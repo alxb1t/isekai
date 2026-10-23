@@ -364,9 +364,7 @@ onMounted(async () => {
   place(0, 0)
 })
 
-onUnmounted(() => {
-  window.removeEventListener('keydown', onKey)
-})
+onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>

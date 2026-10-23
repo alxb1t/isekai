@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { checkBilling as askBilling, stopJob } from '../api'
-import type { Billing, FileState, JobSlot } from '../types'
+import type { Billing, FileState, HubInfo, JobSlot } from '../types'
 import { noun } from '../words'
 
 /* Whether a pod may be billing or the window is past its end. */
@@ -17,19 +17,21 @@ export function clock(seconds: number): string {
 }
 
 /* What the stream names: the batch the screen shows and the import it has open. */
-export interface Target {
+interface Target {
   batch: string | null
   staging: string | null
 }
 
 /* The kinds of event the stream sends. */
 const KINDS = ['snapshot', 'job', 'billing', 'cell', 'file'] as const
-export type Kind = (typeof KINDS)[number]
+type Kind = (typeof KINDS)[number]
 type Handler = (data: unknown) => void
 
-interface Snapshot {
+/* What every connect sends first: the slot, billing, and the hub and files it names. */
+export interface Snapshot {
   job: JobSlot | null
   billing: Billing
+  hub?: HubInfo
   files?: Record<string, FileState>
 }
 
@@ -52,7 +54,7 @@ export const useLiveStore = defineStore('live', () => {
   const target: Target = { batch: null, staging: null }
   const handlers = new Map<Kind, Set<Handler>>()
   let stream: EventSource | null = null
-  let ticking = false
+  setInterval(() => (now.value = Date.now()), 1000)
 
   /* Each event of `kind`, on every stream this page opens; returns the way to stop. */
   function listen(kind: Kind, handler: Handler): () => void {
@@ -79,10 +81,6 @@ export const useLiveStore = defineStore('live', () => {
 
   function open(): void {
     stream?.close()
-    if (!ticking) {
-      ticking = true
-      setInterval(() => (now.value = Date.now()), 1000)
-    }
     const query = new URLSearchParams()
     if (target.batch !== null) query.set('batch', target.batch)
     if (target.staging !== null) query.set('staging', target.staging)
@@ -91,29 +89,24 @@ export const useLiveStore = defineStore('live', () => {
     stream = opened
     for (const kind of KINDS)
       opened.addEventListener(kind, (event) => {
-        const data: unknown = JSON.parse((event as MessageEvent<string>).data)
-        take(kind, data)
-        emit(kind, data)
+        emit(kind, JSON.parse((event as MessageEvent<string>).data))
       })
   }
 
-  /* Keep what this store holds of an event. */
-  function take(kind: Kind, data: unknown): void {
-    if (kind === 'snapshot') {
-      const found = data as Snapshot
-      job.value = found.job
-      billing.value = found.billing
-      files.value = found.files ?? {}
-      loaded.value = true
-    } else if (kind === 'job') {
-      job.value = data as JobSlot
-    } else if (kind === 'billing') {
-      billing.value = data as Billing
-    } else if (kind === 'file') {
-      const { upload, ...state } = data as FileState & { upload: string }
-      files.value = { ...files.value, [upload]: state }
-    }
-  }
+  /* This store's own handlers, registered first, so every other one reads what they keep. */
+  listen('snapshot', (data) => {
+    const found = data as Snapshot
+    job.value = found.job
+    billing.value = found.billing
+    files.value = found.files ?? {}
+    loaded.value = true
+  })
+  listen('job', (data) => (job.value = data as JobSlot))
+  listen('billing', (data) => (billing.value = data as Billing))
+  listen('file', (data) => {
+    const { upload, ...state } = data as FileState & { upload: string }
+    files.value = { ...files.value, [upload]: state }
+  })
 
   /* Stop the running job; a refusal is thrown for the screen to show. */
   async function stop(): Promise<void> {

@@ -30,11 +30,11 @@ const totals = computed(() => {
 
 const batch = computed(() => (typeof route.params.batch === 'string' ? route.params.batch : null))
 /* The page's one stream names the batch the screen shows, and the batch store holds it. */
-const store = useBatchStore()
+const batchStore = useBatchStore()
 watch(
   batch,
   (shown) => {
-    if (shown !== null) store.open(shown)
+    batchStore.open(shown)
     live.follow({ batch: shown })
   },
   { immediate: true },

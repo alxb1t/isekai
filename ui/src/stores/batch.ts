@@ -1,8 +1,8 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 import { hub as readHub, renderOffer, renders as readRenders } from '../api'
 import type { CellEvent, HubCell, HubInfo, RenderOffer, RendersInfo } from '../types'
-import { useLiveStore } from './live'
+import { type Snapshot, useLiveStore } from './live'
 
 const NO_OFFER: RenderOffer = { disabled: null, images: 0, refused: null }
 
@@ -31,8 +31,8 @@ export const useBatchStore = defineStore('batch', () => {
   /* The newest offer request; an answer to an older one is dropped. */
   let asked = 0
 
-  /* Hold `batch`; another batch starts from nothing. */
-  function open(batch: string): void {
+  /* Hold `batch`, or none off a batch's screens; another batch starts from nothing. */
+  function open(batch: string | null): void {
     if (name.value === batch) return
     name.value = batch
     hub.value = null
@@ -44,21 +44,18 @@ export const useBatchStore = defineStore('batch', () => {
     asked += 1
   }
 
-  /** Read the hub again; a refusal is thrown to the caller, who decides where it shows. */
-  async function reloadHub(): Promise<HubInfo> {
+  /* Read the held batch with `read` into `into`, unless another batch is held by then. */
+  async function reload<T>(read: (batch: string) => Promise<T>, into: Ref<T | null>): Promise<T> {
     const batch = name.value ?? ''
-    const read = await readHub(batch)
-    if (name.value === batch) hub.value = read
-    return read
+    const found = await read(batch)
+    if (name.value === batch) into.value = found
+    return found
   }
 
+  /** Read the hub again; a refusal is thrown to the caller, who decides where it shows. */
+  const reloadHub = () => reload(readHub, hub)
   /** Read the renders again; a refusal is thrown to the caller. */
-  async function reloadRenders(): Promise<RendersInfo> {
-    const batch = name.value ?? ''
-    const read = await readRenders(batch)
-    if (name.value === batch) renders.value = read
-    return read
-  }
+  const reloadRenders = () => reload(readRenders, renders)
 
   /* Read the offer again. One that cannot be read is refused, so its reason shows. */
   async function check(): Promise<void> {
@@ -90,12 +87,11 @@ export const useBatchStore = defineStore('batch', () => {
   }
 
   live.listen('snapshot', (data) => {
-    const found = (data as { hub?: HubInfo }).hub
+    const found = (data as Snapshot).hub
     if (found && found.batch === name.value) hub.value = found
   })
   live.listen('cell', (data) => {
     const event = data as CellEvent
-    if (event.batch !== name.value) return
     const here = at(event.source, event.flow)
     apply(event.source, event.flow, event.cell)
     if (event.state === 'start') running.value[here] = event.stage

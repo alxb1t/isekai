@@ -740,7 +740,7 @@ def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
     read_again.wait(10.0)
     reader.stop()
     assert reader.files()[again]["state"] == "ready"
-    reader.refuse_unread()
+    reader.seal()
 
 
 @pytest.mark.spec("ui:sheet:two-uploads-of-one-name-keep-their-own-states")

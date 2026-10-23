@@ -192,52 +192,47 @@ class Reader:
             )
         held = Path(tempfile.mkdtemp(dir=self._staging, prefix=".upload-")) / name
         held.write_bytes(body)
+        record = {"file": name, "state": "waiting"}
         # Named and recorded under the lock `seal` takes: no upload lands once
         # a commit has sealed the reader.
         with self._lock:
-            if self._sealed:
-                shutil.rmtree(held.parent, ignore_errors=True)
-                raise Refusal(
-                    f"{name}: Import is already committing this import; once the "
-                    "batch's hub opens, add it with Add sources"
-                )
-            self._uploads += 1
-            upload = f"u{self._uploads}"
-            self._files[upload] = {"file": name, "state": "waiting"}
-        self._publish({"upload": upload, "file": name, "state": "waiting"})
+            sealed = self._sealed
+            if not sealed:
+                self._uploads += 1
+                upload = f"u{self._uploads}"
+                self._files[upload] = record
+        if sealed:
+            shutil.rmtree(held.parent, ignore_errors=True)
+            raise Refusal(
+                f"{name}: Import is already committing this import; once the "
+                "batch's hub opens, add it with Add sources"
+            )
+        state = {"upload": upload, **record}
+        self._publish(state)
         self._queue.put((upload, name, held))
-        return {"upload": upload, "file": name, "state": "waiting"}
+        return state
 
     def files(self) -> dict[str, dict[str, Any]]:
         """Return every upload's name and state, by its id."""
         with self._lock:
             return {upload: dict(state) for upload, state in self._files.items()}
 
-    def refuse_unread(self) -> None:
-        """Refuse while any file still waits or converts, naming how many are read."""
-        with self._lock:
-            self._refuse_unread()
-
     def seal(self) -> None:
         """Refuse while a file is unread, else refuse later uploads until `unseal`."""
         with self._lock:
-            self._refuse_unread()
+            states = self._files.values()
+            unread = sum(one["state"] in _UNREAD for one in states)
+            if unread:
+                raise Refusal(
+                    f"{len(states) - unread} of {len(states)} files are read; wait "
+                    "for the rest, then import"
+                )
             self._sealed = True
 
     def unseal(self) -> None:
         """Take uploads again, after a commit that was refused."""
         with self._lock:
             self._sealed = False
-
-    def _refuse_unread(self) -> None:
-        """Refuse while a file still waits or converts; the caller holds the lock."""
-        states = self._files.values()
-        unread = sum(one["state"] in _UNREAD for one in states)
-        if unread:
-            raise Refusal(
-                f"{len(states) - unread} of {len(states)} files are read; wait for "
-                "the rest, then import"
-            )
 
     def halt(self) -> None:
         """Ask the thread to stop once the file being read is done."""
