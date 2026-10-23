@@ -6,7 +6,7 @@ Every new pytest test carries `@pytest.mark.spec`, and every new vitest test `sp
 ## Progress
 
 - [x] 1 — The live store
-- [ ] 2 — One stream
+- [x] 2 — One stream
 - [ ] 3 — The batch store
 - [ ] 4 — The upload id and the cards
 
@@ -24,18 +24,18 @@ Every new pytest test carries `@pytest.mark.spec`, and every new vitest test `sp
 
 ## 2 — One stream
 
-- [ ] 2.1 **HALT CHECK** — the hub and the import sheet open streams of their own.
+- [x] 2.1 **HALT CHECK** — the hub and the import sheet open streams of their own.
   Verify: `grep -c 'new EventSource' ui/src/views/Hub.vue ui/src/components/ImportSheet.vue` prints `1` for each file.
-- [ ] 2.2 Add `follow` and `listen` to `ui/src/stores/live.ts` per [D3](design.md#d3); follow the route's batch in
+- [x] 2.2 Add `follow` and `listen` to `ui/src/stores/live.ts` per [D3](design.md#d3); follow the route's batch in
   `ui/src/App.vue`; take the hub's snapshot and `cell` events through `listen` in `ui/src/views/Hub.vue`.
   Verify: `grep -c 'new EventSource' ui/src/views/Hub.vue` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.3 Follow the import's staging id in `ui/src/components/ImportSheet.vue`, its tiles read from the live store's
+- [x] 2.3 Follow the import's staging id in `ui/src/components/ImportSheet.vue`, its tiles read from the live store's
   `files`, per [D3](design.md#d3).
   Verify: `grep -c 'new EventSource' ui/src/components/ImportSheet.vue` prints `0`, and `uv run pytest -q tests/e2e/test_import.py` exits 0.
-- [ ] 2.4 Bind `ui:events:one-stream-follows-the-batch-and-the-import` in a new `ui/src/stores/live.test.ts`, with
+- [x] 2.4 Bind `ui:events:one-stream-follows-the-batch-and-the-import` in a new `ui/src/stores/live.test.ts`, with
   `EventSource` stubbed.
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c 'one-stream-follows-the-batch-and-the-import' ui/src/stores/live.test.ts` prints `1`.
-- [ ] 2.5 Say the page's one stream names its batch and its open import, and opens again when either changes, in
+- [x] 2.5 Say the page's one stream names its batch and its open import, and opens again when either changes, in
   `ui/design/spec.md` §8 and the `/events` bullet of `isekai/interface/ui/README.md`.
   Verify: `grep -c 'opens again' ui/design/spec.md isekai/interface/ui/README.md` prints `1` for each file.
 

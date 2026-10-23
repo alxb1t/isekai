@@ -184,6 +184,14 @@ export interface StagedFile {
   carries: string[]
 }
 
+/* One upload's state, as the import's stream reports it. */
+export interface FileState {
+  state: 'waiting' | 'converting' | 'refused' | StagedState
+  name?: string
+  carries?: string[]
+  refusal?: string
+}
+
 export interface Committed {
   batch: string
   written: string[]

@@ -12,6 +12,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The page's job slot, billing and clock live in one Pinia store, `pinia` and `@vue/devtools-api` pinned
   exactly; stopping a job and checking billing are its actions (0068 D1, D2).
 
+- A page holds one event stream, naming its batch and its open import, and opens it again when either
+  changes; the hub and the import sheet no longer open their own (0068 D3).
+
 ## [0.41.0] - 2026-10-23 · 0067-hub-and-renders
 
 Gate: local 0m37s · CI 7m25s (build-image at 801ffec) · 0.40.1: local 0m35s · CI 7m25s

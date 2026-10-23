@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { alerting, useLiveStore } from './stores/live'
@@ -11,7 +11,7 @@ const route = useRoute()
 const router = useRouter()
 const live = useLiveStore()
 const { job, billing } = storeToRefs(live)
-const { connect, prepareTotals, renderTotals } = live
+const { prepareTotals, renderTotals } = live
 
 const alert = computed(() => alerting(billing.value))
 const running = computed(() => job.value?.state === 'running')
@@ -28,6 +28,8 @@ const totals = computed(() => {
 })
 
 const batch = computed(() => (typeof route.params.batch === 'string' ? route.params.batch : null))
+/* The page's one stream names the batch the screen shows. */
+watch(batch, (shown) => live.follow({ batch: shown }), { immediate: true })
 const place = computed(() => batch.value ?? 'library')
 const screen = computed(() => route.name)
 const key = computed(() =>
@@ -55,7 +57,6 @@ function onKey(event: KeyboardEvent): void {
 
 onMounted(() => {
   window.addEventListener('keydown', onKey)
-  connect()
 })
 onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>

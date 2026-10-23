@@ -37,8 +37,8 @@ function openRender(): void {
 }
 /* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
 const selected = ref<Set<number>>(new Set())
-/* The job slot is the shell's live state; this stream brings cells. A render
-   holds the one slot, so Prepare waits while it is `blocked`. */
+/* The job slot and the cells arrive on the page's one stream. A render holds
+   the one slot, so Prepare waits while it is `blocked`. */
 const live = useLiveStore()
 const { job, renderRunning: blocked } = storeToRefs(live)
 const { prepareTotals } = live
@@ -48,7 +48,7 @@ const barRefusal = ref<string | null>(null)
 const refusals = ref<Record<string, string>>({})
 /* The stage running in a cell, by `source|flow`, from the job's reports. */
 const running = ref<Record<string, string>>({})
-let stream: EventSource | null = null
+let unlisten: (() => void)[] = []
 
 /* Add sources commits into this batch, and the grid is read again. */
 async function added(): Promise<void> {
@@ -358,20 +358,22 @@ function onKey(event: KeyboardEvent): void {
 
 /* The stream: a snapshot on every connect, then each report as it happens. */
 function listen(): void {
-  stream = new EventSource(`/events?${new URLSearchParams({ batch: props.batch })}`)
-  stream.addEventListener('snapshot', (event) => {
-    const data = JSON.parse((event as MessageEvent<string>).data) as { hub?: HubInfo }
-    if (data.hub) info.value = data.hub
-  })
-  stream.addEventListener('cell', (event) => {
-    const data = JSON.parse((event as MessageEvent<string>).data) as CellEvent
-    const here = at(data.source, data.flow)
-    apply(data.source, data.flow, data.cell)
-    if (data.state === 'start') running.value[here] = data.stage
-    else delete running.value[here]
-    if (data.state === 'refused' && data.message) refusals.value[here] = data.message
-    else if (data.state === 'done') delete refusals.value[here]
-  })
+  unlisten = [
+    live.listen('snapshot', (data) => {
+      const found = (data as { hub?: HubInfo }).hub
+      if (found) info.value = found
+    }),
+    live.listen('cell', (data) => taken(data as CellEvent)),
+  ]
+}
+
+function taken(data: CellEvent): void {
+  const here = at(data.source, data.flow)
+  apply(data.source, data.flow, data.cell)
+  if (data.state === 'start') running.value[here] = data.stage
+  else delete running.value[here]
+  if (data.state === 'refused' && data.message) refusals.value[here] = data.message
+  else if (data.state === 'done') delete refusals.value[here]
 }
 
 /* A failed Prepare is shown, the one that ended before this hub opened too. */
@@ -395,19 +397,19 @@ watch(job, (slot, before) => {
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
   void checkRender()
+  listen()
   try {
     info.value = await hub(props.batch)
   } catch (reason) {
     refusal.value = (reason as Error).message
     return
   }
-  listen()
   place(0, 0)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
-  stream?.close()
+  for (const stop of unlisten) stop()
 })
 </script>
 

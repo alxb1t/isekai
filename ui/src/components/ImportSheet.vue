@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { noun } from '../words'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
-import type { StagedFile } from '../types'
+import { useLiveStore } from '../stores/live'
+import type { FileState, StagedFile } from '../types'
 
 /* The New batch and Add sources sheet (design spec J1, J7): files chosen in the
    browser's dialog, each sent in its own request with its own bar, then read and
@@ -16,13 +17,7 @@ const emit = defineEmits<{ close: []; imported: [batch: string] }>()
 type Phase = 'queued' | 'uploading' | 'waiting' | 'converting' | 'read' | 'refused'
 
 /* One file's state, as the import's stream reports it. */
-interface FileEvent {
-  file: string
-  state: 'waiting' | 'converting' | 'refused' | StagedFile['state']
-  name?: string
-  carries?: string[]
-  refusal?: string
-}
+type FileEvent = FileState & { file: string }
 
 interface Tile {
   key: number
@@ -70,11 +65,11 @@ const name = ref(new Date().toISOString().slice(0, 10))
 const refusal = ref<string | null>(null)
 let committed = false
 let counter = 0
-let stream: EventSource | null = null
+const live = useLiveStore()
 const opening = openStaging().then(
   (opened) => {
     staging.value = opened.id
-    listen(opened.id)
+    live.follow({ staging: opened.id })
     return opened.id
   },
   (reason: Error) => {
@@ -131,19 +126,14 @@ function pump(): void {
   for (const one of queued.slice(0, Math.max(PARALLEL - running.length, 0))) void send(one)
 }
 
-/* The import's stream: every file's state on connect, then each change. */
-function listen(id: string): void {
-  stream = new EventSource(`/events?${new URLSearchParams({ staging: id })}`)
-  stream.addEventListener('snapshot', (event) => {
-    const data = JSON.parse((event as MessageEvent<string>).data) as {
-      files?: Record<string, Omit<FileEvent, 'file'>>
-    }
-    for (const [file, state] of Object.entries(data.files ?? {})) apply({ file, ...state })
-  })
-  stream.addEventListener('file', (event) => {
-    apply(JSON.parse((event as MessageEvent<string>).data) as FileEvent)
-  })
-}
+/* The import's files, from the page's stream: each state is applied once, as it arrives. */
+watch(
+  () => live.files,
+  (files, before) => {
+    for (const [file, state] of Object.entries(files))
+      if (state !== before[file]) apply({ file, ...state })
+  },
+)
 
 /* Put a reported state on the first unread tile of that name. Its upload's
    answer, not the stream, says it waits: the stream can report it first. */
@@ -227,7 +217,7 @@ async function importAll(): Promise<void> {
 }
 
 async function cancel(): Promise<void> {
-  stream?.close()
+  live.follow({ staging: null })
   if (staging.value !== null && !committed) {
     committed = true
     await cancelStaging(staging.value).catch(() => undefined)
@@ -253,7 +243,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
-  stream?.close()
+  live.follow({ staging: null })
   if (staging.value !== null && !committed) void cancelStaging(staging.value).catch(() => undefined)
 })
 </script>
