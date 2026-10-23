@@ -387,12 +387,14 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 
 ## 7 · Keys
 
-Matched on `event.code`, the physical key, with the typed character suppressed; ⌥0–⌥4 fire inside text
-fields, ⌥R and ⌥E do not fire inside a chip input.
+Matched on `event.code`, the physical key, with the typed character suppressed, and declared once in
+the key store ([D25](../../docs/decisions.md#d25--shortcuts-match-the-physical-key)); `?` lists them. ⌘
+is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K run; ⌥R and ⌥E do not fire inside a
+chip input.
 
 | where | keys |
 |---|---|
-| everywhere | ⌥0 Home · ⌥1 Hub · ⌥2 Review · ⌥3 Renders · ⌥4 the session · ⌥← → flow · ⌥Space the cheatsheet · ⌘↵ the outlined action · esc closes an overlay, never a billing alert |
+| everywhere | ⇧L the library · ⇧H Hub · ⇧R the queue's head · ⇧I Renders · ⇧S the session · ? the key list · ⌥← → flow · ⌥Space the cheatsheet · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⌥N New batch · ↑↓ ↵ the library |
 | Hub | ↑↓←→ cells · space tick / untick, or a column for the selected rows · ⇧↑↓ select rows · ↵ the cell's action · ⌥A Add sources · ⌥R Render |
 | Review | ⌘Z ⇧⌘Z · ⌥↑↓ the queue · ⌘↵ Approve · autocomplete ↑↓ ↵ esc · ⌃↓ walk refusals · ⌥↵ take every suggested spelling · ⌥C photo and render, on a revision · ⌥↓ the collapsed caption |

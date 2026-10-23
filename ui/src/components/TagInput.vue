@@ -84,8 +84,9 @@ function onKey(event: KeyboardEvent): void {
     event.stopPropagation()
     emit('commit', matches.value[selected.value].tag)
     reset()
-  } else if (event.key === 'Escape') {
-    /* Esc closes the dropdown and keeps the fragment; Esc again clears it.
+  } else if (event.key === 'Escape' && matches.value.length) {
+    /* Esc closes the dropdown and keeps the fragment; with none open, it bubbles
+       and the key store leaves the field (D25).
 
        It stops here rather than bubbling: nothing above this input should act
        on an Esc the dropdown answered, least of all the photo overlay's
@@ -95,8 +96,7 @@ function onKey(event: KeyboardEvent): void {
        it. A `.focus()` on the already-focused element costs nothing. */
     event.preventDefault()
     event.stopPropagation()
-    if (matches.value.length) clear()
-    else fragment.value = ''
+    clear()
     box.value?.focus()
   } else if (event.key === ' ' && fragment.value === '') {
     /* A leading space can only ever match nothing -- every tag in the

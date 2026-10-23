@@ -39,7 +39,8 @@ def test_a_tag_is_committed_from_the_ranked_autocomplete(
 
     # Leaving inside the debounce sends the edit: the hub opens only once the
     # route's leave guard has had the draft written.
-    page.keyboard.press("Alt+Digit1")
+    page.keyboard.press("Escape")
+    page.keyboard.press("Shift+KeyH")
     expect(page).to_have_url(served.hub)
     draft = latest_artifact(served.draft.directory(FLOW, REVIEW), DRAFT)
     assert draft is not None

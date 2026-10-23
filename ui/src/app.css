@@ -1970,3 +1970,22 @@ body {
     animation: none;
   }
 }
+
+/* — the key list — */
+
+.keylist {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px var(--space-6);
+  margin: 0;
+  font-size: 12px;
+}
+
+.keylist__keys {
+  color: var(--ink);
+}
+
+.keylist__label {
+  margin: 0;
+  color: var(--ink-2);
+}

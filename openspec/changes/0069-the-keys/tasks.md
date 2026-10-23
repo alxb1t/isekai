@@ -5,27 +5,27 @@ The registry, the screens, Review, then the dialogs, per [design](design.md). Ev
 
 ## Progress
 
-- [ ] 1 — The registry
+- [x] 1 — The registry
 - [ ] 2 — The screens
 - [ ] 3 — Review
 - [ ] 4 — The dialogs
 
 ## 1 — The registry
 
-- [ ] 1.1 **HALT CHECK** — no key store exists, and the shell matches Option.
+- [x] 1.1 **HALT CHECK** — no key store exists, and the shell matches Option.
   Verify: `test -e ui/src/stores/keys.ts` exits 1, and `grep -c 'altKey' ui/src/App.vue` prints `1`.
-- [ ] 1.2 Add `ui/src/stores/keys.ts` and `ui/src/composables/useKeys.ts` per [D1](design.md#d1), with the field
+- [x] 1.2 Add `ui/src/stores/keys.ts` and `ui/src/composables/useKeys.ts` per [D1](design.md#d1), with the field
   rule of [D2](design.md#d2) and the `Esc` order of [D3](design.md#d3); install the one listener in `ui/src/App.vue`.
   Verify: `grep -c 'useKeyStore' ui/src/App.vue` prints a number of at least `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 1.3 Declare the everywhere keys of [D4](design.md#d4) in `ui/src/App.vue`, its Option branch gone; add
+- [x] 1.3 Declare the everywhere keys of [D4](design.md#d4) in `ui/src/App.vue`, its Option branch gone; add
   `ui/src/components/KeyList.vue` on `?` and `ui/src/components/KeyHint.vue` per [D6](design.md#d6).
   Verify: `grep -c 'altKey' ui/src/App.vue` prints `0`, and `test -e ui/src/components/KeyList.vue` exits 0.
-- [ ] 1.4 Bind the `ui:keys:` scenarios of `ui/src/stores/keys.test.ts` named in the design's [Tests](design.md#tests).
+- [x] 1.4 Bind the `ui:keys:` scenarios of `ui/src/stores/keys.test.ts` named in the design's [Tests](design.md#tests).
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c "spec('ui:keys:" ui/src/stores/keys.test.ts` prints `6`.
-- [ ] 1.5 In `test_a_tag_is_committed_from_the_ranked_autocomplete` in `tests/e2e/test_review.py`, press `Escape`, then
+- [x] 1.5 In `test_a_tag_is_committed_from_the_ranked_autocomplete` in `tests/e2e/test_review.py`, press `Escape`, then
   `Shift+KeyH`, where it pressed `Alt+Digit1`.
   Verify: `grep -c 'Alt+Digit1' tests/e2e/test_review.py` prints `0`, and `uv run pytest -q tests/e2e/test_review.py` exits 0.
-- [ ] 1.6 Rewrite D25 in `docs/decisions.md` per [D8](design.md#d8), and the *everywhere* row of `ui/design/spec.md` §7.
+- [x] 1.6 Rewrite D25 in `docs/decisions.md` per [D8](design.md#d8), and the *everywhere* row of `ui/design/spec.md` §7.
   Verify: `grep -c 'Option shortcuts match the physical key' docs/decisions.md` prints `0`, and `uv run pytest -q tests/test_docs.py` exits 0.
 
 ## 2 — The screens
