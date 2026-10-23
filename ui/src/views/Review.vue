@@ -451,8 +451,14 @@ useKeys('screen', [
   },
 ])
 
-// The draft is flushed as the tab goes; the PUT is kept alive past the page.
-const onLeave = () => void sheet.flush()
+// The draft is flushed as the tab goes; the PUT is kept alive past the page. An
+// edit still waiting for an earlier save cannot be sent before the page goes, so
+// the browser asks the operator to stay rather than lose it unsaid.
+const onLeave = (event: BeforeUnloadEvent) => {
+  if (!sheet.leave()) return
+  event.preventDefault()
+  event.returnValue = true
+}
 
 // Leaving for another screen flushes too; the draft is the operator's work.
 onBeforeRouteLeave(async () => {
@@ -477,8 +483,8 @@ onUnmounted(() => window.removeEventListener('beforeunload', onLeave))
 watch(current, (id) => {
   if (!id) return
   // The pending write belongs to the input being left, not the one arriving.
-  // Not awaited: `flush()` captures the id it is writing and `open()` guards on
-  // `current`, so the two cannot cross.
+  // Not awaited: `flush()` takes the edit and its id before `open()` moves
+  // `current`, and the save states the receipt of that input's own last save.
   void sheet.flush()
   focused.value = null
   selectedChip.value = null

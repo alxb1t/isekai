@@ -168,13 +168,14 @@ short name is a sanitised filename and can repeat; its digest cannot.
 
 The system SHALL report a draft as saving exactly while a save it started is unanswered, whatever order saves and
 input switches answer in, and SHALL send a pending edit when the page leaves the sheet — to another sheet, another
-screen, or by closing — by a request the browser keeps alive past the page. An approval SHALL wait for a save in
-flight, and state the draft that save wrote.
+screen, or by closing — by a request the browser keeps alive past the page. A save SHALL wait for the sheet's save
+in flight and state the draft it wrote, and a page closing before that save answers SHALL ask before it goes. An
+approval SHALL wait for a save in flight, and state the draft that save wrote.
 
 The saved receipt is the only thing on the page that speaks about saving, so a counter one stale answer can drive
 below zero silences it for the rest of the input. An edit typed inside the debounce is the operator's work, and
-closing the tab is an ordinary way to leave. An approval pressed inside a save's round trip is the operator's own
-edit, not another tab's.
+closing the tab is an ordinary way to leave. An edit or an approval pressed inside a save's round trip is the
+operator's own, not another tab's, and a closing page never reads the receipt it would have to state.
 
 #### Scenario: a stale save cannot clear the saving state
 - **Key:** `ui:save:a-stale-save-cannot-clear-saving`
@@ -188,6 +189,7 @@ edit, not another tab's.
 - **Layers:** unit
 - **WHEN** the page leaves a sheet inside the debounce
 - **THEN** the pending edit is sent with a request kept alive past the page
+- **AND** a page closing while a save of the sheet is unanswered asks before it goes
 
 #### Scenario: an approval waits for a save in flight
 - **Key:** `ui:save:an-approval-waits-for-a-save-in-flight`

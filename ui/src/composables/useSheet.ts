@@ -46,12 +46,16 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
 
   const done: Edit[] = []
   const undone: Edit[] = []
-  /* One token per save, never reset: a second PUT can start before the first
+  /* One token per save, never reset: a second save can start before the first
      has answered, and an input switch can land between them. `saving` is true
      exactly while a token is held, whichever order the answers come in. Each
-     holds its input and its answer, so `flush` can wait for its own input's. */
-  const inFlight = new Map<number, { id: string; landed: Promise<boolean> }>()
+     holds its input, its answer, and the `saved` it leaves the draft at -- the
+     receipt's, or the precondition it stated if it failed -- so `flush` can
+     wait for its own input's and the next save of that input can state it. */
+  const inFlight = new Map<number, { id: string; landed: Promise<boolean>; leaves: Promise<number | null> }>()
   let token = 0
+  /* Saves started and not yet sent, each waiting for an earlier save of its input. */
+  let waiting = 0
   /* A slow earlier answer must never overwrite a newer one. Two saves can be in
      flight at once -- the debounce is what puts them there -- so the receipt of
      the first can land after the second's. The pattern is `useVocabulary`'s,
@@ -117,22 +121,27 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
      read-only sheet answers -- nothing was written, so nothing may be built
      from it. A sheet with no edit pending sends nothing.
 
-     **It waits for every save of this input still in flight before it sends
-     a pending edit**, and answers with the newest: an approval pressed inside a
-     save's round trip must state the draft that save wrote, and a pending edit
-     sent beside it would state the same stale `saved` and be refused as another
-     tab's. */
+     **It takes a pending edit at once, then waits for every save of this input
+     still in flight**, answering with the newest: an approval pressed inside a
+     save's round trip must state the draft that save wrote. The edit is taken
+     before the caller can switch input or the page go; `send` orders it. */
   async function flush(): Promise<boolean> {
     if (timer !== undefined) clearTimeout(timer)
     timer = undefined
     if (detail.value === null || detail.value.readonly) return false
     const id = current
-    // Sent at once when nothing is in flight: a leaving page has no turn to wait.
-    const earlier = landed(id)
-    const before = earlier.length > 0 ? await Promise.all(earlier) : []
-    if (dirty && current === id) send()
+    if (dirty) send()
     const answers = await Promise.all(landed(id))
-    return answers.at(-1) ?? before.at(-1) ?? true
+    return answers.at(-1) ?? true
+  }
+
+  /* The page is going: flush, and answer whether an edit is still waiting for
+     an earlier save. Its precondition is that save's receipt, which a page
+     that has gone never reads, so the page asks before it goes instead of
+     sending it stale to be refused as another tab's. */
+  function leave(): boolean {
+    void flush()
+    return waiting > 0
   }
 
   /* The answers of every save of input `id` still in flight, in the order they started. */
@@ -140,7 +149,11 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     return [...inFlight.values()].filter((save) => save.id === id).map((save) => save.landed)
   }
 
-  /* Start one save of the whole draft, held in `inFlight` until it answers. */
+  /* Start one save of the whole draft as it stands now, held in `inFlight`
+     until it answers. **Saves of one input are sent in order**: a save is sent
+     at once when none of its input is in flight, else after the last one
+     answers, stating the `saved` that one leaves -- two sent side by side would
+     state the same precondition and the second be refused as another tab's. */
   function send(): void {
     dirty = false
     const id = current
@@ -148,7 +161,10 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     const asking = { count: renders.value.count, seeds: [...renders.value.seeds] }
     const asked = (generation += 1)
     const mine = (token += 1)
-    inFlight.set(mine, { id, landed: write(id, payload, asking, asked, mine) })
+    const last = [...inFlight.values()].filter((save) => save.id === id).at(-1)
+    if (last !== undefined) waiting += 1
+    const outcome = write(id, payload, asking, asked, mine, last?.leaves ?? saved.value)
+    inFlight.set(mine, { id, landed: outcome.then((it) => it.ok), leaves: outcome.then((it) => it.saved) })
     saving.value = true
   }
 
@@ -158,9 +174,16 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     asking: Renders,
     asked: number,
     mine: number,
-  ): Promise<boolean> {
+    after: Promise<number | null> | number | null,
+  ): Promise<{ ok: boolean; saved: number | null }> {
+    // Awaited only behind an earlier save, so a save with none in flight is sent at once.
+    let precondition: number | null
+    if (after instanceof Promise) {
+      precondition = await after
+      waiting -= 1
+    } else precondition = after
     try {
-      const receipt = await saveDraft({ ...scope, digest: id }, payload, asking, saved.value)
+      const receipt = await saveDraft({ ...scope, digest: id }, payload, asking, precondition)
       if (current === id) {
         // The server's clock, never the browser's: a receipt the client wrote
         // for itself is a claim about a save rather than a record of one. Taken
@@ -171,11 +194,11 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
           refusal.value = null
         }
       }
-      return true
+      return { ok: true, saved: receipt.saved }
     } catch (reason) {
       if (current === id) dirty = true
       if (current === id && asked === generation) refusal.value = (reason as Error).message
-      return false
+      return { ok: false, saved: precondition }
     } finally {
       inFlight.delete(mine)
       saving.value = inFlight.size > 0
@@ -255,5 +278,6 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     undo,
     redo,
     flush,
+    leave,
   }
 }
