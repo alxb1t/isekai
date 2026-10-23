@@ -1,20 +1,26 @@
-"""The app's server-side parts that need no server: the bundle and the invariant.
+"""Prove bundle freshness, surface invariants and orderly shutdown.
 
-Nothing in this file needs a web framework; the endpoints are in
-`tests/test_ui_api.py`, and the library is in `tests/test_ui_library.py`.
+The shutdown harness runs real uvicorn over the suite's offline wiring.
+Endpoint contracts live in `tests/test_ui_api.py`.
 """
 
 import importlib.util
+import io
 import os
 import signal
+import socket
 import subprocess
+import sys
+import threading
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
 
 from isekai.foundation.refusal import Refusal
-from isekai.interface.ui import bundle
+from isekai.interface.ui import bundle, events
 
 # Every file in `ui/` that is neither `src/` nor an ignored root. `_is_fresh`
 # watches them by exclusion rather than by name, so `tsconfig.json` -- which
@@ -305,3 +311,132 @@ def test_an_absent_or_empty_bundle_is_still_not_fresh(tmp_path: Path) -> None:
     (source / "dist").mkdir()
 
     assert not bundle._is_fresh(source / "dist", source)
+
+
+@pytest.mark.spec("ui:events:stopping-ends-open-streams-quietly")
+def test_closed_broadcast_ends_existing_and_late_streams() -> None:
+    broadcast = events.Broadcast()
+    stream = events.stream(broadcast, lambda: {}, heartbeat=30)
+    assert next(stream).startswith("event: snapshot")
+    ended = threading.Event()
+    received: list[str | None] = []
+
+    def consume() -> None:
+        received.append(next(stream, None))
+        ended.set()
+
+    worker = threading.Thread(target=consume, daemon=True)
+    worker.start()
+    try:
+        broadcast.close()
+        broadcast.close()
+        assert ended.wait(1)
+        assert received == [None]
+        late = events.stream(broadcast, lambda: {}, heartbeat=30)
+        assert next(late, None) is None
+        assert not broadcast._queues
+    finally:
+        broadcast.close()
+        worker.join(1)
+
+
+@pytest.mark.spec("ui:events:stopping-ends-open-streams-quietly")
+def test_serve_returns_130_for_keyboard_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from isekai.interface import ui
+    from isekai.interface.ui import app as app_module
+    from isekai.interface.ui.billing import Billing
+    from tests.e2e.wiring import fake
+
+    root = tmp_path / "library"
+    root.mkdir()
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html>")
+    monkeypatch.setattr(ui.library, "root", lambda: root)
+    monkeypatch.setattr(ui, "ensure_built", lambda: dist)
+    monkeypatch.setattr(Billing, "watch", lambda self: None)
+
+    def interrupted(*args: object, **kwargs: object) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(app_module, "run", interrupted)
+    wired = fake(runs=root / "runs")
+    assert ui.serve(wired, port=7717) == 130
+    assert isinstance(wired.err, io.StringIO)
+    assert wired.err.getvalue() == ""
+
+
+@pytest.mark.spec("ui:events:stopping-ends-open-streams-quietly")
+@pytest.mark.parametrize("streams", [0, 1, 3], ids=["idle", "open", "concurrent"])
+def test_sigint_ends_streams_without_cancellation_output(
+    tmp_path: Path, streams: int
+) -> None:
+    root = tmp_path / "library"
+    root.mkdir()
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html>")
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    script = (
+        "import sys; from pathlib import Path; from dataclasses import replace; "
+        "from isekai.interface import ui; from isekai.boundary.gpu import Volume; "
+        "from tests.e2e.wiring import fake; "
+        f"root = Path({str(root)!r}); "
+        f"ui.ensure_built = lambda: Path({str(dist)!r}); "
+        "wired = fake(runs=root / 'runs'); "
+        "wired = replace(wired, out=sys.stdout, err=sys.stderr, "
+        "volume=Volume(run=lambda argv, log: 0, records=root / '.gpunit')); "
+        f"sys.exit(ui.serve(wired, port={port}))"
+    )
+    child = subprocess.Popen(
+        [sys.executable, "-c", script],
+        env={**os.environ, "ISEKAI_LIBRARY": str(root)},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        start_new_session=True,
+    )
+    opened = []
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    url = f"http://127.0.0.1:{port}"
+    try:
+        deadline = time.monotonic() + 20
+        while True:
+            assert child.poll() is None, child.communicate()[0]
+            try:
+                with opener.open(f"{url}/api/library", timeout=1):
+                    break
+            except urllib.error.URLError:
+                assert time.monotonic() < deadline, "server did not start"
+                time.sleep(0.02)
+        for _ in range(streams):
+            response = opener.open(f"{url}/events", timeout=5)
+            opened.append(response)
+            assert response.readline() == b"event: snapshot\n"
+            assert response.readline().startswith(b"data: ")
+            assert response.readline() == b"\n"
+        child.send_signal(signal.SIGINT)
+        for response in opened:
+            assert response.read() == b""
+        output, _ = child.communicate(timeout=10)
+        assert child.returncode == 130, output
+        for forbidden in (
+            "CancelledError",
+            "Traceback",
+            "timeout graceful shutdown exceeded",
+        ):
+            assert forbidden not in output
+    finally:
+        for response in opened:
+            response.close()
+        if child.poll() is None:
+            child.terminate()
+        try:
+            child.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            child.kill()
+            child.communicate(timeout=10)

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { noun } from '../words'
 import StatusMark from './StatusMark.vue'
 
 /* The run line and the receipts.
@@ -28,7 +29,7 @@ defineSlots<{ status?: () => unknown }>()
     <header class="app-header">
       <span class="app-header__brand">isekai review</span>
       <span class="app-header__run mono">
-        {{ flow }} · {{ inputs }} inputs · {{ approved }} approved
+        {{ flow }} · {{ inputs }} {{ noun(inputs, 'input') }} · {{ approved }} approved
       </span>
       <slot name="status" />
       <div class="app-header__receipts mono">

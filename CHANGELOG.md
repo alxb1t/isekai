@@ -9,6 +9,24 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.40.1] - 2026-10-23 · 0066-the-quick-patch
+
+Gate: local 0m35s · CI 7m25s (build-image at 801ffec) · 0.40.0: local 0m34s · CI 1m12s
+
+### Fixed
+
+- End event streams before the server’s shutdown wait and return quietly on Ctrl-C after cleanup;
+  print the volume recovery command when a close fails after its worker ends (0066 D4, D5).
+
+- Prepare shows sheet-completed cells against its accepted total and a ticking elapsed time in the
+  strip and bar; reconnects preserve the counts and original start (0066 D3).
+
+- Use singular count labels at one and leave a consistent gap between hub header controls so
+  small batches read correctly and the controls stay spaced (0066 D7).
+
+- Correct the UI child-process and shared-work descriptions, and state the Render quote’s image-total
+  and limit boundary so its confirmation claim matches the check (0066 D2, D6).
+
 ## [0.40.0] - 2026-10-21 · 0065-revise
 
 Gate: local 0m34s · CI 1m12s (ci at abf4e5e) · 0.39.1: local 0m29s · CI 0m55s

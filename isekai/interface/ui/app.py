@@ -44,6 +44,7 @@ GET  anything else                                 the bundle's index.html
 ```
 """
 
+import asyncio
 import re
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
@@ -51,6 +52,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from functools import cache
 from pathlib import Path
+from types import FrameType
 from typing import Any, TypeGuard
 
 import uvicorn
@@ -1401,8 +1403,17 @@ def run(app: FastAPI, *, host: str, port: int) -> None:
     A thin wrapper so that `__init__.py` composes the surface without importing
     a web framework at module scope.
     """
-    # An open event stream never ends by itself, so a stop waits for it no more
-    # than a second before the job is interrupted and the streams closed.
-    uvicorn.run(
-        app, host=host, port=port, log_level="warning", timeout_graceful_shutdown=1
-    )
+    broadcast: events.Broadcast = app.state.broadcast
+
+    class Server(uvicorn.Server):
+        def handle_exit(self, sig: int, frame: FrameType | None) -> None:
+            # A signal cannot take the broadcast lock; wake queues on the loop.
+            broadcast.closed = True
+            asyncio.get_running_loop().call_soon(broadcast.close)
+            super().handle_exit(sig, frame)
+
+    Server(
+        uvicorn.Config(
+            app, host=host, port=port, log_level="warning", timeout_graceful_shutdown=1
+        )
+    ).run()

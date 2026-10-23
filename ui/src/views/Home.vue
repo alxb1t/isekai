@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { noun } from '../words'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { library } from '../api'
 import ImportSheet from '../components/ImportSheet.vue'
@@ -11,6 +12,7 @@ import type { LibraryRow } from '../types'
    over it (J1); on a first start it follows the privacy line (J1·1). */
 const router = useRouter()
 const rows = ref<LibraryRow[] | null>(null)
+const batchCount = computed(() => rows.value?.filter((row) => row.batch).length ?? 0)
 const refusal = ref<string | null>(null)
 const list = ref<HTMLElement | null>(null)
 const importing = ref(false)
@@ -87,7 +89,7 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
     </div>
     <template v-if="rows.length > 0">
       <p class="section-label">
-        library · {{ rows.filter((row) => row.batch).length }} batches · newest activity first
+        library · {{ batchCount }} {{ noun(batchCount, 'batch', 'batches') }} · newest activity first
       </p>
       <div ref="list" class="library">
         <template v-for="row in rows" :key="row.name">
@@ -100,14 +102,14 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
             @keydown="onKey($event, row)"
           >
             <span class="library__name">{{ row.name }}</span>
-            <span class="library__meta">{{ row.sources }} sources</span>
+            <span class="library__meta">{{ row.sources }} {{ noun(row.sources, 'source') }}</span>
             <div class="library__chips">
               <span v-for="one in row.flows" :key="one.flow" class="library__chip">
                 {{ one.flow }} {{ one.approved }}/{{ one.of }} approved ·
                 {{ one.rendered }}/{{ one.of }} rendered
               </span>
               <span v-if="row.without_flow" class="library__meta">
-                {{ row.without_flow }} sources without a flow
+                {{ row.without_flow }} {{ noun(row.without_flow, 'source') }} without a flow
               </span>
             </div>
             <span class="library__meta library__when">

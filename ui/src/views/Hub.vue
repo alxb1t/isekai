@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { noun } from '../words'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { assign, hub, prepare, renderOffer, stopJob } from '../api'
@@ -39,7 +40,7 @@ function openRender(): void {
 /* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
 const selected = ref<Set<number>>(new Set())
 /* The job slot and billing are the shell's live state; this stream brings cells. */
-const { job, billing } = useLive()
+const { job, billing, prepareTotals } = useLive()
 /* The Prepare bar's refusal, the CLI's own text (J8a). */
 const barRefusal = ref<string | null>(null)
 /* Each cell's refusal from a tick or from the job, by `source|flow`. */
@@ -357,7 +358,10 @@ onUnmounted(() => {
       @close="(rendering = false), void checkRender()"
     />
     <div class="hub__head">
-      <span class="mono">{{ sources.length }} sources × {{ flows.length }} flows</span>
+      <span class="mono">
+        {{ sources.length }} {{ noun(sources.length, 'source') }} ×
+        {{ flows.length }} {{ noun(flows.length, 'flow') }}
+      </span>
       <button class="btn btn-secondary hub__add" type="button" @click="adding = true">
         Add sources…<span class="appbar__key">⌥A</span>
       </button>
@@ -479,7 +483,7 @@ onUnmounted(() => {
     <div v-if="bar" class="prepare-bar">
       <template v-if="busy">
         <span class="prepare-bar__cells mono">
-          Prepare · {{ job?.stage }} · {{ job?.flow }}
+          Prepare · {{ prepareTotals(job) }}
         </span>
         <button class="btn btn-secondary" type="button" @click="stop">Stop</button>
       </template>

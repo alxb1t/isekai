@@ -2,13 +2,13 @@
 
 A sibling of `cli.py` rather than a client of it. Review, a tick and an import
 call `wiring` and the owning functions directly, and a `Refusal` is caught rather
-than scraped out of stderr prose. Prepare is the exception by design: `jobs.py`
-runs the CLI's own stage verbs as children, reading their `--progress json` (D4).
+than scraped out of stderr prose. Prepare and Render are the exceptions by design:
+`jobs.py` runs the CLI's stage verbs as children, reading `--progress json` (D4).
 
 The split is what keeps the suite offline. `library.py` reads the library and
 each batch's stages and imports no web framework; `bundle.py` builds the browser
 bundle or refuses naming the command; `jobs.py` and `events.py` run Prepare and
-stream it; `app.py` is the only module that imports a web framework at all; and
+Render and stream their progress; `app.py` imports the web framework; and
 `serve()` below composes them.
 
 **The library and the bundle are refused before a port is bound**, because the
@@ -59,5 +59,8 @@ def serve(wired: Wiring, *, port: int) -> int:
     )
     # gpunit is asked once now, then only while a session runs or an alert is open.
     app.state.billing.watch()
-    run(app, host=HOST, port=port)
+    try:
+        run(app, host=HOST, port=port)
+    except KeyboardInterrupt:
+        return 130
     return 0

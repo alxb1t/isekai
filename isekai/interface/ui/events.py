@@ -30,6 +30,7 @@ class Broadcast:
 
     def __init__(self) -> None:
         """Start with no stream open."""
+        self.closed = False
         self._lock = threading.Lock()
         self._queues: list[queue.Queue[Event]] = []
 
@@ -54,6 +55,7 @@ class Broadcast:
 
     def close(self) -> None:
         """End every open stream: the server is stopping."""
+        self.closed = True
         self.publish(CLOSE, {})
 
 
@@ -81,14 +83,21 @@ def stream(
     """
     found = broadcast.subscribe()
     try:
-        yield frame("snapshot", snapshot())
-        while True:
+        if broadcast.closed:
+            return
+        initial = snapshot()
+        if broadcast.closed:
+            return
+        yield frame("snapshot", initial)
+        while not broadcast.closed:
             try:
                 kind, data = found.get(timeout=heartbeat)
             except queue.Empty:
+                if broadcast.closed:
+                    return
                 yield ": keep-alive\n\n"
                 continue
-            if kind == CLOSE:
+            if kind == CLOSE or broadcast.closed:
                 return
             if kind == "cell" and data.get("batch") != batch:
                 continue

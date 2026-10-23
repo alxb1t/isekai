@@ -72,13 +72,13 @@ classified or what state a sheet is in, belongs to the component that owns that 
   those files. `interface/cli.py`'s `_once` decides that a transient transport failure is not kept for
   the session — the render stage's rule. `interface/ui/library.py`'s `stage` ranks a run's stages and
   decides which damaged file marks a cell — the run directory's and the stages' work.
-  `interface/render.py`'s `short` decides what each approval lacks of its count, and its `estimate`
-  how long a session's work takes; the review UI imports both for Render's quote — the render stage's
-  work, shared between two front ends. `interface/ui/library.py`'s `_origin` decides whether a version
-  is a revision or a re-roll by its own comparison of fields rather than the review stage's
-  `same_fields`, and its `paired` decides which older version a seed compares with;
+  `interface/render.py`'s `short` decides what each approval lacks of its count, and its `quote`
+  reaches `estimate` to price the session; the review UI imports `short`, `quote` and `run_ids` —
+  the render stage's work, shared between front ends. `interface/ui/library.py`'s `_origin` decides
+  whether a version is a revision or a re-roll by its own comparison of fields rather than the review
+  stage's `same_fields`. Its `paired` decides which older version a seed compares with, and
   `interface/ui/app.py`'s `_revision` decides which image a draft revises — the review stage's work,
-  each needing the rendered seeds the render stage lists, which the review stage may not import.
+  needing the rendered seeds the render stage lists, which the review stage may not import.
 
 ### The code is layered
 

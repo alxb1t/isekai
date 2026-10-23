@@ -16,6 +16,7 @@ import urllib.error
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
+from typing import TextIO
 
 import pytest
 
@@ -30,6 +31,7 @@ from isekai.foundation.refusal import Refusal  # noqa: E402
 from isekai.foundation.run import Run, open_run  # noqa: E402
 from isekai.interface.render import LOST_EXIT  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
+from isekai.interface.ui import app as app_module  # noqa: E402
 from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
 from isekai.interface.ui.jobs import Jobs, Step, settle_s  # noqa: E402
 from isekai.pipeline.generate import prepare  # noqa: E402
@@ -145,7 +147,7 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
     broadcast = events.Broadcast()
     found = broadcast.subscribe()
     script = _Script({"tag": _line("start") + "; import time; time.sleep(30)"})
-    jobs = Jobs(broadcast, lambda: None, command=script)
+    jobs = Jobs(broadcast, lambda: None, command=script, now=lambda: STARTED)
     steps = [Step(FLOW, verb, (run.id, done.id)) for verb in ("tag", "caption")]
     jobs.prepare("b", folder, steps, lambda line: dict(line))
     _until(found, "cell")
@@ -161,6 +163,7 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
         "flow": FLOW,
         "stage": "tag",
         "message": None,
+        "progress": {"started": STARTED, "of": 2, "done": 0},
     }
     assert snapshot(done.path) == before
 
@@ -256,6 +259,154 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
     data = json.loads(frames[-1].split("\n")[1].removeprefix("data: "))
     assert (data["source"], data["flow"], data["state"]) == ("ada.jpg", FLOW, "done")
     assert data["cell"]["stage"] == "tagged"
+
+
+STARTED = "2026-10-22T10:00:00Z"
+
+
+@pytest.mark.spec("ui:prepare:totals-count-cells-not-stages")
+def test_prepare_totals_count_cells_once(tmp_path: Path) -> None:
+    folder, (run, refused) = _batch(tmp_path, "ada.jpg", "bea.jpg")
+    other = OFFERED[1]
+    lines = [
+        (run.id, FLOW, "tag", "done", "tagged"),
+        (run.id, FLOW, "caption", "done", "sheet"),
+        (refused.id, FLOW, "sheet", "refused", "sheet"),
+        ("unknown", FLOW, "sheet", "done", "sheet"),
+        (refused.id, other, "sheet", "done", "sheet"),
+        (refused.id, FLOW, "sheet", "done", "tagged"),
+        (run.id, FLOW, "sheet", "done", "sheet"),
+        (run.id, FLOW, "sheet", "done", "sheet"),
+        (run.id, other, "sheet", "done", "rendered"),
+    ]
+    reports = [
+        {
+            "run": run_id,
+            "flow": flow,
+            "stage": stage,
+            "state": state,
+            "cell": {"stage": reached},
+        }
+        for run_id, flow, stage, state, reached in lines
+    ]
+    script = "import json; " + "; ".join(
+        f"print(json.dumps({line!r}), flush=True)" for line in reports
+    )
+    broadcast = events.Broadcast()
+    found = broadcast.subscribe()
+    jobs = Jobs(
+        broadcast, lambda: None, command=_Script({"sheet": script}), now=lambda: STARTED
+    )
+    jobs.prepare(
+        "b",
+        folder,
+        [Step(FLOW, "sheet", (run.id, refused.id)), Step(other, "sheet", (run.id,))],
+        dict,
+    )
+    jobs.wait(WAIT)
+    slot = jobs.slot()
+    assert slot is not None
+    assert slot["progress"] == {"started": STARTED, "of": 3, "done": 2}
+    updates = []
+    while not found.empty():
+        kind, data = found.get_nowait()
+        if kind == "job":
+            updates.append(data["progress"]["done"])
+    assert 1 in updates and 2 in updates
+    slot["progress"]["done"] = 99
+    copied = jobs.slot()
+    assert copied is not None
+    assert copied["progress"]["done"] == 2
+
+
+@pytest.mark.spec("ui:events:a-reconnect-keeps-prepare-progress")
+def test_reconnect_keeps_prepare_progress(
+    tmp_path: Path, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    folder, (run, later) = _batch(tmp_path, "ada.jpg", "bea.jpg")
+    wired = bare_wiring(
+        vocabulary=lambda: vocabulary,
+        runs_root=folder / "runs",
+        rng=random.Random(0),
+        probe=lambda: None,
+    )
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html>")
+    made: list[Jobs] = []
+
+    def make_jobs(
+        broadcast: events.Broadcast,
+        probe: Callable[[], None],
+        *,
+        volume: Volume,
+        raise_volume: Callable[[], None],
+        err: TextIO,
+    ) -> Jobs:
+        job = Jobs(broadcast, probe, volume=volume, raise_volume=raise_volume, err=err)
+        made.append(job)
+        return job
+
+    monkeypatch.setattr(app_module, "Jobs", make_jobs)
+    app = create_app(
+        folder.parent,
+        wired,
+        flows=OFFERED,
+        bundle=dist,
+        wire=lambda runs: replace(wired, runs_root=runs),
+        host=HOST,
+        port=PORT,
+    )
+    jobs = made[0]
+    broadcast: events.Broadcast = app.state.broadcast
+    release = tmp_path / "release"
+    first = {
+        "run": run.id,
+        "flow": FLOW,
+        "stage": "sheet",
+        "state": "done",
+        "cell": {"stage": "sheet"},
+    }
+    script = (
+        "import json, pathlib, time; "
+        f"print(json.dumps({first!r}), flush=True); "
+        f"release = pathlib.Path({str(release)!r}); deadline = time.monotonic() + 20; "
+        "\nwhile not release.exists() and time.monotonic() < deadline:"
+        "\n time.sleep(.01)"
+    )
+    monkeypatch.setattr(jobs, "_command", _Script({"sheet": script}))
+    monkeypatch.setattr(jobs, "_now", lambda: STARTED)
+    subscribe = broadcast.subscribe
+    updates = subscribe()
+
+    def finite_subscription() -> queue.Queue[events.Event]:
+        found = subscribe()
+        found.put((events.CLOSE, {}))
+        return found
+
+    monkeypatch.setattr(broadcast, "subscribe", finite_subscription)
+    client = TestClient(app, base_url=f"http://{HOST}:{PORT}")
+    try:
+        initial = jobs.prepare(
+            "b", folder, [Step(FLOW, "sheet", (run.id, later.id))], dict
+        )
+        assert initial["progress"]["started"] == STARTED
+        monkeypatch.setattr(jobs, "_now", lambda: "2026-10-22T10:05:00Z")
+        while _until(updates, "job")[1]["progress"]["done"] != 1:
+            pass
+        for _ in range(2):
+            body = client.get("/events?batch=b")
+            first_frame = body.text.split("\n")[1].removeprefix("data: ")
+            assert json.loads(first_frame)["job"]["progress"] == {
+                "started": STARTED,
+                "of": 2,
+                "done": 1,
+            }
+        assert jobs.running() == "prepare"
+    finally:
+        broadcast.unsubscribe(updates)
+        release.touch()
+        jobs.shutdown()
 
 
 # --- render ---------------------------------------------------------------------
@@ -376,6 +527,8 @@ def test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown(
     ]
     # Said as the wait begins, so a stop that takes minutes does not look hung.
     assert f"waiting up to {settle_s():.0f}s" in err.getvalue()
+    assert "gpunit volume down" not in err.getvalue()
+    assert "wait ran out" not in err.getvalue()
 
 
 @pytest.mark.spec("ui:render-job:an-outlasted-stop-names-the-fix")
@@ -411,8 +564,71 @@ def test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window(
         jobs.shutdown(timeout=0.05)
 
         assert "uv run --env-file .env gpunit volume down" in err.getvalue()
+        assert "wait ran out" in err.getvalue()
     finally:
         jobs.wait(WAIT)
+
+
+def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str]]:
+    """Return terminal output and recorded teardown acts after a stopped render."""
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+
+    def volume(argv: Sequence[str], log: Path) -> int:
+        with record.open("a") as acts:
+            print(" ".join(argv), file=acts)
+        return 1 if "down" in argv else 0
+
+    script = (
+        "import signal, sys, time\n"
+        "def down(*_):\n"
+        "    open(sys.argv[1], 'a').write('torn down\\n')\n"
+        "    sys.exit(130)\n"
+        "signal.signal(signal.SIGINT, down)\n"
+        "open(sys.argv[1], 'a').write('render\\n')\n"
+        "time.sleep(30)\n"
+    )
+    err = io.StringIO()
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=Volume(run=volume, records=tmp_path / ".gpunit"),
+        render=lambda limit, runs: [sys.executable, "-c", script, str(record)],
+        settle=lambda: 2,
+        err=err,
+    )
+    jobs.render("b", folder, limit=1500, total=1, keep_open=keep_open)
+    try:
+        deadline = time.monotonic() + WAIT
+        while "render" not in (record.read_text() if record.exists() else ""):
+            assert time.monotonic() < deadline, "render did not start"
+            time.sleep(0.01)
+        jobs.shutdown(timeout=2)
+        assert jobs.running() is None
+        assert jobs._thread is not None and not jobs._thread.is_alive()
+        return err.getvalue(), record.read_text().splitlines()
+    finally:
+        if jobs.running():
+            jobs.stop()
+        jobs.wait(WAIT)
+
+
+@pytest.mark.spec("ui:render-job:a-failed-close-at-stop-names-the-fix")
+def test_failed_close_at_stop_names_the_fix(tmp_path: Path) -> None:
+    terminal, acts = _stop_with_window(tmp_path, keep_open=False)
+    assert acts == ["volume up --yes", "render", "torn down", "volume down"]
+    assert "uv run --env-file .env gpunit volume down" in terminal
+    assert "wait ran out" not in terminal
+    assert "close failed" in terminal
+
+
+@pytest.mark.spec("ui:render-job:a-kept-window-needs-no-close-remedy")
+def test_kept_window_at_stop_needs_no_remedy(tmp_path: Path) -> None:
+    terminal, acts = _stop_with_window(tmp_path, keep_open=True)
+    assert acts == ["volume up --yes", "render", "torn down"]
+    assert "waiting up to" in terminal
+    assert "gpunit volume down" not in terminal
+    assert "wait ran out" not in terminal
 
 
 @pytest.mark.spec("ui:render-job:a-verb-that-cannot-start-fails-the-job")

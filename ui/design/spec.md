@@ -25,6 +25,7 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 7. **No money after the Render quote**.
 8. **The URL is real**. Overlays keep the URL of the page beneath. The Render dialog has no URL.
 9. **A refusal's text is the CLI's, verbatim**. The UI invents no command.
+10. **Count labels use the singular noun at one and the plural otherwise**: `1 source`, `0 sources`, `3 sources`.
 
 ## 2 · Tokens
 
@@ -78,8 +79,9 @@ timer mono 40px/500.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
 - **JobStrip**, `ground-deep`, mono 11px. Its dot: hollow idle, accent running, accent square unresolved. Then a label
-  (`job · prepare`) and totals (`3 cells · 1 of 3 done · 01:47`, `image 1 of 2 · 06:41 of ≤10:30`), or the last
-  job's receipt. On the right, while the volume is open inside its window, the quiet item
+  (`job · prepare`) and totals (`1 of 3 cells done · 01:47`, `image 1 of 2 · 06:41 of ≤10:30`), or the last
+  job's receipt. Prepare keeps the accepted-cell total fixed, counts cells completed at sheet and ticks
+  elapsed time every second from its original start. On the right, while the volume is open, the quiet item
   `volume open · until 19:38 · close`.
 
 ## 4 · Routes
@@ -157,6 +159,7 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
         ┌ IMG_0430 × summon · …                 [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
 ```
 
+- **The hub header** leaves a 12 px gap between its items. Add sources keeps its right alignment.
 - **A cell:** unassigned, a bare 14px checkbox and nothing else. Otherwise the checkbox, the stage track — six
   13×4 segments, gap 3: assigned · tag · caption · sheet · approved · rendered; done `accent`, running `accent-dim`,
   the rest `line-disabled`; a draft shares the sheet segment — and the stage word in mono 12: `assigned`,
@@ -167,8 +170,9 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
 - **A cell's refusal** sits inside the cell with its fix; the cell returns to assigned, so the next Prepare retries
   it.
 - **The PrepareBar** floats centred, bottom 50, 940 wide, `raised-2`, 1px `line-control`, radius 8. Pending: the
-  cells named in mono 11, Discard, primary `n changes · Prepare ⌘↵`. Running: `Prepare`, Stop — finished cells stay
-  done, the rest stay assigned. Refused: the CLI's refusal (J8a). Disabled: its reason (`A render is running ·
+  cells named in mono 11, Discard, primary `n changes · Prepare ⌘↵`. Running: `Prepare · 1 of 3 cells done · 01:47`,
+  Stop. The accepted-cell total stays fixed; the sheet-completed count and ticking elapsed time match JobStrip,
+  including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a). Disabled: its reason (`A render is running ·
   06:41`). There is no done state: the receipt goes to the job strip, the accent to Review next.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is a
   44×60 thumbnail, the mono 13 name and mono 11 `file · dims`; a row checkbox appears in selection mode.

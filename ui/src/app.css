@@ -1413,6 +1413,7 @@ body {
 
 .hub__head {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
   margin: 0 0 12px;
@@ -1730,7 +1731,6 @@ body {
 
 .hub__add {
   margin-left: auto;
-  margin-right: 12px;
 }
 
 .hub__column {

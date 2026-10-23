@@ -22,7 +22,7 @@ import subprocess
 import sys
 import threading
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -128,6 +128,10 @@ class _Job:
     # A render's session as the page draws it: its steps, its images, its limit.
     session: dict[str, Any] | None = None
 
+    started: str | None = None
+    accepted: set[tuple[str, str]] = field(default_factory=set)
+    completed: set[tuple[str, str]] = field(default_factory=set)
+
     def describe(self) -> dict[str, Any]:
         described = {
             "kind": self.kind,
@@ -137,6 +141,12 @@ class _Job:
             "stage": self.stage,
             "message": self.message,
         }
+        if self.started is not None:
+            described["progress"] = {
+                "started": self.started,
+                "of": len(self.accepted),
+                "done": len(self.completed),
+            }
         if self.session is not None:
             described["session"] = {
                 **self.session,
@@ -211,7 +221,12 @@ class Jobs:
                     f"{batch} has no assigned cell without a sheet; tick a flow for "
                     "a source, then try again"
                 )
-            job = _Job(batch, tuple(steps))
+            job = _Job(
+                batch,
+                tuple(steps),
+                started=self._now(),
+                accepted={(step.flow, run) for step in steps for run in step.runs},
+            )
             self._job, self._stopping = job, False
             self._thread = threading.Thread(
                 target=self._run, args=(job, folder, cell), daemon=True
@@ -309,12 +324,14 @@ class Jobs:
         )
         self.wait(timeout)
         assert job.session is not None
-        thread = self._thread
         with self._lock:
-            kept = job.session["steps"]["volume down"] == "kept"
-        if thread is not None and thread.is_alive() and not kept:
+            closed = job.session["steps"]["volume down"]
+        if closed not in {"done", "kept"}:
+            reason = (
+                "the window close failed" if closed == "failed" else "the wait ran out"
+            )
             self._say(
-                "the wait ran out, and the window may still be open: close it with "
+                f"{reason}, and the window may still be open: close it with "
                 f"`{VOLUME_DOWN}`"
             )
 
@@ -353,6 +370,21 @@ class Jobs:
                     found = cell(event) if event is not None else None
                     if found is not None:
                         self._broadcast.publish("cell", found)
+                        assert event is not None
+                        identity = (str(event.get("flow")), str(event.get("run")))
+                        with self._lock:
+                            completed = (
+                                event.get("stage") == "sheet"
+                                and event.get("state") == "done"
+                                and found.get("cell", {}).get("stage")
+                                in {"sheet", "draft", "approved", "rendered"}
+                                and identity in job.accepted
+                                and identity not in job.completed
+                            )
+                            if completed:
+                                job.completed.add(identity)
+                        if completed:
+                            self._publish(job)
                 code = child.wait()
                 with self._lock:
                     self._child = None

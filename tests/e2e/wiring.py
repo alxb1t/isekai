@@ -6,6 +6,7 @@ after its run-root guard (D41). No GPU, no Ollama, no provisioned vocabulary.
 
 import io
 import random
+import time
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -13,7 +14,7 @@ from pathlib import Path
 
 from isekai.boundary.gpu import Seams, Volume
 from isekai.interface.wiring import Wiring
-from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.caption import FakeReader, Reading
 from isekai.pipeline.tagging import FakeTagger
 from tests.conftest import VOCABULARY
 from tests.fakes import SESSION_IMAGE, FakeComfyClient
@@ -60,10 +61,29 @@ SESSION = Seams(
 )
 
 
+class _HeldReader(FakeReader):
+    def __init__(self, release: Path) -> None:
+        super().__init__(prose="Dark brown hair, brown eyes.")
+        self._release = release
+
+    def read(self, photo: Path, briefing: str, workspace: Path) -> Reading:
+        deadline = time.monotonic() + 30
+        while not self._release.exists():
+            if time.monotonic() >= deadline:
+                raise AssertionError("Prepare reader was not released")
+            time.sleep(0.02)
+        return super().read(photo, briefing, workspace)
+
+
 def fake(*, runs: Path) -> Wiring:
     """Return a wiring over `runs` whose every seam is an offline double."""
+    reader = (
+        _HeldReader(runs.parent / ".prepare-release")
+        if runs.parent.name == "hub-prepare"
+        else FakeReader(prose="Dark brown hair, brown eyes.")
+    )
     return Wiring(
-        reader=Always(FakeReader(prose="Dark brown hair, brown eyes.")),
+        reader=Always(reader),
         tagger=fake_wd14(),
         hosted_tagger=Always(FakeTagger()),
         client=FakeComfyClient(),
