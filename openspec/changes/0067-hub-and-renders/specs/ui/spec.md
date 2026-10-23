@@ -167,9 +167,9 @@ cell can hold an older version's images, so its newest image is named by the ser
 The system SHALL serve an event stream that, on every connection, sends a snapshot of the job slot and, when a batch
 is named, that batch's hub, and then sends each change as the job's stages report it. A running Prepare snapshot
 SHALL carry its accepted total, completed count and start time. A hub opened while the slot holds its batch's failed
-Prepare SHALL show that job's message until Discard dismisses it. When the surface stops, its streams SHALL end
-before the server's graceful wait expires, without cancellation errors; a terminal interrupt SHALL exit quietly after
-cleanup.
+Prepare SHALL show that job's message until Discard on that batch's hub dismisses it in that page. When the surface
+stops, its streams SHALL end before the server's graceful wait expires, without cancellation errors; a terminal
+interrupt SHALL exit quietly after cleanup.
 
 A reload or a second tab gets the whole truth at once; a job's progress reaches the page as the verbs report it. A
 job outlives its page, so a failure that happened while no page was open is still told.
@@ -204,7 +204,7 @@ job outlives its page, so a failure that happened while no page was open is stil
 - **Layers:** unit
 - **WHEN** a hub opens while the slot holds its batch's failed Prepare
 - **THEN** the Prepare bar shows the job's message
-- **AND** once Discard dismisses it, a hub opened again does not
+- **AND** once Discard dismisses it, a hub opened again in that page does not
 
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 

@@ -21,19 +21,18 @@ def _cell(page: Page, source: str, flow: str = FLOW) -> Locator:
     return page.locator(f'.hub__cell[data-source="{source}.jpg"][data-flow="{flow}"]')
 
 
-def _tick(page: Page, served: Served, batch: str, source: str) -> None:
-    """Open `batch`'s hub and tick `source` × `FLOW`."""
-    page.goto(served.hub_of(batch))
-    expect(_cell(page, source)).to_have_attribute("data-stage", "none")
-    _cell(page, source).get_by_role("checkbox").click()
-    expect(_cell(page, source)).to_have_attribute("data-stage", "assigned")
-
-
 @pytest.mark.spec("ui:hub:a-tick-assigns-the-flow")
 def test_a_tick_assigns_the_flow_and_survives_a_reload(
     page: Page, served: Served
 ) -> None:
-    _tick(page, served, "hub-tick", "tick")
+    page.goto(served.hub_of("hub-tick"))
+    expect(_cell(page, "tick")).to_have_attribute("data-stage", "none")
+    # Rows aside and beside are selected; a click on tick's checkbox ticks it alone.
+    page.keyboard.press("Shift+ArrowDown")
+    _cell(page, "tick").get_by_role("checkbox").click()
+    expect(_cell(page, "tick")).to_have_attribute("data-stage", "assigned")
+    expect(_cell(page, "aside")).to_have_attribute("data-stage", "none")
+    expect(_cell(page, "beside")).to_have_attribute("data-stage", "none")
     expect(page.locator(".hub__head")).to_have_css("gap", "12px")
 
     page.reload()

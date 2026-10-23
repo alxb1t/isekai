@@ -482,9 +482,27 @@ def group_of(run: Run, flow: str, version: int) -> Path:
     return run.directory(flow, OUTPUTS, f"{version:03d}")
 
 
-# A version or a seed as a filename spells it: ASCII digits alone, since
-# `str.isdigit` also passes a superscript `int` cannot read.
+# A version as a filename spells it: ASCII digits alone, since `str.isdigit`
+# also passes a superscript `int` cannot read.
 _DIGITS = re.compile(r"[0-9]+")
+
+# The most digits a seed is spelled in, so a longer one is refused unread.
+_SEED_DIGITS = len(str(SEED_RANGE[-1]))
+
+
+def is_seed(text: str) -> bool:
+    """Return whether `text` spells a seed as a render's file is named for it.
+
+    The canonical ASCII decimal of a seed the sampler takes, alone: a padded, a
+    superscript or an out-of-range spelling names no render.
+    e.g. "42" -> True; "0042", "²", "", "9" * 300 -> False
+    """
+    return (
+        len(text) <= _SEED_DIGITS
+        and _DIGITS.fullmatch(text) is not None
+        and str(int(text)) == text
+        and int(text) in SEED_RANGE
+    )
 
 
 def rendered_at(image: Path) -> tuple[Run, str, int, int]:
@@ -499,8 +517,7 @@ def rendered_at(image: Path) -> tuple[Run, str, int, int]:
     run = Run(run_directory.name, run_directory)
     if not (
         image.is_file()
-        and _DIGITS.fullmatch(image.stem)
-        and int(image.stem) in SEED_RANGE
+        and is_seed(image.stem)
         and len(group.name) == 3
         and _DIGITS.fullmatch(group.name)
         and group.parent.name == OUTPUTS

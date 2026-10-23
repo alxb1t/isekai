@@ -68,7 +68,6 @@ from isekai.foundation.artifacts import (
     CAPTION_FILE,
     DRAFT_FILE,
     ONE_RENDER,
-    SEED_RANGE,
     TAGS_FILE,
     WD14_FILE,
     Renders,
@@ -92,6 +91,7 @@ from isekai.foundation.run import (
     approved_versions,
     assign,
     find_run,
+    is_seed,
     is_version,
     latest_artifact,
     media_type,
@@ -1097,7 +1097,7 @@ def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
             and isinstance(image.get("flow"), str)
             and _numbered(image.get("version"))
             and isinstance(image.get("seed"), str)
-            and _seed_of(image["seed"])
+            and is_seed(image["seed"])
         ):
             raise Refusal(f"the revision's image {image!r} is not one; {fix}")
         named.append(
@@ -1145,22 +1145,6 @@ def _numbered(value: object) -> TypeGuard[int]:
     e.g. 2 -> True, 1000 -> False
     """
     return _whole(value) and is_version(value)
-
-
-# The most digits a seed is spelled in, so a longer one is refused unread.
-_SEED_DIGITS = len(str(SEED_RANGE[-1]))
-
-
-def _seed_of(text: str) -> bool:
-    """Return whether a request's text is a decimal seed a render can draw.
-
-    e.g. "1840266731" -> True, "9" * 300 -> False
-    """
-    return (
-        len(text) <= _SEED_DIGITS
-        and _DECIMAL.fullmatch(text) is not None
-        and int(text) in SEED_RANGE
-    )
 
 
 def _whole(value: object) -> TypeGuard[int]:

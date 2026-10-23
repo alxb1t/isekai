@@ -33,6 +33,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A click ticks its own hub cell, a discarded Prepare failure stays dismissed, a refused count keeps the Render bar
   with its reason, a damaged large view says so, and a padded render name is no render (0067 D4, D6, D8, D10).
 
+- A checkbox click ticks its own cell alone; Discard dismisses only its own batch's failure, in that page; one
+  seed predicate names a render for the stage, `revise` and the app alike (0067 D4, D10).
+
 ## [0.40.1] - 2026-10-23 · 0066-the-quick-patch
 
 Gate: local 0m35s · CI 7m25s (build-image at 801ffec) · 0.40.0: local 0m34s · CI 1m12s

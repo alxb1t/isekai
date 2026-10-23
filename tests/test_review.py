@@ -1324,3 +1324,14 @@ def test_one_refused_image_leaves_every_run_without_a_revision(
     assert status == 1
     assert f"refused: {twin}: {run.id}/{FLOW}: is in this selection twice" in err
     assert versions(run.directory(FLOW, "review")) == [1]
+
+    # A padded name is no render's, though its seed's render lies beside it.
+    _image(run, 1, 42)
+    padded = run.directory(FLOW, "outputs", "001") / "0042.png"
+    padded.write_bytes(b"png")
+
+    status, err = _revise_verb(vocabulary, padded)
+
+    assert status == 1
+    assert f"refused: {padded}: is not an image a render wrote" in err
+    assert versions(run.directory(FLOW, "review")) == [1]

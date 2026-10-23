@@ -283,7 +283,6 @@ export interface RendersInfo {
   }[]
 }
 
-/* An image's large view: the approval it was rendered from, filled fields only. */
 /* A batch's Render offer: the images it lacks, why Render is disabled, and why
    an approval's count is refused, each null when there is none. */
 export interface RenderOffer {
@@ -292,6 +291,7 @@ export interface RenderOffer {
   refused: string | null
 }
 
+/* An image's large view: the approval it was rendered from, filled fields only. */
 export interface RenderDetail {
   flow: string
   version: number

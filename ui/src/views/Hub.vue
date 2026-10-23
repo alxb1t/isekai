@@ -261,11 +261,11 @@ async function stop(): Promise<void> {
   }
 }
 
-/* Discard unticks every pending cell that holds no work yet, and dismisses a
-   failed Prepare, so a hub opened again does not show it. */
+/* Discard unticks every pending cell that holds no work yet, and dismisses this
+   batch's failed Prepare, so a hub opened again in this page does not show it. */
 function discard(): void {
   barRefusal.value = null
-  dismiss(job.value)
+  dismiss(job.value, props.batch)
   for (const flow of flows.value) {
     const rows = sources.value.filter((one) => cell(one, flow).stage === 'assigned')
     if (rows.length) void tick(rows, flow, true)
@@ -503,7 +503,7 @@ onUnmounted(() => {
             :checked="cell(source, flow).stage !== null"
             :disabled="locked(cell(source, flow))"
             :aria-label="`${source.name} × ${flow}`"
-            @click.prevent.stop="place(row, column), toggle(row, column)"
+            @click.prevent.stop="place(row, column), toggle(row, column, true)"
           />
           <template v-if="cell(source, flow).stage !== null">
             <span class="hub__track">

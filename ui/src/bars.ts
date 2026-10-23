@@ -26,8 +26,9 @@ export function bar(state: BarState): Bar {
   return null
 }
 
-/* The failed Prepares Discard dismissed, by batch, start and message. A module's,
-   not a hub's: a hub opened again would otherwise show one again. */
+/* The failed Prepares Discard dismissed in this page, by batch, start and message.
+   A module's, not a hub's: a hub opened again would otherwise show one again. A
+   reload or another tab starts with none, and shows the failure the slot holds. */
 const dismissed = new Set<string>()
 
 function named(slot: JobSlot): string {
@@ -44,7 +45,9 @@ export function failed(slot: JobSlot | null, batch: string): string | null {
     : null
 }
 
-/** Dismiss the failed Prepare `slot` holds, so no hub shows it again. */
-export function dismiss(slot: JobSlot | null): void {
-  if (slot?.kind === 'prepare' && slot.state === 'failed') dismissed.add(named(slot))
+/** Dismiss `batch`'s failed Prepare `slot` holds, so no hub in this page shows it again. */
+export function dismiss(slot: JobSlot | null, batch: string): void {
+  if (slot?.kind === 'prepare' && slot.state === 'failed' && slot.batch === batch) {
+    dismissed.add(named(slot))
+  }
 }

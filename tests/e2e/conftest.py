@@ -46,7 +46,7 @@ QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
 # A batch per hub test, so every test owns the cells it ticks and prepares. Its
 # sources are photographs with no run, except those `ASSIGNED` names.
 FRESH: dict[str, tuple[str, ...]] = {
-    "hub-tick": ("tick",),
+    "hub-tick": ("aside", "beside", "tick"),
     "hub-prepare": ("pick", "skip"),
 }
 

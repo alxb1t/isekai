@@ -15,6 +15,12 @@ spec('ui:render:prepare-takes-the-bar-first', () => {
   expect(bar({ ...idle, refused: true })).toBe('render')
 })
 
+spec('ui:render:a-refused-count-is-shown', () => {
+  // A refused count keeps the Render bar with no image short, so its reason is on screen.
+  expect(bar({ ...idle, refused: true })).toBe('render')
+  expect(bar({ ...idle, changes: 1, refused: true })).toBe('prepare')
+})
+
 function slot(over: Partial<JobSlot>): JobSlot {
   return {
     kind: 'prepare',
@@ -33,9 +39,12 @@ spec('ui:events:a-hub-opened-after-a-failure-shows-it', () => {
   expect(failed(slot({ kind: 'render' }), 'b')).toBeNull()
   expect(failed(slot({ state: 'done' }), 'b')).toBeNull()
   expect(failed(null, 'b')).toBeNull()
-  // Once discarded, a hub opened again leaves it dismissed; the next failure shows.
+  // A Discard on another batch's hub leaves this batch's failure shown.
   const first = slot({ progress: { started: '10:00', of: 2, done: 1 } })
-  dismiss(first)
+  dismiss(first, 'other')
+  expect(failed({ ...first }, 'b')).toBe('refused: see log.txt')
+  // Once discarded, a hub opened again in this page leaves it dismissed; the next failure shows.
+  dismiss(first, 'b')
   expect(failed({ ...first }, 'b')).toBeNull()
   expect(failed(slot({ progress: { started: '10:05', of: 2, done: 0 } }), 'b')).toBe(
     'refused: see log.txt',
