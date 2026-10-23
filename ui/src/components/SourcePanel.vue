@@ -33,6 +33,12 @@ const props = defineProps<{
 defineEmits<{ open: []; render: []; pair: [] }>()
 
 const landscape = computed(() => props.width > props.height)
+const frame = computed(() => ({
+  src: props.photo,
+  alt: props.id,
+  loading: props.loading,
+  ratio: `${props.width} / ${props.height}`,
+}))
 
 /* A revision's pair shares the column at one height: each image takes width in
    proportion to its aspect ratio. The render's is the photograph's until it loads. */
@@ -88,13 +94,7 @@ defineExpose({
         <span class="source__row">
           <span class="kicker source__label">① photograph · {{ width }}×{{ height }}</span>
         </span>
-        <PhotoFrame
-          :src="photo"
-          :alt="id"
-          :loading="loading"
-          :ratio="`${width} / ${height}`"
-          @open="$emit('open')"
-        />
+        <PhotoFrame v-bind="frame" @open="$emit('open')" />
       </figure>
       <figure class="source__side source__revised" :style="{ flexGrow: renderRatio }" data-revised>
         <span class="source__row">
@@ -115,13 +115,7 @@ defineExpose({
           {{ id }} · {{ width }}×{{ height }}<template v-if="loading"> · reading…</template>
         </span>
       </div>
-      <PhotoFrame
-        :src="photo"
-        :alt="id"
-        :loading="loading"
-        :ratio="`${width} / ${height}`"
-        @open="$emit('open')"
-      />
+      <PhotoFrame v-bind="frame" @open="$emit('open')" />
     </template>
     <CaptionPanel :prose="caption" :command="captionCommand" :loading="loading" />
     <section v-if="scored.length" class="caption">

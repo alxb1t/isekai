@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useKeys } from '../composables/useKeys'
+import { clamp } from '../grid'
 import { plain } from '../stores/keys'
 
 /* Images in a native dialog, fitted to the window. A click on the image toggles
@@ -21,7 +22,8 @@ const emit = defineEmits<{ close: [] }>()
 
 const dialog = ref<HTMLDialogElement | null>(null)
 const image = ref<HTMLImageElement | null>(null)
-const at = ref(Math.min(Math.max(props.start ?? 0, 0), props.images.length - 1))
+const last = props.images.length - 1
+const at = ref(clamp(props.start ?? 0, last))
 const shown = computed(() => props.images[at.value])
 const actual = ref(false)
 /* The fitted image's scale, measured once it has loaded, on every resize while
@@ -41,7 +43,7 @@ function toggle(): void {
 
 /* Each step opens its image fitted. */
 function step(direction: -1 | 1): void {
-  at.value = Math.min(Math.max(at.value + direction, 0), props.images.length - 1)
+  at.value = clamp(at.value + direction, last)
 }
 
 watch(at, () => {

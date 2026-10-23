@@ -35,15 +35,16 @@ function discard(): void {
     <p v-if="refusal" class="approve-bar__refusal mono">
       <span class="refusal__mark" />{{ refusal }}
     </p>
-    <span v-if="approved" class="approve-bar__note mono">This sheet is approved and read-only.</span>
-    <span v-else class="approve-bar__note">Saving happens on its own.</span>
-
-    <span v-if="approved" class="approve-bar__fact">
-      <span class="approve-bar__dot" />
-      <span class="mono">Approved {{ at }}</span>
-    </span>
+    <template v-if="approved">
+      <span class="approve-bar__note mono">This sheet is approved and read-only.</span>
+      <span class="approve-bar__fact">
+        <span class="approve-bar__dot" />
+        <span class="mono">Approved {{ at }}</span>
+      </span>
+    </template>
     <template v-else>
-      <span v-if="discardable && asking" class="approve-bar__ask" data-discard-confirm>
+      <span class="approve-bar__note">Saving happens on its own.</span>
+      <span v-if="asking" class="approve-bar__ask" data-discard-confirm>
         Delete this draft and its edits?
         <button class="btn btn-secondary" type="button" @click="asking = false">Keep</button>
         <button class="btn btn-secondary" type="button" @click="discard">Delete</button>

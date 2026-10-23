@@ -17,6 +17,7 @@ import { useApproval } from '../composables/useApproval'
 import { useKeys } from '../composables/useKeys'
 import { useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
+import { clamp } from '../grid'
 import { nextPane, type Pane } from '../panes'
 import { modded, plain, shifted } from '../stores/keys'
 import type { FieldCandidates } from '../types'
@@ -33,9 +34,9 @@ const props = defineProps<{ batch: string; digest: string; flow: string }>()
 const router = useRouter()
 const batch = useQueue(props.batch, props.flow, () => props.digest)
 const failure = ref<string | null>(null)
-/* A refusal after the approval landed: the approval stands, and the bar says
-   what could not be read again. */
-const afterApproval = ref<string | null>(null)
+/* A refusal reading the sheet again after an approval or a discard, or of the
+   discard itself: the bar says what could not be done. */
+const refused = ref<string | null>(null)
 const sheet = useSheet({ batch: props.batch, flow: props.flow })
 const approval = useApproval()
 const current = computed(() => props.digest)
@@ -51,7 +52,6 @@ const revised = computed(() => {
   if (!held?.seed) return null
   return { src: imageAt({ ...props, version: held.version, seed: held.seed }), seed: held.seed }
 })
-const discarding = ref<string | null>(null)
 const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 
 /* The URL is the state: choosing another sheet is a navigation. */
@@ -111,15 +111,13 @@ const opened = computed(() =>
     0,
   ),
 )
-const render = computed(() =>
-  revised.value ? { src: revised.value.src, name: `render · seed ${revised.value.seed}` } : null,
-)
 const viewed = computed(() => {
   if (lens.value === 'photo') return { images: photos.value, start: opened.value }
-  if (!render.value) return null
-  if (lens.value === 'render') return { images: [render.value], start: 0 }
+  if (!revised.value) return null
+  const render = { src: revised.value.src, name: `render · seed ${revised.value.seed}` }
+  if (lens.value === 'render') return { images: [render], start: 0 }
   const photo = photos.value[opened.value]
-  if (lens.value === 'pair' && photo) return { images: [photo, render.value], start: 0 }
+  if (lens.value === 'pair' && photo) return { images: [photo, render], start: 0 }
   return null
 })
 
@@ -138,15 +136,13 @@ const minute = (at: number | null) =>
         minute: '2-digit',
       })
 
-const flow = computed(() => props.flow)
-
 /* When the sheet was approved: in this sitting, else as the server read it. */
 const approvedAt = computed(() => clock(approval.at.value ?? sheet.detail.value?.approved_at ?? null))
 
 /* Every refusal the page meets, in the approve bar. */
 const refusal = computed(
   () =>
-    approval.refusal.value ?? sheet.refusal.value ?? afterApproval.value ?? discarding.value,
+    approval.refusal.value ?? sheet.refusal.value ?? refused.value,
 )
 
 /* `③ sheet — approved` once it is, which is also when the fields go read-only.
@@ -171,7 +167,7 @@ async function reread(id: string): Promise<void> {
   const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
   focused.value = null
   selectedChip.value = null
-  if (read.status === 'rejected') afterApproval.value = (read.reason as Error).message
+  if (read.status === 'rejected') refused.value = (read.reason as Error).message
 }
 
 /* Delete this draft, as `review --discard` does, and stay on the sheet. A save
@@ -185,7 +181,7 @@ async function discard(): Promise<void> {
       sheet.saved.value,
     )
   } catch (reason) {
-    discarding.value = (reason as Error).message
+    refused.value = (reason as Error).message
     return
   }
   await reread(current.value)
@@ -344,14 +340,29 @@ function toggleLens(which: Lens): void {
 
 const scrollSource = (direction: -1 | 1) => source.value?.scrollBy({ top: direction * 120 })
 
-/* `j` `k` or ↓ ↑: the rail changes the input, the source pane scrolls, and the
-   sheet walks its rows from the field last left. */
+/* ④'s stops, the count then each slot, walked from the one focused. */
+function moveRenders(direction: -1 | 1): void {
+  const stops = [
+    ...document.querySelectorAll<HTMLElement>(
+      '.renders-block [data-renders-count], .renders-block [data-slot]',
+    ),
+  ]
+  const at = stops.findIndex((one) => one === document.activeElement)
+  stops[clamp(at + direction, stops.length - 1)]?.focus()
+}
+
+/* A slot takes digits alone, so `j` `k` walk ④ from inside one. */
+const inSlot = () => document.activeElement?.matches('[data-slot]') ?? false
+
+/* `j` `k` or ↓ ↑: the rail changes the input, the source pane scrolls, the
+   sheet walks its rows from the field last left, and ④ its stops. */
 function vertical(direction: -1 | 1): () => void {
   return () => {
     const here = paneNow()
     if (here === 'rail') stepBatch(direction)
     else if (here === 'source') scrollSource(direction)
     else if (here === 'sheet') moveRow(direction)
+    else moveRenders(direction)
   }
 }
 
@@ -396,6 +407,22 @@ useKeys('screen', [
   { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'pane right', run: () => movePane(1) },
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
   { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'up', run: vertical(-1) },
+  {
+    id: 'slot-down',
+    keys: plain('KeyJ', 'ArrowDown'),
+    label: 'next slot',
+    run: () => moveRenders(1),
+    inField: true,
+    when: inSlot,
+  },
+  {
+    id: 'slot-up',
+    keys: plain('KeyK', 'ArrowUp'),
+    label: 'previous slot',
+    run: () => moveRenders(-1),
+    inField: true,
+    when: inSlot,
+  },
   {
     id: 'scroll-down',
     keys: [{ code: 'KeyE', ctrl: true }],
@@ -456,8 +483,7 @@ watch(current, (id) => {
   focused.value = null
   selectedChip.value = null
   approval.forget()
-  afterApproval.value = null
-  discarding.value = null
+  refused.value = null
   lastField.value = null
   void sheet.open(id).then(() => enter(paneNow()))
 })
@@ -474,7 +500,7 @@ watch(current, (id) => {
     />
     <div v-if="batch.info.value" class="work" @focusin="remember">
       <BatchRail
-        :flow="flow"
+        :flow="props.flow"
         :inputs="batch.inputs.value"
         :approved="batch.approved.value"
         :current="current"

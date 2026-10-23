@@ -11,7 +11,8 @@ export interface Focus {
 /** A move: to the previous or next cell, image or row. */
 export type Move = 'cell-' | 'cell+' | 'image-' | 'image+' | 'row-' | 'row+'
 
-const clamp = (value: number, high: number) => Math.min(Math.max(value, 0), high)
+/** Return `value` held between 0 and `high`. */
+export const clamp = (value: number, high: number) => Math.min(Math.max(value, 0), high)
 
 /* The cell a column falls in, and the column its first image takes. */
 function cellOf(counts: number[], column: number): { cell: number; start: number } {

@@ -169,9 +169,8 @@ class Cell:
     run. `refusal` is set, and `stage` is `unreadable`, where the file that decides
     the stage cannot be read. `status` is where stage ③ stands, `review.state`'s
     answer, wherever the cell has a sheet. `newest` is the last-written image of
-    the newest version holding any, or None. `short` is how many images the newest
-    approval lacks of its count, `shortfall`'s answer; None while unapproved, and
-    0 where its count is refused.
+    the newest version holding any, or None. `short` is `lacking`'s answer for the
+    newest approval; None while unapproved.
     """
 
     stage: str | None
@@ -520,7 +519,7 @@ def stage(run: Run, loaded: Flow, *, newest: bool = True) -> Cell:
     rendered ×n > approved > draft > sheet > tagged > assigned > no flow. The
     file that decides it is read, so a format this build does not know marks
     the cell rather than the batch. Without `newest`, no image's time is read
-    and the cell names no newest image: Home shows none.
+    and the cell names no newest image and no shortfall: Home shows neither.
     """
     flow, suffix = loaded.id, loaded.output_suffix
     if not run.directory(flow).is_dir():
@@ -539,7 +538,7 @@ def stage(run: Run, loaded: Flow, *, newest: bool = True) -> Cell:
                 named = _newest_image(run, flow, approved, suffix, written)
             else:
                 renders = len(rendered_seeds(group, suffix))
-            short = _short(run, loaded)
+            short = lacking(run, loaded) if newest else None
             if renders:
                 return Cell(
                     "rendered", renders, status=status, newest=named, short=short
@@ -559,8 +558,14 @@ def stage(run: Run, loaded: Flow, *, newest: bool = True) -> Cell:
     return Cell("assigned")
 
 
-def _short(run: Run, loaded: Flow) -> int:
-    """Return what `loaded`'s newest approval lacks of its count, 0 if it is refused."""
+def lacking(run: Run | None, loaded: Flow) -> int:
+    """Return how many images `loaded`'s newest approval in `run` lacks, or 0.
+
+    An unapproved flow lacks none, and a damaged approval is already marked on
+    its own version, so neither refuses the page.
+    """
+    if run is None:
+        return 0
     try:
         return shortfall(run, loaded)
     except Refusal:

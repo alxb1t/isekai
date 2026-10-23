@@ -946,11 +946,6 @@ body {
   padding: var(--space-6) 18px var(--space-3);
 }
 
-.sheet-header__line {
-  margin-top: 5px;
-  font-size: 12.5px;
-  color: var(--color-neutral-400);
-}
 
 .budget {
   margin-left: auto;

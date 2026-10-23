@@ -79,7 +79,7 @@ classified or what state a sheet is in, belongs to the component that owns that 
   stage's `same_fields`. Its `paired` decides which older version a seed compares with, and
   `interface/ui/app.py`'s `_revision` decides which image a draft revises — the review stage's work,
   needing the rendered seeds the render stage lists, which the review stage may not import.
-  `interface/ui/app.py`'s `_ready` decides that an unapproved or damaged flow lacks no image, and
+  `interface/ui/library.py`'s `lacking` decides that an unapproved or damaged flow lacks no image, and
   `interface/ui/library.py`'s `_newest_image` decides by the time each was written which image is a
   cell's newest — the render stage's work.
 

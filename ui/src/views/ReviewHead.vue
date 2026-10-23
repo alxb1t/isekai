@@ -15,10 +15,12 @@ const store = useBatchStore()
 const refusal = ref<string | null>(null)
 const empty = ref(false)
 
+/* The hub the store holds is kept current by the page's stream; it is read only
+   when none is held yet. */
 onMounted(async () => {
-  let info
+  let info = store.hub
   try {
-    info = await store.reloadHub()
+    info ??= await store.reloadHub()
   } catch (reason) {
     refusal.value = (reason as Error).message
     return

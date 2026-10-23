@@ -245,7 +245,7 @@ def test_an_approved_cell_names_the_last_image_of_its_newest_rendered_version(
     assert library.stage(run, loaded).newest == Rendered(1, 5)
     # Home reads no image's time: it shows no newest image.
     assert library.stage(run, loaded, newest=False) == Cell(
-        "approved", status="approved", short=1
+        "approved", status="approved"
     )
 
 

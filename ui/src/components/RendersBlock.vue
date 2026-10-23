@@ -1,35 +1,18 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { fewer, more, renders as read, set, slots, type Slot } from '../slots'
 import type { Renders } from '../types'
 
 /* ④ Renders: one slot per image, each a seed or random (design spec J3). The
    slots are held here, so a seed typed into the third slot stays there while
-   the draft lists it first; they are read again only when the draft moves. */
+   the draft lists it first. Review mounts this afresh for each read of the
+   sheet, so the draft never moves under it. */
 const props = defineProps<{ renders: Renders; readonly: boolean }>()
 const emit = defineEmits<{ change: [renders: Renders] }>()
 
 const held = ref<Slot[]>(slots(props.renders))
 /* A refused entry, by slot: the slot keeps what was typed and says why. */
 const refused = ref<Record<number, string>>({})
-const panel = ref<HTMLElement | null>(null)
-
-function same(one: Renders, other: Renders): boolean {
-  return (
-    one.count === other.count &&
-    one.seeds.length === other.seeds.length &&
-    one.seeds.every((seed, index) => seed === other.seeds[index])
-  )
-}
-
-watch(
-  () => props.renders,
-  (next) => {
-    if (same(read(held.value), next)) return
-    held.value = slots(next)
-    refused.value = {}
-  },
-)
 
 function change(next: Slot[]): void {
   held.value = next
@@ -47,23 +30,6 @@ function type(at: number, typed: string): void {
   change(next)
 }
 
-/* `j` `k` or ↓ ↑ walk the count and the slots; a slot takes digits alone, so
-   the letters never type into one. */
-function walk(event: KeyboardEvent): void {
-  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
-  const step = { j: 1, ArrowDown: 1, k: -1, ArrowUp: -1 }[event.key]
-  if (!step || !panel.value) return
-  const stops = [
-    panel.value.querySelector<HTMLElement>('[data-renders-count]'),
-    ...panel.value.querySelectorAll<HTMLElement>('[data-slot]'),
-  ].filter((one): one is HTMLElement => one !== null)
-  const at = stops.findIndex((one) => one.contains(document.activeElement))
-  const next = stops[Math.min(Math.max(at + step, 0), stops.length - 1)]
-  event.preventDefault()
-  event.stopPropagation()
-  next?.focus()
-}
-
 const draws = computed(() => {
   const { count, seeds } = props.renders
   const images = `${count} image${count === 1 ? '' : 's'}`
@@ -75,7 +41,7 @@ const draws = computed(() => {
 </script>
 
 <template>
-  <section ref="panel" class="renders-block" tabindex="-1" @keydown="walk">
+  <section class="renders-block" tabindex="-1">
     <span class="section-label">④ Renders</span>
     <div class="renders-block__count mono">
       <span class="renders-block__label">images</span>
