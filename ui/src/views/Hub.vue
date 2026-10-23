@@ -294,54 +294,50 @@ function select(step: number): void {
   place(target, column)
 }
 
-const free = () => !adding.value && !dialog.value && !viewing.value
 const moveBy = (rows: number, columns: number) => () =>
   place(focus.value.row + rows, focus.value.column + columns)
 
 /* h j k l or the arrows move between cells, ⇧J ⇧K or ⇧↓ ⇧↑ select rows, and
    esc clears the selection (D25). */
-useKeys(
-  'screen',
-  [
-    { id: 'add', keys: [shifted('KeyA')], label: 'add sources', run: () => (adding.value = true) },
-    { id: 'render', keys: [shifted('KeyG')], label: 'render', run: openRender },
-    { id: 'prepare', keys: [modded('Enter')], label: 'prepare', run: () => void runPrepare() },
-    { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'left', run: moveBy(0, -1) },
-    { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: moveBy(1, 0) },
-    { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'up', run: moveBy(-1, 0) },
-    { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'right', run: moveBy(0, 1) },
-    {
-      id: 'select-down',
-      keys: [shifted('KeyJ'), shifted('ArrowDown')],
-      label: 'select rows down',
-      run: () => select(1),
-    },
-    {
-      id: 'select-up',
-      keys: [shifted('KeyK'), shifted('ArrowUp')],
-      label: 'select rows up',
-      run: () => select(-1),
-    },
-    {
-      id: 'tick',
-      keys: plain('Space'),
-      label: 'tick / untick',
-      run: () => toggle(focus.value.row, focus.value.column),
-    },
-    {
-      id: 'act',
-      keys: plain('Enter'),
-      label: "the cell's action",
-      run: () => act(focus.value.row, focus.value.column),
-    },
-    {
-      id: 'clear',
-      keys: plain('Escape'),
-      label: 'clear the selection',
-      run: () => (selected.value = new Set()),
-    },
-  ].map((command) => ({ ...command, when: free })),
-)
+useKeys('screen', [
+  { id: 'add', keys: [shifted('KeyA')], label: 'add sources', run: () => (adding.value = true) },
+  { id: 'render', keys: [shifted('KeyG')], label: 'render', run: openRender },
+  { id: 'prepare', keys: [modded('Enter')], label: 'prepare', run: () => void runPrepare() },
+  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'left', run: moveBy(0, -1) },
+  { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: moveBy(1, 0) },
+  { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'up', run: moveBy(-1, 0) },
+  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'right', run: moveBy(0, 1) },
+  {
+    id: 'select-down',
+    keys: [shifted('KeyJ'), shifted('ArrowDown')],
+    label: 'select rows down',
+    run: () => select(1),
+  },
+  {
+    id: 'select-up',
+    keys: [shifted('KeyK'), shifted('ArrowUp')],
+    label: 'select rows up',
+    run: () => select(-1),
+  },
+  {
+    id: 'tick',
+    keys: plain('Space'),
+    label: 'tick / untick',
+    run: () => toggle(focus.value.row, focus.value.column),
+  },
+  {
+    id: 'act',
+    keys: plain('Enter'),
+    label: "the cell's action",
+    run: () => act(focus.value.row, focus.value.column),
+  },
+  {
+    id: 'clear',
+    keys: plain('Escape'),
+    label: 'clear the selection',
+    run: () => (selected.value = new Set()),
+  },
+])
 
 /* A failed Prepare is shown, the one that ended before this hub opened too. */
 watch(

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { noun } from '../words'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { quoteRender, startRender } from '../api'
+import { useKeys } from '../composables/useKeys'
+import { modded, plain } from '../stores/keys'
 import { clock } from '../stores/live'
 import type { Quote } from '../types'
+import KeyHint from './KeyHint.vue'
 
 /* The Render dialog (design spec J4·1): per flow what renders and what is left
    out, the estimate and its limit, and the price at most. It has no URL, so a
@@ -35,25 +38,18 @@ async function confirm(): Promise<void> {
   }
 }
 
-function onKey(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    emit('close')
-  } else if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-    event.preventDefault()
-    void confirm()
-  }
-}
+useKeys('overlay', [
+  { id: 'cancel', keys: plain('Escape'), label: 'cancel', run: () => emit('close') },
+  { id: 'confirm', keys: [modded('Enter')], label: 'render', run: () => void confirm() },
+])
 
 onMounted(async () => {
-  window.addEventListener('keydown', onKey)
   try {
     quote.value = await quoteRender(props.batch)
   } catch (reason) {
     refusal.value = (reason as Error).message
   }
 })
-onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
@@ -108,7 +104,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <footer class="render-dialog__actions">
         <span v-if="quote?.disabled" class="render-dialog__reason">{{ quote.disabled }}</span>
         <button class="btn btn-secondary" type="button" @click="emit('close')">
-          Cancel<span class="appbar__key">esc</span>
+          Cancel<KeyHint command="cancel" />
         </button>
         <button
           class="btn btn-primary"
@@ -118,7 +114,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           @click="confirm"
         >
           Render<template v-if="quote"> · at most {{ dollars(quote.price.at_most) }}</template
-          ><span class="appbar__key">⌘↵</span>
+          ><KeyHint command="confirm" />
         </button>
       </footer>
     </section>

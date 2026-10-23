@@ -112,7 +112,7 @@ new batch; J5–J6 on one already rendered.
 | frame | trigger | URL |
 |---|---|---|
 | J1·1 Home, first start | — | `…/` |
-| J1·2 the browser's file dialog, filtered to images | ⌥N New batch | `…/` |
+| J1·2 the browser's file dialog, filtered to images | ⇧N New batch | `…/` |
 | J1·3 the sheet, `reading 3 of 6` | choose 6 files, Open | `…/` |
 | J1·4 the sheet, every file read: 2 converted, 1 RAW refused | reading ends | `…/` |
 | J1·5 the hub, every cell a bare checkbox | ⌘↵ Import | `…/b/2026-10-19/hub` |
@@ -122,7 +122,7 @@ J1·1  LIBRARY · EMPTY
       No batches yet.
       Sources are copied into ~/isekai/. A photograph leaves this Mac only to be rendered:
       metadata stripped, held only in the GPU pod's memory, and gone when the pod is.
-      [ New batch ⌥N ]                                              ← the accent
+      [ New batch ⇧N ]                                              ← the accent
 
 J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 [ Add files… ] ┐
       │ SOURCES · 5 · 7.3 MB                                 │ NAME                       │
@@ -149,16 +149,16 @@ J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 
 | J2·4 done: no bar, the accent on Review next | the last cell finishes | same |
 
 ```
-6 sources × 2 flows                          [ Add sources… ⌥A ]  [ Review next · 16_01 conjure ⌥2 ]
+6 sources × 2 flows                          [ Add sources… ⇧A ]  [ Review next · 16_01 conjure ⇧R ]
 SOURCE                 │ summon-anime-wai                 │ conjure-anime-wai
 [▣] 00003              │ ☑ ▰▰▰▰▰▰ rendered ×1      ↵ view │ ☑ ▰▰▰▰▰▱ approved
     00003.png · 832×1216│                                  │
 [▣] cowboy_shot_2      │ ☑ ▰▰▰▱▱▱ captioning…            │ ☐
 [▣] IMG_0430           │ ☑ ▰▱▱▱▱▱ assigned                │ ☐
-↑↓←→ move · space tick / untick · ⇧↑↓ select rows · ↵ the cell's action · ⌥A add sources · ⌥R render
+h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's action · ⌘↵ prepare · ⇧A add sources · ⇧G render
 
         ┌ IMG_0430 × summon · …                 [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
-        ┌ 2 images ready to render                                        [ Render ⌥R ] ┐   RenderBar
+        ┌ 2 images ready to render                                        [ Render ⇧G ] ┐   RenderBar
 ```
 
 - **The hub header** leaves a 12 px gap between its items. Add sources keeps its right alignment.
@@ -184,9 +184,9 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
   edge, as on a running RenderBar, and a running segment pulses `accent-dim` ↔ `accent`; under
   `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
 - **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
-  to render`, the render stage's own count, and primary `Render ⌥R`, disabled with its reason. With nothing short it
+  to render`, the render stage's own count, and primary `Render ⇧G`, disabled with its reason. With nothing short it
   is absent; while a render runs it shows the job strip's totals, `image 1 of 2 · 06:41 of ≤10:30`, and
-  `Session ⌥4`.
+  `Session ⇧S`.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is a
   96×128 thumbnail, a render tile's size, upright, that opens the viewer, the file's stem in mono 13 and mono 11
   `file · dims`, the size read from the file; a row checkbox appears in selection mode.
@@ -197,7 +197,7 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
 
 | frame | trigger | URL |
 |---|---|---|
-| J3·1 the first sheet in summon's queue | ⌥2 Review next | `…/b/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
+| J3·1 the first sheet in summon's queue | ⇧R Review next | `…/b/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J3·2 a field edited, the empties marked, Count 2 | edit · Mark 6 empty fields intentional · count + | same |
 | J3·3 the next unapproved sheet in summon | ⌘↵ Approve | `…/review/<16_01's run>/summon-anime-wai` |
 | J3·4 the hub, the Render bar, `3 images ready to render`, takes the accent | ⌘↵ Approve on the last one | `…/b/2026-10-19/hub` |
@@ -218,17 +218,17 @@ rail │ ① SOURCE                  │ ③ SHEET — DRAFT  9 filled · 7 empt
   default empty). Listed seeds render first; the rest of Count are drawn. Both are approved with the sheet. The line
   `THE NEXT RENDER DRAWS …` states the result.
 - **The queue**: Review next opens the unapproved sheets of the first flow that has any, in grid order;
-  Revise opens the drafts it wrote. Approve moves to the next; after the last, the hub. ⌥↑↓ steps without approving.
+  Revise opens the drafts it wrote. Approve moves to the next; after the last, the hub. ⇧J ⇧K step without approving.
   Approve still refuses an unmarked empty field.
 
 ### J4 · Render
 
 | frame | trigger | URL |
 |---|---|---|
-| J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⌥R Render | `…/b/2026-10-19/hub` — the dialog has none |
+| J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⇧G Render | `…/b/2026-10-19/hub` — the dialog has none |
 | J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.06 | `…/session` |
 | J4·3 done: `Nothing is billing.` | the last image lands; teardown and volume down confirm | `…/session` |
-| J4·4 Renders with the four new images | ⌥3 View in Renders | `…/b/2026-10-19/renders` |
+| J4·4 Renders with the four new images | ⇧I View in Renders | `…/b/2026-10-19/renders` |
 
 ```
 J4·1  RENDER · 2026-10-19 · ON A RENTED GPU                      Render 4 images
@@ -270,18 +270,18 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 |---|---|---|
 | J5·1 Renders, before the revision | — | `…/b/2026-09-17/renders` |
 | J5·2 the large view, no Compare yet | ↵ | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731` |
-| J5·3 the Revise confirm over it | ⌥E Revise this image | same |
+| J5·3 the Revise confirm over it | e Revise this image | same |
 | J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/b/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
 | J5·6 the hub, the Render bar, `1 image ready to render`, takes the accent | ⌘↵ Approve — Revise's queue ends | `…/b/2026-09-17/hub` |
-| (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⌥R · ⌘↵ | `…/session` |
-| J5·7 Renders: v2 after v1, both marked `⇄` | ⌥3 View in Renders | `…/b/2026-09-17/renders` |
+| (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | `…/session` |
+| J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/b/2026-09-17/renders` |
 | J5·8 the large view of v2, with `Compare with v1  C` | ↵ on v2 | `…/v2/1840266731` |
 | J5·9 before / after | C | `…/v2/1840266731/compare` |
 
 ```
 J5·4  ① SOURCE  [photograph] │ RENDER BEING REVISED [render, accent hairline]
-      ② CAPTION  collapsed on a revision · ⌥↓
+      ② CAPTION  collapsed on a revision
       ③ SHEET — REVISION OF RENDER 1840266731   1 field changed · saved 15:52:04
       eye_colour  • [blue eyes ×]      was light · blue eyes
       ④ RENDERS  count [− 1 +]   seeds prefilled [1840266731 ×] [ + seed ]
@@ -290,7 +290,7 @@ J5·4  ① SOURCE  [photograph] │ RENDER BEING REVISED [render, accent hairlin
 J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
       [render, equal size, top-aligned]      [render]
       same seed · 1840266731     1 FIELD CHANGED  eye_colour  light blue eyes → blue eyes
-      \ swap in place · ← → next revised image · esc back                  [ Revise again ⌥E ]
+      \ swap in place · ← → next revised image · esc back                   [ Revise again e ]
 ```
 
 - **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer, and its name. A
@@ -300,12 +300,12 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   stage's own count. The Render bar offers them. The version's heading — `revision of v1` or `re-roll of v1`, the
   approval time, the Count and the seeds — is in the large view.
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
-  (filled fields only, read-only), the photograph a key away (⌥C). `Esc` and its back button go back to
+  (filled fields only, read-only), the photograph a key away (⇧C). `Esc` and its back button go back to
   where it was opened: the hub, or else Renders. `Compare with v1  C` appears when another version
   of the same source × flow shares the seed; with several, it compares with the newest older one.
 - **Revise** (the verb `isekai revise`): the confirm lists each image — source × flow × seed, the version it copies,
   the seed it prefills. All or nothing: a refusal lists every selected image, those that could be revised
-  too, and offers `Deselect those 2 and revise 1 ⌥↵`; it has no primary button.
+  too, and offers `Deselect those 2 and revise 1 ⇧↵`; it has no primary button.
 - **The revision's sheet** marks changed rows with an accent gutter dot and a `was` line against the rendered sheet.
 - **Approve refuses an unchanged revision** — neither fields nor ④ changed — naming the image it would reproduce
  . *Discard revision* deletes this unapproved draft, through `review --discard`.
@@ -314,10 +314,10 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 
 | frame | trigger | URL |
 |---|---|---|
-| (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · ⌥E · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
+| (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · e · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
 | J6·1 Review: the seed cleared, Count 3, the tags untouched | × the seed · count + + | `…/review/0d4b7e6fb2a8/conjure-anime-wai` |
-| (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⌥R · ⌘↵ | `…/session` |
-| J6·2 Renders: three new images after v1, no pair | ⌥3 | `…/b/2026-09-17/renders` |
+| (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⇧G · ⌘↵ | `…/session` |
+| J6·2 Renders: three new images after v1, no pair | ⇧I | `…/b/2026-09-17/renders` |
 
 Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`, `was 1840266731 · cleared`.
 
@@ -332,7 +332,7 @@ Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`,
 | J7·4 two new rows, bare checkboxes | ⌘↵ Import 2 | same |
 
 ```
-J7·1  LIBRARY · 4 batches · newest activity first                              [ New batch ⌥N ]
+J7·1  LIBRARY · 4 batches · newest activity first                              [ New batch ⇧N ]
       BATCH            SOURCES  ▢▢▢▢▢▢▢+5  FLOWS                                         LAST ACTIVITY ↓
       2026-09-17       6 sources [thumbs]  [summon-anime-wai 2/5 approved · 1/5 rendered]
                                            [conjure-anime-wai 1/2 approved · 0/2 rendered]  today 15:31
@@ -354,7 +354,7 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 
 - **J8a, Prepare refused** — from J2·2, ⌘↵. The bar shows the CLI's refusal; nothing ran, the cells stay assigned.
   Start Ollama outside the app, then ⌘↵ again → J2·3. URL `…/b/2026-10-19/hub`.
-- **J8b, teardown unconfirmed** — from J4·2, teardown gets no answer. The band shows on every screen; *Resolve* or ⌥4
+- **J8b, teardown unconfirmed** — from J4·2, teardown gets no answer. The band shows on every screen; *Resolve* or ⇧S
   opens the alert at `…/session`. Ways out, each ending in **Check again**, which asks gpunit: Check again itself;
   `uv run --env-file .env gpunit down`, then Check again; stop it in RunPod's console, then Check again. It clears
   only when gpunit confirms the pod gone → the band goes, the receipt stays.
@@ -369,7 +369,7 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 |---|---|---|
 | Home | loading | rows paint with folder names; counts and thumbnails fill per row |
 | Home | the library cannot be created | a full-page refusal naming the permission problem |
-| New batch | name taken | the refusal with a free name offered, `use 2026-10-19 2 ⌥↵`; Import disabled `Choose a name that isn't taken` |
+| New batch | name taken | the refusal with a free name offered, `use 2026-10-19 2 ⇧↵`; Import disabled `Choose a name that isn't taken` |
 | New batch | name unusable | `A name can't contain /, start with a dot, or be empty.` |
 | New batch | nothing usable | Import disabled `None of the chosen files could be read.` |
 | New batch | cancel | the staging folder is deleted; the library is unchanged |
@@ -378,7 +378,7 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 | Hub | a render running | Render disabled `A render session is running · 06:41 of ≤10:30`; the accent on Review next |
 | Hub | Prepare disabled | the bar keeps its cells, reason `A render is running · 06:41` |
 | Hub | Add sources, nothing new | Import disabled `Nothing new to add` |
-| Hub | the batch is gone | a full-page refusal, `Back to the library ⌥0` |
+| Hub | the batch is gone | a full-page refusal, `Back to the library ⇧L` |
 | Render | refused before billing | the CLI's refusal: no GPU free, no key in `.env`; `nothing billed` when true |
 | Render | disabled | `Prepare is running · 01:42` · `A pod may still be billing.` |
 | Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, Review next |
@@ -398,7 +398,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K 
 | Hub | h j k l or ←↓↑→ cells · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④ · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the queue · ⌃E ⌃Y scroll the photograph · ↵ on the photograph fills the window · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow, ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C photo and render, on a revision · the collapsed caption, its key named when built |
 | Renders | h l cells · j k or ↓↑ sources · ←→ images · space select · ↵ the large view · e Revise · ⇧G Render · in the large view, e Revise, c compare, esc back · in compare, `\` swap, esc back |
-| dialogs | ⌘↵ confirm · esc cancel |
+| dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 
 No key spends money: ⇧G opens the dialog, and only its ⌘↵ starts billing.
 

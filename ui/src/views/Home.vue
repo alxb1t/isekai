@@ -54,7 +54,6 @@ function walk(step: -1 | 1): void {
 }
 
 const onRow = () => at() >= 0
-const idle = () => !importing.value
 
 /* j k or ↓ ↑ walk the batches, ↵ opens the focused one (D25). */
 useKeys('screen', [
@@ -63,28 +62,25 @@ useKeys('screen', [
     keys: [shifted('KeyN')],
     label: 'new batch',
     run: () => (importing.value = true),
-    when: idle,
   },
   {
     id: 'next',
     keys: plain('KeyJ', 'ArrowDown'),
     label: 'next batch',
     run: () => walk(1),
-    when: idle,
   },
   {
     id: 'previous',
     keys: plain('KeyK', 'ArrowUp'),
     label: 'previous batch',
     run: () => walk(-1),
-    when: idle,
   },
   {
     id: 'open',
     keys: plain('Enter'),
     label: 'open the batch',
     run: () => open(batches.value[at()]),
-    when: () => idle() && onRow(),
+    when: onRow,
   },
 ])
 

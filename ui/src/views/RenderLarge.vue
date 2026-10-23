@@ -54,29 +54,25 @@ const back = computed(() =>
     : { to: { name: 'renders', params: { batch: props.batch } }, label: 'Back to Renders' },
 )
 
-const free = () => !revising.value
-
 useKeys('screen', [
   {
     id: 'revise',
     keys: plain('KeyE'),
     label: 'revise',
     run: () => (revising.value = true),
-    when: free,
   },
   {
     id: 'compare',
     keys: plain('KeyC'),
     label: 'compare',
     run: compare,
-    when: () => free() && Boolean(detail.value?.compare),
+    when: () => Boolean(detail.value?.compare),
   },
   {
     id: 'back',
     keys: plain('Escape'),
     label: 'back',
     run: () => void router.push(back.value.to),
-    when: free,
   },
 ])
 

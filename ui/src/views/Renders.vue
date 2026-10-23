@@ -147,45 +147,41 @@ function go(move: Move): () => void {
 }
 
 const here = () => rows.value[focus.value.row]?.[focus.value.column]
-const free = () => !revising.value && !dialog.value && !viewing.value
 
 /* h j k l between cells, the arrows between images (D25). */
-useKeys(
-  'screen',
-  [
-    { id: 'previous-cell', keys: plain('KeyH'), label: 'previous cell', run: go('cell-') },
-    { id: 'next-cell', keys: plain('KeyL'), label: 'next cell', run: go('cell+') },
-    { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'next source', run: go('row+') },
-    { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'previous source', run: go('row-') },
-    { id: 'left', keys: plain('ArrowLeft'), label: 'previous image', run: go('image-') },
-    { id: 'right', keys: plain('ArrowRight'), label: 'next image', run: go('image+') },
-    {
-      id: 'select',
-      keys: plain('Space'),
-      label: 'select',
-      run: () => {
-        const at = here()
-        if (at) toggle(at)
-      },
+useKeys('screen', [
+  { id: 'previous-cell', keys: plain('KeyH'), label: 'previous cell', run: go('cell-') },
+  { id: 'next-cell', keys: plain('KeyL'), label: 'next cell', run: go('cell+') },
+  { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'next source', run: go('row+') },
+  { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'previous source', run: go('row-') },
+  { id: 'left', keys: plain('ArrowLeft'), label: 'previous image', run: go('image-') },
+  { id: 'right', keys: plain('ArrowRight'), label: 'next image', run: go('image+') },
+  {
+    id: 'select',
+    keys: plain('Space'),
+    label: 'select',
+    run: () => {
+      const at = here()
+      if (at) toggle(at)
     },
-    {
-      id: 'open',
-      keys: plain('Enter'),
-      label: 'the large view',
-      run: () => {
-        const at = here()
-        if (at) open(at.digest, at.flow, at.version, at.seed)
-      },
+  },
+  {
+    id: 'open',
+    keys: plain('Enter'),
+    label: 'the large view',
+    run: () => {
+      const at = here()
+      if (at) open(at.digest, at.flow, at.version, at.seed)
     },
-    {
-      id: 'revise',
-      keys: plain('KeyE'),
-      label: 'revise',
-      run: () => (revising.value = chosen.value.length > 0),
-    },
-    { id: 'render', keys: [shifted('KeyG')], label: 'render', run: () => store.openDialog() },
-  ].map((command) => ({ ...command, when: free })),
-)
+  },
+  {
+    id: 'revise',
+    keys: plain('KeyE'),
+    label: 'revise',
+    run: () => (revising.value = chosen.value.length > 0),
+  },
+  { id: 'render', keys: [shifted('KeyG')], label: 'render', run: () => store.openDialog() },
+])
 
 function thumb(digest: string, flow: string, version: number, seed: string): string {
   return thumbAt({ batch: props.batch, digest, flow, version, seed })

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useKeys } from '../composables/useKeys'
+import { plain } from '../stores/keys'
 
 /* One image in a native dialog, fitted to the window. A click on the image
    toggles 1:1 pixels, scrolled inside the dialog; Esc or a click outside closes.
@@ -42,6 +44,10 @@ const title = computed(() => {
 function outside(event: MouseEvent): void {
   if (event.target === dialog.value) dialog.value?.close()
 }
+
+useKeys('overlay', [
+  { id: 'close', keys: plain('Escape'), label: 'close', run: () => dialog.value?.close() },
+])
 
 onMounted(() => {
   dialog.value?.showModal()

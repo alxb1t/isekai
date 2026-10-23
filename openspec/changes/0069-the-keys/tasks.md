@@ -8,7 +8,7 @@ The registry, the screens, Review, then the dialogs, per [design](design.md). Ev
 - [x] 1 — The registry
 - [x] 2 — The screens
 - [x] 3 — Review
-- [ ] 4 — The dialogs
+- [x] 4 — The dialogs
 
 ## 1 — The registry
 
@@ -63,14 +63,14 @@ The registry, the screens, Review, then the dialogs, per [design](design.md). Ev
 
 ## 4 — The dialogs
 
-- [ ] 4.1 **HALT CHECK** — Cancel stays live while Import commits.
+- [x] 4.1 **HALT CHECK** — Cancel stays live while Import commits.
   Verify: `grep -c 'committing' ui/src/components/ImportSheet.vue` prints `5`.
-- [ ] 4.2 Move `ui/src/components/ImportSheet.vue`, `ui/src/components/RenderDialog.vue`,
+- [x] 4.2 Move `ui/src/components/ImportSheet.vue`, `ui/src/components/RenderDialog.vue`,
   `ui/src/components/ReviseConfirm.vue` and `ui/src/components/ImageViewer.vue` onto `useKeys` as overlays per [D4](design.md#d4); hold
   the import sheet's Cancel and `Esc` while `committing` per [D7](design.md#d7); `RefusalPage.vue`'s hint by `KeyHint`.
   Verify: `grep -rc "addEventListener('keydown'" ui/src/components` prints `0` for each file, and `grep -c 'altKey' ui/src/components/ReviseConfirm.vue` prints `0`.
-- [ ] 4.3 Move the in-flight step out of `test_importing_a_new_batch_opens_its_hub_with_every_source_unassigned`
+- [x] 4.3 Move the in-flight step out of `test_importing_a_new_batch_opens_its_hub_with_every_source_unassigned`
   into a new `test_a_commit_in_flight_holds_the_sheet` in `tests/e2e/test_import.py`, also pressing `Escape`.
   Verify: `grep -c 'a-commit-in-flight-holds-the-sheet' tests/e2e/test_import.py` prints `1`, and `uv run pytest -q tests/e2e/test_import.py` exits 0.
-- [ ] 4.4 Rewrite every other `⌥` key in `ui/design/spec.md` per [D4](design.md#d4), and its *dialogs* row.
+- [x] 4.4 Rewrite every other `⌥` key in `ui/design/spec.md` per [D4](design.md#d4), and its *dialogs* row.
   Verify: `grep -c '⌥' ui/design/spec.md` prints `0`.

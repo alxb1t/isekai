@@ -20,6 +20,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - Review moves between the rail, the photograph, the sheet and ④ with `h` `l`, walks each with `j` `k`,
   and steps sheets with `⇧J` `⇧K`; the tag cheatsheet opens on `Mod+K`, which Linux does not take (0069 D4, D5).
 
+- The import sheet, the Render dialog, the Revise confirm and the viewer take the keys over their screen; a
+  commit in flight holds the import sheet, its Cancel and `Esc` with it (0069 D4, D7).
+
 ## [0.42.0] - 2026-10-23 · 0068-the-store
 
 Gate: local 0m36s · CI 7m25s (build-image at 801ffec) · 0.41.0: local 0m37s · CI 7m25s
