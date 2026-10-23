@@ -65,6 +65,7 @@ from isekai.shared.image import (
     dimensions_or_refuse,
     metadata_in,
     thumbnail_jpeg,
+    upright_jpeg,
     upright_thumbnail,
 )
 
@@ -454,6 +455,21 @@ def _upright(source: Path) -> bytes:
         ) from unread
 
 
+def source_jpeg(source: Path) -> bytes:
+    """Return `source` turned as its orientation says, as a JPEG at its full size.
+
+    For a source in a format the render does not read, placed by hand: the viewer
+    shows it as its thumbnail does.
+    """
+    try:
+        return upright_jpeg(source)
+    except OSError as unread:
+        raise Refusal(
+            f"{source.name}: is not an image this build can read ({unread}); "
+            f"delete {source} and import it again"
+        ) from unread
+
+
 def source_files(folder: Path) -> Callable[[str], Path]:
     """Return what finds a file under batch `folder`'s `sources/` by name, or refuses.
 
@@ -491,12 +507,13 @@ def _grid(folder: Path, suffixes: Mapping[str, str], *, marks: bool = True) -> H
     return Hub(folder.name, tuple(suffixes), sources)
 
 
-def stage(run: Run, flow: str, suffix: str) -> Cell:
+def stage(run: Run, flow: str, suffix: str, *, newest: bool = True) -> Cell:
     """Return `run`'s stage in `flow`, the furthest its directory holds.
 
     rendered ×n > approved > draft > sheet > tagged > assigned > no flow. The
     file that decides it is read, so a format this build does not know marks
-    the cell rather than the batch.
+    the cell rather than the batch. Without `newest`, no image's time is read
+    and the cell names no newest image: Home shows none.
     """
     if not run.directory(flow).is_dir():
         return Cell(None)
@@ -506,11 +523,17 @@ def stage(run: Run, flow: str, suffix: str) -> Cell:
     try:
         if approved:
             _check(latest_artifact(review, APPROVED), APPROVED_FILE)
-            renders = rendered_seeds(group_of(run, flow, approved[-1]), suffix)
-            newest = _newest_image(run, flow, approved, suffix)
+            group = group_of(run, flow, approved[-1])
+            named: Rendered | None = None
+            if newest:
+                written = _written(group, suffix)
+                renders = len(written)
+                named = _newest_image(run, flow, approved, suffix, written)
+            else:
+                renders = len(rendered_seeds(group, suffix))
             if renders:
-                return Cell("rendered", len(renders), status=status, newest=newest)
-            return Cell("approved", status=status, newest=newest)
+                return Cell("rendered", renders, status=status, newest=named)
+            return Cell("approved", status=status, newest=named)
         if (draft := current_draft(review)) is not None:
             _check(draft, DRAFT_FILE)
             return Cell("draft", status=status)
@@ -526,14 +549,24 @@ def stage(run: Run, flow: str, suffix: str) -> Cell:
 
 
 def _newest_image(
-    run: Run, flow: str, approved: Sequence[int], suffix: str
+    run: Run,
+    flow: str,
+    approved: Sequence[int],
+    suffix: str,
+    top: Mapping[int, float],
 ) -> Rendered | None:
     """Return the last-written image of the newest version holding any, or None.
 
+    `top` is the newest version's own, already listed, so no group is listed twice.
     e.g. v2 rendered nothing, v1 holds 7 then 9 -> Rendered(1, 9)
     """
     for version in reversed(approved):
-        if written := _written(group_of(run, flow, version), suffix):
+        written = (
+            top
+            if version == approved[-1]
+            else _written(group_of(run, flow, version), suffix)
+        )
+        if written:
             return Rendered(version, max(written, key=written.__getitem__))
     return None
 
@@ -541,9 +574,8 @@ def _newest_image(
 def _written(group: Path, suffix: str) -> dict[int, float]:
     """Return when each render in `group` was written, by seed.
 
-    The time is the listed file's own, never one of a name rebuilt from its seed:
-    `007.png` lists as seed 7, and no `7.png` need exist. A file deleted after
-    the listing is no longer an image, so it is left out.
+    The time is the listed file's own, never one of a name rebuilt from its seed.
+    A file deleted after the listing is no longer an image, so it is left out.
     """
     if not group.is_dir():
         return {}
@@ -551,8 +583,7 @@ def _written(group: Path, suffix: str) -> dict[int, float]:
     for path in group.iterdir():
         if is_render(path, suffix):
             with contextlib.suppress(FileNotFoundError):
-                at = path.stat().st_mtime
-                written[int(path.stem)] = max(at, written.get(int(path.stem), at))
+                written[int(path.stem)] = path.stat().st_mtime
     return written
 
 
@@ -629,7 +660,7 @@ def _source(
 ) -> Source:
     """Return one source, with its cell in every offered flow."""
     cells = {
-        flow: stage(run, flow, suffix) if run else Cell(None)
+        flow: stage(run, flow, suffix, newest=marks) if run else Cell(None)
         for flow, suffix in suffixes.items()
     }
     if not marks:

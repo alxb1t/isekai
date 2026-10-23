@@ -453,13 +453,15 @@ def create_app(
     def read_render_offer(batch: str) -> dict[str, Any]:
         """Return how many images the batch lacks, and why Render is disabled, or null.
 
-        It prices nothing; the count is the render stage's own.
+        It prices nothing; the count is the render stage's own. `refused` is why an
+        approval's count cannot be read, or null: the bar shows it with none short.
         """
         runs = folder(batch) / library.RUNS
         short = render.short(runs, render.run_ids(runs), wire(runs))
         return {
             "disabled": _held() or short.blocked,
             "images": sum(short.images.values()),
+            "refused": short.refused[0] if short.refused else None,
         }
 
     @app.post("/api/b/{batch}/render/quote")
@@ -648,7 +650,7 @@ def create_app(
         }
 
     @app.get("/api/b/{batch}/review/{digest}/{flow}/photo")
-    def read_photo(batch: str, digest: str, flow: str) -> FileResponse:
+    def read_photo(batch: str, digest: str, flow: str) -> Response:
         """Serve the photograph's bytes, whole. `image.py` reads headers, not pixels."""
         return _photograph(held(batch, digest, flow).run.photo)
 
@@ -828,16 +830,26 @@ def create_app(
         """Return one render's large view: the approval's filled fields beside it.
 
         It is headed by what the version was: the one it came from, a revision or
-        a re-roll, and its count and seeds.
+        a re-roll, and its count and seeds; or, where its `renders` no render
+        takes, damaged, naming the file, with no count.
         """
         run, _, approval = rendered(batch, digest, flow, version, seed)
         _, fields = _approved(approval)
         number = _version(version)
         suffix = offered(flow).output_suffix
-        # The approval was just read whole, so its version is not damaged.
         held = next(
-            one for one in library.versions(run, flow, suffix) if one.version == number
+            (
+                one
+                for one in library.versions(run, flow, suffix)
+                if one.version == number
+            ),
+            None,
         )
+        if held is None:
+            raise Refusal(
+                f"{approval.name}: it was gone when its version was listed; reload "
+                "the page"
+            )
         return {
             "flow": flow,
             "version": number,
@@ -848,6 +860,7 @@ def create_app(
             "kind": held.kind,
             "count": held.count,
             "seeds": _decimal(held.seeds),
+            "damaged": held.damaged,
             # The newest older version that rendered this seed, or null.
             "compare": library.paired(run, flow, number, seed, suffix),
         }
@@ -897,9 +910,14 @@ def create_app(
         )
 
     @app.get("/api/b/{batch}/sources/{name}")
-    def read_source(batch: str, name: str) -> FileResponse:
-        """Serve a source's bytes, whole, with or without a run."""
-        return _photograph(library.source_files(folder(batch))(name))
+    def read_source(batch: str, name: str) -> Response:
+        """Serve a source's bytes, whole, with or without a run.
+
+        One in a format the render does not read, placed by hand, is served as an
+        upright JPEG of it, so the viewer shows what its thumbnail does.
+        """
+        source = library.source_files(folder(batch))(name)
+        return _photograph(source, other=library.source_jpeg)
 
     @app.get("/api/b/{batch}/sources/{name}/thumb")
     def read_source_thumb(batch: str, name: str) -> FileResponse:
@@ -1218,18 +1236,26 @@ def _quote(
     }
 
 
-def _photograph(path: Path) -> FileResponse:
+def _photograph(
+    path: Path, *, other: Callable[[Path], bytes] | None = None
+) -> Response:
     """Serve the photograph at `path` as the image its bytes are, never its name's.
 
     A source keeps the name it arrived with, and one ending `.html` served by its
     suffix would run as a page on this surface's own origin; `nosniff` keeps the
-    browser from guessing past the declared type.
+    browser from guessing past the declared type. Bytes neither JPEG nor PNG are
+    refused, or served as the JPEG `other` makes of them.
     """
+    headers = {"X-Content-Type-Options": "nosniff"}
     with path.open("rb") as handle:
-        kind, _ = media_type(handle.read(SIGNATURE_BYTES))
-    return FileResponse(
-        path, media_type=kind, headers={"X-Content-Type-Options": "nosniff"}
-    )
+        head = handle.read(SIGNATURE_BYTES)
+    try:
+        kind, _ = media_type(head)
+    except Refusal:
+        if other is None:
+            raise
+        return Response(other(path), media_type="image/jpeg", headers=headers)
+    return FileResponse(path, media_type=kind, headers=headers)
 
 
 def _hub(grid: library.Hub) -> dict[str, Any]:

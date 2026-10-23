@@ -32,8 +32,14 @@ const place = computed(() => ({
 const clock = (at: number) =>
   new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
 
+/* Compare carries where this view was opened from, so its esc returns here
+   with the same way back. */
 function compare(): void {
-  void router.push({ name: 'compare', params: { ...props } })
+  void router.push({
+    name: 'compare',
+    params: { ...props },
+    state: { from: window.history.state?.from ?? null },
+  })
 }
 
 /* Where esc and the back button go: the hub when it opened this view, else
@@ -91,11 +97,15 @@ onMounted(async () => {
           · {{ detail.kind }} of v{{ detail.came_from }}</template
         ><template v-if="detail.approved_at !== null">
           · approved {{ clock(detail.approved_at) }}</template
-        >
-        · count {{ detail.count }}<template v-if="detail.seeds.length">
-          · seeds {{ detail.seeds.join(', ') }}</template
-        >
+        ><template v-if="detail.damaged === null">
+          · count {{ detail.count }}<template v-if="detail.seeds.length">
+            · seeds {{ detail.seeds.join(', ') }}</template
+          ></template
+        ><template v-else> · damaged</template>
       </span>
+      <p v-if="detail.damaged" class="renders__refusal">
+        <span class="refusal__mark" />{{ detail.damaged }}
+      </p>
       <dl class="large__fields">
         <template v-for="(tags, name) in detail.fields" :key="name">
           <dt class="mono">{{ name }}</dt>

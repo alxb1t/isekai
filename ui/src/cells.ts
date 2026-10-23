@@ -28,3 +28,22 @@ export function action(cell: HubCell): CellAction {
         : { action: 'view', hint: '↵ view' }
   }
 }
+
+/** Return the rows a tick lands on: a click's own row; space's, the selection's.
+
+    A pointer lands on one cell, so a click ticks that cell whatever rows ⇧↑↓
+    selected; space ticks the focused column for every selected row. */
+export function targets(selected: ReadonlySet<number>, row: number, pointer: boolean): number[] {
+  return pointer || selected.size === 0 ? [row] : [...selected]
+}
+
+/** Return whether a click on a cell runs its action.
+
+    A click inside the cell's refusal, or one that ends a text selection, is
+    reading or copying the fix, never a tick. */
+export function clicks(
+  target: { closest(selector: string): unknown } | null,
+  selection: string,
+): boolean {
+  return selection === '' && !target?.closest('.hub__refusal')
+}

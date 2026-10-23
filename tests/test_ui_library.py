@@ -229,6 +229,18 @@ def test_an_approved_cell_names_the_last_image_of_its_newest_rendered_version(
     padded.write_bytes(b"png")
     os.utime(padded, (500, 500))
     assert library.stage(run, SUMMON, suffix).newest == Rendered(1, 5)
+    # Written last, a padded name or one of digits outside ASCII is still no
+    # render: no image of seed 42 is where a large view looks for it.
+    os.utime(padded, (4_000, 4_000))
+    assert library.stage(run, SUMMON, suffix).newest == Rendered(1, 5)
+    superscript = older / f"²{suffix}"
+    superscript.write_bytes(b"png")
+    os.utime(superscript, (5_000, 5_000))
+    assert library.stage(run, SUMMON, suffix).newest == Rendered(1, 5)
+    # Home reads no image's time: it shows no newest image.
+    assert library.stage(run, SUMMON, suffix, newest=False) == Cell(
+        "approved", status="approved"
+    )
 
 
 @pytest.mark.spec("ui:hub:an-untracked-flow-is-ignored")

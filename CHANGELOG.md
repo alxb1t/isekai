@@ -30,6 +30,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A damaged version's images stay drawn beside its striped tile, as the grid's focus moves across them; a hub read
   survives an oddly named or vanished render; a photograph is served as its bytes' image type, `nosniff` (0067 D8).
 
+- A click ticks its own hub cell, a discarded Prepare failure stays dismissed, a refused count keeps the Render bar
+  with its reason, a damaged large view says so, and a padded render name is no render (0067 D4, D6, D8, D10).
+
 ## [0.40.1] - 2026-10-23 · 0066-the-quick-patch
 
 Gate: local 0m35s · CI 7m25s (build-image at 801ffec) · 0.40.0: local 0m34s · CI 1m12s

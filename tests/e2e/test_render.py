@@ -88,6 +88,10 @@ def test_a_damaged_versions_images_are_drawn_and_hold_the_focus(
     image = page.locator("[data-version='1'][data-seed='7']")
     expect(image.locator("img")).to_have_js_property("complete", True)
     expect(image).to_have_class(re.compile("renders__image--focused"))
+    # Its count refuses, so the Render bar stays, disabled, with that reason.
+    bar = page.locator("[data-render-bar]")
+    expect(bar.locator("[data-render-reason]")).to_contain_text("restore it in")
+    expect(bar.locator("[data-render]")).to_be_disabled()
 
 
 @pytest.mark.spec("ui:hub:a-rendered-cell-opens-its-newest-image")

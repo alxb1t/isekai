@@ -284,6 +284,14 @@ export interface RendersInfo {
 }
 
 /* An image's large view: the approval it was rendered from, filled fields only. */
+/* A batch's Render offer: the images it lacks, why Render is disabled, and why
+   an approval's count is refused, each null when there is none. */
+export interface RenderOffer {
+  disabled: string | null
+  images: number
+  refused: string | null
+}
+
 export interface RenderDetail {
   flow: string
   version: number
@@ -293,8 +301,11 @@ export interface RenderDetail {
   /* The version this one was copied from and what changed, as `RenderVersion`'s. */
   came_from: number | null
   kind: 'revision' | 're-roll' | null
-  count: number
+  /* Null where the approval is damaged. */
+  count: number | null
   seeds: string[]
+  /* Why the approval's `renders` is refused, naming the file, or null. */
+  damaged: string | null
   /* The newest older version that rendered this seed, or null. */
   compare: number | null
 }

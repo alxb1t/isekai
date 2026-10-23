@@ -46,7 +46,12 @@ function onKey(event: KeyboardEvent): void {
     swapped.value = !swapped.value
   } else if (event.key === 'Escape') {
     event.preventDefault()
-    void router.push({ name: 'render', params: { ...props } })
+    // Back to the large view, with the way back it was opened with.
+    void router.push({
+      name: 'render',
+      params: { ...props },
+      state: { from: window.history.state?.from ?? null },
+    })
   }
 }
 

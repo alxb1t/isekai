@@ -1488,6 +1488,20 @@ def test_a_source_named_as_a_page_is_served_as_the_image_it_is(
     assert whole.headers["x-content-type-options"] == "nosniff"
     assert photo.headers["content-type"] == "image/jpeg"
     assert photo.headers["x-content-type-options"] == "nosniff"
+    # A source in a format the render does not read, placed by hand, is served as
+    # an upright JPEG of it, so the viewer shows what its thumbnail does.
+    from PIL import Image
+
+    held, turned = io.BytesIO(), Image.Exif()
+    turned[0x0112] = 6
+    Image.new("RGB", (40, 30), (30, 60, 90)).save(held, "WEBP", exif=turned.tobytes())
+    (sources / "pose.webp").write_bytes(held.getvalue())
+    other = client.get(f"/api/b/{BATCH}/sources/pose.webp")
+    assert other.status_code == 200
+    assert other.headers["content-type"] == "image/jpeg"
+    assert other.headers["x-content-type-options"] == "nosniff"
+    with Image.open(io.BytesIO(other.content)) as shown:
+        assert (shown.format, shown.size) == ("JPEG", (30, 40))
 
 
 @pytest.mark.spec("ui:renders:a-damaged-approval-marks-its-version")
@@ -1513,6 +1527,10 @@ def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
     assert (newer["version"], newer["rendered"], newer["damaged"]) == (2, ["22"], None)
     assert (damaged["version"], damaged["rendered"]) == (1, ["11"])
     assert older.name in damaged["damaged"]
+    # Its image's large view is headed damaged too, naming the file, not counted.
+    large = client.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/11").json()
+    assert older.name in large["damaged"]
+    assert large["count"] is None
 
 
 def _approved_again(

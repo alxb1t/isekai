@@ -32,7 +32,13 @@ const viewing = ref<string | null>(null)
 const { job, renderRunning } = useLive()
 const { offer, dialog, check: checkRender, open: openRender, close } = useRenderOffer(props.batch)
 const shown = computed(() =>
-  bar({ changes: 0, preparing: false, images: offer.value.images, rendering: renderRunning.value }),
+  bar({
+    changes: 0,
+    preparing: false,
+    images: offer.value.images,
+    refused: offer.value.refused !== null,
+    rendering: renderRunning.value,
+  }),
 )
 
 interface Spot {
@@ -313,6 +319,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       v-if="shown === 'render'"
       :images="offer.images"
       :disabled="offer.disabled"
+      :refused="offer.refused"
       @open="openRender"
     />
     <RenderDialog v-if="dialog" :batch="batch" @close="close" />

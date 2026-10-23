@@ -17,6 +17,7 @@ import type {
   LibraryInfo,
   Quote,
   RenderDetail,
+  RenderOffer,
   Renders,
   RendersInfo,
   ReviseRefused,
@@ -100,8 +101,9 @@ export function stopJob(): Promise<{ job: JobSlot | null }> {
   return send('/api/job/stop', 'POST', {})
 }
 
-/* How many images a batch lacks, and why Render is disabled or null; it prices nothing. */
-export function renderOffer(batch: string): Promise<{ disabled: string | null; images: number }> {
+/* How many images a batch lacks, why Render is disabled or null, and why a count
+   is refused or null; it prices nothing. */
+export function renderOffer(batch: string): Promise<RenderOffer> {
   return get(`/api/b/${encodeURIComponent(batch)}/render`)
 }
 

@@ -2,8 +2,8 @@
 import { noun } from '../words'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { bar as barOf, failed } from '../bars'
-import { action } from '../cells'
+import { bar as barOf, dismiss, failed } from '../bars'
+import { action, clicks, targets } from '../cells'
 import { assign, hub, prepare, sourceAt, sourceThumbAt, stopJob } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
@@ -100,6 +100,7 @@ const shown = computed(() =>
     changes: changes.value.length,
     preparing: busy.value || barRefusal.value !== null,
     images: offer.value.images,
+    refused: offer.value.refused !== null,
     rendering: blocked.value,
   }),
 )
@@ -186,13 +187,14 @@ function view(source: HubSource, flow: string): void {
   })
 }
 
-/* A click or ↵ on a cell: whatever its stage offers. */
-function act(row: number, column: number): void {
+/* A click or ↵ on a cell: whatever its stage offers. A click ticks its own cell
+   alone; ↵, as space, the selected rows. */
+function act(row: number, column: number, pointer = false): void {
   const source = sources.value[row]
   const flow = flows.value[column]
   if (!source || !flow) return
   const kind = action(cell(source, flow)).action
-  if (kind === 'tick') toggle(row, column)
+  if (kind === 'tick') toggle(row, column, pointer)
   else if (kind === 'review' || kind === 'sheet') review(source, flow)
   else if (kind === 'view') view(source, flow)
 }
@@ -220,21 +222,25 @@ async function tick(targets: HubSource[], flow: string, remove: boolean): Promis
 }
 
 /* Space on a cell: tick it, or untick it while it is only assigned. With rows
-   selected, the focused column is ticked for every one of them. */
-function toggle(row: number, column: number): void {
+   selected, the focused column is ticked for every one of them; a pointer's
+   click ticks its own cell alone. */
+function toggle(row: number, column: number, pointer = false): void {
   const flow = flows.value[column]
   if (!flow) return
-  if (selected.value.size > 0) {
-    const rows = [...selected.value].map((index) => sources.value[index]).filter(Boolean)
-    const unticked = rows.some((one) => cell(one, flow).stage === null)
-    void tick(rows, flow, !unticked)
-    return
-  }
-  const source = sources.value[row]
-  if (!source) return
-  const found = cell(source, flow)
-  if (locked(found)) return
-  void tick([source], flow, found.stage === 'assigned')
+  const rows = targets(selected.value, row, pointer)
+    .map((index) => sources.value[index])
+    .filter((one): one is HubSource => one !== undefined)
+  if (rows.length === 0) return
+  const unticked = rows.some((one) => cell(one, flow).stage === null)
+  void tick(rows, flow, !unticked)
+}
+
+/* A pointer's click on a cell; one on its refusal, or ending a text selection,
+   leaves it as it is. */
+function clicked(event: MouseEvent, row: number, column: number): void {
+  place(row, column)
+  if (clicks(event.target as Element | null, window.getSelection()?.toString() ?? ''))
+    act(row, column, true)
 }
 
 async function runPrepare(): Promise<void> {
@@ -255,9 +261,11 @@ async function stop(): Promise<void> {
   }
 }
 
-/* Discard unticks every pending cell that holds no work yet. */
+/* Discard unticks every pending cell that holds no work yet, and dismisses a
+   failed Prepare, so a hub opened again does not show it. */
 function discard(): void {
   barRefusal.value = null
+  dismiss(job.value)
   for (const flow of flows.value) {
     const rows = sources.value.filter((one) => cell(one, flow).stage === 'assigned')
     if (rows.length) void tick(rows, flow, true)
@@ -486,7 +494,7 @@ onUnmounted(() => {
           :data-flow="flow"
           :data-stage="cell(source, flow).stage ?? 'none'"
           tabindex="-1"
-          @click="place(row, column), act(row, column)"
+          @click="clicked($event, row, column)"
         >
           <input
             class="hub__tick"
@@ -539,6 +547,7 @@ onUnmounted(() => {
       v-if="shown === 'render'"
       :images="offer.images"
       :disabled="offer.disabled"
+      :refused="offer.refused"
       @open="openRender"
     />
     <div v-else-if="shown === 'prepare'" class="prepare-bar" :class="{ running: busy }">

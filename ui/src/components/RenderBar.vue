@@ -4,8 +4,9 @@ import { noun } from '../words'
 
 /* The Render bar (design spec J2): the images short of their count, with Render,
    or, with none short, the running session's totals and the way to it. Its
-   button keeps `data-render`; a disabled one has its reason beside it. */
-defineProps<{ images: number; disabled: string | null }>()
+   button keeps `data-render`; a disabled one has its reason beside it. A count
+   the render stage refuses keeps Render, disabled, so the reason is never silent. */
+defineProps<{ images: number; disabled: string | null; refused: string | null }>()
 defineEmits<{ open: [] }>()
 
 const { job, renderRunning, renderTotals } = useLive()
@@ -13,8 +14,8 @@ const { job, renderRunning, renderTotals } = useLive()
 
 <template>
   <div class="prepare-bar" :class="{ running: renderRunning }" data-render-bar>
-    <template v-if="images > 0">
-      <span class="prepare-bar__cells mono">
+    <template v-if="images > 0 || (refused !== null && !renderRunning)">
+      <span v-if="images > 0" class="prepare-bar__cells mono">
         {{ images }} {{ noun(images, 'image') }} ready to render
       </span>
       <span v-if="disabled" class="hub__reason" data-render-reason>{{ disabled }}</span>

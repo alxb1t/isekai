@@ -293,14 +293,24 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
     return assembled, refused + across(ready, assemble_one)
 
 
+def _is_seed(stem: str) -> bool:
+    """Return whether `stem` is a seed as a render is named for it.
+
+    The canonical ASCII decimal only, as `image_of` writes it: `0042` or `²`
+    names no image `image_of` would find, so neither is a render.
+    e.g. "42" -> True; "0042", "²", "" -> False
+    """
+    return stem.isascii() and stem.isdigit() and str(int(stem)) == stem
+
+
 def is_render(path: Path, suffix: str) -> bool:
     """Return whether `path` is a render a flow producing `suffix` wrote."""
-    return path.suffix == suffix and path.stem.isdigit()
+    return path.suffix == suffix and _is_seed(path.stem)
 
 
 def is_sidecar(path: Path) -> bool:
     """Return whether `path` is a render's sidecar."""
-    return path.name.endswith(SIDECAR) and path.name.removesuffix(SIDECAR).isdigit()
+    return path.name.endswith(SIDECAR) and _is_seed(path.name.removesuffix(SIDECAR))
 
 
 def rendered_seeds(directory: Path, suffix: str) -> list[int]:

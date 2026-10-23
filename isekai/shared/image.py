@@ -618,6 +618,19 @@ def upright_thumbnail(path: Path) -> bytes:
         return thumbnail_jpeg(ImageOps.exif_transpose(opened))
 
 
+def upright_jpeg(path: Path) -> bytes:
+    """Return the image at `path` turned as its orientation says, as a full-size JPEG.
+
+    Raises `OSError` for a file Pillow cannot decode; each caller words its refusal.
+    """
+    from PIL import Image, ImageOps
+
+    with Image.open(path) as opened:
+        out = io.BytesIO()
+        ImageOps.exif_transpose(opened).convert("RGB").save(out, "JPEG", quality=92)
+        return out.getvalue()
+
+
 def thumbnail_jpeg(image: "Image") -> bytes:
     """Return `image` as a JPEG at most `THUMB_SIDE` on its long side."""
     small = image.convert("RGB")

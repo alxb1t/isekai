@@ -167,8 +167,9 @@ cell can hold an older version's images, so its newest image is named by the ser
 The system SHALL serve an event stream that, on every connection, sends a snapshot of the job slot and, when a batch
 is named, that batch's hub, and then sends each change as the job's stages report it. A running Prepare snapshot
 SHALL carry its accepted total, completed count and start time. A hub opened while the slot holds its batch's failed
-Prepare SHALL show that job's message. When the surface stops, its streams SHALL end before the server's graceful
-wait expires, without cancellation errors; a terminal interrupt SHALL exit quietly after cleanup.
+Prepare SHALL show that job's message until Discard dismisses it. When the surface stops, its streams SHALL end
+before the server's graceful wait expires, without cancellation errors; a terminal interrupt SHALL exit quietly after
+cleanup.
 
 A reload or a second tab gets the whole truth at once; a job's progress reaches the page as the verbs report it. A
 job outlives its page, so a failure that happened while no page was open is still told.
@@ -203,23 +204,25 @@ job outlives its page, so a failure that happened while no page was open is stil
 - **Layers:** unit
 - **WHEN** a hub opens while the slot holds its batch's failed Prepare
 - **THEN** the Prepare bar shows the job's message
+- **AND** once Discard dismisses it, a hub opened again does not
 
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
 The system SHALL offer Render from a bar on a batch's hub and its Renders view that counts the images short of their
-approvals' counts, and SHALL show no such bar when none is short, nor on the hub while changes wait for Prepare.
-The bar SHALL be disabled, with its reason, when a job runs, when a pod may still be billing, and when no RunPod key
-is in the surface's environment. It SHALL open a dialog listing per offered flow the images that will render and what
-is left out, with the reason, the session's estimate and limit, and its price at most — the limit at the hourly
-maximum `gpunit.toml` names, with the volume at its configured rate. Its confirmation SHALL be the only act that
-rents; the dialog SHALL hold no URL. The confirmation SHALL carry the limit and the number of images the dialog
-showed, and SHALL be refused, starting nothing, when the batch's quote taken again has a longer limit or another
-number of images.
+approvals' counts, and SHALL show no such bar when none is short and no count is refused, nor on the hub while changes
+wait for Prepare. The bar SHALL be disabled, with its reason, when a job runs, when a pod may still be billing, when
+no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a dialog
+listing per offered flow the images that will render and what is left out, with the reason, the session's estimate
+and limit, and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its
+configured rate. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL. The confirmation
+SHALL carry the limit and the number of images the dialog showed, and SHALL be refused, starting nothing, when the
+batch's quote taken again has a longer limit or another number of images.
 
 The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
 not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires
 a fresh confirmation, even where the limit sits at its floor or cap. An equal-total change of sources or approvals
-is outside that comparison. A bar that is absent needs no reason, and one forward action holds the screen's accent.
+is outside that comparison. A bar that is absent needs no reason, and one forward action holds the screen's accent;
+a refused count keeps the bar, so the refusal is never silent.
 
 #### Scenario: the dialog lists what renders per flow
 - **Key:** `ui:render:the-dialog-lists-what-renders`
@@ -248,6 +251,13 @@ is outside that comparison. A bar that is absent needs no reason, and one forwar
 - **THEN** the Prepare bar shows and the Render bar does not
 - **AND** with nothing waiting the Render bar shows, and with nothing short neither does
 
+#### Scenario: a refused count is shown
+- **Key:** `ui:render:a-refused-count-is-shown`
+- **Layers:** unit
+- **WHEN** a batch's only approval short of its count holds a count no render takes
+- **THEN** its Render offer counts no image and carries the refusal, naming the file
+- **AND** the Render bar shows, disabled, with its reason
+
 #### Scenario: the confirmation starts the render
 - **Key:** `ui:render:the-confirmation-starts-the-render`
 - **Layers:** e2e
@@ -272,13 +282,15 @@ the photograph in a viewer. `Esc` on a large view SHALL return to the screen it 
 approval it cannot read as damaged, naming the file, and show every image, that version's own among them; and SHALL
 refuse an address whose version is not `v` and ASCII digits. It SHALL serve each thumbnail, a render's or a source's,
 from a cache in the library's `.cache/`, made on first request and named by the image's own bytes. It SHALL serve a
-photograph, a source or a run's copy, as the image its bytes are, whatever its name ends in.
+photograph, a source or a run's copy, as the image its bytes are, whatever its name ends in, and a source in a format
+the render does not read as an upright JPEG of it.
 
 The images come back to where the sheets were decided, in the order they were made; a cache the library can lose
 costs only its rebuild. Two batches can hold one source rendered at one seed, so only the bytes say which image a
 thumbnail shows. One damaged file costs only its own version, never the batch's page. The count a cell lacks is the
 render stage's own, so the page and the render agree on what is ready. A source keeps the name it arrived with, and
-one ending `.html` served by its name would run as a page on the surface's own origin.
+one ending `.html` served by its name would run as a page on the surface's own origin; one placed by hand in another
+format is still shown, as its thumbnail is.
 
 #### Scenario: versions are listed newest first
 - **Key:** `ui:renders:versions-newest-first`
@@ -350,6 +362,7 @@ one ending `.html` served by its name would run as a page on the surface's own o
 - **WHEN** a source whose name ends `.html` holds a PNG and is asked for whole
 - **THEN** it is served as `image/png`, and the browser is told not to guess another type
 - **AND** a run's photograph is served the same way
+- **AND** a source in another format is served as an upright JPEG of it
 
 ### Requirement: A version says what it was, and Compare shows a seed's two versions
 
