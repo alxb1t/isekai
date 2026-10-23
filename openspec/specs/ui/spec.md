@@ -806,10 +806,13 @@ for each its upload's progress, then its reading, then whether it is ready, conv
 the reason. Import SHALL stay disabled, with its reason, until every chosen file is read, and SHALL commit only the
 ready files and those the operator chose to import as they are. Each upload SHALL keep its own state, whatever its
 name; an upload SHALL be refused once Import begins committing; and a file whose reading fails SHALL be refused
-alone, the next file still read.
+alone, the next file still read. While Import commits, the sheet SHALL take no file, no second Import and no
+cancel, by button, by `Esc` or by leaving the screen; a commit refused after the screen is left SHALL cancel its
+staged folder.
 
 Each file's bar answers which one is slow; each reason sits on the file it concerns, so two files of one name are
-two uploads. A file that lands while the folder is committed would be dropped from the batch unseen.
+two uploads. A file that lands while the folder is committed would be dropped from the batch unseen, and a cancel
+then would delete the folder the commit is moving.
 
 #### Scenario: each file shows its own progress, then its result
 - **Key:** `ui:sheet:each-file-shows-its-progress`
@@ -870,6 +873,20 @@ two uploads. A file that lands while the folder is committed would be dropped fr
 - **WHEN** reading one uploaded file raises
 - **THEN** that file is refused, naming why
 - **AND** the next file is still read
+
+#### Scenario: a commit in flight holds the sheet
+- **Key:** `ui:sheet:a-commit-in-flight-holds-the-sheet`
+- **Layers:** e2e
+- **WHEN** Import's commit is in flight
+- **THEN** Add files…, Import and Cancel are disabled
+- **AND** `Esc` leaves the sheet open
+
+#### Scenario: leaving the screen mid-commit keeps the staged folder
+- **Key:** `ui:sheet:leaving-mid-commit-keeps-the-folder`
+- **Layers:** unit
+- **WHEN** the sheet closes while Import's commit is in flight
+- **THEN** its staging folder is not cancelled
+- **AND** a commit refused after it closes cancels the folder
 
 ### Requirement: Prepare runs what changed as one job, and refuses before it starts when Ollama does not answer
 
@@ -1310,3 +1327,87 @@ edit. The grid carries the images; the large view, which carries the sheet, carr
 - **Layers:** e2e
 - **WHEN** Compare is opened on a revised image
 - **THEN** both images and the changed fields are shown
+
+### Requirement: Every command has one key, declared once, and none fires while typing
+
+The system SHALL declare each keyboard command once, with its key and its label, on the screen or overlay that
+offers it, and SHALL draw every key hint, each screen's key bar and the key list that `?` opens from those
+declarations. It SHALL match a key by the physical key, whatever the keyboard layout, and SHALL treat Mod as `⌘` on
+macOS and `Ctrl` elsewhere. An open overlay SHALL take every key before the screen beneath it, and the screen before
+the keys offered everywhere. While focus is in a text field, no command SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`,
+`⇧Mod+Z` and `Mod+K`, and the field SHALL keep its own editing keys. On the hub, a focused button or link SHALL
+keep `↵` and `Space`. `Esc` SHALL close an open suggestion list first, then leave the field, then close the top
+overlay, then go back on the screen, and SHALL never close a billing alert. No key SHALL spend money but the Render
+dialog's `Mod+↵`, which confirms the price it quotes.
+
+A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
+Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.
+
+```
+keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod+Z · Mod+K, else the field's own
+               │ no
+               ▼
+           top overlay ─▶ screen ─▶ everywhere        the first that declares the key runs
+```
+
+#### Scenario: a key is matched by the physical key
+- **Key:** `ui:keys:a-key-is-matched-by-the-physical-key`
+- **Layers:** unit
+- **WHEN** `⇧H` is pressed on a Cyrillic layout
+- **THEN** the command declared for `⇧H` runs
+
+#### Scenario: Mod is Command or Control
+- **Key:** `ui:keys:mod-is-command-or-control`
+- **Layers:** unit
+- **WHEN** a command declared for `Mod+K` is offered
+- **THEN** `⌘K` and `Ctrl+K` each run it
+
+#### Scenario: no command fires in a text field
+- **Key:** `ui:keys:no-command-fires-in-a-text-field`
+- **Layers:** unit
+- **WHEN** a declared letter is pressed with focus in a text field
+- **THEN** no command runs
+- **AND** `Esc`, `Mod+↵`, `Mod+Z` and `Mod+K` still do
+
+#### Scenario: a command waits until the field is left
+- **Key:** `ui:keys:a-command-waits-until-the-field-is-left`
+- **Layers:** e2e
+- **WHEN** `⇧H` is typed into a tag field, then `Esc` and `⇧H` are pressed
+- **THEN** the field holds the typed text and Review stays open
+- **AND** the second `⇧H` opens the hub
+
+#### Scenario: a focused control keeps Enter and Space
+- **Key:** `ui:keys:a-focused-control-keeps-enter-and-space`
+- **Layers:** unit
+- **WHEN** `↵` or `Space` is pressed on the hub with focus on a button or a link
+- **THEN** the control answers it and the cell's command does not run
+
+#### Scenario: an overlay takes the keys first
+- **Key:** `ui:keys:an-overlay-takes-the-keys-first`
+- **Layers:** unit
+- **WHEN** an overlay and the screen beneath it both declare a key
+- **THEN** only the overlay's command runs
+
+#### Scenario: Esc closes the nearest thing first
+- **Key:** `ui:keys:esc-closes-the-nearest-thing-first`
+- **Layers:** unit
+- **WHEN** `Esc` is pressed with a suggestion list open in a field inside an overlay
+- **THEN** the list closes, and the next `Esc` leaves the field, and the next closes the overlay
+
+#### Scenario: the key list and the hints come from the declarations
+- **Key:** `ui:keys:hints-come-from-the-declarations`
+- **Layers:** unit
+- **WHEN** a screen declares its commands
+- **THEN** its key bar, its button hints and the key list name each command's key and label
+
+#### Scenario: Renders moves by cell and by image
+- **Key:** `ui:keys:renders-moves-by-cell-and-by-image`
+- **Layers:** unit
+- **WHEN** `l` and then `→` are pressed on the Renders grid
+- **THEN** `l` moves to the next cell and `→` to the next image inside it
+
+#### Scenario: Review moves between its panes
+- **Key:** `ui:keys:review-moves-between-its-panes`
+- **Layers:** unit
+- **WHEN** `l` is pressed from the rail three times
+- **THEN** focus moves through the source pane and the sheet to ④

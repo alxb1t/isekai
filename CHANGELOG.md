@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-10-23 · 0069-the-keys
+
+Gate: local 0m39s · CI 7m25s (build-image at 801ffec) · 0.42.0: local 0m36s · CI 7m25s
+
 ### Changed
 
 - Every key is declared once in a key store with one listener; none fires in a text field, `Esc` leaves
