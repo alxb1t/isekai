@@ -301,10 +301,10 @@ source approved again after a copy would otherwise leave the target on the old s
 
 The system SHALL carry in a draft, and into its approval, a count of images and a list of seeds, SHALL read a draft
 or approval without them as a count of one and no seeds, and SHALL refuse approval of a count below the number of
-seeds listed or a seed outside the range a render accepts, naming the field.
+seeds listed a seed outside the range a render accepts, or a seed listed twice, naming the field.
 
 What the operator approves includes how many attempts the sheet gets and at which seeds. An old draft reads as it
-always rendered.
+always rendered. A seed listed twice would render one image twice.
 
 #### Scenario: an old draft reads as one image
 - **Key:** `review:renders:an-old-draft-reads-as-one`
@@ -322,6 +322,12 @@ always rendered.
 - **Key:** `review:renders:a-seed-out-of-range-is-refused`
 - **Layers:** unit
 - **WHEN** approval is asked for a draft with a negative seed
+- **THEN** it is refused naming the seed
+
+#### Scenario: a repeated seed is refused
+- **Key:** `review:renders:a-repeated-seed-is-refused`
+- **Layers:** unit
+- **WHEN** approval is asked for a draft listing seed 144 twice
 - **THEN** it is refused naming the seed
 
 ### Requirement: A revision is a draft from the approval that made the image, its seed prefilled

@@ -9,6 +9,29 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-10-23 · 0070-review
+
+Gate: local 0m40s · CI 7m25s (build-image at 801ffec) · 0.43.0: local 0m39s · CI 7m25s
+
+### Changed
+
+- A batch's Review has its own address, `/b/<batch>/review`, which opens its head; the Review tab counts the
+  unapproved sheets, and the hub's *Review next* is gone. Each hub cell carries what its approval lacks (0070 D1, D2).
+
+- Approve stays on the sheet, read-only, and Discard stays too; Review's rail, headed by its flow, lists every
+  sheet not yet rendered. Revise opens its first draft, the rest in the rail. An approval waits for a save in
+  flight (0070 D3, D4, D9).
+
+- Review's old header is gone: the save and approval times sit in ③'s kicker, every refusal in the approve bar,
+  and no file name shows. A revision's photograph and render share one header row at one height; Discard asks
+  from the approve bar (0070 D5, D6, D9).
+
+- ④ is one slot per image, a seed or random, in a panel right of the sheet rows; a typed seed sets its slot at
+  once, and a seed listed twice is refused, by the slot and by approval (0070 D7).
+
+- Review's photograph opens in the viewer, `←` `→` stepping the rail's photographs, and a revision's render opens
+  there too; *Side by side* `⇧C` shows the pair at one height. The photo overlay is gone (0070 D8).
+
 ## [0.43.0] - 2026-10-23 · 0069-the-keys
 
 Gate: local 0m39s · CI 7m25s (build-image at 801ffec) · 0.42.0: local 0m36s · CI 7m25s

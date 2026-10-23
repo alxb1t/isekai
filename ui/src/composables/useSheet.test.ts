@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
 import type { InputDetail } from '../types'
+import { useApproval } from './useApproval'
 import { useSheet } from './useSheet'
 
 /* `fetch` is stubbed with answers the test releases by hand, so the order in
@@ -112,4 +113,69 @@ spec('ui:save:a-pending-edit-is-sent-on-leaving', async () => {
   expect(put.init?.method).toBe('PUT')
   expect(put.init?.keepalive).toBe(true)
   expect(JSON.parse(String(put.init?.body)).fields.hair).toEqual(['long hair', 'brown hair'])
+
+  // Review's switch inside that save's round trip: the edit is sent once it answers, stating the draft it wrote.
+  sheet.commit('hair', 'short hair', null)
+  void sheet.flush()
+  const switched = sheet.open('b')
+  expect(calls.map((call) => call.url)).toEqual(['/api/b/b/review/a/f/draft', '/api/b/b/review/b/f'])
+  await answer('/api/b/b/review/a/f/draft', receipt(11))
+  const left = calls.find((call) => call.url === '/api/b/b/review/a/f/draft')
+  expect(left?.init?.keepalive).toBe(true)
+  expect(JSON.parse(String(left?.init?.body)).saved).toBe(11)
+  expect(JSON.parse(String(left?.init?.body)).fields.hair).toEqual(['long hair', 'brown hair', 'short hair'])
+  await answer('/api/b/b/review/b/f', detail('b', 20))
+  await switched
+  await answer('/api/b/b/review/a/f/draft', receipt(12))
+  expect(sheet.saved.value).toBe(20)
+
+  // Closing inside a save's round trip: no edit can state its receipt before the page goes, so the page asks.
+  sheet.commit('hair', 'brown hair', null)
+  void sheet.flush()
+  sheet.commit('hair', 'short hair', null)
+  expect(sheet.leave()).toBe(true)
+  expect(calls.map((call) => call.url)).toEqual(['/api/b/b/review/b/f/draft'])
+  // Staying, the edit is sent once that save answers, stating the draft it wrote.
+  await answer('/api/b/b/review/b/f/draft', receipt(21))
+  const [kept] = calls
+  expect(kept.init?.keepalive).toBe(true)
+  expect(JSON.parse(String(kept.init?.body)).saved).toBe(21)
+  expect(JSON.parse(String(kept.init?.body)).fields.hair).toEqual(['long hair', 'brown hair', 'short hair'])
+  await answer('/api/b/b/review/b/f/draft', receipt(22))
+  expect(sheet.leave()).toBe(false)
+})
+
+spec('ui:save:an-approval-waits-for-a-save-in-flight', async () => {
+  const sheet = useSheet({ batch: 'b', flow: 'f' })
+  const approval = useApproval()
+  const opened = sheet.open('a')
+  await answer('/api/b/b/review/a/f', detail('a', 10))
+  await opened
+  sheet.commit('hair', 'brown hair', null)
+  void sheet.flush()
+  // A second tag inside the first save's round trip: pending when Approve is pressed.
+  sheet.commit('hair', 'short hair', null)
+
+  // Review's Approve: the draft on disk first, then the approval stating it.
+  const approving = (async () => {
+    if (await sheet.flush()) await approval.approve({ batch: 'b', digest: 'a', flow: 'f' }, sheet.saved.value)
+  })()
+  await vi.runAllTimersAsync()
+  expect(calls.map((call) => call.url)).toEqual(['/api/b/b/review/a/f/draft'])
+
+  // The pending edit is sent once the first save answers, stating the draft it wrote.
+  await answer('/api/b/b/review/a/f/draft', receipt(11))
+  const [second] = calls
+  expect(second.url).toBe('/api/b/b/review/a/f/draft')
+  const sent = JSON.parse(String(second.init?.body))
+  expect(sent.saved).toBe(11)
+  expect(sent.fields.hair).toEqual(['long hair', 'brown hair', 'short hair'])
+
+  await answer('/api/b/b/review/a/f/draft', receipt(12))
+  const [post] = calls
+  expect(post.url).toBe('/api/b/b/review/a/f/approve')
+  expect(JSON.parse(String(post.init?.body))).toEqual({ saved: 12 })
+  await answer('/api/b/b/review/a/f/approve', { approved: '001.approved.json', warnings: [], at: 13 })
+  await approving
+  expect(approval.at.value).toBe(13)
 })

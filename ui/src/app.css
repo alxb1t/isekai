@@ -737,38 +737,8 @@ body {
   min-height: 0;
 }
 
-/* — app header — */
-
-.app-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-  height: 41px;
-  flex: none;
-  padding: 0 var(--space-4);
-  border-bottom: 1px solid var(--color-neutral-900);
-}
-
-.app-header__brand {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.app-header__run {
-  font-size: 11.5px;
-  color: var(--color-neutral-400);
-}
-
-.app-header__receipts {
-  margin-left: auto;
-  display: flex;
-  gap: var(--space-4);
-  font-size: 11.5px;
-  color: var(--color-neutral-500);
-}
-
 /* `· saved 14:30` is thirteen characters; the slot holds that whether it is
-   showing the time, the spinner, or nothing yet. */
+   showing the time or the spinner. */
 .receipt__when {
   display: inline-block;
   min-width: 13ch;
@@ -799,22 +769,6 @@ body {
   .spinner {
     animation: none;
   }
-}
-
-.app-header__receipt--approved {
-  color: var(--color-accent-300);
-}
-
-/* The one place a refusal lands. Blunt, no modal, and it never implies the
-   operator's work was lost -- the design's own rule for states it specified and
-   deliberately did not draw. */
-.app-header__refusal {
-  flex: none;
-  padding: var(--space-2) var(--space-4);
-  font-size: 11.5px;
-  color: var(--color-accent-300);
-  background: var(--color-accent-900);
-  border-bottom: 1px solid var(--color-accent-700);
 }
 
 /* — batch rail — */
@@ -992,11 +946,6 @@ body {
   padding: var(--space-6) 18px var(--space-3);
 }
 
-.sheet-header__line {
-  margin-top: 5px;
-  font-size: 12.5px;
-  color: var(--color-neutral-400);
-}
 
 .budget {
   margin-left: auto;
@@ -1106,16 +1055,42 @@ body {
 }
 
 .source__pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  align-items: flex-start;
   gap: var(--space-2);
 }
 
-.source__revised {
+/* Width in proportion to the image's aspect ratio, so both stand at one height. */
+.source__side {
+  flex-basis: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   margin: 0;
+}
+
+.source__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A label line of the pair; one height on both sides, so the images top-align. */
+.source__row {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.source__pair-open {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
 }
 
 .source__revised img {
@@ -1185,17 +1160,26 @@ body {
 
 /* — ④ renders — */
 
-.renders-block {
-  flex: none;
-  padding: var(--space-3) 18px 0;
-  border-top: 1px solid var(--color-neutral-900);
+.form__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
 }
 
-.renders-block__row {
+.form__body .rows {
+  min-width: 0;
+}
+
+/* ④, a panel right of the sheet rows. */
+.renders-block {
+  flex: none;
+  width: 230px;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
+  padding: var(--space-3) 18px;
+  border-left: 1px solid var(--color-neutral-900);
+  overflow-y: auto;
 }
 
 .renders-block__label {
@@ -1203,9 +1187,8 @@ body {
   color: var(--ink-2);
 }
 
-.renders-block__count,
-.renders-block__seeds {
-  display: inline-flex;
+.renders-block__count {
+  display: flex;
   align-items: center;
   gap: 6px;
 }
@@ -1221,14 +1204,38 @@ body {
   text-align: center;
 }
 
+.renders-block__slots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.renders-block__slot {
+  display: grid;
+  grid-template-columns: 3ch 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
 .renders-block__seed {
-  width: 14ch;
+  width: 100%;
   height: 26px;
   font-size: 12px;
 }
 
+.renders-block__refusal {
+  grid-column: 2;
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
 .renders-block__draws {
-  margin: var(--space-2) 0 0;
+  margin: 0;
 }
 
 /* — footer — */
@@ -1238,7 +1245,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-4);
+  gap: 12px;
   padding: var(--space-4) 18px;
   border-top: 1px solid var(--color-neutral-900);
 }
@@ -1359,13 +1366,11 @@ body {
   outline: none;
 }
 
-/* — photo overlay — */
+/* — overlays: the cheatsheet and the key list — */
 
 .overlay {
-  /* Below the app header, which stays: the run line, the count and the save
-     receipt still read, so the operator never loses their place. It is not
-     dimmed with an opacity wrapper -- that is how the header first became
-     illegible. */
+  /* Below the app bar, which stays, so the operator never loses their place.
+     It is not dimmed with an opacity wrapper, which leaves the bar illegible. */
   position: fixed;
   top: 41px;
   right: 0;
@@ -1378,30 +1383,6 @@ body {
   /* One shade below the app's, mixed from the token rather than invented. */
   background: color-mix(in srgb, var(--color-bg) 72%, black);
   overflow: auto;
-}
-
-.overlay__figure {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* No `.lighten` here, and that is the point: this is where colour is judged. */
-.overlay__photo {
-  max-height: calc(100vh - 140px);
-  width: auto;
-  box-shadow: var(--shadow-lg);
-}
-
-.overlay__photo--actual {
-  max-height: none;
-  max-width: none;
-}
-
-.overlay__meta {
-  font-size: 11px;
-  color: var(--color-neutral-500);
 }
 
 .overlay__side {
@@ -1425,17 +1406,6 @@ body {
   color: var(--color-neutral-500);
 }
 
-.overlay__caption {
-  margin-top: var(--space-2);
-  font-size: 13.5px;
-  line-height: 1.62;
-  color: var(--color-neutral-300);
-}
-
-.overlay__caption p {
-  margin: 0 0 var(--space-4);
-}
-
 .overlay__foot {
   margin-top: auto;
   padding-top: var(--space-6);
@@ -1444,8 +1414,7 @@ body {
   color: var(--color-neutral-500);
 }
 
-/* The cheatsheet's side is the photo overlay's, without the 620px reading
-   measure: `clothes` is a four-figure list of chips and a column that narrow
+/* The cheatsheet's side, without the 620px reading measure: `clothes` is a four-figure list of chips and a column that narrow
    would wrap it into a ribbon. Nothing else about the ground changes. */
 .overlay__side--wide {
   max-width: none;
@@ -1508,6 +1477,20 @@ body {
   max-width: none;
   max-height: none;
   cursor: zoom-out;
+}
+
+/* Side by side: widths in proportion to each image's aspect ratio, so both
+   stand at one height, top-aligned. */
+.viewer__pair {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.viewer__side {
+  flex-basis: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 /* — the hub — */
@@ -1987,5 +1970,34 @@ body {
 
 .keylist__label {
   margin: 0;
+  color: var(--ink-2);
+}
+
+.review-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 48px;
+}
+
+.appbar__count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  margin-left: 6px;
+}
+
+/* The read in progress, while Review's batch or sheet loads. */
+.review__reading {
+  padding: var(--space-2) var(--space-4);
+}
+
+/* Discard's ask, in Discard's place left of Approve. */
+.approve-bar__ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
   color: var(--ink-2);
 }

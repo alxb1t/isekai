@@ -1,4 +1,4 @@
-"""Review as a queue, in a browser: Approve moves on, and a later failure shows."""
+"""Approving in Review, in a browser: the sheet stays, and a later failure shows."""
 
 import pytest
 from playwright.sync_api import Page, Route, expect
@@ -13,25 +13,18 @@ def _approve(page: Page) -> None:
     button.click()
 
 
-@pytest.mark.spec("ui:queue:approve-moves-to-the-next-sheet")
-def test_approve_opens_the_next_unapproved_sheet(page: Page, served: Served) -> None:
-    first, second = served.queues["queue-moves"]
-    page.goto(served.review(first, "queue-moves"))
+@pytest.mark.spec("ui:review:approve-stays-on-the-sheet")
+def test_approve_stays_on_the_sheet(page: Page, served: Served) -> None:
+    first, _ = served.queues["queue-stays"]
+    page.goto(served.review(first, "queue-stays"))
     _approve(page)
-    expect(page).to_have_url(served.review(second, "queue-moves"))
-    expect(page.locator(".rail__card--current")).to_contain_text("dot.jpg")
+    expect(page.locator(".rail__card--current .mark--filled")).to_be_visible()
+    expect(page).to_have_url(served.review(first, "queue-stays"))
+    expect(page.locator("input.fragment")).to_have_count(0)
+    expect(page.locator(".rail__card--current")).to_contain_text("cid.jpg")
 
 
-@pytest.mark.spec("ui:queue:after-the-last-sheet-the-hub-opens")
-def test_approving_the_last_sheet_opens_the_hub(page: Page, served: Served) -> None:
-    (only,) = served.queues["queue-last"]
-    page.goto(served.review(only, "queue-last"))
-    _approve(page)
-    expect(page).to_have_url(served.hub_of("queue-last"))
-    expect(page.get_by_text("nothing left to review")).to_be_visible()
-
-
-@pytest.mark.spec("ui:queue:a-failure-after-approval-is-shown")
+@pytest.mark.spec("ui:review:a-failure-after-approval-is-shown")
 def test_a_failure_reading_the_next_state_shows_in_the_approve_bar(
     page: Page, served: Served
 ) -> None:

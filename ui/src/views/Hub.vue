@@ -14,7 +14,6 @@ import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
-import { head } from '../composables/useQueue'
 import { at, useBatchStore } from '../stores/batch'
 import { isControl, modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
@@ -78,13 +77,6 @@ const RUNNING: Record<string, { segment: number; word: string }> = {
 const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
 const busy = computed(() => job.value?.state === 'running' && job.value.kind === 'prepare')
-
-/* Review next: the queue's head, which ⇧R opens from every screen. */
-const next = computed(() => {
-  const at = info.value ? head(info.value) : null
-  const source = at && info.value?.sources.find((one) => one.digest === at.digest)
-  return at && source ? { source, flow: at.flow } : null
-})
 
 /* What Prepare would run: every assigned cell with no sheet. */
 const changes = computed(() =>
@@ -279,10 +271,6 @@ function place(row: number, column: number): void {
   )
 }
 
-function reviewNext(): void {
-  if (next.value) review(next.value.source, next.value.flow)
-}
-
 /* ⇧↑↓ extends the selection from the focused row, which joins it. */
 function select(step: number): void {
   const { row, column } = focus.value
@@ -370,10 +358,14 @@ onMounted(async () => {
     <ImportSheet v-if="adding" :batch="batch" @close="adding = false" @imported="added" />
     <ImageViewer
       v-if="viewing"
-      :src="sourceAt(batch, viewing.name)"
-      :name="viewing.name"
-      :width="viewing.width"
-      :height="viewing.height"
+      :images="[
+        {
+          src: sourceAt(batch, viewing.name),
+          name: viewing.name,
+          width: viewing.width,
+          height: viewing.height,
+        },
+      ]"
       @close="viewing = null"
     />
     <RenderDialog v-if="dialog" :batch="batch" @close="store.closeDialog" />
@@ -385,16 +377,6 @@ onMounted(async () => {
       <button class="btn btn-secondary hub__add" type="button" @click="adding = true">
         Add sources…<KeyHint command="add" />
       </button>
-      <button
-        v-if="next"
-        class="btn"
-        :class="shown ? 'btn-secondary' : 'btn-primary'"
-        type="button"
-        @click="reviewNext"
-      >
-        Review next · {{ next.source.name }} {{ next.flow }}<KeyHint command="review" />
-      </button>
-      <span v-else class="hub__reason">nothing left to review</span>
     </div>
     <div
       ref="grid"

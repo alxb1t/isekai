@@ -1112,6 +1112,24 @@ def test_a_seed_out_of_range_refuses_approval_naming_the_seed(
     assert approved_versions(run.directory(FLOW, "review")) == []
 
 
+@pytest.mark.spec("review:renders:a-repeated-seed-is-refused")
+def test_a_repeated_seed_refuses_approval_naming_the_seed(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    draft = _with_renders(run, 1, [])
+    fields = read(draft, DRAFT_FILE)["fields"]
+    with pytest.raises(Refusal, match="renders seed 144 is listed twice"):
+        save_draft(run, FLOW, fields, {"count": 2, "seeds": [144, 144]})
+    _damage(draft, "renders", {"count": 2, "seeds": [144, 144]})
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert "renders seed 144 is listed twice" in str(refused.value)
+    assert draft.exists()
+    assert approved_versions(run.directory(FLOW, "review")) == []
+
+
 # --- revise and discard -------------------------------------------------------
 
 SEED = 1840266731

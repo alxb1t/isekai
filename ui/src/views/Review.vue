@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { discardDraft, fieldCandidates, imageAt, photoUrl as photoAt } from '../api'
-import AppHeader from '../components/AppHeader.vue'
 import ApproveBar from '../components/ApproveBar.vue'
 import BatchRail from '../components/BatchRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
+import ImageViewer from '../components/ImageViewer.vue'
 import KeyBar from '../components/KeyBar.vue'
 import LoadingSkeleton from '../components/LoadingSkeleton.vue'
-import PhotoOverlay from '../components/PhotoOverlay.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RendersBlock from '../components/RendersBlock.vue'
 import SheetForm from '../components/SheetForm.vue'
@@ -16,14 +15,15 @@ import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
 import { useKeys } from '../composables/useKeys'
-import { after, queue, queued, reviewQueue, useQueue } from '../composables/useQueue'
+import { useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
+import { clamp } from '../grid'
 import { nextPane, type Pane } from '../panes'
 import { modded, plain, shifted } from '../stores/keys'
 import type { FieldCandidates } from '../types'
 
 /* Review: one batch in one flow, the run in the URL. It shows the loading state
-   or the review layout; the photo overlay layers over either. The router keys
+   or the review layout; the viewer layers over either. The router keys
    this view by batch and flow, so a new digest is a new sheet in the same view.
 
    It owns the global keyboard model -- the bindings that cross components, so
@@ -32,13 +32,11 @@ import type { FieldCandidates } from '../types'
    move between them are read by `TagInput`. */
 const props = defineProps<{ batch: string; digest: string; flow: string }>()
 const router = useRouter()
-const route = useRoute()
 const batch = useQueue(props.batch, props.flow, () => props.digest)
 const failure = ref<string | null>(null)
-const done = computed(() => batch.info.value !== null && queue(batch.info.value, props.flow).length === 0)
-/* A refusal after the approval landed: the approval stands, and the bar says
-   what could not be read next. */
-const afterApproval = ref<string | null>(null)
+/* A refusal reading the sheet again after an approval or a discard, or of the
+   discard itself: the bar says what could not be done. */
+const refused = ref<string | null>(null)
 const sheet = useSheet({ batch: props.batch, flow: props.flow })
 const approval = useApproval()
 const current = computed(() => props.digest)
@@ -54,9 +52,6 @@ const revised = computed(() => {
   if (!held?.seed) return null
   return { src: imageAt({ ...props, version: held.version, seed: held.seed }), seed: held.seed }
 })
-const discarding = ref<string | null>(null)
-/* Discard deletes the operator's edits, so it asks once before it does. */
-const confirmingDiscard = ref(false)
 const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 
 /* The URL is the state: choosing another sheet is a navigation. */
@@ -89,7 +84,7 @@ const source = ref<HTMLElement | null>(null)
 
    `candidates` is fetched once per sitting and then held: the table does not
    move while a surface is up. */
-type Lens = 'photo' | 'cheatsheet'
+type Lens = 'photo' | 'render' | 'pair' | 'cheatsheet'
 
 const lens = ref<Lens | null>(null)
 const candidates = ref<FieldCandidates | null>(null)
@@ -100,13 +95,38 @@ const candidates = ref<FieldCandidates | null>(null)
 const suspended = computed(() => lens.value !== null)
 const selectedChip = ref<number | null>(null)
 
+/* What the viewer shows: the rail's photographs from the open one, the render
+   being revised alone, or the photograph and the render side by side. */
+const photos = computed(() =>
+  batch.inputs.value.map((input) => ({
+    src: photoUrl(input.id),
+    name: input.name,
+    width: input.width,
+    height: input.height,
+  })),
+)
+const opened = computed(() =>
+  Math.max(
+    batch.inputs.value.findIndex((input) => input.id === current.value),
+    0,
+  ),
+)
+const viewed = computed(() => {
+  if (lens.value === 'photo') return { images: photos.value, start: opened.value }
+  if (!revised.value) return null
+  const render = { src: revised.value.src, name: `render · seed ${revised.value.seed}` }
+  if (lens.value === 'render') return { images: [render], start: 0 }
+  const photo = photos.value[opened.value]
+  if (lens.value === 'pair' && photo) return { images: [photo, render], start: 0 }
+  return null
+})
+
 const clock = (at: number | null) =>
   at === null ? null : new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
 
 /* The draft's time to the minute. It is rewritten every few seconds while the
    operator types, and a seconds field that ticks under the eye is noise; the
-   approved time keeps its seconds, because it is written once and is the
-   receipt someone might quote. */
+   approved time keeps its seconds, because it is written once. */
 const minute = (at: number | null) =>
   at === null
     ? null
@@ -116,42 +136,13 @@ const minute = (at: number | null) =>
         minute: '2-digit',
       })
 
-const flow = computed(() => props.flow)
+/* When the sheet was approved: in this sitting, else as the server read it. */
+const approvedAt = computed(() => clock(approval.at.value ?? sheet.detail.value?.approved_at ?? null))
 
-/* The draft receipt outlives the draft file, within one sitting.
-
-   `approve()` unlinks the draft, so after approving there is nothing on disk for
-   the review payload to report -- but the pairing is the whole of "saving is
-   not approving", stated without words: two files, two acts, two timestamps
-   seconds apart. So what was saved is remembered here and kept beside the
-   approved line. An input approved in an earlier sitting shows the approved
-   receipt alone, which is the truth about it. */
-const lastDraft = ref<{ name: string; saved: number | null } | null>(null)
-
-// The payload, not the draft's name: every input's draft is `001.draft.json`,
-// so watching the name fires on the first load and never again.
-watch(sheet.detail, (body) => {
-  if (body?.draft) lastDraft.value = { name: body.draft, saved: body.saved }
-})
-
-// Autosave moves the time without changing the payload. `null` is not a time:
-// after approval the draft is gone and `saved` goes null, but the moment it was
-// last written is exactly what the pairing exists to state.
-watch(
-  () => sheet.saved.value,
-  (at) => {
-    if (at !== null && lastDraft.value) lastDraft.value = { ...lastDraft.value, saved: at }
-  },
-)
-
-const receipt = computed(() =>
-  lastDraft.value ? `${flow.value}/review/${lastDraft.value.name}` : null,
-)
-
-const approvedReceipt = computed(() =>
-  sheet.detail.value?.approved
-    ? `${flow.value}/review/${sheet.detail.value.approved}`
-    : null,
+/* Every refusal the page meets, in the approve bar. */
+const refusal = computed(
+  () =>
+    approval.refusal.value ?? sheet.refusal.value ?? refused.value,
 )
 
 /* `③ sheet — approved` once it is, which is also when the fields go read-only.
@@ -164,33 +155,25 @@ const kicker = computed(() => {
   // arrived -- `readonly` defaults to true while `detail` is null, so testing
   // it first would call an unloaded sheet approved.
   if (!sheet.detail.value?.approved) return 'draft from the tagger'
-  if (sheet.readonly.value) return 'approved'
+  if (sheet.readonly.value) return approvedAt.value ? `approved ${approvedAt.value}` : 'approved'
   const held = revision.value
   if (held?.seed) return `revision of render ${held.seed}`
   return held ? `revision of v${held.version}` : 're-opened'
 })
 
-/* Revise's queue, when Review was opened by it: open the next of its drafts,
-   else the hub, and return true. False without one: the batch's queue decides. */
-function nextRevised(): boolean {
-  const held = route.query.queue
-  if (typeof held !== 'string') return false
-  const [next, ...rest] = queued(held)
-  if (next)
-    void router.push({
-      name: 'review',
-      params: { batch: props.batch, digest: next.digest, flow: next.flow },
-      query: { queue: reviewQueue(rest) },
-    })
-  else void router.push({ name: 'hub', params: { batch: props.batch } })
-  return true
+/* Read the batch and the open sheet again, staying on it; a refusal shows in
+   the approve bar. */
+async function reread(id: string): Promise<void> {
+  const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
+  focused.value = null
+  selectedChip.value = null
+  if (read.status === 'rejected') refused.value = (read.reason as Error).message
 }
 
-/* Delete this draft, as `review --discard` does, and go on as approving would.
-   A save still in flight lands first, so the discard states the draft it moved
-   to rather than racing it. */
+/* Delete this draft, as `review --discard` does, and stay on the sheet. A save
+   still in flight lands first, so the discard states the draft it moved to
+   rather than racing it. */
 async function discard(): Promise<void> {
-  confirmingDiscard.value = false
   if (!(await sheet.flush())) return
   try {
     await discardDraft(
@@ -198,10 +181,10 @@ async function discard(): Promise<void> {
       sheet.saved.value,
     )
   } catch (reason) {
-    discarding.value = (reason as Error).message
+    refused.value = (reason as Error).message
     return
   }
-  if (!nextRevised()) void router.push({ name: 'hub', params: { batch: props.batch } })
+  await reread(current.value)
 }
 
 async function approve(): Promise<void> {
@@ -221,19 +204,8 @@ async function approve(): Promise<void> {
   if (!(await sheet.flush())) return
   const place = { batch: props.batch, digest: id, flow: props.flow }
   if (!(await approval.approve(place, sheet.saved.value))) return
-  // Neither depends on the other's answer; both depend only on the POST landing.
-  // The sheet is re-read so the page shows it approved, whatever follows.
-  if (nextRevised()) return
-  const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
-  focused.value = null
-  selectedChip.value = null
-  if (read.status === 'rejected') {
-    afterApproval.value = (read.reason as Error).message
-    return
-  }
-  const next = after(read.value, props.flow, id)
-  if (next) select(next)
-  else void router.push({ name: 'hub', params: { batch: props.batch } })
+  // Approving is an act, not a navigation: the sheet stays, read-only.
+  await reread(id)
 }
 
 /* The rail already knows every input's dimensions, so the source column draws
@@ -368,14 +340,29 @@ function toggleLens(which: Lens): void {
 
 const scrollSource = (direction: -1 | 1) => source.value?.scrollBy({ top: direction * 120 })
 
-/* `j` `k` or ↓ ↑: the rail changes the input, the source pane scrolls, and the
-   sheet walks its rows from the field last left. */
+/* ④'s stops, the count then each slot, walked from the one focused. */
+function moveRenders(direction: -1 | 1): void {
+  const stops = [
+    ...document.querySelectorAll<HTMLElement>(
+      '.renders-block [data-renders-count], .renders-block [data-slot]',
+    ),
+  ]
+  const at = stops.findIndex((one) => one === document.activeElement)
+  stops[clamp(at + direction, stops.length - 1)]?.focus()
+}
+
+/* A slot takes digits alone, so `j` `k` walk ④ from inside one. */
+const inSlot = () => document.activeElement?.matches('[data-slot]') ?? false
+
+/* `j` `k` or ↓ ↑: the rail changes the input, the source pane scrolls, the
+   sheet walks its rows from the field last left, and ④ its stops. */
 function vertical(direction: -1 | 1): () => void {
   return () => {
     const here = paneNow()
     if (here === 'rail') stepBatch(direction)
     else if (here === 'source') scrollSource(direction)
     else if (here === 'sheet') moveRow(direction)
+    else moveRenders(direction)
   }
 }
 
@@ -421,6 +408,22 @@ useKeys('screen', [
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
   { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'up', run: vertical(-1) },
   {
+    id: 'slot-down',
+    keys: plain('KeyJ', 'ArrowDown'),
+    label: 'next slot',
+    run: () => moveRenders(1),
+    inField: true,
+    when: inSlot,
+  },
+  {
+    id: 'slot-up',
+    keys: plain('KeyK', 'ArrowUp'),
+    label: 'previous slot',
+    run: () => moveRenders(-1),
+    inField: true,
+    when: inSlot,
+  },
+  {
     id: 'scroll-down',
     keys: [{ code: 'KeyE', ctrl: true }],
     label: 'scroll the photograph',
@@ -439,10 +442,23 @@ useKeys('screen', [
     run: () => void openLens('photo'),
     when: () => paneNow() === 'source' && sheet.detail.value !== null,
   },
+  {
+    id: 'side-by-side',
+    keys: [shifted('KeyC')],
+    label: 'the photograph and the render, side by side',
+    run: () => void openLens('pair'),
+    when: () => revised.value !== null,
+  },
 ])
 
-// The draft is flushed as the tab goes; the PUT is kept alive past the page.
-const onLeave = () => void sheet.flush()
+// The draft is flushed as the tab goes; the PUT is kept alive past the page. An
+// edit still waiting for an earlier save cannot be sent before the page goes, so
+// the browser asks the operator to stay rather than lose it unsaid.
+const onLeave = (event: BeforeUnloadEvent) => {
+  if (!sheet.leave()) return
+  event.preventDefault()
+  event.returnValue = true
+}
 
 // Leaving for another screen flushes too; the draft is the operator's work.
 onBeforeRouteLeave(async () => {
@@ -467,17 +483,14 @@ onUnmounted(() => window.removeEventListener('beforeunload', onLeave))
 watch(current, (id) => {
   if (!id) return
   // The pending write belongs to the input being left, not the one arriving.
-  // Not awaited: `flush()` captures the id it is writing and `open()` guards on
-  // `current`, so the two cannot cross.
+  // Not awaited: `flush()` takes the edit and its id before `open()` moves
+  // `current`, and the save states the receipt of that input's own last save.
   void sheet.flush()
   focused.value = null
   selectedChip.value = null
   approval.forget()
-  afterApproval.value = null
-  discarding.value = null
-  confirmingDiscard.value = false
+  refused.value = null
   lastField.value = null
-  lastDraft.value = null
   void sheet.open(id).then(() => enter(paneNow()))
 })
 </script>
@@ -485,37 +498,17 @@ watch(current, (id) => {
 <template>
   <RefusalPage v-if="failure" :refusal="failure" />
   <div v-else class="review">
-    <AppHeader
-      :flow="flow"
-      :inputs="batch.sheets.value"
-      :approved="batch.approved.value"
-      :draft="receipt"
-      :saved="minute(lastDraft?.saved ?? null)"
-      :saving="sheet.saving.value"
-      :approved-name="approvedReceipt"
-      :approved-at="clock(approval.at.value)"
-      :refusal="approval.refusal.value ?? sheet.refusal.value"
-    >
-      <template #status>
-        <LoadingSkeleton
-          v-if="batch.loading.value || sheet.loading.value"
-          :reading="batch.loading.value ? null : current"
-          :vocabulary="vocabulary"
-        />
-        <span
-          v-else-if="done"
-          class="app-header__receipt--approved mono"
-          style="font-size: 11.5px"
-        >
-          nothing left to review
-        </span>
-      </template>
-    </AppHeader>
+    <LoadingSkeleton
+      v-if="batch.loading.value || sheet.loading.value"
+      class="review__reading"
+      :reading="batch.loading.value ? null : current"
+      :vocabulary="vocabulary"
+    />
     <div v-if="batch.info.value" class="work" @focusin="remember">
       <BatchRail
+        :flow="props.flow"
         :inputs="batch.inputs.value"
         :approved="batch.approved.value"
-        :sheets="batch.sheets.value"
         :current="current"
         :edited="batch.edited.value"
         :photo-url="photoUrl"
@@ -537,6 +530,8 @@ watch(current, (id) => {
         :loading="sheet.loading.value"
         :revised="revised"
         @open="openLens('photo')"
+        @render="openLens('render')"
+        @pair="openLens('pair')"
       />
       <SheetForm
         :schema="schema"
@@ -547,6 +542,8 @@ watch(current, (id) => {
         :selected="selectedChip"
         :loading="sheet.loading.value"
         :kicker="kicker"
+        :saving="sheet.saving.value"
+        :saved="sheet.readonly.value ? null : minute(sheet.saved.value)"
         :previous="revision?.fields ?? null"
         @remove="(field, index) => (sheet.remove(field, index), batch.markEdited(current))"
       >
@@ -567,55 +564,36 @@ watch(current, (id) => {
             @row="moveRow"
           />
         </template>
-        <template #footer>
+        <template #aside>
           <RendersBlock
             v-if="!sheet.loading.value"
+            :key="current"
             :renders="sheet.renders.value"
             :readonly="sheet.readonly.value"
             @change="sheet.setRenders"
           />
-          <p v-if="revision" class="approve-bar__note mono">
-            <span v-if="discarding" class="approve-bar__refusal"
-              ><span class="refusal__mark" />{{ discarding }}</span
-            >
-            <span v-if="confirmingDiscard" data-discard-confirm>
-              Delete this draft and its edits?
-              <button class="btn btn-secondary" type="button" @click="confirmingDiscard = false">
-                Keep
-              </button>
-              <button class="btn btn-secondary" type="button" @click="discard">Delete</button>
-            </span>
-            <button
-              v-else
-              class="btn btn-secondary"
-              type="button"
-              data-discard
-              @click="confirmingDiscard = true"
-            >
-              Discard draft
-            </button>
-          </p>
+        </template>
+        <template #footer>
           <ApproveBar
+            :key="current"
             :approved="sheet.readonly.value"
-            :at="clock(approval.at.value)"
-            :file="approvedReceipt"
+            :at="approvedAt"
             :working="approval.working.value"
-            :refusal="afterApproval"
+            :refusal="refusal"
+            :discardable="revision !== null"
             @approve="approve"
+            @discard="discard"
           />
         </template>
       </SheetForm>
     </div>
 
-    <PhotoOverlay
-      v-if="lens === 'photo' && sheet.detail.value"
-      :id="sheet.detail.value.id"
-      :width="sheet.detail.value.width"
-      :height="sheet.detail.value.height"
-      :photo="photoUrl(sheet.detail.value.id)"
-      :caption="sheet.detail.value.caption"
+    <ImageViewer
+      v-if="viewed && viewed.images.length"
+      :images="viewed.images"
+      :start="viewed.start"
+      :pair="lens === 'pair'"
       @close="closeLens"
-      @step="stepBatch"
     />
 
     <CheatsheetOverlay

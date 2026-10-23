@@ -1,30 +1,33 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import KeyHint from './KeyHint.vue'
 
-/* Approve, or the fact that it happened.
+/* Approve, or the fact that it happened, and every refusal the page meets.
 
    **Accent-outlined and always live.** No scroll gate, no dwell timer, no
    confirmation step, and no disabled twin: the only thing that stops an approve
-   is a refusal, never a ritual. Frame delta 5 takes the empties action with it --
-   a control that marked something nothing reads would be a control with no
-   consequence.
+   is a refusal, never a ritual. Once approved the button becomes a stated time
+   rather than a greyed-out copy of itself.
 
-   Once approved the button becomes a stated time rather than a greyed-out copy
-   of itself, and the footer states that the input is read-only and names the
-   file that holds it (frame deltas 6 and 7, Design D5). There is no exit
-   affordance, because there is nothing on disk for an edit after approval to be
-   written into: `approve()` deletes the draft, and opening the surface again
-   writes no replacement. */
+   Discard, on a revision, sits left of Approve and asks before it deletes: it
+   takes the operator's edits with the draft. Review keys this bar by sheet, so
+   an ask never outlives its sheet. */
 defineProps<{
   approved: boolean
   at: string | null
-  file: string | null
   working: boolean
-  /* What could not be read after the approval landed; the approval stands. */
+  /* The page's refusal, verbatim; the work it names is never lost. */
   refusal?: string | null
+  discardable?: boolean
 }>()
 
-defineEmits<{ approve: [] }>()
+const emit = defineEmits<{ approve: []; discard: [] }>()
+const asking = ref(false)
+
+function discard(): void {
+  asking.value = false
+  emit('discard')
+}
 </script>
 
 <template>
@@ -32,25 +35,37 @@ defineEmits<{ approve: [] }>()
     <p v-if="refusal" class="approve-bar__refusal mono">
       <span class="refusal__mark" />{{ refusal }}
     </p>
-    <span v-if="approved" class="approve-bar__note mono">
-      This input is approved and read-only. It is
-      <span class="app-header__receipt--approved">{{ file }}</span
-      >; a new version is an explicit act, taken from the terminal.
-    </span>
-    <span v-else class="approve-bar__note">Saving happens on its own.</span>
-
-    <span v-if="approved" class="approve-bar__fact">
-      <span class="approve-bar__dot" />
-      <span class="mono">Approved {{ at }}</span>
-    </span>
-    <button
-      v-else
-      class="btn btn-primary"
-      type="button"
-      :disabled="working"
-      @click="$emit('approve')"
-    >
-      Approve sheet<KeyHint command="approve" />
-    </button>
+    <template v-if="approved">
+      <span class="approve-bar__note mono">This sheet is approved and read-only.</span>
+      <span class="approve-bar__fact">
+        <span class="approve-bar__dot" />
+        <span class="mono">Approved {{ at }}</span>
+      </span>
+    </template>
+    <template v-else>
+      <span class="approve-bar__note">Saving happens on its own.</span>
+      <span v-if="asking" class="approve-bar__ask" data-discard-confirm>
+        Delete this draft and its edits?
+        <button class="btn btn-secondary" type="button" @click="asking = false">Keep</button>
+        <button class="btn btn-secondary" type="button" @click="discard">Delete</button>
+      </span>
+      <button
+        v-else-if="discardable"
+        class="btn btn-secondary"
+        type="button"
+        data-discard
+        @click="asking = true"
+      >
+        Discard draft
+      </button>
+      <button
+        class="btn btn-primary"
+        type="button"
+        :disabled="working"
+        @click="$emit('approve')"
+      >
+        Approve sheet<KeyHint command="approve" />
+      </button>
+    </template>
   </footer>
 </template>

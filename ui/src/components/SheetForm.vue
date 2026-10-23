@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { Budget } from '../types'
 import FieldRow from './FieldRow.vue'
 import SheetHeader from './SheetHeader.vue'
@@ -13,6 +12,9 @@ const props = defineProps<{
   budget: Budget | null
   readonly: boolean
   kicker: string
+  /* The draft's save: in flight, or the time it landed. */
+  saving?: boolean
+  saved?: string | null
   focused: string | null
   selected: number | null
   loading?: boolean
@@ -21,10 +23,6 @@ const props = defineProps<{
 }>()
 
 defineEmits<{ remove: [field: string, index: number] }>()
-
-const filled = computed(
-  () => props.schema.filter((name) => (props.fields[name] ?? []).length > 0).length,
-)
 
 function was(name: string): string[] | null {
   if (!props.previous) return null
@@ -42,15 +40,10 @@ function state(name: string): 'filled' | 'empty' | 'pending' {
 
 <template>
   <section class="form">
-    <SheetHeader
-      :kicker="kicker"
-      :fields="schema.length"
-      :filled="filled"
-      :budget="budget"
-      :loading="loading"
-    />
-    <div class="rows">
-      <FieldRow
+    <SheetHeader :kicker="kicker" :budget="budget" :saving="saving" :saved="saved" />
+    <div class="form__body">
+      <div class="rows">
+        <FieldRow
         v-for="name in schema"
         :key="name"
         :field-key="name"
@@ -63,8 +56,11 @@ function state(name: string): 'filled' | 'empty' | 'pending' {
         :was="was(name)"
         @remove="(index) => $emit('remove', name, index)"
       >
-        <slot name="editor" :field="name" />
-      </FieldRow>
+          <slot name="editor" :field="name" />
+        </FieldRow>
+      </div>
+      <!-- ④, right of the rows. -->
+      <slot name="aside" />
     </div>
     <slot name="footer" />
   </section>

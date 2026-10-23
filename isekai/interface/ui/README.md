@@ -7,7 +7,7 @@ with them.
 ```
 Home ─ New batch ─▶ import sheet ─▶ <batch>/sources/
 hub ─ tick ─▶ assign ─▶ Prepare ─▶ tag → caption → sheet ─▶ /events ─▶ the cells
-hub ─ Review next ─▶ Review ─▶ approve
+Review ─▶ /b/<batch>/review ─▶ the head ─▶ Review ─▶ approve
 hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶ volume down ─▶ /events ─▶ the session
 ```
 

@@ -61,6 +61,8 @@ export interface HubCell {
   status: InputStatus | null
   /* The last-written image of the newest version holding any; its seed a decimal string. */
   newest: { version: number; seed: string } | null
+  /* How many images the newest approval lacks, as the render stage counts; null while unapproved. */
+  short: number | null
 }
 
 export interface HubSource {

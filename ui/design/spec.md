@@ -34,7 +34,7 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 |---|---|---|
 | `--ground` | `#161724` | app background |
 | `--ground-deep` | `#11121c` | app bar, rail, job strip, fields |
-| `--ground-media` | `#0e0f17` | large view, compare, photo overlay |
+| `--ground-media` | `#0e0f17` | large view, compare, the viewer |
 | `--raised` | `#1a1b29` | dialogs, sheets |
 | `--raised-2` | `#1d1e30` | Prepare bar, focused cell |
 | `--line` | `#272939` | borders, column dividers |
@@ -65,7 +65,7 @@ timer mono 40px/500.
 ## 3 · The shell
 
 ```
-┌ isekai  2026-09-17   Hub ⇧H  Review ⇧R  Renders ⇧I      flow [all|summon|conjure] ⇧F   ? keys      ┐ AppBar 40
+┌ isekai  2026-09-17   Hub ⇧H  Review 3 ⇧R  Renders ⇧I    flow [all|summon|conjure] ⇧F   ? keys      ┐ AppBar 40
 ├─ BillingBanner (only when something may be billing; filled accent, cannot be dismissed) ───────────┤
 │                                                                                                     │
 │                                   <the route's screen>                                              │
@@ -75,7 +75,8 @@ timer mono 40px/500.
 ```
 
 - **AppBar**, `ground-deep`, bottom border `line`. The wordmark goes Home. The place is mono 12px `ink-2`: `library`
-  on Home, else the batch name. Tabs only inside a batch; the active one has a 2px accent underline. The flow
+  on Home, else the batch name. Tabs only inside a batch; the active one has a 2px accent underline. The Review
+  tab counts the batch's unapproved sheets in mono 11 `accent`, and opens the batch's Review. The flow
   switcher is a segmented control; Review drops `all`.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
@@ -91,7 +92,8 @@ timer mono 40px/500.
 |---|---|---|
 | `/` | Home | the New batch sheet |
 | `/b/<batch>/hub` | Hub | the Add sources sheet, the Prepare bar, the Render dialog |
-| `/b/<batch>/review/<run>/<flow>` | Review | the cheatsheet, the photo overlay |
+| `/b/<batch>/review` | Review's head, replaced by its sheet's URL | — |
+| `/b/<batch>/review/<run>/<flow>` | Review | the cheatsheet, the viewer, *Side by side* |
 | `/b/<batch>/renders` | Renders grid | the Revise confirm |
 | `/b/<batch>/renders/<run>/<flow>/<version>/<seed>` | large view | the Revise confirm |
 | `/b/<batch>/renders/<run>/<flow>/<version>/<seed>/compare` | before / after | — |
@@ -100,6 +102,8 @@ timer mono 40px/500.
 - `<run>` is the run's **12-hex digest** (`0d4b7e6fb2a8`), unique by construction; the screen shows the short name
  .
 - `<version>` is `v` + the approval's number (`v2` is `review/002.approved.json`, rendered into `outputs/002/`).
+- `/b/<batch>/review` opens the first unapproved sheet of the first flow that has one, in the hub's order; else
+  the first approved sheet short of its images, read-only; else *No sheet waits for review* and the way to the hub.
 - `/session` exists only while a session runs or an alert is unresolved; otherwise it redirects to Home.
 
 ## 5 · The journeys
@@ -146,10 +150,10 @@ J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 
 | J2·1 one cell assigned; the bar `1 change · Prepare ⌘↵` | arrow to 00003 × conjure, space | `…/b/2026-10-19/hub` |
 | J2·2 three rows selected, summon ticked for all; `4 changes` | ⇧↓ ⇧↓, space on the summon header | same |
 | J2·3 Prepare running: progress in the cells, totals in the job strip | ⌘↵ Prepare | same |
-| J2·4 done: no bar, the accent on Review next | the last cell finishes | same |
+| J2·4 done: no bar; the Review tab counts the new sheets | the last cell finishes | same |
 
 ```
-6 sources × 2 flows                          [ Add sources… ⇧A ]  [ Review next · 16_01 conjure ⇧R ]
+6 sources × 2 flows                          [ Add sources… ⇧A ]
 SOURCE                 │ summon-anime-wai                 │ conjure-anime-wai
 [▣] 00003              │ ☑ ▰▰▰▰▰▰ rendered ×1      ↵ view │ ☑ ▰▰▰▰▰▱ approved
     00003.png · 832×1216│                                  │
@@ -180,7 +184,7 @@ h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's a
   Stop. The accepted-cell total stays fixed; the sheet-completed count and ticking elapsed time match JobStrip,
   including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
   hub opened after the failure too. Disabled: its reason (`A render is running · 06:41`). There is no done state: the
-  receipt goes to the job strip, the accent to Review next. Running, a 2 px `accent` line slides along the bar's top
+  receipt goes to the job strip, the count to the Review tab. Running, a 2 px `accent` line slides along the bar's top
   edge, as on a running RenderBar, and a running segment pulses `accent-dim` ↔ `accent`; under
   `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
 - **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
@@ -197,29 +201,34 @@ h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's a
 
 | frame | trigger | URL |
 |---|---|---|
-| J3·1 the first sheet in summon's queue | ⇧R Review next | `…/b/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
+| J3·1 the batch's head, the first sheet in summon | ⇧R Review | `…/b/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J3·2 a field edited, the empties marked, Count 2 | edit · Mark 6 empty fields intentional · count + | same |
-| J3·3 the next unapproved sheet in summon | ⌘↵ Approve | `…/review/<16_01's run>/summon-anime-wai` |
-| J3·4 the hub, the Render bar, `3 images ready to render`, takes the accent | ⌘↵ Approve on the last one | `…/b/2026-10-19/hub` |
+| J3·3 the same sheet, approved and read-only; its rail mark ● | ⌘↵ Approve | same |
+| J3·4 the next sheet in the rail | ⇧J | `…/review/<16_01's run>/summon-anime-wai` |
 
 ```
-rail │ ① SOURCE                  │ ③ SHEET — DRAFT  9 filled · 7 empty · drafted 13:59:30    28 / 77 tokens
-●    │ [photograph]              │ hair_colour   [blonde hair ×]
-◐    │ ② CAPTION  231 words      │ eye_colour    [blue eyes ×]
-○    │ one sentence a block …    │ …16 fields, 34px rows
-     │                           │ ④ RENDERS   count [− 1 +]   seeds [ + seed ]
-     │                           │   THE NEXT RENDER DRAWS 1 image · random seed
-     │                           │ [ Mark 7 empty fields intentional ]            [ Approve sheet ⌘↵ ]
+rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59      28 / 77 tokens │ ④ RENDERS
+●    │ [photograph]              │ hair_colour   [blonde hair ×]                     │ images [−] 2 [+]
+◐    │ ② CAPTION  231 words      │ eye_colour    [blue eyes ×]                       │ 1 [144     ]
+○    │ one sentence a block …    │ …16 fields, 34px rows                             │ 2 [random  ]
+     │                           │                                                   │ THE NEXT RENDER DRAWS
+     │                           │                                                   │ 2 images · seed 144 + 1 random
+     │                           │ [ Mark 7 empty fields intentional ]                       [ Approve sheet ⌘↵ ]
 ```
 
 - The surface is today's review surface inside the shell: rail, ① source and ② caption, ③ sheet, approve bar. The
-  sheet header carries counts and a time, never a path.
-- **④ Renders**: Count (a stepper, default 1, never below the number of seeds listed) and Seeds (a list,
-  default empty). Listed seeds render first; the rest of Count are drawn. Both are approved with the sheet. The line
-  `THE NEXT RENDER DRAWS …` states the result.
-- **The queue**: Review next opens the unapproved sheets of the first flow that has any, in grid order;
-  Revise opens the drafts it wrote. Approve moves to the next; after the last, the hub. ⇧J ⇧K step without approving.
-  Approve still refuses an unmarked empty field.
+  sheet's kicker carries its receipt, never a path; there is no other header.
+- **④ Renders**, a 230 px panel right of the sheet rows: one slot per image, its seed or `random`, and a stepper
+  for how many — `−` drops the last random slot, else the last seed; never below one. A typed digit sets its slot
+  at once; a seed already in another slot is refused in the slot. Listed seeds render first; the rest are drawn.
+  Both are approved with the sheet. `Tab` walks `−`, `+` and the slots; `j` `k` move between the count and the
+  slots. The line `THE NEXT RENDER DRAWS …` states the result.
+- **The viewer**: the photograph opens in it, fitted, and `←` `→` step through the rail's photographs; a revision's
+  render opens in it alone.
+- **The rail**: the flow's name heads it, and it lists every sheet of the flow not yet rendered — unapproved, or
+  approved and short of its images — and the one open, each marked ○ untouched, ◐ edited, ● approved, ◌ re-opened;
+  its footer counts the approved among them. Revise opens the first draft it wrote; the rest wait in the rail.
+  Approve stays on the sheet, read-only. ⇧J ⇧K step the rail. Approve still refuses an unmarked empty field.
 
 ### J4 · Render
 
@@ -273,19 +282,21 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | J5·3 the Revise confirm over it | e Revise this image | same |
 | J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/b/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
-| J5·6 the hub, the Render bar, `1 image ready to render`, takes the accent | ⌘↵ Approve — Revise's queue ends | `…/b/2026-09-17/hub` |
+| J5·6 the revision approved, read-only; the hub's Render bar, `1 image ready to render` | ⌘↵ Approve · ⇧H | `…/b/2026-09-17/hub` |
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | `…/session` |
 | J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/b/2026-09-17/renders` |
 | J5·8 the large view of v2, with `Compare with v1  C` | ↵ on v2 | `…/v2/1840266731` |
 | J5·9 before / after | C | `…/v2/1840266731/compare` |
 
 ```
-J5·4  ① SOURCE  [photograph] │ RENDER BEING REVISED [render, accent hairline]
+J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731   [ Side by side ⇧C ]
+      [photograph]               [render, accent hairline]       one height, top-aligned
       ② CAPTION  collapsed on a revision
-      ③ SHEET — REVISION OF RENDER 1840266731   1 field changed · saved 15:52:04
-      eye_colour  • [blue eyes ×]      was light · blue eyes
-      ④ RENDERS  count [− 1 +]   seeds prefilled [1840266731 ×] [ + seed ]
-                 THE NEXT RENDER DRAWS 1 image · seed 1840266731
+      ③ SHEET — REVISION OF RENDER 1840266731 · saved 15:52
+      eye_colour  • [blue eyes ×]      was light · blue eyes   │ ④ RENDERS  images [−] 1 [+]
+                                                              │ 1 [1840266731]  prefilled, one slot per image
+                                                              │ THE NEXT RENDER DRAWS 1 image · seed 1840266731
+                                        [ Discard draft ]  [ Approve sheet ⌘↵ ]
 
 J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
       [render, equal size, top-aligned]      [render]
@@ -308,7 +319,12 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   too, and offers `Deselect those 2 and revise 1 ⇧↵`; it has no primary button.
 - **The revision's sheet** marks changed rows with an accent gutter dot and a `was` line against the rendered sheet.
 - **Approve refuses an unchanged revision** — neither fields nor ④ changed — naming the image it would reproduce
- . *Discard revision* deletes this unapproved draft, through `review --discard`.
+ . *Discard draft*, 12 px left of Approve, asks, then deletes this unapproved draft, through `review --discard`;
+  the sheet stays open.
+- **One header row** names the photograph and its size, and the render and its seed, over the pair, with *Side by
+  side* `⇧C` at its right: one dialog, the pair at one height, fit only, `Esc` to close. No how-to text. A click on
+  either image opens it in the viewer. Every receipt sits in ③'s kicker, `· saved 15:52` or `APPROVED 14:12:40`, and every refusal in the
+  approve bar.
 
 ### J6 · Re-roll
 
@@ -375,13 +391,13 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 | New batch | cancel | the staging folder is deleted; the library is unchanged |
 | Hub | loading | placeholder rows, `reading 2 of 6` |
 | Hub | a damaged run | the cell reads `unreadable`, with the CLI's refusal (path, line and column) and its fix; the rest of the grid works |
-| Hub | a render running | Render disabled `A render session is running · 06:41 of ≤10:30`; the accent on Review next |
+| Hub | a render running | Render disabled `A render session is running · 06:41 of ≤10:30` |
 | Hub | Prepare disabled | the bar keeps its cells, reason `A render is running · 06:41` |
 | Hub | Add sources, nothing new | Import disabled `Nothing new to add` |
 | Hub | the batch is gone | a full-page refusal, `Back to the library ⇧L` |
 | Render | refused before billing | the CLI's refusal: no GPU free, no key in `.env`; `nothing billed` when true |
 | Render | disabled | `Prepare is running · 01:42` · `A pod may still be billing.` |
-| Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, Review next |
+| Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, the Review tab's count |
 | Renders | a missing image | `its record is there, its image is gone`, the path in the fix |
 | Renders | Revise disabled | `No image selected` · `Prepare is running · 01:42` |
 
@@ -393,10 +409,10 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K 
 
 | where | keys |
 |---|---|
-| everywhere | ⇧L the library · ⇧H Hub · ⇧R the queue's head · ⇧I Renders · ⇧S the session · ? the key list · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
+| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the session · ? the key list · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
-| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④ · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the queue · ⌃E ⌃Y scroll the photograph · ↵ on the photograph fills the window · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow, ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C photo and render, on a revision · the collapsed caption, its key named when built |
+| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④ · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ↵ on the photograph opens the viewer, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow, ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C *Side by side*, the photograph and the render, on a revision · the collapsed caption, its key named when built |
 | Renders | h l cells · j k or ↓↑ sources · ←→ images · space select · ↵ the large view · e Revise · ⇧G Render · in the large view, e Revise, c compare, esc back · in compare, `\` swap, esc back |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 

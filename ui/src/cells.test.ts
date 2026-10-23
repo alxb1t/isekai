@@ -4,7 +4,7 @@ import { spec } from './test/spec'
 import type { HubCell } from './types'
 
 function cell(stage: HubCell['stage'], newest: HubCell['newest'] = null): HubCell {
-  return { stage, renders: 0, refusal: null, status: null, newest }
+  return { stage, renders: 0, refusal: null, status: null, newest, short: null }
 }
 
 spec('ui:hub:a-click-follows-the-cells-stage', () => {

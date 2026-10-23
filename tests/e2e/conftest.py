@@ -25,21 +25,20 @@ from isekai.foundation.flow import load_flow
 from isekai.foundation.run import Run, approval_of, open_run
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare
-from isekai.pipeline.review import approve, review, save_draft
+from isekai.pipeline.review import approve, review, revise, save_draft
 from tests.e2e.wiring import VOCABULARY
 from tests.fakes import FakeComfyClient
-from tests.images import jpeg_bytes, photo_jpeg
+from tests.images import photo_jpeg
 from tests.stages import caption, render, sheet
 
 REPO = Path(__file__).resolve().parents[2]
 FLOW = "summon-anime-wai"
 BATCH = "2026-10-19"
 
-# A batch per queue test, each source a sheet with no draft, so every test owns
-# the sheets it approves. Sizes differ so each source is its own run.
+# A batch per approval test, each source a sheet with no draft, so every test
+# owns the sheets it approves. Sizes differ so each source is its own run.
 QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
-    "queue-moves": (("cid", (700, 1000)), ("dot", (710, 1000))),
-    "queue-last": (("eve", (720, 1000)),),
+    "queue-stays": (("cid", (700, 1000)), ("dot", (710, 1000))),
     "queue-fails": (("fay", (730, 1000)),),
 }
 
@@ -59,6 +58,9 @@ RENDER = "render"
 SHOWN = "shown"
 # The batch a revision is written in: one source rendered once at seed 7.
 REVISED = "revised"
+# The batch a discard is asked in and the pair is drawn from: one source
+# rendered at seed 7, its render's revision drafted.
+DISCARDED = "discarded"
 # The batch Compare reads: one source with seed 7 rendered under v1 and under v2,
 # which changes `clothes`.
 COMPARED = "compared"
@@ -82,6 +84,7 @@ class Served:
     rendered: Run
     shown: Run
     revised: Run
+    discarded: Run
     compared: Run
     prepare_release: Path
 
@@ -100,9 +103,12 @@ class Served:
 
 
 def _run(folder: Path, name: str, size: tuple[int, int]) -> Run:
-    """Return a run of a new source carrying a caption and a sheet for `FLOW`."""
+    """Return a run of a new source carrying a caption and a sheet for `FLOW`.
+
+    Its photograph decodes, as a browser draws it; its size names its run.
+    """
     photo = folder / "sources" / f"{name}.jpg"
-    photo.write_bytes(jpeg_bytes(*size))
+    photo.write_bytes(photo_jpeg((40, 90, 60), size))
     run = open_run(photo, folder / "runs")
     caption(run, FakeReader(prose="Dark brown hair, brown eyes."))
     sheet(run, load_flow(FLOW).schema, VOCABULARY)
@@ -178,6 +184,8 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     approve(rendered, FLOW, load_flow(FLOW).schema, VOCABULARY)
     shown = _rendered_at_seven(lib / SHOWN, "hal", (750, 1000))
     revised = _rendered_at_seven(lib / REVISED, "ida", (770, 1000))
+    discarded = _rendered_at_seven(lib / DISCARDED, "ivy", (775, 1000))
+    revise(discarded, FLOW, 1, 7)
     compared = _rendered_at_seven(lib / COMPARED, "jo", (780, 1000))
     again = review(compared, FLOW, new_version=True)
     assert again is not None
@@ -214,6 +222,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
             rendered,
             shown,
             revised,
+            discarded,
             compared,
             lib / "hub-prepare" / ".prepare-release",
         )

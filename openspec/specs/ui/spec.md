@@ -63,23 +63,10 @@ and name the artifact that holds it. Where a draft numbered above the approved a
 exists, the system SHALL present the input as **re-opened**: editable, with its approved artifact still
 named.
 
-**The previous wording assumed a state the pipeline can produce.** It read *"Approval deletes the draft
-and opening the surface again writes no replacement, because a new version is an explicit act — so there
-is nothing on disk for an edit after approval to be written into."* The second clause is true and the
-inference from it is not: `review --flow F --new-version` is exactly that explicit act, and
-`review:copy:second-review-appends` requires it to write a new numbered draft from the approved copy. Two
-capabilities described one state and disagreed about it.
-
-**`review` is the one that was right.** `--new-version` exists for this and is older and tested; the
-surface is what had no way to show its result. `v0.22.1` closed the disagreement in the other direction
-because that fix needed no spec delta, and said so in the refusal it shipped — *"this page keeps showing
-the input approved and read-only either way, because the re-opened state is v0.22.2's."* This is that
-version.
-
-**Re-opened is a third status, not a second meaning for an existing one.** An input with an approved
-artifact and no newer draft is finished and stays read-only; the approved artifact is never edited in
-place in either case. What changes is that a deliberately re-opened input stops being reported as
-something it is not.
+`review --flow F --new-version` writes a new numbered draft from the approved copy, and the surface shows that
+state as its own rather than as something it is not: re-opened is a third status, and the approved artifact is
+never edited in place in either case. The library counts every approval the run directories hold; Review's rail
+lists only the sheets not yet rendered, so its footer counts the approved among them.
 
 #### Scenario: a draft update against an approved input is refused
 - **Key:** `ui:approval:approved-input-refuses-a-draft-update`
@@ -110,6 +97,7 @@ something it is not.
 - **WHEN** the batch is read while one of its inputs is re-opened
 - **THEN** that input's reported status is neither approved nor a plain draft
 - **AND** the batch's approved count agrees with what the run directories hold
+- **AND** Review's footer counts the approved among the rail's sheets, the re-opened one included
 
 #### Scenario: a stale lower draft does not re-open an approved input
 - **Key:** `ui:approval:a-stale-lower-draft-does-not-reopen`
@@ -619,8 +607,9 @@ approved from another's sheet stays the CLI's. On first start the privacy line i
 
 ### Requirement: Every screen has a URL naming its batch and its run
 
-The system SHALL give Home, a batch's hub and a review of a source in a flow each its own URL, SHALL name the batch
-in every URL inside one, and SHALL name a run by the twelve-character digest its identifier begins with. It SHALL
+The system SHALL give Home, a batch's hub, a batch's Review and a review of a source in a flow each its own URL,
+SHALL name the batch in every URL inside one, and SHALL name a run by the twelve-character digest its identifier
+begins with. A batch's Review SHALL open the sheet Review starts from and put that sheet's URL in its place. It SHALL
 answer any of them on a fresh load, and SHALL refuse one naming a batch or a run the library does not hold, naming
 the way back.
 
@@ -630,6 +619,7 @@ short name is a sanitised filename and can repeat; its digest cannot.
 ```
 /                                  Home
 /b/<batch>/hub                     the hub
+/b/<batch>/review                  the head of Review, replaced by its sheet's URL
 /b/<batch>/review/<digest>/<flow>  Review
 ```
 
@@ -652,50 +642,18 @@ short name is a sanitised filename and can repeat; its digest cannot.
 - **THEN** the page refuses, naming the batch
 - **AND** it offers the way back to Home
 
-### Requirement: Review is a queue of unapproved sheets, and opening one writes its draft
-
-The system SHALL open Review from the hub on the unapproved sheets of the first flow that has any, in the hub's
-order, SHALL move to the next sheet in that queue on approval, and SHALL return to the hub after the last. Opening a
-sheet that has no draft SHALL write one through the review stage's own function, and opening it again SHALL write
-no second draft. A failure after approval SHALL be shown in the approve bar, never dropped.
-
-The queue is the batch, one flow at a time, so approving is the only step between sheets. The draft is written where
-review always writes it, by the function that owns its shape.
-
-#### Scenario: approve moves to the next sheet in the flow
-- **Key:** `ui:queue:approve-moves-to-the-next-sheet`
-- **Layers:** e2e
-- **WHEN** a sheet is approved and the flow has another unapproved sheet
-- **THEN** Review opens that sheet
-
-#### Scenario: after the last sheet the hub opens
-- **Key:** `ui:queue:after-the-last-sheet-the-hub-opens`
-- **Layers:** e2e
-- **WHEN** the last unapproved sheet in the queue is approved
-- **THEN** the hub opens
-
-#### Scenario: opening a sheet with no draft writes one
-- **Key:** `ui:queue:opening-a-sheet-writes-its-draft`
-- **Layers:** unit
-- **WHEN** Review opens a sheet whose flow has a sheet and no draft
-- **THEN** a draft is written through the review stage
-- **AND** opening it again writes no second draft
-
-#### Scenario: a failure after approval is shown
-- **Key:** `ui:queue:a-failure-after-approval-is-shown`
-- **Layers:** e2e
-- **WHEN** an approval succeeds and reading the next state fails
-- **THEN** the approve bar shows the refusal
-
 ### Requirement: The page's save state is true to the requests in flight, and a pending edit is sent on leaving
 
 The system SHALL report a draft as saving exactly while a save it started is unanswered, whatever order saves and
 input switches answer in, and SHALL send a pending edit when the page leaves the sheet — to another sheet, another
-screen, or by closing — by a request the browser keeps alive past the page.
+screen, or by closing — by a request the browser keeps alive past the page. A save SHALL wait for the sheet's save
+in flight and state the draft it wrote, and a page closing before that save answers SHALL ask before it goes. An
+approval SHALL wait for a save in flight, and state the draft that save wrote.
 
 The saved receipt is the only thing on the page that speaks about saving, so a counter one stale answer can drive
 below zero silences it for the rest of the input. An edit typed inside the debounce is the operator's work, and
-closing the tab is an ordinary way to leave.
+closing the tab is an ordinary way to leave. An edit or an approval pressed inside a save's round trip is the
+operator's own, not another tab's, and a closing page never reads the receipt it would have to state.
 
 #### Scenario: a stale save cannot clear the saving state
 - **Key:** `ui:save:a-stale-save-cannot-clear-saving`
@@ -709,6 +667,13 @@ closing the tab is an ordinary way to leave.
 - **Layers:** unit
 - **WHEN** the page leaves a sheet inside the debounce
 - **THEN** the pending edit is sent with a request kept alive past the page
+- **AND** a page closing while a save of the sheet is unanswered asks before it goes
+
+#### Scenario: an approval waits for a save in flight
+- **Key:** `ui:save:an-approval-waits-for-a-save-in-flight`
+- **Layers:** unit
+- **WHEN** Approve is pressed while a save is unanswered
+- **THEN** the approval is sent once that save answers, stating the draft it wrote
 
 ### Requirement: The hub shows each source's stage in each offered flow, and a tick assigns it
 
@@ -1260,45 +1225,6 @@ another format is still shown, as its thumbnail is.
 - **WHEN** an image past Pillow's pixel bound is read for a thumbnail, or served whole
 - **THEN** it is refused, naming the file
 
-### Requirement: Revise starts from an image, and opens its drafts as a queue
-
-The system SHALL offer Revise from an image's large view and over a selection in the Renders grid, SHALL show what it
-will write before writing, and SHALL then open Review on the drafts it wrote, one after another, returning to the hub
-after the last. It SHALL write a selection's drafts all or none, refusing by name an image of a flow this build does
-not track, and refusing a selection that names a version or a seed no run can hold. On a revision, Review SHALL show
-the image being revised beside the photograph, mark each field that differs from its approval, and offer to discard
-the draft, deleting it only once the operator confirms.
-
-The comparison that matters on a revision is the render against the photograph, read against the sheet. A discard
-deletes the operator's edits, so one click never does.
-
-#### Scenario: Revise opens Review on the revision
-- **Key:** `ui:revise:revise-opens-review-on-the-revision`
-- **Layers:** e2e
-- **WHEN** Revise is confirmed on an image's large view
-- **THEN** Review opens on its draft with the render beside the photograph and the seed prefilled
-
-#### Scenario: an untracked flow refuses its image
-- **Key:** `ui:revise:an-untracked-flow-refuses-its-image`
-- **Layers:** unit
-- **WHEN** Revise is asked for a selection holding an image of a flow this build does not track
-- **THEN** that image is refused naming its flow
-- **AND** no draft is written for any image
-
-#### Scenario: an image no run can hold is refused
-- **Key:** `ui:revise:an-image-no-run-can-hold-is-refused`
-- **Layers:** unit
-- **WHEN** Revise is asked for an image whose version or seed no run can hold
-- **THEN** the selection is refused
-- **AND** no draft is written
-
-#### Scenario: a discard deletes the draft the page read
-- **Key:** `ui:revise:a-discard-deletes-the-draft-the-page-read`
-- **Layers:** unit
-- **WHEN** a discard states the draft on disk
-- **THEN** that draft is deleted
-- **AND** every approval is unchanged
-
 ### Requirement: A version says what it was, and Compare shows a seed's two versions
 
 The system SHALL head each image's large view with its approval version, the version it came from, read from its
@@ -1411,3 +1337,128 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 - **Layers:** unit
 - **WHEN** `l` is pressed from the rail three times
 - **THEN** focus moves through the source pane and the sheet to ④
+
+### Requirement: Review opens a batch at its own address, lists every unrendered sheet, and Approve stays on the sheet
+
+The system SHALL open a batch's Review on its head: the first unapproved sheet of the first flow that has one, in
+the hub's order; else the first approved sheet whose newest approval lacks images of its count, read-only; else a
+page saying no sheet waits for review, with the way to the hub. The hub SHALL carry for each cell the number of
+images its newest approval lacks, as the render stage counts it. Review's rail SHALL list every sheet of the flow
+that is unapproved or lacks images, each marked untouched, edited, approved or re-opened, and its footer SHALL count
+the approved among them; the Review tab SHALL count the unapproved. Approve SHALL leave the sheet open and
+read-only. Opening a sheet that has no draft SHALL write one through the review stage's own function, and opening it
+again SHALL write no second draft; a failure after approval SHALL be shown in the approve bar, never dropped. ④
+SHALL show one slot per image, a set seed or random, beside the sheet rows. The photograph SHALL open in the viewer,
+stepping through the rail's sheets.
+
+A sheet is done when its images are, not when it is approved, so the rail keeps it until then; the count is the
+render stage's own. Approving is an act, not a navigation. A slot per image says what the next render draws before it
+is approved.
+
+```
+the head:  first unapproved ─▶ else first approved and short ─▶ else "No sheet waits for review"
+```
+
+#### Scenario: a batch's Review opens its head
+- **Key:** `ui:review:a-batch-opens-its-head`
+- **Layers:** unit
+- **WHEN** a batch holds an approved, short sheet and an unapproved one, then neither
+- **THEN** its Review opens the unapproved sheet, then the approved one
+- **AND** with no sheet left it opens none
+
+#### Scenario: a cell counts what its newest approval lacks
+- **Key:** `ui:review:a-cell-counts-what-it-lacks`
+- **Layers:** unit
+- **WHEN** a cell's newest approval holds one image of a count of three
+- **THEN** the hub carries two for that cell
+
+#### Scenario: the rail holds every sheet not yet rendered
+- **Key:** `ui:review:the-rail-holds-every-unrendered-sheet`
+- **Layers:** unit
+- **WHEN** a flow holds an unapproved sheet, an approved short one and an approved one with all its images
+- **THEN** the rail lists the first two, marked by their state
+
+#### Scenario: Approve stays on the sheet
+- **Key:** `ui:review:approve-stays-on-the-sheet`
+- **Layers:** e2e
+- **WHEN** a sheet is approved
+- **THEN** the same sheet stays open, read-only, and its rail mark reads approved
+
+#### Scenario: opening a sheet with no draft writes one
+- **Key:** `ui:review:opening-a-sheet-writes-its-draft`
+- **Layers:** unit
+- **WHEN** Review opens a sheet whose flow has a sheet and no draft
+- **THEN** a draft is written through the review stage
+- **AND** opening it again writes no second draft
+
+#### Scenario: a failure after approval is shown
+- **Key:** `ui:review:a-failure-after-approval-is-shown`
+- **Layers:** e2e
+- **WHEN** an approval succeeds and reading the batch again fails
+- **THEN** the approve bar shows the refusal
+
+#### Scenario: each image has a slot
+- **Key:** `ui:review:each-image-has-a-slot`
+- **Layers:** unit
+- **WHEN** a draft renders four images with seed 144 listed
+- **THEN** ④ shows four slots, the first holding 144 and three random
+- **AND** removing a slot takes a random one first
+
+#### Scenario: the photograph opens in the viewer
+- **Key:** `ui:review:the-photograph-opens-in-the-viewer`
+- **Layers:** e2e
+- **WHEN** the photograph is opened, then `→` is pressed
+- **THEN** the viewer shows it fitted, then the next sheet's photograph
+
+### Requirement: Revise starts from an image, and opens Review on its first draft
+
+The system SHALL offer Revise from an image's large view and over a selection in the Renders grid, SHALL show what it
+will write before writing, and SHALL then open Review on the first draft it wrote, the others in the rail. It SHALL
+write a selection's drafts all or none, refusing by name an image of a flow this build does not track, and refusing a
+selection that names a version or a seed no run can hold. On a revision, Review SHALL show the photograph and the
+image being revised on one line, at equal height under one header row, mark each field that differs from its
+approval, offer *Side by side* to see both in one dialog, and offer to discard the draft from the approve bar,
+deleting it only once the operator confirms.
+
+The comparison that matters on a revision is the render against the photograph, read against the sheet. A discard
+deletes the operator's edits, so one click never does.
+
+#### Scenario: Revise opens Review on the revision
+- **Key:** `ui:revise:revise-opens-review-on-the-revision`
+- **Layers:** e2e
+- **WHEN** Revise is confirmed on an image's large view
+- **THEN** Review opens on its draft with the render beside the photograph and the seed prefilled
+
+#### Scenario: an untracked flow refuses its image
+- **Key:** `ui:revise:an-untracked-flow-refuses-its-image`
+- **Layers:** unit
+- **WHEN** Revise is asked for a selection holding an image of a flow this build does not track
+- **THEN** that image is refused naming its flow
+- **AND** no draft is written for any image
+
+#### Scenario: an image no run can hold is refused
+- **Key:** `ui:revise:an-image-no-run-can-hold-is-refused`
+- **Layers:** unit
+- **WHEN** Revise is asked for an image whose version or seed no run can hold
+- **THEN** the selection is refused
+- **AND** no draft is written
+
+#### Scenario: a discard deletes the draft the page read
+- **Key:** `ui:revise:a-discard-deletes-the-draft-the-page-read`
+- **Layers:** unit
+- **WHEN** a discard states the draft on disk
+- **THEN** that draft is deleted
+- **AND** every approval is unchanged
+
+#### Scenario: Discard asks before it deletes
+- **Key:** `ui:revise:discard-asks-before-it-deletes`
+- **Layers:** e2e
+- **WHEN** Discard is pressed on a revision, then Keep
+- **THEN** the draft is still on disk and the sheet still open
+
+#### Scenario: Side by side shows the pair
+- **Key:** `ui:revise:side-by-side-shows-the-pair`
+- **Layers:** e2e
+- **WHEN** *Side by side* is opened on a revision
+- **THEN** one dialog shows the photograph and the render at equal height
+- **AND** `Esc` closes it

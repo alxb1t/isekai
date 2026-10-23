@@ -104,7 +104,7 @@ from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
-from isekai.pipeline.generate import image_of, shortfall
+from isekai.pipeline.generate import image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     Revision,
@@ -330,7 +330,7 @@ def create_app(
         if not _is_tag_list(names):
             raise Refusal("the request's `sources` is not a list of source names")
         remove = payload.get("remove") is True
-        suffix = load_flow(flow, wired.flows_dir).output_suffix
+        loaded = offered(flow)
         runs = found / library.RUNS
         named = library.source_files(found)
         cells: dict[str, Any] = {}
@@ -341,7 +341,7 @@ def create_app(
                 run = find_run(source, runs) if remove else open_run(source, runs)
                 if run is not None:
                     assign(run, flow, remove=remove)
-                cell = library.stage(run, flow, suffix) if run else library.Cell(None)
+                cell = library.stage(run, loaded) if run else library.Cell(None)
                 cells[name] = _cell_out(cell)
             except Refusal as one:
                 refused[name] = str(one)
@@ -803,7 +803,9 @@ def create_app(
                 {
                     "name": one.name,
                     "digest": one.digest,
-                    "ready": {flow: _ready(one.run, offered(flow)) for flow in flows},
+                    "ready": {
+                        flow: library.lacking(one.run, offered(flow)) for flow in flows
+                    },
                     "cells": {
                         flow: [
                             _version_out(version)
@@ -1018,11 +1020,10 @@ def cell_event(
     """
     batch = grid.name
     sources = {one.run.id: one.name for one in grid.sources if one.run}
-    suffixes = {flow: one.output_suffix for flow, one in loaded.items()}
 
     def cell(line: Mapping[str, Any]) -> dict[str, Any] | None:
         run_id, flow = str(line.get("run")), str(line.get("flow"))
-        if run_id not in sources or flow not in suffixes:
+        if run_id not in sources or flow not in loaded:
             return None
         run = Run(run_id, found / library.RUNS / run_id)
         return {
@@ -1032,7 +1033,7 @@ def cell_event(
             "stage": line.get("stage"),
             "state": line.get("state"),
             "message": line.get("message"),
-            "cell": _cell_out(library.stage(run, flow, suffixes[flow])),
+            "cell": _cell_out(library.stage(run, loaded[flow])),
         }
 
     return cell
@@ -1123,20 +1124,6 @@ def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
 def _image_out(digest: str, flow: str, version: int, seed: int) -> dict[str, Any]:
     """Describe an image of a revision, its seed a decimal string."""
     return {"digest": digest, "flow": flow, "version": version, "seed": str(seed)}
-
-
-def _ready(run: Run | None, flow: Flow) -> int:
-    """Return how many images `flow`'s newest approval in `run` lacks, or 0.
-
-    An unapproved flow lacks none, and a damaged approval is already marked on
-    its own version, so neither refuses the page.
-    """
-    if run is None:
-        return 0
-    try:
-        return shortfall(run, flow)
-    except Refusal:
-        return 0
 
 
 def _version_out(version: library.Version) -> dict[str, Any]:

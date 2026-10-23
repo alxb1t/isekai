@@ -9,12 +9,13 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
+from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import OUTPUTS, REVIEW, Run, open_run
+from isekai.foundation.run import OUTPUTS, REVIEW, Run, approval_of, open_run
 from isekai.interface.ui import library
 from isekai.interface.ui.library import Cell, FlowCount, Rendered
-from isekai.pipeline.review import approve, review
+from isekai.pipeline.review import approve, review, save_draft
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import tree
 from tests.images import jpeg_bytes, jpeg_with_header, photo_jpeg
@@ -173,10 +174,11 @@ def test_a_cells_stage_is_the_furthest_its_run_directory_holds(
 ) -> None:
     folder = _batch(tmp_path, "b", "ada.jpg")
     run = _run(folder, "ada.jpg")
-    suffix = load_flow(SUMMON).output_suffix
+    loaded = load_flow(SUMMON)
+    suffix = loaded.output_suffix
 
     def now() -> Cell:
-        return library.stage(run, SUMMON, suffix)
+        return library.stage(run, loaded)
 
     assert now() == Cell(None)
     run.directory(SUMMON).mkdir()
@@ -189,17 +191,18 @@ def test_a_cells_stage_is_the_furthest_its_run_directory_holds(
     review(run, SUMMON)
     assert now() == Cell("draft", status="draft")
     approve(run, SUMMON, schema, vocabulary)
-    assert now() == Cell("approved", status="approved")
+    assert now() == Cell("approved", status="approved", short=1)
     rendered = run.directory(SUMMON, OUTPUTS, "001")
     rendered.mkdir(parents=True)
     for seed in (7, 8):
         (rendered / f"{seed}{suffix}").write_bytes(b"png")
     newest = Rendered(1, 8)
-    assert now() == Cell("rendered", 2, status="approved", newest=newest)
+    done = Cell("rendered", 2, status="approved", newest=newest, short=0)
+    assert now() == done
 
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
     (source,) = grid.sources
-    assert source.cells[SUMMON] == Cell("rendered", 2, status="approved", newest=newest)
+    assert source.cells[SUMMON] == done
     assert source.digest == run.digest
 
 
@@ -209,7 +212,8 @@ def test_an_approved_cell_names_the_last_image_of_its_newest_rendered_version(
 ) -> None:
     folder = _batch(tmp_path, "b", "ada.jpg")
     run = _run(folder, "ada.jpg")
-    suffix = load_flow(SUMMON).output_suffix
+    loaded = load_flow(SUMMON)
+    suffix = loaded.output_suffix
     _approved(run, vocabulary)
     older = run.directory(SUMMON, OUTPUTS, "001")
     older.mkdir(parents=True)
@@ -221,7 +225,7 @@ def test_an_approved_cell_names_the_last_image_of_its_newest_rendered_version(
     review(run, SUMMON, new_version=True)
     approve(run, SUMMON, load_flow(SUMMON).schema, vocabulary)
 
-    cell = library.stage(run, SUMMON, suffix)
+    cell = library.stage(run, loaded)
 
     assert cell.stage == "approved"
     assert cell.renders == 0
@@ -230,19 +234,50 @@ def test_an_approved_cell_names_the_last_image_of_its_newest_rendered_version(
     padded = older / f"0042{suffix}"
     padded.write_bytes(b"png")
     os.utime(padded, (500, 500))
-    assert library.stage(run, SUMMON, suffix).newest == Rendered(1, 5)
+    assert library.stage(run, loaded).newest == Rendered(1, 5)
     # Written last, a padded name or one of digits outside ASCII is still no
     # render: no image of seed 42 is where a large view looks for it.
     os.utime(padded, (4_000, 4_000))
-    assert library.stage(run, SUMMON, suffix).newest == Rendered(1, 5)
+    assert library.stage(run, loaded).newest == Rendered(1, 5)
     superscript = older / f"²{suffix}"
     superscript.write_bytes(b"png")
     os.utime(superscript, (5_000, 5_000))
-    assert library.stage(run, SUMMON, suffix).newest == Rendered(1, 5)
+    assert library.stage(run, loaded).newest == Rendered(1, 5)
     # Home reads no image's time: it shows no newest image.
-    assert library.stage(run, SUMMON, suffix, newest=False) == Cell(
+    assert library.stage(run, loaded, newest=False) == Cell(
         "approved", status="approved"
     )
+
+
+@pytest.mark.spec("ui:review:a-cell-counts-what-it-lacks")
+def test_a_cell_counts_what_its_newest_approval_lacks(
+    tmp_path: Path, vocabulary: Vocabulary
+) -> None:
+    folder = _batch(tmp_path, "b", "ada.jpg")
+    run = _run(folder, "ada.jpg")
+    loaded = load_flow(SUMMON)
+    sheet(run, loaded.schema, vocabulary)
+    draft = review(run, SUMMON)
+    assert draft is not None
+    save_draft(
+        run, SUMMON, read(draft, DRAFT_FILE)["fields"], {"count": 3, "seeds": []}
+    )
+    assert library.stage(run, loaded).short is None
+    approve(run, SUMMON, loaded.schema, vocabulary)
+    group = run.directory(SUMMON, OUTPUTS, "001")
+    group.mkdir(parents=True)
+    (group / f"7{loaded.output_suffix}").write_bytes(b"png")
+
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
+
+    (source,) = grid.sources
+    assert source.cells[SUMMON].short == 2
+    # A count no approval can carry is refused, and counts nothing.
+    approval = approval_of(run, SUMMON, 1)
+    body = json.loads(approval.read_text())
+    body["renders"] = {"count": 0, "seeds": []}
+    approval.write_text(json.dumps(body))
+    assert library.stage(run, loaded).short == 0
 
 
 @pytest.mark.spec("ui:hub:an-untracked-flow-is-ignored")
@@ -343,7 +378,7 @@ def test_an_unreadable_run_file_marks_its_cell_alone(
     assert cells["ada.jpg"].stage == "unreadable"
     assert "001.draft.json" in str(cells["ada.jpg"].refusal)
     assert "version 99" in str(cells["ada.jpg"].refusal)
-    assert cells["bea.jpg"] == Cell("approved", status="approved")
+    assert cells["bea.jpg"] == Cell("approved", status="approved", short=1)
 
 
 @pytest.mark.spec("ui:hub:the-hub-writes-nothing")

@@ -1,8 +1,9 @@
 """Render from the browser: the dialog, the session, the large view, Revise, Compare.
 
-A revision and a comparison each own a batch, so neither leans on the other's
-draft. The server renders on the e2e doubles: a session that rents nothing and a
-transport that answers at once. Each step waits on the page's own state.
+A revision, a discard and a comparison each own a batch, so none leans on
+another's draft. The server renders on the e2e doubles: a session that rents
+nothing and a transport that answers at once. Each step waits on the page's own
+state.
 """
 
 import re
@@ -10,9 +11,12 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
+from isekai.foundation.run import REVIEW
+from isekai.pipeline.review import current_draft
 from tests.e2e.conftest import (
     COMPARED,
     DAMAGED,
+    DISCARDED,
     FLOW,
     RENDER,
     REVISED,
@@ -110,9 +114,7 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
 
 
 @pytest.mark.spec("ui:revise:revise-opens-review-on-the-revision")
-def test_revise_opens_review_on_the_revision_and_approving_it_ends_at_the_hub(
-    page: Page, served: Served
-) -> None:
+def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None:
     digest = served.revised.digest
     page.goto(f"{served.url}/b/{REVISED}/renders/{digest}/{FLOW}/v1/7")
     expect(page.locator("[data-revise]")).to_be_visible()
@@ -122,22 +124,58 @@ def test_revise_opens_review_on_the_revision_and_approving_it_ends_at_the_hub(
 
     confirm.locator("[data-confirm]").click()
 
-    expect(page).to_have_url(
-        re.compile(rf"/b/{REVISED}/review/{digest}/{FLOW}\?queue=")
-    )
+    review = f"{served.url}/b/{REVISED}/review/{digest}/{FLOW}"
+    expect(page).to_have_url(review)
     expect(page.locator("[data-revised] img")).to_have_js_property("complete", True)
     expect(page.locator(".renders-block")).to_contain_text("seed 7")
     expect(page.locator(".form")).to_contain_text("revision of render 7")
     row = page.locator(".row", has_text="hair_colour")
     row.locator(".chip__x").first.click()
     expect(page.locator("[data-changed='hair_colour']")).to_contain_text("was")
+    page.get_by_role("button", name="Approve sheet").click()
+    expect(page.locator(".form")).to_contain_text("approved")
+    expect(page.locator("input.fragment")).to_have_count(0)
+    expect(page).to_have_url(review)
+
+
+@pytest.mark.spec("ui:revise:discard-asks-before-it-deletes")
+def test_discard_asks_before_it_deletes(page: Page, served: Served) -> None:
+    review = served.review(served.discarded, DISCARDED)
+    page.goto(review)
+    expect(page.locator("[data-revised] img")).to_have_js_property("complete", True)
+
     page.locator("[data-discard]").click()
     asking = page.locator("[data-discard-confirm]")
     expect(asking).to_contain_text("Delete this draft and its edits?")
     asking.get_by_role("button", name="Keep").click()
+
     expect(asking).to_have_count(0)
-    page.get_by_role("button", name="Approve sheet").click()
-    expect(page).to_have_url(served.hub_of(REVISED))
+    expect(page.locator("[data-discard]")).to_be_visible()
+    expect(page).to_have_url(review)
+    assert current_draft(served.discarded.directory(FLOW, REVIEW)) is not None
+
+
+@pytest.mark.spec("ui:revise:side-by-side-shows-the-pair")
+def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
+    page.goto(served.review(served.discarded, DISCARDED))
+    expect(page.locator("[data-revised] img")).to_have_js_property("complete", True)
+
+    page.get_by_role("button", name="Side by side").click()
+
+    pair = page.locator("dialog[data-pair] img")
+    expect(pair).to_have_count(2)
+    for one in (pair.nth(0), pair.nth(1)):
+        expect(one).to_have_js_property("complete", True)
+    # One read of both boxes: the dialog re-centres as each image's ratio lands.
+    page.wait_for_function(
+        """() => {
+          const [a, b] = [...document.querySelectorAll('dialog[data-pair] img')]
+            .map((one) => one.getBoundingClientRect())
+          return a.height > 0 && Math.abs(a.height - b.height) <= 1 && a.top === b.top
+        }"""
+    )
+    page.keyboard.press("Escape")
+    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
 
 
 @pytest.mark.spec("ui:compare:compare-shows-the-pair-and-the-change")

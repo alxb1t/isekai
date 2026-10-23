@@ -3,7 +3,6 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { revise } from '../api'
 import { useKeys } from '../composables/useKeys'
-import { reviewQueue } from '../composables/useQueue'
 import { modded, plain, shifted } from '../stores/keys'
 import type { RefusedImage, RevisedImage } from '../types'
 import KeyHint from './KeyHint.vue'
@@ -31,11 +30,11 @@ async function confirm(images: RevisedImage[]): Promise<void> {
       refused.value = answer.images
       return
     }
-    const [first, ...rest] = answer.drafts
+    // The rest wait in the rail.
+    const [first] = answer.drafts
     void router.push({
       name: 'review',
       params: { batch: props.batch, digest: first.digest, flow: first.flow },
-      query: { queue: reviewQueue(rest) },
     })
   } catch (reason) {
     failure.value = (reason as Error).message
