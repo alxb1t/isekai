@@ -259,7 +259,7 @@ the CLI's own verbs as children with `--progress json`, its cells moving live ov
 corrects one sheet, its ④ setting how many images it renders and at which seeds, and Approve moves to the
 next. **Render** opens a dialog quoting what renders and its price at most; **its confirmation is the one
 act on the page that spends money**, and the session view shows it to *Nothing is billing.* Renders shows
-each source's images by flow, oldest to newest, each marked with its version, and an image's large view
+each source's images by flow, versions oldest to newest, each marked with its version, and an image's large view
 shows the sheet it came from, headed a revision or a re-roll of the one it came from. **Revise** (⌥E),
 from the large view or over a selection, runs what `isekai revise` does and opens Review on each draft
 with the render beside the photograph; **Compare** (C) shows a seed under two versions and the fields

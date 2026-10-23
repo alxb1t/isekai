@@ -274,23 +274,22 @@ a refused count keeps the bar, so the refusal is never silent.
 ### Requirement: The Renders view shows each source's images by flow and version
 
 The system SHALL list a batch's images by source and offered flow, each cell's approval versions newest first, and
-SHALL show them as a grid of sources by flows, each cell one row of its images from oldest to newest, each image
-marked with its version, and open an image's large view, with the
-sheet it was rendered from, from any of them. A cell whose newest approval lacks images of its count SHALL carry the
-number it lacks, as the render stage counts it. Each source SHALL show its photograph's thumbnail, upright, opening
-the photograph in a viewer. `Esc` on a large view SHALL return to the screen it was opened from. It SHALL mark an
-approval it cannot read as damaged, naming the file, and show every image, that version's own among them; and SHALL
-refuse an address whose version is not `v` and ASCII digits. It SHALL serve each thumbnail, a render's or a source's,
-from a cache in the library's `.cache/`, made on first request and named by the image's own bytes. It SHALL serve a
-photograph, a source or a run's copy, as the image its bytes are, whatever its name ends in, and a source in a format
-the render does not read as an upright JPEG of it.
+SHALL show them as a grid of sources by flows, each cell one row of its images, its versions oldest to newest, each
+image marked with its version, and open an image's large view, with the sheet it was rendered from, from any of them.
+A cell whose newest approval lacks images of its count SHALL carry the number it lacks, as the render stage counts it.
+Each source SHALL show its photograph's thumbnail, upright, opening the photograph in a viewer. `Esc` on a large view
+SHALL return to the screen it was opened from. It SHALL mark an approval it cannot read as damaged, naming the file,
+and show every image, that version's own among them; and SHALL refuse an address whose version is not `v` and ASCII
+digits. It SHALL serve each thumbnail, a render's or a source's, from a cache in the library's `.cache/`, made on
+first request and named by the image's own bytes. It SHALL serve a photograph, a source or a run's copy, as the image
+its bytes are, whatever its name ends in, and a source in a format the render does not read as an upright JPEG of it.
 
-The images come back to where the sheets were decided, in the order they were made; a cache the library can lose
-costs only its rebuild. Two batches can hold one source rendered at one seed, so only the bytes say which image a
-thumbnail shows. One damaged file costs only its own version, never the batch's page. The count a cell lacks is the
-render stage's own, so the page and the render agree on what is ready. A source keeps the name it arrived with, and
-one ending `.html` served by its name would run as a page on the surface's own origin; one placed by hand in another
-format is still shown, as its thumbnail is.
+The images come back to where the sheets were decided, version by version in the order they were approved; a cache the
+library can lose costs only its rebuild. Two batches can hold one source rendered at one seed, so only the bytes say
+which image a thumbnail shows. One damaged file costs only its own version, never the batch's page. The count a cell
+lacks is the render stage's own, so the page and the render agree on what is ready. A source keeps the name it arrived
+with, and one ending `.html` served by its name would run as a page on the surface's own origin; one placed by hand in
+another format is still shown, as its thumbnail is.
 
 #### Scenario: versions are listed newest first
 - **Key:** `ui:renders:versions-newest-first`

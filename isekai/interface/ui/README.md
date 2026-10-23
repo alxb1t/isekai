@@ -25,7 +25,7 @@ hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶
   what renders, what is left out and why, the estimate, the limit and the price at most. Only
   `POST …/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --progress json`,
   then `volume down` unless the window is kept.
-- **Renders** reads each cell's images oldest to newest, with how many its newest approval still lacks,
+- **Renders** reads each cell's images, versions oldest to newest, with how many its newest approval still lacks,
   the render stage's own count; Render comes from its bar, as on the hub. The large view shows an image
   beside the approval's filled fields. A thumbnail, a render's or a source's, is made once, into the
   library's `.cache/`.

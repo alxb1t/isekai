@@ -200,7 +200,7 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
 | J3·1 the first sheet in summon's queue | ⌥2 Review next | `…/b/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J3·2 a field edited, the empties marked, Count 2 | edit · Mark 6 empty fields intentional · count + | same |
 | J3·3 the next unapproved sheet in summon | ⌘↵ Approve | `…/review/<16_01's run>/summon-anime-wai` |
-| J3·4 the hub, `Render 3` takes the accent | ⌘↵ Approve on the last one | `…/b/2026-10-19/hub` |
+| J3·4 the hub, the Render bar, `3 images ready to render`, takes the accent | ⌘↵ Approve on the last one | `…/b/2026-10-19/hub` |
 
 ```
 rail │ ① SOURCE                  │ ③ SHEET — DRAFT  9 filled · 7 empty · drafted 13:59:30    28 / 77 tokens
@@ -225,7 +225,7 @@ rail │ ① SOURCE                  │ ③ SHEET — DRAFT  9 filled · 7 empt
 
 | frame | trigger | URL |
 |---|---|---|
-| J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⌥R Render 3 | `…/b/2026-10-19/hub` — the dialog has none |
+| J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⌥R Render | `…/b/2026-10-19/hub` — the dialog has none |
 | J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.06 | `…/session` |
 | J4·3 done: `Nothing is billing.` | the last image lands; teardown and volume down confirm | `…/session` |
 | J4·4 Renders with the four new images | ⌥3 View in Renders | `…/b/2026-10-19/renders` |
@@ -273,7 +273,7 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | J5·3 the Revise confirm over it | ⌥E Revise this image | same |
 | J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/b/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
-| J5·6 the hub, `Render 1` takes the accent | ⌘↵ Approve — Revise's queue ends | `…/b/2026-09-17/hub` |
+| J5·6 the hub, the Render bar, `1 image ready to render`, takes the accent | ⌘↵ Approve — Revise's queue ends | `…/b/2026-09-17/hub` |
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⌥R · ⌘↵ | `…/session` |
 | J5·7 Renders: v2 after v1, both marked `⇄` | ⌥3 View in Renders | `…/b/2026-09-17/renders` |
 | J5·8 the large view of v2, with `Compare with v1  C` | ↵ on v2 | `…/v2/1840266731` |
@@ -294,7 +294,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 ```
 
 - **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer, and its name. A
-  cell is one wrapped row of thumbnails, oldest to newest, each with a `vN` badge and `⇄` in `accent-ink` when its
+  cell is one wrapped row of thumbnails, versions oldest to newest, each with a `vN` badge and `⇄` in `accent-ink` when its
   seed is shared across versions. A damaged version is a striped tile before its images, its refusal under the
   cell. Last comes the ready tile, `ready · n images`, while the newest version lacks images of its Count, the render
   stage's own count. The Render bar offers them. The version's heading — `revision of v1` or `re-roll of v1`, the
