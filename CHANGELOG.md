@@ -9,6 +9,24 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-10-23 · 0069-the-keys
+
+Gate: local 0m39s · CI 7m25s (build-image at 801ffec) · 0.42.0: local 0m36s · CI 7m25s
+
+### Changed
+
+- Every key is declared once in a key store with one listener; none fires in a text field, `Esc` leaves
+  the field first, and `?` lists the keys. The shell's keys are `⇧L` `⇧H` `⇧R` `⇧I` `⇧S` (0069 D1–D3, D6, D8).
+
+- Home, the hub, Renders, the large view, Compare and the session declare their keys, each with a key bar:
+  `h j k l` move, `⇧N` `⇧A` `⇧G` act, and `e` revises; Renders' `h l` step cells, its arrows images (0069 D4, D6).
+
+- Review moves between the rail, the photograph, the sheet and ④ with `h` `l`, walks each with `j` `k`,
+  and steps sheets with `⇧J` `⇧K`; the tag cheatsheet opens on `Mod+K`, which Linux does not take (0069 D4, D5).
+
+- The import sheet, the Render dialog, the Revise confirm and the viewer take the keys over their screen; a
+  commit in flight holds the import sheet, its Cancel and `Esc` with it (0069 D4, D7).
+
 ## [0.42.0] - 2026-10-23 · 0068-the-store
 
 Gate: local 0m36s · CI 7m25s (build-image at 801ffec) · 0.41.0: local 0m37s · CI 7m25s

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import CaptionPanel from './CaptionPanel.vue'
+import KeyHint from './KeyHint.vue'
 import PhotoFrame from './PhotoFrame.vue'
 import TagChip from './TagChip.vue'
 import { grouped } from '../caption'
@@ -49,11 +50,10 @@ const offered = computed(() => props.tags ?? [])
 const confidence = (value: number): string => value.toFixed(2)
 
 /* `ref="source"` on a component hands back the component, not its element, and
-   `Alt+→` has to focus and scroll the real one. */
+   Review's keys scroll the real one. */
 const element = ref<HTMLElement | null>(null)
 
 defineExpose({
-  focus: () => element.value?.focus(),
   scrollBy: (options: ScrollToOptions) => element.value?.scrollBy(options),
 })
 </script>
@@ -69,7 +69,8 @@ defineExpose({
       <span class="kicker">① photograph</span>
       <span class="source__meta mono">
         {{ id }} · {{ width }}×{{ height }} ·
-        {{ loading ? 'reading…' : 'click or ⌥f to fill window' }}
+        <template v-if="loading">reading…</template
+        ><template v-else>click or <KeyHint command="photo" /> to fill window</template>
       </span>
     </div>
     <div :class="{ source__pair: revised }">

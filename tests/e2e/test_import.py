@@ -161,19 +161,35 @@ def test_importing_a_new_batch_opens_its_hub_with_every_source_unassigned(
         _jpeg(tmp_path / "second.jpg", (0, 100, 0)),
     ]
 
-    committing: list[Route] = []
-    page.route("**/commit", lambda route: committing.append(route))
-
     _choose(page, served, files)
     expect(page.locator(".import__count")).to_contain_text("2 sources")
     page.get_by_label("Batch name").fill("e2e-imported")
     page.locator(".import__foot .btn-primary").click()
-    # While the commit runs, no file can be added: the seal would refuse it unseen.
-    held = _sent(page, committing)
-    expect(page.get_by_role("button", name="Add files…")).to_be_disabled()
-    expect(page.locator(".import__foot .btn-primary")).to_be_disabled()
-    held.continue_()
 
     expect(page).to_have_url(served.hub_of("e2e-imported"))
     expect(page.locator(".hub__name")).to_have_count(2)
     expect(page.locator('.hub__cell[data-stage="none"]')).to_have_count(4)
+
+
+@pytest.mark.spec("ui:sheet:a-commit-in-flight-holds-the-sheet")
+def test_a_commit_in_flight_holds_the_sheet(
+    page: Page, served: Served, tmp_path: Path
+) -> None:
+    committing: list[Route] = []
+    page.route("**/commit", lambda route: committing.append(route))
+
+    _choose(page, served, [_jpeg(tmp_path / "held.jpg", (0, 0, 100))])
+    expect(page.locator(".import__count")).to_contain_text("1 source")
+    page.get_by_label("Batch name").fill("e2e-held")
+    page.locator(".import__foot .btn-primary").click()
+    # A file added now would be refused unseen, and a cancel would delete the
+    # folder the commit is moving.
+    held = _sent(page, committing)
+    expect(page.get_by_role("button", name="Add files…")).to_be_disabled()
+    expect(page.locator(".import__foot .btn-primary")).to_be_disabled()
+    expect(page.get_by_role("button", name="Cancel")).to_be_disabled()
+    page.keyboard.press("Escape")
+    expect(page.locator(".import")).to_be_visible()
+    held.continue_()
+
+    expect(page).to_have_url(served.hub_of("e2e-held"))

@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useKeys } from '../composables/useKeys'
+import { modded, plain } from '../stores/keys'
+import KeyHint from './KeyHint.vue'
 import TagChip from './TagChip.vue'
 import type { FieldCandidates } from '../types'
 
@@ -26,7 +29,18 @@ import type { FieldCandidates } from '../types'
    or type step. */
 const props = defineProps<{ candidates: FieldCandidates; field: string | null }>()
 
-defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: [] }>()
+
+useKeys('overlay', [
+  { id: 'close', keys: plain('Escape'), label: 'close', run: () => emit('close') },
+  {
+    id: 'cheatsheet',
+    keys: [modded('KeyK')],
+    label: 'close',
+    run: () => emit('close'),
+    inField: true,
+  },
+])
 
 const fragment = ref('')
 const box = ref<HTMLInputElement | null>(null)
@@ -74,7 +88,9 @@ const shown = computed(() => groups.value.reduce((sum, one) => sum + one.tags.le
             autocomplete="off"
             spellcheck="false"
           />
-          <span class="overlay__exit mono">esc · click anywhere</span>
+          <span class="overlay__exit mono"
+            ><KeyHint command="close" /> · <KeyHint command="cheatsheet" /> · click anywhere</span
+          >
           <button class="btn btn-secondary btn-icon" type="button" @click="$emit('close')">
             ×
           </button>
@@ -101,7 +117,7 @@ const shown = computed(() => groups.value.reduce((sum, one) => sum + one.tags.le
             Reference only — a tag here is not inserted. Read it, close, and type it.
           </div>
           <div>
-            {{ shown }} tags shown{{ field ? ` · opened from ${field}` : '' }} · ⌥space
+            {{ shown }} tags shown{{ field ? ` · opened from ${field}` : '' }} · <KeyHint command="cheatsheet" />
             closes
           </div>
         </footer>

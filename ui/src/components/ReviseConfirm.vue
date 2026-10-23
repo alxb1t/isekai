@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { revise } from '../api'
+import { useKeys } from '../composables/useKeys'
 import { reviewQueue } from '../composables/useQueue'
+import { modded, plain, shifted } from '../stores/keys'
 import type { RefusedImage, RevisedImage } from '../types'
+import KeyHint from './KeyHint.vue'
 
 /* The Revise confirm (design spec J5·3): each image, the version it copies and
    the seed it prefills. All or nothing: a refusal lists every image, and offers
@@ -47,21 +50,23 @@ function deselect(): void {
   void confirm(images)
 }
 
-function onKey(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    emit('close')
-  } else if (event.altKey && event.key === 'Enter' && refused.value && kept.value.length) {
-    event.preventDefault()
-    deselect()
-  } else if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && !refused.value) {
-    event.preventDefault()
-    void confirm(props.images)
-  }
-}
-
-onMounted(() => window.addEventListener('keydown', onKey))
-onUnmounted(() => window.removeEventListener('keydown', onKey))
+useKeys('overlay', [
+  { id: 'cancel', keys: plain('Escape'), label: 'cancel', run: () => emit('close') },
+  {
+    id: 'deselect',
+    keys: [shifted('Enter')],
+    label: 'deselect the refused and revise',
+    run: deselect,
+    when: () => refused.value !== null && kept.value.length > 0,
+  },
+  {
+    id: 'confirm',
+    keys: [modded('Enter')],
+    label: 'write and review',
+    run: () => void confirm(props.images),
+    when: () => !refused.value,
+  },
+])
 </script>
 
 <template>
@@ -87,7 +92,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       </p>
       <footer class="render-dialog__actions">
         <button class="btn btn-secondary" type="button" @click="emit('close')">
-          Cancel<span class="appbar__key">esc</span>
+          Cancel<KeyHint command="cancel" />
         </button>
         <button
           v-if="refused && kept.length"
@@ -96,9 +101,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           data-deselect
           @click="deselect"
         >
-          Deselect those {{ dropped }} and revise {{ kept.length }}<span class="appbar__key"
-            >⌥↵</span
-          >
+          Deselect those {{ dropped }} and revise {{ kept.length }}<KeyHint command="deselect" />
         </button>
         <button
           v-else-if="!refused"
@@ -108,9 +111,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           :disabled="writing"
           @click="confirm(images)"
         >
-          Write {{ plural(images.length, 'draft') }} and review<span class="appbar__key"
-            >⌘↵</span
-          >
+          Write {{ plural(images.length, 'draft') }} and review<KeyHint command="confirm" />
         </button>
       </footer>
     </section>

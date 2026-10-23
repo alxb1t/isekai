@@ -2,7 +2,11 @@
 import { noun } from '../words'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
+import { useKeys } from '../composables/useKeys'
+import { modded, plain } from '../stores/keys'
+import { discards } from '../staging'
 import { useLiveStore } from '../stores/live'
+import KeyHint from './KeyHint.vue'
 import type { StagedFile } from '../types'
 
 /* The New batch and Add sources sheet (design spec J1, J7): files chosen in the
@@ -221,7 +225,16 @@ async function importAll(): Promise<void> {
     refusal.value = (reason as Error).message
   } finally {
     committing.value = false
+    // A commit refused after the sheet closed leaves a folder no one will import.
+    leave()
   }
+}
+
+/* Cancel the staging folder if the sheet has closed and no commit holds it. */
+function leave(): void {
+  const id = staging.value
+  if (id !== null && discards(id, closed, committing.value, committed))
+    void cancelStaging(id).catch(() => undefined)
 }
 
 async function cancel(): Promise<void> {
@@ -233,27 +246,31 @@ async function cancel(): Promise<void> {
   emit('close')
 }
 
-/* ⌘↵ imports, esc cancels. */
-function onKey(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    void cancel()
-  } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-    event.preventDefault()
-    void importAll()
-  }
-}
+/* While a commit is in flight Esc does nothing: a cancel then would delete the
+   folder the commit is moving. */
+useKeys('overlay', [
+  {
+    id: 'cancel',
+    keys: plain('Escape'),
+    label: 'cancel',
+    run: () => void cancel(),
+    when: () => !committing.value,
+  },
+  {
+    id: 'import',
+    keys: [modded('Enter')],
+    label: 'import',
+    run: () => void importAll(),
+    inField: true,
+  },
+])
 
-onMounted(() => {
-  window.addEventListener('keydown', onKey)
-  picker.value?.click()
-})
+onMounted(() => picker.value?.click())
 
 onUnmounted(() => {
   closed = true
-  window.removeEventListener('keydown', onKey)
   live.follow({ staging: null })
-  if (staging.value !== null && !committed) void cancelStaging(staging.value).catch(() => undefined)
+  leave()
 })
 </script>
 
@@ -355,8 +372,8 @@ onUnmounted(() => {
       </p>
       <footer class="import__foot">
         <span v-if="disabled" class="import__disabled">{{ disabled }}</span>
-        <button class="btn btn-secondary" type="button" @click="cancel">
-          Cancel<span class="appbar__key">esc</span>
+        <button class="btn btn-secondary" type="button" :disabled="committing" @click="cancel">
+          Cancel<KeyHint command="cancel" />
         </button>
         <button
           class="btn btn-primary"
@@ -364,7 +381,7 @@ onUnmounted(() => {
           :disabled="disabled !== null"
           @click="importAll"
         >
-          {{ adding ? `Import ${ready.length}` : 'Import' }}<span class="appbar__key">⌘↵</span>
+          {{ adding ? `Import ${ready.length}` : 'Import' }}<KeyHint command="import" />
         </button>
       </footer>
     </section>

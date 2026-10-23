@@ -367,13 +367,16 @@ as it is from a client that is not a browser.**
   an image tag on another site, which sends no `Origin`, is still refused.
 - **Made by:** `0018`, `0023`, `0061`.
 
-### D25 · Option shortcuts match the physical key
+### D25 · Shortcuts match the physical key
 
-**UI shortcuts using Option match `event.code` and call `preventDefault()`.**
+**A shortcut is matched on `event.code` and declared once, in the key store: `⇧`+letter for a command,
+a plain letter only where nothing is typed, and Mod — `⌘` on macOS, `Ctrl` elsewhere — where a command
+must reach into a text field. Inside a text field only `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z` and `Mod+K` run.**
 
-- **Why:** on macOS, Option types characters — `Option+Space` would put an invisible non-breaking space
-  into a tag field — and Space also presses a focused button.
-- **Made by:** `0021`.
+- **Why:** a key typed into a field is text. Option types characters on macOS and is the window
+  manager's on Linux, and a layout moves letters but not keys. One declaration is what the hints and
+  the key list read, so they cannot disagree with the keys.
+- **Made by:** `0021`, `0069`.
 
 ### D41 · The test seam is a factory named in the environment
 

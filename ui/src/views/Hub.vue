@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { noun } from '../words'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar as barOf, dismiss, failed } from '../bars'
@@ -8,11 +8,15 @@ import { action, clicks, targets } from '../cells'
 import { assign, prepare, sourceAt, sourceThumbAt } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
+import KeyBar from '../components/KeyBar.vue'
+import KeyHint from '../components/KeyHint.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
-import { firstFlow, queue } from '../composables/useQueue'
+import { useKeys } from '../composables/useKeys'
+import { head } from '../composables/useQueue'
 import { at, useBatchStore } from '../stores/batch'
+import { isControl, modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
 import type { HubCell, HubSource, Stage } from '../types'
 
@@ -75,14 +79,11 @@ const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
 const busy = computed(() => job.value?.state === 'running' && job.value.kind === 'prepare')
 
-/* Review next: the first unapproved sheet of the first flow that has any. */
+/* Review next: the queue's head, which ⇧R opens from every screen. */
 const next = computed(() => {
-  const held = info.value
-  const flow = held ? firstFlow(held) : null
-  if (!held || !flow) return null
-  const digest = queue(held, flow)[0]
-  const source = held.sources.find((one) => one.digest === digest)
-  return source ? { source, flow } : null
+  const at = info.value ? head(info.value) : null
+  const source = at && info.value?.sources.find((one) => one.digest === at.digest)
+  return at && source ? { source, flow: at.flow } : null
 })
 
 /* What Prepare would run: every assigned cell with no sheet. */
@@ -290,57 +291,56 @@ function select(step: number): void {
   place(target, column)
 }
 
-/* ↑↓←→ move between cells, space ticks, ⇧↑↓ selects rows, ↵ runs the focused
-   cell's action, ⌘↵ Prepare, ⌥2 Review next, ⌥A Add sources, esc clears the
-   selection. Matched on `event.code`, because Option types a character on macOS. */
-function onKey(event: KeyboardEvent): void {
-  if (adding.value || dialog.value || viewing.value) return
-  const { row, column } = focus.value
-  if (event.altKey && event.code === 'Digit2') {
-    event.preventDefault()
-    reviewNext()
-    return
-  }
-  if (event.altKey && event.code === 'KeyA') {
-    event.preventDefault()
-    adding.value = true
-    return
-  }
-  if (event.altKey && event.code === 'KeyR') {
-    event.preventDefault()
-    openRender()
-    return
-  }
-  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-    event.preventDefault()
-    void runPrepare()
-    return
-  }
-  if (event.altKey || event.metaKey || event.ctrlKey) return
-  if (event.shiftKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-    event.preventDefault()
-    select(event.key === 'ArrowDown' ? 1 : -1)
-    return
-  }
-  const moves: Record<string, [number, number]> = {
-    ArrowUp: [-1, 0],
-    ArrowDown: [1, 0],
-    ArrowLeft: [0, -1],
-    ArrowRight: [0, 1],
-  }
-  const move = moves[event.key]
-  if (move) {
-    event.preventDefault()
-    place(row + move[0], column + move[1])
-  } else if (event.key === ' ') {
-    event.preventDefault()
-    toggle(row, column)
-  } else if (event.key === 'Escape') {
-    selected.value = new Set()
-  } else if (event.key === 'Enter') {
-    act(row, column)
-  }
-}
+const moveBy = (rows: number, columns: number) => () =>
+  place(focus.value.row + rows, focus.value.column + columns)
+
+/* ↵ and Space are the grid's unless a button or a link holds the focus, which
+   answers them itself. */
+const onGrid = () => !isControl(document.activeElement)
+
+/* h j k l or the arrows move between cells, ⇧J ⇧K or ⇧↓ ⇧↑ select rows, and
+   esc clears the selection (D25). */
+useKeys('screen', [
+  { id: 'add', keys: [shifted('KeyA')], label: 'add sources', run: () => (adding.value = true) },
+  { id: 'render', keys: [shifted('KeyG')], label: 'render', run: openRender },
+  { id: 'prepare', keys: [modded('Enter')], label: 'prepare', run: () => void runPrepare() },
+  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'left', run: moveBy(0, -1) },
+  { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: moveBy(1, 0) },
+  { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'up', run: moveBy(-1, 0) },
+  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'right', run: moveBy(0, 1) },
+  {
+    id: 'select-down',
+    keys: [shifted('KeyJ'), shifted('ArrowDown')],
+    label: 'select rows down',
+    run: () => select(1),
+  },
+  {
+    id: 'select-up',
+    keys: [shifted('KeyK'), shifted('ArrowUp')],
+    label: 'select rows up',
+    run: () => select(-1),
+  },
+  {
+    id: 'tick',
+    keys: plain('Space'),
+    label: 'tick / untick',
+    run: () => toggle(focus.value.row, focus.value.column),
+    when: onGrid,
+  },
+  {
+    id: 'act',
+    keys: plain('Enter'),
+    label: "the cell's action",
+    run: () => act(focus.value.row, focus.value.column),
+    when: onGrid,
+  },
+  {
+    id: 'clear',
+    keys: plain('Escape'),
+    label: 'clear the selection',
+    run: () => (selected.value = new Set()),
+  },
+])
 
 /* A failed Prepare is shown, the one that ended before this hub opened too. */
 watch(
@@ -353,7 +353,6 @@ watch(
 )
 
 onMounted(async () => {
-  window.addEventListener('keydown', onKey)
   void store.check()
   try {
     await store.reloadHub()
@@ -363,8 +362,6 @@ onMounted(async () => {
   }
   place(0, 0)
 })
-
-onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
@@ -386,7 +383,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         {{ flows.length }} {{ noun(flows.length, 'flow') }}
       </span>
       <button class="btn btn-secondary hub__add" type="button" @click="adding = true">
-        Add sources…<span class="appbar__key">⌥A</span>
+        Add sources…<KeyHint command="add" />
       </button>
       <button
         v-if="next"
@@ -395,7 +392,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         type="button"
         @click="reviewNext"
       >
-        Review next · {{ next.source.name }} {{ next.flow }}<span class="appbar__key">⌥2</span>
+        Review next · {{ next.source.name }} {{ next.flow }}<KeyHint command="review" />
       </button>
       <span v-else class="hub__reason">nothing left to review</span>
     </div>
@@ -498,10 +495,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </template>
     </div>
-    <p class="hub__keys mono">
-      ↑↓←→ move · space tick / untick · ⇧↑↓ select rows · ↵ the cell's action · ⌥A add sources ·
-      ⌥2 review next · ⌥R render · ⌥0 library
-    </p>
+    <KeyBar />
     <RenderBar
       v-if="shown === 'render'"
       :images="offer.images"

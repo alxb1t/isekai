@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { comparison, imageAt } from '../api'
+import KeyBar from '../components/KeyBar.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import { useKeys } from '../composables/useKeys'
+import { plain } from '../stores/keys'
 import type { CompareSide, Comparison } from '../types'
 
 /* Before and after (design spec J5·9): one seed under the newest older version
@@ -40,23 +43,28 @@ const seeds = (side: CompareSide) =>
 const image = (side: CompareSide) =>
   imageAt({ ...props, version: side.version, seed: props.seed })
 
-function onKey(event: KeyboardEvent): void {
-  if (event.key === '\\') {
-    event.preventDefault()
-    swapped.value = !swapped.value
-  } else if (event.key === 'Escape') {
-    event.preventDefault()
+useKeys('screen', [
+  {
+    id: 'swap',
+    keys: plain('Backslash'),
+    label: 'swap in place',
+    run: () => (swapped.value = !swapped.value),
+  },
+  {
+    id: 'back',
+    keys: plain('Escape'),
+    label: 'back',
     // Back to the large view, with the way back it was opened with.
-    void router.push({
-      name: 'render',
-      params: { ...props },
-      state: { from: window.history.state?.from ?? null },
-    })
-  }
-}
+    run: () =>
+      void router.push({
+        name: 'render',
+        params: { ...props },
+        state: { from: window.history.state?.from ?? null },
+      }),
+  },
+])
 
 onMounted(async () => {
-  window.addEventListener('keydown', onKey)
   try {
     pair.value = await comparison({
       ...props,
@@ -66,7 +74,6 @@ onMounted(async () => {
     refusal.value = (reason as Error).message
   }
 })
-onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
@@ -91,6 +98,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         {{ one.after.join(' · ') || 'empty' }}
       </span>
     </div>
-    <p class="compare__keys mono">\ swap in place · esc back</p>
+    <KeyBar />
   </section>
 </template>

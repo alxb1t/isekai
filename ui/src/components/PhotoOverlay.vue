@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { paragraphsOf, wordsOf } from '../caption'
+import { useKeys } from '../composables/useKeys'
+import { plain } from '../stores/keys'
+import KeyHint from './KeyHint.vue'
 
 /* A lens over the review screen, not a step in it. Nothing here can change the
    sheet, so leaving is never a decision -- esc, a click anywhere, or the ×.
@@ -20,7 +23,15 @@ const props = defineProps<{
   caption: string | null
 }>()
 
-defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; step: [direction: -1 | 1] }>()
+
+/* The arrows still move through the batch, so the overlay doubles as a way to
+   compare inputs without closing it. */
+useKeys('overlay', [
+  { id: 'close', keys: plain('Escape', 'Enter'), label: 'close', run: () => emit('close') },
+  { id: 'previous', keys: plain('ArrowLeft'), label: 'previous', run: () => emit('step', -1) },
+  { id: 'next', keys: plain('ArrowRight'), label: 'next', run: () => emit('step', 1) },
+])
 
 const actual = ref(false)
 
@@ -70,7 +81,7 @@ const words = computed(() => wordsOf(props.caption))
           >
             1:1 pixels
           </button>
-          <span class="overlay__exit mono">esc · ⌥f · click anywhere</span>
+          <span class="overlay__exit mono"><KeyHint command="close" /> · click anywhere</span>
           <button class="btn btn-secondary btn-icon" type="button" @click="$emit('close')">
             ×
           </button>

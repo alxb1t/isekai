@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import KeyHint from './KeyHint.vue'
+
 /* Approve, or the fact that it happened.
 
    **Accent-outlined and always live.** No scroll gate, no dwell timer, no
@@ -48,7 +50,7 @@ defineEmits<{ approve: [] }>()
       :disabled="working"
       @click="$emit('approve')"
     >
-      Approve sheet <span class="mono">⌘↩</span>
+      Approve sheet<KeyHint command="approve" />
     </button>
   </footer>
 </template>

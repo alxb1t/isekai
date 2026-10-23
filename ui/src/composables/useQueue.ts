@@ -19,6 +19,13 @@ export function firstFlow(info: HubInfo): string | null {
   return info.flows.find((flow) => queue(info, flow).length > 0) ?? null
 }
 
+/** Return the queue's head: the first unapproved sheet of the first flow that has any. */
+export function head(info: HubInfo): { digest: string; flow: string } | null {
+  const flow = firstFlow(info)
+  const digest = flow ? queue(info, flow)[0] : undefined
+  return flow && digest ? { digest, flow } : null
+}
+
 /**
  * Return the sheet Review opens after `digest` is approved, or null for the hub.
  *

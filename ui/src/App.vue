@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import KeyHint from './components/KeyHint.vue'
+import KeyList from './components/KeyList.vue'
+import { useKeys } from './composables/useKeys'
+import { head } from './composables/useQueue'
 import { useBatchStore } from './stores/batch'
+import { shifted, useKeyStore } from './stores/keys'
 import { alerting, useLiveStore } from './stores/live'
 
 /* The shell: the AppBar, the BillingBanner's slot, the route's screen and the
@@ -45,29 +50,48 @@ const key = computed(() =>
   route.name === 'review' ? `${route.params.batch}/${route.params.flow}` : route.path,
 )
 
-/* ⌥0 the library and ⌥1 the batch's hub, from anywhere, text fields included.
-   Matched on `event.code`: Option types a character on macOS. */
-function onKey(event: KeyboardEvent): void {
-  if (!event.altKey) return
-  if (event.code === 'Digit0') {
-    event.preventDefault()
-    void router.push({ name: 'home' })
-  } else if (event.code === 'Digit1' && batch.value) {
-    event.preventDefault()
-    void router.push({ name: 'hub', params: { batch: batch.value } })
-  } else if (event.code === 'Digit3' && batch.value) {
-    event.preventDefault()
-    void router.push({ name: 'renders', params: { batch: batch.value } })
-  } else if (event.code === 'Digit4') {
-    event.preventDefault()
-    void router.push({ name: 'session' })
-  }
+const queued = computed(() => (batchStore.hub ? head(batchStore.hub) : null))
+const listing = ref(false)
+
+const onBatch = () => batch.value !== null
+function open(name: string): void {
+  void router.push({ name, params: batch.value ? { batch: batch.value } : {} })
 }
 
-onMounted(() => {
-  window.addEventListener('keydown', onKey)
-})
-onUnmounted(() => window.removeEventListener('keydown', onKey))
+/* The keys every screen answers, outside a text field (D25). */
+useKeys('everywhere', [
+  { id: 'library', keys: [shifted('KeyL')], label: 'library', run: () => open('home') },
+  { id: 'hub', keys: [shifted('KeyH')], label: 'hub', run: () => open('hub'), when: onBatch },
+  {
+    id: 'review',
+    keys: [shifted('KeyR')],
+    label: "review the queue's head",
+    run: () => {
+      if (queued.value && batch.value)
+        void router.push({ name: 'review', params: { batch: batch.value, ...queued.value } })
+    },
+    when: () => queued.value !== null,
+  },
+  {
+    id: 'renders',
+    keys: [shifted('KeyI')],
+    label: 'renders',
+    run: () => open('renders'),
+    when: onBatch,
+  },
+  { id: 'session', keys: [shifted('KeyS')], label: 'session', run: () => open('session') },
+  {
+    id: 'keys',
+    keys: [shifted('Slash')],
+    label: 'the key list',
+    run: () => (listing.value = true),
+  },
+])
+
+/* The page's one key listener: every command is a declaration in the key store. */
+const keys = useKeyStore()
+onMounted(() => window.addEventListener('keydown', keys.press))
+onUnmounted(() => window.removeEventListener('keydown', keys.press))
 </script>
 
 <template>
@@ -80,16 +104,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           :to="{ name: 'hub', params: { batch } }"
           class="appbar__tab"
           :class="{ 'appbar__tab--active': screen === 'hub' }"
-          >Hub<span class="appbar__key">⌥1</span></RouterLink
+          >Hub<KeyHint command="hub" /></RouterLink
         >
         <span class="appbar__tab" :class="{ 'appbar__tab--active': screen === 'review' }"
-          >Review<span class="appbar__key">⌥2</span></span
+          >Review<KeyHint command="review" /></span
         >
         <RouterLink
           :to="{ name: 'renders', params: { batch } }"
           class="appbar__tab"
           :class="{ 'appbar__tab--active': screen === 'renders' || screen === 'render' }"
-          >Renders<span class="appbar__key">⌥3</span></RouterLink
+          >Renders<KeyHint command="renders" /></RouterLink
         >
       </template>
     </header>
@@ -104,12 +128,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         ></span
       >
       <RouterLink :to="{ name: 'session' }" class="band__resolve"
-        >Resolve<span class="appbar__key">⌥4</span></RouterLink
+        >Resolve<KeyHint command="session" /></RouterLink
       >
     </div>
     <main class="app__screen">
       <RouterView :key="key" />
     </main>
+    <KeyList v-if="listing" @close="listing = false" />
     <footer class="jobstrip">
       <span
         class="jobstrip__dot"

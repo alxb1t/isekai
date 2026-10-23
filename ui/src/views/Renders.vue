@@ -1,24 +1,29 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar } from '../bars'
 import { sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
+import KeyBar from '../components/KeyBar.vue'
+import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
+import { useKeys } from '../composables/useKeys'
+import { type Move, moved } from '../grid'
 import { useBatchStore } from '../stores/batch'
+import { plain, shifted } from '../stores/keys'
 import { noun } from '../words'
 import type { RenderVersion, RevisedImage } from '../types'
 
 /* Renders: a grid of sources by flows, each cell one row of its images, its
    versions oldest to newest, each image marked with its version (design spec
-   J5·1). ←→ move along a source's images, ↑↓ between sources, and ↵ or a click
-   opens an image's large view; space selects, and ⌥E revises the selection (§7).
-   A seed rendered under two versions is marked ⇄. The Render bar offers what the
-   newest approvals lack, ⌥R; a source's thumbnail opens it in the viewer. */
+   J5·1). ↵ or a click opens an image's large view; space selects, and e revises
+   the selection (§7). A seed rendered under two versions is marked ⇄. The Render
+   bar offers what the newest approvals lack; a source's thumbnail opens it in the
+   viewer. */
 const props = defineProps<{ batch: string }>()
 const router = useRouter()
 const refusal = ref<string | null>(null)
@@ -118,62 +123,60 @@ function repeated(versions: RenderVersion[]): Set<string> {
   return new Set([...seen].filter(([, count]) => count > 1).map(([seed]) => seed))
 }
 
-function move(rowStep: number, columnStep: number): void {
-  const held = rows.value
-  const filled = held.map((one, index) => (one.length ? index : -1)).filter((one) => one >= 0)
-  if (!filled.length) return
-  let { row, column } = focus.value
-  if (rowStep) {
-    const at = filled.indexOf(row)
-    row = filled[Math.min(Math.max(at + rowStep, 0), filled.length - 1)]
+/* Each cell's image count, by source row then flow, counted from `rows`. */
+const cells = computed(() =>
+  rows.value.map((spots) =>
+    (info.value?.flows ?? []).map((flow) => spots.filter((one) => one.flow === flow).length),
+  ),
+)
+
+function go(move: Move): () => void {
+  return () => {
+    focus.value = moved(cells.value, focus.value, move)
+    void nextTick(() =>
+      document
+        .querySelector<HTMLElement>('.renders__image--focused')
+        ?.scrollIntoView({ block: 'nearest' }),
+    )
   }
-  column = Math.min(Math.max(column + columnStep, 0), held[row].length - 1)
-  focus.value = { row, column }
-  void nextTick(() =>
-    document.querySelector<HTMLElement>('.renders__image--focused')?.scrollIntoView({ block: 'nearest' }),
-  )
 }
 
-function onKey(event: KeyboardEvent): void {
-  if (revising.value || dialog.value || viewing.value) return
-  // Matched on `event.code`: ⌥E types a character.
-  if (event.altKey && event.code === 'KeyE') {
-    event.preventDefault()
-    if (chosen.value.length) revising.value = true
-    return
-  }
-  if (event.altKey && event.code === 'KeyR') {
-    event.preventDefault()
-    store.openDialog()
-    return
-  }
-  if (event.altKey || event.metaKey || event.ctrlKey) return
-  if (event.key === ' ') {
-    const here = rows.value[focus.value.row]?.[focus.value.column]
-    if (here) {
-      event.preventDefault()
-      toggle(here)
-    }
-    return
-  }
-  const steps: Record<string, [number, number]> = {
-    ArrowUp: [-1, 0],
-    ArrowDown: [1, 0],
-    ArrowLeft: [0, -1],
-    ArrowRight: [0, 1],
-  }
-  const step = steps[event.key]
-  if (step) {
-    event.preventDefault()
-    move(...step)
-  } else if (event.key === 'Enter') {
-    const spot = rows.value[focus.value.row]?.[focus.value.column]
-    if (spot) {
-      event.preventDefault()
-      open(spot.digest, spot.flow, spot.version, spot.seed)
-    }
-  }
-}
+const here = () => rows.value[focus.value.row]?.[focus.value.column]
+
+/* h j k l between cells, the arrows between images (D25). */
+useKeys('screen', [
+  { id: 'previous-cell', keys: plain('KeyH'), label: 'previous cell', run: go('cell-') },
+  { id: 'next-cell', keys: plain('KeyL'), label: 'next cell', run: go('cell+') },
+  { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'next source', run: go('row+') },
+  { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'previous source', run: go('row-') },
+  { id: 'left', keys: plain('ArrowLeft'), label: 'previous image', run: go('image-') },
+  { id: 'right', keys: plain('ArrowRight'), label: 'next image', run: go('image+') },
+  {
+    id: 'select',
+    keys: plain('Space'),
+    label: 'select',
+    run: () => toggle(here() as Spot),
+    when: () => here() !== undefined,
+  },
+  {
+    id: 'open',
+    keys: plain('Enter'),
+    label: 'the large view',
+    run: () => {
+      const at = here() as Spot
+      open(at.digest, at.flow, at.version, at.seed)
+    },
+    when: () => here() !== undefined,
+  },
+  {
+    id: 'revise',
+    keys: plain('KeyE'),
+    label: 'revise',
+    run: () => (revising.value = true),
+    when: () => chosen.value.length > 0,
+  },
+  { id: 'render', keys: [shifted('KeyG')], label: 'render', run: () => store.openDialog() },
+])
 
 function thumb(digest: string, flow: string, version: number, seed: string): string {
   return thumbAt({ batch: props.batch, digest, flow, version, seed })
@@ -187,7 +190,6 @@ function open(digest: string, flow: string, version: number, seed: string): void
 }
 
 onMounted(async () => {
-  window.addEventListener('keydown', onKey)
   void store.check()
   try {
     await store.reloadRenders()
@@ -198,7 +200,6 @@ onMounted(async () => {
   const first = rows.value.findIndex((one) => one.length > 0)
   if (first >= 0) focus.value = { row: first, column: 0 }
 })
-onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
@@ -212,7 +213,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         :disabled="!chosen.length"
         @click="revising = true"
       >
-        Revise {{ chosen.length || '' }}<span class="appbar__key">⌥E</span>
+        Revise {{ chosen.length || '' }}<KeyHint command="revise" />
       </button>
       <span v-if="!chosen.length" class="renders__reason">No image selected</span>
     </div>
@@ -319,5 +320,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       @open="store.openDialog"
     />
     <RenderDialog v-if="dialog" :batch="batch" @close="store.closeDialog" />
+    <KeyBar />
   </section>
 </template>

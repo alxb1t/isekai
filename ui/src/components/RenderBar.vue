@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reasons } from '../bars'
+import KeyHint from './KeyHint.vue'
 import { storeToRefs } from 'pinia'
 import { useLiveStore } from '../stores/live'
 import { noun } from '../words'
@@ -42,13 +43,13 @@ const { renderTotals } = live
         :disabled="disabled !== null"
         @click="$emit('open')"
       >
-        Render<span class="appbar__key">⌥R</span>
+        Render<KeyHint command="render" />
       </button>
     </template>
     <template v-else>
       <span class="prepare-bar__cells mono">{{ renderTotals(job) }}</span>
       <RouterLink class="btn btn-secondary" :to="{ name: 'session' }"
-        >Session<span class="appbar__key">⌥4</span></RouterLink
+        >Session<KeyHint command="session" /></RouterLink
       >
     </template>
   </div>
