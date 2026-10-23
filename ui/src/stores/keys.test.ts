@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
-import { type Command, type Press, useKeyStore } from './keys'
+import { type Command, type Press, isControl, useKeyStore } from './keys'
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -123,6 +123,10 @@ spec('ui:keys:esc-closes-the-nearest-thing-first', () => {
   expect(target.left).toBe(false)
   expect(close.run).not.toHaveBeenCalled()
 
+  // An Esc that drops an input method's composition is the input method's.
+  expect(keys.press(press('Escape', { target, isComposing: true }))).toBe(false)
+  expect(target.left).toBe(false)
+
   keys.press(press('Escape', { target }))
   expect(target.left).toBe(true)
   expect(close.run).not.toHaveBeenCalled()
@@ -154,4 +158,25 @@ spec('ui:keys:hints-come-from-the-declarations', () => {
   ])
   keys.mac = false
   expect(keys.hint('approve')).toBe('Ctrl+↵')
+
+  // A screen command on an everywhere key is the one listed, as it is the one that runs.
+  keys.declare('screen', [command('renders', 'KeyI', { keys: [{ code: 'KeyI', shift: true }] })])
+  keys.declare('everywhere', [
+    command('library', 'KeyI', { keys: [{ code: 'KeyI', shift: true }], label: 'renders' }),
+  ])
+  expect(keys.listed.filter((one) => one.keys === '⇧I').map((one) => one.id)).toEqual(['renders'])
+})
+
+spec('ui:keys:a-focused-control-keeps-enter-and-space', () => {
+  const element = (tagName: string, given: object = {}) =>
+    ({ tagName, ...given }) as unknown as EventTarget
+
+  expect(isControl(element('BUTTON'))).toBe(true)
+  expect(isControl(element('INPUT', { type: 'checkbox' }))).toBe(true)
+  expect(isControl(element('A', { href: '/renders/b' }))).toBe(true)
+  expect(isControl(element('SELECT'))).toBe(true)
+  // A grid cell or the page itself leaves the keys to the screen.
+  expect(isControl(element('DIV'))).toBe(false)
+  expect(isControl(element('BODY'))).toBe(false)
+  expect(isControl(null)).toBe(false)
 })

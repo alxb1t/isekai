@@ -31,7 +31,8 @@ const total = (counts: number[]) => startOf(counts, counts.length)
 /**
  * Return the focus after `move`; `cells[row][cell]` counts each cell's images.
  *
- * A move past either end stays, and an empty cell or row is stepped over.
+ * A move past either end stays, and an empty cell or row is stepped over. A row
+ * move keeps the cell and the image in it, or lands in the row's nearest filled cell.
  * e.g. cells [[2, 3]], {row 0, column 0}: 'cell+' -> column 2, 'image+' -> column 1
  */
 export function moved(cells: number[][], at: Focus, move: Move): Focus {
@@ -49,8 +50,20 @@ export function moved(cells: number[][], at: Focus, move: Move): Focus {
     return at
   }
   for (let row = at.row + step; row >= 0 && row < cells.length; row += step) {
-    const images = total(cells[row])
-    if (images > 0) return { row, column: clamp(at.column, images - 1) }
+    const target = cells[row]
+    const cell = nearest(target, here.cell)
+    if (cell !== null) {
+      const column = clamp(at.column - here.start, target[cell] - 1) + startOf(target, cell)
+      return { row, column }
+    }
   }
   return at
+}
+
+/* The filled cell of `counts` nearest `cell`, the earlier on a tie, or null. */
+function nearest(counts: number[], cell: number): number | null {
+  for (let distance = 0; distance < counts.length; distance += 1)
+    for (const near of [cell - distance, cell + distance])
+      if ((counts[near] ?? 0) > 0) return near
+  return null
 }

@@ -89,8 +89,8 @@ function onKey(event: KeyboardEvent): void {
        and the key store leaves the field (D25).
 
        It stops here rather than bubbling: nothing above this input should act
-       on an Esc the dropdown answered, least of all the photo overlay's
-       handler. And the focus is re-asserted rather than assumed -- the operator
+       on an Esc the dropdown answered, least of all the key store, which would
+       leave the field. And the focus is re-asserted rather than assumed -- the operator
        reported losing it, and the next thing they press is `↓` to walk on to
        the next field, which only reaches the sheet if this input still holds
        it. A `.focus()` on the already-focused element costs nothing. */

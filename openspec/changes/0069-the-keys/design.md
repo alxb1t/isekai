@@ -89,6 +89,7 @@ archive is frozen; this note is the correction (`0068·R10`).
 |---|---|---|---|
 | unit · vitest | `ui:keys:a-key-is-matched-by-the-physical-key`, `ui:keys:mod-is-command-or-control`, `ui:keys:no-command-fires-in-a-text-field`, `ui:keys:an-overlay-takes-the-keys-first`, `ui:keys:esc-closes-the-nearest-thing-first`, `ui:keys:hints-come-from-the-declarations` | none | `ui/src/stores/keys.test.ts` |
 | unit · vitest | `ui:keys:renders-moves-by-cell-and-by-image`, `ui:keys:review-moves-between-its-panes` | none | `ui/src/grid.test.ts`, `ui/src/panes.test.ts` |
+| unit · vitest | `ui:keys:a-focused-control-keeps-enter-and-space`, `ui:sheet:leaving-mid-commit-keeps-the-folder` | none | `ui/src/stores/keys.test.ts`, `ui/src/staging.test.ts` |
 | e2e | `ui:keys:a-command-waits-until-the-field-is-left`, `ui:sheet:a-commit-in-flight-holds-the-sheet` | `Alt+Digit1` and `Alt+Space` in `tests/e2e/test_review.py`; `Alt+KeyE` in `tests/e2e/test_render.py`; the in-flight step out of `test_importing_a_new_batch_opens_its_hub_with_every_source_unassigned` | `tests/e2e/test_review.py`, `tests/e2e/test_import.py`, `tests/e2e/test_render.py` |
 
 **End-to-end runs added:** two tests, on Chromium only (T4). Only a browser holds focus in a field, so the field rule's

@@ -16,7 +16,7 @@ import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
 import { head } from '../composables/useQueue'
 import { at, useBatchStore } from '../stores/batch'
-import { modded, plain, shifted } from '../stores/keys'
+import { isControl, modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
 import type { HubCell, HubSource, Stage } from '../types'
 
@@ -294,6 +294,10 @@ function select(step: number): void {
 const moveBy = (rows: number, columns: number) => () =>
   place(focus.value.row + rows, focus.value.column + columns)
 
+/* ↵ and Space are the grid's unless a button or a link holds the focus, which
+   answers them itself. */
+const onGrid = () => !isControl(document.activeElement)
+
 /* h j k l or the arrows move between cells, ⇧J ⇧K or ⇧↓ ⇧↑ select rows, and
    esc clears the selection (D25). */
 useKeys('screen', [
@@ -321,12 +325,14 @@ useKeys('screen', [
     keys: plain('Space'),
     label: 'tick / untick',
     run: () => toggle(focus.value.row, focus.value.column),
+    when: onGrid,
   },
   {
     id: 'act',
     keys: plain('Enter'),
     label: "the cell's action",
     run: () => act(focus.value.row, focus.value.column),
+    when: onGrid,
   },
   {
     id: 'clear',

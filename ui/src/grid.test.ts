@@ -19,4 +19,14 @@ spec('ui:keys:renders-moves-by-cell-and-by-image', () => {
   expect(moved(cells, { row: 0, column: 1 }, 'image+')).toEqual({ row: 0, column: 1 })
   expect(moved(cells, cell, 'cell-')).toEqual({ row: 0, column: 0 })
   expect(moved(cells, { row: 0, column: 4 }, 'row+')).toEqual({ row: 2, column: 2 })
+
+  // A row move keeps the flow: its image, or the last the next row has in it.
+  const uneven = [
+    [5, 2],
+    [10, 2],
+    [0, 1],
+  ]
+  expect(moved(uneven, { row: 0, column: 5 }, 'row+')).toEqual({ row: 1, column: 10 })
+  expect(moved(uneven, { row: 1, column: 11 }, 'row-')).toEqual({ row: 0, column: 6 })
+  expect(moved(uneven, { row: 1, column: 7 }, 'row+')).toEqual({ row: 2, column: 0 })
 })

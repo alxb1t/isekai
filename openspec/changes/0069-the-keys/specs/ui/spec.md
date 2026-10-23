@@ -7,10 +7,10 @@ offers it, and SHALL draw every key hint, each screen's key bar and the key list
 declarations. It SHALL match a key by the physical key, whatever the keyboard layout, and SHALL treat Mod as `⌘` on
 macOS and `Ctrl` elsewhere. An open overlay SHALL take every key before the screen beneath it, and the screen before
 the keys offered everywhere. While focus is in a text field, no command SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`,
-`⇧Mod+Z` and `Mod+K`, and the field SHALL keep its own editing keys. `Esc` SHALL close an open suggestion list first,
-then leave the field, then close the top overlay, then go back on the screen, and SHALL never close a billing alert.
-No key SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it
-quotes.
+`⇧Mod+Z` and `Mod+K`, and the field SHALL keep its own editing keys. On the hub, a focused button or link SHALL
+keep `↵` and `Space`. `Esc` SHALL close an open suggestion list first, then leave the field, then close the top
+overlay, then go back on the screen, and SHALL never close a billing alert. No key SHALL spend money but the Render
+dialog's `Mod+↵`, which confirms the price it quotes.
 
 A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
 Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.
@@ -47,6 +47,12 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 - **WHEN** `⇧H` is typed into a tag field, then `Esc` and `⇧H` are pressed
 - **THEN** the field holds the typed text and Review stays open
 - **AND** the second `⇧H` opens the hub
+
+#### Scenario: a focused control keeps Enter and Space
+- **Key:** `ui:keys:a-focused-control-keeps-enter-and-space`
+- **Layers:** unit
+- **WHEN** `↵` or `Space` is pressed on the hub with focus on a button or a link
+- **THEN** the control answers it and the cell's command does not run
 
 #### Scenario: an overlay takes the keys first
 - **Key:** `ui:keys:an-overlay-takes-the-keys-first`
@@ -88,7 +94,8 @@ the reason. Import SHALL stay disabled, with its reason, until every chosen file
 ready files and those the operator chose to import as they are. Each upload SHALL keep its own state, whatever its
 name; an upload SHALL be refused once Import begins committing; and a file whose reading fails SHALL be refused
 alone, the next file still read. While Import commits, the sheet SHALL take no file, no second Import and no
-cancel, by button, by `Esc` or by leaving the screen.
+cancel, by button, by `Esc` or by leaving the screen; a commit refused after the screen is left SHALL cancel its
+staged folder.
 
 Each file's bar answers which one is slow; each reason sits on the file it concerns, so two files of one name are
 two uploads. A file that lands while the folder is committed would be dropped from the batch unseen, and a cancel
@@ -166,3 +173,4 @@ then would delete the folder the commit is moving.
 - **Layers:** unit
 - **WHEN** the sheet closes while Import's commit is in flight
 - **THEN** its staging folder is not cancelled
+- **AND** a commit refused after it closes cancels the folder

@@ -45,6 +45,8 @@ export interface Press {
   ctrlKey: boolean
   altKey: boolean
   defaultPrevented: boolean
+  /* An input method is composing: the key is its own. */
+  isComposing?: boolean
   target: EventTarget | null
   preventDefault(): void
 }
@@ -71,6 +73,15 @@ export function isField(target: EventTarget | null): boolean {
   if (element.isContentEditable) return true
   if (element.tagName === 'TEXTAREA') return true
   return element.tagName === 'INPUT' && TEXT.has((element.type ?? 'text').toLowerCase())
+}
+
+const CONTROLS = new Set(['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'SUMMARY'])
+
+/** Return whether `target` is a control that answers `↵` and `Space` itself: a button, a link, an input. */
+export function isControl(target: EventTarget | null): boolean {
+  const element = target as Partial<HTMLAnchorElement> | null
+  if (!element?.tagName) return false
+  return CONTROLS.has(element.tagName) || (element.tagName === 'A' && Boolean(element.href))
 }
 
 function onMac(): boolean {
@@ -144,8 +155,9 @@ export const useKeyStore = defineStore('keys', () => {
 
   /** Run the first command the key reaches and return whether one ran. */
   function press(event: Press): boolean {
-    // A field's own handler answered it, and stopped it there or marked it.
-    if (event.defaultPrevented) return false
+    // A field's own handler answered it, and stopped it there or marked it; or
+    // an input method is composing, and the key is its own.
+    if (event.defaultPrevented || event.isComposing) return false
     const field = isField(event.target)
     // In a field, Esc leaves it; the overlay or the screen takes the next one.
     if (field && event.code === 'Escape') {
@@ -184,8 +196,12 @@ export const useKeyStore = defineStore('keys', () => {
   /** The screen's commands, as its key bar lists them. */
   const bar = computed(() => entries('screen'))
 
-  /** Everywhere's commands and the screen's, as the key list shows them. */
-  const listed = computed(() => [...entries('everywhere'), ...bar.value])
+  /** Everywhere's commands and the screen's, as the key list shows them; a key the
+      screen declares is listed once, as the screen's command, the one it runs. */
+  const listed = computed(() => {
+    const taken = new Set(bar.value.map((one) => one.keys))
+    return [...entries('everywhere').filter((one) => !taken.has(one.keys)), ...bar.value]
+  })
 
   /** Return a command's keys by its id, from the newest layer that declares it, or null. */
   function hint(id: string): string | null {

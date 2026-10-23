@@ -225,7 +225,16 @@ async function importAll(): Promise<void> {
     refusal.value = (reason as Error).message
   } finally {
     committing.value = false
+    // A commit refused after the sheet closed leaves a folder no one will import.
+    leave()
   }
+}
+
+/* Cancel the staging folder if the sheet has closed and no commit holds it. */
+function leave(): void {
+  const id = staging.value
+  if (id !== null && discards(id, closed, committing.value, committed))
+    void cancelStaging(id).catch(() => undefined)
 }
 
 async function cancel(): Promise<void> {
@@ -261,8 +270,7 @@ onMounted(() => picker.value?.click())
 onUnmounted(() => {
   closed = true
   live.follow({ staging: null })
-  if (discards(staging.value, committing.value, committed))
-    void cancelStaging(staging.value).catch(() => undefined)
+  leave()
 })
 </script>
 
