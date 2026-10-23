@@ -1900,15 +1900,6 @@ body {
   }
 }
 
-/* Reduced motion stops every running signal; the clocks still tick. */
-@media (prefers-reduced-motion: reduce) {
-  .prepare-bar.running::before,
-  .hub__segment--running,
-  .import__bar--running .import__fill {
-    animation: none;
-  }
-}
-
 .hub__word--running {
   color: var(--accent-ink);
 }
@@ -1968,4 +1959,14 @@ body {
   margin: 0;
   font-size: 12px;
   color: var(--ink);
+}
+
+/* Reduced motion stops every running signal; the clocks still tick. It stays last, so it follows
+   every rule that starts one. */
+@media (prefers-reduced-motion: reduce) {
+  .prepare-bar.running::before,
+  .hub__segment--running,
+  .import__bar--running .import__fill {
+    animation: none;
+  }
 }
