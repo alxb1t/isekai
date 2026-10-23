@@ -560,7 +560,7 @@ onUnmounted(() => {
       :disabled="offer.disabled"
       @open="openRender"
     />
-    <div v-else-if="shown === 'prepare'" class="prepare-bar">
+    <div v-else-if="shown === 'prepare'" class="prepare-bar" :class="{ running: busy }">
       <template v-if="busy">
         <span class="prepare-bar__cells mono">
           Prepare · {{ prepareTotals(job) }}

@@ -179,7 +179,9 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
   Stop. The accepted-cell total stays fixed; the sheet-completed count and ticking elapsed time match JobStrip,
   including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
   hub opened after the failure too. Disabled: its reason (`A render is running · 06:41`). There is no done state: the
-  receipt goes to the job strip, the accent to Review next.
+  receipt goes to the job strip, the accent to Review next. Running, a 2 px `accent` line slides along the bar's top
+  edge, as on a running RenderBar, and a running segment pulses `accent-dim` ↔ `accent`; under
+  `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
 - **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
   to render`, the render stage's own count, and primary `Render ⌥R`, disabled with its reason. With nothing short it
   is absent; while a render runs it shows the job strip's totals, `image 1 of 2 · 06:41 of ≤10:30`, and

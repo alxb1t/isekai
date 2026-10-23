@@ -24,6 +24,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The Renders grid reads oldest to newest, a row per cell with `vN` badges and a ready tile counting what the
   newest approval lacks; each version's heading moves to its large view (0067 D7, D8).
 
+- A running Prepare or Render bar draws a sliding accent line and its running segment pulses; reduced motion
+  stops both and the import bar's fill (0067 D9).
+
 ## [0.40.1] - 2026-10-23 · 0066-the-quick-patch
 
 Gate: local 0m35s · CI 7m25s (build-image at 801ffec) · 0.40.0: local 0m34s · CI 1m12s

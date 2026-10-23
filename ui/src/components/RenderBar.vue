@@ -10,11 +10,12 @@ const props = defineProps<{ images: number; disabled: string | null }>()
 defineEmits<{ open: [] }>()
 
 const { job, renderTotals } = useLive()
+const running = computed(() => job.value?.kind === 'render' && job.value.state === 'running')
 const totals = computed(() => (props.images > 0 ? '' : renderTotals(job.value)))
 </script>
 
 <template>
-  <div class="prepare-bar render-bar" data-render-bar>
+  <div class="prepare-bar" :class="{ running }" data-render-bar>
     <template v-if="images > 0">
       <span class="prepare-bar__cells mono">
         {{ images }} {{ noun(images, 'image') }} ready to render

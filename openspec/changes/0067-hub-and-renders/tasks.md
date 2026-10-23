@@ -10,7 +10,7 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 - [x] 3 — Cell actions
 - [x] 4 — The Render bar
 - [x] 5 — The Renders grid
-- [ ] 6 — Motion
+- [x] 6 — Motion
 
 ## 1 — Source images and the viewer
 
@@ -110,10 +110,10 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 
 ## 6 — Motion
 
-- [ ] 6.1 Add the running line, the segment pulse and their reduced-motion stop, with the import fill's, to
+- [x] 6.1 Add the running line, the segment pulse and their reduced-motion stop, with the import fill's, to
   `ui/src/app.css` per [D9](design.md#d9); mark the running Prepare bar in `ui/src/views/Hub.vue` and the running
   Render bar in `ui/src/components/RenderBar.vue`.
   Verify: `grep -c 'prefers-reduced-motion' ui/src/app.css` prints a number of at least `2`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 6.2 In `ui/design/spec.md` J2's PrepareBar bullet, state the running line, the pulse and their stop under
+- [x] 6.2 In `ui/design/spec.md` J2's PrepareBar bullet, state the running line, the pulse and their stop under
   `prefers-reduced-motion`.
   Verify: `grep -c 'prefers-reduced-motion' ui/design/spec.md` prints a number of at least `1`.

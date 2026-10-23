@@ -1886,6 +1886,22 @@ body {
 
 .hub__segment--running {
   background: var(--accent-dim);
+  animation: segment-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes segment-pulse {
+  to {
+    background: var(--accent);
+  }
+}
+
+/* Reduced motion stops every running signal; the clocks still tick. */
+@media (prefers-reduced-motion: reduce) {
+  .prepare-bar.running::before,
+  .hub__segment--running,
+  .import__bar--running .import__fill {
+    animation: none;
+  }
 }
 
 .hub__word--running {
@@ -1913,6 +1929,22 @@ body {
   border: 1px solid var(--line-control);
   border-radius: 8px;
   box-shadow: var(--shadow-bar);
+}
+
+/* A running bar: a 2 px accent line slides along its top edge. */
+.prepare-bar.running {
+  overflow: hidden;
+}
+
+.prepare-bar.running::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 30%;
+  height: 2px;
+  background: var(--accent);
+  animation: import-running 1.6s ease-in-out infinite;
 }
 
 .prepare-bar__cells {
