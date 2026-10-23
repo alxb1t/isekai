@@ -52,6 +52,15 @@ function prepareTotals(held: JobSlot | null): string {
   return `${progress.done} of ${progress.of} ${noun(progress.of, 'cell')} done · ${clock(elapsed)}`
 }
 
+/* A running render's images against its total, and its clock against its limit.
+   e.g. "image 1 of 2 · 06:41 of ≤10:30" */
+function renderTotals(held: JobSlot | null): string {
+  const session = held?.session
+  if (held?.kind !== 'render' || held.state !== 'running' || !session) return ''
+  const elapsed = (now.value - Date.parse(session.started)) / 1000
+  return `image ${session.images.length} of ${session.of} · ${clock(elapsed)} of ≤${clock(session.limit)}`
+}
+
 export function useLive() {
-  return { job, billing, loaded, now, connect, alerting, clock, prepareTotals }
+  return { job, billing, loaded, now, connect, alerting, clock, prepareTotals, renderTotals }
 }

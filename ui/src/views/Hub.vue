@@ -2,10 +2,12 @@
 import { noun } from '../words'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { bar as barOf, failed } from '../bars'
 import { action } from '../cells'
 import { assign, hub, prepare, renderOffer, sourceAt, sourceThumbAt, stopJob } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
+import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useLive } from '../composables/useLive'
@@ -27,19 +29,20 @@ const adding = ref(false)
 const rendering = ref(false)
 /* The source open in the viewer, or null. */
 const viewing = ref<HubSource | null>(null)
-/* Why Render is disabled, from the server's quote; null while it is offered. */
-const renderBlocked = ref<string | null>(null)
+/* The images the batch lacks, and why Render is disabled or null, from the server. */
+const offer = ref<{ disabled: string | null; images: number }>({ disabled: null, images: 0 })
 
 async function checkRender(): Promise<void> {
   try {
-    renderBlocked.value = (await renderOffer(props.batch)).disabled
+    offer.value = await renderOffer(props.batch)
   } catch (reason) {
-    renderBlocked.value = (reason as Error).message
+    offer.value = { disabled: (reason as Error).message, images: offer.value.images }
   }
 }
 
 function openRender(): void {
-  if (renderBlocked.value === null) rendering.value = true
+  if (shown.value === 'render' && offer.value.images > 0 && offer.value.disabled === null)
+    rendering.value = true
 }
 /* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
 const selected = ref<Set<number>>(new Set())
@@ -102,7 +105,15 @@ const changes = computed(() =>
       .map((flow) => ({ source, flow })),
   ),
 )
-const bar = computed(() => busy.value || changes.value.length > 0 || barRefusal.value !== null)
+/* The one bar the hub shows: Prepare first, then Render, then none. */
+const shown = computed(() =>
+  barOf({
+    changes: changes.value.length,
+    preparing: busy.value || barRefusal.value !== null,
+    images: offer.value.images,
+    rendering: blocked.value,
+  }),
+)
 
 /* A cell's key in the maps of refusals and running stages. */
 function at(name: string, flow: string): string {
@@ -363,9 +374,18 @@ function listen(): void {
   })
 }
 
+/* A failed Prepare is shown, the one that ended before this hub opened too. */
+watch(
+  job,
+  (slot) => {
+    const message = failed(slot, props.batch)
+    if (message !== null) barRefusal.value = message
+  },
+  { immediate: true },
+)
+
 /* A job that ends changes the cells and what Render offers. */
 watch(job, (slot, before) => {
-  if (slot?.state === 'failed' && slot.kind === 'prepare') barRefusal.value = slot.message
   if (before?.state === 'running' && slot?.state !== 'running') {
     running.value = {}
     void hub(props.batch).then((read) => (info.value = read))
@@ -423,23 +443,13 @@ onUnmounted(() => {
       <button
         v-if="next"
         class="btn"
-        :class="bar ? 'btn-secondary' : 'btn-primary'"
+        :class="shown ? 'btn-secondary' : 'btn-primary'"
         type="button"
         @click="reviewNext"
       >
         Review next · {{ next.source.name }} {{ next.flow }}<span class="appbar__key">⌥2</span>
       </button>
       <span v-else class="hub__reason">nothing left to review</span>
-      <span v-if="renderBlocked" class="hub__reason" data-render-reason>{{ renderBlocked }}</span>
-      <button
-        class="btn btn-secondary"
-        type="button"
-        data-render
-        :disabled="renderBlocked !== null"
-        @click="openRender"
-      >
-        Render…<span class="appbar__key">⌥R</span>
-      </button>
     </div>
     <div
       ref="grid"
@@ -544,7 +554,13 @@ onUnmounted(() => {
       ↑↓←→ move · space tick / untick · ⇧↑↓ select rows · ↵ the cell's action · ⌥A add sources ·
       ⌥2 review next · ⌥R render · ⌥0 library
     </p>
-    <div v-if="bar" class="prepare-bar">
+    <RenderBar
+      v-if="shown === 'render'"
+      :images="offer.images"
+      :disabled="offer.disabled"
+      @open="openRender"
+    />
+    <div v-else-if="shown === 'prepare'" class="prepare-bar">
       <template v-if="busy">
         <span class="prepare-bar__cells mono">
           Prepare · {{ prepareTotals(job) }}

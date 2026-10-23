@@ -17,7 +17,8 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
    short (`00003`, `16_01`).
 3. **One accent-outlined action per screen**: the next forward action, or none. Everything else is outlined
    grey.
-4. **A disabled button has its reason beside it**, never in a tooltip.
+4. **A disabled button has its reason beside it**, never in a tooltip, where the screen does not already show why.
+   An action with nothing to do is absent, not disabled.
 5. **A refusal** is a 7×7 accent square, the reason in `ink`, then the fix in `ink-2`. A command or an offered value
    inside the fix is mono, `accent-ink`.
 6. **One job slot**, Prepare or Render. While a job runs, only actions that would start another job are
@@ -148,7 +149,7 @@ J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 
 | J2·4 done: no bar, the accent on Review next | the last cell finishes | same |
 
 ```
-6 sources × 2 flows         [ Add sources… ⌥A ]  [ Review next · 16_01 conjure ⌥2 ]  [ Render 2 ⌥R ]
+6 sources × 2 flows                          [ Add sources… ⌥A ]  [ Review next · 16_01 conjure ⌥2 ]
 SOURCE                 │ summon-anime-wai                 │ conjure-anime-wai
 [▣] 00003              │ ☑ ▰▰▰▰▰▰ rendered ×1      ↵ view │ ☑ ▰▰▰▰▰▱ approved
     00003.png · 832×1216│                                  │
@@ -157,6 +158,7 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
 ↑↓←→ move · space tick / untick · ⇧↑↓ select rows · ↵ the cell's action · ⌥A add sources · ⌥R render
 
         ┌ IMG_0430 × summon · …                 [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
+        ┌ 2 images ready to render                                        [ Render ⌥R ] ┐   RenderBar
 ```
 
 - **The hub header** leaves a 12 px gap between its items. Add sources keeps its right alignment.
@@ -175,8 +177,13 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
 - **The PrepareBar** floats centred, bottom 50, 940 wide, `raised-2`, 1px `line-control`, radius 8. Pending: the
   cells named in mono 11, Discard, primary `n changes · Prepare ⌘↵`. Running: `Prepare · 1 of 3 cells done · 01:47`,
   Stop. The accepted-cell total stays fixed; the sheet-completed count and ticking elapsed time match JobStrip,
-  including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a). Disabled: its reason (`A render is running ·
-  06:41`). There is no done state: the receipt goes to the job strip, the accent to Review next.
+  including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
+  hub opened after the failure too. Disabled: its reason (`A render is running · 06:41`). There is no done state: the
+  receipt goes to the job strip, the accent to Review next.
+- **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
+  to render`, the render stage's own count, and primary `Render ⌥R`, disabled with its reason. With nothing short it
+  is absent; while a render runs it shows the job strip's totals, `image 1 of 2 · 06:41 of ≤10:30`, and
+  `Session ⌥4`.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is a
   44×60 thumbnail, upright, that opens the viewer, the file's stem in mono 13 and mono 11 `file · dims`, the size
   read from the file; a row checkbox appears in selection mode.
@@ -367,7 +374,7 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 | Hub | Add sources, nothing new | Import disabled `Nothing new to add` |
 | Hub | the batch is gone | a full-page refusal, `Back to the library ⌥0` |
 | Render | refused before billing | the CLI's refusal: no GPU free, no key in `.env`; `nothing billed` when true |
-| Render | disabled | `Every approved source × flow already has its Count of images.` · `Prepare is running · 01:42` · `A pod may still be billing.` |
+| Render | disabled | `Prepare is running · 01:42` · `A pod may still be billing.` |
 | Renders | empty | the count of approvals short of their Count, with Render; with nothing approved, Review next |
 | Renders | a missing image | `its record is there, its image is gone`, the path in the fix |
 | Renders | Revise disabled | `No image selected` · `Prepare is running · 01:42` |

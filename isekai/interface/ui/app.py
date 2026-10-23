@@ -449,13 +449,15 @@ def create_app(
 
     @app.get("/api/b/{batch}/render")
     def read_render_offer(batch: str) -> dict[str, Any]:
-        """Return why Render is disabled for the batch, or null; it prices nothing."""
-        held = _held()
-        if held is not None:
-            return {"disabled": held}
+        """Return how many images the batch lacks, and why Render is disabled, or null.
+
+        It prices nothing; the count is the render stage's own.
+        """
         runs = folder(batch) / library.RUNS
+        short = render.short(runs, render.run_ids(runs), wire(runs))
         return {
-            "disabled": render.short(runs, render.run_ids(runs), wire(runs)).blocked
+            "disabled": _held() or short.blocked,
+            "images": sum(short.images.values()),
         }
 
     @app.post("/api/b/{batch}/render/quote")

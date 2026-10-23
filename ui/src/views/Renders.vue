@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { renders, thumbAt } from '../api'
+import { bar } from '../bars'
+import { renderOffer, renders, thumbAt } from '../api'
 import RefusalPage from '../components/RefusalPage.vue'
+import RenderBar from '../components/RenderBar.vue'
+import RenderDialog from '../components/RenderDialog.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
+import { useLive } from '../composables/useLive'
 import type { RenderVersion, RendersInfo, RevisedImage } from '../types'
 
 /* Renders: a grid of sources by flows, each cell's approvals newest first with
    their images (design spec J5·1). ←→ move along a source's images, ↑↓ between
    sources, and ↵ or a click opens an image's large view; space selects, and ⌥E
-   revises the selection (§7). A seed rendered under two versions is labelled ⇄. */
+   revises the selection (§7). A seed rendered under two versions is labelled ⇄.
+   The Render bar offers what the newest approvals lack, ⌥R. */
 const props = defineProps<{ batch: string }>()
 const router = useRouter()
 const info = ref<RendersInfo | null>(null)
@@ -18,6 +23,31 @@ const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 /* The selected images, each as `key` spells it. */
 const selected = ref(new Set<string>())
 const revising = ref(false)
+/* The Render dialog is up; it has no URL of its own (design spec §1 rule 8). */
+const rendering = ref(false)
+/* The images the batch lacks, and why Render is disabled or null, from the server. */
+const offer = ref<{ disabled: string | null; images: number }>({ disabled: null, images: 0 })
+const { job, billing } = useLive()
+const shown = computed(() =>
+  bar({
+    changes: 0,
+    preparing: false,
+    images: offer.value.images,
+    rendering: job.value?.kind === 'render' && job.value.state === 'running',
+  }),
+)
+
+async function checkRender(): Promise<void> {
+  try {
+    offer.value = await renderOffer(props.batch)
+  } catch (reason) {
+    offer.value = { disabled: (reason as Error).message, images: offer.value.images }
+  }
+}
+
+function openRender(): void {
+  if (offer.value.images > 0 && offer.value.disabled === null) rendering.value = true
+}
 
 interface Spot {
   digest: string
@@ -102,11 +132,16 @@ function move(rowStep: number, columnStep: number): void {
 }
 
 function onKey(event: KeyboardEvent): void {
-  if (revising.value) return
+  if (revising.value || rendering.value) return
   // Matched on `event.code`: ⌥E types a character.
   if (event.altKey && event.code === 'KeyE') {
     event.preventDefault()
     if (chosen.value.length) revising.value = true
+    return
+  }
+  if (event.altKey && event.code === 'KeyR') {
+    event.preventDefault()
+    openRender()
     return
   }
   if (event.altKey || event.metaKey || event.ctrlKey) return
@@ -151,6 +186,15 @@ function open(digest: string, flow: string, version: number, seed: string): void
   })
 }
 
+/* A job that ends, or a pod alert raised or cleared, changes what Render offers. */
+watch(job, (slot, before) => {
+  if (before?.state === 'running' && slot?.state !== 'running') {
+    void renders(props.batch).then((read) => (info.value = read))
+    void checkRender()
+  }
+})
+watch(billing, () => void checkRender())
+
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
   try {
@@ -159,6 +203,7 @@ onMounted(async () => {
     refusal.value = (reason as Error).message
     return
   }
+  void checkRender()
   const first = rows.value.findIndex((one) => one.length > 0)
   if (first >= 0) focus.value = { row: first, column: 0 }
 })
@@ -245,6 +290,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       :batch="batch"
       :images="chosen"
       @close="revising = false"
+    />
+    <RenderBar
+      v-if="shown === 'render'"
+      :images="offer.images"
+      :disabled="offer.disabled"
+      @open="openRender"
+    />
+    <RenderDialog
+      v-if="rendering"
+      :batch="batch"
+      @close="(rendering = false), void checkRender()"
     />
   </section>
 </template>

@@ -8,7 +8,7 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 - [x] 1 — Source images and the viewer
 - [x] 2 — Home
 - [x] 3 — Cell actions
-- [ ] 4 — The Render bar
+- [x] 4 — The Render bar
 - [ ] 5 — The Renders grid
 - [ ] 6 — Motion
 
@@ -74,19 +74,19 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 
 ## 4 — The Render bar
 
-- [ ] 4.1 **HALT CHECK** — Render's reason sits in the hub's header.
+- [x] 4.1 **HALT CHECK** — Render's reason sits in the hub's header.
   Verify: `grep -c 'data-render-reason' ui/src/views/Hub.vue` prints `1`.
-- [ ] 4.2 Return `images` from `read_render_offer` in `isekai/interface/ui/app.py` per [D6](design.md#d6); in
+- [x] 4.2 Return `images` from `read_render_offer` in `isekai/interface/ui/app.py` per [D6](design.md#d6); in
   `test_with_every_count_rendered_render_is_disabled_naming_why` in `tests/test_ui_jobs.py`, assert `images` is `0`.
   Verify: `uv run pytest -q tests/test_ui_jobs.py` exits 0, and `grep -c 'offer\["images"\] == 0' tests/test_ui_jobs.py` prints `1`.
-- [ ] 4.3 Add `bar` and `failed` to a new `ui/src/bars.ts`, bound to `ui:render:prepare-takes-the-bar-first` and
+- [x] 4.3 Add `bar` and `failed` to a new `ui/src/bars.ts`, bound to `ui:render:prepare-takes-the-bar-first` and
   `ui:events:a-hub-opened-after-a-failure-shows-it` in a new `ui/src/bars.test.ts`, per [D6](design.md#d6) and
   [D10](design.md#d10).
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c -E 'prepare-takes-the-bar-first|a-hub-opened-after-a-failure-shows-it' ui/src/bars.test.ts` prints `2`.
-- [ ] 4.4 Add `ui/src/components/RenderBar.vue`, its button keeping `data-render`; draw it in `ui/src/views/Hub.vue`
+- [x] 4.4 Add `ui/src/components/RenderBar.vue`, its button keeping `data-render`; draw it in `ui/src/views/Hub.vue`
   and `ui/src/views/Renders.vue`; drop the header's Render button; read `failed` with `immediate` in `Hub.vue`.
   Verify: `grep -c 'data-render-reason' ui/src/views/Hub.vue` prints `0`, and `uv run pytest -q tests/e2e/test_render.py tests/e2e/test_prepare.py` exits 0.
-- [ ] 4.5 In `ui/design/spec.md`: rule 4 shows a reason only where the screen does not already show why; J2's
+- [x] 4.5 In `ui/design/spec.md`: rule 4 shows a reason only where the screen does not already show why; J2's
   header loses `[ Render 2 ⌥R ]` for the bar of [D6](design.md#d6); §6 drops *Every approved…*.
   Verify: `grep -c 'Every approved source × flow already has its Count' ui/design/spec.md` prints `0`, and `grep -c 'ready to render' ui/design/spec.md` prints a number of at least `1`.
 

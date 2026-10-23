@@ -772,6 +772,7 @@ def test_with_every_count_rendered_render_is_disabled_naming_why(
     offer = client.get("/api/b/b/render").json()
 
     assert "already has its Count" in offer["disabled"]
+    assert offer["images"] == 0
 
 
 @pytest.mark.spec("ui:render:a-grown-quote-is-refused")

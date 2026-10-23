@@ -100,8 +100,8 @@ export function stopJob(): Promise<{ job: JobSlot | null }> {
   return send('/api/job/stop', 'POST', {})
 }
 
-/* Why Render is disabled for a batch, or null; it prices nothing. */
-export function renderOffer(batch: string): Promise<{ disabled: string | null }> {
+/* How many images a batch lacks, and why Render is disabled or null; it prices nothing. */
+export function renderOffer(batch: string): Promise<{ disabled: string | null; images: number }> {
   return get(`/api/b/${encodeURIComponent(batch)}/render`)
 }
 
