@@ -11,6 +11,7 @@ import os
 import struct
 import threading
 import time
+from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -693,7 +694,7 @@ def test_a_batch_inside_the_working_tree_is_refused_and_nothing_written(
 # --- reading in turn ---------------------------------------------------------
 
 
-@pytest.mark.spec("ui:sheet:the-stream-reports-each-files-reading")
+@pytest.mark.spec("ui:sheet:a-failed-read-refuses-its-file-alone")
 def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -723,20 +724,81 @@ def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
 
     staging = stage(tmp_path / "library")
     reader = importing.Reader(staging, LIMIT, publish)
-    reader.put("a.jpg", photo_jpeg((200, 0, 0)))
-    reader.put("b.jpg", photo_jpeg((0, 200, 0)))
+    a = reader.put("a.jpg", photo_jpeg((200, 0, 0)))["upload"]
+    b = reader.put("b.jpg", photo_jpeg((0, 200, 0)))["upload"]
 
     both_read.wait(10.0)
     files = reader.files()
-    assert files["a.jpg"]["state"] == "refused"
-    assert "a.jpg: " in files["a.jpg"]["refusal"]
-    assert "No space left on device" in files["a.jpg"]["refusal"]
-    assert files["b.jpg"]["state"] == "ready"
+    assert files[a]["state"] == "refused"
+    assert "a.jpg: " in files[a]["refusal"]
+    assert "No space left on device" in files[a]["refusal"]
+    assert files[b]["state"] == "ready"
     staged = sorted(p.name for p in staging.iterdir() if not p.name.startswith("."))
     assert staged == ["b.jpg"]
 
-    reader.put("a.jpg", photo_jpeg((200, 0, 0)))
+    again = reader.put("a.jpg", photo_jpeg((200, 0, 0)))["upload"]
     read_again.wait(10.0)
     reader.stop()
-    assert reader.files()["a.jpg"]["state"] == "ready"
+    assert reader.files()[again]["state"] == "ready"
     reader.refuse_unread()
+
+
+@pytest.mark.spec("ui:sheet:two-uploads-of-one-name-keep-their-own-states")
+def test_two_uploads_of_one_name_keep_their_own_states(tmp_path: Path) -> None:
+    published: list[dict[str, object]] = []
+    both_read = threading.Event()
+
+    def publish(event: dict[str, object]) -> None:
+        published.append(event)
+        if sum(one["state"] not in {"waiting", "converting"} for one in published) == 2:
+            both_read.set()
+
+    reader = importing.Reader(stage(tmp_path / "library"), LIMIT, publish)
+    first = reader.put("a.jpg", b"not an image")["upload"]
+    second = reader.put("a.jpg", photo_jpeg((0, 200, 0)))["upload"]
+
+    assert both_read.wait(10.0)
+    reader.stop()
+    files = reader.files()
+    assert first != second
+    assert files[first]["state"] == "refused"
+    assert files[second]["state"] == "ready"
+    assert "refusal" not in files[second]
+    assert {one["upload"] for one in published if one["state"] == "refused"} == {first}
+
+
+@pytest.mark.spec("ui:sheet:an-upload-after-import-is-refused")
+def test_an_upload_once_import_commits_is_refused_and_the_batch_is_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    library = tmp_path / "library"
+    read_once = threading.Event()
+
+    def publish(staged: str, event: dict[str, object]) -> None:
+        if event["state"] not in {"waiting", "converting"}:
+            read_once.set()
+
+    imports = importing.Imports(library, LIMIT, publish)
+    staged = imports.open()
+    reader = imports.reader(staged)
+    reader.put("a.jpg", photo_jpeg((200, 0, 0)))
+    assert read_once.wait(10.0)
+    real = importing.commit
+    refused: list[str] = []
+
+    def landing_mid_commit(
+        folder: Path, into: Path, name: str, as_is: Iterable[str] = (), *, add: bool
+    ) -> importing.Committed:
+        try:
+            reader.put("late.jpg", photo_jpeg((0, 0, 200)))
+        except Refusal as one:
+            refused.append(str(one))
+        return real(folder, into, name, as_is, add=add)
+
+    monkeypatch.setattr(importing, "commit", landing_mid_commit)
+    imports.commit(staged, "trip")
+
+    assert len(refused) == 1
+    assert "late.jpg: " in refused[0]
+    assert "Add sources" in refused[0]
+    assert sorted(p.name for p in (library / "trip" / "sources").iterdir()) == ["a.jpg"]

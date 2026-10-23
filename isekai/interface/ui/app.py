@@ -354,17 +354,18 @@ def create_app(
 
     @app.put("/api/staging/{staged}/files/{name}", status_code=202)
     async def put_file(staged: str, name: str, request: Request) -> dict[str, Any]:
-        """Hold one uploaded file for its import's reader, and answer `waiting`.
+        """Hold an upload for its import's reader; answer its id and `waiting`.
 
         The body is the file. One past the limit is refused by its declared
-        length before its body is read. Its reading is reported on the stream.
+        length before its body is read. Its reading is reported on the stream,
+        under its upload id.
         """
         held = imports.reader(staged)
         declared = request.headers.get("content-length")
         if declared is not None and declared.isdigit() and int(declared) > limit:
             raise importing.past_limit(name, int(declared), limit)
         body = await request.body()
-        return {"file": name, **await run_in_threadpool(held.put, name, body)}
+        return await run_in_threadpool(held.put, name, body)
 
     @app.get("/api/staging/{staged}/files/{name}/thumb")
     def read_staged_thumb(staged: str, name: str) -> Response:

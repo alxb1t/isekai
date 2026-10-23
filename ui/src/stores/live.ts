@@ -43,7 +43,7 @@ export const useLiveStore = defineStore('live', () => {
   const loaded = ref(false)
   /* Now, in milliseconds, a second at a time: one clock for every running timer. */
   const now = ref(Date.now())
-  /* The followed import's files, by name. */
+  /* The followed import's files, by upload id. */
   const files = ref<Record<string, FileState>>({})
   /* A render session holds the slot. */
   const renderRunning = computed(
@@ -110,8 +110,8 @@ export const useLiveStore = defineStore('live', () => {
     } else if (kind === 'billing') {
       billing.value = data as Billing
     } else if (kind === 'file') {
-      const { file, ...state } = data as FileState & { file: string }
-      files.value = { ...files.value, [file]: state }
+      const { upload, ...state } = data as FileState & { upload: string }
+      files.value = { ...files.value, [upload]: state }
     }
   }
 

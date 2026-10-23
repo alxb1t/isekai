@@ -395,7 +395,7 @@ def test_one_source_at_one_seed_in_two_batches_has_two_thumbnails(
         assert (pixel[0] > pixel[2]) == (colour[0] > colour[2])
 
 
-@pytest.mark.spec_exempt("twin: a file past Pillow's bound refuses as an unread one")
+@pytest.mark.spec("ui:renders:an-unreadable-image-is-refused")
 @pytest.mark.parametrize("read", ["_upright", "source_jpeg", "_shrunk"])
 def test_an_image_past_pillows_pixel_bound_is_refused_naming_it(
     read: str, tmp_path: Path

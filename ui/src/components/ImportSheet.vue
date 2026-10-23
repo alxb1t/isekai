@@ -3,7 +3,7 @@ import { noun } from '../words'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
 import { useLiveStore } from '../stores/live'
-import type { FileState, StagedFile } from '../types'
+import type { StagedFile } from '../types'
 
 /* The New batch and Add sources sheet (design spec J1, J7): files chosen in the
    browser's dialog, each sent in its own request with its own bar, then read and
@@ -16,12 +16,11 @@ const emit = defineEmits<{ close: []; imported: [batch: string] }>()
 /* `queued` before its upload starts; `waiting` and `converting` are the server's. */
 type Phase = 'queued' | 'uploading' | 'waiting' | 'converting' | 'read' | 'refused'
 
-/* One file's state, as the import's stream reports it. */
-type FileEvent = FileState & { file: string }
-
 interface Tile {
   key: number
   file: File
+  /* The server's id for this upload, once its request is answered. */
+  upload: string | null
   phase: Phase
   progress: number
   result: StagedFile | null
@@ -29,10 +28,10 @@ interface Tile {
   asIs: boolean
 }
 
-/* One file, one request, its body the file itself, answered once its bytes land.
-   `XMLHttpRequest` rather than `fetch`, because only it reports an upload's
-   progress. */
-function uploadFile(id: string, file: File, onProgress: (fraction: number) => void): Promise<void> {
+/* One file, one request, its body the file itself, answered with its upload id
+   once its bytes land. `XMLHttpRequest` rather than `fetch`, because only it
+   reports an upload's progress. */
+function uploadFile(id: string, file: File, onProgress: (fraction: number) => void): Promise<string> {
   const url = `/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(file.name)}`
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -41,13 +40,13 @@ function uploadFile(id: string, file: File, onProgress: (fraction: number) => vo
       if (event.lengthComputable) onProgress(event.loaded / event.total)
     }
     xhr.onload = () => {
-      let body: { refusal?: string } = {}
+      let body: { refusal?: string; upload?: string } = {}
       try {
         body = JSON.parse(xhr.responseText) as typeof body
       } catch {
         body = {}
       }
-      if (xhr.status >= 200 && xhr.status < 300) resolve()
+      if (xhr.status >= 200 && xhr.status < 300 && body.upload) resolve(body.upload)
       else reject(new Error(body.refusal ?? `${file.name}: the server answered ${xhr.status}`))
     }
     xhr.onerror = () => reject(new Error(`${file.name}: the upload did not reach the server`))
@@ -108,6 +107,7 @@ function choose(event: Event): void {
     tiles.value.push({
       key: counter++,
       file,
+      upload: null,
       phase: 'queued',
       progress: 0,
       result: null,
@@ -126,32 +126,27 @@ function pump(): void {
   for (const one of queued.slice(0, Math.max(PARALLEL - running.length, 0))) void send(one)
 }
 
-/* The import's files, from the page's stream: each state is applied once, as it arrives. */
+/* The import's files, from the page's stream, each on the tile holding its upload. */
 watch(
   () => live.files,
-  (files, before) => {
-    for (const [file, state] of Object.entries(files))
-      if (state !== before[file]) apply({ file, ...state })
+  () => {
+    for (const one of tiles.value) apply(one)
   },
 )
 
-/* Put a reported state on the first unread tile of that name. Its upload's
-   answer, not the stream, says it waits: the stream can report it first. */
-function apply(event: FileEvent): void {
-  if (event.state === 'waiting') return
-  const one = tiles.value.find(
-    (tile) =>
-      tile.file.name === event.file && tile.phase !== 'queued' && tile.phase !== 'read' && tile.phase !== 'refused',
-  )
-  if (!one) return
-  if (event.state === 'converting') {
+/* Put its upload's reported state on a tile. Its upload's answer, not the
+   stream, says it waits: the stream can report it first. */
+function apply(one: Tile): void {
+  const reported = one.upload === null ? undefined : live.files[one.upload]
+  if (!reported || reported.state === 'waiting') return
+  if (reported.state === 'converting') {
     one.phase = 'converting'
-  } else if (event.state === 'refused') {
+  } else if (reported.state === 'refused') {
     one.phase = 'refused'
-    one.refusal = event.refusal ?? `${event.file}: refused`
+    one.refusal = reported.refusal ?? `${reported.file}: refused`
   } else {
     one.phase = 'read'
-    one.result = { name: event.name ?? event.file, state: event.state, carries: event.carries ?? [] }
+    one.result = { name: reported.name ?? reported.file, state: reported.state, carries: reported.carries ?? [] }
   }
 }
 
@@ -164,10 +159,11 @@ async function send(one: Tile): Promise<void> {
     return
   }
   try {
-    await uploadFile(id, one.file, (fraction) => {
+    one.upload = await uploadFile(id, one.file, (fraction) => {
       one.progress = fraction
     })
     if (one.phase === 'uploading') one.phase = 'waiting'
+    apply(one)
   } catch (reason) {
     one.phase = 'refused'
     one.refusal = (reason as Error).message

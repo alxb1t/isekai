@@ -8,7 +8,7 @@ Every new pytest test carries `@pytest.mark.spec`, and every new vitest test `sp
 - [x] 1 — The live store
 - [x] 2 — One stream
 - [x] 3 — The batch store
-- [ ] 4 — The upload id and the cards
+- [x] 4 — The upload id and the cards
 
 ## 1 — The live store
 
@@ -58,22 +58,22 @@ Every new pytest test carries `@pytest.mark.spec`, and every new vitest test `sp
 
 ## 4 — The upload id and the cards
 
-- [ ] 4.1 **HALT CHECK** — the reader keys its files by upload name.
+- [x] 4.1 **HALT CHECK** — the reader keys its files by upload name.
   Verify: `grep -c 'self._files\[name\] = state' isekai/pipeline/importing.py` prints `1`.
-- [ ] 4.2 Add the upload id, `Reader.seal` and the commit's seal to `isekai/pipeline/importing.py`, and the PUT's
+- [x] 4.2 Add the upload id, `Reader.seal` and the commit's seal to `isekai/pipeline/importing.py`, and the PUT's
   `upload` to `isekai/interface/ui/app.py`, per [D6](design.md#d6); read `files` by `upload` in the staging tests of
   `tests/test_ui_api.py` and in `tests/test_importing.py`.
   Verify: `grep -c 'def seal' isekai/pipeline/importing.py` prints `1`, and `uv run pytest -q tests/test_importing.py tests/test_ui_api.py` exits 0.
-- [ ] 4.3 In `tests/test_importing.py`, bind `ui:sheet:two-uploads-of-one-name-keep-their-own-states` and
+- [x] 4.3 In `tests/test_importing.py`, bind `ui:sheet:two-uploads-of-one-name-keep-their-own-states` and
   `ui:sheet:an-upload-after-import-is-refused`, and rebind `test_a_read_that_raises_refuses_its_file_and_the_next_is_read`
   to `ui:sheet:a-failed-read-refuses-its-file-alone`.
   Verify: `grep -c -E 'ui:sheet:(two-uploads-of-one-name|an-upload-after-import|a-failed-read-refuses)' tests/test_importing.py` prints `3`, and `uv run pytest -q tests/test_importing.py` exits 0.
-- [ ] 4.4 Key the live store's `files` by `upload` in `ui/src/stores/live.ts`, and each tile by its `upload` in
+- [x] 4.4 Key the live store's `files` by `upload` in `ui/src/stores/live.ts`, and each tile by its `upload` in
   `ui/src/components/ImportSheet.vue`, per [D6](design.md#d6).
   Verify: `grep -c 'tile.file.name === event.file' ui/src/components/ImportSheet.vue` prints `0`, and `uv run pytest -q tests/e2e/test_import.py` exits 0.
-- [ ] 4.5 Name `DecompressionBombError` beside `OSError` in the `upright_thumbnail` and `upright_jpeg` docstrings in
+- [x] 4.5 Name `DecompressionBombError` beside `OSError` in the `upright_thumbnail` and `upright_jpeg` docstrings in
   `isekai/shared/image.py`; bind the bomb test in `tests/test_ui_library.py` to `ui:renders:an-unreadable-image-is-refused`.
   Verify: `grep -c 'DecompressionBombError' isekai/shared/image.py` prints a number of at least `2`, and `grep -c 'spec_exempt("twin: a file past' tests/test_ui_library.py` prints `0`.
-- [ ] 4.6 Say each upload keeps its own state, and none lands once Import commits, in the import bullet of
+- [x] 4.6 Say each upload keeps its own state, and none lands once Import commits, in the import bullet of
   `isekai/interface/ui/README.md`.
   Verify: `grep -c 'upload id' isekai/interface/ui/README.md` prints a number of at least `1`, and `uv run pytest -q tests/test_docs.py` exits 0.

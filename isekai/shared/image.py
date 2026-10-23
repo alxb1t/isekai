@@ -608,7 +608,8 @@ def _orientation_tiff(
 def upright_thumbnail(path: Path) -> bytes:
     """Return the image at `path` turned as its orientation says, as `thumbnail_jpeg`.
 
-    Raises `OSError` for a file Pillow cannot decode; each caller words its refusal.
+    Raises `OSError` for a file Pillow cannot decode, and `DecompressionBombError` for
+    one past its pixel bound; each caller words its refusal.
     """
     from PIL import Image, ImageOps
 
@@ -621,7 +622,8 @@ def upright_thumbnail(path: Path) -> bytes:
 def upright_jpeg(path: Path) -> bytes:
     """Return the image at `path` turned as its orientation says, as a full-size JPEG.
 
-    Raises `OSError` for a file Pillow cannot decode; each caller words its refusal.
+    Raises `OSError` for a file Pillow cannot decode, and `DecompressionBombError` for
+    one past its pixel bound; each caller words its refusal.
     """
     from PIL import Image, ImageOps
 

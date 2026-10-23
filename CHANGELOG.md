@@ -18,6 +18,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The open batch's hub, running cells, renders and Render offer live in one store, so Review and Renders
   follow Prepare as the hub does; an offer answered after a newer one is dropped (0068 D4, D5, D7).
 
+- Each upload keeps its own state under the id its upload answers, so two files of one name are two
+  tiles; Import seals the reader, so an upload after it is refused rather than dropped (0068 D6, D7).
+
 ## [0.41.0] - 2026-10-23 · 0067-hub-and-renders
 
 Gate: local 0m37s · CI 7m25s (build-image at 801ffec) · 0.40.1: local 0m35s · CI 7m25s

@@ -184,8 +184,9 @@ export interface StagedFile {
   carries: string[]
 }
 
-/* One upload's state, as the import's stream reports it. */
+/* One upload's name and state, as the import's stream reports it. */
 export interface FileState {
+  file: string
   state: 'waiting' | 'converting' | 'refused' | StagedState
   name?: string
   carries?: string[]

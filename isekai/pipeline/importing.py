@@ -160,9 +160,10 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
 class Reader:
     """Read a staging folder's uploads one at a time, in the order they landed.
 
-    Each upload is held in a dot-named folder until its turn. Each change of a
-    file's state is published: `waiting`, `converting`, then a `Staged` state or
-    `refused`. e.g. `{"file": "a.heic", "state": "converted", "name": "a.jpg"}`
+    Each upload is named by its own id, so two of one name keep their own states,
+    and held in a dot-named folder until its turn. Each change of its state is
+    published: `waiting`, `converting`, then a `Staged` state or `refused`.
+    e.g. `{"upload": "u1", "file": "a.heic", "state": "converted", "name": "a.jpg"}`
     """
 
     def __init__(
@@ -174,13 +175,15 @@ class Reader:
         self._publish = publish
         self._lock = threading.Lock()
         self._files: dict[str, dict[str, Any]] = {}
-        self._queue: queue.Queue[tuple[str, Path] | None] = queue.Queue()
+        self._queue: queue.Queue[tuple[str, str, Path] | None] = queue.Queue()
+        self._uploads = 0
+        self._sealed = False
         self._stopped = False
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
     def put(self, name: str, body: bytes) -> dict[str, Any]:
-        """Hold an uploaded file's bytes for reading; return its state, `waiting`."""
+        """Hold an upload for reading; return its id, its name and `waiting`."""
         _refuse_name(name)
         if self._stopped:
             raise Refusal(
@@ -189,18 +192,46 @@ class Reader:
             )
         held = Path(tempfile.mkdtemp(dir=self._staging, prefix=".upload-")) / name
         held.write_bytes(body)
-        state = self._set(name, {"state": "waiting"})
-        self._queue.put((name, held))
-        return state
+        # Named and recorded under the lock `seal` takes: no upload lands once
+        # a commit has sealed the reader.
+        with self._lock:
+            if self._sealed:
+                shutil.rmtree(held.parent, ignore_errors=True)
+                raise Refusal(
+                    f"{name}: Import is already committing this import; once the "
+                    "batch's hub opens, add it with Add sources"
+                )
+            self._uploads += 1
+            upload = f"u{self._uploads}"
+            self._files[upload] = {"file": name, "state": "waiting"}
+        self._publish({"upload": upload, "file": name, "state": "waiting"})
+        self._queue.put((upload, name, held))
+        return {"upload": upload, "file": name, "state": "waiting"}
 
     def files(self) -> dict[str, dict[str, Any]]:
-        """Return every file's state, by the name it was uploaded as."""
+        """Return every upload's name and state, by its id."""
         with self._lock:
-            return {name: dict(state) for name, state in self._files.items()}
+            return {upload: dict(state) for upload, state in self._files.items()}
 
     def refuse_unread(self) -> None:
         """Refuse while any file still waits or converts, naming how many are read."""
-        states = self.files().values()
+        with self._lock:
+            self._refuse_unread()
+
+    def seal(self) -> None:
+        """Refuse while a file is unread, else refuse later uploads until `unseal`."""
+        with self._lock:
+            self._refuse_unread()
+            self._sealed = True
+
+    def unseal(self) -> None:
+        """Take uploads again, after a commit that was refused."""
+        with self._lock:
+            self._sealed = False
+
+    def _refuse_unread(self) -> None:
+        """Refuse while a file still waits or converts; the caller holds the lock."""
+        states = self._files.values()
         unread = sum(one["state"] in _UNREAD for one in states)
         if unread:
             raise Refusal(
@@ -221,8 +252,8 @@ class Reader:
     def _run(self) -> None:
         """Read each held upload in turn until stopped."""
         while (item := self._queue.get()) is not None and not self._stopped:
-            name, held = item
-            self._set(name, {"state": "converting"})
+            upload, name, held = item
+            self._set(upload, name, {"state": "converting"})
             try:
                 staged = read(held, self._staging, self._limit)
                 result = {
@@ -238,14 +269,13 @@ class Reader:
                 result = {"state": "refused", "refusal": _failed(name, failed)}
             finally:
                 shutil.rmtree(held.parent, ignore_errors=True)
-            self._set(name, result)
+            self._set(upload, name, result)
 
-    def _set(self, name: str, state: dict[str, Any]) -> dict[str, Any]:
-        """Record and publish `state` for `name`."""
+    def _set(self, upload: str, name: str, state: dict[str, Any]) -> None:
+        """Record and publish `state` for `upload`, uploaded as `name`."""
         with self._lock:
-            self._files[name] = state
-        self._publish({"file": name, **state})
-        return state
+            self._files[upload] = {"file": name, **state}
+        self._publish({"upload": upload, "file": name, **state})
 
 
 # The states of a file the reader has not finished with.
@@ -263,8 +293,8 @@ def _failed(name: str, failed: Exception) -> str:
 class Imports:
     """Every open import of a library, each a staging folder and its reader.
 
-    A reader starts when its import opens and stops before a commit or a
-    cancel touches the folder.
+    A reader starts when its import opens. It is sealed before a commit touches
+    the folder, so no upload lands in it, and stops before a cancel does.
     """
 
     def __init__(
@@ -297,10 +327,18 @@ class Imports:
     def commit(
         self, staged: str, name: str, as_is: Iterable[str] = (), *, add: bool = False
     ) -> Committed:
-        """Commit import `staged` as `commit` does, once every file is read."""
+        """Commit import `staged` as `commit` does, once every file is read.
+
+        Its reader is sealed first and unsealed on a refusal, so the sheet can add
+        more and import again.
+        """
         folder, reader = self._named(staged)
-        reader.refuse_unread()
-        done = commit(folder, self._library, name, as_is, add=add)
+        reader.seal()
+        try:
+            done = commit(folder, self._library, name, as_is, add=add)
+        except BaseException:
+            reader.unseal()
+            raise
         self._close(staged)
         return done
 
