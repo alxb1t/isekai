@@ -7,8 +7,8 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 const props = defineProps<{
   src: string
   name: string
-  width: number | null
-  height: number | null
+  width?: number | null
+  height?: number | null
 }>()
 
 const emit = defineEmits<{ close: [] }>()

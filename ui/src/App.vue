@@ -20,9 +20,7 @@ const hour = (at: string | null) =>
 const totals = computed(() => {
   const held = job.value
   if (!held) return ''
-  if (held.kind === 'render' && held.session && held.state === 'running')
-    return renderTotals(held)
-  if (held.state === 'running') return prepareTotals(held)
+  if (held.state === 'running') return renderTotals(held) || prepareTotals(held)
   return `last: ${held.kind} · ${held.state}`
 })
 

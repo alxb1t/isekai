@@ -2,13 +2,14 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { bar } from '../bars'
-import { renderOffer, renders, sourceAt, sourceThumbAt, thumbAt } from '../api'
+import { renders, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
 import { useLive } from '../composables/useLive'
+import { useRenderOffer } from '../composables/useRenderOffer'
 import { noun } from '../words'
 import type { RenderVersion, RendersInfo, RevisedImage } from '../types'
 
@@ -28,31 +29,11 @@ const selected = ref(new Set<string>())
 const revising = ref(false)
 /* The source open in the viewer, by name, or null. */
 const viewing = ref<string | null>(null)
-/* The Render dialog is up; it has no URL of its own (design spec §1 rule 8). */
-const rendering = ref(false)
-/* The images the batch lacks, and why Render is disabled or null, from the server. */
-const offer = ref<{ disabled: string | null; images: number }>({ disabled: null, images: 0 })
-const { job, billing } = useLive()
+const { job, renderRunning } = useLive()
+const { offer, dialog, check: checkRender, open: openRender, close } = useRenderOffer(props.batch)
 const shown = computed(() =>
-  bar({
-    changes: 0,
-    preparing: false,
-    images: offer.value.images,
-    rendering: job.value?.kind === 'render' && job.value.state === 'running',
-  }),
+  bar({ changes: 0, preparing: false, images: offer.value.images, rendering: renderRunning.value }),
 )
-
-async function checkRender(): Promise<void> {
-  try {
-    offer.value = await renderOffer(props.batch)
-  } catch (reason) {
-    offer.value = { disabled: (reason as Error).message, images: offer.value.images }
-  }
-}
-
-function openRender(): void {
-  if (offer.value.images > 0 && offer.value.disabled === null) rendering.value = true
-}
 
 interface Spot {
   digest: string
@@ -61,21 +42,25 @@ interface Spot {
   seed: string
 }
 
-/* A cell's versions as they are drawn: oldest first. The payload lists them
-   newest first, which a living scenario holds. */
-function oldest(versions: RenderVersion[] | undefined): RenderVersion[] {
-  return [...(versions ?? [])].reverse()
-}
+/* Each cell's versions as they are drawn, oldest first, by source row then flow.
+   The payload lists them newest first, which a living scenario holds. */
+const oldest = computed<Record<string, RenderVersion[]>[]>(() =>
+  (info.value?.sources ?? []).map((source) =>
+    Object.fromEntries(
+      (info.value?.flows ?? []).map((flow) => [flow, [...(source.cells[flow] ?? [])].reverse()]),
+    ),
+  ),
+)
 
 /* Each source's images in the order they are drawn: flow, oldest version, seed. */
 const rows = computed<Spot[][]>(() => {
   const held = info.value
   if (!held) return []
-  return held.sources.map((source) =>
+  return held.sources.map((source, row) =>
     source.digest === null
       ? []
       : held.flows.flatMap((flow) =>
-          oldest(source.cells[flow]).flatMap((version) =>
+          oldest.value[row][flow].flatMap((version) =>
             version.rendered.map((seed) => ({
               digest: source.digest as string,
               flow,
@@ -143,7 +128,7 @@ function move(rowStep: number, columnStep: number): void {
 }
 
 function onKey(event: KeyboardEvent): void {
-  if (revising.value || rendering.value || viewing.value) return
+  if (revising.value || dialog.value || viewing.value) return
   // Matched on `event.code`: ⌥E types a character.
   if (event.altKey && event.code === 'KeyE') {
     event.preventDefault()
@@ -194,24 +179,21 @@ function open(digest: string, flow: string, version: number, seed: string): void
   })
 }
 
-/* A job that ends, or a pod alert raised or cleared, changes what Render offers. */
+/* A job that ends changes the images. */
 watch(job, (slot, before) => {
-  if (before?.state === 'running' && slot?.state !== 'running') {
+  if (before?.state === 'running' && slot?.state !== 'running')
     void renders(props.batch).then((read) => (info.value = read))
-    void checkRender()
-  }
 })
-watch(billing, () => void checkRender())
 
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
+  void checkRender()
   try {
     info.value = await renders(props.batch)
   } catch (reason) {
     refusal.value = (reason as Error).message
     return
   }
-  void checkRender()
   const first = rows.value.findIndex((one) => one.length > 0)
   if (first >= 0) focus.value = { row: first, column: 0 }
 })
@@ -254,7 +236,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
         <div v-for="flow in info.flows" :key="flow" class="renders__cell">
           <span class="renders__images">
-            <template v-for="version in oldest(source.cells[flow])" :key="version.version">
+            <template v-for="version in oldest[row][flow]" :key="version.version">
               <span
                 v-if="version.damaged"
                 class="renders__image renders__image--damaged"
@@ -305,7 +287,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             >
           </span>
           <p
-            v-for="version in oldest(source.cells[flow]).filter((one) => one.damaged)"
+            v-for="version in oldest[row][flow].filter((one) => one.damaged)"
             :key="version.version"
             class="renders__refusal"
           >
@@ -318,8 +300,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       v-if="viewing"
       :src="sourceAt(batch, viewing)"
       :name="viewing"
-      :width="null"
-      :height="null"
       @close="viewing = null"
     />
     <ReviseConfirm
@@ -334,10 +314,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       :disabled="offer.disabled"
       @open="openRender"
     />
-    <RenderDialog
-      v-if="rendering"
-      :batch="batch"
-      @close="(rendering = false), void checkRender()"
-    />
+    <RenderDialog v-if="dialog" :batch="batch" @close="close" />
   </section>
 </template>

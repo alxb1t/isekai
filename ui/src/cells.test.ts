@@ -16,7 +16,6 @@ spec('ui:hub:a-click-follows-the-cells-stage', () => {
     [cell('unreadable'), 'none', null],
     [cell('sheet'), 'review', '↵ review'],
     [cell('draft'), 'review', '↵ review'],
-    [cell('draft', image), 'review', '↵ review'],
     [cell('approved'), 'sheet', '↵ review'],
     [cell('approved', image), 'view', '↵ view'],
     [cell('rendered', image), 'view', '↵ view'],

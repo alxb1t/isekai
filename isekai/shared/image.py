@@ -605,6 +605,19 @@ def _orientation_tiff(
     return b"MM\x00\x2a" + struct.pack(">IH", 8, 1) + entry + struct.pack(">I", 0)
 
 
+def upright_thumbnail(path: Path) -> bytes:
+    """Return the image at `path` turned as its orientation says, as `thumbnail_jpeg`.
+
+    Raises `OSError` for a file Pillow cannot decode; each caller words its refusal.
+    """
+    from PIL import Image, ImageOps
+
+    with Image.open(path) as opened:
+        # A JPEG decodes at the smallest scale that still covers the side.
+        opened.draft("RGB", (THUMB_SIDE, THUMB_SIDE))
+        return thumbnail_jpeg(ImageOps.exif_transpose(opened))
+
+
 def thumbnail_jpeg(image: "Image") -> bytes:
     """Return `image` as a JPEG at most `THUMB_SIDE` on its long side."""
     small = image.convert("RGB")

@@ -4,13 +4,14 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { bar as barOf, failed } from '../bars'
 import { action } from '../cells'
-import { assign, hub, prepare, renderOffer, sourceAt, sourceThumbAt, stopJob } from '../api'
+import { assign, hub, prepare, sourceAt, sourceThumbAt, stopJob } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useLive } from '../composables/useLive'
+import { useRenderOffer } from '../composables/useRenderOffer'
 import { firstFlow, queue } from '../composables/useQueue'
 import type { CellEvent, HubCell, HubInfo, HubSource, Stage } from '../types'
 
@@ -25,29 +26,19 @@ const refusal = ref<string | null>(null)
 const grid = ref<HTMLElement | null>(null)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
-/* The Render dialog is up; it has no URL of its own (design spec §1 rule 8). */
-const rendering = ref(false)
 /* The source open in the viewer, or null. */
 const viewing = ref<HubSource | null>(null)
-/* The images the batch lacks, and why Render is disabled or null, from the server. */
-const offer = ref<{ disabled: string | null; images: number }>({ disabled: null, images: 0 })
+const { offer, dialog, check: checkRender, open, close } = useRenderOffer(props.batch)
 
-async function checkRender(): Promise<void> {
-  try {
-    offer.value = await renderOffer(props.batch)
-  } catch (reason) {
-    offer.value = { disabled: (reason as Error).message, images: offer.value.images }
-  }
-}
-
+/* Render opens only from its own bar: while changes wait, Prepare holds it. */
 function openRender(): void {
-  if (shown.value === 'render' && offer.value.images > 0 && offer.value.disabled === null)
-    rendering.value = true
+  if (shown.value === 'render') open()
 }
 /* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
 const selected = ref<Set<number>>(new Set())
-/* The job slot and billing are the shell's live state; this stream brings cells. */
-const { job, billing, prepareTotals } = useLive()
+/* The job slot is the shell's live state; this stream brings cells. A render
+   holds the one slot, so Prepare waits while it is `blocked`. */
+const { job, renderRunning: blocked, prepareTotals } = useLive()
 /* The Prepare bar's refusal, the CLI's own text (J8a). */
 const barRefusal = ref<string | null>(null)
 /* Each cell's refusal from a tick or from the job, by `source|flow`. */
@@ -84,8 +75,6 @@ const RUNNING: Record<string, { segment: number; word: string }> = {
 const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
 const busy = computed(() => job.value?.state === 'running' && job.value.kind === 'prepare')
-/* A render holds the one slot: Prepare waits, with its reason. */
-const blocked = computed(() => job.value?.state === 'running' && job.value.kind === 'render')
 
 /* Review next: the first unapproved sheet of the first flow that has any. */
 const next = computed(() => {
@@ -308,7 +297,7 @@ function select(step: number): void {
    cell's action, ⌘↵ Prepare, ⌥2 Review next, ⌥A Add sources, esc clears the
    selection. Matched on `event.code`, because Option types a character on macOS. */
 function onKey(event: KeyboardEvent): void {
-  if (adding.value || rendering.value || viewing.value) return
+  if (adding.value || dialog.value || viewing.value) return
   const { row, column } = focus.value
   if (event.altKey && event.code === 'Digit2') {
     event.preventDefault()
@@ -384,20 +373,17 @@ watch(
   { immediate: true },
 )
 
-/* A job that ends changes the cells and what Render offers. */
+/* A job that ends changes the cells. */
 watch(job, (slot, before) => {
   if (before?.state === 'running' && slot?.state !== 'running') {
     running.value = {}
     void hub(props.batch).then((read) => (info.value = read))
-    void checkRender()
   }
 })
 
-/* A pod alert raised or cleared changes what Render offers. */
-watch(billing, () => void checkRender())
-
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
+  void checkRender()
   try {
     info.value = await hub(props.batch)
   } catch (reason) {
@@ -405,7 +391,6 @@ onMounted(async () => {
     return
   }
   listen()
-  void checkRender()
   place(0, 0)
 })
 
@@ -427,11 +412,7 @@ onUnmounted(() => {
       :height="viewing.height"
       @close="viewing = null"
     />
-    <RenderDialog
-      v-if="rendering"
-      :batch="batch"
-      @close="(rendering = false), void checkRender()"
-    />
+    <RenderDialog v-if="dialog" :batch="batch" @close="close" />
     <div class="hub__head">
       <span class="mono">
         {{ sources.length }} {{ noun(sources.length, 'source') }} ×

@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { Billing, JobSlot } from '../types'
 import { noun } from '../words'
 
@@ -6,6 +6,8 @@ import { noun } from '../words'
    shell opens once. A snapshot on every connect, then each change. */
 const job = ref<JobSlot | null>(null)
 const billing = ref<Billing | null>(null)
+/* A render session holds the slot. */
+const renderRunning = computed(() => job.value?.kind === 'render' && job.value.state === 'running')
 /* The first snapshot has arrived: until it does, nothing is known. */
 const loaded = ref(false)
 /* Now, in milliseconds, a second at a time: one clock for every running timer. */
@@ -62,5 +64,16 @@ function renderTotals(held: JobSlot | null): string {
 }
 
 export function useLive() {
-  return { job, billing, loaded, now, connect, alerting, clock, prepareTotals, renderTotals }
+  return {
+    job,
+    billing,
+    loaded,
+    now,
+    renderRunning,
+    connect,
+    alerting,
+    clock,
+    prepareTotals,
+    renderTotals,
+  }
 }

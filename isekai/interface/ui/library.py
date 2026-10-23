@@ -60,7 +60,12 @@ from isekai.pipeline.generate import rendered_seeds
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
-from isekai.shared.image import dimensions_or_refuse, metadata_in, thumbnail_jpeg
+from isekai.shared.image import (
+    dimensions_or_refuse,
+    metadata_in,
+    thumbnail_jpeg,
+    upright_thumbnail,
+)
 
 VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
@@ -439,11 +444,8 @@ def source_thumbnail(library: Path, source: Path) -> Path:
 
 def _upright(source: Path) -> bytes:
     """Return `source` turned as its orientation says, at most `THUMB_SIDE` a side."""
-    from PIL import Image, ImageOps
-
     try:
-        with Image.open(source) as opened:
-            return thumbnail_jpeg(ImageOps.exif_transpose(opened))
+        return upright_thumbnail(source)
     except OSError as unread:
         raise Refusal(
             f"{source.name}: is not an image this build can read ({unread}); "
@@ -500,20 +502,20 @@ def stage(run: Run, flow: str, suffix: str) -> Cell:
     review = run.directory(flow, REVIEW)
     approved = approved_versions(review)
     status = review_state(review)
-    newest = _newest_image(run, flow, approved, suffix)
     try:
         if approved:
             _check(latest_artifact(review, APPROVED), APPROVED_FILE)
             renders = rendered_seeds(group_of(run, flow, approved[-1]), suffix)
+            newest = _newest_image(run, flow, approved, renders, suffix)
             if renders:
                 return Cell("rendered", len(renders), status=status, newest=newest)
             return Cell("approved", status=status, newest=newest)
         if (draft := current_draft(review)) is not None:
             _check(draft, DRAFT_FILE)
-            return Cell("draft", status=status, newest=newest)
+            return Cell("draft", status=status)
         if (sheet := latest_artifact(run.directory(flow, SHEETS))) is not None:
             _check(sheet, SHEET_FILE)
-            return Cell("sheet", status=status, newest=newest)
+            return Cell("sheet", status=status)
         if (tags := latest_artifact(run.directory(flow, WD14))) is not None:
             _check(tags, WD14_FILE)
             return Cell("tagged")
@@ -523,15 +525,16 @@ def stage(run: Run, flow: str, suffix: str) -> Cell:
 
 
 def _newest_image(
-    run: Run, flow: str, approved: Sequence[int], suffix: str
+    run: Run, flow: str, approved: Sequence[int], newest: Sequence[int], suffix: str
 ) -> Rendered | None:
     """Return the last-written image of the newest version holding any, or None.
 
+    `newest` is the seeds already listed under the newest approval.
     e.g. v2 rendered nothing, v1 holds 7 then 9 -> Rendered(1, 9)
     """
     for version in reversed(approved):
         group = group_of(run, flow, version)
-        seeds = rendered_seeds(group, suffix)
+        seeds = newest if version == approved[-1] else rendered_seeds(group, suffix)
         if seeds:
             last = max(
                 seeds, key=lambda seed: (group / f"{seed}{suffix}").stat().st_mtime
