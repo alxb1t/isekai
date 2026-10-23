@@ -1378,6 +1378,29 @@ def test_a_cells_approvals_are_listed_newest_first_with_their_images(
     ]
 
 
+@pytest.mark.spec("ui:renders:a-cell-counts-what-is-ready")
+def test_a_cell_counts_the_images_its_newest_approval_lacks(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    _approved_again(made, schema, vocabulary, {"count": 3, "seeds": [22]})
+    flow = load_flow(FLOW)
+    prepare(made, {FLOW: flow})
+    comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+    render(made, flow, comfy, seeds=[22], poll=0)
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    body = client.get(f"/api/b/{BATCH}/renders").json()
+
+    (source,) = body["sources"]
+    assert source["ready"] == {FLOW: 2, "conjure-anime-wai": 0}
+
+
 @pytest.mark.spec("ui:renders:a-thumbnail-is-made-once")
 def test_a_thumbnail_asked_for_twice_is_read_from_the_cache_the_second_time(
     wired: Wiring,
@@ -1498,19 +1521,32 @@ def test_a_version_is_headed_a_revision_or_a_re_roll_of_the_one_it_came_from(
     schema: Schema,
     vocabulary: Vocabulary,
 ) -> None:
+    flow = load_flow(FLOW)
+    comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+
+    def rendered(seed: int) -> None:
+        prepare(made, {FLOW: flow})
+        render(made, flow, comfy, seeds=[seed], poll=0)
+
     _source(made)
     review(made, FLOW)
     approve(made, FLOW, schema, vocabulary)
+    rendered(7)
     _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
+    rendered(7)
     _approved_again(made, schema, vocabulary, {"count": 1, "seeds": [5]})
+    rendered(5)
     client = _client(wired, made, tmp_path, drafted=False)
+    large = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}"
 
-    body = client.get(f"/api/b/{BATCH}/renders").json()
+    views = [client.get(f"{large}/{at}").json() for at in ("v3/5", "v2/7", "v1/7")]
 
-    (source,) = body["sources"]
-    assert [
-        (one["version"], one["came_from"], one["kind"]) for one in source["cells"][FLOW]
-    ] == [(3, 2, "re-roll"), (2, 1, "revision"), (1, None, None)]
+    assert [(one["version"], one["came_from"], one["kind"]) for one in views] == [
+        (3, 2, "re-roll"),
+        (2, 1, "revision"),
+        (1, None, None),
+    ]
+    assert (views[0]["count"], views[0]["seeds"]) == (1, ["5"])
 
 
 @pytest.mark.spec("ui:compare:a-seed-pairs-with-its-newest-older-version")

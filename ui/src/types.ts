@@ -274,7 +274,13 @@ export interface RenderVersion {
 
 export interface RendersInfo {
   flows: string[]
-  sources: { name: string; digest: string | null; cells: Record<string, RenderVersion[]> }[]
+  sources: {
+    name: string
+    digest: string | null
+    /* How many images each flow's newest approval lacks, as the render stage counts. */
+    ready: Record<string, number>
+    cells: Record<string, RenderVersion[]>
+  }[]
 }
 
 /* An image's large view: the approval it was rendered from, filled fields only. */
@@ -284,6 +290,11 @@ export interface RenderDetail {
   seed: string
   fields: Record<string, string[]>
   approved_at: number | null
+  /* The version this one was copied from and what changed, as `RenderVersion`'s. */
+  came_from: number | null
+  kind: 'revision' | 're-roll' | null
+  count: number
+  seeds: string[]
   /* The newest older version that rendered this seed, or null. */
   compare: number | null
 }

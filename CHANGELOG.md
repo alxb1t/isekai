@@ -21,6 +21,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A Render bar on the hub and Renders counts the images ready to render, the render stage's own count, and
   replaces the header's Render button; a hub opened after a failed Prepare shows its message (0067 D6, D10).
 
+- The Renders grid reads oldest to newest, a row per cell with `vN` badges and a ready tile counting what the
+  newest approval lacks; each version's heading moves to its large view (0067 D7, D8).
+
 ## [0.40.1] - 2026-10-23 · 0066-the-quick-patch
 
 Gate: local 0m35s · CI 7m25s (build-image at 801ffec) · 0.40.0: local 0m34s · CI 1m12s

@@ -272,7 +272,7 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
 | J5·6 the hub, `Render 1` takes the accent | ⌘↵ Approve — Revise's queue ends | `…/b/2026-09-17/hub` |
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⌥R · ⌘↵ | `…/session` |
-| J5·7 Renders: v2 above v1, both labelled `⇄ 1840266731` | ⌥3 View in Renders | `…/b/2026-09-17/renders` |
+| J5·7 Renders: v2 after v1, both marked `⇄` | ⌥3 View in Renders | `…/b/2026-09-17/renders` |
 | J5·8 the large view of v2, with `Compare with v1  C` | ↵ on v2 | `…/v2/1840266731` |
 | J5·9 before / after | C | `…/v2/1840266731/compare` |
 
@@ -290,9 +290,12 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
       \ swap in place · ← → next revised image · esc back                  [ Revise again ⌥E ]
 ```
 
-- **Renders** is a grid of sources × flows. In each cell, versions newest first; the header line gives the version,
-  `revision of v1` or `re-roll of v1`, the approval time, the Count and the seeds. A seed shared across versions is
-  labelled `⇄ seed` in `accent-ink`.
+- **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer, and its name. A
+  cell is one wrapped row of thumbnails, oldest to newest, each with a `vN` badge and `⇄` in `accent-ink` when its
+  seed is shared across versions. A damaged version is a striped tile, its refusal under the cell. Last comes the
+  ready tile, `ready · n images`, while the newest version lacks images of its Count, the render stage's own count.
+  The Render bar offers them. The version's heading — `revision of v1` or `re-roll of v1`, the approval time, the
+  Count and the seeds — is in the large view.
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
   (filled fields only, read-only), the photograph a key away (⌥C). `Esc` and its back button go back to
   where it was opened: the hub, or else Renders. `Compare with v1  C` appears when another version
@@ -311,7 +314,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 | (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · ⌥E · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
 | J6·1 Review: the seed cleared, Count 3, the tags untouched | × the seed · count + + | `…/review/0d4b7e6fb2a8/conjure-anime-wai` |
 | (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⌥R · ⌘↵ | `…/session` |
-| J6·2 Renders: three new images above v1, no pair | ⌥3 | `…/b/2026-09-17/renders` |
+| J6·2 Renders: three new images after v1, no pair | ⌥3 | `…/b/2026-09-17/renders` |
 
 Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`, `was 1840266731 · cleared`.
 
@@ -375,7 +378,7 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 | Hub | the batch is gone | a full-page refusal, `Back to the library ⌥0` |
 | Render | refused before billing | the CLI's refusal: no GPU free, no key in `.env`; `nothing billed` when true |
 | Render | disabled | `Prepare is running · 01:42` · `A pod may still be billing.` |
-| Renders | empty | the count of approvals short of their Count, with Render; with nothing approved, Review next |
+| Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, Review next |
 | Renders | a missing image | `its record is there, its image is gone`, the path in the fix |
 | Renders | Revise disabled | `No image selected` · `Prepare is running · 01:42` |
 

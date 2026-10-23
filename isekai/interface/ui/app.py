@@ -102,7 +102,7 @@ from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
-from isekai.pipeline.generate import image_of
+from isekai.pipeline.generate import image_of, shortfall
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     Revision,
@@ -773,7 +773,11 @@ def create_app(
 
     @app.get("/api/b/{batch}/renders")
     def read_renders(batch: str) -> dict[str, Any]:
-        """Return each source's images by offered flow, approvals newest first."""
+        """Return each source's images by offered flow, approvals newest first.
+
+        `ready` is how many images each flow's newest approval lacks, as the
+        render stage counts them.
+        """
         suffixes = {flow: offered(flow).output_suffix for flow in flows}
         return {
             "flows": list(flows),
@@ -781,6 +785,7 @@ def create_app(
                 {
                     "name": one.name,
                     "digest": one.digest,
+                    "ready": {flow: _ready(one.run, offered(flow)) for flow in flows},
                     "cells": {
                         flow: [
                             _version_out(version)
@@ -818,17 +823,29 @@ def create_app(
     def read_render(
         batch: str, digest: str, flow: str, version: str, seed: int
     ) -> dict[str, Any]:
-        """Return one render's large view: the approval's filled fields beside it."""
+        """Return one render's large view: the approval's filled fields beside it.
+
+        It is headed by what the version was: the one it came from, a revision or
+        a re-roll, and its count and seeds.
+        """
         run, _, approval = rendered(batch, digest, flow, version, seed)
         _, fields = _approved(approval)
         number = _version(version)
         suffix = offered(flow).output_suffix
+        # The approval was just read whole, so its version is not damaged.
+        held = next(
+            one for one in library.versions(run, flow, suffix) if one.version == number
+        )
         return {
             "flow": flow,
             "version": number,
             "seed": str(seed),
             "fields": {name: tags for name, tags in fields.items() if tags},
             "approved_at": _saved(approval),
+            "came_from": held.came_from,
+            "kind": held.kind,
+            "count": held.count,
+            "seeds": _decimal(held.seeds),
             # The newest older version that rendered this seed, or null.
             "compare": library.paired(run, flow, number, seed, suffix),
         }
@@ -1072,6 +1089,20 @@ def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
 def _image_out(digest: str, flow: str, version: int, seed: int) -> dict[str, Any]:
     """Describe an image of a revision, its seed a decimal string."""
     return {"digest": digest, "flow": flow, "version": version, "seed": str(seed)}
+
+
+def _ready(run: Run | None, flow: Flow) -> int:
+    """Return how many images `flow`'s newest approval in `run` lacks, or 0.
+
+    An unapproved flow lacks none, and a damaged approval is already marked on
+    its own version, so neither refuses the page.
+    """
+    if run is None:
+        return 0
+    try:
+        return shortfall(run, flow)
+    except Refusal:
+        return 0
 
 
 def _version_out(version: library.Version) -> dict[str, Any]:

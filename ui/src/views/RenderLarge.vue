@@ -29,6 +29,9 @@ const place = computed(() => ({
   seed: props.seed,
 }))
 
+const clock = (at: number) =>
+  new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
+
 function compare(): void {
   void router.push({ name: 'compare', params: { ...props } })
 }
@@ -82,6 +85,16 @@ onMounted(async () => {
     <aside class="large__sheet" data-sheet>
       <span class="section-label">
         {{ detail.flow }} · v{{ detail.version }} · seed {{ detail.seed }}
+      </span>
+      <span class="large__head mono" data-heading>
+        v{{ detail.version }}<template v-if="detail.kind">
+          · {{ detail.kind }} of v{{ detail.came_from }}</template
+        ><template v-if="detail.approved_at !== null">
+          · approved {{ clock(detail.approved_at) }}</template
+        >
+        · count {{ detail.count }}<template v-if="detail.seeds.length">
+          · seeds {{ detail.seeds.join(', ') }}</template
+        >
       </span>
       <dl class="large__fields">
         <template v-for="(tags, name) in detail.fields" :key="name">

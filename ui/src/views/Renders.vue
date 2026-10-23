@@ -2,19 +2,22 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { bar } from '../bars'
-import { renderOffer, renders, thumbAt } from '../api'
+import { renderOffer, renders, sourceAt, sourceThumbAt, thumbAt } from '../api'
+import ImageViewer from '../components/ImageViewer.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
 import { useLive } from '../composables/useLive'
+import { noun } from '../words'
 import type { RenderVersion, RendersInfo, RevisedImage } from '../types'
 
-/* Renders: a grid of sources by flows, each cell's approvals newest first with
-   their images (design spec J5·1). ←→ move along a source's images, ↑↓ between
-   sources, and ↵ or a click opens an image's large view; space selects, and ⌥E
-   revises the selection (§7). A seed rendered under two versions is labelled ⇄.
-   The Render bar offers what the newest approvals lack, ⌥R. */
+/* Renders: a grid of sources by flows, each cell one row of its images from
+   oldest to newest, each marked with its version (design spec J5·1). ←→ move
+   along a source's images, ↑↓ between sources, and ↵ or a click opens an image's
+   large view; space selects, and ⌥E revises the selection (§7). A seed rendered
+   under two versions is marked ⇄. The Render bar offers what the newest
+   approvals lack, ⌥R; a source's thumbnail opens it in the viewer. */
 const props = defineProps<{ batch: string }>()
 const router = useRouter()
 const info = ref<RendersInfo | null>(null)
@@ -23,6 +26,8 @@ const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 /* The selected images, each as `key` spells it. */
 const selected = ref(new Set<string>())
 const revising = ref(false)
+/* The source open in the viewer, by name, or null. */
+const viewing = ref<string | null>(null)
 /* The Render dialog is up; it has no URL of its own (design spec §1 rule 8). */
 const rendering = ref(false)
 /* The images the batch lacks, and why Render is disabled or null, from the server. */
@@ -56,7 +61,13 @@ interface Spot {
   seed: string
 }
 
-/* Each source's images in the order they are drawn: flow, newest version, seed. */
+/* A cell's versions as they are drawn: oldest first. The payload lists them
+   newest first, which a living scenario holds. */
+function oldest(versions: RenderVersion[] | undefined): RenderVersion[] {
+  return [...(versions ?? [])].reverse()
+}
+
+/* Each source's images in the order they are drawn: flow, oldest version, seed. */
 const rows = computed<Spot[][]>(() => {
   const held = info.value
   if (!held) return []
@@ -64,7 +75,7 @@ const rows = computed<Spot[][]>(() => {
     source.digest === null
       ? []
       : held.flows.flatMap((flow) =>
-          (source.cells[flow] ?? []).flatMap((version) =>
+          oldest(source.cells[flow]).flatMap((version) =>
             version.rendered.map((seed) => ({
               digest: source.digest as string,
               flow,
@@ -132,7 +143,7 @@ function move(rowStep: number, columnStep: number): void {
 }
 
 function onKey(event: KeyboardEvent): void {
-  if (revising.value || rendering.value) return
+  if (revising.value || rendering.value || viewing.value) return
   // Matched on `event.code`: ⌥E types a character.
   if (event.altKey && event.code === 'KeyE') {
     event.preventDefault()
@@ -171,9 +182,6 @@ function onKey(event: KeyboardEvent): void {
     }
   }
 }
-
-const clock = (at: number) =>
-  new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
 
 function thumb(digest: string, flow: string, version: number, seed: string): string {
   return thumbAt({ batch: props.batch, digest, flow, version, seed })
@@ -232,29 +240,32 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <span class="section-label">source</span>
       <span v-for="flow in info.flows" :key="flow" class="section-label">{{ flow }}</span>
       <template v-for="(source, row) in info.sources" :key="source.name">
-        <span class="renders__name mono">{{ source.name }}</span>
-        <div v-for="flow in info.flows" :key="flow" class="renders__cell">
-          <div
-            v-for="version in source.cells[flow] ?? []"
-            :key="version.version"
-            class="renders__version"
-            :data-version="version.version"
+        <div class="renders__source">
+          <button
+            class="hub__thumb"
+            type="button"
+            :aria-label="`view ${source.name}`"
+            data-source-thumb
+            @click="viewing = source.name"
           >
-            <span v-if="version.damaged" class="renders__head mono" data-damaged>
-              v{{ version.version }} · {{ version.damaged }}
-            </span>
-            <span v-else class="renders__head mono">
-              v{{ version.version }}<template v-if="version.kind">
-                · {{ version.kind }} of v{{ version.came_from }}</template
+            <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
+          </button>
+          <span class="renders__name mono">{{ source.name }}</span>
+        </div>
+        <div v-for="flow in info.flows" :key="flow" class="renders__cell">
+          <span class="renders__images">
+            <template v-for="version in oldest(source.cells[flow])" :key="version.version">
+              <span
+                v-if="version.damaged"
+                class="renders__image renders__image--damaged"
+                :data-version="version.version"
+                data-damaged
               >
-              · approved {{ clock(version.at) }} · count
-              {{ version.count }}<template v-if="version.seeds.length">
-                · seeds {{ version.seeds.join(', ') }}</template
-              >
-            </span>
-            <span class="renders__images">
+                <span class="renders__badge mono">v{{ version.version }}</span>
+              </span>
               <button
                 v-for="seed in version.rendered"
+                v-else
                 :key="seed"
                 class="renders__image"
                 :class="{
@@ -266,6 +277,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                     ),
                 }"
                 type="button"
+                :data-version="version.version"
                 :data-seed="seed"
                 @click="source.digest && open(source.digest, flow, version.version, seed)"
               >
@@ -274,17 +286,42 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                   :src="thumb(source.digest, flow, version.version, seed)"
                   :alt="`${source.name} ${flow} v${version.version} seed ${seed}`"
                 />
-                <span
-                  v-if="shared.get(`${source.digest}|${flow}`)?.has(seed)"
-                  class="renders__pair mono"
-                  >⇄ {{ seed }}</span
+                <span class="renders__badge mono"
+                  >v{{ version.version }}
+                  <span
+                    v-if="shared.get(`${source.digest}|${flow}`)?.has(seed)"
+                    class="renders__shared"
+                    data-shared
+                    >⇄</span
+                  ></span
                 >
               </button>
-            </span>
-          </div>
+            </template>
+            <span
+              v-if="(source.ready[flow] ?? 0) > 0"
+              class="renders__image renders__image--ready mono"
+              data-ready
+              >ready · {{ source.ready[flow] }} {{ noun(source.ready[flow], 'image') }}</span
+            >
+          </span>
+          <p
+            v-for="version in oldest(source.cells[flow]).filter((one) => one.damaged)"
+            :key="version.version"
+            class="renders__refusal"
+          >
+            <span class="refusal__mark" />v{{ version.version }} · {{ version.damaged }}
+          </p>
         </div>
       </template>
     </div>
+    <ImageViewer
+      v-if="viewing"
+      :src="sourceAt(batch, viewing)"
+      :name="viewing"
+      :width="null"
+      :height="null"
+      @close="viewing = null"
+    />
     <ReviseConfirm
       v-if="revising"
       :batch="batch"

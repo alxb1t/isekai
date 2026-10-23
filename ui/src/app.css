@@ -338,12 +338,6 @@ body {
   outline: 2px solid var(--accent);
 }
 
-.renders__pair {
-  display: block;
-  font-size: 10.5px;
-  color: var(--accent-ink);
-}
-
 .renders__bar {
   display: flex;
   align-items: center;
@@ -412,14 +406,60 @@ body {
   font-size: 13px;
 }
 
-.renders__version {
+.renders__source {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 10px;
+  align-items: flex-start;
 }
 
-.renders__head {
+.renders__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.renders__badge {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 4px;
+  font-size: 10.5px;
+  color: var(--ink-1b);
+  background: var(--ground-deep);
+  border-radius: 3px;
+}
+
+.renders__shared {
+  color: var(--accent-ink);
+}
+
+.renders__image--damaged,
+.renders__image--ready {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.renders__image--ready {
+  font-size: 11px;
+  color: var(--ink-2);
+  border-style: dashed;
+}
+
+.renders__refusal {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.renders__refusal .refusal__mark {
+  margin-top: 4px;
+}
+
+.large__head {
   font-size: 11px;
   color: var(--ink-2);
 }
@@ -431,12 +471,13 @@ body {
 }
 
 .renders__image {
+  position: relative;
   width: 96px;
   height: 128px;
   padding: 0;
   border: 1px solid var(--line-control);
   border-radius: 3px;
-  background: repeating-linear-gradient(135deg, #1f2030 0 5px, #26273b 5px 10px);
+  background: var(--placeholder);
   cursor: pointer;
 }
 

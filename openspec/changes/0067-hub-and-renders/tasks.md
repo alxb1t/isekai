@@ -9,7 +9,7 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 - [x] 2 — Home
 - [x] 3 — Cell actions
 - [x] 4 — The Render bar
-- [ ] 5 — The Renders grid
+- [x] 5 — The Renders grid
 - [ ] 6 — Motion
 
 ## 1 — Source images and the viewer
@@ -92,19 +92,19 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 
 ## 5 — The Renders grid
 
-- [ ] 5.1 **HALT CHECK** — the Renders payload names no ready count.
+- [x] 5.1 **HALT CHECK** — the Renders payload names no ready count.
   Verify: `grep -c '"ready"' isekai/interface/ui/app.py` prints `0`.
-- [ ] 5.2 Add `ready` to `read_renders` per [D7](design.md#d7), and the heading fields to `read_render` per
+- [x] 5.2 Add `ready` to `read_renders` per [D7](design.md#d7), and the heading fields to `read_render` per
   [D8](design.md#d8). In `tests/test_ui_api.py`, bind `ui:renders:a-cell-counts-what-is-ready`, and read
   `ui:compare:a-version-is-named-by-what-changed` from rendered images' large views.
   Verify: `uv run pytest -q tests/test_ui_api.py` exits 0, and `grep -c 'ui:renders:a-cell-counts-what-is-ready' tests/test_ui_api.py` prints `1`.
-- [ ] 5.3 Draw the grid of [D8](design.md#d8) in `ui/src/views/Renders.vue` — rows, badges, the damaged and ready
+- [x] 5.3 Draw the grid of [D8](design.md#d8) in `ui/src/views/Renders.vue` — rows, badges, the damaged and ready
   tiles, the source column opening `ImageViewer` — and the heading in `ui/src/views/RenderLarge.vue`.
   Verify: `uv run python -m tools.typecheck_ui` exits 0, and `grep -c 'ImageViewer' ui/src/views/Renders.vue` prints a number of at least `1`.
-- [ ] 5.4 In `tests/e2e/test_render.py`, select the grid's image as `[data-version='1'][data-seed='7']`, and add
+- [x] 5.4 In `tests/e2e/test_render.py`, select the grid's image as `[data-version='1'][data-seed='7']`, and add
   `test_a_source_opens_in_the_viewer` bound to `ui:renders:a-source-opens-in-the-viewer`.
   Verify: `uv run pytest -q tests/e2e/test_render.py` exits 0, and `grep -c 'ui:renders:a-source-opens-in-the-viewer' tests/e2e/test_render.py` prints `1`.
-- [ ] 5.5 Say Renders reads oldest to newest with a ready count, and Render comes from its bar, in
+- [x] 5.5 Say Renders reads oldest to newest with a ready count, and Render comes from its bar, in
   `isekai/interface/ui/README.md`; redraw J5·1's grid bullet and §6's *Renders · empty* in `ui/design/spec.md`.
   Verify: `grep -c 'newest first' isekai/interface/ui/README.md` prints `0`, `grep -c 'oldest to newest' ui/design/spec.md` prints a number of at least `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
 

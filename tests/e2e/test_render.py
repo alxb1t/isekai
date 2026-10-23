@@ -34,7 +34,7 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     page: Page, served: Served
 ) -> None:
     page.goto(f"{served.url}/b/{SHOWN}/renders")
-    tile = page.locator("[data-version='1'] [data-seed='7']")
+    tile = page.locator("[data-version='1'][data-seed='7']")
     expect(tile.locator("img")).to_have_js_property("complete", True)
 
     tile.click()
@@ -50,6 +50,24 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     expect(tile).to_have_class(re.compile("renders__image--focused"))
     page.keyboard.press("Enter")
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
+
+
+@pytest.mark.spec("ui:renders:a-source-opens-in-the-viewer")
+def test_a_source_opens_in_the_viewer(page: Page, served: Served) -> None:
+    grid = f"{served.url}/b/{SHOWN}/renders"
+    page.goto(grid)
+
+    page.locator("[data-source-thumb]").click()
+
+    viewer = page.locator("dialog[data-viewer]")
+    expect(viewer).to_be_visible()
+    expect(viewer).to_contain_text("hal.jpg")
+    box, size = viewer.bounding_box(), page.viewport_size
+    assert box is not None and size is not None
+    assert box["width"] <= size["width"] and box["height"] <= size["height"]
+    page.keyboard.press("Escape")
+    expect(viewer).to_have_count(0)
+    expect(page).to_have_url(grid)
 
 
 @pytest.mark.spec("ui:hub:a-rendered-cell-opens-its-newest-image")
