@@ -301,8 +301,7 @@ onMounted(async () => {
     </div>
     <ImageViewer
       v-if="viewing"
-      :src="sourceAt(batch, viewing)"
-      :name="viewing"
+      :images="[{ src: sourceAt(batch, viewing), name: viewing }]"
       @close="viewing = null"
     />
     <ReviseConfirm

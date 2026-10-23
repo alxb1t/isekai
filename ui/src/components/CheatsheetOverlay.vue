@@ -21,8 +21,8 @@ import type { FieldCandidates } from '../types'
    and the ones he reaches for are in the tail. The filter is what makes length the
    point rather than the problem.
 
-   It composes `PhotoOverlay`'s ground rather than introducing one: the same
-   `Teleport`, the same `.overlay` block below the app header, `.overlay__controls`
+   It composes the overlay ground rather than introducing one: a `Teleport`, the
+   `.overlay` block below the app bar, `.overlay__controls`
    / `.overlay__exit` / `.overlay__foot` for chrome, `.source__head` + `.kicker`
    for section heads, `.row__tags` + `TagChip` for the grid, `.input` for the
    filter and `.drop__posts` for the counts. Not one new component, colour, space

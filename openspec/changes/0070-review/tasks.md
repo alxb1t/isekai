@@ -9,7 +9,7 @@ carries `@pytest.mark.spec`, and every new vitest test `spec("…")`, with the k
 - [x] 2 — The rail and Approve
 - [x] 3 — The layout
 - [x] 4 — ④ as slots
-- [ ] 5 — The dialogs
+- [x] 5 — The dialogs
 
 ## 1 — The address
 
@@ -85,13 +85,13 @@ carries `@pytest.mark.spec`, and every new vitest test `spec("…")`, with the k
 
 ## 5 — The dialogs
 
-- [ ] 5.1 **HALT CHECK** — Review's photograph opens in its own lens.
+- [x] 5.1 **HALT CHECK** — Review's photograph opens in its own lens.
   Verify: `test -e ui/src/components/PhotoOverlay.vue` exits 0.
-- [ ] 5.2 Give `ui/src/components/ImageViewer.vue` its images and `←` / `→`; open the photograph and the revised
+- [x] 5.2 Give `ui/src/components/ImageViewer.vue` its images and `←` / `→`; open the photograph and the revised
   render in it from `ui/src/views/Review.vue`; add *Side by side*; delete `PhotoOverlay.vue`, per [D8](design.md#d8).
   Verify: `test -e ui/src/components/PhotoOverlay.vue` exits 1, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 5.3 Add `test_the_photograph_opens_in_the_viewer` to `tests/e2e/test_review.py` and
+- [x] 5.3 Add `test_the_photograph_opens_in_the_viewer` to `tests/e2e/test_review.py` and
   `test_side_by_side_shows_the_pair` to `tests/e2e/test_render.py`, each bound to its key.
   Verify: `cat tests/e2e/test_review.py tests/e2e/test_render.py | grep -c -E 'the-photograph-opens-in-the-viewer|side-by-side-shows-the-pair'` prints `2`, and `uv run pytest -q tests/e2e` exits 0.
-- [ ] 5.4 Name the viewer and *Side by side* in `ui/design/spec.md` J3 and J5·4, and `⇧C` in §7's Review row.
+- [x] 5.4 Name the viewer and *Side by side* in `ui/design/spec.md` J3 and J5·4, and `⇧C` in §7's Review row.
   Verify: `grep -c 'Side by side' ui/design/spec.md` prints a number of at least `2`.

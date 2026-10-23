@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import CaptionPanel from './CaptionPanel.vue'
+import KeyHint from './KeyHint.vue'
 import PhotoFrame from './PhotoFrame.vue'
 import TagChip from './TagChip.vue'
 import { grouped } from '../caption'
@@ -29,7 +30,7 @@ const props = defineProps<{
   revised?: { src: string; seed: string } | null
 }>()
 
-defineEmits<{ open: [] }>()
+defineEmits<{ open: []; render: []; pair: [] }>()
 
 const landscape = computed(() => props.width > props.height)
 
@@ -84,7 +85,9 @@ defineExpose({
          at one height (J5·4). -->
     <div v-if="revised" class="source__pair">
       <figure class="source__side" :style="{ flexGrow: ratio }">
-        <span class="kicker source__label">① photograph · {{ width }}×{{ height }}</span>
+        <span class="source__row">
+          <span class="kicker source__label">① photograph · {{ width }}×{{ height }}</span>
+        </span>
         <PhotoFrame
           :src="photo"
           :alt="id"
@@ -94,8 +97,15 @@ defineExpose({
         />
       </figure>
       <figure class="source__side source__revised" :style="{ flexGrow: renderRatio }" data-revised>
-        <span class="kicker source__label">render being revised · seed {{ revised.seed }}</span>
-        <img :src="revised.src" :alt="`render ${revised.seed}`" @load="measured" />
+        <span class="source__row">
+          <span class="kicker source__label">render being revised · seed {{ revised.seed }}</span>
+          <button class="btn btn-secondary source__pair-open" type="button" @click="$emit('pair')">
+            Side by side<KeyHint command="side-by-side" />
+          </button>
+        </span>
+        <button class="photo-frame" type="button" @click="$emit('render')">
+          <img :src="revised.src" :alt="`render ${revised.seed}`" @load="measured" />
+        </button>
       </figure>
     </div>
     <template v-else>

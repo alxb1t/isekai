@@ -58,8 +58,8 @@ RENDER = "render"
 SHOWN = "shown"
 # The batch a revision is written in: one source rendered once at seed 7.
 REVISED = "revised"
-# The batch a discard is asked in: one source rendered at seed 7, its render's
-# revision drafted.
+# The batch a discard is asked in and the pair is drawn from: one source whose
+# photograph decodes, rendered at seed 7, its render's revision drafted.
 DISCARDED = "discarded"
 # The batch Compare reads: one source with seed 7 rendered under v1 and under v2,
 # which changes `clothes`.
@@ -102,20 +102,27 @@ class Served:
         return self.hub_of(self.batch)
 
 
-def _run(folder: Path, name: str, size: tuple[int, int]) -> Run:
-    """Return a run of a new source carrying a caption and a sheet for `FLOW`."""
+def _run(
+    folder: Path, name: str, size: tuple[int, int], *, decodes: bool = False
+) -> Run:
+    """Return a run of a new source carrying a caption and a sheet for `FLOW`.
+
+    Its photograph is a header alone unless it `decodes`, as a browser must draw it.
+    """
     photo = folder / "sources" / f"{name}.jpg"
-    photo.write_bytes(jpeg_bytes(*size))
+    photo.write_bytes(photo_jpeg((40, 90, 60), size) if decodes else jpeg_bytes(*size))
     run = open_run(photo, folder / "runs")
     caption(run, FakeReader(prose="Dark brown hair, brown eyes."))
     sheet(run, load_flow(FLOW).schema, VOCABULARY)
     return run
 
 
-def _rendered_at_seven(folder: Path, name: str, size: tuple[int, int]) -> Run:
+def _rendered_at_seven(
+    folder: Path, name: str, size: tuple[int, int], *, decodes: bool = False
+) -> Run:
     """Return a run of a new source approved once and rendered at seed 7."""
     (folder / "sources").mkdir(parents=True)
-    run = _run(folder, name, size)
+    run = _run(folder, name, size, decodes=decodes)
     review(run, FLOW)
     approve(run, FLOW, load_flow(FLOW).schema, VOCABULARY)
     _render_seven(run)
@@ -181,7 +188,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     approve(rendered, FLOW, load_flow(FLOW).schema, VOCABULARY)
     shown = _rendered_at_seven(lib / SHOWN, "hal", (750, 1000))
     revised = _rendered_at_seven(lib / REVISED, "ida", (770, 1000))
-    discarded = _rendered_at_seven(lib / DISCARDED, "ivy", (775, 1000))
+    discarded = _rendered_at_seven(lib / DISCARDED, "ivy", (775, 1000), decodes=True)
     revise(discarded, FLOW, 1, 7)
     compared = _rendered_at_seven(lib / COMPARED, "jo", (780, 1000))
     again = review(compared, FLOW, new_version=True)

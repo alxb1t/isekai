@@ -34,7 +34,7 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 |---|---|---|
 | `--ground` | `#161724` | app background |
 | `--ground-deep` | `#11121c` | app bar, rail, job strip, fields |
-| `--ground-media` | `#0e0f17` | large view, compare, photo overlay |
+| `--ground-media` | `#0e0f17` | large view, compare, the viewer |
 | `--raised` | `#1a1b29` | dialogs, sheets |
 | `--raised-2` | `#1d1e30` | Prepare bar, focused cell |
 | `--line` | `#272939` | borders, column dividers |
@@ -93,7 +93,7 @@ timer mono 40px/500.
 | `/` | Home | the New batch sheet |
 | `/b/<batch>/hub` | Hub | the Add sources sheet, the Prepare bar, the Render dialog |
 | `/b/<batch>/review` | Review's head, replaced by its sheet's URL | — |
-| `/b/<batch>/review/<run>/<flow>` | Review | the cheatsheet, the photo overlay |
+| `/b/<batch>/review/<run>/<flow>` | Review | the cheatsheet, the viewer, *Side by side* |
 | `/b/<batch>/renders` | Renders grid | the Revise confirm |
 | `/b/<batch>/renders/<run>/<flow>/<version>/<seed>` | large view | the Revise confirm |
 | `/b/<batch>/renders/<run>/<flow>/<version>/<seed>/compare` | before / after | — |
@@ -223,6 +223,8 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
   at once; a seed already in another slot is refused in the slot. Listed seeds render first; the rest are drawn.
   Both are approved with the sheet. `Tab` walks `−`, `+` and the slots; `j` `k` move between the count and the
   slots. The line `THE NEXT RENDER DRAWS …` states the result.
+- **The viewer**: the photograph opens in it, fitted, and `←` `→` step through the rail's photographs; a revision's
+  render opens in it alone.
 - **The rail**: the flow's name heads it, and it lists every sheet of the flow not yet rendered — unapproved, or
   approved and short of its images — and the one open, each marked ○ untouched, ◐ edited, ● approved, ◌ re-opened;
   its footer counts the approved among them. Revise opens the first draft it wrote; the rest wait in the rail.
@@ -287,7 +289,7 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | J5·9 before / after | C | `…/v2/1840266731/compare` |
 
 ```
-J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731
+J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731   [ Side by side ⇧C ]
       [photograph]               [render, accent hairline]       one height, top-aligned
       ② CAPTION  collapsed on a revision
       ③ SHEET — REVISION OF RENDER 1840266731 · saved 15:52
@@ -319,8 +321,9 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 - **Approve refuses an unchanged revision** — neither fields nor ④ changed — naming the image it would reproduce
  . *Discard draft*, 12 px left of Approve, asks, then deletes this unapproved draft, through `review --discard`;
   the sheet stays open.
-- **One header row** names the photograph and its size, and the render and its seed, over the pair; no how-to
-  text. Every receipt sits in ③'s kicker, `· saved 15:52` or `APPROVED 14:12:40`, and every refusal in the
+- **One header row** names the photograph and its size, and the render and its seed, over the pair, with *Side by
+  side* `⇧C` at its right: one dialog, the pair at one height, fit only, `Esc` to close. No how-to text. A click on
+  either image opens it in the viewer. Every receipt sits in ③'s kicker, `· saved 15:52` or `APPROVED 14:12:40`, and every refusal in the
   approve bar.
 
 ### J6 · Re-roll
@@ -409,7 +412,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K 
 | everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the session · ? the key list · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
-| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④ · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ↵ on the photograph fills the window · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow, ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C photo and render, on a revision · the collapsed caption, its key named when built |
+| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④ · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ↵ on the photograph opens the viewer, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow, ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C *Side by side*, the photograph and the render, on a revision · the collapsed caption, its key named when built |
 | Renders | h l cells · j k or ↓↑ sources · ←→ images · space select · ↵ the large view · e Revise · ⇧G Render · in the large view, e Revise, c compare, esc back · in compare, `\` swap, esc back |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 

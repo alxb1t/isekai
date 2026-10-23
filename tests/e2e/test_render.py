@@ -155,6 +155,29 @@ def test_discard_asks_before_it_deletes(page: Page, served: Served) -> None:
     assert current_draft(served.discarded.directory(FLOW, REVIEW)) is not None
 
 
+@pytest.mark.spec("ui:revise:side-by-side-shows-the-pair")
+def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
+    page.goto(served.review(served.discarded, DISCARDED))
+    expect(page.locator("[data-revised] img")).to_have_js_property("complete", True)
+
+    page.get_by_role("button", name="Side by side").click()
+
+    pair = page.locator("dialog[data-pair] img")
+    expect(pair).to_have_count(2)
+    for one in (pair.nth(0), pair.nth(1)):
+        expect(one).to_have_js_property("complete", True)
+    # One read of both boxes: the dialog re-centres as each image's ratio lands.
+    page.wait_for_function(
+        """() => {
+          const [a, b] = [...document.querySelectorAll('dialog[data-pair] img')]
+            .map((one) => one.getBoundingClientRect())
+          return a.height > 0 && Math.abs(a.height - b.height) <= 1 && a.top === b.top
+        }"""
+    )
+    page.keyboard.press("Escape")
+    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
+
+
 @pytest.mark.spec("ui:compare:compare-shows-the-pair-and-the-change")
 def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
     page: Page, served: Served

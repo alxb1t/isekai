@@ -5,9 +5,9 @@ import { discardDraft, fieldCandidates, imageAt, photoUrl as photoAt } from '../
 import ApproveBar from '../components/ApproveBar.vue'
 import BatchRail from '../components/BatchRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
+import ImageViewer from '../components/ImageViewer.vue'
 import KeyBar from '../components/KeyBar.vue'
 import LoadingSkeleton from '../components/LoadingSkeleton.vue'
-import PhotoOverlay from '../components/PhotoOverlay.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RendersBlock from '../components/RendersBlock.vue'
 import SheetForm from '../components/SheetForm.vue'
@@ -22,7 +22,7 @@ import { modded, plain, shifted } from '../stores/keys'
 import type { FieldCandidates } from '../types'
 
 /* Review: one batch in one flow, the run in the URL. It shows the loading state
-   or the review layout; the photo overlay layers over either. The router keys
+   or the review layout; the viewer layers over either. The router keys
    this view by batch and flow, so a new digest is a new sheet in the same view.
 
    It owns the global keyboard model -- the bindings that cross components, so
@@ -84,7 +84,7 @@ const source = ref<HTMLElement | null>(null)
 
    `candidates` is fetched once per sitting and then held: the table does not
    move while a surface is up. */
-type Lens = 'photo' | 'cheatsheet'
+type Lens = 'photo' | 'render' | 'pair' | 'cheatsheet'
 
 const lens = ref<Lens | null>(null)
 const candidates = ref<FieldCandidates | null>(null)
@@ -94,6 +94,34 @@ const candidates = ref<FieldCandidates | null>(null)
    fire twice — once for chip selection and once for the batch. */
 const suspended = computed(() => lens.value !== null)
 const selectedChip = ref<number | null>(null)
+
+/* What the viewer shows: the rail's photographs from the open one, the render
+   being revised alone, or the photograph and the render side by side. */
+const photos = computed(() =>
+  batch.inputs.value.map((input) => ({
+    src: photoUrl(input.id),
+    name: input.name,
+    width: input.width,
+    height: input.height,
+  })),
+)
+const opened = computed(() =>
+  Math.max(
+    batch.inputs.value.findIndex((input) => input.id === current.value),
+    0,
+  ),
+)
+const render = computed(() =>
+  revised.value ? { src: revised.value.src, name: `render · seed ${revised.value.seed}` } : null,
+)
+const viewed = computed(() => {
+  if (lens.value === 'photo') return { images: photos.value, start: opened.value }
+  if (!render.value) return null
+  if (lens.value === 'render') return { images: [render.value], start: 0 }
+  const photo = photos.value[opened.value]
+  if (lens.value === 'pair' && photo) return { images: [photo, render.value], start: 0 }
+  return null
+})
 
 const clock = (at: number | null) =>
   at === null ? null : new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
@@ -387,6 +415,13 @@ useKeys('screen', [
     run: () => void openLens('photo'),
     when: () => paneNow() === 'source' && sheet.detail.value !== null,
   },
+  {
+    id: 'side-by-side',
+    keys: [shifted('KeyC')],
+    label: 'the photograph and the render, side by side',
+    run: () => void openLens('pair'),
+    when: () => revised.value !== null,
+  },
 ])
 
 // The draft is flushed as the tab goes; the PUT is kept alive past the page.
@@ -463,6 +498,8 @@ watch(current, (id) => {
         :loading="sheet.loading.value"
         :revised="revised"
         @open="openLens('photo')"
+        @render="openLens('render')"
+        @pair="openLens('pair')"
       />
       <SheetForm
         :schema="schema"
@@ -519,15 +556,12 @@ watch(current, (id) => {
       </SheetForm>
     </div>
 
-    <PhotoOverlay
-      v-if="lens === 'photo' && sheet.detail.value"
-      :id="sheet.detail.value.id"
-      :width="sheet.detail.value.width"
-      :height="sheet.detail.value.height"
-      :photo="photoUrl(sheet.detail.value.id)"
-      :caption="sheet.detail.value.caption"
+    <ImageViewer
+      v-if="viewed && viewed.images.length"
+      :images="viewed.images"
+      :start="viewed.start"
+      :pair="lens === 'pair'"
       @close="closeLens"
-      @step="stepBatch"
     />
 
     <CheatsheetOverlay

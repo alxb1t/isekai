@@ -1,31 +1,37 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useKeys } from '../composables/useKeys'
 import { plain } from '../stores/keys'
 
-/* One image in a native dialog, fitted to the window. A click on the image
-   toggles 1:1 pixels, scrolled inside the dialog; Esc or a click outside closes.
-   The dialog keeps the URL of the page beneath (design spec §1 rule 8). */
-const props = defineProps<{
+/* Images in a native dialog, fitted to the window. A click on the image toggles
+   1:1 pixels, scrolled inside the dialog; `←` `→` step through the images, and
+   Esc or a click outside closes. With `pair`, every image stands side by side at
+   one height, fit only. The dialog keeps the URL of the page beneath (design spec
+   §1 rule 8). */
+export interface Shown {
   src: string
   name: string
   width?: number | null
   height?: number | null
-}>()
+}
+
+const props = defineProps<{ images: Shown[]; start?: number; pair?: boolean }>()
 
 const emit = defineEmits<{ close: [] }>()
 
 const dialog = ref<HTMLDialogElement | null>(null)
 const image = ref<HTMLImageElement | null>(null)
+const at = ref(Math.min(Math.max(props.start ?? 0, 0), props.images.length - 1))
+const shown = computed(() => props.images[at.value])
 const actual = ref(false)
 /* The fitted image's scale, measured once it has loaded, on every resize while
    fitted, and on the switch back to fit: at 1:1 the drawn width is the natural one. */
 const scale = ref<number | null>(null)
 
 function measure(): void {
-  const shown = image.value
-  if (shown && shown.naturalWidth > 0 && !actual.value)
-    scale.value = Math.round((shown.clientWidth / shown.naturalWidth) * 100)
+  const held = image.value
+  if (held && held.naturalWidth > 0 && !actual.value)
+    scale.value = Math.round((held.clientWidth / held.naturalWidth) * 100)
 }
 
 function toggle(): void {
@@ -33,20 +39,52 @@ function toggle(): void {
   if (!actual.value) void nextTick(measure)
 }
 
-const title = computed(() => {
-  const size = props.width && props.height ? ` · ${props.width}×${props.height}` : ''
-  const fit = actual.value ? '1:1' : scale.value === null ? 'fit' : `fit ${scale.value}%`
-  return `${props.name}${size} · ${fit}`
+/* Each step opens its image fitted. */
+function step(direction: -1 | 1): void {
+  at.value = Math.min(Math.max(at.value + direction, 0), props.images.length - 1)
+}
+
+watch(at, () => {
+  actual.value = false
+  scale.value = null
 })
 
-/* The dialog itself is the backdrop's target: a click on the image or the title
+const title = computed(() => {
+  if (props.pair) return props.images.map((one) => one.name).join(' · ')
+  const { name, width, height } = shown.value
+  const size = width && height ? ` · ${width}×${height}` : ''
+  const fit = actual.value ? '1:1' : scale.value === null ? 'fit' : `fit ${scale.value}%`
+  const place = props.images.length > 1 ? ` · ${at.value + 1} of ${props.images.length}` : ''
+  return `${name}${size} · ${fit}${place}`
+})
+
+/* The pair's aspect ratios, each the image's own once it loads: widths in
+   proportion to them put both at one height. */
+const ratios = ref(props.images.map((one) => (one.width && one.height ? one.width / one.height : 1)))
+
+function loaded(index: number, event: Event): void {
+  const held = event.target as HTMLImageElement
+  if (held.naturalHeight) ratios.value[index] = held.naturalWidth / held.naturalHeight
+}
+
+/* As wide as the window allows, and no taller than it. */
+const pairWidth = computed(() => {
+  const sum = ratios.value.reduce((total, one) => total + one, 0)
+  return `min(calc(100vw - 64px), calc((100vh - 120px) * ${sum}))`
+})
+
+/* The dialog itself is the backdrop's target: a click on an image or the title
    lands on them instead. */
 function outside(event: MouseEvent): void {
   if (event.target === dialog.value) dialog.value?.close()
 }
 
+const stepping = () => !props.pair && props.images.length > 1
+
 useKeys('overlay', [
   { id: 'close', keys: plain('Escape'), label: 'close', run: () => dialog.value?.close() },
+  { id: 'previous', keys: plain('ArrowLeft'), label: 'previous', run: () => step(-1), when: stepping },
+  { id: 'next', keys: plain('ArrowRight'), label: 'next', run: () => step(1), when: stepping },
 ])
 
 onMounted(() => {
@@ -63,16 +101,29 @@ onUnmounted(() => window.removeEventListener('resize', measure))
     class="viewer"
     :class="{ 'viewer--actual': actual }"
     data-viewer
+    :data-pair="pair || undefined"
     @click="outside"
     @close="emit('close')"
   >
     <p class="viewer__title mono">{{ title }}</p>
-    <div class="viewer__frame">
+    <div v-if="pair" class="viewer__pair" :style="{ width: pairWidth }">
+      <img
+        v-for="(one, index) in images"
+        :key="one.src"
+        class="viewer__side"
+        :style="{ flexGrow: ratios[index] }"
+        :src="one.src"
+        :alt="one.name"
+        @load="loaded(index, $event)"
+      />
+    </div>
+    <div v-else class="viewer__frame">
       <img
         ref="image"
+        :key="shown.src"
         class="viewer__image"
-        :src="src"
-        :alt="name"
+        :src="shown.src"
+        :alt="shown.name"
         @load="measure"
         @click="toggle"
       />

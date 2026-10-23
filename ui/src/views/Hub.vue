@@ -358,10 +358,14 @@ onMounted(async () => {
     <ImportSheet v-if="adding" :batch="batch" @close="adding = false" @imported="added" />
     <ImageViewer
       v-if="viewing"
-      :src="sourceAt(batch, viewing.name)"
-      :name="viewing.name"
-      :width="viewing.width"
-      :height="viewing.height"
+      :images="[
+        {
+          src: sourceAt(batch, viewing.name),
+          name: viewing.name,
+          width: viewing.width,
+          height: viewing.height,
+        },
+      ]"
       @close="viewing = null"
     />
     <RenderDialog v-if="dialog" :batch="batch" @close="store.closeDialog" />
