@@ -7,6 +7,10 @@
      for the autocomplete: the post count is read by digit count, which only
      works if the digits align. */
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* One image's tile on the hub and on Renders: a source's thumbnail and a
+     render's are drawn the same size, so a row reads across at one scale. */
+  --tile-width: 96px;
+  --tile-height: 128px;
 }
 
 html,
@@ -472,8 +476,8 @@ body {
 
 .renders__image {
   position: relative;
-  width: 96px;
-  height: 128px;
+  width: var(--tile-width);
+  height: var(--tile-height);
   padding: 0;
   border: 1px solid var(--line-control);
   border-radius: 3px;
@@ -653,7 +657,7 @@ body {
 
 .library__row {
   display: grid;
-  grid-template-columns: 220px 260px 1fr 200px;
+  grid-template-columns: 220px minmax(260px, max-content) 1fr 200px;
   gap: 16px;
   align-items: start;
   padding: 14px 8px;
@@ -691,13 +695,14 @@ body {
 
 .library__thumbs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
 }
 
 .library__thumb {
-  width: 28px;
-  height: 38px;
+  width: 84px;
+  height: 114px;
   object-fit: cover;
   background: var(--placeholder);
   border-radius: 3px;
@@ -1566,8 +1571,8 @@ body {
 
 .hub__thumb {
   flex: none;
-  width: 44px;
-  height: 60px;
+  width: var(--tile-width);
+  height: var(--tile-height);
   padding: 0;
   overflow: hidden;
   background: var(--placeholder);

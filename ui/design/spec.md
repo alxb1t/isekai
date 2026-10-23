@@ -188,8 +188,8 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
   is absent; while a render runs it shows the job strip's totals, `image 1 of 2 · 06:41 of ≤10:30`, and
   `Session ⌥4`.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is a
-  44×60 thumbnail, upright, that opens the viewer, the file's stem in mono 13 and mono 11 `file · dims`, the size
-  read from the file; a row checkbox appears in selection mode.
+  96×128 thumbnail, a render tile's size, upright, that opens the viewer, the file's stem in mono 13 and mono 11
+  `file · dims`, the size read from the file; a row checkbox appears in selection mode.
 - **The viewer** is a dialog over the page, its URL unchanged: the image fitted, a click for 1:1 pixels, `Esc` or a
   click outside to close, titled with the name, the dimensions and `fit n%` or `1:1`.
 
@@ -341,9 +341,9 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
                          to clear this row.                                                  can't be opened
 ```
 
-- **Home's row**: the name, `n sources`, up to seven 28×38 thumbnails then `+n`, one chip per flow present
-  (its denominator the sources that have it; chips wrap), `n sources without a flow`, and last activity — the time
-  and kind of the newest file written in the batch. Sorted by last activity; a folder without `sources/`
+- **Home's row**: the name, `n sources`, up to seven 84×114 thumbnails then `+n`, wrapping in a narrow window, one
+  chip per flow present (its denominator the sources that have it; chips wrap), `n sources without a flow`, and last
+  activity — the time and kind of the newest file written in the batch. Sorted by last activity; a folder without `sources/`
   sorts last, striped and inert; dot-folders, `.staging` among them, are not listed.
 - **A running render's row** has an accent left edge (`inset 2px 0 0`), background `#1b1c2c`,
   `● render running · 06:41` and `image 1 of 2`.

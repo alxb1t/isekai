@@ -36,6 +36,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A checkbox click ticks its own cell alone; Discard dismisses only its own batch's failure, in that page; one
   seed predicate names a render for the stage, `revise` and the app alike (0067 D4, D10).
 
+- A source's thumbnail on the hub and on Renders is a render tile's 96×128, declared once; Home's are 84×114,
+  three times their size, wrapping in a narrow window (0067 D3).
+
 ## [0.40.1] - 2026-10-23 · 0066-the-quick-patch
 
 Gate: local 0m35s · CI 7m25s (build-image at 801ffec) · 0.40.0: local 0m34s · CI 1m12s
