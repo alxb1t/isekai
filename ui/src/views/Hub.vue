@@ -5,16 +5,16 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar as barOf, dismiss, failed } from '../bars'
 import { action, clicks, targets } from '../cells'
-import { assign, hub, prepare, sourceAt, sourceThumbAt } from '../api'
+import { assign, prepare, sourceAt, sourceThumbAt } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
-import { useRenderOffer } from '../composables/useRenderOffer'
 import { firstFlow, queue } from '../composables/useQueue'
+import { at, useBatchStore } from '../stores/batch'
 import { useLiveStore } from '../stores/live'
-import type { CellEvent, HubCell, HubInfo, HubSource, Stage } from '../types'
+import type { HubCell, HubSource, Stage } from '../types'
 
 /* A batch's hub: its sources by the offered flows, each cell's stage read from
    the run's directory (design spec J2). A tick assigns a flow through the
@@ -22,38 +22,34 @@ import type { CellEvent, HubCell, HubInfo, HubSource, Stage } from '../types'
    progress arrives over `/events`. */
 const props = defineProps<{ batch: string }>()
 const router = useRouter()
-const info = ref<HubInfo | null>(null)
 const refusal = ref<string | null>(null)
 const grid = ref<HTMLElement | null>(null)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
 /* The source open in the viewer, or null. */
 const viewing = ref<HubSource | null>(null)
-const { offer, dialog, rendering, check: checkRender, open, close } = useRenderOffer(props.batch)
+/* The batch's hub, its running cells and refusals, and its Render offer, shared
+   with every screen of the batch and kept live from the page's one stream. */
+const store = useBatchStore()
+const { hub: info, running, refusals, offer, dialog, rendering } = storeToRefs(store)
 
 /* Render opens only from its own bar: while changes wait, Prepare holds it. */
 function openRender(): void {
-  if (shown.value === 'render') open()
+  if (shown.value === 'render') store.openDialog()
 }
 /* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
 const selected = ref<Set<number>>(new Set())
-/* The job slot and the cells arrive on the page's one stream. A render holds
-   the one slot, so Prepare waits while it is `blocked`. */
+/* A render holds the one slot, so Prepare waits while it is `blocked`. */
 const live = useLiveStore()
 const { job, renderRunning: blocked } = storeToRefs(live)
 const { prepareTotals } = live
 /* The Prepare bar's refusal, the CLI's own text (J8a). */
 const barRefusal = ref<string | null>(null)
-/* Each cell's refusal from a tick or from the job, by `source|flow`. */
-const refusals = ref<Record<string, string>>({})
-/* The stage running in a cell, by `source|flow`, from the job's reports. */
-const running = ref<Record<string, string>>({})
-let unlisten: (() => void)[] = []
 
 /* Add sources commits into this batch, and the grid is read again. */
 async function added(): Promise<void> {
   adding.value = false
-  info.value = await hub(props.batch)
+  await store.reloadHub()
 }
 
 /* The six segments of a stage track, and how many each stage has done. A draft
@@ -107,11 +103,6 @@ const shown = computed(() =>
     rendering: rendering.value,
   }),
 )
-
-/* A cell's key in the maps of refusals and running stages. */
-function at(name: string, flow: string): string {
-  return `${name}|${flow}`
-}
 
 /* A source's display name: its file's name without the extension. */
 function stem(name: string): string {
@@ -202,11 +193,6 @@ function act(row: number, column: number, pointer = false): void {
   else if (kind === 'view') view(source, flow)
 }
 
-function apply(name: string, flow: string, found: HubCell): void {
-  const source = sources.value.find((one) => one.name === name)
-  if (source) source.cells = { ...source.cells, [flow]: found }
-}
-
 /* Tick or untick `flow` for `targets`, each answered on its own. */
 async function tick(targets: HubSource[], flow: string, remove: boolean): Promise<void> {
   const names = targets.filter((one) => !locked(cell(one, flow))).map((one) => one.name)
@@ -214,7 +200,7 @@ async function tick(targets: HubSource[], flow: string, remove: boolean): Promis
   try {
     const answered = await assign(props.batch, names, flow, remove)
     for (const [name, found] of Object.entries(answered.cells)) {
-      apply(name, flow, found)
+      store.apply(name, flow, found)
       delete refusals.value[at(name, flow)]
     }
     for (const [name, message] of Object.entries(answered.refused))
@@ -356,26 +342,6 @@ function onKey(event: KeyboardEvent): void {
   }
 }
 
-/* The stream: a snapshot on every connect, then each report as it happens. */
-function listen(): void {
-  unlisten = [
-    live.listen('snapshot', (data) => {
-      const found = (data as { hub?: HubInfo }).hub
-      if (found) info.value = found
-    }),
-    live.listen('cell', (data) => taken(data as CellEvent)),
-  ]
-}
-
-function taken(data: CellEvent): void {
-  const here = at(data.source, data.flow)
-  apply(data.source, data.flow, data.cell)
-  if (data.state === 'start') running.value[here] = data.stage
-  else delete running.value[here]
-  if (data.state === 'refused' && data.message) refusals.value[here] = data.message
-  else if (data.state === 'done') delete refusals.value[here]
-}
-
 /* A failed Prepare is shown, the one that ended before this hub opened too. */
 watch(
   job,
@@ -386,20 +352,11 @@ watch(
   { immediate: true },
 )
 
-/* A job that ends changes the cells. */
-watch(job, (slot, before) => {
-  if (before?.state === 'running' && slot?.state !== 'running') {
-    running.value = {}
-    void hub(props.batch).then((read) => (info.value = read))
-  }
-})
-
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
-  void checkRender()
-  listen()
+  void store.check()
   try {
-    info.value = await hub(props.batch)
+    await store.reloadHub()
   } catch (reason) {
     refusal.value = (reason as Error).message
     return
@@ -409,7 +366,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
-  for (const stop of unlisten) stop()
 })
 </script>
 
@@ -425,7 +381,7 @@ onUnmounted(() => {
       :height="viewing.height"
       @close="viewing = null"
     />
-    <RenderDialog v-if="dialog" :batch="batch" @close="close" />
+    <RenderDialog v-if="dialog" :batch="batch" @close="store.closeDialog" />
     <div class="hub__head">
       <span class="mono">
         {{ sources.length }} {{ noun(sources.length, 'source') }} ×

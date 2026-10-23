@@ -1,10 +1,12 @@
+import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
 import type { HubInfo, InputStatus } from '../types'
 import { useQueue } from './useQueue'
 
 /* `fetch` answers the hub with a batch built here, so the run directories the
-   count must agree with are the ones this file declares. */
+   count must agree with are the ones this file declares. The queue reads it
+   through the batch store, fresh for each test. */
 let hub: HubInfo
 
 function source(name: string, status: InputStatus) {
@@ -19,6 +21,7 @@ function source(name: string, status: InputStatus) {
 }
 
 beforeEach(() => {
+  setActivePinia(createPinia())
   vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => hub }))
 })
 

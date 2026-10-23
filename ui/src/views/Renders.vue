@@ -1,28 +1,26 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar } from '../bars'
-import { renders, sourceAt, sourceThumbAt, thumbAt } from '../api'
+import { sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
-import { useLiveStore } from '../stores/live'
-import { useRenderOffer } from '../composables/useRenderOffer'
+import { useBatchStore } from '../stores/batch'
 import { noun } from '../words'
-import type { RenderVersion, RendersInfo, RevisedImage } from '../types'
+import type { RenderVersion, RevisedImage } from '../types'
 
-/* Renders: a grid of sources by flows, each cell one row of its images from
-   oldest to newest, each marked with its version (design spec J5·1). ←→ move
-   along a source's images, ↑↓ between sources, and ↵ or a click opens an image's
-   large view; space selects, and ⌥E revises the selection (§7). A seed rendered
-   under two versions is marked ⇄. The Render bar offers what the newest
-   approvals lack, ⌥R; a source's thumbnail opens it in the viewer. */
+/* Renders: a grid of sources by flows, each cell one row of its images, its
+   versions oldest to newest, each image marked with its version (design spec
+   J5·1). ←→ move along a source's images, ↑↓ between sources, and ↵ or a click
+   opens an image's large view; space selects, and ⌥E revises the selection (§7).
+   A seed rendered under two versions is marked ⇄. The Render bar offers what the
+   newest approvals lack, ⌥R; a source's thumbnail opens it in the viewer. */
 const props = defineProps<{ batch: string }>()
 const router = useRouter()
-const info = ref<RendersInfo | null>(null)
 const refusal = ref<string | null>(null)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 /* The selected images, each as `key` spells it. */
@@ -30,15 +28,10 @@ const selected = ref(new Set<string>())
 const revising = ref(false)
 /* The source open in the viewer, by name, or null. */
 const viewing = ref<string | null>(null)
-const { job } = storeToRefs(useLiveStore())
-const {
-  offer,
-  dialog,
-  rendering,
-  check: checkRender,
-  open: openRender,
-  close,
-} = useRenderOffer(props.batch)
+/* The batch's images and its Render offer, shared with every screen of the batch;
+   a job's end reads both again. */
+const store = useBatchStore()
+const { renders: info, offer, dialog, rendering } = storeToRefs(store)
 const shown = computed(() =>
   bar({
     changes: 0,
@@ -151,7 +144,7 @@ function onKey(event: KeyboardEvent): void {
   }
   if (event.altKey && event.code === 'KeyR') {
     event.preventDefault()
-    openRender()
+    store.openDialog()
     return
   }
   if (event.altKey || event.metaKey || event.ctrlKey) return
@@ -193,17 +186,11 @@ function open(digest: string, flow: string, version: number, seed: string): void
   })
 }
 
-/* A job that ends changes the images. */
-watch(job, (slot, before) => {
-  if (before?.state === 'running' && slot?.state !== 'running')
-    void renders(props.batch).then((read) => (info.value = read))
-})
-
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
-  void checkRender()
+  void store.check()
   try {
-    info.value = await renders(props.batch)
+    await store.reloadRenders()
   } catch (reason) {
     refusal.value = (reason as Error).message
     return
@@ -329,8 +316,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       :disabled="offer.disabled"
       :refused="offer.refused"
       :rendering="rendering"
-      @open="openRender"
+      @open="store.openDialog"
     />
-    <RenderDialog v-if="dialog" :batch="batch" @close="close" />
+    <RenderDialog v-if="dialog" :batch="batch" @close="store.closeDialog" />
   </section>
 </template>

@@ -15,7 +15,7 @@ export interface BarState {
   /* The render stage refused a count, or the offer could not be read: the bar
      stays so its reason is on screen. */
   refused: boolean
-  /* A render session running. */
+  /* A render session running for this batch, not another's. */
   rendering: boolean
 }
 

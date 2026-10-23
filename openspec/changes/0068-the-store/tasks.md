@@ -7,7 +7,7 @@ Every new pytest test carries `@pytest.mark.spec`, and every new vitest test `sp
 
 - [x] 1 — The live store
 - [x] 2 — One stream
-- [ ] 3 — The batch store
+- [x] 3 — The batch store
 - [ ] 4 — The upload id and the cards
 
 ## 1 — The live store
@@ -41,18 +41,18 @@ Every new pytest test carries `@pytest.mark.spec`, and every new vitest test `sp
 
 ## 3 — The batch store
 
-- [ ] 3.1 **HALT CHECK** — the Render offer is a composable.
+- [x] 3.1 **HALT CHECK** — the Render offer is a composable.
   Verify: `test -e ui/src/composables/useRenderOffer.ts` exits 0.
-- [ ] 3.2 Add `ui/src/stores/batch.ts` per [D4](design.md#d4), its offer requests numbered; open it on the route's
+- [x] 3.2 Add `ui/src/stores/batch.ts` per [D4](design.md#d4), its offer requests numbered; open it on the route's
   batch in `ui/src/App.vue`; delete `ui/src/composables/useRenderOffer.ts`.
   Verify: `test -e ui/src/composables/useRenderOffer.ts` exits 1, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.3 Move `ui/src/views/Hub.vue`, `ui/src/views/Renders.vue` and `useQueue` in `ui/src/composables/useQueue.ts`
+- [x] 3.3 Move `ui/src/views/Hub.vue`, `ui/src/views/Renders.vue` and `useQueue` in `ui/src/composables/useQueue.ts`
   onto the batch store per [D5](design.md#d5).
   Verify: `grep -c 'await hub(' ui/src/views/Hub.vue ui/src/composables/useQueue.ts` prints `0` for each file, and `uv run pytest -q tests/e2e` exits 0.
-- [ ] 3.4 Rewrite `ui/src/composables/useQueue.test.ts` against the batch store; bind `ui:render:a-stale-offer-is-dropped`
+- [x] 3.4 Rewrite `ui/src/composables/useQueue.test.ts` against the batch store; bind `ui:render:a-stale-offer-is-dropped`
   in a new `ui/src/stores/batch.test.ts`.
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c 'a-stale-offer-is-dropped' ui/src/stores/batch.test.ts` prints `1`.
-- [ ] 3.5 Say `BarState.rendering` is this batch's session in `ui/src/bars.ts`, and that a row's versions run oldest
+- [x] 3.5 Say `BarState.rendering` is this batch's session in `ui/src/bars.ts`, and that a row's versions run oldest
   to newest in the header comment of `ui/src/views/Renders.vue`, per [D7](design.md#d7).
   Verify: `grep -c 'A render session running\. \*/' ui/src/bars.ts` prints `0`, and `grep -c 'its images from' ui/src/views/Renders.vue` prints `0`.
 

@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { useBatchStore } from './stores/batch'
 import { alerting, useLiveStore } from './stores/live'
 
 /* The shell: the AppBar, the BillingBanner's slot, the route's screen and the
@@ -28,8 +29,16 @@ const totals = computed(() => {
 })
 
 const batch = computed(() => (typeof route.params.batch === 'string' ? route.params.batch : null))
-/* The page's one stream names the batch the screen shows. */
-watch(batch, (shown) => live.follow({ batch: shown }), { immediate: true })
+/* The page's one stream names the batch the screen shows, and the batch store holds it. */
+const store = useBatchStore()
+watch(
+  batch,
+  (shown) => {
+    if (shown !== null) store.open(shown)
+    live.follow({ batch: shown })
+  },
+  { immediate: true },
+)
 const place = computed(() => batch.value ?? 'library')
 const screen = computed(() => route.name)
 const key = computed(() =>
