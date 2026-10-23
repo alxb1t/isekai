@@ -28,7 +28,7 @@ const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
 /* The source open in the viewer, or null. */
 const viewing = ref<HubSource | null>(null)
-const { offer, dialog, check: checkRender, open, close } = useRenderOffer(props.batch)
+const { offer, dialog, rendering, check: checkRender, open, close } = useRenderOffer(props.batch)
 
 /* Render opens only from its own bar: while changes wait, Prepare holds it. */
 function openRender(): void {
@@ -101,7 +101,7 @@ const shown = computed(() =>
     preparing: busy.value || barRefusal.value !== null,
     images: offer.value.images,
     refused: offer.value.refused !== null,
-    rendering: blocked.value,
+    rendering: rendering.value,
   }),
 )
 
@@ -548,6 +548,7 @@ onUnmounted(() => {
       :images="offer.images"
       :disabled="offer.disabled"
       :refused="offer.refused"
+      :rendering="rendering"
       @open="openRender"
     />
     <div v-else-if="shown === 'prepare'" class="prepare-bar" :class="{ running: busy }">

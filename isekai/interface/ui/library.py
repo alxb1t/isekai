@@ -423,7 +423,7 @@ def _shrunk(image: Path) -> bytes:
     try:
         with Image.open(image) as opened:
             return thumbnail_jpeg(opened)
-    except OSError as unread:
+    except (OSError, Image.DecompressionBombError) as unread:
         raise Refusal(
             f"{image.name}: is not an image this build can read ({unread}); delete "
             f"{image} and its .render.json, then render it again"
@@ -446,9 +446,11 @@ def source_thumbnail(library: Path, source: Path) -> Path:
 
 def _upright(source: Path) -> bytes:
     """Return `source` turned as its orientation says, at most `THUMB_SIDE` a side."""
+    from PIL.Image import DecompressionBombError
+
     try:
         return upright_thumbnail(source)
-    except OSError as unread:
+    except (OSError, DecompressionBombError) as unread:
         raise Refusal(
             f"{source.name}: is not an image this build can read ({unread}); "
             f"delete {source} and import it again"
@@ -461,9 +463,11 @@ def source_jpeg(source: Path) -> bytes:
     For a source in a format the render does not read, placed by hand: the viewer
     shows it as its thumbnail does.
     """
+    from PIL.Image import DecompressionBombError
+
     try:
         return upright_jpeg(source)
-    except OSError as unread:
+    except (OSError, DecompressionBombError) as unread:
         raise Refusal(
             f"{source.name}: is not an image this build can read ({unread}); "
             f"delete {source} and import it again"

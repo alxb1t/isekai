@@ -2,6 +2,8 @@
 
 import json
 import os
+import struct
+import zlib
 from pathlib import Path
 
 import pytest
@@ -391,3 +393,23 @@ def test_one_source_at_one_seed_in_two_batches_has_two_thumbnails(
             pixel = made.convert("RGB").getpixel((10, 10))
         assert isinstance(pixel, tuple)
         assert (pixel[0] > pixel[2]) == (colour[0] > colour[2])
+
+
+@pytest.mark.spec_exempt("twin: a file past Pillow's bound refuses as an unread one")
+@pytest.mark.parametrize("read", ["_upright", "source_jpeg", "_shrunk"])
+def test_an_image_past_pillows_pixel_bound_is_refused_naming_it(
+    read: str, tmp_path: Path
+) -> None:
+    # A PNG header declaring more pixels than Pillow opens, and no pixels at all.
+    def chunk(kind: bytes, body: bytes) -> bytes:
+        size, check = struct.pack(">I", len(body)), zlib.crc32(kind + body)
+        return size + kind + body + struct.pack(">I", check)
+
+    header = struct.pack(">IIBBBBB", 20000, 10000, 8, 2, 0, 0, 0)
+    huge = tmp_path / "huge.png"
+    huge.write_bytes(
+        b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IEND", b"")
+    )
+
+    with pytest.raises(Refusal, match="huge.png: is not an image this build can read"):
+        getattr(library, read)(huge)

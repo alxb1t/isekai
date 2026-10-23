@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import { bar, dismiss, failed } from './bars'
+import { bar, dismiss, failed, reasons } from './bars'
 import { spec } from './test/spec'
 import type { JobSlot } from './types'
 
@@ -19,6 +19,12 @@ spec('ui:render:a-refused-count-is-shown', () => {
   // A refused count keeps the Render bar with no image short, so its reason is on screen.
   expect(bar({ ...idle, refused: true })).toBe('render')
   expect(bar({ ...idle, changes: 1, refused: true })).toBe('prepare')
+  // A hold, such as no key, is shown beside the refusal rather than in its place.
+  const noKey = 'No RunPod key: add RUNPOD_API_KEY to .env'
+  const damaged = '0001.approved.json: `renders.count` is 0; restore it'
+  expect(reasons(noKey, damaged)).toEqual([noKey, damaged])
+  expect(reasons(damaged, damaged)).toEqual([damaged])
+  expect(reasons(null, null)).toEqual([])
 })
 
 function slot(over: Partial<JobSlot>): JobSlot {

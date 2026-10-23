@@ -29,15 +29,22 @@ const selected = ref(new Set<string>())
 const revising = ref(false)
 /* The source open in the viewer, by name, or null. */
 const viewing = ref<string | null>(null)
-const { job, renderRunning } = useLive()
-const { offer, dialog, check: checkRender, open: openRender, close } = useRenderOffer(props.batch)
+const { job } = useLive()
+const {
+  offer,
+  dialog,
+  rendering,
+  check: checkRender,
+  open: openRender,
+  close,
+} = useRenderOffer(props.batch)
 const shown = computed(() =>
   bar({
     changes: 0,
     preparing: false,
     images: offer.value.images,
     refused: offer.value.refused !== null,
-    rendering: renderRunning.value,
+    rendering: rendering.value,
   }),
 )
 
@@ -320,6 +327,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       :images="offer.images"
       :disabled="offer.disabled"
       :refused="offer.refused"
+      :rendering="rendering"
       @open="openRender"
     />
     <RenderDialog v-if="dialog" :batch="batch" @close="close" />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 
 /* One image in a native dialog, fitted to the window. A click on the image
    toggles 1:1 pixels, scrolled inside the dialog; Esc or a click outside closes.
@@ -16,13 +16,19 @@ const emit = defineEmits<{ close: [] }>()
 const dialog = ref<HTMLDialogElement | null>(null)
 const image = ref<HTMLImageElement | null>(null)
 const actual = ref(false)
-/* The fitted image's scale, measured once it has loaded and on every resize. */
+/* The fitted image's scale, measured once it has loaded, on every resize while
+   fitted, and on the switch back to fit: at 1:1 the drawn width is the natural one. */
 const scale = ref<number | null>(null)
 
 function measure(): void {
   const shown = image.value
-  if (shown && shown.naturalWidth > 0)
+  if (shown && shown.naturalWidth > 0 && !actual.value)
     scale.value = Math.round((shown.clientWidth / shown.naturalWidth) * 100)
+}
+
+function toggle(): void {
+  actual.value = !actual.value
+  if (!actual.value) void nextTick(measure)
 }
 
 const title = computed(() => {
@@ -62,7 +68,7 @@ onUnmounted(() => window.removeEventListener('resize', measure))
         :src="src"
         :alt="name"
         @load="measure"
-        @click="actual = !actual"
+        @click="toggle"
       />
     </div>
   </dialog>
