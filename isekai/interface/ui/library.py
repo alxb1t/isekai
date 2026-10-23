@@ -60,7 +60,7 @@ from isekai.pipeline.generate import rendered_seeds
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
-from isekai.shared.image import metadata_in, thumbnail_jpeg
+from isekai.shared.image import dimensions_or_refuse, metadata_in, thumbnail_jpeg
 
 VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
@@ -80,10 +80,11 @@ _KINDS: Mapping[str, str] = {
     OUTPUTS: "render",
 }
 
-# A source's digest, and what it carries, by what its file's stat says: reading
-# every photograph on every listing would read the whole library each time.
+# A source's digest, what it carries and its size, by what its file's stat says:
+# reading every photograph on every listing would read the whole library each time.
 _DIGESTS: dict[tuple[str, int, int, int], str] = {}
 _CARRIES: dict[tuple[str, int, int, int], tuple[str, ...]] = {}
+_SIZES: dict[tuple[str, int, int, int], tuple[int, int] | None] = {}
 
 
 def root(environ: Mapping[str, str] = os.environ) -> Path:
@@ -159,13 +160,15 @@ class Source:
     """One file under `sources/`, its run if it has one, and a cell per flow.
 
     `carries` names what the file holds beyond its pixels and orientation: a
-    source imported as it is, which the hub marks not cleaned.
+    source imported as it is, which the hub marks not cleaned. `size` is the
+    file's width and height, upright, or None where its header cannot be read.
     """
 
     name: str
     run: Run | None
     cells: Mapping[str, Cell] = field(default_factory=dict)
     carries: tuple[str, ...] = ()
+    size: tuple[int, int] | None = None
 
     @property
     def digest(self) -> str | None:
@@ -403,6 +406,34 @@ def _shrunk(image: Path) -> bytes:
         ) from unread
 
 
+def source_thumbnail(library: Path, source: Path) -> Path:
+    """Return a source's thumbnail in the library's cache, upright, made once only.
+
+    Named by the source's digest, which is also the folder its run would take.
+    e.g. `sources/ada.jpg` -> `.cache/0d4b…/sources/0d4b….jpg`
+    """
+    digest = _digest(source)
+    cached = library / CACHE / digest / SOURCES / f"{digest}.jpg"
+    if cached.is_file():
+        return cached
+    write_atomically(cached, _upright(source))
+    return cached
+
+
+def _upright(source: Path) -> bytes:
+    """Return `source` turned as its orientation says, at most `THUMB_SIDE` a side."""
+    from PIL import Image, ImageOps
+
+    try:
+        with Image.open(source) as opened:
+            return thumbnail_jpeg(ImageOps.exif_transpose(opened))
+    except OSError as unread:
+        raise Refusal(
+            f"{source.name}: is not an image this build can read ({unread}); "
+            f"delete {source} and import it again"
+        ) from unread
+
+
 def source_files(folder: Path) -> Callable[[str], Path]:
     """Return what finds a file under batch `folder`'s `sources/` by name, or refuses.
 
@@ -429,7 +460,8 @@ def _suffixes(flows: Sequence[str], flows_dir: Path) -> dict[str, str]:
 def _grid(folder: Path, suffixes: Mapping[str, str], *, marks: bool = True) -> Hub:
     """Return batch `folder`'s grid over the flows `suffixes` names.
 
-    Without `marks`, no source is read for its not-cleaned mark: Home shows none.
+    Without `marks`, no source is read for its not-cleaned mark or its size: Home
+    shows neither.
     """
     runs = _runs(folder / RUNS)
     sources = tuple(
@@ -516,6 +548,20 @@ def _carries(path: Path) -> tuple[str, ...]:
     return _CARRIES[key]
 
 
+def _size(path: Path) -> tuple[int, int] | None:
+    """Return a source's width and height from its header, or None where unreadable.
+
+    e.g. a 1200×900 JPEG whose orientation turns it -> (900, 1200)
+    """
+    key = _key(path)
+    if key not in _SIZES:
+        try:
+            _SIZES[key] = dimensions_or_refuse(path, "")
+        except Refusal:
+            _SIZES[key] = None
+    return _SIZES[key]
+
+
 def _runs(runs: Path) -> dict[str, Run]:
     """Return the runs under `runs` that hold a frame, by their identifier's digest."""
     if not runs.is_dir():
@@ -536,7 +582,9 @@ def _source(
         flow: stage(run, flow, suffix) if run else Cell(None)
         for flow, suffix in suffixes.items()
     }
-    return Source(path.name, run, cells, _carries(path) if marks else ())
+    if not marks:
+        return Source(path.name, run, cells)
+    return Source(path.name, run, cells, _carries(path), _size(path))
 
 
 def _row(folder: Path, suffixes: Mapping[str, str]) -> Row:

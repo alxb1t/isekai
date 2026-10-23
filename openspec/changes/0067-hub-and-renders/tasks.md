@@ -5,7 +5,7 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 
 ## Progress
 
-- [ ] 1 — Source images and the viewer
+- [x] 1 — Source images and the viewer
 - [ ] 2 — Home
 - [ ] 3 — Cell actions
 - [ ] 4 — The Render bar
@@ -14,19 +14,19 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 
 ## 1 — Source images and the viewer
 
-- [ ] 1.1 **HALT CHECK** — no route serves a source by name.
+- [x] 1.1 **HALT CHECK** — no route serves a source by name.
   Verify: `grep -c '/api/b/{batch}/sources' isekai/interface/ui/app.py` prints `0`.
-- [ ] 1.2 Add `source_thumbnail` and `Source.size` to `isekai/interface/ui/library.py`, the source routes to
+- [x] 1.2 Add `source_thumbnail` and `Source.size` to `isekai/interface/ui/library.py`, the source routes to
   `isekai/interface/ui/app.py` and drop `_size`, per [D1](design.md#d1). Bind `ui:hub:a-source-is-sized-from-its-file`
   in `tests/test_ui_library.py` and `ui:renders:a-source-thumbnail-is-upright` in `tests/test_ui_api.py`.
   Verify: `uv run pytest -q tests/test_ui_library.py tests/test_ui_api.py` exits 0, and `cat tests/test_ui_library.py tests/test_ui_api.py | grep -c -E 'ui:hub:a-source-is-sized-from-its-file|ui:renders:a-source-thumbnail-is-upright'` prints `2`.
-- [ ] 1.3 Add `ui/src/components/ImageViewer.vue` per [D2](design.md#d2), the source addresses to `ui/src/api.ts`,
+- [x] 1.3 Add `ui/src/components/ImageViewer.vue` per [D2](design.md#d2), the source addresses to `ui/src/api.ts`,
   and the source cell of [D3](design.md#d3) to `ui/src/views/Hub.vue`.
   Verify: `uv run python -m tools.typecheck_ui` exits 0, and `grep -c 'ImageViewer' ui/src/views/Hub.vue` prints a number of at least `1`.
-- [ ] 1.4 In `test_a_reload_lands_on_the_same_hub_and_the_same_review` in `tests/e2e/test_routes.py`, read
+- [x] 1.4 In `test_a_reload_lands_on_the_same_hub_and_the_same_review` in `tests/e2e/test_routes.py`, read
   `ada.jpg` from `.hub__file` instead of `.hub__name`.
   Verify: `grep -c 'hub__name' tests/e2e/test_routes.py` prints `0`, and `uv run pytest -q tests/e2e/test_routes.py` exits 0.
-- [ ] 1.5 In `ui/design/spec.md` J2's grid bullet, say the source's thumbnail opens the viewer and its name is the
+- [x] 1.5 In `ui/design/spec.md` J2's grid bullet, say the source's thumbnail opens the viewer and its name is the
   file's stem.
   Verify: `grep -c 'opens the viewer' ui/design/spec.md` prints a number of at least `1`.
 

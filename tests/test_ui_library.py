@@ -15,7 +15,7 @@ from isekai.interface.ui.library import Cell, FlowCount
 from isekai.pipeline.review import approve, review
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import tree
-from tests.images import jpeg_bytes, photo_jpeg
+from tests.images import jpeg_bytes, jpeg_with_header, photo_jpeg
 from tests.stages import sheet, write_wd14
 
 REPO = Path(__file__).resolve().parent.parent
@@ -241,6 +241,25 @@ def test_a_source_still_carrying_metadata_is_marked_not_cleaned(
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
 
     assert {one.name: one.carries for one in grid.sources}["banner.jpg"] == ()
+
+
+@pytest.mark.spec("ui:hub:a-source-is-sized-from-its-file")
+def test_a_source_with_no_run_is_sized_from_its_own_file(tmp_path: Path) -> None:
+    folder = _batch(tmp_path, "b", "ada.jpg")
+    (folder / "sources" / "turned.jpg").write_bytes(
+        jpeg_with_header(1200, 900, orientation=6)
+    )
+    (folder / "sources" / "broken.jpg").write_bytes(b"not an image")
+
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
+
+    assert not (folder / "runs").exists()
+    sizes = {one.name: one.size for one in grid.sources}
+    assert sizes == {
+        "ada.jpg": (600, 800),
+        "turned.jpg": (900, 1200),
+        "broken.jpg": None,
+    }
 
 
 @pytest.mark.spec("ui:hub:an-unreadable-file-marks-its-cell")

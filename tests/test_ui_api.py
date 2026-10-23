@@ -1412,6 +1412,44 @@ def test_a_thumbnail_asked_for_twice_is_read_from_the_cache_the_second_time(
     assert thumb_file.read_bytes() == first.content
 
 
+@pytest.mark.spec("ui:renders:a-source-thumbnail-is-upright")
+def test_a_source_thumbnail_is_turned_upright_and_read_from_the_cache_again(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from PIL import Image
+
+    # Orientation 6 turns a wide file a quarter turn: upright, it is tall.
+    turned = Image.Exif()
+    turned[0x0112] = 6
+    sources = tmp_path / "lib" / BATCH / "sources"
+    (sources / "turned.jpg").write_bytes(
+        photo_jpeg((30, 60, 90), (800, 400), exif=turned.tobytes())
+    )
+    made: list[Path] = []
+    upright = library._upright
+
+    def counted(source: Path) -> bytes:
+        made.append(source)
+        return upright(source)
+
+    monkeypatch.setattr(library, "_upright", counted)
+    thumb = f"/api/b/{BATCH}/sources/turned.jpg/thumb"
+
+    first = client.get(thumb)
+    second = client.get(thumb)
+
+    assert first.status_code == second.status_code == 200
+    assert first.headers["content-type"] == "image/jpeg"
+    with Image.open(io.BytesIO(first.content)) as shown:
+        width, height = shown.size
+    assert height > width
+    assert second.content == first.content
+    assert len(made) == 1
+    whole = client.get(f"/api/b/{BATCH}/sources/turned.jpg")
+    assert whole.content == (sources / "turned.jpg").read_bytes()
+    assert client.get(f"/api/b/{BATCH}/sources/absent.jpg/thumb").status_code == 409
+
+
 @pytest.mark.spec("ui:renders:a-damaged-approval-marks-its-version")
 def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
     wired: Wiring,

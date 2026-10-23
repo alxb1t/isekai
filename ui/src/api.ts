@@ -221,6 +221,16 @@ export function stagedThumbAt(id: string, name: string): string {
   return `/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(name)}/thumb`
 }
 
+/* A source under a batch's `sources/`, by its file's name, with or without a run. */
+export function sourceAt(batch: string, name: string): string {
+  return `/api/b/${encodeURIComponent(batch)}/sources/${encodeURIComponent(name)}`
+}
+
+/* The source's thumbnail, upright. */
+export function sourceThumbAt(batch: string, name: string): string {
+  return `${sourceAt(batch, name)}/thumb`
+}
+
 export function renders(batch: string): Promise<RendersInfo> {
   return get<RendersInfo>(`/api/b/${encodeURIComponent(batch)}/renders`)
 }

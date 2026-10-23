@@ -39,6 +39,7 @@ POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/discard
 POST /api/b/{batch}/revise              {images: [{digest, flow, version, seed}]}
 GET  /api/b/{batch}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
      and its /image, /thumb and /compare
+GET  /api/b/{batch}/sources/{name}   and its /thumb
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
@@ -874,6 +875,19 @@ def create_app(
             library.thumbnail(root, run, image), media_type="image/jpeg"
         )
 
+    @app.get("/api/b/{batch}/sources/{name}")
+    def read_source(batch: str, name: str) -> FileResponse:
+        """Serve a source's bytes, whole, with or without a run."""
+        return FileResponse(library.source_files(folder(batch))(name))
+
+    @app.get("/api/b/{batch}/sources/{name}/thumb")
+    def read_source_thumb(batch: str, name: str) -> FileResponse:
+        """Serve a source's thumbnail, upright, made in the library's cache once."""
+        source = library.source_files(folder(batch))(name)
+        return FileResponse(
+            library.source_thumbnail(root, source), media_type="image/jpeg"
+        )
+
     @app.get("/api/{rest:path}")
     def no_route(rest: str) -> JSONResponse:
         """Answer an unknown API path as not found, never with the page."""
@@ -1178,7 +1192,8 @@ def _hub(grid: library.Hub) -> dict[str, Any]:
             {
                 "name": one.name,
                 "digest": one.digest,
-                **_size(one.run),
+                "width": one.size[0] if one.size else None,
+                "height": one.size[1] if one.size else None,
                 "cells": {flow: asdict(cell) for flow, cell in one.cells.items()},
                 "carries": list(one.carries),
             }
@@ -1205,17 +1220,6 @@ def _dimensions(run: Run) -> tuple[int, int]:
         "the page reads the photograph's own header to size itself and there is "
         "nothing to fall back to -- re-export it as a JPEG or PNG",
     )
-
-
-def _size(run: Run | None) -> dict[str, int | None]:
-    """Return a source's size for the hub, or nulls where it has no readable run."""
-    if run is None:
-        return {"width": None, "height": None}
-    try:
-        width, height = _dimensions(run)
-    except Refusal:
-        return {"width": None, "height": None}
-    return {"width": width, "height": height}
 
 
 def _wd14(one: Held) -> list[dict[str, Any]] | None:

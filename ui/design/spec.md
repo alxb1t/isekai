@@ -175,7 +175,10 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
   including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a). Disabled: its reason (`A render is running ·
   06:41`). There is no done state: the receipt goes to the job strip, the accent to Review next.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is a
-  44×60 thumbnail, the mono 13 name and mono 11 `file · dims`; a row checkbox appears in selection mode.
+  44×60 thumbnail, upright, that opens the viewer, the file's stem in mono 13 and mono 11 `file · dims`, the size
+  read from the file; a row checkbox appears in selection mode.
+- **The viewer** is a dialog over the page, its URL unchanged: the image fitted, a click for 1:1 pixels, `Esc` or a
+  click outside to close, titled with the name, the dimensions and `fit n%` or `1:1`.
 
 ### J3 · Review and approve
 

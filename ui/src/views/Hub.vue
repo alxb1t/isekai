@@ -2,7 +2,8 @@
 import { noun } from '../words'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { assign, hub, prepare, renderOffer, stopJob } from '../api'
+import { assign, hub, prepare, renderOffer, sourceAt, sourceThumbAt, stopJob } from '../api'
+import ImageViewer from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
@@ -23,6 +24,8 @@ const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
 /* The Render dialog is up; it has no URL of its own (design spec §1 rule 8). */
 const rendering = ref(false)
+/* The source open in the viewer, or null. */
+const viewing = ref<HubSource | null>(null)
 /* Why Render is disabled, from the server's quote; null while it is offered. */
 const renderBlocked = ref<string | null>(null)
 
@@ -103,6 +106,12 @@ const bar = computed(() => busy.value || changes.value.length > 0 || barRefusal.
 /* A cell's key in the maps of refusals and running stages. */
 function at(name: string, flow: string): string {
   return `${name}|${flow}`
+}
+
+/* A source's display name: its file's name without the extension. */
+function stem(name: string): string {
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(0, dot) : name
 }
 
 function key(source: HubSource, flow: string): string {
@@ -249,7 +258,7 @@ function select(step: number): void {
    cell's Review, ⌘↵ Prepare, ⌥2 Review next, ⌥A Add sources, esc clears the
    selection. Matched on `event.code`, because Option types a character on macOS. */
 function onKey(event: KeyboardEvent): void {
-  if (adding.value || rendering.value) return
+  if (adding.value || rendering.value || viewing.value) return
   const { row, column } = focus.value
   if (event.altKey && event.code === 'Digit2') {
     event.preventDefault()
@@ -352,6 +361,14 @@ onUnmounted(() => {
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="info" class="hub">
     <ImportSheet v-if="adding" :batch="batch" @close="adding = false" @imported="added" />
+    <ImageViewer
+      v-if="viewing"
+      :src="sourceAt(batch, viewing.name)"
+      :name="viewing.name"
+      :width="viewing.width"
+      :height="viewing.height"
+      @close="viewing = null"
+    />
     <RenderDialog
       v-if="rendering"
       :batch="batch"
@@ -404,20 +421,30 @@ onUnmounted(() => {
       </button>
       <template v-for="(source, row) in sources" :key="source.name">
         <div class="hub__source" :class="{ 'hub__source--selected': selected.has(row) }">
-          <span class="hub__name mono">
-            <input
-              v-if="selected.size > 0"
-              class="hub__tick"
-              type="checkbox"
-              :checked="selected.has(row)"
-              :aria-label="`select ${source.name}`"
-              @change="selected.has(row) ? selected.delete(row) : selected.add(row)"
-            />{{ source.name }}
+          <button
+            class="hub__thumb"
+            type="button"
+            :aria-label="`view ${source.name}`"
+            @click="viewing = source"
+          >
+            <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
+          </button>
+          <span class="hub__about">
+            <span class="hub__name mono">
+              <input
+                v-if="selected.size > 0"
+                class="hub__tick"
+                type="checkbox"
+                :checked="selected.has(row)"
+                :aria-label="`select ${source.name}`"
+                @change="selected.has(row) ? selected.delete(row) : selected.add(row)"
+              />{{ stem(source.name) }}
+            </span>
+            <span class="hub__file mono">
+              {{ source.name }}<template v-if="source.width"> · {{ source.width }}×{{ source.height }}</template>
+            </span>
+            <span v-if="source.carries.length" class="hub__warn mono">⚠ not cleaned</span>
           </span>
-          <span class="hub__file mono">
-            {{ source.name }}<template v-if="source.width"> · {{ source.width }}×{{ source.height }}</template>
-          </span>
-          <span v-if="source.carries.length" class="hub__warn mono">⚠ not cleaned</span>
         </div>
         <div
           v-for="(flow, column) in flows"
