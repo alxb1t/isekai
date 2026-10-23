@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { discardDraft, fieldCandidates, imageAt, photoUrl as photoAt } from '../api'
 import AppHeader from '../components/AppHeader.vue'
 import ApproveBar from '../components/ApproveBar.vue'
@@ -16,7 +16,7 @@ import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
 import { useKeys } from '../composables/useKeys'
-import { after, queue, queued, reviewQueue, useQueue } from '../composables/useQueue'
+import { useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import { nextPane, type Pane } from '../panes'
 import { modded, plain, shifted } from '../stores/keys'
@@ -32,12 +32,10 @@ import type { FieldCandidates } from '../types'
    move between them are read by `TagInput`. */
 const props = defineProps<{ batch: string; digest: string; flow: string }>()
 const router = useRouter()
-const route = useRoute()
 const batch = useQueue(props.batch, props.flow, () => props.digest)
 const failure = ref<string | null>(null)
-const done = computed(() => batch.info.value !== null && queue(batch.info.value, props.flow).length === 0)
 /* A refusal after the approval landed: the approval stands, and the bar says
-   what could not be read next. */
+   what could not be read again. */
 const afterApproval = ref<string | null>(null)
 const sheet = useSheet({ batch: props.batch, flow: props.flow })
 const approval = useApproval()
@@ -170,25 +168,18 @@ const kicker = computed(() => {
   return held ? `revision of v${held.version}` : 're-opened'
 })
 
-/* Revise's queue, when Review was opened by it: open the next of its drafts,
-   else the hub, and return true. False without one: the batch's queue decides. */
-function nextRevised(): boolean {
-  const held = route.query.queue
-  if (typeof held !== 'string') return false
-  const [next, ...rest] = queued(held)
-  if (next)
-    void router.push({
-      name: 'review',
-      params: { batch: props.batch, digest: next.digest, flow: next.flow },
-      query: { queue: reviewQueue(rest) },
-    })
-  else void router.push({ name: 'hub', params: { batch: props.batch } })
-  return true
+/* Read the batch and the open sheet again, staying on it; a refusal shows in
+   the approve bar. */
+async function reread(id: string): Promise<void> {
+  const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
+  focused.value = null
+  selectedChip.value = null
+  if (read.status === 'rejected') afterApproval.value = (read.reason as Error).message
 }
 
-/* Delete this draft, as `review --discard` does, and go on as approving would.
-   A save still in flight lands first, so the discard states the draft it moved
-   to rather than racing it. */
+/* Delete this draft, as `review --discard` does, and stay on the sheet. A save
+   still in flight lands first, so the discard states the draft it moved to
+   rather than racing it. */
 async function discard(): Promise<void> {
   confirmingDiscard.value = false
   if (!(await sheet.flush())) return
@@ -201,7 +192,8 @@ async function discard(): Promise<void> {
     discarding.value = (reason as Error).message
     return
   }
-  if (!nextRevised()) void router.push({ name: 'hub', params: { batch: props.batch } })
+  lastDraft.value = null
+  await reread(current.value)
 }
 
 async function approve(): Promise<void> {
@@ -221,19 +213,8 @@ async function approve(): Promise<void> {
   if (!(await sheet.flush())) return
   const place = { batch: props.batch, digest: id, flow: props.flow }
   if (!(await approval.approve(place, sheet.saved.value))) return
-  // Neither depends on the other's answer; both depend only on the POST landing.
-  // The sheet is re-read so the page shows it approved, whatever follows.
-  if (nextRevised()) return
-  const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
-  focused.value = null
-  selectedChip.value = null
-  if (read.status === 'rejected') {
-    afterApproval.value = (read.reason as Error).message
-    return
-  }
-  const next = after(read.value, props.flow, id)
-  if (next) select(next)
-  else void router.push({ name: 'hub', params: { batch: props.batch } })
+  // Approving is an act, not a navigation: the sheet stays, read-only.
+  await reread(id)
 }
 
 /* The rail already knows every input's dimensions, so the source column draws
@@ -487,7 +468,7 @@ watch(current, (id) => {
   <div v-else class="review">
     <AppHeader
       :flow="flow"
-      :inputs="batch.sheets.value"
+      :inputs="batch.inputs.value.length"
       :approved="batch.approved.value"
       :draft="receipt"
       :saved="minute(lastDraft?.saved ?? null)"
@@ -502,20 +483,13 @@ watch(current, (id) => {
           :reading="batch.loading.value ? null : current"
           :vocabulary="vocabulary"
         />
-        <span
-          v-else-if="done"
-          class="app-header__receipt--approved mono"
-          style="font-size: 11.5px"
-        >
-          nothing left to review
-        </span>
       </template>
     </AppHeader>
     <div v-if="batch.info.value" class="work" @focusin="remember">
       <BatchRail
+        :flow="flow"
         :inputs="batch.inputs.value"
         :approved="batch.approved.value"
-        :sheets="batch.sheets.value"
         :current="current"
         :edited="batch.edited.value"
         :photo-url="photoUrl"

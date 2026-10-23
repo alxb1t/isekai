@@ -6,7 +6,7 @@ carries `@pytest.mark.spec`, and every new vitest test `spec("…")`, with the k
 ## Progress
 
 - [x] 1 — The address
-- [ ] 2 — The rail and Approve
+- [x] 2 — The rail and Approve
 - [ ] 3 — The layout
 - [ ] 4 — ④ as slots
 - [ ] 5 — The dialogs
@@ -30,24 +30,24 @@ carries `@pytest.mark.spec`, and every new vitest test `spec("…")`, with the k
 
 ## 2 — The rail and Approve
 
-- [ ] 2.1 **HALT CHECK** — Approve moves on, and Revise rides a query.
+- [x] 2.1 **HALT CHECK** — Approve moves on, and Revise rides a query.
   Verify: `grep -c 'after(\|nextRevised' ui/src/views/Review.vue` prints `4`.
-- [ ] 2.2 Replace `useQueue`'s listing with `rail` in `ui/src/composables/useQueue.ts`, dropping `after`, `queued`
+- [x] 2.2 Replace `useQueue`'s listing with `rail` in `ui/src/composables/useQueue.ts`, dropping `after`, `queued`
   and `reviewQueue`; rewrite `ui/src/composables/useQueue.test.ts`, binding `ui:review:the-rail-holds-every-unrendered-sheet`.
   Verify: `grep -c 'export function \(after\|queued\|reviewQueue\)' ui/src/composables/useQueue.ts` prints `0`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 2.3 Keep Approve, Discard and Revise on their sheet in `ui/src/views/Review.vue` per [D4](design.md#d4); mark
+- [x] 2.3 Keep Approve, Discard and Revise on their sheet in `ui/src/views/Review.vue` per [D4](design.md#d4); mark
   and head the rail in `ui/src/components/BatchRail.vue` per [D3](design.md#d3).
   Verify: `grep -c 'after(\|nextRevised\|queue:' ui/src/views/Review.vue` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.4 Await the saves in flight in `flush` in `ui/src/composables/useSheet.ts`, and `flush` before Approve, per
+- [x] 2.4 Await the saves in flight in `flush` in `ui/src/composables/useSheet.ts`, and `flush` before Approve, per
   [D9](design.md#d9); bind `ui:save:an-approval-waits-for-a-save-in-flight` in `ui/src/composables/useSheet.test.ts`.
   Verify: `grep -c 'an-approval-waits-for-a-save-in-flight' ui/src/composables/useSheet.test.ts` prints `1`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 2.5 Replace the queue tests in `tests/e2e/test_queue.py` per the design's [Tests](design.md#tests) table, and
+- [x] 2.5 Replace the queue tests in `tests/e2e/test_queue.py` per the design's [Tests](design.md#tests) table, and
   rebind the failure test to `ui:review:a-failure-after-approval-is-shown`; rebind `tests/test_ui_api.py`'s draft-on-open test.
   Verify: `grep -rc 'ui:queue:' tests` prints `0` for each file, and `uv run pytest -q tests/e2e/test_queue.py tests/test_ui_api.py` exits 0.
-- [ ] 2.6 End `test_revise_opens_review_on_the_revision_and_approving_it_ends_at_the_hub` in `tests/e2e/test_render.py`
+- [x] 2.6 End `test_revise_opens_review_on_the_revision_and_approving_it_ends_at_the_hub` in `tests/e2e/test_render.py`
   on its approved sheet, renamed `test_revise_opens_review_on_the_revision`.
   Verify: `grep -c 'approving_it_ends_at_the_hub' tests/e2e/test_render.py` prints `0`, and `uv run pytest -q tests/e2e/test_render.py` exits 0.
-- [ ] 2.7 Rewrite *The queue* bullet of `ui/design/spec.md` J3 per [D4](design.md#d4): Approve stays; the rail holds
+- [x] 2.7 Rewrite *The queue* bullet of `ui/design/spec.md` J3 per [D4](design.md#d4): Approve stays; the rail holds
   every sheet not yet rendered.
   Verify: `grep -c 'Approve moves to the next' ui/design/spec.md` prints `0`.
 

@@ -35,11 +35,10 @@ REPO = Path(__file__).resolve().parents[2]
 FLOW = "summon-anime-wai"
 BATCH = "2026-10-19"
 
-# A batch per queue test, each source a sheet with no draft, so every test owns
-# the sheets it approves. Sizes differ so each source is its own run.
+# A batch per approval test, each source a sheet with no draft, so every test
+# owns the sheets it approves. Sizes differ so each source is its own run.
 QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
-    "queue-moves": (("cid", (700, 1000)), ("dot", (710, 1000))),
-    "queue-last": (("eve", (720, 1000)),),
+    "queue-stays": (("cid", (700, 1000)), ("dot", (710, 1000))),
     "queue-fails": (("fay", (730, 1000)),),
 }
 

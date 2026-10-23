@@ -48,8 +48,9 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
   const undone: Edit[] = []
   /* One token per save, never reset: a second PUT can start before the first
      has answered, and an input switch can land between them. `saving` is true
-     exactly while a token is held, whichever order the answers come in. */
-  const inFlight = new Set<number>()
+     exactly while a token is held, whichever order the answers come in. Each
+     holds its input and its answer, so `flush` can wait for its own input's. */
+  const inFlight = new Map<number, { id: string; landed: Promise<boolean> }>()
   let token = 0
   /* A slow earlier answer must never overwrite a newer one. Two saves can be in
      flight at once -- the debounce is what puts them there -- so the receipt of
@@ -114,21 +115,41 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
      approved input and a stale `saved` both answer 409. A caller that waits
      without reading the answer waits for nothing. `false` is also what a
      read-only sheet answers -- nothing was written, so nothing may be built
-     from it. A sheet with no edit pending answers `true` and sends nothing:
-     the disk already holds it. */
+     from it. A sheet with no edit pending sends nothing.
+
+     **It waits for every save of this input still in flight**, and answers
+     with the newest: an approval pressed inside a save's round trip must state
+     the draft that save wrote, not the one before it. */
   async function flush(): Promise<boolean> {
     if (timer !== undefined) clearTimeout(timer)
     timer = undefined
     if (detail.value === null || detail.value.readonly) return false
-    if (!dirty) return true
+    if (dirty) send()
+    const id = current
+    const mine = [...inFlight.values()].filter((save) => save.id === id)
+    const answers = await Promise.all(mine.map((save) => save.landed))
+    return answers.at(-1) ?? true
+  }
+
+  /* Start one save of the whole draft, held in `inFlight` until it answers. */
+  function send(): void {
     dirty = false
     const id = current
     const payload = { ...fields.value }
     const asking = { count: renders.value.count, seeds: [...renders.value.seeds] }
     const asked = (generation += 1)
     const mine = (token += 1)
-    inFlight.add(mine)
+    inFlight.set(mine, { id, landed: write(id, payload, asking, asked, mine) })
     saving.value = true
+  }
+
+  async function write(
+    id: string,
+    payload: Record<string, string[]>,
+    asking: Renders,
+    asked: number,
+    mine: number,
+  ): Promise<boolean> {
     try {
       const receipt = await saveDraft({ ...scope, digest: id }, payload, asking, saved.value)
       if (current === id) {

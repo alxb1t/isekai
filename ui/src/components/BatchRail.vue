@@ -6,14 +6,12 @@ import StatusMark from './StatusMark.vue'
 /* Thumbnails at their true aspect ratio: orientation is part of how the
    operator recognises an input, so a square crop would take that away. */
 const props = defineProps<{
+  flow: string
+  /* The flow's sheets not yet rendered, and the open one: `useQueue`'s rail. */
   inputs: BatchInput[]
-  /* `useQueue`'s count of inputs holding an approved artifact, read from the
-     hub's statuses: the same number `AppHeader` is given, so it has one
-     derivation. */
+  /* `useQueue`'s count of them holding an approved artifact, read from the
+     hub's statuses. */
   approved: number
-  /* Every sheet in the flow, the count `approved` is out of; the rail lists
-     only the queue and the open sheet. */
-  sheets: number
   current: string
   edited: Set<string>
   photoUrl: (id: string) => string
@@ -41,7 +39,7 @@ function ready(id: string): void {
 
 <template>
   <nav class="rail">
-    <span class="kicker">batch</span>
+    <span class="kicker rail__flow">{{ flow }}</span>
     <div class="rail__cards">
       <button
         v-for="input in inputs"
@@ -78,6 +76,6 @@ function ready(id: string): void {
       <span class="rail__legend-row"><StatusMark kind="hollow" :size="8" /> untouched</span>
     </div>
 
-    <span class="rail__run mono">{{ approved }} of {{ sheets }} approved</span>
+    <span class="rail__run mono">{{ approved }} of {{ inputs.length }} approved</span>
   </nav>
 </template>

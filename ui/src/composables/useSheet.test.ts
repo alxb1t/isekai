@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
 import type { InputDetail } from '../types'
+import { useApproval } from './useApproval'
 import { useSheet } from './useSheet'
 
 /* `fetch` is stubbed with answers the test releases by hand, so the order in
@@ -112,4 +113,29 @@ spec('ui:save:a-pending-edit-is-sent-on-leaving', async () => {
   expect(put.init?.method).toBe('PUT')
   expect(put.init?.keepalive).toBe(true)
   expect(JSON.parse(String(put.init?.body)).fields.hair).toEqual(['long hair', 'brown hair'])
+})
+
+spec('ui:save:an-approval-waits-for-a-save-in-flight', async () => {
+  const sheet = useSheet({ batch: 'b', flow: 'f' })
+  const approval = useApproval()
+  const opened = sheet.open('a')
+  await answer('/api/b/b/review/a/f', detail('a', 10))
+  await opened
+  sheet.commit('hair', 'brown hair', null)
+  void sheet.flush()
+
+  // Review's Approve: the draft on disk first, then the approval stating it.
+  const approving = (async () => {
+    if (await sheet.flush()) await approval.approve({ batch: 'b', digest: 'a', flow: 'f' }, sheet.saved.value)
+  })()
+  await vi.runAllTimersAsync()
+  expect(calls.map((call) => call.url)).toEqual(['/api/b/b/review/a/f/draft'])
+
+  await answer('/api/b/b/review/a/f/draft', receipt(11))
+  const [post] = calls
+  expect(post.url).toBe('/api/b/b/review/a/f/approve')
+  expect(JSON.parse(String(post.init?.body))).toEqual({ saved: 11 })
+  await answer('/api/b/b/review/a/f/approve', { approved: '001.approved.json', warnings: [], at: 12 })
+  await approving
+  expect(approval.at.value).toBe(12)
 })

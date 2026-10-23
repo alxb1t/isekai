@@ -344,7 +344,7 @@ def test_any_other_path_is_the_page_and_an_unknown_api_path_is_not_found(
     assert client.get("/api/nothing-here").status_code == 404
 
 
-@pytest.mark.spec("ui:queue:opening-a-sheet-writes-its-draft")
+@pytest.mark.spec("ui:review:opening-a-sheet-writes-its-draft")
 def test_opening_a_sheet_with_no_draft_writes_one_and_opening_again_writes_none(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:

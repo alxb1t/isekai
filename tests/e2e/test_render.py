@@ -110,9 +110,7 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
 
 
 @pytest.mark.spec("ui:revise:revise-opens-review-on-the-revision")
-def test_revise_opens_review_on_the_revision_and_approving_it_ends_at_the_hub(
-    page: Page, served: Served
-) -> None:
+def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None:
     digest = served.revised.digest
     page.goto(f"{served.url}/b/{REVISED}/renders/{digest}/{FLOW}/v1/7")
     expect(page.locator("[data-revise]")).to_be_visible()
@@ -122,9 +120,8 @@ def test_revise_opens_review_on_the_revision_and_approving_it_ends_at_the_hub(
 
     confirm.locator("[data-confirm]").click()
 
-    expect(page).to_have_url(
-        re.compile(rf"/b/{REVISED}/review/{digest}/{FLOW}\?queue=")
-    )
+    review = f"{served.url}/b/{REVISED}/review/{digest}/{FLOW}"
+    expect(page).to_have_url(review)
     expect(page.locator("[data-revised] img")).to_have_js_property("complete", True)
     expect(page.locator(".renders-block")).to_contain_text("seed 7")
     expect(page.locator(".form")).to_contain_text("revision of render 7")
@@ -137,7 +134,9 @@ def test_revise_opens_review_on_the_revision_and_approving_it_ends_at_the_hub(
     asking.get_by_role("button", name="Keep").click()
     expect(asking).to_have_count(0)
     page.get_by_role("button", name="Approve sheet").click()
-    expect(page).to_have_url(served.hub_of(REVISED))
+    expect(page.locator(".form")).to_contain_text("approved")
+    expect(page.locator("input.fragment")).to_have_count(0)
+    expect(page).to_have_url(review)
 
 
 @pytest.mark.spec("ui:compare:compare-shows-the-pair-and-the-change")

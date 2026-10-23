@@ -2,10 +2,10 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
 import type { HubInfo, InputStatus } from '../types'
-import { head, useQueue } from './useQueue'
+import { head, rail, useQueue } from './useQueue'
 
 /* `fetch` answers the hub with a batch built here, so the run directories the
-   count must agree with are the ones this file declares. The queue reads it
+   count must agree with are the ones this file declares. The rail reads it
    through the batch store, fresh for each test. */
 let hub: HubInfo
 
@@ -30,12 +30,12 @@ afterEach(() => {
 })
 
 spec('ui:approval:a-re-opened-input-is-not-counted-approved', async () => {
-  // Two runs hold an approved artifact in `f`: `a` approved, `b` re-opened
-  // over its approved one. `c` holds a draft alone.
+  // Two runs hold an approved artifact in `f`: `a` approved and short, `b`
+  // re-opened over its approved one. `c` holds a draft alone.
   hub = {
     batch: 'b',
     flows: ['f'],
-    sources: [source('a', 'approved'), source('b', 're-opened'), source('c', 'draft')],
+    sources: [source('a', 'approved', 1), source('b', 're-opened'), source('c', 'draft')],
   }
   const held = 2
   const queue = useQueue('b', 'f', () => 'c')
@@ -45,9 +45,24 @@ spec('ui:approval:a-re-opened-input-is-not-counted-approved', async () => {
   const reopened = queue.inputs.value.find((input) => input.id === 'b')
   expect(reopened?.status).toBe('re-opened')
   expect(queue.approved.value).toBe(held)
-  // The count is out of every sheet in the flow, as the approved count is: the
-  // rail lists only `b` and `c`, so its length would read "2 of 2 approved".
-  expect(queue.sheets.value).toBe(3)
+})
+
+spec('ui:review:the-rail-holds-every-unrendered-sheet', () => {
+  // `a` waits for review, `b` is approved and lacks an image, `c` has all its images.
+  const info: HubInfo = {
+    batch: 'b',
+    flows: ['f'],
+    sources: [source('a', 'draft'), source('b', 'approved', 1), source('c', 'approved', 0)],
+  }
+
+  const listed = rail(info, 'f', 'a')
+
+  expect(listed.map((input) => [input.id, input.status])).toEqual([
+    ['a', 'draft'],
+    ['b', 'approved'],
+  ])
+  // The open sheet stays, though it has all its images.
+  expect(rail(info, 'f', 'c').map((input) => input.id)).toEqual(['a', 'b', 'c'])
 })
 
 spec('ui:review:a-batch-opens-its-head', () => {
