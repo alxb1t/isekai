@@ -32,7 +32,7 @@ GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s
 POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}, and GET its /thumb
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
-GET  /events[?batch=|?staging=]                    Server-Sent Events
+GET  /events[?batch=&staging=], either or both    Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
 POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/discard
@@ -354,17 +354,18 @@ def create_app(
 
     @app.put("/api/staging/{staged}/files/{name}", status_code=202)
     async def put_file(staged: str, name: str, request: Request) -> dict[str, Any]:
-        """Hold one uploaded file for its import's reader, and answer `waiting`.
+        """Hold an upload for its import's reader; answer its id and `waiting`.
 
         The body is the file. One past the limit is refused by its declared
-        length before its body is read. Its reading is reported on the stream.
+        length before its body is read. Its reading is reported on the stream,
+        under its upload id.
         """
         held = imports.reader(staged)
         declared = request.headers.get("content-length")
         if declared is not None and declared.isdigit() and int(declared) > limit:
             raise importing.past_limit(name, int(declared), limit)
         body = await request.body()
-        return {"file": name, **await run_in_threadpool(held.put, name, body)}
+        return await run_in_threadpool(held.put, name, body)
 
     @app.get("/api/staging/{staged}/files/{name}/thumb")
     def read_staged_thumb(staged: str, name: str) -> Response:
@@ -526,14 +527,27 @@ def create_app(
     ) -> StreamingResponse:
         """Stream the job slot, `batch`'s hub and `staging`'s files, then each change.
 
-        A reload or a second tab gets the whole truth at once.
+        A reload or a second tab gets the whole truth at once. A batch or an import
+        it cannot read is left out of the snapshot, never refused.
         """
-        held = imports.reader(staging) if staging is not None else None
+        # An import it no longer holds is left out rather than refused: the page's
+        # one stream would never open again after a refused connect.
+        try:
+            held = imports.reader(staging) if staging is not None else None
+        except Refusal:
+            held = None
 
         def snapshot() -> dict[str, Any]:
             found = {"job": jobs.slot(), "billing": billing.state()}
             if batch is not None:
-                found["hub"] = _hub(library.hub(folder(batch), flows, wired.flows_dir))
+                # A batch it cannot read is left out: the screen's own read of it
+                # shows the refusal, and the page keeps its stream.
+                try:
+                    grid = library.hub(folder(batch), flows, wired.flows_dir)
+                except Refusal:
+                    pass
+                else:
+                    found["hub"] = _hub(grid)
             if held is not None:
                 found["files"] = held.files()
             return found

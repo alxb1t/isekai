@@ -9,6 +9,24 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-10-23 · 0068-the-store
+
+Gate: local 0m36s · CI 7m25s (build-image at 801ffec) · 0.41.0: local 0m37s · CI 7m25s
+
+### Changed
+
+- The page's job slot, billing and clock live in one Pinia store, `pinia` and `@vue/devtools-api` pinned
+  exactly; stopping a job and checking billing are its actions (0068 D1, D2).
+
+- A page holds one event stream, naming its batch and its open import, and opens it again when either
+  changes; the hub and the import sheet no longer open their own (0068 D3).
+
+- The open batch's hub, running cells, renders and Render offer live in one store, so Review and Renders
+  follow Prepare as the hub does; an offer answered after a newer one is dropped (0068 D4, D5, D7).
+
+- Each upload keeps its own state under the id its upload answers, so two files of one name are two
+  tiles; Import seals the reader, so an upload after it is refused rather than dropped (0068 D6, D7).
+
 ## [0.41.0] - 2026-10-23 · 0067-hub-and-renders
 
 Gate: local 0m37s · CI 7m25s (build-image at 801ffec) · 0.40.1: local 0m35s · CI 7m25s

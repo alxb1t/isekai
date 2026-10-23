@@ -3,7 +3,7 @@ import { noun } from '../words'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { quoteRender, startRender } from '../api'
-import { useLive } from '../composables/useLive'
+import { clock } from '../stores/live'
 import type { Quote } from '../types'
 
 /* The Render dialog (design spec J4·1): per flow what renders and what is left
@@ -13,7 +13,6 @@ import type { Quote } from '../types'
 const props = defineProps<{ batch: string }>()
 const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
-const { clock } = useLive()
 const quote = ref<Quote | null>(null)
 const refusal = ref<string | null>(null)
 const keepOpen = ref(false)

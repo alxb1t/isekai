@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { noun } from '../words'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
+import { useLiveStore } from '../stores/live'
 import type { StagedFile } from '../types'
 
 /* The New batch and Add sources sheet (design spec J1, J7): files chosen in the
    browser's dialog, each sent in its own request with its own bar, then read and
-   cleaned by the server one at a time, each step reported on the import's stream,
+   cleaned by the server one at a time, each step reported on the page's stream,
    then imported in one move. With `batch`, the files join that batch; without
    it, the sheet names a new one. */
 const props = defineProps<{ batch?: string }>()
@@ -15,18 +16,11 @@ const emit = defineEmits<{ close: []; imported: [batch: string] }>()
 /* `queued` before its upload starts; `waiting` and `converting` are the server's. */
 type Phase = 'queued' | 'uploading' | 'waiting' | 'converting' | 'read' | 'refused'
 
-/* One file's state, as the import's stream reports it. */
-interface FileEvent {
-  file: string
-  state: 'waiting' | 'converting' | 'refused' | StagedFile['state']
-  name?: string
-  carries?: string[]
-  refusal?: string
-}
-
 interface Tile {
   key: number
   file: File
+  /* The server's id for this upload, once its request is answered. */
+  upload: string | null
   phase: Phase
   progress: number
   result: StagedFile | null
@@ -34,10 +28,10 @@ interface Tile {
   asIs: boolean
 }
 
-/* One file, one request, its body the file itself, answered once its bytes land.
-   `XMLHttpRequest` rather than `fetch`, because only it reports an upload's
-   progress. */
-function uploadFile(id: string, file: File, onProgress: (fraction: number) => void): Promise<void> {
+/* One file, one request, its body the file itself, answered with its upload id
+   once its bytes land. `XMLHttpRequest` rather than `fetch`, because only it
+   reports an upload's progress. */
+function uploadFile(id: string, file: File, onProgress: (fraction: number) => void): Promise<string> {
   const url = `/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(file.name)}`
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -46,13 +40,13 @@ function uploadFile(id: string, file: File, onProgress: (fraction: number) => vo
       if (event.lengthComputable) onProgress(event.loaded / event.total)
     }
     xhr.onload = () => {
-      let body: { refusal?: string } = {}
+      let body: { refusal?: string; upload?: string } = {}
       try {
         body = JSON.parse(xhr.responseText) as typeof body
       } catch {
         body = {}
       }
-      if (xhr.status >= 200 && xhr.status < 300) resolve()
+      if (xhr.status >= 200 && xhr.status < 300 && body.upload) resolve(body.upload)
       else reject(new Error(body.refusal ?? `${file.name}: the server answered ${xhr.status}`))
     }
     xhr.onerror = () => reject(new Error(`${file.name}: the upload did not reach the server`))
@@ -68,13 +62,21 @@ const staging = ref<string | null>(null)
 const tiles = ref<Tile[]>([])
 const name = ref(new Date().toISOString().slice(0, 10))
 const refusal = ref<string | null>(null)
+/* Import's commit is in flight: no file is added, nor Import pressed again. */
+const committing = ref(false)
 let committed = false
+/* The sheet is gone: an import that opens after it is cancelled, never followed. */
+let closed = false
 let counter = 0
-let stream: EventSource | null = null
+const live = useLiveStore()
 const opening = openStaging().then(
   (opened) => {
+    if (closed) {
+      void cancelStaging(opened.id).catch(() => undefined)
+      return null
+    }
     staging.value = opened.id
-    listen(opened.id)
+    live.follow({ staging: opened.id })
     return opened.id
   },
   (reason: Error) => {
@@ -100,6 +102,7 @@ const shown = computed(() => tiles.value.filter((one) => one.phase !== 'refused'
 
 /* Import's reason for being disabled, or null when it is not (rule 4). */
 const disabled = computed(() => {
+  if (committing.value) return 'Importing'
   if (tiles.value.length === 0) return 'Choose files to import'
   if (reading.value) return `Reading ${read.value.length} of ${tiles.value.length}`
   if (ready.value.length === 0)
@@ -113,6 +116,7 @@ function choose(event: Event): void {
     tiles.value.push({
       key: counter++,
       file,
+      upload: null,
       phase: 'queued',
       progress: 0,
       result: null,
@@ -131,37 +135,27 @@ function pump(): void {
   for (const one of queued.slice(0, Math.max(PARALLEL - running.length, 0))) void send(one)
 }
 
-/* The import's stream: every file's state on connect, then each change. */
-function listen(id: string): void {
-  stream = new EventSource(`/events?${new URLSearchParams({ staging: id })}`)
-  stream.addEventListener('snapshot', (event) => {
-    const data = JSON.parse((event as MessageEvent<string>).data) as {
-      files?: Record<string, Omit<FileEvent, 'file'>>
-    }
-    for (const [file, state] of Object.entries(data.files ?? {})) apply({ file, ...state })
-  })
-  stream.addEventListener('file', (event) => {
-    apply(JSON.parse((event as MessageEvent<string>).data) as FileEvent)
-  })
-}
+/* The import's files, from the page's stream, each on the tile holding its upload. */
+watch(
+  () => live.files,
+  () => {
+    for (const one of tiles.value) apply(one)
+  },
+)
 
-/* Put a reported state on the first unread tile of that name. Its upload's
-   answer, not the stream, says it waits: the stream can report it first. */
-function apply(event: FileEvent): void {
-  if (event.state === 'waiting') return
-  const one = tiles.value.find(
-    (tile) =>
-      tile.file.name === event.file && tile.phase !== 'queued' && tile.phase !== 'read' && tile.phase !== 'refused',
-  )
-  if (!one) return
-  if (event.state === 'converting') {
+/* Put its upload's reported state on a tile. Its upload's answer, not the
+   stream, says it waits: the stream can report it first. */
+function apply(one: Tile): void {
+  const reported = one.upload === null ? undefined : live.files[one.upload]
+  if (!reported || reported.state === 'waiting') return
+  if (reported.state === 'converting') {
     one.phase = 'converting'
-  } else if (event.state === 'refused') {
+  } else if (reported.state === 'refused') {
     one.phase = 'refused'
-    one.refusal = event.refusal ?? `${event.file}: refused`
+    one.refusal = reported.refusal ?? `${reported.file}: refused`
   } else {
     one.phase = 'read'
-    one.result = { name: event.name ?? event.file, state: event.state, carries: event.carries ?? [] }
+    one.result = { name: reported.name ?? reported.file, state: reported.state, carries: reported.carries ?? [] }
   }
 }
 
@@ -174,10 +168,11 @@ async function send(one: Tile): Promise<void> {
     return
   }
   try {
-    await uploadFile(id, one.file, (fraction) => {
+    one.upload = await uploadFile(id, one.file, (fraction) => {
       one.progress = fraction
     })
     if (one.phase === 'uploading') one.phase = 'waiting'
+    apply(one)
   } catch (reason) {
     one.phase = 'refused'
     one.refusal = (reason as Error).message
@@ -217,17 +212,20 @@ async function importAll(): Promise<void> {
   const asIs = tiles.value
     .filter((one) => one.result?.state === 'not cleaned' && one.asIs)
     .map((one) => one.result?.name ?? '')
+  committing.value = true
   try {
     const done = await commitStaging(staging.value, target, asIs, adding.value)
     committed = true
     emit('imported', done.batch)
   } catch (reason) {
     refusal.value = (reason as Error).message
+  } finally {
+    committing.value = false
   }
 }
 
 async function cancel(): Promise<void> {
-  stream?.close()
+  live.follow({ staging: null })
   if (staging.value !== null && !committed) {
     committed = true
     await cancelStaging(staging.value).catch(() => undefined)
@@ -252,8 +250,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  closed = true
   window.removeEventListener('keydown', onKey)
-  stream?.close()
+  live.follow({ staging: null })
   if (staging.value !== null && !committed) void cancelStaging(staging.value).catch(() => undefined)
 })
 </script>
@@ -270,7 +269,12 @@ onUnmounted(() => {
           {{ tiles.length }} {{ noun(tiles.length, 'file') }} chosen ·
           {{ ready.length }} {{ noun(ready.length, 'source') }} · {{ refused.length }} refused
         </span>
-        <button class="btn btn-secondary import__add" type="button" @click="picker?.click()">
+        <button
+          class="btn btn-secondary import__add"
+          type="button"
+          :disabled="committing"
+          @click="picker?.click()"
+        >
           Add files…
         </button>
         <input

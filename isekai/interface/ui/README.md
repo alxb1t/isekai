@@ -14,8 +14,10 @@ hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶
 - **Import.** The sheet sends each chosen file in its own `PUT`, a bar each, answered once its bytes
   land. The import's reader in `pipeline/importing.py` then reads the files into the library's
   `.staging/` one at a time, cleaning each to its pixels and orientation and verifying it, and
-  `/events?staging=<id>` reports each tile's step; a read tile shows its preview. Import commits the
-  batch's `sources/` in one move. A staging folder left behind is swept when the server starts.
+  the page's stream, naming the import, reports each tile's step; a read tile shows its preview. Each upload
+  keeps its own state under the upload id its `PUT` answers, so two files of one name are two tiles. Import
+  seals the reader, so no upload lands once it commits the batch's `sources/` in one move. A staging
+  folder left behind is swept when the server starts.
 - **A tick** is `POST /api/b/{batch}/assign`, the same `assign` `isekai assign` runs: a flow's empty
   directory in the source's run. An untick past assigned is refused, so a tick never deletes work.
 - **Prepare** is one job in one slot (`jobs.py`). It asks Ollama first, then runs `isekai tag`,
@@ -32,8 +34,10 @@ hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶
 - **Billing** (`billing.py`) is read from gpunit's records in `.gpunit/`: a pod alert, the window's quiet
   item, or the band. gpunit is asked at start, every half minute while a session runs or an alert is
   open, and on Check again.
-- **`/events`** (`events.py`) streams a snapshot of the job slot, billing and the batch's hub on every
-  connect, then a `cell` event per progress line, the cell's stage read again from disk.
+- **`/events`** (`events.py`) streams a snapshot of the job slot, billing, the batch's hub and the import's
+  files on every connect, then a `cell` event per progress line, the cell's stage read again from disk. A page
+  holds one stream, naming its batch and its open import, and it opens again when either changes. A batch or
+  an import it cannot read is left out of the snapshot, so the stream still opens.
 
 The columns are the flows `config/ui.json` offers. The render's confirmation is the one act that
 spends money, and only as the CLI's own verb

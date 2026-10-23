@@ -1680,17 +1680,17 @@ def _upload(
 
 
 def _until_read(
-    feed: "queue.Queue[events.Event]", staged: str, names: set[str]
+    feed: "queue.Queue[events.Event]", staged: str, uploads: set[str]
 ) -> list[Any]:
-    """Return import `staged`'s `file` events, in order, until every name is read."""
+    """Return import `staged`'s `file` events, in order, until every upload is read."""
     seen: list[Any] = []
-    left = set(names)
+    left = set(uploads)
     while left:
         kind, data = feed.get(timeout=WAIT)
         if kind == "file" and data["staging"] == staged:
             seen.append(data)
             if data["state"] in _READ:
-                left.discard(data["file"])
+                left.discard(data["upload"])
     return seen
 
 
@@ -1725,7 +1725,7 @@ def test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn(
     assert [status for status, _ in answers] == [202, 202]
     assert [body["state"] for _, body in answers] == ["waiting", "waiting"]
     released.set()
-    _until_read(feed, staged, {"first.jpg", "second.jpg"})
+    _until_read(feed, staged, {body["upload"] for _, body in answers})
     assert reading == ["first.jpg", "second.jpg"]
     assert inside[1] == 1
 
@@ -1753,10 +1753,12 @@ def test_the_imports_stream_reports_a_file_waiting_converting_then_converted(
     def upload_once_open() -> None:
         try:
             assert snapshotted.wait(WAIT), "the stream framed no snapshot"
-            _upload(client, staged, "plain.heic", HEIC.read_bytes())
-            _upload(client, other, "elsewhere.jpg", photo_jpeg((9, 9, 9), (40, 30)))
-            _until_read(feed, staged, {"plain.heic"})
-            _until_read(feed, other, {"elsewhere.jpg"})
+            _, plain = _upload(client, staged, "plain.heic", HEIC.read_bytes())
+            _, away = _upload(
+                client, other, "elsewhere.jpg", photo_jpeg((9, 9, 9), (40, 30))
+            )
+            _until_read(feed, staged, {plain["upload"]})
+            _until_read(feed, other, {away["upload"]})
         except BaseException as failed:  # re-raised on the test's own thread
             failures.append(failed)
         finally:
@@ -1791,8 +1793,10 @@ def test_a_staged_files_preview_is_a_downscaled_jpeg_kept_nowhere(
 ) -> None:
     feed = _broadcast(client).subscribe()
     staged = client.post("/api/staging").json()["id"]
-    _upload(client, staged, "wide.jpg", photo_jpeg((30, 60, 90), (1600, 1200)))
-    (read,) = _until_read(feed, staged, {"wide.jpg"})[-1:]
+    _, wide = _upload(
+        client, staged, "wide.jpg", photo_jpeg((30, 60, 90), (1600, 1200))
+    )
+    (read,) = _until_read(feed, staged, {wide["upload"]})[-1:]
     before = snapshot(tmp_path / "lib")
 
     answered = client.get(f"/api/staging/{staged}/files/{read['name']}/thumb")

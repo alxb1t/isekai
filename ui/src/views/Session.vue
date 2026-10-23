@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { checkBilling, stopJob, thumbAt } from '../api'
-import { useLive } from '../composables/useLive'
+import { storeToRefs } from 'pinia'
+import { thumbAt } from '../api'
+import { alerting, clock, useLiveStore } from '../stores/live'
 
 /* The render session (design spec J4·2, J4·3), and the billing alert's way out
    (J8b). It exists only while a render's session is in the slot or an alert is
    open; otherwise it is Home. No spend is shown after the quote. */
 const router = useRouter()
-const { job, billing, loaded, now, alerting, clock } = useLive()
+const live = useLiveStore()
+const { job, billing, loaded, now } = storeToRefs(live)
 const refusal = ref<string | null>(null)
 
 const session = computed(() => (job.value?.kind === 'render' ? job.value.session : undefined))
@@ -54,7 +56,7 @@ const quiet = computed(
 
 async function stop(): Promise<void> {
   try {
-    await stopJob()
+    await live.stop()
   } catch (reason) {
     refusal.value = (reason as Error).message
   }
@@ -62,7 +64,7 @@ async function stop(): Promise<void> {
 
 async function check(): Promise<void> {
   try {
-    billing.value = (await checkBilling()).billing
+    await live.checkBilling()
   } catch (reason) {
     refusal.value = (reason as Error).message
   }

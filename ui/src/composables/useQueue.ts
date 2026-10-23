@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { hub } from '../api'
+import { useBatchStore } from '../stores/batch'
 import type { BatchInput, HubInfo } from '../types'
 
 /* The queue is the batch, one flow at a time: that flow's sheets not yet
@@ -36,11 +36,13 @@ export function after(info: HubInfo, flow: string, digest: string): string | nul
  * One batch in one flow, as Review's rail shows it: the queue, and the sheet
  * open now if it has left the queue by being approved.
  *
- * Read from `/api/b/{batch}/hub`, which lists the run directories on every
- * request, so the rail follows a verb run in the terminal.
+ * Read from the batch store's hub, which `load` reads again from the run
+ * directories, so the rail follows a verb run in the terminal.
  */
 export function useQueue(batch: string, flow: string, current: () => string) {
-  const info = ref<HubInfo | null>(null)
+  const store = useBatchStore()
+  store.open(batch)
+  const info = computed(() => store.hub)
   const edited = ref(new Set<string>())
   const loading = ref(true)
 
@@ -82,8 +84,7 @@ export function useQueue(batch: string, flow: string, current: () => string) {
   /** Re-read the hub; a refusal is thrown to the caller, who decides where it shows. */
   async function load(): Promise<HubInfo> {
     try {
-      info.value = await hub(batch)
-      return info.value
+      return await store.reloadHub()
     } finally {
       loading.value = false
     }

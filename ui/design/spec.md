@@ -417,7 +417,8 @@ idle ──confirm──▶ running ──▶ (render) teardown ──▶ done �
   `{"step": "teardown", "state": "confirmed"}`). The server reads the child's stdout; the human output still goes to
   `log.txt`, which the UI never parses.
 - **The page is told over SSE**: one stream, `/events`, a full snapshot on every connect — the job slot, the
-  open batch's cells, billing state — then only changes. Actions are HTTP POSTs.
+  open batch's cells, the open import's files, billing state — then only changes. The stream names the page's
+  batch and its open import, and opens again when either changes. Actions are HTTP POSTs.
 - **The hub's cells** are a listing of `runs/`, read again on each progress event.
 - **gpunit is asked** every ~30 s while a session runs or an alert is unresolved, on Check again, and once at
   server start. The volume item and its band run on a timer from the window's end gpunit recorded locally. Idle, the
