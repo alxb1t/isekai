@@ -31,6 +31,8 @@ export interface LibraryRow {
   name: string
   batch: boolean
   sources: number
+  /* The first sources' names, in the hub's order: the row's thumbnails. */
+  thumbs: string[]
   flows: FlowCount[]
   without_flow: number
   newest: number | null

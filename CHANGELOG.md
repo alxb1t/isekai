@@ -12,6 +12,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The hub shows each source's thumbnail, upright, and its size read from its own file, run or none; the
   thumbnail opens the source in a viewer dialog, fitted, a click for 1:1 (0067 D1, D2, D3).
 
+- Home's row shows its first sources' thumbnails, then `+n`, and *New batch* sits in the library's header
+  row, or under the privacy line on a first start (0067 D3, D10).
+
 ## [0.40.1] - 2026-10-23 · 0066-the-quick-patch
 
 Gate: local 0m35s · CI 7m25s (build-image at 801ffec) · 0.40.0: local 0m34s · CI 1m12s

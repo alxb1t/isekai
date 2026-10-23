@@ -315,8 +315,7 @@ Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`,
 | J7·4 two new rows, bare checkboxes | ⌘↵ Import 2 | same |
 
 ```
-J7·1  [ New batch ⌥N ]
-      LIBRARY · 4 batches · newest activity first
+J7·1  LIBRARY · 4 batches · newest activity first                              [ New batch ⌥N ]
       BATCH            SOURCES  ▢▢▢▢▢▢▢+5  FLOWS                                         LAST ACTIVITY ↓
       2026-09-17       6 sources [thumbs]  [summon-anime-wai 2/5 approved · 1/5 rendered]
                                            [conjure-anime-wai 1/2 approved · 0/2 rendered]  today 15:31

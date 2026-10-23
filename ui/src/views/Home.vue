@@ -2,14 +2,15 @@
 import { noun } from '../words'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { library } from '../api'
+import { library, sourceThumbAt } from '../api'
 import ImportSheet from '../components/ImportSheet.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import type { LibraryRow } from '../types'
 
 /* Home: every folder of the library, batches by their newest file first, the
    rest after them, inert (design spec J7·1). New batch opens the import sheet
-   over it (J1); on a first start it follows the privacy line (J1·1). */
+   over it (J1); it sits in the library's header row, and on a first start under
+   the privacy line (J1·1). */
 const router = useRouter()
 const rows = ref<LibraryRow[] | null>(null)
 const batchCount = computed(() => rows.value?.filter((row) => row.batch).length ?? 0)
@@ -81,16 +82,20 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
         Sources are copied into ~/isekai/. A photograph leaves this Mac only to be rendered:
         metadata stripped, held only in the GPU pod's memory, and gone when the pod is.
       </p>
-    </div>
-    <div class="home__head">
       <button class="btn btn-primary" type="button" @click="importing = true">
         New batch<span class="appbar__key">⌥N</span>
       </button>
     </div>
-    <template v-if="rows.length > 0">
-      <p class="section-label">
-        library · {{ batchCount }} {{ noun(batchCount, 'batch', 'batches') }} · newest activity first
-      </p>
+    <template v-else>
+      <div class="home__head">
+        <p class="section-label">
+          library · {{ batchCount }} {{ noun(batchCount, 'batch', 'batches') }} · newest activity
+          first
+        </p>
+        <button class="btn btn-primary" type="button" @click="importing = true">
+          New batch<span class="appbar__key">⌥N</span>
+        </button>
+      </div>
       <div ref="list" class="library">
         <template v-for="row in rows" :key="row.name">
           <div
@@ -102,7 +107,22 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
             @keydown="onKey($event, row)"
           >
             <span class="library__name">{{ row.name }}</span>
-            <span class="library__meta">{{ row.sources }} {{ noun(row.sources, 'source') }}</span>
+            <div class="library__sources">
+              <span class="library__meta">{{ row.sources }} {{ noun(row.sources, 'source') }}</span>
+              <span v-if="row.thumbs.length" class="library__thumbs">
+                <img
+                  v-for="name in row.thumbs"
+                  :key="name"
+                  class="library__thumb"
+                  :src="sourceThumbAt(row.name, name)"
+                  alt=""
+                  loading="lazy"
+                />
+                <span v-if="row.sources > row.thumbs.length" class="library__meta">
+                  +{{ row.sources - row.thumbs.length }}
+                </span>
+              </span>
+            </div>
             <div class="library__chips">
               <span v-for="one in row.flows" :key="one.flow" class="library__chip">
                 {{ one.flow }} {{ one.approved }}/{{ one.of }} approved ·

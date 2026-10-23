@@ -6,7 +6,7 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 ## Progress
 
 - [x] 1 — Source images and the viewer
-- [ ] 2 — Home
+- [x] 2 — Home
 - [ ] 3 — Cell actions
 - [ ] 4 — The Render bar
 - [ ] 5 — The Renders grid
@@ -32,17 +32,17 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 
 ## 2 — Home
 
-- [ ] 2.1 Add `thumbs` to `Row` in `isekai/interface/ui/library.py` per [D3](design.md#d3); bind
+- [x] 2.1 Add `thumbs` to `Row` in `isekai/interface/ui/library.py` per [D3](design.md#d3); bind
   `ui:batch-folder:a-row-names-its-first-sources` in `tests/test_ui_library.py`.
   Verify: `uv run pytest -q tests/test_ui_library.py` exits 0, and `grep -c 'ui:batch-folder:a-row-names-its-first-sources' tests/test_ui_library.py` prints `1`.
-- [ ] 2.2 Draw each row's thumbnails and `+n`, and move *New batch* into the library's header row, in
+- [x] 2.2 Draw each row's thumbnails and `+n`, and move *New batch* into the library's header row, in
   `ui/src/views/Home.vue`, with `thumbs` in `ui/src/types.ts`, per [D3](design.md#d3).
   Verify: `uv run python -m tools.typecheck_ui` exits 0, and `grep -c 'thumbs' ui/src/views/Home.vue` prints a number of at least `1`.
-- [ ] 2.3 Move the first-start step out of `test_each_chosen_file_shows_its_upload_then_its_result` into a new
+- [x] 2.3 Move the first-start step out of `test_each_chosen_file_shows_its_upload_then_its_result` into a new
   `test_first_start_shows_new_batch_under_the_privacy_line` in `tests/e2e/test_import.py`, bound to
   `ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line`, per [D10](design.md#d10).
   Verify: `uv run pytest -q tests/e2e/test_import.py` exits 0, and `grep -c 'first-start-shows-new-batch-under-the-privacy-line' tests/e2e/test_import.py` prints `1`.
-- [ ] 2.4 In `ui/design/spec.md` J7·1, put `[ New batch ⌥N ]` at the right of the `LIBRARY · 4 batches` line.
+- [x] 2.4 In `ui/design/spec.md` J7·1, put `[ New batch ⌥N ]` at the right of the `LIBRARY · 4 batches` line.
   Verify: `grep -c 'newest activity first.*New batch' ui/design/spec.md` prints `1`.
 
 ## 3 — Cell actions

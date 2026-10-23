@@ -80,6 +80,9 @@ _KINDS: Mapping[str, str] = {
     OUTPUTS: "render",
 }
 
+# How many of a batch's sources Home's row shows as thumbnails, before `+n`.
+ROW_THUMBS = 7
+
 # A source's digest, what it carries and its size, by what its file's stat says:
 # reading every photograph on every listing would read the whole library each time.
 _DIGESTS: dict[tuple[str, int, int, int], str] = {}
@@ -128,11 +131,15 @@ class FlowCount:
 
 @dataclass(frozen=True)
 class Row:
-    """One folder of the library, as Home lists it."""
+    """One folder of the library, as Home lists it.
+
+    `thumbs` names its first `ROW_THUMBS` sources, in the hub's order.
+    """
 
     name: str
     batch: bool
     sources: int = 0
+    thumbs: tuple[str, ...] = ()
     flows: tuple[FlowCount, ...] = ()
     without_flow: int = 0
     newest: float | None = None
@@ -599,6 +606,7 @@ def _row(folder: Path, suffixes: Mapping[str, str]) -> Row:
         folder.name,
         True,
         sources=len(grid.sources),
+        thumbs=tuple(one.name for one in grid.sources[:ROW_THUMBS]),
         flows=tuple(count for count in counts if count.of),
         without_flow=len(bare),
         newest=newest,

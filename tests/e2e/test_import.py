@@ -81,9 +81,9 @@ def _tile(page: Page, name: str):  # noqa: ANN202
     return page.locator(f'.import__tile[data-file="{name}"]')
 
 
-@pytest.mark.spec("ui:sheet:each-file-shows-its-progress")
-def test_each_chosen_file_shows_its_upload_then_its_result(
-    page: Page, served: Served, tmp_path: Path
+@pytest.mark.spec("ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line")
+def test_first_start_shows_new_batch_under_the_privacy_line(
+    page: Page, served: Served
 ) -> None:
     page.route("**/api/library", lambda route: route.fulfill(json={"rows": []}))
     page.goto(served.url)
@@ -92,6 +92,12 @@ def test_each_chosen_file_shows_its_upload_then_its_result(
     below, above = first.bounding_box(), privacy.bounding_box()
     assert below is not None and above is not None
     assert below["y"] >= above["y"] + above["height"]
+
+
+@pytest.mark.spec("ui:sheet:each-file-shows-its-progress")
+def test_each_chosen_file_shows_its_upload_then_its_result(
+    page: Page, served: Served, tmp_path: Path
+) -> None:
     held = _hold(page, "held.jpg")
     stream = _hold_stream(page)
     files = [

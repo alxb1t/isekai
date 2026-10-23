@@ -612,7 +612,7 @@ body {
 
 .library__row {
   display: grid;
-  grid-template-columns: 220px 120px 1fr 200px;
+  grid-template-columns: 220px 260px 1fr 200px;
   gap: 16px;
   align-items: start;
   padding: 14px 8px;
@@ -640,6 +640,26 @@ body {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--ink-2);
+}
+
+.library__sources {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.library__thumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.library__thumb {
+  width: 28px;
+  height: 38px;
+  object-fit: cover;
+  background: var(--placeholder);
+  border-radius: 3px;
 }
 
 .library__chips {
@@ -1509,7 +1529,7 @@ body {
   height: 60px;
   padding: 0;
   overflow: hidden;
-  background: repeating-linear-gradient(135deg, #1f2030 0 5px, #26273b 5px 10px);
+  background: var(--placeholder);
   border: none;
   border-radius: 3px;
   cursor: zoom-in;
@@ -1793,8 +1813,8 @@ body {
 .home__head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 14px;
-  margin-bottom: 12px;
 }
 
 .hub__add {
