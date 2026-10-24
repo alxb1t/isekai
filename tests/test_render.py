@@ -15,6 +15,7 @@ import tomllib
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,13 @@ import pytest
 
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyClient, ComfyTransport, TransportFailure
-from isekai.foundation.artifacts import RENDER_FILE, read
+from isekai.foundation.artifacts import (
+    RENDER_FILE,
+    SESSION_ID,
+    SESSIONS,
+    read,
+    session_id,
+)
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.run import REPOSITORY, Run, open_run
 from isekai.interface import render
@@ -146,6 +153,7 @@ def session(
     opener: gpu.OpenSession | None = None,
     client: ComfyTransport | None = None,
     wiring: Wiring | None = None,
+    given: str | None = None,
     **seams: Any,  # noqa: ANN401 -- `render.Seams`'s fields, by name
 ) -> int:
     defaults = render.Seams(
@@ -156,7 +164,7 @@ def session(
         kill=lambda: None,
     )
     return render.run_session(
-        argparse.Namespace(runs=runs, requests=list(requests)),
+        argparse.Namespace(runs=runs, requests=list(requests), session=given),
         wiring or wired(runs),
         generate if generate is not None else Calls(),
         dataclasses.replace(defaults, **seams),
@@ -237,6 +245,8 @@ def test_the_report_is_asked_through_the_forwarded_port_before_any_render(
     assert calls.rendered() == [
         [
             "generate",
+            "--progress",
+            "json",
             "--flow",
             FLOW,
             "--count",
@@ -432,9 +442,23 @@ def test_the_session_is_opened_on_the_repositorys_gpunit_toml_alone(
     calls = Calls()
     environ = {"ISEKAI_IMAGE": "ghcr.io/a/b:latest", "GPUNIT_IMAGE": "x"}
 
-    assert session(runs, f"{FLOW}=1", generate=calls, opener=gpu.open_session) == 0
+    assert (
+        session(
+            runs,
+            f"{FLOW}=1",
+            generate=calls,
+            opener=gpu.open_session,
+            given="20261024T091200Z",
+        )
+        == 0
+    )
     status = session(
-        runs, f"{FLOW}=1", generate=calls, opener=gpu.open_session, environ=environ
+        runs,
+        f"{FLOW}=1",
+        generate=calls,
+        opener=gpu.open_session,
+        environ=environ,
+        given="20261024T091201Z",
     )
 
     assert status == 0
@@ -546,7 +570,8 @@ def test_with_no_request_a_run_without_the_flow_is_skipped(
 
     assert session(root, generate=calls) == 0, log(root)
     assert calls.rendered() == [
-        ["generate", "--flow", FLOW, "--server", f"http://127.0.0.1:{LOCAL_PORT}"]
+        ["generate", "--progress", "json", "--flow", FLOW]
+        + ["--server", f"http://127.0.0.1:{LOCAL_PORT}"]
         + ["--runs", str(root), held.id]
     ]
     assert bare.id not in log(root)
@@ -663,11 +688,19 @@ def test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down(
         return Raising()
 
     # gpunit reads no .env, and the key lives only there: each remedy loads it.
-    assert session(runs, f"{FLOW}=1", opener=raising(gpunit.Lost())) == 3
+    assert (
+        session(
+            runs, f"{FLOW}=1", opener=raising(gpunit.Lost()), given="20261024T091200Z"
+        )
+        == 3
+    )
     assert "`uv run --env-file .env gpunit status` shows" in log(runs)
     assert "`uv run --env-file .env gpunit down` deletes it" in log(runs)
     failed = gpunit.TeardownFailed("the teardown failed")
-    assert session(runs, f"{FLOW}=1", opener=raising(failed)) == 1
+    assert (
+        session(runs, f"{FLOW}=1", opener=raising(failed), given="20261024T091201Z")
+        == 1
+    )
     assert "run `uv run --env-file .env gpunit down`" in log(runs)
 
 
@@ -782,6 +815,131 @@ def test_a_session_whose_endpoint_never_answers_reports_its_teardown(
     assert lines[-1] == {"step": "teardown", "state": "done"}
 
 
+def records(runs: Path) -> list[dict[str, Any]]:
+    """Return the batch's session records, by name."""
+    folder = runs.parent / SESSIONS
+    return [json.loads(path.read_text()) for path in sorted(folder.glob("*.json"))]
+
+
+def landing(*seeds: str, seen: list[dict[str, Any]]) -> Calls:
+    """Return a `generate` stub landing each seed, noting the record after each."""
+
+    def land(argv: list[str], wired: Wiring) -> int:
+        if "--server" not in argv:
+            return 0
+        runs = Path(argv[argv.index("--runs") + 1])
+        for seed in seeds:
+            line: dict[str, object] = {"run": "r1", "flow": FLOW, "digest": "d1"}
+            line |= {"stage": "render", "state": "done", "version": 1, "seed": seed}
+            print(json.dumps(line), file=wired.out)
+            seen.extend(records(runs))
+        return 0
+
+    return Calls(land)
+
+
+@pytest.mark.spec("cli:render-session:a-session-writes-its-record")
+def test_a_session_writes_its_record_of_each_image_and_no_price(
+    tmp_path: Path,
+) -> None:
+    runs = batch(tmp_path)
+
+    assert session(runs, f"{FLOW}=2", generate=landing("7", "8", seen=[])) == 0
+
+    (record,) = records(runs)
+    assert record["schema"] == {"name": "session", "version": 1}
+    assert record["images"] == [
+        {"digest": "d1", "flow": FLOW, "version": 1, "seed": seed}
+        for seed in ("7", "8")
+    ]
+    assert (record["outcome"], record["message"]) == ("done", None)
+    assert record["asked"] == {FLOW: 2}
+    assert record["steps"] == {"pod": "ready", "teardown": "done"}
+    assert record["ended"] is not None
+    assert set(record) == {
+        "schema", "id", "started", "ended", "limit", "asked", "steps", "images",
+        "outcome", "message",
+    }  # fmt: skip
+
+
+@pytest.mark.spec("cli:render-session:the-record-follows-each-image")
+def test_the_record_reads_running_with_the_first_image_before_the_second(
+    tmp_path: Path,
+) -> None:
+    runs = batch(tmp_path)
+    seen: list[dict[str, Any]] = []
+
+    assert session(runs, f"{FLOW}=2", generate=landing("7", "8", seen=seen)) == 0
+
+    first = seen[0]
+    assert first["outcome"] == "running"
+    assert [image["seed"] for image in first["images"]] == ["7"]
+    assert first["ended"] is None
+
+
+@pytest.mark.spec("cli:render-session:the-given-id-names-the-record")
+def test_the_given_id_names_the_record_and_another_shape_is_refused(
+    tmp_path: Path,
+) -> None:
+    runs = batch(tmp_path)
+    given = "20261024T091200Z"
+
+    assert session(runs, f"{FLOW}=1", given=given) == 0
+
+    named = runs.parent / SESSIONS / f"{given}.json"
+    assert json.loads(named.read_text())["id"] == given
+    # The id the start writes is one the flag reads.
+    assert SESSION_ID.fullmatch(session_id(datetime.now(UTC)))
+    # The id names a file, so no other shape reaches a path.
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["render", str(runs), "--session", "../x"])
+
+
+@pytest.mark.spec("cli:render-session:a-refusal-before-renting-writes-none")
+def test_a_session_refused_before_renting_writes_no_record(tmp_path: Path) -> None:
+    runs = batch(tmp_path)
+
+    assert session(runs, f"{FLOW}=1", busy=lambda port: True) == 1
+
+    assert not (runs.parent / SESSIONS).exists()
+
+
+@pytest.mark.spec("cli:render-session:a-refusal-before-renting-writes-none")
+def test_a_folder_without_links_or_locks_refuses_before_renting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import errno
+    import fcntl
+
+    from isekai.foundation import atomic_write
+
+    runs = batch(tmp_path)
+    folder = runs.parent / SESSIONS
+
+    def unsupported(*args: object) -> None:
+        raise OSError(errno.ENOTSUP, "Operation not supported")
+
+    def lockless(*args: object) -> None:
+        raise OSError(errno.ENOLCK, "No locks available")
+
+    for target, name, fault in (
+        (atomic_write.os, "link", unsupported),
+        (fcntl, "flock", lockless),
+    ):
+        with monkeypatch.context() as patched:
+            patched.setattr(target, name, fault)
+            wiring, opener = wired(runs), FakeOpen()
+            assert session(runs, f"{FLOW}=1", opener=opener, wiring=wiring) == 1
+            assert opener.opened == 0
+            assert isinstance(wiring.err, io.StringIO)
+            assert f"refused: {folder}" in wiring.err.getvalue()
+            assert list(folder.glob("*.json")) == []
+            assert list(folder.glob("*.partial")) == []
+            # The reader on such a folder reads no render running, and never crashes.
+            (folder / "20261024T091200Z.lock").touch()
+            assert not render.record_running(folder / "20261024T091200Z.json")
+
+
 TIMING = render.Timing(
     boot_s=600, per_image_s=60, teardown_s=120, limit_factor=1.5, volume_rate=0.005
 )
@@ -879,3 +1037,65 @@ def test_the_env_file_is_read_as_key_value_lines(tmp_path: Path) -> None:
         "BARE": "v",
     }
     assert gpu.read_env(tmp_path / "absent") == {}
+
+
+@pytest.mark.spec("cli:render-session:an-owned-id-is-refused")
+def test_an_owned_session_id_refuses_before_renting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runs = batch(tmp_path)
+    given = "20261024T091200Z"
+    assert session(runs, f"{FLOW}=1", given=given) == 0
+    path = runs.parent / SESSIONS / f"{given}.json"
+    previous = path.read_bytes()
+    for chosen in (given, None):
+        monkeypatch.setattr(render, "session_id", lambda moment: given)
+        opener = FakeOpen()
+        assert session(runs, f"{FLOW}=1", given=chosen, opener=opener) == 1
+        assert opener.opened == 0
+        assert path.read_bytes() == previous
+
+
+@pytest.mark.spec("cli:render-session:concurrent-starts-reserve-one-record")
+def test_concurrent_starts_reserve_one_whole_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    from isekai.foundation.refusal import Refusal
+
+    barrier = threading.Barrier(2)
+
+    def start() -> bool:
+        record = render.Record(tmp_path, "20261024T091200Z", 1200, {FLOW: 1})
+        barrier.wait(timeout=5)
+        try:
+            record.open()
+        except Refusal:
+            return False
+        return True
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        outcomes = list(workers.map(lambda _: start(), range(2)))
+    assert sorted(outcomes) == [False, True]
+    record = json.loads((tmp_path / "20261024T091200Z.json").read_text())
+    assert record["outcome"] == "running"
+    assert record["asked"] == {FLOW: 1}
+
+    # Even a writer outside the lifetime-lock protocol cannot be replaced in the
+    # gap before publication. The complete record that won stays byte-for-byte.
+    from isekai.foundation import atomic_write
+
+    original = atomic_write.os.link
+    occupied = tmp_path / "20261024T091201Z.json"
+    previous = (tmp_path / "20261024T091200Z.json").read_bytes()
+
+    def raced(source: str, destination: Path) -> None:
+        destination.write_bytes(previous)
+        original(source, destination)
+
+    monkeypatch.setattr(atomic_write.os, "link", raced)
+    with pytest.raises(Refusal, match="already exists"):
+        render.Record(tmp_path, "20261024T091201Z", 1200, {FLOW: 2}).open()
+    assert occupied.read_bytes() == previous
+    assert list(tmp_path.glob("*.partial")) == []

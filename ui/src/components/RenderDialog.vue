@@ -29,8 +29,18 @@ async function confirm(): Promise<void> {
   if (!quote.value || quote.value.disabled || starting.value) return
   starting.value = true
   try {
-    await startRender(props.batch, keepOpen.value, quote.value.estimate.limit_s, total.value)
-    void router.push({ name: 'session' })
+    const { job } = await startRender(
+      props.batch,
+      keepOpen.value,
+      quote.value.estimate.limit_s,
+      total.value,
+    )
+    const id = job.session?.id
+    void router.push(
+      id
+        ? { name: 'session', params: { batch: props.batch, id } }
+        : { name: 'sessions', params: { batch: props.batch } },
+    )
   } catch (reason) {
     refusal.value = (reason as Error).message
   } finally {

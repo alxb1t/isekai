@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import Billing from './views/Billing.vue'
 import Home from './views/Home.vue'
 import Compare from './views/Compare.vue'
 import Hub from './views/Hub.vue'
@@ -6,7 +7,8 @@ import RenderLarge from './views/RenderLarge.vue'
 import Renders from './views/Renders.vue'
 import Review from './views/Review.vue'
 import ReviewHead from './views/ReviewHead.vue'
-import Session from './views/Session.vue'
+import SessionPage from './views/SessionPage.vue'
+import Sessions from './views/Sessions.vue'
 
 /* Every screen has a URL naming its batch and its run (design spec §4). The
    server answers any of them with the shell, so a reload lands where it was.
@@ -31,7 +33,9 @@ export const router = createRouter({
       component: Compare,
       props: true,
     },
-    { path: '/session', name: 'session', component: Session },
+    { path: '/b/:batch/sessions', name: 'sessions', component: Sessions, props: true },
+    { path: '/b/:batch/sessions/:id', name: 'session', component: SessionPage, props: true },
+    { path: '/billing', name: 'billing', component: Billing },
     { path: '/:rest(.*)*', redirect: '/' },
   ],
 })

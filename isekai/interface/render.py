@@ -9,12 +9,15 @@ With no request, every approval short of its count renders what it lacks. A coun
 draws that many seeds; a source flow renders its latest seeds again. A source
 rendered by count in the same line goes first, in the same session. Output is shown
 and appended to the batch's log, `<runs>/../log.txt` (D36); with `--progress json`
-the prose goes to stderr alone, which the caller keeps, as the app's job does.
+the prose goes to stderr alone, which the caller keeps, as the app's job does. Once
+the pod is asked for, the session's record is kept at `<runs>/../sessions/<id>.json`.
 """
 
 import argparse
 import contextlib
 import dataclasses
+import errno
+import fcntl
 import io
 import json
 import math
@@ -26,6 +29,7 @@ import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TextIO, cast
 
@@ -33,6 +37,14 @@ from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyTransport
 from isekai.boundary.gpu import Seams
 from isekai.boundary.pod_start import HOLD_SECONDS
+from isekai.foundation.artifacts import (
+    SESSION_FILE,
+    SESSIONS,
+    SessionRecord,
+    create,
+    replace,
+    session_id,
+)
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -175,9 +187,141 @@ def await_endpoint(
             time.sleep(poll_s)
 
 
+def _utc(moment: datetime) -> str:
+    """Return `moment` as the record spells a time, e.g. 2026-10-24T09:12:00Z."""
+    return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# What a filesystem without hard links or advisory locks answers `link` or `flock`.
+UNSUPPORTED = frozenset(
+    {errno.ENOTSUP, errno.EOPNOTSUPP, errno.EPERM, errno.ENOLCK, errno.ENOSYS}
+)
+
+
+def record_running(path: Path) -> bool:
+    """Return whether a render process holds this record's lifetime lock.
+
+    The lock file stays in place across releases, so opening it always tests the
+    same inode; the kernel releases its lock even when the render is killed. A
+    filesystem without locks holds no running render, since `Record.open`
+    refuses to start one there.
+    """
+    try:
+        held = path.with_suffix(".lock").open("r")
+    except FileNotFoundError:
+        return False
+    with held:
+        try:
+            fcntl.flock(held, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        except OSError as failure:
+            if failure.errno not in UNSUPPORTED:
+                raise
+    return False
+
+
+class Record:
+    """A session's record in `folder`, written whole at each change once opened.
+
+    Nothing is written before `open`, so a session refused before renting leaves
+    no record (D2).
+    """
+
+    def __init__(
+        self, folder: Path, given: str | None, limit: int, asked: Mapping[str, int]
+    ) -> None:
+        """Name the record by `given`, else by its start, once it opens."""
+        self._folder = folder
+        self._given = given
+        # Where the record is, once open: the one sign it is written.
+        self._path: Path | None = None
+        self._held: TextIO | None = None
+        self._body: SessionRecord = {
+            "schema": SESSION_FILE.schema,
+            "id": "",
+            "started": "",
+            "ended": None,
+            "limit": limit,
+            "asked": dict(asked),
+            "steps": {},
+            "images": [],
+            "outcome": "running",
+            "message": None,
+        }
+        # Why the session is ending, when the watchdog ends it.
+        self.note: str | None = None
+
+    def open(self) -> None:
+        """Write the record as running."""
+        started = datetime.now(UTC)
+        name = self._given or session_id(started)
+        self._body["id"], self._body["started"] = name, _utc(started)
+        path = self._folder / f"{name}.json"
+        self._folder.mkdir(parents=True, exist_ok=True)
+        self._held = path.with_suffix(".lock").open("a")
+        try:
+            fcntl.flock(self._held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            create(path, SESSION_FILE, self._body)
+        except (BlockingIOError, FileExistsError):
+            self.close()
+            raise Refusal(
+                f"session {name} already exists; choose another --session id "
+                "or wait until the next second and render again"
+            ) from None
+        except OSError as failure:
+            self.close()
+            if failure.errno not in UNSUPPORTED:
+                raise
+            raise Refusal(
+                f"{self._folder} cannot hold a session record: its filesystem has "
+                f"no hard links or file locks ({failure.strerror}); keep the batch "
+                "on a disk that has both, such as the default .data/, and render again"
+            ) from None
+        except BaseException:
+            self.close()
+            raise
+        self._path = path
+
+    def close(self) -> None:
+        """Release the process's liveness lock without inventing an outcome."""
+        if self._held is not None:
+            self._held.close()
+            self._held = None
+
+    def step(self, step: str, state: str) -> None:
+        """Record `step` at `state`."""
+        self._body["steps"][step] = state
+        self._write()
+
+    def image(self, item: Mapping[str, Any]) -> None:
+        """Record the image a `generate` line landed."""
+        self._body["images"].append(
+            {
+                "digest": item["digest"],
+                "flow": item["flow"],
+                "version": item["version"],
+                "seed": item["seed"],
+            }
+        )
+        self._write()
+
+    def end(self, outcome: str, message: str | None = None) -> None:
+        """Record the session ended at `outcome`."""
+        self._body["ended"] = _utc(datetime.now(UTC))
+        self._body["outcome"] = outcome
+        self._body["message"] = message
+        self._write()
+
+    def _write(self) -> None:
+        if self._path is not None:
+            replace(self._path, SESSION_FILE, self._body)
+
+
 class Steps:
     """A session's JSON lines on `out`, one per step, when `enabled`.
 
+    Each step and image reaches `record` too, whether or not it is printed.
     e.g. {"step": "image", "n": 2, "of": 4, "run": "…", "flow": "…", "state": "done"}
     """
 
@@ -186,29 +330,39 @@ class Steps:
         self.out = out
         self.enabled = enabled
         self.flag: tuple[str, ...] = ("--progress", "json") if enabled else ()
+        self.record: Record | None = None
         self._n = 0
 
-    def step(self, step: str, state: str, **more: object) -> None:
-        """Print one step's line."""
+    def step(self, step: str, state: str) -> None:
+        """Print one step's line, and record it."""
+        if self.record is not None:
+            self.record.step(step, state)
+        self._line(step=step, state=state)
+
+    def _line(self, **line: object) -> None:
         if self.enabled:
             # Flushed: a job reads this from a pipe, line by line, as it happens.
-            line = {"step": step, **more, "state": state}
             print(json.dumps(line), file=self.out, flush=True)
 
     def child(self, total: int = 0) -> TextIO:
-        """Return where a `generate` line writes: its image lines become steps."""
-        if not self.enabled:
+        """Return where a `generate` line writes: its image lines become steps.
+
+        Once a record is kept, every image reaches it, whether or not it prints.
+        """
+        if not (self.enabled or self.record):
             return self.out
         # A text stream as `_Tee` is; `TextIO` is a type no stream class subclasses.
         return cast("TextIO", _Images(self, total))
 
     def image(self, item: Mapping[str, Any], total: int) -> None:
         """Print the next image's line, of `total`, naming its run, flow and seed."""
+        if self.record is not None:
+            self.record.image(item)
         self._n += 1
         named = {
             key: item.get(key) for key in ("run", "digest", "flow", "version", "seed")
         }
-        self.step("image", "done", n=self._n, of=total, **named)
+        self._line(step="image", n=self._n, of=total, **named, state="done")
 
 
 class _Images(io.TextIOBase):
@@ -267,8 +421,9 @@ def run_session(
         steps = Steps(logged.out, json_lines)
         try:
             limit = getattr(args, "limit", None)
+            given = getattr(args, "session", None)
             return _session(
-                runs, list(args.requests), limit, logged, generate, seams, steps
+                runs, list(args.requests), limit, given, logged, generate, seams, steps
             )
         except Refusal as refused:
             print(f"refused: {refused}", file=logged.err)
@@ -527,6 +682,7 @@ def _session(
     runs: Path,
     texts: list[str],
     asked: int | None,
+    given: str | None,
     wired: Wiring,
     generate: Generate,
     seams: Seams,
@@ -589,13 +745,16 @@ def _session(
     limit = asked or _estimated(runs, ids, _images(lines), timing, ceiling_s).limit_s
     again = shlex.join(["uv", "run", "python", "-m", "isekai", "render", str(runs)])
     rest = "".join(f" {text}" for text in texts)
+    record = Record(runs.parent / SESSIONS, given, limit, _images(lines))
+    steps.record = record
 
     def reached() -> None:
-        print(
-            f"refused: the session reached its {limit}s limit; renders so far are "
-            f"kept, and in a new session `{again}{rest}` renders only the rest",
-            file=wired.err,
+        ended = (
+            f"the session reached its {limit}s limit; renders so far are "
+            f"kept, and in a new session `{again}{rest}` renders only the rest"
         )
+        record.note = ended
+        print(f"refused: {ended}", file=wired.err)
         seams.kill()
 
     print(f"session limit {limit}s", file=wired.err)
@@ -606,9 +765,10 @@ def _session(
     watchdog.daemon = True
     watchdog.start()
     try:
-        return _rendered(lines, limit, wired, generate, seams, steps)
+        return _rendered(lines, limit, wired, generate, seams, steps, record)
     finally:
         watchdog.cancel()
+        record.close()
 
 
 def _requested(
@@ -645,15 +805,21 @@ def _rendered(
     generate: Generate,
     seams: Seams,
     steps: Steps,
+    record: Record,
 ) -> int:
     from gpunit import Lost, Refused, TeardownFailed
 
     def say(line: str) -> None:
         print(line, file=wired.err)
 
+    def refuse(message: str) -> None:
+        record.end("failed", message)
+        print(f"refused: {message}", file=wired.err)
+
     opened = False
     try:
         environ = gpu.environ_of(seams)
+        record.open()
         steps.step("pod", "starting")
         with seams.open_session(REPOSITORY, environ, say, limit) as session:
             opened = True
@@ -668,9 +834,12 @@ def _rendered(
             # One flow failing does not cost the next its render; the exit says so.
             failed = False
             for line in lines:
+                # JSON whatever the session prints, so each image reaches the record;
+                # its prose goes to stderr, which the log tees.
                 argv = [
                     "generate",
-                    *steps.flag,
+                    "--progress",
+                    "json",
                     *line.head,
                     "--server",
                     server,
@@ -678,32 +847,36 @@ def _rendered(
                 ]
                 failed |= generate(argv, live) != 0
         steps.step("teardown", "done")
+        if failed:
+            record.end("failed", "a flow failed; the batch's log names it")
+        else:
+            record.end("done")
         return int(failed)
     except KeyboardInterrupt as stopped:
         # gpunit deletes the pod on every exit, an interrupt included.
         steps.step("teardown", "done")
+        record.end("stopped", record.note)
         # gpunit's `Interrupted` carries the signal; a bare Ctrl-C is SIGINT.
         return 128 + int(getattr(stopped, "signal", signal.SIGINT))
     # gpunit's CLI reads no .env, where the key lives, so each remedy loads it.
     except Lost:
         steps.step("pod", "lost")
-        print(
-            "refused: the provider's answer was lost; "
+        refuse(
+            "the provider's answer was lost; "
             "`uv run --env-file .env gpunit status` shows what is left, "
-            "and `uv run --env-file .env gpunit down` deletes it",
-            file=wired.err,
+            "and `uv run --env-file .env gpunit down` deletes it"
         )
         return LOST_EXIT
     except TeardownFailed:
         steps.step("teardown", "failed")
-        print(
-            "refused: the session's teardown failed, and its pod may still bill; "
-            "run `uv run --env-file .env gpunit down`",
-            file=wired.err,
+        refuse(
+            "the session's teardown failed, and its pod may still bill; "
+            "run `uv run --env-file .env gpunit down`"
         )
         return 1
     except Refused as refused:
         steps.step("pod", "refused")
+        record.end("failed", str(refused))
         # gpunit has written its own `refused:` line through `say`. Where it names a
         # bare `gpunit <verb>`, the line after it is that command loading the key; a
         # note, not a second refusal.
@@ -714,9 +887,10 @@ def _rendered(
                 file=wired.err,
             )
         return 1
-    except Exception:
+    except Exception as failure:
         # A refusal inside the session, an endpoint that never answered among them,
         # leaves through gpunit's teardown, which a failure would have raised.
         if opened:
             steps.step("teardown", "done")
+        record.end("failed", str(failure))
         raise

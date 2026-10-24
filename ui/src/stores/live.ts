@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { checkBilling as askBilling, stopJob } from '../api'
-import type { Billing, FileState, HubInfo, JobSlot } from '../types'
+import { checkBilling as askBilling, runningSessions, stopJob } from '../api'
+import type { Billing, FileState, HubInfo, JobSlot, RunningSession } from '../types'
 import { noun } from '../words'
 
 /* Whether a pod may be billing or the window is past its end. */
@@ -47,14 +47,45 @@ export const useLiveStore = defineStore('live', () => {
   const now = ref(Date.now())
   /* The followed import's files, by upload id. */
   const files = ref<Record<string, FileState>>({})
-  /* A render session holds the slot. */
-  const renderRunning = computed(
-    () => job.value?.kind === 'render' && job.value.state === 'running',
-  )
+  /* Disk liveness also sees renders started outside this surface. */
+  const activeSessions = ref<RunningSession[]>([])
+  /* Why the last read of them failed; while set, their last answer may be stale. */
+  const sessionsRefusal = ref<string | null>(null)
+  const slotRender = computed(() => {
+    const held = job.value
+    return held?.kind === 'render' && held.state === 'running' && held.session ? held : null
+  })
+  const activeRender = computed<RunningSession | null>(() => {
+    const held = slotRender.value
+    if (held?.session)
+      return { batch: held.batch, id: held.session.id, started: held.session.started }
+    return activeSessions.value[0] ?? null
+  })
+  const renderRunning = computed(() => activeRender.value !== null)
+  /* Whether what `renderRunning` says is current: the slot's, or a read that answered. */
+  const renderConfirmed = computed(() => slotRender.value !== null || sessionsRefusal.value === null)
   const target: Target = { batch: null, staging: null }
   const handlers = new Map<Kind, Set<Handler>>()
   let stream: EventSource | null = null
   setInterval(() => (now.value = Date.now()), 1000)
+  let readingSessions = false
+  async function refreshSessions(): Promise<void> {
+    if (readingSessions) return
+    readingSessions = true
+    try {
+      activeSessions.value = (await runningSessions()).sessions
+      sessionsRefusal.value = null
+    } catch (reason) {
+      // A failed read is no evidence a render ended, so the last answer stays,
+      // named as unconfirmed rather than shown as fact.
+      sessionsRefusal.value = (reason as Error).message
+    } finally {
+      readingSessions = false
+    }
+  }
+  setInterval(() => {
+    if (stream) void refreshSessions()
+  }, 2000)
 
   /* Each event of `kind`, on every stream this page opens; returns the way to stop. */
   function listen(kind: Kind, handler: Handler): () => void {
@@ -77,6 +108,7 @@ export const useLiveStore = defineStore('live', () => {
     target.batch = batch
     target.staging = staging
     open()
+    void refreshSessions()
   }
 
   function open(): void {
@@ -141,6 +173,10 @@ export const useLiveStore = defineStore('live', () => {
     now,
     files,
     renderRunning,
+    activeRender,
+    activeSessions,
+    sessionsRefusal,
+    renderConfirmed,
     follow,
     listen,
     stop,
@@ -149,3 +185,13 @@ export const useLiveStore = defineStore('live', () => {
     renderTotals,
   }
 })
+
+/** The billing page's state, from what is known and whether a render runs.
+    A running render that is not `confirmed` never hides an alert. */
+export function billingState(found: Billing | null, running: boolean, confirmed = true): string {
+  if (!found) return 'pending'
+  if (running && confirmed) return 'running'
+  if (alerting(found)) return 'alert'
+  if (running) return 'running'
+  return found.volume ? 'open' : 'quiet'
+}

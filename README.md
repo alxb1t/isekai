@@ -172,7 +172,9 @@ included. **Billing is per second, from the pod's create to its deletion.** With
 each approval lacks of the count Review set, its listed seeds first, and names each unapproved flow it leaves
 out. A request is `<flow>=<count>`, or `<flow>=<source>` to render on another flow's latest seeds. The session
 stops at its limit — `--limit SECONDS`, or the work's estimate from recorded durations — and prints `session
-limit <seconds>s` as it opens; everything it says is shown and appended to `<runs>/../log.txt`.
+limit <seconds>s` as it opens; everything it says is shown and appended to `<runs>/../log.txt`. Beside the
+log, once the pod is asked for, its record `<runs>/../sessions/<id>.json` holds its steps, each image as it
+lands and how it ended, and no price.
 
 From the app, a batch's **Render** quotes what renders, the limit and the price at most, and its confirmation
 alone rents: the job opens the window, runs `render`, and closes the window unless it was kept open.
@@ -238,7 +240,8 @@ uv run --env-file .env gpunit volume down   # once no other batch follows
   photograph's stage in each flow, and the *Review* tab opens the batch's head: the first unapproved
   sheet of the first flow that has one. Stop it with Ctrl-C.
 - **`approve --cancel` takes an approval back** to its draft while nothing was made from it — no prompt,
-  render group or copy in another flow. Once something was, `isekai revise` is the way on.
+  render group or copy in another flow. Past that, the way on is `isekai revise` where an image exists, else
+  `review --new-version`.
 - **`render` takes a count per flow**, and renders every run under `$R`.
 - **`show` takes no `--flow`**: it reports every flow a run holds.
 
@@ -309,8 +312,8 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   a copy already of the source's latest writes nothing, and any other approval is copied over under the next
   number.
 - `--cancel` — on `approve`: turn each flow's newest approval back into its draft instead, refusing one
-  anything was made from; a copy is deleted, as `--from` writes it again, leaving the flow on what lies beneath
-  it, which the line names; not combinable with `--from`.
+  anything was made from; a copy is deleted, as `--from` copies the source's newest approval again, leaving the
+  flow on what lies beneath it, which the line names; not combinable with `--from`.
 - `--server SERVER` — the ComfyUI endpoint, reached through the tunnel; **omit it to assemble every
   prompt and stop without rendering**, which is how a whole batch is checked before anything is
   rented.
@@ -321,6 +324,8 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   number is approved.
 - `--progress json` — on `tag`, `caption` and `sheet`: one JSON line per item's start and end on
   stdout, the prose on stderr. It is how Prepare reads a stage's progress.
+- `--session ID` — on `render`: name the session's record `<runs>/../sessions/<ID>.json`, an ID such as
+  `20261024T091200Z`; without it, the session's start in UTC names it.
 - `--new-version` — on `caption`, `tag`, `sheet` and `review`, write the next numbered version of
   what that verb writes, and nothing another verb writes, instead of doing nothing. Every stage decides whether it is done by a directory listing, so re-running one is
   free.

@@ -607,7 +607,8 @@ approved from another's sheet stays the CLI's. On first start the privacy line i
 
 ### Requirement: Every screen has a URL naming its batch and its run
 
-The system SHALL give Home, a batch's hub, a batch's Review and a review of a source in a flow each its own URL,
+The system SHALL give Home, a batch's hub, a batch's Review, a review of a source in a flow, a batch's sessions,
+one session and the billing alert's way out each its own URL,
 SHALL name the batch in every URL inside one, and SHALL name a run by the twelve-character digest its identifier
 begins with. A batch's Review SHALL open the sheet Review starts from and put that sheet's URL in its place. It SHALL
 answer any of them on a fresh load, and SHALL refuse one naming a batch or a run the library does not hold, naming
@@ -621,6 +622,9 @@ short name is a sanitised filename and can repeat; its digest cannot.
 /b/<batch>/hub                     the hub
 /b/<batch>/review                  the head of Review, replaced by its sheet's URL
 /b/<batch>/review/<digest>/<flow>  Review
+/b/<batch>/sessions                the batch's sessions
+/b/<batch>/sessions/<id>           one session
+/billing                           the billing alert's way out
 ```
 
 #### Scenario: a reload lands on the same screen
@@ -1021,7 +1025,7 @@ a refused count keeps the bar, so the refusal is never silent.
 - **Key:** `ui:render:the-confirmation-starts-the-render`
 - **Layers:** e2e
 - **WHEN** the dialog's Render is confirmed
-- **THEN** the session view opens at `/session`
+- **THEN** the session's page opens at `/b/<batch>/sessions/<id>`
 
 #### Scenario: a quote that has grown is refused
 - **Key:** `ui:render:a-grown-quote-is-refused`
@@ -1039,14 +1043,15 @@ a refused count keeps the bar, so the refusal is never silent.
 ### Requirement: The render job opens the volume, renders, and closes the volume unless kept
 
 The system SHALL run a render as one job: the volume window opened or extended, then the rendering verb with the
-session's limit and its progress, then the window closed unless the operator kept it open. A lost answer from the
-window's opening SHALL render nothing and raise the volume alert; a failed close SHALL raise it too. A job whose verb
-cannot be started SHALL end failed, naming the batch's log, and still close the window. Stop SHALL interrupt the
-rendering verb, which tears its pod down. The surface stopping SHALL do the same, and SHALL wait for the pod's
-teardown and the window's close before it exits, for at most the teardown's estimate and one volume verb, saying so
-on its terminal as the wait begins. After that wait, a window not kept whose close has failed or remains unfinished
-SHALL cause the terminal to name the command that closes it, even when the worker has ended; kept and successfully
-closed windows SHALL need no close remedy. An interrupt at the surface's terminal SHALL reach no child of the job.
+session's limit, its id and its progress, then the window closed unless the operator kept it open. A lost answer from
+the window's opening SHALL render nothing and raise the volume alert, and an opening that raises SHALL mark its step
+failed; a failed close SHALL raise it too. A job whose verb cannot be started SHALL end failed, naming the batch's
+log, and still close the window. Stop SHALL interrupt the rendering verb, which tears its pod down. The surface
+stopping SHALL do the same, and SHALL wait for the pod's teardown and the window's close before it exits, for at most
+the teardown's estimate and one volume verb, saying so on its terminal as the wait begins. After that wait, a window
+not kept whose close has failed or remains unfinished SHALL cause the terminal to name the command that closes it,
+even when the worker has ended; kept and successfully closed windows SHALL need no close remedy. An interrupt at the
+surface's terminal SHALL reach no child of the job.
 
 The volume is the job's to open and to close, so no step depends on the operator remembering one, and a surface that
 exits mid-render leaves no window billing that was not kept. The wait is bounded so a hung verb cannot hold the
@@ -1099,12 +1104,21 @@ open.
 - **WHEN** the surface stops mid-render with the window kept
 - **THEN** the pod is torn down and the window is left open without a close-remedy warning
 
+#### Scenario: an opening that raises fails its step
+- **Key:** `ui:render-job:an-opening-that-raises-fails-its-step`
+- **Layers:** unit
+- **WHEN** opening the window raises
+- **THEN** the job ends failed and the volume step reads failed
+
 ### Requirement: Billing state is read from gpunit's own records
 
 The system SHALL show a pod as possibly billing when gpunit holds a pod record or a pending create while no session
 runs, SHALL ask gpunit for its status only on start, every half minute while a session runs or an alert is open, and
-on Check again, and SHALL clear an alert only when gpunit confirms the pod or volume gone. It SHALL show an open
-volume as a quiet item until the end gpunit recorded for its window, and as the alert band after it.
+on Check again, and SHALL clear an alert only when gpunit confirms the pod or volume gone. It SHALL offer the alert's
+way out on its own page, `/billing`, which the alert band opens. It SHALL show an open volume as a quiet item until
+the end gpunit recorded for its window, and as the alert band after it. The page SHALL show unknown billing while
+its first snapshot is pending and an open volume while one is recorded; it SHALL say nothing is billing only when
+both pod and volume are known absent.
 
 gpunit already records what it created; reading those records adds no state to disagree with them. Idle, the surface
 reaches nothing.
@@ -1127,6 +1141,13 @@ reaches nothing.
 - **Layers:** unit
 - **WHEN** gpunit's window record ends in the past and the volume is still recorded
 - **THEN** the alert band is shown in place of the quiet item
+
+
+#### Scenario: billing clearance requires known absence
+- **Key:** `ui:billing:clearance-requires-known-absence`
+- **Layers:** unit
+- **WHEN** billing is unknown, a volume is open, or both resources are known absent
+- **THEN** the page respectively shows pending state, the open volume, or nothing billing
 
 ### Requirement: The Renders view shows each source's images by flow and version
 
@@ -1350,10 +1371,11 @@ unapproved or lacks images, each marked untouched, edited, approved or re-opened
 approved among them; the Review tab SHALL count the unapproved. Approve SHALL leave the sheet open and read-only, the
 approve bar naming the approval it shows, offering *Cancel approve* while the review stage can cancel it, else the
 reason beside it, and while no render runs for the batch; a cancel SHALL leave the sheet open on what the flow is
-left on: its draft, editable, or for a copy the approval beneath it, read-only. Opening a sheet that has no draft
-SHALL write one through the review stage's own function, and opening it again SHALL write no second draft; a failure
-after approval SHALL be shown in the approve bar, never dropped. ④ SHALL show one slot per image, a set seed or
-random, beside the sheet rows. The photograph SHALL open in the viewer, stepping through the rail's sheets.
+left on: its draft, editable, or for a copy the draft open above what lies beneath, else the approval beneath it,
+read-only. Opening a sheet that has no draft SHALL write one through the review stage's own function, and opening it
+again SHALL write no second draft; a failure after approval SHALL be shown in the approve bar, never dropped. ④ SHALL
+show one slot per image, a set seed or random, beside the sheet rows. The photograph SHALL open in the viewer,
+stepping through the rail's sheets.
 
 A sheet is done when its images are, not when it is approved, so the rail keeps it until then; the count is the
 render stage's own. Approving is an act, not a navigation, and a copy's cancel takes back only the copy. A slot per
@@ -1480,3 +1502,62 @@ deletes the operator's edits, so one click never does.
 - **WHEN** *Side by side* is opened on a revision
 - **THEN** one dialog shows the photograph and the render at equal height
 - **AND** `Esc` closes it
+
+### Requirement: Each batch's render sessions are listed and shown from their records
+
+The system SHALL list a batch's render sessions from its records, the running one first and the rest newest first,
+each with its start, its duration against its limit, its outcome and its images, and SHALL show one session's page
+from its record, live while it runs, with the volume steps and Stop the job adds. A Sessions tab SHALL sit beside the
+hub, Review and Renders. While a render runs, every screen SHALL show it running, with its clock, linking to its
+session's page. A finished image SHALL open in the viewer, and the batch's source photographs SHALL show on the page,
+each opening in the viewer; images and photographs SHALL be drawn at the tile size Renders draws. The viewer SHALL
+follow its list when it changes while open.
+
+A session is the record the render wrote, so the page, the list and the terminal agree, and a finished session can
+be found again. A running render is the one thing on the surface that bills by the minute.
+
+#### Scenario: a batch lists its sessions
+- **Key:** `ui:sessions:a-batch-lists-its-sessions`
+- **Layers:** unit
+- **WHEN** a batch holds a running record and two finished ones
+- **THEN** its sessions are listed running first, then newest first
+
+#### Scenario: a session's page reads its record
+- **Key:** `ui:sessions:a-session-reads-its-record`
+- **Layers:** unit
+- **WHEN** a session is asked for by its id
+- **THEN** its record's images, steps and outcome are served
+- **AND** an id no record holds is refused, naming the batch's sessions
+
+#### Scenario: the list shows a finished session
+- **Key:** `ui:sessions:the-list-shows-a-finished-session`
+- **Layers:** e2e
+- **WHEN** the Sessions tab is opened on a batch holding a finished record
+- **THEN** the session is listed with its images, and its page opens from it
+
+#### Scenario: a terminal render stays live
+- **Key:** `ui:sessions:a-terminal-render-stays-live`
+- **Layers:** unit
+- **WHEN** a terminal render runs without an app job slot
+- **THEN** its record reads running and the global running-session read names its batch and id
+- **AND** after its process releases ownership without an outcome the record reads ended without an outcome
+
+#### Scenario: the selected record keeps the newest response
+- **Key:** `ui:sessions:the-selected-record-keeps-the-newest-response`
+- **Layers:** unit
+- **WHEN** an older record read answers after a newer read of the same session
+- **THEN** the selected record keeps the newer outcome and images
+
+#### Scenario: an observed list follows its render
+- **Key:** `ui:sessions:an-observed-list-follows-its-render`
+- **Layers:** unit
+- **WHEN** a render starts and lands images while its batch's sessions list is observed
+- **THEN** the list reads the running record and its images again
+- **AND** overlapping refreshes coalesce without an older response replacing newer state
+
+#### Scenario: the viewer follows image identity
+- **Key:** `ui:sessions:the-viewer-follows-image-identity`
+- **Layers:** unit
+- **WHEN** an open viewer's list shrinks, reorders, grows or becomes empty
+- **THEN** it keeps the selected image by identity while present, otherwise a valid neighbour
+- **AND** an empty list closes the viewer

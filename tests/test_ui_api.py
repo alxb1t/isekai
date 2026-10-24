@@ -23,6 +23,7 @@ Everything that can be asserted without a server is in `tests/test_ui.py` and
 """
 
 import contextlib
+import fcntl
 import io
 import json
 import queue
@@ -49,11 +50,14 @@ import isekai.pipeline.review as review_module  # noqa: E402
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
+    SESSION_FILE,
     TAGS_FILE,
     Artifact,
     Renders,
+    SessionRecord,
     read,
 )
+from isekai.foundation.artifacts import replace as replace_record
 from isekai.foundation.flow import Schema, load_flow  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
     APPROVED,
@@ -75,6 +79,7 @@ from isekai.interface.ui.app import (  # noqa: E402
     authorities,
     create_app,
 )
+from isekai.interface.ui.jobs import Jobs  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.generate import prepare, prompt_artifact  # noqa: E402
@@ -939,10 +944,19 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
 
 @pytest.mark.spec("ui:review:the-sheet-says-why-it-cannot-be-cancelled")
 def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
-    client: TestClient, made: Run, schema: Schema
+    client: TestClient, made: Run, schema: Schema, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _approved(client, made)
     assert client.get(_at(made)).json()["cancel"] is None
+
+    # A render running for the batch holds the cancel, whatever the review stage says.
+    with monkeypatch.context() as held:
+        held.setattr(Jobs, "slot", lambda self: _rendering_slot("20261024T091200Z"))
+        assert client.get(_at(made)).json()["cancel"] == "A render session is running."
+        refused = client.post(_at(made, "/cancel"))
+        assert refused.status_code == 409
+        assert "A render session is running." in refused.json()["refusal"]
+    assert (made.directory(FLOW, REVIEW) / "001.approved.json").exists()
 
     cancelled = client.post(_at(made, "/cancel"))
 
@@ -1679,6 +1693,90 @@ def test_a_version_of_digits_outside_ascii_is_refused_not_failed(
     assert "names no version" in answered.json()["refusal"]
 
 
+# --- render sessions ----------------------------------------------------------
+
+
+def _rendering_slot(session: str) -> dict[str, Any]:
+    """Return the job slot as it reads while a render of `BATCH` runs."""
+    return {
+        "kind": "render",
+        "batch": BATCH,
+        "state": "running",
+        "session": {"id": session},
+    }
+
+
+def _record(made: Run, name: str, started: str, outcome: str) -> SessionRecord:
+    """Write and return a session record of `made`'s batch, one image landed."""
+    record: SessionRecord = {
+        "schema": SESSION_FILE.schema,
+        "id": name,
+        "started": started,
+        "ended": None if outcome == "running" else started,
+        "limit": 1200,
+        "asked": {FLOW: 1},
+        "steps": {"pod": "ready"},
+        "images": [{"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"}],
+        "outcome": outcome,
+        "message": None,
+    }
+    folder = made.path.parent.parent / "sessions"
+    replace_record(folder / f"{name}.json", SESSION_FILE, record)
+    return record
+
+
+@pytest.mark.spec("ui:sessions:a-batch-lists-its-sessions")
+def test_a_batch_lists_its_sessions_running_first_then_newest(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _record(made, "20261024T090000Z", "2026-10-24T09:00:00Z", "running")
+    _record(made, "20261024T080000Z", "2026-10-24T08:00:00Z", "done")
+    _record(made, "20261024T100000Z", "2026-10-24T10:00:00Z", "stopped")
+    monkeypatch.setattr(Jobs, "slot", lambda self: _rendering_slot("20261024T090000Z"))
+
+    lock = made.path.parent.parent / "sessions" / "20261024T090000Z.lock"
+    with lock.open("a") as process:
+        fcntl.flock(process, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        listed = client.get(f"/api/b/{BATCH}/sessions").json()["sessions"]
+
+        assert [(one["id"], one["outcome"]) for one in listed] == [
+            ("20261024T090000Z", "running"),
+            ("20261024T100000Z", "stopped"),
+            ("20261024T080000Z", "done"),
+        ]
+    # The render's lifetime lock, rather than the slot, establishes liveness.
+    assert (
+        client.get(f"/api/b/{BATCH}/sessions/20261024T090000Z").json()["outcome"]
+        is None
+    )
+    monkeypatch.setattr(Jobs, "slot", lambda self: None)
+    listed = client.get(f"/api/b/{BATCH}/sessions").json()["sessions"]
+    assert [(one["id"], one["outcome"]) for one in listed] == [
+        ("20261024T100000Z", "stopped"),
+        ("20261024T090000Z", None),
+        ("20261024T080000Z", "done"),
+    ]
+
+
+@pytest.mark.spec("ui:sessions:a-session-reads-its-record")
+def test_a_session_is_served_from_its_record_and_an_unknown_id_refused(
+    client: TestClient, made: Run
+) -> None:
+    written = _record(made, "20261024T080000Z", "2026-10-24T08:00:00Z", "done")
+
+    served = client.get(f"/api/b/{BATCH}/sessions/20261024T080000Z").json()
+
+    assert (served["images"], served["steps"], served["outcome"]) == (
+        written["images"],
+        written["steps"],
+        "done",
+    )
+    for unknown in ("20261024T070000Z", "latest"):
+        refused = client.get(f"/api/b/{BATCH}/sessions/{unknown}")
+        assert refused.status_code == 409
+        assert f"its sessions are at /b/{BATCH}/sessions" in refused.json()["refusal"]
+
+
 # --- the import sheet ---------------------------------------------------------
 
 HEIC = Path(__file__).resolve().parent / "fixtures" / "sources" / "plain.heic"
@@ -1835,3 +1933,31 @@ def test_a_staged_files_preview_is_a_downscaled_jpeg_kept_nowhere(
         assert shown.format == "JPEG"
         assert max(shown.size) == THUMB_SIDE
     assert snapshot(tmp_path / "lib") == before
+
+
+@pytest.mark.spec("ui:sessions:a-terminal-render-stays-live")
+def test_a_terminal_session_is_live_without_a_job_slot(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from isekai.interface.render import Record
+
+    monkeypatch.setattr(Jobs, "slot", lambda self: None)
+    name = "20261024T091200Z"
+    record = Record(made.path.parent.parent / "sessions", name, 1200, {FLOW: 1})
+    # A damaged record in another batch is that batch's refusal, not this read's.
+    other = made.path.parent.parent.parent / "another"
+    (other / "sources").mkdir(parents=True)
+    (other / "sessions").mkdir()
+    (other / "sessions" / "20261024T080000Z.json").write_text("{")
+    record.open()
+    try:
+        response = client.get(f"/api/b/{BATCH}/sessions/{name}")
+        assert response.json()["outcome"] == "running"
+        running = client.get("/api/sessions/running").json()["sessions"]
+        assert [(one["batch"], one["id"]) for one in running] == [(BATCH, name)]
+        record.image({"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"})
+        assert len(client.get(f"/api/b/{BATCH}/sessions/{name}").json()["images"]) == 1
+    finally:
+        record.close()
+    assert client.get(f"/api/b/{BATCH}/sessions/{name}").json()["outcome"] is None
+    assert client.get("/api/sessions/running").json()["sessions"] == []

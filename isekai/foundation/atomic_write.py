@@ -18,8 +18,10 @@ import tempfile
 from pathlib import Path
 
 
-def write_atomically(path: Path, body: bytes) -> None:
+def write_atomically(path: Path, body: bytes, *, exclusive: bool = False) -> None:
     """Write `body` to `path` through a temporary file on the same filesystem.
+
+    With `exclusive`, publish only if no destination exists, through an atomic link.
 
     The temporary file is created in the destination's own directory, so the
     replace is a rename within one filesystem and is atomic. It is also named
@@ -35,7 +37,11 @@ def write_atomically(path: Path, body: bytes) -> None:
             sink.write(body)
             sink.flush()
             os.fsync(sink.fileno())
-        os.replace(temporary, path)
+        if exclusive:
+            os.link(temporary, path)
+            Path(temporary).unlink()
+        else:
+            os.replace(temporary, path)
     except BaseException:
         Path(temporary).unlink(missing_ok=True)
         raise

@@ -90,6 +90,14 @@ body {
   border-bottom-color: var(--accent);
 }
 
+/* The running render, at the bar's far end, on every screen. */
+.appbar__render {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--accent-ink);
+  text-decoration: none;
+}
+
 .appbar__key {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -320,10 +328,22 @@ body {
 }
 
 .session__tile {
-  width: 60px;
-  height: 80px;
+  width: var(--tile-width);
+  height: var(--tile-height);
+  padding: 0;
+  border: none;
   border-radius: 3px;
   background: repeating-linear-gradient(135deg, #1f2030 0 5px, #26273b 5px 10px);
+}
+
+button.session__tile {
+  cursor: zoom-in;
+}
+
+/* A photograph of the batch, at a render tile's size. */
+.session__tile--photo {
+  border: 1px solid var(--line);
+  background: var(--raised-2);
 }
 
 .session__tile--done {
@@ -385,6 +405,44 @@ body {
   flex-direction: column;
   gap: 10px;
   align-items: flex-start;
+}
+
+/* — a batch's render sessions — */
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 32px 48px;
+  overflow: auto;
+}
+
+.sessions__none {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.sessions__row {
+  display: grid;
+  grid-template-columns: 180px 140px 140px 120px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.sessions__outcome[data-outcome='running'] {
+  color: var(--accent-ink);
+}
+
+.sessions__images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 /* — Renders and the large view (J5·1, J5·2) — */

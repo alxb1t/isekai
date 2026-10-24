@@ -7,7 +7,7 @@ are the flows `config/ui.json` offers.
 
 ```
 ~/isekai/                      the library, `ISEKAI_LIBRARY`
-  <batch>/ sources/ runs/ log.txt
+  <batch>/ sources/ runs/ log.txt sessions/
   .staging/                    a dot-folder: never listed
   .cache/<digest>/…            thumbnails, made on first request
 ```
@@ -26,11 +26,15 @@ from typing import Any, Literal
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
+    SESSION_FILE,
+    SESSION_ID,
+    SESSIONS,
     SHEET_FILE,
     WD14_FILE,
     Artifact,
     Renders,
     ReviewApproved,
+    SessionRecord,
     read,
     renders_of,
 )
@@ -56,6 +60,7 @@ from isekai.foundation.run import (
     group_of,
     latest_artifact,
 )
+from isekai.interface.render import record_running
 from isekai.interface.wiring import trackable
 from isekai.pipeline.generate import is_render, rendered_seeds, shortfall
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
@@ -281,6 +286,56 @@ def run_named(folder: Path, digest: str) -> Run:
             "hub to choose one"
         )
     return found
+
+
+def sessions(folder: Path) -> list[dict[str, Any]]:
+    """Return batch `folder`'s session records, the running one first, then newest.
+
+    The render's lifetime lock keeps terminal and app renders live alike; an
+    abandoned record has no outcome, regardless of what the app slot holds.
+    """
+    found = [_session(path) for path in (folder / SESSIONS).glob("*.json")]
+    found.sort(key=lambda one: one["started"], reverse=True)
+    found.sort(key=lambda one: one["outcome"] != "running")
+    return found
+
+
+def running(folder: Path) -> list[dict[str, Any]]:
+    """Return batch `folder`'s records a render process holds, newest first.
+
+    Liveness is read from each lock before any record is parsed, so a damaged
+    record that no render holds refuses only its own batch's list. A held record
+    that does not read is left to that list, which names its remedy.
+    """
+    found = []
+    for path in (folder / SESSIONS).glob("*.json"):
+        if record_running(path):
+            with contextlib.suppress(Refusal):
+                found.append(_session(path))
+    found.sort(key=lambda one: one["started"], reverse=True)
+    return [one for one in found if one["outcome"] == "running"]
+
+
+def session(folder: Path, name: str) -> dict[str, Any]:
+    """Return the session record `name` names, refusing an id no record holds."""
+    path = folder / SESSIONS / f"{name}.json"
+    if SESSION_ID.fullmatch(name) is None or not path.is_file():
+        raise Refusal(
+            f"{folder.name} holds no session {name!r}; its sessions are at "
+            f"/b/{folder.name}/sessions"
+        )
+    return _session(path)
+
+
+def _session(path: Path) -> dict[str, Any]:
+    """Return one record as served, a stale `running` read as no outcome."""
+    record: SessionRecord = read(
+        path, SESSION_FILE, remedy=f"delete {path}: no stage writes it again"
+    )
+    served: dict[str, Any] = dict(record)
+    if record["outcome"] == "running" and not record_running(path):
+        served["outcome"] = None
+    return served
 
 
 def hub(folder: Path, flows: Sequence[str], flows_dir: Path) -> Hub:

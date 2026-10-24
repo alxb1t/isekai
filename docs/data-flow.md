@@ -205,11 +205,15 @@ An approval carries `renders`, a count and seeds set in Review's ④, and
 its listed seeds first, leaving out each unapproved flow by name. Each render
 records its `duration`, and the next session's limit is estimated from them
 ([D26](decisions.md#d26--renders-run-on-a-rented-gpu)). The app's Render runs the
-same verb as a job, quoted first:
+same verb as a job, quoted first. The verb keeps the session's record beside the
+batch's log, `<batch>/sessions/<id>.json`, and the app's sessions are read from it. The initial record is published
+exclusively, so an occupied id refuses without replacing history. The render process holds `<id>.lock` until it
+exits; the app reads these locks across the library every two seconds, so a terminal render stays live as well:
+
 
 ```
-dialog: quote ─▶ confirm ─▶ gpunit volume up ─▶ render --limit … --progress json
-          ─▶ gpunit volume down, unless kept ─▶ /session ─▶ Renders
+dialog: quote ─▶ confirm ─▶ gpunit volume up ─▶ render --limit … --session <id> --progress json
+          ─▶ gpunit volume down, unless kept ─▶ /b/<batch>/sessions/<id> ─▶ Renders
 ```
 
 `caption` and `tag` reach a model too, but a local one: Ollama over HTTP to this

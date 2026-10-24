@@ -48,7 +48,10 @@ const { renderTotals } = live
     </template>
     <template v-else>
       <span class="prepare-bar__cells mono">{{ renderTotals(job) }}</span>
-      <RouterLink class="btn btn-secondary" :to="{ name: 'session' }"
+      <RouterLink
+        v-if="job?.session"
+        class="btn btn-secondary"
+        :to="{ name: 'session', params: { batch: job.batch, id: job.session.id } }"
         >Session<KeyHint command="session" /></RouterLink
       >
     </template>

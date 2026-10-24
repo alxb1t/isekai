@@ -29,6 +29,7 @@ GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/b/{batch}/prepare   ·   POST /api/job/stop
 GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s, images}
+GET  /api/sessions/running   ·   GET /api/b/{batch}/sessions{/id,}
 POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}, and GET its /thumb
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
@@ -519,6 +520,34 @@ def create_app(
         )
         return {"job": job}
 
+    def rendering_slot() -> dict[str, Any] | None:
+        """Return the job slot while it runs a render, or None."""
+        slot = jobs.slot()
+        if slot and slot["state"] == "running" and slot["kind"] == "render":
+            return slot
+        return None
+
+    @app.get("/api/sessions/running")
+    def running_sessions() -> dict[str, Any]:
+        """Read live disk records across batches, including terminal renders."""
+        found = []
+        for child in library.listed(root):
+            if library.is_batch(child):
+                found += [
+                    {"batch": child.name, **one} for one in library.running(child)
+                ]
+        return {"sessions": found}
+
+    @app.get("/api/b/{batch}/sessions")
+    def read_sessions(batch: str) -> dict[str, Any]:
+        """List the batch's render sessions from their records, the running first."""
+        return {"sessions": library.sessions(folder(batch))}
+
+    @app.get("/api/b/{batch}/sessions/{name}")
+    def read_session(batch: str, name: str) -> dict[str, Any]:
+        """Return one render session's record; the slot holds its volume steps."""
+        return library.session(folder(batch), name)
+
     @app.post("/api/billing/check")
     def post_check() -> dict[str, Any]:
         """Ask gpunit again; an alert clears only when its records say gone."""
@@ -754,10 +783,10 @@ def create_app(
 
     def _rendering(batch: str) -> str | None:
         """Return what a render running for `batch` says, or None."""
-        slot = jobs.slot()
-        if slot and slot["state"] == "running" and slot["kind"] == "render":
-            return "A render session is running." if slot["batch"] == batch else None
-        return None
+        slot = rendering_slot()
+        return (
+            "A render session is running." if slot and slot["batch"] == batch else None
+        )
 
     @app.post("/api/b/{batch}/review/{digest}/{flow}/discard")
     def post_discard(

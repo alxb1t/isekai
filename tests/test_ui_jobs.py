@@ -424,7 +424,7 @@ def test_reconnect_keeps_prepare_progress(
 # --- render ---------------------------------------------------------------------
 
 
-def _order(record: Path) -> tuple[Volume, Callable[[int, Path], list[str]]]:
+def _order(record: Path) -> tuple[Volume, Callable[[int, Path, str], list[str]]]:
     """Return a gpunit double and a render command, each appending its act to `record`.
 
     The render child is a real process, so the order is read from one file.
@@ -435,9 +435,12 @@ def _order(record: Path) -> tuple[Volume, Callable[[int, Path], list[str]]]:
             print(" ".join(argv), file=acts)
         return LOST_EXIT if "up" in argv and "lost" in record.name else 0
 
-    def command(limit: int, runs: Path) -> list[str]:
-        script = "import sys; open(sys.argv[1], 'a').write(f'render {sys.argv[2]}\\n')"
-        return [sys.executable, "-c", script, str(record), str(limit)]
+    def command(limit: int, runs: Path, session: str) -> list[str]:
+        script = (
+            "import sys; open(sys.argv[1], 'a')"
+            ".write(f'render {sys.argv[2]} {sys.argv[3]}\\n')"
+        )
+        return [sys.executable, "-c", script, str(record), str(limit), session]
 
     return Volume(run=run, records=record.parent / ".gpunit"), command
 
@@ -460,14 +463,41 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
     jobs.render("b", folder, limit=1500, total=1, keep_open=False)
     jobs.wait(WAIT)
 
+    slot = jobs.slot() or {}
+    # The verb's record is named by the slot's id, so the page reads that record.
     assert record.read_text().splitlines() == [
         "volume up --yes",
-        "render 1500",
+        f"render 1500 {slot['session']['id']}",
         "volume down",
     ]
-    slot = jobs.slot() or {}
     assert slot["state"] == "done"
     assert slot["session"]["ended"] == "ended"
+
+
+@pytest.mark.spec("ui:render-job:an-opening-that-raises-fails-its-step")
+def test_a_window_opening_that_raises_fails_the_job_and_its_step(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    rendered: list[int] = []
+
+    def unstartable(argv: Sequence[str], log: Path) -> int:
+        raise OSError("gpunit is not installed")
+
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=Volume(run=unstartable, records=tmp_path / ".gpunit"),
+        render=lambda limit, runs, session: rendered.append(limit) or [],
+    )
+
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.wait(WAIT)
+
+    slot = jobs.slot() or {}
+    assert slot["state"] == "failed"
+    assert slot["session"]["steps"]["volume up"] == "failed"
+    assert rendered == []
 
 
 @pytest.mark.spec("ui:render-job:a-lost-opening-renders-nothing")
@@ -519,7 +549,7 @@ def test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown(
         events.Broadcast(),
         lambda: None,
         volume=volume,
-        render=lambda limit, runs: [sys.executable, "-c", script, str(record)],
+        render=lambda limit, runs, session: [sys.executable, "-c", script, str(record)],
         err=err,
     )
     jobs.render("b", folder, limit=1500, total=1, keep_open=False)
@@ -562,7 +592,7 @@ def test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window(
         events.Broadcast(),
         lambda: None,
         volume=volume,
-        render=lambda limit, runs: [sys.executable, "-c", script, str(record)],
+        render=lambda limit, runs, session: [sys.executable, "-c", script, str(record)],
         settle=lambda: 0.05,
         err=err,
     )
@@ -605,7 +635,7 @@ def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str
         events.Broadcast(),
         lambda: None,
         volume=Volume(run=volume, records=tmp_path / ".gpunit"),
-        render=lambda limit, runs: [sys.executable, "-c", script, str(record)],
+        render=lambda limit, runs, session: [sys.executable, "-c", script, str(record)],
         settle=lambda: 2,
         err=err,
     )
@@ -654,7 +684,7 @@ def test_a_render_verb_that_cannot_start_fails_the_job_and_closes_the_window(
         events.Broadcast(),
         lambda: None,
         volume=volume,
-        render=lambda limit, runs: [str(tmp_path / "no-such-interpreter")],
+        render=lambda limit, runs, session: [str(tmp_path / "no-such-interpreter")],
     )
 
     jobs.render("b", folder, limit=1500, total=1, keep_open=False)

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useKeys } from '../composables/useKeys'
-import { clamp } from '../grid'
+import { useViewer } from '../composables/useViewer'
 import { plain } from '../stores/keys'
 
 /* Images in a native dialog, fitted to the window. A click on the image toggles
    1:1 pixels, scrolled inside the dialog; `←` `→` step through the images, and
    Esc or a click outside closes. With `pair`, every image stands side by side at
-   one height, fit only. The dialog keeps the URL of the page beneath (design spec
-   §1 rule 8). */
+   one height, fit only. The list may grow while open, as a live session's does.
+   The dialog keeps the URL of the page beneath (design spec §1 rule 8). */
 export interface Shown {
   src: string
   name: string
@@ -22,9 +22,7 @@ const emit = defineEmits<{ close: [] }>()
 
 const dialog = ref<HTMLDialogElement | null>(null)
 const image = ref<HTMLImageElement | null>(null)
-const last = props.images.length - 1
-const at = ref(clamp(props.start ?? 0, last))
-const shown = computed(() => props.images[at.value])
+const { at, shown, step } = useViewer(() => props.images, props.start ?? 0, () => emit('close'))
 const actual = ref(false)
 /* The fitted image's scale, measured once it has loaded, on every resize while
    fitted, and on the switch back to fit: at 1:1 the drawn width is the natural one. */
@@ -41,18 +39,18 @@ function toggle(): void {
   if (!actual.value) void nextTick(measure)
 }
 
-/* Each step opens its image fitted. */
-function step(direction: -1 | 1): void {
-  at.value = clamp(at.value + direction, last)
-}
-
-watch(at, () => {
-  actual.value = false
-  scale.value = null
-})
+/* Each selected image opens fitted, even when a removed image's neighbour takes its place. */
+watch(
+  () => shown.value?.src,
+  () => {
+    actual.value = false
+    scale.value = null
+  },
+)
 
 const title = computed(() => {
   if (props.pair) return props.images.map((one) => one.name).join(' · ')
+  if (!shown.value) return ''
   const { name, width, height } = shown.value
   const size = width && height ? ` · ${width}×${height}` : ''
   const fit = actual.value ? '1:1' : scale.value === null ? 'fit' : `fit ${scale.value}%`
@@ -119,7 +117,7 @@ onUnmounted(() => window.removeEventListener('resize', measure))
         @load="loaded(index, $event)"
       />
     </div>
-    <div v-else class="viewer__frame">
+    <div v-else-if="shown" class="viewer__frame">
       <img
         ref="image"
         :key="shown.src"

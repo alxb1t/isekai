@@ -97,14 +97,18 @@ timer mono 40px/500.
 | `/b/<batch>/renders` | Renders grid | the Revise confirm |
 | `/b/<batch>/renders/<run>/<flow>/<version>/<seed>` | large view | the Revise confirm |
 | `/b/<batch>/renders/<run>/<flow>/<version>/<seed>/compare` | before / after | — |
-| `/session` | the render session | — |
+| `/b/<batch>/sessions` | the batch's render sessions | — |
+| `/b/<batch>/sessions/<id>` | one render session | the viewer |
+| `/billing` | the billing alert's way out | — |
 
 - `<run>` is the run's **12-hex digest** (`0d4b7e6fb2a8`), unique by construction; the screen shows the short name
  .
 - `<version>` is `v` + the approval's number (`v2` is `review/002.approved.json`, rendered into `outputs/002/`).
 - `/b/<batch>/review` opens the first unapproved sheet of the first flow that has one, in the hub's order; else
   the first approved sheet short of its images, read-only; else *No sheet waits for review* and the way to the hub.
-- `/session` exists only while a session runs or an alert is unresolved; otherwise it redirects to Home.
+- `<id>` is the session's start in UTC, `20261024T091200Z`, and names its record `<batch>/sessions/<id>.json`. The
+  list and the page read the records, so a finished session is found again and one started in the terminal shows.
+- While a render runs, every screen shows `● render 06:41`, its clock, linking to its session's page.
 
 ## 5 · The journeys
 
@@ -230,9 +234,9 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
   its footer counts the approved among them. Revise opens the first draft it wrote; the rest wait in the rail.
   Approve stays on the sheet, read-only. ⇧J ⇧K step the rail. Approve still refuses an unmarked empty field.
 - **Cancel approve**, grey-outlined beside the approved time, takes the approval back while nothing derives from it —
-  no prompt, render group or copy — and the sheet is editable again; a copy's cancel deletes only the copy, so a flow
-  that held its own approval beneath it opens on that one, read-only, the bar's note naming it as it names every
-  approval shown. No key, no ask. Otherwise it is disabled, the review stage's reason beside it; while a render
+  no prompt, render group or copy — and the sheet is editable again; a copy's cancel deletes only the copy, and the
+  sheet opens on the draft open above what lies beneath, else the approval beneath, read-only, the bar's note naming
+  it as it names every approval shown. No key, no ask. Otherwise it is disabled, the review stage's reason beside it; while a render
   session runs for the batch, the reason says so.
 
 ### J4 · Render
@@ -240,8 +244,8 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
 | frame | trigger | URL |
 |---|---|---|
 | J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⇧G Render | `…/b/2026-10-19/hub` — the dialog has none |
-| J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.06 | `…/session` |
-| J4·3 done: `Nothing is billing.` | the last image lands; teardown and volume down confirm | `…/session` |
+| J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.06 | `…/b/2026-10-19/sessions/20261019T152112Z` |
+| J4·3 done: `Nothing is billing.` | the last image lands; teardown and volume down confirm | same |
 | J4·4 Renders with the four new images | ⇧I View in Renders | `…/b/2026-10-19/renders` |
 
 ```
@@ -288,7 +292,7 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/b/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
 | J5·6 the revision approved, read-only; the hub's Render bar, `1 image ready to render` | ⌘↵ Approve · ⇧H | `…/b/2026-09-17/hub` |
-| (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | `…/session` |
+| (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | `…/b/2026-09-17/sessions/<id>` |
 | J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/b/2026-09-17/renders` |
 | J5·8 the large view of v2, with `Compare with v1  C` | ↵ on v2 | `…/v2/1840266731` |
 | J5·9 before / after | C | `…/v2/1840266731/compare` |
@@ -337,7 +341,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 |---|---|---|
 | (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · e · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
 | J6·1 Review: the seed cleared, Count 3, the tags untouched | × the seed · count + + | `…/review/0d4b7e6fb2a8/conjure-anime-wai` |
-| (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⇧G · ⌘↵ | `…/session` |
+| (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⇧G · ⌘↵ | `…/b/2026-09-17/sessions/<id>` |
 | J6·2 Renders: three new images after v1, no pair | ⇧I | `…/b/2026-09-17/renders` |
 
 Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`, `was 1840266731 · cleared`.
@@ -375,8 +379,8 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 
 - **J8a, Prepare refused** — from J2·2, ⌘↵. The bar shows the CLI's refusal; nothing ran, the cells stay assigned.
   Start Ollama outside the app, then ⌘↵ again → J2·3. URL `…/b/2026-10-19/hub`.
-- **J8b, teardown unconfirmed** — from J4·2, teardown gets no answer. The band shows on every screen; *Resolve* or ⇧S
-  opens the alert at `…/session`. Ways out, each ending in **Check again**, which asks gpunit: Check again itself;
+- **J8b, teardown unconfirmed** — from J4·2, teardown gets no answer. The band shows on every screen; *Resolve*
+  opens the alert at `…/billing`. Ways out, each ending in **Check again**, which asks gpunit: Check again itself;
   `uv run --env-file .env gpunit down`, then Check again; stop it in RunPod's console, then Check again. It clears
   only when gpunit confirms the pod gone → the band goes, the receipt stays.
 - **J8c, the volume past its window** — Home with the quiet job-strip item; at the window's end the band:
@@ -414,7 +418,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K 
 
 | where | keys |
 |---|---|
-| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the session · ? the key list · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
+| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the running session, else the batch's sessions · ? the key list · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④ · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ↵ on the photograph opens the viewer, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow, ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C *Side by side*, the photograph and the render, on a revision · the collapsed caption, its key named when built |
