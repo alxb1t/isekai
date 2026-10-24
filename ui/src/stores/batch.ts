@@ -25,6 +25,18 @@ export function at(name: string, flow: string): string {
   return `${name}|${flow}`
 }
 
+/** Return the spot of `spots` that `name` calls `held`, else the first.
+
+    A remembered focus can outlive its spot, as a source is added or a version
+    rendered. e.g. kept(['a', 'c'], (one) => one, 'b') -> 'a' */
+export function kept<T>(
+  spots: T[],
+  name: (spot: T) => string,
+  held: string | null,
+): T | undefined {
+  return spots.find((one) => name(one) === held) ?? spots[0]
+}
+
 /* The open batch, one copy for every screen of it: its hub, the stages running
    in its cells and their refusals, its renders and its sessions once a screen
    reads them, and its Render offer and dialog, which has no URL of its own
@@ -50,6 +62,9 @@ export const useBatchStore = defineStore('batch', () => {
   let listAgain = false
   const offer = ref<RenderOffer>({ ...NO_OFFER })
   const dialog = ref(false)
+  /* Each grid's focus, by its spot's name, written on every move: Esc from a
+     large view, the Back button and a tab switch all come back to it. */
+  const focus = ref<{ hub: string | null; renders: string | null }>({ hub: null, renders: null })
   /* A render session running for this batch, not another's. */
   const rendering = computed(() => renderRunning.value && activeRender.value?.batch === name.value)
   /* A Prepare running for this batch, not another's. */
@@ -77,6 +92,7 @@ export const useBatchStore = defineStore('batch', () => {
     shown = null
     offer.value = { ...NO_OFFER }
     dialog.value = false
+    focus.value = { hub: null, renders: null }
     asked += 1
   }
 
@@ -232,6 +248,7 @@ export const useBatchStore = defineStore('batch', () => {
     session,
     offer,
     dialog,
+    focus,
     rendering,
     preparing,
     open,

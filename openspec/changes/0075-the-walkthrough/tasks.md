@@ -7,7 +7,7 @@ Home, the hub, the kept focus, the large view, then Review, per [design](design.
 
 - [x] 1 — Home's row
 - [x] 2 — The hub
-- [ ] 3 — The kept focus
+- [x] 3 — The kept focus
 - [ ] 4 — The large view
 - [ ] 5 — Review's rail
 
@@ -34,12 +34,12 @@ Home, the hub, the kept focus, the large view, then Review, per [design](design.
 
 ## 3 — The kept focus
 
-- [ ] 3.1 **HALT CHECK** — the hub starts at its first cell on every mount.
+- [x] 3.1 **HALT CHECK** — the hub starts at its first cell on every mount.
   Verify: `grep -c 'place(0, 0)' ui/src/views/Hub.vue` prints `1`.
-- [ ] 3.2 Keep `focus.hub` and `focus.renders` in `ui/src/stores/batch.ts`, restored by `ui/src/views/Hub.vue` and
+- [x] 3.2 Keep `focus.hub` and `focus.renders` in `ui/src/stores/batch.ts`, restored by `ui/src/views/Hub.vue` and
   `ui/src/views/Renders.vue`, per [D4](design.md#d4); bind `ui:renders:a-grid-keeps-its-focus` in `ui/src/stores/batch.test.ts`.
   Verify: `grep -c 'place(0, 0)' ui/src/views/Hub.vue` prints `0`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 3.3 Add the `Esc` steps of the design's [Tests](design.md#tests) to the rendered-cell test and
+- [x] 3.3 Add the `Esc` steps of the design's [Tests](design.md#tests) to the rendered-cell test and
   `test_an_image_opened_from_the_grid_shows_the_approval_it_came_from` in `tests/e2e/test_render.py`.
   Verify: `grep -c 'hub__cell--focused' tests/e2e/test_render.py` prints a number of at least `1`, and `uv run pytest -q tests/e2e/test_render.py` exits 0.
 

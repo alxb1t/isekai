@@ -80,6 +80,17 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     expect(tile).to_have_class(re.compile("renders__image--focused"))
     page.keyboard.press("Enter")
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
+    # Esc comes back focused on the image it closed, not the grid's first.
+    page.goto(f"{served.url}/b/{COMPARED}/renders")
+    second = page.locator("[data-version='2'][data-seed='7']")
+    expect(second.locator("img")).to_have_js_property("complete", True)
+    second.click()
+    expect(page.locator("[data-sheet]")).to_contain_text("v2")
+    page.keyboard.press("Escape")
+    expect(second).to_have_class(re.compile("renders__image--focused"))
+    expect(page.locator("[data-version='1'][data-seed='7']")).not_to_have_class(
+        re.compile("renders__image--focused")
+    )
 
 
 @pytest.mark.spec("ui:renders:a-source-opens-in-the-viewer")
@@ -136,6 +147,8 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
     page.keyboard.press("Escape")
     expect(page).to_have_url(served.hub_of(SHOWN))
+    expect(rendered).to_have_class(re.compile("hub__cell--focused"))
+    expect(rendered).to_be_focused()
 
 
 @pytest.mark.spec("ui:hub:the-source-cell-opens-its-photograph")

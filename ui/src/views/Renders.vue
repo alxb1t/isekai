@@ -13,7 +13,7 @@ import RenderDialog from '../components/RenderDialog.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
 import { useKeys } from '../composables/useKeys'
 import { type Move, moved } from '../grid'
-import { useBatchStore } from '../stores/batch'
+import { kept, useBatchStore } from '../stores/batch'
 import { plain, shifted } from '../stores/keys'
 import { noun } from '../words'
 import type { RenderVersion, RevisedImage } from '../types'
@@ -130,9 +130,16 @@ const cells = computed(() =>
   ),
 )
 
+/* Focus `spot`, and keep it in the store for this grid's next opening. */
+function hold(spot: { row: number; column: number }): void {
+  focus.value = spot
+  const one = here()
+  if (one) store.focus.renders = key(one)
+}
+
 function go(move: Move): () => void {
   return () => {
-    focus.value = moved(cells.value, focus.value, move)
+    hold(moved(cells.value, focus.value, move))
     void nextTick(() =>
       document
         .querySelector<HTMLElement>('.renders__image--focused')
@@ -162,10 +169,7 @@ useKeys('screen', [
     id: 'open',
     keys: plain('Enter'),
     label: 'the large view',
-    run: () => {
-      const at = here() as Spot
-      open(at.digest, at.flow, at.version, at.seed)
-    },
+    run: () => open(focus.value.row, here() as Spot),
     when: () => here() !== undefined,
   },
   {
@@ -182,7 +186,10 @@ function thumb(digest: string, flow: string, version: number, seed: string): str
   return thumbAt({ batch: props.batch, digest, flow, version, seed })
 }
 
-function open(digest: string, flow: string, version: number, seed: string): void {
+/* The large view of `one`, in row `row`, which takes the focus first. */
+function open(row: number, one: Spot): void {
+  hold({ row, column: rows.value[row].findIndex((spot) => key(spot) === key(one)) })
+  const { digest, flow, version, seed } = one
   void router.push({
     name: 'render',
     params: { batch: props.batch, digest, flow, version: `v${version}`, seed },
@@ -197,8 +204,9 @@ onMounted(async () => {
     refusal.value = (reason as Error).message
     return
   }
-  const first = rows.value.findIndex((one) => one.length > 0)
-  if (first >= 0) focus.value = { row: first, column: 0 }
+  const spots = rows.value.flatMap((held, row) => held.map((one, column) => ({ row, column, one })))
+  const spot = kept(spots, ({ one }) => key(one), store.focus.renders)
+  if (spot) hold({ row: spot.row, column: spot.column })
 })
 </script>
 
@@ -264,7 +272,10 @@ onMounted(async () => {
                 type="button"
                 :data-version="version.version"
                 :data-seed="seed"
-                @click="source.digest && open(source.digest, flow, version.version, seed)"
+                @click="
+                  source.digest &&
+                  open(row, { digest: source.digest, flow, version: version.version, seed })
+                "
               >
                 <img
                   v-if="source.digest"

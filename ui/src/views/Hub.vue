@@ -14,7 +14,7 @@ import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
-import { at, useBatchStore } from '../stores/batch'
+import { at, kept, useBatchStore } from '../stores/batch'
 import { isControl, modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
 import type { HubCell, HubSource, Stage } from '../types'
@@ -291,6 +291,12 @@ function discard(): void {
   }
 }
 
+/* A cell's name in the store's focus: its source's and its flow's, the source
+   column's flow empty. */
+function named(spot: { row: number; column: number }): string {
+  return at(sources.value[spot.row]?.name ?? '', flows.value[spot.column - 1] ?? '')
+}
+
 function place(row: number, column: number): void {
   const rows = sources.value.length
   if (rows === 0) return
@@ -298,6 +304,7 @@ function place(row: number, column: number): void {
     row: Math.min(Math.max(row, 0), rows - 1),
     column: Math.min(Math.max(column, 0), flows.value.length),
   }
+  store.focus.hub = named(focus.value)
   void nextTick(() =>
     grid.value
       ?.querySelector<HTMLElement>(
@@ -392,7 +399,11 @@ onMounted(async () => {
     refusal.value = (reason as Error).message
     return
   }
-  place(0, 0)
+  const spots = sources.value.flatMap((_, row) =>
+    Array.from({ length: flows.value.length + 1 }, (_, column) => ({ row, column })),
+  )
+  const spot = kept(spots, named, store.focus.hub)
+  if (spot) place(spot.row, spot.column)
 })
 </script>
 

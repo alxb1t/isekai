@@ -3,7 +3,7 @@ import { nextTick } from 'vue'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
 import type { RenderOffer } from '../types'
-import { useBatchStore } from './batch'
+import { kept, useBatchStore } from './batch'
 import { useLiveStore } from './live'
 
 /* Each offer request waits on its own answer, released in whatever order a test chooses. */
@@ -101,4 +101,18 @@ spec('ui:sessions:an-observed-list-follows-its-render', async () => {
   lists = requests.filter((one) => one.url.endsWith('/sessions'))
   lists[2].answer({ sessions: [{ id: 's', outcome: 'running', images: [{ seed: '7' }] }] })
   await vi.waitFor(() => expect(store.sessions?.[0]?.images).toHaveLength(1))
+})
+
+spec('ui:renders:a-grid-keeps-its-focus', () => {
+  const store = useBatchStore()
+  const name = (one: string) => one
+  store.open('b')
+  expect(kept(['a', 'b', 'c'], name, store.focus.renders)).toBe('a')
+  store.focus.renders = 'b'
+  store.open('b')
+  expect(kept(['a', 'b', 'c'], name, store.focus.renders)).toBe('b')
+  // A spot gone since is the first; another batch starts from the first.
+  expect(kept(['a', 'c'], name, store.focus.renders)).toBe('a')
+  store.open('c')
+  expect(store.focus).toEqual({ hub: null, renders: null })
 })

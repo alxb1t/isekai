@@ -20,6 +20,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A rendered hub cell shows every image it holds, each marked with its version; a click or `↵` opens the viewer on
   the newest, whose `↵` opens its large view. Each version's outputs are listed once (0075 D5).
 
+- The hub and Renders keep their focus for the open batch: `Esc` from a large view, the Back button and a tab switch
+  come back to the cell or image left, else the first (0075 D4).
+
 ## [0.47.0] - 2026-10-24 · 0074-two-job-slots
 
 Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.46.0: local 0m40s · CI 7m25s
