@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.44.1] - 2026-10-24 · 0071-the-review-patch
+
+Gate: local 0m38s · CI 7m25s (build-image at 801ffec) · 0.44.0: local 0m40s · CI 7m25s
+
 ### Fixed
 
 - The README and Review's comments say what Review does: Approve stays on the sheet, Revise opens its first draft
