@@ -23,6 +23,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The hub and Renders keep their focus for the open batch: `Esc` from a large view, the Back button and a tab switch
   come back to the cell or image left, else the first (0075 D4).
 
+- An image's large view offers *Side by side* on `⇧C`: the image beside its run's photograph at equal height (0075 D2).
+
 ## [0.47.0] - 2026-10-24 · 0074-two-job-slots
 
 Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.46.0: local 0m40s · CI 7m25s

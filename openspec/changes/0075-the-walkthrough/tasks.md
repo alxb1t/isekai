@@ -8,7 +8,7 @@ Home, the hub, the kept focus, the large view, then Review, per [design](design.
 - [x] 1 — Home's row
 - [x] 2 — The hub
 - [x] 3 — The kept focus
-- [ ] 4 — The large view
+- [x] 4 — The large view
 - [ ] 5 — Review's rail
 
 ## 1 — Home's row
@@ -45,9 +45,9 @@ Home, the hub, the kept focus, the large view, then Review, per [design](design.
 
 ## 4 — The large view
 
-- [ ] 4.1 **HALT CHECK** — the large view offers no *Side by side*.
+- [x] 4.1 **HALT CHECK** — the large view offers no *Side by side*.
   Verify: `grep -c 'Side by side' ui/src/views/RenderLarge.vue` prints `0`.
-- [ ] 4.2 Add `Side by side ⇧C` to `ui/src/views/RenderLarge.vue` per [D2](design.md#d2); add
+- [x] 4.2 Add `Side by side ⇧C` to `ui/src/views/RenderLarge.vue` per [D2](design.md#d2); add
   `test_side_by_side_sets_the_image_beside_its_photograph` to `tests/e2e/test_render.py`, bound to its key.
   Verify: `grep -c 'Side by side' ui/src/views/RenderLarge.vue` prints a number of at least `1`, and `grep -c 'side-by-side-sets-the-image-beside-its-photograph' tests/e2e/test_render.py` prints `1`.
 

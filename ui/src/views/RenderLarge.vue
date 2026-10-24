@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { imageAt, renderDetail } from '../api'
+import { imageAt, photoUrl, renderDetail } from '../api'
+import ImageViewer from '../components/ImageViewer.vue'
 import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
 import { useKeys } from '../composables/useKeys'
-import { plain } from '../stores/keys'
+import { plain, shifted } from '../stores/keys'
 import type { RenderDetail } from '../types'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
    sheet it was rendered from beside it — filled fields only, read-only. e
-   revises it; c compares it with the newest older version of its seed (J5·8). */
+   revises it; c compares it with the newest older version of its seed (J5·8);
+   ⇧C sets it beside its run's photograph. */
 const props = defineProps<{
   batch: string
   digest: string
@@ -24,6 +26,8 @@ const router = useRouter()
 const detail = ref<RenderDetail | null>(null)
 const refusal = ref<string | null>(null)
 const revising = ref(false)
+/* The image beside its run's photograph, in the viewer's pair. */
+const pairing = ref(false)
 
 const place = computed(() => ({
   batch: props.batch,
@@ -67,6 +71,12 @@ useKeys('screen', [
     label: 'compare',
     run: compare,
     when: () => Boolean(detail.value?.compare),
+  },
+  {
+    id: 'side-by-side',
+    keys: [shifted('KeyC')],
+    label: 'side by side',
+    run: () => (pairing.value = true),
   },
   {
     id: 'back',
@@ -128,12 +138,24 @@ onMounted(async () => {
         >
           Compare with v{{ detail.compare }}<KeyHint command="compare" />
         </button>
+        <button class="btn btn-secondary" type="button" data-side-by-side @click="pairing = true">
+          Side by side<KeyHint command="side-by-side" />
+        </button>
         <RouterLink class="btn btn-secondary" :to="back.to"
           >{{ back.label }}<KeyHint command="back" /></RouterLink
         >
       </div>
       <KeyBar />
     </aside>
+    <ImageViewer
+      v-if="pairing"
+      :images="[
+        { src: photoUrl(place), name: 'photograph' },
+        { src: imageAt(place), name: `seed ${detail.seed}` },
+      ]"
+      pair
+      @close="pairing = false"
+    />
     <ReviseConfirm
       v-if="revising"
       :batch="batch"

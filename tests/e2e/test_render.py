@@ -235,6 +235,34 @@ def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
     expect(page.locator("dialog[data-viewer]")).to_have_count(0)
 
 
+@pytest.mark.spec("ui:compare:side-by-side-sets-the-image-beside-its-photograph")
+def test_side_by_side_sets_the_image_beside_its_photograph(
+    page: Page, served: Served
+) -> None:
+    large = f"{served.url}/b/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
+    page.goto(large)
+    expect(page.locator("[data-sheet]")).to_contain_text("v1")
+
+    page.keyboard.press("Shift+C")
+
+    pair = page.locator("dialog[data-pair] img")
+    expect(pair).to_have_count(2)
+    expect(pair.nth(0)).to_have_attribute("src", re.compile(r"/photo$"))
+    expect(pair.nth(1)).to_have_attribute("src", re.compile(r"/v1/7/image$"))
+    for one in (pair.nth(0), pair.nth(1)):
+        expect(one).to_have_js_property("complete", True)
+    page.wait_for_function(
+        """() => {
+          const [a, b] = [...document.querySelectorAll('dialog[data-pair] img')]
+            .map((one) => one.getBoundingClientRect())
+          return a.height > 0 && Math.abs(a.height - b.height) <= 1 && a.top === b.top
+        }"""
+    )
+    page.keyboard.press("Escape")
+    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
+    expect(page).to_have_url(large)
+
+
 @pytest.mark.spec("ui:compare:compare-shows-the-pair-and-the-change")
 def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
     page: Page, served: Served
