@@ -32,6 +32,12 @@ leaves every cell assigned, so pressing Prepare again is the whole fix.
 - **WHEN** a job is asked for while another of its kind runs
 - **THEN** it is refused naming the running job
 
+#### Scenario: another batch's Prepare is disabled while one runs
+- **Key:** `ui:prepare:another-batchs-prepare-is-disabled`
+- **Layers:** unit
+- **WHEN** a hub has changes waiting while a Prepare runs for another batch
+- **THEN** its Prepare is disabled, naming the batch that runs
+
 #### Scenario: Prepare refuses when Ollama does not answer
 - **Key:** `ui:prepare:refused-when-ollama-does-not-answer`
 - **Layers:** unit

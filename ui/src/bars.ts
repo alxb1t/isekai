@@ -34,6 +34,14 @@ export function reasons(disabled: string | null, refused: string | null): string
   return [...new Set([disabled, refused])].filter((reason) => reason !== null)
 }
 
+/** Return why `batch`'s Prepare is disabled, or null: one Prepare runs at a time,
+    so another batch's running Prepare holds it (design spec rule 6). */
+export function held(slot: JobSlot | null, batch: string): string | null {
+  return slot?.kind === 'prepare' && slot.state === 'running' && slot.batch !== batch
+    ? `Prepare is running on ${slot.batch}`
+    : null
+}
+
 /* The failed Prepares Discard dismissed in this page, by batch, start and message.
    A module's, not a hub's: a hub opened again would otherwise show one again. A
    reload or another tab starts with none, and shows the failure Prepare's slot holds. */

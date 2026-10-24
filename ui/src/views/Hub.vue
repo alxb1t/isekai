@@ -3,7 +3,7 @@ import { noun } from '../words'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { bar as barOf, dismiss, failed } from '../bars'
+import { bar as barOf, dismiss, failed, held } from '../bars'
 import { action, clicks, targets } from '../cells'
 import { assign, prepare, sourceAt, sourceThumbAt } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
@@ -46,6 +46,8 @@ const selected = ref<Set<number>>(new Set())
 const live = useLiveStore()
 const { jobs } = storeToRefs(live)
 const { prepareTotals } = live
+/* Another batch's running Prepare, which disables this one's, with its reason. */
+const prepareHeld = computed(() => held(jobs.value.prepare, props.batch))
 /* The Prepare bar's refusal, the CLI's own text (J8a). */
 const barRefusal = ref<string | null>(null)
 
@@ -225,7 +227,7 @@ function clicked(event: MouseEvent, row: number, column: number): void {
 }
 
 async function runPrepare(): Promise<void> {
-  if (busy.value || changes.value.length === 0) return
+  if (busy.value || prepareHeld.value !== null || changes.value.length === 0) return
   barRefusal.value = null
   try {
     live.hold((await prepare(props.batch)).job)
@@ -500,10 +502,11 @@ onMounted(async () => {
           {{ changes.map((one) => `${one.source.name} × ${one.flow}`).join(' · ') }}
         </span>
         <button class="btn btn-secondary" type="button" @click="discard">Discard</button>
+        <span v-if="prepareHeld" class="hub__reason" data-prepare-reason>{{ prepareHeld }}</span>
         <button
           class="btn btn-primary"
           type="button"
-          :disabled="changes.length === 0"
+          :disabled="changes.length === 0 || prepareHeld !== null"
           @click="runPrepare"
         >
           {{ changes.length }} {{ changes.length === 1 ? 'change' : 'changes' }} · Prepare<span

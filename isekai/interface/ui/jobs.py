@@ -1,6 +1,6 @@
 """Prepare and Render as jobs: the pipeline's own verbs, run as children.
 
-One job of each kind runs at a time, the two side by side (D1). The CLI is the one
+One job of each kind runs at a time, the two side by side. The CLI is the one
 path, so a job is exactly what the verbs do. Each child runs in its own session and
 reports through `--progress json`; its prose is appended to the batch's `log.txt`,
 each line naming its job. A job outlives the page that started it.

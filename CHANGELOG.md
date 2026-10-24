@@ -18,7 +18,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   Prepare no longer holds Render back (0074 D4).
 
 - Every screen reads its own slot: a hub's Prepare bar its batch's Prepare, the Render bar and the session page the
-  render; the hub no longer holds Prepare while a render runs, and the job strip shows each running job (0074 D5).
+  render; the hub no longer holds Prepare while a render runs, another batch's Prepare disables it with its reason,
+  and the job strip shows each running job (0074 D5).
 
 - The design spec's rule 6 and §8, the READMEs and `docs/data-flow.md` state two job slots; the session outcome's
   comment names its lifetime lock, and the `render.py` row names every importer (0074 D6).

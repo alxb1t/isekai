@@ -81,9 +81,9 @@ timer mono 40px/500.
   switcher is a segmented control; Review drops `all`.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
-- **JobStrip**, `ground-deep`, mono 11px. Its dot: hollow idle, accent running, accent square unresolved. Then a label
-  (`job · prepare`) and totals (`1 of 3 cells done · 01:47`, `image 1 of 2 · 06:41 of ≤10:30`), or the last
-  job's receipt. Prepare keeps the accepted-cell total fixed, counts cells completed at sheet and ticks
+- **JobStrip**, `ground-deep`, mono 11px. One item per running job, each a dot, a label (`job · prepare`) and its
+  totals (`1 of 3 cells done · 01:47`, `image 1 of 2 · 06:41 of ≤10:30`); with none running, each kind's last
+  receipt. The dot: hollow idle, accent running, accent square unresolved. Prepare keeps the accepted-cell total fixed, counts cells completed at sheet and ticks
   elapsed time every second from its original start. On the right, while the volume is open, the quiet item
   `volume open · until 19:38 · close`.
 
@@ -188,7 +188,7 @@ h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's a
   cells named in mono 11, Discard, primary `n changes · Prepare ⌘↵`. Running: `Prepare · 1 of 3 cells done · 01:47`,
   Stop. The accepted-cell total stays fixed; the sheet-completed count and ticking elapsed time match JobStrip,
   including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
-  hub opened after the failure too. Disabled: its reason (`A render is running · 06:41`). There is no done state: the
+  hub opened after the failure too. Disabled while another batch's Prepare runs: its reason (`Prepare is running on 2026-10-19`). There is no done state: the
   receipt goes to the job strip, the count to the Review tab. Running, a 2 px `accent` line slides along the bar's top
   edge, as on a running RenderBar, and a running segment pulses `accent-dim` ↔ `accent`; under
   `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
@@ -402,14 +402,14 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 | Hub | loading | placeholder rows, `reading 2 of 6` |
 | Hub | a damaged run | the cell reads `unreadable`, with the CLI's refusal (path, line and column) and its fix; the rest of the grid works |
 | Hub | a render running | Render disabled `A render session is running · 06:41 of ≤10:30` |
-| Hub | Prepare disabled | the bar keeps its cells, reason `A render is running · 06:41` |
+| Hub | Prepare disabled | the bar keeps its cells, reason `Prepare is running on 2026-10-19` |
 | Hub | Add sources, nothing new | Import disabled `Nothing new to add` |
 | Hub | the batch is gone | a full-page refusal, `Back to the library ⇧L` |
 | Render | refused before billing | the CLI's refusal: no GPU free, no key in `.env`; `nothing billed` when true |
-| Render | disabled | `Prepare is running · 01:42` · `A pod may still be billing.` |
+| Render | disabled | `A pod may still be billing.` |
 | Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, the Review tab's count |
 | Renders | a missing image | `its record is there, its image is gone`, the path in the fix |
-| Renders | Revise disabled | `No image selected` · `Prepare is running · 01:42` |
+| Renders | Revise disabled | `No image selected` |
 
 ## 7 · Keys
 

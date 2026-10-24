@@ -52,7 +52,7 @@ with the surface. **Non-Goals:** job records on disk; two of one kind; a change 
 | layer | added | edited | where |
 |---|---|---|---|
 | unit · pytest | `ui:prepare:a-render-runs-beside-a-prepare`, `ui:prepare:stopping-the-surface-interrupts-both`, `ui:prepare:the-log-names-each-job` | `ui:prepare:one-job-at-a-time` — a second of one kind; `ui:events:a-connection-starts-with-a-snapshot` — both slots | `tests/test_ui_jobs.py`, `tests/test_ui.py` |
-| unit · vitest | `ui:events:a-job-event-fills-its-kinds-slot` | none | `ui/src/stores/live.test.ts` |
+| unit · vitest | `ui:events:a-job-event-fills-its-kinds-slot`, `ui:prepare:another-batchs-prepare-is-disabled` | none | `ui/src/stores/live.test.ts`, `ui/src/bars.test.ts` |
 | e2e | none | `test_prepare_takes_the_assigned_cells_to_their_sheet_and_no_other` gains a step: while Prepare runs, the Render bar of the `render` batch is enabled | `tests/e2e/test_prepare.py` |
 
 **End-to-end runs added:** none — one step in the Prepare test, which already holds a Prepare running (T2).
