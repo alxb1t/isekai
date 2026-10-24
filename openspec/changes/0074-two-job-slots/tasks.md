@@ -5,19 +5,19 @@ The job runner, the wire, the screens, then the docs, per [design](design.md). E
 
 ## Progress
 
-- [ ] 1 — The job runner
+- [x] 1 — The job runner
 - [ ] 2 — The wire
 - [ ] 3 — The screens
 - [ ] 4 — The docs
 
 ## 1 — The job runner
 
-- [ ] 1.1 **HALT CHECK** — `Jobs` holds one slot.
+- [x] 1.1 **HALT CHECK** — `Jobs` holds one slot.
   Verify: `grep -c '_slots' isekai/interface/ui/jobs.py` prints `0`.
-- [ ] 1.2 Give `Jobs` a slot per kind, refusals, Stop and wait per kind, and a shutdown of both, in
+- [x] 1.2 Give `Jobs` a slot per kind, refusals, Stop and wait per kind, and a shutdown of both, in
   `isekai/interface/ui/jobs.py`, per [D1](design.md#d1) and [D2](design.md#d2); its callers in `isekai/interface/ui/app.py` name a kind.
   Verify: `grep -c '_slots' isekai/interface/ui/jobs.py` prints a number of at least `1`, and `uv run pytest -q tests/test_ui_jobs.py tests/test_ui.py` exits 0.
-- [ ] 1.3 Prefix each log line with its job per [D3](design.md#d3); bind `ui:prepare:a-render-runs-beside-a-prepare`,
+- [x] 1.3 Prefix each log line with its job per [D3](design.md#d3); bind `ui:prepare:a-render-runs-beside-a-prepare`,
   `ui:prepare:stopping-the-surface-interrupts-both` and `ui:prepare:the-log-names-each-job`, and recast `ui:prepare:one-job-at-a-time` to one kind, in `tests/test_ui_jobs.py`.
   Verify: `grep -c -E 'ui:prepare:(a-render-runs-beside|stopping-the-surface-interrupts-both|the-log-names-each-job)' tests/test_ui_jobs.py` prints `3`, and `uv run pytest -q tests/test_ui_jobs.py` exits 0.
 

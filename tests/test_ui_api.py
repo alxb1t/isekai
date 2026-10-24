@@ -951,7 +951,9 @@ def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
 
     # A render running for the batch holds the cancel, whatever the review stage says.
     with monkeypatch.context() as held:
-        held.setattr(Jobs, "slot", lambda self: _rendering_slot("20261024T091200Z"))
+        held.setattr(
+            Jobs, "slot", lambda self, kind: _rendering_slot("20261024T091200Z")
+        )
         assert client.get(_at(made)).json()["cancel"] == "A render session is running."
         refused = client.post(_at(made, "/cancel"))
         assert refused.status_code == 409
@@ -1732,7 +1734,9 @@ def test_a_batch_lists_its_sessions_running_first_then_newest(
     _record(made, "20261024T090000Z", "2026-10-24T09:00:00Z", "running")
     _record(made, "20261024T080000Z", "2026-10-24T08:00:00Z", "done")
     _record(made, "20261024T100000Z", "2026-10-24T10:00:00Z", "stopped")
-    monkeypatch.setattr(Jobs, "slot", lambda self: _rendering_slot("20261024T090000Z"))
+    monkeypatch.setattr(
+        Jobs, "slot", lambda self, kind: _rendering_slot("20261024T090000Z")
+    )
 
     lock = made.path.parent.parent / "sessions" / "20261024T090000Z.lock"
     with lock.open("a") as process:
@@ -1749,7 +1753,7 @@ def test_a_batch_lists_its_sessions_running_first_then_newest(
         client.get(f"/api/b/{BATCH}/sessions/20261024T090000Z").json()["outcome"]
         is None
     )
-    monkeypatch.setattr(Jobs, "slot", lambda self: None)
+    monkeypatch.setattr(Jobs, "slot", lambda self, kind: None)
     listed = client.get(f"/api/b/{BATCH}/sessions").json()["sessions"]
     assert [(one["id"], one["outcome"]) for one in listed] == [
         ("20261024T100000Z", "stopped"),
@@ -1941,7 +1945,7 @@ def test_a_terminal_session_is_live_without_a_job_slot(
 ) -> None:
     from isekai.interface.render import Record
 
-    monkeypatch.setattr(Jobs, "slot", lambda self: None)
+    monkeypatch.setattr(Jobs, "slot", lambda self, kind: None)
     name = "20261024T091200Z"
     record = Record(made.path.parent.parent / "sessions", name, 1200, {FLOW: 1})
     # A damaged record in another batch is that batch's refusal, not this read's.

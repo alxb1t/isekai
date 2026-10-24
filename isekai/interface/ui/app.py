@@ -232,7 +232,7 @@ def create_app(
         err=wired.err,
     )
     billing = Billing(
-        wired.volume, root / GPUNIT_LOG, broadcast, lambda: jobs.running() == "render"
+        wired.volume, root / GPUNIT_LOG, broadcast, lambda: jobs.running("render")
     )
 
     @asynccontextmanager
@@ -423,8 +423,8 @@ def create_app(
 
     @app.post("/api/job/stop")
     def post_stop() -> dict[str, Any]:
-        """Interrupt the running stage; no later stage starts."""
-        return {"job": jobs.stop()}
+        """Interrupt the running stage, a render's first; no later stage starts."""
+        return {"job": jobs.stop("render" if jobs.running("render") else "prepare")}
 
     @cache
     def offered(flow: str) -> Flow:
@@ -441,10 +441,10 @@ def create_app(
 
     def _held() -> str | None:
         """Return what holds Render back whatever the batch: a job, a pod, no key."""
-        running = jobs.running()
-        if running is not None:
-            kind = "A render session" if running == "render" else "Prepare"
-            return f"{kind} is running."
+        if jobs.running("render"):
+            return "A render session is running."
+        if jobs.running("prepare"):
+            return "Prepare is running."
         if billing.state()["pod"]:
             return "A pod may still be billing."
         if not keyed(wired.session):
@@ -521,9 +521,9 @@ def create_app(
         return {"job": job}
 
     def rendering_slot() -> dict[str, Any] | None:
-        """Return the job slot while it runs a render, or None."""
-        slot = jobs.slot()
-        if slot and slot["state"] == "running" and slot["kind"] == "render":
+        """Return the render slot while it runs, or None."""
+        slot = jobs.slot("render")
+        if slot and slot["state"] == "running":
             return slot
         return None
 
@@ -570,7 +570,12 @@ def create_app(
             held = None
 
         def snapshot() -> dict[str, Any]:
-            found = {"job": jobs.slot(), "billing": billing.state()}
+            # The page holds one job: a running render's, else Prepare's slot.
+            shown = "render" if jobs.running("render") else "prepare"
+            found = {
+                "job": jobs.slot(shown) or jobs.slot("render"),
+                "billing": billing.state(),
+            }
             if batch is not None:
                 # A batch it cannot read is left out: the screen's own read of it
                 # shows the refusal, and the page keeps its stream.

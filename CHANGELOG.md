@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- The app's job runner holds a Prepare and a render side by side, each refused, stopped and waited for in its own
+  slot; stopping the app interrupts both, and each line in a batch's log names its job (0074 D1–D3).
+
 ## [0.46.0] - 2026-10-24 · 0073-sessions
 
 Gate: local 0m40s · CI 7m25s (build-image at 801ffec) · 0.45.0: local 0m39s · CI 7m25s

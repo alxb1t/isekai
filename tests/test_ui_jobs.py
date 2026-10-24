@@ -1,7 +1,7 @@
 """Prepare as a job, and the event stream that tells the page of it.
 
 Each child is a real process: a short Python script stands in for a verb, so Stop
-and the one slot are proved against a process that can be interrupted.
+and the slots are proved against a process that can be interrupted.
 """
 
 import io
@@ -102,18 +102,143 @@ def _steps(run: Run) -> list[Step]:
 SLEEP = "import time; time.sleep(30)"
 
 
+def _sleeping_render(limit: int, runs: Path, session: str) -> list[str]:
+    """Return a render child that runs until it is interrupted."""
+    return [sys.executable, "-c", SLEEP]
+
+
 @pytest.mark.spec("ui:prepare:one-job-at-a-time")
-def test_a_second_job_is_refused_naming_the_one_that_runs(tmp_path: Path) -> None:
+def test_a_second_job_of_a_kind_is_refused_naming_the_one_that_runs(
+    tmp_path: Path,
+) -> None:
     folder, (run,) = _batch(tmp_path, "ada.jpg")
-    jobs = Jobs(events.Broadcast(), lambda: None, command=_Script({"tag": SLEEP}))
+    volume, _ = _order(tmp_path / "acts")
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        command=_Script({"tag": SLEEP}),
+        volume=volume,
+        render=_sleeping_render,
+    )
     jobs.prepare("b", folder, _steps(run), lambda line: None)
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
 
     try:
         with pytest.raises(Refusal, match="a job is running: Prepare on b"):
             jobs.prepare("other", folder, _steps(run), lambda line: None)
+        with pytest.raises(Refusal, match="a job is running: Render on b"):
+            jobs.render("other", folder, limit=1500, total=1, keep_open=False)
     finally:
-        jobs.stop()
-        jobs.wait(WAIT)
+        jobs.shutdown()
+
+
+@pytest.mark.spec("ui:prepare:a-render-runs-beside-a-prepare")
+def test_a_render_runs_beside_a_prepare_and_its_stop_leaves_the_prepare(
+    tmp_path: Path,
+) -> None:
+    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    volume, _ = _order(tmp_path / "acts")
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        command=_Script({"tag": SLEEP}),
+        volume=volume,
+        render=_sleeping_render,
+    )
+    jobs.prepare("b", folder, _steps(run), lambda line: None)
+
+    try:
+        jobs.render("other", folder, limit=1500, total=1, keep_open=False)
+        assert jobs.running("prepare") and jobs.running("render")
+
+        jobs.stop("render")
+        jobs.wait("render", WAIT)
+
+        assert (jobs.slot("render") or {})["state"] == "stopped"
+        assert jobs.running("prepare")
+    finally:
+        jobs.shutdown()
+
+
+@pytest.mark.spec("ui:prepare:stopping-the-surface-interrupts-both")
+def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
+    tmp_path: Path,
+) -> None:
+    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+    volume, _ = _order(record)
+    # A render child that takes a while to tear its pod down once interrupted.
+    script = (
+        "import signal, sys, time\n"
+        "def down(*_):\n"
+        "    time.sleep(0.5)\n"
+        "    open(sys.argv[1], 'a').write('torn down\\n')\n"
+        "    sys.exit(130)\n"
+        "signal.signal(signal.SIGINT, down)\n"
+        "open(sys.argv[1], 'a').write('render\\n')\n"
+        "time.sleep(30)\n"
+    )
+    broadcast = events.Broadcast()
+    found = broadcast.subscribe()
+    prepared = _Script({"tag": _line("start") + "; import time; time.sleep(30)"})
+    jobs = Jobs(
+        broadcast,
+        lambda: None,
+        command=prepared,
+        volume=volume,
+        render=lambda limit, runs, session: [sys.executable, "-c", script, str(record)],
+        err=io.StringIO(),
+    )
+    jobs.prepare("b", folder, _steps(run), dict)
+    _until(found, "cell")
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    deadline = time.monotonic() + WAIT
+    while "render" not in (record.read_text() if record.exists() else ""):
+        assert time.monotonic() < deadline, "the render child never started"
+        time.sleep(0.01)
+
+    jobs.shutdown(timeout=0.05)
+
+    assert record.read_text().splitlines() == [
+        "volume up --yes",
+        "render",
+        "torn down",
+        "volume down",
+    ]
+    assert (jobs.slot("prepare") or {})["state"] == "stopped"
+    assert prepared.asked == ["tag"]
+
+
+@pytest.mark.spec("ui:prepare:the-log-names-each-job")
+def test_each_line_a_job_writes_to_the_batchs_log_names_its_job(
+    tmp_path: Path,
+) -> None:
+    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    volume, _ = _order(tmp_path / "acts")
+    # The last line ends with no newline, as a child cut short leaves it.
+    said = "import sys; sys.stderr.write({!r})"
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        command=_Script({"tag": said.format("tag one\ntag two")}),
+        volume=volume,
+        render=lambda limit, runs, session: [
+            sys.executable,
+            "-c",
+            said.format("pod up\n"),
+        ],
+    )
+
+    jobs.prepare("b", folder, _steps(run), lambda line: None)
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.wait("prepare", WAIT)
+    jobs.wait("render", WAIT)
+
+    assert sorted((folder / "log.txt").read_text().splitlines()) == [
+        "[prepare] tag one",
+        "[prepare] tag two",
+        "[render] pod up",
+    ]
 
 
 @pytest.mark.spec("ui:prepare:refused-when-ollama-does-not-answer")
@@ -134,7 +259,7 @@ def test_prepare_is_refused_with_the_readers_message_and_starts_nothing(
 
     assert str(refused.value) == ollama.NOT_LISTENING
     assert script.asked == []
-    assert jobs.slot() is None
+    assert jobs.slot("prepare") is None
 
 
 @pytest.mark.spec("ui:prepare:stop-interrupts-the-job")
@@ -152,11 +277,11 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
     jobs.prepare("b", folder, steps, lambda line: dict(line))
     _until(found, "cell")
 
-    jobs.stop()
-    jobs.wait(WAIT)
+    jobs.stop("prepare")
+    jobs.wait("prepare", WAIT)
 
     assert script.asked == ["tag"]
-    assert jobs.slot() == {
+    assert jobs.slot("prepare") == {
         "kind": "prepare",
         "batch": "b",
         "state": "stopped",
@@ -177,10 +302,10 @@ def test_a_stage_that_fails_before_it_reports_ends_the_job_naming_the_log(
     jobs = Jobs(events.Broadcast(), lambda: None, command=script)
 
     jobs.prepare("b", folder, _steps(run), lambda line: None)
-    jobs.wait(WAIT)
+    jobs.wait("prepare", WAIT)
 
     assert script.asked == ["tag"]
-    slot = jobs.slot()
+    slot = jobs.slot("prepare")
     assert slot is not None
     assert (slot["state"], slot["stage"]) == ("failed", "tag")
     assert "b/log.txt" in slot["message"]
@@ -267,7 +392,7 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
         frames.append(frame)
         if frame.startswith("event: cell"):
             break
-    jobs.wait(WAIT)
+    jobs.wait("prepare", WAIT)
     data = json.loads(frames[-1].split("\n")[1].removeprefix("data: "))
     assert (data["source"], data["flow"], data["state"]) == ("ada.jpg", FLOW, "done")
     assert data["cell"]["stage"] == "tagged"
@@ -315,8 +440,8 @@ def test_prepare_totals_count_cells_once(tmp_path: Path) -> None:
         [Step(FLOW, "sheet", (run.id, refused.id)), Step(other, "sheet", (run.id,))],
         dict,
     )
-    jobs.wait(WAIT)
-    slot = jobs.slot()
+    jobs.wait("prepare", WAIT)
+    slot = jobs.slot("prepare")
     assert slot is not None
     assert slot["progress"] == {"started": STARTED, "of": 3, "done": 2}
     updates = []
@@ -326,7 +451,7 @@ def test_prepare_totals_count_cells_once(tmp_path: Path) -> None:
             updates.append(data["progress"]["done"])
     assert 1 in updates and 2 in updates
     slot["progress"]["done"] = 99
-    copied = jobs.slot()
+    copied = jobs.slot("prepare")
     assert copied is not None
     assert copied["progress"]["done"] == 2
 
@@ -414,7 +539,7 @@ def test_reconnect_keeps_prepare_progress(
                 "of": 2,
                 "done": 1,
             }
-        assert jobs.running() == "prepare"
+        assert jobs.running("prepare")
     finally:
         broadcast.unsubscribe(updates)
         release.touch()
@@ -461,9 +586,9 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
     )
 
     jobs.render("b", folder, limit=1500, total=1, keep_open=False)
-    jobs.wait(WAIT)
+    jobs.wait("render", WAIT)
 
-    slot = jobs.slot() or {}
+    slot = jobs.slot("render") or {}
     # The verb's record is named by the slot's id, so the page reads that record.
     assert record.read_text().splitlines() == [
         "volume up --yes",
@@ -492,9 +617,9 @@ def test_a_window_opening_that_raises_fails_the_job_and_its_step(
     )
 
     jobs.render("b", folder, limit=1500, total=1, keep_open=False)
-    jobs.wait(WAIT)
+    jobs.wait("render", WAIT)
 
-    slot = jobs.slot() or {}
+    slot = jobs.slot("render") or {}
     assert slot["state"] == "failed"
     assert slot["session"]["steps"]["volume up"] == "failed"
     assert rendered == []
@@ -517,11 +642,11 @@ def test_a_lost_window_opening_renders_nothing_and_raises_the_volume_alert(
     )
 
     jobs.render("b", folder, limit=1500, total=1, keep_open=False)
-    jobs.wait(WAIT)
+    jobs.wait("render", WAIT)
 
     assert record.read_text().splitlines() == ["volume up --yes"]
     assert raised == [True]
-    slot = jobs.slot() or {}
+    slot = jobs.slot("render") or {}
     assert slot["state"] == "failed"
     assert slot["session"]["steps"]["volume up"] == "lost"
 
@@ -608,7 +733,7 @@ def test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window(
         assert "uv run --env-file .env gpunit volume down" in err.getvalue()
         assert "wait ran out" in err.getvalue()
     finally:
-        jobs.wait(WAIT)
+        jobs.wait("render", WAIT)
 
 
 def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str]]:
@@ -646,13 +771,14 @@ def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str
             assert time.monotonic() < deadline, "render did not start"
             time.sleep(0.01)
         jobs.shutdown(timeout=2)
-        assert jobs.running() is None
-        assert jobs._thread is not None and not jobs._thread.is_alive()
+        assert not jobs.running("render")
+        thread = jobs._slots["render"].thread
+        assert thread is not None and not thread.is_alive()
         return err.getvalue(), record.read_text().splitlines()
     finally:
-        if jobs.running():
-            jobs.stop()
-        jobs.wait(WAIT)
+        if jobs.running("render"):
+            jobs.stop("render")
+        jobs.wait("render", WAIT)
 
 
 @pytest.mark.spec("ui:render-job:a-failed-close-at-stop-names-the-fix")
@@ -688,10 +814,10 @@ def test_a_render_verb_that_cannot_start_fails_the_job_and_closes_the_window(
     )
 
     jobs.render("b", folder, limit=1500, total=1, keep_open=False)
-    jobs.wait(WAIT)
+    jobs.wait("render", WAIT)
 
     assert record.read_text().splitlines() == ["volume up --yes", "volume down"]
-    slot = jobs.slot() or {}
+    slot = jobs.slot("render") or {}
     assert slot["state"] == "failed"
     assert "b/log.txt" in slot["message"]
 

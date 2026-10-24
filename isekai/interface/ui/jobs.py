@@ -1,8 +1,9 @@
-"""Prepare and Render as jobs: the pipeline's own verbs, run as children, one at a time.
+"""Prepare and Render as jobs: the pipeline's own verbs, run as children.
 
-The CLI is the one path, so a job is exactly what the verbs do. Each child runs
-in its own session and reports through `--progress json`; its prose is appended
-to the batch's `log.txt`. A job outlives the page that started it.
+One job of each kind runs at a time, the two side by side (D1). The CLI is the one
+path, so a job is exactly what the verbs do. Each child runs in its own session and
+reports through `--progress json`; its prose is appended to the batch's `log.txt`,
+each line naming its job. A job outlives the page that started it.
 
 ```
 Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
@@ -10,7 +11,8 @@ Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
 Render ─▶ volume up ─ lost ─▶ the volume alert, nothing renders
            └ up ─▶ render --limit … --session … --progress json
                  ─▶ volume down, unless kept
-Stop, or the server stopping ─▶ SIGINT to the child ─▶ no later stage starts
+Stop ─▶ SIGINT to its kind's child ─▶ no later stage of that job starts
+the server stopping ─▶ SIGINT to both children at once
 the server stopping mid-render ─▶ says so, then waits for the teardown and the
                                   window's close ─ runs out ─▶ names `volume down`
 a child failing with no line reported ─▶ failed, naming log.txt ─▶ no later stage starts
@@ -22,11 +24,12 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, Literal, TextIO
 
 from isekai.boundary.gpu import Volume
 from isekai.foundation.artifacts import session_id
@@ -40,8 +43,16 @@ from isekai.interface.ui.library import LOG, RUNS
 # The stages Prepare runs for each flow, in order.
 PREPARE = ("tag", "caption", "sheet")
 
+# The kinds of job, each with its own slot.
+Kind = Literal["prepare", "render"]
+KINDS: tuple[Kind, ...] = ("prepare", "render")
+
 # What a refusal calls each kind of job.
-LABELS = {"prepare": "Prepare", "render": "Render"}
+LABELS: dict[Kind, str] = {"prepare": "Prepare", "render": "Render"}
+
+# How long a child's log lines are read for once it exits: a grandchild that holds
+# the pipe open must not hold the job running.
+DRAIN_S = 5.0
 
 # How long a stopping server gives a render's window to close once its pod is torn
 # down: one gpunit volume verb.
@@ -125,7 +136,7 @@ def plan(todo: Mapping[str, Sequence[str]], tagged: Mapping[str, bool]) -> list[
 class _Job:
     batch: str
     steps: tuple[Step, ...]
-    kind: str = "prepare"
+    kind: Kind = "prepare"
     state: str = "running"
     flow: str | None = None
     stage: str | None = None
@@ -161,8 +172,18 @@ class _Job:
         return described
 
 
+@dataclass
+class _Slot:
+    """One kind's job, the child running for it, and the thread watching it."""
+
+    job: _Job | None = None
+    child: subprocess.Popen[str] | None = None
+    stopping: bool = False
+    thread: threading.Thread | None = None
+
+
 class Jobs:
-    """The one job slot, and the child running in it."""
+    """A slot per kind of job, and the child running in each."""
 
     def __init__(
         self,
@@ -177,7 +198,7 @@ class Jobs:
         settle: Callable[[], float] = settle_s,
         err: TextIO | None = None,
     ) -> None:
-        """Hold an empty slot that publishes on `broadcast`.
+        """Hold an empty slot per kind, each publishing on `broadcast`.
 
         `volume` opens and closes a render's window; `raise_volume` raises the
         volume alert when either goes unanswered. `settle` is how long a stopping
@@ -192,18 +213,17 @@ class Jobs:
         self._now = now
         self._settle = settle
         self._err = err if err is not None else sys.stderr
+        # One lock guards both slots.
         self._lock = threading.Lock()
-        self._job: _Job | None = None
-        self._child: subprocess.Popen[str] | None = None
-        self._stopping = False
-        self._thread: threading.Thread | None = None
+        self._slots: dict[Kind, _Slot] = {kind: _Slot() for kind in KINDS}
         # How long a running render is waited for when the server stops.
         self._settle_s = 0.0
 
-    def slot(self) -> dict[str, Any] | None:
-        """Return the job in the slot, running or ended, or None."""
+    def slot(self, kind: Kind) -> dict[str, Any] | None:
+        """Return the job in `kind`'s slot, running or ended, or None."""
         with self._lock:
-            return self._job.describe() if self._job else None
+            job = self._slots[kind].job
+            return job.describe() if job else None
 
     def prepare(
         self,
@@ -212,15 +232,15 @@ class Jobs:
         steps: Sequence[Step],
         cell: Callable[[dict[str, Any]], dict[str, Any] | None],
     ) -> dict[str, Any]:
-        """Start Prepare over `steps`, or refuse: a job running, or no answer.
+        """Start Prepare over `steps`, or refuse: a Prepare running, or no answer.
 
         `cell` turns a progress line into the event the page applies, or None.
         """
-        self._refuse_running()
+        self._refuse_running("prepare")
         # Outside the lock: a host that is slow to answer holds up no snapshot.
         self._probe()
         with self._lock:
-            self._refuse_running()
+            self._refuse_running("prepare")
             if not steps:
                 raise Refusal(
                     f"{batch} has no assigned cell without a sheet; tick a flow for "
@@ -232,19 +252,15 @@ class Jobs:
                 started=self._now(),
                 accepted={(step.flow, run) for step in steps for run in step.runs},
             )
-            self._job, self._stopping = job, False
-            self._thread = threading.Thread(
-                target=self._run, args=(job, folder, cell), daemon=True
-            )
-            self._thread.start()
+            self._occupy(job, self._run, (job, folder, cell))
         self._publish(job)
         return job.describe()
 
-    def running(self) -> str | None:
-        """Return the running job's kind, or None."""
+    def running(self, kind: Kind) -> bool:
+        """Return whether a job of `kind` is running."""
         with self._lock:
-            job = self._job
-            return job.kind if job is not None and job.state == "running" else None
+            job = self._slots[kind].job
+            return job is not None and job.state == "running"
 
     def render(
         self,
@@ -259,7 +275,7 @@ class Jobs:
         # Read before the job starts, so a stopping server reads no file.
         settle = self._settle()
         with self._lock:
-            self._refuse_running()
+            self._refuse_running("render")
             self._settle_s = settle
             steps = dict.fromkeys(("volume up", "pod", "teardown", "volume down"), "")
             if keep_open:
@@ -275,17 +291,20 @@ class Jobs:
                 "images": [],
             }
             job = _Job(batch, (), kind="render", session=session)
-            self._job, self._stopping = job, False
-            self._thread = threading.Thread(
-                target=self._run_render, args=(job, folder, limit), daemon=True
-            )
-            self._thread.start()
+            self._occupy(job, self._run_render, (job, folder, limit))
         self._publish(job)
         return job.describe()
 
-    def _refuse_running(self) -> None:
-        """Refuse while a job runs, naming it."""
-        job = self._job
+    def _occupy(self, job: _Job, target: Callable[..., None], args: tuple) -> None:
+        """Put `job` in its slot, and start `target` watching it; hold the lock."""
+        slot = self._slots[job.kind]
+        slot.job, slot.stopping = job, False
+        slot.thread = threading.Thread(target=target, args=args, daemon=True)
+        slot.thread.start()
+
+    def _refuse_running(self, kind: Kind) -> None:
+        """Refuse while a job of `kind` runs, naming it."""
+        job = self._slots[kind].job
         if job is not None and job.state == "running":
             raise Refusal(
                 f"a job is running: {LABELS[job.kind]} on {job.batch}; wait for it "
@@ -293,46 +312,52 @@ class Jobs:
                 "Stop it, then try again"
             )
 
-    def stop(self) -> dict[str, Any]:
-        """Interrupt the running stage and start no other, or refuse: none runs."""
+    def stop(self, kind: Kind) -> dict[str, Any]:
+        """Interrupt `kind`'s running stage and start no other, or refuse: none runs."""
         with self._lock:
-            if self._job is None or self._job.state != "running":
-                raise Refusal("no job is running, so there is nothing to stop")
-            self._interrupt()
-            return self._job.describe()
+            slot = self._slots[kind]
+            if slot.job is None or slot.job.state != "running":
+                raise Refusal(
+                    f"no {LABELS[kind]} is running, so there is nothing to stop"
+                )
+            self._interrupt(slot)
+            return slot.job.describe()
 
-    def wait(self, timeout: float | None = None) -> None:
-        """Return once the job in the slot has ended, or `timeout` has passed."""
-        thread = self._thread
+    def wait(self, kind: Kind, timeout: float | None = None) -> None:
+        """Return once the job in `kind`'s slot has ended, or `timeout` has passed."""
+        thread = self._slots[kind].thread
         if thread is not None:
             thread.join(timeout)
 
     def shutdown(self, timeout: float = 10.0) -> None:
-        """Interrupt a running job and wait for it: the server is stopping.
+        """Interrupt both running jobs at once, and wait: the server is stopping.
 
-        Prepare is waited for `timeout`. A render is waited for through its pod's
-        teardown and the window's close, at most its teardown estimate and one
-        volume verb, saying so on the terminal: a stop that looks hung invites the
-        kill that would leave the window open. A wait that runs out with the window
-        not closed names the command that closes it.
+        Prepare is waited for `timeout`, and never past a render's wait. A render is
+        waited for through its pod's teardown and the window's close, at most its
+        teardown estimate and one volume verb, saying so on the terminal: a stop that
+        looks hung invites the kill that would leave the window open. A wait that runs
+        out with the window not closed names the command that closes it.
         """
         with self._lock:
-            job = self._job
-            running = job is not None and job.state == "running"
-            if running:
-                self._interrupt()
-        if not (running and job is not None and job.kind == "render"):
-            self.wait(timeout)
+            render = self._slots["render"].job
+            rendering = render is not None and render.state == "running"
+            for slot in self._slots.values():
+                if slot.job is not None and slot.job.state == "running":
+                    self._interrupt(slot)
+        if not rendering:
+            self.wait("prepare", timeout)
             return
+        assert render is not None and render.session is not None
         timeout = max(timeout, self._settle_s)
+        deadline = time.monotonic() + timeout
         self._say(
             f"stopping mid-render: waiting up to {timeout:.0f}s for the pod's "
             "teardown and the window's close"
         )
-        self.wait(timeout)
-        assert job.session is not None
+        self.wait("render", timeout)
+        self.wait("prepare", max(0.0, deadline - time.monotonic()))
         with self._lock:
-            closed = job.session["steps"]["volume down"]
+            closed = render.session["steps"]["volume down"]
         if closed not in {"done", "kept"}:
             reason = (
                 "the window close failed" if closed == "failed" else "the wait ran out"
@@ -346,10 +371,10 @@ class Jobs:
         """Print one line on the server's terminal."""
         print(f"isekai: {line}", file=self._err, flush=True)
 
-    def _interrupt(self) -> None:
-        """Send the child SIGINT, as a Ctrl-C would; hold the lock."""
-        self._stopping = True
-        child = self._child
+    def _interrupt(self, slot: _Slot) -> None:
+        """Send `slot`'s child SIGINT, as a Ctrl-C would; hold the lock."""
+        slot.stopping = True
+        child = slot.child
         if child is not None and child.poll() is None:
             try:
                 os.killpg(child.pid, signal.SIGINT)
@@ -363,11 +388,13 @@ class Jobs:
         cell: Callable[[dict[str, Any]], dict[str, Any] | None],
     ) -> None:
         """Run each step's child in turn, publishing each line it reports."""
+        slot = self._slots[job.kind]
         try:
             for step in job.steps:
-                child = self._start(job, step, folder)
-                if child is None:
+                started = self._start(job, step, folder)
+                if started is None:
                     break
+                child, tee = started
                 self._publish(job)
                 assert child.stdout is not None
                 reported = False
@@ -393,11 +420,12 @@ class Jobs:
                         if completed:
                             self._publish(job)
                 code = child.wait()
+                tee.join(DRAIN_S)
                 with self._lock:
-                    self._child = None
+                    slot.child = None
                     # A child that fails before its first line said nothing the
                     # page can show; its reason is in the log.
-                    if code != 0 and not reported and not self._stopping:
+                    if code != 0 and not reported and not slot.stopping:
                         job.state = "failed"
                         job.message = (
                             f"{step.verb} on {step.flow} ended before reporting "
@@ -407,12 +435,13 @@ class Jobs:
         finally:
             with self._lock:
                 if job.state == "running":
-                    job.state = "stopped" if self._stopping else "done"
+                    job.state = "stopped" if slot.stopping else "done"
             self._publish(job)
 
     def _run_render(self, job: _Job, folder: Path, limit: int) -> None:
         """Open the window, run the render verb, and close the window unless kept."""
         assert job.session is not None
+        slot = self._slots[job.kind]
         steps = job.session["steps"]
         log = folder / LOG
         opened = False
@@ -438,7 +467,7 @@ class Jobs:
             if not opened:
                 self._mark(job, "volume up", "failed")
             with self._lock:
-                self._child = None
+                slot.child = None
                 job.state = "failed"
                 job.message = (
                     f"the render job could not run ({error}); read {job.batch}/{LOG}, "
@@ -453,18 +482,19 @@ class Jobs:
                     self._raise_volume()
             with self._lock:
                 if job.state == "running":
-                    job.state = "stopped" if self._stopping else "done"
+                    job.state = "stopped" if slot.stopping else "done"
                 job.session["ended"] = self._now()
             self._publish(job)
 
     def _render_child(self, job: _Job, folder: Path, limit: int) -> None:
         """Run the render verb, reading its steps; start none once Stop was asked."""
         assert job.session is not None
+        slot = self._slots[job.kind]
         with self._lock:
-            if self._stopping:
+            if slot.stopping:
                 return
             argv = self._render(limit, folder / RUNS, job.session["id"])
-            child = self._spawn(argv, folder)
+            child, tee = self._spawn(job.kind, argv, folder)
         assert child.stdout is not None
         reported = False
         for raw in child.stdout:
@@ -484,9 +514,10 @@ class Jobs:
                     job.session["steps"][str(line.get("step"))] = line.get("state")
             self._publish(job)
         code = child.wait()
+        tee.join(DRAIN_S)
         with self._lock:
-            self._child = None
-            if code != 0 and not self._stopping:
+            slot.child = None
+            if code != 0 and not slot.stopping:
                 job.state = "failed"
                 job.message = (
                     f"render ended with exit {code}"
@@ -503,34 +534,52 @@ class Jobs:
 
     def _start(
         self, job: _Job, step: Step, folder: Path
-    ) -> subprocess.Popen[str] | None:
+    ) -> tuple[subprocess.Popen[str], threading.Thread] | None:
         """Start `step`'s child, or return None once Stop was asked for."""
         with self._lock:
-            if self._stopping:
+            if self._slots[job.kind].stopping:
                 return None
             argv = self._command(step.verb, step.flow, folder / RUNS, step.runs)
             job.flow, job.stage = step.flow, step.verb
-            return self._spawn(argv, folder)
+            return self._spawn(job.kind, argv, folder)
 
-    def _spawn(self, argv: list[str], folder: Path) -> subprocess.Popen[str]:
-        """Start `argv` as the slot's child, its prose appended to the batch's log.
+    def _spawn(
+        self, kind: Kind, argv: list[str], folder: Path
+    ) -> tuple[subprocess.Popen[str], threading.Thread]:
+        """Start `argv` as `kind`'s child, and the thread writing its prose to the log.
 
         Hold the lock.
         """
-        with (folder / LOG).open("a") as log:
+        # Line-buffered, so each line lands whole beside the other job's.
+        log = (folder / LOG).open("a", buffering=1)
+        try:
             # Its own session, so a Ctrl-C at the terminal reaches the server
             # alone, and the server decides what the child is sent.
-            self._child = subprocess.Popen(
+            child = subprocess.Popen(
                 argv,
                 stdout=subprocess.PIPE,
-                stderr=log,
+                stderr=subprocess.PIPE,
                 cwd=REPOSITORY,
                 text=True,
                 start_new_session=True,
             )
-        return self._child
+        except OSError:
+            log.close()
+            raise
+        assert child.stderr is not None
+        tee = threading.Thread(target=_tee, args=(child.stderr, log, kind), daemon=True)
+        tee.start()
+        self._slots[kind].child = child
+        return child, tee
 
     def _publish(self, job: _Job) -> None:
         with self._lock:
             described = job.describe()
         self._broadcast.publish("job", described)
+
+
+def _tee(stream: TextIO, log: TextIO, kind: Kind) -> None:
+    """Write each line of `stream` to `log`, naming its job. e.g. `[render] …`."""
+    with stream, log:
+        for line in stream:
+            print(f"[{kind}]", line.rstrip("\n"), file=log)
