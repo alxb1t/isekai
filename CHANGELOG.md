@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-10-24 · 0075-the-walkthrough
+
+Gate: local 0m41s · CI 7m25s (build-image at 801ffec) · 0.47.0: local 0m42s · CI 7m25s
+
 ### Changed
 
 - Home's batch row reads as one header line — name, sources, flow chips and last activity — with its thumbnails
