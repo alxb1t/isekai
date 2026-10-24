@@ -42,7 +42,6 @@ from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.flow import Flow, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
-    APPROVED,
     CAPTIONS,
     FRAME_NAME,
     ID_DIGEST_CHARS,
@@ -62,7 +61,7 @@ from isekai.foundation.run import (
 )
 from isekai.interface.render import record_running
 from isekai.interface.wiring import trackable
-from isekai.pipeline.generate import is_render, rendered_seeds, shortfall
+from isekai.pipeline.generate import is_render, lacks, rendered_seeds, shortfall
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
@@ -174,9 +173,10 @@ class Cell:
     run. `refusal` is set, and `stage` is `unreadable`, where the file that decides
     the stage cannot be read. `status` is where stage ③ stands, `review.state`'s
     answer, wherever the cell has a sheet. `newest` is the last-written image of
-    the newest version holding any, or None. `short` is `lacking`'s answer for the
-    newest approval; None while unapproved. `images` is every approved version's
-    images, oldest version first and each version's in the order written.
+    the newest version holding any, or None. `short` is how many images the
+    newest approval lacks of its count; None while unapproved. `images` is every
+    approved version's images, oldest version first and each version's in the
+    order written.
     """
 
     stage: str | None
@@ -586,12 +586,17 @@ def stage(run: Run, loaded: Flow, *, newest: bool = True) -> Cell:
     status = review_state(review)
     try:
         if approved:
-            _check(latest_artifact(review, APPROVED), APPROVED_FILE)
+            approval = approval_of(run, flow, approved[-1])
+            body = read(approval, APPROVED_FILE)
             if newest:
                 images = _images(run, flow, approved, suffix)
                 renders = sum(one.version == approved[-1] for one in images)
                 named = images[-1] if images else None
-                short = lacking(run, loaded)
+                # A damaged `renders` is marked on its own version: it lacks none.
+                try:
+                    short = lacks(approval, body, renders)
+                except Refusal:
+                    short = 0
             else:
                 group = group_of(run, flow, approved[-1])
                 renders = len(rendered_seeds(group, suffix))

@@ -15,6 +15,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import OUTPUTS, REVIEW, Run, approval_of, open_run
 from isekai.interface.ui import library
 from isekai.interface.ui.library import Cell, FlowCount, Rendered
+from isekai.pipeline import generate
 from isekai.pipeline.review import approve, review, save_draft
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import tree
@@ -274,19 +275,31 @@ def test_a_cell_lists_its_images_oldest_to_newest_from_one_listing(
         image = group / f"{seed}{suffix}"
         image.write_bytes(b"png")
         os.utime(image, (at, at))
+    # Every listing of a group and every read of a run file, wherever it is made.
     listed: list[Path] = []
-    written = library._written
-    monkeypatch.setattr(
-        library,
-        "_written",
-        lambda group, suffix: listed.append(group) or written(group, suffix),
-    )
+    opened: list[Path] = []
+    for module, name, record in (
+        (library, "_written", listed),
+        (library, "rendered_seeds", listed),
+        (generate, "rendered_seeds", listed),
+        (library, "read", opened),
+        (generate, "read", opened),
+    ):
+        real = getattr(module, name)
+        monkeypatch.setattr(
+            module,
+            name,
+            lambda path, *rest, real=real, record=record, **named: (
+                record.append(path) or real(path, *rest, **named)
+            ),
+        )
 
     cell = library.stage(run, loaded)
 
     assert cell.images == (Rendered(1, 9), Rendered(1, 2), Rendered(2, 4))
-    assert (cell.renders, cell.newest) == (1, Rendered(2, 4))
+    assert (cell.renders, cell.newest, cell.short) == (1, Rendered(2, 4), 0)
     assert sorted(group.name for group in listed) == ["001", "002"]
+    assert len(opened) == 1
 
 
 @pytest.mark.spec("ui:review:a-cell-counts-what-it-lacks")
