@@ -13,8 +13,10 @@ Stdlib only, and on `python -m isekai`'s import graph.
 """
 
 import json
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Generic, NewType, NotRequired, TypedDict, TypeGuard, TypeVar
 
@@ -394,6 +396,16 @@ RENDER_FILE: Artifact[Render] = Artifact("render", 1)
 # A render's sidecar is `<seed>` and this; its image is `<seed>` and the flow's suffix.
 SIDECAR = ".render.json"
 SESSION_FILE: Artifact[SessionRecord] = Artifact("session", 1)
+# A batch's session records, beside its log; each is named by its session's id.
+SESSIONS = "sessions"
+# A session's id is a start in UTC; `session_id` writes it and this reads it.
+SESSION_ID = re.compile(r"[0-9]{8}T[0-9]{6}Z")
+
+
+def session_id(moment: datetime) -> str:
+    """Return the id a session started at `moment` takes, e.g. 20261024T091200Z."""
+    return moment.strftime("%Y%m%dT%H%M%SZ")
+
 
 # The version this build reads of each kind, by name: for a reader that learns
 # the kind from the file rather than being told it, as `show` does.

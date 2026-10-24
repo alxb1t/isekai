@@ -81,7 +81,8 @@ classified or what state a sheet is in, belongs to the component that owns that 
   needing the rendered seeds the render stage lists, which the review stage may not import.
   `interface/ui/library.py`'s `lacking` decides that an unapproved or damaged flow lacks no image, and
   `interface/ui/library.py`'s `_newest_image` decides by the time each was written which image is a
-  cell's newest — the render stage's work.
+  cell's newest — the render stage's work. Its `_session` decides that a record still reading running
+  that no job runs was ended outright — the render verb's work, which owns the record.
 
 ### The code is layered
 

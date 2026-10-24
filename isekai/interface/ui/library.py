@@ -27,6 +27,8 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     SESSION_FILE,
+    SESSION_ID,
+    SESSIONS,
     SHEET_FILE,
     WD14_FILE,
     Artifact,
@@ -58,7 +60,6 @@ from isekai.foundation.run import (
     group_of,
     latest_artifact,
 )
-from isekai.interface.render import SESSION_ID, SESSIONS
 from isekai.interface.wiring import trackable
 from isekai.pipeline.generate import is_render, rendered_seeds, shortfall
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
@@ -292,9 +293,7 @@ def sessions(folder: Path, live: str | None) -> list[dict[str, Any]]:
     `live` is the id of the render the job slot runs. A record reading running
     that is not it was ended outright, and reads as ended with no outcome.
     """
-    found = [
-        _session(path, live) for path in sorted((folder / SESSIONS).glob("*.json"))
-    ]
+    found = [_session(path, live) for path in (folder / SESSIONS).glob("*.json")]
     found.sort(key=lambda one: one["started"], reverse=True)
     found.sort(key=lambda one: one["outcome"] != "running")
     return found

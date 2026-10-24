@@ -519,12 +519,17 @@ def create_app(
         )
         return {"job": job}
 
-    def live() -> str | None:
-        """Return the id of the render session the slot runs, or None."""
+    def rendering_slot() -> dict[str, Any] | None:
+        """Return the job slot while it runs a render, or None."""
         slot = jobs.slot()
         if slot and slot["state"] == "running" and slot["kind"] == "render":
-            return slot["session"]["id"]
+            return slot
         return None
+
+    def live() -> str | None:
+        """Return the id of the render session the slot runs, or None."""
+        slot = rendering_slot()
+        return slot["session"]["id"] if slot else None
 
     @app.get("/api/b/{batch}/sessions")
     def read_sessions(batch: str) -> dict[str, Any]:
@@ -533,7 +538,7 @@ def create_app(
 
     @app.get("/api/b/{batch}/sessions/{name}")
     def read_session(batch: str, name: str) -> dict[str, Any]:
-        """Return one render session's record; the job slot adds the volume steps."""
+        """Return one render session's record; the slot holds its volume steps."""
         return library.session(folder(batch), name, live())
 
     @app.post("/api/billing/check")
@@ -771,10 +776,10 @@ def create_app(
 
     def _rendering(batch: str) -> str | None:
         """Return what a render running for `batch` says, or None."""
-        slot = jobs.slot()
-        if slot and slot["state"] == "running" and slot["kind"] == "render":
-            return "A render session is running." if slot["batch"] == batch else None
-        return None
+        slot = rendering_slot()
+        return (
+            "A render session is running." if slot and slot["batch"] == batch else None
+        )
 
     @app.post("/api/b/{batch}/review/{digest}/{flow}/discard")
     def post_discard(

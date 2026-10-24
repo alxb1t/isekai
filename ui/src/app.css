@@ -336,14 +336,14 @@ body {
   background: repeating-linear-gradient(135deg, #1f2030 0 5px, #26273b 5px 10px);
 }
 
-.session__open {
-  display: block;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: none;
-  background: none;
+button.session__tile {
   cursor: zoom-in;
+}
+
+/* A photograph of the batch, at a render tile's size. */
+.session__tile--photo {
+  border: 1px solid var(--line);
+  background: var(--raised-2);
 }
 
 .session__tile--done {
@@ -351,18 +351,6 @@ body {
   border: 1px solid var(--accent-dim);
 }
 
-/* A photograph of the batch, at a render tile's size. */
-.session__photo {
-  width: var(--tile-width);
-  height: var(--tile-height);
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  background: var(--raised-2);
-  cursor: zoom-in;
-}
-
-.session__photo img,
 .session__tile img {
   width: 100%;
   height: 100%;

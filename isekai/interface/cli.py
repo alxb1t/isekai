@@ -53,7 +53,7 @@ from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.artifacts import SEED_RANGE
+from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -67,7 +67,7 @@ from isekai.foundation.run import (
     rendered_at,
 )
 from isekai.interface.compare_view import write_page
-from isekai.interface.render import SESSION_ID, run_session
+from isekai.interface.render import run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
 from isekai.pipeline.caption import caption

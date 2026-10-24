@@ -29,14 +29,10 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from isekai.boundary.gpu import Volume
+from isekai.foundation.artifacts import session_id
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
-from isekai.interface.render import (
-    LOST_EXIT,
-    load_timing,
-    progress_line,
-    session_id,
-)
+from isekai.interface.render import LOST_EXIT, load_timing, progress_line
 from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS

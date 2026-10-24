@@ -6,6 +6,7 @@ import ImageViewer, { type Shown } from '../components/ImageViewer.vue'
 import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import { asked, lasted, outcome } from '../sessions'
 import { useBatchStore } from '../stores/batch'
 import { alerting, clock, useLiveStore } from '../stores/live'
 
@@ -31,23 +32,22 @@ const alert = computed(() => alerting(billing.value))
 
 const started = computed(() => record.value?.started ?? slot.value?.session?.started ?? null)
 const limit = computed(() => record.value?.limit ?? slot.value?.session?.limit ?? 0)
-const of = computed(() =>
-  record.value
-    ? Object.values(record.value.asked).reduce((sum, n) => sum + n, 0)
-    : (slot.value?.session?.of ?? 0),
-)
+const of = computed(() => (record.value ? asked(record.value) : (slot.value?.session?.of ?? 0)))
 const images = computed(() => record.value?.images ?? [])
 const done = computed(() => images.value.length)
 const steps = computed(() => record.value?.steps ?? {})
 const volume = computed(() => slot.value?.session?.steps ?? {})
 
-/* Seconds from the start to the end, or to now while it runs; null once ended outright. */
-const elapsed = computed(() => {
-  if (!started.value) return null
-  const ended = record.value?.ended ?? slot.value?.session?.ended
-  if (ended) return (Date.parse(ended) - Date.parse(started.value)) / 1000
-  return running.value ? (now.value - Date.parse(started.value)) / 1000 : null
-})
+const elapsed = computed(() =>
+  started.value
+    ? lasted(
+        started.value,
+        record.value?.ended ?? slot.value?.session?.ended,
+        running.value,
+        now.value,
+      )
+    : null,
+)
 
 /* The five steps, always, each with its state. */
 const shown = computed(() => {
@@ -78,14 +78,9 @@ const failure = computed(() =>
       ? slot.value.message
       : null,
 )
-const ended = computed(() =>
-  running.value ? null : (record.value?.outcome ?? (record.value ? 'ended, no outcome' : null)),
-)
+const ended = computed(() => (running.value || !record.value ? null : outcome(record.value)))
 
-function thumb(index: number): string | null {
-  const image = images.value[index]
-  return image ? thumbAt({ batch: props.batch, ...image }) : null
-}
+const thumbs = computed(() => images.value.map((one) => thumbAt({ batch: props.batch, ...one })))
 
 /* What the viewer steps through: the finished images, or the batch's photographs. */
 const viewing = ref<{ images: 'rendered' | 'sources'; start: number } | null>(null)
@@ -146,30 +141,26 @@ onMounted(async () => {
       </li>
     </ol>
     <div class="session__images">
-      <span
-        v-for="index in of"
-        :key="index"
-        class="session__tile"
-        :class="{ 'session__tile--done': index <= done }"
-      >
+      <template v-for="index in of" :key="index">
         <button
-          v-if="thumb(index - 1)"
-          class="session__open"
+          v-if="thumbs[index - 1]"
+          class="session__tile session__tile--done"
           type="button"
           :aria-label="`view image ${index}`"
           data-session-image
           @click="viewing = { images: 'rendered', start: index - 1 }"
         >
-          <img :src="thumb(index - 1) ?? ''" alt="" />
+          <img :src="thumbs[index - 1]" alt="" />
         </button>
-      </span>
+        <span v-else class="session__tile" />
+      </template>
     </div>
     <span v-if="sources.length" class="section-label">Photographs</span>
     <div v-if="sources.length" class="session__images">
       <button
         v-for="(one, index) in sources"
         :key="one.name"
-        class="session__photo"
+        class="session__tile session__tile--photo"
         type="button"
         :aria-label="`view ${one.name}`"
         data-session-source

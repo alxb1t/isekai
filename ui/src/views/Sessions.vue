@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { thumbAt } from '../api'
 import KeyBar from '../components/KeyBar.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useBatchStore } from '../stores/batch'
+import { asked, lasted, outcome } from '../sessions'
 import { clock, useLiveStore } from '../stores/live'
-import type { SessionRecord } from '../types'
 import { noun } from '../words'
 
 /* A batch's render sessions, read from their records: the running one first,
@@ -28,14 +28,18 @@ const start = (at: string) =>
     second: '2-digit',
   })
 
-/* Seconds from the start to the end, or to now while it runs; null once ended outright. */
-function lasted(one: SessionRecord): number | null {
-  if (one.ended) return (Date.parse(one.ended) - Date.parse(one.started)) / 1000
-  if (one.outcome === 'running') return (now.value - Date.parse(one.started)) / 1000
-  return null
-}
-
-const asked = (one: SessionRecord) => Object.values(one.asked).reduce((sum, n) => sum + n, 0)
+/* Each session as its row draws it. */
+const rows = computed(() =>
+  (sessions.value ?? []).map((one) => {
+    const seconds = lasted(one.started, one.ended, one.outcome === 'running', now.value)
+    return {
+      one,
+      lasted: seconds === null ? '—' : clock(seconds),
+      of: asked(one),
+      outcome: outcome(one),
+    }
+  }),
+)
 
 onMounted(async () => {
   try {
@@ -52,22 +56,17 @@ onMounted(async () => {
     <span class="section-label">Render sessions · {{ props.batch }}</span>
     <p v-if="!sessions.length" class="sessions__none">No render session has run for this batch.</p>
     <RouterLink
-      v-for="one in sessions"
+      v-for="{ one, lasted: took, of, outcome: ended } in rows"
       :key="one.id"
       class="sessions__row"
       :data-session="one.id"
       :to="{ name: 'session', params: { batch: props.batch, id: one.id } }"
     >
       <span class="sessions__start mono">{{ start(one.started) }}</span>
-      <span class="sessions__lasted mono"
-        >{{ lasted(one) === null ? '—' : clock(lasted(one) ?? 0) }} of
-        {{ clock(one.limit) }}</span
-      >
-      <span class="sessions__outcome" :data-outcome="one.outcome ?? 'ended'">{{
-        one.outcome ?? 'ended, no outcome'
-      }}</span>
+      <span class="sessions__lasted mono">{{ took }} of {{ clock(one.limit) }}</span>
+      <span class="sessions__outcome" :data-outcome="one.outcome ?? 'ended'">{{ ended }}</span>
       <span class="sessions__count mono"
-        >{{ one.images.length }} of {{ asked(one) }} {{ noun(asked(one), 'image') }}</span
+        >{{ one.images.length }} of {{ of }} {{ noun(of, 'image') }}</span
       >
       <span class="sessions__images">
         <span v-for="image in one.images" :key="`${image.digest}/${image.seed}`" class="session__tile session__tile--done">

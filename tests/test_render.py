@@ -15,6 +15,7 @@ import tomllib
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,13 @@ import pytest
 
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyClient, ComfyTransport, TransportFailure
-from isekai.foundation.artifacts import RENDER_FILE, read
+from isekai.foundation.artifacts import (
+    RENDER_FILE,
+    SESSION_ID,
+    SESSIONS,
+    read,
+    session_id,
+)
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.run import REPOSITORY, Run, open_run
 from isekai.interface import render
@@ -788,7 +795,7 @@ def test_a_session_whose_endpoint_never_answers_reports_its_teardown(
 
 def records(runs: Path) -> list[dict[str, Any]]:
     """Return the batch's session records, by name."""
-    folder = runs.parent / render.SESSIONS
+    folder = runs.parent / SESSIONS
     return [json.loads(path.read_text()) for path in sorted(folder.glob("*.json"))]
 
 
@@ -857,8 +864,10 @@ def test_the_given_id_names_the_record_and_another_shape_is_refused(
 
     assert session(runs, f"{FLOW}=1", given=given) == 0
 
-    named = runs.parent / render.SESSIONS / f"{given}.json"
+    named = runs.parent / SESSIONS / f"{given}.json"
     assert json.loads(named.read_text())["id"] == given
+    # The id the start writes is one the flag reads.
+    assert SESSION_ID.fullmatch(session_id(datetime.now(UTC)))
     # The id names a file, so no other shape reaches a path.
     with pytest.raises(SystemExit):
         build_parser().parse_args(["render", str(runs), "--session", "../x"])
@@ -870,7 +879,7 @@ def test_a_session_refused_before_renting_writes_no_record(tmp_path: Path) -> No
 
     assert session(runs, f"{FLOW}=1", busy=lambda port: True) == 1
 
-    assert not (runs.parent / render.SESSIONS).exists()
+    assert not (runs.parent / SESSIONS).exists()
 
 
 TIMING = render.Timing(

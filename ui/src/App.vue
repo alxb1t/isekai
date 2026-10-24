@@ -6,6 +6,7 @@ import KeyHint from './components/KeyHint.vue'
 import KeyList from './components/KeyList.vue'
 import { useKeys } from './composables/useKeys'
 import { queue } from './composables/useQueue'
+import { lasted } from './sessions'
 import { useBatchStore } from './stores/batch'
 import { shifted, useKeyStore } from './stores/keys'
 import { alerting, clock, useLiveStore } from './stores/live'
@@ -66,7 +67,7 @@ function open(name: string): void {
 const rendered = computed(() => {
   const held = job.value
   if (!renderRunning.value || !held?.session) return null
-  const elapsed = (now.value - Date.parse(held.session.started)) / 1000
+  const elapsed = lasted(held.session.started, null, true, now.value) ?? 0
   return { batch: held.batch, id: held.session.id, clock: clock(elapsed) }
 })
 /* ⇧S: the running session, else the open batch's sessions. */

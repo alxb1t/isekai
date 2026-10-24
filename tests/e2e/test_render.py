@@ -41,7 +41,7 @@ def test_confirming_the_dialog_opens_the_session(page: Page, served: Served) -> 
         re.compile(rf"{re.escape(served.url)}/b/{RENDER}/sessions/\d{{8}}T\d{{6}}Z$")
     )
     expect(page.locator("[data-quiet]")).to_have_text("Nothing is billing.")
-    expect(page.locator(".session__tile img")).to_have_count(1)
+    expect(page.locator("[data-session-image] img")).to_have_count(1)
 
 
 @pytest.mark.spec("ui:sessions:the-list-shows-a-finished-session")
@@ -56,7 +56,7 @@ def test_the_list_shows_a_finished_session(page: Page, served: Served) -> None:
 
     expect(page).to_have_url(f"{served.url}/b/{SHOWN}/sessions/{FINISHED}")
     expect(page.locator("[data-outcome]")).to_have_text("done")
-    expect(page.locator(".session__tile img")).to_have_count(1)
+    expect(page.locator("[data-session-image] img")).to_have_count(1)
 
 
 @pytest.mark.spec("ui:renders:the-large-view-shows-its-sheet")

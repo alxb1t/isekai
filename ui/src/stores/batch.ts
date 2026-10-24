@@ -78,11 +78,8 @@ export const useBatchStore = defineStore('batch', () => {
   /** Read the renders again; a refusal is thrown to the caller. */
   const reloadRenders = () => reload(readRenders, renders)
   /** Read the sessions again; a refusal is thrown to the caller. */
-  async function reloadSessions(): Promise<void> {
-    const batch = name.value ?? ''
-    const found = await readSessions(batch)
-    if (name.value === batch) sessions.value = found.sessions
-  }
+  const reloadSessions = () =>
+    reload((batch) => readSessions(batch).then((found) => found.sessions), sessions)
   /* Read session `id`'s record, kept unless another batch or session is shown by then. */
   async function readShown(id: string): Promise<void> {
     const batch = name.value ?? ''
@@ -152,10 +149,15 @@ export const useBatchStore = defineStore('batch', () => {
     if (sessions.value) void reloadSessions().catch(() => undefined)
   })
   /* The render job reports each step and image after its record changes, so the
-     session it runs is read again on each report, its record written or not yet. */
+     session it runs is read again when its pod, teardown, images or state move. */
+  let reported = ''
   watch(job, (slot) => {
     const id = shown
-    if (id === null || slot?.kind !== 'render' || slot.session?.id !== id) return
+    const held = slot?.session
+    if (id === null || slot?.kind !== 'render' || held?.id !== id) return
+    const now = [slot.state, held.steps.pod, held.steps.teardown, held.images.length].join('|')
+    if (now === reported) return
+    reported = now
     void readShown(id).catch(() => undefined)
   })
   watch(
