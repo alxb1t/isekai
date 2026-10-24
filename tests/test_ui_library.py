@@ -15,6 +15,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import OUTPUTS, REVIEW, Run, approval_of, open_run
 from isekai.interface.ui import library
 from isekai.interface.ui.library import Cell, FlowCount, Rendered
+from isekai.pipeline import generate
 from isekai.pipeline.review import approve, review, save_draft
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import tree
@@ -197,7 +198,14 @@ def test_a_cells_stage_is_the_furthest_its_run_directory_holds(
     for seed in (7, 8):
         (rendered / f"{seed}{suffix}").write_bytes(b"png")
     newest = Rendered(1, 8)
-    done = Cell("rendered", 2, status="approved", newest=newest, short=0)
+    done = Cell(
+        "rendered",
+        2,
+        status="approved",
+        newest=newest,
+        short=0,
+        images=(Rendered(1, 7), newest),
+    )
     assert now() == done
 
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
@@ -247,6 +255,51 @@ def test_an_approved_cell_names_the_last_image_of_its_newest_rendered_version(
     assert library.stage(run, loaded, newest=False) == Cell(
         "approved", status="approved"
     )
+
+
+@pytest.mark.spec("ui:hub:a-cell-lists-its-images")
+def test_a_cell_lists_its_images_oldest_to_newest_from_one_listing(
+    tmp_path: Path, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    folder = _batch(tmp_path, "b", "ada.jpg")
+    run = _run(folder, "ada.jpg")
+    loaded = load_flow(SUMMON)
+    suffix = loaded.output_suffix
+    _approved(run, vocabulary)
+    review(run, SUMMON, new_version=True)
+    approve(run, SUMMON, loaded.schema, vocabulary)
+    # Within a version, the order is the order the images were written.
+    for version, seed, at in (("002", 4, 3_000), ("001", 9, 1_000), ("001", 2, 2_000)):
+        group = run.directory(SUMMON, OUTPUTS, version)
+        group.mkdir(parents=True, exist_ok=True)
+        image = group / f"{seed}{suffix}"
+        image.write_bytes(b"png")
+        os.utime(image, (at, at))
+    # Every listing of a group and every read of a run file, wherever it is made.
+    listed: list[Path] = []
+    opened: list[Path] = []
+    for module, name, record in (
+        (library, "_written", listed),
+        (library, "rendered_seeds", listed),
+        (generate, "rendered_seeds", listed),
+        (library, "read", opened),
+        (generate, "read", opened),
+    ):
+        real = getattr(module, name)
+        monkeypatch.setattr(
+            module,
+            name,
+            lambda path, *rest, real=real, record=record, **named: (
+                record.append(path) or real(path, *rest, **named)
+            ),
+        )
+
+    cell = library.stage(run, loaded)
+
+    assert cell.images == (Rendered(1, 9), Rendered(1, 2), Rendered(2, 4))
+    assert (cell.renders, cell.newest, cell.short) == (1, Rendered(2, 4), 0)
+    assert sorted(group.name for group in listed) == ["001", "002"]
+    assert len(opened) == 1
 
 
 @pytest.mark.spec("ui:review:a-cell-counts-what-it-lacks")

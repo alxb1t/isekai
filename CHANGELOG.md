@@ -9,6 +9,29 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-10-24 · 0075-the-walkthrough
+
+Gate: local 0m41s · CI 7m25s (build-image at 801ffec) · 0.47.0: local 0m42s · CI 7m25s
+
+### Changed
+
+- Home's batch row reads as one header line — name, sources, flow chips and last activity — with its thumbnails
+  below at the full width (0075 D1).
+
+- The hub's source cell is its grid's first column: `h` reaches it and `↵` opens the batch's photographs in the
+  viewer (0075 D3).
+
+- A rendered hub cell shows every image it holds, each marked with its version; a click or `↵` opens the viewer on
+  the newest, whose `↵` opens its large view. Each version's outputs are listed once (0075 D5).
+
+- The hub and Renders keep their focus for the open batch: `Esc` from a large view, the Back button and a tab switch
+  come back to the cell or image left, else the first (0075 D4).
+
+- An image's large view offers *Side by side* on `⇧C`: the image beside its run's photograph at equal height (0075 D2).
+
+- Review's rail names each other flow holding unapproved sheets, with how many, and `⇧F` opens the next one's first;
+  the design spec draws the walkthrough's screens and one job-strip dot (0075 D6, D7).
+
 ## [0.47.0] - 2026-10-24 · 0074-two-job-slots
 
 Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.46.0: local 0m40s · CI 7m25s

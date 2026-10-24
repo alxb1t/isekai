@@ -67,6 +67,13 @@ function select(digest: string): void {
     void router.push({ name: 'review', params: { ...props, digest } })
 }
 
+/* The next flow holding unapproved sheets, opened on its first. */
+function nextFlow(): void {
+  const next = batch.others.value[0]
+  if (next)
+    void router.push({ name: 'review', params: { ...props, digest: next.first, flow: next.flow } })
+}
+
 function stepBatch(direction: -1 | 1): void {
   const inputs = batch.inputs.value
   const at = inputs.findIndex((i) => i.id === props.digest)
@@ -431,6 +438,13 @@ useKeys('screen', [
     label: 'previous sheet',
     run: () => stepBatch(-1),
   },
+  {
+    id: 'next-flow',
+    keys: [shifted('KeyF')],
+    label: 'the next flow',
+    run: nextFlow,
+    when: () => batch.others.value.length > 0,
+  },
   { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'pane left', run: () => movePane(-1) },
   { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'pane right', run: () => movePane(1) },
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
@@ -536,6 +550,7 @@ watch(current, (id) => {
       <BatchRail
         :flow="props.flow"
         :inputs="batch.inputs.value"
+        :others="batch.others.value"
         :approved="batch.approved.value"
         :current="current"
         :edited="batch.edited.value"

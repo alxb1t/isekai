@@ -744,10 +744,21 @@ button.session__tile {
   color: var(--ink-2);
 }
 
-.library__sources {
+/* A batch's row: one header line, its thumbnails below at the full width. */
+.library__row--batch {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+}
+
+.library__head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.library__head .library__chips {
+  flex: 1;
 }
 
 .library__thumbs {
@@ -782,6 +793,7 @@ button.session__tile {
 
 .library__when {
   text-align: right;
+  white-space: nowrap;
 }
 
 .library__reason {
@@ -907,6 +919,13 @@ button.session__tile {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Another flow's unapproved sheets, under the open flow's name. */
+.rail__waiting {
+  padding: 0 5px var(--space-2);
+  font-size: 10.5px;
+  color: var(--color-neutral-500);
 }
 
 .rail__run {
@@ -1679,6 +1698,14 @@ button.session__tile {
   margin-left: auto;
   font-size: 11px;
   color: var(--ink-2);
+}
+
+/* A cell's images under its stage track, at a Renders tile's size. */
+.hub__images {
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+  gap: 6px;
 }
 
 .hub__refusal {

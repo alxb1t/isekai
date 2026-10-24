@@ -50,6 +50,9 @@ export const useBatchStore = defineStore('batch', () => {
   let listAgain = false
   const offer = ref<RenderOffer>({ ...NO_OFFER })
   const dialog = ref(false)
+  /* Each grid's focus, by its spot's name, written on every move: Esc from a
+     large view, the Back button and a tab switch all come back to it. */
+  const focus = ref<{ hub: string | null; renders: string | null }>({ hub: null, renders: null })
   /* A render session running for this batch, not another's. */
   const rendering = computed(() => renderRunning.value && activeRender.value?.batch === name.value)
   /* A Prepare running for this batch, not another's. */
@@ -77,6 +80,7 @@ export const useBatchStore = defineStore('batch', () => {
     shown = null
     offer.value = { ...NO_OFFER }
     dialog.value = false
+    focus.value = { hub: null, renders: null }
     asked += 1
   }
 
@@ -232,6 +236,7 @@ export const useBatchStore = defineStore('batch', () => {
     session,
     offer,
     dialog,
+    focus,
     rendering,
     preparing,
     open,

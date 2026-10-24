@@ -125,41 +125,41 @@ onMounted(async () => {
         <template v-for="row in rows" :key="row.name">
           <div
             v-if="row.batch"
-            class="library__row"
+            class="library__row library__row--batch"
             data-batch
             tabindex="0"
             @click="open(row)"
           >
-            <span class="library__name">{{ row.name }}</span>
-            <div class="library__sources">
+            <div class="library__head">
+              <span class="library__name">{{ row.name }}</span>
               <span class="library__meta">{{ row.sources }} {{ noun(row.sources, 'source') }}</span>
-              <span v-if="row.thumbs.length" class="library__thumbs">
-                <img
-                  v-for="name in row.thumbs"
-                  :key="name"
-                  class="library__thumb"
-                  :src="sourceThumbAt(row.name, name)"
-                  alt=""
-                  loading="lazy"
-                />
-                <span v-if="row.sources > row.thumbs.length" class="library__meta">
-                  +{{ row.sources - row.thumbs.length }}
+              <div class="library__chips">
+                <span v-for="one in row.flows" :key="one.flow" class="library__chip">
+                  {{ one.flow }} {{ one.approved }}/{{ one.of }} approved ·
+                  {{ one.rendered }}/{{ one.of }} rendered
                 </span>
+                <span v-if="row.without_flow" class="library__meta">
+                  {{ row.without_flow }} {{ noun(row.without_flow, 'source') }} without a flow
+                </span>
+              </div>
+              <span class="library__meta library__when">
+                {{ when(row.newest) }}<template v-if="row.kind"> · {{ row.kind }}</template>
+                · open ↵
               </span>
             </div>
-            <div class="library__chips">
-              <span v-for="one in row.flows" :key="one.flow" class="library__chip">
-                {{ one.flow }} {{ one.approved }}/{{ one.of }} approved ·
-                {{ one.rendered }}/{{ one.of }} rendered
-              </span>
-              <span v-if="row.without_flow" class="library__meta">
-                {{ row.without_flow }} {{ noun(row.without_flow, 'source') }} without a flow
+            <div v-if="row.thumbs.length" class="library__thumbs">
+              <img
+                v-for="name in row.thumbs"
+                :key="name"
+                class="library__thumb"
+                :src="sourceThumbAt(row.name, name)"
+                alt=""
+                loading="lazy"
+              />
+              <span v-if="row.sources > row.thumbs.length" class="library__meta">
+                +{{ row.sources - row.thumbs.length }}
               </span>
             </div>
-            <span class="library__meta library__when">
-              {{ when(row.newest) }}<template v-if="row.kind"> · {{ row.kind }}</template>
-              <br />open ↵
-            </span>
           </div>
           <div v-else class="library__row library__row--inert">
             <span class="library__name">{{ row.name }}</span>

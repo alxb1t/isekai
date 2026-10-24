@@ -172,8 +172,13 @@ def approved_artifact(run: Run, flow: str) -> tuple[int, Path]:
 
 def _approved_renders(approval: Path) -> Renders:
     """Return an approval's `renders`; only a hand repairs a damaged one."""
-    remedy = f"restore it in {approval} by hand"
+    remedy = _repair(approval)
     return renders_of(approval, read(approval, APPROVED_FILE, remedy=remedy), remedy)
+
+
+def _repair(approval: Path) -> str:
+    """Return the remedy a damaged approval names: only a hand repairs one."""
+    return f"restore it in {approval} by hand"
 
 
 def image_of(run: Run, flow: Flow, version: int, seed: int) -> Path:
@@ -327,9 +332,19 @@ def shortfall(run: Run, flow: Flow) -> int:
     unapproved flow is refused naming the way out.
     """
     version, approval = approved_artifact(run, flow.id)
-    count = _approved_renders(approval)["count"]
+    body = read(approval, APPROVED_FILE, remedy=_repair(approval))
     group = group_of(run, flow.id, version)
-    return max(count - len(rendered_seeds(group, flow.output_suffix)), 0)
+    return lacks(approval, body, len(rendered_seeds(group, flow.output_suffix)))
+
+
+def lacks(approval: Path, body: Mapping[str, object], rendered: int) -> int:
+    """Return how many images an approval read as `body` lacks with `rendered` written.
+
+    A caller that has already read the approval and listed its group passes both,
+    so neither is done twice; a damaged `renders` is refused naming its repair.
+    e.g. `{"renders": {"count": 3, ...}}` with 1 written -> 2
+    """
+    return max(renders_of(approval, body, _repair(approval))["count"] - rendered, 0)
 
 
 def sidecars(run: Run, flow: str) -> list[Path]:

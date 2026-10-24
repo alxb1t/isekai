@@ -687,13 +687,16 @@ The system SHALL show a batch's hub as a grid of its sources by the flows the su
 stage read from that run's directory — no flow, assigned, tagged, sheet, draft, approved or rendered — and SHALL
 ignore any other flow's directory. A cell whose run file cannot be read SHALL show that it is unreadable, with the
 refusal the pipeline raised, and the rest of the grid SHALL still be shown. Reading the hub SHALL write nothing; a
-tick SHALL write only through the assigning verb, and an untick only while the cell is assigned. A source imported
-as it is, still carrying metadata, SHALL be marked on its row. Each source SHALL show its thumbnail and the size read
+tick SHALL write only through the assigning verb, and an untick only while the cell is assigned. A source imported as
+it is, still carrying metadata, SHALL be marked on its row. Each source SHALL show its thumbnail and the size read
 from its own file, with or without a run. A cell SHALL name its newest image — the newest version holding images,
 then its last-written image — and a click or `↵` SHALL follow the cell's stage: tick while unassigned or assigned,
-open Review on a sheet or a draft, open the sheet read-only on an approval with no image, and open the newest
-image's large view where the cell holds images; a tagged or unreadable cell SHALL do nothing. The header SHALL leave
-a 12 px gap between items.
+open Review on a sheet or a draft, open the sheet read-only on an approval with no image, and open the viewer on the
+newest of the cell's images where it holds any, stepping through them, `↵` opening an image's large view; a tagged or
+unreadable cell SHALL do nothing. A cell holding images SHALL show every one of them, oldest to newest, each marked
+with its version. A source's cell SHALL be the grid's first column, reached by `h` and `←`, and `↵` there SHALL open
+its photograph in the viewer, stepping through the batch's sources. The hub SHALL keep its focus across a large view,
+the Back button and a switch of tabs. The header SHALL leave a 12 px gap between items.
 
 A stage is a directory listing, the rule every stage already follows, so the grid cannot drift from the disk, and a
 tick survives a reload. The mark and the size are read from the source itself, so no file records them. An approved
@@ -766,9 +769,21 @@ cell can hold an older version's images, so its newest image is named by the ser
 #### Scenario: a rendered cell opens its newest image
 - **Key:** `ui:hub:a-rendered-cell-opens-its-newest-image`
 - **Layers:** e2e
-- **WHEN** a rendered cell is clicked
-- **THEN** its newest image's large view opens
-- **AND** `Esc` returns to the hub
+- **WHEN** a rendered cell is clicked, then `↵` is pressed in the viewer
+- **THEN** the viewer opens on its newest image, then that image's large view
+- **AND** `Esc` returns to the hub, focused on that cell
+
+#### Scenario: a cell lists its images
+- **Key:** `ui:hub:a-cell-lists-its-images`
+- **Layers:** unit
+- **WHEN** a cell holds images under two versions
+- **THEN** the hub carries them oldest to newest, each with its version and seed
+
+#### Scenario: the source cell opens its photograph
+- **Key:** `ui:hub:the-source-cell-opens-its-photograph`
+- **Layers:** e2e
+- **WHEN** `h` is pressed on a row's first flow cell, then `↵`
+- **THEN** the row's photograph opens in the viewer
 
 ### Requirement: Sources are chosen in the file dialog, and each shows its own upload
 
@@ -1190,7 +1205,8 @@ SHALL show them as a grid of sources by flows, each cell one row of its images, 
 image marked with its version, and open an image's large view, with the sheet it was rendered from, from any of them.
 A cell whose newest approval lacks images of its count SHALL carry the number it lacks, as the render stage counts
 it. Each source SHALL show its photograph's thumbnail, upright, opening the photograph in a viewer. `Esc` on a large
-view SHALL return to the screen it was opened from. It SHALL mark an approval it cannot read as damaged, naming the
+view SHALL return to the screen it was opened from, focused on the image it closed, and Renders SHALL keep its focus
+across the Back button and a switch of tabs. It SHALL mark an approval it cannot read as damaged, naming the
 file, and show every image, that version's own among them; and SHALL refuse an address whose version is not `v` and
 ASCII digits. It SHALL serve each thumbnail, a render's or a source's, from a cache in the library's `.cache/`, made
 on first request and named by the image's own bytes. It SHALL refuse an image it cannot read, one past Pillow's pixel
@@ -1253,6 +1269,7 @@ another format is still shown, as its thumbnail is.
 - **Layers:** e2e
 - **WHEN** an image is opened from the grid
 - **THEN** its large view shows the approval it was rendered from
+- **AND** `Esc` returns to the grid focused on that image
 
 #### Scenario: a source opens in the viewer
 - **Key:** `ui:renders:a-source-opens-in-the-viewer`
@@ -1282,13 +1299,20 @@ another format is still shown, as its thumbnail is.
 - **WHEN** an image past Pillow's pixel bound is read for a thumbnail, or served whole
 - **THEN** it is refused, naming the file
 
+#### Scenario: a grid keeps its focus
+- **Key:** `ui:renders:a-grid-keeps-its-focus`
+- **Layers:** unit
+- **WHEN** a batch's grid focus is moved, then its view is opened again
+- **THEN** the focus is where it was left, or on the first spot when that one is gone
+
 ### Requirement: A version says what it was, and Compare shows a seed's two versions
 
 The system SHALL head each image's large view with its approval version, the version it came from, read from its
 producer, naming it a revision when its fields differ from that version's and a re-roll when only its count or seeds
 do, and the approval's time, count and seeds. A large view whose seed is rendered under an older version of the same
 source and flow SHALL offer Compare with the newest such version, showing both images at equal size, the fields that
-changed, what changed in the count and seeds, and the tokens before and after.
+changed, what changed in the count and seeds, and the tokens before and after. Every large view SHALL
+offer *Side by side*, the image beside its run's photograph at equal height.
 
 The origin is already on disk, so nothing new records it. Same seed, same composition: the difference left is the
 edit. The grid carries the images; the large view, which carries the sheet, carries what the version was.
@@ -1310,6 +1334,12 @@ edit. The grid carries the images; the large view, which carries the sheet, carr
 - **Layers:** e2e
 - **WHEN** Compare is opened on a revised image
 - **THEN** both images and the changed fields are shown
+
+#### Scenario: Side by side sets the image beside its photograph
+- **Key:** `ui:compare:side-by-side-sets-the-image-beside-its-photograph`
+- **Layers:** e2e
+- **WHEN** *Side by side* is opened on an image's large view
+- **THEN** one dialog shows the run's photograph and the image at equal height
 
 ### Requirement: Every command has one key, declared once, and none fires while typing
 
@@ -1402,7 +1432,8 @@ hub's order; else the first approved sheet whose newest approval lacks images of
 saying no sheet waits for review, with the way to the hub. The hub SHALL carry for each cell the number of images its
 newest approval lacks, as the render stage counts it. Review's rail SHALL list every sheet of the flow that is
 unapproved or lacks images, each marked untouched, edited, approved or re-opened, and its footer SHALL count the
-approved among them; the Review tab SHALL count the unapproved. Approve SHALL leave the sheet open and read-only, the
+approved among them; the Review tab SHALL count the unapproved, every flow's, and the rail's head SHALL name each
+other flow holding some, with how many and the key to it. Approve SHALL leave the sheet open and read-only, the
 approve bar naming the approval it shows, offering *Cancel approve* while the review stage can cancel it, else the
 reason beside it, and while no render runs for the batch; a cancel SHALL leave the sheet open on what the flow is
 left on: its draft, editable, or for a copy the draft open above what lies beneath, else the approval beneath it,
@@ -1482,6 +1513,12 @@ the head:  first unapproved ─▶ else first approved and short ─▶ else "No
 - **Layers:** unit
 - **WHEN** Review reads an approved sheet whose prompt is assembled
 - **THEN** its payload carries the review stage's reason
+
+#### Scenario: the rail names the other flows' waiting sheets
+- **Key:** `ui:review:the-rail-names-the-other-flows-waiting`
+- **Layers:** unit
+- **WHEN** Review is open on one flow and another flow holds one unapproved sheet
+- **THEN** the rail's head names that flow and one waiting
 
 ### Requirement: Revise starts from an image, and opens Review on its first draft
 

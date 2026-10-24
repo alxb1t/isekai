@@ -5,9 +5,10 @@ import { useViewer } from '../composables/useViewer'
 import { plain } from '../stores/keys'
 
 /* Images in a native dialog, fitted to the window. A click on the image toggles
-   1:1 pixels, scrolled inside the dialog; `←` `→` step through the images, and
-   Esc or a click outside closes. With `pair`, every image stands side by side at
-   one height, fit only. The list may grow while open, as a live session's does.
+   1:1 pixels, scrolled inside the dialog; `←` `→` `h` `l` step through the images,
+   `↵` runs `open` on the shown one where it is given, and Esc or a click outside
+   closes. With `pair`, every image stands side by side at one height, fit only.
+   The list may grow while open, as a live session's does.
    The dialog keeps the URL of the page beneath (design spec §1 rule 8). */
 export interface Shown {
   src: string
@@ -16,7 +17,12 @@ export interface Shown {
   height?: number | null
 }
 
-const props = defineProps<{ images: Shown[]; start?: number; pair?: boolean }>()
+const props = defineProps<{
+  images: Shown[]
+  start?: number
+  pair?: boolean
+  open?: (index: number) => void
+}>()
 
 const emit = defineEmits<{ close: [] }>()
 
@@ -83,8 +89,21 @@ const stepping = () => !props.pair && props.images.length > 1
 
 useKeys('overlay', [
   { id: 'close', keys: plain('Escape'), label: 'close', run: () => dialog.value?.close() },
-  { id: 'previous', keys: plain('ArrowLeft'), label: 'previous', run: () => step(-1), when: stepping },
-  { id: 'next', keys: plain('ArrowRight'), label: 'next', run: () => step(1), when: stepping },
+  {
+    id: 'previous',
+    keys: plain('ArrowLeft', 'KeyH'),
+    label: 'previous',
+    run: () => step(-1),
+    when: stepping,
+  },
+  { id: 'next', keys: plain('ArrowRight', 'KeyL'), label: 'next', run: () => step(1), when: stepping },
+  {
+    id: 'open',
+    keys: plain('Enter'),
+    label: 'large view',
+    run: () => props.open?.(at.value),
+    when: () => props.open !== undefined,
+  },
 ])
 
 onMounted(() => {

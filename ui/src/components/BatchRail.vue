@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import type { Waiting } from '../composables/useQueue'
 import type { BatchInput, MarkKind } from '../types'
+import KeyHint from './KeyHint.vue'
 import StatusMark from './StatusMark.vue'
 
 /* Thumbnails at their true aspect ratio: orientation is part of how the
@@ -12,6 +14,8 @@ const props = defineProps<{
   /* `useQueue`'s count of them holding an approved artifact, read from the
      hub's statuses. */
   approved: number
+  /* The other flows holding unapproved sheets, and how many: `useQueue`'s `others`. */
+  others: Waiting[]
   current: string
   edited: Set<string>
   photoUrl: (id: string) => string
@@ -40,6 +44,9 @@ function ready(id: string): void {
 <template>
   <nav class="rail">
     <span class="kicker rail__flow">{{ flow }}</span>
+    <span v-for="one in others" :key="one.flow" class="rail__waiting mono" data-waiting>
+      {{ one.flow }} · {{ one.count }} waiting<KeyHint command="next-flow" />
+    </span>
     <div class="rail__cards">
       <button
         v-for="input in inputs"

@@ -80,6 +80,17 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     expect(tile).to_have_class(re.compile("renders__image--focused"))
     page.keyboard.press("Enter")
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
+    # Esc comes back focused on the image it closed, not the grid's first.
+    page.goto(f"{served.url}/b/{COMPARED}/renders")
+    second = page.locator("[data-version='2'][data-seed='7']")
+    expect(second.locator("img")).to_have_js_property("complete", True)
+    second.click()
+    expect(page.locator("[data-sheet]")).to_contain_text("v2")
+    page.keyboard.press("Escape")
+    expect(second).to_have_class(re.compile("renders__image--focused"))
+    expect(page.locator("[data-version='1'][data-seed='7']")).not_to_have_class(
+        re.compile("renders__image--focused")
+    )
 
 
 @pytest.mark.spec("ui:renders:a-source-opens-in-the-viewer")
@@ -120,15 +131,43 @@ def test_a_damaged_versions_images_are_drawn_and_hold_the_focus(
 def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> None:
     page.goto(served.hub_of(SHOWN))
     rendered = page.locator(f'.hub__cell[data-flow="{FLOW}"][data-stage="rendered"]')
+    expect(
+        rendered.locator("[data-version='1'][data-seed='7'] img")
+    ).to_have_js_property("complete", True)
 
     rendered.click()
 
+    viewer = page.locator("dialog[data-viewer]")
+    expect(viewer.locator("img")).to_have_attribute("src", re.compile(r"/v1/7/image$"))
+    expect(page).to_have_url(served.hub_of(SHOWN))
+    page.keyboard.press("Enter")
     expect(page).to_have_url(
         f"{served.url}/b/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
     )
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
     page.keyboard.press("Escape")
     expect(page).to_have_url(served.hub_of(SHOWN))
+    expect(rendered).to_have_class(re.compile("hub__cell--focused"))
+    expect(rendered).to_be_focused()
+
+
+@pytest.mark.spec("ui:hub:the-source-cell-opens-its-photograph")
+def test_the_source_cell_opens_its_photograph(page: Page, served: Served) -> None:
+    page.goto(served.hub_of(SHOWN))
+    first = page.locator('.hub__cell[data-row="0"][data-column="1"]')
+    expect(first).to_be_visible()
+    page.keyboard.press("l")
+    expect(first).to_be_focused()
+
+    page.keyboard.press("h")
+    expect(page.locator('.hub__source[data-row="0"]')).to_be_focused()
+    page.keyboard.press("Enter")
+
+    viewer = page.locator("dialog[data-viewer]")
+    expect(viewer.locator("img")).to_have_attribute(
+        "src", f"/api/b/{SHOWN}/sources/hal.jpg"
+    )
+    expect(viewer.locator("img")).to_have_js_property("complete", True)
 
 
 @pytest.mark.spec("ui:revise:revise-opens-review-on-the-revision")
@@ -194,6 +233,34 @@ def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
     )
     page.keyboard.press("Escape")
     expect(page.locator("dialog[data-viewer]")).to_have_count(0)
+
+
+@pytest.mark.spec("ui:compare:side-by-side-sets-the-image-beside-its-photograph")
+def test_side_by_side_sets_the_image_beside_its_photograph(
+    page: Page, served: Served
+) -> None:
+    large = f"{served.url}/b/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
+    page.goto(large)
+    expect(page.locator("[data-sheet]")).to_contain_text("v1")
+
+    page.keyboard.press("Shift+C")
+
+    pair = page.locator("dialog[data-pair] img")
+    expect(pair).to_have_count(2)
+    expect(pair.nth(0)).to_have_attribute("src", re.compile(r"/photo$"))
+    expect(pair.nth(1)).to_have_attribute("src", re.compile(r"/v1/7/image$"))
+    for one in (pair.nth(0), pair.nth(1)):
+        expect(one).to_have_js_property("complete", True)
+    page.wait_for_function(
+        """() => {
+          const [a, b] = [...document.querySelectorAll('dialog[data-pair] img')]
+            .map((one) => one.getBoundingClientRect())
+          return a.height > 0 && Math.abs(a.height - b.height) <= 1 && a.top === b.top
+        }"""
+    )
+    page.keyboard.press("Escape")
+    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
+    expect(page).to_have_url(large)
 
 
 @pytest.mark.spec("ui:compare:compare-shows-the-pair-and-the-change")
