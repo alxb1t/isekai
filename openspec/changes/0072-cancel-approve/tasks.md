@@ -5,15 +5,15 @@ The review stage, the verb, then the surface, per [design](design.md). Every new
 
 ## Progress
 
-- [ ] 1 — The review stage
+- [x] 1 — The review stage
 - [ ] 2 — The verb
 - [ ] 3 — The surface
 
 ## 1 — The review stage
 
-- [ ] 1.1 **HALT CHECK** — the review stage has no cancel.
+- [x] 1.1 **HALT CHECK** — the review stage has no cancel.
   Verify: `grep -c 'def cancel' isekai/pipeline/review.py` prints `0`.
-- [ ] 1.2 Add `cancellable` and `cancel` to `isekai/pipeline/review.py` per [D1](design.md#d1), [D2](design.md#d2)
+- [x] 1.2 Add `cancellable` and `cancel` to `isekai/pipeline/review.py` per [D1](design.md#d1), [D2](design.md#d2)
   and [D3](design.md#d3); bind every `review:cancel:` key of the [review](specs/review/spec.md) delta in `tests/test_review.py`.
   Verify: `uv run pytest -q tests/test_review.py` exits 0, and `grep -c 'review:cancel:' tests/test_review.py` prints `6`.
 

@@ -59,6 +59,8 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
     NEW_VERSION,
+    OUTPUTS,
+    PROMPTS,
     REVIEW,
     SHEETS,
     Run,
@@ -66,6 +68,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     group_of,
+    is_seed,
     latest,
     latest_artifact,
     next_version,
@@ -81,6 +84,9 @@ DRAFT = "draft"
 
 # The option that deletes a flow's waiting draft.
 DISCARD = ("--discard",)
+
+# The option that cancels a flow's newest approval.
+CANCEL = ("--cancel",)
 
 # SDXL's text encoders read 77 tokens at a time; past that the prompt is chunked
 # and the chunks are averaged, which is not the same prompt. Sheets already run
@@ -291,6 +297,130 @@ def discard(run: Run, flow: str) -> Path:
         f"{run.id}: flow {flow} has no draft to discard; run "
         f"`{stage_command(run, STAGE, flow)}` to take a copy"
     )
+
+
+def cancellable(run: Run, flow: str) -> str | None:
+    """Return why `flow`'s newest approval cannot be cancelled, or None if it can."""
+    try:
+        _cancelling(run, flow)
+    except Refusal as refusal:
+        return str(refusal)
+    return None
+
+
+def cancel(run: Run, flow: str) -> Path:
+    """Turn `flow`'s newest approval back into its draft, and return the draft.
+
+    The draft is written before the approval is deleted, so a crash between
+    leaves both, which reads as approved and is finished by cancelling again.
+    e.g. review/002.approved.json -> review/002.draft.json
+    """
+    version, body = _cancelling(run, flow)
+    directory = run.directory(flow, REVIEW)
+    path = directory / artifact_name(version, DRAFT)
+    if not path.exists():
+        producer = body["producer"]
+        draft: ReviewDraft = {
+            "schema": DRAFT_FILE.schema,
+            "producer": {
+                "implementation": producer["implementation"],
+                "from": producer["from"],
+                "source": producer["source"],
+            },
+            "flow": flow,
+            "sheet": body["sheet"],
+            "vocabulary": body["vocabulary"],
+            "fields": body["fields"],
+        }
+        if "schema_document" in body:
+            draft["schema_document"] = body["schema_document"]
+        if "field_map" in body:
+            draft["field_map"] = body["field_map"]
+        if "renders" in body:
+            draft["renders"] = body["renders"]
+        write(path, DRAFT_FILE, draft)
+    approval_of(run, flow, version).unlink()
+    return path
+
+
+def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
+    """Return the newest approval of `flow` and its number, refusing its cancel.
+
+    Refused while anything derives from it: a file numbered for it in the
+    flow's prompts or outputs, or another flow's approval copied from it.
+    """
+    directory = run.directory(flow, REVIEW)
+    approved = approved_versions(directory)
+    if not approved:
+        raise Refusal(
+            f"{run.id}: flow {flow} has no approval to cancel; run "
+            f"`{stage_command(run, 'approve', flow)}` to approve its draft"
+        )
+    version = approved[-1]
+    name = artifact_name(version, APPROVED)
+    again = f"`{stage_command(run, 'approve', flow, options=CANCEL)}`"
+    waiting = current_draft(directory)
+    if waiting is not None:
+        raise Refusal(
+            f"{run.id}: flow {flow} has {waiting.name} open above {name}, and a "
+            "cancel never replaces a draft; run "
+            f"`{stage_command(run, STAGE, flow, options=DISCARD)}`, then {again}"
+        )
+    body = _approval(run, flow, version, f"run {again}")
+    copied = approval_of(run, flow, version)
+    require(copied, body, "producer", dict, f"restore it in {copied}, then {again}")
+    origin = body["producer"].get("copied_from")
+    if origin is not None:
+        raise Refusal(
+            f"{run.id}: flow {flow}'s {name} is a copy of {origin['flow']}'s "
+            f"approval {origin['approval']:03d}; run "
+            f"`{stage_command(run, 'approve', origin['flow'], options=CANCEL)}` "
+            "to cancel the source instead"
+        )
+    derived = _derived(run, flow, version)
+    if derived:
+        group = group_of(run, flow, version)
+        images = (
+            sorted(path for path in group.iterdir() if is_seed(path.stem))
+            if group.is_dir()
+            else []
+        )
+        way = (
+            f"run `{_revise_command(images[0])}` to correct an image of it"
+            if images
+            else f"run {_again(run, flow)} to correct it under the next number"
+        )
+        raise Refusal(
+            f"{run.id}: flow {flow}'s {name} cannot be cancelled, because "
+            f"{', '.join(derived)} came from it; {way}"
+        )
+    return version, body
+
+
+def _derived(run: Run, flow: str, version: int) -> list[str]:
+    """Return what derives from `flow`'s approval `version`, by its path in the run.
+
+    e.g. (run, f, 2) -> ["f/prompts/002.json", "g/review/001.approved.json"]
+    """
+    number = f"{version:03d}"
+    found = [
+        f"{flow}/{stage}/{entry.name}"
+        for stage in (PROMPTS, OUTPUTS)
+        if (listed := run.directory(flow, stage)).is_dir()
+        for entry in sorted(listed.iterdir())
+        if entry.name == number or entry.name.startswith(f"{number}.")
+    ]
+    source = {"flow": flow, "approval": version}
+    for other in run.flows:
+        if other == flow:
+            continue
+        for held in approved_versions(run.directory(other, REVIEW)):
+            path = approval_of(run, other, held)
+            copy = read(path, APPROVED_FILE, remedy=f"restore it in {path} by hand")
+            producer = copy.get("producer")
+            if isinstance(producer, dict) and producer.get("copied_from") == source:
+                found.append(f"{other}/{REVIEW}/{path.name}")
+    return found
 
 
 def _approval(run: Run, flow: str, version: int, retry: str) -> ReviewApproved:

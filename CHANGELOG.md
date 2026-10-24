@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Added
+
+- The review stage can cancel an approval nothing was made from, writing back its draft; a prompt, a render group,
+  a failure record or a copy in another flow refuses it, naming the way on (0072 D1, D2, D3).
+
 ## [0.44.1] - 2026-10-24 · 0071-the-review-patch
 
 Gate: local 0m38s · CI 7m25s (build-image at 801ffec) · 0.44.0: local 0m40s · CI 7m25s
