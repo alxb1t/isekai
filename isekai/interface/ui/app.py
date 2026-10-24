@@ -14,8 +14,8 @@ filename, when approval is legal, and what a token costs.
 
 **A run directory is written only through the functions that own it**: stage
 ③'s `review()` when a sheet is opened, `save_draft()` on autosave,
-`approve()` on the button, `revise()` and `discard()` on theirs, and the run's
-own `open_run()` and `assign()` on a tick. Nothing here builds an artifact
+`approve()` on the button, `cancel()`, `revise()` and `discard()` on theirs, and
+the run's own `open_run()` and `assign()` on a tick. Nothing here builds an artifact
 body or an artifact filename, and `tests/test_ui.py`'s grep is what keeps it so.
 
 **uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
@@ -35,7 +35,8 @@ DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
 GET  /events[?batch=&staging=], either or both    Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
-POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/discard
+POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/cancel
+POST /api/b/{batch}/review/{digest}/{flow}/discard
 POST /api/b/{batch}/revise              {images: [{digest, flow, version, seed}]}
 GET  /api/b/{batch}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
      and its /image, /thumb and /compare
@@ -111,6 +112,8 @@ from isekai.pipeline.review import (
     TokenBudget,
     approve,
     came_from,
+    cancel,
+    cancellable,
     current_draft,
     discard,
     refuse_revisions,
@@ -660,6 +663,8 @@ def create_app(
             # The approved artifact's own time, which the draft's cannot stand
             # in for: `approve()` unlinks the draft.
             "approved_at": _saved(approved),
+            # Why *Cancel approve* is disabled, or null while it can run.
+            "cancel": _rendering(batch) or cancellable(one.run, one.flow.id),
             "budget": _budget(budget),
         }
 
@@ -729,6 +734,27 @@ def create_app(
             "warnings": warnings,
             "at": _saved(written),
         }
+
+    @app.post("/api/b/{batch}/review/{digest}/{flow}/cancel")
+    def post_cancel(batch: str, digest: str, flow: str) -> dict[str, Any]:
+        """Turn the approval back into its draft, refused while a render runs."""
+        one = held(batch, digest, flow)
+        with _DRAFT_UPDATE:
+            rendering = _rendering(batch)
+            if rendering is not None:
+                raise Refusal(
+                    f"{rendering} Wait for it to end, then cancel the approval again."
+                )
+            draft = cancel(one.run, one.flow.id)
+        return {"draft": draft.name}
+
+    def _rendering(batch: str) -> str | None:
+        """Return what a render running for `batch` says, or None."""
+        slot = jobs.slot()
+        running = slot is not None and slot["state"] == "running"
+        if running and slot["kind"] == "render" and slot["batch"] == batch:
+            return "A render session is running."
+        return None
 
     @app.post("/api/b/{batch}/review/{digest}/{flow}/discard")
     def post_discard(

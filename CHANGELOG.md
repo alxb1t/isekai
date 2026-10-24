@@ -17,6 +17,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `isekai approve --cancel` takes each named run's approval back, each run answered on its own; beside
   `--from` it is refused before any run is read (0072 D4).
 
+- Review's approve bar offers *Cancel approve* on an approved sheet, which opens it again, editable; disabled, it
+  says why — something made from it, or a render running. A refused discard no longer outlives a reload (0072 D5, D6).
+
 ## [0.44.1] - 2026-10-24 · 0071-the-review-patch
 
 Gate: local 0m38s · CI 7m25s (build-image at 801ffec) · 0.44.0: local 0m40s · CI 7m25s

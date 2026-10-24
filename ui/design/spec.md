@@ -229,6 +229,9 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
   approved and short of its images — and the one open, each marked ○ untouched, ◐ edited, ● approved, ◌ re-opened;
   its footer counts the approved among them. Revise opens the first draft it wrote; the rest wait in the rail.
   Approve stays on the sheet, read-only. ⇧J ⇧K step the rail. Approve still refuses an unmarked empty field.
+- **Cancel approve**, grey-outlined beside the approved time, takes the approval back while nothing derives from it —
+  no prompt, render group or copy — and the sheet is editable again. No key, no ask. Otherwise it is disabled, the
+  review stage's reason beside it; while a render session runs for the batch, the reason says so.
 
 ### J4 · Render
 

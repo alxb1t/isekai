@@ -279,7 +279,8 @@ def refuse_revision(
 def discard(run: Run, flow: str) -> Path:
     """Delete `flow`'s highest draft while it is unapproved, and return its path.
 
-    An approval is never deleted, so a highest number that is approved refuses.
+    An approval is never discarded, so a highest number that is approved
+    refuses; `cancel` takes back one nothing was made from.
     """
     directory = run.directory(flow, REVIEW)
     draft = current_draft(directory)
