@@ -6,7 +6,7 @@ The review stage, the verb, then the surface, per [design](design.md). Every new
 ## Progress
 
 - [x] 1 — The review stage
-- [ ] 2 — The verb
+- [x] 2 — The verb
 - [ ] 3 — The surface
 
 ## 1 — The review stage
@@ -19,12 +19,12 @@ The review stage, the verb, then the surface, per [design](design.md). Every new
 
 ## 2 — The verb
 
-- [ ] 2.1 **HALT CHECK** — `approve` takes no `--cancel`.
+- [x] 2.1 **HALT CHECK** — `approve` takes no `--cancel`.
   Verify: `grep -c '"--cancel"' isekai/interface/cli.py` prints `0`.
-- [ ] 2.2 Add `--cancel` to `approve` in `isekai/interface/cli.py` per [D4](design.md#d4); bind both
+- [x] 2.2 Add `--cancel` to `approve` in `isekai/interface/cli.py` per [D4](design.md#d4); bind both
   `cli:approve-cancel:` keys in `tests/test_pipeline_cli.py`.
   Verify: `uv run python -m isekai approve --help` exits 0, and `grep -c 'cli:approve-cancel:' tests/test_pipeline_cli.py` prints `2`.
-- [ ] 2.3 Name `approve --cancel` in the verbs list of `README.md`.
+- [x] 2.3 Name `approve --cancel` in the verbs list of `README.md`.
   Verify: `grep -c 'approve --cancel' README.md` prints a number of at least `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
 
 ## 3 — The surface

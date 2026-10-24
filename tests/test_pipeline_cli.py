@@ -32,6 +32,8 @@ from isekai.foundation.run import open_run
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
 from isekai.pipeline.caption import FakeReader, OllamaReader
+from isekai.pipeline.generate import prompt_artifact
+from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
@@ -611,6 +613,65 @@ def test_a_flow_named_as_its_own_approval_source_is_refused_naming_it(
     assert dispatch(parsed, wired) == 1
 
     assert err.getvalue().startswith("refused: summon-anime-wai: a flow is not")
+    assert not (tmp_path / "runs").exists()
+
+
+@pytest.mark.spec("cli:approve-cancel:each-run-on-its-own")
+def test_approve_cancel_answers_each_run_on_its_own(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    runs = []
+    for name in ("ada", "bo"):
+        photo = tmp_path / f"{name}.jpg"
+        photo.write_bytes(jpeg_bytes(640, 480 + len(runs)))
+        run = open_run(photo, tmp_path / "runs")
+        sheet(run, schema, vocabulary)
+        review(run, "summon-anime-wai")
+        approve(run, "summon-anime-wai", schema, vocabulary)
+        runs.append(run)
+    cancelled, rendered = runs
+    prompt_artifact(rendered, load_flow("summon-anime-wai"), schema)
+    wired = _wiring(tmp_path)
+    err = io.StringIO()
+    wired.err = err
+    parsed = build_parser().parse_args(
+        ["approve", "--flow", "summon-anime-wai", "--cancel", rendered.id, cancelled.id]
+    )
+
+    assert dispatch(parsed, wired) == 1
+
+    review_of = cancelled.directory("summon-anime-wai", "review")
+    assert sorted(path.name for path in review_of.iterdir()) == ["001.draft.json"]
+    assert "summon-anime-wai/prompts/001.json came from it" in err.getvalue()
+    assert (
+        rendered.directory("summon-anime-wai", "review") / "001.approved.json"
+    ).exists()
+
+
+@pytest.mark.spec("cli:approve-cancel:not-beside-from")
+def test_approve_cancel_beside_from_is_refused_before_any_run_is_read(
+    tmp_path: Path,
+) -> None:
+    wired = _wiring(tmp_path)
+    err = io.StringIO()
+    wired.err = err
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    parsed = build_parser().parse_args(
+        [
+            "approve",
+            "--flow",
+            "control-anime-wai",
+            "--from",
+            "summon-anime-wai",
+            "--cancel",
+            str(photo),
+        ]
+    )
+
+    assert dispatch(parsed, wired) == 1
+
+    assert err.getvalue().startswith("refused: --cancel takes an approval back")
     assert not (tmp_path / "runs").exists()
 
 
