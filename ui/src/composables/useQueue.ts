@@ -19,18 +19,25 @@ export function queue(info: HubInfo, flow: string): string[] {
   )
 }
 
+/** Another flow's unapproved sheets: how many, and the first, which ⇧F opens. */
+export interface Waiting {
+  flow: string
+  count: number
+  first: string
+}
+
 /**
- * Return each flow but `flow` holding unapproved sheets, with how many, from
- * the flow after `flow` round to the one before it.
+ * Return each flow but `flow` holding unapproved sheets, from the flow after
+ * `flow` round to the one before it.
  *
- * e.g. flows [f, g, h] open on g, f 1 and h 2 waiting -> [{h, 2}, {f, 1}]
+ * e.g. flows [f, g, h] open on g, f 1 and h 2 waiting -> [{h, 2, …}, {f, 1, …}]
  */
-export function waiting(info: HubInfo, flow: string): { flow: string; count: number }[] {
+export function waiting(info: HubInfo, flow: string): Waiting[] {
   const at = info.flows.indexOf(flow)
   const others = [...info.flows.slice(at + 1), ...info.flows.slice(0, Math.max(at, 0))]
   return others.flatMap((other) => {
-    const count = queue(info, other).length
-    return count ? [{ flow: other, count }] : []
+    const [first, ...rest] = queue(info, other)
+    return first ? [{ flow: other, count: rest.length + 1, first }] : []
   })
 }
 

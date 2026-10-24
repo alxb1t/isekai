@@ -1,10 +1,10 @@
 import { expect } from 'vitest'
-import { action, clicks, targets } from './cells'
+import { EMPTY_CELL, action, clicks, targets } from './cells'
 import { spec } from './test/spec'
 import type { HubCell } from './types'
 
 function cell(stage: HubCell['stage'], newest: HubCell['newest'] = null): HubCell {
-  return { stage, renders: 0, refusal: null, status: null, newest, short: null, images: [] }
+  return { ...EMPTY_CELL, stage, newest }
 }
 
 spec('ui:hub:a-click-follows-the-cells-stage', () => {

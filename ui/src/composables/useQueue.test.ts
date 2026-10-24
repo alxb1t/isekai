@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
+import { EMPTY_CELL } from '../cells'
 import { spec } from '../test/spec'
 import type { HubInfo, InputStatus } from '../types'
 import { head, rail, useQueue, waiting } from './useQueue'
@@ -15,9 +16,7 @@ function source(name: string, status: InputStatus, short: number | null = null) 
     digest: name,
     width: 1,
     height: 1,
-    cells: {
-      f: { stage: null, renders: 0, refusal: null, status, newest: null, short, images: [] },
-    },
+    cells: { f: { ...EMPTY_CELL, status, short } },
     carries: [],
   }
 }
@@ -103,10 +102,10 @@ spec('ui:review:the-rail-names-the-other-flows-waiting', () => {
     ],
   }
 
-  expect(waiting(info, 'f')).toEqual([{ flow: 'g', count: 1 }])
+  expect(waiting(info, 'f')).toEqual([{ flow: 'g', count: 1, first: 'a' }])
   // From the flow after the open one, round to the one before it.
   expect(waiting(info, 'h')).toEqual([
-    { flow: 'f', count: 1 },
-    { flow: 'g', count: 1 },
+    { flow: 'f', count: 1, first: 'a' },
+    { flow: 'g', count: 1, first: 'a' },
   ])
 })

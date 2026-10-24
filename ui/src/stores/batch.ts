@@ -25,18 +25,6 @@ export function at(name: string, flow: string): string {
   return `${name}|${flow}`
 }
 
-/** Return the spot of `spots` that `name` calls `held`, else the first.
-
-    A remembered focus can outlive its spot, as a source is added or a version
-    rendered. e.g. kept(['a', 'c'], (one) => one, 'b') -> 'a' */
-export function kept<T>(
-  spots: T[],
-  name: (spot: T) => string,
-  held: string | null,
-): T | undefined {
-  return spots.find((one) => name(one) === held) ?? spots[0]
-}
-
 /* The open batch, one copy for every screen of it: its hub, the stages running
    in its cells and their refusals, its renders and its sessions once a screen
    reads them, and its Render offer and dialog, which has no URL of its own

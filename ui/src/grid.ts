@@ -14,6 +14,18 @@ export type Move = 'cell-' | 'cell+' | 'image-' | 'image+' | 'row-' | 'row+'
 /** Return `value` held between 0 and `high`. */
 export const clamp = (value: number, high: number) => Math.min(Math.max(value, 0), high)
 
+/** Return the spot of `spots` that `name` calls `held`, else the first.
+
+    A remembered focus can outlive its spot, as a source is added or a version
+    rendered. e.g. kept(['a', 'c'], (one) => one, 'b') -> 'a' */
+export function kept<T>(
+  spots: T[],
+  name: (spot: T) => string,
+  held: string | null,
+): T | undefined {
+  return spots.find((one) => name(one) === held) ?? spots[0]
+}
+
 /* The cell a column falls in, and the column its first image takes. */
 function cellOf(counts: number[], column: number): { cell: number; start: number } {
   let start = 0

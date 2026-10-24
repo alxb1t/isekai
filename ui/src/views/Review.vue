@@ -21,7 +21,7 @@ import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
 import { useKeys } from '../composables/useKeys'
-import { queue, useQueue } from '../composables/useQueue'
+import { useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import { clamp } from '../grid'
 import { nextPane, type Pane } from '../panes'
@@ -70,8 +70,8 @@ function select(digest: string): void {
 /* The next flow holding unapproved sheets, opened on its first. */
 function nextFlow(): void {
   const next = batch.others.value[0]
-  const digest = next && batch.info.value ? queue(batch.info.value, next.flow)[0] : undefined
-  if (digest) void router.push({ name: 'review', params: { ...props, digest, flow: next.flow } })
+  if (next)
+    void router.push({ name: 'review', params: { ...props, digest: next.first, flow: next.flow } })
 }
 
 function stepBatch(direction: -1 | 1): void {

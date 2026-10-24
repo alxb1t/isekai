@@ -28,6 +28,10 @@ const refusal = ref<string | null>(null)
 const revising = ref(false)
 /* The image beside its run's photograph, in the viewer's pair. */
 const pairing = ref(false)
+const pair = computed(() => [
+  { src: photoUrl(place.value), name: 'photograph' },
+  { src: imageAt(place.value), name: `seed ${props.seed}` },
+])
 
 const place = computed(() => ({
   batch: props.batch,
@@ -149,10 +153,7 @@ onMounted(async () => {
     </aside>
     <ImageViewer
       v-if="pairing"
-      :images="[
-        { src: photoUrl(place), name: 'photograph' },
-        { src: imageAt(place), name: `seed ${detail.seed}` },
-      ]"
+      :images="pair"
       pair
       @close="pairing = false"
     />

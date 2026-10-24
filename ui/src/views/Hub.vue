@@ -4,7 +4,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar as barOf, dismiss, failed, held } from '../bars'
-import { action, clicks, targets } from '../cells'
+import { EMPTY_CELL, action, clicks, targets } from '../cells'
 import { assign, imageAt, prepare, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer, { type Shown } from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
@@ -14,7 +14,8 @@ import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
-import { at, kept, useBatchStore } from '../stores/batch'
+import { clamp, kept } from '../grid'
+import { at, useBatchStore } from '../stores/batch'
 import { isControl, modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
 import type { HubCell, HubSource, Stage } from '../types'
@@ -111,17 +112,12 @@ function key(source: HubSource, flow: string): string {
 }
 
 function cell(source: HubSource, flow: string): HubCell {
-  return (
-    source.cells[flow] ?? {
-      stage: null,
-      renders: 0,
-      refusal: null,
-      status: null,
-      newest: null,
-      short: null,
-      images: [],
-    }
-  )
+  return source.cells[flow] ?? EMPTY_CELL
+}
+
+/* Whether the focus is on `row` at grid column `column`: 0 the source, the flows from 1. */
+function focused(row: number, column: number): boolean {
+  return focus.value.row === row && focus.value.column === column
 }
 
 function pending(found: HubCell): boolean {
@@ -210,11 +206,10 @@ function view(source: HubSource, flow: string, index?: number): void {
   }
 }
 
-/* A click or ↵ on a cell: whatever its stage offers; the source column's opens
-   its photograph. A click ticks its own cell alone; ↵, as space, the selected rows. */
+/* A click or ↵ on a cell: whatever its stage offers. A click ticks its own cell
+   alone; ↵, as space, the selected rows. */
 function act(row: number, column: number, pointer = false): void {
   const source = sources.value[row]
-  if (source && column === 0) return viewSource(row)
   const flow = flows.value[column - 1]
   if (!source || !flow) return
   const kind = action(cell(source, flow)).action
@@ -301,8 +296,8 @@ function place(row: number, column: number): void {
   const rows = sources.value.length
   if (rows === 0) return
   focus.value = {
-    row: Math.min(Math.max(row, 0), rows - 1),
-    column: Math.min(Math.max(column, 0), flows.value.length),
+    row: clamp(row, rows - 1),
+    column: clamp(column, flows.value.length),
   }
   store.focus.hub = named(focus.value)
   void nextTick(() =>
@@ -449,7 +444,7 @@ onMounted(async () => {
           class="hub__source"
           :class="{
             'hub__source--selected': selected.has(row),
-            'hub__cell--focused': focus.row === row && focus.column === 0,
+            'hub__cell--focused': focused(row, 0),
           }"
           :data-row="row"
           data-column="0"
@@ -479,7 +474,7 @@ onMounted(async () => {
               {{ source.name }}<template v-if="source.width"> · {{ source.width }}×{{ source.height }}</template>
             </span>
             <span v-if="source.carries.length" class="hub__warn mono">⚠ not cleaned</span>
-            <span v-if="focus.row === row && focus.column === 0" class="hub__action mono"
+            <span v-if="focused(row, 0)" class="hub__action mono"
               >↵ view photo</span
             >
           </span>
@@ -488,7 +483,7 @@ onMounted(async () => {
           v-for="(flow, column) in flows"
           :key="flow"
           class="hub__cell"
-          :class="{ 'hub__cell--focused': focus.row === row && focus.column === column + 1 }"
+          :class="{ 'hub__cell--focused': focused(row, column + 1) }"
           :data-row="row"
           :data-column="column + 1"
           :data-source="source.name"
@@ -521,12 +516,12 @@ onMounted(async () => {
               >{{ word(source, flow) }}</span
             >
             <span
-              v-if="focus.row === row && focus.column === column + 1 && locked(cell(source, flow))"
+              v-if="focused(row, column + 1) && locked(cell(source, flow))"
               class="hub__reason"
               >prepared · the tick stays</span
             >
             <span
-              v-if="focus.row === row && focus.column === column + 1 && hint(source, flow)"
+              v-if="focused(row, column + 1) && hint(source, flow)"
               class="hub__action mono"
               >{{ hint(source, flow) }}</span
             >

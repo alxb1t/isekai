@@ -4,6 +4,17 @@ import type { HubCell } from './types'
    states: one table, so no template decides it on its own. */
 export type Action = 'tick' | 'review' | 'sheet' | 'view' | 'none'
 
+/** A cell whose run holds no directory for the flow, or a source with no run. */
+export const EMPTY_CELL: Readonly<HubCell> = {
+  stage: null,
+  renders: 0,
+  refusal: null,
+  status: null,
+  newest: null,
+  short: null,
+  images: [],
+}
+
 export interface CellAction {
   action: Action
   hint: string | null

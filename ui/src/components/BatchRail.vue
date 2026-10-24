@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import type { Waiting } from '../composables/useQueue'
 import type { BatchInput, MarkKind } from '../types'
 import KeyHint from './KeyHint.vue'
 import StatusMark from './StatusMark.vue'
@@ -14,7 +15,7 @@ const props = defineProps<{
      hub's statuses. */
   approved: number
   /* The other flows holding unapproved sheets, and how many: `useQueue`'s `others`. */
-  others: { flow: string; count: number }[]
+  others: Waiting[]
   current: string
   edited: Set<string>
   photoUrl: (id: string) => string

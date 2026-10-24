@@ -3,7 +3,8 @@ import { nextTick } from 'vue'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
 import type { RenderOffer } from '../types'
-import { kept, useBatchStore } from './batch'
+import { kept } from '../grid'
+import { useBatchStore } from './batch'
 import { useLiveStore } from './live'
 
 /* Each offer request waits on its own answer, released in whatever order a test chooses. */
