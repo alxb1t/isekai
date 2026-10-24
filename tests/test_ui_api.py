@@ -584,7 +584,7 @@ def test_a_re_opened_input_reports_its_own_status_and_does_not_split_the_count(
 def test_an_update_written_against_a_stale_draft_is_refused(
     client: TestClient, made: Run
 ) -> None:
-    """The page autosaves on a debounce, so two `PUT`s can be in flight at once.
+    """Two pages open on one draft can each have a `PUT` in flight at once.
 
     Unordered, they would commit in whatever order the server finished them, so
     last write would win where *last* is not the operator's last keystroke.

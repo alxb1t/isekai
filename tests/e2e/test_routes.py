@@ -37,7 +37,7 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
 
     page.goto(f"{served.url}/b/{served.batch}/review")
     expect(page).to_have_url(served.review(served.draft))
-    expect(page.locator(".rail__card--current")).to_contain_text("ada.jpg")
+    expect(current).to_contain_text("ada.jpg")
 
     empty = f"{served.url}/b/{SHOWN}/review"
     page.goto(empty)
