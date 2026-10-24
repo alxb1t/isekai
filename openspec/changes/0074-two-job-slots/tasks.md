@@ -6,7 +6,7 @@ The job runner, the wire, the screens, then the docs, per [design](design.md). E
 ## Progress
 
 - [x] 1 — The job runner
-- [ ] 2 — The wire
+- [x] 2 — The wire
 - [ ] 3 — The screens
 - [ ] 4 — The docs
 
@@ -23,9 +23,9 @@ The job runner, the wire, the screens, then the docs, per [design](design.md). E
 
 ## 2 — The wire
 
-- [ ] 2.1 **HALT CHECK** — Stop is one route.
+- [x] 2.1 **HALT CHECK** — Stop is one route.
   Verify: `grep -c '"/api/job/stop"' isekai/interface/ui/app.py` prints `1`.
-- [ ] 2.2 Carry `jobs` in the snapshot, `kind` on the `job` event, Render's hold per kind and `POST /api/jobs/{kind}/stop`
+- [x] 2.2 Carry `jobs` in the snapshot, `kind` on the `job` event, Render's hold per kind and `POST /api/jobs/{kind}/stop`
   in `isekai/interface/ui/app.py` per [D4](design.md#d4); the snapshot test of `ui:events:a-connection-starts-with-a-snapshot` reads both slots.
   Verify: `grep -c '"/api/job/stop"' isekai/interface/ui/app.py` prints `0`, and `uv run pytest -q tests/test_ui_jobs.py tests/test_ui_api.py` exits 0.
 

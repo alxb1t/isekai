@@ -312,7 +312,7 @@ def test_a_stage_that_fails_before_it_reports_ends_the_job_naming_the_log(
 
 
 @pytest.mark.spec("ui:events:a-connection-starts-with-a-snapshot")
-def test_a_stream_opened_for_a_batch_starts_with_the_slot_and_its_hub(
+def test_a_stream_opened_for_a_batch_starts_with_both_slots_and_its_hub(
     tmp_path: Path, vocabulary: Vocabulary
 ) -> None:
     folder, (run,) = _batch(tmp_path, "ada.jpg")
@@ -354,7 +354,7 @@ def test_a_stream_opened_for_a_batch_starts_with_the_slot_and_its_hub(
         return json.loads(data.removeprefix("data: "))
 
     first = first_frame("/events?batch=b")
-    assert first["job"] is None
+    assert first["jobs"] == {"prepare": None, "render": None}
     assert first["hub"]["batch"] == "b"
     assert first["hub"]["sources"][0]["cells"][FLOW]["stage"] == "assigned"
     assert first["hub"]["sources"][0]["digest"] == run.digest
@@ -362,7 +362,7 @@ def test_a_stream_opened_for_a_batch_starts_with_the_slot_and_its_hub(
     # A batch or an import it cannot read is left out, and the stream still opens:
     # it is the page's only one, and a refused connect would end it for good.
     missing = first_frame("/events?batch=gone")
-    assert (missing["job"], "hub" in missing) == (None, False)
+    assert (missing["jobs"]["prepare"], "hub" in missing) == (None, False)
     closed = first_frame("/events?batch=b&staging=0123")
     assert (closed["hub"]["batch"], "files" in closed) == ("b", False)
 
@@ -534,7 +534,7 @@ def test_reconnect_keeps_prepare_progress(
         for _ in range(2):
             body = client.get("/events?batch=b")
             first_frame = body.text.split("\n")[1].removeprefix("data: ")
-            assert json.loads(first_frame)["job"]["progress"] == {
+            assert json.loads(first_frame)["jobs"]["prepare"]["progress"] == {
                 "started": STARTED,
                 "of": 2,
                 "done": 1,

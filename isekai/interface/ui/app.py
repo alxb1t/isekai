@@ -27,7 +27,7 @@ and `python -m isekai`'s import graph never reaches it at all.
 ```
 GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
-POST /api/b/{batch}/prepare   ·   POST /api/job/stop
+POST /api/b/{batch}/prepare   ·   POST /api/jobs/{prepare,render}/stop
 GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s, images}
 GET  /api/sessions/running   ·   GET /api/b/{batch}/sessions{/id,}
 POST /api/billing/check
@@ -103,7 +103,7 @@ from isekai.foundation.run import (
 from isekai.interface import render
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
-from isekai.interface.ui.jobs import Jobs, plan
+from isekai.interface.ui.jobs import KINDS, Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
 from isekai.pipeline.generate import image_of
@@ -421,10 +421,13 @@ def create_app(
         cell = cell_event(found, grid, loaded)
         return {"job": jobs.prepare(batch, found, steps, cell)}
 
-    @app.post("/api/job/stop")
-    def post_stop() -> dict[str, Any]:
-        """Interrupt the running stage, a render's first; no later stage starts."""
-        return {"job": jobs.stop("render" if jobs.running("render") else "prepare")}
+    @app.post("/api/jobs/{kind}/stop")
+    def post_stop(kind: str) -> dict[str, Any]:
+        """Interrupt `kind`'s running stage; no later one starts, the other runs on."""
+        for one in KINDS:
+            if one == kind:
+                return {"job": jobs.stop(one)}
+        raise Refusal(f"there is no {kind} job: stop `prepare` or `render`")
 
     @cache
     def offered(flow: str) -> Flow:
@@ -440,11 +443,9 @@ def create_app(
         return found, made, _quote(found, made, disabled, wired.flows_dir)
 
     def _held() -> str | None:
-        """Return what holds Render back whatever the batch: a job, a pod, no key."""
+        """Return what holds Render back whatever the batch: a render, a pod, no key."""
         if jobs.running("render"):
             return "A render session is running."
-        if jobs.running("prepare"):
-            return "Prepare is running."
         if billing.state()["pod"]:
             return "A pod may still be billing."
         if not keyed(wired.session):
@@ -557,7 +558,7 @@ def create_app(
     def read_events(
         batch: str | None = None, staging: str | None = None
     ) -> StreamingResponse:
-        """Stream the job slot, `batch`'s hub and `staging`'s files, then each change.
+        """Stream both job slots, `batch`'s hub and `staging`'s files, then each change.
 
         A reload or a second tab gets the whole truth at once. A batch or an import
         it cannot read is left out of the snapshot, never refused.
@@ -570,10 +571,12 @@ def create_app(
             held = None
 
         def snapshot() -> dict[str, Any]:
-            # The page holds one job: a running render's, else Prepare's slot.
-            shown = "render" if jobs.running("render") else "prepare"
+            slots = {kind: jobs.slot(kind) for kind in KINDS}
+            # `job` goes once the live store reads `jobs`.
+            shown = slots["render"] if jobs.running("render") else slots["prepare"]
             found = {
-                "job": jobs.slot(shown) or jobs.slot("render"),
+                "jobs": slots,
+                "job": shown or slots["render"],
                 "billing": billing.state(),
             }
             if batch is not None:
