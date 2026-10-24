@@ -862,16 +862,19 @@ then would delete the folder the commit is moving.
 ### Requirement: Prepare runs what changed as one job, and refuses before it starts when Ollama does not answer
 
 The system SHALL run Prepare as one job over every assigned cell with no sheet: for each flow, the tagging, reading
-and sheet stages, each one invocation of the pipeline's own verb over that flow's cells. Only one job SHALL run at a
-time; a job SHALL keep running when its page closes; Stop SHALL interrupt the current stage and start no other;
-stopping the surface SHALL interrupt a running job; and a stage that fails having reported nothing SHALL end the job
+and sheet stages, each one invocation of the pipeline's own verb over that flow's cells. One job of each kind, a Prepare
+and a render, SHALL run at a time, the two side by side in any batches; a job SHALL keep running when its page closes;
+Stop SHALL interrupt the current stage of the job it names and start no other, leaving the other job running;
+stopping the surface SHALL interrupt every running job; each line a job's verbs write to the batch's log SHALL name
+its job; and a stage that fails having reported nothing SHALL end the job
 as failed, naming the batch's log, and start no other. Before any stage starts, the surface SHALL check that the
 local model server answers, and SHALL refuse with its message, starting nothing, when it does not. While Prepare
 runs, the job strip and Prepare bar SHALL show completed cells out of the accepted total and elapsed time; the total
 SHALL stay fixed, a cell SHALL count as completed only at sheet, and elapsed time SHALL tick every second.
 
-The pipeline's verb is the one path, so Prepare is exactly what the verbs do. A refusal before the start leaves every
-cell assigned, so pressing Prepare again is the whole fix.
+The pipeline's verb is the one path, so Prepare is exactly what the verbs do. Prepare runs on the local models and a
+render on a rented GPU, and they write no file in common, so neither waits for the other. A refusal before the start
+leaves every cell assigned, so pressing Prepare again is the whole fix.
 
 #### Scenario: Prepare runs each stage over the assigned cells
 - **Key:** `ui:prepare:prepare-runs-the-assigned-cells`
@@ -879,13 +882,20 @@ cell assigned, so pressing Prepare again is the whole fix.
 - **WHEN** Prepare is pressed with cells assigned
 - **THEN** each cell reaches sheet
 - **AND** no cell outside the assignment changes
-- **AND** while it runs, the strip and bar show matching totals and ticking elapsed time across a reload
+- **AND** while it runs, the strip and bar show matching totals and ticking elapsed time across a reload, and Render
+  is offered beside it
 
 #### Scenario: a second job is refused while one runs
 - **Key:** `ui:prepare:one-job-at-a-time`
 - **Layers:** unit
-- **WHEN** a job is asked for while another runs
+- **WHEN** a job is asked for while another of its kind runs
 - **THEN** it is refused naming the running job
+
+#### Scenario: another batch's Prepare is disabled while one runs
+- **Key:** `ui:prepare:another-batchs-prepare-is-disabled`
+- **Layers:** unit
+- **WHEN** a hub has changes waiting while a Prepare runs for another batch
+- **THEN** its Prepare is disabled, naming the batch that runs
 
 #### Scenario: Prepare refuses when Ollama does not answer
 - **Key:** `ui:prepare:refused-when-ollama-does-not-answer`
@@ -915,15 +925,33 @@ cell assigned, so pressing Prepare again is the whole fix.
 - **THEN** each cell counts once in the fixed total and only cells reaching sheet count as completed
 - **AND** a repeated completion never increments the count again
 
+#### Scenario: a render runs beside a Prepare
+- **Key:** `ui:prepare:a-render-runs-beside-a-prepare`
+- **Layers:** unit
+- **WHEN** a render is asked for while a Prepare runs
+- **THEN** both run, and Stop of the render leaves the Prepare running
+
+#### Scenario: stopping the surface interrupts both jobs
+- **Key:** `ui:prepare:stopping-the-surface-interrupts-both`
+- **Layers:** unit
+- **WHEN** the surface stops while a Prepare and a render run
+- **THEN** both are interrupted, and the render's window closes before the surface exits
+
+#### Scenario: the log names each job
+- **Key:** `ui:prepare:the-log-names-each-job`
+- **Layers:** unit
+- **WHEN** a Prepare and a render write to one batch's log
+- **THEN** each line begins with its job's name
+
 ### Requirement: The page is told of a job as it runs
 
-The system SHALL serve an event stream that, on every connection, sends a snapshot of the job slot and, when a batch
-is named, that batch's hub, and then sends each change as the job's stages report it. A running Prepare snapshot
-SHALL carry its accepted total, completed count and start time. A hub opened while the slot holds its batch's failed
-Prepare SHALL show that job's message until Discard on that batch's hub dismisses it in that page. A page SHALL hold
-one event stream, naming the batch its screen shows and the import it has open, and SHALL open it again when either
-changes. When the surface stops, its streams SHALL end before the server's graceful wait expires, without
-cancellation errors; a terminal interrupt SHALL exit quietly after cleanup.
+The system SHALL serve an event stream that, on every connection, sends a snapshot of both job slots, the Prepare and
+the render, and, when a batch is named, that batch's hub, and then sends each change as the job's stages report it. A
+running Prepare snapshot SHALL carry its accepted total, completed count and start time. A hub opened while the slot
+holds its batch's failed Prepare SHALL show that job's message until Discard on that batch's hub dismisses it in that
+page. A page SHALL hold one event stream, naming the batch its screen shows and the import it has open, and SHALL
+open it again when either changes. When the surface stops, its streams SHALL end before the server's graceful wait
+expires, without cancellation errors; a terminal interrupt SHALL exit quietly after cleanup.
 
 A reload or a second tab gets the whole truth at once; a job's progress reaches the page as the verbs report it. A
 job outlives its page, so a failure that happened while no page was open is still told. Every connect brings a
@@ -933,7 +961,7 @@ snapshot, so a stream opened again loses nothing, and one connection a page leav
 - **Key:** `ui:events:a-connection-starts-with-a-snapshot`
 - **Layers:** unit
 - **WHEN** the stream is opened for a batch
-- **THEN** its first event carries the job slot and that batch's hub
+- **THEN** its first event carries both job slots and that batch's hub
 
 #### Scenario: a stage's report reaches the stream
 - **Key:** `ui:events:a-stages-report-reaches-the-stream`
@@ -968,11 +996,17 @@ snapshot, so a stream opened again loses nothing, and one connection a page leav
 - **THEN** it holds one stream, opened again naming the batch and then the import too
 - **AND** the stream it closed is the only other one it opened
 
+#### Scenario: a job event fills its kind's slot
+- **Key:** `ui:events:a-job-event-fills-its-kinds-slot`
+- **Layers:** unit
+- **WHEN** a render's event arrives while a Prepare runs
+- **THEN** the page holds both jobs, each in its own slot
+
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
 The system SHALL offer Render from a bar on a batch's hub and its Renders view that counts the images short of their
 approvals' counts, and SHALL show no such bar when none is short and no count is refused, nor on the hub while changes
-wait for Prepare. The bar SHALL be disabled, with its reason, when a job runs, when a pod may still be billing, when
+wait for Prepare. The bar SHALL be disabled, with its reason, when a render runs, when a pod may still be billing, when
 no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a dialog
 listing per offered flow the images that will render and what is left out, with the reason, the session's estimate
 and limit, and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its

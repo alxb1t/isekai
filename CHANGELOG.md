@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-10-24 · 0074-two-job-slots
+
+Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.46.0: local 0m40s · CI 7m25s
+
 ### Changed
 
 - The app's job runner holds a Prepare and a render side by side, each refused, stopped and waited for in its own
