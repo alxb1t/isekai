@@ -218,7 +218,8 @@ async function approve(): Promise<void> {
 }
 
 /* Take the approval back, as `approve --cancel` does, and stay on the sheet:
-   editable again, or, for a copy over an older approval, on that approval. */
+   editable again, or, for a copy, on the draft open above what lies beneath,
+   else the approval beneath, read-only. */
 async function cancelApprove(): Promise<void> {
   const id = current.value
   if (!id) return

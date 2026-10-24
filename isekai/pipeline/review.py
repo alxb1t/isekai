@@ -310,13 +310,14 @@ def cancellable(run: Run, flow: str) -> str | None:
 
 
 def cancel(run: Run, flow: str) -> Path | None:
-    """Turn `flow`'s newest approval back into its draft, and return the draft.
+    """Cancel `flow`'s newest approval, and return what the flow is left on.
 
-    The draft is written before the approval is deleted, so a crash between
-    leaves both, which reads as approved and is finished by cancelling again.
+    An approval goes back to its draft, written before the approval is deleted,
+    so a crash between leaves both, which reads as approved and is finished by
+    cancelling again.
     A copy has no draft to go back to, so it is deleted, as `approve --from`
-    writes it again, and what the flow is left on is returned: the draft open
-    above what lies beneath, else the approval beneath, else None.
+    copies the source's newest approval again, and the flow is left on the draft
+    open above what lies beneath, else the approval beneath, else None.
     e.g. review/002.approved.json -> review/002.draft.json
     e.g. a copy, review/002.approved.json -> review/001.approved.json
     """

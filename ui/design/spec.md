@@ -234,9 +234,9 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
   its footer counts the approved among them. Revise opens the first draft it wrote; the rest wait in the rail.
   Approve stays on the sheet, read-only. ⇧J ⇧K step the rail. Approve still refuses an unmarked empty field.
 - **Cancel approve**, grey-outlined beside the approved time, takes the approval back while nothing derives from it —
-  no prompt, render group or copy — and the sheet is editable again; a copy's cancel deletes only the copy, so a flow
-  that held its own approval beneath it opens on that one, read-only, the bar's note naming it as it names every
-  approval shown. No key, no ask. Otherwise it is disabled, the review stage's reason beside it; while a render
+  no prompt, render group or copy — and the sheet is editable again; a copy's cancel deletes only the copy, and the
+  sheet opens on the draft open above what lies beneath, else the approval beneath, read-only, the bar's note naming
+  it as it names every approval shown. No key, no ask. Otherwise it is disabled, the review stage's reason beside it; while a render
   session runs for the batch, the reason says so.
 
 ### J4 · Render

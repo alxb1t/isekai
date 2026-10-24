@@ -9,7 +9,7 @@ test carries `@pytest.mark.spec` with the key its task names.
 - [x] 2 — The routes
 - [x] 3 — The screens
 - [x] 4 — The viewer
-- [ ] 5 — The prose
+- [x] 5 — The prose
 
 ## 1 — The record
 
@@ -61,8 +61,8 @@ test carries `@pytest.mark.spec` with the key its task names.
 
 ## 5 — The prose
 
-- [ ] 5.1 **HALT CHECK** — the cancel's docstring says it returns the draft.
+- [x] 5.1 **HALT CHECK** — the cancel's docstring says it returns the draft.
   Verify: `grep -c 'and return the draft' isekai/pipeline/review.py` prints `1`.
-- [ ] 5.2 Apply [D7](design.md#d7)'s wording to `README.md`, `isekai/interface/README.md`, `ui/design/spec.md` J3,
+- [x] 5.2 Apply [D7](design.md#d7)'s wording to `README.md`, `isekai/interface/README.md`, `ui/design/spec.md` J3,
   `ui/src/views/Review.vue`'s cancel comment and `cancel`'s docstring in `isekai/pipeline/review.py`.
   Verify: `grep -c 'and return the draft' isekai/pipeline/review.py` prints `0`, `grep -c '…/cancel' isekai/interface/README.md` prints `1`, and `grep -c 'Once something was\|writes it again' README.md` prints `0`.

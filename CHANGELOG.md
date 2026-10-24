@@ -21,6 +21,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A session's finished images and the batch's photographs open in the viewer, drawn at the Renders tile size; the
   viewer follows its list as a live session adds to it (0073 D6).
 
+- The README, the design spec, Review's comment and the cancel's docstring say what a cancel does: `--from` copies the
+  source's newest approval again, and a copy's cancel leaves the sheet on what the flow holds (0073 D7).
+
 ## [0.45.0] - 2026-10-24 · 0072-cancel-approve
 
 Gate: local 0m39s · CI 7m25s (build-image at 801ffec) · 0.44.1: local 0m38s · CI 7m25s
