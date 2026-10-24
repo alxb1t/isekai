@@ -56,10 +56,9 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
   let token = 0
   /* Saves started and not yet sent, each waiting for an earlier save of its input. */
   let waiting = 0
-  /* A slow earlier answer must never overwrite a newer one. Two saves can be in
-     flight at once -- the debounce is what puts them there -- so the receipt of
-     the first can land after the second's. The pattern is `useVocabulary`'s,
-     applied to the write side.
+  /* A slow earlier answer must never overwrite a newer one. A save can answer
+     while a later one of its input waits behind it, so its budget and refusal
+     are stale. The pattern is `useVocabulary`'s, applied to the write side.
 
      **It governs `budget` and `refusal` and nothing else.** Those describe the
      request that produced them, so an older one's answer is stale. `saved` is
@@ -89,7 +88,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
       body = await inputDetail({ ...scope, digest: id })
     } catch (reason) {
       if (current !== id) return
-      // A read that fails has to land somewhere, and the header line is where
+      // A read that fails has to land somewhere, and the approve bar is where
       // every other refusal lands. Without this the page sits on the skeleton
       // for ever and says nothing at all, which is the one outcome the surface
       // is not allowed to have.

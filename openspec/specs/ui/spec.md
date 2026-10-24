@@ -59,14 +59,14 @@ the ranking rule and buys nothing but correctness.
 
 The system SHALL present an input whose flow has an approved artifact and no later draft as not editable,
 SHALL refuse a draft update against such an input, and SHALL state on the page that the input is approved
-and name the artifact that holds it. Where a draft numbered above the approved artifact's `approved_from`
-exists, the system SHALL present the input as **re-opened**: editable, with its approved artifact still
-named.
+and when, naming no file. Where a draft numbered above the approved artifact's `approved_from`
+exists, the system SHALL present the input as **re-opened**: editable, its approval still
+stated.
 
 `review --flow F --new-version` writes a new numbered draft from the approved copy, and the surface shows that
 state as its own rather than as something it is not: re-opened is a third status, and the approved artifact is
 never edited in place in either case. The library counts every approval the run directories hold; Review's rail
-lists only the sheets not yet rendered, so its footer counts the approved among them.
+holds the sheets not yet rendered and the one open, and its footer counts the approved among them.
 
 #### Scenario: a draft update against an approved input is refused
 - **Key:** `ui:approval:approved-input-refuses-a-draft-update`
@@ -626,8 +626,10 @@ short name is a sanitised filename and can repeat; its digest cannot.
 #### Scenario: a reload lands on the same screen
 - **Key:** `ui:routes:a-reload-lands-on-the-same-screen`
 - **Layers:** e2e
-- **WHEN** a hub or a review is reloaded
+- **WHEN** a hub, a review or a batch's Review address is loaded again
 - **THEN** the same batch, source and flow are shown
+- **AND** a batch's Review address is replaced by its head's sheet URL
+- **AND** a batch with no sheet waiting says none waits
 
 #### Scenario: a run is named by its digest
 - **Key:** `ui:routes:a-run-is-named-by-its-digest`
@@ -646,9 +648,9 @@ short name is a sanitised filename and can repeat; its digest cannot.
 
 The system SHALL report a draft as saving exactly while a save it started is unanswered, whatever order saves and
 input switches answer in, and SHALL send a pending edit when the page leaves the sheet — to another sheet, another
-screen, or by closing — by a request the browser keeps alive past the page. A save SHALL wait for the sheet's save
-in flight and state the draft it wrote, and a page closing before that save answers SHALL ask before it goes. An
-approval SHALL wait for a save in flight, and state the draft that save wrote.
+screen, or by closing — by a request the browser keeps alive past the page. A save SHALL wait for the sheet's save in
+flight and state the draft it wrote, and a page closing while an edit waits behind a save in flight SHALL ask before
+it goes. An approval SHALL wait for a save in flight, and state the draft that save wrote.
 
 The saved receipt is the only thing on the page that speaks about saving, so a counter one stale answer can drive
 below zero silences it for the rest of the input. An edit typed inside the debounce is the operator's work, and
@@ -667,7 +669,7 @@ operator's own, not another tab's, and a closing page never reads the receipt it
 - **Layers:** unit
 - **WHEN** the page leaves a sheet inside the debounce
 - **THEN** the pending edit is sent with a request kept alive past the page
-- **AND** a page closing while a save of the sheet is unanswered asks before it goes
+- **AND** a page closing while an edit waits behind an unanswered save asks before it goes
 
 #### Scenario: an approval waits for a save in flight
 - **Key:** `ui:save:an-approval-waits-for-a-save-in-flight`
@@ -1413,7 +1415,8 @@ the head:  first unapproved ─▶ else first approved and short ─▶ else "No
 ### Requirement: Revise starts from an image, and opens Review on its first draft
 
 The system SHALL offer Revise from an image's large view and over a selection in the Renders grid, SHALL show what it
-will write before writing, and SHALL then open Review on the first draft it wrote, the others in the rail. It SHALL
+will write before writing, and SHALL then open Review on the first draft it wrote, the others of its flow
+in the rail. It SHALL
 write a selection's drafts all or none, refusing by name an image of a flow this build does not track, and refusing a
 selection that names a version or a seed no run can hold. On a revision, Review SHALL show the photograph and the
 image being revised on one line, at equal height under one header row, mark each field that differs from its
