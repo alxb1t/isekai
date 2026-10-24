@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
 import type { HubInfo, InputStatus } from '../types'
-import { head, rail, useQueue } from './useQueue'
+import { head, rail, useQueue, waiting } from './useQueue'
 
 /* `fetch` answers the hub with a batch built here, so the run directories the
    count must agree with are the ones this file declares. The rail reads it
@@ -87,4 +87,26 @@ spec('ui:review:a-batch-opens-its-head', () => {
   const done = batch('approved')
   done.sources[0].cells.f.short = 0
   expect(head(done)).toBeNull()
+})
+
+spec('ui:review:the-rail-names-the-other-flows-waiting', () => {
+  // `g` holds one unapproved sheet and `h` none; `f` is the flow open.
+  const one = source('a', 'draft')
+  const info: HubInfo = {
+    batch: 'b',
+    flows: ['f', 'g', 'h'],
+    sources: [
+      {
+        ...one,
+        cells: { ...one.cells, g: { ...one.cells.f }, h: { ...one.cells.f, status: 'approved' } },
+      },
+    ],
+  }
+
+  expect(waiting(info, 'f')).toEqual([{ flow: 'g', count: 1 }])
+  // From the flow after the open one, round to the one before it.
+  expect(waiting(info, 'h')).toEqual([
+    { flow: 'f', count: 1 },
+    { flow: 'g', count: 1 },
+  ])
 })

@@ -25,6 +25,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - An image's large view offers *Side by side* on `⇧C`: the image beside its run's photograph at equal height (0075 D2).
 
+- Review's rail names each other flow holding unapproved sheets, with how many, and `⇧F` opens the next one's first;
+  the design spec draws the walkthrough's screens and one job-strip dot (0075 D6, D7).
+
 ## [0.47.0] - 2026-10-24 · 0074-two-job-slots
 
 Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.46.0: local 0m40s · CI 7m25s

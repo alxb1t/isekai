@@ -21,7 +21,7 @@ import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
 import { useKeys } from '../composables/useKeys'
-import { useQueue } from '../composables/useQueue'
+import { queue, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import { clamp } from '../grid'
 import { nextPane, type Pane } from '../panes'
@@ -65,6 +65,13 @@ const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 function select(digest: string): void {
   if (digest !== props.digest)
     void router.push({ name: 'review', params: { ...props, digest } })
+}
+
+/* The next flow holding unapproved sheets, opened on its first. */
+function nextFlow(): void {
+  const next = batch.others.value[0]
+  const digest = next && batch.info.value ? queue(batch.info.value, next.flow)[0] : undefined
+  if (digest) void router.push({ name: 'review', params: { ...props, digest, flow: next.flow } })
 }
 
 function stepBatch(direction: -1 | 1): void {
@@ -431,6 +438,13 @@ useKeys('screen', [
     label: 'previous sheet',
     run: () => stepBatch(-1),
   },
+  {
+    id: 'next-flow',
+    keys: [shifted('KeyF')],
+    label: 'the next flow',
+    run: nextFlow,
+    when: () => batch.others.value.length > 0,
+  },
   { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'pane left', run: () => movePane(-1) },
   { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'pane right', run: () => movePane(1) },
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
@@ -536,6 +550,7 @@ watch(current, (id) => {
       <BatchRail
         :flow="props.flow"
         :inputs="batch.inputs.value"
+        :others="batch.others.value"
         :approved="batch.approved.value"
         :current="current"
         :edited="batch.edited.value"

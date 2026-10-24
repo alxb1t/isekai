@@ -81,9 +81,9 @@ timer mono 40px/500.
   switcher is a segmented control; Review drops `all`.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
-- **JobStrip**, `ground-deep`, mono 11px. One item per running job, each a dot, a label (`job · prepare`) and its
-  totals (`1 of 3 cells done · 01:47`, `image 1 of 2 · 06:41 of ≤10:30`); with none running, each kind's last
-  receipt. The dot: hollow idle, accent running, accent square unresolved. Prepare keeps the accepted-cell total fixed, counts cells completed at sheet and ticks
+- **JobStrip**, `ground-deep`, mono 11px: one dot, then one item per running job, each a label (`job · prepare`)
+  and its totals (`1 of 3 cells done · 01:47`, `image 1 of 2 · 06:41 of ≤10:30`); with none running, each kind's
+  last receipt. The dot: hollow idle, accent running, accent square unresolved. Prepare keeps the accepted-cell total fixed, counts cells completed at sheet and ticks
   elapsed time every second from its original start. On the right, while the volume is open, the quiet item
   `volume open · until 19:38 · close`.
 
@@ -160,11 +160,11 @@ J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 
 ```
 6 sources × 2 flows                          [ Add sources… ⇧A ]
 SOURCE                 │ summon-anime-wai                 │ conjure-anime-wai
-[▣] 00003              │ ☑ ▰▰▰▰▰▰ rendered ×1      ↵ view │ ☑ ▰▰▰▰▰▱ approved
-    00003.png · 832×1216│                                  │
+[▣] 00003              │ ☑ ▰▰▰▰▰▰ rendered ×2      ↵ view │ ☑ ▰▰▰▰▰▱ approved
+    00003.png · 832×1216│ [v1▢][v2▢]                       │
 [▣] cowboy_shot_2      │ ☑ ▰▰▰▱▱▱ captioning…            │ ☐
 [▣] IMG_0430           │ ☑ ▰▱▱▱▱▱ assigned                │ ☐
-h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's action · ⌘↵ prepare · ⇧A add sources · ⇧G render
+h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ view photo · ↵ the cell's action · ⌘↵ prepare · ⇧A add sources · ⇧G render
 
         ┌ IMG_0430 × summon · …                 [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
         ┌ 2 images ready to render                                        [ Render ⇧G ] ┐   RenderBar
@@ -177,11 +177,15 @@ h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's a
   `tagging…`, `captioning…`, `sheet`, `draft`, `approved`, `rendered ×n`. Running words are `accent-ink`.
 - **The tick:** accent fill is assigned and can be unticked; `tick-locked` is prepared and stays (`prepared ·
   the tick stays`).
-- **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`
-  or `↵ view`).
+- **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`,
+  `↵ view` or, on the source cell, `↵ view photo`). The hub keeps its focus for the open batch: `Esc` from a large
+  view, the Back button and a tab switch come back to the cell left, else the first.
 - **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
-  cell holding images opens its newest image's large view (`↵ view`). The checkbox's own click only ticks.
+  cell holding images opens the viewer on its newest (`↵ view`), `← →` `h l` step its images and `↵` opens the
+  shown one's large view. The checkbox's own click only ticks.
+- **A cell's images** sit under its stage track, every approved version's, oldest to newest, each a 96×128 tile
+  with its `vN` badge, wrapping; a click on one opens the viewer on it.
 - **A cell's refusal** sits inside the cell with its fix; the cell returns to assigned, so the next Prepare retries
   it.
 - **The PrepareBar** floats centred, bottom 50, 940 wide, `raised-2`, 1px `line-control`, radius 8. Pending: the
@@ -196,9 +200,11 @@ h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's a
   to render`, the render stage's own count, and primary `Render ⇧G`, disabled with its reason. With nothing short it
   is absent; while a render runs it shows the job strip's totals, `image 1 of 2 · 06:41 of ≤10:30`, and
   `Session ⇧S`.
-- **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is a
-  96×128 thumbnail, a render tile's size, upright, that opens the viewer, the file's stem in mono 13 and mono 11
-  `file · dims`, the size read from the file; a row checkbox appears in selection mode.
+- **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is the grid's
+  first column, `h` from the first flow cell: a 96×128 thumbnail, a render tile's size, upright, the file's stem in
+  mono 13 and mono 11 `file · dims`, the size read from the file; a row checkbox appears in selection mode. A click
+  on the thumbnail or `↵` opens the viewer on its photograph, `← →` stepping the batch's sources; space does nothing
+  there.
 - **The viewer** is a dialog over the page, its URL unchanged: the image fitted, a click for 1:1 pixels, `Esc` or a
   click outside to close, titled with the name, the dimensions and `fit n%` or `1:1`.
 
@@ -230,7 +236,8 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
   slots. The line `THE NEXT RENDER DRAWS …` states the result.
 - **The viewer**: the photograph opens in it, fitted, and `←` `→` step through the rail's photographs; a revision's
   render opens in it alone.
-- **The rail**: the flow's name heads it, and it lists every sheet of the flow not yet rendered — unapproved, or
+- **The rail**: the flow's name heads it, with a line under it for each other flow holding unapproved sheets,
+  `summon-anime-wai · 1 waiting ⇧F`; ⇧F opens the next such flow's first. It lists every sheet of the flow not yet rendered — unapproved, or
   approved and short of its images — and the one open, each marked ○ untouched, ◐ edited, ● approved, ◌ re-opened;
   its footer counts the approved among them. Revise opens the first draft it wrote; the rest wait in the rail.
   Approve stays on the sheet, read-only. ⇧J ⇧K step the rail. Approve still refuses an unmarked empty field.
@@ -321,8 +328,9 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   stage's own count. The Render bar offers them. The version's heading — `revision of v1` or `re-roll of v1`, the
   approval time, the Count and the seeds — is in the large view.
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
-  (filled fields only, read-only), the photograph a key away (⇧C). `Esc` and its back button go back to
-  where it was opened: the hub, or else Renders. `Compare with v1  C` appears when another version
+  (filled fields only, read-only), and *Side by side* `⇧C`: the image beside its run's photograph, at one height,
+  in one dialog. `Esc` and its back button go back to where it was opened, the hub or else Renders, focused on the
+  cell or the image left. `Compare with v1  C` appears when another version
   of the same source × flow shares the seed; with several, it compares with the newest older one.
 - **Revise** (the verb `isekai revise`): the confirm lists each image — source × flow × seed, the version it copies,
   the seed it prefills. All or nothing: a refusal lists every selected image, those that could be revised
@@ -359,17 +367,17 @@ Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`,
 
 ```
 J7·1  LIBRARY · 4 batches · newest activity first                              [ New batch ⇧N ]
-      BATCH            SOURCES  ▢▢▢▢▢▢▢+5  FLOWS                                         LAST ACTIVITY ↓
-      2026-09-17       6 sources [thumbs]  [summon-anime-wai 2/5 approved · 1/5 rendered]
-                                           [conjure-anime-wai 1/2 approved · 0/2 rendered]  today 15:31
-                                           1 source without a flow                          render · 1 image   open ↵
+      2026-09-17  6 sources  [summon-anime-wai 2/5 approved · 1/5 rendered]
+                             [conjure-anime-wai 1/2 approved · 0/2 rendered]  today 15:31 · render · open ↵
+      ▢▢▢▢▢▢▢ +5
       old exports      ▨ Not a batch: no sources/ folder inside. Move it out of ~/isekai/ in Finder
                          to clear this row.                                                  can't be opened
 ```
 
-- **Home's row**: the name, `n sources`, up to seven 84×114 thumbnails then `+n`, wrapping in a narrow window, one
-  chip per flow present (its denominator the sources that have it; chips wrap), `n sources without a flow`, and last
-  activity — the time and kind of the newest file written in the batch. Sorted by last activity; a folder without `sources/`
+- **Home's row**: a header line — the name, `n sources`, one chip per flow present (its denominator the sources that
+  have it; chips wrap), `n sources without a flow`, and at the right last activity, the time and kind of the newest
+  file written in the batch, then `open ↵` — over up to seven 84×114 thumbnails then `+n`, at the full width,
+  wrapping in a narrow window. Sorted by last activity; a folder without `sources/`
   sorts last, striped and inert; dot-folders, `.staging` among them, are not listed.
 - **A running render's row** has an accent left edge (`inset 2px 0 0`), background `#1b1c2c`,
   `● render running · 06:41` and `image 1 of 2`.
@@ -421,9 +429,9 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K 
 |---|---|
 | everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the running session, else the batch's sessions · ? the key list · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
-| Hub | h j k l or ←↓↑→ cells · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
-| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④ · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ↵ on the photograph opens the viewer, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow, ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C *Side by side*, the photograph and the render, on a revision · the collapsed caption, its key named when built |
-| Renders | h l cells · j k or ↓↑ sources · ←→ images · space select · ↵ the large view · e Revise · ⇧G Render · in the large view, e Revise, c compare, esc back · in compare, `\` swap, esc back |
+| Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
+| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④ · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ↵ on the photograph opens the viewer, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow holding unapproved sheets · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C *Side by side*, the photograph and the render, on a revision · the collapsed caption, its key named when built |
+| Renders | h l cells · j k or ↓↑ sources · ←→ images · space select · ↵ the large view · e Revise · ⇧G Render · in the large view, e Revise, c compare, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 
 No key spends money but the Render dialog's ⌘↵, which confirms the price it quotes: ⇧G only opens the dialog.

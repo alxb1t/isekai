@@ -20,6 +20,21 @@ export function queue(info: HubInfo, flow: string): string[] {
 }
 
 /**
+ * Return each flow but `flow` holding unapproved sheets, with how many, from
+ * the flow after `flow` round to the one before it.
+ *
+ * e.g. flows [f, g, h] open on g, f 1 and h 2 waiting -> [{h, 2}, {f, 1}]
+ */
+export function waiting(info: HubInfo, flow: string): { flow: string; count: number }[] {
+  const at = info.flows.indexOf(flow)
+  const others = [...info.flows.slice(at + 1), ...info.flows.slice(0, Math.max(at, 0))]
+  return others.flatMap((other) => {
+    const count = queue(info, other).length
+    return count ? [{ flow: other, count }] : []
+  })
+}
+
+/**
  * Return the sheet a batch's Review opens on, or null for none.
  *
  * The first unapproved sheet of the first flow that has one, else the first
@@ -74,6 +89,8 @@ export function useQueue(batch: string, flow: string, current: () => string) {
   const inputs = computed<BatchInput[]>(() =>
     info.value ? rail(info.value, flow, current()) : [],
   )
+  /* The other flows' unapproved sheets, which the rail's head names. */
+  const others = computed(() => (info.value ? waiting(info.value, flow) : []))
 
   /* The rail's sheets holding an approved artifact, re-opened ones included:
      what the directory holds, not what the sheet shows. */
@@ -95,5 +112,5 @@ export function useQueue(batch: string, flow: string, current: () => string) {
     edited.value = new Set(edited.value).add(id)
   }
 
-  return { info, inputs, approved, edited, loading, load, markEdited }
+  return { info, inputs, others, approved, edited, loading, load, markEdited }
 }

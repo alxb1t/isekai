@@ -9,7 +9,7 @@ Home, the hub, the kept focus, the large view, then Review, per [design](design.
 - [x] 2 — The hub
 - [x] 3 — The kept focus
 - [x] 4 — The large view
-- [ ] 5 — Review's rail
+- [x] 5 — Review's rail
 
 ## 1 — Home's row
 
@@ -53,11 +53,11 @@ Home, the hub, the kept focus, the large view, then Review, per [design](design.
 
 ## 5 — Review's rail
 
-- [ ] 5.1 **HALT CHECK** — the rail names no other flow.
+- [x] 5.1 **HALT CHECK** — the rail names no other flow.
   Verify: `grep -c 'waiting' ui/src/composables/useQueue.ts` prints `0`.
-- [ ] 5.2 Add `waiting` to `ui/src/composables/useQueue.ts` and the other flows' line to `ui/src/components/BatchRail.vue`
+- [x] 5.2 Add `waiting` to `ui/src/composables/useQueue.ts` and the other flows' line to `ui/src/components/BatchRail.vue`
   per [D6](design.md#d6); bind `ui:review:the-rail-names-the-other-flows-waiting` in `ui/src/composables/useQueue.test.ts`.
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c 'the-rail-names-the-other-flows-waiting' ui/src/composables/useQueue.test.ts` prints `1`.
-- [ ] 5.3 In `ui/design/spec.md`: J7·1's row per [D1](design.md#d1), J2's source column and strip, J5's *Side by side*,
+- [x] 5.3 In `ui/design/spec.md`: J7·1's row per [D1](design.md#d1), J2's source column and strip, J5's *Side by side*,
   J3's rail head, and the job strip's line per [D7](design.md#d7).
   Verify: `grep -c 'one dot, then one item per running job' ui/design/spec.md` prints `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
