@@ -18,7 +18,7 @@ the other flows' waiting sheets are.
 | `specs/` | `ui` |
 
 ```
-hub   [▢] 1  1.jpeg · 748×1173 │ ☑ ▰▰▰▰▰▰ rendered ×3  [v1▢][v2▢][v2▢]   ↵ view
+hub   [▢] 1  1.jpeg · 748×1173 │ ☑ ▰▰▰▰▰▰ rendered ×2  [v1▢][v2▢][v2▢]   ↵ view
        ↵ the photograph          └─ ↵ the viewer on the newest ── ← → h l ── ↵ the large view ── Esc back, focus kept
 ```
 

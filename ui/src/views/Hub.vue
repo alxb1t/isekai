@@ -183,7 +183,7 @@ function view(source: HubSource, flow: string, index?: number): void {
   const { digest } = source
   const images = cell(source, flow).images
   if (digest === null || images.length === 0) return
-  const place = (one: { version: number; seed: string }) => ({
+  const address = (one: { version: number; seed: string }) => ({
     batch: props.batch,
     digest,
     flow,
@@ -191,7 +191,7 @@ function view(source: HubSource, flow: string, index?: number): void {
   })
   viewing.value = {
     images: images.map((one) => ({
-      src: imageAt(place(one)),
+      src: imageAt(address(one)),
       name: `${source.name} · ${flow} · v${one.version} · seed ${one.seed}`,
     })),
     start: index ?? images.length - 1,
@@ -199,7 +199,7 @@ function view(source: HubSource, flow: string, index?: number): void {
       const one = images[at]
       void router.push({
         name: 'render',
-        params: { ...place(one), version: `v${one.version}` },
+        params: { ...address(one), version: `v${one.version}` },
         state: { from: 'hub' },
       })
     },

@@ -160,7 +160,7 @@ J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 
 ```
 6 sources × 2 flows                          [ Add sources… ⇧A ]
 SOURCE                 │ summon-anime-wai                 │ conjure-anime-wai
-[▣] 00003              │ ☑ ▰▰▰▰▰▰ rendered ×2      ↵ view │ ☑ ▰▰▰▰▰▱ approved
+[▣] 00003              │ ☑ ▰▰▰▰▰▰ rendered ×1      ↵ view │ ☑ ▰▰▰▰▰▱ approved
     00003.png · 832×1216│ [v1▢][v2▢]                       │
 [▣] cowboy_shot_2      │ ☑ ▰▰▰▱▱▱ captioning…            │ ☐
 [▣] IMG_0430           │ ☑ ▰▱▱▱▱▱ assigned                │ ☐
@@ -179,7 +179,7 @@ h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ view photo �
   the tick stays`).
 - **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`,
   `↵ view` or, on the source cell, `↵ view photo`). The hub keeps its focus for the open batch: `Esc` from a large
-  view, the Back button and a tab switch come back to the cell left, else the first.
+  view, the Back button and a tab switch come back to the cell left, else the first row's source cell.
 - **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
   cell holding images opens the viewer on its newest (`↵ view`), `← →` `h l` step its images and `↵` opens the
