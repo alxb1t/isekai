@@ -424,10 +424,9 @@ def create_app(
     @app.post("/api/jobs/{kind}/stop")
     def post_stop(kind: str) -> dict[str, Any]:
         """Interrupt `kind`'s running stage; no later one starts, the other runs on."""
-        for one in KINDS:
-            if one == kind:
-                return {"job": jobs.stop(one)}
-        raise Refusal(f"there is no {kind} job: stop `prepare` or `render`")
+        if kind not in KINDS:
+            raise Refusal(f"there is no {kind} job: stop `prepare` or `render`")
+        return {"job": jobs.stop(kind)}
 
     @cache
     def offered(flow: str) -> Flow:

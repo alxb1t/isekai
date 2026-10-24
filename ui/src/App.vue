@@ -10,6 +10,7 @@ import { lasted } from './sessions'
 import { useBatchStore } from './stores/batch'
 import { shifted, useKeyStore } from './stores/keys'
 import { alerting, clock, useLiveStore } from './stores/live'
+import type { JobSlot } from './types'
 
 /* The shell: the AppBar, the BillingBanner's slot, the route's screen and the
    JobStrip (design spec §3). Review is keyed by batch and flow, so moving to
@@ -23,8 +24,7 @@ const { prepareTotals, renderTotals } = live
 const alert = computed(() => alerting(billing.value))
 /* Each kind's job, running or ended, Prepare's first. */
 const held = computed(() => [jobs.value.prepare, jobs.value.render].filter((slot) => slot !== null))
-const runningJobs = computed(() => held.value.filter((slot) => slot.state === 'running'))
-const running = computed(() => runningJobs.value.length > 0)
+const running = computed(() => held.value.some((slot) => slot.state === 'running'))
 /* `HH:MM` of a UTC time gpunit recorded, on this machine's clock. */
 const hour = (at: string | null) =>
   at ? new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''
@@ -32,18 +32,10 @@ const hour = (at: string | null) =>
 /* The strip's items: one per running job, sharing its totals and the live clock
    with its bar; with none running, each kind's last outcome. */
 const items = computed(() =>
-  running.value
-    ? runningJobs.value.map((slot) => ({
-        kind: slot.kind,
-        label: `job · ${slot.kind}`,
-        totals: renderTotals(slot) || prepareTotals(slot),
-      }))
-    : held.value.map((slot) => ({
-        kind: slot.kind,
-        label: '',
-        totals: `last: ${slot.kind} · ${slot.state}`,
-      })),
+  running.value ? held.value.filter((slot) => slot.state === 'running') : held.value,
 )
+const totals = (slot: JobSlot) =>
+  running.value ? renderTotals(slot) || prepareTotals(slot) : `last: ${slot.kind} · ${slot.state}`
 
 const batch = computed(() => (typeof route.params.batch === 'string' ? route.params.batch : null))
 /* The page's one stream names the batch the screen shows, and the batch store holds it. */
@@ -188,9 +180,9 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
         :class="{ 'jobstrip__dot--running': running, 'jobstrip__dot--alert': alert }"
       />
       <span v-if="!running">job · idle</span>
-      <template v-for="item in items" :key="item.kind">
-        <span v-if="item.label">{{ item.label }}</span>
-        <span class="jobstrip__totals" :data-job-item="item.kind">{{ item.totals }}</span>
+      <template v-for="slot in items" :key="slot.kind">
+        <span v-if="running">job · {{ slot.kind }}</span>
+        <span class="jobstrip__totals" :data-job-item="slot.kind">{{ totals(slot) }}</span>
       </template>
       <span
         v-if="billing?.volume?.state === 'open'"

@@ -101,6 +101,26 @@ def _steps(run: Run) -> list[Step]:
 
 SLEEP = "import time; time.sleep(30)"
 
+# A render child that takes a while to tear its pod down once interrupted.
+SLOW_TEARDOWN = (
+    "import signal, sys, time\n"
+    "def down(*_):\n"
+    "    time.sleep(0.5)\n"
+    "    open(sys.argv[1], 'a').write('torn down\\n')\n"
+    "    sys.exit(130)\n"
+    "signal.signal(signal.SIGINT, down)\n"
+    "open(sys.argv[1], 'a').write('render\\n')\n"
+    "time.sleep(30)\n"
+)
+
+
+def _until_rendering(record: Path) -> None:
+    """Return once a render child has written `render` to `record`."""
+    deadline = time.monotonic() + WAIT
+    while "render" not in (record.read_text() if record.exists() else ""):
+        assert time.monotonic() < deadline, "the render child never started"
+        time.sleep(0.01)
+
 
 def _sleeping_render(limit: int, runs: Path, session: str) -> list[str]:
     """Return a render child that runs until it is interrupted."""
@@ -167,17 +187,6 @@ def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
     folder, (run,) = _batch(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
     volume, _ = _order(record)
-    # A render child that takes a while to tear its pod down once interrupted.
-    script = (
-        "import signal, sys, time\n"
-        "def down(*_):\n"
-        "    time.sleep(0.5)\n"
-        "    open(sys.argv[1], 'a').write('torn down\\n')\n"
-        "    sys.exit(130)\n"
-        "signal.signal(signal.SIGINT, down)\n"
-        "open(sys.argv[1], 'a').write('render\\n')\n"
-        "time.sleep(30)\n"
-    )
     broadcast = events.Broadcast()
     found = broadcast.subscribe()
     prepared = _Script({"tag": _line("start") + "; import time; time.sleep(30)"})
@@ -186,16 +195,18 @@ def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
         lambda: None,
         command=prepared,
         volume=volume,
-        render=lambda limit, runs, session: [sys.executable, "-c", script, str(record)],
+        render=lambda limit, runs, session: [
+            sys.executable,
+            "-c",
+            SLOW_TEARDOWN,
+            str(record),
+        ],
         err=io.StringIO(),
     )
     jobs.prepare("b", folder, _steps(run), dict)
     _until(found, "cell")
     jobs.render("b", folder, limit=1500, total=1, keep_open=False)
-    deadline = time.monotonic() + WAIT
-    while "render" not in (record.read_text() if record.exists() else ""):
-        assert time.monotonic() < deadline, "the render child never started"
-        time.sleep(0.01)
+    _until_rendering(record)
 
     jobs.shutdown(timeout=0.05)
 
@@ -658,30 +669,21 @@ def test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown(
     folder, _ = _batch(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
     volume, _ = _order(record)
-    # A render child that takes a while to tear its pod down once interrupted.
-    script = (
-        "import signal, sys, time\n"
-        "def down(*_):\n"
-        "    time.sleep(0.5)\n"
-        "    open(sys.argv[1], 'a').write('torn down\\n')\n"
-        "    sys.exit(130)\n"
-        "signal.signal(signal.SIGINT, down)\n"
-        "open(sys.argv[1], 'a').write('render\\n')\n"
-        "time.sleep(30)\n"
-    )
     err = io.StringIO()
     jobs = Jobs(
         events.Broadcast(),
         lambda: None,
         volume=volume,
-        render=lambda limit, runs, session: [sys.executable, "-c", script, str(record)],
+        render=lambda limit, runs, session: [
+            sys.executable,
+            "-c",
+            SLOW_TEARDOWN,
+            str(record),
+        ],
         err=err,
     )
     jobs.render("b", folder, limit=1500, total=1, keep_open=False)
-    deadline = time.monotonic() + WAIT
-    while "render" not in (record.read_text() if record.exists() else ""):
-        assert time.monotonic() < deadline, "the render child never started"
-        time.sleep(0.01)
+    _until_rendering(record)
 
     # A wait shorter than the teardown: a render is waited for past it.
     jobs.shutdown(timeout=0.05)
@@ -722,10 +724,7 @@ def test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window(
         err=err,
     )
     jobs.render("b", folder, limit=1500, total=1, keep_open=False)
-    deadline = time.monotonic() + WAIT
-    while "render" not in (record.read_text() if record.exists() else ""):
-        assert time.monotonic() < deadline, "the render child never started"
-        time.sleep(0.01)
+    _until_rendering(record)
 
     try:
         jobs.shutdown(timeout=0.05)
@@ -766,10 +765,7 @@ def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str
     )
     jobs.render("b", folder, limit=1500, total=1, keep_open=keep_open)
     try:
-        deadline = time.monotonic() + WAIT
-        while "render" not in (record.read_text() if record.exists() else ""):
-            assert time.monotonic() < deadline, "render did not start"
-            time.sleep(0.01)
+        _until_rendering(record)
         jobs.shutdown(timeout=2)
         assert not jobs.running("render")
         thread = jobs._slots["render"].thread

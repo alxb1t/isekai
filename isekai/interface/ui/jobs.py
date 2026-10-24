@@ -29,7 +29,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal, TextIO
+from typing import Any, Literal, TextIO, get_args
 
 from isekai.boundary.gpu import Volume
 from isekai.foundation.artifacts import session_id
@@ -45,7 +45,7 @@ PREPARE = ("tag", "caption", "sheet")
 
 # The kinds of job, each with its own slot.
 Kind = Literal["prepare", "render"]
-KINDS: tuple[Kind, ...] = ("prepare", "render")
+KINDS: tuple[Kind, ...] = get_args(Kind)
 
 # What a refusal calls each kind of job.
 LABELS: dict[Kind, str] = {"prepare": "Prepare", "render": "Render"}
@@ -174,12 +174,18 @@ class _Job:
 
 @dataclass
 class _Slot:
-    """One kind's job, the child running for it, and the thread watching it."""
+    """One kind's job, its child and that child's log writer, and its watcher."""
 
     job: _Job | None = None
     child: subprocess.Popen[str] | None = None
+    tee: threading.Thread | None = None
     stopping: bool = False
     thread: threading.Thread | None = None
+
+    @property
+    def running(self) -> bool:
+        """Return whether the slot holds a running job."""
+        return self.job is not None and self.job.state == "running"
 
 
 class Jobs:
@@ -259,8 +265,7 @@ class Jobs:
     def running(self, kind: Kind) -> bool:
         """Return whether a job of `kind` is running."""
         with self._lock:
-            job = self._slots[kind].job
-            return job is not None and job.state == "running"
+            return self._slots[kind].running
 
     def render(
         self,
@@ -305,7 +310,7 @@ class Jobs:
     def _refuse_running(self, kind: Kind) -> None:
         """Refuse while a job of `kind` runs, naming it."""
         job = self._slots[kind].job
-        if job is not None and job.state == "running":
+        if job is not None and self._slots[kind].running:
             raise Refusal(
                 f"a job is running: {LABELS[job.kind]} on {job.batch}; wait for it "
                 "to end, or "
@@ -316,7 +321,7 @@ class Jobs:
         """Interrupt `kind`'s running stage and start no other, or refuse: none runs."""
         with self._lock:
             slot = self._slots[kind]
-            if slot.job is None or slot.job.state != "running":
+            if slot.job is None or not slot.running:
                 raise Refusal(
                     f"no {LABELS[kind]} is running, so there is nothing to stop"
                 )
@@ -340,22 +345,22 @@ class Jobs:
         """
         with self._lock:
             render = self._slots["render"].job
-            rendering = render is not None and render.state == "running"
+            rendering = self._slots["render"].running
             for slot in self._slots.values():
-                if slot.job is not None and slot.job.state == "running":
+                if slot.running:
                     self._interrupt(slot)
+        if rendering:
+            timeout = max(timeout, self._settle_s)
+            self._say(
+                f"stopping mid-render: waiting up to {timeout:.0f}s for the pod's "
+                "teardown and the window's close"
+            )
+        deadline = time.monotonic() + timeout
+        for kind in KINDS:
+            self.wait(kind, max(0.0, deadline - time.monotonic()))
         if not rendering:
-            self.wait("prepare", timeout)
             return
         assert render is not None and render.session is not None
-        timeout = max(timeout, self._settle_s)
-        deadline = time.monotonic() + timeout
-        self._say(
-            f"stopping mid-render: waiting up to {timeout:.0f}s for the pod's "
-            "teardown and the window's close"
-        )
-        self.wait("render", timeout)
-        self.wait("prepare", max(0.0, deadline - time.monotonic()))
         with self._lock:
             closed = render.session["steps"]["volume down"]
         if closed not in {"done", "kept"}:
@@ -391,10 +396,9 @@ class Jobs:
         slot = self._slots[job.kind]
         try:
             for step in job.steps:
-                started = self._start(job, step, folder)
-                if started is None:
+                child = self._start(job, step, folder)
+                if child is None:
                     break
-                child, tee = started
                 self._publish(job)
                 assert child.stdout is not None
                 reported = False
@@ -419,8 +423,7 @@ class Jobs:
                                 job.completed.add(identity)
                         if completed:
                             self._publish(job)
-                code = child.wait()
-                tee.join(DRAIN_S)
+                code = self._reap(slot, child)
                 with self._lock:
                     slot.child = None
                     # A child that fails before its first line said nothing the
@@ -494,7 +497,7 @@ class Jobs:
             if slot.stopping:
                 return
             argv = self._render(limit, folder / RUNS, job.session["id"])
-            child, tee = self._spawn(job.kind, argv, folder)
+            child = self._spawn(job.kind, argv, folder)
         assert child.stdout is not None
         reported = False
         for raw in child.stdout:
@@ -513,8 +516,7 @@ class Jobs:
                 else:
                     job.session["steps"][str(line.get("step"))] = line.get("state")
             self._publish(job)
-        code = child.wait()
-        tee.join(DRAIN_S)
+        code = self._reap(slot, child)
         with self._lock:
             slot.child = None
             if code != 0 and not slot.stopping:
@@ -534,7 +536,7 @@ class Jobs:
 
     def _start(
         self, job: _Job, step: Step, folder: Path
-    ) -> tuple[subprocess.Popen[str], threading.Thread] | None:
+    ) -> subprocess.Popen[str] | None:
         """Start `step`'s child, or return None once Stop was asked for."""
         with self._lock:
             if self._slots[job.kind].stopping:
@@ -545,7 +547,7 @@ class Jobs:
 
     def _spawn(
         self, kind: Kind, argv: list[str], folder: Path
-    ) -> tuple[subprocess.Popen[str], threading.Thread]:
+    ) -> subprocess.Popen[str]:
         """Start `argv` as `kind`'s child, and the thread writing its prose to the log.
 
         Hold the lock.
@@ -567,10 +569,20 @@ class Jobs:
             log.close()
             raise
         assert child.stderr is not None
-        tee = threading.Thread(target=_tee, args=(child.stderr, log, kind), daemon=True)
-        tee.start()
-        self._slots[kind].child = child
-        return child, tee
+        slot = self._slots[kind]
+        slot.child = child
+        slot.tee = threading.Thread(
+            target=_tee, args=(child.stderr, log, kind), daemon=True
+        )
+        slot.tee.start()
+        return child
+
+    def _reap(self, slot: _Slot, child: subprocess.Popen[str]) -> int:
+        """Return `child`'s exit once it and its log writer have ended."""
+        code = child.wait()
+        if slot.tee is not None:
+            slot.tee.join(DRAIN_S)
+        return code
 
     def _publish(self, job: _Job) -> None:
         with self._lock:

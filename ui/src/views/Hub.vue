@@ -34,7 +34,7 @@ const viewing = ref<HubSource | null>(null)
 /* The batch's hub, its running cells and refusals, and its Render offer, shared
    with every screen of the batch and kept live from the page's one stream. */
 const store = useBatchStore()
-const { hub: info, running, refusals, offer, dialog, rendering } = storeToRefs(store)
+const { hub: info, running, refusals, offer, dialog, rendering, preparing: busy } = storeToRefs(store)
 
 /* Render opens only from its own bar: while changes wait, Prepare holds it. */
 function openRender(): void {
@@ -76,10 +76,6 @@ const RUNNING: Record<string, { segment: number; word: string }> = {
 
 const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
-/* A Prepare running for this batch, not another's. */
-const busy = computed(
-  () => jobs.value.prepare?.state === 'running' && jobs.value.prepare.batch === props.batch,
-)
 
 /* What Prepare would run: every assigned cell with no sheet. */
 const changes = computed(() =>
