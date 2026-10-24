@@ -87,9 +87,10 @@ the CLI's own verb, a child of the server
 **Prepare is a job of those children.** It asks Ollama first, then runs `tag`,
 `caption` and `sheet` per flow over every assigned cell with no sheet, each with
 `--progress json`: one JSON line per item's start and end on stdout, its prose
-appended to the batch's `log.txt`. One job runs at a time, and Stop or the server
-stopping sends the child SIGINT. **`/events`** is the page's channel: a snapshot of
-the job slot and the batch's hub on every connect, then a `cell` event per line,
+appended to the batch's `log.txt` as `[prepare] …`. One Prepare runs at a time,
+beside at most one render; Stop sends its child SIGINT, and the server stopping
+interrupts both. **`/events`** is the page's channel: a snapshot of both job slots
+and the batch's hub on every connect, then a `cell` event per line,
 its stage read again from disk.
 
 ```

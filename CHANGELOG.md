@@ -20,6 +20,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - Every screen reads its own slot: a hub's Prepare bar its batch's Prepare, the Render bar and the session page the
   render; the hub no longer holds Prepare while a render runs, and the job strip shows each running job (0074 D5).
 
+- The design spec's rule 6 and §8, the READMEs and `docs/data-flow.md` state two job slots; the session outcome's
+  comment names its lifetime lock, and the `render.py` row names every importer (0074 D6).
+
 ## [0.46.0] - 2026-10-24 · 0073-sessions
 
 Gate: local 0m40s · CI 7m25s (build-image at 801ffec) · 0.45.0: local 0m39s · CI 7m25s

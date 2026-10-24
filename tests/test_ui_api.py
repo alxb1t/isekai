@@ -1699,7 +1699,7 @@ def test_a_version_of_digits_outside_ascii_is_refused_not_failed(
 
 
 def _rendering_slot(session: str) -> dict[str, Any]:
-    """Return the job slot as it reads while a render of `BATCH` runs."""
+    """Return the render slot as it reads while a render of `BATCH` runs."""
     return {
         "kind": "render",
         "batch": BATCH,

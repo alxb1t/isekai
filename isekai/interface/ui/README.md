@@ -21,15 +21,16 @@ render ─▶ <batch>/sessions/<id>.json ─▶ /b/<batch>/sessions ─▶ /b/<b
   folder left behind is swept when the server starts.
 - **A tick** is `POST /api/b/{batch}/assign`, the same `assign` `isekai assign` runs: a flow's empty
   directory in the source's run. An untick past assigned is refused, so a tick never deletes work.
-- **Prepare** is one job in one slot (`jobs.py`). It asks Ollama first, then runs `isekai tag`,
-  `caption` and `sheet` per flow as children, each with `--progress json`, their prose appended to the
-  batch's `log.txt`. Stop, and the server stopping, send the child SIGINT.
-- **Render** is the slot's other job. `POST …/render/quote` takes the render verb's own quote: per flow
+- **Prepare** is one job in its own slot (`jobs.py`), beside the render's. It asks Ollama first, then
+  runs `isekai tag`, `caption` and `sheet` per flow as children, each with `--progress json`, each line
+  of their prose appended to the batch's `log.txt` as `[prepare] …`. Stop, `POST
+  /api/jobs/prepare/stop`, sends its child SIGINT; the server stopping interrupts both jobs.
+- **Render** has the other slot, its prose logged as `[render] …`. `POST …/render/quote` takes the render verb's own quote: per flow
   what renders, what is left out and why, the estimate, the limit and the price at most. Only
   `POST …/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --session <id> --progress
   json`, then `volume down` unless the window is kept.
 - **Sessions** are read from the records the render verb writes, `<batch>/sessions/<id>.json`:
-  `GET …/sessions` lists them, the running one first, and `GET …/sessions/<id>` serves one. The job slot adds
+  `GET …/sessions` lists them, the running one first, and `GET …/sessions/<id>` serves one. The render slot adds
   the volume steps and Stop. `GET /api/sessions/running` reads process-held liveness locks across the library,
   each before its record, so a damaged record refuses only its own batch's list; local polling refreshes observed
   records and lists every two seconds, so terminal renders show on every screen too. A failed poll marks the last
@@ -42,7 +43,7 @@ render ─▶ <batch>/sessions/<id>.json ─▶ /b/<batch>/sessions ─▶ /b/<b
 - **Billing** (`billing.py`) is read from gpunit's records in `.gpunit/`: a pod alert, the window's quiet
   item, or the band. gpunit is asked at start, every half minute while a session runs or an alert is
   open, and on Check again.
-- **`/events`** (`events.py`) streams a snapshot of the job slot, billing, the batch's hub and the import's
+- **`/events`** (`events.py`) streams a snapshot of both job slots, billing, the batch's hub and the import's
   files on every connect, then a `cell` event per progress line, the cell's stage read again from disk. A page
   holds one stream, naming its batch and its open import, and it opens again when either changes. A batch or
   an import it cannot read is left out of the snapshot, so the stream still opens.

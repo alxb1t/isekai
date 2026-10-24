@@ -20,8 +20,8 @@ export function asked(record: SessionRecord): number {
   return Object.values(record.asked).reduce((sum, n) => sum + n, 0)
 }
 
-/* The word for how a session ended; a record no job runs that still reads running
-   was ended outright. */
+/* The word for how a session ended; a record still reading running whose lifetime
+   lock no process holds was ended outright. */
 export function outcome(record: SessionRecord): string {
   return record.outcome ?? 'ended, no outcome'
 }

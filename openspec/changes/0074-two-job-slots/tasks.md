@@ -8,7 +8,7 @@ The job runner, the wire, the screens, then the docs, per [design](design.md). E
 - [x] 1 — The job runner
 - [x] 2 — The wire
 - [x] 3 — The screens
-- [ ] 4 — The docs
+- [x] 4 — The docs
 
 ## 1 — The job runner
 
@@ -45,8 +45,8 @@ The job runner, the wire, the screens, then the docs, per [design](design.md). E
 
 ## 4 — The docs
 
-- [ ] 4.1 **HALT CHECK** — the design spec states one job slot.
+- [x] 4.1 **HALT CHECK** — the design spec states one job slot.
   Verify: `grep -c 'One job slot' ui/design/spec.md` prints `1`.
-- [ ] 4.2 Rewrite rule 6 and §8 of `ui/design/spec.md`, the job runner's line in `isekai/interface/ui/README.md`, and
+- [x] 4.2 Rewrite rule 6 and §8 of `ui/design/spec.md`, the job runner's line in `isekai/interface/ui/README.md`, and
   `0073·R9`'s comments in `ui/src/sessions.ts` and its `render.py` row in `isekai/interface/README.md`, per [D6](design.md#d6).
   Verify: `grep -c 'One job slot' ui/design/spec.md` prints `0`, `grep 'render\.py. | .cli\.py' isekai/interface/README.md | grep -c 'ui/library.py'` prints `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
