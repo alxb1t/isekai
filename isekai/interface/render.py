@@ -9,7 +9,8 @@ With no request, every approval short of its count renders what it lacks. A coun
 draws that many seeds; a source flow renders its latest seeds again. A source
 rendered by count in the same line goes first, in the same session. Output is shown
 and appended to the batch's log, `<runs>/../log.txt` (D36); with `--progress json`
-the prose goes to stderr alone, which the caller keeps, as the app's job does.
+the prose goes to stderr alone, which the caller keeps, as the app's job does. Once
+the pod is asked for, the session's record is kept at `<runs>/../sessions/<id>.json`.
 """
 
 import argparse
@@ -26,6 +27,7 @@ import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TextIO, cast
 
@@ -33,6 +35,7 @@ from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyTransport
 from isekai.boundary.gpu import Seams
 from isekai.boundary.pod_start import HOLD_SECONDS
+from isekai.foundation.artifacts import SESSION_FILE, SessionRecord, replace
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -70,6 +73,10 @@ LOST_EXIT = 3
 REQUEST = re.compile(r"([a-z0-9-]+)=([1-9][0-9]*|[a-z][a-z0-9-]*)")
 # The bare command a gpunit refusal names: a verb, or `volume` and its action.
 REMEDY = re.compile(r"run gpunit ([a-z]+(?: up| down)?)")
+# A batch's session records, beside its log; each is named by its session's id.
+SESSIONS = "sessions"
+# A session's id is a start in UTC, e.g. 20261024T091200Z.
+SESSION_ID = re.compile(r"[0-9]{8}T[0-9]{6}Z")
 
 # `generate`'s argv and the wiring it runs on -> its exit status.
 Generate = Callable[[list[str], Wiring], int]
@@ -175,9 +182,86 @@ def await_endpoint(
             time.sleep(poll_s)
 
 
+def _utc(moment: datetime) -> str:
+    """Return `moment` as the record spells a time, e.g. 2026-10-24T09:12:00Z."""
+    return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class Record:
+    """A session's record in `folder`, written whole at each change once opened.
+
+    Nothing is written before `open`, so a session refused before renting leaves
+    no record (D2).
+    """
+
+    def __init__(
+        self, folder: Path, given: str | None, limit: int, asked: Mapping[str, int]
+    ) -> None:
+        """Name the record by `given`, else by its start, once it opens."""
+        self._folder = folder
+        self._given = given
+        self._limit = limit
+        self._asked = dict(asked)
+        self._path: Path | None = None
+        self._body: SessionRecord | None = None
+        # Why the session is ending, when the watchdog ends it.
+        self.note: str | None = None
+
+    def open(self) -> None:
+        """Write the record as running."""
+        started = datetime.now(UTC)
+        name = self._given or started.strftime("%Y%m%dT%H%M%SZ")
+        body: SessionRecord = {
+            "schema": SESSION_FILE.schema,
+            "id": name,
+            "started": _utc(started),
+            "ended": None,
+            "limit": self._limit,
+            "asked": self._asked,
+            "steps": {},
+            "images": [],
+            "outcome": "running",
+            "message": None,
+        }
+        self._path, self._body = self._folder / f"{name}.json", body
+        self._write()
+
+    def step(self, step: str, state: str) -> None:
+        """Record `step` at `state`, once open."""
+        if self._body is not None:
+            self._body["steps"][step] = state
+            self._write()
+
+    def image(self, item: Mapping[str, Any]) -> None:
+        """Record the image a `generate` line landed, once open."""
+        if self._body is not None:
+            self._body["images"].append(
+                {
+                    "digest": item["digest"],
+                    "flow": item["flow"],
+                    "version": item["version"],
+                    "seed": item["seed"],
+                }
+            )
+            self._write()
+
+    def end(self, outcome: str, message: str | None = None) -> None:
+        """Record the session ended at `outcome`, once open."""
+        if self._body is not None:
+            self._body["ended"] = _utc(datetime.now(UTC))
+            self._body["outcome"] = outcome
+            self._body["message"] = message
+            self._write()
+
+    def _write(self) -> None:
+        if self._path is not None and self._body is not None:
+            replace(self._path, SESSION_FILE, self._body)
+
+
 class Steps:
     """A session's JSON lines on `out`, one per step, when `enabled`.
 
+    Each step and image reaches `record` too, whether or not it is printed.
     e.g. {"step": "image", "n": 2, "of": 4, "run": "…", "flow": "…", "state": "done"}
     """
 
@@ -186,24 +270,33 @@ class Steps:
         self.out = out
         self.enabled = enabled
         self.flag: tuple[str, ...] = ("--progress", "json") if enabled else ()
+        self.record: Record | None = None
         self._n = 0
 
     def step(self, step: str, state: str, **more: object) -> None:
         """Print one step's line."""
+        if self.record is not None and step != "image":
+            self.record.step(step, state)
         if self.enabled:
             # Flushed: a job reads this from a pipe, line by line, as it happens.
             line = {"step": step, **more, "state": state}
             print(json.dumps(line), file=self.out, flush=True)
 
-    def child(self, total: int = 0) -> TextIO:
-        """Return where a `generate` line writes: its image lines become steps."""
-        if not self.enabled:
+    def child(self, total: int = 0, *, lines: bool = False) -> TextIO:
+        """Return where a `generate` line writes: its image lines become steps.
+
+        `lines` says the line prints JSON whether or not this session does, as a
+        rendering line does so that its images reach the record.
+        """
+        if not (self.enabled or lines):
             return self.out
         # A text stream as `_Tee` is; `TextIO` is a type no stream class subclasses.
         return cast("TextIO", _Images(self, total))
 
     def image(self, item: Mapping[str, Any], total: int) -> None:
         """Print the next image's line, of `total`, naming its run, flow and seed."""
+        if self.record is not None:
+            self.record.image(item)
         self._n += 1
         named = {
             key: item.get(key) for key in ("run", "digest", "flow", "version", "seed")
@@ -267,8 +360,9 @@ def run_session(
         steps = Steps(logged.out, json_lines)
         try:
             limit = getattr(args, "limit", None)
+            given = getattr(args, "session", None)
             return _session(
-                runs, list(args.requests), limit, logged, generate, seams, steps
+                runs, list(args.requests), limit, given, logged, generate, seams, steps
             )
         except Refusal as refused:
             print(f"refused: {refused}", file=logged.err)
@@ -527,6 +621,7 @@ def _session(
     runs: Path,
     texts: list[str],
     asked: int | None,
+    given: str | None,
     wired: Wiring,
     generate: Generate,
     seams: Seams,
@@ -589,13 +684,16 @@ def _session(
     limit = asked or _estimated(runs, ids, _images(lines), timing, ceiling_s).limit_s
     again = shlex.join(["uv", "run", "python", "-m", "isekai", "render", str(runs)])
     rest = "".join(f" {text}" for text in texts)
+    record = Record(runs.parent / SESSIONS, given, limit, _images(lines))
+    steps.record = record
 
     def reached() -> None:
-        print(
-            f"refused: the session reached its {limit}s limit; renders so far are "
-            f"kept, and in a new session `{again}{rest}` renders only the rest",
-            file=wired.err,
+        ended = (
+            f"the session reached its {limit}s limit; renders so far are "
+            f"kept, and in a new session `{again}{rest}` renders only the rest"
         )
+        record.note = ended
+        print(f"refused: {ended}", file=wired.err)
         seams.kill()
 
     print(f"session limit {limit}s", file=wired.err)
@@ -606,7 +704,7 @@ def _session(
     watchdog.daemon = True
     watchdog.start()
     try:
-        return _rendered(lines, limit, wired, generate, seams, steps)
+        return _rendered(lines, limit, wired, generate, seams, steps, record)
     finally:
         watchdog.cancel()
 
@@ -645,6 +743,7 @@ def _rendered(
     generate: Generate,
     seams: Seams,
     steps: Steps,
+    record: Record,
 ) -> int:
     from gpunit import Lost, Refused, TeardownFailed
 
@@ -654,6 +753,7 @@ def _rendered(
     opened = False
     try:
         environ = gpu.environ_of(seams)
+        record.open()
         steps.step("pod", "starting")
         with seams.open_session(REPOSITORY, environ, say, limit) as session:
             opened = True
@@ -661,16 +761,19 @@ def _rendered(
             client = seams.connect(server)
             await_endpoint(client, server, seams.wait_s, seams.poll_s)
             steps.step("pod", "ready")
-            out = steps.child(sum(line.images for line in lines))
+            out = steps.child(sum(line.images for line in lines), lines=True)
             live = dataclasses.replace(
                 wired, client=client, image=session.image, out=out
             )
             # One flow failing does not cost the next its render; the exit says so.
             failed = False
             for line in lines:
+                # JSON whatever the session prints, so each image reaches the record;
+                # its prose goes to stderr, which the log tees.
                 argv = [
                     "generate",
-                    *steps.flag,
+                    "--progress",
+                    "json",
                     *line.head,
                     "--server",
                     server,
@@ -678,32 +781,40 @@ def _rendered(
                 ]
                 failed |= generate(argv, live) != 0
         steps.step("teardown", "done")
+        if failed:
+            record.end("failed", "a flow failed; the batch's log names it")
+        else:
+            record.end("done")
         return int(failed)
     except KeyboardInterrupt as stopped:
         # gpunit deletes the pod on every exit, an interrupt included.
         steps.step("teardown", "done")
+        record.end("stopped", record.note)
         # gpunit's `Interrupted` carries the signal; a bare Ctrl-C is SIGINT.
         return 128 + int(getattr(stopped, "signal", signal.SIGINT))
     # gpunit's CLI reads no .env, where the key lives, so each remedy loads it.
     except Lost:
         steps.step("pod", "lost")
-        print(
-            "refused: the provider's answer was lost; "
+        lost = (
+            "the provider's answer was lost; "
             "`uv run --env-file .env gpunit status` shows what is left, "
-            "and `uv run --env-file .env gpunit down` deletes it",
-            file=wired.err,
+            "and `uv run --env-file .env gpunit down` deletes it"
         )
+        record.end("failed", lost)
+        print(f"refused: {lost}", file=wired.err)
         return LOST_EXIT
     except TeardownFailed:
         steps.step("teardown", "failed")
-        print(
-            "refused: the session's teardown failed, and its pod may still bill; "
-            "run `uv run --env-file .env gpunit down`",
-            file=wired.err,
+        failed_down = (
+            "the session's teardown failed, and its pod may still bill; "
+            "run `uv run --env-file .env gpunit down`"
         )
+        record.end("failed", failed_down)
+        print(f"refused: {failed_down}", file=wired.err)
         return 1
     except Refused as refused:
         steps.step("pod", "refused")
+        record.end("failed", str(refused))
         # gpunit has written its own `refused:` line through `say`. Where it names a
         # bare `gpunit <verb>`, the line after it is that command loading the key; a
         # note, not a second refusal.
@@ -714,9 +825,10 @@ def _rendered(
                 file=wired.err,
             )
         return 1
-    except Exception:
+    except Exception as failure:
         # A refusal inside the session, an endpoint that never answered among them,
         # leaves through gpunit's teardown, which a failure would have raised.
         if opened:
             steps.step("teardown", "done")
+        record.end("failed", str(failure))
         raise

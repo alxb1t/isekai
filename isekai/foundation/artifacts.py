@@ -328,6 +328,39 @@ class Render(TypedDict):
     seeds_from: NotRequired[str]
 
 
+class SessionImage(TypedDict):
+    """One image a render session landed: its run's digest, flow, approval and seed.
+
+    The seed is a string, as the session's line carries it: a 64-bit seed is past
+    what a page's number holds.
+    """
+
+    digest: str
+    flow: str
+    version: int
+    seed: str
+
+
+class SessionRecord(TypedDict):
+    """A render session, `<batch>/sessions/<id>.json`, kept current to its end.
+
+    A batch's file beside its log, not a run's. `asked` is the images per flow,
+    `steps` the pod's and the teardown's states. `outcome` is `running` until the
+    session ends `done`, `stopped` or `failed`, with `message`. It holds no price.
+    """
+
+    schema: SchemaBlock
+    id: str
+    started: str
+    ended: str | None
+    limit: int
+    asked: dict[str, int]
+    steps: dict[str, str]
+    images: list[SessionImage]
+    outcome: str
+    message: str | None
+
+
 # --- the descriptors ----------------------------------------------------------
 
 
@@ -360,6 +393,7 @@ PROMPT_FILE: Artifact[Prompt] = Artifact("prompt", 1)
 RENDER_FILE: Artifact[Render] = Artifact("render", 1)
 # A render's sidecar is `<seed>` and this; its image is `<seed>` and the flow's suffix.
 SIDECAR = ".render.json"
+SESSION_FILE: Artifact[SessionRecord] = Artifact("session", 1)
 
 # The version this build reads of each kind, by name: for a reader that learns
 # the kind from the file rather than being told it, as `show` does.
@@ -387,6 +421,15 @@ def write(path: Path, kind: Artifact[T], artifact: T) -> None:
     nothing; an annotated one is checked key by key.
     """
     write_json(path, artifact)
+
+
+def replace(path: Path, kind: Artifact[T], body: T) -> None:
+    """Write `body` whole over the file of `kind` at `path`, as often as it changes.
+
+    Every run file is written once; a session record is the file kept current,
+    and each write replaces it atomically, so a reader never sees half of one.
+    """
+    write_json(path, body)
 
 
 def read(path: Path, kind: Artifact[T], *, remedy: str | None = None) -> T:

@@ -5,7 +5,7 @@ test carries `@pytest.mark.spec` with the key its task names.
 
 ## Progress
 
-- [ ] 1 — The record
+- [x] 1 — The record
 - [ ] 2 — The routes
 - [ ] 3 — The screens
 - [ ] 4 — The viewer
@@ -13,14 +13,14 @@ test carries `@pytest.mark.spec` with the key its task names.
 
 ## 1 — The record
 
-- [ ] 1.1 **HALT CHECK** — no session file kind exists.
+- [x] 1.1 **HALT CHECK** — no session file kind exists.
   Verify: `grep -c 'Artifact("session"' isekai/foundation/artifacts.py` prints `0`.
-- [ ] 1.2 Add `SESSION_FILE`, `SessionRecord` and `replace` to `isekai/foundation/artifacts.py` per [D1](design.md#d1);
+- [x] 1.2 Add `SESSION_FILE`, `SessionRecord` and `replace` to `isekai/foundation/artifacts.py` per [D1](design.md#d1);
   write the record from `_session` in `isekai/interface/render.py` and take `--session` in `isekai/interface/cli.py`, per [D2](design.md#d2).
   Verify: `grep -c 'Artifact("session", 1)' isekai/foundation/artifacts.py` prints `1`, and `uv run python -m isekai render --help` exits 0.
-- [ ] 1.3 Bind every `cli:render-session:` key of the [cli](specs/cli/spec.md) delta in `tests/test_render.py`.
+- [x] 1.3 Bind every `cli:render-session:` key of the [cli](specs/cli/spec.md) delta in `tests/test_render.py`.
   Verify: `uv run pytest -q tests/test_render.py` exits 0, and `grep -c 'cli:render-session:' tests/test_render.py` prints `4`.
-- [ ] 1.4 Name `--session` and the record beside the log in `README.md`'s `render` flags.
+- [x] 1.4 Name `--session` and the record beside the log in `README.md`'s `render` flags.
   Verify: `grep -c 'sessions/' README.md` prints a number of at least `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
 
 ## 2 — The routes

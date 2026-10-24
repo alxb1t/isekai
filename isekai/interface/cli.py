@@ -67,7 +67,7 @@ from isekai.foundation.run import (
     rendered_at,
 )
 from isekai.interface.compare_view import write_page
-from isekai.interface.render import run_session
+from isekai.interface.render import SESSION_ID, run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
 from isekai.pipeline.caption import caption
@@ -161,6 +161,19 @@ def _positive(below_one: str) -> Callable[[str], int]:
 # A render count: every one of them costs money.
 _count = _positive("a render count below 1 renders nothing")
 _seconds = _positive("a session limit below 1s ends at once")
+
+
+def _session_id(value: str) -> str:
+    """Return `value` as a session's id, refusing one that is not a start in UTC.
+
+    The id names a file, so nothing but the one shape reaches a path.
+    e.g. "20261024T091200Z" -> "20261024T091200Z"
+    """
+    if SESSION_ID.fullmatch(value) is None:
+        raise argparse.ArgumentTypeError(
+            f"{value!r} is not a start in UTC, e.g. 20261024T091200Z"
+        )
+    return value
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -322,6 +335,16 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "end the session after this many seconds, at most gpunit.toml's "
             "ceiling; without it, the limit is estimated from the work"
+        ),
+    )
+    made["render"].add_argument(
+        "--session",
+        type=_session_id,
+        default=None,
+        metavar="ID",
+        help=(
+            "name the session's record <batch>/sessions/<ID>.json; without it, "
+            "the session's start in UTC names it"
         ),
     )
     made["render"].set_defaults(photos=[])
