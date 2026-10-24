@@ -389,7 +389,7 @@ def test_sigint_ends_streams_without_cancellation_output(
         f"ui.ensure_built = lambda: Path({str(dist)!r}); "
         "wired = fake(runs=root / 'runs'); "
         "wired = replace(wired, out=sys.stdout, err=sys.stderr, "
-        "volume=Volume(run=lambda argv, log: 0, records=root / '.gpunit')); "
+        "volume=Volume(run=lambda argv, say: 0, records=root / '.gpunit')); "
         f"sys.exit(ui.serve(wired, port={port}))"
     )
     child = subprocess.Popen(

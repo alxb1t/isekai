@@ -25,7 +25,7 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from isekai.boundary import gpu, ollama  # noqa: E402
-from isekai.boundary.gpu import Seams, Volume  # noqa: E402
+from isekai.boundary.gpu import Say, Seams, Volume  # noqa: E402
 from isekai.foundation.flow import FLOWS_DIR, Schema, load_flow  # noqa: E402
 from isekai.foundation.refusal import Refusal  # noqa: E402
 from isekai.foundation.run import Run, approval_of, open_run  # noqa: E402
@@ -225,7 +225,12 @@ def test_each_line_a_job_writes_to_the_batchs_log_names_its_job(
     tmp_path: Path,
 ) -> None:
     folder, (run,) = _batch(tmp_path, "ada.jpg")
-    volume, _ = _order(tmp_path / "acts")
+
+    def gpunit(argv: Sequence[str], say: Say) -> int:
+        say(f"gpunit {' '.join(argv)}")
+        return 0
+
+    volume = Volume(run=gpunit, records=tmp_path / ".gpunit")
     # The last line ends with no newline, as a child cut short leaves it.
     said = "import sys; sys.stderr.write({!r})"
     jobs = Jobs(
@@ -248,6 +253,8 @@ def test_each_line_a_job_writes_to_the_batchs_log_names_its_job(
     assert sorted((folder / "log.txt").read_text().splitlines()) == [
         "[prepare] tag one",
         "[prepare] tag two",
+        "[render] gpunit volume down",
+        "[render] gpunit volume up --yes",
         "[render] pod up",
     ]
 
@@ -566,7 +573,7 @@ def _order(record: Path) -> tuple[Volume, Callable[[int, Path, str], list[str]]]
     The render child is a real process, so the order is read from one file.
     """
 
-    def run(argv: Sequence[str], log: Path) -> int:
+    def run(argv: Sequence[str], say: Say) -> int:
         with record.open("a") as acts:
             print(" ".join(argv), file=acts)
         return LOST_EXIT if "up" in argv and "lost" in record.name else 0
@@ -617,7 +624,7 @@ def test_a_window_opening_that_raises_fails_the_job_and_its_step(
     folder, _ = _batch(tmp_path, "ada.jpg")
     rendered: list[int] = []
 
-    def unstartable(argv: Sequence[str], log: Path) -> int:
+    def unstartable(argv: Sequence[str], say: Say) -> int:
         raise OSError("gpunit is not installed")
 
     jobs = Jobs(
@@ -740,7 +747,7 @@ def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str
     folder, _ = _batch(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
 
-    def volume(argv: Sequence[str], log: Path) -> int:
+    def volume(argv: Sequence[str], say: Say) -> int:
         with record.open("a") as acts:
             print(" ".join(argv), file=acts)
         return 1 if "down" in argv else 0
@@ -830,7 +837,7 @@ def test_a_gpunit_verb_runs_in_its_own_session(
 
     monkeypatch.setattr(gpu.subprocess, "run", recorded)
 
-    assert Volume().down(tmp_path / "log.txt") == 0
+    assert Volume().down(lambda line: None) == 0
     ((argv, kwargs),) = ran
     assert argv[1:] == ["-m", "gpunit", "volume", "down"]
     assert kwargs.get("start_new_session") is True

@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from isekai.boundary.gpu import Seams, Volume
+from isekai.boundary.gpu import Say, Seams, Volume
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader, Reading
 from isekai.pipeline.tagging import FakeTagger
@@ -41,10 +41,9 @@ def _opened(
     yield _Session()
 
 
-def _gpunit(argv: Sequence[str], log: Path) -> int:
-    """Answer every gpunit verb as done, writing its line to the log."""
-    with log.open("a", encoding="utf-8") as appended:
-        print(f"fake gpunit {' '.join(argv)}", file=appended)
+def _gpunit(argv: Sequence[str], say: Say) -> int:
+    """Answer every gpunit verb as done, saying its line."""
+    say(f"fake gpunit {' '.join(argv)}")
     return 0
 
 

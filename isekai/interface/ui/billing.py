@@ -105,7 +105,8 @@ class Billing:
 
     def check(self) -> dict[str, Any]:
         """Ask gpunit, then read its records; an alert clears only on their word."""
-        self._volume.status(self._log)
+        with self._log.open("a", encoding="utf-8") as log:
+            self._volume.status(lambda line: print(line, file=log))
         records = self._volume.records
         with self._lock:
             if self._raised and not any(

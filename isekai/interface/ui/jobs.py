@@ -31,7 +31,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, TextIO, get_args
 
-from isekai.boundary.gpu import Volume
+from isekai.boundary.gpu import Say, Volume
 from isekai.foundation.artifacts import session_id
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
@@ -446,11 +446,10 @@ class Jobs:
         assert job.session is not None
         slot = self._slots[job.kind]
         steps = job.session["steps"]
-        log = folder / LOG
         opened = False
         try:
             self._mark(job, "volume up", "running")
-            code = self._volume.up(log)
+            code = _named(job.kind, folder, self._volume.up)
             if code != 0:
                 self._mark(job, "volume up", "lost" if code == LOST_EXIT else "failed")
                 if code == LOST_EXIT:
@@ -479,7 +478,7 @@ class Jobs:
         finally:
             if opened and steps["volume down"] != "kept":
                 self._mark(job, "volume down", "running")
-                code = self._volume.down(log)
+                code = _named(job.kind, folder, self._volume.down)
                 self._mark(job, "volume down", "done" if code == 0 else "failed")
                 if code != 0:
                     self._raise_volume()
@@ -588,6 +587,13 @@ class Jobs:
         with self._lock:
             described = job.describe()
         self._broadcast.publish("job", described)
+
+
+def _named(kind: Kind, folder: Path, verb: Callable[[Say], int]) -> int:
+    """Run a gpunit `verb`, each line it says written to the log naming its job."""
+    # Line-buffered, so each line lands whole beside the other job's.
+    with (folder / LOG).open("a", buffering=1) as log:
+        return verb(lambda line: print(f"[{kind}]", line, file=log))
 
 
 def _tee(stream: TextIO, log: TextIO, kind: Kind) -> None:
