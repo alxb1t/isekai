@@ -22,6 +22,9 @@ def test_approve_stays_on_the_sheet(page: Page, served: Served) -> None:
     expect(page).to_have_url(served.review(first, "queue-stays"))
     expect(page.locator("input.fragment")).to_have_count(0)
     expect(page.locator(".rail__card--current")).to_contain_text("cid.jpg")
+    expect(page.locator(".approve-bar")).to_contain_text(
+        "approved as 001.approved.json and read-only"
+    )
 
 
 @pytest.mark.spec("ui:review:a-failure-after-approval-is-shown")

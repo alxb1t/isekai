@@ -7,16 +7,17 @@ hub's order; else the first approved sheet whose newest approval lacks images of
 saying no sheet waits for review, with the way to the hub. The hub SHALL carry for each cell the number of images its
 newest approval lacks, as the render stage counts it. Review's rail SHALL list every sheet of the flow that is
 unapproved or lacks images, each marked untouched, edited, approved or re-opened, and its footer SHALL count the
-approved among them; the Review tab SHALL count the unapproved. Approve SHALL leave the sheet open and read-only,
-offering *Cancel approve* while the review stage can cancel it, else the reason beside it, and while no render runs
-for the batch; a cancel SHALL leave the sheet open and editable. Opening a sheet that has no draft SHALL write one
-through the review stage's own function, and opening it again SHALL write no second draft; a failure after approval
-SHALL be shown in the approve bar, never dropped. ④ SHALL show one slot per image, a set seed or random, beside the
-sheet rows. The photograph SHALL open in the viewer, stepping through the rail's sheets.
+approved among them; the Review tab SHALL count the unapproved. Approve SHALL leave the sheet open and read-only, the
+approve bar naming the approval it shows, offering *Cancel approve* while the review stage can cancel it, else the
+reason beside it, and while no render runs for the batch; a cancel SHALL leave the sheet open on what the flow is
+left on: its draft, editable, or for a copy the approval beneath it, read-only. Opening a sheet that has no draft
+SHALL write one through the review stage's own function, and opening it again SHALL write no second draft; a failure
+after approval SHALL be shown in the approve bar, never dropped. ④ SHALL show one slot per image, a set seed or
+random, beside the sheet rows. The photograph SHALL open in the viewer, stepping through the rail's sheets.
 
 A sheet is done when its images are, not when it is approved, so the rail keeps it until then; the count is the
-render stage's own. Approving is an act, not a navigation. A slot per image says what the next render draws before it
-is approved.
+render stage's own. Approving is an act, not a navigation, and a copy's cancel takes back only the copy. A slot per
+image says what the next render draws before it is approved.
 
 ```
 the head:  first unapproved ─▶ else first approved and short ─▶ else "No sheet waits for review"
@@ -46,6 +47,7 @@ the head:  first unapproved ─▶ else first approved and short ─▶ else "No
 - **Layers:** e2e
 - **WHEN** a sheet is approved
 - **THEN** the same sheet stays open, read-only, and its rail mark reads approved
+- **AND** the approve bar names its approval
 
 #### Scenario: opening a sheet with no draft writes one
 - **Key:** `ui:review:opening-a-sheet-writes-its-draft`

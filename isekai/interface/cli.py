@@ -853,10 +853,8 @@ def _per_item(
 
             def approve_flow(name: str) -> None:
                 if args.cancel:
-                    draft = cancel_approval(run, name)
-                    back = (
-                        "a copy, deleted" if draft is None else f"back to {draft.name}"
-                    )
+                    left = cancel_approval(run, name)
+                    back = "a copy, deleted" if left is None else f"back to {left.name}"
                     reporter.say(f"{run.id}: approve cancelled {name}, {back}")
                     return
                 written, warnings = approve(

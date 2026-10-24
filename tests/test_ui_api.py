@@ -946,7 +946,7 @@ def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
 
     cancelled = client.post(_at(made, "/cancel"))
 
-    assert cancelled.json() == {"draft": "001.draft.json"}
+    assert cancelled.json() == {"back": "001.draft.json"}
     assert client.get(_at(made)).json()["readonly"] is False
 
     # Approved again, and its prompt assembled: the payload says why not.

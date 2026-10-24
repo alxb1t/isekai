@@ -1484,17 +1484,22 @@ def test_a_copy_is_deleted_and_an_approval_with_a_later_draft_refuses_its_discar
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _approved_source(run, schema, vocabulary)
-    copy, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
-    assert copy is not None
-    held = copy.read_bytes()
     assert review(run, FLOW, new_version=True) is not None
-    before = snapshot(run.path)
-
-    assert cancel(run, CONTROL) is None
-    gone = str(copy.relative_to(run.path))
-    assert snapshot(run.path) == {k: v for k, v in before.items() if k != gone}
     with pytest.raises(Refusal, match=f"review --flow {FLOW} .*--discard"):
         cancel(run, FLOW)
+
+    sheet(run, schema, vocabulary, flow=CONTROL)
+    review(run, CONTROL)
+    own, _ = approve(run, CONTROL, schema, vocabulary)
+    copy, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    assert own is not None and copy is not None
+    held = copy.read_bytes()
+    before = snapshot(run.path)
+
+    assert cancel(run, CONTROL) == own
+    gone = str(copy.relative_to(run.path))
+    assert snapshot(run.path) == {k: v for k, v in before.items() if k != gone}
+    assert state(run.directory(CONTROL, "review")) == "approved"
     assert approve(run, CONTROL, schema, vocabulary, source=FLOW)[0] == copy
     assert copy.read_bytes() == held
 

@@ -739,7 +739,8 @@ def create_app(
     def post_cancel(batch: str, digest: str, flow: str) -> dict[str, Any]:
         """Turn the approval back into its draft, refused while a render runs.
 
-        A copy has no draft to go back to, so it is deleted and `draft` is null.
+        `back` names what the flow is left on: the draft, or for a deleted copy
+        the draft or approval beneath it, null where nothing is.
         """
         one = held(batch, digest, flow)
         with _DRAFT_UPDATE:
@@ -748,8 +749,8 @@ def create_app(
                 raise Refusal(
                     f"{rendering} Wait for it to end, then cancel the approval again."
                 )
-            draft = cancel(one.run, one.flow.id)
-        return {"draft": None if draft is None else draft.name}
+            left = cancel(one.run, one.flow.id)
+        return {"back": None if left is None else left.name}
 
     def _rendering(batch: str) -> str | None:
         """Return what a render running for `batch` says, or None."""

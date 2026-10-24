@@ -174,9 +174,10 @@ export function approve(
 }
 
 /* Turns the approval back into its draft, as `approve --cancel` does, or deletes
-   a copy, whose draft is null; anything made from it, or a render running for
+   a copy; `back` names what the flow is left on, a draft or the approval beneath
+   a copy, null where nothing is. Anything made from it, or a render running for
    the batch, refuses. */
-export function cancelApproval(place: Place): Promise<{ draft: string | null }> {
+export function cancelApproval(place: Place): Promise<{ back: string | null }> {
   return send(`${at(place)}/cancel`, 'POST', {})
 }
 

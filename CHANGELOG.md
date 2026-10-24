@@ -23,6 +23,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A copy's cancel deletes it, and its source's refusal names that cancel, so the two no longer send the operator to
   each other; a cancel refused for what derives names a waiting draft rather than its discard (0072 D2, D3).
 
+- A copy cancelled over a flow's own approval leaves that approval standing, and the CLI line and Review's approve
+  bar name it, so a sheet still approved after a cancel says which approval it shows (0072 D3, D5).
+
 ## [0.44.1] - 2026-10-24 · 0071-the-review-patch
 
 Gate: local 0m38s · CI 7m25s (build-image at 801ffec) · 0.44.0: local 0m40s · CI 7m25s

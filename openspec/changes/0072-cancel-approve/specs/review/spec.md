@@ -5,15 +5,16 @@
 The system SHALL cancel a flow's newest approval by writing the draft it was approved from — its fields, renders,
 sheet, vocabulary, schema document and field map, and its producer without what approval added — and then deleting
 the approval, leaving every older approval in place, and SHALL cancel an approval that is itself a copy by deleting
-it. It SHALL refuse, writing nothing and naming the reason and a way on that succeeds, while anything derives from the
-approval — a prompt, a render group or a failure record numbered for it, or another flow's approval copied from it —
-and while a later draft exists, naming a waiting draft rather than its discard while anything derives. A cancel
-interrupted between its writing and its deleting SHALL be finished by running it again.
+it, naming what the flow is left on: the draft open above what lies beneath, else the approval beneath, which stays
+approved. It SHALL refuse, writing nothing and naming the reason and a way on that succeeds, while anything derives
+from the approval — a prompt, a render group or a failure record numbered for it, or another flow's approval copied
+from it — and while a later draft exists, naming a waiting draft rather than its discard while anything derives. A
+cancel interrupted between its writing and its deleting SHALL be finished by running it again.
 
 An approved artifact is never silently replaced: cancelling is an explicit act, and it is refused once anything has
 been made from the approval, so no output loses the sheet that made it. A copy has no draft of its own, and
-`approve --from` writes it again. A draft written before the delete leaves a crash reading as still approved, which
-approving already does.
+`approve --from` writes it again; deleting it takes back only the copy, so what it was written over stands. A draft
+written before the delete leaves a crash reading as still approved, which approving already does.
 
 ```
 NNN.approved.json ─▶ write NNN.draft.json ─▶ delete NNN.approved.json
@@ -51,8 +52,9 @@ NNN.approved.json ─▶ write NNN.draft.json ─▶ delete NNN.approved.json
 #### Scenario: a copy is deleted, and a re-opened sheet is refused
 - **Key:** `review:cancel:a-copy-is-deleted-and-a-reopened-sheet-refused`
 - **Layers:** unit
-- **WHEN** a cancel is asked for an approval that is a copy, then for one with a later draft
-- **THEN** the copy alone is deleted, and the second is refused naming its draft's discard
+- **WHEN** a cancel is asked for an approval with a later draft, then for a copy over the flow's own approval
+- **THEN** the first is refused naming its draft's discard, and the copy alone is deleted
+- **AND** the cancel names the approval beneath, and the flow reads as approved
 - **AND** copying again writes the same copy
 
 #### Scenario: an interrupted cancel finishes when run again

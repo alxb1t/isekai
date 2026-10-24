@@ -11,6 +11,8 @@ import KeyHint from './KeyHint.vue'
 
    Cancel approve, once approved, takes the approval back with no ask: approving
    again writes the same. While it cannot, it is disabled with the reason beside.
+   The note names the approval shown, which after a copy's cancel is the one
+   beneath it, still approved.
 
    Discard, on a revision, sits left of Approve and asks before it deletes: it
    takes the operator's edits with the draft. Review keys this bar by sheet, so
@@ -18,6 +20,8 @@ import KeyHint from './KeyHint.vue'
 defineProps<{
   approved: boolean
   at: string | null
+  /* The approval the sheet shows, by its name in the flow, or null. */
+  approval?: string | null
   working: boolean
   /* The page's refusal, verbatim; the work it names is never lost. */
   refusal?: string | null
@@ -41,7 +45,10 @@ function discard(): void {
       <span class="refusal__mark" />{{ refusal }}
     </p>
     <template v-if="approved">
-      <span class="approve-bar__note mono">This sheet is approved and read-only.</span>
+      <span class="approve-bar__note mono">
+        This sheet is approved<template v-if="approval"> as {{ approval }}</template>
+        and read-only.
+      </span>
       <span class="approve-bar__fact">
         <span class="approve-bar__dot" />
         <span class="mono">Approved {{ at }}</span>

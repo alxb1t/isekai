@@ -217,8 +217,8 @@ async function approve(): Promise<void> {
   await reread(id)
 }
 
-/* Take the approval back, as `approve --cancel` does, and stay on the sheet,
-   editable again. */
+/* Take the approval back, as `approve --cancel` does, and stay on the sheet:
+   editable again, or, for a copy over an older approval, on that approval. */
 async function cancelApprove(): Promise<void> {
   const id = current.value
   if (!id) return
@@ -605,6 +605,7 @@ watch(current, (id) => {
             :key="current"
             :approved="sheet.readonly.value"
             :at="approvedAt"
+            :approval="sheet.detail.value?.approved ?? null"
             :working="approval.working.value || cancelling"
             :refusal="refusal"
             :discardable="revision !== null"

@@ -314,16 +314,19 @@ def cancel(run: Run, flow: str) -> Path | None:
 
     The draft is written before the approval is deleted, so a crash between
     leaves both, which reads as approved and is finished by cancelling again.
-    A copy has no draft to go back to, so it is deleted and None returned:
-    `approve --from` writes it again.
+    A copy has no draft to go back to, so it is deleted, as `approve --from`
+    writes it again, and what the flow is left on is returned: the draft open
+    above what lies beneath, else the approval beneath, else None.
     e.g. review/002.approved.json -> review/002.draft.json
+    e.g. a copy, review/002.approved.json -> review/001.approved.json
     """
     version, body = _cancelling(run, flow)
     approval = approval_of(run, flow, version)
+    directory = run.directory(flow, REVIEW)
     if body["producer"].get("copied_from") is not None:
         approval.unlink()
-        return None
-    path = run.directory(flow, REVIEW) / artifact_name(version, DRAFT)
+        return current_draft(directory) or latest_artifact(directory, APPROVED)
+    path = directory / artifact_name(version, DRAFT)
     if not path.exists():
         producer = body["producer"]
         _write_draft(
