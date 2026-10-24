@@ -28,7 +28,7 @@ export function bar(state: BarState): Bar {
 
 /** Return the reasons the Render bar shows beside its button, each once.
 
-    A hold, such as no key or a job running, disables Render whatever the batch;
+    A hold, such as no key or a render running, disables Render whatever the batch;
     a refused count is shown beside it, so the refusal is never silent. */
 export function reasons(disabled: string | null, refused: string | null): string[] {
   return [...new Set([disabled, refused])].filter((reason) => reason !== null)
@@ -36,14 +36,14 @@ export function reasons(disabled: string | null, refused: string | null): string
 
 /* The failed Prepares Discard dismissed in this page, by batch, start and message.
    A module's, not a hub's: a hub opened again would otherwise show one again. A
-   reload or another tab starts with none, and shows the failure the slot holds. */
+   reload or another tab starts with none, and shows the failure Prepare's slot holds. */
 const dismissed = new Set<string>()
 
 function named(slot: JobSlot): string {
   return JSON.stringify([slot.batch, slot.progress?.started ?? null, slot.message])
 }
 
-/** Return the message of `batch`'s failed Prepare the slot holds, or null once dismissed. */
+/** Return the message of `batch`'s failed Prepare `slot` holds, or null once dismissed. */
 export function failed(slot: JobSlot | null, batch: string): string | null {
   return slot?.kind === 'prepare' &&
     slot.state === 'failed' &&

@@ -11,6 +11,7 @@ import type {
   CellEvent,
   HubCell,
   HubInfo,
+  JobSlot,
   RenderOffer,
   RendersInfo,
   SessionRecord,
@@ -30,7 +31,7 @@ export function at(name: string, flow: string): string {
    (design spec §1 rule 8). */
 export const useBatchStore = defineStore('batch', () => {
   const live = useLiveStore()
-  const { job, billing, renderRunning, activeRender, activeSessions } = storeToRefs(live)
+  const { jobs, billing, renderRunning, activeRender, activeSessions } = storeToRefs(live)
   const name = ref<string | null>(null)
   const hub = ref<HubInfo | null>(null)
   /* The stage running in a cell, by `source|flow`, from the job's reports. */
@@ -165,21 +166,24 @@ export const useBatchStore = defineStore('batch', () => {
     else if (event.state === 'done') delete refusals.value[here]
   })
 
-  /* A job that starts or ends, or a pod alert raised or cleared, changes the
-     offer; a job that ends changes the cells and the images too. */
-  watch(job, (slot, before) => {
+  /* A job of either kind that starts or ends, or a pod alert raised or cleared,
+     changes the offer; a job that ends changes the cells and the images too. */
+  function moved(slot: JobSlot | null, before: JobSlot | null): void {
     const was = before?.state === 'running'
     if (was === (slot?.state === 'running') || name.value === null) return
     void check()
     if (!was) return
-    running.value = {}
+    // Only Prepare's reports mark a cell running; a render's end leaves them.
+    if (before?.kind === 'prepare') running.value = {}
     void reloadHub().catch(() => undefined)
     if (renders.value) void reloadRenders().catch(() => undefined)
-  })
+  }
+  watch(() => jobs.value.prepare, moved)
+  watch(() => jobs.value.render, moved)
   /* Every render change, including volume opening, refreshes an observed list.
      Reads in flight coalesce; the selected record drops out-of-order answers. */
-  watch(job, (slot) => {
-    if (slot?.kind !== 'render' || slot.batch !== name.value) return
+  watch(() => jobs.value.render, (slot) => {
+    if (slot?.batch !== name.value) return
     if (observed) void reloadSessions().catch(() => undefined)
     if (shown !== null && slot.session?.id === shown)
       void readShown(shown).catch(() => undefined)

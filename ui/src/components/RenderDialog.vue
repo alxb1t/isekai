@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 import { quoteRender, startRender } from '../api'
 import { useKeys } from '../composables/useKeys'
 import { modded, plain } from '../stores/keys'
-import { clock } from '../stores/live'
+import { clock, useLiveStore } from '../stores/live'
 import type { Quote } from '../types'
 import KeyHint from './KeyHint.vue'
 
@@ -16,6 +16,7 @@ import KeyHint from './KeyHint.vue'
 const props = defineProps<{ batch: string }>()
 const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
+const live = useLiveStore()
 const quote = ref<Quote | null>(null)
 const refusal = ref<string | null>(null)
 const keepOpen = ref(false)
@@ -35,6 +36,8 @@ async function confirm(): Promise<void> {
       quote.value.estimate.limit_s,
       total.value,
     )
+    // Held at once, so the session's page draws from the render slot as it opens.
+    live.hold(job)
     const id = job.session?.id
     void router.push(
       id

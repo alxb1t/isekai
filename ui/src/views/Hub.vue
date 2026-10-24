@@ -42,9 +42,9 @@ function openRender(): void {
 }
 /* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
 const selected = ref<Set<number>>(new Set())
-/* A render holds the one slot, so Prepare waits while it is `blocked`. */
+/* Prepare has its own slot: a render running beside it holds nothing back. */
 const live = useLiveStore()
-const { job, renderRunning: blocked } = storeToRefs(live)
+const { jobs } = storeToRefs(live)
 const { prepareTotals } = live
 /* The Prepare bar's refusal, the CLI's own text (J8a). */
 const barRefusal = ref<string | null>(null)
@@ -76,7 +76,10 @@ const RUNNING: Record<string, { segment: number; word: string }> = {
 
 const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
-const busy = computed(() => job.value?.state === 'running' && job.value.kind === 'prepare')
+/* A Prepare running for this batch, not another's. */
+const busy = computed(
+  () => jobs.value.prepare?.state === 'running' && jobs.value.prepare.batch === props.batch,
+)
 
 /* What Prepare would run: every assigned cell with no sheet. */
 const changes = computed(() =>
@@ -226,10 +229,10 @@ function clicked(event: MouseEvent, row: number, column: number): void {
 }
 
 async function runPrepare(): Promise<void> {
-  if (busy.value || blocked.value || changes.value.length === 0) return
+  if (busy.value || changes.value.length === 0) return
   barRefusal.value = null
   try {
-    job.value = (await prepare(props.batch)).job
+    live.hold((await prepare(props.batch)).job)
   } catch (reason) {
     barRefusal.value = (reason as Error).message
   }
@@ -237,7 +240,7 @@ async function runPrepare(): Promise<void> {
 
 async function stop(): Promise<void> {
   try {
-    await live.stop()
+    await live.stop('prepare')
   } catch (reason) {
     barRefusal.value = (reason as Error).message
   }
@@ -247,7 +250,7 @@ async function stop(): Promise<void> {
    batch's failed Prepare, so a hub opened again in this page does not show it. */
 function discard(): void {
   barRefusal.value = null
-  dismiss(job.value, props.batch)
+  dismiss(jobs.value.prepare, props.batch)
   for (const flow of flows.value) {
     const rows = sources.value.filter((one) => cell(one, flow).stage === 'assigned')
     if (rows.length) void tick(rows, flow, true)
@@ -332,7 +335,7 @@ useKeys('screen', [
 
 /* A failed Prepare is shown, the one that ended before this hub opened too. */
 watch(
-  job,
+  () => jobs.value.prepare,
   (slot) => {
     const message = failed(slot, props.batch)
     if (message !== null) barRefusal.value = message
@@ -489,7 +492,7 @@ onMounted(async () => {
     <div v-else-if="shown === 'prepare'" class="prepare-bar" :class="{ running: busy }">
       <template v-if="busy">
         <span class="prepare-bar__cells mono">
-          Prepare · {{ prepareTotals(job) }}
+          Prepare · {{ prepareTotals(jobs.prepare) }}
         </span>
         <button class="btn btn-secondary" type="button" @click="stop">Stop</button>
       </template>
@@ -501,11 +504,10 @@ onMounted(async () => {
           {{ changes.map((one) => `${one.source.name} × ${one.flow}`).join(' · ') }}
         </span>
         <button class="btn btn-secondary" type="button" @click="discard">Discard</button>
-        <span v-if="blocked" class="hub__reason">A render is running</span>
         <button
           class="btn btn-primary"
           type="button"
-          :disabled="changes.length === 0 || blocked"
+          :disabled="changes.length === 0"
           @click="runPrepare"
         >
           {{ changes.length }} {{ changes.length === 1 ? 'change' : 'changes' }} · Prepare<span

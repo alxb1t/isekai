@@ -7,7 +7,7 @@ The job runner, the wire, the screens, then the docs, per [design](design.md). E
 
 - [x] 1 — The job runner
 - [x] 2 — The wire
-- [ ] 3 — The screens
+- [x] 3 — The screens
 - [ ] 4 — The docs
 
 ## 1 — The job runner
@@ -31,15 +31,15 @@ The job runner, the wire, the screens, then the docs, per [design](design.md). E
 
 ## 3 — The screens
 
-- [ ] 3.1 **HALT CHECK** — the hub holds Prepare back while a render runs.
+- [x] 3.1 **HALT CHECK** — the hub holds Prepare back while a render runs.
   Verify: `grep -c 'A render is running' ui/src/views/Hub.vue` prints `1`.
-- [ ] 3.2 Hold `jobs.prepare` and `jobs.render` in `ui/src/stores/live.ts`, with `ui/src/api.ts` and `ui/src/types.ts`;
+- [x] 3.2 Hold `jobs.prepare` and `jobs.render` in `ui/src/stores/live.ts`, with `ui/src/api.ts` and `ui/src/types.ts`;
   bind `ui:events:a-job-event-fills-its-kinds-slot` in `ui/src/stores/live.test.ts`, per [D5](design.md#d5).
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c 'a-job-event-fills-its-kinds-slot' ui/src/stores/live.test.ts` prints `1`.
-- [ ] 3.3 Move `ui/src/App.vue`, `ui/src/stores/batch.ts`, `ui/src/views/Hub.vue`, `ui/src/views/SessionPage.vue`,
+- [x] 3.3 Move `ui/src/App.vue`, `ui/src/stores/batch.ts`, `ui/src/views/Hub.vue`, `ui/src/views/SessionPage.vue`,
   `ui/src/views/Billing.vue`, `ui/src/components/RenderBar.vue` and `ui/src/components/RenderDialog.vue` to their own slots per [D5](design.md#d5).
   Verify: `grep -c 'A render is running\|blocked' ui/src/views/Hub.vue` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.4 Add the step of the design's [Tests](design.md#tests) to `test_prepare_takes_the_assigned_cells_to_their_sheet_and_no_other`
+- [x] 3.4 Add the step of the design's [Tests](design.md#tests) to `test_prepare_takes_the_assigned_cells_to_their_sheet_and_no_other`
   in `tests/e2e/test_prepare.py`.
   Verify: `grep -c 'data-render' tests/e2e/test_prepare.py` prints a number of at least `1`, and `uv run pytest -q tests/e2e` exits 0.
 

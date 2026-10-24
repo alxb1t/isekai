@@ -19,7 +19,7 @@ defineProps<{
 defineEmits<{ open: [] }>()
 
 const live = useLiveStore()
-const { job } = storeToRefs(live)
+const { jobs } = storeToRefs(live)
 const { renderTotals } = live
 </script>
 
@@ -47,11 +47,11 @@ const { renderTotals } = live
       </button>
     </template>
     <template v-else>
-      <span class="prepare-bar__cells mono">{{ renderTotals(job) }}</span>
+      <span class="prepare-bar__cells mono">{{ renderTotals(jobs.render) }}</span>
       <RouterLink
-        v-if="job?.session"
+        v-if="jobs.render?.session"
         class="btn btn-secondary"
-        :to="{ name: 'session', params: { batch: job.batch, id: job.session.id } }"
+        :to="{ name: 'session', params: { batch: jobs.render.batch, id: jobs.render.session.id } }"
         >Session<KeyHint command="session" /></RouterLink
       >
     </template>

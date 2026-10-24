@@ -571,12 +571,8 @@ def create_app(
             held = None
 
         def snapshot() -> dict[str, Any]:
-            slots = {kind: jobs.slot(kind) for kind in KINDS}
-            # `job` goes once the live store reads `jobs`.
-            shown = slots["render"] if jobs.running("render") else slots["prepare"]
             found = {
-                "jobs": slots,
-                "job": shown or slots["render"],
+                "jobs": {kind: jobs.slot(kind) for kind in KINDS},
                 "billing": billing.state(),
             }
             if batch is not None:

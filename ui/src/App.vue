@@ -17,22 +17,33 @@ import { alerting, clock, useLiveStore } from './stores/live'
 const route = useRoute()
 const router = useRouter()
 const live = useLiveStore()
-const { job, billing, now, activeRender, renderConfirmed, sessionsRefusal } = storeToRefs(live)
+const { jobs, billing, now, activeRender, renderConfirmed, sessionsRefusal } = storeToRefs(live)
 const { prepareTotals, renderTotals } = live
 
 const alert = computed(() => alerting(billing.value))
-const running = computed(() => job.value?.state === 'running')
+/* Each kind's job, running or ended, Prepare's first. */
+const held = computed(() => [jobs.value.prepare, jobs.value.render].filter((slot) => slot !== null))
+const runningJobs = computed(() => held.value.filter((slot) => slot.state === 'running'))
+const running = computed(() => runningJobs.value.length > 0)
 /* `HH:MM` of a UTC time gpunit recorded, on this machine's clock. */
 const hour = (at: string | null) =>
   at ? new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''
 
-/* The strip shares its totals and the live clock with the Prepare and Render bars. */
-const totals = computed(() => {
-  const held = job.value
-  if (!held) return ''
-  if (held.state === 'running') return renderTotals(held) || prepareTotals(held)
-  return `last: ${held.kind} · ${held.state}`
-})
+/* The strip's items: one per running job, sharing its totals and the live clock
+   with its bar; with none running, each kind's last outcome. */
+const items = computed(() =>
+  running.value
+    ? runningJobs.value.map((slot) => ({
+        kind: slot.kind,
+        label: `job · ${slot.kind}`,
+        totals: renderTotals(slot) || prepareTotals(slot),
+      }))
+    : held.value.map((slot) => ({
+        kind: slot.kind,
+        label: '',
+        totals: `last: ${slot.kind} · ${slot.state}`,
+      })),
+)
 
 const batch = computed(() => (typeof route.params.batch === 'string' ? route.params.batch : null))
 /* The page's one stream names the batch the screen shows, and the batch store holds it. */
@@ -176,8 +187,11 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
         class="jobstrip__dot"
         :class="{ 'jobstrip__dot--running': running, 'jobstrip__dot--alert': alert }"
       />
-      <span>job · {{ running ? job?.kind : 'idle' }}</span>
-      <span class="jobstrip__totals">{{ totals }}</span>
+      <span v-if="!running">job · idle</span>
+      <template v-for="item in items" :key="item.kind">
+        <span v-if="item.label">{{ item.label }}</span>
+        <span class="jobstrip__totals" :data-job-item="item.kind">{{ item.totals }}</span>
+      </template>
       <span
         v-if="billing?.volume?.state === 'open'"
         class="jobstrip__volume"

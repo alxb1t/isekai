@@ -381,7 +381,7 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
     broadcast = events.Broadcast()
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
     cell = cell_event(folder, grid, {FLOW: load_flow(FLOW)})
-    stream = events.stream(broadcast, lambda: {"job": None}, batch="b", heartbeat=WAIT)
+    stream = events.stream(broadcast, lambda: {"jobs": {}}, batch="b", heartbeat=WAIT)
     next(stream)
     jobs = Jobs(broadcast, lambda: None, command=_Script({"tag": copy}))
 
