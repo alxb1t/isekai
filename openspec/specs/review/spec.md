@@ -405,9 +405,9 @@ from it — and while a later draft exists, naming a waiting draft rather than i
 cancel interrupted between its writing and its deleting SHALL be finished by running it again.
 
 An approved artifact is never silently replaced: cancelling is an explicit act, and it is refused once anything has
-been made from the approval, so no output loses the sheet that made it. A copy has no draft of its own, and
-`approve --from` writes it again; deleting it takes back only the copy, so what it was written over stands. A draft
-written before the delete leaves a crash reading as still approved, which approving already does.
+been made from the approval, so no output loses the sheet that made it. A copy has no draft of its own, and `approve
+--from` copies the source's newest approval again; deleting it takes back only the copy, so what it was written over
+stands. A draft written before the delete leaves a crash reading as still approved, which approving already does.
 
 ```
 NNN.approved.json ─▶ write NNN.draft.json ─▶ delete NNN.approved.json

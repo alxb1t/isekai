@@ -9,11 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
-- Session ids refuse collisions without losing history; terminal renders stay live across the app, list refreshes
-  preserve progress, the viewer keeps image identity, and Billing distinguishes open and unknown states (0073 D8–D11).
+## [0.46.0] - 2026-10-24 · 0073-sessions
 
-- A damaged session record refuses only its own batch, a failed running read is shown as unconfirmed and never hides
-  the billing alert, and a sessions folder without hard links or locks refuses before the pod ask (0073 D8–D10).
+Gate: local 0m40s · CI 7m25s (build-image at 801ffec) · 0.45.0: local 0m39s · CI 7m25s
+
+### Added
 
 - `isekai render` keeps its session's record beside the batch's log, `sessions/<id>.json`, from the pod's ask to its
   end: its steps, each image as it lands, and how it ended. `--session ID` names it (0073 D1, D2).
@@ -27,8 +27,18 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A session's finished images and the batch's photographs open in the viewer, drawn at the Renders tile size; the
   viewer follows its list as a live session adds to it (0073 D6).
 
+### Changed
+
 - The README, the design spec, Review's comment and the cancel's docstring say what a cancel does: `--from` copies the
   source's newest approval again, and a copy's cancel leaves the sheet on what the flow holds (0073 D7).
+
+### Fixed
+
+- Session ids refuse collisions without losing history; terminal renders stay live across the app, list refreshes
+  preserve progress, the viewer keeps image identity, and Billing distinguishes open and unknown states (0073 D8–D11).
+
+- A damaged session record refuses only its own batch, a failed running read is shown as unconfirmed and never hides
+  the billing alert, and a sessions folder without hard links or locks refuses before the pod ask (0073 D8–D10).
 
 ## [0.45.0] - 2026-10-24 · 0072-cancel-approve
 
