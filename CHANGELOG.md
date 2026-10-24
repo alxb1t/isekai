@@ -14,6 +14,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The README and Review's comments say what Review does: Approve stays on the sheet, Revise opens its first draft
   with the rest in the rail, and refusals land in the approve bar (0071 D2).
 
+- A test opens a batch's Review address: it lands on its head's sheet, and a batch with none waiting says so
+  (0071 D3).
+
 ## [0.44.0] - 2026-10-23 · 0070-review
 
 Gate: local 0m40s · CI 7m25s (build-image at 801ffec) · 0.43.0: local 0m39s · CI 7m25s

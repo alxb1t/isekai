@@ -3,7 +3,7 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e.conftest import Served
+from tests.e2e.conftest import SHOWN, Served
 
 
 @pytest.mark.spec("ui:routes:a-reload-lands-on-the-same-screen")
@@ -34,6 +34,15 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     page.locator('.hub__cell[data-row="0"][data-stage="draft"]').click()
     expect(page).to_have_url(served.review(served.draft))
     expect(page.locator(".rail__card--current")).to_contain_text("ada.jpg")
+
+    page.goto(f"{served.url}/b/{served.batch}/review")
+    expect(page).to_have_url(served.review(served.draft))
+    expect(page.locator(".rail__card--current")).to_contain_text("ada.jpg")
+
+    empty = f"{served.url}/b/{SHOWN}/review"
+    page.goto(empty)
+    expect(page.locator("[data-review-head]")).to_contain_text("No sheet waits")
+    expect(page).to_have_url(empty)
 
 
 @pytest.mark.spec("ui:routes:an-unknown-batch-is-refused")
