@@ -221,7 +221,7 @@ async function approve(): Promise<void> {
    editable again. */
 async function cancelApprove(): Promise<void> {
   const id = current.value
-  if (!id || !sheet.readonly.value) return
+  if (!id) return
   cancelling.value = true
   try {
     await cancelApproval({ batch: props.batch, digest: id, flow: props.flow })

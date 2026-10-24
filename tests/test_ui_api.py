@@ -941,7 +941,7 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
 def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
     client: TestClient, made: Run, schema: Schema
 ) -> None:
-    assert client.post(_at(made, "/approve")).status_code == 200
+    _approved(client, made)
     assert client.get(_at(made)).json()["cancel"] is None
 
     cancelled = client.post(_at(made, "/cancel"))
@@ -950,7 +950,7 @@ def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
     assert client.get(_at(made)).json()["readonly"] is False
 
     # Approved again, and its prompt assembled: the payload says why not.
-    assert client.post(_at(made, "/approve")).status_code == 200
+    _approved(client, made)
     prompt_artifact(made, load_flow(FLOW), schema)
     reason = cancellable(made, FLOW)
     assert reason is not None and f"{FLOW}/prompts/001.json came from it" in reason

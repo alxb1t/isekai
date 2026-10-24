@@ -59,7 +59,6 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
     NEW_VERSION,
-    OUTPUTS,
     PROMPTS,
     REVIEW,
     SHEETS,
@@ -67,6 +66,7 @@ from isekai.foundation.run import (
     approval_of,
     approved_versions,
     artifact_name,
+    attempts,
     group_of,
     is_seed,
     latest,
@@ -317,29 +317,19 @@ def cancel(run: Run, flow: str) -> Path:
     e.g. review/002.approved.json -> review/002.draft.json
     """
     version, body = _cancelling(run, flow)
-    directory = run.directory(flow, REVIEW)
-    path = directory / artifact_name(version, DRAFT)
+    path = run.directory(flow, REVIEW) / artifact_name(version, DRAFT)
     if not path.exists():
         producer = body["producer"]
-        draft: ReviewDraft = {
-            "schema": DRAFT_FILE.schema,
-            "producer": {
-                "implementation": producer["implementation"],
-                "from": producer["from"],
-                "source": producer["source"],
-            },
-            "flow": flow,
-            "sheet": body["sheet"],
-            "vocabulary": body["vocabulary"],
-            "fields": body["fields"],
-        }
-        if "schema_document" in body:
-            draft["schema_document"] = body["schema_document"]
-        if "field_map" in body:
-            draft["field_map"] = body["field_map"]
-        if "renders" in body:
-            draft["renders"] = body["renders"]
-        write(path, DRAFT_FILE, draft)
+        _write_draft(
+            run,
+            flow,
+            producer["from"],
+            producer["source"],
+            body,
+            body["sheet"],
+            body.get("renders"),
+            version,
+        )
     approval_of(run, flow, version).unlink()
     return path
 
@@ -381,14 +371,14 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
     derived = _derived(run, flow, version)
     if derived:
         group = group_of(run, flow, version)
-        images = (
-            sorted(path for path in group.iterdir() if is_seed(path.stem))
+        image = (
+            min((path for path in group.iterdir() if is_seed(path.stem)), default=None)
             if group.is_dir()
-            else []
+            else None
         )
         way = (
-            f"run `{_revise_command(images[0])}` to correct an image of it"
-            if images
+            f"run `{_revise_command(image)}` to correct an image of it"
+            if image is not None
             else f"run {_again(run, flow)} to correct it under the next number"
         )
         raise Refusal(
@@ -403,14 +393,13 @@ def _derived(run: Run, flow: str, version: int) -> list[str]:
 
     e.g. (run, f, 2) -> ["f/prompts/002.json", "g/review/001.approved.json"]
     """
-    number = f"{version:03d}"
-    found = [
-        f"{flow}/{stage}/{entry.name}"
-        for stage in (PROMPTS, OUTPUTS)
-        if (listed := run.directory(flow, stage)).is_dir()
-        for entry in sorted(listed.iterdir())
-        if entry.name == number or entry.name.startswith(f"{number}.")
+    prompts = run.directory(flow, PROMPTS)
+    made = [
+        prompts / artifact_name(version),
+        *(attempt.path for attempt in attempts(prompts, version)),
+        group_of(run, flow, version),
     ]
+    found = [str(path.relative_to(run.path)) for path in made if path.exists()]
     source = {"flow": flow, "approval": version}
     for other in run.flows:
         if other == flow:
@@ -451,10 +440,12 @@ def _write_draft(
     carried: Sheet | ReviewApproved,
     sheet_version: int,
     renders: Renders | None = None,
+    version: int | None = None,
 ) -> Path:
-    """Write the next draft of `flow` from `carried`, and return its path."""
+    """Write `flow`'s draft numbered `version`, else the next, and return its path."""
     review_directory = run.directory(flow, REVIEW)
-    path = review_directory / artifact_name(next_version(review_directory), DRAFT)
+    number = next_version(review_directory) if version is None else version
+    path = review_directory / artifact_name(number, DRAFT)
     draft: ReviewDraft = {
         "schema": DRAFT_FILE.schema,
         "producer": {"implementation": STAGE, "from": came_from, "source": source},

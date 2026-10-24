@@ -751,9 +751,8 @@ def create_app(
     def _rendering(batch: str) -> str | None:
         """Return what a render running for `batch` says, or None."""
         slot = jobs.slot()
-        running = slot is not None and slot["state"] == "running"
-        if running and slot["kind"] == "render" and slot["batch"] == batch:
-            return "A render session is running."
+        if slot and slot["state"] == "running" and slot["kind"] == "render":
+            return "A render session is running." if slot["batch"] == batch else None
         return None
 
     @app.post("/api/b/{batch}/review/{digest}/{flow}/discard")
