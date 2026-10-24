@@ -600,7 +600,7 @@ def test_an_update_written_against_a_stale_draft_is_refused(
     assert first.json()["saved"] != saved
 
     # The second was written against what the page read before the first, which
-    # is exactly the state a debounce produces.
+    # is the state a second page open on the draft produces.
     second = client.put(_at(made, "/draft"), json={"fields": fields, "saved": saved})
 
     assert second.status_code == 409

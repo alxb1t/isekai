@@ -262,7 +262,7 @@ act on the page that spends money**, and the session view shows it to *Nothing i
 each source's images by flow, versions oldest to newest, each marked with its version, and an image's large view
 shows the sheet it came from, headed a revision or a re-roll of the one it came from. **Revise** (`e`),
 from the large view or over a selection, runs what `isekai revise` does and opens Review on the first draft it
-wrote, the rest in the rail, with the render beside the photograph; **Compare** (`c`) shows a seed under two
+wrote, the others of its flow in the rail, with the render beside the photograph; **Compare** (`c`) shows a seed under two
 versions and the fields that changed. Every screen has its own URL, so a reload lands where it was. Stop it
 with Ctrl-C, which interrupts a running job; mid-render
 it says so and waits, up to the teardown's estimate and one volume verb, for the pod's teardown and the
