@@ -200,7 +200,7 @@ async function approve(): Promise<void> {
   // would approve the draft as of the last write that *did* land and discard
   // everything typed after it, behind a banner the operator has no reason to
   // read as "your approval is about to be wrong". `flush()` leaves the refusal
-  // on the header line; stopping here is what makes it true.
+  // in the approve bar; stopping here is what makes it true.
   if (!(await sheet.flush())) return
   const place = { batch: props.batch, digest: id, flow: props.flow }
   if (!(await approval.approve(place, sheet.saved.value))) return

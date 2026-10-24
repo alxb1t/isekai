@@ -19,7 +19,7 @@ import TagAutocomplete from './TagAutocomplete.vue'
    out and copied back, so nothing can come back different. What it must not do
    is answer keys the lens owns — Escape, which would clear a fragment instead of
    closing the lens, and the horizontal arrows, which would move chip selection
-   while the lens moves the batch. */
+   while the viewer steps its images. */
 const props = defineProps<{
   field: string
   vocabulary: number

@@ -4,16 +4,16 @@ The prose, then the route test, per [design](design.md). The spec cards are paid
 
 ## Progress
 
-- [ ] 1 — The prose
+- [x] 1 — The prose
 - [ ] 2 — The route test
 
 ## 1 — The prose
 
-- [ ] 1.1 **HALT CHECK** — the README still describes the queue.
+- [x] 1.1 **HALT CHECK** — the README still describes the queue.
   Verify: `grep -c 'Approve moves to the\|on each draft' README.md` prints `2`.
-- [ ] 1.2 Rewrite `README.md:259` and `:264` per [D2](design.md#d2).
+- [x] 1.2 Rewrite `README.md:259` and `:264` per [D2](design.md#d2).
   Verify: `grep -c 'Approve moves to the\|on each draft' README.md` prints `0`, and `uv run pytest -q tests/test_docs.py` exits 0.
-- [ ] 1.3 Rewrite the comments in `ui/src/composables/useSheet.ts`, `ui/src/views/Review.vue` and
+- [x] 1.3 Rewrite the comments in `ui/src/composables/useSheet.ts`, `ui/src/views/Review.vue` and
   `ui/src/components/TagInput.vue` per [D2](design.md#d2).
   Verify: `grep -c 'header line\|lens moves the batch\|Two saves can be in' ui/src/composables/useSheet.ts ui/src/views/Review.vue ui/src/components/TagInput.vue` prints `0` for each file.
 
