@@ -182,6 +182,11 @@ def await_endpoint(
             time.sleep(poll_s)
 
 
+def session_id(moment: datetime) -> str:
+    """Return the id a session started at `moment` takes, e.g. 20261024T091200Z."""
+    return moment.strftime("%Y%m%dT%H%M%SZ")
+
+
 def _utc(moment: datetime) -> str:
     """Return `moment` as the record spells a time, e.g. 2026-10-24T09:12:00Z."""
     return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -210,7 +215,7 @@ class Record:
     def open(self) -> None:
         """Write the record as running."""
         started = datetime.now(UTC)
-        name = self._given or started.strftime("%Y%m%dT%H%M%SZ")
+        name = self._given or session_id(started)
         body: SessionRecord = {
             "schema": SESSION_FILE.schema,
             "id": name,

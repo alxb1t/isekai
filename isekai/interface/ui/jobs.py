@@ -8,7 +8,8 @@ to the batch's `log.txt`. A job outlives the page that started it.
 Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
             └ answers ─▶ per flow: tag ─▶ caption ─▶ sheet ─▶ done
 Render ─▶ volume up ─ lost ─▶ the volume alert, nothing renders
-           └ up ─▶ render --limit … --progress json ─▶ volume down, unless kept
+           └ up ─▶ render --limit … --session … --progress json
+                 ─▶ volume down, unless kept
 Stop, or the server stopping ─▶ SIGINT to the child ─▶ no later stage starts
 the server stopping mid-render ─▶ says so, then waits for the teardown and the
                                   window's close ─ runs out ─▶ names `volume down`
@@ -23,13 +24,19 @@ import sys
 import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TextIO
 
 from isekai.boundary.gpu import Volume
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
-from isekai.interface.render import LOST_EXIT, load_timing, progress_line
+from isekai.interface.render import (
+    LOST_EXIT,
+    load_timing,
+    progress_line,
+    session_id,
+)
 from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
@@ -74,11 +81,11 @@ def isekai_command(verb: str, flow: str, runs: Path, ids: Sequence[str]) -> list
     ]
 
 
-# How a render is started: the session's limit and the batch's runs root.
-RenderCommand = Callable[[int, Path], list[str]]
+# How a render is started: the session's limit, the batch's runs root, its id.
+RenderCommand = Callable[[int, Path, str], list[str]]
 
 
-def render_command(limit: int, runs: Path) -> list[str]:
+def render_command(limit: int, runs: Path, session: str) -> list[str]:
     """Return the render verb line. e.g. `python -m isekai render --limit 1200 …`."""
     return [
         sys.executable,
@@ -87,6 +94,8 @@ def render_command(limit: int, runs: Path) -> list[str]:
         "render",
         "--limit",
         str(limit),
+        "--session",
+        session,
         "--progress",
         "json",
         str(runs),
@@ -260,6 +269,8 @@ class Jobs:
             if keep_open:
                 steps["volume down"] = "kept"
             session = {
+                # The verb's record is named by it, so the page can read that record.
+                "id": session_id(datetime.now(UTC)),
                 "started": self._now(),
                 "limit": limit,
                 "of": total,
@@ -428,6 +439,8 @@ class Jobs:
         except OSError as error:
             # A verb that could not be started, or a log that could not be opened:
             # nothing rendered, and the page says so rather than showing an end.
+            if not opened:
+                self._mark(job, "volume up", "failed")
             with self._lock:
                 self._child = None
                 job.state = "failed"
@@ -454,7 +467,8 @@ class Jobs:
         with self._lock:
             if self._stopping:
                 return
-            child = self._spawn(self._render(limit, folder / RUNS), folder)
+            argv = self._render(limit, folder / RUNS, job.session["id"])
+            child = self._spawn(argv, folder)
         assert child.stdout is not None
         reported = False
         for raw in child.stdout:

@@ -6,7 +6,7 @@ test carries `@pytest.mark.spec` with the key its task names.
 ## Progress
 
 - [x] 1 — The record
-- [ ] 2 — The routes
+- [x] 2 — The routes
 - [ ] 3 — The screens
 - [ ] 4 — The viewer
 - [ ] 5 — The prose
@@ -25,15 +25,15 @@ test carries `@pytest.mark.spec` with the key its task names.
 
 ## 2 — The routes
 
-- [ ] 2.1 **HALT CHECK** — the app serves no session.
+- [x] 2.1 **HALT CHECK** — the app serves no session.
   Verify: `grep -c '/api/b/{batch}/sessions' isekai/interface/ui/app.py` prints `0`.
-- [ ] 2.2 Add `sessions` to `isekai/interface/ui/library.py` and the session routes to `isekai/interface/ui/app.py` per
+- [x] 2.2 Add `sessions` to `isekai/interface/ui/library.py` and the session routes to `isekai/interface/ui/app.py` per
   [D3](design.md#d3); bind both `ui:sessions:` unit keys in `tests/test_ui_api.py`.
   Verify: `uv run pytest -q tests/test_ui_api.py` exits 0, and `grep -c -E 'ui:sessions:(a-batch-lists|a-session-reads)' tests/test_ui_api.py` prints `2`.
-- [ ] 2.3 Pass `--session` from `render_command`, keep the id in the slot, and fail a raising `volume up`'s step, in
+- [x] 2.3 Pass `--session` from `render_command`, keep the id in the slot, and fail a raising `volume up`'s step, in
   `isekai/interface/ui/jobs.py`, per [D3](design.md#d3) and [D7](design.md#d7); bind `ui:render-job:an-opening-that-raises-fails-its-step` in `tests/test_ui_jobs.py`.
   Verify: `uv run pytest -q tests/test_ui_jobs.py` exits 0, and `grep -c 'an-opening-that-raises-fails-its-step' tests/test_ui_jobs.py` prints `1`.
-- [ ] 2.4 Add the render step of [D7](design.md#d7) to `test_an_approved_sheet_carries_why_it_cannot_be_cancelled` in
+- [x] 2.4 Add the render step of [D7](design.md#d7) to `test_an_approved_sheet_carries_why_it_cannot_be_cancelled` in
   `tests/test_ui_api.py`.
   Verify: `grep -rc 'render session is running' tests/test_ui_api.py` prints a number of at least `1`, and `uv run pytest -q tests/test_ui_api.py` exits 0.
 

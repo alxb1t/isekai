@@ -12,6 +12,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `isekai render` keeps its session's record beside the batch's log, `sessions/<id>.json`, from the pod's ask to its
   end: its steps, each image as it lands, and how it ended. `--session ID` names it (0073 D1, D2).
 
+- The app serves a batch's sessions and each one from its records, the running one first; the render job names its
+  session, and a window opening that raises marks its step failed rather than running (0073 D3, D7).
+
 ## [0.45.0] - 2026-10-24 · 0072-cancel-approve
 
 Gate: local 0m39s · CI 7m25s (build-image at 801ffec) · 0.44.1: local 0m38s · CI 7m25s

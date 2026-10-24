@@ -519,6 +519,23 @@ def create_app(
         )
         return {"job": job}
 
+    def live() -> str | None:
+        """Return the id of the render session the slot runs, or None."""
+        slot = jobs.slot()
+        if slot and slot["state"] == "running" and slot["kind"] == "render":
+            return slot["session"]["id"]
+        return None
+
+    @app.get("/api/b/{batch}/sessions")
+    def read_sessions(batch: str) -> dict[str, Any]:
+        """List the batch's render sessions from their records, the running first."""
+        return {"sessions": library.sessions(folder(batch), live())}
+
+    @app.get("/api/b/{batch}/sessions/{name}")
+    def read_session(batch: str, name: str) -> dict[str, Any]:
+        """Return one render session's record; the job slot adds the volume steps."""
+        return library.session(folder(batch), name, live())
+
     @app.post("/api/billing/check")
     def post_check() -> dict[str, Any]:
         """Ask gpunit again; an alert clears only when its records say gone."""
