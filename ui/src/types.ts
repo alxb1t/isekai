@@ -204,17 +204,43 @@ export interface Committed {
   left_out: string[]
 }
 
+/* One image a render session landed. The seed is a string: a 64-bit seed is past
+   what a JavaScript number holds exactly. */
+export interface SessionImage {
+  digest: string
+  flow: string
+  version: number
+  seed: string
+}
+
+/* A render session's record, `<batch>/sessions/<id>.json`, as the server reads
+   it: `outcome` is null for a record still reading running that no job runs. */
+export interface SessionRecord {
+  id: string
+  started: string
+  ended: string | null
+  limit: number
+  /* The images each flow was asked to render. */
+  asked: Record<string, number>
+  /* `pod` and `teardown`, each by its state. */
+  steps: Record<string, string>
+  images: SessionImage[]
+  outcome: 'running' | 'done' | 'stopped' | 'failed' | null
+  message: string | null
+}
+
 /* The one job slot: Prepare running, or the last one's end. */
-/* A render's session as the job reports it: each step's state by name —
-   `volume up`, `pod`, `teardown`, `volume down` — and each image as it lands. */
+/* A render's session as the job reports it: its record's id, each step's state by
+   name — `volume up`, `pod`, `teardown`, `volume down` — and each image as it lands. */
 export interface RenderSession {
+  id: string
   started: string
   /* When the job ended; null while it runs. */
   ended: string | null
   limit: number
   of: number
   steps: Record<string, string>
-  images: { digest: string; flow: string; version: number; seed: string }[]
+  images: SessionImage[]
 }
 
 export interface JobSlot {

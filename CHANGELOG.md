@@ -15,6 +15,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The app serves a batch's sessions and each one from its records, the running one first; the render job names its
   session, and a window opening that raises marks its step failed rather than running (0073 D3, D7).
 
+- Each batch has a Sessions tab: its sessions listed from their records and a page per session, so a finished one is
+  found again. A running render shows on every screen, and the billing alert's way out is `/billing` (0073 D4, D5).
+
 ## [0.45.0] - 2026-10-24 · 0072-cancel-approve
 
 Gate: local 0m39s · CI 7m25s (build-image at 801ffec) · 0.44.1: local 0m38s · CI 7m25s

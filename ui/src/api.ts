@@ -23,6 +23,7 @@ import type {
   ReviseRefused,
   RevisedDraft,
   RevisedImage,
+  SessionRecord,
   TagMatches,
 } from './types'
 
@@ -124,6 +125,16 @@ export function startRender(
     limit_s: limitS,
     images,
   })
+}
+
+/* A batch's render sessions from their records, the running one first, then newest. */
+export function sessions(batch: string): Promise<{ sessions: SessionRecord[] }> {
+  return get(`/api/b/${encodeURIComponent(batch)}/sessions`)
+}
+
+/* One render session's record; an id no record holds is refused. */
+export function session(batch: string, id: string): Promise<SessionRecord> {
+  return get(`/api/b/${encodeURIComponent(batch)}/sessions/${encodeURIComponent(id)}`)
 }
 
 /* Ask gpunit again; an alert clears only when its records say gone. */

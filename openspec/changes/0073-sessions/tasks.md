@@ -7,7 +7,7 @@ test carries `@pytest.mark.spec` with the key its task names.
 
 - [x] 1 — The record
 - [x] 2 — The routes
-- [ ] 3 — The screens
+- [x] 3 — The screens
 - [ ] 4 — The viewer
 - [ ] 5 — The prose
 
@@ -39,15 +39,15 @@ test carries `@pytest.mark.spec` with the key its task names.
 
 ## 3 — The screens
 
-- [ ] 3.1 **HALT CHECK** — `/session` is the session's screen.
+- [x] 3.1 **HALT CHECK** — `/session` is the session's screen.
   Verify: `grep -c "path: '/session'" ui/src/router.ts` prints `1`.
-- [ ] 3.2 Add `ui/src/views/Sessions.vue`, `ui/src/views/SessionPage.vue` and `ui/src/views/Billing.vue` with their
+- [x] 3.2 Add `ui/src/views/Sessions.vue`, `ui/src/views/SessionPage.vue` and `ui/src/views/Billing.vue` with their
   routes, the Sessions tab, the indicator and `⇧S` in `ui/src/App.vue`, per [D4](design.md#d4) and [D5](design.md#d5); delete `Session.vue`.
   Verify: `test -e ui/src/views/Session.vue` exits 1, `grep -c "path: '/session'" ui/src/router.ts` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.3 Land `test_confirming_the_dialog_opens_the_session` in `tests/e2e/test_render.py` on the session's page;
+- [x] 3.3 Land `test_confirming_the_dialog_opens_the_session` in `tests/e2e/test_render.py` on the session's page;
   write a finished record in `tests/e2e/conftest.py`; add `test_the_list_shows_a_finished_session`, bound to its key.
   Verify: `grep -c 'the-list-shows-a-finished-session' tests/e2e/test_render.py` prints `1`, and `uv run pytest -q tests/e2e` exits 0.
-- [ ] 3.4 Replace `/session` with the sessions' addresses and `/billing` in `ui/design/spec.md` §4, J4 and J8, and in
+- [x] 3.4 Replace `/session` with the sessions' addresses and `/billing` in `ui/design/spec.md` §4, J4 and J8, and in
   `isekai/interface/ui/README.md`.
   Verify: `grep -c '/session\b' ui/design/spec.md` prints `0`, and `grep -c 'sessions/' isekai/interface/ui/README.md` prints a number of at least `1`.
 

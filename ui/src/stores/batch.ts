@@ -1,7 +1,20 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch, type Ref } from 'vue'
-import { hub as readHub, renderOffer, renders as readRenders } from '../api'
-import type { CellEvent, HubCell, HubInfo, RenderOffer, RendersInfo } from '../types'
+import {
+  hub as readHub,
+  renderOffer,
+  renders as readRenders,
+  session as readSession,
+  sessions as readSessions,
+} from '../api'
+import type {
+  CellEvent,
+  HubCell,
+  HubInfo,
+  RenderOffer,
+  RendersInfo,
+  SessionRecord,
+} from '../types'
 import { type Snapshot, useLiveStore } from './live'
 
 const NO_OFFER: RenderOffer = { disabled: null, images: 0, refused: null }
@@ -12,8 +25,9 @@ export function at(name: string, flow: string): string {
 }
 
 /* The open batch, one copy for every screen of it: its hub, the stages running
-   in its cells and their refusals, its renders once a screen reads them, and its
-   Render offer and dialog, which has no URL of its own (design spec §1 rule 8). */
+   in its cells and their refusals, its renders and its sessions once a screen
+   reads them, and its Render offer and dialog, which has no URL of its own
+   (design spec §1 rule 8). */
 export const useBatchStore = defineStore('batch', () => {
   const live = useLiveStore()
   const { job, billing, renderRunning } = storeToRefs(live)
@@ -24,6 +38,10 @@ export const useBatchStore = defineStore('batch', () => {
   /* Each cell's refusal from a tick or from the job, by `source|flow`. */
   const refusals = ref<Record<string, string>>({})
   const renders = ref<RendersInfo | null>(null)
+  const sessions = ref<SessionRecord[] | null>(null)
+  /* The record of the session a page shows, by `shown`, read again as its job reports. */
+  const session = ref<SessionRecord | null>(null)
+  let shown: string | null = null
   const offer = ref<RenderOffer>({ ...NO_OFFER })
   const dialog = ref(false)
   /* A render session running for this batch, not another's. */
@@ -39,6 +57,9 @@ export const useBatchStore = defineStore('batch', () => {
     running.value = {}
     refusals.value = {}
     renders.value = null
+    sessions.value = null
+    session.value = null
+    shown = null
     offer.value = { ...NO_OFFER }
     dialog.value = false
     asked += 1
@@ -56,6 +77,24 @@ export const useBatchStore = defineStore('batch', () => {
   const reloadHub = () => reload(readHub, hub)
   /** Read the renders again; a refusal is thrown to the caller. */
   const reloadRenders = () => reload(readRenders, renders)
+  /** Read the sessions again; a refusal is thrown to the caller. */
+  async function reloadSessions(): Promise<void> {
+    const batch = name.value ?? ''
+    const found = await readSessions(batch)
+    if (name.value === batch) sessions.value = found.sessions
+  }
+  /* Read session `id`'s record, kept unless another batch or session is shown by then. */
+  async function readShown(id: string): Promise<void> {
+    const batch = name.value ?? ''
+    const found = await readSession(batch, id)
+    if (name.value === batch && shown === id) session.value = found
+  }
+  /** Show session `id`, reading its record; a refusal is thrown to the caller. */
+  function showSession(id: string): Promise<void> {
+    shown = id
+    session.value = null
+    return readShown(id)
+  }
 
   /* Read the offer again. One that cannot be read is refused, so its reason shows. */
   async function check(): Promise<void> {
@@ -110,6 +149,14 @@ export const useBatchStore = defineStore('batch', () => {
     running.value = {}
     void reloadHub().catch(() => undefined)
     if (renders.value) void reloadRenders().catch(() => undefined)
+    if (sessions.value) void reloadSessions().catch(() => undefined)
+  })
+  /* The render job reports each step and image after its record changes, so the
+     session it runs is read again on each report, its record written or not yet. */
+  watch(job, (slot) => {
+    const id = shown
+    if (id === null || slot?.kind !== 'render' || slot.session?.id !== id) return
+    void readShown(id).catch(() => undefined)
   })
   watch(
     () => billing.value?.pod,
@@ -124,12 +171,16 @@ export const useBatchStore = defineStore('batch', () => {
     running,
     refusals,
     renders,
+    sessions,
+    session,
     offer,
     dialog,
     rendering,
     open,
     reloadHub,
     reloadRenders,
+    reloadSessions,
+    showSession,
     check,
     openDialog,
     closeDialog,

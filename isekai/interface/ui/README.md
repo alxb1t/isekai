@@ -9,6 +9,7 @@ Home ─ New batch ─▶ import sheet ─▶ <batch>/sources/
 hub ─ tick ─▶ assign ─▶ Prepare ─▶ tag → caption → sheet ─▶ /events ─▶ the cells
 Review ─▶ /b/<batch>/review ─▶ the head ─▶ Review ─▶ approve
 hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶ volume down ─▶ /events ─▶ the session
+render ─▶ <batch>/sessions/<id>.json ─▶ /b/<batch>/sessions ─▶ /b/<batch>/sessions/<id>
 ```
 
 - **Import.** The sheet sends each chosen file in its own `PUT`, a bar each, answered once its bytes
@@ -25,8 +26,11 @@ hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶
   batch's `log.txt`. Stop, and the server stopping, send the child SIGINT.
 - **Render** is the slot's other job. `POST …/render/quote` takes the render verb's own quote: per flow
   what renders, what is left out and why, the estimate, the limit and the price at most. Only
-  `POST …/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --progress json`,
-  then `volume down` unless the window is kept.
+  `POST …/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --session <id> --progress
+  json`, then `volume down` unless the window is kept.
+- **Sessions** are read from the records the render verb writes, `<batch>/sessions/<id>.json`:
+  `GET …/sessions` lists them, the running one first, and `GET …/sessions/<id>` serves one. The job slot adds
+  the volume steps and Stop; while it runs a render, every screen shows it. The alert's way out is `/billing`.
 - **Renders** reads each cell's images, versions oldest to newest, with how many its newest approval still lacks,
   the render stage's own count; Render comes from its bar, as on the hub. The large view shows an image
   beside the approval's filled fields. A thumbnail, a render's or a source's, is made once, into the

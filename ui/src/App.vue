@@ -8,7 +8,7 @@ import { useKeys } from './composables/useKeys'
 import { queue } from './composables/useQueue'
 import { useBatchStore } from './stores/batch'
 import { shifted, useKeyStore } from './stores/keys'
-import { alerting, useLiveStore } from './stores/live'
+import { alerting, clock, useLiveStore } from './stores/live'
 
 /* The shell: the AppBar, the BillingBanner's slot, the route's screen and the
    JobStrip (design spec §3). Review is keyed by batch and flow, so moving to
@@ -16,7 +16,7 @@ import { alerting, useLiveStore } from './stores/live'
 const route = useRoute()
 const router = useRouter()
 const live = useLiveStore()
-const { job, billing } = storeToRefs(live)
+const { job, billing, now, renderRunning } = storeToRefs(live)
 const { prepareTotals, renderTotals } = live
 
 const alert = computed(() => alerting(billing.value))
@@ -62,6 +62,20 @@ function open(name: string): void {
   void router.push({ name, params: batch.value ? { batch: batch.value } : {} })
 }
 
+/* The running render's session, wherever the screen is, and its clock. */
+const rendered = computed(() => {
+  const held = job.value
+  if (!renderRunning.value || !held?.session) return null
+  const elapsed = (now.value - Date.parse(held.session.started)) / 1000
+  return { batch: held.batch, id: held.session.id, clock: clock(elapsed) }
+})
+/* ⇧S: the running session, else the open batch's sessions. */
+function sessions(): void {
+  const held = rendered.value
+  if (held) void router.push({ name: 'session', params: { batch: held.batch, id: held.id } })
+  else open('sessions')
+}
+
 /* The keys every screen answers, outside a text field (D25). */
 useKeys('everywhere', [
   { id: 'library', keys: [shifted('KeyL')], label: 'library', run: () => open('home') },
@@ -74,7 +88,7 @@ useKeys('everywhere', [
     run: () => open('renders'),
     when: onBatch,
   },
-  { id: 'session', keys: [shifted('KeyS')], label: 'session', run: () => open('session') },
+  { id: 'session', keys: [shifted('KeyS')], label: 'sessions', run: sessions, when: onBatch },
   {
     id: 'keys',
     keys: [shifted('Slash')],
@@ -115,7 +129,22 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
           :class="{ 'appbar__tab--active': screen === 'renders' || screen === 'render' }"
           >Renders<KeyHint command="renders" /></RouterLink
         >
+        <RouterLink
+          :to="{ name: 'sessions', params: { batch } }"
+          class="appbar__tab"
+          :class="{ 'appbar__tab--active': screen === 'sessions' || screen === 'session' }"
+          data-sessions-tab
+          >Sessions<KeyHint command="session" /></RouterLink
+        >
       </template>
+      <!-- A running render bills by the minute, so every screen shows it. -->
+      <RouterLink
+        v-if="rendered"
+        :to="{ name: 'session', params: { batch: rendered.batch, id: rendered.id } }"
+        class="appbar__render mono"
+        data-rendering
+        >● render {{ rendered.clock }}</RouterLink
+      >
     </header>
     <!-- The BillingBanner: only when something may be billing; esc never closes it. -->
     <div v-if="alert" class="band" role="alert">
@@ -127,9 +156,7 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
           Window ended {{ hour(billing.volume.ends) }}.</template
         ></span
       >
-      <RouterLink :to="{ name: 'session' }" class="band__resolve"
-        >Resolve<KeyHint command="session" /></RouterLink
-      >
+      <RouterLink :to="{ name: 'billing' }" class="band__resolve">Resolve</RouterLink>
     </div>
     <main class="app__screen">
       <RouterView :key="key" />
