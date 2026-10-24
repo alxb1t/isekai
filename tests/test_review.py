@@ -6,6 +6,7 @@ this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 
 import io
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -1450,6 +1451,14 @@ def test_anything_made_from_an_approval_refuses_its_cancel_and_changes_nothing(
     assert cancellable(run, FLOW) == str(refused.value)
     assert snapshot(run.path) == before
 
+    waiting = review(run, FLOW, new_version=True)
+    assert waiting is not None
+    reopened = cancellable(run, FLOW)
+    assert reopened is not None
+    assert f"{FLOW}/{named} came from it" in reopened
+    assert str(waiting) in reopened
+    assert "--discard" not in reopened
+
 
 @pytest.mark.spec("review:cancel:a-copy-taken-from-it-refuses")
 def test_a_copy_in_another_flow_refuses_the_sources_cancel(
@@ -1461,25 +1470,33 @@ def test_a_copy_in_another_flow_refuses_the_sources_cancel(
 
     with pytest.raises(Refusal, match=f"{CONTROL}/review/001.approved.json came"):
         cancel(run, FLOW)
+    assert re.search(
+        f"approve --flow {CONTROL} .*--cancel", str(cancellable(run, FLOW))
+    )
 
     assert snapshot(run.path) == before
+    assert cancel(run, CONTROL) is None
+    assert cancel(run, FLOW) == run.directory(FLOW, "review") / "001.draft.json"
 
 
-@pytest.mark.spec("review:cancel:a-copy-and-a-reopened-sheet-are-refused")
-def test_a_copy_and_an_approval_with_a_later_draft_refuse_naming_the_way_on(
+@pytest.mark.spec("review:cancel:a-copy-is-deleted-and-a-reopened-sheet-refused")
+def test_a_copy_is_deleted_and_an_approval_with_a_later_draft_refuses_its_discard(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _approved_source(run, schema, vocabulary)
-    approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    copy, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    assert copy is not None
+    held = copy.read_bytes()
     assert review(run, FLOW, new_version=True) is not None
     before = snapshot(run.path)
 
-    with pytest.raises(Refusal, match=f"approve --flow {FLOW} .*--cancel"):
-        cancel(run, CONTROL)
+    assert cancel(run, CONTROL) is None
+    gone = str(copy.relative_to(run.path))
+    assert snapshot(run.path) == {k: v for k, v in before.items() if k != gone}
     with pytest.raises(Refusal, match=f"review --flow {FLOW} .*--discard"):
         cancel(run, FLOW)
-
-    assert snapshot(run.path) == before
+    assert approve(run, CONTROL, schema, vocabulary, source=FLOW)[0] == copy
+    assert copy.read_bytes() == held
 
 
 @pytest.mark.spec("review:cancel:an-interrupted-cancel-finishes")

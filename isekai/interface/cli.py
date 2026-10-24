@@ -235,7 +235,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--cancel",
         action="store_true",
         help="turn each flow's newest approval back into its draft instead, "
-        "refusing one anything was made from",
+        "deleting a copy and refusing one anything was made from",
     )
     # The job runner's channel: a line per item it can parse, the prose kept apart.
     for name in ("caption", "tag", "sheet", "generate"):
@@ -854,9 +854,10 @@ def _per_item(
             def approve_flow(name: str) -> None:
                 if args.cancel:
                     draft = cancel_approval(run, name)
-                    reporter.say(
-                        f"{run.id}: approve cancelled {name}, back to {draft.name}"
+                    back = (
+                        "a copy, deleted" if draft is None else f"back to {draft.name}"
                     )
+                    reporter.say(f"{run.id}: approve cancelled {name}, {back}")
                     return
                 written, warnings = approve(
                     run,

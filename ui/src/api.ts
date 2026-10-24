@@ -173,9 +173,10 @@ export function approve(
   return send(`${at(place)}/approve`, 'POST', { saved })
 }
 
-/* Turns the approval back into its draft, as `approve --cancel` does; anything
-   made from it, or a render running for the batch, refuses. */
-export function cancelApproval(place: Place): Promise<{ draft: string }> {
+/* Turns the approval back into its draft, as `approve --cancel` does, or deletes
+   a copy, whose draft is null; anything made from it, or a render running for
+   the batch, refuses. */
+export function cancelApproval(place: Place): Promise<{ draft: string | null }> {
   return send(`${at(place)}/cancel`, 'POST', {})
 }
 

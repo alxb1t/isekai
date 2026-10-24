@@ -737,7 +737,10 @@ def create_app(
 
     @app.post("/api/b/{batch}/review/{digest}/{flow}/cancel")
     def post_cancel(batch: str, digest: str, flow: str) -> dict[str, Any]:
-        """Turn the approval back into its draft, refused while a render runs."""
+        """Turn the approval back into its draft, refused while a render runs.
+
+        A copy has no draft to go back to, so it is deleted and `draft` is null.
+        """
         one = held(batch, digest, flow)
         with _DRAFT_UPDATE:
             rendering = _rendering(batch)
@@ -746,7 +749,7 @@ def create_app(
                     f"{rendering} Wait for it to end, then cancel the approval again."
                 )
             draft = cancel(one.run, one.flow.id)
-        return {"draft": draft.name}
+        return {"draft": None if draft is None else draft.name}
 
     def _rendering(batch: str) -> str | None:
         """Return what a render running for `batch` says, or None."""

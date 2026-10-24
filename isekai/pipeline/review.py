@@ -309,14 +309,20 @@ def cancellable(run: Run, flow: str) -> str | None:
     return None
 
 
-def cancel(run: Run, flow: str) -> Path:
+def cancel(run: Run, flow: str) -> Path | None:
     """Turn `flow`'s newest approval back into its draft, and return the draft.
 
     The draft is written before the approval is deleted, so a crash between
     leaves both, which reads as approved and is finished by cancelling again.
+    A copy has no draft to go back to, so it is deleted and None returned:
+    `approve --from` writes it again.
     e.g. review/002.approved.json -> review/002.draft.json
     """
     version, body = _cancelling(run, flow)
+    approval = approval_of(run, flow, version)
+    if body["producer"].get("copied_from") is not None:
+        approval.unlink()
+        return None
     path = run.directory(flow, REVIEW) / artifact_name(version, DRAFT)
     if not path.exists():
         producer = body["producer"]
@@ -330,7 +336,7 @@ def cancel(run: Run, flow: str) -> Path:
             body.get("renders"),
             version,
         )
-    approval_of(run, flow, version).unlink()
+    approval.unlink()
     return path
 
 
@@ -338,7 +344,9 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
     """Return the newest approval of `flow` and its number, refusing its cancel.
 
     Refused while anything derives from it: a file numbered for it in the
-    flow's prompts or outputs, or another flow's approval copied from it.
+    flow's prompts or outputs, or another flow's approval copied from it. That
+    is checked before a waiting draft, so a draft is never named for discarding
+    while the cancel would still be refused.
     """
     directory = run.directory(flow, REVIEW)
     approved = approved_versions(directory)
@@ -350,25 +358,11 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
     version = approved[-1]
     name = artifact_name(version, APPROVED)
     again = f"`{stage_command(run, 'approve', flow, options=CANCEL)}`"
-    waiting = current_draft(directory)
-    if waiting is not None:
-        raise Refusal(
-            f"{run.id}: flow {flow} has {waiting.name} open above {name}, and a "
-            "cancel never replaces a draft; run "
-            f"`{stage_command(run, STAGE, flow, options=DISCARD)}`, then {again}"
-        )
     body = _approval(run, flow, version, f"run {again}")
     copied = approval_of(run, flow, version)
     require(copied, body, "producer", dict, f"restore it in {copied}, then {again}")
-    origin = body["producer"].get("copied_from")
-    if origin is not None:
-        raise Refusal(
-            f"{run.id}: flow {flow}'s {name} is a copy of {origin['flow']}'s "
-            f"approval {origin['approval']:03d}; run "
-            f"`{stage_command(run, 'approve', origin['flow'], options=CANCEL)}` "
-            "to cancel the source instead"
-        )
-    derived = _derived(run, flow, version)
+    waiting = current_draft(directory)
+    derived, copies = _derived(run, flow, version)
     if derived:
         group = group_of(run, flow, version)
         image = (
@@ -376,22 +370,41 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
             if group.is_dir()
             else None
         )
-        way = (
-            f"run `{_revise_command(image)}` to correct an image of it"
-            if image is not None
-            else f"run {_again(run, flow)} to correct it under the next number"
-        )
+        if waiting is not None:
+            way = (
+                f"{waiting} is open above it; edit it, then run "
+                f"`{stage_command(run, 'approve', flow)}` to approve the correction"
+            )
+        elif len(copies) == len(derived):
+            first = ", then ".join(
+                f"`{stage_command(run, 'approve', other, options=CANCEL)}`"
+                for other in copies
+            )
+            way = f"run {first}, then {again}"
+        elif image is not None:
+            way = f"run `{_revise_command(image)}` to correct an image of it"
+        else:
+            way = f"run {_again(run, flow)} to correct it under the next number"
         raise Refusal(
             f"{run.id}: flow {flow}'s {name} cannot be cancelled, because "
             f"{', '.join(derived)} came from it; {way}"
         )
+    if waiting is not None:
+        raise Refusal(
+            f"{run.id}: flow {flow} has {waiting.name} open above {name}, and a "
+            "cancel never replaces a draft; run "
+            f"`{stage_command(run, STAGE, flow, options=DISCARD)}`, then {again}"
+        )
     return version, body
 
 
-def _derived(run: Run, flow: str, version: int) -> list[str]:
-    """Return what derives from `flow`'s approval `version`, by its path in the run.
+def _derived(run: Run, flow: str, version: int) -> tuple[list[str], list[str]]:
+    """Return what derives from `flow`'s approval `version`, and what can go first.
 
-    e.g. (run, f, 2) -> ["f/prompts/002.json", "g/review/001.approved.json"]
+    Each derived file is named by its path in the run; the flows are those whose
+    copy of it is their newest approval and can be cancelled.
+
+    e.g. (run, f, 2) -> (["f/prompts/002.json", "g/review/001.approved.json"], [])
     """
     prompts = run.directory(flow, PROMPTS)
     made = [
@@ -400,17 +413,21 @@ def _derived(run: Run, flow: str, version: int) -> list[str]:
         group_of(run, flow, version),
     ]
     found = [str(path.relative_to(run.path)) for path in made if path.exists()]
+    copies: list[str] = []
     source = {"flow": flow, "approval": version}
     for other in run.flows:
         if other == flow:
             continue
-        for held in approved_versions(run.directory(other, REVIEW)):
+        held_versions = approved_versions(run.directory(other, REVIEW))
+        for held in held_versions:
             path = approval_of(run, other, held)
             copy = read(path, APPROVED_FILE, remedy=f"restore it in {path} by hand")
             producer = copy.get("producer")
             if isinstance(producer, dict) and producer.get("copied_from") == source:
                 found.append(f"{other}/{REVIEW}/{path.name}")
-    return found
+                if held == held_versions[-1] and cancellable(run, other) is None:
+                    copies.append(other)
+    return found, copies
 
 
 def _approval(run: Run, flow: str, version: int, retry: str) -> ReviewApproved:

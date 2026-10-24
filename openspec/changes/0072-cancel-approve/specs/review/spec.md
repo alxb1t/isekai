@@ -4,14 +4,16 @@
 
 The system SHALL cancel a flow's newest approval by writing the draft it was approved from — its fields, renders,
 sheet, vocabulary, schema document and field map, and its producer without what approval added — and then deleting
-the approval, leaving every older approval in place. It SHALL refuse, writing nothing and naming the reason and the
-way on, while anything derives from the approval — a prompt, a render group or a failure record numbered for it, or
-another flow's approval copied from it — while a later draft exists, and for an approval that is itself a copy. A
-cancel interrupted between its writing and its deleting SHALL be finished by running it again.
+the approval, leaving every older approval in place, and SHALL cancel an approval that is itself a copy by deleting
+it. It SHALL refuse, writing nothing and naming the reason and a way on that succeeds, while anything derives from the
+approval — a prompt, a render group or a failure record numbered for it, or another flow's approval copied from it —
+and while a later draft exists, naming a waiting draft rather than its discard while anything derives. A cancel
+interrupted between its writing and its deleting SHALL be finished by running it again.
 
 An approved artifact is never silently replaced: cancelling is an explicit act, and it is refused once anything has
-been made from the approval, so no output loses the sheet that made it. A draft written before the delete leaves a
-crash reading as still approved, which approving already does.
+been made from the approval, so no output loses the sheet that made it. A copy has no draft of its own, and
+`approve --from` writes it again. A draft written before the delete leaves a crash reading as still approved, which
+approving already does.
 
 ```
 NNN.approved.json ─▶ write NNN.draft.json ─▶ delete NNN.approved.json
@@ -37,18 +39,21 @@ NNN.approved.json ─▶ write NNN.draft.json ─▶ delete NNN.approved.json
 - **WHEN** a cancel is asked while a prompt, a render group or a failure record is numbered for the approval
 - **THEN** it is refused naming what derives and the way on
 - **AND** no file changes
+- **AND** with a draft waiting above it, that draft is named rather than its discard
 
 #### Scenario: a copy taken from it refuses the cancel
 - **Key:** `review:cancel:a-copy-taken-from-it-refuses`
 - **Layers:** unit
 - **WHEN** another flow's approval is copied from the approval
-- **THEN** the cancel is refused naming that flow
+- **THEN** the cancel is refused naming that flow's cancel
+- **AND** once that copy is cancelled, the cancel succeeds
 
-#### Scenario: a copy and a re-opened sheet are refused
-- **Key:** `review:cancel:a-copy-and-a-reopened-sheet-are-refused`
+#### Scenario: a copy is deleted, and a re-opened sheet is refused
+- **Key:** `review:cancel:a-copy-is-deleted-and-a-reopened-sheet-refused`
 - **Layers:** unit
 - **WHEN** a cancel is asked for an approval that is a copy, then for one with a later draft
-- **THEN** each is refused naming the way on
+- **THEN** the copy alone is deleted, and the second is refused naming its draft's discard
+- **AND** copying again writes the same copy
 
 #### Scenario: an interrupted cancel finishes when run again
 - **Key:** `review:cancel:an-interrupted-cancel-finishes`
