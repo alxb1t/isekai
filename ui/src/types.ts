@@ -236,7 +236,6 @@ export interface RunningSession {
   started: string
 }
 
-/* The one job slot: Prepare running, or the last one's end. */
 /* A render's session as the job reports it: its record's id, each step's state by
    name — `volume up`, `pod`, `teardown`, `volume down` — and each image as it lands. */
 export interface RenderSession {
@@ -250,8 +249,11 @@ export interface RenderSession {
   images: SessionImage[]
 }
 
+export type JobKind = 'prepare' | 'render'
+
+/* One kind's job: running, or the last one's end. */
 export interface JobSlot {
-  kind: 'prepare' | 'render'
+  kind: JobKind
   batch: string
   state: 'running' | 'done' | 'stopped' | 'failed'
   flow: string | null
@@ -261,6 +263,9 @@ export interface JobSlot {
   progress?: { started: string; of: number; done: number }
   session?: RenderSession
 }
+
+/* Each kind's slot: its job, running or ended, or null. */
+export type JobSlots = Record<JobKind, JobSlot | null>
 
 /* What gpunit's records say may be billing: a pod with no session running, and
    the window volume — `open` until its end, `band` past it or unanswered. */

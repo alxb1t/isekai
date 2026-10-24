@@ -114,27 +114,33 @@ class Seams:
     poll_s: float = POLL_S
 
 
-# gpunit's verb line after `gpunit`, and the log its output is appended to -> exit.
-Gpunit = Callable[[Sequence[str], Path], int]
+# Where each line of gpunit's output goes, without its newline.
+Say = Callable[[str], None]
+
+# gpunit's verb line after `gpunit`, and where its output is said -> exit.
+Gpunit = Callable[[Sequence[str], Say], int]
 
 
-def run_gpunit(argv: Sequence[str], log: Path) -> int:
-    """Run `gpunit <argv>` in the repository on its `.env`, appending to `log`.
+def run_gpunit(argv: Sequence[str], say: Say) -> int:
+    """Run `gpunit <argv>` in the repository on its `.env`, saying each line it writes.
 
     gpunit reads no `.env`, where the key lives, so it is handed one. It runs in
     its own session, so a Ctrl-C at the caller's terminal never cuts a create or
-    a delete halfway.
+    a delete halfway. Its output is handed on line by line, so the caller decides
+    how each line reads in its log.
     """
-    with log.open("a", encoding="utf-8") as appended:
-        done = subprocess.run(
-            [sys.executable, "-m", "gpunit", *argv],
-            cwd=REPOSITORY,
-            env=_dotenv(),
-            stdout=appended,
-            stderr=subprocess.STDOUT,
-            check=False,
-            start_new_session=True,
-        )
+    done = subprocess.run(
+        [sys.executable, "-m", "gpunit", *argv],
+        cwd=REPOSITORY,
+        env=_dotenv(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+        start_new_session=True,
+    )
+    for line in (done.stdout or "").splitlines():
+        say(line)
     return done.returncode
 
 
@@ -149,17 +155,17 @@ class Volume:
     run: Gpunit = run_gpunit
     records: Path = REPOSITORY / ".gpunit"
 
-    def up(self, log: Path) -> int:
+    def up(self, say: Say) -> int:
         """Open the window, or extend a live one, agreeing to its price."""
-        return self.run(["volume", "up", "--yes"], log)
+        return self.run(["volume", "up", "--yes"], say)
 
-    def down(self, log: Path) -> int:
+    def down(self, say: Say) -> int:
         """Close the window."""
-        return self.run(["volume", "down"], log)
+        return self.run(["volume", "down"], say)
 
-    def status(self, log: Path) -> int:
+    def status(self, say: Say) -> int:
         """Ask gpunit what it holds; it sweeps a window past its end."""
-        return self.run(["status", "--json"], log)
+        return self.run(["status", "--json"], say)
 
 
 def _dotenv() -> dict[str, str]:

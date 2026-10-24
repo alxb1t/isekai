@@ -9,6 +9,25 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-10-24 · 0074-two-job-slots
+
+Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.46.0: local 0m40s · CI 7m25s
+
+### Changed
+
+- The app's job runner holds a Prepare and a render side by side, each refused, stopped and waited for in its own
+  slot; stopping the app interrupts both, and each line in a batch's log names its job (0074 D1–D3).
+
+- The event stream's snapshot carries both slots as `jobs`, Stop is `POST /api/jobs/{kind}/stop`, and a running
+  Prepare no longer holds Render back (0074 D4).
+
+- Every screen reads its own slot: a hub's Prepare bar its batch's Prepare, the Render bar and the session page the
+  render; the hub no longer holds Prepare while a render runs, another batch's Prepare disables it with its reason,
+  and the job strip shows each running job (0074 D5).
+
+- The design spec's rule 6 and §8, the READMEs and `docs/data-flow.md` state two job slots; the session outcome's
+  comment names its lifetime lock, and the `render.py` row names every importer (0074 D6).
+
 ## [0.46.0] - 2026-10-24 · 0073-sessions
 
 Gate: local 0m40s · CI 7m25s (build-image at 801ffec) · 0.45.0: local 0m39s · CI 7m25s

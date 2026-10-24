@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { checkBilling as askBilling, runningSessions, stopJob } from '../api'
-import type { Billing, FileState, HubInfo, JobSlot, RunningSession } from '../types'
+import type { Billing, FileState, HubInfo, JobKind, JobSlot, JobSlots, RunningSession } from '../types'
 import { noun } from '../words'
 
 /* Whether a pod may be billing or the window is past its end. */
@@ -27,19 +27,20 @@ const KINDS = ['snapshot', 'job', 'billing', 'cell', 'file'] as const
 type Kind = (typeof KINDS)[number]
 type Handler = (data: unknown) => void
 
-/* What every connect sends first: the slot, billing, and the hub and files it names. */
+/* What every connect sends first: both slots, billing, and the hub and files it names. */
 export interface Snapshot {
-  job: JobSlot | null
+  jobs: JobSlots
   billing: Billing
   hub?: HubInfo
   files?: Record<string, FileState>
 }
 
-/* The job slot, billing and the open import's files, live, for every screen,
+/* Both job slots, billing and the open import's files, live, for every screen,
    from the page's one stream. Every connect brings a snapshot, so opening it
    again for another batch or import loses nothing. */
 export const useLiveStore = defineStore('live', () => {
-  const job = ref<JobSlot | null>(null)
+  /* Each kind's job, running or ended; a job event replaces its own kind's alone. */
+  const jobs = ref<JobSlots>({ prepare: null, render: null })
   const billing = ref<Billing | null>(null)
   /* The first snapshot has arrived: until it does, nothing is known. */
   const loaded = ref(false)
@@ -52,8 +53,8 @@ export const useLiveStore = defineStore('live', () => {
   /* Why the last read of them failed; while set, their last answer may be stale. */
   const sessionsRefusal = ref<string | null>(null)
   const slotRender = computed(() => {
-    const held = job.value
-    return held?.kind === 'render' && held.state === 'running' && held.session ? held : null
+    const held = jobs.value.render
+    return held?.state === 'running' && held.session ? held : null
   })
   const activeRender = computed<RunningSession | null>(() => {
     const held = slotRender.value
@@ -128,21 +129,26 @@ export const useLiveStore = defineStore('live', () => {
   /* This store's own handlers, registered first, so every other one reads what they keep. */
   listen('snapshot', (data) => {
     const found = data as Snapshot
-    job.value = found.job
+    jobs.value = found.jobs
     billing.value = found.billing
     files.value = found.files ?? {}
     loaded.value = true
   })
-  listen('job', (data) => (job.value = data as JobSlot))
+  listen('job', (data) => hold(data as JobSlot))
   listen('billing', (data) => (billing.value = data as Billing))
   listen('file', (data) => {
     const { upload, ...state } = data as FileState & { upload: string }
     files.value = { ...files.value, [upload]: state }
   })
 
-  /* Stop the running job; a refusal is thrown for the screen to show. */
-  async function stop(): Promise<void> {
-    await stopJob()
+  /* Put `slot` in its kind's slot, leaving the other kind's as it is. */
+  function hold(slot: JobSlot): void {
+    jobs.value = { ...jobs.value, [slot.kind]: slot }
+  }
+
+  /* Stop `kind`'s running job; a refusal is thrown for the screen to show. */
+  async function stop(kind: JobKind): Promise<void> {
+    await stopJob(kind)
   }
 
   /* Ask gpunit again what may be billing; a refusal is thrown for the screen to show. */
@@ -167,7 +173,7 @@ export const useLiveStore = defineStore('live', () => {
   }
 
   return {
-    job,
+    jobs,
     billing,
     loaded,
     now,
@@ -179,6 +185,7 @@ export const useLiveStore = defineStore('live', () => {
     renderConfirmed,
     follow,
     listen,
+    hold,
     stop,
     checkBilling,
     prepareTotals,

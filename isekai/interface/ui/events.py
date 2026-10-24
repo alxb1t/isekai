@@ -5,7 +5,7 @@ A job publishes; each connection holds its own queue, so a slow page delays no
 other. No web framework, so the stream is tested with no server involved.
 
 ```
-connect ─▶ snapshot {job, billing, hub?, files?} ─▶ job · cell · file · billing ─▶ …
+connect ─▶ snapshot {jobs, billing, hub?, files?} ─▶ job · cell · file · billing ─▶ …
 ```
 """
 

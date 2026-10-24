@@ -14,7 +14,7 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from isekai.boundary.gpu import Seams, Volume  # noqa: E402
+from isekai.boundary.gpu import Say, Seams, Volume  # noqa: E402
 from isekai.interface.ui import HOST, events  # noqa: E402
 from isekai.interface.ui.app import create_app  # noqa: E402
 from isekai.interface.ui.billing import Billing, read  # noqa: E402
@@ -27,7 +27,7 @@ NOW = "2026-10-21T12:00:00Z"
 def _volume(records: Path, asked: list[str]) -> Volume:
     """Return a gpunit double over `records`: it records each verb, changes nothing."""
 
-    def run(argv: Sequence[str], log: Path) -> int:
+    def run(argv: Sequence[str], say: Say) -> int:
         asked.append(" ".join(argv))
         return 0
 

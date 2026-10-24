@@ -13,6 +13,7 @@ import type {
   FieldCandidates,
   HubInfo,
   InputDetail,
+  JobKind,
   JobSlot,
   LibraryInfo,
   Quote,
@@ -99,8 +100,8 @@ export function prepare(batch: string): Promise<{ job: JobSlot }> {
   return send(`/api/b/${encodeURIComponent(batch)}/prepare`, 'POST', {})
 }
 
-export function stopJob(): Promise<{ job: JobSlot | null }> {
-  return send('/api/job/stop', 'POST', {})
+export function stopJob(kind: JobKind): Promise<{ job: JobSlot }> {
+  return send(`/api/jobs/${kind}/stop`, 'POST', {})
 }
 
 /* How many images a batch lacks, why Render is disabled or null, and why a count

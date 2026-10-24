@@ -27,7 +27,7 @@ and `python -m isekai`'s import graph never reaches it at all.
 ```
 GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
-POST /api/b/{batch}/prepare   ·   POST /api/job/stop
+POST /api/b/{batch}/prepare   ·   POST /api/jobs/{prepare,render}/stop
 GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s, images}
 GET  /api/sessions/running   ·   GET /api/b/{batch}/sessions{/id,}
 POST /api/billing/check
@@ -103,7 +103,7 @@ from isekai.foundation.run import (
 from isekai.interface import render
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
-from isekai.interface.ui.jobs import Jobs, plan
+from isekai.interface.ui.jobs import KINDS, Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
 from isekai.pipeline.generate import image_of
@@ -232,7 +232,7 @@ def create_app(
         err=wired.err,
     )
     billing = Billing(
-        wired.volume, root / GPUNIT_LOG, broadcast, lambda: jobs.running() == "render"
+        wired.volume, root / GPUNIT_LOG, broadcast, lambda: jobs.running("render")
     )
 
     @asynccontextmanager
@@ -421,10 +421,12 @@ def create_app(
         cell = cell_event(found, grid, loaded)
         return {"job": jobs.prepare(batch, found, steps, cell)}
 
-    @app.post("/api/job/stop")
-    def post_stop() -> dict[str, Any]:
-        """Interrupt the running stage; no later stage starts."""
-        return {"job": jobs.stop()}
+    @app.post("/api/jobs/{kind}/stop")
+    def post_stop(kind: str) -> dict[str, Any]:
+        """Interrupt `kind`'s running stage; no later one starts, the other runs on."""
+        if kind not in KINDS:
+            raise Refusal(f"there is no {kind} job: stop `prepare` or `render`")
+        return {"job": jobs.stop(kind)}
 
     @cache
     def offered(flow: str) -> Flow:
@@ -440,11 +442,9 @@ def create_app(
         return found, made, _quote(found, made, disabled, wired.flows_dir)
 
     def _held() -> str | None:
-        """Return what holds Render back whatever the batch: a job, a pod, no key."""
-        running = jobs.running()
-        if running is not None:
-            kind = "A render session" if running == "render" else "Prepare"
-            return f"{kind} is running."
+        """Return what holds Render back whatever the batch: a render, a pod, no key."""
+        if jobs.running("render"):
+            return "A render session is running."
         if billing.state()["pod"]:
             return "A pod may still be billing."
         if not keyed(wired.session):
@@ -521,9 +521,9 @@ def create_app(
         return {"job": job}
 
     def rendering_slot() -> dict[str, Any] | None:
-        """Return the job slot while it runs a render, or None."""
-        slot = jobs.slot()
-        if slot and slot["state"] == "running" and slot["kind"] == "render":
+        """Return the render slot while it runs, or None."""
+        slot = jobs.slot("render")
+        if slot and slot["state"] == "running":
             return slot
         return None
 
@@ -557,7 +557,7 @@ def create_app(
     def read_events(
         batch: str | None = None, staging: str | None = None
     ) -> StreamingResponse:
-        """Stream the job slot, `batch`'s hub and `staging`'s files, then each change.
+        """Stream both job slots, `batch`'s hub and `staging`'s files, then each change.
 
         A reload or a second tab gets the whole truth at once. A batch or an import
         it cannot read is left out of the snapshot, never refused.
@@ -570,7 +570,10 @@ def create_app(
             held = None
 
         def snapshot() -> dict[str, Any]:
-            found = {"job": jobs.slot(), "billing": billing.state()}
+            found = {
+                "jobs": {kind: jobs.slot(kind) for kind in KINDS},
+                "billing": billing.state(),
+            }
             if batch is not None:
                 # A batch it cannot read is left out: the screen's own read of it
                 # shows the refusal, and the page keeps its stream.

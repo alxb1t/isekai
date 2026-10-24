@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import { bar, dismiss, failed, reasons } from './bars'
+import { bar, dismiss, failed, held, reasons } from './bars'
 import { spec } from './test/spec'
 import type { JobSlot } from './types'
 
@@ -55,4 +55,12 @@ spec('ui:events:a-hub-opened-after-a-failure-shows-it', () => {
   expect(failed(slot({ progress: { started: '10:05', of: 2, done: 0 } }), 'b')).toBe(
     'refused: see log.txt',
   )
+})
+
+spec('ui:prepare:another-batchs-prepare-is-disabled', () => {
+  const running = slot({ state: 'running', message: null })
+  expect(held(running, 'other')).toBe('Prepare is running on b')
+  expect(held(running, 'b')).toBeNull()
+  expect(held(slot({}), 'other')).toBeNull()
+  expect(held(null, 'other')).toBeNull()
 })

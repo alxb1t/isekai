@@ -81,17 +81,17 @@ spec('ui:sessions:an-observed-list-follows-its-render', async () => {
     },
     message: null, flow: null, stage: null,
   })
-  live.job = slot(0)
+  live.hold(slot(0))
   await nextTick()
   let lists = requests.filter((one) => one.url.endsWith('/sessions'))
   expect(lists).toHaveLength(2)
   // Image and volume changes during one read coalesce into one following read.
-  live.job = slot(1, 'done')
+  live.hold(slot(1, 'done'))
   await nextTick()
-  live.job = {
+  live.hold({
     ...slot(1, 'done'),
     session: { ...slot(1, 'done').session, steps: { pod: 'ready' } },
-  }
+  })
   await nextTick()
   expect(requests.filter((one) => one.url.endsWith('/sessions'))).toHaveLength(2)
   lists[1].answer({ sessions: [{ id: 's', outcome: 'running', images: [] }] })

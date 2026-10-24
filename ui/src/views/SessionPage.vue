@@ -11,7 +11,7 @@ import { useBatchStore } from '../stores/batch'
 import { alerting, clock, useLiveStore } from '../stores/live'
 
 /* One render session (design spec J4·2, J4·3), from the record its verb writes.
-   While the job slot runs it, the slot adds the volume steps and Stop, and the
+   While the render slot runs it, the slot adds the volume steps and Stop, and the
    page is drawn from the slot until the verb has written the record. A finished
    image and each of the batch's photographs open in the viewer. No spend is
    shown after the quote. */
@@ -19,16 +19,15 @@ const props = defineProps<{ batch: string; id: string }>()
 const store = useBatchStore()
 const live = useLiveStore()
 const { session: record, hub } = storeToRefs(store)
-const { job, billing, now } = storeToRefs(live)
+const { jobs, billing, now } = storeToRefs(live)
 const refusal = ref<string | null>(null)
 const stopRefusal = ref<string | null>(null)
 
-/* The job slot's session, while it is this one. */
-const slot = computed(() =>
-  job.value?.kind === 'render' && job.value.batch === props.batch && job.value.session?.id === props.id
-    ? job.value
-    : null,
-)
+/* The render slot's session, while it is this one. */
+const slot = computed(() => {
+  const held = jobs.value.render
+  return held?.batch === props.batch && held.session?.id === props.id ? held : null
+})
 const running = computed(() => record.value?.outcome === 'running' || slot.value?.state === 'running')
 const alert = computed(() => alerting(billing.value))
 
@@ -103,7 +102,7 @@ const viewed = computed<Shown[]>(() =>
 
 async function stop(): Promise<void> {
   try {
-    await live.stop()
+    await live.stop('render')
   } catch (reason) {
     stopRefusal.value = (reason as Error).message
   }

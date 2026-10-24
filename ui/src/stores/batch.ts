@@ -11,6 +11,7 @@ import type {
   CellEvent,
   HubCell,
   HubInfo,
+  JobSlot,
   RenderOffer,
   RendersInfo,
   SessionRecord,
@@ -30,7 +31,7 @@ export function at(name: string, flow: string): string {
    (design spec §1 rule 8). */
 export const useBatchStore = defineStore('batch', () => {
   const live = useLiveStore()
-  const { job, billing, renderRunning, activeRender, activeSessions } = storeToRefs(live)
+  const { jobs, billing, renderRunning, activeRender, activeSessions } = storeToRefs(live)
   const name = ref<string | null>(null)
   const hub = ref<HubInfo | null>(null)
   /* The stage running in a cell, by `source|flow`, from the job's reports. */
@@ -51,6 +52,10 @@ export const useBatchStore = defineStore('batch', () => {
   const dialog = ref(false)
   /* A render session running for this batch, not another's. */
   const rendering = computed(() => renderRunning.value && activeRender.value?.batch === name.value)
+  /* A Prepare running for this batch, not another's. */
+  const preparing = computed(
+    () => jobs.value.prepare?.state === 'running' && jobs.value.prepare.batch === name.value,
+  )
   /* The newest offer request; an answer to an older one is dropped. */
   let asked = 0
 
@@ -165,21 +170,35 @@ export const useBatchStore = defineStore('batch', () => {
     else if (event.state === 'done') delete refusals.value[here]
   })
 
-  /* A job that starts or ends, or a pod alert raised or cleared, changes the
-     offer; a job that ends changes the cells and the images too. */
-  watch(job, (slot, before) => {
+  /* Whether a slot's job started or ended, while a batch is open; null otherwise. */
+  function moved(slot: JobSlot | null, before: JobSlot | null): 'started' | 'ended' | null {
     const was = before?.state === 'running'
-    if (was === (slot?.state === 'running') || name.value === null) return
-    void check()
-    if (!was) return
-    running.value = {}
+    if (was === (slot?.state === 'running') || name.value === null) return null
+    return was ? 'ended' : 'started'
+  }
+  /* A job that ends changes the cells and the images. */
+  function ended(): void {
     void reloadHub().catch(() => undefined)
     if (renders.value) void reloadRenders().catch(() => undefined)
+  }
+  /* A Prepare's end changes the offer and clears the cells its reports marked running. */
+  watch(() => jobs.value.prepare, (slot, before) => {
+    if (moved(slot, before) !== 'ended') return
+    running.value = {}
+    void check()
+    ended()
+  })
+  /* A render that starts or ends changes the offer: it holds Render back. */
+  watch(() => jobs.value.render, (slot, before) => {
+    const move = moved(slot, before)
+    if (move === null) return
+    void check()
+    if (move === 'ended') ended()
   })
   /* Every render change, including volume opening, refreshes an observed list.
      Reads in flight coalesce; the selected record drops out-of-order answers. */
-  watch(job, (slot) => {
-    if (slot?.kind !== 'render' || slot.batch !== name.value) return
+  watch(() => jobs.value.render, (slot) => {
+    if (slot?.batch !== name.value) return
     if (observed) void reloadSessions().catch(() => undefined)
     if (shown !== null && slot.session?.id === shown)
       void readShown(shown).catch(() => undefined)
@@ -214,6 +233,7 @@ export const useBatchStore = defineStore('batch', () => {
     offer,
     dialog,
     rendering,
+    preparing,
     open,
     reloadHub,
     reloadRenders,
