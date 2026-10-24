@@ -7,8 +7,8 @@ import { plain } from '../stores/keys'
 /* Images in a native dialog, fitted to the window. A click on the image toggles
    1:1 pixels, scrolled inside the dialog; `←` `→` step through the images, and
    Esc or a click outside closes. With `pair`, every image stands side by side at
-   one height, fit only. The dialog keeps the URL of the page beneath (design spec
-   §1 rule 8). */
+   one height, fit only. The list may grow while open, as a live session's does.
+   The dialog keeps the URL of the page beneath (design spec §1 rule 8). */
 export interface Shown {
   src: string
   name: string
@@ -22,8 +22,8 @@ const emit = defineEmits<{ close: [] }>()
 
 const dialog = ref<HTMLDialogElement | null>(null)
 const image = ref<HTMLImageElement | null>(null)
-const last = props.images.length - 1
-const at = ref(clamp(props.start ?? 0, last))
+const last = () => props.images.length - 1
+const at = ref(clamp(props.start ?? 0, last()))
 const shown = computed(() => props.images[at.value])
 const actual = ref(false)
 /* The fitted image's scale, measured once it has loaded, on every resize while
@@ -43,7 +43,7 @@ function toggle(): void {
 
 /* Each step opens its image fitted. */
 function step(direction: -1 | 1): void {
-  at.value = clamp(at.value + direction, last)
+  at.value = clamp(at.value + direction, last())
 }
 
 watch(at, () => {

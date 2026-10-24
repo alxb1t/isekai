@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { thumbAt } from '../api'
+import { imageAt, sourceAt, sourceThumbAt, thumbAt } from '../api'
+import ImageViewer, { type Shown } from '../components/ImageViewer.vue'
 import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
@@ -10,12 +11,13 @@ import { alerting, clock, useLiveStore } from '../stores/live'
 
 /* One render session (design spec J4·2, J4·3), from the record its verb writes.
    While the job slot runs it, the slot adds the volume steps and Stop, and the
-   page is drawn from the slot until the verb has written the record. No spend is
+   page is drawn from the slot until the verb has written the record. A finished
+   image and each of the batch's photographs open in the viewer. No spend is
    shown after the quote. */
 const props = defineProps<{ batch: string; id: string }>()
 const store = useBatchStore()
 const live = useLiveStore()
-const { session: record } = storeToRefs(store)
+const { session: record, hub } = storeToRefs(store)
 const { job, billing, now } = storeToRefs(live)
 const refusal = ref<string | null>(null)
 const stopRefusal = ref<string | null>(null)
@@ -85,6 +87,23 @@ function thumb(index: number): string | null {
   return image ? thumbAt({ batch: props.batch, ...image }) : null
 }
 
+/* What the viewer steps through: the finished images, or the batch's photographs. */
+const viewing = ref<{ images: 'rendered' | 'sources'; start: number } | null>(null)
+const sources = computed(() => hub.value?.sources ?? [])
+const viewed = computed<Shown[]>(() =>
+  viewing.value?.images === 'sources'
+    ? sources.value.map((one) => ({
+        src: sourceAt(props.batch, one.name),
+        name: one.name,
+        width: one.width,
+        height: one.height,
+      }))
+    : images.value.map((one) => ({
+        src: imageAt({ batch: props.batch, ...one }),
+        name: `${one.flow} · v${one.version} · seed ${one.seed}`,
+      })),
+)
+
 async function stop(): Promise<void> {
   try {
     await live.stop()
@@ -133,8 +152,31 @@ onMounted(async () => {
         class="session__tile"
         :class="{ 'session__tile--done': index <= done }"
       >
-        <img v-if="thumb(index - 1)" :src="thumb(index - 1) ?? ''" alt="" />
+        <button
+          v-if="thumb(index - 1)"
+          class="session__open"
+          type="button"
+          :aria-label="`view image ${index}`"
+          data-session-image
+          @click="viewing = { images: 'rendered', start: index - 1 }"
+        >
+          <img :src="thumb(index - 1) ?? ''" alt="" />
+        </button>
       </span>
+    </div>
+    <span v-if="sources.length" class="section-label">Photographs</span>
+    <div v-if="sources.length" class="session__images">
+      <button
+        v-for="(one, index) in sources"
+        :key="one.name"
+        class="session__photo"
+        type="button"
+        :aria-label="`view ${one.name}`"
+        data-session-source
+        @click="viewing = { images: 'sources', start: index }"
+      >
+        <img :src="sourceThumbAt(batch, one.name)" alt="" loading="lazy" />
+      </button>
     </div>
     <p v-if="failure" class="session__refusal"><span class="refusal__mark" />{{ failure }}</p>
     <p v-if="stopRefusal" class="session__refusal">
@@ -153,6 +195,12 @@ onMounted(async () => {
         >
       </template>
     </footer>
+    <ImageViewer
+      v-if="viewing && viewed.length"
+      :images="viewed"
+      :start="viewing.start"
+      @close="viewing = null"
+    />
     <KeyBar />
   </section>
 </template>

@@ -8,7 +8,7 @@ test carries `@pytest.mark.spec` with the key its task names.
 - [x] 1 — The record
 - [x] 2 — The routes
 - [x] 3 — The screens
-- [ ] 4 — The viewer
+- [x] 4 — The viewer
 - [ ] 5 — The prose
 
 ## 1 — The record
@@ -53,9 +53,9 @@ test carries `@pytest.mark.spec` with the key its task names.
 
 ## 4 — The viewer
 
-- [ ] 4.1 **HALT CHECK** — session tiles are their own size.
+- [x] 4.1 **HALT CHECK** — session tiles are their own size.
   Verify: `grep -c 'width: 60px' ui/src/app.css` prints a number of at least `1`.
-- [ ] 4.2 Open a session's images and the batch's sources in `ui/src/components/ImageViewer.vue` from `SessionPage.vue`,
+- [x] 4.2 Open a session's images and the batch's sources in `ui/src/components/ImageViewer.vue` from `SessionPage.vue`,
   tiles at the Renders size in `ui/src/app.css`; read `last` on each step, per [D6](design.md#d6).
   Verify: `grep -c 'const last = props.images.length - 1' ui/src/components/ImageViewer.vue` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
 
