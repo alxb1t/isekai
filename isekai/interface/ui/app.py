@@ -533,9 +533,9 @@ def create_app(
         found = []
         for child in library.listed(root):
             if library.is_batch(child):
-                for record in library.sessions(child):
-                    if record["outcome"] == "running":
-                        found.append({"batch": child.name, **record})
+                found += [
+                    {"batch": child.name, **one} for one in library.running(child)
+                ]
         return {"sessions": found}
 
     @app.get("/api/b/{batch}/sessions")

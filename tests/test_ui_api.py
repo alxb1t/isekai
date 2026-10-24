@@ -1944,6 +1944,11 @@ def test_a_terminal_session_is_live_without_a_job_slot(
     monkeypatch.setattr(Jobs, "slot", lambda self: None)
     name = "20261024T091200Z"
     record = Record(made.path.parent.parent / "sessions", name, 1200, {FLOW: 1})
+    # A damaged record in another batch is that batch's refusal, not this read's.
+    other = made.path.parent.parent.parent / "another"
+    (other / "sources").mkdir(parents=True)
+    (other / "sessions").mkdir()
+    (other / "sessions" / "20261024T080000Z.json").write_text("{")
     record.open()
     try:
         response = client.get(f"/api/b/{BATCH}/sessions/{name}")

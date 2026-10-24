@@ -8,9 +8,11 @@ import { billingState, useLiveStore } from '../stores/live'
    bill with no batch. Each way ends in Check again, which asks gpunit; an alert
    clears only on its word. */
 const live = useLiveStore()
-const { billing, renderRunning } = storeToRefs(live)
+const { billing, renderRunning, renderConfirmed, sessionsRefusal } = storeToRefs(live)
 const refusal = ref<string | null>(null)
-const state = computed(() => billingState(billing.value, renderRunning.value))
+const state = computed(() =>
+  billingState(billing.value, renderRunning.value, renderConfirmed.value),
+)
 
 async function check(): Promise<void> {
   refusal.value = null
@@ -26,6 +28,9 @@ async function check(): Promise<void> {
   <section class="session" data-billing>
     <span class="section-label">Billing</span>
     <p v-if="refusal" class="session__refusal"><span class="refusal__mark" />{{ refusal }}</p>
+    <p v-if="!renderConfirmed" class="session__refusal">
+      <span class="refusal__mark" />Running renders are unconfirmed: {{ sessionsRefusal }}
+    </p>
     <div v-if="state === 'alert'" class="session__alert">
       <p v-if="billing?.pod">
         <span class="refusal__mark" />A pod may still be billing.

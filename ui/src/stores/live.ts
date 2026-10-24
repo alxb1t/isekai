@@ -49,13 +49,21 @@ export const useLiveStore = defineStore('live', () => {
   const files = ref<Record<string, FileState>>({})
   /* Disk liveness also sees renders started outside this surface. */
   const activeSessions = ref<RunningSession[]>([])
-  const activeRender = computed<RunningSession | null>(() => {
+  /* Why the last read of them failed; while set, their last answer may be stale. */
+  const sessionsRefusal = ref<string | null>(null)
+  const slotRender = computed(() => {
     const held = job.value
-    if (held?.kind === 'render' && held.state === 'running' && held.session)
+    return held?.kind === 'render' && held.state === 'running' && held.session ? held : null
+  })
+  const activeRender = computed<RunningSession | null>(() => {
+    const held = slotRender.value
+    if (held?.session)
       return { batch: held.batch, id: held.session.id, started: held.session.started }
     return activeSessions.value[0] ?? null
   })
   const renderRunning = computed(() => activeRender.value !== null)
+  /* Whether what `renderRunning` says is current: the slot's, or a read that answered. */
+  const renderConfirmed = computed(() => slotRender.value !== null || sessionsRefusal.value === null)
   const target: Target = { batch: null, staging: null }
   const handlers = new Map<Kind, Set<Handler>>()
   let stream: EventSource | null = null
@@ -66,8 +74,11 @@ export const useLiveStore = defineStore('live', () => {
     readingSessions = true
     try {
       activeSessions.value = (await runningSessions()).sessions
-    } catch {
-      // A failed local read supplies no evidence that a running render ended.
+      sessionsRefusal.value = null
+    } catch (reason) {
+      // A failed read is no evidence a render ended, so the last answer stays,
+      // named as unconfirmed rather than shown as fact.
+      sessionsRefusal.value = (reason as Error).message
     } finally {
       readingSessions = false
     }
@@ -164,6 +175,8 @@ export const useLiveStore = defineStore('live', () => {
     renderRunning,
     activeRender,
     activeSessions,
+    sessionsRefusal,
+    renderConfirmed,
     follow,
     listen,
     stop,
@@ -173,10 +186,12 @@ export const useLiveStore = defineStore('live', () => {
   }
 })
 
-/** The billing page's state, from what is known and whether a render runs. */
-export function billingState(found: Billing | null, running: boolean): string {
+/** The billing page's state, from what is known and whether a render runs.
+    A running render that is not `confirmed` never hides an alert. */
+export function billingState(found: Billing | null, running: boolean, confirmed = true): string {
   if (!found) return 'pending'
-  if (running) return 'running'
+  if (running && confirmed) return 'running'
   if (alerting(found)) return 'alert'
+  if (running) return 'running'
   return found.volume ? 'open' : 'quiet'
 }

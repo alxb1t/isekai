@@ -300,6 +300,22 @@ def sessions(folder: Path) -> list[dict[str, Any]]:
     return found
 
 
+def running(folder: Path) -> list[dict[str, Any]]:
+    """Return batch `folder`'s records a render process holds, newest first.
+
+    Liveness is read from each lock before any record is parsed, so a damaged
+    record that no render holds refuses only its own batch's list. A held record
+    that does not read is left to that list, which names its remedy.
+    """
+    found = []
+    for path in (folder / SESSIONS).glob("*.json"):
+        if record_running(path):
+            with contextlib.suppress(Refusal):
+                found.append(_session(path))
+    found.sort(key=lambda one: one["started"], reverse=True)
+    return [one for one in found if one["outcome"] == "running"]
+
+
 def session(folder: Path, name: str) -> dict[str, Any]:
     """Return the session record `name` names, refusing an id no record holds."""
     path = folder / SESSIONS / f"{name}.json"

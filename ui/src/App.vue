@@ -17,7 +17,7 @@ import { alerting, clock, useLiveStore } from './stores/live'
 const route = useRoute()
 const router = useRouter()
 const live = useLiveStore()
-const { job, billing, now, activeRender } = storeToRefs(live)
+const { job, billing, now, activeRender, renderConfirmed, sessionsRefusal } = storeToRefs(live)
 const { prepareTotals, renderTotals } = live
 
 const alert = computed(() => alerting(billing.value))
@@ -145,6 +145,14 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
         class="appbar__render mono"
         data-rendering
         >● render {{ rendered.clock }}</RouterLink
+      >
+      <!-- A failed read of the disk's running renders leaves its last answer unconfirmed. -->
+      <span
+        v-if="!renderConfirmed"
+        class="appbar__render mono"
+        :title="sessionsRefusal ?? ''"
+        data-sessions-unconfirmed
+        >running renders unconfirmed</span
       >
     </header>
     <!-- The BillingBanner: only when something may be billing; esc never closes it. -->

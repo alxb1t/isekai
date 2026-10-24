@@ -16,6 +16,7 @@ the pod is asked for, the session's record is kept at `<runs>/../sessions/<id>.j
 import argparse
 import contextlib
 import dataclasses
+import errno
 import fcntl
 import io
 import json
@@ -191,11 +192,19 @@ def _utc(moment: datetime) -> str:
     return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# What a filesystem without hard links or advisory locks answers `link` or `flock`.
+UNSUPPORTED = frozenset(
+    {errno.ENOTSUP, errno.EOPNOTSUPP, errno.EPERM, errno.ENOLCK, errno.ENOSYS}
+)
+
+
 def record_running(path: Path) -> bool:
     """Return whether a render process holds this record's lifetime lock.
 
     The lock file stays in place across releases, so opening it always tests the
-    same inode; the kernel releases its lock even when the render is killed.
+    same inode; the kernel releases its lock even when the render is killed. A
+    filesystem without locks holds no running render, since `Record.open`
+    refuses to start one there.
     """
     try:
         held = path.with_suffix(".lock").open("r")
@@ -206,6 +215,9 @@ def record_running(path: Path) -> bool:
             fcntl.flock(held, fcntl.LOCK_SH | fcntl.LOCK_NB)
         except BlockingIOError:
             return True
+        except OSError as failure:
+            if failure.errno not in UNSUPPORTED:
+                raise
     return False
 
 
@@ -256,6 +268,15 @@ class Record:
             raise Refusal(
                 f"session {name} already exists; choose another --session id "
                 "or wait until the next second and render again"
+            ) from None
+        except OSError as failure:
+            self.close()
+            if failure.errno not in UNSUPPORTED:
+                raise
+            raise Refusal(
+                f"{self._folder} cannot hold a session record: its filesystem has "
+                f"no hard links or file locks ({failure.strerror}); keep the batch "
+                "on a disk that has both, such as the default .data/, and render again"
             ) from None
         except BaseException:
             self.close()

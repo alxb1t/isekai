@@ -904,6 +904,42 @@ def test_a_session_refused_before_renting_writes_no_record(tmp_path: Path) -> No
     assert not (runs.parent / SESSIONS).exists()
 
 
+@pytest.mark.spec("cli:render-session:a-refusal-before-renting-writes-none")
+def test_a_folder_without_links_or_locks_refuses_before_renting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import errno
+    import fcntl
+
+    from isekai.foundation import atomic_write
+
+    runs = batch(tmp_path)
+    folder = runs.parent / SESSIONS
+
+    def unsupported(*args: object) -> None:
+        raise OSError(errno.ENOTSUP, "Operation not supported")
+
+    def lockless(*args: object) -> None:
+        raise OSError(errno.ENOLCK, "No locks available")
+
+    for target, name, fault in (
+        (atomic_write.os, "link", unsupported),
+        (fcntl, "flock", lockless),
+    ):
+        with monkeypatch.context() as patched:
+            patched.setattr(target, name, fault)
+            wiring, opener = wired(runs), FakeOpen()
+            assert session(runs, f"{FLOW}=1", opener=opener, wiring=wiring) == 1
+            assert opener.opened == 0
+            assert isinstance(wiring.err, io.StringIO)
+            assert f"refused: {folder}" in wiring.err.getvalue()
+            assert list(folder.glob("*.json")) == []
+            assert list(folder.glob("*.partial")) == []
+            # The reader on such a folder reads no render running, and never crashes.
+            (folder / "20261024T091200Z.lock").touch()
+            assert not render.record_running(folder / "20261024T091200Z.json")
+
+
 TIMING = render.Timing(
     boot_s=600, per_image_s=60, teardown_s=120, limit_factor=1.5, volume_rate=0.005
 )
