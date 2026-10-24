@@ -14,6 +14,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - Home's batch row reads as one header line — name, sources, flow chips and last activity — with its thumbnails
   below at the full width (0075 D1).
 
+- The hub's source cell is its grid's first column: `h` reaches it and `↵` opens the batch's photographs in the
+  viewer (0075 D3).
+
+- A rendered hub cell shows every image it holds, each marked with its version; a click or `↵` opens the viewer on
+  the newest, whose `↵` opens its large view. Each version's outputs are listed once (0075 D5).
+
 ## [0.47.0] - 2026-10-24 · 0074-two-job-slots
 
 Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.46.0: local 0m40s · CI 7m25s

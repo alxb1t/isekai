@@ -5,8 +5,8 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar as barOf, dismiss, failed, held } from '../bars'
 import { action, clicks, targets } from '../cells'
-import { assign, prepare, sourceAt, sourceThumbAt } from '../api'
-import ImageViewer from '../components/ImageViewer.vue'
+import { assign, imageAt, prepare, sourceAt, sourceThumbAt, thumbAt } from '../api'
+import ImageViewer, { type Shown } from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
 import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
@@ -29,8 +29,10 @@ const refusal = ref<string | null>(null)
 const grid = ref<HTMLElement | null>(null)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
-/* The source open in the viewer, or null. */
-const viewing = ref<HubSource | null>(null)
+/* What the viewer shows, from where, and what its ↵ opens; or null. */
+const viewing = ref<{ images: Shown[]; start: number; open?: (index: number) => void } | null>(
+  null,
+)
 /* The batch's hub, its running cells and refusals, and its Render offer, shared
    with every screen of the batch and kept live from the page's one stream. */
 const store = useBatchStore()
@@ -110,7 +112,15 @@ function key(source: HubSource, flow: string): string {
 
 function cell(source: HubSource, flow: string): HubCell {
   return (
-    source.cells[flow] ?? { stage: null, renders: 0, refusal: null, status: null, newest: null }
+    source.cells[flow] ?? {
+      stage: null,
+      renders: 0,
+      refusal: null,
+      status: null,
+      newest: null,
+      short: null,
+      images: [],
+    }
   )
 }
 
@@ -158,28 +168,54 @@ function review(source: HubSource, flow: string): void {
     })
 }
 
-/* The large view of a cell's newest image; Esc there comes back here. */
-function view(source: HubSource, flow: string): void {
-  const newest = cell(source, flow).newest
-  if (source.digest === null || newest === null) return
-  void router.push({
-    name: 'render',
-    params: {
-      batch: props.batch,
-      digest: source.digest,
-      flow,
-      version: `v${newest.version}`,
-      seed: newest.seed,
-    },
-    state: { from: 'hub' },
-  })
+/* The batch's photographs in the viewer, from the row's. */
+function viewSource(row: number): void {
+  viewing.value = {
+    images: sources.value.map((one) => ({
+      src: sourceAt(props.batch, one.name),
+      name: one.name,
+      width: one.width,
+      height: one.height,
+    })),
+    start: row,
+  }
 }
 
-/* A click or ↵ on a cell: whatever its stage offers. A click ticks its own cell
-   alone; ↵, as space, the selected rows. */
+/* A cell's images in the viewer, from `index` or its newest; ↵ there opens the
+   shown image's large view, and Esc there comes back here. */
+function view(source: HubSource, flow: string, index?: number): void {
+  const { digest } = source
+  const images = cell(source, flow).images
+  if (digest === null || images.length === 0) return
+  const place = (one: { version: number; seed: string }) => ({
+    batch: props.batch,
+    digest,
+    flow,
+    ...one,
+  })
+  viewing.value = {
+    images: images.map((one) => ({
+      src: imageAt(place(one)),
+      name: `${source.name} · ${flow} · v${one.version} · seed ${one.seed}`,
+    })),
+    start: index ?? images.length - 1,
+    open: (at) => {
+      const one = images[at]
+      void router.push({
+        name: 'render',
+        params: { ...place(one), version: `v${one.version}` },
+        state: { from: 'hub' },
+      })
+    },
+  }
+}
+
+/* A click or ↵ on a cell: whatever its stage offers; the source column's opens
+   its photograph. A click ticks its own cell alone; ↵, as space, the selected rows. */
 function act(row: number, column: number, pointer = false): void {
   const source = sources.value[row]
-  const flow = flows.value[column]
+  if (source && column === 0) return viewSource(row)
+  const flow = flows.value[column - 1]
   if (!source || !flow) return
   const kind = action(cell(source, flow)).action
   if (kind === 'tick') toggle(row, column, pointer)
@@ -206,9 +242,9 @@ async function tick(targets: HubSource[], flow: string, remove: boolean): Promis
 
 /* Space on a cell: tick it, or untick it while it is only assigned. With rows
    selected, the focused column is ticked for every one of them; a pointer's
-   click ticks its own cell alone. */
+   click ticks its own cell alone. The source column ticks nothing. */
 function toggle(row: number, column: number, pointer = false): void {
-  const flow = flows.value[column]
+  const flow = flows.value[column - 1]
   if (!flow) return
   const rows = targets(selected.value, row, pointer)
     .map((index) => sources.value[index])
@@ -219,7 +255,7 @@ function toggle(row: number, column: number, pointer = false): void {
 }
 
 /* A pointer's click on a cell; one on its refusal, or ending a text selection,
-   leaves it as it is. */
+   leaves it as it is. Column 0 is the source's; the flows' start at 1. */
 function clicked(event: MouseEvent, row: number, column: number): void {
   place(row, column)
   if (clicks(event.target as Element | null, window.getSelection()?.toString() ?? ''))
@@ -257,11 +293,10 @@ function discard(): void {
 
 function place(row: number, column: number): void {
   const rows = sources.value.length
-  const columns = flows.value.length
-  if (rows === 0 || columns === 0) return
+  if (rows === 0) return
   focus.value = {
     row: Math.min(Math.max(row, 0), rows - 1),
-    column: Math.min(Math.max(column, 0), columns - 1),
+    column: Math.min(Math.max(column, 0), flows.value.length),
   }
   void nextTick(() =>
     grid.value
@@ -286,6 +321,7 @@ const moveBy = (rows: number, columns: number) => () =>
 /* ↵ and Space are the grid's unless a button or a link holds the focus, which
    answers them itself. */
 const onGrid = () => !isControl(document.activeElement)
+const onSource = () => focus.value.column === 0
 
 /* h j k l or the arrows move between cells, ⇧J ⇧K or ⇧↓ ⇧↑ select rows, and
    esc clears the selection (D25). */
@@ -315,6 +351,13 @@ useKeys('screen', [
     label: 'tick / untick',
     run: () => toggle(focus.value.row, focus.value.column),
     when: onGrid,
+  },
+  {
+    id: 'photo',
+    keys: plain('Enter'),
+    label: 'view photo',
+    run: () => viewSource(focus.value.row),
+    when: () => onGrid() && onSource(),
   },
   {
     id: 'act',
@@ -359,14 +402,9 @@ onMounted(async () => {
     <ImportSheet v-if="adding" :batch="batch" @close="adding = false" @imported="added" />
     <ImageViewer
       v-if="viewing"
-      :images="[
-        {
-          src: sourceAt(batch, viewing.name),
-          name: viewing.name,
-          width: viewing.width,
-          height: viewing.height,
-        },
-      ]"
+      :images="viewing.images"
+      :start="viewing.start"
+      :open="viewing.open"
       @close="viewing = null"
     />
     <RenderDialog v-if="dialog" :batch="batch" @close="store.closeDialog" />
@@ -391,17 +429,27 @@ onMounted(async () => {
         class="hub__label hub__column mono"
         type="button"
         :disabled="selected.size === 0"
-        @click="toggle(focus.row, column)"
+        @click="toggle(focus.row, column + 1)"
       >
         {{ flow }}
       </button>
       <template v-for="(source, row) in sources" :key="source.name">
-        <div class="hub__source" :class="{ 'hub__source--selected': selected.has(row) }">
+        <div
+          class="hub__source"
+          :class="{
+            'hub__source--selected': selected.has(row),
+            'hub__cell--focused': focus.row === row && focus.column === 0,
+          }"
+          :data-row="row"
+          data-column="0"
+          tabindex="-1"
+          @click="place(row, 0)"
+        >
           <button
             class="hub__thumb"
             type="button"
             :aria-label="`view ${source.name}`"
-            @click="viewing = source"
+            @click="viewSource(row)"
           >
             <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
           </button>
@@ -420,20 +468,23 @@ onMounted(async () => {
               {{ source.name }}<template v-if="source.width"> · {{ source.width }}×{{ source.height }}</template>
             </span>
             <span v-if="source.carries.length" class="hub__warn mono">⚠ not cleaned</span>
+            <span v-if="focus.row === row && focus.column === 0" class="hub__action mono"
+              >↵ view photo</span
+            >
           </span>
         </div>
         <div
           v-for="(flow, column) in flows"
           :key="flow"
           class="hub__cell"
-          :class="{ 'hub__cell--focused': focus.row === row && focus.column === column }"
+          :class="{ 'hub__cell--focused': focus.row === row && focus.column === column + 1 }"
           :data-row="row"
-          :data-column="column"
+          :data-column="column + 1"
           :data-source="source.name"
           :data-flow="flow"
           :data-stage="cell(source, flow).stage ?? 'none'"
           tabindex="-1"
-          @click="clicked($event, row, column)"
+          @click="clicked($event, row, column + 1)"
         >
           <input
             class="hub__tick"
@@ -442,7 +493,7 @@ onMounted(async () => {
             :checked="cell(source, flow).stage !== null"
             :disabled="locked(cell(source, flow))"
             :aria-label="`${source.name} × ${flow}`"
-            @click.prevent.stop="place(row, column), toggle(row, column, true)"
+            @click.prevent.stop="place(row, column + 1), toggle(row, column + 1, true)"
           />
           <template v-if="cell(source, flow).stage !== null">
             <span class="hub__track">
@@ -459,15 +510,33 @@ onMounted(async () => {
               >{{ word(source, flow) }}</span
             >
             <span
-              v-if="focus.row === row && focus.column === column && locked(cell(source, flow))"
+              v-if="focus.row === row && focus.column === column + 1 && locked(cell(source, flow))"
               class="hub__reason"
               >prepared · the tick stays</span
             >
             <span
-              v-if="focus.row === row && focus.column === column && hint(source, flow)"
+              v-if="focus.row === row && focus.column === column + 1 && hint(source, flow)"
               class="hub__action mono"
               >{{ hint(source, flow) }}</span
             >
+            <span v-if="source.digest && cell(source, flow).images.length" class="hub__images">
+              <button
+                v-for="(one, index) in cell(source, flow).images"
+                :key="`${one.version}/${one.seed}`"
+                class="renders__image"
+                type="button"
+                :data-version="one.version"
+                :data-seed="one.seed"
+                @click.stop="place(row, column + 1), view(source, flow, index)"
+              >
+                <img
+                  :src="thumbAt({ batch, digest: source.digest, flow, ...one })"
+                  :alt="`${source.name} ${flow} v${one.version} seed ${one.seed}`"
+                  loading="lazy"
+                />
+                <span class="renders__badge mono">v{{ one.version }}</span>
+              </button>
+            </span>
             <p v-if="cell(source, flow).refusal" class="hub__refusal">
               <span class="refusal__mark" />{{ cell(source, flow).refusal }}
             </p>

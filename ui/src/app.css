@@ -1693,6 +1693,14 @@ button.session__tile {
   color: var(--ink-2);
 }
 
+/* A cell's images under its stage track, at a Renders tile's size. */
+.hub__images {
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+  gap: 6px;
+}
+
 .hub__refusal {
   display: flex;
   gap: 8px;

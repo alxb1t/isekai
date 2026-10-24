@@ -15,7 +15,9 @@ function source(name: string, status: InputStatus, short: number | null = null) 
     digest: name,
     width: 1,
     height: 1,
-    cells: { f: { stage: null, renders: 0, refusal: null, status, newest: null, short } },
+    cells: {
+      f: { stage: null, renders: 0, refusal: null, status, newest: null, short, images: [] },
+    },
     carries: [],
   }
 }

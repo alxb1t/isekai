@@ -175,7 +175,8 @@ class Cell:
     the stage cannot be read. `status` is where stage ③ stands, `review.state`'s
     answer, wherever the cell has a sheet. `newest` is the last-written image of
     the newest version holding any, or None. `short` is `lacking`'s answer for the
-    newest approval; None while unapproved.
+    newest approval; None while unapproved. `images` is every approved version's
+    images, oldest version first and each version's in the order written.
     """
 
     stage: str | None
@@ -184,6 +185,7 @@ class Cell:
     status: Status | None = None
     newest: Rendered | None = None
     short: int | None = None
+    images: tuple[Rendered, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -585,20 +587,23 @@ def stage(run: Run, loaded: Flow, *, newest: bool = True) -> Cell:
     try:
         if approved:
             _check(latest_artifact(review, APPROVED), APPROVED_FILE)
-            group = group_of(run, flow, approved[-1])
-            named: Rendered | None = None
             if newest:
-                written = _written(group, suffix)
-                renders = len(written)
-                named = _newest_image(run, flow, approved, suffix, written)
+                images = _images(run, flow, approved, suffix)
+                renders = sum(one.version == approved[-1] for one in images)
+                named = images[-1] if images else None
+                short = lacking(run, loaded)
             else:
+                group = group_of(run, flow, approved[-1])
                 renders = len(rendered_seeds(group, suffix))
-            short = lacking(run, loaded) if newest else None
-            if renders:
-                return Cell(
-                    "rendered", renders, status=status, newest=named, short=short
-                )
-            return Cell("approved", status=status, newest=named, short=short)
+                images, named, short = (), None, None
+            return Cell(
+                "rendered" if renders else "approved",
+                renders,
+                status=status,
+                newest=named,
+                short=short,
+                images=images,
+            )
         if (draft := current_draft(review)) is not None:
             _check(draft, DRAFT_FILE)
             return Cell("draft", status=status)
@@ -627,27 +632,23 @@ def lacking(run: Run | None, loaded: Flow) -> int:
         return 0
 
 
-def _newest_image(
-    run: Run,
-    flow: str,
-    approved: Sequence[int],
-    suffix: str,
-    top: Mapping[int, float],
-) -> Rendered | None:
-    """Return the last-written image of the newest version holding any, or None.
+def _images(
+    run: Run, flow: str, approved: Sequence[int], suffix: str
+) -> tuple[Rendered, ...]:
+    """Return the images of every version in `approved`, each group listed once.
 
-    `top` is the newest version's own, already listed, so no group is listed twice.
-    e.g. v2 rendered nothing, v1 holds 7 then 9 -> Rendered(1, 9)
+    Oldest version first, each version's by the time written, then by seed, so
+    the last is the last-written image of the newest version holding any.
+    e.g. v1 holds 9 then 2, v2 holds 4 -> Rendered (1, 9), (1, 2), (2, 4)
     """
-    for version in reversed(approved):
-        written = (
-            top
-            if version == approved[-1]
-            else _written(group_of(run, flow, version), suffix)
+    images: list[Rendered] = []
+    for version in approved:
+        written = _written(group_of(run, flow, version), suffix)
+        images += (
+            Rendered(version, seed)
+            for seed in sorted(written, key=lambda seed: (written[seed], seed))
         )
-        if written:
-            return Rendered(version, max(written, key=written.__getitem__))
-    return None
+    return tuple(images)
 
 
 def _written(group: Path, suffix: str) -> dict[int, float]:

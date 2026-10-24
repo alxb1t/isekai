@@ -1324,13 +1324,15 @@ def _hub(grid: library.Hub) -> dict[str, Any]:
 
 
 def _cell_out(cell: library.Cell) -> dict[str, Any]:
-    """Describe a hub cell, its newest image's seed a decimal string."""
-    newest = cell.newest
+    """Describe a hub cell, each of its images' seeds a decimal string."""
+
+    def image(one: library.Rendered) -> dict[str, Any]:
+        return {"version": one.version, "seed": str(one.seed)}
+
     return {
         **asdict(cell),
-        "newest": None
-        if newest is None
-        else {"version": newest.version, "seed": str(newest.seed)},
+        "newest": None if cell.newest is None else image(cell.newest),
+        "images": [image(one) for one in cell.images],
     }
 
 

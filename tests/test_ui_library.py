@@ -197,7 +197,14 @@ def test_a_cells_stage_is_the_furthest_its_run_directory_holds(
     for seed in (7, 8):
         (rendered / f"{seed}{suffix}").write_bytes(b"png")
     newest = Rendered(1, 8)
-    done = Cell("rendered", 2, status="approved", newest=newest, short=0)
+    done = Cell(
+        "rendered",
+        2,
+        status="approved",
+        newest=newest,
+        short=0,
+        images=(Rendered(1, 7), newest),
+    )
     assert now() == done
 
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
@@ -247,6 +254,39 @@ def test_an_approved_cell_names_the_last_image_of_its_newest_rendered_version(
     assert library.stage(run, loaded, newest=False) == Cell(
         "approved", status="approved"
     )
+
+
+@pytest.mark.spec("ui:hub:a-cell-lists-its-images")
+def test_a_cell_lists_its_images_oldest_to_newest_from_one_listing(
+    tmp_path: Path, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    folder = _batch(tmp_path, "b", "ada.jpg")
+    run = _run(folder, "ada.jpg")
+    loaded = load_flow(SUMMON)
+    suffix = loaded.output_suffix
+    _approved(run, vocabulary)
+    review(run, SUMMON, new_version=True)
+    approve(run, SUMMON, loaded.schema, vocabulary)
+    # Within a version, the order is the order the images were written.
+    for version, seed, at in (("002", 4, 3_000), ("001", 9, 1_000), ("001", 2, 2_000)):
+        group = run.directory(SUMMON, OUTPUTS, version)
+        group.mkdir(parents=True, exist_ok=True)
+        image = group / f"{seed}{suffix}"
+        image.write_bytes(b"png")
+        os.utime(image, (at, at))
+    listed: list[Path] = []
+    written = library._written
+    monkeypatch.setattr(
+        library,
+        "_written",
+        lambda group, suffix: listed.append(group) or written(group, suffix),
+    )
+
+    cell = library.stage(run, loaded)
+
+    assert cell.images == (Rendered(1, 9), Rendered(1, 2), Rendered(2, 4))
+    assert (cell.renders, cell.newest) == (1, Rendered(2, 4))
+    assert sorted(group.name for group in listed) == ["001", "002"]
 
 
 @pytest.mark.spec("ui:review:a-cell-counts-what-it-lacks")

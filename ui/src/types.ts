@@ -63,6 +63,8 @@ export interface HubCell {
   newest: { version: number; seed: string } | null
   /* How many images the newest approval lacks, as the render stage counts; null while unapproved. */
   short: number | null
+  /* Every approved version's images, oldest to newest; each seed a decimal string. */
+  images: { version: number; seed: string }[]
 }
 
 export interface HubSource {

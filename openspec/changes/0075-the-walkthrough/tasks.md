@@ -6,7 +6,7 @@ Home, the hub, the kept focus, the large view, then Review, per [design](design.
 ## Progress
 
 - [x] 1 — Home's row
-- [ ] 2 — The hub
+- [x] 2 — The hub
 - [ ] 3 — The kept focus
 - [ ] 4 — The large view
 - [ ] 5 — Review's rail
@@ -20,15 +20,15 @@ Home, the hub, the kept focus, the large view, then Review, per [design](design.
 
 ## 2 — The hub
 
-- [ ] 2.1 **HALT CHECK** — the hub's columns are the flows alone.
+- [x] 2.1 **HALT CHECK** — the hub's columns are the flows alone.
   Verify: `grep -c 'columns - 1' ui/src/views/Hub.vue` prints `1`.
-- [ ] 2.2 Add `images` to `Cell` in `isekai/interface/ui/library.py` from one listing per group per [D5](design.md#d5),
+- [x] 2.2 Add `images` to `Cell` in `isekai/interface/ui/library.py` from one listing per group per [D5](design.md#d5),
   with `ui/src/types.ts`; bind `ui:hub:a-cell-lists-its-images` in `tests/test_ui_library.py`.
   Verify: `uv run pytest -q tests/test_ui_library.py` exits 0, and `grep -c 'ui:hub:a-cell-lists-its-images' tests/test_ui_library.py` prints `1`.
-- [ ] 2.3 Add the source column, the cell's strip and the viewer from a cell to `ui/src/views/Hub.vue`, and `open` to
+- [x] 2.3 Add the source column, the cell's strip and the viewer from a cell to `ui/src/views/Hub.vue`, and `open` to
   `ui/src/components/ImageViewer.vue`, per [D3](design.md#d3) and [D5](design.md#d5).
   Verify: `grep -c 'columns - 1' ui/src/views/Hub.vue` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.4 Extend `test_a_rendered_cell_opens_its_newest_image` in `tests/e2e/test_render.py` through the viewer to the
+- [x] 2.4 Extend `test_a_rendered_cell_opens_its_newest_image` in `tests/e2e/test_render.py` through the viewer to the
   large view; add `test_the_source_cell_opens_its_photograph`, bound to its key.
   Verify: `grep -c 'the-source-cell-opens-its-photograph' tests/e2e/test_render.py` prints `1`, and `uv run pytest -q tests/e2e/test_render.py` exits 0.
 

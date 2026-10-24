@@ -120,15 +120,41 @@ def test_a_damaged_versions_images_are_drawn_and_hold_the_focus(
 def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> None:
     page.goto(served.hub_of(SHOWN))
     rendered = page.locator(f'.hub__cell[data-flow="{FLOW}"][data-stage="rendered"]')
+    expect(
+        rendered.locator("[data-version='1'][data-seed='7'] img")
+    ).to_have_js_property("complete", True)
 
     rendered.click()
 
+    viewer = page.locator("dialog[data-viewer]")
+    expect(viewer.locator("img")).to_have_attribute("src", re.compile(r"/v1/7/image$"))
+    expect(page).to_have_url(served.hub_of(SHOWN))
+    page.keyboard.press("Enter")
     expect(page).to_have_url(
         f"{served.url}/b/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
     )
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
     page.keyboard.press("Escape")
     expect(page).to_have_url(served.hub_of(SHOWN))
+
+
+@pytest.mark.spec("ui:hub:the-source-cell-opens-its-photograph")
+def test_the_source_cell_opens_its_photograph(page: Page, served: Served) -> None:
+    page.goto(served.hub_of(SHOWN))
+    first = page.locator('.hub__cell[data-row="0"][data-column="1"]')
+    expect(first).to_be_visible()
+    page.keyboard.press("l")
+    expect(first).to_be_focused()
+
+    page.keyboard.press("h")
+    expect(page.locator('.hub__source[data-row="0"]')).to_be_focused()
+    page.keyboard.press("Enter")
+
+    viewer = page.locator("dialog[data-viewer]")
+    expect(viewer.locator("img")).to_have_attribute(
+        "src", f"/api/b/{SHOWN}/sources/hal.jpg"
+    )
+    expect(viewer.locator("img")).to_have_js_property("complete", True)
 
 
 @pytest.mark.spec("ui:revise:revise-opens-review-on-the-revision")
