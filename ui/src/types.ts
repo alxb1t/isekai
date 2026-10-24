@@ -214,7 +214,7 @@ export interface SessionImage {
 }
 
 /* A render session's record, `<batch>/sessions/<id>.json`, as the server reads
-   it: `outcome` is null for a record still reading running that no job runs. */
+   it: `outcome` is null for a record still reading running whose render process no longer holds its lifetime lock. */
 export interface SessionRecord {
   id: string
   started: string
@@ -227,6 +227,13 @@ export interface SessionRecord {
   images: SessionImage[]
   outcome: 'running' | 'done' | 'stopped' | 'failed' | null
   message: string | null
+}
+
+/* A running render discovered from disk, wherever it was started. */
+export interface RunningSession {
+  batch: string
+  id: string
+  started: string
 }
 
 /* The one job slot: Prepare running, or the last one's end. */

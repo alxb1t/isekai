@@ -17,7 +17,7 @@ import { alerting, clock, useLiveStore } from './stores/live'
 const route = useRoute()
 const router = useRouter()
 const live = useLiveStore()
-const { job, billing, now, renderRunning } = storeToRefs(live)
+const { job, billing, now, activeRender } = storeToRefs(live)
 const { prepareTotals, renderTotals } = live
 
 const alert = computed(() => alerting(billing.value))
@@ -65,10 +65,10 @@ function open(name: string): void {
 
 /* The running render's session, wherever the screen is, and its clock. */
 const rendered = computed(() => {
-  const held = job.value
-  if (!renderRunning.value || !held?.session) return null
-  const elapsed = lasted(held.session.started, null, true, now.value) ?? 0
-  return { batch: held.batch, id: held.session.id, clock: clock(elapsed) }
+  const held = activeRender.value
+  if (!held) return null
+  const elapsed = lasted(held.started, null, true, now.value) ?? 0
+  return { batch: held.batch, id: held.id, clock: clock(elapsed) }
 })
 /* ⇧S: the running session, else the open batch's sessions. */
 function sessions(): void {

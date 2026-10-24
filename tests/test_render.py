@@ -442,9 +442,23 @@ def test_the_session_is_opened_on_the_repositorys_gpunit_toml_alone(
     calls = Calls()
     environ = {"ISEKAI_IMAGE": "ghcr.io/a/b:latest", "GPUNIT_IMAGE": "x"}
 
-    assert session(runs, f"{FLOW}=1", generate=calls, opener=gpu.open_session) == 0
+    assert (
+        session(
+            runs,
+            f"{FLOW}=1",
+            generate=calls,
+            opener=gpu.open_session,
+            given="20261024T091200Z",
+        )
+        == 0
+    )
     status = session(
-        runs, f"{FLOW}=1", generate=calls, opener=gpu.open_session, environ=environ
+        runs,
+        f"{FLOW}=1",
+        generate=calls,
+        opener=gpu.open_session,
+        environ=environ,
+        given="20261024T091201Z",
     )
 
     assert status == 0
@@ -674,11 +688,19 @@ def test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down(
         return Raising()
 
     # gpunit reads no .env, and the key lives only there: each remedy loads it.
-    assert session(runs, f"{FLOW}=1", opener=raising(gpunit.Lost())) == 3
+    assert (
+        session(
+            runs, f"{FLOW}=1", opener=raising(gpunit.Lost()), given="20261024T091200Z"
+        )
+        == 3
+    )
     assert "`uv run --env-file .env gpunit status` shows" in log(runs)
     assert "`uv run --env-file .env gpunit down` deletes it" in log(runs)
     failed = gpunit.TeardownFailed("the teardown failed")
-    assert session(runs, f"{FLOW}=1", opener=raising(failed)) == 1
+    assert (
+        session(runs, f"{FLOW}=1", opener=raising(failed), given="20261024T091201Z")
+        == 1
+    )
     assert "run `uv run --env-file .env gpunit down`" in log(runs)
 
 
@@ -979,3 +1001,65 @@ def test_the_env_file_is_read_as_key_value_lines(tmp_path: Path) -> None:
         "BARE": "v",
     }
     assert gpu.read_env(tmp_path / "absent") == {}
+
+
+@pytest.mark.spec("cli:render-session:an-owned-id-is-refused")
+def test_an_owned_session_id_refuses_before_renting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runs = batch(tmp_path)
+    given = "20261024T091200Z"
+    assert session(runs, f"{FLOW}=1", given=given) == 0
+    path = runs.parent / SESSIONS / f"{given}.json"
+    previous = path.read_bytes()
+    for chosen in (given, None):
+        monkeypatch.setattr(render, "session_id", lambda moment: given)
+        opener = FakeOpen()
+        assert session(runs, f"{FLOW}=1", given=chosen, opener=opener) == 1
+        assert opener.opened == 0
+        assert path.read_bytes() == previous
+
+
+@pytest.mark.spec("cli:render-session:concurrent-starts-reserve-one-record")
+def test_concurrent_starts_reserve_one_whole_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    from isekai.foundation.refusal import Refusal
+
+    barrier = threading.Barrier(2)
+
+    def start() -> bool:
+        record = render.Record(tmp_path, "20261024T091200Z", 1200, {FLOW: 1})
+        barrier.wait(timeout=5)
+        try:
+            record.open()
+        except Refusal:
+            return False
+        return True
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        outcomes = list(workers.map(lambda _: start(), range(2)))
+    assert sorted(outcomes) == [False, True]
+    record = json.loads((tmp_path / "20261024T091200Z.json").read_text())
+    assert record["outcome"] == "running"
+    assert record["asked"] == {FLOW: 1}
+
+    # Even a writer outside the lifetime-lock protocol cannot be replaced in the
+    # gap before publication. The complete record that won stays byte-for-byte.
+    from isekai.foundation import atomic_write
+
+    original = atomic_write.os.link
+    occupied = tmp_path / "20261024T091201Z.json"
+    previous = (tmp_path / "20261024T091200Z.json").read_bytes()
+
+    def raced(source: str, destination: Path) -> None:
+        destination.write_bytes(previous)
+        original(source, destination)
+
+    monkeypatch.setattr(atomic_write.os, "link", raced)
+    with pytest.raises(Refusal, match="already exists"):
+        render.Record(tmp_path, "20261024T091201Z", 1200, {FLOW: 2}).open()
+    assert occupied.read_bytes() == previous
+    assert list(tmp_path.glob("*.partial")) == []

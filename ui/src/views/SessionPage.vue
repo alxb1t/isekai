@@ -25,9 +25,11 @@ const stopRefusal = ref<string | null>(null)
 
 /* The job slot's session, while it is this one. */
 const slot = computed(() =>
-  job.value?.kind === 'render' && job.value.session?.id === props.id ? job.value : null,
+  job.value?.kind === 'render' && job.value.batch === props.batch && job.value.session?.id === props.id
+    ? job.value
+    : null,
 )
-const running = computed(() => slot.value?.state === 'running')
+const running = computed(() => record.value?.outcome === 'running' || slot.value?.state === 'running')
 const alert = computed(() => alerting(billing.value))
 
 const started = computed(() => record.value?.started ?? slot.value?.session?.started ?? null)
@@ -174,10 +176,10 @@ onMounted(async () => {
       <span class="refusal__mark" />{{ stopRefusal }}
     </p>
     <footer class="session__actions">
-      <button v-if="running" class="btn btn-secondary" type="button" @click="stop">
+      <button v-if="slot?.state === 'running'" class="btn btn-secondary" type="button" @click="stop">
         Stop session now
       </button>
-      <template v-else>
+      <template v-if="!running">
         <span v-if="quiet" class="session__quiet" data-quiet>Nothing is billing.</span>
         <span v-if="ended" class="mono" data-outcome>{{ ended }}</span>
         <span class="mono">{{ done }} of {{ of }} rendered</span>

@@ -16,6 +16,7 @@ the pod is asked for, the session's record is kept at `<runs>/../sessions/<id>.j
 import argparse
 import contextlib
 import dataclasses
+import fcntl
 import io
 import json
 import math
@@ -39,6 +40,7 @@ from isekai.foundation.artifacts import (
     SESSION_FILE,
     SESSIONS,
     SessionRecord,
+    create,
     replace,
     session_id,
 )
@@ -189,6 +191,24 @@ def _utc(moment: datetime) -> str:
     return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def record_running(path: Path) -> bool:
+    """Return whether a render process holds this record's lifetime lock.
+
+    The lock file stays in place across releases, so opening it always tests the
+    same inode; the kernel releases its lock even when the render is killed.
+    """
+    try:
+        held = path.with_suffix(".lock").open("r")
+    except FileNotFoundError:
+        return False
+    with held:
+        try:
+            fcntl.flock(held, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+    return False
+
+
 class Record:
     """A session's record in `folder`, written whole at each change once opened.
 
@@ -204,6 +224,7 @@ class Record:
         self._given = given
         # Where the record is, once open: the one sign it is written.
         self._path: Path | None = None
+        self._held: TextIO | None = None
         self._body: SessionRecord = {
             "schema": SESSION_FILE.schema,
             "id": "",
@@ -224,8 +245,28 @@ class Record:
         started = datetime.now(UTC)
         name = self._given or session_id(started)
         self._body["id"], self._body["started"] = name, _utc(started)
-        self._path = self._folder / f"{name}.json"
-        self._write()
+        path = self._folder / f"{name}.json"
+        self._folder.mkdir(parents=True, exist_ok=True)
+        self._held = path.with_suffix(".lock").open("a")
+        try:
+            fcntl.flock(self._held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            create(path, SESSION_FILE, self._body)
+        except (BlockingIOError, FileExistsError):
+            self.close()
+            raise Refusal(
+                f"session {name} already exists; choose another --session id "
+                "or wait until the next second and render again"
+            ) from None
+        except BaseException:
+            self.close()
+            raise
+        self._path = path
+
+    def close(self) -> None:
+        """Release the process's liveness lock without inventing an outcome."""
+        if self._held is not None:
+            self._held.close()
+            self._held = None
 
     def step(self, step: str, state: str) -> None:
         """Record `step` at `state`."""
@@ -706,6 +747,7 @@ def _session(
         return _rendered(lines, limit, wired, generate, seams, steps, record)
     finally:
         watchdog.cancel()
+        record.close()
 
 
 def _requested(

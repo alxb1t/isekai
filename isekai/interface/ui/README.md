@@ -30,7 +30,9 @@ render ─▶ <batch>/sessions/<id>.json ─▶ /b/<batch>/sessions ─▶ /b/<b
   json`, then `volume down` unless the window is kept.
 - **Sessions** are read from the records the render verb writes, `<batch>/sessions/<id>.json`:
   `GET …/sessions` lists them, the running one first, and `GET …/sessions/<id>` serves one. The job slot adds
-  the volume steps and Stop; while it runs a render, every screen shows it. The alert's way out is `/billing`.
+  the volume steps and Stop. `GET /api/sessions/running` reads process-held liveness locks across the library;
+  local polling refreshes observed records and lists every two seconds, so terminal renders show on every screen too.
+  The alert's way out is `/billing`, which distinguishes unknown billing, an open volume and confirmed absence.
 - **Renders** reads each cell's images, versions oldest to newest, with how many its newest approval still lacks,
   the render stage's own count; Render comes from its bar, as on the hub. The large view shows an image
   beside the approval's filled fields. A thumbnail, a render's or a source's, is made once, into the

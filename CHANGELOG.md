@@ -9,6 +9,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- Session ids refuse collisions without losing history; terminal renders stay live across the app, list refreshes
+  preserve progress, the viewer keeps image identity, and Billing distinguishes open and unknown states (0073 D8–D11).
+
 - `isekai render` keeps its session's record beside the batch's log, `sessions/<id>.json`, from the pod's ask to its
   end: its steps, each image as it lands, and how it ended. `--session ID` names it (0073 D1, D2).
 

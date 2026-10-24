@@ -32,6 +32,33 @@ be found again. A running render is the one thing on the surface that bills by t
 - **WHEN** the Sessions tab is opened on a batch holding a finished record
 - **THEN** the session is listed with its images, and its page opens from it
 
+#### Scenario: a terminal render stays live
+- **Key:** `ui:sessions:a-terminal-render-stays-live`
+- **Layers:** unit
+- **WHEN** a terminal render runs without an app job slot
+- **THEN** its record reads running and the global running-session read names its batch and id
+- **AND** after its process releases ownership without an outcome the record reads ended without an outcome
+
+#### Scenario: the selected record keeps the newest response
+- **Key:** `ui:sessions:the-selected-record-keeps-the-newest-response`
+- **Layers:** unit
+- **WHEN** an older record read answers after a newer read of the same session
+- **THEN** the selected record keeps the newer outcome and images
+
+#### Scenario: an observed list follows its render
+- **Key:** `ui:sessions:an-observed-list-follows-its-render`
+- **Layers:** unit
+- **WHEN** a render starts and lands images while its batch's sessions list is observed
+- **THEN** the list reads the running record and its images again
+- **AND** overlapping refreshes coalesce without an older response replacing newer state
+
+#### Scenario: the viewer follows image identity
+- **Key:** `ui:sessions:the-viewer-follows-image-identity`
+- **Layers:** unit
+- **WHEN** an open viewer's list shrinks, reorders, grows or becomes empty
+- **THEN** it keeps the selected image by identity while present, otherwise a valid neighbour
+- **AND** an empty list closes the viewer
+
 ## MODIFIED Requirements
 
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
@@ -184,7 +211,9 @@ The system SHALL show a pod as possibly billing when gpunit holds a pod record o
 runs, SHALL ask gpunit for its status only on start, every half minute while a session runs or an alert is open, and
 on Check again, and SHALL clear an alert only when gpunit confirms the pod or volume gone. It SHALL offer the alert's
 way out on its own page, `/billing`, which the alert band opens. It SHALL show an open volume as a quiet item until
-the end gpunit recorded for its window, and as the alert band after it.
+the end gpunit recorded for its window, and as the alert band after it. The page SHALL show unknown billing while
+its first snapshot is pending and an open volume while one is recorded; it SHALL say nothing is billing only when
+both pod and volume are known absent.
 
 gpunit already records what it created; reading those records adds no state to disagree with them. Idle, the surface
 reaches nothing.
@@ -207,6 +236,13 @@ reaches nothing.
 - **Layers:** unit
 - **WHEN** gpunit's window record ends in the past and the volume is still recorded
 - **THEN** the alert band is shown in place of the quiet item
+
+
+#### Scenario: billing clearance requires known absence
+- **Key:** `ui:billing:clearance-requires-known-absence`
+- **Layers:** unit
+- **WHEN** billing is unknown, a volume is open, or both resources are known absent
+- **THEN** the page respectively shows pending state, the open volume, or nothing billing
 
 
 ### Requirement: Every screen has a URL naming its batch and its run

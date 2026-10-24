@@ -23,6 +23,7 @@ Everything that can be asserted without a server is in `tests/test_ui.py` and
 """
 
 import contextlib
+import fcntl
 import io
 import json
 import queue
@@ -1733,14 +1734,21 @@ def test_a_batch_lists_its_sessions_running_first_then_newest(
     _record(made, "20261024T100000Z", "2026-10-24T10:00:00Z", "stopped")
     monkeypatch.setattr(Jobs, "slot", lambda self: _rendering_slot("20261024T090000Z"))
 
-    listed = client.get(f"/api/b/{BATCH}/sessions").json()["sessions"]
+    lock = made.path.parent.parent / "sessions" / "20261024T090000Z.lock"
+    with lock.open("a") as process:
+        fcntl.flock(process, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        listed = client.get(f"/api/b/{BATCH}/sessions").json()["sessions"]
 
-    assert [(one["id"], one["outcome"]) for one in listed] == [
-        ("20261024T090000Z", "running"),
-        ("20261024T100000Z", "stopped"),
-        ("20261024T080000Z", "done"),
-    ]
-    # With no render in the slot, a record still reading running was ended outright.
+        assert [(one["id"], one["outcome"]) for one in listed] == [
+            ("20261024T090000Z", "running"),
+            ("20261024T100000Z", "stopped"),
+            ("20261024T080000Z", "done"),
+        ]
+    # The render's lifetime lock, rather than the slot, establishes liveness.
+    assert (
+        client.get(f"/api/b/{BATCH}/sessions/20261024T090000Z").json()["outcome"]
+        is None
+    )
     monkeypatch.setattr(Jobs, "slot", lambda self: None)
     listed = client.get(f"/api/b/{BATCH}/sessions").json()["sessions"]
     assert [(one["id"], one["outcome"]) for one in listed] == [
@@ -1925,3 +1933,26 @@ def test_a_staged_files_preview_is_a_downscaled_jpeg_kept_nowhere(
         assert shown.format == "JPEG"
         assert max(shown.size) == THUMB_SIDE
     assert snapshot(tmp_path / "lib") == before
+
+
+@pytest.mark.spec("ui:sessions:a-terminal-render-stays-live")
+def test_a_terminal_session_is_live_without_a_job_slot(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from isekai.interface.render import Record
+
+    monkeypatch.setattr(Jobs, "slot", lambda self: None)
+    name = "20261024T091200Z"
+    record = Record(made.path.parent.parent / "sessions", name, 1200, {FLOW: 1})
+    record.open()
+    try:
+        response = client.get(f"/api/b/{BATCH}/sessions/{name}")
+        assert response.json()["outcome"] == "running"
+        running = client.get("/api/sessions/running").json()["sessions"]
+        assert [(one["batch"], one["id"]) for one in running] == [(BATCH, name)]
+        record.image({"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"})
+        assert len(client.get(f"/api/b/{BATCH}/sessions/{name}").json()["images"]) == 1
+    finally:
+        record.close()
+    assert client.get(f"/api/b/{BATCH}/sessions/{name}").json()["outcome"] is None
+    assert client.get("/api/sessions/running").json()["sessions"] == []

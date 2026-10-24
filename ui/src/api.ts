@@ -24,6 +24,7 @@ import type {
   RevisedDraft,
   RevisedImage,
   SessionRecord,
+  RunningSession,
   TagMatches,
 } from './types'
 
@@ -125,6 +126,11 @@ export function startRender(
     limit_s: limitS,
     images,
   })
+}
+
+/* Live disk records across the library, including renders started in a terminal. */
+export function runningSessions(): Promise<{ sessions: RunningSession[] }> {
+  return get('/api/sessions/running')
 }
 
 /* A batch's render sessions from their records, the running one first, then newest. */

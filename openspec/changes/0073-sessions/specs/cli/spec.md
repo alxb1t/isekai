@@ -7,13 +7,15 @@ log, named by the session's id — the id `--session` gives, else the start in U
 replace the record whole as each image lands and as the session ends. The record SHALL hold the id, the start, the
 end, the limit, what each flow was asked to render, the pod's and the teardown's steps, each image as its run digest,
 flow, version and seed in order, and the outcome — running, done, stopped or failed, with its message — and no price.
-A session refused before anything is rented SHALL write no record.
+A session refused before anything is rented SHALL write no record. An existing id SHALL be refused without
+replacing its record or asking for a pod, including when concurrent starts choose the same id.
 
 The state of a session lives on disk, so a page, a second tab, a restarted surface and a render started in the
 terminal all read the same truth; no price follows the quote.
 
 ```
-start ─▶ sessions/<id>.json {outcome: running, images: []} ─▶ each image: replaced ─▶ end: replaced {outcome}
+free checks ─▶ claim id + lifetime lock ─▶ running record ─▶ images ─▶ ended record ─▶ release lock
+                    └ occupied ─▶ refuse without asking for a pod
 ```
 
 #### Scenario: a session writes its record
@@ -40,3 +42,15 @@ start ─▶ sessions/<id>.json {outcome: running, images: []} ─▶ each image
 - **Layers:** unit
 - **WHEN** a session is refused before it asks for a pod
 - **THEN** no record is written
+
+#### Scenario: an owned id is refused
+- **Key:** `cli:render-session:an-owned-id-is-refused`
+- **Layers:** unit
+- **WHEN** another session chooses an id whose record already exists, explicitly or automatically
+- **THEN** it refuses before asking for a pod and leaves the existing record unchanged
+
+#### Scenario: concurrent starts reserve one record
+- **Key:** `cli:render-session:concurrent-starts-reserve-one-record`
+- **Layers:** unit
+- **WHEN** concurrent starts choose the same unused id
+- **THEN** exactly one owns the complete record and the other refuses

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import KeyBar from '../components/KeyBar.vue'
-import { alerting, useLiveStore } from '../stores/live'
+import { billingState, useLiveStore } from '../stores/live'
 
 /* The billing alert's way out (design spec J8b, J8c), on its own page: a pod may
    bill with no batch. Each way ends in Check again, which asks gpunit; an alert
@@ -10,7 +10,7 @@ import { alerting, useLiveStore } from '../stores/live'
 const live = useLiveStore()
 const { billing, renderRunning } = storeToRefs(live)
 const refusal = ref<string | null>(null)
-const alert = computed(() => alerting(billing.value))
+const state = computed(() => billingState(billing.value, renderRunning.value))
 
 async function check(): Promise<void> {
   refusal.value = null
@@ -26,7 +26,7 @@ async function check(): Promise<void> {
   <section class="session" data-billing>
     <span class="section-label">Billing</span>
     <p v-if="refusal" class="session__refusal"><span class="refusal__mark" />{{ refusal }}</p>
-    <div v-if="alert && !renderRunning" class="session__alert">
+    <div v-if="state === 'alert'" class="session__alert">
       <p v-if="billing?.pod">
         <span class="refusal__mark" />A pod may still be billing.
         <span class="mono">uv run --env-file .env gpunit down</span>, or stop it in RunPod's
@@ -38,8 +38,10 @@ async function check(): Promise<void> {
       </p>
       <button class="btn btn-primary" type="button" @click="check">Check again</button>
     </div>
-    <p v-else-if="renderRunning" class="session__refusal">A render session is running.</p>
-    <p v-else class="session__quiet" data-quiet>Nothing is billing.</p>
+    <p v-else-if="state === 'running'" class="session__refusal">A render session is running.</p>
+    <p v-else-if="state === 'pending'" class="mono">Checking billing…</p>
+    <p v-else-if="state === 'open'" class="mono">The window volume is open and billing.</p>
+    <p v-else-if="state === 'quiet'" class="session__quiet" data-quiet>Nothing is billing.</p>
     <KeyBar />
   </section>
 </template>

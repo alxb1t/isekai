@@ -29,6 +29,7 @@ GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/b/{batch}/prepare   ·   POST /api/job/stop
 GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s, images}
+GET  /api/sessions/running   ·   GET /api/b/{batch}/sessions{/id,}
 POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}, and GET its /thumb
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
@@ -526,20 +527,26 @@ def create_app(
             return slot
         return None
 
-    def live() -> str | None:
-        """Return the id of the render session the slot runs, or None."""
-        slot = rendering_slot()
-        return slot["session"]["id"] if slot else None
+    @app.get("/api/sessions/running")
+    def running_sessions() -> dict[str, Any]:
+        """Read live disk records across batches, including terminal renders."""
+        found = []
+        for child in library.listed(root):
+            if library.is_batch(child):
+                for record in library.sessions(child):
+                    if record["outcome"] == "running":
+                        found.append({"batch": child.name, **record})
+        return {"sessions": found}
 
     @app.get("/api/b/{batch}/sessions")
     def read_sessions(batch: str) -> dict[str, Any]:
         """List the batch's render sessions from their records, the running first."""
-        return {"sessions": library.sessions(folder(batch), live())}
+        return {"sessions": library.sessions(folder(batch))}
 
     @app.get("/api/b/{batch}/sessions/{name}")
     def read_session(batch: str, name: str) -> dict[str, Any]:
         """Return one render session's record; the slot holds its volume steps."""
-        return library.session(folder(batch), name, live())
+        return library.session(folder(batch), name)
 
     @app.post("/api/billing/check")
     def post_check() -> dict[str, Any]:

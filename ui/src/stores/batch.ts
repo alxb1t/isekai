@@ -30,7 +30,7 @@ export function at(name: string, flow: string): string {
    (design spec §1 rule 8). */
 export const useBatchStore = defineStore('batch', () => {
   const live = useLiveStore()
-  const { job, billing, renderRunning } = storeToRefs(live)
+  const { job, billing, renderRunning, activeRender, activeSessions } = storeToRefs(live)
   const name = ref<string | null>(null)
   const hub = ref<HubInfo | null>(null)
   /* The stage running in a cell, by `source|flow`, from the job's reports. */
@@ -42,16 +42,26 @@ export const useBatchStore = defineStore('batch', () => {
   /* The record of the session a page shows, by `shown`, read again as its job reports. */
   const session = ref<SessionRecord | null>(null)
   let shown: string | null = null
+  let recordAsked = 0
+  let epoch = 0
+  let observed = false
+  let listing: Promise<void> | null = null
+  let listAgain = false
   const offer = ref<RenderOffer>({ ...NO_OFFER })
   const dialog = ref(false)
   /* A render session running for this batch, not another's. */
-  const rendering = computed(() => renderRunning.value && job.value?.batch === name.value)
+  const rendering = computed(() => renderRunning.value && activeRender.value?.batch === name.value)
   /* The newest offer request; an answer to an older one is dropped. */
   let asked = 0
 
   /* Hold `batch`, or none off a batch's screens; another batch starts from nothing. */
   function open(batch: string | null): void {
     if (name.value === batch) return
+    epoch += 1
+    recordAsked += 1
+    observed = false
+    listing = null
+    listAgain = false
     name.value = batch
     hub.value = null
     running.value = {}
@@ -78,13 +88,32 @@ export const useBatchStore = defineStore('batch', () => {
   /** Read the renders again; a refusal is thrown to the caller. */
   const reloadRenders = () => reload(readRenders, renders)
   /** Read the sessions again; a refusal is thrown to the caller. */
-  const reloadSessions = () =>
-    reload((batch) => readSessions(batch).then((found) => found.sessions), sessions)
+  function reloadSessions(): Promise<void> {
+    observed = true
+    if (listing) {
+      listAgain = true
+      return listing
+    }
+    const batch = name.value ?? ''
+    const mine = epoch
+    listing = (async () => {
+      do {
+        listAgain = false
+        const found = await readSessions(batch)
+        if (mine !== epoch) return
+        sessions.value = found.sessions
+      } while (listAgain)
+    })().finally(() => {
+      if (mine === epoch) listing = null
+    })
+    return listing
+  }
   /* Read session `id`'s record, kept unless another batch or session is shown by then. */
   async function readShown(id: string): Promise<void> {
+    const mine = ++recordAsked
     const batch = name.value ?? ''
     const found = await readSession(batch, id)
-    if (name.value === batch && shown === id) session.value = found
+    if (mine === recordAsked && name.value === batch && shown === id) session.value = found
   }
   /** Show session `id`, reading its record; a refusal is thrown to the caller. */
   function showSession(id: string): Promise<void> {
@@ -146,19 +175,26 @@ export const useBatchStore = defineStore('batch', () => {
     running.value = {}
     void reloadHub().catch(() => undefined)
     if (renders.value) void reloadRenders().catch(() => undefined)
-    if (sessions.value) void reloadSessions().catch(() => undefined)
   })
-  /* The render job reports each step and image after its record changes, so the
-     session it runs is read again when its pod, teardown, images or state move. */
-  let reported = ''
+  /* Every render change, including volume opening, refreshes an observed list.
+     Reads in flight coalesce; the selected record drops out-of-order answers. */
   watch(job, (slot) => {
-    const id = shown
-    const held = slot?.session
-    if (id === null || slot?.kind !== 'render' || held?.id !== id) return
-    const now = [slot.state, held.steps.pod, held.steps.teardown, held.images.length].join('|')
-    if (now === reported) return
-    reported = now
-    void readShown(id).catch(() => undefined)
+    if (slot?.kind !== 'render' || slot.batch !== name.value) return
+    if (observed) void reloadSessions().catch(() => undefined)
+    if (shown !== null && slot.session?.id === shown)
+      void readShown(shown).catch(() => undefined)
+  })
+  /* Local disk polling discovers terminal renders and brings their records up
+     to date, including one final read after liveness disappears. */
+  watch(activeSessions, () => {
+    if (name.value === null) return
+    if (observed) void reloadSessions().catch(() => undefined)
+    if (
+      shown !== null &&
+      (session.value?.outcome === 'running' ||
+        activeSessions.value.some((one) => one.batch === name.value && one.id === shown))
+    )
+      void readShown(shown).catch(() => undefined)
   })
   watch(
     () => billing.value?.pod,

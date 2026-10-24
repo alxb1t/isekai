@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { checkBilling as askBilling, stopJob } from '../api'
-import type { Billing, FileState, HubInfo, JobSlot } from '../types'
+import { checkBilling as askBilling, runningSessions, stopJob } from '../api'
+import type { Billing, FileState, HubInfo, JobSlot, RunningSession } from '../types'
 import { noun } from '../words'
 
 /* Whether a pod may be billing or the window is past its end. */
@@ -47,14 +47,34 @@ export const useLiveStore = defineStore('live', () => {
   const now = ref(Date.now())
   /* The followed import's files, by upload id. */
   const files = ref<Record<string, FileState>>({})
-  /* A render session holds the slot. */
-  const renderRunning = computed(
-    () => job.value?.kind === 'render' && job.value.state === 'running',
-  )
+  /* Disk liveness also sees renders started outside this surface. */
+  const activeSessions = ref<RunningSession[]>([])
+  const activeRender = computed<RunningSession | null>(() => {
+    const held = job.value
+    if (held?.kind === 'render' && held.state === 'running' && held.session)
+      return { batch: held.batch, id: held.session.id, started: held.session.started }
+    return activeSessions.value[0] ?? null
+  })
+  const renderRunning = computed(() => activeRender.value !== null)
   const target: Target = { batch: null, staging: null }
   const handlers = new Map<Kind, Set<Handler>>()
   let stream: EventSource | null = null
   setInterval(() => (now.value = Date.now()), 1000)
+  let readingSessions = false
+  async function refreshSessions(): Promise<void> {
+    if (readingSessions) return
+    readingSessions = true
+    try {
+      activeSessions.value = (await runningSessions()).sessions
+    } catch {
+      // A failed local read supplies no evidence that a running render ended.
+    } finally {
+      readingSessions = false
+    }
+  }
+  setInterval(() => {
+    if (stream) void refreshSessions()
+  }, 2000)
 
   /* Each event of `kind`, on every stream this page opens; returns the way to stop. */
   function listen(kind: Kind, handler: Handler): () => void {
@@ -77,6 +97,7 @@ export const useLiveStore = defineStore('live', () => {
     target.batch = batch
     target.staging = staging
     open()
+    void refreshSessions()
   }
 
   function open(): void {
@@ -141,6 +162,8 @@ export const useLiveStore = defineStore('live', () => {
     now,
     files,
     renderRunning,
+    activeRender,
+    activeSessions,
     follow,
     listen,
     stop,
@@ -149,3 +172,11 @@ export const useLiveStore = defineStore('live', () => {
     renderTotals,
   }
 })
+
+/** The billing page's state, from what is known and whether a render runs. */
+export function billingState(found: Billing | null, running: boolean): string {
+  if (!found) return 'pending'
+  if (running) return 'running'
+  if (alerting(found)) return 'alert'
+  return found.volume ? 'open' : 'quiet'
+}

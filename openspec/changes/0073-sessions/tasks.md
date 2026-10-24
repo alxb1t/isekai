@@ -10,6 +10,7 @@ test carries `@pytest.mark.spec` with the key its task names.
 - [x] 3 — The screens
 - [x] 4 — The viewer
 - [x] 5 — The prose
+- [x] 6 — Converge: record ownership, live reads and safe browser state
 
 ## 1 — The record
 
@@ -66,3 +67,16 @@ test carries `@pytest.mark.spec` with the key its task names.
 - [x] 5.2 Apply [D7](design.md#d7)'s wording to `README.md`, `isekai/interface/README.md`, `ui/design/spec.md` J3,
   `ui/src/views/Review.vue`'s cancel comment and `cancel`'s docstring in `isekai/pipeline/review.py`.
   Verify: `grep -c 'and return the draft' isekai/pipeline/review.py` prints `0`, `grep -c '…/cancel' isekai/interface/README.md` prints `1`, and `grep -c 'Once something was\|writes it again' README.md` prints `0`.
+
+## 6 — Converge: record ownership, live reads and safe browser state
+
+- [x] 6.1 Reserve the initial record exclusively before the pod ask, retain atomic owner updates and hold a
+  process-lifetime lock, per [D8](design.md#d8) and [D9](design.md#d9); cover explicit and automatic collisions,
+  simultaneous starts, a destination appearing during publication, terminal liveness and abandoned records.
+  Verify: `uv run pytest -q tests/test_render.py tests/test_ui_api.py` and `make gate` exit 0.
+- [x] 6.2 Discover terminal sessions through local disk polling, refresh observed lists with coalescing, guard
+  selected-record responses and retain slot-only controls, per [D10](design.md#d10).
+  Verify: `uv run python -m tools.test_ui` and `make gate` exit 0.
+- [x] 6.3 Reconcile viewer selection by URL through growth, shrink, reorder and empty lists, and distinguish pending,
+  open and clear billing states, per [D6](design.md#d6) and [D11](design.md#d11).
+  Verify: `uv run python -m tools.test_ui` and `make gate` exit 0.

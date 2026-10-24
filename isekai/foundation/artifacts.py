@@ -435,6 +435,11 @@ def write(path: Path, kind: Artifact[T], artifact: T) -> None:
     write_json(path, artifact)
 
 
+def create(path: Path, kind: Artifact[T], body: T) -> None:
+    """Publish one complete file of `kind`, refusing an already occupied path."""
+    write_atomically(path, (json.dumps(body, indent=2) + "\n").encode(), exclusive=True)
+
+
 def replace(path: Path, kind: Artifact[T], body: T) -> None:
     """Write `body` whole over the file of `kind` at `path`, as often as it changes.
 
