@@ -744,10 +744,21 @@ button.session__tile {
   color: var(--ink-2);
 }
 
-.library__sources {
+/* A batch's row: one header line, its thumbnails below at the full width. */
+.library__row--batch {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+}
+
+.library__head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.library__head .library__chips {
+  flex: 1;
 }
 
 .library__thumbs {
@@ -782,6 +793,7 @@ button.session__tile {
 
 .library__when {
   text-align: right;
+  white-space: nowrap;
 }
 
 .library__reason {

@@ -5,7 +5,7 @@ Home, the hub, the kept focus, the large view, then Review, per [design](design.
 
 ## Progress
 
-- [ ] 1 — Home's row
+- [x] 1 — Home's row
 - [ ] 2 — The hub
 - [ ] 3 — The kept focus
 - [ ] 4 — The large view
@@ -13,9 +13,9 @@ Home, the hub, the kept focus, the large view, then Review, per [design](design.
 
 ## 1 — Home's row
 
-- [ ] 1.1 **HALT CHECK** — the count and the thumbnails share one container.
+- [x] 1.1 **HALT CHECK** — the count and the thumbnails share one container.
   Verify: `grep -c 'class="library__sources"' ui/src/views/Home.vue` prints `1`.
-- [ ] 1.2 Lay Home's row out per [D1](design.md#d1) in `ui/src/views/Home.vue` and `ui/src/app.css`.
+- [x] 1.2 Lay Home's row out per [D1](design.md#d1) in `ui/src/views/Home.vue` and `ui/src/app.css`.
   Verify: `grep -c 'class="library__sources"' ui/src/views/Home.vue` prints `0`, and `uv run pytest -q tests/e2e/test_import.py tests/e2e/test_routes.py` exits 0.
 
 ## 2 — The hub
