@@ -97,6 +97,7 @@ from isekai.pipeline.review import (
     review,
     revise,
 )
+from isekai.pipeline.review import cancel as cancel_approval
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
 from isekai.shared.field_map import FieldMap
@@ -229,6 +230,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="FLOW",
         help="copy this flow's latest approval under each --flow instead of a draft",
+    )
+    made["approve"].add_argument(
+        "--cancel",
+        action="store_true",
+        help="turn each flow's newest approval back into its draft instead, "
+        "deleting a copy and refusing one anything was made from",
     )
     # The job runner's channel: a line per item it can parse, the prose kept apart.
     for name in ("caption", "tag", "sheet", "generate"):
@@ -549,6 +556,11 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             return _revise(args.images, wired)
         flows = _flows_for(args, wired)
         if verb == "approve":
+            if args.cancel and args.source is not None:
+                raise Refusal(
+                    "--cancel takes an approval back and --from copies one; drop "
+                    f"`--from {args.source}` or `--cancel` from the command"
+                )
             _refuse_bad_source(args.source, "from", flows, wired)
         if verb == "generate":
             _refuse_bad_source(args.seeds_from, "seeds-from", flows, wired)
@@ -840,6 +852,11 @@ def _per_item(
         elif verb == "approve":
 
             def approve_flow(name: str) -> None:
+                if args.cancel:
+                    left = cancel_approval(run, name)
+                    back = "a copy, deleted" if left is None else f"back to {left.name}"
+                    reporter.say(f"{run.id}: approve cancelled {name}, {back}")
+                    return
                 written, warnings = approve(
                     run,
                     name,

@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
-import { discardDraft, fieldCandidates, imageAt, photoUrl as photoAt } from '../api'
+import {
+  cancelApproval,
+  discardDraft,
+  fieldCandidates,
+  imageAt,
+  photoUrl as photoAt,
+} from '../api'
 import ApproveBar from '../components/ApproveBar.vue'
 import BatchRail from '../components/BatchRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
@@ -34,9 +40,10 @@ const props = defineProps<{ batch: string; digest: string; flow: string }>()
 const router = useRouter()
 const batch = useQueue(props.batch, props.flow, () => props.digest)
 const failure = ref<string | null>(null)
-/* A refusal reading the sheet again after an approval or a discard, or of the
-   discard itself: the bar says what could not be done. */
+/* A refusal reading the sheet again after an approval, a cancel or a discard,
+   or of the cancel or the discard itself: the bar says what could not be done. */
 const refused = ref<string | null>(null)
+const cancelling = ref(false)
 const sheet = useSheet({ batch: props.batch, flow: props.flow })
 const approval = useApproval()
 const current = computed(() => props.digest)
@@ -164,6 +171,7 @@ const kicker = computed(() => {
 /* Read the batch and the open sheet again, staying on it; a refusal shows in
    the approve bar. */
 async function reread(id: string): Promise<void> {
+  refused.value = null
   const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
   focused.value = null
   selectedChip.value = null
@@ -174,6 +182,7 @@ async function reread(id: string): Promise<void> {
    still in flight lands first, so the discard states the draft it moved to
    rather than racing it. */
 async function discard(): Promise<void> {
+  refused.value = null
   if (!(await sheet.flush())) return
   try {
     await discardDraft(
@@ -205,6 +214,24 @@ async function approve(): Promise<void> {
   const place = { batch: props.batch, digest: id, flow: props.flow }
   if (!(await approval.approve(place, sheet.saved.value))) return
   // Approving is an act, not a navigation: the sheet stays, read-only.
+  await reread(id)
+}
+
+/* Take the approval back, as `approve --cancel` does, and stay on the sheet:
+   editable again, or, for a copy over an older approval, on that approval. */
+async function cancelApprove(): Promise<void> {
+  const id = current.value
+  if (!id) return
+  cancelling.value = true
+  try {
+    await cancelApproval({ batch: props.batch, digest: id, flow: props.flow })
+  } catch (reason) {
+    refused.value = (reason as Error).message
+    return
+  } finally {
+    cancelling.value = false
+  }
+  approval.forget()
   await reread(id)
 }
 
@@ -578,11 +605,14 @@ watch(current, (id) => {
             :key="current"
             :approved="sheet.readonly.value"
             :at="approvedAt"
-            :working="approval.working.value"
+            :approval="sheet.detail.value?.approved ?? null"
+            :working="approval.working.value || cancelling"
             :refusal="refusal"
             :discardable="revision !== null"
+            :uncancellable="sheet.detail.value?.cancel ?? null"
             @approve="approve"
             @discard="discard"
+            @cancel="cancelApprove"
           />
         </template>
       </SheetForm>

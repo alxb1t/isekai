@@ -1,4 +1,4 @@
-"""Approving in Review, in a browser: the sheet stays, and a later failure shows."""
+"""Approving in Review, in a browser: it stays, shows a failure, and cancels."""
 
 import pytest
 from playwright.sync_api import Page, Route, expect
@@ -22,6 +22,9 @@ def test_approve_stays_on_the_sheet(page: Page, served: Served) -> None:
     expect(page).to_have_url(served.review(first, "queue-stays"))
     expect(page.locator("input.fragment")).to_have_count(0)
     expect(page.locator(".rail__card--current")).to_contain_text("cid.jpg")
+    expect(page.locator(".approve-bar")).to_contain_text(
+        "approved as 001.approved.json and read-only"
+    )
 
 
 @pytest.mark.spec("ui:review:a-failure-after-approval-is-shown")
@@ -41,3 +44,17 @@ def test_a_failure_reading_the_next_state_shows_in_the_approve_bar(
         "the hub could not be read"
     )
     expect(page).to_have_url(served.review(only, "queue-fails"))
+
+
+@pytest.mark.spec("ui:review:cancel-approve-opens-the-sheet-again")
+def test_cancel_approve_opens_the_sheet_again(page: Page, served: Served) -> None:
+    (only,) = served.queues["queue-cancels"]
+    page.goto(served.review(only, "queue-cancels"))
+    _approve(page)
+    expect(page.locator("input.fragment")).to_have_count(0)
+
+    page.get_by_role("button", name="Cancel approve").click()
+
+    expect(page.locator("input.fragment").first).to_be_visible()
+    expect(page.get_by_role("button", name="Approve sheet")).to_be_enabled()
+    expect(page).to_have_url(served.review(only, "queue-cancels"))

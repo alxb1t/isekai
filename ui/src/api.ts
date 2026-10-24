@@ -173,6 +173,14 @@ export function approve(
   return send(`${at(place)}/approve`, 'POST', { saved })
 }
 
+/* Turns the approval back into its draft, as `approve --cancel` does, or deletes
+   a copy; `back` names what the flow is left on, a draft or the approval beneath
+   a copy, null where nothing is. Anything made from it, or a render running for
+   the batch, refuses. */
+export function cancelApproval(place: Place): Promise<{ back: string | null }> {
+  return send(`${at(place)}/cancel`, 'POST', {})
+}
+
 /* Deletes the waiting draft, as `review --discard` does; an approval refuses.
    `saved` is the draft's precondition, so the page deletes only the draft it
    last read: one another tab moved since answers 409. */

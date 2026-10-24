@@ -9,6 +9,27 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-10-24 · 0072-cancel-approve
+
+Gate: local 0m39s · CI 7m25s (build-image at 801ffec) · 0.44.1: local 0m38s · CI 7m25s
+
+### Added
+
+- The review stage can cancel an approval nothing was made from, writing back its draft; a prompt, a render group,
+  a failure record or a copy in another flow refuses it, naming the way on (0072 D1, D2, D3).
+
+- `isekai approve --cancel` takes each named run's approval back, each run answered on its own; beside
+  `--from` it is refused before any run is read (0072 D4).
+
+- Review's approve bar offers *Cancel approve* on an approved sheet, which opens it again, editable; disabled, it
+  says why — something made from it, or a render running. A refused discard no longer outlives a reload (0072 D5, D6).
+
+- A copy's cancel deletes it, and its source's refusal names that cancel, so the two no longer send the operator to
+  each other; a cancel refused for what derives names a waiting draft rather than its discard (0072 D2, D3).
+
+- A copy cancelled over a flow's own approval leaves that approval standing, and the CLI line and Review's approve
+  bar name it, so a sheet still approved after a cancel says which approval it shows (0072 D3, D5).
+
 ## [0.44.1] - 2026-10-24 · 0071-the-review-patch
 
 Gate: local 0m38s · CI 7m25s (build-image at 801ffec) · 0.44.0: local 0m40s · CI 7m25s

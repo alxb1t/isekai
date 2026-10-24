@@ -6,6 +6,7 @@ this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 
 import io
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,7 @@ from isekai.foundation.run import (
     Run,
     approved_versions,
     open_run,
+    record_failure,
     versions,
 )
 from isekai.interface.cli import build_parser, dispatch
@@ -33,6 +35,8 @@ from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     approve,
+    cancel,
+    cancellable,
     current_draft,
     discard,
     estimate_tokens,
@@ -1353,3 +1357,163 @@ def test_one_refused_image_leaves_every_run_without_a_revision(
     assert status == 1
     assert f"refused: {padded}: is not an image a render wrote" in err
     assert versions(run.directory(FLOW, "review")) == [1]
+
+
+# --- cancel -------------------------------------------------------------------
+
+
+def _approved_with_draft(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> tuple[Path, bytes]:
+    """Approve a draft listing a seed, and return the approval and the draft's bytes."""
+    draft = review(run, FLOW)
+    assert draft is not None
+    _edit(draft, hair_silhouette=["long hair"])
+    save_draft(run, FLOW, read(draft, DRAFT_FILE)["fields"], {"count": 2, "seeds": [7]})
+    held = draft.read_bytes()
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    return approved, held
+
+
+@pytest.mark.spec("review:cancel:a-cancel-restores-the-draft")
+def test_a_cancel_writes_back_the_draft_the_approval_was_made_from(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    approved, held = _approved_with_draft(run, schema, vocabulary)
+    assert cancellable(run, FLOW) is None
+
+    draft = cancel(run, FLOW)
+
+    assert draft == run.directory(FLOW, "review") / "001.draft.json"
+    assert draft.read_bytes() == held
+    assert not approved.exists()
+    assert state(run.directory(FLOW, "review")) == "draft"
+
+
+@pytest.mark.spec("review:cancel:an-older-approval-stays")
+def test_cancelling_a_revision_leaves_the_rendered_approval_it_revised(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    first = _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+    frozen = first.read_bytes()
+    _image(run, 1, SEED)
+    revised = revise(run, FLOW, 1, SEED)
+    _edit(revised, clothes=["collared shirt"])
+    assert approve(run, FLOW, schema, vocabulary)[0] is not None
+
+    assert cancel(run, FLOW) == revised
+
+    assert first.read_bytes() == frozen
+    assert approved_versions(run.directory(FLOW, "review")) == [1]
+    assert state(run.directory(FLOW, "review")) == "re-opened"
+
+
+@pytest.mark.spec("review:cancel:anything-made-from-it-refuses")
+@pytest.mark.parametrize(
+    ("made", "named", "way"),
+    [
+        ("prompt", "prompts/001.json", "--new-version"),
+        ("failure", "prompts/001.error.1.permanent.json", "--new-version"),
+        ("empty group", "outputs/001", "--new-version"),
+        ("image", "outputs/001", "isekai revise "),
+    ],
+)
+def test_anything_made_from_an_approval_refuses_its_cancel_and_changes_nothing(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    made: str,
+    named: str,
+    way: str,
+) -> None:
+    _approved_with_draft(run, schema, vocabulary)
+    if made == "prompt":
+        prompt_artifact(run, load_flow(FLOW), schema)
+    elif made == "failure":
+        record_failure(
+            run.directory(FLOW, "prompts"),
+            1,
+            "permanent",
+            {"stage": "assemble", "detail": "x"},
+        )
+    elif made == "empty group":
+        run.directory(FLOW, "outputs", "001").mkdir(parents=True)
+    else:
+        _image(run, 1, SEED)
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal) as refused:
+        cancel(run, FLOW)
+
+    assert f"{FLOW}/{named} came from it" in str(refused.value)
+    assert way in str(refused.value)
+    assert cancellable(run, FLOW) == str(refused.value)
+    assert snapshot(run.path) == before
+
+    waiting = review(run, FLOW, new_version=True)
+    assert waiting is not None
+    reopened = cancellable(run, FLOW)
+    assert reopened is not None
+    assert f"{FLOW}/{named} came from it" in reopened
+    assert str(waiting) in reopened
+    assert "--discard" not in reopened
+
+
+@pytest.mark.spec("review:cancel:a-copy-taken-from-it-refuses")
+def test_a_copy_in_another_flow_refuses_the_sources_cancel(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal, match=f"{CONTROL}/review/001.approved.json came"):
+        cancel(run, FLOW)
+    assert re.search(
+        f"approve --flow {CONTROL} .*--cancel", str(cancellable(run, FLOW))
+    )
+
+    assert snapshot(run.path) == before
+    assert cancel(run, CONTROL) is None
+    assert cancel(run, FLOW) == run.directory(FLOW, "review") / "001.draft.json"
+
+
+@pytest.mark.spec("review:cancel:a-copy-is-deleted-and-a-reopened-sheet-refused")
+def test_a_copy_is_deleted_and_an_approval_with_a_later_draft_refuses_its_discard(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    assert review(run, FLOW, new_version=True) is not None
+    with pytest.raises(Refusal, match=f"review --flow {FLOW} .*--discard"):
+        cancel(run, FLOW)
+
+    sheet(run, schema, vocabulary, flow=CONTROL)
+    review(run, CONTROL)
+    own, _ = approve(run, CONTROL, schema, vocabulary)
+    copy, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    assert own is not None and copy is not None
+    held = copy.read_bytes()
+    before = snapshot(run.path)
+
+    assert cancel(run, CONTROL) == own
+    gone = str(copy.relative_to(run.path))
+    assert snapshot(run.path) == {k: v for k, v in before.items() if k != gone}
+    assert state(run.directory(CONTROL, "review")) == "approved"
+    assert approve(run, CONTROL, schema, vocabulary, source=FLOW)[0] == copy
+    assert copy.read_bytes() == held
+
+
+@pytest.mark.spec("review:cancel:an-interrupted-cancel-finishes")
+def test_a_cancel_interrupted_before_its_delete_finishes_when_run_again(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    approved, held = _approved_with_draft(run, schema, vocabulary)
+    beside = run.directory(FLOW, "review") / "001.draft.json"
+    beside.write_bytes(held)
+    assert state(run.directory(FLOW, "review")) == "approved"
+
+    assert cancel(run, FLOW) == beside
+
+    assert sorted(path.name for path in beside.parent.iterdir()) == [beside.name]
+    assert beside.read_bytes() == held

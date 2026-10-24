@@ -35,6 +35,7 @@ function detail(id: string, saved: number): InputDetail {
     approved: null,
     saved,
     approved_at: null,
+    cancel: 'f has no approval to cancel',
     budget: { total: 2, per_field: { hair: 2 }, overhead: 0, window: 75 },
   }
 }

@@ -156,6 +156,8 @@ export interface InputDetail {
   approved: string | null
   saved: number | null
   approved_at: number | null
+  /* Why *Cancel approve* is disabled, or null while it can run. */
+  cancel: string | null
   budget: Budget
 }
 

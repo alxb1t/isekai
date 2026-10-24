@@ -77,11 +77,12 @@ from isekai.interface.ui.app import (  # noqa: E402
 )
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
-from isekai.pipeline.generate import prepare  # noqa: E402
+from isekai.pipeline.generate import prepare, prompt_artifact  # noqa: E402
 from isekai.pipeline.review import (  # noqa: E402
     DRAFT,
     ENCODER_WINDOW,
     approve,
+    cancellable,
     review,
     save_draft,
 )
@@ -934,6 +935,30 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
     assert body["approved_at"] is not None
     assert body["fields"] == expected
     assert not (made.directory(FLOW, REVIEW) / "001.draft.json").exists()
+
+
+@pytest.mark.spec("ui:review:the-sheet-says-why-it-cannot-be-cancelled")
+def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
+    client: TestClient, made: Run, schema: Schema
+) -> None:
+    _approved(client, made)
+    assert client.get(_at(made)).json()["cancel"] is None
+
+    cancelled = client.post(_at(made, "/cancel"))
+
+    assert cancelled.json() == {"back": "001.draft.json"}
+    assert client.get(_at(made)).json()["readonly"] is False
+
+    # Approved again, and its prompt assembled: the payload says why not.
+    _approved(client, made)
+    prompt_artifact(made, load_flow(FLOW), schema)
+    reason = cancellable(made, FLOW)
+    assert reason is not None and f"{FLOW}/prompts/001.json came from it" in reason
+
+    assert client.get(_at(made)).json()["cancel"] == reason
+    refused = client.post(_at(made, "/cancel"))
+    assert refused.status_code == 409
+    assert (made.directory(FLOW, REVIEW) / "001.approved.json").exists()
 
 
 # --- the two tag lists the source pane shows ----------------------------------
