@@ -73,6 +73,7 @@ from isekai.foundation.run import (
     latest,
     latest_artifact,
     next_version,
+    sheet_of,
     stage_command,
     versions,
 )
@@ -216,7 +217,7 @@ def draft_from(
     sheet holds no work, so it is replaced at its number; an edited one refuses.
     e.g. (run, conjure, summon, None, schema) -> conjure/review/001.draft.json
     """
-    again = "then draft it again"
+    then = "then draft it again"
     if source == flow:
         raise Refusal(
             f"{run.id}: flow {flow} is drafted from its own approval; run "
@@ -226,7 +227,7 @@ def draft_from(
     if sheet_version is None:
         raise Refusal(
             f"{run.id}: flow {flow} has no sheet to draft {source}'s approval into; "
-            f"run `{stage_command(run, 'assign', flow)}`, then Prepare, {again}"
+            f"run `{stage_command(run, 'assign', flow)}`, then Prepare, {then}"
         )
     held = approved_versions(run.directory(source, REVIEW))
     approval = held[-1] if version is None and held else version
@@ -234,27 +235,24 @@ def draft_from(
         named = "an approval" if approval is None else artifact_name(approval, APPROVED)
         raise Refusal(
             f"{run.id}: flow {source} has no {named} to draft {flow} from; run "
-            f"`{stage_command(run, 'approve', source)}` to approve its draft, {again}"
+            f"`{stage_command(run, 'approve', source)}` to approve its draft, {then}"
         )
     carried = _approval(run, source, approval, f"draft {flow} again")
-    copied = run.directory(flow, SHEETS) / artifact_name(sheet_version)
+    copied = sheet_of(run, flow, sheet_version)
     body = read(copied, SHEET_FILE)
-    remedy = f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, {again}"
+    remedy = f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, {then}"
     require(copied, body, "vocabulary", dict, remedy)
     require(copied, body, "fields", dict, remedy)
+    discarding = f"run `{stage_command(run, STAGE, flow, options=DISCARD)}`, {then}"
     waiting = current_draft(run.directory(flow, REVIEW))
-    if waiting is not None and not _untouched(run, flow, waiting):
+    if waiting is not None and _edited(run, flow, waiting, discarding):
         raise Refusal(
             f"{run.id}: flow {flow} has {waiting.name} waiting, edited from its "
             "sheet, and a draft from another flow never replaces an edit; approve "
-            f"it, or run `{stage_command(run, STAGE, flow, options=DISCARD)}`, {again}"
+            f"it, or {discarding}"
         )
-    shared, own = carried["fields"], body["fields"]
-    fields = {
-        name: list(shared[name] if name in shared else own[name])
-        for name in schema.names
-        if name in shared or name in own
-    }
+    merged = {**body["fields"], **carried["fields"]}
+    fields = {name: list(merged[name]) for name in schema.names if name in merged}
     return _write_draft(
         run,
         flow,
@@ -267,17 +265,12 @@ def draft_from(
     )
 
 
-def _untouched(run: Run, flow: str, draft: Path) -> bool:
-    """Return whether `draft` holds exactly the fields of the sheet it records."""
-    body = read(draft, DRAFT_FILE)
-    number, fields = body.get("sheet"), body.get("fields")
-    if not isinstance(number, int) or not isinstance(fields, Mapping):
-        return False
-    copied = run.directory(flow, SHEETS) / artifact_name(number)
-    if not copied.is_file():
-        return False
-    held = read(copied, SHEET_FILE).get("fields")
-    return isinstance(held, Mapping) and same_fields(held, fields)
+def _edited(run: Run, flow: str, draft: Path, remedy: str) -> bool:
+    """Return whether `draft` differs from the sheet it records, as approval says."""
+    body = read(draft, DRAFT_FILE, remedy=remedy)
+    require(draft, body, "sheet", int, remedy)
+    require(draft, body, "fields", dict, remedy)
+    return _differs(body["fields"], draft, sheet_of(run, flow, body["sheet"]), remedy)
 
 
 # An image to revise: its run, its flow, its approval's number and its seed.
@@ -954,6 +947,21 @@ def same_fields(
     return {name: list(tags) for name, tags in one.items()} == {
         name: list(tags) for name, tags in other.items()
     }
+
+
+def drafted_from(body: Mapping[str, object]) -> CopiedFrom | None:
+    """Return the other flow's approval a draft was drafted from, or None.
+
+    e.g. producer `{…, "drafted_from": {"flow": "f", "approval": 1}}` -> that
+    """
+    producer = body.get("producer")
+    origin = producer.get("drafted_from") if isinstance(producer, Mapping) else None
+    if not isinstance(origin, Mapping):
+        return None
+    flow, approval = origin.get("flow"), origin.get("approval")
+    if not isinstance(flow, str) or not isinstance(approval, int):
+        return None
+    return {"flow": flow, "approval": approval}
 
 
 def came_from(body: Mapping[str, object]) -> int | None:

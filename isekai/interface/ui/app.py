@@ -122,6 +122,7 @@ from isekai.pipeline.review import (
     current_draft,
     discard,
     draft_from,
+    drafted_from,
     refuse_revisions,
     review,
     revise,
@@ -437,6 +438,15 @@ def create_app(
     def offered(flow: str) -> Flow:
         """Return a tracked flow by name, loaded once: a flow is pinned while served."""
         return _flow(wired, flow)
+
+    @cache
+    def sheet_alone() -> list[str]:
+        """Return the tracked flows drafted from a sheet alone, read once."""
+        return [
+            name
+            for name in tracked_flows(wired.flows_dir)
+            if offered(name).inputs == ("sheet",)
+        ]
 
     def quoted(batch: str) -> tuple[Path, render.Quote, dict[str, Any]]:
         """Return a batch's folder, its quote, and the quote as the dialog shows it."""
@@ -938,12 +948,13 @@ def create_app(
         """
         run, _, approval = rendered(batch, digest, flow, version, seed)
         _, fields = _approved(approval)
-        assigned = {
-            name
-            for one in library.sources(folder(batch))
-            if one.run is not None
-            for name in one.run.flows
-        }
+        candidates = [name for name in sheet_alone() if name != flow]
+        # Listed only when a target could be offered: most views offer none.
+        runs = (
+            [one.run for one in library.sources(folder(batch)) if one.run]
+            if candidates
+            else []
+        )
         number = _version(version)
         suffix = offered(flow).output_suffix
         listed = library.versions(run, flow, suffix)
@@ -969,10 +980,8 @@ def create_app(
             # The flows of the batch drafted from a sheet alone, this one aside.
             "targets": [
                 name
-                for name in tracked_flows(wired.flows_dir)
-                if name in assigned
-                and name != flow
-                and offered(name).inputs == ("sheet",)
+                for name in candidates
+                if any(run.directory(name).is_dir() for run in runs)
             ],
             # The cell's images, as Renders draws them: oldest version first.
             "images": [
@@ -1213,18 +1222,13 @@ def _drafted(
 
     e.g. from summon 1, on sheet 1 -> {"flow": "summon-…", "approval": 1, "fields": …}
     """
-    producer = body.get("producer")
-    origin = producer.get("drafted_from") if isinstance(producer, Mapping) else None
-    if not isinstance(origin, Mapping):
+    origin = drafted_from(body)
+    if origin is None:
         return None
     require(draft, body, "sheet", int, remedy)
     sheet = sheet_of(one.run, one.flow.id, body["sheet"])
     held = read(sheet, SHEET_FILE, remedy=remedy)
-    return {
-        "flow": origin["flow"],
-        "approval": origin["approval"],
-        "fields": _fields(sheet, held, remedy),
-    }
+    return {**origin, "fields": _fields(sheet, held, remedy)}
 
 
 def _side(

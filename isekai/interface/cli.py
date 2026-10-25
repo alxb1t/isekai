@@ -95,6 +95,7 @@ from isekai.pipeline.review import (
     approve,
     discard,
     draft_from,
+    drafted_from,
     refuse_revisions,
     review,
     revise,
@@ -602,9 +603,9 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
                     "--cancel takes an approval back and --from copies one; drop "
                     f"`--from {args.source}` or `--cancel` from the command"
                 )
-            _refuse_bad_source(args.source, "from", flows, wired)
         if verb == "review":
             _refuse_review_options(args)
+        if verb in ("approve", "review"):
             _refuse_bad_source(args.source, "from", flows, wired)
         if verb == "generate":
             _refuse_bad_source(args.seeds_from, "seeds-from", flows, wired)
@@ -912,11 +913,11 @@ def _per_item(
                     drafted = draft_from(
                         run, name, args.source, args.approval, flows[name].schema
                     )
-                    producer = read_artifact(drafted, DRAFT_FILE)["producer"]
-                    approval = producer["drafted_from"]["approval"]
+                    origin = drafted_from(read_artifact(drafted, DRAFT_FILE))
+                    approval = "" if origin is None else f" v{origin['approval']}"
                     reporter.say(
                         f"{run.id}: review drafted {name}/{drafted.name} from "
-                        f"{args.source} v{approval}"
+                        f"{args.source}{approval}"
                     )
                     return
                 _say(
