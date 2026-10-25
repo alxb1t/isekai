@@ -9,7 +9,8 @@ SHALL approve that draft as an ordinary approval of the target, never as a copy.
 a target holding no sheet; a source holding no such approval; a source that is the target or no tracked flow; and a
 waiting draft of the target whose fields differ from its sheet's or that renders anything but one drawn seed. A
 waiting draft equal to its sheet, rendering one drawn seed, SHALL be replaced at its own number. The system SHALL
-refuse cancelling a source approval while a target approval drafted from it stands, naming the target's cancel.
+refuse cancelling a source approval while a target approval or waiting draft drafted from it stands, naming the
+target's cancel or the command that discards that draft.
 
 ```
 source approval vN ──▶ every field both declare ─┐
@@ -18,8 +19,8 @@ target newest sheet ──▶ every field it alone has ┴─▶ target draft ·
 
 The operator corrects a sheet once, in the flow that reads the photograph, and finishes only the fields another flow
 adds. A draft the operator never touched holds no work, so replacing it loses nothing; an edited one does, and a
-count, a seed or a revision's seed is an edit. A target approval names the source approval it was drafted from, so
-that approval stands while the record does, as a copy's source does.
+count, a seed or a revision's seed is an edit. A target draft or approval names the source approval it was drafted
+from, so that approval stands while the record does, as a copy's source does.
 
 #### Scenario: the shared fields come from the source and the rest from the sheet
 - **Key:** `review:draft-from:the-shared-fields-come-from-the-source`
@@ -68,9 +69,9 @@ that approval stands while the record does, as a copy's source does.
 - **THEN** it is refused naming that draft and the command that discards it
 - **AND** the draft is unchanged
 
-#### Scenario: its approval refuses the source's cancel
-- **Key:** `review:draft-from:its-approval-refuses-the-sources-cancel`
+#### Scenario: what is drafted from it refuses the source's cancel
+- **Key:** `review:draft-from:what-is-drafted-from-it-refuses-the-sources-cancel`
 - **Layers:** unit
-- **WHEN** a cancel is asked for a source approval a target approval was drafted from
-- **THEN** it is refused naming the target's cancel, and no file changes
-- **AND** once the target's approval is cancelled, the source's cancel succeeds
+- **WHEN** a cancel is asked for a source approval a target approval or waiting draft was drafted from
+- **THEN** it is refused naming the target's cancel, or its draft's discard, and no file changes
+- **AND** once the target's approval is cancelled and its draft discarded, the source's cancel succeeds

@@ -1221,7 +1221,9 @@ def test_an_edited_waiting_draft_is_refused_naming_its_discard(
     assert waiting.read_bytes() == before
 
 
-@pytest.mark.spec("review:draft-from:its-approval-refuses-the-sources-cancel")
+@pytest.mark.spec(
+    "review:draft-from:what-is-drafted-from-it-refuses-the-sources-cancel"
+)
 def test_an_approval_drafted_from_a_source_refuses_the_sources_cancel(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
@@ -1239,6 +1241,16 @@ def test_an_approval_drafted_from_a_source_refuses_the_sources_cancel(
 
     assert snapshot(run.path) == before
     assert cancel(run, CONJURE) == draft
+    waiting = snapshot(run.path)
+
+    with pytest.raises(Refusal, match=f"{CONJURE}/review/001.draft.json came"):
+        cancel(run, FLOW)
+    assert re.search(
+        f"review --flow {CONJURE} .*--discard", str(cancellable(run, FLOW))
+    )
+
+    assert snapshot(run.path) == waiting
+    assert discard(run, CONJURE) == draft
     assert cancel(run, FLOW) == run.directory(FLOW, "review") / "001.draft.json"
 
 
