@@ -14,9 +14,10 @@ filename, when approval is legal, and what a token costs.
 
 **A run directory is written only through the functions that own it**: stage
 ③'s `review()` when a sheet is opened, `save_draft()` on autosave,
-`approve()` on the button, `cancel()`, `revise()` and `discard()` on theirs, and
-the run's own `open_run()` and `assign()` on a tick. Nothing here builds an artifact
-body or an artifact filename, and `tests/test_ui.py`'s grep is what keeps it so.
+`approve()` on the button, `cancel()`, `revise()`, `draft_from()` and
+`discard()` on theirs, and the run's own `open_run()` and `assign()` on a tick.
+Nothing here builds an artifact body or an artifact filename, and
+`tests/test_ui.py`'s grep is what keeps it so.
 
 **uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
 calls this module's `run()` instead, so the server is reached from this one file
@@ -38,6 +39,7 @@ GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
 POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/cancel
 POST /api/b/{batch}/review/{digest}/{flow}/discard
+POST /api/b/{batch}/review/{digest}/{flow}/draft-from   {source, version}
 POST /api/b/{batch}/revise              {images: [{digest, flow, version, seed}]}
 GET  /api/b/{batch}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
      and its /image, /thumb and /compare{/other/other_seed,}
@@ -70,6 +72,7 @@ from isekai.foundation.artifacts import (
     CAPTION_FILE,
     DRAFT_FILE,
     ONE_RENDER,
+    SHEET_FILE,
     TAGS_FILE,
     WD14_FILE,
     Renders,
@@ -98,6 +101,7 @@ from isekai.foundation.run import (
     latest_artifact,
     media_type,
     open_run,
+    sheet_of,
     stage_command,
 )
 from isekai.interface import render
@@ -117,6 +121,7 @@ from isekai.pipeline.review import (
     cancellable,
     current_draft,
     discard,
+    draft_from,
     refuse_revisions,
     review,
     revise,
@@ -645,7 +650,7 @@ def create_app(
         state = review_state(one.directory(REVIEW))
         fields: dict[str, list[str]] = {}
         renders = ONE_RENDER
-        revision = None
+        revision = drafted = None
         if state == "approved" and approved is not None:
             # No command rewrites an approved sheet: `review` copies it and
             # refuses the same damage, so only a hand repairs it.
@@ -659,6 +664,7 @@ def create_app(
             fields = _fields(draft, body, remedy)
             renders = renders_of(draft, body, remedy)
             revision = _revision(one, body, renders)
+            drafted = _drafted(one, draft, body, remedy)
         budget = token_budget(fields, one.flow.schema, one.flow)
         caption = latest_artifact(one.directory(CAPTIONS))
         width, height = _dimensions(one.run)
@@ -686,6 +692,9 @@ def create_app(
             # The approval a draft was copied from, its fields and the image
             # being revised; null for a draft of a sheet.
             "revision": revision,
+            # The other flow's approval a draft was drafted from, and the fields
+            # of its own sheet; null for any other draft.
+            "drafted": drafted,
             # **Approval with nothing newer beside it is what makes a sheet
             # read-only**, which is precisely `state() == "approved"`.
             "readonly": state == "approved",
@@ -806,6 +815,23 @@ def create_app(
             gone = discard(one.run, one.flow.id)
         return {"discarded": gone.name}
 
+    @app.post("/api/b/{batch}/review/{digest}/{flow}/draft-from")
+    def post_draft_from(
+        batch: str, digest: str, flow: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Draft `flow` from `source`'s approval `version`, as `review --from` does."""
+        one = held(batch, digest, flow)
+        source, version = payload.get("source"), payload.get("version")
+        if not isinstance(source, str) or not _numbered(version):
+            raise Refusal(
+                "the request names no source flow and approval; send `source` and "
+                "`version` -- nothing was written"
+            )
+        offered(source)
+        with _DRAFT_UPDATE:
+            written = draft_from(one.run, flow, source, version, one.flow.schema)
+        return {"draft": written.name}
+
     @app.post("/api/b/{batch}/revise", response_model=None)
     def post_revise(
         batch: str, payload: dict[str, Any]
@@ -912,6 +938,12 @@ def create_app(
         """
         run, _, approval = rendered(batch, digest, flow, version, seed)
         _, fields = _approved(approval)
+        assigned = {
+            name
+            for one in library.sources(folder(batch))
+            if one.run is not None
+            for name in one.run.flows
+        }
         number = _version(version)
         suffix = offered(flow).output_suffix
         listed = library.versions(run, flow, suffix)
@@ -934,6 +966,14 @@ def create_app(
             "damaged": held.damaged,
             # The newest older version that rendered this seed, or null.
             "compare": library.paired(run, flow, number, seed, suffix),
+            # The flows of the batch drafted from a sheet alone, this one aside.
+            "targets": [
+                name
+                for name in tracked_flows(wired.flows_dir)
+                if name in assigned
+                and name != flow
+                and offered(name).inputs == ("sheet",)
+            ],
             # The cell's images, as Renders draws them: oldest version first.
             "images": [
                 {"version": each.version, "seed": rendered_seed}
@@ -1163,6 +1203,27 @@ def _revision(
         "version": version,
         "seed": None if seed is None else str(seed),
         "fields": _approved(approval)[1],
+    }
+
+
+def _drafted(
+    one: Held, draft: Path, body: Mapping[str, Any], remedy: str
+) -> dict[str, Any] | None:
+    """Describe the other flow's approval a draft was drafted from, and its sheet.
+
+    e.g. from summon 1, on sheet 1 -> {"flow": "summon-…", "approval": 1, "fields": …}
+    """
+    producer = body.get("producer")
+    origin = producer.get("drafted_from") if isinstance(producer, Mapping) else None
+    if not isinstance(origin, Mapping):
+        return None
+    require(draft, body, "sheet", int, remedy)
+    sheet = sheet_of(one.run, one.flow.id, body["sheet"])
+    held = read(sheet, SHEET_FILE, remedy=remedy)
+    return {
+        "flow": origin["flow"],
+        "approval": origin["approval"],
+        "fields": _fields(sheet, held, remedy),
     }
 
 

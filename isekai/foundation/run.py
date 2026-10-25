@@ -477,6 +477,11 @@ def approval_of(run: Run, flow: str, version: int) -> Path:
     return run.directory(flow, REVIEW) / artifact_name(version, APPROVED)
 
 
+def sheet_of(run: Run, flow: str, version: int) -> Path:
+    """Return the path of `flow`'s sheet numbered `version` in `run`."""
+    return run.directory(flow, SHEETS) / artifact_name(version)
+
+
 def group_of(run: Run, flow: str, version: int) -> Path:
     """Return the outputs group the approval numbered `version` renders into."""
     return run.directory(flow, OUTPUTS, f"{version:03d}")

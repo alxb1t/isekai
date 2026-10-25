@@ -7,7 +7,7 @@ The review stage, the verb, then the surface, per [design](design.md). Every new
 
 - [x] 1 — The review stage
 - [x] 2 — The verb
-- [ ] 3 — The surface
+- [x] 3 — The surface
 
 ## 1 — The review stage
 
@@ -36,21 +36,21 @@ The review stage, the verb, then the surface, per [design](design.md). Every new
 
 ## 3 — The surface
 
-- [ ] 3.1 **HALT CHECK** — the server drafts from no other flow.
+- [x] 3.1 **HALT CHECK** — the server drafts from no other flow.
   Verify: `grep -c 'draft-from' isekai/interface/ui/app.py` prints `0`.
-- [ ] 3.2 Add `targets` to `read_render`, the `draft-from` route and its docstring line, and `drafted` to
+- [x] 3.2 Add `targets` to `read_render`, the `draft-from` route and its docstring line, and `drafted` to
   `read_input`, in `isekai/interface/ui/app.py`, per [D5](design.md#d5) and [D7](design.md#d7); bind the unit
   `ui:conjure-from:` keys in `tests/test_ui_api.py`.
   Verify: `grep -c 'ui:conjure-from:' tests/test_ui_api.py` prints `3`, and `uv run pytest -q tests/test_ui_api.py tests/test_ui.py` exits 0.
-- [ ] 3.3 Add `draftFrom` to `ui/src/api.ts`, `targets` and `drafted` to `ui/src/types.ts`, the buttons and `f` to
+- [x] 3.3 Add `draftFrom` to `ui/src/api.ts`, `targets` and `drafted` to `ui/src/types.ts`, the buttons and `f` to
   `ui/src/views/RenderLarge.vue` per [D6](design.md#d6), and the marks, kicker and Discard to `ui/src/views/Review.vue`
   per [D7](design.md#d7).
   Verify: `grep -c "id: 'draft-from'" ui/src/views/RenderLarge.vue` prints `1`, and `uv run python -m tools.typecheck_ui` exits 0, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 3.4 Add a `CONJURED` batch to `tests/e2e/conftest.py` — a run with summon rendered at seed 7 and a conjure
+- [x] 3.4 Add a `CONJURED` batch to `tests/e2e/conftest.py` — a run with summon rendered at seed 7 and a conjure
   sheet — and `test_conjure_from_this_opens_review` to `tests/e2e/test_render.py`, bound to
   `ui:conjure-from:conjure-from-this-opens-review`.
   Verify: `grep -c 'conjure-from-this-opens-review' tests/e2e/test_render.py` prints `1`, and `uv run pytest -q tests/e2e/test_render.py` exits 0.
-- [ ] 3.5 In `ui/design/spec.md` §7's Renders row, `in the large view, e Revise, c compare,` →
+- [x] 3.5 In `ui/design/spec.md` §7's Renders row, `in the large view, e Revise, c compare,` →
   `in the large view, e Revise, f Conjure from this, c compare,`; in J5's *↵ always opens the large view* bullet,
   say each flow drafted from a sheet alone is offered as *Conjure from this*, and Review marks its draft against
   that flow's sheet.

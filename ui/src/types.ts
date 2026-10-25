@@ -153,6 +153,9 @@ export interface InputDetail {
   /* The approval a draft was copied from, its fields, and the seed of the image
      being revised; null for a draft of a sheet. */
   revision: Revision | null
+  /* The other flow's approval a waiting draft was drafted from, and its own
+     sheet's fields; null for any other draft. */
+  drafted: Drafted | null
   readonly: boolean
   draft: string | null
   approved: string | null
@@ -166,6 +169,12 @@ export interface InputDetail {
 export interface Revision {
   version: number
   seed: string | null
+  fields: Record<string, string[]>
+}
+
+export interface Drafted {
+  flow: string
+  approval: number
   fields: Record<string, string[]>
 }
 
@@ -365,6 +374,8 @@ export interface RenderDetail {
   compare: number | null
   /* The cell's images, oldest version first, as Renders draws them. */
   images: { version: number; seed: string }[]
+  /* The batch's flows drafted from a sheet alone, this one aside. */
+  targets: string[]
 }
 
 /* One image a revision names, its seed a decimal string. */

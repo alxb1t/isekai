@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { imageAt, photoUrl, renderDetail, versionOf } from '../api'
+import { draftFrom, imageAt, photoUrl, renderDetail, versionOf } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
@@ -14,7 +14,7 @@ import type { RenderDetail } from '../types'
    sheet it was rendered from beside it — filled fields only, read-only. e
    revises it; c picks another image of its cell in the viewer, starting on the
    newest older version of its seed, and ↵ compares the two (J5·8); ⇧C sets it
-   beside its run's photograph. */
+   beside its run's photograph; f drafts the first target from its approval. */
 const props = defineProps<{
   batch: string
   digest: string
@@ -26,6 +26,8 @@ const router = useRouter()
 const detail = ref<RenderDetail | null>(null)
 const refusal = ref<string | null>(null)
 const revising = ref(false)
+/* Why drafting a target from this image's approval was refused, or null. */
+const drafting = ref<string | null>(null)
 /* The image beside its run's photograph, in the viewer's pair. */
 const pairing = ref(false)
 /* The viewer picking the image to compare with. */
@@ -82,6 +84,26 @@ function compare(index: number): void {
   })
 }
 
+/* `conjure-anime-wai` -> `Conjure from this`. */
+function fromThis(flow: string): string {
+  const [word] = flow.split('-')
+  return `${word.charAt(0).toUpperCase()}${word.slice(1)} from this`
+}
+
+/* No confirm: the draft is one Discard draft away, and costs nothing. */
+async function draftTarget(target: string): Promise<void> {
+  drafting.value = null
+  try {
+    await draftFrom({ ...place.value, flow: target }, props.flow, place.value.version)
+    void router.push({
+      name: 'review',
+      params: { batch: props.batch, digest: props.digest, flow: target },
+    })
+  } catch (reason) {
+    drafting.value = (reason as Error).message
+  }
+}
+
 /* Where esc and the back button go: the hub when it opened this view, else
    Renders, which holds every image. A pasted address carries no state. */
 const back = computed(() =>
@@ -96,6 +118,13 @@ useKeys('screen', [
     keys: plain('KeyE'),
     label: 'revise',
     run: () => (revising.value = true),
+  },
+  {
+    id: 'draft-from',
+    keys: plain('KeyF'),
+    label: 'draft from this',
+    run: () => void draftTarget(detail.value?.targets[0] ?? ''),
+    when: () => (detail.value?.targets.length ?? 0) > 0,
   },
   {
     id: 'compare',
@@ -162,6 +191,16 @@ onMounted(async () => {
           Revise this image<KeyHint command="revise" />
         </button>
         <button
+          v-for="(target, index) in detail.targets"
+          :key="target"
+          class="btn btn-secondary"
+          type="button"
+          data-draft-from
+          @click="draftTarget(target)"
+        >
+          {{ fromThis(target) }}<KeyHint v-if="index === 0" command="draft-from" />
+        </button>
+        <button
           v-if="others.length"
           class="btn btn-secondary"
           type="button"
@@ -177,6 +216,9 @@ onMounted(async () => {
           >{{ back.label }}<KeyHint command="back" /></RouterLink
         >
       </div>
+      <p v-if="drafting" class="renders__refusal" data-draft-refusal>
+        <span class="refusal__mark" />{{ drafting }}
+      </p>
     </aside>
     <ImageViewer
       v-if="picking"

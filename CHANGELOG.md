@@ -17,6 +17,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `isekai review --from FLOW [--version N]` drafts each `--flow` from that flow's approval, the newest unless
   `--version` names one (0077 D4).
 
+- An image's large view offers *Conjure from this* `f`, drafting conjure from the image's approval and opening
+  Review, which marks the draft against conjure's sheet, names the approval and offers *Discard draft* (0077 D5–D7).
+
 ## [0.49.0] - 2026-10-25 · 0076-the-second-walkthrough
 
 Gate: local 0m41s · CI 7m25s (build-image at 801ffec) · 0.48.0: local 0m41s · CI 7m25s

@@ -347,7 +347,10 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   cell or the image left. `Compare…  c` appears when its cell holds another image: the viewer opens over the
   cell's other images, every version's and seed's, on the newest older version of this seed, else the image before
   this one, and `↵` compares the shown one, the older of the two before. The same-seed address, `…/compare`, still compares with the newest
-  older version of the seed.
+  older version of the seed. Each flow of the batch drafted from a sheet alone is offered as *Conjure from this*,
+  the first on `f`: it drafts that flow from this image's approval and opens Review, which marks its draft
+  against that flow's sheet, names the approval in the kicker and offers *Discard draft*; a refusal shows under
+  the actions.
 - **Revise** (the verb `isekai revise`): the confirm lists each image — source × flow × seed, the version it copies,
   the seed it prefills. All or nothing: a refusal lists every selected image, those that could be revised
   too, and offers `Deselect those 2 and revise 1 ⇧↵`; it has no primary button.
@@ -447,7 +450,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K 
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ↵ on the photograph opens the viewer, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow holding unapproved sheets · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C *Side by side*, the photograph and the render, on a revision · the collapsed caption, its key named when built |
-| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · e Revise · ⇧G Render · in the large view, e Revise, c compare, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
+| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · e Revise · ⇧G Render · in the large view, e Revise, f Conjure from this, c compare, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
 | Session | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 

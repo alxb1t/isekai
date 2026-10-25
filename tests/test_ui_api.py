@@ -51,6 +51,7 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     SESSION_FILE,
+    SHEET_FILE,
     TAGS_FILE,
     Artifact,
     Renders,
@@ -67,6 +68,7 @@ from isekai.foundation.run import (  # noqa: E402
     WD14,
     Run,
     approval_of,
+    assign,
     latest_artifact,
     open_run,
     versions,
@@ -1752,6 +1754,84 @@ def test_a_version_of_digits_outside_ascii_is_refused_not_failed(
 
     assert answered.status_code == 409
     assert "names no version" in answered.json()["refusal"]
+
+
+# --- Conjure from this ---------------------------------------------------------
+
+CONJURE = "conjure-anime-wai"
+
+
+def _drafting(made: Run, schema: Schema, vocabulary: Vocabulary) -> str:
+    """Approve and render summon at seed 7, assign conjure, and return the route."""
+    flow = load_flow(FLOW)
+    comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+    _source(made)
+    draft = review(made, FLOW)
+    assert draft is not None
+    save_draft(made, FLOW, {**read(draft, DRAFT_FILE)["fields"], "expression": []})
+    approve(made, FLOW, schema, vocabulary)
+    prepare(made, {FLOW: flow})
+    render(made, flow, comfy, seeds=[7], poll=0)
+    assign(made, CONJURE)
+    return f"/api/b/{BATCH}/review/{made.digest}/{CONJURE}/draft-from"
+
+
+@pytest.mark.spec("ui:conjure-from:the-large-view-names-its-targets")
+def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _drafting(made, schema, vocabulary)
+    # Control reads a photograph, so it is assigned and still no target.
+    assign(made, "control-anime-wai")
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    body = client.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/7").json()
+
+    assert body["targets"] == [CONJURE]
+
+
+@pytest.mark.spec("ui:conjure-from:a-refused-draft-writes-nothing")
+def test_a_draft_from_into_a_flow_with_no_sheet_is_refused_and_writes_nothing(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    route = _drafting(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    before = snapshot(made.path)
+
+    answered = client.post(route, json={"source": FLOW, "version": 1})
+
+    assert answered.status_code == 409
+    assert f"assign --flow {CONJURE}" in answered.json()["refusal"]
+    assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("ui:conjure-from:review-reads-the-draft-against-the-sheet")
+def test_review_names_a_drafted_drafts_source_and_carries_its_sheets_fields(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    route = _drafting(made, schema, vocabulary)
+    sheet(made, load_flow(CONJURE).schema, vocabulary, flow=CONJURE)
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    drafted = client.post(route, json={"source": FLOW, "version": 1})
+    body = client.get(route.removesuffix("/draft-from")).json()
+
+    assert drafted.json() == {"draft": "001.draft.json"}
+    own = read(made.path / CONJURE / "sheets" / "001.json", SHEET_FILE)["fields"]
+    assert body["drafted"] == {"flow": FLOW, "approval": 1, "fields": own}
+    assert body["fields"]["expression"] == [] != own["expression"]
 
 
 # --- render sessions ----------------------------------------------------------
