@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar } from '../bars'
@@ -223,6 +223,9 @@ onMounted(async () => {
   const spot = kept([...images, ...sources], ({ name }) => name, store.focus.renders)
   if (spot) hold({ row: spot.row, column: spot.column })
 })
+
+/* The Render dialog is this page's: leaving the page closes it. */
+onUnmounted(() => store.closeDialog())
 </script>
 
 <template>

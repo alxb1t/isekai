@@ -7,7 +7,7 @@ The layout, the keys, the dialogs, then the session grid, per [design](design.md
 
 - [x] 1 — The layout
 - [x] 2 — The keys
-- [ ] 3 — The dialogs
+- [x] 3 — The dialogs
 - [ ] 4 — The session grid
 
 ## 1 — The layout
@@ -36,15 +36,15 @@ The layout, the keys, the dialogs, then the session grid, per [design](design.md
 
 ## 3 — The dialogs
 
-- [ ] 3.1 **HALT CHECK** — Compare names one image.
+- [x] 3.1 **HALT CHECK** — Compare names one image.
   Verify: `grep -c "path: '/b/:batch/renders/:digest/:flow/:version/:seed/compare'," ui/src/router.ts` prints `1`.
-- [ ] 3.2 Close the Render dialog per [D4](design.md#d4) in `ui/src/components/RenderDialog.vue`, `ui/src/views/Hub.vue` and
+- [x] 3.2 Close the Render dialog per [D4](design.md#d4) in `ui/src/components/RenderDialog.vue`, `ui/src/views/Hub.vue` and
   `ui/src/views/Renders.vue`.
   Verify: `grep -c 'closeDialog\|dialog.value = false' ui/src/components/RenderDialog.vue` prints a number of at least `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.3 Compare any pair per [D2](design.md#d2) in `isekai/interface/ui/app.py`, `ui/src/router.ts`,
+- [x] 3.3 Compare any pair per [D2](design.md#d2) in `isekai/interface/ui/app.py`, `ui/src/router.ts`,
   `ui/src/views/RenderLarge.vue`, `ui/src/views/Compare.vue` and `ui/src/components/ImageViewer.vue`; bind `ui:compare:any-two-images-of-a-cell` in `tests/test_ui_api.py`.
   Verify: `grep -c 'ui:compare:any-two-images-of-a-cell' tests/test_ui_api.py` prints `1`, and `uv run pytest -q tests/test_ui_api.py` exits 0.
-- [ ] 3.4 Add the steps of the design's [Tests](design.md#tests) to the grid, compare and render tests in
+- [x] 3.4 Add the steps of the design's [Tests](design.md#tests) to the grid, compare and render tests in
   `tests/e2e/test_render.py`.
   Verify: `grep -c 'different seeds' tests/e2e/test_render.py` prints a number of at least `1`, and `uv run pytest -q tests/e2e` exits 0.
 

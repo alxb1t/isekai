@@ -914,14 +914,8 @@ def create_app(
         _, fields = _approved(approval)
         number = _version(version)
         suffix = offered(flow).output_suffix
-        held = next(
-            (
-                one
-                for one in library.versions(run, flow, suffix)
-                if one.version == number
-            ),
-            None,
-        )
+        listed = library.versions(run, flow, suffix)
+        held = next((one for one in listed if one.version == number), None)
         if held is None:
             raise Refusal(
                 f"{approval.name}: it was gone when its version was listed; reload "
@@ -940,33 +934,63 @@ def create_app(
             "damaged": held.damaged,
             # The newest older version that rendered this seed, or null.
             "compare": library.paired(run, flow, number, seed, suffix),
+            # The cell's images, as Renders draws them: oldest version first.
+            "images": [
+                {"version": each.version, "seed": str(rendered_seed)}
+                for each in reversed(listed)
+                for rendered_seed in each.rendered
+            ],
         }
 
     @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/compare")
+    @app.get(
+        "/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/compare/{other}/{other_seed}"
+    )
     def read_compare(
-        batch: str, digest: str, flow: str, version: str, seed: int
+        batch: str,
+        digest: str,
+        flow: str,
+        version: str,
+        seed: int,
+        other: str | None = None,
+        other_seed: int | None = None,
     ) -> dict[str, Any]:
-        """Return a seed's image under this version beside the newest older one."""
+        """Return this image beside another image of its cell.
+
+        The other is the one named, else the newest older version of this seed.
+        e.g. `…/v4/7/compare/v2/5` -> v2's seed 5 before, v4's seed 7 after
+        """
         run, _, after = rendered(batch, digest, flow, version, seed)
         number = _version(version)
         one = offered(flow)
-        older = library.paired(run, flow, number, seed, one.output_suffix)
-        if older is None:
+        if other is None or other_seed is None:
+            older = library.paired(run, flow, number, seed, one.output_suffix)
+            if older is None:
+                raise Refusal(
+                    f"v{number} · {seed}: no older version of {flow} rendered this "
+                    "seed, so there is nothing to compare; go back to its large view"
+                )
+            other, other_seed = f"v{older}", seed
+        earlier = _version(other)
+        if (earlier, other_seed) == (number, seed):
             raise Refusal(
-                f"v{number} · {seed}: no older version of {flow} rendered this seed, "
-                "so there is nothing to compare; go back to its large view"
+                f"v{number} · {seed}: an image compared with itself shows no change; "
+                "go back to its large view and pick another"
             )
+        _, _, before = rendered(batch, digest, flow, other, other_seed)
         now, now_fields = _side(one, number, after)
-        was, was_fields = _side(one, older, approval_of(run, flow, older))
+        was, was_fields = _side(one, earlier, before)
+        changed = [
+            {"field": name, "before": was_fields[name], "after": now_fields[name]}
+            for name in one.schema.names
+            if was_fields[name] != now_fields[name]
+        ]
         return {
-            "seed": str(seed),
-            "before": was,
-            "after": now,
-            "changed": [
-                {"field": name, "before": was_fields[name], "after": now_fields[name]}
-                for name in one.schema.names
-                if was_fields[name] != now_fields[name]
-            ],
+            "before": {**was, "seed": str(other_seed)},
+            "after": {**now, "seed": str(seed)},
+            "changed": changed,
+            "different_seeds": other_seed != seed,
+            "same_sheet": not changed,
         }
 
     @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/image")

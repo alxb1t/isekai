@@ -1661,6 +1661,62 @@ def test_a_seed_rendered_under_three_versions_compares_the_third_with_the_second
     ]
 
 
+@pytest.mark.spec("ui:compare:any-two-images-of-a-cell")
+def test_compare_takes_any_two_images_of_a_cell(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    flow = load_flow(FLOW)
+    comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+
+    def rendered(seed: int) -> None:
+        prepare(made, {FLOW: flow})
+        render(made, flow, comfy, seeds=[seed], poll=0)
+
+    _source(made)
+    review(made, FLOW)
+    approve(made, FLOW, schema, vocabulary)
+    rendered(7)
+    _approved_again(made, schema, vocabulary, {"count": 1, "seeds": [5]})
+    rendered(5)
+    _approved_again(made, schema, vocabulary, {"count": 1, "seeds": [7]})
+    rendered(7)
+    _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
+    rendered(7)
+    client = _client(wired, made, tmp_path, drafted=False)
+    large = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}"
+
+    view = client.get(f"{large}/v4/7").json()
+    pair = client.get(f"{large}/v4/7/compare/v2/5").json()
+    shared = client.get(f"{large}/v3/7/compare/v2/5").json()
+    itself = client.get(f"{large}/v4/7/compare/v4/7")
+
+    assert [(one["version"], one["seed"]) for one in view["images"]] == [
+        (1, "7"),
+        (2, "5"),
+        (3, "7"),
+        (4, "7"),
+    ]
+    assert [
+        (side["version"], side["seed"]) for side in (pair["before"], pair["after"])
+    ] == [
+        (2, "5"),
+        (4, "7"),
+    ]
+    assert [(one["field"], one["after"]) for one in pair["changed"]] == [
+        ("clothes", ["collared shirt"])
+    ]
+    assert (pair["different_seeds"], pair["same_sheet"]) == (True, False)
+    assert (shared["changed"], shared["same_sheet"]) == ([], True)
+    # The same-seed address still pairs with the newest older version.
+    assert client.get(f"{large}/v4/7/compare").json()["before"]["version"] == 3
+    assert itself.status_code == 409
+    assert "compared with itself" in itself.json()["refusal"]
+
+
 @pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")
 def test_a_seed_of_digits_outside_ascii_is_refused_naming_the_seeds(
     client: TestClient, made: Run

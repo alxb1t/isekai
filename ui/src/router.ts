@@ -33,6 +33,12 @@ export const router = createRouter({
       component: Compare,
       props: true,
     },
+    {
+      path: '/b/:batch/renders/:digest/:flow/:version/:seed/compare/:with/:withSeed',
+      name: 'compare-with',
+      component: Compare,
+      props: true,
+    },
     { path: '/b/:batch/sessions', name: 'sessions', component: Sessions, props: true },
     { path: '/b/:batch/sessions/:id', name: 'session', component: SessionPage, props: true },
     { path: '/billing', name: 'billing', component: Billing },

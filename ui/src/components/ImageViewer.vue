@@ -6,8 +6,8 @@ import { plain } from '../stores/keys'
 
 /* Images in a native dialog, fitted to the window. A click on the image toggles
    1:1 pixels, scrolled inside the dialog; `←` `→` `h` `l` step through the images,
-   `↵` runs `open` on the shown one where it is given, and Esc or a click outside
-   closes. With `pair`, every image stands side by side at one height, fit only.
+   `↵` runs `open` on the shown one where it is given, labelled `action`, so the
+   viewer can pick an image as well as open one, and Esc or a click outside closes. With `pair`, every image stands side by side at one height, fit only.
    The list may grow while open, as a live session's does.
    The dialog keeps the URL of the page beneath (design spec §1 rule 8). */
 export interface Shown {
@@ -22,6 +22,7 @@ const props = defineProps<{
   start?: number
   pair?: boolean
   open?: (index: number) => void
+  action?: string
 }>()
 
 const emit = defineEmits<{ close: [] }>()
@@ -100,7 +101,7 @@ useKeys('overlay', [
   {
     id: 'open',
     keys: plain('Enter'),
-    label: 'large view',
+    label: props.action ?? 'large view',
     run: () => props.open?.(at.value),
     when: () => props.open !== undefined,
   },

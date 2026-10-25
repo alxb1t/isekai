@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { noun } from '../words'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar as barOf, dismiss, failed, held } from '../bars'
@@ -399,6 +399,9 @@ onMounted(async () => {
   const spot = kept(spots, named, store.focus.hub)
   if (spot) place(spot.row, spot.column)
 })
+
+/* The Render dialog is this page's: leaving the page closes it. */
+onUnmounted(() => store.closeDialog())
 </script>
 
 <template>

@@ -221,6 +221,11 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     save_draft(compared, FLOW, {**fields, "clothes": ["collared shirt"]})
     approve(compared, FLOW, load_flow(FLOW).schema, VOCABULARY)
     _render_seven(compared)
+    # A second seed under v2, so Compare can pick another seed's image.
+    image = photo_jpeg((90, 60, 30), (640, 800))
+    render(
+        compared, load_flow(FLOW), FakeComfyClient(view_bytes=image), seeds=[5], poll=0
+    )
     damaged = _rendered_at_seven(lib / DAMAGED, "kim", (790, 1000))
     approval = approval_of(damaged, FLOW, 1)
     body = json.loads(approval.read_text())

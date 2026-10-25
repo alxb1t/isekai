@@ -289,6 +289,11 @@ export function renderDetail(place: RenderPlace): Promise<RenderDetail> {
   return get<RenderDetail>(renderAt(place))
 }
 
-export function comparison(place: RenderPlace): Promise<Comparison> {
-  return get<Comparison>(`${renderAt(place)}/compare`)
+/** Return `place` beside `other`, another image of its cell, else the newest older of its seed. */
+export function comparison(
+  place: RenderPlace,
+  other?: { version: number; seed: string },
+): Promise<Comparison> {
+  const pair = other ? `/v${other.version}/${encodeURIComponent(other.seed)}` : ''
+  return get<Comparison>(`${renderAt(place)}/compare${pair}`)
 }
