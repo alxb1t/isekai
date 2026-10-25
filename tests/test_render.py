@@ -857,9 +857,31 @@ def test_a_session_writes_its_record_of_each_image_and_no_price(
     assert record["steps"] == {"pod": "ready", "teardown": "done"}
     assert record["ended"] is not None
     assert set(record) == {
-        "schema", "id", "started", "ended", "limit", "asked", "steps", "images",
-        "outcome", "message",
+        "schema", "id", "started", "ended", "limit", "asked", "planned", "steps",
+        "images", "outcome", "message",
     }  # fmt: skip
+
+
+@pytest.mark.spec("cli:render-session:the-record-plans-each-photograph")
+def test_the_record_plans_each_run_and_flow_with_its_images(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    lacking = counted(tmp_path, schema, vocabulary, "ada", 0)
+    half = counted(tmp_path, schema, vocabulary, "beatrix", 1)
+    root = tmp_path / "b" / "runs"
+    counts = batch(tmp_path / "counts", "r1", "r2")
+
+    assert session(root) == 0, log(root)
+    assert session(counts, f"{FLOW}=3") == 0, log(counts)
+
+    ((short,), (asked,)) = records(root), records(counts)
+    assert sorted(short["planned"], key=lambda one: one["images"]) == [
+        {"digest": half.digest, "flow": FLOW, "images": 1},
+        {"digest": lacking.digest, "flow": FLOW, "images": 2},
+    ]
+    assert asked["planned"] == [
+        {"digest": run_id, "flow": FLOW, "images": 3} for run_id in ("r1", "r2")
+    ]
 
 
 @pytest.mark.spec("cli:render-session:the-record-follows-each-image")

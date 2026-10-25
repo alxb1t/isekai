@@ -8,7 +8,7 @@ The layout, the keys, the dialogs, then the session grid, per [design](design.md
 - [x] 1 — The layout
 - [x] 2 — The keys
 - [x] 3 — The dialogs
-- [ ] 4 — The session grid
+- [x] 4 — The session grid
 
 ## 1 — The layout
 
@@ -50,14 +50,14 @@ The layout, the keys, the dialogs, then the session grid, per [design](design.md
 
 ## 4 — The session grid
 
-- [ ] 4.1 **HALT CHECK** — the record plans nothing.
+- [x] 4.1 **HALT CHECK** — the record plans nothing.
   Verify: `grep -c 'planned' isekai/interface/render.py` prints `0`.
-- [ ] 4.2 Add `planned` to `SessionRecord` in `isekai/foundation/artifacts.py` and write it in `isekai/interface/render.py`
+- [x] 4.2 Add `planned` to `SessionRecord` in `isekai/foundation/artifacts.py` and write it in `isekai/interface/render.py`
   per [D7](design.md#d7); bind `cli:render-session:the-record-plans-each-photograph` in `tests/test_render.py`.
   Verify: `grep -c 'planned' isekai/interface/render.py` prints a number of at least `1`, and `uv run pytest -q tests/test_render.py` exits 0.
-- [ ] 4.3 Build the grid and its moves in `ui/src/sessions.ts` and draw them in `ui/src/views/SessionPage.vue` per
+- [x] 4.3 Build the grid and its moves in `ui/src/sessions.ts` and draw them in `ui/src/views/SessionPage.vue` per
   [D7](design.md#d7); bind both `ui:sessions:` grid keys in a new `ui/src/sessions.test.ts`.
   Verify: `grep -c -E 'the-grid-holds-each-flow|the-grid-moves-by-photograph' ui/src/sessions.test.ts` prints `2`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 4.4 Redraw `ui/design/spec.md`'s J2 source cell, rule 1, J5's Compare and J4's session page per [D3](design.md#d3),
+- [x] 4.4 Redraw `ui/design/spec.md`'s J2 source cell, rule 1, J5's Compare and J4's session page per [D3](design.md#d3),
   [D5](design.md#d5), [D2](design.md#d2) and [D7](design.md#d7).
   Verify: `grep -c 'bottom key bar' ui/design/spec.md` prints `0`, and `uv run pytest -q tests/test_docs.py` exits 0.

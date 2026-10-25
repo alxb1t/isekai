@@ -40,6 +40,7 @@ from isekai.boundary.pod_start import HOLD_SECONDS
 from isekai.foundation.artifacts import (
     SESSION_FILE,
     SESSIONS,
+    SessionPlan,
     SessionRecord,
     create,
     replace,
@@ -229,7 +230,12 @@ class Record:
     """
 
     def __init__(
-        self, folder: Path, given: str | None, limit: int, asked: Mapping[str, int]
+        self,
+        folder: Path,
+        given: str | None,
+        limit: int,
+        asked: Mapping[str, int],
+        planned: Sequence[SessionPlan] = (),
     ) -> None:
         """Name the record by `given`, else by its start, once it opens."""
         self._folder = folder
@@ -244,6 +250,7 @@ class Record:
             "ended": None,
             "limit": limit,
             "asked": dict(asked),
+            "planned": list(planned),
             "steps": {},
             "images": [],
             "outcome": "running",
@@ -432,12 +439,16 @@ def run_session(
 
 @dataclass(frozen=True)
 class Line:
-    """One `generate` line of a session, and how many images it renders."""
+    """One `generate` line of a session, how many images it renders, and per run.
+
+    e.g. `planned` (("0d4b…_ada", 2), ("9f1c…_bea", 1)) for `images` 3
+    """
 
     flow: str
     head: tuple[str, ...]
     where: tuple[str, ...]
     images: int
+    planned: tuple[tuple[str, int], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -587,6 +598,16 @@ class Short:
         return None
 
 
+def _plan(runs: Path, lines: Sequence[Line]) -> list[SessionPlan]:
+    """Return what `lines` plan for each run and flow, by the run's digest."""
+    return [
+        {"digest": Run(run_id, runs / run_id).digest, "flow": line.flow, "images": n}
+        for line in lines
+        for run_id, n in line.planned
+        if n
+    ]
+
+
 def _images(lines: Sequence[Line]) -> dict[str, int]:
     """Return how many images `lines` render, by flow."""
     found: dict[str, int] = {}
@@ -625,7 +646,8 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
     for flow in sorted({flow for _, flow, _ in wanted}):
         held = [(run_id, n) for run_id, named, n in wanted if named == flow]
         where = ("--runs", str(runs), *(run_id for run_id, _ in held))
-        lines.append(Line(flow, ("--flow", flow), where, sum(n for _, n in held)))
+        images = sum(n for _, n in held)
+        lines.append(Line(flow, ("--flow", flow), where, images, tuple(held)))
     return Short(lines, wanted, left_out, refused)
 
 
@@ -745,7 +767,9 @@ def _session(
     limit = asked or _estimated(runs, ids, _images(lines), timing, ceiling_s).limit_s
     again = shlex.join(["uv", "run", "python", "-m", "isekai", "render", str(runs)])
     rest = "".join(f" {text}" for text in texts)
-    record = Record(runs.parent / SESSIONS, given, limit, _images(lines))
+    record = Record(
+        runs.parent / SESSIONS, given, limit, _images(lines), _plan(runs, lines)
+    )
     steps.record = record
 
     def reached() -> None:
@@ -785,17 +809,20 @@ def _requested(
     it renders first in this session.
     """
     if request.by_count:
-        images = counts[request.flow] * len(ids)
+        planned = [(run_id, counts[request.flow]) for run_id in ids]
     elif request.value in counts:
-        images = counts[request.value] * len(ids)
+        planned = [(run_id, counts[request.value]) for run_id in ids]
     else:
         suffix = load_flow(request.value, wired.flows_dir).output_suffix
-        images = 0
+        planned = []
         for run_id in ids:
             groups = render_groups(Run(run_id, runs / run_id), request.value)
-            images += len(rendered_seeds(groups[-1], suffix)) if groups else 0
+            seeds = rendered_seeds(groups[-1], suffix) if groups else []
+            planned.append((run_id, len(seeds)))
     head = ("--flow", request.flow, request.mode, request.value)
-    return Line(request.flow, head, ("--runs", str(runs), *ids), images)
+    images = sum(n for _, n in planned)
+    where = ("--runs", str(runs), *ids)
+    return Line(request.flow, head, where, images, tuple(planned))
 
 
 def _rendered(

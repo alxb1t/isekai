@@ -356,6 +356,33 @@ button.session__tile {
   cursor: zoom-in;
 }
 
+/* The session's grid: a flow per row over the photographs' row, a photograph per
+   column; a cell's images stack, so a column stays one tile wide. */
+.session__grid {
+  display: grid;
+  gap: 8px 12px;
+  align-items: start;
+}
+
+.session__flow {
+  align-self: center;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.session__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 3px;
+  border-radius: 4px;
+  outline: none;
+}
+
+.session__cell--focused {
+  box-shadow: inset 0 0 0 1px var(--focus);
+}
+
 /* A photograph of the batch, at a render tile's size. */
 .session__tile--photo {
   border: 1px solid var(--line);

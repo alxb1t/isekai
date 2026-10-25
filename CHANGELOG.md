@@ -9,6 +9,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- A render session's record plans each photograph's images per flow, and its page is a grid of flows over the
+  photographs, waiting tiles for what is to come, moved by `h j k l` with `↵` opening the row (0076 D7).
+
 - `c` on any large view picks another image of its cell in the viewer, any version or seed, and Compare names when
   the seeds differ or the sheets are the same. The Render dialog closes when its page is left (0076 D2, D4).
 

@@ -224,6 +224,8 @@ export interface SessionRecord {
   limit: number
   /* The images each flow was asked to render. */
   asked: Record<string, number>
+  /* The images planned for each run, by its digest, and flow; absent from an older record. */
+  planned?: { digest: string; flow: string; images: number }[]
   /* `pod` and `teardown`, each by its state. */
   steps: Record<string, string>
   images: SessionImage[]
