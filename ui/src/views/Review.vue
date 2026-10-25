@@ -23,7 +23,7 @@ import { useKeys } from '../composables/useKeys'
 import { useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import { clamp } from '../grid'
-import { nextPane, type Pane } from '../panes'
+import { nextPane, type Pane, paneKeys } from '../panes'
 import { modded, plain, shifted, useKeyStore } from '../stores/keys'
 import type { FieldCandidates } from '../types'
 
@@ -444,28 +444,7 @@ useKeys('screen', [
     run: nextFlow,
     when: () => batch.others.value.length > 0,
   },
-  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'pane left', run: () => movePane(-1) },
-  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'pane right', run: () => movePane(1) },
-  /* A field keeps h and l as text, so on macOS, where ⌃ is free of the window
-     manager, ⌃H ⌃L move between panes from it; elsewhere they are not declared (D25). */
-  ...(useKeyStore().mac
-    ? [
-        {
-          id: 'field-left',
-          keys: [{ code: 'KeyH', ctrl: true }],
-          label: 'pane left',
-          run: () => movePane(-1),
-          inField: true,
-        },
-        {
-          id: 'field-right',
-          keys: [{ code: 'KeyL', ctrl: true }],
-          label: 'pane right',
-          run: () => movePane(1),
-          inField: true,
-        },
-      ]
-    : []),
+  ...paneKeys(useKeyStore().mac, movePane),
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
   { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'up', run: vertical(-1) },
   {

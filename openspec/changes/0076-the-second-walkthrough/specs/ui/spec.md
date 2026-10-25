@@ -9,10 +9,11 @@ layout, and SHALL treat Mod as `⌘` on macOS and `Ctrl` elsewhere. An open over
 screen beneath it, and the screen before the keys offered everywhere. While focus is in a text field, no command
 SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z` and `Mod+K`, and on macOS Review's `⌃H` and `⌃L`, which move between
 its panes; the field SHALL keep its own editing keys. On a grid, a move between rows SHALL keep the column it is in,
-held at a shorter row's end. On the hub, a focused button or link SHALL keep `↵` and `Space`. An `Esc` that ends an
-input method's composition SHALL be the input method's, closing nothing. `Esc` SHALL close an open suggestion list
-first, then leave the field, then close the top overlay, then go back on the screen, and SHALL never close a billing
-alert. No key SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it quotes.
+held at a shorter row's end. On the hub and on a session's page, a focused button or link SHALL keep `↵` and `Space`.
+An `Esc` that ends an input method's composition SHALL be the input method's, closing nothing. `Esc` SHALL close an
+open suggestion list first, then leave the field, then close the top overlay, then go back on the screen, and SHALL
+never close a billing alert. No key SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it
+quotes.
 
 A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
 Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.

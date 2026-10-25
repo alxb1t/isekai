@@ -9,7 +9,7 @@ import { useKeys } from '../composables/useKeys'
 import { type Focus, type Move, moved } from '../grid'
 import { asked, first, grid, lastColumns, lasted, outcome } from '../sessions'
 import { useBatchStore } from '../stores/batch'
-import { plain } from '../stores/keys'
+import { isControl, plain } from '../stores/keys'
 import { alerting, clock, useLiveStore } from '../stores/live'
 
 /* One render session (design spec J4·2, J4·3), from the record its verb writes.
@@ -17,8 +17,8 @@ import { alerting, clock, useLiveStore } from '../stores/live'
    page is drawn from the slot until the verb has written the record. Its images
    are a grid: a column per photograph, a row per flow, the photographs' row last,
    a waiting tile per image to come. h j k l or the arrows move, the first render
-   focused on opening; ↵ opens the viewer over the row. No spend is shown after
-   the quote. */
+   focused on opening; ↵ opens the viewer over the row, unless a button or link
+   such as Stop has the focus and answers it. No spend is shown after the quote. */
 const props = defineProps<{ batch: string; id: string }>()
 const store = useBatchStore()
 const live = useLiveStore()
@@ -160,7 +160,7 @@ useKeys('screen', [
     keys: plain('Enter'),
     label: 'the viewer',
     run: () => view(focus.value),
-    when: () => layout.value.digests.length > 0,
+    when: () => layout.value.digests.length > 0 && !isControl(document.activeElement),
   },
 ])
 

@@ -62,6 +62,11 @@ def test_the_list_shows_a_finished_session(page: Page, served: Served) -> None:
     expect(page).to_have_url(f"{served.url}/b/{SHOWN}/sessions/{FINISHED}")
     expect(page.locator("[data-outcome]")).to_have_text("done")
     expect(page.locator("[data-session-image] img")).to_have_count(1)
+    # A focused link or button keeps ↵ from the grid's viewer.
+    page.locator("[data-renders]").focus()
+    page.keyboard.press("Enter")
+    expect(page).to_have_url(f"{served.url}/b/{SHOWN}/renders")
+    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
 
 
 @pytest.mark.spec("ui:renders:the-large-view-shows-its-sheet")

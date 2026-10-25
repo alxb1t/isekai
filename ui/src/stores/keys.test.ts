@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, vi } from 'vitest'
+import { paneKeys } from '../panes'
 import { spec } from '../test/spec'
 import { type Command, type Press, isControl, isMac, useKeyStore } from './keys'
 
@@ -208,30 +209,28 @@ spec('ui:keys:review-panes-move-from-a-field-on-macos', () => {
   expect(isMac({ platform: 'Linux x86_64' })).toBe(false)
   expect(isMac(undefined)).toBe(false)
 
-  // As Review declares them: plain l is text in a field; on macOS alone, ⌃L moves the pane.
+  // Review's own pane keys: plain l is text in a field; on macOS alone, ⌃L moves the pane.
   function review(mac: boolean) {
     setActivePinia(createPinia())
     const keys = useKeyStore()
     keys.mac = mac
-    const right = command('right', 'KeyL')
-    const fieldRight = command('field-right', 'KeyL', {
-      keys: [{ code: 'KeyL', ctrl: true }],
-      label: 'pane right',
-      inField: true,
-    })
-    keys.declare('screen', [right, ...(keys.mac ? [fieldRight] : [])])
-    return { keys, right, fieldRight, target: field() }
+    const move = vi.fn()
+    keys.declare('screen', paneKeys(keys.mac, move))
+    return { keys, move, target: field() }
   }
 
   const mac = review(true)
   expect(mac.keys.press(press('KeyL', { target: mac.target }))).toBe(false)
+  expect(mac.move).not.toHaveBeenCalled()
   expect(mac.keys.press(press('KeyL', { target: mac.target, ctrlKey: true }))).toBe(true)
-  expect(mac.fieldRight.run).toHaveBeenCalledOnce()
+  expect(mac.move).toHaveBeenCalledExactlyOnceWith(1)
+  expect(mac.keys.press(press('KeyH', { target: mac.target, ctrlKey: true }))).toBe(true)
+  expect(mac.move).toHaveBeenLastCalledWith(-1)
   expect(mac.keys.hint('field-right')).toBe('⌃L')
 
   const linux = review(false)
   expect(linux.keys.press(press('KeyL', { target: linux.target, ctrlKey: true }))).toBe(false)
-  expect(linux.fieldRight.run).not.toHaveBeenCalled()
-  expect(linux.right.run).not.toHaveBeenCalled()
-  expect(linux.keys.listed.map((one) => one.id)).toEqual(['right'])
+  expect(linux.keys.press(press('KeyH', { target: linux.target, ctrlKey: true }))).toBe(false)
+  expect(linux.move).not.toHaveBeenCalled()
+  expect(linux.keys.listed.map((one) => one.id)).toEqual(['left', 'right'])
 })
