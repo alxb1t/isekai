@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar } from '../bars'
 import { sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
-import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RenderBar from '../components/RenderBar.vue'
@@ -22,8 +21,8 @@ import type { RenderVersion, RevisedImage } from '../types'
    versions oldest to newest, each image marked with its version (design spec
    J5·1). ↵ or a click opens an image's large view; space selects, and e revises
    the selection (§7). A seed rendered under two versions is marked ⇄. The Render
-   bar offers what the newest approvals lack; a source's thumbnail opens it in the
-   viewer. */
+   bar offers what the newest approvals lack; a source, its row's first column,
+   opens in the viewer on ↵ or a click on its thumbnail. */
 const props = defineProps<{ batch: string }>()
 const router = useRouter()
 const refusal = ref<string | null>(null)
@@ -86,8 +85,8 @@ const rows = computed<Spot[][]>(() => {
 
 /* The focused image, as `spot` spells it. e.g. "0|summon-anime-wai|1|42" */
 const focused = computed(() => {
-  const here = rows.value[focus.value.row]?.[focus.value.column]
-  return here ? spot(focus.value.row, here.flow, here.version, here.seed) : ''
+  const one = here()
+  return one ? spot(focus.value.row, one.flow, one.version, one.seed) : ''
 })
 
 function spot(row: number, flow: string, version: number, seed: string): string {
@@ -123,41 +122,46 @@ function repeated(versions: RenderVersion[]): Set<string> {
   return new Set([...seen].filter(([, count]) => count > 1).map(([seed]) => seed))
 }
 
-/* Each cell's image count, by source row then flow, counted from `rows`. */
-const cells = computed(() =>
-  rows.value.map((spots) =>
-    (info.value?.flows ?? []).map((flow) => spots.filter((one) => one.flow === flow).length),
-  ),
-)
+/* A source's spot, as the store keeps it. e.g. "source|hal.jpg" */
+const sourceKey = (name: string) => `source|${name}`
 
 /* Focus `spot`, and keep it in the store for this grid's next opening. */
 function hold(spot: { row: number; column: number }): void {
   focus.value = spot
   const one = here()
+  const source = info.value?.sources[spot.row]
   if (one) store.focus.renders = key(one)
+  else if (source) store.focus.renders = sourceKey(source.name)
 }
 
 function go(move: Move): () => void {
   return () => {
-    hold(moved(cells.value, focus.value, move))
+    // A row's last column is its image count: column 0 is its source.
+    hold(
+      moved(
+        rows.value.map((spots) => spots.length),
+        focus.value,
+        move,
+      ),
+    )
     void nextTick(() =>
       document
-        .querySelector<HTMLElement>('.renders__image--focused')
+        .querySelector<HTMLElement>('.renders__image--focused, .renders__source--focused')
         ?.scrollIntoView({ block: 'nearest' }),
     )
   }
 }
 
-const here = () => rows.value[focus.value.row]?.[focus.value.column]
+/* The focused image; column 0 is its row's source. */
+const here = (): Spot | undefined => rows.value[focus.value.row]?.[focus.value.column - 1]
+const onSource = (row: number) => focus.value.row === row && focus.value.column === 0
 
-/* h j k l between cells, the arrows between images (D25). */
+/* h l and the arrows step images, crossing cells into the source; j k between rows (D25). */
 useKeys('screen', [
-  { id: 'previous-cell', keys: plain('KeyH'), label: 'previous cell', run: go('cell-') },
-  { id: 'next-cell', keys: plain('KeyL'), label: 'next cell', run: go('cell+') },
+  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'previous image', run: go('column-') },
+  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'next image', run: go('column+') },
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'next source', run: go('row+') },
   { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'previous source', run: go('row-') },
-  { id: 'left', keys: plain('ArrowLeft'), label: 'previous image', run: go('image-') },
-  { id: 'right', keys: plain('ArrowRight'), label: 'next image', run: go('image+') },
   {
     id: 'select',
     keys: plain('Space'),
@@ -168,9 +172,13 @@ useKeys('screen', [
   {
     id: 'open',
     keys: plain('Enter'),
-    label: 'the large view',
-    run: () => open(focus.value.row, here() as Spot),
-    when: () => here() !== undefined,
+    label: 'open',
+    run: () => {
+      const one = here()
+      if (one) open(focus.value.row, one)
+      else viewing.value = info.value?.sources[focus.value.row]?.name ?? null
+    },
+    when: () => here() !== undefined || focus.value.column === 0,
   },
   {
     id: 'revise',
@@ -188,7 +196,7 @@ function thumb(digest: string, flow: string, version: number, seed: string): str
 
 /* The large view of `one`, in row `row`, which takes the focus first. */
 function open(row: number, one: Spot): void {
-  hold({ row, column: rows.value[row].findIndex((spot) => key(spot) === key(one)) })
+  hold({ row, column: rows.value[row].findIndex((spot) => key(spot) === key(one)) + 1 })
   const { digest, flow, version, seed } = one
   void router.push({
     name: 'render',
@@ -204,9 +212,22 @@ onMounted(async () => {
     refusal.value = (reason as Error).message
     return
   }
-  const spots = rows.value.flatMap((held, row) => held.map((one, column) => ({ row, column, one })))
-  const spot = kept(spots, ({ one }) => key(one), store.focus.renders)
+  // Images first, so a grid opened afresh focuses its first image, not a source.
+  const images = rows.value.flatMap((held, row) =>
+    held.map((one, column) => ({ row, column: column + 1, name: key(one) })),
+  )
+  const sources = (info.value?.sources ?? []).map((source, row) => ({
+    row,
+    column: 0,
+    name: sourceKey(source.name),
+  }))
+  const spot = kept([...images, ...sources], ({ name }) => name, store.focus.renders)
   if (spot) hold({ row: spot.row, column: spot.column })
+})
+
+/* The Render dialog is this page's: leaving the page closes it. */
+onUnmounted(() => {
+  if (dialog.value) store.closeDialog()
 })
 </script>
 
@@ -232,7 +253,12 @@ onMounted(async () => {
       <span class="section-label">source</span>
       <span v-for="flow in info.flows" :key="flow" class="section-label">{{ flow }}</span>
       <template v-for="(source, row) in info.sources" :key="source.name">
-        <div class="renders__source">
+        <div
+          class="renders__source"
+          :class="{ 'renders__source--focused': onSource(row) }"
+          :data-row="row"
+          data-source
+        >
           <button
             class="hub__thumb"
             type="button"
@@ -330,6 +356,5 @@ onMounted(async () => {
       @open="store.openDialog"
     />
     <RenderDialog v-if="dialog" :batch="batch" @close="store.closeDialog" />
-    <KeyBar />
   </section>
 </template>

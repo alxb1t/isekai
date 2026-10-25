@@ -9,6 +9,26 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-10-25 · 0076-the-second-walkthrough
+
+Gate: local 0m41s · CI 7m25s (build-image at 801ffec) · 0.48.0: local 0m41s · CI 7m25s
+
+### Changed
+
+- A render session's record plans each photograph's images per flow, and its page is a grid of flows over the
+  photographs, waiting tiles for what is to come, moved by `h j k l` with `↵` opening the row (0076 D7).
+
+- `c` on any large view picks another image of its cell in the viewer, any version or seed; Compare sets the older
+  before and names when the seeds differ or the sheets are the same. The Render dialog closes when its page is left
+  (0076 D2, D4).
+
+- On macOS, `⌃H` `⌃L` move between Review's panes from a field. On Renders, `h l` step images as the arrows do,
+  crossing cells and reaching the source, whose `↵` opens its photograph; `j k` keep the column (0076 D1, D6).
+
+- The hub's source cell is a column — name and file level with the tick line, the thumbnail below — and long
+  source and batch names wrap inside their columns. No screen draws a key bar; the app bar's `?` opens the key
+  list (0076 D3, D5).
+
 ## [0.48.0] - 2026-10-24 · 0075-the-walkthrough
 
 Gate: local 0m41s · CI 7m25s (build-image at 801ffec) · 0.47.0: local 0m42s · CI 7m25s

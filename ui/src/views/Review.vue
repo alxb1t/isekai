@@ -12,7 +12,6 @@ import ApproveBar from '../components/ApproveBar.vue'
 import BatchRail from '../components/BatchRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
 import ImageViewer from '../components/ImageViewer.vue'
-import KeyBar from '../components/KeyBar.vue'
 import LoadingSkeleton from '../components/LoadingSkeleton.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RendersBlock from '../components/RendersBlock.vue'
@@ -24,8 +23,8 @@ import { useKeys } from '../composables/useKeys'
 import { useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import { clamp } from '../grid'
-import { nextPane, type Pane } from '../panes'
-import { modded, plain, shifted } from '../stores/keys'
+import { nextPane, type Pane, paneKeys } from '../panes'
+import { modded, plain, shifted, useKeyStore } from '../stores/keys'
 import type { FieldCandidates } from '../types'
 
 /* Review: one batch in one flow, the run in the URL. It shows the loading state
@@ -445,8 +444,7 @@ useKeys('screen', [
     run: nextFlow,
     when: () => batch.others.value.length > 0,
   },
-  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'pane left', run: () => movePane(-1) },
-  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'pane right', run: () => movePane(1) },
+  ...paneKeys(useKeyStore().mac, movePane),
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
   { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'up', run: vertical(-1) },
   {
@@ -648,6 +646,5 @@ watch(current, (id) => {
       :field="lastField"
       @close="closeLens"
     />
-    <KeyBar />
   </div>
 </template>

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { imageAt, photoUrl, renderDetail } from '../api'
+import { imageAt, photoUrl, renderDetail, versionOf } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
-import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
@@ -13,8 +12,9 @@ import type { RenderDetail } from '../types'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
    sheet it was rendered from beside it — filled fields only, read-only. e
-   revises it; c compares it with the newest older version of its seed (J5·8);
-   ⇧C sets it beside its run's photograph. */
+   revises it; c picks another image of its cell in the viewer, starting on the
+   newest older version of its seed, and ↵ compares the two (J5·8); ⇧C sets it
+   beside its run's photograph. */
 const props = defineProps<{
   batch: string
   digest: string
@@ -28,6 +28,8 @@ const refusal = ref<string | null>(null)
 const revising = ref(false)
 /* The image beside its run's photograph, in the viewer's pair. */
 const pairing = ref(false)
+/* The viewer picking the image to compare with. */
+const picking = ref(false)
 const pair = computed(() => [
   { src: photoUrl(place.value), name: 'photograph' },
   { src: imageAt(place.value), name: `seed ${props.seed}` },
@@ -37,19 +39,45 @@ const place = computed(() => ({
   batch: props.batch,
   digest: props.digest,
   flow: props.flow,
-  version: Number(props.version.replace(/^v/, '')),
+  version: versionOf(props.version),
   seed: props.seed,
 }))
 
 const clock = (at: number) =>
   new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
 
+/* The cell's other images, in the order Renders draws them. */
+const others = computed(() =>
+  (detail.value?.images ?? []).filter(
+    (one) => one.version !== place.value.version || one.seed !== props.seed,
+  ),
+)
+const choices = computed(() =>
+  others.value.map((one) => ({
+    src: imageAt({ ...place.value, ...one }),
+    name: `v${one.version} · seed ${one.seed}`,
+  })),
+)
+
+/* The pick starts on this seed's newest older version, else the image before this one. */
+const first = computed(() => {
+  const paired = others.value.findIndex(
+    (one) => one.version === detail.value?.compare && one.seed === props.seed,
+  )
+  if (paired >= 0) return paired
+  const here = (detail.value?.images ?? []).findIndex(
+    (one) => one.version === place.value.version && one.seed === props.seed,
+  )
+  return Math.max(here - 1, 0)
+})
+
 /* Compare carries where this view was opened from, so its esc returns here
    with the same way back. */
-function compare(): void {
+function compare(index: number): void {
+  const other = others.value[index]
   void router.push({
     name: 'compare',
-    params: { ...props },
+    params: { ...props, with: `v${other.version}`, withSeed: other.seed },
     state: { from: window.history.state?.from ?? null },
   })
 }
@@ -73,8 +101,8 @@ useKeys('screen', [
     id: 'compare',
     keys: plain('KeyC'),
     label: 'compare',
-    run: compare,
-    when: () => Boolean(detail.value?.compare),
+    run: () => (picking.value = true),
+    when: () => others.value.length > 0,
   },
   {
     id: 'side-by-side',
@@ -134,13 +162,13 @@ onMounted(async () => {
           Revise this image<KeyHint command="revise" />
         </button>
         <button
-          v-if="detail.compare"
+          v-if="others.length"
           class="btn btn-secondary"
           type="button"
           data-compare
-          @click="compare"
+          @click="picking = true"
         >
-          Compare with v{{ detail.compare }}<KeyHint command="compare" />
+          Compare…<KeyHint command="compare" />
         </button>
         <button class="btn btn-secondary" type="button" data-side-by-side @click="pairing = true">
           Side by side<KeyHint command="side-by-side" />
@@ -149,8 +177,15 @@ onMounted(async () => {
           >{{ back.label }}<KeyHint command="back" /></RouterLink
         >
       </div>
-      <KeyBar />
     </aside>
+    <ImageViewer
+      v-if="picking"
+      :images="choices"
+      :start="first"
+      :open="compare"
+      action="compare with this"
+      @close="picking = false"
+    />
     <ImageViewer
       v-if="pairing"
       :images="pair"

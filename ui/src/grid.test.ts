@@ -3,30 +3,33 @@ import { moved } from './grid'
 import { spec } from './test/spec'
 
 spec('ui:keys:renders-moves-by-cell-and-by-image', () => {
-  // One source over three flows: two images, none, three.
-  const cells = [
-    [2, 0, 3],
-    [0, 0, 0],
-    [1, 1, 1],
-  ]
-  const start = { row: 0, column: 0 }
+  // Three sources; a column counts the source, 0, then the row's images across its
+  // cells: the first row's two, none and three images are its columns 1 to 5.
+  const images = [5, 0, 3]
+  const last = { row: 0, column: 2 }
 
-  const cell = moved(cells, start, 'cell+')
-  expect(cell).toEqual({ row: 0, column: 2 })
-  expect(moved(cells, cell, 'image+')).toEqual({ row: 0, column: 3 })
-  expect(moved(cells, start, 'image+')).toEqual({ row: 0, column: 1 })
-  // An image move stays inside its cell; a cell move steps over an empty one.
-  expect(moved(cells, { row: 0, column: 1 }, 'image+')).toEqual({ row: 0, column: 1 })
-  expect(moved(cells, cell, 'cell-')).toEqual({ row: 0, column: 0 })
-  expect(moved(cells, { row: 0, column: 4 }, 'row+')).toEqual({ row: 2, column: 2 })
+  // h l and the arrows both step images, crossing from a cell's last to the next's first.
+  expect(moved(images, last, 'column+')).toEqual({ row: 0, column: 3 })
+  expect(moved(images, { row: 0, column: 3 }, 'column-')).toEqual(last)
+  // A row's start steps into its source, and no further; its end stays.
+  expect(moved(images, { row: 0, column: 1 }, 'column-')).toEqual({ row: 0, column: 0 })
+  expect(moved(images, { row: 0, column: 0 }, 'column-')).toEqual({ row: 0, column: 0 })
+  expect(moved(images, { row: 0, column: 5 }, 'column+')).toEqual({ row: 0, column: 5 })
+  // A source with no images is still its row's spot.
+  expect(moved(images, { row: 1, column: 0 }, 'column+')).toEqual({ row: 1, column: 0 })
+  expect(moved([], { row: 0, column: 0 }, 'row+')).toEqual({ row: 0, column: 0 })
+})
 
-  // A row move keeps the flow: its image, or the last the next row has in it.
-  const uneven = [
-    [5, 2],
-    [10, 2],
-    [0, 1],
-  ]
-  expect(moved(uneven, { row: 0, column: 5 }, 'row+')).toEqual({ row: 1, column: 10 })
-  expect(moved(uneven, { row: 1, column: 11 }, 'row-')).toEqual({ row: 0, column: 6 })
-  expect(moved(uneven, { row: 1, column: 7 }, 'row+')).toEqual({ row: 2, column: 0 })
+spec('ui:keys:a-row-move-keeps-the-column', () => {
+  // The third image of a row whose next row holds two.
+  const images = [4, 2, 6]
+  const third = { row: 0, column: 3 }
+
+  expect(moved(images, third, 'row+')).toEqual({ row: 1, column: 2 })
+  expect(moved(images, { row: 2, column: 5 }, 'row-')).toEqual({ row: 1, column: 2 })
+  expect(moved(images, { row: 1, column: 1 }, 'row+')).toEqual({ row: 2, column: 1 })
+  // The source column stays the source column; past either end the focus stays.
+  expect(moved(images, { row: 1, column: 0 }, 'row+')).toEqual({ row: 2, column: 0 })
+  expect(moved(images, third, 'row-')).toEqual(third)
+  expect(moved(images, { row: 2, column: 5 }, 'row+')).toEqual({ row: 2, column: 5 })
 })

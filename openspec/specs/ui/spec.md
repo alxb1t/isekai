@@ -1020,15 +1020,16 @@ snapshot, so a stream opened again loses nothing, and one connection a page leav
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
 The system SHALL offer Render from a bar on a batch's hub and its Renders view that counts the images short of their
-approvals' counts, and SHALL show no such bar when none is short and no count is refused, nor on the hub while changes
-wait for Prepare. The bar SHALL be disabled, with its reason, when a render runs, when a pod may still be billing, when
-no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a dialog
-listing per offered flow the images that will render and what is left out, with the reason, the session's estimate
-and limit, and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its
-configured rate. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL. The confirmation
-SHALL carry the limit and the number of images the dialog showed, and SHALL be refused, starting nothing, when the
-batch's quote taken again has a longer limit or another number of images. The bar SHALL show the newest offer
-asked for, whatever order the answers arrive in.
+approvals' counts, and SHALL show no such bar when none is short and no count is refused, nor on the hub while
+changes wait for Prepare. The bar SHALL be disabled, with its reason, when a render runs, when a pod may still be
+billing, when no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a
+dialog listing per offered flow the images that will render and what is left out, with the reason, the session's
+estimate and limit, and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at
+its configured rate. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL, and SHALL close
+when its page is left, the confirmation's own navigation among the ways out. The confirmation SHALL carry the limit
+and the number of images the dialog showed, and SHALL be refused, starting nothing, when the batch's quote taken
+again has a longer limit or another number of images. The bar SHALL show the newest offer asked for, whatever order
+the answers arrive in.
 
 The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
 not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires
@@ -1075,6 +1076,7 @@ a refused count keeps the bar, so the refusal is never silent.
 - **Layers:** e2e
 - **WHEN** the dialog's Render is confirmed
 - **THEN** the session's page opens at `/b/<batch>/sessions/<id>`
+- **AND** back on the hub the dialog is closed
 
 #### Scenario: a quote that has grown is refused
 - **Key:** `ui:render:a-grown-quote-is-refused`
@@ -1204,7 +1206,8 @@ The system SHALL list a batch's images by source and offered flow, each cell's a
 SHALL show them as a grid of sources by flows, each cell one row of its images, its versions oldest to newest, each
 image marked with its version, and open an image's large view, with the sheet it was rendered from, from any of them.
 A cell whose newest approval lacks images of its count SHALL carry the number it lacks, as the render stage counts
-it. Each source SHALL show its photograph's thumbnail, upright, opening the photograph in a viewer. `Esc` on a large
+it. Each source SHALL show its photograph's thumbnail, upright, opening the photograph in a viewer, its cell the
+grid's first column, reached by the keys and opened by `↵`. `Esc` on a large
 view SHALL return to the screen it was opened from, focused on the image it closed, and Renders SHALL keep its focus
 across the Back button and a switch of tabs. It SHALL mark an approval it cannot read as damaged, naming the
 file, and show every image, that version's own among them; and SHALL refuse an address whose version is not `v` and
@@ -1270,6 +1273,7 @@ another format is still shown, as its thumbnail is.
 - **WHEN** an image is opened from the grid
 - **THEN** its large view shows the approval it was rendered from
 - **AND** `Esc` returns to the grid focused on that image
+- **AND** `h` from a row's first image reaches its source, and `↵` there opens its photograph
 
 #### Scenario: a source opens in the viewer
 - **Key:** `ui:renders:a-source-opens-in-the-viewer`
@@ -1308,11 +1312,13 @@ another format is still shown, as its thumbnail is.
 ### Requirement: A version says what it was, and Compare shows a seed's two versions
 
 The system SHALL head each image's large view with its approval version, the version it came from, read from its
-producer, naming it a revision when its fields differ from that version's and a re-roll when only its count or seeds
-do, and the approval's time, count and seeds. A large view whose seed is rendered under an older version of the same
-source and flow SHALL offer Compare with the newest such version, showing both images at equal size, the fields that
-changed, what changed in the count and seeds, and the tokens before and after. Every large view SHALL
-offer *Side by side*, the image beside its run's photograph at equal height.
+producer, naming it a revision when its fields differ from that version's and a re-roll when only its count or seeds do,
+and the approval's time, count and seeds. A large view whose seed is rendered under an older version of the same source
+and flow SHALL offer Compare with the newest such version first, and every large view SHALL offer Compare with any other
+image of its source and flow, picked in the viewer, saying so when the two seeds differ or the two share a sheet,
+showing both images at equal size, the older of the two before, the fields that changed, what changed in the count and
+seeds, and the tokens before and after. Every large view SHALL offer *Side by side*, the image beside its run's
+photograph at equal height.
 
 The origin is already on disk, so nothing new records it. Same seed, same composition: the difference left is the
 edit. The grid carries the images; the large view, which carries the sheet, carries what the version was.
@@ -1334,6 +1340,7 @@ edit. The grid carries the images; the large view, which carries the sheet, carr
 - **Layers:** e2e
 - **WHEN** Compare is opened on a revised image
 - **THEN** both images and the changed fields are shown
+- **AND** a pick of another seed's image compares it, saying the seeds differ
 
 #### Scenario: Side by side sets the image beside its photograph
 - **Key:** `ui:compare:side-by-side-sets-the-image-beside-its-photograph`
@@ -1341,23 +1348,34 @@ edit. The grid carries the images; the large view, which carries the sheet, carr
 - **WHEN** *Side by side* is opened on an image's large view
 - **THEN** one dialog shows the run's photograph and the image at equal height
 
+#### Scenario: Compare takes any two images of a cell
+- **Key:** `ui:compare:any-two-images-of-a-cell`
+- **Layers:** unit
+- **WHEN** Compare is asked for an image of v4 against an image of v2 with another seed
+- **THEN** it serves both, the changed fields and that the seeds differ
+- **AND** v2 is before, whichever of the two is named
+
 ### Requirement: Every command has one key, declared once, and none fires while typing
 
-The system SHALL declare each keyboard command once, with its key and its label, on the screen or overlay that
-offers it, and SHALL draw every key hint, each screen's key bar and the key list that `?` opens from those
-declarations. It SHALL match a key by the physical key, whatever the keyboard layout, and SHALL treat Mod as `⌘` on
-macOS and `Ctrl` elsewhere. An open overlay SHALL take every key before the screen beneath it, and the screen before
-the keys offered everywhere. While focus is in a text field, no command SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`,
-`⇧Mod+Z` and `Mod+K`, and the field SHALL keep its own editing keys. On the hub, a focused button or link SHALL
-keep `↵` and `Space`. `Esc` SHALL close an open suggestion list first, then leave the field, then close the top
-overlay, then go back on the screen, and SHALL never close a billing alert. No key SHALL spend money but the Render
-dialog's `Mod+↵`, which confirms the price it quotes.
+The system SHALL declare each keyboard command once, with its key and its label, on the screen or overlay that offers
+it, and SHALL draw every key hint and the key list from those declarations, the list opening on `?` and on the app
+bar's `?` button; no screen SHALL carry a key bar. It SHALL match a key by the physical key, whatever the keyboard
+layout, and SHALL treat Mod as `⌘` on macOS and `Ctrl` elsewhere. An open overlay SHALL take every key before the
+screen beneath it, and the screen before the keys offered everywhere. While focus is in a text field, no command
+SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z` and `Mod+K`, and on macOS Review's `⌃H` and `⌃L`, which move between
+its panes; the field SHALL keep its own editing keys. On a grid, a move between rows SHALL keep the column it is in,
+held at a shorter row's end. On the hub and on a session's page, a focused button or link SHALL keep `↵` and `Space`.
+An `Esc` that ends an input method's composition SHALL be the input method's, closing nothing. `Esc` SHALL close an
+open suggestion list first, then leave the field, then close the top overlay, then go back on the screen, and SHALL
+never close a billing alert. No key SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it
+quotes.
 
 A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
 Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.
 
 ```
-keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod+Z · Mod+K, else the field's own
+keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod+Z · Mod+K,
+               │                     on macOS Review's ⌃H ⌃L, else the field's own
                │ no
                ▼
            top overlay ─▶ screen ─▶ everywhere        the first that declares the key runs
@@ -1392,7 +1410,7 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 #### Scenario: a focused control keeps Enter and Space
 - **Key:** `ui:keys:a-focused-control-keeps-enter-and-space`
 - **Layers:** unit
-- **WHEN** `↵` or `Space` is pressed on the hub with focus on a button or a link
+- **WHEN** `↵` or `Space` is pressed on the hub or a session's page with focus on a button or a link
 - **THEN** the control answers it and the cell's command does not run
 
 #### Scenario: an overlay takes the keys first
@@ -1411,19 +1429,38 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 - **Key:** `ui:keys:hints-come-from-the-declarations`
 - **Layers:** unit
 - **WHEN** a screen declares its commands
-- **THEN** its key bar, its button hints and the key list name each command's key and label
+- **THEN** its button hints and the key list name each command's key and label
+- **AND** no key bar is drawn
 
 #### Scenario: Renders moves by cell and by image
 - **Key:** `ui:keys:renders-moves-by-cell-and-by-image`
 - **Layers:** unit
-- **WHEN** `l` and then `→` are pressed on the Renders grid
-- **THEN** `l` moves to the next cell and `→` to the next image inside it
+- **WHEN** `l` and then `→` are pressed on a cell's last image of the Renders grid
+- **THEN** each moves to the next image, crossing into the next cell, and `h` at a row's start reaches its source
 
 #### Scenario: Review moves between its panes
 - **Key:** `ui:keys:review-moves-between-its-panes`
 - **Layers:** unit
 - **WHEN** `l` is pressed from the rail three times
 - **THEN** focus moves through the source pane and the sheet to ④
+
+#### Scenario: a row move keeps the column
+- **Key:** `ui:keys:a-row-move-keeps-the-column`
+- **Layers:** unit
+- **WHEN** `j` is pressed on the Renders grid's third image of a row whose next row holds two
+- **THEN** the focus moves to that row's second image
+
+#### Scenario: an Esc that ends a composition closes nothing
+- **Key:** `ui:keys:an-esc-ending-a-composition-closes-nothing`
+- **Layers:** unit
+- **WHEN** `Esc` ends an input method's composition in a field inside an overlay
+- **THEN** the field keeps the focus and the overlay stays open
+
+#### Scenario: Review's panes move from a field on macOS
+- **Key:** `ui:keys:review-panes-move-from-a-field-on-macos`
+- **Layers:** unit
+- **WHEN** `⌃L` is pressed with focus in a tag field, on macOS and then on Linux
+- **THEN** on macOS the next pane takes the focus, and on Linux nothing moves
 
 ### Requirement: Review opens a batch at its own address, lists every unrendered sheet, and Approve stays on the sheet
 
@@ -1580,9 +1617,11 @@ The system SHALL list a batch's render sessions from its records, the running on
 each with its start, its duration against its limit, its outcome and its images, and SHALL show one session's page
 from its record, live while it runs, with the volume steps and Stop the job adds. A Sessions tab SHALL sit beside the
 hub, Review and Renders. While a render runs, every screen SHALL show it running, with its clock, linking to its
-session's page. A finished image SHALL open in the viewer, and the batch's source photographs SHALL show on the page,
-each opening in the viewer; images and photographs SHALL be drawn at the tile size Renders draws. The viewer SHALL
-follow its list when it changes while open.
+session's page. A finished image SHALL open in the viewer, and the page SHALL be a grid: a column for each photograph
+the session was asked to render, a row for each flow it renders, the photographs' row at the foot, a cell holding
+that flow's images of that photograph and a waiting tile for each still to come, each opening in the viewer, moved
+through by the keys; images and photographs SHALL be drawn at the tile size Renders draws. The viewer SHALL follow
+its list when it changes while open.
 
 A session is the record the render wrote, so the page, the list and the terminal agree, and a finished session can
 be found again. A running render is the one thing on the surface that bills by the minute.
@@ -1632,3 +1671,16 @@ be found again. A running render is the one thing on the surface that bills by t
 - **WHEN** an open viewer's list shrinks, reorders, grows or becomes empty
 - **THEN** it keeps the selected image by identity while present, otherwise a valid neighbour
 - **AND** an empty list closes the viewer
+
+#### Scenario: the session grid holds each flow over the originals
+- **Key:** `ui:sessions:the-grid-holds-each-flow-over-the-originals`
+- **Layers:** unit
+- **WHEN** a record plans two images of one photograph in summon and one of another in conjure
+- **THEN** the grid has a column per photograph, a row per flow over the photographs' row, and three waiting tiles
+- **AND** a record without a plan places its landed images and no waiting tiles
+
+#### Scenario: the session grid moves by photograph and by row
+- **Key:** `ui:sessions:the-grid-moves-by-photograph-and-row`
+- **Layers:** unit
+- **WHEN** `l` and then `j` are pressed on the grid's first render
+- **THEN** `l` moves to the next photograph's column and `j` to the row below, held at the photographs' row

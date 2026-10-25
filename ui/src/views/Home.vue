@@ -4,7 +4,6 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { library, sourceThumbAt } from '../api'
 import ImportSheet from '../components/ImportSheet.vue'
-import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
@@ -172,6 +171,5 @@ onMounted(async () => {
         </template>
       </div>
     </template>
-    <KeyBar />
   </section>
 </template>

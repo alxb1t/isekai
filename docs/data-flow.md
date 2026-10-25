@@ -56,7 +56,8 @@ that approval, newest or not, with a count of one and the seed listed. Every ima
 is checked first, and a selection is written whole or not at all; a flow's waiting
 draft refuses it, and `review --discard` deletes that draft. Approval refuses a
 revision that would only re-render images its approval already made. The app's
-Compare pairs a seed with the newest older version that rendered it:
+Compare pairs any two images of a cell, the older before, and by default a seed with
+the newest older version that rendered it:
 
 ```
 outputs/001/7.png ─▶ revise ─▶ review/003.draft.json  {count 1, seeds [7]}

@@ -98,6 +98,22 @@ body {
   text-decoration: none;
 }
 
+/* The key list's button, at the bar's far end, after the running render. */
+.appbar__keys {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.appbar__render ~ .appbar__keys {
+  margin-left: 0;
+}
+
 .appbar__key {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -321,12 +337,6 @@ body {
   background: var(--accent);
 }
 
-.session__images {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 .session__tile {
   width: var(--tile-width);
   height: var(--tile-height);
@@ -338,6 +348,33 @@ body {
 
 button.session__tile {
   cursor: zoom-in;
+}
+
+/* The session's grid: a flow per row over the photographs' row, a photograph per
+   column; a cell's images stack, so a column stays one tile wide. */
+.session__grid {
+  display: grid;
+  gap: 8px 12px;
+  align-items: start;
+}
+
+.session__flow {
+  align-self: center;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.session__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 3px;
+  border-radius: 4px;
+  outline: none;
+}
+
+.session__cell--focused {
+  box-shadow: inset 0 0 0 1px var(--focus);
 }
 
 /* A photograph of the batch, at a render tile's size. */
@@ -472,6 +509,7 @@ button.session__tile {
   display: flex;
   gap: 10px;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .renders__cell {
@@ -861,6 +899,7 @@ button.session__tile {
 }
 
 .rail__card {
+  min-width: 0;
   padding: 5px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
@@ -1617,15 +1656,19 @@ button.session__tile {
   outline: none;
 }
 
-.hub__cell--focused {
+.hub__cell--focused,
+.renders__grid > .renders__source--focused {
   background: var(--raised-2);
   box-shadow: inset 0 0 0 1px var(--focus);
 }
 
+/* The name and file first, level with the cells' tick line, the thumbnail below. */
 .hub__source {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .hub__thumb {
@@ -1661,6 +1704,16 @@ button.session__tile {
 .hub__file {
   font-size: 11px;
   color: var(--ink-3);
+}
+
+/* A long name breaks inside its column rather than spilling out of it. */
+.hub__name,
+.hub__file,
+.renders__name,
+.rail__foot > span,
+.library__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .hub__tick {
@@ -1719,13 +1772,6 @@ button.session__tile {
 
 .hub__refusal .refusal__mark {
   margin-top: 4px;
-}
-
-/* A screen's key bar. */
-.keybar {
-  margin-top: 12px;
-  font-size: 11px;
-  color: var(--ink-3);
 }
 
 /* — the import sheet — */

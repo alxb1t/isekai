@@ -1,7 +1,15 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, vi } from 'vitest'
+import { paneKeys } from '../panes'
 import { spec } from '../test/spec'
-import { type Command, type Press, isControl, useKeyStore } from './keys'
+import { type Command, type Press, isControl, isMac, useKeyStore } from './keys'
+
+/* Every screen's and component's source, as the page draws them. */
+const SOURCES = import.meta.glob<string>(['../*.vue', '../views/*.vue', '../components/*.vue'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -123,10 +131,6 @@ spec('ui:keys:esc-closes-the-nearest-thing-first', () => {
   expect(target.left).toBe(false)
   expect(close.run).not.toHaveBeenCalled()
 
-  // An Esc that drops an input method's composition is the input method's.
-  expect(keys.press(press('Escape', { target, isComposing: true }))).toBe(false)
-  expect(target.left).toBe(false)
-
   keys.press(press('Escape', { target }))
   expect(target.left).toBe(true)
   expect(close.run).not.toHaveBeenCalled()
@@ -145,10 +149,7 @@ spec('ui:keys:hints-come-from-the-declarations', () => {
     command('approve', 'Enter', { keys: [{ code: 'Enter', mod: true }], label: 'approve' }),
   ])
 
-  expect(keys.bar).toEqual([
-    { id: 'revise', keys: 'e', label: 'revise' },
-    { id: 'approve', keys: '⌘↵', label: 'approve' },
-  ])
+  expect(keys.hint('revise')).toBe('e')
   expect(keys.hint('hub')).toBe('⇧H')
   expect(keys.hint('approve')).toBe('⌘↵')
   expect(keys.listed.map((one) => `${one.keys} ${one.label}`)).toEqual([
@@ -165,6 +166,12 @@ spec('ui:keys:hints-come-from-the-declarations', () => {
     command('library', 'KeyI', { keys: [{ code: 'KeyI', shift: true }], label: 'renders' }),
   ])
   expect(keys.listed.filter((one) => one.keys === '⇧I').map((one) => one.id)).toEqual(['renders'])
+
+  // The key list, opened on ? or the app bar's ? button, is the one place keys are listed.
+  expect(keys).not.toHaveProperty('bar')
+  expect(Object.keys(SOURCES)).toContain('../views/Hub.vue')
+  for (const [file, source] of Object.entries(SOURCES))
+    expect(source, file).not.toMatch(/KeyBar|key-bar/)
 })
 
 spec('ui:keys:a-focused-control-keeps-enter-and-space', () => {
@@ -179,4 +186,51 @@ spec('ui:keys:a-focused-control-keeps-enter-and-space', () => {
   expect(isControl(element('DIV'))).toBe(false)
   expect(isControl(element('BODY'))).toBe(false)
   expect(isControl(null)).toBe(false)
+})
+
+spec('ui:keys:an-esc-ending-a-composition-closes-nothing', () => {
+  const keys = useKeyStore()
+  const close = command('close', 'Escape')
+  keys.declare('overlay', [close])
+  const target = field()
+
+  const ending = press('Escape', { target, isComposing: true })
+
+  expect(keys.press(ending)).toBe(false)
+  expect(ending.defaultPrevented).toBe(false)
+  expect(target.left).toBe(false)
+  expect(close.run).not.toHaveBeenCalled()
+})
+
+spec('ui:keys:review-panes-move-from-a-field-on-macos', () => {
+  // The platform is read from the client hint first, else the deprecated `platform`.
+  expect(isMac({ userAgentData: { platform: 'macOS' }, platform: 'Linux x86_64' })).toBe(true)
+  expect(isMac({ platform: 'MacIntel' })).toBe(true)
+  expect(isMac({ platform: 'Linux x86_64' })).toBe(false)
+  expect(isMac(undefined)).toBe(false)
+
+  // Review's own pane keys: plain l is text in a field; on macOS alone, ⌃L moves the pane.
+  function review(mac: boolean) {
+    setActivePinia(createPinia())
+    const keys = useKeyStore()
+    keys.mac = mac
+    const move = vi.fn()
+    keys.declare('screen', paneKeys(keys.mac, move))
+    return { keys, move, target: field() }
+  }
+
+  const mac = review(true)
+  expect(mac.keys.press(press('KeyL', { target: mac.target }))).toBe(false)
+  expect(mac.move).not.toHaveBeenCalled()
+  expect(mac.keys.press(press('KeyL', { target: mac.target, ctrlKey: true }))).toBe(true)
+  expect(mac.move).toHaveBeenCalledExactlyOnceWith(1)
+  expect(mac.keys.press(press('KeyH', { target: mac.target, ctrlKey: true }))).toBe(true)
+  expect(mac.move).toHaveBeenLastCalledWith(-1)
+  expect(mac.keys.hint('field-right')).toBe('⌃L')
+
+  const linux = review(false)
+  expect(linux.keys.press(press('KeyL', { target: linux.target, ctrlKey: true }))).toBe(false)
+  expect(linux.keys.press(press('KeyH', { target: linux.target, ctrlKey: true }))).toBe(false)
+  expect(linux.move).not.toHaveBeenCalled()
+  expect(linux.keys.listed.map((one) => one.id)).toEqual(['left', 'right'])
 })

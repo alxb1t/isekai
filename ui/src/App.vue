@@ -157,6 +157,15 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
         data-sessions-unconfirmed
         >running renders unconfirmed</span
       >
+      <button
+        class="appbar__keys mono"
+        type="button"
+        aria-label="the key list"
+        data-keys-button
+        @click="listing = true"
+      >
+        ?
+      </button>
     </header>
     <!-- The BillingBanner: only when something may be billing; esc never closes it. -->
     <div v-if="alert" class="band" role="alert">

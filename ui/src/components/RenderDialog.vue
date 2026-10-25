@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { quoteRender, startRender } from '../api'
 import { useKeys } from '../composables/useKeys'
 import { modded, plain } from '../stores/keys'
+import { useBatchStore } from '../stores/batch'
 import { clock, useLiveStore } from '../stores/live'
 import type { Quote } from '../types'
 import KeyHint from './KeyHint.vue'
@@ -12,11 +13,12 @@ import KeyHint from './KeyHint.vue'
 /* The Render dialog (design spec J4·1): per flow what renders and what is left
    out, the estimate and its limit, and the price at most. It has no URL, so a
    reload never reopens a confirmation that spends; ⌘↵ is the only act here that
-   rents. */
+   rents. It belongs to its page: confirming closes it before the session opens. */
 const props = defineProps<{ batch: string }>()
 const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
 const live = useLiveStore()
+const store = useBatchStore()
 const quote = ref<Quote | null>(null)
 const refusal = ref<string | null>(null)
 const keepOpen = ref(false)
@@ -38,6 +40,7 @@ async function confirm(): Promise<void> {
     )
     // Held at once, so the session's page draws from the render slot as it opens.
     live.hold(job)
+    store.closeDialog()
     const id = job.session?.id
     void router.push(
       id

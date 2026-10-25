@@ -1,23 +1,25 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { comparison, imageAt } from '../api'
-import KeyBar from '../components/KeyBar.vue'
+import { comparison, imageAt, versionOf } from '../api'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
 import { plain } from '../stores/keys'
 import type { CompareSide, Comparison } from '../types'
 
-/* Before and after (design spec J5·9): one seed under the newest older version
-   and under this one, at equal size, with what changed between their sheets.
-   Same seed, same composition: the difference left is the edit. `\` swaps the
-   sides in place; esc goes back to the large view. */
+/* Before and after (design spec J5·9): this image beside another of its cell —
+   the one picked, else its seed under the newest older version — at equal size,
+   the older of the two before as the server orders them, with what changed between their sheets, saying when the seeds differ or the
+   sheets are the same. Same seed, same composition: the difference left is the
+   edit. `\` swaps the sides in place; esc goes back to the large view. */
 const props = defineProps<{
   batch: string
   digest: string
   flow: string
   version: string
   seed: string
+  with?: string
+  withSeed?: string
 }>()
 const router = useRouter()
 const pair = ref<Comparison | null>(null)
@@ -40,8 +42,17 @@ const clock = (at: number | null) =>
 const seeds = (side: CompareSide) =>
   `count ${side.renders.count}${side.renders.seeds.length ? ` · seeds ${side.renders.seeds.join(', ')}` : ''}`
 
+/* The large view this was opened from: its address without the other image. */
+const large = computed(() => ({
+  batch: props.batch,
+  digest: props.digest,
+  flow: props.flow,
+  version: props.version,
+  seed: props.seed,
+}))
+
 const image = (side: CompareSide) =>
-  imageAt({ ...props, version: side.version, seed: props.seed })
+  imageAt({ ...large.value, version: side.version, seed: side.seed })
 
 useKeys('screen', [
   {
@@ -58,7 +69,7 @@ useKeys('screen', [
     run: () =>
       void router.push({
         name: 'render',
-        params: { ...props },
+        params: large.value,
         state: { from: window.history.state?.from ?? null },
       }),
   },
@@ -66,10 +77,11 @@ useKeys('screen', [
 
 onMounted(async () => {
   try {
-    pair.value = await comparison({
-      ...props,
-      version: Number(props.version.replace(/^v/, '')),
-    })
+    const other =
+      props.with && props.withSeed
+        ? { version: versionOf(props.with), seed: props.withSeed }
+        : undefined
+    pair.value = await comparison({ ...large.value, version: versionOf(props.version) }, other)
   } catch (reason) {
     refusal.value = (reason as Error).message
   }
@@ -84,12 +96,16 @@ onMounted(async () => {
         <figcaption class="section-label">
           {{ label }} · v{{ side.version }} · approved {{ clock(side.approved_at) }}
         </figcaption>
-        <img :src="image(side)" :alt="`${label} v${side.version} seed ${pair.seed}`" />
+        <img :src="image(side)" :alt="`${label} v${side.version} seed ${side.seed}`" />
         <span class="compare__line mono">{{ seeds(side) }} · {{ side.tokens }} tokens</span>
       </figure>
     </div>
     <div class="compare__change mono" data-changed>
-      <span>same seed · {{ pair.seed }}</span>
+      <span v-if="pair.different_seeds" data-seeds-differ
+        >different seeds · {{ pair.before.seed }} → {{ pair.after.seed }}</span
+      >
+      <span v-else>same seed · {{ pair.after.seed }}</span>
+      <span v-if="pair.same_sheet" data-same-sheet>same sheet</span>
       <span class="section-label">
         {{ pair.changed.length }} field{{ pair.changed.length === 1 ? '' : 's' }} changed
       </span>
@@ -98,6 +114,5 @@ onMounted(async () => {
         {{ one.after.join(' · ') || 'empty' }}
       </span>
     </div>
-    <KeyBar />
   </section>
 </template>

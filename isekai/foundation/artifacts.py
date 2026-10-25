@@ -343,12 +343,21 @@ class SessionImage(TypedDict):
     seed: str
 
 
+class SessionPlan(TypedDict):
+    """The images a render session plans for one run, by its digest, in one flow."""
+
+    digest: str
+    flow: str
+    images: int
+
+
 class SessionRecord(TypedDict):
     """A render session, `<batch>/sessions/<id>.json`, kept current to its end.
 
-    A batch's file beside its log, not a run's. `asked` is the images per flow,
-    `steps` the pod's and the teardown's states. `outcome` is `running` until the
-    session ends `done`, `stopped` or `failed`, with `message`. It holds no price.
+    A batch's file beside its log, not a run's. `asked` is the images per flow and
+    `planned` per run and flow; a record written before `planned` reads as no plan.
+    `steps` are the pod's and the teardown's states. `outcome` is `running` until
+    the session ends `done`, `stopped` or `failed`, with `message`. No price.
     """
 
     schema: SchemaBlock
@@ -357,6 +366,7 @@ class SessionRecord(TypedDict):
     ended: str | None
     limit: int
     asked: dict[str, int]
+    planned: NotRequired[list[SessionPlan]]
     steps: dict[str, str]
     images: list[SessionImage]
     outcome: str

@@ -2,8 +2,8 @@ import { defineStore } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
 
 /* Every keyboard command the page offers, declared once by the screen or overlay
-   that offers it, and the one listener's dispatch over them (D25). The key bar,
-   the key list and every button's hint read these declarations. */
+   that offers it, and the one listener's dispatch over them (D25). The key list
+   and every button's hint read these declarations. */
 
 /** Where a command is offered: everywhere, on the screen, or in an overlay over it. */
 export type Scope = 'everywhere' | 'screen' | 'overlay'
@@ -84,10 +84,14 @@ export function isControl(target: EventTarget | null): boolean {
   return CONTROLS.has(element.tagName) || (element.tagName === 'A' && Boolean(element.href))
 }
 
-function onMac(): boolean {
-  const found = globalThis.navigator as
-    | (Navigator & { userAgentData?: { platform: string } })
-    | undefined
+/** What the platform check reads of `navigator`; `navigator` is one. */
+export interface Platform {
+  userAgentData?: { platform: string }
+  platform?: string
+}
+
+/** Return whether `found` is macOS, by its client hint first, as `navigator.platform` is deprecated. */
+export function isMac(found: Platform | undefined): boolean {
   return /mac|iphone|ipad/i.test(found?.userAgentData?.platform ?? found?.platform ?? '')
 }
 
@@ -125,7 +129,7 @@ export function keyText(key: Key, mac: boolean): string {
 }
 
 export const useKeyStore = defineStore('keys', () => {
-  const mac = ref(onMac())
+  const mac = ref(isMac(globalThis.navigator as Platform | undefined))
   /* Newest last. Shallow: a command's `run` is a closure, never state. */
   const layers = shallowRef<Layer[]>([])
   let made = 0
@@ -193,14 +197,12 @@ export const useKeyStore = defineStore('keys', () => {
       .filter((layer) => layer.scope === scope)
       .flatMap((layer) => layer.commands.map(entry))
 
-  /** The screen's commands, as its key bar lists them. */
-  const bar = computed(() => entries('screen'))
-
   /** Everywhere's commands and the screen's, as the key list shows them; a key the
       screen declares is listed once, as the screen's command, the one it runs. */
   const listed = computed(() => {
-    const taken = new Set(bar.value.map((one) => one.keys))
-    return [...entries('everywhere').filter((one) => !taken.has(one.keys)), ...bar.value]
+    const screen = entries('screen')
+    const taken = new Set(screen.map((one) => one.keys))
+    return [...entries('everywhere').filter((one) => !taken.has(one.keys)), ...screen]
   })
 
   /** Return a command's keys by its id, from the newest layer that declares it, or null. */
@@ -212,5 +214,5 @@ export const useKeyStore = defineStore('keys', () => {
     return null
   }
 
-  return { mac, declare, drop, press, bar, listed, hint }
+  return { mac, declare, drop, press, listed, hint }
 })

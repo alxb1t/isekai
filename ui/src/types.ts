@@ -224,6 +224,8 @@ export interface SessionRecord {
   limit: number
   /* The images each flow was asked to render. */
   asked: Record<string, number>
+  /* The images planned for each run, by its digest, and flow; absent from an older record. */
+  planned?: { digest: string; flow: string; images: number }[]
   /* `pod` and `teardown`, each by its state. */
   steps: Record<string, string>
   images: SessionImage[]
@@ -361,6 +363,8 @@ export interface RenderDetail {
   damaged: string | null
   /* The newest older version that rendered this seed, or null. */
   compare: number | null
+  /* The cell's images, oldest version first, as Renders draws them. */
+  images: { version: number; seed: string }[]
 }
 
 /* One image a revision names, its seed a decimal string. */
@@ -390,14 +394,17 @@ export interface ReviseRefused {
 /* One side of a comparison. */
 export interface CompareSide {
   version: number
+  seed: string
   approved_at: number | null
   renders: Renders
   tokens: number
 }
 
 export interface Comparison {
-  seed: string
   before: CompareSide
   after: CompareSide
   changed: { field: string; before: string[]; after: string[] }[]
+  different_seeds: boolean
+  /* No field differs between the two sheets. */
+  same_sheet: boolean
 }

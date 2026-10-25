@@ -42,6 +42,11 @@ def test_confirming_the_dialog_opens_the_session(page: Page, served: Served) -> 
     )
     expect(page.locator("[data-quiet]")).to_have_text("Nothing is billing.")
     expect(page.locator("[data-session-image] img")).to_have_count(1)
+    # The dialog was the hub's: back on the hub, it is closed.
+    page.keyboard.press("Shift+H")
+    expect(page).to_have_url(served.hub_of(RENDER))
+    expect(page.locator(".hub__grid")).to_be_visible()
+    expect(page.locator(".render-dialog")).to_have_count(0)
 
 
 @pytest.mark.spec("ui:sessions:the-list-shows-a-finished-session")
@@ -57,6 +62,11 @@ def test_the_list_shows_a_finished_session(page: Page, served: Served) -> None:
     expect(page).to_have_url(f"{served.url}/b/{SHOWN}/sessions/{FINISHED}")
     expect(page.locator("[data-outcome]")).to_have_text("done")
     expect(page.locator("[data-session-image] img")).to_have_count(1)
+    # A focused link or button keeps ↵ from the grid's viewer.
+    page.locator("[data-renders]").focus()
+    page.keyboard.press("Enter")
+    expect(page).to_have_url(f"{served.url}/b/{SHOWN}/renders")
+    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
 
 
 @pytest.mark.spec("ui:renders:the-large-view-shows-its-sheet")
@@ -90,6 +100,18 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     expect(second).to_have_class(re.compile("renders__image--focused"))
     expect(page.locator("[data-version='1'][data-seed='7']")).not_to_have_class(
         re.compile("renders__image--focused")
+    )
+    # From a row's first image, h reaches its source, and ↵ opens its photograph.
+    page.goto(f"{served.url}/b/{SHOWN}/renders")
+    expect(tile).to_have_class(re.compile("renders__image--focused"))
+    page.keyboard.press("h")
+    expect(page.locator("[data-source]")).to_have_class(
+        re.compile("renders__source--focused")
+    )
+    page.keyboard.press("Enter")
+    viewer = page.locator("dialog[data-viewer]")
+    expect(viewer.locator("img")).to_have_attribute(
+        "src", f"/api/b/{SHOWN}/sources/hal.jpg"
     )
 
 
@@ -269,13 +291,28 @@ def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
 ) -> None:
     large = f"{served.url}/b/{COMPARED}/renders/{served.compared.digest}/{FLOW}/v2/7"
     page.goto(large)
-    expect(page.locator("[data-compare]")).to_contain_text("Compare with v1")
+    expect(page.locator("[data-compare]")).to_contain_text("Compare…")
 
+    # c picks in the viewer, starting on this seed's older version.
     page.keyboard.press("c")
+    picker = page.locator("dialog[data-viewer]")
+    expect(picker.locator(".viewer__title")).to_contain_text("v1 · seed 7")
+    page.keyboard.press("Enter")
 
-    expect(page).to_have_url(f"{large}/compare")
+    expect(page).to_have_url(f"{large}/compare/v1/7")
     images = page.locator("[data-side] img")
     expect(images).to_have_count(2)
     expect(images.nth(0)).to_have_js_property("complete", True)
     expect(page.locator("[data-changed]")).to_contain_text("clothes")
     expect(page.locator("[data-changed]")).to_contain_text("collared shirt")
+    # A pick of another seed's image compares it, saying the seeds differ.
+    page.goto(large)
+    expect(page.locator("[data-compare]")).to_be_visible()
+    page.keyboard.press("c")
+    expect(picker.locator(".viewer__title")).to_contain_text("v1 · seed 7")
+    page.keyboard.press("l")
+    expect(picker.locator(".viewer__title")).to_contain_text("v2 · seed 5")
+    page.keyboard.press("Enter")
+    expect(page).to_have_url(f"{large}/compare/v2/5")
+    expect(page.locator("[data-seeds-differ]")).to_contain_text("different seeds")
+    expect(page.locator("[data-same-sheet]")).to_be_visible()
