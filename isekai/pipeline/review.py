@@ -43,8 +43,10 @@ from typing import Literal
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
+    ONE_RENDER,
     SHEET_FILE,
     SIDECAR,
+    CopiedFrom,
     Renders,
     ReviewApproved,
     ReviewDraft,
@@ -72,6 +74,7 @@ from isekai.foundation.run import (
     latest,
     latest_artifact,
     next_version,
+    sheet_of,
     stage_command,
     versions,
 )
@@ -202,6 +205,81 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
     carried = refuse_revision(run, flow, version, seed)
     renders: Renders = {"count": 1, "seeds": [seed]}
     return _write_draft(run, flow, version, REVIEW, carried, carried["sheet"], renders)
+
+
+def draft_from(
+    run: Run, flow: str, source: str, version: int | None, schema: Schema
+) -> Path:
+    """Write `flow`'s draft from `source`'s approval `version`, else its newest.
+
+    Each field of `schema` the approval holds is the approval's; every other is
+    `flow`'s newest sheet's, as are the records the fields came through. No seeds
+    are carried: the approval's are another flow's. A waiting draft equal to its
+    sheet, rendering one drawn seed, holds no work, so it is replaced at its
+    number; one with edited fields, or a count or seeds of its own, refuses.
+    e.g. (run, conjure, summon, None, schema) -> conjure/review/001.draft.json
+    """
+    then = "then draft it again"
+    if source == flow:
+        raise Refusal(
+            f"{run.id}: flow {flow} is drafted from its own approval; run "
+            f"{_again(run, flow)} to copy it, or name another flow to draft from"
+        )
+    sheet_version = latest(run.directory(flow, SHEETS))
+    if sheet_version is None:
+        raise Refusal(
+            f"{run.id}: flow {flow} has no sheet to draft {source}'s approval into; "
+            f"run `{stage_command(run, 'assign', flow)}`, then Prepare, {then}"
+        )
+    held = approved_versions(run.directory(source, REVIEW))
+    approval = held[-1] if version is None and held else version
+    if approval is None or approval not in held:
+        named = "an approval" if approval is None else artifact_name(approval, APPROVED)
+        raise Refusal(
+            f"{run.id}: flow {source} has no {named} to draft {flow} from; run "
+            f"`{stage_command(run, 'approve', source)}` to approve its draft, {then}"
+        )
+    carried = _approval(run, source, approval, f"draft {flow} again")
+    copied = sheet_of(run, flow, sheet_version)
+    body = read(copied, SHEET_FILE)
+    remedy = f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, {then}"
+    require(copied, body, "vocabulary", dict, remedy)
+    require(copied, body, "fields", dict, remedy)
+    discarding = f"run `{stage_command(run, STAGE, flow, options=DISCARD)}`, {then}"
+    waiting = current_draft(run.directory(flow, REVIEW))
+    if waiting is not None and _edited(run, flow, waiting, discarding):
+        raise Refusal(
+            f"{run.id}: flow {flow} has {waiting.name} waiting with edits of its "
+            "own, and a draft from another flow never replaces an edit; approve "
+            f"it, or {discarding}"
+        )
+    merged = {**body["fields"], **carried["fields"]}
+    fields = {name: list(merged[name]) for name in schema.names if name in merged}
+    return _write_draft(
+        run,
+        flow,
+        sheet_version,
+        SHEETS,
+        {**body, "fields": fields},
+        sheet_version,
+        version=None if waiting is None else int(waiting.name[:3]),
+        drafted_from={"flow": source, "approval": approval},
+    )
+
+
+def _edited(run: Run, flow: str, draft: Path, remedy: str) -> bool:
+    """Return whether `draft` holds work a replacement would lose.
+
+    Its fields differ from the sheet it records, as approval says, or it renders
+    anything but one drawn seed: a count or seeds set in Review, or the seed a
+    revision lists. A draft taken from a sheet does neither.
+    """
+    body = read(draft, DRAFT_FILE, remedy=remedy)
+    require(draft, body, "sheet", int, remedy)
+    require(draft, body, "fields", dict, remedy)
+    if renders_of(draft, body, remedy) != ONE_RENDER:
+        return True
+    return _differs(body["fields"], draft, sheet_of(run, flow, body["sheet"]), remedy)
 
 
 # An image to revise: its run, its flow, its approval's number and its seed.
@@ -339,6 +417,7 @@ def cancel(run: Run, flow: str) -> Path | None:
             body["sheet"],
             body.get("renders"),
             version,
+            drafted_from(body),
         )
     approval.unlink()
     return path
@@ -348,9 +427,10 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
     """Return the newest approval of `flow` and its number, refusing its cancel.
 
     Refused while anything derives from it: a file numbered for it in the
-    flow's prompts or outputs, or another flow's approval copied from it. That
-    is checked before a waiting draft, so a draft is never named for discarding
-    while the cancel would still be refused.
+    flow's prompts or outputs, another flow's approval copied or drafted from
+    it, or another flow's waiting draft drafted from it. That is checked before
+    a waiting draft, so a draft is never named for discarding while the cancel
+    would still be refused.
     """
     directory = run.directory(flow, REVIEW)
     approved = approved_versions(directory)
@@ -366,7 +446,7 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
     copied = approval_of(run, flow, version)
     require(copied, body, "producer", dict, f"restore it in {copied}, then {again}")
     waiting = current_draft(directory)
-    derived, copies = _derived(run, flow, version)
+    derived, firsts = _derived(run, flow, version)
     if derived:
         group = group_of(run, flow, version)
         image = (
@@ -379,12 +459,8 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
                 f"{waiting} is open above it; edit it, then run "
                 f"`{stage_command(run, 'approve', flow)}` to approve the correction"
             )
-        elif len(copies) == len(derived):
-            first = ", then ".join(
-                f"`{stage_command(run, 'approve', other, options=CANCEL)}`"
-                for other in copies
-            )
-            way = f"run {first}, then {again}"
+        elif len(firsts) == len(derived):
+            way = f"run {', then '.join(firsts)}, then {again}"
         elif image is not None:
             way = f"run `{_revise_command(image)}` to correct an image of it"
         else:
@@ -405,10 +481,14 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
 def _derived(run: Run, flow: str, version: int) -> tuple[list[str], list[str]]:
     """Return what derives from `flow`'s approval `version`, and what can go first.
 
-    Each derived file is named by its path in the run; the flows are those whose
-    copy of it is their newest approval and can be cancelled.
+    Each derived file is named by its path in the run. What can go first is a
+    command for each: the cancel of another flow's copy of it, or approval
+    drafted from it, that is its newest approval and can be cancelled, and the
+    discard of another flow's waiting draft drafted from it.
 
     e.g. (run, f, 2) -> (["f/prompts/002.json", "g/review/001.approved.json"], [])
+    e.g. (run, f, 1) -> (["g/review/001.draft.json"],
+                         ["`python -m isekai review --flow g --discard r`"])
     """
     prompts = run.directory(flow, PROMPTS)
     made = [
@@ -417,21 +497,37 @@ def _derived(run: Run, flow: str, version: int) -> tuple[list[str], list[str]]:
         group_of(run, flow, version),
     ]
     found = [str(path.relative_to(run.path)) for path in made if path.exists()]
-    copies: list[str] = []
+    firsts: list[str] = []
     source = {"flow": flow, "approval": version}
     for other in run.flows:
         if other == flow:
             continue
-        held_versions = approved_versions(run.directory(other, REVIEW))
+        directory = run.directory(other, REVIEW)
+        held_versions = approved_versions(directory)
         for held in held_versions:
             path = approval_of(run, other, held)
             copy = read(path, APPROVED_FILE, remedy=f"restore it in {path} by hand")
             producer = copy.get("producer")
-            if isinstance(producer, dict) and producer.get("copied_from") == source:
+            if isinstance(producer, dict) and source in (
+                producer.get("copied_from"),
+                producer.get("drafted_from"),
+            ):
                 found.append(f"{other}/{REVIEW}/{path.name}")
                 if held == held_versions[-1] and cancellable(run, other) is None:
-                    copies.append(other)
-    return found, copies
+                    firsts.append(
+                        f"`{stage_command(run, 'approve', other, options=CANCEL)}`"
+                    )
+        waiting = current_draft(directory)
+        if waiting is None:
+            continue
+        discarding = f"`{stage_command(run, STAGE, other, options=DISCARD)}`"
+        again = f"`{stage_command(run, 'approve', flow, options=CANCEL)}`"
+        draft = read(waiting, DRAFT_FILE, remedy=f"run {discarding}, then {again}")
+        producer = draft.get("producer")
+        if isinstance(producer, dict) and producer.get("drafted_from") == source:
+            found.append(f"{other}/{REVIEW}/{waiting.name}")
+            firsts.append(discarding)
+    return found, firsts
 
 
 def _approval(run: Run, flow: str, version: int, retry: str) -> ReviewApproved:
@@ -462,6 +558,7 @@ def _write_draft(
     sheet_version: int,
     renders: Renders | None = None,
     version: int | None = None,
+    drafted_from: CopiedFrom | None = None,
 ) -> Path:
     """Write `flow`'s draft numbered `version`, else the next, and return its path."""
     review_directory = run.directory(flow, REVIEW)
@@ -483,6 +580,8 @@ def _write_draft(
         draft["field_map"] = carried["field_map"]
     if renders is not None:
         draft["renders"] = renders
+    if drafted_from is not None:
+        draft["producer"]["drafted_from"] = drafted_from
     write(path, DRAFT_FILE, draft)
     return path
 
@@ -875,6 +974,21 @@ def same_fields(
     return {name: list(tags) for name, tags in one.items()} == {
         name: list(tags) for name, tags in other.items()
     }
+
+
+def drafted_from(body: Mapping[str, object]) -> CopiedFrom | None:
+    """Return the other flow's approval a draft was drafted from, or None.
+
+    e.g. producer `{…, "drafted_from": {"flow": "f", "approval": 1}}` -> that
+    """
+    producer = body.get("producer")
+    origin = producer.get("drafted_from") if isinstance(producer, Mapping) else None
+    if not isinstance(origin, Mapping):
+        return None
+    flow, approval = origin.get("flow"), origin.get("approval")
+    if not isinstance(flow, str) or not isinstance(approval, int):
+        return None
+    return {"flow": flow, "approval": approval}
 
 
 def came_from(body: Mapping[str, object]) -> int | None:

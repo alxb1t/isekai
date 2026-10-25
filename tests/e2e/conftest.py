@@ -39,6 +39,7 @@ from tests.stages import caption, render, sheet
 
 REPO = Path(__file__).resolve().parents[2]
 FLOW = "summon-anime-wai"
+CONJURE = "conjure-anime-wai"
 BATCH = "2026-10-19"
 
 # A batch per approval test, each source a sheet with no draft, so every test
@@ -75,6 +76,10 @@ COMPARED = "compared"
 # approval holding a count no render takes.
 DAMAGED = "damaged"
 
+# The batch Conjure from this drafts in: one source whose summon approval changes
+# `clothes`, rendered at seed 7, beside a conjure sheet.
+CONJURED = "conjured"
+
 # The finished session `SHOWN` holds a record of: its one image, seed 7.
 FINISHED = "20261019T091200Z"
 
@@ -96,6 +101,7 @@ class Served:
     revised: Run
     discarded: Run
     compared: Run
+    conjured: Run
     prepare_release: Path
 
     def review(self, run: Run, batch: str | None = None) -> str:
@@ -229,6 +235,15 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     approval = approval_of(damaged, FLOW, 1)
     body = json.loads(approval.read_text())
     approval.write_text(json.dumps({**body, "renders": {"count": 0}}))
+    (lib / CONJURED / "sources").mkdir(parents=True)
+    conjured = _run(lib / CONJURED, "lu", (800, 1000))
+    draft_of = review(conjured, FLOW)
+    assert draft_of is not None
+    fields = read(draft_of, DRAFT_FILE)["fields"]
+    save_draft(conjured, FLOW, {**fields, "clothes": ["collared shirt"]})
+    approve(conjured, FLOW, load_flow(FLOW).schema, VOCABULARY)
+    _render_at(conjured)
+    sheet(conjured, load_flow(CONJURE).schema, VOCABULARY, flow=CONJURE)
 
     port = _free_port()
     url = f"http://127.0.0.1:{port}"
@@ -256,6 +271,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
             revised,
             discarded,
             compared,
+            conjured,
             lib / "hub-prepare" / ".prepare-release",
         )
     finally:

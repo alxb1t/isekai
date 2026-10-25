@@ -53,6 +53,9 @@ const schema = computed(() => sheet.detail.value?.schema ?? [])
 const revision = computed(() =>
   sheet.readonly.value ? null : (sheet.detail.value?.revision ?? null),
 )
+/* A draft drafted from another flow's approval: its own sheet's fields mark
+   what that approval changed. */
+const drafted = computed(() => sheet.detail.value?.drafted ?? null)
 const revised = computed(() => {
   const held = revision.value
   if (!held?.seed) return null
@@ -164,6 +167,7 @@ const refusal = computed(
    artifact, and that input is re-opened -- editable, and carrying a correction
    the tagger did not write. */
 const kicker = computed(() => {
+  if (drafted.value) return `from ${drafted.value.flow} v${drafted.value.approval}`
   // No approved artifact is the tagger's draft, whether or not the payload has
   // arrived -- `readonly` defaults to true while `detail` is null, so testing
   // it first would call an unloaded sheet approved.
@@ -585,7 +589,7 @@ watch(current, (id) => {
         :kicker="kicker"
         :saving="sheet.saving.value"
         :saved="sheet.readonly.value ? null : minute(sheet.saved.value)"
-        :previous="revision?.fields ?? null"
+        :previous="revision?.fields ?? drafted?.fields ?? null"
         @remove="(field, index) => (sheet.remove(field, index), batch.markEdited(current))"
       >
         <template #editor="{ field }">
@@ -622,7 +626,7 @@ watch(current, (id) => {
             :approval="sheet.detail.value?.approved ?? null"
             :working="approval.working.value || cancelling"
             :refusal="refusal"
-            :discardable="revision !== null"
+            :discardable="revision !== null || drafted !== null"
             :uncancellable="sheet.detail.value?.cancel ?? null"
             @approve="approve"
             @discard="discard"

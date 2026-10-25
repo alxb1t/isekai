@@ -206,6 +206,16 @@ export function discardDraft(place: Place, saved: number | null): Promise<{ disc
   return send(`${at(place)}/discard`, 'POST', { saved })
 }
 
+/* Drafts the flow `place` names from `source`'s approval `version`, as `review
+   --from` does; a waiting draft holding edits, or no sheet, refuses. */
+export function draftFrom(
+  place: Place,
+  source: string,
+  version: number,
+): Promise<{ draft: string }> {
+  return send(`${at(place)}/draft-from`, 'POST', { source, version })
+}
+
 /* Every image's draft, or none: a refusal answers each image, and is returned
    rather than thrown so the page can offer to deselect the refused. */
 export function revise(

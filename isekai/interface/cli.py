@@ -53,7 +53,8 @@ from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
+from isekai.foundation.artifacts import DRAFT_FILE, SEED_RANGE, SESSION_ID
+from isekai.foundation.artifacts import read as read_artifact
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -93,6 +94,8 @@ from isekai.pipeline.review import (
     Revision,
     approve,
     discard,
+    draft_from,
+    drafted_from,
     refuse_revisions,
     review,
     revise,
@@ -236,7 +239,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="delete each flow's directory instead, refusing one that holds work",
     )
-    # The one verb that reads another flow, and only the one the operator names.
+    # A verb that reads another flow reads only the one the operator names.
     made["approve"].add_argument(
         "--from",
         dest="source",
@@ -274,6 +277,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--discard",
         action="store_true",
         help="delete each flow's waiting draft instead, refusing an approval",
+    )
+    made["review"].add_argument(
+        "--from",
+        dest="source",
+        default=None,
+        metavar="FLOW",
+        help="draft each --flow from this flow's approval, its own fields from "
+        "its sheet",
+    )
+    made["review"].add_argument(
+        "--version",
+        dest="approval",
+        type=int,
+        default=None,
+        metavar="N",
+        help="the approval --from drafts from (default its newest)",
     )
 
     made["revise"].add_argument(
@@ -584,6 +603,9 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
                     "--cancel takes an approval back and --from copies one; drop "
                     f"`--from {args.source}` or `--cancel` from the command"
                 )
+        if verb == "review":
+            _refuse_review_options(args)
+        if verb in ("approve", "review"):
             _refuse_bad_source(args.source, "from", flows, wired)
         if verb == "generate":
             _refuse_bad_source(args.seeds_from, "seeds-from", flows, wired)
@@ -631,6 +653,26 @@ def _refuse_bad_source(
             f"{source}: a flow is not its own source; drop `--{flag} {source}` or "
             f"`--flow {source}` from the command"
         )
+
+
+def _refuse_review_options(args: argparse.Namespace) -> None:
+    """Refuse `--from` beside `--discard` or `--new-version`, or `--version` alone."""
+    if args.source is None:
+        if args.approval is not None:
+            raise Refusal(
+                f"--version names the approval --from drafts from; add `--from "
+                f"FLOW` or drop `--version {args.approval}` from the command"
+            )
+        return
+    for flag, given in (
+        ("--discard", args.discard),
+        ("--new-version", args.new_version),
+    ):
+        if given:
+            raise Refusal(
+                f"--from drafts from another flow and {flag} does not; drop "
+                f"`--from {args.source}` or `{flag}` from the command"
+            )
 
 
 def _require_tagged(
@@ -866,6 +908,17 @@ def _per_item(
                 if args.discard:
                     gone = discard(run, name)
                     reporter.say(f"{run.id}: review discarded {name}/{gone.name}")
+                    return
+                if args.source is not None:
+                    drafted = draft_from(
+                        run, name, args.source, args.approval, flows[name].schema
+                    )
+                    origin = drafted_from(read_artifact(drafted, DRAFT_FILE))
+                    approval = "" if origin is None else f" v{origin['approval']}"
+                    reporter.say(
+                        f"{run.id}: review drafted {name}/{drafted.name} from "
+                        f"{args.source}{approval}"
+                    )
                     return
                 _say(
                     reporter, run, "review", review(run, name, new_version=new_version)

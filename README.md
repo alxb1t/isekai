@@ -310,7 +310,9 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   render nothing; `render` runs it before the pod for a source it renders first in the same session.
 - `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, recording the source;
   a copy already of the source's latest writes nothing, and any other approval is copied over under the next
-  number.
+  number; on `review`: draft each `--flow` from that flow's approval, its own fields from its sheet, refused
+  beside `--discard` or `--new-version`.
+- `--version N` — on `review`, with `--from`: the approval to draft from (default: the source's newest).
 - `--cancel` — on `approve`: turn each flow's newest approval back into its draft instead, refusing one
   anything was made from; a copy is deleted, as `--from` copies the source's newest approval again, leaving the
   flow on what lies beneath it, which the line names; not combinable with `--from`.

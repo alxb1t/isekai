@@ -1,9 +1,9 @@
 """Render from the browser: the dialog, the session, the large view, Revise, Compare.
 
-A revision, a discard and a comparison each own a batch, so none leans on
-another's draft. The server renders on the e2e doubles: a session that rents
-nothing and a transport that answers at once. Each step waits on the page's own
-state.
+A revision, a discard, a comparison and a draft from another flow each own a
+batch, so none leans on another's draft. The server renders on the e2e doubles:
+a session that rents nothing and a transport that answers at once. Each step
+waits on the page's own state.
 """
 
 import re
@@ -15,6 +15,8 @@ from isekai.foundation.run import REVIEW
 from isekai.pipeline.review import current_draft
 from tests.e2e.conftest import (
     COMPARED,
+    CONJURE,
+    CONJURED,
     DAMAGED,
     DISCARDED,
     FINISHED,
@@ -215,6 +217,19 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
     expect(page.locator(".form")).to_contain_text("approved")
     expect(page.locator("input.fragment")).to_have_count(0)
     expect(page).to_have_url(review)
+
+
+@pytest.mark.spec("ui:conjure-from:conjure-from-this-opens-review")
+def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
+    digest = served.conjured.digest
+    page.goto(f"{served.url}/b/{CONJURED}/renders/{digest}/{FLOW}/v1/7")
+    expect(page.locator("[data-draft-from]")).to_contain_text("Conjure from this")
+
+    page.keyboard.press("f")
+
+    expect(page).to_have_url(f"{served.url}/b/{CONJURED}/review/{digest}/{CONJURE}")
+    expect(page.locator(".form")).to_contain_text(f"from {FLOW} v1")
+    expect(page.locator("[data-changed='clothes']")).to_contain_text("was")
 
 
 @pytest.mark.spec("ui:revise:discard-asks-before-it-deletes")
