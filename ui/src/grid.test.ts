@@ -9,14 +9,14 @@ spec('ui:keys:renders-moves-by-cell-and-by-image', () => {
   const last = { row: 0, column: 2 }
 
   // h l and the arrows both step images, crossing from a cell's last to the next's first.
-  expect(moved(images, last, 'image+')).toEqual({ row: 0, column: 3 })
-  expect(moved(images, { row: 0, column: 3 }, 'image-')).toEqual(last)
+  expect(moved(images, last, 'column+')).toEqual({ row: 0, column: 3 })
+  expect(moved(images, { row: 0, column: 3 }, 'column-')).toEqual(last)
   // A row's start steps into its source, and no further; its end stays.
-  expect(moved(images, { row: 0, column: 1 }, 'image-')).toEqual({ row: 0, column: 0 })
-  expect(moved(images, { row: 0, column: 0 }, 'image-')).toEqual({ row: 0, column: 0 })
-  expect(moved(images, { row: 0, column: 5 }, 'image+')).toEqual({ row: 0, column: 5 })
+  expect(moved(images, { row: 0, column: 1 }, 'column-')).toEqual({ row: 0, column: 0 })
+  expect(moved(images, { row: 0, column: 0 }, 'column-')).toEqual({ row: 0, column: 0 })
+  expect(moved(images, { row: 0, column: 5 }, 'column+')).toEqual({ row: 0, column: 5 })
   // A source with no images is still its row's spot.
-  expect(moved(images, { row: 1, column: 0 }, 'image+')).toEqual({ row: 1, column: 0 })
+  expect(moved(images, { row: 1, column: 0 }, 'column+')).toEqual({ row: 1, column: 0 })
   expect(moved([], { row: 0, column: 0 }, 'row+')).toEqual({ row: 0, column: 0 })
 })
 

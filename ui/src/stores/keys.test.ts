@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
-import { type Command, type Press, controlled, isControl, isMac, useKeyStore } from './keys'
+import { type Command, type Press, isControl, isMac, useKeyStore } from './keys'
 
 /* Every screen's and component's source, as the page draws them. */
 const SOURCES = import.meta.glob<string>(['../*.vue', '../views/*.vue', '../components/*.vue'], {
@@ -208,27 +208,30 @@ spec('ui:keys:review-panes-move-from-a-field-on-macos', () => {
   expect(isMac({ platform: 'Linux x86_64' })).toBe(false)
   expect(isMac(undefined)).toBe(false)
 
-  const keys = useKeyStore()
-  // As Review declares them: plain l is text in a field, ⌃L moves the pane.
-  const right = command('right', 'KeyL')
-  const fieldRight = command('field-right', 'KeyL', {
-    keys: [controlled('KeyL')],
-    label: 'pane right',
-    inField: true,
-  })
-  keys.declare('screen', [right, fieldRight])
-  const target = field()
+  // As Review declares them: plain l is text in a field; on macOS alone, ⌃L moves the pane.
+  function review(mac: boolean) {
+    setActivePinia(createPinia())
+    const keys = useKeyStore()
+    keys.mac = mac
+    const right = command('right', 'KeyL')
+    const fieldRight = command('field-right', 'KeyL', {
+      keys: [{ code: 'KeyL', ctrl: true }],
+      label: 'pane right',
+      inField: true,
+    })
+    keys.declare('screen', [right, ...(keys.mac ? [fieldRight] : [])])
+    return { keys, right, fieldRight, target: field() }
+  }
 
-  keys.mac = true
-  expect(keys.press(press('KeyL', { target }))).toBe(false)
-  expect(keys.press(press('KeyL', { target, ctrlKey: true }))).toBe(true)
-  expect(fieldRight.run).toHaveBeenCalledOnce()
-  expect(keys.hint('field-right')).toBe('⌃L')
+  const mac = review(true)
+  expect(mac.keys.press(press('KeyL', { target: mac.target }))).toBe(false)
+  expect(mac.keys.press(press('KeyL', { target: mac.target, ctrlKey: true }))).toBe(true)
+  expect(mac.fieldRight.run).toHaveBeenCalledOnce()
+  expect(mac.keys.hint('field-right')).toBe('⌃L')
 
-  keys.mac = false
-  expect(keys.press(press('KeyL', { target, ctrlKey: true }))).toBe(false)
-  expect(fieldRight.run).toHaveBeenCalledOnce()
-  expect(right.run).not.toHaveBeenCalled()
-  expect(keys.hint('field-right')).toBe('')
-  expect(keys.listed.map((one) => one.id)).toEqual(['right'])
+  const linux = review(false)
+  expect(linux.keys.press(press('KeyL', { target: linux.target, ctrlKey: true }))).toBe(false)
+  expect(linux.fieldRight.run).not.toHaveBeenCalled()
+  expect(linux.right.run).not.toHaveBeenCalled()
+  expect(linux.keys.listed.map((one) => one.id)).toEqual(['right'])
 })

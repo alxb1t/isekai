@@ -337,12 +337,6 @@ body {
   background: var(--accent);
 }
 
-.session__images {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 .session__tile {
   width: var(--tile-width);
   height: var(--tile-height);
@@ -516,11 +510,6 @@ button.session__tile {
   gap: 10px;
   align-items: flex-start;
   min-width: 0;
-}
-
-.renders__grid > .renders__source--focused {
-  background: var(--raised-2);
-  box-shadow: inset 0 0 0 1px var(--focus);
 }
 
 .renders__cell {
@@ -1667,7 +1656,8 @@ button.session__tile {
   outline: none;
 }
 
-.hub__cell--focused {
+.hub__cell--focused,
+.renders__grid > .renders__source--focused {
   background: var(--raised-2);
   box-shadow: inset 0 0 0 1px var(--focus);
 }

@@ -272,6 +272,9 @@ export interface RenderPlace {
   seed: string
 }
 
+/** Return the number an address's version spells. e.g. "v2" -> 2 */
+export const versionOf = (version: string) => Number(version.replace(/^v/, ''))
+
 export function renderAt(place: RenderPlace): string {
   const [batch, ...rest] = [place.batch, place.digest, place.flow, `v${place.version}`, place.seed]
   return `/api/b/${encodeURIComponent(batch)}/renders/${rest.map(encodeURIComponent).join('/')}`

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { imageAt, photoUrl, renderDetail } from '../api'
+import { imageAt, photoUrl, renderDetail, versionOf } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
@@ -39,7 +39,7 @@ const place = computed(() => ({
   batch: props.batch,
   digest: props.digest,
   flow: props.flow,
-  version: Number(props.version.replace(/^v/, '')),
+  version: versionOf(props.version),
   seed: props.seed,
 }))
 
@@ -76,7 +76,7 @@ const first = computed(() => {
 function compare(index: number): void {
   const other = others.value[index]
   void router.push({
-    name: 'compare-with',
+    name: 'compare',
     params: { ...props, with: `v${other.version}`, withSeed: other.seed },
     state: { from: window.history.state?.from ?? null },
   })

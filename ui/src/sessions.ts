@@ -1,7 +1,7 @@
 /* What a render session's record says, read the one way the list and the page
    both read it. */
 
-import { type Focus, clamp } from './grid'
+import type { Focus } from './grid'
 import type { SessionImage, SessionRecord } from './types'
 
 /* Seconds from `started` to `ended`, or to `now` while it runs; null once ended
@@ -53,11 +53,14 @@ export function grid(record: SessionRecord): Grid {
   const planned = record.planned ?? []
   const digests = distinct([...planned, ...record.images].map((one) => one.digest))
   const flows = distinct([...planned, ...record.images].map((one) => one.flow))
+  const at = (one: { flow: string; digest: string }) => `${one.flow}|${one.digest}`
+  const landed = new Map<string, SessionImage[]>()
+  for (const one of record.images) landed.set(at(one), [...(landed.get(at(one)) ?? []), one])
+  const plans = new Map(planned.map((one) => [at(one), one.images]))
   const cells = flows.map((flow) =>
     digests.map((digest) => {
-      const images = record.images.filter((one) => one.flow === flow && one.digest === digest)
-      const plan = planned.find((one) => one.flow === flow && one.digest === digest)
-      return { images, waiting: Math.max((plan?.images ?? 0) - images.length, 0) }
+      const images = landed.get(at({ flow, digest })) ?? []
+      return { images, waiting: Math.max((plans.get(at({ flow, digest })) ?? 0) - images.length, 0) }
     }),
   )
   return { digests, flows, cells }
@@ -70,17 +73,10 @@ export function first(held: Grid, record: SessionRecord): Focus {
   return { row: held.flows.indexOf(landed.flow), column: held.digests.indexOf(landed.digest) }
 }
 
-/** A move on the session grid: to the previous or next photograph, or row. */
-export type Step = 'photograph-' | 'photograph+' | 'row-' | 'row+'
+/** Return each row's last column, the photographs' row the last row, for `moved`.
 
-/** Return the focus after `step`, held inside the grid, its photographs' row the last.
-
-    e.g. two photographs over one flow, {row 0, column 0}: 'photograph+' -> column 1,
-    'row+' -> row 1, the photographs' row, and 'row+' again stays there */
-export function stepped(held: Grid, at: Focus, step: Step): Focus {
-  if (held.digests.length === 0) return at
-  const by = step.endsWith('+') ? 1 : -1
-  if (step.startsWith('photograph'))
-    return { row: at.row, column: clamp(at.column + by, held.digests.length - 1) }
-  return { row: clamp(at.row + by, held.flows.length), column: at.column }
+    e.g. two photographs over one flow -> [1, 1]; no photograph -> [] */
+export function lastColumns(held: Grid): number[] {
+  if (held.digests.length === 0) return []
+  return Array<number>(held.flows.length + 1).fill(held.digests.length - 1)
 }

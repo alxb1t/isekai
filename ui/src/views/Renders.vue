@@ -136,6 +136,7 @@ function hold(spot: { row: number; column: number }): void {
 
 function go(move: Move): () => void {
   return () => {
+    // A row's last column is its image count: column 0 is its source.
     hold(
       moved(
         rows.value.map((spots) => spots.length),
@@ -157,8 +158,8 @@ const onSource = (row: number) => focus.value.row === row && focus.value.column 
 
 /* h l and the arrows step images, crossing cells into the source; j k between rows (D25). */
 useKeys('screen', [
-  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'previous image', run: go('image-') },
-  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'next image', run: go('image+') },
+  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'previous image', run: go('column-') },
+  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'next image', run: go('column+') },
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'next source', run: go('row+') },
   { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'previous source', run: go('row-') },
   {
@@ -225,7 +226,9 @@ onMounted(async () => {
 })
 
 /* The Render dialog is this page's: leaving the page closes it. */
-onUnmounted(() => store.closeDialog())
+onUnmounted(() => {
+  if (dialog.value) store.closeDialog()
+})
 </script>
 
 <template>

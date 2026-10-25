@@ -936,9 +936,9 @@ def create_app(
             "compare": library.paired(run, flow, number, seed, suffix),
             # The cell's images, as Renders draws them: oldest version first.
             "images": [
-                {"version": each.version, "seed": str(rendered_seed)}
+                {"version": each.version, "seed": rendered_seed}
                 for each in reversed(listed)
-                for rendered_seed in each.rendered
+                for rendered_seed in _decimal(each.rendered)
             ],
         }
 

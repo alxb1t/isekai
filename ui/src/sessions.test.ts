@@ -1,5 +1,6 @@
 import { expect } from 'vitest'
-import { first, grid, stepped } from './sessions'
+import { moved } from './grid'
+import { first, grid, lastColumns } from './sessions'
 import { spec } from './test/spec'
 import type { SessionRecord } from './types'
 
@@ -63,17 +64,18 @@ spec('ui:sessions:the-grid-moves-by-photograph-and-row', () => {
     images: [image('a', SUMMON, '7')],
   })
   const held = grid(landed)
+  const last = lastColumns(held)
   const start = first(held, landed)
   expect(start).toEqual({ row: 0, column: 0 })
 
-  const right = stepped(held, start, 'photograph+')
+  const right = moved(last, start, 'column+')
   expect(right).toEqual({ row: 0, column: 1 })
-  const down = stepped(held, right, 'row+')
+  const down = moved(last, right, 'row+')
   expect(down).toEqual({ row: 1, column: 1 })
   // Row 2 is the photographs' row: the last, where a row move stops.
-  const photographs = stepped(held, down, 'row+')
+  const photographs = moved(last, down, 'row+')
   expect(photographs).toEqual({ row: 2, column: 1 })
-  expect(stepped(held, photographs, 'row+')).toEqual(photographs)
-  expect(stepped(held, right, 'photograph+')).toEqual(right)
-  expect(stepped(held, start, 'row-')).toEqual(start)
+  expect(moved(last, photographs, 'row+')).toEqual(photographs)
+  expect(moved(last, right, 'column+')).toEqual(right)
+  expect(moved(last, start, 'row-')).toEqual(start)
 })

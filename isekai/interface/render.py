@@ -439,16 +439,20 @@ def run_session(
 
 @dataclass(frozen=True)
 class Line:
-    """One `generate` line of a session, how many images it renders, and per run.
+    """One `generate` line of a session, and how many images it renders per run.
 
-    e.g. `planned` (("0d4b…_ada", 2), ("9f1c…_bea", 1)) for `images` 3
+    e.g. `planned` (("0d4b…_ada", 2), ("9f1c…_bea", 1)) renders 3 `images`
     """
 
     flow: str
     head: tuple[str, ...]
     where: tuple[str, ...]
-    images: int
-    planned: tuple[tuple[str, int], ...] = ()
+    planned: tuple[tuple[str, int], ...]
+
+    @property
+    def images(self) -> int:
+        """Return how many images the line renders, across its runs."""
+        return sum(n for _, n in self.planned)
 
 
 @dataclass(frozen=True)
@@ -646,8 +650,7 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
     for flow in sorted({flow for _, flow, _ in wanted}):
         held = [(run_id, n) for run_id, named, n in wanted if named == flow]
         where = ("--runs", str(runs), *(run_id for run_id, _ in held))
-        images = sum(n for _, n in held)
-        lines.append(Line(flow, ("--flow", flow), where, images, tuple(held)))
+        lines.append(Line(flow, ("--flow", flow), where, tuple(held)))
     return Short(lines, wanted, left_out, refused)
 
 
@@ -820,9 +823,7 @@ def _requested(
             seeds = rendered_seeds(groups[-1], suffix) if groups else []
             planned.append((run_id, len(seeds)))
     head = ("--flow", request.flow, request.mode, request.value)
-    images = sum(n for _, n in planned)
-    where = ("--runs", str(runs), *ids)
-    return Line(request.flow, head, where, images, tuple(planned))
+    return Line(request.flow, head, ("--runs", str(runs), *ids), tuple(planned))
 
 
 def _rendered(

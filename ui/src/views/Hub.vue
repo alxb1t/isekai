@@ -401,7 +401,9 @@ onMounted(async () => {
 })
 
 /* The Render dialog is this page's: leaving the page closes it. */
-onUnmounted(() => store.closeDialog())
+onUnmounted(() => {
+  if (dialog.value) store.closeDialog()
+})
 </script>
 
 <template>

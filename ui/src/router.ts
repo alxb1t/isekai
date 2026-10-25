@@ -28,14 +28,8 @@ export const router = createRouter({
       props: true,
     },
     {
-      path: '/b/:batch/renders/:digest/:flow/:version/:seed/compare',
+      path: '/b/:batch/renders/:digest/:flow/:version/:seed/compare/:with?/:withSeed?',
       name: 'compare',
-      component: Compare,
-      props: true,
-    },
-    {
-      path: '/b/:batch/renders/:digest/:flow/:version/:seed/compare/:with/:withSeed',
-      name: 'compare-with',
       component: Compare,
       props: true,
     },

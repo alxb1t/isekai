@@ -148,15 +148,17 @@ def _rendered_at_seven(folder: Path, name: str, size: tuple[int, int]) -> Run:
     run = _run(folder, name, size)
     review(run, FLOW)
     approve(run, FLOW, load_flow(FLOW).schema, VOCABULARY)
-    _render_seven(run)
+    _render_at(run)
     return run
 
 
-def _render_seven(run: Run) -> None:
-    """Render `run`'s newest approval at seed 7, on the fake transport."""
+def _render_at(run: Run, seed: int = 7) -> None:
+    """Render `run`'s newest approval at seed 7, or `seed`, on the fake transport."""
     prepare(run, {FLOW: load_flow(FLOW)})
     image = photo_jpeg((90, 60, 30), (640, 800))
-    render(run, load_flow(FLOW), FakeComfyClient(view_bytes=image), seeds=[7], poll=0)
+    render(
+        run, load_flow(FLOW), FakeComfyClient(view_bytes=image), seeds=[seed], poll=0
+    )
 
 
 def _free_port() -> int:
@@ -220,12 +222,9 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     fields = read(again, DRAFT_FILE)["fields"]
     save_draft(compared, FLOW, {**fields, "clothes": ["collared shirt"]})
     approve(compared, FLOW, load_flow(FLOW).schema, VOCABULARY)
-    _render_seven(compared)
+    _render_at(compared)
     # A second seed under v2, so Compare can pick another seed's image.
-    image = photo_jpeg((90, 60, 30), (640, 800))
-    render(
-        compared, load_flow(FLOW), FakeComfyClient(view_bytes=image), seeds=[5], poll=0
-    )
+    _render_at(compared, seed=5)
     damaged = _rendered_at_seven(lib / DAMAGED, "kim", (790, 1000))
     approval = approval_of(damaged, FLOW, 1)
     body = json.loads(approval.read_text())

@@ -1,17 +1,16 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { imageAt, photoUrl, thumbAt } from '../api'
+import { imageAt, photoUrl, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer, { type Shown } from '../components/ImageViewer.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
-import type { Focus } from '../grid'
-import { type Step, asked, first, grid, lasted, outcome, stepped } from '../sessions'
+import { type Focus, type Move, moved } from '../grid'
+import { asked, first, grid, lastColumns, lasted, outcome } from '../sessions'
 import { useBatchStore } from '../stores/batch'
 import { plain } from '../stores/keys'
 import { alerting, clock, useLiveStore } from '../stores/live'
-import type { SessionImage } from '../types'
 
 /* One render session (design spec J4·2, J4·3), from the record its verb writes.
    While the render slot runs it, the slot adds the volume steps and Stop, and the
@@ -23,7 +22,7 @@ import type { SessionImage } from '../types'
 const props = defineProps<{ batch: string; id: string }>()
 const store = useBatchStore()
 const live = useLiveStore()
-const { session: record } = storeToRefs(store)
+const { session: record, hub } = storeToRefs(store)
 const { jobs, billing, now } = storeToRefs(live)
 const refusal = ref<string | null>(null)
 const stopRefusal = ref<string | null>(null)
@@ -93,19 +92,26 @@ const focus = ref<Focus>({ row: 0, column: 0 })
 const focused = (row: number, column: number) =>
   focus.value.row === row && focus.value.column === column
 
-/* A photograph's own flow, any that plans or landed it, for its run's address. */
-function photo(column: number): string {
-  const row = layout.value.cells.findIndex(
-    (cells) => cells[column].images.length > 0 || cells[column].waiting > 0,
-  )
-  const digest = layout.value.digests[column]
-  return photoUrl({ batch: props.batch, digest, flow: layout.value.flows[row] })
-}
+/* Each column's photograph: its source's, by name, once the hub is read; else the
+   run's own, whole, at the address of any flow that plans or landed it. */
+const photographs = computed(() =>
+  layout.value.digests.map((digest, column) => {
+    const source = hub.value?.sources.find((one) => one.digest === digest)
+    if (source) {
+      const src = sourceAt(props.batch, source.name)
+      return { src, thumb: sourceThumbAt(props.batch, source.name), name: source.name }
+    }
+    const row = layout.value.cells.findIndex(
+      (cells) => cells[column].images.length > 0 || cells[column].waiting > 0,
+    )
+    const src = photoUrl({ batch: props.batch, digest, flow: layout.value.flows[row] })
+    return { src, thumb: src, name: digest }
+  }),
+)
 
 /* A row's images, left to right, as the viewer steps through them. */
 function row(at: number): Shown[] {
-  if (at === layout.value.flows.length)
-    return layout.value.digests.map((digest, column) => ({ src: photo(column), name: digest }))
+  if (at === layout.value.flows.length) return photographs.value
   return layout.value.cells[at].flatMap((cell) =>
     cell.images.map((one) => ({
       src: imageAt({ batch: props.batch, ...one }),
@@ -118,8 +124,8 @@ function row(at: number): Shown[] {
 const viewing = ref<{ row: number; start: number } | null>(null)
 const viewed = computed<Shown[]>(() => (viewing.value ? row(viewing.value.row) : []))
 
-/* Open the viewer over `at`'s row, on `one`, else the cell's first image. */
-function view(at: Focus, one?: SessionImage): void {
+/* Open the viewer over `at`'s row, on the cell's `index`th image. */
+function view(at: Focus, index = 0): void {
   focus.value = at
   if (at.row === layout.value.flows.length) {
     viewing.value = { row: at.row, start: at.column }
@@ -130,7 +136,7 @@ function view(at: Focus, one?: SessionImage): void {
     .reduce((sum, cell) => sum + cell.images.length, 0)
   const cell = layout.value.cells[at.row][at.column]
   if (!cell.images.length) return
-  viewing.value = { row: at.row, start: before + Math.max(one ? cell.images.indexOf(one) : 0, 0) }
+  viewing.value = { row: at.row, start: before + index }
 }
 
 function place(at: Focus): void {
@@ -142,11 +148,11 @@ function place(at: Focus): void {
   )
 }
 
-const go = (step: Step) => () => place(stepped(layout.value, focus.value, step))
+const go = (move: Move) => () => place(moved(lastColumns(layout.value), focus.value, move))
 
 useKeys('screen', [
-  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'previous photograph', run: go('photograph-') },
-  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'next photograph', run: go('photograph+') },
+  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'previous photograph', run: go('column-') },
+  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'next photograph', run: go('column+') },
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'next row', run: go('row+') },
   { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'previous row', run: go('row-') },
   {
@@ -161,8 +167,8 @@ useKeys('screen', [
 /* The first render takes the focus once the record is read, and holds the tab stop. */
 watch(
   () => record.value !== null,
-  (read) => {
-    if (read && record.value) place(first(layout.value, record.value))
+  () => {
+    if (record.value) place(first(layout.value, record.value))
   },
   { immediate: true },
 )
@@ -176,6 +182,9 @@ async function stop(): Promise<void> {
 }
 
 onMounted(async () => {
+  // The hub names each photograph's source; a refused read costs only its
+  // thumbnails, as the run's own photographs still draw.
+  if (!hub.value) void store.reloadHub().catch(() => undefined)
   try {
     await store.showSession(props.id)
   } catch (reason) {
@@ -226,14 +235,14 @@ onMounted(async () => {
           @click="focus = { row: at, column }"
         >
           <button
-            v-for="one in cell.images"
+            v-for="(one, index) in cell.images"
             :key="`${one.version}/${one.seed}`"
             class="session__tile session__tile--done"
             type="button"
             tabindex="-1"
             :aria-label="`view ${one.flow} v${one.version} seed ${one.seed}`"
             data-session-image
-            @click.stop="view({ row: at, column }, one)"
+            @click.stop="view({ row: at, column }, index)"
           >
             <img :src="thumbAt({ batch, ...one })" alt="" />
           </button>
@@ -253,11 +262,11 @@ onMounted(async () => {
           class="session__tile session__tile--photo"
           type="button"
           tabindex="-1"
-          :aria-label="`view the photograph ${digest}`"
+          :aria-label="`view the photograph ${photographs[column].name}`"
           data-session-source
           @click="view({ row: layout.flows.length, column })"
         >
-          <img :src="photo(column)" alt="" loading="lazy" />
+          <img :src="photographs[column].thumb" alt="" loading="lazy" />
         </button>
       </div>
     </div>

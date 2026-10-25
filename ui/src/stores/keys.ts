@@ -14,8 +14,6 @@ export interface Key {
   shift?: boolean
   mod?: boolean
   ctrl?: boolean
-  /* Offered on macOS alone, and drawn nowhere else. */
-  macOS?: boolean
 }
 
 /** Return a key pressed with ⇧. */
@@ -26,9 +24,6 @@ export const plain = (...codes: string[]): Key[] => codes.map((code) => ({ code 
 
 /** Return a key pressed with Mod. */
 export const modded = (code: string): Key => ({ code, mod: true })
-
-/** Return a key pressed with ⌃, offered on macOS alone, where ⌃ is free of the window manager. */
-export const controlled = (code: string): Key => ({ code, ctrl: true, macOS: true })
 
 /** One command: its keys, its label in the hints, and what it runs. */
 export interface Command {
@@ -103,7 +98,6 @@ export function isMac(found: Platform | undefined): boolean {
 /** Return whether `key` is the key `event` pressed: its code and exactly its modifiers. */
 export function matches(key: Key, event: Press, mac: boolean): boolean {
   if (event.code !== key.code || event.altKey) return false
-  if (key.macOS && !mac) return false
   if (Boolean(key.shift) !== event.shiftKey) return false
   const ctrl = Boolean(key.ctrl) || (!mac && Boolean(key.mod))
   const meta = mac && Boolean(key.mod)
@@ -191,21 +185,17 @@ export const useKeyStore = defineStore('keys', () => {
   function entry(command: Command): Entry {
     return {
       id: command.id,
-      keys: command.keys
-        .filter((key) => mac.value || !key.macOS)
-        .map((key) => keyText(key, mac.value))
-        .join(' '),
+      keys: command.keys.map((key) => keyText(key, mac.value)).join(' '),
       label: command.label,
     }
   }
 
-  /* Every declared command with a key on this platform, offered now or not: a
-     `when` may read the page, which is not reactive. */
+  /* Every declared command, offered now or not: a `when` may read the page,
+     which is not reactive. */
   const entries = (scope: Scope) =>
     layers.value
       .filter((layer) => layer.scope === scope)
       .flatMap((layer) => layer.commands.map(entry))
-      .filter((one) => one.keys !== '')
 
   /** Everywhere's commands and the screen's, as the key list shows them; a key the
       screen declares is listed once, as the screen's command, the one it runs. */

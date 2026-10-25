@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { comparison, imageAt } from '../api'
+import { comparison, imageAt, versionOf } from '../api'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
 import { plain } from '../stores/keys'
@@ -42,8 +42,6 @@ const clock = (at: number | null) =>
 const seeds = (side: CompareSide) =>
   `count ${side.renders.count}${side.renders.seeds.length ? ` · seeds ${side.renders.seeds.join(', ')}` : ''}`
 
-const number = (version: string) => Number(version.replace(/^v/, ''))
-
 /* The large view this was opened from: its address without the other image. */
 const large = computed(() => ({
   batch: props.batch,
@@ -81,9 +79,9 @@ onMounted(async () => {
   try {
     const other =
       props.with && props.withSeed
-        ? { version: number(props.with), seed: props.withSeed }
+        ? { version: versionOf(props.with), seed: props.withSeed }
         : undefined
-    pair.value = await comparison({ ...large.value, version: number(props.version) }, other)
+    pair.value = await comparison({ ...large.value, version: versionOf(props.version) }, other)
   } catch (reason) {
     refusal.value = (reason as Error).message
   }
