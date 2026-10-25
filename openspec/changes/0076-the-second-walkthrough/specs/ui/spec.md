@@ -19,7 +19,8 @@ A key typed into a field is text, never a command; a list drawn from the declara
 Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.
 
 ```
-keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod+Z · Mod+K, else the field's own
+keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod+Z · Mod+K,
+               │                     on macOS Review's ⌃H ⌃L, else the field's own
                │ no
                ▼
            top overlay ─▶ screen ─▶ everywhere        the first that declares the key runs
@@ -54,7 +55,7 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 #### Scenario: a focused control keeps Enter and Space
 - **Key:** `ui:keys:a-focused-control-keeps-enter-and-space`
 - **Layers:** unit
-- **WHEN** `↵` or `Space` is pressed on the hub with focus on a button or a link
+- **WHEN** `↵` or `Space` is pressed on the hub or a session's page with focus on a button or a link
 - **THEN** the control answers it and the cell's command does not run
 
 #### Scenario: an overlay takes the keys first
@@ -220,13 +221,13 @@ another format is still shown, as its thumbnail is.
 ### Requirement: A version says what it was, and Compare shows a seed's two versions
 
 The system SHALL head each image's large view with its approval version, the version it came from, read from its
-producer, naming it a revision when its fields differ from that version's and a re-roll when only its count or seeds
-do, and the approval's time, count and seeds. A large view whose seed is rendered under an older version of the same
-source and flow SHALL offer Compare with the newest such version first, and every large view SHALL offer Compare with
-any other image of its source and flow, picked in the viewer, saying so when the two seeds differ or the two share a
-sheet, showing both images at equal size, the fields that changed, what changed in the count and seeds, and the
-tokens before and after. Every large view SHALL offer *Side by side*, the image beside its run's photograph at equal
-height.
+producer, naming it a revision when its fields differ from that version's and a re-roll when only its count or seeds do,
+and the approval's time, count and seeds. A large view whose seed is rendered under an older version of the same source
+and flow SHALL offer Compare with the newest such version first, and every large view SHALL offer Compare with any other
+image of its source and flow, picked in the viewer, saying so when the two seeds differ or the two share a sheet,
+showing both images at equal size, the older of the two before, the fields that changed, what changed in the count and
+seeds, and the tokens before and after. Every large view SHALL offer *Side by side*, the image beside its run's
+photograph at equal height.
 
 The origin is already on disk, so nothing new records it. Same seed, same composition: the difference left is the
 edit. The grid carries the images; the large view, which carries the sheet, carries what the version was.
@@ -261,6 +262,7 @@ edit. The grid carries the images; the large view, which carries the sheet, carr
 - **Layers:** unit
 - **WHEN** Compare is asked for an image of v4 against an image of v2 with another seed
 - **THEN** it serves both, the changed fields and that the seeds differ
+- **AND** v2 is before, whichever of the two is named
 
 
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most

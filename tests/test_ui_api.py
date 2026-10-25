@@ -1691,6 +1691,7 @@ def test_compare_takes_any_two_images_of_a_cell(
 
     view = client.get(f"{large}/v4/7").json()
     pair = client.get(f"{large}/v4/7/compare/v2/5").json()
+    newer = client.get(f"{large}/v2/5/compare/v4/7").json()
     shared = client.get(f"{large}/v3/7/compare/v2/5").json()
     itself = client.get(f"{large}/v4/7/compare/v4/7")
 
@@ -1710,6 +1711,8 @@ def test_compare_takes_any_two_images_of_a_cell(
         ("clothes", ["collared shirt"])
     ]
     assert (pair["different_seeds"], pair["same_sheet"]) == (True, False)
+    # A newer image picked from an older one is still the after side.
+    assert newer == pair
     assert (shared["changed"], shared["same_sheet"]) == ([], True)
     # The same-seed address still pairs with the newest older version.
     assert client.get(f"{large}/v4/7/compare").json()["before"]["version"] == 3

@@ -9,7 +9,7 @@ import type { CompareSide, Comparison } from '../types'
 
 /* Before and after (design spec J5·9): this image beside another of its cell —
    the one picked, else its seed under the newest older version — at equal size,
-   with what changed between their sheets, saying when the seeds differ or the
+   the older of the two before as the server orders them, with what changed between their sheets, saying when the seeds differ or the
    sheets are the same. Same seed, same composition: the difference left is the
    edit. `\` swaps the sides in place; esc goes back to the large view. */
 const props = defineProps<{

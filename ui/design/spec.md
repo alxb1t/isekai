@@ -332,7 +332,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
       [render, equal size, top-aligned]      [render]
       same seed · 1840266731     1 FIELD CHANGED  eye_colour  light blue eyes → blue eyes
       another seed picked:  different seeds · 2216093514 → 1840266731 · same sheet when no field changed
-      \ swap in place · ← → next revised image · esc back                   [ Revise again e ]
+                                                                             [ Revise again e ]
 ```
 
 - **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer, and its name. A
@@ -346,7 +346,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   in one dialog. `Esc` and its back button go back to where it was opened, the hub or else Renders, focused on the
   cell or the image left. `Compare…  c` appears when its cell holds another image: the viewer opens over the
   cell's other images, every version's and seed's, on the newest older version of this seed, else the image before
-  this one, and `↵` compares the shown one. The same-seed address, `…/compare`, still compares with the newest
+  this one, and `↵` compares the shown one, the older of the two before. The same-seed address, `…/compare`, still compares with the newest
   older version of the seed.
 - **Revise** (the verb `isekai revise`): the confirm lists each image — source × flow × seed, the version it copies,
   the seed it prefills. All or nothing: a refusal lists every selected image, those that could be revised
@@ -439,7 +439,7 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 
 Matched on `event.code`, the physical key, with the typed character suppressed, and declared once in
 the key store ([D25](../../docs/decisions.md#d25--shortcuts-match-the-physical-key)); `?` lists them. ⌘
-is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K run.
+is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K run, and on macOS Review's ⌃H ⌃L.
 
 | where | keys |
 |---|---|

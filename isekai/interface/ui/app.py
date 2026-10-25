@@ -40,7 +40,7 @@ POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/cancel
 POST /api/b/{batch}/review/{digest}/{flow}/discard
 POST /api/b/{batch}/revise              {images: [{digest, flow, version, seed}]}
 GET  /api/b/{batch}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
-     and its /image, /thumb and /compare
+     and its /image, /thumb and /compare{/other/other_seed,}
 GET  /api/b/{batch}/sources/{name}   and its /thumb
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
@@ -955,10 +955,12 @@ def create_app(
         other: str | None = None,
         other_seed: int | None = None,
     ) -> dict[str, Any]:
-        """Return this image beside another image of its cell.
+        """Return this image beside another image of its cell, the older one before.
 
         The other is the one named, else the newest older version of this seed.
-        e.g. `…/v4/7/compare/v2/5` -> v2's seed 5 before, v4's seed 7 after
+        The pair is ordered by version, then seed, whichever of the two is named.
+        e.g. `…/v4/7/compare/v2/5` and `…/v2/5/compare/v4/7` -> v2's seed 5
+        before, v4's seed 7 after
         """
         run, _, after = rendered(batch, digest, flow, version, seed)
         number = _version(version)
@@ -977,19 +979,23 @@ def create_app(
                 f"v{number} · {seed}: an image compared with itself shows no change; "
                 "go back to its large view and pick another"
             )
-        _, _, before = rendered(batch, digest, flow, other, other_seed)
-        now, now_fields = _side(one, number, after)
-        was, was_fields = _side(one, earlier, before)
+        _, _, named = rendered(batch, digest, flow, other, other_seed)
+        (was_at, was_seed, before), (now_at, now_seed, after) = sorted(
+            [(earlier, other_seed, named), (number, seed, after)],
+            key=lambda side: side[:2],
+        )
+        now, now_fields = _side(one, now_at, after)
+        was, was_fields = _side(one, was_at, before)
         changed = [
             {"field": name, "before": was_fields[name], "after": now_fields[name]}
             for name in one.schema.names
             if was_fields[name] != now_fields[name]
         ]
         return {
-            "before": {**was, "seed": str(other_seed)},
-            "after": {**now, "seed": str(seed)},
+            "before": {**was, "seed": str(was_seed)},
+            "after": {**now, "seed": str(now_seed)},
             "changed": changed,
-            "different_seeds": other_seed != seed,
+            "different_seeds": was_seed != now_seed,
             "same_sheet": not changed,
         }
 
