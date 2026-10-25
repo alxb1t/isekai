@@ -9,6 +9,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-10-25 · 0076-the-second-walkthrough
+
+Gate: local 0m41s · CI 7m25s (build-image at 801ffec) · 0.48.0: local 0m41s · CI 7m25s
+
+### Changed
+
 - A render session's record plans each photograph's images per flow, and its page is a grid of flows over the
   photographs, waiting tiles for what is to come, moved by `h j k l` with `↵` opening the row (0076 D7).
 
