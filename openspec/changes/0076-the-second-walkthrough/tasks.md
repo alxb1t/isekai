@@ -5,19 +5,19 @@ The layout, the keys, the dialogs, then the session grid, per [design](design.md
 
 ## Progress
 
-- [ ] 1 — The layout
+- [x] 1 — The layout
 - [ ] 2 — The keys
 - [ ] 3 — The dialogs
 - [ ] 4 — The session grid
 
 ## 1 — The layout
 
-- [ ] 1.1 **HALT CHECK** — the key bar is on every screen.
+- [x] 1.1 **HALT CHECK** — the key bar is on every screen.
   Verify: `grep -rl '<KeyBar' ui/src/views | wc -l` prints `9`.
-- [ ] 1.2 Make the hub's source cell a column and wrap source names per [D3](design.md#d3), in `ui/src/views/Hub.vue`,
+- [x] 1.2 Make the hub's source cell a column and wrap source names per [D3](design.md#d3), in `ui/src/views/Hub.vue`,
   `ui/src/views/Renders.vue`, `ui/src/components/BatchRail.vue`, `ui/src/views/Home.vue` and `ui/src/app.css`.
   Verify: `grep -c 'overflow-wrap: anywhere' ui/src/app.css` prints a number of at least `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 1.3 Delete `ui/src/components/KeyBar.vue` and its uses; add the app bar's `?` button in `ui/src/App.vue`, per
+- [x] 1.3 Delete `ui/src/components/KeyBar.vue` and its uses; add the app bar's `?` button in `ui/src/App.vue`, per
   [D5](design.md#d5); recast `ui:keys:hints-come-from-the-declarations` in `ui/src/stores/keys.test.ts` to no key bar.
   Verify: `test -e ui/src/components/KeyBar.vue` exits 1, and `uv run python -m tools.test_ui` exits 0.
 

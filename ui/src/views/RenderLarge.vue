@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { imageAt, photoUrl, renderDetail } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
-import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
@@ -149,7 +148,6 @@ onMounted(async () => {
           >{{ back.label }}<KeyHint command="back" /></RouterLink
         >
       </div>
-      <KeyBar />
     </aside>
     <ImageViewer
       v-if="pairing"

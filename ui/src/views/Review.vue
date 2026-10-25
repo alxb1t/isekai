@@ -12,7 +12,6 @@ import ApproveBar from '../components/ApproveBar.vue'
 import BatchRail from '../components/BatchRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
 import ImageViewer from '../components/ImageViewer.vue'
-import KeyBar from '../components/KeyBar.vue'
 import LoadingSkeleton from '../components/LoadingSkeleton.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RendersBlock from '../components/RendersBlock.vue'
@@ -648,6 +647,5 @@ watch(current, (id) => {
       :field="lastField"
       @close="closeLens"
     />
-    <KeyBar />
   </div>
 </template>

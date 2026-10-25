@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import KeyBar from '../components/KeyBar.vue'
 import { billingState, useLiveStore } from '../stores/live'
 
 /* The billing alert's way out (design spec J8b, J8c), on its own page: a pod may
@@ -47,6 +46,5 @@ async function check(): Promise<void> {
     <p v-else-if="state === 'pending'" class="mono">Checking billing…</p>
     <p v-else-if="state === 'open'" class="mono">The window volume is open and billing.</p>
     <p v-else-if="state === 'quiet'" class="session__quiet" data-quiet>Nothing is billing.</p>
-    <KeyBar />
   </section>
 </template>

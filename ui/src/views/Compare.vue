@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { comparison, imageAt } from '../api'
-import KeyBar from '../components/KeyBar.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
 import { plain } from '../stores/keys'
@@ -98,6 +97,5 @@ onMounted(async () => {
         {{ one.after.join(' · ') || 'empty' }}
       </span>
     </div>
-    <KeyBar />
   </section>
 </template>

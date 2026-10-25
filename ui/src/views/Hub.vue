@@ -8,7 +8,6 @@ import { EMPTY_CELL, action, clicks, targets } from '../cells'
 import { assign, imageAt, prepare, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer, { type Shown } from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
-import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
@@ -451,14 +450,6 @@ onMounted(async () => {
           tabindex="-1"
           @click="place(row, 0)"
         >
-          <button
-            class="hub__thumb"
-            type="button"
-            :aria-label="`view ${source.name}`"
-            @click="viewSource(row)"
-          >
-            <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
-          </button>
           <span class="hub__about">
             <span class="hub__name mono">
               <input
@@ -478,6 +469,14 @@ onMounted(async () => {
               >↵ view photo</span
             >
           </span>
+          <button
+            class="hub__thumb"
+            type="button"
+            :aria-label="`view ${source.name}`"
+            @click="viewSource(row)"
+          >
+            <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
+          </button>
         </div>
         <div
           v-for="(flow, column) in flows"
@@ -553,7 +552,6 @@ onMounted(async () => {
         </div>
       </template>
     </div>
-    <KeyBar />
     <RenderBar
       v-if="shown === 'render'"
       :images="offer.images"

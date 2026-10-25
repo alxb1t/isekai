@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { imageAt, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer, { type Shown } from '../components/ImageViewer.vue'
-import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { asked, lasted, outcome } from '../sessions'
@@ -193,6 +192,5 @@ onMounted(async () => {
       :start="viewing.start"
       @close="viewing = null"
     />
-    <KeyBar />
   </section>
 </template>

@@ -3,6 +3,13 @@ import { beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
 import { type Command, type Press, isControl, useKeyStore } from './keys'
 
+/* Every screen's and component's source, as the page draws them. */
+const SOURCES = import.meta.glob<string>(['../*.vue', '../views/*.vue', '../components/*.vue'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+
 beforeEach(() => {
   setActivePinia(createPinia())
 })
@@ -145,10 +152,7 @@ spec('ui:keys:hints-come-from-the-declarations', () => {
     command('approve', 'Enter', { keys: [{ code: 'Enter', mod: true }], label: 'approve' }),
   ])
 
-  expect(keys.bar).toEqual([
-    { id: 'revise', keys: 'e', label: 'revise' },
-    { id: 'approve', keys: '⌘↵', label: 'approve' },
-  ])
+  expect(keys.hint('revise')).toBe('e')
   expect(keys.hint('hub')).toBe('⇧H')
   expect(keys.hint('approve')).toBe('⌘↵')
   expect(keys.listed.map((one) => `${one.keys} ${one.label}`)).toEqual([
@@ -165,6 +169,12 @@ spec('ui:keys:hints-come-from-the-declarations', () => {
     command('library', 'KeyI', { keys: [{ code: 'KeyI', shift: true }], label: 'renders' }),
   ])
   expect(keys.listed.filter((one) => one.keys === '⇧I').map((one) => one.id)).toEqual(['renders'])
+
+  // The key list, opened on ? or the app bar's ? button, is the one place keys are listed.
+  expect(keys).not.toHaveProperty('bar')
+  expect(Object.keys(SOURCES)).toContain('../views/Hub.vue')
+  for (const [file, source] of Object.entries(SOURCES))
+    expect(source, file).not.toMatch(/KeyBar|key-bar/)
 })
 
 spec('ui:keys:a-focused-control-keeps-enter-and-space', () => {

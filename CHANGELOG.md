@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- The hub's source cell is a column — name and file level with the tick line, the thumbnail below — and long
+  source and batch names wrap inside their columns. No screen draws a key bar; the app bar's `?` opens the key
+  list (0076 D3, D5).
+
 ## [0.48.0] - 2026-10-24 · 0075-the-walkthrough
 
 Gate: local 0m41s · CI 7m25s (build-image at 801ffec) · 0.47.0: local 0m42s · CI 7m25s

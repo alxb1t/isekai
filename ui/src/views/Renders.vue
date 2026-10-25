@@ -5,7 +5,6 @@ import { storeToRefs } from 'pinia'
 import { bar } from '../bars'
 import { sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
-import KeyBar from '../components/KeyBar.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RenderBar from '../components/RenderBar.vue'
@@ -330,6 +329,5 @@ onMounted(async () => {
       @open="store.openDialog"
     />
     <RenderDialog v-if="dialog" :batch="batch" @close="store.closeDialog" />
-    <KeyBar />
   </section>
 </template>

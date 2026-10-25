@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { thumbAt } from '../api'
-import KeyBar from '../components/KeyBar.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useBatchStore } from '../stores/batch'
 import { asked, lasted, outcome } from '../sessions'
@@ -74,6 +73,5 @@ onMounted(async () => {
         </span>
       </span>
     </RouterLink>
-    <KeyBar />
   </section>
 </template>
