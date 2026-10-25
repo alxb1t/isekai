@@ -14,6 +14,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The review stage drafts a flow from another flow's approval: the fields both hold come from the approval, the
   rest from the flow's own sheet, and the draft names where it came from (0077 D1, D2, D3).
 
+- `isekai review --from FLOW [--version N]` drafts each `--flow` from that flow's approval, the newest unless
+  `--version` names one (0077 D4).
+
 ## [0.49.0] - 2026-10-25 · 0076-the-second-walkthrough
 
 Gate: local 0m41s · CI 7m25s (build-image at 801ffec) · 0.48.0: local 0m41s · CI 7m25s

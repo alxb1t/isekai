@@ -6,7 +6,7 @@ The review stage, the verb, then the surface, per [design](design.md). Every new
 ## Progress
 
 - [x] 1 — The review stage
-- [ ] 2 — The verb
+- [x] 2 — The verb
 - [ ] 3 — The surface
 
 ## 1 — The review stage
@@ -22,15 +22,15 @@ The review stage, the verb, then the surface, per [design](design.md). Every new
 
 ## 2 — The verb
 
-- [ ] 2.1 **HALT CHECK** — `review` takes no `--from`.
+- [x] 2.1 **HALT CHECK** — `review` takes no `--from`.
   Verify: `uv run python -m isekai review --help | grep -c -- '--from'` prints `0`.
-- [ ] 2.2 Add `--from` and `--version` to `review` in `isekai/interface/cli.py`, and call `draft_from` from
+- [x] 2.2 Add `--from` and `--version` to `review` in `isekai/interface/cli.py`, and call `draft_from` from
   `review_flow`, per [D4](design.md#d4); bind both `cli:review-from:` keys in `tests/test_pipeline_cli.py`.
   Verify: `uv run python -m isekai review --help | grep -c -- '--version'` prints a number of at least `1`, and `grep -c 'cli:review-from:' tests/test_pipeline_cli.py` prints `2`, and `uv run pytest -q tests/test_pipeline_cli.py` exits 0.
-- [ ] 2.3 In `README.md`'s options list, `--from FLOW` — on `approve`: … → `--from FLOW` — on `approve`: … ; on
+- [x] 2.3 In `README.md`'s options list, `--from FLOW` — on `approve`: … → `--from FLOW` — on `approve`: … ; on
   `review`: draft each `--flow` from that flow's approval, its own fields from its sheet, and add `--version N`.
   Verify: `grep -c 'on .review.: draft each' README.md` prints `1`, and `grep -c -- '--version N' README.md` prints a number of at least `1`.
-- [ ] 2.4 In `docs/data-flow.md`'s stage diagram, under `revise`, add the line
+- [x] 2.4 In `docs/data-flow.md`'s stage diagram, under `revise`, add the line
   `review --from ── reads another flow's approval and its own sheet ──▶ review/NNN.draft.json`.
   Verify: `grep -c 'review --from' docs/data-flow.md` prints `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
 

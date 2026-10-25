@@ -26,9 +26,10 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary import ollama
+from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Flow, Schema, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import open_run
+from isekai.foundation.run import Run, open_run
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
 from isekai.pipeline.caption import FakeReader, OllamaReader
@@ -693,3 +694,86 @@ def test_an_untracked_approval_source_is_refused_naming_the_flows_there_are(
 
     assert not (tmp_path / "runs").exists()
     assert "summon-v9: not a flow this build tracks" in err.getvalue()
+
+
+CONJURE = "conjure-anime-wai"
+
+
+def _two_approvals(
+    tmp_path: Path, name: str, schema: Schema, vocabulary: Vocabulary
+) -> Run:
+    """Open a run whose summon holds approvals one and two, and conjure a sheet."""
+    photo = tmp_path / f"{name}.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480 + len(name)))
+    run = open_run(photo, tmp_path / "runs")
+    sheet(run, schema, vocabulary)
+    sheet(run, load_flow(CONJURE).schema, vocabulary, flow=CONJURE)
+    review(run, "summon-anime-wai")
+    approve(run, "summon-anime-wai", schema, vocabulary)
+    draft = review(run, "summon-anime-wai", new_version=True)
+    assert draft is not None
+    body = json.loads(draft.read_text())
+    body["fields"]["hair_silhouette"] = ["very long hair"]
+    draft.write_text(json.dumps(body))
+    approve(run, "summon-anime-wai", schema, vocabulary)
+    return run
+
+
+@pytest.mark.spec("cli:review-from:each-flow-is-drafted-from-the-newest-approval")
+def test_review_from_drafts_each_flow_from_the_newest_approval_or_the_one_named(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    newest = _two_approvals(tmp_path, "ada", schema, vocabulary)
+    named = _two_approvals(tmp_path, "bo", schema, vocabulary)
+    wired = _wiring(tmp_path)
+    out = io.StringIO()
+    wired.out = out
+    argv = ["review", "--flow", CONJURE, "--from", "summon-anime-wai"]
+
+    assert dispatch(build_parser().parse_args([*argv, newest.id]), wired) == 0
+    assert (
+        dispatch(build_parser().parse_args([*argv, "--version", "1", named.id]), wired)
+        == 0
+    )
+
+    for run, approval in ((newest, 2), (named, 1)):
+        draft = run.directory(CONJURE, "review") / "001.draft.json"
+        producer = read(draft, DRAFT_FILE)["producer"]
+        assert producer["drafted_from"] == {
+            "flow": "summon-anime-wai",
+            "approval": approval,
+        }
+    said = out.getvalue()
+    assert (
+        f"{newest.id}: review drafted {CONJURE}/001.draft.json from summon-anime-wai v2"
+        in said
+    )
+
+
+@pytest.mark.spec("cli:review-from:a-conflicting-option-is-refused")
+@pytest.mark.parametrize(
+    ("options", "named"),
+    [
+        (["--from", "summon-anime-wai", "--discard"], "--discard"),
+        (["--from", "summon-anime-wai", "--new-version"], "--new-version"),
+        (["--version", "1"], "--version"),
+    ],
+)
+def test_review_from_beside_a_conflicting_option_is_refused_before_any_run_is_read(
+    tmp_path: Path, options: list[str], named: str
+) -> None:
+    wired = _wiring(tmp_path)
+    err = io.StringIO()
+    wired.err = err
+    # A photograph, so a run would be opened if the options were checked late.
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    parsed = build_parser().parse_args(
+        ["review", "--flow", CONJURE, *options, str(photo)]
+    )
+
+    assert dispatch(parsed, wired) == 1
+
+    assert err.getvalue().startswith("refused: --")
+    assert f"`{named}" in err.getvalue()
+    assert not (tmp_path / "runs").exists()
