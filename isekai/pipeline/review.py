@@ -43,6 +43,7 @@ from typing import Literal
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
+    ONE_RENDER,
     SHEET_FILE,
     SIDECAR,
     CopiedFrom,
@@ -214,7 +215,8 @@ def draft_from(
     Each field of `schema` the approval holds is the approval's; every other is
     `flow`'s newest sheet's, as are the records the fields came through. No seeds
     are carried: the approval's are another flow's. A waiting draft equal to its
-    sheet holds no work, so it is replaced at its number; an edited one refuses.
+    sheet, rendering one drawn seed, holds no work, so it is replaced at its
+    number; one with edited fields, or a count or seeds of its own, refuses.
     e.g. (run, conjure, summon, None, schema) -> conjure/review/001.draft.json
     """
     then = "then draft it again"
@@ -247,8 +249,8 @@ def draft_from(
     waiting = current_draft(run.directory(flow, REVIEW))
     if waiting is not None and _edited(run, flow, waiting, discarding):
         raise Refusal(
-            f"{run.id}: flow {flow} has {waiting.name} waiting, edited from its "
-            "sheet, and a draft from another flow never replaces an edit; approve "
+            f"{run.id}: flow {flow} has {waiting.name} waiting with edits of its "
+            "own, and a draft from another flow never replaces an edit; approve "
             f"it, or {discarding}"
         )
     merged = {**body["fields"], **carried["fields"]}
@@ -266,10 +268,17 @@ def draft_from(
 
 
 def _edited(run: Run, flow: str, draft: Path, remedy: str) -> bool:
-    """Return whether `draft` differs from the sheet it records, as approval says."""
+    """Return whether `draft` holds work a replacement would lose.
+
+    Its fields differ from the sheet it records, as approval says, or it renders
+    anything but one drawn seed: a count or seeds set in Review, or the seed a
+    revision lists. A draft taken from a sheet does neither.
+    """
     body = read(draft, DRAFT_FILE, remedy=remedy)
     require(draft, body, "sheet", int, remedy)
     require(draft, body, "fields", dict, remedy)
+    if renders_of(draft, body, remedy) != ONE_RENDER:
+        return True
     return _differs(body["fields"], draft, sheet_of(run, flow, body["sheet"]), remedy)
 
 
@@ -408,6 +417,7 @@ def cancel(run: Run, flow: str) -> Path | None:
             body["sheet"],
             body.get("renders"),
             version,
+            drafted_from(body),
         )
     approval.unlink()
     return path
@@ -417,9 +427,9 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
     """Return the newest approval of `flow` and its number, refusing its cancel.
 
     Refused while anything derives from it: a file numbered for it in the
-    flow's prompts or outputs, or another flow's approval copied from it. That
-    is checked before a waiting draft, so a draft is never named for discarding
-    while the cancel would still be refused.
+    flow's prompts or outputs, or another flow's approval copied or drafted from
+    it. That is checked before a waiting draft, so a draft is never named for
+    discarding while the cancel would still be refused.
     """
     directory = run.directory(flow, REVIEW)
     approved = approved_versions(directory)
@@ -475,7 +485,8 @@ def _derived(run: Run, flow: str, version: int) -> tuple[list[str], list[str]]:
     """Return what derives from `flow`'s approval `version`, and what can go first.
 
     Each derived file is named by its path in the run; the flows are those whose
-    copy of it is their newest approval and can be cancelled.
+    copy of it, or approval drafted from it, is their newest approval and can be
+    cancelled.
 
     e.g. (run, f, 2) -> (["f/prompts/002.json", "g/review/001.approved.json"], [])
     """
@@ -496,7 +507,10 @@ def _derived(run: Run, flow: str, version: int) -> tuple[list[str], list[str]]:
             path = approval_of(run, other, held)
             copy = read(path, APPROVED_FILE, remedy=f"restore it in {path} by hand")
             producer = copy.get("producer")
-            if isinstance(producer, dict) and producer.get("copied_from") == source:
+            if isinstance(producer, dict) and source in (
+                producer.get("copied_from"),
+                producer.get("drafted_from"),
+            ):
                 found.append(f"{other}/{REVIEW}/{path.name}")
                 if held == held_versions[-1] and cancellable(run, other) is None:
                     copies.append(other)

@@ -1129,7 +1129,8 @@ def test_a_drafted_draft_approves_as_an_edited_approval_and_no_copy(
 ) -> None:
     _summon_approved(run, schema, vocabulary)
     conjure = _conjure(run, vocabulary)
-    draft_from(run, CONJURE, FLOW, None, conjure)
+    draft = draft_from(run, CONJURE, FLOW, None, conjure)
+    held = draft.read_bytes()
 
     approved, _ = approve(run, CONJURE, conjure, vocabulary)
 
@@ -1137,6 +1138,8 @@ def test_a_drafted_draft_approves_as_an_edited_approval_and_no_copy(
     producer = read(approved, APPROVED_FILE)["producer"]
     assert producer["edited"] is True
     assert "copied_from" not in producer
+    assert cancel(run, CONJURE) == draft
+    assert draft.read_bytes() == held
 
 
 @pytest.mark.spec("review:draft-from:a-target-with-no-sheet-is-refused")
@@ -1188,14 +1191,24 @@ def test_an_unedited_waiting_draft_is_replaced_at_its_number(
 
 
 @pytest.mark.spec("review:draft-from:an-edited-waiting-draft-is-refused")
+@pytest.mark.parametrize("edit", ["fields", "renders", "revision"])
 def test_an_edited_waiting_draft_is_refused_naming_its_discard(
-    run: Run, schema: Schema, vocabulary: Vocabulary
+    run: Run, schema: Schema, vocabulary: Vocabulary, edit: str
 ) -> None:
     _summon_approved(run, schema, vocabulary)
     conjure = _conjure(run, vocabulary)
     waiting = review(run, CONJURE)
     assert waiting is not None
-    _edit(waiting, bangs=[])
+    fields = read(waiting, DRAFT_FILE)["fields"]
+    if edit == "fields":
+        _edit(waiting, bangs=[])
+    elif edit == "renders":
+        save_draft(run, CONJURE, fields, {"count": 4, "seeds": [11, 22, 33, 44]})
+    else:
+        assert approve(run, CONJURE, conjure, vocabulary)[0] is not None
+        _image(run, 1, SEED, CONJURE)
+        waiting = revise(run, CONJURE, 1, SEED)
+        assert read(waiting, DRAFT_FILE)["fields"] == fields
     before = waiting.read_bytes()
 
     with pytest.raises(Refusal) as refused:
@@ -1203,9 +1216,30 @@ def test_an_edited_waiting_draft_is_refused_naming_its_discard(
 
     message = str(refused.value)
     discard_ = f"python -m isekai review --flow {CONJURE}{runs_flag(run)} --discard"
-    assert "001.draft.json waiting" in message
+    assert f"{waiting.name} waiting" in message
     assert f"`{discard_} {run.id}`" in message
     assert waiting.read_bytes() == before
+
+
+@pytest.mark.spec("review:draft-from:its-approval-refuses-the-sources-cancel")
+def test_an_approval_drafted_from_a_source_refuses_the_sources_cancel(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    draft = draft_from(run, CONJURE, FLOW, None, conjure)
+    assert approve(run, CONJURE, conjure, vocabulary)[0] is not None
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal, match=f"{CONJURE}/review/001.approved.json came"):
+        cancel(run, FLOW)
+    assert re.search(
+        f"approve --flow {CONJURE} .*--cancel", str(cancellable(run, FLOW))
+    )
+
+    assert snapshot(run.path) == before
+    assert cancel(run, CONJURE) == draft
+    assert cancel(run, FLOW) == run.directory(FLOW, "review") / "001.draft.json"
 
 
 # --- ④ renders: how many images, and which seeds -------------------------------
@@ -1415,9 +1449,9 @@ def test_discarding_an_approved_flow_is_refused_and_changes_nothing(
     assert snapshot(run.directory(FLOW, "review")) == before
 
 
-def _image(run: Run, version: int, seed: int) -> Path:
-    """Write what a render leaves for `seed` under approval `version`."""
-    group = run.directory(FLOW, "outputs", f"{version:03d}")
+def _image(run: Run, version: int, seed: int, flow: str = FLOW) -> Path:
+    """Write what a render of `flow` leaves for `seed` under approval `version`."""
+    group = run.directory(flow, "outputs", f"{version:03d}")
     group.mkdir(parents=True, exist_ok=True)
     (group / f"{seed}.render.json").write_text("{}\n")
     image = group / f"{seed}.png"
