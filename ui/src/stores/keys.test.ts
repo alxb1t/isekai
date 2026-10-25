@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
-import { type Command, type Press, isControl, useKeyStore } from './keys'
+import { type Command, type Press, controlled, isControl, isMac, useKeyStore } from './keys'
 
 /* Every screen's and component's source, as the page draws them. */
 const SOURCES = import.meta.glob<string>(['../*.vue', '../views/*.vue', '../components/*.vue'], {
@@ -130,10 +130,6 @@ spec('ui:keys:esc-closes-the-nearest-thing-first', () => {
   expect(target.left).toBe(false)
   expect(close.run).not.toHaveBeenCalled()
 
-  // An Esc that drops an input method's composition is the input method's.
-  expect(keys.press(press('Escape', { target, isComposing: true }))).toBe(false)
-  expect(target.left).toBe(false)
-
   keys.press(press('Escape', { target }))
   expect(target.left).toBe(true)
   expect(close.run).not.toHaveBeenCalled()
@@ -189,4 +185,50 @@ spec('ui:keys:a-focused-control-keeps-enter-and-space', () => {
   expect(isControl(element('DIV'))).toBe(false)
   expect(isControl(element('BODY'))).toBe(false)
   expect(isControl(null)).toBe(false)
+})
+
+spec('ui:keys:an-esc-ending-a-composition-closes-nothing', () => {
+  const keys = useKeyStore()
+  const close = command('close', 'Escape')
+  keys.declare('overlay', [close])
+  const target = field()
+
+  const ending = press('Escape', { target, isComposing: true })
+
+  expect(keys.press(ending)).toBe(false)
+  expect(ending.defaultPrevented).toBe(false)
+  expect(target.left).toBe(false)
+  expect(close.run).not.toHaveBeenCalled()
+})
+
+spec('ui:keys:review-panes-move-from-a-field-on-macos', () => {
+  // The platform is read from the client hint first, else the deprecated `platform`.
+  expect(isMac({ userAgentData: { platform: 'macOS' }, platform: 'Linux x86_64' })).toBe(true)
+  expect(isMac({ platform: 'MacIntel' })).toBe(true)
+  expect(isMac({ platform: 'Linux x86_64' })).toBe(false)
+  expect(isMac(undefined)).toBe(false)
+
+  const keys = useKeyStore()
+  // As Review declares them: plain l is text in a field, ⌃L moves the pane.
+  const right = command('right', 'KeyL')
+  const fieldRight = command('field-right', 'KeyL', {
+    keys: [controlled('KeyL')],
+    label: 'pane right',
+    inField: true,
+  })
+  keys.declare('screen', [right, fieldRight])
+  const target = field()
+
+  keys.mac = true
+  expect(keys.press(press('KeyL', { target }))).toBe(false)
+  expect(keys.press(press('KeyL', { target, ctrlKey: true }))).toBe(true)
+  expect(fieldRight.run).toHaveBeenCalledOnce()
+  expect(keys.hint('field-right')).toBe('⌃L')
+
+  keys.mac = false
+  expect(keys.press(press('KeyL', { target, ctrlKey: true }))).toBe(false)
+  expect(fieldRight.run).toHaveBeenCalledOnce()
+  expect(right.run).not.toHaveBeenCalled()
+  expect(keys.hint('field-right')).toBe('')
+  expect(keys.listed.map((one) => one.id)).toEqual(['right'])
 })

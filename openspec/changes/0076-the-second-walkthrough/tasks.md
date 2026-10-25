@@ -6,7 +6,7 @@ The layout, the keys, the dialogs, then the session grid, per [design](design.md
 ## Progress
 
 - [x] 1 — The layout
-- [ ] 2 — The keys
+- [x] 2 — The keys
 - [ ] 3 — The dialogs
 - [ ] 4 — The session grid
 
@@ -23,15 +23,15 @@ The layout, the keys, the dialogs, then the session grid, per [design](design.md
 
 ## 2 — The keys
 
-- [ ] 2.1 **HALT CHECK** — Renders' letters move by cell.
+- [x] 2.1 **HALT CHECK** — Renders' letters move by cell.
   Verify: `grep -c "'cell-'" ui/src/grid.ts` prints a number of at least `1`.
-- [ ] 2.2 Detect the platform in `ui/src/stores/keys.ts` and declare `⌃H` `⌃L` on macOS in `ui/src/views/Review.vue`, per
+- [x] 2.2 Detect the platform in `ui/src/stores/keys.ts` and declare `⌃H` `⌃L` on macOS in `ui/src/views/Review.vue`, per
   [D1](design.md#d1); bind `ui:keys:review-panes-move-from-a-field-on-macos` and `ui:keys:an-esc-ending-a-composition-closes-nothing` in `ui/src/stores/keys.test.ts`.
   Verify: `grep -c -E 'review-panes-move-from-a-field-on-macos|an-esc-ending-a-composition-closes-nothing' ui/src/stores/keys.test.ts` prints `2`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 2.3 Rewrite `ui/src/grid.ts` and Renders' keys in `ui/src/views/Renders.vue` per [D6](design.md#d6); recast
+- [x] 2.3 Rewrite `ui/src/grid.ts` and Renders' keys in `ui/src/views/Renders.vue` per [D6](design.md#d6); recast
   `ui:keys:renders-moves-by-cell-and-by-image` and bind `ui:keys:a-row-move-keeps-the-column` in `ui/src/grid.test.ts`.
   Verify: `grep -c "'cell-'" ui/src/grid.ts` prints `0`, and `grep -c 'a-row-move-keeps-the-column' ui/src/grid.test.ts` prints `1`.
-- [ ] 2.4 Add D25's macOS pair to `docs/decisions.md` per [D1](design.md#d1).
+- [x] 2.4 Add D25's macOS pair to `docs/decisions.md` per [D1](design.md#d1).
   Verify: `grep -c '⌃H' docs/decisions.md` prints a number of at least `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
 
 ## 3 — The dialogs

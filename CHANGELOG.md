@@ -9,6 +9,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- On macOS, `⌃H` `⌃L` move between Review's panes from a field. On Renders, `h l` step images as the arrows do,
+  crossing cells and reaching the source, whose `↵` opens its photograph; `j k` keep the column (0076 D1, D6).
+
 - The hub's source cell is a column — name and file level with the tick line, the thumbnail below — and long
   source and batch names wrap inside their columns. No screen draws a key bar; the app bar's `?` opens the key
   list (0076 D3, D5).
