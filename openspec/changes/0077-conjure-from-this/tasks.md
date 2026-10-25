@@ -5,18 +5,18 @@ The review stage, the verb, then the surface, per [design](design.md). Every new
 
 ## Progress
 
-- [ ] 1 — The review stage
+- [x] 1 — The review stage
 - [ ] 2 — The verb
 - [ ] 3 — The surface
 
 ## 1 — The review stage
 
-- [ ] 1.1 **HALT CHECK** — the review stage drafts from no other flow.
+- [x] 1.1 **HALT CHECK** — the review stage drafts from no other flow.
   Verify: `grep -c 'def draft_from' isekai/pipeline/review.py` prints `0`.
-- [ ] 1.2 Add `drafted_from: NotRequired[CopiedFrom]` to `ChainProducer` in `isekai/foundation/artifacts.py` per
+- [x] 1.2 Add `drafted_from: NotRequired[CopiedFrom]` to `ChainProducer` in `isekai/foundation/artifacts.py` per
   [D2](design.md#d2), declaring `CopiedFrom` above it.
   Verify: `grep -c '"drafted_from": NotRequired\[CopiedFrom\]' isekai/foundation/artifacts.py` prints `1`, and `uv run ty check` exits 0.
-- [ ] 1.3 Add `draft_from` to `isekai/pipeline/review.py` per [D1](design.md#d1), [D2](design.md#d2) and
+- [x] 1.3 Add `draft_from` to `isekai/pipeline/review.py` per [D1](design.md#d1), [D2](design.md#d2) and
   [D3](design.md#d3); bind every `review:draft-from:` key of the [review](specs/review/spec.md) delta in `tests/test_review.py`.
   Verify: `uv run pytest -q tests/test_review.py` exits 0, and `grep -c 'review:draft-from:' tests/test_review.py` prints `7`.
 

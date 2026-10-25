@@ -155,17 +155,23 @@ SheetProducer = TypedDict(
     },
 )
 
-ChainProducer = TypedDict(
-    "ChainProducer",
-    {"implementation": str, "from": int, "source": str},
-)
-
 
 class CopiedFrom(TypedDict):
-    """The approval another flow's approval was copied from."""
+    """Another flow's approval: one a draft was drafted from, or one copied."""
 
     flow: str
     approval: int
+
+
+ChainProducer = TypedDict(
+    "ChainProducer",
+    {
+        "implementation": str,
+        "from": int,
+        "source": str,
+        "drafted_from": NotRequired[CopiedFrom],
+    },
+)
 
 
 class ApprovedProducer(ChainProducer):

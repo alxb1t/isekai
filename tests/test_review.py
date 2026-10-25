@@ -7,6 +7,7 @@ this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 import io
 import json
 import re
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,7 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     SHEET_FILE,
+    DanbooruTag,
     Renders,
     read,
     renders_of,
@@ -39,6 +41,7 @@ from isekai.pipeline.review import (
     cancellable,
     current_draft,
     discard,
+    draft_from,
     estimate_tokens,
     review,
     revise,
@@ -46,10 +49,11 @@ from isekai.pipeline.review import (
     state,
     token_budget,
 )
+from isekai.shared.field_map import Group
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.images import jpeg_bytes
-from tests.stages import caption, runs_flag, sheet
+from tests.stages import FIELD_MAP, caption, runs_flag, sheet
 
 FLOW = "summon-anime-wai"
 
@@ -1046,6 +1050,162 @@ def test_a_target_not_copied_from_the_sources_latest_is_copied_again(
     assert body["producer"]["copied_from"] == {"flow": FLOW, "approval": 2}
     assert body["fields"] == read(newer, APPROVED_FILE)["fields"]
     assert held.read_bytes() == frozen
+
+
+# --- drafting from another flow's approval ------------------------------------
+
+CONJURE = "conjure-anime-wai"
+
+
+def _conjure(run: Run, vocabulary: Vocabulary) -> Schema:
+    """Write a conjure sheet unlike summon's, `bangs` its own, and return its schema."""
+    schema = load_flow(CONJURE).schema
+    routed = replace(
+        FIELD_MAP,
+        fields={**FIELD_MAP.fields, "bangs": Group(primary=("wavy hair",), also=())},
+    )
+    sheet(
+        run,
+        schema,
+        vocabulary,
+        flow=CONJURE,
+        field_map=routed,
+        tags=[DanbooruTag("short_hair"), DanbooruTag("wavy_hair")],
+    )
+    return schema
+
+
+def _summon_approved(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
+    """Approve summon with `hair_silhouette` corrected, and return its approval."""
+    draft = review(run, FLOW)
+    assert draft is not None
+    _edit(draft, hair_silhouette=["very long hair"])
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    return approved
+
+
+@pytest.mark.spec("review:draft-from:the-shared-fields-come-from-the-source")
+def test_a_drafted_draft_takes_the_shared_fields_and_keeps_its_own(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    source = read(_summon_approved(run, schema, vocabulary), APPROVED_FILE)
+    conjure = _conjure(run, vocabulary)
+    own = read(run.path / CONJURE / "sheets" / "001.json", SHEET_FILE)["fields"]
+
+    draft = draft_from(run, CONJURE, FLOW, None, conjure)
+
+    fields = read(draft, DRAFT_FILE)["fields"]
+    assert tuple(fields) == conjure.names
+    assert {name: fields[name] for name in schema.names} == source["fields"]
+    assert fields["bangs"] == own["bangs"] == ["wavy hair"]
+    assert own["hair_silhouette"] != source["fields"]["hair_silhouette"]
+
+
+@pytest.mark.spec("review:draft-from:the-draft-names-where-it-came-from")
+def test_a_drafted_draft_names_its_sheet_and_the_approval_it_came_from(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+
+    draft = draft_from(run, CONJURE, FLOW, 1, conjure)
+
+    assert draft == run.path / CONJURE / "review" / "001.draft.json"
+    body = read(draft, DRAFT_FILE)
+    assert body["sheet"] == 1
+    assert body["producer"] == {
+        "implementation": "review",
+        "from": 1,
+        "source": "sheets",
+        "drafted_from": {"flow": FLOW, "approval": 1},
+    }
+    assert "renders" not in body
+
+
+@pytest.mark.spec("review:draft-from:its-approval-is-an-ordinary-approval")
+def test_a_drafted_draft_approves_as_an_edited_approval_and_no_copy(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    draft_from(run, CONJURE, FLOW, None, conjure)
+
+    approved, _ = approve(run, CONJURE, conjure, vocabulary)
+
+    assert approved == run.path / CONJURE / "review" / "001.approved.json"
+    producer = read(approved, APPROVED_FILE)["producer"]
+    assert producer["edited"] is True
+    assert "copied_from" not in producer
+
+
+@pytest.mark.spec("review:draft-from:a-target-with-no-sheet-is-refused")
+def test_a_target_with_no_sheet_is_refused_naming_its_assign_and_prepare(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+
+    with pytest.raises(Refusal) as refused:
+        draft_from(run, CONJURE, FLOW, None, load_flow(CONJURE).schema)
+
+    message = str(refused.value)
+    assign = f"`python -m isekai assign --flow {CONJURE}{runs_flag(run)} {run.id}`"
+    assert f"{assign}, then Prepare" in message
+    assert not (run.path / CONJURE).exists()
+
+
+@pytest.mark.spec("review:draft-from:a-missing-source-approval-is-refused")
+def test_a_source_without_the_approval_named_is_refused_naming_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+
+    with pytest.raises(Refusal) as refused:
+        draft_from(run, CONJURE, FLOW, 2, conjure)
+
+    message = str(refused.value)
+    assert f"flow {FLOW} has no 002.approved.json" in message
+    assert f"`python -m isekai approve --flow {FLOW}{runs_flag(run)} {run.id}`" in (
+        message
+    )
+    assert not (run.path / CONJURE / "review").exists()
+
+
+@pytest.mark.spec("review:draft-from:an-unedited-waiting-draft-is-replaced")
+def test_an_unedited_waiting_draft_is_replaced_at_its_number(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    waiting = review(run, CONJURE)
+
+    draft = draft_from(run, CONJURE, FLOW, None, conjure)
+
+    assert draft == waiting == run.path / CONJURE / "review" / "001.draft.json"
+    assert versions(run.path / CONJURE / "review") == [1]
+    assert read(draft, DRAFT_FILE)["producer"]["drafted_from"]["flow"] == FLOW
+
+
+@pytest.mark.spec("review:draft-from:an-edited-waiting-draft-is-refused")
+def test_an_edited_waiting_draft_is_refused_naming_its_discard(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    waiting = review(run, CONJURE)
+    assert waiting is not None
+    _edit(waiting, bangs=[])
+    before = waiting.read_bytes()
+
+    with pytest.raises(Refusal) as refused:
+        draft_from(run, CONJURE, FLOW, None, conjure)
+
+    message = str(refused.value)
+    discard_ = f"python -m isekai review --flow {CONJURE}{runs_flag(run)} --discard"
+    assert "001.draft.json waiting" in message
+    assert f"`{discard_} {run.id}`" in message
+    assert waiting.read_bytes() == before
 
 
 # --- ④ renders: how many images, and which seeds -------------------------------

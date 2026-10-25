@@ -45,6 +45,7 @@ from isekai.foundation.artifacts import (
     DRAFT_FILE,
     SHEET_FILE,
     SIDECAR,
+    CopiedFrom,
     Renders,
     ReviewApproved,
     ReviewDraft,
@@ -202,6 +203,81 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
     carried = refuse_revision(run, flow, version, seed)
     renders: Renders = {"count": 1, "seeds": [seed]}
     return _write_draft(run, flow, version, REVIEW, carried, carried["sheet"], renders)
+
+
+def draft_from(
+    run: Run, flow: str, source: str, version: int | None, schema: Schema
+) -> Path:
+    """Write `flow`'s draft from `source`'s approval `version`, else its newest.
+
+    Each field of `schema` the approval holds is the approval's; every other is
+    `flow`'s newest sheet's, as are the records the fields came through. No seeds
+    are carried: the approval's are another flow's. A waiting draft equal to its
+    sheet holds no work, so it is replaced at its number; an edited one refuses.
+    e.g. (run, conjure, summon, None, schema) -> conjure/review/001.draft.json
+    """
+    again = "then draft it again"
+    if source == flow:
+        raise Refusal(
+            f"{run.id}: flow {flow} is drafted from its own approval; run "
+            f"{_again(run, flow)} to copy it, or name another flow to draft from"
+        )
+    sheet_version = latest(run.directory(flow, SHEETS))
+    if sheet_version is None:
+        raise Refusal(
+            f"{run.id}: flow {flow} has no sheet to draft {source}'s approval into; "
+            f"run `{stage_command(run, 'assign', flow)}`, then Prepare, {again}"
+        )
+    held = approved_versions(run.directory(source, REVIEW))
+    approval = held[-1] if version is None and held else version
+    if approval is None or approval not in held:
+        named = "an approval" if approval is None else artifact_name(approval, APPROVED)
+        raise Refusal(
+            f"{run.id}: flow {source} has no {named} to draft {flow} from; run "
+            f"`{stage_command(run, 'approve', source)}` to approve its draft, {again}"
+        )
+    carried = _approval(run, source, approval, f"draft {flow} again")
+    copied = run.directory(flow, SHEETS) / artifact_name(sheet_version)
+    body = read(copied, SHEET_FILE)
+    remedy = f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, {again}"
+    require(copied, body, "vocabulary", dict, remedy)
+    require(copied, body, "fields", dict, remedy)
+    waiting = current_draft(run.directory(flow, REVIEW))
+    if waiting is not None and not _untouched(run, flow, waiting):
+        raise Refusal(
+            f"{run.id}: flow {flow} has {waiting.name} waiting, edited from its "
+            "sheet, and a draft from another flow never replaces an edit; approve "
+            f"it, or run `{stage_command(run, STAGE, flow, options=DISCARD)}`, {again}"
+        )
+    shared, own = carried["fields"], body["fields"]
+    fields = {
+        name: list(shared[name] if name in shared else own[name])
+        for name in schema.names
+        if name in shared or name in own
+    }
+    return _write_draft(
+        run,
+        flow,
+        sheet_version,
+        SHEETS,
+        {**body, "fields": fields},
+        sheet_version,
+        version=None if waiting is None else int(waiting.name[:3]),
+        drafted_from={"flow": source, "approval": approval},
+    )
+
+
+def _untouched(run: Run, flow: str, draft: Path) -> bool:
+    """Return whether `draft` holds exactly the fields of the sheet it records."""
+    body = read(draft, DRAFT_FILE)
+    number, fields = body.get("sheet"), body.get("fields")
+    if not isinstance(number, int) or not isinstance(fields, Mapping):
+        return False
+    copied = run.directory(flow, SHEETS) / artifact_name(number)
+    if not copied.is_file():
+        return False
+    held = read(copied, SHEET_FILE).get("fields")
+    return isinstance(held, Mapping) and same_fields(held, fields)
 
 
 # An image to revise: its run, its flow, its approval's number and its seed.
@@ -462,6 +538,7 @@ def _write_draft(
     sheet_version: int,
     renders: Renders | None = None,
     version: int | None = None,
+    drafted_from: CopiedFrom | None = None,
 ) -> Path:
     """Write `flow`'s draft numbered `version`, else the next, and return its path."""
     review_directory = run.directory(flow, REVIEW)
@@ -483,6 +560,8 @@ def _write_draft(
         draft["field_map"] = carried["field_map"]
     if renders is not None:
         draft["renders"] = renders
+    if drafted_from is not None:
+        draft["producer"]["drafted_from"] = drafted_from
     write(path, DRAFT_FILE, draft)
     return path
 
