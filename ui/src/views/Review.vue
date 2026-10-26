@@ -20,7 +20,7 @@ import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
 import { useKeys } from '../composables/useKeys'
-import { useQueue } from '../composables/useQueue'
+import { flowsWaiting, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import { clamp } from '../grid'
 import { nextPane, type Pane, paneKeys } from '../panes'
@@ -65,13 +65,6 @@ const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 function select(digest: string): void {
   if (digest !== props.digest)
     void router.push({ name: 'review', params: { ...props, digest } })
-}
-
-/* The next flow holding unapproved sheets, opened on its first. */
-function nextFlow(): void {
-  const next = batch.others.value[0]
-  if (next)
-    void router.push({ name: 'review', params: { ...props, digest: next.first, flow: next.flow } })
 }
 
 function stepBatch(direction: -1 | 1): void {
@@ -464,11 +457,11 @@ useKeys('screen', [
     run: () => stepBatch(-1),
   },
   {
-    id: 'next-flow',
-    keys: [shifted('KeyF')],
-    label: 'the next flow',
-    run: nextFlow,
-    when: () => batch.others.value.length > 0,
+    id: 'flows',
+    keys: plain('Escape'),
+    label: 'the flows waiting',
+    run: () => void router.push({ name: 'review-head', params: { batch: props.batch } }),
+    when: () => batch.info.value !== null && flowsWaiting(batch.info.value).length > 1,
   },
   ...paneKeys(useKeyStore().mac, movePane, moveRow),
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },

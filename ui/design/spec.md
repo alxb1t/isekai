@@ -214,6 +214,8 @@ y_long_name            │                                  │
 
 ### J3 · Review and approve
 
+With two or more flows waiting, the Review tab is a chooser, a row per flow; ↵ opens its head, esc on Review returns.
+
 | frame | trigger | URL |
 |---|---|---|
 | J3·1 the batch's head, the first sheet in summon | ⇧R Review | `…/b/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
@@ -241,7 +243,7 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
 - **The viewer**: the photograph opens in it, fitted, and `←` `→` step through the rail's photographs; a revision's
   render opens in it alone.
 - **The rail**: the flow's name heads it, with a line under it for each other flow holding unapproved sheets,
-  `summon-anime-wai · 1 waiting ⇧F`; ⇧F opens the next such flow's first. It lists every sheet of the flow not yet rendered — unapproved, or
+  `summon-anime-wai · 1 waiting ⇧R`; ⇧R opens the chooser. It lists every sheet of the flow not yet rendered — unapproved, or
   approved and short of its images — and the one open, each marked ○ untouched, ◐ edited, ● approved, ◌ re-opened;
   its footer counts the approved among them. Revise opens the first draft it wrote; the rest wait in the rail.
   Approve stays on the sheet, read-only. ⇧J ⇧K step the rail. Approve still refuses an unmarked empty field.
@@ -452,7 +454,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K and
 | everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the running session, else the batch's sessions · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
-| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow holding unapproved sheets · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
+| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
 | Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · e Revise · ⇧G Render · in the large view, e Revise, f Conjure from this, c compare, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
 | Session | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |

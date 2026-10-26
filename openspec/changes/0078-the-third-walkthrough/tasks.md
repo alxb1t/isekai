@@ -8,7 +8,7 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 - [x] 1 — The layout
 - [x] 2 — Review's keys from a field
 - [x] 3 — The approved revision and the waiting draft
-- [ ] 4 — The flow chooser
+- [x] 4 — The flow chooser
 - [ ] 5 — The large view
 - [ ] 6 — The dialogs
 
@@ -81,19 +81,19 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 
 ## 4 — The flow chooser
 
-- [ ] 4.1 **HALT CHECK** — Review jumps to the next flow on `⇧F`.
+- [x] 4.1 **HALT CHECK** — Review jumps to the next flow on `⇧F`.
   Verify: `grep -c "id: 'next-flow'" ui/src/views/Review.vue` prints `1`.
-- [ ] 4.2 Add `flowsWaiting` to `ui/src/composables/useQueue.ts` per [D9](design.md#d9); in
+- [x] 4.2 Add `flowsWaiting` to `ui/src/composables/useQueue.ts` per [D9](design.md#d9); in
   `ui/src/composables/useQueue.test.ts` bind `ui:review:two-flows-waiting-open-the-chooser` and give
   `ui:review:a-batch-opens-its-head` its one flow.
   Verify: `grep -c 'two-flows-waiting-open-the-chooser' ui/src/composables/useQueue.test.ts` prints `1`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 4.3 Draw the chooser in `ui/src/views/ReviewHead.vue`, return to it on `Esc` and delete `next-flow` and
+- [x] 4.3 Draw the chooser in `ui/src/views/ReviewHead.vue`, return to it on `Esc` and delete `next-flow` and
   `nextFlow` in `ui/src/views/Review.vue`, and name `⇧R` in `ui/src/components/BatchRail.vue`, per [D9](design.md#d9).
   Verify: `grep -c "id: 'next-flow'" ui/src/views/Review.vue` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 4.4 Add a batch whose source holds an unapproved sheet in summon and in conjure to `tests/e2e/conftest.py`, and
+- [x] 4.4 Add a batch whose source holds an unapproved sheet in summon and in conjure to `tests/e2e/conftest.py`, and
   `test_the_chooser_opens_a_flow` to `tests/e2e/test_queue.py`, bound to `ui:review:the-chooser-opens-a-flow`.
   Verify: `grep -c 'the-chooser-opens-a-flow' tests/e2e/test_queue.py` prints `1`, and `uv run pytest -q tests/e2e/test_queue.py` exits 0.
-- [ ] 4.5 In `ui/design/spec.md`: the Review row's `⇧F the next flow holding unapproved sheets · ` deleted; J3 opens on
+- [x] 4.5 In `ui/design/spec.md`: the Review row's `⇧F the next flow holding unapproved sheets · ` deleted; J3 opens on
   a sentence: `With two or more flows waiting, the Review tab is a chooser, a row per flow; ↵ opens its head, esc on
   Review returns.`
   Verify: `grep -c '⇧F the next flow' ui/design/spec.md` prints `0`, and `grep -c 'the Review tab is a chooser' ui/design/spec.md` prints `1`.

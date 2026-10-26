@@ -20,6 +20,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - An approved revision keeps its image and `was` marks on Review; Revise on an image whose flow holds a waiting
   draft opens that draft instead of refusing (0078 D7, D8).
 
+- With two or more flows waiting, the Review tab is a chooser — a row per flow, its counts and photographs — and
+  `Esc` on Review returns to it; `⇧F` is gone (0078 D9).
+
 ## [0.50.0] - 2026-10-25 · 0077-conjure-from-this
 
 Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.49.0: local 0m41s · CI 7m25s

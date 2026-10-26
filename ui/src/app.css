@@ -2114,6 +2114,12 @@ button.session__tile {
   padding: 48px;
 }
 
+/* The chooser's rows take the page's width, as Home's do. */
+.review-head--chooser {
+  align-items: stretch;
+  padding: 16px 24px;
+}
+
 .appbar__count {
   font-family: var(--font-mono);
   font-size: 11px;

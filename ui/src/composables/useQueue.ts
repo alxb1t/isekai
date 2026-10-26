@@ -2,8 +2,9 @@ import { computed, ref } from 'vue'
 import { useBatchStore } from '../stores/batch'
 import type { BatchInput, HubCell, HubInfo } from '../types'
 
-/* Review walks the batch one flow at a time (design spec J3): its head opens
-   first, and its rail lists what is not yet rendered. */
+/* Review walks the batch one flow at a time (design spec J3): with two or more
+   flows waiting the operator chooses one, its head opens first, and its rail
+   lists what is not yet rendered. */
 
 /** Return whether a cell's sheet waits for review: it has one, not yet approved. */
 const unapproved = (cell: HubCell | undefined) =>
@@ -19,11 +20,10 @@ export function queue(info: HubInfo, flow: string): string[] {
   )
 }
 
-/** Another flow's unapproved sheets: how many, and the first, which ⇧F opens. */
+/** Another flow's unapproved sheets, and how many. */
 export interface Waiting {
   flow: string
   count: number
-  first: string
 }
 
 /**
@@ -36,20 +36,58 @@ export function waiting(info: HubInfo, flow: string): Waiting[] {
   const at = info.flows.indexOf(flow)
   const others = [...info.flows.slice(at + 1), ...info.flows.slice(0, Math.max(at, 0))]
   return others.flatMap((other) => {
-    const [first, ...rest] = queue(info, other)
-    return first ? [{ flow: other, count: rest.length + 1, first }] : []
+    const count = queue(info, other).length
+    return count ? [{ flow: other, count }] : []
+  })
+}
+
+/** A flow holding sheets to review: how many wait to be approved, how many lack
+    images, and their sources, in the hub's order. */
+export interface FlowWaiting {
+  flow: string
+  approve: number
+  short: number
+  sources: { name: string; digest: string }[]
+}
+
+/**
+ * Return each flow holding a sheet unapproved or short of its images, in the
+ * hub's order: the chooser's rows.
+ *
+ * e.g. f: a unapproved, b short; g: none -> [{f, approve 1, short 1, [a, b]}]
+ */
+export function flowsWaiting(info: HubInfo): FlowWaiting[] {
+  return info.flows.flatMap((flow) => {
+    const cells = info.sources.flatMap((source) => {
+      const cell = source.cells[flow]
+      return source.digest && (unapproved(cell) || short(cell))
+        ? [{ name: source.name, digest: source.digest, cell }]
+        : []
+    })
+    if (!cells.length) return []
+    return [
+      {
+        flow,
+        approve: cells.filter((one) => unapproved(one.cell)).length,
+        short: cells.filter((one) => short(one.cell)).length,
+        sources: cells.map(({ name, digest }) => ({ name, digest })),
+      },
+    ]
   })
 }
 
 /**
- * Return the sheet a batch's Review opens on, or null for none.
+ * Return the sheet Review opens on among `flows`, or null for none.
  *
  * The first unapproved sheet of the first flow that has one, else the first
  * approved sheet whose newest approval lacks images, flow by flow.
  */
-export function head(info: HubInfo): { digest: string; flow: string } | null {
+export function head(
+  info: HubInfo,
+  flows: string[] = info.flows,
+): { digest: string; flow: string } | null {
   for (const waits of [unapproved, short])
-    for (const flow of info.flows) {
+    for (const flow of flows) {
       const source = info.sources.find((one) => one.digest && waits(one.cells[flow]))
       if (source?.digest) return { digest: source.digest, flow }
     }

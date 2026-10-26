@@ -80,6 +80,9 @@ DAMAGED = "damaged"
 # `clothes`, rendered at seed 7, beside a conjure sheet.
 CONJURED = "conjured"
 
+# The batch the chooser opens on: one source with an unapproved sheet in each flow.
+CHOSEN = "chosen"
+
 # The finished session `SHOWN` holds a record of: its one image, seed 7.
 FINISHED = "20261019T091200Z"
 
@@ -102,6 +105,7 @@ class Served:
     discarded: Run
     compared: Run
     conjured: Run
+    chosen: Run
     prepare_release: Path
 
     def review(self, run: Run, batch: str | None = None) -> str:
@@ -244,6 +248,9 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     approve(conjured, FLOW, load_flow(FLOW).schema, VOCABULARY)
     _render_at(conjured)
     sheet(conjured, load_flow(CONJURE).schema, VOCABULARY, flow=CONJURE)
+    (lib / CHOSEN / "sources").mkdir(parents=True)
+    chosen = _run(lib / CHOSEN, "mo", (810, 1000))
+    sheet(chosen, load_flow(CONJURE).schema, VOCABULARY, flow=CONJURE)
 
     port = _free_port()
     url = f"http://127.0.0.1:{port}"
@@ -272,6 +279,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
             discarded,
             compared,
             conjured,
+            chosen,
             lib / "hub-prepare" / ".prepare-release",
         )
     finally:
