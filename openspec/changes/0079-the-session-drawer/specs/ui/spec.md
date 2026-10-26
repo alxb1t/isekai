@@ -286,6 +286,13 @@ Renders.
 - **THEN** the drawer shows the first's outcome until the second starts, then the second
 
 
+#### Scenario: the viewer closes for a replacement session
+- **Key:** `ui:sessions:the-viewer-closes-for-a-replacement-session`
+- **Layers:** unit
+- **WHEN** another terminal render starts while the finished session's photograph viewer is open
+- **THEN** the viewer closes while the drawer waits for the replacement record
+- **AND** the drawer shows the replacement session without an error
+
 #### Scenario: a session's page reads its record
 - **Key:** `ui:sessions:a-session-reads-its-record`
 - **Layers:** unit

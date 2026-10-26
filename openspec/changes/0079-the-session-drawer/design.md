@@ -54,6 +54,7 @@ change to the render job, its records or the CLI; a finished session found again
 | layer | added | edited | where |
 |---|---|---|---|
 | unit · vitest | `ui:sessions:the-drawer-keeps-the-last-session` | `ui:sessions:the-selected-record-keeps-the-newest-response` moves from `ui/src/stores/batch.test.ts` to `ui/src/stores/drawer.test.ts` | `ui/src/stores/drawer.test.ts` |
+| unit · vitest | `ui:sessions:the-viewer-closes-for-a-replacement-session` | none | `ui/src/components/SessionDrawer.test.ts` |
 | unit · pytest | none | `test_a_session_is_served_from_its_record_and_an_unknown_id_refused` — the refusal names the id | `tests/test_ui_api.py` |
 | e2e | `ui:sessions:the-drawer-holds-the-render` | `test_confirming_the_dialog_opens_the_session` — the drawer over the hub, the hub's URL kept | `tests/e2e/conftest.py` gains a second renderable batch; `tests/e2e/test_render.py` |
 

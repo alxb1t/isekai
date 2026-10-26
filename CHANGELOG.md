@@ -9,6 +9,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- Starting another render closes the previous session's photograph viewer, keeping the drawer usable
+  while the replacement record loads (0079 D1, D2).
+
 - The running render opens in a drawer over any screen — on `⌃;`, the app bar's `●` or the Render bar's
   *Session* — and confirming a render opens it over the hub, which keeps its URL (0079 D1–D3).
 

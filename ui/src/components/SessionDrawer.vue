@@ -2,9 +2,10 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { imageAt, photoUrl, sourceAt, sourceThumbAt, thumbAt } from '../api'
-import ImageViewer, { type Shown } from './ImageViewer.vue'
+import { photoUrl, sourceAt, sourceThumbAt, thumbAt } from '../api'
+import ImageViewer from './ImageViewer.vue'
 import KeyHint from './KeyHint.vue'
+import { useSessionViewer } from '../composables/useSessionViewer'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import { useKeys } from '../composables/useKeys'
 import { type Focus, type Move, moved } from '../grid'
@@ -117,34 +118,16 @@ const photographs = computed(() =>
   }),
 )
 
-/* A row's images, left to right, as the viewer steps through them. */
-function row(at: number): Shown[] {
-  if (at === layout.value.flows.length) return photographs.value
-  return layout.value.cells[at].flatMap((cell) =>
-    cell.images.map((one) => ({
-      src: imageAt({ batch: batch.value, ...one }),
-      name: `${one.flow} · v${one.version} · seed ${one.seed}`,
-    })),
-  )
-}
-
-/* The row the viewer steps through, and where it starts. */
-const viewing = ref<{ row: number; start: number } | null>(null)
-const viewed = computed<Shown[]>(() => (viewing.value ? row(viewing.value.row) : []))
+const { viewing, viewed, open: openViewer } = useSessionViewer(
+  () => target.value,
+  () => layout.value,
+  () => photographs.value,
+)
 
 /* Open the viewer over `at`'s row, on the cell's `index`th image. */
 function view(at: Focus, index = 0): void {
   focus.value = at
-  if (at.row === layout.value.flows.length) {
-    viewing.value = { row: at.row, start: at.column }
-    return
-  }
-  const before = layout.value.cells[at.row]
-    .slice(0, at.column)
-    .reduce((sum, cell) => sum + cell.images.length, 0)
-  const cell = layout.value.cells[at.row][at.column]
-  if (!cell.images.length) return
-  viewing.value = { row: at.row, start: before + index }
+  openViewer(at, index)
 }
 
 function place(at: Focus): void {
