@@ -481,44 +481,6 @@ button.session__tile {
   color: var(--ink-2);
 }
 
-/* — a batch's render sessions — */
-
-.sessions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 32px 48px;
-  overflow: auto;
-}
-
-.sessions__none {
-  margin: 0;
-  font-size: 12px;
-  color: var(--ink-2);
-}
-
-.sessions__row {
-  display: grid;
-  grid-template-columns: 180px 140px 140px 120px 1fr;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 12px;
-  color: var(--ink);
-  text-decoration: none;
-}
-
-.sessions__outcome[data-outcome='running'] {
-  color: var(--accent-ink);
-}
-
-.sessions__images {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
 /* — Renders and the large view (J5·1, J5·2) — */
 
 .renders {

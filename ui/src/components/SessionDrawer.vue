@@ -12,6 +12,7 @@ import { asked, first, grid, lastColumns, lasted, outcome } from '../sessions'
 import { useDrawerStore } from '../stores/drawer'
 import { type Key, isControl, plain, shifted } from '../stores/keys'
 import { alerting, clock, useLiveStore } from '../stores/live'
+import { noun } from '../words'
 
 /* The render drawer (design spec J4·2, J4·3): the shown session, from the record
    its verb writes, over half the window. While the render slot runs it, the slot
@@ -216,7 +217,7 @@ onMounted(() => {
   <dialog ref="dialog" class="drawer" aria-label="Render session" data-drawer @cancel.prevent>
     <section v-if="record || slot" class="session" :data-session="target?.id">
       <span class="section-label">
-        Render session · {{ batch }} · {{ of }} image{{ of === 1 ? '' : 's' }}
+        Render session · {{ batch }} · {{ of }} {{ noun(of, 'image') }}
       </span>
       <p class="session__timer mono" data-session-timer>
         {{ elapsed === null ? '—' : clock(elapsed)

@@ -4,8 +4,8 @@ import { hub as readHub, session as readSession } from '../api'
 import type { SessionRecord } from '../types'
 import { useLiveStore } from './live'
 
-/** The session a drawer shows: its batch and its record's id. */
-export interface Shown {
+/* The session a drawer shows: its batch and its record's id. */
+interface Shown {
   batch: string
   id: string
 }
@@ -27,6 +27,8 @@ export const useDrawerStore = defineStore('drawer', () => {
 
   const same = (one: Shown | null, other: Shown | null) =>
     one?.batch === other?.batch && one?.id === other?.id
+  /* A read from a watcher or a click: its refusal leaves the last record shown. */
+  const quietly = (read: Promise<void>) => void read.catch(() => undefined)
 
   /* Name each photograph from `batch`'s hub, once; a refused read leaves the
      run's own photographs to draw. */
@@ -68,20 +70,22 @@ export const useDrawerStore = defineStore('drawer', () => {
 
   /** Open the drawer on session `id` of `batch`. */
   function openOn(batch: string, id: string): void {
-    void show(batch, id).catch(() => undefined)
+    quietly(show(batch, id))
     open.value = true
   }
 
   /* A new render replaces the shown one; an ended one stays. */
   watch(activeRender, (held) => {
-    if (held && !same(shown.value, held)) void show(held.batch, held.id).catch(() => undefined)
+    if (held && !same(shown.value, held)) quietly(show(held.batch, held.id))
   })
-  /* Every move of the render slot's session, including its volume steps. */
+  /* Every move of the render slot's session, including its volume steps; a session
+     the slot has just taken was read as it was shown. */
   watch(
     () => jobs.value.render,
-    (slot) => {
-      if (slot?.session && same(shown.value, { batch: slot.batch, id: slot.session.id }))
-        void refresh().catch(() => undefined)
+    (slot, before) => {
+      if (!slot?.session || before?.session?.id !== slot.session.id) return
+      if (same(shown.value, { batch: slot.batch, id: slot.session.id }))
+        quietly(refresh())
     },
   )
   /* Disk polling brings a terminal render's record up to date, and reads it once
@@ -92,7 +96,7 @@ export const useDrawerStore = defineStore('drawer', () => {
       held &&
       (record.value?.outcome === 'running' || found.some((one) => same(one, held)))
     )
-      void refresh().catch(() => undefined)
+      quietly(refresh())
   })
 
   return {
