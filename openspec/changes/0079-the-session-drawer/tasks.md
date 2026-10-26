@@ -6,7 +6,7 @@ The drawer beside the session pages, then the pages gone, per [design](design.md
 ## Progress
 
 - [x] 1 — The drawer
-- [ ] 2 — The session pages removed
+- [x] 2 — The session pages removed
 
 ## 1 — The drawer
 
@@ -30,17 +30,17 @@ The drawer beside the session pages, then the pages gone, per [design](design.md
 
 ## 2 — The session pages removed
 
-- [ ] 2.1 **HALT CHECK** — the session pages still answer.
+- [x] 2.1 **HALT CHECK** — the session pages still answer.
   Verify: `grep -c "/b/:batch/sessions" ui/src/router.ts` prints `2`.
-- [ ] 2.2 Delete the routes, `ui/src/views/SessionPage.vue`, `ui/src/views/Sessions.vue`, the Sessions tab, `⇧S` and
+- [x] 2.2 Delete the routes, `ui/src/views/SessionPage.vue`, `ui/src/views/Sessions.vue`, the Sessions tab, `⇧S` and
   `sessions()` in `ui/src/App.vue`, `sessions` in `ui/src/api.ts`, and the batch store's session state in
   `ui/src/stores/batch.ts`, per [D4](design.md#d4); delete `ui:sessions:an-observed-list-follows-its-render` in
   `ui/src/stores/batch.test.ts` and `test_the_list_shows_a_finished_session` in `tests/e2e/test_render.py`.
   Verify: `test -e ui/src/views/SessionPage.vue; echo $?` prints `1`, and `grep -c "shifted('KeyS')" ui/src/App.vue` prints `0`, and `grep -c 'an-observed-list-follows-its-render' ui/src/stores/batch.test.ts` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.3 Delete `/api/b/{batch}/sessions` in `isekai/interface/ui/app.py` and `library.sessions` in
+- [x] 2.3 Delete `/api/b/{batch}/sessions` in `isekai/interface/ui/app.py` and `library.sessions` in
   `isekai/interface/ui/library.py`, and make `library.session`'s refusal `{batch} holds no session {id!r}`, per
   [D4](design.md#d4); delete `test_a_batch_lists_its_sessions_running_first_then_newest` and check the refusal names
   the id in `test_a_session_is_served_from_its_record_and_an_unknown_id_refused` (`tests/test_ui_api.py`).
   Verify: `grep -c 'def sessions' isekai/interface/ui/library.py` prints `0`, and `grep -c 'its sessions are at' isekai/interface/ui/library.py tests/test_ui_api.py` prints `0` for each file, and `uv run pytest -q tests/test_ui_api.py` exits 0.
-- [ ] 2.4 Edit `ui/design/spec.md` and `docs/data-flow.md` per [D5](design.md#d5).
+- [x] 2.4 Edit `ui/design/spec.md` and `docs/data-flow.md` per [D5](design.md#d5).
   Verify: `grep -cE 'b/[^ ]*/sessions' ui/design/spec.md` prints `0`, and `grep -c '⌃; the render drawer' ui/design/spec.md` prints `1`, and `grep -c 'the render drawer' docs/data-flow.md` prints `1`, and `uv run pytest -q tests/e2e` exits 0.

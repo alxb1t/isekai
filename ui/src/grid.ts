@@ -1,6 +1,6 @@
 /* A grid's moves (D25): `h l` and the arrows step along a row, `j k` between rows.
    On Renders a row is a source, and a focus column counts its source, column 0,
-   then its images across its cells; the session page's grid is rectangular. */
+   then its images across its cells; the render drawer's grid is rectangular. */
 
 /** A focus on the grid: a source's row and a column in it. */
 export interface Focus {

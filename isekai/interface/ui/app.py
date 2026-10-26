@@ -30,7 +30,7 @@ GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/b/{batch}/prepare   ·   POST /api/jobs/{prepare,render}/stop
 GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s, images}
-GET  /api/sessions/running   ·   GET /api/b/{batch}/sessions{/id,}
+GET  /api/sessions/running   ·   GET /api/b/{batch}/sessions/{id}
 POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}, and GET its /thumb
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
@@ -552,11 +552,6 @@ def create_app(
                     {"batch": child.name, **one} for one in library.running(child)
                 ]
         return {"sessions": found}
-
-    @app.get("/api/b/{batch}/sessions")
-    def read_sessions(batch: str) -> dict[str, Any]:
-        """List the batch's render sessions from their records, the running first."""
-        return {"sessions": library.sessions(folder(batch))}
 
     @app.get("/api/b/{batch}/sessions/{name}")
     def read_session(batch: str, name: str) -> dict[str, Any]:

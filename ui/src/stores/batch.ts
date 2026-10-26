@@ -1,21 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch, type Ref } from 'vue'
-import {
-  hub as readHub,
-  renderOffer,
-  renders as readRenders,
-  session as readSession,
-  sessions as readSessions,
-} from '../api'
-import type {
-  CellEvent,
-  HubCell,
-  HubInfo,
-  JobSlot,
-  RenderOffer,
-  RendersInfo,
-  SessionRecord,
-} from '../types'
+import { hub as readHub, renderOffer, renders as readRenders } from '../api'
+import type { CellEvent, HubCell, HubInfo, JobSlot, RenderOffer, RendersInfo } from '../types'
 import { type Snapshot, useLiveStore } from './live'
 
 const NO_OFFER: RenderOffer = { disabled: null, images: 0, refused: null }
@@ -26,12 +12,12 @@ export function at(name: string, flow: string): string {
 }
 
 /* The open batch, one copy for every screen of it: its hub, the stages running
-   in its cells and their refusals, its renders and its sessions once a screen
-   reads them, and its Render offer and dialog, which has no URL of its own
+   in its cells and their refusals, its renders once a screen reads them, and its
+   Render offer and dialog, which has no URL of its own
    (design spec §1 rule 8). */
 export const useBatchStore = defineStore('batch', () => {
   const live = useLiveStore()
-  const { jobs, billing, renderRunning, activeRender, activeSessions } = storeToRefs(live)
+  const { jobs, billing, renderRunning, activeRender } = storeToRefs(live)
   const name = ref<string | null>(null)
   const hub = ref<HubInfo | null>(null)
   /* The stage running in a cell, by `source|flow`, from the job's reports. */
@@ -39,15 +25,6 @@ export const useBatchStore = defineStore('batch', () => {
   /* Each cell's refusal from a tick or from the job, by `source|flow`. */
   const refusals = ref<Record<string, string>>({})
   const renders = ref<RendersInfo | null>(null)
-  const sessions = ref<SessionRecord[] | null>(null)
-  /* The record of the session a page shows, by `shown`, read again as its job reports. */
-  const session = ref<SessionRecord | null>(null)
-  let shown: string | null = null
-  let recordAsked = 0
-  let epoch = 0
-  let observed = false
-  let listing: Promise<void> | null = null
-  let listAgain = false
   const offer = ref<RenderOffer>({ ...NO_OFFER })
   const dialog = ref(false)
   /* Each grid's focus, by its spot's name, written on every move: Esc from a
@@ -65,19 +42,11 @@ export const useBatchStore = defineStore('batch', () => {
   /* Hold `batch`, or none off a batch's screens; another batch starts from nothing. */
   function open(batch: string | null): void {
     if (name.value === batch) return
-    epoch += 1
-    recordAsked += 1
-    observed = false
-    listing = null
-    listAgain = false
     name.value = batch
     hub.value = null
     running.value = {}
     refusals.value = {}
     renders.value = null
-    sessions.value = null
-    session.value = null
-    shown = null
     offer.value = { ...NO_OFFER }
     dialog.value = false
     focus.value = { hub: null, renders: null }
@@ -96,40 +65,6 @@ export const useBatchStore = defineStore('batch', () => {
   const reloadHub = () => reload(readHub, hub)
   /** Read the renders again; a refusal is thrown to the caller. */
   const reloadRenders = () => reload(readRenders, renders)
-  /** Read the sessions again; a refusal is thrown to the caller. */
-  function reloadSessions(): Promise<void> {
-    observed = true
-    if (listing) {
-      listAgain = true
-      return listing
-    }
-    const batch = name.value ?? ''
-    const mine = epoch
-    listing = (async () => {
-      do {
-        listAgain = false
-        const found = await readSessions(batch)
-        if (mine !== epoch) return
-        sessions.value = found.sessions
-      } while (listAgain)
-    })().finally(() => {
-      if (mine === epoch) listing = null
-    })
-    return listing
-  }
-  /* Read session `id`'s record, kept unless another batch or session is shown by then. */
-  async function readShown(id: string): Promise<void> {
-    const mine = ++recordAsked
-    const batch = name.value ?? ''
-    const found = await readSession(batch, id)
-    if (mine === recordAsked && name.value === batch && shown === id) session.value = found
-  }
-  /** Show session `id`, reading its record; a refusal is thrown to the caller. */
-  function showSession(id: string): Promise<void> {
-    shown = id
-    session.value = null
-    return readShown(id)
-  }
 
   /* Read the offer again. One that cannot be read is refused, so its reason shows. */
   async function check(): Promise<void> {
@@ -199,26 +134,6 @@ export const useBatchStore = defineStore('batch', () => {
     void check()
     if (move === 'ended') ended()
   })
-  /* Every render change, including volume opening, refreshes an observed list.
-     Reads in flight coalesce; the selected record drops out-of-order answers. */
-  watch(() => jobs.value.render, (slot) => {
-    if (slot?.batch !== name.value) return
-    if (observed) void reloadSessions().catch(() => undefined)
-    if (shown !== null && slot.session?.id === shown)
-      void readShown(shown).catch(() => undefined)
-  })
-  /* Local disk polling discovers terminal renders and brings their records up
-     to date, including one final read after liveness disappears. */
-  watch(activeSessions, () => {
-    if (name.value === null) return
-    if (observed) void reloadSessions().catch(() => undefined)
-    if (
-      shown !== null &&
-      (session.value?.outcome === 'running' ||
-        activeSessions.value.some((one) => one.batch === name.value && one.id === shown))
-    )
-      void readShown(shown).catch(() => undefined)
-  })
   watch(
     () => billing.value?.pod,
     () => {
@@ -232,8 +147,6 @@ export const useBatchStore = defineStore('batch', () => {
     running,
     refusals,
     renders,
-    sessions,
-    session,
     offer,
     dialog,
     focus,
@@ -242,8 +155,6 @@ export const useBatchStore = defineStore('batch', () => {
     open,
     reloadHub,
     reloadRenders,
-    reloadSessions,
-    showSession,
     check,
     openDialog,
     closeDialog,

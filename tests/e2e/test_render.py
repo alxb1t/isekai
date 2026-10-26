@@ -20,7 +20,6 @@ from tests.e2e.conftest import (
     DAMAGED,
     DISCARDED,
     DRAWN,
-    FINISHED,
     FLOW,
     RENDER,
     REVISED,
@@ -104,26 +103,6 @@ def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
     # A click on the backdrop closes it.
     page.mouse.click(10, size["height"] / 2)
     expect(drawer).to_have_count(0)
-
-
-@pytest.mark.spec("ui:sessions:the-list-shows-a-finished-session")
-def test_the_list_shows_a_finished_session(page: Page, served: Served) -> None:
-    page.goto(served.hub_of(SHOWN))
-    page.locator("[data-sessions-tab]").click()
-
-    row = page.locator(f"[data-session='{FINISHED}']")
-    expect(row.locator("img")).to_have_js_property("complete", True)
-    expect(row).to_contain_text("done")
-    row.click()
-
-    expect(page).to_have_url(f"{served.url}/b/{SHOWN}/sessions/{FINISHED}")
-    expect(page.locator("[data-outcome]")).to_have_text("done")
-    expect(page.locator("[data-session-image] img")).to_have_count(1)
-    # A focused link or button keeps ↵ from the grid's viewer.
-    page.locator("[data-renders]").focus()
-    page.keyboard.press("Enter")
-    expect(page).to_have_url(f"{served.url}/b/{SHOWN}/renders")
-    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
 
 
 @pytest.mark.spec("ui:renders:the-large-view-shows-its-sheet")

@@ -75,13 +75,6 @@ const rendered = computed(() => {
   const elapsed = lasted(held.started, null, true, now.value) ?? 0
   return { batch: held.batch, id: held.id, clock: clock(elapsed) }
 })
-/* ⇧S: the running session, else the open batch's sessions. */
-function sessions(): void {
-  const held = rendered.value
-  if (held) void router.push({ name: 'session', params: { batch: held.batch, id: held.id } })
-  else open('sessions')
-}
-
 /* The render drawer's key: real Ctrl on every platform, from a field too (D25). */
 const DRAWER: Key = { code: 'Semicolon', ctrl: true }
 const drawer = useDrawerStore()
@@ -98,7 +91,6 @@ useKeys('everywhere', [
     run: () => open('renders'),
     when: onBatch,
   },
-  { id: 'session', keys: [shifted('KeyS')], label: 'sessions', run: sessions, when: onBatch },
   { id: 'drawer', keys: [DRAWER], label: 'the render drawer', run: drawer.toggle, inField: true },
   keyList(() => (listing.value = true)),
 ])
@@ -134,13 +126,6 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
           class="appbar__tab"
           :class="{ 'appbar__tab--active': screen === 'renders' || screen === 'render' }"
           >Renders<KeyHint command="renders" /></RouterLink
-        >
-        <RouterLink
-          :to="{ name: 'sessions', params: { batch } }"
-          class="appbar__tab"
-          :class="{ 'appbar__tab--active': screen === 'sessions' || screen === 'session' }"
-          data-sessions-tab
-          >Sessions<KeyHint command="session" /></RouterLink
         >
       </template>
       <!-- A running render bills by the minute, so every screen shows it. -->
