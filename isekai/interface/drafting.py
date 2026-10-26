@@ -1,6 +1,6 @@
 """Draft a flow from another flow's approval, filling a flow with no sheet first.
 
-The verb and the page run one sequence: assign, sheet, draft. No stage may call
+The verb and the page run one sequence: sheet, draft. No stage may call
 another, so the sequence is composed here, and each step stays its stage's.
 """
 
@@ -8,7 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from isekai.foundation.flow import Flow
-from isekai.foundation.run import SHEETS, Run, assign, latest
+from isekai.foundation.run import SHEETS, Run, latest
 from isekai.pipeline.review import draft_from, drafting_approval
 from isekai.pipeline.sheet import sheet
 from isekai.shared.field_map import FieldMap
@@ -25,13 +25,13 @@ def draft_across(
 ) -> Path:
     """Return `target`'s draft from `source`'s approval `version`, else its newest.
 
-    A target with no sheet is assigned and its sheet filled from `source`'s tag
-    list first. The approval is checked before anything is written, so a refusal
-    writes nothing. The vocabulary and the table are read only for that fill.
+    A target with no sheet has its sheet filled from `source`'s tag list first,
+    and that write is what assigns it. The approval is checked whole, and the
+    sheet stage checks the tag list before its write, so a refusal writes nothing.
+    The vocabulary and the table are read only for that fill.
     """
     approval = drafting_approval(run, target.id, source, version)
     if latest(run.directory(target.id, SHEETS)) is None:
-        assign(run, target.id)
         sheet(
             run,
             target.id,

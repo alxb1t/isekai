@@ -261,8 +261,9 @@ def draft_from(
 def drafting_approval(run: Run, flow: str, source: str, version: int | None) -> int:
     """Return the approval of `source` that `draft_from` drafts `flow` from.
 
-    `version`, else `source`'s newest. Refuses `flow` itself as the source, and an
-    approval `source` does not hold.
+    `version`, else `source`'s newest. Refuses `flow` itself as the source, an
+    approval `source` does not hold, and one a draft cannot copy, so a caller
+    that writes before drafting is refused before its first write.
     e.g. (run, conjure, summon, None) -> 2
     """
     if source == flow:
@@ -279,6 +280,7 @@ def drafting_approval(run: Run, flow: str, source: str, version: int | None) -> 
             f"`{stage_command(run, 'approve', source)}` to approve its draft, "
             f"{_DRAFT_AGAIN}"
         )
+    _approval(run, source, approval, f"draft {flow} again")
     return approval
 
 

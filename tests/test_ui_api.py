@@ -1853,7 +1853,7 @@ def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
 
 
 @pytest.mark.spec("ui:conjure-from:a-refused-draft-writes-nothing")
-def test_a_draft_from_an_approval_the_source_does_not_hold_writes_nothing(
+def test_a_draft_from_a_refused_source_writes_nothing(
     wired: Wiring,
     made: Run,
     tmp_path: Path,
@@ -1869,6 +1869,30 @@ def test_a_draft_from_an_approval_the_source_does_not_hold_writes_nothing(
     assert answered.status_code == 409
     assert "009.approved.json" in answered.json()["refusal"]
     assert snapshot(made.path) == before
+
+    # A damaged approval body is refused before the target is assigned or filled.
+    approved = made.directory(FLOW, "review") / "001.approved.json"
+    intact = approved.read_bytes()
+    approved.write_text(json.dumps({**json.loads(intact), "fields": None}))
+    before = snapshot(made.path)
+
+    damaged = client.post(route, json={"source": FLOW, "version": 1})
+
+    assert damaged.status_code == 409
+    assert "001.approved.json" in damaged.json()["refusal"]
+    assert snapshot(made.path) == before
+    assert not made.directory(CONJURE).exists()
+
+    # So is a damaged tag list of the source's, which would fill the target's sheet.
+    approved.write_bytes(intact)
+    (made.directory(FLOW, WD14) / "001.json").write_text("{}")
+    before = snapshot(made.path)
+
+    untagged = client.post(route, json={"source": FLOW, "version": 1})
+
+    assert untagged.status_code == 409
+    assert snapshot(made.path) == before
+    assert not made.directory(CONJURE).exists()
 
 
 @pytest.mark.spec("ui:conjure-from:a-waiting-edit-is-opened")
