@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-10-26 · 0078-the-third-walkthrough
+
+Gate: local 0m46s · CI 1m24s (ci at 7300efc) · 0.50.0: local 0m42s · CI 7m25s
+
 ### Changed
 
 - The browser guide names Review's flow chooser and `⇧E` for Revise; the walkthrough names Compare's tile
