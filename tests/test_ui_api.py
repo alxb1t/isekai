@@ -176,12 +176,18 @@ def _clear_wd14(run: Run) -> None:
 
 
 def _client(
-    wired: Wiring, made: Run, tmp_path: Path, *, drafted: bool = True
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    *,
+    drafted: bool = True,
+    offered: Sequence[str] = OFFERED,
 ) -> TestClient:
     """Return a client over the app, with a stand-in for the built bundle.
 
     `drafted` takes the draft opening the sheet would, so a test may write
-    before it reads. The library is the folder holding the wiring's batch.
+    before it reads; `offered` is the surface's flows. The library is the folder
+    holding the wiring's batch.
     """
     dist = tmp_path / "dist"
     dist.mkdir(exist_ok=True)
@@ -191,7 +197,7 @@ def _client(
     app = create_app(
         wired.runs_root.parent.parent,
         wired,
-        flows=OFFERED,
+        flows=offered,
         bundle=dist,
         wire=lambda runs: replace(wired, runs_root=runs),
         host=HOST,
@@ -1850,6 +1856,21 @@ def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
     body = client.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/7").json()
 
     assert body["targets"] == [CONJURE]
+
+    # A sheet-alone flow the surface does not offer is no target, and its press
+    # is refused writing nothing.
+    alone = _client(wired, made, tmp_path, drafted=False, offered=(FLOW,))
+    before = snapshot(made.path)
+
+    narrowed = alone.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/7").json()
+    pressed = alone.post(
+        f"/api/b/{BATCH}/review/{made.digest}/{CONJURE}/draft-from",
+        json={"source": FLOW, "version": 1},
+    )
+
+    assert narrowed["targets"] == []
+    assert pressed.status_code == 409
+    assert snapshot(made.path) == before
 
 
 @pytest.mark.spec("ui:conjure-from:a-refused-draft-writes-nothing")

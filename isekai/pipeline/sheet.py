@@ -113,12 +113,12 @@ def sheet(
     one under this flow's own directory, or under the flow the operator names as
     `tags_from` -- a flow reads another's only when it is named (D17).
 
-    **For a tagged flow, an absent tag list is a refusal.** A sheet with every
-    field empty is legal and therefore silent, so writing one when the tagger
-    never ran would hide the only thing the operator needs told. The rule that a
-    missing tag artifact is an absent aid still holds for the *hosted* tagger,
-    which contributes nothing to a sheet; it cannot hold for the local one the
-    sheet is filled from.
+    **For a tagged flow with no source named, an absent tag list is a
+    refusal.** A sheet with every field empty is legal and therefore silent, so
+    writing one when the tagger never ran would hide the only thing the operator
+    needs told. The rule that a missing tag artifact is an absent aid still holds
+    for the *hosted* tagger, which contributes nothing to a sheet; it cannot hold
+    for the local one the sheet is filled from.
 
     Returns the artifact's path, or None when this flow already had a sheet;
     a kept sheet filled from a superseded tag list is warned about.

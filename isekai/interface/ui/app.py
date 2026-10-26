@@ -447,12 +447,8 @@ def create_app(
 
     @cache
     def sheet_alone() -> list[str]:
-        """Return the tracked flows drafted from a sheet alone, read once."""
-        return [
-            name
-            for name in tracked_flows(wired.flows_dir)
-            if offered(name).inputs == ("sheet",)
-        ]
+        """Return the offered flows drafted from a sheet alone, read once."""
+        return [name for name in flows if offered(name).inputs == ("sheet",)]
 
     def quoted(batch: str) -> tuple[Path, render.Quote, dict[str, Any]]:
         """Return a batch's folder, its quote, and the quote as the dialog shows it."""
@@ -843,6 +839,12 @@ def create_app(
         is written.
         """
         one = held(batch, digest, flow)
+        if flow not in (targets := sheet_alone()):
+            raise Refusal(
+                f"{flow}: not a flow this surface drafts from an image's approval; "
+                f"the flows it drafts are {', '.join(targets) or 'none'} -- reload "
+                "the image's large view to choose one; nothing was written"
+            )
         source, version = payload.get("source"), payload.get("version")
         if not isinstance(source, str) or not _numbered(version):
             raise Refusal(

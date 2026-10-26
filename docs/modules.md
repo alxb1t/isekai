@@ -45,9 +45,11 @@ verb and the hub's route both call it. `--progress json` is a reporter inside
 `python -m isekai render` between `python -m gpunit volume up` and `volume down`,
 as children, so the CLI stays the one path a stage runs through, and
 `interface/ui/events.py` streams what they report to the page as `/events`.
-The one stage the server runs in its own process is `sheet()`, for a target's
-first sheet when a draft is made from another flow: `interface/drafting.py`'s
-`draft_across` runs it, the same sequence the CLI's `review --from` runs (D4).
+Every other write the server makes runs in its own process, through the function
+that owns it: stage ③'s review functions, import's reader, and `sheet()` for a
+target's first sheet when a draft is made from another flow —
+`interface/drafting.py`'s `draft_across` runs it, the same sequence the CLI's
+`review --from` runs (D4).
 `wiring.py` imports `boundary/ollama.py` for the probe a job asks first.
 
 **`tests/test_layers.py` holds where the lazy edges point; review holds that they
