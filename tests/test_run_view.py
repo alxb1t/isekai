@@ -21,6 +21,7 @@ from isekai.interface.run_view import (
     report,
     unread,
 )
+from isekai.pipeline import sheet as sheet_stage
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare
 from isekai.pipeline.review import approve, review
@@ -28,7 +29,7 @@ from isekai.pipeline.tagging import FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import caption, fake_tagger, render, sheet
+from tests.stages import FIELD_MAP, caption, fake_tagger, render, sheet
 
 FLOW = "summon-anime-wai"
 
@@ -77,7 +78,7 @@ def test_the_report_marks_the_active_version_for_each_stage(run: Run) -> None:
 
 
 @pytest.mark.spec("cli:show:producers-are-reported")
-def test_each_artifacts_producer_is_shown(run: Run) -> None:
+def test_each_artifacts_producer_is_shown(run: Run, vocabulary: Vocabulary) -> None:
     by_name = {(item.stage, item.flow): item for item in listings(run)}
 
     assert "fake-reader" in by_name[("captions", FLOW)].producers[1]
@@ -85,6 +86,22 @@ def test_each_artifacts_producer_is_shown(run: Run) -> None:
     assert "unpinned" in by_name[("captions", FLOW)].producers[1]
     assert "wd14" in by_name[("sheets", FLOW)].producers[1]
     assert "unedited" in by_name[("review", FLOW)].producers[1]
+
+    # A sheet filled from another flow's list names that flow beside its number.
+    target = load_flow("conjure-anime-wai")
+    sheet_stage.sheet(
+        run,
+        target.id,
+        target.schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=target.tagger,
+        flow_digest=target.digest,
+        tags_from=FLOW,
+    )
+    by_name = {(item.stage, item.flow): item for item in listings(run)}
+    assert "from 001" in by_name[("sheets", FLOW)].producers[1]
+    assert f"from {FLOW}/001" in by_name[("sheets", target.id)].producers[1]
 
 
 @pytest.mark.spec("cli:show:producers-are-reported")

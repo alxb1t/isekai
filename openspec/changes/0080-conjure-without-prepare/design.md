@@ -2,7 +2,8 @@
 
 How a target flow with no sheet gets one from its source's tags, and how the page and the verb draft in one act.
 **Verdict: feasible** — the sheet stage already routes a tag list through a schema; it learns to read the named
-source's, and the interface layer runs assign, sheet and draft in order, as no stage may call another.
+source's, and the interface layer runs sheet and draft in order, as no stage may call another; the sheet's write
+assigns the target, after the source's approval is checked whole.
 
 ## Context
 
@@ -43,7 +44,7 @@ target; changing the review stage's refusals.
 | id | decision | because | rejected |
 |---|---|---|---|
 | [D1](#d1) | **`sheet(…, tags_from: str \| None = None)`**: with `tags_from`, the tag list read is `run.directory(tags_from, WD14)`'s newest, routed through the target's schema, vocabulary and field map; absent, every field is written empty, as untagged; the producer records `tags_from`, `SheetProducer` gaining `"tags_from": NotRequired[str]` | the same pinned tagger read the same photograph; D32 adds a recording key without a version | the target's own tags first |
-| [D2](#d2) | **`isekai/interface/drafting.py`** `draft_across(run, target: Flow, source, version, vocabulary, field_map) -> Path`: where the target holds no sheet, `assign(run, target.id)`, then `sheet(…, tagged=target.tagger, flow_digest=target.digest, tags_from=source)`, then `draft_from`; `review_flow` and `post_draft_from` call it | no stage calls another; one sequence for the verb and the page | a stage calling the sheet stage |
+| [D2](#d2) | **`isekai/interface/drafting.py`** `draft_across(run, target: Flow, source, version, vocabulary, field_map) -> Path`: `drafting_approval` checks the source's approval whole; where the target holds no sheet, `sheet(…, tagged=target.tagger, flow_digest=target.digest, tags_from=source)`, whose write assigns the target; then `draft_from`; `review_flow` and `post_draft_from` call it | no stage calls another; one sequence for the verb and the page; nothing is written before the source is checked | a stage calling the sheet stage |
 | [D3](#d3) | **`review.waiting_edit(run, flow) -> Path \| None`** — the waiting draft whose fields differ from its sheet, from `_edited`; `post_draft_from` answers it as `{draft, waiting: true}`, writing nothing; an unedited waiting draft is replaced as today; `review_flow` keeps `draft_from`'s refusal | the edited draft is the work in hand; the CLI asks for a draft | refusing on the page |
 | [D4](#d4) | **targets:** `sheet_alone()` less the image's flow, with no reading of the batch's runs | the press assigns | assigned flows only |
 | [D5](#d5) | **`drafted` after approve:** `read_input` computes `drafted` for the approval it shows as for a draft; `Review.vue` keeps it read-only; *Discard draft* on a draft only | an approved revision keeps its marks since `v0.51.0` | |

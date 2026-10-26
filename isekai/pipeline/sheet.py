@@ -106,11 +106,12 @@ def sheet(
     tag list fills the sheet instead of this flow's own, and is recorded; that
     flow holding none gives every field empty.
 
-    **The fill is told nothing about flows beyond `tagged`, and reaches nothing
-    at all.** It is handed a tag list, the schema, the vocabulary and the table,
-    so the same code serves every flow without learning that flows exist; `flow`
-    decides only which directory is read and written. A flow shares nothing, so
-    the tag list read here is the one produced under this flow's own directory (D17).
+    **The fill is told nothing about flows beyond `tagged` and `tags_from`, and
+    reaches nothing at all.** It is handed a tag list, the schema, the vocabulary
+    and the table, so the same code serves every flow without learning that flows
+    exist; `flow` decides which directory is written, and the list read is the
+    one under this flow's own directory, or under the flow the operator names as
+    `tags_from` -- a flow reads another's only when it is named (D17).
 
     **For a tagged flow, an absent tag list is a refusal.** A sheet with every
     field empty is legal and therefore silent, so writing one when the tagger
@@ -171,26 +172,29 @@ def sheet(
 
 
 def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
-    """Return a warning when the kept sheet's tag list is below the flow's latest.
+    """Return a warning when the kept sheet's tag list is below its flow's latest.
 
-    A sheet it cannot read, or one with no list number, gives none: review
-    refuses an unreadable sheet by name.
+    The list is weighed against the flow that filled the sheet, named by
+    `tags_from` where it is not this one. A sheet it cannot read, or one with no
+    list number, gives none: review refuses an unreadable sheet by name.
     """
-    newest = latest(run.directory(flow, WD14))
-    if newest is None:
-        return []
     try:
         filled = read(directory / artifact_name(kept), SHEET_FILE)
     except Refusal:
+        return []
+    listed = tagged_from(filled) or flow
+    newest = latest(run.directory(listed, WD14))
+    if newest is None:
         return []
     producer = filled.get("producer")
     source = producer.get("from") if isinstance(producer, dict) else None
     # `bool` is an `int`, and a hand-edited `true` is not a list number.
     if not isinstance(source, int) or isinstance(source, bool) or source >= newest:
         return []
+    lists = WD14 if listed == flow else f"{listed}/{WD14}"
     return [
         f"{run.id}/{flow}: sheet {kept:03d} was filled from "
-        f"{WD14}/{artifact_name(source)}, and {WD14}/{artifact_name(newest)} "
+        f"{lists}/{artifact_name(source)}, and {lists}/{artifact_name(newest)} "
         f"is newer; run `{stage_command(run, STAGE, flow, options=NEW_VERSION)}`"
     ]
 

@@ -612,6 +612,35 @@ def test_a_newer_tag_list_is_named(
     assert written.read_bytes() == before
     assert versions(run.directory(FLOW, "sheets")) == [1]
 
+    # A sheet filled from another flow's list is weighed against that flow's.
+    sheet_stage.sheet(
+        run,
+        TARGET,
+        schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=True,
+        flow_digest=FLOW_DIGEST,
+        tags_from=FLOW,
+    )
+    write_wd14(run, version=3)
+    assert sheet_stage.sheet(
+        run,
+        TARGET,
+        schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=True,
+        flow_digest=FLOW_DIGEST,
+    ) == (
+        None,
+        [
+            f"{run.id}/{TARGET}: sheet 001 was filled from {FLOW}/wd14/002.json, "
+            f"and {FLOW}/wd14/003.json is newer; run `python -m isekai sheet "
+            f"--flow {TARGET}{runs_flag(run)} --new-version {run.id}`"
+        ],
+    )
+
 
 @pytest.mark.spec("sheet:superseded:the-latest-list-is-silent")
 def test_a_sheet_from_the_latest_list_is_silent(

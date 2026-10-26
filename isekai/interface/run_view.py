@@ -46,6 +46,7 @@ from isekai.pipeline.generate import (
     render_groups,
     rendered_seeds,
 )
+from isekai.pipeline.sheet import tagged_from
 
 # The stages in the order a run passes through them. Every one of them is a
 # flow's own -- the run is input above and flow below -- so there is nothing for
@@ -127,7 +128,11 @@ def _producer_of(path: Path) -> str:
     if origin is not None:
         if not isinstance(origin, int):
             return "unreadable"
-        parts.append(f"from {origin:03d}")
+        # A sheet filled from another flow's tag list counts in that flow's `wd14/`.
+        borrowed = tagged_from(body)
+        parts.append(
+            f"from {borrowed}/{origin:03d}" if borrowed else f"from {origin:03d}"
+        )
     if producer.get("edited") is not None:
         parts.append("edited" if producer["edited"] else "unedited")
     return " · ".join(parts)
