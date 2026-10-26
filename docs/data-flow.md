@@ -35,6 +35,7 @@ its neighbours.
       │   with --from, reads the source flow's approval instead
      revise ── reads an image's approval ──▶ review/NNN.draft.json   its seed listed
      review --from ── reads another flow's approval and its own sheet ──▶ review/NNN.draft.json
+      │           its sheet filled first from the source's tag list where no sheet
       │           (or `ui`, the same stage in a browser)
       ▼
   ④ generate ── reads the approved sheet ──▶ prompts/   assembled, offline

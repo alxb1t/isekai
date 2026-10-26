@@ -68,6 +68,7 @@ from isekai.foundation.run import (
     rendered_at,
 )
 from isekai.interface.compare_view import write_page
+from isekai.interface.drafting import draft_across
 from isekai.interface.render import run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
@@ -94,7 +95,6 @@ from isekai.pipeline.review import (
     Revision,
     approve,
     discard,
-    draft_from,
     drafted_from,
     refuse_revisions,
     review,
@@ -910,8 +910,13 @@ def _per_item(
                     reporter.say(f"{run.id}: review discarded {name}/{gone.name}")
                     return
                 if args.source is not None:
-                    drafted = draft_from(
-                        run, name, args.source, args.approval, flows[name].schema
+                    drafted = draft_across(
+                        run,
+                        flows[name],
+                        args.source,
+                        args.approval,
+                        vocabulary,
+                        field_map,
                     )
                     origin = drafted_from(read_artifact(drafted, DRAFT_FILE))
                     approval = "" if origin is None else f" v{origin['approval']}"

@@ -6,7 +6,7 @@ test carries `@pytest.mark.spec` with the key its task names.
 ## Progress
 
 - [x] 1 — A sheet from another flow's tags
-- [ ] 2 — The drafting sequence
+- [x] 2 — The drafting sequence
 - [ ] 3 — The page
 
 ## 1 — A sheet from another flow's tags
@@ -20,13 +20,13 @@ test carries `@pytest.mark.spec` with the key its task names.
 
 ## 2 — The drafting sequence
 
-- [ ] 2.1 **HALT CHECK** — no interface module runs assign, sheet and draft together.
+- [x] 2.1 **HALT CHECK** — no interface module runs assign, sheet and draft together.
   Verify: `test -e isekai/interface/drafting.py; echo $?` prints `1`.
-- [ ] 2.2 Add `draft_across` in `isekai/interface/drafting.py` per [D2](design.md#d2), and call it from `review_flow`
+- [x] 2.2 Add `draft_across` in `isekai/interface/drafting.py` per [D2](design.md#d2), and call it from `review_flow`
   in `isekai/interface/cli.py`; bind `cli:review-from:a-target-with-no-sheet-is-filled-first` in
   `tests/test_pipeline_cli.py`.
   Verify: `grep -c 'draft_across' isekai/interface/cli.py` prints a number of at least `1`, and `grep -c 'a-target-with-no-sheet-is-filled-first' tests/test_pipeline_cli.py` prints `1`, and `uv run pytest -q tests/test_pipeline_cli.py tests/test_layers.py` exits 0.
-- [ ] 2.3 Edit `README.md` and `docs/data-flow.md` per [D7](design.md#d7).
+- [x] 2.3 Edit `README.md` and `docs/data-flow.md` per [D7](design.md#d7).
   Verify: `grep -c "filling a target with no sheet from the source's tags" README.md` prints `1`, and `grep -c "the source's tag list where no sheet" docs/data-flow.md` prints `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
 
 ## 3 — The page

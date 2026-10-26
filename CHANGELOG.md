@@ -11,6 +11,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - The sheet stage fills a flow's sheet from another flow's tag list when told to, recording that flow, so a
   target needs no tagging of its own (0080 D1).
+- `review --from` assigns a target with no sheet and fills it from the source's tags before drafting, so a
+  conjure draft needs no tick and no Prepare (0080 D2).
 
 ## [0.52.0] - 2026-10-26 · 0079-the-session-drawer
 

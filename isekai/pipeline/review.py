@@ -220,24 +220,12 @@ def draft_from(
     e.g. (run, conjure, summon, None, schema) -> conjure/review/001.draft.json
     """
     then = "then draft it again"
-    if source == flow:
-        raise Refusal(
-            f"{run.id}: flow {flow} is drafted from its own approval; run "
-            f"{_again(run, flow)} to copy it, or name another flow to draft from"
-        )
+    approval = drafting_approval(run, flow, source, version)
     sheet_version = latest(run.directory(flow, SHEETS))
     if sheet_version is None:
         raise Refusal(
             f"{run.id}: flow {flow} has no sheet to draft {source}'s approval into; "
             f"run `{stage_command(run, 'assign', flow)}`, then Prepare, {then}"
-        )
-    held = approved_versions(run.directory(source, REVIEW))
-    approval = held[-1] if version is None and held else version
-    if approval is None or approval not in held:
-        named = "an approval" if approval is None else artifact_name(approval, APPROVED)
-        raise Refusal(
-            f"{run.id}: flow {source} has no {named} to draft {flow} from; run "
-            f"`{stage_command(run, 'approve', source)}` to approve its draft, {then}"
         )
     carried = _approval(run, source, approval, f"draft {flow} again")
     copied = sheet_of(run, flow, sheet_version)
@@ -265,6 +253,30 @@ def draft_from(
         version=None if waiting is None else int(waiting.name[:3]),
         drafted_from={"flow": source, "approval": approval},
     )
+
+
+def drafting_approval(run: Run, flow: str, source: str, version: int | None) -> int:
+    """Return the approval of `source` that `draft_from` drafts `flow` from.
+
+    `version`, else `source`'s newest. Refuses `flow` itself as the source, and an
+    approval `source` does not hold.
+    e.g. (run, conjure, summon, None) -> 2
+    """
+    then = "then draft it again"
+    if source == flow:
+        raise Refusal(
+            f"{run.id}: flow {flow} is drafted from its own approval; run "
+            f"{_again(run, flow)} to copy it, or name another flow to draft from"
+        )
+    held = approved_versions(run.directory(source, REVIEW))
+    approval = held[-1] if version is None and held else version
+    if approval is None or approval not in held:
+        named = "an approval" if approval is None else artifact_name(approval, APPROVED)
+        raise Refusal(
+            f"{run.id}: flow {source} has no {named} to draft {flow} from; run "
+            f"`{stage_command(run, 'approve', source)}` to approve its draft, {then}"
+        )
+    return approval
 
 
 def _edited(run: Run, flow: str, draft: Path, remedy: str) -> bool:
