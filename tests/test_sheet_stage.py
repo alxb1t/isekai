@@ -612,35 +612,6 @@ def test_a_newer_tag_list_is_named(
     assert written.read_bytes() == before
     assert versions(run.directory(FLOW, "sheets")) == [1]
 
-    # A sheet filled from another flow's list is weighed against that flow's.
-    sheet_stage.sheet(
-        run,
-        TARGET,
-        schema,
-        vocabulary,
-        FIELD_MAP,
-        tagged=True,
-        flow_digest=FLOW_DIGEST,
-        tags_from=FLOW,
-    )
-    write_wd14(run, version=3)
-    assert sheet_stage.sheet(
-        run,
-        TARGET,
-        schema,
-        vocabulary,
-        FIELD_MAP,
-        tagged=True,
-        flow_digest=FLOW_DIGEST,
-    ) == (
-        None,
-        [
-            f"{run.id}/{TARGET}: sheet 001 was filled from {FLOW}/wd14/002.json, "
-            f"and {FLOW}/wd14/003.json is newer; run `python -m isekai sheet "
-            f"--flow {TARGET}{runs_flag(run)} --new-version {run.id}`"
-        ],
-    )
-
 
 @pytest.mark.spec("sheet:superseded:the-latest-list-is-silent")
 def test_a_sheet_from_the_latest_list_is_silent(
@@ -772,3 +743,36 @@ def test_a_source_with_no_tag_list_gives_an_empty_sheet_naming_it(
     assert body["fields"] == {name: [] for name in schema.names}
     assert body["producer"]["tags_from"] == FLOW
     assert "from" not in body["producer"]
+
+
+@pytest.mark.spec("sheet:superseded:a-borrowed-sheet-is-silent")
+@pytest.mark.parametrize("newer", [FLOW, TARGET], ids=["source", "target"])
+def test_a_sheet_filled_from_another_flows_tags_is_never_weighed(
+    run: Run, schema: Schema, vocabulary: Vocabulary, newer: str
+) -> None:
+    write_wd14(run)
+    filled, _ = sheet_stage.sheet(
+        run,
+        TARGET,
+        schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=True,
+        flow_digest=FLOW_DIGEST,
+        tags_from=FLOW,
+    )
+    assert filled is not None
+    before = filled.read_bytes()
+    write_wd14(run, flow=newer, version=2)
+
+    assert sheet_stage.sheet(
+        run,
+        TARGET,
+        schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=True,
+        flow_digest=FLOW_DIGEST,
+    ) == (None, [])
+    assert filled.read_bytes() == before
+    assert versions(run.directory(TARGET, "sheets")) == [1]

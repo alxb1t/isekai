@@ -48,6 +48,8 @@ None.
 
 - `sheet`:
   - ADDED *A sheet is filled from another flow's tag list when the operator names it* — the routing and the record.
+  - MODIFIED *A kept sheet filled from a superseded tag list is named* — a sheet filled from another flow's tags is
+    not weighed.
 - `cli`:
   - MODIFIED *The review verb drafts from another flow's approval with `--from`* — a target with no sheet is
     assigned and filled first.
@@ -62,7 +64,7 @@ None.
 - **Code:** `isekai/foundation/artifacts.py`, `isekai/pipeline/sheet.py`, `isekai/pipeline/review.py`,
   `isekai/interface/drafting.py` (new), `isekai/interface/cli.py`, `isekai/interface/ui/app.py`,
   `ui/src/types.ts`, `ui/src/views/RenderLarge.vue`, `ui/src/views/Review.vue`, `ui/src/components/SourcePanel.vue`.
-- **Tests:** `tests/test_sheet_stage.py`, `tests/test_pipeline_cli.py`, `tests/test_ui_api.py`,
+- **Tests:** `tests/test_sheet_stage.py`, `tests/test_pipeline_cli.py`, `tests/test_ui_api.py`, `tests/test_run_view.py`,
   `tests/e2e/conftest.py`, `tests/e2e/test_render.py`.
 - **Docs:** `README.md`, `docs/data-flow.md`, `ui/design/spec.md`.
 

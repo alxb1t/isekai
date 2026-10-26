@@ -172,29 +172,30 @@ def sheet(
 
 
 def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
-    """Return a warning when the kept sheet's tag list is below its flow's latest.
+    """Return a warning when the kept sheet's tag list is below the flow's latest.
 
-    The list is weighed against the flow that filled the sheet, named by
-    `tags_from` where it is not this one. A sheet it cannot read, or one with no
-    list number, gives none: review refuses an unreadable sheet by name.
+    A sheet it cannot read, or one with no list number, gives none: review
+    refuses an unreadable sheet by name. Nor does a sheet filled from another
+    flow's tags: it is built from that flow's approval, so neither flow's later
+    list is weighed against it.
     """
+    newest = latest(run.directory(flow, WD14))
+    if newest is None:
+        return []
     try:
         filled = read(directory / artifact_name(kept), SHEET_FILE)
     except Refusal:
         return []
-    listed = tagged_from(filled) or flow
-    newest = latest(run.directory(listed, WD14))
-    if newest is None:
+    if tagged_from(filled) is not None:
         return []
     producer = filled.get("producer")
     source = producer.get("from") if isinstance(producer, dict) else None
     # `bool` is an `int`, and a hand-edited `true` is not a list number.
     if not isinstance(source, int) or isinstance(source, bool) or source >= newest:
         return []
-    lists = WD14 if listed == flow else f"{listed}/{WD14}"
     return [
         f"{run.id}/{flow}: sheet {kept:03d} was filled from "
-        f"{lists}/{artifact_name(source)}, and {lists}/{artifact_name(newest)} "
+        f"{WD14}/{artifact_name(source)}, and {WD14}/{artifact_name(newest)} "
         f"is newer; run `{stage_command(run, STAGE, flow, options=NEW_VERSION)}`"
     ]
 

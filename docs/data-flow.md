@@ -83,8 +83,11 @@ default, where a batch is a folder holding `sources/` with its runs root `runs/`
 beside it ([D40](decisions.md#d40--a-batch-is-a-library-folder-holding-sources)).
 Its page names the batch, the run's digest and the flow in every URL. It writes
 through the functions that own each write — import's for a source, `assign` for
-a tick, review's for a draft, its edits and an approval — and runs a stage only as
-the CLI's own verb, a child of the server
+a tick, review's for a draft, its edits and an approval, and `sheet()` for a
+target's first sheet when a draft is made from another flow, which
+`interface/drafting.py`'s `draft_across` runs in the server's process, the
+sequence `review --from` runs too. Every other stage it runs only as the CLI's
+own verb, a child of the server
 ([D4](decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children)).
 
 **Prepare is a job of those children.** It asks Ollama first, then runs `tag`,
