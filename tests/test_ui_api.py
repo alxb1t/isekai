@@ -23,7 +23,6 @@ Everything that can be asserted without a server is in `tests/test_ui.py` and
 """
 
 import contextlib
-import fcntl
 import io
 import json
 import queue
@@ -1925,41 +1924,6 @@ def _record(made: Run, name: str, started: str, outcome: str) -> SessionRecord:
     return record
 
 
-@pytest.mark.spec("ui:sessions:a-batch-lists-its-sessions")
-def test_a_batch_lists_its_sessions_running_first_then_newest(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    _record(made, "20261024T090000Z", "2026-10-24T09:00:00Z", "running")
-    _record(made, "20261024T080000Z", "2026-10-24T08:00:00Z", "done")
-    _record(made, "20261024T100000Z", "2026-10-24T10:00:00Z", "stopped")
-    monkeypatch.setattr(
-        Jobs, "slot", lambda self, kind: _rendering_slot("20261024T090000Z")
-    )
-
-    lock = made.path.parent.parent / "sessions" / "20261024T090000Z.lock"
-    with lock.open("a") as process:
-        fcntl.flock(process, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        listed = client.get(f"/api/b/{BATCH}/sessions").json()["sessions"]
-
-        assert [(one["id"], one["outcome"]) for one in listed] == [
-            ("20261024T090000Z", "running"),
-            ("20261024T100000Z", "stopped"),
-            ("20261024T080000Z", "done"),
-        ]
-    # The render's lifetime lock, rather than the slot, establishes liveness.
-    assert (
-        client.get(f"/api/b/{BATCH}/sessions/20261024T090000Z").json()["outcome"]
-        is None
-    )
-    monkeypatch.setattr(Jobs, "slot", lambda self, kind: None)
-    listed = client.get(f"/api/b/{BATCH}/sessions").json()["sessions"]
-    assert [(one["id"], one["outcome"]) for one in listed] == [
-        ("20261024T100000Z", "stopped"),
-        ("20261024T090000Z", None),
-        ("20261024T080000Z", "done"),
-    ]
-
-
 @pytest.mark.spec("ui:sessions:a-session-reads-its-record")
 def test_a_session_is_served_from_its_record_and_an_unknown_id_refused(
     client: TestClient, made: Run
@@ -1976,7 +1940,7 @@ def test_a_session_is_served_from_its_record_and_an_unknown_id_refused(
     for unknown in ("20261024T070000Z", "latest"):
         refused = client.get(f"/api/b/{BATCH}/sessions/{unknown}")
         assert refused.status_code == 409
-        assert f"its sessions are at /b/{BATCH}/sessions" in refused.json()["refusal"]
+        assert refused.json()["refusal"] == f"{BATCH} holds no session {unknown!r}"
 
 
 # --- the import sheet ---------------------------------------------------------

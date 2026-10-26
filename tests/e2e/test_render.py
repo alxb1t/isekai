@@ -1,4 +1,4 @@
-"""Render from the browser: the dialog, the session, the large view, Revise, Compare.
+"""Render from the browser: the dialog, the drawer, the large view, Revise, Compare.
 
 A revision, a discard, a comparison and a draft from another flow each own a
 batch, so none leans on another's draft. The server renders on the e2e doubles:
@@ -19,7 +19,7 @@ from tests.e2e.conftest import (
     CONJURED,
     DAMAGED,
     DISCARDED,
-    FINISHED,
+    DRAWN,
     FLOW,
     RENDER,
     REVISED,
@@ -63,36 +63,46 @@ def test_confirming_the_dialog_opens_the_session(page: Page, served: Served) -> 
 
     confirm.click()
 
-    expect(page).to_have_url(
-        re.compile(rf"{re.escape(served.url)}/b/{RENDER}/sessions/\d{{8}}T\d{{6}}Z$")
-    )
-    expect(page.locator("[data-quiet]")).to_have_text("Nothing is billing.")
-    expect(page.locator("[data-session-image] img")).to_have_count(1)
-    # The dialog was the hub's: back on the hub, it is closed.
-    page.keyboard.press("Shift+H")
-    expect(page).to_have_url(served.hub_of(RENDER))
-    expect(page.locator(".hub__grid")).to_be_visible()
+    drawer = page.locator("dialog[data-drawer]")
+    expect(drawer.locator("[data-quiet]")).to_have_text("Nothing is billing.")
+    expect(drawer.locator("[data-session-image] img")).to_have_count(1)
     expect(page.locator(".render-dialog")).to_have_count(0)
+    expect(page).to_have_url(served.hub_of(RENDER))
+    # The drawer is over the hub: closed, the hub is beneath it.
+    page.keyboard.press("Escape")
+    expect(drawer).to_have_count(0)
+    expect(page.locator(".hub__grid")).to_be_visible()
 
 
-@pytest.mark.spec("ui:sessions:the-list-shows-a-finished-session")
-def test_the_list_shows_a_finished_session(page: Page, served: Served) -> None:
-    page.goto(served.hub_of(SHOWN))
-    page.locator("[data-sessions-tab]").click()
+@pytest.mark.spec("ui:sessions:the-drawer-holds-the-render")
+def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
+    page.goto(served.hub_of(DRAWN))
+    page.locator("[data-render]").click()
+    page.locator("[data-confirm]").click()
 
-    row = page.locator(f"[data-session='{FINISHED}']")
-    expect(row.locator("img")).to_have_js_property("complete", True)
-    expect(row).to_contain_text("done")
-    row.click()
-
-    expect(page).to_have_url(f"{served.url}/b/{SHOWN}/sessions/{FINISHED}")
-    expect(page.locator("[data-outcome]")).to_have_text("done")
-    expect(page.locator("[data-session-image] img")).to_have_count(1)
-    # A focused link or button keeps ↵ from the grid's viewer.
-    page.locator("[data-renders]").focus()
+    drawer = page.locator("dialog[data-drawer]")
+    image = drawer.locator("[data-session-image] img")
+    expect(image).to_have_js_property("complete", True)
+    expect(page).to_have_url(served.hub_of(DRAWN))
+    # Half the window at least, against its right edge.
+    box, size = drawer.bounding_box(), page.viewport_size
+    assert box is not None and size is not None
+    assert box["width"] >= max(size["width"] / 2, 480) - 1
+    assert box["x"] + box["width"] == pytest.approx(size["width"], abs=1)
     page.keyboard.press("Enter")
-    expect(page).to_have_url(f"{served.url}/b/{SHOWN}/renders")
-    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
+    viewer = page.locator("dialog[data-viewer]")
+    expect(viewer.locator("img")).to_have_attribute("src", re.compile(r"/image$"))
+    page.keyboard.press("Escape")
+    expect(viewer).to_have_count(0)
+    expect(drawer).to_be_visible()
+    page.keyboard.press("Escape")
+    expect(drawer).to_have_count(0)
+    expect(page.locator(".hub__grid")).to_be_visible()
+    page.keyboard.press("Control+Semicolon")
+    expect(drawer.locator("[data-outcome]")).to_have_text("done")
+    # A click on the backdrop closes it.
+    page.mouse.click(10, size["height"] / 2)
+    expect(drawer).to_have_count(0)
 
 
 @pytest.mark.spec("ui:renders:the-large-view-shows-its-sheet")

@@ -100,8 +100,6 @@ timer mono 40px/500.
 | `/b/<batch>/renders` | Renders grid | the Revise confirm |
 | `/b/<batch>/renders/<run>/<flow>/<version>/<seed>` | large view | the Revise confirm |
 | `/b/<batch>/renders/<run>/<flow>/<version>/<seed>/compare` | before / after | — |
-| `/b/<batch>/sessions` | the batch's render sessions | — |
-| `/b/<batch>/sessions/<id>` | one render session | the viewer |
 | `/billing` | the billing alert's way out | — |
 
 - `<run>` is the run's **12-hex digest** (`0d4b7e6fb2a8`), unique by construction; the screen shows the short name
@@ -109,9 +107,7 @@ timer mono 40px/500.
 - `<version>` is `v` + the approval's number (`v2` is `review/002.approved.json`, rendered into `outputs/002/`).
 - `/b/<batch>/review` opens the first unapproved sheet of the first flow that has one, in the hub's order; else
   the first approved sheet short of its images, read-only; else *No sheet waits for review* and the way to the hub.
-- `<id>` is the session's start in UTC, `20261024T091200Z`, and names its record `<batch>/sessions/<id>.json`. The
-  list and the page read the records, so a finished session is found again and one started in the terminal shows.
-- While a render runs, every screen shows `● render 06:41`, its clock, linking to its session's page.
+- While a render runs, every screen shows `● render 06:41`, its clock, opening the render drawer, which holds no URL.
 
 ## 5 · The journeys
 
@@ -202,7 +198,7 @@ y_long_name            │                                  │
 - **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
   to render`, the render stage's own count, and primary `Render ⇧G`, disabled with its reason. With nothing short it
   is absent; while a render runs it shows the job strip's totals, `image 1 of 2 · 06:41 of ≤10:30`, and
-  `Session ⇧S`.
+  `Session ⌃;`.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is the grid's
   first column, `h` from the first flow cell, and a column itself: the file's stem in mono 13, its first line level
   with the cells' tick line, the size in the viewer's title, then a 96×128 thumbnail at the cell's foot, a
@@ -259,7 +255,7 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
 | frame | trigger | URL |
 |---|---|---|
 | J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⇧G Render | `…/b/2026-10-19/hub` — the dialog has none |
-| J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.06 | `…/b/2026-10-19/sessions/20261019T152112Z` |
+| J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.06 | the drawer over the hub |
 | J4·3 done: `Nothing is billing.` | the last image lands; teardown and volume down confirm | same |
 | J4·4 Renders with the four new images | ⇧I View in Renders | `…/b/2026-10-19/renders` |
 
@@ -315,7 +311,7 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/b/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
 | J5·6 the revision approved, read-only; the hub's Render bar, `1 image ready to render` | ⌘↵ Approve · ⇧H | `…/b/2026-09-17/hub` |
-| (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | `…/b/2026-09-17/sessions/<id>` |
+| (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | the drawer over the hub |
 | J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/b/2026-09-17/renders` |
 | J5·8 the large view of v2, with `Compare with…  c` | ↵ on v2 | `…/v2/1840266731` |
 | J5·9 before / after | c, ↵ on v1 in the tile picker | `…/v2/1840266731/compare/v1/1840266731` |
@@ -376,7 +372,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 |---|---|---|
 | (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · ⇧E · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
 | J6·1 Review: the seed cleared, Count 3, the tags untouched | × the seed · count + + | `…/review/0d4b7e6fb2a8/conjure-anime-wai` |
-| (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⇧G · ⌘↵ | `…/b/2026-09-17/sessions/<id>` |
+| (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⇧G · ⌘↵ | the drawer over the hub |
 | J6·2 Renders: three new images after v1, no pair | ⇧I | `…/b/2026-09-17/renders` |
 
 Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`, `was 1840266731 · cleared`.
@@ -449,17 +445,17 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 
 Matched on `event.code`, the physical key, with the typed character suppressed, and declared once in
 the key store ([D25](../../docs/decisions.md#d25--shortcuts-match-the-physical-key)); `⌃/` lists them. ⌘
-is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K and ⌃/ run, Review's ⌃P, and on macOS Review's
+is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, ⌃/ and ⌃; run, Review's ⌃P, and on macOS Review's
 ⌃H ⌃L ⌃J ⌃K.
 
 | where | keys |
 |---|---|
-| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the running session, else the batch's sessions · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
+| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⌃; the render drawer, from a field too · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
 | Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧E Revise · ⇧G Render · in the large view, ⇧E Revise, ⇧F Conjure from this, c Compare with…, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
-| Session | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row |
+| Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧I its batch's Renders · ⌃; or esc close |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 
 No key spends money but the Render dialog's ⌘↵, which confirms the price it quotes: ⇧G only opens the dialog.

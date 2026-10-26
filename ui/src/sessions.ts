@@ -1,5 +1,4 @@
-/* What a render session's record says, read the one way the list and the page
-   both read it. */
+/* What a render session's record says, as the render drawer reads it. */
 
 import type { Focus } from './grid'
 import type { SessionImage, SessionRecord } from './types'
@@ -33,7 +32,7 @@ export interface Cell {
   waiting: number
 }
 
-/** The session page's grid: a column per photograph, a row per flow, `cells[row][column]`.
+/** The render drawer's grid: a column per photograph, a row per flow, `cells[row][column]`.
 
     The photographs' row is drawn below the flows' rows, as row `flows.length`. */
 export interface Grid {

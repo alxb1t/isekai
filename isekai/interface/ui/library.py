@@ -290,24 +290,12 @@ def run_named(folder: Path, digest: str) -> Run:
     return found
 
 
-def sessions(folder: Path) -> list[dict[str, Any]]:
-    """Return batch `folder`'s session records, the running one first, then newest.
-
-    The render's lifetime lock keeps terminal and app renders live alike; an
-    abandoned record has no outcome, regardless of what the app slot holds.
-    """
-    found = [_session(path) for path in (folder / SESSIONS).glob("*.json")]
-    found.sort(key=lambda one: one["started"], reverse=True)
-    found.sort(key=lambda one: one["outcome"] != "running")
-    return found
-
-
 def running(folder: Path) -> list[dict[str, Any]]:
     """Return batch `folder`'s records a render process holds, newest first.
 
     Liveness is read from each lock before any record is parsed, so a damaged
-    record that no render holds refuses only its own batch's list. A held record
-    that does not read is left to that list, which names its remedy.
+    record that no render holds is never read. A held record that does not read
+    is left out; a read of that session names its remedy.
     """
     found = []
     for path in (folder / SESSIONS).glob("*.json"):
@@ -322,10 +310,7 @@ def session(folder: Path, name: str) -> dict[str, Any]:
     """Return the session record `name` names, refusing an id no record holds."""
     path = folder / SESSIONS / f"{name}.json"
     if SESSION_ID.fullmatch(name) is None or not path.is_file():
-        raise Refusal(
-            f"{folder.name} holds no session {name!r}; its sessions are at "
-            f"/b/{folder.name}/sessions"
-        )
+        raise Refusal(f"{folder.name} holds no session {name!r}")
     return _session(path)
 
 

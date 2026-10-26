@@ -9,6 +9,23 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-10-26 · 0079-the-session-drawer
+
+Gate: local 0m45s · CI 1m29s (ci at 63d656d) · 0.51.0: local 0m46s · CI 1m24s
+
+### Changed
+
+- The shortcut decision includes `⌃;` among the keys available in text fields, matching the drawer (0079 D3).
+
+- Starting another render closes the previous session's photograph viewer, keeping the drawer usable
+  while the replacement record loads (0079 D1, D2).
+
+- The running render opens in a drawer over any screen — on `⌃;`, the app bar's `●` or the Render bar's
+  *Session* — and confirming a render opens it over the hub, which keeps its URL (0079 D1–D3).
+
+- The session pages, their routes, the Sessions tab, `⇧S` and the sessions list's endpoint are gone: the drawer
+  holds the running render, and a finished one's images are on Renders (0079 D4, D5).
+
 ## [0.51.0] - 2026-10-26 · 0078-the-third-walkthrough
 
 Gate: local 0m46s · CI 1m24s (ci at 7300efc) · 0.50.0: local 0m42s · CI 7m25s

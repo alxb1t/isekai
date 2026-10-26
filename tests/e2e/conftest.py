@@ -20,13 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.foundation.artifacts import (
-    DRAFT_FILE,
-    SESSION_FILE,
-    SessionRecord,
-    read,
-    replace,
-)
+from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import load_flow
 from isekai.foundation.run import Run, approval_of, open_run
 from isekai.pipeline.caption import FakeReader
@@ -62,6 +56,8 @@ ASSIGNED: dict[str, tuple[str, ...]] = {"hub-prepare": ("pick",)}
 
 # The batch a render test owns: one source approved for one image.
 RENDER = "render"
+# The batch the drawer's test renders: one source approved for one image.
+DRAWN = "drawn"
 # The batch the Renders view is read from: one source already rendered once.
 SHOWN = "shown"
 # The batch a revision is written in: one source rendered once at seed 7.
@@ -82,9 +78,6 @@ CONJURED = "conjured"
 
 # The batch the chooser opens on: one source with an unapproved sheet in each flow.
 CHOSEN = "chosen"
-
-# The finished session `SHOWN` holds a record of: its one image, seed 7.
-FINISHED = "20261019T091200Z"
 
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
 STARTUP = 300
@@ -135,29 +128,18 @@ def _run(folder: Path, name: str, size: tuple[int, int]) -> Run:
     return run
 
 
-def _finished(folder: Path, run: Run) -> None:
-    """Write the record of a finished session that rendered `run` at seed 7."""
-    record: SessionRecord = {
-        "schema": SESSION_FILE.schema,
-        "id": FINISHED,
-        "started": "2026-10-19T09:12:00Z",
-        "ended": "2026-10-19T09:20:00Z",
-        "limit": 1200,
-        "asked": {FLOW: 1},
-        "steps": {"pod": "ready", "teardown": "done"},
-        "images": [{"digest": run.digest, "flow": FLOW, "version": 1, "seed": "7"}],
-        "outcome": "done",
-        "message": None,
-    }
-    replace(folder / "sessions" / f"{FINISHED}.json", SESSION_FILE, record)
-
-
-def _rendered_at_seven(folder: Path, name: str, size: tuple[int, int]) -> Run:
-    """Return a run of a new source approved once and rendered at seed 7."""
+def _approved(folder: Path, name: str, size: tuple[int, int]) -> Run:
+    """Return a run of a new source approved once and not yet rendered."""
     (folder / "sources").mkdir(parents=True)
     run = _run(folder, name, size)
     review(run, FLOW)
     approve(run, FLOW, load_flow(FLOW).schema, VOCABULARY)
+    return run
+
+
+def _rendered_at_seven(folder: Path, name: str, size: tuple[int, int]) -> Run:
+    """Return a run of a new source approved once and rendered at seed 7."""
+    run = _approved(folder, name, size)
     _render_at(run)
     return run
 
@@ -217,12 +199,9 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
             if one in ASSIGNED.get(name, ()):
                 open_run(photo, lib / name / "runs").directory(FLOW).mkdir()
 
-    (lib / RENDER / "sources").mkdir(parents=True)
-    rendered = _run(lib / RENDER, "gia", (740, 1000))
-    review(rendered, FLOW)
-    approve(rendered, FLOW, load_flow(FLOW).schema, VOCABULARY)
+    rendered = _approved(lib / RENDER, "gia", (740, 1000))
+    _approved(lib / DRAWN, "nia", (745, 1000))
     shown = _rendered_at_seven(lib / SHOWN, "hal", (750, 1000))
-    _finished(lib / SHOWN, shown)
     revised = _rendered_at_seven(lib / REVISED, "ida", (770, 1000))
     discarded = _rendered_at_seven(lib / DISCARDED, "ivy", (775, 1000))
     revise(discarded, FLOW, 1, 7)

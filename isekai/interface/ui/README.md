@@ -8,8 +8,8 @@ with them.
 Home ─ New batch ─▶ import sheet ─▶ <batch>/sources/
 hub ─ tick ─▶ assign ─▶ Prepare ─▶ tag → caption → sheet ─▶ /events ─▶ the cells
 Review ─▶ /b/<batch>/review ─▶ the head ─▶ Review ─▶ approve
-hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶ volume down ─▶ /events ─▶ the session
-render ─▶ <batch>/sessions/<id>.json ─▶ /b/<batch>/sessions ─▶ /b/<batch>/sessions/<id>
+hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶ volume down ─▶ /events ─▶ the drawer
+render ─▶ <batch>/sessions/<id>.json ─▶ GET …/sessions/<id> ─▶ the render drawer
 ```
 
 - **Import.** The sheet sends each chosen file in its own `PUT`, a bar each, answered once its bytes
@@ -30,10 +30,10 @@ render ─▶ <batch>/sessions/<id>.json ─▶ /b/<batch>/sessions ─▶ /b/<b
   `POST …/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --session <id> --progress
   json`, then `volume down` unless the window is kept.
 - **Sessions** are read from the records the render verb writes, `<batch>/sessions/<id>.json`:
-  `GET …/sessions` lists them, the running one first, and `GET …/sessions/<id>` serves one. The render slot adds
-  the volume steps and Stop. `GET /api/sessions/running` reads process-held liveness locks across the library,
-  each before its record, so a damaged record refuses only its own batch's list; local polling refreshes observed
-  records and lists every two seconds, so terminal renders show on every screen too. A failed poll marks the last
+  `GET …/sessions/<id>` serves one to the render drawer, and the render slot adds the volume steps and Stop.
+  `GET /api/sessions/running` reads process-held liveness locks across the library, each before its record, so a
+  damaged record no render holds is never read; local polling refreshes the drawer's record every two seconds, so
+  terminal renders show on every screen too. A failed poll marks the last
   answer unconfirmed on every screen, and an unconfirmed render never hides the billing alert.
   The alert's way out is `/billing`, which distinguishes unknown billing, an open volume and confirmed absence.
 - **Renders** reads each cell's images, versions oldest to newest, with how many its newest approval still lacks,

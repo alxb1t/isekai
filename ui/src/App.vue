@@ -4,11 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import KeyHint from './components/KeyHint.vue'
 import KeyList from './components/KeyList.vue'
+import SessionDrawer from './components/SessionDrawer.vue'
 import { useKeys } from './composables/useKeys'
 import { queue } from './composables/useQueue'
 import { lasted } from './sessions'
 import { useBatchStore } from './stores/batch'
-import { keyList, shifted, useKeyStore } from './stores/keys'
+import { useDrawerStore } from './stores/drawer'
+import { type Key, keyList, shifted, useKeyStore } from './stores/keys'
 import { alerting, clock, useLiveStore } from './stores/live'
 import type { JobSlot } from './types'
 
@@ -73,14 +75,11 @@ const rendered = computed(() => {
   const elapsed = lasted(held.started, null, true, now.value) ?? 0
   return { batch: held.batch, id: held.id, clock: clock(elapsed) }
 })
-/* ⇧S: the running session, else the open batch's sessions. */
-function sessions(): void {
-  const held = rendered.value
-  if (held) void router.push({ name: 'session', params: { batch: held.batch, id: held.id } })
-  else open('sessions')
-}
+/* The render drawer's key: real Ctrl on every platform, from a field too (D25). */
+const DRAWER: Key = { code: 'Semicolon', ctrl: true }
+const drawer = useDrawerStore()
 
-/* The keys every screen answers, outside a text field (D25). */
+/* The keys every screen answers, outside a text field but for the drawer's and the key list's (D25). */
 useKeys('everywhere', [
   { id: 'library', keys: [shifted('KeyL')], label: 'library', run: () => open('home') },
   { id: 'hub', keys: [shifted('KeyH')], label: 'hub', run: () => open('hub'), when: onBatch },
@@ -92,7 +91,7 @@ useKeys('everywhere', [
     run: () => open('renders'),
     when: onBatch,
   },
-  { id: 'session', keys: [shifted('KeyS')], label: 'sessions', run: sessions, when: onBatch },
+  { id: 'drawer', keys: [DRAWER], label: 'the render drawer', run: drawer.toggle, inField: true },
   keyList(() => (listing.value = true)),
 ])
 
@@ -128,22 +127,18 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
           :class="{ 'appbar__tab--active': screen === 'renders' || screen === 'render' }"
           >Renders<KeyHint command="renders" /></RouterLink
         >
-        <RouterLink
-          :to="{ name: 'sessions', params: { batch } }"
-          class="appbar__tab"
-          :class="{ 'appbar__tab--active': screen === 'sessions' || screen === 'session' }"
-          data-sessions-tab
-          >Sessions<KeyHint command="session" /></RouterLink
-        >
       </template>
       <!-- A running render bills by the minute, so every screen shows it. -->
-      <RouterLink
+      <button
         v-if="rendered"
-        :to="{ name: 'session', params: { batch: rendered.batch, id: rendered.id } }"
         class="appbar__render mono"
+        type="button"
+        :title="`the render drawer ${keys.hint('drawer') ?? ''}`"
         data-rendering
-        >● render {{ rendered.clock }}</RouterLink
+        @click="drawer.openOn(rendered.batch, rendered.id)"
       >
+        ● render {{ rendered.clock }}
+      </button>
       <!-- A failed read of the disk's running renders leaves its last answer unconfirmed. -->
       <span
         v-if="!renderConfirmed"
@@ -179,6 +174,7 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
       <RouterView :key="key" />
     </main>
     <KeyList v-if="listing" @close="listing = false" />
+    <SessionDrawer v-if="drawer.open" :toggle="DRAWER" />
     <footer class="jobstrip">
       <span
         class="jobstrip__dot"
