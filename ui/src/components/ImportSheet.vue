@@ -3,6 +3,7 @@ import { noun } from '../words'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
 import { useKeys } from '../composables/useKeys'
+import { useHeldFocus } from '../composables/useHeldFocus'
 import { modded, plain } from '../stores/keys'
 import { discards } from '../staging'
 import { useLiveStore } from '../stores/live'
@@ -265,7 +266,14 @@ useKeys('overlay', [
   },
 ])
 
-onMounted(() => picker.value?.click())
+/* A modal dialog, on its first control. */
+const dialog = ref<HTMLDialogElement | null>(null)
+useHeldFocus(dialog)
+
+onMounted(() => {
+  dialog.value?.showModal()
+  picker.value?.click()
+})
 
 onUnmounted(() => {
   closed = true
@@ -275,115 +283,118 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="scrim">
-    <section class="import" role="dialog" :aria-label="adding ? 'Add sources' : 'New batch'">
-      <header class="import__head">
-        <h2 class="import__title">{{ adding ? 'Add sources' : 'New batch' }}</h2>
-        <span v-if="reading" class="import__count import__count--reading mono">
-          reading {{ read.length }} of {{ tiles.length }}
-        </span>
-        <span v-else class="import__count mono">
-          {{ tiles.length }} {{ noun(tiles.length, 'file') }} chosen ·
-          {{ ready.length }} {{ noun(ready.length, 'source') }} · {{ refused.length }} refused
-        </span>
-        <button
-          class="btn btn-secondary import__add"
-          type="button"
-          :disabled="committing"
-          @click="picker?.click()"
-        >
-          Add files…
-        </button>
-        <input
-          ref="picker"
-          class="import__picker"
-          type="file"
-          multiple
-          accept="image/*,.heic,.heif,.nef,.cr2,.arw,.dng"
-          @change="choose"
-        />
-      </header>
-      <div class="import__body">
-        <div class="import__files">
-          <p class="section-label">sources · {{ ready.length }} · {{ total() }}</p>
-          <div class="import__tiles">
-            <div
-              v-for="one in shown"
-              :key="one.key"
-              class="import__tile"
-              :class="{ 'import__tile--dim': one.result?.state === 'skipped' }"
-              :data-file="one.file.name"
-              :data-phase="one.phase"
-              :data-state="one.result?.state ?? ''"
-            >
-              <img v-if="preview(one)" class="import__preview" :src="preview(one) ?? ''" alt="" />
-              <span class="import__name mono">{{ one.result?.name ?? one.file.name }}</span>
-              <span class="import__size mono">{{ size(one.file.size) }}</span>
-              <span v-if="one.phase === 'queued'" class="import__word mono">queued</span>
-              <template v-else-if="one.phase === 'uploading'">
-                <span class="import__bar">
-                  <span class="import__fill" :style="{ width: `${Math.round(one.progress * 100)}%` }" />
-                </span>
-                <span class="import__word mono">uploading {{ Math.round(one.progress * 100) }}%</span>
+  <dialog
+    ref="dialog"
+    class="import"
+    :aria-label="adding ? 'Add sources' : 'New batch'"
+    @cancel.prevent
+  >
+    <header class="import__head">
+      <h2 class="import__title">{{ adding ? 'Add sources' : 'New batch' }}</h2>
+      <span v-if="reading" class="import__count import__count--reading mono">
+        reading {{ read.length }} of {{ tiles.length }}
+      </span>
+      <span v-else class="import__count mono">
+        {{ tiles.length }} {{ noun(tiles.length, 'file') }} chosen ·
+        {{ ready.length }} {{ noun(ready.length, 'source') }} · {{ refused.length }} refused
+      </span>
+      <button
+        class="btn btn-secondary import__add"
+        type="button"
+        :disabled="committing"
+        @click="picker?.click()"
+      >
+        Add files…
+      </button>
+      <input
+        ref="picker"
+        class="import__picker"
+        type="file"
+        multiple
+        accept="image/*,.heic,.heif,.nef,.cr2,.arw,.dng"
+        @change="choose"
+      />
+    </header>
+    <div class="import__body">
+      <div class="import__files">
+        <p class="section-label">sources · {{ ready.length }} · {{ total() }}</p>
+        <div class="import__tiles">
+          <div
+            v-for="one in shown"
+            :key="one.key"
+            class="import__tile"
+            :class="{ 'import__tile--dim': one.result?.state === 'skipped' }"
+            :data-file="one.file.name"
+            :data-phase="one.phase"
+            :data-state="one.result?.state ?? ''"
+          >
+            <img v-if="preview(one)" class="import__preview" :src="preview(one) ?? ''" alt="" />
+            <span class="import__name mono">{{ one.result?.name ?? one.file.name }}</span>
+            <span class="import__size mono">{{ size(one.file.size) }}</span>
+            <span v-if="one.phase === 'queued'" class="import__word mono">queued</span>
+            <template v-else-if="one.phase === 'uploading'">
+              <span class="import__bar">
+                <span class="import__fill" :style="{ width: `${Math.round(one.progress * 100)}%` }" />
+              </span>
+              <span class="import__word mono">uploading {{ Math.round(one.progress * 100) }}%</span>
+            </template>
+            <span v-else-if="one.phase === 'waiting'" class="import__word mono">waiting</span>
+            <template v-else-if="one.phase === 'converting'">
+              <span class="import__bar import__bar--running"><span class="import__fill" /></span>
+              <span class="import__word import__word--running mono">converting…</span>
+            </template>
+            <template v-else-if="one.result">
+              <span v-if="badge(one)" class="import__badge mono">{{ badge(one) }}</span>
+              <span v-if="one.result.state === 'skipped'" class="import__word mono">already chosen</span>
+              <span
+                v-else-if="one.result.name !== one.file.name && !badge(one)"
+                class="import__word mono"
+                >chosen as {{ one.file.name }}</span
+              >
+              <span v-if="one.result.state === 'ready'" class="import__word mono">ready</span>
+              <template v-if="one.result.state === 'not cleaned'">
+                <span class="import__warn mono">⚠ not cleaned · {{ one.result.carries.join(', ') }}</span>
+                <label class="import__asis mono">
+                  <input v-model="one.asIs" type="checkbox" />import as it is
+                </label>
               </template>
-              <span v-else-if="one.phase === 'waiting'" class="import__word mono">waiting</span>
-              <template v-else-if="one.phase === 'converting'">
-                <span class="import__bar import__bar--running"><span class="import__fill" /></span>
-                <span class="import__word import__word--running mono">converting…</span>
-              </template>
-              <template v-else-if="one.result">
-                <span v-if="badge(one)" class="import__badge mono">{{ badge(one) }}</span>
-                <span v-if="one.result.state === 'skipped'" class="import__word mono">already chosen</span>
-                <span
-                  v-else-if="one.result.name !== one.file.name && !badge(one)"
-                  class="import__word mono"
-                  >chosen as {{ one.file.name }}</span
-                >
-                <span v-if="one.result.state === 'ready'" class="import__word mono">ready</span>
-                <template v-if="one.result.state === 'not cleaned'">
-                  <span class="import__warn mono">⚠ not cleaned · {{ one.result.carries.join(', ') }}</span>
-                  <label class="import__asis mono">
-                    <input v-model="one.asIs" type="checkbox" />import as it is
-                  </label>
-                </template>
-              </template>
-            </div>
+            </template>
           </div>
-          <template v-if="refused.length">
-            <p class="section-label">refused · {{ refused.length }}</p>
-            <p
-              v-for="one in refused"
-              :key="one.key"
-              class="import__refused"
-              :data-file="one.file.name"
-            >
-              <span class="refusal__mark" /><span class="mono">{{ one.file.name }}</span>
-              <span class="import__reason">{{ one.refusal }}</span>
-            </p>
-          </template>
         </div>
-        <div v-if="!adding" class="import__side">
-          <p class="section-label">name</p>
-          <input v-model="name" class="input import__batch mono" type="text" aria-label="Batch name" />
-        </div>
+        <template v-if="refused.length">
+          <p class="section-label">refused · {{ refused.length }}</p>
+          <p
+            v-for="one in refused"
+            :key="one.key"
+            class="import__refused"
+            :data-file="one.file.name"
+          >
+            <span class="refusal__mark" /><span class="mono">{{ one.file.name }}</span>
+            <span class="import__reason">{{ one.refusal }}</span>
+          </p>
+        </template>
       </div>
-      <p v-if="refusal" class="import__refused import__refused--commit">
-        <span class="refusal__mark" /><span class="import__reason">{{ refusal }}</span>
-      </p>
-      <footer class="import__foot">
-        <span v-if="disabled" class="import__disabled">{{ disabled }}</span>
-        <button class="btn btn-secondary" type="button" :disabled="committing" @click="cancel">
-          Cancel<KeyHint command="cancel" />
-        </button>
-        <button
-          class="btn btn-primary"
-          type="button"
-          :disabled="disabled !== null"
-          @click="importAll"
-        >
-          {{ adding ? `Import ${ready.length}` : 'Import' }}<KeyHint command="import" />
-        </button>
-      </footer>
-    </section>
-  </div>
+      <div v-if="!adding" class="import__side">
+        <p class="section-label">name</p>
+        <input v-model="name" class="input import__batch mono" type="text" aria-label="Batch name" />
+      </div>
+    </div>
+    <p v-if="refusal" class="import__refused import__refused--commit">
+      <span class="refusal__mark" /><span class="import__reason">{{ refusal }}</span>
+    </p>
+    <footer class="import__foot">
+      <span v-if="disabled" class="import__disabled">{{ disabled }}</span>
+      <button class="btn btn-secondary" type="button" :disabled="committing" @click="cancel">
+        Cancel<KeyHint command="cancel" />
+      </button>
+      <button
+        class="btn btn-primary"
+        type="button"
+        :disabled="disabled !== null"
+        @click="importAll"
+      >
+        {{ adding ? `Import ${ready.length}` : 'Import' }}<KeyHint command="import" />
+      </button>
+    </footer>
+  </dialog>
 </template>

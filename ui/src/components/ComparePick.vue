@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useHeldFocus } from '../composables/useHeldFocus'
 import { useKeys } from '../composables/useKeys'
 import { plain } from '../stores/keys'
 
@@ -54,6 +55,7 @@ useKeys('overlay', [
   },
 ])
 
+useHeldFocus(dialog)
 onMounted(() => {
   dialog.value?.showModal()
   tiles()[props.start]?.focus()

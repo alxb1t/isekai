@@ -28,6 +28,7 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 8. **The URL is real**. Overlays keep the URL of the page beneath. The Render dialog has no URL.
 9. **A refusal's text is the CLI's, verbatim**. The UI invents no command.
 10. **Count labels use the singular noun at one and the plural otherwise**: `1 source`, `0 sources`, `3 sources`.
+11. **A dialog holds the focus** while open — on its first control, the page behind inert — and gives it back on close.
 
 ## 2 · Tokens
 

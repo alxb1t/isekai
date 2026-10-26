@@ -188,6 +188,7 @@ body {
   width: 720px;
   max-width: calc(100vw - 48px);
   padding: 24px;
+  color: var(--ink);
   background: var(--raised);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1807,22 +1808,20 @@ button.session__tile {
 
 /* — the import sheet — */
 
-/* The New batch and Add sources sheet, over the page beneath (design spec J1·4). */
-.scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* The confirming dialogs, modal over the page beneath (design spec J1·4, J4·1, J5·3). */
+.render-dialog::backdrop,
+.import::backdrop {
   background: var(--scrim);
 }
 
+/* The New batch and Add sources sheet. */
 .import {
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 64px));
   max-height: calc(100vh - 96px);
+  padding: 0;
+  color: var(--ink);
   background: var(--raised);
   border: 1px solid var(--line);
   border-radius: 8px;

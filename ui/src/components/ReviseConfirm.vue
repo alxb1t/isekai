@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { revise } from '../api'
 import { useKeys } from '../composables/useKeys'
+import { useHeldFocus } from '../composables/useHeldFocus'
 import { modded, plain, shifted } from '../stores/keys'
 import type { RefusedImage, RevisedDraft, RevisedImage } from '../types'
 import KeyHint from './KeyHint.vue'
@@ -20,6 +21,20 @@ const failure = ref<string | null>(null)
 const writing = ref(false)
 /* The answer of a selection some of whose images were already waiting. */
 const answered = ref<RevisedDraft[] | null>(null)
+const dialog = ref<HTMLDialogElement | null>(null)
+const primary = ref<HTMLButtonElement | null>(null)
+
+/* A modal dialog, on its confirm button. */
+useHeldFocus(dialog)
+onMounted(() => {
+  dialog.value?.showModal()
+  primary.value?.focus()
+})
+
+/* The dialog itself is the backdrop's target: a click inside lands on its content. */
+function outside(event: MouseEvent): void {
+  if (event.target === dialog.value) emit('close')
+}
 
 const kept = computed(() => (refused.value ?? []).filter((one) => one.refusal === null))
 const dropped = computed(() => (refused.value ?? []).length - kept.value.length)
@@ -90,59 +105,65 @@ useKeys('overlay', [
 </script>
 
 <template>
-  <div class="scrim" @click.self="emit('close')">
-    <section class="render-dialog" role="dialog" aria-label="Revise" data-revise-confirm>
-      <header class="render-dialog__head">
-        <span class="section-label">Revise · {{ batch }}</span>
-        <h2 class="render-dialog__title">Revise {{ plural(images.length, 'image') }}</h2>
-      </header>
-      <p v-if="failure" class="render-dialog__refusal">
-        <span class="refusal__mark" />{{ failure }}
-      </p>
-      <p
-        v-for="one in refused ?? images.map((image) => ({ ...image, refusal: null }))"
-        :key="key(one)"
-        class="render-dialog__flow mono"
+  <dialog
+    ref="dialog"
+    class="render-dialog"
+    aria-label="Revise"
+    data-revise-confirm
+    @cancel.prevent
+    @click="outside"
+  >
+    <header class="render-dialog__head">
+      <span class="section-label">Revise · {{ batch }}</span>
+      <h2 class="render-dialog__title">Revise {{ plural(images.length, 'image') }}</h2>
+    </header>
+    <p v-if="failure" class="render-dialog__refusal">
+      <span class="refusal__mark" />{{ failure }}
+    </p>
+    <p
+      v-for="one in refused ?? images.map((image) => ({ ...image, refusal: null }))"
+      :key="key(one)"
+      class="render-dialog__flow mono"
+    >
+      <span class="render-dialog__name">{{ one.flow }}</span>
+      {{ one.digest }} · copies v{{ one.version }} · prefills seed {{ one.seed }}
+      <span v-if="waits(one)" data-waiting>· already waiting</span>
+      <span v-if="one.refusal" class="render-dialog__refusal" data-refused
+        ><span class="refusal__mark" />{{ one.refusal }}</span
       >
-        <span class="render-dialog__name">{{ one.flow }}</span>
-        {{ one.digest }} · copies v{{ one.version }} · prefills seed {{ one.seed }}
-        <span v-if="waits(one)" data-waiting>· already waiting</span>
-        <span v-if="one.refusal" class="render-dialog__refusal" data-refused
-          ><span class="refusal__mark" />{{ one.refusal }}</span
-        >
-      </p>
-      <footer class="render-dialog__actions">
-        <button class="btn btn-secondary" type="button" @click="emit('close')">
-          Cancel<KeyHint command="cancel" />
-        </button>
-        <button
-          v-if="refused && kept.length"
-          class="btn btn-secondary"
-          type="button"
-          data-deselect
-          @click="deselect"
-        >
-          Deselect those {{ dropped }} and revise {{ kept.length }}<KeyHint command="deselect" />
-        </button>
-        <button
-          v-else-if="answered"
-          class="btn btn-primary"
-          type="button"
-          @click="review(answered)"
-        >
-          Review<KeyHint command="review" />
-        </button>
-        <button
-          v-else-if="!refused"
-          class="btn btn-primary"
-          type="button"
-          data-confirm
-          :disabled="writing"
-          @click="confirm(images)"
-        >
-          Write {{ plural(images.length, 'draft') }} and review<KeyHint command="confirm" />
-        </button>
-      </footer>
-    </section>
-  </div>
+    </p>
+    <footer class="render-dialog__actions">
+      <button class="btn btn-secondary" type="button" @click="emit('close')">
+        Cancel<KeyHint command="cancel" />
+      </button>
+      <button
+        v-if="refused && kept.length"
+        class="btn btn-secondary"
+        type="button"
+        data-deselect
+        @click="deselect"
+      >
+        Deselect those {{ dropped }} and revise {{ kept.length }}<KeyHint command="deselect" />
+      </button>
+      <button
+        v-else-if="answered"
+        class="btn btn-primary"
+        type="button"
+        @click="review(answered)"
+      >
+        Review<KeyHint command="review" />
+      </button>
+      <button
+        v-else-if="!refused"
+        ref="primary"
+        class="btn btn-primary"
+        type="button"
+        data-confirm
+        :disabled="writing"
+        @click="confirm(images)"
+      >
+        Write {{ plural(images.length, 'draft') }} and review<KeyHint command="confirm" />
+      </button>
+    </footer>
+  </dialog>
 </template>

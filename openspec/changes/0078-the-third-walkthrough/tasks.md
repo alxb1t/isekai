@@ -10,7 +10,7 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 - [x] 3 — The approved revision and the waiting draft
 - [x] 4 — The flow chooser
 - [x] 5 — The large view
-- [ ] 6 — The dialogs
+- [x] 6 — The dialogs
 
 ## 1 — The layout
 
@@ -125,14 +125,14 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 
 ## 6 — The dialogs
 
-- [ ] 6.1 **HALT CHECK** — the Render dialog is no `<dialog>`.
+- [x] 6.1 **HALT CHECK** — the Render dialog is no `<dialog>`.
   Verify: `grep -c '<dialog' ui/src/components/RenderDialog.vue` prints `0`.
-- [ ] 6.2 Render `ui/src/components/RenderDialog.vue`, `ui/src/components/ReviseConfirm.vue` and
+- [x] 6.2 Render `ui/src/components/RenderDialog.vue`, `ui/src/components/ReviseConfirm.vue` and
   `ui/src/components/ImportSheet.vue` as modal `<dialog>`s with their first focus per [D13](design.md#d13).
   Verify: `grep -c 'showModal' ui/src/components/RenderDialog.vue ui/src/components/ReviseConfirm.vue ui/src/components/ImportSheet.vue` prints `1` for each file, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 6.3 Add `test_the_render_dialog_opens_on_its_checkbox` to `tests/e2e/test_render.py`, bound to
+- [x] 6.3 Add `test_the_render_dialog_opens_on_its_checkbox` to `tests/e2e/test_render.py`, bound to
   `ui:dialogs:the-render-dialog-opens-on-its-checkbox`, on the `RENDER` batch, cancelled.
   Verify: `grep -c 'the-render-dialog-opens-on-its-checkbox' tests/e2e/test_render.py` prints `1`, and `uv run pytest -q tests/e2e` exits 0.
-- [ ] 6.4 Add rule 11 to `ui/design/spec.md` §1: `**A dialog holds the focus** while open — on its first control, the
+- [x] 6.4 Add rule 11 to `ui/design/spec.md` §1: `**A dialog holds the focus** while open — on its first control, the
   page behind inert — and gives it back on close.`
   Verify: `grep -c 'A dialog holds the focus' ui/design/spec.md` prints `1`.

@@ -28,6 +28,30 @@ from tests.e2e.conftest import (
 )
 
 
+@pytest.mark.spec("ui:dialogs:the-render-dialog-opens-on-its-checkbox")
+def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> None:
+    # Cancelled, so the next test still confirms this batch's one image.
+    page.goto(served.hub_of(RENDER))
+    cell = page.locator('.hub__source[data-row="0"]')
+    expect(cell).to_be_focused()
+
+    page.keyboard.press("Shift+G")
+
+    dialog = page.locator("dialog.render-dialog")
+    keep = dialog.locator("[data-keep-open]")
+    expect(keep).to_be_focused()
+    # ↵ on the checkbox neither ticks it nor renders.
+    page.keyboard.press("Enter")
+    expect(keep).not_to_be_checked()
+    expect(dialog).to_be_visible()
+    for _ in range(dialog.locator("button:enabled, input").count()):
+        page.keyboard.press("Tab")
+        assert dialog.evaluate("(held) => held.contains(document.activeElement)")
+    page.keyboard.press("Escape")
+    expect(dialog).to_have_count(0)
+    expect(cell).to_be_focused()
+
+
 @pytest.mark.spec("ui:render:the-confirmation-starts-the-render")
 def test_confirming_the_dialog_opens_the_session(page: Page, served: Served) -> None:
     page.goto(served.hub_of(RENDER))
