@@ -5,7 +5,7 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 
 ## Progress
 
-- [ ] 1 — The layout
+- [x] 1 — The layout
 - [ ] 2 — Review's keys from a field
 - [ ] 3 — The approved revision and the waiting draft
 - [ ] 4 — The flow chooser
@@ -14,21 +14,21 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 
 ## 1 — The layout
 
-- [ ] 1.1 **HALT CHECK** — the Library names seven sources a row.
+- [x] 1.1 **HALT CHECK** — the Library names seven sources a row.
   Verify: `grep -c 'ROW_THUMBS = 7$' isekai/interface/ui/library.py` prints `1`.
-- [ ] 1.2 Set `ROW_THUMBS = 15` in `isekai/interface/ui/library.py` per [D3](design.md#d3); in `tests/test_ui_library.py`,
+- [x] 1.2 Set `ROW_THUMBS = 15` in `isekai/interface/ui/library.py` per [D3](design.md#d3); in `tests/test_ui_library.py`,
   `test_a_row_names_its_first_seven_sources_in_the_hubs_order` becomes `…_first_fifteen_…`, seventeen sources.
   Verify: `grep -c 'ROW_THUMBS = 15$' isekai/interface/ui/library.py` prints `1`, and `uv run pytest -q tests/test_ui_library.py` exits 0.
-- [ ] 1.3 Redraw the hub's row in `ui/src/views/Hub.vue` and `ui/src/app.css` per [D1](design.md#d1); in
+- [x] 1.3 Redraw the hub's row in `ui/src/views/Hub.vue` and `ui/src/app.css` per [D1](design.md#d1); in
   `tests/e2e/test_routes.py` find the source by `.hub__name`.
   Verify: `grep -c 'hub__file' ui/src/views/Hub.vue ui/src/app.css tests/e2e/test_routes.py` prints `0` for each file, and `uv run pytest -q tests/e2e/test_routes.py` exits 0.
-- [ ] 1.4 Add the step to `test_the_source_cell_opens_its_photograph` in `tests/e2e/test_render.py`: with the source
+- [x] 1.4 Add the step to `test_the_source_cell_opens_its_photograph` in `tests/e2e/test_render.py`: with the source
   cell focused, `.hub__thumb`'s bottom equals the row's `.hub__images` bottom.
   Verify: `grep -c 'hub__images' tests/e2e/test_render.py` prints a number of at least `1`, and `uv run pytest -q tests/e2e/test_render.py -k source_cell` exits 0.
-- [ ] 1.5 Draw Renders' source cell as the thumbnail alone in `ui/src/views/Renders.vue` and `ui/src/app.css` per
+- [x] 1.5 Draw Renders' source cell as the thumbnail alone in `ui/src/views/Renders.vue` and `ui/src/app.css` per
   [D2](design.md#d2).
   Verify: `grep -c 'renders__name' ui/src/views/Renders.vue ui/src/app.css` prints `0` for each file, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 1.6 In `ui/design/spec.md`: J2's grid drawing loses its `file · dims` lines; its grid bullet's ``then mono 11
+- [x] 1.6 In `ui/design/spec.md`: J2's grid drawing loses its `file · dims` lines; its grid bullet's ``then mono 11
   `file · dims`, the size read from the file,`` → `the size in the viewer's title,`; the Renders bullet loses `, and
   its name`; Home's `up to seven` → `up to fifteen`.
   Verify: `grep -c 'file · dims' ui/design/spec.md` prints `0`, and `grep -c 'up to fifteen' ui/design/spec.md` prints `1`.

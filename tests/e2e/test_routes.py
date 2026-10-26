@@ -16,10 +16,10 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     page.keyboard.press("Enter")
     expect(page).to_have_url(served.hub)
     expect(page.locator(".appbar__place")).to_have_text(served.batch)
-    expect(page.locator(".hub__file", has_text="ada.jpg")).to_be_visible()
+    expect(page.locator(".hub__name", has_text="ada")).to_be_visible()
     page.reload()
     expect(page).to_have_url(served.hub)
-    expect(page.locator(".hub__file", has_text="ada.jpg")).to_be_visible()
+    expect(page.locator(".hub__name", has_text="ada")).to_be_visible()
 
     page.goto(served.review(served.approved))
     current = page.locator(".rail__card--current")

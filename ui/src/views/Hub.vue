@@ -466,14 +466,9 @@ onUnmounted(() => {
                 @change="selected.has(row) ? selected.delete(row) : selected.add(row)"
               />{{ stem(source.name) }}
             </span>
-            <span class="hub__file mono">
-              {{ source.name }}<template v-if="source.width"> · {{ source.width }}×{{ source.height }}</template>
-            </span>
             <span v-if="source.carries.length" class="hub__warn mono">⚠ not cleaned</span>
-            <span v-if="focused(row, 0)" class="hub__action mono"
-              >↵ view photo</span
-            >
           </span>
+          <span v-if="focused(row, 0)" class="hub__action mono">↵ view photo</span>
           <button
             class="hub__thumb"
             type="button"
@@ -496,64 +491,69 @@ onUnmounted(() => {
           tabindex="-1"
           @click="clicked($event, row, column + 1)"
         >
-          <input
-            class="hub__tick"
-            :class="{ 'hub__tick--assigned': cell(source, flow).stage === 'assigned' }"
-            type="checkbox"
-            :checked="cell(source, flow).stage !== null"
-            :disabled="locked(cell(source, flow))"
-            :aria-label="`${source.name} × ${flow}`"
-            @click.prevent.stop="place(row, column + 1), toggle(row, column + 1, true)"
-          />
-          <template v-if="cell(source, flow).stage !== null">
-            <span class="hub__track">
-              <span
-                v-for="(name, index) in SEGMENTS"
-                :key="name"
-                class="hub__segment"
-                :class="segment(source, flow, index)"
-              />
-            </span>
-            <span
-              class="hub__word mono"
-              :class="{ 'hub__word--running': running[key(source, flow)] }"
-              >{{ word(source, flow) }}</span
-            >
-            <span
-              v-if="focused(row, column + 1) && locked(cell(source, flow))"
-              class="hub__reason"
-              >prepared · the tick stays</span
-            >
-            <span
-              v-if="focused(row, column + 1) && hint(source, flow)"
-              class="hub__action mono"
-              >{{ hint(source, flow) }}</span
-            >
-            <span v-if="source.digest && cell(source, flow).images.length" class="hub__images">
-              <button
-                v-for="(one, index) in cell(source, flow).images"
-                :key="`${one.version}/${one.seed}`"
-                class="renders__image"
-                type="button"
-                :data-version="one.version"
-                :data-seed="one.seed"
-                @click.stop="place(row, column + 1), view(source, flow, index)"
-              >
-                <img
-                  :src="thumbAt({ batch, digest: source.digest, flow, ...one })"
-                  :alt="`${source.name} ${flow} v${one.version} seed ${one.seed}`"
-                  loading="lazy"
+          <span class="hub__line">
+            <input
+              class="hub__tick"
+              :class="{ 'hub__tick--assigned': cell(source, flow).stage === 'assigned' }"
+              type="checkbox"
+              :checked="cell(source, flow).stage !== null"
+              :disabled="locked(cell(source, flow))"
+              :aria-label="`${source.name} × ${flow}`"
+              @click.prevent.stop="place(row, column + 1), toggle(row, column + 1, true)"
+            />
+            <template v-if="cell(source, flow).stage !== null">
+              <span class="hub__track">
+                <span
+                  v-for="(name, index) in SEGMENTS"
+                  :key="name"
+                  class="hub__segment"
+                  :class="segment(source, flow, index)"
                 />
-                <span class="renders__badge mono">v{{ one.version }}</span>
-              </button>
-            </span>
-            <p v-if="cell(source, flow).refusal" class="hub__refusal">
-              <span class="refusal__mark" />{{ cell(source, flow).refusal }}
-            </p>
-          </template>
+              </span>
+              <span
+                class="hub__word mono"
+                :class="{ 'hub__word--running': running[key(source, flow)] }"
+                >{{ word(source, flow) }}</span
+              >
+              <span
+                v-if="focused(row, column + 1) && locked(cell(source, flow))"
+                class="hub__reason"
+                >prepared · the tick stays</span
+              >
+              <span
+                v-if="focused(row, column + 1) && hint(source, flow)"
+                class="hub__action mono"
+                >{{ hint(source, flow) }}</span
+              >
+            </template>
+          </span>
+          <p v-if="cell(source, flow).stage !== null && cell(source, flow).refusal" class="hub__refusal">
+            <span class="refusal__mark" />{{ cell(source, flow).refusal }}
+          </p>
           <p v-if="refusals[key(source, flow)]" class="hub__refusal">
             <span class="refusal__mark" />{{ refusals[key(source, flow)] }}
           </p>
+          <span
+            v-if="cell(source, flow).stage !== null && source.digest && cell(source, flow).images.length"
+            class="hub__images"
+          >
+            <button
+              v-for="(one, index) in cell(source, flow).images"
+              :key="`${one.version}/${one.seed}`"
+              class="renders__image"
+              type="button"
+              :data-version="one.version"
+              :data-seed="one.seed"
+              @click.stop="place(row, column + 1), view(source, flow, index)"
+            >
+              <img
+                :src="thumbAt({ batch, digest: source.digest, flow, ...one })"
+                :alt="`${source.name} ${flow} v${one.version} seed ${one.seed}`"
+                loading="lazy"
+              />
+              <span class="renders__badge mono">v{{ one.version }}</span>
+            </button>
+          </span>
         </div>
       </template>
     </div>

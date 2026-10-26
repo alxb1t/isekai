@@ -184,7 +184,15 @@ def test_the_source_cell_opens_its_photograph(page: Page, served: Served) -> Non
     expect(first).to_be_focused()
 
     page.keyboard.press("h")
-    expect(page.locator('.hub__source[data-row="0"]')).to_be_focused()
+    source = page.locator('.hub__source[data-row="0"]')
+    expect(source).to_be_focused()
+    expect(source.locator(".hub__action")).to_be_visible()
+    thumb = source.locator(".hub__thumb").bounding_box()
+    images = page.locator('.hub__cell[data-row="0"] .hub__images').bounding_box()
+    assert thumb is not None and images is not None
+    assert thumb["y"] + thumb["height"] == pytest.approx(
+        images["y"] + images["height"], abs=1
+    )
     page.keyboard.press("Enter")
 
     viewer = page.locator("dialog[data-viewer]")

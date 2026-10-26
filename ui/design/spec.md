@@ -162,11 +162,9 @@ J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 
 6 sources × 2 flows                          [ Add sources… ⇧A ]
 SOURCE                 │ summon-anime-wai                 │ conjure-anime-wai
 00003                  │ ☑ ▰▰▰▰▰▰ rendered ×1      ↵ view │ ☑ ▰▰▰▰▰▱ approved
-00003.png · 832×1216   │ [v1▢][v2▢]                       │
-[▣]                    │                                  │
+[▣]                    │ [v1▢][v2▢]                       │
 cowboy_shot_2_of_a_ver │ ☑ ▰▰▰▱▱▱ captioning…            │ ☐
-y_long_name.jpg · 832× │                                  │
-1216                   │                                  │
+y_long_name            │                                  │
 [▣]                    │                                  │
 
         ┌ IMG_0430 × summon · …                 [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
@@ -181,13 +179,14 @@ y_long_name.jpg · 832× │                                  │
 - **The tick:** accent fill is assigned and can be unticked; `tick-locked` is prepared and stays (`prepared ·
   the tick stays`).
 - **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`,
-  `↵ view` or, on the source cell, `↵ view photo`). The hub keeps its focus for the open batch: `Esc` from a large
+  `↵ view` or, on the source cell, `↵ view photo` at its top right, taking no line). The hub keeps its focus for the open batch: `Esc` from a large
   view, the Back button and a tab switch come back to the cell left, else the first row's source cell.
 - **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
   cell holding images opens the viewer on its newest (`↵ view`), `← →` `h l` step its images and `↵` opens the
   shown one's large view. The checkbox's own click only ticks.
-- **A cell's images** sit under its stage track, every approved version's, oldest to newest, each a 96×128 tile
+- **A cell's images** sit at its foot, level with the source's thumbnail, under its stage track and any refusal,
+  every approved version's, oldest to newest, each a 96×128 tile
   with its `vN` badge, wrapping; a click on one opens the viewer on it.
 - **A cell's refusal** sits inside the cell with its fix; the cell returns to assigned, so the next Prepare retries
   it.
@@ -205,7 +204,7 @@ y_long_name.jpg · 832× │                                  │
   `Session ⇧S`.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is the grid's
   first column, `h` from the first flow cell, and a column itself: the file's stem in mono 13, its first line level
-  with the cells' tick line, then mono 11 `file · dims`, the size read from the file, then a 96×128 thumbnail, a
+  with the cells' tick line, the size in the viewer's title, then a 96×128 thumbnail at the cell's foot, a
   render tile's size, upright; a row checkbox appears in selection mode. A long name breaks inside the column, as
   it does on Renders, Review's rail and Home, never spilling out. A click
   on the thumbnail or `↵` opens the viewer on its photograph, `← →` stepping the batch's sources; space does nothing
@@ -335,7 +334,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
                                                                              [ Revise again e ]
 ```
 
-- **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer, and its name. A
+- **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer. A
   cell is one wrapped row of thumbnails, versions oldest to newest, each with a `vN` badge and `⇄` in `accent-ink` when its
   seed is shared across versions. A damaged version is a striped tile before its images, its refusal under the
   cell. Last comes the ready tile, `ready · n images`, while the newest version lacks images of its Count, the render
@@ -395,7 +394,7 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 
 - **Home's row**: a header line — the name, `n sources`, one chip per flow present (its denominator the sources that
   have it; chips wrap), `n sources without a flow`, and at the right last activity, the time and kind of the newest
-  file written in the batch, then `open ↵` — over up to seven 84×114 thumbnails then `+n`, at the full width,
+  file written in the batch, then `open ↵` — over up to fifteen 84×114 thumbnails then `+n`, at the full width,
   wrapping in a narrow window. Sorted by last activity; a folder without `sources/`
   sorts last, striped and inert; dot-folders, `.staging` among them, are not listed.
 - **A running render's row** has an accent left edge (`inset 2px 0 0`), background `#1b1c2c`,
