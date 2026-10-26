@@ -607,12 +607,11 @@ approved from another's sheet stays the CLI's. On first start the privacy line i
 
 ### Requirement: Every screen has a URL naming its batch and its run
 
-The system SHALL give Home, a batch's hub, a batch's Review, a review of a source in a flow, a batch's sessions,
-one session and the billing alert's way out each its own URL,
-SHALL name the batch in every URL inside one, and SHALL name a run by the twelve-character digest its identifier
-begins with. A batch's Review SHALL open the sheet Review starts from and put that sheet's URL in its place. It SHALL
-answer any of them on a fresh load, and SHALL refuse one naming a batch or a run the library does not hold, naming
-the way back.
+The system SHALL give Home, a batch's hub, a batch's Review, a review of a source in a flow and the billing alert's way
+out each its own URL, the session drawer holding none, SHALL name the batch in every URL inside one, and SHALL name a
+run by the twelve-character digest its identifier begins with. A batch's Review SHALL open the sheet Review starts from
+and put that sheet's URL in its place. It SHALL answer any of them on a fresh load, and SHALL refuse one naming a batch
+or a run the library does not hold, naming the way back.
 
 A reload, a second tab or a bookmark then lands where it was, never on whatever the server last held open. A run's
 short name is a sanitised filename and can repeat; its digest cannot.
@@ -622,8 +621,6 @@ short name is a sanitised filename and can repeat; its digest cannot.
 /b/<batch>/hub                     the hub
 /b/<batch>/review                  the head of Review, replaced by its sheet's URL
 /b/<batch>/review/<digest>/<flow>  Review
-/b/<batch>/sessions                the batch's sessions
-/b/<batch>/sessions/<id>           one session
 /billing                           the billing alert's way out
 ```
 
@@ -1025,16 +1022,16 @@ snapshot, so a stream opened again loses nothing, and one connection a page leav
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
 The system SHALL offer Render from a bar on a batch's hub and its Renders view that counts the images short of their
-approvals' counts, and SHALL show no such bar when none is short and no count is refused, nor on the hub while
-changes wait for Prepare. The bar SHALL be disabled, with its reason, when a render runs, when a pod may still be
-billing, when no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a
-dialog listing per offered flow the images that will render and what is left out, with the reason, the session's
-estimate and limit, and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at
-its configured rate. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL, and SHALL close
-when its page is left, the confirmation's own navigation among the ways out. The confirmation SHALL carry the limit
-and the number of images the dialog showed, and SHALL be refused, starting nothing, when the batch's quote taken
-again has a longer limit or another number of images. The bar SHALL show the newest offer asked for, whatever order
-the answers arrive in.
+approvals' counts, and SHALL show no such bar when none is short and no count is refused, nor on the hub while changes
+wait for Prepare. The bar SHALL be disabled, with its reason, when a render runs, when a pod may still be billing, when
+no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a dialog listing
+per offered flow the images that will render and what is left out, with the reason, the session's estimate and limit,
+and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its configured rate. Its
+confirmation SHALL be the only act that rents; the dialog SHALL hold no URL, and SHALL close when its page is left, and
+the confirmation SHALL close it and open the session drawer over the page. The confirmation SHALL carry the limit and
+the number of images the dialog showed, and SHALL be refused, starting nothing, when the batch's quote taken again has a
+longer limit or another number of images. The bar SHALL show the newest offer asked for, whatever order the answers
+arrive in.
 
 The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
 not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires
@@ -1080,8 +1077,8 @@ a refused count keeps the bar, so the refusal is never silent.
 - **Key:** `ui:render:the-confirmation-starts-the-render`
 - **Layers:** e2e
 - **WHEN** the dialog's Render is confirmed
-- **THEN** the session's page opens at `/b/<batch>/sessions/<id>`
-- **AND** back on the hub the dialog is closed
+- **THEN** the session drawer opens over the hub, which keeps its URL
+- **AND** the dialog is closed
 
 #### Scenario: a quote that has grown is refused
 - **Key:** `ui:render:a-grown-quote-is-refused`
@@ -1376,14 +1373,14 @@ it, and SHALL draw every key hint and the key list from those declarations, the 
 on the app bar's `?` button; no screen SHALL carry a key bar. It SHALL match a key by the physical key, whatever the
 keyboard layout, and SHALL treat Mod as `⌘` on macOS and `Ctrl` elsewhere. An open overlay SHALL take every key before
 the screen beneath it, and the screen before the keys offered everywhere. While focus is in a text field, no command
-SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K` and `⌃/`, Review's `⌃P`, and on macOS Review's `⌃H` and `⌃L`,
-which move between its panes, and `⌃J` and `⌃K`, which move between its fields as `↓` and `↑` do; the field SHALL keep
-its own editing keys. On a grid, a move between rows SHALL keep the column it is in, held at a shorter row's end. On the
-hub and on a session's page, a focused button or link SHALL keep `↵` and `Space`. An `Esc` that ends an input method's
-composition SHALL be the input method's, closing nothing. `Esc` SHALL close an open suggestion list first, then leave
-the field, then close the top overlay, then go back on the screen, and SHALL never close a billing alert. On the large
-view and on Renders a command that writes SHALL take a shifted letter and one that only looks a plain one. No key SHALL
-spend money but the Render dialog's `Mod+↵`, which confirms the price it quotes.
+SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;`, Review's `⌃P`, and on macOS Review's `⌃H` and
+`⌃L`, which move between its panes, and `⌃J` and `⌃K`, which move between its fields as `↓` and `↑` do; the field SHALL
+keep its own editing keys. On a grid, a move between rows SHALL keep the column it is in, held at a shorter row's end.
+On the hub and in the session drawer, a focused button or link SHALL keep `↵` and `Space`. An `Esc` that ends an input
+method's composition SHALL be the input method's, closing nothing. `Esc` SHALL close an open suggestion list first, then
+leave the field, then close the top overlay, then go back on the screen, and SHALL never close a billing alert. On the
+large view and on Renders a command that writes SHALL take a shifted letter and one that only looks a plain one. No key
+SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it quotes.
 
 A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
 Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.
@@ -1391,7 +1388,7 @@ On Linux `Ctrl+J` is the browser's and `Ctrl+K` is `Mod+K`, so the field moves a
 not pressed in passing, so it guards what writes.
 
 ```
-keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod+Z · Mod+K · ⌃/, Review's ⌃P,
+keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod+Z · Mod+K · ⌃/ · ⌃;, Review's ⌃P,
                │                     on macOS Review's ⌃H ⌃L ⌃J ⌃K, else the field's own
                │ no
                ▼
@@ -1427,7 +1424,7 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 #### Scenario: a focused control keeps Enter and Space
 - **Key:** `ui:keys:a-focused-control-keeps-enter-and-space`
 - **Layers:** unit
-- **WHEN** `↵` or `Space` is pressed on the hub or a session's page with focus on a button or a link
+- **WHEN** `↵` or `Space` is pressed on the hub or in the session drawer with focus on a button or a link
 - **THEN** the control answers it and the cell's command does not run
 
 #### Scenario: an overlay takes the keys first
@@ -1678,80 +1675,6 @@ the comparison still matters once the revision is approved.
 - **THEN** one dialog shows the photograph and the render at equal height, then the photograph alone
 - **AND** `Esc` closes it
 
-### Requirement: Each batch's render sessions are listed and shown from their records
-
-The system SHALL list a batch's render sessions from its records, the running one first and the rest newest first,
-each with its start, its duration against its limit, its outcome and its images, and SHALL show one session's page
-from its record, live while it runs, with the volume steps and Stop the job adds. A Sessions tab SHALL sit beside the
-hub, Review and Renders. While a render runs, every screen SHALL show it running, with its clock, linking to its
-session's page. A finished image SHALL open in the viewer, and the page SHALL be a grid: a column for each photograph
-the session was asked to render, a row for each flow it renders, the photographs' row at the foot, a cell holding
-that flow's images of that photograph and a waiting tile for each still to come, each opening in the viewer, moved
-through by the keys; images and photographs SHALL be drawn at the tile size Renders draws. The viewer SHALL follow
-its list when it changes while open.
-
-A session is the record the render wrote, so the page, the list and the terminal agree, and a finished session can
-be found again. A running render is the one thing on the surface that bills by the minute.
-
-#### Scenario: a batch lists its sessions
-- **Key:** `ui:sessions:a-batch-lists-its-sessions`
-- **Layers:** unit
-- **WHEN** a batch holds a running record and two finished ones
-- **THEN** its sessions are listed running first, then newest first
-
-#### Scenario: a session's page reads its record
-- **Key:** `ui:sessions:a-session-reads-its-record`
-- **Layers:** unit
-- **WHEN** a session is asked for by its id
-- **THEN** its record's images, steps and outcome are served
-- **AND** an id no record holds is refused, naming the batch's sessions
-
-#### Scenario: the list shows a finished session
-- **Key:** `ui:sessions:the-list-shows-a-finished-session`
-- **Layers:** e2e
-- **WHEN** the Sessions tab is opened on a batch holding a finished record
-- **THEN** the session is listed with its images, and its page opens from it
-
-#### Scenario: a terminal render stays live
-- **Key:** `ui:sessions:a-terminal-render-stays-live`
-- **Layers:** unit
-- **WHEN** a terminal render runs without an app job slot
-- **THEN** its record reads running and the global running-session read names its batch and id
-- **AND** after its process releases ownership without an outcome the record reads ended without an outcome
-
-#### Scenario: the selected record keeps the newest response
-- **Key:** `ui:sessions:the-selected-record-keeps-the-newest-response`
-- **Layers:** unit
-- **WHEN** an older record read answers after a newer read of the same session
-- **THEN** the selected record keeps the newer outcome and images
-
-#### Scenario: an observed list follows its render
-- **Key:** `ui:sessions:an-observed-list-follows-its-render`
-- **Layers:** unit
-- **WHEN** a render starts and lands images while its batch's sessions list is observed
-- **THEN** the list reads the running record and its images again
-- **AND** overlapping refreshes coalesce without an older response replacing newer state
-
-#### Scenario: the viewer follows image identity
-- **Key:** `ui:sessions:the-viewer-follows-image-identity`
-- **Layers:** unit
-- **WHEN** an open viewer's list shrinks, reorders, grows or becomes empty
-- **THEN** it keeps the selected image by identity while present, otherwise a valid neighbour
-- **AND** an empty list closes the viewer
-
-#### Scenario: the session grid holds each flow over the originals
-- **Key:** `ui:sessions:the-grid-holds-each-flow-over-the-originals`
-- **Layers:** unit
-- **WHEN** a record plans two images of one photograph in summon and one of another in conjure
-- **THEN** the grid has a column per photograph, a row per flow over the photographs' row, and three waiting tiles
-- **AND** a record without a plan places its landed images and no waiting tiles
-
-#### Scenario: the session grid moves by photograph and by row
-- **Key:** `ui:sessions:the-grid-moves-by-photograph-and-row`
-- **Layers:** unit
-- **WHEN** `l` and then `j` are pressed on the grid's first render
-- **THEN** `l` moves to the next photograph's column and `j` to the row below, held at the photographs' row
-
 ### Requirement: Conjure from this drafts from an image's approval, and opens Review on it
 
 The system SHALL offer, on an image's large view, one action per target — each flow of the batch that reads a sheet
@@ -1813,3 +1736,92 @@ covers; and only `Mod+↵` spends money, so `↵` on the checkbox never renders.
 - **WHEN** the Render dialog opens on the hub, then `Tab` is pressed until the focus has passed every control
 - **THEN** *Keep the volume open* held the focus first, and the focus never left the dialog
 - **AND** `Esc` returns the focus to the hub cell it left
+
+### Requirement: The running render opens in a drawer every screen offers
+
+The system SHALL show the running render in a session drawer: a modal dialog over half the window, at least 480 px
+wide, on the right, over a dark backdrop, holding no URL. `⌃;` SHALL open and close it on every screen, from a field
+too, and the running render's link SHALL open it; confirming a render SHALL open it, and a render started from the
+terminal SHALL open nothing. It SHALL read the running render's record, live while it runs, with the volume steps and
+Stop the job adds; after it ends it SHALL show that session's outcome, its images and its time until the app reloads or
+another render starts; with neither it SHALL say no render runs. Its images SHALL be a grid: a column for each
+photograph the session was asked to render, a row for each flow, the photographs' row at the foot, a cell holding that
+flow's images of that photograph and a waiting tile for each still to come, drawn at the tile size Renders draws and
+moved through by `h j k l` and the arrows. `↵` SHALL open the focused row in the viewer over the drawer, which SHALL
+follow its list when it changes while open; `⇧I` SHALL close the drawer and open its batch's Renders. A click on the
+backdrop, `⌃;` and `Esc` SHALL close it, `Esc` closing the viewer first.
+
+```
+any screen ──⌃; or ●──▶ the drawer, half the window ──↵──▶ the viewer over it
+                         esc / ⌃; / the backdrop ◀──esc── closes one layer
+```
+
+A running render bills by the minute wherever the operator is, so it is the app's, not a batch's: it is glanced at, not
+gone to. A session is the record the render wrote, so the drawer and the terminal agree; once it ends its images are on
+Renders.
+
+#### Scenario: the drawer holds the render
+- **Key:** `ui:sessions:the-drawer-holds-the-render`
+- **Layers:** e2e
+- **WHEN** a render is confirmed, `↵` is pressed on its image, then `Esc` twice, then `⌃;`
+- **THEN** the drawer shows the render over the hub, the viewer its image, then the drawer again, then the page alone
+- **AND** `⌃;` opens the drawer again on the finished session's outcome
+
+#### Scenario: the drawer keeps the last session
+- **Key:** `ui:sessions:the-drawer-keeps-the-last-session`
+- **Layers:** unit
+- **WHEN** a running render ends, then another starts
+- **THEN** the drawer shows the first's outcome until the second starts, then the second
+
+
+#### Scenario: the viewer closes for a replacement session
+- **Key:** `ui:sessions:the-viewer-closes-for-a-replacement-session`
+- **Layers:** unit
+- **WHEN** another terminal render starts while the finished session's photograph viewer is open
+- **THEN** the viewer closes while the drawer waits for the replacement record
+- **AND** the drawer shows the replacement session without an error
+
+#### Scenario: a session's page reads its record
+- **Key:** `ui:sessions:a-session-reads-its-record`
+- **Layers:** unit
+- **WHEN** a session is asked for by its id
+- **THEN** its record's images, steps and outcome are served
+- **AND** an id no record holds is refused, naming the id
+
+
+#### Scenario: a terminal render stays live
+- **Key:** `ui:sessions:a-terminal-render-stays-live`
+- **Layers:** unit
+- **WHEN** a terminal render runs without an app job slot
+- **THEN** its record reads running and the global running-session read names its batch and id
+- **AND** after its process releases ownership without an outcome the record reads ended without an outcome
+
+
+#### Scenario: the selected record keeps the newest response
+- **Key:** `ui:sessions:the-selected-record-keeps-the-newest-response`
+- **Layers:** unit
+- **WHEN** an older record read answers after a newer read of the same session
+- **THEN** the selected record keeps the newer outcome and images
+
+
+#### Scenario: the viewer follows image identity
+- **Key:** `ui:sessions:the-viewer-follows-image-identity`
+- **Layers:** unit
+- **WHEN** an open viewer's list shrinks, reorders, grows or becomes empty
+- **THEN** it keeps the selected image by identity while present, otherwise a valid neighbour
+- **AND** an empty list closes the viewer
+
+
+#### Scenario: the session grid holds each flow over the originals
+- **Key:** `ui:sessions:the-grid-holds-each-flow-over-the-originals`
+- **Layers:** unit
+- **WHEN** a record plans two images of one photograph in summon and one of another in conjure
+- **THEN** the grid has a column per photograph, a row per flow over the photographs' row, and three waiting tiles
+- **AND** a record without a plan places its landed images and no waiting tiles
+
+
+#### Scenario: the session grid moves by photograph and by row
+- **Key:** `ui:sessions:the-grid-moves-by-photograph-and-row`
+- **Layers:** unit
+- **WHEN** `l` and then `j` are pressed on the grid's first render
+- **THEN** `l` moves to the next photograph's column and `j` to the row below, held at the photographs' row

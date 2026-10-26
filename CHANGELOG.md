@@ -9,6 +9,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-10-26 · 0079-the-session-drawer
+
+Gate: local 0m45s · CI 1m29s (ci at 63d656d) · 0.51.0: local 0m46s · CI 1m24s
+
+### Changed
+
 - The shortcut decision includes `⌃;` among the keys available in text fields, matching the drawer (0079 D3).
 
 - Starting another render closes the previous session's photograph viewer, keeping the drawer usable
