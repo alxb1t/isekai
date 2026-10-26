@@ -48,11 +48,9 @@ const approval = useApproval()
 const current = computed(() => props.digest)
 const photoUrl = (digest: string) => photoAt({ batch: props.batch, digest, flow: props.flow })
 const schema = computed(() => sheet.detail.value?.schema ?? [])
-/* A draft copied from an approval, while it is still a draft: the approval's
-   fields mark what changed, and its image sits beside the photograph (J5·4). */
-const revision = computed(() =>
-  sheet.readonly.value ? null : (sheet.detail.value?.revision ?? null),
-)
+/* A draft copied from an approval, and once approved too: the approval's fields
+   mark what changed, and its image sits beside the photograph (J5·4). */
+const revision = computed(() => sheet.detail.value?.revision ?? null)
 /* A draft drafted from another flow's approval: its own sheet's fields mark
    what that approval changed. */
 const drafted = computed(() => sheet.detail.value?.drafted ?? null)

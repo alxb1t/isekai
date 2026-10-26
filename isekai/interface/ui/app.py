@@ -668,6 +668,7 @@ def create_app(
             body = read(approved, APPROVED_FILE, remedy=remedy)
             fields = _fields(approved, body, remedy)
             renders = renders_of(approved, body, remedy)
+            revision = _revision(one, body, renders)
         elif draft is not None:
             remedy = _remedy(one, "review")
             body = read(draft, DRAFT_FILE)
@@ -699,8 +700,8 @@ def create_app(
             # Seeds as decimal strings: a 64-bit seed is past what a JavaScript
             # number holds exactly.
             "renders": _renders_out(renders),
-            # The approval a draft was copied from, its fields and the image
-            # being revised; null for a draft of a sheet.
+            # The approval a draft or the approval shown was copied from, its
+            # fields and the image being revised; null for a copy of a sheet.
             "revision": revision,
             # The other flow's approval a draft was drafted from, and the fields
             # of its own sheet; null for any other draft.
@@ -848,27 +849,39 @@ def create_app(
     ) -> dict[str, Any] | JSONResponse:
         """Write a revision for every image named, or, when any is refused, none.
 
-        A refusal answers each image with its own refusal, or null where it could
-        be revised, so the page can offer to deselect the rest.
+        An image whose flow holds a waiting draft is answered with that draft as
+        `waiting`, and nothing is written for it. A refusal answers each image
+        with its own refusal, or null where it could be revised, so the page can
+        offer to deselect the rest.
         """
         found = folder(batch)
         named = _images(payload)
         answers: list[str | None] = []
+        waiting: list[Path | None] = []
         located: list[tuple[Path, Revision]] = []
-        for digest, flow, version, seed in named:
-            try:
-                # A flow this build does not track names no directory of a run.
-                one = offered(flow)
-                run = library.run_named(found, digest)
-                image = image_of(run, one, version, seed)
-                located.append((image, (run, flow, version, seed)))
-                answers.append(None)
-            except Refusal as refused:
-                answers.append(str(refused))
         with _DRAFT_UPDATE:
-            # Each image the batch holds takes its answer from the review stage.
+            for digest, flow, version, seed in named:
+                held = None
+                try:
+                    # A flow this build does not track names no directory of a run.
+                    one = offered(flow)
+                    run = library.run_named(found, digest)
+                    image = image_of(run, one, version, seed)
+                    # The draft in hand is opened rather than refused; the review
+                    # stage, and the CLI through it, still refuses it.
+                    held = current_draft(run.directory(flow, REVIEW))
+                    if held is None:
+                        located.append((image, (run, flow, version, seed)))
+                    answers.append(None)
+                except Refusal as refused:
+                    answers.append(str(refused))
+                waiting.append(held)
+            # Each other image the batch holds takes its answer from the review stage.
             checked = iter(refuse_revisions(located))
-            answers = [next(checked) if a is None else a for a in answers]
+            answers = [
+                next(checked) if answer is None and held is None else answer
+                for answer, held in zip(answers, waiting, strict=True)
+            ]
             if any(answer is not None for answer in answers):
                 return JSONResponse(
                     {
@@ -880,10 +893,17 @@ def create_app(
                     },
                     REFUSED,
                 )
-            drafts = [
-                {**_image_out(*one), "draft": revise(*revision).name}
-                for one, (_, revision) in zip(named, located, strict=True)
-            ]
+            written = iter(located)
+            drafts = []
+            for one, held in zip(named, waiting, strict=True):
+                draft = None if held else revise(*next(written)[1]).name
+                drafts.append(
+                    {
+                        **_image_out(*one),
+                        "draft": draft,
+                        "waiting": held.name if held else None,
+                    }
+                )
         return {"drafts": drafts}
 
     @app.get("/api/b/{batch}/renders")
@@ -1189,7 +1209,7 @@ def _approved(approval: Path) -> tuple[ReviewApproved, dict[str, list[str]]]:
 def _revision(
     one: Held, body: Mapping[str, Any], renders: Renders
 ) -> dict[str, Any] | None:
-    """Describe the approval a draft was copied from, and the image it revises.
+    """Describe the approval a draft or an approval was copied from, and its image.
 
     The image is the first listed seed rendered under that approval, or null.
     e.g. from 1, seeds [7], outputs/001/7.png there -> {"version": 1, "seed": "7", …}

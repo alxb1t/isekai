@@ -84,7 +84,7 @@ from isekai.interface.ui.app import (  # noqa: E402
 from isekai.interface.ui.jobs import Jobs  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
-from isekai.pipeline.generate import prepare, prompt_artifact  # noqa: E402
+from isekai.pipeline.generate import image_of, prepare, prompt_artifact  # noqa: E402
 from isekai.pipeline.review import (  # noqa: E402
     DRAFT,
     ENCODER_WINDOW,
@@ -721,6 +721,65 @@ def test_a_discard_stating_the_draft_on_disk_deletes_it_and_no_approval(
     assert answered.json() == {"discarded": "002.draft.json"}
     assert versions(made.directory(FLOW, REVIEW)) == [1]
     assert approved.read_bytes() == frozen
+
+
+def _revised(client: TestClient, made: Run) -> Path:
+    """Approve `made`, render seed 7 under it, and revise that image; return v1."""
+    first = _approved(client, made)
+    image = image_of(made, load_flow(FLOW), 1, 7)
+    image.parent.mkdir(parents=True)
+    image.write_bytes(png_bytes(8, 8))
+    (image.parent / "7.render.json").write_text("{}\n")
+    answered = client.post(
+        f"/api/b/{BATCH}/revise",
+        json={
+            "images": [{"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"}]
+        },
+    )
+    assert answered.status_code == 200
+    return first
+
+
+@pytest.mark.spec("ui:revise:an-approved-revision-keeps-its-image")
+def test_an_approved_revision_names_the_approval_its_image_and_its_fields(
+    client: TestClient, made: Run
+) -> None:
+    first = _revised(client, made)
+    body = client.get(_at(made)).json()
+    # A second image is a change, so the copy approves.
+    renders = {"count": 2, "seeds": ["7"]}
+    saved = client.put(
+        _at(made, "/draft"),
+        json={"fields": body["fields"], "renders": renders, "saved": body["saved"]},
+    ).json()["saved"]
+    assert client.post(_at(made, "/approve"), json={"saved": saved}).status_code == 200
+
+    approved = client.get(_at(made)).json()
+
+    assert approved["readonly"] is True
+    assert approved["approved"] == "002.approved.json"
+    assert approved["revision"] == {
+        "version": 1,
+        "seed": "7",
+        "fields": read(first, APPROVED_FILE)["fields"],
+    }
+
+
+@pytest.mark.spec("ui:revise:a-waiting-draft-is-opened")
+def test_revising_an_image_whose_flow_holds_a_waiting_draft_answers_that_draft(
+    client: TestClient, made: Run
+) -> None:
+    _revised(client, made)
+    image = {"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"}
+    before = snapshot(made.path)
+
+    answered = client.post(f"/api/b/{BATCH}/revise", json={"images": [image]})
+
+    assert answered.status_code == 200
+    assert answered.json() == {
+        "drafts": [{**image, "draft": None, "waiting": "002.draft.json"}]
+    }
+    assert snapshot(made.path) == before
 
 
 @pytest.mark.spec("ui:draft-update:no-precondition-is-accepted")

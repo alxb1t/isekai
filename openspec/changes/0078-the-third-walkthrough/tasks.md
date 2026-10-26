@@ -7,7 +7,7 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 
 - [x] 1 — The layout
 - [x] 2 — Review's keys from a field
-- [ ] 3 — The approved revision and the waiting draft
+- [x] 3 — The approved revision and the waiting draft
 - [ ] 4 — The flow chooser
 - [ ] 5 — The large view
 - [ ] 6 — The dialogs
@@ -62,20 +62,20 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 
 ## 3 — The approved revision and the waiting draft
 
-- [ ] 3.1 **HALT CHECK** — Review drops a revision once read-only.
+- [x] 3.1 **HALT CHECK** — Review drops a revision once read-only.
   Verify: `grep -c 'sheet.readonly.value ? null : (sheet.detail.value?.revision' ui/src/views/Review.vue` prints `1`.
-- [ ] 3.2 Compute `revision` for the approval in `read_input` (`isekai/interface/ui/app.py`) and keep it in
+- [x] 3.2 Compute `revision` for the approval in `read_input` (`isekai/interface/ui/app.py`) and keep it in
   `ui/src/views/Review.vue` per [D7](design.md#d7); bind `ui:revise:an-approved-revision-keeps-its-image` in
   `tests/test_ui_api.py`.
   Verify: `grep -c 'ui:revise:an-approved-revision-keeps-its-image' tests/test_ui_api.py` prints `1`, and `uv run pytest -q tests/test_ui_api.py` exits 0.
-- [ ] 3.3 Answer a waiting draft in `post_revise` (`isekai/interface/ui/app.py`) and open it from
+- [x] 3.3 Answer a waiting draft in `post_revise` (`isekai/interface/ui/app.py`) and open it from
   `ui/src/components/ReviseConfirm.vue`, with `ui/src/api.ts` and `ui/src/types.ts`, per [D8](design.md#d8); bind
   `ui:revise:a-waiting-draft-is-opened` in `tests/test_ui_api.py`.
   Verify: `grep -c 'ui:revise:a-waiting-draft-is-opened' tests/test_ui_api.py` prints `1`, and `uv run pytest -q tests/test_ui_api.py` exits 0, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.4 In `test_revise_opens_review_on_the_revision` (`tests/e2e/test_render.py`), after *Approve sheet*, the
+- [x] 3.4 In `test_revise_opens_review_on_the_revision` (`tests/e2e/test_render.py`), after *Approve sheet*, the
   `[data-revised] img` is still shown.
   Verify: `uv run pytest -q tests/e2e/test_render.py -k revise_opens_review` exits 0.
-- [ ] 3.5 In `ui/design/spec.md` J5: *The revision's sheet* bullet adds `, and keeps them once approved`; the Revise
+- [x] 3.5 In `ui/design/spec.md` J5: *The revision's sheet* bullet adds `, and keeps them once approved`; the Revise
   bullet adds `An image whose flow holds a waiting draft opens Review on that draft, writing nothing.`
   Verify: `grep -c 'keeps them once approved' ui/design/spec.md` prints `1`, and `grep -c 'holds a waiting draft opens Review' ui/design/spec.md` prints `1`.
 

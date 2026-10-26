@@ -216,8 +216,9 @@ export function draftFrom(
   return send(`${at(place)}/draft-from`, 'POST', { source, version })
 }
 
-/* Every image's draft, or none: a refusal answers each image, and is returned
-   rather than thrown so the page can offer to deselect the refused. */
+/* Every image's draft, written or already waiting, or none: a refusal answers
+   each image, and is returned rather than thrown so the page can offer to
+   deselect the refused. */
 export function revise(
   batch: string,
   images: RevisedImage[],

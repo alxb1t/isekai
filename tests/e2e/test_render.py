@@ -225,6 +225,8 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
     expect(page.locator(".form")).to_contain_text("approved")
     expect(page.locator("input.fragment")).to_have_count(0)
     expect(page).to_have_url(review)
+    expect(page.locator("[data-revised] img")).to_be_visible()
+    expect(page.locator("[data-changed='hair_colour']")).to_contain_text("was")
 
 
 @pytest.mark.spec("ui:conjure-from:conjure-from-this-opens-review")
