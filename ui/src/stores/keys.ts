@@ -126,6 +126,7 @@ const GLYPHS: Record<string, string> = {
   Space: 'space',
   Backslash: '\\',
   Slash: '/',
+  Semicolon: ';',
 }
 
 /** Return how a key is written in a hint. e.g. {code: 'KeyH', shift: true} -> "⇧H" */

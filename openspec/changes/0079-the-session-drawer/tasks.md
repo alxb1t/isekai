@@ -5,26 +5,26 @@ The drawer beside the session pages, then the pages gone, per [design](design.md
 
 ## Progress
 
-- [ ] 1 — The drawer
+- [x] 1 — The drawer
 - [ ] 2 — The session pages removed
 
 ## 1 — The drawer
 
-- [ ] 1.1 **HALT CHECK** — no drawer exists, and a confirmed render routes to its session's page.
+- [x] 1.1 **HALT CHECK** — no drawer exists, and a confirmed render routes to its session's page.
   Verify: `test -e ui/src/components/SessionDrawer.vue; echo $?` prints `1`, and `grep -c "name: 'session'" ui/src/components/RenderDialog.vue` prints `1`.
-- [ ] 1.2 Add `ui/src/stores/drawer.ts` per [D1](design.md#d1); in `ui/src/stores/drawer.test.ts` bind
+- [x] 1.2 Add `ui/src/stores/drawer.ts` per [D1](design.md#d1); in `ui/src/stores/drawer.test.ts` bind
   `ui:sessions:the-drawer-keeps-the-last-session`, and move `ui:sessions:the-selected-record-keeps-the-newest-response`
   there from `ui/src/stores/batch.test.ts`.
   Verify: `grep -c "spec('ui:sessions:" ui/src/stores/drawer.test.ts` prints `2`, and `grep -c 'the-selected-record-keeps-the-newest-response' ui/src/stores/batch.test.ts` prints `0`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 1.3 Add `ui/src/components/SessionDrawer.vue` per [D2](design.md#d2), drawn in `ui/src/App.vue`, its styles in
+- [x] 1.3 Add `ui/src/components/SessionDrawer.vue` per [D2](design.md#d2), drawn in `ui/src/App.vue`, its styles in
   `ui/src/app.css`; declare `⌃;`, and make `●` and the Render bar's link in `ui/src/components/RenderBar.vue` open it,
   per [D3](design.md#d3).
   Verify: `grep -c 'showModal' ui/src/components/SessionDrawer.vue` prints `1`, and `grep -c "code: 'Semicolon', ctrl: true" ui/src/App.vue` prints `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 1.4 Open the drawer from `confirm` in `ui/src/components/RenderDialog.vue` per [D3](design.md#d3); in
+- [x] 1.4 Open the drawer from `confirm` in `ui/src/components/RenderDialog.vue` per [D3](design.md#d3); in
   `test_confirming_the_dialog_opens_the_session` (`tests/e2e/test_render.py`) expect the drawer over the hub, the hub's
   URL kept.
   Verify: `grep -c "name: 'session'" ui/src/components/RenderDialog.vue` prints `0`, and `uv run pytest -q tests/e2e/test_render.py -k confirming` exits 0.
-- [ ] 1.5 Add a second renderable batch to `tests/e2e/conftest.py`, and `test_the_drawer_holds_the_render` to
+- [x] 1.5 Add a second renderable batch to `tests/e2e/conftest.py`, and `test_the_drawer_holds_the_render` to
   `tests/e2e/test_render.py`, bound to `ui:sessions:the-drawer-holds-the-render`.
   Verify: `grep -c 'the-drawer-holds-the-render' tests/e2e/test_render.py` prints `1`, and `uv run pytest -q tests/e2e/test_render.py` exits 0.
 

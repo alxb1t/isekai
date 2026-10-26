@@ -40,23 +40,6 @@ spec('ui:render:a-stale-offer-is-dropped', async () => {
   expect(store.offer.images).toBe(2)
 })
 
-spec('ui:sessions:the-selected-record-keeps-the-newest-response', async () => {
-  const pending: ((value: object) => void)[] = []
-  vi.stubGlobal('fetch', () => new Promise((resolve) =>
-    pending.push((value) => resolve({ ok: true, json: async () => value })),
-  ))
-  const store = useBatchStore()
-  store.open('b')
-  const older = store.showSession('s')
-  const newer = store.showSession('s')
-  pending[1]({ id: 's', outcome: 'done', images: [{ seed: '7' }] })
-  await newer
-  pending[0]({ id: 's', outcome: 'running', images: [] })
-  await older
-  expect(store.session?.outcome).toBe('done')
-  expect(store.session?.images).toHaveLength(1)
-})
-
 spec('ui:sessions:an-observed-list-follows-its-render', async () => {
   const requests: { url: string; answer: (value: object) => void }[] = []
   vi.stubGlobal('fetch', (url: string) => new Promise((resolve) => requests.push({

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { noun } from '../words'
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { quoteRender, startRender } from '../api'
 import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import { modded, plain } from '../stores/keys'
 import { useBatchStore } from '../stores/batch'
+import { useDrawerStore } from '../stores/drawer'
 import { clock, useLiveStore } from '../stores/live'
 import type { Quote } from '../types'
 import KeyHint from './KeyHint.vue'
@@ -14,14 +14,14 @@ import KeyHint from './KeyHint.vue'
 /* The Render dialog (design spec J4·1): per flow what renders and what is left
    out, the estimate and its limit, and the price at most. It has no URL, so a
    reload never reopens a confirmation that spends; ⌘↵ is the only act here that
-   rents. It belongs to its page: confirming closes it before the session opens.
+   rents. It belongs to its page: confirming closes it and opens the render drawer over it.
    A modal dialog: the focus waits on *Keep the volume open*, where `↵` does
    nothing, so only ⌘↵ spends. */
 const props = defineProps<{ batch: string }>()
 const emit = defineEmits<{ close: [] }>()
-const router = useRouter()
 const live = useLiveStore()
 const store = useBatchStore()
+const drawer = useDrawerStore()
 const quote = ref<Quote | null>(null)
 const refusal = ref<string | null>(null)
 const keepOpen = ref(false)
@@ -43,15 +43,11 @@ async function confirm(): Promise<void> {
       quote.value.estimate.limit_s,
       total.value,
     )
-    // Held at once, so the session's page draws from the render slot as it opens.
+    // Held at once, so the drawer draws from the render slot as it opens.
     live.hold(job)
     store.closeDialog()
     const id = job.session?.id
-    void router.push(
-      id
-        ? { name: 'session', params: { batch: props.batch, id } }
-        : { name: 'sessions', params: { batch: props.batch } },
-    )
+    if (id) drawer.openOn(props.batch, id)
   } catch (reason) {
     refusal.value = (reason as Error).message
   } finally {
