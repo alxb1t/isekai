@@ -121,18 +121,18 @@ def test_a_flows_counts_are_out_of_the_sources_that_have_it(
 
 
 @pytest.mark.spec("ui:batch-folder:a-row-names-its-first-sources")
-def test_a_row_names_its_first_seven_sources_in_the_hubs_order(
+def test_a_row_names_its_first_fifteen_sources_in_the_hubs_order(
     tmp_path: Path,
 ) -> None:
-    names = [f"{letter}.jpg" for letter in "ihgfedcba"]
+    names = [f"{letter}.jpg" for letter in "qponmlkjihgfedcba"]
     folder = _batch(tmp_path, "b", *names)
 
     (row,) = library.rows(tmp_path, OFFERED, FLOWS_DIR)
 
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
-    assert row.thumbs == tuple(one.name for one in grid.sources[:7])
-    assert row.thumbs == ("a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.jpg", "f.jpg", "g.jpg")
-    assert row.sources == 9
+    assert row.thumbs == tuple(one.name for one in grid.sources[:15])
+    assert row.thumbs == tuple(f"{letter}.jpg" for letter in "abcdefghijklmno")
+    assert row.sources == 17
 
 
 @pytest.mark.spec("ui:batch-folder:batches-are-ordered-by-their-newest-file")

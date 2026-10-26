@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { draftFrom, imageAt, photoUrl, renderDetail, versionOf } from '../api'
+import { draftFrom, hub, imageAt, photoUrl, renderDetail, versionOf } from '../api'
+import { type CellImage, others as othersOf, pick } from '../cells'
+import ComparePick from '../components/ComparePick.vue'
 import ImageViewer from '../components/ImageViewer.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
@@ -11,10 +13,10 @@ import { plain, shifted } from '../stores/keys'
 import type { RenderDetail } from '../types'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
-   sheet it was rendered from beside it — filled fields only, read-only. e
-   revises it; c picks another image of its cell in the viewer, starting on the
-   newest older version of its seed, and ↵ compares the two (J5·8); ⇧C sets it
-   beside its run's photograph; f drafts the first target from its approval. */
+   sheet it was rendered from beside it — filled fields only, read-only. ⇧E
+   revises it; c compares it with another image of its cell, picked in a dialog
+   of tiles (J5·8); ⇧C sets it beside its run's photograph; ⇧F drafts the first
+   target from its approval. */
 const props = defineProps<{
   batch: string
   digest: string
@@ -26,12 +28,13 @@ const router = useRouter()
 const detail = ref<RenderDetail | null>(null)
 const refusal = ref<string | null>(null)
 const revising = ref(false)
+const checkingRevision = ref(false)
 /* Why drafting a target from this image's approval was refused, or null. */
 const drafting = ref<string | null>(null)
 /* The image beside its run's photograph, in the viewer's pair. */
 const pairing = ref(false)
-/* The viewer picking the image to compare with. */
-const picking = ref(false)
+/* The tile the dialog picking the image to compare with opens on, while it is open. */
+const picking = ref<number | null>(null)
 const pair = computed(() => [
   { src: photoUrl(place.value), name: 'photograph' },
   { src: imageAt(place.value), name: `seed ${props.seed}` },
@@ -50,33 +53,27 @@ const clock = (at: number) =>
 
 /* The cell's other images, in the order Renders draws them. */
 const others = computed(() =>
-  (detail.value?.images ?? []).filter(
-    (one) => one.version !== place.value.version || one.seed !== props.seed,
-  ),
+  othersOf(detail.value?.images ?? [], place.value.version, props.seed),
 )
 const choices = computed(() =>
-  others.value.map((one) => ({
-    src: imageAt({ ...place.value, ...one }),
-    name: `v${one.version} · seed ${one.seed}`,
-  })),
+  others.value.map((one) => ({ ...one, src: imageAt({ ...place.value, ...one }) })),
 )
 
-/* The pick starts on this seed's newest older version, else the image before this one. */
-const first = computed(() => {
-  const paired = others.value.findIndex(
-    (one) => one.version === detail.value?.compare && one.seed === props.seed,
+/* *Compare with…*: straight to the cell's one other image, else the pick. */
+function compareWith(): void {
+  const where = pick(
+    detail.value?.images ?? [],
+    place.value.version,
+    props.seed,
+    detail.value?.compare ?? null,
   )
-  if (paired >= 0) return paired
-  const here = (detail.value?.images ?? []).findIndex(
-    (one) => one.version === place.value.version && one.seed === props.seed,
-  )
-  return Math.max(here - 1, 0)
-})
+  if ('compare' in where) compare(where.compare)
+  else picking.value = where.at
+}
 
 /* Compare carries where this view was opened from, so its esc returns here
    with the same way back. */
-function compare(index: number): void {
-  const other = others.value[index]
+function compare(other: CellImage): void {
   void router.push({
     name: 'compare',
     params: { ...props, with: `v${other.version}`, withSeed: other.seed },
@@ -88,6 +85,28 @@ function compare(index: number): void {
 function fromThis(flow: string): string {
   const [word] = flow.split('-')
   return `${word.charAt(0).toUpperCase()}${word.slice(1)} from this`
+}
+
+/* A rendered flow with a later draft is re-opened. Read its current state
+   before asking to write, so an existing correction opens without a confirm. */
+async function reviseImage(): Promise<void> {
+  if (checkingRevision.value) return
+  checkingRevision.value = true
+  drafting.value = null
+  try {
+    const grid = await hub(props.batch)
+    const cell = grid.sources.find((one) => one.digest === props.digest)?.cells[props.flow]
+    if (cell?.status === 're-opened') {
+      await router.push({
+        name: 'review',
+        params: { batch: props.batch, digest: props.digest, flow: props.flow },
+      })
+    } else revising.value = true
+  } catch (reason) {
+    drafting.value = (reason as Error).message
+  } finally {
+    checkingRevision.value = false
+  }
 }
 
 /* No confirm: the draft is one Discard draft away, and costs nothing. */
@@ -115,13 +134,13 @@ const back = computed(() =>
 useKeys('screen', [
   {
     id: 'revise',
-    keys: plain('KeyE'),
+    keys: [shifted('KeyE')],
     label: 'revise',
-    run: () => (revising.value = true),
+    run: () => void reviseImage(),
   },
   {
     id: 'draft-from',
-    keys: plain('KeyF'),
+    keys: [shifted('KeyF')],
     label: 'draft from this',
     run: () => void draftTarget(detail.value?.targets[0] ?? ''),
     when: () => (detail.value?.targets.length ?? 0) > 0,
@@ -129,8 +148,8 @@ useKeys('screen', [
   {
     id: 'compare',
     keys: plain('KeyC'),
-    label: 'compare',
-    run: () => (picking.value = true),
+    label: 'compare with…',
+    run: compareWith,
     when: () => others.value.length > 0,
   },
   {
@@ -180,53 +199,64 @@ onMounted(async () => {
       <p v-if="detail.damaged" class="renders__refusal">
         <span class="refusal__mark" />{{ detail.damaged }}
       </p>
+      <div class="large__actions">
+        <div class="large__group">
+          <button class="btn btn-secondary" type="button" data-revise @click="reviseImage">
+            Revise this image<KeyHint command="revise" />
+          </button>
+          <button
+            v-for="(target, index) in detail.targets"
+            :key="target"
+            class="btn btn-secondary"
+            type="button"
+            data-draft-from
+            @click="draftTarget(target)"
+          >
+            {{ fromThis(target) }}<KeyHint v-if="index === 0" command="draft-from" />
+          </button>
+        </div>
+        <div class="large__group">
+          <button
+            v-if="others.length"
+            class="btn btn-secondary"
+            type="button"
+            data-compare
+            @click="compareWith"
+          >
+            Compare with…<KeyHint command="compare" />
+          </button>
+          <button
+            class="btn btn-secondary"
+            type="button"
+            data-side-by-side
+            @click="pairing = true"
+          >
+            Side by side<KeyHint command="side-by-side" />
+          </button>
+        </div>
+        <div class="large__group">
+          <RouterLink class="btn btn-secondary" :to="back.to"
+            >{{ back.label }}<KeyHint command="back" /></RouterLink
+          >
+        </div>
+      </div>
+      <p v-if="drafting" class="renders__refusal" data-draft-refusal>
+        <span class="refusal__mark" />{{ drafting }}
+      </p>
       <dl class="large__fields">
         <template v-for="(tags, name) in detail.fields" :key="name">
           <dt class="mono">{{ name }}</dt>
           <dd>{{ tags.join(' · ') }}</dd>
         </template>
       </dl>
-      <div class="large__actions">
-        <button class="btn btn-secondary" type="button" data-revise @click="revising = true">
-          Revise this image<KeyHint command="revise" />
-        </button>
-        <button
-          v-for="(target, index) in detail.targets"
-          :key="target"
-          class="btn btn-secondary"
-          type="button"
-          data-draft-from
-          @click="draftTarget(target)"
-        >
-          {{ fromThis(target) }}<KeyHint v-if="index === 0" command="draft-from" />
-        </button>
-        <button
-          v-if="others.length"
-          class="btn btn-secondary"
-          type="button"
-          data-compare
-          @click="picking = true"
-        >
-          Compare…<KeyHint command="compare" />
-        </button>
-        <button class="btn btn-secondary" type="button" data-side-by-side @click="pairing = true">
-          Side by side<KeyHint command="side-by-side" />
-        </button>
-        <RouterLink class="btn btn-secondary" :to="back.to"
-          >{{ back.label }}<KeyHint command="back" /></RouterLink
-        >
-      </div>
-      <p v-if="drafting" class="renders__refusal" data-draft-refusal>
-        <span class="refusal__mark" />{{ drafting }}
-      </p>
     </aside>
-    <ImageViewer
-      v-if="picking"
+    <ComparePick
+      v-if="picking !== null"
+      :title="`Compare v${detail.version} · seed ${detail.seed} with…`"
       :images="choices"
-      :start="first"
-      :open="compare"
-      action="compare with this"
-      @close="picking = false"
+      :start="picking"
+      @pick="compare"
+      @close="picking = null"
     />
     <ImageViewer
       v-if="pairing"

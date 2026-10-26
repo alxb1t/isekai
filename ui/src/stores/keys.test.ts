@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, vi } from 'vitest'
 import { paneKeys } from '../panes'
 import { spec } from '../test/spec'
-import { type Command, type Press, isControl, isMac, useKeyStore } from './keys'
+import { type Command, type Press, isControl, isMac, keyList, useKeyStore } from './keys'
 
 /* Every screen's and component's source, as the page draws them. */
 const SOURCES = import.meta.glob<string>(['../*.vue', '../views/*.vue', '../components/*.vue'], {
@@ -167,7 +167,7 @@ spec('ui:keys:hints-come-from-the-declarations', () => {
   ])
   expect(keys.listed.filter((one) => one.keys === '⇧I').map((one) => one.id)).toEqual(['renders'])
 
-  // The key list, opened on ? or the app bar's ? button, is the one place keys are listed.
+  // The key list, opened on ⌃/ or the app bar's ? button, is the one place keys are listed.
   expect(keys).not.toHaveProperty('bar')
   expect(Object.keys(SOURCES)).toContain('../views/Hub.vue')
   for (const [file, source] of Object.entries(SOURCES))
@@ -215,7 +215,7 @@ spec('ui:keys:review-panes-move-from-a-field-on-macos', () => {
     const keys = useKeyStore()
     keys.mac = mac
     const move = vi.fn()
-    keys.declare('screen', paneKeys(keys.mac, move))
+    keys.declare('screen', paneKeys(keys.mac, move, vi.fn()))
     return { keys, move, target: field() }
   }
 
@@ -233,4 +233,51 @@ spec('ui:keys:review-panes-move-from-a-field-on-macos', () => {
   expect(linux.keys.press(press('KeyH', { target: linux.target, ctrlKey: true }))).toBe(false)
   expect(linux.move).not.toHaveBeenCalled()
   expect(linux.keys.listed.map((one) => one.id)).toEqual(['left', 'right'])
+})
+
+spec('ui:keys:the-key-list-opens-from-a-field', () => {
+  const keys = useKeyStore()
+  const open = vi.fn()
+  keys.declare('everywhere', [keyList(open)])
+  const target = field()
+
+  expect(keys.press(press('Slash', { target, ctrlKey: true }))).toBe(true)
+  expect(open).toHaveBeenCalledOnce()
+
+  // ? is text in a field, and outside one no longer opens the list.
+  const question = press('Slash', { target, shiftKey: true })
+  expect(keys.press(question)).toBe(false)
+  expect(question.defaultPrevented).toBe(false)
+  expect(keys.press(press('Slash', { shiftKey: true }))).toBe(false)
+  expect(open).toHaveBeenCalledOnce()
+
+  // ⌃ on macOS too, where ⌘/ would be the browser's.
+  keys.mac = true
+  expect(keys.press(press('Slash', { ctrlKey: true }))).toBe(true)
+  expect(keys.hint('keys')).toBe('⌃/')
+})
+
+spec('ui:keys:review-fields-move-from-a-field-on-macos', () => {
+  function review(mac: boolean) {
+    setActivePinia(createPinia())
+    const keys = useKeyStore()
+    keys.mac = mac
+    const row = vi.fn()
+    keys.declare('screen', paneKeys(keys.mac, vi.fn(), row))
+    return { keys, row, target: field() }
+  }
+
+  const mac = review(true)
+  expect(mac.keys.press(press('KeyJ', { target: mac.target, ctrlKey: true }))).toBe(true)
+  expect(mac.row).toHaveBeenCalledExactlyOnceWith(1)
+  expect(mac.keys.press(press('KeyK', { target: mac.target, ctrlKey: true }))).toBe(true)
+  expect(mac.row).toHaveBeenLastCalledWith(-1)
+  expect([mac.keys.hint('field-down'), mac.keys.hint('field-up')]).toEqual(['⌃J', '⌃K'])
+
+  // On Linux ⌃J is the browser's and ⌃K is Mod+K: neither is Review's.
+  const linux = review(false)
+  expect(linux.keys.hint('field-down')).toBeNull()
+  expect(linux.keys.hint('field-up')).toBeNull()
+  expect(linux.keys.press(press('KeyJ', { target: linux.target, ctrlKey: true }))).toBe(false)
+  expect(linux.row).not.toHaveBeenCalled()
 })

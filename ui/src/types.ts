@@ -386,9 +386,11 @@ export interface RevisedImage {
   seed: string
 }
 
-/* An image a revision wrote a draft for, by the draft's name. */
+/* An image a revision answered: the draft it wrote, or the draft already waiting
+   in its flow, by name; the other is null. */
 export interface RevisedDraft extends RevisedImage {
-  draft: string
+  draft: string | null
+  waiting: string | null
 }
 
 /* An image of a refused revision: its refusal, or null where it could be revised. */

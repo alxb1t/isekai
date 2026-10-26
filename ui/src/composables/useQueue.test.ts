@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { EMPTY_CELL } from '../cells'
 import { spec } from '../test/spec'
 import type { HubInfo, InputStatus } from '../types'
-import { head, rail, useQueue, waiting } from './useQueue'
+import { flowsWaiting, head, rail, useQueue, waiting } from './useQueue'
 
 /* `fetch` answers the hub with a batch built here, so the run directories the
    count must agree with are the ones this file declares. The rail reads it
@@ -81,11 +81,46 @@ spec('ui:review:a-batch-opens-its-head', () => {
     sources: [source('a', 'approved', 1), source('b', b), source('c', 'approved', 0)],
   })
 
+  // One flow waits, so Review opens its head rather than the chooser.
+  expect(flowsWaiting(batch('draft')).map((one) => one.flow)).toEqual(['f'])
   expect(head(batch('draft'))).toEqual({ digest: 'b', flow: 'f' })
   expect(head(batch('approved'))).toEqual({ digest: 'a', flow: 'f' })
   const done = batch('approved')
   done.sources[0].cells.f.short = 0
   expect(head(done)).toBeNull()
+  expect(flowsWaiting(done)).toEqual([])
+})
+
+spec('ui:review:two-flows-waiting-open-the-chooser', () => {
+  // `a` waits in `f` and `g`; `b` waits in `g` alone, approved and short; `c` waits nowhere.
+  const cells = (f: InputStatus, g: InputStatus, short: number | null = null) => ({
+    f: { ...EMPTY_CELL, status: f },
+    g: { ...EMPTY_CELL, status: g, short },
+  })
+  const info: HubInfo = {
+    batch: 'b',
+    flows: ['f', 'g'],
+    sources: [
+      { ...source('a', 'draft'), cells: cells('draft', 'draft') },
+      { ...source('b', 'approved', 0), cells: cells('approved', 'approved', 2) },
+      { ...source('c', 'approved', 0), cells: cells('approved', 'approved', 0) },
+    ],
+  }
+
+  expect(flowsWaiting(info)).toEqual([
+    { flow: 'f', approve: 1, short: 0, sources: [{ name: 'a', digest: 'a' }] },
+    {
+      flow: 'g',
+      approve: 1,
+      short: 1,
+      sources: [
+        { name: 'a', digest: 'a' },
+        { name: 'b', digest: 'b' },
+      ],
+    },
+  ])
+  // A row's ↵ opens that flow's head.
+  expect(head(info, ['g'])).toEqual({ digest: 'a', flow: 'g' })
 })
 
 spec('ui:review:the-rail-names-the-other-flows-waiting', () => {
@@ -102,10 +137,10 @@ spec('ui:review:the-rail-names-the-other-flows-waiting', () => {
     ],
   }
 
-  expect(waiting(info, 'f')).toEqual([{ flow: 'g', count: 1, first: 'a' }])
+  expect(waiting(info, 'f')).toEqual([{ flow: 'g', count: 1 }])
   // From the flow after the open one, round to the one before it.
   expect(waiting(info, 'h')).toEqual([
-    { flow: 'f', count: 1, first: 'a' },
-    { flow: 'g', count: 1, first: 'a' },
+    { flow: 'f', count: 1 },
+    { flow: 'g', count: 1 },
   ])
 })

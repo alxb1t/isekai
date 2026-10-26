@@ -20,11 +20,11 @@ import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
 import { useKeys } from '../composables/useKeys'
-import { useQueue } from '../composables/useQueue'
+import { chooses, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import { clamp } from '../grid'
 import { nextPane, type Pane, paneKeys } from '../panes'
-import { modded, plain, shifted, useKeyStore } from '../stores/keys'
+import { type Command, modded, plain, shifted, useKeyStore } from '../stores/keys'
 import type { FieldCandidates } from '../types'
 
 /* Review: one batch in one flow, the run in the URL. It shows the loading state
@@ -48,11 +48,9 @@ const approval = useApproval()
 const current = computed(() => props.digest)
 const photoUrl = (digest: string) => photoAt({ batch: props.batch, digest, flow: props.flow })
 const schema = computed(() => sheet.detail.value?.schema ?? [])
-/* A draft copied from an approval, while it is still a draft: the approval's
-   fields mark what changed, and its image sits beside the photograph (J5·4). */
-const revision = computed(() =>
-  sheet.readonly.value ? null : (sheet.detail.value?.revision ?? null),
-)
+/* A draft copied from an approval, and once approved too: the approval's fields
+   mark what changed, and its image sits beside the photograph (J5·4). */
+const revision = computed(() => sheet.detail.value?.revision ?? null)
 /* A draft drafted from another flow's approval: its own sheet's fields mark
    what that approval changed. */
 const drafted = computed(() => sheet.detail.value?.drafted ?? null)
@@ -67,13 +65,6 @@ const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 function select(digest: string): void {
   if (digest !== props.digest)
     void router.push({ name: 'review', params: { ...props, digest } })
-}
-
-/* The next flow holding unapproved sheets, opened on its first. */
-function nextFlow(): void {
-  const next = batch.others.value[0]
-  if (next)
-    void router.push({ name: 'review', params: { ...props, digest: next.first, flow: next.flow } })
 }
 
 function stepBatch(direction: -1 | 1): void {
@@ -103,6 +94,8 @@ const source = ref<HTMLElement | null>(null)
 type Lens = 'photo' | 'render' | 'pair' | 'cheatsheet'
 
 const lens = ref<Lens | null>(null)
+/* Where the focus was when a lens opened, a field included: closing gives it back. */
+let returnTo: HTMLElement | null = null
 const candidates = ref<FieldCandidates | null>(null)
 /* True while a lens is up, by construction rather than by remembering to set two
    flags together. `TagInput` reads it and yields Escape and the arrows, so `Esc`
@@ -357,6 +350,8 @@ function back(field: string): void {
    different. Every path that opens a lens goes through here, including the click
    on the photograph. */
 async function openLens(which: Lens): Promise<void> {
+  const held = document.activeElement
+  if (lens.value === null && held instanceof HTMLElement && held !== document.body) returnTo = held
   if (which === 'cheatsheet' && !candidates.value) {
     candidates.value = await fieldCandidates(props.flow)
   }
@@ -364,17 +359,39 @@ async function openLens(which: Lens): Promise<void> {
   lens.value = which
 }
 
-/* Give the criterion back exactly. `enter('sheet')` focuses `lastField`, which
-   is what the operator was typing into, and `focus()` keeps the two in step. */
+/* Give the focus back where the lens found it; with none, `enter('sheet')`
+   focuses `lastField`, what the operator was typing into. */
 function closeLens(): void {
   lens.value = null
-  void nextTick(() => enter('sheet'))
+  const back = returnTo
+  returnTo = null
+  void nextTick(() => (back?.isConnected ? back.focus() : enter('sheet')))
 }
 
 function toggleLens(which: Lens): void {
   if (lens.value === which) closeLens()
   else void openLens(which)
 }
+
+/* `⌃P`: the photograph, on a revision the pair; in the pair, the photograph alone
+   and back. */
+function photograph(): void {
+  if (lens.value === 'pair') lens.value = 'photo'
+  else if (lens.value === 'photo' && revised.value) lens.value = 'pair'
+  else if (lens.value === 'photo') closeLens()
+  else void openLens(revised.value ? 'pair' : 'photo')
+}
+
+const photographKey: Command = {
+  id: 'photograph',
+  keys: [{ code: 'KeyP', ctrl: true }],
+  label: 'the photograph, on a revision side by side',
+  run: photograph,
+  inField: true,
+  when: () => sheet.detail.value !== null,
+}
+/* What the viewer adds to its own keys: `⌃P` reaches into it. */
+const viewerKeys = [photographKey]
 
 const scrollSource = (direction: -1 | 1) => source.value?.scrollBy({ top: direction * 120 })
 
@@ -405,7 +422,7 @@ function vertical(direction: -1 | 1): () => void {
 }
 
 /* The keys that cross components, so no component owns two of them (D25). Mod+K,
-   Mod+↵ and Mod+Z reach into a field: they are what the operator presses mid-edit. */
+   Mod+↵, Mod+Z and ⌃P reach into a field: they are what the operator presses mid-edit. */
 useKeys('screen', [
   {
     id: 'approve',
@@ -442,13 +459,13 @@ useKeys('screen', [
     run: () => stepBatch(-1),
   },
   {
-    id: 'next-flow',
-    keys: [shifted('KeyF')],
-    label: 'the next flow',
-    run: nextFlow,
-    when: () => batch.others.value.length > 0,
+    id: 'flows',
+    keys: plain('Escape'),
+    label: 'the flows waiting',
+    run: () => void router.push({ name: 'review-head', params: { batch: props.batch } }),
+    when: () => batch.info.value !== null && chooses(batch.info.value),
   },
-  ...paneKeys(useKeyStore().mac, movePane),
+  ...paneKeys(useKeyStore().mac, movePane, moveRow),
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
   { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'up', run: vertical(-1) },
   {
@@ -479,20 +496,7 @@ useKeys('screen', [
     label: 'scroll back',
     run: () => scrollSource(-1),
   },
-  {
-    id: 'photo',
-    keys: plain('Enter'),
-    label: 'the photograph',
-    run: () => void openLens('photo'),
-    when: () => paneNow() === 'source' && sheet.detail.value !== null,
-  },
-  {
-    id: 'side-by-side',
-    keys: [shifted('KeyC')],
-    label: 'the photograph and the render, side by side',
-    run: () => void openLens('pair'),
-    when: () => revised.value !== null,
-  },
+  photographKey,
 ])
 
 // The draft is flushed as the tab goes; the PUT is kept alive past the page. An
@@ -638,9 +642,11 @@ watch(current, (id) => {
 
     <ImageViewer
       v-if="viewed && viewed.images.length"
+      :key="lens ?? ''"
       :images="viewed.images"
       :start="viewed.start"
       :pair="lens === 'pair'"
+      :commands="viewerKeys"
       @close="closeLens"
     />
 

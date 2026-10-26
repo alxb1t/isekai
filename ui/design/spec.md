@@ -28,6 +28,7 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 8. **The URL is real**. Overlays keep the URL of the page beneath. The Render dialog has no URL.
 9. **A refusal's text is the CLI's, verbatim**. The UI invents no command.
 10. **Count labels use the singular noun at one and the plural otherwise**: `1 source`, `0 sources`, `3 sources`.
+11. **A dialog holds the focus** while open — on its first control, the page behind inert — and gives it back on close.
 
 ## 2 · Tokens
 
@@ -79,7 +80,7 @@ timer mono 40px/500.
   on Home, else the batch name. Tabs only inside a batch; the active one has a 2px accent underline. The Review
   tab counts the batch's unapproved sheets in mono 11 `accent`, and opens the batch's Review. The flow
   switcher is a segmented control; Review drops `all`. The `?` button at its right end, after the running render,
-  opens the key list, as `?` does; no screen draws a key bar.
+  opens the key list, as `⌃/` does; no screen draws a key bar.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
 - **JobStrip**, `ground-deep`, mono 11px: one dot, then one item per running job, each a label (`job · prepare`)
@@ -162,11 +163,9 @@ J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 
 6 sources × 2 flows                          [ Add sources… ⇧A ]
 SOURCE                 │ summon-anime-wai                 │ conjure-anime-wai
 00003                  │ ☑ ▰▰▰▰▰▰ rendered ×1      ↵ view │ ☑ ▰▰▰▰▰▱ approved
-00003.png · 832×1216   │ [v1▢][v2▢]                       │
-[▣]                    │                                  │
+[▣]                    │ [v1▢][v2▢]                       │
 cowboy_shot_2_of_a_ver │ ☑ ▰▰▰▱▱▱ captioning…            │ ☐
-y_long_name.jpg · 832× │                                  │
-1216                   │                                  │
+y_long_name            │                                  │
 [▣]                    │                                  │
 
         ┌ IMG_0430 × summon · …                 [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
@@ -181,13 +180,14 @@ y_long_name.jpg · 832× │                                  │
 - **The tick:** accent fill is assigned and can be unticked; `tick-locked` is prepared and stays (`prepared ·
   the tick stays`).
 - **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`,
-  `↵ view` or, on the source cell, `↵ view photo`). The hub keeps its focus for the open batch: `Esc` from a large
+  `↵ view` or, on the source cell, `↵ view photo` at its top right, taking no line). The hub keeps its focus for the open batch: `Esc` from a large
   view, the Back button and a tab switch come back to the cell left, else the first row's source cell.
 - **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
   cell holding images opens the viewer on its newest (`↵ view`), `← →` `h l` step its images and `↵` opens the
   shown one's large view. The checkbox's own click only ticks.
-- **A cell's images** sit under its stage track, every approved version's, oldest to newest, each a 96×128 tile
+- **A cell's images** sit at its foot, level with the source's thumbnail, under its stage track and any refusal,
+  every approved version's, oldest to newest, each a 96×128 tile
   with its `vN` badge, wrapping; a click on one opens the viewer on it.
 - **A cell's refusal** sits inside the cell with its fix; the cell returns to assigned, so the next Prepare retries
   it.
@@ -205,7 +205,7 @@ y_long_name.jpg · 832× │                                  │
   `Session ⇧S`.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is the grid's
   first column, `h` from the first flow cell, and a column itself: the file's stem in mono 13, its first line level
-  with the cells' tick line, then mono 11 `file · dims`, the size read from the file, then a 96×128 thumbnail, a
+  with the cells' tick line, the size in the viewer's title, then a 96×128 thumbnail at the cell's foot, a
   render tile's size, upright; a row checkbox appears in selection mode. A long name breaks inside the column, as
   it does on Renders, Review's rail and Home, never spilling out. A click
   on the thumbnail or `↵` opens the viewer on its photograph, `← →` stepping the batch's sources; space does nothing
@@ -214,6 +214,8 @@ y_long_name.jpg · 832× │                                  │
   click outside to close, titled with the name, the dimensions and `fit n%` or `1:1`.
 
 ### J3 · Review and approve
+
+With two or more flows waiting, the Review tab is a chooser, a row per flow; ↵ opens its head, esc on Review returns.
 
 | frame | trigger | URL |
 |---|---|---|
@@ -242,7 +244,7 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
 - **The viewer**: the photograph opens in it, fitted, and `←` `→` step through the rail's photographs; a revision's
   render opens in it alone.
 - **The rail**: the flow's name heads it, with a line under it for each other flow holding unapproved sheets,
-  `summon-anime-wai · 1 waiting ⇧F`; ⇧F opens the next such flow's first. It lists every sheet of the flow not yet rendered — unapproved, or
+  `summon-anime-wai · 1 waiting ⇧R`; ⇧R opens the chooser. It lists every sheet of the flow not yet rendered — unapproved, or
   approved and short of its images — and the one open, each marked ○ untouched, ◐ edited, ● approved, ◌ re-opened;
   its footer counts the approved among them. Revise opens the first draft it wrote; the rest wait in the rail.
   Approve stays on the sheet, read-only. ⇧J ⇧K step the rail. Approve still refuses an unmarked empty field.
@@ -309,17 +311,17 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 |---|---|---|
 | J5·1 Renders, before the revision | — | `…/b/2026-09-17/renders` |
 | J5·2 the large view, no Compare yet | ↵ | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731` |
-| J5·3 the Revise confirm over it | e Revise this image | same |
+| J5·3 the Revise confirm over it | ⇧E Revise this image | same |
 | J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/b/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
 | J5·6 the revision approved, read-only; the hub's Render bar, `1 image ready to render` | ⌘↵ Approve · ⇧H | `…/b/2026-09-17/hub` |
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | `…/b/2026-09-17/sessions/<id>` |
 | J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/b/2026-09-17/renders` |
-| J5·8 the large view of v2, with `Compare…  c` | ↵ on v2 | `…/v2/1840266731` |
-| J5·9 before / after | c, ↵ on v1 in the viewer | `…/v2/1840266731/compare/v1/1840266731` |
+| J5·8 the large view of v2, with `Compare with…  c` | ↵ on v2 | `…/v2/1840266731` |
+| J5·9 before / after | c, ↵ on v1 in the tile picker | `…/v2/1840266731/compare/v1/1840266731` |
 
 ```
-J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731   [ Side by side ⇧C ]
+J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731   [ Side by side ⌃P ]
       [photograph]               [render, accent hairline]       one height, top-aligned
       ② CAPTION  collapsed on a revision
       ③ SHEET — REVISION OF RENDER 1840266731 · saved 15:52
@@ -332,10 +334,9 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
       [render, equal size, top-aligned]      [render]
       same seed · 1840266731     1 FIELD CHANGED  eye_colour  light blue eyes → blue eyes
       another seed picked:  different seeds · 2216093514 → 1840266731 · same sheet when no field changed
-                                                                             [ Revise again e ]
 ```
 
-- **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer, and its name. A
+- **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer. A
   cell is one wrapped row of thumbnails, versions oldest to newest, each with a `vN` badge and `⇄` in `accent-ink` when its
   seed is shared across versions. A damaged version is a striped tile before its images, its refusal under the
   cell. Last comes the ready tile, `ready · n images`, while the newest version lacks images of its Count, the render
@@ -343,23 +344,29 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   approval time, the Count and the seeds — is in the large view.
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
   (filled fields only, read-only), and *Side by side* `⇧C`: the image beside its run's photograph, at one height,
-  in one dialog. `Esc` and its back button go back to where it was opened, the hub or else Renders, focused on the
-  cell or the image left. `Compare…  c` appears when its cell holds another image: the viewer opens over the
-  cell's other images, every version's and seed's, on the newest older version of this seed, else the image before
-  this one, and `↵` compares the shown one, the older of the two before. The same-seed address, `…/compare`, still compares with the newest
+  in one dialog. Its actions stand under the heading, above the fields: a column of full-width buttons, label left
+  and key right, in groups 12 px apart — the writes, the comparisons, the way back. `Esc` and its back button go
+  back to where it was opened, the hub or else Renders, focused on the cell or the image left.
+  `Compare with…  c` appears when its cell holds another image, and with one other compares at once. Else it
+  opens a dialog of the cell's other images as tiles at Renders' size, every version's and seed's, oldest first,
+  `vN · seed` under each, focused on the newest older version of this seed, else the image before this one;
+  `h j k l` and the arrows move, `↵` or a click compares, the older of the two before. The same-seed address, `…/compare`, still compares with the newest
   older version of the seed. Each flow of the batch drafted from a sheet alone is offered as *Conjure from this*,
-  the first on `f`: it drafts that flow from this image's approval and opens Review, which marks its draft
+  the first on `⇧F`: it drafts that flow from this image's approval and opens Review, which marks its draft
   against that flow's sheet, names the approval in the kicker and offers *Discard draft*; a refusal shows under
   the actions.
 - **Revise** (the verb `isekai revise`): the confirm lists each image — source × flow × seed, the version it copies,
   the seed it prefills. All or nothing: a refusal lists every selected image, those that could be revised
   too, and offers `Deselect those 2 and revise 1 ⇧↵`; it has no primary button.
-- **The revision's sheet** marks changed rows with an accent gutter dot and a `was` line against the rendered sheet.
+  An image whose flow holds a waiting draft opens Review on that draft, writing nothing. In a selection it is left
+  out, the rest written, and the confirm names it `already waiting`, then offers `Review ⌘↵`.
+- **The revision's sheet** marks changed rows with an accent gutter dot and a `was` line against the rendered sheet,
+  and keeps them once approved.
 - **Approve refuses an unchanged revision** — neither fields nor ④ changed — naming the image it would reproduce
  . *Discard draft*, 12 px left of Approve, asks, then deletes this unapproved draft, through `review --discard`;
   the sheet stays open.
 - **One header row** names the photograph and its size, and the render and its seed, over the pair, with *Side by
-  side* `⇧C` at its right: one dialog, the pair at one height, fit only, `Esc` to close. No how-to text. A click on
+  side* `⌃P` at its right: one dialog, the pair at one height, fit only, `Esc` to close. No how-to text. A click on
   either image opens it in the viewer. Every receipt sits in ③'s kicker, `· saved 15:52` or `APPROVED 14:12:40`, and every refusal in the
   approve bar.
 
@@ -367,7 +374,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 
 | frame | trigger | URL |
 |---|---|---|
-| (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · e · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
+| (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · ⇧E · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
 | J6·1 Review: the seed cleared, Count 3, the tags untouched | × the seed · count + + | `…/review/0d4b7e6fb2a8/conjure-anime-wai` |
 | (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⇧G · ⌘↵ | `…/b/2026-09-17/sessions/<id>` |
 | J6·2 Renders: three new images after v1, no pair | ⇧I | `…/b/2026-09-17/renders` |
@@ -395,7 +402,7 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 
 - **Home's row**: a header line — the name, `n sources`, one chip per flow present (its denominator the sources that
   have it; chips wrap), `n sources without a flow`, and at the right last activity, the time and kind of the newest
-  file written in the batch, then `open ↵` — over up to seven 84×114 thumbnails then `+n`, at the full width,
+  file written in the batch, then `open ↵` — over up to fifteen 84×114 thumbnails then `+n`, at the full width,
   wrapping in a narrow window. Sorted by last activity; a folder without `sources/`
   sorts last, striped and inert; dot-folders, `.staging` among them, are not listed.
 - **A running render's row** has an accent left edge (`inset 2px 0 0`), background `#1b1c2c`,
@@ -441,16 +448,17 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 ## 7 · Keys
 
 Matched on `event.code`, the physical key, with the typed character suppressed, and declared once in
-the key store ([D25](../../docs/decisions.md#d25--shortcuts-match-the-physical-key)); `?` lists them. ⌘
-is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K run, and on macOS Review's ⌃H ⌃L.
+the key store ([D25](../../docs/decisions.md#d25--shortcuts-match-the-physical-key)); `⌃/` lists them. ⌘
+is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K and ⌃/ run, Review's ⌃P, and on macOS Review's
+⌃H ⌃L ⌃J ⌃K.
 
 | where | keys |
 |---|---|
-| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the running session, else the batch's sessions · ? the key list · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
+| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the running session, else the batch's sessions · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
-| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ↵ on the photograph opens the viewer, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow holding unapproved sheets · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C *Side by side*, the photograph and the render, on a revision · the collapsed caption, its key named when built |
-| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · e Revise · ⇧G Render · in the large view, e Revise, f Conjure from this, c compare, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
+| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
+| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧E Revise · ⇧G Render · in the large view, ⇧E Revise, ⇧F Conjure from this, c Compare with…, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
 | Session | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 

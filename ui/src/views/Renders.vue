@@ -182,7 +182,7 @@ useKeys('screen', [
   },
   {
     id: 'revise',
-    keys: plain('KeyE'),
+    keys: [shifted('KeyE')],
     label: 'revise',
     run: () => (revising.value = true),
     when: () => chosen.value.length > 0,
@@ -248,7 +248,7 @@ onUnmounted(() => {
     </div>
     <div
       class="renders__grid"
-      :style="{ gridTemplateColumns: `250px repeat(${info.flows.length}, 1fr)` }"
+      :style="{ gridTemplateColumns: `calc(var(--tile-width) + 20px) repeat(${info.flows.length}, 1fr)` }"
     >
       <span class="section-label">source</span>
       <span v-for="flow in info.flows" :key="flow" class="section-label">{{ flow }}</span>
@@ -262,13 +262,12 @@ onUnmounted(() => {
           <button
             class="hub__thumb"
             type="button"
-            :aria-label="`view ${source.name}`"
+            :aria-label="source.name"
             data-source-thumb
             @click="viewing = source.name"
           >
             <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
           </button>
-          <span class="renders__name mono">{{ source.name }}</span>
         </div>
         <div v-for="flow in info.flows" :key="flow" class="renders__cell">
           <span class="renders__images">

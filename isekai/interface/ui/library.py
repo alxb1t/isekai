@@ -92,7 +92,7 @@ _KINDS: Mapping[str, str] = {
 }
 
 # How many of a batch's sources Home's row shows as thumbnails, before `+n`.
-ROW_THUMBS = 7
+ROW_THUMBS = 15
 
 # A source's digest, what it carries and its size, by what its file's stat says:
 # reading every photograph on every listing would read the whole library each time.

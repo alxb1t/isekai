@@ -100,7 +100,7 @@ defineExpose({
         <span class="source__row">
           <span class="kicker source__label">render being revised · seed {{ revised.seed }}</span>
           <button class="btn btn-secondary source__pair-open" type="button" @click="$emit('pair')">
-            Side by side<KeyHint command="side-by-side" />
+            Side by side<KeyHint command="photograph" />
           </button>
         </span>
         <button class="photo-frame" type="button" @click="$emit('render')">

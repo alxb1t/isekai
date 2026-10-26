@@ -9,6 +9,36 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-10-26 · 0078-the-third-walkthrough
+
+Gate: local 0m46s · CI 1m24s (ci at 7300efc) · 0.50.0: local 0m42s · CI 7m25s
+
+### Changed
+
+- The browser guide names Review's flow chooser and `⇧E` for Revise; the walkthrough names Compare's tile
+  picker, keeping the instructions aligned with the controls (0078 D9–D11).
+
+- Revisiting an image's waiting revision opens Review directly and preserves its edits, without asking to write
+  another draft (0078 D8).
+
+- The hub's row sets its photograph and its renders at the cells' foot, `↵ view photo` in the corner and the stem
+  alone; Renders' source cell is its thumbnail; Home's row shows fifteen sources (0078 D1–D3).
+
+- Review reaches its keys from a field: `⌃P` the photograph, or *Side by side* on a revision; `⌃J` `⌃K` the fields
+  on macOS; `⌃/` the key list everywhere, replacing `?` (0078 D4–D6).
+
+- An approved revision keeps its image and `was` marks on Review; Revise on an image whose flow holds a waiting
+  draft opens that draft instead of refusing (0078 D7, D8).
+
+- With two or more flows waiting, the Review tab is a chooser — a row per flow, its counts and photographs — and
+  `Esc` on Review returns to it; `⇧F` is gone (0078 D9).
+
+- The large view's writes take a shifted letter — `⇧E` Revise, `⇧F` Conjure from this, and `⇧E` on Renders;
+  *Compare with…* picks in a dialog of tiles, or compares at once; its buttons are a grouped column (0078 D10–D12).
+
+- The Render, Revise and import dialogs are modal: the focus opens on their first control — the Render dialog's
+  on *Keep the volume open* — stays inside them, and returns where it was on close (0078 D13).
+
 ## [0.50.0] - 2026-10-25 · 0077-conjure-from-this
 
 Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.49.0: local 0m41s · CI 7m25s

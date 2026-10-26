@@ -28,6 +28,30 @@ from tests.e2e.conftest import (
 )
 
 
+@pytest.mark.spec("ui:dialogs:the-render-dialog-opens-on-its-checkbox")
+def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> None:
+    # Cancelled, so the next test still confirms this batch's one image.
+    page.goto(served.hub_of(RENDER))
+    cell = page.locator('.hub__source[data-row="0"]')
+    expect(cell).to_be_focused()
+
+    page.keyboard.press("Shift+G")
+
+    dialog = page.locator("dialog.render-dialog")
+    keep = dialog.locator("[data-keep-open]")
+    expect(keep).to_be_focused()
+    # ↵ on the checkbox neither ticks it nor renders.
+    page.keyboard.press("Enter")
+    expect(keep).not_to_be_checked()
+    expect(dialog).to_be_visible()
+    for _ in range(dialog.locator("button:enabled, input").count()):
+        page.keyboard.press("Tab")
+        assert dialog.evaluate("(held) => held.contains(document.activeElement)")
+    page.keyboard.press("Escape")
+    expect(dialog).to_have_count(0)
+    expect(cell).to_be_focused()
+
+
 @pytest.mark.spec("ui:render:the-confirmation-starts-the-render")
 def test_confirming_the_dialog_opens_the_session(page: Page, served: Served) -> None:
     page.goto(served.hub_of(RENDER))
@@ -184,7 +208,15 @@ def test_the_source_cell_opens_its_photograph(page: Page, served: Served) -> Non
     expect(first).to_be_focused()
 
     page.keyboard.press("h")
-    expect(page.locator('.hub__source[data-row="0"]')).to_be_focused()
+    source = page.locator('.hub__source[data-row="0"]')
+    expect(source).to_be_focused()
+    expect(source.locator(".hub__action")).to_be_visible()
+    thumb = source.locator(".hub__thumb").bounding_box()
+    images = page.locator('.hub__cell[data-row="0"] .hub__images').bounding_box()
+    assert thumb is not None and images is not None
+    assert thumb["y"] + thumb["height"] == pytest.approx(
+        images["y"] + images["height"], abs=1
+    )
     page.keyboard.press("Enter")
 
     viewer = page.locator("dialog[data-viewer]")
@@ -199,7 +231,7 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
     digest = served.revised.digest
     page.goto(f"{served.url}/b/{REVISED}/renders/{digest}/{FLOW}/v1/7")
     expect(page.locator("[data-revise]")).to_be_visible()
-    page.keyboard.press("e")
+    page.keyboard.press("Shift+E")
     confirm = page.locator("[data-revise-confirm]")
     expect(confirm).to_contain_text("copies v1 · prefills seed 7")
 
@@ -211,12 +243,27 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
     expect(page.locator(".renders-block")).to_contain_text("seed 7")
     expect(page.locator(".form")).to_contain_text("revision of render 7")
     row = page.locator(".row", has_text="hair_colour")
-    row.locator(".chip__x").first.click()
+    with page.expect_response(lambda response: response.request.method == "PUT"):
+        row.locator(".chip__x").first.click()
     expect(page.locator("[data-changed='hair_colour']")).to_contain_text("was")
+    expect(page.locator(".receipt__when")).to_contain_text("saved")
+    draft = current_draft(served.revised.directory(FLOW, REVIEW))
+    assert draft is not None
+    before = draft.read_bytes()
+    page.goto(f"{served.url}/b/{REVISED}/renders/{digest}/{FLOW}/v1/7")
+    expect(page.locator("[data-revise]")).to_be_visible()
+    page.keyboard.press("Shift+E")
+    expect(page).to_have_url(review)
+    expect(page.locator("[data-revise-confirm]")).to_have_count(0)
+    expect(page.locator("[data-changed='hair_colour']")).to_contain_text("was")
+    assert current_draft(served.revised.directory(FLOW, REVIEW)) == draft
+    assert draft.read_bytes() == before
     page.get_by_role("button", name="Approve sheet").click()
     expect(page.locator(".form")).to_contain_text("approved")
     expect(page.locator("input.fragment")).to_have_count(0)
     expect(page).to_have_url(review)
+    expect(page.locator("[data-revised] img")).to_be_visible()
+    expect(page.locator("[data-changed='hair_colour']")).to_contain_text("was")
 
 
 @pytest.mark.spec("ui:conjure-from:conjure-from-this-opens-review")
@@ -225,7 +272,7 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     page.goto(f"{served.url}/b/{CONJURED}/renders/{digest}/{FLOW}/v1/7")
     expect(page.locator("[data-draft-from]")).to_contain_text("Conjure from this")
 
-    page.keyboard.press("f")
+    page.keyboard.press("Shift+F")
 
     expect(page).to_have_url(f"{served.url}/b/{CONJURED}/review/{digest}/{CONJURE}")
     expect(page.locator(".form")).to_contain_text(f"from {FLOW} v1")
@@ -254,7 +301,9 @@ def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
     page.goto(served.review(served.discarded, DISCARDED))
     expect(page.locator("[data-revised] img")).to_have_js_property("complete", True)
 
-    page.get_by_role("button", name="Side by side").click()
+    page.locator("input.fragment").first.click()
+
+    page.keyboard.press("Control+KeyP")
 
     pair = page.locator("dialog[data-pair] img")
     expect(pair).to_have_count(2)
@@ -268,8 +317,13 @@ def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
           return a.height > 0 && Math.abs(a.height - b.height) <= 1 && a.top === b.top
         }"""
     )
+    page.keyboard.press("Control+KeyP")
+    viewer = page.locator("dialog[data-viewer]")
+    expect(page.locator("dialog[data-pair]")).to_have_count(0)
+    expect(viewer.locator("img")).to_have_count(1)
+    expect(viewer.locator("img")).to_have_attribute("src", re.compile(r"/photo$"))
     page.keyboard.press("Escape")
-    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
+    expect(viewer).to_have_count(0)
 
 
 @pytest.mark.spec("ui:compare:side-by-side-sets-the-image-beside-its-photograph")
@@ -306,12 +360,16 @@ def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
 ) -> None:
     large = f"{served.url}/b/{COMPARED}/renders/{served.compared.digest}/{FLOW}/v2/7"
     page.goto(large)
-    expect(page.locator("[data-compare]")).to_contain_text("Compare…")
+    expect(page.locator("[data-compare]")).to_contain_text("Compare with…")
 
-    # c picks in the viewer, starting on this seed's older version.
+    # c picks among the cell's other images as tiles, on this seed's older version.
     page.keyboard.press("c")
-    picker = page.locator("dialog[data-viewer]")
-    expect(picker.locator(".viewer__title")).to_contain_text("v1 · seed 7")
+    picker = page.locator("dialog[data-compare-pick]")
+    expect(picker.locator(".viewer__title")).to_contain_text(
+        "Compare v2 · seed 7 with…"
+    )
+    expect(picker.locator("[data-pick]")).to_have_count(2)
+    expect(picker.get_by_role("button", name="v1 · seed 7")).to_be_focused()
     page.keyboard.press("Enter")
 
     expect(page).to_have_url(f"{large}/compare/v1/7")
@@ -324,10 +382,8 @@ def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
     page.goto(large)
     expect(page.locator("[data-compare]")).to_be_visible()
     page.keyboard.press("c")
-    expect(picker.locator(".viewer__title")).to_contain_text("v1 · seed 7")
-    page.keyboard.press("l")
-    expect(picker.locator(".viewer__title")).to_contain_text("v2 · seed 5")
-    page.keyboard.press("Enter")
+    expect(picker.get_by_role("button", name="v1 · seed 7")).to_be_focused()
+    picker.get_by_role("button", name="v2 · seed 5").click()
     expect(page).to_have_url(f"{large}/compare/v2/5")
     expect(page.locator("[data-seeds-differ]")).to_contain_text("different seeds")
     expect(page.locator("[data-same-sheet]")).to_be_visible()

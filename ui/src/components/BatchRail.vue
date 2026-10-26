@@ -14,7 +14,8 @@ const props = defineProps<{
   /* `useQueue`'s count of them holding an approved artifact, read from the
      hub's statuses. */
   approved: number
-  /* The other flows holding unapproved sheets, and how many: `useQueue`'s `others`. */
+  /* The other flows holding unapproved sheets, and how many: `useQueue`'s `others`;
+     the chooser, on ⇧R, opens them. */
   others: Waiting[]
   current: string
   edited: Set<string>
@@ -45,7 +46,7 @@ function ready(id: string): void {
   <nav class="rail">
     <span class="kicker rail__flow">{{ flow }}</span>
     <span v-for="one in others" :key="one.flow" class="rail__waiting mono" data-waiting>
-      {{ one.flow }} · {{ one.count }} waiting<KeyHint command="next-flow" />
+      {{ one.flow }} · {{ one.count }} waiting<KeyHint command="review" />
     </span>
     <div class="rail__cards">
       <button

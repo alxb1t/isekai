@@ -1,9 +1,9 @@
-"""Approving in Review, in a browser: it stays, shows a failure, and cancels."""
+"""Review in a browser: the chooser, and approving that stays, fails and cancels."""
 
 import pytest
 from playwright.sync_api import Page, Route, expect
 
-from tests.e2e.conftest import Served
+from tests.e2e.conftest import CHOSEN, CONJURE, Served
 
 
 def _approve(page: Page) -> None:
@@ -58,3 +58,22 @@ def test_cancel_approve_opens_the_sheet_again(page: Page, served: Served) -> Non
     expect(page.locator("input.fragment").first).to_be_visible()
     expect(page.get_by_role("button", name="Approve sheet")).to_be_enabled()
     expect(page).to_have_url(served.review(only, "queue-cancels"))
+
+
+@pytest.mark.spec("ui:review:the-chooser-opens-a-flow")
+def test_the_chooser_opens_a_flow(page: Page, served: Served) -> None:
+    chooser = f"{served.url}/b/{CHOSEN}/review"
+    page.goto(chooser)
+    rows = page.locator("[data-flow-row]")
+    expect(rows).to_have_count(2)
+    expect(rows.nth(0)).to_be_focused()
+
+    page.keyboard.press("j")
+    page.keyboard.press("Enter")
+
+    expect(page).to_have_url(f"{chooser}/{served.chosen.digest}/{CONJURE}")
+    expect(page.locator("input.fragment").first).to_be_visible()
+    expect(page.locator(".rail__card--current")).to_be_focused()
+    page.keyboard.press("Escape")
+    expect(page).to_have_url(chooser)
+    expect(rows.nth(1)).to_be_focused()

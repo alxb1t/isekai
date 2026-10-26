@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import { EMPTY_CELL, action, clicks, targets } from './cells'
+import { EMPTY_CELL, action, clicks, pick, targets } from './cells'
 import { spec } from './test/spec'
 import type { HubCell } from './types'
 
@@ -33,4 +33,18 @@ spec('ui:hub:a-click-follows-the-cells-stage', () => {
   expect(clicks(on(false), '')).toBe(true)
   expect(clicks(on(true), '')).toBe(false)
   expect(clicks(on(false), 'python -m isekai')).toBe(false)
+})
+
+spec('ui:compare:one-other-image-is-compared-at-once', () => {
+  const v1 = { version: 1, seed: '7' }
+  const v2 = { version: 2, seed: '7' }
+  // One other image: no pick.
+  expect(pick([v1, v2], 2, '7', 1)).toEqual({ compare: v1 })
+
+  // Three others: the pick opens on v2, this seed's newest older version.
+  const v2b = { version: 2, seed: '5' }
+  const v3 = { version: 3, seed: '7' }
+  expect(pick([v1, v2, v2b, v3], 3, '7', 2)).toEqual({ at: 1 })
+  // With no older version of the seed, on the image before this one.
+  expect(pick([v1, v2b, v3], 3, '7', null)).toEqual({ at: 1 })
 })

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useVocabulary } from '../composables/useVocabulary'
+import { FIELD_DOWN, FIELD_UP } from '../panes'
+import { matches as pressed, useKeyStore } from '../stores/keys'
 import TagAutocomplete from './TagAutocomplete.vue'
 
 /* The in-flight fragment, and the dropdown it opens.
@@ -42,6 +44,7 @@ const fragment = ref('')
 const selected = ref(0)
 const box = ref<HTMLInputElement | null>(null)
 const { matches, total, search, clear } = useVocabulary()
+const keys = useKeyStore()
 
 const open = computed(() => props.focused && matches.value.length > 0)
 
@@ -56,20 +59,27 @@ function reset(): void {
   clear()
 }
 
+/* `⌃J` `⌃K` on macOS are `↓` `↑` from a field: an open list steps here, and with
+   none the key store's `field-down` `field-up` walk the sheet (D25). */
+function vertical(event: KeyboardEvent): -1 | 1 | null {
+  if (event.key === 'ArrowDown') return 1
+  if (event.key === 'ArrowUp') return -1
+  if (!keys.mac) return null
+  return pressed(FIELD_DOWN, event, true) ? 1 : pressed(FIELD_UP, event, true) ? -1 : null
+}
+
 function onKey(event: KeyboardEvent): void {
   if (props.suspended) return
-  if (event.key === 'ArrowDown' && open.value) {
+  const step = vertical(event)
+  if (step !== null && open.value) {
     event.preventDefault()
-    selected.value = (selected.value + 1) % matches.value.length
-  } else if (event.key === 'ArrowUp' && open.value) {
-    event.preventDefault()
-    selected.value = (selected.value - 1 + matches.value.length) % matches.value.length
+    selected.value = (selected.value + step + matches.value.length) % matches.value.length
   } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     // With no dropdown open, the vertical keys walk the sheet. Nothing in the
     // design assigns them a meaning here, and Tab alone makes an operator who
     // has just clicked a row reach for the mouse again to reach the next one.
     event.preventDefault()
-    emit('row', event.key === 'ArrowUp' ? -1 : 1)
+    emit('row', step ?? 1)
   } else if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) {
     /* A fragment matching nothing commits nothing: there is no row to take.
 

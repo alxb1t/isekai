@@ -8,7 +8,7 @@ import { useKeys } from './composables/useKeys'
 import { queue } from './composables/useQueue'
 import { lasted } from './sessions'
 import { useBatchStore } from './stores/batch'
-import { shifted, useKeyStore } from './stores/keys'
+import { keyList, shifted, useKeyStore } from './stores/keys'
 import { alerting, clock, useLiveStore } from './stores/live'
 import type { JobSlot } from './types'
 
@@ -93,12 +93,7 @@ useKeys('everywhere', [
     when: onBatch,
   },
   { id: 'session', keys: [shifted('KeyS')], label: 'sessions', run: sessions, when: onBatch },
-  {
-    id: 'keys',
-    keys: [shifted('Slash')],
-    label: 'the key list',
-    run: () => (listing.value = true),
-  },
+  keyList(() => (listing.value = true)),
 ])
 
 /* The page's one key listener: every command is a declaration in the key store. */
@@ -161,6 +156,7 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
         class="appbar__keys mono"
         type="button"
         aria-label="the key list"
+        :title="`the key list ${keys.hint('keys') ?? ''}`"
         data-keys-button
         @click="listing = true"
       >

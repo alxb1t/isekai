@@ -58,3 +58,32 @@ export function clicks(
 ): boolean {
   return selection === '' && !target?.closest('.hub__refusal')
 }
+
+/** An image of a cell, by its approval's version and its seed. */
+export interface CellImage {
+  version: number
+  seed: string
+}
+
+/** Return the images of a cell but `version`'s `seed`, in the cell's order. */
+export const others = (images: CellImage[], version: number, seed: string): CellImage[] =>
+  images.filter((one) => one.version !== version || one.seed !== seed)
+
+/** Return where *Compare with…* goes from `version`'s `seed`: straight to the
+    cell's one other image, else the pick, on that seed's newest older version,
+    `compare`, else on the image before this one, indexed among the others.
+
+    e.g. ([v1·7, v2·7], 2, '7', 1) -> {compare: v1·7} */
+export function pick(
+  images: CellImage[],
+  version: number,
+  seed: string,
+  compare: number | null,
+): { at: number } | { compare: CellImage } {
+  const rest = others(images, version, seed)
+  if (rest.length === 1) return { compare: rest[0] }
+  const paired = rest.findIndex((one) => one.version === compare && one.seed === seed)
+  if (paired >= 0) return { at: paired }
+  const here = images.findIndex((one) => one.version === version && one.seed === seed)
+  return { at: Math.max(here - 1, 0) }
+}
