@@ -73,7 +73,7 @@ COMPARED = "compared"
 DAMAGED = "damaged"
 
 # The batch Conjure from this drafts in: one source whose summon approval changes
-# `clothes`, rendered at seed 7, beside a conjure sheet.
+# `clothes`, rendered at seed 7, and no conjure sheet: the press fills it.
 CONJURED = "conjured"
 
 # The batch the chooser opens on: one source with an unapproved sheet in each flow.
@@ -226,7 +226,6 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     save_draft(conjured, FLOW, {**fields, "clothes": ["collared shirt"]})
     approve(conjured, FLOW, load_flow(FLOW).schema, VOCABULARY)
     _render_at(conjured)
-    sheet(conjured, load_flow(CONJURE).schema, VOCABULARY, flow=CONJURE)
     (lib / CHOSEN / "sources").mkdir(parents=True)
     chosen = _run(lib / CHOSEN, "mo", (810, 1000))
     sheet(chosen, load_flow(CONJURE).schema, VOCABULARY, flow=CONJURE)

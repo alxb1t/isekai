@@ -1820,7 +1820,7 @@ CONJURE = "conjure-anime-wai"
 
 
 def _drafting(made: Run, schema: Schema, vocabulary: Vocabulary) -> str:
-    """Approve and render summon at seed 7, assign conjure, and return the route."""
+    """Approve and render summon at seed 7, and return conjure's draft-from route."""
     flow = load_flow(FLOW)
     comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
     _source(made)
@@ -1830,7 +1830,6 @@ def _drafting(made: Run, schema: Schema, vocabulary: Vocabulary) -> str:
     approve(made, FLOW, schema, vocabulary)
     prepare(made, {FLOW: flow})
     render(made, flow, comfy, seeds=[7], poll=0)
-    assign(made, CONJURE)
     return f"/api/b/{BATCH}/review/{made.digest}/{CONJURE}/draft-from"
 
 
@@ -1843,6 +1842,7 @@ def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
     vocabulary: Vocabulary,
 ) -> None:
     _drafting(made, schema, vocabulary)
+    # Conjure is assigned to no source, and is a target: the press assigns.
     # Control reads a photograph, so it is assigned and still no target.
     assign(made, "control-anime-wai")
     client = _client(wired, made, tmp_path, drafted=False)
@@ -1853,7 +1853,7 @@ def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
 
 
 @pytest.mark.spec("ui:conjure-from:a-refused-draft-writes-nothing")
-def test_a_draft_from_into_a_flow_with_no_sheet_is_refused_and_writes_nothing(
+def test_a_draft_from_an_approval_the_source_does_not_hold_writes_nothing(
     wired: Wiring,
     made: Run,
     tmp_path: Path,
@@ -1864,10 +1864,33 @@ def test_a_draft_from_into_a_flow_with_no_sheet_is_refused_and_writes_nothing(
     client = _client(wired, made, tmp_path, drafted=False)
     before = snapshot(made.path)
 
-    answered = client.post(route, json={"source": FLOW, "version": 1})
+    answered = client.post(route, json={"source": FLOW, "version": 9})
 
     assert answered.status_code == 409
-    assert f"assign --flow {CONJURE}" in answered.json()["refusal"]
+    assert "009.approved.json" in answered.json()["refusal"]
+    assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("ui:conjure-from:a-waiting-edit-is-opened")
+def test_a_draft_from_onto_an_edited_waiting_draft_answers_it_and_writes_nothing(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    route = _drafting(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    assert client.post(route, json={"source": FLOW, "version": 1}).json() == {
+        "draft": "001.draft.json"
+    }
+    draft = made.directory(CONJURE, "review") / "001.draft.json"
+    save_draft(made, CONJURE, {**read(draft, DRAFT_FILE)["fields"], "clothes": []})
+    before = snapshot(made.path)
+
+    answered = client.post(route, json={"source": FLOW, "version": 1})
+
+    assert answered.json() == {"draft": "001.draft.json", "waiting": True}
     assert snapshot(made.path) == before
 
 
@@ -1890,6 +1913,45 @@ def test_review_names_a_drafted_drafts_source_and_carries_its_sheets_fields(
     own = read(made.path / CONJURE / "sheets" / "001.json", SHEET_FILE)["fields"]
     assert body["drafted"] == {"flow": FLOW, "approval": 1, "fields": own}
     assert body["fields"]["expression"] == [] != own["expression"]
+
+
+@pytest.mark.spec("ui:conjure-from:an-approved-draft-keeps-its-marks")
+def test_review_names_an_approved_drafted_drafts_source_and_its_sheets_fields(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    route = _drafting(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    client.post(route, json={"source": FLOW, "version": 1})
+    approve(made, CONJURE, load_flow(CONJURE).schema, vocabulary)
+
+    body = client.get(route.removesuffix("/draft-from")).json()
+
+    own = read(made.path / CONJURE / "sheets" / "001.json", SHEET_FILE)["fields"]
+    assert body["readonly"] is True
+    assert body["drafted"] == {"flow": FLOW, "approval": 1, "fields": own}
+
+
+@pytest.mark.spec("ui:source:a-borrowed-sheet-shows-its-sources-caption")
+def test_a_sheet_filled_from_another_flows_tags_shows_that_flows_caption(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    route = _drafting(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    client.post(route, json={"source": FLOW, "version": 1})
+
+    body = client.get(route.removesuffix("/draft-from")).json()
+
+    assert body["caption"] == "Dark brown hair, brown eyes."
+    assert body["caption_from"] == FLOW
+    assert body["caption_command"] is None
 
 
 # --- render sessions ----------------------------------------------------------

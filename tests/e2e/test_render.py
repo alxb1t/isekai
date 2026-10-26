@@ -287,6 +287,7 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     expect(page).to_have_url(f"{served.url}/b/{CONJURED}/review/{digest}/{CONJURE}")
     expect(page.locator(".form")).to_contain_text(f"from {FLOW} v1")
     expect(page.locator("[data-changed='clothes']")).to_contain_text("was")
+    expect(page.locator("[data-caption-heading]")).to_contain_text(f"caption · {FLOW}")
 
 
 @pytest.mark.spec("ui:revise:discard-asks-before-it-deletes")

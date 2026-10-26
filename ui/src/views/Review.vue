@@ -51,8 +51,8 @@ const schema = computed(() => sheet.detail.value?.schema ?? [])
 /* A draft copied from an approval, and once approved too: the approval's fields
    mark what changed, and its image sits beside the photograph (J5·4). */
 const revision = computed(() => sheet.detail.value?.revision ?? null)
-/* A draft drafted from another flow's approval: its own sheet's fields mark
-   what that approval changed. */
+/* A draft drafted from another flow's approval, and once approved too: its own
+   sheet's fields mark what that approval changed, read-only once approved. */
 const drafted = computed(() => sheet.detail.value?.drafted ?? null)
 const revised = computed(() => {
   const held = revision.value
@@ -574,6 +574,7 @@ watch(current, (id) => {
         :photo="photoUrl(showing.id)"
         :caption="sheet.detail.value?.caption ?? null"
         :caption-command="sheet.detail.value?.caption_command ?? null"
+        :caption-from="sheet.detail.value?.caption_from ?? null"
         :wd14="sheet.detail.value?.wd14 ?? null"
         :tags="sheet.detail.value?.tags ?? null"
         :loading="sheet.loading.value"

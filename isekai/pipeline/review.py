@@ -279,6 +279,18 @@ def drafting_approval(run: Run, flow: str, source: str, version: int | None) -> 
     return approval
 
 
+def waiting_edit(run: Run, flow: str) -> Path | None:
+    """Return `flow`'s waiting draft when it holds work `draft_from` never replaces.
+
+    That is edited fields, or a count or seeds of its own; else None.
+    """
+    waiting = current_draft(run.directory(flow, REVIEW))
+    discarding = f"run `{stage_command(run, STAGE, flow, options=DISCARD)}`"
+    if waiting is None or not _edited(run, flow, waiting, discarding):
+        return None
+    return waiting
+
+
 def _edited(run: Run, flow: str, draft: Path, remedy: str) -> bool:
     """Return whether `draft` holds work a replacement would lose.
 

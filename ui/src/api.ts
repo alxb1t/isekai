@@ -202,12 +202,13 @@ export function discardDraft(place: Place, saved: number | null): Promise<{ disc
 }
 
 /* Drafts the flow `place` names from `source`'s approval `version`, as `review
-   --from` does; a waiting draft holding edits, or no sheet, refuses. */
+   --from` does, assigning and filling a flow with no sheet first; a waiting
+   draft holding edits is answered `waiting`, and nothing is written. */
 export function draftFrom(
   place: Place,
   source: string,
   version: number,
-): Promise<{ draft: string }> {
+): Promise<{ draft: string; waiting?: true }> {
   return send(`${at(place)}/draft-from`, 'POST', { source, version })
 }
 

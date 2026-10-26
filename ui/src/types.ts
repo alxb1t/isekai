@@ -143,6 +143,9 @@ export interface InputDetail {
   /* The command that writes a missing caption, built by the server; null
      beside a caption. The browser never spells a command. */
   caption_command: string | null
+  /* The flow whose caption is shown, where this flow holds none and its sheet
+     holds that flow's tags; else null. */
+  caption_from: string | null
   /* Null where the artifact is absent, which is never a failure: a run
      captioned before v0.20, a flow that declares no tagger, or a tagger that
      failed. The panel simply is not drawn. */
@@ -153,8 +156,8 @@ export interface InputDetail {
   /* The approval a draft was copied from, its fields, and the seed of the image
      being revised; null for a draft of a sheet. */
   revision: Revision | null
-  /* The other flow's approval a waiting draft was drafted from, and its own
-     sheet's fields; null for any other draft. */
+  /* The other flow's approval the draft or the approval shown was drafted
+     from, and its own sheet's fields; null for any other. */
   drafted: Drafted | null
   readonly: boolean
   draft: string | null
@@ -374,7 +377,8 @@ export interface RenderDetail {
   compare: number | null
   /* The cell's images, oldest version first, as Renders draws them. */
   images: { version: number; seed: string }[]
-  /* The batch's flows drafted from a sheet alone, this one aside. */
+  /* The offered flows drafted from a sheet alone, this one aside, assigned or
+     not. */
   targets: string[]
 }
 
