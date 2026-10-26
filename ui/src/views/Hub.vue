@@ -527,16 +527,13 @@ onUnmounted(() => {
               >
             </template>
           </span>
-          <p v-if="cell(source, flow).stage !== null && cell(source, flow).refusal" class="hub__refusal">
+          <p v-if="cell(source, flow).refusal" class="hub__refusal">
             <span class="refusal__mark" />{{ cell(source, flow).refusal }}
           </p>
           <p v-if="refusals[key(source, flow)]" class="hub__refusal">
             <span class="refusal__mark" />{{ refusals[key(source, flow)] }}
           </p>
-          <span
-            v-if="cell(source, flow).stage !== null && source.digest && cell(source, flow).images.length"
-            class="hub__images"
-          >
+          <span v-if="source.digest && cell(source, flow).images.length" class="hub__images">
             <button
               v-for="(one, index) in cell(source, flow).images"
               :key="`${one.version}/${one.seed}`"

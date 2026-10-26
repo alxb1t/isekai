@@ -188,7 +188,6 @@ body {
   width: 720px;
   max-width: calc(100vw - 48px);
   padding: 24px;
-  color: var(--ink);
   background: var(--raised);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1575,7 +1574,12 @@ button.session__tile {
   box-shadow: var(--shadow-sheet);
 }
 
-.viewer::backdrop {
+/* Every dialog is modal, over the page beneath (design spec §1 rule 11). */
+dialog {
+  color: var(--ink);
+}
+
+dialog::backdrop {
   background: var(--scrim);
 }
 
@@ -1808,12 +1812,6 @@ button.session__tile {
 
 /* — the import sheet — */
 
-/* The confirming dialogs, modal over the page beneath (design spec J1·4, J4·1, J5·3). */
-.render-dialog::backdrop,
-.import::backdrop {
-  background: var(--scrim);
-}
-
 /* The New batch and Add sources sheet. */
 .import {
   display: flex;
@@ -1821,7 +1819,6 @@ button.session__tile {
   width: min(960px, calc(100vw - 64px));
   max-height: calc(100vh - 96px);
   padding: 0;
-  color: var(--ink);
   background: var(--raised);
   border: 1px solid var(--line);
   border-radius: 8px;

@@ -59,17 +59,12 @@ async function confirm(): Promise<void> {
   }
 }
 
-/* The dialog itself is the backdrop's target: a click inside lands on its content. */
-function outside(event: MouseEvent): void {
-  if (event.target === dialog.value) emit('close')
-}
-
 useKeys('overlay', [
   { id: 'cancel', keys: plain('Escape'), label: 'cancel', run: () => emit('close') },
   { id: 'confirm', keys: [modded('Enter')], label: 'render', run: () => void confirm() },
 ])
 
-useHeldFocus(dialog)
+useHeldFocus(dialog, () => emit('close'))
 
 /* The checkbox is drawn with the quote, so it takes the focus once the quote lands. */
 onMounted(async () => {
@@ -91,7 +86,6 @@ onMounted(async () => {
     class="render-dialog"
     aria-label="Render"
     @cancel.prevent
-    @click="outside"
   >
     <header class="render-dialog__head">
       <span class="section-label">Render · {{ batch }} · on a rented GPU</span>

@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { draftFrom, imageAt, photoUrl, renderDetail, versionOf } from '../api'
-import { type CellImage, pick } from '../cells'
+import { type CellImage, others as othersOf, pick } from '../cells'
 import ComparePick from '../components/ComparePick.vue'
 import ImageViewer from '../components/ImageViewer.vue'
 import KeyHint from '../components/KeyHint.vue'
@@ -32,9 +32,8 @@ const revising = ref(false)
 const drafting = ref<string | null>(null)
 /* The image beside its run's photograph, in the viewer's pair. */
 const pairing = ref(false)
-/* The dialog picking the image to compare with, and the tile it opens on. */
-const picking = ref(false)
-const start = ref(0)
+/* The tile the dialog picking the image to compare with opens on, while it is open. */
+const picking = ref<number | null>(null)
 const pair = computed(() => [
   { src: photoUrl(place.value), name: 'photograph' },
   { src: imageAt(place.value), name: `seed ${props.seed}` },
@@ -53,9 +52,7 @@ const clock = (at: number) =>
 
 /* The cell's other images, in the order Renders draws them. */
 const others = computed(() =>
-  (detail.value?.images ?? []).filter(
-    (one) => one.version !== place.value.version || one.seed !== props.seed,
-  ),
+  othersOf(detail.value?.images ?? [], place.value.version, props.seed),
 )
 const choices = computed(() =>
   others.value.map((one) => ({ ...one, src: imageAt({ ...place.value, ...one }) })),
@@ -70,10 +67,7 @@ function compareWith(): void {
     detail.value?.compare ?? null,
   )
   if ('compare' in where) compare(where.compare)
-  else {
-    start.value = where.at
-    picking.value = true
-  }
+  else picking.value = where.at
 }
 
 /* Compare carries where this view was opened from, so its esc returns here
@@ -234,12 +228,12 @@ onMounted(async () => {
       </dl>
     </aside>
     <ComparePick
-      v-if="picking"
+      v-if="picking !== null"
       :title="`Compare v${detail.version} · seed ${detail.seed} with…`"
       :images="choices"
-      :start="start"
-      @pick="(index) => compare(others[index])"
-      @close="picking = false"
+      :start="picking"
+      @pick="compare"
+      @close="picking = null"
     />
     <ImageViewer
       v-if="pairing"

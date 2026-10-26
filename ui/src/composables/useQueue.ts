@@ -76,6 +76,9 @@ export function flowsWaiting(info: HubInfo): FlowWaiting[] {
   })
 }
 
+/** Return whether a batch's Review is the chooser: two or more flows wait. */
+export const chooses = (info: HubInfo): boolean => flowsWaiting(info).length > 1
+
 /**
  * Return the sheet Review opens on among `flows`, or null for none.
  *

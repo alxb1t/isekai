@@ -1,12 +1,16 @@
 /* Review's panes, left to right: the rail, the photograph and its caption, the
    sheet, and ④ Renders. `h` `l` or `←` `→` move between them outside a field (D25). */
 
-import { type Command, plain } from './stores/keys'
+import { type Command, type Key, plain } from './stores/keys'
 
 /** One of Review's panes. */
 export type Pane = 'rail' | 'source' | 'sheet' | 'renders'
 
 export const PANES: Pane[] = ['rail', 'source', 'sheet', 'renders']
+
+/** macOS's `⌃J` `⌃K`: `↓` `↑` from a field, which a tag field reads too. */
+export const FIELD_DOWN: Key = { code: 'KeyJ', ctrl: true }
+export const FIELD_UP: Key = { code: 'KeyK', ctrl: true }
 
 /** Return the pane `step` from `at`, held at either end. e.g. ('rail', 1) -> 'source' */
 export function nextPane(at: Pane, step: -1 | 1): Pane {
@@ -46,14 +50,14 @@ export function paneKeys(
     },
     {
       id: 'field-down',
-      keys: [{ code: 'KeyJ', ctrl: true }],
+      keys: [FIELD_DOWN],
       label: 'next field',
       run: () => row(1),
       inField: true,
     },
     {
       id: 'field-up',
-      keys: [{ code: 'KeyK', ctrl: true }],
+      keys: [FIELD_UP],
       label: 'previous field',
       run: () => row(-1),
       inField: true,

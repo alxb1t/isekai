@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useVocabulary } from '../composables/useVocabulary'
-import { useKeyStore } from '../stores/keys'
+import { FIELD_DOWN, FIELD_UP } from '../panes'
+import { matches as pressed, useKeyStore } from '../stores/keys'
 import TagAutocomplete from './TagAutocomplete.vue'
 
 /* The in-flight fragment, and the dropdown it opens.
@@ -63,8 +64,8 @@ function reset(): void {
 function vertical(event: KeyboardEvent): -1 | 1 | null {
   if (event.key === 'ArrowDown') return 1
   if (event.key === 'ArrowUp') return -1
-  if (!keys.mac || !event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return null
-  return event.code === 'KeyJ' ? 1 : event.code === 'KeyK' ? -1 : null
+  if (!keys.mac) return null
+  return pressed(FIELD_DOWN, event, true) ? 1 : pressed(FIELD_UP, event, true) ? -1 : null
 }
 
 function onKey(event: KeyboardEvent): void {
@@ -78,7 +79,7 @@ function onKey(event: KeyboardEvent): void {
     // design assigns them a meaning here, and Tab alone makes an operator who
     // has just clicked a row reach for the mouse again to reach the next one.
     event.preventDefault()
-    emit('row', event.key === 'ArrowUp' ? -1 : 1)
+    emit('row', step ?? 1)
   } else if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) {
     /* A fragment matching nothing commits nothing: there is no row to take.
 

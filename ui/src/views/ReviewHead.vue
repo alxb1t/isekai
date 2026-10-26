@@ -10,8 +10,9 @@ import { sourceThumbAt } from '../api'
 import KeyHint from '../components/KeyHint.vue'
 import LoadingSkeleton from '../components/LoadingSkeleton.vue'
 import RefusalPage from '../components/RefusalPage.vue'
-import { flowsWaiting, head } from '../composables/useQueue'
+import { chooses, flowsWaiting, head } from '../composables/useQueue'
 import { useKeys } from '../composables/useKeys'
+import { clamp, kept } from '../grid'
 import { useBatchStore } from '../stores/batch'
 import { plain } from '../stores/keys'
 import { noun } from '../words'
@@ -47,10 +48,12 @@ function rows(): HTMLElement[] {
   return [...(list.value?.querySelectorAll<HTMLElement>('[data-flow-row]') ?? [])]
 }
 const at = () => rows().indexOf(document.activeElement as HTMLElement)
+/* The flow of the row holding the focus, or undefined. */
+const focusedFlow = () => (document.activeElement as HTMLElement | null)?.dataset?.flowRow
 
 function walk(step: -1 | 1): void {
   const held = rows()
-  held[Math.min(Math.max(at() + step, 0), held.length - 1)]?.focus()
+  held[clamp(at() + step, held.length - 1)]?.focus()
 }
 
 useKeys('screen', [
@@ -60,7 +63,7 @@ useKeys('screen', [
     id: 'open',
     keys: plain('Enter'),
     label: 'review the flow',
-    run: () => open(waiting.value[at()].flow),
+    run: () => open(focusedFlow() ?? ''),
     when: () => choosing.value && at() >= 0,
   },
 ])
@@ -75,11 +78,10 @@ onMounted(async () => {
     refusal.value = (reason as Error).message
     return
   }
-  if (flowsWaiting(info).length > 1) {
+  if (chooses(info)) {
     choosing.value = true
     await nextTick()
-    const kept = waiting.value.findIndex((one) => one.flow === chosen.get(props.batch))
-    rows()[Math.max(kept, 0)]?.focus()
+    kept(rows(), (row) => row.dataset.flowRow ?? '', chosen.get(props.batch) ?? null)?.focus()
     return
   }
   const first = head(info)
@@ -96,8 +98,7 @@ onMounted(async () => {
         v-for="one in waiting"
         :key="one.flow"
         class="library__row library__row--batch"
-        data-flow-row
-        :data-flow="one.flow"
+        :data-flow-row="one.flow"
         tabindex="0"
         @click="open(one.flow)"
       >

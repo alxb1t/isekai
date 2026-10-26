@@ -20,7 +20,7 @@ import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
 import { useKeys } from '../composables/useKeys'
-import { flowsWaiting, useQueue } from '../composables/useQueue'
+import { chooses, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import { clamp } from '../grid'
 import { nextPane, type Pane, paneKeys } from '../panes'
@@ -390,6 +390,8 @@ const photographKey: Command = {
   inField: true,
   when: () => sheet.detail.value !== null,
 }
+/* What the viewer adds to its own keys: `⌃P` reaches into it. */
+const viewerKeys = [photographKey]
 
 const scrollSource = (direction: -1 | 1) => source.value?.scrollBy({ top: direction * 120 })
 
@@ -461,7 +463,7 @@ useKeys('screen', [
     keys: plain('Escape'),
     label: 'the flows waiting',
     run: () => void router.push({ name: 'review-head', params: { batch: props.batch } }),
-    when: () => batch.info.value !== null && flowsWaiting(batch.info.value).length > 1,
+    when: () => batch.info.value !== null && chooses(batch.info.value),
   },
   ...paneKeys(useKeyStore().mac, movePane, moveRow),
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
@@ -644,7 +646,7 @@ watch(current, (id) => {
       :images="viewed.images"
       :start="viewed.start"
       :pair="lens === 'pair'"
-      :commands="[photographKey]"
+      :commands="viewerKeys"
       @close="closeLens"
     />
 

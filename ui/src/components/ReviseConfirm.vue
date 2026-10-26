@@ -25,16 +25,11 @@ const dialog = ref<HTMLDialogElement | null>(null)
 const primary = ref<HTMLButtonElement | null>(null)
 
 /* A modal dialog, on its confirm button. */
-useHeldFocus(dialog)
+useHeldFocus(dialog, () => emit('close'))
 onMounted(() => {
   dialog.value?.showModal()
   primary.value?.focus()
 })
-
-/* The dialog itself is the backdrop's target: a click inside lands on its content. */
-function outside(event: MouseEvent): void {
-  if (event.target === dialog.value) emit('close')
-}
 
 const kept = computed(() => (refused.value ?? []).filter((one) => one.refusal === null))
 const dropped = computed(() => (refused.value ?? []).length - kept.value.length)
@@ -62,8 +57,8 @@ async function confirm(images: RevisedImage[]): Promise<void> {
       refused.value = answer.images
       return
     }
-    const waiting = answer.drafts.some((one) => one.waiting !== null)
-    if (waiting && answer.drafts.some((one) => one.draft !== null)) answered.value = answer.drafts
+    const { drafts } = answer
+    if (drafts.some((one) => one.waiting) && drafts.some((one) => one.draft)) answered.value = drafts
     else review(answer.drafts)
   } catch (reason) {
     failure.value = (reason as Error).message
@@ -111,7 +106,6 @@ useKeys('overlay', [
     aria-label="Revise"
     data-revise-confirm
     @cancel.prevent
-    @click="outside"
   >
     <header class="render-dialog__head">
       <span class="section-label">Revise · {{ batch }}</span>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useHeldFocus } from '../composables/useHeldFocus'
+import type { CellImage } from '../cells'
 import { useKeys } from '../composables/useKeys'
+import { clamp } from '../grid'
 import { plain } from '../stores/keys'
 
 /* *Compare with…* (design spec J5·2): the cell's other images as tiles, oldest
@@ -9,11 +11,11 @@ import { plain } from '../stores/keys'
    focus. `h j k l` and the arrows move, `↵` or a click compares, `Esc` goes back. */
 const props = defineProps<{
   title: string
-  images: { src: string; version: number; seed: string }[]
+  images: (CellImage & { src: string })[]
   start: number
 }>()
 
-const emit = defineEmits<{ pick: [index: number]; close: [] }>()
+const emit = defineEmits<{ pick: [image: CellImage]; close: [] }>()
 
 const dialog = ref<HTMLDialogElement | null>(null)
 
@@ -32,12 +34,7 @@ function walk(rows: number, columns: number): void {
   const held = tiles()
   if (!held.length) return
   const next = at() + rows * perRow(held) + columns
-  held[Math.min(Math.max(next, 0), held.length - 1)].focus()
-}
-
-/* The dialog itself is the backdrop's target: a click on a tile lands on it. */
-function outside(event: MouseEvent): void {
-  if (event.target === dialog.value) dialog.value?.close()
+  held[clamp(next, held.length - 1)].focus()
 }
 
 useKeys('overlay', [
@@ -50,12 +47,12 @@ useKeys('overlay', [
     id: 'compare',
     keys: plain('Enter'),
     label: 'compare',
-    run: () => emit('pick', at()),
+    run: () => emit('pick', props.images[at()]),
     when: () => at() >= 0,
   },
 ])
 
-useHeldFocus(dialog)
+useHeldFocus(dialog, () => dialog.value?.close())
 onMounted(() => {
   dialog.value?.showModal()
   tiles()[props.start]?.focus()
@@ -68,18 +65,17 @@ onMounted(() => {
     class="viewer"
     :aria-label="title"
     data-compare-pick
-    @click="outside"
     @close="emit('close')"
   >
     <p class="viewer__title mono">{{ title }}</p>
     <div class="pick">
-      <figure v-for="(one, index) in images" :key="`${one.version}/${one.seed}`" class="pick__tile">
+      <figure v-for="one in images" :key="`${one.version}/${one.seed}`" class="pick__tile">
         <button
           class="renders__image"
           type="button"
           data-pick
           :aria-label="`v${one.version} · seed ${one.seed}`"
-          @click="emit('pick', index)"
+          @click="emit('pick', one)"
         >
           <img :src="one.src" alt="" />
         </button>

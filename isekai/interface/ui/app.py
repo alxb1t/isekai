@@ -856,32 +856,31 @@ def create_app(
         """
         found = folder(batch)
         named = _images(payload)
-        answers: list[str | None] = []
-        waiting: list[Path | None] = []
-        located: list[tuple[Path, Revision]] = []
+        answers: list[str | None] = [None] * len(named)
+        drafts = [{**_image_out(*one), "draft": None, "waiting": None} for one in named]
+        # Each image to write, by its place in `named`.
+        located: list[tuple[int, Path, Revision]] = []
         with _DRAFT_UPDATE:
-            for digest, flow, version, seed in named:
-                held = None
+            for at, (digest, flow, version, seed) in enumerate(named):
                 try:
                     # A flow this build does not track names no directory of a run.
                     one = offered(flow)
                     run = library.run_named(found, digest)
                     image = image_of(run, one, version, seed)
-                    # The draft in hand is opened rather than refused; the review
-                    # stage, and the CLI through it, still refuses it.
-                    held = current_draft(run.directory(flow, REVIEW))
-                    if held is None:
-                        located.append((image, (run, flow, version, seed)))
-                    answers.append(None)
                 except Refusal as refused:
-                    answers.append(str(refused))
-                waiting.append(held)
+                    answers[at] = str(refused)
+                    continue
+                # The draft in hand is opened rather than refused; the review
+                # stage, and the CLI through it, still refuses it.
+                waiting = current_draft(run.directory(flow, REVIEW))
+                if waiting is not None:
+                    drafts[at]["waiting"] = waiting.name
+                else:
+                    located.append((at, image, (run, flow, version, seed)))
             # Each other image the batch holds takes its answer from the review stage.
-            checked = iter(refuse_revisions(located))
-            answers = [
-                next(checked) if answer is None and held is None else answer
-                for answer, held in zip(answers, waiting, strict=True)
-            ]
+            checked = refuse_revisions([(image, held) for _, image, held in located])
+            for (at, _, _), answer in zip(located, checked, strict=True):
+                answers[at] = answer
             if any(answer is not None for answer in answers):
                 return JSONResponse(
                     {
@@ -893,17 +892,8 @@ def create_app(
                     },
                     REFUSED,
                 )
-            written = iter(located)
-            drafts = []
-            for one, held in zip(named, waiting, strict=True):
-                draft = None if held else revise(*next(written)[1]).name
-                drafts.append(
-                    {
-                        **_image_out(*one),
-                        "draft": draft,
-                        "waiting": held.name if held else None,
-                    }
-                )
+            for at, _, revision in located:
+                drafts[at]["draft"] = revise(*revision).name
         return {"drafts": drafts}
 
     @app.get("/api/b/{batch}/renders")
