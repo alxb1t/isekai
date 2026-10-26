@@ -237,8 +237,8 @@ uv run --env-file .env gpunit volume down   # once no other batch follows
 - **`isekai assign` ticks a flow**: it gives each source's run that flow's empty directory, and
   `--remove` takes away one that holds no work yet.
 - **`ui` takes no arguments.** It serves every batch of the library; the batch's hub shows each
-  photograph's stage in each flow, and the *Review* tab opens the batch's head: the first unapproved
-  sheet of the first flow that has one. Stop it with Ctrl-C.
+  photograph's stage in each flow, and the *Review* tab opens a chooser when multiple flows have sheets
+  waiting, or the first unapproved sheet when one flow waits. Stop it with Ctrl-C.
 - **`approve --cancel` takes an approval back** to its draft while nothing was made from it — no prompt,
   render group or copy in another flow. Past that, the way on is `isekai revise` where an image exists, else
   `review --new-version`.
@@ -265,7 +265,7 @@ corrects one sheet, its ④ setting how many images it renders and at which seed
 read-only. **Render** opens a dialog quoting what renders and its price at most; **its confirmation is the one
 act on the page that spends money**, and the session view shows it to *Nothing is billing.* Renders shows
 each source's images by flow, versions oldest to newest, each marked with its version, and an image's large view
-shows the sheet it came from, headed a revision or a re-roll of the one it came from. **Revise** (`e`),
+shows the sheet it came from, headed a revision or a re-roll of the one it came from. **Revise** (`⇧E`),
 from the large view or over a selection, runs what `isekai revise` does and opens Review on the first draft it
 wrote, the others of its flow in the rail, with the render beside the photograph; **Compare** (`c`) shows a seed under two
 versions and the fields that changed. Every screen has its own URL, so a reload lands where it was. Stop it

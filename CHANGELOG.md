@@ -11,6 +11,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Changed
 
+- The browser guide names Review's flow chooser and `⇧E` for Revise; the walkthrough names Compare's tile
+  picker, keeping the instructions aligned with the controls (0078 D9–D11).
+
 - Revisiting an image's waiting revision opens Review directly and preserves its edits, without asking to write
   another draft (0078 D8).
 

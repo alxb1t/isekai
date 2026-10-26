@@ -318,7 +318,7 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | `…/b/2026-09-17/sessions/<id>` |
 | J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/b/2026-09-17/renders` |
 | J5·8 the large view of v2, with `Compare with…  c` | ↵ on v2 | `…/v2/1840266731` |
-| J5·9 before / after | c, ↵ on v1 in the viewer | `…/v2/1840266731/compare/v1/1840266731` |
+| J5·9 before / after | c, ↵ on v1 in the tile picker | `…/v2/1840266731/compare/v1/1840266731` |
 
 ```
 J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731   [ Side by side ⌃P ]
