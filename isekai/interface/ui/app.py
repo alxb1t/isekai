@@ -1241,6 +1241,8 @@ def _drafted(
 ) -> dict[str, Any] | None:
     """Describe the other flow's approval a draft was drafted from, and its sheet.
 
+    `remedy` repairs the draft or approval; a damaged sheet names itself, since
+    no command rewrites a sheet one records: `review` copies the same damage.
     e.g. from summon 1, on sheet 1 -> {"flow": "summon-…", "approval": 1, "fields": …}
     """
     origin = drafted_from(body)
@@ -1248,8 +1250,9 @@ def _drafted(
         return None
     require(draft, body, "sheet", int, remedy)
     sheet = sheet_of(one.run, one.flow.id, body["sheet"])
-    held = read(sheet, SHEET_FILE, remedy=remedy)
-    return {**origin, "fields": _fields(sheet, held, remedy)}
+    restore = f"restore {sheet} by hand, then reload the page"
+    held = read(sheet, SHEET_FILE, remedy=restore)
+    return {**origin, "fields": _fields(sheet, held, restore)}
 
 
 def _caption(one: Held) -> tuple[Path | None, str | None]:

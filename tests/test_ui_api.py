@@ -1934,9 +1934,17 @@ def test_review_names_a_drafted_drafts_source_and_carries_its_sheets_fields(
     body = client.get(route.removesuffix("/draft-from")).json()
 
     assert drafted.json() == {"draft": "001.draft.json"}
-    own = read(made.path / CONJURE / "sheets" / "001.json", SHEET_FILE)["fields"]
+    target = made.path / CONJURE / "sheets" / "001.json"
+    own = read(target, SHEET_FILE)["fields"]
     assert body["drafted"] == {"flow": FLOW, "approval": 1, "fields": own}
     assert body["fields"]["expression"] == [] != own["expression"]
+
+    _damage(target, _drop("fields"))
+    refused = client.get(route.removesuffix("/draft-from"))
+
+    # `review --new-version` copies the same damaged sheet, so a hand restores it.
+    assert refused.status_code == 409
+    assert f"restore {target} by hand" in refused.json()["refusal"]
 
 
 @pytest.mark.spec("ui:conjure-from:an-approved-draft-keeps-its-marks")
@@ -1954,9 +1962,18 @@ def test_review_names_an_approved_drafted_drafts_source_and_its_sheets_fields(
 
     body = client.get(route.removesuffix("/draft-from")).json()
 
-    own = read(made.path / CONJURE / "sheets" / "001.json", SHEET_FILE)["fields"]
+    target = made.path / CONJURE / "sheets" / "001.json"
+    own = read(target, SHEET_FILE)["fields"]
     assert body["readonly"] is True
     assert body["drafted"] == {"flow": FLOW, "approval": 1, "fields": own}
+
+    _damage(target, _drop("fields"))
+    refused = client.get(route.removesuffix("/draft-from"))
+
+    # The approval is intact: the file to restore is the sheet it was drafted on.
+    assert refused.status_code == 409
+    assert f"restore {target} by hand" in refused.json()["refusal"]
+    assert "001.approved.json" not in refused.json()["refusal"]
 
 
 @pytest.mark.spec("ui:source:a-borrowed-sheet-shows-its-sources-caption")
