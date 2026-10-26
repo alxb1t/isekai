@@ -9,6 +9,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- The sheet stage fills a flow's sheet from another flow's tag list when told to, recording that flow, so a
+  target needs no tagging of its own (0080 D1).
+
 ## [0.52.0] - 2026-10-26 · 0079-the-session-drawer
 
 Gate: local 0m45s · CI 1m29s (ci at 63d656d) · 0.51.0: local 0m46s · CI 1m24s

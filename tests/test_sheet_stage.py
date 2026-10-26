@@ -690,3 +690,56 @@ def test_a_sheet_records_the_digest_it_is_handed_tagged_or_empty(
     assert read(before, SHEET_FILE).get("flow_digest") == "a" * 64
     assert read(after, SHEET_FILE).get("flow_digest") == "b" * 64
     assert read(empty, SHEET_FILE).get("flow_digest") == "c" * 64
+
+
+# --- another flow's tags ------------------------------------------------------
+
+TARGET = "conjure-anime-wai"
+
+
+@pytest.mark.spec("sheet:tags-from:filled-from-the-sources-tag-list")
+def test_a_sheet_is_filled_from_the_named_flows_tag_list(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    write_wd14(run, [DanbooruTag("brown_hair"), DanbooruTag("long_hair")])
+
+    written, warnings = sheet_stage.sheet(
+        run,
+        TARGET,
+        schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=True,
+        flow_digest=FLOW_DIGEST,
+        tags_from=FLOW,
+    )
+
+    body = _body(written)
+    assert warnings == []
+    assert written is not None and written.parent == run.path / TARGET / "sheets"
+    assert body["fields"]["hair_colour"] == ["brown hair"]
+    assert body["fields"]["hair_silhouette"] == ["long hair"]
+    assert body["producer"]["tags_from"] == FLOW
+    assert body["producer"]["from"] == 1
+    assert not (run.path / TARGET / "wd14").exists()
+
+
+@pytest.mark.spec("sheet:tags-from:no-source-tag-list-gives-an-empty-sheet")
+def test_a_source_with_no_tag_list_gives_an_empty_sheet_naming_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    written, _ = sheet_stage.sheet(
+        run,
+        TARGET,
+        schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=True,
+        flow_digest=FLOW_DIGEST,
+        tags_from=FLOW,
+    )
+
+    body = _body(written)
+    assert body["fields"] == {name: [] for name in schema.names}
+    assert body["producer"]["tags_from"] == FLOW
+    assert "from" not in body["producer"]

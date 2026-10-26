@@ -5,15 +5,15 @@ test carries `@pytest.mark.spec` with the key its task names.
 
 ## Progress
 
-- [ ] 1 — A sheet from another flow's tags
+- [x] 1 — A sheet from another flow's tags
 - [ ] 2 — The drafting sequence
 - [ ] 3 — The page
 
 ## 1 — A sheet from another flow's tags
 
-- [ ] 1.1 **HALT CHECK** — the sheet stage reads only the flow's own tag list.
+- [x] 1.1 **HALT CHECK** — the sheet stage reads only the flow's own tag list.
   Verify: `grep -c 'tags_from' isekai/pipeline/sheet.py isekai/foundation/artifacts.py` prints `0` for each file.
-- [ ] 1.2 Add `tags_from` to `sheet` in `isekai/pipeline/sheet.py` and to `SheetProducer` in
+- [x] 1.2 Add `tags_from` to `sheet` in `isekai/pipeline/sheet.py` and to `SheetProducer` in
   `isekai/foundation/artifacts.py` per [D1](design.md#d1); bind both `sheet:tags-from:` keys in
   `tests/test_sheet_stage.py`.
   Verify: `grep -c 'sheet:tags-from:' tests/test_sheet_stage.py` prints `2`, and `uv run pytest -q tests/test_sheet_stage.py` exits 0, and `uv run ty check` exits 0.

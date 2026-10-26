@@ -94,13 +94,16 @@ def sheet(
     tagged: bool,
     flow_digest: str,
     new_version: bool = False,
+    tags_from: str | None = None,
 ) -> tuple[Path | None, list[str]]:
     """Route this flow's tag list into a sheet, under that flow, with its warnings.
 
     `tagged` says whether the flow declares the tagger, and has no default
     because a default decides silently. Untagged, no list is read and every
     field is written empty for the person to fill (D31).
-    `flow_digest` is recorded and never read.
+    `flow_digest` is recorded and never read. `tags_from` names the flow whose
+    tag list fills the sheet instead of this flow's own, and is recorded; that
+    flow holding none gives every field empty.
 
     **The fill is told nothing about flows beyond `tagged`, and reaches nothing
     at all.** It is handed a tag list, the schema, the vocabulary and the table,
@@ -126,7 +129,11 @@ def sheet(
         return None, _superseded(run, flow, directory, kept)
     version = (kept or 0) + 1
 
-    if not tagged:
+    if tags_from is not None:
+        fields, made_by = _from_source(
+            run, flow, tags_from, schema, vocabulary, field_map
+        )
+    elif not tagged:
         # No tagger was going to run, so an empty sheet hides nothing; and
         # nothing here can fail, so no budget is checked.
         fields = route((), field_map, schema)
@@ -222,6 +229,39 @@ def _from_tag_list(
         raise refusal_for(
             STAGE, run, "permanent", detail, record, SHEETS, STAGE, flow, STAGE
         ) from failed
+    return fields, made_by
+
+
+def _from_source(
+    run: Run,
+    flow: str,
+    source_flow: str,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    field_map: FieldMap,
+) -> tuple[dict[str, list[str]], SheetProducer]:
+    """Return the checked fields routed from another flow's tag list, and its producer.
+
+    No list gives every field empty. A damaged list is refused and recorded
+    nowhere: its fix is the source's, and a record here would bar the retry.
+    """
+    source = latest(run.directory(source_flow, WD14))
+    if source is None:
+        fields = route((), field_map, schema)
+        made_by: SheetProducer = {
+            "implementation": EMPTY,
+            "models": [],
+            "pinned": True,
+            "artifacts": {},
+        }
+        validate(fields, schema, vocabulary)
+    else:
+        retag = stage_command(run, "tag", source_flow, options=NEW_VERSION)
+        redraft = stage_command(run, "review", flow, options=("--from", source_flow))
+        remedy = f"run `{retag}`, then `{redraft}`"
+        fields, made_by = _route(run, source_flow, source, schema, field_map, remedy)
+        validate(fields, schema, vocabulary, remedy=remedy)
+    made_by["tags_from"] = source_flow
     return fields, made_by
 
 
