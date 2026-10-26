@@ -9,7 +9,7 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 - [x] 2 — Review's keys from a field
 - [x] 3 — The approved revision and the waiting draft
 - [x] 4 — The flow chooser
-- [ ] 5 — The large view
+- [x] 5 — The large view
 - [ ] 6 — The dialogs
 
 ## 1 — The layout
@@ -100,26 +100,26 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 
 ## 5 — The large view
 
-- [ ] 5.1 **HALT CHECK** — the large view revises on a plain `e`.
+- [x] 5.1 **HALT CHECK** — the large view revises on a plain `e`.
   Verify: `grep -c "keys: plain('KeyE')" ui/src/views/RenderLarge.vue` prints `1`.
-- [ ] 5.2 Shift `revise` and `draft-from` in `ui/src/views/RenderLarge.vue` and `revise` in `ui/src/views/Renders.vue`
+- [x] 5.2 Shift `revise` and `draft-from` in `ui/src/views/RenderLarge.vue` and `revise` in `ui/src/views/Renders.vue`
   per [D10](design.md#d10); press `Shift+E` in `test_revise_opens_review_on_the_revision` and `Shift+F` in
   `test_conjure_from_this_opens_review` (`tests/e2e/test_render.py`).
   Verify: `grep -c "plain('KeyE')" ui/src/views/RenderLarge.vue ui/src/views/Renders.vue` prints `0` for each file, and `grep -c "plain('KeyF')" ui/src/views/RenderLarge.vue` prints `0`.
-- [ ] 5.3 Add `pick` to `ui/src/cells.ts` and bind `ui:compare:one-other-image-is-compared-at-once` in
+- [x] 5.3 Add `pick` to `ui/src/cells.ts` and bind `ui:compare:one-other-image-is-compared-at-once` in
   `ui/src/cells.test.ts`; draw the pick in a new `ui/src/components/ComparePick.vue` opened from
   `ui/src/views/RenderLarge.vue`, and drop `action` from `ui/src/components/ImageViewer.vue`, per [D11](design.md#d11);
   pick by tile in `test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed`.
   Verify: `grep -c 'one-other-image-is-compared-at-once' ui/src/cells.test.ts` prints `1`, and `grep -c 'action' ui/src/components/ImageViewer.vue` prints `0`, and `uv run pytest -q tests/e2e/test_render.py` exits 0.
-- [ ] 5.4 Lay `.large__actions` out as the grouped column above the fields in `ui/src/views/RenderLarge.vue` and
+- [x] 5.4 Lay `.large__actions` out as the grouped column above the fields in `ui/src/views/RenderLarge.vue` and
   `ui/src/app.css` per [D12](design.md#d12).
   Verify: `grep -c 'large__group' ui/src/views/RenderLarge.vue` prints a number of at least `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 5.5 In `ui/design/spec.md`: the Renders row's `e Revise` → `⇧E Revise` in both places, `f Conjure from this` →
+- [x] 5.5 In `ui/design/spec.md`: the Renders row's `e Revise` → `⇧E Revise` in both places, `f Conjure from this` →
   `⇧F Conjure from this`, `c compare` → `c Compare with…`; J5's `e Revise this image` → `⇧E Revise this image`;
   `` `Compare…  c` `` → `` `Compare with…  c` `` in J5's table and its large-view bullet, which says the pick is a
   dialog of tiles and one other image compares at once.
   Verify: `grep -c '⇧E Revise' ui/design/spec.md` prints a number of at least `2`, and `grep -c 'Compare…  c' ui/design/spec.md` prints `0`.
-- [ ] 5.6 In `docs/decisions.md` D25's rule, `` `⇧`+letter for a command,`` → `` `⇧`+letter for a command, always for
+- [x] 5.6 In `docs/decisions.md` D25's rule, `` `⇧`+letter for a command,`` → `` `⇧`+letter for a command, always for
   one that writes,``.
   Verify: `grep -c 'always for' docs/decisions.md` prints a number of at least `1`, and `grep -c 'one that writes' docs/decisions.md` prints `1`.
 

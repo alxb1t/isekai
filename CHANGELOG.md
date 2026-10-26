@@ -23,6 +23,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - With two or more flows waiting, the Review tab is a chooser — a row per flow, its counts and photographs — and
   `Esc` on Review returns to it; `⇧F` is gone (0078 D9).
 
+- The large view's writes take a shifted letter — `⇧E` Revise, `⇧F` Conjure from this, and `⇧E` on Renders;
+  *Compare with…* picks in a dialog of tiles, or compares at once; its buttons are a grouped column (0078 D10–D12).
+
 ## [0.50.0] - 2026-10-25 · 0077-conjure-from-this
 
 Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.49.0: local 0m41s · CI 7m25s

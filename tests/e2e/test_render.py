@@ -207,7 +207,7 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
     digest = served.revised.digest
     page.goto(f"{served.url}/b/{REVISED}/renders/{digest}/{FLOW}/v1/7")
     expect(page.locator("[data-revise]")).to_be_visible()
-    page.keyboard.press("e")
+    page.keyboard.press("Shift+E")
     confirm = page.locator("[data-revise-confirm]")
     expect(confirm).to_contain_text("copies v1 · prefills seed 7")
 
@@ -235,7 +235,7 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     page.goto(f"{served.url}/b/{CONJURED}/renders/{digest}/{FLOW}/v1/7")
     expect(page.locator("[data-draft-from]")).to_contain_text("Conjure from this")
 
-    page.keyboard.press("f")
+    page.keyboard.press("Shift+F")
 
     expect(page).to_have_url(f"{served.url}/b/{CONJURED}/review/{digest}/{CONJURE}")
     expect(page.locator(".form")).to_contain_text(f"from {FLOW} v1")
@@ -323,12 +323,16 @@ def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
 ) -> None:
     large = f"{served.url}/b/{COMPARED}/renders/{served.compared.digest}/{FLOW}/v2/7"
     page.goto(large)
-    expect(page.locator("[data-compare]")).to_contain_text("Compare…")
+    expect(page.locator("[data-compare]")).to_contain_text("Compare with…")
 
-    # c picks in the viewer, starting on this seed's older version.
+    # c picks among the cell's other images as tiles, on this seed's older version.
     page.keyboard.press("c")
-    picker = page.locator("dialog[data-viewer]")
-    expect(picker.locator(".viewer__title")).to_contain_text("v1 · seed 7")
+    picker = page.locator("dialog[data-compare-pick]")
+    expect(picker.locator(".viewer__title")).to_contain_text(
+        "Compare v2 · seed 7 with…"
+    )
+    expect(picker.locator("[data-pick]")).to_have_count(2)
+    expect(picker.get_by_role("button", name="v1 · seed 7")).to_be_focused()
     page.keyboard.press("Enter")
 
     expect(page).to_have_url(f"{large}/compare/v1/7")
@@ -341,10 +345,8 @@ def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
     page.goto(large)
     expect(page.locator("[data-compare]")).to_be_visible()
     page.keyboard.press("c")
-    expect(picker.locator(".viewer__title")).to_contain_text("v1 · seed 7")
-    page.keyboard.press("l")
-    expect(picker.locator(".viewer__title")).to_contain_text("v2 · seed 5")
-    page.keyboard.press("Enter")
+    expect(picker.get_by_role("button", name="v1 · seed 7")).to_be_focused()
+    picker.get_by_role("button", name="v2 · seed 5").click()
     expect(page).to_have_url(f"{large}/compare/v2/5")
     expect(page.locator("[data-seeds-differ]")).to_contain_text("different seeds")
     expect(page.locator("[data-same-sheet]")).to_be_visible()

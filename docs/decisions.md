@@ -370,10 +370,10 @@ as it is from a client that is not a browser.**
 ### D25 · Shortcuts match the physical key
 
 **A shortcut is matched on `event.code` and declared once, in the key store: `⇧`+letter for a command,
-a plain letter only where nothing is typed, and Mod — `⌘` on macOS, `Ctrl` elsewhere — where a command
-must reach into a text field. Inside a text field only `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K` and `⌃/`
-run, Review's `⌃P`, and on macOS Review's `⌃H` `⌃L`, which move between its panes, and `⌃J` `⌃K`, which
-move between its fields.**
+always for one that writes, a plain letter only where nothing is typed, and Mod — `⌘` on macOS, `Ctrl`
+elsewhere — where a command must reach into a text field. Inside a text field only `Esc`, `Mod+↵`, `Mod+Z`,
+`⇧Mod+Z`, `Mod+K` and `⌃/` run, Review's `⌃P`, and on macOS Review's `⌃H` `⌃L`, which move between its panes,
+and `⌃J` `⌃K`, which move between its fields.**
 
 - **Why:** a key typed into a field is text. Option types characters on macOS and is the window
   manager's on Linux, and a layout moves letters but not keys. One declaration is what the hints and

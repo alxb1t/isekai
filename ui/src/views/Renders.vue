@@ -182,7 +182,7 @@ useKeys('screen', [
   },
   {
     id: 'revise',
-    keys: plain('KeyE'),
+    keys: [shifted('KeyE')],
     label: 'revise',
     run: () => (revising.value = true),
     when: () => chosen.value.length > 0,

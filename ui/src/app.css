@@ -626,10 +626,22 @@ button.session__tile {
   color: var(--ink-2);
 }
 
+/* The actions under the heading, above the fields, a full-width column in
+   groups: the writes, the comparisons, the way back. */
 .large__actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.large__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.large__group > .btn {
+  justify-content: space-between;
 }
 
 /* — Compare: two renders of one seed at equal size, top-aligned (J5·9) — */
@@ -1564,6 +1576,23 @@ button.session__tile {
 
 .viewer::backdrop {
   background: var(--scrim);
+}
+
+/* Compare with…'s tiles, at a Renders tile's size, each named under it. */
+.pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: min(calc(100vw - 96px), 720px);
+}
+
+.pick__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-2);
 }
 
 .viewer__title {

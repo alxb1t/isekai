@@ -310,13 +310,13 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 |---|---|---|
 | J5·1 Renders, before the revision | — | `…/b/2026-09-17/renders` |
 | J5·2 the large view, no Compare yet | ↵ | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731` |
-| J5·3 the Revise confirm over it | e Revise this image | same |
+| J5·3 the Revise confirm over it | ⇧E Revise this image | same |
 | J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/b/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
 | J5·6 the revision approved, read-only; the hub's Render bar, `1 image ready to render` | ⌘↵ Approve · ⇧H | `…/b/2026-09-17/hub` |
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | `…/b/2026-09-17/sessions/<id>` |
 | J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/b/2026-09-17/renders` |
-| J5·8 the large view of v2, with `Compare…  c` | ↵ on v2 | `…/v2/1840266731` |
+| J5·8 the large view of v2, with `Compare with…  c` | ↵ on v2 | `…/v2/1840266731` |
 | J5·9 before / after | c, ↵ on v1 in the viewer | `…/v2/1840266731/compare/v1/1840266731` |
 
 ```
@@ -333,7 +333,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
       [render, equal size, top-aligned]      [render]
       same seed · 1840266731     1 FIELD CHANGED  eye_colour  light blue eyes → blue eyes
       another seed picked:  different seeds · 2216093514 → 1840266731 · same sheet when no field changed
-                                                                             [ Revise again e ]
+                                                                             [ Revise again ⇧E ]
 ```
 
 - **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer. A
@@ -344,12 +344,15 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   approval time, the Count and the seeds — is in the large view.
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
   (filled fields only, read-only), and *Side by side* `⇧C`: the image beside its run's photograph, at one height,
-  in one dialog. `Esc` and its back button go back to where it was opened, the hub or else Renders, focused on the
-  cell or the image left. `Compare…  c` appears when its cell holds another image: the viewer opens over the
-  cell's other images, every version's and seed's, on the newest older version of this seed, else the image before
-  this one, and `↵` compares the shown one, the older of the two before. The same-seed address, `…/compare`, still compares with the newest
+  in one dialog. Its actions stand under the heading, above the fields: a column of full-width buttons, label left
+  and key right, in groups 12 px apart — the writes, the comparisons, the way back. `Esc` and its back button go
+  back to where it was opened, the hub or else Renders, focused on the cell or the image left.
+  `Compare with…  c` appears when its cell holds another image, and with one other compares at once. Else it
+  opens a dialog of the cell's other images as tiles at Renders' size, every version's and seed's, oldest first,
+  `vN · seed` under each, focused on the newest older version of this seed, else the image before this one;
+  `h j k l` and the arrows move, `↵` or a click compares, the older of the two before. The same-seed address, `…/compare`, still compares with the newest
   older version of the seed. Each flow of the batch drafted from a sheet alone is offered as *Conjure from this*,
-  the first on `f`: it drafts that flow from this image's approval and opens Review, which marks its draft
+  the first on `⇧F`: it drafts that flow from this image's approval and opens Review, which marks its draft
   against that flow's sheet, names the approval in the kicker and offers *Discard draft*; a refusal shows under
   the actions.
 - **Revise** (the verb `isekai revise`): the confirm lists each image — source × flow × seed, the version it copies,
@@ -371,7 +374,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 
 | frame | trigger | URL |
 |---|---|---|
-| (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · e · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
+| (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · ⇧E · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
 | J6·1 Review: the seed cleared, Count 3, the tags untouched | × the seed · count + + | `…/review/0d4b7e6fb2a8/conjure-anime-wai` |
 | (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⇧G · ⌘↵ | `…/b/2026-09-17/sessions/<id>` |
 | J6·2 Renders: three new images after v1, no pair | ⇧I | `…/b/2026-09-17/renders` |
@@ -455,7 +458,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K and
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
-| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · e Revise · ⇧G Render · in the large view, e Revise, f Conjure from this, c compare, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
+| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧E Revise · ⇧G Render · in the large view, ⇧E Revise, ⇧F Conjure from this, c Compare with…, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
 | Session | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 
