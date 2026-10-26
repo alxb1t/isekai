@@ -334,7 +334,6 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
       [render, equal size, top-aligned]      [render]
       same seed · 1840266731     1 FIELD CHANGED  eye_colour  light blue eyes → blue eyes
       another seed picked:  different seeds · 2216093514 → 1840266731 · same sheet when no field changed
-                                                                             [ Revise again ⇧E ]
 ```
 
 - **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer. A

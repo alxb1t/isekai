@@ -243,8 +243,21 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
     expect(page.locator(".renders-block")).to_contain_text("seed 7")
     expect(page.locator(".form")).to_contain_text("revision of render 7")
     row = page.locator(".row", has_text="hair_colour")
-    row.locator(".chip__x").first.click()
+    with page.expect_response(lambda response: response.request.method == "PUT"):
+        row.locator(".chip__x").first.click()
     expect(page.locator("[data-changed='hair_colour']")).to_contain_text("was")
+    expect(page.locator(".receipt__when")).to_contain_text("saved")
+    draft = current_draft(served.revised.directory(FLOW, REVIEW))
+    assert draft is not None
+    before = draft.read_bytes()
+    page.goto(f"{served.url}/b/{REVISED}/renders/{digest}/{FLOW}/v1/7")
+    expect(page.locator("[data-revise]")).to_be_visible()
+    page.keyboard.press("Shift+E")
+    expect(page).to_have_url(review)
+    expect(page.locator("[data-revise-confirm]")).to_have_count(0)
+    expect(page.locator("[data-changed='hair_colour']")).to_contain_text("was")
+    assert current_draft(served.revised.directory(FLOW, REVIEW)) == draft
+    assert draft.read_bytes() == before
     page.get_by_role("button", name="Approve sheet").click()
     expect(page.locator(".form")).to_contain_text("approved")
     expect(page.locator("input.fragment")).to_have_count(0)

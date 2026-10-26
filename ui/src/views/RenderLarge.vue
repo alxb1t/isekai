@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { draftFrom, imageAt, photoUrl, renderDetail, versionOf } from '../api'
+import { draftFrom, hub, imageAt, photoUrl, renderDetail, versionOf } from '../api'
 import { type CellImage, others as othersOf, pick } from '../cells'
 import ComparePick from '../components/ComparePick.vue'
 import ImageViewer from '../components/ImageViewer.vue'
@@ -28,6 +28,7 @@ const router = useRouter()
 const detail = ref<RenderDetail | null>(null)
 const refusal = ref<string | null>(null)
 const revising = ref(false)
+const checkingRevision = ref(false)
 /* Why drafting a target from this image's approval was refused, or null. */
 const drafting = ref<string | null>(null)
 /* The image beside its run's photograph, in the viewer's pair. */
@@ -86,6 +87,28 @@ function fromThis(flow: string): string {
   return `${word.charAt(0).toUpperCase()}${word.slice(1)} from this`
 }
 
+/* A rendered flow with a later draft is re-opened. Read its current state
+   before asking to write, so an existing correction opens without a confirm. */
+async function reviseImage(): Promise<void> {
+  if (checkingRevision.value) return
+  checkingRevision.value = true
+  drafting.value = null
+  try {
+    const grid = await hub(props.batch)
+    const cell = grid.sources.find((one) => one.digest === props.digest)?.cells[props.flow]
+    if (cell?.status === 're-opened') {
+      await router.push({
+        name: 'review',
+        params: { batch: props.batch, digest: props.digest, flow: props.flow },
+      })
+    } else revising.value = true
+  } catch (reason) {
+    drafting.value = (reason as Error).message
+  } finally {
+    checkingRevision.value = false
+  }
+}
+
 /* No confirm: the draft is one Discard draft away, and costs nothing. */
 async function draftTarget(target: string): Promise<void> {
   drafting.value = null
@@ -113,7 +136,7 @@ useKeys('screen', [
     id: 'revise',
     keys: [shifted('KeyE')],
     label: 'revise',
-    run: () => (revising.value = true),
+    run: () => void reviseImage(),
   },
   {
     id: 'draft-from',
@@ -178,7 +201,7 @@ onMounted(async () => {
       </p>
       <div class="large__actions">
         <div class="large__group">
-          <button class="btn btn-secondary" type="button" data-revise @click="revising = true">
+          <button class="btn btn-secondary" type="button" data-revise @click="reviseImage">
             Revise this image<KeyHint command="revise" />
           </button>
           <button

@@ -11,6 +11,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Changed
 
+- Revisiting an image's waiting revision opens Review directly and preserves its edits, without asking to write
+  another draft (0078 D8).
+
 - The hub's row sets its photograph and its renders at the cells' foot, `↵ view photo` in the corner and the stem
   alone; Renders' source cell is its thumbnail; Home's row shows fifteen sources (0078 D1–D3).
 
