@@ -372,7 +372,7 @@ as it is from a client that is not a browser.**
 **A shortcut is matched on `event.code` and declared once, in the key store: `⇧`+letter for a command,
 always for one that writes, a plain letter only where nothing is typed, and Mod — `⌘` on macOS, `Ctrl`
 elsewhere — where a command must reach into a text field. Inside a text field only `Esc`, `Mod+↵`, `Mod+Z`,
-`⇧Mod+Z`, `Mod+K` and `⌃/` run, Review's `⌃P`, and on macOS Review's `⌃H` `⌃L`, which move between its panes,
+`⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;` run, Review's `⌃P`, and on macOS Review's `⌃H` `⌃L`, which move between its panes,
 and `⌃J` `⌃K`, which move between its fields.**
 
 - **Why:** a key typed into a field is text. Option types characters on macOS and is the window
