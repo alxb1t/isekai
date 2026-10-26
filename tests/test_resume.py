@@ -351,6 +351,30 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     for _ in range(BUDGETS["caption"]):
         record_failure(directory, 1, "transient", {"stage": "caption", "detail": "x"})
     collect(lambda: caption(bare, reader, briefing_path=CAPTION_BRIEFING))
+
+    # A damaged tag list of the flow `review --from` fills a target's sheet from.
+    from isekai.foundation.artifacts import WD14_FILE
+    from isekai.pipeline.sheet import sheet as fill
+
+    other = tmp_path / "borrowed.jpg"
+    other.write_bytes(jpeg_bytes(480, 640))
+    borrowed = open_run(other, wired.runs_root)
+    listed = borrowed.directory(FLOW, "wd14")
+    listed.mkdir(parents=True)
+    (listed / "001.json").write_text(json.dumps({"schema": WD14_FILE.schema}))
+    target = load_flow("conjure-anime-wai")
+    collect(
+        lambda: fill(
+            borrowed,
+            target.id,
+            target.schema,
+            wired.vocabulary(),
+            FIELD_MAP,
+            tagged=target.tagger,
+            flow_digest=target.digest,
+            tags_from=FLOW,
+        )
+    )
     return messages
 
 

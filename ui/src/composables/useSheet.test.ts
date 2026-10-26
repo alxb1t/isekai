@@ -25,6 +25,7 @@ function detail(id: string, saved: number): InputDetail {
     height: 1,
     caption: null,
     caption_command: null,
+    caption_from: null,
     wd14: null,
     tags: null,
     fields: { hair: ['long hair'] },

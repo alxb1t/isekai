@@ -176,12 +176,18 @@ def _clear_wd14(run: Run) -> None:
 
 
 def _client(
-    wired: Wiring, made: Run, tmp_path: Path, *, drafted: bool = True
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    *,
+    drafted: bool = True,
+    offered: Sequence[str] = OFFERED,
 ) -> TestClient:
     """Return a client over the app, with a stand-in for the built bundle.
 
     `drafted` takes the draft opening the sheet would, so a test may write
-    before it reads. The library is the folder holding the wiring's batch.
+    before it reads; `offered` is the surface's flows. The library is the folder
+    holding the wiring's batch.
     """
     dist = tmp_path / "dist"
     dist.mkdir(exist_ok=True)
@@ -191,7 +197,7 @@ def _client(
     app = create_app(
         wired.runs_root.parent.parent,
         wired,
-        flows=OFFERED,
+        flows=offered,
         bundle=dist,
         wire=lambda runs: replace(wired, runs_root=runs),
         host=HOST,
@@ -1820,7 +1826,7 @@ CONJURE = "conjure-anime-wai"
 
 
 def _drafting(made: Run, schema: Schema, vocabulary: Vocabulary) -> str:
-    """Approve and render summon at seed 7, assign conjure, and return the route."""
+    """Approve and render summon at seed 7, and return conjure's draft-from route."""
     flow = load_flow(FLOW)
     comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
     _source(made)
@@ -1830,7 +1836,6 @@ def _drafting(made: Run, schema: Schema, vocabulary: Vocabulary) -> str:
     approve(made, FLOW, schema, vocabulary)
     prepare(made, {FLOW: flow})
     render(made, flow, comfy, seeds=[7], poll=0)
-    assign(made, CONJURE)
     return f"/api/b/{BATCH}/review/{made.digest}/{CONJURE}/draft-from"
 
 
@@ -1843,6 +1848,7 @@ def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
     vocabulary: Vocabulary,
 ) -> None:
     _drafting(made, schema, vocabulary)
+    # Conjure is assigned to no source, and is a target: the press assigns.
     # Control reads a photograph, so it is assigned and still no target.
     assign(made, "control-anime-wai")
     client = _client(wired, made, tmp_path, drafted=False)
@@ -1851,9 +1857,24 @@ def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
 
     assert body["targets"] == [CONJURE]
 
+    # A sheet-alone flow the surface does not offer is no target, and its press
+    # is refused writing nothing.
+    alone = _client(wired, made, tmp_path, drafted=False, offered=(FLOW,))
+    before = snapshot(made.path)
+
+    narrowed = alone.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/7").json()
+    pressed = alone.post(
+        f"/api/b/{BATCH}/review/{made.digest}/{CONJURE}/draft-from",
+        json={"source": FLOW, "version": 1},
+    )
+
+    assert narrowed["targets"] == []
+    assert pressed.status_code == 409
+    assert snapshot(made.path) == before
+
 
 @pytest.mark.spec("ui:conjure-from:a-refused-draft-writes-nothing")
-def test_a_draft_from_into_a_flow_with_no_sheet_is_refused_and_writes_nothing(
+def test_a_draft_from_a_refused_source_writes_nothing(
     wired: Wiring,
     made: Run,
     tmp_path: Path,
@@ -1864,10 +1885,57 @@ def test_a_draft_from_into_a_flow_with_no_sheet_is_refused_and_writes_nothing(
     client = _client(wired, made, tmp_path, drafted=False)
     before = snapshot(made.path)
 
-    answered = client.post(route, json={"source": FLOW, "version": 1})
+    answered = client.post(route, json={"source": FLOW, "version": 9})
 
     assert answered.status_code == 409
-    assert f"assign --flow {CONJURE}" in answered.json()["refusal"]
+    assert "009.approved.json" in answered.json()["refusal"]
+    assert snapshot(made.path) == before
+
+    # A damaged approval body is refused before the target is assigned or filled.
+    approved = made.directory(FLOW, "review") / "001.approved.json"
+    intact = approved.read_bytes()
+    approved.write_text(json.dumps({**json.loads(intact), "fields": None}))
+    before = snapshot(made.path)
+
+    damaged = client.post(route, json={"source": FLOW, "version": 1})
+
+    assert damaged.status_code == 409
+    assert "001.approved.json" in damaged.json()["refusal"]
+    assert snapshot(made.path) == before
+    assert not made.directory(CONJURE).exists()
+
+    # So is a damaged tag list of the source's, which would fill the target's sheet.
+    approved.write_bytes(intact)
+    (made.directory(FLOW, WD14) / "001.json").write_text("{}")
+    before = snapshot(made.path)
+
+    untagged = client.post(route, json={"source": FLOW, "version": 1})
+
+    assert untagged.status_code == 409
+    assert snapshot(made.path) == before
+    assert not made.directory(CONJURE).exists()
+
+
+@pytest.mark.spec("ui:conjure-from:a-waiting-edit-is-opened")
+def test_a_draft_from_onto_an_edited_waiting_draft_answers_it_and_writes_nothing(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    route = _drafting(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    assert client.post(route, json={"source": FLOW, "version": 1}).json() == {
+        "draft": "001.draft.json"
+    }
+    draft = made.directory(CONJURE, "review") / "001.draft.json"
+    save_draft(made, CONJURE, {**read(draft, DRAFT_FILE)["fields"], "clothes": []})
+    before = snapshot(made.path)
+
+    answered = client.post(route, json={"source": FLOW, "version": 1})
+
+    assert answered.json() == {"draft": "001.draft.json", "waiting": True}
     assert snapshot(made.path) == before
 
 
@@ -1887,9 +1955,65 @@ def test_review_names_a_drafted_drafts_source_and_carries_its_sheets_fields(
     body = client.get(route.removesuffix("/draft-from")).json()
 
     assert drafted.json() == {"draft": "001.draft.json"}
-    own = read(made.path / CONJURE / "sheets" / "001.json", SHEET_FILE)["fields"]
+    target = made.path / CONJURE / "sheets" / "001.json"
+    own = read(target, SHEET_FILE)["fields"]
     assert body["drafted"] == {"flow": FLOW, "approval": 1, "fields": own}
     assert body["fields"]["expression"] == [] != own["expression"]
+
+    _damage(target, _drop("fields"))
+    refused = client.get(route.removesuffix("/draft-from"))
+
+    # `review --new-version` copies the same damaged sheet, so a hand restores it.
+    assert refused.status_code == 409
+    assert f"restore {target} by hand" in refused.json()["refusal"]
+
+
+@pytest.mark.spec("ui:conjure-from:an-approved-draft-keeps-its-marks")
+def test_review_names_an_approved_drafted_drafts_source_and_its_sheets_fields(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    route = _drafting(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    client.post(route, json={"source": FLOW, "version": 1})
+    approve(made, CONJURE, load_flow(CONJURE).schema, vocabulary)
+
+    body = client.get(route.removesuffix("/draft-from")).json()
+
+    target = made.path / CONJURE / "sheets" / "001.json"
+    own = read(target, SHEET_FILE)["fields"]
+    assert body["readonly"] is True
+    assert body["drafted"] == {"flow": FLOW, "approval": 1, "fields": own}
+
+    _damage(target, _drop("fields"))
+    refused = client.get(route.removesuffix("/draft-from"))
+
+    # The approval is intact: the file to restore is the sheet it was drafted on.
+    assert refused.status_code == 409
+    assert f"restore {target} by hand" in refused.json()["refusal"]
+    assert "001.approved.json" not in refused.json()["refusal"]
+
+
+@pytest.mark.spec("ui:source:a-borrowed-sheet-shows-its-sources-caption")
+def test_a_sheet_filled_from_another_flows_tags_shows_that_flows_caption(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    route = _drafting(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    client.post(route, json={"source": FLOW, "version": 1})
+
+    body = client.get(route.removesuffix("/draft-from")).json()
+
+    assert body["caption"] == "Dark brown hair, brown eyes."
+    assert body["caption_from"] == FLOW
+    assert body["caption_command"] is None
 
 
 # --- render sessions ----------------------------------------------------------

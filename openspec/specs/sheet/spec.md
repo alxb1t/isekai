@@ -66,16 +66,20 @@ against, and what any future producer must meet.
 
 ### Requirement: The stage fills fields from the tag list of a flow that declares the tagger, and leaves them empty for a flow that declares none
 
-The system SHALL fill a sheet from a schema, a vocabulary, a field map and — for a flow that declares the
-tagger — its local tag list, and SHALL store fields only. It SHALL NOT store an assembled prompt in a sheet,
-SHALL NOT be told which flow requested the work beyond whether a tag list is expected and the flow's digest
-it records, and SHALL NOT read prose. For a flow that declares the tagger it SHALL refuse naming the verb that
-produces the tag list when that list is absent. For a flow that declares none it SHALL write every field empty,
-and the sheet's producer SHALL record that no tag list and no model filled it. Every sheet SHALL record the digest
-of the flow it was filled for, and SHALL carry the tag list's confidence floor into its producer where the list
-records one.
+The system SHALL fill a sheet from a schema, a vocabulary, a field map and a tag list — the source flow's where the
+operator names one, else, for a flow that declares the tagger, its local list — and SHALL store fields only. It
+SHALL NOT store an assembled prompt in a sheet, SHALL NOT be told which flow requested the work beyond whether a tag
+list is expected, the source flow the operator names and the flow's digest it records, and SHALL NOT read prose.
+Where no source is named, for a flow that declares the tagger it SHALL refuse naming the verb that produces the tag
+list when that list is absent, and for a flow that declares none it SHALL write every field empty, and the sheet's
+producer SHALL record that no tag list and no model filled it. Every sheet SHALL record the digest of the flow it was
+filled for, and SHALL carry the tag list's confidence floor into its producer where the list records one.
 
 ```
+source flow named? ──yes──▶ fill from the source's tag list, or empty where it holds none
+         │
+         no
+         ▼
 flow declares the tagger? ──yes──▶ local tag list present? ──yes──▶ fill through the field map
          │                                  │
          no                                 no ──▶ refuse, naming the verb that produces it
@@ -84,9 +88,11 @@ every field empty; the producer names no tag list and no model
 ```
 
 A prompt stored in the sheet would be edited by a person and silently overwritten by a rebuild. The stage learns
-only whether a tag list is expected and the flow's digest, which it records and never reads, so one stage serves
-every flow; the digest ties a sheet to the schema it was filled against across a re-pin. It reads a tag list, not
-prose, because a tagger whose output layer is the vocabulary cannot name a tag outside it
+only whether a tag list is expected, the source the operator names and the flow's digest, which it records and never
+reads, so one stage serves every flow; the digest ties a sheet to the schema it was filled against across a re-pin.
+A flow reads another's tag list only when the operator names it
+([D17](../../../docs/decisions.md#d17--input-above-flow-below)). It reads a tag list, not prose, because a tagger
+whose output layer is the vocabulary cannot name a tag outside it
 ([D2](../../../docs/decisions.md#d2--a-table-fills-the-sheet)). An empty sheet is legal and so silent: for a tagged
 flow it would hide a tagger that never ran, and for a flow that declares none there is nothing to hide — a person
 fills it, and approval still gates the render
@@ -130,15 +136,15 @@ fills it, and approval still gates the render
 #### Scenario: an absent tag list is a refusal naming the verb that fills it
 - **Key:** `sheet:output:an-absent-tag-list-is-refused`
 - **Layers:** unit
-- **WHEN** a sheet is asked, for a flow that declares the tagger, for an input whose local tagger's artifact
-  is absent
+- **WHEN** a sheet is asked, for a flow that declares the tagger and with no source named, for an input whose
+  local tagger's artifact is absent
 - **THEN** the stage refuses, naming the verb that would produce it
 - **AND** no sheet is written
 
 #### Scenario: a flow that declares no tagger gets a sheet with every field empty
 - **Key:** `sheet:output:a-flow-without-a-tagger-gets-empty-fields`
 - **Layers:** unit
-- **WHEN** a sheet is asked for an input of a flow that declares no tagger
+- **WHEN** a sheet is asked, with no source named, for an input of a flow that declares no tagger
 - **THEN** a sheet is written with every schema field present and empty
 - **AND** its producer names no tag list and no model
 
@@ -160,12 +166,16 @@ fills it, and approval still gates the render
 
 When a flow that declares the tagger already has a sheet and no new version is asked for, the system SHALL write
 nothing, and SHALL warn where the flow holds a tag list numbered above the one its latest sheet was filled from,
-naming both numbers and the command that fills a new sheet. A kept sheet it cannot read SHALL leave the command
-silent.
+naming both numbers and the command that fills a new sheet. A kept sheet it cannot read, or one filled from another
+flow's tags, SHALL leave the command silent.
 
 ```
 sheet, no new version asked, a sheet exists
         │
+        ▼
+filled from another flow's tags? ──yes──▶ silent
+        │
+        no
         ▼
 latest tag list above the sheet's source? ──yes──▶ warn: both numbers, the command
         │
@@ -176,7 +186,8 @@ nothing written, either way
 
 `tag --new-version` writes a newer list and leaves the sheet filled from the old one, so "already complete" alone
 hides it. The warning names the fix and changes nothing: a new version is an explicit act. A sheet that cannot be
-read is refused by name at review.
+read is refused by name at review. A sheet filled from another flow's tags is built from that flow's approval, so a
+later tag list under either flow does not supersede it.
 
 #### Scenario: a newer tag list is named
 - **Key:** `sheet:superseded:a-newer-tag-list-is-named`
@@ -205,3 +216,40 @@ read is refused by name at review.
 - **WHEN** the sheet verb runs without a new version for a flow whose latest sheet cannot be read
 - **THEN** nothing is written
 - **AND** no warning is given
+
+#### Scenario: a sheet filled from another flow's tags is silent
+- **Key:** `sheet:superseded:a-borrowed-sheet-is-silent`
+- **Layers:** unit
+- **WHEN** the sheet verb runs without a new version for a flow whose sheet was filled from another flow's tags
+- **THEN** nothing is written
+- **AND** no warning is given, whichever flow holds a newer tag list
+
+### Requirement: A sheet is filled from another flow's tag list when the operator names it
+
+The system SHALL fill a flow's sheet from another flow's tag list when the operator names that flow as the source,
+through the target flow's own schema, vocabulary and field map, and SHALL record the source flow in the sheet's
+producer. Where the source holds no tag list, it SHALL write every field empty, as for a flow that declares no
+tagger.
+
+```
+summon-anime-wai/wd14/001.json ──▶ conjure's schema · vocabulary · field map ──▶ conjure-anime-wai/sheets/001.json
+                                                                                  producer.tags_from: summon-anime-wai
+```
+
+Two flows that tag with the same pinned model read the same photograph the same way, so the second needs no tagging
+of its own. A flow reads another's artifacts only when the operator names it
+([D17](../../../docs/decisions.md#d17--input-above-flow-below)), and the sheet says whose tags it holds.
+
+#### Scenario: a sheet is filled from the source's tag list
+- **Key:** `sheet:tags-from:filled-from-the-sources-tag-list`
+- **Layers:** unit
+- **WHEN** a sheet is asked for a flow with another flow named as the source of its tags
+- **THEN** its fields are routed from the source's tag list through the target's schema and field map
+- **AND** its producer names the source flow
+
+#### Scenario: no source tag list gives an empty sheet
+- **Key:** `sheet:tags-from:no-source-tag-list-gives-an-empty-sheet`
+- **Layers:** unit
+- **WHEN** a sheet is asked from a source flow that holds no tag list
+- **THEN** a sheet is written with every field present and empty
+- **AND** its producer names the source flow

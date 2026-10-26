@@ -35,6 +35,7 @@ name everywhere removes the class of error.
 Stdlib only.
 """
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from isekai.foundation.artifacts import (
@@ -94,26 +95,30 @@ def sheet(
     tagged: bool,
     flow_digest: str,
     new_version: bool = False,
+    tags_from: str | None = None,
 ) -> tuple[Path | None, list[str]]:
     """Route this flow's tag list into a sheet, under that flow, with its warnings.
 
     `tagged` says whether the flow declares the tagger, and has no default
     because a default decides silently. Untagged, no list is read and every
     field is written empty for the person to fill (D31).
-    `flow_digest` is recorded and never read.
+    `flow_digest` is recorded and never read. `tags_from` names the flow whose
+    tag list fills the sheet instead of this flow's own, and is recorded; that
+    flow holding none gives every field empty.
 
-    **The fill is told nothing about flows beyond `tagged`, and reaches nothing
-    at all.** It is handed a tag list, the schema, the vocabulary and the table,
-    so the same code serves every flow without learning that flows exist; `flow`
-    decides only which directory is read and written. A flow shares nothing, so
-    the tag list read here is the one produced under this flow's own directory (D17).
+    **The fill is told nothing about flows beyond `tagged` and `tags_from`, and
+    reaches nothing at all.** It is handed a tag list, the schema, the vocabulary
+    and the table, so the same code serves every flow without learning that flows
+    exist; `flow` decides which directory is written, and the list read is the
+    one under this flow's own directory, or under the flow the operator names as
+    `tags_from` -- a flow reads another's only when it is named (D17).
 
-    **For a tagged flow, an absent tag list is a refusal.** A sheet with every
-    field empty is legal and therefore silent, so writing one when the tagger
-    never ran would hide the only thing the operator needs told. The rule that a
-    missing tag artifact is an absent aid still holds for the *hosted* tagger,
-    which contributes nothing to a sheet; it cannot hold for the local one the
-    sheet is filled from.
+    **For a tagged flow with no source named, an absent tag list is a
+    refusal.** A sheet with every field empty is legal and therefore silent, so
+    writing one when the tagger never ran would hide the only thing the operator
+    needs told. The rule that a missing tag artifact is an absent aid still holds
+    for the *hosted* tagger, which contributes nothing to a sheet; it cannot hold
+    for the local one the sheet is filled from.
 
     Returns the artifact's path, or None when this flow already had a sheet;
     a kept sheet filled from a superseded tag list is warned about.
@@ -126,9 +131,17 @@ def sheet(
         return None, _superseded(run, flow, directory, kept)
     version = (kept or 0) + 1
 
-    if not tagged:
-        # No tagger was going to run, so an empty sheet hides nothing; and
-        # nothing here can fail, so no budget is checked.
+    borrowed = (
+        None
+        if tags_from is None
+        else _from_source(run, flow, tags_from, schema, vocabulary, field_map)
+    )
+    if borrowed is not None:
+        fields, made_by = borrowed
+    elif tags_from is not None or not tagged:
+        # No tagger was going to run, or the named flow holds no tag list, so an
+        # empty sheet hides nothing; and nothing here can fail, so no budget is
+        # checked.
         fields = route((), field_map, schema)
         made_by: SheetProducer = {
             "implementation": EMPTY,
@@ -141,6 +154,8 @@ def sheet(
         fields, made_by = _from_tag_list(
             run, flow, directory, version, schema, vocabulary, field_map
         )
+    if tags_from is not None:
+        made_by["tags_from"] = tags_from
 
     path = directory / artifact_name(version)
     artifact: Sheet = {
@@ -160,7 +175,9 @@ def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
     """Return a warning when the kept sheet's tag list is below the flow's latest.
 
     A sheet it cannot read, or one with no list number, gives none: review
-    refuses an unreadable sheet by name.
+    refuses an unreadable sheet by name. Nor does a sheet filled from another
+    flow's tags: it is built from that flow's approval, so neither flow's later
+    list is weighed against it.
     """
     newest = latest(run.directory(flow, WD14))
     if newest is None:
@@ -168,6 +185,8 @@ def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
     try:
         filled = read(directory / artifact_name(kept), SHEET_FILE)
     except Refusal:
+        return []
+    if tagged_from(filled) is not None:
         return []
     producer = filled.get("producer")
     source = producer.get("from") if isinstance(producer, dict) else None
@@ -223,6 +242,40 @@ def _from_tag_list(
             STAGE, run, "permanent", detail, record, SHEETS, STAGE, flow, STAGE
         ) from failed
     return fields, made_by
+
+
+def _from_source(
+    run: Run,
+    flow: str,
+    source_flow: str,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    field_map: FieldMap,
+) -> tuple[dict[str, list[str]], SheetProducer] | None:
+    """Return the checked fields routed from another flow's tag list, and its producer.
+
+    None when that flow holds no list. A damaged list is refused and recorded
+    nowhere: its fix is the source's, and a record here would bar the retry.
+    """
+    source = latest(run.directory(source_flow, WD14))
+    if source is None:
+        return None
+    retag = stage_command(run, "tag", source_flow, options=NEW_VERSION)
+    redraft = stage_command(run, "review", flow, options=("--from", source_flow))
+    remedy = f"run `{retag}`, then `{redraft}`"
+    fields, made_by = _route(run, source_flow, source, schema, field_map, remedy)
+    validate(fields, schema, vocabulary, remedy=remedy)
+    return fields, made_by
+
+
+def tagged_from(body: Mapping[str, object]) -> str | None:
+    """Return the flow whose tag list filled a sheet, when not its own, else None.
+
+    e.g. producer `{…, "tags_from": "summon-anime-wai"}` -> "summon-anime-wai"
+    """
+    producer = body.get("producer")
+    source = producer.get("tags_from") if isinstance(producer, Mapping) else None
+    return source if isinstance(source, str) else None
 
 
 def _route(

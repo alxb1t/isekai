@@ -75,17 +75,21 @@ field. No model decides a sheet.**
 
 ### D4 · The UI runs stages only as the CLI's children
 
-**The browser runs a stage only as the CLI's own verb, a child of the server; the one act in it that
-spends is Render's confirmation, after its quote.** Prepare is `tag`, `caption` and `sheet` run as
-children, and Render is `render` between gpunit's `volume up` and `volume down`. Every other write goes
-through the function that owns it: a draft, its edits and an approval through `review`'s, a tick through
-the run's `assign`, a source through import.
+**The browser runs a stage only as the CLI's own verb, a child of the server, save the sheet a draft from
+another flow fills; the one act in it that spends is Render's confirmation, after its quote.** Prepare is
+`tag`, `caption` and `sheet` run as children, and Render is `render` between gpunit's `volume up` and
+`volume down`. Every other write goes through the function that owns it: a draft, its edits and an
+approval through `review`'s, a tick through the run's `assign`, a source through import, and a target's
+first sheet, when it is drafted from another flow, through `sheet()`, which `interface/drafting.py`'s
+`draft_across` runs in the server's process before the draft.
 
 - **Why:** the CLI is the one path, so a stage the page starts is exactly the stage the terminal runs,
-  and a write no stage owns would give a run file a second author. Spend behind a web page is bounded by
-  what the operator read: the confirmation carries the quote it showed, and a quote grown since is
-  refused. The quote compares image total and limit, not source or approval identity.
-- **Made by:** `0018`, `0061`, `0062`, `0063`.
+  and a write no stage owns would give a run file a second author. `draft_across` is the sequence
+  `review --from` runs too, so the in-process fill is still the terminal's path; it is free, and it
+  refuses before it writes. Spend behind a web page is bounded by what the operator read: the
+  confirmation carries the quote it showed, and a quote grown since is refused. The quote compares
+  image total and limit, not source or approval identity.
+- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`.
 
 ### D42 · A new draft starts from the last approval
 

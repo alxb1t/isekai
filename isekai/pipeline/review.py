@@ -207,6 +207,10 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
     return _write_draft(run, flow, version, REVIEW, carried, carried["sheet"], renders)
 
 
+# How every refusal of a draft from another flow's approval ends.
+_DRAFT_AGAIN = "then draft it again"
+
+
 def draft_from(
     run: Run, flow: str, source: str, version: int | None, schema: Schema
 ) -> Path:
@@ -219,40 +223,27 @@ def draft_from(
     number; one with edited fields, or a count or seeds of its own, refuses.
     e.g. (run, conjure, summon, None, schema) -> conjure/review/001.draft.json
     """
-    then = "then draft it again"
-    if source == flow:
-        raise Refusal(
-            f"{run.id}: flow {flow} is drafted from its own approval; run "
-            f"{_again(run, flow)} to copy it, or name another flow to draft from"
-        )
+    approval = drafting_approval(run, flow, source, version)
     sheet_version = latest(run.directory(flow, SHEETS))
     if sheet_version is None:
         raise Refusal(
             f"{run.id}: flow {flow} has no sheet to draft {source}'s approval into; "
-            f"run `{stage_command(run, 'assign', flow)}`, then Prepare, {then}"
-        )
-    held = approved_versions(run.directory(source, REVIEW))
-    approval = held[-1] if version is None and held else version
-    if approval is None or approval not in held:
-        named = "an approval" if approval is None else artifact_name(approval, APPROVED)
-        raise Refusal(
-            f"{run.id}: flow {source} has no {named} to draft {flow} from; run "
-            f"`{stage_command(run, 'approve', source)}` to approve its draft, {then}"
+            f"run `{stage_command(run, 'assign', flow)}`, then Prepare, {_DRAFT_AGAIN}"
         )
     carried = _approval(run, source, approval, f"draft {flow} again")
     copied = sheet_of(run, flow, sheet_version)
     body = read(copied, SHEET_FILE)
-    remedy = f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, {then}"
+    resheet = stage_command(run, "sheet", flow, options=NEW_VERSION)
+    remedy = f"run `{resheet}`, {_DRAFT_AGAIN}"
     require(copied, body, "vocabulary", dict, remedy)
     require(copied, body, "fields", dict, remedy)
-    discarding = f"run `{stage_command(run, STAGE, flow, options=DISCARD)}`, {then}"
-    waiting = current_draft(run.directory(flow, REVIEW))
-    if waiting is not None and _edited(run, flow, waiting, discarding):
+    if (edited := waiting_edit(run, flow)) is not None:
         raise Refusal(
-            f"{run.id}: flow {flow} has {waiting.name} waiting with edits of its "
+            f"{run.id}: flow {flow} has {edited.name} waiting with edits of its "
             "own, and a draft from another flow never replaces an edit; approve "
-            f"it, or {discarding}"
+            f"it, or {_discarding(run, flow)}"
         )
+    waiting = current_draft(run.directory(flow, REVIEW))
     merged = {**body["fields"], **carried["fields"]}
     fields = {name: list(merged[name]) for name in schema.names if name in merged}
     return _write_draft(
@@ -265,6 +256,48 @@ def draft_from(
         version=None if waiting is None else int(waiting.name[:3]),
         drafted_from={"flow": source, "approval": approval},
     )
+
+
+def drafting_approval(run: Run, flow: str, source: str, version: int | None) -> int:
+    """Return the approval of `source` that `draft_from` drafts `flow` from.
+
+    `version`, else `source`'s newest. Refuses `flow` itself as the source, an
+    approval `source` does not hold, and one a draft cannot copy, so a caller
+    that writes before drafting is refused before its first write.
+    e.g. (run, conjure, summon, None) -> 2
+    """
+    if source == flow:
+        raise Refusal(
+            f"{run.id}: flow {flow} is drafted from its own approval; run "
+            f"{_again(run, flow)} to copy it, or name another flow to draft from"
+        )
+    held = approved_versions(run.directory(source, REVIEW))
+    approval = held[-1] if version is None and held else version
+    if approval is None or approval not in held:
+        named = "an approval" if approval is None else artifact_name(approval, APPROVED)
+        raise Refusal(
+            f"{run.id}: flow {source} has no {named} to draft {flow} from; run "
+            f"`{stage_command(run, 'approve', source)}` to approve its draft, "
+            f"{_DRAFT_AGAIN}"
+        )
+    _approval(run, source, approval, f"draft {flow} again")
+    return approval
+
+
+def waiting_edit(run: Run, flow: str) -> Path | None:
+    """Return `flow`'s waiting draft when it holds work `draft_from` never replaces.
+
+    That is edited fields, or a count or seeds of its own; else None.
+    """
+    waiting = current_draft(run.directory(flow, REVIEW))
+    if waiting is None or not _edited(run, flow, waiting, _discarding(run, flow)):
+        return None
+    return waiting
+
+
+def _discarding(run: Run, flow: str) -> str:
+    """Return the remedy that discards `flow`'s waiting draft before drafting again."""
+    return f"run `{stage_command(run, STAGE, flow, options=DISCARD)}`, {_DRAFT_AGAIN}"
 
 
 def _edited(run: Run, flow: str, draft: Path, remedy: str) -> bool:

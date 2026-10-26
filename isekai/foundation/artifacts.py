@@ -142,7 +142,8 @@ class TagsProducer(TypedDict):
 
 
 # The functional form below, because `from` is a Python keyword. `from` is
-# absent from a sheet no tag list filled (D31).
+# absent from a sheet no tag list filled (D31); `tags_from` names the flow whose
+# tag list filled it, when that is not its own.
 SheetProducer = TypedDict(
     "SheetProducer",
     {
@@ -152,6 +153,7 @@ SheetProducer = TypedDict(
         "artifacts": dict[str, DigestRecord],
         "from": NotRequired[int],
         "floor": NotRequired[float],
+        "tags_from": NotRequired[str],
     },
 )
 

@@ -109,7 +109,8 @@ async function reviseImage(): Promise<void> {
   }
 }
 
-/* No confirm: the draft is one Discard draft away, and costs nothing. */
+/* No confirm: the draft is one Discard draft away, and costs nothing. A waiting
+   draft with edits of its own is answered rather than replaced, and opened. */
 async function draftTarget(target: string): Promise<void> {
   drafting.value = null
   try {

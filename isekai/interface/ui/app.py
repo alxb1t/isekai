@@ -15,7 +15,10 @@ filename, when approval is legal, and what a token costs.
 **A run directory is written only through the functions that own it**: stage
 ③'s `review()` when a sheet is opened, `save_draft()` on autosave,
 `approve()` on the button, `cancel()`, `revise()`, `draft_from()` and
-`discard()` on theirs, and the run's own `open_run()` and `assign()` on a tick.
+`discard()` on theirs, the run's own `open_run()` and `assign()` on a tick,
+and stage ②'s `sheet()` when a draft from another flow fills a target with
+no sheet -- run in this process by `interface/drafting.py`'s `draft_across`,
+the sequence `review --from` runs too (D4).
 Nothing here builds an artifact body or an artifact filename, and
 `tests/test_ui.py`'s grep is what keeps it so.
 
@@ -86,6 +89,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
     CAPTIONS,
+    NEW_VERSION,
     REVIEW,
     SHEETS,
     SIGNATURE_BYTES,
@@ -105,6 +109,7 @@ from isekai.foundation.run import (
     stage_command,
 )
 from isekai.interface import render
+from isekai.interface.drafting import draft_across
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
@@ -121,15 +126,16 @@ from isekai.pipeline.review import (
     cancellable,
     current_draft,
     discard,
-    draft_from,
     drafted_from,
     refuse_revisions,
     review,
     revise,
     save_draft,
     token_budget,
+    waiting_edit,
 )
 from isekai.pipeline.review import state as review_state
+from isekai.pipeline.sheet import tagged_from
 from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.vocabulary import Vocabulary
@@ -441,12 +447,8 @@ def create_app(
 
     @cache
     def sheet_alone() -> list[str]:
-        """Return the tracked flows drafted from a sheet alone, read once."""
-        return [
-            name
-            for name in tracked_flows(wired.flows_dir)
-            if offered(name).inputs == ("sheet",)
-        ]
+        """Return the offered flows drafted from a sheet alone, read once."""
+        return [name for name in flows if offered(name).inputs == ("sheet",)]
 
     def quoted(batch: str) -> tuple[Path, render.Quote, dict[str, Any]]:
         """Return a batch's folder, its quote, and the quote as the dialog shows it."""
@@ -664,6 +666,7 @@ def create_app(
             fields = _fields(approved, body, remedy)
             renders = renders_of(approved, body, remedy)
             revision = _revision(one, body, renders)
+            drafted = _drafted(one, approved, body, remedy)
         elif draft is not None:
             remedy = _remedy(one, "review")
             body = read(draft, DRAFT_FILE)
@@ -672,7 +675,7 @@ def create_app(
             revision = _revision(one, body, renders)
             drafted = _drafted(one, draft, body, remedy)
         budget = token_budget(fields, one.flow.schema, one.flow)
-        caption = latest_artifact(one.directory(CAPTIONS))
+        caption, caption_from = _caption(one)
         width, height = _dimensions(one.run)
         return {
             "id": one.run.digest,
@@ -682,11 +685,16 @@ def create_app(
             "vocabulary": len(shared.vocabulary()),
             "width": width,
             "height": height,
-            "caption": _prose(one, caption) if caption else None,
+            "caption": (
+                _prose(one, caption, caption_from or one.flow.id) if caption else None
+            ),
             # The one artifact a skipped verb leaves missing on a page under
             # review, so the page names what writes it. Built here: the browser
             # never spells a command.
             "caption_command": None if caption else _command(one, "caption"),
+            # The flow whose caption is shown, where the sheet holds its tags
+            # and this flow holds no caption of its own; else null.
+            "caption_from": caption_from,
             # Both lists are `null` where the artifact is absent -- which is
             # three legitimate states, none of them a failure.
             "wd14": _wd14(one),
@@ -825,8 +833,18 @@ def create_app(
     def post_draft_from(
         batch: str, digest: str, flow: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
-        """Draft `flow` from `source`'s approval `version`, as `review --from` does."""
+        """Draft `flow` from `source`'s approval `version`, as `review --from` does.
+
+        A waiting draft with edits of its own is answered `waiting`, and nothing
+        is written.
+        """
         one = held(batch, digest, flow)
+        if flow not in (targets := sheet_alone()):
+            raise Refusal(
+                f"{flow}: not a flow this surface drafts from an image's approval; "
+                f"the flows it drafts are {', '.join(targets) or 'none'} -- reload "
+                "the image's large view to choose one; nothing was written"
+            )
         source, version = payload.get("source"), payload.get("version")
         if not isinstance(source, str) or not _numbered(version):
             raise Refusal(
@@ -835,7 +853,17 @@ def create_app(
             )
         offered(source)
         with _DRAFT_UPDATE:
-            written = draft_from(one.run, flow, source, version, one.flow.schema)
+            # An edited draft is the work in hand, so it is opened, not refused.
+            if (waiting := waiting_edit(one.run, flow)) is not None:
+                return {"draft": waiting.name, "waiting": True}
+            written = draft_across(
+                one.run,
+                one.flow,
+                source,
+                version,
+                shared.vocabulary,
+                shared.field_map,
+            )
         return {"draft": written.name}
 
     @app.post("/api/b/{batch}/revise", response_model=None)
@@ -953,13 +981,6 @@ def create_app(
         """
         run, _, approval = rendered(batch, digest, flow, version, seed)
         _, fields = _approved(approval)
-        candidates = [name for name in sheet_alone() if name != flow]
-        # Listed only when a target could be offered: most views offer none.
-        runs = (
-            [one.run for one in library.sources(folder(batch)) if one.run]
-            if candidates
-            else []
-        )
         number = _version(version)
         suffix = offered(flow).output_suffix
         listed = library.versions(run, flow, suffix)
@@ -982,12 +1003,9 @@ def create_app(
             "damaged": held.damaged,
             # The newest older version that rendered this seed, or null.
             "compare": library.paired(run, flow, number, seed, suffix),
-            # The flows of the batch drafted from a sheet alone, this one aside.
-            "targets": [
-                name
-                for name in candidates
-                if any(run.directory(name).is_dir() for run in runs)
-            ],
+            # The offered flows drafted from a sheet alone, this one aside,
+            # assigned or not: the press assigns.
+            "targets": [name for name in sheet_alone() if name != flow],
             # The cell's images, as Renders draws them: oldest version first.
             "images": [
                 {"version": each.version, "seed": rendered_seed}
@@ -1225,6 +1243,8 @@ def _drafted(
 ) -> dict[str, Any] | None:
     """Describe the other flow's approval a draft was drafted from, and its sheet.
 
+    `remedy` repairs the draft or approval; a damaged sheet names itself, since
+    no command rewrites a sheet one records: `review` copies the same damage.
     e.g. from summon 1, on sheet 1 -> {"flow": "summon-…", "approval": 1, "fields": …}
     """
     origin = drafted_from(body)
@@ -1232,8 +1252,29 @@ def _drafted(
         return None
     require(draft, body, "sheet", int, remedy)
     sheet = sheet_of(one.run, one.flow.id, body["sheet"])
-    held = read(sheet, SHEET_FILE, remedy=remedy)
-    return {**origin, "fields": _fields(sheet, held, remedy)}
+    restore = f"restore {sheet} by hand, then reload the page"
+    held = read(sheet, SHEET_FILE, remedy=restore)
+    return {**origin, "fields": _fields(sheet, held, restore)}
+
+
+def _caption(one: Held) -> tuple[Path | None, str | None]:
+    """Return `one`'s newest caption, and the flow it is borrowed from, or None.
+
+    Where `one` holds no caption and its newest sheet holds another flow's tags,
+    that flow's newest caption is borrowed. An unreadable sheet borrows nothing.
+    """
+    own = latest_artifact(one.directory(CAPTIONS))
+    newest = latest_artifact(one.directory(SHEETS))
+    if own is not None or newest is None:
+        return own, None
+    try:
+        source = tagged_from(read(newest, SHEET_FILE))
+    except Refusal:
+        return None, None
+    borrowed = (
+        None if source is None else latest_artifact(one.run.directory(source, CAPTIONS))
+    )
+    return (borrowed, source) if borrowed is not None else (None, None)
 
 
 def _side(
@@ -1520,12 +1561,15 @@ def _command(one: Held, verb: str, *flags: str) -> str:
     return stage_command(one.run, verb, one.flow.id, options=flags)
 
 
-def _remedy(one: Held, verb: str) -> str:
+def _remedy(one: Held, verb: str, flow: str | None = None) -> str:
     """Return the remedy naming the command that rewrites `verb`'s file for `one`.
+
+    `flow` names another flow's file instead.
 
     e.g. "tag" -> "rewrite it with `python -m isekai tag --flow f --new-version r`"
     """
-    return f"rewrite it with `{_command(one, verb, '--new-version')}`"
+    command = stage_command(one.run, verb, flow or one.flow.id, options=NEW_VERSION)
+    return f"rewrite it with `{command}`"
 
 
 def _is_tag_list(value: object) -> TypeGuard[list[str]]:
@@ -1546,10 +1590,10 @@ def _fields(path: Path, body: Mapping[str, Any], remedy: str) -> dict[str, list[
     return dict(body["fields"])
 
 
-def _prose(one: Held, path: Path) -> str:
-    """Return a caption's prose, refusing by name a caption that has none."""
+def _prose(one: Held, path: Path, flow: str) -> str:
+    """Return `flow`'s caption's prose, refusing by name a caption that has none."""
     body = read(path, CAPTION_FILE)
-    require(path, body, "prose", str, _remedy(one, "caption"))
+    require(path, body, "prose", str, _remedy(one, "caption", flow))
     return body["prose"]
 
 

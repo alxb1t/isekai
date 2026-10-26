@@ -26,7 +26,7 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary import ollama
-from isekai.foundation.artifacts import DRAFT_FILE, read
+from isekai.foundation.artifacts import DRAFT_FILE, SHEET_FILE, read
 from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Flow, Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import Run, open_run
@@ -748,6 +748,29 @@ def test_review_from_drafts_each_flow_from_the_newest_approval_or_the_one_named(
         f"{newest.id}: review drafted {CONJURE}/001.draft.json from summon-anime-wai v2"
         in said
     )
+
+
+@pytest.mark.spec("cli:review-from:a-target-with-no-sheet-is-filled-first")
+def test_review_from_assigns_a_target_with_no_sheet_and_fills_it_from_the_source(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    run = open_run(photo, tmp_path / "runs")
+    sheet(run, schema, vocabulary)
+    review(run, "summon-anime-wai")
+    approve(run, "summon-anime-wai", schema, vocabulary)
+    argv = ["review", "--flow", CONJURE, "--from", "summon-anime-wai", run.id]
+
+    assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
+
+    filled = read(run.directory(CONJURE, "sheets") / "001.json", SHEET_FILE)
+    assert filled["producer"]["tags_from"] == "summon-anime-wai"
+    assert (run.directory(CONJURE, "review") / "001.draft.json").is_file()
+    assert sorted(child.name for child in run.directory(CONJURE).iterdir()) == [
+        "review",
+        "sheets",
+    ]
 
 
 @pytest.mark.spec("cli:review-from:a-conflicting-option-is-refused")

@@ -9,6 +9,21 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-10-26 · 0080-conjure-without-prepare
+
+Gate: local 0m45s · CI 1m29s (ci at 63d656d) · 0.52.0: local 0m45s · CI 1m29s
+
+### Changed
+
+- The sheet stage fills a flow's sheet from another flow's tag list when told to, recording that flow, so a
+  target needs no tagging of its own (0080 D1).
+- `review --from` assigns a target with no sheet and fills it from the source's tags before drafting, so a
+  conjure draft needs no tick and no Prepare (0080 D2).
+- *Conjure from this* is offered on every summon image, assigned or not, and opens an edited waiting draft
+  rather than refusing it (0080 D3, D4).
+- Review keeps a drafted approval's marks, and shows the source's caption, named as its, where the target
+  has none (0080 D5, D6).
+
 ## [0.52.0] - 2026-10-26 · 0079-the-session-drawer
 
 Gate: local 0m45s · CI 1m29s (ci at 63d656d) · 0.51.0: local 0m46s · CI 1m24s

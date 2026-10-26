@@ -347,7 +347,8 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   opens a dialog of the cell's other images as tiles at Renders' size, every version's and seed's, oldest first,
   `vN · seed` under each, focused on the newest older version of this seed, else the image before this one;
   `h j k l` and the arrows move, `↵` or a click compares, the older of the two before. The same-seed address, `…/compare`, still compares with the newest
-  older version of the seed. Each flow of the batch drafted from a sheet alone is offered as *Conjure from this*,
+  older version of the seed.
+  Each offered flow drafted from a sheet alone, assigned or not, is offered as *Conjure from this*,
   the first on `⇧F`: it drafts that flow from this image's approval and opens Review, which marks its draft
   against that flow's sheet, names the approval in the kicker and offers *Discard draft*; a refusal shows under
   the actions.
