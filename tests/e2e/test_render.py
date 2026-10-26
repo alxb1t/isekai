@@ -262,7 +262,9 @@ def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
     page.goto(served.review(served.discarded, DISCARDED))
     expect(page.locator("[data-revised] img")).to_have_js_property("complete", True)
 
-    page.get_by_role("button", name="Side by side").click()
+    page.locator("input.fragment").first.click()
+
+    page.keyboard.press("Control+KeyP")
 
     pair = page.locator("dialog[data-pair] img")
     expect(pair).to_have_count(2)
@@ -276,8 +278,13 @@ def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
           return a.height > 0 && Math.abs(a.height - b.height) <= 1 && a.top === b.top
         }"""
     )
+    page.keyboard.press("Control+KeyP")
+    viewer = page.locator("dialog[data-viewer]")
+    expect(page.locator("dialog[data-pair]")).to_have_count(0)
+    expect(viewer.locator("img")).to_have_count(1)
+    expect(viewer.locator("img")).to_have_attribute("src", re.compile(r"/photo$"))
     page.keyboard.press("Escape")
-    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
+    expect(viewer).to_have_count(0)
 
 
 @pytest.mark.spec("ui:compare:side-by-side-sets-the-image-beside-its-photograph")

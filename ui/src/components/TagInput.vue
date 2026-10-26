@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useVocabulary } from '../composables/useVocabulary'
+import { useKeyStore } from '../stores/keys'
 import TagAutocomplete from './TagAutocomplete.vue'
 
 /* The in-flight fragment, and the dropdown it opens.
@@ -42,6 +43,7 @@ const fragment = ref('')
 const selected = ref(0)
 const box = ref<HTMLInputElement | null>(null)
 const { matches, total, search, clear } = useVocabulary()
+const keys = useKeyStore()
 
 const open = computed(() => props.focused && matches.value.length > 0)
 
@@ -56,14 +58,21 @@ function reset(): void {
   clear()
 }
 
+/* `⌃J` `⌃K` on macOS are `↓` `↑` from a field: an open list steps here, and with
+   none the key store's `field-down` `field-up` walk the sheet (D25). */
+function vertical(event: KeyboardEvent): -1 | 1 | null {
+  if (event.key === 'ArrowDown') return 1
+  if (event.key === 'ArrowUp') return -1
+  if (!keys.mac || !event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return null
+  return event.code === 'KeyJ' ? 1 : event.code === 'KeyK' ? -1 : null
+}
+
 function onKey(event: KeyboardEvent): void {
   if (props.suspended) return
-  if (event.key === 'ArrowDown' && open.value) {
+  const step = vertical(event)
+  if (step !== null && open.value) {
     event.preventDefault()
-    selected.value = (selected.value + 1) % matches.value.length
-  } else if (event.key === 'ArrowUp' && open.value) {
-    event.preventDefault()
-    selected.value = (selected.value - 1 + matches.value.length) % matches.value.length
+    selected.value = (selected.value + step + matches.value.length) % matches.value.length
   } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     // With no dropdown open, the vertical keys walk the sheet. Nothing in the
     // design assigns them a meaning here, and Tab alone makes an operator who

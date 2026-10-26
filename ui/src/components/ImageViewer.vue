@@ -2,12 +2,13 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useKeys } from '../composables/useKeys'
 import { useViewer } from '../composables/useViewer'
-import { plain } from '../stores/keys'
+import { type Command, plain } from '../stores/keys'
 
 /* Images in a native dialog, fitted to the window. A click on the image toggles
    1:1 pixels, scrolled inside the dialog; `←` `→` `h` `l` step through the images,
    `↵` runs `open` on the shown one where it is given, labelled `action`, so the
    viewer can pick an image as well as open one, and Esc or a click outside closes. With `pair`, every image stands side by side at one height, fit only.
+   `commands` are the opener's own keys while it is open, as Review's `⌃P`.
    The list may grow while open, as a live session's does.
    The dialog keeps the URL of the page beneath (design spec §1 rule 8). */
 export interface Shown {
@@ -23,6 +24,7 @@ const props = defineProps<{
   pair?: boolean
   open?: (index: number) => void
   action?: string
+  commands?: Command[]
 }>()
 
 const emit = defineEmits<{ close: [] }>()
@@ -105,6 +107,7 @@ useKeys('overlay', [
     run: () => props.open?.(at.value),
     when: () => props.open !== undefined,
   },
+  ...(props.commands ?? []),
 ])
 
 onMounted(() => {

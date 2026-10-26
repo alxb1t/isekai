@@ -14,6 +14,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The hub's row sets its photograph and its renders at the cells' foot, `↵ view photo` in the corner and the stem
   alone; Renders' source cell is its thumbnail; Home's row shows fifteen sources (0078 D1–D3).
 
+- Review reaches its keys from a field: `⌃P` the photograph, or *Side by side* on a revision; `⌃J` `⌃K` the fields
+  on macOS; `⌃/` the key list everywhere, replacing `?` (0078 D4–D6).
+
 ## [0.50.0] - 2026-10-25 · 0077-conjure-from-this
 
 Gate: local 0m42s · CI 7m25s (build-image at 801ffec) · 0.49.0: local 0m41s · CI 7m25s

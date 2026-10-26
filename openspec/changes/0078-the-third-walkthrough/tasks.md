@@ -6,7 +6,7 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 ## Progress
 
 - [x] 1 — The layout
-- [ ] 2 — Review's keys from a field
+- [x] 2 — Review's keys from a field
 - [ ] 3 — The approved revision and the waiting draft
 - [ ] 4 — The flow chooser
 - [ ] 5 — The large view
@@ -35,27 +35,27 @@ pytest test carries `@pytest.mark.spec`, every new vitest test `spec(…)`, with
 
 ## 2 — Review's keys from a field
 
-- [ ] 2.1 **HALT CHECK** — the key list opens on `?` alone.
+- [x] 2.1 **HALT CHECK** — the key list opens on `?` alone.
   Verify: `grep -c "keys: \[shifted('Slash')\]" ui/src/App.vue` prints `1`.
-- [ ] 2.2 Open the key list on `⌃/` per [D6](design.md#d6) in `ui/src/App.vue` and `ui/src/components/KeyList.vue`;
+- [x] 2.2 Open the key list on `⌃/` per [D6](design.md#d6) in `ui/src/App.vue` and `ui/src/components/KeyList.vue`;
   bind `ui:keys:the-key-list-opens-from-a-field` in `ui/src/stores/keys.test.ts`.
   Verify: `grep -c "shifted('Slash')" ui/src/App.vue ui/src/components/KeyList.vue` prints `0` for each file, and `grep -c 'ui:keys:the-key-list-opens-from-a-field' ui/src/stores/keys.test.ts` prints `1`.
-- [ ] 2.3 Add `field-down` and `field-up` to `paneKeys` in `ui/src/panes.ts` and route them in `ui/src/views/Review.vue`
+- [x] 2.3 Add `field-down` and `field-up` to `paneKeys` in `ui/src/panes.ts` and route them in `ui/src/views/Review.vue`
   and `ui/src/components/TagInput.vue` per [D5](design.md#d5); bind `ui:keys:review-fields-move-from-a-field-on-macos`
   in `ui/src/stores/keys.test.ts`.
   Verify: `grep -c "'field-down'" ui/src/panes.ts` prints `1`, and `grep -c 'review-fields-move-from-a-field-on-macos' ui/src/stores/keys.test.ts` prints `1`.
-- [ ] 2.4 Declare `⌃P` and delete Review's `photo` and `side-by-side` commands in `ui/src/views/Review.vue` per
+- [x] 2.4 Declare `⌃P` and delete Review's `photo` and `side-by-side` commands in `ui/src/views/Review.vue` per
   [D4](design.md#d4); in `tests/e2e/test_review.py` open the viewer by `Control+P` from a tag field in
   `test_the_photograph_opens_in_the_viewer`; in `tests/e2e/test_render.py` press `Control+P` twice in
   `test_side_by_side_shows_the_pair`.
   Verify: `grep -c "code: 'KeyP', ctrl: true" ui/src/views/Review.vue` prints `1`, and `uv run python -m tools.test_ui` exits 0, and `uv run pytest -q tests/e2e/test_review.py tests/e2e/test_render.py` exits 0.
-- [ ] 2.5 In `ui/design/spec.md` §7: the intro's `` `?` lists them`` → `` `⌃/` lists them``; the *everywhere* row's
+- [x] 2.5 In `ui/design/spec.md` §7: the intro's `` `?` lists them`` → `` `⌃/` lists them``; the *everywhere* row's
   `? the key list` → `⌃/ the key list, from a field too`; the Review row's `↵ on the photograph opens the viewer, ← → its
   photographs` → `⌃P the photograph, on a revision Side by side, from a field too, ← → its photographs`, its
   `⇧C *Side by side*, the photograph and the render, on a revision` deleted, and `⌃J ⌃K the fields from a field on
   macOS` added after `⌃H ⌃L`.
   Verify: `grep -c '⌃/ the key list' ui/design/spec.md` prints `1`, and `grep -c '⌃J ⌃K the fields' ui/design/spec.md` prints `1`.
-- [ ] 2.6 In `docs/decisions.md` D25's rule, `` and `Mod+K` run, and on macOS Review's `⌃H` and `⌃L`, which move between
+- [x] 2.6 In `docs/decisions.md` D25's rule, `` and `Mod+K` run, and on macOS Review's `⌃H` and `⌃L`, which move between
   its panes.`` → ``, `Mod+K` and `⌃/` run, Review's `⌃P`, and on macOS Review's `⌃H` `⌃L`, which move between its panes,
   and `⌃J` `⌃K`, which move between its fields.``; its *Made by* gains `` `0078` ``.
   Verify: `grep -c "Review's .⌃P." docs/decisions.md` prints `1`, and `grep -c '0076., .0078' docs/decisions.md` prints `1`.

@@ -79,7 +79,7 @@ timer mono 40px/500.
   on Home, else the batch name. Tabs only inside a batch; the active one has a 2px accent underline. The Review
   tab counts the batch's unapproved sheets in mono 11 `accent`, and opens the batch's Review. The flow
   switcher is a segmented control; Review drops `all`. The `?` button at its right end, after the running render,
-  opens the key list, as `?` does; no screen draws a key bar.
+  opens the key list, as `⌃/` does; no screen draws a key bar.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
 - **JobStrip**, `ground-deep`, mono 11px: one dot, then one item per running job, each a label (`job · prepare`)
@@ -318,7 +318,7 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | J5·9 before / after | c, ↵ on v1 in the viewer | `…/v2/1840266731/compare/v1/1840266731` |
 
 ```
-J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731   [ Side by side ⇧C ]
+J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731   [ Side by side ⌃P ]
       [photograph]               [render, accent hairline]       one height, top-aligned
       ② CAPTION  collapsed on a revision
       ③ SHEET — REVISION OF RENDER 1840266731 · saved 15:52
@@ -358,7 +358,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
  . *Discard draft*, 12 px left of Approve, asks, then deletes this unapproved draft, through `review --discard`;
   the sheet stays open.
 - **One header row** names the photograph and its size, and the render and its seed, over the pair, with *Side by
-  side* `⇧C` at its right: one dialog, the pair at one height, fit only, `Esc` to close. No how-to text. A click on
+  side* `⌃P` at its right: one dialog, the pair at one height, fit only, `Esc` to close. No how-to text. A click on
   either image opens it in the viewer. Every receipt sits in ③'s kicker, `· saved 15:52` or `APPROVED 14:12:40`, and every refusal in the
   approve bar.
 
@@ -440,15 +440,16 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 ## 7 · Keys
 
 Matched on `event.code`, the physical key, with the typed character suppressed, and declared once in
-the key store ([D25](../../docs/decisions.md#d25--shortcuts-match-the-physical-key)); `?` lists them. ⌘
-is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K run, and on macOS Review's ⌃H ⌃L.
+the key store ([D25](../../docs/decisions.md#d25--shortcuts-match-the-physical-key)); `⌃/` lists them. ⌘
+is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K and ⌃/ run, Review's ⌃P, and on macOS Review's
+⌃H ⌃L ⌃J ⌃K.
 
 | where | keys |
 |---|---|
-| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the running session, else the batch's sessions · ? the key list · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
+| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧S the running session, else the batch's sessions · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
-| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ↵ on the photograph opens the viewer, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow holding unapproved sheets · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C *Side by side*, the photograph and the render, on a revision · the collapsed caption, its key named when built |
+| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow holding unapproved sheets · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
 | Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · e Revise · ⇧G Render · in the large view, e Revise, f Conjure from this, c compare, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
 | Session | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |

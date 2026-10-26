@@ -16,8 +16,13 @@ export function nextPane(at: Pane, step: -1 | 1): Pane {
 
 /** Return Review's pane keys, each running `move` with its direction: `h` `l` or
     `←` `→` outside a field, and on macOS, where `⌃` is free of the window manager,
-    `⌃H` `⌃L` from inside one, as a field keeps `h` and `l` as text (D25). */
-export function paneKeys(mac: boolean, move: (step: -1 | 1) => void): Command[] {
+    `⌃H` `⌃L` from inside one, as a field keeps `h` and `l` as text; and there `⌃J`
+    `⌃K` run `row`, the field below or above, as `↓` `↑` do in a field (D25). */
+export function paneKeys(
+  mac: boolean,
+  move: (step: -1 | 1) => void,
+  row: (step: -1 | 1) => void,
+): Command[] {
   const outside: Command[] = [
     { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'pane left', run: () => move(-1) },
     { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'pane right', run: () => move(1) },
@@ -37,6 +42,20 @@ export function paneKeys(mac: boolean, move: (step: -1 | 1) => void): Command[] 
       keys: [{ code: 'KeyL', ctrl: true }],
       label: 'pane right',
       run: () => move(1),
+      inField: true,
+    },
+    {
+      id: 'field-down',
+      keys: [{ code: 'KeyJ', ctrl: true }],
+      label: 'next field',
+      run: () => row(1),
+      inField: true,
+    },
+    {
+      id: 'field-up',
+      keys: [{ code: 'KeyK', ctrl: true }],
+      label: 'previous field',
+      run: () => row(-1),
       inField: true,
     },
   ]

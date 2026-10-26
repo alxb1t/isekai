@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useKeys } from '../composables/useKeys'
-import { plain, shifted, useKeyStore } from '../stores/keys'
+import { KEY_LIST, plain, useKeyStore } from '../stores/keys'
 import KeyHint from './KeyHint.vue'
 
 /* Every key this screen answers, everywhere's first, read from their declarations. */
@@ -11,7 +11,7 @@ const { listed } = storeToRefs(useKeyStore())
 useKeys('overlay', [
   {
     id: 'close',
-    keys: [...plain('Escape'), shifted('Slash')],
+    keys: [...plain('Escape'), KEY_LIST],
     label: 'close',
     run: () => emit('close'),
   },

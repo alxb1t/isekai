@@ -60,9 +60,10 @@ def test_an_approved_input_opens_read_only(page: Page, served: Served) -> None:
 @pytest.mark.spec("ui:review:the-photograph-opens-in-the-viewer")
 def test_the_photograph_opens_in_the_viewer(page: Page, served: Served) -> None:
     _open(page, served, served.draft)
-    expect(page.locator("input.fragment").first).to_be_visible()
+    field = page.locator("input.fragment").first
+    field.click()
 
-    page.locator(".source .photo-frame").click()
+    page.keyboard.press("Control+KeyP")
 
     viewer = page.locator("dialog[data-viewer]")
     expect(viewer).to_contain_text("ada.jpg · 900×1200 · fit")
@@ -70,6 +71,7 @@ def test_the_photograph_opens_in_the_viewer(page: Page, served: Served) -> None:
     expect(viewer).to_contain_text("bea.jpg · 1200×900 · fit")
     page.keyboard.press("Escape")
     expect(viewer).to_have_count(0)
+    expect(field).to_be_focused()
 
 
 @pytest.mark.spec("ui:cheatsheet:every-declared-criterion-is-answered")

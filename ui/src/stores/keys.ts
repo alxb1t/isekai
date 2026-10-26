@@ -25,6 +25,18 @@ export const plain = (...codes: string[]): Key[] => codes.map((code) => ({ code 
 /** Return a key pressed with Mod. */
 export const modded = (code: string): Key => ({ code, mod: true })
 
+/** The key list's key: `⌃/` on every platform, free of the browser and the window manager. */
+export const KEY_LIST: Key = { code: 'Slash', ctrl: true }
+
+/** Return the key list's command, which opens it from a field too (D25). */
+export const keyList = (run: () => void): Command => ({
+  id: 'keys',
+  keys: [KEY_LIST],
+  label: 'the key list',
+  run,
+  inField: true,
+})
+
 /** One command: its keys, its label in the hints, and what it runs. */
 export interface Command {
   id: string
@@ -118,7 +130,6 @@ const GLYPHS: Record<string, string> = {
 
 /** Return how a key is written in a hint. e.g. {code: 'KeyH', shift: true} -> "⇧H" */
 export function keyText(key: Key, mac: boolean): string {
-  if (key.code === 'Slash' && key.shift) return '?'
   const letter = key.code.startsWith('Key') ? key.code.slice(3) : null
   const name =
     letter ?? (key.code.startsWith('Digit') ? key.code.slice(5) : (GLYPHS[key.code] ?? key.code))
