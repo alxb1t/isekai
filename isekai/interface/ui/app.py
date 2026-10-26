@@ -86,6 +86,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
     CAPTIONS,
+    NEW_VERSION,
     REVIEW,
     SHEETS,
     SIGNATURE_BYTES,
@@ -131,6 +132,7 @@ from isekai.pipeline.review import (
     waiting_edit,
 )
 from isekai.pipeline.review import state as review_state
+from isekai.pipeline.sheet import tagged_from
 from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.vocabulary import Vocabulary
@@ -674,11 +676,7 @@ def create_app(
             revision = _revision(one, body, renders)
             drafted = _drafted(one, draft, body, remedy)
         budget = token_budget(fields, one.flow.schema, one.flow)
-        caption = latest_artifact(one.directory(CAPTIONS))
-        caption_from = None if caption else _tags_from(one)
-        if caption_from is not None:
-            caption = latest_artifact(one.run.directory(caption_from, CAPTIONS))
-            caption_from = caption_from if caption else None
+        caption, caption_from = _caption(one)
         width, height = _dimensions(one.run)
         return {
             "id": one.run.digest,
@@ -689,9 +687,7 @@ def create_app(
             "width": width,
             "height": height,
             "caption": (
-                _prose(one.run, caption, caption_from or one.flow.id)
-                if caption
-                else None
+                _prose(one, caption, caption_from or one.flow.id) if caption else None
             ),
             # The one artifact a skipped verb leaves missing on a page under
             # review, so the page names what writes it. Built here: the browser
@@ -1253,20 +1249,24 @@ def _drafted(
     return {**origin, "fields": _fields(sheet, held, remedy)}
 
 
-def _tags_from(one: Held) -> str | None:
-    """Return the flow whose tag list filled `one`'s newest sheet, when not its own.
+def _caption(one: Held) -> tuple[Path | None, str | None]:
+    """Return `one`'s newest caption, and the flow it is borrowed from, or None.
 
-    A sheet that cannot be read, or names no such flow, gives None.
+    Where `one` holds no caption and its newest sheet holds another flow's tags,
+    that flow's newest caption is borrowed. An unreadable sheet borrows nothing.
     """
+    own = latest_artifact(one.directory(CAPTIONS))
     newest = latest_artifact(one.directory(SHEETS))
-    if newest is None:
-        return None
+    if own is not None or newest is None:
+        return own, None
     try:
-        producer = read(newest, SHEET_FILE).get("producer")
+        source = tagged_from(read(newest, SHEET_FILE))
     except Refusal:
-        return None
-    source = producer.get("tags_from") if isinstance(producer, dict) else None
-    return source if isinstance(source, str) else None
+        return None, None
+    borrowed = (
+        None if source is None else latest_artifact(one.run.directory(source, CAPTIONS))
+    )
+    return (borrowed, source) if borrowed is not None else (None, None)
 
 
 def _side(
@@ -1553,12 +1553,15 @@ def _command(one: Held, verb: str, *flags: str) -> str:
     return stage_command(one.run, verb, one.flow.id, options=flags)
 
 
-def _remedy(one: Held, verb: str) -> str:
+def _remedy(one: Held, verb: str, flow: str | None = None) -> str:
     """Return the remedy naming the command that rewrites `verb`'s file for `one`.
+
+    `flow` names another flow's file instead.
 
     e.g. "tag" -> "rewrite it with `python -m isekai tag --flow f --new-version r`"
     """
-    return f"rewrite it with `{_command(one, verb, '--new-version')}`"
+    command = stage_command(one.run, verb, flow or one.flow.id, options=NEW_VERSION)
+    return f"rewrite it with `{command}`"
 
 
 def _is_tag_list(value: object) -> TypeGuard[list[str]]:
@@ -1579,11 +1582,10 @@ def _fields(path: Path, body: Mapping[str, Any], remedy: str) -> dict[str, list[
     return dict(body["fields"])
 
 
-def _prose(run: Run, path: Path, flow: str) -> str:
+def _prose(one: Held, path: Path, flow: str) -> str:
     """Return `flow`'s caption's prose, refusing by name a caption that has none."""
     body = read(path, CAPTION_FILE)
-    rewrite = stage_command(run, "caption", flow, options=("--new-version",))
-    require(path, body, "prose", str, f"rewrite it with `{rewrite}`")
+    require(path, body, "prose", str, _remedy(one, "caption", flow))
     return body["prose"]
 
 

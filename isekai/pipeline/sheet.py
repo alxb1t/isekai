@@ -35,6 +35,7 @@ name everywhere removes the class of error.
 Stdlib only.
 """
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from isekai.foundation.artifacts import (
@@ -129,13 +130,17 @@ def sheet(
         return None, _superseded(run, flow, directory, kept)
     version = (kept or 0) + 1
 
-    if tags_from is not None:
-        fields, made_by = _from_source(
-            run, flow, tags_from, schema, vocabulary, field_map
-        )
-    elif not tagged:
-        # No tagger was going to run, so an empty sheet hides nothing; and
-        # nothing here can fail, so no budget is checked.
+    borrowed = (
+        None
+        if tags_from is None
+        else _from_source(run, flow, tags_from, schema, vocabulary, field_map)
+    )
+    if borrowed is not None:
+        fields, made_by = borrowed
+    elif tags_from is not None or not tagged:
+        # No tagger was going to run, or the named flow holds no tag list, so an
+        # empty sheet hides nothing; and nothing here can fail, so no budget is
+        # checked.
         fields = route((), field_map, schema)
         made_by: SheetProducer = {
             "implementation": EMPTY,
@@ -148,6 +153,8 @@ def sheet(
         fields, made_by = _from_tag_list(
             run, flow, directory, version, schema, vocabulary, field_map
         )
+    if tags_from is not None:
+        made_by["tags_from"] = tags_from
 
     path = directory / artifact_name(version)
     artifact: Sheet = {
@@ -239,30 +246,31 @@ def _from_source(
     schema: Schema,
     vocabulary: Vocabulary,
     field_map: FieldMap,
-) -> tuple[dict[str, list[str]], SheetProducer]:
+) -> tuple[dict[str, list[str]], SheetProducer] | None:
     """Return the checked fields routed from another flow's tag list, and its producer.
 
-    No list gives every field empty. A damaged list is refused and recorded
+    None when that flow holds no list. A damaged list is refused and recorded
     nowhere: its fix is the source's, and a record here would bar the retry.
     """
     source = latest(run.directory(source_flow, WD14))
     if source is None:
-        fields = route((), field_map, schema)
-        made_by: SheetProducer = {
-            "implementation": EMPTY,
-            "models": [],
-            "pinned": True,
-            "artifacts": {},
-        }
-        validate(fields, schema, vocabulary)
-    else:
-        retag = stage_command(run, "tag", source_flow, options=NEW_VERSION)
-        redraft = stage_command(run, "review", flow, options=("--from", source_flow))
-        remedy = f"run `{retag}`, then `{redraft}`"
-        fields, made_by = _route(run, source_flow, source, schema, field_map, remedy)
-        validate(fields, schema, vocabulary, remedy=remedy)
-    made_by["tags_from"] = source_flow
+        return None
+    retag = stage_command(run, "tag", source_flow, options=NEW_VERSION)
+    redraft = stage_command(run, "review", flow, options=("--from", source_flow))
+    remedy = f"run `{retag}`, then `{redraft}`"
+    fields, made_by = _route(run, source_flow, source, schema, field_map, remedy)
+    validate(fields, schema, vocabulary, remedy=remedy)
     return fields, made_by
+
+
+def tagged_from(body: Mapping[str, object]) -> str | None:
+    """Return the flow whose tag list filled a sheet, when not its own, else None.
+
+    e.g. producer `{…, "tags_from": "summon-anime-wai"}` -> "summon-anime-wai"
+    """
+    producer = body.get("producer")
+    source = producer.get("tags_from") if isinstance(producer, Mapping) else None
+    return source if isinstance(source, str) else None
 
 
 def _route(
