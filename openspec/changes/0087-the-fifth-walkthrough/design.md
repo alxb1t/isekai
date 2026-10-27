@@ -39,14 +39,14 @@ See [proposal](proposal.md) — *Why*. What holds at the cut, `main` at `7301425
 | [D3](#d3) | **the key rule:** `compare` takes `shifted('KeyC')`; D25's rule reads *a plain letter moves; a command is `⇧` + a letter* | the last plain-letter command; one rule | |
 | [D4](#d4) | **the pick:** each tile's caption `v<N>`; the pick's head names the focused tile, `Compare <flow> v<N> · seed <S> with <flow> v<M> · seed <T>…` | a 64-bit seed breaks the grid; two seeds of one version told apart | |
 | [D5](#d5) | **Compare:** each image under its one-line head alone; the `count · seeds · tokens` lines and the change block deleted; `.compare__sides` centred, the pair as tall as the window less the app bar and the heads; the page's padding the app's 12 px; `read_compare` drops `changed`, `different_seeds` and `same_sheet` | the images as big as possible | keeping the fields unread |
-| [D6](#d6) | **`h` `l` on the large view:** `cells.ts` gains `screenOrder(detail, from)` — from Renders, the source's renders across its flows, as Renders' row; from the hub, the cell's; `h` `l` and `←` `→` replace the address with the step before or after, held at either end; the head adds `2 of 5`; `Esc` returns focused on the image shown | the screen's own order | `j` `k` |
+| [D6](#d6) | **`h` `l` on the large view:** `cells.ts` gains `screenOrder(detail, from)` — from Renders, the source's renders across its flows, as Renders' row; from the hub, the cell's images by write time within each approval, supplied as `read_render`'s `cell` beside the seed-ordered `source` rows; `h` `l` and `←` `→` replace the address with the step before or after, held at either end; the head adds `2 of 5`; `Esc` returns focused on the image shown | the screen's own order | `j` `k` |
 | [D7](#d7) | **the docs:** D25 in `docs/decisions.md` per [D3](#d3); `ui/design/spec.md` — the Render bar's running state, J5's `Compare with…  c` → `⇧C`, the pick, the Compare drawing, §7's large-view keys gaining `h l` | the docs name what the screen does | |
 
 ## Tests
 
 | layer | added | edited | where |
 |---|---|---|---|
-| unit · pytest | none | `ui:compare:any-two-images-of-a-cell` — no changed fields | `tests/test_ui_api.py` |
+| unit · pytest | none | `ui:compare:any-two-images-of-a-cell` — no changed fields, distinct hub write order and Renders seed order | `tests/test_ui_api.py` |
 | unit · vitest | `ui:render:a-running-session-shows-its-totals`; `ui:renders:the-large-view-steps-its-screens-order`; `ui:compare:the-pick-names-the-focused-tile` | none | `ui/src/bars.test.ts`, `ui/src/cells.test.ts` |
 | e2e | none | `test_an_image_opened_from_the_grid_shows_the_approval_it_came_from` and the hub's `test_a_rendered_cell_opens_its_newest_image` — the image in view after `Esc`; the compare tests press `Shift+C` and find no change block | `tests/e2e/test_render.py` |
 

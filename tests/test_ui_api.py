@@ -25,6 +25,7 @@ Everything that can be asserted without a server is in `tests/test_ui.py` and
 import contextlib
 import io
 import json
+import os
 import queue
 import random
 import shlex
@@ -1790,6 +1791,12 @@ def test_compare_takes_any_two_images_of_a_source(
     rendered(7)
     _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
     rendered(7)
+    # The hub follows write time within an approval, Renders seed order.
+    image = image_of(made, flow, 4, 7)
+    for seed, at in ((7, 1), (9, 2), (2, 3)):
+        target = image_of(made, flow, 4, seed)
+        target.write_bytes(image.read_bytes())
+        os.utime(target, (at, at))
     sheet(made, schema, vocabulary, flow=FLAT, flow_digest=manifest_digest(FLAT))
     review(made, FLAT)
     approve(made, FLAT, schema, vocabulary)
@@ -1806,14 +1813,22 @@ def test_compare_takes_any_two_images_of_a_source(
     photo = client.get(f"{large}/v4/7/compare/photo").json()
     itself = client.get(f"{large}/v4/7/compare/{FLOW}/v4/7")
 
-    # The cell's images are the source's row for its flow, served once.
+    # Renders and Compare retain seed order; the hub carries its write order.
     assert "images" not in view
     assert [
         (row["flow"], [(one["version"], one["seed"]) for one in row["images"]])
         for row in view["source"]
     ] == [
-        (FLOW, [(1, "7"), (2, "5"), (3, "7"), (4, "7")]),
+        (FLOW, [(1, "7"), (2, "5"), (3, "7"), (4, "2"), (4, "7"), (4, "9")]),
         (FLAT, [(1, "5")]),
+    ]
+    assert [(one["version"], one["seed"]) for one in view["cell"]] == [
+        (1, "7"),
+        (2, "5"),
+        (3, "7"),
+        (4, "7"),
+        (4, "9"),
+        (4, "2"),
     ]
     # The image picked is on the left, the one compare started from on the right,
     # each served by its head, and no changed field.

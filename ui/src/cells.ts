@@ -141,8 +141,8 @@ export function screenOrder(
   detail: RenderDetail,
   from: 'hub' | 'renders',
 ): NonNullable<PickTile>[] {
+  if (from === 'hub') return detail.cell.map((one) => ({ flow: detail.flow, ...one }))
   return detail.source
-    .filter(({ flow }) => from === 'renders' || flow === detail.flow)
     .flatMap(({ flow, images }) => images.map((one) => ({ flow, ...one })))
 }
 

@@ -5,6 +5,7 @@ import {
   clicks,
   movePick,
   pickHead,
+  placeOf,
   screenOrder,
   sourceGrid,
   stepped,
@@ -166,8 +167,20 @@ spec('ui:renders:the-large-view-steps-its-screens-order', () => {
   expect(stepped(row, second, 1)).toEqual(flat)
   expect(stepped(row, flat, 1)).toBeNull()
   expect(stepped(row, first, -1)).toBeNull()
+  detail.cell = detail.source[0].images
   // From the hub, the cell's images alone.
   const cell = screenOrder(detail, 'hub')
   expect(stepped(cell, first, 1)).toEqual(second)
   expect(stepped(cell, second, 1)).toBeNull()
+
+  // One approval's seeds were written 9 then 2; Renders sorts them numerically.
+  const nine = { flow: detail.flow, version: 1, seed: '9' }
+  const two = { flow: detail.flow, version: 1, seed: '2' }
+  detail.source[0].images = [two, nine]
+  detail.cell = [nine, two]
+  const hub = screenOrder(detail, 'hub')
+  expect(stepped(hub, nine, 1)).toEqual(two)
+  expect(stepped(hub, two, 1)).toBeNull()
+  expect(placeOf(hub, two)).toBe(1)
+  expect(stepped(screenOrder(detail, 'renders'), two, 1)).toEqual(nine)
 })

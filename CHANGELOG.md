@@ -9,6 +9,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- A large view opened from the hub keeps the cell’s write order within each approval, so its step and
+  position match the hub when seed order differs (0087 D6).
+
 - While a session renders, the Render bar shows its totals and *Session*, naming the images short outside it
   as waiting for the next session; a restored focus on Renders and the hub scrolls to the centre (0087 D1, D2).
 - Compare with… is `⇧C`, so a plain letter moves and a command is `⇧` + a letter; the pick captions each tile

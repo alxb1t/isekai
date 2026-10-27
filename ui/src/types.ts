@@ -399,8 +399,10 @@ export interface RenderDetail {
   damaged: string | null
   /* The newest older version that rendered this seed, or null. */
   compare: number | null
+  /* The hub cell's images, oldest version first, each in write order. */
+  cell: { version: number; seed: string }[]
   /* The source's images, a row per offered flow holding any, each oldest version
-     first as Renders draws them; this cell's images are its flow's row. */
+     first, then by seed, as Renders draws them. */
   source: { flow: string; images: { version: number; seed: string }[] }[]
   /* Every offered flow, this one first, assigned or not. */
   targets: string[]
