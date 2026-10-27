@@ -18,7 +18,7 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 
 - [x] 1 — The candidate flows
 - [x] 2 — The prototype photographs **HUMAN
-- [ ] 3 — The sheets
+- [x] 3 — The sheets
 - [ ] 4 — The render and the count ⚠️ GPU
 - [ ] 5 — The verdict **HUMAN
 - [ ] 6 — The winner
@@ -40,14 +40,14 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 
 ## 3 — The sheets
 
-- [ ] 3.1 Assign the three flows: `uv run python -m isekai assign --runs "$R" --flow summon-anime-wai --flow
+- [x] 3.1 Assign the three flows: `uv run python -m isekai assign --runs "$R" --flow summon-anime-wai --flow
   summon-flat-a-anime-wai --flow summon-flat-b-anime-wai "${P[@]}"`.
   Verify: `ls -d .data/flat-summon-prototype/runs/*/summon-flat-b-anime-wai | wc -l` prints `15`.
-- [ ] 3.2 Fill, correct and approve summon's sheets: `uv run python -m isekai.boundary.provision fetch
+- [x] 3.2 Fill, correct and approve summon's sheets: `uv run python -m isekai.boundary.provision fetch
   config/reader.json`, then `tag`, `sheet` and `review` as `uv run python -m isekai tag --runs "$R" --flow
   summon-anime-wai "${P[@]}"`; edit each draft against its photograph per [D4](design.md#d4); then `approve`.
   Verify: `ls .data/flat-summon-prototype/runs/*/summon-anime-wai/review/001.approved.json | wc -l` prints `15`.
-- [ ] 3.3 Copy them: `uv run python -m isekai approve --runs "$R" --flow summon-flat-a-anime-wai --flow
+- [x] 3.3 Copy them: `uv run python -m isekai approve --runs "$R" --flow summon-flat-a-anime-wai --flow
   summon-flat-b-anime-wai --from summon-anime-wai "${P[@]}"`.
   Verify: `ls .data/flat-summon-prototype/runs/*/summon-flat-b-anime-wai/review/001.approved.json | wc -l` prints `15`.
 

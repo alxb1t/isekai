@@ -16,6 +16,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - Candidate `summon-flat-b-anime-wai`: A with its hires pass on the plain checkpoint, run from the CLI; digest
   `bf03405951ab62e9bc5e833dc406bc4b9cdad6b3653e7de01f0cd3c72a0e33a6` (0084 D2, D3).
 - The flat prototype's photographs: five people, three each, kept under the ignored `.data/` (0084 D4).
+- The prototype's sheets: summon's drafts corrected against each photograph, approved, and copied to both
+  candidates so the three flows render one sheet (0084 D4).
 
 ## [0.56.0] - 2026-10-27 · 0083-the-multi-batch-render
 
