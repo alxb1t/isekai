@@ -9,6 +9,15 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.59.0] - 2026-10-27 · 0086-compare-any
+
+Gate: local 0m45s · CI 1m16s (ci at 10c6078) · 0.58.0: local 0m44s · CI 1m34s
+
+### Changed
+
+- `c` on a large view picks any image of its source in a grid — any flow's, or the photograph — and Compare sets
+  the image picked left of the one it started from; *Side by side* `⇧C` folds into the photograph's pick (0086 D1–D6).
+
 ## [0.58.0] - 2026-10-27 · 0085-draft-from
 
 Gate: local 0m44s · CI 1m34s (ci at d71f5ab) · 0.57.0: local 0m44s · CI 1m16s

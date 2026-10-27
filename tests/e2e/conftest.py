@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from isekai.foundation.artifacts import DRAFT_FILE, read
-from isekai.foundation.flow import load_flow
+from isekai.foundation.flow import load_flow, manifest_digest
 from isekai.foundation.run import Run, approval_of, open_run
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare
@@ -34,6 +34,7 @@ from tests.stages import caption, render, sheet
 REPO = Path(__file__).resolve().parents[2]
 FLOW = "summon-anime-wai"
 CONJURE = "conjure-anime-wai"
+FLAT = "summon-flat-anime-wai"
 COLLECTION = "2026-10-19"
 
 # A collection per approval test, each source a sheet with no draft, so every test
@@ -66,7 +67,7 @@ REVISED = "revised"
 # rendered at seed 7, its render's revision drafted.
 DISCARDED = "discarded"
 # The collection Compare reads: one source with seed 7 rendered under v1 and under v2,
-# which changes `clothes`.
+# which changes `clothes`, and flat summon's v1 rendered at seed 9.
 COMPARED = "compared"
 # The collection whose one approval is damaged: a source rendered at seed 7 under an
 # approval holding a count no render takes.
@@ -146,12 +147,12 @@ def _rendered_at_seven(folder: Path, name: str, size: tuple[int, int]) -> Run:
     return run
 
 
-def _render_at(run: Run, seed: int = 7) -> None:
-    """Render `run`'s newest approval at seed 7, or `seed`, on the fake transport."""
-    prepare(run, {FLOW: load_flow(FLOW)})
+def _render_at(run: Run, seed: int = 7, flow: str = FLOW) -> None:
+    """Render `run`'s newest approval in `flow` at seed 7, or `seed`, on the fake."""
+    prepare(run, {flow: load_flow(flow)})
     image = photo_jpeg((90, 60, 30), (640, 800))
     render(
-        run, load_flow(FLOW), FakeComfyClient(view_bytes=image), seeds=[seed], poll=0
+        run, load_flow(flow), FakeComfyClient(view_bytes=image), seeds=[seed], poll=0
     )
 
 
@@ -216,6 +217,14 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     _render_at(compared)
     # A second seed under v2, so Compare can pick another seed's image.
     _render_at(compared, seed=5)
+    # A flat summon image, so Compare can pick another flow's.
+    flat = load_flow(FLAT)
+    sheet(
+        compared, flat.schema, VOCABULARY, flow=FLAT, flow_digest=manifest_digest(FLAT)
+    )
+    review(compared, FLAT)
+    approve(compared, FLAT, flat.schema, VOCABULARY)
+    _render_at(compared, seed=9, flow=FLAT)
     damaged = _rendered_at_seven(lib / DAMAGED, "kim", (790, 1000))
     approval = approval_of(damaged, FLOW, 1)
     body = json.loads(approval.read_text())

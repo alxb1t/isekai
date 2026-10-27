@@ -44,7 +44,7 @@ POST /api/c/{collection}/review/{digest}/{flow}/approve   ·   POST …/cancel
 POST /api/c/{collection}/review/{digest}/{flow}/discard
 POST /api/c/{collection}/draft         {flow, images: [{digest, flow, version, seed}]}
 GET  /api/c/{collection}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
-     and its /image, /thumb and /compare{/other/other_seed,}
+     and its /image, /thumb, /compare/photo and /compare/{flow}/{version}/{seed}
 GET  /api/c/{collection}/sources/{name}   and its /thumb
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
@@ -1004,7 +1004,7 @@ def create_app(
             "flow": flow,
             "version": number,
             "seed": str(seed),
-            "fields": {name: tags for name, tags in fields.items() if tags},
+            "fields": _filled(fields),
             "approved_at": _saved(approval),
             "came_from": held.came_from,
             "kind": held.kind,
@@ -1015,17 +1015,21 @@ def create_app(
             "compare": library.paired(run, flow, number, seed, suffix),
             # Every offered flow, this one first, assigned or not: a draft assigns.
             "targets": sorted(flows, key=lambda name: name != flow),
-            # The cell's images, as Renders draws them: oldest version first.
-            "images": [
-                {"version": each.version, "seed": rendered_seed}
-                for each in reversed(listed)
-                for rendered_seed in _decimal(each.rendered)
+            # The source's images, a row per offered flow holding any, each oldest
+            # version first: the pick, and this cell's images as its flow's row.
+            "source": [
+                {"flow": name, "images": _images_out(images)}
+                for name in flows
+                if (
+                    images := library.rendered_images(
+                        run, name, offered(name).output_suffix
+                    )
+                )
             ],
         }
 
-    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare")
     @app.get(
-        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare/{other}/{other_seed}"
+        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare/{other_flow}/{other_version}/{other_seed}"
     )
     def read_compare(
         collection: str,
@@ -1033,52 +1037,57 @@ def create_app(
         flow: str,
         version: str,
         seed: int,
-        other: str | None = None,
-        other_seed: int | None = None,
+        other_flow: str,
+        other_version: str,
+        other_seed: int,
     ) -> dict[str, Any]:
-        """Return this image beside another image of its cell, the older one before.
+        """Return the image picked beside the one compare started from, of one source.
 
-        The other is the one named, else the newest older version of this seed.
-        The pair is ordered by version, then seed, whichever of the two is named.
-        e.g. `…/v4/7/compare/v2/5` and `…/v2/5/compare/v4/7` -> v2's seed 5
-        before, v4's seed 7 after
+        The picked is the left, this the right. Between two flows, only the
+        fields both declare are compared.
+        e.g. `…/summon/v4/7/compare/flat/v1/5` -> flat's v1 · 5 left, summon's
+        v4 · 7 right
         """
-        run, _, after = rendered(collection, digest, flow, version, seed)
-        number = _version(version)
-        one = offered(flow)
-        if other is None or other_seed is None:
-            older = library.paired(run, flow, number, seed, one.output_suffix)
-            if older is None:
-                raise Refusal(
-                    f"v{number} · {seed}: no older version of {flow} rendered this "
-                    "seed, so there is nothing to compare; go back to its large view"
-                )
-            other, other_seed = f"v{older}", seed
-        earlier = _version(other)
-        if (earlier, other_seed) == (number, seed):
+        number, other_number = _version(version), _version(other_version)
+        if (other_flow, other_number, other_seed) == (flow, number, seed):
             raise Refusal(
-                f"v{number} · {seed}: an image compared with itself shows no change; "
-                "go back to its large view and pick another"
+                f"{flow} {version} · {seed}: an image compared with itself shows no "
+                "change; go back to its large view and pick another"
             )
-        _, _, named = rendered(collection, digest, flow, other, other_seed)
-        (was_at, was_seed, before), (now_at, now_seed, after) = sorted(
-            [(earlier, other_seed, named), (number, seed, after)],
-            key=lambda side: side[:2],
+        _, _, origin = rendered(collection, digest, flow, version, seed)
+        _, _, picked = rendered(
+            collection, digest, other_flow, other_version, other_seed
         )
-        now, now_fields = _side(one, now_at, after)
-        was, was_fields = _side(one, was_at, before)
+        one, other = offered(flow), offered(other_flow)
+        right, right_fields = _side(one, number, origin)
+        left, left_fields = _side(other, other_number, picked)
         changed = [
-            {"field": name, "before": was_fields[name], "after": now_fields[name]}
+            {"field": name, "left": left_fields[name], "right": right_fields[name]}
             for name in one.schema.names
-            if was_fields[name] != now_fields[name]
+            if name in other.schema.names and left_fields[name] != right_fields[name]
         ]
         return {
-            "before": {**was, "seed": str(was_seed)},
-            "after": {**now, "seed": str(now_seed)},
+            "left": {"flow": other_flow, **left, "seed": str(other_seed)},
+            "right": {"flow": flow, **right, "seed": str(seed)},
             "changed": changed,
-            "different_seeds": was_seed != now_seed,
-            "same_sheet": not changed,
+            "different_seeds": other_seed != seed,
+            # A field one flow alone declares is empty on the other's sheet.
+            "same_sheet": _filled(left_fields) == _filled(right_fields),
         }
+
+    @app.get(
+        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare/photo"
+    )
+    def read_compare_photo(
+        collection: str, digest: str, flow: str, version: str, seed: int
+    ) -> dict[str, Any]:
+        """Return the image beside its source's photograph: the pair, no fields.
+
+        The photograph is the left; the page reads its bytes at the run's `/photo`.
+        """
+        _, _, origin = rendered(collection, digest, flow, version, seed)
+        right, _ = _side(offered(flow), _version(version), origin)
+        return {"left": None, "right": {"flow": flow, **right, "seed": str(seed)}}
 
     @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/image")
     def read_render_image(
@@ -1311,6 +1320,14 @@ def _side(
     }, fields
 
 
+def _filled(fields: Mapping[str, list[str]]) -> dict[str, list[str]]:
+    """Return the fields that hold a tag.
+
+    e.g. `{"a": ["x"], "b": []}` -> `{"a": ["x"]}`
+    """
+    return {name: tags for name, tags in fields.items() if tags}
+
+
 def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
     """Return a draft's images, refusing a list that is not of rendered images.
 
@@ -1353,6 +1370,14 @@ def _version_out(version: library.Version) -> dict[str, Any]:
         "seeds": _decimal(version.seeds),
         "rendered": _decimal(version.rendered),
     }
+
+
+def _images_out(images: Sequence[tuple[int, int]]) -> list[dict[str, Any]]:
+    """Describe rendered images by version and decimal seed, as Renders names them.
+
+    e.g. [(1, 7)] -> [{"version": 1, "seed": "7"}]
+    """
+    return [{"version": version, "seed": str(seed)} for version, seed in images]
 
 
 def _decimal(seeds: Sequence[int]) -> list[str]:

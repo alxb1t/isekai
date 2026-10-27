@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { imageAt, photoUrl, renderDetail, versionOf } from '../api'
-import { type CellImage, others as othersOf, pick } from '../cells'
+import { imageAt, photoUrl, renderDetail, thumbAt, versionOf } from '../api'
+import { type PickTile, sourceGrid } from '../cells'
 import ComparePick from '../components/ComparePick.vue'
 import DraftDialog from '../components/DraftDialog.vue'
-import ImageViewer from '../components/ImageViewer.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
@@ -14,9 +13,8 @@ import type { RenderDetail } from '../types'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
    sheet it was rendered from beside it — filled fields only, read-only. ⇧D
-   drafts a flow from it, its own a revision (J5·3); c compares it with another
-   image of its cell, picked in a dialog of tiles (J5·8); ⇧C sets it beside its
-   run's photograph. */
+   drafts a flow from it, its own a revision (J5·3); c compares it with any
+   image of its source, the photograph among them, picked in a grid (J5·8). */
 const props = defineProps<{
   collection: string
   digest: string
@@ -28,14 +26,8 @@ const router = useRouter()
 const detail = ref<RenderDetail | null>(null)
 const refusal = ref<string | null>(null)
 const drafting = ref(false)
-/* The image beside its run's photograph, in the viewer's pair. */
-const pairing = ref(false)
-/* The tile the dialog picking the image to compare with opens on, while it is open. */
-const picking = ref<number | null>(null)
-const pair = computed(() => [
-  { src: photoUrl(place.value), name: 'photograph' },
-  { src: imageAt(place.value), name: `seed ${props.seed}` },
-])
+/* The pick of an image to compare with, while it is open. */
+const picking = ref(false)
 
 const place = computed(() => ({
   collection: props.collection,
@@ -48,34 +40,30 @@ const place = computed(() => ({
 const clock = (at: number) =>
   new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
 
-/* The cell's other images, in the order Renders draws them. */
-const others = computed(() =>
-  othersOf(detail.value?.images ?? [], place.value.version, props.seed),
-)
-const choices = computed(() =>
-  others.value.map((one) => ({ ...one, src: imageAt({ ...place.value, ...one }) })),
-)
+const grid = computed(() => (detail.value ? sourceGrid(detail.value) : null))
 
-/* *Compare with…*: straight to the cell's one other image, else the pick. */
-function compareWith(): void {
-  const where = pick(
-    detail.value?.images ?? [],
-    place.value.version,
-    props.seed,
-    detail.value?.compare ?? null,
-  )
-  if ('compare' in where) compare(where.compare)
-  else picking.value = where.at
-}
+/* A tile's thumbnail: the photograph's own bytes, else the render's thumbnail. */
+const tileSrc = (tile: PickTile) =>
+  tile === null ? photoUrl(place.value) : thumbAt({ ...place.value, ...tile })
 
 /* Compare carries where this view was opened from, so its esc returns here
    with the same way back. */
-function compare(other: CellImage): void {
-  void router.push({
-    name: 'compare',
-    params: { ...props, with: `v${other.version}`, withSeed: other.seed },
-    state: { from: window.history.state?.from ?? null },
-  })
+function compare(other: PickTile): void {
+  const state = { from: window.history.state?.from ?? null }
+  void router.push(
+    other === null
+      ? { name: 'compare-photo', params: props, state }
+      : {
+          name: 'compare',
+          params: {
+            ...props,
+            withFlow: other.flow,
+            withVersion: `v${other.version}`,
+            withSeed: other.seed,
+          },
+          state,
+        },
+  )
 }
 
 /* Where esc and the back button go: the hub when it opened this view, else
@@ -98,14 +86,8 @@ useKeys('screen', [
     id: 'compare',
     keys: plain('KeyC'),
     label: 'compare with…',
-    run: compareWith,
-    when: () => others.value.length > 0,
-  },
-  {
-    id: 'side-by-side',
-    keys: [shifted('KeyC')],
-    label: 'side by side',
-    run: () => (pairing.value = true),
+    run: () => (picking.value = true),
+    when: () => grid.value !== null,
   },
   {
     id: 'back',
@@ -161,21 +143,12 @@ onMounted(async () => {
         </div>
         <div class="large__group">
           <button
-            v-if="others.length"
             class="btn btn-secondary"
             type="button"
             data-compare
-            @click="compareWith"
+            @click="picking = true"
           >
             Compare with…<KeyHint command="compare" />
-          </button>
-          <button
-            class="btn btn-secondary"
-            type="button"
-            data-side-by-side
-            @click="pairing = true"
-          >
-            Side by side<KeyHint command="side-by-side" />
           </button>
         </div>
         <div class="large__group">
@@ -192,18 +165,12 @@ onMounted(async () => {
       </dl>
     </aside>
     <ComparePick
-      v-if="picking !== null"
-      :title="`Compare v${detail.version} · seed ${detail.seed} with…`"
-      :images="choices"
-      :start="picking"
+      v-if="picking && grid"
+      :title="`Compare ${detail.flow} v${detail.version} · seed ${detail.seed} with…`"
+      :grid="grid"
+      :src="tileSrc"
       @pick="compare"
-      @close="picking = null"
-    />
-    <ImageViewer
-      v-if="pairing"
-      :images="pair"
-      pair
-      @close="pairing = false"
+      @close="picking = false"
     />
     <DraftDialog
       v-if="drafting"

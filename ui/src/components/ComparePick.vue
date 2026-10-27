@@ -1,61 +1,64 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { useHeldFocus } from '../composables/useHeldFocus'
-import type { CellImage } from '../cells'
+import { type PickTile, type SourceGrid, imageName, movePick } from '../cells'
 import { useKeys } from '../composables/useKeys'
-import { clamp } from '../grid'
+import type { Focus, Move } from '../grid'
 import { plain } from '../stores/keys'
 
-/* *Compare with…* (design spec J5·2): the cell's other images as tiles, oldest
-   first, each named by its version and seed, in a modal dialog that holds the
-   focus. `h j k l` and the arrows move, `↵` or a click compares, `Esc` goes back. */
+/* *Compare with…* (design spec J5·2): the source's images as a grid in a modal
+   dialog that holds the focus — the photograph's row on top, then a row per
+   flow, oldest first, each tile named by its version and seed, the image
+   compare started from marked. `h j k l` and the arrows move, `↵` or a click
+   compares, `Esc` goes back. */
 const props = defineProps<{
   title: string
-  images: (CellImage & { src: string })[]
-  start: number
+  grid: SourceGrid
+  src: (tile: PickTile) => string
 }>()
 
-const emit = defineEmits<{ pick: [image: CellImage]; close: [] }>()
+const emit = defineEmits<{ pick: [tile: PickTile]; close: [] }>()
 
 const dialog = ref<HTMLDialogElement | null>(null)
+const focus = ref<Focus>(props.grid.start)
 
-function tiles(): HTMLElement[] {
-  return [...(dialog.value?.querySelectorAll<HTMLElement>('[data-pick]') ?? [])]
+const isOrigin = (row: number, column: number) =>
+  row === props.grid.origin.row && column === props.grid.origin.column
+
+async function show(at: Focus): Promise<void> {
+  focus.value = at
+  await nextTick()
+  dialog.value
+    ?.querySelector<HTMLElement>(`[data-row="${at.row}"][data-column="${at.column}"]`)
+    ?.focus()
 }
-const at = () => tiles().indexOf(document.activeElement as HTMLElement)
 
-/* A row's length, read from the layout: the first tile set lower starts the next. */
-function perRow(held: HTMLElement[]): number {
-  const next = held.findIndex((one) => one.offsetTop !== held[0].offsetTop)
-  return next < 0 ? held.length : next
-}
+const walk = (move: Move) => void show(movePick(props.grid, focus.value, move))
 
-function walk(rows: number, columns: number): void {
-  const held = tiles()
-  if (!held.length) return
-  const next = at() + rows * perRow(held) + columns
-  held[clamp(next, held.length - 1)].focus()
+/* The image compare started from is marked, never compared with itself. */
+function choose(row: number, column: number): void {
+  if (!isOrigin(row, column)) emit('pick', props.grid.rows[row].tiles[column])
 }
 
 useKeys('overlay', [
   { id: 'close', keys: plain('Escape'), label: 'back', run: () => dialog.value?.close() },
-  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'previous', run: () => walk(0, -1) },
-  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'next', run: () => walk(0, 1) },
-  { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'row down', run: () => walk(1, 0) },
-  { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'row up', run: () => walk(-1, 0) },
+  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'previous', run: () => walk('column-') },
+  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'next', run: () => walk('column+') },
+  { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'row down', run: () => walk('row+') },
+  { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'row up', run: () => walk('row-') },
   {
     id: 'compare',
     keys: plain('Enter'),
     label: 'compare',
-    run: () => emit('pick', props.images[at()]),
-    when: () => at() >= 0,
+    run: () => choose(focus.value.row, focus.value.column),
+    when: () => !isOrigin(focus.value.row, focus.value.column),
   },
 ])
 
 useHeldFocus(dialog, () => dialog.value?.close())
 onMounted(() => {
   dialog.value?.showModal()
-  tiles()[props.start]?.focus()
+  void show(props.grid.start)
 })
 </script>
 
@@ -69,18 +72,33 @@ onMounted(() => {
   >
     <p class="viewer__title mono">{{ title }}</p>
     <div class="pick">
-      <figure v-for="one in images" :key="`${one.version}/${one.seed}`" class="pick__tile">
-        <button
-          class="renders__image"
-          type="button"
-          data-pick
-          :aria-label="`v${one.version} · seed ${one.seed}`"
-          @click="emit('pick', one)"
-        >
-          <img :src="one.src" alt="" />
-        </button>
-        <figcaption class="mono">v{{ one.version }} · seed {{ one.seed }}</figcaption>
-      </figure>
+      <div v-for="(line, row) in grid.rows" :key="line.flow ?? 'photo'" class="pick__row">
+        <span class="pick__flow mono">{{ line.flow ?? 'photo' }}</span>
+        <div class="pick__tiles">
+          <figure
+            v-for="(tile, column) in line.tiles"
+            :key="tile ? `${tile.version}/${tile.seed}` : 'photo'"
+            class="pick__tile"
+          >
+            <button
+              class="renders__image"
+              :class="{ 'renders__image--selected': isOrigin(row, column) }"
+              type="button"
+              :data-row="row"
+              :data-column="column"
+              :data-origin="isOrigin(row, column) || undefined"
+              :aria-label="imageName(tile)"
+              @focus="focus = { row, column }"
+              @click="choose(row, column)"
+            >
+              <img :src="src(tile)" alt="" />
+            </button>
+            <figcaption class="mono">
+              {{ tile ? `v${tile.version} · seed ${tile.seed}` : 'photograph' }}
+            </figcaption>
+          </figure>
+        </div>
+      </div>
     </div>
   </dialog>
 </template>

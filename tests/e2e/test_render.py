@@ -20,6 +20,7 @@ from tests.e2e.conftest import (
     DAMAGED,
     DISCARDED,
     DRAWN,
+    FLAT,
     FLOW,
     RENDER,
     REVISED,
@@ -371,27 +372,35 @@ def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
 def test_side_by_side_sets_the_image_beside_its_photograph(
     page: Page, served: Served
 ) -> None:
-    large = f"{served.url}/c/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
+    large = f"{served.url}/c/{COMPARED}/renders/{served.compared.digest}/{FLOW}/v2/7"
     page.goto(large)
-    expect(page.locator("[data-sheet]")).to_contain_text("v1")
+    expect(page.locator("[data-sheet]")).to_contain_text("v2")
+    expect(page.locator("[data-side-by-side]")).to_have_count(0)
 
-    page.keyboard.press("Shift+C")
+    # The photograph is the pick's top row.
+    page.keyboard.press("c")
+    picker = page.locator("dialog[data-compare-pick]")
+    expect(picker.get_by_role("button", name=f"{FLOW} · v1 · seed 7")).to_be_focused()
+    page.keyboard.press("k")
+    expect(picker.get_by_role("button", name="photograph")).to_be_focused()
+    page.keyboard.press("Enter")
 
-    pair = page.locator("dialog[data-pair] img")
+    expect(page).to_have_url(f"{large}/compare/photo")
+    pair = page.locator("[data-side] img")
     expect(pair).to_have_count(2)
     expect(pair.nth(0)).to_have_attribute("src", re.compile(r"/photo$"))
-    expect(pair.nth(1)).to_have_attribute("src", re.compile(r"/v1/7/image$"))
+    expect(pair.nth(1)).to_have_attribute("src", re.compile(r"/v2/7/image$"))
     for one in (pair.nth(0), pair.nth(1)):
         expect(one).to_have_js_property("complete", True)
     page.wait_for_function(
         """() => {
-          const [a, b] = [...document.querySelectorAll('dialog[data-pair] img')]
+          const [a, b] = [...document.querySelectorAll('[data-side] img')]
             .map((one) => one.getBoundingClientRect())
           return a.height > 0 && Math.abs(a.height - b.height) <= 1 && a.top === b.top
         }"""
     )
+    expect(page.locator("[data-changed]")).to_have_count(0)
     page.keyboard.press("Escape")
-    expect(page.locator("dialog[data-viewer]")).to_have_count(0)
     expect(page).to_have_url(large)
 
 
@@ -403,28 +412,43 @@ def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
     page.goto(large)
     expect(page.locator("[data-compare]")).to_contain_text("Compare with…")
 
-    # c picks among the cell's other images as tiles, on this seed's older version.
+    # c opens the source's grid on this seed's older version, this image marked.
     page.keyboard.press("c")
     picker = page.locator("dialog[data-compare-pick]")
     expect(picker.locator(".viewer__title")).to_contain_text(
-        "Compare v2 · seed 7 with…"
+        f"Compare {FLOW} v2 · seed 7 with…"
     )
-    expect(picker.locator("[data-pick]")).to_have_count(2)
-    expect(picker.get_by_role("button", name="v1 · seed 7")).to_be_focused()
+    expect(picker.locator(".pick__flow")).to_have_text(["photo", FLOW, FLAT])
+    expect(picker.locator("[data-origin]")).to_have_attribute(
+        "aria-label", f"{FLOW} · v2 · seed 7"
+    )
+    expect(picker.get_by_role("button", name=f"{FLOW} · v1 · seed 7")).to_be_focused()
     page.keyboard.press("Enter")
 
-    expect(page).to_have_url(f"{large}/compare/v1/7")
+    # The image picked is on the left, the one compare started from on the right.
+    expect(page).to_have_url(f"{large}/compare/{FLOW}/v1/7")
+    expect(page.locator("[data-side='left']")).to_contain_text(f"{FLOW} · v1 · seed 7")
+    expect(page.locator("[data-side='right']")).to_contain_text(f"{FLOW} · v2 · seed 7")
     images = page.locator("[data-side] img")
     expect(images).to_have_count(2)
     expect(images.nth(0)).to_have_js_property("complete", True)
     expect(page.locator("[data-changed]")).to_contain_text("clothes")
     expect(page.locator("[data-changed]")).to_contain_text("collared shirt")
-    # A pick of another seed's image compares it, saying the seeds differ.
+    # A pick of another flow's image compares it, saying the seeds differ.
     page.goto(large)
     expect(page.locator("[data-compare]")).to_be_visible()
     page.keyboard.press("c")
-    expect(picker.get_by_role("button", name="v1 · seed 7")).to_be_focused()
-    picker.get_by_role("button", name="v2 · seed 5").click()
-    expect(page).to_have_url(f"{large}/compare/v2/5")
+    expect(picker.get_by_role("button", name=f"{FLOW} · v1 · seed 7")).to_be_focused()
+    page.keyboard.press("j")
+    expect(picker.get_by_role("button", name=f"{FLAT} · v1 · seed 9")).to_be_focused()
+    page.keyboard.press("Enter")
+    expect(page).to_have_url(f"{large}/compare/{FLAT}/v1/9")
+    expect(page.locator("[data-side='left']")).to_contain_text(f"{FLAT} · v1 · seed 9")
     expect(page.locator("[data-seeds-differ]")).to_contain_text("different seeds")
-    expect(page.locator("[data-same-sheet]")).to_be_visible()
+    # A pick of another seed of the same approval says the two share a sheet.
+    page.goto(large)
+    expect(page.locator("[data-compare]")).to_be_visible()
+    page.keyboard.press("c")
+    picker.get_by_role("button", name=f"{FLOW} · v2 · seed 5").click()
+    expect(page).to_have_url(f"{large}/compare/{FLOW}/v2/5")
+    expect(page.locator("[data-same-sheet]")).to_contain_text("same sheet")

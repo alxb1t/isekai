@@ -399,8 +399,9 @@ export interface RenderDetail {
   damaged: string | null
   /* The newest older version that rendered this seed, or null. */
   compare: number | null
-  /* The cell's images, oldest version first, as Renders draws them. */
-  images: { version: number; seed: string }[]
+  /* The source's images, a row per offered flow holding any, each oldest version
+     first as Renders draws them; this cell's images are its flow's row. */
+  source: { flow: string; images: { version: number; seed: string }[] }[]
   /* Every offered flow, this one first, assigned or not. */
   targets: string[]
 }
@@ -431,8 +432,9 @@ export interface DraftRefused {
   images: RefusedImage[]
 }
 
-/* One side of a comparison. */
+/* One side of a comparison: a render, headed by its flow, version and seed. */
 export interface CompareSide {
+  flow: string
   version: number
   seed: string
   approved_at: number | null
@@ -440,11 +442,21 @@ export interface CompareSide {
   tokens: number
 }
 
-export interface Comparison {
-  before: CompareSide
-  after: CompareSide
-  changed: { field: string; before: string[]; after: string[] }[]
+/* Two renders: the image picked left, the one compare started from right, with
+   the fields both flows declare that differ. */
+export interface RenderPair {
+  left: CompareSide
+  right: CompareSide
+  changed: { field: string; left: string[]; right: string[] }[]
   different_seeds: boolean
-  /* No field differs between the two sheets. */
+  /* Every filled field matches, a field one flow alone declares among them. */
   same_sheet: boolean
 }
+
+/* The photograph, left, beside the render compare started from: the pair alone. */
+export interface PhotoPair {
+  left: null
+  right: CompareSide
+}
+
+export type Comparison = RenderPair | PhotoPair

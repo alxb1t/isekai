@@ -697,27 +697,25 @@ button.session__tile {
   padding: 20px;
 }
 
+/* Widths in proportion to each image's aspect ratio, so both stand at one
+   height, top-aligned. */
 .compare__sides {
-  display: grid;
-  flex: 1;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  align-items: flex-start;
   gap: 16px;
-  min-height: 0;
 }
 
 .compare__side {
   display: flex;
   flex-direction: column;
+  flex-basis: 0;
   gap: 6px;
-  min-height: 0;
+  min-width: 0;
   margin: 0;
 }
 
 .compare__side img {
   width: 100%;
-  min-height: 0;
-  object-fit: contain;
-  object-position: top;
   background: var(--ground-media);
 }
 
@@ -1627,11 +1625,30 @@ dialog::backdrop {
 }
 
 /* Compare with…'s tiles, at a Renders tile's size, each named under it. */
+/* A row per flow, its tiles in one line: `j k` keep the column. */
 .pick {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 12px;
   max-width: min(calc(100vw - 96px), 720px);
+}
+
+.pick__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pick__flow {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.pick__tiles {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 3px;
 }
 
 .pick__tile {
