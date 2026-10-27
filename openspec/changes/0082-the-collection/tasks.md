@@ -6,7 +6,7 @@ folder-sense batch is renamed with the code it tests.
 ## Progress
 
 - [x] 1 — The CLI and the stages
-- [ ] 2 — The app
+- [x] 2 — The app
 - [ ] 3 — The docs
 
 ## 1 — The CLI and the stages
@@ -22,9 +22,9 @@ folder-sense batch is renamed with the code it tests.
 
 ## 2 — The app
 
-- [ ] 2.1 **HALT CHECK** — the app's addresses name a batch.
+- [x] 2.1 **HALT CHECK** — the app's addresses name a batch.
   Verify: `grep -c "path: '/b/:batch" ui/src/router.ts` prints `6`.
-- [ ] 2.2 Rename the routes, the API, the payload keys, the identifiers and the words per [D3](design.md#d3) in
+- [x] 2.2 Rename the routes, the API, the payload keys, the identifiers and the words per [D3](design.md#d3) in
   `isekai/interface/ui/` and `ui/src/`, moving `ui/src/stores/batch.ts` to `ui/src/stores/collection.ts` and
   `ui/src/stores/batch.test.ts` to `ui/src/stores/collection.test.ts`; rename them in `tests/test_ui_api.py`,
   `tests/test_ui_library.py`, `tests/test_ui_jobs.py` and `tests/e2e/`.

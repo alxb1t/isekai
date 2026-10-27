@@ -1,13 +1,13 @@
-"""The library: every batch the surface serves, read from the folders alone.
+"""The library: every collection the surface serves, read from the folders alone.
 
-A folder in the library is a batch when it holds `sources/` (D40), so no marker
-file can disagree with the disk. Its runs root is `<batch>/runs`, and every
+A folder in the library is a collection when it holds `sources/` (D40), so no marker
+file can disagree with the disk. Its runs root is `<collection>/runs`, and every
 figure here is a listing read on each call: the hub writes nothing. Its columns
 are the flows `config/ui.json` offers.
 
 ```
 ~/isekai/                      the library, `ISEKAI_LIBRARY`
-  <batch>/ sources/ runs/ log.txt sessions/
+  <collection>/ sources/ runs/ log.txt sessions/
   .staging/                    a dot-folder: never listed
   .cache/<digest>/…            thumbnails, made on first request
 ```
@@ -77,7 +77,7 @@ VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
 RUNS = "runs"
 LOG = "log.txt"
-# The library's thumbnails, a dot-folder so it is listed as no batch.
+# The library's thumbnails, a dot-folder so it is listed as no collection.
 CACHE = ".cache"
 
 # What a run directory's stage folder says was written last, for Home's row.
@@ -91,7 +91,7 @@ _KINDS: Mapping[str, str] = {
     OUTPUTS: "render",
 }
 
-# How many of a batch's sources Home's row shows as thumbnails, before `+n`.
+# How many of a collection's sources Home's row shows as thumbnails, before `+n`.
 ROW_THUMBS = 15
 
 # A source's digest, what it carries and its size, by what its file's stat says:
@@ -109,15 +109,15 @@ def root(environ: Mapping[str, str] = os.environ) -> Path:
 def open_library(library: Path) -> Path:
     """Return the library, created when absent, refusing one git can reach (D18).
 
-    A batch holds copies of photographs, so the rule a runs root is under holds
+    A collection holds copies of photographs, so the rule a runs root is under holds
     for the library that holds every runs root.
     """
     resolved = library.resolve()
     if trackable(resolved):
         raise Refusal(
             f"the library {resolved} is inside this repository and outside its "
-            "ignored .data/ root; a batch holds copies of photographs, so it would "
-            f"be one `git add` from being published -- set {VARIABLE} to a "
+            "ignored .data/ root; a collection holds copies of photographs, so it "
+            f"would be one `git add` from being published -- set {VARIABLE} to a "
             "directory outside the repository, or under .data/"
         )
     try:
@@ -132,7 +132,7 @@ def open_library(library: Path) -> Path:
 
 @dataclass(frozen=True)
 class FlowCount:
-    """One flow's figures in a batch, out of the sources whose runs hold it."""
+    """One flow's figures in a collection, out of the sources whose runs hold it."""
 
     flow: str
     approved: int
@@ -148,7 +148,7 @@ class Row:
     """
 
     name: str
-    batch: bool
+    collection: bool
     sources: int = 0
     thumbs: tuple[str, ...] = ()
     flows: tuple[FlowCount, ...] = ()
@@ -211,15 +211,15 @@ class Source:
 
 @dataclass(frozen=True)
 class Hub:
-    """A batch's grid: its sources by the offered flows."""
+    """A collection's grid: its sources by the offered flows."""
 
     name: str
     flows: tuple[str, ...]
     sources: tuple[Source, ...]
 
 
-def is_batch(folder: Path) -> bool:
-    """Return whether `folder` is a batch: a folder holding `sources/`."""
+def is_collection(folder: Path) -> bool:
+    """Return whether `folder` is a collection: a folder holding `sources/`."""
     return (folder / SOURCES).is_dir()
 
 
@@ -249,49 +249,51 @@ def offered(flows_dir: Path, config: Path = UI_CONFIG) -> tuple[str, ...]:
 
 
 def rows(library: Path, flows: Sequence[str], flows_dir: Path) -> list[Row]:
-    """Return Home's rows: batches by their newest file, newest first, then the rest.
+    """Return Home's rows: collections by newest file, newest first, then the rest.
 
-    A folder that is not a batch is listed and never opened.
+    A folder that is not a collection is listed and never opened.
     """
     folders = listed(library)
     loaded = _loaded(flows, flows_dir)
-    batches = [_row(one, loaded) for one in folders if is_batch(one)]
-    batches.sort(key=lambda row: row.newest or 0.0, reverse=True)
-    return batches + [Row(one.name, False) for one in folders if not is_batch(one)]
+    collections = [_row(one, loaded) for one in folders if is_collection(one)]
+    collections.sort(key=lambda row: row.newest or 0.0, reverse=True)
+    return collections + [
+        Row(one.name, False) for one in folders if not is_collection(one)
+    ]
 
 
-def batch(library: Path, name: str) -> Path:
-    """Return the batch folder `name` names, refusing one the library does not hold."""
+def collection(library: Path, name: str) -> Path:
+    """Return the collection folder `name` names, refusing one the library lacks."""
     folder = library / name
     if (
         name in ("", ".", "..")
         or "/" in name
         or name.startswith(".")
-        or not (folder.is_dir() and is_batch(folder))
+        or not (folder.is_dir() and is_collection(folder))
     ):
         raise Refusal(
-            f"the library holds no batch named {name!r}; go back to the library "
+            f"the library holds no collection named {name!r}; go back to the library "
             "to choose one"
         )
     return folder
 
 
 def run_named(folder: Path, digest: str) -> Run:
-    """Return the run in batch `folder` whose identifier begins with `digest`.
+    """Return the run in collection `folder` whose identifier begins with `digest`.
 
     e.g. "0d4b7e6fb2a8" -> runs/0d4b7e6fb2a8_ada
     """
     found = _runs(folder / RUNS).get(digest)
     if found is None:
         raise Refusal(
-            f"{folder.name} holds no run named {digest!r}; go back to the batch's "
+            f"{folder.name} holds no run named {digest!r}; go back to the collection's "
             "hub to choose one"
         )
     return found
 
 
 def running(folder: Path) -> list[dict[str, Any]]:
-    """Return batch `folder`'s records a render process holds, newest first.
+    """Return collection `folder`'s records a render process holds, newest first.
 
     Liveness is read from each lock before any record is parsed, so a damaged
     record that no render holds is never read. A held record that does not read
@@ -326,12 +328,12 @@ def _session(path: Path) -> dict[str, Any]:
 
 
 def hub(folder: Path, flows: Sequence[str], flows_dir: Path) -> Hub:
-    """Return batch `folder`'s grid over `flows`, each cell's stage from its run."""
+    """Return collection `folder`'s grid over `flows`, each cell's stage from a run."""
     return _grid(folder, _loaded(flows, flows_dir))
 
 
 def sources(folder: Path) -> tuple[Source, ...]:
-    """Return batch `folder`'s sources and their runs, reading no stage and no mark."""
+    """Return collection `folder`'s sources and their runs, reading no stage or mark."""
     return _grid(folder, {}, marks=False).sources
 
 
@@ -445,7 +447,7 @@ def thumbnail(library: Path, run: Run, image: Path) -> Path:
     """Return `image`'s thumbnail in the library's cache, made the first time only.
 
     A JPEG at most `THUMB_SIDE` on its long side, under `.cache/<digest>/` at the
-    image's path in the run, named by the image's own digest too: two batches can
+    image's path in the run, named by the image's own digest too: two collections can
     hold one source rendered at one seed, and only the bytes tell them apart.
     e.g. `…/outputs/001/42.png` -> `.cache/0d4b…/…/001/42.<image digest>.jpg`
     """
@@ -519,7 +521,7 @@ def source_jpeg(source: Path) -> bytes:
 
 
 def source_files(folder: Path) -> Callable[[str], Path]:
-    """Return what finds a file under batch `folder`'s `sources/` by name, or refuses.
+    """Return what finds a file in collection `folder`'s `sources/` by name, or refuses.
 
     The folder is listed once, however many names are asked for.
     """
@@ -542,7 +544,7 @@ def _loaded(flows: Sequence[str], flows_dir: Path) -> dict[str, Flow]:
 
 
 def _grid(folder: Path, flows: Mapping[str, Flow], *, marks: bool = True) -> Hub:
-    """Return batch `folder`'s grid over `flows`.
+    """Return collection `folder`'s grid over `flows`.
 
     Without `marks`, no source is read for its not-cleaned mark or its size: Home
     shows neither.
@@ -560,7 +562,7 @@ def stage(run: Run, loaded: Flow, *, newest: bool = True) -> Cell:
 
     rendered ×n > approved > draft > sheet > tagged > assigned > no flow. The
     file that decides it is read, so a format this build does not know marks
-    the cell rather than the batch. Without `newest`, no image's time is read
+    the cell rather than the collection. Without `newest`, no image's time is read
     and the cell names no newest image and no shortfall: Home shows neither.
     """
     flow, suffix = loaded.id, loaded.output_suffix
@@ -690,7 +692,7 @@ def _carries(path: Path) -> tuple[str, ...]:
     """Return what a source carries beyond its pixels and orientation.
 
     Read from its bytes alone, so a clean source render would refuse is not
-    marked, and no source is decoded to list a batch.
+    marked, and no source is decoded to list a collection.
     e.g. a JPEG imported as it is -> ("EXIF", "XMP"); a cleaned one -> ()
     """
     key = _key(path)
@@ -739,7 +741,7 @@ def _source(
 
 
 def _row(folder: Path, flows: Mapping[str, Flow]) -> Row:
-    """Return one batch's row: its counts per flow and its newest file."""
+    """Return one collection's row: its counts per flow and its newest file."""
     grid = _grid(folder, flows, marks=False)
     newest, kind = _newest(folder)
     counts = [_count(grid.sources, flow) for flow in grid.flows]
@@ -790,7 +792,7 @@ def _newest(folder: Path) -> tuple[float | None, str | None]:
 
 
 def _kind(parts: Sequence[str]) -> str:
-    """Return what a file at `parts` under a batch was written by."""
+    """Return what a file at `parts` under a collection was written by."""
     if parts[0] == SOURCES:
         return "import"
     if parts[0] == RUNS and len(parts) > 3:

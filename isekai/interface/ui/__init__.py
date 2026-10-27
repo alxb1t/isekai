@@ -1,4 +1,4 @@
-"""The app: the library, each batch's hub and stage ③, served by one local process.
+"""The app: the library, each collection's hub and stage ③, served by one local process.
 
 A sibling of `cli.py` rather than a client of it. Review, a tick and an import
 call `wiring` and the owning functions directly, and a `Refusal` is caught rather
@@ -6,13 +6,13 @@ than scraped out of stderr prose. Prepare and Render are the exceptions by desig
 `jobs.py` runs the CLI's stage verbs as children, reading `--progress json` (D4).
 
 The split is what keeps the suite offline. `library.py` reads the library and
-each batch's stages and imports no web framework; `bundle.py` builds the browser
+each collection's stages and imports no web framework; `bundle.py` builds the browser
 bundle or refuses naming the command; `jobs.py` and `events.py` run Prepare and
 Render and stream their progress; `app.py` imports the web framework; and
 `serve()` below composes them.
 
 **The library and the bundle are refused before a port is bound**, because the
-terminal is where the operator is when they start this. A refusal about one batch
+terminal is where the operator is when they start this. A refusal about one collection
 or one run is shown on the page, against what it concerns.
 
 **The server never constructs an artifact.** It passes field values to `review`'s

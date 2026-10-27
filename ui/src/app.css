@@ -384,7 +384,7 @@ button.session__tile {
   box-shadow: inset 0 0 0 1px var(--focus);
 }
 
-/* A photograph of the batch, at a render tile's size. */
+/* A photograph of the collection, at a render tile's size. */
 .session__tile--photo {
   border: 1px solid var(--line);
   background: var(--raised-2);
@@ -789,8 +789,8 @@ button.session__tile {
   color: var(--ink-2);
 }
 
-/* A batch's row: one header line, its thumbnails below at the full width. */
-.library__row--batch {
+/* A collection's row: one header line, its thumbnails below at the full width. */
+.library__row--collection {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -886,7 +886,7 @@ button.session__tile {
   }
 }
 
-/* — batch rail — */
+/* — collection rail — */
 
 .rail {
   width: 132px;
@@ -1811,7 +1811,7 @@ dialog::backdrop {
 
 /* — the import sheet — */
 
-/* The New batch and Add sources sheet. */
+/* The New collection and Add sources sheet. */
 .import {
   display: flex;
   flex-direction: column;
@@ -1986,7 +1986,7 @@ dialog::backdrop {
   color: var(--ink-2);
 }
 
-.import__batch {
+.import__collection {
   width: 100%;
 }
 
@@ -2151,7 +2151,7 @@ dialog::backdrop {
   margin-left: 6px;
 }
 
-/* The read in progress, while Review's batch or sheet loads. */
+/* The read in progress, while Review's collection or sheet loads. */
 .review__reading {
   padding: var(--space-2) var(--space-4);
 }

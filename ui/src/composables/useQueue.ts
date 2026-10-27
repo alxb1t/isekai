@@ -1,8 +1,8 @@
 import { computed, ref } from 'vue'
-import { useBatchStore } from '../stores/batch'
-import type { BatchInput, HubCell, HubInfo } from '../types'
+import { useCollectionStore } from '../stores/collection'
+import type { CollectionInput, HubCell, HubInfo } from '../types'
 
-/* Review walks the batch one flow at a time (design spec J3): with two or more
+/* Review walks the collection one flow at a time (design spec J3): with two or more
    flows waiting the operator chooses one, its head opens first, and its rail
    lists what is not yet rendered. */
 
@@ -76,7 +76,7 @@ export function flowsWaiting(info: HubInfo): FlowWaiting[] {
   })
 }
 
-/** Return whether a batch's Review is the chooser: two or more flows wait. */
+/** Return whether a collection's Review is the chooser: two or more flows wait. */
 export const chooses = (info: HubInfo): boolean => flowsWaiting(info).length > 1
 
 /**
@@ -103,7 +103,7 @@ export function head(
  *
  * e.g. a unapproved, b approved and short, c approved and rendered -> [a, b]
  */
-export function rail(info: HubInfo, flow: string, current: string): BatchInput[] {
+export function rail(info: HubInfo, flow: string, current: string): CollectionInput[] {
   return info.sources.flatMap((source) => {
     const cell = source.cells[flow]
     const status = cell?.status
@@ -122,19 +122,19 @@ export function rail(info: HubInfo, flow: string, current: string): BatchInput[]
 }
 
 /**
- * One batch in one flow, as Review's rail shows it.
+ * One collection in one flow, as Review's rail shows it.
  *
- * Read from the batch store's hub, which `load` reads again from the run
+ * Read from the collection store's hub, which `load` reads again from the run
  * directories, so the rail follows a verb run in the terminal.
  */
-export function useQueue(batch: string, flow: string, current: () => string) {
-  const store = useBatchStore()
-  store.open(batch)
+export function useQueue(collection: string, flow: string, current: () => string) {
+  const store = useCollectionStore()
+  store.open(collection)
   const info = computed(() => store.hub)
   const edited = ref(new Set<string>())
   const loading = ref(true)
 
-  const inputs = computed<BatchInput[]>(() =>
+  const inputs = computed<CollectionInput[]>(() =>
     info.value ? rail(info.value, flow, current()) : [],
   )
   /* The other flows' unapproved sheets, which the rail's head names. */

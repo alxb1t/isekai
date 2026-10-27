@@ -64,7 +64,7 @@ def test_prepare_takes_the_assigned_cells_to_their_sheet_and_no_other(
         assert elapsed >= before_reload.rsplit(" · ", 1)[1]
         expect(bar).to_have_text(re.compile(r"Prepare · 0 of 1 cell done · \d+:\d+"))
 
-        # A render has its own slot: the running Prepare holds no batch's Render.
+        # A render has its own slot: the running Prepare holds no collection's Render.
         beside = page.context.new_page()
         beside.goto(served.hub_of(RENDER))
         expect(beside.locator("[data-render-bar] [data-render]")).to_be_enabled()

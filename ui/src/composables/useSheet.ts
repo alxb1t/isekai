@@ -29,7 +29,7 @@ interface Edit {
  * because an undo that reached back into a different photograph would be a
  * surprise rather than a convenience.
  *
- * One instance serves one batch and one flow; `open` takes the run's digest.
+ * One instance serves one collection and one flow; `open` takes the run's digest.
  */
 export function useSheet(scope: Omit<Place, 'digest'>) {
   const detail = ref<InputDetail | null>(null)

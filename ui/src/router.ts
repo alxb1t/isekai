@@ -8,25 +8,25 @@ import Renders from './views/Renders.vue'
 import Review from './views/Review.vue'
 import ReviewHead from './views/ReviewHead.vue'
 
-/* Every screen has a URL naming its batch and its run (design spec §4). The
+/* Every screen has a URL naming its collection and its run (design spec §4). The
    server answers any of them with the shell, so a reload lands where it was.
    Navigation goes by name, so the router encodes every parameter. */
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'home', component: Home },
-    { path: '/b/:batch/hub', name: 'hub', component: Hub, props: true },
-    { path: '/b/:batch/review', name: 'review-head', component: ReviewHead, props: true },
-    { path: '/b/:batch/review/:digest/:flow', name: 'review', component: Review, props: true },
-    { path: '/b/:batch/renders', name: 'renders', component: Renders, props: true },
+    { path: '/c/:collection/hub', name: 'hub', component: Hub, props: true },
+    { path: '/c/:collection/review', name: 'review-head', component: ReviewHead, props: true },
+    { path: '/c/:collection/review/:digest/:flow', name: 'review', component: Review, props: true },
+    { path: '/c/:collection/renders', name: 'renders', component: Renders, props: true },
     {
-      path: '/b/:batch/renders/:digest/:flow/:version/:seed',
+      path: '/c/:collection/renders/:digest/:flow/:version/:seed',
       name: 'render',
       component: RenderLarge,
       props: true,
     },
     {
-      path: '/b/:batch/renders/:digest/:flow/:version/:seed/compare/:with?/:withSeed?',
+      path: '/c/:collection/renders/:digest/:flow/:version/:seed/compare/:with?/:withSeed?',
       name: 'compare',
       component: Compare,
       props: true,

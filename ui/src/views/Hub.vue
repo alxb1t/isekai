@@ -14,16 +14,16 @@ import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
 import { clamp, kept } from '../grid'
-import { at, useBatchStore } from '../stores/batch'
+import { at, useCollectionStore } from '../stores/collection'
 import { isControl, modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
 import type { HubCell, HubSource, Stage } from '../types'
 
-/* A batch's hub: its sources by the offered flows, each cell's stage read from
+/* A collection's hub: its sources by the offered flows, each cell's stage read from
    the run's directory (design spec J2). A tick assigns a flow through the
    server's `assign`; the Prepare bar runs what changed as one job, and its
    progress arrives over `/events`. */
-const props = defineProps<{ batch: string }>()
+const props = defineProps<{ collection: string }>()
 const router = useRouter()
 const refusal = ref<string | null>(null)
 const grid = ref<HTMLElement | null>(null)
@@ -33,9 +33,9 @@ const adding = ref(false)
 const viewing = ref<{ images: Shown[]; start: number; open?: (index: number) => void } | null>(
   null,
 )
-/* The batch's hub, its running cells and refusals, and its Render offer, shared
-   with every screen of the batch and kept live from the page's one stream. */
-const store = useBatchStore()
+/* The collection's hub, its running cells and refusals, and its Render offer, shared
+   with every screen of the collection and kept live from the page's one stream. */
+const store = useCollectionStore()
 const { hub: info, running, refusals, offer, dialog, rendering, preparing: busy } = storeToRefs(store)
 
 /* Render opens only from its own bar: while changes wait, Prepare holds it. */
@@ -48,12 +48,12 @@ const selected = ref<Set<number>>(new Set())
 const live = useLiveStore()
 const { jobs } = storeToRefs(live)
 const { prepareTotals } = live
-/* Another batch's running Prepare, which disables this one's, with its reason. */
-const prepareHeld = computed(() => held(jobs.value.prepare, props.batch))
+/* Another collection's running Prepare, which disables this one's, with its reason. */
+const prepareHeld = computed(() => held(jobs.value.prepare, props.collection))
 /* The Prepare bar's refusal, the CLI's own text (J8a). */
 const barRefusal = ref<string | null>(null)
 
-/* Add sources commits into this batch, and the grid is read again. */
+/* Add sources commits into this collection, and the grid is read again. */
 async function added(): Promise<void> {
   adding.value = false
   await store.reloadHub()
@@ -159,15 +159,15 @@ function review(source: HubSource, flow: string): void {
   if (reviewable(source, flow))
     void router.push({
       name: 'review',
-      params: { batch: props.batch, digest: source.digest, flow },
+      params: { collection: props.collection, digest: source.digest, flow },
     })
 }
 
-/* The batch's photographs in the viewer, from the row's. */
+/* The collection's photographs in the viewer, from the row's. */
 function viewSource(row: number): void {
   viewing.value = {
     images: sources.value.map((one) => ({
-      src: sourceAt(props.batch, one.name),
+      src: sourceAt(props.collection, one.name),
       name: one.name,
       width: one.width,
       height: one.height,
@@ -183,7 +183,7 @@ function view(source: HubSource, flow: string, index?: number): void {
   const images = cell(source, flow).images
   if (digest === null || images.length === 0) return
   const address = (one: { version: number; seed: string }) => ({
-    batch: props.batch,
+    collection: props.collection,
     digest,
     flow,
     ...one,
@@ -222,7 +222,7 @@ async function tick(targets: HubSource[], flow: string, remove: boolean): Promis
   const names = targets.filter((one) => !locked(cell(one, flow))).map((one) => one.name)
   if (names.length === 0) return
   try {
-    const answered = await assign(props.batch, names, flow, remove)
+    const answered = await assign(props.collection, names, flow, remove)
     for (const [name, found] of Object.entries(answered.cells)) {
       store.apply(name, flow, found)
       delete refusals.value[at(name, flow)]
@@ -260,7 +260,7 @@ async function runPrepare(): Promise<void> {
   if (busy.value || prepareHeld.value !== null || changes.value.length === 0) return
   barRefusal.value = null
   try {
-    live.hold((await prepare(props.batch)).job)
+    live.hold((await prepare(props.collection)).job)
   } catch (reason) {
     barRefusal.value = (reason as Error).message
   }
@@ -275,10 +275,10 @@ async function stop(): Promise<void> {
 }
 
 /* Discard unticks every pending cell that holds no work yet, and dismisses this
-   batch's failed Prepare, so a hub opened again in this page does not show it. */
+   collection's failed Prepare, so a hub opened again in this page does not show it. */
 function discard(): void {
   barRefusal.value = null
-  dismiss(jobs.value.prepare, props.batch)
+  dismiss(jobs.value.prepare, props.collection)
   for (const flow of flows.value) {
     const rows = sources.value.filter((one) => cell(one, flow).stage === 'assigned')
     if (rows.length) void tick(rows, flow, true)
@@ -379,7 +379,7 @@ useKeys('screen', [
 watch(
   () => jobs.value.prepare,
   (slot) => {
-    const message = failed(slot, props.batch)
+    const message = failed(slot, props.collection)
     if (message !== null) barRefusal.value = message
   },
   { immediate: true },
@@ -409,7 +409,7 @@ onUnmounted(() => {
 <template>
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="info" class="hub">
-    <ImportSheet v-if="adding" :batch="batch" @close="adding = false" @imported="added" />
+    <ImportSheet v-if="adding" :collection="collection" @close="adding = false" @imported="added" />
     <ImageViewer
       v-if="viewing"
       :images="viewing.images"
@@ -417,7 +417,7 @@ onUnmounted(() => {
       :open="viewing.open"
       @close="viewing = null"
     />
-    <RenderDialog v-if="dialog" :batch="batch" @close="store.closeDialog" />
+    <RenderDialog v-if="dialog" :collection="collection" @close="store.closeDialog" />
     <div class="hub__head">
       <span class="mono">
         {{ sources.length }} {{ noun(sources.length, 'source') }} ×
@@ -475,7 +475,7 @@ onUnmounted(() => {
             :aria-label="`view ${source.name}`"
             @click="viewSource(row)"
           >
-            <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
+            <img :src="sourceThumbAt(collection, source.name)" alt="" loading="lazy" />
           </button>
         </div>
         <div
@@ -544,7 +544,7 @@ onUnmounted(() => {
               @click.stop="place(row, column + 1), view(source, flow, index)"
             >
               <img
-                :src="thumbAt({ batch, digest: source.digest, flow, ...one })"
+                :src="thumbAt({ collection, digest: source.digest, flow, ...one })"
                 :alt="`${source.name} ${flow} v${one.version} seed ${one.seed}`"
                 loading="lazy"
               />

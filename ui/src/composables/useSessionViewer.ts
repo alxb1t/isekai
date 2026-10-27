@@ -6,7 +6,7 @@ import type { Grid } from '../sessions'
 
 /** The drawer's row viewer, following the shown session and its live grid. */
 export function useSessionViewer(
-  target: () => { batch: string; id: string } | null,
+  target: () => { collection: string; id: string } | null,
   layout: () => Grid,
   photographs: () => Shown[],
 ) {
@@ -19,7 +19,7 @@ export function useSessionViewer(
     if (at === layout().flows.length) return photographs()
     return (layout().cells[at] ?? []).flatMap((cell) =>
       cell.images.map((one) => ({
-        src: imageAt({ batch: target()?.batch ?? '', ...one }),
+        src: imageAt({ collection: target()?.collection ?? '', ...one }),
         name: `${one.flow} · v${one.version} · seed ${one.seed}`,
       })),
     )

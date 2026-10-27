@@ -9,7 +9,7 @@ import {
   photoUrl as photoAt,
 } from '../api'
 import ApproveBar from '../components/ApproveBar.vue'
-import BatchRail from '../components/BatchRail.vue'
+import CollectionRail from '../components/CollectionRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
 import ImageViewer from '../components/ImageViewer.vue'
 import LoadingSkeleton from '../components/LoadingSkeleton.vue'
@@ -27,26 +27,26 @@ import { nextPane, type Pane, paneKeys } from '../panes'
 import { type Command, modded, plain, shifted, useKeyStore } from '../stores/keys'
 import type { FieldCandidates } from '../types'
 
-/* Review: one batch in one flow, the run in the URL. It shows the loading state
+/* Review: one collection in one flow, the run in the URL. It shows the loading state
    or the review layout; the viewer layers over either. The router keys
-   this view by batch and flow, so a new digest is a new sheet in the same view.
+   this view by collection and flow, so a new digest is a new sheet in the same view.
 
    It owns the global keyboard model -- the bindings that cross components, so
    no component ends up owning two of them -- and the chip selection for the
    focused field, because the chips render in `FieldRow` while the keys that
    move between them are read by `TagInput`. */
-const props = defineProps<{ batch: string; digest: string; flow: string }>()
+const props = defineProps<{ collection: string; digest: string; flow: string }>()
 const router = useRouter()
-const batch = useQueue(props.batch, props.flow, () => props.digest)
+const collection = useQueue(props.collection, props.flow, () => props.digest)
 const failure = ref<string | null>(null)
 /* A refusal reading the sheet again after an approval, a cancel or a discard,
    or of the cancel or the discard itself: the bar says what could not be done. */
 const refused = ref<string | null>(null)
 const cancelling = ref(false)
-const sheet = useSheet({ batch: props.batch, flow: props.flow })
+const sheet = useSheet({ collection: props.collection, flow: props.flow })
 const approval = useApproval()
 const current = computed(() => props.digest)
-const photoUrl = (digest: string) => photoAt({ batch: props.batch, digest, flow: props.flow })
+const photoUrl = (digest: string) => photoAt({ collection: props.collection, digest, flow: props.flow })
 const schema = computed(() => sheet.detail.value?.schema ?? [])
 /* A draft copied from an approval, and once approved too: the approval's fields
    mark what changed, and its image sits beside the photograph (J5·4). */
@@ -75,8 +75,8 @@ function select(digest: string): void {
     void router.push({ name: 'review', params: { ...props, digest } })
 }
 
-function stepBatch(direction: -1 | 1): void {
-  const inputs = batch.inputs.value
+function stepCollection(direction: -1 | 1): void {
+  const inputs = collection.inputs.value
   const at = inputs.findIndex((i) => i.id === props.digest)
   if (at < 0 || inputs.length === 0) return
   select(inputs[(at + direction + inputs.length) % inputs.length].id)
@@ -108,14 +108,14 @@ const candidates = ref<FieldCandidates | null>(null)
 /* True while a lens is up, by construction rather than by remembering to set two
    flags together. `TagInput` reads it and yields Escape and the arrows, so `Esc`
    closes the lens rather than clearing a fragment behind it and `←`/`→` do not
-   fire twice — once for chip selection and once for the batch. */
+   fire twice — once for chip selection and once for the collection. */
 const suspended = computed(() => lens.value !== null)
 const selectedChip = ref<number | null>(null)
 
 /* What the viewer shows: the rail's photographs from the open one, the image a
    draft came from alone, or the photograph and that image side by side. */
 const photos = computed(() =>
-  batch.inputs.value.map((input) => ({
+  collection.inputs.value.map((input) => ({
     src: photoUrl(input.id),
     name: input.name,
     width: input.width,
@@ -124,7 +124,7 @@ const photos = computed(() =>
 )
 const opened = computed(() =>
   Math.max(
-    batch.inputs.value.findIndex((input) => input.id === current.value),
+    collection.inputs.value.findIndex((input) => input.id === current.value),
     0,
   ),
 )
@@ -179,11 +179,11 @@ const kicker = computed(() => {
   return held ? `revision of v${held.version}` : 're-opened'
 })
 
-/* Read the batch and the open sheet again, staying on it; a refusal shows in
+/* Read the collection and the open sheet again, staying on it; a refusal shows in
    the approve bar. */
 async function reread(id: string): Promise<void> {
   refused.value = null
-  const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
+  const [read] = await Promise.allSettled([collection.load(), sheet.open(id)])
   focused.value = null
   selectedChip.value = null
   if (read.status === 'rejected') refused.value = (read.reason as Error).message
@@ -197,7 +197,7 @@ async function discard(): Promise<void> {
   if (!(await sheet.flush())) return
   try {
     await discardDraft(
-      { batch: props.batch, digest: current.value, flow: props.flow },
+      { collection: props.collection, digest: current.value, flow: props.flow },
       sheet.saved.value,
     )
   } catch (reason) {
@@ -222,7 +222,7 @@ async function approve(): Promise<void> {
   // read as "your approval is about to be wrong". `flush()` leaves the refusal
   // in the approve bar; stopping here is what makes it true.
   if (!(await sheet.flush())) return
-  const place = { batch: props.batch, digest: id, flow: props.flow }
+  const place = { collection: props.collection, digest: id, flow: props.flow }
   if (!(await approval.approve(place, sheet.saved.value))) return
   // Approving is an act, not a navigation: the sheet stays, read-only.
   await reread(id)
@@ -236,7 +236,7 @@ async function cancelApprove(): Promise<void> {
   if (!id) return
   cancelling.value = true
   try {
-    await cancelApproval({ batch: props.batch, digest: id, flow: props.flow })
+    await cancelApproval({ collection: props.collection, digest: id, flow: props.flow })
   } catch (reason) {
     refused.value = (reason as Error).message
     return
@@ -253,7 +253,7 @@ async function cancelApprove(): Promise<void> {
 const showing = computed(
   () =>
     sheet.detail.value ??
-    batch.inputs.value.find((input) => input.id === current.value) ??
+    collection.inputs.value.find((input) => input.id === current.value) ??
     null,
 )
 
@@ -339,7 +339,7 @@ function moveRow(direction: -1 | 1): void {
 function commit(field: string, tag: string): void {
   sheet.commit(field, tag, selectedChip.value)
   selectedChip.value = null
-  batch.markEdited(current.value)
+  collection.markEdited(current.value)
 }
 
 function back(field: string): void {
@@ -348,7 +348,7 @@ function back(field: string): void {
   const at = selectedChip.value ?? count - 1
   sheet.remove(field, at)
   selectedChip.value = null
-  batch.markEdited(current.value)
+  collection.markEdited(current.value)
 }
 
 /* Open a lens from wherever the focus is. `blur()` rather than a flag: the field
@@ -422,7 +422,7 @@ const inSlot = () => document.activeElement?.matches('[data-slot]') ?? false
 function vertical(direction: -1 | 1): () => void {
   return () => {
     const here = paneNow()
-    if (here === 'rail') stepBatch(direction)
+    if (here === 'rail') stepCollection(direction)
     else if (here === 'source') scrollSource(direction)
     else if (here === 'sheet') moveRow(direction)
     else moveRenders(direction)
@@ -458,20 +458,20 @@ useKeys('screen', [
     id: 'next-sheet',
     keys: [shifted('KeyJ'), shifted('ArrowDown')],
     label: 'next sheet',
-    run: () => stepBatch(1),
+    run: () => stepCollection(1),
   },
   {
     id: 'previous-sheet',
     keys: [shifted('KeyK'), shifted('ArrowUp')],
     label: 'previous sheet',
-    run: () => stepBatch(-1),
+    run: () => stepCollection(-1),
   },
   {
     id: 'flows',
     keys: plain('Escape'),
     label: 'the flows waiting',
-    run: () => void router.push({ name: 'review-head', params: { batch: props.batch } }),
-    when: () => batch.info.value !== null && chooses(batch.info.value),
+    run: () => void router.push({ name: 'review-head', params: { collection: props.collection } }),
+    when: () => collection.info.value !== null && chooses(collection.info.value),
   },
   ...paneKeys(useKeyStore().mac, movePane, moveRow),
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
@@ -524,7 +524,7 @@ onBeforeRouteLeave(async () => {
 onMounted(async () => {
   window.addEventListener('beforeunload', onLeave)
   // Independent reads: the sheet needs only the route's digest.
-  const [read] = await Promise.allSettled([batch.load(), sheet.open(current.value)])
+  const [read] = await Promise.allSettled([collection.load(), sheet.open(current.value)])
   if (read.status === 'rejected') {
     failure.value = (read.reason as Error).message
     return
@@ -555,21 +555,21 @@ watch(current, (id) => {
   <RefusalPage v-if="failure" :refusal="failure" />
   <div v-else class="review">
     <LoadingSkeleton
-      v-if="batch.loading.value || sheet.loading.value"
+      v-if="collection.loading.value || sheet.loading.value"
       class="review__reading"
-      :reading="batch.loading.value ? null : current"
+      :reading="collection.loading.value ? null : current"
       :vocabulary="vocabulary"
     />
-    <div v-if="batch.info.value" class="work" @focusin="remember">
-      <BatchRail
+    <div v-if="collection.info.value" class="work" @focusin="remember">
+      <CollectionRail
         :flow="props.flow"
-        :inputs="batch.inputs.value"
-        :others="batch.others.value"
-        :approved="batch.approved.value"
+        :inputs="collection.inputs.value"
+        :others="collection.others.value"
+        :approved="collection.approved.value"
         :current="current"
-        :edited="batch.edited.value"
+        :edited="collection.edited.value"
         :photo-url="photoUrl"
-        :loading="batch.loading.value"
+        :loading="collection.loading.value"
         @select="select"
       />
 
@@ -603,7 +603,7 @@ watch(current, (id) => {
         :saving="sheet.saving.value"
         :saved="sheet.readonly.value ? null : minute(sheet.saved.value)"
         :previous="revision?.fields ?? drafted?.fields ?? null"
-        @remove="(field, index) => (sheet.remove(field, index), batch.markEdited(current))"
+        @remove="(field, index) => (sheet.remove(field, index), collection.markEdited(current))"
       >
         <template #editor="{ field }">
           <TagInput

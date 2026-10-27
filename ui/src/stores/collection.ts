@@ -11,11 +11,11 @@ export function at(name: string, flow: string): string {
   return `${name}|${flow}`
 }
 
-/* The open batch, one copy for every screen of it: its hub, the stages running
+/* The open collection, one copy for every screen of it: its hub, the stages running
    in its cells and their refusals, its renders once a screen reads them, and its
    Render offer and dialog, which has no URL of its own
    (design spec §1 rule 8). */
-export const useBatchStore = defineStore('batch', () => {
+export const useCollectionStore = defineStore('collection', () => {
   const live = useLiveStore()
   const { jobs, billing, renderRunning, activeRender } = storeToRefs(live)
   const name = ref<string | null>(null)
@@ -30,19 +30,19 @@ export const useBatchStore = defineStore('batch', () => {
   /* Each grid's focus, by its spot's name, written on every move: Esc from a
      large view, the Back button and a tab switch all come back to it. */
   const focus = ref<{ hub: string | null; renders: string | null }>({ hub: null, renders: null })
-  /* A render session running for this batch, not another's. */
-  const rendering = computed(() => renderRunning.value && activeRender.value?.batch === name.value)
-  /* A Prepare running for this batch, not another's. */
+  /* A render session running for this collection, not another's. */
+  const rendering = computed(() => renderRunning.value && activeRender.value?.collection === name.value)
+  /* A Prepare running for this collection, not another's. */
   const preparing = computed(
-    () => jobs.value.prepare?.state === 'running' && jobs.value.prepare.batch === name.value,
+    () => jobs.value.prepare?.state === 'running' && jobs.value.prepare.collection === name.value,
   )
   /* The newest offer request; an answer to an older one is dropped. */
   let asked = 0
 
-  /* Hold `batch`, or none off a batch's screens; another batch starts from nothing. */
-  function open(batch: string | null): void {
-    if (name.value === batch) return
-    name.value = batch
+  /* Hold `collection`, or none off a collection's screens; another collection starts from nothing. */
+  function open(collection: string | null): void {
+    if (name.value === collection) return
+    name.value = collection
     hub.value = null
     running.value = {}
     refusals.value = {}
@@ -53,11 +53,11 @@ export const useBatchStore = defineStore('batch', () => {
     asked += 1
   }
 
-  /* Read the held batch with `read` into `into`, unless another batch is held by then. */
-  async function reload<T>(read: (batch: string) => Promise<T>, into: Ref<T | null>): Promise<T> {
-    const batch = name.value ?? ''
-    const found = await read(batch)
-    if (name.value === batch) into.value = found
+  /* Read the held collection with `read` into `into`, unless another collection is held by then. */
+  async function reload<T>(read: (collection: string) => Promise<T>, into: Ref<T | null>): Promise<T> {
+    const collection = name.value ?? ''
+    const found = await read(collection)
+    if (name.value === collection) into.value = found
     return found
   }
 
@@ -69,10 +69,10 @@ export const useBatchStore = defineStore('batch', () => {
   /* Read the offer again. One that cannot be read is refused, so its reason shows. */
   async function check(): Promise<void> {
     const mine = ++asked
-    const batch = name.value ?? ''
+    const collection = name.value ?? ''
     let found: RenderOffer
     try {
-      found = await renderOffer(batch)
+      found = await renderOffer(collection)
     } catch (reason) {
       const message = (reason as Error).message
       found = { disabled: message, images: offer.value.images, refused: message }
@@ -97,7 +97,7 @@ export const useBatchStore = defineStore('batch', () => {
 
   live.listen('snapshot', (data) => {
     const found = (data as Snapshot).hub
-    if (found && found.batch === name.value) hub.value = found
+    if (found && found.collection === name.value) hub.value = found
   })
   live.listen('cell', (data) => {
     const event = data as CellEvent
@@ -109,7 +109,7 @@ export const useBatchStore = defineStore('batch', () => {
     else if (event.state === 'done') delete refusals.value[here]
   })
 
-  /* Whether a slot's job started or ended, while a batch is open; null otherwise. */
+  /* Whether a slot's job started or ended, while a collection is open; null otherwise. */
   function moved(slot: JobSlot | null, before: JobSlot | null): 'started' | 'ended' | null {
     const was = before?.state === 'running'
     if (was === (slot?.state === 'running') || name.value === null) return null

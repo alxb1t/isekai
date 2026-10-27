@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { billingState, useLiveStore } from '../stores/live'
 
 /* The billing alert's way out (design spec J8b, J8c), on its own page: a pod may
-   bill with no batch. Each way ends in Check again, which asks gpunit; an alert
+   bill with no collection. Each way ends in Check again, which asks gpunit; an alert
    clears only on its word. */
 const live = useLiveStore()
 const { billing, renderRunning, renderConfirmed, sessionsRefusal } = storeToRefs(live)

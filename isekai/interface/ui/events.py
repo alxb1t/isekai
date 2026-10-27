@@ -71,14 +71,14 @@ def stream(
     broadcast: Broadcast,
     snapshot: Callable[[], dict[str, Any]],
     *,
-    batch: str | None = None,
+    collection: str | None = None,
     staging: str | None = None,
     heartbeat: float = HEARTBEAT,
 ) -> Iterator[str]:
-    """Yield the snapshot, then every event for `batch` and `staging`, until stopped.
+    """Yield the snapshot, then each event for `collection` and `staging` until stopped.
 
     Subscribed before the snapshot is read, so nothing between the two is lost.
-    A `cell` event of another batch, or a `file` event of another import, is not
+    A `cell` event of another collection, or a `file` event of another import, is not
     sent; each `job` and `billing` event is.
     """
     found = broadcast.subscribe()
@@ -99,7 +99,7 @@ def stream(
                 continue
             if kind == CLOSE or broadcast.closed:
                 return
-            if kind == "cell" and data.get("batch") != batch:
+            if kind == "cell" and data.get("collection") != collection:
                 continue
             if kind == "file" and data.get("staging") != staging:
                 continue

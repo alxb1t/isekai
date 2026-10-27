@@ -4,13 +4,13 @@ import { hub as readHub, session as readSession } from '../api'
 import type { SessionRecord } from '../types'
 import { useLiveStore } from './live'
 
-/* The session a drawer shows: its batch and its record's id. */
+/* The session a drawer shows: its collection and its record's id. */
 interface Shown {
-  batch: string
+  collection: string
   id: string
 }
 
-/* The render drawer's state, the app's rather than the open batch's: the
+/* The render drawer's state, the app's rather than the open collection's: the
    running render, else the last one this app saw end, until a reload or the
    next render starts. */
 export const useDrawerStore = defineStore('drawer', () => {
@@ -20,22 +20,22 @@ export const useDrawerStore = defineStore('drawer', () => {
   const shown = ref<Shown | null>(null)
   /* The shown session's record, read again as its render moves. */
   const record = ref<SessionRecord | null>(null)
-  /* Each photograph's source name, by its digest, from the shown batch's hub. */
+  /* Each photograph's source name, by its digest, from the shown collection's hub. */
   const photographs = ref<Record<string, string>>({})
   /* The newest record read; an answer to an older one is dropped. */
   let asked = 0
 
   const same = (one: Shown | null, other: Shown | null) =>
-    one?.batch === other?.batch && one?.id === other?.id
+    one?.collection === other?.collection && one?.id === other?.id
   /* A read from a watcher or a click: its refusal leaves the last record shown. */
   const quietly = (read: Promise<void>) => void read.catch(() => undefined)
 
-  /* Name each photograph from `batch`'s hub, once; a refused read leaves the
+  /* Name each photograph from `collection`'s hub, once; a refused read leaves the
      run's own photographs to draw. */
-  async function name(batch: string): Promise<void> {
+  async function name(collection: string): Promise<void> {
     try {
-      const found = await readHub(batch)
-      if (shown.value?.batch !== batch) return
+      const found = await readHub(collection)
+      if (shown.value?.collection !== collection) return
       photographs.value = Object.fromEntries(
         found.sources.flatMap((one) => (one.digest ? [[one.digest, one.name]] : [])),
       )
@@ -49,34 +49,34 @@ export const useDrawerStore = defineStore('drawer', () => {
     const held = shown.value
     if (!held) return
     const mine = ++asked
-    const found = await readSession(held.batch, held.id)
+    const found = await readSession(held.collection, held.id)
     if (mine === asked && same(shown.value, held)) record.value = found
   }
 
-  /** Show session `id` of `batch`, reading its record; a refusal is thrown to the caller. */
-  function show(batch: string, id: string): Promise<void> {
-    const next = { batch, id }
+  /** Show session `id` of `collection`, reading its record; a refusal is thrown to the caller. */
+  function show(collection: string, id: string): Promise<void> {
+    const next = { collection, id }
     if (!same(shown.value, next)) {
-      const named = shown.value?.batch === batch
+      const named = shown.value?.collection === collection
       shown.value = next
       record.value = null
       if (!named) {
         photographs.value = {}
-        void name(batch)
+        void name(collection)
       }
     }
     return refresh()
   }
 
-  /** Open the drawer on session `id` of `batch`. */
-  function openOn(batch: string, id: string): void {
-    quietly(show(batch, id))
+  /** Open the drawer on session `id` of `collection`. */
+  function openOn(collection: string, id: string): void {
+    quietly(show(collection, id))
     open.value = true
   }
 
   /* A new render replaces the shown one; an ended one stays. */
   watch(activeRender, (held) => {
-    if (held && !same(shown.value, held)) quietly(show(held.batch, held.id))
+    if (held && !same(shown.value, held)) quietly(show(held.collection, held.id))
   })
   /* Every move of the render slot's session, including its volume steps; a session
      the slot has just taken was read as it was shown. */
@@ -84,7 +84,7 @@ export const useDrawerStore = defineStore('drawer', () => {
     () => jobs.value.render,
     (slot, before) => {
       if (!slot?.session || before?.session?.id !== slot.session.id) return
-      if (same(shown.value, { batch: slot.batch, id: slot.session.id }))
+      if (same(shown.value, { collection: slot.collection, id: slot.session.id }))
         quietly(refresh())
     },
   )

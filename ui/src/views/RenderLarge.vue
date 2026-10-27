@@ -18,7 +18,7 @@ import type { RenderDetail } from '../types'
    of tiles (J5·8); ⇧C sets it beside its run's photograph; ⇧F drafts the first
    target from its approval. */
 const props = defineProps<{
-  batch: string
+  collection: string
   digest: string
   flow: string
   version: string
@@ -41,7 +41,7 @@ const pair = computed(() => [
 ])
 
 const place = computed(() => ({
-  batch: props.batch,
+  collection: props.collection,
   digest: props.digest,
   flow: props.flow,
   version: versionOf(props.version),
@@ -94,12 +94,12 @@ async function reviseImage(): Promise<void> {
   checkingRevision.value = true
   drafting.value = null
   try {
-    const grid = await hub(props.batch)
+    const grid = await hub(props.collection)
     const cell = grid.sources.find((one) => one.digest === props.digest)?.cells[props.flow]
     if (cell?.status === 're-opened') {
       await router.push({
         name: 'review',
-        params: { batch: props.batch, digest: props.digest, flow: props.flow },
+        params: { collection: props.collection, digest: props.digest, flow: props.flow },
       })
     } else revising.value = true
   } catch (reason) {
@@ -122,7 +122,7 @@ async function draftTarget(target: string): Promise<void> {
     )
     void router.push({
       name: 'review',
-      params: { batch: props.batch, digest: props.digest, flow: target },
+      params: { collection: props.collection, digest: props.digest, flow: target },
     })
   } catch (reason) {
     drafting.value = (reason as Error).message
@@ -133,8 +133,8 @@ async function draftTarget(target: string): Promise<void> {
    Renders, which holds every image. A pasted address carries no state. */
 const back = computed(() =>
   window.history.state?.from === 'hub'
-    ? { to: { name: 'hub', params: { batch: props.batch } }, label: 'Back to Hub' }
-    : { to: { name: 'renders', params: { batch: props.batch } }, label: 'Back to Renders' },
+    ? { to: { name: 'hub', params: { collection: props.collection } }, label: 'Back to Hub' }
+    : { to: { name: 'renders', params: { collection: props.collection } }, label: 'Back to Renders' },
 )
 
 useKeys('screen', [
@@ -272,7 +272,7 @@ onMounted(async () => {
     />
     <ReviseConfirm
       v-if="revising"
-      :batch="batch"
+      :collection="collection"
       :images="[{ digest, flow, version: place.version, seed }]"
       @close="revising = false"
     />

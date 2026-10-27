@@ -1030,11 +1030,11 @@ A reload, a second tab or a bookmark then lands where it was, never on whatever 
 short name is a sanitised filename and can repeat; its digest cannot.
 
 ```
-/                                  Home
-/b/<collection>/hub                     the hub
-/b/<collection>/review                  the head of Review, replaced by its sheet's URL
-/b/<collection>/review/<digest>/<flow>  Review
-/billing                           the billing alert's way out
+/                                       Home
+/c/<collection>/hub                     the hub
+/c/<collection>/review                  the head of Review, replaced by its sheet's URL
+/c/<collection>/review/<digest>/<flow>  Review
+/billing                                the billing alert's way out
 ```
 
 #### Scenario: a reload lands on the same screen

@@ -49,8 +49,8 @@ PORT = 8766
 WAIT = 20.0
 
 
-def _batch(tmp_path: Path, *names: str) -> tuple[Path, list[Run]]:
-    """Write a batch whose every source has a run assigned to `FLOW`."""
+def _collection(tmp_path: Path, *names: str) -> tuple[Path, list[Run]]:
+    """Write a collection whose every source has a run assigned to `FLOW`."""
     folder = tmp_path / "lib" / "b"
     (folder / "sources").mkdir(parents=True)
     made = []
@@ -131,7 +131,7 @@ def _sleeping_render(limit: int, runs: Path, session: str) -> list[str]:
 def test_a_second_job_of_a_kind_is_refused_naming_the_one_that_runs(
     tmp_path: Path,
 ) -> None:
-    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
     volume, _ = _order(tmp_path / "acts")
     jobs = Jobs(
         events.Broadcast(),
@@ -156,7 +156,7 @@ def test_a_second_job_of_a_kind_is_refused_naming_the_one_that_runs(
 def test_a_render_runs_beside_a_prepare_and_its_stop_leaves_the_prepare(
     tmp_path: Path,
 ) -> None:
-    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
     volume, _ = _order(tmp_path / "acts")
     jobs = Jobs(
         events.Broadcast(),
@@ -184,7 +184,7 @@ def test_a_render_runs_beside_a_prepare_and_its_stop_leaves_the_prepare(
 def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
     tmp_path: Path,
 ) -> None:
-    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
     volume, _ = _order(record)
     broadcast = events.Broadcast()
@@ -221,10 +221,10 @@ def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
 
 
 @pytest.mark.spec("ui:prepare:the-log-names-each-job")
-def test_each_line_a_job_writes_to_the_batchs_log_names_its_job(
+def test_each_line_a_job_writes_to_the_collections_log_names_its_job(
     tmp_path: Path,
 ) -> None:
-    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
 
     def gpunit(argv: Sequence[str], say: Say) -> int:
         say(f"gpunit {' '.join(argv)}")
@@ -268,7 +268,7 @@ def test_prepare_is_refused_with_the_readers_message_and_starts_nothing(
             raise urllib.error.URLError("connection refused")
 
     monkeypatch.setattr(ollama, "OPENER", Closed())
-    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
     script = _Script({})
     jobs = Jobs(events.Broadcast(), ollama.probe, command=script)
 
@@ -284,7 +284,7 @@ def test_prepare_is_refused_with_the_readers_message_and_starts_nothing(
 def test_stop_interrupts_the_stage_and_starts_no_later_one(
     tmp_path: Path, vocabulary: Vocabulary
 ) -> None:
-    folder, (run, done) = _batch(tmp_path, "ada.jpg", "bea.jpg")
+    folder, (run, done) = _collection(tmp_path, "ada.jpg", "bea.jpg")
     sheet(done, load_flow(FLOW).schema, vocabulary)
     before = snapshot(done.path)
     broadcast = events.Broadcast()
@@ -301,7 +301,7 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
     assert script.asked == ["tag"]
     assert jobs.slot("prepare") == {
         "kind": "prepare",
-        "batch": "b",
+        "collection": "b",
         "state": "stopped",
         "flow": FLOW,
         "stage": "tag",
@@ -315,7 +315,7 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
 def test_a_stage_that_fails_before_it_reports_ends_the_job_naming_the_log(
     tmp_path: Path,
 ) -> None:
-    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
     script = _Script({"tag": "import sys; sys.exit('no module named onnxruntime')"})
     jobs = Jobs(events.Broadcast(), lambda: None, command=script)
 
@@ -330,10 +330,10 @@ def test_a_stage_that_fails_before_it_reports_ends_the_job_naming_the_log(
 
 
 @pytest.mark.spec("ui:events:a-connection-starts-with-a-snapshot")
-def test_a_stream_opened_for_a_batch_starts_with_both_slots_and_its_hub(
+def test_a_stream_opened_for_a_collection_starts_with_both_slots_and_its_hub(
     tmp_path: Path, vocabulary: Vocabulary
 ) -> None:
-    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
     wired = bare_wiring(
         vocabulary=lambda: vocabulary,
         runs_root=folder / "runs",
@@ -371,25 +371,25 @@ def test_a_stream_opened_for_a_batch_starts_with_both_slots_and_its_hub(
         assert kind == "event: snapshot"
         return json.loads(data.removeprefix("data: "))
 
-    first = first_frame("/events?batch=b")
+    first = first_frame("/events?collection=b")
     assert first["jobs"] == {"prepare": None, "render": None}
-    assert first["hub"]["batch"] == "b"
+    assert first["hub"]["collection"] == "b"
     assert first["hub"]["sources"][0]["cells"][FLOW]["stage"] == "assigned"
     assert first["hub"]["sources"][0]["digest"] == run.digest
 
-    # A batch or an import it cannot read is left out, and the stream still opens:
+    # A collection or an import it cannot read is left out, and the stream still opens:
     # it is the page's only one, and a refused connect would end it for good.
-    missing = first_frame("/events?batch=gone")
+    missing = first_frame("/events?collection=gone")
     assert (missing["jobs"]["prepare"], "hub" in missing) == (None, False)
-    closed = first_frame("/events?batch=b&staging=0123")
-    assert (closed["hub"]["batch"], "files" in closed) == ("b", False)
+    closed = first_frame("/events?collection=b&staging=0123")
+    assert (closed["hub"]["collection"], "files" in closed) == ("b", False)
 
 
 @pytest.mark.spec("ui:events:a-stages-report-reaches-the-stream")
 def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
     tmp_path: Path,
 ) -> None:
-    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
     tags = write_wd14(run)
     staged = tmp_path / "001.json"
     tags.rename(staged)
@@ -399,7 +399,9 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
     broadcast = events.Broadcast()
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
     cell = cell_event(folder, grid, {FLOW: load_flow(FLOW)})
-    stream = events.stream(broadcast, lambda: {"jobs": {}}, batch="b", heartbeat=WAIT)
+    stream = events.stream(
+        broadcast, lambda: {"jobs": {}}, collection="b", heartbeat=WAIT
+    )
     next(stream)
     jobs = Jobs(broadcast, lambda: None, command=_Script({"tag": copy}))
 
@@ -421,7 +423,7 @@ STARTED = "2026-10-22T10:00:00Z"
 
 @pytest.mark.spec("ui:prepare:totals-count-cells-not-stages")
 def test_prepare_totals_count_cells_once(tmp_path: Path) -> None:
-    folder, (run, refused) = _batch(tmp_path, "ada.jpg", "bea.jpg")
+    folder, (run, refused) = _collection(tmp_path, "ada.jpg", "bea.jpg")
     other = OFFERED[1]
     lines = [
         (run.id, FLOW, "tag", "done", "tagged"),
@@ -478,7 +480,7 @@ def test_prepare_totals_count_cells_once(tmp_path: Path) -> None:
 def test_reconnect_keeps_prepare_progress(
     tmp_path: Path, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    folder, (run, later) = _batch(tmp_path, "ada.jpg", "bea.jpg")
+    folder, (run, later) = _collection(tmp_path, "ada.jpg", "bea.jpg")
     wired = bare_wiring(
         vocabulary=lambda: vocabulary,
         runs_root=folder / "runs",
@@ -550,7 +552,7 @@ def test_reconnect_keeps_prepare_progress(
         while _until(updates, "job")[1]["progress"]["done"] != 1:
             pass
         for _ in range(2):
-            body = client.get("/events?batch=b")
+            body = client.get("/events?collection=b")
             first_frame = body.text.split("\n")[1].removeprefix("data: ")
             assert json.loads(first_frame)["jobs"]["prepare"]["progress"] == {
                 "started": STARTED,
@@ -592,7 +594,7 @@ def _order(record: Path) -> tuple[Volume, Callable[[int, Path, str], list[str]]]
 def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
     tmp_path: Path,
 ) -> None:
-    folder, _ = _batch(tmp_path, "ada.jpg")
+    folder, _ = _collection(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
     volume, command = _order(record)
     jobs = Jobs(
@@ -621,7 +623,7 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
 def test_a_window_opening_that_raises_fails_the_job_and_its_step(
     tmp_path: Path,
 ) -> None:
-    folder, _ = _batch(tmp_path, "ada.jpg")
+    folder, _ = _collection(tmp_path, "ada.jpg")
     rendered: list[int] = []
 
     def unstartable(argv: Sequence[str], say: Say) -> int:
@@ -647,7 +649,7 @@ def test_a_window_opening_that_raises_fails_the_job_and_its_step(
 def test_a_lost_window_opening_renders_nothing_and_raises_the_volume_alert(
     tmp_path: Path,
 ) -> None:
-    folder, _ = _batch(tmp_path, "ada.jpg")
+    folder, _ = _collection(tmp_path, "ada.jpg")
     record = tmp_path / "lost-acts"
     volume, command = _order(record)
     raised: list[bool] = []
@@ -673,7 +675,7 @@ def test_a_lost_window_opening_renders_nothing_and_raises_the_volume_alert(
 def test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown(
     tmp_path: Path,
 ) -> None:
-    folder, _ = _batch(tmp_path, "ada.jpg")
+    folder, _ = _collection(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
     volume, _ = _order(record)
     err = io.StringIO()
@@ -711,7 +713,7 @@ def test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown(
 def test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window(
     tmp_path: Path,
 ) -> None:
-    folder, _ = _batch(tmp_path, "ada.jpg")
+    folder, _ = _collection(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
     volume, _ = _order(record)
     # A render child whose teardown outlasts the wait the server gives it.
@@ -744,7 +746,7 @@ def test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window(
 
 def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str]]:
     """Return terminal output and recorded teardown acts after a stopped render."""
-    folder, _ = _batch(tmp_path, "ada.jpg")
+    folder, _ = _collection(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
 
     def volume(argv: Sequence[str], say: Say) -> int:
@@ -806,7 +808,7 @@ def test_kept_window_at_stop_needs_no_remedy(tmp_path: Path) -> None:
 def test_a_render_verb_that_cannot_start_fails_the_job_and_closes_the_window(
     tmp_path: Path,
 ) -> None:
-    folder, _ = _batch(tmp_path, "ada.jpg")
+    folder, _ = _collection(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
     volume, _ = _order(record)
     jobs = Jobs(
@@ -859,7 +861,7 @@ def _approved(
 def _quoting(
     tmp_path: Path, vocabulary: Vocabulary, environ: dict[str, str]
 ) -> tuple[Path, TestClient]:
-    """Return a batch folder and a client whose session is handed `environ`."""
+    """Return a collection folder and a client whose session is handed `environ`."""
     folder = tmp_path / "lib" / "b"
     (folder / "sources").mkdir(parents=True)
     wired = bare_wiring(
@@ -893,7 +895,7 @@ def test_the_quote_lists_each_flows_images_what_is_left_out_and_the_price(
     sheet(drafted, schema, vocabulary, flow=CONTROL)
     review(drafted, CONTROL)
 
-    quote = client.post("/api/b/b/render/quote").json()
+    quote = client.post("/api/c/b/render/quote").json()
 
     assert [(one["flow"], one["images"]) for one in quote["flows"]] == [
         (CONTROL, 1),
@@ -921,8 +923,8 @@ def test_without_a_runpod_key_render_is_disabled_naming_the_fix(
     folder, client = _quoting(tmp_path, vocabulary, {})
     _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
 
-    quote = client.post("/api/b/b/render/quote").json()
-    started = client.post("/api/b/b/render", json={"keep_open": False})
+    quote = client.post("/api/c/b/render/quote").json()
+    started = client.post("/api/c/b/render", json={"keep_open": False})
 
     assert "add RUNPOD_API_KEY to .env" in quote["disabled"]
     assert started.status_code == 409
@@ -940,7 +942,7 @@ def test_with_every_count_rendered_render_is_disabled_naming_why(
     image = photo_jpeg((90, 60, 30), (640, 800))
     render(run, flow, FakeComfyClient(view_bytes=image), seeds=[7], poll=0)
 
-    offer = client.get("/api/b/b/render").json()
+    offer = client.get("/api/c/b/render").json()
 
     assert "already has its Count" in offer["disabled"]
     assert offer["images"] == 0
@@ -956,7 +958,7 @@ def test_an_offer_whose_only_short_approval_is_damaged_carries_its_refusal(
     body = json.loads(approval.read_text())
     approval.write_text(json.dumps({**body, "renders": {"count": 0}}))
 
-    offer = client.get("/api/b/b/render").json()
+    offer = client.get("/api/c/b/render").json()
 
     assert offer["images"] == 0
     assert approval.name in offer["refused"]
@@ -969,20 +971,20 @@ def test_a_confirmation_shorter_than_the_quote_now_gives_is_refused(
 ) -> None:
     folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
     _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
-    shown = client.post("/api/b/b/render/quote").json()["estimate"]["limit_s"]
+    shown = client.post("/api/c/b/render/quote").json()["estimate"]["limit_s"]
 
     started = client.post(
-        "/api/b/b/render", json={"keep_open": False, "limit_s": shown - 1}
+        "/api/c/b/render", json={"keep_open": False, "limit_s": shown - 1}
     )
 
     assert started.status_code == 409
     assert "the quote changed" in started.json()["refusal"]
-    assert client.post("/api/b/b/render/quote").json()["disabled"] is None
+    assert client.post("/api/c/b/render/quote").json()["disabled"] is None
 
     # An approval made while the dialog is open adds an image the limit may not show.
     _approved(folder, "beatrix.jpg", FLOW, schema, vocabulary)
     grown = client.post(
-        "/api/b/b/render", json={"keep_open": False, "limit_s": shown, "images": 1}
+        "/api/c/b/render", json={"keep_open": False, "limit_s": shown, "images": 1}
     )
 
     assert grown.status_code == 409

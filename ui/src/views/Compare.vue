@@ -13,7 +13,7 @@ import type { CompareSide, Comparison } from '../types'
    sheets are the same. Same seed, same composition: the difference left is the
    edit. `\` swaps the sides in place; esc goes back to the large view. */
 const props = defineProps<{
-  batch: string
+  collection: string
   digest: string
   flow: string
   version: string
@@ -44,7 +44,7 @@ const seeds = (side: CompareSide) =>
 
 /* The large view this was opened from: its address without the other image. */
 const large = computed(() => ({
-  batch: props.batch,
+  collection: props.collection,
   digest: props.digest,
   flow: props.flow,
   version: props.version,

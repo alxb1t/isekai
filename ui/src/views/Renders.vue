@@ -12,7 +12,7 @@ import RenderDialog from '../components/RenderDialog.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
 import { useKeys } from '../composables/useKeys'
 import { type Move, kept, moved } from '../grid'
-import { useBatchStore } from '../stores/batch'
+import { useCollectionStore } from '../stores/collection'
 import { plain, shifted } from '../stores/keys'
 import { noun } from '../words'
 import type { RenderVersion, RevisedImage } from '../types'
@@ -23,7 +23,7 @@ import type { RenderVersion, RevisedImage } from '../types'
    the selection (§7). A seed rendered under two versions is marked ⇄. The Render
    bar offers what the newest approvals lack; a source, its row's first column,
    opens in the viewer on ↵ or a click on its thumbnail. */
-const props = defineProps<{ batch: string }>()
+const props = defineProps<{ collection: string }>()
 const router = useRouter()
 const refusal = ref<string | null>(null)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
@@ -32,9 +32,9 @@ const selected = ref(new Set<string>())
 const revising = ref(false)
 /* The source open in the viewer, by name, or null. */
 const viewing = ref<string | null>(null)
-/* The batch's images and its Render offer, shared with every screen of the batch;
+/* The collection's images and its Render offer, shared with every screen of the collection;
    a job's end reads both again. */
-const store = useBatchStore()
+const store = useCollectionStore()
 const { renders: info, offer, dialog, rendering } = storeToRefs(store)
 const shown = computed(() =>
   bar({
@@ -191,7 +191,7 @@ useKeys('screen', [
 ])
 
 function thumb(digest: string, flow: string, version: number, seed: string): string {
-  return thumbAt({ batch: props.batch, digest, flow, version, seed })
+  return thumbAt({ collection: props.collection, digest, flow, version, seed })
 }
 
 /* The large view of `one`, in row `row`, which takes the focus first. */
@@ -200,7 +200,7 @@ function open(row: number, one: Spot): void {
   const { digest, flow, version, seed } = one
   void router.push({
     name: 'render',
-    params: { batch: props.batch, digest, flow, version: `v${version}`, seed },
+    params: { collection: props.collection, digest, flow, version: `v${version}`, seed },
   })
 }
 
@@ -266,7 +266,7 @@ onUnmounted(() => {
             data-source-thumb
             @click="viewing = source.name"
           >
-            <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
+            <img :src="sourceThumbAt(collection, source.name)" alt="" loading="lazy" />
           </button>
         </div>
         <div v-for="flow in info.flows" :key="flow" class="renders__cell">
@@ -337,12 +337,12 @@ onUnmounted(() => {
     </div>
     <ImageViewer
       v-if="viewing"
-      :images="[{ src: sourceAt(batch, viewing), name: viewing }]"
+      :images="[{ src: sourceAt(collection, viewing), name: viewing }]"
       @close="viewing = null"
     />
     <ReviseConfirm
       v-if="revising"
-      :batch="batch"
+      :collection="collection"
       :images="chosen"
       @close="revising = false"
     />
@@ -354,6 +354,6 @@ onUnmounted(() => {
       :rendering="rendering"
       @open="store.openDialog"
     />
-    <RenderDialog v-if="dialog" :batch="batch" @close="store.closeDialog" />
+    <RenderDialog v-if="dialog" :collection="collection" @close="store.closeDialog" />
   </section>
 </template>

@@ -10,21 +10,21 @@ import { useKeys } from '../composables/useKeys'
 import { plain, shifted } from '../stores/keys'
 import type { LibraryRow } from '../types'
 
-/* Home: every folder of the library, batches by their newest file first, the
-   rest after them, inert (design spec J7·1). New batch opens the import sheet
+/* Home: every folder of the library, collections by their newest file first, the
+   rest after them, inert (design spec J7·1). New collection opens the import sheet
    over it (J1); it sits in the library's header row, and on a first start under
    the privacy line (J1·1). */
 const router = useRouter()
 const rows = ref<LibraryRow[] | null>(null)
-const batches = computed(() => rows.value?.filter((row) => row.batch) ?? [])
-const batchCount = computed(() => batches.value.length)
+const collections = computed(() => rows.value?.filter((row) => row.collection) ?? [])
+const collectionCount = computed(() => collections.value.length)
 const refusal = ref<string | null>(null)
 const list = ref<HTMLElement | null>(null)
 const importing = ref(false)
 
-function imported(batch: string): void {
+function imported(collection: string): void {
   importing.value = false
-  void router.push({ name: 'hub', params: { batch } })
+  void router.push({ name: 'hub', params: { collection } })
 }
 
 /* Today's files read as a time, older ones as a date. */
@@ -38,12 +38,12 @@ function when(at: number | null): string {
 }
 
 function open(row: LibraryRow): void {
-  if (row.batch) void router.push({ name: 'hub', params: { batch: row.name } })
+  if (row.collection) void router.push({ name: 'hub', params: { collection: row.name } })
 }
 
-/* The batch rows, and the one holding the focus, or -1. */
+/* The collection rows, and the one holding the focus, or -1. */
 function cards(): HTMLElement[] {
-  return [...(list.value?.querySelectorAll<HTMLElement>('[data-batch]') ?? [])]
+  return [...(list.value?.querySelectorAll<HTMLElement>('[data-collection]') ?? [])]
 }
 const at = () => cards().indexOf(document.activeElement as HTMLElement)
 
@@ -54,31 +54,31 @@ function walk(step: -1 | 1): void {
 
 const onRow = () => at() >= 0
 
-/* j k or ↓ ↑ walk the batches, ↵ opens the focused one (D25). */
+/* j k or ↓ ↑ walk the collections, ↵ opens the focused one (D25). */
 useKeys('screen', [
   {
     id: 'new',
     keys: [shifted('KeyN')],
-    label: 'new batch',
+    label: 'new collection',
     run: () => (importing.value = true),
   },
   {
     id: 'next',
     keys: plain('KeyJ', 'ArrowDown'),
-    label: 'next batch',
+    label: 'next collection',
     run: () => walk(1),
   },
   {
     id: 'previous',
     keys: plain('KeyK', 'ArrowUp'),
-    label: 'previous batch',
+    label: 'previous collection',
     run: () => walk(-1),
   },
   {
     id: 'open',
     keys: plain('Enter'),
-    label: 'open the batch',
-    run: () => open(batches.value[at()]),
+    label: 'open the collection',
+    run: () => open(collections.value[at()]),
     when: onRow,
   },
 ])
@@ -91,7 +91,7 @@ onMounted(async () => {
     return
   }
   await nextTick()
-  list.value?.querySelector<HTMLElement>('[data-batch]')?.focus()
+  list.value?.querySelector<HTMLElement>('[data-collection]')?.focus()
 })
 </script>
 
@@ -101,31 +101,31 @@ onMounted(async () => {
     <ImportSheet v-if="importing" @close="importing = false" @imported="imported" />
     <div v-if="rows.length === 0" class="home__empty">
       <p class="section-label">library · empty</p>
-      <p>No batches yet.</p>
+      <p>No collections yet.</p>
       <p>
         Sources are copied into ~/isekai/. A photograph leaves this Mac only to be rendered:
         metadata stripped, held only in the GPU pod's memory, and gone when the pod is.
       </p>
       <button class="btn btn-primary" type="button" @click="importing = true">
-        New batch<KeyHint command="new" />
+        New collection<KeyHint command="new" />
       </button>
     </div>
     <template v-else>
       <div class="home__head">
         <p class="section-label">
-          library · {{ batchCount }} {{ noun(batchCount, 'batch', 'batches') }} · newest activity
+          library · {{ collectionCount }} {{ noun(collectionCount, 'collection', 'collections') }} · newest activity
           first
         </p>
         <button class="btn btn-primary" type="button" @click="importing = true">
-          New batch<KeyHint command="new" />
+          New collection<KeyHint command="new" />
         </button>
       </div>
       <div ref="list" class="library">
         <template v-for="row in rows" :key="row.name">
           <div
-            v-if="row.batch"
-            class="library__row library__row--batch"
-            data-batch
+            v-if="row.collection"
+            class="library__row library__row--collection"
+            data-collection
             tabindex="0"
             @click="open(row)"
           >
@@ -163,7 +163,7 @@ onMounted(async () => {
           <div v-else class="library__row library__row--inert">
             <span class="library__name">{{ row.name }}</span>
             <span class="library__reason" style="grid-column: span 2">
-              Not a batch: no sources/ folder inside. Move it out of ~/isekai/ in Finder to clear
+              Not a collection: no sources/ folder inside. Move it out of ~/isekai/ in Finder to clear
               this row.
             </span>
             <span class="library__reason library__when">can't be opened</span>

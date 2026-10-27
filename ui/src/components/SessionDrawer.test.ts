@@ -15,7 +15,7 @@ spec('ui:sessions:the-viewer-closes-for-a-replacement-session', async () => {
   const { drawer, live, viewer } = scope.run(() => {
     const drawer = useDrawerStore()
     const live = useLiveStore()
-    drawer.shown = { batch: 'b', id: 'finished' }
+    drawer.shown = { collection: 'b', id: 'finished' }
     drawer.record = {
       id: 'finished',
       started: '',
@@ -49,9 +49,9 @@ spec('ui:sessions:the-viewer-closes-for-a-replacement-session', async () => {
     drawer.record = finished
     expect(viewer.viewed.value).toHaveLength(1)
 
-    live.activeSessions = [{ batch: 'b', id: 'terminal', started: '' }]
+    live.activeSessions = [{ collection: 'b', id: 'terminal', started: '' }]
     await nextTick()
-    expect(drawer.shown).toEqual({ batch: 'b', id: 'terminal' })
+    expect(drawer.shown).toEqual({ collection: 'b', id: 'terminal' })
     expect(drawer.record).toBeNull()
     expect(viewer.viewed.value).toEqual([])
     expect(viewer.viewing.value).toBeNull()

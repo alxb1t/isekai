@@ -16,9 +16,9 @@ export function clock(seconds: number): string {
   return `${minutes}:${String(whole % 60).padStart(2, '0')}`
 }
 
-/* What the stream names: the batch the screen shows and the import it has open. */
+/* What the stream names: the collection the screen shows and the import it has open. */
 interface Target {
-  batch: string | null
+  collection: string | null
   staging: string | null
 }
 
@@ -37,7 +37,7 @@ export interface Snapshot {
 
 /* Both job slots, billing and the open import's files, live, for every screen,
    from the page's one stream. Every connect brings a snapshot, so opening it
-   again for another batch or import loses nothing. */
+   again for another collection or import loses nothing. */
 export const useLiveStore = defineStore('live', () => {
   /* Each kind's job, running or ended; a job event replaces its own kind's alone. */
   const jobs = ref<JobSlots>({ prepare: null, render: null })
@@ -59,13 +59,13 @@ export const useLiveStore = defineStore('live', () => {
   const activeRender = computed<RunningSession | null>(() => {
     const held = slotRender.value
     if (held?.session)
-      return { batch: held.batch, id: held.session.id, started: held.session.started }
+      return { collection: held.collection, id: held.session.id, started: held.session.started }
     return activeSessions.value[0] ?? null
   })
   const renderRunning = computed(() => activeRender.value !== null)
   /* Whether what `renderRunning` says is current: the slot's, or a read that answered. */
   const renderConfirmed = computed(() => slotRender.value !== null || sessionsRefusal.value === null)
-  const target: Target = { batch: null, staging: null }
+  const target: Target = { collection: null, staging: null }
   const handlers = new Map<Kind, Set<Handler>>()
   let stream: EventSource | null = null
   setInterval(() => (now.value = Date.now()), 1000)
@@ -100,13 +100,13 @@ export const useLiveStore = defineStore('live', () => {
     for (const handler of handlers.get(kind) ?? []) handler(data)
   }
 
-  /* Name a batch, an import, or both; the stream opens again only when either changes. */
+  /* Name a collection, an import, or both; the stream opens again only when either changes. */
   function follow(next: Partial<Target>): void {
-    const batch = next.batch !== undefined ? next.batch : target.batch
+    const collection = next.collection !== undefined ? next.collection : target.collection
     const staging = next.staging !== undefined ? next.staging : target.staging
-    if (stream && batch === target.batch && staging === target.staging) return
+    if (stream && collection === target.collection && staging === target.staging) return
     if (staging !== target.staging) files.value = {}
-    target.batch = batch
+    target.collection = collection
     target.staging = staging
     open()
     void refreshSessions()
@@ -115,7 +115,7 @@ export const useLiveStore = defineStore('live', () => {
   function open(): void {
     stream?.close()
     const query = new URLSearchParams()
-    if (target.batch !== null) query.set('batch', target.batch)
+    if (target.collection !== null) query.set('collection', target.collection)
     if (target.staging !== null) query.set('staging', target.staging)
     const named = query.toString()
     const opened = new EventSource(named ? `/events?${named}` : '/events')

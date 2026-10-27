@@ -1,5 +1,5 @@
 <script lang="ts">
-/* The flow each batch's chooser last opened, so a return lands on its row. */
+/* The flow each collection's chooser last opened, so a return lands on its row. */
 const chosen = new Map<string, string>()
 </script>
 
@@ -13,17 +13,17 @@ import RefusalPage from '../components/RefusalPage.vue'
 import { chooses, flowsWaiting, head } from '../composables/useQueue'
 import { useKeys } from '../composables/useKeys'
 import { clamp, kept } from '../grid'
-import { useBatchStore } from '../stores/batch'
+import { useCollectionStore } from '../stores/collection'
 import { plain } from '../stores/keys'
 import { noun } from '../words'
 
-/* A batch's Review (design spec J3). With two or more flows waiting, a chooser:
+/* A collection's Review (design spec J3). With two or more flows waiting, a chooser:
    a row per flow, its counts and its waiting photographs. With one, its head's
    URL takes this one's place, so the address bar names the sheet (§4). With
    none, the way to the hub. */
-const props = defineProps<{ batch: string }>()
+const props = defineProps<{ collection: string }>()
 const router = useRouter()
-const store = useBatchStore()
+const store = useCollectionStore()
 const refusal = ref<string | null>(null)
 const empty = ref(false)
 const choosing = ref(false)
@@ -34,8 +34,8 @@ const waiting = computed(() => (store.hub ? flowsWaiting(store.hub) : []))
 const ROW_THUMBS = 15
 
 function review(digest: string, flow: string): void {
-  chosen.set(props.batch, flow)
-  void router.push({ name: 'review', params: { batch: props.batch, digest, flow } })
+  chosen.set(props.collection, flow)
+  void router.push({ name: 'review', params: { collection: props.collection, digest, flow } })
 }
 
 /* A row opens its flow's head: its first unapproved sheet, else its first short. */
@@ -81,11 +81,11 @@ onMounted(async () => {
   if (chooses(info)) {
     choosing.value = true
     await nextTick()
-    kept(rows(), (row) => row.dataset.flowRow ?? '', chosen.get(props.batch) ?? null)?.focus()
+    kept(rows(), (row) => row.dataset.flowRow ?? '', chosen.get(props.collection) ?? null)?.focus()
     return
   }
   const first = head(info)
-  if (first) void router.replace({ name: 'review', params: { batch: props.batch, ...first } })
+  if (first) void router.replace({ name: 'review', params: { collection: props.collection, ...first } })
   else empty.value = true
 })
 </script>
@@ -97,7 +97,7 @@ onMounted(async () => {
       <div
         v-for="one in waiting"
         :key="one.flow"
-        class="library__row library__row--batch"
+        class="library__row library__row--collection"
         :data-flow-row="one.flow"
         tabindex="0"
         @click="open(one.flow)"
@@ -119,7 +119,7 @@ onMounted(async () => {
             :aria-label="`review ${source.name}`"
             @click.stop="review(source.digest, one.flow)"
           >
-            <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
+            <img :src="sourceThumbAt(collection, source.name)" alt="" loading="lazy" />
           </button>
           <span v-if="one.sources.length > ROW_THUMBS" class="library__meta">
             +{{ one.sources.length - ROW_THUMBS }}
@@ -130,7 +130,7 @@ onMounted(async () => {
   </section>
   <section v-else-if="empty" class="review-head" data-review-head>
     <p>No sheet waits for review.</p>
-    <RouterLink :to="{ name: 'hub', params: { batch } }" class="btn btn-secondary"
+    <RouterLink :to="{ name: 'hub', params: { collection } }" class="btn btn-secondary"
       >Hub<KeyHint command="hub" /></RouterLink
     >
   </section>

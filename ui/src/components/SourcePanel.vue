@@ -64,7 +64,7 @@ function measured(event: Event): void {
    the vocabulary by construction -- the CSV it is scored against IS the
    vocabulary -- so all of them are shown, scored. The hosted list arrives
    already filtered to what the vocabulary carries, which on the acceptance
-   batch was about one tag in ten (design.md D1, D29). */
+   collection was about one tag in ten (design.md D1, D29). */
 const scored = computed(() => props.wd14 ?? [])
 
 const offered = computed(() => props.tags ?? [])

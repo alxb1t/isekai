@@ -30,7 +30,7 @@ spec('ui:render:a-refused-count-is-shown', () => {
 function slot(over: Partial<JobSlot>): JobSlot {
   return {
     kind: 'prepare',
-    batch: 'b',
+    collection: 'b',
     state: 'failed',
     flow: null,
     stage: null,
@@ -41,11 +41,11 @@ function slot(over: Partial<JobSlot>): JobSlot {
 
 spec('ui:events:a-hub-opened-after-a-failure-shows-it', () => {
   expect(failed(slot({}), 'b')).toBe('refused: see log.txt')
-  expect(failed(slot({ batch: 'other' }), 'b')).toBeNull()
+  expect(failed(slot({ collection: 'other' }), 'b')).toBeNull()
   expect(failed(slot({ kind: 'render' }), 'b')).toBeNull()
   expect(failed(slot({ state: 'done' }), 'b')).toBeNull()
   expect(failed(null, 'b')).toBeNull()
-  // A Discard on another batch's hub leaves this batch's failure shown.
+  // A Discard on another collection's hub leaves this collection's failure shown.
   const first = slot({ progress: { started: '10:00', of: 2, done: 1 } })
   dismiss(first, 'other')
   expect(failed({ ...first }, 'b')).toBe('refused: see log.txt')

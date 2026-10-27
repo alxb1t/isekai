@@ -15,7 +15,7 @@ beforeEach(() => {
   records = []
   vi.stubGlobal('fetch', (url: string) =>
     url.endsWith('/hub')
-      ? Promise.resolve({ ok: true, json: async () => ({ batch: 'b', flows: [], sources: [] }) })
+      ? Promise.resolve({ ok: true, json: async () => ({ collection: 'b', flows: [], sources: [] }) })
       : new Promise((resolve) =>
           records.push({ url, answer: (value) => resolve({ ok: true, json: async () => value }) }),
         ),
@@ -26,11 +26,11 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-/* The render slot holding session `id` of batch `b`, in `state`. */
+/* The render slot holding session `id` of collection `b`, in `state`. */
 const slot = (id: string, state: JobSlot['state']): JobSlot => ({
   kind: 'render',
   state,
-  batch: 'b',
+  collection: 'b',
   flow: null,
   stage: null,
   message: null,
@@ -54,20 +54,20 @@ spec('ui:sessions:the-drawer-keeps-the-last-session', async () => {
   const live = useLiveStore()
   live.hold(slot('s1', 'running'))
   await nextTick()
-  expect(drawer.shown).toEqual({ batch: 'b', id: 's1' })
+  expect(drawer.shown).toEqual({ collection: 'b', id: 's1' })
   records.at(-1)?.answer({ id: 's1', outcome: 'running', images: [] })
 
   // It ends: the slot's last move reads the record once more, and it stays.
   live.hold(slot('s1', 'done'))
   await nextTick()
-  expect(records.at(-1)?.url).toBe('/api/b/b/sessions/s1')
+  expect(records.at(-1)?.url).toBe('/api/c/b/sessions/s1')
   records.at(-1)?.answer({ id: 's1', outcome: 'done', images: [{ seed: '7' }] })
   await vi.waitFor(() => expect(drawer.record?.outcome).toBe('done'))
-  expect(drawer.shown).toEqual({ batch: 'b', id: 's1' })
+  expect(drawer.shown).toEqual({ collection: 'b', id: 's1' })
 
   live.hold(slot('s2', 'running'))
   await nextTick()
-  expect(drawer.shown).toEqual({ batch: 'b', id: 's2' })
+  expect(drawer.shown).toEqual({ collection: 'b', id: 's2' })
   expect(drawer.record).toBeNull()
   records.at(-1)?.answer({ id: 's2', outcome: 'running', images: [] })
   await vi.waitFor(() => expect(drawer.record?.id).toBe('s2'))
