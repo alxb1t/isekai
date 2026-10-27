@@ -1,4 +1,4 @@
 {
-  "flows": ["summon-anime-wai", "conjure-anime-wai"],
+  "flows": ["summon-anime-wai", "conjure-anime-wai", "summon-flat-anime-wai"],
   "upload_limit_mb": 200
 }

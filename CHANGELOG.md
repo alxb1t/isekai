@@ -24,6 +24,7 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   cannot read flat faces; B's hires pass made no visible difference (0084 D5).
 - `summon-flat-anime-wai`: summon in a flat, lined anime look, with InstantID ending at 0.65; candidate A under
   its own name, B deleted; digest `05d62409e518a9446ba046c691ed7e2ba194b609803b12a72e853c4ebd092940` (0084 D6).
+- The app offers `summon-flat-anime-wai` beside summon and conjure, as the hub's third column (0084 D6).
 
 ## [0.56.0] - 2026-10-27 · 0083-the-multi-batch-render
 

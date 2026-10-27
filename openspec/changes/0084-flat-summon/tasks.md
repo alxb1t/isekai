@@ -80,3 +80,6 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 - [x] 6.3 Add D44 to `docs/decisions.md`, and name `summon-flat-anime-wai` in `AGENTS.md`'s flows and `README.md`'s
   tree, per [D6](design.md#d6).
   Verify: `grep -c '### D44 · A flat flow is summon with the face chain ending early' docs/decisions.md` prints `1`, and `grep -c 'summon-flat-anime-wai' AGENTS.md README.md` prints a number of at least `1` for each file.
+- [x] 6.4 Offer the winner in the app: add `summon-flat-anime-wai` to `config/ui.json`, and count the offered flows in
+  `tests/e2e/test_import.py`'s hub step, per [D6](design.md#d6).
+  Verify: `grep -c 'summon-flat-anime-wai' config/ui.json` prints `1`, and `uv run pytest -q tests/e2e/test_import.py` exits 0.
