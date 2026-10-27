@@ -1004,7 +1004,7 @@ def create_app(
             "flow": flow,
             "version": number,
             "seed": str(seed),
-            "fields": {name: tags for name, tags in fields.items() if tags},
+            "fields": _filled(fields),
             "approved_at": _saved(approval),
             "came_from": held.came_from,
             "kind": held.kind,
@@ -1072,7 +1072,8 @@ def create_app(
             "right": {"flow": flow, **right, "seed": str(seed)},
             "changed": changed,
             "different_seeds": other_seed != seed,
-            "same_sheet": not changed,
+            # A field one flow alone declares is empty on the other's sheet.
+            "same_sheet": _filled(left_fields) == _filled(right_fields),
         }
 
     @app.get(
@@ -1318,6 +1319,14 @@ def _side(
         "renders": _renders_out(renders_of(approval, body, remedy)),
         "tokens": token_budget(fields, flow.schema, flow).total,
     }, fields
+
+
+def _filled(fields: Mapping[str, list[str]]) -> dict[str, list[str]]:
+    """Return the fields that hold a tag.
+
+    e.g. `{"a": ["x"], "b": []}` -> `{"a": ["x"]}`
+    """
+    return {name: tags for name, tags in fields.items() if tags}
 
 
 def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:

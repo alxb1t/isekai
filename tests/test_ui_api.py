@@ -1848,6 +1848,24 @@ def test_compare_takes_any_two_images_of_a_source(
     assert itself.status_code == 409
     assert "compared with itself" in itself.json()["refusal"]
 
+    # A conjure image drafted from v4 · 7 shares its fields, and fills one of its
+    # own summon's sheet has none of: no field differs, yet no sheet is shared.
+    drafted = {"digest": made.digest, "flow": FLOW, "version": 4, "seed": "7"}
+    assert client.post(
+        DRAFT_ROUTE, json={"flow": CONJURE, "images": [drafted]}
+    ).is_success
+    conjure = load_flow(CONJURE)
+    draft = made.directory(CONJURE, "review") / "001.draft.json"
+    save_draft(
+        made, CONJURE, {**read(draft, DRAFT_FILE)["fields"], "bangs": ["wavy hair"]}
+    )
+    approve(made, CONJURE, conjure.schema, vocabulary)
+    rendered(7, conjure)
+
+    across = client.get(f"{large}/v4/7/compare/{CONJURE}/v1/7").json()
+
+    assert (across["changed"], across["same_sheet"]) == ([], False)
+
 
 @pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")
 def test_a_seed_of_digits_outside_ascii_is_refused_naming_the_seeds(

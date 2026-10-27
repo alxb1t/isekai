@@ -445,3 +445,10 @@ def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
     expect(page).to_have_url(f"{large}/compare/{FLAT}/v1/9")
     expect(page.locator("[data-side='left']")).to_contain_text(f"{FLAT} · v1 · seed 9")
     expect(page.locator("[data-seeds-differ]")).to_contain_text("different seeds")
+    # A pick of another seed of the same approval says the two share a sheet.
+    page.goto(large)
+    expect(page.locator("[data-compare]")).to_be_visible()
+    page.keyboard.press("c")
+    picker.get_by_role("button", name=f"{FLOW} · v2 · seed 5").click()
+    expect(page).to_have_url(f"{large}/compare/{FLOW}/v2/5")
+    expect(page.locator("[data-same-sheet]")).to_contain_text("same sheet")

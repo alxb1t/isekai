@@ -62,3 +62,42 @@ spec('ui:compare:the-pick-moves-by-row-and-column', () => {
   expect(across).toEqual({ row: 1, column: 2 })
   expect(shorter).toEqual({ row: 2, column: 0 })
 })
+
+spec('ui:compare:a-seed-pairs-with-its-newest-older-version', () => {
+  const opened = (version: number, compare: number | null, images: [number, string][]) =>
+    sourceGrid({
+      flow: 'summon-anime-wai',
+      version,
+      seed: '7',
+      compare,
+      source: [
+        {
+          flow: 'summon-anime-wai',
+          images: images.map(([one, seed]) => ({ version: one, seed })),
+        },
+      ],
+    } as unknown as RenderDetail).start
+
+  // The seed's newest older version, past the image before it of another seed.
+  expect(
+    opened(3, 1, [
+      [1, '7'],
+      [2, '5'],
+      [3, '7'],
+    ]),
+  ).toEqual({ row: 1, column: 0 })
+  // Else the image before it in its row.
+  expect(
+    opened(2, null, [
+      [1, '5'],
+      [2, '7'],
+    ]),
+  ).toEqual({ row: 1, column: 0 })
+  // Else, first in its row, the photograph.
+  expect(
+    opened(1, null, [
+      [1, '7'],
+      [2, '5'],
+    ]),
+  ).toEqual({ row: 0, column: 0 })
+})
