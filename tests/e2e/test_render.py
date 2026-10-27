@@ -288,6 +288,10 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     expect(page.locator(".form")).to_contain_text(f"from {FLOW} v1")
     expect(page.locator("[data-changed='clothes']")).to_contain_text("was")
     expect(page.locator("[data-caption-heading]")).to_contain_text(f"caption · {FLOW}")
+    revised = page.locator("[data-revised]")
+    expect(revised).to_contain_text(f"drafted from {FLOW} v1 · seed 7")
+    expect(revised.locator("img")).to_have_js_property("complete", True)
+    expect(revised.locator("img")).not_to_have_js_property("naturalWidth", 0)
 
 
 @pytest.mark.spec("ui:revise:discard-asks-before-it-deletes")

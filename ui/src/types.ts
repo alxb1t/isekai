@@ -179,6 +179,8 @@ export interface Drafted {
   flow: string
   approval: number
   fields: Record<string, string[]>
+  /* The image of that approval the draft was written from, where it names one. */
+  image?: { flow: string; version: number; seed: string }
 }
 
 export interface VocabEntry {

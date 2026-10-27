@@ -28,8 +28,9 @@ const props = defineProps<{
   wd14?: ScoredTag[] | null
   tags?: OfferedTag[] | null
   loading?: boolean
-  /* The image being revised, drawn beside the photograph on a revision (J5·4). */
-  revised?: { src: string; seed: string } | null
+  /* The image a draft came from, drawn beside the photograph (J5·4): a
+     revision's, or, `from` naming its flow and version, a drafted draft's. */
+  revised?: { src: string; seed: string; from: string | null } | null
 }>()
 
 defineEmits<{ open: []; render: []; pair: [] }>()
@@ -100,7 +101,12 @@ defineExpose({
       </figure>
       <figure class="source__side source__revised" :style="{ flexGrow: renderRatio }" data-revised>
         <span class="source__row">
-          <span class="kicker source__label">render being revised · seed {{ revised.seed }}</span>
+          <span v-if="revised.from" class="kicker source__label"
+            >drafted from {{ revised.from }} · seed {{ revised.seed }}</span
+          >
+          <span v-else class="kicker source__label"
+            >render being revised · seed {{ revised.seed }}</span
+          >
           <button class="btn btn-secondary source__pair-open" type="button" @click="$emit('pair')">
             Side by side<KeyHint command="photograph" />
           </button>

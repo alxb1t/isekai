@@ -6,7 +6,7 @@ task names.
 ## Progress
 
 - [x] 1 — The image a draft came from, recorded
-- [ ] 2 — Review shows it
+- [x] 2 — Review shows it
 
 ## 1 — The image a draft came from, recorded
 
@@ -25,14 +25,14 @@ task names.
 
 ## 2 — Review shows it
 
-- [ ] 2.1 **HALT CHECK** — Review guesses a revision's image from its seeds.
+- [x] 2.1 **HALT CHECK** — Review guesses a revision's image from its seeds.
   Verify: `grep -c 'The image is the first listed seed rendered under that approval' isekai/interface/ui/app.py` prints `1`.
-- [ ] 2.2 Read `image` in `_revision` and `_drafted` (`isekai/interface/ui/app.py`) per [D3](design.md#d3); bind
+- [x] 2.2 Read `image` in `_revision` and `_drafted` (`isekai/interface/ui/app.py`) per [D3](design.md#d3); bind
   `ui:revise:a-revision-keeps-its-image-after-its-seed-changes` in `tests/test_ui_api.py`.
   Verify: `grep -c 'a-revision-keeps-its-image-after-its-seed-changes' tests/test_ui_api.py` prints `1`, and `uv run pytest -q tests/test_ui_api.py` exits 0.
-- [ ] 2.3 Draw a drafted draft's image in `ui/src/views/Review.vue` and `ui/src/components/SourcePanel.vue`, with
+- [x] 2.3 Draw a drafted draft's image in `ui/src/views/Review.vue` and `ui/src/components/SourcePanel.vue`, with
   `ui/src/types.ts`, per [D4](design.md#d4); in `test_conjure_from_this_opens_review` (`tests/e2e/test_render.py`)
   check `[data-revised] img` beside the photograph.
   Verify: `grep -c 'drafted from' ui/src/components/SourcePanel.vue` prints a number of at least `1`, and `uv run pytest -q tests/e2e/test_render.py -k conjure` exits 0.
-- [ ] 2.4 Edit `ui/design/spec.md` per [D5](design.md#d5).
+- [x] 2.4 Edit `ui/design/spec.md` per [D5](design.md#d5).
   Verify: `grep -c 'shows the summon image beside the photograph' ui/design/spec.md` prints `1`, and `grep -c 'whatever its seeds become' ui/design/spec.md` prints `1`, and `uv run pytest -q tests/e2e` exits 0.

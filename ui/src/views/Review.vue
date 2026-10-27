@@ -54,10 +54,22 @@ const revision = computed(() => sheet.detail.value?.revision ?? null)
 /* A draft drafted from another flow's approval, and once approved too: its own
    sheet's fields mark what that approval changed, read-only once approved. */
 const drafted = computed(() => sheet.detail.value?.drafted ?? null)
+/* The image a draft came from: a revision's, else the one a drafted draft names. */
 const revised = computed(() => {
   const held = revision.value
-  if (!held?.seed) return null
-  return { src: imageAt({ ...props, version: held.version, seed: held.seed }), seed: held.seed }
+  if (held?.seed)
+    return {
+      src: imageAt({ ...props, version: held.version, seed: held.seed }),
+      seed: held.seed,
+      from: null,
+    }
+  const image = drafted.value?.image
+  if (!image) return null
+  return {
+    src: imageAt({ ...props, flow: image.flow, version: image.version, seed: image.seed }),
+    seed: image.seed,
+    from: `${image.flow} v${image.version}`,
+  }
 })
 const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 
