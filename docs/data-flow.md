@@ -66,7 +66,7 @@ one it started from, its pick opening on the newest older version that rendered 
 outputs/001/7.png ─▶ draft ─▶ review/003.draft.json   {count 1, seeds [7]}
                                 │ edit · approve · render
                                 ▼
-                     outputs/003/7.png ─▶ Compare: 001 ⇄ 003, the changed fields
+                     outputs/003/7.png ─▶ Compare: 001 ⇄ 003, side by side
 ```
 
 Beside them, `show` reads a run's artifacts, versions, producers and failure records,

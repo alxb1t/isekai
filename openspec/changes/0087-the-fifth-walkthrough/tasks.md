@@ -7,7 +7,7 @@ new vitest test carries `spec(…)` with the key its task names.
 
 - [x] 1 — The bar and the scroll
 - [x] 2 — The keys and the pick
-- [ ] 3 — Compare
+- [x] 3 — Compare
 - [ ] 4 — The large view's steps
 
 ## 1 — The bar and the scroll
@@ -39,9 +39,9 @@ new vitest test carries `spec(…)` with the key its task names.
 
 ## 3 — Compare
 
-- [ ] 3.1 **HALT CHECK** — Compare lists the changed fields.
+- [x] 3.1 **HALT CHECK** — Compare lists the changed fields.
   Verify: `grep -c 'data-changed' ui/src/views/Compare.vue` prints a number of at least `1`.
-- [ ] 3.2 Drop `changed`, `different_seeds` and `same_sheet` from `read_compare` (`isekai/interface/ui/app.py`), and
+- [x] 3.2 Drop `changed`, `different_seeds` and `same_sheet` from `read_compare` (`isekai/interface/ui/app.py`), and
   draw the pair and its heads alone, centred and as tall as the window, in `ui/src/views/Compare.vue` and
   `ui/src/app.css`, with `ui/src/types.ts`, per [D5](design.md#d5); edit `ui:compare:any-two-images-of-a-cell` in
   `tests/test_ui_api.py` and the compare tests in `tests/e2e/test_render.py`.

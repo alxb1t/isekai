@@ -1043,8 +1043,7 @@ def create_app(
     ) -> dict[str, Any]:
         """Return the image picked beside the one compare started from, of one source.
 
-        The picked is the left, this the right. Between two flows, only the
-        fields both declare are compared.
+        The picked is the left, this the right: the pair alone.
         e.g. `…/summon/v4/7/compare/flat/v1/5` -> flat's v1 · 5 left, summon's
         v4 · 7 right
         """
@@ -1058,21 +1057,11 @@ def create_app(
         _, _, picked = rendered(
             collection, digest, other_flow, other_version, other_seed
         )
-        one, other = offered(flow), offered(other_flow)
-        right, right_fields = _side(one, number, origin)
-        left, left_fields = _side(other, other_number, picked)
-        changed = [
-            {"field": name, "left": left_fields[name], "right": right_fields[name]}
-            for name in one.schema.names
-            if name in other.schema.names and left_fields[name] != right_fields[name]
-        ]
+        right = _side(offered(flow), number, origin)
+        left = _side(offered(other_flow), other_number, picked)
         return {
             "left": {"flow": other_flow, **left, "seed": str(other_seed)},
             "right": {"flow": flow, **right, "seed": str(seed)},
-            "changed": changed,
-            "different_seeds": other_seed != seed,
-            # A field one flow alone declares is empty on the other's sheet.
-            "same_sheet": _filled(left_fields) == _filled(right_fields),
         }
 
     @app.get(
@@ -1086,7 +1075,7 @@ def create_app(
         The photograph is the left; the page reads its bytes at the run's `/photo`.
         """
         _, _, origin = rendered(collection, digest, flow, version, seed)
-        right, _ = _side(offered(flow), _version(version), origin)
+        right = _side(offered(flow), _version(version), origin)
         return {"left": None, "right": {"flow": flow, **right, "seed": str(seed)}}
 
     @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/image")
@@ -1304,10 +1293,8 @@ def _caption(one: Held) -> tuple[Path | None, str | None]:
     return (borrowed, source) if borrowed is not None else (None, None)
 
 
-def _side(
-    flow: Flow, version: int, approval: Path
-) -> tuple[dict[str, Any], dict[str, list[str]]]:
-    """Return one side of a comparison as the page shows it, and every field."""
+def _side(flow: Flow, version: int, approval: Path) -> dict[str, Any]:
+    """Return one side of a comparison as the page shows it."""
     body, fields = _approved(approval)
     remedy = f"restore it in {approval} by hand, then reload the page"
     for name in flow.schema.names:
@@ -1317,7 +1304,7 @@ def _side(
         "approved_at": _saved(approval),
         "renders": _renders_out(renders_of(approval, body, remedy)),
         "tokens": token_budget(fields, flow.schema, flow).total,
-    }, fields
+    }
 
 
 def _filled(fields: Mapping[str, list[str]]) -> dict[str, list[str]]:

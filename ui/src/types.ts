@@ -442,15 +442,10 @@ export interface CompareSide {
   tokens: number
 }
 
-/* Two renders: the image picked left, the one compare started from right, with
-   the fields both flows declare that differ. */
+/* Two renders: the image picked left, the one compare started from right. */
 export interface RenderPair {
   left: CompareSide
   right: CompareSide
-  changed: { field: string; left: string[]; right: string[] }[]
-  different_seeds: boolean
-  /* Every filled field matches, a field one flow alone declares among them. */
-  same_sheet: boolean
 }
 
 /* The photograph, left, beside the render compare started from: the pair alone. */

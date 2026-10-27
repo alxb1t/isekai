@@ -13,6 +13,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   as waiting for the next session; a restored focus on Renders and the hub scrolls to the centre (0087 D1, D2).
 - Compare with… is `⇧C`, so a plain letter moves and a command is `⇧` + a letter; the pick captions each tile
   by its version alone and names the focused tile, seed and all, in its head (0087 D3, D4).
+- Compare shows the pair alone, each under its flow, version and seed, centred and as tall as the window;
+  the per-image lines and the changed fields go, so the images take the room (0087 D5).
 
 ## [0.59.0] - 2026-10-27 · 0086-compare-any
 
