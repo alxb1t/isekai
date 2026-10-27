@@ -11,6 +11,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - While a session renders, the Render bar shows its totals and *Session*, naming the images short outside it
   as waiting for the next session; a restored focus on Renders and the hub scrolls to the centre (0087 D1, D2).
+- Compare with… is `⇧C`, so a plain letter moves and a command is `⇧` + a letter; the pick captions each tile
+  by its version alone and names the focused tile, seed and all, in its head (0087 D3, D4).
 
 ## [0.59.0] - 2026-10-27 · 0086-compare-any
 

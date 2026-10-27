@@ -6,7 +6,7 @@ new vitest test carries `spec(…)` with the key its task names.
 ## Progress
 
 - [x] 1 — The bar and the scroll
-- [ ] 2 — The keys and the pick
+- [x] 2 — The keys and the pick
 - [ ] 3 — Compare
 - [ ] 4 — The large view's steps
 
@@ -25,14 +25,14 @@ new vitest test carries `spec(…)` with the key its task names.
 
 ## 2 — The keys and the pick
 
-- [ ] 2.1 **HALT CHECK** — Compare is a plain `c`.
+- [x] 2.1 **HALT CHECK** — Compare is a plain `c`.
   Verify: `grep -c "keys: plain('KeyC')" ui/src/views/RenderLarge.vue` prints `1`.
-- [ ] 2.2 Take `shifted('KeyC')` for `compare` in `ui/src/views/RenderLarge.vue` per [D3](design.md#d3); caption each
+- [x] 2.2 Take `shifted('KeyC')` for `compare` in `ui/src/views/RenderLarge.vue` per [D3](design.md#d3); caption each
   tile `v<N>` and name the focused tile in the head in `ui/src/components/ComparePick.vue` per [D4](design.md#d4); bind
   `ui:compare:the-pick-names-the-focused-tile` in `ui/src/cells.test.ts`; press `Shift+C` in the compare tests of
   `tests/e2e/test_render.py`.
   Verify: `grep -c "keys: plain('KeyC')" ui/src/views/RenderLarge.vue` prints `0`, and `grep -c 'the-pick-names-the-focused-tile' ui/src/cells.test.ts` prints `1`, and `uv run pytest -q tests/e2e/test_render.py` exits 0.
-- [ ] 2.3 In `docs/decisions.md` D25, `` `⇧`+letter for a command, always for one that writes, a plain letter only where
+- [x] 2.3 In `docs/decisions.md` D25, `` `⇧`+letter for a command, always for one that writes, a plain letter only where
   nothing is typed`` → ``a plain letter moves, a command is `⇧` + a letter, a plain letter only where nothing is
   typed``.
   Verify: `grep -c 'a plain letter moves, a command is' docs/decisions.md` prints `1`, and `grep -c 'always for one that writes' docs/decisions.md` prints `0`.

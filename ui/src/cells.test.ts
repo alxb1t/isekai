@@ -1,5 +1,14 @@
 import { expect } from 'vitest'
-import { EMPTY_CELL, action, clicks, movePick, sourceGrid, targets } from './cells'
+import {
+  EMPTY_CELL,
+  action,
+  clicks,
+  movePick,
+  pickHead,
+  sourceGrid,
+  targets,
+  tileCaption,
+} from './cells'
 import { spec } from './test/spec'
 import type { HubCell, RenderDetail } from './types'
 
@@ -100,4 +109,31 @@ spec('ui:compare:a-seed-pairs-with-its-newest-older-version', () => {
       [2, '5'],
     ]),
   ).toEqual({ row: 0, column: 0 })
+})
+
+spec('ui:compare:the-pick-names-the-focused-tile', () => {
+  const seed = '18446744073709551615'
+  const grid = sourceGrid({
+    flow: 'summon-anime-wai',
+    version: 3,
+    seed: '7',
+    compare: null,
+    source: [
+      {
+        flow: 'summon-anime-wai',
+        images: [
+          { version: 2, seed: '7' },
+          { version: 2, seed },
+          { version: 3, seed: '7' },
+        ],
+      },
+    ],
+  } as unknown as RenderDetail)
+  const second = movePick(grid, { row: 1, column: 0 }, 'column+')
+  const tile = grid.rows[second.row].tiles[second.column]
+
+  expect(tileCaption(tile)).toBe('v2')
+  expect(pickHead({ flow: 'summon-anime-wai', version: 3, seed: '7' }, tile)).toBe(
+    `Compare summon-anime-wai v3 · seed 7 with summon-anime-wai v2 · seed ${seed}…`,
+  )
 })

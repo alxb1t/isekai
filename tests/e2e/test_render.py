@@ -380,7 +380,7 @@ def test_side_by_side_sets_the_image_beside_its_photograph(
     expect(page.locator("[data-side-by-side]")).to_have_count(0)
 
     # The photograph is the pick's top row.
-    page.keyboard.press("c")
+    page.keyboard.press("Shift+C")
     picker = page.locator("dialog[data-compare-pick]")
     expect(picker.get_by_role("button", name=f"{FLOW} · v1 · seed 7")).to_be_focused()
     page.keyboard.press("k")
@@ -414,11 +414,12 @@ def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
     page.goto(large)
     expect(page.locator("[data-compare]")).to_contain_text("Compare with…")
 
-    # c opens the source's grid on this seed's older version, this image marked.
-    page.keyboard.press("c")
+    # ⇧C opens the source's grid on this seed's older version, this image marked,
+    # the head naming the focused tile.
+    page.keyboard.press("Shift+C")
     picker = page.locator("dialog[data-compare-pick]")
-    expect(picker.locator(".viewer__title")).to_contain_text(
-        f"Compare {FLOW} v2 · seed 7 with…"
+    expect(picker.locator(".viewer__title")).to_have_text(
+        f"Compare {FLOW} v2 · seed 7 with {FLOW} v1 · seed 7…"
     )
     expect(picker.locator(".pick__flow")).to_have_text(["photo", FLOW, FLAT])
     expect(picker.locator("[data-origin]")).to_have_attribute(
@@ -439,7 +440,7 @@ def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
     # A pick of another flow's image compares it, saying the seeds differ.
     page.goto(large)
     expect(page.locator("[data-compare]")).to_be_visible()
-    page.keyboard.press("c")
+    page.keyboard.press("Shift+C")
     expect(picker.get_by_role("button", name=f"{FLOW} · v1 · seed 7")).to_be_focused()
     page.keyboard.press("j")
     expect(picker.get_by_role("button", name=f"{FLAT} · v1 · seed 9")).to_be_focused()
@@ -450,7 +451,7 @@ def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
     # A pick of another seed of the same approval says the two share a sheet.
     page.goto(large)
     expect(page.locator("[data-compare]")).to_be_visible()
-    page.keyboard.press("c")
+    page.keyboard.press("Shift+C")
     picker.get_by_role("button", name=f"{FLOW} · v2 · seed 5").click()
     expect(page).to_have_url(f"{large}/compare/{FLOW}/v2/5")
     expect(page.locator("[data-same-sheet]")).to_contain_text("same sheet")

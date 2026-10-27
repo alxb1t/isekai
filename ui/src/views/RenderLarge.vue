@@ -13,7 +13,7 @@ import type { RenderDetail } from '../types'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
    sheet it was rendered from beside it — filled fields only, read-only. ⇧D
-   drafts a flow from it, its own a revision (J5·3); c compares it with any
+   drafts a flow from it, its own a revision (J5·3); ⇧C compares it with any
    image of its source, the photograph among them, picked in a grid (J5·8). */
 const props = defineProps<{
   collection: string
@@ -84,7 +84,7 @@ useKeys('screen', [
   },
   {
     id: 'compare',
-    keys: plain('KeyC'),
+    keys: [shifted('KeyC')],
     label: 'compare with…',
     run: () => (picking.value = true),
     when: () => grid.value !== null,
@@ -166,7 +166,7 @@ onMounted(async () => {
     </aside>
     <ComparePick
       v-if="picking && grid"
-      :title="`Compare ${detail.flow} v${detail.version} · seed ${detail.seed} with…`"
+:from="detail"
       :grid="grid"
       :src="tileSrc"
       @pick="compare"

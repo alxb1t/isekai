@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useHeldFocus } from '../composables/useHeldFocus'
-import { type PickTile, type SourceGrid, imageName, movePick } from '../cells'
+import { type PickTile, type SourceGrid, imageName, movePick, pickHead, tileCaption } from '../cells'
 import { useKeys } from '../composables/useKeys'
 import type { Focus, Move } from '../grid'
 import { plain } from '../stores/keys'
 
 /* *Compare with…* (design spec J5·2): the source's images as a grid in a modal
    dialog that holds the focus — the photograph's row on top, then a row per
-   flow, oldest first, each tile named by its version and seed, the image
-   compare started from marked. `h j k l` and the arrows move, `↵` or a click
-   compares, `Esc` goes back. */
+   flow, oldest first, each tile captioned by its version, the image compare
+   started from marked, the head naming the focused tile's flow, version and seed.
+   `h j k l` and the arrows move, `↵` or a click compares, `Esc` goes back. */
 const props = defineProps<{
-  title: string
+  from: NonNullable<PickTile>
   grid: SourceGrid
   src: (tile: PickTile) => string
 }>()
@@ -21,6 +21,9 @@ const emit = defineEmits<{ pick: [tile: PickTile]; close: [] }>()
 
 const dialog = ref<HTMLDialogElement | null>(null)
 const focus = ref<Focus>(props.grid.start)
+const head = computed(() =>
+  pickHead(props.from, props.grid.rows[focus.value.row]?.tiles[focus.value.column] ?? null),
+)
 
 const isOrigin = (row: number, column: number) =>
   row === props.grid.origin.row && column === props.grid.origin.column
@@ -66,11 +69,11 @@ onMounted(() => {
   <dialog
     ref="dialog"
     class="viewer"
-    :aria-label="title"
+    :aria-label="head"
     data-compare-pick
     @close="emit('close')"
   >
-    <p class="viewer__title mono">{{ title }}</p>
+    <p class="viewer__title mono" data-pick-head>{{ head }}</p>
     <div class="pick">
       <div v-for="(line, row) in grid.rows" :key="line.flow ?? 'photo'" class="pick__row">
         <span class="pick__flow mono">{{ line.flow ?? 'photo' }}</span>
@@ -93,9 +96,7 @@ onMounted(() => {
             >
               <img :src="src(tile)" alt="" />
             </button>
-            <figcaption class="mono">
-              {{ tile ? `v${tile.version} · seed ${tile.seed}` : 'photograph' }}
-            </figcaption>
+            <figcaption class="mono">{{ tileCaption(tile) }}</figcaption>
           </figure>
         </div>
       </div>
