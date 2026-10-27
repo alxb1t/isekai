@@ -531,31 +531,6 @@ still billing.
 - **WHEN** a session's endpoint never answers, with `--progress json`
 - **THEN** its last line on standard output is the teardown's end
 
-### Requirement: The revise verb takes image paths, and writes every draft or none
-
-The system SHALL offer a verb that takes the paths of rendered images, reads from each its run, flow, approval and
-seed, checks every image before writing anything — the image exists, its approval can be read, its flow holds no
-unapproved draft, and no two images share a run and flow — and then writes a revision for each, or, when any check
-fails, writes nothing and names every image that failed, with its reason. It SHALL tell two images' runs apart by
-the identity of their directories, never by the text of their paths.
-
-An image's path names everything a revision needs, so the verb takes nothing else. A selection is revised whole or
-not at all, so a retry after a fix does not meet the drafts the first try wrote. Two spellings of one run are one
-run, and only its identity says so.
-
-#### Scenario: every image is revised
-- **Key:** `cli:revise:every-image-is-revised`
-- **Layers:** unit
-- **WHEN** the verb is given two images from different runs
-- **THEN** each run's flow gains a revision of its image
-
-#### Scenario: one refusal writes nothing
-- **Key:** `cli:revise:one-refusal-writes-nothing`
-- **Layers:** unit
-- **WHEN** one image given has its flow's draft waiting, an unreadable approval, or another image's run and flow
-- **THEN** no draft is written for any image
-- **AND** the refusal names that image and its reason
-
 ### Requirement: The approve verb cancels an approval with `--cancel`
 
 The system SHALL take `--cancel` on `isekai approve`, cancelling each named run's approval in each named flow through
@@ -576,39 +551,6 @@ refused run must not cost the rest.
 - **Layers:** unit
 - **WHEN** `approve` is given `--cancel` and `--from`
 - **THEN** it is refused before any run is read
-
-### Requirement: The review verb drafts from another flow's approval with `--from`
-
-The system SHALL take `--from FLOW` on `isekai review`, drafting each named flow of each named run from that flow's
-approval through the review stage, first assigning a named flow that holds no sheet and filling its sheet from the
-source's tag list, of the version `--version N` names, else the source's newest approval. It SHALL
-answer each run on its own, and SHALL refuse, before any run is read, `--from` beside `--discard` or
-`--new-version`, `--version` without `--from`, and a source that is a named flow or no tracked flow.
-
-The draft is the review stage's act, so the verb composes it and decides nothing. The newest approval is the one the
-operator just finished, so it needs no number. A target with no sheet needs no Prepare: the source's tags are
-the target's.
-
-#### Scenario: each flow is drafted from the source's newest approval
-- **Key:** `cli:review-from:each-flow-is-drafted-from-the-newest-approval`
-- **Layers:** unit
-- **WHEN** `review --from` names a source holding two approvals and no `--version`
-- **THEN** each named flow's draft is drafted from the source's newest approval
-- **AND** with `--version 1` it is drafted from approval one
-
-#### Scenario: a target with no sheet is assigned and filled first
-- **Key:** `cli:review-from:a-target-with-no-sheet-is-filled-first`
-- **Layers:** unit
-- **WHEN** `review --from` names a target the run is not assigned to
-- **THEN** the target is assigned, its sheet filled from the source's tag list, and its draft written
-- **AND** no caption or tag list is written for the target
-
-#### Scenario: a conflicting option is refused before any run is read
-- **Key:** `cli:review-from:a-conflicting-option-is-refused`
-- **Layers:** unit
-- **WHEN** `review --from` is given beside `--discard`, or `--version` without `--from`
-- **THEN** it is refused naming the options
-- **AND** no run is read
 
 ### Requirement: A render session writes its record into the collection, from its start to its end
 
@@ -681,3 +623,42 @@ free checks ─▶ claim id + lifetime lock ─▶ running record ─▶ images 
 - **THEN** each collection's record holds the shared id, its own images and plan, and the complete collection order
 - **AND** both records hold the pod's and the teardown's steps, and both logs the session's lines
 
+### Requirement: The draft verb drafts a flow from image paths, and writes every draft or none
+
+The system SHALL offer `isekai draft --flow FLOW <image>…`, which reads from each image path its run, flow, approval and
+seed, checks every image before writing anything — the image exists, its approval can be read, the target holds no
+waiting draft with edits of its own, and no two images share a run and target — and then writes, through the review
+stage, a revision where `FLOW` is the image's own flow and a draft from its approval where it is another, assigning a
+target with no sheet and filling its sheet from the source's tags; when any check fails it SHALL write nothing and name
+every image that failed, with its reason. It SHALL tell two images' runs apart by the identity of their directories,
+never by the text of their paths.
+
+An image's path names everything a draft needs but its target, so the verb takes nothing else. A selection is drafted
+whole or not at all, so a retry after a fix does not meet the drafts the first try wrote. A target with no sheet needs
+no Prepare: the source's tags are the target's.
+
+#### Scenario: every image is revised
+- **Key:** `cli:revise:every-image-is-revised`
+- **Layers:** unit
+- **WHEN** the verb is given two images from different runs and their own flow
+- **THEN** each run's flow gains a revision of its image
+
+#### Scenario: one refusal writes nothing
+- **Key:** `cli:revise:one-refusal-writes-nothing`
+- **Layers:** unit
+- **WHEN** one image given has its target's edited draft waiting, an unreadable approval, or another's run and target
+- **THEN** no draft is written for any image
+- **AND** the refusal names that image and its reason
+
+#### Scenario: a target with no sheet is assigned and filled first
+- **Key:** `cli:review-from:a-target-with-no-sheet-is-filled-first`
+- **Layers:** unit
+- **WHEN** `draft --flow` names a target an image's run is not assigned to
+- **THEN** the target is assigned, its sheet filled from the source's tag list, and its draft written
+- **AND** no caption or tag list is written for the target
+
+#### Scenario: another flow is drafted from the image
+- **Key:** `cli:draft:another-flow-is-drafted-from-the-image`
+- **Layers:** unit
+- **WHEN** the verb is given a summon image and another flow
+- **THEN** the target's draft holds the image's approval's shared fields, its seed and its image

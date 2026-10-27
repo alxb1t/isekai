@@ -335,7 +335,8 @@ always rendered. A seed listed twice would render one image twice.
 The system SHALL write, for a rendered image, the next numbered draft of its flow copied from the approval the image was
 rendered under — whether or not that is the newest — naming that approval in its producer, with a count of one and the
 image's seed listed, and recording the image itself — its flow, version and seed — which the approval keeps. It SHALL
-refuse, naming why, while the flow holds an unapproved draft.
+refuse, naming why, while the flow holds a waiting draft with edits of its own, and SHALL replace one equal to its
+sheet at its own number.
 
 A revision starts from what the operator looked at, not from what came after it. Keeping the seed puts the edited sheet
 on the same composition; the seed stays editable, so a re-roll is the same act. The image is recorded apart from the
@@ -357,9 +358,15 @@ seeds, so an edited seed never loses it.
 #### Scenario: a waiting draft refuses a revision
 - **Key:** `review:revise:a-waiting-draft-refuses`
 - **Layers:** unit
-- **WHEN** an image is revised while its flow holds an unapproved draft
+- **WHEN** an image is revised while its flow holds a waiting draft with edits of its own
 - **THEN** the revision is refused naming that draft
 - **AND** no file is written
+
+#### Scenario: an unedited waiting draft is replaced
+- **Key:** `review:revise:an-unedited-waiting-draft-is-replaced`
+- **Layers:** unit
+- **WHEN** an image is revised while its flow's waiting draft equals its sheet
+- **THEN** the revision is written at that draft's number
 
 ### Requirement: Approval refuses a revision that would reproduce its images
 
@@ -469,7 +476,8 @@ NNN.approved.json ─▶ write NNN.draft.json ─▶ delete NNN.approved.json
 When the operator names a source flow and one of its approvals, the system SHALL write the target flow's draft whose
 every field both flows' schemas declare is the source approval's, and whose every other field the target declares is the
 target's newest sheet's, recording the target's sheet and the source flow and approval it was drafted from, and, where
-the operator names one of that approval's images, the image itself — its flow, version and seed. It SHALL approve that
+the operator names one of that approval's images, the image itself — its flow, version and seed — with a count of one
+and that seed listed. It SHALL approve that
 draft as an ordinary approval of the target, never as a copy. It SHALL refuse, naming the way out: a target holding no
 sheet; a source holding no such approval; a named image that approval never rendered; a source that is the target or
 no tracked flow; and a waiting draft of the target whose fields differ from its sheet's or that renders anything but one
@@ -555,3 +563,9 @@ from, so that approval stands while the record does, as a copy's source does.
 - **WHEN** a target is drafted from a source approval naming a seed it rendered no image for
 - **THEN** it is refused naming that seed and the command that lists the rendered seeds
 - **AND** no file is written
+
+#### Scenario: a draft from an image prefills its seed
+- **Key:** `review:draft-from:a-draft-from-an-image-prefills-its-seed`
+- **Layers:** unit
+- **WHEN** a target is drafted from a source approval naming one of its images
+- **THEN** its count is one and its seeds are the image's seed

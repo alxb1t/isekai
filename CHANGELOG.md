@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.58.0] - 2026-10-27 · 0085-draft-from
+
+Gate: local 0m44s · CI 1m34s (ci at d71f5ab) · 0.57.0: local 0m44s · CI 1m16s
+
 ### Changed
 
 - A revision replaces an unedited waiting draft at its number, refusing only one with edits of its own, and a
