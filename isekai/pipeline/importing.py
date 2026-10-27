@@ -1,10 +1,10 @@
-"""How a file becomes a source: read, cleaned, verified, and committed into a batch.
+"""How a file becomes a source: read, cleaned, verified, and put in a collection.
 
 A file is read into a staging folder under the library's `.staging/`, cleaned of
 everything but its pixels and orientation, and verified by the strip's own walk.
 An upload waits in the folder until its `Reader` reads it, one file at a time.
-A commit moves the staged files into the batch's `sources/`; a cancel, or a sweep
-at start, deletes what was staged.
+A commit moves the staged files into the collection's `sources/`; a cancel, or a
+sweep at start, deletes what was staged.
 
 Pillow and `pi_heif` are imported inside the functions that decode, so
 `python -m isekai`'s import graph reaches no wheel (D20).
@@ -48,7 +48,7 @@ JPEG_QUALITY = 95
 
 # A build folder inside a staging folder, named so no staged file can take it:
 # a staged name never starts with a dot.
-_BUILD = ".batch"
+_BUILD = ".collection"
 
 _MB = 1024 * 1024
 
@@ -88,9 +88,9 @@ class Staged:
 
 @dataclass(frozen=True)
 class Committed:
-    """What a commit wrote into the batch, skipped as a source's bytes, and left out."""
+    """What a commit wrote into a collection, skipped as a source's bytes, left out."""
 
-    batch: Path
+    collection: Path
     written: tuple[str, ...]
     skipped: tuple[str, ...]
     left_out: tuple[str, ...]
@@ -195,7 +195,7 @@ class Reader:
             if self._sealed:
                 raise Refusal(
                     f"{name}: Import is already committing this import; once the "
-                    "batch's hub opens, add it with Add sources"
+                    "collection's hub opens, add it with Add sources"
                 )
             self._uploads += 1
             upload = f"u{self._uploads}"
@@ -437,18 +437,18 @@ def commit(
 ) -> Committed:
     """Move every staged file that passes `verify` into `<library>/<name>/sources/`.
 
-    A new batch appears in one rename. With `add`, the files join the batch that
-    is there. A file that fails `verify` is left out unless named in `as_is`. The
+    A new collection appears in one rename. With `add`, the files join the collection
+    that is there. A file that fails `verify` is left out unless named in `as_is`. The
     staging folder is deleted once the files are in; on a refusal it is kept.
     """
-    batch = library / name
-    _refuse_batch_name(name, batch, add=add)
+    collection = library / name
+    _refuse_collection_name(name, collection, add=add)
     chosen = set(as_is)
     staged = sorted(path for path in staging.iterdir() if not path.name.startswith("."))
     left_out = tuple(p.name for p in staged if p.name not in chosen and verify(p))
     taking = [path for path in staged if path.name not in left_out]
     if add:
-        written, skipped = _add(taking, batch / SOURCES)
+        written, skipped = _add(taking, collection / SOURCES)
     else:
         if not taking:
             raise Refusal(
@@ -459,10 +459,10 @@ def commit(
         build.mkdir(parents=True)
         for path in taking:
             path.rename(build / path.name)
-        os.rename(build.parent, batch)
+        os.rename(build.parent, collection)
         written, skipped = tuple(path.name for path in taking), ()
     cancel(staging)
-    return Committed(batch, written, skipped, left_out)
+    return Committed(collection, written, skipped, left_out)
 
 
 def cancel(staging: Path) -> None:
@@ -492,16 +492,16 @@ def sweep(library: Path) -> None:
         folder.rmdir()
 
 
-def _refuse_batch_name(name: str, batch: Path, *, add: bool) -> None:
-    """Refuse a batch name that is empty, holds `/`, starts with a dot, or is taken."""
+def _refuse_collection_name(name: str, collection: Path, *, add: bool) -> None:
+    """Refuse a name that is empty, holds `/`, starts with a dot, or is taken."""
     if not name or "/" in name or name.startswith("."):
         raise Refusal(
-            f"{name!r}: not a batch name; give a name with no `/` that does not "
+            f"{name!r}: not a collection name; give a name with no `/` that does not "
             "start with a dot"
         )
-    if add and not (batch / SOURCES).is_dir():
-        raise Refusal(f"{name}: no batch of that name to add to; name one that is")
-    if not add and batch.exists():
+    if add and not (collection / SOURCES).is_dir():
+        raise Refusal(f"{name}: no collection of that name to add to; name one that is")
+    if not add and collection.exists():
         raise Refusal(f"{name}: a folder of that name is in the library; pick another")
 
 

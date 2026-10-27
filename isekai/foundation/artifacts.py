@@ -369,9 +369,9 @@ class SessionPlan(TypedDict):
 
 
 class SessionRecord(TypedDict):
-    """A render session, `<batch>/sessions/<id>.json`, kept current to its end.
+    """A render session, `<collection>/sessions/<id>.json`, kept current to its end.
 
-    A batch's file beside its log, not a run's. `asked` is the images per flow and
+    A collection's file beside its log, not a run's. `asked` is the images per flow and
     `planned` per run and flow; a record written before `planned` reads as no plan.
     `steps` are the pod's and the teardown's states. `outcome` is `running` until
     the session ends `done`, `stopped` or `failed`, with `message`. No price.
@@ -423,7 +423,7 @@ RENDER_FILE: Artifact[Render] = Artifact("render", 1)
 # A render's sidecar is `<seed>` and this; its image is `<seed>` and the flow's suffix.
 SIDECAR = ".render.json"
 SESSION_FILE: Artifact[SessionRecord] = Artifact("session", 1)
-# A batch's session records, beside its log; each is named by its session's id.
+# A collection's session records, beside its log; each is named by its session's id.
 SESSIONS = "sessions"
 # A session's id is a start in UTC; `session_id` writes it and this reads it.
 SESSION_ID = re.compile(r"[0-9]{8}T[0-9]{6}Z")

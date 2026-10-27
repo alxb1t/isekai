@@ -5,15 +5,15 @@ folder-sense batch is renamed with the code it tests.
 
 ## Progress
 
-- [ ] 1 — The CLI and the stages
+- [x] 1 — The CLI and the stages
 - [ ] 2 — The app
 - [ ] 3 — The docs
 
 ## 1 — The CLI and the stages
 
-- [ ] 1.1 **HALT CHECK** — `import` takes `--batch`.
+- [x] 1.1 **HALT CHECK** — `import` takes `--batch`.
   Verify: `grep -c '"--batch"' isekai/interface/cli.py` prints `1`.
-- [ ] 1.2 Rename the folder sense per [D2](design.md#d2) in `isekai/interface/cli.py`, `isekai/interface/render.py`,
+- [x] 1.2 Rename the folder sense per [D2](design.md#d2) in `isekai/interface/cli.py`, `isekai/interface/render.py`,
   `isekai/interface/compare_view.py`, `isekai/pipeline/importing.py`, `isekai/foundation/artifacts.py`, `evaluation/`
   and `tools/derive_field_map.py`, and in `tests/test_importing.py`, `tests/test_pipeline_cli.py`, `tests/test_compare.py`
   and `tests/test_render.py`; follow a renamed name into its callers under `isekai/interface/ui/`; keep D1's senses,

@@ -180,14 +180,14 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
-    # `compare` takes a batch directory, `render` its runs, `import` a batch and
-    # its files, `revise` images; `ui` takes nothing.
+    # `compare` takes a collection directory, `render` its runs, `import` a
+    # collection and its files, `revise` images; `ui` takes nothing.
     own = {
-        "import": ["--batch", "batch", "photo.jpg"],
+        "import": ["--collection", "collection", "photo.jpg"],
         "revise": ["outputs/001/7.png"],
         "show": [],
         "ui": [],
-        "compare": ["batch"],
+        "compare": ["collection"],
         "render": ["runs", "summon-anime-wai=1"],
     }
     flag = own.get(verb, ["--flow", "summon-anime-wai"])

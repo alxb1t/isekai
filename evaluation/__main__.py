@@ -1,10 +1,10 @@
-"""Score a batch of runs against the cohort its photographs came from.
+"""Score a collection's runs against the cohort its photographs came from.
 
-    uv run python -m evaluation <batch>/runs --cohort <cohort>
+    uv run python -m evaluation <collection>/runs --cohort <cohort>
 
 Each run is matched to its cohort photograph by the digest its frame records;
 the first seed of each flow's latest render group is ranked against every cohort
-photograph. The record is written beside the runs, as `<batch>/evaluation.json`,
+photograph. The record is written beside the runs, as `<collection>/evaluation.json`,
 and the table printed; a run the record does not score is counted there and named
 on stderr alone.
 A separate entry point, not a verb: the evaluator measures the pipeline and
@@ -53,7 +53,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         description="Count, over a cohort, how often each render is nearest its own "
         "photograph and its own person.",
     )
-    p.add_argument("runs", type=Path, help="a batch's runs directory")
+    p.add_argument("runs", type=Path, help="a collection's runs directory")
     p.add_argument(
         "--cohort",
         type=Path,
@@ -154,7 +154,7 @@ def _models() -> dict[str, dict[str, str]]:
 def score(
     runs: Path, cohort_dir: Path, embed: Embed, flows_dir: Path
 ) -> tuple[Record, list[str]]:
-    """Return the batch's record, and a line naming each run or render it did not score.
+    """Return the collection's record, and a line per run or render it did not score.
 
     Every cohort photograph is embedded before any render is opened, so a cohort
     with a faceless photograph refuses while nothing has been scored. A run whose
@@ -222,7 +222,7 @@ def _embedder(models: Path) -> Embed:
 
 
 def main(argv: Sequence[str]) -> int:
-    """Score the batch, write its record beside the runs, and print the table."""
+    """Score the collection, write its record beside the runs, and print the table."""
     args = parse_args(argv)
     try:
         destination = record_destination(args.runs, "evaluation.json")

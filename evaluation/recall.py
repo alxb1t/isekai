@@ -4,11 +4,11 @@ For each scored field of a flow, the tags the approval asked for are set against
 the tags the tagger sees in the render; each miss is named. The tags are counted,
 not the renders: a field showing three of its four tags is not a failed render.
 
-    uv run python -m evaluation.recall <batch>/runs [<run>...]
+    uv run python -m evaluation.recall <collection>/runs [<run>...]
 
 Every render of every group and seed is read alone, with no cohort, against the
 approval its group names. The record is written beside the runs, as
-`<batch>/recall.json`, and the table printed; why a row is not read is on stderr.
+`<collection>/recall.json`, and the table printed; why a row is not read is on stderr.
 
 The arithmetic is stdlib and `normalise` alone, so it is tested on tag sets
 written by hand. The reader is the pipeline's own tagger, behind `Read`, so the
@@ -76,7 +76,7 @@ class Total(TypedDict):
 
 
 class Record(TypedDict):
-    """One batch's recall: the tagger and its floor, every row, a total per flow."""
+    """A collection's recall: the tagger and its floor, every row, a total per flow."""
 
     tagger: dict[str, str]
     floor: float
@@ -130,7 +130,7 @@ def totals(rows: Sequence[Row]) -> dict[str, dict[str, Total]]:
 
 
 def record(rows: Sequence[Row], tagger: Mapping[str, str], floor: float) -> Record:
-    """Return the batch's record; `tagger` maps each model's `dest` to its digest."""
+    """Return the collection's record; `tagger` maps each model's `dest` to a digest."""
     return {
         "tagger": dict(tagger),
         "floor": floor,
@@ -246,7 +246,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         description="Count, per scored field, the approved sheet's tags each render "
         "reads back.",
     )
-    p.add_argument("runs", type=Path, help="a batch's runs directory")
+    p.add_argument("runs", type=Path, help="a collection's runs directory")
     p.add_argument("names", nargs="*", help="read only these runs, by directory name")
     p.add_argument(
         "--models",
@@ -404,7 +404,7 @@ def survey(
 
 
 def main(argv: Sequence[str]) -> int:
-    """Read the batch, write its record beside the runs, and print the table."""
+    """Read the collection, write its record beside the runs, and print the table."""
     args = parse_args(argv)
     try:
         target = destination(args.runs, "recall.json")

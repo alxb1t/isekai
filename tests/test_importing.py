@@ -1,4 +1,4 @@
-"""Import: a file read, cleaned, verified and committed into a batch's `sources/`.
+"""Import: a file read, cleaned, verified and committed into a collection's `sources/`.
 
 Every image is built by Pillow here, except the HEICs, committed fixtures each made
 once by macOS `sips`: `plain.heic` from a synthetic solid-colour PNG, `irot.heic`
@@ -337,11 +337,11 @@ def _sixteen_bit(mode: str, value: int) -> Image.Image:
 def test_a_raw_photograph_is_refused_and_the_others_import(tmp_path: Path) -> None:
     nef = _write(tmp_path, "DSC_0001.NEF", nef_bytes())
     jpeg = _write(tmp_path, "portrait.jpg", photo_jpeg())
-    batch = tmp_path / "library" / "trip"
+    collection = tmp_path / "library" / "trip"
     err = io.StringIO()
     wired = bare_wiring(err=err)
     args = build_parser().parse_args(
-        ["import", "--batch", str(batch), str(nef), str(jpeg)]
+        ["import", "--collection", str(collection), str(nef), str(jpeg)]
     )
 
     code = dispatch(args, wired)
@@ -349,7 +349,9 @@ def test_a_raw_photograph_is_refused_and_the_others_import(tmp_path: Path) -> No
     assert code == 1
     assert "DSC_0001.NEF: a NEF RAW photograph" in err.getvalue()
     assert "export it as JPEG" in err.getvalue()
-    assert [path.name for path in (batch / "sources").iterdir()] == ["portrait.jpg"]
+    assert [path.name for path in (collection / "sources").iterdir()] == [
+        "portrait.jpg"
+    ]
 
 
 @pytest.mark.spec("import:refuse:an-unconvertible-file-is-refused")
@@ -361,15 +363,15 @@ def test_a_file_that_cannot_be_converted_is_refused_and_the_others_import(
     _sixteen_bit("I;16B", 20000).save(out, "TIFF")
     scan = _write(tmp_path, "mac-scan.tiff", out.getvalue())
     jpeg = _write(tmp_path, "portrait.jpg", photo_jpeg())
-    batch = tmp_path / "library" / "trip"
+    collection = tmp_path / "library" / "trip"
     args = build_parser().parse_args(
-        ["import", "--batch", str(batch), str(scan), str(jpeg)]
+        ["import", "--collection", str(collection), str(scan), str(jpeg)]
     )
 
     code = dispatch(args, bare_wiring())
 
     assert code == 0
-    assert sorted(path.name for path in (batch / "sources").iterdir()) == [
+    assert sorted(path.name for path in (collection / "sources").iterdir()) == [
         "mac-scan.jpg",
         "portrait.jpg",
     ]
@@ -383,7 +385,7 @@ def test_a_file_that_cannot_be_converted_is_refused_and_the_others_import(
     other = tmp_path / "library" / "other"
     err = io.StringIO()
     args = build_parser().parse_args(
-        ["import", "--batch", str(other), str(scan), str(jpeg)]
+        ["import", "--collection", str(other), str(scan), str(jpeg)]
     )
 
     code = dispatch(args, bare_wiring(err=err))
@@ -401,10 +403,10 @@ def test_a_file_whose_profile_cannot_be_read_is_refused_and_the_others_import(
     garbage = b"x" * 200
     broken = _write(tmp_path, "broken.jpg", photo_jpeg(icc_profile=garbage))
     jpeg = _write(tmp_path, "portrait.jpg", photo_jpeg())
-    batch = tmp_path / "library" / "trip"
+    collection = tmp_path / "library" / "trip"
     err = io.StringIO()
     args = build_parser().parse_args(
-        ["import", "--batch", str(batch), str(broken), str(jpeg)]
+        ["import", "--collection", str(collection), str(broken), str(jpeg)]
     )
 
     code = dispatch(args, bare_wiring(err=err))
@@ -412,7 +414,9 @@ def test_a_file_whose_profile_cannot_be_read_is_refused_and_the_others_import(
     assert code == 1
     assert "refused: broken.jpg: its colour profile cannot be read" in err.getvalue()
     assert "export it as sRGB JPEG and add it again" in err.getvalue()
-    assert [path.name for path in (batch / "sources").iterdir()] == ["portrait.jpg"]
+    assert [path.name for path in (collection / "sources").iterdir()] == [
+        "portrait.jpg"
+    ]
 
     # A format that is always converted reads the profile on the way to sRGB.
     out = io.BytesIO()
@@ -677,11 +681,11 @@ def test_an_unusable_batch_name_is_refused_and_staging_kept(
 def test_a_batch_inside_the_working_tree_is_refused_and_nothing_written(
     tmp_path: Path,
 ) -> None:
-    inside = REPO / "batch-in-the-tree"
+    inside = REPO / "collection-in-the-tree"
     photo = _write(tmp_path, "portrait.jpg", photo_jpeg())
     err = io.StringIO()
     args = build_parser().parse_args(
-        ["import", "--batch", str(inside / "trip"), str(photo)]
+        ["import", "--collection", str(inside / "trip"), str(photo)]
     )
 
     code = dispatch(args, bare_wiring(err=err))

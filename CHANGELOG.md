@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- A library folder is a collection: `import --collection` with no `--batch` alias, `compare <collection>`, and
+  every refusal and help line say so, leaving *batch* free for what one GPU session renders (0082 D1, D2).
+
 ## [0.54.0] - 2026-10-27 · 0081-the-fourth-walkthrough
 
 Gate: local 0m47s · CI 1m09s (ci at 3b61916) · 0.53.0: local 0m45s · CI 1m29s

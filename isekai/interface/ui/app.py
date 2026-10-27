@@ -412,7 +412,7 @@ def create_app(
             add=payload.get("add") is True,
         )
         return {
-            "batch": done.batch.name,
+            "batch": done.collection.name,
             "written": list(done.written),
             "skipped": list(done.skipped),
             "left_out": list(done.left_out),

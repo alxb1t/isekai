@@ -121,7 +121,7 @@ class Calls:
         return [line for line in self.lines if "--server" in line]
 
 
-def batch(root: Path, *ids: str) -> Path:
+def collection(root: Path, *ids: str) -> Path:
     runs = root / "b" / "runs"
     for run_id in ids or ("r1",):
         (runs / run_id).mkdir(parents=True)
@@ -177,7 +177,7 @@ def log(runs: Path) -> str:
 
 @pytest.mark.spec("pod-image:session:every-exit-tears-down")
 def test_a_flow_that_raises_closes_the_session(tmp_path: Path) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
 
     def explode(argv: list[str], wired: Wiring) -> int:
@@ -194,7 +194,7 @@ def test_a_flow_that_raises_closes_the_session(tmp_path: Path) -> None:
 
 @pytest.mark.spec("pod-image:session:every-exit-tears-down")
 def test_a_sigterm_inside_the_session_closes_it_and_exits_143(tmp_path: Path) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
 
     def signalled(argv: list[str], wired: Wiring) -> int:
@@ -208,7 +208,7 @@ def test_a_sigterm_inside_the_session_closes_it_and_exits_143(tmp_path: Path) ->
 
 @pytest.mark.spec("pod-image:session:every-exit-tears-down")
 def test_nothing_is_rented_before_every_prompt_is_assembled(tmp_path: Path) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
     calls = Calls(lambda argv, wired: 1)
 
@@ -223,7 +223,7 @@ def test_nothing_is_rented_before_every_prompt_is_assembled(tmp_path: Path) -> N
 def test_the_report_is_asked_through_the_forwarded_port_before_any_render(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     client = FakeComfyClient()
     servers: list[str] = []
     asked_before: list[int] = []
@@ -264,7 +264,7 @@ def test_the_report_is_asked_through_the_forwarded_port_before_any_render(
 def test_an_endpoint_silent_past_the_bound_refuses_and_closes_the_session(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
     silent = FakeComfyClient(
         report_failure=TransportFailure("transient", "connection refused")
@@ -285,7 +285,7 @@ def test_an_endpoint_silent_past_the_bound_refuses_and_closes_the_session(
 
 @pytest.mark.spec("pod-image:session:the-endpoint-is-awaited")
 def test_an_endpoint_that_answers_late_is_asked_again(tmp_path: Path) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
 
     class Late(FakeComfyClient):
         def system_stats(self) -> dict[str, Any]:
@@ -322,7 +322,7 @@ class _Stats(http.server.BaseHTTPRequestHandler):
 def test_the_report_reaches_the_loopback_with_a_proxy_exported(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     # Port 9 is discard: a request sent through this proxy never answers.
     for name in ("http_proxy", "HTTP_PROXY", "all_proxy", "ALL_PROXY"):
         monkeypatch.setenv(name, "http://127.0.0.1:9")
@@ -352,7 +352,7 @@ def test_the_report_reaches_the_loopback_with_a_proxy_exported(
 def test_the_watchdog_signals_nothing_once_its_session_has_ended(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     fired = threading.Event()
 
     assert session(runs, f"{FLOW}=1", kill=fired.set, watchdog_s=0.05) == 0
@@ -362,7 +362,7 @@ def test_the_watchdog_signals_nothing_once_its_session_has_ended(
 
 @pytest.mark.spec("pod-image:session:the-watchdog-ends-with-its-session")
 def test_the_watchdog_signals_nothing_after_a_refused_session(tmp_path: Path) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     fired = threading.Event()
     silent = FakeComfyClient(
         report_failure=TransportFailure("transient", "connection refused")
@@ -380,7 +380,7 @@ def test_the_watchdog_signals_nothing_after_a_refused_session(tmp_path: Path) ->
 def test_the_ceiling_writes_its_refusal_and_ends_the_session_with_143(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
     fired = threading.Event()
 
@@ -410,7 +410,7 @@ def test_the_ceiling_writes_its_refusal_and_ends_the_session_with_143(
 def test_the_watchdog_is_armed_at_the_pods_own_limit_before_the_session_opens(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
     armed: list[tuple[float, int]] = []
 
@@ -430,7 +430,7 @@ def test_the_watchdog_is_armed_at_the_pods_own_limit_before_the_session_opens(
 def test_the_session_is_opened_on_the_repositorys_gpunit_toml_alone(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opened: list[tuple[object, dict[str, object]]] = []
 
     @contextmanager
@@ -604,7 +604,7 @@ def test_with_no_request_an_unapproved_flow_is_left_out_and_named(
 def test_a_dependent_behind_its_source_in_one_session_refuses_before_the_pod(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
     calls = Calls(lambda argv, wired: 1 if "--in-step-with" in argv else 0)
 
@@ -632,7 +632,7 @@ def test_a_dependent_behind_its_source_in_one_session_refuses_before_the_pod(
 
 @pytest.mark.spec_exempt("structural: a session's line names its source after it")
 def test_a_dependent_before_its_source_is_refused_naming_both(tmp_path: Path) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
 
     status = session(
@@ -652,7 +652,7 @@ def test_a_dependent_before_its_source_is_refused_naming_both(tmp_path: Path) ->
 
 @pytest.mark.spec_exempt("structural: the verb's argument shape")
 def test_a_request_of_another_shape_is_refused_into_the_log(tmp_path: Path) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
 
     assert session(runs, "summon-anime-wai=0") == 1
     assert (
@@ -664,7 +664,7 @@ def test_a_request_of_another_shape_is_refused_into_the_log(tmp_path: Path) -> N
 def test_a_port_that_already_answers_is_refused_before_the_session(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
 
     assert session(runs, f"{FLOW}=1", opener=opener, busy=lambda port: True) == 1
@@ -676,7 +676,7 @@ def test_a_port_that_already_answers_is_refused_before_the_session(
 def test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
 
     def raising(fault: BaseException) -> FakeOpen:
         class Raising(FakeOpen):
@@ -724,7 +724,7 @@ def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
         return block
 
     listed = "a gpunit-isekai pod already exists: abc (RUNNING); run gpunit down"
-    runs = batch(tmp_path / "listed")
+    runs = collection(tmp_path / "listed")
     assert session(runs, f"{FLOW}=1", opener=refusing(listed)) == 1
     lines = log(runs).splitlines()
     assert lines[-1].endswith("run `uv run --env-file .env gpunit down`")
@@ -740,14 +740,14 @@ def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
         "run gpunit volume down": "volume down",
     }
     for index, (text, verb) in enumerate(window.items()):
-        runs = batch(tmp_path / f"window{index}")
+        runs = collection(tmp_path / f"window{index}")
         assert session(runs, f"{FLOW}=1", opener=refusing(text)) == 1
         lines = log(runs).splitlines()
         assert lines[-1].endswith(f"run `uv run --env-file .env gpunit {verb}`")
         assert sum("refused:" in line for line in lines) == 1
 
     other = "no card in 'gpus' meets vram_gb and max_hourly"
-    runs = batch(tmp_path / "other")
+    runs = collection(tmp_path / "other")
     assert session(runs, f"{FLOW}=1", opener=refusing(other)) == 1
     assert "gpunit" not in log(runs).splitlines()[-1]
     assert "--env-file" not in log(runs)
@@ -792,7 +792,7 @@ def test_a_session_reports_each_image_of_the_total_as_json(
 def test_a_session_whose_endpoint_never_answers_reports_its_teardown(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     wiring = wired(runs)
     silent = FakeComfyClient(
         report_failure=TransportFailure("transient", "connection refused")
@@ -816,7 +816,7 @@ def test_a_session_whose_endpoint_never_answers_reports_its_teardown(
 
 
 def records(runs: Path) -> list[dict[str, Any]]:
-    """Return the batch's session records, by name."""
+    """Return the collection's session records, by name."""
     folder = runs.parent / SESSIONS
     return [json.loads(path.read_text()) for path in sorted(folder.glob("*.json"))]
 
@@ -842,7 +842,7 @@ def landing(*seeds: str, seen: list[dict[str, Any]]) -> Calls:
 def test_a_session_writes_its_record_of_each_image_and_no_price(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
 
     assert session(runs, f"{FLOW}=2", generate=landing("7", "8", seen=[])) == 0
 
@@ -869,7 +869,7 @@ def test_the_record_plans_each_run_and_flow_with_its_images(
     lacking = counted(tmp_path, schema, vocabulary, "ada", 0)
     half = counted(tmp_path, schema, vocabulary, "beatrix", 1)
     root = tmp_path / "b" / "runs"
-    counts = batch(tmp_path / "counts", "r1", "r2")
+    counts = collection(tmp_path / "counts", "r1", "r2")
 
     assert session(root) == 0, log(root)
     assert session(counts, f"{FLOW}=3") == 0, log(counts)
@@ -888,7 +888,7 @@ def test_the_record_plans_each_run_and_flow_with_its_images(
 def test_the_record_reads_running_with_the_first_image_before_the_second(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     seen: list[dict[str, Any]] = []
 
     assert session(runs, f"{FLOW}=2", generate=landing("7", "8", seen=seen)) == 0
@@ -903,7 +903,7 @@ def test_the_record_reads_running_with_the_first_image_before_the_second(
 def test_the_given_id_names_the_record_and_another_shape_is_refused(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     given = "20261024T091200Z"
 
     assert session(runs, f"{FLOW}=1", given=given) == 0
@@ -919,7 +919,7 @@ def test_the_given_id_names_the_record_and_another_shape_is_refused(
 
 @pytest.mark.spec("cli:render-session:a-refusal-before-renting-writes-none")
 def test_a_session_refused_before_renting_writes_no_record(tmp_path: Path) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
 
     assert session(runs, f"{FLOW}=1", busy=lambda port: True) == 1
 
@@ -935,7 +935,7 @@ def test_a_folder_without_links_or_locks_refuses_before_renting(
 
     from isekai.foundation import atomic_write
 
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     folder = runs.parent / SESSIONS
 
     def unsupported(*args: object) -> None:
@@ -995,7 +995,7 @@ def test_with_no_recorded_duration_the_configured_time_per_image_is_used() -> No
 
 @pytest.mark.spec("cli:render-limit:a-short-session-takes-the-floor")
 def test_a_short_sessions_limit_is_the_hold_plus_five_minutes(tmp_path: Path) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
 
     got = render.estimate({FLOW: 1}, {}, render.load_timing(), 3 * 60 * 60)
@@ -1011,7 +1011,7 @@ def test_a_short_sessions_limit_is_the_hold_plus_five_minutes(tmp_path: Path) ->
 def test_a_limit_above_gpunit_tomls_ceiling_is_refused_before_renting(
     tmp_path: Path,
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     opener = FakeOpen()
     calls = Calls()
     ceiling = gpunit.load_spec(REPOSITORY / "gpunit.toml").ceiling_s
@@ -1065,7 +1065,7 @@ def test_the_env_file_is_read_as_key_value_lines(tmp_path: Path) -> None:
 def test_an_owned_session_id_refuses_before_renting(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runs = batch(tmp_path)
+    runs = collection(tmp_path)
     given = "20261024T091200Z"
     assert session(runs, f"{FLOW}=1", given=given) == 0
     path = runs.parent / SESSIONS / f"{given}.json"
