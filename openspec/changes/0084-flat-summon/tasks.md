@@ -1,15 +1,24 @@
 # Tasks — 0084 flat summon
 
-The candidates, the operator's collection, the sheets, the render, the verdict, then the winner, per
-[design](design.md). The prototype collection is `"$ISEKAI_LIBRARY/flat-summon prototype"`; in a shell,
-`C="$ISEKAI_LIBRARY/flat-summon prototype"; R="$C/runs"; P=("$C"/sources/*)`.
+The candidates, the operator's photographs, the sheets, the render and count, the verdict, then the winner, per
+[design](design.md). The prototype is the directory `.data/flat-summon/`; in a shell,
+`C=.data/flat-summon; R="$C/runs"; P=("$C"/cohort/*/*)`.
+
+```
+.data/flat-summon/
+  cohort/<person>/<photo>   the operator's, by hand; the evaluator's cohort too
+  runs/                     assign … render
+  sessions/                 render's record
+  evaluation.json           the cohort count
+  compare.html              each photograph beside its renders
+```
 
 ## Progress
 
 - [x] 1 — The candidate flows
-- [ ] 2 — The prototype collection **HUMAN
+- [ ] 2 — The prototype photographs **HUMAN
 - [ ] 3 — The sheets
-- [ ] 4 — The render ⚠️ GPU
+- [ ] 4 — The render and the count ⚠️ GPU
 - [ ] 5 — The verdict **HUMAN
 - [ ] 6 — The winner
 
@@ -22,39 +31,39 @@ The candidates, the operator's collection, the sheets, the render, the verdict, 
   `tests/test_flow.py` per [D3](design.md#d3); `config/ui.json` stays as it is.
   Verify: `grep -c 'image-generation:flat:' tests/test_flow.py` prints `3`, and `grep -c 'summon-flat' config/ui.json` prints `0`, and `uv run pytest -q tests/test_flow.py` exits 0.
 
-## 2 — The prototype collection **HUMAN
+## 2 — The prototype photographs **HUMAN
 
-- [ ] 2.1 The operator runs `uv run python -m isekai ui`, presses *New collection*, names it `flat-summon prototype`, and
-  imports ten photographs of four or five people, two or three each.
-  Verify: `ls "$ISEKAI_LIBRARY/flat-summon prototype/sources" | wc -l` prints `10`.
+- [ ] 2.1 The operator puts ten photographs of four or five people, two or three each, under
+  `.data/flat-summon/cohort/<person>/`, one directory per person.
+  Verify: `ls .data/flat-summon/cohort/*/* | wc -l` prints `10`.
 
 ## 3 — The sheets
 
 - [ ] 3.1 Assign the three flows: `uv run python -m isekai assign --runs "$R" --flow summon-anime-wai --flow
   summon-flat-a-anime-wai --flow summon-flat-b-anime-wai "${P[@]}"`.
-  Verify: `ls -d "$ISEKAI_LIBRARY/flat-summon prototype/runs"/*/summon-flat-b-anime-wai | wc -l` prints `10`.
+  Verify: `ls -d .data/flat-summon/runs/*/summon-flat-b-anime-wai | wc -l` prints `10`.
 - [ ] 3.2 Fill and approve summon's sheets unedited: `uv run python -m isekai.boundary.provision fetch
   config/reader.json`, then `uv run python -m isekai tag --runs "$R" --flow summon-anime-wai "${P[@]}"`, then
   `sheet`, `review` and `approve` with the same arguments.
-  Verify: `ls "$ISEKAI_LIBRARY/flat-summon prototype/runs"/*/summon-anime-wai/review/001.approved.json | wc -l` prints `10`.
+  Verify: `ls .data/flat-summon/runs/*/summon-anime-wai/review/001.approved.json | wc -l` prints `10`.
 - [ ] 3.3 Copy them: `uv run python -m isekai approve --runs "$R" --flow summon-flat-a-anime-wai --flow
   summon-flat-b-anime-wai --from summon-anime-wai "${P[@]}"`.
-  Verify: `ls "$ISEKAI_LIBRARY/flat-summon prototype/runs"/*/summon-flat-b-anime-wai/review/001.approved.json | wc -l` prints `10`.
+  Verify: `ls .data/flat-summon/runs/*/summon-flat-b-anime-wai/review/001.approved.json | wc -l` prints `10`.
 
-## 4 — The render ⚠️ GPU
+## 4 — The render and the count ⚠️ GPU
 
 - [ ] 4.1 Open the volume, render the three on summon's seeds in one session, close the volume:
   `uv run --env-file .env gpunit volume up --yes`; `uv run python -m isekai render "$R" summon-anime-wai=1
   summon-flat-a-anime-wai=summon-anime-wai summon-flat-b-anime-wai=summon-anime-wai`;
   `uv run --env-file .env gpunit volume down`.
-  Verify: `ls "$ISEKAI_LIBRARY/flat-summon prototype/runs"/*/summon-flat-b-anime-wai/outputs/001/*.png | wc -l` prints `10`, and `test -e .gpunit/pod; echo $?` prints `1`.
+  Verify: `ls .data/flat-summon/runs/*/summon-flat-b-anime-wai/outputs/001/*.png | wc -l` prints `10`, and `test -e .gpunit/pod; echo $?` prints `1`.
+- [ ] 4.2 Count and lay out the renders: `uv run python -m evaluation "$R" --cohort "$C/cohort"`, then
+  `uv run python -m isekai compare "$C"`.
+  Verify: `ls .data/flat-summon/evaluation.json .data/flat-summon/compare.html | wc -l` prints `2`.
 
 ## 5 — The verdict **HUMAN
 
-- [ ] 5.1 The operator copies each photograph from `"$C/sources"` into `.inputs/flat-summon-cohort/<person>/`, then runs
-  `uv run python -m evaluation "$R" --cohort .inputs/flat-summon-cohort`.
-  Verify: `test -e "$ISEKAI_LIBRARY/flat-summon prototype/evaluation.json"; echo $?` prints `0`.
-- [ ] 5.2 The operator judges the three flows by eye on the collection's Renders, then writes
+- [ ] 5.1 The operator judges the three flows by eye in `.data/flat-summon/compare.html`, then writes
   `openspec/changes/0084-flat-summon/verdict.md` per [D5](design.md#d5): a line
   `winner: summon-flat-a-anime-wai`, `winner: summon-flat-b-anime-wai` or `winner: none`, and each flow's count.
   Verify: `grep -cE '^winner: (summon-flat-a-anime-wai|summon-flat-b-anime-wai|none)$' openspec/changes/0084-flat-summon/verdict.md` prints `1`.
