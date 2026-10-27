@@ -42,14 +42,15 @@ a change to summon, conjure or control.
 | [D2](#d2) | **candidate B** `flows/summon-flat-b-anime-wai/`: A, and node `34`'s `model` `["1", 0]`, `positive` `["3", 0]`, `negative` `["4", 0]` — the hires pass on the plain checkpoint and the sheet's conditioning | the refine restyles without InstantID | a second graph stage |
 | [D3](#d3) | **the guard:** `FLATS = {candidate: "summon-anime-wai"}` in `tests/test_flow.py`, beside `CONTROLS`; each flat flow's schema and briefing byte-identical; its graph equal but for node `8`'s `end_at` below one, and, while candidate B stands, node `34`'s inputs; its manifest equal but for the identifier, `ip_weight`, the trailer and the negative, which hold the flat terms; both candidates pinned in `PINNED`, and not offered in `config/ui.json` | a variant differs in the thing under test alone, as a control does; the prototype and the cohort run from the CLI | offering them in the app |
 | [D4](#d4) | **the prototype:** the operator puts fifteen photographs of five people, three each, under `.data/flat-summon-prototype/sources/` as `<person>-<n>.<ext>`; the agent assigns them to the three flows under `.data/flat-summon-prototype/runs/`, tags and sheets summon, corrects each draft against its photograph — adding what it shows, removing what it does not — and approves it, copies them to both candidates with `approve --from`, and renders the three in one session on summon's seeds | the same sheet and seed isolate the style (D38); the app copies no approval and draws its own seeds; a good sheet is a good render's precondition, and the copy keeps the sheet equal across the three; a run keeps its photograph's bytes, so a copy by person is the cohort | the app's collection and Render; summon's machine sheets unedited |
-| [D5](#d5) | **the verdict:** the agent copies `sources/` into `.data/flat-summon-prototype/cohort/<person>/` by name, runs the evaluator against it and `compare`; the operator judges flatness by eye in `compare.html` and writes `verdict.md` in this change — `winner: summon-flat-a-anime-wai`, `summon-flat-b-anime-wai` or `none`, and each flow's count; a candidate passes when flat by eye and its count is at least summon's, less one | the operator's eye and the cohort count, on one set of photographs | the published 28 / 30 |
+| [D5](#d5) | **the verdict:** the agent copies `sources/` into `.data/flat-summon-prototype/cohort/<person>/` by name, runs the evaluator against it and `compare`; the operator judges flatness by eye in `compare.html` and writes `verdict.md` in this change — `winner: summon-flat-a-anime-wai`, `summon-flat-b-anime-wai` or `none`, and each flow's count; the planned threshold was flat by eye and a count at least summon's, less one; the operator superseded that threshold in [verdict.md](verdict.md), choosing A by eye because the photo-trained encoder does not read flat faces | the visual verdict accepts the evaluator's limitation, recorded in D44 | the published 28 / 30 |
 | [D6](#d6) | **the winner:** its directory becomes `flows/summon-flat-anime-wai/`, its identifier with it, pinned under that id; the loser's directory deleted; `FLATS` names the winner alone, and `config/ui.json` offers it; D44 *A flat flow is summon with the face chain ending early* in `docs/decisions.md`; `AGENTS.md`'s flows and `README.md`'s tree name it; on `winner: none` the build halts, and the operator destroys the branch | nothing deleted before the evidence (A4); a failed experiment ships nothing | |
 
 ## Tests
 
 | layer | added | edited | where |
 |---|---|---|---|
-| unit · pytest | `image-generation:flat:files-equal-the-subject`, `image-generation:flat:the-graph-differs-in-the-face-chains-end`, `image-generation:flat:the-manifest-differs-in-the-style`, each over `FLATS` | `PINNED` gains each flat flow | `tests/test_flow.py` |
+| unit · pytest | `image-generation:flat:files-equal-the-subject`, `image-generation:flat:the-graph-differs-in-the-face-chains-end`, `image-generation:flat:the-manifest-differs-in-the-style`, each over `FLATS` | `PINNED` gains each flat flow; the existing control drift tests use the shared `_pair` helper with their assertions and bindings retained | `tests/test_flow.py` |
+| e2e · Playwright | none | `test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned` counts hub cells from the configured flows | `tests/e2e/test_import.py` |
 
 **End-to-end runs added:** none. **Removed or merged:** none.
 
@@ -59,8 +60,8 @@ None.
 
 ## Risks / Trade-offs
 
-- **[Risk]** some of the likeness rides on the shading → the cohort count gates the winner; a failure ships nothing.
-- **[Trade-off]** the prototype spends: thirty images in one session → the Render dialog's quote, against the
+- **[Risk]** some of the likeness rides on the shading → the operator accepts selection by eye in [verdict.md](verdict.md); the photo-trained evaluator cannot judge flat faces, so its count does not gate the winner (D44).
+- **[Trade-off]** the prototype spends: forty-five images in one session → the Render dialog's quote, against the
   configured ceiling, as any render; the phase names the images.
 
 ## Verdict

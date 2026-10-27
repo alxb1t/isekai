@@ -26,6 +26,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   its own name, B deleted; digest `05d62409e518a9446ba046c691ed7e2ba194b609803b12a72e853c4ebd092940` (0084 D6).
 - The app offers `summon-flat-anime-wai` as the hub's second column, beside summon and before conjure (0084 D6).
 
+### Fixed
+
+- The flat prototype design records the visual verdict's override, all edited test proofs, and the full
+  experiment size so the release record matches the completed work (0084 D3, D5).
+
 ## [0.56.0] - 2026-10-27 · 0083-the-multi-batch-render
 
 Gate: local 0m47s · CI 1m16s (ci at f35f347) · 0.55.0: local 0m47s · CI none
