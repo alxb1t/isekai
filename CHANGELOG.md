@@ -9,6 +9,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-10-27 · 0087-the-fifth-walkthrough
+
+Gate: local 0m47s · CI 1m35s (ci at 7301425) · 0.59.0: local 0m45s · CI 1m16s
+
+### Changed
+
 - A large view opened from the hub keeps the cell’s write order within each approval, so its step and
   position match the hub when seed order differs (0087 D6).
 
