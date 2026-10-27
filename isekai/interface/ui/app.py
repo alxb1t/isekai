@@ -108,7 +108,7 @@ from isekai.foundation.run import (
     stage_command,
 )
 from isekai.interface import render
-from isekai.interface.drafting import draft_from_image
+from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
@@ -127,7 +127,6 @@ from isekai.pipeline.review import (
     discard,
     draft_image,
     drafted_from,
-    refuse_drafts,
     review,
     save_draft,
     token_budget,
@@ -905,7 +904,12 @@ def create_app(
                 else:
                     located.append((at, image, (run, flow, version, seed)))
             # Each other image the collection holds is answered by the review stage.
-            checked = refuse_drafts(name, [(image, held) for _, image, held in located])
+            checked = refuse_image_drafts(
+                target,
+                [(image, held) for _, image, held in located],
+                shared.vocabulary,
+                shared.field_map,
+            )
             for (at, _, _), answer in zip(located, checked, strict=True):
                 answers[at] = answer
             if any(answer is not None for answer in answers):

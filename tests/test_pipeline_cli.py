@@ -37,7 +37,7 @@ from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
-from tests.conftest import CSV
+from tests.conftest import CSV, snapshot
 from tests.fakes import READER, FakeComfyClient, stub_comfy
 from tests.images import jpeg_bytes
 from tests.stages import (
@@ -765,6 +765,28 @@ def test_draft_assigns_a_target_with_no_sheet_and_fills_it_from_the_source(
     review(run, "summon-anime-wai")
     approve(run, "summon-anime-wai", schema, vocabulary)
     argv = ["draft", "--flow", CONJURE, str(rendered_image(run, 1, 7))]
+
+    other_photo = tmp_path / "bo.jpg"
+    other_photo.write_bytes(jpeg_bytes(900, 1200))
+    other = open_run(other_photo, tmp_path / "runs")
+    sheet(other, schema, vocabulary)
+    review(other, "summon-anime-wai")
+    approve(other, "summon-anime-wai", schema, vocabulary)
+    batch = [*argv, str(rendered_image(other, 1, 8))]
+    tags = other.directory("summon-anime-wai", "wd14") / "001.json"
+    intact = tags.read_bytes()
+    tags.write_text("{}")
+    before = {one.id: snapshot(one.path) for one in (run, other)}
+    assert dispatch(build_parser().parse_args(batch), _wiring(tmp_path)) == 1
+    assert {one.id: snapshot(one.path) for one in (run, other)} == before
+    tags.write_bytes(intact)
+
+    target = other.directory(CONJURE, "sheets") / "001.json"
+    target.parent.mkdir(parents=True)
+    target.write_text("{}")
+    before = {one.id: snapshot(one.path) for one in (run, other)}
+    assert dispatch(build_parser().parse_args(batch), _wiring(tmp_path)) == 1
+    assert {one.id: snapshot(one.path) for one in (run, other)} == before
 
     assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
 

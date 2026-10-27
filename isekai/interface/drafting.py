@@ -4,13 +4,21 @@ The verb and the page run one sequence: sheet, draft. No stage may call
 another, so the sequence is composed here, and each step stays its stage's.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from isekai.foundation.flow import Flow
+from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import SHEETS, Run, latest
-from isekai.pipeline.review import Revision, draft_from, drafting_approval, revise
-from isekai.pipeline.sheet import sheet
+from isekai.pipeline.review import (
+    Revision,
+    draft_from,
+    drafting_approval,
+    drafting_sheet,
+    refuse_drafts,
+    revise,
+)
+from isekai.pipeline.sheet import prepare_sheet, sheet
 from isekai.shared.field_map import FieldMap
 from isekai.shared.vocabulary import Vocabulary
 
@@ -63,3 +71,38 @@ def draft_from_image(
     if flow == target.id:
         return revise(run, flow, version, seed)
     return draft_across(run, target, flow, version, vocabulary, field_map, seed)
+
+
+def refuse_image_drafts(
+    target: Flow,
+    selection: Sequence[tuple[Path, Revision]],
+    vocabulary: Callable[[], Vocabulary],
+    field_map: Callable[[], FieldMap],
+) -> list[str | None]:
+    """Check all source approvals and target sheet inputs before any batch write.
+
+    Review owns the draft checks; sheet owns routing and validating a first
+    sheet. Composition here checks both stages without one calling the other.
+    """
+    refused = refuse_drafts(target.id, selection)
+    for index, (_, (run, source, _, _)) in enumerate(selection):
+        if refused[index] is not None or source == target.id:
+            continue
+        try:
+            version = latest(run.directory(target.id, SHEETS))
+            if version is None:
+                prepare_sheet(
+                    run,
+                    target.id,
+                    target.schema,
+                    vocabulary(),
+                    field_map(),
+                    tagged=target.tagger,
+                    flow_digest=target.digest,
+                    tags_from=source,
+                )
+            else:
+                drafting_sheet(run, target.id, version)
+        except Refusal as refusal:
+            refused[index] = str(refusal)
+    return refused

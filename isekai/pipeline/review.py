@@ -251,12 +251,7 @@ def draft_from(
             f"run `{stage_command(run, 'assign', flow)}`, then Prepare, {_DRAFT_AGAIN}"
         )
     carried = _approval(run, source, approval, f"draft {flow} again")
-    copied = sheet_of(run, flow, sheet_version)
-    body = read(copied, SHEET_FILE)
-    resheet = stage_command(run, "sheet", flow, options=NEW_VERSION)
-    remedy = f"run `{resheet}`, {_DRAFT_AGAIN}"
-    require(copied, body, "vocabulary", dict, remedy)
-    require(copied, body, "fields", dict, remedy)
+    body = drafting_sheet(run, flow, sheet_version)
     _refuse_edited(run, flow)
     merged = {**body["fields"], **carried["fields"]}
     fields = {name: list(merged[name]) for name in schema.names if name in merged}
@@ -274,6 +269,17 @@ def draft_from(
         if seed is None
         else {"flow": source, "version": approval, "seed": seed},
     )
+
+
+def drafting_sheet(run: Run, flow: str, version: int) -> Sheet:
+    """Read and check the target sheet a cross-flow draft copies, without writes."""
+    copied = sheet_of(run, flow, version)
+    body = read(copied, SHEET_FILE)
+    resheet = stage_command(run, "sheet", flow, options=NEW_VERSION)
+    remedy = f"run `{resheet}`, {_DRAFT_AGAIN}"
+    require(copied, body, "vocabulary", dict, remedy)
+    require(copied, body, "fields", dict, remedy)
+    return body
 
 
 def drafting_approval(

@@ -131,6 +131,41 @@ def sheet(
         return None, _superseded(run, flow, directory, kept)
     version = (kept or 0) + 1
 
+    artifact: Sheet = prepare_sheet(
+        run,
+        flow,
+        schema,
+        vocabulary,
+        field_map,
+        tagged=tagged,
+        flow_digest=flow_digest,
+        tags_from=tags_from,
+        version=version,
+    )
+    path = directory / artifact_name(version)
+    write(path, SHEET_FILE, artifact)
+    return path, []
+
+
+def prepare_sheet(
+    run: Run,
+    flow: str,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    field_map: FieldMap,
+    *,
+    tagged: bool,
+    flow_digest: str,
+    tags_from: str | None = None,
+    version: int = 1,
+) -> Sheet:
+    """Prepare the sheet's checked contents before writing it.
+
+    A named source's tag list is validated without writing, so a draft batch
+    can check every fill before its first sheet. An own-flow tag failure keeps
+    the sheet stage's permanent-failure record.
+    """
+    directory = run.directory(flow, SHEETS)
     borrowed = (
         None
         if tags_from is None
@@ -157,7 +192,6 @@ def sheet(
     if tags_from is not None:
         made_by["tags_from"] = tags_from
 
-    path = directory / artifact_name(version)
     artifact: Sheet = {
         "schema": SHEET_FILE.schema,
         "producer": made_by,
@@ -167,8 +201,7 @@ def sheet(
         "flow_digest": flow_digest,
         "fields": fields,
     }
-    write(path, SHEET_FILE, artifact)
-    return path, []
+    return artifact
 
 
 def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:

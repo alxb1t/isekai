@@ -2113,6 +2113,28 @@ def test_a_selection_from_two_runs_drafts_each_into_the_flow_chosen(
         )
     client = _client(wired, made, tmp_path, drafted=False)
 
+    # A later source's damaged tags refuse the whole selection before any fill.
+    tags = other.directory(FLOW, WD14) / "001.json"
+    intact = tags.read_bytes()
+    tags.write_text("{}")
+    before = {run.id: snapshot(run.path) for run in (made, other)}
+    refused = client.post(DRAFT_ROUTE, json={"flow": CONJURE, "images": images})
+    assert refused.status_code == 409
+    assert [one["refusal"] is None for one in refused.json()["images"]] == [True, False]
+    assert {run.id: snapshot(run.path) for run in (made, other)} == before
+    tags.write_bytes(intact)
+
+    # An existing but damaged target sheet is checked before the earlier fill too.
+    target = other.directory(CONJURE, "sheets") / "001.json"
+    target.parent.mkdir(parents=True)
+    target.write_text("{}")
+    before = {run.id: snapshot(run.path) for run in (made, other)}
+    refused = client.post(DRAFT_ROUTE, json={"flow": CONJURE, "images": images})
+    assert refused.status_code == 409
+    assert [one["refusal"] is None for one in refused.json()["images"]] == [True, False]
+    assert {run.id: snapshot(run.path) for run in (made, other)} == before
+    target.unlink()
+
     answered = client.post(DRAFT_ROUTE, json={"flow": CONJURE, "images": images})
 
     assert answered.status_code == 200

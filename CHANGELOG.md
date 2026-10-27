@@ -18,6 +18,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - *Draft from this* `⇧D` on the large view and a Renders selection lists every offered flow, the image's own
   first, and drafts through one route, `/draft`; `⇧E`, `⇧F` and Revise's confirm go (0085 D4, D5, D6, D7).
 
+### Fixed
+
+- Draft batches check every target sheet and every first sheet's source tags and vocabulary before writing,
+  so a later refusal leaves all selected runs unchanged in the CLI and the app (0085 D3, D4).
+
 ## [0.57.0] - 2026-10-27 · 0084-flat-summon
 
 Gate: local 0m44s · CI 1m16s (ci at f35f347) · 0.56.0: local 0m47s · CI 1m16s

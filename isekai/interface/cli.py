@@ -68,7 +68,7 @@ from isekai.foundation.run import (
     rendered_at,
 )
 from isekai.interface.compare_view import write_page
-from isekai.interface.drafting import draft_from_image
+from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.render import run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
@@ -95,7 +95,6 @@ from isekai.pipeline.review import (
     Revision,
     approve,
     discard,
-    refuse_drafts,
     review,
 )
 from isekai.pipeline.review import cancel as cancel_approval
@@ -514,7 +513,7 @@ def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
             located.append((image, rendered_at(image)))
         except Refusal as unrendered:
             refused.append(f"{image}: {unrendered}")
-    answers = refuse_drafts(target, located)
+    answers = refuse_image_drafts(flow, located, vocabulary, field_map)
     refused += [
         f"{image}: {answer}"
         for (image, _), answer in zip(located, answers, strict=True)
