@@ -1,7 +1,7 @@
 import { expect } from 'vitest'
-import { EMPTY_CELL, action, clicks, pick, targets } from './cells'
+import { EMPTY_CELL, action, clicks, movePick, sourceGrid, targets } from './cells'
 import { spec } from './test/spec'
-import type { HubCell } from './types'
+import type { HubCell, RenderDetail } from './types'
 
 function cell(stage: HubCell['stage'], newest: HubCell['newest'] = null): HubCell {
   return { ...EMPTY_CELL, stage, newest }
@@ -35,16 +35,30 @@ spec('ui:hub:a-click-follows-the-cells-stage', () => {
   expect(clicks(on(false), 'python -m isekai')).toBe(false)
 })
 
-spec('ui:compare:one-other-image-is-compared-at-once', () => {
-  const v1 = { version: 1, seed: '7' }
-  const v2 = { version: 2, seed: '7' }
-  // One other image: no pick.
-  expect(pick([v1, v2], 2, '7', 1)).toEqual({ compare: v1 })
+spec('ui:compare:the-pick-moves-by-row-and-column', () => {
+  const summon = [
+    { version: 1, seed: '7' },
+    { version: 2, seed: '5' },
+    { version: 3, seed: '7' },
+  ]
+  const detail = {
+    flow: 'summon-anime-wai',
+    version: 3,
+    seed: '7',
+    compare: null,
+    source: [
+      { flow: 'summon-anime-wai', images: summon },
+      { flow: 'summon-flat-anime-wai', images: [{ version: 1, seed: '5' }] },
+    ],
+  } as unknown as RenderDetail
+  const grid = sourceGrid(detail)
+  expect(grid.origin).toEqual({ row: 1, column: 2 })
 
-  // Three others: the pick opens on v2, this seed's newest older version.
-  const v2b = { version: 2, seed: '5' }
-  const v3 = { version: 3, seed: '7' }
-  expect(pick([v1, v2, v2b, v3], 3, '7', 2)).toEqual({ at: 1 })
-  // With no older version of the seed, on the image before this one.
-  expect(pick([v1, v2b, v3], 3, '7', null)).toEqual({ at: 1 })
+  const down = movePick(grid, { row: 0, column: 0 }, 'row+')
+  const across = movePick(grid, movePick(grid, down, 'column+'), 'column+')
+  const shorter = movePick(grid, across, 'row+')
+
+  expect(down).toEqual({ row: 1, column: 0 })
+  expect(across).toEqual({ row: 1, column: 2 })
+  expect(shorter).toEqual({ row: 2, column: 0 })
 })

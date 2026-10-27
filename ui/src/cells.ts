@@ -1,4 +1,5 @@
-import type { HubCell, ImageRef } from './types'
+import { type Focus, type Move, moved } from './grid'
+import type { HubCell, ImageRef, RenderDetail } from './types'
 
 /** Return an image as a selection holds it. e.g. "0d4b…|summon-anime-wai|1|42" */
 export function imageKey(one: ImageRef): string {
@@ -64,31 +65,51 @@ export function clicks(
   return selection === '' && !target?.closest('.hub__refusal')
 }
 
-/** An image of a cell, by its approval's version and its seed. */
-export interface CellImage {
-  version: number
-  seed: string
+/** A tile of the pick: an image of a flow, or null for the photograph. */
+export type PickTile = { flow: string; version: number; seed: string } | null
+
+/** The pick of a source's images (D2): the photograph's row, then a row per flow. */
+export interface SourceGrid {
+  rows: { flow: string | null; tiles: PickTile[] }[]
+  /* The image compare started from, marked. */
+  origin: Focus
+  /* Where the focus opens. */
+  start: Focus
 }
 
-/** Return the images of a cell but `version`'s `seed`, in the cell's order. */
-export const others = (images: CellImage[], version: number, seed: string): CellImage[] =>
-  images.filter((one) => one.version !== version || one.seed !== seed)
+/** Return the pick of `detail`'s source, focused on its seed's newest older
+    version, else the image before it in its row, else the photograph.
 
-/** Return where *Compare with…* goes from `version`'s `seed`: straight to the
-    cell's one other image, else the pick, on that seed's newest older version,
-    `compare`, else on the image before this one, indexed among the others.
-
-    e.g. ([v1·7, v2·7], 2, '7', 1) -> {compare: v1·7} */
-export function pick(
-  images: CellImage[],
-  version: number,
-  seed: string,
-  compare: number | null,
-): { at: number } | { compare: CellImage } {
-  const rest = others(images, version, seed)
-  if (rest.length === 1) return { compare: rest[0] }
-  const paired = rest.findIndex((one) => one.version === compare && one.seed === seed)
-  if (paired >= 0) return { at: paired }
-  const here = images.findIndex((one) => one.version === version && one.seed === seed)
-  return { at: Math.max(here - 1, 0) }
+    e.g. summon [v1·7, v2·7] from v2·7, compare 1 -> start {row 1, column 0} */
+export function sourceGrid(detail: RenderDetail): SourceGrid {
+  const rows: SourceGrid['rows'] = [
+    { flow: null, tiles: [null] },
+    ...detail.source.map(({ flow, images }) => ({
+      flow,
+      tiles: images.map((one) => ({ flow, ...one })),
+    })),
+  ]
+  const row = rows.findIndex((one) => one.flow === detail.flow)
+  const at = (version: number | null) =>
+    (rows[row]?.tiles ?? []).findIndex(
+      (one) => one !== null && one.version === version && one.seed === detail.seed,
+    )
+  const origin = { row, column: at(detail.version) }
+  const paired = at(detail.compare)
+  const start =
+    paired >= 0
+      ? { row, column: paired }
+      : origin.column > 0
+        ? { row, column: origin.column - 1 }
+        : { row: 0, column: 0 }
+  return { rows, origin, start }
 }
+
+/** Return the pick's focus after `move`: a row move keeps the column, held at a
+    shorter row's end. */
+export const movePick = (grid: SourceGrid, at: Focus, move: Move): Focus =>
+  moved(
+    grid.rows.map((one) => one.tiles.length - 1),
+    at,
+    move,
+  )

@@ -274,8 +274,8 @@ each source's images by flow, versions oldest to newest, each marked with its ve
 shows the sheet it came from, headed a revision or a re-roll of the one it came from. **Draft from this** (`⇧D`),
 from the large view or over a selection, lists every flow the app offers, the image's own first; `↵` runs what
 `isekai draft --flow` does and opens Review on the first draft it wrote, the others of its flow in the rail, with the
-render beside the photograph; **Compare** (`c`) shows a seed under two
-versions and the fields that changed. Every screen has its own URL, so a reload lands where it was. Stop it
+render beside the photograph; **Compare** (`c`) sets the image beside any image of its source — another
+version's, another flow's, or the photograph — with the fields that differ. Every screen has its own URL, so a reload lands where it was. Stop it
 with Ctrl-C, which interrupts a running job; mid-render
 it says so and waits, up to the teardown's estimate and one volume verb, for the pod's teardown and the
 window's close — killing it then can leave the window open, and a wait that runs out names `gpunit volume down`.

@@ -296,11 +296,13 @@ export function renderDetail(place: RenderPlace): Promise<RenderDetail> {
   return get<RenderDetail>(renderAt(place))
 }
 
-/** Return `place` beside `other`, another image of its cell, else the newest older of its seed. */
+/** Return `place` beside `other`, another image of its source, else its photograph. */
 export function comparison(
   place: RenderPlace,
-  other?: { version: number; seed: string },
+  other: { flow: string; version: number; seed: string } | null,
 ): Promise<Comparison> {
-  const pair = other ? `/v${other.version}/${encodeURIComponent(other.seed)}` : ''
-  return get<Comparison>(`${renderAt(place)}/compare${pair}`)
+  const pair = other
+    ? [other.flow, `v${other.version}`, other.seed].map(encodeURIComponent).join('/')
+    : 'photo'
+  return get<Comparison>(`${renderAt(place)}/compare/${pair}`)
 }

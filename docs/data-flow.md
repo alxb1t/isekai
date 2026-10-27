@@ -59,8 +59,8 @@ sheet. Every image is checked first, and a selection is written whole or not at 
 waiting draft with edits of its own refuses it, and `review --discard` deletes that draft,
 while one equal to its sheet is replaced. Approval refuses a
 revision that would only re-render images its approval already made. The app's
-Compare pairs any two images of a cell, the older before, and by default a seed with
-the newest older version that rendered it:
+Compare sets any image of a source — any flow's, or the photograph — on the left of the
+one it started from, its pick opening on the newest older version that rendered the seed:
 
 ```
 outputs/001/7.png ─▶ draft ─▶ review/003.draft.json   {count 1, seeds [7]}

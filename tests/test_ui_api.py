@@ -60,7 +60,12 @@ from isekai.foundation.artifacts import (
     read,
 )
 from isekai.foundation.artifacts import replace as replace_record
-from isekai.foundation.flow import Schema, load_flow  # noqa: E402
+from isekai.foundation.flow import (  # noqa: E402
+    Flow,
+    Schema,
+    load_flow,
+    manifest_digest,
+)
 from isekai.foundation.run import (  # noqa: E402
     APPROVED,
     CAPTIONS,
@@ -1750,29 +1755,33 @@ def test_a_seed_rendered_under_three_versions_compares_the_third_with_the_second
     large = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v3/7"
 
     view = client.get(large).json()
-    pair = client.get(f"{large}/compare").json()
+    # The pick opens on `compare`, so its ↵ asks for that image.
+    pair = client.get(f"{large}/compare/{FLOW}/v{view['compare']}/7").json()
 
     assert view["compare"] == 2
-    assert (pair["before"]["version"], pair["after"]["version"]) == (2, 3)
-    assert [(one["field"], one["after"]) for one in pair["changed"]] == [
+    assert (pair["left"]["version"], pair["right"]["version"]) == (2, 3)
+    assert [(one["field"], one["right"]) for one in pair["changed"]] == [
         ("clothes", ["collared shirt"])
     ]
 
 
+FLAT = "summon-flat-anime-wai"
+
+
 @pytest.mark.spec("ui:compare:any-two-images-of-a-cell")
-def test_compare_takes_any_two_images_of_a_cell(
+def test_compare_takes_any_two_images_of_a_source(
     wired: Wiring,
     made: Run,
     tmp_path: Path,
     schema: Schema,
     vocabulary: Vocabulary,
 ) -> None:
-    flow = load_flow(FLOW)
+    flow, flat = load_flow(FLOW), load_flow(FLAT)
     comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
 
-    def rendered(seed: int) -> None:
-        prepare(made, {FLOW: flow})
-        render(made, flow, comfy, seeds=[seed], poll=0)
+    def rendered(seed: int, one: Flow = flow) -> None:
+        prepare(made, {one.id: one})
+        render(made, one, comfy, seeds=[seed], poll=0)
 
     _source(made)
     review(made, FLOW)
@@ -1784,14 +1793,22 @@ def test_compare_takes_any_two_images_of_a_cell(
     rendered(7)
     _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
     rendered(7)
-    client = _client(wired, made, tmp_path, drafted=False)
+    sheet(made, schema, vocabulary, flow=FLAT, flow_digest=manifest_digest(FLAT))
+    review(made, FLAT)
+    approve(made, FLAT, schema, vocabulary)
+    rendered(5, flat)
+    # Conjure holds no image of the source, so it has no row.
+    client = _client(
+        wired, made, tmp_path, drafted=False, offered=(FLOW, CONJURE, FLAT)
+    )
     large = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}"
 
     view = client.get(f"{large}/v4/7").json()
-    pair = client.get(f"{large}/v4/7/compare/v2/5").json()
-    newer = client.get(f"{large}/v2/5/compare/v4/7").json()
-    shared = client.get(f"{large}/v3/7/compare/v2/5").json()
-    itself = client.get(f"{large}/v4/7/compare/v4/7")
+    pair = client.get(f"{large}/v4/7/compare/{FLAT}/v1/5").json()
+    within = client.get(f"{large}/v2/5/compare/{FLOW}/v4/7").json()
+    shared = client.get(f"{large}/v3/7/compare/{FLOW}/v2/5").json()
+    photo = client.get(f"{large}/v4/7/compare/photo").json()
+    itself = client.get(f"{large}/v4/7/compare/{FLOW}/v4/7")
 
     assert [(one["version"], one["seed"]) for one in view["images"]] == [
         (1, "7"),
@@ -1800,20 +1817,34 @@ def test_compare_takes_any_two_images_of_a_cell(
         (4, "7"),
     ]
     assert [
-        (side["version"], side["seed"]) for side in (pair["before"], pair["after"])
+        (row["flow"], [(one["version"], one["seed"]) for one in row["images"]])
+        for row in view["source"]
     ] == [
-        (2, "5"),
-        (4, "7"),
+        (FLOW, [(1, "7"), (2, "5"), (3, "7"), (4, "7")]),
+        (FLAT, [(1, "5")]),
     ]
-    assert [(one["field"], one["after"]) for one in pair["changed"]] == [
-        ("clothes", ["collared shirt"])
+    # The image picked is on the left, the one compare started from on the right.
+    assert [
+        (side["flow"], side["version"], side["seed"])
+        for side in (pair["left"], pair["right"])
+    ] == [
+        (FLAT, 1, "5"),
+        (FLOW, 4, "7"),
+    ]
+    assert [(one["field"], one["left"], one["right"]) for one in pair["changed"]] == [
+        ("clothes", ["shirt"], ["collared shirt"])
     ]
     assert (pair["different_seeds"], pair["same_sheet"]) == (True, False)
-    # A newer image picked from an older one is still the after side.
-    assert newer == pair
+    # An older image's compare puts the newer it picked on the left.
+    assert [
+        (side["version"], side["seed"]) for side in (within["left"], within["right"])
+    ] == [
+        (4, "7"),
+        (2, "5"),
+    ]
     assert (shared["changed"], shared["same_sheet"]) == ([], True)
-    # The same-seed address still pairs with the newest older version.
-    assert client.get(f"{large}/v4/7/compare").json()["before"]["version"] == 3
+    # The photograph's pair is the pair alone.
+    assert photo == {"left": None, "right": pair["right"]}
     assert itself.status_code == 409
     assert "compared with itself" in itself.json()["refusal"]
 

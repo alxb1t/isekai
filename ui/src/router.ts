@@ -26,7 +26,13 @@ export const router = createRouter({
       props: true,
     },
     {
-      path: '/c/:collection/renders/:digest/:flow/:version/:seed/compare/:with?/:withSeed?',
+      path: '/c/:collection/renders/:digest/:flow/:version/:seed/compare/photo',
+      name: 'compare-photo',
+      component: Compare,
+      props: true,
+    },
+    {
+      path: '/c/:collection/renders/:digest/:flow/:version/:seed/compare/:withFlow/:withVersion/:withSeed',
       name: 'compare',
       component: Compare,
       props: true,
