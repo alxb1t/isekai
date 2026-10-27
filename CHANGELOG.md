@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-10-27 · 0084-flat-summon
+
+Gate: local 0m44s · CI 1m16s (ci at f35f347) · 0.56.0: local 0m47s · CI 1m16s
+
 ### Added
 
 - Candidate `summon-flat-a-anime-wai`: summon with InstantID ending at 0.65, `ip_weight` 0.7 and a flat prompt,
