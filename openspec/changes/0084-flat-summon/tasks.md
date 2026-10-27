@@ -20,7 +20,7 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 - [x] 2 — The prototype photographs **HUMAN
 - [x] 3 — The sheets
 - [x] 4 — The render and the count ⚠️ GPU
-- [ ] 5 — The verdict **HUMAN
+- [x] 5 — The verdict **HUMAN
 - [ ] 6 — The winner
 
 ## 1 — The candidate flows
@@ -65,7 +65,7 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 
 ## 5 — The verdict **HUMAN
 
-- [ ] 5.1 The operator judges the three flows by eye in `.data/flat-summon-prototype/compare.html`, then writes
+- [x] 5.1 The operator judges the three flows by eye in `.data/flat-summon-prototype/compare.html`, then writes
   `openspec/changes/0084-flat-summon/verdict.md` per [D5](design.md#d5): a line
   `winner: summon-flat-a-anime-wai`, `winner: summon-flat-b-anime-wai` or `winner: none`, and each flow's count.
   Verify: `grep -cE '^winner: (summon-flat-a-anime-wai|summon-flat-b-anime-wai|none)$' openspec/changes/0084-flat-summon/verdict.md` prints `1`.

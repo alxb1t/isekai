@@ -20,6 +20,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   candidates so the three flows render one sheet (0084 D4).
 - The prototype rendered summon and both candidates on summon's seeds in one session, then counted them
   over the cohort and laid them out side by side for the verdict (0084 D4, D5).
+- The verdict picks candidate A by eye: flat and still the person, where the photo-trained face encoder
+  cannot read flat faces; B's hires pass made no visible difference (0084 D5).
 
 ## [0.56.0] - 2026-10-27 · 0083-the-multi-batch-render
 
