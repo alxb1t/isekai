@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-10-27 · 0082-the-collection
+
+Gate: local 0m47s · CI none · 0.54.0: local 0m47s · CI 1m09s
+
 ### Changed
 
 - A library folder is a collection: `import --collection` with no `--batch` alias, `compare <collection>`, and
