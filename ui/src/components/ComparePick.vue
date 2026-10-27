@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
 import { useHeldFocus } from '../composables/useHeldFocus'
-import { type PickTile, type SourceGrid, movePick } from '../cells'
+import { type PickTile, type SourceGrid, imageName, movePick } from '../cells'
 import { useKeys } from '../composables/useKeys'
 import type { Focus, Move } from '../grid'
 import { plain } from '../stores/keys'
@@ -22,8 +22,6 @@ const emit = defineEmits<{ pick: [tile: PickTile]; close: [] }>()
 const dialog = ref<HTMLDialogElement | null>(null)
 const focus = ref<Focus>(props.grid.start)
 
-const named = (tile: PickTile) =>
-  tile === null ? 'photograph' : `${tile.flow} · v${tile.version} · seed ${tile.seed}`
 const isOrigin = (row: number, column: number) =>
   row === props.grid.origin.row && column === props.grid.origin.column
 
@@ -86,11 +84,10 @@ onMounted(() => {
               class="renders__image"
               :class="{ 'renders__image--selected': isOrigin(row, column) }"
               type="button"
-              data-pick
               :data-row="row"
               :data-column="column"
               :data-origin="isOrigin(row, column) || undefined"
-              :aria-label="named(tile)"
+              :aria-label="imageName(tile)"
               @focus="focus = { row, column }"
               @click="choose(row, column)"
             >

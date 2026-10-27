@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useKeys } from '../composables/useKeys'
+import { usePair } from '../composables/usePair'
 import { useViewer } from '../composables/useViewer'
 import { type Command, plain } from '../stores/keys'
 
@@ -66,20 +67,16 @@ const title = computed(() => {
   return `${name}${size} · ${fit}${place}`
 })
 
-/* The pair's aspect ratios, each the image's own once it loads: widths in
-   proportion to them put both at one height. */
-const ratios = ref(props.images.map((one) => (one.width && one.height ? one.width / one.height : 1)))
-
-function loaded(index: number, event: Event): void {
-  const held = event.target as HTMLImageElement
-  if (held.naturalHeight) ratios.value[index] = held.naturalWidth / held.naturalHeight
-}
-
-/* As wide as the window allows, and no taller than it. */
-const pairWidth = computed(() => {
-  const sum = ratios.value.reduce((total, one) => total + one, 0)
-  return `min(calc(100vw - 64px), calc((100vh - 120px) * ${sum}))`
-})
+/* The pair, as wide as the window allows and no taller than it. */
+const {
+  ratios,
+  loaded,
+  width: pairWidth,
+} = usePair(
+  props.images.map((one) => (one.width && one.height ? one.width / one.height : 1)),
+  'calc(100vw - 64px)',
+  '(100vh - 120px)',
+)
 
 /* The dialog itself is the backdrop's target: a click on an image or the title
    lands on them instead. */

@@ -6,6 +6,12 @@ export function imageKey(one: ImageRef): string {
   return `${one.digest}|${one.flow}|${one.version}|${one.seed}`
 }
 
+/** Return an image's name as a heading shows it, or the photograph's for null.
+
+    e.g. {flow: 'summon-anime-wai', version: 2, seed: '7'} -> "summon-anime-wai · v2 · seed 7" */
+export const imageName = (one: { flow: string; version: number; seed: string } | null): string =>
+  one === null ? 'photograph' : `${one.flow} · v${one.version} · seed ${one.seed}`
+
 /* What a click or ↵ on a hub cell does follows its stage, as the design spec's J2
    states: one table, so no template decides it on its own. */
 export type Action = 'tick' | 'review' | 'sheet' | 'view' | 'none'

@@ -1016,16 +1016,14 @@ def create_app(
             # Every offered flow, this one first, assigned or not: a draft assigns.
             "targets": sorted(flows, key=lambda name: name != flow),
             # The cell's images, as Renders draws them: oldest version first.
-            "images": _rendered_out(listed),
+            "images": _images_out(library.rendered_images(run, flow, suffix)),
             # The source's images, a row per offered flow holding any: the pick.
             "source": [
-                {"flow": name, "images": images}
+                {"flow": name, "images": _images_out(images)}
                 for name in flows
                 if (
-                    images := _rendered_out(
-                        listed
-                        if name == flow
-                        else library.versions(run, name, offered(name).output_suffix)
+                    images := library.rendered_images(
+                        run, name, offered(name).output_suffix
                     )
                 )
             ],
@@ -1051,11 +1049,8 @@ def create_app(
         e.g. `…/summon/v4/7/compare/flat/v1/5` -> flat's v1 · 5 left, summon's
         v4 · 7 right
         """
-        if (other_flow, _version(other_version), other_seed) == (
-            flow,
-            _version(version),
-            seed,
-        ):
+        number, other_number = _version(version), _version(other_version)
+        if (other_flow, other_number, other_seed) == (flow, number, seed):
             raise Refusal(
                 f"{flow} {version} · {seed}: an image compared with itself shows no "
                 "change; go back to its large view and pick another"
@@ -1065,8 +1060,8 @@ def create_app(
             collection, digest, other_flow, other_version, other_seed
         )
         one, other = offered(flow), offered(other_flow)
-        right, right_fields = _side(one, _version(version), origin)
-        left, left_fields = _side(other, _version(other_version), picked)
+        right, right_fields = _side(one, number, origin)
+        left, left_fields = _side(other, other_number, picked)
         changed = [
             {"field": name, "left": left_fields[name], "right": right_fields[name]}
             for name in one.schema.names
@@ -1369,16 +1364,12 @@ def _version_out(version: library.Version) -> dict[str, Any]:
     }
 
 
-def _rendered_out(listed: Sequence[library.Version]) -> list[dict[str, Any]]:
-    """Return the versions' rendered images, oldest first, as Renders draws them.
+def _images_out(images: Sequence[tuple[int, int]]) -> list[dict[str, Any]]:
+    """Describe rendered images by version and decimal seed, as Renders names them.
 
-    e.g. [v2 rendered 5, v1 rendered 7] -> [{1, "7"}, {2, "5"}]
+    e.g. [(1, 7)] -> [{"version": 1, "seed": "7"}]
     """
-    return [
-        {"version": each.version, "seed": seed}
-        for each in reversed(listed)
-        for seed in _decimal(each.rendered)
-    ]
+    return [{"version": version, "seed": str(seed)} for version, seed in images]
 
 
 def _decimal(seeds: Sequence[int]) -> list[str]:

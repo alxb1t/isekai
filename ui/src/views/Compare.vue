@@ -2,8 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { comparison, imageAt, photoUrl, versionOf } from '../api'
+import { imageName } from '../cells'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
+import { usePair } from '../composables/usePair'
 import { plain } from '../stores/keys'
 import type { CompareSide, Comparison } from '../types'
 
@@ -42,18 +44,10 @@ const sides = computed<[string, CompareSide | null][]>(() => {
   return swapped.value ? both.reverse() : both
 })
 
-/* Each side's aspect ratio once it loads: widths in proportion put both at one height. */
-const ratios = ref<Record<string, number>>({ left: 1, right: 1 })
-
-function loaded(label: string, event: Event): void {
-  const held = event.target as HTMLImageElement
-  if (held.naturalHeight) ratios.value[label] = held.naturalWidth / held.naturalHeight
-}
-
-/* As wide as the screen allows, and no taller than it. */
-const width = computed(
-  () => `min(100%, calc((100vh - 200px) * ${ratios.value.left + ratios.value.right}))`,
-)
+/* The pair, as wide as the screen allows and no taller than it; a ratio stays
+   with its side when `\` swaps them. */
+const { ratios, loaded, width } = usePair([1, 1], '100%', '(100vh - 200px)')
+const at = (label: string) => (label === 'left' ? 0 : 1)
 
 const clock = (at: number | null) =>
   at === null ? '' : new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
@@ -74,9 +68,6 @@ const image = (side: CompareSide | null) =>
   side === null
     ? photoUrl(large.value)
     : imageAt({ ...large.value, flow: side.flow, version: side.version, seed: side.seed })
-
-const named = (side: CompareSide | null) =>
-  side === null ? 'photograph' : `${side.flow} · v${side.version} · seed ${side.seed}`
 
 useKeys('screen', [
   {
@@ -120,13 +111,13 @@ onMounted(async () => {
         v-for="[label, side] in sides"
         :key="label"
         class="compare__side"
-        :style="{ flexGrow: ratios[label] }"
+        :style="{ flexGrow: ratios[at(label)] }"
         :data-side="label"
       >
         <figcaption class="section-label">
-          {{ named(side) }}<template v-if="side"> · approved {{ clock(side.approved_at) }}</template>
+          {{ imageName(side) }}<template v-if="side"> · approved {{ clock(side.approved_at) }}</template>
         </figcaption>
-        <img :src="image(side)" :alt="named(side)" @load="loaded(label, $event)" />
+        <img :src="image(side)" :alt="imageName(side)" @load="loaded(at(label), $event)" />
         <span v-if="side" class="compare__line mono">{{ seeds(side) }} · {{ side.tokens }} tokens</span>
       </figure>
     </div>

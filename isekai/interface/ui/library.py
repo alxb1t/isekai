@@ -443,6 +443,18 @@ def paired(run: Run, flow: str, version: int, seed: int, suffix: str) -> int | N
     return None
 
 
+def rendered_images(run: Run, flow: str, suffix: str) -> list[tuple[int, int]]:
+    """Return every image `flow` rendered of `run`, oldest version first, by filename.
+
+    e.g. seed 7 under 1, seeds 5 and 7 under 2 -> [(1, 7), (2, 5), (2, 7)]
+    """
+    return [
+        (number, seed)
+        for number in approved_versions(run.directory(flow, REVIEW))
+        for seed in rendered_seeds(group_of(run, flow, number), suffix)
+    ]
+
+
 def thumbnail(library: Path, run: Run, image: Path) -> Path:
     """Return `image`'s thumbnail in the library's cache, made the first time only.
 
