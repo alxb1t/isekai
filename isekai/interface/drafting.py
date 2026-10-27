@@ -32,7 +32,7 @@ def draft_across(
     sheet stage checks the tag list before its write, so a refusal writes nothing.
     The vocabulary and the table are read only for that fill.
     """
-    approval = drafting_approval(run, target.id, source, version)
+    approval = drafting_approval(run, target.id, source, version, seed)
     if latest(run.directory(target.id, SHEETS)) is None:
         sheet(
             run,

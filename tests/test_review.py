@@ -1133,10 +1133,28 @@ def test_a_drafted_draft_records_the_image_it_names_and_none_without(
     unnamed = draft_from(run, CONJURE, FLOW, 1, conjure)
     assert "image" not in read(unnamed, DRAFT_FILE)["producer"]
     discard(run, CONJURE)
+    _image(run, 1, SEED)
     named = draft_from(run, CONJURE, FLOW, 1, conjure, seed=SEED)
 
     image = read(named, DRAFT_FILE)["producer"].get("image")
     assert image == {"flow": FLOW, "version": 1, "seed": SEED}
+
+
+@pytest.mark.spec("review:draft-from:an-image-the-approval-never-rendered-is-refused")
+def test_a_draft_naming_a_seed_its_approval_never_rendered_is_refused(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    _image(run, 1, SEED)
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal) as refused:
+        draft_from(run, CONJURE, FLOW, 1, conjure, seed=999)
+
+    assert "rendered no seed 999 under 001.approved.json" in str(refused.value)
+    assert f"`python -m isekai show{runs_flag(run)} {run.id}`" in str(refused.value)
+    assert snapshot(run.path) == before
 
 
 @pytest.mark.spec("review:draft-from:its-approval-is-an-ordinary-approval")

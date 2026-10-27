@@ -234,13 +234,14 @@ def draft_from(
     Each field of `schema` the approval holds is the approval's; every other is
     `flow`'s newest sheet's, as are the records the fields came through. No seeds
     are carried: the approval's are another flow's. `seed` names the image of
-    that approval the draft is written from, recorded beside it. A waiting
+    that approval the draft is written from, recorded beside it, and refuses
+    as `drafting_approval` refuses. A waiting
     draft equal to its sheet, rendering one drawn seed, holds no work, so it is
     replaced at its number; one with edited fields, or a count or seeds of its
     own, refuses.
     e.g. (run, conjure, summon, None, schema) -> conjure/review/001.draft.json
     """
-    approval = drafting_approval(run, flow, source, version)
+    approval = drafting_approval(run, flow, source, version, seed)
     sheet_version = latest(run.directory(flow, SHEETS))
     if sheet_version is None:
         raise Refusal(
@@ -278,12 +279,15 @@ def draft_from(
     )
 
 
-def drafting_approval(run: Run, flow: str, source: str, version: int | None) -> int:
+def drafting_approval(
+    run: Run, flow: str, source: str, version: int | None, seed: int | None = None
+) -> int:
     """Return the approval of `source` that `draft_from` drafts `flow` from.
 
     `version`, else `source`'s newest. Refuses `flow` itself as the source, an
-    approval `source` does not hold, and one a draft cannot copy, so a caller
-    that writes before drafting is refused before its first write.
+    approval `source` does not hold, one a draft cannot copy, and a `seed` it
+    rendered no image for, so a caller that writes before drafting is refused
+    before its first write.
     e.g. (run, conjure, summon, None) -> 2
     """
     if source == flow:
@@ -301,6 +305,15 @@ def drafting_approval(run: Run, flow: str, source: str, version: int | None) -> 
             f"{_DRAFT_AGAIN}"
         )
     _approval(run, source, approval, f"draft {flow} again")
+    if (
+        seed is not None
+        and not (group_of(run, source, approval) / f"{seed}{SIDECAR}").is_file()
+    ):
+        raise Refusal(
+            f"{run.id}: flow {source} rendered no seed {seed} under "
+            f"{artifact_name(approval, APPROVED)}; run `{stage_command(run, 'show')}` "
+            f"to list the seeds its renders wrote, and draft {flow} from one of those"
+        )
     return approval
 
 

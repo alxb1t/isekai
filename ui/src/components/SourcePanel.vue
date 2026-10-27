@@ -43,7 +43,7 @@ const frame = computed(() => ({
   ratio: `${props.width} / ${props.height}`,
 }))
 
-/* A revision's pair shares the column at one height: each image takes width in
+/* The pair shares the column at one height: each image takes width in
    proportion to its aspect ratio. The render's is the photograph's until it loads. */
 const loaded = ref<number | null>(null)
 const ratio = computed(() => props.width / props.height)
@@ -90,8 +90,8 @@ defineExpose({
     tabindex="0"
     ref="element"
   >
-    <!-- A revision: one header row over the photograph and the render, top-aligned
-         at one height (J5·4). -->
+    <!-- A revision or a draft from an image: one header row over the photograph and
+         the image it came from, top-aligned at one height (J5·4). -->
     <div v-if="revised" class="source__pair">
       <figure class="source__side" :style="{ flexGrow: ratio }">
         <span class="source__row">

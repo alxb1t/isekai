@@ -112,8 +112,8 @@ const candidates = ref<FieldCandidates | null>(null)
 const suspended = computed(() => lens.value !== null)
 const selectedChip = ref<number | null>(null)
 
-/* What the viewer shows: the rail's photographs from the open one, the render
-   being revised alone, or the photograph and the render side by side. */
+/* What the viewer shows: the rail's photographs from the open one, the image a
+   draft came from alone, or the photograph and that image side by side. */
 const photos = computed(() =>
   batch.inputs.value.map((input) => ({
     src: photoUrl(input.id),
@@ -381,8 +381,8 @@ function toggleLens(which: Lens): void {
   else void openLens(which)
 }
 
-/* `⌃P`: the photograph, on a revision the pair; in the pair, the photograph alone
-   and back. */
+/* `⌃P`: the photograph, on a revision or a draft from an image the pair; in the
+   pair, the photograph alone and back. */
 function photograph(): void {
   if (lens.value === 'pair') lens.value = 'photo'
   else if (lens.value === 'photo' && revised.value) lens.value = 'pair'
@@ -393,7 +393,7 @@ function photograph(): void {
 const photographKey: Command = {
   id: 'photograph',
   keys: [{ code: 'KeyP', ctrl: true }],
-  label: 'the photograph, on a revision side by side',
+  label: 'the photograph, on a revision or a draft from an image side by side',
   run: photograph,
   inField: true,
   when: () => sheet.detail.value !== null,

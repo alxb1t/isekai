@@ -1,5 +1,121 @@
 ## MODIFIED Requirements
 
+### Requirement: Review opens a batch at its own address, lists every unrendered sheet, and Approve stays on the sheet
+
+The system SHALL open a batch's Review on a chooser when two or more flows hold sheets to review: a row per flow, its
+name, how many wait to be approved and how many lack images, and up to fifteen of its waiting photographs, then `+n`;
+`j` `k` and the arrows SHALL move between rows, `↵` or a click on a row SHALL open that flow's head, and a click on a
+photograph that sheet. With one such flow it SHALL open that flow's head: its first unapproved sheet in the hub's order,
+else its first approved sheet whose newest approval lacks images of its count, read-only; with none, a page saying no
+sheet waits for review, with the way to the hub. `Esc` on Review, with no overlay open and outside a field, SHALL return
+to the chooser. The hub SHALL carry for each cell the number of images its newest approval lacks, as the render stage
+counts it. Review's rail SHALL list every sheet of the flow that is unapproved or lacks images, each marked untouched,
+edited, approved or re-opened, and its footer SHALL count the approved among them; the Review tab SHALL count the
+unapproved, every flow's, and the rail's head SHALL name each other flow holding some, with how many and the key to the
+chooser. Approve SHALL leave the sheet open and read-only, the approve bar naming the approval it shows, offering
+*Cancel approve* while the review stage can cancel it, else the reason beside it, and while no render runs for the
+batch; a cancel SHALL leave the sheet open on what the flow is left on: its draft, editable, or for a copy the draft
+open above what lies beneath, else the approval beneath it, read-only. Opening a sheet that has no draft SHALL write one
+through the review stage's own function, and opening it again SHALL write no second draft; a failure after approval
+SHALL be shown in the approve bar, never dropped. ④ SHALL show one slot per image, a set seed or random, beside the
+sheet rows. `⌃P` SHALL open the photograph in the viewer — on a revision or a draft from an image, *Side by side* — from
+any pane and from a field, stepping through the rail's sheets, and `Esc` SHALL return the focus where it was.
+
+A sheet is done when its images are, not when it is approved, so the rail keeps it until then; the count is the
+render stage's own. Approving is an act, not a navigation, and a copy's cancel takes back only the copy. A slot per
+image says what the next render draws before it is approved. The operator chooses the flow to review; the page
+does not choose it for them.
+
+```
+two or more flows waiting ─▶ the chooser ─↵─▶ that flow's head
+one flow waiting          ─▶ its head: first unapproved ─▶ else first approved and short
+none                      ─▶ "No sheet waits for review"
+```
+
+#### Scenario: a batch's Review opens its head
+- **Key:** `ui:review:a-batch-opens-its-head`
+- **Layers:** unit
+- **WHEN** a batch's one flow holds an approved, short sheet and an unapproved one, then neither
+- **THEN** its Review opens the unapproved sheet, then the approved one
+- **AND** with no sheet left it opens none
+
+#### Scenario: two flows waiting open the chooser
+- **Key:** `ui:review:two-flows-waiting-open-the-chooser`
+- **Layers:** unit
+- **WHEN** a batch's two flows each hold an unapproved sheet
+- **THEN** its Review is a row per flow, each naming its count and its waiting photographs
+
+#### Scenario: the chooser opens a flow
+- **Key:** `ui:review:the-chooser-opens-a-flow`
+- **Layers:** e2e
+- **WHEN** the Review tab opens on two waiting flows, `j` then `↵` are pressed
+- **THEN** Review opens on the second flow's first waiting sheet
+- **AND** `Esc` returns to the chooser, its second row focused
+
+#### Scenario: a cell counts what its newest approval lacks
+- **Key:** `ui:review:a-cell-counts-what-it-lacks`
+- **Layers:** unit
+- **WHEN** a cell's newest approval holds one image of a count of three
+- **THEN** the hub carries two for that cell
+
+#### Scenario: the rail holds every sheet not yet rendered
+- **Key:** `ui:review:the-rail-holds-every-unrendered-sheet`
+- **Layers:** unit
+- **WHEN** a flow holds an unapproved sheet, an approved short one and an approved one with all its images
+- **THEN** the rail lists the first two, marked by their state
+
+#### Scenario: Approve stays on the sheet
+- **Key:** `ui:review:approve-stays-on-the-sheet`
+- **Layers:** e2e
+- **WHEN** a sheet is approved
+- **THEN** the same sheet stays open, read-only, and its rail mark reads approved
+- **AND** the approve bar names its approval
+
+#### Scenario: opening a sheet with no draft writes one
+- **Key:** `ui:review:opening-a-sheet-writes-its-draft`
+- **Layers:** unit
+- **WHEN** Review opens a sheet whose flow has a sheet and no draft
+- **THEN** a draft is written through the review stage
+- **AND** opening it again writes no second draft
+
+#### Scenario: a failure after approval is shown
+- **Key:** `ui:review:a-failure-after-approval-is-shown`
+- **Layers:** e2e
+- **WHEN** an approval succeeds and reading the batch again fails
+- **THEN** the approve bar shows the refusal
+
+#### Scenario: each image has a slot
+- **Key:** `ui:review:each-image-has-a-slot`
+- **Layers:** unit
+- **WHEN** a draft renders four images with seed 144 listed
+- **THEN** ④ shows four slots, the first holding 144 and three random
+- **AND** removing a slot takes a random one first
+
+#### Scenario: the photograph opens in the viewer
+- **Key:** `ui:review:the-photograph-opens-in-the-viewer`
+- **Layers:** e2e
+- **WHEN** `⌃P` is pressed in a tag field, then `→`
+- **THEN** the viewer shows the photograph fitted, then the next sheet's photograph
+- **AND** `Esc` returns the focus to the field
+
+#### Scenario: Cancel approve opens the sheet again
+- **Key:** `ui:review:cancel-approve-opens-the-sheet-again`
+- **Layers:** e2e
+- **WHEN** a sheet is approved, then *Cancel approve* is pressed
+- **THEN** the same sheet is editable again
+
+#### Scenario: an approved sheet says why it cannot be cancelled
+- **Key:** `ui:review:the-sheet-says-why-it-cannot-be-cancelled`
+- **Layers:** unit
+- **WHEN** Review reads an approved sheet whose prompt is assembled
+- **THEN** its payload carries the review stage's reason
+
+#### Scenario: the rail names the other flows' waiting sheets
+- **Key:** `ui:review:the-rail-names-the-other-flows-waiting`
+- **Layers:** unit
+- **WHEN** Review is open on one flow and another flow holds one unapproved sheet
+- **THEN** the rail's head names that flow and one waiting
+
 ### Requirement: Revise starts from an image, and opens Review on its first draft
 
 The system SHALL offer Revise from an image's large view and over a selection in the Renders grid, SHALL show what it

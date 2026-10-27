@@ -38,8 +38,9 @@ every field both flows' schemas declare is the source approval's, and whose ever
 target's newest sheet's, recording the target's sheet and the source flow and approval it was drafted from, and, where
 the operator names one of that approval's images, the image itself — its flow, version and seed. It SHALL approve that
 draft as an ordinary approval of the target, never as a copy. It SHALL refuse, naming the way out: a target holding no
-sheet; a source holding no such approval; a source that is the target or no tracked flow; and a waiting draft of the
-target whose fields differ from its sheet's or that renders anything but one drawn seed. A waiting draft equal to its
+sheet; a source holding no such approval; a named image that approval never rendered; a source that is the target or
+no tracked flow; and a waiting draft of the target whose fields differ from its sheet's or that renders anything but one
+drawn seed. A waiting draft equal to its
 sheet, rendering one drawn seed, SHALL be replaced at its own number. The system SHALL refuse cancelling a source
 approval while a target approval or waiting draft drafted from it stands, naming the target's cancel or the command that
 discards that draft.
@@ -114,3 +115,10 @@ from, so that approval stands while the record does, as a copy's source does.
 - **WHEN** a target is drafted from a source approval naming one of its images
 - **THEN** the draft records that image's flow, version and seed
 - **AND** a draft naming no image records none
+
+#### Scenario: an image the approval never rendered is refused
+- **Key:** `review:draft-from:an-image-the-approval-never-rendered-is-refused`
+- **Layers:** unit
+- **WHEN** a target is drafted from a source approval naming a seed it rendered no image for
+- **THEN** it is refused naming that seed and the command that lists the rendered seeds
+- **AND** no file is written
