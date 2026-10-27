@@ -1,4 +1,9 @@
-import type { HubCell } from './types'
+import type { HubCell, ImageRef } from './types'
+
+/** Return an image as a selection holds it. e.g. "0d4b…|summon-anime-wai|1|42" */
+export function imageKey(one: ImageRef): string {
+  return `${one.digest}|${one.flow}|${one.version}|${one.seed}`
+}
 
 /* What a click or ↵ on a hub cell does follows its stage, as the design spec's J2
    states: one table, so no template decides it on its own. */

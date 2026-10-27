@@ -352,7 +352,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
         record_failure(directory, 1, "transient", {"stage": "caption", "detail": "x"})
     collect(lambda: caption(bare, reader, briefing_path=CAPTION_BRIEFING))
 
-    # A damaged tag list of the flow `review --from` fills a target's sheet from.
+    # A damaged tag list of the flow `draft --flow` fills a target's sheet from.
     from isekai.foundation.artifacts import WD14_FILE
     from isekai.pipeline.sheet import sheet as fill
 

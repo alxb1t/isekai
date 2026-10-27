@@ -257,12 +257,14 @@ def test_the_source_cell_opens_its_photograph(page: Page, served: Served) -> Non
 def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None:
     digest = served.revised.digest
     page.goto(f"{served.url}/c/{REVISED}/renders/{digest}/{FLOW}/v1/7")
-    expect(page.locator("[data-revise]")).to_be_visible()
-    page.keyboard.press("Shift+E")
-    confirm = page.locator("[data-revise-confirm]")
-    expect(confirm).to_contain_text("copies v1 · prefills seed 7")
+    expect(page.locator("[data-draft-from]")).to_be_visible()
+    page.keyboard.press("Shift+D")
+    dialog = page.locator("[data-draft-dialog]")
+    expect(dialog).to_contain_text(f"Draft from this · {FLOW} v1 · seed 7")
+    expect(dialog.locator("[data-target]").first).to_be_focused()
+    expect(dialog.locator("[data-target]").first).to_contain_text(f"{FLOW}revise")
 
-    confirm.locator("[data-confirm]").click()
+    page.keyboard.press("Enter")
 
     review = f"{served.url}/c/{REVISED}/review/{digest}/{FLOW}"
     expect(page).to_have_url(review)
@@ -278,10 +280,11 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
     assert draft is not None
     before = draft.read_bytes()
     page.goto(f"{served.url}/c/{REVISED}/renders/{digest}/{FLOW}/v1/7")
-    expect(page.locator("[data-revise]")).to_be_visible()
-    page.keyboard.press("Shift+E")
+    expect(page.locator("[data-draft-from]")).to_be_visible()
+    page.keyboard.press("Shift+D")
+    page.keyboard.press("Enter")
     expect(page).to_have_url(review)
-    expect(page.locator("[data-revise-confirm]")).to_have_count(0)
+    expect(page.locator("[data-draft-dialog]")).to_have_count(0)
     expect(page.locator("[data-changed='hair_colour']")).to_contain_text("was")
     assert current_draft(served.revised.directory(FLOW, REVIEW)) == draft
     assert draft.read_bytes() == before
@@ -297,9 +300,15 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
 def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     digest = served.conjured.digest
     page.goto(f"{served.url}/c/{CONJURED}/renders/{digest}/{FLOW}/v1/7")
-    expect(page.locator("[data-draft-from]")).to_contain_text("Conjure from this")
+    expect(page.locator("[data-draft-from]")).to_contain_text("Draft from this")
+    page.keyboard.press("Shift+D")
+    rows = page.locator("[data-draft-dialog] [data-target]")
+    expect(rows.first).to_be_focused()
+    for _ in range([CONJURE in text for text in rows.all_inner_texts()].index(True)):
+        page.keyboard.press("j")
+    expect(rows.filter(has_text=CONJURE)).to_be_focused()
 
-    page.keyboard.press("Shift+F")
+    page.keyboard.press("Enter")
 
     expect(page).to_have_url(f"{served.url}/c/{CONJURED}/review/{digest}/{CONJURE}")
     expect(page.locator(".form")).to_contain_text(f"from {FLOW} v1")

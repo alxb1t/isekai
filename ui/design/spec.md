@@ -97,8 +97,8 @@ timer mono 40px/500.
 | `/c/<collection>/hub` | Hub | the Add sources sheet, the Prepare bar, the Render dialog |
 | `/c/<collection>/review` | Review's head, replaced by its sheet's URL | — |
 | `/c/<collection>/review/<run>/<flow>` | Review | the cheatsheet, the viewer, *Side by side* |
-| `/c/<collection>/renders` | Renders grid | the Revise confirm |
-| `/c/<collection>/renders/<run>/<flow>/<version>/<seed>` | large view | the Revise confirm |
+| `/c/<collection>/renders` | Renders grid | *Draft from this* |
+| `/c/<collection>/renders/<run>/<flow>/<version>/<seed>` | large view | *Draft from this* |
 | `/c/<collection>/renders/<run>/<flow>/<version>/<seed>/compare` | before / after | — |
 | `/billing` | the billing alert's way out | — |
 
@@ -242,7 +242,7 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
 - **The rail**: the flow's name heads it, with a line under it for each other flow holding unapproved sheets,
   `summon-anime-wai · 1 waiting ⇧R`; ⇧R opens the chooser. It lists every sheet of the flow not yet rendered — unapproved, or
   approved and short of its images — and the one open, each marked ○ untouched, ◐ edited, ● approved, ◌ re-opened;
-  its footer counts the approved among them. Revise opens the first draft it wrote; the rest wait in the rail.
+  its footer counts the approved among them. *Draft from this* opens the first draft it wrote; the rest wait in the rail.
   Approve stays on the sheet, read-only. ⇧J ⇧K step the rail. Approve still refuses an unmarked empty field.
 - **Cancel approve**, grey-outlined beside the approved time, takes the approval back while nothing derives from it —
   no prompt, render group or copy — and the sheet is editable again; a copy's cancel deletes only the copy, and the
@@ -320,8 +320,8 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 |---|---|---|
 | J5·1 Renders, before the revision | — | `…/c/2026-09-17/renders` |
 | J5·2 the large view, no Compare yet | ↵ | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731` |
-| J5·3 the Revise confirm over it | ⇧E Revise this image | same |
-| J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/c/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
+| J5·3 *Draft from this* over it, its own flow focused | ⇧D Draft from this | same |
+| J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ↵ on *revise* | `…/c/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
 | J5·6 the revision approved, read-only; the hub's Render bar, `1 image ready to render` | ⌘↵ Approve · ⇧H | `…/c/2026-09-17/hub` |
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | the drawer over the hub |
@@ -361,15 +361,17 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   `vN · seed` under each, focused on the newest older version of this seed, else the image before this one;
   `h j k l` and the arrows move, `↵` or a click compares, the older of the two before. The same-seed address, `…/compare`, still compares with the newest
   older version of the seed.
-  Each offered flow drafted from a sheet alone, assigned or not, is offered as *Conjure from this*,
-  the first on `⇧F`: it drafts that flow from this image's approval and opens Review,
-  which shows the summon image beside the photograph and marks its draft against that flow's sheet, names the
-  approval in the kicker and offers *Discard draft*; a refusal shows under the actions.
-- **Revise** (the verb `isekai revise`): the confirm lists each image — source × flow × seed, the version it copies,
-  the seed it prefills. All or nothing: a refusal lists every selected image, those that could be revised
-  too, and offers `Deselect those 2 and revise 1 ⇧↵`; it has no primary button.
-  An image whose flow holds a waiting draft opens Review on that draft, writing nothing. In a selection it is left
-  out, the rest written, and the confirm names it `already waiting`, then offers `Review ⌘↵`.
+  *Draft from this* `⇧D` heads the writes.
+- **Draft from this** (the verb `isekai draft --flow`), on the large view and over a Renders selection: a dialog
+  headed `Draft from this · summon-anime-wai v1 · seed 1840266731`, or `· 3 images` over a selection, with a row
+  per offered flow, assigned or not — the image's own first, named *revise*, and focused. `j` `k` move, `↵` drafts
+  the focused flow and opens Review on the first draft, the rest in the rail, `Esc` closes. Its own flow is a
+  revision; another is drafted from the image's approval, its own fields from its sheet, and Review shows the image
+  beside the photograph, marks the draft against that flow's sheet and names the approval in the kicker. All or
+  nothing: a refusal lists every selected image, those that could be drafted too, and offers
+  `Deselect those 2 and draft 1 ⇧↵`. A target's waiting draft with edits of its own opens Review on that draft,
+  writing nothing; one equal to its sheet is replaced. In a selection it is left out, the rest written, and the
+  dialog names it `already waiting`, then offers `Review ↵`.
 - **The revision's sheet** marks changed rows with an accent gutter dot and a `was` line against the rendered sheet,
   and keeps them once approved; the image it revises stays, whatever its seeds become.
 - **Approve refuses an unchanged revision** — neither fields nor ④ changed — naming the image it would reproduce
@@ -384,7 +386,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 
 | frame | trigger | URL |
 |---|---|---|
-| (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · ⇧E · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
+| (the large view of 00003 · conjure v1, as J5·2; *Draft from this*, as J5·3) | ↵ · ⇧D · ↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
 | J6·1 Review: the seed cleared, Count 3, the tags untouched | × the seed · count + + | `…/review/0d4b7e6fb2a8/conjure-anime-wai` |
 | (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⇧G · ⌘↵ | the drawer over the hub |
 | J6·2 Renders: three new images after v1, no pair | ⇧I | `…/c/2026-09-17/renders` |
@@ -453,7 +455,7 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 | Render | disabled | `A pod may still be billing.` |
 | Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, the Review tab's count |
 | Renders | a missing image | `its record is there, its image is gone`, the path in the fix |
-| Renders | Revise disabled | `No image selected` |
+| Renders | *Draft from this* disabled | `No image selected` |
 
 ## 7 · Keys
 
@@ -467,8 +469,8 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 | everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⌃; the render drawer, from a field too · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New collection · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
-| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
-| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧E Revise · ⇧G Render · in the large view, ⇧E Revise, ⇧F Conjure from this, c Compare with…, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
+| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
+| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧D Draft from this · ⇧G Render · in the large view, ⇧D Draft from this, c Compare with…, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
 | Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧I its collection's Renders · ⌃; or esc close |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 
@@ -521,4 +523,4 @@ endings once, for both surfaces. The key is `RUNPOD_API_KEY` in `.env` (`.env.ex
 | **ui groundwork** | the shell — AppBar, JobStrip, BillingBanner's slot; tokens; routes with the collection (§4); `isekai ui` with no arguments over `ISEKAI_LIBRARY`; Home and the library (J7·1, Home's states); the hub grid as a listing, focus, keys (§7), the cheatsheet; Review inside the shell with its queue; vitest and Playwright, the fakes behind `ISEKAI_WIRING=<module>:<factory>` |
 | **run flow** | New collection and Add sources (J1, J7) — the upload, staging, `isekai import` and conversion; `isekai assign`; ticking, multi-select, the PrepareBar and Prepare as a job (J2, J8a); `--progress json` on the stage verbs; the job slot; SSE `/events` with the snapshot |
 | **render** | the Render dialog, the session, done (J4); ④ editable, Count and Seeds through approve; `render <runs>` rendering what is short; the scaled limit and recorded durations; Renders, the large view; the billing alerts and the volume item (J8b, J8c); `--progress json` on `render` |
-| **revise** | `isekai revise`, the confirm and its refusal; Review of a revision (J5·4–J5·6); `review --discard`; compare (J5·8, J5·9); re-roll (J6) |
+| **revise** | `isekai draft --flow`, *Draft from this* and its refusal; Review of a revision (J5·4–J5·6); `review --discard`; compare (J5·8, J5·9); re-roll (J6) |

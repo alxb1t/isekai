@@ -5,7 +5,7 @@ using **open models** on a **rented GPU, on demand**. A reproducible, provider-a
 pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
 > **Status: released.** One render path: a **staged pipeline** —
-> `python -m isekai import | assign | tag | caption | sheet | review | approve | revise | generate | show | ui | compare` —
+> `python -m isekai import | assign | tag | caption | sheet | review | approve | draft | generate | show | ui | compare` —
 > which cleans a photograph into a collection, reads it into prose and tags, fills a sheet of canonical tags from the tags by a table, lets a
 > human correct the sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary —
 > and renders from it on a stack provisioned from a pinned, checksummed manifest.
@@ -148,15 +148,19 @@ this pipeline. `ui` is described under *Correcting the sheets in a browser* belo
 there, stop it with Ctrl-C.
 
 A render you mostly like goes back to a draft from the approval that made it, its seed kept, so the edit
-lands on the same composition:
+lands on the same composition — in its own flow, a revision, or in another, that flow's own fields from its
+sheet:
 
 ```sh
-python -m isekai revise .data/runs/<run>/summon-anime-wai/outputs/001/1840266731.png
+python -m isekai draft --flow summon-anime-wai .data/runs/<run>/summon-anime-wai/outputs/001/1840266731.png
+python -m isekai draft --flow conjure-anime-wai .data/runs/<run>/summon-anime-wai/outputs/001/1840266731.png
 python -m isekai review --discard --flow summon-anime-wai .inputs/me.jpg   # drop a waiting draft
 ```
 
-`isekai revise` takes image paths and checks every one before it writes: each run's flow gets a draft, or
-none does. Approval refuses a revision that would only re-render images that exist.
+`isekai draft --flow` takes image paths and checks every one before it writes: each run's flow gets a
+draft, or none does. A waiting draft with edits of its own refuses, and one equal to its sheet is replaced.
+A flow with no sheet is assigned and filled from the image's flow's tags first. Approval refuses a revision
+that would only re-render images that exist.
 
 ### ④ – ⑦ Render on a rented GPU — this is where it starts costing
 
@@ -242,7 +246,7 @@ uv run --env-file .env gpunit volume down   # once no other batch follows
   photograph's stage in each flow, and the *Review* tab opens a chooser when multiple flows have sheets
   waiting, or the first unapproved sheet when one flow waits. Stop it with Ctrl-C.
 - **`approve --cancel` takes an approval back** to its draft while nothing was made from it — no prompt,
-  render group or copy in another flow. Past that, the way on is `isekai revise` where an image exists, else
+  render group or copy in another flow. Past that, the way on is `isekai draft --flow` where an image exists, else
   `review --new-version`.
 - **`render` takes a count per flow**, and renders every run under `$R`.
 - **`show` takes no `--flow`**: it reports every flow a run holds.
@@ -267,9 +271,10 @@ corrects one sheet, its ④ setting how many images it renders and at which seed
 read-only. **Render** opens a dialog quoting what renders and its price at most; **its confirmation is the one
 act on the page that spends money**, and the session view shows it to *Nothing is billing.* Renders shows
 each source's images by flow, versions oldest to newest, each marked with its version, and an image's large view
-shows the sheet it came from, headed a revision or a re-roll of the one it came from. **Revise** (`⇧E`),
-from the large view or over a selection, runs what `isekai revise` does and opens Review on the first draft it
-wrote, the others of its flow in the rail, with the render beside the photograph; **Compare** (`c`) shows a seed under two
+shows the sheet it came from, headed a revision or a re-roll of the one it came from. **Draft from this** (`⇧D`),
+from the large view or over a selection, lists every flow the app offers, the image's own first; `↵` runs what
+`isekai draft --flow` does and opens Review on the first draft it wrote, the others of its flow in the rail, with the
+render beside the photograph; **Compare** (`c`) shows a seed under two
 versions and the fields that changed. Every screen has its own URL, so a reload lands where it was. Stop it
 with Ctrl-C, which interrupts a running job; mid-render
 it says so and waits, up to the teardown's estimate and one volume verb, for the pod's teardown and the
@@ -312,10 +317,7 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   render nothing; `render` runs it before the pod for a source it renders first in the same session.
 - `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, recording the source;
   a copy already of the source's latest writes nothing, and any other approval is copied over under the next
-  number; on `review`: draft each `--flow` from that flow's approval, assigning and
-  filling a target with no sheet from the source's tags, its own fields from its sheet, refused beside
-  `--discard` or `--new-version`.
-- `--version N` — on `review`, with `--from`: the approval to draft from (default: the source's newest).
+  number.
 - `--cancel` — on `approve`: turn each flow's newest approval back into its draft instead, refusing one
   anything was made from; a copy is deleted, as `--from` copies the source's newest approval again, leaving the
   flow on what lies beneath it, which the line names; not combinable with `--from`.

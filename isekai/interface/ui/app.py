@@ -18,7 +18,7 @@ filename, when approval is legal, and what a token costs.
 `discard()` on theirs, the run's own `open_run()` and `assign()` on a tick,
 and stage ②'s `sheet()` when a draft from another flow fills a target with
 no sheet -- run in this process by `interface/drafting.py`'s `draft_across`,
-the sequence `review --from` runs too (D4).
+the sequence `draft --flow` runs too (D4).
 Nothing here builds an artifact body or an artifact filename, and
 `tests/test_ui.py`'s grep is what keeps it so.
 
@@ -42,8 +42,7 @@ GET  /api/c/{collection}/review/{digest}/{flow}         and /photo
 PUT  /api/c/{collection}/review/{digest}/{flow}/draft
 POST /api/c/{collection}/review/{digest}/{flow}/approve   ·   POST …/cancel
 POST /api/c/{collection}/review/{digest}/{flow}/discard
-POST /api/c/{collection}/review/{digest}/{flow}/draft-from   {source, version}
-POST /api/c/{collection}/revise              {images: [{digest, flow, version, seed}]}
+POST /api/c/{collection}/draft         {flow, images: [{digest, flow, version, seed}]}
 GET  /api/c/{collection}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
      and its /image, /thumb and /compare{/other/other_seed,}
 GET  /api/c/{collection}/sources/{name}   and its /thumb
@@ -109,7 +108,7 @@ from isekai.foundation.run import (
     stage_command,
 )
 from isekai.interface import render
-from isekai.interface.drafting import draft_across
+from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
@@ -128,9 +127,7 @@ from isekai.pipeline.review import (
     discard,
     draft_image,
     drafted_from,
-    refuse_revisions,
     review,
-    revise,
     save_draft,
     token_budget,
     waiting_edit,
@@ -445,11 +442,6 @@ def create_app(
     def offered(flow: str) -> Flow:
         """Return a tracked flow by name, loaded once: a flow is pinned while served."""
         return _flow(wired, flow)
-
-    @cache
-    def sheet_alone() -> list[str]:
-        """Return the offered flows drafted from a sheet alone, read once."""
-        return [name for name in flows if offered(name).inputs == ("sheet",)]
 
     def quoted(
         names: Sequence[str] | None,
@@ -869,64 +861,26 @@ def create_app(
             gone = discard(one.run, one.flow.id)
         return {"discarded": gone.name}
 
-    @app.post("/api/c/{collection}/review/{digest}/{flow}/draft-from")
-    def post_draft_from(
-        collection: str, digest: str, flow: str, payload: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Draft `flow` from `source`'s approval `version`, as `review --from` does.
-
-        An optional decimal `seed` names the image of that approval the draft
-        records. A waiting draft with edits of its own is answered `waiting`,
-        and nothing is written.
-        """
-        one = held(collection, digest, flow)
-        if flow not in (targets := sheet_alone()):
-            raise Refusal(
-                f"{flow}: not a flow this surface drafts from an image's approval; "
-                f"the flows it drafts are {', '.join(targets) or 'none'} -- reload "
-                "the image's large view to choose one; nothing was written"
-            )
-        source, version = payload.get("source"), payload.get("version")
-        if not isinstance(source, str) or not _numbered(version):
-            raise Refusal(
-                "the request names no source flow and approval; send `source` and "
-                "`version` -- nothing was written"
-            )
-        seed = payload.get("seed")
-        if seed is not None and not (isinstance(seed, str) and is_seed(seed)):
-            raise Refusal(
-                f"the request's seed {seed!r} is not one; send the image's decimal "
-                "seed, or none -- nothing was written"
-            )
-        seed = None if seed is None else int(seed)
-        offered(source)
-        with _DRAFT_UPDATE:
-            # An edited draft is the work in hand, so it is opened, not refused.
-            if (waiting := waiting_edit(one.run, flow)) is not None:
-                return {"draft": waiting.name, "waiting": True}
-            written = draft_across(
-                one.run,
-                one.flow,
-                source,
-                version,
-                shared.vocabulary,
-                shared.field_map,
-                seed,
-            )
-        return {"draft": written.name}
-
-    @app.post("/api/c/{collection}/revise", response_model=None)
-    def post_revise(
+    @app.post("/api/c/{collection}/draft", response_model=None)
+    def post_draft(
         collection: str, payload: dict[str, Any]
     ) -> dict[str, Any] | JSONResponse:
-        """Write a revision for every image named, or, when any is refused, none.
+        """Draft `flow` from every image named, or, when any is refused, none.
 
-        An image whose flow holds a waiting draft is answered with that draft as
-        `waiting`, and nothing is written for it. A refusal answers each image
-        with its own refusal, or null where it could be revised, so the page can
-        offer to deselect the rest.
+        As `draft --flow` does: an image's own flow a revision, another drafted
+        from its approval. A target's waiting draft with edits of its own is
+        answered as `waiting`, and nothing is written for it. A refusal answers
+        each image with its own refusal, or null, so the page can deselect the rest.
         """
         found = folder(collection)
+        name = payload.get("flow")
+        if not isinstance(name, str) or name not in flows:
+            raise Refusal(
+                f"{name!r}: not a flow this surface drafts; the flows it drafts are "
+                f"{', '.join(flows) or 'none'} -- reload the image's large view to "
+                "choose one; nothing was written"
+            )
+        target = offered(name)
         named = _images(payload)
         answers: list[str | None] = [None] * len(named)
         drafts = [{**_image_out(*one), "draft": None, "waiting": None} for one in named]
@@ -939,18 +893,23 @@ def create_app(
                     one = offered(flow)
                     run = library.run_named(found, digest)
                     image = image_of(run, one, version, seed)
+                    # The draft in hand is opened rather than refused; the
+                    # review stage, and the CLI through it, still refuses it.
+                    waiting = waiting_edit(run, name)
                 except Refusal as refused:
                     answers[at] = str(refused)
                     continue
-                # The draft in hand is opened rather than refused; the review
-                # stage, and the CLI through it, still refuses it.
-                waiting = current_draft(run.directory(flow, REVIEW))
                 if waiting is not None:
                     drafts[at]["waiting"] = waiting.name
                 else:
                     located.append((at, image, (run, flow, version, seed)))
             # Each other image the collection holds is answered by the review stage.
-            checked = refuse_revisions([(image, held) for _, image, held in located])
+            checked = refuse_image_drafts(
+                target,
+                [(image, held) for _, image, held in located],
+                shared.vocabulary,
+                shared.field_map,
+            )
             for (at, _, _), answer in zip(located, checked, strict=True):
                 answers[at] = answer
             if any(answer is not None for answer in answers):
@@ -964,8 +923,10 @@ def create_app(
                     },
                     REFUSED,
                 )
-            for at, _, revision in located:
-                drafts[at]["draft"] = revise(*revision).name
+            for at, _, held in located:
+                drafts[at]["draft"] = draft_from_image(
+                    target, held, shared.vocabulary, shared.field_map
+                ).name
         return {"drafts": drafts}
 
     @app.get("/api/c/{collection}/renders")
@@ -1052,9 +1013,8 @@ def create_app(
             "damaged": held.damaged,
             # The newest older version that rendered this seed, or null.
             "compare": library.paired(run, flow, number, seed, suffix),
-            # The offered flows drafted from a sheet alone, this one aside,
-            # assigned or not: the press assigns.
-            "targets": [name for name in sheet_alone() if name != flow],
+            # Every offered flow, this one first, assigned or not: a draft assigns.
+            "targets": sorted(flows, key=lambda name: name != flow),
             # The cell's images, as Renders draws them: oldest version first.
             "images": [
                 {"version": each.version, "seed": rendered_seed}
@@ -1352,7 +1312,7 @@ def _side(
 
 
 def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
-    """Return a revision's images, refusing a list that is not of rendered images.
+    """Return a draft's images, refusing a list that is not of rendered images.
 
     e.g. `{"images": [{"digest": "0d4b…", "flow": "f", "version": 1, "seed": "7"}]}`
          -> `[("0d4b…", "f", 1, 7)]`
@@ -1363,7 +1323,7 @@ def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
         "written"
     )
     if not isinstance(images, list) or not images:
-        raise Refusal(f"the revision names no images; {fix}")
+        raise Refusal(f"the draft names no images; {fix}")
     named = []
     for image in images:
         if not (
@@ -1374,7 +1334,7 @@ def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
             and isinstance(image.get("seed"), str)
             and is_seed(image["seed"])
         ):
-            raise Refusal(f"the revision's image {image!r} is not one; {fix}")
+            raise Refusal(f"the draft's image {image!r} is not one; {fix}")
         named.append(
             (image["digest"], image["flow"], image["version"], int(image["seed"]))
         )
@@ -1382,7 +1342,7 @@ def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
 
 
 def _image_out(digest: str, flow: str, version: int, seed: int) -> dict[str, Any]:
-    """Describe an image of a revision, its seed a decimal string."""
+    """Describe an image a draft is written from, its seed a decimal string."""
     return {"digest": digest, "flow": flow, "version": version, "seed": str(seed)}
 
 

@@ -16,7 +16,7 @@ would be unreachable -- nothing writes a later one.
     sheet     (2) the WD14 tag list in, a sheet of canonical tags out
     review    (3) the machine's sheet copied somewhere a human may edit it
     approve   (3) validate the edited sheet and rename it
-    revise    (3) a rendered image's approval copied into a draft, its seed kept
+    draft     (3) a rendered image's approval copied into a flow's draft, its seed kept
     generate  (4) assemble every prompt locally, then render
     render    (4) one whole render session on a rented GPU, torn down on every exit
     show          print a run's artifacts, what produced each, and its failures
@@ -54,8 +54,7 @@ from typing import TextIO, TypeVar, cast
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.artifacts import DRAFT_FILE, SEED_RANGE, SESSION_ID
-from isekai.foundation.artifacts import read as read_artifact
+from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -69,7 +68,7 @@ from isekai.foundation.run import (
     rendered_at,
 )
 from isekai.interface.compare_view import write_page
-from isekai.interface.drafting import draft_across
+from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.render import run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
@@ -96,10 +95,7 @@ from isekai.pipeline.review import (
     Revision,
     approve,
     discard,
-    drafted_from,
-    refuse_revisions,
     review,
-    revise,
 )
 from isekai.pipeline.review import cancel as cancel_approval
 from isekai.pipeline.sheet import sheet
@@ -119,7 +115,7 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("sheet", "fill a sheet of canonical tags from the WD14 tag list"),
     ("review", "copy a sheet somewhere a human may edit it"),
     ("approve", "validate an edited sheet and mark it approved"),
-    ("revise", "copy the approval a rendered image came from into a draft"),
+    ("draft", "copy the approval a rendered image came from into a flow's draft"),
     ("generate", "assemble the prompts for a run, then render them"),
     ("render", "run a whole render session on a rented GPU, then tear it down"),
     ("show", "print a run's artifacts, versions, producers and failures"),
@@ -219,11 +215,11 @@ def build_parser() -> argparse.ArgumentParser:
     # `compare` takes a collection directory instead: its runs root is the collection's
     # `runs/`, so a second way to name it could only disagree. `render` takes
     # each collection's runs root, and every run under each. `ui` serves the
-    # library, and `revise` takes images, whose paths name their runs.
+    # library, and `draft` takes images, whose paths name their runs.
     for name in (
         name
         for name in made
-        if name not in ("compare", "import", "render", "revise", "ui")
+        if name not in ("compare", "draft", "import", "render", "ui")
     ):
         made[name].add_argument(
             "photos",
@@ -303,30 +299,22 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="delete each flow's waiting draft instead, refusing an approval",
     )
-    made["review"].add_argument(
-        "--from",
-        dest="source",
-        default=None,
-        metavar="FLOW",
-        help="draft each --flow from this flow's approval, its own fields from "
-        "its sheet",
-    )
-    made["review"].add_argument(
-        "--version",
-        dest="approval",
-        type=int,
-        default=None,
-        metavar="N",
-        help="the approval --from drafts from (default its newest)",
-    )
 
-    made["revise"].add_argument(
+    # One target: an image's path names everything a draft needs but that.
+    made["draft"].add_argument(
+        "--flow",
+        dest="target",
+        required=True,
+        metavar="FLOW",
+        help="the flow to draft; an image's own flow is a revision",
+    )
+    made["draft"].add_argument(
         "images",
         nargs="+",
         type=Path,
         help="rendered images, each <run>/<flow>/outputs/<NNN>/<seed>.png",
     )
-    made["revise"].set_defaults(photos=[], runs=RUNS_ROOT)
+    made["draft"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     # No flow, input or runs root: the app serves every collection of the library
     # `ISEKAI_LIBRARY` names, and its page selects one (D1).
@@ -512,8 +500,12 @@ def _staged_line(item: Staged) -> str:
     return f"{item.name}: {item.state}"
 
 
-def _revise(images: Sequence[Path], wired: Wiring) -> int:
-    """Write a revision for every image, or, when any is refused, none."""
+def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
+    """Write `target`'s draft from every image, or, when any is refused, none."""
+    _require_tracked([target], wired)
+    flow = load_flow(target, wired.flows_dir)
+    vocabulary = cache(wired.vocabulary)
+    field_map = cache(lambda: wired.field_map(vocabulary()))
     refused: list[str] = []
     located: list[tuple[Path, Revision]] = []
     for image in images:
@@ -521,7 +513,7 @@ def _revise(images: Sequence[Path], wired: Wiring) -> int:
             located.append((image, rendered_at(image)))
         except Refusal as unrendered:
             refused.append(f"{image}: {unrendered}")
-    answers = refuse_revisions(located)
+    answers = refuse_image_drafts(flow, located, vocabulary, field_map)
     refused += [
         f"{image}: {answer}"
         for (image, _), answer in zip(located, answers, strict=True)
@@ -529,8 +521,8 @@ def _revise(images: Sequence[Path], wired: Wiring) -> int:
     ]
     if not refused:
         for _, one in located:
-            draft = revise(*one)
-            print(f"revise wrote {draft.relative_to(draft.parents[3])}", file=wired.out)
+            draft = draft_from_image(flow, one, vocabulary, field_map)
+            print(f"draft wrote {draft.relative_to(draft.parents[3])}", file=wired.out)
     for message in refused:
         print(f"refused: {message}", file=wired.err)
     return 1 if refused else 0
@@ -618,8 +610,8 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             return 0
         if verb == "render":
             return run_session(args, wired, _dispatch_argv)
-        if verb == "revise":
-            return _revise(args.images, wired)
+        if verb == "draft":
+            return _draft(args.target, args.images, wired)
         flows = _flows_for(args, wired)
         if verb == "approve":
             if args.cancel and args.source is not None:
@@ -627,9 +619,6 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
                     "--cancel takes an approval back and --from copies one; drop "
                     f"`--from {args.source}` or `--cancel` from the command"
                 )
-        if verb == "review":
-            _refuse_review_options(args)
-        if verb in ("approve", "review"):
             _refuse_bad_source(args.source, "from", flows, wired)
         if verb == "generate":
             _refuse_bad_source(args.seeds_from, "seeds-from", flows, wired)
@@ -681,26 +670,6 @@ def _refuse_bad_source(
             f"{source}: a flow is not its own source; drop `--{flag} {source}` or "
             f"`--flow {source}` from the command"
         )
-
-
-def _refuse_review_options(args: argparse.Namespace) -> None:
-    """Refuse `--from` beside `--discard` or `--new-version`, or `--version` alone."""
-    if args.source is None:
-        if args.approval is not None:
-            raise Refusal(
-                f"--version names the approval --from drafts from; add `--from "
-                f"FLOW` or drop `--version {args.approval}` from the command"
-            )
-        return
-    for flag, given in (
-        ("--discard", args.discard),
-        ("--new-version", args.new_version),
-    ):
-        if given:
-            raise Refusal(
-                f"--from drafts from another flow and {flag} does not; drop "
-                f"`--from {args.source}` or `{flag}` from the command"
-            )
 
 
 def _require_tagged(
@@ -936,22 +905,6 @@ def _per_item(
                 if args.discard:
                     gone = discard(run, name)
                     reporter.say(f"{run.id}: review discarded {name}/{gone.name}")
-                    return
-                if args.source is not None:
-                    drafted = draft_across(
-                        run,
-                        flows[name],
-                        args.source,
-                        args.approval,
-                        vocabulary,
-                        field_map,
-                    )
-                    origin = drafted_from(read_artifact(drafted, DRAFT_FILE))
-                    approval = "" if origin is None else f" v{origin['approval']}"
-                    reporter.say(
-                        f"{run.id}: review drafted {name}/{drafted.name} from "
-                        f"{args.source}{approval}"
-                    )
                     return
                 _say(
                     reporter, run, "review", review(run, name, new_version=new_version)

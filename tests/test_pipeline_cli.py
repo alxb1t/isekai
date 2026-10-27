@@ -26,7 +26,7 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary import ollama
-from isekai.foundation.artifacts import DRAFT_FILE, SHEET_FILE, read
+from isekai.foundation.artifacts import APPROVED_FILE, DRAFT_FILE, SHEET_FILE, read
 from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Flow, Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import Run, open_run
@@ -37,10 +37,18 @@ from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
-from tests.conftest import CSV
+from tests.conftest import CSV, snapshot
 from tests.fakes import READER, FakeComfyClient, stub_comfy
 from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, Always, fake_wd14, runs_flag, sheet, write_wd14
+from tests.stages import (
+    FIELD_MAP,
+    Always,
+    fake_wd14,
+    rendered_image,
+    runs_flag,
+    sheet,
+    write_wd14,
+)
 from tests.transports import FakeTransport
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -53,7 +61,7 @@ EXPECTED_VERBS = (
     "sheet",
     "review",
     "approve",
-    "revise",
+    "draft",
     "generate",
     "render",
     "show",
@@ -181,10 +189,10 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
     # `compare` takes a collection directory, `render` its runs, `import` a
-    # collection and its files, `revise` images; `ui` takes nothing.
+    # collection and its files, `draft` a flow and images; `ui` takes nothing.
     own = {
         "import": ["--collection", "collection", "photo.jpg"],
-        "revise": ["outputs/001/7.png"],
+        "draft": ["--flow", "summon-anime-wai", "outputs/001/7.png"],
         "show": [],
         "ui": [],
         "compare": ["collection"],
@@ -719,39 +727,35 @@ def _two_approvals(
     return run
 
 
-@pytest.mark.spec("cli:review-from:each-flow-is-drafted-from-the-newest-approval")
-def test_review_from_drafts_each_flow_from_the_newest_approval_or_the_one_named(
+@pytest.mark.spec("cli:draft:another-flow-is-drafted-from-the-image")
+def test_draft_writes_another_flow_from_the_images_approval_and_seed(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    newest = _two_approvals(tmp_path, "ada", schema, vocabulary)
-    named = _two_approvals(tmp_path, "bo", schema, vocabulary)
-    wired = _wiring(tmp_path)
-    out = io.StringIO()
-    wired.out = out
-    argv = ["review", "--flow", CONJURE, "--from", "summon-anime-wai"]
+    run = _two_approvals(tmp_path, "ada", schema, vocabulary)
+    argv = ["draft", "--flow", CONJURE, str(rendered_image(run, 1, 7))]
 
-    assert dispatch(build_parser().parse_args([*argv, newest.id]), wired) == 0
-    assert (
-        dispatch(build_parser().parse_args([*argv, "--version", "1", named.id]), wired)
-        == 0
-    )
+    assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
 
-    for run, approval in ((newest, 2), (named, 1)):
-        draft = run.directory(CONJURE, "review") / "001.draft.json"
-        producer = read(draft, DRAFT_FILE)["producer"]
-        assert producer["drafted_from"] == {
-            "flow": "summon-anime-wai",
-            "approval": approval,
-        }
-    said = out.getvalue()
-    assert (
-        f"{newest.id}: review drafted {CONJURE}/001.draft.json from summon-anime-wai v2"
-        in said
+    draft = read(run.directory(CONJURE, "review") / "001.draft.json", DRAFT_FILE)
+    first = read(
+        run.directory("summon-anime-wai", "review") / "001.approved.json",
+        APPROVED_FILE,
     )
+    assert draft["fields"]["hair_silhouette"] == first["fields"]["hair_silhouette"]
+    assert draft["producer"]["drafted_from"] == {
+        "flow": "summon-anime-wai",
+        "approval": 1,
+    }
+    assert draft["producer"]["image"] == {
+        "flow": "summon-anime-wai",
+        "version": 1,
+        "seed": 7,
+    }
+    assert draft["renders"] == {"count": 1, "seeds": [7]}
 
 
 @pytest.mark.spec("cli:review-from:a-target-with-no-sheet-is-filled-first")
-def test_review_from_assigns_a_target_with_no_sheet_and_fills_it_from_the_source(
+def test_draft_assigns_a_target_with_no_sheet_and_fills_it_from_the_source(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     photo = tmp_path / "ada.jpg"
@@ -760,7 +764,29 @@ def test_review_from_assigns_a_target_with_no_sheet_and_fills_it_from_the_source
     sheet(run, schema, vocabulary)
     review(run, "summon-anime-wai")
     approve(run, "summon-anime-wai", schema, vocabulary)
-    argv = ["review", "--flow", CONJURE, "--from", "summon-anime-wai", run.id]
+    argv = ["draft", "--flow", CONJURE, str(rendered_image(run, 1, 7))]
+
+    other_photo = tmp_path / "bo.jpg"
+    other_photo.write_bytes(jpeg_bytes(900, 1200))
+    other = open_run(other_photo, tmp_path / "runs")
+    sheet(other, schema, vocabulary)
+    review(other, "summon-anime-wai")
+    approve(other, "summon-anime-wai", schema, vocabulary)
+    batch = [*argv, str(rendered_image(other, 1, 8))]
+    tags = other.directory("summon-anime-wai", "wd14") / "001.json"
+    intact = tags.read_bytes()
+    tags.write_text("{}")
+    before = {one.id: snapshot(one.path) for one in (run, other)}
+    assert dispatch(build_parser().parse_args(batch), _wiring(tmp_path)) == 1
+    assert {one.id: snapshot(one.path) for one in (run, other)} == before
+    tags.write_bytes(intact)
+
+    target = other.directory(CONJURE, "sheets") / "001.json"
+    target.parent.mkdir(parents=True)
+    target.write_text("{}")
+    before = {one.id: snapshot(one.path) for one in (run, other)}
+    assert dispatch(build_parser().parse_args(batch), _wiring(tmp_path)) == 1
+    assert {one.id: snapshot(one.path) for one in (run, other)} == before
 
     assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
 
@@ -771,32 +797,3 @@ def test_review_from_assigns_a_target_with_no_sheet_and_fills_it_from_the_source
         "review",
         "sheets",
     ]
-
-
-@pytest.mark.spec("cli:review-from:a-conflicting-option-is-refused")
-@pytest.mark.parametrize(
-    ("options", "named"),
-    [
-        (["--from", "summon-anime-wai", "--discard"], "--discard"),
-        (["--from", "summon-anime-wai", "--new-version"], "--new-version"),
-        (["--version", "1"], "--version"),
-    ],
-)
-def test_review_from_beside_a_conflicting_option_is_refused_before_any_run_is_read(
-    tmp_path: Path, options: list[str], named: str
-) -> None:
-    wired = _wiring(tmp_path)
-    err = io.StringIO()
-    wired.err = err
-    # A photograph, so a run would be opened if the options were checked late.
-    photo = tmp_path / "ada.jpg"
-    photo.write_bytes(jpeg_bytes(640, 480))
-    parsed = build_parser().parse_args(
-        ["review", "--flow", CONJURE, *options, str(photo)]
-    )
-
-    assert dispatch(parsed, wired) == 1
-
-    assert err.getvalue().startswith("refused: --")
-    assert f"`{named}" in err.getvalue()
-    assert not (tmp_path / "runs").exists()

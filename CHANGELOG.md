@@ -9,6 +9,25 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.58.0] - 2026-10-27 · 0085-draft-from
+
+Gate: local 0m44s · CI 1m34s (ci at d71f5ab) · 0.57.0: local 0m44s · CI 1m16s
+
+### Changed
+
+- A revision replaces an unedited waiting draft at its number, refusing only one with edits of its own, and a
+  draft from an image lists the image's seed, so both writers share one waiting-draft rule (0085 D1, D2).
+- `isekai draft --flow FLOW <image>…` drafts any flow from rendered images — its own a revision, another from
+  the image's approval — all or none; `revise` and `review --from`/`--version` go, as one act (0085 D3, D6, D7).
+- *Draft from this* `⇧D` on the large view and a Renders selection lists every offered flow, the image's own
+  first, and drafts through one route, `/draft`; `⇧E`, `⇧F` and Revise's confirm go (0085 D4, D5, D6, D7).
+
+### Fixed
+
+- The pipeline inventory names `draft` and its stage writers, matching the CLI (0085 D7).
+- Draft batches check every target sheet and every first sheet's source tags and vocabulary before writing,
+  so a later refusal leaves all selected runs unchanged in the CLI and the app (0085 D3, D4).
+
 ## [0.57.0] - 2026-10-27 · 0084-flat-summon
 
 Gate: local 0m44s · CI 1m16s (ci at f35f347) · 0.56.0: local 0m47s · CI 1m16s
