@@ -16,8 +16,9 @@ folder-sense batch is renamed with the code it tests.
 - [ ] 1.2 Rename the folder sense per [D2](design.md#d2) in `isekai/interface/cli.py`, `isekai/interface/render.py`,
   `isekai/interface/compare_view.py`, `isekai/pipeline/importing.py`, `isekai/foundation/artifacts.py`, `evaluation/`
   and `tools/derive_field_map.py`, and in `tests/test_importing.py`, `tests/test_pipeline_cli.py`, `tests/test_compare.py`
-  and `tests/test_render.py`; follow a renamed name into its callers under `isekai/interface/ui/`; keep D1's senses.
-  Verify: `grep -rniwE --include='*.py' 'batch|batches' isekai/interface/cli.py isekai/interface/render.py isekai/interface/compare_view.py isekai/pipeline/importing.py isekai/foundation/artifacts.py evaluation tools/derive_field_map.py | grep -v 'A batch ends in a question' | wc -l` prints `0`, and `grep -c '"--collection"' isekai/interface/cli.py` prints `1`, and `uv run pytest -q --ignore=tests/e2e` exits 0.
+  and `tests/test_render.py`; follow a renamed name into its callers under `isekai/interface/ui/`; keep D1's senses,
+  and say *invocation* for the field map's and the tagger's inputs in `cli.py`.
+  Verify: `grep -rniwE --include='*.py' 'batch|batches' isekai/interface/cli.py isekai/interface/render.py isekai/interface/compare_view.py isekai/pipeline/importing.py isekai/foundation/artifacts.py evaluation tools/derive_field_map.py | grep -v 'A batch ends in a question\|Batch is the general\|whole batch\|prompt in the batch\|the batch first' | wc -l` prints `0`, and `grep -c '"--collection"' isekai/interface/cli.py` prints `1`, and `uv run pytest -q --ignore=tests/e2e` exits 0.
 
 ## 2 — The app
 
