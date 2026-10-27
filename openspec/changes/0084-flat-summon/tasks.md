@@ -19,8 +19,8 @@ The candidates, the operator's collection, the sheets, the render, the verdict, 
   Verify: `python3 -c "import json;print(json.load(open('flows/summon-anime-wai/graph.json'))['8']['inputs']['end_at'])"` prints `1`.
 - [ ] 1.2 Add `flows/summon-flat-a-anime-wai/` per [D1](design.md#d1) and `flows/summon-flat-b-anime-wai/` per
   [D2](design.md#d2); pin both in `PINNED`, add `FLATS` and bind the three `image-generation:flat:` keys in
-  `tests/test_flow.py` per [D3](design.md#d3); offer both in `config/ui.json`.
-  Verify: `grep -c 'image-generation:flat:' tests/test_flow.py` prints `3`, and `grep -c 'summon-flat-[ab]-anime-wai' config/ui.json` prints `2`, and `uv run pytest -q tests/test_flow.py` exits 0.
+  `tests/test_flow.py` per [D3](design.md#d3); `config/ui.json` stays as it is.
+  Verify: `grep -c 'image-generation:flat:' tests/test_flow.py` prints `3`, and `grep -c 'summon-flat' config/ui.json` prints `0`, and `uv run pytest -q tests/test_flow.py` exits 0.
 
 ## 2 — The prototype collection **HUMAN
 
@@ -64,7 +64,7 @@ The candidates, the operator's collection, the sheets, the render, the verdict, 
 - [ ] 6.1 **HALT CHECK** — a candidate won; on `winner: none` the build halts and the operator destroys the branch.
   Verify: `grep -cE '^winner: summon-flat-[ab]-anime-wai$' openspec/changes/0084-flat-summon/verdict.md` prints `1`.
 - [ ] 6.2 Move the winner to `flows/summon-flat-anime-wai/` with its identifier, delete the loser, and name the winner
-  alone in `PINNED`, `FLATS` (`tests/test_flow.py`) and `config/ui.json`, per [D6](design.md#d6).
+  alone in `PINNED` and `FLATS` (`tests/test_flow.py`), per [D6](design.md#d6).
   Verify: `ls flows | grep -c 'summon-flat-[ab]-anime-wai'` prints `0`, and `test -d flows/summon-flat-anime-wai; echo $?` prints `0`, and `uv run pytest -q tests/test_flow.py` exits 0.
 - [ ] 6.3 Add D44 to `docs/decisions.md`, and name `summon-flat-anime-wai` in `AGENTS.md`'s flows and `README.md`'s
   tree, per [D6](design.md#d6).
