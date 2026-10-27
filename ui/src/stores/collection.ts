@@ -30,8 +30,13 @@ export const useCollectionStore = defineStore('collection', () => {
   /* Each grid's focus, by its spot's name, written on every move: Esc from a
      large view, the Back button and a tab switch all come back to it. */
   const focus = ref<{ hub: string | null; renders: string | null }>({ hub: null, renders: null })
-  /* A render session running for this collection, not another's. */
-  const rendering = computed(() => renderRunning.value && activeRender.value?.collection === name.value)
+  /* A render session running for this collection, among those it renders. */
+  const rendering = computed(
+    () =>
+      renderRunning.value &&
+      name.value !== null &&
+      (activeRender.value?.collections.includes(name.value) ?? false),
+  )
   /* A Prepare running for this collection, not another's. */
   const preparing = computed(
     () => jobs.value.prepare?.state === 'running' && jobs.value.prepare.collection === name.value,

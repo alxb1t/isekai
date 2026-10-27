@@ -4,7 +4,7 @@ import KeyHint from './KeyHint.vue'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { useDrawerStore } from '../stores/drawer'
-import { useLiveStore } from '../stores/live'
+import { collectionsOf, useLiveStore } from '../stores/live'
 import { noun } from '../words'
 
 /* The Render bar (design spec J2): the images short of their count, its
@@ -62,7 +62,7 @@ const render = computed(() => jobs.value.render)
         class="btn btn-secondary"
         type="button"
         data-session-open
-        @click="drawer.openOn(render.collection, render.session.id)"
+        @click="drawer.openOn(collectionsOf(render), render.session.id)"
       >
         Session<KeyHint command="drawer" />
       </button>

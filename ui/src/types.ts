@@ -254,6 +254,13 @@ export interface RunningSession {
   started: string
 }
 
+/* A running render: its id, its start, and every collection holding its record. */
+export interface RunningRender {
+  collections: string[]
+  id: string
+  started: string
+}
+
 /* A render's session as the job reports it: its record's id, each step's state by
    name — `volume up`, `pod`, `teardown`, `volume down` — and each image as it lands. */
 export interface RenderSession {

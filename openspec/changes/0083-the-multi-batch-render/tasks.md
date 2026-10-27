@@ -6,7 +6,7 @@ The session, the app, then the drawer, per [design](design.md). Every new test c
 
 - [x] 1 — One session over many collections
 - [x] 2 — The quote and the dialog
-- [ ] 3 — The drawer
+- [x] 3 — The drawer
 
 ## 1 — One session over many collections
 
@@ -38,13 +38,13 @@ The session, the app, then the drawer, per [design](design.md). Every new test c
 
 ## 3 — The drawer
 
-- [ ] 3.1 **HALT CHECK** — the drawer shows one record.
+- [x] 3.1 **HALT CHECK** — the drawer shows one record.
   Verify: `grep -c 'export function stacked' ui/src/sessions.ts` prints `0`.
-- [ ] 3.2 Add `stacked` and its move to `ui/src/sessions.ts`, group records by id in `ui/src/stores/live.ts` and
+- [x] 3.2 Add `stacked` and its move to `ui/src/sessions.ts`, group records by id in `ui/src/stores/live.ts` and
   `ui/src/stores/drawer.ts`, and stack the grids in `ui/src/components/SessionDrawer.vue`, per [D6](design.md#d6); bind
   `ui:sessions:the-grids-stack-by-collection` in `ui/src/sessions.test.ts`, and move the drawer's and the live store's
   tests to `shown`'s collections.
   Verify: `grep -c 'the-grids-stack-by-collection' ui/src/sessions.test.ts` prints `1`, and `uv run python -m tools.test_ui` exits 0, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.3 In `ui/design/spec.md`, J4's dialog and drawer say a row per collection, the ticks, the ceiling, a grid per
+- [x] 3.3 In `ui/design/spec.md`, J4's dialog and drawer say a row per collection, the ticks, the ceiling, a grid per
   collection; in `docs/data-flow.md`, the render line names many collections in one session.
   Verify: `grep -c 'a row per collection' ui/design/spec.md` prints a number of at least `1`, and `grep -c 'many collections' docs/data-flow.md` prints a number of at least `1`, and `uv run pytest -q tests/e2e` exits 0.

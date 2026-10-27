@@ -15,8 +15,9 @@ spec('ui:sessions:the-viewer-closes-for-a-replacement-session', async () => {
   const { drawer, live, viewer } = scope.run(() => {
     const drawer = useDrawerStore()
     const live = useLiveStore()
-    drawer.shown = { collection: 'b', id: 'finished' }
-    drawer.record = {
+    drawer.shown = { id: 'finished', collections: ['b'] }
+    drawer.records = {
+      b: {
       id: 'finished',
       started: '',
       ended: '',
@@ -26,6 +27,7 @@ spec('ui:sessions:the-viewer-closes-for-a-replacement-session', async () => {
       outcome: 'done',
       message: null,
       images: [{ digest: 'a', flow: 'summon-anime-wai', version: 1, seed: '7' }],
+      },
     }
     const { shown, record } = storeToRefs(drawer)
     const layout = computed(() =>
@@ -35,6 +37,7 @@ spec('ui:sessions:the-viewer-closes-for-a-replacement-session', async () => {
       () => shown.value,
       () => layout.value,
       () => layout.value.digests.map((digest) => ({ src: `/photo/${digest}`, name: digest })),
+      () => 'b',
     )
     return { drawer, live, viewer }
   })!
@@ -44,18 +47,18 @@ spec('ui:sessions:the-viewer-closes-for-a-replacement-session', async () => {
 
     // A temporarily absent record also leaves no row to show.
     const finished = drawer.record!
-    drawer.record = null
+    drawer.records = null
     expect(viewer.viewed.value).toEqual([])
-    drawer.record = finished
+    drawer.records = { b: finished }
     expect(viewer.viewed.value).toHaveLength(1)
 
     live.activeSessions = [{ collection: 'b', id: 'terminal', started: '' }]
     await nextTick()
-    expect(drawer.shown).toEqual({ collection: 'b', id: 'terminal' })
+    expect(drawer.shown).toEqual({ id: 'terminal', collections: ['b'] })
     expect(drawer.record).toBeNull()
     expect(viewer.viewed.value).toEqual([])
     expect(viewer.viewing.value).toBeNull()
-    drawer.record = { ...finished, id: 'terminal', outcome: 'running' }
+    drawer.records = { b: { ...finished, id: 'terminal', outcome: 'running' } }
     expect(viewer.viewed.value).toEqual([])
     expect(viewer.viewing.value).toBeNull()
   } finally {

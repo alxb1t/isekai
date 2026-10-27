@@ -4,11 +4,13 @@ import type { Shown } from '../components/ImageViewer.vue'
 import type { Focus } from '../grid'
 import type { Grid } from '../sessions'
 
-/** The drawer's row viewer, following the shown session and its live grid. */
+/** The drawer's row viewer, following the shown session and the live grid of
+    `collection`, the grid it was opened on. */
 export function useSessionViewer(
-  target: () => { collection: string; id: string } | null,
+  target: () => { id: string } | null,
   layout: () => Grid,
   photographs: () => Shown[],
+  collection: () => string,
 ) {
   const viewing = ref<{ row: number; start: number } | null>(null)
   const viewed = computed<Shown[]>(() => (viewing.value ? row(viewing.value.row) : []))
@@ -19,7 +21,7 @@ export function useSessionViewer(
     if (at === layout().flows.length) return photographs()
     return (layout().cells[at] ?? []).flatMap((cell) =>
       cell.images.map((one) => ({
-        src: imageAt({ collection: target()?.collection ?? '', ...one }),
+        src: imageAt({ collection: collection(), ...one }),
         name: `${one.flow} · v${one.version} · seed ${one.seed}`,
       })),
     )

@@ -388,6 +388,15 @@ button.session__tile {
   align-items: start;
 }
 
+.session__stack + .session__stack {
+  margin-top: 16px;
+}
+
+.session__collection {
+  display: block;
+  margin: 0 0 8px;
+}
+
 .session__flow {
   align-self: center;
   font-size: 12px;

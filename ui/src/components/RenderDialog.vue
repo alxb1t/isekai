@@ -7,7 +7,7 @@ import { useHeldFocus } from '../composables/useHeldFocus'
 import { modded, plain } from '../stores/keys'
 import { useCollectionStore } from '../stores/collection'
 import { useDrawerStore } from '../stores/drawer'
-import { clock, useLiveStore } from '../stores/live'
+import { clock, collectionsOf, useLiveStore } from '../stores/live'
 import type { Quote, QuotedCollection } from '../types'
 import KeyHint from './KeyHint.vue'
 
@@ -90,7 +90,7 @@ async function confirm(): Promise<void> {
     live.hold(job)
     store.closeDialog()
     const id = job.session?.id
-    if (id) drawer.openOn(job.collection, id)
+    if (id) drawer.openOn(collectionsOf(job), id)
   } catch (reason) {
     refusal.value = (reason as Error).message
   } finally {

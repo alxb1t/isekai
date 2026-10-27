@@ -73,7 +73,7 @@ const rendered = computed(() => {
   const held = activeRender.value
   if (!held) return null
   const elapsed = lasted(held.started, null, true, now.value) ?? 0
-  return { collection: held.collection, id: held.id, clock: clock(elapsed) }
+  return { collections: held.collections, id: held.id, clock: clock(elapsed) }
 })
 /* The render drawer's key: real Ctrl on every platform, from a field too (D25). */
 const DRAWER: Key = { code: 'Semicolon', ctrl: true }
@@ -135,7 +135,7 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
         type="button"
         :title="`the render drawer ${keys.hint('drawer') ?? ''}`"
         data-rendering
-        @click="drawer.openOn(rendered.collection, rendered.id)"
+        @click="drawer.openOn(rendered.collections, rendered.id)"
       >
         ● render {{ rendered.clock }}
       </button>

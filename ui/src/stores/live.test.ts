@@ -74,7 +74,16 @@ spec('ui:sessions:a-terminal-render-stays-live', async () => {
   await vi.advanceTimersByTimeAsync(0)
   expect(live.jobs).toEqual({ prepare: null, render: null })
   expect(live.renderRunning).toBe(true)
-  expect(live.activeRender).toMatchObject(terminal)
+  expect(live.activeRender).toEqual({
+    collections: ['b'],
+    id: terminal.id,
+    started: terminal.started,
+  })
+  // One render's records in two collections are one render.
+  records = [terminal, { ...terminal, collection: 'c' }]
+  await vi.advanceTimersByTimeAsync(2000)
+  expect(live.activeRender?.collections).toEqual(['b', 'c'])
+  records = [terminal]
   // A failing read says so, and its last answer never masks a billing alert.
   const answer = { ok: false, status: 409, json: async () => ({ refusal: 'x.json: damaged' }) }
   vi.stubGlobal('fetch', vi.fn(async () => answer))

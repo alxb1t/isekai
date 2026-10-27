@@ -79,3 +79,36 @@ export function lastColumns(held: Grid): number[] {
   if (held.digests.length === 0) return []
   return Array<number>(held.flows.length + 1).fill(held.digests.length - 1)
 }
+
+/** The drawer's grids stacked top to bottom: every row's last column, for `moved`,
+    and the stacked row each grid starts at. A grid with no photograph has no row. */
+export interface Stack {
+  last: number[]
+  starts: number[]
+}
+
+/** Return `grids` stacked, so `moved` takes `j` from a grid's last row into the
+    first row of the grid below and `k` back, the column kept.
+
+    e.g. a grid of two photographs over one flow, then one of one -> last [1, 1, 0, 0], starts [0, 2] */
+export function stacked(grids: Grid[]): Stack {
+  const last: number[] = []
+  const starts: number[] = []
+  for (const held of grids) {
+    starts.push(last.length)
+    last.push(...lastColumns(held))
+  }
+  return { last, starts }
+}
+
+/** Return the grid a stacked row falls in, and the row within it.
+
+    e.g. starts [0, 2], row 3 -> { grid: 1, row: 1 } */
+export function located(stack: Stack, row: number): { grid: number; row: number } {
+  const ends = [...stack.starts.slice(1), stack.last.length]
+  const grid = Math.max(
+    0,
+    stack.starts.findIndex((start, index) => start <= row && row < ends[index]),
+  )
+  return { grid, row: row - (stack.starts[grid] ?? 0) }
+}
