@@ -8,7 +8,7 @@ import type { MarkKind } from '../types'
    refusal surface. `ring` is the kind a re-opened input takes: approved and
    open again is neither of those states alone, so it is neither disc nor
    outline. The names here are shapes, never statuses -- translating one to the
-   other is `BatchRail.mark()`'s job and stays there. */
+   other is `CollectionRail.mark()`'s job and stays there. */
 withDefaults(defineProps<{ kind: MarkKind; size?: number; rail?: boolean }>(), {
   size: 7,
   rail: false,

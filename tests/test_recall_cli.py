@@ -66,9 +66,11 @@ def _render(run: Run, flow: str, group: int, *seeds: int) -> None:
         Image.new("RGB", (8, 8)).save(directory / f"{seed}.png")
 
 
-def _batch(root: Path, *, approve_second_group: bool = True) -> tuple[Path, Run, Run]:
+def _collection(
+    root: Path, *, approve_second_group: bool = True
+) -> tuple[Path, Run, Run]:
     """Write two runs: `summon` rendered under two approvals, `control` under one."""
-    runs = root / "batch" / "runs"
+    runs = root / "collection" / "runs"
     for at, name in enumerate(("a.png", "b.png")):
         (root / "photos").mkdir(parents=True, exist_ok=True)
         Image.new("RGB", (8, 8), (at * 90, 0, 0)).save(root / "photos" / name)
@@ -101,7 +103,7 @@ def _record(runs: Path) -> Record:
 def test_every_render_is_a_row_counted_against_its_groups_approval(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runs, _, _ = _batch(tmp_path)
+    runs, _, _ = _collection(tmp_path)
 
     assert _run(monkeypatch, _Tagger(), runs) == 0
 
@@ -130,7 +132,7 @@ def test_a_render_that_does_not_decode_is_its_own_row(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    runs, _, _ = _batch(tmp_path)
+    runs, _, _ = _collection(tmp_path)
     tagger = _Tagger(undecodable=frozenset({"22.png"}))
 
     assert _run(monkeypatch, tagger, runs) == 0
@@ -146,7 +148,7 @@ def test_a_render_whose_approval_is_absent_is_its_own_row(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    runs, _, _ = _batch(tmp_path, approve_second_group=False)
+    runs, _, _ = _collection(tmp_path, approve_second_group=False)
     tagger = _Tagger()
 
     assert _run(monkeypatch, tagger, runs) == 0
@@ -163,7 +165,7 @@ def test_a_render_whose_approval_holds_a_field_that_is_not_tags_is_its_own_row(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    runs, a, _ = _batch(tmp_path)
+    runs, a, _ = _collection(tmp_path)
     damaged = a.directory(SUMMON, REVIEW, artifact_name(2, APPROVED))
     damaged.write_text(
         json.dumps(
@@ -187,7 +189,7 @@ def test_named_runs_narrow_the_reading_and_an_unknown_name_refuses_first(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    runs, a, b = _batch(tmp_path)
+    runs, a, b = _collection(tmp_path)
     tagger = _Tagger()
 
     assert _run(monkeypatch, tagger, runs, b.id) == 0
@@ -211,7 +213,7 @@ def test_a_row_names_its_run_by_its_digest_prefix_and_never_its_filename(
     named = tmp_path / "photos" / "ada-lovelace.png"
     named.parent.mkdir()
     Image.new("RGB", (8, 8)).save(named)
-    runs = tmp_path / "batch" / "runs"
+    runs = tmp_path / "collection" / "runs"
     run = open_run(named, runs)
     _approve(run, SUMMON, 1, {"hair_colour": ["brown hair"]})
     _render(run, SUMMON, 1, 11)
@@ -233,7 +235,7 @@ def test_a_renamed_run_is_named_by_its_frames_digest_and_never_its_new_name(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    runs, a, b = _batch(tmp_path)
+    runs, a, b = _collection(tmp_path)
     prefix = a.photo_record["sha256"][:ID_DIGEST_CHARS]
     a.path.rename(runs / "ada-lovelace-old")
 
@@ -254,7 +256,7 @@ def test_every_render_of_a_run_whose_frame_does_not_read_is_an_unreadable_row(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    runs, a, b = _batch(tmp_path)
+    runs, a, b = _collection(tmp_path)
     b.frame_path.write_text("{not json")
     b.path.rename(runs / "ada-lovelace-old")
     tagger = _Tagger()
@@ -279,7 +281,7 @@ def test_every_render_of_a_run_whose_frame_does_not_read_is_an_unreadable_row(
 def test_the_record_names_the_taggers_files_by_digest_and_its_floor(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runs, _, _ = _batch(tmp_path)
+    runs, _, _ = _collection(tmp_path)
 
     assert _run(monkeypatch, _Tagger(), runs) == 0
 
@@ -295,7 +297,7 @@ def test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refuse
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     repository = tmp_path / "repository"
-    runs, _, _ = _batch(repository)
+    runs, _, _ = _collection(repository)
     monkeypatch.setattr(wiring, "REPOSITORY", repository)
     monkeypatch.setattr(wiring, "DATA_ROOT", repository / ".data")
     tagger = _Tagger()
@@ -334,7 +336,7 @@ def test_a_tagger_file_that_does_not_match_its_pin_refuses_naming_the_fetch(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    runs, _, _ = _batch(tmp_path)
+    runs, _, _ = _collection(tmp_path)
 
     def swapped(models: Path) -> wd14.LocalTagger:
         raise DigestMismatch(f"{wd14.MODEL_DEST}: expected {'a' * 64}, got {'f' * 64}")

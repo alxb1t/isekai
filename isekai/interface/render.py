@@ -8,7 +8,7 @@
 With no request, every approval short of its count renders what it lacks. A count
 draws that many seeds; a source flow renders its latest seeds again. A source
 rendered by count in the same line goes first, in the same session. Output is shown
-and appended to the batch's log, `<runs>/../log.txt` (D36); with `--progress json`
+and appended to the collection's log, `<runs>/../log.txt` (D36); with `--progress json`
 the prose goes to stderr alone, which the caller keeps, as the app's job does. Once
 the pod is asked for, the session's record is kept at `<runs>/../sessions/<id>.json`.
 """
@@ -57,7 +57,7 @@ from isekai.foundation.run import (
     approved_versions,
     latest_artifact,
 )
-from isekai.interface.compare_view import BATCH_PHOTOS
+from isekai.interface.compare_view import COLLECTION_PHOTOS
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.generate import (
     duration,
@@ -145,7 +145,7 @@ def in_session_sources(requests: Sequence[Request]) -> list[bool]:
 
 
 def run_ids(runs: Path) -> list[str]:
-    """Return every run under `runs`, by id; a batch not yet assigned has none."""
+    """Return every run under `runs`, by id; a collection not yet assigned has none."""
     if not runs.is_dir():
         return []
     return sorted(
@@ -154,7 +154,7 @@ def run_ids(runs: Path) -> list[str]:
 
 
 class _Tee(io.TextIOBase):
-    """Write to the terminal's stream and the batch's log alike."""
+    """Write to the terminal's stream and the collection's log alike."""
 
     def __init__(self, *streams: TextIO) -> None:
         """Write to each of `streams`."""
@@ -282,8 +282,9 @@ class Record:
                 raise
             raise Refusal(
                 f"{self._folder} cannot hold a session record: its filesystem has "
-                f"no hard links or file locks ({failure.strerror}); keep the batch "
-                "on a disk that has both, such as the default .data/, and render again"
+                f"no hard links or file locks ({failure.strerror}); keep the "
+                "collection on a disk with both, such as the default .data/, and "
+                "render again"
             ) from None
         except BaseException:
             self.close()
@@ -401,14 +402,14 @@ def run_session(
     """Run one render session and return its exit status.
 
     0 every flow rendered · 1 a flow failed or a refusal · 3 the create's answer
-    was lost · 128+n a signal ended it. Every refusal reaches the batch's log too,
+    was lost · 128+n a signal ended it. Every refusal reaches the collection's log too,
     through the caller under `--progress json`.
     """
     seams = wired.session if seams is None else seams
     runs = Path(args.runs)
     if not runs.is_dir():
         print(
-            f"refused: {runs} is not a directory; give the batch's runs/",
+            f"refused: {runs} is not a directory; give the collection's runs/",
             file=wired.err,
         )
         return 1
@@ -578,7 +579,7 @@ def _limit(asked: int | None, ceiling_s: int) -> None:
 
 @dataclass(frozen=True)
 class Short:
-    """What a batch lacks of its approvals, what is left out, and what is damaged."""
+    """What a collection lacks of its approvals, leaves out, and has damaged."""
 
     lines: list[Line]
     # (run, flow, images), e.g. ("0d4b…_ada", "summon-anime-wai", 2)
@@ -656,7 +657,7 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
 
 @dataclass(frozen=True)
 class Quote:
-    """What a render of a batch would do, how long it may take, and its price."""
+    """What a render of a collection would do, how long it may take, and its price."""
 
     short: Short
     estimate: Estimate
@@ -721,9 +722,9 @@ def _session(
     ids = run_ids(runs)
     flows = [arg for request in requests for arg in ("--flow", request.flow)]
     if not ids and requests:
-        photos = shlex.quote(str(runs.parent / BATCH_PHOTOS))
+        photos = shlex.quote(str(runs.parent / COLLECTION_PHOTOS))
         raise Refusal(
-            f"{runs} holds no run; open them from the batch's photographs with: "
+            f"{runs} holds no run; open them from the collection's photographs with: "
             f"uv run python -m isekai tag {' '.join(flows)} --runs "
             f"{shlex.quote(str(runs))} {photos}/*"
         )
@@ -876,7 +877,7 @@ def _rendered(
                 failed |= generate(argv, live) != 0
         steps.step("teardown", "done")
         if failed:
-            record.end("failed", "a flow failed; the batch's log names it")
+            record.end("failed", "a flow failed; the collection's log names it")
         else:
             record.end("done")
         return int(failed)

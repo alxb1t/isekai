@@ -16,7 +16,7 @@ from tests.e2e.conftest import FLOW, Served
 
 
 def _open(page: Page, served: Served, run: Run) -> None:
-    """Load `run`'s review in the batch."""
+    """Load `run`'s review in the collection."""
     page.goto(served.review(run))
 
 

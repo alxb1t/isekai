@@ -22,7 +22,7 @@ is what lets the operator's pruning pass see the junk rather than inherit it.
    every tag that *is* that suffix or *ends in* `" " + suffix`. Not substring:
    substring gives `hair` 265 rather than 103.
 2. **The seven seed lists** — `clothes`, `pose` and `body_shape` hold 102 of the
-   200 tags the operator approved over the batch `APPROVED` names and not one of
+   200 tags the operator approved over the collection `APPROVED` names and not one of
    them declares a suffix, so the criteria that carry the weight are exactly the
    ones the suffix walk cannot reach. A seed is a **stem**, matched on word
    boundaries against its own inflections.
@@ -150,7 +150,7 @@ SEEDS: Mapping[str, tuple[str, tuple[str, ...]]] = {
 # it, so no identity criterion can hold it -- and the router drops it either way.
 # What the entry buys is the record: the absence is a decision somebody took
 # rather than a gap nobody had looked at. `realistic` 19,111 is the same kind of
-# tag and appears on all eight photographs of the batch `APPROVED` names; it is
+# tag and appears on all eight photographs of the collection `APPROVED` names; it is
 # deliberately not here yet, because the operator named one.
 EXCLUDED: tuple[str, ...] = ("photorealistic",)
 
@@ -202,10 +202,10 @@ BRIEFING: Mapping[str, tuple[str, ...]] = {
 # 41 examples, and `filings()` below is kept as an authoring aid that prints the
 # drift rather than as an input.
 #
-# 113 tags over the ten approved sheets of the batch `APPROVED` names, as
+# 113 tags over the ten approved sheets of the collection `APPROVED` names, as
 # `tag -> criterion -> how often`. The keys decide: for each tag filed under more
 # than one criterion, `PRECEDENCE` picks the same winner the counts do.
-# Refresh it with `--refresh` after a batch, never by hand.
+# Refresh it with `--refresh` after a collection is approved, never by hand.
 FILED: Mapping[str, Mapping[str, int]] = {
     "1girl": {"count": 10},
     "arm support": {"pose": 1},
@@ -442,10 +442,10 @@ def filings(root: Path = Path(".")) -> dict[str, Counter[str]]:
     """Return, per tag, how often the operator filed it under each criterion.
 
     **Nothing in the derivation calls this.** It is what `--refresh` diffs
-    `FILED` against after a batch, and `FILED` is what the table is built from --
-    the runs are gitignored, so a derivation that read them here would be
-    reproducible on exactly one machine. An absent directory returns nothing,
-    which `--refresh` reports as an absent aid rather than as drift.
+    `FILED` against after a collection is approved, and `FILED` is what the table
+    is built from -- the runs are gitignored, so a derivation that read them here
+    would be reproducible on exactly one machine. An absent directory returns
+    nothing, which `--refresh` reports as an absent aid rather than as drift.
     """
     filed: dict[str, Counter[str]] = defaultdict(Counter)
     for path in sorted(root.glob(APPROVED)):
@@ -570,13 +570,15 @@ def report(vocabulary: Vocabulary, groups: Mapping[str, set[str]]) -> None:
         print(f"\n  {' + '.join(claimed)} -- {len(tags)}, {len(unfiled)} unfiled")
         print("    " + ", ".join(unfiled[:12]))
 
-    print(f"\n== {len(filed)} tags the operator has filed, over the v0.20 batch ==")
+    print(
+        f"\n== {len(filed)} tags the operator has filed, over the v0.20 collection =="
+    )
 
 
 def refresh(root: Path = Path(".")) -> None:
     """Print how `FILED` differs from the approved sheets that are on disk.
 
-    The one place the gitignored runs are read, and it writes nothing. A batch
+    The one place the gitignored runs are read, and it writes nothing. A collection
     the operator has just approved is transcribed into `FILED` by hand from this
     output, so the crossing from `.data/` into a tracked file is a deliberate
     edit rather than a side effect of re-running the deriver.

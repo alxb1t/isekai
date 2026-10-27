@@ -271,11 +271,11 @@ only reviews sheets composes no seam rather than fabricating doubles.
 
 ### Requirement: A comparison page shows every run's photograph beside its renders
 
-The system SHALL offer a verb that, given a batch directory holding a `runs/` directory, writes one HTML page into
-that batch directory showing, for each run, the run's photograph and every render of each flow's latest approval,
+The system SHALL offer a verb that, given a collection directory holding a `runs/` directory, writes one HTML page into
+that collection directory showing, for each run, the run's photograph and every render of each flow's latest approval,
 each render labelled by its flow and seed and carrying the positive prompt it came from, with each flow's caption
 and a run without a render marked. The page SHALL link every image by a path relative to itself and SHALL embed
-none. The verb SHALL print only the page's path, and SHALL refuse, naming the directory, a batch directory that
+none. The verb SHALL print only the page's path, and SHALL refuse, naming the directory, a collection directory that
 holds no `runs/`.
 
 A batch ends in a question a person answers by eye: which flow kept whom. The page answers it without an agent
@@ -285,14 +285,14 @@ path lets an agent hand the page over unread.
 #### Scenario: the page links each photograph to its renders
 - **Key:** `cli:compare:the-page-links-photographs-to-renders`
 - **Layers:** unit
-- **WHEN** the verb is run on a batch whose runs hold renders from more than one flow
+- **WHEN** the verb is run on a collection whose runs hold renders from more than one flow
 - **THEN** the page holds one entry per run, with its photograph and each flow's renders labelled by flow and seed
 - **AND** every image is linked by a relative path and none is embedded
 
 #### Scenario: a run with no render is marked
 - **Key:** `cli:compare:a-run-without-a-render-is-marked`
 - **Layers:** unit
-- **WHEN** a run in the batch has no render for a flow
+- **WHEN** a run in the collection has no render for a flow
 - **THEN** its entry says so for that flow
 - **AND** the page is still written
 
@@ -319,7 +319,7 @@ flow. It SHALL refuse a flow that is not tracked, at the point of selection, nam
 The flow supplies what a stage reads — its briefing, its schema, its graph and its dials — so a stage cannot act
 without one, and every tracked flow is an unbounded default that spends at the last verb. The selection repeats
 because flows batch: every flow named in one rendering invocation shares one boot. The serving verb is not a stage
-verb: it serves the flows its configuration offers, of every batch, and its page selects one.
+verb: it serves the flows its configuration offers, of every collection, and its page selects one.
 
 #### Scenario: a stage verb without a flow is refused
 - **Key:** `cli:flow-selection:a-stage-verb-requires-a-flow`
@@ -546,8 +546,8 @@ The system SHALL take `--cancel` on `isekai approve`, cancelling each named run'
 the review stage, SHALL answer each run on its own so one refusal stops no other, and SHALL refuse `--cancel` beside
 `--from`.
 
-A cancel is the review stage's act, so the verb composes it and decides nothing; a batch is many runs, and one refused
-run must not cost the rest.
+A cancel is the review stage's act, so the verb composes it and decides nothing; a collection is many runs, and one
+refused run must not cost the rest.
 
 #### Scenario: each run is cancelled on its own
 - **Key:** `cli:approve-cancel:each-run-on-its-own`
@@ -561,16 +561,48 @@ run must not cost the rest.
 - **WHEN** `approve` is given `--cancel` and `--from`
 - **THEN** it is refused before any run is read
 
-### Requirement: A render session writes its record into the batch, from its start to its end
+### Requirement: The review verb drafts from another flow's approval with `--from`
 
-The system SHALL, once a render session asks for a pod, write its record to the batch's `sessions/` folder beside the
-log, named by the session's id — the id `--session` gives, else the start in UTC as `20261024T091200Z` — and SHALL
-replace the record whole as each image lands and as the session ends. The record SHALL hold the id, the start, the
-end, the limit, what each flow was asked to render and what it plans for each photograph, the pod's and the
-teardown's steps, each image as its run digest, flow, version and seed in order, and the outcome — running, done,
-stopped or failed, with its message — and no price. A session refused before anything is rented SHALL write no
-record. An existing id SHALL be refused without replacing its record or asking for a pod, including when concurrent
-starts choose the same id.
+The system SHALL take `--from FLOW` on `isekai review`, drafting each named flow of each named run from that flow's
+approval through the review stage, first assigning a named flow that holds no sheet and filling its sheet from the
+source's tag list, of the version `--version N` names, else the source's newest approval. It SHALL
+answer each run on its own, and SHALL refuse, before any run is read, `--from` beside `--discard` or
+`--new-version`, `--version` without `--from`, and a source that is a named flow or no tracked flow.
+
+The draft is the review stage's act, so the verb composes it and decides nothing. The newest approval is the one the
+operator just finished, so it needs no number. A target with no sheet needs no Prepare: the source's tags are
+the target's.
+
+#### Scenario: each flow is drafted from the source's newest approval
+- **Key:** `cli:review-from:each-flow-is-drafted-from-the-newest-approval`
+- **Layers:** unit
+- **WHEN** `review --from` names a source holding two approvals and no `--version`
+- **THEN** each named flow's draft is drafted from the source's newest approval
+- **AND** with `--version 1` it is drafted from approval one
+
+#### Scenario: a target with no sheet is assigned and filled first
+- **Key:** `cli:review-from:a-target-with-no-sheet-is-filled-first`
+- **Layers:** unit
+- **WHEN** `review --from` names a target the run is not assigned to
+- **THEN** the target is assigned, its sheet filled from the source's tag list, and its draft written
+- **AND** no caption or tag list is written for the target
+
+#### Scenario: a conflicting option is refused before any run is read
+- **Key:** `cli:review-from:a-conflicting-option-is-refused`
+- **Layers:** unit
+- **WHEN** `review --from` is given beside `--discard`, or `--version` without `--from`
+- **THEN** it is refused naming the options
+- **AND** no run is read
+
+### Requirement: A render session writes its record into the collection, from its start to its end
+
+The system SHALL, once a render session asks for a pod, write its record to the collection's `sessions/` folder beside
+the log, named by the session's id — the id `--session` gives, else the start in UTC as `20261024T091200Z` — and SHALL
+replace the record whole as each image lands and as the session ends. The record SHALL hold the id, the start, the end,
+the limit, what each flow was asked to render and what it plans for each photograph, the pod's and the teardown's steps,
+each image as its run digest, flow, version and seed in order, and the outcome — running, done, stopped or failed, with
+its message — and no price. A session refused before anything is rented SHALL write no record. An existing id SHALL be
+refused without replacing its record or asking for a pod, including when concurrent starts choose the same id.
 
 The state of a session lives on disk, so a page, a second tab, a restarted surface and a render started in the
 terminal all read the same truth; no price follows the quote.
@@ -623,35 +655,3 @@ free checks ─▶ claim id + lifetime lock ─▶ running record ─▶ images 
 - **WHEN** a session is asked for two images of one run and one of another
 - **THEN** its record plans each run and flow with its number of images
 
-### Requirement: The review verb drafts from another flow's approval with `--from`
-
-The system SHALL take `--from FLOW` on `isekai review`, drafting each named flow of each named run from that flow's
-approval through the review stage, first assigning a named flow that holds no sheet and filling its sheet from the
-source's tag list, of the version `--version N` names, else the source's newest approval. It SHALL
-answer each run on its own, and SHALL refuse, before any run is read, `--from` beside `--discard` or
-`--new-version`, `--version` without `--from`, and a source that is a named flow or no tracked flow.
-
-The draft is the review stage's act, so the verb composes it and decides nothing. The newest approval is the one the
-operator just finished, so it needs no number. A target with no sheet needs no Prepare: the source's tags are
-the target's.
-
-#### Scenario: each flow is drafted from the source's newest approval
-- **Key:** `cli:review-from:each-flow-is-drafted-from-the-newest-approval`
-- **Layers:** unit
-- **WHEN** `review --from` names a source holding two approvals and no `--version`
-- **THEN** each named flow's draft is drafted from the source's newest approval
-- **AND** with `--version 1` it is drafted from approval one
-
-#### Scenario: a target with no sheet is assigned and filled first
-- **Key:** `cli:review-from:a-target-with-no-sheet-is-filled-first`
-- **Layers:** unit
-- **WHEN** `review --from` names a target the run is not assigned to
-- **THEN** the target is assigned, its sheet filled from the source's tag list, and its draft written
-- **AND** no caption or tag list is written for the target
-
-#### Scenario: a conflicting option is refused before any run is read
-- **Key:** `cli:review-from:a-conflicting-option-is-refused`
-- **Layers:** unit
-- **WHEN** `review --from` is given beside `--discard`, or `--version` without `--from`
-- **THEN** it is refused naming the options
-- **AND** no run is read

@@ -5,7 +5,7 @@ import { quoteRender, startRender } from '../api'
 import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import { modded, plain } from '../stores/keys'
-import { useBatchStore } from '../stores/batch'
+import { useCollectionStore } from '../stores/collection'
 import { useDrawerStore } from '../stores/drawer'
 import { clock, useLiveStore } from '../stores/live'
 import type { Quote } from '../types'
@@ -17,10 +17,10 @@ import KeyHint from './KeyHint.vue'
    rents. It belongs to its page: confirming closes it and opens the render drawer over it.
    A modal dialog: the focus waits on *Keep the volume open*, where `↵` does
    nothing, so only ⌘↵ spends. */
-const props = defineProps<{ batch: string }>()
+const props = defineProps<{ collection: string }>()
 const emit = defineEmits<{ close: [] }>()
 const live = useLiveStore()
-const store = useBatchStore()
+const store = useCollectionStore()
 const drawer = useDrawerStore()
 const quote = ref<Quote | null>(null)
 const refusal = ref<string | null>(null)
@@ -38,7 +38,7 @@ async function confirm(): Promise<void> {
   starting.value = true
   try {
     const { job } = await startRender(
-      props.batch,
+      props.collection,
       keepOpen.value,
       quote.value.estimate.limit_s,
       total.value,
@@ -47,7 +47,7 @@ async function confirm(): Promise<void> {
     live.hold(job)
     store.closeDialog()
     const id = job.session?.id
-    if (id) drawer.openOn(props.batch, id)
+    if (id) drawer.openOn(props.collection, id)
   } catch (reason) {
     refusal.value = (reason as Error).message
   } finally {
@@ -66,7 +66,7 @@ useHeldFocus(dialog, () => emit('close'))
 onMounted(async () => {
   dialog.value?.showModal()
   try {
-    quote.value = await quoteRender(props.batch)
+    quote.value = await quoteRender(props.collection)
   } catch (reason) {
     refusal.value = (reason as Error).message
     return
@@ -84,7 +84,7 @@ onMounted(async () => {
     @cancel.prevent
   >
     <header class="render-dialog__head">
-      <span class="section-label">Render · {{ batch }} · on a rented GPU</span>
+      <span class="section-label">Render · {{ collection }} · on a rented GPU</span>
       <h2 class="render-dialog__title">
         Render {{ total }} image{{ total === 1 ? '' : 's' }}
       </h2>

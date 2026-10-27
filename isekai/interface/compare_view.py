@@ -4,7 +4,7 @@ A batch ends in a question a person answers by eye -- which flow kept whom -- an
 this writes the page they answer it on, so an agent can hand it over without
 reading a run. Like `run_view`, it reads and decides nothing.
 
-    <batch>/runs/<id>/...  ->  <batch>/compare.html
+    <collection>/runs/<id>/...  ->  <collection>/compare.html
 
 Images are linked relative to the page and none is embedded: the page stays
 small, and every image stays where the run put it. Stdlib only.
@@ -34,10 +34,10 @@ from isekai.foundation.run import (
 from isekai.pipeline.generate import rendered_seeds
 
 PAGE_NAME = "compare.html"
-BATCH_RUNS = "runs"
-# The folder of a batch's photographs, as the refusal below names it: a batch
-# holds them in `sources/` (D40).
-BATCH_PHOTOS = "sources"
+COLLECTION_RUNS = "runs"
+# The folder of a collection's photographs, as the refusal below names it: a
+# collection holds them in `sources/` (D40).
+COLLECTION_PHOTOS = "sources"
 
 _STYLE = """
 :root { color-scheme: dark; }
@@ -97,21 +97,22 @@ document.addEventListener("keydown", (event) => {
 </script>"""
 
 
-def _link(path: Path, batch: Path) -> str:
-    """Return `path` as an attribute-safe URL relative to the page in `batch`."""
-    return html.escape(quote(path.relative_to(batch).as_posix()), quote=True)
+def _link(path: Path, collection: Path) -> str:
+    """Return `path` as an attribute-safe URL relative to the page in `collection`."""
+    return html.escape(quote(path.relative_to(collection).as_posix()), quote=True)
 
 
-def _runs(batch: Path, flows_dir: Path) -> list[Run]:
-    """Return every run under the batch's `runs/`, by id, or refuse naming the batch."""
-    root = batch / BATCH_RUNS
+def _runs(collection: Path, flows_dir: Path) -> list[Run]:
+    """Return every run under the collection's `runs/`, by id, or refuse naming it."""
+    root = collection / COLLECTION_RUNS
     if not root.is_dir():
         flows = " ".join(f"--flow {flow}" for flow in tracked_flows(flows_dir))
         raise Refusal(
-            f"{batch} holds no {BATCH_RUNS}/ directory, so it is not a batch; give "
-            f"the path of the batch directory that holds {BATCH_RUNS}/, or open its "
-            f"runs with `python -m isekai tag {flows} --runs {shlex.quote(str(root))} "
-            f"{shlex.quote(str(batch / BATCH_PHOTOS))}/*`"
+            f"{collection} holds no {COLLECTION_RUNS}/ directory, so it is not a "
+            f"collection; give the path of the collection directory that holds "
+            f"{COLLECTION_RUNS}/, or open its runs with "
+            f"`python -m isekai tag {flows} --runs {shlex.quote(str(root))} "
+            f"{shlex.quote(str(collection / COLLECTION_PHOTOS))}/*`"
         )
     return [
         Run(path.name, path)
@@ -129,7 +130,7 @@ def _prompt(run: Run, flow: str, version: int) -> str:
     return f'<p class="prompt"><b>positive</b> {html.escape(positive)}</p>'
 
 
-def _renders(run: Run, name: str, flow: Flow | None, batch: Path) -> list[str]:
+def _renders(run: Run, name: str, flow: Flow | None, collection: Path) -> list[str]:
     """Return a figure per render of the flow's latest approval, or say why none.
 
     `flow` is None for a directory this build carries no flow for -- work left by
@@ -148,7 +149,7 @@ def _renders(run: Run, name: str, flow: Flow | None, batch: Path) -> list[str]:
             return [
                 f"<figure><figcaption>{html.escape(name)} &middot; seed {seed}"
                 f"</figcaption><img loading=lazy "
-                f'src="{_link(directory / f"{seed}{flow.output_suffix}", batch)}" '
+                f'src="{_link(directory / f"{seed}{flow.output_suffix}", collection)}" '
                 f'alt="">{prompt}</figure>'
                 for seed in seeds
             ]
@@ -158,7 +159,7 @@ def _renders(run: Run, name: str, flow: Flow | None, batch: Path) -> list[str]:
     ]
 
 
-def _entry(run: Run, flows: Mapping[str, Flow | None], batch: Path) -> str:
+def _entry(run: Run, flows: Mapping[str, Flow | None], collection: Path) -> str:
     """Return one run's section: the photograph and each flow's renders, then captions.
 
     Each render carries the positive prompt it came from; the captions span the
@@ -166,7 +167,7 @@ def _entry(run: Run, flows: Mapping[str, Flow | None], batch: Path) -> str:
     """
     figures = [
         f"<figure><figcaption>photograph</figcaption>"
-        f'<img loading=lazy src="{_link(run.photo, batch)}" alt=""></figure>'
+        f'<img loading=lazy src="{_link(run.photo, collection)}" alt=""></figure>'
     ]
     captions = []
     for name, flow in flows.items():
@@ -177,7 +178,7 @@ def _entry(run: Run, flows: Mapping[str, Flow | None], batch: Path) -> str:
                 f'<p class="caption"><b>{html.escape(name)}</b> '
                 f"{html.escape(prose)}</p>"
             )
-        figures.extend(_renders(run, name, flow, batch))
+        figures.extend(_renders(run, name, flow, collection))
     return (
         f'<section><div class="id">{html.escape(run.id)}</div>'
         f'<div class="grid">{"".join(figures)}</div>'
@@ -193,23 +194,23 @@ def _column(item: tuple[str, Flow | None]) -> tuple[int, str]:
     return int("photo" not in flow.inputs), name
 
 
-def page(batch: Path, flows_dir: Path = FLOWS_DIR) -> str:
-    """Return the comparison page for `batch`, or refuse a directory with no `runs/`.
+def page(collection: Path, flows_dir: Path = FLOWS_DIR) -> str:
+    """Return the comparison page for `collection`, or refuse one with no `runs/`.
 
-    Every run shows every flow any run in the batch holds, so each row has the same
-    columns and a flow a run never reached reads *no render yet*. A flow that reads
+    Every run shows every flow any run in the collection holds, so each row has the
+    same columns and a flow a run never reached reads *no render yet*. A flow that reads
     the photograph sits beside it, then the rest, then any directory this build
     carries no flow for, marked so rather than failing the page: each group by name.
     """
-    runs = _runs(batch, flows_dir)
+    runs = _runs(collection, flows_dir)
     tracked = set(tracked_flows(flows_dir))
     loaded = {
         name: load_flow(name, flows_dir) if name in tracked else None
         for name in {name for run in runs for name in run.flows}
     }
     flows = dict(sorted(loaded.items(), key=_column))
-    title = f"isekai &mdash; {html.escape(batch.name)}"
-    entries = "".join(_entry(run, flows, batch) for run in runs)
+    title = f"isekai &mdash; {html.escape(collection.name)}"
+    entries = "".join(_entry(run, flows, collection) for run in runs)
     return (
         "<!doctype html><html lang=en><meta charset=utf-8>"
         f"<title>{title}</title><style>{_STYLE}</style>"
@@ -217,13 +218,13 @@ def page(batch: Path, flows_dir: Path = FLOWS_DIR) -> str:
     )
 
 
-def write_page(batch: Path, flows_dir: Path = FLOWS_DIR) -> Path:
-    """Write the comparison page into `batch` and return its path.
+def write_page(collection: Path, flows_dir: Path = FLOWS_DIR) -> Path:
+    """Write the comparison page into `collection` and return its path.
 
     The page is built whole before anything is written, so a refusal leaves the
-    batch as it was.
+    collection as it was.
     """
-    body = page(batch, flows_dir)
-    path = batch / PAGE_NAME
+    body = page(collection, flows_dir)
+    path = collection / PAGE_NAME
     write_atomically(path, body.encode())
     return path

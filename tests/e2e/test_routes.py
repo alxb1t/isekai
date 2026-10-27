@@ -11,11 +11,11 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     page: Page, served: Served
 ) -> None:
     page.goto(served.url)
-    expect(page.locator(".library__row[data-batch]").first).to_be_focused()
-    page.locator(".library__row", has_text=served.batch).focus()
+    expect(page.locator(".library__row[data-collection]").first).to_be_focused()
+    page.locator(".library__row", has_text=served.collection).focus()
     page.keyboard.press("Enter")
     expect(page).to_have_url(served.hub)
-    expect(page.locator(".appbar__place")).to_have_text(served.batch)
+    expect(page.locator(".appbar__place")).to_have_text(served.collection)
     expect(page.locator(".hub__name", has_text="ada")).to_be_visible()
     page.reload()
     expect(page).to_have_url(served.hub)
@@ -36,24 +36,24 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     expect(page.locator(".rail__card--current")).to_contain_text("ada.jpg")
 
     page.goto(served.hub)
-    page.goto(f"{served.url}/b/{served.batch}/review")
+    page.goto(f"{served.url}/c/{served.collection}/review")
     expect(page).to_have_url(served.review(served.draft))
     expect(current).to_contain_text("ada.jpg")
     page.go_back()
     expect(page).to_have_url(served.hub)
 
-    empty = f"{served.url}/b/{SHOWN}/review"
+    empty = f"{served.url}/c/{SHOWN}/review"
     page.goto(empty)
     expect(page.locator("[data-review-head]")).to_contain_text("No sheet waits")
     expect(page).to_have_url(empty)
 
 
 @pytest.mark.spec("ui:routes:an-unknown-batch-is-refused")
-def test_an_unknown_batch_is_refused_with_the_way_back(
+def test_an_unknown_collection_is_refused_with_the_way_back(
     page: Page, served: Served
 ) -> None:
-    page.goto(f"{served.url}/b/no-such-batch/hub")
-    expect(page.locator(".refusal__reason")).to_contain_text("no-such-batch")
+    page.goto(f"{served.url}/c/no-such-collection/hub")
+    expect(page.locator(".refusal__reason")).to_contain_text("no-such-collection")
     page.get_by_role("link", name="Back to the library").click()
     expect(page).to_have_url(f"{served.url}/")
-    expect(page.locator(".library__name", has_text=served.batch)).to_be_visible()
+    expect(page.locator(".library__name", has_text=served.collection)).to_be_visible()

@@ -156,7 +156,7 @@ generator's file under another name is still the generator's. A face not found s
 
 ### Requirement: Every render is a row
 
-The system SHALL write one record per batch holding, for every cohort photograph and every flow, the render's
+The system SHALL write one record per collection holding, for every cohort photograph and every flow, the render's
 seed, its nearest photograph and its outcome — a hit, a miss, no face found, unreadable, not rendered — and SHALL
 print one table from that record alone, a row of counts per flow, each followed by its chance row. The render
 ranked SHALL be the first seed of the flow's latest render group; where that group holds no render the row SHALL
@@ -179,7 +179,7 @@ file is no reason to lose the rest. A row per flow, with its own chance beneath 
 read beside the first without a second tool. The latest group is the render the operator last made, and the one
 a control flow's seeds are taken from; an empty one is a render that failed, not one to look past. A run's id
 carries its photograph's digest and filename, and a run
-outside the cohort is by construction not one of its synthetic people, so the record — the file a batch
+outside the cohort is by construction not one of its synthetic people, so the record — the file a collection
 publishes — names none, and is never written where one `git add` publishes it
 ([D18](../../../docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)).
 A run it does score is named by the digest half of its id, which still finds the run and carries no filename.
@@ -222,7 +222,7 @@ A run it does score is named by the digest half of its id, which still finds the
 #### Scenario: the record counts the runs it does not score and names none
 - **Key:** `evaluation:table:the-record-names-no-unscored-run`
 - **Layers:** unit
-- **WHEN** a batch holds a run outside the cohort and a run that cannot be read
+- **WHEN** a collection holds a run outside the cohort and a run that cannot be read
 - **THEN** the record and the table count each and carry neither run's id
 - **AND** each run's id is printed on the error stream
 
@@ -287,7 +287,7 @@ bytes it was counted with cannot be walked back to them.
 #### Scenario: the record names the bytes it was counted with
 - **Key:** `evaluation:pinned-artifacts:the-record-names-the-bytes`
 - **Layers:** unit
-- **WHEN** a batch's record is written
+- **WHEN** a collection's record is written
 - **THEN** it names the detector and the encoder each by its destination and its pinned digest
 - **AND** it names each cohort photograph's digest
 
@@ -305,7 +305,7 @@ bytes it was counted with cannot be walked back to them.
 For each render under the runs it is given, the system SHALL read the render with the tagger that fills the
 sheet, at that tagger's own floor, and SHALL count, per scored field of the render's flow, the tags of the
 approval the render was made from that it reads back, naming each tag it does not. It SHALL read each render
-alone, with no cohort, SHALL write one record per batch holding a row per render and a total per flow, and SHALL
+alone, with no cohort, SHALL write one record per collection holding a row per render and a total per flow, and SHALL
 print its table from that record alone. A render that does not decode, and a render whose approval cannot be
 read, SHALL each be a row saying so and SHALL NOT end the reading of another. Named runs SHALL narrow the
 reading, and a name the runs do not hold SHALL refuse before any render is read. The record SHALL name the
@@ -399,3 +399,4 @@ photograph's filename, which may be a person's name; the digest half still finds
 - **WHEN** a render is read
 - **THEN** its row names the run by the digest prefix of its id
 - **AND** the record carries no photograph's filename
+

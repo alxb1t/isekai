@@ -1,4 +1,4 @@
-"""What both evaluators ask of a batch: its runs, their names, where the record goes.
+"""What both evaluators ask of a collection: its runs, their names, where records go.
 
 A record names a run by its digest prefix, since a slug can be a person's name.
 The record sits beside the runs and never where git can reach. Both evaluators
@@ -16,8 +16,8 @@ def runs_in(directory: Path) -> list[Run]:
     """Return every run under `directory` that has a frame, in name order."""
     if not directory.is_dir():
         raise Refusal(
-            f"{directory} is not a directory; give the batch's runs directory, the "
-            "one `python -m isekai render` rendered into"
+            f"{directory} is not a directory; give the collection's runs directory, "
+            "the one `python -m isekai render` rendered into"
         )
     return [
         Run(frame.parent.name, frame.parent)
@@ -38,9 +38,9 @@ def run_prefix(run: Run) -> str:
 
 
 def destination(runs: Path, name: str) -> Path:
-    """Return `<batch>/<name>`, refusing a place git can reach (D18).
+    """Return `<collection>/<name>`, refusing a place git can reach (D18).
 
-    e.g. `.data/batch/runs`, `recall.json` -> `.data/batch/recall.json`
+    e.g. `.data/collection/runs`, `recall.json` -> `.data/collection/recall.json`
     """
     target = runs.parent / name
     if trackable(target.parent):

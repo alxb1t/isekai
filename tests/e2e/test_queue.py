@@ -38,7 +38,7 @@ def test_a_failure_reading_the_next_state_shows_in_the_approve_bar(
     def refuse(route: Route) -> None:
         route.fulfill(status=409, json={"refusal": "the hub could not be read"})
 
-    page.route("**/api/b/queue-fails/hub", refuse)
+    page.route("**/api/c/queue-fails/hub", refuse)
     _approve(page)
     expect(page.locator(".approve-bar__refusal")).to_contain_text(
         "the hub could not be read"
@@ -62,7 +62,7 @@ def test_cancel_approve_opens_the_sheet_again(page: Page, served: Served) -> Non
 
 @pytest.mark.spec("ui:review:the-chooser-opens-a-flow")
 def test_the_chooser_opens_a_flow(page: Page, served: Served) -> None:
-    chooser = f"{served.url}/b/{CHOSEN}/review"
+    chooser = f"{served.url}/c/{CHOSEN}/review"
     page.goto(chooser)
     rows = page.locator("[data-flow-row]")
     expect(rows).to_have_count(2)

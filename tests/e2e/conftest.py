@@ -34,9 +34,9 @@ from tests.stages import caption, render, sheet
 REPO = Path(__file__).resolve().parents[2]
 FLOW = "summon-anime-wai"
 CONJURE = "conjure-anime-wai"
-BATCH = "2026-10-19"
+COLLECTION = "2026-10-19"
 
-# A batch per approval test, each source a sheet with no draft, so every test
+# A collection per approval test, each source a sheet with no draft, so every test
 # owns the sheets it approves. Sizes differ so each source is its own run.
 QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
     "queue-stays": (("cid", (700, 1000)), ("dot", (710, 1000))),
@@ -44,7 +44,7 @@ QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
     "queue-cancels": (("eve", (720, 1000)),),
 }
 
-# A batch per hub test, so every test owns the cells it ticks and prepares. Its
+# A collection per hub test, so every test owns the cells it ticks and prepares. Its
 # sources are photographs with no run, except those `ASSIGNED` names.
 FRESH: dict[str, tuple[str, ...]] = {
     "hub-tick": ("aside", "beside", "tick"),
@@ -54,29 +54,29 @@ FRESH: dict[str, tuple[str, ...]] = {
 # The fresh sources whose run is already assigned to `FLOW`, as a tick leaves it.
 ASSIGNED: dict[str, tuple[str, ...]] = {"hub-prepare": ("pick",)}
 
-# The batch a render test owns: one source approved for one image.
+# The collection a render test owns: one source approved for one image.
 RENDER = "render"
-# The batch the drawer's test renders: one source approved for one image.
+# The collection the drawer's test renders: one source approved for one image.
 DRAWN = "drawn"
-# The batch the Renders view is read from: one source already rendered once.
+# The collection the Renders view is read from: one source already rendered once.
 SHOWN = "shown"
-# The batch a revision is written in: one source rendered once at seed 7.
+# The collection a revision is written in: one source rendered once at seed 7.
 REVISED = "revised"
-# The batch a discard is asked in and the pair is drawn from: one source
+# The collection a discard is asked in and the pair is drawn from: one source
 # rendered at seed 7, its render's revision drafted.
 DISCARDED = "discarded"
-# The batch Compare reads: one source with seed 7 rendered under v1 and under v2,
+# The collection Compare reads: one source with seed 7 rendered under v1 and under v2,
 # which changes `clothes`.
 COMPARED = "compared"
-# The batch whose one approval is damaged: a source rendered at seed 7 under an
+# The collection whose one approval is damaged: a source rendered at seed 7 under an
 # approval holding a count no render takes.
 DAMAGED = "damaged"
 
-# The batch Conjure from this drafts in: one source whose summon approval changes
+# The collection Conjure from this drafts in: one source whose summon approval changes
 # `clothes`, rendered at seed 7, and no conjure sheet: the press fills it.
 CONJURED = "conjured"
 
-# The batch the chooser opens on: one source with an unapproved sheet in each flow.
+# The collection the chooser opens on: one source with an unapproved sheet in each flow.
 CHOSEN = "chosen"
 
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
@@ -85,10 +85,10 @@ STARTUP = 300
 
 @dataclass(frozen=True)
 class Served:
-    """The running app: its address, its batch and the runs it serves."""
+    """The running app: its address, its collection and the runs it serves."""
 
     url: str
-    batch: str
+    collection: str
     draft: Run
     approved: Run
     queues: dict[str, tuple[Run, ...]]
@@ -101,18 +101,20 @@ class Served:
     chosen: Run
     prepare_release: Path
 
-    def review(self, run: Run, batch: str | None = None) -> str:
-        """Return the address of `run`'s review in `FLOW`, in `batch` or the main."""
-        return f"{self.url}/b/{batch or self.batch}/review/{run.digest}/{FLOW}"
+    def review(self, run: Run, collection: str | None = None) -> str:
+        """Return the address of `run`'s review in `FLOW`, in `collection` or main."""
+        return (
+            f"{self.url}/c/{collection or self.collection}/review/{run.digest}/{FLOW}"
+        )
 
-    def hub_of(self, batch: str) -> str:
-        """Return the address of `batch`'s hub."""
-        return f"{self.url}/b/{batch}/hub"
+    def hub_of(self, collection: str) -> str:
+        """Return the address of `collection`'s hub."""
+        return f"{self.url}/c/{collection}/hub"
 
     @property
     def hub(self) -> str:
-        """Return the address of the main batch's hub."""
-        return self.hub_of(self.batch)
+        """Return the address of the main collection's hub."""
+        return self.hub_of(self.collection)
 
 
 def _run(folder: Path, name: str, size: tuple[int, int]) -> Run:
@@ -177,9 +179,9 @@ def _wait(url: str, server: subprocess.Popen[bytes]) -> None:
 
 @pytest.fixture(scope="session")
 def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
-    """Serve a batch of one draft and one approved input of `FLOW`, then stop."""
+    """Serve a collection of one draft and one approved input of `FLOW`, then stop."""
     lib = tmp_path_factory.mktemp("e2e") / "isekai"
-    folder = lib / BATCH
+    folder = lib / COLLECTION
     (folder / "sources").mkdir(parents=True)
     draft = _run(folder, "ada", (900, 1200))
     approved = _run(folder, "bea", (1200, 900))
@@ -247,7 +249,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
         _wait(f"{url}/api/library", server)
         yield Served(
             url,
-            BATCH,
+            COLLECTION,
             draft,
             approved,
             queues,

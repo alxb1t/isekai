@@ -28,10 +28,10 @@ def _nef(path: Path) -> Path:
 
 
 def _choose(page: Page, served: Served, files: list[Path]) -> None:
-    """Open New batch on Home and choose `files` in the dialog it opens."""
+    """Open New collection on Home and choose `files` in the dialog it opens."""
     page.goto(served.url)
     with page.expect_file_chooser() as chooser:
-        page.get_by_role("button", name="New batch").click()
+        page.get_by_role("button", name="New collection").click()
     chooser.value.set_files([str(path) for path in files])
 
 
@@ -83,13 +83,13 @@ def _tile(page: Page, name: str):  # noqa: ANN202
 
 
 @pytest.mark.spec("ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line")
-def test_first_start_shows_new_batch_under_the_privacy_line(
+def test_first_start_shows_new_collection_under_the_privacy_line(
     page: Page, served: Served
 ) -> None:
     page.route("**/api/library", lambda route: route.fulfill(json={"rows": []}))
     page.goto(served.url)
     privacy = page.get_by_text("A photograph leaves this Mac only to be rendered")
-    first = page.get_by_role("button", name="New batch")
+    first = page.get_by_role("button", name="New collection")
     below, above = first.bounding_box(), privacy.bounding_box()
     assert below is not None and above is not None
     assert below["y"] >= above["y"] + above["height"]
@@ -153,7 +153,7 @@ def test_import_is_disabled_naming_how_many_are_read_until_all_are(
 
 
 @pytest.mark.spec("ui:sheet:an-import-opens-the-hub")
-def test_importing_a_new_batch_opens_its_hub_with_every_source_unassigned(
+def test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned(
     page: Page, served: Served, tmp_path: Path
 ) -> None:
     files = [
@@ -163,7 +163,7 @@ def test_importing_a_new_batch_opens_its_hub_with_every_source_unassigned(
 
     _choose(page, served, files)
     expect(page.locator(".import__count")).to_contain_text("2 sources")
-    page.get_by_label("Batch name").fill("e2e-imported")
+    page.get_by_label("Collection name").fill("e2e-imported")
     page.locator(".import__foot .btn-primary").click()
 
     expect(page).to_have_url(served.hub_of("e2e-imported"))
@@ -180,7 +180,7 @@ def test_a_commit_in_flight_holds_the_sheet(
 
     _choose(page, served, [_jpeg(tmp_path / "held.jpg", (0, 0, 100))])
     expect(page.locator(".import__count")).to_contain_text("1 source")
-    page.get_by_label("Batch name").fill("e2e-held")
+    page.get_by_label("Collection name").fill("e2e-held")
     page.locator(".import__foot .btn-primary").click()
     # A file added now would be refused unseen, and a cancel would delete the
     # folder the commit is moving.

@@ -6,7 +6,7 @@ pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
 > **Status: released.** One render path: a **staged pipeline** —
 > `python -m isekai import | assign | tag | caption | sheet | review | approve | revise | generate | show | ui | compare` —
-> which cleans a photograph into a batch, reads it into prose and tags, fills a sheet of canonical tags from the tags by a table, lets a
+> which cleans a photograph into a collection, reads it into prose and tags, fills a sheet of canonical tags from the tags by a table, lets a
 > human correct the sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary —
 > and renders from it on a stack provisioned from a pinned, checksummed manifest.
 > Development follows OpenSpec SDD, and **`openspec/` is authoritative** for what the code does and
@@ -132,8 +132,8 @@ In a browser, which is the recommended path:
 python -m isekai ui     # serves ~/isekai, or the library ISEKAI_LIBRARY names
 ```
 
-It serves a library rather than a run you name: a batch is a folder in it holding `sources/`, with its
-runs in `runs/` beside it. A run reaches the browser when its runs root is a batch's — the batch below
+It serves a library rather than a run you name: a collection is a folder in it holding `sources/`, with its
+runs in `runs/` beside it. A run reaches the browser when its runs root is a collection's — the collection below
 shows how.
 
 Or by hand, which stays a fully working path:
@@ -176,7 +176,7 @@ limit <seconds>s` as it opens; everything it says is shown and appended to `<run
 log, once the pod is asked for, its record `<runs>/../sessions/<id>.json` holds its steps, each image as it
 lands and how it ended, and no price.
 
-From the app, a batch's **Render** quotes what renders, the limit and the price at most, and its confirmation
+From the app, a collection's **Render** quotes what renders, the limit and the price at most, and its confirmation
 alone rents: the job opens the window, runs `render`, and closes the window unless it was kept open.
 
 Each image lands under the run directory, named for the seed that produced it, beside a provenance
@@ -202,18 +202,18 @@ python -m isekai show .inputs/me.jpg
 Prints a run's artifacts, versions, what produced each one and every failure record, and names anything below a
 flow it does not read. It reaches no model and no GPU, and it works on a checkout that has provisioned nothing.
 
-### A batch of photographs, through both flows
+### A collection of photographs, through both flows
 
 The same steps for a directory of photographs and `summon` and `conjure`, one command per step. Written
 for zsh, where `P=(…)` is an array of every file in the directory; in bash, use `"${P[@]}"` for `$P`.
 
 ```sh
-B=~/isekai/2026-10-19   # a batch: a folder of the library holding sources/
-R=$B/runs               # this batch's runs, beside its sources
+C=~/isekai/2026-10-19   # a collection: a folder of the library holding sources/
+R=$C/runs               # this collection's runs, beside its sources
 
-# the batch: each photograph cleaned to its pixels and orientation, then each flow ticked
-uv run python -m isekai import --batch $B ~/Pictures/trip/*.jpg
-P=($B/sources/*)        # every photograph in the batch
+# the collection: each photograph cleaned to its pixels and orientation, then each flow ticked
+uv run python -m isekai import --collection $C ~/Pictures/trip/*.jpg
+P=($C/sources/*)        # every photograph in the collection
 uv run python -m isekai assign --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 
 # ① ② free: the stage verbs take every photograph and both flows at once
@@ -222,7 +222,7 @@ uv run python -m isekai tag     --runs $R --flow summon-anime-wai --flow conjure
 uv run python -m isekai caption --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 uv run python -m isekai sheet   --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 
-# ③ free: the library in a browser -- the batch's hub, then Review
+# ③ free: the library in a browser -- the collection's hub, then Review
 uv run python -m isekai ui
 uv run python -m isekai show --runs $R $P
 
@@ -236,7 +236,7 @@ uv run --env-file .env gpunit volume down   # once no other batch follows
   and nothing else; a HEIC or a WebP becomes a JPEG or a PNG, and a RAW is refused with its fix.
 - **`isekai assign` ticks a flow**: it gives each source's run that flow's empty directory, and
   `--remove` takes away one that holds no work yet.
-- **`ui` takes no arguments.** It serves every batch of the library; the batch's hub shows each
+- **`ui` takes no arguments.** It serves every collection of the library; the collection's hub shows each
   photograph's stage in each flow, and the *Review* tab opens a chooser when multiple flows have sheets
   waiting, or the first unapproved sheet when one flow waits. Stop it with Ctrl-C.
 - **`approve --cancel` takes an approval back** to its draft while nothing was made from it — no prompt,
@@ -256,9 +256,9 @@ python -m isekai ui
 ```
 
 It opens the library — `~/isekai`, or the directory `ISEKAI_LIBRARY` names, created when absent and
-refused inside this repository outside `.data/` — prints a URL and blocks. Home lists the batches by
-their newest file, and *New batch* imports photographs chosen in the file dialog, each with its own
-upload bar. A batch's hub shows each photograph's stage in each flow `config/ui.json` offers: a tick
+refused inside this repository outside `.data/` — prints a URL and blocks. Home lists the collections by
+their newest file, and *New collection* imports photographs chosen in the file dialog, each with its own
+upload bar. A collection's hub shows each photograph's stage in each flow `config/ui.json` offers: a tick
 runs `isekai assign`, and *Prepare* runs `tag`, `caption` and `sheet` over what changed as one job,
 the CLI's own verbs as children with `--progress json`, its cells moving live over `/events`. Review
 corrects one sheet, its ④ setting how many images it renders and at which seeds, and Approve stays on the sheet,
@@ -320,7 +320,7 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
 - `--server SERVER` — the ComfyUI endpoint, reached through the tunnel; **omit it to assemble every
   prompt and stop without rendering**, which is how a whole batch is checked before anything is
   rented.
-- `--batch BATCH` — on `import`: the batch directory, made when absent; otherwise the files join its
+- `--collection COLLECTION` — on `import`: the collection directory, made when absent; otherwise the files join its
   `sources/`. A file with a source's bytes is skipped, and one with a taken name becomes `<stem>-2`.
 - `--remove` — on `assign`: delete each flow's directory instead, refusing one that holds work.
 - `--discard` — on `review`: delete each flow's waiting draft instead, refusing a flow whose highest

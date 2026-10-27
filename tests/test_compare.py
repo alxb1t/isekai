@@ -50,15 +50,15 @@ def _wiring(out: io.StringIO, err: io.StringIO) -> Wiring:
     )
 
 
-def _run(batch: Path, name: str, prose: str, height: int = 480) -> Run:
-    """Open a run in `batch` and caption it under both flows.
+def _run(collection: Path, name: str, prose: str, height: int = 480) -> Run:
+    """Open a run in `collection` and caption it under both flows.
 
     `height` tells two photographs apart: a run is keyed by the photograph's bytes.
     """
-    photo = batch / "photos" / f"{name}.jpg"
+    photo = collection / "photos" / f"{name}.jpg"
     photo.parent.mkdir(parents=True, exist_ok=True)
     photo.write_bytes(jpeg_bytes(640, height))
-    run = open_run(photo, batch / "runs")
+    run = open_run(photo, collection / "runs")
     for flow in (SUMMON, CONJURE):
         caption(
             run,
@@ -92,19 +92,19 @@ def _render(run: Run, flow: str, version: int, *seeds: int) -> None:
         (directory / f"{seed}{load_flow(flow).output_suffix}").write_bytes(b"image")
 
 
-def _compare(batch: Path) -> tuple[int, str, str]:
+def _compare(collection: Path) -> tuple[int, str, str]:
     """Run the verb the way the command line does; return its status, out and err."""
     out, err = io.StringIO(), io.StringIO()
     status = dispatch(
-        build_parser().parse_args(["compare", str(batch)]), _wiring(out, err)
+        build_parser().parse_args(["compare", str(collection)]), _wiring(out, err)
     )
     return status, out.getvalue(), err.getvalue()
 
 
-def _page(batch: Path) -> str:
+def _page(collection: Path) -> str:
     """Run the verb, require it succeeded, and return the page it wrote."""
-    assert _compare(batch)[0] == 0
-    return (batch / PAGE_NAME).read_text()
+    assert _compare(collection)[0] == 0
+    return (collection / PAGE_NAME).read_text()
 
 
 def _section(body: str, run: Run) -> str:
@@ -114,9 +114,9 @@ def _section(body: str, run: Run) -> str:
 
 @pytest.mark.spec("cli:compare:the-page-links-photographs-to-renders")
 def test_each_run_shows_its_photograph_and_each_flows_renders(tmp_path: Path) -> None:
-    batch = tmp_path / "batch"
-    ada = _run(batch, "ada", "Ada")
-    bea = _run(batch, "bea", "Bea", height=481)
+    collection = tmp_path / "collection"
+    ada = _run(collection, "ada", "Ada")
+    bea = _run(collection, "bea", "Bea", height=481)
     for run in (ada, bea):
         _approve(run, SUMMON, 1)
         _render(run, SUMMON, 1, 11)
@@ -126,7 +126,7 @@ def test_each_run_shows_its_photograph_and_each_flows_renders(tmp_path: Path) ->
     _approve(ada, SUMMON, 2)
     _render(ada, SUMMON, 2, 12)
 
-    body = _page(batch)
+    body = _page(collection)
     assert body.count("<section>") == 2
     for run in (ada, bea):
         assert f'src="runs/{run.id}/{run.photo.name}"' in _section(body, run)
@@ -142,18 +142,18 @@ def test_each_run_shows_its_photograph_and_each_flows_renders(tmp_path: Path) ->
     sources = re.findall(r'src="([^"]+)"', body)
     assert sources
     for source in sources:
-        assert (batch / source).is_file(), source
+        assert (collection / source).is_file(), source
     assert "data:" not in body
 
 
 @pytest.mark.spec("cli:compare:a-run-without-a-render-is-marked")
 def test_a_flow_with_no_render_says_so_and_the_page_is_written(tmp_path: Path) -> None:
-    batch = tmp_path / "batch"
-    run = _run(batch, "ada", "Ada")
+    collection = tmp_path / "collection"
+    run = _run(collection, "ada", "Ada")
     _approve(run, SUMMON, 1)
     _render(run, SUMMON, 1, 11)
 
-    body = _page(batch)
+    body = _page(collection)
     assert f"<figcaption>{CONJURE}</figcaption>" in body
     assert "no render yet" in body
     assert f"{SUMMON} &middot; seed 11" in body
@@ -163,14 +163,14 @@ def test_a_flow_with_no_render_says_so_and_the_page_is_written(tmp_path: Path) -
 def test_a_directory_no_tracked_flow_names_is_marked_and_the_page_is_written(
     tmp_path: Path,
 ) -> None:
-    batch = tmp_path / "batch"
-    run = _run(batch, "ada", "Ada")
+    collection = tmp_path / "collection"
+    run = _run(collection, "ada", "Ada")
     _approve(run, SUMMON, 1)
     _render(run, SUMMON, 1, 11)
     # Work left by a flow since renamed: this build carries no manifest for it.
     run.directory("summon-v9", REVIEW).mkdir(parents=True)
 
-    body = _page(batch)
+    body = _page(collection)
     assert "<figcaption>summon-v9</figcaption>" in body
     assert "not a tracked flow" in body
     assert f"{SUMMON} &middot; seed 11" in body
@@ -178,41 +178,41 @@ def test_a_directory_no_tracked_flow_names_is_marked_and_the_page_is_written(
 
 @pytest.mark.spec("cli:compare:only-the-path-is-printed")
 def test_the_verb_prints_the_pages_path_and_nothing_else(tmp_path: Path) -> None:
-    batch = tmp_path / "batch"
-    _run(batch, "ada", "Ada")
+    collection = tmp_path / "collection"
+    _run(collection, "ada", "Ada")
 
-    assert _compare(batch) == (0, f"{batch / PAGE_NAME}\n", "")
+    assert _compare(collection) == (0, f"{collection / PAGE_NAME}\n", "")
 
 
 @pytest.mark.spec("cli:compare:a-batch-without-runs-is-refused")
 def test_a_directory_without_runs_is_refused_naming_it(tmp_path: Path) -> None:
-    batch = tmp_path / "photos-only"
-    batch.mkdir()
+    collection = tmp_path / "photos-only"
+    collection.mkdir()
 
-    status, out, err = _compare(batch)
+    status, out, err = _compare(collection)
 
     assert (status, out) == (1, "")
     assert err.startswith("refused: ")
-    assert str(batch) in err
+    assert str(collection) in err
     # The fix is a command to paste, naming where the stages put the runs.
     flows = " ".join(f"--flow {flow}" for flow in tracked_flows())
     assert f"`python -m isekai tag {flows} " in err
-    assert f"--runs {batch / 'runs'} " in err
-    assert list(batch.iterdir()) == []
+    assert f"--runs {collection / 'runs'} " in err
+    assert list(collection.iterdir()) == []
 
 
 @pytest.mark.spec("cli:compare:the-page-links-photographs-to-renders")
 def test_captions_span_the_row_and_each_prompt_sits_under_its_render(
     tmp_path: Path,
 ) -> None:
-    batch = tmp_path / "batch"
-    run = _run(batch, "ada", "Ada")
+    collection = tmp_path / "collection"
+    run = _run(collection, "ada", "Ada")
     for flow, seed in ((SUMMON, 11), (CONJURE, 21)):
         _approve(run, flow, 1)
         _prompt(run, flow, 1, f"masterpiece, {flow} <positive>")
         _render(run, flow, 1, seed)
 
-    body = _page(batch)
+    body = _page(collection)
     grid, captions = body.split('<div class="grid">')[1].split('<div class="captions">')
     assert f"Ada for {SUMMON}" in captions and f"Ada for {CONJURE}" in captions
     assert "Ada for" not in grid
@@ -226,10 +226,10 @@ def test_captions_span_the_row_and_each_prompt_sits_under_its_render(
 def test_a_clicked_image_opens_in_an_overlay_the_page_carries_itself(
     tmp_path: Path,
 ) -> None:
-    batch = tmp_path / "batch"
-    _run(batch, "ada", "Ada")
+    collection = tmp_path / "collection"
+    _run(collection, "ada", "Ada")
 
-    body = _page(batch)
+    body = _page(collection)
     assert 'id="overlay"' in body
     assert '"Escape"' in body
     # A click on the shown image switches between fitted and its full size.

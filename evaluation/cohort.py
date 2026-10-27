@@ -84,7 +84,7 @@ class FlowRecord(TypedDict):
 
 
 class Record(TypedDict):
-    """One batch's evaluation: the cohort, the models, every flow, the runs unscored.
+    """A collection's evaluation: the cohort, the models, every flow, the runs unscored.
 
     The runs unscored are counted, never named: a run's id carries its photograph's
     filename.
@@ -208,7 +208,7 @@ def record(
     *,
     unreadable: int = 0,
 ) -> Record:
-    """Return the batch's record: a row per cohort photograph per flow, and counts.
+    """Return the collection's record: a row per cohort photograph per flow, and counts.
 
     A photograph a flow holds no row for is `not rendered`. A count is over the
     renders scored, and its chance is summed over the same renders. `outside` and

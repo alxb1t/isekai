@@ -1,7 +1,7 @@
 """Render from the browser: the dialog, the drawer, the large view, Revise, Compare.
 
 A revision, a discard, a comparison and a draft from another flow each own a
-batch, so none leans on another's draft. The server renders on the e2e doubles:
+collection, so none leans on another's draft. The server renders on the e2e doubles:
 a session that rents nothing and a transport that answers at once. Each step
 waits on the page's own state.
 """
@@ -30,7 +30,7 @@ from tests.e2e.conftest import (
 
 @pytest.mark.spec("ui:dialogs:the-render-dialog-opens-on-its-checkbox")
 def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> None:
-    # Cancelled, so the next test still confirms this batch's one image.
+    # Cancelled, so the next test still confirms this collection's one image.
     page.goto(served.hub_of(RENDER))
     cell = page.locator('.hub__source[data-row="0"]')
     expect(cell).to_be_focused()
@@ -109,25 +109,25 @@ def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
 def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     page: Page, served: Served
 ) -> None:
-    page.goto(f"{served.url}/b/{SHOWN}/renders")
+    page.goto(f"{served.url}/c/{SHOWN}/renders")
     tile = page.locator("[data-version='1'][data-seed='7']")
     expect(tile.locator("img")).to_have_js_property("complete", True)
 
     tile.click()
 
     expect(page).to_have_url(
-        f"{served.url}/b/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
+        f"{served.url}/c/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
     )
     sheet = page.locator("[data-sheet]")
     expect(sheet).to_contain_text("v1")
     expect(sheet).to_contain_text("hair_colour")
     page.keyboard.press("Escape")
-    expect(page).to_have_url(f"{served.url}/b/{SHOWN}/renders")
+    expect(page).to_have_url(f"{served.url}/c/{SHOWN}/renders")
     expect(tile).to_have_class(re.compile("renders__image--focused"))
     page.keyboard.press("Enter")
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
     # Esc comes back focused on the image it closed, not the grid's first.
-    page.goto(f"{served.url}/b/{COMPARED}/renders")
+    page.goto(f"{served.url}/c/{COMPARED}/renders")
     second = page.locator("[data-version='2'][data-seed='7']")
     expect(second.locator("img")).to_have_js_property("complete", True)
     second.click()
@@ -138,7 +138,7 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
         re.compile("renders__image--focused")
     )
     # From a row's first image, h reaches its source, and ↵ opens its photograph.
-    page.goto(f"{served.url}/b/{SHOWN}/renders")
+    page.goto(f"{served.url}/c/{SHOWN}/renders")
     expect(tile).to_have_class(re.compile("renders__image--focused"))
     page.keyboard.press("h")
     expect(page.locator("[data-source]")).to_have_class(
@@ -147,13 +147,13 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     page.keyboard.press("Enter")
     viewer = page.locator("dialog[data-viewer]")
     expect(viewer.locator("img")).to_have_attribute(
-        "src", f"/api/b/{SHOWN}/sources/hal.jpg"
+        "src", f"/api/c/{SHOWN}/sources/hal.jpg"
     )
 
 
 @pytest.mark.spec("ui:renders:a-source-opens-in-the-viewer")
 def test_a_source_opens_in_the_viewer(page: Page, served: Served) -> None:
-    grid = f"{served.url}/b/{SHOWN}/renders"
+    grid = f"{served.url}/c/{SHOWN}/renders"
     page.goto(grid)
 
     page.locator("[data-source-thumb]").click()
@@ -173,7 +173,7 @@ def test_a_source_opens_in_the_viewer(page: Page, served: Served) -> None:
 def test_a_damaged_versions_images_are_drawn_and_hold_the_focus(
     page: Page, served: Served
 ) -> None:
-    page.goto(f"{served.url}/b/{DAMAGED}/renders")
+    page.goto(f"{served.url}/c/{DAMAGED}/renders")
 
     expect(page.locator("[data-damaged]")).to_be_visible()
     image = page.locator("[data-version='1'][data-seed='7']")
@@ -200,7 +200,7 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
     expect(page).to_have_url(served.hub_of(SHOWN))
     page.keyboard.press("Enter")
     expect(page).to_have_url(
-        f"{served.url}/b/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
+        f"{served.url}/c/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
     )
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
     page.keyboard.press("Escape")
@@ -231,7 +231,7 @@ def test_the_source_cell_opens_its_photograph(page: Page, served: Served) -> Non
 
     viewer = page.locator("dialog[data-viewer]")
     expect(viewer.locator("img")).to_have_attribute(
-        "src", f"/api/b/{SHOWN}/sources/hal.jpg"
+        "src", f"/api/c/{SHOWN}/sources/hal.jpg"
     )
     expect(viewer.locator("img")).to_have_js_property("complete", True)
 
@@ -239,7 +239,7 @@ def test_the_source_cell_opens_its_photograph(page: Page, served: Served) -> Non
 @pytest.mark.spec("ui:revise:revise-opens-review-on-the-revision")
 def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None:
     digest = served.revised.digest
-    page.goto(f"{served.url}/b/{REVISED}/renders/{digest}/{FLOW}/v1/7")
+    page.goto(f"{served.url}/c/{REVISED}/renders/{digest}/{FLOW}/v1/7")
     expect(page.locator("[data-revise]")).to_be_visible()
     page.keyboard.press("Shift+E")
     confirm = page.locator("[data-revise-confirm]")
@@ -247,7 +247,7 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
 
     confirm.locator("[data-confirm]").click()
 
-    review = f"{served.url}/b/{REVISED}/review/{digest}/{FLOW}"
+    review = f"{served.url}/c/{REVISED}/review/{digest}/{FLOW}"
     expect(page).to_have_url(review)
     expect(page.locator("[data-revised] img")).to_have_js_property("complete", True)
     expect(page.locator(".renders-block")).to_contain_text("seed 7")
@@ -260,7 +260,7 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
     draft = current_draft(served.revised.directory(FLOW, REVIEW))
     assert draft is not None
     before = draft.read_bytes()
-    page.goto(f"{served.url}/b/{REVISED}/renders/{digest}/{FLOW}/v1/7")
+    page.goto(f"{served.url}/c/{REVISED}/renders/{digest}/{FLOW}/v1/7")
     expect(page.locator("[data-revise]")).to_be_visible()
     page.keyboard.press("Shift+E")
     expect(page).to_have_url(review)
@@ -279,12 +279,12 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
 @pytest.mark.spec("ui:conjure-from:conjure-from-this-opens-review")
 def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     digest = served.conjured.digest
-    page.goto(f"{served.url}/b/{CONJURED}/renders/{digest}/{FLOW}/v1/7")
+    page.goto(f"{served.url}/c/{CONJURED}/renders/{digest}/{FLOW}/v1/7")
     expect(page.locator("[data-draft-from]")).to_contain_text("Conjure from this")
 
     page.keyboard.press("Shift+F")
 
-    expect(page).to_have_url(f"{served.url}/b/{CONJURED}/review/{digest}/{CONJURE}")
+    expect(page).to_have_url(f"{served.url}/c/{CONJURED}/review/{digest}/{CONJURE}")
     expect(page.locator(".form")).to_contain_text(f"from {FLOW} v1")
     expect(page.locator("[data-changed='clothes']")).to_contain_text("was")
     expect(page.locator("[data-caption-heading]")).to_contain_text(f"caption · {FLOW}")
@@ -345,7 +345,7 @@ def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
 def test_side_by_side_sets_the_image_beside_its_photograph(
     page: Page, served: Served
 ) -> None:
-    large = f"{served.url}/b/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
+    large = f"{served.url}/c/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
     page.goto(large)
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
 
@@ -373,7 +373,7 @@ def test_side_by_side_sets_the_image_beside_its_photograph(
 def test_compare_shows_both_versions_of_a_seed_and_the_field_that_changed(
     page: Page, served: Served
 ) -> None:
-    large = f"{served.url}/b/{COMPARED}/renders/{served.compared.digest}/{FLOW}/v2/7"
+    large = f"{served.url}/c/{COMPARED}/renders/{served.compared.digest}/{FLOW}/v2/7"
     page.goto(large)
     expect(page.locator("[data-compare]")).to_contain_text("Compare with…")
 

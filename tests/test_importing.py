@@ -1,4 +1,4 @@
-"""Import: a file read, cleaned, verified and committed into a batch's `sources/`.
+"""Import: a file read, cleaned, verified and committed into a collection's `sources/`.
 
 Every image is built by Pillow here, except the HEICs, committed fixtures each made
 once by macOS `sips`: `plain.heic` from a synthetic solid-colour PNG, `irot.heic`
@@ -337,11 +337,11 @@ def _sixteen_bit(mode: str, value: int) -> Image.Image:
 def test_a_raw_photograph_is_refused_and_the_others_import(tmp_path: Path) -> None:
     nef = _write(tmp_path, "DSC_0001.NEF", nef_bytes())
     jpeg = _write(tmp_path, "portrait.jpg", photo_jpeg())
-    batch = tmp_path / "library" / "trip"
+    collection = tmp_path / "library" / "trip"
     err = io.StringIO()
     wired = bare_wiring(err=err)
     args = build_parser().parse_args(
-        ["import", "--batch", str(batch), str(nef), str(jpeg)]
+        ["import", "--collection", str(collection), str(nef), str(jpeg)]
     )
 
     code = dispatch(args, wired)
@@ -349,7 +349,9 @@ def test_a_raw_photograph_is_refused_and_the_others_import(tmp_path: Path) -> No
     assert code == 1
     assert "DSC_0001.NEF: a NEF RAW photograph" in err.getvalue()
     assert "export it as JPEG" in err.getvalue()
-    assert [path.name for path in (batch / "sources").iterdir()] == ["portrait.jpg"]
+    assert [path.name for path in (collection / "sources").iterdir()] == [
+        "portrait.jpg"
+    ]
 
 
 @pytest.mark.spec("import:refuse:an-unconvertible-file-is-refused")
@@ -361,15 +363,15 @@ def test_a_file_that_cannot_be_converted_is_refused_and_the_others_import(
     _sixteen_bit("I;16B", 20000).save(out, "TIFF")
     scan = _write(tmp_path, "mac-scan.tiff", out.getvalue())
     jpeg = _write(tmp_path, "portrait.jpg", photo_jpeg())
-    batch = tmp_path / "library" / "trip"
+    collection = tmp_path / "library" / "trip"
     args = build_parser().parse_args(
-        ["import", "--batch", str(batch), str(scan), str(jpeg)]
+        ["import", "--collection", str(collection), str(scan), str(jpeg)]
     )
 
     code = dispatch(args, bare_wiring())
 
     assert code == 0
-    assert sorted(path.name for path in (batch / "sources").iterdir()) == [
+    assert sorted(path.name for path in (collection / "sources").iterdir()) == [
         "mac-scan.jpg",
         "portrait.jpg",
     ]
@@ -383,7 +385,7 @@ def test_a_file_that_cannot_be_converted_is_refused_and_the_others_import(
     other = tmp_path / "library" / "other"
     err = io.StringIO()
     args = build_parser().parse_args(
-        ["import", "--batch", str(other), str(scan), str(jpeg)]
+        ["import", "--collection", str(other), str(scan), str(jpeg)]
     )
 
     code = dispatch(args, bare_wiring(err=err))
@@ -401,10 +403,10 @@ def test_a_file_whose_profile_cannot_be_read_is_refused_and_the_others_import(
     garbage = b"x" * 200
     broken = _write(tmp_path, "broken.jpg", photo_jpeg(icc_profile=garbage))
     jpeg = _write(tmp_path, "portrait.jpg", photo_jpeg())
-    batch = tmp_path / "library" / "trip"
+    collection = tmp_path / "library" / "trip"
     err = io.StringIO()
     args = build_parser().parse_args(
-        ["import", "--batch", str(batch), str(broken), str(jpeg)]
+        ["import", "--collection", str(collection), str(broken), str(jpeg)]
     )
 
     code = dispatch(args, bare_wiring(err=err))
@@ -412,7 +414,9 @@ def test_a_file_whose_profile_cannot_be_read_is_refused_and_the_others_import(
     assert code == 1
     assert "refused: broken.jpg: its colour profile cannot be read" in err.getvalue()
     assert "export it as sRGB JPEG and add it again" in err.getvalue()
-    assert [path.name for path in (batch / "sources").iterdir()] == ["portrait.jpg"]
+    assert [path.name for path in (collection / "sources").iterdir()] == [
+        "portrait.jpg"
+    ]
 
     # A format that is always converted reads the profile on the way to sRGB.
     out = io.BytesIO()
@@ -556,7 +560,7 @@ def test_an_uncleanable_file_chosen_as_it_is_imports(
 
 
 @pytest.mark.spec("import:stage:a-commit-moves-every-file")
-def test_a_commit_moves_every_staged_file_into_the_batch(tmp_path: Path) -> None:
+def test_a_commit_moves_every_staged_file_into_the_collection(tmp_path: Path) -> None:
     library = tmp_path / "library"
     staging = stage(library)
     for name, colour in (("a.jpg", (1, 1, 1)), ("b.jpg", (2, 2, 2))):
@@ -659,7 +663,7 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
 
 @pytest.mark.spec("import:stage:an-unusable-name-is-refused")
 @pytest.mark.parametrize("name", ["taken", "", "a/b", ".hidden"])
-def test_an_unusable_batch_name_is_refused_and_staging_kept(
+def test_an_unusable_collection_name_is_refused_and_staging_kept(
     tmp_path: Path, name: str
 ) -> None:
     library = tmp_path / "library"
@@ -674,14 +678,14 @@ def test_an_unusable_batch_name_is_refused_and_staging_kept(
 
 
 @pytest.mark.spec("import:stage:a-batch-git-can-reach-is-refused")
-def test_a_batch_inside_the_working_tree_is_refused_and_nothing_written(
+def test_a_collection_inside_the_working_tree_is_refused_and_nothing_written(
     tmp_path: Path,
 ) -> None:
-    inside = REPO / "batch-in-the-tree"
+    inside = REPO / "collection-in-the-tree"
     photo = _write(tmp_path, "portrait.jpg", photo_jpeg())
     err = io.StringIO()
     args = build_parser().parse_args(
-        ["import", "--batch", str(inside / "trip"), str(photo)]
+        ["import", "--collection", str(inside / "trip"), str(photo)]
     )
 
     code = dispatch(args, bare_wiring(err=err))
@@ -797,7 +801,7 @@ def test_two_uploads_of_one_name_keep_their_own_states(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec("ui:sheet:an-upload-after-import-is-refused")
-def test_an_upload_once_import_commits_is_refused_and_the_batch_is_unchanged(
+def test_an_upload_once_import_commits_is_refused_and_the_collection_is_unchanged(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     library = tmp_path / "library"

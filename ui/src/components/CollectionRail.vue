@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { Waiting } from '../composables/useQueue'
-import type { BatchInput, MarkKind } from '../types'
+import type { CollectionInput, MarkKind } from '../types'
 import KeyHint from './KeyHint.vue'
 import StatusMark from './StatusMark.vue'
 
@@ -10,7 +10,7 @@ import StatusMark from './StatusMark.vue'
 const props = defineProps<{
   flow: string
   /* The flow's sheets not yet rendered, and the open one: `useQueue`'s rail. */
-  inputs: BatchInput[]
+  inputs: CollectionInput[]
   /* `useQueue`'s count of them holding an approved artifact, read from the
      hub's statuses. */
   approved: number
@@ -25,7 +25,7 @@ const props = defineProps<{
 
 defineEmits<{ select: [id: string] }>()
 
-function mark(input: BatchInput): MarkKind {
+function mark(input: CollectionInput): MarkKind {
   if (props.loading) return 'dashed'
   if (input.status === 'approved') return 'filled'
   if (input.status === 're-opened') return 'ring'

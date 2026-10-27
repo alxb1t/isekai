@@ -1,7 +1,7 @@
 /* The endpoints, in one module.
 
    A URL here is a contract between this app and `isekai/interface/ui/app.py` in
-   the same repository. Every path inside a batch names the batch, and a run by
+   the same repository. Every path inside a collection names the collection, and a run by
    the twelve-character digest its identifier begins with. */
 
 import type {
@@ -29,9 +29,9 @@ import type {
   TagMatches,
 } from './types'
 
-/** One run in one flow of one batch: what a review URL names. */
+/** One run in one flow of one collection: what a review URL names. */
 export interface Place {
-  batch: string
+  collection: string
   digest: string
   flow: string
 }
@@ -81,48 +81,48 @@ export function library(): Promise<LibraryInfo> {
   return get<LibraryInfo>('/api/library')
 }
 
-export function hub(batch: string): Promise<HubInfo> {
-  return get<HubInfo>(`/api/b/${encodeURIComponent(batch)}/hub`)
+export function hub(collection: string): Promise<HubInfo> {
+  return get<HubInfo>(`/api/c/${encodeURIComponent(collection)}/hub`)
 }
 
 /* A tick or an untick, for each named source; an untick past assigned is refused
    on its own, beside the cells that changed. */
 export function assign(
-  batch: string,
+  collection: string,
   sources: string[],
   flow: string,
   remove: boolean,
 ): Promise<Assigned> {
-  return send(`/api/b/${encodeURIComponent(batch)}/assign`, 'POST', { sources, flow, remove })
+  return send(`/api/c/${encodeURIComponent(collection)}/assign`, 'POST', { sources, flow, remove })
 }
 
-export function prepare(batch: string): Promise<{ job: JobSlot }> {
-  return send(`/api/b/${encodeURIComponent(batch)}/prepare`, 'POST', {})
+export function prepare(collection: string): Promise<{ job: JobSlot }> {
+  return send(`/api/c/${encodeURIComponent(collection)}/prepare`, 'POST', {})
 }
 
 export function stopJob(kind: JobKind): Promise<{ job: JobSlot }> {
   return send(`/api/jobs/${kind}/stop`, 'POST', {})
 }
 
-/* How many images a batch lacks, why Render is disabled or null, and why a count
+/* How many images a collection lacks, why Render is disabled or null, and why a count
    is refused or null; it prices nothing. */
-export function renderOffer(batch: string): Promise<RenderOffer> {
-  return get(`/api/b/${encodeURIComponent(batch)}/render`)
+export function renderOffer(collection: string): Promise<RenderOffer> {
+  return get(`/api/c/${encodeURIComponent(collection)}/render`)
 }
 
 /* The quote rents nothing; only `startRender` does. */
-export function quoteRender(batch: string): Promise<Quote> {
-  return send(`/api/b/${encodeURIComponent(batch)}/render/quote`, 'POST', {})
+export function quoteRender(collection: string): Promise<Quote> {
+  return send(`/api/c/${encodeURIComponent(collection)}/render/quote`, 'POST', {})
 }
 
 /* Carries the limit and the images the dialog showed: a quote grown since is refused. */
 export function startRender(
-  batch: string,
+  collection: string,
   keepOpen: boolean,
   limitS: number,
   images: number,
 ): Promise<{ job: JobSlot }> {
-  return send(`/api/b/${encodeURIComponent(batch)}/render`, 'POST', {
+  return send(`/api/c/${encodeURIComponent(collection)}/render`, 'POST', {
     keep_open: keepOpen,
     limit_s: limitS,
     images,
@@ -135,8 +135,8 @@ export function runningSessions(): Promise<{ sessions: RunningSession[] }> {
 }
 
 /* One render session's record; an id no record holds is refused. */
-export function session(batch: string, id: string): Promise<SessionRecord> {
-  return get(`/api/b/${encodeURIComponent(batch)}/sessions/${encodeURIComponent(id)}`)
+export function session(collection: string, id: string): Promise<SessionRecord> {
+  return get(`/api/c/${encodeURIComponent(collection)}/sessions/${encodeURIComponent(id)}`)
 }
 
 /* Ask gpunit again; an alert clears only when its records say gone. */
@@ -151,8 +151,8 @@ export function fieldCandidates(flow: string): Promise<FieldCandidates> {
 }
 
 function at(place: Place): string {
-  const [batch, digest, flow] = [place.batch, place.digest, place.flow].map(encodeURIComponent)
-  return `/api/b/${batch}/review/${digest}/${flow}`
+  const [collection, digest, flow] = [place.collection, place.digest, place.flow].map(encodeURIComponent)
+  return `/api/c/${collection}/review/${digest}/${flow}`
 }
 
 export function inputDetail(place: Place): Promise<InputDetail> {
@@ -189,7 +189,7 @@ export function approve(
 /* Turns the approval back into its draft, as `approve --cancel` does, or deletes
    a copy; `back` names what the flow is left on, a draft or the approval beneath
    a copy, null where nothing is. Anything made from it, or a render running for
-   the batch, refuses. */
+   the collection, refuses. */
 export function cancelApproval(place: Place): Promise<{ back: string | null }> {
   return send(`${at(place)}/cancel`, 'POST', {})
 }
@@ -218,10 +218,10 @@ export function draftFrom(
    each image, and is returned rather than thrown so the page can offer to
    deselect the refused. */
 export function revise(
-  batch: string,
+  collection: string,
   images: RevisedImage[],
 ): Promise<{ drafts: RevisedDraft[] } | ReviseRefused> {
-  return send(`/api/b/${encodeURIComponent(batch)}/revise`, 'POST', { images }, {}, (body) =>
+  return send(`/api/c/${encodeURIComponent(collection)}/revise`, 'POST', { images }, {}, (body) =>
     'images' in body,
   )
 }
@@ -231,7 +231,7 @@ export function photoUrl(place: Place): string {
 }
 
 /* An import: a staging folder the chosen files are read into, then committed
-   into a batch's `sources/` in one move, or cancelled. */
+   into a collection's `sources/` in one move, or cancelled. */
 export function openStaging(): Promise<{ id: string }> {
   return send('/api/staging', 'POST', {})
 }
@@ -242,12 +242,12 @@ export function cancelStaging(id: string): Promise<unknown> {
 
 export function commitStaging(
   id: string,
-  batch: string,
+  collection: string,
   asIs: string[],
   add: boolean,
 ): Promise<Committed> {
   return send(`/api/staging/${encodeURIComponent(id)}/commit`, 'POST', {
-    batch,
+    collection,
     as_is: asIs,
     add,
   })
@@ -258,23 +258,23 @@ export function stagedThumbAt(id: string, name: string): string {
   return `/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(name)}/thumb`
 }
 
-/* A source under a batch's `sources/`, by its file's name, with or without a run. */
-export function sourceAt(batch: string, name: string): string {
-  return `/api/b/${encodeURIComponent(batch)}/sources/${encodeURIComponent(name)}`
+/* A source under a collection's `sources/`, by its file's name, with or without a run. */
+export function sourceAt(collection: string, name: string): string {
+  return `/api/c/${encodeURIComponent(collection)}/sources/${encodeURIComponent(name)}`
 }
 
 /* The source's thumbnail, upright. */
-export function sourceThumbAt(batch: string, name: string): string {
-  return `${sourceAt(batch, name)}/thumb`
+export function sourceThumbAt(collection: string, name: string): string {
+  return `${sourceAt(collection, name)}/thumb`
 }
 
-export function renders(batch: string): Promise<RendersInfo> {
-  return get<RendersInfo>(`/api/b/${encodeURIComponent(batch)}/renders`)
+export function renders(collection: string): Promise<RendersInfo> {
+  return get<RendersInfo>(`/api/c/${encodeURIComponent(collection)}/renders`)
 }
 
 /* One image of a source in a flow: `version` is the approval's number. */
 export interface RenderPlace {
-  batch: string
+  collection: string
   digest: string
   flow: string
   version: number
@@ -285,8 +285,8 @@ export interface RenderPlace {
 export const versionOf = (version: string) => Number(version.replace(/^v/, ''))
 
 export function renderAt(place: RenderPlace): string {
-  const [batch, ...rest] = [place.batch, place.digest, place.flow, `v${place.version}`, place.seed]
-  return `/api/b/${encodeURIComponent(batch)}/renders/${rest.map(encodeURIComponent).join('/')}`
+  const [collection, ...rest] = [place.collection, place.digest, place.flow, `v${place.version}`, place.seed]
+  return `/api/c/${encodeURIComponent(collection)}/renders/${rest.map(encodeURIComponent).join('/')}`
 }
 
 export function thumbAt(place: RenderPlace): string {

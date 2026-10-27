@@ -287,7 +287,7 @@ the pod exists would count from too late, and the pod's own stop would come firs
 - **Key:** `pod-image:session:the-watchdog-ends-the-session`
 - **Layers:** unit
 - **WHEN** the ceiling passes with the session still open
-- **THEN** `isekai render` writes a refusal naming the ceiling to the batch's log
+- **THEN** `isekai render` writes a refusal naming the ceiling to the collection's log
 - **AND** the session closes, and it exits `143`
 
 ### Requirement: The session's spec asks for a host that can render
@@ -345,3 +345,4 @@ window that ends before the longest session can is a session gpunit refuses to o
 - **Layers:** unit
 - **WHEN** `gpunit.toml` is read
 - **THEN** its ceiling plus its timeout is shorter than its volume ceiling
+

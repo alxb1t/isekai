@@ -1,6 +1,6 @@
 """The endpoints, against a running application.
 
-They are the address guard, the library, a batch's hub, the tag search, the field
+They are the address guard, the library, a collection's hub, the tag search, the field
 candidates, a run's review, photo, draft and approval, its renders, and the import's
 upload, stream and preview.
 
@@ -113,7 +113,7 @@ from tests.stages import (  # noqa: E402
 )
 
 FLOW = "summon-anime-wai"
-BATCH = "2026-10-19"
+COLLECTION = "2026-10-19"
 # The suite's own copy of the flows `config/ui.json` offers.
 OFFERED = (FLOW, "conjure-anime-wai")
 
@@ -126,14 +126,14 @@ ADDRESS = f"http://{HOST}:{PORT}"
 
 
 def _at(run: Run, tail: str = "") -> str:
-    """Return the review path naming `run` in `FLOW`: `/api/b/<b>/review/<d>/<f>`."""
-    return f"/api/b/{BATCH}/review/{run.digest}/{FLOW}{tail}"
+    """Return the review path naming `run` in `FLOW`: `/api/c/<c>/review/<d>/<f>`."""
+    return f"/api/c/{COLLECTION}/review/{run.digest}/{FLOW}{tail}"
 
 
 @pytest.fixture
 def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
-    """Return a ③-only wiring over one batch of a library: no reader, no tagger."""
-    (tmp_path / "lib" / BATCH / "sources").mkdir(parents=True)
+    """Return a ③-only wiring over one collection of a library: no reader, no tagger."""
+    (tmp_path / "lib" / COLLECTION / "sources").mkdir(parents=True)
     return Wiring(
         reader=None,
         tagger=None,
@@ -141,7 +141,7 @@ def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
         client=None,
         vocabulary=lambda: vocabulary,
         field_map=lambda _: FIELD_MAP,
-        runs_root=tmp_path / "lib" / BATCH / "runs",
+        runs_root=tmp_path / "lib" / COLLECTION / "runs",
         rng=random.Random(0),
         out=io.StringIO(),
         err=io.StringIO(),
@@ -165,7 +165,7 @@ def made(wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary) 
 
 
 def _source(run: Run) -> None:
-    """Put the run's photograph under the batch's `sources/`, as an import would."""
+    """Put the run's photograph in the collection's `sources/`, as an import would."""
     (run.path.parent.parent / "sources" / "ada.jpg").write_bytes(run.photo.read_bytes())
 
 
@@ -187,7 +187,7 @@ def _client(
 
     `drafted` takes the draft opening the sheet would, so a test may write
     before it reads; `offered` is the surface's flows. The library is the folder
-    holding the wiring's batch.
+    holding the wiring's collection.
     """
     dist = tmp_path / "dist"
     dist.mkdir(exist_ok=True)
@@ -294,7 +294,7 @@ def test_every_loopback_alias_of_the_bound_port_is_answered() -> None:
     assert authorities("example.test", PORT) == {f"example.test:{PORT}"}
 
 
-# --- the batch, and the payload the page is drawn from ------------------------
+# --- the collection, and the payload the page is drawn from ------------------------
 
 
 @pytest.mark.spec_exempt("structural: the shape the page is drawn from")
@@ -302,10 +302,10 @@ def test_the_hub_and_the_input_name_the_flow_the_schema_and_the_vocabulary(
     client: TestClient, made: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _source(made)
-    hub = client.get(f"/api/b/{BATCH}/hub").json()
+    hub = client.get(f"/api/c/{COLLECTION}/hub").json()
     body = client.get(_at(made)).json()
 
-    assert hub["batch"] == BATCH
+    assert hub["collection"] == COLLECTION
     assert FLOW in hub["flows"]
     assert [one["digest"] for one in hub["sources"]] == [made.digest]
     assert hub["sources"][0]["cells"][FLOW]["stage"] == "draft"
@@ -324,7 +324,7 @@ def test_unticking_a_cell_past_assigned_is_refused_and_changes_nothing(
     before = snapshot(made.path)
 
     answered = client.post(
-        f"/api/b/{BATCH}/assign",
+        f"/api/c/{COLLECTION}/assign",
         json={"sources": ["ada.jpg"], "flow": FLOW, "remove": True},
     ).json()
 
@@ -340,18 +340,18 @@ def test_a_review_url_names_its_run_by_the_digest_its_identifier_begins_with(
 
     assert body["run"] == made.id
     assert made.id.startswith(body["id"]) and len(body["id"]) == 12
-    unknown = client.get(f"/api/b/{BATCH}/review/{'0' * 12}/{FLOW}")
+    unknown = client.get(f"/api/c/{COLLECTION}/review/{'0' * 12}/{FLOW}")
     assert unknown.status_code == 409
     assert "no run named" in unknown.json()["refusal"]
-    elsewhere = client.get(f"/api/b/no-such-batch/review/{made.digest}/{FLOW}")
-    assert "no batch named 'no-such-batch'" in elsewhere.json()["refusal"]
+    elsewhere = client.get(f"/api/c/no-such-collection/review/{made.digest}/{FLOW}")
+    assert "no collection named 'no-such-collection'" in elsewhere.json()["refusal"]
 
 
 @pytest.mark.spec_exempt("structural: a screen's path loads the shell, an API's not")
 def test_any_other_path_is_the_page_and_an_unknown_api_path_is_not_found(
     client: TestClient,
 ) -> None:
-    page = client.get(f"/b/{BATCH}/review/0d4b7e6fb2a8/{FLOW}")
+    page = client.get(f"/c/{COLLECTION}/review/0d4b7e6fb2a8/{FLOW}")
     assert page.status_code == 200
     assert page.text == "<!doctype html>"
     assert client.get("/api/nothing-here").status_code == 404
@@ -573,7 +573,7 @@ def test_a_re_opened_input_reports_its_own_status_and_does_not_split_the_count(
     _source(made)
 
     def status() -> str:
-        (one,) = client.get(f"/api/b/{BATCH}/hub").json()["sources"]
+        (one,) = client.get(f"/api/c/{COLLECTION}/hub").json()["sources"]
         return str(one["cells"][FLOW]["status"])
 
     assert status() == "draft"
@@ -676,7 +676,7 @@ def test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written(
     before = snapshot(made.path)
 
     answered = client.post(
-        f"/api/b/{BATCH}/revise",
+        f"/api/c/{COLLECTION}/revise",
         json={"images": [{**image, "flow": FLOW}, {**image, "flow": "nope"}]},
     )
 
@@ -699,7 +699,7 @@ def test_a_revision_of_a_version_or_seed_no_run_can_hold_is_refused(
     before = snapshot(made.path)
 
     answered = client.post(
-        f"/api/b/{BATCH}/revise",
+        f"/api/c/{COLLECTION}/revise",
         json={
             "images": [
                 {"digest": made.digest, "flow": FLOW, "version": version, "seed": seed}
@@ -736,7 +736,7 @@ def _revised(client: TestClient, made: Run) -> Path:
     image.write_bytes(png_bytes(8, 8))
     (image.parent / "7.render.json").write_text("{}\n")
     answered = client.post(
-        f"/api/b/{BATCH}/revise",
+        f"/api/c/{COLLECTION}/revise",
         json={
             "images": [{"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"}]
         },
@@ -795,7 +795,7 @@ def test_revising_an_image_whose_flow_holds_a_waiting_draft_answers_that_draft(
     image = {"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"}
     before = snapshot(made.path)
 
-    answered = client.post(f"/api/b/{BATCH}/revise", json={"images": [image]})
+    answered = client.post(f"/api/c/{COLLECTION}/revise", json={"images": [image]})
 
     assert answered.status_code == 200
     assert answered.json() == {
@@ -1032,7 +1032,8 @@ def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
     _approved(client, made)
     assert client.get(_at(made)).json()["cancel"] is None
 
-    # A render running for the batch holds the cancel, whatever the review stage says.
+    # A render running for the collection holds the cancel, whatever the review
+    # stage says.
     with monkeypatch.context() as held:
         held.setattr(
             Jobs, "slot", lambda self, kind: _rendering_slot("20261024T091200Z")
@@ -1084,7 +1085,7 @@ def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
     # vocabulary it emits and so every one of them is committable.
     assert body["wd14"] == [{"tag": "1girl", "confidence": 0.9}]
     # Filtered: `fashion photography` is in no field's reach, and on the
-    # acceptance batch nine in ten of this model's tags were like it.
+    # acceptance collection nine in ten of this model's tags were like it.
     assert [one["tag"] for one in body["tags"]] == ["brown hair", "blue eyes"]
 
 
@@ -1397,7 +1398,7 @@ def test_a_damaged_file_is_refused_by_name(
             [made.id],
         )
         assert parsed.runs == made.path.parent
-    assert client.get(f"/api/b/{BATCH}/hub").status_code == 200
+    assert client.get(f"/api/c/{COLLECTION}/hub").status_code == 200
 
 
 @pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
@@ -1418,7 +1419,7 @@ def test_a_damage_remedy_under_the_default_root_names_no_runs_flag(
 def test_a_damage_remedy_under_a_root_holding_a_space_pastes_as_one_argument(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
-    root = tmp_path / "my lib" / BATCH / "runs"
+    root = tmp_path / "my lib" / COLLECTION / "runs"
     (root.parent / "sources").mkdir(parents=True)
     root.mkdir()
     shutil.move(made.path, root / made.id)
@@ -1492,7 +1493,7 @@ def test_a_cells_approvals_are_listed_newest_first_with_their_images(
     _rendered_twice(made, schema, vocabulary)
     client = _client(wired, made, tmp_path, drafted=False)
 
-    body = client.get(f"/api/b/{BATCH}/renders").json()
+    body = client.get(f"/api/c/{COLLECTION}/renders").json()
 
     (source,) = body["sources"]
     cell = source["cells"][FLOW]
@@ -1519,7 +1520,7 @@ def test_a_cell_counts_the_images_its_newest_approval_lacks(
     render(made, flow, comfy, seeds=[22], poll=0)
     client = _client(wired, made, tmp_path, drafted=False)
 
-    body = client.get(f"/api/b/{BATCH}/renders").json()
+    body = client.get(f"/api/c/{COLLECTION}/renders").json()
 
     (source,) = body["sources"]
     assert source["ready"] == {FLOW: 2, "conjure-anime-wai": 0}
@@ -1545,7 +1546,7 @@ def test_a_thumbnail_asked_for_twice_is_read_from_the_cache_the_second_time(
         return shrink(image)
 
     monkeypatch.setattr(library, "_shrunk", counted)
-    thumb = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/11/thumb"
+    thumb = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/11/thumb"
 
     first = client.get(thumb)
     second = client.get(thumb)
@@ -1568,7 +1569,7 @@ def test_a_source_thumbnail_is_turned_upright_and_read_from_the_cache_again(
     # Orientation 6 turns a wide file a quarter turn: upright, it is tall.
     turned = Image.Exif()
     turned[0x0112] = 6
-    sources = tmp_path / "lib" / BATCH / "sources"
+    sources = tmp_path / "lib" / COLLECTION / "sources"
     (sources / "turned.jpg").write_bytes(
         photo_jpeg((30, 60, 90), (800, 400), exif=turned.tobytes())
     )
@@ -1580,7 +1581,7 @@ def test_a_source_thumbnail_is_turned_upright_and_read_from_the_cache_again(
         return upright(source)
 
     monkeypatch.setattr(library, "_upright", counted)
-    thumb = f"/api/b/{BATCH}/sources/turned.jpg/thumb"
+    thumb = f"/api/c/{COLLECTION}/sources/turned.jpg/thumb"
 
     first = client.get(thumb)
     second = client.get(thumb)
@@ -1592,19 +1593,21 @@ def test_a_source_thumbnail_is_turned_upright_and_read_from_the_cache_again(
     assert height > width
     assert second.content == first.content
     assert len(made) == 1
-    whole = client.get(f"/api/b/{BATCH}/sources/turned.jpg")
+    whole = client.get(f"/api/c/{COLLECTION}/sources/turned.jpg")
     assert whole.content == (sources / "turned.jpg").read_bytes()
-    assert client.get(f"/api/b/{BATCH}/sources/absent.jpg/thumb").status_code == 409
+    assert (
+        client.get(f"/api/c/{COLLECTION}/sources/absent.jpg/thumb").status_code == 409
+    )
 
 
 @pytest.mark.spec("ui:renders:a-photograph-is-served-as-its-bytes")
 def test_a_source_named_as_a_page_is_served_as_the_image_it_is(
     client: TestClient, made: Run, tmp_path: Path
 ) -> None:
-    sources = tmp_path / "lib" / BATCH / "sources"
+    sources = tmp_path / "lib" / COLLECTION / "sources"
     (sources / "portrait.html").write_bytes(png_bytes(40, 30))
 
-    whole = client.get(f"/api/b/{BATCH}/sources/portrait.html")
+    whole = client.get(f"/api/c/{COLLECTION}/sources/portrait.html")
     photo = client.get(_at(made, "/photo"))
 
     assert whole.status_code == 200
@@ -1620,7 +1623,7 @@ def test_a_source_named_as_a_page_is_served_as_the_image_it_is(
     turned[0x0112] = 6
     Image.new("RGB", (40, 30), (30, 60, 90)).save(held, "WEBP", exif=turned.tobytes())
     (sources / "pose.webp").write_bytes(held.getvalue())
-    other = client.get(f"/api/b/{BATCH}/sources/pose.webp")
+    other = client.get(f"/api/c/{COLLECTION}/sources/pose.webp")
     assert other.status_code == 200
     assert other.headers["content-type"] == "image/jpeg"
     assert other.headers["x-content-type-options"] == "nosniff"
@@ -1643,7 +1646,7 @@ def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
     body = json.loads(older.read_text())
     older.write_text(json.dumps({**body, "renders": {"count": 0}}))
 
-    answered = client.get(f"/api/b/{BATCH}/renders")
+    answered = client.get(f"/api/c/{COLLECTION}/renders")
 
     assert answered.status_code == 200
     (source,) = answered.json()["sources"]
@@ -1652,7 +1655,7 @@ def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
     assert (damaged["version"], damaged["rendered"]) == (1, ["11"])
     assert older.name in damaged["damaged"]
     # Its image's large view is headed damaged too, naming the file, not counted.
-    large = client.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/11").json()
+    large = client.get(f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/11").json()
     assert older.name in large["damaged"]
     assert large["count"] is None
 
@@ -1696,7 +1699,7 @@ def test_a_version_is_headed_a_revision_or_a_re_roll_of_the_one_it_came_from(
     _approved_again(made, schema, vocabulary, {"count": 1, "seeds": [5]})
     rendered(5)
     client = _client(wired, made, tmp_path, drafted=False)
-    large = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}"
+    large = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}"
 
     views = [client.get(f"{large}/{at}").json() for at in ("v3/5", "v2/7", "v1/7")]
 
@@ -1732,7 +1735,7 @@ def test_a_seed_rendered_under_three_versions_compares_the_third_with_the_second
     _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
     rendered()
     client = _client(wired, made, tmp_path, drafted=False)
-    large = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v3/7"
+    large = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v3/7"
 
     view = client.get(large).json()
     pair = client.get(f"{large}/compare").json()
@@ -1770,7 +1773,7 @@ def test_compare_takes_any_two_images_of_a_cell(
     _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
     rendered(7)
     client = _client(wired, made, tmp_path, drafted=False)
-    large = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}"
+    large = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}"
 
     view = client.get(f"{large}/v4/7").json()
     pair = client.get(f"{large}/v4/7/compare/v2/5").json()
@@ -1831,7 +1834,7 @@ def test_a_version_of_digits_outside_ascii_is_refused_not_failed(
     _rendered_twice(made, schema, vocabulary)
     client = _client(wired, made, tmp_path, drafted=False)
 
-    answered = client.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v²/11")
+    answered = client.get(f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v²/11")
 
     assert answered.status_code == 409
     assert "names no version" in answered.json()["refusal"]
@@ -1853,7 +1856,7 @@ def _drafting(made: Run, schema: Schema, vocabulary: Vocabulary) -> str:
     approve(made, FLOW, schema, vocabulary)
     prepare(made, {FLOW: flow})
     render(made, flow, comfy, seeds=[7], poll=0)
-    return f"/api/b/{BATCH}/review/{made.digest}/{CONJURE}/draft-from"
+    return f"/api/c/{COLLECTION}/review/{made.digest}/{CONJURE}/draft-from"
 
 
 @pytest.mark.spec("ui:conjure-from:the-large-view-names-its-targets")
@@ -1870,7 +1873,7 @@ def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
     assign(made, "control-anime-wai")
     client = _client(wired, made, tmp_path, drafted=False)
 
-    body = client.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/7").json()
+    body = client.get(f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/7").json()
 
     assert body["targets"] == [CONJURE]
 
@@ -1879,9 +1882,11 @@ def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
     alone = _client(wired, made, tmp_path, drafted=False, offered=(FLOW,))
     before = snapshot(made.path)
 
-    narrowed = alone.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/7").json()
+    narrowed = alone.get(
+        f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/7"
+    ).json()
     pressed = alone.post(
-        f"/api/b/{BATCH}/review/{made.digest}/{CONJURE}/draft-from",
+        f"/api/c/{COLLECTION}/review/{made.digest}/{CONJURE}/draft-from",
         json={"source": FLOW, "version": 1},
     )
 
@@ -2037,17 +2042,17 @@ def test_a_sheet_filled_from_another_flows_tags_shows_that_flows_caption(
 
 
 def _rendering_slot(session: str) -> dict[str, Any]:
-    """Return the render slot as it reads while a render of `BATCH` runs."""
+    """Return the render slot as it reads while a render of `COLLECTION` runs."""
     return {
         "kind": "render",
-        "batch": BATCH,
+        "collection": COLLECTION,
         "state": "running",
         "session": {"id": session},
     }
 
 
 def _record(made: Run, name: str, started: str, outcome: str) -> SessionRecord:
-    """Write and return a session record of `made`'s batch, one image landed."""
+    """Write and return a session record of `made`'s collection, one image landed."""
     record: SessionRecord = {
         "schema": SESSION_FILE.schema,
         "id": name,
@@ -2071,7 +2076,7 @@ def test_a_session_is_served_from_its_record_and_an_unknown_id_refused(
 ) -> None:
     written = _record(made, "20261024T080000Z", "2026-10-24T08:00:00Z", "done")
 
-    served = client.get(f"/api/b/{BATCH}/sessions/20261024T080000Z").json()
+    served = client.get(f"/api/c/{COLLECTION}/sessions/20261024T080000Z").json()
 
     assert (served["images"], served["steps"], served["outcome"]) == (
         written["images"],
@@ -2079,9 +2084,9 @@ def test_a_session_is_served_from_its_record_and_an_unknown_id_refused(
         "done",
     )
     for unknown in ("20261024T070000Z", "latest"):
-        refused = client.get(f"/api/b/{BATCH}/sessions/{unknown}")
+        refused = client.get(f"/api/c/{COLLECTION}/sessions/{unknown}")
         assert refused.status_code == 409
-        assert refused.json()["refusal"] == f"{BATCH} holds no session {unknown!r}"
+        assert refused.json()["refusal"] == f"{COLLECTION} holds no session {unknown!r}"
 
 
 # --- the import sheet ---------------------------------------------------------
@@ -2251,20 +2256,26 @@ def test_a_terminal_session_is_live_without_a_job_slot(
     monkeypatch.setattr(Jobs, "slot", lambda self, kind: None)
     name = "20261024T091200Z"
     record = Record(made.path.parent.parent / "sessions", name, 1200, {FLOW: 1})
-    # A damaged record in another batch is that batch's refusal, not this read's.
+    # A damaged record in another collection is that collection's refusal, not
+    # this read's.
     other = made.path.parent.parent.parent / "another"
     (other / "sources").mkdir(parents=True)
     (other / "sessions").mkdir()
     (other / "sessions" / "20261024T080000Z.json").write_text("{")
     record.open()
     try:
-        response = client.get(f"/api/b/{BATCH}/sessions/{name}")
+        response = client.get(f"/api/c/{COLLECTION}/sessions/{name}")
         assert response.json()["outcome"] == "running"
         running = client.get("/api/sessions/running").json()["sessions"]
-        assert [(one["batch"], one["id"]) for one in running] == [(BATCH, name)]
+        assert [(one["collection"], one["id"]) for one in running] == [
+            (COLLECTION, name)
+        ]
         record.image({"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"})
-        assert len(client.get(f"/api/b/{BATCH}/sessions/{name}").json()["images"]) == 1
+        assert (
+            len(client.get(f"/api/c/{COLLECTION}/sessions/{name}").json()["images"])
+            == 1
+        )
     finally:
         record.close()
-    assert client.get(f"/api/b/{BATCH}/sessions/{name}").json()["outcome"] is None
+    assert client.get(f"/api/c/{COLLECTION}/sessions/{name}").json()["outcome"] is None
     assert client.get("/api/sessions/running").json()["sessions"] == []

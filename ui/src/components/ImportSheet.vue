@@ -10,13 +10,13 @@ import { useLiveStore } from '../stores/live'
 import KeyHint from './KeyHint.vue'
 import type { StagedFile } from '../types'
 
-/* The New batch and Add sources sheet (design spec J1, J7): files chosen in the
+/* The New collection and Add sources sheet (design spec J1, J7): files chosen in the
    browser's dialog, each sent in its own request with its own bar, then read and
    cleaned by the server one at a time, each step reported on the page's stream,
-   then imported in one move. With `batch`, the files join that batch; without
+   then imported in one move. With `collection`, the files join that collection; without
    it, the sheet names a new one. */
-const props = defineProps<{ batch?: string }>()
-const emit = defineEmits<{ close: []; imported: [batch: string] }>()
+const props = defineProps<{ collection?: string }>()
+const emit = defineEmits<{ close: []; imported: [collection: string] }>()
 
 /* `queued` before its upload starts; `waiting` and `converting` are the server's. */
 type Phase = 'queued' | 'uploading' | 'waiting' | 'converting' | 'read' | 'refused'
@@ -90,7 +90,7 @@ const opening = openStaging().then(
   },
 )
 
-const adding = computed(() => props.batch !== undefined)
+const adding = computed(() => props.collection !== undefined)
 const read = computed(() => tiles.value.filter((one) => one.phase === 'read' || one.phase === 'refused'))
 const reading = computed(() => read.value.length < tiles.value.length)
 const refused = computed(() => tiles.value.filter((one) => one.phase === 'refused'))
@@ -213,7 +213,7 @@ function total(): string {
 async function importAll(): Promise<void> {
   if (disabled.value !== null || staging.value === null) return
   refusal.value = null
-  const target = props.batch ?? name.value.trim()
+  const target = props.collection ?? name.value.trim()
   const asIs = tiles.value
     .filter((one) => one.result?.state === 'not cleaned' && one.asIs)
     .map((one) => one.result?.name ?? '')
@@ -221,7 +221,7 @@ async function importAll(): Promise<void> {
   try {
     const done = await commitStaging(staging.value, target, asIs, adding.value)
     committed = true
-    emit('imported', done.batch)
+    emit('imported', done.collection)
   } catch (reason) {
     refusal.value = (reason as Error).message
   } finally {
@@ -286,11 +286,11 @@ onUnmounted(() => {
   <dialog
     ref="dialog"
     class="import"
-    :aria-label="adding ? 'Add sources' : 'New batch'"
+    :aria-label="adding ? 'Add sources' : 'New collection'"
     @cancel.prevent
   >
     <header class="import__head">
-      <h2 class="import__title">{{ adding ? 'Add sources' : 'New batch' }}</h2>
+      <h2 class="import__title">{{ adding ? 'Add sources' : 'New collection' }}</h2>
       <span v-if="reading" class="import__count import__count--reading mono">
         reading {{ read.length }} of {{ tiles.length }}
       </span>
@@ -376,7 +376,7 @@ onUnmounted(() => {
       </div>
       <div v-if="!adding" class="import__side">
         <p class="section-label">name</p>
-        <input v-model="name" class="input import__batch mono" type="text" aria-label="Batch name" />
+        <input v-model="name" class="input import__collection mono" type="text" aria-label="Collection name" />
       </div>
     </div>
     <p v-if="refusal" class="import__refused import__refused--commit">

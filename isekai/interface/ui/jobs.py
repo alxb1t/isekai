@@ -2,7 +2,7 @@
 
 One job of each kind runs at a time, the two side by side. The CLI is the one
 path, so a job is exactly what the verbs do. Each child runs in its own session and
-reports through `--progress json`; its prose is appended to the batch's `log.txt`,
+reports through `--progress json`; its prose is appended to the collection's `log.txt`,
 each line naming its job. A job outlives the page that started it.
 
 ```
@@ -88,7 +88,7 @@ def isekai_command(verb: str, flow: str, runs: Path, ids: Sequence[str]) -> list
     ]
 
 
-# How a render is started: the session's limit, the batch's runs root, its id.
+# How a render is started: the session's limit, the collection's runs root, its id.
 RenderCommand = Callable[[int, Path, str], list[str]]
 
 
@@ -134,7 +134,7 @@ def plan(todo: Mapping[str, Sequence[str]], tagged: Mapping[str, bool]) -> list[
 
 @dataclass
 class _Job:
-    batch: str
+    collection: str
     steps: tuple[Step, ...]
     kind: Kind = "prepare"
     state: str = "running"
@@ -151,7 +151,7 @@ class _Job:
     def describe(self) -> dict[str, Any]:
         described = {
             "kind": self.kind,
-            "batch": self.batch,
+            "collection": self.collection,
             "state": self.state,
             "flow": self.flow,
             "stage": self.stage,
@@ -233,7 +233,7 @@ class Jobs:
 
     def prepare(
         self,
-        batch: str,
+        collection: str,
         folder: Path,
         steps: Sequence[Step],
         cell: Callable[[dict[str, Any]], dict[str, Any] | None],
@@ -249,11 +249,11 @@ class Jobs:
             self._refuse_running("prepare")
             if not steps:
                 raise Refusal(
-                    f"{batch} has no assigned cell without a sheet; tick a flow for "
-                    "a source, then try again"
+                    f"{collection} has no assigned cell without a sheet; tick a flow "
+                    "for a source, then try again"
                 )
             job = _Job(
-                batch,
+                collection,
                 tuple(steps),
                 started=self._now(),
                 accepted={(step.flow, run) for step in steps for run in step.runs},
@@ -269,7 +269,7 @@ class Jobs:
 
     def render(
         self,
-        batch: str,
+        collection: str,
         folder: Path,
         *,
         limit: int,
@@ -295,7 +295,7 @@ class Jobs:
                 "steps": steps,
                 "images": [],
             }
-            job = _Job(batch, (), kind="render", session=session)
+            job = _Job(collection, (), kind="render", session=session)
             self._occupy(job, self._run_render, (job, folder, limit))
         self._publish(job)
         return job.describe()
@@ -312,8 +312,8 @@ class Jobs:
         job = self._slots[kind].job
         if job is not None and self._slots[kind].running:
             raise Refusal(
-                f"a job is running: {LABELS[job.kind]} on {job.batch}; wait for it "
-                "to end, or "
+                f"a job is running: {LABELS[job.kind]} on {job.collection}; wait for "
+                "it to end, or "
                 "Stop it, then try again"
             )
 
@@ -432,7 +432,8 @@ class Jobs:
                         job.state = "failed"
                         job.message = (
                             f"{step.verb} on {step.flow} ended before reporting "
-                            f"(exit {code}); read {job.batch}/{LOG}, then try again"
+                            f"(exit {code}); read {job.collection}/{LOG}, "
+                            "then try again"
                         )
                         break
         finally:
@@ -457,7 +458,7 @@ class Jobs:
                 job.state = "failed"
                 job.message = (
                     f"gpunit volume up did not open the window (exit {code}); read "
-                    f"{job.batch}/{LOG}, and nothing was rendered"
+                    f"{job.collection}/{LOG}, and nothing was rendered"
                 )
                 return
             opened = True
@@ -472,8 +473,8 @@ class Jobs:
                 slot.child = None
                 job.state = "failed"
                 job.message = (
-                    f"the render job could not run ({error}); read {job.batch}/{LOG}, "
-                    "then try again"
+                    f"the render job could not run ({error}); read "
+                    f"{job.collection}/{LOG}, then try again"
                 )
         finally:
             if opened and steps["volume down"] != "kept":
@@ -523,7 +524,7 @@ class Jobs:
                 job.message = (
                     f"render ended with exit {code}"
                     + ("" if reported else " before reporting")
-                    + f"; read {job.batch}/{LOG}"
+                    + f"; read {job.collection}/{LOG}"
                 )
 
     def _mark(self, job: _Job, step: str, state: str) -> None:

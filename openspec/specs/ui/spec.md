@@ -94,9 +94,9 @@ holds the sheets not yet rendered and the one open, and its footer counts the ap
 #### Scenario: a re-opened input is not counted as approved
 - **Key:** `ui:approval:a-re-opened-input-is-not-counted-approved`
 - **Layers:** unit
-- **WHEN** the batch is read while one of its inputs is re-opened
+- **WHEN** the collection is read while one of its inputs is re-opened
 - **THEN** that input's reported status is neither approved nor a plain draft
-- **AND** the batch's approved count agrees with what the run directories hold
+- **AND** the collection's approved count agrees with what the run directories hold
 - **AND** Review's footer counts the approved among the rail's sheets, the re-opened one included
 
 #### Scenario: a stale lower draft does not re-open an approved input
@@ -170,7 +170,7 @@ committable tags the hosted tagger offered, and SHALL make neither list a way to
 **The two lists are narrowed differently, and the asymmetry is measured rather than chosen.** The local
 tagger is scored against the vocabulary it emits, so every tag it returns is committable by
 construction and all of them are shown, with the confidence beside each — a wrong tag sorted below a
-right one refutes itself. The hosted tagger free-associates: on the acceptance batch roughly nine in
+right one refutes itself. The hosted tagger free-associates: on the acceptance collection roughly nine in
 ten of its tags were outside the vocabulary, could not be committed to any field, and the operator's
 verdict was that only the marked ones carried any value. So its list is **filtered to what the
 vocabulary carries** before it is shown.
@@ -461,7 +461,7 @@ been read. A blank pane cannot be told from a photograph with nothing to say, an
 the caption bundled for exactly that reason; naming the command keeps the reason without the bundle.
 
 The server builds the command, as it builds every other command a refusal prints, and it names the run and its
-runs root so it works when pasted: a batch's runs root in the library is never the default.
+runs root so it works when pasted: a collection's runs root in the library is never the default.
 
 #### Scenario: an input with no caption names the command that writes it
 - **Key:** `ui:source:a-missing-caption-names-its-command`
@@ -511,13 +511,13 @@ library directory named by `ISEKAI_LIBRARY` and defaulting to `~/isekai`, creati
 before binding a port, a library inside the repository's working tree that is not under the ignored data root, and a
 library it cannot create, naming the remedy.
 
-The library is where the app keeps every batch, so the operator never types a path. Its batches hold copies of
+The library is where the app keeps every collection, so the operator never types a path. Its collections hold copies of
 photographs, so the rule that keeps a runs root out of what git tracks holds for the library too
 ([D18](../../../docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)).
 
 ```
 ~/isekai/                      the library
-  <batch>/ sources/ runs/ log.txt
+  <collection>/ sources/ runs/ log.txt
   .staging/                    a dot-folder: never listed
 ```
 
@@ -539,119 +539,6 @@ photographs, so the rule that keeps a runs root out of what git tracks holds for
 - **WHEN** the library resolves inside the working tree and outside the ignored data root
 - **THEN** the surface refuses before binding a port
 - **AND** the message names the variable that moves it
-
-### Requirement: A folder in the library is a batch when it holds `sources/`
-
-The system SHALL list as a batch every folder in the library that holds `sources/`, SHALL list any other folder as
-not a batch and open none of it, and SHALL list no dot-folder. Each batch's row SHALL carry its name, its source
-count, the names of its first fifteen sources, whose thumbnails it shows, for each flow the surface offers that is
-present the counts approved and rendered out of the sources that have that flow, the count of sources with no flow,
-and the time and kind of the newest file written in it. Batches SHALL be ordered by that time, newest first, and
-folders that are not batches after them. Home SHALL carry New batch at the right of the library's header row, and on
-an empty library below the privacy line. Count labels on the surface SHALL use a singular noun at one and a plural
-noun otherwise.
-
-A folder is a batch by its layout alone, so no marker file can disagree with what is on disk, and the row is a
-listing read on every request. A folder that is not a batch is shown rather than hidden so the screen matches the
-folder, and nothing in the app writes into it. The flows the surface offers are named in its configuration; a flow
-approved from another's sheet stays the CLI's. On first start the privacy line is read before the first import.
-
-#### Scenario: a folder with `sources/` is a batch
-- **Key:** `ui:batch-folder:a-folder-with-sources-is-a-batch`
-- **Layers:** unit
-- **WHEN** the library holds a folder with `sources/` and one without
-- **THEN** the first is listed as a batch
-- **AND** the second is listed as not a batch, and cannot be opened
-
-#### Scenario: a dot-folder is not listed
-- **Key:** `ui:batch-folder:a-dot-folder-is-not-listed`
-- **Layers:** unit
-- **WHEN** the library holds a folder whose name starts with a dot
-- **THEN** it is not listed at all
-
-#### Scenario: a flow's counts are of the sources that have it
-- **Key:** `ui:batch-folder:a-flows-counts-are-of-its-sources`
-- **Layers:** unit
-- **WHEN** a batch's sources have different sets of flows
-- **THEN** each flow's approved and rendered counts are out of the sources whose runs hold that flow
-- **AND** the sources with no flow are counted apart
-
-#### Scenario: batches are ordered by their newest file
-- **Key:** `ui:batch-folder:batches-are-ordered-by-their-newest-file`
-- **Layers:** unit
-- **WHEN** the library holds batches written at different times
-- **THEN** they are listed newest first, by the newest file written in each
-
-#### Scenario: no file records a batch
-- **Key:** `ui:batch-folder:no-file-records-a-batch`
-- **Layers:** unit
-- **WHEN** the surface lists the library and opens a batch
-- **THEN** no file describing a batch is created anywhere in the library
-
-#### Scenario: a flow the surface does not offer has no count
-- **Key:** `ui:batch-folder:an-unoffered-flow-has-no-count`
-- **Layers:** unit
-- **WHEN** a batch's runs hold a tracked flow the configuration does not offer
-- **THEN** its row carries no count for that flow
-
-#### Scenario: count labels use singular at one
-- **Key:** `ui:batch-folder:count-labels-use-singular-at-one`
-- **Layers:** unit
-- **WHEN** a count label is drawn for zero, one and several items
-- **THEN** one uses the singular noun and the other counts use the plural noun
-
-#### Scenario: a row names its first sources
-- **Key:** `ui:batch-folder:a-row-names-its-first-sources`
-- **Layers:** unit
-- **WHEN** a batch holds seventeen sources
-- **THEN** its row names the first fifteen in the hub's order
-- **AND** its source count is seventeen
-
-#### Scenario: first start shows New batch under the privacy line
-- **Key:** `ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line`
-- **Layers:** e2e
-- **WHEN** Home opens on an empty library
-- **THEN** New batch sits below the privacy line
-
-### Requirement: Every screen has a URL naming its batch and its run
-
-The system SHALL give Home, a batch's hub, a batch's Review, a review of a source in a flow and the billing alert's way
-out each its own URL, the session drawer holding none, SHALL name the batch in every URL inside one, and SHALL name a
-run by the twelve-character digest its identifier begins with. A batch's Review SHALL open the sheet Review starts from
-and put that sheet's URL in its place. It SHALL answer any of them on a fresh load, and SHALL refuse one naming a batch
-or a run the library does not hold, naming the way back.
-
-A reload, a second tab or a bookmark then lands where it was, never on whatever the server last held open. A run's
-short name is a sanitised filename and can repeat; its digest cannot.
-
-```
-/                                  Home
-/b/<batch>/hub                     the hub
-/b/<batch>/review                  the head of Review, replaced by its sheet's URL
-/b/<batch>/review/<digest>/<flow>  Review
-/billing                           the billing alert's way out
-```
-
-#### Scenario: a reload lands on the same screen
-- **Key:** `ui:routes:a-reload-lands-on-the-same-screen`
-- **Layers:** e2e
-- **WHEN** a hub, a review or a batch's Review address is loaded again
-- **THEN** the same batch, source and flow are shown
-- **AND** a batch's Review address is replaced by its head's sheet URL
-- **AND** a batch with no sheet waiting says none waits
-
-#### Scenario: a run is named by its digest
-- **Key:** `ui:routes:a-run-is-named-by-its-digest`
-- **Layers:** unit
-- **WHEN** a review URL names a run
-- **THEN** the run is the one whose identifier begins with that digest
-
-#### Scenario: an unknown batch is refused with the way back
-- **Key:** `ui:routes:an-unknown-batch-is-refused`
-- **Layers:** e2e
-- **WHEN** a URL names a batch the library does not hold
-- **THEN** the page refuses, naming the batch
-- **AND** it offers the way back to Home
 
 ### Requirement: The page's save state is true to the requests in flight, and a pending edit is sent on leaving
 
@@ -688,23 +575,23 @@ operator's own, not another tab's, and a closing page never reads the receipt it
 
 ### Requirement: The hub shows each source's stage in each offered flow, and a tick assigns it
 
-The system SHALL show a batch's hub as a grid of its sources by the flows the surface offers, each cell carrying the
-stage read from that run's directory — no flow, assigned, tagged, sheet, draft, approved or rendered — and SHALL ignore
-any other flow's directory. A cell whose run file cannot be read SHALL show that it is unreadable, with the refusal the
-pipeline raised, and the rest of the grid SHALL still be shown. Reading the hub SHALL write nothing; a tick SHALL write
-only through the assigning verb, and an untick only while the cell is assigned. A source imported as it is, still
-carrying metadata, SHALL be marked on its row. Each source SHALL show its name and its thumbnail, and its row SHALL
-carry the size read from its own file, with or without a run, which the viewer's title names. A source's thumbnail and a
-cell's images SHALL sit at the foot of their cells, level across the row, whatever text stands above them; a cell's
-refusal SHALL stand above its images, and `↵ view photo` SHALL take no line of the source's cell. A cell SHALL name its
-newest image — the newest version holding images, then its last-written image — and a click or `↵` SHALL follow the
-cell's stage: tick while unassigned or assigned, open Review on a sheet or a draft, open the sheet read-only on an
+The system SHALL show a collection's hub as a grid of its sources by the flows the surface offers, each cell carrying
+the stage read from that run's directory — no flow, assigned, tagged, sheet, draft, approved or rendered — and SHALL
+ignore any other flow's directory. A cell whose run file cannot be read SHALL show that it is unreadable, with the
+refusal the pipeline raised, and the rest of the grid SHALL still be shown. Reading the hub SHALL write nothing; a tick
+SHALL write only through the assigning verb, and an untick only while the cell is assigned. A source imported as it is,
+still carrying metadata, SHALL be marked on its row. Each source SHALL show its name and its thumbnail, and its row
+SHALL carry the size read from its own file, with or without a run, which the viewer's title names. A source's thumbnail
+and a cell's images SHALL sit at the foot of their cells, level across the row, whatever text stands above them; a
+cell's refusal SHALL stand above its images, and `↵ view photo` SHALL take no line of the source's cell. A cell SHALL
+name its newest image — the newest version holding images, then its last-written image — and a click or `↵` SHALL follow
+the cell's stage: tick while unassigned or assigned, open Review on a sheet or a draft, open the sheet read-only on an
 approval with no image, and open the viewer on the newest of the cell's images where it holds any, stepping through
 them, `↵` opening an image's large view; a tagged or unreadable cell SHALL do nothing. A cell holding images SHALL show
 every one of them, oldest to newest, each marked with its version. A source's cell SHALL be the grid's first column,
-reached by `h` and `←`, and `↵` there SHALL open its photograph in the viewer, stepping through the batch's sources. The
-hub SHALL keep its focus across a large view, the Back button and a switch of tabs. The header SHALL leave a 12 px gap
-between items.
+reached by `h` and `←`, and `↵` there SHALL open its photograph in the viewer, stepping through the collection's
+sources. The hub SHALL keep its focus across a large view, the Back button and a switch of tabs. The header SHALL leave
+a 12 px gap between items.
 
 A stage is a directory listing, the rule every stage already follows, so the grid cannot drift from the disk, and a tick
 survives a reload. The mark and the size are read from the source itself, so no file records them. An approved cell can
@@ -733,8 +620,8 @@ pictures share a foot, so a long name, a mark or a refusal moves only the text a
 #### Scenario: the hub writes nothing
 - **Key:** `ui:hub:the-hub-writes-nothing`
 - **Layers:** unit
-- **WHEN** a batch's hub is read
-- **THEN** no file in the batch is created, changed or removed
+- **WHEN** a collection's hub is read
+- **THEN** no file in the collection is created, changed or removed
 
 #### Scenario: a tick assigns the flow
 - **Key:** `ui:hub:a-tick-assigns-the-flow`
@@ -807,7 +694,7 @@ cancel, by button, by `Esc` or by leaving the screen; a commit refused after the
 staged folder.
 
 Each file's bar answers which one is slow; each reason sits on the file it concerns, so two files of one name are
-two uploads. A file that lands while the folder is committed would be dropped from the batch unseen, and a cancel
+two uploads. A file that lands while the folder is committed would be dropped from the collection unseen, and a cancel
 then would delete the folder the commit is moving.
 
 #### Scenario: each file shows its own progress, then its result
@@ -826,8 +713,8 @@ then would delete the folder the commit is moving.
 #### Scenario: an imported batch opens its hub
 - **Key:** `ui:sheet:an-import-opens-the-hub`
 - **Layers:** e2e
-- **WHEN** Import is pressed on a new batch
-- **THEN** the batch's hub opens with every source unassigned
+- **WHEN** Import is pressed on a new collection
+- **THEN** the collection's hub opens with every source unassigned
 
 #### Scenario: a staged file serves its preview
 - **Key:** `ui:sheet:a-staged-file-serves-its-preview`
@@ -861,7 +748,7 @@ then would delete the folder the commit is moving.
 - **Layers:** unit
 - **WHEN** a file is uploaded once Import has begun committing
 - **THEN** the upload is refused, naming the way to add it
-- **AND** the committed batch is unchanged by it
+- **AND** the committed collection is unchanged by it
 
 #### Scenario: a failed read refuses its file alone
 - **Key:** `ui:sheet:a-failed-read-refuses-its-file-alone`
@@ -886,16 +773,16 @@ then would delete the folder the commit is moving.
 
 ### Requirement: Prepare runs what changed as one job, and refuses before it starts when Ollama does not answer
 
-The system SHALL run Prepare as one job over every assigned cell with no sheet: for each flow, the tagging, reading
-and sheet stages, each one invocation of the pipeline's own verb over that flow's cells. One job of each kind, a Prepare
-and a render, SHALL run at a time, the two side by side in any batches; a job SHALL keep running when its page closes;
-Stop SHALL interrupt the current stage of the job it names and start no other, leaving the other job running;
-stopping the surface SHALL interrupt every running job; each line a job's verbs write to the batch's log SHALL name
-its job; and a stage that fails having reported nothing SHALL end the job
-as failed, naming the batch's log, and start no other. Before any stage starts, the surface SHALL check that the
-local model server answers, and SHALL refuse with its message, starting nothing, when it does not. While Prepare
-runs, the job strip and Prepare bar SHALL show completed cells out of the accepted total and elapsed time; the total
-SHALL stay fixed, a cell SHALL count as completed only at sheet, and elapsed time SHALL tick every second.
+The system SHALL run Prepare as one job over every assigned cell with no sheet: for each flow, the tagging, reading and
+sheet stages, each one invocation of the pipeline's own verb over that flow's cells. One job of each kind, a Prepare and
+a render, SHALL run at a time, the two side by side in any collections; a job SHALL keep running when its page closes;
+Stop SHALL interrupt the current stage of the job it names and start no other, leaving the other job running; stopping
+the surface SHALL interrupt every running job; each line a job's verbs write to the collection's log SHALL name its job;
+and a stage that fails having reported nothing SHALL end the job as failed, naming the collection's log, and start no
+other. Before any stage starts, the surface SHALL check that the local model server answers, and SHALL refuse with its
+message, starting nothing, when it does not. While Prepare runs, the job strip and Prepare bar SHALL show completed
+cells out of the accepted total and elapsed time; the total SHALL stay fixed, a cell SHALL count as completed only at
+sheet, and elapsed time SHALL tick every second.
 
 The pipeline's verb is the one path, so Prepare is exactly what the verbs do. Prepare runs on the local models and a
 render on a rented GPU, and they write no file in common, so neither waits for the other. A refusal before the start
@@ -919,8 +806,8 @@ leaves every cell assigned, so pressing Prepare again is the whole fix.
 #### Scenario: another batch's Prepare is disabled while one runs
 - **Key:** `ui:prepare:another-batchs-prepare-is-disabled`
 - **Layers:** unit
-- **WHEN** a hub has changes waiting while a Prepare runs for another batch
-- **THEN** its Prepare is disabled, naming the batch that runs
+- **WHEN** a hub has changes waiting while a Prepare runs for another collection
+- **THEN** its Prepare is disabled, naming the collection that runs
 
 #### Scenario: Prepare refuses when Ollama does not answer
 - **Key:** `ui:prepare:refused-when-ollama-does-not-answer`
@@ -940,7 +827,7 @@ leaves every cell assigned, so pressing Prepare again is the whole fix.
 - **Key:** `ui:prepare:a-silent-failure-ends-the-job`
 - **Layers:** unit
 - **WHEN** a stage exits in failure having reported no item
-- **THEN** the job ends as failed, naming the batch's log
+- **THEN** the job ends as failed, naming the collection's log
 - **AND** no later stage starts
 
 #### Scenario: totals count cells rather than stage reports
@@ -965,18 +852,18 @@ leaves every cell assigned, so pressing Prepare again is the whole fix.
 #### Scenario: the log names each job
 - **Key:** `ui:prepare:the-log-names-each-job`
 - **Layers:** unit
-- **WHEN** a Prepare and a render write to one batch's log
+- **WHEN** a Prepare and a render write to one collection's log
 - **THEN** each line begins with its job's name
 
 ### Requirement: The page is told of a job as it runs
 
 The system SHALL serve an event stream that, on every connection, sends a snapshot of both job slots, the Prepare and
-the render, and, when a batch is named, that batch's hub, and then sends each change as the job's stages report it. A
-running Prepare snapshot SHALL carry its accepted total, completed count and start time. A hub opened while the slot
-holds its batch's failed Prepare SHALL show that job's message until Discard on that batch's hub dismisses it in that
-page. A page SHALL hold one event stream, naming the batch its screen shows and the import it has open, and SHALL
-open it again when either changes. When the surface stops, its streams SHALL end before the server's graceful wait
-expires, without cancellation errors; a terminal interrupt SHALL exit quietly after cleanup.
+the render, and, when a collection is named, that collection's hub, and then sends each change as the job's stages
+report it. A running Prepare snapshot SHALL carry its accepted total, completed count and start time. A hub opened while
+the slot holds its collection's failed Prepare SHALL show that job's message until Discard on that collection's hub
+dismisses it in that page. A page SHALL hold one event stream, naming the collection its screen shows and the import it
+has open, and SHALL open it again when either changes. When the surface stops, its streams SHALL end before the server's
+graceful wait expires, without cancellation errors; a terminal interrupt SHALL exit quietly after cleanup.
 
 A reload or a second tab gets the whole truth at once; a job's progress reaches the page as the verbs report it. A
 job outlives its page, so a failure that happened while no page was open is still told. Every connect brings a
@@ -985,8 +872,8 @@ snapshot, so a stream opened again loses nothing, and one connection a page leav
 #### Scenario: a connection starts with a snapshot
 - **Key:** `ui:events:a-connection-starts-with-a-snapshot`
 - **Layers:** unit
-- **WHEN** the stream is opened for a batch
-- **THEN** its first event carries both job slots and that batch's hub
+- **WHEN** the stream is opened for a collection
+- **THEN** its first event carries both job slots and that collection's hub
 
 #### Scenario: a stage's report reaches the stream
 - **Key:** `ui:events:a-stages-report-reaches-the-stream`
@@ -1010,15 +897,15 @@ snapshot, so a stream opened again loses nothing, and one connection a page leav
 #### Scenario: a hub opened after a failure shows it
 - **Key:** `ui:events:a-hub-opened-after-a-failure-shows-it`
 - **Layers:** unit
-- **WHEN** a hub opens while the slot holds its batch's failed Prepare
+- **WHEN** a hub opens while the slot holds its collection's failed Prepare
 - **THEN** the Prepare bar shows the job's message
 - **AND** once Discard dismisses it, a hub opened again in that page does not
 
 #### Scenario: one stream follows the batch and the import
 - **Key:** `ui:events:one-stream-follows-the-batch-and-the-import`
 - **Layers:** unit
-- **WHEN** a page opens a batch, then an import inside it
-- **THEN** it holds one stream, opened again naming the batch and then the import too
+- **WHEN** a page opens a collection, then an import inside it
+- **THEN** it holds one stream, opened again naming the collection and then the import too
 - **AND** the stream it closed is the only other one it opened
 
 #### Scenario: a job event fills its kind's slot
@@ -1029,17 +916,17 @@ snapshot, so a stream opened again loses nothing, and one connection a page leav
 
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
-The system SHALL offer Render from a bar on a batch's hub and its Renders view that counts the images short of their
-approvals' counts, and SHALL show no such bar when none is short and no count is refused, nor on the hub while changes
-wait for Prepare. The bar SHALL be disabled, with its reason, when a render runs, when a pod may still be billing, when
-no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a dialog listing
-per offered flow the images that will render and what is left out, with the reason, the session's estimate and limit,
-and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its configured rate. Its
-confirmation SHALL be the only act that rents; the dialog SHALL hold no URL, and SHALL close when its page is left, and
-the confirmation SHALL close it and open the session drawer over the page. The confirmation SHALL carry the limit and
-the number of images the dialog showed, and SHALL be refused, starting nothing, when the batch's quote taken again has a
-longer limit or another number of images. The bar SHALL show the newest offer asked for, whatever order the answers
-arrive in.
+The system SHALL offer Render from a bar on a collection's hub and its Renders view that counts the images short of
+their approvals' counts, and SHALL show no such bar when none is short and no count is refused, nor on the hub while
+changes wait for Prepare. The bar SHALL be disabled, with its reason, when a render runs, when a pod may still be
+billing, when no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a
+dialog listing per offered flow the images that will render and what is left out, with the reason, the session's
+estimate and limit, and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its
+configured rate. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL, and SHALL close when
+its page is left, and the confirmation SHALL close it and open the session drawer over the page. The confirmation SHALL
+carry the limit and the number of images the dialog showed, and SHALL be refused, starting nothing, when the
+collection's quote taken again has a longer limit or another number of images. The bar SHALL show the newest offer asked
+for, whatever order the answers arrive in.
 
 The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
 not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires
@@ -1050,7 +937,7 @@ a refused count keeps the bar, so the refusal is never silent.
 #### Scenario: the dialog lists what renders per flow
 - **Key:** `ui:render:the-dialog-lists-what-renders`
 - **Layers:** unit
-- **WHEN** a batch's quote is asked for with approvals short of their count in two flows
+- **WHEN** a collection's quote is asked for with approvals short of their count in two flows
 - **THEN** it lists each flow's images and what is left out, with the reason
 - **AND** it carries the estimate, the limit and the price at most
 
@@ -1063,8 +950,8 @@ a refused count keeps the bar, so the refusal is never silent.
 #### Scenario: nothing short disables Render
 - **Key:** `ui:render:nothing-short-disables-render`
 - **Layers:** unit
-- **WHEN** every approval in a batch already has its count of images
-- **THEN** the batch's Render offer counts no image
+- **WHEN** every approval in a collection already has its count of images
+- **THEN** the collection's Render offer counts no image
 - **AND** it names why
 
 #### Scenario: Prepare takes the bar first
@@ -1077,7 +964,7 @@ a refused count keeps the bar, so the refusal is never silent.
 #### Scenario: a refused count is shown
 - **Key:** `ui:render:a-refused-count-is-shown`
 - **Layers:** unit
-- **WHEN** a batch's only approval short of its count holds a count no render takes
+- **WHEN** a collection's only approval short of its count holds a count no render takes
 - **THEN** its Render offer counts no image and carries the refusal, naming the file
 - **AND** the Render bar shows, disabled, with its reason
 
@@ -1091,7 +978,7 @@ a refused count keeps the bar, so the refusal is never silent.
 #### Scenario: a quote that has grown is refused
 - **Key:** `ui:render:a-grown-quote-is-refused`
 - **Layers:** unit
-- **WHEN** Render is confirmed with a shorter limit, or fewer images, than the batch's quote now gives
+- **WHEN** Render is confirmed with a shorter limit, or fewer images, than the collection's quote now gives
 - **THEN** the confirmation is refused, naming that the quote changed
 - **AND** no job starts
 
@@ -1106,7 +993,7 @@ a refused count keeps the bar, so the refusal is never silent.
 The system SHALL run a render as one job: the volume window opened or extended, then the rendering verb with the
 session's limit, its id and its progress, then the window closed unless the operator kept it open. A lost answer from
 the window's opening SHALL render nothing and raise the volume alert, and an opening that raises SHALL mark its step
-failed; a failed close SHALL raise it too. A job whose verb cannot be started SHALL end failed, naming the batch's
+failed; a failed close SHALL raise it too. A job whose verb cannot be started SHALL end failed, naming the collection's
 log, and still close the window. Stop SHALL interrupt the rendering verb, which tears its pod down. The surface
 stopping SHALL do the same, and SHALL wait for the pod's teardown and the window's close before it exits, for at most
 the teardown's estimate and one volume verb, saying so on its terminal as the wait begins. After that wait, a window
@@ -1150,7 +1037,7 @@ open.
 - **Key:** `ui:render-job:a-verb-that-cannot-start-fails-the-job`
 - **Layers:** unit
 - **WHEN** the rendering verb cannot be started after the window opens
-- **THEN** the job ends failed, naming the batch's log
+- **THEN** the job ends failed, naming the collection's log
 - **AND** the window is closed
 
 #### Scenario: a failed close at stop names the fix
@@ -1212,7 +1099,7 @@ reaches nothing.
 
 ### Requirement: The Renders view shows each source's images by flow and version
 
-The system SHALL list a batch's images by source and offered flow, each cell's approval versions newest first, and
+The system SHALL list a collection's images by source and offered flow, each cell's approval versions newest first, and
 SHALL show them as a grid of sources by flows, each cell one row of its images, its versions oldest to newest, each
 image marked with its version, and open an image's large view, with the sheet it was rendered from, from any of them.
 A cell whose newest approval lacks images of its count SHALL carry the number it lacks, as the render stage counts
@@ -1227,11 +1114,11 @@ bound among them, naming the file. It SHALL serve a photograph, a source or a ru
 whatever its name ends in, and a source in a format the render does not read as an upright JPEG of it.
 
 The images come back to where the sheets were decided, version by version in the order they were approved; a cache the
-library can lose costs only its rebuild. Two batches can hold one source rendered at one seed, so only the bytes say
-which image a thumbnail shows. One damaged file costs only its own version, never the batch's page. The count a cell
-lacks is the render stage's own, so the page and the render agree on what is ready. A source keeps the name it arrived
-with, and one ending `.html` served by its name would run as a page on the surface's own origin; one placed by hand in
-another format is still shown, as its thumbnail is.
+library can lose costs only its rebuild. Two collections can hold one source rendered at one seed, so only the bytes say
+which image a thumbnail shows. One damaged file costs only its own version, never the collection's page. The count a
+cell lacks is the render stage's own, so the page and the render agree on what is ready. A source keeps the name it
+arrived with, and one ending `.html` served by its name would run as a page on the surface's own origin; one placed by
+hand in another format is still shown, as its thumbnail is.
 
 #### Scenario: versions are listed newest first
 - **Key:** `ui:renders:versions-newest-first`
@@ -1261,7 +1148,7 @@ another format is still shown, as its thumbnail is.
 #### Scenario: a thumbnail is its own image's
 - **Key:** `ui:renders:a-thumbnail-is-its-own-images`
 - **Layers:** unit
-- **WHEN** two batches hold different images of one source, flow, version and seed
+- **WHEN** two collections hold different images of one source, flow, version and seed
 - **THEN** each image's thumbnail is made from that image
 
 #### Scenario: a source's thumbnail is upright
@@ -1316,7 +1203,7 @@ another format is still shown, as its thumbnail is.
 #### Scenario: a grid keeps its focus
 - **Key:** `ui:renders:a-grid-keeps-its-focus`
 - **Layers:** unit
-- **WHEN** a batch's grid focus is moved, then its view is opened again
+- **WHEN** a collection's grid focus is moved, then its view is opened again
 - **THEN** the focus is where it was left, or on the first spot when that one is gone
 
 ### Requirement: A version says what it was, and Compare shows a seed's two versions
@@ -1497,122 +1384,6 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 - **THEN** on macOS `⌃J` and `⌃K` move to the next and the previous field from a text field
 - **AND** on Linux neither is declared
 
-### Requirement: Review opens a batch at its own address, lists every unrendered sheet, and Approve stays on the sheet
-
-The system SHALL open a batch's Review on a chooser when two or more flows hold sheets to review: a row per flow, its
-name, how many wait to be approved and how many lack images, and up to fifteen of its waiting photographs, then `+n`;
-`j` `k` and the arrows SHALL move between rows, `↵` or a click on a row SHALL open that flow's head, and a click on a
-photograph that sheet. With one such flow it SHALL open that flow's head: its first unapproved sheet in the hub's order,
-else its first approved sheet whose newest approval lacks images of its count, read-only; with none, a page saying no
-sheet waits for review, with the way to the hub. `Esc` on Review, with no overlay open and outside a field, SHALL return
-to the chooser. The hub SHALL carry for each cell the number of images its newest approval lacks, as the render stage
-counts it. Review's rail SHALL list every sheet of the flow that is unapproved or lacks images, each marked untouched,
-edited, approved or re-opened, and its footer SHALL count the approved among them; the Review tab SHALL count the
-unapproved, every flow's, and the rail's head SHALL name each other flow holding some, with how many and the key to the
-chooser. Approve SHALL leave the sheet open and read-only, the approve bar naming the approval it shows, offering
-*Cancel approve* while the review stage can cancel it, else the reason beside it, and while no render runs for the
-batch; a cancel SHALL leave the sheet open on what the flow is left on: its draft, editable, or for a copy the draft
-open above what lies beneath, else the approval beneath it, read-only. Opening a sheet that has no draft SHALL write one
-through the review stage's own function, and opening it again SHALL write no second draft; a failure after approval
-SHALL be shown in the approve bar, never dropped. ④ SHALL show one slot per image, a set seed or random, beside the
-sheet rows. `⌃P` SHALL open the photograph in the viewer — on a revision or a draft from an image, *Side by side* — from
-any pane and from a field, stepping through the rail's sheets, and `Esc` SHALL return the focus where it was.
-
-A sheet is done when its images are, not when it is approved, so the rail keeps it until then; the count is the
-render stage's own. Approving is an act, not a navigation, and a copy's cancel takes back only the copy. A slot per
-image says what the next render draws before it is approved. The operator chooses the flow to review; the page
-does not choose it for them.
-
-```
-two or more flows waiting ─▶ the chooser ─↵─▶ that flow's head
-one flow waiting          ─▶ its head: first unapproved ─▶ else first approved and short
-none                      ─▶ "No sheet waits for review"
-```
-
-#### Scenario: a batch's Review opens its head
-- **Key:** `ui:review:a-batch-opens-its-head`
-- **Layers:** unit
-- **WHEN** a batch's one flow holds an approved, short sheet and an unapproved one, then neither
-- **THEN** its Review opens the unapproved sheet, then the approved one
-- **AND** with no sheet left it opens none
-
-#### Scenario: two flows waiting open the chooser
-- **Key:** `ui:review:two-flows-waiting-open-the-chooser`
-- **Layers:** unit
-- **WHEN** a batch's two flows each hold an unapproved sheet
-- **THEN** its Review is a row per flow, each naming its count and its waiting photographs
-
-#### Scenario: the chooser opens a flow
-- **Key:** `ui:review:the-chooser-opens-a-flow`
-- **Layers:** e2e
-- **WHEN** the Review tab opens on two waiting flows, `j` then `↵` are pressed
-- **THEN** Review opens on the second flow's first waiting sheet
-- **AND** `Esc` returns to the chooser, its second row focused
-
-#### Scenario: a cell counts what its newest approval lacks
-- **Key:** `ui:review:a-cell-counts-what-it-lacks`
-- **Layers:** unit
-- **WHEN** a cell's newest approval holds one image of a count of three
-- **THEN** the hub carries two for that cell
-
-#### Scenario: the rail holds every sheet not yet rendered
-- **Key:** `ui:review:the-rail-holds-every-unrendered-sheet`
-- **Layers:** unit
-- **WHEN** a flow holds an unapproved sheet, an approved short one and an approved one with all its images
-- **THEN** the rail lists the first two, marked by their state
-
-#### Scenario: Approve stays on the sheet
-- **Key:** `ui:review:approve-stays-on-the-sheet`
-- **Layers:** e2e
-- **WHEN** a sheet is approved
-- **THEN** the same sheet stays open, read-only, and its rail mark reads approved
-- **AND** the approve bar names its approval
-
-#### Scenario: opening a sheet with no draft writes one
-- **Key:** `ui:review:opening-a-sheet-writes-its-draft`
-- **Layers:** unit
-- **WHEN** Review opens a sheet whose flow has a sheet and no draft
-- **THEN** a draft is written through the review stage
-- **AND** opening it again writes no second draft
-
-#### Scenario: a failure after approval is shown
-- **Key:** `ui:review:a-failure-after-approval-is-shown`
-- **Layers:** e2e
-- **WHEN** an approval succeeds and reading the batch again fails
-- **THEN** the approve bar shows the refusal
-
-#### Scenario: each image has a slot
-- **Key:** `ui:review:each-image-has-a-slot`
-- **Layers:** unit
-- **WHEN** a draft renders four images with seed 144 listed
-- **THEN** ④ shows four slots, the first holding 144 and three random
-- **AND** removing a slot takes a random one first
-
-#### Scenario: the photograph opens in the viewer
-- **Key:** `ui:review:the-photograph-opens-in-the-viewer`
-- **Layers:** e2e
-- **WHEN** `⌃P` is pressed in a tag field, then `→`
-- **THEN** the viewer shows the photograph fitted, then the next sheet's photograph
-- **AND** `Esc` returns the focus to the field
-
-#### Scenario: Cancel approve opens the sheet again
-- **Key:** `ui:review:cancel-approve-opens-the-sheet-again`
-- **Layers:** e2e
-- **WHEN** a sheet is approved, then *Cancel approve* is pressed
-- **THEN** the same sheet is editable again
-
-#### Scenario: an approved sheet says why it cannot be cancelled
-- **Key:** `ui:review:the-sheet-says-why-it-cannot-be-cancelled`
-- **Layers:** unit
-- **WHEN** Review reads an approved sheet whose prompt is assembled
-- **THEN** its payload carries the review stage's reason
-
-#### Scenario: the rail names the other flows' waiting sheets
-- **Key:** `ui:review:the-rail-names-the-other-flows-waiting`
-- **Layers:** unit
-- **WHEN** Review is open on one flow and another flow holds one unapproved sheet
-- **THEN** the rail's head names that flow and one waiting
-
 ### Requirement: Revise starts from an image, and opens Review on its first draft
 
 The system SHALL offer Revise from an image's large view and over a selection in the Renders grid, SHALL show what it
@@ -1717,7 +1488,7 @@ target adds.
 #### Scenario: the large view names its targets
 - **Key:** `ui:conjure-from:the-large-view-names-its-targets`
 - **Layers:** unit
-- **WHEN** a summon image's large view is read in a batch where no source is assigned conjure
+- **WHEN** a summon image's large view is read in a collection where no source is assigned conjure
 - **THEN** its targets are conjure alone
 
 #### Scenario: a refused draft writes nothing
@@ -1755,7 +1526,7 @@ target adds.
 
 ### Requirement: A dialog holds the focus while it is open
 
-The system SHALL open every confirming dialog — Render, Revise, and New batch or Add sources — as a modal dialog,
+The system SHALL open every confirming dialog — Render, Revise, and New collection or Add sources — as a modal dialog,
 the page behind it inert, the focus on its first control and held inside it, and SHALL return the focus to where it
 was when it closes. The Render dialog's first control SHALL be *Keep the volume open*, which `Space` toggles and
 `↵` leaves alone; the Revise dialog's SHALL be its confirm button.
@@ -1772,26 +1543,26 @@ covers; and only `Mod+↵` spends money, so `↵` on the checkbox never renders.
 
 ### Requirement: The running render opens in a drawer every screen offers
 
-The system SHALL show the running render in a session drawer: a modal dialog over half the window, at least 480 px
-wide, on the right, over a dark backdrop, holding no URL. `⌃;` SHALL open and close it on every screen, from a field
-too, and the running render's link SHALL open it; confirming a render SHALL open it, and a render started from the
-terminal SHALL open nothing. It SHALL read the running render's record, live while it runs, with the volume steps and
-Stop the job adds; after it ends it SHALL show that session's outcome, its images and its time until the app reloads or
-another render starts; with neither it SHALL say no render runs. Its images SHALL be a grid: a column for each
-photograph the session was asked to render, a row for each flow, the photographs' row at the foot, a cell holding that
-flow's images of that photograph and a waiting tile for each still to come, drawn at the tile size Renders draws and
-moved through by `h j k l` and the arrows. `↵` SHALL open the focused row in the viewer over the drawer, which SHALL
-follow its list when it changes while open; `⇧I` SHALL close the drawer and open its batch's Renders. A click on the
-backdrop, `⌃;` and `Esc` SHALL close it, `Esc` closing the viewer first.
+The system SHALL show the running render in a session drawer: a modal dialog over half the window, at least 480 px wide,
+on the right, over a dark backdrop, holding no URL. `⌃;` SHALL open and close it on every screen, from a field too, and
+the running render's link SHALL open it; confirming a render SHALL open it, and a render started from the terminal SHALL
+open nothing. It SHALL read the running render's record, live while it runs, with the volume steps and Stop the job
+adds; after it ends it SHALL show that session's outcome, its images and its time until the app reloads or another
+render starts; with neither it SHALL say no render runs. Its images SHALL be a grid: a column for each photograph the
+session was asked to render, a row for each flow, the photographs' row at the foot, a cell holding that flow's images of
+that photograph and a waiting tile for each still to come, drawn at the tile size Renders draws and moved through by `h
+j k l` and the arrows. `↵` SHALL open the focused row in the viewer over the drawer, which SHALL follow its list when it
+changes while open; `⇧I` SHALL close the drawer and open its collection's Renders. A click on the backdrop, `⌃;` and
+`Esc` SHALL close it, `Esc` closing the viewer first.
 
 ```
 any screen ──⌃; or ●──▶ the drawer, half the window ──↵──▶ the viewer over it
                          esc / ⌃; / the backdrop ◀──esc── closes one layer
 ```
 
-A running render bills by the minute wherever the operator is, so it is the app's, not a batch's: it is glanced at, not
-gone to. A session is the record the render wrote, so the drawer and the terminal agree; once it ends its images are on
-Renders.
+A running render bills by the minute wherever the operator is, so it is the app's, not a collection's: it is glanced at,
+not gone to. A session is the record the render wrote, so the drawer and the terminal agree; once it ends its images are
+on Renders.
 
 #### Scenario: the drawer holds the render
 - **Key:** `ui:sessions:the-drawer-holds-the-render`
@@ -1826,7 +1597,7 @@ Renders.
 - **Key:** `ui:sessions:a-terminal-render-stays-live`
 - **Layers:** unit
 - **WHEN** a terminal render runs without an app job slot
-- **THEN** its record reads running and the global running-session read names its batch and id
+- **THEN** its record reads running and the global running-session read names its collection and id
 - **AND** after its process releases ownership without an outcome the record reads ended without an outcome
 
 
@@ -1858,3 +1629,233 @@ Renders.
 - **Layers:** unit
 - **WHEN** `l` and then `j` are pressed on the grid's first render
 - **THEN** `l` moves to the next photograph's column and `j` to the row below, held at the photographs' row
+
+### Requirement: A folder in the library is a collection when it holds `sources/`
+
+The system SHALL list as a collection every folder in the library that holds `sources/`, SHALL list any other folder as
+not a collection and open none of it, and SHALL list no dot-folder. Each collection's row SHALL carry its name, its
+source count, the names of its first fifteen sources, whose thumbnails it shows, for each flow the surface offers that
+is present the counts approved and rendered out of the sources that have that flow, the count of sources with no flow,
+and the time and kind of the newest file written in it. Collections SHALL be ordered by that time, newest first, and
+folders that are not collections after them. Home SHALL carry New collection at the right of the library's header row,
+and on an empty library below the privacy line. Count labels on the surface SHALL use a singular noun at one and a
+plural noun otherwise.
+
+A folder is a collection by its layout alone, so no marker file can disagree with what is on disk, and the row is a
+listing read on every request. A folder that is not a collection is shown rather than hidden so the screen matches the
+folder, and nothing in the app writes into it. The flows the surface offers are named in its configuration; a flow
+approved from another's sheet stays the CLI's. On first start the privacy line is read before the first import.
+
+#### Scenario: a folder with `sources/` is a collection
+- **Key:** `ui:batch-folder:a-folder-with-sources-is-a-batch`
+- **Layers:** unit
+- **WHEN** the library holds a folder with `sources/` and one without
+- **THEN** the first is listed as a collection
+- **AND** the second is listed as not a collection, and cannot be opened
+
+#### Scenario: a dot-folder is not listed
+- **Key:** `ui:batch-folder:a-dot-folder-is-not-listed`
+- **Layers:** unit
+- **WHEN** the library holds a folder whose name starts with a dot
+- **THEN** it is not listed at all
+
+#### Scenario: a flow's counts are of the sources that have it
+- **Key:** `ui:batch-folder:a-flows-counts-are-of-its-sources`
+- **Layers:** unit
+- **WHEN** a collection's sources have different sets of flows
+- **THEN** each flow's approved and rendered counts are out of the sources whose runs hold that flow
+- **AND** the sources with no flow are counted apart
+
+#### Scenario: collections are ordered by their newest file
+- **Key:** `ui:batch-folder:batches-are-ordered-by-their-newest-file`
+- **Layers:** unit
+- **WHEN** the library holds collections written at different times
+- **THEN** they are listed newest first, by the newest file written in each
+
+#### Scenario: no file records a collection
+- **Key:** `ui:batch-folder:no-file-records-a-batch`
+- **Layers:** unit
+- **WHEN** the surface lists the library and opens a collection
+- **THEN** no file describing a collection is created anywhere in the library
+
+#### Scenario: a flow the surface does not offer has no count
+- **Key:** `ui:batch-folder:an-unoffered-flow-has-no-count`
+- **Layers:** unit
+- **WHEN** a collection's runs hold a tracked flow the configuration does not offer
+- **THEN** its row carries no count for that flow
+
+#### Scenario: count labels use singular at one
+- **Key:** `ui:batch-folder:count-labels-use-singular-at-one`
+- **Layers:** unit
+- **WHEN** a count label is drawn for zero, one and several items
+- **THEN** one uses the singular noun and the other counts use the plural noun
+
+#### Scenario: a row names its first sources
+- **Key:** `ui:batch-folder:a-row-names-its-first-sources`
+- **Layers:** unit
+- **WHEN** a collection holds seventeen sources
+- **THEN** its row names the first fifteen in the hub's order
+- **AND** its source count is seventeen
+
+#### Scenario: first start shows New collection under the privacy line
+- **Key:** `ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line`
+- **Layers:** e2e
+- **WHEN** Home opens on an empty library
+- **THEN** New collection sits below the privacy line
+
+### Requirement: Every screen has a URL naming its collection and its run
+
+The system SHALL give Home, a collection's hub, a collection's Review, a review of a source in a flow and the billing
+alert's way out each its own URL, the session drawer holding none, SHALL name the collection in every URL inside one,
+and SHALL name a run by the twelve-character digest its identifier begins with. A collection's Review SHALL open the
+sheet Review starts from and put that sheet's URL in its place. It SHALL answer any of them on a fresh load, and SHALL
+refuse one naming a collection or a run the library does not hold, naming the way back.
+
+A reload, a second tab or a bookmark then lands where it was, never on whatever the server last held open. A run's
+short name is a sanitised filename and can repeat; its digest cannot.
+
+```
+/                                       Home
+/c/<collection>/hub                     the hub
+/c/<collection>/review                  the head of Review, replaced by its sheet's URL
+/c/<collection>/review/<digest>/<flow>  Review
+/billing                                the billing alert's way out
+```
+
+#### Scenario: a reload lands on the same screen
+- **Key:** `ui:routes:a-reload-lands-on-the-same-screen`
+- **Layers:** e2e
+- **WHEN** a hub, a review or a collection's Review address is loaded again
+- **THEN** the same collection, source and flow are shown
+- **AND** a collection's Review address is replaced by its head's sheet URL
+- **AND** a collection with no sheet waiting says none waits
+
+#### Scenario: a run is named by its digest
+- **Key:** `ui:routes:a-run-is-named-by-its-digest`
+- **Layers:** unit
+- **WHEN** a review URL names a run
+- **THEN** the run is the one whose identifier begins with that digest
+
+#### Scenario: an unknown collection is refused with the way back
+- **Key:** `ui:routes:an-unknown-batch-is-refused`
+- **Layers:** e2e
+- **WHEN** a URL names a collection the library does not hold
+- **THEN** the page refuses, naming the collection
+- **AND** it offers the way back to Home
+
+### Requirement: Review opens a collection at its own address, lists every unrendered sheet, and Approve stays on the sheet
+
+The system SHALL open a collection's Review on a chooser when two or more flows hold sheets to review: a row per flow,
+its name, how many wait to be approved and how many lack images, and up to fifteen of its waiting photographs, then
+`+n`; `j` `k` and the arrows SHALL move between rows, `↵` or a click on a row SHALL open that flow's head, and a click
+on a photograph that sheet. With one such flow it SHALL open that flow's head: its first unapproved sheet in the hub's
+order, else its first approved sheet whose newest approval lacks images of its count, read-only; with none, a page
+saying no sheet waits for review, with the way to the hub. `Esc` on Review, with no overlay open and outside a field,
+SHALL return to the chooser. The hub SHALL carry for each cell the number of images its newest approval lacks, as the
+render stage counts it. Review's rail SHALL list every sheet of the flow that is unapproved or lacks images, each marked
+untouched, edited, approved or re-opened, and its footer SHALL count the approved among them; the Review tab SHALL count
+the unapproved, every flow's, and the rail's head SHALL name each other flow holding some, with how many and the key to
+the chooser. Approve SHALL leave the sheet open and read-only, the approve bar naming the approval it shows, offering
+*Cancel approve* while the review stage can cancel it, else the reason beside it, and while no render runs for the
+collection; a cancel SHALL leave the sheet open on what the flow is left on: its draft, editable, or for a copy the
+draft open above what lies beneath, else the approval beneath it, read-only. Opening a sheet that has no draft SHALL
+write one through the review stage's own function, and opening it again SHALL write no second draft; a failure after
+approval SHALL be shown in the approve bar, never dropped. ④ SHALL show one slot per image, a set seed or random, beside
+the sheet rows. `⌃P` SHALL open the photograph in the viewer — on a revision or a draft from an image, *Side by side* —
+from any pane and from a field, stepping through the rail's sheets, and `Esc` SHALL return the focus where it was.
+
+A sheet is done when its images are, not when it is approved, so the rail keeps it until then; the count is the
+render stage's own. Approving is an act, not a navigation, and a copy's cancel takes back only the copy. A slot per
+image says what the next render draws before it is approved. The operator chooses the flow to review; the page
+does not choose it for them.
+
+```
+two or more flows waiting ─▶ the chooser ─↵─▶ that flow's head
+one flow waiting          ─▶ its head: first unapproved ─▶ else first approved and short
+none                      ─▶ "No sheet waits for review"
+```
+
+#### Scenario: a collection's Review opens its head
+- **Key:** `ui:review:a-batch-opens-its-head`
+- **Layers:** unit
+- **WHEN** a collection's one flow holds an approved, short sheet and an unapproved one, then neither
+- **THEN** its Review opens the unapproved sheet, then the approved one
+- **AND** with no sheet left it opens none
+
+#### Scenario: two flows waiting open the chooser
+- **Key:** `ui:review:two-flows-waiting-open-the-chooser`
+- **Layers:** unit
+- **WHEN** a collection's two flows each hold an unapproved sheet
+- **THEN** its Review is a row per flow, each naming its count and its waiting photographs
+
+#### Scenario: the chooser opens a flow
+- **Key:** `ui:review:the-chooser-opens-a-flow`
+- **Layers:** e2e
+- **WHEN** the Review tab opens on two waiting flows, `j` then `↵` are pressed
+- **THEN** Review opens on the second flow's first waiting sheet
+- **AND** `Esc` returns to the chooser, its second row focused
+
+#### Scenario: a cell counts what its newest approval lacks
+- **Key:** `ui:review:a-cell-counts-what-it-lacks`
+- **Layers:** unit
+- **WHEN** a cell's newest approval holds one image of a count of three
+- **THEN** the hub carries two for that cell
+
+#### Scenario: the rail holds every sheet not yet rendered
+- **Key:** `ui:review:the-rail-holds-every-unrendered-sheet`
+- **Layers:** unit
+- **WHEN** a flow holds an unapproved sheet, an approved short one and an approved one with all its images
+- **THEN** the rail lists the first two, marked by their state
+
+#### Scenario: Approve stays on the sheet
+- **Key:** `ui:review:approve-stays-on-the-sheet`
+- **Layers:** e2e
+- **WHEN** a sheet is approved
+- **THEN** the same sheet stays open, read-only, and its rail mark reads approved
+- **AND** the approve bar names its approval
+
+#### Scenario: opening a sheet with no draft writes one
+- **Key:** `ui:review:opening-a-sheet-writes-its-draft`
+- **Layers:** unit
+- **WHEN** Review opens a sheet whose flow has a sheet and no draft
+- **THEN** a draft is written through the review stage
+- **AND** opening it again writes no second draft
+
+#### Scenario: a failure after approval is shown
+- **Key:** `ui:review:a-failure-after-approval-is-shown`
+- **Layers:** e2e
+- **WHEN** an approval succeeds and reading the collection again fails
+- **THEN** the approve bar shows the refusal
+
+#### Scenario: each image has a slot
+- **Key:** `ui:review:each-image-has-a-slot`
+- **Layers:** unit
+- **WHEN** a draft renders four images with seed 144 listed
+- **THEN** ④ shows four slots, the first holding 144 and three random
+- **AND** removing a slot takes a random one first
+
+#### Scenario: the photograph opens in the viewer
+- **Key:** `ui:review:the-photograph-opens-in-the-viewer`
+- **Layers:** e2e
+- **WHEN** `⌃P` is pressed in a tag field, then `→`
+- **THEN** the viewer shows the photograph fitted, then the next sheet's photograph
+- **AND** `Esc` returns the focus to the field
+
+#### Scenario: Cancel approve opens the sheet again
+- **Key:** `ui:review:cancel-approve-opens-the-sheet-again`
+- **Layers:** e2e
+- **WHEN** a sheet is approved, then *Cancel approve* is pressed
+- **THEN** the same sheet is editable again
+
+#### Scenario: an approved sheet says why it cannot be cancelled
+- **Key:** `ui:review:the-sheet-says-why-it-cannot-be-cancelled`
+- **Layers:** unit
+- **WHEN** Review reads an approved sheet whose prompt is assembled
+- **THEN** its payload carries the review stage's reason
+
+#### Scenario: the rail names the other flows' waiting sheets
+- **Key:** `ui:review:the-rail-names-the-other-flows-waiting`
+- **Layers:** unit
+- **WHEN** Review is open on one flow and another flow holds one unapproved sheet
+- **THEN** the rail's head names that flow and one waiting
+

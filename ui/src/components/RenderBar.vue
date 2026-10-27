@@ -11,7 +11,7 @@ import { noun } from '../words'
    or, with none short, the running session's totals and the drawer's button. Its
    button keeps `data-render`; a disabled one has its reason beside it. A count
    the render stage refuses keeps Render, disabled, so the reason is never silent.
-   `rendering` is a session running for this bar's own batch. */
+   `rendering` is a session running for this bar's own collection. */
 defineProps<{
   images: number
   disabled: string | null
@@ -57,7 +57,7 @@ const render = computed(() => jobs.value.render)
         class="btn btn-secondary"
         type="button"
         data-session-open
-        @click="drawer.openOn(render.batch, render.session.id)"
+        @click="drawer.openOn(render.collection, render.session.id)"
       >
         Session<KeyHint command="drawer" />
       </button>

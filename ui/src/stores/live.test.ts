@@ -38,13 +38,13 @@ afterEach(() => {
 spec('ui:events:one-stream-follows-the-batch-and-the-import', () => {
   const live = useLiveStore()
 
-  live.follow({ batch: 'a' })
-  live.follow({ batch: 'a' })
+  live.follow({ collection: 'a' })
+  live.follow({ collection: 'a' })
   live.follow({ staging: 's1' })
 
   expect(FakeSource.opened.map((one) => one.url)).toEqual([
-    '/events?batch=a',
-    '/events?batch=a&staging=s1',
+    '/events?collection=a',
+    '/events?collection=a&staging=s1',
   ])
   expect(FakeSource.opened.map((one) => one.closed)).toEqual([true, false])
 })
@@ -52,9 +52,9 @@ spec('ui:events:one-stream-follows-the-batch-and-the-import', () => {
 spec('ui:events:a-job-event-fills-its-kinds-slot', () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ sessions: [] }) })))
   const live = useLiveStore()
-  live.follow({ batch: 'b' })
+  live.follow({ collection: 'b' })
   const [stream] = FakeSource.opened
-  const slot = { batch: 'b', state: 'running', flow: null, stage: null, message: null }
+  const slot = { collection: 'b', state: 'running', flow: null, stage: null, message: null }
   const prepare = { ...slot, kind: 'prepare' }
   const session = { id: 's', started: '', ended: null, limit: 1, of: 1, steps: {}, images: [] }
   const render = { ...slot, kind: 'render', session }
@@ -66,11 +66,11 @@ spec('ui:events:a-job-event-fills-its-kinds-slot', () => {
 })
 
 spec('ui:sessions:a-terminal-render-stays-live', async () => {
-  const terminal = { batch: 'b', id: '20261024T091200Z', started: '2026-10-24T09:12:00Z' }
+  const terminal = { collection: 'b', id: '20261024T091200Z', started: '2026-10-24T09:12:00Z' }
   let records = [terminal]
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ sessions: records }) })))
   const live = useLiveStore()
-  live.follow({ batch: null })
+  live.follow({ collection: null })
   await vi.advanceTimersByTimeAsync(0)
   expect(live.jobs).toEqual({ prepare: null, render: null })
   expect(live.renderRunning).toBe(true)

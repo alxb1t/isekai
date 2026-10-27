@@ -9,7 +9,7 @@ drift.
 so an upgrade command would be a dispatch table with no entries and its refusal
 would be unreachable -- nothing writes a later one.
 
-    import        clean photographs into a batch's sources/
+    import        clean photographs into a collection's sources/
     assign        give a source a flow's empty directory, or take an empty one away
     caption   (1) a photograph in, prose out
     tag       (1) a photograph in; the WD14 tags, then the hosted tags, out
@@ -20,10 +20,10 @@ would be unreachable -- nothing writes a later one.
     generate  (4) assemble every prompt locally, then render
     render    (4) one whole render session on a rented GPU, torn down on every exit
     show          print a run's artifacts, what produced each, and its failures
-    ui        (3) serve the review surface for a batch of inputs
+    ui        (3) serve the review surface for the library's collections
     compare       write a page of every run's photograph beside its renders
 
-**`import` fills a batch, `assign` ticks a flow, `show` inspects a run, `ui`
+**`import` fills a collection, `assign` ticks a flow, `show` inspects a run, `ui`
 serves a surface, `compare` writes a page, and every other verb runs a stage.**
 The stage verbs and `assign` take `--flow` repeatably; `ui`, `show` and
 `compare` take none -- the surface serves every flow it offers, and the others
@@ -111,7 +111,7 @@ from isekai.shared.vocabulary import Vocabulary
 T = TypeVar("T")
 
 VERBS: tuple[tuple[str, str], ...] = (
-    ("import", "clean photographs and add them to a batch's sources/"),
+    ("import", "clean photographs and add them to a collection's sources/"),
     ("assign", "give each source a flow's empty directory, or remove an empty one"),
     ("caption", "read a photograph into prose"),
     ("tag", "score a photograph with WD14, then list the JoyCaption tags"),
@@ -122,7 +122,7 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("generate", "assemble the prompts for a run, then render them"),
     ("render", "run a whole render session on a rented GPU, then tear it down"),
     ("show", "print a run's artifacts, versions, producers and failures"),
-    ("ui", "serve the app over the library of batches"),
+    ("ui", "serve the app over the library of collections"),
     ("compare", "write a page of each run's photograph beside its renders"),
 )
 
@@ -191,7 +191,7 @@ def build_parser() -> argparse.ArgumentParser:
         for name, summary in VERBS
     }
 
-    # `compare` takes a batch directory instead: its runs root is the batch's
+    # `compare` takes a collection directory instead: its runs root is the collection's
     # `runs/`, so a second way to name it could only disagree. `render` takes
     # its runs root first, and every run under it. `ui` serves the library, and
     # `revise` takes images, whose paths name their runs.
@@ -303,7 +303,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     made["revise"].set_defaults(photos=[], runs=RUNS_ROOT)
 
-    # No flow, input or runs root: the app serves every batch of the library
+    # No flow, input or runs root: the app serves every collection of the library
     # `ISEKAI_LIBRARY` names, and its page selects one (D1).
     made["ui"].add_argument(
         "--port",
@@ -314,10 +314,10 @@ def build_parser() -> argparse.ArgumentParser:
     made["ui"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     made["import"].add_argument(
-        "--batch",
+        "--collection",
         type=Path,
         required=True,
-        help="the batch directory; made when absent, else the files join its sources/",
+        help="the collection directory; made when absent, else files join its sources/",
     )
     made["import"].add_argument(
         "files", nargs="+", type=Path, help="the photographs to clean and add"
@@ -325,17 +325,17 @@ def build_parser() -> argparse.ArgumentParser:
     made["import"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     made["compare"].add_argument(
-        "batch",
+        "collection",
         type=Path,
-        help="the batch directory: the one holding runs/, where the page is written",
+        help="the collection directory, holding runs/; the page is written there",
     )
-    # Every namespace keeps one shape; `compare` reads its runs from the batch.
+    # Every namespace keeps one shape; `compare` reads its runs from the collection.
     made["compare"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     made["render"].add_argument(
         "runs",
         type=Path,
-        help="the batch's runs/; every run under it is rendered",
+        help="the collection's runs/; every run under it is rendered",
     )
     made["render"].add_argument(
         "requests",
@@ -362,7 +362,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="ID",
         help=(
-            "name the session's record <batch>/sessions/<ID>.json; without it, "
+            "name the session's record <collection>/sessions/<ID>.json; without it, "
             "the session's start in UTC names it"
         ),
     )
@@ -439,20 +439,20 @@ def _ui(args: argparse.Namespace, wired: Wiring) -> int:
 
 
 def _import(args: argparse.Namespace, wired: Wiring) -> int:
-    """Read each file into the batch's staging, commit what is clean, and report.
+    """Read each file into the collection's staging, commit what is clean, and report.
 
     No file that is not cleaned is imported: that choice is the page's, one file
     at a time.
     """
-    batch = Path(args.batch).resolve()
-    if trackable(batch.parent):
+    collection = Path(args.collection).resolve()
+    if trackable(collection.parent):
         raise Refusal(
-            f"--batch {batch} is inside this repository and outside its ignored "
-            ".data/ root; a batch holds copies of photographs, so it would be one "
-            "`git add` from being published -- point --batch under .data/ or at a "
-            "directory outside the repository"
+            f"--collection {collection} is inside this repository and outside its "
+            "ignored .data/ root; a collection holds copies of photographs, so it "
+            "would be one `git add` from being published -- point --collection "
+            "under .data/ or at a directory outside the repository"
         )
-    staging = stage(batch.parent)
+    staging = stage(collection.parent)
     limit = upload_limit()
     staged: list[Staged] = []
     try:
@@ -462,13 +462,14 @@ def _import(args: argparse.Namespace, wired: Wiring) -> int:
         for item in staged:
             print(_staged_line(item), file=wired.out)
         if any(item.state in ("ready", "converted") for item in staged):
-            add = (batch / SOURCES).is_dir()
-            done = commit(staging, batch.parent, batch.name, add=add)
+            add = (collection / SOURCES).is_dir()
+            done = commit(staging, collection.parent, collection.name, add=add)
             for name in done.skipped:
                 print(f"{name}: skipped, a source holds its bytes", file=wired.out)
             if done.written:
                 print(
-                    f"{batch.name}: imported {', '.join(done.written)}", file=wired.out
+                    f"{collection.name}: imported {', '.join(done.written)}",
+                    file=wired.out,
                 )
     except Refusal as uncommitted:
         refused.append(str(uncommitted))
@@ -590,7 +591,7 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
         if verb == "import":
             return _import(args, wired)
         if verb == "compare":
-            print(write_page(args.batch, wired.flows_dir), file=wired.out)
+            print(write_page(args.collection, wired.flows_dir), file=wired.out)
             return 0
         if verb == "render":
             return run_session(args, wired, _dispatch_argv)
@@ -786,7 +787,7 @@ def _per_item(
 
         Memoised beside the vocabulary and for its reason: the table is held
         against the vocabulary at load, so reading it per photograph would
-        re-run four whole-table checks for every input in a batch. It is handed
+        re-run four whole-table checks for every input of an invocation. It is handed
         the memoised vocabulary rather than finding its own.
         """
         return wired.field_map(vocabulary())
@@ -796,7 +797,7 @@ def _per_item(
 
         **A thunk rather than a value, and one slot rather than one per flow.**
 
-        Lazy, because opening it hashes 467 MB and loads a graph: a batch whose
+        Lazy, because opening it hashes 467 MB and loads a graph: an invocation whose
         lists are all already written must not pay for that to write nothing,
         and a completed run must still resume on a machine that has since
         emptied `models/`. `vocabulary()` above is a thunk for exactly this

@@ -13,7 +13,7 @@ import KeyHint from './KeyHint.vue'
    to deselect the refused; it has no primary button then. An image whose flow
    holds a waiting draft is left out: alone, Review opens on that draft; beside
    written ones, the confirm names it `already waiting` before Review. */
-const props = defineProps<{ batch: string; images: RevisedImage[] }>()
+const props = defineProps<{ collection: string; images: RevisedImage[] }>()
 const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
 const refused = ref<RefusedImage[] | null>(null)
@@ -44,7 +44,7 @@ function review(drafts: RevisedDraft[]): void {
   const first = drafts.find((one) => one.draft !== null) ?? drafts[0]
   void router.push({
     name: 'review',
-    params: { batch: props.batch, digest: first.digest, flow: first.flow },
+    params: { collection: props.collection, digest: first.digest, flow: first.flow },
   })
 }
 
@@ -52,7 +52,7 @@ async function confirm(images: RevisedImage[]): Promise<void> {
   if (writing.value || !images.length) return
   writing.value = true
   try {
-    const answer = await revise(props.batch, images)
+    const answer = await revise(props.collection, images)
     if ('images' in answer) {
       refused.value = answer.images
       return
@@ -108,7 +108,7 @@ useKeys('overlay', [
     @cancel.prevent
   >
     <header class="render-dialog__head">
-      <span class="section-label">Revise · {{ batch }}</span>
+      <span class="section-label">Revise · {{ collection }}</span>
       <h2 class="render-dialog__title">Revise {{ plural(images.length, 'image') }}</h2>
     </header>
     <p v-if="failure" class="render-dialog__refusal">

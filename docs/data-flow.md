@@ -15,7 +15,7 @@ its neighbours.
   a file the operator chose
       │
       ▼
-  import ── cleaned, verified ──▶ <batch>/sources/   pixels and orientation only
+  import ── cleaned, verified ──▶ <collection>/sources/   pixels and orientation only
       │
   assign ── a flow ticked ──▶ runs/<input-id>/<flow-id>/   empty
       │
@@ -42,10 +42,10 @@ its neighbours.
               ── then renders each prompt ──▶ outputs/   on a rented GPU
 ```
 
-**`import` is how a photograph enters a batch.** It reads each file into the
+**`import` is how a photograph enters a collection.** It reads each file into the
 library's `.staging/`, keeps its pixels and orientation and nothing else — a
 non-sRGB colour profile converted, a HEIC or WebP turned into a JPEG or PNG —
-verifies it by the strip's own walk, and commits the batch's `sources/` in one
+verifies it by the strip's own walk, and commits the collection's `sources/` in one
 move ([D43](decisions.md#d43--a-source-holds-pixels-and-orientation-only)). A RAW,
 a file of several images, one past `config/ui.json`'s limit, one past 50 MP and one
 render would refuse are refused by name. **`isekai assign`** ticks a flow: it opens the source's
@@ -69,19 +69,19 @@ outputs/001/7.png ─▶ revise ─▶ review/003.draft.json  {count 1, seeds [7
 ```
 
 Beside them, `show` reads a run's artifacts, versions, producers and failure records,
-names what below a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a batch's runs the
-same way and writes one page into the batch directory, `compare.html`: each run's
+names what below a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a collection's runs the
+same way and writes one page into the collection directory, `compare.html`: each run's
 photograph beside each flow's renders, linked and never embedded.
 
 Every stage verb takes `--flow`, required and repeatable, because the flow
 supplies the briefing a stage reads, the schema it fills against and the
 directory it writes into. `show`, `compare` and `ui`, which are not stage verbs,
 take no `--flow`: `show` and `compare` report every flow the runs already hold —
-`compare` takes the batch directory instead of `--runs` — and `ui` takes no
+`compare` takes the collection directory instead of `--runs` — and `ui` takes no
 argument at all. It serves the library `ISEKAI_LIBRARY` names, `~/isekai` by
-default, where a batch is a folder holding `sources/` with its runs root `runs/`
-beside it ([D40](decisions.md#d40--a-batch-is-a-library-folder-holding-sources)).
-Its page names the batch, the run's digest and the flow in every URL. It writes
+default, where a collection is a folder holding `sources/` with its runs root `runs/`
+beside it ([D40](decisions.md#d40--a-collection-is-a-library-folder-holding-sources)).
+Its page names the collection, the run's digest and the flow in every URL. It writes
 through the functions that own each write — import's for a source, `assign` for
 a tick, review's for a draft, its edits and an approval, and `sheet()` for a
 target's first sheet when a draft is made from another flow, which
@@ -93,10 +93,10 @@ own verb, a child of the server
 **Prepare is a job of those children.** It asks Ollama first, then runs `tag`,
 `caption` and `sheet` per flow over every assigned cell with no sheet, each with
 `--progress json`: one JSON line per item's start and end on stdout, its prose
-appended to the batch's `log.txt` as `[prepare] …`. One Prepare runs at a time,
+appended to the collection's `log.txt` as `[prepare] …`. One Prepare runs at a time,
 beside at most one render; Stop sends its child SIGINT, and the server stopping
 interrupts both. **`/events`** is the page's channel: a snapshot of both job slots
-and the batch's hub on every connect, then a `cell` event per line,
+and the collection's hub on every connect, then a `cell` event per line,
 its stage read again from disk.
 
 ```
@@ -213,7 +213,7 @@ its listed seeds first, leaving out each unapproved flow by name. Each render
 records its `duration`, and the next session's limit is estimated from them
 ([D26](decisions.md#d26--renders-run-on-a-rented-gpu)). The app's Render runs the
 same verb as a job, quoted first. The verb keeps the session's record beside the
-batch's log, `<batch>/sessions/<id>.json`, and the app's drawer reads it. The initial record is published
+collection's log, `<collection>/sessions/<id>.json`, and the app's drawer reads it. The initial record is published
 exclusively, so an occupied id refuses without replacing history. The render process holds `<id>.lock` until it
 exits; the app reads these locks across the library every two seconds, so a terminal render stays live as well:
 

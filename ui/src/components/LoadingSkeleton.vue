@@ -15,7 +15,7 @@ defineProps<{ reading: string | null; vocabulary: number }>()
 <template>
   <p class="skeleton__line mono">
     <span v-if="reading">reading {{ reading }}…</span>
-    <span v-else>reading the batch…</span>
+    <span v-else>reading the collection…</span>
     <template v-if="vocabulary">
       · vocabulary {{ vocabulary.toLocaleString('en-GB') }} tags · loaded
     </template>

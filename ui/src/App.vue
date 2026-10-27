@@ -8,14 +8,14 @@ import SessionDrawer from './components/SessionDrawer.vue'
 import { useKeys } from './composables/useKeys'
 import { queue } from './composables/useQueue'
 import { lasted } from './sessions'
-import { useBatchStore } from './stores/batch'
+import { useCollectionStore } from './stores/collection'
 import { useDrawerStore } from './stores/drawer'
 import { type Key, keyList, shifted, useKeyStore } from './stores/keys'
 import { alerting, clock, useLiveStore } from './stores/live'
 import type { JobSlot } from './types'
 
 /* The shell: the AppBar, the BillingBanner's slot, the route's screen and the
-   JobStrip (design spec §3). Review is keyed by batch and flow, so moving to
+   JobStrip (design spec §3). Review is keyed by collection and flow, so moving to
    another run keeps the view and its autosave; another flow is a new view. */
 const route = useRoute()
 const router = useRouter()
@@ -39,33 +39,33 @@ const items = computed(() =>
 const totals = (slot: JobSlot) =>
   running.value ? renderTotals(slot) || prepareTotals(slot) : `last: ${slot.kind} · ${slot.state}`
 
-const batch = computed(() => (typeof route.params.batch === 'string' ? route.params.batch : null))
-/* The page's one stream names the batch the screen shows, and the batch store holds it. */
-const batchStore = useBatchStore()
+const collection = computed(() => (typeof route.params.collection === 'string' ? route.params.collection : null))
+/* The page's one stream names the collection the screen shows, and the collection store holds it. */
+const collectionStore = useCollectionStore()
 watch(
-  batch,
+  collection,
   (shown) => {
-    batchStore.open(shown)
-    live.follow({ batch: shown })
+    collectionStore.open(shown)
+    live.follow({ collection: shown })
   },
   { immediate: true },
 )
-const place = computed(() => batch.value ?? 'library')
+const place = computed(() => collection.value ?? 'library')
 const screen = computed(() => route.name)
 const key = computed(() =>
-  route.name === 'review' ? `${route.params.batch}/${route.params.flow}` : route.path,
+  route.name === 'review' ? `${route.params.collection}/${route.params.flow}` : route.path,
 )
 
-/* The Review tab counts the batch's unapproved sheets, every flow's. */
+/* The Review tab counts the collection's unapproved sheets, every flow's. */
 const unapproved = computed(() => {
-  const held = batchStore.hub
+  const held = collectionStore.hub
   return held ? held.flows.reduce((sum, flow) => sum + queue(held, flow).length, 0) : 0
 })
 const listing = ref(false)
 
-const onBatch = () => batch.value !== null
+const onCollection = () => collection.value !== null
 function open(name: string): void {
-  void router.push({ name, params: batch.value ? { batch: batch.value } : {} })
+  void router.push({ name, params: collection.value ? { collection: collection.value } : {} })
 }
 
 /* The running render's session, wherever the screen is, and its clock. */
@@ -73,7 +73,7 @@ const rendered = computed(() => {
   const held = activeRender.value
   if (!held) return null
   const elapsed = lasted(held.started, null, true, now.value) ?? 0
-  return { batch: held.batch, id: held.id, clock: clock(elapsed) }
+  return { collection: held.collection, id: held.id, clock: clock(elapsed) }
 })
 /* The render drawer's key: real Ctrl on every platform, from a field too (D25). */
 const DRAWER: Key = { code: 'Semicolon', ctrl: true }
@@ -82,14 +82,14 @@ const drawer = useDrawerStore()
 /* The keys every screen answers, outside a text field but for the drawer's and the key list's (D25). */
 useKeys('everywhere', [
   { id: 'library', keys: [shifted('KeyL')], label: 'library', run: () => open('home') },
-  { id: 'hub', keys: [shifted('KeyH')], label: 'hub', run: () => open('hub'), when: onBatch },
-  { id: 'review', keys: [shifted('KeyR')], label: 'review', run: () => open('review-head'), when: onBatch },
+  { id: 'hub', keys: [shifted('KeyH')], label: 'hub', run: () => open('hub'), when: onCollection },
+  { id: 'review', keys: [shifted('KeyR')], label: 'review', run: () => open('review-head'), when: onCollection },
   {
     id: 'renders',
     keys: [shifted('KeyI')],
     label: 'renders',
     run: () => open('renders'),
-    when: onBatch,
+    when: onCollection,
   },
   { id: 'drawer', keys: [DRAWER], label: 'the render drawer', run: drawer.toggle, inField: true },
   keyList(() => (listing.value = true)),
@@ -106,15 +106,15 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
     <header class="appbar">
       <RouterLink to="/" class="appbar__mark">isekai</RouterLink>
       <span class="appbar__place">{{ place }}</span>
-      <template v-if="batch">
+      <template v-if="collection">
         <RouterLink
-          :to="{ name: 'hub', params: { batch } }"
+          :to="{ name: 'hub', params: { collection } }"
           class="appbar__tab"
           :class="{ 'appbar__tab--active': screen === 'hub' }"
           >Hub<KeyHint command="hub" /></RouterLink
         >
         <RouterLink
-          :to="{ name: 'review-head', params: { batch } }"
+          :to="{ name: 'review-head', params: { collection } }"
           class="appbar__tab"
           :class="{ 'appbar__tab--active': screen === 'review' || screen === 'review-head' }"
           data-review-tab
@@ -122,7 +122,7 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
           ><KeyHint command="review" /></RouterLink
         >
         <RouterLink
-          :to="{ name: 'renders', params: { batch } }"
+          :to="{ name: 'renders', params: { collection } }"
           class="appbar__tab"
           :class="{ 'appbar__tab--active': screen === 'renders' || screen === 'render' }"
           >Renders<KeyHint command="renders" /></RouterLink
@@ -135,7 +135,7 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
         type="button"
         :title="`the render drawer ${keys.hint('drawer') ?? ''}`"
         data-rendering
-        @click="drawer.openOn(rendered.batch, rendered.id)"
+        @click="drawer.openOn(rendered.collection, rendered.id)"
       >
         ● render {{ rendered.clock }}
       </button>

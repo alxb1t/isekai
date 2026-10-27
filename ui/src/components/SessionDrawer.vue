@@ -31,11 +31,11 @@ const { jobs, billing, now } = storeToRefs(live)
 const stopRefusal = ref<string | null>(null)
 const dialog = ref<HTMLDialogElement | null>(null)
 
-const batch = computed(() => target.value?.batch ?? '')
+const collection = computed(() => target.value?.collection ?? '')
 /* The render slot's session, while it is the shown one. */
 const slot = computed(() => {
   const held = jobs.value.render
-  return held?.batch === target.value?.batch && held?.session?.id === target.value?.id
+  return held?.collection === target.value?.collection && held?.session?.id === target.value?.id
     ? held
     : null
 })
@@ -106,14 +106,14 @@ const photographs = computed(() =>
     const name = named.value[digest]
     if (name)
       return {
-        src: sourceAt(batch.value, name),
-        thumb: sourceThumbAt(batch.value, name),
+        src: sourceAt(collection.value, name),
+        thumb: sourceThumbAt(collection.value, name),
         name,
       }
     const row = layout.value.cells.findIndex(
       (cells) => cells[column].images.length > 0 || cells[column].waiting > 0,
     )
-    const src = photoUrl({ batch: batch.value, digest, flow: layout.value.flows[row] })
+    const src = photoUrl({ collection: collection.value, digest, flow: layout.value.flows[row] })
     return { src, thumb: src, name: digest }
   }),
 )
@@ -141,7 +141,7 @@ const go = (move: Move) => () => place(moved(lastColumns(layout.value), focus.va
 
 function renders(): void {
   drawer.close()
-  void router.push({ name: 'renders', params: { batch: batch.value } })
+  void router.push({ name: 'renders', params: { collection: collection.value } })
 }
 
 useKeys('overlay', [
@@ -200,7 +200,7 @@ onMounted(() => {
   <dialog ref="dialog" class="drawer" aria-label="Render session" data-drawer @cancel.prevent>
     <section v-if="record || slot" class="session" :data-session="target?.id">
       <span class="section-label">
-        Render session · {{ batch }} · {{ of }} {{ noun(of, 'image') }}
+        Render session · {{ collection }} · {{ of }} {{ noun(of, 'image') }}
       </span>
       <p class="session__timer mono" data-session-timer>
         {{ elapsed === null ? '—' : clock(elapsed)
@@ -246,7 +246,7 @@ onMounted(() => {
               data-session-image
               @click.stop="view({ row: at, column }, index)"
             >
-              <img :src="thumbAt({ batch, ...one })" alt="" />
+              <img :src="thumbAt({ collection, ...one })" alt="" />
             </button>
             <span
               v-for="index in cell.waiting"
@@ -292,7 +292,7 @@ onMounted(() => {
           <RouterLink
             class="btn btn-primary"
             data-renders
-            :to="{ name: 'renders', params: { batch } }"
+            :to="{ name: 'renders', params: { collection } }"
             @click="drawer.close"
             >View in Renders<KeyHint command="renders" /></RouterLink
           >

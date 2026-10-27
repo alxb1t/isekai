@@ -77,8 +77,8 @@ timer mono 40px/500.
 ```
 
 - **AppBar**, `ground-deep`, bottom border `line`. The wordmark goes Home. The place is mono 12px `ink-2`: `library`
-  on Home, else the batch name. Tabs only inside a batch; the active one has a 2px accent underline. The Review
-  tab counts the batch's unapproved sheets in mono 11 `accent`, and opens the batch's Review. The flow
+  on Home, else the collection name. Tabs only inside a collection; the active one has a 2px accent underline. The Review
+  tab counts the collection's unapproved sheets in mono 11 `accent`, and opens the collection's Review. The flow
   switcher is a segmented control; Review drops `all`. The `?` button at its right end, after the running render,
   opens the key list, as `⌃/` does; no screen draws a key bar.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
@@ -93,45 +93,45 @@ timer mono 40px/500.
 
 | route | screen | opens over it |
 |---|---|---|
-| `/` | Home | the New batch sheet |
-| `/b/<batch>/hub` | Hub | the Add sources sheet, the Prepare bar, the Render dialog |
-| `/b/<batch>/review` | Review's head, replaced by its sheet's URL | — |
-| `/b/<batch>/review/<run>/<flow>` | Review | the cheatsheet, the viewer, *Side by side* |
-| `/b/<batch>/renders` | Renders grid | the Revise confirm |
-| `/b/<batch>/renders/<run>/<flow>/<version>/<seed>` | large view | the Revise confirm |
-| `/b/<batch>/renders/<run>/<flow>/<version>/<seed>/compare` | before / after | — |
+| `/` | Home | the New collection sheet |
+| `/c/<collection>/hub` | Hub | the Add sources sheet, the Prepare bar, the Render dialog |
+| `/c/<collection>/review` | Review's head, replaced by its sheet's URL | — |
+| `/c/<collection>/review/<run>/<flow>` | Review | the cheatsheet, the viewer, *Side by side* |
+| `/c/<collection>/renders` | Renders grid | the Revise confirm |
+| `/c/<collection>/renders/<run>/<flow>/<version>/<seed>` | large view | the Revise confirm |
+| `/c/<collection>/renders/<run>/<flow>/<version>/<seed>/compare` | before / after | — |
 | `/billing` | the billing alert's way out | — |
 
 - `<run>` is the run's **12-hex digest** (`0d4b7e6fb2a8`), unique by construction; the screen shows the short name
  .
 - `<version>` is `v` + the approval's number (`v2` is `review/002.approved.json`, rendered into `outputs/002/`).
-- `/b/<batch>/review` opens the first unapproved sheet of the first flow that has one, in the hub's order; else
+- `/c/<collection>/review` opens the first unapproved sheet of the first flow that has one, in the hub's order; else
   the first approved sheet short of its images, read-only; else *No sheet waits for review* and the way to the hub.
 - While a render runs, every screen shows `● render 06:41`, its clock, opening the render drawer, which holds no URL.
 
 ## 5 · The journeys
 
 Each row is one frame: the trigger that leads to it, and its URL. `…` is `localhost:7717`. J1–J4 run in order on a
-new batch; J5–J6 on one already rendered.
+new collection; J5–J6 on one already rendered.
 
-### J1 · First batch
+### J1 · First collection
 
 | frame | trigger | URL |
 |---|---|---|
 | J1·1 Home, first start | — | `…/` |
-| J1·2 the browser's file dialog, filtered to images | ⇧N New batch | `…/` |
+| J1·2 the browser's file dialog, filtered to images | ⇧N New collection | `…/` |
 | J1·3 the sheet, `reading 3 of 6` | choose 6 files, Open | `…/` |
 | J1·4 the sheet, every file read: 2 converted, 1 RAW refused | reading ends | `…/` |
-| J1·5 the hub, every cell a bare checkbox | ⌘↵ Import | `…/b/2026-10-19/hub` |
+| J1·5 the hub, every cell a bare checkbox | ⌘↵ Import | `…/c/2026-10-19/hub` |
 
 ```
 J1·1  LIBRARY · EMPTY
-      No batches yet.
+      No collections yet.
       Sources are copied into ~/isekai/. A photograph leaves this Mac only to be rendered:
       metadata stripped, held only in the GPU pod's memory, and gone when the pod is.
-      [ New batch ⇧N ]                                              ← the accent
+      [ New collection ⇧N ]                                         ← the accent
 
-J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 [ Add files… ] ┐
+J1·4  ┌ New collection   6 files chosen · 5 sources · 1 refused            [ Add files… ] ┐
       │ SOURCES · 5 · 7.3 MB                                 │ NAME                       │
       │ [00003.png] [16_01.png] [IMG_0412.jpg]  [still_04.jpg] │ [ 2026-10-19            ]  │
       │                          HEIC → JPEG    WEBP → JPEG    │                            │
@@ -150,7 +150,7 @@ J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 
 
 | frame | trigger | URL |
 |---|---|---|
-| J2·1 one cell assigned; the bar `1 change · Prepare ⌘↵` | arrow to 00003 × conjure, space | `…/b/2026-10-19/hub` |
+| J2·1 one cell assigned; the bar `1 change · Prepare ⌘↵` | arrow to 00003 × conjure, space | `…/c/2026-10-19/hub` |
 | J2·2 three rows selected, summon ticked for all; `4 changes` | ⇧↓ ⇧↓, space on the summon header | same |
 | J2·3 Prepare running: progress in the cells, totals in the job strip | ⌘↵ Prepare | same |
 | J2·4 done: no bar; the Review tab counts the new sheets | the last cell finishes | same |
@@ -176,7 +176,7 @@ y_long_name            │                                  │
 - **The tick:** accent fill is assigned and can be unticked; `tick-locked` is prepared and stays (`prepared ·
   the tick stays`).
 - **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`,
-  `↵ view` or, on the source cell, `↵ view photo` at its top right, taking no line). The hub keeps its focus for the open batch: `Esc` from a large
+  `↵ view` or, on the source cell, `↵ view photo` at its top right, taking no line). The hub keeps its focus for the open collection: `Esc` from a large
   view, the Back button and a tab switch come back to the cell left, else the first row's source cell.
 - **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
@@ -191,7 +191,7 @@ y_long_name            │                                  │
   cells named in mono 11, Discard, primary `n changes · Prepare ⌘↵`. Running: `Prepare · 1 of 3 cells done · 01:47`,
   Stop. The accepted-cell total stays fixed; the sheet-completed count and ticking elapsed time match JobStrip,
   including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
-  hub opened after the failure too. Disabled while another batch's Prepare runs: its reason (`Prepare is running on 2026-10-19`). There is no done state: the
+  hub opened after the failure too. Disabled while another collection's Prepare runs: its reason (`Prepare is running on 2026-10-19`). There is no done state: the
   receipt goes to the job strip, the count to the Review tab. Running, a 2 px `accent` line slides along the bar's top
   edge, as on a running RenderBar, and a running segment pulses `accent-dim` ↔ `accent`; under
   `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
@@ -204,7 +204,7 @@ y_long_name            │                                  │
   with the cells' tick line, the size in the viewer's title, then a 96×128 thumbnail at the cell's foot, a
   render tile's size, upright; a row checkbox appears in selection mode. A long name breaks inside the column, as
   it does on Renders, Review's rail and Home, never spilling out. A click
-  on the thumbnail or `↵` opens the viewer on its photograph, `← →` stepping the batch's sources; space does nothing
+  on the thumbnail or `↵` opens the viewer on its photograph, `← →` stepping the collection's sources; space does nothing
   there.
 - **The viewer** is a dialog over the page, its URL unchanged: the image fitted, a click for 1:1 pixels, `Esc` or a
   click outside to close, titled with the name, the dimensions and `fit n%` or `1:1`.
@@ -215,7 +215,7 @@ With two or more flows waiting, the Review tab is a chooser, a row per flow; ↵
 
 | frame | trigger | URL |
 |---|---|---|
-| J3·1 the batch's head, the first sheet in summon | ⇧R Review | `…/b/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
+| J3·1 the collection's head, the first sheet in summon | ⇧R Review | `…/c/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J3·2 a field edited, the empties marked, Count 2 | edit · Mark 6 empty fields intentional · count + | same |
 | J3·3 the same sheet, approved and read-only; its rail mark ● | ⌘↵ Approve | same |
 | J3·4 the next sheet in the rail | ⇧J | `…/review/<16_01's run>/summon-anime-wai` |
@@ -248,16 +248,16 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
   no prompt, render group or copy — and the sheet is editable again; a copy's cancel deletes only the copy, and the
   sheet opens on the draft open above what lies beneath, else the approval beneath, read-only, the bar's note naming
   it as it names every approval shown. No key, no ask. Otherwise it is disabled, the review stage's reason beside it; while a render
-  session runs for the batch, the reason says so.
+  session runs for the collection, the reason says so.
 
 ### J4 · Render
 
 | frame | trigger | URL |
 |---|---|---|
-| J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⇧G Render | `…/b/2026-10-19/hub` — the dialog has none |
+| J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⇧G Render | `…/c/2026-10-19/hub` — the dialog has none |
 | J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.06 | the drawer over the hub |
 | J4·3 done: `Nothing is billing.` | the last image lands; teardown and volume down confirm | same |
-| J4·4 Renders with the four new images | ⇧I View in Renders | `…/b/2026-10-19/renders` |
+| J4·4 Renders with the four new images | ⇧I View in Renders | `…/c/2026-10-19/renders` |
 
 ```
 J4·1  RENDER · 2026-10-19 · ON A RENTED GPU                      Render 4 images
@@ -305,14 +305,14 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 
 | frame | trigger | URL |
 |---|---|---|
-| J5·1 Renders, before the revision | — | `…/b/2026-09-17/renders` |
+| J5·1 Renders, before the revision | — | `…/c/2026-09-17/renders` |
 | J5·2 the large view, no Compare yet | ↵ | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731` |
 | J5·3 the Revise confirm over it | ⇧E Revise this image | same |
-| J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/b/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
+| J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/c/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
-| J5·6 the revision approved, read-only; the hub's Render bar, `1 image ready to render` | ⌘↵ Approve · ⇧H | `…/b/2026-09-17/hub` |
+| J5·6 the revision approved, read-only; the hub's Render bar, `1 image ready to render` | ⌘↵ Approve · ⇧H | `…/c/2026-09-17/hub` |
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | the drawer over the hub |
-| J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/b/2026-09-17/renders` |
+| J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/c/2026-09-17/renders` |
 | J5·8 the large view of v2, with `Compare with…  c` | ↵ on v2 | `…/v2/1840266731` |
 | J5·9 before / after | c, ↵ on v1 in the tile picker | `…/v2/1840266731/compare/v1/1840266731` |
 
@@ -374,43 +374,43 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 | (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · ⇧E · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
 | J6·1 Review: the seed cleared, Count 3, the tags untouched | × the seed · count + + | `…/review/0d4b7e6fb2a8/conjure-anime-wai` |
 | (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⇧G · ⌘↵ | the drawer over the hub |
-| J6·2 Renders: three new images after v1, no pair | ⇧I | `…/b/2026-09-17/renders` |
+| J6·2 Renders: three new images after v1, no pair | ⇧I | `…/c/2026-09-17/renders` |
 
 Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`, `was 1840266731 · cleared`.
 
-### J7 · Add sources to a batch
+### J7 · Add sources to a collection
 
 | frame | trigger | URL |
 |---|---|---|
 | J7·1 Home, the library | — | `…/` |
-| J7·2 its hub | ↵ on 2026-09-17 | `…/b/2026-09-17/hub` |
+| J7·2 its hub | ↵ on 2026-09-17 | `…/c/2026-09-17/hub` |
 | (the file dialog, as J1·2) | ⇧A Add sources… | same |
 | J7·3 the sheet without a name: one `already here`, one copied as `16_01-2.png`, one HEIC converted | Open; reading ends | same |
 | J7·4 two new rows, bare checkboxes | ⌘↵ Import 2 | same |
 
 ```
-J7·1  LIBRARY · 4 batches · newest activity first                              [ New batch ⇧N ]
+J7·1  LIBRARY · 4 collections · newest activity first                     [ New collection ⇧N ]
       2026-09-17  6 sources  [summon-anime-wai 2/5 approved · 1/5 rendered]
                              [conjure-anime-wai 1/2 approved · 0/2 rendered]  today 15:31 · render · open ↵
       ▢▢▢▢▢▢▢ +5
-      old exports      ▨ Not a batch: no sources/ folder inside. Move it out of ~/isekai/ in Finder
+      old exports      ▨ Not a collection: no sources/ folder inside. Move it out of ~/isekai/ in Finder
                          to clear this row.                                                  can't be opened
 ```
 
 - **Home's row**: a header line — the name, `n sources`, one chip per flow present (its denominator the sources that
   have it; chips wrap), `n sources without a flow`, and at the right last activity, the time and kind of the newest
-  file written in the batch, then `open ↵` — over up to fifteen 84×114 thumbnails then `+n`, at the full width,
+  file written in the collection, then `open ↵` — over up to fifteen 84×114 thumbnails then `+n`, at the full width,
   wrapping in a narrow window. Sorted by last activity; a folder without `sources/`
   sorts last, striped and inert; dot-folders, `.staging` among them, are not listed.
 - **A running render's row** has an accent left edge (`inset 2px 0 0`), background `#1b1c2c`,
   `● render running · 06:41` and `image 1 of 2`.
-- **`already here`** is the same bytes as a source in the batch: dimmed, skipped. A different file with a taken name
+- **`already here`** is the same bytes as a source in the collection: dimmed, skipped. A different file with a taken name
   is copied as `<stem>-2` and says `chosen as 16_01.png`.
 
 ### J8 · When it goes wrong
 
 - **J8a, Prepare refused** — from J2·2, ⌘↵. The bar shows the CLI's refusal; nothing ran, the cells stay assigned.
-  Start Ollama outside the app, then ⌘↵ again → J2·3. URL `…/b/2026-10-19/hub`.
+  Start Ollama outside the app, then ⌘↵ again → J2·3. URL `…/c/2026-10-19/hub`.
 - **J8b, teardown unconfirmed** — from J4·2, teardown gets no answer. The band shows on every screen; *Resolve*
   opens the alert at `…/billing`. Ways out, each ending in **Check again**, which asks gpunit: Check again itself;
   `uv run --env-file .env gpunit down`, then Check again; stop it in RunPod's console, then Check again. It clears
@@ -426,16 +426,16 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 |---|---|---|
 | Home | loading | rows paint with folder names; counts and thumbnails fill per row |
 | Home | the library cannot be created | a full-page refusal naming the permission problem |
-| New batch | name taken | the refusal with a free name offered, `use 2026-10-19 2 ⇧↵`; Import disabled `Choose a name that isn't taken` |
-| New batch | name unusable | `A name can't contain /, start with a dot, or be empty.` |
-| New batch | nothing usable | Import disabled `None of the chosen files could be read.` |
-| New batch | cancel | the staging folder is deleted; the library is unchanged |
+| New collection | name taken | the refusal with a free name offered, `use 2026-10-19 2 ⇧↵`; Import disabled `Choose a name that isn't taken` |
+| New collection | name unusable | `A name can't contain /, start with a dot, or be empty.` |
+| New collection | nothing usable | Import disabled `None of the chosen files could be read.` |
+| New collection | cancel | the staging folder is deleted; the library is unchanged |
 | Hub | loading | placeholder rows, `reading 2 of 6` |
 | Hub | a damaged run | the cell reads `unreadable`, with the CLI's refusal (path, line and column) and its fix; the rest of the grid works |
 | Hub | a render running | Render disabled `A render session is running · 06:41 of ≤10:30` |
 | Hub | Prepare disabled | the bar keeps its cells, reason `Prepare is running on 2026-10-19` |
 | Hub | Add sources, nothing new | Import disabled `Nothing new to add` |
-| Hub | the batch is gone | a full-page refusal, `Back to the library ⇧L` |
+| Hub | the collection is gone | a full-page refusal, `Back to the library ⇧L` |
 | Render | refused before billing | the CLI's refusal: no GPU free, no key in `.env`; `nothing billed` when true |
 | Render | disabled | `A pod may still be billing.` |
 | Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, the Review tab's count |
@@ -452,11 +452,11 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 | where | keys |
 |---|---|
 | everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⌃; the render drawer, from a field too · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
-| Home | ⇧N New batch · j k or ↓↑ ↵ the library |
+| Home | ⇧N New collection · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
 | Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧E Revise · ⇧G Render · in the large view, ⇧E Revise, ⇧F Conjure from this, c Compare with…, ⇧C *Side by side*, esc back · in compare, `\` swap, esc back |
-| Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧I its batch's Renders · ⌃; or esc close |
+| Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧I its collection's Renders · ⌃; or esc close |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 
 No key spends money but the Render dialog's ⌘↵, which confirms the price it quotes: ⇧G only opens the dialog.
@@ -480,8 +480,8 @@ idle ──confirm──▶ running ──▶ (render) teardown ──▶ done �
   `{"step": "teardown", "state": "confirmed"}`). The server reads the child's stdout; the human output still goes to
   `log.txt`, each line naming its job — `[prepare] …`, `[render] …` — and the UI never parses it.
 - **The page is told over SSE**: one stream, `/events`, a full snapshot on every connect — both job slots, the
-  open batch's cells, the open import's files, billing state — then only changes. The stream names the page's
-  batch and its open import, and opens again when either changes. Actions are HTTP POSTs.
+  open collection's cells, the open import's files, billing state — then only changes. The stream names the page's
+  collection and its open import, and opens again when either changes. Actions are HTTP POSTs.
 - **The hub's cells** are a listing of `runs/`, read again on each progress event.
 - **gpunit is asked** every ~30 s while a session runs or an alert is unresolved, on Check again, and once at
   server start. The volume item and its band run on a timer from the window's end gpunit recorded locally. Idle, the
@@ -505,7 +505,7 @@ endings once, for both surfaces. The key is `RUNPOD_API_KEY` in `.env` (`.env.ex
 
 | version | builds |
 |---|---|
-| **ui groundwork** | the shell — AppBar, JobStrip, BillingBanner's slot; tokens; routes with the batch (§4); `isekai ui` with no arguments over `ISEKAI_LIBRARY`; Home and the library (J7·1, Home's states); the hub grid as a listing, focus, keys (§7), the cheatsheet; Review inside the shell with its queue; vitest and Playwright, the fakes behind `ISEKAI_WIRING=<module>:<factory>` |
-| **run flow** | New batch and Add sources (J1, J7) — the upload, staging, `isekai import` and conversion; `isekai assign`; ticking, multi-select, the PrepareBar and Prepare as a job (J2, J8a); `--progress json` on the stage verbs; the job slot; SSE `/events` with the snapshot |
+| **ui groundwork** | the shell — AppBar, JobStrip, BillingBanner's slot; tokens; routes with the collection (§4); `isekai ui` with no arguments over `ISEKAI_LIBRARY`; Home and the library (J7·1, Home's states); the hub grid as a listing, focus, keys (§7), the cheatsheet; Review inside the shell with its queue; vitest and Playwright, the fakes behind `ISEKAI_WIRING=<module>:<factory>` |
+| **run flow** | New collection and Add sources (J1, J7) — the upload, staging, `isekai import` and conversion; `isekai assign`; ticking, multi-select, the PrepareBar and Prepare as a job (J2, J8a); `--progress json` on the stage verbs; the job slot; SSE `/events` with the snapshot |
 | **render** | the Render dialog, the session, done (J4); ④ editable, Count and Seeds through approve; `render <runs>` rendering what is short; the scaled limit and recorded durations; Renders, the large view; the billing alerts and the volume item (J8b, J8c); `--progress json` on `render` |
 | **revise** | `isekai revise`, the confirm and its refusal; Review of a revision (J5·4–J5·6); `review --discard`; compare (J5·8, J5·9); re-roll (J6) |

@@ -5,9 +5,9 @@ import { spec } from '../test/spec'
 import type { HubInfo, InputStatus } from '../types'
 import { flowsWaiting, head, rail, useQueue, waiting } from './useQueue'
 
-/* `fetch` answers the hub with a batch built here, so the run directories the
+/* `fetch` answers the hub with a collection built here, so the run directories the
    count must agree with are the ones this file declares. The rail reads it
-   through the batch store, fresh for each test. */
+   through the collection store, fresh for each test. */
 let hub: HubInfo
 
 function source(name: string, status: InputStatus, short: number | null = null) {
@@ -35,7 +35,7 @@ spec('ui:approval:a-re-opened-input-is-not-counted-approved', async () => {
   // short, `b` re-opened over its approved one. `c` holds a draft alone, and `d`
   // is approved with all its images, so the rail leaves it out.
   hub = {
-    batch: 'b',
+    collection: 'b',
     flows: ['f'],
     sources: [
       source('a', 'approved', 1),
@@ -58,7 +58,7 @@ spec('ui:approval:a-re-opened-input-is-not-counted-approved', async () => {
 spec('ui:review:the-rail-holds-every-unrendered-sheet', () => {
   // `a` waits for review, `b` is approved and lacks an image, `c` has all its images.
   const info: HubInfo = {
-    batch: 'b',
+    collection: 'b',
     flows: ['f'],
     sources: [source('a', 'draft'), source('b', 'approved', 1), source('c', 'approved', 0)],
   }
@@ -75,17 +75,17 @@ spec('ui:review:the-rail-holds-every-unrendered-sheet', () => {
 
 spec('ui:review:a-batch-opens-its-head', () => {
   // `a` is approved and lacks an image; `b` waits for review; `c` has all its images.
-  const batch = (b: InputStatus): HubInfo => ({
-    batch: 'b',
+  const collection = (b: InputStatus): HubInfo => ({
+    collection: 'b',
     flows: ['f'],
     sources: [source('a', 'approved', 1), source('b', b), source('c', 'approved', 0)],
   })
 
   // One flow waits, so Review opens its head rather than the chooser.
-  expect(flowsWaiting(batch('draft')).map((one) => one.flow)).toEqual(['f'])
-  expect(head(batch('draft'))).toEqual({ digest: 'b', flow: 'f' })
-  expect(head(batch('approved'))).toEqual({ digest: 'a', flow: 'f' })
-  const done = batch('approved')
+  expect(flowsWaiting(collection('draft')).map((one) => one.flow)).toEqual(['f'])
+  expect(head(collection('draft'))).toEqual({ digest: 'b', flow: 'f' })
+  expect(head(collection('approved'))).toEqual({ digest: 'a', flow: 'f' })
+  const done = collection('approved')
   done.sources[0].cells.f.short = 0
   expect(head(done)).toBeNull()
   expect(flowsWaiting(done)).toEqual([])
@@ -98,7 +98,7 @@ spec('ui:review:two-flows-waiting-open-the-chooser', () => {
     g: { ...EMPTY_CELL, status: g, short },
   })
   const info: HubInfo = {
-    batch: 'b',
+    collection: 'b',
     flows: ['f', 'g'],
     sources: [
       { ...source('a', 'draft'), cells: cells('draft', 'draft') },
@@ -127,7 +127,7 @@ spec('ui:review:the-rail-names-the-other-flows-waiting', () => {
   // `g` holds one unapproved sheet and `h` none; `f` is the flow open.
   const one = source('a', 'draft')
   const info: HubInfo = {
-    batch: 'b',
+    collection: 'b',
     flows: ['f', 'g', 'h'],
     sources: [
       {

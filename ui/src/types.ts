@@ -8,7 +8,7 @@ export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half' | 'ring'
    approved input is editable again. */
 export type InputStatus = 'approved' | 're-opened' | 'draft'
 
-export interface BatchInput {
+export interface CollectionInput {
   /* The run's digest. */
   id: string
   name: string
@@ -17,7 +17,7 @@ export interface BatchInput {
   status: InputStatus
 }
 
-/* One flow's figures in a batch, out of the sources whose runs hold it. */
+/* One flow's figures in a collection, out of the sources whose runs hold it. */
 export interface FlowCount {
   flow: string
   approved: number
@@ -25,11 +25,11 @@ export interface FlowCount {
   of: number
 }
 
-/* One folder of the library. A folder that is not a batch carries only its
+/* One folder of the library. A folder that is not a collection carries only its
    name: it is listed and never opened. `newest` is the server's clock. */
 export interface LibraryRow {
   name: string
-  batch: boolean
+  collection: boolean
   sources: number
   /* The first sources' names, in the hub's order: the row's thumbnails. */
   thumbs: string[]
@@ -78,7 +78,7 @@ export interface HubSource {
 }
 
 export interface HubInfo {
-  batch: string
+  collection: string
   flows: string[]
   sources: HubSource[]
 }
@@ -101,7 +101,7 @@ export interface ScoredTag {
 }
 
 /* One tag from the hosted tagger that the vocabulary actually carries. The
-   server sends only these: on v0.20's acceptance batch roughly nine in ten of
+   server sends only these: on v0.20's acceptance collection roughly nine in ten of
    this model's tags were committable to no field, and reading nine to find the
    tenth is attention spent on the busiest pane in the surface.
 
@@ -214,7 +214,7 @@ export interface FileState {
 }
 
 export interface Committed {
-  batch: string
+  collection: string
   written: string[]
   skipped: string[]
   left_out: string[]
@@ -229,7 +229,7 @@ export interface SessionImage {
   seed: string
 }
 
-/* A render session's record, `<batch>/sessions/<id>.json`, as the server reads
+/* A render session's record, `<collection>/sessions/<id>.json`, as the server reads
    it: `outcome` is null for a record still reading running whose render process no longer holds its lifetime lock. */
 export interface SessionRecord {
   id: string
@@ -249,7 +249,7 @@ export interface SessionRecord {
 
 /* A running render discovered from disk, wherever it was started. */
 export interface RunningSession {
-  batch: string
+  collection: string
   id: string
   started: string
 }
@@ -272,11 +272,11 @@ export type JobKind = 'prepare' | 'render'
 /* One kind's job: running, or the last one's end. */
 export interface JobSlot {
   kind: JobKind
-  batch: string
+  collection: string
   state: 'running' | 'done' | 'stopped' | 'failed'
   flow: string | null
   stage: string | null
-  /* Why a failed job ended, naming the batch's log; null otherwise. */
+  /* Why a failed job ended, naming the collection's log; null otherwise. */
   message: string | null
   progress?: { started: string; of: number; done: number }
   session?: RenderSession
@@ -310,7 +310,7 @@ export interface Quote {
 
 /* A stage's report about one cell, its stage read again from disk. */
 export interface CellEvent {
-  batch: string
+  collection: string
   source: string
   flow: string
   stage: string
@@ -352,7 +352,7 @@ export interface RendersInfo {
   }[]
 }
 
-/* A batch's Render offer: the images it lacks, why Render is disabled, and why
+/* A collection's Render offer: the images it lacks, why Render is disabled, and why
    an approval's count is refused, each null when there is none. */
 export interface RenderOffer {
   disabled: string | null

@@ -7,7 +7,7 @@ open image models are run end to end, from container to rented GPU to CLI. Flows
 `control-anime-wai` as `summon` with its face dials at zero — on a
 WAI-illustrious-SDXL v17.0 base, driven by staged verbs an operator runs one at a time: `tag` and
 `caption` → `sheet` → `review`/`approve` → `generate`, with `show` reading a run and `ui` serving the
-library of batches — each batch's hub, stage ③, its render and its images — in a browser. Everything before `generate` is free and local; only the render costs money.
+library of collections — each collection's hub, stage ③, its render and its images — in a browser. Everything before `generate` is free and local; only the render costs money.
 
 > **That paragraph is the ceiling, and the ceiling is the point.** A fuller account — the verbs, what
 > each stage reads and writes, the run layout, the identity mechanisms and their dials — belongs in

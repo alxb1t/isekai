@@ -26,27 +26,27 @@ Nothing here builds an artifact body or an artifact filename, and
 calls this module's `run()` instead, so the server is reached from this one file
 and `python -m isekai`'s import graph never reaches it at all.
 
-**Every path inside a batch names the batch, and a run by its digest** (D3):
+**Every path inside a collection names the collection, and a run by its digest** (D3):
 
 ```
 GET  /api/library
-GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
-POST /api/b/{batch}/prepare   ·   POST /api/jobs/{prepare,render}/stop
-GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s, images}
-GET  /api/sessions/running   ·   GET /api/b/{batch}/sessions/{id}
+GET  /api/c/{collection}/hub   ·   POST …/assign        {sources, flow, remove}
+POST /api/c/{collection}/prepare   ·   POST /api/jobs/{prepare,render}/stop
+GET  /api/c/{collection}/render  ·  POST …/render{/quote,}  {keep_open, limit_s, images}
+GET  /api/sessions/running   ·   GET /api/c/{collection}/sessions/{id}
 POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}, and GET its /thumb
-DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
-GET  /events[?batch=&staging=], either or both    Server-Sent Events
-GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
-PUT  /api/b/{batch}/review/{digest}/{flow}/draft
-POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/cancel
-POST /api/b/{batch}/review/{digest}/{flow}/discard
-POST /api/b/{batch}/review/{digest}/{flow}/draft-from   {source, version}
-POST /api/b/{batch}/revise              {images: [{digest, flow, version, seed}]}
-GET  /api/b/{batch}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
+DELETE /api/staging/{id}   ·   POST …/{id}/commit   {collection, as_is, add}
+GET  /events[?collection=&staging=], either or both    Server-Sent Events
+GET  /api/c/{collection}/review/{digest}/{flow}         and /photo
+PUT  /api/c/{collection}/review/{digest}/{flow}/draft
+POST /api/c/{collection}/review/{digest}/{flow}/approve   ·   POST …/cancel
+POST /api/c/{collection}/review/{digest}/{flow}/discard
+POST /api/c/{collection}/review/{digest}/{flow}/draft-from   {source, version}
+POST /api/c/{collection}/revise              {images: [{digest, flow, version, seed}]}
+GET  /api/c/{collection}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
      and its /image, /thumb and /compare{/other/other_seed,}
-GET  /api/b/{batch}/sources/{name}   and its /thumb
+GET  /api/c/{collection}/sources/{name}   and its /thumb
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
@@ -171,7 +171,7 @@ REFUSED = 409
 FORBIDDEN = 403
 
 # Where gpunit's status answers are appended, in the library: a dot-file is listed
-# as no batch.
+# as no collection.
 GPUNIT_LOG = ".gpunit.log"
 
 # The names a loopback listener answers to. `Host: evil.example` resolving to
@@ -228,11 +228,11 @@ def create_app(
     host: str,
     port: int,
 ) -> FastAPI:
-    """Return the app's application, serving every batch of the library at `root`.
+    """Return the app's application, serving every collection of the library at `root`.
 
-    `wire` builds one batch's wiring from its runs root, and is called on every
-    request inside a batch, so the run-root guard holds for each (D19). `wired`
-    supplies what every batch shares: the flows, the vocabulary and the table.
+    `wire` builds one collection's wiring from its runs root, and is called on every
+    request inside a collection, so the run-root guard holds for each (D19). `wired`
+    supplies what every collection shares: the flows, the vocabulary and the table.
     `flows` are the hub's columns, the flows the surface offers.
     `host` and `port` are the address every request is checked against.
     """
@@ -303,40 +303,40 @@ def create_app(
         """Turn a `Refusal` into a response carrying its string, verbatim."""
         return JSONResponse({"refusal": str(refusal)}, status_code=REFUSED)
 
-    def folder(batch: str) -> Path:
-        """Return a batch's folder, its runs root passed through the guard."""
-        found = library.batch(root, batch)
+    def folder(collection: str) -> Path:
+        """Return a collection's folder, its runs root passed through the guard."""
+        found = library.collection(root, collection)
         wire(found / library.RUNS)
         return found
 
-    def held(batch: str, digest: str, flow: str) -> Held:
+    def held(collection: str, digest: str, flow: str) -> Held:
         """Return the run and flow a review URL names, refusing either unknown."""
-        found = folder(batch)
+        found = folder(collection)
         return Held(library.run_named(found, digest), _flow(wired, flow))
 
     @app.get("/api/library")
     def read_library() -> dict[str, Any]:
-        """List the library's folders, batches by their newest file first."""
+        """List the library's folders, collections by their newest file first."""
         rows = library.rows(root, flows, wired.flows_dir)
         return {"rows": [asdict(row) for row in rows]}
 
-    @app.get("/api/b/{batch}/hub")
-    def read_hub(batch: str) -> dict[str, Any]:
-        """Describe a batch's grid: its sources by the offered flows, each cell's stage.
+    @app.get("/api/c/{collection}/hub")
+    def read_hub(collection: str) -> dict[str, Any]:
+        """Return a collection's grid: its sources by offered flow, each cell's stage.
 
         Read from the run directories on every request, so it follows a verb run
         in the terminal while the page is open.
         """
-        return _hub(library.hub(folder(batch), flows, wired.flows_dir))
+        return _hub(library.hub(folder(collection), flows, wired.flows_dir))
 
-    @app.post("/api/b/{batch}/assign")
-    def post_assign(batch: str, payload: dict[str, Any]) -> dict[str, Any]:
+    @app.post("/api/c/{collection}/assign")
+    def post_assign(collection: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Tick a flow for sources, or untick it, through the run's own `assign`.
 
         Each source is answered on its own: one refused untick leaves the others
         done, and its refusal comes back beside their cells.
         """
-        found = folder(batch)
+        found = folder(collection)
         flow = str(payload.get("flow"))
         if flow not in flows:
             raise Refusal(
@@ -401,38 +401,38 @@ def create_app(
 
     @app.post("/api/staging/{staged}/commit")
     def post_commit(staged: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Commit an import into a new batch, or with `add` into an open one."""
+        """Commit an import into a new collection, or with `add` into an open one."""
         as_is = payload.get("as_is", [])
         if not _is_tag_list(as_is):
             raise Refusal("the request's `as_is` is not a list of file names")
         done = imports.commit(
             staged,
-            str(payload.get("batch", "")),
+            str(payload.get("collection", "")),
             as_is,
             add=payload.get("add") is True,
         )
         return {
-            "batch": done.batch.name,
+            "collection": done.collection.name,
             "written": list(done.written),
             "skipped": list(done.skipped),
             "left_out": list(done.left_out),
         }
 
-    @app.post("/api/b/{batch}/prepare")
-    def post_prepare(batch: str) -> dict[str, Any]:
+    @app.post("/api/c/{collection}/prepare")
+    def post_prepare(collection: str) -> dict[str, Any]:
         """Start Prepare over every assigned cell with no sheet, as one job.
 
         The local model server is asked first, so a job that could not run
         starts nothing.
         """
-        found = folder(batch)
+        found = folder(collection)
         grid = library.hub(found, flows, wired.flows_dir)
         loaded = {flow: load_flow(flow, wired.flows_dir) for flow in flows}
         steps = plan(
             library.unprepared(grid), {flow: one.tagger for flow, one in loaded.items()}
         )
         cell = cell_event(found, grid, loaded)
-        return {"job": jobs.prepare(batch, found, steps, cell)}
+        return {"job": jobs.prepare(collection, found, steps, cell)}
 
     @app.post("/api/jobs/{kind}/stop")
     def post_stop(kind: str) -> dict[str, Any]:
@@ -451,16 +451,16 @@ def create_app(
         """Return the offered flows drafted from a sheet alone, read once."""
         return [name for name in flows if offered(name).inputs == ("sheet",)]
 
-    def quoted(batch: str) -> tuple[Path, render.Quote, dict[str, Any]]:
-        """Return a batch's folder, its quote, and the quote as the dialog shows it."""
-        found = folder(batch)
+    def quoted(collection: str) -> tuple[Path, render.Quote, dict[str, Any]]:
+        """Return a collection's folder, its quote, and the quote the dialog shows."""
+        found = folder(collection)
         runs = found / library.RUNS
         made = render.quote(runs, wire(runs))
         disabled = _held() or made.short.blocked
         return found, made, _quote(found, made, disabled, wired.flows_dir)
 
     def _held() -> str | None:
-        """Return what holds Render back whatever the batch: a render, a pod, no key."""
+        """Return what holds Render back in any collection: a render, a pod, no key."""
         if jobs.running("render"):
             return "A render session is running."
         if billing.state()["pod"]:
@@ -472,14 +472,14 @@ def create_app(
             )
         return None
 
-    @app.get("/api/b/{batch}/render")
-    def read_render_offer(batch: str) -> dict[str, Any]:
-        """Return how many images the batch lacks, and why Render is disabled, or null.
+    @app.get("/api/c/{collection}/render")
+    def read_render_offer(collection: str) -> dict[str, Any]:
+        """Return how many images a collection lacks, and why Render is off, or null.
 
         It prices nothing; the count is the render stage's own. `refused` is why an
         approval's count cannot be read, or null: the bar shows it with none short.
         """
-        runs = folder(batch) / library.RUNS
+        runs = folder(collection) / library.RUNS
         short = render.short(runs, render.run_ids(runs), wire(runs))
         return {
             "disabled": _held() or short.blocked,
@@ -487,17 +487,17 @@ def create_app(
             "refused": short.refused[0] if short.refused else None,
         }
 
-    @app.post("/api/b/{batch}/render/quote")
-    def post_quote(batch: str) -> dict[str, Any]:
-        """Quote what a render of the batch renders, its limit and its price at most.
+    @app.post("/api/c/{collection}/render/quote")
+    def post_quote(collection: str) -> dict[str, Any]:
+        """Quote what a render of a collection renders, its limit and its price at most.
 
         It rents nothing; only the render's own `POST` does.
         """
-        return quoted(batch)[2]
+        return quoted(collection)[2]
 
-    @app.post("/api/b/{batch}/render")
+    @app.post("/api/c/{collection}/render")
     def post_render(
-        batch: str, payload: dict[str, Any] | None = None
+        collection: str, payload: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Start the render job the quote describes, or refuse naming why not.
 
@@ -507,7 +507,7 @@ def create_app(
         operator agreed to.
         """
         body = payload or {}
-        found, made, described = quoted(batch)
+        found, made, described = quoted(collection)
         if described["disabled"] is not None:
             raise Refusal(described["disabled"])
         shown, listed = body.get("limit_s"), body.get("images")
@@ -530,7 +530,7 @@ def create_app(
                 f"images, not {listed}; {reopen} it"
             )
         job = jobs.render(
-            batch,
+            collection,
             found,
             limit=made.estimate.limit_s,
             total=total,
@@ -547,19 +547,19 @@ def create_app(
 
     @app.get("/api/sessions/running")
     def running_sessions() -> dict[str, Any]:
-        """Read live disk records across batches, including terminal renders."""
+        """Read live disk records across collections, including terminal renders."""
         found = []
         for child in library.listed(root):
-            if library.is_batch(child):
+            if library.is_collection(child):
                 found += [
-                    {"batch": child.name, **one} for one in library.running(child)
+                    {"collection": child.name, **one} for one in library.running(child)
                 ]
         return {"sessions": found}
 
-    @app.get("/api/b/{batch}/sessions/{name}")
-    def read_session(batch: str, name: str) -> dict[str, Any]:
+    @app.get("/api/c/{collection}/sessions/{name}")
+    def read_session(collection: str, name: str) -> dict[str, Any]:
         """Return one render session's record; the slot holds its volume steps."""
-        return library.session(folder(batch), name)
+        return library.session(folder(collection), name)
 
     @app.post("/api/billing/check")
     def post_check() -> dict[str, Any]:
@@ -568,12 +568,12 @@ def create_app(
 
     @app.get("/events")
     def read_events(
-        batch: str | None = None, staging: str | None = None
+        collection: str | None = None, staging: str | None = None
     ) -> StreamingResponse:
-        """Stream both job slots, `batch`'s hub and `staging`'s files, then each change.
+        """Stream the job slots, `collection`'s hub, `staging`'s files, then changes.
 
-        A reload or a second tab gets the whole truth at once. A batch or an import
-        it cannot read is left out of the snapshot, never refused.
+        A reload or a second tab gets the whole truth at once. A collection or an
+        import it cannot read is left out of the snapshot, never refused.
         """
         # An import it no longer holds is left out rather than refused: the page's
         # one stream would never open again after a refused connect.
@@ -587,11 +587,11 @@ def create_app(
                 "jobs": {kind: jobs.slot(kind) for kind in KINDS},
                 "billing": billing.state(),
             }
-            if batch is not None:
-                # A batch it cannot read is left out: the screen's own read of it
+            if collection is not None:
+                # A collection it cannot read is left out: the screen's own read of it
                 # shows the refusal, and the page keeps its stream.
                 try:
-                    grid = library.hub(folder(batch), flows, wired.flows_dir)
+                    grid = library.hub(folder(collection), flows, wired.flows_dir)
                 except Refusal:
                     pass
                 else:
@@ -601,7 +601,7 @@ def create_app(
             return found
 
         return StreamingResponse(
-            events.stream(broadcast, snapshot, batch=batch, staging=staging),
+            events.stream(broadcast, snapshot, collection=collection, staging=staging),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache"},
         )
@@ -640,15 +640,15 @@ def create_app(
         """
         return shared.candidates(_flow(wired, flow))
 
-    @app.get("/api/b/{batch}/review/{digest}/{flow}")
-    def read_input(batch: str, digest: str, flow: str) -> dict[str, Any]:
+    @app.get("/api/c/{collection}/review/{digest}/{flow}")
+    def read_input(collection: str, digest: str, flow: str) -> dict[str, Any]:
         """Return everything Review shows for one run in one flow, in one payload.
 
         The fields come from the approved artifact while the input is approved and
         from the current draft otherwise, which is what makes an input approved in
         an earlier sitting open read-only rather than empty.
         """
-        one = held(batch, digest, flow)
+        one = held(collection, digest, flow)
         if latest_artifact(one.directory(SHEETS)) is not None:
             # Opening a sheet takes its draft through the stage that owns it (D5);
             # `review` writes nothing where a draft or an approval is there.
@@ -720,18 +720,18 @@ def create_app(
             # in for: `approve()` unlinks the draft.
             "approved_at": _saved(approved),
             # Why *Cancel approve* is disabled, or null while it can run.
-            "cancel": _rendering(batch) or cancellable(one.run, one.flow.id),
+            "cancel": _rendering(collection) or cancellable(one.run, one.flow.id),
             "budget": _budget(budget),
         }
 
-    @app.get("/api/b/{batch}/review/{digest}/{flow}/photo")
-    def read_photo(batch: str, digest: str, flow: str) -> Response:
+    @app.get("/api/c/{collection}/review/{digest}/{flow}/photo")
+    def read_photo(collection: str, digest: str, flow: str) -> Response:
         """Serve the photograph's bytes, whole. `image.py` reads headers, not pixels."""
-        return _photograph(held(batch, digest, flow).run.photo)
+        return _photograph(held(collection, digest, flow).run.photo)
 
-    @app.put("/api/b/{batch}/review/{digest}/{flow}/draft")
+    @app.put("/api/c/{collection}/review/{digest}/{flow}/draft")
     def put_draft(
-        batch: str, digest: str, flow: str, payload: dict[str, Any]
+        collection: str, digest: str, flow: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
         """Replace the draft's values in place, through the one function that owns it.
 
@@ -745,7 +745,7 @@ def create_app(
         the order the server finishes them. The check and the write hold one
         lock, so of two updates stating one precondition, the later fails it.
         """
-        one = held(batch, digest, flow)
+        one = held(collection, digest, flow)
         # Before the lock: a malformed body refuses without waiting on a write.
         fields = _update(payload)
         renders = _renders_in(payload)
@@ -768,9 +768,9 @@ def create_app(
             "budget": _budget(budget),
         }
 
-    @app.post("/api/b/{batch}/review/{digest}/{flow}/approve")
+    @app.post("/api/c/{collection}/review/{digest}/{flow}/approve")
     def post_approve(
-        batch: str, digest: str, flow: str, payload: dict[str, Any] | None = None
+        collection: str, digest: str, flow: str, payload: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Validate and approve the draft, through the only writer of an approval.
 
@@ -779,7 +779,7 @@ def create_app(
         **It states the draft update's precondition**, so a page approves only
         the draft it last read, never one another writer has since moved.
         """
-        one = held(batch, digest, flow)
+        one = held(collection, digest, flow)
         with _DRAFT_UPDATE:
             _precondition(one, payload or {})
             written, warnings = approve(
@@ -791,16 +791,16 @@ def create_app(
             "at": _saved(written),
         }
 
-    @app.post("/api/b/{batch}/review/{digest}/{flow}/cancel")
-    def post_cancel(batch: str, digest: str, flow: str) -> dict[str, Any]:
+    @app.post("/api/c/{collection}/review/{digest}/{flow}/cancel")
+    def post_cancel(collection: str, digest: str, flow: str) -> dict[str, Any]:
         """Turn the approval back into its draft, refused while a render runs.
 
         `back` names what the flow is left on: the draft, or for a deleted copy
         the draft or approval beneath it, null where nothing is.
         """
-        one = held(batch, digest, flow)
+        one = held(collection, digest, flow)
         with _DRAFT_UPDATE:
-            rendering = _rendering(batch)
+            rendering = _rendering(collection)
             if rendering is not None:
                 raise Refusal(
                     f"{rendering} Wait for it to end, then cancel the approval again."
@@ -808,31 +808,33 @@ def create_app(
             left = cancel(one.run, one.flow.id)
         return {"back": None if left is None else left.name}
 
-    def _rendering(batch: str) -> str | None:
-        """Return what a render running for `batch` says, or None."""
+    def _rendering(collection: str) -> str | None:
+        """Return what a render running for `collection` says, or None."""
         slot = rendering_slot()
         return (
-            "A render session is running." if slot and slot["batch"] == batch else None
+            "A render session is running."
+            if slot and slot["collection"] == collection
+            else None
         )
 
-    @app.post("/api/b/{batch}/review/{digest}/{flow}/discard")
+    @app.post("/api/c/{collection}/review/{digest}/{flow}/discard")
     def post_discard(
-        batch: str, digest: str, flow: str, payload: dict[str, Any] | None = None
+        collection: str, digest: str, flow: str, payload: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Delete the waiting draft, as `review --discard` does; an approval refuses.
 
         **It states the draft update's precondition**, so a page deletes only the
         draft it last read, never one another tab has since edited.
         """
-        one = held(batch, digest, flow)
+        one = held(collection, digest, flow)
         with _DRAFT_UPDATE:
             _precondition(one, payload or {}, "discard again")
             gone = discard(one.run, one.flow.id)
         return {"discarded": gone.name}
 
-    @app.post("/api/b/{batch}/review/{digest}/{flow}/draft-from")
+    @app.post("/api/c/{collection}/review/{digest}/{flow}/draft-from")
     def post_draft_from(
-        batch: str, digest: str, flow: str, payload: dict[str, Any]
+        collection: str, digest: str, flow: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
         """Draft `flow` from `source`'s approval `version`, as `review --from` does.
 
@@ -840,7 +842,7 @@ def create_app(
         records. A waiting draft with edits of its own is answered `waiting`,
         and nothing is written.
         """
-        one = held(batch, digest, flow)
+        one = held(collection, digest, flow)
         if flow not in (targets := sheet_alone()):
             raise Refusal(
                 f"{flow}: not a flow this surface drafts from an image's approval; "
@@ -876,9 +878,9 @@ def create_app(
             )
         return {"draft": written.name}
 
-    @app.post("/api/b/{batch}/revise", response_model=None)
+    @app.post("/api/c/{collection}/revise", response_model=None)
     def post_revise(
-        batch: str, payload: dict[str, Any]
+        collection: str, payload: dict[str, Any]
     ) -> dict[str, Any] | JSONResponse:
         """Write a revision for every image named, or, when any is refused, none.
 
@@ -887,7 +889,7 @@ def create_app(
         with its own refusal, or null where it could be revised, so the page can
         offer to deselect the rest.
         """
-        found = folder(batch)
+        found = folder(collection)
         named = _images(payload)
         answers: list[str | None] = [None] * len(named)
         drafts = [{**_image_out(*one), "draft": None, "waiting": None} for one in named]
@@ -910,7 +912,7 @@ def create_app(
                     drafts[at]["waiting"] = waiting.name
                 else:
                     located.append((at, image, (run, flow, version, seed)))
-            # Each other image the batch holds takes its answer from the review stage.
+            # Each other image the collection holds is answered by the review stage.
             checked = refuse_revisions([(image, held) for _, image, held in located])
             for (at, _, _), answer in zip(located, checked, strict=True):
                 answers[at] = answer
@@ -929,8 +931,8 @@ def create_app(
                 drafts[at]["draft"] = revise(*revision).name
         return {"drafts": drafts}
 
-    @app.get("/api/b/{batch}/renders")
-    def read_renders(batch: str) -> dict[str, Any]:
+    @app.get("/api/c/{collection}/renders")
+    def read_renders(collection: str) -> dict[str, Any]:
         """Return each source's images by offered flow, approvals newest first.
 
         `ready` is how many images each flow's newest approval lacks, as the
@@ -958,15 +960,15 @@ def create_app(
                         for flow in flows
                     },
                 }
-                for one in library.sources(folder(batch))
+                for one in library.sources(folder(collection))
             ],
         }
 
     def rendered(
-        batch: str, digest: str, flow: str, version: str, seed: int
+        collection: str, digest: str, flow: str, version: str, seed: int
     ) -> tuple[Run, Path, Path]:
         """Return a render's run, its image and the approval it was rendered from."""
-        found = folder(batch)
+        found = folder(collection)
         run = library.run_named(found, digest)
         one = offered(flow)
         number = _version(version)
@@ -979,9 +981,9 @@ def create_app(
             )
         return run, image, approval
 
-    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}")
+    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}")
     def read_render(
-        batch: str, digest: str, flow: str, version: str, seed: int
+        collection: str, digest: str, flow: str, version: str, seed: int
     ) -> dict[str, Any]:
         """Return one render's large view: the approval's filled fields beside it.
 
@@ -989,7 +991,7 @@ def create_app(
         a re-roll, and its count and seeds; or, where its `renders` no render
         takes, damaged, naming the file, with no count.
         """
-        run, _, approval = rendered(batch, digest, flow, version, seed)
+        run, _, approval = rendered(collection, digest, flow, version, seed)
         _, fields = _approved(approval)
         number = _version(version)
         suffix = offered(flow).output_suffix
@@ -1024,12 +1026,12 @@ def create_app(
             ],
         }
 
-    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/compare")
+    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare")
     @app.get(
-        "/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/compare/{other}/{other_seed}"
+        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare/{other}/{other_seed}"
     )
     def read_compare(
-        batch: str,
+        collection: str,
         digest: str,
         flow: str,
         version: str,
@@ -1044,7 +1046,7 @@ def create_app(
         e.g. `…/v4/7/compare/v2/5` and `…/v2/5/compare/v4/7` -> v2's seed 5
         before, v4's seed 7 after
         """
-        run, _, after = rendered(batch, digest, flow, version, seed)
+        run, _, after = rendered(collection, digest, flow, version, seed)
         number = _version(version)
         one = offered(flow)
         if other is None or other_seed is None:
@@ -1061,7 +1063,7 @@ def create_app(
                 f"v{number} · {seed}: an image compared with itself shows no change; "
                 "go back to its large view and pick another"
             )
-        _, _, named = rendered(batch, digest, flow, other, other_seed)
+        _, _, named = rendered(collection, digest, flow, other, other_seed)
         (was_at, was_seed, before), (now_at, now_seed, after) = sorted(
             [(earlier, other_seed, named), (number, seed, after)],
             key=lambda side: side[:2],
@@ -1081,37 +1083,37 @@ def create_app(
             "same_sheet": not changed,
         }
 
-    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/image")
+    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/image")
     def read_render_image(
-        batch: str, digest: str, flow: str, version: str, seed: int
+        collection: str, digest: str, flow: str, version: str, seed: int
     ) -> FileResponse:
         """Serve the render's bytes, whole."""
-        return FileResponse(rendered(batch, digest, flow, version, seed)[1])
+        return FileResponse(rendered(collection, digest, flow, version, seed)[1])
 
-    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/thumb")
+    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/thumb")
     def read_render_thumb(
-        batch: str, digest: str, flow: str, version: str, seed: int
+        collection: str, digest: str, flow: str, version: str, seed: int
     ) -> FileResponse:
         """Serve the render's thumbnail, made in the library's cache the first time."""
-        run, image, _ = rendered(batch, digest, flow, version, seed)
+        run, image, _ = rendered(collection, digest, flow, version, seed)
         return FileResponse(
             library.thumbnail(root, run, image), media_type="image/jpeg"
         )
 
-    @app.get("/api/b/{batch}/sources/{name}")
-    def read_source(batch: str, name: str) -> Response:
+    @app.get("/api/c/{collection}/sources/{name}")
+    def read_source(collection: str, name: str) -> Response:
         """Serve a source's bytes, whole, with or without a run.
 
         One in a format the render does not read, placed by hand, is served as an
         upright JPEG of it, so the viewer shows what its thumbnail does.
         """
-        source = library.source_files(folder(batch))(name)
+        source = library.source_files(folder(collection))(name)
         return _photograph(source, other=library.source_jpeg)
 
-    @app.get("/api/b/{batch}/sources/{name}/thumb")
-    def read_source_thumb(batch: str, name: str) -> FileResponse:
+    @app.get("/api/c/{collection}/sources/{name}/thumb")
+    def read_source_thumb(collection: str, name: str) -> FileResponse:
         """Serve a source's thumbnail, upright, made in the library's cache once."""
-        source = library.source_files(folder(batch))(name)
+        source = library.source_files(folder(collection))(name)
         return FileResponse(
             library.source_thumbnail(root, source), media_type="image/jpeg"
         )
@@ -1138,7 +1140,7 @@ def create_app(
 
 
 class _Shared:
-    """What every batch shares, read once when first asked for.
+    """What every collection shares, read once when first asked for.
 
     Read on first use rather than at start, so a missing vocabulary is a
     refusal on the page that needs it rather than a server that never starts.
@@ -1191,7 +1193,7 @@ def cell_event(
 
     A line naming a run or a flow the job did not start reads None.
     """
-    batch = grid.name
+    collection = grid.name
     sources = {one.run.id: one.name for one in grid.sources if one.run}
 
     def cell(line: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -1200,7 +1202,7 @@ def cell_event(
             return None
         run = Run(run_id, found / library.RUNS / run_id)
         return {
-            "batch": batch,
+            "collection": collection,
             "source": sources[run_id],
             "flow": flow,
             "stage": line.get("stage"),
@@ -1383,7 +1385,7 @@ def _version(text: str) -> int:
     if not _DECIMAL.fullmatch(digits):
         raise Refusal(
             f"{text!r} names no version; a version is v and the approval's number, "
-            "e.g. v1 -- go back to the batch's Renders to choose one"
+            "e.g. v1 -- go back to the collection's Renders to choose one"
         )
     return int(digits)
 
@@ -1465,9 +1467,9 @@ def _photograph(
 
 
 def _hub(grid: library.Hub) -> dict[str, Any]:
-    """Describe a batch's grid as the page draws it."""
+    """Describe a collection's grid as the page draws it."""
     return {
-        "batch": grid.name,
+        "collection": grid.name,
         "flows": list(grid.flows),
         "sources": [
             {
@@ -1502,7 +1504,7 @@ def _flow(wired: Wiring, flow: str) -> Flow:
     if flow not in tracked:
         raise Refusal(
             f"{flow}: not a flow this build tracks; the flows it tracks are "
-            f"{', '.join(tracked)} -- go back to the batch's hub to choose one"
+            f"{', '.join(tracked)} -- go back to the collection's hub to choose one"
         )
     return load_flow(flow, wired.flows_dir)
 
@@ -1552,7 +1554,7 @@ def _tags(one: Held, vocabulary: Vocabulary) -> list[dict[str, Any]] | None:
 
     **Filtered to what the vocabulary carries, on the way to the page and never
     on the way to disk.** Roughly nine in ten of this model's tags were outside
-    the vocabulary on an acceptance batch and could be committed to no field;
+    the vocabulary on an acceptance collection and could be committed to no field;
     the artifact keeps every tag the model returned. Deduplicated here only:
     `{tag, posts}` repeats carry no information and would be duplicate Vue keys.
     The local tagger's list is not filtered -- it emits the vocabulary itself.
