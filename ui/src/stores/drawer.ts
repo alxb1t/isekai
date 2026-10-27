@@ -1,14 +1,9 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { hub as readHub, session as readSession } from '../api'
+import { type Shown, same } from '../sessions'
 import type { SessionRecord } from '../types'
 import { collectionsOf, useLiveStore } from './live'
-
-/* The session a drawer shows: its record's id and every collection holding it. */
-interface Shown {
-  id: string
-  collections: string[]
-}
 
 /* The render drawer's state, the app's rather than the open collection's: the
    running render, else the last one this app saw end, until a reload or the
@@ -30,8 +25,6 @@ export const useDrawerStore = defineStore('drawer', () => {
   /* The newest records read; an answer to an older read is dropped. */
   let asked = 0
 
-  const same = (one: Shown | null, other: Shown | null) =>
-    one?.id === other?.id && one?.collections.join('/') === other?.collections.join('/')
   /* A read from a watcher or a click: its refusal leaves the last record shown. */
   const quietly = (read: Promise<void>) => void read.catch(() => undefined)
 
@@ -66,13 +59,12 @@ export const useDrawerStore = defineStore('drawer', () => {
   function show(collections: string[], id: string): Promise<void> {
     const next = { id, collections }
     if (!same(shown.value, next)) {
-      const named = Object.keys(photographs.value)
       shown.value = next
       records.value = null
       photographs.value = Object.fromEntries(
         Object.entries(photographs.value).filter(([one]) => collections.includes(one)),
       )
-      for (const one of collections) if (!named.includes(one)) void name(one)
+      for (const one of collections) if (!(one in photographs.value)) void name(one)
     }
     return refresh()
   }

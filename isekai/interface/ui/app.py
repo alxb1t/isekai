@@ -344,7 +344,7 @@ def create_app(
                 f"are {', '.join(flows)} -- reload the hub"
             )
         names = payload.get("sources")
-        if not _is_tag_list(names):
+        if not _strings(names):
             raise Refusal("the request's `sources` is not a list of source names")
         remove = payload.get("remove") is True
         loaded = offered(flow)
@@ -403,7 +403,7 @@ def create_app(
     def post_commit(staged: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Commit an import into a new collection, or with `add` into an open one."""
         as_is = payload.get("as_is", [])
-        if not _is_tag_list(as_is):
+        if not _strings(as_is):
             raise Refusal("the request's `as_is` is not a list of file names")
         done = imports.commit(
             staged,
@@ -456,8 +456,8 @@ def create_app(
     ) -> tuple[dict[str, Path], render.Quote, dict[str, Any]]:
         """Return the quoted collections' folders, their quote, and the dialog's view.
 
-        With no names, every collection short of images or refusing a count, in the
-        Library's order: one with nothing short adds nothing to the estimate.
+        With no names, every collection, in the Library's order. Only those the
+        quote keeps, short of images or refusing a count, are returned.
         """
         if names is None:
             shelf = library.rows(root, flows, wired.flows_dir)
@@ -466,15 +466,13 @@ def create_app(
             asked = list(dict.fromkeys(names))
         found = {name: folder(name) for name in asked}
         made = render.quote([one / library.RUNS for one in found.values()], wired)
-        if names is None:
-            found = {
-                name: one
-                for name, one in found.items()
-                if made.shorts[one / library.RUNS].lines
-                or made.shorts[one / library.RUNS].refused
-            }
+        found = {
+            name: one
+            for name, one in found.items()
+            if one / library.RUNS in made.shorts
+        }
         disabled = _held() or (
-            made.blocked if found else "Tick a collection to render."
+            made.blocked if asked else "Tick a collection to render."
         )
         return found, made, _quote(found, made, disabled, wired.flows_dir)
 
@@ -491,9 +489,9 @@ def create_app(
             )
         return None
 
-    def lacking(collection: str) -> render.Short:
-        """Return what a collection's approvals lack, as the render stage counts it."""
-        runs = folder(collection) / library.RUNS
+    def short_of(found: Path) -> render.Short:
+        """Return what a collection folder's approvals lack, as rendering counts it."""
+        runs = found / library.RUNS
         return render.short(runs, render.run_ids(runs), wire(runs))
 
     @app.get("/api/c/{collection}/render")
@@ -505,15 +503,17 @@ def create_app(
         is why an approval's count cannot be read, or null: the bar shows it with
         none short.
         """
-        short = lacking(collection)
+        short = short_of(folder(collection))
         others = sum(
-            sum(lacking(child.name).images.values())
+            sum(short_of(child).images.values())
             for child in library.listed(root)
             if library.is_collection(child) and child.name != collection
         )
+        # Nothing short here is no reason while another collection is short.
+        refused = short.refused[0] if short.refused else None
+        idle = None if short.lines or others else short.blocked
         return {
-            "disabled": _held()
-            or (short.blocked if short.refused or not others else None),
+            "disabled": _held() or refused or idle,
             "images": sum(short.images.values()),
             "others": others,
             "refused": short.refused[0] if short.refused else None,
@@ -527,7 +527,7 @@ def create_app(
         quoted. It rents nothing; only the render's own `POST` does.
         """
         names = (payload or {}).get("collections")
-        if names is not None and not _names(names):
+        if names is not None and not _strings(names):
             raise Refusal(
                 "the quote names no list of collections; close Render and open it again"
             )
@@ -545,7 +545,7 @@ def create_app(
         body = payload or {}
         reopen = "close Render and open it again to read"
         names = body.get("collections")
-        if not _names(names) or not names:
+        if not _strings(names) or not names:
             raise Refusal(f"the confirmation names no collections; {reopen} the quote")
         found, made, described = quoted(names)
         if described["disabled"] is not None:
@@ -568,11 +568,7 @@ def create_app(
                 f"images, not {listed}; {reopen} it"
             )
         job = jobs.render(
-            {
-                name: one
-                for name, one in found.items()
-                if made.shorts[one / library.RUNS].lines
-            },
+            found,
             limit=made.estimate.limit_s,
             total=made.images,
             keep_open=bool(body.get("keep_open")),
@@ -1412,11 +1408,6 @@ def _numbered(value: object) -> TypeGuard[int]:
     return _whole(value) and is_version(value)
 
 
-def _names(value: object) -> TypeGuard[list[str]]:
-    """Return whether a request's value is a list of collection names."""
-    return isinstance(value, list) and all(isinstance(one, str) for one in value)
-
-
 def _whole(value: object) -> TypeGuard[int]:
     """Return whether a request's value is a whole number, a JSON `true` not one."""
     return isinstance(value, int) and not isinstance(value, bool)
@@ -1628,7 +1619,7 @@ def _tags(one: Held, vocabulary: Vocabulary) -> list[dict[str, Any]] | None:
     if path is None:
         return None
     listed = read(path, TAGS_FILE).get("tags")
-    if not _is_tag_list(listed):
+    if not _strings(listed):
         raise Refusal(
             f"{path.name}: its `tags` is not a list of strings; {_remedy(one, 'tag')}"
         )
@@ -1658,14 +1649,14 @@ def _remedy(one: Held, verb: str, flow: str | None = None) -> str:
     return f"rewrite it with `{command}`"
 
 
-def _is_tag_list(value: object) -> TypeGuard[list[str]]:
-    """Return whether `value` is a list of tag strings."""
-    return isinstance(value, list) and all(isinstance(tag, str) for tag in value)
+def _strings(value: object) -> TypeGuard[list[str]]:
+    """Return whether `value` is a list of strings: tags, or collection names."""
+    return isinstance(value, list) and all(isinstance(one, str) for one in value)
 
 
 def _untagged(fields: Mapping[str, object]) -> str | None:
     """Return the first field whose value is not a list of tags, or None."""
-    return next((name for name, tags in fields.items() if not _is_tag_list(tags)), None)
+    return next((name for name, tags in fields.items() if not _strings(tags)), None)
 
 
 def _fields(path: Path, body: Mapping[str, Any], remedy: str) -> dict[str, list[str]]:

@@ -80,6 +80,17 @@ export function lastColumns(held: Grid): number[] {
   return Array<number>(held.flows.length + 1).fill(held.digests.length - 1)
 }
 
+/** The session a drawer shows: its record's id and every collection holding it. */
+export interface Shown {
+  id: string
+  collections: string[]
+}
+
+/** Return whether `one` and `other` name the same session, in the same collections. */
+export function same(one: Shown | null, other: Shown | null): boolean {
+  return one?.id === other?.id && one?.collections.join('/') === other?.collections.join('/')
+}
+
 /** The drawer's grids stacked top to bottom: every row's last column, for `moved`,
     and the stacked row each grid starts at. A grid with no photograph has no row. */
 export interface Stack {

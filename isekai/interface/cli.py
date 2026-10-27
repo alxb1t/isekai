@@ -42,6 +42,7 @@ with site-packages off the path.
 """
 
 import argparse
+import dataclasses
 import json
 import shlex
 import sys
@@ -657,8 +658,12 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
 
 
 def _dispatch_argv(argv: list[str], wired: Wiring) -> int:
-    """Run one verb line on `wired`, as `render` runs `generate` for each flow."""
-    return dispatch(build_parser().parse_args(argv), wired)
+    """Run one verb line on `wired`, as `render` runs `generate` for each flow.
+
+    The line's own `--runs` is the runs root it is wired on: a session spans many.
+    """
+    args = build_parser().parse_args(argv)
+    return dispatch(args, dataclasses.replace(wired, runs_root=args.runs))
 
 
 def _refuse_bad_source(

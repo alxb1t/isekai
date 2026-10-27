@@ -9,7 +9,7 @@ import { useSessionViewer } from '../composables/useSessionViewer'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import { useKeys } from '../composables/useKeys'
 import { type Focus, type Move, moved } from '../grid'
-import { asked, first, grid, lasted, located, outcome, stacked } from '../sessions'
+import { asked, first, grid, lasted, located, outcome, same, stacked } from '../sessions'
 import { useDrawerStore } from '../stores/drawer'
 import { type Key, isControl, plain, shifted } from '../stores/keys'
 import { alerting, clock, collectionsOf, useLiveStore } from '../stores/live'
@@ -37,10 +37,8 @@ const collections = computed(() => target.value?.collections ?? [])
 /* The render slot's session, while it is the shown one. */
 const slot = computed(() => {
   const held = jobs.value.render
-  return held?.session?.id === target.value?.id &&
-    held && collectionsOf(held).join('/') === collections.value.join('/')
-    ? held
-    : null
+  const shown = held?.session && { id: held.session.id, collections: collectionsOf(held) }
+  return shown && same(target.value, shown) ? held : null
 })
 const running = computed(() => record.value?.outcome === 'running' || slot.value?.state === 'running')
 const alert = computed(() => alerting(billing.value))
@@ -125,6 +123,10 @@ const grids = computed(() =>
   }),
 )
 const stack = computed(() => stacked(grids.value.map((one) => one.layout)))
+/* Each grid with the stacked row it starts at. */
+const placed = computed(() =>
+  grids.value.map((one, index) => ({ ...one, start: stack.value.starts[index] })),
+)
 /* The focus on the stacked rows: a grid's row `r` is stacked row `starts[grid] + r`. */
 const focus = ref<Focus>({ row: 0, column: 0 })
 const focused = (row: number, column: number) =>
@@ -155,11 +157,10 @@ function place(at: Focus): void {
 
 /* The first grid's first landed image, else the first cell. */
 function start(): Focus {
-  const index = grids.value.findIndex((one) => one.record.images.length > 0)
-  if (index < 0) return { row: 0, column: 0 }
-  const { layout, record: one } = grids.value[index]
-  const at = first(layout, one)
-  return { row: stack.value.starts[index] + at.row, column: at.column }
+  const held = placed.value.find((one) => one.record.images.length > 0)
+  if (!held) return { row: 0, column: 0 }
+  const at = first(held.layout, held.record)
+  return { row: held.start + at.row, column: at.column }
 }
 
 const go = (move: Move) => () => place(moved(stack.value.last, focus.value, move))
@@ -245,7 +246,7 @@ onMounted(() => {
         </li>
       </ol>
       <section
-        v-for="(one, index) in grids"
+        v-for="one in placed"
         :key="one.collection"
         class="session__stack"
         :data-session-collection="one.collection"
@@ -267,10 +268,10 @@ onMounted(() => {
               v-for="(cell, column) in one.layout.cells[at]"
               :key="one.layout.digests[column]"
               class="session__cell"
-              :class="{ 'session__cell--focused': focused(stack.starts[index] + at, column) }"
-              :data-cell="`${stack.starts[index] + at}-${column}`"
-              :tabindex="focused(stack.starts[index] + at, column) ? 0 : -1"
-              @click="focus = { row: stack.starts[index] + at, column }"
+              :class="{ 'session__cell--focused': focused(one.start + at, column) }"
+              :data-cell="`${one.start + at}-${column}`"
+              :tabindex="focused(one.start + at, column) ? 0 : -1"
+              @click="focus = { row: one.start + at, column }"
             >
               <button
                 v-for="(image, nth) in cell.images"
@@ -280,7 +281,7 @@ onMounted(() => {
                 tabindex="-1"
                 :aria-label="`view ${image.flow} v${image.version} seed ${image.seed}`"
                 data-session-image
-                @click.stop="view({ row: stack.starts[index] + at, column }, nth)"
+                @click.stop="view({ row: one.start + at, column }, nth)"
               >
                 <img :src="thumbAt({ collection: one.collection, ...image })" alt="" />
               </button>
@@ -298,10 +299,10 @@ onMounted(() => {
             :key="digest"
             class="session__cell"
             :class="{
-              'session__cell--focused': focused(stack.starts[index] + one.layout.flows.length, column),
+              'session__cell--focused': focused(one.start + one.layout.flows.length, column),
             }"
-            :data-cell="`${stack.starts[index] + one.layout.flows.length}-${column}`"
-            :tabindex="focused(stack.starts[index] + one.layout.flows.length, column) ? 0 : -1"
+            :data-cell="`${one.start + one.layout.flows.length}-${column}`"
+            :tabindex="focused(one.start + one.layout.flows.length, column) ? 0 : -1"
           >
             <button
               class="session__tile session__tile--photo"
@@ -309,7 +310,7 @@ onMounted(() => {
               tabindex="-1"
               :aria-label="`view the photograph ${one.photographs[column].name}`"
               data-session-source
-              @click="view({ row: stack.starts[index] + one.layout.flows.length, column })"
+              @click="view({ row: one.start + one.layout.flows.length, column })"
             >
               <img :src="one.photographs[column].thumb" alt="" loading="lazy" />
             </button>

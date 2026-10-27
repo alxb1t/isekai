@@ -417,7 +417,7 @@ onUnmounted(() => {
       :open="viewing.open"
       @close="viewing = null"
     />
-    <RenderDialog v-if="dialog" :collection="collection" @close="store.closeDialog" />
+    <RenderDialog v-if="dialog" @close="store.closeDialog" />
     <div class="hub__head">
       <span class="mono">
         {{ sources.length }} {{ noun(sources.length, 'source') }} ×

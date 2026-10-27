@@ -147,6 +147,13 @@ def in_session_sources(requests: Sequence[Request]) -> list[bool]:
     return deferred
 
 
+def again(roots: Sequence[Path]) -> str:
+    """Return the command that renders what each of `roots` lacks, in one session."""
+    return shlex.join(
+        ["uv", "run", "python", "-m", "isekai", "render", *map(str, roots)]
+    )
+
+
 def run_ids(runs: Path) -> list[str]:
     """Return every run under `runs`, by id; a collection not yet assigned has none."""
     if not runs.is_dir():
@@ -265,8 +272,6 @@ class Record:
         }
         if others:
             self._body["collections"] = list(others)
-        # Why the session is ending, when the watchdog ends it.
-        self.note: str | None = None
 
     def open(self, started: datetime | None = None) -> None:
         """Write the record as running, started now unless `started` is given."""
@@ -479,11 +484,9 @@ def run_session(
             return 1
     once = list(dict.fromkeys(runs.resolve() for runs in roots))
     if len(once) < len(roots):
-        again = shlex.join(
-            ["uv", "run", "python", "-m", "isekai", "render", *map(str, once)]
-        )
         print(
-            f"refused: a collection's runs/ is named twice; name each once: `{again}`",
+            f"refused: a collection's runs/ is named twice; name each once: "
+            f"`{again(once)}`",
             file=wired.err,
         )
         return 1
@@ -571,10 +574,11 @@ def load_timing(path: Path = RENDER_CONFIG) -> Timing:
 
 @dataclass(frozen=True)
 class Estimate:
-    """A session's estimate and its limit, in seconds."""
+    """A session's estimate and limit, in seconds; `capped` if the ceiling cut it."""
 
     seconds: float
     limit_s: int
+    capped: bool = False
 
 
 def recent(runs: Path, ids: Sequence[str], flow: str) -> list[float]:
@@ -606,13 +610,13 @@ def estimate[K](
     `images` and `recorded` share a key: a flow, or a collection's flow. The limit
     is the estimate times the factor, at least `FLOOR_S` and at most `ceiling_s`.
     e.g. 4 images at a recorded median of 90 s, boot 180, teardown 120, factor 1.5
-         -> Estimate(660.0, 1200), the floor
+         -> Estimate(660.0, 1200, False), the floor
     """
     seconds = timing.boot_s + timing.teardown_s
     for key, count in images.items():
         seconds += count * statistics.median(recorded.get(key) or [timing.per_image_s])
-    limit = min(ceiling_s, max(FLOOR_S, math.ceil(seconds * timing.limit_factor)))
-    return Estimate(seconds, limit)
+    wanted = max(FLOOR_S, math.ceil(seconds * timing.limit_factor))
+    return Estimate(seconds, min(ceiling_s, wanted), wanted > ceiling_s)
 
 
 # A collection's runs root, its run ids, and the images it renders by flow.
@@ -660,6 +664,10 @@ def _limit(asked: int | None, ceiling_s: int) -> None:
         )
 
 
+# Why Render is off when every approval already has its count of images.
+NOTHING_SHORT = "Every approved source × flow already has its Count of images."
+
+
 @dataclass(frozen=True)
 class Short:
     """What a collection lacks of its approvals, leaves out, and has damaged."""
@@ -682,7 +690,7 @@ class Short:
         if self.refused:
             return self.refused[0]
         if not self.lines:
-            return "Every approved source × flow already has its Count of images."
+            return NOTHING_SHORT
         return None
 
 
@@ -742,7 +750,8 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
 class Quote:
     """What one session over many collections would do, how long, and its price."""
 
-    # Each collection's shortfall, by its runs root, in the order quoted.
+    # The shortfall of each collection quoted that is short or refuses a count,
+    # by its runs root, in the order quoted.
     shorts: dict[Path, Short]
     estimate: Estimate
     timing: Timing
@@ -764,12 +773,12 @@ class Quote:
         A refused count first, then nothing short, then an estimate whose limit
         would pass the ceiling: the session would end before its work.
         """
-        for found in self.shorts.values():
-            if found.refused:
-                return found.refused[0]
+        refused = (found.blocked for found in self.shorts.values() if found.refused)
+        if (first := next(refused, None)) is not None:
+            return first
         if not self.images:
-            return "Every approved source × flow already has its Count of images."
-        if math.ceil(self.estimate.seconds * self.timing.limit_factor) > self.ceiling_s:
+            return NOTHING_SHORT
+        if self.estimate.capped:
             return (
                 f"The estimate passes gpunit.toml's ceiling of {self.ceiling_s}s; "
                 "untick a collection."
@@ -792,8 +801,9 @@ def quote(roots: Sequence[Path], wired: Wiring) -> Quote:
         )
     timing = load_timing()
     ids = {runs: run_ids(runs) for runs in roots}
-    shorts = {runs: short(runs, ids[runs], wired) for runs in roots}
-    work = [(runs, ids[runs], found.images) for runs, found in shorts.items()]
+    found = {runs: short(runs, ids[runs], wired) for runs in roots}
+    shorts = {runs: one for runs, one in found.items() if one.lines or one.refused}
+    work = [(runs, ids[runs], one.images) for runs, one in shorts.items()]
     guess = estimated(work, timing, bound.ceiling_s)
     hourly = bound.max_hourly + timing.volume_rate
     return Quote(
@@ -828,13 +838,11 @@ def _session(
 ) -> int:
     requests = [parse_request(text) for text in texts]
     deferred = in_session_sources(requests)
-    again = shlex.join(
-        ["uv", "run", "python", "-m", "isekai", "render", *map(str, roots)]
-    )
+    retry = again(roots)
     if requests and len(roots) > 1:
         raise Refusal(
             f"{requests[0]} renders one collection's runs; render each collection "
-            f"apart, or what every one lacks with `{again}`"
+            f"apart, or what every one lacks with `{retry}`"
         )
     ceiling_s = gpu.bounds(REPOSITORY).ceiling_s
     _limit(asked, ceiling_s)
@@ -867,8 +875,7 @@ def _session(
             print("nothing is short of its count; nothing was rented", file=wired.err)
             return 0
         for line in lines:
-            checked = dataclasses.replace(free, runs_root=line.runs)
-            if generate([*verb, *line.head, *line.where], checked) != 0:
+            if generate([*verb, *line.head, *line.where], free) != 0:
                 return 1
 
     if seams.busy(PORT):
@@ -877,8 +884,9 @@ def _session(
             f"lsof -iTCP:{PORT} -sTCP:LISTEN shows what holds it"
         )
 
-    held = {runs: [line for line in lines if line.runs == runs] for runs in roots}
-    held = {runs: its for runs, its in held.items() if its}
+    held = {
+        runs: its for runs in roots if (its := [li for li in lines if li.runs == runs])
+    }
     work = [(runs, ids[runs], _images(its)) for runs, its in held.items()]
     limit = asked or estimated(work, timing, ceiling_s).limit_s
     rest = "".join(f" {text}" for text in texts)
@@ -901,7 +909,7 @@ def _session(
     def reached() -> None:
         ended = (
             f"the session reached its {limit}s limit; renders so far are "
-            f"kept, and in a new session `{again}{rest}` renders only the rest"
+            f"kept, and in a new session `{retry}{rest}` renders only the rest"
         )
         record.note = ended
         print(f"refused: {ended}", file=wired.err)
@@ -940,15 +948,14 @@ def _asked(
             f"{shlex.quote(str(runs))} {photos}/*"
         )
     where = ("--runs", str(runs), *ids)
-    checked = dataclasses.replace(free, runs_root=runs)
-    if generate([*verb, *flows, *where], checked) != 0:
+    if generate([*verb, *flows, *where], free) != 0:
         return None
     for request, late in zip(requests, deferred, strict=True):
         if request.by_count:
             continue
         check = "--in-step-with" if late else "--seeds-from"
         argv = [*verb, "--flow", request.flow, check, request.value, *where]
-        if generate(argv, checked) != 0:
+        if generate(argv, free) != 0:
             return None
     counts = {r.flow: int(r.value) for r in requests if r.by_count}
     return [_requested(request, runs, ids, counts, free) for request in requests]
@@ -1021,7 +1028,6 @@ def _rendered(
                     client=client,
                     image=session.image,
                     out=steps.child(total, line.runs),
-                    runs_root=line.runs,
                 )
                 # JSON whatever the session prints, so each image reaches the record;
                 # its prose goes to stderr, which the log tees.

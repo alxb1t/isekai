@@ -355,6 +355,6 @@ onUnmounted(() => {
       :rendering="rendering"
       @open="store.openDialog"
     />
-    <RenderDialog v-if="dialog" :collection="collection" @close="store.closeDialog" />
+    <RenderDialog v-if="dialog" @close="store.closeDialog" />
   </section>
 </template>

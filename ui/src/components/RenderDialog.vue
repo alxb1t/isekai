@@ -19,7 +19,6 @@ import KeyHint from './KeyHint.vue'
    its page: confirming closes it and opens the render drawer over it. A modal
    dialog: the focus waits on *Keep the volume open*, where `↵` does nothing, so
    only ⌘↵ spends. */
-defineProps<{ collection: string }>()
 const emit = defineEmits<{ close: [] }>()
 const live = useLiveStore()
 const store = useCollectionStore()

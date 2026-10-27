@@ -613,11 +613,7 @@ def _named(kind: Kind, folders: Sequence[Path], verb: Callable[[Say], int]) -> i
             for folder in folders
         ]
 
-        def say(line: str) -> None:
-            for log in logs:
-                print(f"[{kind}]", line, file=log)
-
-        return verb(say)
+        return verb(lambda line: _say(logs, kind, line))
 
 
 def _tee(stream: TextIO, logs: Sequence[TextIO], kind: Kind) -> None:
@@ -627,5 +623,10 @@ def _tee(stream: TextIO, logs: Sequence[TextIO], kind: Kind) -> None:
         for log in logs:
             held.enter_context(log)
         for line in stream:
-            for log in logs:
-                print(f"[{kind}]", line.rstrip("\n"), file=log)
+            _say(logs, kind, line.rstrip("\n"))
+
+
+def _say(logs: Sequence[TextIO], kind: Kind, line: str) -> None:
+    """Write `line` to every log, naming its job."""
+    for log in logs:
+        print(f"[{kind}]", line, file=log)
