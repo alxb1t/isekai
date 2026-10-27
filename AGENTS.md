@@ -4,9 +4,9 @@ A self-hosted, headless pipeline: **photo of a person → anime image of that sa
 models on an on-demand RunPod GPU running our own ComfyUI image. It exists to learn — and to show — how
 open image models are run end to end, from container to rented GPU to CLI. Flows —
 `summon-anime-wai` from a photograph, `conjure-anime-wai` from a corrected sheet alone,
-`control-anime-wai` as `summon` with its face dials at zero — on a
-WAI-illustrious-SDXL v17.0 base, driven by staged verbs an operator runs one at a time: `tag` and
-`caption` → `sheet` → `review`/`approve` → `generate`, with `show` reading a run and `ui` serving the
+`control-anime-wai` as `summon` with its face dials at zero, `summon-flat-anime-wai` as `summon` in a flat,
+lined look — on a WAI-illustrious-SDXL v17.0 base, driven by staged verbs an operator runs one at a time:
+`tag` and `caption` → `sheet` → `review`/`approve` → `generate`, with `show` reading a run and `ui` serving the
 library of collections — each collection's hub, stage ③, its render and its images — in a browser. Everything before `generate` is free and local; only the render costs money.
 
 > **That paragraph is the ceiling, and the ceiling is the point.** A fuller account — the verbs, what

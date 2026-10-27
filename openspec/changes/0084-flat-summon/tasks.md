@@ -21,7 +21,7 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 - [x] 3 — The sheets
 - [x] 4 — The render and the count ⚠️ GPU
 - [x] 5 — The verdict **HUMAN
-- [ ] 6 — The winner
+- [x] 6 — The winner
 
 ## 1 — The candidate flows
 
@@ -72,11 +72,11 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 
 ## 6 — The winner
 
-- [ ] 6.1 **HALT CHECK** — a candidate won; on `winner: none` the build halts and the operator destroys the branch.
+- [x] 6.1 **HALT CHECK** — a candidate won; on `winner: none` the build halts and the operator destroys the branch.
   Verify: `grep -cE '^winner: summon-flat-[ab]-anime-wai$' openspec/changes/0084-flat-summon/verdict.md` prints `1`.
-- [ ] 6.2 Move the winner to `flows/summon-flat-anime-wai/` with its identifier, delete the loser, and name the winner
+- [x] 6.2 Move the winner to `flows/summon-flat-anime-wai/` with its identifier, delete the loser, and name the winner
   alone in `PINNED` and `FLATS` (`tests/test_flow.py`), per [D6](design.md#d6).
   Verify: `ls flows | grep -c 'summon-flat-[ab]-anime-wai'` prints `0`, and `test -d flows/summon-flat-anime-wai; echo $?` prints `0`, and `uv run pytest -q tests/test_flow.py` exits 0.
-- [ ] 6.3 Add D44 to `docs/decisions.md`, and name `summon-flat-anime-wai` in `AGENTS.md`'s flows and `README.md`'s
+- [x] 6.3 Add D44 to `docs/decisions.md`, and name `summon-flat-anime-wai` in `AGENTS.md`'s flows and `README.md`'s
   tree, per [D6](design.md#d6).
   Verify: `grep -c '### D44 · A flat flow is summon with the face chain ending early' docs/decisions.md` prints `1`, and `grep -c 'summon-flat-anime-wai' AGENTS.md README.md` prints a number of at least `1` for each file.

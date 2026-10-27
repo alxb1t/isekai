@@ -57,11 +57,8 @@ PINNED: dict[str, str] = {
     "summon-anime-wai": (
         "96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698"
     ),
-    "summon-flat-a-anime-wai": (
-        "4be4cf3e72d83a4e98b045ac2e43bcfc725d7c01ecdc9fd87349bff74eab7728"
-    ),
-    "summon-flat-b-anime-wai": (
-        "bf03405951ab62e9bc5e833dc406bc4b9cdad6b3653e7de01f0cd3c72a0e33a6"
+    "summon-flat-anime-wai": (
+        "05d62409e518a9446ba046c691ed7e2ba194b609803b12a72e853c4ebd092940"
     ),
 }
 
@@ -69,10 +66,7 @@ PINNED: dict[str, str] = {
 CONTROLS: dict[str, str] = {"control-anime-wai": "summon-anime-wai"}
 
 # A flat flow and the subject it is held equal to but for its style.
-FLATS: dict[str, str] = {
-    "summon-flat-a-anime-wai": "summon-anime-wai",
-    "summon-flat-b-anime-wai": "summon-anime-wai",
-}
+FLATS: dict[str, str] = {"summon-flat-anime-wai": "summon-anime-wai"}
 
 # The terms a flat flow appends to its subject's trailer and negative.
 FLAT_TRAILER = "flat color, cel shading, lineart"
