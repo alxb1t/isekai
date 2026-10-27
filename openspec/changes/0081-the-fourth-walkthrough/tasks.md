@@ -5,20 +5,20 @@ task names.
 
 ## Progress
 
-- [ ] 1 — The image a draft came from, recorded
+- [x] 1 — The image a draft came from, recorded
 - [ ] 2 — Review shows it
 
 ## 1 — The image a draft came from, recorded
 
-- [ ] 1.1 **HALT CHECK** — no producer records an image.
+- [x] 1.1 **HALT CHECK** — no producer records an image.
   Verify: `grep -c '"image": NotRequired' isekai/foundation/artifacts.py` prints `0`.
-- [ ] 1.2 Add `DraftImage` and `image` to `ChainProducer` in `isekai/foundation/artifacts.py` per [D1](design.md#d1);
+- [x] 1.2 Add `DraftImage` and `image` to `ChainProducer` in `isekai/foundation/artifacts.py` per [D1](design.md#d1);
   write it from `revise` and `draft_from` in `isekai/pipeline/review.py` per [D2](design.md#d2); in
   `tests/test_review.py` bind `review:revise:a-revision-records-its-image` and
   `review:draft-from:a-draft-from-an-image-records-it`, and add `image` to
   `test_a_revision_copies_the_images_approval_and_keeps_its_seed`'s producer.
   Verify: `grep -c 'a-revision-records-its-image\|a-draft-from-an-image-records-it' tests/test_review.py` prints `2`, and `uv run pytest -q tests/test_review.py` exits 0, and `uv run ty check` exits 0.
-- [ ] 1.3 Pass the seed through `draft_across` (`isekai/interface/drafting.py`), `post_draft_from`
+- [x] 1.3 Pass the seed through `draft_across` (`isekai/interface/drafting.py`), `post_draft_from`
   (`isekai/interface/ui/app.py`) and `draftFrom` (`ui/src/api.ts`, `ui/src/views/RenderLarge.vue`) per
   [D2](design.md#d2).
   Verify: `grep -c 'seed' isekai/interface/drafting.py` prints a number of at least `1`, and `uv run pytest -q tests/test_ui_api.py tests/test_pipeline_cli.py` exits 0, and `uv run python -m tools.typecheck_ui` exits 0.

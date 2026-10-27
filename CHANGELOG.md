@@ -9,6 +9,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- A revision, and a draft *Conjure from this* writes, records the image it came from — flow, version and seed —
+  and its approval keeps it, so an edited seed never loses the image (0081 D1, D2).
+
 ## [0.53.0] - 2026-10-26 · 0080-conjure-without-prepare
 
 Gate: local 0m45s · CI 1m29s (ci at 63d656d) · 0.52.0: local 0m45s · CI 1m29s

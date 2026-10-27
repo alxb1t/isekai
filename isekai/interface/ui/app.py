@@ -835,8 +835,9 @@ def create_app(
     ) -> dict[str, Any]:
         """Draft `flow` from `source`'s approval `version`, as `review --from` does.
 
-        A waiting draft with edits of its own is answered `waiting`, and nothing
-        is written.
+        An optional decimal `seed` names the image of that approval the draft
+        records. A waiting draft with edits of its own is answered `waiting`,
+        and nothing is written.
         """
         one = held(batch, digest, flow)
         if flow not in (targets := sheet_alone()):
@@ -851,6 +852,12 @@ def create_app(
                 "the request names no source flow and approval; send `source` and "
                 "`version` -- nothing was written"
             )
+        seed = payload.get("seed")
+        if seed is not None and not (isinstance(seed, str) and is_seed(seed)):
+            raise Refusal(
+                f"the request's seed {seed!r} is not one; send the image's decimal "
+                "seed, or none -- nothing was written"
+            )
         offered(source)
         with _DRAFT_UPDATE:
             # An edited draft is the work in hand, so it is opened, not refused.
@@ -863,6 +870,7 @@ def create_app(
                 version,
                 shared.vocabulary,
                 shared.field_map,
+                None if seed is None else int(seed),
             )
         return {"draft": written.name}
 
