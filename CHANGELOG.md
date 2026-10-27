@@ -18,6 +18,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The flat prototype's photographs: five people, three each, kept under the ignored `.data/` (0084 D4).
 - The prototype's sheets: summon's drafts corrected against each photograph, approved, and copied to both
   candidates so the three flows render one sheet (0084 D4).
+- The prototype rendered summon and both candidates on summon's seeds in one session, then counted them
+  over the cohort and laid them out side by side for the verdict (0084 D4, D5).
 
 ## [0.56.0] - 2026-10-27 · 0083-the-multi-batch-render
 

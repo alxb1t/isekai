@@ -19,7 +19,7 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 - [x] 1 — The candidate flows
 - [x] 2 — The prototype photographs **HUMAN
 - [x] 3 — The sheets
-- [ ] 4 — The render and the count ⚠️ GPU
+- [x] 4 — The render and the count ⚠️ GPU
 - [ ] 5 — The verdict **HUMAN
 - [ ] 6 — The winner
 
@@ -53,12 +53,12 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 
 ## 4 — The render and the count ⚠️ GPU
 
-- [ ] 4.1 Open the volume, render the three on summon's seeds in one session, close the volume:
+- [x] 4.1 Open the volume, render the three on summon's seeds in one session, close the volume:
   `uv run --env-file .env gpunit volume up --yes`; `uv run python -m isekai render "$R" summon-anime-wai=1
   summon-flat-a-anime-wai=summon-anime-wai summon-flat-b-anime-wai=summon-anime-wai`;
   `uv run --env-file .env gpunit volume down`.
   Verify: `ls .data/flat-summon-prototype/runs/*/summon-flat-b-anime-wai/outputs/001/*.png | wc -l` prints `15`, and `test -e .gpunit/pod; echo $?` prints `1`.
-- [ ] 4.2 Count and lay out the renders: `for f in "${P[@]}"; do b=$(basename "$f"); mkdir -p "$C/cohort/${b%%-*}";
+- [x] 4.2 Count and lay out the renders: `for f in "${P[@]}"; do b=$(basename "$f"); mkdir -p "$C/cohort/${b%%-*}";
   cp "$f" "$C/cohort/${b%%-*}/"; done`, `uv run python -m evaluation "$R" --cohort "$C/cohort"`, then
   `uv run python -m isekai compare "$C"`.
   Verify: `ls .data/flat-summon-prototype/evaluation.json .data/flat-summon-prototype/compare.html | wc -l` prints `2`.
