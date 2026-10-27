@@ -277,7 +277,7 @@ again resumes the same run.**
 
 **Everything a run produces lives in its runs root — `.data/runs` by default, which git ignores. A runs
 root inside the repository must sit under `.data/`; one outside it may sit anywhere. The library
-`isekai ui` serves, `ISEKAI_LIBRARY`, is held to the same rule, and so is each batch's `runs/` in it.**
+`isekai ui` serves, `ISEKAI_LIBRARY`, is held to the same rule, and so is each collection's `runs/` in it.**
 
 - **Why:** a run holds a copy of the photograph, so a person's likeness is in it by construction.
   Anywhere else inside the repository, those files would be one `git add` from being published.
@@ -294,15 +294,17 @@ reader after it.
   render's `sheet` replaced `sheet_version` rather than redefining it.
 - **Made by:** `0033`.
 
-### D40 · A batch is a library folder holding `sources/`
+### D40 · A collection is a library folder holding `sources/`
 
-**A folder in the library is a batch when it holds `sources/`; its runs root is `runs/` beside it. No
-file records a batch, and a dot-folder is never listed. Every figure the UI shows of a batch — its
-counts, each cell's stage — is a listing read on each request.**
+**A folder in the library is a collection when it holds `sources/`; its runs root is `runs/` beside it. No
+file records a collection, and a dot-folder is never listed. Every figure the UI shows of a collection — its
+counts, each cell's stage — is a listing read on each request. A batch is not a folder: it is the
+photographs one GPU session renders.**
 
 - **Why:** layout alone decides, so no marker file can disagree with the disk, and a stage is a
-  directory listing already. The operator never types a path: the batch is in the URL.
-- **Made by:** `0061`.
+  directory listing already. The operator never types a path: the collection is in the URL. *Batch*
+  names the set a session renders, so the folder needs a word of its own.
+- **Made by:** `0061`, `0082`.
 
 ### D43 · A source holds pixels and orientation only
 
@@ -319,7 +321,7 @@ hub marks it.
 
 ### D19 · One place builds the components
 
-**`wiring.py` builds the components, and the CLI and the UI both use it; the UI builds one batch's
+**`wiring.py` builds the components, and the CLI and the UI both use it; the UI builds one collection's
 wiring through `wiring_from` on every request inside it. `ISEKAI_WIRING` is the one way past the real
 components, and it still passes the runs-root check ([D41](#d41--the-test-seam-is-a-factory-named-in-the-environment)).**
 

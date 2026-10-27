@@ -15,6 +15,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   every refusal and help line say so, leaving *batch* free for what one GPU session renders (0082 D1, D2).
 - The app calls a library folder a collection: its screens sit under `/c/<collection>/…`, its API under
   `/api/c/<collection>/…`, and Home offers New collection; an old `/b/` address is not redirected (0082 D3).
+- The docs call a library folder a collection, and D40 says a batch is what one GPU session renders, so each
+  word names one thing (0082 D4).
 
 ## [0.54.0] - 2026-10-27 · 0081-the-fourth-walkthrough
 

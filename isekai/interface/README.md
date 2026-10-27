@@ -1,7 +1,7 @@
 # `interface/` — what an operator touches
 
 The two front ends. The verb line, the composition behind them both, the
-read-only account of a run, the comparison page of a batch, and the browser
+read-only account of a run, the comparison page of a collection, and the browser
 surface for stage ③.
 `isekai/__main__.py` stays at the package root because `runpy` pins that path; it
 is a shim over `cli.py` and holds nothing else.
@@ -17,11 +17,11 @@ neither is privileged and neither goes through the other.
 | `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together, or with `--progress json` a JSON line per item; `import` and `assign` compose `pipeline/importing.py` and the run's own `assign` |
 | `wiring.py` | composes the modules — resolves the reader and the two taggers per flow, verifies the vocabulary before it is read, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
 | `drafting.py` | drafts a flow from another flow's approval for `review --from` and the page, assigning a flow with no sheet and filling it from the source's tags first |
-| `render.py` | the `render` verb: finds what each approval lacks or takes the requests, assembles every prompt, estimates the session's limit and its quote, opens a GPU session through `boundary/gpu.py` stopping at that limit, waits for the endpoint, runs `generate` per flow, reports each step with `--progress json`, and writes the prose to the batch's log |
+| `render.py` | the `render` verb: finds what each approval lacks or takes the requests, assembles every prompt, estimates the session's limit and its quote, opens a GPU session through `boundary/gpu.py` stopping at that limit, waits for the endpoint, runs `generate` per flow, reports each step with `--progress json`, and writes the prose to the collection's log |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions, producers and failure records, and the names below a flow it does not read. Decides nothing |
-| `compare_view.py` | the `compare` verb: one page of every run's photograph beside each flow's renders, written into the batch directory. Reads, decides nothing |
+| `compare_view.py` | the `compare` verb: one page of every run's photograph beside each flow's renders, written into the collection directory. Reads, decides nothing |
 | `ui/__init__.py` | the `ui` verb: opens the library `ISEKAI_LIBRARY` names, sweeps import's staging, reads the offered flows, prints the address, serves until stopped |
-| `ui/library.py` | the library, its batches and each source × offered flow's stage, all read from folders, each source's not-cleaned mark, each approval's rendered seeds, each batch's session records, and the thumbnails in the library's `.cache/`. **Imports no web framework**, which keeps it testable in the main suite |
+| `ui/library.py` | the library, its collections and each source × offered flow's stage, all read from folders, each source's not-cleaned mark, each approval's rendered seeds, each collection's session records, and the thumbnails in the library's `.cache/`. **Imports no web framework**, which keeps it testable in the main suite |
 | `ui/bundle.py` | builds the browser bundle when it is absent; refuses naming `npm install` rather than fetching |
 | `ui/jobs.py` | Prepare and Render as jobs, a slot per kind, side by side: `tag` → `caption` → `sheet` run as CLI children per flow after a probe of the model server; `gpunit volume up` → `render` → `volume down` unless kept; Stop and server stop sending SIGINT |
 | `ui/billing.py` | what may be billing, read from gpunit's records in `.gpunit/`: the pod alert, the window's quiet item and the band; gpunit asked at start, every half minute while needed, and on Check again |

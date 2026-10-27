@@ -135,9 +135,9 @@ what carries data at run time.
 ```
 
 - **The CLI builds the components** through `interface/wiring.py` and hands them
-  to the UI its `ui` verb starts (`cli.py`'s `_ui`). The UI builds one batch's
+  to the UI its `ui` verb starts (`cli.py`'s `_ui`). The UI builds one collection's
   wiring per request through `wiring_from`, so the runs-root guard holds for each
-  batch, and no module under `interface/ui/` imports `cli.py`. Review holds both.
+  collection, and no module under `interface/ui/` imports `cli.py`. Review holds both.
 - **Each front end calls the stage functions directly.**
 - **A stage reads and writes its run directory.** No stage imports another stage;
   `tests/test_layers.py::test_no_stage_imports_another` holds this. Every run

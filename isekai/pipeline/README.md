@@ -8,7 +8,7 @@ supplies the briefing it reads, the schema it fills against and the directory it
 writes into.
 
 **The verbs are `import` · `caption` · `tag` · `sheet` · `review` · `approve` · `revise` · `generate`.**
-`importing.py` is `import`: it fills a batch's `sources/` and comes before every run.
+`importing.py` is `import`: it fills a collection's `sources/` and comes before every run.
 `review.py` holds `review`, `approve` and `revise`, and `tagging.py` is `tag`: its two functions write
 the two tag lists, each refusal collected on its own. `caption` and `tag` are
 independent, and neither reads the other's output
@@ -18,7 +18,7 @@ independent, and neither reads the other's output
 
 | file | does | costs |
 |---|---|---|
-| `importing.py` | reads a file into staging — an upload in turn, by its open import's reader — cleans it to its pixels and orientation, verifies it, previews it, and commits the batch's `sources/` | free |
+| `importing.py` | reads a file into staging — an upload in turn, by its open import's reader — cleans it to its pixels and orientation, verifies it, previews it, and commits the collection's `sources/` | free |
 | `caption.py` | ① `caption`: turns a photograph into descriptive prose | a model call |
 | `tagging.py` | ① `tag`: a scored tag list from a local ONNX session, then a raw one from a hosted model. **Neither is narrowed** — filtering is ②'s job | free, then a model call |
 | `sheet.py` | ② routes the local tag list into the flow's schema's fields, through the authored table | free |

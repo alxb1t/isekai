@@ -7,7 +7,7 @@ folder-sense batch is renamed with the code it tests.
 
 - [x] 1 — The CLI and the stages
 - [x] 2 — The app
-- [ ] 3 — The docs
+- [x] 3 — The docs
 
 ## 1 — The CLI and the stages
 
@@ -32,9 +32,9 @@ folder-sense batch is renamed with the code it tests.
 
 ## 3 — The docs
 
-- [ ] 3.1 **HALT CHECK** — D40 calls the folder a batch.
+- [x] 3.1 **HALT CHECK** — D40 calls the folder a batch.
   Verify: `grep -c '### D40 · A batch is a library folder' docs/decisions.md` prints `1`.
-- [ ] 3.2 Rename the folder sense per [D4](design.md#d4) in `docs/decisions.md`, `docs/data-flow.md`,
+- [x] 3.2 Rename the folder sense per [D4](design.md#d4) in `docs/decisions.md`, `docs/data-flow.md`,
   `docs/modules.md`, `README.md`, `AGENTS.md`, `ui/design/spec.md`, `evaluation/README.md` and each `README.md` under
   `isekai/`; keep D1's senses.
   Verify: `grep -c '### D40 · A collection is a library folder' docs/decisions.md` prints `1`, and `grep -rn 'd40--a-batch' docs README.md | wc -l` prints `0`, and `grep -c -- '--collection COLLECTION' README.md` prints `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
