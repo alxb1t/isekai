@@ -17,7 +17,7 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 ## Progress
 
 - [x] 1 — The candidate flows
-- [ ] 2 — The prototype photographs **HUMAN
+- [x] 2 — The prototype photographs **HUMAN
 - [ ] 3 — The sheets
 - [ ] 4 — The render and the count ⚠️ GPU
 - [ ] 5 — The verdict **HUMAN
@@ -34,7 +34,7 @@ The candidates, the operator's photographs, the sheets, the render and count, th
 
 ## 2 — The prototype photographs **HUMAN
 
-- [ ] 2.1 The operator puts fifteen photographs of five people, three each, under
+- [x] 2.1 The operator puts fifteen photographs of five people, three each, under
   `.data/flat-summon-prototype/sources/`, each named `<person>-<n>.<ext>`.
   Verify: `ls .data/flat-summon-prototype/sources | wc -l` prints `15`.
 
