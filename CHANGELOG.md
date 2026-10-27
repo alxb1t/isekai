@@ -9,6 +9,32 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-10-27 · 0084-flat-summon
+
+Gate: local 0m44s · CI 1m16s (ci at f35f347) · 0.56.0: local 0m47s · CI 1m16s
+
+### Added
+
+- Candidate `summon-flat-a-anime-wai`: summon with InstantID ending at 0.65, `ip_weight` 0.7 and a flat prompt,
+  run from the CLI; digest `4be4cf3e72d83a4e98b045ac2e43bcfc725d7c01ecdc9fd87349bff74eab7728` (0084 D1, D3).
+- Candidate `summon-flat-b-anime-wai`: A with its hires pass on the plain checkpoint, run from the CLI; digest
+  `bf03405951ab62e9bc5e833dc406bc4b9cdad6b3653e7de01f0cd3c72a0e33a6` (0084 D2, D3).
+- The flat prototype's photographs: five people, three each, kept under the ignored `.data/` (0084 D4).
+- The prototype's sheets: summon's drafts corrected against each photograph, approved, and copied to both
+  candidates so the three flows render one sheet (0084 D4).
+- The prototype rendered summon and both candidates on summon's seeds in one session, then counted them
+  over the cohort and laid them out side by side for the verdict (0084 D4, D5).
+- The verdict picks candidate A by eye: flat and still the person, where the photo-trained face encoder
+  cannot read flat faces; B's hires pass made no visible difference (0084 D5).
+- `summon-flat-anime-wai`: summon in a flat, lined anime look, with InstantID ending at 0.65; candidate A under
+  its own name, B deleted; digest `05d62409e518a9446ba046c691ed7e2ba194b609803b12a72e853c4ebd092940` (0084 D6).
+- The app offers `summon-flat-anime-wai` as the hub's second column, beside summon and before conjure (0084 D6).
+
+### Fixed
+
+- The flat prototype design records the visual verdict's override, all edited test proofs, and the full
+  experiment size so the release record matches the completed work (0084 D3, D5).
+
 ## [0.56.0] - 2026-10-27 · 0083-the-multi-batch-render
 
 Gate: local 0m47s · CI 1m16s (ci at f35f347) · 0.55.0: local 0m47s · CI none

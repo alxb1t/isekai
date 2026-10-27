@@ -57,10 +57,20 @@ PINNED: dict[str, str] = {
     "summon-anime-wai": (
         "96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698"
     ),
+    "summon-flat-anime-wai": (
+        "05d62409e518a9446ba046c691ed7e2ba194b609803b12a72e853c4ebd092940"
+    ),
 }
 
 # A control flow and the subject it is held equal to; a second control is one line.
 CONTROLS: dict[str, str] = {"control-anime-wai": "summon-anime-wai"}
+
+# A flat flow and the subject it is held equal to but for its style.
+FLATS: dict[str, str] = {"summon-flat-anime-wai": "summon-anime-wai"}
+
+# The terms a flat flow appends to its subject's trailer and negative.
+FLAT_TRAILER = "flat color, cel shading, lineart"
+FLAT_NEGATIVE = "realistic, photorealistic, 3d, semi-realistic"
 
 # The dials a control zeroes: the face chain, and nothing else.
 FACE_DIALS = ("ip_weight", "identity_cn_strength")
@@ -922,6 +932,30 @@ def test_a_tagger_that_is_not_a_boolean_is_refused_naming_the_key(
     assert repr(value) in str(refused.value)
 
 
+# --- a variant equals its subject ---------------------------------------------
+
+
+def _pair(tmp_path: Path, variant: str, subject: str) -> tuple[Path, Path]:
+    """Copy a tracked variant and its subject into a scratch root."""
+    return (
+        shutil.copytree(load_flow(variant).path, tmp_path / variant),
+        shutil.copytree(load_flow(subject).path, tmp_path / "subject"),
+    )
+
+
+def _manifest_without(
+    directory: Path, dials: tuple[str, ...] = (), prompt: tuple[str, ...] = ()
+) -> dict:
+    """Return a manifest without its name and the given dials and prompt keys."""
+    document = json.loads((directory / MANIFEST_NAME).read_text())
+    document.pop("flow")
+    for dial in dials:
+        document["dials"].pop(dial)
+    for key in prompt:
+        document["prompt"].pop(key)
+    return document
+
+
 # --- a control equals its subject ---------------------------------------------
 
 
@@ -935,24 +969,11 @@ def _control_differences(control_dir: Path, subject_dir: Path) -> list[str]:
         for name in SIBLINGS
         if (control_dir / name).read_bytes() != (subject_dir / name).read_bytes()
     ]
-    manifests = []
-    for directory in (control_dir, subject_dir):
-        document = json.loads((directory / MANIFEST_NAME).read_text())
-        document.pop("flow")
-        for dial in FACE_DIALS:
-            document["dials"].pop(dial)
-        manifests.append(document)
-    if manifests[0] != manifests[1]:
+    if _manifest_without(control_dir, FACE_DIALS) != _manifest_without(
+        subject_dir, FACE_DIALS
+    ):
         differing.append(MANIFEST_NAME)
     return differing
-
-
-def _control_pair(tmp_path: Path, control: str) -> tuple[Path, Path]:
-    """Copy a tracked control and its subject into a scratch root."""
-    return (
-        shutil.copytree(load_flow(control).path, tmp_path / control),
-        shutil.copytree(load_flow(CONTROLS[control]).path, tmp_path / "subject"),
-    )
 
 
 @pytest.mark.spec("image-generation:control:files-equal-the-subject")
@@ -982,7 +1003,7 @@ def test_a_control_manifest_differs_only_in_its_name_and_zeroed_face_dials(
 
 @pytest.mark.spec("image-generation:control:files-equal-the-subject")
 def test_a_control_whose_graph_drifts_is_named(tmp_path: Path) -> None:
-    control, subject = _control_pair(tmp_path, "control-anime-wai")
+    control, subject = _pair(tmp_path, "control-anime-wai", "summon-anime-wai")
     assert _control_differences(control, subject) == []
     (control / GRAPH_NAME).write_text("{}\n")
 
@@ -991,9 +1012,91 @@ def test_a_control_whose_graph_drifts_is_named(tmp_path: Path) -> None:
 
 @pytest.mark.spec("image-generation:control:manifest-differs-only-in-the-face-dials")
 def test_a_control_whose_manifest_differs_elsewhere_is_named(tmp_path: Path) -> None:
-    control, subject = _control_pair(tmp_path, "control-anime-wai")
+    control, subject = _pair(tmp_path, "control-anime-wai", "summon-anime-wai")
     document = json.loads((control / MANIFEST_NAME).read_text())
     document["dials"]["cfg"] = 99
     (control / MANIFEST_NAME).write_text(json.dumps(document, indent=2) + "\n")
 
     assert _control_differences(control, subject) == [MANIFEST_NAME]
+
+
+# --- a flat flow equals its subject but for its style --------------------------
+
+
+def _flat_differences(flat_dir: Path, subject_dir: Path) -> list[str]:
+    """Return the files separating a flat flow from its subject beyond its style.
+
+    The style is the identity node's `end_at`, `ip_weight`, the trailer and the
+    negative. e.g. `["graph.json"]` when the graph differs anywhere else.
+    """
+    differing = [
+        name
+        for name in SIBLINGS
+        if name != GRAPH_NAME
+        and (flat_dir / name).read_bytes() != (subject_dir / name).read_bytes()
+    ]
+    style = {"dials": ("ip_weight",), "prompt": ("trailer", "negative")}
+    manifest, subject_manifest = (
+        _manifest_without(d, **style) for d in (flat_dir, subject_dir)
+    )
+    identity = subject_manifest["nodes"]["identity"]
+    ours, theirs = (
+        json.loads((d / GRAPH_NAME).read_text()) for d in (flat_dir, subject_dir)
+    )
+    ours[identity]["inputs"]["end_at"] = theirs[identity]["inputs"]["end_at"]
+    if ours != theirs:
+        differing.append(GRAPH_NAME)
+    if manifest != subject_manifest:
+        differing.append(MANIFEST_NAME)
+    return differing
+
+
+@pytest.mark.spec("image-generation:flat:files-equal-the-subject")
+@pytest.mark.parametrize("flat", sorted(FLATS))
+def test_a_flat_flow_holds_the_subjects_schema_and_briefing(
+    flat: str, tmp_path: Path
+) -> None:
+    ours, subject = _pair(tmp_path, flat, FLATS[flat])
+    assert _flat_differences(ours, subject) == []
+
+    (ours / SCHEMA_NAME).write_text("{}\n")
+    assert _flat_differences(ours, subject) == [SCHEMA_NAME]
+
+
+@pytest.mark.spec("image-generation:flat:the-graph-differs-in-the-face-chains-end")
+@pytest.mark.parametrize("flat", sorted(FLATS))
+def test_a_flat_graph_differs_only_in_the_face_chains_end(
+    flat: str, tmp_path: Path
+) -> None:
+    ours, subject = _pair(tmp_path, flat, FLATS[flat])
+    tracked = load_flow(flat)
+    graph = tracked.graph()
+    assert _flat_differences(ours, subject) == []
+    assert graph[tracked.nodes["identity"]]["inputs"]["end_at"] < 1
+
+    graph[tracked.nodes["hires_sampler"]]["inputs"]["denoise"] = 0.5
+    (ours / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
+    assert _flat_differences(ours, subject) == [GRAPH_NAME]
+
+
+@pytest.mark.spec("image-generation:flat:the-manifest-differs-in-the-style")
+@pytest.mark.parametrize("flat", sorted(FLATS))
+def test_a_flat_manifest_differs_only_in_its_name_and_its_style(
+    flat: str, tmp_path: Path
+) -> None:
+    ours, subject = load_flow(flat), load_flow(FLATS[flat])
+    separator = subject.prompt["separator"]
+    assert _flat_differences(ours.path, subject.path) == []
+    assert ours.prompt["trailer"] == separator.join(
+        (subject.prompt["trailer"], FLAT_TRAILER)
+    )
+    assert ours.prompt["negative"] == separator.join(
+        (subject.prompt["negative"], FLAT_NEGATIVE)
+    )
+    assert ours.dials["ip_weight"] < subject.dials["ip_weight"]
+
+    scratch, scratch_subject = _pair(tmp_path, flat, FLATS[flat])
+    document = json.loads((scratch / MANIFEST_NAME).read_text())
+    document["dials"]["identity_cn_strength"] = 0.5
+    (scratch / MANIFEST_NAME).write_text(json.dumps(document, indent=2) + "\n")
+    assert _flat_differences(scratch, scratch_subject) == [MANIFEST_NAME]

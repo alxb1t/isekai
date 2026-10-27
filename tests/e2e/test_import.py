@@ -5,12 +5,14 @@ import's first stream connection is held too, then answered with one `converting
 frame: a real conversion is over before a page can be seen drawing it.
 """
 
+import json
 import re
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page, Route, expect
 
+from isekai.pipeline.importing import UI_CONFIG
 from tests.e2e.conftest import Served
 from tests.images import nef_bytes, photo_jpeg
 
@@ -168,7 +170,10 @@ def test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned(
 
     expect(page).to_have_url(served.hub_of("e2e-imported"))
     expect(page.locator(".hub__name")).to_have_count(2)
-    expect(page.locator('.hub__cell[data-stage="none"]')).to_have_count(4)
+    offered = json.loads(UI_CONFIG.read_text())["flows"]
+    expect(page.locator('.hub__cell[data-stage="none"]')).to_have_count(
+        len(files) * len(offered)
+    )
 
 
 @pytest.mark.spec("ui:sheet:a-commit-in-flight-holds-the-sheet")

@@ -435,6 +435,7 @@ isekai/
 │   ├── schema.json            # the sheet's field list, in prompt order
 │   └── caption.briefing.md    # the standing instructions the photograph is read under
 ├── flows/control-anime-wai/   # summon's files with the face dials at 0, held equal by a test
+├── flows/summon-flat-anime-wai/ # summon's files with InstantID ending early and a flat prompt, held equal by a test
 ├── ui/                        # the app: Vue 3 + Vite + vue-router; design/spec.md; dist/ and node_modules/ ignored
 │   ├── src/                   # the app; styles.css is the vendored stylesheet, Inter beside it
 │   └── design/                # spec.md, the design the app is built to
