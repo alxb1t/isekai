@@ -25,10 +25,11 @@ render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─�
   runs `isekai tag`, `caption` and `sheet` per flow as children, each with `--progress json`, each line
   of their prose appended to the collection's `log.txt` as `[prepare] …`. Stop, `POST
   /api/jobs/prepare/stop`, sends its child SIGINT; the server stopping interrupts both jobs.
-- **Render** has the other slot, its prose logged as `[render] …`. `POST …/render/quote` takes the render verb's own quote: per flow
-  what renders, what is left out and why, the estimate, the limit and the price at most. Only
-  `POST …/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --session <id> --progress
-  json`, then `volume down` unless the window is kept.
+- **Render** has the other slot, its prose logged as `[render] …` in every collection it renders. `POST
+  /api/render/quote` takes the render verb's own quote over the named collections, or every one short of images:
+  per collection and flow what renders, what is left out and why, and one estimate, limit and price at most.
+  Only `POST /api/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --session <id>
+  --progress json <runs>…`, then `volume down` unless the window is kept.
 - **Sessions** are read from the records the render verb writes, `<collection>/sessions/<id>.json`:
   `GET …/sessions/<id>` serves one to the render drawer, and the render slot adds the volume steps and Stop.
   `GET /api/sessions/running` reads process-held liveness locks across the library, each before its record, so a

@@ -451,12 +451,31 @@ def create_app(
         """Return the offered flows drafted from a sheet alone, read once."""
         return [name for name in flows if offered(name).inputs == ("sheet",)]
 
-    def quoted(collection: str) -> tuple[Path, render.Quote, dict[str, Any]]:
-        """Return a collection's folder, its quote, and the quote the dialog shows."""
-        found = folder(collection)
-        runs = found / library.RUNS
-        made = render.quote(runs, wire(runs))
-        disabled = _held() or made.short.blocked
+    def quoted(
+        names: Sequence[str] | None,
+    ) -> tuple[dict[str, Path], render.Quote, dict[str, Any]]:
+        """Return the quoted collections' folders, their quote, and the dialog's view.
+
+        With no names, every collection short of images or refusing a count, in the
+        Library's order: one with nothing short adds nothing to the estimate.
+        """
+        if names is None:
+            shelf = library.rows(root, flows, wired.flows_dir)
+            asked = [row.name for row in shelf if row.collection]
+        else:
+            asked = list(dict.fromkeys(names))
+        found = {name: folder(name) for name in asked}
+        made = render.quote([one / library.RUNS for one in found.values()], wired)
+        if names is None:
+            found = {
+                name: one
+                for name, one in found.items()
+                if made.shorts[one / library.RUNS].lines
+                or made.shorts[one / library.RUNS].refused
+            }
+        disabled = _held() or (
+            made.blocked if found else "Tick a collection to render."
+        )
         return found, made, _quote(found, made, disabled, wired.flows_dir)
 
     def _held() -> str | None:
@@ -472,34 +491,51 @@ def create_app(
             )
         return None
 
+    def lacking(collection: str) -> render.Short:
+        """Return what a collection's approvals lack, as the render stage counts it."""
+        runs = folder(collection) / library.RUNS
+        return render.short(runs, render.run_ids(runs), wire(runs))
+
     @app.get("/api/c/{collection}/render")
     def read_render_offer(collection: str) -> dict[str, Any]:
         """Return how many images a collection lacks, and why Render is off, or null.
 
-        It prices nothing; the count is the render stage's own. `refused` is why an
-        approval's count cannot be read, or null: the bar shows it with none short.
+        It prices nothing; the count is the render stage's own. `others` is the
+        images every other collection lacks, which the same dialog renders. `refused`
+        is why an approval's count cannot be read, or null: the bar shows it with
+        none short.
         """
-        runs = folder(collection) / library.RUNS
-        short = render.short(runs, render.run_ids(runs), wire(runs))
+        short = lacking(collection)
+        others = sum(
+            sum(lacking(child.name).images.values())
+            for child in library.listed(root)
+            if library.is_collection(child) and child.name != collection
+        )
         return {
-            "disabled": _held() or short.blocked,
+            "disabled": _held()
+            or (short.blocked if short.refused or not others else None),
             "images": sum(short.images.values()),
+            "others": others,
             "refused": short.refused[0] if short.refused else None,
         }
 
-    @app.post("/api/c/{collection}/render/quote")
-    def post_quote(collection: str) -> dict[str, Any]:
-        """Quote what a render of a collection renders, its limit and its price at most.
+    @app.post("/api/render/quote")
+    def post_quote(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Quote one render of the named collections, its limit and its price at most.
 
-        It rents nothing; only the render's own `POST` does.
+        `collections` names them; absent, every collection short of images is
+        quoted. It rents nothing; only the render's own `POST` does.
         """
-        return quoted(collection)[2]
+        names = (payload or {}).get("collections")
+        if names is not None and not _names(names):
+            raise Refusal(
+                "the quote names no list of collections; close Render and open it again"
+            )
+        return quoted(names)[2]
 
-    @app.post("/api/c/{collection}/render")
-    def post_render(
-        collection: str, payload: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
-        """Start the render job the quote describes, or refuse naming why not.
+    @app.post("/api/render")
+    def post_render(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Start the render job the quote of `collections` describes, or refuse why not.
 
         The quote is taken again here, so what renders is what is on disk now; a
         limit longer than the one the dialog showed, `limit_s`, or another number
@@ -507,11 +543,14 @@ def create_app(
         operator agreed to.
         """
         body = payload or {}
-        found, made, described = quoted(collection)
+        reopen = "close Render and open it again to read"
+        names = body.get("collections")
+        if not _names(names) or not names:
+            raise Refusal(f"the confirmation names no collections; {reopen} the quote")
+        found, made, described = quoted(names)
         if described["disabled"] is not None:
             raise Refusal(described["disabled"])
         shown, listed = body.get("limit_s"), body.get("images")
-        reopen = "close Render and open it again to read"
         if not _whole(shown):
             raise Refusal(f"the confirmation names no quoted limit; {reopen} the quote")
         if made.estimate.limit_s > shown:
@@ -523,17 +562,19 @@ def create_app(
             raise Refusal(
                 f"the confirmation names no quoted images; {reopen} the quote"
             )
-        total = sum(made.short.images.values())
-        if total != listed:
+        if made.images != listed:
             raise Refusal(
-                f"the quote changed since it was shown: it now renders {total} "
+                f"the quote changed since it was shown: it now renders {made.images} "
                 f"images, not {listed}; {reopen} it"
             )
         job = jobs.render(
-            collection,
-            found,
+            {
+                name: one
+                for name, one in found.items()
+                if made.shorts[one / library.RUNS].lines
+            },
             limit=made.estimate.limit_s,
-            total=total,
+            total=made.images,
             keep_open=bool(body.get("keep_open")),
         )
         return {"job": job}
@@ -1371,6 +1412,11 @@ def _numbered(value: object) -> TypeGuard[int]:
     return _whole(value) and is_version(value)
 
 
+def _names(value: object) -> TypeGuard[list[str]]:
+    """Return whether a request's value is a list of collection names."""
+    return isinstance(value, list) and all(isinstance(one, str) for one in value)
+
+
 def _whole(value: object) -> TypeGuard[int]:
     """Return whether a request's value is a whole number, a JSON `true` not one."""
     return isinstance(value, int) and not isinstance(value, bool)
@@ -1391,9 +1437,37 @@ def _version(text: str) -> int:
 
 
 def _quote(
-    found: Path, made: render.Quote, disabled: str | None, flows_dir: Path
+    found: Mapping[str, Path],
+    made: render.Quote,
+    disabled: str | None,
+    flows_dir: Path,
 ) -> dict[str, Any]:
-    """Describe a quote as the Render dialog shows it, each run by its source."""
+    """Describe a quote as the Render dialog shows it: a row per collection."""
+    return {
+        "collections": [
+            _quoted_row(name, one, made.shorts[one / library.RUNS], flows_dir)
+            for name, one in found.items()
+        ],
+        "estimate": {
+            "seconds": made.estimate.seconds,
+            "limit_s": made.estimate.limit_s,
+            "boot_s": made.timing.boot_s,
+            "teardown_s": made.timing.teardown_s,
+        },
+        "price": {
+            "about": made.about,
+            "at_most": made.at_most,
+            "keep_open": made.keep_open,
+        },
+        "ceiling_s": made.ceiling_s,
+        "disabled": disabled,
+    }
+
+
+def _quoted_row(
+    name: str, found: Path, short: render.Short, flows_dir: Path
+) -> dict[str, Any]:
+    """Describe one collection's part of a quote, each run by its source."""
     runs = {
         one.run.id: (one.name, one.run)
         for one in library.hub(found, (), flows_dir).sources
@@ -1417,30 +1491,21 @@ def _quote(
             "images": line.images,
             "sources": [
                 {**source(run_id, flow), "images": images}
-                for run_id, flow, images in made.short.wanted
+                for run_id, flow, images in short.wanted
                 if flow == line.flow
             ],
         }
-        for line in made.short.lines
+        for line in short.lines
     ]
     return {
+        "collection": name,
+        "images": sum(short.images.values()),
         "flows": flows,
         "left_out": [
             {**source(run_id, flow), "flow": flow, "reason": reason}
-            for run_id, flow, reason in made.short.left_out
+            for run_id, flow, reason in short.left_out
         ],
-        "estimate": {
-            "seconds": made.estimate.seconds,
-            "limit_s": made.estimate.limit_s,
-            "boot_s": made.timing.boot_s,
-            "teardown_s": made.timing.teardown_s,
-        },
-        "price": {
-            "about": made.about,
-            "at_most": made.at_most,
-            "keep_open": made.keep_open,
-        },
-        "disabled": disabled,
+        "refused": short.refused[0] if short.refused else None,
     }
 
 

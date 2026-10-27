@@ -269,10 +269,12 @@ export interface RenderSession {
 
 export type JobKind = 'prepare' | 'render'
 
-/* One kind's job: running, or the last one's end. */
+/* One kind's job: running, or the last one's end. A render names every
+   collection it renders in `collections`, `collection` first. */
 export interface JobSlot {
   kind: JobKind
   collection: string
+  collections?: string[]
   state: 'running' | 'done' | 'stopped' | 'failed'
   flow: string | null
   stage: string | null
@@ -298,13 +300,23 @@ export interface QuoteSource {
   version: number | null
 }
 
-/* The Render dialog's quote: per flow what renders, what is left out and why,
-   the estimate and limit in seconds, and the price in dollars. */
-export interface Quote {
+/* One collection's row of a quote: per flow what renders, what is left out and
+   why, and a count it refuses, or null. */
+export interface QuotedCollection {
+  collection: string
+  images: number
   flows: { flow: string; images: number; sources: (QuoteSource & { images: number })[] }[]
   left_out: (QuoteSource & { flow: string; reason: string })[]
+  refused: string | null
+}
+
+/* The Render dialog's quote: a row per collection, one session's estimate and
+   limit in seconds against `gpunit.toml`'s ceiling, and the price in dollars. */
+export interface Quote {
+  collections: QuotedCollection[]
   estimate: { seconds: number; limit_s: number; boot_s: number; teardown_s: number }
   price: { about: number; at_most: number; keep_open: number }
+  ceiling_s: number
   disabled: string | null
 }
 
@@ -352,11 +364,13 @@ export interface RendersInfo {
   }[]
 }
 
-/* A collection's Render offer: the images it lacks, why Render is disabled, and why
-   an approval's count is refused, each null when there is none. */
+/* A collection's Render offer: the images it lacks and every other collection
+   lacks, why Render is disabled, and why an approval's count is refused, each
+   null when there is none. */
 export interface RenderOffer {
   disabled: string | null
   images: number
+  others: number
   refused: string | null
 }
 

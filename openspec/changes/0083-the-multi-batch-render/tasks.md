@@ -5,7 +5,7 @@ The session, the app, then the drawer, per [design](design.md). Every new test c
 ## Progress
 
 - [x] 1 — One session over many collections
-- [ ] 2 — The quote and the dialog
+- [x] 2 — The quote and the dialog
 - [ ] 3 — The drawer
 
 ## 1 — One session over many collections
@@ -24,14 +24,14 @@ The session, the app, then the drawer, per [design](design.md). Every new test c
 
 ## 2 — The quote and the dialog
 
-- [ ] 2.1 **HALT CHECK** — the app quotes one collection.
+- [x] 2.1 **HALT CHECK** — the app quotes one collection.
   Verify: `grep -c 'def quoted(collection: str)' isekai/interface/ui/app.py` prints `1`.
-- [ ] 2.2 Quote and start across collections in `isekai/interface/render.py`, `isekai/interface/ui/app.py` and
+- [x] 2.2 Quote and start across collections in `isekai/interface/render.py`, `isekai/interface/ui/app.py` and
   `isekai/interface/ui/jobs.py` per [D4](design.md#d4); in `tests/test_ui_api.py` bind
   `ui:render:the-dialog-quotes-every-collection` and `ui:render:past-the-ceiling-disables-render` and move the quote and
   start tests to the new routes; in `tests/test_ui_jobs.py` start renders with collections.
   Verify: `grep -c '"/api/render/quote"' isekai/interface/ui/app.py` prints `1`, and `grep -c 'the-dialog-quotes-every-collection\|past-the-ceiling-disables-render' tests/test_ui_api.py` prints `2`, and `uv run pytest -q tests/test_ui_api.py tests/test_ui_jobs.py` exits 0.
-- [ ] 2.3 Draw the rows, ticks and ceiling in `ui/src/components/RenderDialog.vue` and `+n in other collections` in
+- [x] 2.3 Draw the rows, ticks and ceiling in `ui/src/components/RenderDialog.vue` and `+n in other collections` in
   `ui/src/components/RenderBar.vue` per [D5](design.md#d5), with `ui/src/api.ts` and `ui/src/types.ts`; in
   `tests/e2e/test_render.py` find the collection's row in the dialog.
   Verify: `grep -c 'in other collections' ui/src/components/RenderBar.vue` prints `1`, and `uv run python -m tools.typecheck_ui` exits 0, and `uv run pytest -q tests/e2e/test_render.py` exits 0.

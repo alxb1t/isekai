@@ -34,6 +34,8 @@ def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> 
     page.goto(served.hub_of(RENDER))
     cell = page.locator('.hub__source[data-row="0"]')
     expect(cell).to_be_focused()
+    # ⇧G acts on the Render bar, which shows once the offer is read.
+    expect(page.locator("[data-render]")).to_be_enabled()
 
     page.keyboard.press("Shift+G")
 
@@ -52,13 +54,27 @@ def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> 
     expect(cell).to_be_focused()
 
 
+def _alone(page: Page, collection: str) -> None:
+    """Untick every dialog row but `collection`'s, and wait for its quote."""
+    dialog = page.locator("dialog.render-dialog")
+    own = dialog.locator(f'[data-collection="{collection}"]')
+    expect(own).to_contain_text("1 image")
+    others = dialog.locator(
+        f'[data-collection]:not([data-collection="{collection}"]) [data-tick]'
+    )
+    for index in range(others.count()):
+        others.nth(index).uncheck()
+    expect(own.locator("[data-tick]")).to_be_checked()
+    expect(dialog.locator(".render-dialog__title")).to_have_text("Render 1 image")
+
+
 @pytest.mark.spec("ui:render:the-confirmation-starts-the-render")
 def test_confirming_the_dialog_opens_the_session(page: Page, served: Served) -> None:
     page.goto(served.hub_of(RENDER))
     page.locator("[data-render]").click()
+    _alone(page, RENDER)
     confirm = page.locator("[data-confirm]")
     expect(confirm).to_be_enabled()
-    expect(page.locator(".render-dialog")).to_contain_text("Render 1 image")
     expect(page).to_have_url(served.hub_of(RENDER))
 
     confirm.click()
@@ -78,6 +94,7 @@ def test_confirming_the_dialog_opens_the_session(page: Page, served: Served) -> 
 def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
     page.goto(served.hub_of(DRAWN))
     page.locator("[data-render]").click()
+    _alone(page, DRAWN)
     page.locator("[data-confirm]").click()
 
     drawer = page.locator("dialog[data-drawer]")

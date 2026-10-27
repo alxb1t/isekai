@@ -740,22 +740,49 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
 
 @dataclass(frozen=True)
 class Quote:
-    """What a render of a collection would do, how long it may take, and its price."""
+    """What one session over many collections would do, how long, and its price."""
 
-    short: Short
+    # Each collection's shortfall, by its runs root, in the order quoted.
+    shorts: dict[Path, Short]
     estimate: Estimate
     timing: Timing
+    ceiling_s: int
     # Dollars: the estimate's price, the limit's, and the window kept open after.
     about: float
     at_most: float
     keep_open: float
 
+    @property
+    def images(self) -> int:
+        """Return how many images the session renders, across its collections."""
+        return sum(sum(found.images.values()) for found in self.shorts.values())
 
-def quote(runs: Path, wired: Wiring) -> Quote:
-    """Return the quote for rendering what `runs` is short of, as the session would.
+    @property
+    def blocked(self) -> str | None:
+        """Return why nothing would render, or None while the session may start.
 
-    The price is at `gpunit.toml`'s `max_hourly`, which gpunit refuses a card
-    above, with the volume at `config/render.json`'s rate (D26).
+        A refused count first, then nothing short, then an estimate whose limit
+        would pass the ceiling: the session would end before its work.
+        """
+        for found in self.shorts.values():
+            if found.refused:
+                return found.refused[0]
+        if not self.images:
+            return "Every approved source × flow already has its Count of images."
+        if math.ceil(self.estimate.seconds * self.timing.limit_factor) > self.ceiling_s:
+            return (
+                f"The estimate passes gpunit.toml's ceiling of {self.ceiling_s}s; "
+                "untick a collection."
+            )
+        return None
+
+
+def quote(roots: Sequence[Path], wired: Wiring) -> Quote:
+    """Return the quote for one session over what each of `roots` is short of.
+
+    As the session would: one boot over every collection's images. The price is
+    at `gpunit.toml`'s `max_hourly`, which gpunit refuses a card above, with the
+    volume at `config/render.json`'s rate (D26).
     """
     bound = gpu.bounds(REPOSITORY)
     if bound.max_hourly is None or bound.volume_ceiling_s is None:
@@ -764,14 +791,16 @@ def quote(runs: Path, wired: Wiring) -> Quote:
             "bound; restore them with `git checkout -- gpunit.toml`"
         )
     timing = load_timing()
-    ids = run_ids(runs)
-    found = short(runs, ids, wired)
-    guess = estimated([(runs, ids, found.images)], timing, bound.ceiling_s)
+    ids = {runs: run_ids(runs) for runs in roots}
+    shorts = {runs: short(runs, ids[runs], wired) for runs in roots}
+    work = [(runs, ids[runs], found.images) for runs, found in shorts.items()]
+    guess = estimated(work, timing, bound.ceiling_s)
     hourly = bound.max_hourly + timing.volume_rate
     return Quote(
-        found,
+        shorts,
         guess,
         timing,
+        bound.ceiling_s,
         about=guess.seconds / 3600 * hourly,
         at_most=guess.limit_s / 3600 * hourly,
         keep_open=bound.volume_ceiling_s / 3600 * timing.volume_rate,

@@ -4,7 +4,7 @@ import { hub as readHub, renderOffer, renders as readRenders } from '../api'
 import type { CellEvent, HubCell, HubInfo, JobSlot, RenderOffer, RendersInfo } from '../types'
 import { type Snapshot, useLiveStore } from './live'
 
-const NO_OFFER: RenderOffer = { disabled: null, images: 0, refused: null }
+const NO_OFFER: RenderOffer = { disabled: null, images: 0, others: 0, refused: null }
 
 /* A cell's key in the maps of refusals and running stages. */
 export function at(name: string, flow: string): string {
@@ -75,13 +75,14 @@ export const useCollectionStore = defineStore('collection', () => {
       found = await renderOffer(collection)
     } catch (reason) {
       const message = (reason as Error).message
-      found = { disabled: message, images: offer.value.images, refused: message }
+      found = { ...offer.value, disabled: message, refused: message }
     }
     if (mine === asked) offer.value = found
   }
 
   function openDialog(): void {
-    if (offer.value.images > 0 && offer.value.disabled === null) dialog.value = true
+    const short = offer.value.images + offer.value.others
+    if (short > 0 && offer.value.disabled === null) dialog.value = true
   }
 
   function closeDialog(): void {

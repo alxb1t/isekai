@@ -29,11 +29,12 @@ from isekai.boundary.gpu import Say, Seams, Volume  # noqa: E402
 from isekai.foundation.flow import FLOWS_DIR, Schema, load_flow  # noqa: E402
 from isekai.foundation.refusal import Refusal  # noqa: E402
 from isekai.foundation.run import Run, approval_of, open_run  # noqa: E402
+from isekai.interface.cli import build_parser  # noqa: E402
 from isekai.interface.render import LOST_EXIT  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
 from isekai.interface.ui import app as app_module  # noqa: E402
 from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
-from isekai.interface.ui.jobs import Jobs, Step, settle_s  # noqa: E402
+from isekai.interface.ui.jobs import Jobs, Step, render_command, settle_s  # noqa: E402
 from isekai.pipeline.generate import prepare  # noqa: E402
 from isekai.pipeline.review import approve, review  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
@@ -122,7 +123,7 @@ def _until_rendering(record: Path) -> None:
         time.sleep(0.01)
 
 
-def _sleeping_render(limit: int, runs: Path, session: str) -> list[str]:
+def _sleeping_render(limit: int, roots: Sequence[Path], session: str) -> list[str]:
     """Return a render child that runs until it is interrupted."""
     return [sys.executable, "-c", SLEEP]
 
@@ -141,13 +142,13 @@ def test_a_second_job_of_a_kind_is_refused_naming_the_one_that_runs(
         render=_sleeping_render,
     )
     jobs.prepare("b", folder, _steps(run), lambda line: None)
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
 
     try:
         with pytest.raises(Refusal, match="a job is running: Prepare on b"):
             jobs.prepare("other", folder, _steps(run), lambda line: None)
         with pytest.raises(Refusal, match="a job is running: Render on b"):
-            jobs.render("other", folder, limit=1500, total=1, keep_open=False)
+            jobs.render({"other": folder}, limit=1500, total=1, keep_open=False)
     finally:
         jobs.shutdown()
 
@@ -168,7 +169,7 @@ def test_a_render_runs_beside_a_prepare_and_its_stop_leaves_the_prepare(
     jobs.prepare("b", folder, _steps(run), lambda line: None)
 
     try:
-        jobs.render("other", folder, limit=1500, total=1, keep_open=False)
+        jobs.render({"other": folder}, limit=1500, total=1, keep_open=False)
         assert jobs.running("prepare") and jobs.running("render")
 
         jobs.stop("render")
@@ -195,7 +196,7 @@ def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
         lambda: None,
         command=prepared,
         volume=volume,
-        render=lambda limit, runs, session: [
+        render=lambda limit, roots, session: [
             sys.executable,
             "-c",
             SLOW_TEARDOWN,
@@ -205,7 +206,7 @@ def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
     )
     jobs.prepare("b", folder, _steps(run), dict)
     _until(found, "cell")
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
     _until_rendering(record)
 
     jobs.shutdown(timeout=0.05)
@@ -238,25 +239,33 @@ def test_each_line_a_job_writes_to_the_collections_log_names_its_job(
         lambda: None,
         command=_Script({"tag": said.format("tag one\ntag two")}),
         volume=volume,
-        render=lambda limit, runs, session: [
+        render=lambda limit, roots, session: [
             sys.executable,
             "-c",
             said.format("pod up\n"),
         ],
     )
 
+    other = folder.parent / "c"
+    other.mkdir()
     jobs.prepare("b", folder, _steps(run), lambda line: None)
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.render({"b": folder, "c": other}, limit=1500, total=1, keep_open=False)
     jobs.wait("prepare", WAIT)
     jobs.wait("render", WAIT)
 
-    assert sorted((folder / "log.txt").read_text().splitlines()) == [
-        "[prepare] tag one",
-        "[prepare] tag two",
+    rendered = [
         "[render] gpunit volume down",
         "[render] gpunit volume up --yes",
         "[render] pod up",
     ]
+    assert sorted((folder / "log.txt").read_text().splitlines()) == [
+        "[prepare] tag one",
+        "[prepare] tag two",
+        *rendered,
+    ]
+    # A render's prose reaches every collection it renders.
+    assert sorted((other / "log.txt").read_text().splitlines()) == rendered
+    assert (jobs.slot("render") or {})["collections"] == ["b", "c"]
 
 
 @pytest.mark.spec("ui:prepare:refused-when-ollama-does-not-answer")
@@ -569,7 +578,9 @@ def test_reconnect_keeps_prepare_progress(
 # --- render ---------------------------------------------------------------------
 
 
-def _order(record: Path) -> tuple[Volume, Callable[[int, Path, str], list[str]]]:
+def _order(
+    record: Path,
+) -> tuple[Volume, Callable[[int, Sequence[Path], str], list[str]]]:
     """Return a gpunit double and a render command, each appending its act to `record`.
 
     The render child is a real process, so the order is read from one file.
@@ -580,7 +591,7 @@ def _order(record: Path) -> tuple[Volume, Callable[[int, Path, str], list[str]]]
             print(" ".join(argv), file=acts)
         return LOST_EXIT if "up" in argv and "lost" in record.name else 0
 
-    def command(limit: int, runs: Path, session: str) -> list[str]:
+    def command(limit: int, roots: Sequence[Path], session: str) -> list[str]:
         script = (
             "import sys; open(sys.argv[1], 'a')"
             ".write(f'render {sys.argv[2]} {sys.argv[3]}\\n')"
@@ -605,7 +616,7 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
         now=lambda: "ended",
     )
 
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
     jobs.wait("render", WAIT)
 
     slot = jobs.slot("render") or {}
@@ -617,6 +628,11 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
     ]
     assert slot["state"] == "done"
     assert slot["session"]["ended"] == "ended"
+    # The real line names every collection's runs root, as the verb reads them.
+    roots = [folder / "runs", folder.parent / "c" / "runs"]
+    line = render_command(1500, roots, slot["session"]["id"])
+    parsed = build_parser().parse_args(line[3:])
+    assert (parsed.runs, parsed.requests, parsed.limit) == (roots, [], 1500)
 
 
 @pytest.mark.spec("ui:render-job:an-opening-that-raises-fails-its-step")
@@ -633,10 +649,10 @@ def test_a_window_opening_that_raises_fails_the_job_and_its_step(
         events.Broadcast(),
         lambda: None,
         volume=Volume(run=unstartable, records=tmp_path / ".gpunit"),
-        render=lambda limit, runs, session: rendered.append(limit) or [],
+        render=lambda limit, roots, session: rendered.append(limit) or [],
     )
 
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
     jobs.wait("render", WAIT)
 
     slot = jobs.slot("render") or {}
@@ -661,7 +677,7 @@ def test_a_lost_window_opening_renders_nothing_and_raises_the_volume_alert(
         raise_volume=lambda: raised.append(True),
     )
 
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
     jobs.wait("render", WAIT)
 
     assert record.read_text().splitlines() == ["volume up --yes"]
@@ -683,7 +699,7 @@ def test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown(
         events.Broadcast(),
         lambda: None,
         volume=volume,
-        render=lambda limit, runs, session: [
+        render=lambda limit, roots, session: [
             sys.executable,
             "-c",
             SLOW_TEARDOWN,
@@ -691,7 +707,7 @@ def test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown(
         ],
         err=err,
     )
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
     _until_rendering(record)
 
     # A wait shorter than the teardown: a render is waited for past it.
@@ -728,11 +744,16 @@ def test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window(
         events.Broadcast(),
         lambda: None,
         volume=volume,
-        render=lambda limit, runs, session: [sys.executable, "-c", script, str(record)],
+        render=lambda limit, roots, session: [
+            sys.executable,
+            "-c",
+            script,
+            str(record),
+        ],
         settle=lambda: 0.05,
         err=err,
     )
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
     _until_rendering(record)
 
     try:
@@ -768,11 +789,16 @@ def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str
         events.Broadcast(),
         lambda: None,
         volume=Volume(run=volume, records=tmp_path / ".gpunit"),
-        render=lambda limit, runs, session: [sys.executable, "-c", script, str(record)],
+        render=lambda limit, roots, session: [
+            sys.executable,
+            "-c",
+            script,
+            str(record),
+        ],
         settle=lambda: 2,
         err=err,
     )
-    jobs.render("b", folder, limit=1500, total=1, keep_open=keep_open)
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=keep_open)
     try:
         _until_rendering(record)
         jobs.shutdown(timeout=2)
@@ -815,10 +841,10 @@ def test_a_render_verb_that_cannot_start_fails_the_job_and_closes_the_window(
         events.Broadcast(),
         lambda: None,
         volume=volume,
-        render=lambda limit, runs, session: [str(tmp_path / "no-such-interpreter")],
+        render=lambda limit, roots, session: [str(tmp_path / "no-such-interpreter")],
     )
 
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
     jobs.wait("render", WAIT)
 
     assert record.read_text().splitlines() == ["volume up --yes", "volume down"]
@@ -895,14 +921,15 @@ def test_the_quote_lists_each_flows_images_what_is_left_out_and_the_price(
     sheet(drafted, schema, vocabulary, flow=CONTROL)
     review(drafted, CONTROL)
 
-    quote = client.post("/api/c/b/render/quote").json()
+    quote = client.post("/api/render/quote", json={"collections": ["b"]}).json()
 
-    assert [(one["flow"], one["images"]) for one in quote["flows"]] == [
+    (row,) = quote["collections"]
+    assert [(one["flow"], one["images"]) for one in row["flows"]] == [
         (CONTROL, 1),
         (FLOW, 1),
     ]
-    assert quote["flows"][1]["sources"][0]["name"] == "ada.jpg"
-    assert quote["left_out"] == [
+    assert row["flows"][1]["sources"][0]["name"] == "ada.jpg"
+    assert row["left_out"] == [
         {
             "name": "ada.jpg",
             "digest": drafted.digest,
@@ -923,8 +950,10 @@ def test_without_a_runpod_key_render_is_disabled_naming_the_fix(
     folder, client = _quoting(tmp_path, vocabulary, {})
     _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
 
-    quote = client.post("/api/c/b/render/quote").json()
-    started = client.post("/api/c/b/render", json={"keep_open": False})
+    quote = client.post("/api/render/quote", json={"collections": ["b"]}).json()
+    started = client.post(
+        "/api/render", json={"collections": ["b"], "keep_open": False}
+    )
 
     assert "add RUNPOD_API_KEY to .env" in quote["disabled"]
     assert started.status_code == 409
@@ -971,20 +1000,22 @@ def test_a_confirmation_shorter_than_the_quote_now_gives_is_refused(
 ) -> None:
     folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
     _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
-    shown = client.post("/api/c/b/render/quote").json()["estimate"]["limit_s"]
+    asked = {"collections": ["b"]}
+    shown = client.post("/api/render/quote", json=asked).json()["estimate"]["limit_s"]
 
     started = client.post(
-        "/api/c/b/render", json={"keep_open": False, "limit_s": shown - 1}
+        "/api/render", json={**asked, "keep_open": False, "limit_s": shown - 1}
     )
 
     assert started.status_code == 409
     assert "the quote changed" in started.json()["refusal"]
-    assert client.post("/api/c/b/render/quote").json()["disabled"] is None
+    assert client.post("/api/render/quote", json=asked).json()["disabled"] is None
 
     # An approval made while the dialog is open adds an image the limit may not show.
     _approved(folder, "beatrix.jpg", FLOW, schema, vocabulary)
     grown = client.post(
-        "/api/c/b/render", json={"keep_open": False, "limit_s": shown, "images": 1}
+        "/api/render",
+        json={**asked, "keep_open": False, "limit_s": shown, "images": 1},
     )
 
     assert grown.status_code == 409
