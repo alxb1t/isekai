@@ -3,8 +3,7 @@
 ### Requirement: A flat flow is its subject with the face chain ending early and a flat style
 
 The system SHALL hold a flat flow equal to its subject flow but for its style: the schema and the briefing byte for
-byte; the graph equal but for the identity node's `end_at`, below one, and, where the flat flow restyles its hires
-pass, that pass reading the plain checkpoint and the sheet's own conditioning; and the manifest equal once the
+byte; the graph equal but for the identity node's `end_at`, below one; and the manifest equal once the
 identifier, `ip_weight` and the prompt's trailer and negative are set aside, the trailer gaining `flat color, cel
 shading, lineart` and the negative `realistic, photorealistic, 3d, semi-realistic`. A difference anywhere else SHALL
 fail the suite naming the file.
@@ -12,7 +11,7 @@ fail the suite naming the file.
 ```
 flows/summon-anime-wai/            flows/summon-flat-anime-wai/
   schema.json, briefing    ══▶       byte-identical
-  graph.json  end_at 1     ──▶       end_at below 1; the hires pass, where restyled, on the plain checkpoint
+  graph.json  end_at 1     ──▶       end_at below 1
   flow.json   ip_weight    ──▶       a lower ip_weight; the flat trailer and negative
 ```
 
@@ -26,11 +25,11 @@ migration of it ([D15](../../../docs/decisions.md#d15--a-flow-is-named-for-what-
 - **WHEN** a flat flow's schema and briefing are compared with its subject's
 - **THEN** each is byte-identical
 
-#### Scenario: the graph differs only in the face chain's end and the hires pass
+#### Scenario: the graph differs only in the face chain's end
 - **Key:** `image-generation:flat:the-graph-differs-in-the-face-chains-end`
 - **Layers:** unit
 - **WHEN** a flat flow's graph is compared with its subject's
-- **THEN** the identity node's `end_at` is below one, and nothing else differs but a restyled hires pass's inputs
+- **THEN** the identity node's `end_at` is below one, and nothing else differs
 
 #### Scenario: the manifest differs only in the style
 - **Key:** `image-generation:flat:the-manifest-differs-in-the-style`

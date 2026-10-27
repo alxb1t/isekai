@@ -932,6 +932,30 @@ def test_a_tagger_that_is_not_a_boolean_is_refused_naming_the_key(
     assert repr(value) in str(refused.value)
 
 
+# --- a variant equals its subject ---------------------------------------------
+
+
+def _pair(tmp_path: Path, variant: str, subject: str) -> tuple[Path, Path]:
+    """Copy a tracked variant and its subject into a scratch root."""
+    return (
+        shutil.copytree(load_flow(variant).path, tmp_path / variant),
+        shutil.copytree(load_flow(subject).path, tmp_path / "subject"),
+    )
+
+
+def _manifest_without(
+    directory: Path, dials: tuple[str, ...] = (), prompt: tuple[str, ...] = ()
+) -> dict:
+    """Return a manifest without its name and the given dials and prompt keys."""
+    document = json.loads((directory / MANIFEST_NAME).read_text())
+    document.pop("flow")
+    for dial in dials:
+        document["dials"].pop(dial)
+    for key in prompt:
+        document["prompt"].pop(key)
+    return document
+
+
 # --- a control equals its subject ---------------------------------------------
 
 
@@ -945,24 +969,11 @@ def _control_differences(control_dir: Path, subject_dir: Path) -> list[str]:
         for name in SIBLINGS
         if (control_dir / name).read_bytes() != (subject_dir / name).read_bytes()
     ]
-    manifests = []
-    for directory in (control_dir, subject_dir):
-        document = json.loads((directory / MANIFEST_NAME).read_text())
-        document.pop("flow")
-        for dial in FACE_DIALS:
-            document["dials"].pop(dial)
-        manifests.append(document)
-    if manifests[0] != manifests[1]:
+    if _manifest_without(control_dir, FACE_DIALS) != _manifest_without(
+        subject_dir, FACE_DIALS
+    ):
         differing.append(MANIFEST_NAME)
     return differing
-
-
-def _control_pair(tmp_path: Path, control: str) -> tuple[Path, Path]:
-    """Copy a tracked control and its subject into a scratch root."""
-    return (
-        shutil.copytree(load_flow(control).path, tmp_path / control),
-        shutil.copytree(load_flow(CONTROLS[control]).path, tmp_path / "subject"),
-    )
 
 
 @pytest.mark.spec("image-generation:control:files-equal-the-subject")
@@ -992,7 +1003,7 @@ def test_a_control_manifest_differs_only_in_its_name_and_zeroed_face_dials(
 
 @pytest.mark.spec("image-generation:control:files-equal-the-subject")
 def test_a_control_whose_graph_drifts_is_named(tmp_path: Path) -> None:
-    control, subject = _control_pair(tmp_path, "control-anime-wai")
+    control, subject = _pair(tmp_path, "control-anime-wai", "summon-anime-wai")
     assert _control_differences(control, subject) == []
     (control / GRAPH_NAME).write_text("{}\n")
 
@@ -1001,7 +1012,7 @@ def test_a_control_whose_graph_drifts_is_named(tmp_path: Path) -> None:
 
 @pytest.mark.spec("image-generation:control:manifest-differs-only-in-the-face-dials")
 def test_a_control_whose_manifest_differs_elsewhere_is_named(tmp_path: Path) -> None:
-    control, subject = _control_pair(tmp_path, "control-anime-wai")
+    control, subject = _pair(tmp_path, "control-anime-wai", "summon-anime-wai")
     document = json.loads((control / MANIFEST_NAME).read_text())
     document["dials"]["cfg"] = 99
     (control / MANIFEST_NAME).write_text(json.dumps(document, indent=2) + "\n")
@@ -1015,48 +1026,29 @@ def test_a_control_whose_manifest_differs_elsewhere_is_named(tmp_path: Path) -> 
 def _flat_differences(flat_dir: Path, subject_dir: Path) -> list[str]:
     """Return the files separating a flat flow from its subject beyond its style.
 
-    The style is the identity node's `end_at`, a hires pass restyled onto the plain
-    checkpoint and the sheet's conditioning, `ip_weight`, the trailer and the
-    negative. e.g. `["graph.json"]` when the hires pass reads anything else.
+    The style is the identity node's `end_at`, `ip_weight`, the trailer and the
+    negative. e.g. `["graph.json"]` when the graph differs anywhere else.
     """
     differing = [
         name
-        for name in (SCHEMA_NAME, CAPTION_BRIEFING_NAME)
-        if (flat_dir / name).read_bytes() != (subject_dir / name).read_bytes()
+        for name in SIBLINGS
+        if name != GRAPH_NAME
+        and (flat_dir / name).read_bytes() != (subject_dir / name).read_bytes()
     ]
-    nodes = json.loads((subject_dir / MANIFEST_NAME).read_text())["nodes"]
-    graphs = [json.loads((d / GRAPH_NAME).read_text()) for d in (flat_dir, subject_dir)]
-    identity, hires = nodes["identity"], nodes["hires_sampler"]
-    restyled = {
-        "model": graphs[1][identity]["inputs"]["model"],
-        "positive": [nodes["positive"], 0],
-        "negative": [nodes["negative"], 0],
-    }
-    flat_hires = graphs[0][hires]["inputs"]
-    if {key: flat_hires[key] for key in restyled} == restyled:
-        flat_hires.update({key: graphs[1][hires]["inputs"][key] for key in restyled})
-    graphs[0][identity]["inputs"]["end_at"] = graphs[1][identity]["inputs"]["end_at"]
-    if graphs[0] != graphs[1]:
+    style = {"dials": ("ip_weight",), "prompt": ("trailer", "negative")}
+    manifest, subject_manifest = (
+        _manifest_without(d, **style) for d in (flat_dir, subject_dir)
+    )
+    identity = subject_manifest["nodes"]["identity"]
+    ours, theirs = (
+        json.loads((d / GRAPH_NAME).read_text()) for d in (flat_dir, subject_dir)
+    )
+    ours[identity]["inputs"]["end_at"] = theirs[identity]["inputs"]["end_at"]
+    if ours != theirs:
         differing.append(GRAPH_NAME)
-    manifests = []
-    for directory in (flat_dir, subject_dir):
-        document = json.loads((directory / MANIFEST_NAME).read_text())
-        document.pop("flow")
-        document["dials"].pop("ip_weight")
-        document["prompt"].pop("trailer")
-        document["prompt"].pop("negative")
-        manifests.append(document)
-    if manifests[0] != manifests[1]:
+    if manifest != subject_manifest:
         differing.append(MANIFEST_NAME)
     return differing
-
-
-def _flat_pair(tmp_path: Path, flat: str) -> tuple[Path, Path]:
-    """Copy a tracked flat flow and its subject into a scratch root."""
-    return (
-        shutil.copytree(load_flow(flat).path, tmp_path / flat),
-        shutil.copytree(load_flow(FLATS[flat]).path, tmp_path / "subject"),
-    )
 
 
 @pytest.mark.spec("image-generation:flat:files-equal-the-subject")
@@ -1064,7 +1056,7 @@ def _flat_pair(tmp_path: Path, flat: str) -> tuple[Path, Path]:
 def test_a_flat_flow_holds_the_subjects_schema_and_briefing(
     flat: str, tmp_path: Path
 ) -> None:
-    ours, subject = _flat_pair(tmp_path, flat)
+    ours, subject = _pair(tmp_path, flat, FLATS[flat])
     assert _flat_differences(ours, subject) == []
 
     (ours / SCHEMA_NAME).write_text("{}\n")
@@ -1073,16 +1065,16 @@ def test_a_flat_flow_holds_the_subjects_schema_and_briefing(
 
 @pytest.mark.spec("image-generation:flat:the-graph-differs-in-the-face-chains-end")
 @pytest.mark.parametrize("flat", sorted(FLATS))
-def test_a_flat_graph_differs_only_in_the_face_chains_end_and_the_hires_pass(
+def test_a_flat_graph_differs_only_in_the_face_chains_end(
     flat: str, tmp_path: Path
 ) -> None:
-    ours, subject = _flat_pair(tmp_path, flat)
-    nodes = load_flow(flat).nodes
-    graph = json.loads((ours / GRAPH_NAME).read_text())
+    ours, subject = _pair(tmp_path, flat, FLATS[flat])
+    tracked = load_flow(flat)
+    graph = tracked.graph()
     assert _flat_differences(ours, subject) == []
-    assert graph[nodes["identity"]]["inputs"]["end_at"] < 1
+    assert graph[tracked.nodes["identity"]]["inputs"]["end_at"] < 1
 
-    graph[nodes["hires_sampler"]]["inputs"]["positive"] = [nodes["negative"], 0]
+    graph[tracked.nodes["hires_sampler"]]["inputs"]["denoise"] = 0.5
     (ours / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
     assert _flat_differences(ours, subject) == [GRAPH_NAME]
 
@@ -1103,7 +1095,7 @@ def test_a_flat_manifest_differs_only_in_its_name_and_its_style(
     )
     assert ours.dials["ip_weight"] < subject.dials["ip_weight"]
 
-    scratch, scratch_subject = _flat_pair(tmp_path, flat)
+    scratch, scratch_subject = _pair(tmp_path, flat, FLATS[flat])
     document = json.loads((scratch / MANIFEST_NAME).read_text())
     document["dials"]["identity_cn_strength"] = 0.5
     (scratch / MANIFEST_NAME).write_text(json.dumps(document, indent=2) + "\n")
