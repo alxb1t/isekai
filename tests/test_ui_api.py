@@ -111,6 +111,7 @@ from tests.stages import (  # noqa: E402
     caption,
     fake_tagger,
     render,
+    rendered_image,
     sheet,
 )
 
@@ -118,6 +119,8 @@ FLOW = "summon-anime-wai"
 COLLECTION = "2026-10-19"
 # The suite's own copy of the flows `config/ui.json` offers.
 OFFERED = (FLOW, "conjure-anime-wai")
+# The route every draft from an image is written through.
+DRAFT_ROUTE = f"/api/c/{COLLECTION}/draft"
 
 # The address every client below is built against. The app refuses a request
 # not addressed to the loopback address it was bound to, so a test client has
@@ -678,7 +681,7 @@ def test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written(
     before = snapshot(made.path)
 
     answered = client.post(
-        f"/api/c/{COLLECTION}/draft",
+        DRAFT_ROUTE,
         json={
             "flow": FLOW,
             "images": [{**image, "flow": FLOW}, {**image, "flow": "nope"}],
@@ -704,7 +707,7 @@ def test_a_revision_of_a_version_or_seed_no_run_can_hold_is_refused(
     before = snapshot(made.path)
 
     answered = client.post(
-        f"/api/c/{COLLECTION}/draft",
+        DRAFT_ROUTE,
         json={
             "flow": FLOW,
             "images": [
@@ -742,7 +745,7 @@ def _revised(client: TestClient, made: Run) -> Path:
     image.write_bytes(png_bytes(8, 8))
     (image.parent / "7.render.json").write_text("{}\n")
     answered = client.post(
-        f"/api/c/{COLLECTION}/draft",
+        DRAFT_ROUTE,
         json={
             "flow": FLOW,
             "images": [
@@ -804,9 +807,7 @@ def test_revising_an_image_whose_flow_holds_a_waiting_draft_answers_that_draft(
     image = {"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"}
     before = snapshot(made.path)
 
-    answered = client.post(
-        f"/api/c/{COLLECTION}/draft", json={"flow": FLOW, "images": [image]}
-    )
+    answered = client.post(DRAFT_ROUTE, json={"flow": FLOW, "images": [image]})
 
     assert answered.status_code == 200
     assert answered.json() == {
@@ -1875,9 +1876,6 @@ def _summon_image(made: Run, version: int = 1) -> dict[str, Any]:
     return {"digest": made.digest, "flow": FLOW, "version": version, "seed": "7"}
 
 
-DRAFT_ROUTE = f"/api/c/{COLLECTION}/draft"
-
-
 def _into_conjure(made: Run, version: int = 1) -> dict[str, Any]:
     """Return the request drafting conjure from summon's image under `version`."""
     return {"flow": CONJURE, "images": [_summon_image(made, version)]}
@@ -2109,18 +2107,13 @@ def test_a_selection_from_two_runs_drafts_each_into_the_flow_chosen(
         sheet(run, schema, vocabulary)
         review(run, FLOW)
         approve(run, FLOW, schema, vocabulary)
-        image = image_of(run, load_flow(FLOW), 1, seed)
-        image.parent.mkdir(parents=True)
-        image.write_bytes(png_bytes(8, 8))
-        (image.parent / f"{seed}.render.json").write_text("{}\n")
+        rendered_image(run, 1, seed)
         images.append(
             {"digest": run.digest, "flow": FLOW, "version": 1, "seed": str(seed)}
         )
     client = _client(wired, made, tmp_path, drafted=False)
 
-    answered = client.post(
-        f"/api/c/{COLLECTION}/draft", json={"flow": CONJURE, "images": images}
-    )
+    answered = client.post(DRAFT_ROUTE, json={"flow": CONJURE, "images": images})
 
     assert answered.status_code == 200
     for run, seed in ((made, 7), (other, 8)):

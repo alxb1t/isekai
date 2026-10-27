@@ -620,7 +620,6 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
                     "--cancel takes an approval back and --from copies one; drop "
                     f"`--from {args.source}` or `--cancel` from the command"
                 )
-        if verb == "approve":
             _refuse_bad_source(args.source, "from", flows, wired)
         if verb == "generate":
             _refuse_bad_source(args.seeds_from, "seeds-from", flows, wired)

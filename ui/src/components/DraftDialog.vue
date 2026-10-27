@@ -4,13 +4,14 @@ import { useRouter } from 'vue-router'
 import { draft } from '../api'
 import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
+import { imageKey } from '../cells'
 import { clamp } from '../grid'
 import { plain, shifted } from '../stores/keys'
 import type { DraftedImage, ImageRef, RefusedImage } from '../types'
 import KeyHint from './KeyHint.vue'
 
-/* *Draft from this* (design spec J5·3): a row per target, the images' own flow
-   first, named *revise*, and focused. `j` `k` move, `↵` drafts and opens Review
+/* *Draft from this* (design spec J5·3): a row per offered flow, the first
+   image's own first, named *revise* where every image is of it, and focused. `j` `k` move, `↵` drafts and opens Review
    on the first draft, `Esc` closes. All or nothing: a refusal lists every image
    and offers to deselect the refused. A target's edited waiting draft is opened,
    not replaced; beside written drafts, the dialog names it `already waiting`. */
@@ -39,11 +40,12 @@ const title = computed(() => {
     : `Draft from this · ${props.images.length} images`
 })
 const revises = (target: string) => props.images.every((one) => one.flow === target)
+const rowsFor = computed(() => {
+  const own = props.images[0]?.flow
+  return [...props.targets].sort((a, b) => Number(b === own) - Number(a === own))
+})
 const kept = computed(() => (refused.value ?? []).filter((one) => one.refusal === null))
 const dropped = computed(() => (refused.value ?? []).length - kept.value.length)
-const key = (one: ImageRef) => `${one.digest}|${one.flow}|${one.version}|${one.seed}`
-const waits = (one: ImageRef) =>
-  answered.value?.some((held) => held.waiting !== null && key(held) === key(one)) ?? false
 
 function rows(): HTMLElement[] {
   return [...(dialog.value?.querySelectorAll<HTMLElement>('[data-target]') ?? [])]
@@ -100,7 +102,7 @@ useKeys('overlay', [
     id: 'draft',
     keys: plain('Enter'),
     label: 'draft and review',
-    run: () => void write(props.targets[at()], props.images),
+    run: () => void write(rowsFor.value[at()], props.images),
     when: () => !refused.value && !answered.value && at() >= 0,
   },
   {
@@ -138,12 +140,12 @@ useKeys('overlay', [
     <template v-if="refused || answered">
       <p
         v-for="one in refused ?? answered ?? []"
-        :key="key(one)"
+        :key="imageKey(one)"
         class="render-dialog__flow mono"
       >
         <span class="render-dialog__name">{{ one.flow }}</span>
         {{ one.digest }} · v{{ one.version }} · seed {{ one.seed }}
-        <span v-if="waits(one)" data-waiting>· already waiting</span>
+        <span v-if="'waiting' in one && one.waiting" data-waiting>· already waiting</span>
         <span
           v-if="'refusal' in one && one.refusal"
           class="render-dialog__refusal"
@@ -154,7 +156,7 @@ useKeys('overlay', [
     </template>
     <div v-else class="render-dialog__targets">
       <button
-        v-for="target in targets"
+        v-for="target in rowsFor"
         :key="target"
         class="btn btn-secondary render-dialog__target mono"
         type="button"

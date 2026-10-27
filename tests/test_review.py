@@ -54,6 +54,7 @@ from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, caption, runs_flag, sheet
+from tests.stages import rendered_image as _image
 
 FLOW = "summon-anime-wai"
 
@@ -1543,16 +1544,6 @@ def test_discarding_an_approved_flow_is_refused_and_changes_nothing(
         discard(run, FLOW)
 
     assert snapshot(run.directory(FLOW, "review")) == before
-
-
-def _image(run: Run, version: int, seed: int, flow: str = FLOW) -> Path:
-    """Write what a render of `flow` leaves for `seed` under approval `version`."""
-    group = run.directory(flow, "outputs", f"{version:03d}")
-    group.mkdir(parents=True, exist_ok=True)
-    (group / f"{seed}.render.json").write_text("{}\n")
-    image = group / f"{seed}.png"
-    image.write_bytes(b"png")
-    return image
 
 
 def _revise_verb(vocabulary: Vocabulary, *images: Path) -> tuple[int, str]:

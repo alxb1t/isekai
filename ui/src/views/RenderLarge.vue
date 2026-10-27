@@ -92,7 +92,7 @@ useKeys('screen', [
     keys: [shifted('KeyD')],
     label: 'draft from this',
     run: () => (drafting.value = true),
-    when: () => (detail.value?.targets.length ?? 0) > 0,
+    when: () => detail.value !== null,
   },
   {
     id: 'compare',
@@ -154,7 +154,6 @@ onMounted(async () => {
             class="btn btn-secondary"
             type="button"
             data-draft-from
-            :disabled="!detail.targets.length"
             @click="drafting = true"
           >
             Draft from this<KeyHint command="draft-from" />

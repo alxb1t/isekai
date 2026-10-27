@@ -19,14 +19,14 @@ def draft_across(
     run: Run,
     target: Flow,
     source: str,
-    version: int | None,
+    version: int,
     vocabulary: Callable[[], Vocabulary],
     field_map: Callable[[], FieldMap],
-    seed: int | None = None,
+    seed: int,
 ) -> Path:
-    """Return `target`'s draft from `source`'s approval `version`, else its newest.
+    """Return `target`'s draft from `source`'s approval `version`.
 
-    `seed`, where given, names the image of that approval the draft records.
+    `seed` names the image of that approval the draft records.
     A target with no sheet has its sheet filled from `source`'s tag list first,
     and that write is what assigns it. The approval is checked whole, and the
     sheet stage checks the tag list before its write, so a refusal writes nothing.

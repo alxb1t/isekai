@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar } from '../bars'
+import { imageKey } from '../cells'
 import { sourceAt, sourceThumbAt, thumbAt } from '../api'
 import DraftDialog from '../components/DraftDialog.vue'
 import ImageViewer from '../components/ImageViewer.vue'
@@ -46,12 +47,7 @@ const shown = computed(() =>
   }),
 )
 
-interface Spot {
-  digest: string
-  flow: string
-  version: number
-  seed: string
-}
+type Spot = ImageRef
 
 /* Each cell's versions as they are drawn, oldest first, by source row then flow.
    The payload lists them newest first, which a living scenario holds. */
@@ -93,17 +89,11 @@ function spot(row: number, flow: string, version: number, seed: string): string 
   return `${row}|${flow}|${version}|${seed}`
 }
 
-/* An image as the selection holds it. e.g. "0d4b…|summon-anime-wai|1|42" */
-const key = (one: Spot) => `${one.digest}|${one.flow}|${one.version}|${one.seed}`
+const key = imageKey
 
 const chosen = computed<ImageRef[]>(() =>
   rows.value.flat().filter((one) => selected.value.has(key(one))),
 )
-/* Every offered flow, the first chosen image's own first. */
-const targets = computed(() => {
-  const own = chosen.value[0]?.flow
-  return [...(info.value?.flows ?? [])].sort((a, b) => Number(b === own) - Number(a === own))
-})
 
 function toggle(one: Spot): void {
   const next = new Set(selected.value)
@@ -349,7 +339,7 @@ onUnmounted(() => {
       v-if="drafting"
       :collection="collection"
       :images="chosen"
-      :targets="targets"
+      :targets="info.flows"
       @close="drafting = false"
     />
     <RenderBar

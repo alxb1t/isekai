@@ -40,7 +40,15 @@ from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.fakes import READER, FakeComfyClient, stub_comfy
 from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, Always, fake_wd14, runs_flag, sheet, write_wd14
+from tests.stages import (
+    FIELD_MAP,
+    Always,
+    fake_wd14,
+    rendered_image,
+    runs_flag,
+    sheet,
+    write_wd14,
+)
 from tests.transports import FakeTransport
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -719,22 +727,12 @@ def _two_approvals(
     return run
 
 
-def _rendered(run: Run, version: int, seed: int) -> Path:
-    """Write what a render of summon leaves for `seed` under approval `version`."""
-    group = run.directory("summon-anime-wai", "outputs", f"{version:03d}")
-    group.mkdir(parents=True, exist_ok=True)
-    (group / f"{seed}.render.json").write_text("{}\n")
-    image = group / f"{seed}.png"
-    image.write_bytes(b"png")
-    return image
-
-
 @pytest.mark.spec("cli:draft:another-flow-is-drafted-from-the-image")
 def test_draft_writes_another_flow_from_the_images_approval_and_seed(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     run = _two_approvals(tmp_path, "ada", schema, vocabulary)
-    argv = ["draft", "--flow", CONJURE, str(_rendered(run, 1, 7))]
+    argv = ["draft", "--flow", CONJURE, str(rendered_image(run, 1, 7))]
 
     assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
 
@@ -766,7 +764,7 @@ def test_draft_assigns_a_target_with_no_sheet_and_fills_it_from_the_source(
     sheet(run, schema, vocabulary)
     review(run, "summon-anime-wai")
     approve(run, "summon-anime-wai", schema, vocabulary)
-    argv = ["draft", "--flow", CONJURE, str(_rendered(run, 1, 7))]
+    argv = ["draft", "--flow", CONJURE, str(rendered_image(run, 1, 7))]
 
     assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
 

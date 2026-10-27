@@ -65,6 +65,16 @@ def runs_flag(run: Run) -> str:
     return f" --runs {shlex.quote(str(run.path.parent))}"
 
 
+def rendered_image(run: Run, version: int, seed: int, flow: str = FLOW.id) -> Path:
+    """Write what a render of `flow` leaves for `seed` under approval `version`."""
+    group = run.directory(flow, "outputs", f"{version:03d}")
+    group.mkdir(parents=True, exist_ok=True)
+    (group / f"{seed}.render.json").write_text("{}\n")
+    image = group / f"{seed}.png"
+    image.write_bytes(b"png")
+    return image
+
+
 def caption(
     run: Run,
     reader: caption_stage.Reader,

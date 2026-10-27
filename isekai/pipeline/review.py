@@ -205,7 +205,6 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
     e.g. (run, f, 1, 1840266731) -> review/003.draft.json, seeds [1840266731]
     """
     carried = refuse_revision(run, flow, version, seed)
-    waiting = current_draft(run.directory(flow, REVIEW))
     renders: Renders = {"count": 1, "seeds": [seed]}
     return _write_draft(
         run,
@@ -215,7 +214,7 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
         carried,
         carried["sheet"],
         renders,
-        version=None if waiting is None else int(waiting.name[:3]),
+        version=_waiting_number(run, flow),
         image={"flow": flow, "version": version, "seed": seed},
     )
 
@@ -259,7 +258,6 @@ def draft_from(
     require(copied, body, "vocabulary", dict, remedy)
     require(copied, body, "fields", dict, remedy)
     _refuse_edited(run, flow)
-    waiting = current_draft(run.directory(flow, REVIEW))
     merged = {**body["fields"], **carried["fields"]}
     fields = {name: list(merged[name]) for name in schema.names if name in merged}
     return _write_draft(
@@ -270,7 +268,7 @@ def draft_from(
         {**body, "fields": fields},
         sheet_version,
         None if seed is None else {"count": 1, "seeds": [seed]},
-        version=None if waiting is None else int(waiting.name[:3]),
+        version=_waiting_number(run, flow),
         drafted_from={"flow": source, "approval": approval},
         image=None
         if seed is None
@@ -327,14 +325,26 @@ def waiting_edit(run: Run, flow: str) -> Path | None:
     return waiting
 
 
-def _refuse_edited(run: Run, flow: str) -> None:
-    """Refuse `flow`'s waiting draft with edits of its own, naming its discard."""
+def _refuse_edited(run: Run, flow: str, again: str = "draft it again") -> None:
+    """Refuse `flow`'s waiting draft with edits of its own, naming its discard.
+
+    `again` is what to do once it is discarded.
+    """
     if (edited := waiting_edit(run, flow)) is not None:
         raise Refusal(
             f"{run.id}: flow {flow} has {edited.name} waiting with edits of its "
-            "own, and a draft from another flow never replaces an edit; approve "
-            f"it, or {_discarding(run, flow)}"
+            "own, and a new draft never replaces an edit; approve it, or run "
+            f"`{stage_command(run, STAGE, flow, options=DISCARD)}`, then {again}"
         )
+
+
+def _waiting_number(run: Run, flow: str) -> int | None:
+    """Return the number of `flow`'s waiting draft, which a new draft replaces.
+
+    e.g. review/002.draft.json -> 2; no draft waiting -> None
+    """
+    waiting = current_draft(run.directory(flow, REVIEW))
+    return None if waiting is None else int(waiting.name[:3])
 
 
 def _discarding(run: Run, flow: str) -> str:
@@ -387,12 +397,12 @@ def refuse_drafts(
                     f"`{_draft_command(selection[first][0], target)}` alone, "
                     "and draft this image once that draft is approved"
                 )
+            again = f"run `{_draft_command(image, target)}`"
             if flow == target:
-                again = f"run `{_draft_command(image, target)}`"
                 refuse_revision(run, flow, version, seed, again)
             else:
                 drafting_approval(run, target, flow, version, seed)
-                _refuse_edited(run, target)
+                _refuse_edited(run, target, again)
             refused.append(None)
         except Refusal as refusal:
             refused.append(str(refusal))
@@ -418,12 +428,7 @@ def refuse_revision(
     before anything is written. `again` is what to do once the refusal's cause
     is fixed.
     """
-    if (edited := waiting_edit(run, flow)) is not None:
-        raise Refusal(
-            f"{run.id}: flow {flow} has {edited.name} waiting with edits of its "
-            "own, and a revision never replaces an edit; approve it, or run "
-            f"`{stage_command(run, STAGE, flow, options=DISCARD)}`, then {again}"
-        )
+    _refuse_edited(run, flow, again)
     copied = approval_of(run, flow, version)
     if not copied.exists():
         raise Refusal(
