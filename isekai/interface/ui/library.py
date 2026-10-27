@@ -328,7 +328,7 @@ def _session(path: Path) -> dict[str, Any]:
 
 
 def hub(folder: Path, flows: Sequence[str], flows_dir: Path) -> Hub:
-    """Return collection `folder`'s grid over `flows`, each cell's stage from a run."""
+    """Return `folder`'s grid over `flows`, each cell's stage from its run."""
     return _grid(folder, _loaded(flows, flows_dir))
 
 

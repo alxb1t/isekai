@@ -37,7 +37,7 @@ import type { FieldCandidates } from '../types'
    move between them are read by `TagInput`. */
 const props = defineProps<{ collection: string; digest: string; flow: string }>()
 const router = useRouter()
-const collection = useQueue(props.collection, props.flow, () => props.digest)
+const queue = useQueue(props.collection, props.flow, () => props.digest)
 const failure = ref<string | null>(null)
 /* A refusal reading the sheet again after an approval, a cancel or a discard,
    or of the cancel or the discard itself: the bar says what could not be done. */
@@ -76,7 +76,7 @@ function select(digest: string): void {
 }
 
 function stepCollection(direction: -1 | 1): void {
-  const inputs = collection.inputs.value
+  const inputs = queue.inputs.value
   const at = inputs.findIndex((i) => i.id === props.digest)
   if (at < 0 || inputs.length === 0) return
   select(inputs[(at + direction + inputs.length) % inputs.length].id)
@@ -108,14 +108,14 @@ const candidates = ref<FieldCandidates | null>(null)
 /* True while a lens is up, by construction rather than by remembering to set two
    flags together. `TagInput` reads it and yields Escape and the arrows, so `Esc`
    closes the lens rather than clearing a fragment behind it and `←`/`→` do not
-   fire twice — once for chip selection and once for the collection. */
+   fire twice — once for chip selection and once for the queue. */
 const suspended = computed(() => lens.value !== null)
 const selectedChip = ref<number | null>(null)
 
 /* What the viewer shows: the rail's photographs from the open one, the image a
    draft came from alone, or the photograph and that image side by side. */
 const photos = computed(() =>
-  collection.inputs.value.map((input) => ({
+  queue.inputs.value.map((input) => ({
     src: photoUrl(input.id),
     name: input.name,
     width: input.width,
@@ -124,7 +124,7 @@ const photos = computed(() =>
 )
 const opened = computed(() =>
   Math.max(
-    collection.inputs.value.findIndex((input) => input.id === current.value),
+    queue.inputs.value.findIndex((input) => input.id === current.value),
     0,
   ),
 )
@@ -183,7 +183,7 @@ const kicker = computed(() => {
    the approve bar. */
 async function reread(id: string): Promise<void> {
   refused.value = null
-  const [read] = await Promise.allSettled([collection.load(), sheet.open(id)])
+  const [read] = await Promise.allSettled([queue.load(), sheet.open(id)])
   focused.value = null
   selectedChip.value = null
   if (read.status === 'rejected') refused.value = (read.reason as Error).message
@@ -253,7 +253,7 @@ async function cancelApprove(): Promise<void> {
 const showing = computed(
   () =>
     sheet.detail.value ??
-    collection.inputs.value.find((input) => input.id === current.value) ??
+    queue.inputs.value.find((input) => input.id === current.value) ??
     null,
 )
 
@@ -339,7 +339,7 @@ function moveRow(direction: -1 | 1): void {
 function commit(field: string, tag: string): void {
   sheet.commit(field, tag, selectedChip.value)
   selectedChip.value = null
-  collection.markEdited(current.value)
+  queue.markEdited(current.value)
 }
 
 function back(field: string): void {
@@ -348,7 +348,7 @@ function back(field: string): void {
   const at = selectedChip.value ?? count - 1
   sheet.remove(field, at)
   selectedChip.value = null
-  collection.markEdited(current.value)
+  queue.markEdited(current.value)
 }
 
 /* Open a lens from wherever the focus is. `blur()` rather than a flag: the field
@@ -471,7 +471,7 @@ useKeys('screen', [
     keys: plain('Escape'),
     label: 'the flows waiting',
     run: () => void router.push({ name: 'review-head', params: { collection: props.collection } }),
-    when: () => collection.info.value !== null && chooses(collection.info.value),
+    when: () => queue.info.value !== null && chooses(queue.info.value),
   },
   ...paneKeys(useKeyStore().mac, movePane, moveRow),
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
@@ -524,7 +524,7 @@ onBeforeRouteLeave(async () => {
 onMounted(async () => {
   window.addEventListener('beforeunload', onLeave)
   // Independent reads: the sheet needs only the route's digest.
-  const [read] = await Promise.allSettled([collection.load(), sheet.open(current.value)])
+  const [read] = await Promise.allSettled([queue.load(), sheet.open(current.value)])
   if (read.status === 'rejected') {
     failure.value = (read.reason as Error).message
     return
@@ -555,21 +555,21 @@ watch(current, (id) => {
   <RefusalPage v-if="failure" :refusal="failure" />
   <div v-else class="review">
     <LoadingSkeleton
-      v-if="collection.loading.value || sheet.loading.value"
+      v-if="queue.loading.value || sheet.loading.value"
       class="review__reading"
-      :reading="collection.loading.value ? null : current"
+      :reading="queue.loading.value ? null : current"
       :vocabulary="vocabulary"
     />
-    <div v-if="collection.info.value" class="work" @focusin="remember">
+    <div v-if="queue.info.value" class="work" @focusin="remember">
       <CollectionRail
         :flow="props.flow"
-        :inputs="collection.inputs.value"
-        :others="collection.others.value"
-        :approved="collection.approved.value"
+        :inputs="queue.inputs.value"
+        :others="queue.others.value"
+        :approved="queue.approved.value"
         :current="current"
-        :edited="collection.edited.value"
+        :edited="queue.edited.value"
         :photo-url="photoUrl"
-        :loading="collection.loading.value"
+        :loading="queue.loading.value"
         @select="select"
       />
 
@@ -603,7 +603,7 @@ watch(current, (id) => {
         :saving="sheet.saving.value"
         :saved="sheet.readonly.value ? null : minute(sheet.saved.value)"
         :previous="revision?.fields ?? drafted?.fields ?? null"
-        @remove="(field, index) => (sheet.remove(field, index), collection.markEdited(current))"
+        @remove="(field, index) => (sheet.remove(field, index), queue.markEdited(current))"
       >
         <template #editor="{ field }">
           <TagInput

@@ -88,7 +88,7 @@ class Staged:
 
 @dataclass(frozen=True)
 class Committed:
-    """What a commit wrote into a collection, skipped as a source's bytes, left out."""
+    """What a commit wrote, skipped as a source's bytes, and left out."""
 
     collection: Path
     written: tuple[str, ...]

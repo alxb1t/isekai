@@ -113,7 +113,7 @@ onMounted(async () => {
     <template v-else>
       <div class="home__head">
         <p class="section-label">
-          library · {{ collectionCount }} {{ noun(collectionCount, 'collection', 'collections') }} · newest activity
+          library · {{ collectionCount }} {{ noun(collectionCount, 'collection') }} · newest activity
           first
         </p>
         <button class="btn btn-primary" type="button" @click="importing = true">

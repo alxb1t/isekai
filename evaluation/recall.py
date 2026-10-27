@@ -130,7 +130,7 @@ def totals(rows: Sequence[Row]) -> dict[str, dict[str, Total]]:
 
 
 def record(rows: Sequence[Row], tagger: Mapping[str, str], floor: float) -> Record:
-    """Return the collection's record; `tagger` maps each model's `dest` to a digest."""
+    """Return the record; `tagger` maps each model's `dest` to its digest."""
     return {
         "tagger": dict(tagger),
         "floor": floor,

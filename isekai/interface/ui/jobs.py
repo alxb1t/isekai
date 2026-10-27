@@ -432,8 +432,8 @@ class Jobs:
                         job.state = "failed"
                         job.message = (
                             f"{step.verb} on {step.flow} ended before reporting "
-                            f"(exit {code}); read {job.collection}/{LOG}, then try "
-                            "again"
+                            f"(exit {code}); read {job.collection}/{LOG}, "
+                            "then try again"
                         )
                         break
         finally:

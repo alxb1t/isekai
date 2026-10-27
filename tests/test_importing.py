@@ -560,7 +560,7 @@ def test_an_uncleanable_file_chosen_as_it_is_imports(
 
 
 @pytest.mark.spec("import:stage:a-commit-moves-every-file")
-def test_a_commit_moves_every_staged_file_into_the_batch(tmp_path: Path) -> None:
+def test_a_commit_moves_every_staged_file_into_the_collection(tmp_path: Path) -> None:
     library = tmp_path / "library"
     staging = stage(library)
     for name, colour in (("a.jpg", (1, 1, 1)), ("b.jpg", (2, 2, 2))):
@@ -663,7 +663,7 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
 
 @pytest.mark.spec("import:stage:an-unusable-name-is-refused")
 @pytest.mark.parametrize("name", ["taken", "", "a/b", ".hidden"])
-def test_an_unusable_batch_name_is_refused_and_staging_kept(
+def test_an_unusable_collection_name_is_refused_and_staging_kept(
     tmp_path: Path, name: str
 ) -> None:
     library = tmp_path / "library"
@@ -678,7 +678,7 @@ def test_an_unusable_batch_name_is_refused_and_staging_kept(
 
 
 @pytest.mark.spec("import:stage:a-batch-git-can-reach-is-refused")
-def test_a_batch_inside_the_working_tree_is_refused_and_nothing_written(
+def test_a_collection_inside_the_working_tree_is_refused_and_nothing_written(
     tmp_path: Path,
 ) -> None:
     inside = REPO / "collection-in-the-tree"
@@ -801,7 +801,7 @@ def test_two_uploads_of_one_name_keep_their_own_states(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec("ui:sheet:an-upload-after-import-is-refused")
-def test_an_upload_once_import_commits_is_refused_and_the_batch_is_unchanged(
+def test_an_upload_once_import_commits_is_refused_and_the_collection_is_unchanged(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     library = tmp_path / "library"

@@ -126,7 +126,7 @@ ADDRESS = f"http://{HOST}:{PORT}"
 
 
 def _at(run: Run, tail: str = "") -> str:
-    """Return the review path naming `run` in `FLOW`: `/api/c/<b>/review/<d>/<f>`."""
+    """Return the review path naming `run` in `FLOW`: `/api/c/<c>/review/<d>/<f>`."""
     return f"/api/c/{COLLECTION}/review/{run.digest}/{FLOW}{tail}"
 
 

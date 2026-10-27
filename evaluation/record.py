@@ -1,4 +1,4 @@
-"""What both evaluators ask of a collection: its runs, their names, the record's place.
+"""What both evaluators ask of a collection: its runs, their names, where records go.
 
 A record names a run by its digest prefix, since a slug can be a person's name.
 The record sits beside the runs and never where git can reach. Both evaluators

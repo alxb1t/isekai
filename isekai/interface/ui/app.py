@@ -32,8 +32,7 @@ and `python -m isekai`'s import graph never reaches it at all.
 GET  /api/library
 GET  /api/c/{collection}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/c/{collection}/prepare   ·   POST /api/jobs/{prepare,render}/stop
-GET  /api/c/{collection}/render   ·   POST …/render{/quote,}
-                                       {keep_open, limit_s, images}
+GET  /api/c/{collection}/render  ·  POST …/render{/quote,}  {keep_open, limit_s, images}
 GET  /api/sessions/running   ·   GET /api/c/{collection}/sessions/{id}
 POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}, and GET its /thumb
@@ -323,7 +322,7 @@ def create_app(
 
     @app.get("/api/c/{collection}/hub")
     def read_hub(collection: str) -> dict[str, Any]:
-        """Describe a collection's grid: its sources by the offered flows, each stage.
+        """Return a collection's grid: its sources by offered flow, each cell's stage.
 
         Read from the run directories on every request, so it follows a verb run
         in the terminal while the page is open.
@@ -913,8 +912,7 @@ def create_app(
                     drafts[at]["waiting"] = waiting.name
                 else:
                     located.append((at, image, (run, flow, version, seed)))
-            # Each other image the collection holds takes its answer from the review
-            # stage.
+            # Each other image the collection holds is answered by the review stage.
             checked = refuse_revisions([(image, held) for _, image, held in located])
             for (at, _, _), answer in zip(located, checked, strict=True):
                 answers[at] = answer

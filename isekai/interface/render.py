@@ -283,7 +283,7 @@ class Record:
             raise Refusal(
                 f"{self._folder} cannot hold a session record: its filesystem has "
                 f"no hard links or file locks ({failure.strerror}); keep the "
-                "collection on a disk that has both, such as the default .data/, and "
+                "collection on a disk with both, such as the default .data/, and "
                 "render again"
             ) from None
         except BaseException:
@@ -579,7 +579,7 @@ def _limit(asked: int | None, ceiling_s: int) -> None:
 
 @dataclass(frozen=True)
 class Short:
-    """What a collection lacks of its approvals, what it leaves out, what is damaged."""
+    """What a collection lacks of its approvals, leaves out, and has damaged."""
 
     lines: list[Line]
     # (run, flow, images), e.g. ("0d4b…_ada", "summon-anime-wai", 2)

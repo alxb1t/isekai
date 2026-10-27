@@ -317,10 +317,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--collection",
         type=Path,
         required=True,
-        help=(
-            "the collection directory; made when absent, else the files join its "
-            "sources/"
-        ),
+        help="the collection directory; made when absent, else files join its sources/",
     )
     made["import"].add_argument(
         "files", nargs="+", type=Path, help="the photographs to clean and add"
@@ -330,9 +327,7 @@ def build_parser() -> argparse.ArgumentParser:
     made["compare"].add_argument(
         "collection",
         type=Path,
-        help=(
-            "the collection directory: the one holding runs/, where the page is written"
-        ),
+        help="the collection directory, holding runs/; the page is written there",
     )
     # Every namespace keeps one shape; `compare` reads its runs from the collection.
     made["compare"].set_defaults(photos=[], runs=RUNS_ROOT)

@@ -37,13 +37,13 @@ class _Embedder:
         return self.vectors.get(path.name)
 
 
-def _batch(root: Path) -> tuple[Path, Path]:
-    """Write a cohort of three photographs and a batch of their runs.
+def _collection(root: Path) -> tuple[Path, Path]:
+    """Write a cohort of three photographs and a collection of their runs.
 
     p1-1 is rendered and its face found, p1-2 is rendered with no face found, and
     p2-1 is never rendered.
     """
-    cohort, runs = root / "cohort", root / "batch" / "runs"
+    cohort, runs = root / "cohort", root / "collection" / "runs"
     for colour, name in enumerate(sorted(VECTORS.keys() - {"11.png"})):
         (cohort / name[:2]).mkdir(parents=True, exist_ok=True)
         photo = cohort / name[:2] / name
@@ -61,7 +61,7 @@ def _batch(root: Path) -> tuple[Path, Path]:
 def test_a_cohort_photograph_with_no_face_refuses_before_any_render_is_opened(
     tmp_path: Path,
 ) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     embed = _Embedder({k: v for k, v in VECTORS.items() if k != "p2-1.png"})
 
     with pytest.raises(Refusal, match="p2-1.png"):
@@ -73,7 +73,7 @@ def test_a_cohort_photograph_with_no_face_refuses_before_any_render_is_opened(
 def test_a_render_with_no_face_and_an_unrendered_photograph_are_rows(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     monkeypatch.setattr(entry, "_embedder", lambda models: _Embedder(VECTORS))
 
     code = entry.main([str(runs), "--cohort", str(cohort)])
@@ -99,7 +99,7 @@ class _Decoding(_Embedder):
 
 @pytest.mark.spec("evaluation:cohort:an-undecodable-file-is-refused")
 def test_a_cohort_file_that_is_not_an_image_refuses_naming_it(tmp_path: Path) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     (cohort / "p1" / "notes.txt").write_text("not a photograph")
     embed = _Decoding(VECTORS)
 
@@ -110,7 +110,7 @@ def test_a_cohort_file_that_is_not_an_image_refuses_naming_it(tmp_path: Path) ->
 
 @pytest.mark.spec("evaluation:table:an-unreadable-render-is-a-row")
 def test_a_render_that_does_not_decode_is_its_own_row(tmp_path: Path) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     (render,) = runs.glob(f"*/{FLOW}/{OUTPUTS}/001/22.png")
     render.write_bytes(b"\x89PNG trunc")
     vectors = {**VECTORS, "22.png": [0.9, 0.1, 0.0]}
@@ -127,7 +127,7 @@ def test_a_render_that_does_not_decode_is_its_own_row(tmp_path: Path) -> None:
 
 @pytest.mark.spec("evaluation:table:an-unreadable-render-is-a-row")
 def test_a_render_too_large_to_open_is_its_own_row(tmp_path: Path) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     (render,) = runs.glob(f"*/{FLOW}/{OUTPUTS}/001/22.png")
     render.write_bytes(oversized_png())
     vectors = {**VECTORS, "22.png": [0.9, 0.1, 0.0]}
@@ -144,7 +144,7 @@ def test_a_render_too_large_to_open_is_its_own_row(tmp_path: Path) -> None:
 def test_the_first_seed_of_the_latest_render_group_is_the_one_ranked(
     tmp_path: Path,
 ) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     run = open_run(cohort / "p1" / "p1-1.png", runs)
     later = run.directory(FLOW, OUTPUTS, "002")
     later.mkdir()
@@ -165,7 +165,7 @@ def test_the_first_seed_of_the_latest_render_group_is_the_one_ranked(
 
 @pytest.mark.spec("evaluation:table:an-empty-latest-group-is-not-rendered")
 def test_a_latest_group_holding_no_render_is_not_rendered(tmp_path: Path) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     run = open_run(cohort / "p1" / "p1-1.png", runs)
     failed = run.directory(FLOW, OUTPUTS, "002")
     failed.mkdir()
@@ -185,7 +185,7 @@ def test_a_latest_group_holding_no_render_is_not_rendered(tmp_path: Path) -> Non
 def test_a_run_that_cannot_be_read_is_listed_and_the_others_are_scored(
     tmp_path: Path,
 ) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     (damaged,) = runs.glob("*_p1-2")
     (stray,) = runs.glob("*_p2-1")
     (damaged / "run.json").write_text("{not json")
@@ -207,7 +207,7 @@ def test_a_run_that_cannot_be_read_is_listed_and_the_others_are_scored(
 def test_a_flow_this_build_does_not_carry_costs_its_run_only_that_flow(
     tmp_path: Path,
 ) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     (run,) = runs.glob("*_p1-1")
     (run / "a-retired-flow").mkdir()
 
@@ -223,7 +223,7 @@ def test_a_flow_this_build_does_not_carry_costs_its_run_only_that_flow(
 def test_the_record_counts_an_outside_and_an_unreadable_run_and_names_neither(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     stranger = tmp_path / "elsewhere" / "stranger.png"
     stranger.parent.mkdir()
     Image.new("RGB", (8, 8), (0, 0, 200)).save(stranger)
@@ -250,7 +250,7 @@ def test_the_record_counts_an_outside_and_an_unreadable_run_and_names_neither(
 def test_a_scored_run_is_named_by_its_digest_prefix_and_never_its_filename(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _, cohort = _batch(tmp_path)
+    _, cohort = _collection(tmp_path)
     named = tmp_path / "photos" / "ada-lovelace.png"
     named.parent.mkdir()
     named.write_bytes((cohort / "p1" / "p1-1.png").read_bytes())
@@ -278,7 +278,7 @@ def test_a_scored_run_is_named_by_its_digest_prefix_and_never_its_filename(
 def test_a_renamed_run_is_named_by_the_digest_its_frame_records(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     (run,) = runs.glob("*_p1-2")
     prefix = run.name[:ID_DIGEST_CHARS]
     run.rename(runs / "ada-lovelace-old")
@@ -299,7 +299,7 @@ def test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refuse
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     repository = tmp_path / "repository"
-    runs, cohort = _batch(repository)
+    runs, cohort = _collection(repository)
     monkeypatch.setattr(wiring, "REPOSITORY", repository)
     monkeypatch.setattr(wiring, "DATA_ROOT", repository / ".data")
     embed = _Embedder(VECTORS)
@@ -317,7 +317,7 @@ def test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refuse
 def test_the_record_names_each_model_and_cohort_photograph_by_its_digest(
     tmp_path: Path,
 ) -> None:
-    runs, cohort = _batch(tmp_path)
+    runs, cohort = _collection(tmp_path)
     manifest = load_eval_manifest()
 
     rec, _ = entry.score(runs, cohort, _Embedder(VECTORS), FLOWS_DIR)

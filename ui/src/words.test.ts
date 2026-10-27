@@ -7,6 +7,6 @@ spec('ui:batch-folder:count-labels-use-singular-at-one', () => {
     for (const word of ['source', 'flow', 'input', 'file', 'image', 'field']) {
       expect(noun(count, word)).toBe(count === 1 ? word : `${word}s`)
     }
-    expect(noun(count, 'collection', 'collections')).toBe(count === 1 ? 'collection' : 'collections')
+    expect(noun(count, 'match', 'matches')).toBe(count === 1 ? 'match' : 'matches')
   }
 })
