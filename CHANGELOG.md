@@ -9,6 +9,13 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Added
+
+- Candidate `summon-flat-a-anime-wai`: summon with InstantID ending at 0.65, `ip_weight` 0.7 and a flat prompt,
+  run from the CLI; digest `4be4cf3e72d83a4e98b045ac2e43bcfc725d7c01ecdc9fd87349bff74eab7728` (0084 D1, D3).
+- Candidate `summon-flat-b-anime-wai`: A with its hires pass on the plain checkpoint, run from the CLI; digest
+  `bf03405951ab62e9bc5e833dc406bc4b9cdad6b3653e7de01f0cd3c72a0e33a6` (0084 D2, D3).
+
 ## [0.56.0] - 2026-10-27 · 0083-the-multi-batch-render
 
 Gate: local 0m47s · CI 1m16s (ci at f35f347) · 0.55.0: local 0m47s · CI none

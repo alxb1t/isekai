@@ -6,7 +6,7 @@ The candidates, the operator's collection, the sheets, the render, the verdict, 
 
 ## Progress
 
-- [ ] 1 — The candidate flows
+- [x] 1 — The candidate flows
 - [ ] 2 — The prototype collection **HUMAN
 - [ ] 3 — The sheets
 - [ ] 4 — The render ⚠️ GPU
@@ -15,9 +15,9 @@ The candidates, the operator's collection, the sheets, the render, the verdict, 
 
 ## 1 — The candidate flows
 
-- [ ] 1.1 **HALT CHECK** — summon's graph runs InstantID to the end.
+- [x] 1.1 **HALT CHECK** — summon's graph runs InstantID to the end.
   Verify: `python3 -c "import json;print(json.load(open('flows/summon-anime-wai/graph.json'))['8']['inputs']['end_at'])"` prints `1`.
-- [ ] 1.2 Add `flows/summon-flat-a-anime-wai/` per [D1](design.md#d1) and `flows/summon-flat-b-anime-wai/` per
+- [x] 1.2 Add `flows/summon-flat-a-anime-wai/` per [D1](design.md#d1) and `flows/summon-flat-b-anime-wai/` per
   [D2](design.md#d2); pin both in `PINNED`, add `FLATS` and bind the three `image-generation:flat:` keys in
   `tests/test_flow.py` per [D3](design.md#d3); `config/ui.json` stays as it is.
   Verify: `grep -c 'image-generation:flat:' tests/test_flow.py` prints `3`, and `grep -c 'summon-flat' config/ui.json` prints `0`, and `uv run pytest -q tests/test_flow.py` exits 0.

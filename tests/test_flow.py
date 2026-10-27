@@ -57,10 +57,26 @@ PINNED: dict[str, str] = {
     "summon-anime-wai": (
         "96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698"
     ),
+    "summon-flat-a-anime-wai": (
+        "4be4cf3e72d83a4e98b045ac2e43bcfc725d7c01ecdc9fd87349bff74eab7728"
+    ),
+    "summon-flat-b-anime-wai": (
+        "bf03405951ab62e9bc5e833dc406bc4b9cdad6b3653e7de01f0cd3c72a0e33a6"
+    ),
 }
 
 # A control flow and the subject it is held equal to; a second control is one line.
 CONTROLS: dict[str, str] = {"control-anime-wai": "summon-anime-wai"}
+
+# A flat flow and the subject it is held equal to but for its style.
+FLATS: dict[str, str] = {
+    "summon-flat-a-anime-wai": "summon-anime-wai",
+    "summon-flat-b-anime-wai": "summon-anime-wai",
+}
+
+# The terms a flat flow appends to its subject's trailer and negative.
+FLAT_TRAILER = "flat color, cel shading, lineart"
+FLAT_NEGATIVE = "realistic, photorealistic, 3d, semi-realistic"
 
 # The dials a control zeroes: the face chain, and nothing else.
 FACE_DIALS = ("ip_weight", "identity_cn_strength")
@@ -997,3 +1013,104 @@ def test_a_control_whose_manifest_differs_elsewhere_is_named(tmp_path: Path) -> 
     (control / MANIFEST_NAME).write_text(json.dumps(document, indent=2) + "\n")
 
     assert _control_differences(control, subject) == [MANIFEST_NAME]
+
+
+# --- a flat flow equals its subject but for its style --------------------------
+
+
+def _flat_differences(flat_dir: Path, subject_dir: Path) -> list[str]:
+    """Return the files separating a flat flow from its subject beyond its style.
+
+    The style is the identity node's `end_at`, a hires pass restyled onto the plain
+    checkpoint and the sheet's conditioning, `ip_weight`, the trailer and the
+    negative. e.g. `["graph.json"]` when the hires pass reads anything else.
+    """
+    differing = [
+        name
+        for name in (SCHEMA_NAME, CAPTION_BRIEFING_NAME)
+        if (flat_dir / name).read_bytes() != (subject_dir / name).read_bytes()
+    ]
+    nodes = json.loads((subject_dir / MANIFEST_NAME).read_text())["nodes"]
+    graphs = [json.loads((d / GRAPH_NAME).read_text()) for d in (flat_dir, subject_dir)]
+    identity, hires = nodes["identity"], nodes["hires_sampler"]
+    restyled = {
+        "model": graphs[1][identity]["inputs"]["model"],
+        "positive": [nodes["positive"], 0],
+        "negative": [nodes["negative"], 0],
+    }
+    flat_hires = graphs[0][hires]["inputs"]
+    if {key: flat_hires[key] for key in restyled} == restyled:
+        flat_hires.update({key: graphs[1][hires]["inputs"][key] for key in restyled})
+    graphs[0][identity]["inputs"]["end_at"] = graphs[1][identity]["inputs"]["end_at"]
+    if graphs[0] != graphs[1]:
+        differing.append(GRAPH_NAME)
+    manifests = []
+    for directory in (flat_dir, subject_dir):
+        document = json.loads((directory / MANIFEST_NAME).read_text())
+        document.pop("flow")
+        document["dials"].pop("ip_weight")
+        document["prompt"].pop("trailer")
+        document["prompt"].pop("negative")
+        manifests.append(document)
+    if manifests[0] != manifests[1]:
+        differing.append(MANIFEST_NAME)
+    return differing
+
+
+def _flat_pair(tmp_path: Path, flat: str) -> tuple[Path, Path]:
+    """Copy a tracked flat flow and its subject into a scratch root."""
+    return (
+        shutil.copytree(load_flow(flat).path, tmp_path / flat),
+        shutil.copytree(load_flow(FLATS[flat]).path, tmp_path / "subject"),
+    )
+
+
+@pytest.mark.spec("image-generation:flat:files-equal-the-subject")
+@pytest.mark.parametrize("flat", sorted(FLATS))
+def test_a_flat_flow_holds_the_subjects_schema_and_briefing(
+    flat: str, tmp_path: Path
+) -> None:
+    ours, subject = _flat_pair(tmp_path, flat)
+    assert _flat_differences(ours, subject) == []
+
+    (ours / SCHEMA_NAME).write_text("{}\n")
+    assert _flat_differences(ours, subject) == [SCHEMA_NAME]
+
+
+@pytest.mark.spec("image-generation:flat:the-graph-differs-in-the-face-chains-end")
+@pytest.mark.parametrize("flat", sorted(FLATS))
+def test_a_flat_graph_differs_only_in_the_face_chains_end_and_the_hires_pass(
+    flat: str, tmp_path: Path
+) -> None:
+    ours, subject = _flat_pair(tmp_path, flat)
+    nodes = load_flow(flat).nodes
+    graph = json.loads((ours / GRAPH_NAME).read_text())
+    assert _flat_differences(ours, subject) == []
+    assert graph[nodes["identity"]]["inputs"]["end_at"] < 1
+
+    graph[nodes["hires_sampler"]]["inputs"]["positive"] = [nodes["negative"], 0]
+    (ours / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
+    assert _flat_differences(ours, subject) == [GRAPH_NAME]
+
+
+@pytest.mark.spec("image-generation:flat:the-manifest-differs-in-the-style")
+@pytest.mark.parametrize("flat", sorted(FLATS))
+def test_a_flat_manifest_differs_only_in_its_name_and_its_style(
+    flat: str, tmp_path: Path
+) -> None:
+    ours, subject = load_flow(flat), load_flow(FLATS[flat])
+    separator = subject.prompt["separator"]
+    assert _flat_differences(ours.path, subject.path) == []
+    assert ours.prompt["trailer"] == separator.join(
+        (subject.prompt["trailer"], FLAT_TRAILER)
+    )
+    assert ours.prompt["negative"] == separator.join(
+        (subject.prompt["negative"], FLAT_NEGATIVE)
+    )
+    assert ours.dials["ip_weight"] < subject.dials["ip_weight"]
+
+    scratch, scratch_subject = _flat_pair(tmp_path, flat)
+    document = json.loads((scratch / MANIFEST_NAME).read_text())
+    document["dials"]["identity_cn_strength"] = 0.5
+    (scratch / MANIFEST_NAME).write_text(json.dumps(document, indent=2) + "\n")
+    assert _flat_differences(scratch, scratch_subject) == [MANIFEST_NAME]
