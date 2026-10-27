@@ -367,35 +367,19 @@ def refuse_drafts(
     """Return why each image of `selection` cannot be drafted into `target`, else None.
 
     An image of `target` is checked as `refuse_revision` checks it, any other as
-    `draft_from` refuses before it writes. Checked whole, so a selection is
-    drafted all or none; see `_refusals`.
+    `draft_from` refuses before it writes. Checked whole before anything is
+    written, so a selection is drafted all or not at all; a flow takes one draft
+    at a time, and its run is known by the identity of its directory, never by
+    the text of its path.
     e.g. ("c", [(a.png, (run, s, 1, 7)), (b.png, (run, s, 2, 8))])
          -> [None, "<run>/c: is in this selection twice, …"]
     """
-    return _refusals([(image, held, target) for image, held in selection])
-
-
-def refuse_revisions(selection: Sequence[tuple[Path, Revision]]) -> list[str | None]:
-    """Return why each image of `selection` cannot be revised, None where it can.
-
-    Each image is drafted into its own flow, as `refuse_drafts` checks it.
-    """
-    return _refusals([(image, held, held[1]) for image, held in selection])
-
-
-def _refusals(selection: Sequence[tuple[Path, Revision, str]]) -> list[str | None]:
-    """Return why each image cannot be drafted into the flow beside it, else None.
-
-    Checked whole before anything is written, so a selection is drafted all or
-    not at all; a flow takes one draft at a time, and its run is known by the
-    identity of its directory, never by the text of its path.
-    """
-    seen: dict[tuple[int, int, str], int] = {}
+    seen: dict[tuple[int, int], int] = {}
     refused: list[str | None] = []
-    for index, (image, (run, flow, version, seed), target) in enumerate(selection):
+    for index, (image, (run, flow, version, seed)) in enumerate(selection):
         try:
             held = run.path.stat()
-            first = seen.setdefault((held.st_dev, held.st_ino, target), index)
+            first = seen.setdefault((held.st_dev, held.st_ino), index)
             if first != index:
                 raise Refusal(
                     f"{run.id}/{target}: is in this selection twice, and a flow takes "

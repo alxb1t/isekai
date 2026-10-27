@@ -68,7 +68,7 @@ from isekai.foundation.run import (
     rendered_at,
 )
 from isekai.interface.compare_view import write_page
-from isekai.interface.drafting import draft_image
+from isekai.interface.drafting import draft_from_image
 from isekai.interface.render import run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
@@ -522,7 +522,7 @@ def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
     ]
     if not refused:
         for _, one in located:
-            draft = draft_image(flow, one, vocabulary, field_map)
+            draft = draft_from_image(flow, one, vocabulary, field_map)
             print(f"draft wrote {draft.relative_to(draft.parents[3])}", file=wired.out)
     for message in refused:
         print(f"refused: {message}", file=wired.err)

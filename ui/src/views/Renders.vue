@@ -4,23 +4,23 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar } from '../bars'
 import { sourceAt, sourceThumbAt, thumbAt } from '../api'
+import DraftDialog from '../components/DraftDialog.vue'
 import ImageViewer from '../components/ImageViewer.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
-import ReviseConfirm from '../components/ReviseConfirm.vue'
 import { useKeys } from '../composables/useKeys'
 import { type Move, kept, moved } from '../grid'
 import { useCollectionStore } from '../stores/collection'
 import { plain, shifted } from '../stores/keys'
 import { noun } from '../words'
-import type { RenderVersion, RevisedImage } from '../types'
+import type { ImageRef, RenderVersion } from '../types'
 
 /* Renders: a grid of sources by flows, each cell one row of its images, its
    versions oldest to newest, each image marked with its version (design spec
-   J5·1). ↵ or a click opens an image's large view; space selects, and e revises
-   the selection (§7). A seed rendered under two versions is marked ⇄. The Render
+   J5·1). ↵ or a click opens an image's large view; space selects, and ⇧D drafts
+   a flow from the selection (J5·3). A seed rendered under two versions is marked ⇄. The Render
    bar offers what the newest approvals lack; a source, its row's first column,
    opens in the viewer on ↵ or a click on its thumbnail. */
 const props = defineProps<{ collection: string }>()
@@ -29,7 +29,7 @@ const refusal = ref<string | null>(null)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 /* The selected images, each as `key` spells it. */
 const selected = ref(new Set<string>())
-const revising = ref(false)
+const drafting = ref(false)
 /* The source open in the viewer, by name, or null. */
 const viewing = ref<string | null>(null)
 /* The collection's images and its Render offer, shared with every screen of the collection;
@@ -96,9 +96,14 @@ function spot(row: number, flow: string, version: number, seed: string): string 
 /* An image as the selection holds it. e.g. "0d4b…|summon-anime-wai|1|42" */
 const key = (one: Spot) => `${one.digest}|${one.flow}|${one.version}|${one.seed}`
 
-const chosen = computed<RevisedImage[]>(() =>
+const chosen = computed<ImageRef[]>(() =>
   rows.value.flat().filter((one) => selected.value.has(key(one))),
 )
+/* Every offered flow, the first chosen image's own first. */
+const targets = computed(() => {
+  const own = chosen.value[0]?.flow
+  return [...(info.value?.flows ?? [])].sort((a, b) => Number(b === own) - Number(a === own))
+})
 
 function toggle(one: Spot): void {
   const next = new Set(selected.value)
@@ -181,10 +186,10 @@ useKeys('screen', [
     when: () => here() !== undefined || focus.value.column === 0,
   },
   {
-    id: 'revise',
-    keys: [shifted('KeyE')],
-    label: 'revise',
-    run: () => (revising.value = true),
+    id: 'draft-from',
+    keys: [shifted('KeyD')],
+    label: 'draft from this',
+    run: () => (drafting.value = true),
     when: () => chosen.value.length > 0,
   },
   { id: 'render', keys: [shifted('KeyG')], label: 'render', run: () => store.openDialog() },
@@ -238,11 +243,11 @@ onUnmounted(() => {
       <button
         class="btn btn-secondary"
         type="button"
-        data-revise
+        data-draft-from
         :disabled="!chosen.length"
-        @click="revising = true"
+        @click="drafting = true"
       >
-        Revise {{ chosen.length || '' }}<KeyHint command="revise" />
+        Draft from this {{ chosen.length || '' }}<KeyHint command="draft-from" />
       </button>
       <span v-if="!chosen.length" class="renders__reason">No image selected</span>
     </div>
@@ -340,11 +345,12 @@ onUnmounted(() => {
       :images="[{ src: sourceAt(collection, viewing), name: viewing }]"
       @close="viewing = null"
     />
-    <ReviseConfirm
-      v-if="revising"
+    <DraftDialog
+      v-if="drafting"
       :collection="collection"
       :images="chosen"
-      @close="revising = false"
+      :targets="targets"
+      @close="drafting = false"
     />
     <RenderBar
       v-if="shown === 'render'"

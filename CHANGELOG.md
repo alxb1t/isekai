@@ -15,6 +15,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   draft from an image lists the image's seed, so both writers share one waiting-draft rule (0085 D1, D2).
 - `isekai draft --flow FLOW <image>…` drafts any flow from rendered images — its own a revision, another from
   the image's approval — all or none; `revise` and `review --from`/`--version` go, as one act (0085 D3, D6, D7).
+- *Draft from this* `⇧D` on the large view and a Renders selection lists every offered flow, the image's own
+  first, and drafts through one route, `/draft`; `⇧E`, `⇧F` and Revise's confirm go (0085 D4, D5, D6, D7).
 
 ## [0.57.0] - 2026-10-27 · 0084-flat-summon
 

@@ -10,8 +10,11 @@ import type {
   Budget,
   Committed,
   Comparison,
+  DraftedImage,
+  DraftRefused,
   FieldCandidates,
   HubInfo,
+  ImageRef,
   InputDetail,
   JobKind,
   JobSlot,
@@ -21,9 +24,6 @@ import type {
   RenderOffer,
   Renders,
   RendersInfo,
-  ReviseRefused,
-  RevisedDraft,
-  RevisedImage,
   SessionRecord,
   RunningSession,
   TagMatches,
@@ -203,28 +203,21 @@ export function discardDraft(place: Place, saved: number | null): Promise<{ disc
   return send(`${at(place)}/discard`, 'POST', { saved })
 }
 
-/* Drafts the flow `place` names from `source`'s approval `version`, as `review
-   --from` does, recording the image `seed` names, assigning and filling a flow
-   with no sheet first; a waiting draft holding edits is answered `waiting`, and
-   nothing is written. */
-export function draftFrom(
-  place: Place,
-  source: string,
-  version: number,
-  seed: string,
-): Promise<{ draft: string; waiting?: true }> {
-  return send(`${at(place)}/draft-from`, 'POST', { source, version, seed })
-}
-
-/* Every image's draft, written or already waiting, or none: a refusal answers
-   each image, and is returned rather than thrown so the page can offer to
-   deselect the refused. */
-export function revise(
+/* Drafts `flow` from every image, as `draft --flow` does: an image's own flow a
+   revision, another from its approval. Each image's draft, written or an edited
+   one already waiting, or none: a refusal answers each image, and is returned
+   rather than thrown so the page can offer to deselect the refused. */
+export function draft(
   collection: string,
-  images: RevisedImage[],
-): Promise<{ drafts: RevisedDraft[] } | ReviseRefused> {
-  return send(`/api/c/${encodeURIComponent(collection)}/revise`, 'POST', { images }, {}, (body) =>
-    'images' in body,
+  flow: string,
+  images: ImageRef[],
+): Promise<{ drafts: DraftedImage[] } | DraftRefused> {
+  return send(
+    `/api/c/${encodeURIComponent(collection)}/draft`,
+    'POST',
+    { flow, images },
+    {},
+    (body) => 'images' in body,
   )
 }
 

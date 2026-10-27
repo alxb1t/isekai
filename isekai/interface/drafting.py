@@ -47,7 +47,7 @@ def draft_across(
     return draft_from(run, target.id, source, approval, target.schema, seed)
 
 
-def draft_image(
+def draft_from_image(
     target: Flow,
     image: Revision,
     vocabulary: Callable[[], Vocabulary],

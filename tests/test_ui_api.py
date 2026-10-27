@@ -678,8 +678,11 @@ def test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written(
     before = snapshot(made.path)
 
     answered = client.post(
-        f"/api/c/{COLLECTION}/revise",
-        json={"images": [{**image, "flow": FLOW}, {**image, "flow": "nope"}]},
+        f"/api/c/{COLLECTION}/draft",
+        json={
+            "flow": FLOW,
+            "images": [{**image, "flow": FLOW}, {**image, "flow": "nope"}],
+        },
     )
 
     assert answered.status_code == 409
@@ -701,11 +704,12 @@ def test_a_revision_of_a_version_or_seed_no_run_can_hold_is_refused(
     before = snapshot(made.path)
 
     answered = client.post(
-        f"/api/c/{COLLECTION}/revise",
+        f"/api/c/{COLLECTION}/draft",
         json={
+            "flow": FLOW,
             "images": [
                 {"digest": made.digest, "flow": FLOW, "version": version, "seed": seed}
-            ]
+            ],
         },
     )
 
@@ -738,9 +742,12 @@ def _revised(client: TestClient, made: Run) -> Path:
     image.write_bytes(png_bytes(8, 8))
     (image.parent / "7.render.json").write_text("{}\n")
     answered = client.post(
-        f"/api/c/{COLLECTION}/revise",
+        f"/api/c/{COLLECTION}/draft",
         json={
-            "images": [{"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"}]
+            "flow": FLOW,
+            "images": [
+                {"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"}
+            ],
         },
     )
     assert answered.status_code == 200
@@ -797,7 +804,9 @@ def test_revising_an_image_whose_flow_holds_a_waiting_draft_answers_that_draft(
     image = {"digest": made.digest, "flow": FLOW, "version": 1, "seed": "7"}
     before = snapshot(made.path)
 
-    answered = client.post(f"/api/c/{COLLECTION}/revise", json={"images": [image]})
+    answered = client.post(
+        f"/api/c/{COLLECTION}/draft", json={"flow": FLOW, "images": [image]}
+    )
 
     assert answered.status_code == 200
     assert answered.json() == {
@@ -1842,13 +1851,13 @@ def test_a_version_of_digits_outside_ascii_is_refused_not_failed(
     assert "names no version" in answered.json()["refusal"]
 
 
-# --- Conjure from this ---------------------------------------------------------
+# --- Draft from this, into another flow -----------------------------------------
 
 CONJURE = "conjure-anime-wai"
 
 
 def _drafting(made: Run, schema: Schema, vocabulary: Vocabulary) -> str:
-    """Approve and render summon at seed 7, and return conjure's draft-from route."""
+    """Approve and render summon at seed 7, and return conjure's review route."""
     flow = load_flow(FLOW)
     comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
     _source(made)
@@ -1858,11 +1867,29 @@ def _drafting(made: Run, schema: Schema, vocabulary: Vocabulary) -> str:
     approve(made, FLOW, schema, vocabulary)
     prepare(made, {FLOW: flow})
     render(made, flow, comfy, seeds=[7], poll=0)
-    return f"/api/c/{COLLECTION}/review/{made.digest}/{CONJURE}/draft-from"
+    return f"/api/c/{COLLECTION}/review/{made.digest}/{CONJURE}"
+
+
+def _summon_image(made: Run, version: int = 1) -> dict[str, Any]:
+    """Return summon's image at seed 7 under approval `version`, as a page names it."""
+    return {"digest": made.digest, "flow": FLOW, "version": version, "seed": "7"}
+
+
+DRAFT_ROUTE = f"/api/c/{COLLECTION}/draft"
+
+
+def _into_conjure(made: Run, version: int = 1) -> dict[str, Any]:
+    """Return the request drafting conjure from summon's image under `version`."""
+    return {"flow": CONJURE, "images": [_summon_image(made, version)]}
+
+
+def _drafted(made: Run, name: str = "001.draft.json") -> dict[str, Any]:
+    """Return the page's answer for summon's image drafted into conjure as `name`."""
+    return {"drafts": [{**_summon_image(made), "draft": name, "waiting": None}]}
 
 
 @pytest.mark.spec("ui:conjure-from:the-large-view-names-its-targets")
-def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
+def test_a_large_view_offers_every_offered_flow_its_own_first(
     wired: Wiring,
     made: Run,
     tmp_path: Path,
@@ -1870,29 +1897,26 @@ def test_a_large_view_offers_each_flow_drafted_from_a_sheet_alone(
     vocabulary: Vocabulary,
 ) -> None:
     _drafting(made, schema, vocabulary)
-    # Conjure is assigned to no source, and is a target: the press assigns.
-    # Control reads a photograph, so it is assigned and still no target.
+    # Conjure is assigned to no source, and is a target: the draft assigns.
+    # Control is assigned and offered by no surface here, so it is no target.
     assign(made, "control-anime-wai")
-    client = _client(wired, made, tmp_path, drafted=False)
+    client = _client(wired, made, tmp_path, drafted=False, offered=(CONJURE, FLOW))
 
     body = client.get(f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/7").json()
 
-    assert body["targets"] == [CONJURE]
+    assert body["targets"] == [FLOW, CONJURE]
 
-    # A sheet-alone flow the surface does not offer is no target, and its press
-    # is refused writing nothing.
+    # A flow the surface does not offer is no target, and its draft is refused
+    # writing nothing.
     alone = _client(wired, made, tmp_path, drafted=False, offered=(FLOW,))
     before = snapshot(made.path)
 
     narrowed = alone.get(
         f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/7"
     ).json()
-    pressed = alone.post(
-        f"/api/c/{COLLECTION}/review/{made.digest}/{CONJURE}/draft-from",
-        json={"source": FLOW, "version": 1},
-    )
+    pressed = alone.post(DRAFT_ROUTE, json=_into_conjure(made))
 
-    assert narrowed["targets"] == []
+    assert narrowed["targets"] == [FLOW]
     assert pressed.status_code == 409
     assert snapshot(made.path) == before
 
@@ -1905,11 +1929,11 @@ def test_a_draft_from_a_refused_source_writes_nothing(
     schema: Schema,
     vocabulary: Vocabulary,
 ) -> None:
-    route = _drafting(made, schema, vocabulary)
+    _drafting(made, schema, vocabulary)
     client = _client(wired, made, tmp_path, drafted=False)
     before = snapshot(made.path)
 
-    answered = client.post(route, json={"source": FLOW, "version": 9})
+    answered = client.post(DRAFT_ROUTE, json=_into_conjure(made, 9))
 
     assert answered.status_code == 409
     assert "009.approved.json" in answered.json()["refusal"]
@@ -1921,7 +1945,7 @@ def test_a_draft_from_a_refused_source_writes_nothing(
     approved.write_text(json.dumps({**json.loads(intact), "fields": None}))
     before = snapshot(made.path)
 
-    damaged = client.post(route, json={"source": FLOW, "version": 1})
+    damaged = client.post(DRAFT_ROUTE, json=_into_conjure(made))
 
     assert damaged.status_code == 409
     assert "001.approved.json" in damaged.json()["refusal"]
@@ -1933,7 +1957,7 @@ def test_a_draft_from_a_refused_source_writes_nothing(
     (made.directory(FLOW, WD14) / "001.json").write_text("{}")
     before = snapshot(made.path)
 
-    untagged = client.post(route, json={"source": FLOW, "version": 1})
+    untagged = client.post(DRAFT_ROUTE, json=_into_conjure(made))
 
     assert untagged.status_code == 409
     assert snapshot(made.path) == before
@@ -1948,18 +1972,17 @@ def test_a_draft_from_onto_an_edited_waiting_draft_answers_it_and_writes_nothing
     schema: Schema,
     vocabulary: Vocabulary,
 ) -> None:
-    route = _drafting(made, schema, vocabulary)
+    _drafting(made, schema, vocabulary)
     client = _client(wired, made, tmp_path, drafted=False)
-    assert client.post(route, json={"source": FLOW, "version": 1}).json() == {
-        "draft": "001.draft.json"
-    }
+    assert client.post(DRAFT_ROUTE, json=_into_conjure(made)).json() == _drafted(made)
     draft = made.directory(CONJURE, "review") / "001.draft.json"
     save_draft(made, CONJURE, {**read(draft, DRAFT_FILE)["fields"], "clothes": []})
     before = snapshot(made.path)
 
-    answered = client.post(route, json={"source": FLOW, "version": 1})
+    answered = client.post(DRAFT_ROUTE, json=_into_conjure(made))
 
-    assert answered.json() == {"draft": "001.draft.json", "waiting": True}
+    waiting = {**_summon_image(made), "draft": None, "waiting": "001.draft.json"}
+    assert answered.json() == {"drafts": [waiting]}
     assert snapshot(made.path) == before
 
 
@@ -1975,17 +1998,22 @@ def test_review_names_a_drafted_drafts_source_and_carries_its_sheets_fields(
     sheet(made, load_flow(CONJURE).schema, vocabulary, flow=CONJURE)
     client = _client(wired, made, tmp_path, drafted=False)
 
-    drafted = client.post(route, json={"source": FLOW, "version": 1})
-    body = client.get(route.removesuffix("/draft-from")).json()
+    drafted = client.post(DRAFT_ROUTE, json=_into_conjure(made))
+    body = client.get(route).json()
 
-    assert drafted.json() == {"draft": "001.draft.json"}
+    assert drafted.json() == _drafted(made)
     target = made.path / CONJURE / "sheets" / "001.json"
     own = read(target, SHEET_FILE)["fields"]
-    assert body["drafted"] == {"flow": FLOW, "approval": 1, "fields": own}
+    assert body["drafted"] == {
+        "flow": FLOW,
+        "approval": 1,
+        "fields": own,
+        "image": {"flow": FLOW, "version": 1, "seed": "7"},
+    }
     assert body["fields"]["expression"] == [] != own["expression"]
 
     _damage(target, _drop("fields"))
-    refused = client.get(route.removesuffix("/draft-from"))
+    refused = client.get(route)
 
     # `review --new-version` copies the same damaged sheet, so a hand restores it.
     assert refused.status_code == 409
@@ -2002,18 +2030,23 @@ def test_review_names_an_approved_drafted_drafts_source_and_its_sheets_fields(
 ) -> None:
     route = _drafting(made, schema, vocabulary)
     client = _client(wired, made, tmp_path, drafted=False)
-    client.post(route, json={"source": FLOW, "version": 1})
+    client.post(DRAFT_ROUTE, json=_into_conjure(made))
     approve(made, CONJURE, load_flow(CONJURE).schema, vocabulary)
 
-    body = client.get(route.removesuffix("/draft-from")).json()
+    body = client.get(route).json()
 
     target = made.path / CONJURE / "sheets" / "001.json"
     own = read(target, SHEET_FILE)["fields"]
     assert body["readonly"] is True
-    assert body["drafted"] == {"flow": FLOW, "approval": 1, "fields": own}
+    assert body["drafted"] == {
+        "flow": FLOW,
+        "approval": 1,
+        "fields": own,
+        "image": {"flow": FLOW, "version": 1, "seed": "7"},
+    }
 
     _damage(target, _drop("fields"))
-    refused = client.get(route.removesuffix("/draft-from"))
+    refused = client.get(route)
 
     # The approval is intact: the file to restore is the sheet it was drafted on.
     assert refused.status_code == 409
@@ -2031,13 +2064,69 @@ def test_a_sheet_filled_from_another_flows_tags_shows_that_flows_caption(
 ) -> None:
     route = _drafting(made, schema, vocabulary)
     client = _client(wired, made, tmp_path, drafted=False)
-    client.post(route, json={"source": FLOW, "version": 1})
+    client.post(DRAFT_ROUTE, json=_into_conjure(made))
 
-    body = client.get(route.removesuffix("/draft-from")).json()
+    body = client.get(route).json()
 
     assert body["caption"] == "Dark brown hair, brown eyes."
     assert body["caption_from"] == FLOW
     assert body["caption_command"] is None
+
+
+@pytest.mark.spec("ui:draft-from:an-unedited-waiting-draft-is-replaced")
+def test_a_draft_into_a_target_whose_waiting_draft_is_its_sheet_replaces_it(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    route = _drafting(made, schema, vocabulary)
+    sheet(made, load_flow(CONJURE).schema, vocabulary, flow=CONJURE)
+    assert review(made, CONJURE) is not None
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    answered = client.post(DRAFT_ROUTE, json=_into_conjure(made))
+
+    assert answered.json() == _drafted(made)
+    assert versions(made.directory(CONJURE, REVIEW)) == [1]
+    assert client.get(route).json()["drafted"]["flow"] == FLOW
+
+
+@pytest.mark.spec("ui:draft-from:a-selection-drafts-into-the-flow-chosen")
+def test_a_selection_from_two_runs_drafts_each_into_the_flow_chosen(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    photo = tmp_path / "bo.jpg"
+    photo.write_bytes(jpeg_bytes(900, 1200))
+    other = open_run(photo, wired.runs_root)
+    images = []
+    for run, seed in ((made, 7), (other, 8)):
+        sheet(run, schema, vocabulary)
+        review(run, FLOW)
+        approve(run, FLOW, schema, vocabulary)
+        image = image_of(run, load_flow(FLOW), 1, seed)
+        image.parent.mkdir(parents=True)
+        image.write_bytes(png_bytes(8, 8))
+        (image.parent / f"{seed}.render.json").write_text("{}\n")
+        images.append(
+            {"digest": run.digest, "flow": FLOW, "version": 1, "seed": str(seed)}
+        )
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    answered = client.post(
+        f"/api/c/{COLLECTION}/draft", json={"flow": CONJURE, "images": images}
+    )
+
+    assert answered.status_code == 200
+    for run, seed in ((made, 7), (other, 8)):
+        draft = read(run.directory(CONJURE, REVIEW) / "001.draft.json", DRAFT_FILE)
+        assert draft["producer"]["drafted_from"] == {"flow": FLOW, "approval": 1}
+        assert draft["renders"] == {"count": 1, "seeds": [seed]}
 
 
 # --- render sessions ----------------------------------------------------------

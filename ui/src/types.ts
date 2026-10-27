@@ -180,7 +180,7 @@ export interface Drafted {
   approval: number
   fields: Record<string, string[]>
   /* The image of that approval the draft was written from, where it names one. */
-  image?: Omit<RevisedImage, 'digest'>
+  image?: Omit<ImageRef, 'digest'>
 }
 
 export interface VocabEntry {
@@ -401,33 +401,32 @@ export interface RenderDetail {
   compare: number | null
   /* The cell's images, oldest version first, as Renders draws them. */
   images: { version: number; seed: string }[]
-  /* The offered flows drafted from a sheet alone, this one aside, assigned or
-     not. */
+  /* Every offered flow, this one first, assigned or not. */
   targets: string[]
 }
 
-/* One image a revision names, its seed a decimal string. */
-export interface RevisedImage {
+/* One image a draft is written from, its seed a decimal string. */
+export interface ImageRef {
   digest: string
   flow: string
   version: number
   seed: string
 }
 
-/* An image a revision answered: the draft it wrote, or the draft already waiting
-   in its flow, by name; the other is null. */
-export interface RevisedDraft extends RevisedImage {
+/* An image a draft answered: the draft it wrote, or the edited draft already
+   waiting in the target, by name; the other is null. */
+export interface DraftedImage extends ImageRef {
   draft: string | null
   waiting: string | null
 }
 
-/* An image of a refused revision: its refusal, or null where it could be revised. */
-export interface RefusedImage extends RevisedImage {
+/* An image of a refused draft: its refusal, or null where it could be drafted. */
+export interface RefusedImage extends ImageRef {
   refusal: string | null
 }
 
-/* A revision the server refused, answering each image. Nothing was written. */
-export interface ReviseRefused {
+/* A draft the server refused, answering each image. Nothing was written. */
+export interface DraftRefused {
   refusal: string
   images: RefusedImage[]
 }

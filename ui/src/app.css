@@ -237,6 +237,18 @@ button.appbar__render {
   color: var(--ink-2);
 }
 
+/* Draft from this (J5·3): a row per target, the one focused drafts on ↵. */
+.render-dialog__targets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.render-dialog__target {
+  justify-content: space-between;
+  font-size: 12px;
+}
+
 .render-dialog__name {
   color: var(--ink);
   margin-right: 8px;

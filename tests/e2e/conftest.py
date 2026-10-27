@@ -72,8 +72,8 @@ COMPARED = "compared"
 # approval holding a count no render takes.
 DAMAGED = "damaged"
 
-# The collection Conjure from this drafts in: one source whose summon approval changes
-# `clothes`, rendered at seed 7, and no conjure sheet: the press fills it.
+# The collection Draft from this drafts conjure in: one source whose summon approval
+# changes `clothes`, rendered at seed 7, and no conjure sheet: the draft fills it.
 CONJURED = "conjured"
 
 # The collection the chooser opens on: one source with an unapproved sheet in each flow.

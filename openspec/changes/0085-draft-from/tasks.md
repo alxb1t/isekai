@@ -6,7 +6,7 @@ The stage, the verb, then the page, per [design](design.md). Every new test carr
 
 - [x] 1 — The stage
 - [x] 2 — The verb
-- [ ] 3 — The page
+- [x] 3 — The page
 
 ## 1 — The stage
 
@@ -35,16 +35,16 @@ The stage, the verb, then the page, per [design](design.md). Every new test carr
 
 ## 3 — The page
 
-- [ ] 3.1 **HALT CHECK** — the page drafts through two routes.
+- [x] 3.1 **HALT CHECK** — the page drafts through two routes.
   Verify: `grep -c '/draft-from"\|/revise"' isekai/interface/ui/app.py` prints `2`.
-- [ ] 3.2 Add `/api/c/{collection}/draft` and every offered flow as a target, and delete `/draft-from` and `/revise`, in
+- [x] 3.2 Add `/api/c/{collection}/draft` and every offered flow as a target, and delete `/draft-from` and `/revise`, in
   `isekai/interface/ui/app.py` per [D4](design.md#d4) and [D6](design.md#d6); in `tests/test_ui_api.py` bind
   `ui:draft-from:an-unedited-waiting-draft-is-replaced` and `ui:draft-from:a-selection-drafts-into-the-flow-chosen`, and
   move the revise and draft-from tests to `/draft`.
   Verify: `grep -c '/draft-from"\|/revise"' isekai/interface/ui/app.py` prints `0`, and `grep -c 'ui:draft-from:' tests/test_ui_api.py` prints `2`, and `uv run pytest -q tests/test_ui_api.py` exits 0.
-- [ ] 3.3 Add `ui/src/components/DraftDialog.vue` and delete `ui/src/components/ReviseConfirm.vue`, open it on `⇧D` in
+- [x] 3.3 Add `ui/src/components/DraftDialog.vue` and delete `ui/src/components/ReviseConfirm.vue`, open it on `⇧D` in
   `ui/src/views/RenderLarge.vue` and `ui/src/views/Renders.vue`, and delete `⇧E` and `⇧F`, with `ui/src/api.ts` and
   `ui/src/types.ts`, per [D5](design.md#d5); in `tests/e2e/test_render.py` press `Shift+D`, then `Enter` on the row.
   Verify: `test -e ui/src/components/ReviseConfirm.vue; echo $?` prints `1`, and `grep -c "shifted('KeyE')\|shifted('KeyF')" ui/src/views/RenderLarge.vue ui/src/views/Renders.vue` prints `0` for each file, and `uv run python -m tools.typecheck_ui` exits 0, and `uv run pytest -q tests/e2e/test_render.py` exits 0.
-- [ ] 3.4 Edit `ui/design/spec.md` per [D7](design.md#d7).
+- [x] 3.4 Edit `ui/design/spec.md` per [D7](design.md#d7).
   Verify: `grep -c 'Draft from this' ui/design/spec.md` prints a number of at least `2`, and `grep -c '⇧E Revise\|⇧F Conjure' ui/design/spec.md` prints `0`, and `uv run pytest -q tests/e2e` exits 0.

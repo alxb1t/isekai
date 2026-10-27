@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { draftFrom, hub, imageAt, photoUrl, renderDetail, versionOf } from '../api'
+import { imageAt, photoUrl, renderDetail, versionOf } from '../api'
 import { type CellImage, others as othersOf, pick } from '../cells'
 import ComparePick from '../components/ComparePick.vue'
+import DraftDialog from '../components/DraftDialog.vue'
 import ImageViewer from '../components/ImageViewer.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
-import ReviseConfirm from '../components/ReviseConfirm.vue'
 import { useKeys } from '../composables/useKeys'
 import { plain, shifted } from '../stores/keys'
 import type { RenderDetail } from '../types'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
-   sheet it was rendered from beside it — filled fields only, read-only. ⇧E
-   revises it; c compares it with another image of its cell, picked in a dialog
-   of tiles (J5·8); ⇧C sets it beside its run's photograph; ⇧F drafts the first
-   target from its approval. */
+   sheet it was rendered from beside it — filled fields only, read-only. ⇧D
+   drafts a flow from it, its own a revision (J5·3); c compares it with another
+   image of its cell, picked in a dialog of tiles (J5·8); ⇧C sets it beside its
+   run's photograph. */
 const props = defineProps<{
   collection: string
   digest: string
@@ -27,10 +27,7 @@ const props = defineProps<{
 const router = useRouter()
 const detail = ref<RenderDetail | null>(null)
 const refusal = ref<string | null>(null)
-const revising = ref(false)
-const checkingRevision = ref(false)
-/* Why drafting a target from this image's approval was refused, or null. */
-const drafting = ref<string | null>(null)
+const drafting = ref(false)
 /* The image beside its run's photograph, in the viewer's pair. */
 const pairing = ref(false)
 /* The tile the dialog picking the image to compare with opens on, while it is open. */
@@ -81,54 +78,6 @@ function compare(other: CellImage): void {
   })
 }
 
-/* `conjure-anime-wai` -> `Conjure from this`. */
-function fromThis(flow: string): string {
-  const [word] = flow.split('-')
-  return `${word.charAt(0).toUpperCase()}${word.slice(1)} from this`
-}
-
-/* A rendered flow with a later draft is re-opened. Read its current state
-   before asking to write, so an existing correction opens without a confirm. */
-async function reviseImage(): Promise<void> {
-  if (checkingRevision.value) return
-  checkingRevision.value = true
-  drafting.value = null
-  try {
-    const grid = await hub(props.collection)
-    const cell = grid.sources.find((one) => one.digest === props.digest)?.cells[props.flow]
-    if (cell?.status === 're-opened') {
-      await router.push({
-        name: 'review',
-        params: { collection: props.collection, digest: props.digest, flow: props.flow },
-      })
-    } else revising.value = true
-  } catch (reason) {
-    drafting.value = (reason as Error).message
-  } finally {
-    checkingRevision.value = false
-  }
-}
-
-/* No confirm: the draft is one Discard draft away, and costs nothing. A waiting
-   draft with edits of its own is answered rather than replaced, and opened. */
-async function draftTarget(target: string): Promise<void> {
-  drafting.value = null
-  try {
-    await draftFrom(
-      { ...place.value, flow: target },
-      props.flow,
-      place.value.version,
-      props.seed,
-    )
-    void router.push({
-      name: 'review',
-      params: { collection: props.collection, digest: props.digest, flow: target },
-    })
-  } catch (reason) {
-    drafting.value = (reason as Error).message
-  }
-}
-
 /* Where esc and the back button go: the hub when it opened this view, else
    Renders, which holds every image. A pasted address carries no state. */
 const back = computed(() =>
@@ -139,16 +88,10 @@ const back = computed(() =>
 
 useKeys('screen', [
   {
-    id: 'revise',
-    keys: [shifted('KeyE')],
-    label: 'revise',
-    run: () => void reviseImage(),
-  },
-  {
     id: 'draft-from',
-    keys: [shifted('KeyF')],
+    keys: [shifted('KeyD')],
     label: 'draft from this',
-    run: () => void draftTarget(detail.value?.targets[0] ?? ''),
+    run: () => (drafting.value = true),
     when: () => (detail.value?.targets.length ?? 0) > 0,
   },
   {
@@ -207,18 +150,14 @@ onMounted(async () => {
       </p>
       <div class="large__actions">
         <div class="large__group">
-          <button class="btn btn-secondary" type="button" data-revise @click="reviseImage">
-            Revise this image<KeyHint command="revise" />
-          </button>
           <button
-            v-for="(target, index) in detail.targets"
-            :key="target"
             class="btn btn-secondary"
             type="button"
             data-draft-from
-            @click="draftTarget(target)"
+            :disabled="!detail.targets.length"
+            @click="drafting = true"
           >
-            {{ fromThis(target) }}<KeyHint v-if="index === 0" command="draft-from" />
+            Draft from this<KeyHint command="draft-from" />
           </button>
         </div>
         <div class="large__group">
@@ -246,9 +185,6 @@ onMounted(async () => {
           >
         </div>
       </div>
-      <p v-if="drafting" class="renders__refusal" data-draft-refusal>
-        <span class="refusal__mark" />{{ drafting }}
-      </p>
       <dl class="large__fields">
         <template v-for="(tags, name) in detail.fields" :key="name">
           <dt class="mono">{{ name }}</dt>
@@ -270,11 +206,12 @@ onMounted(async () => {
       pair
       @close="pairing = false"
     />
-    <ReviseConfirm
-      v-if="revising"
+    <DraftDialog
+      v-if="drafting"
       :collection="collection"
       :images="[{ digest, flow, version: place.version, seed }]"
-      @close="revising = false"
+      :targets="detail.targets"
+      @close="drafting = false"
     />
   </section>
 </template>
