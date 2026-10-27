@@ -101,11 +101,9 @@ defineExpose({
       </figure>
       <figure class="source__side source__revised" :style="{ flexGrow: renderRatio }" data-revised>
         <span class="source__row">
-          <span v-if="revised.from" class="kicker source__label"
-            >drafted from {{ revised.from }} · seed {{ revised.seed }}</span
-          >
-          <span v-else class="kicker source__label"
-            >render being revised · seed {{ revised.seed }}</span
+          <span class="kicker source__label"
+            >{{ revised.from ? `drafted from ${revised.from}` : 'render being revised' }} · seed
+            {{ revised.seed }}</span
           >
           <button class="btn btn-secondary source__pair-open" type="button" @click="$emit('pair')">
             Side by side<KeyHint command="photograph" />

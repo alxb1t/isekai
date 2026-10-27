@@ -180,7 +180,7 @@ export interface Drafted {
   approval: number
   fields: Record<string, string[]>
   /* The image of that approval the draft was written from, where it names one. */
-  image?: { flow: string; version: number; seed: string }
+  image?: Omit<RevisedImage, 'digest'>
 }
 
 export interface VocabEntry {

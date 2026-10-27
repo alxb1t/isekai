@@ -859,6 +859,7 @@ def create_app(
                 f"the request's seed {seed!r} is not one; send the image's decimal "
                 "seed, or none -- nothing was written"
             )
+        seed = None if seed is None else int(seed)
         offered(source)
         with _DRAFT_UPDATE:
             # An edited draft is the work in hand, so it is opened, not refused.
@@ -871,7 +872,7 @@ def create_app(
                 version,
                 shared.vocabulary,
                 shared.field_map,
-                None if seed is None else int(seed),
+                seed,
             )
         return {"draft": written.name}
 

@@ -1058,11 +1058,7 @@ def draft_image(body: Mapping[str, object]) -> DraftImage | None:
     if not isinstance(image, Mapping):
         return None
     flow, version, seed = image.get("flow"), image.get("version"), image.get("seed")
-    if not isinstance(flow, str):
-        return None
-    if not isinstance(version, int) or not isinstance(seed, int):
-        return None
-    if isinstance(version, bool) or isinstance(seed, bool):
+    if not (isinstance(flow, str) and type(version) is int and type(seed) is int):
         return None
     return {"flow": flow, "version": version, "seed": seed}
 

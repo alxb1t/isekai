@@ -57,18 +57,14 @@ const drafted = computed(() => sheet.detail.value?.drafted ?? null)
 /* The image a draft came from: a revision's, else the one a drafted draft names. */
 const revised = computed(() => {
   const held = revision.value
-  if (held?.seed)
-    return {
-      src: imageAt({ ...props, version: held.version, seed: held.seed }),
-      seed: held.seed,
-      from: null,
-    }
-  const image = drafted.value?.image
+  const image = held?.seed
+    ? { flow: props.flow, version: held.version, seed: held.seed }
+    : drafted.value?.image
   if (!image) return null
   return {
-    src: imageAt({ ...props, flow: image.flow, version: image.version, seed: image.seed }),
+    src: imageAt({ ...props, ...image }),
     seed: image.seed,
-    from: `${image.flow} v${image.version}`,
+    from: held?.seed ? null : `${image.flow} v${image.version}`,
   }
 })
 const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
