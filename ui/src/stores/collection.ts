@@ -1,5 +1,6 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch, type Ref } from 'vue'
+import { planOf } from '../bars'
 import { hub as readHub, renderOffer, renders as readRenders } from '../api'
 import type { CellEvent, HubCell, HubInfo, JobSlot, RenderOffer, RendersInfo } from '../types'
 import { type Snapshot, useLiveStore } from './live'
@@ -37,6 +38,8 @@ export const useCollectionStore = defineStore('collection', () => {
       name.value !== null &&
       (activeRender.value?.collections.includes(name.value) ?? false),
   )
+  /* The plan of the session this surface runs, for any collection, or null. */
+  const plan = computed(() => planOf(jobs.value.render))
   /* A Prepare running for this collection, not another's. */
   const preparing = computed(
     () => jobs.value.prepare?.state === 'running' && jobs.value.prepare.collection === name.value,
@@ -140,6 +143,13 @@ export const useCollectionStore = defineStore('collection', () => {
     void check()
     if (move === 'ended') ended()
   })
+  /* A landed image is short no more, so the bar's waiting count is read again. */
+  watch(
+    () => plan.value?.done,
+    (done, before) => {
+      if (done !== undefined && before !== undefined && name.value !== null) void check()
+    },
+  )
   watch(
     () => billing.value?.pod,
     () => {
@@ -157,6 +167,7 @@ export const useCollectionStore = defineStore('collection', () => {
     dialog,
     focus,
     rendering,
+    plan,
     preparing,
     open,
     reloadHub,

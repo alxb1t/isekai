@@ -590,8 +590,8 @@ approval with no image, and open the viewer on the newest of the cell's images w
 them, `↵` opening an image's large view; a tagged or unreadable cell SHALL do nothing. A cell holding images SHALL show
 every one of them, oldest to newest, each marked with its version. A source's cell SHALL be the grid's first column,
 reached by `h` and `←`, and `↵` there SHALL open its photograph in the viewer, stepping through the collection's
-sources. The hub SHALL keep its focus across a large view, the Back button and a switch of tabs. The header SHALL leave
-a 12 px gap between items.
+sources. The hub SHALL keep its focus across a large view, the Back button and a switch of tabs, a restored focus
+scrolled to the window's centre. The header SHALL leave a 12 px gap between items.
 
 A stage is a directory listing, the rule every stage already follows, so the grid cannot drift from the disk, and a tick
 survives a reload. The mark and the size are read from the source itself, so no file records them. An approved cell can
@@ -667,7 +667,7 @@ pictures share a foot, so a long name, a mark or a refusal moves only the text a
 - **Layers:** e2e
 - **WHEN** a rendered cell is clicked, then `↵` is pressed in the viewer
 - **THEN** the viewer opens on its newest image, then that image's large view
-- **AND** `Esc` returns to the hub, focused on that cell
+- **AND** `Esc` returns to the hub, focused on that cell, and that cell in view
 
 #### Scenario: a cell lists its images
 - **Key:** `ui:hub:a-cell-lists-its-images`
@@ -918,18 +918,19 @@ snapshot, so a stream opened again loses nothing, and one connection a page leav
 
 The system SHALL offer Render from a bar on a collection's hub and its Renders view that counts the images short of
 their approvals' counts, its collection's and, as `+n in other collections`, every other collection's, and SHALL show no
-such bar when no collection is short and no count is refused, nor on the hub while changes wait for Prepare. The bar
-SHALL be disabled, with its reason, when a render runs, when a pod may still be billing, when no RunPod key is in the
-surface's environment, and when an approval's count is refused. It SHALL open a dialog listing a row per collection
-short of images, in the Library's order, each ticked, and in each row per offered flow the images that will render and
-what is left out, with the reason; unticking a row SHALL quote the rest again; the session's estimate and limit, and its
-price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its configured rate; an estimate
-past the ceiling `gpunit.toml` names SHALL disable the confirmation, saying so. Its confirmation SHALL be the only act
-that rents; the dialog SHALL hold no URL, and SHALL close when its page is left, and the confirmation SHALL close it and
-open the session drawer over the page. The confirmation SHALL carry the ticked collections, the limit and the number of
-images the dialog showed, and SHALL be refused, starting nothing, when the ticked collections' quote taken again has a
-longer limit or another number of images. The bar SHALL show the newest offer asked for, whatever order the answers
-arrive in.
+such bar when no collection is short and no count is refused, nor on the hub while changes wait for Prepare. While a
+render runs the bar SHALL show the session's totals and *Session* in place of the count and Render, and name the images
+short that the session does not render as waiting for the next session. The bar SHALL be disabled, with its reason, when
+a pod may still be billing, when no RunPod key is in the surface's environment, and when an approval's count is refused.
+It SHALL open a dialog listing a row per collection short of images, in the Library's order, each ticked, and in each
+row per offered flow the images that will render and what is left out, with the reason; unticking a row SHALL quote the
+rest again; the session's estimate and limit, and its price at most — the limit at the hourly maximum `gpunit.toml`
+names, with the volume at its configured rate; an estimate past the ceiling `gpunit.toml` names SHALL disable the
+confirmation, saying so. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL, and SHALL
+close when its page is left, and the confirmation SHALL close it and open the session drawer over the page. The
+confirmation SHALL carry the ticked collections, the limit and the number of images the dialog showed, and SHALL be
+refused, starting nothing, when the ticked collections' quote taken again has a longer limit or another number of
+images. The bar SHALL show the newest offer asked for, whatever order the answers arrive in.
 
 The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
 not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires
@@ -1003,6 +1004,13 @@ a refused count keeps the bar, so the refusal is never silent.
 - **Layers:** unit
 - **WHEN** the ticked collections' estimate passes the configured ceiling
 - **THEN** the quote's confirmation is disabled, naming the ceiling
+
+#### Scenario: a running session shows its totals
+- **Key:** `ui:render:a-running-session-shows-its-totals`
+- **Layers:** unit
+- **WHEN** the bar is read while a session renders three images and a fourth is short outside it
+- **THEN** it shows the session's totals and *Session*, and one image waiting for the next session
+- **AND** it shows no count ready to render and no Render
 
 ### Requirement: The render job opens the volume, renders, and closes the volume unless kept
 
@@ -1117,17 +1125,19 @@ reaches nothing.
 
 The system SHALL list a collection's images by source and offered flow, each cell's approval versions newest first, and
 SHALL show them as a grid of sources by flows, each cell one row of its images, its versions oldest to newest, each
-image marked with its version, and open an image's large view, with the sheet it was rendered from, from any of them.
-A cell whose newest approval lacks images of its count SHALL carry the number it lacks, as the render stage counts
-it. Each source SHALL show its photograph's thumbnail, upright, opening the photograph in a viewer, its cell the
-grid's first column, reached by the keys and opened by `↵`. `Esc` on a large
-view SHALL return to the screen it was opened from, focused on the image it closed, and Renders SHALL keep its focus
-across the Back button and a switch of tabs. It SHALL mark an approval it cannot read as damaged, naming the
+image marked with its version, and open an image's large view, with the sheet it was rendered from, from any of them. A
+cell whose newest approval lacks images of its count SHALL carry the number it lacks, as the render stage counts it.
+Each source SHALL show its photograph's thumbnail, upright, opening the photograph in a viewer, its cell the grid's
+first column, reached by the keys and opened by `↵`. `h` `l` and the arrows on a large view SHALL step through the
+renders of the screen it was opened from — Renders: the source's row across its flows; the hub: the cell's images —
+replacing its address, held at either end, its head naming the step, `2 of 5`. `Esc` on a large view SHALL return to the
+screen it was opened from, focused on the image it closed and scrolled to the window's centre, and Renders SHALL keep
+its focus across the Back button and a switch of tabs. It SHALL mark an approval it cannot read as damaged, naming the
 file, and show every image, that version's own among them; and SHALL refuse an address whose version is not `v` and
-ASCII digits. It SHALL serve each thumbnail, a render's or a source's, from a cache in the library's `.cache/`, made
-on first request and named by the image's own bytes. It SHALL refuse an image it cannot read, one past Pillow's pixel
-bound among them, naming the file. It SHALL serve a photograph, a source or a run's copy, as the image its bytes are,
-whatever its name ends in, and a source in a format the render does not read as an upright JPEG of it.
+ASCII digits. It SHALL serve each thumbnail, a render's or a source's, from a cache in the library's `.cache/`, made on
+first request and named by the image's own bytes. It SHALL refuse an image it cannot read, one past Pillow's pixel bound
+among them, naming the file. It SHALL serve a photograph, a source or a run's copy, as the image its bytes are, whatever
+its name ends in, and a source in a format the render does not read as an upright JPEG of it.
 
 The images come back to where the sheets were decided, version by version in the order they were approved; a cache the
 library can lose costs only its rebuild. Two collections can hold one source rendered at one seed, so only the bytes say
@@ -1185,7 +1195,7 @@ hand in another format is still shown, as its thumbnail is.
 - **Layers:** e2e
 - **WHEN** an image is opened from the grid
 - **THEN** its large view shows the approval it was rendered from
-- **AND** `Esc` returns to the grid focused on that image
+- **AND** `Esc` returns to the grid focused on that image, and that image in view
 - **AND** `h` from a row's first image reaches its source, and `↵` there opens its photograph
 
 #### Scenario: a source opens in the viewer
@@ -1222,6 +1232,13 @@ hand in another format is still shown, as its thumbnail is.
 - **WHEN** a collection's grid focus is moved, then its view is opened again
 - **THEN** the focus is where it was left, or on the first spot when that one is gone
 
+#### Scenario: the large view steps through its screen's order
+- **Key:** `ui:renders:the-large-view-steps-its-screens-order`
+- **Layers:** unit
+- **WHEN** `l` is pressed on the large view of a source's first image, opened from Renders, then from the hub
+- **THEN** it shows the row's next image across the flows, then the cell's next image
+- **AND** at the last image `l` holds
+
 ### Requirement: Every command has one key, declared once, and none fires while typing
 
 The system SHALL declare each keyboard command once, with its key and its label, on the screen or overlay that offers
@@ -1234,8 +1251,8 @@ SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;`
 keep its own editing keys. On a grid, a move between rows SHALL keep the column it is in, held at a shorter row's end.
 On the hub and in the session drawer, a focused button or link SHALL keep `↵` and `Space`. An `Esc` that ends an input
 method's composition SHALL be the input method's, closing nothing. `Esc` SHALL close an open suggestion list first, then
-leave the field, then close the top overlay, then go back on the screen, and SHALL never close a billing alert. On the
-large view and on Renders a command that writes SHALL take a shifted letter and one that only looks a plain one. No key
+leave the field, then close the top overlay, then go back on the screen, and SHALL never close a billing alert. A plain
+letter SHALL move the focus, and a command SHALL take `⇧` and a letter. No key
 SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it quotes.
 
 A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
@@ -1835,17 +1852,17 @@ never does.
 
 The system SHALL head each image's large view with its approval version, the version it came from, read from its
 producer, naming it a revision when its fields differ from that version's and a re-roll when only its count or seeds do,
-and the approval's time, count and seeds. `c` on a large view SHALL open a pick of its source's images: the photograph's
-row on top, then a row per flow holding images of the source, each row its images oldest to newest, each named by its
-version and seed, the image compare started from marked; the focus SHALL start on the newest older version of its seed,
-else the image before it, else the photograph; `h j k l` and the arrows SHALL move it, keeping the column, held at a
-shorter row's end, `↵` SHALL compare the image picked and `Esc` close the pick. Compare SHALL set the image picked on
-the left and the image compare started from on the right, at equal size, each headed by its flow, version and seed:
-between two renders it SHALL show the fields both flows declare, marked where they differ, and say when the two seeds
-differ or the two share a sheet; with the photograph, the pair alone. The large view SHALL offer no *Side by side*.
+and the approval's time, count and seeds. `⇧C` on a large view SHALL open a pick of its source's images: the
+photograph's row on top, then a row per flow holding images of the source, each row its images oldest to newest, each
+captioned by its version, the image compare started from marked, the pick's head naming the focused image's flow,
+version and seed; the focus SHALL start on the newest older version of its seed, else the image before it, else the
+photograph; `h j k l` and the arrows SHALL move it, keeping the column, held at a shorter row's end, `↵` SHALL compare
+the image picked and `Esc` close the pick. Compare SHALL set the image picked on the left and the image compare started
+from on the right, at equal size, each headed by its flow, version and seed, and nothing else: the pair as tall as the
+window less the app bar and the heads, centred. The large view SHALL offer no *Side by side*.
 
 ```
-large view · summon v2 · seed 9423   c ─▶  photo                  [▣]
+large view · summon v2 · seed 9423  ⇧C ─▶  photo                  [▣]
                                            summon-anime-wai       [v1][v2·][v3]
                                            summon-flat-anime-wai  [v1]
                                        ↵ ─▶ Compare: the image picked │ summon v2 · seed 9423
@@ -1853,7 +1870,7 @@ large view · summon v2 · seed 9423   c ─▶  photo                  [▣]
 
 The origin is already on disk, so nothing new records it. A pick reads as a choice when every choice is in view; one
 source's images are every comparison the operator makes for one person. The eye returns to where it came from, on the
-right.
+right. The images are what is compared, so they take the room.
 
 #### Scenario: a version is named a revision or a re-roll
 - **Key:** `ui:compare:a-version-is-named-by-what-changed`
@@ -1870,21 +1887,21 @@ right.
 #### Scenario: Compare shows the pair and the changed fields
 - **Key:** `ui:compare:compare-shows-the-pair-and-the-change`
 - **Layers:** e2e
-- **WHEN** `c` is pressed on a revised image, then `↵`
-- **THEN** the older version is on the left and the revised image on the right, with the changed fields
+- **WHEN** `⇧C` is pressed on a revised image, then `↵`
+- **THEN** the older version is on the left and the revised image on the right, each under its head alone
 - **AND** a pick of another flow's image compares it, saying the seeds differ
 
 #### Scenario: the photograph's pick sets it beside the image
 - **Key:** `ui:compare:side-by-side-sets-the-image-beside-its-photograph`
 - **Layers:** e2e
-- **WHEN** `c` is pressed on an image's large view, then `k` to the photograph's row and `↵`
+- **WHEN** `⇧C` is pressed on an image's large view, then `k` to the photograph's row and `↵`
 - **THEN** the photograph is on the left and the image on the right, at equal height, with no fields
 
 #### Scenario: Compare takes any two images of a source
 - **Key:** `ui:compare:any-two-images-of-a-cell`
 - **Layers:** unit
 - **WHEN** Compare is asked for a summon image of v4 against a flat summon image of v1 with another seed
-- **THEN** it serves both, the shared fields that differ and that the seeds differ
+- **THEN** it serves both images' heads, and no changed field
 - **AND** the image picked is on the left, the image compare started from on the right
 
 #### Scenario: the pick moves by row and column
@@ -1892,3 +1909,9 @@ right.
 - **Layers:** unit
 - **WHEN** `j` is pressed on the photograph's row, then `l` twice, then `j` onto a shorter row
 - **THEN** the focus moves to the first flow's first image, then its third, then the shorter row's last
+
+#### Scenario: the pick names the focused tile
+- **Key:** `ui:compare:the-pick-names-the-focused-tile`
+- **Layers:** unit
+- **WHEN** the focus moves to the second of two seeds of one version
+- **THEN** its caption reads the version alone, and the pick's head names its flow, version and seed

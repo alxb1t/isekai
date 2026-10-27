@@ -1,5 +1,17 @@
 import { expect } from 'vitest'
-import { EMPTY_CELL, action, clicks, movePick, sourceGrid, targets } from './cells'
+import {
+  EMPTY_CELL,
+  action,
+  clicks,
+  movePick,
+  pickHead,
+  placeOf,
+  screenOrder,
+  sourceGrid,
+  stepped,
+  targets,
+  tileCaption,
+} from './cells'
 import { spec } from './test/spec'
 import type { HubCell, RenderDetail } from './types'
 
@@ -100,4 +112,75 @@ spec('ui:compare:a-seed-pairs-with-its-newest-older-version', () => {
       [2, '5'],
     ]),
   ).toEqual({ row: 0, column: 0 })
+})
+
+spec('ui:compare:the-pick-names-the-focused-tile', () => {
+  const seed = '18446744073709551615'
+  const grid = sourceGrid({
+    flow: 'summon-anime-wai',
+    version: 3,
+    seed: '7',
+    compare: null,
+    source: [
+      {
+        flow: 'summon-anime-wai',
+        images: [
+          { version: 2, seed: '7' },
+          { version: 2, seed },
+          { version: 3, seed: '7' },
+        ],
+      },
+    ],
+  } as unknown as RenderDetail)
+  const second = movePick(grid, { row: 1, column: 0 }, 'column+')
+  const tile = grid.rows[second.row].tiles[second.column]
+
+  expect(tileCaption(tile)).toBe('v2')
+  expect(pickHead({ flow: 'summon-anime-wai', version: 3, seed: '7' }, tile)).toBe(
+    `Compare summon-anime-wai v3 · seed 7 with summon-anime-wai v2 · seed ${seed}…`,
+  )
+})
+
+spec('ui:renders:the-large-view-steps-its-screens-order', () => {
+  const detail = {
+    flow: 'summon-anime-wai',
+    version: 1,
+    seed: '7',
+    source: [
+      {
+        flow: 'summon-anime-wai',
+        images: [
+          { version: 1, seed: '7' },
+          { version: 2, seed: '7' },
+        ],
+      },
+      { flow: 'summon-flat-anime-wai', images: [{ version: 1, seed: '5' }] },
+    ],
+  } as unknown as RenderDetail
+  const first = { flow: 'summon-anime-wai', version: 1, seed: '7' }
+  const second = { flow: 'summon-anime-wai', version: 2, seed: '7' }
+  const flat = { flow: 'summon-flat-anime-wai', version: 1, seed: '5' }
+
+  // From Renders, the row runs on across the flows; at its last image l holds.
+  const row = screenOrder(detail, 'renders')
+  expect(stepped(row, first, 1)).toEqual(second)
+  expect(stepped(row, second, 1)).toEqual(flat)
+  expect(stepped(row, flat, 1)).toBeNull()
+  expect(stepped(row, first, -1)).toBeNull()
+  detail.cell = detail.source[0].images
+  // From the hub, the cell's images alone.
+  const cell = screenOrder(detail, 'hub')
+  expect(stepped(cell, first, 1)).toEqual(second)
+  expect(stepped(cell, second, 1)).toBeNull()
+
+  // One approval's seeds were written 9 then 2; Renders sorts them numerically.
+  const nine = { flow: detail.flow, version: 1, seed: '9' }
+  const two = { flow: detail.flow, version: 1, seed: '2' }
+  detail.source[0].images = [two, nine]
+  detail.cell = [nine, two]
+  const hub = screenOrder(detail, 'hub')
+  expect(stepped(hub, nine, 1)).toEqual(two)
+  expect(stepped(hub, two, 1)).toBeNull()
+  expect(placeOf(hub, two)).toBe(1)
+  expect(stepped(screenOrder(detail, 'renders'), two, 1)).toEqual(nine)
 })

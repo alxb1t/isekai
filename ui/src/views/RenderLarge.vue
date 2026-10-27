@@ -2,19 +2,21 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { imageAt, photoUrl, renderDetail, thumbAt, versionOf } from '../api'
-import { type PickTile, sourceGrid } from '../cells'
+import { type PickTile, imageKey, placeOf, screenOrder, sourceGrid, stepped } from '../cells'
 import ComparePick from '../components/ComparePick.vue'
 import DraftDialog from '../components/DraftDialog.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
+import { useCollectionStore } from '../stores/collection'
 import { plain, shifted } from '../stores/keys'
 import type { RenderDetail } from '../types'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
    sheet it was rendered from beside it — filled fields only, read-only. ⇧D
-   drafts a flow from it, its own a revision (J5·3); c compares it with any
-   image of its source, the photograph among them, picked in a grid (J5·8). */
+   drafts a flow from it, its own a revision (J5·3); ⇧C compares it with any
+   image of its source, the photograph among them, picked in a grid (J5·8).
+   `h` `l` step through the screen it was opened from, in that screen's order. */
 const props = defineProps<{
   collection: string
   digest: string
@@ -23,6 +25,7 @@ const props = defineProps<{
   seed: string
 }>()
 const router = useRouter()
+const store = useCollectionStore()
 const detail = ref<RenderDetail | null>(null)
 const refusal = ref<string | null>(null)
 const drafting = ref(false)
@@ -46,10 +49,14 @@ const grid = computed(() => (detail.value ? sourceGrid(detail.value) : null))
 const tileSrc = (tile: PickTile) =>
   tile === null ? photoUrl(place.value) : thumbAt({ ...place.value, ...tile })
 
+/* The screen this view was opened from. A pasted address carries no state, so
+   it counts as Renders. */
+const from = window.history.state?.from === 'hub' ? 'hub' : 'renders'
+
 /* Compare carries where this view was opened from, so its esc returns here
    with the same way back. */
 function compare(other: PickTile): void {
-  const state = { from: window.history.state?.from ?? null }
+  const state = { from }
   void router.push(
     other === null
       ? { name: 'compare-photo', params: props, state }
@@ -66,15 +73,34 @@ function compare(other: PickTile): void {
   )
 }
 
+/* The images `h` `l` step through, and where this one stands among them. */
+const order = computed(() => (detail.value ? screenOrder(detail.value, from) : []))
+const index = computed(() => placeOf(order.value, place.value))
+
+/* Show the image `by` steps away in place of this one, so esc returns focused on
+   it; held at either end. */
+function step(by: -1 | 1): void {
+  const next = stepped(order.value, place.value, by)
+  if (next === null) return
+  if (from === 'renders') store.focus.renders = imageKey({ digest: props.digest, ...next })
+  void router.replace({
+    name: 'render',
+    params: { ...props, flow: next.flow, version: `v${next.version}`, seed: next.seed },
+    state: { from },
+  })
+}
+
 /* Where esc and the back button go: the hub when it opened this view, else
    Renders, which holds every image. A pasted address carries no state. */
 const back = computed(() =>
-  window.history.state?.from === 'hub'
+  from === 'hub'
     ? { to: { name: 'hub', params: { collection: props.collection } }, label: 'Back to Hub' }
     : { to: { name: 'renders', params: { collection: props.collection } }, label: 'Back to Renders' },
 )
 
 useKeys('screen', [
+  { id: 'previous', keys: plain('KeyH', 'ArrowLeft'), label: 'previous image', run: () => step(-1) },
+  { id: 'next', keys: plain('KeyL', 'ArrowRight'), label: 'next image', run: () => step(1) },
   {
     id: 'draft-from',
     keys: [shifted('KeyD')],
@@ -84,7 +110,7 @@ useKeys('screen', [
   },
   {
     id: 'compare',
-    keys: plain('KeyC'),
+    keys: [shifted('KeyC')],
     label: 'compare with…',
     run: () => (picking.value = true),
     when: () => grid.value !== null,
@@ -114,7 +140,10 @@ onMounted(async () => {
     </div>
     <aside class="large__sheet" data-sheet>
       <span class="section-label">
-        {{ detail.flow }} · v{{ detail.version }} · seed {{ detail.seed }}
+        {{ detail.flow }} · v{{ detail.version }} · seed {{ detail.seed
+        }}<template v-if="index >= 0">
+          · {{ index + 1 }} of {{ order.length }}</template
+        >
       </span>
       <span class="large__head mono" data-heading>
         v{{ detail.version }}<template v-if="detail.kind">
@@ -166,7 +195,7 @@ onMounted(async () => {
     </aside>
     <ComparePick
       v-if="picking && grid"
-      :title="`Compare ${detail.flow} v${detail.version} · seed ${detail.seed} with…`"
+      :from="detail"
       :grid="grid"
       :src="tileSrc"
       @pick="compare"

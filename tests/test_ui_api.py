@@ -25,6 +25,7 @@ Everything that can be asserted without a server is in `tests/test_ui.py` and
 import contextlib
 import io
 import json
+import os
 import queue
 import random
 import shlex
@@ -1760,9 +1761,6 @@ def test_a_seed_rendered_under_three_versions_compares_the_third_with_the_second
 
     assert view["compare"] == 2
     assert (pair["left"]["version"], pair["right"]["version"]) == (2, 3)
-    assert [(one["field"], one["right"]) for one in pair["changed"]] == [
-        ("clothes", ["collared shirt"])
-    ]
 
 
 FLAT = "summon-flat-anime-wai"
@@ -1793,6 +1791,12 @@ def test_compare_takes_any_two_images_of_a_source(
     rendered(7)
     _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
     rendered(7)
+    # The hub follows write time within an approval, Renders seed order.
+    image = image_of(made, flow, 4, 7)
+    for seed, at in ((7, 1), (9, 2), (2, 3)):
+        target = image_of(made, flow, 4, seed)
+        target.write_bytes(image.read_bytes())
+        os.utime(target, (at, at))
     sheet(made, schema, vocabulary, flow=FLAT, flow_digest=manifest_digest(FLAT))
     review(made, FLAT)
     approve(made, FLAT, schema, vocabulary)
@@ -1806,20 +1810,28 @@ def test_compare_takes_any_two_images_of_a_source(
     view = client.get(f"{large}/v4/7").json()
     pair = client.get(f"{large}/v4/7/compare/{FLAT}/v1/5").json()
     within = client.get(f"{large}/v2/5/compare/{FLOW}/v4/7").json()
-    shared = client.get(f"{large}/v3/7/compare/{FLOW}/v2/5").json()
     photo = client.get(f"{large}/v4/7/compare/photo").json()
     itself = client.get(f"{large}/v4/7/compare/{FLOW}/v4/7")
 
-    # The cell's images are the source's row for its flow, served once.
+    # Renders and Compare retain seed order; the hub carries its write order.
     assert "images" not in view
     assert [
         (row["flow"], [(one["version"], one["seed"]) for one in row["images"]])
         for row in view["source"]
     ] == [
-        (FLOW, [(1, "7"), (2, "5"), (3, "7"), (4, "7")]),
+        (FLOW, [(1, "7"), (2, "5"), (3, "7"), (4, "2"), (4, "7"), (4, "9")]),
         (FLAT, [(1, "5")]),
     ]
-    # The image picked is on the left, the one compare started from on the right.
+    assert [(one["version"], one["seed"]) for one in view["cell"]] == [
+        (1, "7"),
+        (2, "5"),
+        (3, "7"),
+        (4, "7"),
+        (4, "9"),
+        (4, "2"),
+    ]
+    # The image picked is on the left, the one compare started from on the right,
+    # each served by its head, and no changed field.
     assert [
         (side["flow"], side["version"], side["seed"])
         for side in (pair["left"], pair["right"])
@@ -1827,10 +1839,7 @@ def test_compare_takes_any_two_images_of_a_source(
         (FLAT, 1, "5"),
         (FLOW, 4, "7"),
     ]
-    assert [(one["field"], one["left"], one["right"]) for one in pair["changed"]] == [
-        ("clothes", ["shirt"], ["collared shirt"])
-    ]
-    assert (pair["different_seeds"], pair["same_sheet"]) == (True, False)
+    assert set(pair) == {"left", "right"}
     # An older image's compare puts the newer it picked on the left.
     assert [
         (side["version"], side["seed"]) for side in (within["left"], within["right"])
@@ -1838,29 +1847,10 @@ def test_compare_takes_any_two_images_of_a_source(
         (4, "7"),
         (2, "5"),
     ]
-    assert (shared["changed"], shared["same_sheet"]) == ([], True)
     # The photograph's pair is the pair alone.
     assert photo == {"left": None, "right": pair["right"]}
     assert itself.status_code == 409
     assert "compared with itself" in itself.json()["refusal"]
-
-    # A conjure image drafted from v4 · 7 shares its fields, and fills one of its
-    # own summon's sheet has none of: no field differs, yet no sheet is shared.
-    drafted = {"digest": made.digest, "flow": FLOW, "version": 4, "seed": "7"}
-    assert client.post(
-        DRAFT_ROUTE, json={"flow": CONJURE, "images": [drafted]}
-    ).is_success
-    conjure = load_flow(CONJURE)
-    draft = made.directory(CONJURE, "review") / "001.draft.json"
-    save_draft(
-        made, CONJURE, {**read(draft, DRAFT_FILE)["fields"], "bangs": ["wavy hair"]}
-    )
-    approve(made, CONJURE, conjure.schema, vocabulary)
-    rendered(7, conjure)
-
-    across = client.get(f"{large}/v4/7/compare/{CONJURE}/v1/7").json()
-
-    assert (across["changed"], across["same_sheet"]) == ([], False)
 
 
 @pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")

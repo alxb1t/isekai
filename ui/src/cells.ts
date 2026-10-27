@@ -111,6 +111,18 @@ export function sourceGrid(detail: RenderDetail): SourceGrid {
   return { rows, origin, start }
 }
 
+/** Return a pick tile's caption: its version alone, so a long seed never widens the grid. */
+export const tileCaption = (tile: PickTile): string =>
+  tile === null ? 'photograph' : `v${tile.version}`
+
+/** Return the pick's head, naming the image compare started from and the focused tile.
+
+    e.g. summon v3·7, focus on summon v2·7 -> "Compare summon v3 · seed 7 with summon v2 · seed 7…" */
+export function pickHead(from: { flow: string; version: number; seed: string }, tile: PickTile): string {
+  const named = (one: NonNullable<PickTile>) => `${one.flow} v${one.version} · seed ${one.seed}`
+  return `Compare ${named(from)} with ${tile === null ? 'photograph' : named(tile)}…`
+}
+
 /** Return the pick's focus after `move`: a row move keeps the column, held at a
     shorter row's end. */
 export const movePick = (grid: SourceGrid, at: Focus, move: Move): Focus =>
@@ -119,3 +131,33 @@ export const movePick = (grid: SourceGrid, at: Focus, move: Move): Focus =>
     at,
     move,
   )
+
+/** Return the images a large view steps through, in the order of the screen it
+    was opened from: Renders' row, the source's images across its flows; the
+    hub's cell, its flow's images alone.
+
+    e.g. summon [v1·7, v2·7], flat [v1·5], from the hub on summon -> summon's two */
+export function screenOrder(
+  detail: RenderDetail,
+  from: 'hub' | 'renders',
+): NonNullable<PickTile>[] {
+  if (from === 'hub') return detail.cell.map((one) => ({ flow: detail.flow, ...one }))
+  return detail.source
+    .flatMap(({ flow, images }) => images.map((one) => ({ flow, ...one })))
+}
+
+/** Return where `at` stands in `order`, or -1. */
+export const placeOf = (order: NonNullable<PickTile>[], at: NonNullable<PickTile>): number =>
+  order.findIndex(
+    (one) => one.flow === at.flow && one.version === at.version && one.seed === at.seed,
+  )
+
+/** Return the image `by` steps from `at` in `order`, or null, held, at either end. */
+export function stepped(
+  order: NonNullable<PickTile>[],
+  at: NonNullable<PickTile>,
+  by: -1 | 1,
+): NonNullable<PickTile> | null {
+  const index = placeOf(order, at)
+  return index < 0 ? null : (order[index + by] ?? null)
+}

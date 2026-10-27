@@ -9,6 +9,24 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-10-27 · 0087-the-fifth-walkthrough
+
+Gate: local 0m47s · CI 1m35s (ci at 7301425) · 0.59.0: local 0m45s · CI 1m16s
+
+### Changed
+
+- A large view opened from the hub keeps the cell’s write order within each approval, so its step and
+  position match the hub when seed order differs (0087 D6).
+
+- While a session renders, the Render bar shows its totals and *Session*, naming the images short outside it
+  as waiting for the next session; a restored focus on Renders and the hub scrolls to the centre (0087 D1, D2).
+- Compare with… is `⇧C`, so a plain letter moves and a command is `⇧` + a letter; the pick captions each tile
+  by its version alone and names the focused tile, seed and all, in its head (0087 D3, D4).
+- Compare shows the pair alone, each under its flow, version and seed, centred and as tall as the window;
+  the per-image lines and the changed fields go, so the images take the room (0087 D5).
+- `h` `l` and the arrows on a large view step through the screen it came from — Renders' row across its flows,
+  the hub's cell — its head naming the step, `2 of 5`; the design spec draws all of it (0087 D6, D7).
+
 ## [0.59.0] - 2026-10-27 · 0086-compare-any
 
 Gate: local 0m45s · CI 1m16s (ci at 10c6078) · 0.58.0: local 0m44s · CI 1m34s

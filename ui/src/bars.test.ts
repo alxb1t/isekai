@@ -1,9 +1,16 @@
 import { expect } from 'vitest'
-import { bar, dismiss, failed, held, reasons } from './bars'
+import { bar, dismiss, failed, held, planOf, reasons, waiting } from './bars'
 import { spec } from './test/spec'
 import type { JobSlot } from './types'
 
-const idle = { changes: 0, preparing: false, images: 0, refused: false, rendering: false }
+const idle = {
+  changes: 0,
+  preparing: false,
+  images: 0,
+  refused: false,
+  rendering: false,
+  plan: null,
+}
 
 spec('ui:render:prepare-takes-the-bar-first', () => {
   expect(bar({ ...idle, changes: 2, images: 3 })).toBe('prepare')
@@ -25,6 +32,23 @@ spec('ui:render:a-refused-count-is-shown', () => {
   expect(reasons(noKey, damaged)).toEqual([noKey, damaged])
   expect(reasons(damaged, damaged)).toEqual([damaged])
   expect(reasons(null, null)).toEqual([])
+})
+
+spec('ui:render:a-running-session-shows-its-totals', () => {
+  const session = { id: 's', started: '', ended: null, limit: 630, of: 3, steps: {}, images: [] }
+  const running = slot({ kind: 'render', state: 'running', message: null, session })
+  // Three images in the session's plan and a fourth short outside it.
+  const state = { ...idle, images: 4, rendering: true, plan: planOf(running) }
+  expect(bar(state)).toBe('session')
+  expect(waiting(state)).toBe('1 image waits for the next session')
+  // A landed image is short no more, so the line holds as the offer is read again.
+  const image = { digest: 'd', flow: 'f', version: 1, seed: '7' }
+  const landed = planOf({ ...running, session: { ...session, images: [image] } })
+  expect(waiting({ images: 3, plan: landed })).toBe('1 image waits for the next session')
+  expect(waiting({ images: 2, plan: landed })).toBeNull()
+  // An ended session has no plan, so the count and Render come back.
+  expect(planOf({ ...running, state: 'done' })).toBeNull()
+  expect(bar({ ...state, plan: null })).toBe('render')
 })
 
 function slot(over: Partial<JobSlot>): JobSlot {

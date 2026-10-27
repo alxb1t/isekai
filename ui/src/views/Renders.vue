@@ -36,7 +36,7 @@ const viewing = ref<string | null>(null)
 /* The collection's images and its Render offer, shared with every screen of the collection;
    a job's end reads both again. */
 const store = useCollectionStore()
-const { renders: info, offer, dialog, rendering } = storeToRefs(store)
+const { renders: info, offer, dialog, rendering, plan } = storeToRefs(store)
 const shown = computed(() =>
   bar({
     changes: 0,
@@ -44,6 +44,7 @@ const shown = computed(() =>
     images: offer.value.images + offer.value.others,
     refused: offer.value.refused !== null,
     rendering: rendering.value,
+    plan: plan.value,
   }),
 )
 
@@ -139,12 +140,18 @@ function go(move: Move): () => void {
         move,
       ),
     )
-    void nextTick(() =>
-      document
-        .querySelector<HTMLElement>('.renders__image--focused, .renders__source--focused')
-        ?.scrollIntoView({ block: 'nearest' }),
-    )
+    scroll({ block: 'nearest' })
   }
+}
+
+/* Scroll the focused spot into view once it is drawn: a key's move `nearest`, a
+   restored focus to the window's centre, where the eye finds it. */
+function scroll(how: ScrollIntoViewOptions): void {
+  void nextTick(() =>
+    document
+      .querySelector<HTMLElement>('.renders__image--focused, .renders__source--focused')
+      ?.scrollIntoView(how),
+  )
 }
 
 /* The focused image; column 0 is its row's source. */
@@ -217,7 +224,10 @@ onMounted(async () => {
     name: sourceKey(source.name),
   }))
   const spot = kept([...images, ...sources], ({ name }) => name, store.focus.renders)
-  if (spot) hold({ row: spot.row, column: spot.column })
+  if (spot) {
+    hold({ row: spot.row, column: spot.column })
+    scroll({ block: 'center' })
+  }
 })
 
 /* The Render dialog is this page's: leaving the page closes it. */
@@ -343,7 +353,7 @@ onUnmounted(() => {
       @close="drafting = false"
     />
     <RenderBar
-      v-if="shown === 'render'"
+      v-if="shown === 'render' || shown === 'session'"
       :images="offer.images"
       :others="offer.others"
       :disabled="offer.disabled"
