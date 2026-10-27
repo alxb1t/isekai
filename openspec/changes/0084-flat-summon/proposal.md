@@ -28,7 +28,7 @@ into the hires pass, and its adapter, trained on photographs, pulls the whole im
 
 - **Two candidate flows** — A ends InstantID early with a flat prompt; B adds a hires pass on the plain checkpoint
   ([D1](design.md#d1), [D2](design.md#d2)).
-- **A prototype** — the operator's photographs in `.data/flat-summon/`, summon's sheets copied to both, one session on summon's seeds
+- **A prototype** — the operator's photographs in `.data/flat-summon-prototype/`, summon's sheets corrected by the agent and copied to both, one session on summon's seeds
   ([D3](design.md#d3), [D4](design.md#d4)).
 - **The verdict** — by eye and by the cohort count, against summon on the same photographs ([D5](design.md#d5)).
 - **The winner kept** as `summon-flat-anime-wai`, run from the CLI; the loser deleted ([D6](design.md#d6)).
