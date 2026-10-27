@@ -5,20 +5,20 @@ new vitest test carries `spec(…)` with the key its task names.
 
 ## Progress
 
-- [ ] 1 — The bar and the scroll
+- [x] 1 — The bar and the scroll
 - [ ] 2 — The keys and the pick
 - [ ] 3 — Compare
 - [ ] 4 — The large view's steps
 
 ## 1 — The bar and the scroll
 
-- [ ] 1.1 **HALT CHECK** — the bar's running branch shows only when nothing is short.
+- [x] 1.1 **HALT CHECK** — the bar's running branch shows only when nothing is short.
   Verify: `grep -c 'v-if="images + others > 0' ui/src/components/RenderBar.vue` prints `1`.
-- [ ] 1.2 Show the running session's totals and the images waiting for the next session in `ui/src/bars.ts` and
+- [x] 1.2 Show the running session's totals and the images waiting for the next session in `ui/src/bars.ts` and
   `ui/src/components/RenderBar.vue` per [D1](design.md#d1); bind `ui:render:a-running-session-shows-its-totals` in
   `ui/src/bars.test.ts`.
   Verify: `grep -c 'wait for the next session' ui/src/bars.ts` prints a number of at least `1`, and `grep -c 'a-running-session-shows-its-totals' ui/src/bars.test.ts` prints `1`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 1.3 Scroll a restored focus to the centre in `ui/src/views/Renders.vue` and `ui/src/views/Hub.vue` per
+- [x] 1.3 Scroll a restored focus to the centre in `ui/src/views/Renders.vue` and `ui/src/views/Hub.vue` per
   [D2](design.md#d2); in `tests/e2e/test_render.py` check the image in view after `Esc` in
   `test_an_image_opened_from_the_grid_shows_the_approval_it_came_from` and `test_a_rendered_cell_opens_its_newest_image`.
   Verify: `grep -l "block: 'center'" ui/src/views/Renders.vue ui/src/views/Hub.vue | wc -l` prints `2`, and `uv run pytest -q tests/e2e/test_render.py` exits 0.

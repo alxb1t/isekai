@@ -36,7 +36,8 @@ const viewing = ref<{ images: Shown[]; start: number; open?: (index: number) => 
 /* The collection's hub, its running cells and refusals, and its Render offer, shared
    with every screen of the collection and kept live from the page's one stream. */
 const store = useCollectionStore()
-const { hub: info, running, refusals, offer, dialog, rendering, preparing: busy } = storeToRefs(store)
+const { hub: info, running, refusals, offer, dialog, rendering, plan, preparing: busy } =
+  storeToRefs(store)
 
 /* Render opens only from its own bar: while changes wait, Prepare holds it. */
 function openRender(): void {
@@ -97,6 +98,7 @@ const shown = computed(() =>
     images: offer.value.images + offer.value.others,
     refused: offer.value.refused !== null,
     rendering: rendering.value,
+    plan: plan.value,
   }),
 )
 
@@ -299,12 +301,13 @@ function place(row: number, column: number): void {
     column: clamp(column, flows.value.length),
   }
   store.focus.hub = named(focus.value)
-  void nextTick(() =>
-    grid.value
-      ?.querySelector<HTMLElement>(
-        `[data-row="${focus.value.row}"][data-column="${focus.value.column}"]`,
-      )
-      ?.focus(),
+  void nextTick(() => focusedCell()?.focus())
+}
+
+/* The focused cell's element, once drawn. */
+function focusedCell(): HTMLElement | null | undefined {
+  return grid.value?.querySelector<HTMLElement>(
+    `[data-row="${focus.value.row}"][data-column="${focus.value.column}"]`,
   )
 }
 
@@ -397,7 +400,12 @@ onMounted(async () => {
     Array.from({ length: flows.value.length + 1 }, (_, column) => ({ row, column })),
   )
   const spot = kept(spots, named, store.focus.hub)
-  if (spot) place(spot.row, spot.column)
+  if (spot) {
+    place(spot.row, spot.column)
+    // A restored focus goes to the window's centre, where the eye finds it; a key's move
+    // keeps the focus's own nearest scroll.
+    void nextTick(() => focusedCell()?.scrollIntoView({ block: 'center' }))
+  }
 })
 
 /* The Render dialog is this page's: leaving the page closes it. */
@@ -555,12 +563,13 @@ onUnmounted(() => {
       </template>
     </div>
     <RenderBar
-      v-if="shown === 'render'"
+      v-if="shown === 'render' || shown === 'session'"
       :images="offer.images"
       :others="offer.others"
       :disabled="offer.disabled"
       :refused="offer.refused"
       :rendering="rendering"
+      :plan="plan"
       @open="openRender"
     />
     <div v-else-if="shown === 'prepare'" class="prepare-bar" :class="{ running: busy }">

@@ -9,6 +9,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- While a session renders, the Render bar shows its totals and *Session*, naming the images short outside it
+  as waiting for the next session; a restored focus on Renders and the hub scrolls to the centre (0087 D1, D2).
+
 ## [0.59.0] - 2026-10-27 · 0086-compare-any
 
 Gate: local 0m45s · CI 1m16s (ci at 10c6078) · 0.58.0: local 0m44s · CI 1m34s
