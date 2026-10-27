@@ -98,7 +98,8 @@ the running render's link SHALL open it; confirming a render SHALL open it, and 
 open nothing. It SHALL read the running render's record, live while it runs, with the volume steps and Stop the job
 adds; after it ends it SHALL show that session's outcome, its images and its time until the app reloads or another
 render starts; with neither it SHALL say no render runs. Its images SHALL be a grid per collection the session renders,
-stacked in its order, each headed by its name: a column for each photograph the session was asked to render, a row for
+stacked in its recorded collection order, retaining scan order for older records without it, each headed by its
+name: a column for each photograph the session was asked to render, a row for
 each flow, the photographs' row at the foot, a cell holding that flow's images of that photograph and a waiting tile for
 each still to come, drawn at the tile size Renders draws and moved through by `h j k l` and the arrows, `j` `↓` on a
 grid's last row moving into the first row of the grid below and `k` `↑` back, keeping the column, held at a shorter
@@ -147,8 +148,8 @@ on Renders.
 #### Scenario: a terminal render stays live
 - **Key:** `ui:sessions:a-terminal-render-stays-live`
 - **Layers:** unit
-- **WHEN** a terminal render runs without an app job slot
-- **THEN** its record reads running and the global running-session read names its collection and id
+- **WHEN** a terminal render runs across collections in reverse name order without an app job slot
+- **THEN** its records read running and the global running-session read carries their id and complete traversal order
 - **AND** after its process releases ownership without an outcome the record reads ended without an outcome
 
 

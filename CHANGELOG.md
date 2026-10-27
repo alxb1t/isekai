@@ -9,6 +9,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- Terminal renders keep their collection traversal in the drawer after disk discovery, even when it differs
+  from the Library's name order; older records remain readable (0083 D3, D6).
+
 - `render <runs>…` renders every named collection's shortfall in one session on one pod, its limit one boot over
   every collection's images; each collection keeps a record of the shared id and the whole log (0083 D1–D3, D7).
 - One quote and one Render dialog cover every collection short of images: a ticked row each, one estimate

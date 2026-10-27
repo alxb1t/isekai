@@ -30,14 +30,20 @@ export function collectionsOf(slot: JobSlot): string[] {
   return slot.collections ?? [slot.collection]
 }
 
-/* The disk's running records, one render per id, in the order first read.
-   e.g. [{b, s}, {c, s}] -> [{collections: [b, c], id: s}] */
+/* The disk's running records, one render per id, in recorded traversal order.
+   Records without that metadata retain the order first read. */
 export function grouped(found: RunningSession[]): RunningRender[] {
   const renders = new Map<string, RunningRender>()
   for (const one of found) {
     const held = renders.get(one.id)
-    if (held) held.collections.push(one.collection)
-    else renders.set(one.id, { collections: [one.collection], id: one.id, started: one.started })
+    if (held) {
+      if (!held.collections.includes(one.collection)) held.collections.push(one.collection)
+    } else
+      renders.set(one.id, {
+        collections: [...(one.collection_order ?? [one.collection])],
+        id: one.id,
+        started: one.started,
+      })
   }
   return [...renders.values()]
 }

@@ -247,10 +247,12 @@ class Record:
         asked: Mapping[str, int],
         planned: Sequence[SessionPlan] = (),
         others: Sequence[str] = (),
+        order: Sequence[str] = (),
     ) -> None:
         """Name the record by `given`, else by its start, once it opens.
 
         `others` names the session's other collections; a session of one has none.
+        `order` names all collections in traversal order, including this one.
         """
         self._folder = folder
         self._given = given
@@ -272,6 +274,8 @@ class Record:
         }
         if others:
             self._body["collections"] = list(others)
+        if order:
+            self._body["collection_order"] = list(order)
 
     def open(self, started: datetime | None = None) -> None:
         """Write the record as running, started now unless `started` is given."""
@@ -900,6 +904,7 @@ def _session(
                 _images(its),
                 _plan(runs, its),
                 [name for name in names if name != runs.parent.name],
+                order=names,
             )
             for runs, its in held.items()
         }

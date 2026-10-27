@@ -901,9 +901,10 @@ def test_a_session_writes_its_record_of_each_image_and_no_price(
     assert record["asked"] == {FLOW: 2}
     assert record["steps"] == {"pod": "ready", "teardown": "done"}
     assert record["ended"] is not None
+    assert record["collection_order"] == [runs.parent.name]
     assert set(record) == {
         "schema", "id", "started", "ended", "limit", "asked", "planned", "steps",
-        "images", "outcome", "message",
+        "images", "outcome", "message", "collection_order",
     }  # fmt: skip
 
 
@@ -966,6 +967,7 @@ def test_each_collection_holds_its_record_of_the_shared_session(
     assert two["planned"] == [{"digest": second.digest, "flow": FLOW, "images": 1}]
     assert (one["asked"], two["asked"]) == ({FLOW: 2}, {FLOW: 1})
     for record in (one, two):
+        assert record["collection_order"] == ["one", "two"]
         assert record["steps"] == {"pod": "ready", "teardown": "done"}
         assert record["outcome"] == "done"
     for root in roots:

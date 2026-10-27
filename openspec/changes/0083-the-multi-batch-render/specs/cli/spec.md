@@ -87,7 +87,8 @@ The system SHALL, once a render session asks for a pod, write a record to each c
 renders, beside its log, every record holding the session's id and naming the other collections in `collections`, named
 by the session's id — the id `--session` gives, else the start in UTC as `20261024T091200Z` — and SHALL replace a record
 whole as each of its collection's images lands and as the session ends, the pod's and the teardown's steps in every
-record; the session's log lines SHALL go to every collection's log. The record SHALL hold the id, the start, the end,
+record; the session's log lines SHALL go to every collection's log, and every record SHALL name the complete
+traversal in `collection_order`, including its own collection. The record SHALL hold the id, the start, the end,
 the limit, what each flow was asked to render and what it plans for each photograph, the pod's and the teardown's steps,
 each image as its run digest, flow, version and seed in order, and the outcome — running, done, stopped or failed, with
 its message — and no price. A session refused before anything is rented SHALL write no record. An existing id SHALL be
@@ -148,5 +149,5 @@ free checks ─▶ claim id + lifetime lock ─▶ running record ─▶ images 
 - **Key:** `cli:render-session:each-collection-holds-its-record`
 - **Layers:** unit
 - **WHEN** a session renders two collections
-- **THEN** each collection's `sessions/` holds a record of that id, its own images and plan, naming the other
+- **THEN** each collection's record holds the shared id, its own images and plan, and the complete collection order
 - **AND** both records hold the pod's and the teardown's steps, and both logs the session's lines

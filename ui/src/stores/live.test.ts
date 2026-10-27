@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { spec } from '../test/spec'
+import type { RunningSession } from '../types'
 import { billingState, useLiveStore } from './live'
 
 /* A stream that records where it was opened and whether it was closed, and
@@ -67,7 +68,7 @@ spec('ui:events:a-job-event-fills-its-kinds-slot', () => {
 
 spec('ui:sessions:a-terminal-render-stays-live', async () => {
   const terminal = { collection: 'b', id: '20261024T091200Z', started: '2026-10-24T09:12:00Z' }
-  let records = [terminal]
+  let records: RunningSession[] = [terminal]
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ sessions: records }) })))
   const live = useLiveStore()
   live.follow({ collection: null })
@@ -83,6 +84,14 @@ spec('ui:sessions:a-terminal-render-stays-live', async () => {
   records = [terminal, { ...terminal, collection: 'c' }]
   await vi.advanceTimersByTimeAsync(2000)
   expect(live.activeRender?.collections).toEqual(['b', 'c'])
+  // Terminal traversal differs from the library's name order; each record
+  // carries the complete order, including its own collection's position.
+  records = [
+    { ...terminal, collection: 'a', collection_order: ['z', 'a'] },
+    { ...terminal, collection: 'z', collection_order: ['z', 'a'] },
+  ]
+  await vi.advanceTimersByTimeAsync(2000)
+  expect(live.activeRender?.collections).toEqual(['z', 'a'])
   records = [terminal]
   // A failing read says so, and its last answer never masks a billing alert.
   const answer = { ok: false, status: 409, json: async () => ({ refusal: 'x.json: damaged' }) }

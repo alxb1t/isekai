@@ -2361,3 +2361,20 @@ def test_a_terminal_session_is_live_without_a_job_slot(
         record.close()
     assert client.get(f"/api/c/{COLLECTION}/sessions/{name}").json()["outcome"] is None
     assert client.get("/api/sessions/running").json()["sessions"] == []
+
+    # The complete traversal survives the name-sorted scan, including in the
+    # second collection's record; old records above need no order field.
+    order = [other.name, COLLECTION]
+    held = [
+        Record(folder / "sessions", "20261024T091300Z", 1200, {FLOW: 1}, order=order)
+        for folder in (other, made.path.parent.parent)
+    ]
+    for one in held:
+        one.open()
+    try:
+        running = client.get("/api/sessions/running").json()["sessions"]
+        assert [one["collection"] for one in running] == [COLLECTION, other.name]
+        assert all(one["collection_order"] == order for one in running)
+    finally:
+        for one in held:
+            one.close()

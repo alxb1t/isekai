@@ -250,6 +250,7 @@ export interface SessionRecord {
 /* A running render discovered from disk, wherever it was started. */
 export interface RunningSession {
   collection: string
+  collection_order?: string[]
   id: string
   started: string
 }
