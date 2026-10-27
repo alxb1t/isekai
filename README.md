@@ -163,6 +163,7 @@ none does. Approval refuses a revision that would only re-render images that exi
 ```sh
 uv run --env-file .env gpunit volume up --yes   # open the window: the models volume, for 4 hours
 python -m isekai render .data/runs                # what each approval lacks of its count
+python -m isekai render <runs>…                   # every collection named, on one pod
 uv run --env-file .env gpunit volume down       # when the last batch is done
 ```
 
@@ -170,10 +171,11 @@ One verb is the whole session: it assembles every prompt of every run under the 
 (④), tunnels to it (⑤), renders each flow (⑥), and deletes the pod (⑦) on every exit — an error or a Ctrl-C
 included. **Billing is per second, from the pod's create to its deletion.** With no request it renders what
 each approval lacks of the count Review set, its listed seeds first, and names each unapproved flow it leaves
-out. A request is `<flow>=<count>`, or `<flow>=<source>` to render on another flow's latest seeds. The session
-stops at its limit — `--limit SECONDS`, or the work's estimate from recorded durations — and prints `session
-limit <seconds>s` as it opens; everything it says is shown and appended to `<runs>/../log.txt`. Beside the
-log, once the pod is asked for, its record `<runs>/../sessions/<id>.json` holds its steps, each image as it
+out. `render <runs>…` names many collections' runs roots and renders what each lacks, in that order, in one
+session. A request is `<flow>=<count>`, or `<flow>=<source>` to render on another flow's latest seeds, beside
+one runs root alone. The session stops at its limit — `--limit SECONDS`, or the work's estimate from recorded
+durations — and prints `session limit <seconds>s` as it opens; everything it says is shown and appended to each
+`<runs>/../log.txt`. Beside each log, once the pod is asked for, its record `<runs>/../sessions/<id>.json` holds its steps, each image as it
 lands and how it ended, and no price.
 
 From the app, a collection's **Render** quotes what renders, the limit and the price at most, and its confirmation

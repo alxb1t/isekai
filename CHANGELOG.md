@@ -9,6 +9,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- `render <runs>…` renders every named collection's shortfall in one session on one pod, its limit one boot over
+  every collection's images; each collection keeps a record of the shared id and the whole log (0083 D1–D3, D7).
+
 ## [0.55.0] - 2026-10-27 · 0082-the-collection
 
 Gate: local 0m47s · CI none · 0.54.0: local 0m47s · CI 1m09s

@@ -1019,6 +1019,10 @@ def test_a_run_root_inside_the_working_tree_is_refused_before_anything_is_create
     # Refused before any run is created -- the check is on the root, not on the
     # first photograph offered to it.
     assert not inside.exists()
+    # A render checks every collection's runs root, not the first alone.
+    beside = ["render", str(REPO / ".data" / "runs"), str(inside)]
+    with pytest.raises(Refusal, match="acceptance-runs"):
+        wiring(build_parser().parse_args(beside))
 
 
 def _a_second_spelling_of(path: Path) -> Path | None:

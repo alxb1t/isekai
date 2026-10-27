@@ -473,15 +473,16 @@ the key would sit in the same memory.**
 
 **It assembles every prompt before any pod exists, opens a gpunit session, waits for the endpoint through its
 tunnel, renders, and closes the session on every exit.** With no request it renders what each approval lacks of
-its count. Three bounds hold it: the laptop's watchdog at the session's limit; the pod's own stop at that limit,
-armed by gpunit's boot script and never past `gpunit.toml`'s ceiling; and gpunit, which refuses a session beside
-a recorded or listed pod of the project and leaves none listed at teardown. One session runs at a time; the
+its count, in each collection it names, on one pod. Three bounds hold it: the laptop's watchdog at the session's
+limit; the pod's own stop at that limit, armed by gpunit's boot script and never past `gpunit.toml`'s ceiling;
+and gpunit, which refuses a session beside a recorded or listed pod of the project and leaves none listed at
+teardown. One session runs at a time; the
 app's Render runs it as a child, between `gpunit volume up` and `volume down`, with `--progress json`.
 
 - **Why:** the lifecycle is gpunit's, tested as a library; isekai keeps the order of its flows, its free pass
   and its log. A pod the laptop can no longer reach must still stop, so the pod stops itself.
-- **Accepts:** ComfyUI's history and node cache hold the batch's photograph until the teardown.
-  Reopen when a pod serves more than one batch.
+- **Accepts:** ComfyUI's history and node cache hold every photograph the session renders,
+  from every collection, until the teardown.
 - **Accepts:** gpunit's signal handlers replace isekai's while the session is open, so isekai sets none.
   Reopen when isekai needs a handler of its own.
-- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`.
+- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`, `0083`.

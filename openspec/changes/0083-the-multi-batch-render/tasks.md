@@ -4,21 +4,21 @@ The session, the app, then the drawer, per [design](design.md). Every new test c
 
 ## Progress
 
-- [ ] 1 — One session over many collections
+- [x] 1 — One session over many collections
 - [ ] 2 — The quote and the dialog
 - [ ] 3 — The drawer
 
 ## 1 — One session over many collections
 
-- [ ] 1.1 **HALT CHECK** — the verb renders one runs root.
+- [x] 1.1 **HALT CHECK** — the verb renders one runs root.
   Verify: `grep -c 'runs = Path(args.runs)' isekai/interface/render.py` prints `1`.
-- [ ] 1.2 Take many runs roots in `render` (`isekai/interface/cli.py`, `isekai/interface/render.py`) per
+- [x] 1.2 Take many runs roots in `render` (`isekai/interface/cli.py`, `isekai/interface/render.py`) per
   [D1](design.md#d1) and [D2](design.md#d2); open a record per collection and tee the log to each per
   [D3](design.md#d3), with `collections` in `SessionRecord` (`isekai/foundation/artifacts.py`); in
   `tests/test_render.py` bind `cli:render-short:many-collections-render-in-one-session`,
   `cli:render-limit:one-boot-for-many-collections` and `cli:render-session:each-collection-holds-its-record`.
   Verify: `grep -c 'many-collections-render-in-one-session\|one-boot-for-many-collections\|each-collection-holds-its-record' tests/test_render.py` prints `3`, and `uv run pytest -q tests/test_render.py` exits 0, and `uv run ty check` exits 0.
-- [ ] 1.3 Rewrite D36's *Accepts* line in `docs/decisions.md` per [D7](design.md#d7); in `README.md`, name
+- [x] 1.3 Rewrite D36's *Accepts* line in `docs/decisions.md` per [D7](design.md#d7); in `README.md`, name
   `render <runs>…` beside the single-collection usage.
   Verify: `grep -c 'from every collection, until the teardown' docs/decisions.md` prints `1`, and `grep -c 'Reopen when a pod serves more than one batch' docs/decisions.md` prints `0`, and `grep -c 'render <runs>…' README.md` prints a number of at least `1`.
 

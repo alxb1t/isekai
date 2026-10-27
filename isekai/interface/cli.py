@@ -49,7 +49,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
-from typing import TextIO, TypeVar
+from typing import TextIO, TypeVar, cast
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
@@ -179,6 +179,30 @@ def _session_id(value: str) -> str:
     return value
 
 
+class _Targets(argparse.Action):
+    """Split `render`'s positionals into its runs roots and its requests.
+
+    A directory is a runs root; any other word holding `=` is a request, and the
+    rest are runs roots the session refuses by name.
+    e.g. [".data/b1/runs", "summon-anime-wai=1"] -> runs [b1/runs], requests [...]
+    """
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: object,
+        option_string: str | None = None,
+    ) -> None:
+        """Set `runs` and `requests` on `namespace` from `values`, in order."""
+        words = [str(value) for value in cast("list[object]", values)]
+        asked = [w for w in words if "=" in w and not Path(w).is_dir()]
+        namespace.runs = [Path(w) for w in words if w not in asked]
+        namespace.requests = asked
+        if not namespace.runs:
+            parser.error("name at least one collection's runs/")
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Return the pipeline's parser, with one subparser per verb."""
     parser = argparse.ArgumentParser(
@@ -193,8 +217,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     # `compare` takes a collection directory instead: its runs root is the collection's
     # `runs/`, so a second way to name it could only disagree. `render` takes
-    # its runs root first, and every run under it. `ui` serves the library, and
-    # `revise` takes images, whose paths name their runs.
+    # each collection's runs root, and every run under each. `ui` serves the
+    # library, and `revise` takes images, whose paths name their runs.
     for name in (
         name
         for name in made
@@ -333,17 +357,15 @@ def build_parser() -> argparse.ArgumentParser:
     made["compare"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     made["render"].add_argument(
-        "runs",
-        type=Path,
-        help="the collection's runs/; every run under it is rendered",
-    )
-    made["render"].add_argument(
-        "requests",
-        nargs="*",
-        metavar="<flow>=<count|source>",
+        "targets",
+        nargs="+",
+        action=_Targets,
+        metavar="<runs>… [<flow>=<count|source> …]",
         help=(
-            "a flow and how many seeds it draws, or the flow whose seeds it takes; "
-            "with none, every approval short of its count renders what it lacks"
+            "each collection's runs/, rendered in one session in the order named; "
+            "then, beside one runs/ alone, a flow and how many seeds it draws, or "
+            "the flow whose seeds it takes. With no request, every approval short "
+            "of its count renders what it lacks"
         ),
     )
     made["render"].add_argument(
