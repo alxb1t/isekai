@@ -16,7 +16,7 @@ neither is privileged and neither goes through the other.
 |---|---|
 | `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together, or with `--progress json` a JSON line per item; `import` and `assign` compose `pipeline/importing.py` and the run's own `assign` |
 | `wiring.py` | composes the modules — resolves the reader and the two taggers per flow, verifies the vocabulary before it is read, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
-| `drafting.py` | drafts a flow from another flow's approval for `review --from` and the page, assigning a flow with no sheet and filling it from the source's tags first |
+| `drafting.py` | drafts a flow from an image for `draft` and the page — its own flow a revision, another from the image's approval, assigning a flow with no sheet and filling it from the source's tags first |
 | `render.py` | the `render` verb: finds what each approval lacks or takes the requests, assembles every prompt, estimates the session's limit and its quote, opens a GPU session through `boundary/gpu.py` stopping at that limit, waits for the endpoint, runs `generate` per flow, reports each step with `--progress json`, and writes the prose to the collection's log |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions, producers and failure records, and the names below a flow it does not read. Decides nothing |
 | `compare_view.py` | the `compare` verb: one page of every run's photograph beside each flow's renders, written into the collection directory. Reads, decides nothing |

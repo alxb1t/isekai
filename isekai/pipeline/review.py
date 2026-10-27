@@ -258,12 +258,7 @@ def draft_from(
     remedy = f"run `{resheet}`, {_DRAFT_AGAIN}"
     require(copied, body, "vocabulary", dict, remedy)
     require(copied, body, "fields", dict, remedy)
-    if (edited := waiting_edit(run, flow)) is not None:
-        raise Refusal(
-            f"{run.id}: flow {flow} has {edited.name} waiting with edits of its "
-            "own, and a draft from another flow never replaces an edit; approve "
-            f"it, or {_discarding(run, flow)}"
-        )
+    _refuse_edited(run, flow)
     waiting = current_draft(run.directory(flow, REVIEW))
     merged = {**body["fields"], **carried["fields"]}
     fields = {name: list(merged[name]) for name in schema.names if name in merged}
@@ -332,6 +327,16 @@ def waiting_edit(run: Run, flow: str) -> Path | None:
     return waiting
 
 
+def _refuse_edited(run: Run, flow: str) -> None:
+    """Refuse `flow`'s waiting draft with edits of its own, naming its discard."""
+    if (edited := waiting_edit(run, flow)) is not None:
+        raise Refusal(
+            f"{run.id}: flow {flow} has {edited.name} waiting with edits of its "
+            "own, and a draft from another flow never replaces an edit; approve "
+            f"it, or {_discarding(run, flow)}"
+        )
+
+
 def _discarding(run: Run, flow: str) -> str:
     """Return the remedy that discards `flow`'s waiting draft before drafting again."""
     return f"run `{stage_command(run, STAGE, flow, options=DISCARD)}`, {_DRAFT_AGAIN}"
@@ -356,41 +361,67 @@ def _edited(run: Run, flow: str, draft: Path, remedy: str) -> bool:
 Revision = tuple[Run, str, int, int]
 
 
+def refuse_drafts(
+    target: str, selection: Sequence[tuple[Path, Revision]]
+) -> list[str | None]:
+    """Return why each image of `selection` cannot be drafted into `target`, else None.
+
+    An image of `target` is checked as `refuse_revision` checks it, any other as
+    `draft_from` refuses before it writes. Checked whole, so a selection is
+    drafted all or none; see `_refusals`.
+    e.g. ("c", [(a.png, (run, s, 1, 7)), (b.png, (run, s, 2, 8))])
+         -> [None, "<run>/c: is in this selection twice, …"]
+    """
+    return _refusals([(image, held, target) for image, held in selection])
+
+
 def refuse_revisions(selection: Sequence[tuple[Path, Revision]]) -> list[str | None]:
     """Return why each image of `selection` cannot be revised, None where it can.
 
-    Checked whole before anything is written, so a selection is revised all or
-    not at all; a flow takes one revision at a time, and its run is known by the
+    Each image is drafted into its own flow, as `refuse_drafts` checks it.
+    """
+    return _refusals([(image, held, held[1]) for image, held in selection])
+
+
+def _refusals(selection: Sequence[tuple[Path, Revision, str]]) -> list[str | None]:
+    """Return why each image cannot be drafted into the flow beside it, else None.
+
+    Checked whole before anything is written, so a selection is drafted all or
+    not at all; a flow takes one draft at a time, and its run is known by the
     identity of its directory, never by the text of its path.
-    e.g. [(a.png, (run, f, 1, 7)), (b.png, (run, f, 2, 8))]
-         -> [None, "<run>/f: is in this selection twice, …"]
     """
     seen: dict[tuple[int, int, str], int] = {}
     refused: list[str | None] = []
-    for index, (image, (run, flow, version, seed)) in enumerate(selection):
+    for index, (image, (run, flow, version, seed), target) in enumerate(selection):
         try:
             held = run.path.stat()
-            first = seen.setdefault((held.st_dev, held.st_ino, flow), index)
+            first = seen.setdefault((held.st_dev, held.st_ino, target), index)
             if first != index:
                 raise Refusal(
-                    f"{run.id}/{flow}: is in this selection twice, and a flow takes "
-                    "one revision at a time; run "
-                    f"`{_revise_command(selection[first][0])}` alone, "
-                    "and revise this image once that draft is approved"
+                    f"{run.id}/{target}: is in this selection twice, and a flow takes "
+                    "one draft at a time; run "
+                    f"`{_draft_command(selection[first][0], target)}` alone, "
+                    "and draft this image once that draft is approved"
                 )
-            refuse_revision(run, flow, version, seed, f"run `{_revise_command(image)}`")
+            if flow == target:
+                again = f"run `{_draft_command(image, target)}`"
+                refuse_revision(run, flow, version, seed, again)
+            else:
+                drafting_approval(run, target, flow, version, seed)
+                _refuse_edited(run, target)
             refused.append(None)
         except Refusal as refusal:
             refused.append(str(refusal))
     return refused
 
 
-def _revise_command(image: Path) -> str:
-    """Return the command that revises `image`, as it is pasted.
+def _draft_command(image: Path, flow: str) -> str:
+    """Return the command that drafts `flow` from `image`, as it is pasted.
 
-    e.g. r/f/outputs/001/7.png -> "python -m isekai revise r/f/outputs/001/7.png"
+    e.g. (r/f/outputs/001/7.png, f)
+         -> "python -m isekai draft --flow f r/f/outputs/001/7.png"
     """
-    return f"python -m isekai revise {shlex.quote(str(image))}"
+    return f"python -m isekai draft --flow {flow} {shlex.quote(str(image))}"
 
 
 def refuse_revision(
@@ -533,7 +564,7 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
         elif len(firsts) == len(derived):
             way = f"run {', then '.join(firsts)}, then {again}"
         elif image is not None:
-            way = f"run `{_revise_command(image)}` to correct an image of it"
+            way = f"run `{_draft_command(image, flow)}` to correct an image of it"
         else:
             way = f"run {_again(run, flow)} to correct it under the next number"
         raise Refusal(

@@ -85,7 +85,7 @@ first sheet, when it is drafted from another flow, through `sheet()`, which `int
 
 - **Why:** the CLI is the one path, so a stage the page starts is exactly the stage the terminal runs,
   and a write no stage owns would give a run file a second author. `draft_across` is the sequence
-  `review --from` runs too, so the in-process fill is still the terminal's path; it is free, and it
+  `draft --flow` runs too, so the in-process fill is still the terminal's path; it is free, and it
   refuses before it writes. Spend behind a web page is bounded by what the operator read: the
   confirmation carries the quote it showed, and a quote grown since is refused. The quote compares
   image total and limit, not source or approval identity.

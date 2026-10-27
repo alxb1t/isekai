@@ -13,6 +13,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - A revision replaces an unedited waiting draft at its number, refusing only one with edits of its own, and a
   draft from an image lists the image's seed, so both writers share one waiting-draft rule (0085 D1, D2).
+- `isekai draft --flow FLOW <image>…` drafts any flow from rendered images — its own a revision, another from
+  the image's approval — all or none; `revise` and `review --from`/`--version` go, as one act (0085 D3, D6, D7).
 
 ## [0.57.0] - 2026-10-27 · 0084-flat-summon
 

@@ -18,7 +18,7 @@ filename, when approval is legal, and what a token costs.
 `discard()` on theirs, the run's own `open_run()` and `assign()` on a tick,
 and stage ②'s `sheet()` when a draft from another flow fills a target with
 no sheet -- run in this process by `interface/drafting.py`'s `draft_across`,
-the sequence `review --from` runs too (D4).
+the sequence `draft --flow` runs too (D4).
 Nothing here builds an artifact body or an artifact filename, and
 `tests/test_ui.py`'s grep is what keeps it so.
 
@@ -873,7 +873,7 @@ def create_app(
     def post_draft_from(
         collection: str, digest: str, flow: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
-        """Draft `flow` from `source`'s approval `version`, as `review --from` does.
+        """Draft `flow` from `source`'s approval `version`, as `draft --flow` does.
 
         An optional decimal `seed` names the image of that approval the draft
         records. A waiting draft with edits of its own is answered `waiting`,

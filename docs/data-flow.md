@@ -33,9 +33,8 @@ its neighbours.
   ③ review ── reads sheets/ ──▶ review/NNN.draft.json
      approve ── reads the draft ──▶ review/NNN.approved.json
       │   with --from, reads the source flow's approval instead
-     revise ── reads an image's approval ──▶ review/NNN.draft.json   its seed listed
-     review --from ── reads another flow's approval and its own sheet ──▶ review/NNN.draft.json
-      │           its sheet filled first from the source's tag list where no sheet
+     draft ── reads an image's approval, and another flow's own sheet ──▶ review/NNN.draft.json
+      │           its seed listed; another flow's sheet filled first from the image's tags where none
       │           (or `ui`, the same stage in a browser)
       ▼
   ④ generate ── reads the approved sheet ──▶ prompts/   assembled, offline
@@ -52,17 +51,19 @@ render would refuse are refused by name. **`isekai assign`** ticks a flow: it op
 run and gives it that flow's empty directory, which is the stage the hub calls
 *assigned*; `--remove` takes one away only while it is empty.
 
-**`isekai revise <image.png> …`** sends a render back to ③. Each path names its
+**`isekai draft --flow FLOW <image.png> …`** sends a render back to ③. Each path names its
 run, flow, approval and seed, `outputs/<NNN>/<seed>.png`; the draft is copied from
-that approval, newest or not, with a count of one and the seed listed. Every image
-is checked first, and a selection is written whole or not at all; a flow's waiting
-draft refuses it, and `review --discard` deletes that draft. Approval refuses a
+that approval, newest or not, with a count of one and the seed listed — into the image's
+own flow a revision, into another its fields both flows declare, the rest from that flow's
+sheet. Every image is checked first, and a selection is written whole or not at all; a
+waiting draft with edits of its own refuses it, and `review --discard` deletes that draft,
+while one equal to its sheet is replaced. Approval refuses a
 revision that would only re-render images its approval already made. The app's
 Compare pairs any two images of a cell, the older before, and by default a seed with
 the newest older version that rendered it:
 
 ```
-outputs/001/7.png ─▶ revise ─▶ review/003.draft.json  {count 1, seeds [7]}
+outputs/001/7.png ─▶ draft ─▶ review/003.draft.json   {count 1, seeds [7]}
                                 │ edit · approve · render
                                 ▼
                      outputs/003/7.png ─▶ Compare: 001 ⇄ 003, the changed fields
@@ -86,7 +87,7 @@ through the functions that own each write — import's for a source, `assign` fo
 a tick, review's for a draft, its edits and an approval, and `sheet()` for a
 target's first sheet when a draft is made from another flow, which
 `interface/drafting.py`'s `draft_across` runs in the server's process, the
-sequence `review --from` runs too. Every other stage it runs only as the CLI's
+sequence `draft --flow` runs too. Every other stage it runs only as the CLI's
 own verb, a child of the server
 ([D4](decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children)).
 

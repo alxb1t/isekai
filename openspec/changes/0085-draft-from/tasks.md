@@ -5,7 +5,7 @@ The stage, the verb, then the page, per [design](design.md). Every new test carr
 ## Progress
 
 - [x] 1 — The stage
-- [ ] 2 — The verb
+- [x] 2 — The verb
 - [ ] 3 — The page
 
 ## 1 — The stage
@@ -20,16 +20,17 @@ The stage, the verb, then the page, per [design](design.md). Every new test carr
 
 ## 2 — The verb
 
-- [ ] 2.1 **HALT CHECK** — the CLI revises with its own verb.
+- [x] 2.1 **HALT CHECK** — the CLI revises with its own verb.
   Verify: `grep -c 'made\["revise"\]' isekai/interface/cli.py` prints a number of at least `1`.
-- [ ] 2.2 Add `draft` and delete `revise` and `review --from`/`--version` in `isekai/interface/cli.py` and
-  `isekai/interface/drafting.py`, and print `isekai draft --flow …` from `_revise_command` (`isekai/pipeline/review.py`),
+- [x] 2.2 Add `draft` and delete `revise` and `review --from`/`--version` in `isekai/interface/cli.py` and
+  `isekai/interface/drafting.py`, print `isekai draft --flow …` from `_revise_command`, renamed `_draft_command` (`isekai/pipeline/review.py`),
+  and drop `review --from` from the sheet stage's remedy in `isekai/pipeline/sheet.py`,
   per [D3](design.md#d3) and [D6](design.md#d6); run the `cli:revise:` tests in `tests/test_review.py` through
   `draft --flow`; in `tests/test_pipeline_cli.py` bind `cli:draft:another-flow-is-drafted-from-the-image`, run
   `cli:review-from:a-target-with-no-sheet-is-filled-first` through `draft --flow`, and delete the tests the design's
   table retires.
   Verify: `grep -c 'made\["revise"\]' isekai/interface/cli.py` prints `0`, and `grep -c 'another-flow-is-drafted-from-the-image' tests/test_pipeline_cli.py` prints `1`, and `uv run pytest -q tests/test_pipeline_cli.py tests/test_review.py` exits 0.
-- [ ] 2.3 Edit `README.md` and `docs/data-flow.md` per [D7](design.md#d7).
+- [x] 2.3 Edit `README.md` and `docs/data-flow.md` per [D7](design.md#d7).
   Verify: `grep -c 'isekai revise\|review --from' README.md docs/data-flow.md` prints `0` for each file, and `grep -c 'isekai draft --flow' README.md` prints a number of at least `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
 
 ## 3 — The page

@@ -1556,7 +1556,7 @@ def _image(run: Run, version: int, seed: int, flow: str = FLOW) -> Path:
 
 
 def _revise_verb(vocabulary: Vocabulary, *images: Path) -> tuple[int, str]:
-    """Run `isekai revise` on `images`, returning its status and its stderr."""
+    """Run `isekai draft` on `images` into their own flow; return status and stderr."""
     err = io.StringIO()
     wired = Wiring(
         reader=None,
@@ -1564,11 +1564,11 @@ def _revise_verb(vocabulary: Vocabulary, *images: Path) -> tuple[int, str]:
         hosted_tagger=None,
         client=None,
         vocabulary=lambda: vocabulary,
-        field_map=lambda _: pytest.fail("revise reads no field map"),
+        field_map=lambda _: pytest.fail("a revision reads no field map"),
         out=io.StringIO(),
         err=err,
     )
-    parsed = build_parser().parse_args(["revise", *map(str, images)])
+    parsed = build_parser().parse_args(["draft", "--flow", FLOW, *map(str, images)])
     return dispatch(parsed, wired), err.getvalue()
 
 
@@ -1708,7 +1708,7 @@ def test_cancelling_a_revision_leaves_the_rendered_approval_it_revised(
         ("prompt", "prompts/001.json", "--new-version"),
         ("failure", "prompts/001.error.1.permanent.json", "--new-version"),
         ("empty group", "outputs/001", "--new-version"),
-        ("image", "outputs/001", "isekai revise "),
+        ("image", "outputs/001", f"isekai draft --flow {FLOW} "),
     ],
 )
 def test_anything_made_from_an_approval_refuses_its_cancel_and_changes_nothing(

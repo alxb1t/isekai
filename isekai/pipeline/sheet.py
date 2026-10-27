@@ -261,8 +261,8 @@ def _from_source(
     if source is None:
         return None
     retag = stage_command(run, "tag", source_flow, options=NEW_VERSION)
-    redraft = stage_command(run, "review", flow, options=("--from", source_flow))
-    remedy = f"run `{retag}`, then `{redraft}`"
+    # The image a draft starts from is the draft verb's, never this stage's.
+    remedy = f"run `{retag}`, then draft {flow} from the {source_flow} image again"
     fields, made_by = _route(run, source_flow, source, schema, field_map, remedy)
     validate(fields, schema, vocabulary, remedy=remedy)
     return fields, made_by
