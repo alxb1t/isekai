@@ -94,7 +94,7 @@ const shown = computed(() =>
   barOf({
     changes: changes.value.length,
     preparing: busy.value || barRefusal.value !== null,
-    images: offer.value.images,
+    images: offer.value.images + offer.value.others,
     refused: offer.value.refused !== null,
     rendering: rendering.value,
   }),
@@ -417,7 +417,7 @@ onUnmounted(() => {
       :open="viewing.open"
       @close="viewing = null"
     />
-    <RenderDialog v-if="dialog" :collection="collection" @close="store.closeDialog" />
+    <RenderDialog v-if="dialog" @close="store.closeDialog" />
     <div class="hub__head">
       <span class="mono">
         {{ sources.length }} {{ noun(sources.length, 'source') }} ×
@@ -557,6 +557,7 @@ onUnmounted(() => {
     <RenderBar
       v-if="shown === 'render'"
       :images="offer.images"
+      :others="offer.others"
       :disabled="offer.disabled"
       :refused="offer.refused"
       :rendering="rendering"

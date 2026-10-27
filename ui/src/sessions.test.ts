@@ -1,6 +1,6 @@
 import { expect } from 'vitest'
 import { moved } from './grid'
-import { first, grid, lastColumns } from './sessions'
+import { first, grid, lastColumns, located, stacked } from './sessions'
 import { spec } from './test/spec'
 import type { SessionRecord } from './types'
 
@@ -78,4 +78,35 @@ spec('ui:sessions:the-grid-moves-by-photograph-and-row', () => {
   expect(moved(last, photographs, 'row+')).toEqual(photographs)
   expect(moved(last, right, 'column+')).toEqual(right)
   expect(moved(last, start, 'row-')).toEqual(start)
+})
+
+spec('ui:sessions:the-grids-stack-by-collection', () => {
+  const upper = grid(
+    record({
+      planned: [
+        { digest: 'a', flow: SUMMON, images: 1 },
+        { digest: 'b', flow: SUMMON, images: 1 },
+        { digest: 'c', flow: SUMMON, images: 1 },
+      ],
+    }),
+  )
+  const lower = grid(
+    record({
+      planned: [
+        { digest: 'd', flow: CONJURE, images: 1 },
+        { digest: 'e', flow: CONJURE, images: 1 },
+      ],
+    }),
+  )
+  const stack = stacked([upper, lower])
+  expect(stack.starts).toEqual([0, 2])
+
+  // From the first grid's last row, its photographs', j enters the second grid's first row.
+  const down = moved(stack.last, { row: 1, column: 1 }, 'row+')
+  expect(down).toEqual({ row: 2, column: 1 })
+  expect(located(stack, down.row)).toEqual({ grid: 1, row: 0 })
+  expect(moved(stack.last, down, 'row-')).toEqual({ row: 1, column: 1 })
+  // A shorter grid holds the column at its row's end.
+  expect(moved(stack.last, { row: 1, column: 2 }, 'row+')).toEqual({ row: 2, column: 1 })
+  expect(located(stack, 1)).toEqual({ grid: 0, row: 1 })
 })

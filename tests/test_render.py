@@ -121,15 +121,15 @@ class Calls:
         return [line for line in self.lines if "--server" in line]
 
 
-def collection(root: Path, *ids: str) -> Path:
-    runs = root / "b" / "runs"
+def collection(root: Path, *ids: str, name: str = "b") -> Path:
+    runs = root / name / "runs"
     for run_id in ids or ("r1",):
         (runs / run_id).mkdir(parents=True)
         (runs / run_id / "run.json").write_text("{}")
     return runs
 
 
-def wired(runs: Path) -> Wiring:
+def wired(runs: Path | list[Path]) -> Wiring:
     def unread() -> Vocabulary:
         raise AssertionError("a session reads no vocabulary")
 
@@ -140,14 +140,14 @@ def wired(runs: Path) -> Wiring:
         client=None,
         vocabulary=unread,
         field_map=lambda _: FIELD_MAP,
-        runs_root=runs,
+        runs_root=runs[0] if isinstance(runs, list) else runs,
         out=io.StringIO(),
         err=io.StringIO(),
     )
 
 
 def session(
-    runs: Path,
+    runs: Path | list[Path],
     *requests: str,
     generate: Callable[[list[str], Wiring], int] | None = None,
     opener: gpu.OpenSession | None = None,
@@ -164,7 +164,11 @@ def session(
         kill=lambda: None,
     )
     return render.run_session(
-        argparse.Namespace(runs=runs, requests=list(requests), session=given),
+        argparse.Namespace(
+            runs=runs if isinstance(runs, list) else [runs],
+            requests=list(requests),
+            session=given,
+        ),
         wiring or wired(runs),
         generate if generate is not None else Calls(),
         dataclasses.replace(defaults, **seams),
@@ -471,10 +475,12 @@ def test_the_session_is_opened_on_the_repositorys_gpunit_toml_alone(
         build_parser().parse_args(["render", str(runs), f"{FLOW}=1", "--image", "x"])
 
 
-def approved(root: Path, schema: Schema, vocabulary: Vocabulary, name: str) -> Run:
+def approved(
+    root: Path, schema: Schema, vocabulary: Vocabulary, name: str, held: str = "b"
+) -> Run:
     photo = root / f"{name}.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900 + 8 * len(name)))
-    made = open_run(photo, root / "b" / "runs")
+    made = open_run(photo, root / held / "runs")
     caption(made, FakeReader(prose="Brown hair, brown eyes."))
     sheet(made, schema, vocabulary)
     review(made, FLOW)
@@ -522,10 +528,15 @@ def real(root: Path, vocabulary: Vocabulary) -> Wiring:
 
 
 def counted(
-    root: Path, schema: Schema, vocabulary: Vocabulary, name: str, made: int
+    root: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    name: str,
+    made: int,
+    held: str = "b",
 ) -> Run:
     """Return a run approved for two images of `FLOW`, `made` of them rendered."""
-    run = approved(root, schema, vocabulary, name)
+    run = approved(root, schema, vocabulary, name, held)
     reapprove(run, schema, vocabulary, {"count": 2, "seeds": []})
     flow = load_flow(FLOW)
     prepare(run, {FLOW: flow})
@@ -596,6 +607,40 @@ def test_with_no_request_an_unapproved_flow_is_left_out_and_named(
     assert images(lacking) == 2
     assert not (started.path / FLOW / "outputs").exists()
     assert f"left out: {started.id}: {FLOW} is a draft" in log(root)
+
+
+@pytest.mark.spec("cli:render-short:many-collections-render-in-one-session")
+def test_many_collections_render_in_one_session_in_the_order_named(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    first = counted(tmp_path, schema, vocabulary, "ada", 1, held="one")
+    second = counted(tmp_path, schema, vocabulary, "beatrix", 1, held="two")
+    roots = [tmp_path / "one" / "runs", tmp_path / "two" / "runs"]
+    opener, calls = FakeOpen(), Calls(_dispatch_argv)
+
+    status = session(
+        roots, generate=calls, opener=opener, wiring=real(roots[0], vocabulary)
+    )
+
+    assert status == 0, log(roots[0])
+    assert opener.opened == 1
+    assert [line[line.index("--runs") + 1] for line in calls.rendered()] == [
+        str(root) for root in roots
+    ]
+    assert (images(first), images(second)) == (2, 2)
+    told = log(roots[0])
+    assert told.index(f"{first.id}: rendered") < told.index(f"{second.id}: rendered")
+
+    opener, calls = FakeOpen(), Calls()
+    assert session(roots, f"{FLOW}=1", generate=calls, opener=opener) == 1
+    assert (opener.opened, calls.lines) == (0, [])
+    assert f"refused: {FLOW}=1 renders one collection's runs" in log(roots[0])
+    parsed = build_parser().parse_args(["render", *map(str, roots), f"{FLOW}=1"])
+    assert (parsed.runs, parsed.requests) == (roots, [f"{FLOW}=1"])
+    twice = wired(roots[0])
+    assert session([roots[0], roots[0]], opener=opener, wiring=twice) == 1
+    assert isinstance(twice.err, io.StringIO)
+    assert "refused: a collection's runs/ is named twice" in twice.err.getvalue()
 
 
 @pytest.mark.spec(
@@ -760,7 +805,7 @@ def test_a_session_reports_each_image_of_the_total_as_json(
     made = counted(tmp_path, schema, vocabulary, "ada", 0)
     root = tmp_path / "b" / "runs"
     wiring = real(root, vocabulary)
-    asked = argparse.Namespace(runs=root, requests=[], progress="json")
+    asked = argparse.Namespace(runs=[root], requests=[], progress="json")
     seams = render.Seams(
         open_session=FakeOpen(),
         environ={},
@@ -805,7 +850,7 @@ def test_a_session_whose_endpoint_never_answers_reports_its_teardown(
         kill=lambda: None,
         wait_s=0,
     )
-    asked = argparse.Namespace(runs=runs, requests=[f"{FLOW}=1"], progress="json")
+    asked = argparse.Namespace(runs=[runs], requests=[f"{FLOW}=1"], progress="json")
 
     status = render.run_session(asked, wiring, Calls(), seams)
 
@@ -856,9 +901,10 @@ def test_a_session_writes_its_record_of_each_image_and_no_price(
     assert record["asked"] == {FLOW: 2}
     assert record["steps"] == {"pod": "ready", "teardown": "done"}
     assert record["ended"] is not None
+    assert record["collection_order"] == [runs.parent.name]
     assert set(record) == {
         "schema", "id", "started", "ended", "limit", "asked", "planned", "steps",
-        "images", "outcome", "message",
+        "images", "outcome", "message", "collection_order",
     }  # fmt: skip
 
 
@@ -882,6 +928,51 @@ def test_the_record_plans_each_run_and_flow_with_its_images(
     assert asked["planned"] == [
         {"digest": run_id, "flow": FLOW, "images": 3} for run_id in ("r1", "r2")
     ]
+
+
+@pytest.mark.spec("cli:render-session:each-collection-holds-its-record")
+def test_each_collection_holds_its_record_of_the_shared_session(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    first = counted(tmp_path, schema, vocabulary, "ada", 0, held="one")
+    second = counted(tmp_path, schema, vocabulary, "beatrix", 1, held="two")
+    roots = [tmp_path / "one" / "runs", tmp_path / "two" / "runs"]
+    given = "20261024T091200Z"
+    # An id one collection already holds refuses, and withdraws the other's record.
+    taken = roots[1].parent / SESSIONS / "20261024T091159Z.json"
+    taken.parent.mkdir()
+    taken.write_text("{}")
+    opener = FakeOpen()
+    wiring = real(roots[0], vocabulary)
+    assert session(roots, wiring=wiring, given=taken.stem, opener=opener) == 1
+    assert opener.opened == 0
+    assert not (roots[0].parent / SESSIONS / taken.name).exists()
+    taken.unlink()
+
+    status = session(
+        roots,
+        generate=_dispatch_argv,
+        wiring=real(roots[0], vocabulary),
+        given=given,
+    )
+
+    assert status == 0, log(roots[0])
+    ((one,), (two,)) = records(roots[0]), records(roots[1])
+    assert (one["id"], two["id"]) == (given, given)
+    assert (one["collections"], two["collections"]) == (["two"], ["one"])
+    assert {image["digest"] for image in one["images"]} == {first.digest}
+    assert {image["digest"] for image in two["images"]} == {second.digest}
+    assert (len(one["images"]), len(two["images"])) == (2, 1)
+    assert one["planned"] == [{"digest": first.digest, "flow": FLOW, "images": 2}]
+    assert two["planned"] == [{"digest": second.digest, "flow": FLOW, "images": 1}]
+    assert (one["asked"], two["asked"]) == ({FLOW: 2}, {FLOW: 1})
+    for record in (one, two):
+        assert record["collection_order"] == ["one", "two"]
+        assert record["steps"] == {"pod": "ready", "teardown": "done"}
+        assert record["outcome"] == "done"
+    for root in roots:
+        assert f"{first.id}: rendered" in log(root)
+        assert f"{second.id}: rendered" in log(root)
 
 
 @pytest.mark.spec("cli:render-session:the-record-follows-each-image")
@@ -985,6 +1076,33 @@ def test_the_estimate_takes_the_median_of_recorded_durations(
     assert got.limit_s == (600 + 4 * 90 + 120) * 1.5
 
 
+@pytest.mark.spec("cli:render-limit:one-boot-for-many-collections")
+def test_one_boot_and_teardown_hold_every_collections_images(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    flow = load_flow(FLOW)
+    fast = approved(tmp_path, schema, vocabulary, "ada", held="one")
+    slow = approved(tmp_path, schema, vocabulary, "beatrix", held="two")
+    for made, ticks in (
+        (fast, [0.0, 80.0, 0.0, 90.0, 0.0, 100.0]),
+        (slow, [0.0, 400.0]),
+    ):
+        prepare(made, {FLOW: flow})
+        seeds = list(range(1, len(ticks) // 2 + 1))
+        stage_render(
+            made, flow, FakeComfyClient(), seeds=seeds, clock=iter(ticks).__next__
+        )
+    work = [
+        (fast.path.parent, [fast.id], {FLOW: 2}),
+        (slow.path.parent, [slow.id], {FLOW: 1}),
+    ]
+
+    got = render.estimated(work, TIMING, 3 * 60 * 60)
+
+    # Each collection's images at its own median, not the pooled one.
+    assert got.seconds == 600 + 2 * 90 + 1 * 400 + 120
+
+
 @pytest.mark.spec("cli:render-limit:the-configured-figure-without-records")
 def test_with_no_recorded_duration_the_configured_time_per_image_is_used() -> None:
     got = render.estimate({FLOW: 10}, {FLOW: []}, TIMING, 3 * 60 * 60)
@@ -1015,7 +1133,7 @@ def test_a_limit_above_gpunit_tomls_ceiling_is_refused_before_renting(
     opener = FakeOpen()
     calls = Calls()
     ceiling = gpunit.load_spec(REPOSITORY / "gpunit.toml").ceiling_s
-    over = argparse.Namespace(runs=runs, requests=[f"{FLOW}=1"], limit=ceiling + 1)
+    over = argparse.Namespace(runs=[runs], requests=[f"{FLOW}=1"], limit=ceiling + 1)
 
     status = render.run_session(
         over,

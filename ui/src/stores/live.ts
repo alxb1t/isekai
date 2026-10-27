@@ -1,7 +1,16 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { checkBilling as askBilling, runningSessions, stopJob } from '../api'
-import type { Billing, FileState, HubInfo, JobKind, JobSlot, JobSlots, RunningSession } from '../types'
+import type {
+  Billing,
+  FileState,
+  HubInfo,
+  JobKind,
+  JobSlot,
+  JobSlots,
+  RunningRender,
+  RunningSession,
+} from '../types'
 import { noun } from '../words'
 
 /* Whether a pod may be billing or the window is past its end. */
@@ -14,6 +23,29 @@ export function clock(seconds: number): string {
   const whole = Math.max(0, Math.floor(seconds))
   const minutes = String(Math.floor(whole / 60)).padStart(2, '0')
   return `${minutes}:${String(whole % 60).padStart(2, '0')}`
+}
+
+/* Every collection a job renders, its own first. */
+export function collectionsOf(slot: JobSlot): string[] {
+  return slot.collections ?? [slot.collection]
+}
+
+/* The disk's running records, one render per id, in recorded traversal order.
+   Records without that metadata retain the order first read. */
+export function grouped(found: RunningSession[]): RunningRender[] {
+  const renders = new Map<string, RunningRender>()
+  for (const one of found) {
+    const held = renders.get(one.id)
+    if (held) {
+      if (!held.collections.includes(one.collection)) held.collections.push(one.collection)
+    } else
+      renders.set(one.id, {
+        collections: [...(one.collection_order ?? [one.collection])],
+        id: one.id,
+        started: one.started,
+      })
+  }
+  return [...renders.values()]
 }
 
 /* What the stream names: the collection the screen shows and the import it has open. */
@@ -56,11 +88,11 @@ export const useLiveStore = defineStore('live', () => {
     const held = jobs.value.render
     return held?.state === 'running' && held.session ? held : null
   })
-  const activeRender = computed<RunningSession | null>(() => {
+  const activeRender = computed<RunningRender | null>(() => {
     const held = slotRender.value
     if (held?.session)
-      return { collection: held.collection, id: held.session.id, started: held.session.started }
-    return activeSessions.value[0] ?? null
+      return { collections: collectionsOf(held), id: held.session.id, started: held.session.started }
+    return grouped(activeSessions.value)[0] ?? null
   })
   const renderRunning = computed(() => activeRender.value !== null)
   /* Whether what `renderRunning` says is current: the slot's, or a read that answered. */

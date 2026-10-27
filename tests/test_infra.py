@@ -1082,7 +1082,7 @@ def test_a_sessions_ceiling_is_its_limit_and_one_over_the_maximum_is_refused(
     (runs / "r1").mkdir(parents=True)
     (runs / "r1" / "run.json").write_text("{}")
     over = argparse.Namespace(
-        runs=runs, requests=["summon-anime-wai=1"], limit=SESSION_CEILING_SECONDS + 1
+        runs=[runs], requests=["summon-anime-wai=1"], limit=SESSION_CEILING_SECONDS + 1
     )
     nothing = Wiring(
         reader=None,

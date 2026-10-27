@@ -917,16 +917,19 @@ snapshot, so a stream opened again loses nothing, and one connection a page leav
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
 The system SHALL offer Render from a bar on a collection's hub and its Renders view that counts the images short of
-their approvals' counts, and SHALL show no such bar when none is short and no count is refused, nor on the hub while
-changes wait for Prepare. The bar SHALL be disabled, with its reason, when a render runs, when a pod may still be
-billing, when no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a
-dialog listing per offered flow the images that will render and what is left out, with the reason, the session's
-estimate and limit, and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its
-configured rate. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL, and SHALL close when
-its page is left, and the confirmation SHALL close it and open the session drawer over the page. The confirmation SHALL
-carry the limit and the number of images the dialog showed, and SHALL be refused, starting nothing, when the
-collection's quote taken again has a longer limit or another number of images. The bar SHALL show the newest offer asked
-for, whatever order the answers arrive in.
+their approvals' counts, its collection's and, as `+n in other collections`, every other collection's, and SHALL show no
+such bar when no collection is short and no count is refused, nor on the hub while changes wait for Prepare. The bar
+SHALL be disabled, with its reason, when a render runs, when a pod may still be billing, when no RunPod key is in the
+surface's environment, and when an approval's count is refused. It SHALL open a dialog listing a row per collection
+short of images, in the Library's order, each ticked, and in each row per offered flow the images that will render and
+what is left out, with the reason; unticking a row SHALL quote the rest again; the session's estimate and limit, and its
+price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its configured rate; an estimate
+past the ceiling `gpunit.toml` names SHALL disable the confirmation, saying so. Its confirmation SHALL be the only act
+that rents; the dialog SHALL hold no URL, and SHALL close when its page is left, and the confirmation SHALL close it and
+open the session drawer over the page. The confirmation SHALL carry the ticked collections, the limit and the number of
+images the dialog showed, and SHALL be refused, starting nothing, when the ticked collections' quote taken again has a
+longer limit or another number of images. The bar SHALL show the newest offer asked for, whatever order the answers
+arrive in.
 
 The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
 not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires
@@ -987,6 +990,19 @@ a refused count keeps the bar, so the refusal is never silent.
 - **Layers:** unit
 - **WHEN** an older offer request is answered after a newer one
 - **THEN** the bar keeps the newer offer
+
+#### Scenario: the dialog quotes every collection
+- **Key:** `ui:render:the-dialog-quotes-every-collection`
+- **Layers:** unit
+- **WHEN** two collections are short of images and the quote is asked for both, then for one
+- **THEN** the first quote lists both, with one estimate and one limit
+- **AND** the second lists the one alone
+
+#### Scenario: past the ceiling disables Render
+- **Key:** `ui:render:past-the-ceiling-disables-render`
+- **Layers:** unit
+- **WHEN** the ticked collections' estimate passes the configured ceiling
+- **THEN** the quote's confirmation is disabled, naming the ceiling
 
 ### Requirement: The render job opens the volume, renders, and closes the volume unless kept
 
@@ -1548,12 +1564,15 @@ on the right, over a dark backdrop, holding no URL. `⌃;` SHALL open and close 
 the running render's link SHALL open it; confirming a render SHALL open it, and a render started from the terminal SHALL
 open nothing. It SHALL read the running render's record, live while it runs, with the volume steps and Stop the job
 adds; after it ends it SHALL show that session's outcome, its images and its time until the app reloads or another
-render starts; with neither it SHALL say no render runs. Its images SHALL be a grid: a column for each photograph the
-session was asked to render, a row for each flow, the photographs' row at the foot, a cell holding that flow's images of
-that photograph and a waiting tile for each still to come, drawn at the tile size Renders draws and moved through by `h
-j k l` and the arrows. `↵` SHALL open the focused row in the viewer over the drawer, which SHALL follow its list when it
-changes while open; `⇧I` SHALL close the drawer and open its collection's Renders. A click on the backdrop, `⌃;` and
-`Esc` SHALL close it, `Esc` closing the viewer first.
+render starts; with neither it SHALL say no render runs. Its images SHALL be a grid per collection the session renders,
+stacked in its recorded collection order, retaining scan order for older records without it, each headed by its
+name: a column for each photograph the session was asked to render, a row for
+each flow, the photographs' row at the foot, a cell holding that flow's images of that photograph and a waiting tile for
+each still to come, drawn at the tile size Renders draws and moved through by `h j k l` and the arrows, `j` `↓` on a
+grid's last row moving into the first row of the grid below and `k` `↑` back, keeping the column, held at a shorter
+row's end. `↵` SHALL open the focused row in the viewer over the drawer, which SHALL follow its list when it changes
+while open; `⇧I` SHALL close the drawer and open the focused image's collection's Renders. A click on the backdrop, `⌃;`
+and `Esc` SHALL close it, `Esc` closing the viewer first.
 
 ```
 any screen ──⌃; or ●──▶ the drawer, half the window ──↵──▶ the viewer over it
@@ -1596,8 +1615,8 @@ on Renders.
 #### Scenario: a terminal render stays live
 - **Key:** `ui:sessions:a-terminal-render-stays-live`
 - **Layers:** unit
-- **WHEN** a terminal render runs without an app job slot
-- **THEN** its record reads running and the global running-session read names its collection and id
+- **WHEN** a terminal render runs across collections in reverse name order without an app job slot
+- **THEN** its records read running and the global running-session read carries their id and complete traversal order
 - **AND** after its process releases ownership without an outcome the record reads ended without an outcome
 
 
@@ -1629,6 +1648,12 @@ on Renders.
 - **Layers:** unit
 - **WHEN** `l` and then `j` are pressed on the grid's first render
 - **THEN** `l` moves to the next photograph's column and `j` to the row below, held at the photographs' row
+
+#### Scenario: the grids stack by collection
+- **Key:** `ui:sessions:the-grids-stack-by-collection`
+- **Layers:** unit
+- **WHEN** `j` is pressed on the first grid's last row, then `k`
+- **THEN** the focus moves into the second grid's first row, in the same column, then back
 
 ### Requirement: A folder in the library is a collection when it holds `sources/`
 

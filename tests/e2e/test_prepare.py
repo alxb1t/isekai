@@ -77,4 +77,5 @@ def test_prepare_takes_the_assigned_cells_to_their_sheet_and_no_other(
     )
     expect(_cell(page, "skip")).to_have_attribute("data-stage", "none")
     expect(_cell(page, "pick", OTHER)).to_have_attribute("data-stage", "none")
-    expect(page.locator(".prepare-bar")).to_have_count(0)
+    # Other collections' images may still show the Render bar; the Prepare bar is gone.
+    expect(page.locator(".prepare-bar:not([data-render-bar])")).to_have_count(0)

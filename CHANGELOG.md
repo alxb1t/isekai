@@ -9,6 +9,25 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.56.0] - 2026-10-27 · 0083-the-multi-batch-render
+
+Gate: local 0m47s · CI 1m16s (ci at f35f347) · 0.55.0: local 0m47s · CI none
+
+### Added
+
+- `render <runs>…` renders every named collection's shortfall in one session on one pod, its limit one boot over
+  every collection's images; each collection keeps a record of the shared id and the whole log (0083 D1–D3, D7).
+- One quote and one Render dialog cover every collection short of images: a ticked row each, one estimate
+  against the ceiling, and `+n in other collections` on the bar (0083 D4, D5).
+- The drawer stacks a grid per collection the session renders, each headed by its name, `j` and `k` moving between
+  grids and `⇧I` opening the focused image's collection's Renders (0083 D6).
+
+### Fixed
+
+- The records docstring describes the shared session id without citing the unrelated hand-path decision (0083 D3).
+- Terminal renders keep their collection traversal in the drawer after disk discovery, even when it differs
+  from the Library's name order; older records remain readable (0083 D3, D6).
+
 ## [0.55.0] - 2026-10-27 · 0082-the-collection
 
 Gate: local 0m47s · CI none · 0.54.0: local 0m47s · CI 1m09s

@@ -30,9 +30,9 @@ spec('ui:render:a-stale-offer-is-dropped', async () => {
   const older = store.check()
   const newer = store.check()
 
-  answers[1]({ disabled: null, images: 2, refused: null })
+  answers[1]({ disabled: null, images: 2, others: 0, refused: null })
   await newer
-  answers[0]({ disabled: null, images: 5, refused: null })
+  answers[0]({ disabled: null, images: 5, others: 0, refused: null })
   await older
 
   expect(store.offer.images).toBe(2)

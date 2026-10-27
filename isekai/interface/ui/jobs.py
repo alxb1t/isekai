@@ -3,13 +3,14 @@
 One job of each kind runs at a time, the two side by side. The CLI is the one
 path, so a job is exactly what the verbs do. Each child runs in its own session and
 reports through `--progress json`; its prose is appended to the collection's `log.txt`,
-each line naming its job. A job outlives the page that started it.
+each line naming its job, and a render's to every collection it renders. A job
+outlives the page that started it.
 
 ```
 Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
             └ answers ─▶ per flow: tag ─▶ caption ─▶ sheet ─▶ done
 Render ─▶ volume up ─ lost ─▶ the volume alert, nothing renders
-           └ up ─▶ render --limit … --session … --progress json
+           └ up ─▶ render --limit … --session … --progress json <runs>…
                  ─▶ volume down, unless kept
 Stop ─▶ SIGINT to its kind's child ─▶ no later stage of that job starts
 the server stopping ─▶ SIGINT to both children at once
@@ -19,6 +20,7 @@ a child failing with no line reported ─▶ failed, naming log.txt ─▶ no la
 ```
 """
 
+import contextlib
 import os
 import signal
 import subprocess
@@ -88,11 +90,11 @@ def isekai_command(verb: str, flow: str, runs: Path, ids: Sequence[str]) -> list
     ]
 
 
-# How a render is started: the session's limit, the collection's runs root, its id.
-RenderCommand = Callable[[int, Path, str], list[str]]
+# How a render is started: the session's limit, each collection's runs root, its id.
+RenderCommand = Callable[[int, Sequence[Path], str], list[str]]
 
 
-def render_command(limit: int, runs: Path, session: str) -> list[str]:
+def render_command(limit: int, roots: Sequence[Path], session: str) -> list[str]:
     """Return the render verb line. e.g. `python -m isekai render --limit 1200 …`."""
     return [
         sys.executable,
@@ -105,7 +107,7 @@ def render_command(limit: int, runs: Path, session: str) -> list[str]:
         session,
         "--progress",
         "json",
-        str(runs),
+        *map(str, roots),
     ]
 
 
@@ -143,6 +145,8 @@ class _Job:
     message: str | None = None
     # A render's session as the page draws it: its steps, its images, its limit.
     session: dict[str, Any] | None = None
+    # Every collection a render renders, `collection` first.
+    collections: tuple[str, ...] = ()
 
     started: str | None = None
     accepted: set[tuple[str, str]] = field(default_factory=set)
@@ -163,6 +167,8 @@ class _Job:
                 "of": len(self.accepted),
                 "done": len(self.completed),
             }
+        if self.collections:
+            described["collections"] = list(self.collections)
         if self.session is not None:
             described["session"] = {
                 **self.session,
@@ -269,14 +275,16 @@ class Jobs:
 
     def render(
         self,
-        collection: str,
-        folder: Path,
+        collections: Mapping[str, Path],
         *,
         limit: int,
         total: int,
         keep_open: bool,
     ) -> dict[str, Any]:
-        """Start a render of `folder`'s runs within `limit` seconds, or refuse."""
+        """Start one render of each collection's runs within `limit` seconds, or refuse.
+
+        `collections` maps each name to its folder, in the order rendered.
+        """
         # Read before the job starts, so a stopping server reads no file.
         settle = self._settle()
         with self._lock:
@@ -295,8 +303,10 @@ class Jobs:
                 "steps": steps,
                 "images": [],
             }
-            job = _Job(collection, (), kind="render", session=session)
-            self._occupy(job, self._run_render, (job, folder, limit))
+            names = tuple(collections)
+            job = _Job(names[0], (), kind="render", session=session, collections=names)
+            folders = tuple(collections.values())
+            self._occupy(job, self._run_render, (job, folders, limit))
         self._publish(job)
         return job.describe()
 
@@ -442,7 +452,7 @@ class Jobs:
                     job.state = "stopped" if slot.stopping else "done"
             self._publish(job)
 
-    def _run_render(self, job: _Job, folder: Path, limit: int) -> None:
+    def _run_render(self, job: _Job, folders: Sequence[Path], limit: int) -> None:
         """Open the window, run the render verb, and close the window unless kept."""
         assert job.session is not None
         slot = self._slots[job.kind]
@@ -450,7 +460,7 @@ class Jobs:
         opened = False
         try:
             self._mark(job, "volume up", "running")
-            code = _named(job.kind, folder, self._volume.up)
+            code = _named(job.kind, folders, self._volume.up)
             if code != 0:
                 self._mark(job, "volume up", "lost" if code == LOST_EXIT else "failed")
                 if code == LOST_EXIT:
@@ -463,7 +473,7 @@ class Jobs:
                 return
             opened = True
             self._mark(job, "volume up", "done")
-            self._render_child(job, folder, limit)
+            self._render_child(job, folders, limit)
         except OSError as error:
             # A verb that could not be started, or a log that could not be opened:
             # nothing rendered, and the page says so rather than showing an end.
@@ -479,7 +489,7 @@ class Jobs:
         finally:
             if opened and steps["volume down"] != "kept":
                 self._mark(job, "volume down", "running")
-                code = _named(job.kind, folder, self._volume.down)
+                code = _named(job.kind, folders, self._volume.down)
                 self._mark(job, "volume down", "done" if code == 0 else "failed")
                 if code != 0:
                     self._raise_volume()
@@ -489,15 +499,16 @@ class Jobs:
                 job.session["ended"] = self._now()
             self._publish(job)
 
-    def _render_child(self, job: _Job, folder: Path, limit: int) -> None:
+    def _render_child(self, job: _Job, folders: Sequence[Path], limit: int) -> None:
         """Run the render verb, reading its steps; start none once Stop was asked."""
         assert job.session is not None
         slot = self._slots[job.kind]
         with self._lock:
             if slot.stopping:
                 return
-            argv = self._render(limit, folder / RUNS, job.session["id"])
-            child = self._spawn(job.kind, argv, folder)
+            roots = [folder / RUNS for folder in folders]
+            argv = self._render(limit, roots, job.session["id"])
+            child = self._spawn(job.kind, argv, folders)
         assert child.stdout is not None
         reported = False
         for raw in child.stdout:
@@ -543,18 +554,20 @@ class Jobs:
                 return None
             argv = self._command(step.verb, step.flow, folder / RUNS, step.runs)
             job.flow, job.stage = step.flow, step.verb
-            return self._spawn(job.kind, argv, folder)
+            return self._spawn(job.kind, argv, (folder,))
 
     def _spawn(
-        self, kind: Kind, argv: list[str], folder: Path
+        self, kind: Kind, argv: list[str], folders: Sequence[Path]
     ) -> subprocess.Popen[str]:
-        """Start `argv` as `kind`'s child, and the thread writing its prose to the log.
+        """Start `argv` as `kind`'s child, and the thread writing its prose to each log.
 
         Hold the lock.
         """
-        # Line-buffered, so each line lands whole beside the other job's.
-        log = (folder / LOG).open("a", buffering=1)
+        logs: list[TextIO] = []
         try:
+            for folder in folders:
+                # Line-buffered, so each line lands whole beside the other job's.
+                logs.append((folder / LOG).open("a", buffering=1))
             # Its own session, so a Ctrl-C at the terminal reaches the server
             # alone, and the server decides what the child is sent.
             child = subprocess.Popen(
@@ -566,13 +579,14 @@ class Jobs:
                 start_new_session=True,
             )
         except OSError:
-            log.close()
+            for log in logs:
+                log.close()
             raise
         assert child.stderr is not None
         slot = self._slots[kind]
         slot.child = child
         slot.tee = threading.Thread(
-            target=_tee, args=(child.stderr, log, kind), daemon=True
+            target=_tee, args=(child.stderr, logs, kind), daemon=True
         )
         slot.tee.start()
         return child
@@ -590,15 +604,29 @@ class Jobs:
         self._broadcast.publish("job", described)
 
 
-def _named(kind: Kind, folder: Path, verb: Callable[[Say], int]) -> int:
-    """Run a gpunit `verb`, each line it says written to the log naming its job."""
-    # Line-buffered, so each line lands whole beside the other job's.
-    with (folder / LOG).open("a", buffering=1) as log:
-        return verb(lambda line: print(f"[{kind}]", line, file=log))
+def _named(kind: Kind, folders: Sequence[Path], verb: Callable[[Say], int]) -> int:
+    """Run a gpunit `verb`, each line it says written to each log naming its job."""
+    with contextlib.ExitStack() as held:
+        # Line-buffered, so each line lands whole beside the other job's.
+        logs = [
+            held.enter_context((folder / LOG).open("a", buffering=1))
+            for folder in folders
+        ]
+
+        return verb(lambda line: _say(logs, kind, line))
 
 
-def _tee(stream: TextIO, log: TextIO, kind: Kind) -> None:
-    """Write each line of `stream` to `log`, naming its job. e.g. `[render] …`."""
-    with stream, log:
+def _tee(stream: TextIO, logs: Sequence[TextIO], kind: Kind) -> None:
+    """Write each line of `stream` to every log, naming its job. e.g. `[render] …`."""
+    with contextlib.ExitStack() as held:
+        held.enter_context(stream)
+        for log in logs:
+            held.enter_context(log)
         for line in stream:
-            print(f"[{kind}]", line.rstrip("\n"), file=log)
+            _say(logs, kind, line.rstrip("\n"))
+
+
+def _say(logs: Sequence[TextIO], kind: Kind, line: str) -> None:
+    """Write `line` to every log, naming its job."""
+    for log in logs:
+        print(f"[{kind}]", line, file=log)

@@ -1,16 +1,19 @@
 """`isekai render`: one whole render session on a rented GPU, torn down on every exit.
 
-    python -m isekai render <runs> [<flow>=<count|source> ...]
+    python -m isekai render <runs>… [<flow>=<count|source> ...]
     e.g. python -m isekai render .data/b1/runs
+         python -m isekai render .data/b1/runs .data/b2/runs
          python -m isekai render .data/b1/runs summon-anime-wai=1 conjure-anime-wai=1
          python -m isekai render .data/b1/runs control-anime-wai=summon-anime-wai
 
-With no request, every approval short of its count renders what it lacks. A count
-draws that many seeds; a source flow renders its latest seeds again. A source
-rendered by count in the same line goes first, in the same session. Output is shown
-and appended to the collection's log, `<runs>/../log.txt` (D36); with `--progress json`
-the prose goes to stderr alone, which the caller keeps, as the app's job does. Once
-the pod is asked for, the session's record is kept at `<runs>/../sessions/<id>.json`.
+With no request, every approval short of its count renders what it lacks, in each
+collection named, on one pod. A count draws that many seeds; a source flow renders
+its latest seeds again; a request takes one collection. A source rendered by count
+in the same line goes first, in the same session. Output is shown and appended to
+each collection's log, `<runs>/../log.txt` (D36); with `--progress json` the prose
+goes to stderr alone, which the caller keeps, as the app's job does. Once the pod
+is asked for, each collection keeps the session's record at
+`<runs>/../sessions/<id>.json`.
 """
 
 import argparse
@@ -144,6 +147,13 @@ def in_session_sources(requests: Sequence[Request]) -> list[bool]:
     return deferred
 
 
+def again(roots: Sequence[Path]) -> str:
+    """Return the command that renders what each of `roots` lacks, in one session."""
+    return shlex.join(
+        ["uv", "run", "python", "-m", "isekai", "render", *map(str, roots)]
+    )
+
+
 def run_ids(runs: Path) -> list[str]:
     """Return every run under `runs`, by id; a collection not yet assigned has none."""
     if not runs.is_dir():
@@ -236,8 +246,14 @@ class Record:
         limit: int,
         asked: Mapping[str, int],
         planned: Sequence[SessionPlan] = (),
+        others: Sequence[str] = (),
+        order: Sequence[str] = (),
     ) -> None:
-        """Name the record by `given`, else by its start, once it opens."""
+        """Name the record by `given`, else by its start, once it opens.
+
+        `others` names the session's other collections; a session of one has none.
+        `order` names all collections in traversal order, including this one.
+        """
         self._folder = folder
         self._given = given
         # Where the record is, once open: the one sign it is written.
@@ -256,12 +272,14 @@ class Record:
             "outcome": "running",
             "message": None,
         }
-        # Why the session is ending, when the watchdog ends it.
-        self.note: str | None = None
+        if others:
+            self._body["collections"] = list(others)
+        if order:
+            self._body["collection_order"] = list(order)
 
-    def open(self) -> None:
-        """Write the record as running."""
-        started = datetime.now(UTC)
+    def open(self, started: datetime | None = None) -> None:
+        """Write the record as running, started now unless `started` is given."""
+        started = started or datetime.now(UTC)
         name = self._given or session_id(started)
         self._body["id"], self._body["started"] = name, _utc(started)
         path = self._folder / f"{name}.json"
@@ -297,6 +315,13 @@ class Record:
             self._held.close()
             self._held = None
 
+    def withdraw(self) -> None:
+        """Delete the record this process opened, and release its lock."""
+        if self._path is not None:
+            self._path.unlink(missing_ok=True)
+            self._path = None
+        self.close()
+
     def step(self, step: str, state: str) -> None:
         """Record `step` at `state`."""
         self._body["steps"][step] = state
@@ -326,6 +351,52 @@ class Record:
             replace(self._path, SESSION_FILE, self._body)
 
 
+class Records:
+    """A session's records, one per collection it renders, all of one id.
+
+    The pod's and the teardown's steps and the outcome reach every record; an
+    image reaches its own collection's alone.
+    """
+
+    def __init__(self, held: Mapping[Path, Record]) -> None:
+        """Keep a record per runs root."""
+        self._held = dict(held)
+        # Why the session is ending, when the watchdog ends it.
+        self.note: str | None = None
+
+    def open(self) -> None:
+        """Write every record as running, or none: a refused one withdraws the rest."""
+        started = datetime.now(UTC)
+        opened: list[Record] = []
+        try:
+            for record in self._held.values():
+                record.open(started)
+                opened.append(record)
+        except BaseException:
+            for record in opened:
+                record.withdraw()
+            raise
+
+    def close(self) -> None:
+        """Release every record's lock."""
+        for record in self._held.values():
+            record.close()
+
+    def step(self, step: str, state: str) -> None:
+        """Record `step` at `state` in every record."""
+        for record in self._held.values():
+            record.step(step, state)
+
+    def image(self, item: Mapping[str, Any], runs: Path) -> None:
+        """Record the image a `generate` line over `runs` landed, in its record."""
+        self._held[runs].image(item)
+
+    def end(self, outcome: str, message: str | None = None) -> None:
+        """Record the session ended at `outcome` in every record."""
+        for record in self._held.values():
+            record.end(outcome, message)
+
+
 class Steps:
     """A session's JSON lines on `out`, one per step, when `enabled`.
 
@@ -338,7 +409,7 @@ class Steps:
         self.out = out
         self.enabled = enabled
         self.flag: tuple[str, ...] = ("--progress", "json") if enabled else ()
-        self.record: Record | None = None
+        self.record: Records | None = None
         self._n = 0
 
     def step(self, step: str, state: str) -> None:
@@ -352,20 +423,20 @@ class Steps:
             # Flushed: a job reads this from a pipe, line by line, as it happens.
             print(json.dumps(line), file=self.out, flush=True)
 
-    def child(self, total: int = 0) -> TextIO:
-        """Return where a `generate` line writes: its image lines become steps.
+    def child(self, total: int = 0, runs: Path | None = None) -> TextIO:
+        """Return where a `generate` line over `runs` writes: its images become steps.
 
-        Once a record is kept, every image reaches it, whether or not it prints.
+        Once a record is kept, every image reaches its collection's, printed or not.
         """
         if not (self.enabled or self.record):
             return self.out
         # A text stream as `_Tee` is; `TextIO` is a type no stream class subclasses.
-        return cast("TextIO", _Images(self, total))
+        return cast("TextIO", _Images(self, total, runs))
 
-    def image(self, item: Mapping[str, Any], total: int) -> None:
+    def image(self, item: Mapping[str, Any], total: int, runs: Path | None) -> None:
         """Print the next image's line, of `total`, naming its run, flow and seed."""
-        if self.record is not None:
-            self.record.image(item)
+        if self.record is not None and runs is not None:
+            self.record.image(item, runs)
         self._n += 1
         named = {
             key: item.get(key) for key in ("run", "digest", "flow", "version", "seed")
@@ -376,10 +447,11 @@ class Steps:
 class _Images(io.TextIOBase):
     """Read `generate`'s JSON lines, and print each landed image as a step."""
 
-    def __init__(self, steps: Steps, total: int) -> None:
-        """Count images against `total`."""
+    def __init__(self, steps: Steps, total: int, runs: Path | None) -> None:
+        """Count images against `total`, each landed under `runs`."""
         self._steps = steps
         self._total = total
+        self._runs = runs
         self._held = ""
 
     def write(self, text: str) -> int:
@@ -389,7 +461,7 @@ class _Images(io.TextIOBase):
         for line in lines:
             item = progress_line(line)
             if item and item.get("stage") == "render" and item.get("state") == "done":
-                self._steps.image(item, self._total)
+                self._steps.image(item, self._total, self._runs)
         return len(text)
 
 
@@ -406,10 +478,19 @@ def run_session(
     through the caller under `--progress json`.
     """
     seams = wired.session if seams is None else seams
-    runs = Path(args.runs)
-    if not runs.is_dir():
+    roots = [Path(runs) for runs in args.runs]
+    for runs in roots:
+        if not runs.is_dir():
+            print(
+                f"refused: {runs} is not a directory; give the collection's runs/",
+                file=wired.err,
+            )
+            return 1
+    once = list(dict.fromkeys(runs.resolve() for runs in roots))
+    if len(once) < len(roots):
         print(
-            f"refused: {runs} is not a directory; give the collection's runs/",
+            f"refused: a collection's runs/ is named twice; name each once: "
+            f"`{again(once)}`",
             file=wired.err,
         )
         return 1
@@ -419,11 +500,14 @@ def run_session(
         # Under `--progress json` stdout is the caller's channel and stderr its
         # log; teeing here too would write every line twice.
         if not json_lines:
-            log = held.enter_context(
-                (runs.parent / "log.txt").open("a", encoding="utf-8")
-            )
+            logs = [
+                held.enter_context(
+                    (runs.parent / "log.txt").open("a", encoding="utf-8")
+                )
+                for runs in roots
+            ]
             logged = dataclasses.replace(
-                wired, out=_Tee(wired.out, log), err=_Tee(wired.err, log)
+                wired, out=_Tee(wired.out, *logs), err=_Tee(wired.err, *logs)
             )
         # On the teed stream, so each `generate` line reaches the log as well.
         steps = Steps(logged.out, json_lines)
@@ -431,7 +515,7 @@ def run_session(
             limit = getattr(args, "limit", None)
             given = getattr(args, "session", None)
             return _session(
-                runs, list(args.requests), limit, given, logged, generate, seams, steps
+                roots, list(args.requests), limit, given, logged, generate, seams, steps
             )
         except Refusal as refused:
             print(f"refused: {refused}", file=logged.err)
@@ -440,11 +524,12 @@ def run_session(
 
 @dataclass(frozen=True)
 class Line:
-    """One `generate` line of a session, and how many images it renders per run.
+    """One `generate` line of a session over `runs`, and its images per run.
 
     e.g. `planned` (("0d4b…_ada", 2), ("9f1c…_bea", 1)) renders 3 `images`
     """
 
+    runs: Path
     flow: str
     head: tuple[str, ...]
     where: tuple[str, ...]
@@ -493,10 +578,11 @@ def load_timing(path: Path = RENDER_CONFIG) -> Timing:
 
 @dataclass(frozen=True)
 class Estimate:
-    """A session's estimate and its limit, in seconds."""
+    """A session's estimate and limit, in seconds; `capped` if the ceiling cut it."""
 
     seconds: float
     limit_s: int
+    capped: bool = False
 
 
 def recent(runs: Path, ids: Sequence[str], flow: str) -> list[float]:
@@ -517,38 +603,43 @@ def recent(runs: Path, ids: Sequence[str], flow: str) -> list[float]:
     return taken
 
 
-def estimate(
-    images: Mapping[str, int],
-    recorded: Mapping[str, Sequence[float]],
+def estimate[K](
+    images: Mapping[K, int],
+    recorded: Mapping[K, Sequence[float]],
     timing: Timing,
     ceiling_s: int,
 ) -> Estimate:
     """Return a session's estimate and its limit, both in seconds.
 
-    The limit is the estimate times the factor, at least `FLOOR_S` and at most
-    `ceiling_s`.
+    `images` and `recorded` share a key: a flow, or a collection's flow. The limit
+    is the estimate times the factor, at least `FLOOR_S` and at most `ceiling_s`.
     e.g. 4 images at a recorded median of 90 s, boot 180, teardown 120, factor 1.5
-         -> Estimate(660.0, 1200), the floor
+         -> Estimate(660.0, 1200, False), the floor
     """
     seconds = timing.boot_s + timing.teardown_s
-    for flow, count in images.items():
-        seconds += count * statistics.median(recorded.get(flow) or [timing.per_image_s])
-    limit = min(ceiling_s, max(FLOOR_S, math.ceil(seconds * timing.limit_factor)))
-    return Estimate(seconds, limit)
+    for key, count in images.items():
+        seconds += count * statistics.median(recorded.get(key) or [timing.per_image_s])
+    wanted = max(FLOOR_S, math.ceil(seconds * timing.limit_factor))
+    return Estimate(seconds, min(ceiling_s, wanted), wanted > ceiling_s)
 
 
-def _estimated(
-    runs: Path,
-    ids: Sequence[str],
-    images: Mapping[str, int],
-    timing: Timing,
-    ceiling_s: int,
-) -> Estimate:
-    """Return the estimate for `images` from what `runs` has recorded.
+# A collection's runs root, its run ids, and the images it renders by flow.
+Work = tuple[Path, Sequence[str], Mapping[str, int]]
 
-    The quote and the session both take it here, so the two cannot disagree.
+
+def estimated(work: Sequence[Work], timing: Timing, ceiling_s: int) -> Estimate:
+    """Return one session's estimate for every collection's images in `work`.
+
+    One boot and one teardown; each collection's images at its own recorded
+    durations. The quote and the session both take it here, so the two cannot
+    disagree.
     """
-    recorded = {flow: recent(runs, ids, flow) for flow in images}
+    images = {(runs, flow): n for runs, _, found in work for flow, n in found.items()}
+    recorded = {
+        (runs, flow): recent(runs, ids, flow)
+        for runs, ids, found in work
+        for flow in found
+    }
     return estimate(images, recorded, timing, ceiling_s)
 
 
@@ -577,6 +668,10 @@ def _limit(asked: int | None, ceiling_s: int) -> None:
         )
 
 
+# Why Render is off when every approval already has its count of images.
+NOTHING_SHORT = "Every approved source × flow already has its Count of images."
+
+
 @dataclass(frozen=True)
 class Short:
     """What a collection lacks of its approvals, leaves out, and has damaged."""
@@ -599,7 +694,7 @@ class Short:
         if self.refused:
             return self.refused[0]
         if not self.lines:
-            return "Every approved source × flow already has its Count of images."
+            return NOTHING_SHORT
         return None
 
 
@@ -651,28 +746,56 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
     for flow in sorted({flow for _, flow, _ in wanted}):
         held = [(run_id, n) for run_id, named, n in wanted if named == flow]
         where = ("--runs", str(runs), *(run_id for run_id, _ in held))
-        lines.append(Line(flow, ("--flow", flow), where, tuple(held)))
+        lines.append(Line(runs, flow, ("--flow", flow), where, tuple(held)))
     return Short(lines, wanted, left_out, refused)
 
 
 @dataclass(frozen=True)
 class Quote:
-    """What a render of a collection would do, how long it may take, and its price."""
+    """What one session over many collections would do, how long, and its price."""
 
-    short: Short
+    # The shortfall of each collection quoted that is short or refuses a count,
+    # by its runs root, in the order quoted.
+    shorts: dict[Path, Short]
     estimate: Estimate
     timing: Timing
+    ceiling_s: int
     # Dollars: the estimate's price, the limit's, and the window kept open after.
     about: float
     at_most: float
     keep_open: float
 
+    @property
+    def images(self) -> int:
+        """Return how many images the session renders, across its collections."""
+        return sum(sum(found.images.values()) for found in self.shorts.values())
 
-def quote(runs: Path, wired: Wiring) -> Quote:
-    """Return the quote for rendering what `runs` is short of, as the session would.
+    @property
+    def blocked(self) -> str | None:
+        """Return why nothing would render, or None while the session may start.
 
-    The price is at `gpunit.toml`'s `max_hourly`, which gpunit refuses a card
-    above, with the volume at `config/render.json`'s rate (D26).
+        A refused count first, then nothing short, then an estimate whose limit
+        would pass the ceiling: the session would end before its work.
+        """
+        refused = (found.blocked for found in self.shorts.values() if found.refused)
+        if (first := next(refused, None)) is not None:
+            return first
+        if not self.images:
+            return NOTHING_SHORT
+        if self.estimate.capped:
+            return (
+                f"The estimate passes gpunit.toml's ceiling of {self.ceiling_s}s; "
+                "untick a collection."
+            )
+        return None
+
+
+def quote(roots: Sequence[Path], wired: Wiring) -> Quote:
+    """Return the quote for one session over what each of `roots` is short of.
+
+    As the session would: one boot over every collection's images. The price is
+    at `gpunit.toml`'s `max_hourly`, which gpunit refuses a card above, with the
+    volume at `config/render.json`'s rate (D26).
     """
     bound = gpu.bounds(REPOSITORY)
     if bound.max_hourly is None or bound.volume_ceiling_s is None:
@@ -681,16 +804,19 @@ def quote(runs: Path, wired: Wiring) -> Quote:
             "bound; restore them with `git checkout -- gpunit.toml`"
         )
     timing = load_timing()
-    ids = run_ids(runs)
-    found = short(runs, ids, wired)
-    estimated = _estimated(runs, ids, found.images, timing, bound.ceiling_s)
+    ids = {runs: run_ids(runs) for runs in roots}
+    found = {runs: short(runs, ids[runs], wired) for runs in roots}
+    shorts = {runs: one for runs, one in found.items() if one.lines or one.refused}
+    work = [(runs, ids[runs], one.images) for runs, one in shorts.items()]
+    guess = estimated(work, timing, bound.ceiling_s)
     hourly = bound.max_hourly + timing.volume_rate
     return Quote(
-        found,
-        estimated,
+        shorts,
+        guess,
         timing,
-        about=estimated.seconds / 3600 * hourly,
-        at_most=estimated.limit_s / 3600 * hourly,
+        bound.ceiling_s,
+        about=guess.seconds / 3600 * hourly,
+        at_most=guess.limit_s / 3600 * hourly,
         keep_open=bound.volume_ceiling_s / 3600 * timing.volume_rate,
     )
 
@@ -705,7 +831,7 @@ def _unready(run: Run, flow: str) -> str:
 
 
 def _session(
-    runs: Path,
+    roots: list[Path],
     texts: list[str],
     asked: int | None,
     given: str | None,
@@ -716,45 +842,39 @@ def _session(
 ) -> int:
     requests = [parse_request(text) for text in texts]
     deferred = in_session_sources(requests)
+    retry = again(roots)
+    if requests and len(roots) > 1:
+        raise Refusal(
+            f"{requests[0]} renders one collection's runs; render each collection "
+            f"apart, or what every one lacks with `{retry}`"
+        )
     ceiling_s = gpu.bounds(REPOSITORY).ceiling_s
     _limit(asked, ceiling_s)
     timing = load_timing()
-    ids = run_ids(runs)
-    flows = [arg for request in requests for arg in ("--flow", request.flow)]
-    if not ids and requests:
-        photos = shlex.quote(str(runs.parent / COLLECTION_PHOTOS))
-        raise Refusal(
-            f"{runs} holds no run; open them from the collection's photographs with: "
-            f"uv run python -m isekai tag {' '.join(flows)} --runs "
-            f"{shlex.quote(str(runs))} {photos}/*"
-        )
-    where = ("--runs", str(runs), *ids)
+    ids = {runs: run_ids(runs) for runs in roots}
 
     # Free work first: every prompt is assembled, and every source checked, before
     # anything is rented.
     free = dataclasses.replace(wired, client=None, image=None, out=steps.child())
     verb = ["generate", *steps.flag]
     if requests:
-        if generate([*verb, *flows, *where], free) != 0:
+        (runs,) = roots
+        lines = _asked(runs, ids[runs], requests, deferred, free, verb, generate)
+        if lines is None:
             return 1
-        for request, late in zip(requests, deferred, strict=True):
-            if request.by_count:
-                continue
-            check = "--in-step-with" if late else "--seeds-from"
-            argv = [*verb, "--flow", request.flow, check, request.value, *where]
-            if generate(argv, free) != 0:
-                return 1
-        counts = {r.flow: int(r.value) for r in requests if r.by_count}
-        lines = [_requested(request, runs, ids, counts, wired) for request in requests]
     else:
-        found = short(runs, ids, wired)
-        for message in found.refused:
-            print(f"refused: {message}", file=wired.err)
-        if found.refused:
+        lines: list[Line] = []
+        refused = False
+        for runs in roots:
+            found = short(runs, ids[runs], wired)
+            for message in found.refused:
+                print(f"refused: {message}", file=wired.err)
+            for run_id, flow, reason in found.left_out:
+                print(f"left out: {run_id}: {flow} is {reason}", file=wired.err)
+            refused |= bool(found.refused)
+            lines += found.lines
+        if refused:
             return 1
-        for run_id, flow, reason in found.left_out:
-            print(f"left out: {run_id}: {flow} is {reason}", file=wired.err)
-        lines = found.lines
         if not lines:
             print("nothing is short of its count; nothing was rented", file=wired.err)
             return 0
@@ -768,18 +888,33 @@ def _session(
             f"lsof -iTCP:{PORT} -sTCP:LISTEN shows what holds it"
         )
 
-    limit = asked or _estimated(runs, ids, _images(lines), timing, ceiling_s).limit_s
-    again = shlex.join(["uv", "run", "python", "-m", "isekai", "render", str(runs)])
+    held = {
+        runs: its for runs in roots if (its := [li for li in lines if li.runs == runs])
+    }
+    work = [(runs, ids[runs], _images(its)) for runs, its in held.items()]
+    limit = asked or estimated(work, timing, ceiling_s).limit_s
     rest = "".join(f" {text}" for text in texts)
-    record = Record(
-        runs.parent / SESSIONS, given, limit, _images(lines), _plan(runs, lines)
+    names = [runs.parent.name for runs in held]
+    record = Records(
+        {
+            runs: Record(
+                runs.parent / SESSIONS,
+                given,
+                limit,
+                _images(its),
+                _plan(runs, its),
+                [name for name in names if name != runs.parent.name],
+                order=names,
+            )
+            for runs, its in held.items()
+        }
     )
     steps.record = record
 
     def reached() -> None:
         ended = (
             f"the session reached its {limit}s limit; renders so far are "
-            f"kept, and in a new session `{again}{rest}` renders only the rest"
+            f"kept, and in a new session `{retry}{rest}` renders only the rest"
         )
         record.note = ended
         print(f"refused: {ended}", file=wired.err)
@@ -797,6 +932,38 @@ def _session(
     finally:
         watchdog.cancel()
         record.close()
+
+
+def _asked(
+    runs: Path,
+    ids: Sequence[str],
+    requests: Sequence[Request],
+    deferred: Sequence[bool],
+    free: Wiring,
+    verb: Sequence[str],
+    generate: Generate,
+) -> list[Line] | None:
+    """Return the requests' lines over `runs` once their free checks pass, else None."""
+    flows = [arg for request in requests for arg in ("--flow", request.flow)]
+    if not ids:
+        photos = shlex.quote(str(runs.parent / COLLECTION_PHOTOS))
+        raise Refusal(
+            f"{runs} holds no run; open them from the collection's photographs with: "
+            f"uv run python -m isekai tag {' '.join(flows)} --runs "
+            f"{shlex.quote(str(runs))} {photos}/*"
+        )
+    where = ("--runs", str(runs), *ids)
+    if generate([*verb, *flows, *where], free) != 0:
+        return None
+    for request, late in zip(requests, deferred, strict=True):
+        if request.by_count:
+            continue
+        check = "--in-step-with" if late else "--seeds-from"
+        argv = [*verb, "--flow", request.flow, check, request.value, *where]
+        if generate(argv, free) != 0:
+            return None
+    counts = {r.flow: int(r.value) for r in requests if r.by_count}
+    return [_requested(request, runs, ids, counts, free) for request in requests]
 
 
 def _requested(
@@ -824,7 +991,8 @@ def _requested(
             seeds = rendered_seeds(groups[-1], suffix) if groups else []
             planned.append((run_id, len(seeds)))
     head = ("--flow", request.flow, request.mode, request.value)
-    return Line(request.flow, head, ("--runs", str(runs), *ids), tuple(planned))
+    where = ("--runs", str(runs), *ids)
+    return Line(runs, request.flow, head, where, tuple(planned))
 
 
 def _rendered(
@@ -834,7 +1002,7 @@ def _rendered(
     generate: Generate,
     seams: Seams,
     steps: Steps,
-    record: Record,
+    record: Records,
 ) -> int:
     from gpunit import Lost, Refused, TeardownFailed
 
@@ -856,13 +1024,16 @@ def _rendered(
             client = seams.connect(server)
             await_endpoint(client, server, seams.wait_s, seams.poll_s)
             steps.step("pod", "ready")
-            out = steps.child(sum(line.images for line in lines))
-            live = dataclasses.replace(
-                wired, client=client, image=session.image, out=out
-            )
+            total = sum(line.images for line in lines)
             # One flow failing does not cost the next its render; the exit says so.
             failed = False
             for line in lines:
+                live = dataclasses.replace(
+                    wired,
+                    client=client,
+                    image=session.image,
+                    out=steps.child(total, line.runs),
+                )
                 # JSON whatever the session prints, so each image reaches the record;
                 # its prose goes to stderr, which the log tees.
                 argv = [

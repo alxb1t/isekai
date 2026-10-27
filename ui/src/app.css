@@ -207,6 +207,29 @@ button.appbar__render {
   font-weight: 600;
 }
 
+.render-dialog__collection {
+  margin: 0 0 12px;
+}
+
+.render-dialog__collection .render-dialog__flow,
+.render-dialog__collection .render-dialog__left {
+  padding-left: 22px;
+}
+
+.render-dialog__collection--off .render-dialog__flow,
+.render-dialog__collection--off .render-dialog__left {
+  opacity: 0.5;
+}
+
+.render-dialog__tick {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
 .render-dialog__flow,
 .render-dialog__left {
   margin: 0 0 6px;
@@ -363,6 +386,15 @@ button.session__tile {
   display: grid;
   gap: 8px 12px;
   align-items: start;
+}
+
+.session__stack + .session__stack {
+  margin-top: 16px;
+}
+
+.session__collection {
+  display: block;
+  margin: 0 0 8px;
 }
 
 .session__flow {

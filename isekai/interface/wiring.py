@@ -320,6 +320,10 @@ def wiring(args: argparse.Namespace) -> Wiring:
     """Build the real wiring from a parsed command line.
 
     `getattr` rather than `args.server`: only `generate` declares the flag, so the
-    attribute is genuinely absent on every other verb's namespace.
+    attribute is genuinely absent on every other verb's namespace. `render` names
+    a runs root per collection: each is checked, and the first is the wiring's.
     """
-    return wiring_from(runs=args.runs, server=getattr(args, "server", None))
+    roots = args.runs if isinstance(args.runs, list) else [args.runs]
+    for runs in roots[1:]:
+        _check_run_root(runs)
+    return wiring_from(runs=roots[0], server=getattr(args, "server", None))

@@ -40,7 +40,7 @@ const shown = computed(() =>
   bar({
     changes: 0,
     preparing: false,
-    images: offer.value.images,
+    images: offer.value.images + offer.value.others,
     refused: offer.value.refused !== null,
     rendering: rendering.value,
   }),
@@ -349,11 +349,12 @@ onUnmounted(() => {
     <RenderBar
       v-if="shown === 'render'"
       :images="offer.images"
+      :others="offer.others"
       :disabled="offer.disabled"
       :refused="offer.refused"
       :rendering="rendering"
       @open="store.openDialog"
     />
-    <RenderDialog v-if="dialog" :collection="collection" @close="store.closeDialog" />
+    <RenderDialog v-if="dialog" @close="store.closeDialog" />
   </section>
 </template>

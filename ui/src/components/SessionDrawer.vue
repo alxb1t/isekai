@@ -9,44 +9,55 @@ import { useSessionViewer } from '../composables/useSessionViewer'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import { useKeys } from '../composables/useKeys'
 import { type Focus, type Move, moved } from '../grid'
-import { asked, first, grid, lastColumns, lasted, outcome } from '../sessions'
+import { asked, first, grid, lasted, located, outcome, same, stacked } from '../sessions'
 import { useDrawerStore } from '../stores/drawer'
 import { type Key, isControl, plain, shifted } from '../stores/keys'
-import { alerting, clock, useLiveStore } from '../stores/live'
+import { alerting, clock, collectionsOf, useLiveStore } from '../stores/live'
 import { noun } from '../words'
 
-/* The render drawer (design spec J4·2, J4·3): the shown session, from the record
+/* The render drawer (design spec J4·2, J4·3): the shown session, from the records
    its verb writes, over half the window. While the render slot runs it, the slot
    adds the volume steps and Stop, and the drawer is drawn from the slot until the
-   verb has written the record. Its images are a grid: a column per photograph, a
-   row per flow, the photographs' row last, a waiting tile per image to come.
-   h j k l or the arrows move; ↵ opens the viewer over the row, unless a button or
-   link such as Stop has the focus and answers it. `toggle` is the key that opens it. */
+   verb has written the records. Its images are a grid per collection, stacked and
+   each headed by its name: a column per photograph, a row per flow, the
+   photographs' row last, a waiting tile per image to come. h j k l or the arrows
+   move, `j` and `k` across grids too; ↵ opens the viewer over the row, unless a
+   button or link such as Stop has the focus and answers it. `toggle` is the key
+   that opens it. */
 const props = defineProps<{ toggle: Key }>()
 const router = useRouter()
 const drawer = useDrawerStore()
 const live = useLiveStore()
-const { shown: target, record, photographs: named } = storeToRefs(drawer)
+const { shown: target, records, record, photographs: named } = storeToRefs(drawer)
 const { jobs, billing, now } = storeToRefs(live)
 const stopRefusal = ref<string | null>(null)
 const dialog = ref<HTMLDialogElement | null>(null)
 
-const collection = computed(() => target.value?.collection ?? '')
+const collections = computed(() => target.value?.collections ?? [])
 /* The render slot's session, while it is the shown one. */
 const slot = computed(() => {
   const held = jobs.value.render
-  return held?.collection === target.value?.collection && held?.session?.id === target.value?.id
-    ? held
-    : null
+  const shown = held?.session && { id: held.session.id, collections: collectionsOf(held) }
+  return shown && same(target.value, shown) ? held : null
 })
 const running = computed(() => record.value?.outcome === 'running' || slot.value?.state === 'running')
 const alert = computed(() => alerting(billing.value))
 
+/* Each collection's record, in the order the session renders them. */
+const held = computed(() =>
+  collections.value.flatMap((one) => {
+    const found = records.value?.[one]
+    return found ? [{ collection: one, record: found }] : []
+  }),
+)
 const started = computed(() => record.value?.started ?? slot.value?.session?.started ?? null)
 const limit = computed(() => record.value?.limit ?? slot.value?.session?.limit ?? 0)
-const of = computed(() => (record.value ? asked(record.value) : (slot.value?.session?.of ?? 0)))
-const images = computed(() => record.value?.images ?? [])
-const done = computed(() => images.value.length)
+const of = computed(() =>
+  held.value.length
+    ? held.value.reduce((sum, one) => sum + asked(one.record), 0)
+    : (slot.value?.session?.of ?? 0),
+)
+const done = computed(() => held.value.reduce((sum, one) => sum + one.record.images.length, 0))
 const steps = computed(() => record.value?.steps ?? {})
 const volume = computed(() => slot.value?.session?.steps ?? {})
 
@@ -92,42 +103,49 @@ const failure = computed(() =>
 )
 const ended = computed(() => (running.value || !record.value ? null : outcome(record.value)))
 
-const layout = computed(() =>
-  record.value ? grid(record.value) : { digests: [], flows: [], cells: [] },
+/* Each collection's grid, and its photographs: its source's, by name, once its hub
+   is read; else the run's own, whole, at the address of any flow that plans or
+   landed it. */
+const grids = computed(() =>
+  held.value.map(({ collection, record: one }) => {
+    const layout = grid(one)
+    const photographs = layout.digests.map((digest, column) => {
+      const name = named.value[collection]?.[digest]
+      if (name)
+        return { src: sourceAt(collection, name), thumb: sourceThumbAt(collection, name), name }
+      const row = layout.cells.findIndex(
+        (cells) => cells[column].images.length > 0 || cells[column].waiting > 0,
+      )
+      const src = photoUrl({ collection, digest, flow: layout.flows[row] })
+      return { src, thumb: src, name: digest }
+    })
+    return { collection, record: one, layout, photographs }
+  }),
 )
+const stack = computed(() => stacked(grids.value.map((one) => one.layout)))
+/* Each grid with the stacked row it starts at. */
+const placed = computed(() =>
+  grids.value.map((one, index) => ({ ...one, start: stack.value.starts[index] })),
+)
+/* The focus on the stacked rows: a grid's row `r` is stacked row `starts[grid] + r`. */
 const focus = ref<Focus>({ row: 0, column: 0 })
 const focused = (row: number, column: number) =>
   focus.value.row === row && focus.value.column === column
-
-/* Each column's photograph: its source's, by name, once the hub is read; else the
-   run's own, whole, at the address of any flow that plans or landed it. */
-const photographs = computed(() =>
-  layout.value.digests.map((digest, column) => {
-    const name = named.value[digest]
-    if (name)
-      return {
-        src: sourceAt(collection.value, name),
-        thumb: sourceThumbAt(collection.value, name),
-        name,
-      }
-    const row = layout.value.cells.findIndex(
-      (cells) => cells[column].images.length > 0 || cells[column].waiting > 0,
-    )
-    const src = photoUrl({ collection: collection.value, digest, flow: layout.value.flows[row] })
-    return { src, thumb: src, name: digest }
-  }),
-)
+/* The grid the focus is in. */
+const current = computed(() => grids.value[located(stack.value, focus.value.row).grid] ?? null)
+const EMPTY = { digests: [], flows: [], cells: [] }
 
 const { viewing, viewed, open: openViewer } = useSessionViewer(
   () => target.value,
-  () => layout.value,
-  () => photographs.value,
+  () => current.value?.layout ?? EMPTY,
+  () => current.value?.photographs ?? [],
+  () => current.value?.collection ?? '',
 )
 
-/* Open the viewer over `at`'s row, on the cell's `index`th image. */
+/* Open the viewer over stacked `at`'s row, on the cell's `index`th image. */
 function view(at: Focus, index = 0): void {
   focus.value = at
-  openViewer(at, index)
+  openViewer({ row: located(stack.value, at.row).row, column: at.column }, index)
 }
 
 function place(at: Focus): void {
@@ -137,11 +155,19 @@ function place(at: Focus): void {
   )
 }
 
-const go = (move: Move) => () => place(moved(lastColumns(layout.value), focus.value, move))
+/* The first grid's first landed image, else the first cell. */
+function start(): Focus {
+  const held = placed.value.find((one) => one.record.images.length > 0)
+  if (!held) return { row: 0, column: 0 }
+  const at = first(held.layout, held.record)
+  return { row: held.start + at.row, column: at.column }
+}
+
+const go = (move: Move) => () => place(moved(stack.value.last, focus.value, move))
 
 function renders(): void {
   drawer.close()
-  void router.push({ name: 'renders', params: { collection: collection.value } })
+  void router.push({ name: 'renders', params: { collection: current.value?.collection ?? '' } })
 }
 
 useKeys('overlay', [
@@ -154,7 +180,7 @@ useKeys('overlay', [
     keys: plain('Enter'),
     label: 'the viewer',
     run: () => view(focus.value),
-    when: () => layout.value.digests.length > 0 && !isControl(document.activeElement),
+    when: () => stack.value.last.length > 0 && !isControl(document.activeElement),
   },
   {
     id: 'renders',
@@ -174,11 +200,11 @@ useKeys('overlay', [
 
 useHeldFocus(dialog, drawer.close)
 
-/* The first render takes the focus once the record is read, and holds the tab stop. */
+/* The first render takes the focus once the records are read, and holds the tab stop. */
 watch(
   () => record.value !== null,
   () => {
-    if (record.value) place(first(layout.value, record.value))
+    if (record.value) place(start())
   },
 )
 
@@ -192,7 +218,7 @@ async function stop(): Promise<void> {
 
 onMounted(() => {
   dialog.value?.showModal()
-  if (record.value) place(first(layout.value, record.value))
+  if (record.value) place(start())
 })
 </script>
 
@@ -200,7 +226,7 @@ onMounted(() => {
   <dialog ref="dialog" class="drawer" aria-label="Render session" data-drawer @cancel.prevent>
     <section v-if="record || slot" class="session" :data-session="target?.id">
       <span class="section-label">
-        Render session · {{ collection }} · {{ of }} {{ noun(of, 'image') }}
+        Render session · {{ collections.join(' · ') }} · {{ of }} {{ noun(of, 'image') }}
       </span>
       <p class="session__timer mono" data-session-timer>
         {{ elapsed === null ? '—' : clock(elapsed)
@@ -219,64 +245,78 @@ onMounted(() => {
           <span class="session__state">{{ step.note ?? step.state }}</span>
         </li>
       </ol>
-      <div
-        v-if="layout.digests.length"
-        class="session__grid"
-        :style="{ gridTemplateColumns: `max-content repeat(${layout.digests.length}, max-content)` }"
-        data-session-grid
+      <section
+        v-for="one in placed"
+        :key="one.collection"
+        class="session__stack"
+        :data-session-collection="one.collection"
       >
-        <template v-for="(flow, at) in layout.flows" :key="flow">
-          <span class="session__flow mono">{{ flow }}</span>
+        <span class="section-label session__collection">{{
+          one.collection
+        }}</span>
+        <div
+          v-if="one.layout.digests.length"
+          class="session__grid"
+          :style="{
+            gridTemplateColumns: `max-content repeat(${one.layout.digests.length}, max-content)`,
+          }"
+          data-session-grid
+        >
+          <template v-for="(flow, at) in one.layout.flows" :key="flow">
+            <span class="session__flow mono">{{ flow }}</span>
+            <div
+              v-for="(cell, column) in one.layout.cells[at]"
+              :key="one.layout.digests[column]"
+              class="session__cell"
+              :class="{ 'session__cell--focused': focused(one.start + at, column) }"
+              :data-cell="`${one.start + at}-${column}`"
+              :tabindex="focused(one.start + at, column) ? 0 : -1"
+              @click="focus = { row: one.start + at, column }"
+            >
+              <button
+                v-for="(image, nth) in cell.images"
+                :key="`${image.version}/${image.seed}`"
+                class="session__tile session__tile--done"
+                type="button"
+                tabindex="-1"
+                :aria-label="`view ${image.flow} v${image.version} seed ${image.seed}`"
+                data-session-image
+                @click.stop="view({ row: one.start + at, column }, nth)"
+              >
+                <img :src="thumbAt({ collection: one.collection, ...image })" alt="" />
+              </button>
+              <span
+                v-for="waiting in cell.waiting"
+                :key="`waiting-${waiting}`"
+                class="session__tile"
+                data-waiting
+              />
+            </div>
+          </template>
+          <span class="session__flow section-label">photographs</span>
           <div
-            v-for="(cell, column) in layout.cells[at]"
-            :key="layout.digests[column]"
+            v-for="(digest, column) in one.layout.digests"
+            :key="digest"
             class="session__cell"
-            :class="{ 'session__cell--focused': focused(at, column) }"
-            :data-cell="`${at}-${column}`"
-            :tabindex="focused(at, column) ? 0 : -1"
-            @click="focus = { row: at, column }"
+            :class="{
+              'session__cell--focused': focused(one.start + one.layout.flows.length, column),
+            }"
+            :data-cell="`${one.start + one.layout.flows.length}-${column}`"
+            :tabindex="focused(one.start + one.layout.flows.length, column) ? 0 : -1"
           >
             <button
-              v-for="(one, index) in cell.images"
-              :key="`${one.version}/${one.seed}`"
-              class="session__tile session__tile--done"
+              class="session__tile session__tile--photo"
               type="button"
               tabindex="-1"
-              :aria-label="`view ${one.flow} v${one.version} seed ${one.seed}`"
-              data-session-image
-              @click.stop="view({ row: at, column }, index)"
+              :aria-label="`view the photograph ${one.photographs[column].name}`"
+              data-session-source
+              @click="view({ row: one.start + one.layout.flows.length, column })"
             >
-              <img :src="thumbAt({ collection, ...one })" alt="" />
+              <img :src="one.photographs[column].thumb" alt="" loading="lazy" />
             </button>
-            <span
-              v-for="index in cell.waiting"
-              :key="`waiting-${index}`"
-              class="session__tile"
-              data-waiting
-            />
           </div>
-        </template>
-        <span class="session__flow section-label">photographs</span>
-        <div
-          v-for="(digest, column) in layout.digests"
-          :key="digest"
-          class="session__cell"
-          :class="{ 'session__cell--focused': focused(layout.flows.length, column) }"
-          :data-cell="`${layout.flows.length}-${column}`"
-          :tabindex="focused(layout.flows.length, column) ? 0 : -1"
-        >
-          <button
-            class="session__tile session__tile--photo"
-            type="button"
-            tabindex="-1"
-            :aria-label="`view the photograph ${photographs[column].name}`"
-            data-session-source
-            @click="view({ row: layout.flows.length, column })"
-          >
-            <img :src="photographs[column].thumb" alt="" loading="lazy" />
-          </button>
         </div>
-      </div>
+      </section>
       <p v-if="failure" class="session__refusal"><span class="refusal__mark" />{{ failure }}</p>
       <p v-if="stopRefusal" class="session__refusal">
         <span class="refusal__mark" />{{ stopRefusal }}
@@ -292,7 +332,7 @@ onMounted(() => {
           <RouterLink
             class="btn btn-primary"
             data-renders
-            :to="{ name: 'renders', params: { collection } }"
+            :to="{ name: 'renders', params: { collection: current?.collection ?? collections[0] } }"
             @click="drawer.close"
             >View in Renders<KeyHint command="renders" /></RouterLink
           >

@@ -68,7 +68,7 @@ def test_a_pod_record_with_no_session_is_an_alert_and_disables_render(
     )
 
     quote = TestClient(app, base_url=f"http://{HOST}:{PORT}").post(
-        "/api/c/b/render/quote"
+        "/api/render/quote", json={"collections": ["b"]}
     )
 
     assert read(records, running=False, raised=False, now=NOW)["pod"] is True

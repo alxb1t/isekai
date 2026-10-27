@@ -260,12 +260,16 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
 | J4·4 Renders with the four new images | ⇧I View in Renders | `…/c/2026-10-19/renders` |
 
 ```
-J4·1  RENDER · 2026-10-19 · ON A RENTED GPU                      Render 4 images
-      summon-anime-wai 3 images · 00003 v1 count 2 · 16_01 v1 count 1
-      conjure-anime-wai 1 image  · 00003 v1 count 1
-      Not included: cowboy_shot_2 · summon is a draft.
+J4·1  RENDER · ON A RENTED GPU                                   Render 4 images
+      ☑ 2026-10-19 3 images                                          a row per collection
+          summon-anime-wai 2 images · 00003 v1 count 2
+          conjure-anime-wai 1 image  · 00003 v1 count 1
+          Not included: cowboy_shot_2 · summon is a draft.
+      ☑ 2026-10-20 1 image
+          summon-anime-wai 1 image  · 16_01 v1 count 1
       ESTIMATE  boot 3:00 · 4 images × 1:00 · teardown 2:00             9 min
                 limit 1.5× the estimate                              13 min 30 s
+                gpunit.toml's ceiling                                3 h
       PRICE     pod 9 min at about $0.40/h                          about $0.06
                 volume attached for the session                 under $0.01
                                      at the limit about $0.09
@@ -279,25 +283,34 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
       ◐ rendering         image 2 of 4 · 00003 · conjure-anime-wai · 4:16
       ○ teardown
       ○ volume down
-      summon-anime-wai    [done]        [▨]                                  a column per photograph
+      2026-10-19                                                             a grid per collection
+      summon-anime-wai    [done]                                             a column per photograph
                           [▨]                                                a cell's images stack
       conjure-anime-wai   [done]
-      PHOTOGRAPHS         [00003]       [16_01]                              the photographs' row last
+      PHOTOGRAPHS         [00003]                                            the photographs' row last
+      2026-10-20                                                             j from the row above
+      summon-anime-wai    [▨]
+      PHOTOGRAPHS         [16_01]
                                                                [ Stop session now ]
 ```
 
-- **What renders**: every approved source × flow whose newest version holds fewer images than its Count,
-  grouped by flow; a large batch collapses each flow to one line, the full list one click away. What is left out is
-  named.
+- **What renders**: a row per collection short of images, in the Library's order, each ticked; in each, every
+  approved source × flow whose newest version holds fewer images than its Count, grouped by flow. What is left out is
+  named. Unticking a row quotes the rest again; one session renders every ticked collection on one pod. The bar
+  counts its own collection's images and `+n in other collections`.
 - **The estimate**: boot + images × time per image + teardown; until durations are recorded, 3:00, 1:00 and
-  2:00. The limit is 1.5× the estimate, under the configured maximum, and teardown starts by itself at the limit. The
-  price comes from the estimate: the pod at `pod_rate` (about $0.40/h), the volume at about $0.005/h.
-- **The session** shows elapsed time against its limit, five steps always, and a grid of its images — no
-  diffusion steps and no spend. A column per photograph the record plans, a row per flow, the photographs' row at
-  the foot; a cell holds that flow's images of that photograph and a striped tile per image still to come, stacked,
-  so a column stays one tile wide. A record that plans nothing places what landed. The first render takes the focus
-  on opening and is the grid's tab stop; `h l` move between photographs, `j k` between rows, held at the
-  photographs' row, and `↵` opens the viewer over the row. Stop goes straight to teardown; finished images are kept.
+  2:00, one boot and one teardown for every ticked collection. The limit is 1.5× the estimate, under the configured
+  maximum, and teardown starts by itself at the limit; an estimate past the ceiling disables Render — *untick a
+  collection*. The price comes from the estimate: the pod at `pod_rate` (about $0.40/h), the volume at about
+  $0.005/h.
+- **The session** shows elapsed time against its limit, five steps always, and a grid per collection it renders,
+  stacked in its order, each headed by its name — no diffusion steps and no spend. A column per photograph the record
+  plans, a row per flow, the photographs' row at the foot; a cell holds that flow's images of that photograph and a
+  striped tile per image still to come, stacked, so a column stays one tile wide. A record that plans nothing places
+  what landed. The first render takes the focus on opening and is the grids' tab stop; `h l` move between
+  photographs, `j k` between rows and from a grid's photographs' row into the next grid's first row, the column kept,
+  and `↵` opens the viewer over the row. `⇧I` opens the focused image's collection's Renders. Stop goes straight to
+  teardown; finished images are kept.
 - **Done** is the step list all confirmed, the count and the duration, and `Nothing is billing.` only when both
   teardown steps are confirmed.
 

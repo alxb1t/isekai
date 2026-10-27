@@ -110,19 +110,21 @@ export function renderOffer(collection: string): Promise<RenderOffer> {
   return get(`/api/c/${encodeURIComponent(collection)}/render`)
 }
 
-/* The quote rents nothing; only `startRender` does. */
-export function quoteRender(collection: string): Promise<Quote> {
-  return send(`/api/c/${encodeURIComponent(collection)}/render/quote`, 'POST', {})
+/* One session's quote over `collections`, or, with none named, every collection
+   short of images. It rents nothing; only `startRender` does. */
+export function quoteRender(collections?: string[]): Promise<Quote> {
+  return send('/api/render/quote', 'POST', collections ? { collections } : {})
 }
 
 /* Carries the limit and the images the dialog showed: a quote grown since is refused. */
 export function startRender(
-  collection: string,
+  collections: string[],
   keepOpen: boolean,
   limitS: number,
   images: number,
 ): Promise<{ job: JobSlot }> {
-  return send(`/api/c/${encodeURIComponent(collection)}/render`, 'POST', {
+  return send('/api/render', 'POST', {
+    collections,
     keep_open: keepOpen,
     limit_s: limitS,
     images,

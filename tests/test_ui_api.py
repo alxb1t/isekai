@@ -43,9 +43,11 @@ from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 import isekai.foundation.run as run_module  # noqa: E402
+import isekai.interface.render as render_module  # noqa: E402
 import isekai.interface.ui.app as app_module  # noqa: E402
 import isekai.pipeline.importing as importing_module  # noqa: E402
 import isekai.pipeline.review as review_module  # noqa: E402
+from isekai.boundary.gpu import Seams  # noqa: E402
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
@@ -2089,6 +2091,86 @@ def test_a_session_is_served_from_its_record_and_an_unknown_id_refused(
         assert refused.json()["refusal"] == f"{COLLECTION} holds no session {unknown!r}"
 
 
+def _quoting_two(
+    wired: Wiring, made: Run, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> TestClient:
+    """Return a keyed client over `COLLECTION` and `second`, each one image short."""
+    keyed = replace(wired, session=Seams(environ={"RUNPOD_API_KEY": "k"}))
+    client = _client(keyed, made, tmp_path)
+    approve(made, FLOW, schema, vocabulary)
+    other = tmp_path / "lib" / "second"
+    (other / "sources").mkdir(parents=True)
+    photo = other / "sources" / "bea.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 932))
+    run = open_run(photo, other / "runs")
+    caption(run, FakeReader(prose="Black hair, grey eyes."))
+    sheet(run, schema, vocabulary)
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
+    return client
+
+
+@pytest.mark.spec("ui:render:the-dialog-quotes-every-collection")
+def test_one_quote_covers_every_ticked_collection(
+    wired: Wiring, made: Run, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    client = _quoting_two(wired, made, tmp_path, schema, vocabulary)
+    timing = render_module.load_timing()
+    both = [COLLECTION, "second"]
+
+    quoted = client.post("/api/render/quote", json={"collections": both}).json()
+    alone = client.post("/api/render/quote", json={"collections": ["second"]}).json()
+
+    assert [row["collection"] for row in quoted["collections"]] == both
+    assert [row["images"] for row in quoted["collections"]] == [1, 1]
+    once = timing.boot_s + timing.teardown_s
+    assert quoted["estimate"]["seconds"] == once + 2 * timing.per_image_s
+    assert quoted["disabled"] is None
+    assert [row["collection"] for row in alone["collections"]] == ["second"]
+    assert alone["estimate"]["seconds"] == once + timing.per_image_s
+    # With none named, every collection short of images is quoted.
+    every = client.post("/api/render/quote", json={}).json()
+    assert {row["collection"] for row in every["collections"]} == set(both)
+    # The bar counts the images other collections lack, which its dialog renders.
+    offer = client.get(f"/api/c/{COLLECTION}/render").json()
+    assert (offer["images"], offer["others"]) == (1, 1)
+    refused = client.post("/api/render", json={"collections": [], "images": 2})
+    assert refused.status_code == 409
+    assert "names no collections" in refused.json()["refusal"]
+
+
+@pytest.mark.spec("ui:render:past-the-ceiling-disables-render")
+def test_an_estimate_past_the_ceiling_disables_render_naming_it(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _quoting_two(wired, made, tmp_path, schema, vocabulary)
+    slow = replace(render_module.load_timing(), per_image_s=3 * 60 * 60)
+    monkeypatch.setattr(render_module, "load_timing", lambda: slow)
+    both = [COLLECTION, "second"]
+
+    quoted = client.post("/api/render/quote", json={"collections": both}).json()
+    started = client.post(
+        "/api/render",
+        json={
+            "collections": both,
+            "limit_s": quoted["estimate"]["limit_s"],
+            "images": 2,
+        },
+    )
+
+    ceiling = quoted["ceiling_s"]
+    assert quoted["disabled"] == (
+        f"The estimate passes gpunit.toml's ceiling of {ceiling}s; untick a collection."
+    )
+    assert started.status_code == 409
+    assert f"ceiling of {ceiling}s" in started.json()["refusal"]
+
+
 # --- the import sheet ---------------------------------------------------------
 
 HEIC = Path(__file__).resolve().parent / "fixtures" / "sources" / "plain.heic"
@@ -2279,3 +2361,20 @@ def test_a_terminal_session_is_live_without_a_job_slot(
         record.close()
     assert client.get(f"/api/c/{COLLECTION}/sessions/{name}").json()["outcome"] is None
     assert client.get("/api/sessions/running").json()["sessions"] == []
+
+    # The complete traversal survives the name-sorted scan, including in the
+    # second collection's record; old records above need no order field.
+    order = [other.name, COLLECTION]
+    held = [
+        Record(folder / "sessions", "20261024T091300Z", 1200, {FLOW: 1}, order=order)
+        for folder in (other, made.path.parent.parent)
+    ]
+    for one in held:
+        one.open()
+    try:
+        running = client.get("/api/sessions/running").json()["sessions"]
+        assert [one["collection"] for one in running] == [COLLECTION, other.name]
+        assert all(one["collection_order"] == order for one in running)
+    finally:
+        for one in held:
+            one.close()

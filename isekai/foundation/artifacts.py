@@ -373,8 +373,12 @@ class SessionRecord(TypedDict):
 
     A collection's file beside its log, not a run's. `asked` is the images per flow and
     `planned` per run and flow; a record written before `planned` reads as no plan.
-    `steps` are the pod's and the teardown's states. `outcome` is `running` until
-    the session ends `done`, `stopped` or `failed`, with `message`. No price.
+    `collections` names the session's other collections, each holding a record of
+    this id; a session of one collection has none. `collection_order` names every
+    collection in traversal order, including this record's own; older records
+    without it retain their scan order. `steps` are the pod's and the
+    teardown's states. `outcome` is `running` until the session ends `done`,
+    `stopped` or `failed`, with `message`. No price.
     """
 
     schema: SchemaBlock
@@ -384,6 +388,8 @@ class SessionRecord(TypedDict):
     limit: int
     asked: dict[str, int]
     planned: NotRequired[list[SessionPlan]]
+    collections: NotRequired[list[str]]
+    collection_order: NotRequired[list[str]]
     steps: dict[str, str]
     images: list[SessionImage]
     outcome: str
