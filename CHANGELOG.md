@@ -9,6 +9,7 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- The records docstring describes the shared session id without citing the unrelated hand-path decision (0083 D3).
 - Terminal renders keep their collection traversal in the drawer after disk discovery, even when it differs
   from the Library's name order; older records remain readable (0083 D3, D6).
 

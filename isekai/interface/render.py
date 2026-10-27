@@ -352,7 +352,7 @@ class Record:
 
 
 class Records:
-    """A session's records, one per collection it renders, all of one id (D3).
+    """A session's records, one per collection it renders, all of one id.
 
     The pod's and the teardown's steps and the outcome reach every record; an
     image reaches its own collection's alone.
