@@ -47,6 +47,7 @@ from isekai.foundation.artifacts import (
     SHEET_FILE,
     SIDECAR,
     CopiedFrom,
+    DraftImage,
     Renders,
     ReviewApproved,
     ReviewDraft,
@@ -204,7 +205,16 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
     """
     carried = refuse_revision(run, flow, version, seed)
     renders: Renders = {"count": 1, "seeds": [seed]}
-    return _write_draft(run, flow, version, REVIEW, carried, carried["sheet"], renders)
+    return _write_draft(
+        run,
+        flow,
+        version,
+        REVIEW,
+        carried,
+        carried["sheet"],
+        renders,
+        image={"flow": flow, "version": version, "seed": seed},
+    )
 
 
 # How every refusal of a draft from another flow's approval ends.
@@ -212,18 +222,26 @@ _DRAFT_AGAIN = "then draft it again"
 
 
 def draft_from(
-    run: Run, flow: str, source: str, version: int | None, schema: Schema
+    run: Run,
+    flow: str,
+    source: str,
+    version: int | None,
+    schema: Schema,
+    seed: int | None = None,
 ) -> Path:
     """Write `flow`'s draft from `source`'s approval `version`, else its newest.
 
     Each field of `schema` the approval holds is the approval's; every other is
     `flow`'s newest sheet's, as are the records the fields came through. No seeds
-    are carried: the approval's are another flow's. A waiting draft equal to its
-    sheet, rendering one drawn seed, holds no work, so it is replaced at its
-    number; one with edited fields, or a count or seeds of its own, refuses.
+    are carried: the approval's are another flow's. `seed` names the image of
+    that approval the draft is written from, recorded beside it, and refuses
+    as `drafting_approval` refuses. A waiting
+    draft equal to its sheet, rendering one drawn seed, holds no work, so it is
+    replaced at its number; one with edited fields, or a count or seeds of its
+    own, refuses.
     e.g. (run, conjure, summon, None, schema) -> conjure/review/001.draft.json
     """
-    approval = drafting_approval(run, flow, source, version)
+    approval = drafting_approval(run, flow, source, version, seed)
     sheet_version = latest(run.directory(flow, SHEETS))
     if sheet_version is None:
         raise Refusal(
@@ -255,15 +273,21 @@ def draft_from(
         sheet_version,
         version=None if waiting is None else int(waiting.name[:3]),
         drafted_from={"flow": source, "approval": approval},
+        image=None
+        if seed is None
+        else {"flow": source, "version": approval, "seed": seed},
     )
 
 
-def drafting_approval(run: Run, flow: str, source: str, version: int | None) -> int:
+def drafting_approval(
+    run: Run, flow: str, source: str, version: int | None, seed: int | None = None
+) -> int:
     """Return the approval of `source` that `draft_from` drafts `flow` from.
 
     `version`, else `source`'s newest. Refuses `flow` itself as the source, an
-    approval `source` does not hold, and one a draft cannot copy, so a caller
-    that writes before drafting is refused before its first write.
+    approval `source` does not hold, one a draft cannot copy, and a `seed` it
+    rendered no image for, so a caller that writes before drafting is refused
+    before its first write.
     e.g. (run, conjure, summon, None) -> 2
     """
     if source == flow:
@@ -281,6 +305,15 @@ def drafting_approval(run: Run, flow: str, source: str, version: int | None) -> 
             f"{_DRAFT_AGAIN}"
         )
     _approval(run, source, approval, f"draft {flow} again")
+    if (
+        seed is not None
+        and not (group_of(run, source, approval) / f"{seed}{SIDECAR}").is_file()
+    ):
+        raise Refusal(
+            f"{run.id}: flow {source} rendered no seed {seed} under "
+            f"{artifact_name(approval, APPROVED)}; run `{stage_command(run, 'show')}` "
+            f"to list the seeds its renders wrote, and draft {flow} from one of those"
+        )
     return approval
 
 
@@ -451,6 +484,7 @@ def cancel(run: Run, flow: str) -> Path | None:
             body.get("renders"),
             version,
             drafted_from(body),
+            draft_image(body),
         )
     approval.unlink()
     return path
@@ -592,6 +626,7 @@ def _write_draft(
     renders: Renders | None = None,
     version: int | None = None,
     drafted_from: CopiedFrom | None = None,
+    image: DraftImage | None = None,
 ) -> Path:
     """Write `flow`'s draft numbered `version`, else the next, and return its path."""
     review_directory = run.directory(flow, REVIEW)
@@ -615,6 +650,8 @@ def _write_draft(
         draft["renders"] = renders
     if drafted_from is not None:
         draft["producer"]["drafted_from"] = drafted_from
+    if image is not None:
+        draft["producer"]["image"] = image
     write(path, DRAFT_FILE, draft)
     return path
 
@@ -1022,6 +1059,21 @@ def drafted_from(body: Mapping[str, object]) -> CopiedFrom | None:
     if not isinstance(flow, str) or not isinstance(approval, int):
         return None
     return {"flow": flow, "approval": approval}
+
+
+def draft_image(body: Mapping[str, object]) -> DraftImage | None:
+    """Return the image a draft or approval was written from, or None.
+
+    e.g. producer `{…, "image": {"flow": "f", "version": 1, "seed": 7}}` -> that
+    """
+    producer = body.get("producer")
+    image = producer.get("image") if isinstance(producer, Mapping) else None
+    if not isinstance(image, Mapping):
+        return None
+    flow, version, seed = image.get("flow"), image.get("version"), image.get("seed")
+    if not (isinstance(flow, str) and type(version) is int and type(seed) is int):
+        return None
+    return {"flow": flow, "version": version, "seed": seed}
 
 
 def came_from(body: Mapping[str, object]) -> int | None:

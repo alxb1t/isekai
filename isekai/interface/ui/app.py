@@ -126,6 +126,7 @@ from isekai.pipeline.review import (
     cancellable,
     current_draft,
     discard,
+    draft_image,
     drafted_from,
     refuse_revisions,
     review,
@@ -835,8 +836,9 @@ def create_app(
     ) -> dict[str, Any]:
         """Draft `flow` from `source`'s approval `version`, as `review --from` does.
 
-        A waiting draft with edits of its own is answered `waiting`, and nothing
-        is written.
+        An optional decimal `seed` names the image of that approval the draft
+        records. A waiting draft with edits of its own is answered `waiting`,
+        and nothing is written.
         """
         one = held(batch, digest, flow)
         if flow not in (targets := sheet_alone()):
@@ -851,6 +853,13 @@ def create_app(
                 "the request names no source flow and approval; send `source` and "
                 "`version` -- nothing was written"
             )
+        seed = payload.get("seed")
+        if seed is not None and not (isinstance(seed, str) and is_seed(seed)):
+            raise Refusal(
+                f"the request's seed {seed!r} is not one; send the image's decimal "
+                "seed, or none -- nothing was written"
+            )
+        seed = None if seed is None else int(seed)
         offered(source)
         with _DRAFT_UPDATE:
             # An edited draft is the work in hand, so it is opened, not refused.
@@ -863,6 +872,7 @@ def create_app(
                 version,
                 shared.vocabulary,
                 shared.field_map,
+                seed,
             )
         return {"draft": written.name}
 
@@ -1214,7 +1224,9 @@ def _revision(
 ) -> dict[str, Any] | None:
     """Describe the approval a draft or an approval was copied from, and its image.
 
-    The image is the first listed seed rendered under that approval, or null.
+    The image is the one the draft records, whatever its seeds became; a record
+    naming none falls back to the first listed seed rendered under that
+    approval, or null.
     e.g. from 1, seeds [7], outputs/001/7.png there -> {"version": 1, "seed": "7", …}
     """
     version = came_from(body)
@@ -1223,14 +1235,17 @@ def _revision(
     approval = approval_of(one.run, one.flow.id, version)
     if not approval.is_file():
         return None
-    seed = next(
-        (
-            seed
-            for seed in renders["seeds"]
-            if image_of(one.run, one.flow, version, seed).is_file()
-        ),
-        None,
-    )
+    if (image := draft_image(body)) is not None:
+        seed = image["seed"]
+    else:
+        seed = next(
+            (
+                seed
+                for seed in renders["seeds"]
+                if image_of(one.run, one.flow, version, seed).is_file()
+            ),
+            None,
+        )
     return {
         "version": version,
         "seed": None if seed is None else str(seed),
@@ -1243,6 +1258,7 @@ def _drafted(
 ) -> dict[str, Any] | None:
     """Describe the other flow's approval a draft was drafted from, and its sheet.
 
+    `image`, its seed a decimal string, is the one the draft records, if any.
     `remedy` repairs the draft or approval; a damaged sheet names itself, since
     no command rewrites a sheet one records: `review` copies the same damage.
     e.g. from summon 1, on sheet 1 -> {"flow": "summon-…", "approval": 1, "fields": …}
@@ -1254,7 +1270,10 @@ def _drafted(
     sheet = sheet_of(one.run, one.flow.id, body["sheet"])
     restore = f"restore {sheet} by hand, then reload the page"
     held = read(sheet, SHEET_FILE, remedy=restore)
-    return {**origin, "fields": _fields(sheet, held, restore)}
+    drafted: dict[str, Any] = {**origin, "fields": _fields(sheet, held, restore)}
+    if (image := draft_image(body)) is not None:
+        drafted["image"] = {**image, "seed": str(image["seed"])}
+    return drafted
 
 
 def _caption(one: Held) -> tuple[Path | None, str | None]:

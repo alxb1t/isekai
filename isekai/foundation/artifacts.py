@@ -165,6 +165,14 @@ class CopiedFrom(TypedDict):
     approval: int
 
 
+class DraftImage(TypedDict):
+    """The rendered image a draft was written from: its flow, version and seed."""
+
+    flow: str
+    version: int
+    seed: int
+
+
 ChainProducer = TypedDict(
     "ChainProducer",
     {
@@ -172,6 +180,7 @@ ChainProducer = TypedDict(
         "from": int,
         "source": str,
         "drafted_from": NotRequired[CopiedFrom],
+        "image": NotRequired[DraftImage],
     },
 )
 

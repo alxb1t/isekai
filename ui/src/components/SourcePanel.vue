@@ -28,8 +28,9 @@ const props = defineProps<{
   wd14?: ScoredTag[] | null
   tags?: OfferedTag[] | null
   loading?: boolean
-  /* The image being revised, drawn beside the photograph on a revision (J5·4). */
-  revised?: { src: string; seed: string } | null
+  /* The image a draft came from, drawn beside the photograph (J5·4): a
+     revision's, or, `from` naming its flow and version, a drafted draft's. */
+  revised?: { src: string; seed: string; from: string | null } | null
 }>()
 
 defineEmits<{ open: []; render: []; pair: [] }>()
@@ -42,7 +43,7 @@ const frame = computed(() => ({
   ratio: `${props.width} / ${props.height}`,
 }))
 
-/* A revision's pair shares the column at one height: each image takes width in
+/* The pair shares the column at one height: each image takes width in
    proportion to its aspect ratio. The render's is the photograph's until it loads. */
 const loaded = ref<number | null>(null)
 const ratio = computed(() => props.width / props.height)
@@ -89,8 +90,8 @@ defineExpose({
     tabindex="0"
     ref="element"
   >
-    <!-- A revision: one header row over the photograph and the render, top-aligned
-         at one height (J5·4). -->
+    <!-- A revision or a draft from an image: one header row over the photograph and
+         the image it came from, top-aligned at one height (J5·4). -->
     <div v-if="revised" class="source__pair">
       <figure class="source__side" :style="{ flexGrow: ratio }">
         <span class="source__row">
@@ -100,7 +101,10 @@ defineExpose({
       </figure>
       <figure class="source__side source__revised" :style="{ flexGrow: renderRatio }" data-revised>
         <span class="source__row">
-          <span class="kicker source__label">render being revised · seed {{ revised.seed }}</span>
+          <span class="kicker source__label"
+            >{{ revised.from ? `drafted from ${revised.from}` : 'render being revised' }} · seed
+            {{ revised.seed }}</span
+          >
           <button class="btn btn-secondary source__pair-open" type="button" @click="$emit('pair')">
             Side by side<KeyHint command="photograph" />
           </button>

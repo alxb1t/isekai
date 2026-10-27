@@ -770,6 +770,23 @@ def test_an_approved_revision_names_the_approval_its_image_and_its_fields(
     }
 
 
+@pytest.mark.spec("ui:revise:a-revision-keeps-its-image-after-its-seed-changes")
+def test_a_revision_whose_seed_changed_names_the_image_it_was_written_from(
+    client: TestClient, made: Run
+) -> None:
+    _revised(client, made)
+    body = client.get(_at(made)).json()
+    renders = {"count": 1, "seeds": ["9"]}
+    saved = client.put(
+        _at(made, "/draft"),
+        json={"fields": body["fields"], "renders": renders, "saved": body["saved"]},
+    ).json()["saved"]
+
+    assert client.get(_at(made)).json()["revision"]["seed"] == "7"
+    assert client.post(_at(made, "/approve"), json={"saved": saved}).status_code == 200
+    assert client.get(_at(made)).json()["revision"]["seed"] == "7"
+
+
 @pytest.mark.spec("ui:revise:a-waiting-draft-is-opened")
 def test_revising_an_image_whose_flow_holds_a_waiting_draft_answers_that_draft(
     client: TestClient, made: Run

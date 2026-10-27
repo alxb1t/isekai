@@ -1123,6 +1123,40 @@ def test_a_drafted_draft_names_its_sheet_and_the_approval_it_came_from(
     assert "renders" not in body
 
 
+@pytest.mark.spec("review:draft-from:a-draft-from-an-image-records-it")
+def test_a_drafted_draft_records_the_image_it_names_and_none_without(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+
+    unnamed = draft_from(run, CONJURE, FLOW, 1, conjure)
+    assert "image" not in read(unnamed, DRAFT_FILE)["producer"]
+    discard(run, CONJURE)
+    _image(run, 1, SEED)
+    named = draft_from(run, CONJURE, FLOW, 1, conjure, seed=SEED)
+
+    image = read(named, DRAFT_FILE)["producer"].get("image")
+    assert image == {"flow": FLOW, "version": 1, "seed": SEED}
+
+
+@pytest.mark.spec("review:draft-from:an-image-the-approval-never-rendered-is-refused")
+def test_a_draft_naming_a_seed_its_approval_never_rendered_is_refused(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    _image(run, 1, SEED)
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal) as refused:
+        draft_from(run, CONJURE, FLOW, 1, conjure, seed=999)
+
+    assert "rendered no seed 999 under 001.approved.json" in str(refused.value)
+    assert f"`python -m isekai show{runs_flag(run)} {run.id}`" in str(refused.value)
+    assert snapshot(run.path) == before
+
+
 @pytest.mark.spec("review:draft-from:its-approval-is-an-ordinary-approval")
 def test_a_drafted_draft_approves_as_an_edited_approval_and_no_copy(
     run: Run, schema: Schema, vocabulary: Vocabulary
@@ -1380,8 +1414,27 @@ def test_a_revision_copies_the_images_approval_and_keeps_its_seed(
         "implementation": "review",
         "from": 1,
         "source": "review",
+        "image": {"flow": FLOW, "version": 1, "seed": SEED},
     }
     assert body["renders"] == {"count": 1, "seeds": [SEED]}
+
+
+@pytest.mark.spec("review:revise:a-revision-records-its-image")
+def test_a_revision_records_its_image_through_a_seed_change_and_approval(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+    _image(run, 1, SEED)
+    draft = revise(run, FLOW, 1, SEED)
+    save_draft(run, FLOW, read(draft, DRAFT_FILE)["fields"], {"count": 1, "seeds": [7]})
+
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+
+    image = {"flow": FLOW, "version": 1, "seed": SEED}
+    assert approved is not None
+    assert read(approved, APPROVED_FILE)["producer"].get("image") == image
+    assert cancel(run, FLOW) == draft
+    assert read(draft, DRAFT_FILE)["producer"].get("image") == image
 
 
 @pytest.mark.spec("review:revise:a-waiting-draft-refuses")

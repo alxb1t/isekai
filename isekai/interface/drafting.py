@@ -22,15 +22,17 @@ def draft_across(
     version: int | None,
     vocabulary: Callable[[], Vocabulary],
     field_map: Callable[[], FieldMap],
+    seed: int | None = None,
 ) -> Path:
     """Return `target`'s draft from `source`'s approval `version`, else its newest.
 
+    `seed`, where given, names the image of that approval the draft records.
     A target with no sheet has its sheet filled from `source`'s tag list first,
     and that write is what assigns it. The approval is checked whole, and the
     sheet stage checks the tag list before its write, so a refusal writes nothing.
     The vocabulary and the table are read only for that fill.
     """
-    approval = drafting_approval(run, target.id, source, version)
+    approval = drafting_approval(run, target.id, source, version, seed)
     if latest(run.directory(target.id, SHEETS)) is None:
         sheet(
             run,
@@ -42,4 +44,4 @@ def draft_across(
             flow_digest=target.digest,
             tags_from=source,
         )
-    return draft_from(run, target.id, source, approval, target.schema)
+    return draft_from(run, target.id, source, approval, target.schema, seed)

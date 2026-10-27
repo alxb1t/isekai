@@ -114,7 +114,12 @@ async function reviseImage(): Promise<void> {
 async function draftTarget(target: string): Promise<void> {
   drafting.value = null
   try {
-    await draftFrom({ ...place.value, flow: target }, props.flow, place.value.version)
+    await draftFrom(
+      { ...place.value, flow: target },
+      props.flow,
+      place.value.version,
+      props.seed,
+    )
     void router.push({
       name: 'review',
       params: { batch: props.batch, digest: props.digest, flow: target },

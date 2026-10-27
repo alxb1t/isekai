@@ -9,6 +9,17 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-10-27 · 0081-the-fourth-walkthrough
+
+Gate: local 0m47s · CI 1m09s (ci at 3b61916) · 0.53.0: local 0m45s · CI 1m29s
+
+### Changed
+
+- A revision, and a draft *Conjure from this* writes, records the image it came from — flow, version and seed —
+  and its approval keeps it, so an edited seed never loses the image (0081 D1, D2).
+- Review shows the image a draft records beside the photograph — a revision's, whatever its seeds become, and
+  a conjure draft's summon image, headed by its flow, version and seed (0081 D3, D4, D5).
+
 ## [0.53.0] - 2026-10-26 · 0080-conjure-without-prepare
 
 Gate: local 0m45s · CI 1m29s (ci at 63d656d) · 0.52.0: local 0m45s · CI 1m29s
