@@ -429,13 +429,15 @@ A program reading a stage's progress reads a format meant for it, never sentence
 
 ### Requirement: A render with no request renders every approval short of its count
 
-The system SHALL, when the rendering verb names a runs root and no request, render for every run and every flow its
-directory holds whose newest approval holds fewer images than its count; SHALL skip a run that has no directory for a
-flow; and SHALL leave out a flow a run holds without an approval, naming the run and the flow on standard error. A
-request `<flow>=<count|source>` SHALL keep its meaning.
+The system SHALL, when the rendering verb names one or more collections' runs roots and no request, render in one
+session, collection after collection in the order named, for every run of each and every flow its directory holds whose
+newest approval holds fewer images than its count; SHALL skip a run that has no directory for a flow; and SHALL leave
+out a flow a run holds without an approval, naming the run and the flow on standard error. A request
+`<flow>=<count|source>` SHALL keep its meaning beside one runs root, and SHALL be refused beside a second.
 
-The operator approves what to render, so the verb renders what is approved and not yet made. A source may hold only
-some flows, and a draft still being corrected waits for its approval rather than holding up the rest.
+The operator approves what to render, so the verb renders what is approved and not yet made. A source may hold only some
+flows, and a draft still being corrected waits for its approval rather than holding up the rest. One boot serves every
+collection named, so a second collection costs its images and no second pod.
 
 #### Scenario: what is short is rendered
 - **Key:** `cli:render-short:what-is-short-is-rendered`
@@ -457,10 +459,18 @@ some flows, and a draft still being corrected waits for its approval rather than
 - **THEN** the other run is rendered and the first is not
 - **AND** standard error names the run and the flow left out
 
+#### Scenario: many collections render in one session
+- **Key:** `cli:render-short:many-collections-render-in-one-session`
+- **Layers:** unit
+- **WHEN** the verb names two collections' runs roots, each short of an image
+- **THEN** one session renders both, the first collection's lines before the second's
+- **AND** a request beside the two runs roots is refused before anything is rented
+
 ### Requirement: A render session's limit is estimated from its work, at most the configured ceiling
 
-The system SHALL bound a render session by a limit: the one `--limit` names, or else boot plus the images it will
-render times the median duration of that flow's last recorded renders, plus teardown, times the configured factor,
+The system SHALL bound a render session by a limit: the one `--limit` names, or else one boot plus the images it will
+render, of every collection it names, times the median duration of that flow's last recorded renders in that
+collection, plus teardown, times the configured factor,
 with configured figures where nothing is recorded, and never below the pod's provisioning hold plus five minutes. It
 SHALL refuse a limit above the ceiling `gpunit.toml` names, and SHALL give the same estimate the surface quotes.
 
@@ -491,6 +501,12 @@ spend. A pod held for diagnosis must stop after its hold ends, not before.
 - **WHEN** a limit above `gpunit.toml`'s ceiling is given
 - **THEN** the invocation is refused naming the ceiling
 - **AND** no session is opened
+
+#### Scenario: one boot for many collections
+- **Key:** `cli:render-limit:one-boot-for-many-collections`
+- **Layers:** unit
+- **WHEN** the limit is estimated for two collections
+- **THEN** it holds one boot and one teardown, and both collections' images
 
 ### Requirement: A render session reports its steps as JSON lines when asked
 
@@ -596,9 +612,12 @@ the target's.
 
 ### Requirement: A render session writes its record into the collection, from its start to its end
 
-The system SHALL, once a render session asks for a pod, write its record to the collection's `sessions/` folder beside
-the log, named by the session's id — the id `--session` gives, else the start in UTC as `20261024T091200Z` — and SHALL
-replace the record whole as each image lands and as the session ends. The record SHALL hold the id, the start, the end,
+The system SHALL, once a render session asks for a pod, write a record to each collection's `sessions/` folder it
+renders, beside its log, every record holding the session's id and naming the other collections in `collections`, named
+by the session's id — the id `--session` gives, else the start in UTC as `20261024T091200Z` — and SHALL replace a record
+whole as each of its collection's images lands and as the session ends, the pod's and the teardown's steps in every
+record; the session's log lines SHALL go to every collection's log, and every record SHALL name the complete
+traversal in `collection_order`, including its own collection. The record SHALL hold the id, the start, the end,
 the limit, what each flow was asked to render and what it plans for each photograph, the pod's and the teardown's steps,
 each image as its run digest, flow, version and seed in order, and the outcome — running, done, stopped or failed, with
 its message — and no price. A session refused before anything is rented SHALL write no record. An existing id SHALL be
@@ -654,4 +673,11 @@ free checks ─▶ claim id + lifetime lock ─▶ running record ─▶ images 
 - **Layers:** unit
 - **WHEN** a session is asked for two images of one run and one of another
 - **THEN** its record plans each run and flow with its number of images
+
+#### Scenario: each collection holds its record
+- **Key:** `cli:render-session:each-collection-holds-its-record`
+- **Layers:** unit
+- **WHEN** a session renders two collections
+- **THEN** each collection's record holds the shared id, its own images and plan, and the complete collection order
+- **AND** both records hold the pod's and the teardown's steps, and both logs the session's lines
 
