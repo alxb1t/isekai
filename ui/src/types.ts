@@ -399,9 +399,8 @@ export interface RenderDetail {
   damaged: string | null
   /* The newest older version that rendered this seed, or null. */
   compare: number | null
-  /* The cell's images, oldest version first, as Renders draws them. */
-  images: { version: number; seed: string }[]
-  /* The source's images, a row per offered flow holding any, as `images` is. */
+  /* The source's images, a row per offered flow holding any, each oldest version
+     first as Renders draws them; this cell's images are its flow's row. */
   source: { flow: string; images: { version: number; seed: string }[] }[]
   /* Every offered flow, this one first, assigned or not. */
   targets: string[]
@@ -450,7 +449,7 @@ export interface RenderPair {
   right: CompareSide
   changed: { field: string; left: string[]; right: string[] }[]
   different_seeds: boolean
-  /* No field differs between the two sheets. */
+  /* Every filled field matches, a field one flow alone declares among them. */
   same_sheet: boolean
 }
 

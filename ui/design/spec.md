@@ -342,7 +342,7 @@ J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731   
 J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · SEED 1840266731
       [the image picked, one height, top-aligned]  [the image compare started from]
       same seed · 1840266731     1 FIELD DIFFERS  eye_colour  light blue eyes │ blue eyes
-      another seed or flow picked:  different seeds · 2216093514 · 1840266731 · same sheet when no field differs
+      another seed or flow picked:  different seeds · 2216093514 · 1840266731 · same sheet when every filled field matches
       the photograph picked:  the photograph left, the image right, no fields
 ```
 

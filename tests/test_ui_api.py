@@ -1810,12 +1810,8 @@ def test_compare_takes_any_two_images_of_a_source(
     photo = client.get(f"{large}/v4/7/compare/photo").json()
     itself = client.get(f"{large}/v4/7/compare/{FLOW}/v4/7")
 
-    assert [(one["version"], one["seed"]) for one in view["images"]] == [
-        (1, "7"),
-        (2, "5"),
-        (3, "7"),
-        (4, "7"),
-    ]
+    # The cell's images are the source's row for its flow, served once.
+    assert "images" not in view
     assert [
         (row["flow"], [(one["version"], one["seed"]) for one in row["images"]])
         for row in view["source"]

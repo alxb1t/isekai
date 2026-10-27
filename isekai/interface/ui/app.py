@@ -1015,9 +1015,8 @@ def create_app(
             "compare": library.paired(run, flow, number, seed, suffix),
             # Every offered flow, this one first, assigned or not: a draft assigns.
             "targets": sorted(flows, key=lambda name: name != flow),
-            # The cell's images, as Renders draws them: oldest version first.
-            "images": _images_out(library.rendered_images(run, flow, suffix)),
-            # The source's images, a row per offered flow holding any: the pick.
+            # The source's images, a row per offered flow holding any, each oldest
+            # version first: the pick, and this cell's images as its flow's row.
             "source": [
                 {"flow": name, "images": _images_out(images)}
                 for name in flows
