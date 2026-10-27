@@ -293,7 +293,9 @@ function named(spot: { row: number; column: number }): string {
   return at(sources.value[spot.row]?.name ?? '', flows.value[spot.column - 1] ?? '')
 }
 
-function place(row: number, column: number): void {
+/* Focus a cell and scroll it into view: a key's move `nearest`, a restored focus
+   to the window's centre, where the eye finds it. */
+function place(row: number, column: number, how: ScrollIntoViewOptions = { block: 'nearest' }): void {
   const rows = sources.value.length
   if (rows === 0) return
   focus.value = {
@@ -301,7 +303,11 @@ function place(row: number, column: number): void {
     column: clamp(column, flows.value.length),
   }
   store.focus.hub = named(focus.value)
-  void nextTick(() => focusedCell()?.focus())
+  void nextTick(() => {
+    const cell = focusedCell()
+    cell?.focus({ preventScroll: true })
+    cell?.scrollIntoView(how)
+  })
 }
 
 /* The focused cell's element, once drawn. */
@@ -400,12 +406,7 @@ onMounted(async () => {
     Array.from({ length: flows.value.length + 1 }, (_, column) => ({ row, column })),
   )
   const spot = kept(spots, named, store.focus.hub)
-  if (spot) {
-    place(spot.row, spot.column)
-    // A restored focus goes to the window's centre, where the eye finds it; a key's move
-    // keeps the focus's own nearest scroll.
-    void nextTick(() => focusedCell()?.scrollIntoView({ block: 'center' }))
-  }
+  if (spot) place(spot.row, spot.column, { block: 'center' })
 })
 
 /* The Render dialog is this page's: leaving the page closes it. */
@@ -569,7 +570,6 @@ onUnmounted(() => {
       :disabled="offer.disabled"
       :refused="offer.refused"
       :rendering="rendering"
-      :plan="plan"
       @open="openRender"
     />
     <div v-else-if="shown === 'prepare'" class="prepare-bar" :class="{ running: busy }">

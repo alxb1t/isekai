@@ -359,7 +359,6 @@ onUnmounted(() => {
       :disabled="offer.disabled"
       :refused="offer.refused"
       :rendering="rendering"
-      :plan="plan"
       @open="store.openDialog"
     />
     <RenderDialog v-if="dialog" @close="store.closeDialog" />

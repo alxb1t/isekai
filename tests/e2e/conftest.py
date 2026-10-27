@@ -215,8 +215,6 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     save_draft(compared, FLOW, {**fields, "clothes": ["collared shirt"]})
     approve(compared, FLOW, load_flow(FLOW).schema, VOCABULARY)
     _render_at(compared)
-    # A second seed under v2, so Compare can pick another seed's image.
-    _render_at(compared, seed=5)
     # A flat summon image, so Compare can pick another flow's.
     flat = load_flow(FLAT)
     sheet(

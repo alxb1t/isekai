@@ -73,7 +73,7 @@ onMounted(() => {
     data-compare-pick
     @close="emit('close')"
   >
-    <p class="viewer__title mono" data-pick-head>{{ head }}</p>
+    <p class="viewer__title mono">{{ head }}</p>
     <div class="pick">
       <div v-for="(line, row) in grid.rows" :key="line.flow ?? 'photo'" class="pick__row">
         <span class="pick__flow mono">{{ line.flow ?? 'photo' }}</span>

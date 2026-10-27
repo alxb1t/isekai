@@ -49,10 +49,14 @@ const grid = computed(() => (detail.value ? sourceGrid(detail.value) : null))
 const tileSrc = (tile: PickTile) =>
   tile === null ? photoUrl(place.value) : thumbAt({ ...place.value, ...tile })
 
+/* The screen this view was opened from. A pasted address carries no state, so
+   it counts as Renders. */
+const from = window.history.state?.from === 'hub' ? 'hub' : 'renders'
+
 /* Compare carries where this view was opened from, so its esc returns here
    with the same way back. */
 function compare(other: PickTile): void {
-  const state = { from: window.history.state?.from ?? null }
+  const state = { from }
   void router.push(
     other === null
       ? { name: 'compare-photo', params: props, state }
@@ -69,30 +73,27 @@ function compare(other: PickTile): void {
   )
 }
 
-/* The images `h` `l` step through, and where this one stands among them. A
-   pasted address carries no state, so it steps as Renders does. */
-const from = window.history.state?.from === 'hub' ? 'hub' : 'renders'
+/* The images `h` `l` step through, and where this one stands among them. */
 const order = computed(() => (detail.value ? screenOrder(detail.value, from) : []))
-const shown = computed(() => ({ flow: props.flow, version: place.value.version, seed: props.seed }))
-const index = computed(() => placeOf(order.value, shown.value))
+const index = computed(() => placeOf(order.value, place.value))
 
 /* Show the image `by` steps away in place of this one, so esc returns focused on
    it; held at either end. */
 function step(by: -1 | 1): void {
-  const next = stepped(order.value, shown.value, by)
+  const next = stepped(order.value, place.value, by)
   if (next === null) return
   if (from === 'renders') store.focus.renders = imageKey({ digest: props.digest, ...next })
   void router.replace({
     name: 'render',
     params: { ...props, flow: next.flow, version: `v${next.version}`, seed: next.seed },
-    state: { from: window.history.state?.from ?? null },
+    state: { from },
   })
 }
 
 /* Where esc and the back button go: the hub when it opened this view, else
    Renders, which holds every image. A pasted address carries no state. */
 const back = computed(() =>
-  window.history.state?.from === 'hub'
+  from === 'hub'
     ? { to: { name: 'hub', params: { collection: props.collection } }, label: 'Back to Hub' }
     : { to: { name: 'renders', params: { collection: props.collection } }, label: 'Back to Renders' },
 )
@@ -141,7 +142,7 @@ onMounted(async () => {
       <span class="section-label">
         {{ detail.flow }} · v{{ detail.version }} · seed {{ detail.seed
         }}<template v-if="index >= 0">
-          · <span data-step>{{ index + 1 }} of {{ order.length }}</span></template
+          · {{ index + 1 }} of {{ order.length }}</template
         >
       </span>
       <span class="large__head mono" data-heading>

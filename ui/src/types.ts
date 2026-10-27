@@ -442,16 +442,9 @@ export interface CompareSide {
   tokens: number
 }
 
-/* Two renders: the image picked left, the one compare started from right. */
-export interface RenderPair {
-  left: CompareSide
+/* The image picked, left — a render, or the photograph where null — beside the
+   render compare started from, right. */
+export interface Comparison {
+  left: CompareSide | null
   right: CompareSide
 }
-
-/* The photograph, left, beside the render compare started from: the pair alone. */
-export interface PhotoPair {
-  left: null
-  right: CompareSide
-}
-
-export type Comparison = RenderPair | PhotoPair

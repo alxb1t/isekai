@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type Plan, reasons, waiting } from '../bars'
+import { planOf, reasons, waiting } from '../bars'
 import KeyHint from './KeyHint.vue'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
@@ -12,14 +12,14 @@ import { noun } from '../words'
    totals, the images short outside its plan, and the drawer's button. Its button
    keeps `data-render`; a disabled one has its reason beside it. A count the render
    stage refuses keeps Render, disabled, so the reason is never silent. `rendering`
-   is a session running for this bar's own collection; `plan` is any this surface runs. */
+   is a session running for this bar's own collection; its plan is that of any session
+   this surface runs. */
 const props = defineProps<{
   images: number
   others: number
   disabled: string | null
   refused: string | null
   rendering: boolean
-  plan: Plan | null
 }>()
 defineEmits<{ open: [] }>()
 
@@ -28,7 +28,8 @@ const drawer = useDrawerStore()
 const { jobs } = storeToRefs(live)
 const { renderTotals } = live
 const render = computed(() => jobs.value.render)
-const left = computed(() => waiting({ images: props.images + props.others, plan: props.plan }))
+const plan = computed(() => planOf(render.value))
+const left = computed(() => waiting({ images: props.images + props.others, plan: plan.value }))
 </script>
 
 <template>
@@ -59,7 +60,7 @@ const left = computed(() => waiting({ images: props.images + props.others, plan:
     </template>
     <template v-else>
       <span class="prepare-bar__cells mono">{{ renderTotals(render) }}</span>
-      <span v-if="left" class="prepare-bar__cells mono" data-render-waiting>{{ left }}</span>
+      <span v-if="left" class="prepare-bar__cells mono">{{ left }}</span>
       <button
         v-if="render?.session"
         class="btn btn-secondary"
