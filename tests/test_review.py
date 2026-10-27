@@ -1140,6 +1140,19 @@ def test_a_drafted_draft_records_the_image_it_names_and_none_without(
     assert image == {"flow": FLOW, "version": 1, "seed": SEED}
 
 
+@pytest.mark.spec("review:draft-from:a-draft-from-an-image-prefills-its-seed")
+def test_a_draft_from_an_image_renders_its_seed_once(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    _image(run, 1, SEED)
+
+    draft = draft_from(run, CONJURE, FLOW, 1, conjure, seed=SEED)
+
+    assert read(draft, DRAFT_FILE)["renders"] == {"count": 1, "seeds": [SEED]}
+
+
 @pytest.mark.spec("review:draft-from:an-image-the-approval-never-rendered-is-refused")
 def test_a_draft_naming_a_seed_its_approval_never_rendered_is_refused(
     run: Run, schema: Schema, vocabulary: Vocabulary
@@ -1438,17 +1451,35 @@ def test_a_revision_records_its_image_through_a_seed_change_and_approval(
 
 
 @pytest.mark.spec("review:revise:a-waiting-draft-refuses")
-def test_a_waiting_draft_refuses_a_revision_and_nothing_is_written(
+def test_an_edited_waiting_draft_refuses_a_revision_and_nothing_is_written(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
-    assert review(run, FLOW, new_version=True) is not None
+    _approved(run, schema, vocabulary)
+    waiting = review(run, FLOW, new_version=True)
+    assert waiting is not None
+    _edit(waiting, bangs=[])
+    _image(run, 1, SEED)
     before = snapshot(run.directory(FLOW, "review"))
 
-    with pytest.raises(Refusal, match="002.draft.json waiting"):
+    with pytest.raises(Refusal, match="002.draft.json waiting with edits"):
         revise(run, FLOW, 1, SEED)
 
     assert snapshot(run.directory(FLOW, "review")) == before
+
+
+@pytest.mark.spec("review:revise:an-unedited-waiting-draft-is-replaced")
+def test_an_unedited_waiting_draft_is_replaced_by_a_revision_at_its_number(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary)
+    waiting = review(run, FLOW, new_version=True)
+    _image(run, 1, SEED)
+
+    draft = revise(run, FLOW, 1, SEED)
+
+    assert draft == waiting == run.directory(FLOW, "review") / "002.draft.json"
+    assert versions(run.directory(FLOW, "review")) == [1, 2]
+    assert read(draft, DRAFT_FILE)["renders"] == {"count": 1, "seeds": [SEED]}
 
 
 @pytest.mark.spec("review:revise:an-unchanged-revision-is-refused")
@@ -1574,14 +1605,16 @@ def test_one_refused_image_leaves_every_run_without_a_revision(
     other = _second_run(run, schema, vocabulary)
     for each in (run, other):
         _approved(each, schema, vocabulary, hair_silhouette=["long hair"])
-    assert review(other, FLOW, new_version=True) is not None
+    waiting = review(other, FLOW, new_version=True)
+    assert waiting is not None
+    _edit(waiting, bangs=[])
     blocked = _image(other, 1, 7)
 
     status, err = _revise_verb(vocabulary, _image(run, 1, SEED), blocked)
 
     assert status == 1
     assert f"{blocked}" in err
-    assert "002.draft.json waiting" in err
+    assert "002.draft.json waiting with edits" in err
     assert versions(run.directory(FLOW, "review")) == [1]
 
     # The waiting draft goes, and the approval it was copied from is broken.

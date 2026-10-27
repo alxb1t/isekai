@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- A revision replaces an unedited waiting draft at its number, refusing only one with edits of its own, and a
+  draft from an image lists the image's seed, so both writers share one waiting-draft rule (0085 D1, D2).
+
 ## [0.57.0] - 2026-10-27 · 0084-flat-summon
 
 Gate: local 0m44s · CI 1m16s (ci at f35f347) · 0.56.0: local 0m47s · CI 1m16s

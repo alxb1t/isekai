@@ -4,19 +4,19 @@ The stage, the verb, then the page, per [design](design.md). Every new test carr
 
 ## Progress
 
-- [ ] 1 — The stage
+- [x] 1 — The stage
 - [ ] 2 — The verb
 - [ ] 3 — The page
 
 ## 1 — The stage
 
-- [ ] 1.1 **HALT CHECK** — a draft from an image lists no seed.
+- [x] 1.1 **HALT CHECK** — a draft from an image lists no seed.
   Verify: `grep -c 'a-draft-from-an-image-prefills-its-seed' tests/test_review.py` prints `0`.
-- [ ] 1.2 Replace an unedited waiting draft in `revise` per [D1](design.md#d1), and list the image's seed in
+- [x] 1.2 Replace an unedited waiting draft in `revise` per [D1](design.md#d1), and list the image's seed in
   `draft_from` per [D2](design.md#d2), in `isekai/pipeline/review.py`; in `tests/test_review.py` bind
   `review:revise:an-unedited-waiting-draft-is-replaced` and `review:draft-from:a-draft-from-an-image-prefills-its-seed`,
   and give `review:revise:a-waiting-draft-refuses` an edited draft.
-  Verify: `grep -c 'an-unedited-waiting-draft-is-replaced\|a-draft-from-an-image-prefills-its-seed' tests/test_review.py` prints `2`, and `uv run pytest -q tests/test_review.py` exits 0.
+  Verify: `grep -c 'review:revise:an-unedited-waiting-draft-is-replaced\|a-draft-from-an-image-prefills-its-seed' tests/test_review.py` prints `2`, and `uv run pytest -q tests/test_review.py` exits 0.
 
 ## 2 — The verb
 
@@ -24,8 +24,8 @@ The stage, the verb, then the page, per [design](design.md). Every new test carr
   Verify: `grep -c 'made\["revise"\]' isekai/interface/cli.py` prints a number of at least `1`.
 - [ ] 2.2 Add `draft` and delete `revise` and `review --from`/`--version` in `isekai/interface/cli.py` and
   `isekai/interface/drafting.py`, and print `isekai draft --flow …` from `_revise_command` (`isekai/pipeline/review.py`),
-  per [D3](design.md#d3) and [D6](design.md#d6); in `tests/test_pipeline_cli.py` bind
-  `cli:draft:another-flow-is-drafted-from-the-image`, run the `cli:revise:` tests and
+  per [D3](design.md#d3) and [D6](design.md#d6); run the `cli:revise:` tests in `tests/test_review.py` through
+  `draft --flow`; in `tests/test_pipeline_cli.py` bind `cli:draft:another-flow-is-drafted-from-the-image`, run
   `cli:review-from:a-target-with-no-sheet-is-filled-first` through `draft --flow`, and delete the tests the design's
   table retires.
   Verify: `grep -c 'made\["revise"\]' isekai/interface/cli.py` prints `0`, and `grep -c 'another-flow-is-drafted-from-the-image' tests/test_pipeline_cli.py` prints `1`, and `uv run pytest -q tests/test_pipeline_cli.py tests/test_review.py` exits 0.

@@ -200,10 +200,12 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
 
     The draft starts from the sheet the image was rendered under, newest or not,
     with a count of one and the image's seed, so an edit lands on the same
-    composition. Refused as `refuse_revision` refuses.
+    composition. A waiting draft equal to its sheet is replaced at its number.
+    Refused as `refuse_revision` refuses.
     e.g. (run, f, 1, 1840266731) -> review/003.draft.json, seeds [1840266731]
     """
     carried = refuse_revision(run, flow, version, seed)
+    waiting = current_draft(run.directory(flow, REVIEW))
     renders: Renders = {"count": 1, "seeds": [seed]}
     return _write_draft(
         run,
@@ -213,6 +215,7 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
         carried,
         carried["sheet"],
         renders,
+        version=None if waiting is None else int(waiting.name[:3]),
         image={"flow": flow, "version": version, "seed": seed},
     )
 
@@ -232,10 +235,10 @@ def draft_from(
     """Write `flow`'s draft from `source`'s approval `version`, else its newest.
 
     Each field of `schema` the approval holds is the approval's; every other is
-    `flow`'s newest sheet's, as are the records the fields came through. No seeds
-    are carried: the approval's are another flow's. `seed` names the image of
-    that approval the draft is written from, recorded beside it, and refuses
-    as `drafting_approval` refuses. A waiting
+    `flow`'s newest sheet's, as are the records the fields came through. The
+    approval's seeds are another flow's, so none is carried. `seed` names the
+    image of that approval the draft is written from, recorded beside it and
+    listed as its one render, and refuses as `drafting_approval` refuses. A waiting
     draft equal to its sheet, rendering one drawn seed, holds no work, so it is
     replaced at its number; one with edited fields, or a count or seeds of its
     own, refuses.
@@ -271,6 +274,7 @@ def draft_from(
         SHEETS,
         {**body, "fields": fields},
         sheet_version,
+        None if seed is None else {"count": 1, "seeds": [seed]},
         version=None if waiting is None else int(waiting.name[:3]),
         drafted_from={"flow": source, "approval": approval},
         image=None
@@ -318,7 +322,7 @@ def drafting_approval(
 
 
 def waiting_edit(run: Run, flow: str) -> Path | None:
-    """Return `flow`'s waiting draft when it holds work `draft_from` never replaces.
+    """Return `flow`'s waiting draft when it holds work a new draft never replaces.
 
     That is edited fields, or a count or seeds of its own; else None.
     """
@@ -394,15 +398,15 @@ def refuse_revision(
 ) -> ReviewApproved:
     """Return the approval `revise` copies for `seed`, refusing what it cannot write.
 
-    A waiting draft is the operator's, so a revision never replaces it. The
-    approval is read here, so a selection is checked whole before anything is
-    written. `again` is what to do once the refusal's cause is fixed.
+    A waiting draft with edits of its own is the operator's, so a revision never
+    replaces it. The approval is read here, so a selection is checked whole
+    before anything is written. `again` is what to do once the refusal's cause
+    is fixed.
     """
-    waiting = current_draft(run.directory(flow, REVIEW))
-    if waiting is not None:
+    if (edited := waiting_edit(run, flow)) is not None:
         raise Refusal(
-            f"{run.id}: flow {flow} has {waiting.name} waiting, and a revision "
-            "never replaces a draft; approve it, or run "
+            f"{run.id}: flow {flow} has {edited.name} waiting with edits of its "
+            "own, and a revision never replaces an edit; approve it, or run "
             f"`{stage_command(run, STAGE, flow, options=DISCARD)}`, then {again}"
         )
     copied = approval_of(run, flow, version)
