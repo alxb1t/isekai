@@ -15,6 +15,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   by its version alone and names the focused tile, seed and all, in its head (0087 D3, D4).
 - Compare shows the pair alone, each under its flow, version and seed, centred and as tall as the window;
   the per-image lines and the changed fields go, so the images take the room (0087 D5).
+- `h` `l` and the arrows on a large view step through the screen it came from — Renders' row across its flows,
+  the hub's cell — its head naming the step, `2 of 5`; the design spec draws all of it (0087 D6, D7).
 
 ## [0.59.0] - 2026-10-27 · 0086-compare-any
 

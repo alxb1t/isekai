@@ -8,7 +8,7 @@ new vitest test carries `spec(…)` with the key its task names.
 - [x] 1 — The bar and the scroll
 - [x] 2 — The keys and the pick
 - [x] 3 — Compare
-- [ ] 4 — The large view's steps
+- [x] 4 — The large view's steps
 
 ## 1 — The bar and the scroll
 
@@ -49,11 +49,11 @@ new vitest test carries `spec(…)` with the key its task names.
 
 ## 4 — The large view's steps
 
-- [ ] 4.1 **HALT CHECK** — the large view takes no `h` `l`.
+- [x] 4.1 **HALT CHECK** — the large view takes no `h` `l`.
   Verify: `grep -c "plain('KeyH'" ui/src/views/RenderLarge.vue` prints `0`.
-- [ ] 4.2 Add `screenOrder` to `ui/src/cells.ts` and step the large view with `h` `l` and the arrows in
+- [x] 4.2 Add `screenOrder` to `ui/src/cells.ts` and step the large view with `h` `l` and the arrows in
   `ui/src/views/RenderLarge.vue` per [D6](design.md#d6); bind `ui:renders:the-large-view-steps-its-screens-order` in
   `ui/src/cells.test.ts`.
   Verify: `grep -c 'the-large-view-steps-its-screens-order' ui/src/cells.test.ts` prints `1`, and `grep -c "plain('KeyH'" ui/src/views/RenderLarge.vue` prints `1`, and `uv run python -m tools.test_ui` exits 0, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 4.3 Edit `ui/design/spec.md` per [D7](design.md#d7).
+- [x] 4.3 Edit `ui/design/spec.md` per [D7](design.md#d7).
   Verify: `grep -c 'Compare with…  ⇧C' ui/design/spec.md` prints a number of at least `1`, and `grep -c 'wait for the next session' ui/design/spec.md` prints `1`, and `uv run pytest -q tests/e2e` exits 0.

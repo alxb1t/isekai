@@ -5,7 +5,9 @@ import {
   clicks,
   movePick,
   pickHead,
+  screenOrder,
   sourceGrid,
+  stepped,
   targets,
   tileCaption,
 } from './cells'
@@ -136,4 +138,36 @@ spec('ui:compare:the-pick-names-the-focused-tile', () => {
   expect(pickHead({ flow: 'summon-anime-wai', version: 3, seed: '7' }, tile)).toBe(
     `Compare summon-anime-wai v3 · seed 7 with summon-anime-wai v2 · seed ${seed}…`,
   )
+})
+
+spec('ui:renders:the-large-view-steps-its-screens-order', () => {
+  const detail = {
+    flow: 'summon-anime-wai',
+    version: 1,
+    seed: '7',
+    source: [
+      {
+        flow: 'summon-anime-wai',
+        images: [
+          { version: 1, seed: '7' },
+          { version: 2, seed: '7' },
+        ],
+      },
+      { flow: 'summon-flat-anime-wai', images: [{ version: 1, seed: '5' }] },
+    ],
+  } as unknown as RenderDetail
+  const first = { flow: 'summon-anime-wai', version: 1, seed: '7' }
+  const second = { flow: 'summon-anime-wai', version: 2, seed: '7' }
+  const flat = { flow: 'summon-flat-anime-wai', version: 1, seed: '5' }
+
+  // From Renders, the row runs on across the flows; at its last image l holds.
+  const row = screenOrder(detail, 'renders')
+  expect(stepped(row, first, 1)).toEqual(second)
+  expect(stepped(row, second, 1)).toEqual(flat)
+  expect(stepped(row, flat, 1)).toBeNull()
+  expect(stepped(row, first, -1)).toBeNull()
+  // From the hub, the cell's images alone.
+  const cell = screenOrder(detail, 'hub')
+  expect(stepped(cell, first, 1)).toEqual(second)
+  expect(stepped(cell, second, 1)).toBeNull()
 })

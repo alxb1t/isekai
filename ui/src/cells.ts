@@ -131,3 +131,33 @@ export const movePick = (grid: SourceGrid, at: Focus, move: Move): Focus =>
     at,
     move,
   )
+
+/** Return the images a large view steps through, in the order of the screen it
+    was opened from: Renders' row, the source's images across its flows; the
+    hub's cell, its flow's images alone.
+
+    e.g. summon [v1·7, v2·7], flat [v1·5], from the hub on summon -> summon's two */
+export function screenOrder(
+  detail: RenderDetail,
+  from: 'hub' | 'renders',
+): NonNullable<PickTile>[] {
+  return detail.source
+    .filter(({ flow }) => from === 'renders' || flow === detail.flow)
+    .flatMap(({ flow, images }) => images.map((one) => ({ flow, ...one })))
+}
+
+/** Return where `at` stands in `order`, or -1. */
+export const placeOf = (order: NonNullable<PickTile>[], at: NonNullable<PickTile>): number =>
+  order.findIndex(
+    (one) => one.flow === at.flow && one.version === at.version && one.seed === at.seed,
+  )
+
+/** Return the image `by` steps from `at` in `order`, or null, held, at either end. */
+export function stepped(
+  order: NonNullable<PickTile>[],
+  at: NonNullable<PickTile>,
+  by: -1 | 1,
+): NonNullable<PickTile> | null {
+  const index = placeOf(order, at)
+  return index < 0 ? null : (order[index + by] ?? null)
+}

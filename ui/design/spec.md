@@ -197,8 +197,9 @@ y_long_name            │                                  │
   `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
 - **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
   to render`, the render stage's own count, and primary `Render ⇧G`, disabled with its reason. With nothing short it
-  is absent; while a render runs it shows the job strip's totals, `image 1 of 2 · 06:41 of ≤10:30`, and
-  `Session ⌃;`.
+  is absent. While a render runs it shows the session's totals, `image 2 of 4 · 06:41 of ≤10:30`, the images
+  short outside its plan, `1 image waits` or `n images wait for the next session`, and `Session ⌃;`, in place of the
+  count and Render.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is the grid's
   first column, `h` from the first flow cell, and a column itself: the file's stem in mono 13, its first line level
   with the cells' tick line, the size in the viewer's title, then a 96×128 thumbnail at the cell's foot, a
@@ -326,8 +327,8 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | J5·6 the revision approved, read-only; the hub's Render bar, `1 image ready to render` | ⌘↵ Approve · ⇧H | `…/c/2026-09-17/hub` |
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | the drawer over the hub |
 | J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/c/2026-09-17/renders` |
-| J5·8 the large view of v2, with `Compare with…  c` | ↵ on v2 | `…/v2/1840266731` |
-| J5·9 Compare | c, ↵ on v1 in the pick | `…/v2/1840266731/compare/summon-anime-wai/v1/1840266731` |
+| J5·8 the large view of v2, with `Compare with…  ⇧C` | ↵ on v2 | `…/v2/1840266731` |
+| J5·9 Compare | ⇧C, ↵ on v1 in the pick | `…/v2/1840266731/compare/summon-anime-wai/v1/1840266731` |
 
 ```
 J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731   [ Side by side ⌃P ]
@@ -341,9 +342,8 @@ J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731   
 
 J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · SEED 1840266731
       [the image picked, one height, top-aligned]  [the image compare started from]
-      same seed · 1840266731     1 FIELD DIFFERS  eye_colour  light blue eyes │ blue eyes
-      another seed or flow picked:  different seeds · 2216093514 · 1840266731 · same sheet when every filled field matches
-      the photograph picked:  the photograph left, the image right, no fields
+      the pair centred, as tall as the window less the app bar and the heads; nothing under it
+      the photograph picked:  the photograph left, the image right
 ```
 
 - **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer. A
@@ -355,15 +355,18 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
   (filled fields only, read-only). Its actions stand under the heading, above the fields: a column of full-width buttons, label left
   and key right, in groups 12 px apart — the writes, the comparisons, the way back. `Esc` and its back button go
-  back to where it was opened, the hub or else Renders, focused on the cell or the image left.
-  `Compare with…  c` opens a pick of the source's images: the photograph's row on top, then a row per flow
-  holding images, headed by its name, tiles at Renders' size oldest first, `vN · seed` under each, the image
-  compare started from marked. It opens on the newest older version of this seed, else the image before this one,
+  back to where it was opened, the hub or else Renders, focused on the cell or the image left. `h` `l` and `←` `→`
+  step through the images of that screen, in its order — Renders' row across its flows, the hub's cell — held at
+  either end, the head naming the step, `summon-anime-wai · v2 · seed 1840266731 · 2 of 5`.
+  `Compare with…  ⇧C` opens a pick of the source's images: the photograph's row on top, then a row per flow
+  holding images, headed by its name, tiles at Renders' size oldest first, `vN` under each, the image
+  compare started from marked, the pick's head naming the focused tile — `Compare summon-anime-wai v2 · seed
+  1840266731 with summon-anime-wai v1 · seed 1840266731…`. It opens on the newest older version of this seed, else the image before this one,
   else the photograph; `h j k l` and the arrows move, keeping the column, held at a shorter row's end; `↵` or a
   click compares, `Esc` closes.
 - **Compare** sets the image picked on the left and the image compare started from on the right, at one height,
-  each headed by its flow, version and seed. Between two renders it lists the fields both flows declare that
-  differ, and says when the seeds differ or the sheets are the same; with the photograph, the pair alone.
+  each headed by its flow, version and seed and nothing else: the pair centred, as tall as the window less the app
+  bar and the heads, on the app's 12 px padding.
   *Draft from this* `⇧D` heads the writes.
 - **Draft from this** (the verb `isekai draft --flow`), on the large view and over a Renders selection: a dialog
   headed `Draft from this · summon-anime-wai v1 · seed 1840266731`, or `· 3 images` over a selection, with a row
@@ -450,7 +453,7 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 | New collection | cancel | the staging folder is deleted; the library is unchanged |
 | Hub | loading | placeholder rows, `reading 2 of 6` |
 | Hub | a damaged run | the cell reads `unreadable`, with the CLI's refusal (path, line and column) and its fix; the rest of the grid works |
-| Hub | a render running | Render disabled `A render session is running · 06:41 of ≤10:30` |
+| Hub | a render running | the session's totals, `image 2 of 4 · 06:41 of ≤10:30`, and `Session ⌃;`; no Render |
 | Hub | Prepare disabled | the bar keeps its cells, reason `Prepare is running on 2026-10-19` |
 | Hub | Add sources, nothing new | Import disabled `Nothing new to add` |
 | Hub | the collection is gone | a full-page refusal, `Back to the library ⇧L` |
@@ -473,7 +476,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 | Home | ⇧N New collection · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
-| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧D Draft from this · ⇧G Render · in the large view, ⇧D Draft from this, c Compare with…, esc back · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
+| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧D Draft from this · ⇧G Render · in the large view, h l or ←→ the screen's images, ⇧D Draft from this, ⇧C Compare with…, esc back · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
 | Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧I its collection's Renders · ⌃; or esc close |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 
