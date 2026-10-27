@@ -20,6 +20,7 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Fixed
 
+- The pipeline inventory names `draft` and its stage writers, matching the CLI (0085 D7).
 - Draft batches check every target sheet and every first sheet's source tags and vocabulary before writing,
   so a later refusal leaves all selected runs unchanged in the CLI and the app (0085 D3, D4).
 
