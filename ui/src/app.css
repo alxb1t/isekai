@@ -503,11 +503,12 @@ button.session__tile {
   align-items: flex-start;
 }
 
-/* — the render drawer: the session over half the window, at the right — */
+/* — the render drawer: the session as wide as its widest grid, at the right — */
 
 .drawer {
-  width: max(50vw, 480px);
-  max-width: 100vw;
+  width: max-content;
+  min-width: max(50vw, 480px);
+  max-width: calc(100vw - 100px);
   height: 100vh;
   max-height: 100vh;
   margin: 0 0 0 auto;
@@ -524,6 +525,18 @@ button.session__tile {
 
 .drawer .session {
   padding: 32px;
+}
+
+/* A wider grid scrolls inside the drawer; its long text never widens it. */
+.drawer .session__stack {
+  overflow-x: auto;
+}
+
+.drawer .section-label,
+.drawer .session__steps,
+.drawer .session__refusal,
+.drawer .session__alert {
+  contain: inline-size;
 }
 
 .drawer__empty {
@@ -1523,7 +1536,7 @@ button.session__tile {
   outline: none;
 }
 
-/* — overlays: the cheatsheet and the key list — */
+/* — overlays: the cheatsheet — */
 
 .overlay {
   /* Below the app bar, which stays, so the operator never loses their place.
@@ -1617,12 +1630,25 @@ dialog::backdrop {
 }
 
 /* Compare with…'s tiles, at a Renders tile's size, each named under it. */
-/* A row per flow, its tiles in one line: `j k` keep the column. */
+/* A row per flow, its tiles in one line: `j k` keep the column. The longest row
+   sets the width; the head, cut at its lines' ends, never does. */
 .pick {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-width: min(calc(100vw - 96px), 720px);
+  gap: 20px;
+  min-width: 480px;
+  max-width: calc(100vw - 96px);
+}
+
+.pick__head {
+  contain: inline-size;
+}
+
+.pick__line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pick__row {
@@ -1638,7 +1664,7 @@ dialog::backdrop {
 
 .pick__tiles {
   display: flex;
-  gap: 12px;
+  gap: 20px;
   overflow-x: auto;
   padding: 3px;
 }
@@ -2196,7 +2222,32 @@ dialog::backdrop {
   }
 }
 
-/* — the key list — */
+/* — the key list: a modal dialog, centred over most of the window — */
+
+.keys-dialog {
+  width: calc(100vw - 160px);
+  max-width: none;
+  height: calc(100vh - 160px);
+  max-height: none;
+  padding: var(--space-6) var(--space-8);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sheet);
+}
+
+.keys-dialog__columns {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: var(--space-8);
+}
+
+.keys-dialog__column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
 .keylist {
   display: grid;

@@ -9,7 +9,7 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 - [x] 2 — The import
 - [x] 3 — The viewer
 - [x] 4 — Review
-- [ ] 5 — The dialogs
+- [x] 5 — The dialogs
 
 ## 1 — The bars
 
@@ -67,14 +67,14 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 
 ## 5 — The dialogs
 
-- [ ] 5.1 `KeyList.vue` is a modal `<dialog>` per [D7](design.md#d7), the key store exposing each entry's scope; vitest in
+- [x] 5.1 `KeyList.vue` is a modal `<dialog>` per [D7](design.md#d7), the key store exposing each entry's scope; vitest in
   `ui/src/stores/keys.test.ts` bound to `ui:dialogs:the-key-list-is-a-dialog`.
   Verify: `grep -c '<dialog' ui/src/components/KeyList.vue` prints `1`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 5.2 The pick's width and head in `ComparePick.vue` and `ui/src/app.css` per [D7](design.md#d7); a step in
+- [x] 5.2 The pick's width and head in `ComparePick.vue` and `ui/src/app.css` per [D7](design.md#d7); a step in
   `test_compare_shows_both_versions_of_a_seed_each_under_its_head`, under that test's own key, that moves the focus from
   an image to the photograph and asserts the pick's width does not change.
   Verify: `sed -n '/^\.pick {/,/}/p' ui/src/app.css | grep -c '720px'` prints `0`, and `uv run pytest --collect-only -q tests/e2e/test_render.py` exits 0.
-- [ ] 5.3 The drawer's width in `ui/src/app.css` per [D7](design.md#d7); a step in `test_the_drawer_holds_the_render`,
+- [x] 5.3 The drawer's width in `ui/src/app.css` per [D7](design.md#d7); a step in `test_the_drawer_holds_the_render`,
   under that test's own key, asserting the drawer's width is at least `max(50vw, 480px)` and at most `100vw − 100px`.
   `ui/design/spec.md`'s pick, drawer and key-list lines say what they are.
   Verify: `grep -c 'calc(100vw - 100px)' ui/src/app.css` prints a count above 0, and `uv run pytest --collect-only -q tests/e2e` exits 0.

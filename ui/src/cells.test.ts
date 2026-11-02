@@ -136,9 +136,10 @@ spec('ui:compare:the-pick-names-the-focused-tile', () => {
   const tile = grid.rows[second.row].tiles[second.column]
 
   expect(tileCaption(tile)).toBe('v2')
-  expect(pickHead({ flow: 'summon-anime-wai', version: 3, seed: '7' }, tile)).toBe(
-    `Compare summon-anime-wai v3 · seed 7 with summon-anime-wai v2 · seed ${seed}…`,
-  )
+  expect(pickHead({ flow: 'summon-anime-wai', version: 3, seed: '7' }, tile)).toEqual([
+    'Compare summon-anime-wai v3 · seed 7',
+    `with summon-anime-wai v2 · seed ${seed}`,
+  ])
 })
 
 spec('ui:renders:the-large-view-steps-its-screens-order', () => {

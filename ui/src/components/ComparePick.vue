@@ -9,7 +9,8 @@ import { plain } from '../stores/keys'
 /* *Compare with…* (design spec J5·2): the source's images as a grid in a modal
    dialog that holds the focus — the photograph's row on top, then a row per
    flow, oldest first, each tile captioned by its version, the image compare
-   started from marked, the head naming the focused tile's flow, version and seed.
+   started from marked, the head naming the focused tile's flow, version and seed
+   on two lines. The pick is as wide as its longest row, whatever is focused.
    `h j k l` and the arrows move, `↵` or a click compares, `Esc` goes back. */
 const props = defineProps<{
   from: NonNullable<PickTile>
@@ -69,11 +70,13 @@ onMounted(() => {
   <dialog
     ref="dialog"
     class="viewer"
-    :aria-label="head"
+    :aria-label="head.join(' ')"
     data-compare-pick
     @close="emit('close')"
   >
-    <p class="viewer__title mono">{{ head }}</p>
+    <p class="viewer__title pick__head mono">
+      <span v-for="line in head" :key="line" class="pick__line">{{ line }}</span>
+    </p>
     <div class="pick">
       <div v-for="(line, row) in grid.rows" :key="line.flow ?? 'photo'" class="pick__row">
         <span class="pick__flow mono">{{ line.flow ?? 'photo' }}</span>

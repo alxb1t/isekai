@@ -257,6 +257,27 @@ spec('ui:keys:the-key-list-opens-from-a-field', () => {
   expect(keys.hint('keys')).toBe('⌃/')
 })
 
+spec('ui:dialogs:the-key-list-is-a-dialog', () => {
+  const keys = useKeyStore()
+  keys.declare('everywhere', [command('hub', 'KeyH', { keys: [{ code: 'KeyH', shift: true }] })])
+  keys.declare('screen', [command('revise', 'KeyE')])
+  keys.declare('overlay', [command('close', 'Escape')])
+
+  // Each entry names its scope, so the list draws a column per scope; an overlay's is never listed.
+  expect(keys.listed.map((one) => [one.id, one.scope])).toEqual([
+    ['hub', 'everywhere'],
+    ['revise', 'screen'],
+  ])
+
+  // A modal dialog holding the focus; ⌃/, Esc and the backdrop close it.
+  const list = SOURCES['../components/KeyList.vue']
+  expect(list).toMatch(/<dialog\b/)
+  expect(list).toContain('showModal()')
+  expect(list).toContain('useHeldFocus(dialog, close)')
+  expect(list).toContain("keys: [...plain('Escape'), KEY_LIST]")
+  expect(list).not.toContain('Teleport')
+})
+
 spec('ui:keys:review-fields-move-from-a-field-on-macos', () => {
   function review(mac: boolean) {
     setActivePinia(createPinia())

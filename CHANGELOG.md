@@ -20,6 +20,8 @@ its new digest.
   moves to `⇧↵`, so one key keeps one meaning (0091 D4).
 - On macOS Review's panes move by `⌃H` `⌃L` alone, leaving `h` `l` to the pane; `⌃E` `⌃Y` go; ④ is one grid of
   `−` `+` and its slots, and `⇧J` `⇧K` keep the rail's sheet centred (0091 D5, D6).
+- The key list is a modal dialog in columns by scope; Compare's pick and the drawer take their widest row's width,
+  their long text cut rather than widening them, so neither jumps as the focus moves (0091 D7).
 
 ## [0.60.2] - 2026-11-02
 

@@ -80,7 +80,8 @@ timer mono 40px/500.
   on Home, else the collection name. Tabs only inside a collection; the active one has a 2px accent underline. The Review
   tab counts the collection's unapproved sheets in mono 11 `accent`, and opens the collection's Review. The flow
   switcher is a segmented control; Review drops `all`. The `?` button at its right end, after the running render,
-  opens the key list, as `⌃/` does; no screen draws a key bar.
+  opens the key list, as `⌃/` does; no screen draws a key bar. The key list is a modal dialog, centred over most of
+  the window, a column per scope — everywhere's, then the screen's; `⌃/`, `esc` and the backdrop close it.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
 - **JobStrip**, `ground-deep`, mono 11px: one dot, then one item per running job, each a label (`job · prepare`)
@@ -312,6 +313,8 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
   maximum, and teardown starts by itself at the limit; an estimate past the ceiling disables Render — *untick a
   collection*. The price comes from the estimate: the pod at `pod_rate` (about $0.40/h), the volume at about
   $0.005/h.
+- **The drawer** stands at the right, as wide as its widest grid: at least half the window and 480 px, at most the
+  window less 100 px, a wider grid scrolling inside it; its long text, a refusal's above all, never widens it.
 - **The session** shows elapsed time against its limit, five steps always, and a grid per collection it renders,
   stacked in its order, each headed by its name — no diffusion steps and no spend. A column per photograph the record
   plans, a row per flow, the photographs' row at the foot; a cell holds that flow's images of that photograph and a
@@ -368,8 +371,10 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
   either end, the head naming the step, `summon-anime-wai · v2 · seed 1840266731 · 2 of 5`.
   `Compare with…  ⇧C` opens a pick of the source's images: the photograph's row on top, then a row per flow
   holding images, headed by its name, tiles at Renders' size oldest first, `vN` under each, the image
-  compare started from marked, the pick's head naming the focused tile — `Compare summon-anime-wai v2 · seed
-  1840266731 with summon-anime-wai v1 · seed 1840266731…`. It opens on the newest older version of this seed, else the image before this one,
+  compare started from marked, the pick's head naming the focused tile on two lines, each cut at its end —
+  `Compare summon-anime-wai v2 · seed 1840266731` over `with summon-anime-wai v1 · seed 1840266731`. The pick is as
+  wide as its longest row, whatever is focused: at least 480 px, at most the window less 96 px, its rows and its
+  tiles 20 px apart. It opens on the newest older version of this seed, else the image before this one,
   else the photograph; `h j k l` and the arrows move, keeping the column, held at a shorter row's end; `↵` or a
   click compares, `Esc` closes.
 - **Compare** sets the image picked on the left and the image compare started from on the right, at one height,
