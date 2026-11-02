@@ -14,6 +14,8 @@ its new digest.
 
 - The stream test reads its first frame before the stream closes, publishing the close to a queue already
   subscribed, so a loaded machine no longer fails it (0089 D1).
+- A run file that cannot be read is refused by name with its remedy, so recall and cohort score the other runs;
+  evaluation's spec names a scored run by the digest prefix its frame records (0089 D2).
 
 ## [0.60.1] - 2026-11-02
 

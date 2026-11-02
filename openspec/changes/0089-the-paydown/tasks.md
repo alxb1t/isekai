@@ -6,7 +6,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 ## Progress
 
 - [x] 1 — The flake
-- [ ] 2 — Evaluation
+- [x] 2 — Evaluation
 - [ ] 3 — The render
 - [ ] 4 — Import
 - [ ] 5 — Cancel and draft-from
@@ -22,11 +22,11 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 ## 2 — Evaluation
 
-- [ ] 2.1 [The evaluation delta](specs/evaluation/spec.md) changes no code. Rebind
+- [x] 2.1 [The evaluation delta](specs/evaluation/spec.md) changes no code. Rebind
   `test_every_render_of_a_run_whose_frame_does_not_read_is_an_unreadable_row` in `tests/test_recall_cli.py` to
   `evaluation:recall:a-run-whose-frame-does-not-read-is-a-row`.
   Verify: `grep -c 'a-run-whose-frame-does-not-read-is-a-row' tests/test_recall_cli.py` prints `1`.
-- [ ] 2.2 In `read` in `isekai/foundation/artifacts.py`, catch `OSError` from `path.read_text()` and raise `Refusal`
+- [x] 2.2 In `read` in `isekai/foundation/artifacts.py`, catch `OSError` from `path.read_text()` and raise `Refusal`
   naming the path and its remedy, per [D2](design.md#d2). Add `test_an_unreadable_file_is_refused_by_name` to
   `tests/test_recall_cli.py`, bound to the key of 2.1: a run whose `run.json` is a directory is a row, the next run read.
   Verify: `uv run pytest tests/test_recall_cli.py -k unreadable_file` exits 0.

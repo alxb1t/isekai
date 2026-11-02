@@ -487,14 +487,20 @@ def read(path: Path, kind: Artifact[T], *, remedy: str | None = None) -> T:
 
     A best-effort parse of a file this build does not know produces fields that
     look fine and mean nothing, so the declared kind, then the version, is
-    checked before any other key is touched. A file that is not a JSON object
-    with an object `schema` is refused by name, never raised. `remedy` replaces
-    the default for a file no stage writes.
+    checked before any other key is touched. A file that cannot be read, or is
+    not a JSON object with an object `schema`, is refused by name, never raised.
+    `remedy` replaces the default for a file no stage writes.
     """
     # A rerun is a no-op while the file exists, so the remedy deletes it first.
     remedy = remedy or f"delete {path}, then run the stage that wrote it again"
     try:
-        parsed: Any = json.loads(path.read_text())
+        text = path.read_text()
+    except OSError as unreadable:
+        raise Refusal(
+            f"{path.name}: cannot be read ({unreadable.strerror}); {remedy}"
+        ) from unreadable
+    try:
+        parsed: Any = json.loads(text)
     except ValueError as unreadable:
         raise Refusal(
             f"{path.name}: is not valid JSON ({unreadable}); {remedy}"
