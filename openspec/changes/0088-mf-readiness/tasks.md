@@ -8,7 +8,7 @@ relative to the repository's root.
 - [x] 1 — The worktree
 - [x] 2 — The changelog
 - [x] 3 — The documents
-- [ ] 4 — The threat model
+- [x] 4 — The threat model
 - [ ] 5 — The ruleset **HUMAN**
 
 ## 1 — The worktree
@@ -72,11 +72,11 @@ relative to the repository's root.
 
 ## 4 — The threat model
 
-- [ ] 4.1 Create `THREAT_MODEL.md` per [D7](design.md#d7). Worth protecting names the photographs and likeness, `.env` and
+- [x] 4.1 Create `THREAT_MODEL.md` per [D7](design.md#d7). Worth protecting names the photographs and likeness, `.env` and
   the RunPod key, the money a pod or volume bills, and `main`. Entry points name a worker's reach, `isekai render` and
   `gpunit`, an upload, and a pod.
   Verify: `grep -c '^## ' THREAT_MODEL.md` prints `4`, and `grep -c 'Not written yet' THREAT_MODEL.md` prints `0`.
-- [ ] 4.2 Add a link to `THREAT_MODEL.md` to `AGENTS.md`'s second mandatory line.
+- [x] 4.2 Add a link to `THREAT_MODEL.md` to `AGENTS.md`'s second mandatory line.
   Verify: `grep -c 'THREAT_MODEL.md' AGENTS.md` prints a count above 0.
 
 ## 5 — The ruleset

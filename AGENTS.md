@@ -25,8 +25,8 @@ rule this repository holds in particular.
 **The gate is `make gate`**, run from the repository root.
 
 **Before work, read [the coding standards](CODING_STANDARDS.md) and [how a change lands](CONTRIBUTING.md): mandatory
-shared context.** **Before designing, building or reviewing, also read [the decisions in force](docs/decisions.md) and
-[the architecture](ARCHITECTURE.md).**
+shared context.** **Before designing, building or reviewing, also read [the decisions in force](docs/decisions.md),
+[the architecture](ARCHITECTURE.md) and [the threat model](THREAT_MODEL.md).**
 
 **Identity preservation is `summon`'s product.** An anime image of someone else is a failed `summon`
 run. `conjure` takes no photograph and makes no identity claim

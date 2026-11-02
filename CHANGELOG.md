@@ -20,6 +20,8 @@ bullet is one change an operator notices, in 1–3 short lines — what changed 
   optional, and every earlier heading stays held (0088 D4).
 - The rules move out of `AGENTS.md` into `CODING_STANDARDS.md` and `CONTRIBUTING.md`, rewritten for today's cut and
   release, and `ARCHITECTURE.md` maps `docs/`, so review reads real documents (0088 D5, D6).
+- `THREAT_MODEL.md` names what is worth protecting, the trust boundaries, the entry points and what is out of scope,
+  and `AGENTS.md` makes it mandatory reading, so security review reads a real model (0088 D7).
 
 ## [0.60.0] - 2026-10-27 · 0087-the-fifth-walkthrough
 
