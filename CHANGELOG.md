@@ -28,6 +28,8 @@ its new digest.
   images, so a remedy it never saw cannot break silently (0089 D7).
 - A slot reads `0144` as the seed `144`, so a repeat is refused there instead of failing every save; a new count
   clears the slots' refusals. The docs say what the Review tab opens and why a repeated seed is refused (0089 D8).
+- The bundle-timeout test starts its ceiling once its stand-in is up, and Review's browser tests share their pages,
+  so a loaded machine no longer fails the gate and no step spends a page of its own (0089 D9).
 
 ## [0.60.1] - 2026-11-02
 

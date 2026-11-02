@@ -12,7 +12,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 - [x] 5 — Cancel and draft-from
 - [x] 6 — The guard
 - [x] 7 — The UI and the docs
-- [ ] 8 — The tests
+- [x] 8 — The tests
 
 ## 1 — The flake
 
@@ -108,11 +108,11 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 ## 8 — The tests
 
-- [ ] 8.1 The bundle-timeout test, `test_a_build_that_does_not_finish_is_stopped_and_named` in `tests/test_ui.py`, waits
+- [x] 8.1 The bundle-timeout test, `test_a_build_that_does_not_finish_is_stopped_and_named` in `tests/test_ui.py`, waits
   for its stand-in's pid file before the ceiling starts, keeping its seconds assertion, per [D9](design.md#d9).
   Verify: `for i in $(seq 10); do uv run pytest -q tests/test_ui.py -k does_not_finish || exit 1; done` exits 0.
-- [ ] 8.2 The `SHOWN` comment in `tests/e2e/conftest.py` adds: "a routes test needs it to hold no sheet waiting for review".
+- [x] 8.2 The `SHOWN` comment in `tests/e2e/conftest.py` adds: "a routes test needs it to hold no sheet waiting for review".
   Verify: `grep -c 'no sheet waiting' tests/e2e/conftest.py` prints `1`.
-- [ ] 8.3 Merge `tests/e2e/test_review.py`'s tests as [Tests](design.md#tests) lists: move each step, delete the three
+- [x] 8.3 Merge `tests/e2e/test_review.py`'s tests as [Tests](design.md#tests) lists: move each step, delete the three
   removed tests.
   Verify: `grep -c '^def test_' tests/e2e/test_review.py` prints `2`, and `uv run pytest tests/e2e/test_review.py` exits 0.

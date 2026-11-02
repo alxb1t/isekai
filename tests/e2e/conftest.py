@@ -59,7 +59,8 @@ ASSIGNED: dict[str, tuple[str, ...]] = {"hub-prepare": ("pick",)}
 RENDER = "render"
 # The collection the drawer's test renders: one source approved for one image.
 DRAWN = "drawn"
-# The collection the Renders view is read from: one source already rendered once.
+# The collection the Renders view is read from: one source already rendered once;
+# a routes test needs it to hold no sheet waiting for review.
 SHOWN = "shown"
 # The collection a revision is written in: one source rendered once at seed 7.
 REVISED = "revised"
