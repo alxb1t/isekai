@@ -25,7 +25,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 - [x] 2.1 [The evaluation delta](specs/evaluation/spec.md) changes no code. Rebind
   `test_every_render_of_a_run_whose_frame_does_not_read_is_an_unreadable_row` in `tests/test_recall_cli.py` to
   `evaluation:recall:a-run-whose-frame-does-not-read-is-a-row`.
-  Verify: `grep -c 'a-run-whose-frame-does-not-read-is-a-row' tests/test_recall_cli.py` prints `1`.
+  Verify: `grep -c 'a-run-whose-frame-does-not-read-is-a-row' tests/test_recall_cli.py` prints `1` before 2.2, `2` after it.
 - [x] 2.2 In `read` in `isekai/foundation/artifacts.py`, catch `OSError` from `path.read_text()` and raise `Refusal`
   naming the path and its remedy, per [D2](design.md#d2). Add `test_an_unreadable_file_is_refused_by_name` to
   `tests/test_recall_cli.py`, bound to the key of 2.1: a run whose `run.json` is a directory is a row, the next run read.
@@ -56,17 +56,17 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 ## 5 — Cancel and draft-from
 
-- [ ] 5.1 `cancel` in `isekai/pipeline/review.py` follows [the review delta](specs/review/spec.md): a flow with a draft
-  and no approval changes nothing and says it is at its draft; with neither, the refusal names `review`. `approve_flow`
-  in `isekai/interface/cli.py` and the cancel route in `isekai/interface/ui/app.py` report the no-op. Add
+- [ ] 5.1 `cancel` in `isekai/pipeline/review.py` follows [the review delta](specs/review/spec.md) and returns
+  `Cancelled(left, changed)` per [D6](design.md#d6); `approve_flow` in `isekai/interface/cli.py`, `post_cancel` in
+  `isekai/interface/ui/app.py` and every `cancel` assertion in `tests/` follow it. Add
   `test_a_flow_with_no_approval_has_nothing_to_cancel` to `tests/test_review.py`, bound to the delta's new key.
   Verify: `uv run pytest tests/test_review.py -k nothing_to_cancel` exits 0, and `grep -c 'has no approval to cancel; run' isekai/pipeline/review.py` prints `0`.
 - [ ] 5.2 Update the cancel text `ui/src/composables/useSheet.test.ts` carries, if its needle changed in 5.1.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 5.3 `drafting_approval` names the held approvals with `--version` when the source holds any, per
-  [D6](design.md#d6). Add `test_a_missing_version_names_the_held_approvals` to `tests/test_review.py`, bound to
+- [ ] 5.3 `drafting_approval`'s refusal for an approval the source does not hold follows [D6](design.md#d6): the held
+  approvals named, then the `draft` command on an image of one, else the `render` command. Add `test_a_missing_version_names_the_held_approvals` to `tests/test_review.py`, bound to
   `review:draft-from:a-missing-source-approval-is-refused`.
-  Verify: `uv run pytest tests/test_review.py -k held_approvals` exits 0.
+  Verify: `uv run pytest tests/test_review.py -k held_approvals` exits 0, and `grep -c -- '--version' isekai/pipeline/review.py` prints `0`.
 - [ ] 5.4 `_derived` adds that flow's `--discard` after a drafted approval's cancel, and `_cancelling`'s refusal says
   the discard drops that flow's fields, per [D6](design.md#d6). In `test_an_approval_drafted_from_a_source_refuses_the_sources_cancel`,
   run the printed chain and assert the source's cancel then succeeds.
