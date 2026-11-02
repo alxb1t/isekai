@@ -6,9 +6,7 @@ import { noun } from '../words'
     e.g. ["ada.jpg", "ada.jpg", "bea.jpg"], "b" -> "2 photographs to prepare in b" */
 export function toPrepare(sources: string[], collection: string): string {
   const count = new Set(sources).size
-  return count === 1
-    ? `1 photograph to prepare in ${collection}`
-    : `${count} photographs to prepare in ${collection}`
+  return `${count} ${noun(count, 'photograph')} to prepare in ${collection}`
 }
 
 /** Return the Prepare button's words: the changes it runs. e.g. 4 -> "4 changes · Prepare" */
