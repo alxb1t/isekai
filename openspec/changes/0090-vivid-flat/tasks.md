@@ -5,7 +5,7 @@ The flows, then the record, per [design](design.md).
 ## Progress
 
 - [x] 1 — The flows
-- [ ] 2 — The record
+- [x] 2 — The record
 
 ## 1 — The flows
 
@@ -27,15 +27,15 @@ The flows, then the record, per [design](design.md).
 
 ## 2 — The record
 
-- [ ] 2.1 `config/ui.json`'s `flows`, per [D3](design.md#d3).
+- [x] 2.1 `config/ui.json`'s `flows`, per [D3](design.md#d3).
   Verify: `uv run python -c 'import json; print(json.load(open("config/ui.json"))["flows"])'` prints `['summon-anime-wai', 'summon-semireal-anime-wai', 'summon-flat-anime-wai', 'summon-vivid-anime-wai', 'conjure-anime-wai']`.
-- [ ] 2.2 In `docs/decisions.md`, D44's bold line, before → after: "`flat color, cel shading, lineart`" → "`flat color,
+- [x] 2.2 In `docs/decisions.md`, D44's bold line, before → after: "`flat color, cel shading, lineart`" → "`flat color,
   cel shading, anime coloring, colorful`", and its **Made by** gains `0090`. Add after D44 `### D46 · A semireal and a
   vivid flow are flat's face chain in other looks`: what each holds, from the style table, chosen by eye.
   Verify: `grep -c '^### D46 · A semireal and a vivid flow are flat' docs/decisions.md` prints `1`, and `grep -c 'cel shading, lineart' docs/decisions.md` prints `0`.
-- [ ] 2.3 `README.md`'s tree: "and it is immutable" → "pinned by its digest, re-pinned only by a recorded change"; a line
+- [x] 2.3 `README.md`'s tree: "and it is immutable" → "pinned by its digest, re-pinned only by a recorded change"; a line
   each for `flows/summon-semireal-anime-wai/` and `flows/summon-vivid-anime-wai/` after flat's.
   Verify: `grep -c 'immutable' README.md` prints `1`, and `grep -c 'summon-vivid-anime-wai' README.md` prints a count above 0.
-- [ ] 2.4 `AGENTS.md`'s flow list names `summon-semireal-anime-wai` and `summon-vivid-anime-wai`, and "a flat, lined look"
+- [x] 2.4 `AGENTS.md`'s flow list names `summon-semireal-anime-wai` and `summon-vivid-anime-wai`, and "a flat, lined look"
   → "a flat look", per [D4](design.md#d4).
   Verify: `grep -c 'summon-semireal-anime-wai' AGENTS.md` prints `1`, and `grep -c 'flat, lined' AGENTS.md` prints `0`.

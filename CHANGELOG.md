@@ -17,6 +17,8 @@ its new digest.
 - `summon-vivid-anime-wai`, flat's face chain with summon's trailer and a negative that refuses muted colour,
   pinned at `76d16cf6ab1139f0985ce9e1f01db957f5817cb7fcd6114709969166edea6850` (0090 D1).
 - One style table holds each styled flow to summon (0090 D2).
+- The app offers summon, semireal, flat, vivid and conjure; `docs/decisions.md` records them as D46, amends D44, and
+  `README.md` and `AGENTS.md` name the new flows (0090 D3, D4).
 
 ### Changed
 

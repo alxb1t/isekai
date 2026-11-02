@@ -433,13 +433,15 @@ isekai/
 │                              #   `uv run python -m evaluation.recall <runs>`
 ├── tests/                     # the suite and its fakes
 ├── models/                    # gitignored; wd14/ holds the tag list and the 467 MB graph
-├── flows/summon-anime-wai/    # one flow: flat, named files, and it is immutable
+├── flows/summon-anime-wai/    # one flow: flat, named files, pinned by its digest, re-pinned only by a recorded change
 │   ├── flow.json              # the manifest: inputs, vocabulary, model, tagger, models, dials, prompt, nodes
 │   ├── graph.json             # the API graph
 │   ├── schema.json            # the sheet's field list, in prompt order
 │   └── caption.briefing.md    # the standing instructions the photograph is read under
 ├── flows/control-anime-wai/   # summon's files with the face dials at 0, held equal by a test
 ├── flows/summon-flat-anime-wai/ # summon's files with InstantID ending early and a flat prompt, held equal by a test
+├── flows/summon-semireal-anime-wai/ # flat's files with summon's whole prompt, held equal by a test
+├── flows/summon-vivid-anime-wai/ # flat's files with summon's trailer and a negative against muted colour
 ├── ui/                        # the app: Vue 3 + Vite + vue-router; design/spec.md; dist/ and node_modules/ ignored
 │   ├── src/                   # the app; styles.css is the vendored stylesheet, Inter beside it
 │   └── design/                # spec.md, the design the app is built to
