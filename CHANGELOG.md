@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.60.1] - 2026-11-02
+
+Gate: local 0m50s · CI 1m38s (ci at eb63832) · 0.60.0: local 0m47s · CI 1m35s
+
 ### Added
 
 - `make setup` restores what a fresh worktree lacks, `AGENTS.md` declares it with the run's lines, and the browser

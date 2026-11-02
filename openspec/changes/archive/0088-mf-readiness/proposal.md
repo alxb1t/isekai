@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.60.1
 ---
 
 # 0088 — mf readiness
