@@ -11,7 +11,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 - [x] 4 — Import
 - [x] 5 — Cancel and draft-from
 - [x] 6 — The guard
-- [ ] 7 — The UI and the docs
+- [x] 7 — The UI and the docs
 - [ ] 8 — The tests
 
 ## 1 — The flake
@@ -87,22 +87,22 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 ## 7 — The UI and the docs
 
-- [ ] 7.1 `set` in `ui/src/slots.ts` compares and keeps seeds as `String(BigInt(seed))`; add a step to the
+- [x] 7.1 `set` in `ui/src/slots.ts` compares and keeps seeds as `String(BigInt(seed))`; add a step to the
   `ui:review:each-image-has-a-slot` test in `ui/src/slots.test.ts`: `0144` beside `144` is refused.
   Verify: `grep -c 'BigInt' ui/src/slots.ts` prints a count above 0, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 7.2 `change()` in `ui/src/components/RendersBlock.vue` clears `refused` whenever the count changes, per
+- [x] 7.2 `change()` in `ui/src/components/RendersBlock.vue` clears `refused` whenever the count changes, per
   [D8](design.md#d8).
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 7.3 The comments at `ui/src/components/SheetForm.vue`, `FieldRow.vue` and `ApproveBar.vue`, before → after: "a
+- [x] 7.3 The comments at `ui/src/components/SheetForm.vue`, `FieldRow.vue` and `ApproveBar.vue`, before → after: "a
   revision" → "a revision, or a draft drafted from another flow's approval".
   Verify: `grep -l 'drafted from another flow' ui/src/components/SheetForm.vue ui/src/components/FieldRow.vue ui/src/components/ApproveBar.vue` names all of them.
-- [ ] 7.4 `README.md`'s *Review* line, before → after: "or the first unapproved sheet when one flow waits" → "or, when
+- [x] 7.4 `README.md`'s *Review* line, before → after: "or the first unapproved sheet when one flow waits" → "or, when
   one flow waits, its first unapproved sheet, else its first approved sheet short of its images".
   Verify: `grep -c 'short of its images' README.md` prints a count above 0.
-- [ ] 7.5 `openspec/specs/sheet/spec.md`'s `## Purpose`, before → after: "and whether a tag list is expected" → "whether
+- [x] 7.5 `openspec/specs/sheet/spec.md`'s `## Purpose`, before → after: "and whether a tag list is expected" → "whether
   a tag list is expected, and the source flow the operator names".
-  Verify: `grep -c 'the source flow the operator names' openspec/specs/sheet/spec.md` prints `1`.
-- [ ] 7.6 Add `### D45 · A repeated seed is refused on every read` to `docs/decisions.md`, after D13: an approval written
+  Verify: `sed -n '/^## Purpose/,/^## Requirements/p' openspec/specs/sheet/spec.md | grep -c 'the source flow the operator names'` prints `1`.
+- [x] 7.6 Add `### D45 · A repeated seed is refused on every read` to `docs/decisions.md`, after D13: an approval written
   before `v0.44` with a repeated seed reads as damaged, and the way on is a new draft.
   Verify: `grep -c '^### D45 ' docs/decisions.md` prints `1`.
 

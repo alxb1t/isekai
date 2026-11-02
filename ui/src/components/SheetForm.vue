@@ -18,7 +18,8 @@ const props = defineProps<{
   focused: string | null
   selected: number | null
   loading?: boolean
-  /* The approval a revision was copied from, whose fields each row is read against. */
+  /* The approval a revision, or a draft drafted from another flow's approval, was
+     copied from, whose fields each row is read against. */
   previous?: Record<string, string[]> | null
 }>()
 

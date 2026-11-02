@@ -213,6 +213,16 @@ approved sheet.**
   integer is the whole reproducibility contract.
 - **Made by:** `0013`.
 
+### D45 · A repeated seed is refused on every read
+
+**An approval listing a seed twice is refused wherever `renders_of` reads it: render, the library and the review
+UI.** One written before `v0.44`, when a slot could hold `0144` beside `144`, reads as damaged; the way on is a new
+draft, approved without the repeat.
+
+- **Why:** a seed listed twice renders one image twice. Reading an old repeat leniently would be a second rule for
+  one file, and a change to what is rendered.
+- **Made by:** `0089`.
+
 ## Flows
 
 ### D14 · A flow is one flat directory

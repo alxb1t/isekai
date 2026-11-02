@@ -26,6 +26,8 @@ its new digest.
   approval's cancel names the discard that follows, and draft-from names the held approvals and a way that works (0089 D6).
 - The printed-command guard provokes the draft, draft-from and cancel refusals, and checks a `draft` command by its
   images, so a remedy it never saw cannot break silently (0089 D7).
+- A slot reads `0144` as the seed `144`, so a repeat is refused there instead of failing every save; a new count
+  clears the slots' refusals. The docs say what the Review tab opens and why a repeated seed is refused (0089 D8).
 
 ## [0.60.1] - 2026-11-02
 

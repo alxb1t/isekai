@@ -13,6 +13,8 @@ spec('ui:review:each-image-has-a-slot', () => {
 
   expect(set(held, 2, '7')).toEqual(['144', null, '7', null])
   expect(set(held, 2, '144')).toBe('seed 144 is already in slot 1')
+  expect(set(held, 2, '0144')).toBe('seed 144 is already in slot 1')
+  expect(set(held, 2, '007')).toEqual(['144', null, '7', null])
   expect(set(held, 0, '')).toEqual([null, null, null, null])
   expect(renders(['144', null, '7', null])).toEqual({ count: 4, seeds: ['144', '7'] })
 })

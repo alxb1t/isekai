@@ -16,7 +16,8 @@ defineProps<{
   readonly: boolean
   focused: boolean
   selected?: number | null
-  /* On a revision, the approval's tags where this field differs from them. */
+  /* On a revision, or a draft drafted from another flow's approval, the approval's
+     tags where this field differs from them. */
   was?: string[] | null
 }>()
 
