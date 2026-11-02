@@ -18,6 +18,8 @@ its new digest.
   step, and `↵` opens a staged file full size, so a mistaken choice costs no restart (0091 D3).
 - The viewer's `↵` toggles fit and full size as a click does, and `j` `k` scroll at full size; the hub's large view
   moves to `⇧↵`, so one key keeps one meaning (0091 D4).
+- On macOS Review's panes move by `⌃H` `⌃L` alone, leaving `h` `l` to the pane; `⌃E` `⌃Y` go; ④ is one grid of
+  `−` `+` and its slots, and `⇧J` `⇧K` keep the rail's sheet centred (0091 D5, D6).
 
 ## [0.60.2] - 2026-11-02
 

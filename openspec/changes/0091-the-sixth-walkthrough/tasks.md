@@ -8,7 +8,7 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 - [x] 1 — The bars
 - [x] 2 — The import
 - [x] 3 — The viewer
-- [ ] 4 — Review
+- [x] 4 — Review
 - [ ] 5 — The dialogs
 
 ## 1 — The bars
@@ -53,16 +53,16 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 
 ## 4 — Review
 
-- [ ] 4.1 `paneKeys` in `ui/src/panes.ts` follows [D5](design.md#d5). Rewrite the `ui:keys:review-moves-between-its-panes`
+- [x] 4.1 `paneKeys` in `ui/src/panes.ts` follows [D5](design.md#d5). Rewrite the `ui:keys:review-moves-between-its-panes`
   test in `ui/src/panes.test.ts` to press `⌃L` through the key store with `isMac` stubbed; `ui/src/stores/keys.test.ts`'s
   Linux list stays `['left','right']`.
   Verify: `grep -c 'KeyL' ui/src/panes.test.ts` prints a count above 0, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 4.2 Delete `⌃E` and `⌃Y` from `ui/src/views/Review.vue` and from `ui/design/spec.md`'s Review row.
+- [x] 4.2 Delete `⌃E` and `⌃Y` from `ui/src/views/Review.vue` and from `ui/design/spec.md`'s Review row.
   Verify: `grep -c "code: 'KeyE', ctrl: true" ui/src/views/Review.vue` prints `0`.
-- [ ] 4.3 ④ follows [D6](design.md#d6): `moveRenders` in `Review.vue` steps a grid by `moved`, `−`'s disabling passes the
+- [x] 4.3 ④ follows [D6](design.md#d6): `moveRenders` in `Review.vue` steps a grid by `moved`, `−`'s disabling passes the
   focus to `+`. Add vitest bound to `ui:review:four-is-one-grid-for-the-keys` and `ui:review:a-stepped-sheet-stays-in-view`.
   Verify: `grep -rl 'four-is-one-grid-for-the-keys' ui/src` names a test file, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 4.4 Add `slot-down` and `slot-up` to D25's in-field list in `docs/decisions.md`.
+- [x] 4.4 Add `slot-down` and `slot-up` to D25's in-field list in `docs/decisions.md`.
   Verify: `sed -n '/^### D25 /,/^### D/p' docs/decisions.md | grep -c 'slot'` prints a count above 0.
 
 ## 5 — The dialogs

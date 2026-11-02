@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { fewer, more, renders as read, set, slots, type Slot } from '../slots'
+import { computed, nextTick, ref } from 'vue'
+import { fewer, more, nearest, renders as read, set, slots, type Slot } from '../slots'
 import type { Renders } from '../types'
 
 /* ④ Renders: one slot per image, each a seed or random (design spec J3). The
@@ -19,6 +19,19 @@ function change(next: Slot[]): void {
   if (next.length !== held.value.length) refused.value = {}
   held.value = next
   emit('change', read(next))
+}
+
+/* The count's `−` and `+`; `−` disabling at one image passes its focus along its row (D6). */
+const minus = ref<HTMLButtonElement | null>(null)
+const plus = ref<HTMLButtonElement | null>(null)
+
+function less(): void {
+  const had = minus.value !== null && minus.value === document.activeElement
+  change(fewer(held.value))
+  void nextTick(() => {
+    const row = [minus.value, plus.value]
+    if (had) row[nearest(row.map((one) => one?.disabled === false), 0)]?.focus()
+  })
 }
 
 function type(at: number, typed: string): void {
@@ -49,21 +62,24 @@ const draws = computed(() => {
       <span class="renders-block__label">images</span>
       <button
         v-if="!readonly"
+        ref="minus"
         class="btn btn-secondary renders-block__step"
         type="button"
         aria-label="fewer"
-        data-renders-count
+        data-renders-step
         :disabled="held.length <= 1"
-        @click="change(fewer(held))"
+        @click="less"
       >
         −
       </button>
       <span class="renders-block__value" data-renders-value>{{ held.length }}</span>
       <button
         v-if="!readonly"
+        ref="plus"
         class="btn btn-secondary renders-block__step"
         type="button"
         aria-label="more"
+        data-renders-step
         @click="change(more(held))"
       >
         +

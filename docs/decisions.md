@@ -399,15 +399,17 @@ as it is from a client that is not a browser.**
 **A shortcut is matched on `event.code` and declared once, in the key store:
 a plain letter moves, a command is `⇧` + a letter, a plain letter only where nothing is typed, and Mod — `⌘`
 on macOS, `Ctrl` elsewhere — where a command must reach into a text field. Inside a text field only `Esc`,
-`Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;` run, Review's `⌃P`, and on macOS Review's `⌃H` `⌃L`,
-which move between its panes, and `⌃J` `⌃K`, which move between its fields.**
+`Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;` run, Review's `⌃P`, on macOS Review's `⌃H` `⌃L`,
+which alone move between its panes, and `⌃J` `⌃K`, which move between its fields, and in ④'s seed slots
+`slot-down` and `slot-up`, `j` `k` `↓` `↑`, which move between the slots.**
 
 - **Why:** a key typed into a field is text. Option types characters on macOS and is the window
   manager's on Linux, and a layout moves letters but not keys. One declaration is what the hints and
   the key list read, so they cannot disagree with the keys. On macOS `⌃` is free of the window manager
   and of `⌘`'s shortcuts, but a text field's `⌃H` deletes backward, and Review's fields give that key up
-  to the pair; elsewhere the pair is not offered, so a wrong platform guess only hides it.
-- **Made by:** `0021`, `0069`, `0076`, `0078`.
+  to the pair; elsewhere the pair is not offered, so a wrong platform guess only hides it. A seed slot takes
+  digits alone, so its letters are free to move.
+- **Made by:** `0021`, `0069`, `0076`, `0078`, `0091`.
 
 ### D41 · The test seam is a factory named in the environment
 
