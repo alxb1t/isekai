@@ -1,8 +1,9 @@
 """The changelog keeps its format, and nothing cites it.
 
 `CHANGELOG.md` is a release record: Keep a Changelog sections, one short bullet
-per change, and each heading naming its change. It is not a source, so no code,
-doc or README points into it.
+per change. Each heading from `FIRST_CHANGE` through `LAST_NAMED` names its change;
+one past it may. A bullet directly under a heading past it passes. It is not a
+source, so no code, doc or README points into it.
 """
 
 import re
@@ -21,6 +22,8 @@ VERSION = re.compile(
 )
 # The first version cut from a change; every heading below it predates the changes.
 FIRST_CHANGE = (0, 7, 0)
+# The last version whose heading must name its change; a release past it writes none.
+LAST_NAMED = (0, 60, 0)
 BULLET_LIMIT = 300
 
 # Files that name the changelog because they write, read or check it.
@@ -28,6 +31,7 @@ MAY_CITE = frozenset(
     {
         "CHANGELOG.md",
         "AGENTS.md",
+        "CONTRIBUTING.md",
         "docs/pins.md",
         "tests/test_flow.py",
         "tests/test_docs.py",
@@ -51,6 +55,11 @@ def bullets(lines: list[str]) -> list[str]:
     return joined
 
 
+def version_of(match: re.Match[str]) -> tuple[int, ...]:
+    """Return a heading's version as integers, e.g. "0.60.1" -> (0, 60, 1)."""
+    return tuple(int(part) for part in match["version"].split("."))
+
+
 def format_problems(text: str) -> list[str]:
     """Return every way `text` breaks the changelog's format, in file order."""
     lines = text.splitlines()
@@ -64,14 +73,16 @@ def format_problems(text: str) -> list[str]:
         if match is None:
             problems.append(f"malformed heading: {heading}")
             continue
-        version = tuple(int(part) for part in match["version"].split("."))
-        if (version >= FIRST_CHANGE) != (match["change"] is not None):
+        version = version_of(match)
+        named = match["change"] is not None
+        if version <= LAST_NAMED and (version >= FIRST_CHANGE) != named:
             problems.append(f"change id wrong for its version: {heading}")
 
     sectioned = True
     for line in lines:
         if line.startswith("## "):
-            sectioned = VERSION.fullmatch(line) is None
+            match = VERSION.fullmatch(line)
+            sectioned = match is None or version_of(match) > LAST_NAMED
         elif line.startswith("### "):
             sectioned = True
             if line[4:] not in SECTIONS:
@@ -144,6 +155,13 @@ def test_the_format_check_reports_each_break(text: str, problem: str) -> None:
     problems = format_problems(text)
 
     assert any(found.startswith(problem) for found in problems), problems
+
+
+@pytest.mark.spec_exempt("structural: a release writes no change id or section")
+def test_a_release_after_the_line_needs_no_change_or_section() -> None:
+    text = "## [Unreleased]\n\n## [0.60.1] - 2026-11-01\n\n- a\n"
+
+    assert format_problems(text) == []
 
 
 @pytest.mark.spec_exempt("structural: nothing cites the changelog")

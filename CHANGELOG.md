@@ -3,11 +3,41 @@
 Notable changes, per [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
-A version's heading names its change: `## [0.25.0] - 2026-09-27 · 0035-the-flow-skills`. A bullet is one change
-an operator notices, in 1–3 short lines — what changed and why — ending with its design id, `(0035 D2)`. It holds
-no figure, file:line reference or pod id; a re-pinned flow's bullet names its new digest.
+A version's heading is its tag and date, `## [0.60.1] - 2026-11-01`; each from `0.7.0` through `0.60.0` also
+names its change. A bullet is one change an operator notices, in 1–3 short lines — what changed and why — ending
+with its design id, `(0035 D2)`. It holds no figure, file:line reference or pod id; a re-pinned flow's bullet names
+its new digest.
 
 ## [Unreleased]
+
+## [0.60.1] - 2026-11-02
+
+Gate: local 0m50s · CI 1m38s (ci at eb63832) · 0.60.0: local 0m47s · CI 1m35s
+
+### Added
+
+- `make setup` restores what a fresh worktree lacks, `AGENTS.md` declares it with the run's lines, and the browser
+  tests' wait ignores a proxy, so an unattended run starts from tracked files alone (0088 D1, D2, D3).
+
+### Changed
+
+- The changelog's test follows the release: from `0.60.1` a heading's change id and a bullet's section are
+  optional, and every earlier heading stays held (0088 D4).
+- The rules move out of `AGENTS.md` into `CODING_STANDARDS.md` and `CONTRIBUTING.md`, rewritten for today's cut and
+  release, and `ARCHITECTURE.md` maps `docs/`, so review reads real documents (0088 D5, D6).
+- `THREAT_MODEL.md` names what is worth protecting, the trust boundaries, the entry points and what is out of scope,
+  and `AGENTS.md` makes it mandatory reading, so security review reads a real model (0088 D7).
+
+### Fixed
+
+- The image-phase instructions drop the shell-script syntax check because no tracked shell scripts remain,
+  keeping the Docker build check (0088 D5).
+- The heading rule names its lower bound, `0.7.0`, in the preamble and test description, so it agrees with
+  the formatter and early releases (0088 D4).
+
+### Security
+
+- A ruleset on `main` refuses a force-push and a deletion; a release still pushes to it directly (0088 D8).
 
 ## [0.60.0] - 2026-10-27 · 0087-the-fifth-walkthrough
 

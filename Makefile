@@ -1,7 +1,7 @@
 # The gate: this recipe is its one declaration. CI and the MinionsFactory skills
 # run `make gate`; `make -n gate` prints what it runs.
 
-.PHONY: gate browsers drift derive
+.PHONY: gate setup browsers drift derive
 
 gate:
 # environment, from the tracked lock; not a quality axis, hence first
@@ -20,6 +20,14 @@ gate:
 	uv run python -m tools.test_ui
 # tests
 	uv run pytest
+
+# Restore what a fresh worktree lacks: the environment, the browser toolchain,
+# Chromium and the vocabulary. Not part of the gate, which never fetches.
+setup:
+	uv sync --locked
+	npm ci --prefix ui
+	$(MAKE) browsers
+	uv run python -m isekai.boundary.provision fetch config/vocabulary.json
 
 # Fetch the Chromium the browser tests in `tests/e2e/` drive. Not part of the
 # gate, because it downloads a browser; CI runs it before the gate.
