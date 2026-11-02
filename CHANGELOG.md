@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.61.0] - 2026-11-02
+
+Gate: local 0m28s · CI none · 0.60.2: local 0m47s · CI 1m29s
+
 ### Added
 
 - `summon-semireal-anime-wai`, flat's face chain with summon's whole prompt, pinned at

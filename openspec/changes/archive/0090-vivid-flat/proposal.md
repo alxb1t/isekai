@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.61
 ---
 
 # 0090 — vivid flat
