@@ -165,13 +165,14 @@ def _free_port() -> int:
 
 def _wait(url: str, server: subprocess.Popen[bytes]) -> None:
     """Return once `url` answers, failing with the server's output if it stops."""
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     deadline = time.monotonic() + STARTUP
     while time.monotonic() < deadline:
         if server.poll() is not None:
             output = server.stdout.read().decode() if server.stdout else ""
             pytest.fail(f"isekai ui exited {server.returncode}: {output}")
         try:
-            with urllib.request.urlopen(url, timeout=1):
+            with opener.open(url, timeout=1):
                 return
         except (urllib.error.URLError, ConnectionError):
             time.sleep(0.2)

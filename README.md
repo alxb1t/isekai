@@ -398,14 +398,13 @@ make gate
 (`.github/workflows/ci.yml`) runs `make gate` too.
 
 Its browser half, `tools/typecheck_ui.py` and `tools/test_ui.py`, runs `vue-tsc --noEmit` and
-vitest over `ui/` and needs `ui/node_modules/`. It is **not** restored for you — run `npm install` in
-`ui/` once, as `isekai ui` already asks. The browser tests in `tests/e2e/` drive Chromium through
-Playwright; fetch it once with `make browsers`. They serve the app on the suite's doubles through
-`ISEKAI_WIRING`, so they reach no model either.
+vitest over `ui/` and needs `ui/node_modules/`. It is **not** restored for you — run `make setup`
+once, which restores it, the Chromium and the tag list below. The browser tests in `tests/e2e/` drive
+Chromium through Playwright; they serve the app on the suite's doubles through `ISEKAI_WIRING`, so they
+reach no model either.
 
-The suite reads the provisioned tag list, which is gitignored. Fetch it once with
-`uv run python -m isekai.boundary.provision fetch config/vocabulary.json`, or set `ISEKAI_VOCABULARY=absent` to
-skip the checks that read it, as CI does.
+The suite reads the provisioned tag list, which is gitignored. Set `ISEKAI_VOCABULARY=absent` to skip
+the checks that read it, as CI does.
 
 Every command green, or the work is not done. The suite is **fully offline and deterministic** —
 the ComfyUI transport is faked behind a Protocol and no test touches a GPU or the network.

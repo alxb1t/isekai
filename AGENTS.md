@@ -59,6 +59,14 @@ eye**, never mocked and never asserted.
 
 ---
 
+## The run's lines
+
+- **Worktrees:** `../` — each version's worktree sits beside the primary, named by its change id.
+- **Workspace setup:** `make setup` — restores what a fresh worktree lacks.
+- **Ship network:** none — the given package hosts are enough, because the setup fills the worktree first.
+
+---
+
 ## Engineering conventions
 
 The active change's **`design.md`** is authoritative for that change, with this file behind it — read
@@ -208,7 +216,7 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
   | `.inputs/` | source photographs an operator put there by hand | **the loss of work**, and it holds a person's likeness exactly as `.data/` does — which is why `.gitignore` calls that line load-bearing |
   | `models/` | fetched from a pinned, checksummed manifest — including `models/wd14/`, the tag list **and** the graph it is the output layer of | a re-download that is byte-identical by construction |
   | `ui/dist/` | built from tracked source by `vite build` | a deterministic rebuild, which `isekai ui` does for you |
-  | `ui/node_modules/` | fetched from npm | an `npm install`, which nothing does for you — it pulls arbitrary third-party packages |
+  | `ui/node_modules/` | fetched from npm | a `make setup`, which nothing runs for you — it pulls arbitrary third-party packages |
 
   **Only the first two are work.** `.inputs/` is outside `.data/` because a photograph an operator
   supplies is an input rather than something a run generated. The rest are derivable, which is why

@@ -5,7 +5,7 @@ relative to the repository's root.
 
 ## Progress
 
-- [ ] 1 — The worktree
+- [x] 1 — The worktree
 - [ ] 2 — The changelog
 - [ ] 3 — The documents
 - [ ] 4 — The threat model
@@ -13,7 +13,7 @@ relative to the repository's root.
 
 ## 1 — The worktree
 
-- [ ] 1.1 Add a `setup` target to `Makefile` per [D1](design.md#d1), listed in `.PHONY`, its comment saying it restores
+- [x] 1.1 Add a `setup` target to `Makefile` per [D1](design.md#d1), listed in `.PHONY`, its comment saying it restores
   what a fresh worktree lacks and that the gate never fetches. `uv run python -m isekai.boundary.provision fetch
   config/vocabulary.json` is its last line. The `gate` recipe keeps its lines, and `make -n gate` prints what it did.
   `Makefile` changes by exactly these lines:
@@ -29,14 +29,14 @@ relative to the repository's root.
   +     uv run python -m isekai.boundary.provision fetch config/vocabulary.json
   ```
   Verify: `make -n setup | grep -c -E 'uv sync --locked|npm ci --prefix ui|playwright install chromium|provision fetch config/vocabulary.json'` prints `4`.
-- [ ] 1.2 Add to `AGENTS.md`, after its `## The quality gate` section, the section in
+- [x] 1.2 Add to `AGENTS.md`, after its `## The quality gate` section, the section in
   [The run's lines](design.md#the-runs-lines), word for word.
   Verify: `grep -c -E '^- \*\*(Worktrees|Workspace setup|Ship network):\*\*' AGENTS.md` prints `3`, and `grep 'Ship network:' AGENTS.md | grep -c '`'` prints `0`.
-- [ ] 1.3 Name `make setup` where a person is told to restore `ui/node_modules/`: the `ui/node_modules/` row of `AGENTS.md`'s
+- [x] 1.3 Name `make setup` where a person is told to restore `ui/node_modules/`: the `ui/node_modules/` row of `AGENTS.md`'s
   ignored-roots table, the Development paragraph of `README.md`, and the comment above `Install Node` in
   `.github/workflows/ci.yml`. `tools/npm_ui.py` and `isekai/interface/ui/bundle.py` keep their refusals.
   Verify: `grep -c 'make setup' README.md .github/workflows/ci.yml` prints a count above 0 for each file.
-- [ ] 1.4 Open `_wait`'s request in `tests/e2e/conftest.py` through the opener of [D3](design.md#d3).
+- [x] 1.4 Open `_wait`'s request in `tests/e2e/conftest.py` through the opener of [D3](design.md#d3).
   Verify: `grep -c 'ProxyHandler({})' tests/e2e/conftest.py` prints `1`, and `uv run pytest tests/e2e/test_routes.py` exits 0.
 
 ## 2 — The changelog

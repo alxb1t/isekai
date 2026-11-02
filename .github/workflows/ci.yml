@@ -24,12 +24,11 @@ jobs:
 
       # The gate's browser typecheck, `uv run python -m tools.typecheck_ui`, runs
       # `vue-tsc --noEmit` and refuses by name without `ui/node_modules/`. On an
-      # operator's machine that directory is restored by hand, deliberately --
-      # `npm install` fetches third-party packages and nothing in this
-      # repository does it silently. CI is the one place it must be restored
-      # automatically, and `npm ci` from the tracked `ui/package-lock.json` is
-      # the deterministic way to do it: it installs exactly the pinned tree and
-      # fails rather than resolving a new one.
+      # operator's machine `make setup` restores that directory, deliberately --
+      # it fetches third-party packages and the gate never does. CI restores it
+      # here, without the rest of `make setup`, and `npm ci` from the tracked
+      # `ui/package-lock.json` is the deterministic way to do it: it installs
+      # exactly the pinned tree and fails rather than resolving a new one.
       - name: Install Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:

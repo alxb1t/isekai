@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Added
+
+- `make setup` restores what a fresh worktree lacks, `AGENTS.md` declares it with the run's lines, and the browser
+  tests' wait ignores a proxy, so an unattended run starts from tracked files alone (0088 D1, D2, D3).
+
 ## [0.60.0] - 2026-10-27 · 0087-the-fifth-walkthrough
 
 Gate: local 0m47s · CI 1m35s (ci at 7301425) · 0.59.0: local 0m45s · CI 1m16s
