@@ -73,7 +73,7 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 - [ ] 5.2 The pick's width and head in `ComparePick.vue` and `ui/src/app.css` per [D7](design.md#d7); a step in
   `test_compare_shows_both_versions_of_a_seed_each_under_its_head` bound to `ui:compare:the-pick-holds-its-width`, moving
   the focus and comparing the pick's width.
-  Verify: `grep -c 'max-width: 720px\|720px' ui/src/app.css` prints `0`, and `uv run pytest --collect-only -q tests/e2e/test_render.py` exits 0.
+  Verify: `sed -n '/^\.pick {/,/}/p' ui/src/app.css | grep -c '720px'` prints `0`, and `uv run pytest --collect-only -q tests/e2e/test_render.py` exits 0.
 - [ ] 5.3 The drawer's width in `ui/src/app.css` per [D7](design.md#d7); a step in `test_the_drawer_holds_the_render` bound to
   `ui:sessions:the-drawer-fits-its-widest-grid`. `ui/design/spec.md`'s pick, drawer and key-list lines say what they are.
   Verify: `grep -c 'calc(100vw - 100px)' ui/src/app.css` prints a count above 0, and `uv run pytest --collect-only -q tests/e2e` exits 0.
