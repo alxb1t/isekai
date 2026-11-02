@@ -66,8 +66,8 @@ _STAGING_ID = re.compile(f"[0-9a-f]{{{2 * _STAGING_BYTES}}}")
 # How long a staging folder goes unwritten before a sweep takes it as left.
 _LEFT_AFTER = 60 * 60
 
-# The most pixels import decodes: a photograph's sensor is far below it, and a small
-# file declaring more would take gigabytes once decoded and copied.
+# The most pixels import decodes: it refuses some full-resolution photographs from the
+# largest sensors, and a small file declaring more would take gigabytes once decoded.
 MAX_PIXELS = 50_000_000
 
 # The largest difference, in 8-bit levels, a profile may make to a colour and
@@ -207,7 +207,7 @@ class Reader:
             except BaseException:
                 shutil.rmtree(held.parent, ignore_errors=True)
                 raise
-        except OSError as failed:
+        except Exception as failed:
             # A folder a cancel deleted, or a full disk, refuses this upload alone.
             refusal = str(_closed(name)) if self._stopped else _failed(name, failed)
             self._set(upload, name, {"state": "refused", "refusal": refusal})
@@ -411,8 +411,8 @@ def preview(staging: Path, name: str) -> bytes:
 
 
 def _refuse_name(name: str) -> None:
-    """Refuse a name that is empty, starts with a dot, or holds a path separator."""
-    if not name or name.startswith(".") or "/" in name or "\\" in name:
+    """Refuse a name that is empty, starts with a dot, or holds a separator or NUL."""
+    if not name or name.startswith(".") or any(c in name for c in "/\\\x00"):
         raise Refusal(f"{name!r}: not a file name import takes; rename it and add it")
 
 

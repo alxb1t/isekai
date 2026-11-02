@@ -20,6 +20,8 @@ its new digest.
   overrides an exported key (0089 D3).
 - A failed teardown names the refusal that ended the session first, and an unreachable endpoint says a session's
   tunnel may have dropped (0089 D4).
+- An upload that fails to be held for any reason, or whose name holds a NUL byte, is refused alone and never
+  left waiting, so the rest still commit; the pixel bound's comment says what it refuses (0089 D5).
 
 ## [0.60.1] - 2026-11-02
 

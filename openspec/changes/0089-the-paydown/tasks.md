@@ -8,7 +8,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 - [x] 1 — The flake
 - [x] 2 — Evaluation
 - [x] 3 — The render
-- [ ] 4 — Import
+- [x] 4 — Import
 - [ ] 5 — Cancel and draft-from
 - [ ] 6 — The guard
 - [ ] 7 — The UI and the docs
@@ -46,10 +46,10 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 ## 4 — Import
 
-- [ ] 4.1 The `MAX_PIXELS` comment in `isekai/pipeline/importing.py`, before → after: "a photograph's sensor is far
+- [x] 4.1 The `MAX_PIXELS` comment in `isekai/pipeline/importing.py`, before → after: "a photograph's sensor is far
   below it" → "it refuses some full-resolution photographs from the largest sensors".
   Verify: `grep -c 'far below it' isekai/pipeline/importing.py` prints `0`.
-- [ ] 4.2 `put` catches `Exception` around the hold, recording `refused`, and `_refuse_name` refuses a name holding
+- [x] 4.2 `put` catches `Exception` around the hold, recording `refused`, and `_refuse_name` refuses a name holding
   `"\x00"`, per [D5](design.md#d5). Add `test_a_name_holding_a_nul_byte_is_refused_alone` to `tests/test_importing.py`,
   bound to `ui:sheet:a-failed-read-refuses-its-file-alone`: the file is refused and `seal` commits the rest.
   Verify: `uv run pytest tests/test_importing.py -k nul_byte` exits 0.
