@@ -253,10 +253,24 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
     npm.write_text(f"#!/bin/sh\n{script}")
     npm.chmod(0o755)
     monkeypatch.setattr(bundle, "BINARY", str(npm))
-    # Long enough for the stand-in to start its child on a loaded machine.
     monkeypatch.setattr(bundle, "BUILD_TIMEOUT", 3)
+    communicate = subprocess.Popen.communicate
 
-    with pytest.raises(Refusal) as refused:
+    def started(
+        build: "subprocess.Popen[str]",
+        input: str | None = None,
+        timeout: float | None = None,
+    ) -> tuple[str, str]:
+        # The ceiling starts once the child is up, so a loaded machine cannot
+        # spend it before the pid file is written.
+        deadline = time.monotonic() + 30
+        while not child.is_file() or not child.read_text().strip():
+            assert time.monotonic() < deadline, "the stand-in never started its child"
+            time.sleep(0.01)
+        return communicate(build, input, timeout)
+
+    with monkeypatch.context() as held, pytest.raises(Refusal) as refused:
+        held.setattr(subprocess.Popen, "communicate", started)
         bundle.ensure_built(source)
 
     assert "3 seconds" in str(refused.value)

@@ -250,7 +250,7 @@ def test_a_renamed_run_is_named_by_its_frames_digest_and_never_its_new_name(
     assert "ada-lovelace" not in written + out
 
 
-@pytest.mark.spec("evaluation:recall:every-render-is-a-row")
+@pytest.mark.spec("evaluation:recall:a-run-whose-frame-does-not-read-is-a-row")
 def test_every_render_of_a_run_whose_frame_does_not_read_is_an_unreadable_row(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -275,6 +275,30 @@ def test_every_render_of_a_run_whose_frame_does_not_read_is_an_unreadable_row(
     assert "44.png" not in {path.name for path in tagger.seen}
     assert "ada-lovelace" not in written + out
     assert "unreadable: ada-lovelace-old" in err
+
+
+@pytest.mark.spec("evaluation:recall:a-run-whose-frame-does-not-read-is-a-row")
+@pytest.mark.parametrize("damage", ["directory", "invalid-utf8"])
+def test_an_unreadable_file_is_refused_by_name(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    damage: str,
+) -> None:
+    runs, a, b = _collection(tmp_path)
+    if damage == "directory":
+        b.frame_path.unlink()
+        b.frame_path.mkdir()
+    else:
+        b.frame_path.write_bytes(b"\xff")
+
+    assert _run(monkeypatch, _Tagger(), runs) == 0
+
+    rows = {row["seed"]: row for row in _record(runs)["rows"]}
+    assert {rows[seed]["outcome"] for seed in (11, 22, 33)} == {"read"}
+    assert {rows[seed]["run"] for seed in (11, 22, 33)} == {run_prefix(a)}
+    assert rows[44]["outcome"] == "unreadable"
+    assert f"unreadable: {b.path.name}" in capsys.readouterr().err
 
 
 @pytest.mark.spec("evaluation:recall:the-record-names-the-tagger-and-its-floor")

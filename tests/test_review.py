@@ -36,6 +36,7 @@ from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
+    Cancelled,
     approve,
     cancel,
     cancellable,
@@ -1186,7 +1187,7 @@ def test_a_drafted_draft_approves_as_an_edited_approval_and_no_copy(
     producer = read(approved, APPROVED_FILE)["producer"]
     assert producer["edited"] is True
     assert "copied_from" not in producer
-    assert cancel(run, CONJURE) == draft
+    assert cancel(run, CONJURE) == Cancelled(draft, changed=True)
     assert draft.read_bytes() == held
 
 
@@ -1217,10 +1218,33 @@ def test_a_source_without_the_approval_named_is_refused_naming_it(
 
     message = str(refused.value)
     assert f"flow {FLOW} has no 002.approved.json" in message
-    assert f"`python -m isekai approve --flow {FLOW}{runs_flag(run)} {run.id}`" in (
-        message
-    )
+    assert "approve --flow" not in message
     assert not (run.path / CONJURE / "review").exists()
+
+
+@pytest.mark.spec("review:draft-from:a-missing-source-approval-is-refused")
+def test_a_missing_version_names_the_held_approvals(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    conjure = _conjure(run, vocabulary)
+    with pytest.raises(Refusal) as refused:
+        draft_from(run, CONJURE, FLOW, None, conjure)
+    approving = f"`python -m isekai approve --flow {FLOW}{runs_flag(run)} {run.id}`"
+    assert approving in str(refused.value)
+
+    _summon_approved(run, schema, vocabulary)
+    with pytest.raises(Refusal) as refused:
+        draft_from(run, CONJURE, FLOW, 2, conjure)
+    message = str(refused.value)
+    assert f"{FLOW} holds 001.approved.json" in message
+    assert f"`python -m isekai render {run.path.parent} {FLOW}=1`" in message
+    assert "approve --flow" not in message
+
+    image = _image(run, 1, SEED)
+    with pytest.raises(Refusal) as refused:
+        draft_from(run, CONJURE, FLOW, 2, conjure)
+    assert f"`python -m isekai draft --flow {CONJURE} {image}`" in str(refused.value)
+    assert draft_from(run, CONJURE, FLOW, 1, conjure, SEED).exists()
 
 
 @pytest.mark.spec("review:draft-from:an-unedited-waiting-draft-is-replaced")
@@ -1269,6 +1293,15 @@ def test_an_edited_waiting_draft_is_refused_naming_its_discard(
     assert waiting.read_bytes() == before
 
 
+def _run_printed(run: Run, command: str) -> Cancelled | Path:
+    """Run a cancel or a discard a refusal prints, and return what it returns."""
+    if found := re.search(r"review --flow (\S+) .*--discard", command):
+        return discard(run, found[1])
+    found = re.search(r"approve --flow (\S+) .*--cancel", command)
+    assert found is not None
+    return cancel(run, found[1])
+
+
 @pytest.mark.spec(
     "review:draft-from:what-is-drafted-from-it-refuses-the-sources-cancel"
 )
@@ -1283,12 +1316,14 @@ def test_an_approval_drafted_from_a_source_refuses_the_sources_cancel(
 
     with pytest.raises(Refusal, match=f"{CONJURE}/review/001.approved.json came"):
         cancel(run, FLOW)
-    assert re.search(
-        f"approve --flow {CONJURE} .*--cancel", str(cancellable(run, FLOW))
-    )
+    chain = str(cancellable(run, FLOW))
+    assert f"drops {CONJURE}'s fields" in chain
+    first, then, last = re.findall(r"`(python -m isekai [^`]*)`", chain)
+    assert re.search(f"approve --flow {CONJURE} .*--cancel", first)
+    assert re.search(f"approve --flow {FLOW} .*--cancel", last)
 
     assert snapshot(run.path) == before
-    assert cancel(run, CONJURE) == draft
+    assert _run_printed(run, first) == Cancelled(draft, changed=True)
     waiting = snapshot(run.path)
 
     with pytest.raises(Refusal, match=f"{CONJURE}/review/001.draft.json came"):
@@ -1298,8 +1333,9 @@ def test_an_approval_drafted_from_a_source_refuses_the_sources_cancel(
     )
 
     assert snapshot(run.path) == waiting
-    assert discard(run, CONJURE) == draft
-    assert cancel(run, FLOW) == run.directory(FLOW, "review") / "001.draft.json"
+    assert _run_printed(run, then) == draft
+    restored = run.directory(FLOW, "review") / "001.draft.json"
+    assert _run_printed(run, last) == Cancelled(restored, changed=True)
 
 
 # --- ④ renders: how many images, and which seeds -------------------------------
@@ -1447,7 +1483,7 @@ def test_a_revision_records_its_image_through_a_seed_change_and_approval(
     image = {"flow": FLOW, "version": 1, "seed": SEED}
     assert approved is not None
     assert read(approved, APPROVED_FILE)["producer"].get("image") == image
-    assert cancel(run, FLOW) == draft
+    assert cancel(run, FLOW) == Cancelled(draft, changed=True)
     assert read(draft, DRAFT_FILE)["producer"].get("image") == image
 
 
@@ -1666,8 +1702,9 @@ def test_a_cancel_writes_back_the_draft_the_approval_was_made_from(
     approved, held = _approved_with_draft(run, schema, vocabulary)
     assert cancellable(run, FLOW) is None
 
-    draft = cancel(run, FLOW)
+    draft, changed = cancel(run, FLOW)
 
+    assert changed
     assert draft == run.directory(FLOW, "review") / "001.draft.json"
     assert draft.read_bytes() == held
     assert not approved.exists()
@@ -1685,7 +1722,7 @@ def test_cancelling_a_revision_leaves_the_rendered_approval_it_revised(
     _edit(revised, clothes=["collared shirt"])
     assert approve(run, FLOW, schema, vocabulary)[0] is not None
 
-    assert cancel(run, FLOW) == revised
+    assert cancel(run, FLOW) == Cancelled(revised, changed=True)
 
     assert first.read_bytes() == frozen
     assert approved_versions(run.directory(FLOW, "review")) == [1]
@@ -1758,8 +1795,9 @@ def test_a_copy_in_another_flow_refuses_the_sources_cancel(
     )
 
     assert snapshot(run.path) == before
-    assert cancel(run, CONTROL) is None
-    assert cancel(run, FLOW) == run.directory(FLOW, "review") / "001.draft.json"
+    assert cancel(run, CONTROL) == Cancelled(None, changed=True)
+    restored = run.directory(FLOW, "review") / "001.draft.json"
+    assert cancel(run, FLOW) == Cancelled(restored, changed=True)
 
 
 @pytest.mark.spec("review:cancel:a-copy-is-deleted-and-a-reopened-sheet-refused")
@@ -1779,12 +1817,39 @@ def test_a_copy_is_deleted_and_an_approval_with_a_later_draft_refuses_its_discar
     held = copy.read_bytes()
     before = snapshot(run.path)
 
-    assert cancel(run, CONTROL) == own
+    assert cancel(run, CONTROL) == Cancelled(own, changed=True)
     gone = str(copy.relative_to(run.path))
     assert snapshot(run.path) == {k: v for k, v in before.items() if k != gone}
     assert state(run.directory(CONTROL, "review")) == "approved"
     assert approve(run, CONTROL, schema, vocabulary, source=FLOW)[0] == copy
     assert copy.read_bytes() == held
+
+    # A copy over a re-opened flow is cancelled back to the draft beneath it.
+    assert cancel(run, CONTROL) == Cancelled(own, changed=True)
+    waiting = review(run, CONTROL, new_version=True)
+    assert waiting is not None
+    over, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    assert over is not None
+    assert cancel(run, CONTROL) == Cancelled(waiting, changed=True)
+    assert not over.exists()
+    assert state(run.directory(CONTROL, "review")) == "re-opened"
+
+
+@pytest.mark.spec("review:cancel:a-flow-with-no-approval-has-nothing-to-cancel")
+def test_a_flow_with_no_approval_has_nothing_to_cancel(run: Run) -> None:
+    before = snapshot(run.path)
+    with pytest.raises(Refusal, match=f"`python -m isekai review --flow {FLOW}"):
+        cancel(run, FLOW)
+    assert snapshot(run.path) == before
+
+    draft = review(run, FLOW)
+    assert draft is not None
+    before = snapshot(run.path)
+
+    assert cancel(run, FLOW) == Cancelled(draft, changed=False)
+    assert snapshot(run.path) == before
+    assert f"flow {FLOW} is at its draft {draft.name}" in str(cancellable(run, FLOW))
+    assert "python -m isekai" not in str(cancellable(run, FLOW))
 
 
 @pytest.mark.spec("review:cancel:an-interrupted-cancel-finishes")
@@ -1796,7 +1861,7 @@ def test_a_cancel_interrupted_before_its_delete_finishes_when_run_again(
     beside.write_bytes(held)
     assert state(run.directory(FLOW, "review")) == "approved"
 
-    assert cancel(run, FLOW) == beside
+    assert cancel(run, FLOW) == Cancelled(beside, changed=True)
 
     assert sorted(path.name for path in beside.parent.iterdir()) == [beside.name]
     assert beside.read_bytes() == held

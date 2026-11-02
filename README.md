@@ -244,7 +244,8 @@ uv run --env-file .env gpunit volume down   # once no other batch follows
   `--remove` takes away one that holds no work yet.
 - **`ui` takes no arguments.** It serves every collection of the library; the collection's hub shows each
   photograph's stage in each flow, and the *Review* tab opens a chooser when multiple flows have sheets
-  waiting, or the first unapproved sheet when one flow waits. Stop it with Ctrl-C.
+  waiting, or, when one flow waits, its first unapproved sheet, else its first approved sheet
+  short of its images. Stop it with Ctrl-C.
 - **`approve --cancel` takes an approval back** to its draft while nothing was made from it — no prompt,
   render group or copy in another flow. Past that, the way on is `isekai draft --flow` where an image exists, else
   `review --new-version`.
@@ -320,7 +321,8 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   number.
 - `--cancel` — on `approve`: turn each flow's newest approval back into its draft instead, refusing one
   anything was made from; a copy is deleted, as `--from` copies the source's newest approval again, leaving the
-  flow on what lies beneath it, which the line names; not combinable with `--from`.
+  flow on what lies beneath it, which the line names; a flow at its draft is left as it is, and the line says so;
+  not combinable with `--from`.
 - `--server SERVER` — the ComfyUI endpoint, reached through the tunnel; **omit it to assemble every
   prompt and stop without rendering**, which is how a whole batch is checked before anything is
   rented.

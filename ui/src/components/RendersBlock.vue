@@ -11,10 +11,12 @@ const props = defineProps<{ renders: Renders; readonly: boolean }>()
 const emit = defineEmits<{ change: [renders: Renders] }>()
 
 const held = ref<Slot[]>(slots(props.renders))
-/* A refused entry, by slot: the slot keeps what was typed and says why. */
+/* A refused entry, by slot: the slot keeps what was typed and says why. A new
+   count moves the slots, so it clears every refusal. */
 const refused = ref<Record<number, string>>({})
 
 function change(next: Slot[]): void {
+  if (next.length !== held.value.length) refused.value = {}
   held.value = next
   emit('change', read(next))
 }

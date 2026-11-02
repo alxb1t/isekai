@@ -31,22 +31,28 @@ OpenSession = Callable[
 
 
 def read_env(path: Path) -> dict[str, str]:
-    """Return a `.env` file's `KEY=VALUE` lines, quotes stripped; none if it is absent.
+    """Return a `.env` file's `KEY=VALUE` lines as the shell reads them; none if absent.
 
-    e.g. `RUNPOD_API_KEY="k"` -> {"RUNPOD_API_KEY": "k"}
+    A leading `export ` and an unquoted ` #` comment are cut, quotes stripped, and
+    an empty value left out, so it cannot blank a key the environment holds.
+    e.g. `export RUNPOD_API_KEY="k" # mine` -> {"RUNPOD_API_KEY": "k"}
     """
     if not path.is_file():
         return {}
     pairs = {}
     for line in path.read_text(encoding="utf-8").splitlines():
-        text = line.strip()
+        text = line.strip().removeprefix("export ")
         if not text or text.startswith("#") or "=" not in text:
             continue
         key, value = text.split("=", 1)
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-            value = value[1:-1]
-        pairs[key.strip()] = value
+        stripped = value.strip()
+        close = stripped.find(stripped[:1], 1) if stripped[:1] in ('"', "'") else -1
+        if close > 0:
+            value = stripped[1:close]
+        else:
+            value = value.split(" #", 1)[0].strip()
+        if value:
+            pairs[key.strip()] = value
     return pairs
 
 

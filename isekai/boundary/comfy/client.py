@@ -142,7 +142,8 @@ def _reported() -> Iterator[None]:
         raise TransportFailure(
             "transient",
             f"the rendering endpoint could not be reached ({unreachable}); "
-            "render inside a session with `python -m isekai render <runs> "
+            "if a session is open, its tunnel has dropped; otherwise render "
+            "inside a session with `python -m isekai render <runs> "
             "<flow>=<count>`, which opens the tunnel and passes `--server` -- or "
             "drop `--server` to assemble the prompts and stop",
         ) from unreachable

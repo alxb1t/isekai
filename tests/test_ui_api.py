@@ -1045,7 +1045,11 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
 
 @pytest.mark.spec("ui:review:the-sheet-says-why-it-cannot-be-cancelled")
 def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
-    client: TestClient, made: Run, schema: Schema, monkeypatch: pytest.MonkeyPatch
+    client: TestClient,
+    made: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _approved(client, made)
     assert client.get(_at(made)).json()["cancel"] is None
@@ -1064,8 +1068,11 @@ def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
 
     cancelled = client.post(_at(made, "/cancel"))
 
-    assert cancelled.json() == {"back": "001.draft.json"}
+    assert cancelled.json() == {"back": "001.draft.json", "cancelled": True}
     assert client.get(_at(made)).json()["readonly"] is False
+    # At its draft, a flow has nothing to cancel, and the answer says so.
+    again = client.post(_at(made, "/cancel"))
+    assert again.json() == {"back": "001.draft.json", "cancelled": False}
 
     # Approved again, and its prompt assembled: the payload says why not.
     _approved(client, made)
@@ -1077,6 +1084,14 @@ def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
     refused = client.post(_at(made, "/cancel"))
     assert refused.status_code == 409
     assert (made.directory(FLOW, REVIEW) / "001.approved.json").exists()
+
+    # A copy has no draft to go back to: its cancel deletes it.
+    control = "control-anime-wai"
+    copy, _ = approve(made, control, schema, vocabulary, source=FLOW)
+    assert copy is not None
+    at_control = f"/api/c/{COLLECTION}/review/{made.digest}/{control}/cancel"
+    assert client.post(at_control).json() == {"back": None, "cancelled": True}
+    assert not copy.exists()
 
 
 # --- the two tag lists the source pane shows ----------------------------------

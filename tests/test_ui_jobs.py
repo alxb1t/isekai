@@ -370,7 +370,7 @@ def test_a_stream_opened_for_a_collection_starts_with_both_slots_and_its_hub(
             deadline = time.monotonic() + WAIT
             while not broadcast._queues and time.monotonic() < deadline:
                 time.sleep(0.01)
-            broadcast.close()
+            broadcast.publish(events.CLOSE, {})
 
         threading.Thread(target=close_once_open, daemon=True).start()
         body = TestClient(app, base_url=f"http://{HOST}:{PORT}").get(url)

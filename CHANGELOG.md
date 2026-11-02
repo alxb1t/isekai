@@ -10,6 +10,31 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.60.2] - 2026-11-02
+
+Gate: local 0m47s · CI 1m29s (ci at 8a88389) · 0.60.1: local 0m50s · CI 1m38s
+
+### Fixed
+
+- The stream test reads its first frame before the stream closes, publishing the close to a queue already
+  subscribed, so a loaded machine no longer fails it (0089 D1).
+- A run file that cannot be read is refused by name with its remedy, so recall and cohort score the other runs;
+  evaluation's spec names a scored run by the digest prefix its frame records (0089 D2).
+- `.env` is read as the shell reads it — `export`, a trailing comment, an empty value — so a blank line no longer
+  overrides an exported key (0089 D3).
+- A failed teardown names the refusal that ended the session first, and an unreachable endpoint says a session's
+  tunnel may have dropped (0089 D4).
+- An upload that fails to be held for any reason, or whose name holds a NUL byte, is refused alone and never
+  left waiting, so the rest still commit; the pixel bound's comment says what it refuses (0089 D5).
+- Cancel on a flow at its draft changes nothing and says so; with no draft either, it names `review`. A drafted
+  approval's cancel names the discard that follows, and draft-from names the held approvals and a way that works (0089 D6).
+- The printed-command guard provokes the draft, draft-from and cancel refusals, and checks a `draft` command by its
+  images, so a remedy it never saw cannot break silently (0089 D7).
+- A slot reads `0144` as the seed `144`, so a repeat is refused there instead of failing every save; a new count
+  clears the slots' refusals. The docs say what the Review tab opens and why a repeated seed is refused (0089 D8).
+- The bundle-timeout test starts its ceiling once its stand-in is up, and Review's browser tests share their pages,
+  so a loaded machine no longer fails the gate and no step spends a page of its own (0089 D9).
+
 ## [0.60.1] - 2026-11-02
 
 Gate: local 0m50s · CI 1m38s (ci at eb63832) · 0.60.0: local 0m47s · CI 1m35s

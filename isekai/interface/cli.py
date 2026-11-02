@@ -915,7 +915,13 @@ def _per_item(
 
             def approve_flow(name: str) -> None:
                 if args.cancel:
-                    left = cancel_approval(run, name)
+                    left, changed = cancel_approval(run, name)
+                    if not changed and left is not None:
+                        reporter.say(
+                            f"{run.id}: approve has nothing to cancel in {name}; "
+                            f"it is at its draft {left.name}"
+                        )
+                        return
                     back = "a copy, deleted" if left is None else f"back to {left.name}"
                     reporter.say(f"{run.id}: approve cancelled {name}, {back}")
                     return

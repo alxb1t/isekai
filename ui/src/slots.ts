@@ -34,13 +34,15 @@ export function fewer(held: Slot[]): Slot[] {
 /**
  * Return `held` with slot `at` set to `typed`, or the refusal that keeps it.
  *
- * Empty is random. A seed is digits, and one already in another slot is refused.
- * e.g. ([null, '144'], 0, '144') -> 'seed 144 is already in slot 2'
+ * Empty is random. A seed is digits, kept as its decimal without leading zeros as
+ * the server reads it, and one already in another slot is refused.
+ * e.g. ([null, '144'], 0, '0144') -> 'seed 144 is already in slot 2'
  */
 export function set(held: Slot[], at: number, typed: string): Slot[] | string {
-  const seed = typed.trim()
-  if (seed === '') return held.map((one, index) => (index === at ? null : one))
-  if (!/^\d+$/.test(seed)) return `a seed is digits alone, not ${JSON.stringify(seed)}`
+  const trimmed = typed.trim()
+  if (trimmed === '') return held.map((one, index) => (index === at ? null : one))
+  if (!/^\d+$/.test(trimmed)) return `a seed is digits alone, not ${JSON.stringify(trimmed)}`
+  const seed = String(BigInt(trimmed))
   const taken = held.findIndex((one, index) => index !== at && one === seed)
   if (taken >= 0) return `seed ${seed} is already in slot ${taken + 1}`
   return held.map((one, index) => (index === at ? seed : one))

@@ -776,6 +776,40 @@ def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
     gone.seal()
 
 
+@pytest.mark.spec("ui:sheet:a-failed-read-refuses-its-file-alone")
+def test_a_name_holding_a_nul_byte_is_refused_alone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    read = threading.Event()
+
+    def publish(event: dict[str, object]) -> None:
+        if event["state"] == "ready":
+            read.set()
+
+    library = tmp_path / "library"
+    staging = stage(library)
+    reader = importing.Reader(staging, LIMIT, publish)
+    with pytest.raises(Refusal, match="not a file name import takes"):
+        reader.put("a\x00.jpg", photo_jpeg((200, 0, 0)))
+
+    # A hold that raises past `OSError` is refused alone, never left waiting.
+    holding = importing.tempfile.mkdtemp
+
+    def raising(**kwargs: object) -> str:
+        monkeypatch.setattr(importing.tempfile, "mkdtemp", holding)
+        raise ValueError("embedded null byte")
+
+    monkeypatch.setattr(importing.tempfile, "mkdtemp", raising)
+    with pytest.raises(Refusal, match="c.jpg: .*embedded null byte"):
+        reader.put("c.jpg", photo_jpeg((0, 0, 200)))
+
+    reader.put("b.jpg", photo_jpeg((0, 200, 0)))
+    assert read.wait(10.0)
+    reader.seal()
+    reader.stop()
+    assert commit(staging, library, "c").written == ("b.jpg",)
+
+
 @pytest.mark.spec("ui:sheet:two-uploads-of-one-name-keep-their-own-states")
 def test_two_uploads_of_one_name_keep_their_own_states(tmp_path: Path) -> None:
     published: list[dict[str, object]] = []

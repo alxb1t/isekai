@@ -1067,8 +1067,10 @@ def _rendered(
             "and `uv run --env-file .env gpunit down` deletes it"
         )
         return LOST_EXIT
-    except TeardownFailed:
+    except TeardownFailed as failed:
         steps.step("teardown", "failed")
+        if isinstance(failed.__cause__, Refusal):
+            print(f"refused: {failed.__cause__}", file=wired.err)
         refuse(
             "the session's teardown failed, and its pod may still bill; "
             "run `uv run --env-file .env gpunit down`"

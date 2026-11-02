@@ -825,7 +825,8 @@ def create_app(
         """Turn the approval back into its draft, refused while a render runs.
 
         `back` names what the flow is left on: the draft, or for a deleted copy
-        the draft or approval beneath it, null where nothing is.
+        the draft or approval beneath it, null where nothing is. `cancelled` is
+        false for a flow at its draft, which a cancel leaves unchanged.
         """
         one = held(collection, digest, flow)
         with _DRAFT_UPDATE:
@@ -834,8 +835,8 @@ def create_app(
                 raise Refusal(
                     f"{rendering} Wait for it to end, then cancel the approval again."
                 )
-            left = cancel(one.run, one.flow.id)
-        return {"back": None if left is None else left.name}
+            left, changed = cancel(one.run, one.flow.id)
+        return {"back": None if left is None else left.name, "cancelled": changed}
 
     def _rendering(collection: str) -> str | None:
         """Return what a render running for `collection` says, or None."""

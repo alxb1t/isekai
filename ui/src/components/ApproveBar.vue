@@ -14,8 +14,9 @@ import KeyHint from './KeyHint.vue'
    The note names the approval shown, which after a copy's cancel is the one
    beneath it, still approved.
 
-   Discard, on a revision, sits left of Approve and asks before it deletes: it
-   takes the operator's edits with the draft. Review keys this bar by sheet, so
+   Discard, on a revision, or a draft drafted from another flow's approval, sits
+   left of Approve and asks before it deletes: it takes the operator's edits with
+   the draft. Review keys this bar by sheet, so
    an ask never outlives its sheet. */
 defineProps<{
   approved: boolean

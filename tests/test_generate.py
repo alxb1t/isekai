@@ -974,6 +974,7 @@ def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
 
     directory = run.path / FLOW / OUTPUTS / "001"
     assert "the rendering endpoint could not be reached" in str(refused.value)
+    assert "its tunnel has dropped" in str(refused.value)
     assert [one.kind for one in attempts(directory, 1)] == ["transient"]
     assert not list(directory.glob("001.error.1.permanent.json"))
 
