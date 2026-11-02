@@ -7,7 +7,7 @@ relative to the repository's root.
 
 - [x] 1 — The worktree
 - [x] 2 — The changelog
-- [ ] 3 — The documents
+- [x] 3 — The documents
 - [ ] 4 — The threat model
 - [ ] 5 — The ruleset **HUMAN**
 
@@ -55,18 +55,18 @@ relative to the repository's root.
 
 ## 3 — The documents
 
-- [ ] 3.1 Create `CODING_STANDARDS.md` per [D5](design.md#d5), its sections `## Baseline` and `## Project rules`: move
+- [x] 3.1 Create `CODING_STANDARDS.md` per [D5](design.md#d5), its sections `## Baseline` and `## Project rules`: move
   `AGENTS.md`'s `## Engineering conventions` into the first and its *How a spec reads* into the second, word for word.
   Point `tests/test_spec_prose.py`'s docstring at `CODING_STANDARDS.md`.
   Verify: `grep -c 'How a spec reads' CODING_STANDARDS.md` prints a count above 0, and `grep -c 'Engineering conventions' AGENTS.md` prints `0`.
-- [ ] 3.2 Create `CONTRIBUTING.md`, its sections `## How a change lands` and `## The evidence a change carries`: move
+- [x] 3.2 Create `CONTRIBUTING.md`, its sections `## How a change lands` and `## The evidence a change carries`: move
   `AGENTS.md`'s `## The quality gate` and `## How a change is cut here` there, rewritten per [D5](design.md#d5). Add
   `CONTRIBUTING.md` to `MAY_CITE` in `tests/test_changelog.py`.
   Verify: `grep -c 'bump:' CONTRIBUTING.md` prints a count above 0, `grep -c 'version: vX.Y' CONTRIBUTING.md` prints `0`, and `grep -c 'How a change is cut here' AGENTS.md` prints `0`.
-- [ ] 3.3 Create `ARCHITECTURE.md` per [D6](design.md#d6), linking `docs/README.md`, `docs/modules.md`, `docs/data-flow.md`,
+- [x] 3.3 Create `ARCHITECTURE.md` per [D6](design.md#d6), linking `docs/README.md`, `docs/modules.md`, `docs/data-flow.md`,
   `docs/principles.md`, `docs/decisions.md` and `docs/pins.md`.
   Verify: `wc -l < ARCHITECTURE.md` prints a number below `45`, and `grep -c 'docs/modules.md' ARCHITECTURE.md` prints a count above 0.
-- [ ] 3.4 Cut `AGENTS.md` to instructions: add [The mandatory lines](design.md#the-mandatory-lines) to its opening, and
+- [x] 3.4 Cut `AGENTS.md` to instructions: add [The mandatory lines](design.md#the-mandatory-lines) to its opening, and
   update its paragraph naming `## How a change is cut here` and the `README.md` lines naming what `AGENTS.md` carries.
   Verify: `grep -c 'CODING_STANDARDS.md' AGENTS.md` and `grep -c 'ARCHITECTURE.md' AGENTS.md` each print a count above 0.
 

@@ -18,9 +18,15 @@ library of collections — each collection's hub, stage ③, its render and its 
 > starts explaining how something works rather than what to do about it, it belongs in `docs/`.
 
 **The method this repo runs is OpenSpec SDD** — work is defined as a change before it is built, the
-living spec is test-backed, and a release folds one into the other. `## How a change is cut here`,
-below, is the in-tree statement of that contract; everything else here is a rule this repository holds
-in particular.
+living spec is test-backed, and a release folds one into the other.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) is the in-tree statement of that contract; everything else here is a
+rule this repository holds in particular.
+
+**The gate is `make gate`**, run from the repository root.
+
+**Before work, read [the coding standards](CODING_STANDARDS.md) and [how a change lands](CONTRIBUTING.md): mandatory
+shared context.** **Before designing, building or reviewing, also read [the decisions in force](docs/decisions.md) and
+[the architecture](ARCHITECTURE.md).**
 
 **Identity preservation is `summon`'s product.** An anime image of someone else is a failed `summon`
 run. `conjure` takes no photograph and makes no identity claim
@@ -37,148 +43,11 @@ follows. A tool that expands `@` imports loads it through the line below; any ot
 
 ---
 
-## The quality gate
-
-**The gate is `make gate`**, run from the repository root; `make -n gate` prints what it runs. The
-`Makefile` is its one declaration, and the notes on each command are the `Makefile`'s. CI
-(`.github/workflows/ci.yml`) runs `make gate` too.
-
-Every command green, or the phase is not done. **Never weaken the gate to pass** — see the guardrails.
-
-Beyond the gate, **image-as-code phases also run `bash -n` on shell scripts and `docker build --check`**.
-That is a convention for those phases, not part of the gate; adding it to the gate means adding it to the
-`Makefile`.
-
-**The suite runs offline and deterministically.** The ComfyUI transport is faked behind a `ComfyTransport`
-Protocol (`FakeComfyClient`), the suite reads the shipped graph itself rather than a fixture copy of it,
-and seed drawing takes an injected `random.Random`. No test hits a GPU or the network. A scenario only a
-browser shows declares `Layers: e2e` and runs under `tests/e2e/` — Playwright on Chromium, which
-`make browsers` fetches, against the real server on the suite's doubles through `ISEKAI_WIRING`; every
-other declares `Layers: unit`. Diffusion quality and identity fidelity are verified **live on a pod, by
-eye**, never mocked and never asserted.
-
----
-
 ## The run's lines
 
 - **Worktrees:** `../` — each version's worktree sits beside the primary, named by its change id.
 - **Workspace setup:** `make setup` — restores what a fresh worktree lacks.
 - **Ship network:** none — the given package hosts are enough, because the setup fills the worktree first.
-
----
-
-## Engineering conventions
-
-The active change's **`design.md`** is authoritative for that change, with this file behind it — read
-it. **`docs/decisions.md` records the decisions in force; a change's `design.md` records why one was
-taken**, and is frozen when the change is archived.
-
-**Tests are bound to the spec.** Every test carries `@pytest.mark.spec("<key>")` naming the scenario it
-proves, or `@pytest.mark.spec_exempt("<reason>")` if it is genuinely structural. Both are registered in
-`[tool.pytest.ini_options] markers` — registration is load-bearing, because pytest silently ignores an
-unregistered marker, so an unregistered one would bind nothing while looking exactly like a binding.
-Behaviour gets a scenario first; a new test gets a binding.
-
-**A comment says what and why, in the present tense.** It names a decision in force as a plain `D27`, never a link,
-and carries no version, change id or design citation; the archive keeps the history.
-
----
-
-## How a change is cut here
-
-Work is defined before it is built, as a change under `openspec/changes/<id>/`. A change is the unit of
-work **and** the unit of release.
-
-A change is **four artifacts, always all four**: `proposal.md` · `specs/` · `design.md` · `tasks.md`,
-plus the tracked `.openspec.yaml` where one is needed. A change may carry a fifth of its own —
-`0023-backlog-paydown` shipped `no-spec-delta.md` beside the four — but never fewer than the four.
-
-1. **Settle the decisions first.** A change is cut from decisions argued against a person, not from a first
-   draft. The verdict — `feasible` / `feasible-with-caveats` / `needs-precursor` /
-   `infeasible-as-specified` — is recorded in the change's `design.md`.
-2. **Scaffold by hand** — `openspec new change <name>` *does* exist in 1.11.0, and this repo does not
-   use it: it writes into the root `openspec/config.yaml` declares, this repo keeps no such file, and
-   the id rule below is not one the CLI knows. The directory is created directly.
-   The id is `<digits>-<lowercase-slug>`, and the digits are **the next free number**, zero-padded
-   to four — higher than every id under `openspec/changes/` and its `archive/`, for a minor and a
-   patch alike. An id is never renamed once commits carry it as a trailer.
-3. **Author** each artifact against `openspec instructions <proposal|specs|design|tasks> --change
-   <NNNN-slug>`, one at a time, fetching each immediately before writing it. `proposal.md` additionally
-   opens with `version: vX.Y` frontmatter — **the CLI neither emits nor checks that key; it is on the
-   author.**
-4. **A change that changes no requirement** declares the absence rather than inventing one: `skip_specs:
-   true` in the change's tracked `.openspec.yaml`, **plus** `specs/.gitkeep`. Both, not either —
-   `0023-backlog-paydown` carries the pair. Never write a requirement solely to satisfy the validator.
-5. **Finish on a green check** — `openspec validate <NNNN-slug> --strict`.
-
-**Progress lives in `tasks.md`**, in its `## Progress` checklist, and **the current phase is the first
-unchecked box**. A phase is advanced by a commit **and** a ticked box, in that phase's own commit — either
-alone is not an advance.
-
-**The living spec** is `openspec/specs/<capability>/spec.md`, each capability a contract with one
-owner: `caption`, `cli`, `comfy-transport`, `evaluation`, `field-map`, `image-generation`,
-`model-provisioning`, `review`, `run-directory`, `sheet`, `tagging`, `ui`. **List
-`openspec/specs/*/` rather than trusting that line** — when it carried a *count* instead of the names,
-that count was wrong in three consecutive versions.
-A capability enters and leaves the living spec only when a change is **archived**, which is
-`mf-release`'s act and never the builder's — so what is on disk is never what a pending change
-implies. Every `#### Scenario:` carries a `- **Key:**` and a `- **Layers:**` bullet, and the key is
-`<capability>:<requirement-slug>:<scenario-slug>`, so a key locates its own file. On release the delta
-is folded in and the change moves to `openspec/changes/archive/`; archived changes are never deleted.
-
-***How a spec reads*** — the rule every requirement and every delta follows;
-`tests/test_spec_prose.py` holds what a test can check of it.
-
-- **A requirement is one SHALL paragraph** — what the system does, testable. Then one *why*
-  paragraph, in the present tense. A decision in force is linked, not retold.
-- **A scenario has one WHEN, one THEN and at most two AND**, each on one line where it fits. It
-  carries no reasons.
-- **A flow, a state or a layout gets an ASCII diagram**, in a fenced block.
-- **No history** — no version, no change id, no "used to", no "this change". A figure stays only when
-  it is the rule.
-- **`## Purpose` is one or two sentences.**
-
-Before, `run-directory`'s *A run root is under the ignored root or outside the repository* stated its
-SHALL, then a paragraph of reasons, then a paragraph on how its first implementation failed. After:
-
-```
-The system SHALL refuse a run root inside the repository's working tree unless it is under the ignored
-data root, and SHALL accept one outside the repository. It SHALL decide containment by the identity of
-the directories, never by comparing the text of their paths.
-
-A run holds a copy of the photograph, so a run root git can reach is one `git add` from publishing a
-likeness ([D18](../../../docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)). Two spellings of
-one directory are one directory, and only its identity says so.
-```
-
-**The version line is one line in four places** — `proposal.md`'s `version:`, `CHANGELOG.md`'s
-`## [X.Y.Z]`, `pyproject.toml`'s `version`, and the annotated tag `vX.Y.Z`. A minor release spells that
-`vX.Y` / `## [X.Y.0]` / `vX.Y.0`; a patch release spells it `vX.Y.Z` throughout, as `0.22.1` did. All
-four agree or the release halts. One branch per version. `CHANGELOG.md` follows Keep a Changelog +
-SemVer and its preamble's rules: each phase appends one bullet under `## [Unreleased]` — 1–3 short lines,
-what changed and why, ending with its design id — and the release cuts the heading as
-`## [X.Y.Z] - <date> · <change-id>`. No code, doc or README cites it: it is a release record, not a source.
-
-**A minor delivers one feature; a patch delivers none**, and meets every one of these — work that
-cannot is not a patch:
-
-- no format version moves — `MANIFEST_VERSION`, any run file kind's version, which
-  `isekai/foundation/artifacts.py` declares;
-- every behaviour fix is required by an existing requirement: a scenario may be added under one, a
-  requirement may not;
-- nothing deprecates a verb or a flag;
-- nothing changes the product — a sheet's fields, the prompt, the image — for the same inputs and
-  configuration.
-
-Every commit is a Conventional Commit, **one phase = one commit**, staged **by name** and never with
-`git add -A`. Each carries a `Change: <change-id>` git trailer, in the trailer block at the end of the
-message and **contiguous** with any `Co-Authored-By:` line — a blank line between them silently breaks the
-block.
-
-The tooling is **operator tooling, recorded and not pinned**: `@fission-ai/openspec@1.11.0`, resolved on
-`PATH`. It is deliberately **not** in the gate — nothing in CI runs it, so a moving version can never
-turn CI red. `tests/test_spec_bindings.py` holds every binding: each living key has a test, each marker a
-key, each test one marker.
 
 ---
 

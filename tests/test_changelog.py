@@ -31,6 +31,7 @@ MAY_CITE = frozenset(
     {
         "CHANGELOG.md",
         "AGENTS.md",
+        "CONTRIBUTING.md",
         "docs/pins.md",
         "tests/test_flow.py",
         "tests/test_docs.py",
