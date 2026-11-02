@@ -222,6 +222,31 @@ class Reader:
         with self._lock:
             return {upload: dict(state) for upload, state in self._files.items()}
 
+    def remove(self, name: str) -> None:
+        """Delete the file read as `name` and forget its upload; refuse once sealed.
+
+        A skipped upload staged nothing of its own, so it is not one to remove.
+        """
+        _refuse_name(name)
+        # Under the lock `seal` takes, so no commit walks the folder mid-removal.
+        with self._lock:
+            if self._sealed:
+                raise Refusal(
+                    f"{name}: Import is already committing this import; once the "
+                    "collection's hub opens, delete it from the collection's sources/"
+                )
+            uploads = [
+                upload
+                for upload, one in self._files.items()
+                if one.get("name") == name and one["state"] in _STAGED
+            ]
+            if not uploads:
+                raise Refusal(f"{name}: not staged in this import; nothing to remove")
+            with _CLAIM:
+                (self._staging / name).unlink(missing_ok=True)
+            for upload in uploads:
+                del self._files[upload]
+
     def seal(self) -> None:
         """Refuse while sealed or a file is unread, else refuse uploads until `unseal`.
 
@@ -289,6 +314,9 @@ class Reader:
 
 # The states of a file the reader has not finished with.
 _UNREAD = frozenset({"waiting", "converting"})
+
+# The states of a file read into the staging folder under its own name.
+_STAGED = frozenset({"ready", "converted", "not cleaned"})
 
 
 def _closed(name: str) -> Refusal:
@@ -393,15 +421,21 @@ class Imports:
         return folder
 
 
+def staged_file(staging: Path, name: str) -> Path:
+    """Return the path of the file staged as `name`, or refuse it by name."""
+    _refuse_name(name)
+    staged = staging / name
+    if not staged.is_file():
+        raise Refusal(f"{name}: not staged in this import; choose it again")
+    return staged
+
+
 def preview(staging: Path, name: str) -> bytes:
     """Return a staged file upright, as `upright_thumbnail` makes it.
 
     Made from the file each time and kept nowhere: it goes with its staging folder.
     """
-    _refuse_name(name)
-    staged = staging / name
-    if not staged.is_file():
-        raise Refusal(f"{name}: not staged in this import; choose it again")
+    staged = staged_file(staging, name)
     try:
         return upright_thumbnail(staged)
     except OSError as unread:

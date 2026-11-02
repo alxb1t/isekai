@@ -6,7 +6,7 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 ## Progress
 
 - [x] 1 — The bars
-- [ ] 2 — The import
+- [x] 2 — The import
 - [ ] 3 — The viewer
 - [ ] 4 — Review
 - [ ] 5 — The dialogs
@@ -30,14 +30,14 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 
 ## 2 — The import
 
-- [ ] 2.1 Add `remove(name)` to `Reader` in `isekai/pipeline/importing.py`, refused once sealed, and
+- [x] 2.1 Add `remove(name)` to `Reader` in `isekai/pipeline/importing.py`, refused once sealed, and
   `DELETE /api/staging/{staged}/files/{name}` in `isekai/interface/ui/app.py` calling it, per [D3](design.md#d3); pytest
   bound to `import:stage:a-staged-file-is-removed-alone` in `tests/test_importing.py`.
   Verify: `uv run pytest tests/test_importing.py -k removed_alone` exits 0.
-- [ ] 2.2 Add `GET /api/staging/{staged}/files/{name}`, the cleaned file full size, to `isekai/interface/ui/app.py` and its
+- [x] 2.2 Add `GET /api/staging/{staged}/files/{name}`, the cleaned file full size, to `isekai/interface/ui/app.py` and its
   module docstring's route list; a test in `tests/test_ui_api.py` beside the thumb's.
   Verify: `uv run pytest tests/test_ui_api.py -k staging` exits 0.
-- [ ] 2.3 In `ui/src/components/ImportSheet.vue`: the `×` on a read or skipped tile and `⌫` remove it, the focus moving
+- [x] 2.3 In `ui/src/components/ImportSheet.vue`: the `×` on a read or skipped tile and `⌫` remove it, the focus moving
   to the next tile; `.import__tiles` in `ui/src/app.css` a CSS grid stepped by `moved`; `↵` opens the viewer full size.
   Add vitest in `ui/src/staging.test.ts` bound to `ui:sheet:the-tiles-take-the-keys` and `ui:sheet:a-chosen-file-is-removed-alone`.
   Verify: `sed -n '/^\.import__tiles {/,/}/p' ui/src/app.css | grep -c 'display: grid'` prints `1`, and `uv run python -m tools.test_ui` exits 0.

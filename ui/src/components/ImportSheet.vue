@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import { noun } from '../words'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import {
+  cancelStaging,
+  commitStaging,
+  openStaging,
+  removeStaged,
+  stagedAt,
+  stagedThumbAt,
+} from '../api'
 import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
-import { modded, plain } from '../stores/keys'
-import { discards } from '../staging'
+import type { Move } from '../grid'
+import { isField, modded, plain } from '../stores/keys'
+import { after, discards, removal, stepped } from '../staging'
 import { useLiveStore } from '../stores/live'
+import ImageViewer, { type Shown } from './ImageViewer.vue'
 import KeyHint from './KeyHint.vue'
 import type { StagedFile } from '../types'
 
@@ -210,6 +219,73 @@ function total(): string {
   return size(ready.value.reduce((sum, one) => sum + one.file.size, 0))
 }
 
+/* The tiles' grid, the focused tile's place in `shown`, and the viewer's place in `viewable`. */
+const grid = ref<HTMLElement | null>(null)
+const focused = ref<number | null>(null)
+const viewing = ref<number | null>(null)
+let viewed: number | null = null
+
+function focusTile(index: number | null): void {
+  if (index === null) return
+  void nextTick(() => grid.value?.querySelectorAll<HTMLElement>('.import__tile')[index]?.focus())
+}
+
+/* The grid's columns, as the browser lays them out. */
+function columns(): number {
+  const held = grid.value
+  return held ? getComputedStyle(held).gridTemplateColumns.split(' ').filter(Boolean).length : 0
+}
+
+function move(to: Move): void {
+  if (focused.value !== null) focusTile(stepped(focused.value, shown.value.length, columns(), to))
+}
+
+/* Take a chosen file out of the import, unasked: nothing is committed yet (D3). */
+async function remove(one: Tile): Promise<void> {
+  const from = removal(one.phase, one.result?.state)
+  if (from === null || committing.value) return
+  const next = after(shown.value.indexOf(one), shown.value.length)
+  if (from === 'staging' && staging.value !== null && one.result) {
+    try {
+      await removeStaged(staging.value, one.result.name)
+    } catch (reason) {
+      refusal.value = (reason as Error).message
+      return
+    }
+  }
+  refusal.value = null
+  tiles.value = tiles.value.filter((tile) => tile !== one)
+  focusTile(next)
+}
+
+/* The read files, each full size from staging, that `↵` opens in the viewer. */
+const viewable = computed(() => shown.value.filter((one) => preview(one) !== null))
+const images = computed<Shown[]>(() =>
+  viewable.value.map((one) => ({
+    src: stagedAt(staging.value ?? '', one.result?.name ?? ''),
+    name: one.result?.name ?? one.file.name,
+  })),
+)
+
+function view(): void {
+  const one = focused.value === null ? undefined : shown.value[focused.value]
+  const index = one ? viewable.value.indexOf(one) : -1
+  if (index < 0) return
+  viewed = focused.value
+  viewing.value = index
+}
+
+function closeViewer(): void {
+  viewing.value = null
+  focusTile(viewed)
+}
+
+/* Once every file is read, the first tile takes the focus unless a field or a tile holds it. */
+watch(reading, (now) => {
+  if (!now && shown.value.length > 0 && focused.value === null && !isField(document.activeElement))
+    focusTile(0)
+})
+
 async function importAll(): Promise<void> {
   if (disabled.value !== null || staging.value === null) return
   refusal.value = null
@@ -264,7 +340,36 @@ useKeys('overlay', [
     run: () => void importAll(),
     inField: true,
   },
+  ...(
+    [
+      ['tile-left', plain('KeyH', 'ArrowLeft'), 'column-'],
+      ['tile-right', plain('KeyL', 'ArrowRight'), 'column+'],
+      ['tile-up', plain('KeyK', 'ArrowUp'), 'row-'],
+      ['tile-down', plain('KeyJ', 'ArrowDown'), 'row+'],
+    ] as const
+  ).map(([id, keys, to]) => ({
+    id,
+    keys: [...keys],
+    label: 'move',
+    run: () => move(to),
+    when: onTile,
+  })),
+  {
+    id: 'remove-file',
+    keys: plain('Backspace'),
+    label: 'remove the file',
+    run: () => {
+      const one = focused.value === null ? undefined : shown.value[focused.value]
+      if (one) void remove(one)
+    },
+    when: () => onTile() && !committing.value,
+  },
+  { id: 'view-file', keys: plain('Enter'), label: 'full size', run: view, when: onTile },
 ])
+
+function onTile(): boolean {
+  return focused.value !== null
+}
 
 /* A modal dialog, on its first control. */
 const dialog = ref<HTMLDialogElement | null>(null)
@@ -318,16 +423,30 @@ onUnmounted(() => {
     <div class="import__body">
       <div class="import__files">
         <p class="section-label">sources · {{ ready.length }} · {{ total() }}</p>
-        <div class="import__tiles">
+        <div ref="grid" class="import__tiles">
           <div
-            v-for="one in shown"
+            v-for="(one, index) in shown"
             :key="one.key"
             class="import__tile"
             :class="{ 'import__tile--dim': one.result?.state === 'skipped' }"
+            :tabindex="index === (focused ?? 0) ? 0 : -1"
             :data-file="one.file.name"
             :data-phase="one.phase"
             :data-state="one.result?.state ?? ''"
+            @focusin="focused = index"
+            @focusout="focused = null"
           >
+            <button
+              v-if="removal(one.phase, one.result?.state) !== null"
+              class="import__remove"
+              type="button"
+              tabindex="-1"
+              :disabled="committing"
+              :aria-label="`Remove ${one.result?.name ?? one.file.name}`"
+              @click="remove(one)"
+            >
+              ×
+            </button>
             <img v-if="preview(one)" class="import__preview" :src="preview(one) ?? ''" alt="" />
             <span class="import__name mono">{{ one.result?.name ?? one.file.name }}</span>
             <span class="import__size mono">{{ size(one.file.size) }}</span>
@@ -396,5 +515,6 @@ onUnmounted(() => {
         {{ adding ? `Import ${ready.length}` : 'Import' }}<KeyHint command="import" />
       </button>
     </footer>
+    <ImageViewer v-if="viewing !== null" :images="images" :start="viewing" @close="closeViewer" />
   </dialog>
 </template>

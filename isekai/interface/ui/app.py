@@ -35,7 +35,7 @@ POST /api/c/{collection}/prepare   ·   POST /api/jobs/{prepare,render}/stop
 GET  /api/c/{collection}/render  ·  POST …/render{/quote,}  {keep_open, limit_s, images}
 GET  /api/sessions/running   ·   GET /api/c/{collection}/sessions/{id}
 POST /api/billing/check
-POST /api/staging   ·   PUT …/{id}/files/{name}, and GET its /thumb
+POST /api/staging   ·   PUT, GET and DELETE …/{id}/files/{name}, and GET its /thumb
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {collection, as_is, add}
 GET  /events[?collection=&staging=], either or both    Server-Sent Events
 GET  /api/c/{collection}/review/{digest}/{flow}         and /photo
@@ -380,6 +380,19 @@ def create_app(
             raise importing.past_limit(name, int(declared), limit)
         body = await request.body()
         return await run_in_threadpool(held.put, name, body)
+
+    @app.get("/api/staging/{staged}/files/{name}")
+    def read_staged(staged: str, name: str) -> Response:
+        """Serve a staged file full size, as it was cleaned."""
+        served = _photograph(importing.staged_file(imports.folder(staged), name))
+        served.headers["Cache-Control"] = "no-store"
+        return served
+
+    @app.delete("/api/staging/{staged}/files/{name}")
+    def delete_staged(staged: str, name: str) -> dict[str, Any]:
+        """Remove a read file from its import before the commit; refused once sealed."""
+        imports.reader(staged).remove(name)
+        return {}
 
     @app.get("/api/staging/{staged}/files/{name}/thumb")
     def read_staged_thumb(staged: str, name: str) -> Response:

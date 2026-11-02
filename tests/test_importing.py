@@ -834,6 +834,49 @@ def test_two_uploads_of_one_name_keep_their_own_states(tmp_path: Path) -> None:
     assert {one["upload"] for one in published if one["state"] == "refused"} == {first}
 
 
+@pytest.mark.spec("import:stage:a-staged-file-is-removed-alone")
+def test_a_staged_file_is_removed_alone_and_never_once_sealed(tmp_path: Path) -> None:
+    library = tmp_path / "library"
+    read = threading.Event()
+    done: list[str] = []
+
+    def publish(staged: str, event: dict[str, object]) -> None:
+        if event["state"] not in {"waiting", "converting"}:
+            done.append(str(event["file"]))
+            if len(done) == 3:
+                read.set()
+
+    imports = importing.Imports(library, LIMIT, publish)
+    staged = imports.open()
+    reader = imports.reader(staged)
+    for name, colour in (("a.jpg", (200, 0, 0)), ("b.jpg", (0, 200, 0))):
+        reader.put(name, photo_jpeg(colour))
+    skipped = reader.put("again.jpg", photo_jpeg((0, 200, 0)))["upload"]
+    assert read.wait(10.0)
+    folder = imports.folder(staged)
+
+    reader.remove("a.jpg")
+
+    assert sorted(one["name"] for one in reader.files().values()) == [
+        "again.jpg",
+        "b.jpg",
+    ]
+    assert reader.files()[skipped]["state"] == "skipped"
+    with pytest.raises(Refusal, match="again.jpg: not staged"):
+        reader.remove("again.jpg")
+    with pytest.raises(Refusal, match="a.jpg: not staged"):
+        reader.remove("a.jpg")
+
+    reader.seal()
+    with pytest.raises(Refusal, match="b.jpg: Import is already committing"):
+        reader.remove("b.jpg")
+    assert (folder / "b.jpg").is_file()
+    reader.unseal()
+
+    imports.commit(staged, "trip")
+    assert [p.name for p in (library / "trip" / "sources").iterdir()] == ["b.jpg"]
+
+
 @pytest.mark.spec("ui:sheet:an-upload-after-import-is-refused")
 def test_an_upload_once_import_commits_is_refused_and_the_collection_is_unchanged(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch

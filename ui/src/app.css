@@ -1933,14 +1933,16 @@ dialog::backdrop {
   width: 240px;
 }
 
+/* A grid, so `j k` step its rows (D3); a column is a tile's 124px, its padding and border. */
 .import__tiles {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 142px);
   gap: 10px;
   margin-bottom: 14px;
 }
 
 .import__tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1954,6 +1956,29 @@ dialog::backdrop {
 
 .import__tile--dim {
   opacity: 0.5;
+}
+
+.import__tile:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--focus);
+}
+
+.import__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 0 5px;
+  border: none;
+  border-radius: 3px;
+  background: var(--ground-deep);
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.import__remove:hover {
+  color: var(--ink);
 }
 
 .import__name {

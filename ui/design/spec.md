@@ -144,6 +144,9 @@ J1·4  ┌ New collection   6 files chosen · 5 sources · 1 refused            
 
 - Tiles are 124×164 with × at the top right; a converted tile carries its badge (mono 10px) and its name and size
   after conversion.
+- The tiles are a grid. Once every file is read the first tile takes the focus, unless the name field holds it; `h j k
+  l` and the arrows move it, `⌫` removes the focused file as × does, unasked, and `↵` opens it full size in the
+  viewer. A tile still on its way offers no ×.
 - While reading, the header says `reading 3 of 6` in `accent-ink`, tiles show `converting…` or `waiting`, and Import
   is disabled with `Reading 3 of 6`.
 
