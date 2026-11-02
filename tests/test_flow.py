@@ -9,6 +9,7 @@ renders.
 import json
 import shutil
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -58,19 +59,44 @@ PINNED: dict[str, str] = {
         "96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698"
     ),
     "summon-flat-anime-wai": (
-        "05d62409e518a9446ba046c691ed7e2ba194b609803b12a72e853c4ebd092940"
+        "fd8e9f08364172fa0effe13220134fffe76c5abae50c5cd1c68d31b23bdd81ab"
+    ),
+    "summon-semireal-anime-wai": (
+        "b96c1df1c1006fbf1f4445d4d52e6d24b5eb34250460dddc977e6d9f7aa2e3f4"
+    ),
+    "summon-vivid-anime-wai": (
+        "76d16cf6ab1139f0985ce9e1f01db957f5817cb7fcd6114709969166edea6850"
     ),
 }
 
 # A control flow and the subject it is held equal to; a second control is one line.
 CONTROLS: dict[str, str] = {"control-anime-wai": "summon-anime-wai"}
 
-# A flat flow and the subject it is held equal to but for its style.
-FLATS: dict[str, str] = {"summon-flat-anime-wai": "summon-anime-wai"}
 
-# The terms a flat flow appends to its subject's trailer and negative.
-FLAT_TRAILER = "flat color, cel shading, lineart"
-FLAT_NEGATIVE = "realistic, photorealistic, 3d, semi-realistic"
+class Style(NamedTuple):
+    """The subject a styled flow is held equal to, and the terms it appends."""
+
+    subject: str
+    trailer: str
+    negative: str
+
+
+# A styled flow and its style. An empty term adds nothing; a new look is one row.
+FLAT = "summon-flat-anime-wai"
+STYLED: dict[str, Style] = {
+    FLAT: Style(
+        "summon-anime-wai",
+        "flat color, cel shading, anime coloring, colorful",
+        "realistic, photorealistic, 3d, semi-realistic",
+    ),
+    "summon-semireal-anime-wai": Style("summon-anime-wai", "", ""),
+    "summon-vivid-anime-wai": Style(
+        "summon-anime-wai",
+        "",
+        "realistic, photorealistic, 3d, semi-realistic, "
+        "monochrome, greyscale, muted color",
+    ),
+}
 
 # The dials a control zeroes: the face chain, and nothing else.
 FACE_DIALS = ("ip_weight", "identity_cn_strength")
@@ -1020,11 +1046,11 @@ def test_a_control_whose_manifest_differs_elsewhere_is_named(tmp_path: Path) -> 
     assert _control_differences(control, subject) == [MANIFEST_NAME]
 
 
-# --- a flat flow equals its subject but for its style --------------------------
+# --- a styled flow equals its subject but for its style ------------------------
 
 
-def _flat_differences(flat_dir: Path, subject_dir: Path) -> list[str]:
-    """Return the files separating a flat flow from its subject beyond its style.
+def _styled_differences(styled_dir: Path, subject_dir: Path) -> list[str]:
+    """Return the files separating a styled flow from its subject beyond its style.
 
     The style is the identity node's `end_at`, `ip_weight`, the trailer and the
     negative. e.g. `["graph.json"]` when the graph differs anywhere else.
@@ -1033,15 +1059,15 @@ def _flat_differences(flat_dir: Path, subject_dir: Path) -> list[str]:
         name
         for name in SIBLINGS
         if name != GRAPH_NAME
-        and (flat_dir / name).read_bytes() != (subject_dir / name).read_bytes()
+        and (styled_dir / name).read_bytes() != (subject_dir / name).read_bytes()
     ]
     style = {"dials": ("ip_weight",), "prompt": ("trailer", "negative")}
     manifest, subject_manifest = (
-        _manifest_without(d, **style) for d in (flat_dir, subject_dir)
+        _manifest_without(d, **style) for d in (styled_dir, subject_dir)
     )
     identity = subject_manifest["nodes"]["identity"]
     ours, theirs = (
-        json.loads((d / GRAPH_NAME).read_text()) for d in (flat_dir, subject_dir)
+        json.loads((d / GRAPH_NAME).read_text()) for d in (styled_dir, subject_dir)
     )
     ours[identity]["inputs"]["end_at"] = theirs[identity]["inputs"]["end_at"]
     if ours != theirs:
@@ -1051,52 +1077,84 @@ def _flat_differences(flat_dir: Path, subject_dir: Path) -> list[str]:
     return differing
 
 
-@pytest.mark.spec("image-generation:flat:files-equal-the-subject")
-@pytest.mark.parametrize("flat", sorted(FLATS))
-def test_a_flat_flow_holds_the_subjects_schema_and_briefing(
-    flat: str, tmp_path: Path
-) -> None:
-    ours, subject = _pair(tmp_path, flat, FLATS[flat])
-    assert _flat_differences(ours, subject) == []
+def _holds_the_subjects_schema_and_briefing(name: str, tmp_path: Path) -> None:
+    ours, subject = _pair(tmp_path, name, STYLED[name].subject)
+    assert _styled_differences(ours, subject) == []
 
     (ours / SCHEMA_NAME).write_text("{}\n")
-    assert _flat_differences(ours, subject) == [SCHEMA_NAME]
+    assert _styled_differences(ours, subject) == [SCHEMA_NAME]
 
 
-@pytest.mark.spec("image-generation:flat:the-graph-differs-in-the-face-chains-end")
-@pytest.mark.parametrize("flat", sorted(FLATS))
-def test_a_flat_graph_differs_only_in_the_face_chains_end(
-    flat: str, tmp_path: Path
-) -> None:
-    ours, subject = _pair(tmp_path, flat, FLATS[flat])
-    tracked = load_flow(flat)
+def _graph_differs_only_in_the_face_chains_end(name: str, tmp_path: Path) -> None:
+    ours, subject = _pair(tmp_path, name, STYLED[name].subject)
+    tracked = load_flow(name)
     graph = tracked.graph()
-    assert _flat_differences(ours, subject) == []
+    assert _styled_differences(ours, subject) == []
     assert graph[tracked.nodes["identity"]]["inputs"]["end_at"] < 1
 
     graph[tracked.nodes["hires_sampler"]]["inputs"]["denoise"] = 0.5
     (ours / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
-    assert _flat_differences(ours, subject) == [GRAPH_NAME]
+    assert _styled_differences(ours, subject) == [GRAPH_NAME]
 
 
-@pytest.mark.spec("image-generation:flat:the-manifest-differs-in-the-style")
-@pytest.mark.parametrize("flat", sorted(FLATS))
-def test_a_flat_manifest_differs_only_in_its_name_and_its_style(
-    flat: str, tmp_path: Path
-) -> None:
-    ours, subject = load_flow(flat), load_flow(FLATS[flat])
+def _manifest_differs_only_in_its_name_and_its_style(name: str, tmp_path: Path) -> None:
+    style = STYLED[name]
+    ours, subject = load_flow(name), load_flow(style.subject)
     separator = subject.prompt["separator"]
-    assert _flat_differences(ours.path, subject.path) == []
-    assert ours.prompt["trailer"] == separator.join(
-        (subject.prompt["trailer"], FLAT_TRAILER)
-    )
-    assert ours.prompt["negative"] == separator.join(
-        (subject.prompt["negative"], FLAT_NEGATIVE)
-    )
+    assert _styled_differences(ours.path, subject.path) == []
+    for key, added in (("trailer", style.trailer), ("negative", style.negative)):
+        terms = (subject.prompt[key], added) if added else (subject.prompt[key],)
+        assert ours.prompt[key] == separator.join(terms)
     assert ours.dials["ip_weight"] < subject.dials["ip_weight"]
 
-    scratch, scratch_subject = _pair(tmp_path, flat, FLATS[flat])
+    scratch, scratch_subject = _pair(tmp_path, name, style.subject)
     document = json.loads((scratch / MANIFEST_NAME).read_text())
     document["dials"]["identity_cn_strength"] = 0.5
     (scratch / MANIFEST_NAME).write_text(json.dumps(document, indent=2) + "\n")
-    assert _flat_differences(scratch, scratch_subject) == [MANIFEST_NAME]
+    assert _styled_differences(scratch, scratch_subject) == [MANIFEST_NAME]
+
+
+@pytest.mark.spec("image-generation:flat:files-equal-the-subject")
+def test_a_flat_flow_holds_the_subjects_schema_and_briefing(tmp_path: Path) -> None:
+    _holds_the_subjects_schema_and_briefing(FLAT, tmp_path)
+
+
+@pytest.mark.spec("image-generation:flat:the-graph-differs-in-the-face-chains-end")
+def test_a_flat_graph_differs_only_in_the_face_chains_end(tmp_path: Path) -> None:
+    _graph_differs_only_in_the_face_chains_end(FLAT, tmp_path)
+
+
+@pytest.mark.spec("image-generation:flat:the-manifest-differs-in-the-style")
+def test_a_flat_manifest_differs_only_in_its_name_and_its_style(
+    tmp_path: Path,
+) -> None:
+    _manifest_differs_only_in_its_name_and_its_style(FLAT, tmp_path)
+
+
+# --- a semireal and a vivid flow ----------------------------------------------
+
+LOOKS = sorted(set(STYLED) - {FLAT})
+
+
+@pytest.mark.spec("image-generation:styled:files-equal-the-subject")
+@pytest.mark.parametrize("look", LOOKS)
+def test_a_look_holds_the_subjects_schema_and_briefing(
+    look: str, tmp_path: Path
+) -> None:
+    _holds_the_subjects_schema_and_briefing(look, tmp_path)
+
+
+@pytest.mark.spec("image-generation:styled:the-graph-differs-in-the-face-chains-end")
+@pytest.mark.parametrize("look", LOOKS)
+def test_a_look_graph_differs_only_in_the_face_chains_end(
+    look: str, tmp_path: Path
+) -> None:
+    _graph_differs_only_in_the_face_chains_end(look, tmp_path)
+
+
+@pytest.mark.spec("image-generation:styled:the-manifest-differs-in-the-style")
+@pytest.mark.parametrize("look", LOOKS)
+def test_a_look_manifest_differs_only_in_its_name_and_its_style(
+    look: str, tmp_path: Path
+) -> None:
+    _manifest_differs_only_in_its_name_and_its_style(look, tmp_path)

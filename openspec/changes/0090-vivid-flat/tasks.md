@@ -4,23 +4,23 @@ The flows, then the record, per [design](design.md).
 
 ## Progress
 
-- [ ] 1 — The flows
+- [x] 1 — The flows
 - [ ] 2 — The record
 
 ## 1 — The flows
 
-- [ ] 1.1 Copy `flows/summon-vivid-g-anime-wai/` from `prototype/vivid` to `flows/summon-semireal-anime-wai/` and
+- [x] 1.1 Copy `flows/summon-vivid-g-anime-wai/` from `prototype/vivid` to `flows/summon-semireal-anime-wai/` and
   `flows/summon-vivid-f-anime-wai/` to `flows/summon-vivid-anime-wai/` with `git show`, then set each `flow.json`'s
   `flow` to its directory, per [D1](design.md#d1).
   Verify: `diff <(git show prototype/vivid:flows/summon-vivid-g-anime-wai/graph.json) flows/summon-semireal-anime-wai/graph.json` and the same for F's prints nothing, and `grep -c '"flow": "summon-vivid-anime-wai"' flows/summon-vivid-anime-wai/flow.json` prints `1`.
-- [ ] 1.2 In `flows/summon-flat-anime-wai/flow.json`, the trailer, before → after: `flat color, cel shading, lineart` →
+- [x] 1.2 In `flows/summon-flat-anime-wai/flow.json`, the trailer, before → after: `flat color, cel shading, lineart` →
   `flat color, cel shading, anime coloring, colorful`.
   Verify: `grep -c 'anime coloring, colorful' flows/summon-flat-anime-wai/flow.json` prints `1`.
-- [ ] 1.3 In `tests/test_flow.py`, replace `FLATS`, `FLAT_TRAILER` and `FLAT_NEGATIVE` with `STYLED`, per the
+- [x] 1.3 In `tests/test_flow.py`, replace `FLATS`, `FLAT_TRAILER` and `FLAT_NEGATIVE` with `STYLED`, per the
   [style table](design.md#d2); the flat tests read flat's row, and add one test per `image-generation:styled:*` scenario
   of [the delta](specs/image-generation/spec.md), parametrised over the semireal and vivid rows.
   Verify: `grep -c 'FLAT_TRAILER' tests/test_flow.py` prints `0`, and `grep -c 'image-generation:styled:' tests/test_flow.py` prints `3`.
-- [ ] 1.4 Add `summon-semireal-anime-wai` and `summon-vivid-anime-wai` to `PINNED`, and re-pin `summon-flat-anime-wai`,
+- [x] 1.4 Add `summon-semireal-anime-wai` and `summon-vivid-anime-wai` to `PINNED`, and re-pin `summon-flat-anime-wai`,
   each from `uv run python -c 'from isekai.foundation.flow import manifest_digest as d; print(d("<flow>"))'`.
   Verify: `uv run pytest tests/test_flow.py -k 'not a_re_pin_leaves_a_record'` exits 0; the record test passes once
   the phase's CHANGELOG entry names the three digests.

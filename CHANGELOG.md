@@ -10,6 +10,20 @@ its new digest.
 
 ## [Unreleased]
 
+### Added
+
+- `summon-semireal-anime-wai`, flat's face chain with summon's whole prompt, pinned at
+  `b96c1df1c1006fbf1f4445d4d52e6d24b5eb34250460dddc977e6d9f7aa2e3f4` (0090 D1).
+- `summon-vivid-anime-wai`, flat's face chain with summon's trailer and a negative that refuses muted colour,
+  pinned at `76d16cf6ab1139f0985ce9e1f01db957f5817cb7fcd6114709969166edea6850` (0090 D1).
+- One style table holds each styled flow to summon (0090 D2).
+
+### Changed
+
+- `summon-flat-anime-wai` is re-pinned at `fd8e9f08364172fa0effe13220134fffe76c5abae50c5cd1c68d31b23bdd81ab`:
+  its trailer's `lineart` becomes `anime coloring, colorful`, for brighter colour. Its earlier renders keep the
+  old digest (0090 D1).
+
 ## [0.60.2] - 2026-11-02
 
 Gate: local 0m47s · CI 1m29s (ci at 8a88389) · 0.60.1: local 0m50s · CI 1m38s

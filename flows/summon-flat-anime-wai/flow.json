@@ -12,7 +12,7 @@
   },
   "prompt": {
     "prefix": "masterpiece, best quality, amazing quality, newest",
-    "trailer": "anime screencap, detailed eyes, soft lighting, flat color, cel shading, lineart",
+    "trailer": "anime screencap, detailed eyes, soft lighting, flat color, cel shading, anime coloring, colorful",
     "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust, realistic, photorealistic, 3d, semi-realistic",
     "separator": ", "
   },
