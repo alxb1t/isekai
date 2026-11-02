@@ -48,7 +48,6 @@ follows. A tool that expands `@` imports loads it through the line below; any ot
 - **Worktrees:** `../` — each version's worktree sits beside the primary, named by its change id.
 - **Workspace setup:** `make setup` — restores what a fresh worktree lacks.
 - **Ship network:** none — the given package hosts are enough, because the setup fills the worktree first.
-- **Ship loopback:** yes — the browser tests and the server tests serve on `127.0.0.1`.
 
 ---
 
