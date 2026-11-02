@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.60.2] - 2026-11-02
+
+Gate: local 0m47s · CI 1m29s (ci at 8a88389) · 0.60.1: local 0m50s · CI 1m38s
+
 ### Fixed
 
 - The stream test reads its first frame before the stream closes, publishing the close to a queue already

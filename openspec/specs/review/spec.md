@@ -411,13 +411,15 @@ review makes.
 ### Requirement: An approval nothing derives from can be cancelled back to its draft
 
 The system SHALL cancel a flow's newest approval by writing the draft it was approved from — its fields, renders,
-sheet, vocabulary, schema document and field map, and its producer without what approval added — and then deleting
-the approval, leaving every older approval in place, and SHALL cancel an approval that is itself a copy by deleting
-it, naming what the flow is left on: the draft open above what lies beneath, else the approval beneath, which stays
+sheet, vocabulary, schema document and field map, and its producer without what approval added — and then deleting the
+approval, leaving every older approval in place, and SHALL cancel an approval that is itself a copy by deleting it,
+naming what the flow is left on: the draft open above what lies beneath, else the approval beneath, which stays
 approved. It SHALL refuse, writing nothing and naming the reason and a way on that succeeds, while anything derives
-from the approval — a prompt, a render group or a failure record numbered for it, or another flow's approval copied
-from it — and while a later draft exists, naming a waiting draft rather than its discard while anything derives. A
-cancel interrupted between its writing and its deleting SHALL be finished by running it again.
+from the approval — a prompt, a render group or a failure record numbered for it, or another flow's approval copied or
+drafted from it — and while a later draft exists, naming a waiting draft rather than its discard while anything
+derives. A cancel interrupted between its writing and its deleting SHALL be finished by running it again. A cancel
+asked of a flow with no approval SHALL change nothing: with a draft open it SHALL say the flow is at its draft, and
+with none it SHALL refuse naming `review`.
 
 An approved artifact is never silently replaced: cancelling is an explicit act, and it is refused once anything has
 been made from the approval, so no output loses the sheet that made it. A copy has no draft of its own, and `approve
@@ -470,6 +472,13 @@ NNN.approved.json ─▶ write NNN.draft.json ─▶ delete NNN.approved.json
 - **Layers:** unit
 - **WHEN** a flow holds an approval and the draft a cancel wrote beside it
 - **THEN** it reads as approved, and cancelling again leaves only the draft
+
+#### Scenario: a flow with no approval has nothing to cancel
+- **Key:** `review:cancel:a-flow-with-no-approval-has-nothing-to-cancel`
+- **Layers:** unit
+- **WHEN** a cancel is asked for a flow with a draft and no approval, then for a flow with neither
+- **THEN** the first changes nothing and says the flow is at its draft
+- **AND** the second is refused naming `review`, and no file changes
 
 ### Requirement: A draft is written from another flow's approval, its own fields from its own sheet
 

@@ -867,7 +867,9 @@ graceful wait expires, without cancellation errors; a terminal interrupt SHALL e
 
 A reload or a second tab gets the whole truth at once; a job's progress reaches the page as the verbs report it. A
 job outlives its page, so a failure that happened while no page was open is still told. Every connect brings a
-snapshot, so a stream opened again loses nothing, and one connection a page leaves the browser's others free.
+snapshot of the slots and the hub, so a stream opened again loses no job and no cell's stage; a cell's running mark
+and its refusal arrive only as they happen, so a stream opened after them lacks them until that cell next changes.
+One connection a page leaves the browser's others free.
 
 #### Scenario: a connection starts with a snapshot
 - **Key:** `ui:events:a-connection-starts-with-a-snapshot`

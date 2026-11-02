@@ -182,7 +182,7 @@ carries its photograph's digest and filename, and a run
 outside the cohort is by construction not one of its synthetic people, so the record — the file a collection
 publishes — names none, and is never written where one `git add` publishes it
 ([D18](../../../docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)).
-A run it does score is named by the digest half of its id, which still finds the run and carries no filename.
+A run it does score is named by the digest prefix its frame records, which carries no filename.
 
 #### Scenario: one row per flow
 - **Key:** `evaluation:table:one-row-per-flow`
@@ -257,7 +257,7 @@ A run it does score is named by the digest half of its id, which still finds the
 - **Key:** `evaluation:table:a-run-is-named-by-its-digest-prefix`
 - **Layers:** unit
 - **WHEN** a render is ranked
-- **THEN** its row and its table line name the run by the digest prefix of its id
+- **THEN** its row and its table line name the run by the digest prefix its frame records
 - **AND** neither carries the photograph's filename
 
 ### Requirement: Every model the evaluator loads is pinned and verified
@@ -302,15 +302,15 @@ bytes it was counted with cannot be walked back to them.
 
 ### Requirement: Attribute recall counts the approved sheet's scored tags read back from each render
 
-For each render under the runs it is given, the system SHALL read the render with the tagger that fills the
-sheet, at that tagger's own floor, and SHALL count, per scored field of the render's flow, the tags of the
-approval the render was made from that it reads back, naming each tag it does not. It SHALL read each render
-alone, with no cohort, SHALL write one record per collection holding a row per render and a total per flow, and SHALL
-print its table from that record alone. A render that does not decode, and a render whose approval cannot be
-read, SHALL each be a row saying so and SHALL NOT end the reading of another. Named runs SHALL narrow the
-reading, and a name the runs do not hold SHALL refuse before any render is read. The record SHALL name the
-tagger's files by digest and its floor, and SHALL be refused where git can reach it. A row SHALL name its run by
-its digest prefix alone.
+For each render under the runs it is given, the system SHALL read the render with the tagger that fills the sheet, at
+that tagger's own floor, and SHALL count, per scored field of the render's flow, the tags of the approval the render
+was made from that it reads back, naming each tag it does not. It SHALL read each render alone, with no cohort, SHALL
+write one record per collection holding a row per render and a total per flow, and SHALL print its table from that
+record alone. A render that does not decode, a render whose approval cannot be read, and each render of a run whose
+frame does not read SHALL each be a row saying so and SHALL NOT end the reading of another. Named runs SHALL narrow
+the reading, and a name the runs do not hold SHALL refuse before any render is read. The record SHALL name the
+tagger's files by digest and its floor, and SHALL be refused where git can reach it. A row SHALL name its run by its
+digest prefix alone.
 
 ```
 review/<NNN>.approved.json ── the scored fields' tags ──▶ tags asked ─┐
@@ -323,7 +323,7 @@ words
 ([D39](../../../docs/decisions.md#d39--attribute-recall-uses-the-sheets-tagger)).
 Tags are counted, not renders: a field showing three of its four tags is not a failed render, and the missing
 one is the finding. Whether the sheet is true of the photograph is the review's to say. A run's id carries its
-photograph's filename, which may be a person's name; the digest half still finds the run.
+photograph's filename, which may be a person's name; a row names the run by the digest prefix its frame records.
 
 #### Scenario: a tag read back is counted
 - **Key:** `evaluation:recall:a-tag-read-back-is-counted`
@@ -397,6 +397,13 @@ photograph's filename, which may be a person's name; the digest half still finds
 - **Key:** `evaluation:recall:a-run-is-named-by-its-digest-prefix`
 - **Layers:** unit
 - **WHEN** a render is read
-- **THEN** its row names the run by the digest prefix of its id
+- **THEN** its row names the run by the digest prefix its frame records
 - **AND** the record carries no photograph's filename
+
+#### Scenario: each render of a run whose frame does not read is a row
+- **Key:** `evaluation:recall:a-run-whose-frame-does-not-read-is-a-row`
+- **Layers:** unit
+- **WHEN** a run's frame does not read
+- **THEN** each of its renders is an unreadable row naming no run
+- **AND** every other render is read
 
