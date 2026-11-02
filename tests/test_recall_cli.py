@@ -278,18 +278,24 @@ def test_every_render_of_a_run_whose_frame_does_not_read_is_an_unreadable_row(
 
 
 @pytest.mark.spec("evaluation:recall:a-run-whose-frame-does-not-read-is-a-row")
+@pytest.mark.parametrize("damage", ["directory", "invalid-utf8"])
 def test_an_unreadable_file_is_refused_by_name(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    damage: str,
 ) -> None:
     runs, a, b = _collection(tmp_path)
-    b.frame_path.unlink()
-    b.frame_path.mkdir()
+    if damage == "directory":
+        b.frame_path.unlink()
+        b.frame_path.mkdir()
+    else:
+        b.frame_path.write_bytes(b"\xff")
 
     assert _run(monkeypatch, _Tagger(), runs) == 0
 
     rows = {row["seed"]: row for row in _record(runs)["rows"]}
+    assert {rows[seed]["outcome"] for seed in (11, 22, 33)} == {"read"}
     assert {rows[seed]["run"] for seed in (11, 22, 33)} == {run_prefix(a)}
     assert rows[44]["outcome"] == "unreadable"
     assert f"unreadable: {b.path.name}" in capsys.readouterr().err

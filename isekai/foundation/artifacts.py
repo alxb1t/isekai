@@ -495,12 +495,11 @@ def read(path: Path, kind: Artifact[T], *, remedy: str | None = None) -> T:
     remedy = remedy or f"delete {path}, then run the stage that wrote it again"
     try:
         text = path.read_text()
+        parsed: Any = json.loads(text)
     except OSError as unreadable:
         raise Refusal(
             f"{path.name}: cannot be read ({unreadable.strerror}); {remedy}"
         ) from unreadable
-    try:
-        parsed: Any = json.loads(text)
     except ValueError as unreadable:
         raise Refusal(
             f"{path.name}: is not valid JSON ({unreadable}); {remedy}"
