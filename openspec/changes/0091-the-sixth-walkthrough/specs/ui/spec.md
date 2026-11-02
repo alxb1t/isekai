@@ -504,7 +504,6 @@ on Renders.
 - **WHEN** a running render ends, then another starts
 - **THEN** the drawer shows the first's outcome until the second starts, then the second
 
-
 #### Scenario: the viewer closes for a replacement session
 - **Key:** `ui:sessions:the-viewer-closes-for-a-replacement-session`
 - **Layers:** unit
@@ -519,7 +518,6 @@ on Renders.
 - **THEN** its record's images, steps and outcome are served
 - **AND** an id no record holds is refused, naming the id
 
-
 #### Scenario: a terminal render stays live
 - **Key:** `ui:sessions:a-terminal-render-stays-live`
 - **Layers:** unit
@@ -527,13 +525,11 @@ on Renders.
 - **THEN** its records read running and the global running-session read carries their id and complete traversal order
 - **AND** after its process releases ownership without an outcome the record reads ended without an outcome
 
-
 #### Scenario: the selected record keeps the newest response
 - **Key:** `ui:sessions:the-selected-record-keeps-the-newest-response`
 - **Layers:** unit
 - **WHEN** an older record read answers after a newer read of the same session
 - **THEN** the selected record keeps the newer outcome and images
-
 
 #### Scenario: the viewer follows image identity
 - **Key:** `ui:sessions:the-viewer-follows-image-identity`
@@ -542,14 +538,12 @@ on Renders.
 - **THEN** it keeps the selected image by identity while present, otherwise a valid neighbour
 - **AND** an empty list closes the viewer
 
-
 #### Scenario: the session grid holds each flow over the originals
 - **Key:** `ui:sessions:the-grid-holds-each-flow-over-the-originals`
 - **Layers:** unit
 - **WHEN** a record plans two images of one photograph in summon and one of another in conjure
 - **THEN** the grid has a column per photograph, a row per flow over the photographs' row, and three waiting tiles
 - **AND** a record without a plan places its landed images and no waiting tiles
-
 
 #### Scenario: the session grid moves by photograph and by row
 - **Key:** `ui:sessions:the-grid-moves-by-photograph-and-row`
@@ -562,13 +556,6 @@ on Renders.
 - **Layers:** unit
 - **WHEN** `j` is pressed on the first grid's last row, then `k`
 - **THEN** the focus moves into the second grid's first row, in the same column, then back
-
-#### Scenario: the drawer fits its widest grid
-- **Key:** `ui:sessions:the-drawer-fits-its-widest-grid`
-- **Layers:** e2e
-- **WHEN** the drawer holds a session whose grid is wider than half the window
-- **THEN** the drawer is as wide as that grid, short of the window by 100 px at most
-- **AND** a refusal's text does not widen it
 
 #### Scenario: one progress for the Render bar and the drawer
 - **Key:** `ui:sessions:one-progress-for-the-bar-and-the-drawer`
@@ -779,13 +766,6 @@ right. The images are what is compared, so they take the room.
 - **Layers:** unit
 - **WHEN** the focus moves to the second of two seeds of one version
 - **THEN** its caption reads the version alone, and the pick's head names its flow, version and seed
-
-#### Scenario: the pick holds its width
-- **Key:** `ui:compare:the-pick-holds-its-width`
-- **Layers:** e2e
-- **WHEN** the focus moves in the pick from an image with a long name to the photograph
-- **THEN** the pick's width does not change
-- **AND** its head takes two lines, each cut at its end
 
 ## ADDED Requirements
 

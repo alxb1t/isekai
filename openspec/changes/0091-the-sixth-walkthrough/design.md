@@ -35,7 +35,8 @@ what the browser alone shows.
 | unit | vitest for `progress`, the Prepare bar's words, the tile grid's keys, the viewer's `↵` and scroll, the pane keys under a stubbed `isMac`, ④'s grid, the rail's scroll, the key list's columns; pytest for each stage's count, the file's removal and its full-size route | none |
 | end-to-end | none new; steps in `test_a_rendered_cell_opens_its_newest_image`, `test_compare_shows_both_versions_of_a_seed_each_under_its_head` and `test_the_drawer_holds_the_render` in `tests/e2e/test_render.py`, and the strip's text in `tests/e2e/test_prepare.py` | none |
 
-`tests/e2e/` holds 29 tests (`grep -c '^def test_' tests/e2e/*.py`), on Chromium alone; this change adds none. Their
+**A step carries its test's key.** `tests/test_spec_bindings.py` holds one marker a test, so the pick's and the
+drawer's width are steps under their tests' own keys, with no scenario of their own. `tests/e2e/` holds 29 tests (`grep -c '^def test_' tests/e2e/*.py`), on Chromium alone; this change adds none. Their
 edits are checked by `uv run pytest --collect-only -q tests/e2e` in the build, and run by CI. This change deletes and
 merges no test.
 
