@@ -23,6 +23,10 @@ bullet is one change an operator notices, in 1–3 short lines — what changed 
 - `THREAT_MODEL.md` names what is worth protecting, the trust boundaries, the entry points and what is out of scope,
   and `AGENTS.md` makes it mandatory reading, so security review reads a real model (0088 D7).
 
+### Security
+
+- A ruleset on `main` refuses a force-push and a deletion; a release still pushes to it directly (0088 D8).
+
 ## [0.60.0] - 2026-10-27 · 0087-the-fifth-walkthrough
 
 Gate: local 0m47s · CI 1m35s (ci at 7301425) · 0.59.0: local 0m45s · CI 1m16s

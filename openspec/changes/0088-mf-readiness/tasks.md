@@ -9,7 +9,7 @@ relative to the repository's root.
 - [x] 2 — The changelog
 - [x] 3 — The documents
 - [x] 4 — The threat model
-- [ ] 5 — The ruleset **HUMAN**
+- [x] 5 — The ruleset **HUMAN**
 
 ## 1 — The worktree
 
@@ -81,7 +81,7 @@ relative to the repository's root.
 
 ## 5 — The ruleset
 
-- [ ] 5.1 Create the ruleset of [D8](design.md#d8):
+- [x] 5.1 Create the ruleset of [D8](design.md#d8):
 
   ```sh
   gh api -X POST repos/alxb1t/isekai/rulesets --input - <<'JSON'
@@ -92,7 +92,7 @@ relative to the repository's root.
   ```
 
   Verify: `gh api repos/alxb1t/isekai/rulesets --jq '.[].name'` prints `protect main`.
-- [ ] 5.2 Read its rules back:
+- [x] 5.2 Read its rules back:
 
   ```sh
   gh api repos/alxb1t/isekai/rulesets --jq '.[0].id'
