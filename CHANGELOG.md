@@ -24,6 +24,8 @@ its new digest.
   left waiting, so the rest still commit; the pixel bound's comment says what it refuses (0089 D5).
 - Cancel on a flow at its draft changes nothing and says so; with no draft either, it names `review`. A drafted
   approval's cancel names the discard that follows, and draft-from names the held approvals and a way that works (0089 D6).
+- The printed-command guard provokes the draft, draft-from and cancel refusals, and checks a `draft` command by its
+  images, so a remedy it never saw cannot break silently (0089 D7).
 
 ## [0.60.1] - 2026-11-02
 

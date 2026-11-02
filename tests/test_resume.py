@@ -375,7 +375,70 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
             tags_from=FLOW,
         )
     )
+    _draft_and_cancel_refusals(wired, tmp_path, collect)
     return messages
+
+
+def _draft_and_cancel_refusals(
+    wired: Wiring, tmp_path: Path, collect: Callable[[Callable[[], object]], None]
+) -> None:
+    """Provoke the draft verb's, `draft_from`'s and a cancel's refusals of each kind."""
+    from isekai.foundation.artifacts import DRAFT_FILE, read
+    from isekai.foundation.flow import load_flow
+    from isekai.foundation.run import Run, open_run
+    from isekai.pipeline.review import (
+        approve,
+        cancel,
+        discard,
+        draft_from,
+        review,
+        revise,
+        save_draft,
+    )
+    from tests.stages import rendered_image, sheet
+
+    vocabulary = wired.vocabulary()
+    schema = load_flow(FLOW).schema
+    conjure = load_flow("conjure-anime-wai")
+
+    def edited(run: Run, flow: str) -> None:
+        """Open a draft above `flow`'s approval holding a count of its own."""
+        draft = review(run, flow, new_version=True)
+        assert draft is not None
+        fields = read(draft, DRAFT_FILE)["fields"]
+        save_draft(run, flow, fields, {"count": 2, "seeds": []})
+
+    shot = tmp_path / "rendered.jpg"
+    shot.write_bytes(jpeg_bytes(500, 700))
+    rendered = open_run(shot, wired.runs_root)
+    collect(lambda: cancel(rendered, FLOW))
+    sheet(rendered, schema, vocabulary)
+    review(rendered, FLOW)
+    approve(rendered, FLOW, schema, vocabulary)
+    collect(lambda: draft_from(rendered, conjure.id, FLOW, None, conjure.schema))
+    rendered_image(rendered, 1, 7)
+    collect(lambda: draft_from(rendered, conjure.id, FLOW, 2, conjure.schema))
+    collect(lambda: revise(rendered, FLOW, 1, 8))
+    collect(lambda: cancel(rendered, FLOW))
+    edited(rendered, FLOW)
+    collect(lambda: revise(rendered, FLOW, 1, 7))
+    collect(lambda: cancel(rendered, FLOW))
+
+    shot = tmp_path / "drafted.jpg"
+    shot.write_bytes(jpeg_bytes(700, 500))
+    drafted = open_run(shot, wired.runs_root)
+    sheet(drafted, schema, vocabulary)
+    review(drafted, FLOW)
+    approve(drafted, FLOW, schema, vocabulary)
+    review(drafted, FLOW, new_version=True)
+    collect(lambda: cancel(drafted, FLOW))
+    discard(drafted, FLOW)
+    sheet(drafted, conjure.schema, vocabulary, flow=conjure.id, tagged=conjure.tagger)
+    draft_from(drafted, conjure.id, FLOW, None, conjure.schema)
+    approve(drafted, conjure.id, conjure.schema, vocabulary)
+    collect(lambda: cancel(drafted, FLOW))
+    edited(drafted, conjure.id)
+    collect(lambda: draft_from(drafted, conjure.id, FLOW, None, conjure.schema))
 
 
 def _unreadable(tmp_path: Path) -> Path:
@@ -417,6 +480,9 @@ AVAILABLE: Sequence[str] = (
     "python -m isekai review --flow ",
     "python -m isekai approve --flow ",
     "python -m isekai generate --flow ",
+    "python -m isekai assign --flow ",
+    "python -m isekai draft --flow ",
+    "python -m isekai show ",
     "python -m isekai.boundary.provision fetch",
     # The two Ollama remedies.
     "ollama serve",
@@ -477,18 +543,23 @@ def _unrunnable(messages: Sequence[str]) -> list[str]:
     """Return each printed command that does nothing as printed.
 
     Parsed exactly as printed, with the parser that ships: a stage verb that
-    names no run parses, does nothing and exits 0, so it is no remedy.
+    names no run parses, does nothing and exits 0, so it is no remedy. A draft
+    names its run by its images, each of which must be on disk.
     e.g. "review --flow summon-anime-wai" -> listed
     """
     printed = _printed(messages)
     # A positive count, so a refactor that stops printing commands at all does
     # not turn the guard green by emptying it.
     assert printed
-    return [
-        command
-        for command in printed
-        if not build_parser().parse_args(command.split()).photos
-    ]
+    return [command for command in printed if not _names_its_run(command)]
+
+
+def _names_its_run(command: str) -> bool:
+    """Return whether a printed command names the run it acts on."""
+    parsed = build_parser().parse_args(command.split())
+    if parsed.verb == "draft":
+        return all(image.is_file() for image in parsed.images)
+    return bool(parsed.photos)
 
 
 def _printed(messages: Sequence[str]) -> list[str]:
@@ -518,7 +589,8 @@ def test_every_command_a_refusal_prints_is_one_this_build_accepts(
     defaulted = [
         command
         for command in _printed(messages)
-        if build_parser().parse_args(command.split()).runs == RUNS_ROOT
+        if (parsed := build_parser().parse_args(command.split())).runs == RUNS_ROOT
+        and parsed.verb != "draft"
     ]
     assert defaulted == []
 
@@ -528,6 +600,8 @@ def test_the_command_guard_catches_a_command_that_names_no_run() -> None:
     assert _unrunnable(
         ["x; run `python -m isekai review --flow summon-anime-wai` again"]
     ) == ["review --flow summon-anime-wai"]
+    absent = "draft --flow conjure-anime-wai /nowhere/7.png"
+    assert _unrunnable([f"x; run `python -m isekai {absent}`"]) == [absent]
 
 
 @pytest.mark.spec("cli:refusals:refusal-exits-non-zero")

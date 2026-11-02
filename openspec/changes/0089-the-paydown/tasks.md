@@ -10,7 +10,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 - [x] 3 — The render
 - [x] 4 — Import
 - [x] 5 — Cancel and draft-from
-- [ ] 6 — The guard
+- [x] 6 — The guard
 - [ ] 7 — The UI and the docs
 - [ ] 8 — The tests
 
@@ -79,7 +79,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 ## 6 — The guard
 
-- [ ] 6.1 In `tests/test_resume.py`, `_every_refusal` provokes a waiting draft's refusal, an unrendered seed's, the
+- [x] 6.1 In `tests/test_resume.py`, `_every_refusal` provokes a waiting draft's refusal, an unrendered seed's, the
   target-without-sheet, missing-approval and edited-waiting-draft refusals of `draft_from`, and one cancel refusal of
   each kind; `_unrunnable` accepts a `draft` command by its images; `AVAILABLE` gains the prefixes they print, per
   [D7](design.md#d7).
