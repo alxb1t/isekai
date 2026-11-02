@@ -53,8 +53,8 @@ jobs:
         env:
           ISEKAI_VOCABULARY: absent
 
-      # The browser tests, out of the gate while Chromium cannot start inside an
-      # unattended run's sandbox; CI holds them on every push.
+      # The browser tests and the loopback tests, out of the gate while an
+      # unattended run's sandbox cannot run them; CI holds them on every push.
       - name: Browser tests
         run: make e2e
         env:
