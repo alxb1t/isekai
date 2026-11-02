@@ -1,7 +1,7 @@
 # The gate: this recipe is its one declaration. CI and the MinionsFactory skills
 # run `make gate`; `make -n gate` prints what it runs.
 
-.PHONY: gate setup browsers drift derive
+.PHONY: gate e2e setup browsers drift derive
 
 gate:
 # environment, from the tracked lock; not a quality axis, hence first
@@ -18,8 +18,14 @@ gate:
 # the browser's unit tests: `vitest run` over `ui/src/**/*.test.ts`, wrapped
 # the same way
 	uv run python -m tools.test_ui
-# tests
-	uv run pytest
+# tests, but the browser's: under an unattended run's sandbox Chromium never
+# starts, so `make e2e` runs them apart, and CI runs both
+	uv run pytest --ignore=tests/e2e
+
+# The browser tests in `tests/e2e/`, on Chromium. Out of the gate while Chromium
+# cannot start inside the sandbox; CI runs it after the gate.
+e2e:
+	uv run pytest tests/e2e
 
 # Restore what a fresh worktree lacks: the environment, the browser toolchain,
 # Chromium and the vocabulary. Not part of the gate, which never fetches.
@@ -30,7 +36,7 @@ setup:
 	uv run python -m isekai.boundary.provision fetch config/vocabulary.json
 
 # Fetch the Chromium the browser tests in `tests/e2e/` drive. Not part of the
-# gate, because it downloads a browser; CI runs it before the gate.
+# gate, because it downloads a browser; CI runs it before the gate and `make e2e`.
 browsers:
 	uv run playwright install chromium
 

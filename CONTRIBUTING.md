@@ -74,7 +74,9 @@ block.
 
 **The gate is `make gate`**, run from the repository root; `make -n gate` prints what it runs. The
 `Makefile` is its one declaration, and the notes on each command are the `Makefile`'s. CI
-(`.github/workflows/ci.yml`) runs `make gate` too.
+(`.github/workflows/ci.yml`) runs `make gate` too. The browser tests are `make e2e`, out of the gate while
+Chromium cannot start inside an unattended run's sandbox; CI runs them after the gate, on
+every push.
 
 Every command green, or the phase is not done. **Never weaken the gate to pass** — see `AGENTS.md`'s guardrails.
 
@@ -85,7 +87,7 @@ That is a convention for those phases, not part of the gate; adding it to the ga
 **The suite runs offline and deterministically.** The ComfyUI transport is faked behind a `ComfyTransport`
 Protocol (`FakeComfyClient`), the suite reads the shipped graph itself rather than a fixture copy of it,
 and seed drawing takes an injected `random.Random`. No test hits a GPU or the network. A scenario only a
-browser shows declares `Layers: e2e` and runs under `tests/e2e/` — Playwright on Chromium, which
+browser shows declares `Layers: e2e` and runs under `tests/e2e/`, by `make e2e` — Playwright on Chromium, which
 `make browsers` fetches, against the real server on the suite's doubles through `ISEKAI_WIRING`; every
 other declares `Layers: unit`. Diffusion quality and identity fidelity are verified **live on a pod, by
 eye**, never mocked and never asserted.
