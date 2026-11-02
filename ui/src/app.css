@@ -323,15 +323,23 @@ button.appbar__render {
 
 .session__bar {
   height: 6px;
+  overflow: hidden;
   background: var(--line-disabled);
   border-radius: 3px;
 }
 
 .session__fill {
   display: block;
+  width: 0;
   height: 100%;
   background: var(--accent-dim);
   border-radius: 3px;
+}
+
+/* A running session with no plan: the fill slides, sized by nothing. */
+.session__fill--sliding {
+  width: 30%;
+  animation: import-running 1.6s ease-in-out infinite;
 }
 
 .session__steps {
@@ -2128,6 +2136,12 @@ dialog::backdrop {
   animation: import-running 1.6s ease-in-out infinite;
 }
 
+/* A running bar with a plan: the line as wide as its progress, still. */
+.prepare-bar.prepare-bar--sized::before {
+  width: var(--progress);
+  animation: none;
+}
+
 .prepare-bar__cells {
   flex: 1;
   overflow: hidden;
@@ -2150,6 +2164,7 @@ dialog::backdrop {
    every rule that starts one. */
 @media (prefers-reduced-motion: reduce) {
   .prepare-bar.running::before,
+  .session__fill--sliding,
   .hub__segment--running,
   .import__bar--running .import__fill {
     animation: none;

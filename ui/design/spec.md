@@ -84,9 +84,10 @@ timer mono 40px/500.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
 - **JobStrip**, `ground-deep`, mono 11px: one dot, then one item per running job, each a label (`job · prepare`)
-  and its totals (`1 of 3 cells done · 01:47`, `image 1 of 2 · 06:41 of ≤10:30`); with none running, each kind's
-  last receipt. The dot: hollow idle, accent running, accent square unresolved. Prepare keeps the accepted-cell total fixed, counts cells completed at sheet and ticks
-  elapsed time every second from its original start. On the right, while the volume is open, the quiet item
+  and its totals (`tag 6 of 6 · caption 3 of 6 · sheet 0 of 6 · 00:35`, `image 1 of 2 · 06:41 of ≤10:30`); with none
+  running, each kind's last receipt. The dot: hollow idle, accent running, accent square unresolved. Prepare keeps each
+  stage's total fixed, counts each cell once as it completes that stage, and ticks elapsed time every second from its
+  original start. On the right, while the volume is open, the quiet item
   `volume open · until 19:38 · close`.
 
 ## 4 · Routes
@@ -164,7 +165,7 @@ cowboy_shot_2_of_a_ver │ ☑ ▰▰▰▱▱▱ captioning…            │ �
 y_long_name            │                                  │
 [▣]                    │                                  │
 
-        ┌ IMG_0430 × summon · …                 [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
+        ┌ 2 photographs to prepare in 2026-10-19  [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
         ┌ 2 images ready to render                                        [ Render ⇧G ] ┐   RenderBar
 ```
 
@@ -187,19 +188,21 @@ y_long_name            │                                  │
   with its `vN` badge, wrapping; a click on one opens the viewer on it.
 - **A cell's refusal** sits inside the cell with its fix; the cell returns to assigned, so the next Prepare retries
   it.
-- **The PrepareBar** floats centred, bottom 50, 940 wide, `raised-2`, 1px `line-control`, radius 8. Pending: the
-  cells named in mono 11, Discard, primary `n changes · Prepare ⌘↵`. Running: `Prepare · 1 of 3 cells done · 01:47`,
-  Stop. The accepted-cell total stays fixed; the sheet-completed count and ticking elapsed time match JobStrip,
-  including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
+- **The PrepareBar** floats centred, bottom 50, 940 wide, `raised-2`, 1px `line-control`, radius 8. Pending:
+  `<n> photographs to prepare in <collection>` in mono 11, each photograph counted once whatever its flows, Discard,
+  primary `n changes · Prepare ⌘↵`. Running: `Prepare · tag 6 of 6 · caption 3 of 6 · sheet 0 of 6 · 00:35`, Stop.
+  Each stage's total stays fixed; its count and the ticking elapsed time match JobStrip, including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
   hub opened after the failure too. Disabled while another collection's Prepare runs: its reason (`Prepare is running on 2026-10-19`). There is no done state: the
-  receipt goes to the job strip, the count to the Review tab. Running, a 2 px `accent` line slides along the bar's top
-  edge, as on a running RenderBar, and a running segment pulses `accent-dim` ↔ `accent`; under
+  receipt goes to the job strip, the count to the Review tab. Running, a 2 px `accent` line along the bar's top edge
+  is as wide as the stages' cells done over those asked, `progress` in `bars.ts` sizing it as it sizes the RenderBar's
+  and the drawer's; with nothing to size it, the line slides. A running segment pulses `accent-dim` ↔ `accent`; under
   `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
 - **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
   to render`, the render stage's own count, and primary `Render ⇧G`, disabled with its reason. With nothing short it
   is absent. While a render runs it shows the session's totals, `image 2 of 4 · 06:41 of ≤10:30`, the images
   short outside its plan, `1 image waits` or `n images wait for the next session`, and `Session ⌃;`, in place of the
-  count and Render.
+  count and Render. Its line, and the drawer's bar, are as wide as the images done over those asked; the drawer keeps
+  `06:41 of 13:30 at most` as text.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is the grid's
   first column, `h` from the first flow cell, and a column itself: the file's stem in mono 13, its first line level
   with the cells' tick line, the size in the viewer's title, then a 96×128 thumbnail at the cell's foot, a
@@ -278,7 +281,7 @@ J4·1  RENDER · ON A RENTED GPU                                   Render 4 imag
                                            [ Cancel esc ]  [ Render · about $0.06 ⌘↵ ]
 
 J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
-      06:41 of 13:30 at most      [▰▰▰▰▰▰▰▱▱▱▱▱▱]  the bar's width is the limit
+      06:41 of 13:30 at most      [▰▰▰▰▰▰▱▱▱▱▱▱]  images done over asked
       ● volume up         gpunit-isekai · attached                 0:21
       ● pod boot          gpunit-isekai                            2:04
       ◐ rendering         image 2 of 4 · 00003 · conjure-anime-wai · 4:16

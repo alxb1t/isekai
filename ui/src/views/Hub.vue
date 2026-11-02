@@ -1,9 +1,27 @@
-<script setup lang="ts">
+<script lang="ts">
 import { noun } from '../words'
+
+/** Return the Prepare bar's line: the photographs its changes prepare, each once.
+
+    e.g. ["ada.jpg", "ada.jpg", "bea.jpg"], "b" -> "2 photographs to prepare in b" */
+export function toPrepare(sources: string[], collection: string): string {
+  const count = new Set(sources).size
+  return count === 1
+    ? `1 photograph to prepare in ${collection}`
+    : `${count} photographs to prepare in ${collection}`
+}
+
+/** Return the Prepare button's words: the changes it runs. e.g. 4 -> "4 changes · Prepare" */
+export function prepareButton(changes: number): string {
+  return `${changes} ${noun(changes, 'change')} · Prepare`
+}
+</script>
+
+<script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { bar as barOf, dismiss, failed, held } from '../bars'
+import { bar as barOf, dismiss, failed, held, prepared, progress } from '../bars'
 import { EMPTY_CELL, action, clicks, targets } from '../cells'
 import { assign, imageAt, prepare, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer, { type Shown } from '../components/ImageViewer.vue'
@@ -51,6 +69,8 @@ const { jobs } = storeToRefs(live)
 const { prepareTotals } = live
 /* Another collection's running Prepare, which disables this one's, with its reason. */
 const prepareHeld = computed(() => held(jobs.value.prepare, props.collection))
+/* The running Prepare's stages done over the stages asked; null slides the line. */
+const filled = computed(() => progress(prepared(jobs.value.prepare)))
 /* The Prepare bar's refusal, the CLI's own text (J8a). */
 const barRefusal = ref<string | null>(null)
 
@@ -572,7 +592,12 @@ onUnmounted(() => {
       :rendering="rendering"
       @open="openRender"
     />
-    <div v-else-if="shown === 'prepare'" class="prepare-bar" :class="{ running: busy }">
+    <div
+      v-else-if="shown === 'prepare'"
+      class="prepare-bar"
+      :class="{ running: busy, 'prepare-bar--sized': busy && filled !== null }"
+      :style="busy && filled !== null ? { '--progress': `${filled * 100}%` } : undefined"
+    >
       <template v-if="busy">
         <span class="prepare-bar__cells mono">
           Prepare · {{ prepareTotals(jobs.prepare) }}
@@ -584,7 +609,7 @@ onUnmounted(() => {
           <span class="refusal__mark" />{{ barRefusal }}
         </p>
         <span v-else class="prepare-bar__cells mono">
-          {{ changes.map((one) => `${one.source.name} × ${one.flow}`).join(' · ') }}
+          {{ toPrepare(changes.map((one) => one.source.name), collection) }}
         </span>
         <button class="btn btn-secondary" type="button" @click="discard">Discard</button>
         <span v-if="prepareHeld" class="hub__reason" data-prepare-reason>{{ prepareHeld }}</span>
@@ -594,7 +619,7 @@ onUnmounted(() => {
           :disabled="changes.length === 0 || prepareHeld !== null"
           @click="runPrepare"
         >
-          {{ changes.length }} {{ changes.length === 1 ? 'change' : 'changes' }} · Prepare<span
+          {{ prepareButton(changes.length) }}<span
             class="appbar__key"
             >⌘↵</span
           >

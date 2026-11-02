@@ -50,19 +50,21 @@ def test_prepare_takes_the_assigned_cells_to_their_sheet_and_no_other(
 
     page.get_by_role("button", name="1 change · Prepare").click()
 
+    # The reader is held, so the tagging is done and the reading waits.
+    held = r"tag 1 of 1 · caption 0 of 1 · sheet 0 of 1 · \d+:\d+"
     try:
         strip = page.locator(".jobstrip__totals")
         bar = page.locator(".prepare-bar__cells")
-        expect(strip).to_have_text(re.compile(r"0 of 1 cell done · \d+:\d+"))
+        expect(strip).to_have_text(re.compile(held), timeout=PREPARED)
         initial = strip.inner_text()
         expect(bar).to_have_text(f"Prepare · {initial}")
         expect(strip).not_to_have_text(initial, timeout=3000)
         before_reload = strip.inner_text()
         page.reload()
-        expect(strip).to_have_text(re.compile(r"0 of 1 cell done · \d+:\d+"))
+        expect(strip).to_have_text(re.compile(held))
         elapsed = strip.inner_text().rsplit(" · ", 1)[1]
         assert elapsed >= before_reload.rsplit(" · ", 1)[1]
-        expect(bar).to_have_text(re.compile(r"Prepare · 0 of 1 cell done · \d+:\d+"))
+        expect(bar).to_have_text(re.compile(f"Prepare · {held}"))
 
         # A render has its own slot: the running Prepare holds no collection's Render.
         beside = page.context.new_page()

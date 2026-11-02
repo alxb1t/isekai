@@ -10,6 +10,11 @@ its new digest.
 
 ## [Unreleased]
 
+### Changed
+
+- One `progress` sizes the Prepare bar, the Render bar and the drawer's; Prepare counts each stage's cells against
+  its own total, and its bar names the photographs it prepares, so no bar disagrees with another (0091 D1, D2).
+
 ## [0.60.2] - 2026-11-02
 
 Gate: local 0m47s · CI 1m29s (ci at 8a88389) · 0.60.1: local 0m50s · CI 1m38s

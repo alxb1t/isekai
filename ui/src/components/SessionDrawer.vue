@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { progress } from '../bars'
 import { photoUrl, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer from './ImageViewer.vue'
 import KeyHint from './KeyHint.vue'
@@ -58,6 +59,8 @@ const of = computed(() =>
     : (slot.value?.session?.of ?? 0),
 )
 const done = computed(() => held.value.reduce((sum, one) => sum + one.record.images.length, 0))
+/* The images done over the images asked, as the Render bar reads them; null slides. */
+const filled = computed(() => progress({ done: done.value, of: of.value }))
 const steps = computed(() => record.value?.steps ?? {})
 const volume = computed(() => slot.value?.session?.steps ?? {})
 
@@ -235,7 +238,8 @@ onMounted(() => {
       <div class="session__bar">
         <span
           class="session__fill"
-          :style="{ width: `${Math.min(100, ((elapsed ?? 0) / (limit || 1)) * 100)}%` }"
+          :class="{ 'session__fill--sliding': filled === null && running }"
+          :style="filled === null ? undefined : { width: `${filled * 100}%` }"
         />
       </div>
       <ol class="session__steps mono">

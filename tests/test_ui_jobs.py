@@ -315,7 +315,13 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
         "flow": FLOW,
         "stage": "tag",
         "message": None,
-        "progress": {"started": STARTED, "of": 2, "done": 0},
+        "progress": {
+            "started": STARTED,
+            "stages": [
+                {"stage": "tag", "done": 0, "of": 2},
+                {"stage": "caption", "done": 0, "of": 2},
+            ],
+        },
     }
     assert snapshot(done.path) == before
 
@@ -430,21 +436,8 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
 STARTED = "2026-10-22T10:00:00Z"
 
 
-@pytest.mark.spec("ui:prepare:totals-count-cells-not-stages")
-def test_prepare_totals_count_cells_once(tmp_path: Path) -> None:
-    folder, (run, refused) = _collection(tmp_path, "ada.jpg", "bea.jpg")
-    other = OFFERED[1]
-    lines = [
-        (run.id, FLOW, "tag", "done", "tagged"),
-        (run.id, FLOW, "caption", "done", "sheet"),
-        (refused.id, FLOW, "sheet", "refused", "sheet"),
-        ("unknown", FLOW, "sheet", "done", "sheet"),
-        (refused.id, other, "sheet", "done", "sheet"),
-        (refused.id, FLOW, "sheet", "done", "tagged"),
-        (run.id, FLOW, "sheet", "done", "sheet"),
-        (run.id, FLOW, "sheet", "done", "sheet"),
-        (run.id, other, "sheet", "done", "rendered"),
-    ]
+def _reports(*lines: tuple[str, str, str, str, str]) -> str:
+    """Return a script printing a line per `(run, flow, stage, state, reached)`."""
     reports = [
         {
             "run": run_id,
@@ -455,34 +448,70 @@ def test_prepare_totals_count_cells_once(tmp_path: Path) -> None:
         }
         for run_id, flow, stage, state, reached in lines
     ]
-    script = "import json; " + "; ".join(
+    return "import json; " + "; ".join(
         f"print(json.dumps({line!r}), flush=True)" for line in reports
     )
+
+
+@pytest.mark.spec("ui:prepare:totals-count-cells-not-stages")
+def test_prepare_totals_count_each_stages_cells_once(tmp_path: Path) -> None:
+    folder, (run, refused) = _collection(tmp_path, "ada.jpg", "bea.jpg")
+    other = OFFERED[1]
+    scripts = {
+        "tag": _reports(
+            (run.id, FLOW, "tag", "done", "tagged"),
+            (refused.id, FLOW, "tag", "refused", "assigned"),
+            (run.id, FLOW, "tag", "done", "tagged"),
+        ),
+        "caption": _reports(
+            (run.id, FLOW, "caption", "done", "tagged"),
+            (refused.id, FLOW, "caption", "refused", "assigned"),
+        ),
+        "sheet": _reports(
+            (run.id, FLOW, "tag", "done", "tagged"),
+            (refused.id, FLOW, "sheet", "refused", "sheet"),
+            ("unknown", FLOW, "sheet", "done", "sheet"),
+            (refused.id, other, "sheet", "done", "sheet"),
+            (refused.id, FLOW, "sheet", "done", "tagged"),
+            (run.id, FLOW, "sheet", "done", "sheet"),
+            (run.id, FLOW, "sheet", "done", "sheet"),
+            (run.id, other, "sheet", "done", "rendered"),
+        ),
+    }
     broadcast = events.Broadcast()
     found = broadcast.subscribe()
-    jobs = Jobs(
-        broadcast, lambda: None, command=_Script({"sheet": script}), now=lambda: STARTED
-    )
+    jobs = Jobs(broadcast, lambda: None, command=_Script(scripts), now=lambda: STARTED)
     jobs.prepare(
         "b",
         folder,
-        [Step(FLOW, "sheet", (run.id, refused.id)), Step(other, "sheet", (run.id,))],
+        [
+            *(Step(FLOW, verb, (run.id, refused.id)) for verb in ("tag", "caption")),
+            Step(FLOW, "sheet", (run.id, refused.id)),
+            Step(other, "sheet", (run.id,)),
+        ],
         dict,
     )
     jobs.wait("prepare", WAIT)
     slot = jobs.slot("prepare")
     assert slot is not None
-    assert slot["progress"] == {"started": STARTED, "of": 3, "done": 2}
+    assert slot["progress"] == {
+        "started": STARTED,
+        "stages": [
+            {"stage": "tag", "done": 1, "of": 2},
+            {"stage": "caption", "done": 1, "of": 2},
+            {"stage": "sheet", "done": 2, "of": 3},
+        ],
+    }
     updates = []
     while not found.empty():
         kind, data = found.get_nowait()
         if kind == "job":
-            updates.append(data["progress"]["done"])
-    assert 1 in updates and 2 in updates
-    slot["progress"]["done"] = 99
+            updates.append([one["done"] for one in data["progress"]["stages"]])
+    assert [1, 0, 0] in updates and [1, 1, 1] in updates
+    slot["progress"]["stages"][0]["done"] = 99
     copied = jobs.slot("prepare")
     assert copied is not None
-    assert copied["progress"]["done"] == 2
+    assert copied["progress"]["stages"][0]["done"] == 1
 
 
 @pytest.mark.spec("ui:events:a-reconnect-keeps-prepare-progress")
@@ -558,15 +587,14 @@ def test_reconnect_keeps_prepare_progress(
         )
         assert initial["progress"]["started"] == STARTED
         monkeypatch.setattr(jobs, "_now", lambda: "2026-10-22T10:05:00Z")
-        while _until(updates, "job")[1]["progress"]["done"] != 1:
+        while _until(updates, "job")[1]["progress"]["stages"][0]["done"] != 1:
             pass
         for _ in range(2):
             body = client.get("/events?collection=b")
             first_frame = body.text.split("\n")[1].removeprefix("data: ")
             assert json.loads(first_frame)["jobs"]["prepare"]["progress"] == {
                 "started": STARTED,
-                "of": 2,
-                "done": 1,
+                "stages": [{"stage": "sheet", "done": 1, "of": 2}],
             }
         assert jobs.running("prepare")
     finally:

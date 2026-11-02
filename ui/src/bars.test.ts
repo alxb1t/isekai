@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import { bar, dismiss, failed, held, planOf, reasons, waiting } from './bars'
+import { bar, dismiss, failed, held, planOf, prepared, progress, reasons, waiting } from './bars'
 import { spec } from './test/spec'
 import type { JobSlot } from './types'
 
@@ -51,6 +51,28 @@ spec('ui:render:a-running-session-shows-its-totals', () => {
   expect(bar({ ...state, plan: null })).toBe('render')
 })
 
+spec('ui:sessions:one-progress-for-the-bar-and-the-drawer', () => {
+  const image = { digest: 'd', flow: 'f', version: 1, seed: '7' }
+  const images = [image, { ...image, seed: '8' }, { ...image, seed: '9' }]
+  const session = { id: 's', started: '', ended: null, limit: 630, of: 4, steps: {}, images }
+  const running = slot({ kind: 'render', state: 'running', message: null, session })
+  // The Render bar reads the slot's plan, the drawer its records' images over those asked.
+  expect(progress(planOf(running))).toBe(0.75)
+  expect(progress({ done: images.length, of: 4 })).toBe(0.75)
+  // With no plan the bar slides, sized by nothing.
+  expect(progress(planOf(null))).toBeNull()
+  expect(progress({ done: 0, of: 0 })).toBeNull()
+  // The Prepare bar is sized by the same function, over every stage it asked.
+  const stages = [
+    { stage: 'tag', done: 2, of: 2 },
+    { stage: 'caption', done: 1, of: 2 },
+    { stage: 'sheet', done: 0, of: 2 },
+  ]
+  const preparing = slot({ state: 'running', progress: { started: '', stages } })
+  expect(progress(prepared(preparing))).toBe(0.5)
+  expect(prepared(slot({ state: 'running' }))).toBeNull()
+})
+
 function slot(over: Partial<JobSlot>): JobSlot {
   return {
     kind: 'prepare',
@@ -70,13 +92,13 @@ spec('ui:events:a-hub-opened-after-a-failure-shows-it', () => {
   expect(failed(slot({ state: 'done' }), 'b')).toBeNull()
   expect(failed(null, 'b')).toBeNull()
   // A Discard on another collection's hub leaves this collection's failure shown.
-  const first = slot({ progress: { started: '10:00', of: 2, done: 1 } })
+  const first = slot({ progress: { started: '10:00', stages: [] } })
   dismiss(first, 'other')
   expect(failed({ ...first }, 'b')).toBe('refused: see log.txt')
   // Once discarded, a hub opened again in this page leaves it dismissed; the next failure shows.
   dismiss(first, 'b')
   expect(failed({ ...first }, 'b')).toBeNull()
-  expect(failed(slot({ progress: { started: '10:05', of: 2, done: 0 } }), 'b')).toBe(
+  expect(failed(slot({ progress: { started: '10:05', stages: [] } }), 'b')).toBe(
     'refused: see log.txt',
   )
 })

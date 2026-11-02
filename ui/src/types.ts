@@ -288,8 +288,15 @@ export interface JobSlot {
   stage: string | null
   /* Why a failed job ended, naming the collection's log; null otherwise. */
   message: string | null
-  progress?: { started: string; of: number; done: number }
+  progress?: { started: string; stages: StageCount[] }
   session?: RenderSession
+}
+
+/* One Prepare stage's cells done, against the cells it was asked to run. */
+export interface StageCount {
+  stage: string
+  done: number
+  of: number
 }
 
 /* Each kind's slot: its job, running or ended, or null. */

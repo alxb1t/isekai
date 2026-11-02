@@ -41,6 +41,24 @@ export function planOf(slot: JobSlot | null): Plan | null {
   return session ? { of: session.of, done: session.images.length } : null
 }
 
+/** Return how far a bar is filled, 0 to 1, or null when nothing sizes it and it slides.
+
+    Every bar reads it: Prepare, the Render bar and the drawer's.
+    e.g. { done: 3, of: 4 } -> 0.75 */
+export function progress(plan: Plan | null): number | null {
+  return plan && plan.of > 0 ? Math.min(1, plan.done / plan.of) : null
+}
+
+/** Return the Prepare `slot`'s stages done over the stages asked, or null before its totals. */
+export function prepared(slot: JobSlot | null): Plan | null {
+  const stages = slot?.progress?.stages
+  if (!stages?.length) return null
+  return {
+    done: stages.reduce((sum, one) => sum + one.done, 0),
+    of: stages.reduce((sum, one) => sum + one.of, 0),
+  }
+}
+
 /** Return the line naming the images short that the running session does not render, or null.
 
     `images` still counts the plan's images until each lands, so they are taken off.

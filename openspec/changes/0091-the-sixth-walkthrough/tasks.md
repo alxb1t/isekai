@@ -5,7 +5,7 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 
 ## Progress
 
-- [ ] 1 — The bars
+- [x] 1 — The bars
 - [ ] 2 — The import
 - [ ] 3 — The viewer
 - [ ] 4 — Review
@@ -13,19 +13,19 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 
 ## 1 — The bars
 
-- [ ] 1.1 `_Job` in `isekai/interface/ui/jobs.py` counts each stage's completed cells against its total from `job.steps`,
+- [x] 1.1 `_Job` in `isekai/interface/ui/jobs.py` counts each stage's completed cells against its total from `job.steps`,
   and the snapshot carries them, per [D1](design.md#d1); `test_ui_jobs.py`'s `ui:prepare:totals-count-cells-not-stages`
   test asserts a count per stage, a refused cell in none.
   Verify: `uv run pytest tests/test_ui_jobs.py -k totals` exits 0.
-- [ ] 1.2 Add `progress({done, of})` to `ui/src/bars.ts` and size the Prepare bar, the Render bar (`RenderBar.vue`) and the
+- [x] 1.2 Add `progress({done, of})` to `ui/src/bars.ts` and size the Prepare bar, the Render bar (`RenderBar.vue`) and the
   drawer's bar (`SessionDrawer.vue`) by it; `prepareTotals` in `ui/src/stores/live.ts` reads each stage. Add vitest in
   `ui/src/bars.test.ts` bound to `ui:sessions:one-progress-for-the-bar-and-the-drawer`.
   Verify: `grep -c 'function progress' ui/src/bars.ts` prints `1`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 1.3 The Prepare bar in `ui/src/views/Hub.vue` reads `<n> photographs to prepare in <collection>`, per
+- [x] 1.3 The Prepare bar in `ui/src/views/Hub.vue` reads `<n> photographs to prepare in <collection>`, per
   [D2](design.md#d2); vitest bound to `ui:prepare:the-bar-names-its-photographs`. Update the strip's text that
   `tests/e2e/test_prepare.py` asserts to the per-stage form.
   Verify: `grep -c 'photographs to prepare in' ui/src/views/Hub.vue` prints a count above 0, and `uv run pytest --collect-only -q tests/e2e/test_prepare.py` exits 0.
-- [ ] 1.4 `ui/design/spec.md`'s Prepare bar and Render bar lines say what [D1](design.md#d1) and [D2](design.md#d2) make them.
+- [x] 1.4 `ui/design/spec.md`'s Prepare bar and Render bar lines say what [D1](design.md#d1) and [D2](design.md#d2) make them.
   Verify: `grep -c 'photographs to prepare in' ui/design/spec.md` prints a count above 0.
 
 ## 2 — The import
