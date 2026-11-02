@@ -23,6 +23,11 @@ bullet is one change an operator notices, in 1–3 short lines — what changed 
 - `THREAT_MODEL.md` names what is worth protecting, the trust boundaries, the entry points and what is out of scope,
   and `AGENTS.md` makes it mandatory reading, so security review reads a real model (0088 D7).
 
+### Fixed
+
+- The image-phase instructions drop the shell-script syntax check because no tracked shell scripts remain,
+  keeping the Docker build check (0088 D5).
+
 ### Security
 
 - A ruleset on `main` refuses a force-push and a deletion; a release still pushes to it directly (0088 D8).

@@ -78,7 +78,7 @@ block.
 
 Every command green, or the phase is not done. **Never weaken the gate to pass** — see `AGENTS.md`'s guardrails.
 
-Beyond the gate, **image-as-code phases also run `bash -n` on shell scripts and `docker build --check`**.
+Beyond the gate, **image-as-code phases also run `docker build --check`**.
 That is a convention for those phases, not part of the gate; adding it to the gate means adding it to the
 `Makefile`.
 
