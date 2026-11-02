@@ -5,7 +5,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 ## Progress
 
-- [ ] 1 — The flake
+- [x] 1 — The flake
 - [ ] 2 — Evaluation
 - [ ] 3 — The render
 - [ ] 4 — Import
@@ -16,7 +16,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 ## 1 — The flake
 
-- [ ] 1.1 In `tests/test_ui_jobs.py`, `close_once_open` publishes `events.CLOSE` with `{}` in place of
+- [x] 1.1 In `tests/test_ui_jobs.py`, `close_once_open` publishes `events.CLOSE` with `{}` in place of
   `broadcast.close()`, per [D1](design.md#d1).
   Verify: `grep -c 'broadcast.close()' tests/test_ui_jobs.py` prints `0`, and `for i in $(seq 30); do uv run pytest -q tests/test_ui_jobs.py -k both_slots || exit 1; done` exits 0.
 

@@ -10,6 +10,11 @@ its new digest.
 
 ## [Unreleased]
 
+### Fixed
+
+- The stream test reads its first frame before the stream closes, publishing the close to a queue already
+  subscribed, so a loaded machine no longer fails it (0089 D1).
+
 ## [0.60.1] - 2026-11-02
 
 Gate: local 0m50s · CI 1m38s (ci at eb63832) · 0.60.0: local 0m47s · CI 1m35s
