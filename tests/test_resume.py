@@ -657,6 +657,7 @@ def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
 
     message = wired.err.getvalue()
     assert "could not be reached" in message
+    assert "if a session is open, its tunnel has dropped" in message
     assert "python -m isekai render" in message
     assert "--server" in message
     assert "Traceback" not in message

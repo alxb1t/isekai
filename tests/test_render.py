@@ -32,6 +32,7 @@ from isekai.foundation.artifacts import (
     session_id,
 )
 from isekai.foundation.flow import Schema, load_flow
+from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY, Run, open_run
 from isekai.interface import render
 from isekai.interface.cli import _dispatch_argv, build_parser
@@ -750,6 +751,24 @@ def test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down(
 
 
 @pytest.mark.spec_exempt("structural: gpunit's outcomes become the verb's exit")
+def test_a_failed_body_is_named_beside_a_failed_teardown(tmp_path: Path) -> None:
+    runs = collection(tmp_path)
+    failed = gpunit.TeardownFailed("the teardown failed")
+    failed.__cause__ = Refusal("the endpoint never answered")
+
+    class Raising(FakeOpen):
+        @contextmanager
+        def _block(self) -> Iterator[FakeSession]:
+            raise failed
+            yield FakeSession()
+
+    assert session(runs, f"{FLOW}=1", opener=Raising()) == 1
+    written = log(runs)
+    body = written.index("refused: the endpoint never answered")
+    assert body < written.index("refused: the session's teardown failed")
+
+
+@pytest.mark.spec_exempt("structural: gpunit's outcomes become the verb's exit")
 def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
     tmp_path: Path,
 ) -> None:
@@ -1169,12 +1188,18 @@ def test_the_env_file_is_read_as_key_value_lines(tmp_path: Path) -> None:
     env = tmp_path / ".env"
     env.write_text(
         "# a comment\n\nRUNPOD_API_KEY=\"k1\"\nOTHER='two words'\nBARE=v\nnoise\n"
+        'export EXPORTED=e\nCOMMENTED=c # a note\nHASHED=a#b\nQUOTED="q # kept"\n'
+        "EMPTY=\nBLANK=''\n"
     )
 
     assert gpu.read_env(env) == {
         "RUNPOD_API_KEY": "k1",
         "OTHER": "two words",
         "BARE": "v",
+        "EXPORTED": "e",
+        "COMMENTED": "c",
+        "HASHED": "a#b",
+        "QUOTED": "q # kept",
     }
     assert gpu.read_env(tmp_path / "absent") == {}
 

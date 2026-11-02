@@ -7,7 +7,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 - [x] 1 — The flake
 - [x] 2 — Evaluation
-- [ ] 3 — The render
+- [x] 3 — The render
 - [ ] 4 — Import
 - [ ] 5 — Cancel and draft-from
 - [ ] 6 — The guard
@@ -33,13 +33,13 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 ## 3 — The render
 
-- [ ] 3.1 `read_env` in `isekai/boundary/gpu.py` follows [D3](design.md#d3); add an `export` line, a trailing comment
+- [x] 3.1 `read_env` in `isekai/boundary/gpu.py` follows [D3](design.md#d3); add an `export` line, a trailing comment
   and an empty value as cases of `test_the_env_file_is_read_as_key_value_lines` in `tests/test_render.py`.
   Verify: `uv run pytest tests/test_render.py -k env_file` exits 0, and `grep -c 'export ' tests/test_render.py` prints a count above 0.
-- [ ] 3.2 `except TeardownFailed` in `isekai/interface/render.py` prints `refused: <cause>` first when `__cause__` is a
+- [x] 3.2 `except TeardownFailed` in `isekai/interface/render.py` prints `refused: <cause>` first when `__cause__` is a
   `Refusal`, per [D4](design.md#d4). Add `test_a_failed_body_is_named_beside_a_failed_teardown` to `tests/test_render.py`, `spec_exempt` as its neighbours.
   Verify: `uv run pytest tests/test_render.py -k failed_body` exits 0.
-- [ ] 3.3 Reword the unreachable refusal in `isekai/boundary/comfy/client.py` per [D4](design.md#d4): after "could not
+- [x] 3.3 Reword the unreachable refusal in `isekai/boundary/comfy/client.py` per [D4](design.md#d4): after "could not
   be reached (…)" it says "; if a session is open, its tunnel has dropped", then offers `python -m isekai render`, keeping
   "--server". `tests/test_generate.py` and `tests/test_resume.py` assert those words.
   Verify: `grep -c 'tunnel has dropped' isekai/boundary/comfy/client.py` prints `1`, and `uv run pytest tests/test_generate.py tests/test_resume.py -k unreachable` exits 0.

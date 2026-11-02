@@ -16,6 +16,10 @@ its new digest.
   subscribed, so a loaded machine no longer fails it (0089 D1).
 - A run file that cannot be read is refused by name with its remedy, so recall and cohort score the other runs;
   evaluation's spec names a scored run by the digest prefix its frame records (0089 D2).
+- `.env` is read as the shell reads it — `export`, a trailing comment, an empty value — so a blank line no longer
+  overrides an exported key (0089 D3).
+- A failed teardown names the refusal that ended the session first, and an unreachable endpoint says a session's
+  tunnel may have dropped (0089 D4).
 
 ## [0.60.1] - 2026-11-02
 
