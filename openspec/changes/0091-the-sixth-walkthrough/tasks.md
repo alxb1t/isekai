@@ -7,7 +7,7 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 
 - [x] 1 — The bars
 - [x] 2 — The import
-- [ ] 3 — The viewer
+- [x] 3 — The viewer
 - [ ] 4 — Review
 - [ ] 5 — The dialogs
 
@@ -44,10 +44,10 @@ marker its task names. No `Verify:` runs `tests/e2e/`: the build collects them, 
 
 ## 3 — The viewer
 
-- [ ] 3.1 `ImageViewer.vue` follows [D4](design.md#d4); add vitest in `ui/src/components/ImageViewer.test.ts` bound to
+- [x] 3.1 `ImageViewer.vue` follows [D4](design.md#d4); add vitest in `ui/src/components/ImageViewer.test.ts` bound to
   `ui:viewer:enter-toggles-full-size` and `ui:viewer:full-size-scrolls-by-the-keys`.
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c 'full-size-scrolls-by-the-keys' ui/src/components/ImageViewer.test.ts` prints `1`.
-- [ ] 3.2 The hub's large view moves to `⇧↵` in `ui/src/views/Hub.vue` and in `test_a_rendered_cell_opens_its_newest_image`
+- [x] 3.2 The hub's large view moves to `⇧↵` in `ui/src/views/Hub.vue` and in `test_a_rendered_cell_opens_its_newest_image`
   in `tests/e2e/test_render.py`.
   Verify: `grep -c 'Shift+Enter' tests/e2e/test_render.py` prints a count above 0, and `uv run pytest --collect-only -q tests/e2e/test_render.py` exits 0.
 

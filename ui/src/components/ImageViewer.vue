@@ -2,13 +2,14 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useKeys } from '../composables/useKeys'
 import { usePair } from '../composables/usePair'
-import { useViewer } from '../composables/useViewer'
-import { type Command, plain } from '../stores/keys'
+import { useViewer, viewerKeys } from '../composables/useViewer'
+import type { Command } from '../stores/keys'
 
-/* Images in a native dialog, fitted to the window. A click on the image toggles
-   1:1 pixels, scrolled inside the dialog; `←` `→` `h` `l` step through the images,
-   `↵` runs `open` on the shown one where it is given, and Esc or a click outside
-   closes. With `pair`, every image stands side by side at one height, fit only.
+/* Images in a native dialog, fitted to the window. A click on the image or `↵`
+   toggles 1:1 pixels, scrolled inside the dialog by `j` `k` `↓` `↑`; `←` `→` `h` `l`
+   step through the images, `⇧↵` runs `open` on the shown one where it is given, and
+   Esc or a click outside closes. With `pair`, every image stands side by side at one
+   height, fit only.
    `commands` are the opener's own keys while it is open, as Review's `⌃P`.
    The list may grow while open, as a live session's does.
    The dialog keeps the URL of the page beneath (design spec §1 rule 8). */
@@ -31,8 +32,9 @@ const emit = defineEmits<{ close: [] }>()
 
 const dialog = ref<HTMLDialogElement | null>(null)
 const image = ref<HTMLImageElement | null>(null)
-const { at, shown, step } = useViewer(() => props.images, props.start ?? 0, () => emit('close'))
-const actual = ref(false)
+const frame = ref<HTMLElement | null>(null)
+const viewer = useViewer(() => props.images, props.start ?? 0, () => emit('close'))
+const { at, shown, actual, toggle } = viewer
 /* The fitted image's scale, measured once it has loaded, on every resize while
    fitted, and on the switch back to fit: at 1:1 the drawn width is the natural one. */
 const scale = ref<number | null>(null)
@@ -43,16 +45,13 @@ function measure(): void {
     scale.value = Math.round((held.clientWidth / held.naturalWidth) * 100)
 }
 
-function toggle(): void {
-  actual.value = !actual.value
-  if (!actual.value) void nextTick(measure)
-}
+watch(actual, (now) => {
+  if (!now) void nextTick(measure)
+})
 
-/* Each selected image opens fitted, even when a removed image's neighbour takes its place. */
 watch(
   () => shown.value?.src,
   () => {
-    actual.value = false
     scale.value = null
   },
 )
@@ -84,25 +83,13 @@ function outside(event: MouseEvent): void {
   if (event.target === dialog.value) dialog.value?.close()
 }
 
-const stepping = () => !props.pair && props.images.length > 1
-
 useKeys('overlay', [
-  { id: 'close', keys: plain('Escape'), label: 'close', run: () => dialog.value?.close() },
-  {
-    id: 'previous',
-    keys: plain('ArrowLeft', 'KeyH'),
-    label: 'previous',
-    run: () => step(-1),
-    when: stepping,
-  },
-  { id: 'next', keys: plain('ArrowRight', 'KeyL'), label: 'next', run: () => step(1), when: stepping },
-  {
-    id: 'open',
-    keys: plain('Enter'),
-    label: 'large view',
-    run: () => props.open?.(at.value),
-    when: () => props.open !== undefined,
-  },
+  ...viewerKeys(viewer, {
+    close: () => dialog.value?.close(),
+    scroll: (by) => frame.value?.scrollBy({ top: by }),
+    pair: () => props.pair === true,
+    open: props.open && (() => props.open?.(at.value)),
+  }),
   ...(props.commands ?? []),
 ])
 
@@ -136,7 +123,7 @@ onUnmounted(() => window.removeEventListener('resize', measure))
         @load="loaded(index, $event)"
       />
     </div>
-    <div v-else-if="shown" class="viewer__frame">
+    <div v-else-if="shown" ref="frame" class="viewer__frame">
       <img
         ref="image"
         :key="shown.src"

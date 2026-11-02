@@ -217,7 +217,7 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
     viewer = page.locator("dialog[data-viewer]")
     expect(viewer.locator("img")).to_have_attribute("src", re.compile(r"/v1/7/image$"))
     expect(page).to_have_url(served.hub_of(SHOWN))
-    page.keyboard.press("Enter")
+    page.keyboard.press("Shift+Enter")
     expect(page).to_have_url(
         f"{served.url}/c/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
     )

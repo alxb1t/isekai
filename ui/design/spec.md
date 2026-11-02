@@ -184,8 +184,10 @@ y_long_name            │                                  │
   view, the Back button and a tab switch come back to the cell left, else the first row's source cell.
 - **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
-  cell holding images opens the viewer on its newest (`↵ view`), `← →` `h l` step its images and `↵` opens the
+  cell holding images opens the viewer on its newest (`↵ view`), `← →` `h l` step its images and `⇧↵` opens the
   shown one's large view. The checkbox's own click only ticks.
+- **The viewer** opens an image fitted; a click or `↵` toggles full size, where `j k` `↓ ↑` scroll it by 120 px, and
+  `h l` `← →` step to the next image, fitted. On a pair `↵` does nothing.
 - **A cell's images** sit at its foot, level with the source's thumbnail, under its stage track and any refusal,
   every approved version's, oldest to newest, each a 96×128 tile
   with its `vN` badge, wrapping; a click on one opens the viewer on it.
@@ -480,7 +482,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 |---|---|
 | everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⌃; the render drawer, from a field too · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New collection · j k or ↓↑ ↵ the library |
-| Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
+| Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ full size, j k or ↓↑ scroll it, ⇧↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
 | Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧D Draft from this · ⇧G Render · in the large view, h l or ←→ the screen's images, ⇧D Draft from this, ⇧C Compare with…, esc back · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
 | Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧I its collection's Renders · ⌃; or esc close |

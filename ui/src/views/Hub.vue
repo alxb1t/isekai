@@ -198,8 +198,8 @@ function viewSource(row: number): void {
   }
 }
 
-/* A cell's images in the viewer, from `index` or its newest; ↵ there opens the
-   shown image's large view, and Esc there comes back here. */
+/* A cell's images in the viewer, from `index` or its newest; ⇧↵ there opens the
+   shown image's large view, as ↵ toggles full size (D4), and Esc there comes back here. */
 function view(source: HubSource, flow: string, index?: number): void {
   const { digest } = source
   const images = cell(source, flow).images
