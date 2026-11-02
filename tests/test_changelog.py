@@ -1,9 +1,9 @@
 """The changelog keeps its format, and nothing cites it.
 
 `CHANGELOG.md` is a release record: Keep a Changelog sections, one short bullet
-per change. Each heading up to `LAST_NAMED` names its change; one past it may. A
-bullet directly under a heading past it passes. It is not a source, so no code, doc
-or README points into it.
+per change. Each heading from `FIRST_CHANGE` through `LAST_NAMED` names its change;
+one past it may. A bullet directly under a heading past it passes. It is not a
+source, so no code, doc or README points into it.
 """
 
 import re

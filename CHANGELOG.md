@@ -3,9 +3,10 @@
 Notable changes, per [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
-A version's heading is its tag and date, `## [0.60.1] - 2026-11-01`; each up to `0.60.0` also names its change. A
-bullet is one change an operator notices, in 1–3 short lines — what changed and why — ending with its design id,
-`(0035 D2)`. It holds no figure, file:line reference or pod id; a re-pinned flow's bullet names its new digest.
+A version's heading is its tag and date, `## [0.60.1] - 2026-11-01`; each from `0.7.0` through `0.60.0` also
+names its change. A bullet is one change an operator notices, in 1–3 short lines — what changed and why — ending
+with its design id, `(0035 D2)`. It holds no figure, file:line reference or pod id; a re-pinned flow's bullet names
+its new digest.
 
 ## [Unreleased]
 
@@ -27,6 +28,8 @@ bullet is one change an operator notices, in 1–3 short lines — what changed 
 
 - The image-phase instructions drop the shell-script syntax check because no tracked shell scripts remain,
   keeping the Docker build check (0088 D5).
+- The heading rule names its lower bound, `0.7.0`, in the preamble and test description, so it agrees with
+  the formatter and early releases (0088 D4).
 
 ### Security
 
