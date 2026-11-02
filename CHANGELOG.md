@@ -3,9 +3,9 @@
 Notable changes, per [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
-A version's heading names its change: `## [0.25.0] - 2026-09-27 · 0035-the-flow-skills`. A bullet is one change
-an operator notices, in 1–3 short lines — what changed and why — ending with its design id, `(0035 D2)`. It holds
-no figure, file:line reference or pod id; a re-pinned flow's bullet names its new digest.
+A version's heading is its tag and date, `## [0.60.1] - 2026-11-01`; each up to `0.60.0` also names its change. A
+bullet is one change an operator notices, in 1–3 short lines — what changed and why — ending with its design id,
+`(0035 D2)`. It holds no figure, file:line reference or pod id; a re-pinned flow's bullet names its new digest.
 
 ## [Unreleased]
 
@@ -13,6 +13,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - `make setup` restores what a fresh worktree lacks, `AGENTS.md` declares it with the run's lines, and the browser
   tests' wait ignores a proxy, so an unattended run starts from tracked files alone (0088 D1, D2, D3).
+
+### Changed
+
+- The changelog's test follows the release: from `0.60.1` a heading's change id and a bullet's section are
+  optional, and every earlier heading stays held (0088 D4).
 
 ## [0.60.0] - 2026-10-27 · 0087-the-fifth-walkthrough
 

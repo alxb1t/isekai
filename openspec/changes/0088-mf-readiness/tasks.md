@@ -6,7 +6,7 @@ relative to the repository's root.
 ## Progress
 
 - [x] 1 — The worktree
-- [ ] 2 — The changelog
+- [x] 2 — The changelog
 - [ ] 3 — The documents
 - [ ] 4 — The threat model
 - [ ] 5 — The ruleset **HUMAN**
@@ -41,16 +41,16 @@ relative to the repository's root.
 
 ## 2 — The changelog
 
-- [ ] 2.1 **HALT CHECK** Prove phase 1's commit in a worktree with no ignored files. No file changes.
+- [x] 2.1 **HALT CHECK** Prove phase 1's commit in a worktree with no ignored files. No file changes.
   Verify: `git worktree add --detach ../try-0088 HEAD && (cd ../try-0088 && make setup && make gate); code=$?; git worktree remove ../try-0088; test $code -eq 0` exits 0.
-- [ ] 2.2 In `tests/test_changelog.py`, per [D4](design.md#d4), add `LAST_NAMED = (0, 60, 0)` beside `FIRST_CHANGE`. In
+- [x] 2.2 In `tests/test_changelog.py`, per [D4](design.md#d4), add `LAST_NAMED = (0, 60, 0)` beside `FIRST_CHANGE`. In
   `format_problems`, a heading from `FIRST_CHANGE` through `LAST_NAMED` must name its change, one below must not, and one
   above may; a bullet directly under a heading above `LAST_NAMED` passes. The module docstring says so.
   Verify: `uv run pytest tests/test_changelog.py` exits 0.
-- [ ] 2.3 Add `test_a_release_after_the_line_needs_no_change_or_section` to `tests/test_changelog.py`, marked
+- [x] 2.3 Add `test_a_release_after_the_line_needs_no_change_or_section` to `tests/test_changelog.py`, marked
   `spec_exempt`: `format_problems` of an `[Unreleased]` heading, then `## [0.60.1] - 2026-11-01`, then a bullet, is `[]`.
   Verify: `uv run pytest tests/test_changelog.py -k after_the_line` exits 0.
-- [ ] 2.4 In `CHANGELOG.md`'s preamble, before → after: ``A version's heading names its change: `## [0.25.0] - 2026-09-27 · 0035-the-flow-skills`.`` → ``A version's heading is its tag and date, `## [0.60.1] - 2026-11-01`; each up to `0.60.0` also names its change.``
+- [x] 2.4 In `CHANGELOG.md`'s preamble, before → after: ``A version's heading names its change: `## [0.25.0] - 2026-09-27 · 0035-the-flow-skills`.`` → ``A version's heading is its tag and date, `## [0.60.1] - 2026-11-01`; each up to `0.60.0` also names its change.``
   Verify: `sed -n 1,10p CHANGELOG.md | grep -c '0.60.1'` prints `1`.
 
 ## 3 — The documents
