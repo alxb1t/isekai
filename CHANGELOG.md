@@ -22,6 +22,8 @@ its new digest.
   tunnel may have dropped (0089 D4).
 - An upload that fails to be held for any reason, or whose name holds a NUL byte, is refused alone and never
   left waiting, so the rest still commit; the pixel bound's comment says what it refuses (0089 D5).
+- Cancel on a flow at its draft changes nothing and says so; with no draft either, it names `review`. A drafted
+  approval's cancel names the discard that follows, and draft-from names the held approvals and a way that works (0089 D6).
 
 ## [0.60.1] - 2026-11-02
 

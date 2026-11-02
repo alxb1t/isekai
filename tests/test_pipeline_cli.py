@@ -656,6 +656,21 @@ def test_approve_cancel_answers_each_run_on_its_own(
         rendered.directory("summon-anime-wai", "review") / "001.approved.json"
     ).exists()
 
+    # A copy's cancel deletes it; a flow at its draft has nothing to cancel.
+    approve(
+        rendered, "control-anime-wai", schema, vocabulary, source="summon-anime-wai"
+    )
+    assert isinstance(wired.out, io.StringIO)
+    for flow, run in (("control-anime-wai", rendered), ("summon-anime-wai", cancelled)):
+        again = ["approve", "--flow", flow, "--cancel", run.id]
+        assert dispatch(build_parser().parse_args(again), wired) == 0
+    said = wired.out.getvalue()
+    assert (
+        f"{rendered.id}: approve cancelled control-anime-wai, a copy, deleted" in said
+    )
+    assert f"{cancelled.id}: approve has nothing to cancel in summon-anime-wai" in said
+    assert sorted(path.name for path in review_of.iterdir()) == ["001.draft.json"]
+
 
 @pytest.mark.spec("cli:approve-cancel:not-beside-from")
 def test_approve_cancel_beside_from_is_refused_before_any_run_is_read(

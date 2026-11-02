@@ -9,7 +9,7 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 - [x] 2 — Evaluation
 - [x] 3 — The render
 - [x] 4 — Import
-- [ ] 5 — Cancel and draft-from
+- [x] 5 — Cancel and draft-from
 - [ ] 6 — The guard
 - [ ] 7 — The UI and the docs
 - [ ] 8 — The tests
@@ -56,22 +56,22 @@ The flake first, then evaluation, the render, import, cancel, the guard, the UI 
 
 ## 5 — Cancel and draft-from
 
-- [ ] 5.1 `cancel` in `isekai/pipeline/review.py` follows [the review delta](specs/review/spec.md) and returns
+- [x] 5.1 `cancel` in `isekai/pipeline/review.py` follows [the review delta](specs/review/spec.md) and returns
   `Cancelled(left, changed)` per [D6](design.md#d6); `approve_flow` in `isekai/interface/cli.py`, `post_cancel` in
   `isekai/interface/ui/app.py` and every `cancel` assertion in `tests/` follow it. Add
   `test_a_flow_with_no_approval_has_nothing_to_cancel` to `tests/test_review.py`, bound to the delta's new key.
   Verify: `uv run pytest tests/test_review.py -k nothing_to_cancel` exits 0, and `grep -c 'has no approval to cancel; run' isekai/pipeline/review.py` prints `0`.
-- [ ] 5.2 Update the cancel text `ui/src/composables/useSheet.test.ts` carries, if its needle changed in 5.1.
+- [x] 5.2 Update the cancel text `ui/src/composables/useSheet.test.ts` carries, if its needle changed in 5.1.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 5.3 `drafting_approval`'s refusal for an approval the source does not hold follows [D6](design.md#d6): the held
+- [x] 5.3 `drafting_approval`'s refusal for an approval the source does not hold follows [D6](design.md#d6): the held
   approvals named, then the `draft` command on an image of one, else the `render` command. Add `test_a_missing_version_names_the_held_approvals` to `tests/test_review.py`, bound to
   `review:draft-from:a-missing-source-approval-is-refused`.
   Verify: `uv run pytest tests/test_review.py -k held_approvals` exits 0, and `grep -c -- '--version' isekai/pipeline/review.py` prints `0`.
-- [ ] 5.4 `_derived` adds that flow's `--discard` after a drafted approval's cancel, and `_cancelling`'s refusal says
+- [x] 5.4 `_derived` adds that flow's `--discard` after a drafted approval's cancel, and `_cancelling`'s refusal says
   the discard drops that flow's fields, per [D6](design.md#d6). In `test_an_approval_drafted_from_a_source_refuses_the_sources_cancel`,
   run the printed chain and assert the source's cancel then succeeds.
   Verify: `uv run pytest tests/test_review.py -k refuses_the_sources_cancel` exits 0.
-- [ ] 5.5 Add a copy's cancel as a step to `test_approve_cancel_answers_each_run_on_its_own` in `tests/test_pipeline_cli.py`
+- [x] 5.5 Add a copy's cancel as a step to `test_approve_cancel_answers_each_run_on_its_own` in `tests/test_pipeline_cli.py`
   and to `test_an_approved_sheet_carries_why_it_cannot_be_cancelled` in `tests/test_ui_api.py`, and a step copying over
   a re-opened flow to `test_a_copy_is_deleted_and_an_approval_with_a_later_draft_refuses_its_discard`: the draft
   comes back and the flow reads `re-opened`.

@@ -320,7 +320,8 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   number.
 - `--cancel` — on `approve`: turn each flow's newest approval back into its draft instead, refusing one
   anything was made from; a copy is deleted, as `--from` copies the source's newest approval again, leaving the
-  flow on what lies beneath it, which the line names; not combinable with `--from`.
+  flow on what lies beneath it, which the line names; a flow at its draft is left as it is, and the line says so;
+  not combinable with `--from`.
 - `--server SERVER` — the ComfyUI endpoint, reached through the tunnel; **omit it to assemble every
   prompt and stop without rendering**, which is how a whole batch is checked before anything is
   rented.

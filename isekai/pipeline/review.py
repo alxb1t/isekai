@@ -38,7 +38,7 @@ import shlex
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
@@ -96,6 +96,14 @@ CANCEL = ("--cancel",)
 # and the chunks are averaged, which is not the same prompt. Sheets already run
 # well past it and nothing said so, so every one was being silently averaged.
 ENCODER_WINDOW = 77
+
+
+class Cancelled(NamedTuple):
+    """What a cancel left a flow on, and whether it took an approval back."""
+
+    left: Path | None
+    changed: bool
+
 
 # The three states stage ③ has, and the strings the review UI puts on the wire.
 Status = Literal["draft", "approved", "re-opened"]
@@ -303,9 +311,8 @@ def drafting_approval(
     if approval is None or approval not in held:
         named = "an approval" if approval is None else artifact_name(approval, APPROVED)
         raise Refusal(
-            f"{run.id}: flow {source} has no {named} to draft {flow} from; run "
-            f"`{stage_command(run, 'approve', source)}` to approve its draft, "
-            f"{_DRAFT_AGAIN}"
+            f"{run.id}: flow {source} has no {named} to draft {flow} from; "
+            f"{_held_way(run, flow, source, held)}"
         )
     _approval(run, source, approval, f"draft {flow} again")
     if (
@@ -318,6 +325,37 @@ def drafting_approval(
             f"to list the seeds its renders wrote, and draft {flow} from one of those"
         )
     return approval
+
+
+def _held_way(run: Run, flow: str, source: str, held: Sequence[int]) -> str:
+    """Return the way to draft `flow` from an approval `source` holds.
+
+    The draft of the first image of the newest approval that has one, else a
+    render of `source`; with no approval held, its approval.
+    """
+    if not held:
+        return (
+            f"run `{stage_command(run, 'approve', source)}` to approve its draft, "
+            f"{_DRAFT_AGAIN}"
+        )
+    names = ", ".join(artifact_name(version, APPROVED) for version in held)
+    for version in reversed(held):
+        if (image := _first_image(group_of(run, source, version))) is not None:
+            return (
+                f"{source} holds {names}; run `{_draft_command(image, flow)}` "
+                "to draft it from an image of one"
+            )
+    rendering = (
+        f"python -m isekai render {shlex.quote(str(run.path.parent))} {source}=1"
+    )
+    return f"{source} holds {names}; run `{rendering}` to render one, {_DRAFT_AGAIN}"
+
+
+def _first_image(group: Path) -> Path | None:
+    """Return the first image in a render group, or None."""
+    if not group.is_dir():
+        return None
+    return min((path for path in group.iterdir() if is_seed(path.stem)), default=None)
 
 
 def waiting_edit(run: Run, flow: str) -> Path | None:
@@ -483,7 +521,7 @@ def cancellable(run: Run, flow: str) -> str | None:
     return None
 
 
-def cancel(run: Run, flow: str) -> Path | None:
+def cancel(run: Run, flow: str) -> Cancelled:
     """Cancel `flow`'s newest approval, and return what the flow is left on.
 
     An approval goes back to its draft, written before the approval is deleted,
@@ -492,15 +530,20 @@ def cancel(run: Run, flow: str) -> Path | None:
     A copy has no draft to go back to, so it is deleted, as `approve --from`
     copies the source's newest approval again, and the flow is left on the draft
     open above what lies beneath, else the approval beneath, else None.
-    e.g. review/002.approved.json -> review/002.draft.json
-    e.g. a copy, review/002.approved.json -> review/001.approved.json
+    A flow at its draft, with no approval, is left unchanged on that draft.
+    e.g. review/002.approved.json -> (review/002.draft.json, True)
+    e.g. a copy, review/002.approved.json -> (review/001.approved.json, True)
+    e.g. review/001.draft.json alone -> (review/001.draft.json, False)
     """
+    directory = run.directory(flow, REVIEW)
+    if (at := _at_draft(directory)) is not None:
+        return Cancelled(at, changed=False)
     version, body = _cancelling(run, flow)
     approval = approval_of(run, flow, version)
-    directory = run.directory(flow, REVIEW)
     if body["producer"].get("copied_from") is not None:
         approval.unlink()
-        return current_draft(directory) or latest_artifact(directory, APPROVED)
+        left = current_draft(directory) or latest_artifact(directory, APPROVED)
+        return Cancelled(left, changed=True)
     path = directory / artifact_name(version, DRAFT)
     if not path.exists():
         producer = body["producer"]
@@ -517,7 +560,12 @@ def cancel(run: Run, flow: str) -> Path | None:
             draft_image(body),
         )
     approval.unlink()
-    return path
+    return Cancelled(path, changed=True)
+
+
+def _at_draft(directory: Path) -> Path | None:
+    """Return the draft a flow holding no approval is at, or None."""
+    return None if approved_versions(directory) else current_draft(directory)
 
 
 def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
@@ -530,11 +578,15 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
     would still be refused.
     """
     directory = run.directory(flow, REVIEW)
+    if (at := _at_draft(directory)) is not None:
+        raise Refusal(
+            f"{run.id}: flow {flow} is at its draft {at.name}, with no approval"
+        )
     approved = approved_versions(directory)
     if not approved:
         raise Refusal(
-            f"{run.id}: flow {flow} has no approval to cancel; run "
-            f"`{stage_command(run, 'approve', flow)}` to approve its draft"
+            f"{run.id}: flow {flow} has no draft and no approval to cancel; run "
+            f"`{stage_command(run, STAGE, flow)}` to draft its sheet"
         )
     version = approved[-1]
     name = artifact_name(version, APPROVED)
@@ -545,12 +597,7 @@ def _cancelling(run: Run, flow: str) -> tuple[int, ReviewApproved]:
     waiting = current_draft(directory)
     derived, firsts = _derived(run, flow, version)
     if derived:
-        group = group_of(run, flow, version)
-        image = (
-            min((path for path in group.iterdir() if is_seed(path.stem)), default=None)
-            if group.is_dir()
-            else None
-        )
+        image = _first_image(group_of(run, flow, version))
         if waiting is not None:
             way = (
                 f"{waiting} is open above it; edit it, then run "
@@ -581,7 +628,9 @@ def _derived(run: Run, flow: str, version: int) -> tuple[list[str], list[str]]:
     Each derived file is named by its path in the run. What can go first is a
     command for each: the cancel of another flow's copy of it, or approval
     drafted from it, that is its newest approval and can be cancelled, and the
-    discard of another flow's waiting draft drafted from it.
+    discard of another flow's waiting draft drafted from it. An approval drafted
+    from it goes back to a draft drafted from it, so its cancel is followed by
+    that flow's discard.
 
     e.g. (run, f, 2) -> (["f/prompts/002.json", "g/review/001.approved.json"], [])
     e.g. (run, f, 1) -> (["g/review/001.draft.json"],
@@ -600,6 +649,7 @@ def _derived(run: Run, flow: str, version: int) -> tuple[list[str], list[str]]:
         if other == flow:
             continue
         directory = run.directory(other, REVIEW)
+        discarding = f"`{stage_command(run, STAGE, other, options=DISCARD)}`"
         held_versions = approved_versions(directory)
         for held in held_versions:
             path = approval_of(run, other, held)
@@ -611,13 +661,16 @@ def _derived(run: Run, flow: str, version: int) -> tuple[list[str], list[str]]:
             ):
                 found.append(f"{other}/{REVIEW}/{path.name}")
                 if held == held_versions[-1] and cancellable(run, other) is None:
-                    firsts.append(
-                        f"`{stage_command(run, 'approve', other, options=CANCEL)}`"
-                    )
+                    first = f"`{stage_command(run, 'approve', other, options=CANCEL)}`"
+                    if producer.get("drafted_from") == source:
+                        first += (
+                            f", then {discarding}, which drops {other}'s fields "
+                            "drafted from it"
+                        )
+                    firsts.append(first)
         waiting = current_draft(directory)
         if waiting is None:
             continue
-        discarding = f"`{stage_command(run, STAGE, other, options=DISCARD)}`"
         again = f"`{stage_command(run, 'approve', flow, options=CANCEL)}`"
         draft = read(waiting, DRAFT_FILE, remedy=f"run {discarding}, then {again}")
         producer = draft.get("producer")
