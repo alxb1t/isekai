@@ -156,6 +156,7 @@ def _hold_removal(page: Page, name: str) -> list[Route]:
 
 @pytest.mark.spec("ui:sheet:an-import-opens-the-hub")
 @pytest.mark.spec("ui:sheet:a-commit-in-flight-holds-the-sheet")
+@pytest.mark.spec("ui:sheet:a-chosen-file-is-removed-alone")
 def test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned(
     page: Page, served: Served, tmp_path: Path
 ) -> None:

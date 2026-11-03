@@ -958,22 +958,38 @@ def _update_during_approval(
 ) -> int:
     """Approve while an update is in flight, and return the update's status.
 
-    The update starts inside the approval and is given the chance to pass its
-    check first; if it does, its write waits until the approval has written.
-    With the lock the check cannot run until the approval ends, so the chance is
-    a bounded wait that times out; `unlocked`, the check always runs. Both waits
-    are bounded and asserted, so a regression fails rather than hangs.
+    The update starts inside the approval, and the approval goes on once the
+    update waits at the lock, or, `unlocked`, once it has passed its check; it
+    asserts which one stopped it. An update past its check writes only after the
+    approval has written. Both waits are bounded, so a regression fails rather
+    than hangs.
     """
     body = client.get(_at(made)).json()
-    checked, approved = threading.Event(), threading.Event()
+    reached, approved = threading.Event(), threading.Event()
+    # Where the update was stopped: at the lock, or past its check.
+    stopped: list[str] = []
     answers: list[int] = []
     precondition, approving = app_module._precondition, app_module.approve
     write = review_module.write
+    lock = app_module._DRAFT_UPDATE
+
+    class Waited:
+        """The draft lock, saying when an update finds it held."""
+
+        def __enter__(self) -> None:
+            if not lock.acquire(blocking=False):
+                stopped.append("lock")
+                reached.set()
+                lock.acquire()
+
+        def __exit__(self, *exc: object) -> None:
+            lock.release()
 
     def check(one: Held, payload: Mapping[str, Any]) -> None:
         # The approval states a precondition too; only the update's is the signal.
         if "fields" in payload:
-            checked.set()
+            stopped.append("check")
+            reached.set()
         precondition(one, payload)
 
     def put() -> None:
@@ -990,17 +1006,18 @@ def _update_during_approval(
     ) -> None:
         # By name: the endpoint runs on a worker thread, not on `update`.
         if path.name.endswith(".draft.json"):
-            assert approved.wait(timeout=5), "the approval never finished"
+            assert approved.wait(WAIT), "the approval never finished"
         write(path, kind, artifact)
 
     def approve_(
         run: Run, flow: str, schema: Schema, vocabulary: Vocabulary
     ) -> tuple[Path | None, list[str]]:
         update.start()
-        assert checked.wait(timeout=5 if unlocked else 0.5) is unlocked, (
+        assert reached.wait(WAIT), "the update reached neither lock nor check"
+        assert stopped == (["check"] if unlocked else ["lock"]), (
             "the update's check ran inside the approval"
             if not unlocked
-            else "the update's check never ran"
+            else "the update found a lock the approval should not hold"
         )
         try:
             return approving(run, flow, schema, vocabulary)
@@ -1011,6 +1028,8 @@ def _update_during_approval(
     monkeypatch.setattr(app_module, "_precondition", check)
     monkeypatch.setattr(app_module, "approve", approve_)
     monkeypatch.setattr(review_module, "write", late)
+    if not unlocked:
+        monkeypatch.setattr(app_module, "_DRAFT_UPDATE", Waited())
     assert client.post(_at(made, "/approve")).status_code == 200
     update.join()
     return answers[0]
