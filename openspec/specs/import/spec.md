@@ -95,7 +95,8 @@ let it in with the operator, one file at a time.
 ### Requirement: Import is staged, and a commit is one move
 
 The system SHALL read chosen files into a staging folder under the library's `.staging/`, SHALL create the collection
-and move every staged file into its `sources/` in one commit, SHALL delete the staging folder on cancel, and SHALL
+and move every staged file into its `sources/` in one commit, SHALL delete the staging folder on cancel,
+SHALL delete one staged file on request before the commit, refusing once it is sealed, and SHALL
 delete, when the surface starts, each staging folder an import left in the library, keeping any written to within
 the last hour and any folder import did not make. A file with the same bytes as a source already in the collection SHALL
 be skipped; a different file whose name is taken SHALL be written as `<stem>-2`. A collection name SHALL be refused when
@@ -148,6 +149,13 @@ Bytes, not names, decide sameness. A collection holds copies of photographs, so 
 - **WHEN** `isekai import` names a collection inside the working tree and outside `.data/`
 - **THEN** it is refused, naming where a collection may go
 - **AND** nothing is written
+
+#### Scenario: a staged file is removed alone
+- **Key:** `import:stage:a-staged-file-is-removed-alone`
+- **Layers:** unit
+- **WHEN** one staged file is removed, and then the staging folder is committed
+- **THEN** the collection holds every other staged file and not that one
+- **AND** a removal asked once the commit has sealed the folder is refused, and no file changes
 
 ### Requirement: A source is cleaned before it enters a collection
 

@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-11-03
+
+Gate: local 0m33s · CI none · 0.61.0: local 0m28s · CI none
+
 ### Changed
 
 - One `progress` sizes the Prepare bar, the Render bar and the drawer's; Prepare counts each stage's cells against

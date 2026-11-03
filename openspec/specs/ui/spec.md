@@ -587,7 +587,7 @@ cell's refusal SHALL stand above its images, and `↵ view photo` SHALL take no 
 name its newest image — the newest version holding images, then its last-written image — and a click or `↵` SHALL follow
 the cell's stage: tick while unassigned or assigned, open Review on a sheet or a draft, open the sheet read-only on an
 approval with no image, and open the viewer on the newest of the cell's images where it holds any, stepping through
-them, `↵` opening an image's large view; a tagged or unreadable cell SHALL do nothing. A cell holding images SHALL show
+them, `⇧↵` opening an image's large view; a tagged or unreadable cell SHALL do nothing. A cell holding images SHALL show
 every one of them, oldest to newest, each marked with its version. A source's cell SHALL be the grid's first column,
 reached by `h` and `←`, and `↵` there SHALL open its photograph in the viewer, stepping through the collection's
 sources. The hub SHALL keep its focus across a large view, the Back button and a switch of tabs, a restored focus
@@ -665,7 +665,7 @@ pictures share a foot, so a long name, a mark or a refusal moves only the text a
 #### Scenario: a rendered cell opens its newest image
 - **Key:** `ui:hub:a-rendered-cell-opens-its-newest-image`
 - **Layers:** e2e
-- **WHEN** a rendered cell is clicked, then `↵` is pressed in the viewer
+- **WHEN** a rendered cell is clicked, then `⇧↵` is pressed in the viewer
 - **THEN** the viewer opens on its newest image, then that image's large view
 - **AND** `Esc` returns to the hub, focused on that cell, and that cell in view
 
@@ -686,12 +686,17 @@ pictures share a foot, so a long name, a mark or a refusal moves only the text a
 
 The system SHALL take sources through the browser's file dialog, sending each file in its own request, and SHALL show
 for each its upload's progress, then its reading, then whether it is ready, converted, refused or not cleaned, with
-the reason. Import SHALL stay disabled, with its reason, until every chosen file is read, and SHALL commit only the
-ready files and those the operator chose to import as they are. Each upload SHALL keep its own state, whatever its
-name; an upload SHALL be refused once Import begins committing; and a file whose reading fails SHALL be refused
-alone, the next file still read. While Import commits, the sheet SHALL take no file, no second Import and no
-cancel, by button, by `Esc` or by leaving the screen; a commit refused after the screen is left SHALL cancel its
-staged folder.
+the reason. Import SHALL stay disabled, with its reason, until every chosen file is read and every removal has
+ended, and SHALL commit only the ready files and those the operator chose to import as they are. Each upload SHALL
+keep its own state, whatever its name; an upload SHALL be refused once Import begins committing; and a file whose
+reading fails SHALL be refused alone, the next file still read. While Import commits, the sheet SHALL take no file,
+no second Import and no cancel, by button, by `Esc` or by leaving the screen; a commit refused after the screen is
+left SHALL cancel its staged folder. Before Import commits, a read or a skipped file SHALL be removable alone,
+unasked — `×` on its tile, or `⌫` with its tile focused — a read file's removal taking it out of the staging folder,
+unless a file skipped as its copy is still chosen, which then holds it, and the focus moving to the next tile; a file
+still uploading SHALL offer neither. Once read, the tiles SHALL be a grid that `h j k l` and the arrows
+move through, the first tile taking the focus unless a field holds it, and `↵` SHALL open the focused file full size in
+the viewer.
 
 Each file's bar answers which one is slow; each reason sits on the file it concerns, so two files of one name are
 two uploads. A file that lands while the folder is committed would be dropped from the collection unseen, and a cancel
@@ -761,7 +766,7 @@ then would delete the folder the commit is moving.
 - **Key:** `ui:sheet:a-commit-in-flight-holds-the-sheet`
 - **Layers:** e2e
 - **WHEN** Import's commit is in flight
-- **THEN** Add files…, Import and Cancel are disabled
+- **THEN** Add files…, Import and Cancel are disabled, and no file can be removed
 - **AND** `Esc` leaves the sheet open
 
 #### Scenario: leaving the screen mid-commit keeps the staged folder
@@ -770,6 +775,30 @@ then would delete the folder the commit is moving.
 - **WHEN** the sheet closes while Import's commit is in flight
 - **THEN** its staging folder is not cancelled
 - **AND** a commit refused after it closes cancels the folder
+
+#### Scenario: a chosen file is removed alone
+- **Key:** `ui:sheet:a-chosen-file-is-removed-alone`
+- **Layers:** unit
+- **WHEN** a read file and a skipped file are each removed before Import
+- **THEN** the read file leaves the staging folder and the skipped one only the sheet
+- **AND** every other file stays, and Import commits the rest
+- **AND** while a removal is in flight, Import is disabled, naming it
+
+#### Scenario: a removed file's copy keeps the photograph
+- **Key:** `ui:sheet:a-removed-files-copy-keeps-it`
+- **Layers:** unit
+- **WHEN** a read file is removed while a file skipped as its copy is still chosen
+- **THEN** the copy holds the staged file, which stays in the staging folder, and Import commits it
+- **AND** with no copy chosen, the removal takes the file out of the staging folder
+- **AND** a copy heard as skipped only as its file is removed is sent again, so it stages its own bytes and Import
+  commits it
+
+#### Scenario: the tiles take the keys once read
+- **Key:** `ui:sheet:the-tiles-take-the-keys`
+- **Layers:** unit
+- **WHEN** every chosen file is read and no field holds the focus
+- **THEN** the first tile takes the focus, `h j k l` move it, and `⌫` removes the focused file
+- **AND** `↵` opens it full size in the viewer
 
 ### Requirement: Prepare runs what changed as one job, and refuses before it starts when Ollama does not answer
 
@@ -780,9 +809,11 @@ Stop SHALL interrupt the current stage of the job it names and start no other, l
 the surface SHALL interrupt every running job; each line a job's verbs write to the collection's log SHALL name its job;
 and a stage that fails having reported nothing SHALL end the job as failed, naming the collection's log, and start no
 other. Before any stage starts, the surface SHALL check that the local model server answers, and SHALL refuse with its
-message, starting nothing, when it does not. While Prepare runs, the job strip and Prepare bar SHALL show completed
-cells out of the accepted total and elapsed time; the total SHALL stay fixed, a cell SHALL count as completed only at
-sheet, and elapsed time SHALL tick every second.
+message, starting nothing, when it does not. While Prepare runs, the job strip and Prepare bar SHALL show each stage's
+completed cells out of its asked total — `tag 6 of 6 · caption 3 of 6 · sheet 0 of 6 · 00:35` — the bar as wide as the
+stages done over the stages asked; each total SHALL stay fixed, a cell SHALL count once per stage it completes and a
+refused one in none, and elapsed time SHALL tick every second. Before it runs, the Prepare bar SHALL name how many
+photographs it prepares in its collection, `2 photographs to prepare in <collection>`, its button the changes.
 
 The pipeline's verb is the one path, so Prepare is exactly what the verbs do. Prepare runs on the local models and a
 render on a rented GPU, and they write no file in common, so neither waits for the other. A refusal before the start
@@ -834,8 +865,8 @@ leaves every cell assigned, so pressing Prepare again is the whole fix.
 - **Key:** `ui:prepare:totals-count-cells-not-stages`
 - **Layers:** unit
 - **WHEN** assigned cells report tagging, reading, sheet completion and a refusal
-- **THEN** each cell counts once in the fixed total and only cells reaching sheet count as completed
-- **AND** a repeated completion never increments the count again
+- **THEN** each stage's count grows once per cell completing it, against that stage's fixed total
+- **AND** a refused cell counts in no stage, and a repeated completion never increments a count again
 
 #### Scenario: a render runs beside a Prepare
 - **Key:** `ui:prepare:a-render-runs-beside-a-prepare`
@@ -854,6 +885,13 @@ leaves every cell assigned, so pressing Prepare again is the whole fix.
 - **Layers:** unit
 - **WHEN** a Prepare and a render write to one collection's log
 - **THEN** each line begins with its job's name
+
+#### Scenario: the Prepare bar names its photographs
+- **Key:** `ui:prepare:the-bar-names-its-photographs`
+- **Layers:** unit
+- **WHEN** two photographs are assigned to two flows each
+- **THEN** the bar reads `2 photographs to prepare in <collection>`
+- **AND** its button reads `4 changes · Prepare`
 
 ### Requirement: The page is told of a job as it runs
 
@@ -1244,18 +1282,21 @@ hand in another format is still shown, as its thumbnail is.
 ### Requirement: Every command has one key, declared once, and none fires while typing
 
 The system SHALL declare each keyboard command once, with its key and its label, on the screen or overlay that offers
-it, and SHALL draw every key hint and the key list from those declarations, the list opening on `⌃/` on every screen and
-on the app bar's `?` button; no screen SHALL carry a key bar. It SHALL match a key by the physical key, whatever the
-keyboard layout, and SHALL treat Mod as `⌘` on macOS and `Ctrl` elsewhere. An open overlay SHALL take every key before
-the screen beneath it, and the screen before the keys offered everywhere. While focus is in a text field, no command
-SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;`, Review's `⌃P`, and on macOS Review's `⌃H` and
-`⌃L`, which move between its panes, and `⌃J` and `⌃K`, which move between its fields as `↓` and `↑` do; the field SHALL
-keep its own editing keys. On a grid, a move between rows SHALL keep the column it is in, held at a shorter row's end.
-On the hub and in the session drawer, a focused button or link SHALL keep `↵` and `Space`. An `Esc` that ends an input
-method's composition SHALL be the input method's, closing nothing. `Esc` SHALL close an open suggestion list first, then
-leave the field, then close the top overlay, then go back on the screen, and SHALL never close a billing alert. A plain
-letter SHALL move the focus, and a command SHALL take `⇧` and a letter. No key
-SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it quotes.
+it, and SHALL draw every key hint and the key list from those declarations, the list opening on `⌃/` on every screen
+and on the app bar's `?` button; no screen SHALL carry a key bar. It SHALL match a key by the physical key, whatever
+the keyboard layout, and SHALL treat Mod as `⌘` on macOS and `Ctrl` elsewhere. An open overlay SHALL take every key
+before the screen beneath it, and the screen before the keys offered everywhere. While focus is in a text field, no
+command SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;`, Review's `⌃P`, and on macOS Review's
+`⌃H` and `⌃L`, which move between its panes, and `⌃J` and `⌃K`, which move between its fields as `↓` and `↑` do, and
+in ④'s seed slots `j` `k` `↓` `↑`, which move between the slots; the field SHALL keep its own editing keys. On a grid,
+a move between rows SHALL keep the column it is in, held at a shorter row's end. On the hub and in the session drawer,
+a focused button or link SHALL keep `↵` and `Space`. An `Esc` that ends an input method's composition SHALL be the
+input method's, closing nothing. `Esc` SHALL close an open suggestion list first, then leave the field, then close the
+top overlay, then go back on the screen, and SHALL never close a billing alert. On macOS Review's panes SHALL move by
+`⌃H` and `⌃L` alone, from a field or not, and `h` `l` and `←` `→` SHALL move within a pane; elsewhere `h` `l` and `←`
+`→` SHALL move between the panes. A plain letter SHALL move the focus, and a command SHALL take `⇧` and a letter, but
+for `⌫` on a chosen file, which removes it before anything is committed. No key SHALL spend money but the Render
+dialog's `Mod+↵`, which confirms the price it quotes.
 
 A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
 Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.
@@ -1330,8 +1371,9 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 #### Scenario: Review moves between its panes
 - **Key:** `ui:keys:review-moves-between-its-panes`
 - **Layers:** unit
-- **WHEN** `l` is pressed from the rail three times
+- **WHEN** on macOS `⌃L` is pressed from the rail three times, then `l` once
 - **THEN** focus moves through the source pane and the sheet to ④
+- **AND** `l` moves within ④, and no pane changes
 
 #### Scenario: a row move keeps the column
 - **Key:** `ui:keys:a-row-move-keeps-the-column`
@@ -1354,8 +1396,8 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 #### Scenario: the key list opens from a field
 - **Key:** `ui:keys:the-key-list-opens-from-a-field`
 - **Layers:** unit
-- **WHEN** `⌃/` and then `?` are pressed with focus in a text field
-- **THEN** `⌃/` opens the key list and `?` is typed into the field
+- **WHEN** `?` and then `⌃/` are pressed with focus in a text field
+- **THEN** `?` is typed into the field and `⌃/` opens the key list
 
 #### Scenario: Review's fields move from a field on macOS
 - **Key:** `ui:keys:review-fields-move-from-a-field-on-macos`
@@ -1366,10 +1408,13 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 
 ### Requirement: A dialog holds the focus while it is open
 
-The system SHALL open every confirming dialog — Render, Revise, and New collection or Add sources — as a modal dialog,
+The system SHALL open every confirming dialog — Render, Revise, and New collection or Add sources — and the key list as
+a modal dialog,
 the page behind it inert, the focus on its first control and held inside it, and SHALL return the focus to where it
 was when it closes. The Render dialog's first control SHALL be *Keep the volume open*, which `Space` toggles and
-`↵` leaves alone; the Revise dialog's SHALL be its confirm button.
+`↵` leaves alone; the Revise dialog's SHALL be its confirm button. The key list
+SHALL stand centred over most of the window, its keys in columns by scope — everywhere, then the screen's — and `⌃/`,
+`Esc` and the backdrop SHALL close it.
 
 A key goes where the eye is. A dialog over a grid that leaves the focus on the grid sends `↵` and `Tab` to what it
 covers; and only `Mod+↵` spends money, so `↵` on the checkbox never renders.
@@ -1381,22 +1426,31 @@ covers; and only `Mod+↵` spends money, so `↵` on the checkbox never renders.
 - **THEN** *Keep the volume open* held the focus first, and the focus never left the dialog
 - **AND** `Esc` returns the focus to the hub cell it left
 
+#### Scenario: the key list is a dialog
+- **Key:** `ui:dialogs:the-key-list-is-a-dialog`
+- **Layers:** unit
+- **WHEN** `⌃/` opens the key list on a screen
+- **THEN** it is a modal dialog holding the focus, the everywhere keys in one column and the screen's in another
+- **AND** `⌃/`, `Esc` and a click on the backdrop each close it
+
 ### Requirement: The running render opens in a drawer every screen offers
 
-The system SHALL show the running render in a session drawer: a modal dialog over half the window, at least 480 px wide,
-on the right, over a dark backdrop, holding no URL. `⌃;` SHALL open and close it on every screen, from a field too, and
-the running render's link SHALL open it; confirming a render SHALL open it, and a render started from the terminal SHALL
-open nothing. It SHALL read the running render's record, live while it runs, with the volume steps and Stop the job
-adds; after it ends it SHALL show that session's outcome, its images and its time until the app reloads or another
-render starts; with neither it SHALL say no render runs. Its images SHALL be a grid per collection the session renders,
-stacked in its recorded collection order, retaining scan order for older records without it, each headed by its
-name: a column for each photograph the session was asked to render, a row for
-each flow, the photographs' row at the foot, a cell holding that flow's images of that photograph and a waiting tile for
+The system SHALL show the running render in a session drawer: a modal dialog as wide as its widest grid, at least half
+the window and 480 px, at most the window less 100 px, a wider grid scrolling inside it, on the right, over a dark
+backdrop, holding no URL. `⌃;` SHALL open and close it on every screen, from a field too, and the running render's
+link SHALL open it; confirming a render SHALL open it, and a render started from the terminal SHALL open nothing. Its
+bar and the Render bar SHALL show one progress, the images done over the images asked, from one function, the drawer
+keeping the time against the limit as text. It SHALL read the running render's record, live while it runs, with the
+volume steps and Stop the job adds; after it ends it SHALL show that session's outcome, its images and its time until
+the app reloads or another render starts; with neither it SHALL say no render runs. Its images SHALL be a grid per
+collection the session renders, stacked in its recorded collection order, retaining scan order for older records
+without it, each headed by its name: a column for each photograph the session was asked to render, a row for each
+flow, the photographs' row at the foot, a cell holding that flow's images of that photograph and a waiting tile for
 each still to come, drawn at the tile size Renders draws and moved through by `h j k l` and the arrows, `j` `↓` on a
 grid's last row moving into the first row of the grid below and `k` `↑` back, keeping the column, held at a shorter
 row's end. `↵` SHALL open the focused row in the viewer over the drawer, which SHALL follow its list when it changes
-while open; `⇧I` SHALL close the drawer and open the focused image's collection's Renders. A click on the backdrop, `⌃;`
-and `Esc` SHALL close it, `Esc` closing the viewer first.
+while open; `⇧I` SHALL close the drawer and open the focused image's collection's Renders. A click on the backdrop,
+`⌃;` and `Esc` SHALL close it, `Esc` closing the viewer first.
 
 ```
 any screen ──⌃; or ●──▶ the drawer, half the window ──↵──▶ the viewer over it
@@ -1420,7 +1474,6 @@ on Renders.
 - **WHEN** a running render ends, then another starts
 - **THEN** the drawer shows the first's outcome until the second starts, then the second
 
-
 #### Scenario: the viewer closes for a replacement session
 - **Key:** `ui:sessions:the-viewer-closes-for-a-replacement-session`
 - **Layers:** unit
@@ -1435,7 +1488,6 @@ on Renders.
 - **THEN** its record's images, steps and outcome are served
 - **AND** an id no record holds is refused, naming the id
 
-
 #### Scenario: a terminal render stays live
 - **Key:** `ui:sessions:a-terminal-render-stays-live`
 - **Layers:** unit
@@ -1443,13 +1495,11 @@ on Renders.
 - **THEN** its records read running and the global running-session read carries their id and complete traversal order
 - **AND** after its process releases ownership without an outcome the record reads ended without an outcome
 
-
 #### Scenario: the selected record keeps the newest response
 - **Key:** `ui:sessions:the-selected-record-keeps-the-newest-response`
 - **Layers:** unit
 - **WHEN** an older record read answers after a newer read of the same session
 - **THEN** the selected record keeps the newer outcome and images
-
 
 #### Scenario: the viewer follows image identity
 - **Key:** `ui:sessions:the-viewer-follows-image-identity`
@@ -1458,14 +1508,12 @@ on Renders.
 - **THEN** it keeps the selected image by identity while present, otherwise a valid neighbour
 - **AND** an empty list closes the viewer
 
-
 #### Scenario: the session grid holds each flow over the originals
 - **Key:** `ui:sessions:the-grid-holds-each-flow-over-the-originals`
 - **Layers:** unit
 - **WHEN** a record plans two images of one photograph in summon and one of another in conjure
 - **THEN** the grid has a column per photograph, a row per flow over the photographs' row, and three waiting tiles
 - **AND** a record without a plan places its landed images and no waiting tiles
-
 
 #### Scenario: the session grid moves by photograph and by row
 - **Key:** `ui:sessions:the-grid-moves-by-photograph-and-row`
@@ -1478,6 +1526,13 @@ on Renders.
 - **Layers:** unit
 - **WHEN** `j` is pressed on the first grid's last row, then `k`
 - **THEN** the focus moves into the second grid's first row, in the same column, then back
+
+#### Scenario: one progress for the Render bar and the drawer
+- **Key:** `ui:sessions:one-progress-for-the-bar-and-the-drawer`
+- **Layers:** unit
+- **WHEN** a session has rendered three of four images
+- **THEN** the Render bar and the drawer's bar are each three quarters full
+- **AND** with no plan the bar slides, sized by nothing
 
 ### Requirement: A folder in the library is a collection when it holds `sources/`
 
@@ -1601,17 +1656,20 @@ on a photograph that sheet. With one such flow it SHALL open that flow's head: i
 order, else its first approved sheet whose newest approval lacks images of its count, read-only; with none, a page
 saying no sheet waits for review, with the way to the hub. `Esc` on Review, with no overlay open and outside a field,
 SHALL return to the chooser. The hub SHALL carry for each cell the number of images its newest approval lacks, as the
-render stage counts it. Review's rail SHALL list every sheet of the flow that is unapproved or lacks images, each marked
-untouched, edited, approved or re-opened, and its footer SHALL count the approved among them; the Review tab SHALL count
-the unapproved, every flow's, and the rail's head SHALL name each other flow holding some, with how many and the key to
-the chooser. Approve SHALL leave the sheet open and read-only, the approve bar naming the approval it shows, offering
-*Cancel approve* while the review stage can cancel it, else the reason beside it, and while no render runs for the
-collection; a cancel SHALL leave the sheet open on what the flow is left on: its draft, editable, or for a copy the
-draft open above what lies beneath, else the approval beneath it, read-only. Opening a sheet that has no draft SHALL
-write one through the review stage's own function, and opening it again SHALL write no second draft; a failure after
-approval SHALL be shown in the approve bar, never dropped. ④ SHALL show one slot per image, a set seed or random, beside
-the sheet rows. `⌃P` SHALL open the photograph in the viewer — on a revision or a draft from an image, *Side by side* —
-from any pane and from a field, stepping through the rail's sheets, and `Esc` SHALL return the focus where it was.
+render stage counts it. Review's rail SHALL list every sheet of the flow that is unapproved or lacks images, each
+marked untouched, edited, approved or re-opened, and its footer SHALL count the approved among them; the Review tab
+SHALL count the unapproved, every flow's, and the rail's head SHALL name each other flow holding some, with how many
+and the key to the chooser. Approve SHALL leave the sheet open and read-only, the approve bar naming the approval it
+shows, offering *Cancel approve* while the review stage can cancel it, else the reason beside it, and while no render
+runs for the collection; a cancel SHALL leave the sheet open on what the flow is left on: its draft, editable, or for
+a copy the draft open above what lies beneath, else the approval beneath it, read-only. Opening a sheet that has no
+draft SHALL write one through the review stage's own function, and opening it again SHALL write no second draft; a
+failure after approval SHALL be shown in the approve bar, never dropped. ④ SHALL show one slot per image, a set seed
+or random, beside the sheet rows; its count's `−` and `+` and its slots SHALL be one grid for the keys, `−` `+` a row
+and each slot a row below, and a control that disables SHALL pass its focus to the nearest enabled one in its row.
+`⇧J` and `⇧K` SHALL step the rail's sheets, the focused one scrolled into view, centred. `⌃P` SHALL open the
+photograph in the viewer — on a revision or a draft from an image, *Side by side* — from any pane and from a field,
+stepping through the rail's sheets, and `Esc` SHALL return the focus where it was.
 
 A sheet is done when its images are, not when it is approved, so the rail keeps it until then; the count is the
 render stage's own. Approving is an act, not a navigation, and a copy's cancel takes back only the copy. A slot per
@@ -1707,6 +1765,19 @@ none                      ─▶ "No sheet waits for review"
 - **Layers:** unit
 - **WHEN** Review is open on one flow and another flow holds one unapproved sheet
 - **THEN** the rail's head names that flow and one waiting
+
+#### Scenario: ④ is one grid for the keys
+- **Key:** `ui:review:four-is-one-grid-for-the-keys`
+- **Layers:** unit
+- **WHEN** on macOS `l` is pressed on `−`, then `j` twice, then `k` twice, and `−` is pressed down to one image
+- **THEN** the focus moves to `+`, to the first slot, the second, and back to `+`
+- **AND** once `−` disables, the focus is on `+`
+
+#### Scenario: a stepped sheet stays in view
+- **Key:** `ui:review:a-stepped-sheet-stays-in-view`
+- **Layers:** unit
+- **WHEN** `⇧J` steps the rail past its visible end
+- **THEN** the focused sheet is scrolled into view, centred
 
 ### Requirement: Draft from this starts from an image, for any flow the app offers, and opens Review on the draft
 
@@ -1855,15 +1926,18 @@ never does.
 ### Requirement: A version says what it was, and Compare sets an image beside any image of its source
 
 The system SHALL head each image's large view with its approval version, the version it came from, read from its
-producer, naming it a revision when its fields differ from that version's and a re-roll when only its count or seeds do,
-and the approval's time, count and seeds. `⇧C` on a large view SHALL open a pick of its source's images: the
+producer, naming it a revision when its fields differ from that version's and a re-roll when only its count or seeds
+do, and the approval's time, count and seeds. `⇧C` on a large view SHALL open a pick of its source's images: the
 photograph's row on top, then a row per flow holding images of the source, each row its images oldest to newest, each
 captioned by its version, the image compare started from marked, the pick's head naming the focused image's flow,
-version and seed; the focus SHALL start on the newest older version of its seed, else the image before it, else the
-photograph; `h j k l` and the arrows SHALL move it, keeping the column, held at a shorter row's end, `↵` SHALL compare
-the image picked and `Esc` close the pick. Compare SHALL set the image picked on the left and the image compare started
-from on the right, at equal size, each headed by its flow, version and seed, and nothing else: the pair as tall as the
-window less the app bar and the heads, centred. The large view SHALL offer no *Side by side*.
+version and seed on two lines, `Compare <the image started from>` and `with <the focused image>`, each cut at its end;
+the pick SHALL be as wide as its longest row, its images 20 px apart, at least 480 px and at most the window less 96
+px, a longer row scrolling inside it, whatever is focused; the focus SHALL start on the newest older version of its
+seed, else the image before it, else the photograph; `h j k l` and the arrows SHALL move it, keeping the column, held
+at a shorter row's end, `↵` SHALL compare the image picked and `Esc` close the pick. Compare SHALL set the image
+picked on the left and the image compare started from on the right, at equal size, each headed by its flow, version
+and seed, and nothing else: the pair as tall as the window less the app bar and the heads, centred. The large view
+SHALL offer no *Side by side*.
 
 ```
 large view · summon v2 · seed 9423  ⇧C ─▶  photo                  [▣]
@@ -1919,3 +1993,30 @@ right. The images are what is compared, so they take the room.
 - **Layers:** unit
 - **WHEN** the focus moves to the second of two seeds of one version
 - **THEN** its caption reads the version alone, and the pick's head names its flow, version and seed
+
+### Requirement: The viewer shows an image fitted or at full size, by the mouse or the keys
+
+The system SHALL show an image in the viewer fitted to the window, and SHALL toggle it to full size and back by a
+click or `↵`; at full size `j` `k` and `↓` `↑` SHALL scroll it, `h` `l` and the arrows SHALL step to the next image,
+fitted, and `Esc` SHALL close the viewer. On a pair, which is fitted alone, `↵` SHALL do nothing.
+
+```
+fitted ──click or ↵──▶ full size ──j k ↓ ↑──▶ scrolled
+   ▲                       │
+   └──click or ↵ · h l ────┘          Esc closes either
+```
+
+Whether a likeness holds is read at full size, and a hand that left the mouse should not need it back.
+
+#### Scenario: ↵ toggles full size
+- **Key:** `ui:viewer:enter-toggles-full-size`
+- **Layers:** unit
+- **WHEN** `↵` is pressed on a fitted image, then again
+- **THEN** the image shows at full size, then fitted
+- **AND** on a pair `↵` changes nothing
+
+#### Scenario: full size scrolls by the keys
+- **Key:** `ui:viewer:full-size-scrolls-by-the-keys`
+- **Layers:** unit
+- **WHEN** `j` is pressed on an image at full size, then `l`
+- **THEN** the image scrolls down, then the next image shows fitted
