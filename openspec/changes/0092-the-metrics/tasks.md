@@ -5,7 +5,7 @@ The scripts, then the catalogue and the docs, per [design](design.md).
 ## Progress
 
 - [x] 1 — The scripts
-- [ ] 2 — The catalogue
+- [x] 2 — The catalogue
 
 ## 1 — The scripts
 
@@ -21,8 +21,8 @@ The scripts, then the catalogue and the docs, per [design](design.md).
 
 ## 2 — The catalogue
 
-- [ ] 2.1 Write `metrics/catalogue.toml` per [D3](design.md#d3).
+- [x] 2.1 Write `metrics/catalogue.toml` per [D3](design.md#d3).
   Verify: `grep -c '^\[\[metric\]\]' metrics/catalogue.toml` prints `15`, and `grep -c 'watch = 10' metrics/catalogue.toml` prints `1`.
-- [ ] 2.2 Name `metrics/` and `scripts/metrics/` in `AGENTS.md`'s *Layout*, the measuring in `CONTRIBUTING.md`'s
+- [x] 2.2 Name `metrics/` and `scripts/metrics/` in `AGENTS.md`'s *Layout*, the measuring in `CONTRIBUTING.md`'s
   *The evidence a change carries*, and add D47 to `docs/decisions.md`, per [D4](design.md#d4).
   Verify: `grep -c '^### D47 ' docs/decisions.md` prints `1`, and `grep -c 'scripts/metrics' AGENTS.md` prints a count above 0.

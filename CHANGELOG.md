@@ -12,6 +12,8 @@ its new digest.
 
 - Metric scripts under `scripts/metrics/` count the tests, backlog cards, trailers, references, reading set and
   pinned things, each stdlib alone and held by a test, so a change can be read as numbers (0092 D1, D2).
+- `metrics/catalogue.toml` names what a change is measured by, and the docs say where it lives; the release commits
+  a change's values, so the next version's effect is a number, not a recollection (0092 D3, D4).
 
 ## [0.62.0] - 2026-11-03
 

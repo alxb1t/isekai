@@ -434,6 +434,18 @@ check, and is imported then and only then. The suite's doubles stay in `tests/`;
   ([D20](#d20--the-entry-point-loads-no-third-party-package)).
 - **Made by:** `0061`.
 
+### D47 · A change is measured from isekai's own catalogue
+
+**`metrics/catalogue.toml` names what a change is measured by. Each measure is a stdlib script under
+`scripts/metrics/` that prints one number, or a value the station passes. The build drafts the values and the
+release commits them to `metrics/changes/<change-id>.json`; a measure that fails is recorded unavailable and
+halts nothing.**
+
+- **Why:** the gate says whether isekai works, not where it is heading. A version that moves tests between the
+  gate and the browser run is read as numbers. The scripts count isekai's own tree and sit outside `tools/`, whose
+  guards they do not need.
+- **Made by:** `0092`.
+
 ## Infrastructure
 
 ### D26 · Renders run on a rented GPU

@@ -1,0 +1,128 @@
+[[metric]]
+id = "tests-unit"
+title = "Tests in the gate"
+group = "proof"
+unit = "tests"
+better = "lower"
+script = "scripts/metrics/tests_collected.py"
+args = ["--ignore=tests/e2e"]
+
+[[metric]]
+id = "tests-browser"
+title = "Tests in the browser run"
+group = "proof"
+unit = "tests"
+better = "lower"
+script = "scripts/metrics/tests_collected.py"
+args = ["tests/e2e"]
+
+[[metric]]
+id = "gate-seconds"
+title = "Gate duration"
+group = "proof"
+unit = "seconds"
+better = "lower"
+source = "station"
+
+[[metric]]
+id = "open-backlog-cards"
+title = "Open backlog cards"
+group = "debt"
+unit = "cards"
+better = "lower"
+watch = 10
+script = "scripts/metrics/backlog.py"
+
+[[metric]]
+id = "commits-without-trailer"
+title = "Commits without the change's trailer"
+group = "conformance"
+unit = "commits"
+better = "lower"
+script = "scripts/metrics/conformance.py"
+args = ["trailer"]
+
+[[metric]]
+id = "minions-files-tracked"
+title = "Run files tracked"
+group = "conformance"
+unit = "files"
+better = "lower"
+script = "scripts/metrics/conformance.py"
+args = ["minions"]
+
+[[metric]]
+id = "amends"
+title = "Amends to the change directory"
+group = "conformance"
+unit = "commits"
+better = "lower"
+script = "scripts/metrics/conformance.py"
+args = ["amends"]
+
+[[metric]]
+id = "broken-references"
+title = "Broken references"
+group = "conformance"
+unit = "references"
+better = "lower"
+script = "scripts/metrics/references.py"
+
+[[metric]]
+id = "diff-lines"
+title = "Lines changed"
+group = "size"
+unit = "lines"
+better = "lower"
+source = "station"
+
+[[metric]]
+id = "diff-files"
+title = "Files changed"
+group = "size"
+unit = "files"
+better = "lower"
+source = "station"
+
+[[metric]]
+id = "phases"
+title = "Phases"
+group = "size"
+unit = "phases"
+better = "lower"
+source = "station"
+
+[[metric]]
+id = "shared-reading-set"
+title = "Shared reading set"
+group = "size"
+unit = "words"
+better = "lower"
+script = "scripts/metrics/reading_set.py"
+
+[[metric]]
+id = "pinned-flows"
+title = "Pinned flows"
+group = "size"
+unit = "flows"
+better = "lower"
+script = "scripts/metrics/counts.py"
+args = ["pinned"]
+
+[[metric]]
+id = "living-scenarios"
+title = "Living scenarios"
+group = "size"
+unit = "scenarios"
+better = "lower"
+script = "scripts/metrics/counts.py"
+args = ["scenarios"]
+
+[[metric]]
+id = "decisions"
+title = "Decisions in force"
+group = "size"
+unit = "decisions"
+better = "lower"
+script = "scripts/metrics/counts.py"
+args = ["decisions"]
