@@ -16,7 +16,7 @@ names.
   Verify: `grep -c 'the tick stays' ui/src/views/Hub.vue` prints `0`, and `uv run python -m tools.test_ui` exits 0.
 - [ ] 1.2 The library row's chips go from `ui/src/views/Home.vue` and `ui/src/app.css` per [D2](design.md#d2), the API's
   `flows` kept; `ui/design/spec.md`'s library lines say so.
-  Verify: `grep -c 'library__chip' ui/src/views/Home.vue` prints `0`, and `uv run pytest tests/test_ui_library.py tests/test_ui_api.py -k "flow or count"` exits 0.
+  Verify: `grep -c 'class="library__chip"' ui/src/views/Home.vue` prints `0`, and `uv run pytest tests/test_ui_library.py tests/test_ui_api.py -k "flow or count"` exits 0.
 
 ## 2 — The viewer
 
