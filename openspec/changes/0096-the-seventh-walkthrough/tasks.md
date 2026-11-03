@@ -14,9 +14,9 @@ names.
 
 - [ ] 1.1 `ui/src/views/Hub.vue` and `ui/src/app.css` per [D1](design.md#d1); `ui/design/spec.md`'s hub lines say so.
   Verify: `grep -c 'the tick stays' ui/src/views/Hub.vue` prints `0`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 1.2 The library row's counts go per [D2](design.md#d2); delete the two tests [Tests](design.md#tests) lists; a test
-  in `tests/test_ui_library.py`, bound to `ui:batch-folder:a-folder-with-sources-is-a-batch`, asserts the row has no `flows`.
-  Verify: `grep -c 'library__chip\b' ui/src/views/Home.vue` prints `0`, and `uv run pytest tests/test_ui_library.py` exits 0.
+- [ ] 1.2 The library row's chips go from `ui/src/views/Home.vue` and `ui/src/app.css` per [D2](design.md#d2), the API's
+  `flows` kept; `ui/design/spec.md`'s library lines say so.
+  Verify: `grep -c 'library__chip' ui/src/views/Home.vue` prints `0`, and `uv run pytest tests/test_ui_library.py tests/test_ui_api.py -k "flow or count"` exits 0.
 
 ## 2 — The viewer
 
