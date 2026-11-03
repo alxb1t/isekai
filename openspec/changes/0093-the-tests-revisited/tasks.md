@@ -4,19 +4,19 @@ The rule, the flakes, then the browser tests, per [design](design.md).
 
 ## Progress
 
-- [ ] 1 — The rule
+- [x] 1 — The rule
 - [ ] 2 — The flakes
 - [ ] 3 — The browser
 
 ## 1 — The rule
 
-- [ ] 1.1 `unmarked` and its test in `tests/test_spec_bindings.py` follow [D1](design.md#d1); its twin passes a test with
+- [x] 1.1 `unmarked` and its test in `tests/test_spec_bindings.py` follow [D1](design.md#d1); its twin passes a test with
   two `spec` markers and fails `spec` beside `spec_exempt`.
   Verify: `grep -c 'def test_every_test_carries_one_marker' tests/test_spec_bindings.py` prints `0`, and `uv run pytest tests/test_spec_bindings.py` exits 0.
-- [ ] 1.2 `spec()` in `ui/src/test/spec.ts` takes a key or an array of keys, and `_VITEST_SPEC` reads both, per
+- [x] 1.2 `spec()` in `ui/src/test/spec.ts` takes a key or an array of keys, and `_VITEST_SPEC` reads both, per
   [D1](design.md#d1); the binding twin reads a fixture `spec(['a', 'b'], …)` as both keys.
   Verify: `uv run python -m tools.test_ui` exits 0, and `uv run pytest tests/test_spec_bindings.py -k vitest` exits 0.
-- [ ] 1.3 `CONTRIBUTING.md` and `CODING_STANDARDS.md` say each behaviour a test holds carries its key and pytest warns on
+- [x] 1.3 `CONTRIBUTING.md` and `CODING_STANDARDS.md` say each behaviour a test holds carries its key and pytest warns on
   an unregistered marker; `CODING_STANDARDS.md`'s *Project rules* gain *Extend before adding*, per [D2](design.md#d2).
   Verify: `grep -c 'Extend before adding' CODING_STANDARDS.md` prints `1`, and `grep -c 'silently ignores' CODING_STANDARDS.md` prints `0`.
 

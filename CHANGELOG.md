@@ -10,6 +10,11 @@ its new digest.
 
 ## [Unreleased]
 
+### Changed
+
+- A test carries a `spec` key per behaviour it holds, or one `spec_exempt`, and vitest's `spec()` takes several
+  keys, so a step that adds a behaviour binds it; a new case extends an existing test first (0093 D1, D2).
+
 ## [0.62.0] - 2026-11-03
 
 Gate: local 0m33s · CI none · 0.61.0: local 0m28s · CI none

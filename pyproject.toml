@@ -135,7 +135,7 @@ invalid-assignment = "ignore"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-# Registration is load-bearing, not bookkeeping: pytest silently ignores an
+# Registration is load-bearing, not bookkeeping: pytest only warns on an
 # unregistered marker, so an unregistered `spec` would bind nothing while
 # looking exactly like a binding.
 markers = [

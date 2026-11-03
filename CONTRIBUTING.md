@@ -95,4 +95,5 @@ eye**, never mocked and never asserted.
 The tooling is **operator tooling, recorded and not pinned**: `@fission-ai/openspec@1.11.0`, resolved on
 `PATH`. It is deliberately **not** in the gate — nothing in CI runs it, so a moving version can never
 turn CI red. `tests/test_spec_bindings.py` holds every binding: each living key has a test, each marker a
-key, each test one marker.
+key, and each behaviour a test holds carries its key — a test carries its `spec` markers or one `spec_exempt`.
+Both markers are registered in `pyproject.toml`, because pytest only warns on an unregistered marker.
