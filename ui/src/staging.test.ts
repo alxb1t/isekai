@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import { after, discards, heir, orphans, removal, stepped } from './staging'
+import { after, discards, heir, orphans, removal, stepped, withheld } from './staging'
 import { spec } from './test/spec'
 import type { StagedFile } from './types'
 
@@ -26,6 +26,11 @@ spec('ui:sheet:a-chosen-file-is-removed-alone', () => {
   expect(after(1, 4)).toBe(1)
   expect(after(3, 4)).toBe(2)
   expect(after(0, 1)).toBeNull()
+  // Import waits, naming the removals in flight, until each is answered and its tile gone.
+  const sheet = { committing: false, removing: 1, chosen: 2, read: 2, ready: 2, adding: false }
+  expect(withheld(sheet)).toBe('Removing 1 file')
+  expect(withheld({ ...sheet, removing: 2 })).toBe('Removing 2 files')
+  expect(withheld({ ...sheet, removing: 0 })).toBeNull()
 })
 
 spec('ui:sheet:a-removed-files-copy-keeps-it', () => {

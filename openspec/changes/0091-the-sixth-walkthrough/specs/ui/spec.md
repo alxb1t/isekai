@@ -113,15 +113,15 @@ pictures share a foot, so a long name, a mark or a refusal moves only the text a
 
 The system SHALL take sources through the browser's file dialog, sending each file in its own request, and SHALL show
 for each its upload's progress, then its reading, then whether it is ready, converted, refused or not cleaned, with
-the reason. Import SHALL stay disabled, with its reason, until every chosen file is read, and SHALL commit only the
-ready files and those the operator chose to import as they are. Each upload SHALL keep its own state, whatever its
-name; an upload SHALL be refused once Import begins committing; and a file whose reading fails SHALL be refused
-alone, the next file still read. While Import commits, the sheet SHALL take no file, no second Import and no
-cancel, by button, by `Esc` or by leaving the screen; a commit refused after the screen is left SHALL cancel its
-staged folder. Before Import commits, a read or a skipped file SHALL be removable alone, unasked — `×` on its tile, or
-`⌫` with its tile focused — a read file's removal taking it out of the staging folder, unless a file skipped as its
-copy is still chosen, which then holds it, and the focus moving to the next tile; a file still uploading SHALL offer
-neither. Once read, the tiles SHALL be a grid that `h j k l` and the arrows
+the reason. Import SHALL stay disabled, with its reason, until every chosen file is read and every removal has
+ended, and SHALL commit only the ready files and those the operator chose to import as they are. Each upload SHALL
+keep its own state, whatever its name; an upload SHALL be refused once Import begins committing; and a file whose
+reading fails SHALL be refused alone, the next file still read. While Import commits, the sheet SHALL take no file,
+no second Import and no cancel, by button, by `Esc` or by leaving the screen; a commit refused after the screen is
+left SHALL cancel its staged folder. Before Import commits, a read or a skipped file SHALL be removable alone,
+unasked — `×` on its tile, or `⌫` with its tile focused — a read file's removal taking it out of the staging folder,
+unless a file skipped as its copy is still chosen, which then holds it, and the focus moving to the next tile; a file
+still uploading SHALL offer neither. Once read, the tiles SHALL be a grid that `h j k l` and the arrows
 move through, the first tile taking the focus unless a field holds it, and `↵` SHALL open the focused file full size in
 the viewer.
 
@@ -209,6 +209,7 @@ then would delete the folder the commit is moving.
 - **WHEN** a read file and a skipped file are each removed before Import
 - **THEN** the read file leaves the staging folder and the skipped one only the sheet
 - **AND** every other file stays, and Import commits the rest
+- **AND** while a removal is in flight, Import is disabled, naming it
 
 #### Scenario: a removed file's copy keeps the photograph
 - **Key:** `ui:sheet:a-removed-files-copy-keeps-it`

@@ -1,5 +1,6 @@
 import { type Move, moved } from './grid'
 import type { StagedFile } from './types'
+import { noun } from './words'
 
 /* An import's staging folder, and when the sheet discards it. A closed sheet
    cancels its folder once no commit is moving it: at closing, or when a commit
@@ -41,6 +42,30 @@ export function orphans(results: (StagedFile | null)[]): number[] {
   return results.flatMap((one, index) =>
     one?.state === 'skipped' && one.copyOf !== null && !held.has(one.copyOf) ? [index] : [],
   )
+}
+
+/** What Import's state is read from: the tiles chosen, read and ready, and the removals in flight. */
+export interface Sheet {
+  committing: boolean
+  removing: number
+  chosen: number
+  read: number
+  ready: number
+  adding: boolean
+}
+
+/** Return Import's reason for being disabled, or null when it is not (rule 4).
+
+    A removal in flight holds Import until its tile is gone, so a copy it leaves
+    standing for bytes staged nowhere is sent again before the commit.
+    e.g. ({ committing: false, removing: 1, chosen: 2, read: 2, ready: 2, adding: false }) -> 'Removing 1 file' */
+export function withheld(sheet: Sheet): string | null {
+  if (sheet.committing) return 'Importing'
+  if (sheet.removing > 0) return `Removing ${sheet.removing} ${noun(sheet.removing, 'file')}`
+  if (sheet.chosen === 0) return 'Choose files to import'
+  if (sheet.read < sheet.chosen) return `Reading ${sheet.read} of ${sheet.chosen}`
+  if (sheet.ready === 0) return sheet.adding ? 'Nothing new to add' : 'None of the chosen files could be read.'
+  return null
 }
 
 /** Return the tile the focus takes once the tile at `index` of `count` is removed, or null.

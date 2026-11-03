@@ -13,7 +13,7 @@ import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import type { Move } from '../grid'
 import { isField, modded, plain } from '../stores/keys'
-import { after, discards, heir, orphans, removal, stepped } from '../staging'
+import { after, discards, heir, orphans, removal, stepped, withheld } from '../staging'
 import { useLiveStore } from '../stores/live'
 import ImageViewer, { type Shown } from './ImageViewer.vue'
 import KeyHint from './KeyHint.vue'
@@ -78,6 +78,8 @@ const name = ref(new Date().toISOString().slice(0, 10))
 const refusal = ref<string | null>(null)
 /* Import's commit is in flight: no file is added, nor Import pressed again. */
 const committing = ref(false)
+/* The removals whose tile has not gone yet: Import waits for each. */
+const removing = ref(0)
 let committed = false
 /* The sheet is gone: an import that opens after it is cancelled, never followed. */
 let closed = false
@@ -115,14 +117,16 @@ const ready = computed(() =>
 const shown = computed(() => tiles.value.filter((one) => one.phase !== 'refused'))
 
 /* Import's reason for being disabled, or null when it is not (rule 4). */
-const disabled = computed(() => {
-  if (committing.value) return 'Importing'
-  if (tiles.value.length === 0) return 'Choose files to import'
-  if (reading.value) return `Reading ${read.value.length} of ${tiles.value.length}`
-  if (ready.value.length === 0)
-    return adding.value ? 'Nothing new to add' : "None of the chosen files could be read."
-  return null
-})
+const disabled = computed(() =>
+  withheld({
+    committing: committing.value,
+    removing: removing.value,
+    chosen: tiles.value.length,
+    read: read.value.length,
+    ready: ready.value.length,
+    adding: adding.value,
+  }),
+)
 
 function choose(event: Event): void {
   const input = event.target as HTMLInputElement
@@ -262,24 +266,30 @@ async function remove(one: Tile): Promise<void> {
   const next = after(shown.value.indexOf(one), shown.value.length)
   const results = tiles.value.map((tile) => tile.result)
   const copy = one.result ? tiles.value[heir(results, one.result.name)] : undefined
-  if (from === 'staging' && copy) {
-    // A copy still chosen takes the file over, under the removed tile's upload.
-    copy.upload = one.upload
-    copy.result = one.result
-    copy.asIs = one.asIs
-  } else if (from === 'staging' && staging.value !== null && one.result) {
-    try {
-      await removeStaged(staging.value, one.result.name)
-    } catch (reason) {
-      refusal.value = (reason as Error).message
-      return
+  removing.value += 1
+  try {
+    if (from === 'staging' && copy) {
+      // A copy still chosen takes the file over, under the removed tile's upload.
+      copy.upload = one.upload
+      copy.result = one.result
+      copy.asIs = one.asIs
+    } else if (from === 'staging' && staging.value !== null && one.result) {
+      try {
+        await removeStaged(staging.value, one.result.name)
+      } catch (reason) {
+        refusal.value = (reason as Error).message
+        return
+      }
     }
+    refusal.value = null
+    tiles.value = tiles.value.filter((tile) => tile !== one)
+    // A copy heard while the removal was in flight lost its file with it.
+    settle()
+    focusTile(next)
+  } finally {
+    // Only now may Import commit: a copy the removal left standing is queued again.
+    removing.value -= 1
   }
-  refusal.value = null
-  tiles.value = tiles.value.filter((tile) => tile !== one)
-  // A copy heard while the removal was in flight lost its file with it.
-  settle()
-  focusTile(next)
 }
 
 /* The read files, each full size from staging, that `↵` opens in the viewer. */
