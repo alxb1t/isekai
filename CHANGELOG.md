@@ -14,6 +14,8 @@ its new digest.
 
 - A test carries a `spec` key per behaviour it holds, or one `spec_exempt`, and vitest's `spec()` takes several
   keys, so a step that adds a behaviour binds it; a new case extends an existing test first (0093 D1, D2).
+- The proxy and the shutdown tests run in-process and return to the gate, and the watchdog, bundle-timeout and
+  overlap tests wait on events rather than the clock, so no gate test binds a socket or races a timer (0093 D3, D4).
 
 ## [0.62.0] - 2026-11-03
 

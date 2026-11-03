@@ -856,23 +856,41 @@ def test_a_stale_lower_draft_does_not_reopen_an_approved_input(
 
 
 def _overlap(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+    client: TestClient,
+    made: Run,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    unlocked: bool = False,
 ) -> dict[str, int]:
     """Send two updates stating one precondition, the second inside the first.
 
-    The second starts while the first is between its check and its write, and
-    is given the chance to pass the check before the first writes.
+    The second starts while the first is between its check and its write. The
+    first writes once the second waits at the lock, or, `unlocked`, once the
+    second has passed its check.
     """
     body = client.get(_at(made)).json()
     saved = body["saved"]
-    checked = threading.Event()
+    reached = threading.Event()
     answers: dict[str, int] = {}
     threads: list[threading.Thread] = []
     precondition, save = app_module._precondition, app_module.save_draft
+    lock = app_module._DRAFT_UPDATE
+
+    class Waited:
+        """The draft lock, saying when an update finds it held."""
+
+        def __enter__(self) -> None:
+            if not lock.acquire(blocking=False):
+                reached.set()
+                lock.acquire()
+
+        def __exit__(self, *exc: object) -> None:
+            lock.release()
 
     def check(one: Held, payload: Mapping[str, Any]) -> None:
-        if threading.current_thread().name == "second":
-            checked.set()
+        # By its payload: the endpoint runs on a worker thread, not on `second`.
+        if payload["fields"]["hair_colour"] == ["black hair"]:
+            reached.set()
         precondition(one, payload)
 
     def put(name: str, hair: str) -> None:
@@ -893,11 +911,15 @@ def _overlap(
             )
             threads.append(second)
             second.start()
-            checked.wait(timeout=0.5)
+            assert reached.wait(WAIT), (
+                "the second update reached neither lock nor check"
+            )
         return save(run, flow, fields, renders)
 
     monkeypatch.setattr(app_module, "_precondition", check)
     monkeypatch.setattr(app_module, "save_draft", write)
+    if not unlocked:
+        monkeypatch.setattr(app_module, "_DRAFT_UPDATE", Waited())
     put("first", "blonde")
     for thread in threads:
         thread.join()
@@ -921,7 +943,10 @@ def test_without_the_lock_overlapping_updates_both_commit(
 ) -> None:
     monkeypatch.setattr(app_module, "_DRAFT_UPDATE", contextlib.nullcontext())
 
-    assert _overlap(client, made, monkeypatch) == {"first": 200, "second": 200}
+    assert _overlap(client, made, monkeypatch, unlocked=True) == {
+        "first": 200,
+        "second": 200,
+    }
 
 
 def _update_during_approval(

@@ -74,9 +74,8 @@ block.
 
 **The gate is `make gate`**, run from the repository root; `make -n gate` prints what it runs. The
 `Makefile` is its one declaration, and the notes on each command are the `Makefile`'s. CI
-(`.github/workflows/ci.yml`) runs `make gate` too. The browser tests and the few that serve on `127.0.0.1` are
-`make e2e`, out of the gate while an unattended run's sandbox cannot run them; CI runs them after the gate, on
-every push.
+(`.github/workflows/ci.yml`) runs `make gate` too. The browser tests are `make e2e`, out of the gate while an
+unattended run's sandbox cannot run them; CI runs them after the gate, on every push.
 
 Every command green, or the phase is not done. **Never weaken the gate to pass** — see `AGENTS.md`'s guardrails.
 

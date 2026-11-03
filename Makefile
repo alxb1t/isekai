@@ -3,9 +3,6 @@
 
 .PHONY: gate e2e setup browsers drift derive
 
-# The tests outside `tests/e2e/` that serve on 127.0.0.1.
-LOOPBACK = tests/test_ui.py::test_sigint_ends_streams_without_cancellation_output tests/test_render.py::test_the_report_reaches_the_loopback_with_a_proxy_exported
-
 gate:
 # environment, from the tracked lock; not a quality axis, hence first
 	uv sync --locked
@@ -21,16 +18,14 @@ gate:
 # the browser's unit tests: `vitest run` over `ui/src/**/*.test.ts`, wrapped
 # the same way
 	uv run python -m tools.test_ui
-# tests, but those an unattended run's sandbox cannot run -- the browser's, as
-# Chromium never starts there, and the few that serve on 127.0.0.1 -- which
-# `make e2e` runs apart, and CI runs both
-	uv run pytest --ignore=tests/e2e $(addprefix --deselect ,$(LOOPBACK))
+# tests, but the browser's, as Chromium never starts in an unattended run's
+# sandbox -- which `make e2e` runs apart, and CI runs both
+	uv run pytest --ignore=tests/e2e
 
-# The browser tests in `tests/e2e/`, on Chromium, and the tests that serve on
-# loopback. Out of the gate while the sandbox cannot run them; CI runs it after
-# the gate.
+# The browser tests in `tests/e2e/`, on Chromium. Out of the gate while the
+# sandbox cannot run them; CI runs it after the gate.
 e2e:
-	uv run pytest tests/e2e $(LOOPBACK)
+	uv run pytest tests/e2e
 
 # Restore what a fresh worktree lacks: the environment, the browser toolchain,
 # Chromium and the vocabulary. Not part of the gate, which never fetches.

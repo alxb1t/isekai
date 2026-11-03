@@ -1744,23 +1744,31 @@ def _saved(path: Path | None) -> float | None:
     return path.stat().st_mtime if path is not None else None
 
 
+class Server(uvicorn.Server):
+    """uvicorn's server, ending every open stream as soon as a signal stops it."""
+
+    def __init__(self, config: uvicorn.Config, broadcast: events.Broadcast) -> None:
+        """Serve `config`, closing `broadcast` on the signal that stops it."""
+        super().__init__(config)
+        self._broadcast = broadcast
+
+    def handle_exit(self, sig: int, frame: FrameType | None) -> None:
+        """Mark the streams closed, wake them on the loop, then stop as uvicorn does."""
+        # A signal cannot take the broadcast lock; wake queues on the loop.
+        self._broadcast.closed = True
+        asyncio.get_running_loop().call_soon(self._broadcast.close)
+        super().handle_exit(sig, frame)
+
+
 def run(app: FastAPI, *, host: str, port: int) -> None:
     """Block, serving `app`, until the operator stops it.
 
     A thin wrapper so that `__init__.py` composes the surface without importing
     a web framework at module scope.
     """
-    broadcast: events.Broadcast = app.state.broadcast
-
-    class Server(uvicorn.Server):
-        def handle_exit(self, sig: int, frame: FrameType | None) -> None:
-            # A signal cannot take the broadcast lock; wake queues on the loop.
-            broadcast.closed = True
-            asyncio.get_running_loop().call_soon(broadcast.close)
-            super().handle_exit(sig, frame)
-
     Server(
         uvicorn.Config(
             app, host=host, port=port, log_level="warning", timeout_graceful_shutdown=1
-        )
+        ),
+        app.state.broadcast,
     ).run()

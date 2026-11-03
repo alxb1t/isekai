@@ -5,7 +5,7 @@ The rule, the flakes, then the browser tests, per [design](design.md).
 ## Progress
 
 - [x] 1 — The rule
-- [ ] 2 — The flakes
+- [x] 2 — The flakes
 - [ ] 3 — The browser
 
 ## 1 — The rule
@@ -22,10 +22,10 @@ The rule, the flakes, then the browser tests, per [design](design.md).
 
 ## 2 — The flakes
 
-- [ ] 2.1 Rewrite `test_the_report_reaches_the_loopback_with_a_proxy_exported` in `tests/test_render.py` socketless, per
+- [x] 2.1 Rewrite `test_the_report_reaches_the_loopback_with_a_proxy_exported` in `tests/test_render.py` socketless, per
   [D3](design.md#d3).
   Verify: `grep -c 'ThreadingHTTPServer' tests/test_render.py` prints `0`, and `uv run pytest tests/test_render.py -k proxy_exported` exits 0.
-- [ ] 2.2 Rewrite `test_sigint_ends_streams_without_cancellation_output` in `tests/test_ui.py` in-process, lifting the
+- [x] 2.2 Rewrite `test_sigint_ends_streams_without_cancellation_output` in `tests/test_ui.py` in-process, lifting the
   `Server` subclass in `isekai/interface/ui/app.py` to module scope, per [D3](design.md#d3). Remove `LOOPBACK` from the
   `Makefile` and its mention in `.github/workflows/ci.yml` and `CONTRIBUTING.md`.
   Verify: `grep -c 'LOOPBACK' Makefile` prints `0`, and `uv run pytest tests/test_ui.py -k sigint` exits 0.
@@ -49,7 +49,7 @@ The rule, the flakes, then the browser tests, per [design](design.md).
   - uv run pytest tests/e2e $(LOOPBACK)
   + uv run pytest tests/e2e
   ```
-- [ ] 2.3 The watchdog tests in `tests/test_render.py`, the bundle-timeout test in `tests/test_ui.py` and `_overlap` in
+- [x] 2.3 The watchdog tests in `tests/test_render.py`, the bundle-timeout test in `tests/test_ui.py` and `_overlap` in
   `tests/test_ui_api.py` follow [D4](design.md#d4).
   Verify: `grep -c 'fired.wait(0.15)' tests/test_render.py` prints `0`, `grep -c '"ps"' tests/test_ui.py` prints `0`, and `for i in $(seq 20); do uv run pytest -q tests/test_render.py -k watchdog || exit 1; done` exits 0.
 
