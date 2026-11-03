@@ -77,6 +77,11 @@ block.
 (`.github/workflows/ci.yml`) runs `make gate` too. The browser tests are `make e2e`, out of the gate while an
 unattended run's sandbox cannot run them; CI runs them after the gate, on every push.
 
+**A change is measured as well as gated.** `metrics/catalogue.toml` names the measures, each a script under
+`scripts/metrics/` or a value the station passes. The build drafts a change's values and the release commits them to
+`metrics/changes/<change-id>.json` ([D47](docs/decisions.md#d47--a-change-is-measured-from-isekais-own-catalogue)).
+A measure that cannot be read is recorded unavailable; nothing halts.
+
 Every command green, or the phase is not done. **Never weaken the gate to pass** — see `AGENTS.md`'s guardrails.
 
 Beyond the gate, **image-as-code phases also run `docker build --check`**.
