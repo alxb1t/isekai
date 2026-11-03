@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.62.2] - 2026-11-03
+
+Gate: local 0m35s · CI not read under mf-ship · 0.62.1: local 0m30s · CI not read under mf-ship
+
 ### Changed
 
 - A test carries a `spec` key per behaviour it holds, or one `spec_exempt`, and vitest's `spec()` takes several
