@@ -115,12 +115,15 @@ export function sourceGrid(detail: RenderDetail): SourceGrid {
 export const tileCaption = (tile: PickTile): string =>
   tile === null ? 'photograph' : `v${tile.version}`
 
-/** Return the pick's head, naming the image compare started from and the focused tile.
+/** Return the pick's head as its two lines, the image compare started from and the focused tile.
 
-    e.g. summon v3·7, focus on summon v2·7 -> "Compare summon v3 · seed 7 with summon v2 · seed 7…" */
-export function pickHead(from: { flow: string; version: number; seed: string }, tile: PickTile): string {
+    e.g. summon v3·7, focus on summon v2·7 -> ["Compare summon v3 · seed 7", "with summon v2 · seed 7"] */
+export function pickHead(
+  from: { flow: string; version: number; seed: string },
+  tile: PickTile,
+): [string, string] {
   const named = (one: NonNullable<PickTile>) => `${one.flow} v${one.version} · seed ${one.seed}`
-  return `Compare ${named(from)} with ${tile === null ? 'photograph' : named(tile)}…`
+  return [`Compare ${named(from)}`, `with ${tile === null ? 'photograph' : named(tile)}`]
 }
 
 /** Return the pick's focus after `move`: a row move keeps the column, held at a

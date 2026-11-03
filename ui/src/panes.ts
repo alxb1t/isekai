@@ -1,5 +1,6 @@
 /* Review's panes, left to right: the rail, the photograph and its caption, the
-   sheet, and ④ Renders. `h` `l` or `←` `→` move between them outside a field (D25). */
+   sheet, and ④ Renders. On macOS `⌃H` `⌃L` alone move between them; elsewhere
+   `h` `l` or `←` `→` do, outside a field (D25). */
 
 import { type Command, type Key, plain } from './stores/keys'
 
@@ -18,22 +19,21 @@ export function nextPane(at: Pane, step: -1 | 1): Pane {
   return PANES[Math.min(Math.max(index, 0), PANES.length - 1)]
 }
 
-/** Return Review's pane keys, each running `move` with its direction: `h` `l` or
-    `←` `→` outside a field, and on macOS, where `⌃` is free of the window manager,
-    `⌃H` `⌃L` from inside one, as a field keeps `h` and `l` as text; and there `⌃J`
-    `⌃K` run `row`, the field below or above, as `↓` `↑` do in a field (D25). */
+/** Return Review's pane keys, each running `move` with its direction. On macOS, where
+    `⌃` is free of the window manager, `⌃H` `⌃L` alone, from a field or not, so `h` `l`
+    and `←` `→` stay the pane's own; and there `⌃J` `⌃K` run `row`, the field below or
+    above, as `↓` `↑` do in a field. Elsewhere `h` `l` or `←` `→`, outside a field (D25). */
 export function paneKeys(
   mac: boolean,
   move: (step: -1 | 1) => void,
   row: (step: -1 | 1) => void,
 ): Command[] {
-  const outside: Command[] = [
-    { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'pane left', run: () => move(-1) },
-    { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'pane right', run: () => move(1) },
-  ]
-  if (!mac) return outside
+  if (!mac)
+    return [
+      { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'pane left', run: () => move(-1) },
+      { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'pane right', run: () => move(1) },
+    ]
   return [
-    ...outside,
     {
       id: 'field-left',
       keys: [{ code: 'KeyH', ctrl: true }],

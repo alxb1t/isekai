@@ -10,6 +10,24 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-11-03
+
+Gate: local 0m33s · CI none · 0.61.0: local 0m28s · CI none
+
+### Changed
+
+- One `progress` sizes the Prepare bar, the Render bar and the drawer's; Prepare counts each stage's cells against
+  its own total, and its bar names the photographs it prepares, so no bar disagrees with another (0091 D1, D2).
+- A chosen file leaves an import alone, by `×` or `⌫`, through the reader's `remove`, a copy of it still chosen
+  keeping the photograph; the tiles are a grid the keys step, and `↵` opens a staged file full size, so a mistaken
+  choice costs no restart (0091 D3).
+- The viewer's `↵` toggles fit and full size as a click does, and `j` `k` scroll at full size; the hub's large view
+  moves to `⇧↵`, so one key keeps one meaning (0091 D4).
+- On macOS Review's panes move by `⌃H` `⌃L` alone, leaving `h` `l` to the pane; `⌃E` `⌃Y` go; ④ is one grid of
+  `−` `+` and its slots, and `⇧J` `⇧K` keep the rail's sheet centred (0091 D5, D6).
+- The key list is a modal dialog in columns by scope; Compare's pick and the drawer take their widest row's width,
+  their long text cut rather than widening them, so neither jumps as the focus moves (0091 D7).
+
 ## [0.61.0] - 2026-11-02
 
 Gate: local 0m28s · CI none · 0.60.2: local 0m47s · CI 1m29s

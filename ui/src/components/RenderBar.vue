@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { planOf, reasons, waiting } from '../bars'
+import { planOf, progress, reasons, waiting } from '../bars'
 import KeyHint from './KeyHint.vue'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
@@ -30,10 +30,17 @@ const { renderTotals } = live
 const render = computed(() => jobs.value.render)
 const plan = computed(() => planOf(render.value))
 const left = computed(() => waiting({ images: props.images + props.others, plan: plan.value }))
+/* The images done over the images asked; null slides the line. */
+const filled = computed(() => progress(plan.value))
 </script>
 
 <template>
-  <div class="prepare-bar" :class="{ running: rendering || plan !== null }" data-render-bar>
+  <div
+    class="prepare-bar"
+    :class="{ running: rendering || plan !== null, 'prepare-bar--sized': filled !== null }"
+    :style="filled === null ? undefined : { '--progress': `${filled * 100}%` }"
+    data-render-bar
+  >
     <template v-if="plan === null && (images + others > 0 || (refused !== null && !rendering))">
       <span v-if="images > 0" class="prepare-bar__cells mono">
         {{ images }} {{ noun(images, 'image') }} ready to render

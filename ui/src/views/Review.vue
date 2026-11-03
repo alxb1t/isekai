@@ -22,8 +22,9 @@ import { useApproval } from '../composables/useApproval'
 import { useKeys } from '../composables/useKeys'
 import { chooses, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
-import { clamp } from '../grid'
+import type { Move } from '../grid'
 import { nextPane, type Pane, paneKeys } from '../panes'
+import { nearest, stepFour } from '../slots'
 import { type Command, modded, plain, shifted, useKeyStore } from '../stores/keys'
 import type { FieldCandidates } from '../types'
 
@@ -37,6 +38,7 @@ import type { FieldCandidates } from '../types'
    move between them are read by `TagInput`. */
 const props = defineProps<{ collection: string; digest: string; flow: string }>()
 const router = useRouter()
+const mac = useKeyStore().mac
 const queue = useQueue(props.collection, props.flow, () => props.digest)
 const failure = ref<string | null>(null)
 /* A refusal reading the sheet again after an approval, a cancel or a discard,
@@ -403,15 +405,31 @@ const viewerKeys = [photographKey]
 
 const scrollSource = (direction: -1 | 1) => source.value?.scrollBy({ top: direction * 120 })
 
-/* ④'s stops, the count then each slot, walked from the one focused. */
-function moveRenders(direction: -1 | 1): void {
-  const stops = [
-    ...document.querySelectorAll<HTMLElement>(
-      '.renders-block [data-renders-count], .renders-block [data-slot]',
-    ),
-  ]
-  const at = stops.findIndex((one) => one === document.activeElement)
-  stops[clamp(at + direction, stops.length - 1)]?.focus()
+/* ④ as a grid (D6): the count's `−` `+` a row, then a row per slot. */
+function fourStops(): HTMLElement[][] {
+  const block = document.querySelector('.renders-block')
+  if (!block) return []
+  const count = [...block.querySelectorAll<HTMLElement>('[data-renders-step]')]
+  const slots = [...block.querySelectorAll<HTMLElement>('[data-slot]')].map((one) => [one])
+  return count.length > 0 ? [count, ...slots] : slots
+}
+
+/* The column a row move keeps, the one `h` `l` last took. */
+let fourColumn = 0
+
+function moveRenders(move: Move): void {
+  const stops = fourStops()
+  const enabled = stops.map((one) => one.map((stop) => !stop.matches(':disabled')))
+  const active = document.activeElement
+  const row = stops.findIndex((one) => one.some((stop) => stop === active))
+  if (row < 0) {
+    stops[0]?.[nearest(enabled[0] ?? [], 0)]?.focus()
+    return
+  }
+  const at = { row, column: stops[row].findIndex((stop) => stop === active) }
+  const to = stepFour(enabled, at, move, fourColumn)
+  fourColumn = to.kept
+  stops[to.focus.row]?.[to.focus.column]?.focus()
 }
 
 /* A slot takes digits alone, so `j` `k` walk ④ from inside one. */
@@ -425,7 +443,7 @@ function vertical(direction: -1 | 1): () => void {
     if (here === 'rail') stepCollection(direction)
     else if (here === 'source') scrollSource(direction)
     else if (here === 'sheet') moveRow(direction)
-    else moveRenders(direction)
+    else moveRenders(direction > 0 ? 'row+' : 'row-')
   }
 }
 
@@ -473,14 +491,14 @@ useKeys('screen', [
     run: () => void router.push({ name: 'review-head', params: { collection: props.collection } }),
     when: () => queue.info.value !== null && chooses(queue.info.value),
   },
-  ...paneKeys(useKeyStore().mac, movePane, moveRow),
+  ...paneKeys(mac, movePane, moveRow),
   { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
   { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'up', run: vertical(-1) },
   {
     id: 'slot-down',
     keys: plain('KeyJ', 'ArrowDown'),
     label: 'next slot',
-    run: () => moveRenders(1),
+    run: () => moveRenders('row+'),
     inField: true,
     when: inSlot,
   },
@@ -488,22 +506,22 @@ useKeys('screen', [
     id: 'slot-up',
     keys: plain('KeyK', 'ArrowUp'),
     label: 'previous slot',
-    run: () => moveRenders(-1),
+    run: () => moveRenders('row-'),
     inField: true,
     when: inSlot,
   },
-  {
-    id: 'scroll-down',
-    keys: [{ code: 'KeyE', ctrl: true }],
-    label: 'scroll the photograph',
-    run: () => scrollSource(1),
-  },
-  {
-    id: 'scroll-up',
-    keys: [{ code: 'KeyY', ctrl: true }],
-    label: 'scroll back',
-    run: () => scrollSource(-1),
-  },
+  ...(
+    [
+      ['four-left', plain('KeyH', 'ArrowLeft'), 'column-'],
+      ['four-right', plain('KeyL', 'ArrowRight'), 'column+'],
+    ] as const
+  ).map(([id, keys, to]) => ({
+    id,
+    keys: [...keys],
+    label: to === 'column-' ? 'left in ④' : 'right in ④',
+    run: () => moveRenders(to),
+    when: () => mac && paneNow() === 'renders',
+  })),
   photographKey,
 ])
 

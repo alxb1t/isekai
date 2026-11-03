@@ -2483,6 +2483,34 @@ def test_a_staged_files_preview_is_a_downscaled_jpeg_kept_nowhere(
     assert snapshot(tmp_path / "lib") == before
 
 
+@pytest.mark.spec("ui:sheet:the-tiles-take-the-keys")
+def test_staging_serves_a_read_file_full_size_until_it_is_removed(
+    client: TestClient, tmp_path: Path
+) -> None:
+    feed = _broadcast(client).subscribe()
+    staged = client.post("/api/staging").json()["id"]
+    _, wide = _upload(
+        client, staged, "wide.jpg", photo_jpeg((30, 60, 90), (1600, 1200))
+    )
+    (read,) = _until_read(feed, staged, {wide["upload"]})[-1:]
+    file = f"/api/staging/{staged}/files/{read['name']}"
+
+    answered = client.get(file)
+
+    assert answered.status_code == 200
+    assert answered.headers["content-type"] == "image/jpeg"
+    assert answered.headers["cache-control"] == "no-store"
+    assert answered.headers["x-content-type-options"] == "nosniff"
+    from PIL import Image
+
+    with Image.open(io.BytesIO(answered.content)) as shown:
+        assert shown.size == (1600, 1200)
+
+    assert client.delete(file).status_code == 200
+    assert client.get(file).status_code == 409
+    assert client.delete(file).status_code == 409
+
+
 @pytest.mark.spec("ui:sessions:a-terminal-render-stays-live")
 def test_a_terminal_session_is_live_without_a_job_slot(
     client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch

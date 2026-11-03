@@ -250,9 +250,19 @@ export function commitStaging(
   })
 }
 
+/* A staged file, full size, by the name it is staged as. */
+export function stagedAt(id: string, name: string): string {
+  return `/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(name)}`
+}
+
 /* A staged file's preview, by the name it is staged as. */
 export function stagedThumbAt(id: string, name: string): string {
-  return `/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(name)}/thumb`
+  return `${stagedAt(id, name)}/thumb`
+}
+
+/* Take a read file out of its import's staging folder, before the commit. */
+export function removeStaged(id: string, name: string): Promise<unknown> {
+  return request(stagedAt(id, name), { method: 'DELETE' })
 }
 
 /* A source under a collection's `sources/`, by its file's name, with or without a run. */

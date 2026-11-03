@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import { noun } from '../words'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import {
+  cancelStaging,
+  commitStaging,
+  openStaging,
+  removeStaged,
+  stagedAt,
+  stagedThumbAt,
+} from '../api'
 import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
-import { modded, plain } from '../stores/keys'
-import { discards } from '../staging'
+import type { Move } from '../grid'
+import { isField, modded, plain } from '../stores/keys'
+import { after, discards, heir, orphans, removal, stepped, withheld } from '../staging'
 import { useLiveStore } from '../stores/live'
+import ImageViewer, { type Shown } from './ImageViewer.vue'
 import KeyHint from './KeyHint.vue'
 import type { StagedFile } from '../types'
 
@@ -69,6 +78,8 @@ const name = ref(new Date().toISOString().slice(0, 10))
 const refusal = ref<string | null>(null)
 /* Import's commit is in flight: no file is added, nor Import pressed again. */
 const committing = ref(false)
+/* The removals whose tile has not gone yet: Import waits for each. */
+const removing = ref(0)
 let committed = false
 /* The sheet is gone: an import that opens after it is cancelled, never followed. */
 let closed = false
@@ -106,14 +117,16 @@ const ready = computed(() =>
 const shown = computed(() => tiles.value.filter((one) => one.phase !== 'refused'))
 
 /* Import's reason for being disabled, or null when it is not (rule 4). */
-const disabled = computed(() => {
-  if (committing.value) return 'Importing'
-  if (tiles.value.length === 0) return 'Choose files to import'
-  if (reading.value) return `Reading ${read.value.length} of ${tiles.value.length}`
-  if (ready.value.length === 0)
-    return adding.value ? 'Nothing new to add' : "None of the chosen files could be read."
-  return null
-})
+const disabled = computed(() =>
+  withheld({
+    committing: committing.value,
+    removing: removing.value,
+    chosen: tiles.value.length,
+    read: read.value.length,
+    ready: ready.value.length,
+    adding: adding.value,
+  }),
+)
 
 function choose(event: Event): void {
   const input = event.target as HTMLInputElement
@@ -141,12 +154,22 @@ function pump(): void {
 }
 
 /* The import's files, from the page's stream, each on the tile holding its upload. */
-watch(
-  () => live.files,
-  () => {
-    for (const one of tiles.value) apply(one)
-  },
-)
+watch(() => live.files, settle)
+
+/* Put each tile's reported state on it, then send again each copy whose file no
+   tile holds: removed as the copy was read, so the copy's bytes are staged nowhere. */
+function settle(): void {
+  for (const one of tiles.value) apply(one)
+  const lost = orphans(tiles.value.map((tile) => tile.result))
+  for (const index of lost) {
+    const one = tiles.value[index]
+    one.upload = null
+    one.phase = 'queued'
+    one.progress = 0
+    one.result = null
+  }
+  if (lost.length > 0) pump()
+}
 
 /* Put its upload's reported state on a tile. Its upload's answer, not the
    stream, says it waits: the stream can report it first. */
@@ -160,7 +183,12 @@ function apply(one: Tile): void {
     one.refusal = reported.refusal ?? `${reported.file}: refused`
   } else {
     one.phase = 'read'
-    one.result = { name: reported.name ?? reported.file, state: reported.state, carries: reported.carries ?? [] }
+    one.result = {
+      name: reported.name ?? reported.file,
+      state: reported.state,
+      carries: reported.carries ?? [],
+      copyOf: reported.copy_of ?? null,
+    }
   }
 }
 
@@ -177,7 +205,7 @@ async function send(one: Tile): Promise<void> {
       one.progress = fraction
     })
     if (one.phase === 'uploading') one.phase = 'waiting'
-    apply(one)
+    settle()
   } catch (reason) {
     one.phase = 'refused'
     one.refusal = (reason as Error).message
@@ -209,6 +237,88 @@ function size(bytes: number): string {
 function total(): string {
   return size(ready.value.reduce((sum, one) => sum + one.file.size, 0))
 }
+
+/* The tiles' grid, the focused tile's place in `shown`, and the viewer's place in `viewable`. */
+const grid = ref<HTMLElement | null>(null)
+const focused = ref<number | null>(null)
+const viewing = ref<number | null>(null)
+let viewed: number | null = null
+
+function focusTile(index: number | null): void {
+  if (index === null) return
+  void nextTick(() => grid.value?.querySelectorAll<HTMLElement>('.import__tile')[index]?.focus())
+}
+
+/* The grid's columns, as the browser lays them out. */
+function columns(): number {
+  const held = grid.value
+  return held ? getComputedStyle(held).gridTemplateColumns.split(' ').filter(Boolean).length : 0
+}
+
+function move(to: Move): void {
+  if (focused.value !== null) focusTile(stepped(focused.value, shown.value.length, columns(), to))
+}
+
+/* Take a chosen file out of the import, unasked: nothing is committed yet (D3). */
+async function remove(one: Tile): Promise<void> {
+  const from = removal(one.phase, one.result?.state)
+  if (from === null || committing.value) return
+  const next = after(shown.value.indexOf(one), shown.value.length)
+  const results = tiles.value.map((tile) => tile.result)
+  const copy = one.result ? tiles.value[heir(results, one.result.name)] : undefined
+  removing.value += 1
+  try {
+    if (from === 'staging' && copy) {
+      // A copy still chosen takes the file over, under the removed tile's upload.
+      copy.upload = one.upload
+      copy.result = one.result
+      copy.asIs = one.asIs
+    } else if (from === 'staging' && staging.value !== null && one.result) {
+      try {
+        await removeStaged(staging.value, one.result.name)
+      } catch (reason) {
+        refusal.value = (reason as Error).message
+        return
+      }
+    }
+    refusal.value = null
+    tiles.value = tiles.value.filter((tile) => tile !== one)
+    // A copy heard while the removal was in flight lost its file with it.
+    settle()
+    focusTile(next)
+  } finally {
+    // Only now may Import commit: a copy the removal left standing is queued again.
+    removing.value -= 1
+  }
+}
+
+/* The read files, each full size from staging, that `↵` opens in the viewer. */
+const viewable = computed(() => shown.value.filter((one) => preview(one) !== null))
+const images = computed<Shown[]>(() =>
+  viewable.value.map((one) => ({
+    src: stagedAt(staging.value ?? '', one.result?.name ?? ''),
+    name: one.result?.name ?? one.file.name,
+  })),
+)
+
+function view(): void {
+  const one = focused.value === null ? undefined : shown.value[focused.value]
+  const index = one ? viewable.value.indexOf(one) : -1
+  if (index < 0) return
+  viewed = focused.value
+  viewing.value = index
+}
+
+function closeViewer(): void {
+  viewing.value = null
+  focusTile(viewed)
+}
+
+/* Once every file is read, the first tile takes the focus unless a field or a tile holds it. */
+watch(reading, (now) => {
+  if (!now && shown.value.length > 0 && focused.value === null && !isField(document.activeElement))
+    focusTile(0)
+})
 
 async function importAll(): Promise<void> {
   if (disabled.value !== null || staging.value === null) return
@@ -264,7 +374,36 @@ useKeys('overlay', [
     run: () => void importAll(),
     inField: true,
   },
+  ...(
+    [
+      ['tile-left', plain('KeyH', 'ArrowLeft'), 'column-'],
+      ['tile-right', plain('KeyL', 'ArrowRight'), 'column+'],
+      ['tile-up', plain('KeyK', 'ArrowUp'), 'row-'],
+      ['tile-down', plain('KeyJ', 'ArrowDown'), 'row+'],
+    ] as const
+  ).map(([id, keys, to]) => ({
+    id,
+    keys: [...keys],
+    label: 'move',
+    run: () => move(to),
+    when: onTile,
+  })),
+  {
+    id: 'remove-file',
+    keys: plain('Backspace'),
+    label: 'remove the file',
+    run: () => {
+      const one = focused.value === null ? undefined : shown.value[focused.value]
+      if (one) void remove(one)
+    },
+    when: () => onTile() && !committing.value,
+  },
+  { id: 'view-file', keys: plain('Enter'), label: 'full size', run: view, when: onTile },
 ])
+
+function onTile(): boolean {
+  return focused.value !== null
+}
 
 /* A modal dialog, on its first control. */
 const dialog = ref<HTMLDialogElement | null>(null)
@@ -318,16 +457,30 @@ onUnmounted(() => {
     <div class="import__body">
       <div class="import__files">
         <p class="section-label">sources · {{ ready.length }} · {{ total() }}</p>
-        <div class="import__tiles">
+        <div ref="grid" class="import__tiles">
           <div
-            v-for="one in shown"
+            v-for="(one, index) in shown"
             :key="one.key"
             class="import__tile"
             :class="{ 'import__tile--dim': one.result?.state === 'skipped' }"
+            :tabindex="index === (focused ?? 0) ? 0 : -1"
             :data-file="one.file.name"
             :data-phase="one.phase"
             :data-state="one.result?.state ?? ''"
+            @focusin="focused = index"
+            @focusout="focused = null"
           >
+            <button
+              v-if="removal(one.phase, one.result?.state) !== null"
+              class="import__remove"
+              type="button"
+              tabindex="-1"
+              :disabled="committing"
+              :aria-label="`Remove ${one.result?.name ?? one.file.name}`"
+              @click="remove(one)"
+            >
+              ×
+            </button>
             <img v-if="preview(one)" class="import__preview" :src="preview(one) ?? ''" alt="" />
             <span class="import__name mono">{{ one.result?.name ?? one.file.name }}</span>
             <span class="import__size mono">{{ size(one.file.size) }}</span>
@@ -396,5 +549,6 @@ onUnmounted(() => {
         {{ adding ? `Import ${ready.length}` : 'Import' }}<KeyHint command="import" />
       </button>
     </footer>
+    <ImageViewer v-if="viewing !== null" :images="images" :start="viewing" @close="closeViewer" />
   </dialog>
 </template>

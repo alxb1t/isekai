@@ -102,10 +102,12 @@ def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
     image = drawer.locator("[data-session-image] img")
     expect(image).to_have_js_property("complete", True)
     expect(page).to_have_url(served.hub_of(DRAWN))
-    # Half the window at least, against its right edge.
+    # Half the window and 480 px at least, the window less 100 px at most, against
+    # its right edge.
     box, size = drawer.bounding_box(), page.viewport_size
     assert box is not None and size is not None
     assert box["width"] >= max(size["width"] / 2, 480) - 1
+    assert box["width"] <= size["width"] - 100 + 1
     assert box["x"] + box["width"] == pytest.approx(size["width"], abs=1)
     page.keyboard.press("Enter")
     viewer = page.locator("dialog[data-viewer]")
@@ -217,7 +219,7 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
     viewer = page.locator("dialog[data-viewer]")
     expect(viewer.locator("img")).to_have_attribute("src", re.compile(r"/v1/7/image$"))
     expect(page).to_have_url(served.hub_of(SHOWN))
-    page.keyboard.press("Enter")
+    page.keyboard.press("Shift+Enter")
     expect(page).to_have_url(
         f"{served.url}/c/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
     )
@@ -418,13 +420,25 @@ def test_compare_shows_both_versions_of_a_seed_each_under_its_head(
     # the head naming the focused tile.
     page.keyboard.press("Shift+C")
     picker = page.locator("dialog[data-compare-pick]")
-    expect(picker.locator(".viewer__title")).to_have_text(
-        f"Compare {FLOW} v2 · seed 7 with {FLOW} v1 · seed 7…"
+    expect(picker.locator(".pick__line")).to_have_text(
+        [f"Compare {FLOW} v2 · seed 7", f"with {FLOW} v1 · seed 7"]
     )
     expect(picker.locator(".pick__flow")).to_have_text(["photo", FLOW, FLAT])
     expect(picker.locator("[data-origin]")).to_have_attribute(
         "aria-label", f"{FLOW} · v2 · seed 7"
     )
+    expect(picker.get_by_role("button", name=f"{FLOW} · v1 · seed 7")).to_be_focused()
+    # The pick holds its width whatever is focused: the photograph's shorter head too.
+    held = picker.bounding_box()
+    page.keyboard.press("k")
+    expect(picker.get_by_role("button", name="photograph")).to_be_focused()
+    expect(picker.locator(".pick__line")).to_have_text(
+        [f"Compare {FLOW} v2 · seed 7", "with photograph"]
+    )
+    moved = picker.bounding_box()
+    assert held is not None and moved is not None
+    assert moved["width"] == pytest.approx(held["width"], abs=1)
+    page.keyboard.press("j")
     expect(picker.get_by_role("button", name=f"{FLOW} · v1 · seed 7")).to_be_focused()
     page.keyboard.press("Enter")
 

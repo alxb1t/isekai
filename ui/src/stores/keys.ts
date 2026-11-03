@@ -63,11 +63,12 @@ export interface Press {
   preventDefault(): void
 }
 
-/** A command as the hints show it. */
+/** A command as the hints show it, with the scope that declares it. */
 export interface Entry {
   id: string
   keys: string
   label: string
+  scope: Scope
 }
 
 interface Layer {
@@ -194,11 +195,12 @@ export const useKeyStore = defineStore('keys', () => {
     return false
   }
 
-  function entry(command: Command): Entry {
+  function entry(command: Command, scope: Scope): Entry {
     return {
       id: command.id,
       keys: command.keys.map((key) => keyText(key, mac.value)).join(' '),
       label: command.label,
+      scope,
     }
   }
 
@@ -207,7 +209,7 @@ export const useKeyStore = defineStore('keys', () => {
   const entries = (scope: Scope) =>
     layers.value
       .filter((layer) => layer.scope === scope)
-      .flatMap((layer) => layer.commands.map(entry))
+      .flatMap((layer) => layer.commands.map((command) => entry(command, scope)))
 
   /** Everywhere's commands and the screen's, as the key list shows them; a key the
       screen declares is listed once, as the screen's command, the one it runs. */
@@ -221,7 +223,7 @@ export const useKeyStore = defineStore('keys', () => {
   function hint(id: string): string | null {
     for (const layer of [...layers.value].reverse()) {
       const found = layer.commands.find((command) => command.id === id)
-      if (found) return entry(found).keys
+      if (found) return entry(found, layer.scope).keys
     }
     return null
   }

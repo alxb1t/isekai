@@ -11,7 +11,6 @@ import type {
   RunningRender,
   RunningSession,
 } from '../types'
-import { noun } from '../words'
 
 /* Whether a pod may be billing or the window is past its end. */
 export function alerting(found: Billing | null): boolean {
@@ -188,11 +187,14 @@ export const useLiveStore = defineStore('live', () => {
     billing.value = (await askBilling()).billing
   }
 
+  /* Each stage's cells done against its total, and the time since the start.
+     e.g. "tag 6 of 6 · caption 3 of 6 · sheet 0 of 6 · 00:35" */
   function prepareTotals(held: JobSlot | null): string {
     const progress = held?.progress
     if (!progress) return ''
     const elapsed = (now.value - Date.parse(progress.started)) / 1000
-    return `${progress.done} of ${progress.of} ${noun(progress.of, 'cell')} done · ${clock(elapsed)}`
+    const stages = progress.stages.map((one) => `${one.stage} ${one.done} of ${one.of}`)
+    return [...stages, clock(elapsed)].join(' · ')
   }
 
   /* A running render's images against its total, and its clock against its limit.

@@ -80,13 +80,15 @@ timer mono 40px/500.
   on Home, else the collection name. Tabs only inside a collection; the active one has a 2px accent underline. The Review
   tab counts the collection's unapproved sheets in mono 11 `accent`, and opens the collection's Review. The flow
   switcher is a segmented control; Review drops `all`. The `?` button at its right end, after the running render,
-  opens the key list, as `⌃/` does; no screen draws a key bar.
+  opens the key list, as `⌃/` does; no screen draws a key bar. The key list is a modal dialog, centred over most of
+  the window, a column per scope — everywhere's, then the screen's; `⌃/`, `esc` and the backdrop close it.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
 - **JobStrip**, `ground-deep`, mono 11px: one dot, then one item per running job, each a label (`job · prepare`)
-  and its totals (`1 of 3 cells done · 01:47`, `image 1 of 2 · 06:41 of ≤10:30`); with none running, each kind's
-  last receipt. The dot: hollow idle, accent running, accent square unresolved. Prepare keeps the accepted-cell total fixed, counts cells completed at sheet and ticks
-  elapsed time every second from its original start. On the right, while the volume is open, the quiet item
+  and its totals (`tag 6 of 6 · caption 3 of 6 · sheet 0 of 6 · 00:35`, `image 1 of 2 · 06:41 of ≤10:30`); with none
+  running, each kind's last receipt. The dot: hollow idle, accent running, accent square unresolved. Prepare keeps each
+  stage's total fixed, counts each cell once as it completes that stage, and ticks elapsed time every second from its
+  original start. On the right, while the volume is open, the quiet item
   `volume open · until 19:38 · close`.
 
 ## 4 · Routes
@@ -143,6 +145,9 @@ J1·4  ┌ New collection   6 files chosen · 5 sources · 1 refused            
 
 - Tiles are 124×164 with × at the top right; a converted tile carries its badge (mono 10px) and its name and size
   after conversion.
+- The tiles are a grid. Once every file is read the first tile takes the focus, unless the name field holds it; `h j k
+  l` and the arrows move it, `⌫` removes the focused file as × does, unasked, and `↵` opens it full size in the
+  viewer. A tile still on its way offers no ×.
 - While reading, the header says `reading 3 of 6` in `accent-ink`, tiles show `converting…` or `waiting`, and Import
   is disabled with `Reading 3 of 6`.
 
@@ -164,7 +169,7 @@ cowboy_shot_2_of_a_ver │ ☑ ▰▰▰▱▱▱ captioning…            │ �
 y_long_name            │                                  │
 [▣]                    │                                  │
 
-        ┌ IMG_0430 × summon · …                 [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
+        ┌ 2 photographs to prepare in 2026-10-19  [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
         ┌ 2 images ready to render                                        [ Render ⇧G ] ┐   RenderBar
 ```
 
@@ -180,26 +185,30 @@ y_long_name            │                                  │
   view, the Back button and a tab switch come back to the cell left, else the first row's source cell.
 - **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
-  cell holding images opens the viewer on its newest (`↵ view`), `← →` `h l` step its images and `↵` opens the
+  cell holding images opens the viewer on its newest (`↵ view`), `← →` `h l` step its images and `⇧↵` opens the
   shown one's large view. The checkbox's own click only ticks.
+- **The viewer** opens an image fitted; a click or `↵` toggles full size, where `j k` `↓ ↑` scroll it by 120 px, and
+  `h l` `← →` step to the next image, fitted. On a pair `↵` does nothing.
 - **A cell's images** sit at its foot, level with the source's thumbnail, under its stage track and any refusal,
   every approved version's, oldest to newest, each a 96×128 tile
   with its `vN` badge, wrapping; a click on one opens the viewer on it.
 - **A cell's refusal** sits inside the cell with its fix; the cell returns to assigned, so the next Prepare retries
   it.
-- **The PrepareBar** floats centred, bottom 50, 940 wide, `raised-2`, 1px `line-control`, radius 8. Pending: the
-  cells named in mono 11, Discard, primary `n changes · Prepare ⌘↵`. Running: `Prepare · 1 of 3 cells done · 01:47`,
-  Stop. The accepted-cell total stays fixed; the sheet-completed count and ticking elapsed time match JobStrip,
-  including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
+- **The PrepareBar** floats centred, bottom 50, 940 wide, `raised-2`, 1px `line-control`, radius 8. Pending:
+  `<n> photographs to prepare in <collection>` in mono 11, each photograph counted once whatever its flows, Discard,
+  primary `n changes · Prepare ⌘↵`. Running: `Prepare · tag 6 of 6 · caption 3 of 6 · sheet 0 of 6 · 00:35`, Stop.
+  Each stage's total stays fixed; its count and the ticking elapsed time match JobStrip, including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
   hub opened after the failure too. Disabled while another collection's Prepare runs: its reason (`Prepare is running on 2026-10-19`). There is no done state: the
-  receipt goes to the job strip, the count to the Review tab. Running, a 2 px `accent` line slides along the bar's top
-  edge, as on a running RenderBar, and a running segment pulses `accent-dim` ↔ `accent`; under
+  receipt goes to the job strip, the count to the Review tab. Running, a 2 px `accent` line along the bar's top edge
+  is as wide as the stages' cells done over those asked, `progress` in `bars.ts` sizing it as it sizes the RenderBar's
+  and the drawer's; with nothing to size it, the line slides. A running segment pulses `accent-dim` ↔ `accent`; under
   `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
 - **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
   to render`, the render stage's own count, and primary `Render ⇧G`, disabled with its reason. With nothing short it
   is absent. While a render runs it shows the session's totals, `image 2 of 4 · 06:41 of ≤10:30`, the images
   short outside its plan, `1 image waits` or `n images wait for the next session`, and `Session ⌃;`, in place of the
-  count and Render.
+  count and Render. Its line, and the drawer's bar, are as wide as the images done over those asked; the drawer keeps
+  `06:41 of 13:30 at most` as text.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is the grid's
   first column, `h` from the first flow cell, and a column itself: the file's stem in mono 13, its first line level
   with the cells' tick line, the size in the viewer's title, then a 96×128 thumbnail at the cell's foot, a
@@ -278,7 +287,7 @@ J4·1  RENDER · ON A RENTED GPU                                   Render 4 imag
                                            [ Cancel esc ]  [ Render · about $0.06 ⌘↵ ]
 
 J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
-      06:41 of 13:30 at most      [▰▰▰▰▰▰▰▱▱▱▱▱▱]  the bar's width is the limit
+      06:41 of 13:30 at most      [▰▰▰▰▰▰▱▱▱▱▱▱]  images done over asked
       ● volume up         gpunit-isekai · attached                 0:21
       ● pod boot          gpunit-isekai                            2:04
       ◐ rendering         image 2 of 4 · 00003 · conjure-anime-wai · 4:16
@@ -304,6 +313,8 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
   maximum, and teardown starts by itself at the limit; an estimate past the ceiling disables Render — *untick a
   collection*. The price comes from the estimate: the pod at `pod_rate` (about $0.40/h), the volume at about
   $0.005/h.
+- **The drawer** stands at the right, as wide as its widest grid: at least half the window and 480 px, at most the
+  window less 100 px, a wider grid scrolling inside it; its long text, a refusal's above all, never widens it.
 - **The session** shows elapsed time against its limit, five steps always, and a grid per collection it renders,
   stacked in its order, each headed by its name — no diffusion steps and no spend. A column per photograph the record
   plans, a row per flow, the photographs' row at the foot; a cell holds that flow's images of that photograph and a
@@ -360,8 +371,10 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
   either end, the head naming the step, `summon-anime-wai · v2 · seed 1840266731 · 2 of 5`.
   `Compare with…  ⇧C` opens a pick of the source's images: the photograph's row on top, then a row per flow
   holding images, headed by its name, tiles at Renders' size oldest first, `vN` under each, the image
-  compare started from marked, the pick's head naming the focused tile — `Compare summon-anime-wai v2 · seed
-  1840266731 with summon-anime-wai v1 · seed 1840266731…`. It opens on the newest older version of this seed, else the image before this one,
+  compare started from marked, the pick's head naming the focused tile on two lines, each cut at its end —
+  `Compare summon-anime-wai v2 · seed 1840266731` over `with summon-anime-wai v1 · seed 1840266731`. The pick is as
+  wide as its longest row, whatever is focused: at least 480 px, at most the window less 96 px, its rows and its
+  tiles 20 px apart. It opens on the newest older version of this seed, else the image before this one,
   else the photograph; `h j k l` and the arrows move, keeping the column, held at a shorter row's end; `↵` or a
   click compares, `Esc` closes.
 - **Compare** sets the image picked on the left and the image compare started from on the right, at one height,
@@ -474,8 +487,8 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 |---|---|
 | everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⌃; the render drawer, from a field too · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New collection · j k or ↓↑ ↵ the library |
-| Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
-| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④, and ⌃H ⌃L from a field on macOS · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the rail · ⌃E ⌃Y scroll the photograph · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
+| Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ full size, j k or ↓↑ scroll it, ⇧↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
+| Review | the panes: the rail, the photograph, the sheet, ④ — on macOS ⌃H ⌃L alone, from a field or not, elsewhere h l or ←→ · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows, ④'s grid of − + and its slots, from a slot too · h l or ←→ across − + on macOS · ⇧J ⇧K or ⇧↓↑ the rail, the sheet scrolled to its centre · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
 | Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧D Draft from this · ⇧G Render · in the large view, h l or ←→ the screen's images, ⇧D Draft from this, ⇧C Compare with…, esc back · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
 | Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧I its collection's Renders · ⌃; or esc close |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |

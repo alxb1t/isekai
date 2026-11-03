@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useCentred } from '../composables/useCentred'
 import type { Waiting } from '../composables/useQueue'
 import type { CollectionInput, MarkKind } from '../types'
 import KeyHint from './KeyHint.vue'
@@ -40,10 +41,17 @@ function ready(id: string): void {
   if (decoded.value.has(id)) return
   decoded.value = new Set(decoded.value).add(id)
 }
+
+/* `⇧J` `⇧K` step past the rail's visible end: the current sheet is scrolled to its centre. */
+const rail = ref<HTMLElement | null>(null)
+useCentred(
+  () => props.current,
+  () => rail.value?.querySelector('.rail__card--current'),
+)
 </script>
 
 <template>
-  <nav class="rail">
+  <nav ref="rail" class="rail">
     <span class="kicker rail__flow">{{ flow }}</span>
     <span v-for="one in others" :key="one.flow" class="rail__waiting mono" data-waiting>
       {{ one.flow }} · {{ one.count }} waiting<KeyHint command="review" />

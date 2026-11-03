@@ -45,6 +45,13 @@ from isekai.interface.ui.library import LOG, RUNS
 # The stages Prepare runs for each flow, in order.
 PREPARE = ("tag", "caption", "sheet")
 
+# The cell stages a done line must read for its stage to count it; a stage absent
+# writes no file the hub's stage reads.
+REACHED = {
+    "tag": {"tagged", "sheet", "draft", "approved", "rendered"},
+    "sheet": {"sheet", "draft", "approved", "rendered"},
+}
+
 # The kinds of job, each with its own slot.
 Kind = Literal["prepare", "render"]
 KINDS: tuple[Kind, ...] = get_args(Kind)
@@ -149,8 +156,36 @@ class _Job:
     collections: tuple[str, ...] = ()
 
     started: str | None = None
-    accepted: set[tuple[str, str]] = field(default_factory=set)
-    completed: set[tuple[str, str]] = field(default_factory=set)
+    # Each stage's cells, by flow and run, that reported it done.
+    completed: dict[str, set[tuple[str, str]]] = field(default_factory=dict)
+
+    def asked(self, verb: str) -> set[tuple[str, str]]:
+        """Return the cells, by flow and run, the job's steps run `verb` over."""
+        return {
+            (step.flow, run)
+            for step in self.steps
+            if step.verb == verb
+            for run in step.runs
+        }
+
+    def complete(self, line: Mapping[str, Any], found: Mapping[str, Any]) -> bool:
+        """Count `line`'s cell done for its stage once; return whether it counted.
+
+        `found` is the cell event the line made, its stage read from disk.
+        """
+        verb = str(line.get("stage"))
+        identity = (str(line.get("flow")), str(line.get("run")))
+        reached = found.get("cell", {}).get("stage")
+        done = self.completed.setdefault(verb, set())
+        counts = (
+            line.get("state") == "done"
+            and (verb not in REACHED or reached in REACHED[verb])
+            and identity in self.asked(verb)
+            and identity not in done
+        )
+        if counts:
+            done.add(identity)
+        return counts
 
     def describe(self) -> dict[str, Any]:
         described = {
@@ -164,8 +199,15 @@ class _Job:
         if self.started is not None:
             described["progress"] = {
                 "started": self.started,
-                "of": len(self.accepted),
-                "done": len(self.completed),
+                "stages": [
+                    {
+                        "stage": verb,
+                        "done": len(self.completed.get(verb, ())),
+                        "of": len(asked),
+                    }
+                    for verb in PREPARE
+                    if (asked := self.asked(verb))
+                ],
             }
         if self.collections:
             described["collections"] = list(self.collections)
@@ -258,12 +300,7 @@ class Jobs:
                     f"{collection} has no assigned cell without a sheet; tick a flow "
                     "for a source, then try again"
                 )
-            job = _Job(
-                collection,
-                tuple(steps),
-                started=self._now(),
-                accepted={(step.flow, run) for step in steps for run in step.runs},
-            )
+            job = _Job(collection, tuple(steps), started=self._now())
             self._occupy(job, self._run, (job, folder, cell))
         self._publish(job)
         return job.describe()
@@ -419,18 +456,8 @@ class Jobs:
                     if found is not None:
                         self._broadcast.publish("cell", found)
                         assert event is not None
-                        identity = (str(event.get("flow")), str(event.get("run")))
                         with self._lock:
-                            completed = (
-                                event.get("stage") == "sheet"
-                                and event.get("state") == "done"
-                                and found.get("cell", {}).get("stage")
-                                in {"sheet", "draft", "approved", "rendered"}
-                                and identity in job.accepted
-                                and identity not in job.completed
-                            )
-                            if completed:
-                                job.completed.add(identity)
+                            completed = job.complete(event, found)
                         if completed:
                             self._publish(job)
                 code = self._reap(slot, child)
