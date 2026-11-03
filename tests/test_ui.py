@@ -472,3 +472,11 @@ def test_sigint_ends_streams_without_cancellation_output(
 
     assert (jobs.slot("prepare") or {})["state"] == "stopped"
     assert "Traceback" not in err.getvalue()
+
+    # The surface serves through the server that closes the streams; none binds.
+    served: list[uvicorn.Server] = []
+    monkeypatch.setattr(uvicorn.Server, "run", lambda self: served.append(self))
+    app_module.run(app, host=HOST, port=7717)
+    (serving,) = served
+    assert isinstance(serving, app_module.Server)
+    assert serving._broadcast is broadcast
