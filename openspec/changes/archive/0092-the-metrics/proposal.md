@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: v0.62.1
 ---
 
 # 0092 — the metrics
