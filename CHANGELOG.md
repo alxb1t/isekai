@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- Metric scripts under `scripts/metrics/` count the tests, backlog cards, trailers, references, reading set and
+  pinned things, each stdlib alone and held by a test, so a change can be read as numbers (0092 D1, D2).
+
 ## [0.62.0] - 2026-11-03
 
 Gate: local 0m33s · CI none · 0.61.0: local 0m28s · CI none

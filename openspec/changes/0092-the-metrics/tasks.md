@@ -4,18 +4,18 @@ The scripts, then the catalogue and the docs, per [design](design.md).
 
 ## Progress
 
-- [ ] 1 — The scripts
+- [x] 1 — The scripts
 - [ ] 2 — The catalogue
 
 ## 1 — The scripts
 
-- [ ] 1.1 Write `scripts/metrics/tests_collected.py` and `scripts/metrics/backlog.py` per [D1](design.md#d1) and
+- [x] 1.1 Write `scripts/metrics/tests_collected.py` and `scripts/metrics/backlog.py` per [D1](design.md#d1) and
   [D2](design.md#d2).
   Verify: `uv run --script scripts/metrics/tests_collected.py tests/e2e` prints a whole number above 0, and `uv run --script scripts/metrics/backlog.py` prints a whole number.
-- [ ] 1.2 Write `scripts/metrics/conformance.py`, `scripts/metrics/references.py`, `scripts/metrics/reading_set.py` and
+- [x] 1.2 Write `scripts/metrics/conformance.py`, `scripts/metrics/references.py`, `scripts/metrics/reading_set.py` and
   `scripts/metrics/counts.py` per [D2](design.md#d2).
   Verify: `uv run --script scripts/metrics/counts.py pinned` prints `6`, and `uv run --script scripts/metrics/references.py` prints a whole number.
-- [ ] 1.3 Add `tests/test_metric_scripts.py`, importing each script's counting function from its file, per
+- [x] 1.3 Add `tests/test_metric_scripts.py`, importing each script's counting function from its file, per
   [Tests](design.md#tests).
   Verify: `uv run pytest tests/test_metric_scripts.py` exits 0.
 
