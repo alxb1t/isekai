@@ -51,14 +51,19 @@ The rule, the flakes, then the browser tests, per [design](design.md).
   ```
 - [x] 2.3 The watchdog tests in `tests/test_render.py`, the bundle-timeout test in `tests/test_ui.py` and `_overlap` in
   `tests/test_ui_api.py` follow [D4](design.md#d4).
-  Verify: `grep -c 'fired.wait(0.15)' tests/test_render.py` prints `0`, `grep -c '"ps"' tests/test_ui.py` prints `0`, and `for i in $(seq 20); do uv run pytest -q tests/test_render.py -k watchdog || exit 1; done` exits 0.
+  Verify: `grep -c 'fired.wait(0.15)' tests/test_render.py` prints `0`, `grep -c '"ps"' tests/test_ui.py` prints `0`, and `uv run pytest -q tests/test_render.py -k watchdog` exits 0, run twenty times.
 
 ## 3 — The browser
 
 - [ ] 3.1 Merge the browser tests per [Tests](design.md#tests), each merged test carrying both keys.
   Verify: `cat tests/e2e/test_*.py | grep -c '^def test_'` prints `19`, and `uv run pytest --collect-only -q tests/e2e` exits 0.
-- [ ] 3.2 Add the drawer's viewport step and the pick's width step under their restored keys, and `0091·R4`'s and
-  `0091·R9`'s steps in the merged import test, per [D5](design.md#d5).
-  Verify: `grep -c 'the-drawer-fits-its-widest-grid\|the-pick-holds-its-width' tests/e2e/test_render.py` prints `2`, and `uv run pytest tests/test_spec_bindings.py` exits 0.
-- [ ] 3.3 Name the order couplings in `tests/e2e/conftest.py`, per [D5](design.md#d5).
+- [ ] 3.2 Add `WIDE` to `tests/e2e/conftest.py`, four approved photographs of distinct sizes in one collection, per
+  [D5](design.md#d5). Add the drawer's step to `test_the_render_dialog_opens_on_its_checkbox`'s merged test or a test that
+  renders, under `ui:sessions:the-drawer-fits-its-widest-grid`: `WIDE` rendered at an 800 px viewport, the drawer as wide
+  as its grid and at most the window less 100 px.
+  Verify: `grep -c 'WIDE' tests/e2e/conftest.py` prints a count above 0, and `uv run pytest --collect-only -q tests/e2e` exits 0.
+- [ ] 3.3 Add `ui:compare:the-pick-holds-its-width` to the pick's width step, and `0091·R4`'s and `0091·R9`'s steps in
+  the merged import test, per [D5](design.md#d5).
+  Verify: `grep -c 'the-drawer-fits-its-widest-grid' tests/e2e/test_render.py` prints `1`, `grep -c 'the-pick-holds-its-width' tests/e2e/test_render.py` prints `1`, and `uv run pytest tests/test_spec_bindings.py` exits 0.
+- [ ] 3.4 Name the order couplings in `tests/e2e/conftest.py`, per [D5](design.md#d5).
   Verify: `grep -c 'test_prepare.py' tests/e2e/conftest.py` prints a count above 0.
