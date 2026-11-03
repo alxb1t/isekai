@@ -58,8 +58,8 @@ The rule, the flakes, then the browser tests, per [design](design.md).
 - [ ] 3.1 Merge the browser tests per [Tests](design.md#tests), each merged test carrying both keys.
   Verify: `cat tests/e2e/test_*.py | grep -c '^def test_'` prints `19`, and `uv run pytest --collect-only -q tests/e2e` exits 0.
 - [ ] 3.2 Add `WIDE` to `tests/e2e/conftest.py`, four approved photographs of distinct sizes in one collection, per
-  [D5](design.md#d5). Add the drawer's step to `test_the_render_dialog_opens_on_its_checkbox`'s merged test or a test that
-  renders, under `ui:sessions:the-drawer-fits-its-widest-grid`: `WIDE` rendered at an 800 px viewport, the drawer as wide
+  [D5](design.md#d5). Add the drawer's step to `test_the_drawer_holds_the_render`, after its own session ends,
+  under `ui:sessions:the-drawer-fits-its-widest-grid`: `WIDE` rendered at an 800 px viewport, the drawer as wide
   as its grid and at most the window less 100 px.
   Verify: `grep -c 'WIDE' tests/e2e/conftest.py` prints a count above 0, and `uv run pytest --collect-only -q tests/e2e` exits 0.
 - [ ] 3.3 Add `ui:compare:the-pick-holds-its-width` to the pick's width step, and `0091·R4`'s and `0091·R9`'s steps in
