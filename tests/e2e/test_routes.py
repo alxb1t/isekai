@@ -7,6 +7,7 @@ from tests.e2e.conftest import SHOWN, Served
 
 
 @pytest.mark.spec("ui:routes:a-reload-lands-on-the-same-screen")
+@pytest.mark.spec("ui:routes:an-unknown-batch-is-refused")
 def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     page: Page, served: Served
 ) -> None:
@@ -47,11 +48,7 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     expect(page.locator("[data-review-head]")).to_contain_text("No sheet waits")
     expect(page).to_have_url(empty)
 
-
-@pytest.mark.spec("ui:routes:an-unknown-batch-is-refused")
-def test_an_unknown_collection_is_refused_with_the_way_back(
-    page: Page, served: Served
-) -> None:
+    # An unknown collection is refused, naming it, with the way back.
     page.goto(f"{served.url}/c/no-such-collection/hub")
     expect(page.locator(".refusal__reason")).to_contain_text("no-such-collection")
     page.get_by_role("link", name="Back to the library").click()

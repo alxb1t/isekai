@@ -6,7 +6,7 @@ The rule, the flakes, then the browser tests, per [design](design.md).
 
 - [x] 1 — The rule
 - [x] 2 — The flakes
-- [ ] 3 — The browser
+- [x] 3 — The browser
 
 ## 1 — The rule
 
@@ -55,15 +55,15 @@ The rule, the flakes, then the browser tests, per [design](design.md).
 
 ## 3 — The browser
 
-- [ ] 3.1 Merge the browser tests per [Tests](design.md#tests), each merged test carrying both keys.
+- [x] 3.1 Merge the browser tests per [Tests](design.md#tests), each merged test carrying both keys.
   Verify: `cat tests/e2e/test_*.py | grep -c '^def test_'` prints `19`, and `uv run pytest --collect-only -q tests/e2e` exits 0.
-- [ ] 3.2 Add `WIDE` to `tests/e2e/conftest.py`, four approved photographs of distinct sizes in one collection, per
+- [x] 3.2 Add `WIDE` to `tests/e2e/conftest.py`, four approved photographs of distinct sizes in one collection, per
   [D5](design.md#d5). Add the drawer's step to `test_the_drawer_holds_the_render`, after its own session ends,
   under `ui:sessions:the-drawer-fits-its-widest-grid`: `WIDE` rendered at an 800 px viewport, the drawer as wide
   as its grid and at most the window less 100 px.
   Verify: `grep -c 'WIDE' tests/e2e/conftest.py` prints a count above 0, and `uv run pytest --collect-only -q tests/e2e` exits 0.
-- [ ] 3.3 Add `ui:compare:the-pick-holds-its-width` to the pick's width step, and `0091·R4`'s and `0091·R9`'s steps in
+- [x] 3.3 Add `ui:compare:the-pick-holds-its-width` to the pick's width step, and `0091·R4`'s and `0091·R9`'s steps in
   the merged import test, per [D5](design.md#d5).
   Verify: `grep -c 'the-drawer-fits-its-widest-grid' tests/e2e/test_render.py` prints `1`, `grep -c 'the-pick-holds-its-width' tests/e2e/test_render.py` prints `1`, and `uv run pytest tests/test_spec_bindings.py` exits 0.
-- [ ] 3.4 Name the order couplings in `tests/e2e/conftest.py`, per [D5](design.md#d5).
+- [x] 3.4 Name the order couplings in `tests/e2e/conftest.py`, per [D5](design.md#d5).
   Verify: `grep -c 'test_prepare.py' tests/e2e/conftest.py` prints a count above 0.

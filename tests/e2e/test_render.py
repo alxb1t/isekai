@@ -25,13 +25,30 @@ from tests.e2e.conftest import (
     RENDER,
     REVISED,
     SHOWN,
+    WIDE,
+    WIDE_SOURCES,
     Served,
 )
 
 
+def _alone(page: Page, collection: str, images: int = 1) -> None:
+    """Untick every dialog row but `collection`'s, and wait for its `images` quote."""
+    quoted = f"{images} image{'' if images == 1 else 's'}"
+    dialog = page.locator("dialog.render-dialog")
+    own = dialog.locator(f'[data-collection="{collection}"]')
+    expect(own).to_contain_text(quoted)
+    others = dialog.locator(
+        f'[data-collection]:not([data-collection="{collection}"]) [data-tick]'
+    )
+    for index in range(others.count()):
+        others.nth(index).uncheck()
+    expect(own.locator("[data-tick]")).to_be_checked()
+    expect(dialog.locator(".render-dialog__title")).to_have_text(f"Render {quoted}")
+
+
 @pytest.mark.spec("ui:dialogs:the-render-dialog-opens-on-its-checkbox")
+@pytest.mark.spec("ui:render:the-confirmation-starts-the-render")
 def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> None:
-    # Cancelled, so the next test still confirms this collection's one image.
     page.goto(served.hub_of(RENDER))
     cell = page.locator('.hub__source[data-row="0"]')
     expect(cell).to_be_focused()
@@ -54,32 +71,13 @@ def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> 
     expect(dialog).to_have_count(0)
     expect(cell).to_be_focused()
 
-
-def _alone(page: Page, collection: str) -> None:
-    """Untick every dialog row but `collection`'s, and wait for its quote."""
-    dialog = page.locator("dialog.render-dialog")
-    own = dialog.locator(f'[data-collection="{collection}"]')
-    expect(own).to_contain_text("1 image")
-    others = dialog.locator(
-        f'[data-collection]:not([data-collection="{collection}"]) [data-tick]'
-    )
-    for index in range(others.count()):
-        others.nth(index).uncheck()
-    expect(own.locator("[data-tick]")).to_be_checked()
-    expect(dialog.locator(".render-dialog__title")).to_have_text("Render 1 image")
-
-
-@pytest.mark.spec("ui:render:the-confirmation-starts-the-render")
-def test_confirming_the_dialog_opens_the_session(page: Page, served: Served) -> None:
-    page.goto(served.hub_of(RENDER))
+    # Confirmed, the dialog opens the session over the hub.
     page.locator("[data-render]").click()
     _alone(page, RENDER)
     confirm = page.locator("[data-confirm]")
     expect(confirm).to_be_enabled()
     expect(page).to_have_url(served.hub_of(RENDER))
-
     confirm.click()
-
     drawer = page.locator("dialog[data-drawer]")
     expect(drawer.locator("[data-quiet]")).to_have_text("Nothing is billing.")
     expect(drawer.locator("[data-session-image] img")).to_have_count(1)
@@ -92,6 +90,7 @@ def test_confirming_the_dialog_opens_the_session(page: Page, served: Served) -> 
 
 
 @pytest.mark.spec("ui:sessions:the-drawer-holds-the-render")
+@pytest.mark.spec("ui:sessions:the-drawer-fits-its-widest-grid")
 def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
     page.goto(served.hub_of(DRAWN))
     page.locator("[data-render]").click()
@@ -124,8 +123,33 @@ def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
     page.mouse.click(10, size["height"] / 2)
     expect(drawer).to_have_count(0)
 
+    # A grid wider than half the window sets the drawer's width.
+    page.set_viewport_size({"width": 800, "height": size["height"]})
+    page.goto(served.hub_of(WIDE))
+    page.locator("[data-render]").click()
+    _alone(page, WIDE, len(WIDE_SOURCES))
+    page.locator("[data-confirm]").click()
+    expect(image).to_have_count(len(WIDE_SOURCES))
+    for index in range(len(WIDE_SOURCES)):
+        expect(image.nth(index)).to_have_js_property("complete", True)
+    fit = drawer.evaluate(
+        """(held) => {
+          const grid = held.querySelector('[data-session-grid]')
+          const left = grid.getBoundingClientRect().left
+          const edge = Math.max(
+            ...[...grid.children].map((one) => one.getBoundingClientRect().right))
+          return { grid: edge - left, room: grid.clientWidth }
+        }"""
+    )
+    assert fit["grid"] == pytest.approx(fit["room"], abs=1)
+    box = drawer.bounding_box()
+    assert box is not None
+    assert box["width"] > max(800 / 2, 480)
+    assert box["width"] <= 800 - 100 + 1
+
 
 @pytest.mark.spec("ui:renders:the-large-view-shows-its-sheet")
+@pytest.mark.spec("ui:renders:a-source-opens-in-the-viewer")
 def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     page: Page, served: Served
 ) -> None:
@@ -171,15 +195,10 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
         "src", f"/api/c/{SHOWN}/sources/hal.jpg"
     )
 
-
-@pytest.mark.spec("ui:renders:a-source-opens-in-the-viewer")
-def test_a_source_opens_in_the_viewer(page: Page, served: Served) -> None:
+    # A click on the source's thumbnail opens it in the viewer, inside the window.
     grid = f"{served.url}/c/{SHOWN}/renders"
     page.goto(grid)
-
     page.locator("[data-source-thumb]").click()
-
-    viewer = page.locator("dialog[data-viewer]")
     expect(viewer).to_be_visible()
     expect(viewer).to_contain_text("hal.jpg")
     box, size = viewer.bounding_box(), page.viewport_size
@@ -207,6 +226,7 @@ def test_a_damaged_versions_images_are_drawn_and_hold_the_focus(
 
 
 @pytest.mark.spec("ui:hub:a-rendered-cell-opens-its-newest-image")
+@pytest.mark.spec("ui:hub:the-source-cell-opens-its-photograph")
 def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> None:
     page.goto(served.hub_of(SHOWN))
     rendered = page.locator(f'.hub__cell[data-flow="{FLOW}"][data-stage="rendered"]')
@@ -230,9 +250,7 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
     expect(rendered).to_be_focused()
     expect(rendered).to_be_in_viewport()
 
-
-@pytest.mark.spec("ui:hub:the-source-cell-opens-its-photograph")
-def test_the_source_cell_opens_its_photograph(page: Page, served: Served) -> None:
+    # From a row's first flow cell, h reaches its source, and ↵ opens its photograph.
     page.goto(served.hub_of(SHOWN))
     first = page.locator('.hub__cell[data-row="0"][data-column="1"]')
     expect(first).to_be_visible()
@@ -250,8 +268,6 @@ def test_the_source_cell_opens_its_photograph(page: Page, served: Served) -> Non
         images["y"] + images["height"], abs=1
     )
     page.keyboard.press("Enter")
-
-    viewer = page.locator("dialog[data-viewer]")
     expect(viewer.locator("img")).to_have_attribute(
         "src", f"/api/c/{SHOWN}/sources/hal.jpg"
     )
@@ -326,6 +342,7 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
 
 
 @pytest.mark.spec("ui:revise:discard-asks-before-it-deletes")
+@pytest.mark.spec("ui:revise:side-by-side-shows-the-pair")
 def test_discard_asks_before_it_deletes(page: Page, served: Served) -> None:
     review = served.review(served.discarded, DISCARDED)
     page.goto(review)
@@ -341,14 +358,8 @@ def test_discard_asks_before_it_deletes(page: Page, served: Served) -> None:
     expect(page).to_have_url(review)
     assert current_draft(served.discarded.directory(FLOW, REVIEW)) is not None
 
-
-@pytest.mark.spec("ui:revise:side-by-side-shows-the-pair")
-def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
-    page.goto(served.review(served.discarded, DISCARDED))
-    expect(page.locator("[data-revised] img")).to_have_js_property("complete", True)
-
+    # ⌃P from a field sets the image beside its photograph, then the photograph alone.
     page.locator("input.fragment").first.click()
-
     page.keyboard.press("Control+KeyP")
 
     pair = page.locator("dialog[data-pair] img")
@@ -372,43 +383,9 @@ def test_side_by_side_shows_the_pair(page: Page, served: Served) -> None:
     expect(viewer).to_have_count(0)
 
 
-@pytest.mark.spec("ui:compare:side-by-side-sets-the-image-beside-its-photograph")
-def test_side_by_side_sets_the_image_beside_its_photograph(
-    page: Page, served: Served
-) -> None:
-    large = f"{served.url}/c/{COMPARED}/renders/{served.compared.digest}/{FLOW}/v2/7"
-    page.goto(large)
-    expect(page.locator("[data-sheet]")).to_contain_text("v2")
-    expect(page.locator("[data-side-by-side]")).to_have_count(0)
-
-    # The photograph is the pick's top row.
-    page.keyboard.press("Shift+C")
-    picker = page.locator("dialog[data-compare-pick]")
-    expect(picker.get_by_role("button", name=f"{FLOW} · v1 · seed 7")).to_be_focused()
-    page.keyboard.press("k")
-    expect(picker.get_by_role("button", name="photograph")).to_be_focused()
-    page.keyboard.press("Enter")
-
-    expect(page).to_have_url(f"{large}/compare/photo")
-    pair = page.locator("[data-side] img")
-    expect(pair).to_have_count(2)
-    expect(pair.nth(0)).to_have_attribute("src", re.compile(r"/photo$"))
-    expect(pair.nth(1)).to_have_attribute("src", re.compile(r"/v2/7/image$"))
-    for one in (pair.nth(0), pair.nth(1)):
-        expect(one).to_have_js_property("complete", True)
-    page.wait_for_function(
-        """() => {
-          const [a, b] = [...document.querySelectorAll('[data-side] img')]
-            .map((one) => one.getBoundingClientRect())
-          return a.height > 0 && Math.abs(a.height - b.height) <= 1 && a.top === b.top
-        }"""
-    )
-    expect(page.locator("[data-changed]")).to_have_count(0)
-    page.keyboard.press("Escape")
-    expect(page).to_have_url(large)
-
-
 @pytest.mark.spec("ui:compare:compare-shows-the-pair-and-the-change")
+@pytest.mark.spec("ui:compare:the-pick-holds-its-width")
+@pytest.mark.spec("ui:compare:side-by-side-sets-the-image-beside-its-photograph")
 def test_compare_shows_both_versions_of_a_seed_each_under_its_head(
     page: Page, served: Served
 ) -> None:
@@ -464,3 +441,31 @@ def test_compare_shows_both_versions_of_a_seed_each_under_its_head(
     expect(page).to_have_url(f"{large}/compare/{FLAT}/v1/9")
     expect(left).to_have_text(f"{FLAT} · v1 · seed 9")
     expect(right).to_have_text(f"{FLOW} · v2 · seed 7")
+
+    # The photograph, the pick's top row, is set beside the image at equal height,
+    # with no fields; the large view offers no Side by side.
+    page.goto(large)
+    expect(page.locator("[data-sheet]")).to_contain_text("v2")
+    expect(page.locator("[data-side-by-side]")).to_have_count(0)
+    page.keyboard.press("Shift+C")
+    expect(picker.get_by_role("button", name=f"{FLOW} · v1 · seed 7")).to_be_focused()
+    page.keyboard.press("k")
+    expect(picker.get_by_role("button", name="photograph")).to_be_focused()
+    page.keyboard.press("Enter")
+    expect(page).to_have_url(f"{large}/compare/photo")
+    pair = page.locator("[data-side] img")
+    expect(pair).to_have_count(2)
+    expect(pair.nth(0)).to_have_attribute("src", re.compile(r"/photo$"))
+    expect(pair.nth(1)).to_have_attribute("src", re.compile(r"/v2/7/image$"))
+    for one in (pair.nth(0), pair.nth(1)):
+        expect(one).to_have_js_property("complete", True)
+    page.wait_for_function(
+        """() => {
+          const [a, b] = [...document.querySelectorAll('[data-side] img')]
+            .map((one) => one.getBoundingClientRect())
+          return a.height > 0 && Math.abs(a.height - b.height) <= 1 && a.top === b.top
+        }"""
+    )
+    expect(page.locator("[data-changed]")).to_have_count(0)
+    page.keyboard.press("Escape")
+    expect(page).to_have_url(large)
