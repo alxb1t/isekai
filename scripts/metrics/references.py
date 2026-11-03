@@ -10,6 +10,7 @@ link to a missing file or anchor, or a `D<n>` with no decision heading.
 
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 DOCS = (
@@ -41,7 +42,11 @@ def slug(heading: str) -> str:
 
     e.g. "D10 · The face" -> "d10--the-face"
     """
-    kept = re.sub(r"[^\w\- ]", "", heading.strip().lower())
+    kept = "".join(
+        char
+        for char in heading.strip().lower()
+        if char in "_- " or unicodedata.category(char)[0] in "LM" or char.isdecimal()
+    )
     return kept.replace(" ", "-")
 
 

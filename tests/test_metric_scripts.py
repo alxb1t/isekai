@@ -251,6 +251,10 @@ def test_the_references_count_spans_the_scanned_docs(tmp_path: Path) -> None:
 @pytest.mark.spec_exempt("structural: a heading's anchor is GitHub's")
 def test_a_headings_anchor_is_githubs() -> None:
     assert references.slug("D10 · The face, `x`") == "d10--the-face-x"
+    assert (
+        references.slug("D1 · Stage ① is two independent verbs")
+        == "d1--stage--is-two-independent-verbs"
+    )
     assert references.anchors('# A\n\n## A\n\n<a id="Custom"></a>\n') == {
         "a",
         "a-1",
