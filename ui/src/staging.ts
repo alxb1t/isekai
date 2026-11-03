@@ -32,6 +32,17 @@ export function heir(results: (StagedFile | null)[], name: string): number {
   return results.findIndex((one) => one?.state === 'skipped' && one.copyOf === name)
 }
 
+/** Return the indices of the results skipped as a copy of a file no other result holds.
+
+    A file removed just as its copy is read leaves that copy standing for bytes
+    staged nowhere, so the sheet sends it again. e.g. ([{ state: 'skipped', copyOf: 'b.jpg' }]) -> [0] */
+export function orphans(results: (StagedFile | null)[]): number[] {
+  const held = new Set(results.flatMap((one) => (one && one.state !== 'skipped' ? [one.name] : [])))
+  return results.flatMap((one, index) =>
+    one?.state === 'skipped' && one.copyOf !== null && !held.has(one.copyOf) ? [index] : [],
+  )
+}
+
 /** Return the tile the focus takes once the tile at `index` of `count` is removed, or null.
 
     e.g. (3, 4) -> 2, the last tile's removal passing the focus back */

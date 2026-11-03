@@ -216,6 +216,8 @@ then would delete the folder the commit is moving.
 - **WHEN** a read file is removed while a file skipped as its copy is still chosen
 - **THEN** the copy holds the staged file, which stays in the staging folder, and Import commits it
 - **AND** with no copy chosen, the removal takes the file out of the staging folder
+- **AND** a copy heard as skipped only as its file is removed is sent again, so it stages its own bytes and Import
+  commits it
 
 #### Scenario: the tiles take the keys once read
 - **Key:** `ui:sheet:the-tiles-take-the-keys`

@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import { after, discards, heir, removal, stepped } from './staging'
+import { after, discards, heir, orphans, removal, stepped } from './staging'
 import { spec } from './test/spec'
 import type { StagedFile } from './types'
 
@@ -36,6 +36,14 @@ spec('ui:sheet:a-removed-files-copy-keeps-it', () => {
   expect(heir([read, null, other, copy, copy], 'b.jpg')).toBe(3)
   // With no copy chosen, the file leaves the staging folder.
   expect(heir([read, other], 'b.jpg')).toBe(-1)
+  // A copy heard as skipped while its file's removal is in flight is held by the
+  // removed tile until it goes, then stands for bytes staged nowhere: it is sent again.
+  expect(orphans([read, copy])).toEqual([])
+  expect(orphans([copy])).toEqual([0])
+  // So is a copy heard only after the removal, beside a tile still reading.
+  expect(orphans([null, copy, other])).toEqual([1, 2])
+  // A copy whose file another tile holds is not.
+  expect(orphans([null, copy, { ...read, name: 'c.jpg' }, other])).toEqual([1])
 })
 
 spec('ui:sheet:the-tiles-take-the-keys', () => {

@@ -13,7 +13,7 @@ import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import type { Move } from '../grid'
 import { isField, modded, plain } from '../stores/keys'
-import { after, discards, heir, removal, stepped } from '../staging'
+import { after, discards, heir, orphans, removal, stepped } from '../staging'
 import { useLiveStore } from '../stores/live'
 import ImageViewer, { type Shown } from './ImageViewer.vue'
 import KeyHint from './KeyHint.vue'
@@ -150,12 +150,22 @@ function pump(): void {
 }
 
 /* The import's files, from the page's stream, each on the tile holding its upload. */
-watch(
-  () => live.files,
-  () => {
-    for (const one of tiles.value) apply(one)
-  },
-)
+watch(() => live.files, settle)
+
+/* Put each tile's reported state on it, then send again each copy whose file no
+   tile holds: removed as the copy was read, so the copy's bytes are staged nowhere. */
+function settle(): void {
+  for (const one of tiles.value) apply(one)
+  const lost = orphans(tiles.value.map((tile) => tile.result))
+  for (const index of lost) {
+    const one = tiles.value[index]
+    one.upload = null
+    one.phase = 'queued'
+    one.progress = 0
+    one.result = null
+  }
+  if (lost.length > 0) pump()
+}
 
 /* Put its upload's reported state on a tile. Its upload's answer, not the
    stream, says it waits: the stream can report it first. */
@@ -191,7 +201,7 @@ async function send(one: Tile): Promise<void> {
       one.progress = fraction
     })
     if (one.phase === 'uploading') one.phase = 'waiting'
-    apply(one)
+    settle()
   } catch (reason) {
     one.phase = 'refused'
     one.refusal = (reason as Error).message
@@ -267,6 +277,8 @@ async function remove(one: Tile): Promise<void> {
   }
   refusal.value = null
   tiles.value = tiles.value.filter((tile) => tile !== one)
+  // A copy heard while the removal was in flight lost its file with it.
+  settle()
   focusTile(next)
 }
 
