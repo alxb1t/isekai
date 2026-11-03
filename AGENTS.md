@@ -69,6 +69,9 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
 - **`.minions/`** — MinionsFactory's run artefacts, gitignored whole.
+- **`metrics/` and `scripts/metrics/`** — the catalogue a change is measured by, and a script per measure
+  ([docs D47](docs/decisions.md#d47--a-change-is-measured-from-isekais-own-catalogue)). The release commits a
+  change's values under `metrics/changes/`.
 - **`.data/` holds everything a run produces or consumes, and is gitignored.** The reason is not
   tidiness. A run directory holds a *copy of the photograph* — that is what makes a run reconstructable
   from disk — so it contains personal photographs **by construction**. Under a top-level `runs/` the
