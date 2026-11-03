@@ -28,7 +28,7 @@ def git(root: Path, *args: str) -> str:
 def commits_without_trailer(root: Path, change: str, base: str, head: str) -> int:
     """Return the commits in base..head whose `Change` trailer is not `change`.
 
-    e.g. two commits, one trailed `Change: 0092-x` and one trailed nothing -> 1
+    e.g. two commits, one trailed `Change: <id>` and one trailed nothing -> 1
     """
     log = git(
         root,
