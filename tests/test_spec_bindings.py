@@ -1,9 +1,10 @@
 """Every spec↔test binding, held by the gate.
 
 Each living key has a test, each `spec` marker names a key the living spec or an
-open delta holds, and each test carries exactly one of `spec` and `spec_exempt`.
-Keys are read with a regex, markers with `ast`: no marker is built at runtime.
-A vitest test under `ui/src/` binds through `spec("<key>", …)`, read with a regex.
+open delta holds, and each test carries one or more `spec` markers or one
+`spec_exempt`. Keys are read with a regex, markers with `ast`: no marker is built
+at runtime. A vitest test under `ui/src/` binds through `spec("<key>", …)` or
+`spec(["<key>", …], …)`, read with a regex.
 """
 
 import ast
@@ -18,7 +19,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 _KEY = re.compile(r"^- \*\*Key:\*\* `([^`]+)`", re.M)
 _MARKERS = ("spec", "spec_exempt")
-_VITEST_SPEC = re.compile(r"\bspec\(\s*(?:(['\"])([^'\"\n]+)\1\s*,)?")
+_LITERAL = r"(['\"])([^'\"\n]+)\1"
+_VITEST_SPEC = re.compile(rf"\bspec\(\s*(?:{_LITERAL}\s*,|\[([^\]]*)\]\s*,)?")
+_VITEST_ITEM = re.compile(_LITERAL)
 # A test declared past `spec` binds nothing: vitest's own `test`, `it` and their
 # modifiers, at the start of a line.
 _VITEST_BARE = re.compile(r"^\s*(?:test|it)(?:\.\w+)*\(", re.M)
@@ -129,12 +132,26 @@ def marked_tests(root: Path) -> list[Test]:
     ]
 
 
+def _vitest_markers(match: re.Match[str]) -> list[Marker]:
+    """Return a `spec(` call's keys as markers, one None for any not a string literal.
+
+    e.g. `spec(['a:b:c', "d:e:f"], …)` -> [("spec", "a:b:c"), ("spec", "d:e:f")].
+    """
+    if match.group(2):
+        return [("spec", match.group(2))]
+    items = [item.strip() for item in (match.group(3) or "").split(",")]
+    literals = [_VITEST_ITEM.fullmatch(item) for item in items if item]
+    if not literals or not all(literals):
+        return [("spec", None)]
+    return [("spec", m.group(2)) for m in literals if m]
+
+
 def vitest_tests(root: Path) -> list[Test]:
     """Return each vitest test under `ui/src/` with its binding, as `marked_tests` does.
 
     e.g. `spec("a:b:c", …)` on line 7 of `ui/src/x.test.ts`
     -> ("ui/src/x.test.ts", "line 7", [("spec", "a:b:c")]).
-    A key that is not one string literal reads as None, and so does a bare `test(`.
+    A key that is not a string literal reads as None, and so does a bare `test(`.
     """
     found: list[Test] = []
     for path in sorted((root / "ui" / "src").rglob("*.test.ts")):
@@ -144,7 +161,7 @@ def vitest_tests(root: Path) -> list[Test]:
             return f"line {text.count(chr(10), 0, at) + 1}"
 
         found += [
-            (file, line(m.start()), [("spec", m.group(2))])
+            (file, line(m.start()), _vitest_markers(m))
             for m in _VITEST_SPEC.finditer(text)
         ]
         found += [(file, line(m.end()), []) for m in _VITEST_BARE.finditer(text)]
@@ -191,11 +208,16 @@ def unknown(keys: set[str], tests: list[Test]) -> list[str]:
 
 
 def unmarked(tests: list[Test]) -> list[str]:
-    """Return every test without exactly one readable marker, as `file::test`."""
+    """Return every test without its `spec` keys or one `spec_exempt`, as `file::test`.
+
+    That is a test with no marker, a marker not read, or `spec_exempt` beside another.
+    """
     return sorted(
         f"{file}::{name}"
         for file, name, markers in tests
-        if len(markers) != 1 or markers[0][1] is None
+        if not markers
+        or any(arg is None for _, arg in markers)
+        or (len(markers) > 1 and any(kind == "spec_exempt" for kind, _ in markers))
     )
 
 
@@ -229,10 +251,10 @@ def test_every_marker_names_a_key(keys: set[str], tests: list[Test]) -> None:
     assert not stray, f"markers naming no key: {stray[:5]}"
 
 
-@pytest.mark.spec_exempt("structural: every test carries one marker")
-def test_every_test_carries_one_marker(tests: list[Test]) -> None:
+@pytest.mark.spec_exempt("structural: every test carries its keys or its exemption")
+def test_every_test_carries_its_keys_or_its_exemption(tests: list[Test]) -> None:
     loose = unmarked(tests)
-    assert not loose, f"tests without exactly one marker: {loose[:5]}"
+    assert not loose, f"tests without their keys or one exemption: {loose[:5]}"
 
 
 @pytest.mark.spec_exempt("structural: no spec marker sits where none is read")
@@ -309,8 +331,12 @@ def test_a_marker_on_a_removed_key_is_not_stray(tmp_path: Path) -> None:
     ]
 
 
-@pytest.mark.spec_exempt("structural: twin of test_every_test_carries_one_marker")
-def test_a_test_with_no_marker_or_two_is_caught(tmp_path: Path) -> None:
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_test_carries_its_keys_or_its_exemption"
+)
+def test_a_test_with_no_marker_or_an_exemption_beside_another_is_caught(
+    tmp_path: Path,
+) -> None:
     tests = """\
 import pytest
 
@@ -327,11 +353,24 @@ def test_gone():
 
 
 @pytest.mark.spec("cap:kept:kept")
+@pytest.mark.spec("cap:gone:gone")
+def test_two_keys():
+    pass
+
+
+@pytest.mark.spec("cap:kept:kept")
 @pytest.mark.spec_exempt("structural")
 def test_both():
     pass
 
 
+@pytest.mark.spec_exempt("structural")
+@pytest.mark.spec_exempt("structural")
+def test_two_exemptions():
+    pass
+
+
+@pytest.mark.spec("cap:gone:gone")
 @pytest.mark.spec(KEY)
 def test_built():
     pass
@@ -341,6 +380,7 @@ def test_built():
         "tests/test_cap.py::test_both",
         "tests/test_cap.py::test_built",
         "tests/test_cap.py::test_kept",
+        "tests/test_cap.py::test_two_exemptions",
     ]
 
 
@@ -372,7 +412,9 @@ def test_an_added_key_is_known_and_neither_it_nor_a_removed_one_is_demanded(
     assert "cap:old:old" not in spec_keys(root)
 
 
-@pytest.mark.spec_exempt("structural: twin of test_every_test_carries_one_marker")
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_test_carries_its_keys_or_its_exemption"
+)
 def test_a_test_inside_a_test_class_is_checked(tmp_path: Path) -> None:
     tests = """\
 import pytest
@@ -478,6 +520,10 @@ spec("cap:gone:typo", async () => {})
 spec(KEY, () => {})
 
 test('bare', () => {})
+
+spec(['cap:kept:kept', "cap:gone:gone"], () => {})
+
+spec(['cap:kept:kept', KEY], () => {})
 """
 
 
@@ -490,8 +536,12 @@ def test_a_vitest_key_with_no_living_key_is_caught(tmp_path: Path) -> None:
     assert unknown(nameable(root), found) == [
         "ui/src/composables/x.test.ts::line 5 -> cap:gone:typo"
     ]
-    assert unbound({"cap:kept:kept"}, found) == []
+    assert unbound({"cap:kept:kept", "cap:gone:gone"}, found) == []
+    assert [markers for _, at, markers in found if at == "line 11"] == [
+        [("spec", "cap:kept:kept"), ("spec", "cap:gone:gone")]
+    ]
     assert unmarked(found) == [
+        "ui/src/composables/x.test.ts::line 13",
         "ui/src/composables/x.test.ts::line 7",
         "ui/src/composables/x.test.ts::line 9",
     ]

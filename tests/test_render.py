@@ -7,9 +7,10 @@ record is the point, which runs the real `generate` on a fake transport.
 
 import argparse
 import dataclasses
-import http.server
+import http.client
 import io
 import json
+import socket
 import threading
 import tomllib
 from collections.abc import Callable, Iterator, Mapping
@@ -17,7 +18,7 @@ from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import gpunit
 import pytest
@@ -307,20 +308,38 @@ def test_an_endpoint_that_answers_late_is_asked_again(tmp_path: Path) -> None:
     assert len(calls.rendered()) == 1
 
 
-class _Stats(http.server.BaseHTTPRequestHandler):
-    paths: list[str] = []
+class _StatsConnection(http.client.HTTPConnection):
+    """Answers each request with `STATS`, recording where it was sent; binds nothing."""
 
-    def do_GET(self) -> None:  # noqa: N802 -- the handler's name is http.server's
-        type(self).paths.append(self.path)
+    asked: list[tuple[str, int, str]] = []
+
+    def request(
+        self,
+        method: str,
+        url: str,
+        body: object = None,
+        headers: Mapping[str, object] | None = None,
+        *,
+        encode_chunked: bool = False,
+    ) -> None:
+        type(self).asked.append((self.host, self.port or 80, url))
+
+    def getresponse(self) -> http.client.HTTPResponse:
         body = json.dumps(STATS).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        head = f"HTTP/1.1 200 OK\r\nContent-Length: {len(body)}\r\n\r\n".encode()
+        answer = http.client.HTTPResponse(cast("socket.socket", _Wire(head + body)))
+        answer.begin()
+        return answer
 
-    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
-        pass
+
+@dataclass(frozen=True)
+class _Wire:
+    """A socket that holds one response's bytes, which is all `HTTPResponse` reads."""
+
+    raw: bytes
+
+    def makefile(self, mode: str) -> io.BytesIO:
+        return io.BytesIO(self.raw)
 
 
 @pytest.mark.spec("pod-image:session:the-tunnel-is-reached-directly")
@@ -328,57 +347,75 @@ def test_the_report_reaches_the_loopback_with_a_proxy_exported(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     runs = collection(tmp_path)
-    # Port 9 is discard: a request sent through this proxy never answers.
     for name in ("http_proxy", "HTTP_PROXY", "all_proxy", "ALL_PROXY"):
-        monkeypatch.setenv(name, "http://127.0.0.1:9")
+        monkeypatch.setenv(name, "http://proxy.invalid:8080")
     monkeypatch.delenv("no_proxy", raising=False)
     monkeypatch.delenv("NO_PROXY", raising=False)
-    _Stats.paths = []
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Stats)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    try:
-        opener = FakeOpen(session=FakeSession(local=server.server_address[1]))
-        status = session(
-            runs,
-            f"{FLOW}=1",
-            opener=opener,
-            connect=ComfyClient,
-            wait_s=0,
-        )
-    finally:
-        server.shutdown()
-        server.server_close()
+    monkeypatch.setattr(http.client, "HTTPConnection", _StatsConnection)
+    monkeypatch.setattr(_StatsConnection, "asked", [])
+
+    status = session(runs, f"{FLOW}=1", connect=ComfyClient, wait_s=0)
 
     assert status == 0
-    assert _Stats.paths == ["/system_stats"]
+    assert _StatsConnection.asked == [("127.0.0.1", LOCAL_PORT, "/system_stats")]
+
+
+@dataclass
+class _Watchdogs:
+    """Each watchdog a session arms, by its interval, and how many were cancelled."""
+
+    armed: list[float] = field(default_factory=list)
+    cancelled: int = 0
+
+
+def _watchdogs(monkeypatch: pytest.MonkeyPatch) -> _Watchdogs:
+    """Patch the session's `Timer` to record its watchdog and never start a thread."""
+    seen = _Watchdogs()
+
+    class Timer(threading.Timer):
+        def start(self) -> None:
+            seen.armed.append(self.interval)
+
+        def cancel(self) -> None:
+            seen.cancelled += 1
+            super().cancel()
+
+    monkeypatch.setattr(render.threading, "Timer", Timer)
+    return seen
 
 
 @pytest.mark.spec("pod-image:session:the-watchdog-ends-with-its-session")
 def test_the_watchdog_signals_nothing_once_its_session_has_ended(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     runs = collection(tmp_path)
-    fired = threading.Event()
+    watchdogs = _watchdogs(monkeypatch)
+    kills: list[None] = []
 
-    assert session(runs, f"{FLOW}=1", kill=fired.set, watchdog_s=0.05) == 0
-    assert not fired.wait(0.15)
+    assert session(runs, f"{FLOW}=1", kill=lambda: kills.append(None)) == 0
+    assert (len(watchdogs.armed), watchdogs.cancelled) == (1, 1)
+    assert kills == []
     assert "reached its" not in log(runs)
 
 
 @pytest.mark.spec("pod-image:session:the-watchdog-ends-with-its-session")
-def test_the_watchdog_signals_nothing_after_a_refused_session(tmp_path: Path) -> None:
+def test_the_watchdog_signals_nothing_after_a_refused_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     runs = collection(tmp_path)
-    fired = threading.Event()
+    watchdogs = _watchdogs(monkeypatch)
+    kills: list[None] = []
     silent = FakeComfyClient(
         report_failure=TransportFailure("transient", "connection refused")
     )
 
     status = session(
-        runs, f"{FLOW}=1", client=silent, wait_s=0, kill=fired.set, watchdog_s=0.05
+        runs, f"{FLOW}=1", client=silent, wait_s=0, kill=lambda: kills.append(None)
     )
 
     assert status == 1
-    assert not fired.wait(0.15)
+    assert (len(watchdogs.armed), watchdogs.cancelled) == (1, 1)
+    assert kills == []
 
 
 @pytest.mark.spec("pod-image:session:the-watchdog-ends-the-session")

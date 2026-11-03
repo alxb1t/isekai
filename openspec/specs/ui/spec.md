@@ -1534,6 +1534,12 @@ on Renders.
 - **THEN** the Render bar and the drawer's bar are each three quarters full
 - **AND** with no plan the bar slides, sized by nothing
 
+#### Scenario: the drawer fits its widest grid
+- **Key:** `ui:sessions:the-drawer-fits-its-widest-grid`
+- **Layers:** e2e
+- **WHEN** the drawer holds a session whose grid is wider than half the window
+- **THEN** the drawer is as wide as that grid, short of the window by 100 px at most
+
 ### Requirement: A folder in the library is a collection when it holds `sources/`
 
 The system SHALL list as a collection every folder in the library that holds `sources/`, SHALL list any other folder as
@@ -1993,6 +1999,12 @@ right. The images are what is compared, so they take the room.
 - **Layers:** unit
 - **WHEN** the focus moves to the second of two seeds of one version
 - **THEN** its caption reads the version alone, and the pick's head names its flow, version and seed
+
+#### Scenario: the pick holds its width
+- **Key:** `ui:compare:the-pick-holds-its-width`
+- **Layers:** e2e
+- **WHEN** the focus moves in the pick from an image to the photograph
+- **THEN** the pick's width does not change
 
 ### Requirement: The viewer shows an image fitted or at full size, by the mouse or the keys
 

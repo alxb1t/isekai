@@ -10,6 +10,19 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.62.2] - 2026-11-03
+
+Gate: local 0m35s · CI not read under mf-ship · 0.62.1: local 0m30s · CI not read under mf-ship
+
+### Changed
+
+- A test carries a `spec` key per behaviour it holds, or one `spec_exempt`, and vitest's `spec()` takes several
+  keys, so a step that adds a behaviour binds it; a new case extends an existing test first (0093 D1, D2).
+- The proxy and the shutdown tests run in-process and return to the gate, and the watchdog, bundle-timeout and
+  overlap tests wait on events rather than the clock, so no gate test binds a socket or races a timer (0093 D3, D4).
+- The browser tests reaching one page merge, each carrying both keys, so a run opens fewer contexts; the drawer's
+  width and the pick's width return as steps, and the import holds a removal and a commit in flight (0093 D5).
+
 ## [0.62.1] - 2026-11-03
 
 Gate: local 0m30s · CI not read under mf-ship · 0.62.0: local 0m33s · CI none

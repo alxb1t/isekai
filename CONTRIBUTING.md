@@ -74,9 +74,8 @@ block.
 
 **The gate is `make gate`**, run from the repository root; `make -n gate` prints what it runs. The
 `Makefile` is its one declaration, and the notes on each command are the `Makefile`'s. CI
-(`.github/workflows/ci.yml`) runs `make gate` too. The browser tests and the few that serve on `127.0.0.1` are
-`make e2e`, out of the gate while an unattended run's sandbox cannot run them; CI runs them after the gate, on
-every push.
+(`.github/workflows/ci.yml`) runs `make gate` too. The browser tests are `make e2e`, out of the gate while an
+unattended run's sandbox cannot run them; CI runs them after the gate, on every push.
 
 **A change is measured as well as gated.** `metrics/catalogue.toml` names the measures, each a script under
 `scripts/metrics/` or a value the station passes. The build drafts a change's values and the release commits them to
@@ -100,4 +99,5 @@ eye**, never mocked and never asserted.
 The tooling is **operator tooling, recorded and not pinned**: `@fission-ai/openspec@1.11.0`, resolved on
 `PATH`. It is deliberately **not** in the gate — nothing in CI runs it, so a moving version can never
 turn CI red. `tests/test_spec_bindings.py` holds every binding: each living key has a test, each marker a
-key, each test one marker.
+key, and each behaviour a test holds carries its key — a test carries its `spec` markers or one `spec_exempt`.
+Both markers are registered in `pyproject.toml`, because pytest only warns on an unregistered marker.

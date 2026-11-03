@@ -1,26 +1,30 @@
 """Prove bundle freshness, surface invariants and orderly shutdown.
 
-The shutdown harness runs real uvicorn over the suite's offline wiring.
-Endpoint contracts live in `tests/test_ui_api.py`.
+The shutdown harness stops the app's own uvicorn server in-process, over the
+suite's offline wiring. Endpoint contracts live in `tests/test_ui_api.py`.
 """
 
+import asyncio
 import importlib.util
 import io
 import os
+import select
 import signal
-import socket
 import subprocess
 import sys
 import threading
 import time
-import urllib.error
-import urllib.request
+from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from isekai.foundation.refusal import Refusal
 from isekai.interface.ui import bundle, events
+
+# Seconds a thread is waited for before the test fails; never part of a verdict.
+WAIT = 20.0
 
 # Every file in `ui/` that is neither `src/` nor an ignored root. `_is_fresh`
 # watches them by exclusion rather than by name, so `tsconfig.json` -- which
@@ -243,13 +247,19 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
     """The ceiling is applied, and it and a Ctrl-C each stop the whole group.
 
     A real stand-in for `npm`, which starts a child the way `npm` starts `vite`:
-    killing the parent alone would leave that child building unseen.
+    killing the parent alone would leave that child building unseen. The child
+    alone holds the FIFO's write end, so the FIFO reads to its end once it is gone.
     """
     source = tmp_path / "ui"
     (source / "node_modules").mkdir(parents=True)
     child = tmp_path / "child.pid"
+    held = tmp_path / "held"
+    os.mkfifo(held)
     npm = tmp_path / "npm"
-    script = f"sleep 60 >/dev/null 2>&1 &\necho $! > {child}\nwait\n"
+    script = (
+        f"exec 3>{held}\nsleep 60 >/dev/null 2>&1 &\nexec 3>&-\n"
+        f"echo $! > {child}\nwait\n"
+    )
     npm.write_text(f"#!/bin/sh\n{script}")
     npm.chmod(0o755)
     monkeypatch.setattr(bundle, "BINARY", str(npm))
@@ -269,17 +279,19 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
             time.sleep(0.01)
         return communicate(build, input, timeout)
 
-    with monkeypatch.context() as held, pytest.raises(Refusal) as refused:
-        held.setattr(subprocess.Popen, "communicate", started)
+    reader = os.open(held, os.O_RDONLY | os.O_NONBLOCK)
+    with monkeypatch.context() as patched, pytest.raises(Refusal) as refused:
+        patched.setattr(subprocess.Popen, "communicate", started)
         bundle.ensure_built(source)
 
     assert "3 seconds" in str(refused.value)
     assert "by hand" in str(refused.value)
-    assert _stops(int(child.read_text()))
+    assert _stops(reader)
 
     # A Ctrl-C while it builds stops the group too: in its own session, the
     # build never receives the terminal's SIGINT.
     child.unlink()
+    reader = os.open(held, os.O_RDONLY | os.O_NONBLOCK)
     monkeypatch.setattr(bundle, "BUILD_TIMEOUT", 60)
 
     def interrupt(signum: int, frame: object) -> None:
@@ -296,23 +308,21 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, previous)
-    assert _stops(int(child.read_text()))
+    assert _stops(reader)
 
 
-def _stops(pid: int) -> bool:
-    """Return whether process `pid` is gone, or a zombie, within a few seconds."""
-    for _ in range(50):
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return True
-        state = subprocess.run(
-            ["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True
-        ).stdout.strip()
-        if state.startswith("Z") or not state:
-            return True
-        time.sleep(0.1)
-    return False
+def _stops(reader: int) -> bool:
+    """Return whether every holder of the FIFO `reader` reads has let go, then close it.
+
+    A process gone, or a zombie, holds no file, so the FIFO reads to its end.
+    """
+    try:
+        while select.select([reader], [], [], WAIT)[0]:
+            if not os.read(reader, 1):
+                return True
+        return False
+    finally:
+        os.close(reader)
 
 
 @pytest.mark.spec_exempt("structural: when the on-demand build actually fires")
@@ -385,72 +395,88 @@ def test_serve_returns_130_for_keyboard_interrupt(
 @pytest.mark.spec("ui:events:stopping-ends-open-streams-quietly")
 @pytest.mark.parametrize("streams", [0, 1, 3], ids=["idle", "open", "concurrent"])
 def test_sigint_ends_streams_without_cancellation_output(
-    tmp_path: Path, streams: int
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, streams: int
 ) -> None:
-    root = tmp_path / "library"
-    root.mkdir()
+    import uvicorn
+    from fastapi.testclient import TestClient
+
+    from isekai.boundary.gpu import Volume
+    from isekai.foundation.run import open_run
+    from isekai.interface.ui import HOST
+    from isekai.interface.ui import app as app_module
+    from isekai.interface.ui.jobs import Jobs, Step
+    from tests.e2e.wiring import fake
+    from tests.images import jpeg_bytes
+
+    folder = tmp_path / "library" / "b"
+    (folder / "sources").mkdir(parents=True)
+    (folder / "sources" / "ada.jpg").write_bytes(jpeg_bytes(600, 800))
+    run = open_run(folder / "sources" / "ada.jpg", folder / "runs")
     dist = tmp_path / "dist"
     dist.mkdir()
     (dist / "index.html").write_text("<!doctype html>")
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        port = probe.getsockname()[1]
-    script = (
-        "import sys; from pathlib import Path; from dataclasses import replace; "
-        "from isekai.interface import ui; from isekai.boundary.gpu import Volume; "
-        "from tests.e2e.wiring import fake; "
-        f"root = Path({str(root)!r}); "
-        f"ui.ensure_built = lambda: Path({str(dist)!r}); "
-        "wired = fake(runs=root / 'runs'); "
-        "wired = replace(wired, out=sys.stdout, err=sys.stderr, "
-        "volume=Volume(run=lambda argv, say: 0, records=root / '.gpunit')); "
-        f"sys.exit(ui.serve(wired, port={port}))"
+    err = io.StringIO()
+    wired = replace(
+        fake(runs=folder / "runs"),
+        err=err,
+        volume=Volume(run=lambda argv, say: 0, records=tmp_path / ".gpunit"),
     )
-    child = subprocess.Popen(
-        [sys.executable, "-c", script],
-        env={**os.environ, "ISEKAI_LIBRARY": str(root)},
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        start_new_session=True,
+    made: list[Jobs] = []
+
+    def make_jobs(*args: Any, **kwargs: Any) -> Jobs:  # noqa: ANN401 -- Jobs' own
+        made.append(Jobs(*args, **kwargs))
+        return made[-1]
+
+    monkeypatch.setattr(app_module, "Jobs", make_jobs)
+    app = app_module.create_app(
+        folder.parent,
+        wired,
+        flows=("summon-anime-wai",),
+        bundle=dist,
+        wire=lambda runs: replace(wired, runs_root=runs),
+        host=HOST,
+        port=7717,
     )
-    opened = []
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    url = f"http://127.0.0.1:{port}"
-    try:
-        deadline = time.monotonic() + 20
-        while True:
-            assert child.poll() is None, child.communicate()[0]
-            try:
-                with opener.open(f"{url}/api/library", timeout=1):
-                    break
-            except urllib.error.URLError:
-                assert time.monotonic() < deadline, "server did not start"
-                time.sleep(0.02)
-        for _ in range(streams):
-            response = opener.open(f"{url}/events", timeout=5)
-            opened.append(response)
-            assert response.readline() == b"event: snapshot\n"
-            assert response.readline().startswith(b"data: ")
-            assert response.readline() == b"\n"
-        child.send_signal(signal.SIGINT)
-        for response in opened:
-            assert response.read() == b""
-        output, _ = child.communicate(timeout=10)
-        assert child.returncode == 130, output
-        for forbidden in (
-            "CancelledError",
-            "Traceback",
-            "timeout graceful shutdown exceeded",
-        ):
-            assert forbidden not in output
-    finally:
-        for response in opened:
-            response.close()
-        if child.poll() is None:
-            child.terminate()
-        try:
-            child.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            child.kill()
-            child.communicate(timeout=10)
+    (jobs,) = made
+    sleep = [sys.executable, "-c", "import time; time.sleep(30)"]
+    monkeypatch.setattr(jobs, "_command", lambda verb, flow, runs, ids: sleep)
+    broadcast: events.Broadcast = app.state.broadcast
+    server = app_module.Server(uvicorn.Config(app), broadcast)
+
+    async def interrupt() -> None:
+        server.handle_exit(signal.SIGINT, None)
+        # The broadcast closes on the loop's next turn.
+        await asyncio.sleep(0)
+
+    with TestClient(app, base_url=f"http://{HOST}:7717"):
+        jobs.prepare("b", folder, [Step("summon-anime-wai", "tag", (run.id,))], dict)
+        assert jobs.running("prepare")
+        opened = [
+            events.stream(broadcast, dict, heartbeat=3600) for _ in range(streams)
+        ]
+        assert [next(one) for one in opened] == [
+            "event: snapshot\ndata: {}\n\n"
+        ] * streams
+        # Each stream is read to its end; the job's own events may come first.
+        workers = [
+            threading.Thread(target=list, args=(one,), daemon=True) for one in opened
+        ]
+        for worker in workers:
+            worker.start()
+        asyncio.run(interrupt())
+        for worker in workers:
+            worker.join(WAIT)
+
+        assert not [worker for worker in workers if worker.is_alive()]
+        assert server.should_exit
+
+    assert (jobs.slot("prepare") or {})["state"] == "stopped"
+    assert "Traceback" not in err.getvalue()
+
+    # The surface serves through the server that closes the streams; none binds.
+    served: list[uvicorn.Server] = []
+    monkeypatch.setattr(uvicorn.Server, "run", lambda self: served.append(self))
+    app_module.run(app, host=HOST, port=7717)
+    (serving,) = served
+    assert isinstance(serving, app_module.Server)
+    assert serving._broadcast is broadcast

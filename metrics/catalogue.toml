@@ -5,7 +5,7 @@ group = "proof"
 unit = "tests"
 better = "lower"
 script = "scripts/metrics/tests_collected.py"
-args = ["--ignore=tests/e2e", "--deselect=tests/test_ui.py::test_sigint_ends_streams_without_cancellation_output", "--deselect=tests/test_render.py::test_the_report_reaches_the_loopback_with_a_proxy_exported"]
+args = ["--ignore=tests/e2e"]
 
 [[metric]]
 id = "tests-browser"
@@ -14,7 +14,7 @@ group = "proof"
 unit = "tests"
 better = "lower"
 script = "scripts/metrics/tests_collected.py"
-args = ["tests/e2e", "tests/test_ui.py::test_sigint_ends_streams_without_cancellation_output", "tests/test_render.py::test_the_report_reaches_the_loopback_with_a_proxy_exported"]
+args = ["tests/e2e"]
 
 [[metric]]
 id = "gate-seconds"

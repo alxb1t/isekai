@@ -1,8 +1,9 @@
 """The import sheet in a browser: files chosen in the dialog, each with its own upload.
 
-One upload is held at the network so the page can be seen while it is in flight. The
-import's first stream connection is held too, then answered with one `converting`
-frame: a real conversion is over before a page can be seen drawing it.
+An upload, a removal and a commit are each held at the network so the page can be
+seen while it is in flight. The import's first stream connection is held too, then
+answered with one `converting` frame: a real conversion is over before a page can be
+seen drawing it.
 """
 
 import json
@@ -98,6 +99,7 @@ def test_first_start_shows_new_collection_under_the_privacy_line(
 
 
 @pytest.mark.spec("ui:sheet:each-file-shows-its-progress")
+@pytest.mark.spec("ui:sheet:import-waits-for-reading")
 def test_each_chosen_file_shows_its_upload_then_its_result(
     page: Page, served: Served, tmp_path: Path
 ) -> None:
@@ -128,73 +130,76 @@ def test_each_chosen_file_shows_its_upload_then_its_result(
     refused = page.locator('.import__refused[data-file="DSC_2291.NEF"]')
     expect(refused).to_contain_text("a NEF RAW photograph")
     expect(refused).to_contain_text("export it as JPEG")
+    # Import waits for the held upload's reading, naming how many are read.
+    importing = page.locator(".import__foot .btn-primary")
+    expect(importing).to_be_disabled()
+    expect(page.locator(".import__disabled")).to_have_text("Reading 2 of 3")
     _release(page, held)
     expect(_tile(page, "held.jpg")).to_have_attribute("data-state", "ready")
-    page.get_by_role("button", name="Cancel").click()
-
-
-@pytest.mark.spec("ui:sheet:import-waits-for-reading")
-def test_import_is_disabled_naming_how_many_are_read_until_all_are(
-    page: Page, served: Served, tmp_path: Path
-) -> None:
-    held = _hold(page, "slow.jpg")
-    files = [
-        _jpeg(tmp_path / "quick.jpg", (40, 50, 60)),
-        _jpeg(tmp_path / "slow.jpg", (70, 80, 90)),
-    ]
-
-    _choose(page, served, files)
-
-    importing = page.locator(".import__foot .btn-primary")
-    expect(_tile(page, "quick.jpg")).to_have_attribute("data-state", "ready")
-    expect(importing).to_be_disabled()
-    expect(page.locator(".import__disabled")).to_have_text("Reading 1 of 2")
-    _release(page, held)
     expect(importing).to_be_enabled()
     page.get_by_role("button", name="Cancel").click()
 
 
+def _hold_removal(page: Page, name: str) -> list[Route]:
+    """Hold the removal of the staged `name`; its upload reaches the server."""
+    held: list[Route] = []
+
+    def removal(route: Route) -> None:
+        if route.request.method == "DELETE":
+            held.append(route)
+        else:
+            route.continue_()
+
+    page.route(f"**/files/{name}", removal)
+    return held
+
+
 @pytest.mark.spec("ui:sheet:an-import-opens-the-hub")
+@pytest.mark.spec("ui:sheet:a-commit-in-flight-holds-the-sheet")
+@pytest.mark.spec("ui:sheet:a-chosen-file-is-removed-alone")
 def test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned(
     page: Page, served: Served, tmp_path: Path
 ) -> None:
+    removing = _hold_removal(page, "third.jpg")
+    committing: list[Route] = []
+    page.route("**/commit", lambda route: committing.append(route))
     files = [
         _jpeg(tmp_path / "first.jpg", (100, 0, 0)),
         _jpeg(tmp_path / "second.jpg", (0, 100, 0)),
     ]
 
-    _choose(page, served, files)
+    _choose(page, served, [*files, _jpeg(tmp_path / "third.jpg", (0, 0, 100))])
+    importing = page.locator(".import__foot .btn-primary")
+    expect(page.locator(".import__count")).to_contain_text("3 sources")
+    # Import waits while a removal is in flight.
+    page.get_by_role("button", name="Remove third.jpg").click()
+    removal = _sent(page, removing)
+    expect(importing).to_be_disabled()
+    expect(page.locator(".import__disabled")).to_have_text("Removing 1 file")
+    removal.continue_()
+    expect(_tile(page, "third.jpg")).to_have_count(0)
+    expect(importing).to_be_enabled()
     expect(page.locator(".import__count")).to_contain_text("2 sources")
     page.get_by_label("Collection name").fill("e2e-imported")
-    page.locator(".import__foot .btn-primary").click()
+    importing.click()
+
+    # While the commit is in flight a file added would be refused unseen, a file
+    # removed would leave the folder it is moving, and a cancel would delete it.
+    commit = _sent(page, committing)
+    expect(page.get_by_role("button", name="Add files…")).to_be_disabled()
+    expect(importing).to_be_disabled()
+    expect(page.get_by_role("button", name="Cancel")).to_be_disabled()
+    expect(page.get_by_role("button", name="Remove first.jpg")).to_be_disabled()
+    page.locator(".import__tile").first.focus()
+    page.keyboard.press("Backspace")
+    expect(page.locator(".import__tile")).to_have_count(len(files))
+    page.keyboard.press("Escape")
+    expect(page.locator(".import")).to_be_visible()
+    commit.continue_()
 
     expect(page).to_have_url(served.hub_of("e2e-imported"))
-    expect(page.locator(".hub__name")).to_have_count(2)
+    expect(page.locator(".hub__name")).to_have_count(len(files))
     offered = json.loads(UI_CONFIG.read_text())["flows"]
     expect(page.locator('.hub__cell[data-stage="none"]')).to_have_count(
         len(files) * len(offered)
     )
-
-
-@pytest.mark.spec("ui:sheet:a-commit-in-flight-holds-the-sheet")
-def test_a_commit_in_flight_holds_the_sheet(
-    page: Page, served: Served, tmp_path: Path
-) -> None:
-    committing: list[Route] = []
-    page.route("**/commit", lambda route: committing.append(route))
-
-    _choose(page, served, [_jpeg(tmp_path / "held.jpg", (0, 0, 100))])
-    expect(page.locator(".import__count")).to_contain_text("1 source")
-    page.get_by_label("Collection name").fill("e2e-held")
-    page.locator(".import__foot .btn-primary").click()
-    # A file added now would be refused unseen, and a cancel would delete the
-    # folder the commit is moving.
-    held = _sent(page, committing)
-    expect(page.get_by_role("button", name="Add files…")).to_be_disabled()
-    expect(page.locator(".import__foot .btn-primary")).to_be_disabled()
-    expect(page.get_by_role("button", name="Cancel")).to_be_disabled()
-    page.keyboard.press("Escape")
-    expect(page.locator(".import")).to_be_visible()
-    held.continue_()
-
-    expect(page).to_have_url(served.hub_of("e2e-held"))

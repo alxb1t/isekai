@@ -21,6 +21,7 @@ def _open(page: Page, served: Served, run: Run) -> None:
 
 
 @pytest.mark.spec("ui:review:the-photograph-opens-in-the-viewer")
+@pytest.mark.spec("ui:keys:a-command-waits-until-the-field-is-left")
 def test_the_photograph_opens_in_the_viewer(page: Page, served: Served) -> None:
     _open(page, served, served.draft)
     field = page.locator("input.fragment").first
@@ -53,11 +54,8 @@ def test_the_photograph_opens_in_the_viewer(page: Page, served: Served) -> None:
     expect(page.locator("input.fragment")).to_have_count(0)
     expect(page.locator(".chip__x")).to_have_count(0)
 
-
-@pytest.mark.spec("ui:keys:a-command-waits-until-the-field-is-left")
-def test_a_command_waits_until_the_field_is_left(page: Page, served: Served) -> None:
+    # A command typed in a field waits until the field is left.
     _open(page, served, served.draft)
-    field = page.locator("input.fragment").first
     field.click()
     # A tag is committed from the autocomplete, ranked by post count.
     field.press_sequentially("eyes")

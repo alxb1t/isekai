@@ -42,7 +42,6 @@ COLLECTION = "2026-10-19"
 QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
     "queue-stays": (("cid", (700, 1000)), ("dot", (710, 1000))),
     "queue-fails": (("fay", (730, 1000)),),
-    "queue-cancels": (("eve", (720, 1000)),),
 }
 
 # A collection per hub test, so every test owns the cells it ticks and prepares. Its
@@ -55,10 +54,23 @@ FRESH: dict[str, tuple[str, ...]] = {
 # The fresh sources whose run is already assigned to `FLOW`, as a tick leaves it.
 ASSIGNED: dict[str, tuple[str, ...]] = {"hub-prepare": ("pick",)}
 
+# The files run in name order, and these lean on it: `test_prepare.py` reads RENDER's
+# Render enabled before `test_render.py` confirms it, and `test_routes.py` opens the
+# draft `test_review.py` writes.
+
 # The collection a render test owns: one source approved for one image.
 RENDER = "render"
 # The collection the drawer's test renders: one source approved for one image.
 DRAWN = "drawn"
+# The collection whose grid sets the drawer's width: sources approved for one image
+# each, enough that their grid is wider than half an 800 px window.
+WIDE = "wide"
+WIDE_SOURCES = (
+    ("oto", (820, 1000)),
+    ("pia", (830, 1000)),
+    ("quy", (840, 1000)),
+    ("rex", (850, 1000)),
+)
 # The collection the Renders view is read from: one source already rendered once;
 # a routes test needs it to hold no sheet waiting for review.
 SHOWN = "shown"
@@ -134,7 +146,7 @@ def _run(folder: Path, name: str, size: tuple[int, int]) -> Run:
 
 def _approved(folder: Path, name: str, size: tuple[int, int]) -> Run:
     """Return a run of a new source approved once and not yet rendered."""
-    (folder / "sources").mkdir(parents=True)
+    (folder / "sources").mkdir(parents=True, exist_ok=True)
     run = _run(folder, name, size)
     review(run, FLOW)
     approve(run, FLOW, load_flow(FLOW).schema, VOCABULARY)
@@ -206,6 +218,8 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
 
     rendered = _approved(lib / RENDER, "gia", (740, 1000))
     _approved(lib / DRAWN, "nia", (745, 1000))
+    for name, size in WIDE_SOURCES:
+        _approved(lib / WIDE, name, size)
     shown = _rendered_at_seven(lib / SHOWN, "hal", (750, 1000))
     revised = _rendered_at_seven(lib / REVISED, "ida", (770, 1000))
     discarded = _rendered_at_seven(lib / DISCARDED, "ivy", (775, 1000))
