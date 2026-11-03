@@ -1729,8 +1729,10 @@ operator confirms.
 ```
 large view · summon-anime-wai v2 · seed 9423…   ⇧D
   Draft from this
-  ▸ summon-anime-wai        revise
+  ▸ summon-anime-wai           revise
+    summon-semireal-anime-wai
     summon-flat-anime-wai
+    summon-vivid-anime-wai
     conjure-anime-wai
   ↵ ─▶ Review on the draft: the photograph │ the image it came from
 ```

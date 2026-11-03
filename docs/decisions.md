@@ -267,13 +267,24 @@ recording the source. A stage reads another flow only when the operator names it
 ### D44 · A flat flow is summon with the face chain ending early
 
 **`summon-flat-anime-wai` is `summon-anime-wai`'s directory with InstantID ending at 0.65 of the steps, a lower
-`ip_weight`, and `flat color, cel shading, lineart` in its trailer and `realistic, photorealistic, 3d,
-semi-realistic` in its negative, held equal to it otherwise by a test; `config/ui.json` offers it in the app.**
+`ip_weight`, and `flat color, cel shading, anime coloring, colorful` in its trailer and `realistic, photorealistic,
+3d, semi-realistic` in its negative, held equal to it otherwise by a test; `config/ui.json` offers it in the app.**
 
 - **Why:** the face is set in the early steps and the style in the late ones, so ending the face chain early
   keeps the person and frees the look from InstantID's photographic shading. The cohort count cannot judge it:
   its photo-trained encoder does not read flat faces, so the flow was chosen by eye.
-- **Made by:** `0084`.
+- **Made by:** `0084`, `0090`.
+
+### D46 · A semireal and a vivid flow are flat's face chain in other looks
+
+**`summon-semireal-anime-wai` is flat's directory with summon's whole prompt, and `summon-vivid-anime-wai` is flat's
+directory with summon's trailer and `realistic, photorealistic, 3d, semi-realistic, monochrome, greyscale, muted
+color` in its negative; a test holds each equal to summon but for that style, and `config/ui.json` offers both.**
+
+- **Why:** flat kept the person but lost colour, and the prompt was the cause, not `lineart` or the early end of the
+  face chain. Each look was chosen by eye on the operator's photographs, as flat was, because the cohort count
+  cannot judge a stylised face.
+- **Made by:** `0090`.
 
 ## Runs
 
