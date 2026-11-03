@@ -195,13 +195,15 @@ export interface TagMatches {
 }
 
 /* What reading one uploaded file left in staging. `name` is what it is staged
-   as: the file's own name, converted, or `<stem>-2`. */
+   as: the file's own name, converted, or `<stem>-2`. A skipped file names in
+   `copyOf` the staged file that holds its bytes. */
 export type StagedState = 'ready' | 'converted' | 'not cleaned' | 'skipped'
 
 export interface StagedFile {
   name: string
   state: StagedState
   carries: string[]
+  copyOf: string | null
 }
 
 /* One upload's name and state, as the page's stream reports it. */
@@ -210,6 +212,7 @@ export interface FileState {
   state: 'waiting' | 'converting' | 'refused' | StagedState
   name?: string
   carries?: string[]
+  copy_of?: string | null
   refusal?: string
 }
 

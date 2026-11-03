@@ -843,7 +843,7 @@ def test_a_staged_file_is_removed_alone_and_never_once_sealed(tmp_path: Path) ->
     def publish(staged: str, event: dict[str, object]) -> None:
         if event["state"] not in {"waiting", "converting"}:
             done.append(str(event["file"]))
-            if len(done) == 3:
+            if len(done) == 4:
                 read.set()
 
     imports = importing.Imports(library, LIMIT, publish)
@@ -852,6 +852,7 @@ def test_a_staged_file_is_removed_alone_and_never_once_sealed(tmp_path: Path) ->
     for name, colour in (("a.jpg", (200, 0, 0)), ("b.jpg", (0, 200, 0))):
         reader.put(name, photo_jpeg(colour))
     skipped = reader.put("again.jpg", photo_jpeg((0, 200, 0)))["upload"]
+    reader.put("c.jpg", photo_jpeg((0, 0, 200)))
     assert read.wait(10.0)
     folder = imports.folder(staged)
 
@@ -860,8 +861,11 @@ def test_a_staged_file_is_removed_alone_and_never_once_sealed(tmp_path: Path) ->
     assert sorted(one["name"] for one in reader.files().values()) == [
         "again.jpg",
         "b.jpg",
+        "c.jpg",
     ]
     assert reader.files()[skipped]["state"] == "skipped"
+    # A skipped upload names the staged file that holds its bytes.
+    assert reader.files()[skipped]["copy_of"] == "b.jpg"
     with pytest.raises(Refusal, match="again.jpg: not staged"):
         reader.remove("again.jpg")
     with pytest.raises(Refusal, match="a.jpg: not staged"):
@@ -873,8 +877,14 @@ def test_a_staged_file_is_removed_alone_and_never_once_sealed(tmp_path: Path) ->
     assert (folder / "b.jpg").is_file()
     reader.unseal()
 
+    # Removing a file forgets every upload skipped as its copy: none stands for
+    # bytes that are gone.
+    reader.remove("b.jpg")
+    assert not (folder / "b.jpg").exists()
+    assert [one["name"] for one in reader.files().values()] == ["c.jpg"]
+
     imports.commit(staged, "trip")
-    assert [p.name for p in (library / "trip" / "sources").iterdir()] == ["b.jpg"]
+    assert [p.name for p in (library / "trip" / "sources").iterdir()] == ["c.jpg"]
 
 
 @pytest.mark.spec("ui:sheet:an-upload-after-import-is-refused")

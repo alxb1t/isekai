@@ -1,4 +1,5 @@
 import { type Move, moved } from './grid'
+import type { StagedFile } from './types'
 
 /* An import's staging folder, and when the sheet discards it. A closed sheet
    cancels its folder once no commit is moving it: at closing, or when a commit
@@ -21,6 +22,14 @@ export function discards(
 export function removal(phase: string, state: string | undefined): 'staging' | 'sheet' | null {
   if (phase !== 'read') return null
   return state === 'skipped' ? 'sheet' : 'staging'
+}
+
+/** Return the index of the first result skipped as a copy of the staged file `name`, or -1.
+
+    Removing a file a copy still stands for hands the file to that copy, so the
+    photograph stays chosen and in the import. e.g. ([{ state: 'skipped', copyOf: 'b.jpg' }], 'b.jpg') -> 0 */
+export function heir(results: (StagedFile | null)[], name: string): number {
+  return results.findIndex((one) => one?.state === 'skipped' && one.copyOf === name)
 }
 
 /** Return the tile the focus takes once the tile at `index` of `count` is removed, or null.

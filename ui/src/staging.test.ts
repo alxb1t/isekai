@@ -1,6 +1,7 @@
 import { expect } from 'vitest'
-import { after, discards, removal, stepped } from './staging'
+import { after, discards, heir, removal, stepped } from './staging'
 import { spec } from './test/spec'
+import type { StagedFile } from './types'
 
 spec('ui:sheet:leaving-mid-commit-keeps-the-folder', () => {
   expect(discards('s1', true, true, false)).toBe(false)
@@ -25,6 +26,16 @@ spec('ui:sheet:a-chosen-file-is-removed-alone', () => {
   expect(after(1, 4)).toBe(1)
   expect(after(3, 4)).toBe(2)
   expect(after(0, 1)).toBeNull()
+})
+
+spec('ui:sheet:a-removed-files-copy-keeps-it', () => {
+  const read: StagedFile = { name: 'b.jpg', state: 'ready', carries: [], copyOf: null }
+  const copy: StagedFile = { name: 'again.jpg', state: 'skipped', carries: [], copyOf: 'b.jpg' }
+  const other: StagedFile = { name: 'more.jpg', state: 'skipped', carries: [], copyOf: 'c.jpg' }
+  // The first copy still chosen takes the staged file over, so it stays in the import.
+  expect(heir([read, null, other, copy, copy], 'b.jpg')).toBe(3)
+  // With no copy chosen, the file leaves the staging folder.
+  expect(heir([read, other], 'b.jpg')).toBe(-1)
 })
 
 spec('ui:sheet:the-tiles-take-the-keys', () => {

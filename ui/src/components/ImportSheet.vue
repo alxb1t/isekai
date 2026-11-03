@@ -13,7 +13,7 @@ import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import type { Move } from '../grid'
 import { isField, modded, plain } from '../stores/keys'
-import { after, discards, removal, stepped } from '../staging'
+import { after, discards, heir, removal, stepped } from '../staging'
 import { useLiveStore } from '../stores/live'
 import ImageViewer, { type Shown } from './ImageViewer.vue'
 import KeyHint from './KeyHint.vue'
@@ -169,7 +169,12 @@ function apply(one: Tile): void {
     one.refusal = reported.refusal ?? `${reported.file}: refused`
   } else {
     one.phase = 'read'
-    one.result = { name: reported.name ?? reported.file, state: reported.state, carries: reported.carries ?? [] }
+    one.result = {
+      name: reported.name ?? reported.file,
+      state: reported.state,
+      carries: reported.carries ?? [],
+      copyOf: reported.copy_of ?? null,
+    }
   }
 }
 
@@ -245,7 +250,14 @@ async function remove(one: Tile): Promise<void> {
   const from = removal(one.phase, one.result?.state)
   if (from === null || committing.value) return
   const next = after(shown.value.indexOf(one), shown.value.length)
-  if (from === 'staging' && staging.value !== null && one.result) {
+  const results = tiles.value.map((tile) => tile.result)
+  const copy = one.result ? tiles.value[heir(results, one.result.name)] : undefined
+  if (from === 'staging' && copy) {
+    // A copy still chosen takes the file over, under the removed tile's upload.
+    copy.upload = one.upload
+    copy.result = one.result
+    copy.asIs = one.asIs
+  } else if (from === 'staging' && staging.value !== null && one.result) {
     try {
       await removeStaged(staging.value, one.result.name)
     } catch (reason) {

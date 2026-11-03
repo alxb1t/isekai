@@ -79,11 +79,15 @@ State = Literal["ready", "converted", "not cleaned", "skipped"]
 
 @dataclass(frozen=True)
 class Staged:
-    """What reading one file left in staging, and what it still carries."""
+    """What reading one file left in staging, and what it still carries.
+
+    A skipped file names in `copy_of` the staged file that holds its bytes.
+    """
 
     name: str
     state: State
     carries: tuple[str, ...] = ()
+    copy_of: str | None = None
 
 
 @dataclass(frozen=True)
@@ -138,9 +142,10 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
     body, converted = _clean(file)
     suffix = _suffix(body) if converted else Path(name).suffix
     with _CLAIM:
-        target = _free_name(staging, Path(name).stem, suffix, body)
-        if target is None:
-            return Staged(name, "skipped")
+        holder = _holding(staging, body)
+        if holder is not None:
+            return Staged(name, "skipped", copy_of=holder.name)
+        target = _free_name(staging, Path(name).stem, suffix)
         try:
             write_atomically(target, body)
             carries = verify(target)
@@ -225,7 +230,9 @@ class Reader:
     def remove(self, name: str) -> None:
         """Delete the file read as `name` and forget its upload; refuse once sealed.
 
-        A skipped upload staged nothing of its own, so it is not one to remove.
+        A skipped upload staged nothing of its own, so it is not one to remove,
+        and one skipped as a copy of `name` is forgotten with it: the sheet hands
+        the file to a copy it still shows rather than remove it.
         """
         _refuse_name(name)
         # Under the lock `seal` takes, so no commit walks the folder mid-removal.
@@ -242,6 +249,11 @@ class Reader:
             ]
             if not uploads:
                 raise Refusal(f"{name}: not staged in this import; nothing to remove")
+            uploads += [
+                upload
+                for upload, one in self._files.items()
+                if one.get("copy_of") == name
+            ]
             with _CLAIM:
                 (self._staging / name).unlink(missing_ok=True)
             for upload in uploads:
@@ -294,6 +306,7 @@ class Reader:
                     "state": staged.state,
                     "name": staged.name,
                     "carries": list(staged.carries),
+                    "copy_of": staged.copy_of,
                 }
             except Refusal as refused:
                 result = {"state": "refused", "refusal": str(refused)}
@@ -544,28 +557,34 @@ def _add(taking: list[Path], sources: Path) -> tuple[tuple[str, ...], tuple[str,
     written: list[str] = []
     skipped: list[str] = []
     for path in taking:
-        body = path.read_bytes()
-        target = _free_name(sources, path.stem, path.suffix, body)
-        if target is None:
+        if _holding(sources, path.read_bytes()) is not None:
             skipped.append(path.name)
             continue
+        target = _free_name(sources, path.stem, path.suffix)
         path.rename(target)
         written.append(target.name)
     return tuple(written), tuple(skipped)
 
 
-def _free_name(folder: Path, stem: str, suffix: str, body: bytes) -> Path | None:
-    """Return where `body` goes in `folder`, or None when a file there holds it.
+def _holding(folder: Path, body: bytes) -> Path | None:
+    """Return the file in `folder` that holds `body`, or None.
 
-    Bytes, not names, decide sameness: a taken name gets `-2`, then `-3`.
-    e.g. `portrait.jpg` taken by other bytes -> `portrait-2.jpg`
+    Bytes, not names, decide sameness.
     """
     if folder.is_dir():
         for present in folder.iterdir():
             # The size first, so only a file that could match is read.
             same = present.is_file() and present.stat().st_size == len(body)
             if same and present.read_bytes() == body:
-                return None
+                return present
+    return None
+
+
+def _free_name(folder: Path, stem: str, suffix: str) -> Path:
+    """Return the first name in `folder` no file takes, `-2` then `-3` after a stem.
+
+    e.g. `portrait.jpg` taken -> `portrait-2.jpg`
+    """
     target = folder / f"{stem}{suffix}"
     count = 1
     while target.exists():

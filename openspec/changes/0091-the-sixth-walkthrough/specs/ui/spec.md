@@ -119,8 +119,9 @@ name; an upload SHALL be refused once Import begins committing; and a file whose
 alone, the next file still read. While Import commits, the sheet SHALL take no file, no second Import and no
 cancel, by button, by `Esc` or by leaving the screen; a commit refused after the screen is left SHALL cancel its
 staged folder. Before Import commits, a read or a skipped file SHALL be removable alone, unasked — `×` on its tile, or
-`⌫` with its tile focused — a read file's removal taking it out of the staging folder, and the focus moving to the next
-tile; a file still uploading SHALL offer neither. Once read, the tiles SHALL be a grid that `h j k l` and the arrows
+`⌫` with its tile focused — a read file's removal taking it out of the staging folder, unless a file skipped as its
+copy is still chosen, which then holds it, and the focus moving to the next tile; a file still uploading SHALL offer
+neither. Once read, the tiles SHALL be a grid that `h j k l` and the arrows
 move through, the first tile taking the focus unless a field holds it, and `↵` SHALL open the focused file full size in
 the viewer.
 
@@ -208,6 +209,13 @@ then would delete the folder the commit is moving.
 - **WHEN** a read file and a skipped file are each removed before Import
 - **THEN** the read file leaves the staging folder and the skipped one only the sheet
 - **AND** every other file stays, and Import commits the rest
+
+#### Scenario: a removed file's copy keeps the photograph
+- **Key:** `ui:sheet:a-removed-files-copy-keeps-it`
+- **Layers:** unit
+- **WHEN** a read file is removed while a file skipped as its copy is still chosen
+- **THEN** the copy holds the staged file, which stays in the staging folder, and Import commits it
+- **AND** with no copy chosen, the removal takes the file out of the staging folder
 
 #### Scenario: the tiles take the keys once read
 - **Key:** `ui:sheet:the-tiles-take-the-keys`
