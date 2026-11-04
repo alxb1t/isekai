@@ -103,6 +103,21 @@ def test_each_artifacts_producer_is_shown(run: Run, vocabulary: Vocabulary) -> N
     assert "from 001" in by_name[("sheets", FLOW)].producers[1]
     assert f"from {FLOW}/001" in by_name[("sheets", target.id)].producers[1]
 
+    # Two flows back, it names the flow whose list was read, not the one named.
+    onward = load_flow("summon-flat-anime-wai")
+    sheet_stage.sheet(
+        run,
+        onward.id,
+        onward.schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=onward.tagger,
+        flow_digest=onward.digest,
+        tags_from=target.id,
+    )
+    by_name = {(item.stage, item.flow): item for item in listings(run)}
+    assert f"from {FLOW}/001" in by_name[("sheets", onward.id)].producers[1]
+
 
 @pytest.mark.spec("cli:show:producers-are-reported")
 def test_artifacts_from_different_implementations_are_distinguishable(

@@ -41,7 +41,7 @@ export function useViewer<T extends { src: string }>(
   return { at, last, shown, step, actual, toggle }
 }
 
-/** Return the viewer's keys (D4): `↵` toggles full size, `j` `k` `↓` `↑` scroll at full size,
+/** Return the viewer's keys, each matched on the physical key per D25: `↵` toggles full size, `j` `k` `↓` `↑` scroll at full size,
     `h` `l` `←` `→` step, `⇧↵` runs the opener's `open` where it is given, and Esc closes.
 
     A pair is fitted alone, so `↵` is not offered on one. */

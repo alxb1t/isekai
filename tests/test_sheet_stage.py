@@ -721,6 +721,7 @@ def test_a_sheet_is_filled_from_the_named_flows_tag_list(
     assert body["fields"]["hair_silhouette"] == ["long hair"]
     assert body["producer"]["tags_from"] == FLOW
     assert body["producer"]["from"] == 1
+    assert "listed_from" not in body["producer"]
     assert not (run.path / TARGET / "wd14").exists()
 
 
@@ -743,6 +744,59 @@ def test_a_source_with_no_tag_list_gives_an_empty_sheet_naming_it(
     assert body["fields"] == {name: [] for name in schema.names}
     assert body["producer"]["tags_from"] == FLOW
     assert "from" not in body["producer"]
+
+
+MIDDLE = "summon-flat-anime-wai"
+
+
+def _drafted(
+    run: Run, schema: Schema, vocabulary: Vocabulary, flow: str, source: str
+) -> Sheet:
+    """Write `flow`'s sheet filled from `source`'s tags, and return it."""
+    written, _ = sheet_stage.sheet(
+        run,
+        flow,
+        schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=True,
+        flow_digest=FLOW_DIGEST,
+        tags_from=source,
+        new_version=True,
+    )
+    return _body(written)
+
+
+@pytest.mark.spec("sheet:tags-from:a-source-without-a-list-leads-on")
+def test_a_source_without_a_list_leads_on_to_the_flow_that_tagged(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    write_wd14(run, [DanbooruTag("brown_hair")])
+    _drafted(run, schema, vocabulary, MIDDLE, FLOW)
+
+    body = _drafted(run, schema, vocabulary, TARGET, MIDDLE)
+
+    assert body["fields"]["hair_colour"] == ["brown hair"]
+    assert body["producer"]["tags_from"] == MIDDLE
+    assert body["producer"]["from"] == 1
+    assert body["producer"]["listed_from"] == FLOW
+
+
+@pytest.mark.spec("sheet:tags-from:a-source-without-a-list-leads-on")
+def test_the_walk_that_leads_on_ends_at_a_list_and_at_a_loop(
+    run: Run, schema: Schema, vocabulary: Vocabulary, tmp_path: Path
+) -> None:
+    write_wd14(run)
+    _drafted(run, schema, vocabulary, MIDDLE, FLOW)
+    _drafted(run, schema, vocabulary, TARGET, MIDDLE)
+    assert sheet_stage.tagger_of(run, FLOW) == FLOW
+    assert sheet_stage.tagger_of(run, TARGET) == FLOW
+
+    # Each sheet names the other, and neither flow holds a list.
+    looped = open_run(run.photo, tmp_path / "looped")
+    _drafted(looped, schema, vocabulary, MIDDLE, TARGET)
+    _drafted(looped, schema, vocabulary, TARGET, MIDDLE)
+    assert sheet_stage.tagger_of(looped, TARGET) is None
 
 
 @pytest.mark.spec("sheet:superseded:a-borrowed-sheet-is-silent")

@@ -330,7 +330,8 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   `sources/`. A file with a source's bytes is skipped, and one with a taken name becomes `<stem>-2`.
 - `--remove` — on `assign`: delete each flow's directory instead, refusing one that holds work.
 - `--discard` — on `review`: delete each flow's waiting draft instead, refusing a flow whose highest
-  number is approved.
+  number is approved. A draft from another flow's image, in a flow holding only it and the sheet
+  drafting wrote, takes that sheet and the flow's directory with it.
 - `--progress json` — on `tag`, `caption` and `sheet`: one JSON line per item's start and end on
   stdout, the prose on stderr. It is how Prepare reads a stage's progress.
 - `--session ID` — on `render`: name the session's record `<runs>/../sessions/<ID>.json`, an ID such as

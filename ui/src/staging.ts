@@ -4,7 +4,7 @@ import { noun } from './words'
 
 /* An import's staging folder, and when the sheet discards it. A closed sheet
    cancels its folder once no commit is moving it: at closing, or when a commit
-   in flight then is refused. Its tiles are a grid the keys step through (D3). */
+   in flight then is refused. Its tiles are a grid the keys step through, as on every grid. */
 
 /** Whether the sheet cancels `staging` now. e.g. ('s1', true, true, false) -> false */
 export function discards(

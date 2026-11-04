@@ -165,7 +165,8 @@ a person, and the acceptance looks for it specifically.
 ### Requirement: Both tag lists are shown beside the prose, read-only, and neither is editable there
 
 The system SHALL show, beside the caption, the scored list the local tagger produced and the
-committable tags the hosted tagger offered, and SHALL make neither list a way to change a sheet.
+committable tags the hosted tagger offered — the input's flow's, else those of the flow its sheet's tags came from,
+followed from sheet to sheet as the caption is — and SHALL make neither list a way to change a sheet.
 
 **The two lists are narrowed differently, and the asymmetry is measured rather than chosen.** The local
 tagger is scored against the vocabulary it emits, so every tag it returns is committable by
@@ -194,6 +195,12 @@ operator's attention on.
 - **Layers:** unit
 - **WHEN** a hosted tag outside the vocabulary is withheld from the payload
 - **THEN** that tag is still present in the stored artifact, unchanged
+
+#### Scenario: a sheet filled from another flow's tags shows that flow's lists
+- **Key:** `ui:source:a-borrowed-sheet-shows-the-taggers-lists`
+- **Layers:** unit
+- **WHEN** a flow holding no tag lists has a sheet whose tags came, two flows back, from a flow that holds both
+- **THEN** the source pane shows both of that flow's lists
 
 ### Requirement: Vocabulary membership is decided by the server, not by the browser
 
@@ -446,10 +453,10 @@ tagging capability's own rule and is untouched here.
 
 ### Requirement: A missing caption is shown with the command that writes it
 
-The system SHALL, when an input's flow holds no caption, show in the source pane the caption of the flow its
-sheet's tags came from, named as that flow's, and else that there is none and the command that writes it, naming
-the flow, the run and the runs root. It SHALL NOT refuse to open the surface for
-the absence.
+The system SHALL, when an input's flow holds no caption, show in the source pane the caption of the flow its sheet's
+tags came from, followed from sheet to sheet to the flow that tagged, named as that flow's, and else that there is
+none and the command that writes it, naming the flow, the run and the runs root. It SHALL NOT refuse to open the
+surface for the absence.
 
 **The prose is the one artifact a skipped verb leaves missing on a page under review.** The tag lists keep
 their silence: a list is missing because a tagger failed, because the run predates it, or because the flow
@@ -476,6 +483,12 @@ runs root so it works when pasted: a collection's runs root in the library is ne
 - **WHEN** an input is opened whose flow holds no caption and whose sheet names another flow's tags
 - **THEN** the payload carries that flow's caption prose and names that flow
 - **AND** it carries no command
+
+#### Scenario: a sheet two flows from its tags shows the tagger's caption
+- **Key:** `ui:source:a-two-hop-sheet-shows-the-taggers-caption`
+- **Layers:** unit
+- **WHEN** a flow's sheet takes its tags from a flow whose own sheet takes them from a third, which holds the caption
+- **THEN** the source pane shows the third flow's caption, named as its
 
 ### Requirement: A damaged run file or a malformed draft update is refused, never failed
 
@@ -1546,15 +1559,17 @@ The system SHALL list as a collection every folder in the library that holds `so
 not a collection and open none of it, and SHALL list no dot-folder. Each collection's row SHALL carry its name, its
 source count, the names of its first fifteen sources, whose thumbnails it shows, for each flow the surface offers that
 is present the counts approved and rendered out of the sources that have that flow, the count of sources with no flow,
-and the time and kind of the newest file written in it. Collections SHALL be ordered by that time, newest first, and
-folders that are not collections after them. Home SHALL carry New collection at the right of the library's header row,
-and on an empty library below the privacy line. Count labels on the surface SHALL use a singular noun at one and a
-plural noun otherwise.
+and the time and kind of the newest file written in it; Home SHALL draw the row with no count per flow, which the
+payload alone carries. Collections SHALL be ordered by that time, newest first, and folders that are not collections
+after them. Home SHALL carry New collection at the right of the library's header row, and on an empty library below the
+privacy line. Count labels on the surface SHALL use a singular noun at one and a plural noun otherwise.
 
 A folder is a collection by its layout alone, so no marker file can disagree with what is on disk, and the row is a
 listing read on every request. A folder that is not a collection is shown rather than hidden so the screen matches the
 folder, and nothing in the app writes into it. The flows the surface offers are named in its configuration; a flow
-approved from another's sheet stays the CLI's. On first start the privacy line is read before the first import.
+approved from another's sheet stays the CLI's. The per-flow counts are read where an approval is counted, and the row
+on screen keeps to the collection's name, its sources and its newest activity. On first start the privacy line is read
+before the first import.
 
 #### Scenario: a folder with `sources/` is a collection
 - **Key:** `ui:batch-folder:a-folder-with-sources-is-a-batch`
@@ -1606,6 +1621,12 @@ approved from another's sheet stays the CLI's. On first start the privacy line i
 - **WHEN** a collection holds seventeen sources
 - **THEN** its row names the first fifteen in the hub's order
 - **AND** its source count is seventeen
+
+#### Scenario: the row Home draws shows no count per flow
+- **Key:** `ui:batch-folder:the-row-draws-no-count-per-flow`
+- **Layers:** e2e
+- **WHEN** Home lists a collection that holds an approval
+- **THEN** its row shows no flow's approved or rendered count
 
 #### Scenario: first start shows New collection under the privacy line
 - **Key:** `ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line`

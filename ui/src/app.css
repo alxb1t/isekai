@@ -849,8 +849,8 @@ button.session__tile {
   gap: 16px;
 }
 
-.library__head .library__chips {
-  flex: 1;
+.library__head > .library__when {
+  margin-left: auto;
 }
 
 .library__thumbs {
@@ -866,21 +866,6 @@ button.session__tile {
   object-fit: cover;
   background: var(--placeholder);
   border-radius: 3px;
-}
-
-.library__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.library__chip {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 2px 8px;
-  border: 1px solid var(--chip-line);
-  border-radius: 4px;
-  color: var(--ink-1b);
 }
 
 .library__when {
@@ -1631,13 +1616,16 @@ dialog::backdrop {
 
 /* Compare with…'s tiles, at a Renders tile's size, each named under it. */
 /* A row per flow, its tiles in one line: `j k` keep the column. The longest row
-   sets the width; the head, cut at its lines' ends, never does. */
+   sets the width; the head, cut at its lines' ends, never does. Past the window's
+   height the rows scroll inside. */
 .pick {
   display: flex;
   flex-direction: column;
   gap: 20px;
   min-width: 480px;
   max-width: calc(100vw - 96px);
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
 }
 
 .pick__head {
@@ -1678,20 +1666,28 @@ dialog::backdrop {
   color: var(--ink-2);
 }
 
+/* No name widens the dialog: the title is one line, cut by an ellipsis. */
 .viewer__title {
+  contain: inline-size;
   margin: 0 0 12px;
+  overflow: hidden;
   font-size: 11px;
   color: var(--ink-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* The frame keeps its size while an image loads; the image centres in it. */
 .viewer__frame {
-  max-width: calc(100vw - 64px);
-  max-height: calc(100vh - 96px);
+  display: flex;
+  width: calc(100vw - 64px);
+  height: calc(100vh - 96px);
   overflow: auto;
 }
 
 .viewer__image {
   display: block;
+  margin: auto;
   max-width: calc(100vw - 64px);
   max-height: calc(100vh - 96px);
   cursor: zoom-in;
@@ -1756,6 +1752,7 @@ dialog::backdrop {
 
 /* A row's pictures sit at its cells' foot, level whatever text stands above them. */
 .hub__cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1786,7 +1783,9 @@ dialog::backdrop {
   min-width: 0;
 }
 
-.hub__source > .hub__action {
+/* A focused cell's one action takes no line, so focus never grows a row. */
+.hub__source > .hub__action,
+.hub__line > .hub__action {
   position: absolute;
   top: 10px;
   right: 8px;
@@ -1959,7 +1958,7 @@ dialog::backdrop {
   width: 240px;
 }
 
-/* A grid, so `j k` step its rows (D3); a column is a tile's 124px, its padding and border. */
+/* A grid, so `j k` step its rows as on every grid; a column is a tile's 124px, its padding and border. */
 .import__tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, 142px);

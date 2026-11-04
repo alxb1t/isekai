@@ -90,6 +90,7 @@ from isekai.interface.ui.app import (  # noqa: E402
 )
 from isekai.interface.ui.jobs import Jobs  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
+from isekai.pipeline import sheet as sheet_stage  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.generate import image_of, prepare, prompt_artifact  # noqa: E402
 from isekai.pipeline.review import (  # noqa: E402
@@ -2163,6 +2164,59 @@ def test_a_sheet_filled_from_another_flows_tags_shows_that_flows_caption(
     assert body["caption"] == "Dark brown hair, brown eyes."
     assert body["caption_from"] == FLOW
     assert body["caption_command"] is None
+
+    # A tag list of conjure's own leaves its sheet's source the caption's.
+    tag_wd14(made, CONJURE, fake_tagger)
+    tagged = client.get(route).json()
+
+    assert tagged["caption"] == "Dark brown hair, brown eyes."
+    assert tagged["caption_from"] == FLOW
+
+
+def _two_hops(made: Run, vocabulary: Vocabulary) -> str:
+    """Fill conjure from summon's tags and flat from conjure's; return flat's route."""
+    for flow, source in ((CONJURE, FLOW), (FLAT, CONJURE)):
+        sheet_stage.sheet(
+            made,
+            flow,
+            load_flow(flow).schema,
+            vocabulary,
+            FIELD_MAP,
+            tagged=True,
+            flow_digest=manifest_digest(flow),
+            tags_from=source,
+        )
+    review(made, FLAT)
+    return f"/api/c/{COLLECTION}/review/{made.digest}/{FLAT}"
+
+
+@pytest.mark.spec("ui:source:a-two-hop-sheet-shows-the-taggers-caption")
+def test_a_sheet_two_flows_from_its_tags_shows_the_taggers_caption(
+    wired: Wiring, made: Run, tmp_path: Path, vocabulary: Vocabulary
+) -> None:
+    route = _two_hops(made, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False, offered=(*OFFERED, FLAT))
+
+    body = client.get(route).json()
+
+    assert body["caption"] == "Dark brown hair, brown eyes."
+    assert body["caption_from"] == FLOW
+    assert body["caption_command"] is None
+
+
+@pytest.mark.spec("ui:source:a-borrowed-sheet-shows-the-taggers-lists")
+def test_a_borrowed_sheet_shows_the_taggers_lists(
+    wired: Wiring, made: Run, tmp_path: Path, vocabulary: Vocabulary
+) -> None:
+    tag_hosted(made, FLOW, FakeTagger(tags=("brown hair", "fashion photography")))
+    route = _two_hops(made, vocabulary)
+    client = _client(wired, made, tmp_path, offered=(*OFFERED, FLAT))
+    own = client.get(_at(made)).json()
+
+    body = client.get(route).json()
+
+    assert own["wd14"] and body["wd14"] == own["wd14"]
+    assert [one["tag"] for one in body["tags"]] == ["brown hair"]
 
 
 @pytest.mark.spec("ui:draft-from:an-unedited-waiting-draft-is-replaced")

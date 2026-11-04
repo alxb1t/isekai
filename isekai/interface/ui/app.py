@@ -133,7 +133,7 @@ from isekai.pipeline.review import (
     waiting_edit,
 )
 from isekai.pipeline.review import state as review_state
-from isekai.pipeline.sheet import tagged_from
+from isekai.pipeline.sheet import sheet_source, tagger_of
 from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.vocabulary import Vocabulary
@@ -1292,21 +1292,25 @@ def _drafted(
 def _caption(one: Held) -> tuple[Path | None, str | None]:
     """Return `one`'s newest caption, and the flow it is borrowed from, or None.
 
-    Where `one` holds no caption and its newest sheet holds another flow's tags,
-    that flow's newest caption is borrowed. An unreadable sheet borrows nothing.
+    Where `one` holds no caption, the newest caption of the flow its sheets lead
+    to is borrowed (`tagger_of`). An unreadable sheet borrows nothing.
     """
-    own = latest_artifact(one.directory(CAPTIONS))
-    newest = latest_artifact(one.directory(SHEETS))
-    if own is not None or newest is None:
-        return own, None
-    try:
-        source = tagged_from(read(newest, SHEET_FILE))
-    except Refusal:
-        return None, None
-    borrowed = (
-        None if source is None else latest_artifact(one.run.directory(source, CAPTIONS))
-    )
-    return (borrowed, source) if borrowed is not None else (None, None)
+    path, flow = _listed(one, CAPTIONS)
+    return path, None if path is None or flow == one.flow.id else flow
+
+
+def _listed(one: Held, stage: str) -> tuple[Path | None, str]:
+    """Return `one`'s newest `stage` artifact, else its tagger's, and whose it is.
+
+    The walk starts at the flow `one`'s newest sheet names, never at `one`'s own
+    flow, so a flow holding a tag list of its own still borrows what it lacks.
+    """
+    own = latest_artifact(one.directory(stage))
+    source = None if own is not None else sheet_source(one.run, one.flow.id)
+    tagger = None if source is None else tagger_of(one.run, source)
+    if tagger is None:
+        return own, one.flow.id
+    return latest_artifact(one.run.directory(tagger, stage)), tagger
 
 
 def _side(flow: Flow, version: int, approval: Path) -> dict[str, Any]:
@@ -1568,12 +1572,13 @@ def _wd14(one: Held) -> list[dict[str, Any]] | None:
     Stored sorted by confidence descending, and passed through in that order:
     the sort is what makes a wrong tag arrive pre-refuted by the right one above
     it, so re-ordering here would throw away the reason the number is shown.
+    Where `one` holds none, its tagger's is shown.
     """
-    path = latest_artifact(one.directory(WD14))
+    path, flow = _listed(one, WD14)
     if path is None:
         return None
     found = read(path, WD14_FILE)
-    remedy = _remedy(one, "tag")
+    remedy = _remedy(one, "tag", flow)
     require(path, found, "tags", list, remedy)
     scored: list[dict[str, Any]] = []
     for index, entry in enumerate(found["tags"]):
@@ -1602,14 +1607,16 @@ def _tags(one: Held, vocabulary: Vocabulary) -> list[dict[str, Any]] | None:
     the artifact keeps every tag the model returned. Deduplicated here only:
     `{tag, posts}` repeats carry no information and would be duplicate Vue keys.
     The local tagger's list is not filtered -- it emits the vocabulary itself.
+    Where `one` holds none, its tagger's is shown.
     """
-    path = latest_artifact(one.directory(TAGS))
+    path, flow = _listed(one, TAGS)
     if path is None:
         return None
     listed = read(path, TAGS_FILE).get("tags")
     if not _strings(listed):
         raise Refusal(
-            f"{path.name}: its `tags` is not a list of strings; {_remedy(one, 'tag')}"
+            f"{path.name}: its `tags` is not a list of strings; "
+            f"{_remedy(one, 'tag', flow)}"
         )
     return [
         {"tag": name, "posts": vocabulary.count(name)}

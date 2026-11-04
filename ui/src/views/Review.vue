@@ -405,7 +405,7 @@ const viewerKeys = [photographKey]
 
 const scrollSource = (direction: -1 | 1) => source.value?.scrollBy({ top: direction * 120 })
 
-/* ④ as a grid (D6): the count's `−` `+` a row, then a row per slot. */
+/* ④ as a grid the keys step, as on every grid: the count's `−` `+` a row, then a row per slot. */
 function fourStops(): HTMLElement[][] {
   const block = document.querySelector('.renders-block')
   if (!block) return []

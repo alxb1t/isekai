@@ -259,7 +259,7 @@ function move(to: Move): void {
   if (focused.value !== null) focusTile(stepped(focused.value, shown.value.length, columns(), to))
 }
 
-/* Take a chosen file out of the import, unasked: nothing is committed yet (D3). */
+/* Take a chosen file out of the import, unasked: nothing is committed yet, so nothing is lost. */
 async function remove(one: Tile): Promise<void> {
   const from = removal(one.phase, one.result?.state)
   if (from === null || committing.value) return

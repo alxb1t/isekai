@@ -132,15 +132,9 @@ onMounted(async () => {
             <div class="library__head">
               <span class="library__name">{{ row.name }}</span>
               <span class="library__meta">{{ row.sources }} {{ noun(row.sources, 'source') }}</span>
-              <div class="library__chips">
-                <span v-for="one in row.flows" :key="one.flow" class="library__chip">
-                  {{ one.flow }} {{ one.approved }}/{{ one.of }} approved ·
-                  {{ one.rendered }}/{{ one.of }} rendered
-                </span>
-                <span v-if="row.without_flow" class="library__meta">
-                  {{ row.without_flow }} {{ noun(row.without_flow, 'source') }} without a flow
-                </span>
-              </div>
+              <span v-if="row.without_flow" class="library__meta">
+                {{ row.without_flow }} {{ noun(row.without_flow, 'source') }} without a flow
+              </span>
               <span class="library__meta library__when">
                 {{ when(row.newest) }}<template v-if="row.kind"> · {{ row.kind }}</template>
                 · open ↵

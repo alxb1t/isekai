@@ -74,7 +74,7 @@ export function clicks(
 /** A tile of the pick: an image of a flow, or null for the photograph. */
 export type PickTile = { flow: string; version: number; seed: string } | null
 
-/** The pick of a source's images (D2): the photograph's row, then a row per flow. */
+/** The pick of a source's images: the photograph's row, then a row per flow holding images. */
 export interface SourceGrid {
   rows: { flow: string | null; tiles: PickTile[] }[]
   /* The image compare started from, marked. */

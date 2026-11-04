@@ -197,7 +197,7 @@ function viewSource(row: number): void {
 }
 
 /* A cell's images in the viewer, from `index` or its newest; ⇧↵ there opens the
-   shown image's large view, as ↵ toggles full size (D4), and Esc there comes back here. */
+   shown image's large view, as ↵ toggles full size, and Esc there comes back here. */
 function view(source: HubSource, flow: string, index?: number): void {
   const { digest } = source
   const images = cell(source, flow).images
@@ -211,7 +211,7 @@ function view(source: HubSource, flow: string, index?: number): void {
   viewing.value = {
     images: images.map((one) => ({
       src: imageAt(address(one)),
-      name: `${source.name} · ${flow} · v${one.version} · seed ${one.seed}`,
+      name: `${source.name} · ${flow} · v${one.version}`,
     })),
     start: index ?? images.length - 1,
     open: (at) => {
@@ -541,11 +541,6 @@ onUnmounted(() => {
                 class="hub__word mono"
                 :class="{ 'hub__word--running': running[key(source, flow)] }"
                 >{{ word(source, flow) }}</span
-              >
-              <span
-                v-if="focused(row, column + 1) && locked(cell(source, flow))"
-                class="hub__reason"
-                >prepared · the tick stays</span
               >
               <span
                 v-if="focused(row, column + 1) && hint(source, flow)"

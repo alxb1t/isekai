@@ -69,6 +69,7 @@ from isekai.foundation.run import (
     approval_of,
     approved_versions,
     artifact_name,
+    assign,
     attempts,
     group_of,
     is_seed,
@@ -491,13 +492,21 @@ def refuse_revision(
 def discard(run: Run, flow: str) -> Path:
     """Delete `flow`'s highest draft while it is unapproved, and return its path.
 
-    An approval is never discarded, so a highest number that is approved
-    refuses; `cancel` takes back one nothing was made from.
+    A draft from another flow's approval, in a flow holding only it and the
+    sheet that drafting wrote, takes the sheet and the flow's directory with it,
+    so the flow is unassigned again. An approval is never discarded, so a highest
+    number that is approved refuses; `cancel` takes back one nothing was made from.
     """
     directory = run.directory(flow, REVIEW)
     draft = current_draft(directory)
     if draft is not None:
+        written = _drafting_wrote(run, flow, draft)
         draft.unlink()
+        if written is not None:
+            written.unlink()
+            directory.rmdir()
+            written.parent.rmdir()
+            assign(run, flow, remove=True)
         return draft
     approved = approved_versions(directory)
     if approved:
@@ -510,6 +519,31 @@ def discard(run: Run, flow: str) -> Path:
         f"{run.id}: flow {flow} has no draft to discard; run "
         f"`{stage_command(run, STAGE, flow)}` to take a copy"
     )
+
+
+def _drafting_wrote(run: Run, flow: str, draft: Path) -> Path | None:
+    """Return the sheet the drafting of `draft` wrote, when `flow` holds only the two.
+
+    The sheet is the drafting's when its producer's `tags_from` names the flow the
+    draft was drafted from. An unreadable draft or sheet gives None.
+    """
+    try:
+        body = read(draft, DRAFT_FILE)
+    except Refusal:
+        return None
+    origin, version = drafted_from(body), body.get("sheet")
+    if origin is None or not isinstance(version, int) or isinstance(version, bool):
+        return None
+    sheet = sheet_of(run, flow, version)
+    held = set(run.directory(flow).rglob("*"))
+    if held != {draft.parent, draft, sheet.parent, sheet}:
+        return None
+    try:
+        producer = read(sheet, SHEET_FILE).get("producer")
+    except Refusal:
+        return None
+    tags_from = producer.get("tags_from") if isinstance(producer, Mapping) else None
+    return sheet if tags_from == origin["flow"] else None
 
 
 def cancellable(run: Run, flow: str) -> str | None:

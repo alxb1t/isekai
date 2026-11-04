@@ -10,6 +10,20 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.63.0] - 2026-11-04
+
+Gate: local 0m32s · CI not read under mf-ship · 0.62.2: local 0m35s · CI not read under mf-ship
+
+- The hub's focused cell grows no line: "prepared · the tick stays" is gone and its `↵` hint sits at the cell's top
+  right; the library row draws no chip per flow, though the API keeps each flow's counts (0096 D1, D2).
+- The viewer's frame keeps the window's size while an image loads, and its title, without the seed on the hub and in
+  the drawer, is one line cut by an ellipsis; Compare's pick stays inside the window, its rows scrolling (0096 D3, D4).
+- A flow drafted from a drafted flow follows `tags_from` to the flow that tagged: its sheet is filled and names, as
+  `show` does, the list it read, and Review shows that flow's caption and lists, even beside a list of its own (0096 D5).
+- Discarding a draft drafted from another flow's image, in a flow holding only it and the sheet drafting wrote, takes
+  the sheet and the flow's directory too, so drafting again is one key; the UI's comments say what they decide rather
+  than cite a past design's id (0096 D6, D7).
+
 ## [0.62.2] - 2026-11-03
 
 Gate: local 0m35s · CI not read under mf-ship · 0.62.1: local 0m30s · CI not read under mf-ship

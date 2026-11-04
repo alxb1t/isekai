@@ -51,7 +51,7 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 | `--accent-dim` | `#5a5296` | the running segment of a stage track |
 | `--accent-ink` | `#b3abf4` | commands, running words (`captioning…`) |
 | `--tick-locked` | `#34364a` | a prepared, locked tick |
-| `--chip-line` | `#2f3146` | a flow chip's border |
+| `--chip-line` | `#2f3146` | an import row's badge border |
 | placeholder | `repeating-linear-gradient(135deg,#1f2030 0 5px,#26273b 5px 10px)` | an image not yet decoded |
 | scrim | `rgba(10,11,18,.4)` | behind sheets and dialogs |
 
@@ -178,10 +178,10 @@ y_long_name            │                                  │
   13×4 segments, gap 3: assigned · tag · caption · sheet · approved · rendered; done `accent`, running `accent-dim`,
   the rest `line-disabled`; a draft shares the sheet segment — and the stage word in mono 12: `assigned`,
   `tagging…`, `captioning…`, `sheet`, `draft`, `approved`, `rendered ×n`. Running words are `accent-ink`.
-- **The tick:** accent fill is assigned and can be unticked; `tick-locked` is prepared and stays (`prepared ·
-  the tick stays`).
+- **The tick:** accent fill is assigned and can be unticked; `tick-locked` is prepared and stays, with no word
+  saying so.
 - **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`,
-  `↵ view` or, on the source cell, `↵ view photo` at its top right, taking no line). The hub keeps its focus for the open collection: `Esc` from a large
+  `↵ view` or, on the source cell, `↵ view photo`), at the cell's top right, taking no line. The hub keeps its focus for the open collection: `Esc` from a large
   view, the Back button and a tab switch come back to the cell left, else the first row's source cell.
 - **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
@@ -217,7 +217,9 @@ y_long_name            │                                  │
   on the thumbnail or `↵` opens the viewer on its photograph, `← →` stepping the collection's sources; space does nothing
   there.
 - **The viewer** is a dialog over the page, its URL unchanged: the image fitted, a click for 1:1 pixels, `Esc` or a
-  click outside to close, titled with the name, the dimensions and `fit n%` or `1:1`.
+  click outside to close, titled with the name, the dimensions and `fit n%` or `1:1`. A hub image's name is
+  `ada.jpg · summon-anime-wai · v2`, without its seed. The title is one line, cut by an ellipsis, so no name widens
+  the dialog; the frame is the window less 64 × 96 px whatever is loading, the image centred in it.
 
 ### J3 · Review and approve
 
@@ -321,7 +323,7 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
   striped tile per image still to come, stacked, so a column stays one tile wide. A record that plans nothing places
   what landed. The first render takes the focus on opening and is the grids' tab stop; `h l` move between
   photographs, `j k` between rows and from a grid's photographs' row into the next grid's first row, the column kept,
-  and `↵` opens the viewer over the row. `⇧I` opens the focused image's collection's Renders. Stop goes straight to
+  and `↵` opens the viewer over the row, each image named `summon-anime-wai · v1`. `⇧I` opens the focused image's collection's Renders. Stop goes straight to
   teardown; finished images are kept.
 - **Done** is the step list all confirmed, the count and the duration, and `Nothing is billing.` only when both
   teardown steps are confirmed.
@@ -374,7 +376,7 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
   compare started from marked, the pick's head naming the focused tile on two lines, each cut at its end —
   `Compare summon-anime-wai v2 · seed 1840266731` over `with summon-anime-wai v1 · seed 1840266731`. The pick is as
   wide as its longest row, whatever is focused: at least 480 px, at most the window less 96 px, its rows and its
-  tiles 20 px apart. It opens on the newest older version of this seed, else the image before this one,
+  tiles 20 px apart. Its rows stand no taller than the window less 96 px, scrolling inside. It opens on the newest older version of this seed, else the image before this one,
   else the photograph; `h j k l` and the arrows move, keeping the column, held at a shorter row's end; `↵` or a
   click compares, `Esc` closes.
 - **Compare** sets the image picked on the left and the image compare started from on the right, at one height,
@@ -424,15 +426,14 @@ Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`,
 
 ```
 J7·1  LIBRARY · 4 collections · newest activity first                     [ New collection ⇧N ]
-      2026-09-17  6 sources  [summon-anime-wai 2/5 approved · 1/5 rendered]
-                             [conjure-anime-wai 1/2 approved · 0/2 rendered]  today 15:31 · render · open ↵
+      2026-09-17  6 sources  1 source without a flow                 today 15:31 · render · open ↵
       ▢▢▢▢▢▢▢ +5
       old exports      ▨ Not a collection: no sources/ folder inside. Move it out of ~/isekai/ in Finder
                          to clear this row.                                                  can't be opened
 ```
 
-- **Home's row**: a header line — the name, `n sources`, one chip per flow present (its denominator the sources that
-  have it; chips wrap), `n sources without a flow`, and at the right last activity, the time and kind of the newest
+- **Home's row**: a header line — the name, `n sources`, `n sources without a flow`, no chip per flow (the API keeps
+  each flow's counts), and at the right last activity, the time and kind of the newest
   file written in the collection, then `open ↵` — over up to fifteen 84×114 thumbnails then `+n`, at the full width,
   wrapping in a narrow window. Sorted by last activity; a folder without `sources/`
   sorts last, striped and inert; dot-folders, `.staging` among them, are not listed.

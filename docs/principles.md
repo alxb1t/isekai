@@ -245,6 +245,10 @@ place. A stage whose file already exists does nothing unless asked for a new ver
   - `tests/test_artifact_bytes.py::test_each_kind_is_written_byte_for_byte`
   - `tests/test_artifact_bytes.py::test_only_the_contract_writes_a_run_file`
   - `tests/test_review.py::test_approving_an_approved_flow_writes_nothing`
+- **Known breaks:** `pipeline/review.py`'s `discard` deletes a file the sheet stage wrote: a draft from
+  another flow's approval, in a flow holding only it and the sheet that drafting filled, is discarded with
+  that sheet and the flow's directory — the undo of the sheet-then-draft sequence `interface/drafting.py`
+  composes, done inside the review stage.
 
 ### Every artifact records what shaped it
 
