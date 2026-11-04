@@ -229,8 +229,9 @@ later tag list under either flow does not supersede it.
 
 The system SHALL fill a flow's sheet from another flow's tag list when the operator names that flow as the source,
 through the target flow's own schema, vocabulary and field map, and SHALL record the source flow in the sheet's
-producer. Where the source holds no tag list, it SHALL write every field empty, as for a flow that declares no
-tagger.
+producer. Where the source holds no tag list, it SHALL follow the source's own sheet to the flow its tags came from,
+sheet to sheet, SHALL record beside the source the flow whose list it read, and only where none holds a list SHALL it
+write every field empty, as for a flow that declares no tagger.
 
 ```
 summon-anime-wai/wd14/001.json ──▶ conjure's schema · vocabulary · field map ──▶ conjure-anime-wai/sheets/001.json
@@ -254,3 +255,10 @@ of its own. A flow reads another's artifacts only when the operator names it
 - **WHEN** a sheet is asked from a source flow that holds no tag list
 - **THEN** a sheet is written with every field present and empty
 - **AND** its producer names the source flow
+
+#### Scenario: a source without a list leads on to the flow that tagged
+- **Key:** `sheet:tags-from:a-source-without-a-list-leads-on`
+- **Layers:** unit
+- **WHEN** a sheet names a source whose own sheet took its tags from a third flow holding the list
+- **THEN** the sheet is filled from the third flow's list, the producer naming the source the operator gave
+- **AND** its producer names the third flow as the one whose list it read
