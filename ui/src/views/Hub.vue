@@ -567,7 +567,7 @@ onUnmounted(() => {
             >
               <img
                 :src="thumbAt({ collection, digest: source.digest, flow, ...one })"
-                :alt="`${source.name} ${flow} v${one.version}`"
+                :alt="`${source.name} ${flow} v${one.version} seed ${one.seed}`"
                 loading="lazy"
               />
               <span class="renders__badge mono">v{{ one.version }}</span>

@@ -8,6 +8,7 @@ from tests.e2e.conftest import SHOWN, Served
 
 @pytest.mark.spec("ui:routes:a-reload-lands-on-the-same-screen")
 @pytest.mark.spec("ui:routes:an-unknown-batch-is-refused")
+@pytest.mark.spec("ui:batch-folder:the-row-draws-no-count-per-flow")
 def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     page: Page, served: Served
 ) -> None:

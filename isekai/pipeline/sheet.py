@@ -102,17 +102,18 @@ def sheet(
     `tagged` says whether the flow declares the tagger, and has no default
     because a default decides silently. Untagged, no list is read and every
     field is written empty for the person to fill (D31).
-    `flow_digest` is recorded and never read. `tags_from` names the flow whose
-    tag list fills the sheet instead of this flow's own, and is recorded; where
-    it holds none, its sheet leads on (`tagger_of`), and no list found gives
-    every field empty.
+    `flow_digest` is recorded and never read. `tags_from` names the flow to take
+    the tags from instead of this flow's own, and is recorded; the list read is
+    its own, else the one its sheets lead to (`tagger_of`), and no list found
+    gives every field empty.
 
     **The fill is told nothing about flows beyond `tagged` and `tags_from`, and
     reaches nothing at all.** It is handed a tag list, the schema, the vocabulary
     and the table, so the same code serves every flow without learning that flows
     exist; `flow` decides which directory is written, and the list read is the
-    one under this flow's own directory, or under the flow the operator names as
-    `tags_from` -- a flow reads another's only when it is named (D17).
+    one under this flow's own directory, or the one the flow the operator names
+    as `tags_from` leads to (`tagger_of`) -- a flow reads another's only when it
+    is named (D17).
 
     **For a tagged flow with no source named, an absent tag list is a
     refusal.** A sheet with every field empty is legal and therefore silent, so
@@ -341,7 +342,7 @@ def sheet_source(run: Run, flow: str) -> str | None:
 
 
 def tagged_from(body: Mapping[str, object]) -> str | None:
-    """Return the flow whose tag list filled a sheet, when not its own, else None.
+    """Return the flow the operator named as a sheet's tag source, else None.
 
     e.g. producer `{…, "tags_from": "summon-anime-wai"}` -> "summon-anime-wai"
     """

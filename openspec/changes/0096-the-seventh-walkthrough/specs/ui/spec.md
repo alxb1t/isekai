@@ -78,3 +78,84 @@ operator's attention on.
 - **Layers:** unit
 - **WHEN** a flow holding no tag lists has a sheet whose tags came, two flows back, from a flow that holds both
 - **THEN** the source pane shows both of that flow's lists
+
+### Requirement: A folder in the library is a collection when it holds `sources/`
+
+The system SHALL list as a collection every folder in the library that holds `sources/`, SHALL list any other folder as
+not a collection and open none of it, and SHALL list no dot-folder. Each collection's row SHALL carry its name, its
+source count, the names of its first fifteen sources, whose thumbnails it shows, for each flow the surface offers that
+is present the counts approved and rendered out of the sources that have that flow, the count of sources with no flow,
+and the time and kind of the newest file written in it; Home SHALL draw the row with no count per flow, which the
+payload alone carries. Collections SHALL be ordered by that time, newest first, and folders that are not collections
+after them. Home SHALL carry New collection at the right of the library's header row, and on an empty library below the
+privacy line. Count labels on the surface SHALL use a singular noun at one and a plural noun otherwise.
+
+A folder is a collection by its layout alone, so no marker file can disagree with what is on disk, and the row is a
+listing read on every request. A folder that is not a collection is shown rather than hidden so the screen matches the
+folder, and nothing in the app writes into it. The flows the surface offers are named in its configuration; a flow
+approved from another's sheet stays the CLI's. The per-flow counts are read where an approval is counted, and the row
+on screen keeps to the collection's name, its sources and its newest activity. On first start the privacy line is read
+before the first import.
+
+#### Scenario: a folder with `sources/` is a collection
+- **Key:** `ui:batch-folder:a-folder-with-sources-is-a-batch`
+- **Layers:** unit
+- **WHEN** the library holds a folder with `sources/` and one without
+- **THEN** the first is listed as a collection
+- **AND** the second is listed as not a collection, and cannot be opened
+
+#### Scenario: a dot-folder is not listed
+- **Key:** `ui:batch-folder:a-dot-folder-is-not-listed`
+- **Layers:** unit
+- **WHEN** the library holds a folder whose name starts with a dot
+- **THEN** it is not listed at all
+
+#### Scenario: a flow's counts are of the sources that have it
+- **Key:** `ui:batch-folder:a-flows-counts-are-of-its-sources`
+- **Layers:** unit
+- **WHEN** a collection's sources have different sets of flows
+- **THEN** each flow's approved and rendered counts are out of the sources whose runs hold that flow
+- **AND** the sources with no flow are counted apart
+
+#### Scenario: collections are ordered by their newest file
+- **Key:** `ui:batch-folder:batches-are-ordered-by-their-newest-file`
+- **Layers:** unit
+- **WHEN** the library holds collections written at different times
+- **THEN** they are listed newest first, by the newest file written in each
+
+#### Scenario: no file records a collection
+- **Key:** `ui:batch-folder:no-file-records-a-batch`
+- **Layers:** unit
+- **WHEN** the surface lists the library and opens a collection
+- **THEN** no file describing a collection is created anywhere in the library
+
+#### Scenario: a flow the surface does not offer has no count
+- **Key:** `ui:batch-folder:an-unoffered-flow-has-no-count`
+- **Layers:** unit
+- **WHEN** a collection's runs hold a tracked flow the configuration does not offer
+- **THEN** its row carries no count for that flow
+
+#### Scenario: count labels use singular at one
+- **Key:** `ui:batch-folder:count-labels-use-singular-at-one`
+- **Layers:** unit
+- **WHEN** a count label is drawn for zero, one and several items
+- **THEN** one uses the singular noun and the other counts use the plural noun
+
+#### Scenario: a row names its first sources
+- **Key:** `ui:batch-folder:a-row-names-its-first-sources`
+- **Layers:** unit
+- **WHEN** a collection holds seventeen sources
+- **THEN** its row names the first fifteen in the hub's order
+- **AND** its source count is seventeen
+
+#### Scenario: the row Home draws shows no count per flow
+- **Key:** `ui:batch-folder:the-row-draws-no-count-per-flow`
+- **Layers:** e2e
+- **WHEN** Home lists a collection that holds an approval
+- **THEN** its row shows no flow's approved or rendered count
+
+#### Scenario: first start shows New collection under the privacy line
+- **Key:** `ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line`
+- **Layers:** e2e
+- **WHEN** Home opens on an empty library
+- **THEN** New collection sits below the privacy line

@@ -30,8 +30,8 @@ other functions of both.
 
 | layer | adds | removes |
 |---|---|---|
-| unit | `tagger_of` over two hops and a loop; the sheet, the caption and both lists borrowed two hops back; the list read two hops back recorded and shown; a caption borrowed by a flow holding its own tag list; a drafted draft undone whole and a sheet's own draft discarded alone; a page step that the library row draws no chip | none |
-| end-to-end | none | none |
+| unit | `tagger_of` over two hops and a loop; the sheet, the caption and both lists borrowed two hops back; the list read two hops back recorded and shown; a caption borrowed by a flow holding its own tag list; a drafted draft undone whole and a sheet's own draft discarded alone | none |
+| end-to-end | a step that the library row draws no chip | none |
 
 This change deletes and merges no test.
 
