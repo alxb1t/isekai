@@ -36,10 +36,12 @@ names.
 
 ## 4 — The discard
 
-- [ ] 4.1 `discard` in `isekai/pipeline/review.py` per [D6](design.md#d6); a test in `tests/test_review.py` bound to
+- [x] 4.1 `discard` in `isekai/pipeline/review.py` per [D6](design.md#d6); a test in `tests/test_review.py` bound to
   `review:discard:a-drafted-draft-is-undone-whole`.
   Verify: `uv run pytest tests/test_review.py -k undone_whole` exits 0.
 - [ ] 4.2 Rewrite the plain design cites per [D7](design.md#d7) in `ui/src/app.css`, `Hub.vue`, `Review.vue`,
   `composables/useViewer.ts`, `components/RendersBlock.vue`, `composables/useCentred.ts`, `slots.ts`, `staging.ts`,
-  `components/ImportSheet.vue` and `cells.ts`.
-  Verify: `git grep -nE '\(D[0-9]+\)' -- 'ui/src/*.ts' 'ui/src/*.vue' 'ui/src/*.css'` prints nothing.
+  `components/ImportSheet.vue` and `cells.ts`. A cite of a decision in force stays plain, as `D25`; a comment cites D25
+  only for how a key is matched, never for how a grid steps.
+  Verify: `git grep -nE '\(D[0-9]+\)' -- 'ui/src/*.ts' 'ui/src/*.vue' 'ui/src/*.css' | grep -v 'D25'` prints nothing: D25 is a
+  decision in force, cited plain.
