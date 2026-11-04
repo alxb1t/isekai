@@ -103,8 +103,9 @@ def sheet(
     because a default decides silently. Untagged, no list is read and every
     field is written empty for the person to fill (D31).
     `flow_digest` is recorded and never read. `tags_from` names the flow whose
-    tag list fills the sheet instead of this flow's own, and is recorded; that
-    flow holding none gives every field empty.
+    tag list fills the sheet instead of this flow's own, and is recorded; where
+    it holds none, its sheet leads on (`tagger_of`), and no list found gives
+    every field empty.
 
     **The fill is told nothing about flows beyond `tagged` and `tags_from`, and
     reaches nothing at all.** It is handed a tag list, the schema, the vocabulary
@@ -285,20 +286,45 @@ def _from_source(
     vocabulary: Vocabulary,
     field_map: FieldMap,
 ) -> tuple[dict[str, list[str]], SheetProducer] | None:
-    """Return the checked fields routed from another flow's tag list, and its producer.
+    """Return the checked fields routed from the list `source_flow` leads to, and who.
 
-    None when that flow holds no list. A damaged list is refused and recorded
-    nowhere: its fix is the source's, and a record here would bar the retry.
+    None when no flow it leads to holds a list. A damaged list is refused and
+    recorded nowhere: its fix is the tagger's, and a record here would bar the retry.
     """
-    source = latest(run.directory(source_flow, WD14))
-    if source is None:
+    tagger = tagger_of(run, source_flow)
+    source = None if tagger is None else latest(run.directory(tagger, WD14))
+    if tagger is None or source is None:
         return None
-    retag = stage_command(run, "tag", source_flow, options=NEW_VERSION)
+    retag = stage_command(run, "tag", tagger, options=NEW_VERSION)
     # The image a draft starts from is the draft verb's, never this stage's.
     remedy = f"run `{retag}`, then draft {flow} from the {source_flow} image again"
-    fields, made_by = _route(run, source_flow, source, schema, field_map, remedy)
+    fields, made_by = _route(run, tagger, source, schema, field_map, remedy)
     validate(fields, schema, vocabulary, remedy=remedy)
     return fields, made_by
+
+
+def tagger_of(run: Run, flow: str) -> str | None:
+    """Return the flow holding the tag list `flow` leads to, or None.
+
+    `flow` itself when it holds one, else the flow its newest sheet's `tags_from`
+    leads to, sheet to sheet. An unreadable sheet, a sheet naming no source and a
+    flow seen twice end the walk at None.
+    """
+    seen: set[str] = set()
+    at: str | None = flow
+    while at is not None and at not in seen:
+        if latest(run.directory(at, WD14)) is not None:
+            return at
+        seen.add(at)
+        sheets = run.directory(at, SHEETS)
+        newest = latest(sheets)
+        if newest is None:
+            return None
+        try:
+            at = tagged_from(read(sheets / artifact_name(newest), SHEET_FILE))
+        except Refusal:
+            return None
+    return None
 
 
 def tagged_from(body: Mapping[str, object]) -> str | None:

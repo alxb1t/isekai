@@ -7,7 +7,7 @@ names.
 
 - [x] 1 — The hub
 - [x] 2 — The viewer
-- [ ] 3 — The chain
+- [x] 3 — The chain
 - [ ] 4 — The discard
 
 ## 1 — The hub
@@ -26,10 +26,10 @@ names.
 
 ## 3 — The chain
 
-- [ ] 3.1 Add `tagger_of` and read it in `_from_source`, per [D5](design.md#d5); tests bound to
+- [x] 3.1 Add `tagger_of` and read it in `_from_source`, per [D5](design.md#d5); tests bound to
   `sheet:tags-from:a-source-without-a-list-leads-on`.
   Verify: `uv run pytest tests/test_sheet_stage.py -k leads_on` exits 0.
-- [ ] 3.2 `_caption`, `_wd14` and `_tags` in `isekai/interface/ui/app.py` read the tagger's when the flow holds none, per
+- [x] 3.2 `_caption`, `_wd14` and `_tags` in `isekai/interface/ui/app.py` read the tagger's when the flow holds none, per
   [D5](design.md#d5); tests in `tests/test_ui_api.py` bound to `ui:source:a-two-hop-sheet-shows-the-taggers-caption` and
   `ui:source:a-borrowed-sheet-shows-the-taggers-lists`.
   Verify: `uv run pytest tests/test_ui_api.py -k taggers` exits 0.

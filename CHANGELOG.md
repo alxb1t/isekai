@@ -14,6 +14,8 @@ its new digest.
   right; the library row draws no chip per flow, though the API keeps each flow's counts (0096 D1, D2).
 - The viewer's frame keeps the window's size while an image loads, and its title, without the seed on the hub and in
   the drawer, is one line cut by an ellipsis; Compare's pick stays inside the window, its rows scrolling (0096 D3, D4).
+- A flow drafted from a drafted flow follows `tags_from` sheet to sheet to the flow that tagged, so its sheet is filled
+  and Review shows that flow's caption and both tag lists, instead of an empty sheet and no aids (0096 D5).
 
 ## [0.62.2] - 2026-11-03
 
