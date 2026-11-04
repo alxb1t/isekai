@@ -211,7 +211,7 @@ function view(source: HubSource, flow: string, index?: number): void {
   viewing.value = {
     images: images.map((one) => ({
       src: imageAt(address(one)),
-      name: `${source.name} · ${flow} · v${one.version} · seed ${one.seed}`,
+      name: `${source.name} · ${flow} · v${one.version}`,
     })),
     start: index ?? images.length - 1,
     open: (at) => {
@@ -567,7 +567,7 @@ onUnmounted(() => {
             >
               <img
                 :src="thumbAt({ collection, digest: source.digest, flow, ...one })"
-                :alt="`${source.name} ${flow} v${one.version} seed ${one.seed}`"
+                :alt="`${source.name} ${flow} v${one.version}`"
                 loading="lazy"
               />
               <span class="renders__badge mono">v{{ one.version }}</span>

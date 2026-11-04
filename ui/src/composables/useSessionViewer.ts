@@ -22,7 +22,7 @@ export function useSessionViewer(
     return (layout().cells[at] ?? []).flatMap((cell) =>
       cell.images.map((one) => ({
         src: imageAt({ collection: collection(), ...one }),
-        name: `${one.flow} · v${one.version} · seed ${one.seed}`,
+        name: `${one.flow} · v${one.version}`,
       })),
     )
   }

@@ -6,7 +6,7 @@ names.
 ## Progress
 
 - [x] 1 — The hub
-- [ ] 2 — The viewer
+- [x] 2 — The viewer
 - [ ] 3 — The chain
 - [ ] 4 — The discard
 
@@ -20,7 +20,7 @@ names.
 
 ## 2 — The viewer
 
-- [ ] 2.1 `.viewer__frame`, `.viewer__title` and the pick in `ui/src/app.css`, and the hub's and the drawer's titles, per
+- [x] 2.1 `.viewer__frame`, `.viewer__title` and the pick in `ui/src/app.css`, and the hub's and the drawer's titles, per
   [D3](design.md#d3) and [D4](design.md#d4); `ui/design/spec.md`'s viewer and pick lines say so.
   Verify: `grep -c 'seed \${' ui/src/views/Hub.vue` prints `0`, `sed -n '/^\.viewer__title {/,/}/p' ui/src/app.css | grep -c 'contain: inline-size'` prints `1`, and `uv run python -m tools.typecheck_ui` exits 0.
 

@@ -1616,13 +1616,16 @@ dialog::backdrop {
 
 /* Compare with…'s tiles, at a Renders tile's size, each named under it. */
 /* A row per flow, its tiles in one line: `j k` keep the column. The longest row
-   sets the width; the head, cut at its lines' ends, never does. */
+   sets the width; the head, cut at its lines' ends, never does. Past the window's
+   height the rows scroll inside. */
 .pick {
   display: flex;
   flex-direction: column;
   gap: 20px;
   min-width: 480px;
   max-width: calc(100vw - 96px);
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
 }
 
 .pick__head {
@@ -1663,20 +1666,28 @@ dialog::backdrop {
   color: var(--ink-2);
 }
 
+/* No name widens the dialog: the title is one line, cut by an ellipsis. */
 .viewer__title {
+  contain: inline-size;
   margin: 0 0 12px;
+  overflow: hidden;
   font-size: 11px;
   color: var(--ink-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* The frame keeps its size while an image loads; the image centres in it. */
 .viewer__frame {
-  max-width: calc(100vw - 64px);
-  max-height: calc(100vh - 96px);
+  display: flex;
+  width: calc(100vw - 64px);
+  height: calc(100vh - 96px);
   overflow: auto;
 }
 
 .viewer__image {
   display: block;
+  margin: auto;
   max-width: calc(100vw - 64px);
   max-height: calc(100vh - 96px);
   cursor: zoom-in;
