@@ -2165,6 +2165,13 @@ def test_a_sheet_filled_from_another_flows_tags_shows_that_flows_caption(
     assert body["caption_from"] == FLOW
     assert body["caption_command"] is None
 
+    # A tag list of conjure's own leaves its sheet's source the caption's.
+    tag_wd14(made, CONJURE, fake_tagger)
+    tagged = client.get(route).json()
+
+    assert tagged["caption"] == "Dark brown hair, brown eyes."
+    assert tagged["caption_from"] == FLOW
+
 
 def _two_hops(made: Run, vocabulary: Vocabulary) -> str:
     """Fill conjure from summon's tags and flat from conjure's; return flat's route."""

@@ -133,7 +133,7 @@ from isekai.pipeline.review import (
     waiting_edit,
 )
 from isekai.pipeline.review import state as review_state
-from isekai.pipeline.sheet import tagger_of
+from isekai.pipeline.sheet import sheet_source, tagger_of
 from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.vocabulary import Vocabulary
@@ -1300,9 +1300,14 @@ def _caption(one: Held) -> tuple[Path | None, str | None]:
 
 
 def _listed(one: Held, stage: str) -> tuple[Path | None, str]:
-    """Return `one`'s newest `stage` artifact, else its tagger's, and whose it is."""
+    """Return `one`'s newest `stage` artifact, else its tagger's, and whose it is.
+
+    The walk starts at the flow `one`'s newest sheet names, never at `one`'s own
+    flow, so a flow holding a tag list of its own still borrows what it lacks.
+    """
     own = latest_artifact(one.directory(stage))
-    tagger = None if own is not None else tagger_of(one.run, one.flow.id)
+    source = None if own is not None else sheet_source(one.run, one.flow.id)
+    tagger = None if source is None else tagger_of(one.run, source)
     if tagger is None:
         return own, one.flow.id
     return latest_artifact(one.run.directory(tagger, stage)), tagger

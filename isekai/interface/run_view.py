@@ -128,8 +128,10 @@ def _producer_of(path: Path) -> str:
     if origin is not None:
         if not isinstance(origin, int):
             return "unreadable"
-        # A sheet filled from another flow's tag list counts in that flow's `wd14/`.
-        borrowed = tagged_from(body)
+        # A sheet filled from another flow's tag list counts in the `wd14/` of the
+        # flow `tags_from` leads to: `listed_from` where it leads on, else itself.
+        listed = producer.get("listed_from")
+        borrowed = listed if isinstance(listed, str) else tagged_from(body)
         parts.append(
             f"from {borrowed}/{origin:03d}" if borrowed else f"from {origin:03d}"
         )

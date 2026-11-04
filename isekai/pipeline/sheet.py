@@ -288,8 +288,10 @@ def _from_source(
 ) -> tuple[dict[str, list[str]], SheetProducer] | None:
     """Return the checked fields routed from the list `source_flow` leads to, and who.
 
-    None when no flow it leads to holds a list. A damaged list is refused and
-    recorded nowhere: its fix is the tagger's, and a record here would bar the retry.
+    None when no flow it leads to holds a list. A list `source_flow` does not
+    hold itself is recorded as `listed_from`, so the sheet names the file it
+    came from. A damaged list is refused and recorded nowhere: its fix is the
+    tagger's, and a record here would bar the retry.
     """
     tagger = tagger_of(run, source_flow)
     source = None if tagger is None else latest(run.directory(tagger, WD14))
@@ -300,6 +302,8 @@ def _from_source(
     remedy = f"run `{retag}`, then draft {flow} from the {source_flow} image again"
     fields, made_by = _route(run, tagger, source, schema, field_map, remedy)
     validate(fields, schema, vocabulary, remedy=remedy)
+    if tagger != source_flow:
+        made_by["listed_from"] = tagger
     return fields, made_by
 
 
@@ -316,15 +320,24 @@ def tagger_of(run: Run, flow: str) -> str | None:
         if latest(run.directory(at, WD14)) is not None:
             return at
         seen.add(at)
-        sheets = run.directory(at, SHEETS)
-        newest = latest(sheets)
-        if newest is None:
-            return None
-        try:
-            at = tagged_from(read(sheets / artifact_name(newest), SHEET_FILE))
-        except Refusal:
-            return None
+        at = sheet_source(run, at)
     return None
+
+
+def sheet_source(run: Run, flow: str) -> str | None:
+    """Return the flow `flow`'s newest sheet names as `tags_from`, or None.
+
+    A flow with no sheet, an unreadable sheet and a sheet naming no source give
+    None.
+    """
+    sheets = run.directory(flow, SHEETS)
+    newest = latest(sheets)
+    if newest is None:
+        return None
+    try:
+        return tagged_from(read(sheets / artifact_name(newest), SHEET_FILE))
+    except Refusal:
+        return None
 
 
 def tagged_from(body: Mapping[str, object]) -> str | None:

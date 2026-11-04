@@ -721,6 +721,7 @@ def test_a_sheet_is_filled_from_the_named_flows_tag_list(
     assert body["fields"]["hair_silhouette"] == ["long hair"]
     assert body["producer"]["tags_from"] == FLOW
     assert body["producer"]["from"] == 1
+    assert "listed_from" not in body["producer"]
     assert not (run.path / TARGET / "wd14").exists()
 
 
@@ -778,6 +779,7 @@ def test_a_source_without_a_list_leads_on_to_the_flow_that_tagged(
     assert body["fields"]["hair_colour"] == ["brown hair"]
     assert body["producer"]["tags_from"] == MIDDLE
     assert body["producer"]["from"] == 1
+    assert body["producer"]["listed_from"] == FLOW
 
 
 @pytest.mark.spec("sheet:tags-from:a-source-without-a-list-leads-on")
