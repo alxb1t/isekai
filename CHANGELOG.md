@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- The hub's focused cell grows no line: "prepared · the tick stays" is gone and its `↵` hint sits at the cell's top
+  right; the library row draws no chip per flow, though the API keeps each flow's counts (0096 D1, D2).
+
 ## [0.62.2] - 2026-11-03
 
 Gate: local 0m35s · CI not read under mf-ship · 0.62.1: local 0m30s · CI not read under mf-ship

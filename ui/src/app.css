@@ -849,8 +849,8 @@ button.session__tile {
   gap: 16px;
 }
 
-.library__head .library__chips {
-  flex: 1;
+.library__head > .library__when {
+  margin-left: auto;
 }
 
 .library__thumbs {
@@ -866,21 +866,6 @@ button.session__tile {
   object-fit: cover;
   background: var(--placeholder);
   border-radius: 3px;
-}
-
-.library__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.library__chip {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 2px 8px;
-  border: 1px solid var(--chip-line);
-  border-radius: 4px;
-  color: var(--ink-1b);
 }
 
 .library__when {
@@ -1756,6 +1741,7 @@ dialog::backdrop {
 
 /* A row's pictures sit at its cells' foot, level whatever text stands above them. */
 .hub__cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1786,7 +1772,9 @@ dialog::backdrop {
   min-width: 0;
 }
 
-.hub__source > .hub__action {
+/* A focused cell's one action takes no line, so focus never grows a row. */
+.hub__source > .hub__action,
+.hub__line > .hub__action {
   position: absolute;
   top: 10px;
   right: 8px;

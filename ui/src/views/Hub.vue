@@ -543,11 +543,6 @@ onUnmounted(() => {
                 >{{ word(source, flow) }}</span
               >
               <span
-                v-if="focused(row, column + 1) && locked(cell(source, flow))"
-                class="hub__reason"
-                >prepared · the tick stays</span
-              >
-              <span
                 v-if="focused(row, column + 1) && hint(source, flow)"
                 class="hub__action mono"
                 >{{ hint(source, flow) }}</span

@@ -13,7 +13,10 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
 ) -> None:
     page.goto(served.url)
     expect(page.locator(".library__row[data-collection]").first).to_be_focused()
-    page.locator(".library__row", has_text=served.collection).focus()
+    row = page.locator(".library__row", has_text=served.collection)
+    # The row draws no chip per flow, though the collection holds an approval.
+    expect(row).not_to_contain_text("approved")
+    row.focus()
     page.keyboard.press("Enter")
     expect(page).to_have_url(served.hub)
     expect(page.locator(".appbar__place")).to_have_text(served.collection)
