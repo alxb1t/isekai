@@ -7,6 +7,7 @@ this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 import io
 import json
 import re
+import shutil
 from dataclasses import replace
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from isekai.foundation.run import (
 )
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
+from isekai.pipeline import sheet as sheet_stage
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import (
@@ -1580,6 +1582,52 @@ def test_discarding_an_approved_flow_is_refused_and_changes_nothing(
         discard(run, FLOW)
 
     assert snapshot(run.directory(FLOW, "review")) == before
+
+
+@pytest.mark.spec("review:discard:a-drafted-draft-is-undone-whole")
+def test_a_drafted_draft_is_undone_whole_and_a_tagged_flows_alone(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = load_flow(CONJURE)
+    sheet_stage.sheet(
+        run,
+        CONJURE,
+        conjure.schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=conjure.tagger,
+        flow_digest=conjure.digest,
+        tags_from=FLOW,
+    )
+    drafted = draft_from(run, CONJURE, FLOW, 1, conjure.schema)
+
+    assert discard(run, CONJURE) == drafted
+    assert not run.directory(CONJURE).exists()
+
+    # The drafting's sheet beside a caption of the flow's own stays.
+    written, _ = sheet_stage.sheet(
+        run,
+        CONJURE,
+        conjure.schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=conjure.tagger,
+        flow_digest=conjure.digest,
+        tags_from=FLOW,
+    )
+    caption(run, FakeReader(prose="Short wavy hair."), flow=CONJURE)
+    draft_from(run, CONJURE, FLOW, 1, conjure.schema)
+    discard(run, CONJURE)
+    assert written is not None and written.exists()
+    shutil.rmtree(run.directory(CONJURE))
+
+    # A flow with its own tagged sheet keeps it: the draft alone goes.
+    _conjure(run, vocabulary)
+    kept = draft_from(run, CONJURE, FLOW, 1, conjure.schema)
+    assert discard(run, CONJURE) == kept
+    assert not kept.exists()
+    assert versions(run.directory(CONJURE, "sheets")) == [1]
 
 
 def _revise_verb(vocabulary: Vocabulary, *images: Path) -> tuple[int, str]:

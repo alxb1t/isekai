@@ -16,6 +16,9 @@ its new digest.
   the drawer, is one line cut by an ellipsis; Compare's pick stays inside the window, its rows scrolling (0096 D3, D4).
 - A flow drafted from a drafted flow follows `tags_from` sheet to sheet to the flow that tagged, so its sheet is filled
   and Review shows that flow's caption and both tag lists, instead of an empty sheet and no aids (0096 D5).
+- Discarding a draft drafted from another flow's image, in a flow holding only it and the sheet drafting wrote, takes
+  the sheet and the flow's directory too, so drafting again is one key; the UI's comments say what they decide rather
+  than cite a past design's id (0096 D6, D7).
 
 ## [0.62.2] - 2026-11-03
 

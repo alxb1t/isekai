@@ -1958,7 +1958,7 @@ dialog::backdrop {
   width: 240px;
 }
 
-/* A grid, so `j k` step its rows (D3); a column is a tile's 124px, its padding and border. */
+/* A grid, so `j k` step its rows as on every grid; a column is a tile's 124px, its padding and border. */
 .import__tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, 142px);

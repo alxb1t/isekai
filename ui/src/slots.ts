@@ -59,7 +59,7 @@ export function nearest(row: boolean[], column: number): number {
 }
 
 /**
- * Return ④'s focus after `move`, and the column a row move keeps (D6).
+ * Return ④'s focus after `move`, and the column a row move keeps, as on every grid.
  *
  * `enabled` holds a row per stop row: the count's `−` `+`, then each slot. A row move
  * keeps the column the focus is in, or from a one-stop row `kept`, the one it last

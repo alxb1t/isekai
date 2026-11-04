@@ -21,7 +21,7 @@ function change(next: Slot[]): void {
   emit('change', read(next))
 }
 
-/* The count's `−` and `+`; `−` disabling at one image passes its focus along its row (D6). */
+/* The count's `−` and `+`; `−` disabling at one image passes its focus along its row, so ④ never loses it. */
 const minus = ref<HTMLButtonElement | null>(null)
 const plus = ref<HTMLButtonElement | null>(null)
 
