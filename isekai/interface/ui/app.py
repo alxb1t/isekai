@@ -1295,14 +1295,8 @@ def _caption(one: Held) -> tuple[Path | None, str | None]:
     Where `one` holds no caption, the newest caption of the flow its sheets lead
     to is borrowed (`tagger_of`). An unreadable sheet borrows nothing.
     """
-    own = latest_artifact(one.directory(CAPTIONS))
-    if own is not None:
-        return own, None
-    tagger = tagger_of(one.run, one.flow.id)
-    if tagger is None or tagger == one.flow.id:
-        return None, None
-    borrowed = latest_artifact(one.run.directory(tagger, CAPTIONS))
-    return (borrowed, tagger) if borrowed is not None else (None, None)
+    path, flow = _listed(one, CAPTIONS)
+    return path, None if path is None or flow == one.flow.id else flow
 
 
 def _listed(one: Held, stage: str) -> tuple[Path | None, str]:
