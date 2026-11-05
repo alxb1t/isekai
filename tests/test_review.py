@@ -979,6 +979,10 @@ def test_a_copy_carries_the_sources_fields_and_the_targets_schema_validates_them
         approve(run, CONTROL, narrower, vocabulary, source=FLOW)
     assert schema.fields[0].name in str(refused.value)
     assert not (run.path / CONTROL / "review").exists()
+    # Re-editing the source cannot fit a narrower schema; the target's own sheet can.
+    assert "delete it from that draft" not in str(refused.value)
+    assert stage_command(run, "review", CONTROL) in str(refused.value)
+    assert stage_command(run, "approve", CONTROL) in str(refused.value)
 
     copied, warnings = approve(run, CONTROL, schema, vocabulary, source=FLOW)
 

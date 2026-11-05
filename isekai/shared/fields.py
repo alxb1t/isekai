@@ -26,6 +26,7 @@ def validate(
     *,
     excluded: frozenset[str] = frozenset(),
     remedy: str | None = None,
+    schema_remedy: str | None = None,
 ) -> None:
     """Refuse a sheet that is not exactly the schema's fields of canonical tags.
 
@@ -34,14 +35,17 @@ def validate(
     not in the vocabulary's prediction set, a tag is not in its spelling, or a
     tag is on the field map's `excluded` list. An empty field is none of those.
     `remedy` replaces each edit-the-sheet advice for a caller whose sheet does
-    not exist yet, so editing it is no fix.
+    not exist yet, so editing it is no fix. `schema_remedy`, when given, replaces
+    it for the missing and extra fields alone, for a caller whose tags can be
+    fixed where its fields cannot.
     """
+    shape_remedy = schema_remedy or remedy
     missing = [name for name in schema.names if name not in fields]
     if missing:
         raise Refusal(
             f"the sheet is missing {', '.join(missing)}; "
             + (
-                remedy
+                shape_remedy
                 or "add the field with an empty list -- an empty field is a "
                 "legal answer, a missing one is not"
             )
@@ -51,7 +55,10 @@ def validate(
         raise Refusal(
             f"the sheet carries {', '.join(sorted(extra))}, which schema "
             f"{schema.name} does not declare; "
-            + (remedy or "remove the entry, or write a flow whose schema declares it")
+            + (
+                shape_remedy
+                or "remove the entry, or write a flow whose schema declares it"
+            )
         )
     outside = [
         (name, tag)

@@ -1053,7 +1053,9 @@ def _copy_approval(
     ):
         require(path, body, key, shape, remedy)
     fields = {name: list(tags) for name, tags in body["fields"].items()}
-    # Neither flow has a draft to edit, so the fix goes through `source`'s own.
+    # Neither flow has a draft to edit, so a tag's fix goes through `source`'s own;
+    # a field `flow`'s schema does not fit is no edit to `source`, so it goes
+    # through `flow`'s own sheet instead.
     copy = stage_command(run, "approve", flow, options=("--from", source))
     validate(
         fields,
@@ -1062,6 +1064,10 @@ def _copy_approval(
         excluded=excluded,
         remedy=f"run {_again(run, source)}, delete it from that draft, run "
         f"`{stage_command(run, 'approve', source)}`, then `{copy}` again",
+        schema_remedy=f"copy from a flow whose schema declares {schema.name}'s "
+        f"fields, or run "
+        f"`{stage_command(run, STAGE, flow)}`, edit the draft, then "
+        f"`{stage_command(run, 'approve', flow)}` to approve {flow} on its own",
     )
 
     copied: ReviewApproved = {
