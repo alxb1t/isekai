@@ -10,6 +10,15 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.69.1] - 2026-11-05
+
+Gate: local 0m33s · CI not read under mf-ship · 0.69.0: local 0m27s · CI not read under mf-ship
+
+- A key's move to the render drawer's first row scrolls it to its top, to its last row to its foot, so the timer
+  and Stop show; a grid's first row brings its collection's name into view (0105 D1, D2).
+- A key's move to the import sheet's first row of tiles scrolls its body to its top, so the sources' label shows, and
+  to its last row to its foot (0105 D3).
+
 ## [0.69.0] - 2026-11-05
 
 Gate: local 0m27s · CI not read under mf-ship · 0.68.0: local 0m26s · CI not read under mf-ship
