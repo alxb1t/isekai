@@ -13,11 +13,19 @@ import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import type { Move } from '../grid'
 import { isField, modded, plain } from '../stores/keys'
-import { after, discards, heir, orphans, removal, stepped, withheld } from '../staging'
+import {
+  type Tile,
+  after,
+  discards,
+  handOff,
+  removal,
+  requeue,
+  stepped,
+  withheld,
+} from '../staging'
 import { useLiveStore } from '../stores/live'
 import ImageViewer, { type Shown } from './ImageViewer.vue'
 import KeyHint from './KeyHint.vue'
-import type { StagedFile } from '../types'
 
 /* The New collection and Add sources sheet (design spec J1, J7): files chosen in the
    browser's dialog, each sent in its own request with its own bar, then read and
@@ -26,21 +34,6 @@ import type { StagedFile } from '../types'
    it, the sheet names a new one. */
 const props = defineProps<{ collection?: string }>()
 const emit = defineEmits<{ close: []; imported: [collection: string] }>()
-
-/* `queued` before its upload starts; `waiting` and `converting` are the server's. */
-type Phase = 'queued' | 'uploading' | 'waiting' | 'converting' | 'read' | 'refused'
-
-interface Tile {
-  key: number
-  file: File
-  /* The server's id for this upload, once its request is answered. */
-  upload: string | null
-  phase: Phase
-  progress: number
-  result: StagedFile | null
-  refusal: string | null
-  asIs: boolean
-}
 
 /* One file, one request, its body the file itself, answered with its upload id
    once its bytes land. `XMLHttpRequest` rather than `fetch`, because only it
@@ -160,15 +153,7 @@ watch(() => live.files, settle)
    tile holds: removed as the copy was read, so the copy's bytes are staged nowhere. */
 function settle(): void {
   for (const one of tiles.value) apply(one)
-  const lost = orphans(tiles.value.map((tile) => tile.result))
-  for (const index of lost) {
-    const one = tiles.value[index]
-    one.upload = null
-    one.phase = 'queued'
-    one.progress = 0
-    one.result = null
-  }
-  if (lost.length > 0) pump()
+  if (requeue(tiles.value).length > 0) pump()
 }
 
 /* Put its upload's reported state on a tile. Its upload's answer, not the
@@ -259,23 +244,22 @@ function move(to: Move): void {
   if (focused.value !== null) focusTile(stepped(focused.value, shown.value.length, columns(), to))
 }
 
+/* The tiles whose removal is in flight: a second press removes nothing. */
+const leaving = new Set<number>()
+
 /* Take a chosen file out of the import, unasked: nothing is committed yet, so nothing is lost. */
 async function remove(one: Tile): Promise<void> {
-  const from = removal(one.phase, one.result?.state)
+  const from = removal(one.phase, one.result?.state, leaving.has(one.key))
   if (from === null || committing.value) return
   const next = after(shown.value.indexOf(one), shown.value.length)
-  const results = tiles.value.map((tile) => tile.result)
-  const copy = one.result ? tiles.value[heir(results, one.result.name)] : undefined
+  leaving.add(one.key)
   removing.value += 1
   try {
-    if (from === 'staging' && copy) {
-      // A copy still chosen takes the file over, under the removed tile's upload.
-      copy.upload = one.upload
-      copy.result = one.result
-      copy.asIs = one.asIs
-    } else if (from === 'staging' && staging.value !== null && one.result) {
+    // A copy still chosen takes the file over, under the removed tile's upload.
+    const staged = from === 'staging' ? handOff(tiles.value, one) : null
+    if (staged !== null && staging.value !== null) {
       try {
-        await removeStaged(staging.value, one.result.name)
+        await removeStaged(staging.value, staged)
       } catch (reason) {
         refusal.value = (reason as Error).message
         return
@@ -288,6 +272,7 @@ async function remove(one: Tile): Promise<void> {
     focusTile(next)
   } finally {
     // Only now may Import commit: a copy the removal left standing is queued again.
+    leaving.delete(one.key)
     removing.value -= 1
   }
 }

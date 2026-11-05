@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- A second `×` or `⌫` on a file whose removal is in flight does nothing, so it sends no second removal; the removed
+  file's hand-off to its copy and a lost copy's reset are each held by a unit test (0099 D1, D2, D3).
+
 ## [0.63.0] - 2026-11-04
 
 Gate: local 0m32s · CI not read under mf-ship · 0.62.2: local 0m35s · CI not read under mf-ship

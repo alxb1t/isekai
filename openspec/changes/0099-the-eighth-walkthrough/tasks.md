@@ -5,21 +5,21 @@ names.
 
 ## Progress
 
-- [ ] 1 — The cards
+- [x] 1 — The cards
 - [ ] 2 — ⇧A
 - [ ] 3 — The edges
 
 ## 1 — The cards
 
-- [ ] 1.1 In `ui/src/staging.ts`, take `Phase` and `Tile` over from `ui/src/components/ImportSheet.vue`, give `removal`
+- [x] 1.1 In `ui/src/staging.ts`, take `Phase` and `Tile` over from `ui/src/components/ImportSheet.vue`, give `removal`
   its `leaving` parameter, its `phase` still a `string`, and add `handOff` and `requeue`, per [D1](design.md#d1),
   [D2](design.md#d2), [D3](design.md#d3).
   Verify: `grep -n -e '^export type Phase' -e '^export interface Tile' -e '^export function handOff' -e '^export function requeue' -e 'leaving = false' ui/src/staging.ts` prints a line for each.
-- [ ] 1.2 In `ImportSheet.vue`, delete its own `Phase` and `Tile`, import `Tile` from `../staging`, guard `remove()` by
+- [x] 1.2 In `ImportSheet.vue`, delete its own `Phase` and `Tile`, import `Tile` from `../staging`, guard `remove()` by
   `leaving`, call `handOff` in `remove()` and `requeue` in `settle()`, and drop `heir`, `orphans` and `StagedFile` from its imports,
   per [D1](design.md#d1), [D2](design.md#d2), [D3](design.md#d3).
   Verify: `grep -n -e 'leaving.has(one.key)' -e 'handOff(tiles.value, one)' -e 'requeue(tiles.value)' ui/src/components/ImportSheet.vue` prints a line for each.
-- [ ] 1.3 In `ui/src/staging.test.ts`: under `ui:sheet:a-chosen-file-is-removed-alone`, `removal(…, true)` is `null`;
+- [x] 1.3 In `ui/src/staging.test.ts`: under `ui:sheet:a-chosen-file-is-removed-alone`, `removal(…, true)` is `null`;
   under `ui:sheet:a-removed-files-copy-keeps-it`, `handOff` gives a copy the upload, result and `asIs` and returns
   `null`, else `'b.jpg'`, and `requeue` clears and queues a lone copy, leaving a held one as it was.
   Verify: `npm --prefix ui run test -- src/staging.test.ts` exits 0.
