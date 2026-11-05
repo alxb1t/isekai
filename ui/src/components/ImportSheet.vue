@@ -12,7 +12,7 @@ import {
 import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import type { Move } from '../grid'
-import { isField, modded, plain } from '../stores/keys'
+import { isField, modded, plain, shifted } from '../stores/keys'
 import {
   type Tile,
   after,
@@ -359,6 +359,13 @@ useKeys('overlay', [
     run: () => void importAll(),
     inField: true,
   },
+  {
+    id: 'add-files',
+    keys: [shifted('KeyA')],
+    label: 'add files',
+    run: () => picker.value?.click(),
+    when: () => !committing.value,
+  },
   ...(
     [
       ['tile-left', plain('KeyH', 'ArrowLeft'), 'column-'],
@@ -428,7 +435,7 @@ onUnmounted(() => {
         :disabled="committing"
         @click="picker?.click()"
       >
-        Add files…
+        Add files…<KeyHint command="add-files" />
       </button>
       <input
         ref="picker"

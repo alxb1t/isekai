@@ -31,10 +31,16 @@ def _nef(path: Path) -> Path:
 
 
 def _choose(page: Page, served: Served, files: list[Path]) -> None:
-    """Open New collection on Home and choose `files` in the dialog it opens."""
+    """Open New collection on Home and choose `files` in the dialog `⇧A` opens.
+
+    The dialog the sheet opens as it mounts is answered with nothing first.
+    """
     page.goto(served.url)
-    with page.expect_file_chooser() as chooser:
+    with page.expect_file_chooser() as opened:
         page.get_by_role("button", name="New collection").click()
+    opened.value.set_files([])
+    with page.expect_file_chooser() as chooser:
+        page.keyboard.press("Shift+A")
     chooser.value.set_files([str(path) for path in files])
 
 
@@ -100,6 +106,7 @@ def test_first_start_shows_new_collection_under_the_privacy_line(
 
 @pytest.mark.spec("ui:sheet:each-file-shows-its-progress")
 @pytest.mark.spec("ui:sheet:import-waits-for-reading")
+@pytest.mark.spec("ui:sheet:shift-a-opens-the-file-dialog")
 def test_each_chosen_file_shows_its_upload_then_its_result(
     page: Page, served: Served, tmp_path: Path
 ) -> None:
@@ -113,6 +120,7 @@ def test_each_chosen_file_shows_its_upload_then_its_result(
 
     _choose(page, served, files)
 
+    expect(page.get_by_role("button", name="Add files…")).to_contain_text("⇧A")
     heic = _tile(page, "plain.heic")
     expect(_tile(page, "held.jpg")).to_have_attribute("data-phase", "uploading")
     expect(heic).to_have_attribute("data-phase", "waiting")

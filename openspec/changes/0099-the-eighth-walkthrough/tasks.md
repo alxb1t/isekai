@@ -6,7 +6,7 @@ names.
 ## Progress
 
 - [x] 1 — The cards
-- [ ] 2 — ⇧A
+- [x] 2 — ⇧A
 - [ ] 3 — The edges
 
 ## 1 — The cards
@@ -26,14 +26,14 @@ names.
 
 ## 2 — ⇧A
 
-- [ ] 2.1 In `ImportSheet.vue`, add the `add-files` command and the hint on *Add files…*, per [D4](design.md#d4),
+- [x] 2.1 In `ImportSheet.vue`, add the `add-files` command and the hint on *Add files…*, per [D4](design.md#d4),
   importing `shifted` from `../stores/keys`.
   Verify: `grep -n -e "id: 'add-files'" -e 'KeyHint command="add-files"' ui/src/components/ImportSheet.vue` prints a line for each.
-- [ ] 2.2 In `tests/e2e/test_import.py`, `_choose` answers the mount's chooser with `set_files([])`, then takes the chooser
+- [x] 2.2 In `tests/e2e/test_import.py`, `_choose` answers the mount's chooser with `set_files([])`, then takes the chooser
   from `page.keyboard.press("Shift+A")`; `test_each_chosen_file_shows_its_upload_then_its_result` gains the key
   `ui:sheet:shift-a-opens-the-file-dialog` and `expect(…"Add files…")).to_contain_text("⇧A")`.
   Verify: `grep -n -e 'press("Shift+A")' -e 'ui:sheet:shift-a-opens-the-file-dialog' tests/e2e/test_import.py` prints a line for each.
-- [ ] 2.3 In `ui/design/spec.md`, J1·4's `            [ Add files… ] ┐` → `         [ Add files… ⇧A ] ┐`, and §7's
+- [x] 2.3 In `ui/design/spec.md`, J1·4's `            [ Add files… ] ┐` → `         [ Add files… ⇧A ] ┐`, and §7's
   `| dialogs |` row's `esc cancel, held while an import commits` → `esc cancel, held while an import commits · ⇧A Add
   files…, in the import sheet`.
   Verify: `grep -n -F -e '[ Add files… ⇧A ] ┐' -e 'commits · ⇧A Add files…, in the import sheet' ui/design/spec.md` prints a line for each.
