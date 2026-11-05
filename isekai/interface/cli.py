@@ -931,6 +931,7 @@ def _per_item(
                     flows[name].schema,
                     vocabulary(),
                     source=args.source,
+                    excluded=field_map().excluded,
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)

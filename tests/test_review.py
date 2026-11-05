@@ -579,6 +579,26 @@ def test_a_tag_absent_from_the_vocabulary_refuses_approval(
     assert approved_versions(run.path / FLOW / "review") == []
 
 
+@pytest.mark.spec("field-map:excluded:approval-refuses-an-excluded-tag")
+def test_an_excluded_tag_refuses_approval_naming_the_remedy(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    _edit(draft, accessories=["glasses"])
+    frozen = draft.read_bytes()
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary, excluded=frozenset({"glasses"}))
+
+    message = str(refused.value)
+    assert "glasses" in message
+    assert "accessories" in message
+    assert "delete it from the draft" in message
+    assert draft.read_bytes() == frozen
+    assert approved_versions(run.path / FLOW / "review") == []
+
+
 @pytest.mark.spec("review:validation:message-states-the-prediction-set")
 def test_the_refusal_does_not_claim_the_tag_is_unreal(
     run: Run, schema: Schema, vocabulary: Vocabulary
@@ -980,6 +1000,30 @@ def test_a_copied_approval_names_its_flow_and_the_approval_it_came_from(
     assert body["flow"] == CONTROL
     assert body["producer"]["copied_from"] == {"flow": FLOW, "approval": 1}
     assert body["sheet"] == read(source, APPROVED_FILE)["sheet"]
+
+
+@pytest.mark.spec("field-map:excluded:approval-refuses-an-excluded-tag")
+def test_an_excluded_tag_refuses_a_copied_approval(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    _edit(draft, accessories=["glasses"])
+    approve(run, FLOW, schema, vocabulary)
+
+    with pytest.raises(Refusal) as refused:
+        approve(
+            run,
+            CONTROL,
+            schema,
+            vocabulary,
+            source=FLOW,
+            excluded=frozenset({"glasses"}),
+        )
+
+    assert "glasses" in str(refused.value)
+    assert "accessories" in str(refused.value)
+    assert not (run.path / CONTROL / "review").exists()
 
 
 @pytest.mark.spec("run-directory:layout:a-named-source-is-recorded")

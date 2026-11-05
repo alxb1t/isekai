@@ -60,11 +60,16 @@ own artifacts, and each tagger's refusal is collected on its own.**
 ### D2 · A table fills the sheet
 
 **The sheet is filled from WD14's tags by one authored table, `config/field_map.json`, read from tag to
-field. No model decides a sheet.**
+field. No model decides a sheet.** No tag on its excluded list — `photorealistic` and every tag containing
+`tattoo` — reaches a field: no group holds one, the tag search skips one, and approval and sheet preparation
+refuse one.
 
 - **Why:** WD14's tags are all in the vocabulary, because its label file *is* the vocabulary, and a table
   cannot invent a tag. The router placed 73% of the tags offered, and 90% of those survived review.
-- **Made by:** `0021`.
+- **Why those excluded:** neither describes the person: `photorealistic` is how a picture was rendered, and a
+  tattoo is outside what `summon` preserves ([D29](#d29--what-summon-preserves)). A sheet routed by an earlier
+  table may still hold one, so approval refuses it rather than routing alone.
+- **Made by:** `0021`, `0101`.
 
 ### D3 · The hand path stays
 

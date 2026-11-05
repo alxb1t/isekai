@@ -900,6 +900,8 @@ def approve(
     schema: Schema,
     vocabulary: Vocabulary,
     source: str | None = None,
+    *,
+    excluded: frozenset[str] = frozenset(),
 ) -> tuple[Path | None, list[str]]:
     """Validate `flow`'s current draft and approve it, returning it and any warnings.
 
@@ -913,7 +915,9 @@ def approve(
     absent tag unreal would overclaim.
     """
     if source is not None:
-        return _copy_approval(run, flow, schema, vocabulary, source), []
+        return _copy_approval(
+            run, flow, schema, vocabulary, source, excluded=excluded
+        ), []
     directory = run.directory(flow, REVIEW)
     draft = current_draft(directory)
     if draft is None:
@@ -938,7 +942,7 @@ def approve(
         if isinstance(held, dict)
         else {}
     )
-    validate(fields, schema, vocabulary)
+    validate(fields, schema, vocabulary, excluded=excluded)
 
     warnings: list[str] = []
     estimate = estimate_tokens(fields, schema)
@@ -998,7 +1002,13 @@ def approve(
 
 
 def _copy_approval(
-    run: Run, flow: str, schema: Schema, vocabulary: Vocabulary, source: str
+    run: Run,
+    flow: str,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    source: str,
+    *,
+    excluded: frozenset[str],
 ) -> Path | None:
     """Write `source`'s latest approval under `flow`, or None if `flow` is in step.
 
@@ -1043,7 +1053,7 @@ def _copy_approval(
     ):
         require(path, body, key, shape, remedy)
     fields = {name: list(tags) for name, tags in body["fields"].items()}
-    validate(fields, schema, vocabulary)
+    validate(fields, schema, vocabulary, excluded=excluded)
 
     copied: ReviewApproved = {
         **body,

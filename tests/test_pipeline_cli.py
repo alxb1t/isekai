@@ -21,6 +21,7 @@ import json
 import os
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -34,7 +35,7 @@ from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
 from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.generate import prompt_artifact
-from isekai.pipeline.review import approve, review
+from isekai.pipeline.review import approve, review, save_draft
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
@@ -669,6 +670,33 @@ def test_approve_cancel_answers_each_run_on_its_own(
         f"{rendered.id}: approve cancelled control-anime-wai, a copy, deleted" in said
     )
     assert f"{cancelled.id}: approve has nothing to cancel in summon-anime-wai" in said
+    assert sorted(path.name for path in review_of.iterdir()) == ["001.draft.json"]
+
+
+@pytest.mark.spec("field-map:excluded:approval-refuses-an-excluded-tag")
+def test_approve_refuses_a_tag_the_wired_field_map_excludes(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    run = open_run(photo, tmp_path / "runs")
+    sheet(run, schema, vocabulary)
+    draft = review(run, "summon-anime-wai")
+    assert draft is not None
+    fields = {**read(draft, DRAFT_FILE)["fields"], "accessories": ["glasses"]}
+    save_draft(run, "summon-anime-wai", fields)
+    wired = _wiring(tmp_path)
+    wired.field_map = lambda _: replace(FIELD_MAP, excluded=frozenset({"glasses"}))
+    err = io.StringIO()
+    wired.err = err
+    parsed = build_parser().parse_args(
+        ["approve", "--flow", "summon-anime-wai", run.id]
+    )
+
+    assert dispatch(parsed, wired) == 1
+
+    assert "'glasses' in accessories" in err.getvalue()
+    review_of = run.directory("summon-anime-wai", "review")
     assert sorted(path.name for path in review_of.iterdir()) == ["001.draft.json"]
 
 

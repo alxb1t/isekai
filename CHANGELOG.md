@@ -12,6 +12,9 @@ its new digest.
 
 - The field map excludes every tattoo tag beside `photorealistic`, and no group routes or browses one: a tattoo is
   outside what `summon` preserves. The table is re-derived at revision 4 (0101 D1, D2).
+- The tag search skips an excluded tag, and approval and sheet preparation refuse one, naming the tag, its field and
+  "delete it from the draft"; a sheet routed by an earlier table can no longer carry one to a prompt (0101 D3–D6).
+- Docs D2 names the excluded list's classes and why (0101 D7).
 
 ## [0.66.0] - 2026-11-05
 

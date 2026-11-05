@@ -24,15 +24,17 @@ def validate(
     schema: Schema,
     vocabulary: Vocabulary,
     *,
+    excluded: frozenset[str] = frozenset(),
     remedy: str | None = None,
 ) -> None:
     """Refuse a sheet that is not exactly the schema's fields of canonical tags.
 
-    Three ways a sheet can be wrong, and each names what to do about it: a field
-    the schema declares is missing, a key the schema does not declare is present,
-    or a tag is not in the vocabulary's prediction set. An empty field is none of
-    those. `remedy` replaces each edit-the-sheet advice for a caller whose sheet
-    does not exist yet, so editing it is no fix.
+    Each way a sheet can be wrong names what to do about it: a field the schema
+    declares is missing, a key the schema does not declare is present, a tag is
+    not in the vocabulary's prediction set, a tag is not in its spelling, or a
+    tag is on the field map's `excluded` list. An empty field is none of those.
+    `remedy` replaces each edit-the-sheet advice for a caller whose sheet does
+    not exist yet, so editing it is no fix.
     """
     missing = [name for name in schema.names if name not in fields]
     if missing:
@@ -75,4 +77,13 @@ def validate(
         raise Refusal(
             f"{listed}: not written in the vocabulary's own spelling; "
             + (remedy or "use lowercase words separated by single spaces")
+        )
+    barred = [
+        (name, tag) for name in schema.names for tag in fields[name] if tag in excluded
+    ]
+    if barred:
+        listed = ", ".join(f"{tag!r} in {name}" for name, tag in barred)
+        raise Refusal(
+            f"{listed}: on the field map's excluded list, which no criterion can hold; "
+            + (remedy or "delete it from the draft")
         )
