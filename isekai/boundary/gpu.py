@@ -132,22 +132,21 @@ def run_gpunit(argv: Sequence[str], say: Say) -> int:
 
     gpunit reads no `.env`, where the key lives, so it is handed one. It runs in
     its own session, so a Ctrl-C at the caller's terminal never cuts a create or
-    a delete halfway. Its output is handed on line by line, so the caller decides
-    how each line reads in its log.
+    a delete halfway. Its output is handed on line by line as it comes, so the
+    caller decides how each line reads in its log.
     """
-    done = subprocess.run(
+    with subprocess.Popen(
         [sys.executable, "-m", "gpunit", *argv],
         cwd=REPOSITORY,
         env=_dotenv(),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        check=False,
         start_new_session=True,
-    )
-    for line in (done.stdout or "").splitlines():
-        say(line)
-    return done.returncode
+    ) as child:
+        for line in child.stdout or ():
+            say(line.removesuffix("\n"))
+    return child.returncode
 
 
 @dataclass(frozen=True)

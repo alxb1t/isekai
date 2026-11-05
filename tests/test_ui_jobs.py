@@ -885,13 +885,14 @@ def test_a_render_verb_that_cannot_start_fails_the_job_and_closes_the_window(
 def test_a_gpunit_verb_runs_in_its_own_session(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    ran: list[tuple[list[str], dict[str, object]]] = []
+    ran: list[tuple[list[str], dict[str, Any]]] = []
+    real = subprocess.Popen
 
-    def recorded(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+    def recorded(argv: list[str], **kwargs: Any) -> subprocess.Popen[str]:  # noqa: ANN401 -- Popen's
         ran.append((argv, kwargs))
-        return subprocess.CompletedProcess(argv, 0)
+        return real([sys.executable, "-c", "pass"], **kwargs)
 
-    monkeypatch.setattr(gpu.subprocess, "run", recorded)
+    monkeypatch.setattr(gpu.subprocess, "Popen", recorded)
 
     assert Volume().down(lambda line: None) == 0
     ((argv, kwargs),) = ran

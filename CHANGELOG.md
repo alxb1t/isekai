@@ -12,6 +12,8 @@ its new digest.
 
 - gpunit moves to `v0.12.0`, whose `volume up` remakes a window volume the provider deleted; the image keeps
   `v0.7.0`'s boot script, its tag pinned on its own, so nothing is rebuilt (0097 D1, D2, D3).
+- gpunit's lines reach the log as gpunit writes them, not once its verb exits, so a window being opened shows its
+  progress and a server that dies mid-verb keeps what was said (0097 D4).
 
 ## [0.63.0] - 2026-11-04
 

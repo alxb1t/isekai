@@ -6,7 +6,7 @@ reason its task names.
 ## Progress
 
 - [x] 1 — The pin
-- [ ] 2 — The lines
+- [x] 2 — The lines
 - [ ] 3 — The reason
 
 ## 1 — The pin
@@ -25,14 +25,14 @@ reason its task names.
 
 ## 2 — The lines
 
-- [ ] 2.1 `run_gpunit` in `isekai/boundary/gpu.py` hands each line to `say` through `subprocess.Popen` per
+- [x] 2.1 `run_gpunit` in `isekai/boundary/gpu.py` hands each line to `say` through `subprocess.Popen` per
   [D4](design.md#d4). In the same edit, `test_a_gpunit_verb_runs_in_its_own_session` in `tests/test_ui_jobs.py` records
   `Popen` and starts the real one on `[sys.executable, "-c", "pass"]`, so no test reaches gpunit; its assertions stay.
   Verify: `grep -n 'done.stdout' isekai/boundary/gpu.py` prints nothing, and `uv run pytest tests/test_ui_jobs.py -k own_session` exits 0.
-- [ ] 2.2 Write `tests/test_gpu.py` with `test_run_gpunit_says_a_line_before_the_verb_exits`, as
+- [x] 2.2 Write `tests/test_gpu.py` with `test_run_gpunit_says_a_line_before_the_verb_exits`, as
   [Tests](design.md#tests) describes, carrying `spec_exempt("structural: gpunit's lines reach say as they come")`.
   Verify: `uv run pytest tests/test_gpu.py` exits 0.
-- [ ] 2.3 Add `tests/test_gpu.py`, after `tests/stages.py`, to the `gpu.py` row's outside list in `isekai/boundary/README.md`'s *Imported by*.
+- [x] 2.3 Add `tests/test_gpu.py`, after `tests/stages.py`, to the `gpu.py` row's outside list in `isekai/boundary/README.md`'s *Imported by*.
   Verify: `grep -c 'tests/stages.py., .tests/test_gpu.py' isekai/boundary/README.md` prints `1`.
 
 ## 3 — The reason
