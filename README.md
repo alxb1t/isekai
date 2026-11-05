@@ -158,6 +158,7 @@ sheet:
 python -m isekai draft --flow summon-anime-wai .data/runs/<run>/summon-anime-wai/outputs/001/1840266731.png
 python -m isekai draft --flow conjure-anime-wai .data/runs/<run>/summon-anime-wai/outputs/001/1840266731.png
 python -m isekai review --discard --flow summon-anime-wai .inputs/me.jpg   # drop a waiting draft
+python -m isekai discard .data/runs/<run>/summon-anime-wai/outputs/001/1840266731.png   # delete one render
 ```
 
 `isekai draft --flow` takes image paths and checks every one before it writes: each run's flow gets a

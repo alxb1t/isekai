@@ -9,7 +9,7 @@ from the repository root.
 - [x] 2 — The verb
 - [x] 3 — The endpoint
 - [x] 4 — The page
-- [ ] 5 — The record
+- [x] 5 — The record
 
 ## 1 — The function
 
@@ -106,23 +106,23 @@ from the repository root.
 
 ## 5 — The record
 
-- [ ] 5.1 In `docs/decisions.md`, amend D25 per [the record](design.md#the-record): the rule's clause, the *Why*
+- [x] 5.1 In `docs/decisions.md`, amend D25 per [the record](design.md#the-record): the rule's clause, the *Why*
   sentence and `` `0106` `` in `Made by:`.
   Verify: `grep -n '⇧⌫' docs/decisions.md` prints one line.
-- [ ] 5.2 In `docs/principles.md`, add [the record](design.md#the-record)'s sentence to the *Known breaks* of *The run
+- [x] 5.2 In `docs/principles.md`, add [the record](design.md#the-record)'s sentence to the *Known breaks* of *The run
   directory is the only channel between stages, and a run's only state*.
   Verify: `grep -n 'discard_render' docs/principles.md` prints one line.
-- [ ] 5.3 In `docs/data-flow.md`, add the `isekai discard` paragraph and edit the UI's writers, per
+- [x] 5.3 In `docs/data-flow.md`, add the `isekai discard` paragraph and edit the UI's writers, per
   [the record](design.md#the-record).
   Verify: `grep -n 'isekai discard <image.png>' docs/data-flow.md` prints one line.
-- [ ] 5.4 In `README.md`'s block holding `isekai draft --flow`, add [the record](design.md#the-record)'s `discard` line.
+- [x] 5.4 In `README.md`'s block holding `isekai draft --flow`, add [the record](design.md#the-record)'s `discard` line.
   Verify: `grep -n '# delete one render' README.md` prints one line.
-- [ ] 5.5 In `isekai/pipeline/README.md`, edit the verbs line and the `generate.py` row per
+- [x] 5.5 In `isekai/pipeline/README.md`, edit the verbs line and the `generate.py` row per
   [the record](design.md#the-record).
   Verify: `grep -n 'and discards one render' isekai/pipeline/README.md` prints one line.
-- [ ] 5.6 In `isekai/interface/README.md`'s file table, edit the `ui/app.py`, `cli.py` and `ui/__init__.py` rows per
+- [x] 5.6 In `isekai/interface/README.md`'s file table, edit the `ui/app.py`, `cli.py` and `ui/__init__.py` rows per
   [the record](design.md#the-record), closing 0091·R3.
   Verify: `grep -n 'GET. and .DELETE …/{id}/files/{name}' isekai/interface/README.md` prints one line.
-- [ ] 5.7 In `isekai/interface/ui/README.md`, add [the record](design.md#the-record)'s *Delete* bullet after the
+- [x] 5.7 In `isekai/interface/ui/README.md`, add [the record](design.md#the-record)'s *Delete* bullet after the
   *Render* bullet.
   Verify: `grep -n 'Delete\*\* on a large view' isekai/interface/ui/README.md` prints one line.

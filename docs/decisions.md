@@ -418,8 +418,9 @@ as it is from a client that is not a browser.**
 ### D25 · Shortcuts match the physical key
 
 **A shortcut is matched on `event.code` and declared once, in the key store:
-a plain letter moves, a command is `⇧` + a letter, a plain letter only where nothing is typed, and Mod — `⌘`
-on macOS, `Ctrl` elsewhere — where a command must reach into a text field. Inside a text field only `Esc`,
+a plain letter moves, a command is `⇧` + a letter, or `⇧⌫`, the large view's Delete, which asks first, a plain
+letter only where nothing is typed, and Mod — `⌘` on macOS, `Ctrl` elsewhere — where a command must reach into a
+text field. Inside a text field only `Esc`,
 `Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;` run, Review's `⌃P`, on macOS Review's `⌃H` `⌃L`,
 which alone move between its panes, and `⌃J` `⌃K`, which move between its fields, and in ④'s seed slots
 `slot-down` and `slot-up`, `j` `k` `↓` `↑`, which move between the slots.**
@@ -429,8 +430,9 @@ which alone move between its panes, and `⌃J` `⌃K`, which move between its fi
   the key list read, so they cannot disagree with the keys. On macOS `⌃` is free of the window manager
   and of `⌘`'s shortcuts, but a text field's `⌃H` deletes backward, and Review's fields give that key up
   to the pair; elsewhere the pair is not offered, so a wrong platform guess only hides it. A seed slot takes
-  digits alone, so its letters are free to move.
-- **Made by:** `0021`, `0069`, `0076`, `0078`, `0091`.
+  digits alone, so its letters are free to move. `⌫` is the key a delete is pressed on, and the dialog's *No*
+  first keeps it two keys and a choice.
+- **Made by:** `0021`, `0069`, `0076`, `0078`, `0091`, `0106`.
 
 ### D41 · The test seam is a factory named in the environment
 

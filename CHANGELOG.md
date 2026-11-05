@@ -18,6 +18,8 @@ its new digest.
   the server's process, refused while a render session runs for the collection (0106 D4).
 - `⇧⌫` or *Delete* on a render's large view asks *Delete this render?*, *No* first; *Yes* deletes it and opens the
   Hub on its cell; the import sheet's remove hint reads `⌫` (0106 D5, D6).
+- D25 takes `⇧⌫` as the large view's Delete; principles' *Known breaks*, the data flow and the READMEs name the
+  discard, and the interface README lists staging's per-file `GET` and `DELETE` (0106 D8).
 
 ## [0.70.0] - 2026-11-06
 
