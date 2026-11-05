@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- A key's move to the render drawer's first row scrolls it to its top, to its last row to its foot, so the timer
+  and Stop show; a grid's first row brings its collection's name into view (0105 D1, D2).
+
 ## [0.69.0] - 2026-11-05
 
 Gate: local 0m27s · CI not read under mf-ship · 0.68.0: local 0m26s · CI not read under mf-ship
