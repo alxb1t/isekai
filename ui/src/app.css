@@ -179,14 +179,14 @@ button.appbar__render {
   flex: none;
   padding: 8px 16px;
   background: var(--accent);
-  color: #0f1018;
+  color: var(--band);
   font-weight: 600;
   font-size: 13px;
 }
 
 .band__resolve {
   margin-left: auto;
-  color: #0f1018;
+  color: var(--band);
 }
 
 /* — the Render dialog (J4·1) — */
@@ -393,7 +393,7 @@ button.appbar__render {
   padding: 0;
   border: none;
   border-radius: 3px;
-  background: repeating-linear-gradient(135deg, #1f2030 0 5px, #26273b 5px 10px);
+  background: var(--placeholder);
 }
 
 button.session__tile {
@@ -520,7 +520,7 @@ button.session__tile {
 }
 
 .drawer::backdrop {
-  background: color-mix(in srgb, var(--ground) 80%, transparent);
+  background: var(--scrim-drawer);
 }
 
 .drawer .session {
@@ -1535,8 +1535,8 @@ button.session__tile {
   display: flex;
   gap: var(--space-8);
   padding: var(--space-6) var(--space-8) var(--space-8);
-  /* One shade below the app's, mixed from the token rather than invented. */
-  background: color-mix(in srgb, var(--color-bg) 72%, black);
+  /* The cheatsheet's ground, a token each theme sets. */
+  background: var(--overlay);
   overflow: auto;
 }
 

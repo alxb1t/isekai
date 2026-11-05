@@ -1,0 +1,310 @@
+/* Catppuccin's four flavours as the app's and the sheet's colour tokens (D48).
+   The palette is copied by hand from catppuccin/palette v1.8.0,
+   https://github.com/catppuccin/palette, and mapped by role; the ramps and
+   mixes are computed once and written as hex. Nocturne, the default, is
+   styles.css's own.
+
+   MIT License
+
+   Copyright (c) 2021 Catppuccin
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE. */
+
+[data-theme="latte"] {
+  --color-bg: #eff1f5;
+  --color-surface: #e6e9ef;
+  --color-text: #4c4f69;
+  --color-accent: #8839ef;
+  --color-accent-2: #1e66f5;
+  --color-divider: #4c4f6929;
+  --color-neutral-100: #4c4f69;
+  --color-neutral-200: #60627a;
+  --color-neutral-300: #73768b;
+  --color-neutral-400: #87899b;
+  --color-neutral-500: #9a9dac;
+  --color-neutral-600: #aeb0bd;
+  --color-neutral-700: #c1c4ce;
+  --color-neutral-800: #d2d4dc;
+  --color-neutral-900: #dfe1e7;
+  --color-accent-100: #584b84;
+  --color-accent-200: #64469f;
+  --color-accent-300: #7042b9;
+  --color-accent-400: #7c3dd4;
+  --color-accent-500: #8839ef;
+  --color-accent-600: #9d5ef0;
+  --color-accent-700: #b183f1;
+  --color-accent-800: #c6a7f3;
+  --color-accent-900: #daccf4;
+  --color-accent-2-100: #435485;
+  --color-accent-2-200: #3a58a1;
+  --color-accent-2-300: #305dbd;
+  --color-accent-2-400: #2761d9;
+  --color-accent-2-500: #1e66f5;
+  --color-accent-2-600: #4882f5;
+  --color-accent-2-700: #729ef5;
+  --color-accent-2-800: #9bb9f5;
+  --color-accent-2-900: #c5d5f5;
+  --color-section: #ccd0da;
+  --color-section-glow: #bcc0cc;
+  --color-section-ghost: #acb0be;
+  --shadow-sm: 0 0 0 1px #d2d4dc;
+  --shadow-md: 0 0 0 1px #c1c4ce, 0 6px 18px #4c4f6933;
+  --shadow-lg: 0 0 0 1px #9a9dac, 0 16px 40px #4c4f6940;
+  --ground: #eff1f5;
+  --ground-deep: #e6e9ef;
+  --ground-media: #dce0e8;
+  --raised: #e6e9ef;
+  --raised-2: #bcc0cc;
+  --line: #bcc0cc;
+  --line-soft: #bcc0cc;
+  --line-control: #acb0be;
+  --line-disabled: #bcc0cc;
+  --focus: #6a7cdf;
+  --ink: #4c4f69;
+  --ink-1b: #5c5f77;
+  --ink-2: #5c5f77;
+  --ink-3: #7c7f93;
+  --ink-muted: #6c6f85;
+  --ink-disabled: #9ca0b0;
+  --accent: #8839ef;
+  --accent-dim: #bc95f2;
+  --accent-ink: #7c3dd4;
+  --tick-locked: #acb0be;
+  --chip-line: #bcc0cc;
+  --placeholder: repeating-linear-gradient(135deg, #ccd0da 0 5px, #bcc0cc 5px 10px);
+  --scrim: #4c4f6966;
+  --shadow-sheet: 0 30px 80px #4c4f6933;
+  --shadow-bar: 0 20px 50px #4c4f6938;
+  --band: #eff1f5;
+  --scrim-drawer: #4c4f6999;
+  --overlay: #dce0e8;
+}
+
+[data-theme="frappe"] {
+  --color-bg: #303446;
+  --color-surface: #414559;
+  --color-text: #c6d0f5;
+  --color-accent: #ca9ee6;
+  --color-accent-2: #8caaee;
+  --color-divider: #c6d0f529;
+  --color-neutral-100: #c6d0f5;
+  --color-neutral-200: #b4bde0;
+  --color-neutral-300: #a2abcb;
+  --color-neutral-400: #9098b6;
+  --color-neutral-500: #7e85a1;
+  --color-neutral-600: #6c728c;
+  --color-neutral-700: #5a6077;
+  --color-neutral-800: #4b5066;
+  --color-neutral-900: #3f4458;
+  --color-accent-100: #c7c6f2;
+  --color-accent-200: #c8bcef;
+  --color-accent-300: #c8b2ec;
+  --color-accent-400: #c9a8e9;
+  --color-accent-500: #ca9ee6;
+  --color-accent-600: #ab89c6;
+  --color-accent-700: #8c74a6;
+  --color-accent-800: #6e5e86;
+  --color-accent-900: #4f4966;
+  --color-accent-2-100: #bac8f4;
+  --color-accent-2-200: #afc1f2;
+  --color-accent-2-300: #a3b9f1;
+  --color-accent-2-400: #98b2ef;
+  --color-accent-2-500: #8caaee;
+  --color-accent-2-600: #7a92cc;
+  --color-accent-2-700: #677bab;
+  --color-accent-2-800: #556389;
+  --color-accent-2-900: #424c68;
+  --color-section: #414559;
+  --color-section-glow: #51576d;
+  --color-section-ghost: #626880;
+  --shadow-sm: 0 0 0 1px #4b5066;
+  --shadow-md: 0 0 0 1px #5a6077, 0 6px 18px #2326348c;
+  --shadow-lg: 0 0 0 1px #7e85a1, 0 16px 40px #232634a6;
+  --ground: #303446;
+  --ground-deep: #292c3c;
+  --ground-media: #232634;
+  --raised: #414559;
+  --raised-2: #51576d;
+  --line: #51576d;
+  --line-soft: #51576d;
+  --line-control: #626880;
+  --line-disabled: #51576d;
+  --focus: #babbf1;
+  --ink: #c6d0f5;
+  --ink-1b: #b5bfe2;
+  --ink-2: #b5bfe2;
+  --ink-3: #949cbb;
+  --ink-muted: #a5adce;
+  --ink-disabled: #737994;
+  --accent: #ca9ee6;
+  --accent-dim: #7d6996;
+  --accent-ink: #c9a8e9;
+  --tick-locked: #626880;
+  --chip-line: #51576d;
+  --placeholder: repeating-linear-gradient(135deg, #414559 0 5px, #51576d 5px 10px);
+  --scrim: #23263466;
+  --shadow-sheet: 0 30px 80px #23263480;
+  --shadow-bar: 0 20px 50px #2326348c;
+  --band: #232634;
+  --scrim-drawer: #303446cc;
+  --overlay: #232634;
+}
+
+[data-theme="macchiato"] {
+  --color-bg: #24273a;
+  --color-surface: #363a4f;
+  --color-text: #cad3f5;
+  --color-accent: #c6a0f6;
+  --color-accent-2: #8aadf4;
+  --color-divider: #cad3f529;
+  --color-neutral-100: #cad3f5;
+  --color-neutral-200: #b6bedf;
+  --color-neutral-300: #a2aac8;
+  --color-neutral-400: #8e95b2;
+  --color-neutral-500: #7a809b;
+  --color-neutral-600: #666c85;
+  --color-neutral-700: #52576e;
+  --color-neutral-800: #42465c;
+  --color-neutral-900: #35384d;
+  --color-accent-100: #c9c9f5;
+  --color-accent-200: #c8bff5;
+  --color-accent-300: #c8b4f6;
+  --color-accent-400: #c7aaf6;
+  --color-accent-500: #c6a0f6;
+  --color-accent-600: #a688d0;
+  --color-accent-700: #8570ab;
+  --color-accent-800: #655785;
+  --color-accent-900: #443f60;
+  --color-accent-2-100: #bdcbf5;
+  --color-accent-2-200: #b0c4f5;
+  --color-accent-2-300: #a4bcf4;
+  --color-accent-2-400: #97b5f4;
+  --color-accent-2-500: #8aadf4;
+  --color-accent-2-600: #7692cf;
+  --color-accent-2-700: #6177aa;
+  --color-accent-2-800: #4d5d84;
+  --color-accent-2-900: #38425f;
+  --color-section: #363a4f;
+  --color-section-glow: #494d64;
+  --color-section-ghost: #5b6078;
+  --shadow-sm: 0 0 0 1px #42465c;
+  --shadow-md: 0 0 0 1px #52576e, 0 6px 18px #1819268c;
+  --shadow-lg: 0 0 0 1px #7a809b, 0 16px 40px #181926a6;
+  --ground: #24273a;
+  --ground-deep: #1e2030;
+  --ground-media: #181926;
+  --raised: #363a4f;
+  --raised-2: #494d64;
+  --line: #494d64;
+  --line-soft: #494d64;
+  --line-control: #5b6078;
+  --line-disabled: #494d64;
+  --focus: #b7bdf8;
+  --ink: #cad3f5;
+  --ink-1b: #b8c0e0;
+  --ink-2: #a5adcb;
+  --ink-3: #8087a2;
+  --ink-muted: #939ab7;
+  --ink-disabled: #6e738d;
+  --accent: #c6a0f6;
+  --accent-dim: #756498;
+  --accent-ink: #c7aaf6;
+  --tick-locked: #5b6078;
+  --chip-line: #494d64;
+  --placeholder: repeating-linear-gradient(135deg, #363a4f 0 5px, #494d64 5px 10px);
+  --scrim: #18192666;
+  --shadow-sheet: 0 30px 80px #18192680;
+  --shadow-bar: 0 20px 50px #1819268c;
+  --band: #181926;
+  --scrim-drawer: #24273acc;
+  --overlay: #181926;
+}
+
+[data-theme="mocha"] {
+  --color-bg: #1e1e2e;
+  --color-surface: #313244;
+  --color-text: #cdd6f4;
+  --color-accent: #cba6f7;
+  --color-accent-2: #89b4fa;
+  --color-divider: #cdd6f429;
+  --color-neutral-100: #cdd6f4;
+  --color-neutral-200: #b8c0dc;
+  --color-neutral-300: #a3aac4;
+  --color-neutral-400: #8e94ad;
+  --color-neutral-500: #797e95;
+  --color-neutral-600: #64687d;
+  --color-neutral-700: #4f5265;
+  --color-neutral-800: #3e3f52;
+  --color-neutral-900: #303042;
+  --color-accent-100: #cdccf5;
+  --color-accent-200: #ccc3f5;
+  --color-accent-300: #ccb9f6;
+  --color-accent-400: #cbb0f6;
+  --color-accent-500: #cba6f7;
+  --color-accent-600: #a88bcf;
+  --color-accent-700: #8670a7;
+  --color-accent-800: #63547e;
+  --color-accent-900: #413956;
+  --color-accent-2-100: #bfcff5;
+  --color-accent-2-200: #b2c8f6;
+  --color-accent-2-300: #a4c2f8;
+  --color-accent-2-400: #97bbf9;
+  --color-accent-2-500: #89b4fa;
+  --color-accent-2-600: #7496d1;
+  --color-accent-2-700: #5e78a8;
+  --color-accent-2-800: #495a80;
+  --color-accent-2-900: #333c57;
+  --color-section: #313244;
+  --color-section-glow: #45475a;
+  --color-section-ghost: #585b70;
+  --shadow-sm: 0 0 0 1px #3e3f52;
+  --shadow-md: 0 0 0 1px #4f5265, 0 6px 18px #11111b8c;
+  --shadow-lg: 0 0 0 1px #797e95, 0 16px 40px #11111ba6;
+  --ground: #1e1e2e;
+  --ground-deep: #181825;
+  --ground-media: #11111b;
+  --raised: #313244;
+  --raised-2: #45475a;
+  --line: #45475a;
+  --line-soft: #45475a;
+  --line-control: #585b70;
+  --line-disabled: #45475a;
+  --focus: #b4befe;
+  --ink: #cdd6f4;
+  --ink-1b: #bac2de;
+  --ink-2: #a6adc8;
+  --ink-3: #7f849c;
+  --ink-muted: #9399b2;
+  --ink-disabled: #6c7086;
+  --accent: #cba6f7;
+  --accent-dim: #746292;
+  --accent-ink: #cbb0f6;
+  --tick-locked: #585b70;
+  --chip-line: #45475a;
+  --placeholder: repeating-linear-gradient(135deg, #313244 0 5px, #45475a 5px 10px);
+  --scrim: #11111b66;
+  --shadow-sheet: 0 30px 80px #11111b80;
+  --shadow-bar: 0 20px 50px #11111b8c;
+  --band: #11111b;
+  --scrim-drawer: #1e1e2ecc;
+  --overlay: #11111b;
+}
+
+/* Latte's accent is under 4.5:1 as link text; its links take the accent ink. */
+:where([data-theme="latte"]) a { color: var(--accent-ink); }

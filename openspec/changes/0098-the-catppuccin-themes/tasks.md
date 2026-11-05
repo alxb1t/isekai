@@ -4,32 +4,32 @@ The tokens, then the dialog, then the record, per [design](design.md).
 
 ## Progress
 
-- [ ] 1 — The tokens
+- [x] 1 — The tokens
 - [ ] 2 — The dialog
 - [ ] 3 — The record
 
 ## 1 — The tokens
 
-- [ ] 1.1 **HALT CHECK** The band's literal sits in `ui/src/app.css` at `:182` and `:189`, as [D1](design.md#d1) names.
+- [x] 1.1 **HALT CHECK** The band's literal sits in `ui/src/app.css` at `:182` and `:189`, as [D1](design.md#d1) names.
   Verify: `grep -c '#0f1018' ui/src/app.css` prints `2`.
-- [ ] 1.2 Add `--band`, `--scrim-drawer` and `--overlay` to the app block of `ui/src/styles.css`, after `--shadow-bar`,
+- [x] 1.2 Add `--band`, `--scrim-drawer` and `--overlay` to the app block of `ui/src/styles.css`, after `--shadow-bar`,
   per [D1](design.md#d1). Nocturne's block, `:48-125`, stays byte for byte.
   Verify: `grep -c -F -e '--band: #0f1018;' -e '--scrim-drawer: color-mix(in srgb, var(--ground) 80%, transparent);' -e '--overlay: color-mix(in srgb, var(--color-bg) 72%, black);' ui/src/styles.css` prints `3`.
-- [ ] 1.3 In `ui/src/app.css`, point `.band` (`:182`), `.band__resolve` (`:189`) and the tile at `:396` at
+- [x] 1.3 In `ui/src/app.css`, point `.band` (`:182`), `.band__resolve` (`:189`) and the tile at `:396` at
   `var(--band)` and `var(--placeholder)`, per [D1](design.md#d1).
   Verify: `grep -L -e '#0f1018' -e '#1f2030' ui/src/app.css` prints `ui/src/app.css`.
-- [ ] 1.4 In `ui/src/app.css`, point `.drawer::backdrop` (`:523`) at `var(--scrim-drawer)`, and `.overlay` (`:1539`)
+- [x] 1.4 In `ui/src/app.css`, point `.drawer::backdrop` (`:523`) at `var(--scrim-drawer)`, and `.overlay` (`:1539`)
   at `var(--overlay)` with `:1538`'s new comment, per [D1](design.md#d1).
   Verify: `grep -c -F -e 'var(--scrim-drawer)' -e 'var(--overlay)' ui/src/app.css` prints `2`.
-- [ ] 1.5 Write `ui/src/themes.css`: [the header](design.md#the-header), the Latte, Frappé, Macchiato and Mocha blocks from
+- [x] 1.5 Write `ui/src/themes.css`: [the header](design.md#the-header), the Latte, Frappé, Macchiato and Mocha blocks from
   [the hex table](design.md#the-hex-table), and Latte's link rule, per [D2](design.md#d2).
   Verify: `grep -c '^\[data-theme="[a-z]*"\] {$' ui/src/themes.css` prints `4`.
-- [ ] 1.6 Import `./themes.css` in `ui/src/main.ts`, between `./styles.css` and `./app.css`, per [D2](design.md#d2).
+- [x] 1.6 Import `./themes.css` in `ui/src/main.ts`, between `./styles.css` and `./app.css`, per [D2](design.md#d2).
   Verify: `grep -n "import './themes.css'" ui/src/main.ts` prints `6:import './themes.css'`.
-- [ ] 1.7 Set `css: true` in `ui/vitest.config.ts`'s `test`, with its comment, which does not repeat `css: true`, per
+- [x] 1.7 Set `css: true` in `ui/vitest.config.ts`'s `test`, with its comment, which does not repeat `css: true`, per
   [D7](design.md#d7).
   Verify: `grep -c 'css: true' ui/vitest.config.ts` prints `1`.
-- [ ] 1.8 Write `ui/src/themes.test.ts` with `ui:themes:each-catppuccin-theme-meets-aa` and
+- [x] 1.8 Write `ui/src/themes.test.ts` with `ui:themes:each-catppuccin-theme-meets-aa` and
   `ui:themes:a-theme-sets-every-colour-token`, per [D7](design.md#d7) and [the pairs](design.md#the-pairs).
   Verify: `npm --prefix ui run test -- src/themes.test.ts` exits 0.
 
