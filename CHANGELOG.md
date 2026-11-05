@@ -16,6 +16,8 @@ its new digest.
   naming no render, deleting nothing (0106 D3).
 - `DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}` deletes that render and its thumbnails in
   the server's process, refused while a render session runs for the collection (0106 D4).
+- `⇧⌫` or *Delete* on a render's large view asks *Delete this render?*, *No* first; *Yes* deletes it and opens the
+  Hub on its cell; the import sheet's remove hint reads `⌫` (0106 D5, D6).
 
 ## [0.70.0] - 2026-11-06
 

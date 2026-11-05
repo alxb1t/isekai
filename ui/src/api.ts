@@ -308,6 +308,11 @@ export function renderDetail(place: RenderPlace): Promise<RenderDetail> {
   return get<RenderDetail>(renderAt(place))
 }
 
+/* Delete the render and its thumbnails; refused while a render runs for its collection. */
+export function deleteRender(place: RenderPlace): Promise<{ deleted: boolean }> {
+  return request(renderAt(place), { method: 'DELETE' })
+}
+
 /** Return `place` beside `other`, another image of its source, else its photograph. */
 export function comparison(
   place: RenderPlace,

@@ -432,7 +432,15 @@ onMounted(async () => {
   const spots = sources.value.flatMap((_, row) =>
     Array.from({ length: flows.value.length + 1 }, (_, column) => ({ row, column })),
   )
-  const spot = kept(spots, named, store.focus.hub)
+  // A large view's Delete sends the cell it deleted from, by digest and flow.
+  const sent = window.history.state?.cell as { digest: string; flow: string } | undefined
+  const deletedFrom = sent
+    ? spots.find(
+        ({ row, column }) =>
+          sources.value[row]?.digest === sent.digest && flows.value[column - 1] === sent.flow,
+      )
+    : undefined
+  const spot = deletedFrom ?? kept(spots, named, store.focus.hub)
   if (spot) place(spot.row, spot.column, { block: 'center' })
 })
 

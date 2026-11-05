@@ -8,7 +8,7 @@ from the repository root.
 - [x] 1 — The function
 - [x] 2 — The verb
 - [x] 3 — The endpoint
-- [ ] 4 — The page
+- [x] 4 — The page
 - [ ] 5 — The record
 
 ## 1 — The function
@@ -78,28 +78,28 @@ from the repository root.
 
 ## 4 — The page
 
-- [ ] 4.1 In `ui/src/api.ts`, after `renderDetail`, add `deleteRender(place: RenderPlace): Promise<{ deleted: boolean
+- [x] 4.1 In `ui/src/api.ts`, after `renderDetail`, add `deleteRender(place: RenderPlace): Promise<{ deleted: boolean
   }>`, `request(renderAt(place), { method: 'DELETE' })`, per [D5](design.md#d5).
   Verify: `grep -n 'export function deleteRender' ui/src/api.ts` prints one line.
-- [ ] 4.2 In `ui/src/stores/keys.ts`, add `Backspace: '⌫',` to `GLYPHS`; at the end of
+- [x] 4.2 In `ui/src/stores/keys.ts`, add `Backspace: '⌫',` to `GLYPHS`; at the end of
   `ui:keys:hints-come-from-the-declarations` in `ui/src/stores/keys.test.ts`, declare a `screen` command `delete` on
   `{ code: 'Backspace', shift: true }` and expect `keys.hint('delete')` to be `'⇧⌫'`.
   Verify: `grep -n "toBe('⇧⌫')" ui/src/stores/keys.test.ts` prints one line.
-- [ ] 4.3 Write `ui/src/components/DeleteDialog.vue` per [the page](design.md#the-page), its head comment saying what
+- [x] 4.3 Write `ui/src/components/DeleteDialog.vue` per [the page](design.md#the-page), its head comment saying what
   it asks and that *No* comes first.
   Verify: `grep -n 'data-delete-dialog' ui/src/components/DeleteDialog.vue` prints one line.
-- [ ] 4.4 In `ui/src/views/RenderLarge.vue`, per [the page](design.md#the-page) and [D6](design.md#d6): `deleting`, the
+- [x] 4.4 In `ui/src/views/RenderLarge.vue`, per [the page](design.md#the-page) and [D6](design.md#d6): `deleting`, the
   `delete` command after `compare`, the *Delete* group after *Compare with…*'s, the dialog after `DraftDialog`,
   `deleted()`; the head comment names `⇧⌫`.
   Verify: `grep -n "keys: \[shifted('Backspace')\]" ui/src/views/RenderLarge.vue` prints one line.
-- [ ] 4.5 In `ui/src/views/Hub.vue`'s `onMounted`, focus the spot `window.history.state?.cell` names before
+- [x] 4.5 In `ui/src/views/Hub.vue`'s `onMounted`, focus the spot `window.history.state?.cell` names before
   `kept(spots, named, store.focus.hub)`, per [D6](design.md#d6), with a comment saying who sends it.
   Verify: `grep -n 'history.state?.cell' ui/src/views/Hub.vue` prints one line.
-- [ ] 4.6 In `tests/e2e/conftest.py`, add `DELETED = "deleted"` after `CHOSEN`, commented as the collection a render is
+- [x] 4.6 In `tests/e2e/conftest.py`, add `DELETED = "deleted"` after `CHOSEN`, commented as the collection a render is
   deleted from; `deleted: Run` in `Served` after `discarded`, seeded `_rendered_at_seven(lib / DELETED, "rae", (860,
   1000))` and passed to `Served`.
   Verify: `grep -n '^DELETED = "deleted"$' tests/e2e/conftest.py` prints one line.
-- [ ] 4.7 In `tests/e2e/test_render.py`, add `test_delete_asks_then_opens_the_hub_on_the_cell`
+- [x] 4.7 In `tests/e2e/test_render.py`, add `test_delete_asks_then_opens_the_hub_on_the_cell`
   (`ui:delete-render:the-dialog-opens-on-no`, `ui:delete-render:yes-opens-the-hub-on-the-cell`) on `DELETED`'s
   `v1/7` address: `⇧⌫`, `l`, `h`, `Esc`, then `⇧⌫`, `l`, `↵`; the Hub cell focused, `approved`, `group_of(…, 1)` gone.
   Verify: `uv run pytest tests/e2e/test_render.py --collect-only -q` prints `tests/e2e/test_render.py::test_delete_asks_then_opens_the_hub_on_the_cell`.

@@ -93,6 +93,9 @@ CONJURED = "conjured"
 # The collection the chooser opens on: one source with an unapproved sheet in each flow.
 CHOSEN = "chosen"
 
+# The collection a render is deleted from: one source rendered at seed 7.
+DELETED = "deleted"
+
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
 STARTUP = 300
 
@@ -110,6 +113,7 @@ class Served:
     shown: Run
     revised: Run
     discarded: Run
+    deleted: Run
     compared: Run
     conjured: Run
     chosen: Run
@@ -224,6 +228,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     revised = _rendered_at_seven(lib / REVISED, "ida", (770, 1000))
     discarded = _rendered_at_seven(lib / DISCARDED, "ivy", (775, 1000))
     revise(discarded, FLOW, 1, 7)
+    deleted = _rendered_at_seven(lib / DELETED, "rae", (860, 1000))
     compared = _rendered_at_seven(lib / COMPARED, "jo", (780, 1000))
     again = review(compared, FLOW, new_version=True)
     assert again is not None
@@ -280,6 +285,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
             shown,
             revised,
             discarded,
+            deleted,
             compared,
             conjured,
             chosen,

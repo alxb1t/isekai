@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { imageAt, photoUrl, renderDetail, thumbAt, versionOf } from '../api'
 import { type PickTile, imageKey, placeOf, screenOrder, sourceGrid, stepped } from '../cells'
 import ComparePick from '../components/ComparePick.vue'
+import DeleteDialog from '../components/DeleteDialog.vue'
 import DraftDialog from '../components/DraftDialog.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
@@ -16,6 +17,7 @@ import type { RenderDetail } from '../types'
    sheet it was rendered from beside it — filled fields only, read-only. ⇧D
    drafts a flow from it, its own a revision (J5·3); ⇧C compares it with any
    image of its source, the photograph among them, picked in a grid (J5·8).
+   ⇧⌫ asks, then deletes the render and opens the Hub on its cell.
    `h` `l` step through the screen it was opened from, in that screen's order. */
 const props = defineProps<{
   collection: string
@@ -31,6 +33,7 @@ const refusal = ref<string | null>(null)
 const drafting = ref(false)
 /* The pick of an image to compare with, while it is open. */
 const picking = ref(false)
+const deleting = ref(false)
 
 const place = computed(() => ({
   collection: props.collection,
@@ -98,6 +101,16 @@ const back = computed(() =>
     : { to: { name: 'renders', params: { collection: props.collection } }, label: 'Back to Renders' },
 )
 
+/* The Hub, focused on the deleted render's cell from either screen, named by
+   digest: the view knows it, not the source's name `store.focus.hub` keys on. */
+function deleted(): void {
+  void router.push({
+    name: 'hub',
+    params: { collection: props.collection },
+    state: { cell: { digest: props.digest, flow: props.flow } },
+  })
+}
+
 useKeys('screen', [
   { id: 'previous', keys: plain('KeyH', 'ArrowLeft'), label: 'previous image', run: () => step(-1) },
   { id: 'next', keys: plain('KeyL', 'ArrowRight'), label: 'next image', run: () => step(1) },
@@ -114,6 +127,13 @@ useKeys('screen', [
     label: 'compare with…',
     run: () => (picking.value = true),
     when: () => grid.value !== null,
+  },
+  {
+    id: 'delete',
+    keys: [shifted('Backspace')],
+    label: 'delete this render',
+    run: () => (deleting.value = true),
+    when: () => detail.value !== null,
   },
   {
     id: 'back',
@@ -181,6 +201,16 @@ onMounted(async () => {
           </button>
         </div>
         <div class="large__group">
+          <button
+            class="btn btn-secondary"
+            type="button"
+            data-delete
+            @click="deleting = true"
+          >
+            Delete<KeyHint command="delete" />
+          </button>
+        </div>
+        <div class="large__group">
           <RouterLink class="btn btn-secondary" :to="back.to"
             >{{ back.label }}<KeyHint command="back" /></RouterLink
           >
@@ -207,6 +237,12 @@ onMounted(async () => {
       :images="[{ digest, flow, version: place.version, seed }]"
       :targets="detail.targets"
       @close="drafting = false"
+    />
+    <DeleteDialog
+      v-if="deleting"
+      :place="place"
+      @close="deleting = false"
+      @deleted="deleted"
     />
   </section>
 </template>

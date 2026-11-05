@@ -1,9 +1,9 @@
 """Render from the browser: the dialog, the drawer, the large view, Revise, Compare.
 
-A revision, a discard, a comparison and a draft from another flow each own a
-collection, so none leans on another's draft. The server renders on the e2e doubles:
-a session that rents nothing and a transport that answers at once. Each step
-waits on the page's own state.
+A revision, a discard, a delete, a comparison and a draft from another flow each
+own a collection, so none leans on another's draft. The server renders on the e2e
+doubles: a session that rents nothing and a transport that answers at once. Each
+step waits on the page's own state.
 """
 
 import re
@@ -11,13 +11,14 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from isekai.foundation.run import REVIEW
+from isekai.foundation.run import REVIEW, group_of
 from isekai.pipeline.review import current_draft
 from tests.e2e.conftest import (
     COMPARED,
     CONJURE,
     CONJURED,
     DAMAGED,
+    DELETED,
     DISCARDED,
     DRAWN,
     FLAT,
@@ -403,6 +404,39 @@ def test_discard_asks_before_it_deletes(page: Page, served: Served) -> None:
     expect(viewer.locator("img")).to_have_attribute("src", re.compile(r"/photo$"))
     page.keyboard.press("Escape")
     expect(viewer).to_have_count(0)
+
+
+@pytest.mark.spec("ui:delete-render:the-dialog-opens-on-no")
+@pytest.mark.spec("ui:delete-render:yes-opens-the-hub-on-the-cell")
+def test_delete_asks_then_opens_the_hub_on_the_cell(page: Page, served: Served) -> None:
+    digest = served.deleted.digest
+    page.goto(f"{served.url}/c/{DELETED}/renders/{digest}/{FLOW}/v1/7")
+    expect(page.locator("[data-delete]")).to_be_visible()
+
+    page.keyboard.press("Shift+Backspace")
+    dialog = page.locator("dialog[data-delete-dialog]")
+    expect(dialog.locator(".render-dialog__title")).to_have_text("Delete this render?")
+    no, yes = dialog.locator("[data-delete-no]"), dialog.locator("[data-delete-yes]")
+    expect(no).to_be_focused()
+    page.keyboard.press("l")
+    expect(yes).to_be_focused()
+    page.keyboard.press("h")
+    expect(no).to_be_focused()
+    page.keyboard.press("Escape")
+    expect(dialog).to_have_count(0)
+    expect(page.locator(".large__media img")).to_be_visible()
+
+    page.keyboard.press("Shift+Backspace")
+    expect(no).to_be_focused()
+    page.keyboard.press("l")
+    expect(yes).to_be_focused()
+    page.keyboard.press("Enter")
+
+    expect(page).to_have_url(served.hub_of(DELETED))
+    cell = page.locator(f'.hub__cell[data-row="0"][data-flow="{FLOW}"]')
+    expect(cell).to_have_attribute("data-stage", "approved")
+    expect(cell).to_be_focused()
+    assert not group_of(served.deleted, FLOW, 1).exists()
 
 
 @pytest.mark.spec("ui:compare:compare-shows-the-pair-and-the-change")

@@ -125,6 +125,7 @@ const GLYPHS: Record<string, string> = {
   Enter: '↵',
   Escape: 'esc',
   Space: 'space',
+  Backspace: '⌫',
   Backslash: '\\',
   Slash: '/',
   Semicolon: ';',

@@ -172,6 +172,12 @@ spec('ui:keys:hints-come-from-the-declarations', () => {
   expect(Object.keys(SOURCES)).toContain('../views/Hub.vue')
   for (const [file, source] of Object.entries(SOURCES))
     expect(source, file).not.toMatch(/KeyBar|key-bar/)
+
+  // A large view's delete takes ⇧ and ⌫, and its hint reads so.
+  keys.declare('screen', [
+    command('delete', 'Backspace', { keys: [{ code: 'Backspace', shift: true }] }),
+  ])
+  expect(keys.hint('delete')).toBe('⇧⌫')
 })
 
 spec('ui:keys:a-focused-control-keeps-enter-and-space', () => {
