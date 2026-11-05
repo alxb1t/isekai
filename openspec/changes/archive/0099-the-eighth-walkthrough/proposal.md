@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: v0.64
 backlog: [0091·R5, 0091·R7, 0091·R8]
 ---
 

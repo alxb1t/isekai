@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.64.0] - 2026-11-05
+
+Gate: local 0m35s · CI not read under mf-ship · 0.63.0: local 0m32s · CI not read under mf-ship
+
 - A second `×` or `⌫` on a file whose removal is in flight does nothing, so it sends no second removal; the removed
   file's hand-off to its copy and a lost copy's reset are each held by a unit test (0099 D1, D2, D3).
 - `⇧A` in the import sheet opens the file dialog, in New collection and Add sources alike, and *Add files…* shows
