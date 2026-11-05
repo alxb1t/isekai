@@ -1577,6 +1577,19 @@ button.session__tile {
   border-top: 1px solid var(--color-neutral-800);
 }
 
+/* Near the sheet's foot the list opens above its input, mirrored: row 1 nearest it, the footer on top. */
+.drop--above {
+  top: auto;
+  bottom: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.drop--above .drop__foot {
+  border-top: 0;
+  border-bottom: 1px solid var(--color-neutral-800);
+}
+
 /* The fragment: bare mono text with one accent caret. The caret is the
    browser's own, recoloured -- an accent border drawn beside it was a second
    caret, which is exactly the "committed and in-flight never look alike" rule

@@ -5,8 +5,10 @@ import { grouped } from '../caption'
 /* The dropdown.
 
    **It overlays and never displaces.** Absolutely positioned at `top: 30px`
-   under its row: if the rows below it moved, the operator would lose their place
-   mid-word, and they are typing with their eyes on the photograph.
+   under its row, or above it, mirrored, when only the room above holds it, or
+   neither does and above is larger: if the rows below it moved, the operator
+   would lose their place mid-word, and they are typing with their eyes on the
+   photograph.
 
    Row 1 is preselected, so the highest post count is one ⏎ away and reaching a
    rare tag takes a deliberate ↓. Counts are mono and tabular because they are
@@ -21,6 +23,7 @@ defineProps<{
   total: number
   vocabulary: number
   selected: number
+  above: boolean
 }>()
 
 defineEmits<{ commit: [tag: string] }>()
@@ -28,7 +31,7 @@ defineEmits<{ commit: [tag: string] }>()
 </script>
 
 <template>
-  <div v-if="matches.length" class="drop">
+  <div v-if="matches.length" class="drop" :class="{ 'drop--above': above }">
     <button
       v-for="(match, index) in matches"
       :key="match.tag"

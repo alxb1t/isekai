@@ -22,6 +22,7 @@ def _open(page: Page, served: Served, run: Run) -> None:
 
 @pytest.mark.spec("ui:review:the-photograph-opens-in-the-viewer")
 @pytest.mark.spec("ui:keys:a-command-waits-until-the-field-is-left")
+@pytest.mark.spec("ui:vocabulary:the-list-opens-above-near-the-foot")
 def test_the_photograph_opens_in_the_viewer(page: Page, served: Served) -> None:
     _open(page, served, served.draft)
     field = page.locator("input.fragment").first
@@ -67,6 +68,24 @@ def test_the_photograph_opens_in_the_viewer(page: Page, served: Served) -> None:
     field.press("Enter")
     row = page.locator(".row", has=field)
     expect(row.locator(".chip", has_text="blue eyes")).to_be_visible()
+
+    # Near the sheet's foot the list opens above its input, mirrored, keys unchanged.
+    _open(page, served, served.draft)
+    page.set_viewport_size({"width": 1280, "height": 560})
+    last = page.locator("input.fragment").last
+    last.click()
+    last.press_sequentially("eyes")
+    drop = page.locator(".drop")
+    expect(drop).to_have_class(re.compile(r"\bdrop--above\b"))
+    placed = drop.bounding_box()
+    typed = last.bounding_box()
+    assert placed is not None and typed is not None
+    assert placed["y"] + placed["height"] <= typed["y"] + 1
+    first, second = rows.nth(0).bounding_box(), rows.nth(1).bounding_box()
+    assert first is not None and second is not None
+    assert first["y"] > second["y"]
+    last.press("ArrowDown")
+    expect(rows.nth(1)).to_have_class(re.compile(r"\bdrop__row--selected\b"))
 
     field.press("Shift+KeyH")
     # The list the letter opens is the field's own, and the first Esc closes it.

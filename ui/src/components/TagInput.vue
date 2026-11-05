@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useVocabulary } from '../composables/useVocabulary'
 import { FIELD_DOWN, FIELD_UP } from '../panes'
+import { placement } from '../placement'
 import { matches as pressed, useKeyStore } from '../stores/keys'
 import TagAutocomplete from './TagAutocomplete.vue'
 
@@ -47,6 +48,27 @@ const { matches, total, search, clear } = useVocabulary()
 const keys = useKeyStore()
 
 const open = computed(() => props.focused && matches.value.length > 0)
+const above = ref(false)
+const drop = ref<InstanceType<typeof TagAutocomplete> | null>(null)
+
+/* Measured once the list is drawn and before it is painted: the room to `.rows`'
+   foot and top decides its side. */
+watch(
+  [open, matches],
+  () => {
+    const rows = box.value?.closest('.rows')
+    const list = drop.value?.$el as HTMLElement | undefined
+    if (!open.value || !rows || !box.value || !list) {
+      above.value = false
+      return
+    }
+    const field = box.value.getBoundingClientRect()
+    const room = rows.getBoundingClientRect()
+    above.value =
+      placement(room.bottom - field.bottom, field.top - room.top, list.offsetHeight) === 'above'
+  },
+  { flush: 'post' },
+)
 
 watch(fragment, (value) => {
   selected.value = 0
@@ -145,6 +167,8 @@ function onKey(event: KeyboardEvent): void {
   />
   <TagAutocomplete
     v-if="open"
+    ref="drop"
+    :above="above"
     :matches="matches"
     :total="total"
     :vocabulary="vocabulary"

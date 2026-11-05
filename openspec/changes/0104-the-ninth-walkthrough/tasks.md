@@ -6,7 +6,7 @@ its task names.
 ## Progress
 
 - [x] 1 — The thumbnails
-- [ ] 2 — The flip
+- [x] 2 — The flip
 - [ ] 3 — The record
 
 ## 1 — The thumbnails
@@ -33,21 +33,21 @@ its task names.
 
 ## 2 — The flip
 
-- [ ] 2.1 **HALT CHECK** `.rows` is the sheet's scroller, around every `FieldRow`, as [D5](design.md#d5) measures it.
+- [x] 2.1 **HALT CHECK** `.rows` is the sheet's scroller, around every `FieldRow`, as [D5](design.md#d5) measures it.
   Verify: `grep -n -F '<div class="rows">' ui/src/components/SheetForm.vue` prints a line.
-- [ ] 2.2 Add `ui/src/placement.ts` per [D4](design.md#d4), and `ui/src/placement.test.ts` under
+- [x] 2.2 Add `ui/src/placement.ts` per [D4](design.md#d4), and `ui/src/placement.test.ts` under
   `ui:vocabulary:the-list-opens-above-near-the-foot`, at a height of 300: below 300, above 500 is `'below'`; below 100, above 400
   is `'above'`; neither holding it, below 120, above 200 is `'above'` and below 200, above 120 is `'below'`.
   Verify: `npm --prefix ui run test -- src/placement.test.ts` exits 0.
-- [ ] 2.3 In `ui/src/components/TagAutocomplete.vue`, add the `above: boolean` prop and the `drop--above` binding per
+- [x] 2.3 In `ui/src/components/TagAutocomplete.vue`, add the `above: boolean` prop and the `drop--above` binding per
   [D5](design.md#d5); its comment's `under its row:` → `under its row, or above it, mirrored, when only the room above holds it, or neither does and above is larger:`.
   Verify: `grep -n -F -e 'above: boolean' -e "'drop--above': above" ui/src/components/TagAutocomplete.vue` prints a line for each.
-- [ ] 2.4 In `ui/src/components/TagInput.vue`, measure and pass `above` per [D5](design.md#d5); `onKey` is unchanged.
+- [x] 2.4 In `ui/src/components/TagInput.vue`, measure and pass `above` per [D5](design.md#d5); `onKey` is unchanged.
   Verify: `grep -n -F -e "closest('.rows')" -e 'placement(' -e ':above="above"' ui/src/components/TagInput.vue` prints a line for each.
-- [ ] 2.5 In `ui/src/app.css`, add [D5](design.md#d5)'s `.drop--above` rules after `.drop__foot`, under the comment
+- [x] 2.5 In `ui/src/app.css`, add [D5](design.md#d5)'s `.drop--above` rules after `.drop__foot`, under the comment
   `/* Near the sheet's foot the list opens above its input, mirrored: row 1 nearest it, the footer on top. */`.
   Verify: `grep -n -F -e '.drop--above {' -e '.drop--above .drop__foot {' ui/src/app.css` prints a line for each.
-- [ ] 2.6 In `tests/e2e/test_review.py`'s `test_the_photograph_opens_in_the_viewer`, add the key
+- [x] 2.6 In `tests/e2e/test_review.py`'s `test_the_photograph_opens_in_the_viewer`, add the key
   `ui:vocabulary:the-list-opens-above-near-the-foot` and a last step: `_open` the draft, a 1280×560 viewport, `eyes` typed
   in the last `input.fragment`; `.drop` has `drop--above`, its box's bottom at most the field's top + 1 px, row 0 below row 1, `↓` selects row 1.
   Verify: `grep -n -e 'ui:vocabulary:the-list-opens-above-near-the-foot' -e 'drop--above' tests/e2e/test_review.py` prints a line for each.
