@@ -6,7 +6,7 @@ from the repository root.
 ## Progress
 
 - [x] 1 — The function
-- [ ] 2 — The verb
+- [x] 2 — The verb
 - [ ] 3 — The endpoint
 - [ ] 4 — The page
 - [ ] 5 — The record
@@ -42,21 +42,21 @@ from the repository root.
 
 ## 2 — The verb
 
-- [ ] 2.1 In `isekai/interface/cli.py`, make the edits of [the verb](design.md#the-verb)'s table: the docstring line,
+- [x] 2.1 In `isekai/interface/cli.py`, make the edits of [the verb](design.md#the-verb)'s table: the docstring line,
   the `VERBS` entry, the loop's tuple, the `discard` parser and the `dispatch` branch.
   Verify: `uv run python -m isekai discard --help` exits 0.
-- [ ] 2.2 In `isekai/interface/cli.py`, after `_draft`, add `_discard(image: Path, wired: Wiring) -> int` per
+- [x] 2.2 In `isekai/interface/cli.py`, after `_draft`, add `_discard(image: Path, wired: Wiring) -> int` per
   [D3](design.md#d3), importing `drop_thumbnails` from `isekai.interface.ui` inside it, its docstring saying why.
   Verify: `grep -n 'def _discard(image: Path, wired: Wiring) -> int:' isekai/interface/cli.py` prints one line.
-- [ ] 2.3 In `tests/test_pipeline_cli.py`, add `"discard"` after `"draft"` in `EXPECTED_VERBS`, and
+- [x] 2.3 In `tests/test_pipeline_cli.py`, add `"discard"` after `"draft"` in `EXPECTED_VERBS`, and
   `"discard": ["outputs/001/7.png"]` to `own` in `test_each_verb_is_reachable_as_a_subcommand`.
   Verify: `uv run pytest "tests/test_pipeline_cli.py::test_each_verb_is_reachable_as_a_subcommand[discard]"` exits 0.
-- [ ] 2.4 In `tests/test_pipeline_cli.py`, add `test_discard_deletes_the_render_and_its_thumbnail`
+- [x] 2.4 In `tests/test_pipeline_cli.py`, add `test_discard_deletes_the_render_and_its_thumbnail`
   (`cli:discard:the-render-and-its-thumbnail-are-deleted`): a run in `<tmp>/lib/<collection>/runs`, `sources/` beside
   it, its cache file by hand; the image given relative, after `monkeypatch.chdir(tmp_path)`; `dispatch` exits 0; the
   image, record and thumbnail gone, `wired.out` naming each.
   Verify: `uv run pytest tests/test_pipeline_cli.py -k discard_deletes_the_render` exits 0.
-- [ ] 2.5 In `tests/test_pipeline_cli.py`, add `test_discard_of_a_path_naming_no_render_is_refused`
+- [x] 2.5 In `tests/test_pipeline_cli.py`, add `test_discard_of_a_path_naming_no_render_is_refused`
   (`cli:discard:a-path-naming-no-render-is-refused`): a sidecar's path exits 1, `wired.err` naming it and
   `<run>/<flow>/outputs/<NNN>/<seed>.png`, and a snapshot of the run is unchanged.
   Verify: `uv run pytest tests/test_pipeline_cli.py -k discard_of_a_path` exits 0.

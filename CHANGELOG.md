@@ -12,6 +12,8 @@ its new digest.
 
 - The render stage's `discard_render` deletes one render's image, then its record, then its group once empty, and
   the library's `drop_thumbnails` its cached thumbnails: a render is a likeness, so a failed one leaves (0106 D1, D2).
+- `isekai discard <image>` deletes one render and its thumbnails, printing each path deleted, and refuses a path
+  naming no render, deleting nothing (0106 D3).
 
 ## [0.70.0] - 2026-11-06
 
