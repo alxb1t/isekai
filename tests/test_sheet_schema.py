@@ -184,6 +184,23 @@ def test_a_sheet_carrying_a_tag_outside_the_vocabulary_is_refused(
     assert "prediction set" in message
 
 
+@pytest.mark.spec("sheet:purity:an-excluded-tag-is-refused")
+def test_a_sheet_carrying_an_excluded_tag_is_refused(
+    schema: Schema, vocabulary: Vocabulary
+) -> None:
+    sheet = {name: [] for name in schema.names}
+    sheet["accessories"] = ["glasses"]
+    validate(sheet, schema, vocabulary)
+
+    with pytest.raises(Refusal) as refused:
+        validate(sheet, schema, vocabulary, excluded=frozenset({"glasses"}))
+
+    message = str(refused.value)
+    assert "'glasses' in accessories" in message
+    assert "excluded list" in message
+    assert "delete it from the draft" in message
+
+
 @pytest.mark.spec("sheet:output:sheet-stores-fields-only")
 def test_a_sheet_missing_a_field_is_refused_and_told_to_add_an_empty_one(
     schema: Schema, vocabulary: Vocabulary

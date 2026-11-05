@@ -658,7 +658,11 @@ def create_app(
         """
         vocabulary = shared.vocabulary()
         fragment = q.strip()
-        found = vocabulary.search(fragment) if fragment else []
+        found = (
+            vocabulary.search(fragment, skip=shared.field_map().excluded)
+            if fragment
+            else []
+        )
         return {
             "matches": [
                 {
@@ -825,7 +829,11 @@ def create_app(
         with _DRAFT_UPDATE:
             _precondition(one, payload or {})
             written, warnings = approve(
-                one.run, one.flow.id, one.flow.schema, shared.vocabulary()
+                one.run,
+                one.flow.id,
+                one.flow.schema,
+                shared.vocabulary(),
+                excluded=shared.field_map().excluded,
             )
         return {
             "approved": written.name if written else None,

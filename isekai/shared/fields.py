@@ -24,22 +24,28 @@ def validate(
     schema: Schema,
     vocabulary: Vocabulary,
     *,
+    excluded: frozenset[str] = frozenset(),
     remedy: str | None = None,
+    schema_remedy: str | None = None,
 ) -> None:
     """Refuse a sheet that is not exactly the schema's fields of canonical tags.
 
-    Three ways a sheet can be wrong, and each names what to do about it: a field
-    the schema declares is missing, a key the schema does not declare is present,
-    or a tag is not in the vocabulary's prediction set. An empty field is none of
-    those. `remedy` replaces each edit-the-sheet advice for a caller whose sheet
-    does not exist yet, so editing it is no fix.
+    Each way a sheet can be wrong names what to do about it: a field the schema
+    declares is missing, a key the schema does not declare is present, a tag is
+    not in the vocabulary's prediction set, a tag is not in its spelling, or a
+    tag is on the field map's `excluded` list. An empty field is none of those.
+    `remedy` replaces each edit-the-sheet advice for a caller whose sheet does
+    not exist yet, so editing it is no fix. `schema_remedy`, when given, replaces
+    it for the missing and extra fields alone, for a caller whose tags can be
+    fixed where its fields cannot.
     """
+    shape_remedy = schema_remedy or remedy
     missing = [name for name in schema.names if name not in fields]
     if missing:
         raise Refusal(
             f"the sheet is missing {', '.join(missing)}; "
             + (
-                remedy
+                shape_remedy
                 or "add the field with an empty list -- an empty field is a "
                 "legal answer, a missing one is not"
             )
@@ -49,7 +55,10 @@ def validate(
         raise Refusal(
             f"the sheet carries {', '.join(sorted(extra))}, which schema "
             f"{schema.name} does not declare; "
-            + (remedy or "remove the entry, or write a flow whose schema declares it")
+            + (
+                shape_remedy
+                or "remove the entry, or write a flow whose schema declares it"
+            )
         )
     outside = [
         (name, tag)
@@ -75,4 +84,13 @@ def validate(
         raise Refusal(
             f"{listed}: not written in the vocabulary's own spelling; "
             + (remedy or "use lowercase words separated by single spaces")
+        )
+    barred = [
+        (name, tag) for name in schema.names for tag in fields[name] if tag in excluded
+    ]
+    if barred:
+        listed = ", ".join(f"{tag!r} in {name}" for name, tag in barred)
+        raise Refusal(
+            f"{listed}: on the field map's excluded list, which no criterion can hold; "
+            + (remedy or "delete it from the draft")
         )

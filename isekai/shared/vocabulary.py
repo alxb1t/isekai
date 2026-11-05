@@ -109,10 +109,12 @@ class Vocabulary:
         """
         return sorted(tags, key=lambda tag: (-self.counts.get(tag, 0), tag))
 
-    def search(self, term: str) -> list[str]:
-        """Return every tag containing `term`, ranked."""
+    def search(self, term: str, *, skip: frozenset[str] = frozenset()) -> list[str]:
+        """Return every tag containing `term`, but those in `skip`, ranked."""
         needle = normalise(term)
-        return self.rank(tag for tag in self.counts if needle in tag)
+        return self.rank(
+            tag for tag in self.counts if needle in tag and tag not in skip
+        )
 
 
 def read_tags(body: str) -> dict[str, int]:
