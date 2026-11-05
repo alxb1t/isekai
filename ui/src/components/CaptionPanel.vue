@@ -16,8 +16,6 @@ import { sentencesOf, wordsOf } from '../caption'
 const props = defineProps<{
   prose: string | null
   command: string | null
-  /* The flow the caption is borrowed from, named in the heading, or null. */
-  from?: string | null
   loading?: boolean
 }>()
 
@@ -39,7 +37,7 @@ const missing = computed(() => !props.loading && props.prose === null)
 <template>
   <section class="caption">
     <div class="source__head">
-      <span class="kicker" data-caption-heading>② caption<template v-if="from"> · {{ from }}</template></span>
+      <span class="kicker" data-caption-heading>② caption</span>
       <span class="source__meta mono">
         {{ loading ? 'reading…' : missing ? 'no caption' : `${words} words` }}
       </span>

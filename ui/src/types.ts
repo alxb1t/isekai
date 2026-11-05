@@ -143,9 +143,6 @@ export interface InputDetail {
   /* The command that writes a missing caption, built by the server; null
      beside a caption. The browser never spells a command. */
   caption_command: string | null
-  /* The flow whose caption is shown, where this flow holds none and its sheet
-     holds that flow's tags; else null. */
-  caption_from: string | null
   /* Null where the artifact is absent, which is never a failure: a run
      captioned before v0.20, a flow that declares no tagger, or a tagger that
      failed. The panel simply is not drawn. */

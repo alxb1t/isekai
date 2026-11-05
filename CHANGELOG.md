@@ -13,9 +13,10 @@ its new digest.
 - `isekai migrate` copies each run's per-flow caption and tag lists into `runs/<id>/photo/`, leaving the old files;
   `photo` is no flow, and a run not yet migrated is refused naming the verb (0103 D1–D5). The reader and both
   taggers resolve with no flow (0103 D7).
-- BREAKING: `isekai tag` and `isekai caption` take no `--flow` and write `photo/` once for every flow; one is refused
-  naming the command without it. Prepare tags and captions once per photograph, and the sheet, Review, the hub, `show`
-  and Compare read `photo/`; the borrow between flows is gone (0103 D6, D8–D10).
+- BREAKING: `isekai tag` and `isekai caption` take no `--flow` and write `photo/` once for every flow; Prepare runs
+  them once per photograph, and every reader takes `photo/`, so no flow borrows another's (0103 D6, D8–D10).
+- Review's source pane drops its "· from" heading and `caption_from`: every flow shows the photograph's caption
+  (0103 D11).
 
 ## [0.68.0] - 2026-11-05
 

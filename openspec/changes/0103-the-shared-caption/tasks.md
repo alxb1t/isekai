@@ -7,7 +7,7 @@ the repository root.
 
 - [x] 1 — The store
 - [x] 2 — The switch
-- [ ] 3 — The page
+- [x] 3 — The page
 - [ ] 4 — The record
 
 ## 1 — The store
@@ -196,18 +196,18 @@ the repository root.
 
 ## 3 — The page
 
-- [ ] 3.1 In `ui/src/types.ts`, `caption_from` and the comment above it go; in `ui/src/views/Review.vue`, the
+- [x] 3.1 In `ui/src/types.ts`, `caption_from` and the comment above it go; in `ui/src/views/Review.vue`, the
   `:caption-from` binding goes ([D11](design.md#d11)).
   Verify: `git grep -n -e caption_from -e caption-from -- ui/src/types.ts ui/src/views/Review.vue` prints nothing.
-- [ ] 3.2 In `ui/src/components/SourcePanel.vue`, the `captionFrom` prop and `:from="captionFrom"` go; in
+- [x] 3.2 In `ui/src/components/SourcePanel.vue`, the `captionFrom` prop and `:from="captionFrom"` go; in
   `ui/src/components/CaptionPanel.vue`, the `from` prop, its comment and `<template v-if="from"> · {{ from }}</template>` go.
   Verify: `git grep -n -e captionFrom -e "v-if=\"from\"" -- ui/src/components` prints nothing.
-- [ ] 3.3 In `ui/src/composables/useSheet.test.ts`, the fixture's `caption_from: null` goes.
+- [x] 3.3 In `ui/src/composables/useSheet.test.ts`, the fixture's `caption_from: null` goes.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.4 In `tests/e2e/test_render.py`'s `test_conjure_from_this_opens_review`,
+- [x] 3.4 In `tests/e2e/test_render.py`'s `test_conjure_from_this_opens_review`,
   `to_contain_text(f"caption · {FLOW}")` → `to_have_text("② caption")` on `[data-caption-heading]`.
   Verify: `grep -c 'to_have_text("② caption")' tests/e2e/test_render.py` prints `1`.
-- [ ] 3.5 The source pane's borrow is gone, as the brief's check states.
+- [x] 3.5 The source pane's borrow is gone, as the brief's check states.
   Verify: `git grep -n -e tagger_of -e listed_from -e caption_from -- isekai ui/src` prints nothing.
 
 ## 4 — The record
