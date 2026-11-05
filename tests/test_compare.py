@@ -11,13 +11,14 @@ from pathlib import Path
 
 import pytest
 
-from isekai.foundation.flow import load_flow, tracked_flows
+from isekai.foundation.flow import load_flow
 from isekai.foundation.run import (
     OUTPUTS,
     PROMPTS,
     REVIEW,
     Run,
     artifact_name,
+    assign,
     open_run,
 )
 from isekai.interface.cli import build_parser, dispatch
@@ -51,7 +52,7 @@ def _wiring(out: io.StringIO, err: io.StringIO) -> Wiring:
 
 
 def _run(collection: Path, name: str, prose: str, height: int = 480) -> Run:
-    """Open a run in `collection` and caption it under both flows.
+    """Open a run in `collection`, caption its photograph and assign both flows.
 
     `height` tells two photographs apart: a run is keyed by the photograph's bytes.
     """
@@ -59,12 +60,9 @@ def _run(collection: Path, name: str, prose: str, height: int = 480) -> Run:
     photo.parent.mkdir(parents=True, exist_ok=True)
     photo.write_bytes(jpeg_bytes(640, height))
     run = open_run(photo, collection / "runs")
+    caption(run, FakeReader(prose=f"{prose}, read once"))
     for flow in (SUMMON, CONJURE):
-        caption(
-            run,
-            FakeReader(prose=f"{prose} for {flow}"),
-            flow=flow,
-        )
+        assign(run, flow)
     return run
 
 
@@ -137,7 +135,7 @@ def test_each_run_shows_its_photograph_and_each_flows_renders(tmp_path: Path) ->
     # The flow that reads the photograph sits beside it; the one that does not, after.
     section = _section(body, bea)
     assert section.index(f"{SUMMON} &middot;") < section.index(f"{CONJURE} &middot;")
-    assert f"Ada for {SUMMON}" in _section(body, ada)
+    assert "Ada, read once" in _section(body, ada)
     sources = re.findall(r'src="([^"]+)"', body)
     assert sources
     for source in sources:
@@ -194,9 +192,7 @@ def test_a_directory_without_runs_is_refused_naming_it(tmp_path: Path) -> None:
     assert err.startswith("refused: ")
     assert str(collection) in err
     # The fix is a command to paste, naming where the stages put the runs.
-    flows = " ".join(f"--flow {flow}" for flow in tracked_flows())
-    assert f"`python -m isekai tag {flows} " in err
-    assert f"--runs {collection / 'runs'} " in err
+    assert f"`python -m isekai tag --runs {collection / 'runs'} " in err
     assert list(collection.iterdir()) == []
 
 
@@ -213,8 +209,11 @@ def test_captions_span_the_row_and_each_prompt_sits_under_its_render(
 
     body = _page(collection)
     grid, captions = body.split('<div class="grid">')[1].split('<div class="captions">')
-    assert f"Ada for {SUMMON}" in captions and f"Ada for {CONJURE}" in captions
-    assert "Ada for" not in grid
+    # One caption per run, the photograph's, naming no flow.
+    assert captions.count('<p class="caption">') == 1
+    assert "Ada, read once" in captions
+    assert SUMMON not in captions and CONJURE not in captions
+    assert "Ada, read once" not in grid
     figures = grid.split("<figure>")
     for flow in (SUMMON, CONJURE):
         [figure] = [f for f in figures if f"{flow} &middot; seed" in f]

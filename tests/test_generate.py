@@ -194,7 +194,7 @@ def _run_for_fewer(
     photo = tmp_path / "fewer.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
-    caption(made, FakeReader(prose="Brown hair, brown eyes."), flow=FEWER)
+    caption(made, FakeReader(prose="Brown hair, brown eyes."))
     sheet(
         made,
         schema,
@@ -303,7 +303,6 @@ def test_a_flow_with_no_approved_sheet_is_refused_naming_the_commands(
 def test_every_flow_with_an_approved_artifact_is_selected_without_a_flag(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    caption(run, FakeReader(), flow="summon-v2")
     sheet(run, schema, vocabulary, flow="summon-v2")
     review(run, "summon-v2")
     approve(run, "summon-v2", schema, vocabulary)
@@ -315,7 +314,6 @@ def test_every_flow_with_an_approved_artifact_is_selected_without_a_flag(
 def test_a_flow_with_only_a_draft_is_not_selected(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    caption(run, FakeReader(), flow="summon-v2")
     sheet(run, schema, vocabulary, flow="summon-v2")
     review(run, "summon-v2")
 
@@ -340,7 +338,6 @@ def test_a_named_unapproved_flow_is_refused_beside_an_approved_one(
 def test_named_flows_all_approved_are_refused_nothing(
     run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    caption(run, FakeReader(), flow="summon-v2")
     sheet(run, schema, vocabulary, flow="summon-v2")
     review(run, "summon-v2")
     approve(run, "summon-v2", schema, vocabulary)
@@ -866,8 +863,8 @@ def test_one_flows_malformed_sheet_does_not_cost_its_siblings_their_assembly(
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
+    caption(made, FakeReader(prose="Brown hair, brown eyes."))
     for name in (FLOW, FEWER):
-        caption(made, FakeReader(prose="Brown hair, brown eyes."), flow=name)
         sheet(made, schema, vocabulary, flow=name)
         review(made, name)
         approve(made, name, schema, vocabulary)

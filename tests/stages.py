@@ -39,6 +39,7 @@ from isekai.foundation.artifacts import (
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import Flow, Schema, load_flow, manifest_digest
 from isekai.foundation.run import (
+    PHOTO,
     WD14,
     Run,
     artifact_name,
@@ -80,13 +81,12 @@ def caption(
     run: Run,
     reader: caption_stage.Reader,
     *,
-    flow: str = FLOW.id,
     briefing_path: Path = CAPTION_BRIEFING,
     new_version: bool = False,
 ) -> Path | None:
     """Call the caption stage under the caption config's standing instructions."""
     return caption_stage.caption(
-        run, flow, reader, briefing_path=briefing_path, new_version=new_version
+        run, reader, briefing_path=briefing_path, new_version=new_version
     )
 
 
@@ -146,16 +146,15 @@ def write_wd14(
     run: Run,
     tags: Sequence[DanbooruTag] = TAGS,
     *,
-    flow: str = FLOW.id,
     version: int = 1,
 ) -> Path:
-    """Write the tag artifact the sheet stage reads, in `tag_wd14`'s own shape.
+    """Write the photograph's tag artifact the sheet stage reads, in `tag_wd14`'s shape.
 
     One helper rather than a fixture per module: `sheet()` below calls it for any
     test that has not written one, so a call site passes nothing to get the tag
     list the stage reads.
     """
-    directory = run.directory(flow, WD14)
+    directory = run.directory(PHOTO, WD14)
     path = directory / artifact_name(version)
     listed: Wd14 = {
         "schema": WD14_FILE.schema,
@@ -201,7 +200,7 @@ def sheet(
     Returns the path alone; a test of the stage's warnings calls the stage.
     """
     if tags is not None:
-        write_wd14(run, tags, flow=flow)
+        write_wd14(run, tags)
     written, _ = sheet_stage.sheet(
         run,
         flow,
@@ -217,18 +216,19 @@ def sheet(
 
 @dataclass(frozen=True)
 class Always[T]:
-    """A resolver that hands every flow the same double.
+    """A resolver that hands every caller the same double.
 
-    `Wiring.reader` is a resolver, called per flow. A test that means to drive one
-    double over any number of flows says so with this rather than by repeating a lambda,
-    and `.double` is what keeps the counting assertions -- how many times was the
-    reader actually reached -- reaching the object that did the counting.
+    `Wiring.reader` is a resolver, called each time a verb asks. A test that means to
+    drive one double over any number of calls says so with this rather than by
+    repeating a lambda, and `.double` is what keeps the counting assertions -- how
+    many times was the reader actually reached -- reaching the object that did the
+    counting.
     """
 
     double: T
 
-    def __call__(self, flow: Flow) -> T:
-        """Return the one double, whatever flow asked."""
+    def __call__(self) -> T:
+        """Return the one double."""
         return self.double
 
 
@@ -294,10 +294,10 @@ def fake_tagger(vector: list[float] | None = None) -> LocalTagger:
 
 
 def fake_wd14(vector: list[float] | None = None) -> Always[LocalTagger]:
-    """Return a resolver handing every flow one opened fake tagger.
+    """Return a resolver handing every caller one opened fake tagger.
 
     `Always`'s reason, applied to the local tagger: a test driving one double over
-    any number of flows should not repeat a lambda, and a wiring composed for a
+    any number of calls should not repeat a lambda, and a wiring composed for a
     verb that never tags still has to say what it *would* have tagged with.
     """
     return Always(fake_tagger(vector))

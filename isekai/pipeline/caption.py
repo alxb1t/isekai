@@ -20,7 +20,7 @@ that a producer names what actually made the artifact.
 
 **One implementation ships, and `config/caption.json` names the model it runs.**
 `OllamaReader` reaches a runtime over HTTP to a socket on this machine, and the
-config declares the alias, which `interface/wiring.py` resolves for every flow.
+config declares the alias, which `interface/wiring.py` resolves.
 The adapter lives here, beside
 the Protocol and the double it shares, rather than in `boundary/`: an
 implementation of a Protocol in a different layer from the Protocol is the
@@ -53,6 +53,7 @@ from isekai.foundation.run import (
     instructions_record,
     latest,
     next_version,
+    photo_of,
     record_failure,
     refusal_for,
 )
@@ -230,7 +231,6 @@ class OllamaReader:
 
 def caption(
     run: Run,
-    flow: str,
     reader: Reader,
     *,
     briefing_path: Path,
@@ -238,16 +238,15 @@ def caption(
 ) -> Path | None:
     """Read `run`'s photograph into prose, or do nothing because it is already read.
 
-    **The caption belongs to the flow that asked for it.** The reader still gets
-    the photograph and its standing instructions and nothing else -- `flow` never
-    reaches it -- but the answer is written under that flow, as every stage's
-    artifact is (D17). Two flows over one photograph read it twice.
+    **The caption is the photograph's.** The reader gets the photograph and its
+    standing instructions and nothing else, and the answer is written once, under
+    `photo/`, and every flow reads it (D17).
 
     Returns the artifact's path when one is written, and None when the stage was
     already complete -- which is the whole of resume at this stage: no special
     mode and no state machine, just a command that does nothing the second time.
     """
-    directory = run.directory(flow, CAPTIONS)
+    directory = photo_of(run, CAPTIONS)
     if latest(directory) is not None and not new_version:
         return None
 
@@ -272,7 +271,7 @@ def caption(
             record,
             CAPTIONS,
             STAGE,
-            flow,
+            None,
             STAGE,
         ) from failed
 

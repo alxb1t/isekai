@@ -29,9 +29,9 @@ import pytest
 from isekai.boundary import ollama
 from isekai.foundation.artifacts import APPROVED_FILE, DRAFT_FILE, SHEET_FILE, read
 from isekai.foundation.caption_config import load_caption_config
-from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Flow, Schema, load_flow
+from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Schema, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import Run, open_run
+from isekai.foundation.run import PHOTO, Run, open_run
 from isekai.interface import wiring
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
@@ -70,6 +70,7 @@ EXPECTED_VERBS = (
     "show",
     "ui",
     "compare",
+    "migrate",
 )
 
 
@@ -167,7 +168,8 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
     # `compare` takes a collection directory, `render` its runs, `import` a
-    # collection and its files, `draft` a flow and images; `ui` takes nothing.
+    # collection and its files, `draft` a flow and images; `ui` and `migrate` take
+    # nothing.
     own = {
         "import": ["--collection", "collection", "photo.jpg"],
         "draft": ["--flow", "summon-anime-wai", "outputs/001/7.png"],
@@ -175,6 +177,7 @@ def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
         "ui": [],
         "compare": ["collection"],
         "render": ["runs", "summon-anime-wai=1"],
+        "migrate": [],
     }
     flag = own.get(verb, ["--flow", "summon-anime-wai"])
 
@@ -255,7 +258,7 @@ def test_parsing_a_verb_succeeds() -> None:
 
 # --- the flow selection --------------------------------------------------------
 
-STAGE_VERBS = ("caption", "tag", "sheet", "review", "approve", "generate")
+STAGE_VERBS = ("sheet", "review", "approve", "generate")
 
 
 @pytest.mark.spec("cli:flow-selection:a-stage-verb-requires-a-flow")
@@ -323,6 +326,35 @@ def test_every_stage_verb_accepts_the_flag(verb: str) -> None:
     assert parsed.flows == ["summon-anime-wai"]
 
 
+@pytest.mark.spec("cli:flow-selection:the-photographs-verbs-refuse-a-flow")
+@pytest.mark.parametrize(
+    ("verb", "writes"), [("caption", "prose"), ("tag", "tags")], ids=["caption", "tag"]
+)
+def test_the_photographs_verbs_refuse_a_flow(
+    tmp_path: Path, verb: str, writes: str
+) -> None:
+    wired = _wiring(tmp_path)
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    runs = tmp_path / "elsewhere"
+    parsed = build_parser().parse_args(
+        [verb, "--flow", "summon-anime-wai", "--runs", str(runs), "--new-version"]
+        + ["--progress", "json", str(photo)]
+    )
+
+    status = dispatch(parsed, wired)
+
+    assert status == 1
+    assert isinstance(wired.err, io.StringIO)
+    assert wired.err.getvalue() == (
+        f"refused: `{verb}` takes no --flow: it writes the photograph's {writes}, "
+        f"which every flow reads; run `python -m isekai {verb} --runs {runs} "
+        f"--new-version {photo}`\n"
+    )
+    assert not (tmp_path / "runs").exists()
+    assert not runs.exists()
+
+
 @pytest.mark.spec("cli:flow-selection:every-stage-verb-accepts-it")
 def test_the_inspection_verb_is_the_only_one_that_does_not_take_it() -> None:
     result = _module("show", "--flow", "summon-anime-wai")
@@ -378,7 +410,7 @@ def test_a_model_this_build_cannot_reach_refuses_naming_it_and_the_remedy(
     is named where it is discovered: at the call, by `ollama.py`, with the one
     command that fixes it.
     """
-    reader = reader_for(load_flow("summon-anime-wai"))
+    reader = reader_for()
     assert isinstance(reader, OllamaReader)
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
@@ -411,8 +443,7 @@ def test_the_implementation_the_artifacts_record_is_the_one_the_adapter_names() 
 def test_a_flow_resolves_to_a_reader_running_the_configured_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    flow = load_flow("summon-anime-wai")
-    reader = reader_for(flow)
+    reader = reader_for()
 
     assert isinstance(reader, OllamaReader)
     assert reader.model == load_caption_config().model
@@ -421,8 +452,8 @@ def test_a_flow_resolves_to_a_reader_running_the_configured_model(
     configured = replace(load_caption_config(), model="a-reader")
     monkeypatch.setattr(wiring, "load_caption_config", lambda: configured)
 
-    configured_reader = wiring.reader_for(flow)
-    configured_tagger = wiring.hosted_tagger_for(flow)
+    configured_reader = wiring.reader_for()
+    configured_tagger = wiring.hosted_tagger_for()
 
     assert isinstance(configured_reader, OllamaReader)
     assert isinstance(configured_tagger, OllamaTagger)
@@ -433,7 +464,7 @@ def test_a_flow_resolves_to_a_reader_running_the_configured_model(
 def test_composing_a_wiring_contacts_no_host_and_looks_up_no_binary(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Nothing is constructed until a flow asks, so no check can fire here.
+    """Nothing is constructed until a verb asks, so no check can fire here.
 
     Composing a wiring resolves nothing, so a machine with no Ollama running and
     no alias created still composes one. `shutil.which` and the transport both
@@ -488,9 +519,7 @@ def test_a_wiring_composed_without_a_reader_refuses_by_name(tmp_path: Path) -> N
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
 
-    status = dispatch(
-        _cli_args("caption", str(photo), tmp_path, flow=["summon-anime-wai"]), wired
-    )
+    status = dispatch(_cli_args("caption", str(photo), tmp_path, flow=[]), wired)
 
     assert status == 1
     assert "composed without a reader" in err.getvalue()
@@ -500,57 +529,63 @@ def test_a_wiring_composed_without_a_reader_refuses_by_name(tmp_path: Path) -> N
 def test_one_command_resolves_every_flow_on_the_configured_model(
     tmp_path: Path,
 ) -> None:
+    reader = reader_for()
+
+    assert isinstance(reader, OllamaReader)
+    assert reader.model == load_caption_config().model
+
+
+def _review_with_one_refusing(tmp_path: Path, refusing: str) -> tuple[int, Wiring]:
+    """Review one photograph over two flows, the other alone holding a sheet."""
     root = _flows_a_and_b(tmp_path)
-
-    for name in ("flow-a", "flow-b"):
-        reader = reader_for(load_flow(name, root))
-
-        assert isinstance(reader, OllamaReader)
-        assert reader.model == load_caption_config().model
-
-
-def _caption_with_one_refusing(tmp_path: Path, refusing: str) -> tuple[int, Wiring]:
-    """Caption one photograph over two flows, the reader refusing `refusing`'s."""
-    wired = _wiring(tmp_path, flows_dir=_flows_a_and_b(tmp_path))
-
-    def reader(flow: Flow) -> FakeReader:
-        if flow.id == refusing:
-            raise Refusal(f"{flow.id}: its model is not running")
-        return FakeReader(prose="A person.")
-
-    wired.reader = reader
+    wired = _wiring(tmp_path, flows_dir=root)
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
+    run = open_run(photo, wired.runs_root)
+    other = "flow-b" if refusing == "flow-a" else "flow-a"
+    sheet(run, load_flow(other, root).schema, wired.vocabulary(), flow=other)
     status = dispatch(
-        _cli_args("caption", str(photo), tmp_path, flow=["flow-a", "flow-b"]), wired
+        _cli_args("review", run.id, tmp_path, flow=["flow-a", "flow-b"]), wired
     )
     return status, wired
 
 
-def _captioned(tmp_path: Path) -> list[str]:
-    """Return the flows with a caption written, by name."""
+def _drafted(tmp_path: Path) -> list[str]:
+    """Return the flows with a draft written, by name."""
     return sorted(
         path.parent.parent.name
-        for path in (tmp_path / "runs").glob("*/*/captions/001.json")
+        for path in (tmp_path / "runs").glob("*/*/review/001.draft.json")
     )
+
+
+def _refused(wired: Wiring) -> list[str]:
+    """Return the refusal lines `wired` printed."""
+    assert isinstance(wired.err, io.StringIO)
+    return [
+        line
+        for line in wired.err.getvalue().splitlines()
+        if line.startswith("refused:")
+    ]
 
 
 @pytest.mark.spec("cli:flow-selection:one-flows-refusal-leaves-the-others")
 def test_one_flows_refusal_leaves_the_others(tmp_path: Path) -> None:
-    status, wired = _caption_with_one_refusing(tmp_path, "flow-a")
+    status, wired = _review_with_one_refusing(tmp_path, "flow-a")
 
     assert status == 1
-    assert _captioned(tmp_path) == ["flow-b"]
-    assert isinstance(wired.err, io.StringIO)
-    assert "refused: flow-a: its model is not running" in wired.err.getvalue()
+    assert _drafted(tmp_path) == ["flow-b"]
+    [refused] = _refused(wired)
+    assert "flow-a" in refused and "flow-b" not in refused
 
 
 @pytest.mark.spec_exempt("twin: the named-first flow runs whatever the per-flow guard")
 def test_a_refusal_after_the_first_flow_leaves_it_written(tmp_path: Path) -> None:
-    status, _ = _caption_with_one_refusing(tmp_path, "flow-b")
+    status, wired = _review_with_one_refusing(tmp_path, "flow-b")
 
     assert status == 1
-    assert _captioned(tmp_path) == ["flow-a"]
+    assert _drafted(tmp_path) == ["flow-a"]
+    [refused] = _refused(wired)
+    assert "flow-b" in refused and "flow-a" not in refused
 
 
 @pytest.mark.spec("sheet:superseded:a-newer-tag-list-is-named")
@@ -572,10 +607,37 @@ def test_sheet_prints_a_superseded_list_as_a_warning(
     assert isinstance(wired.out, io.StringIO) and isinstance(wired.err, io.StringIO)
     assert wired.err.getvalue() == (
         f"warning: {run.id}/summon-anime-wai: sheet 001 was filled from "
-        "wd14/001.json, and wd14/002.json is newer; run `python -m isekai sheet "
-        f"--flow summon-anime-wai{runs_flag(run)} --new-version {run.id}`\n"
+        "photo/wd14/001.json, and photo/wd14/002.json is newer; run "
+        f"`python -m isekai sheet --flow summon-anime-wai{runs_flag(run)} "
+        f"--new-version {run.id}`\n"
     )
     assert f"{run.id}: sheet is already complete" in wired.out.getvalue()
+
+
+@pytest.mark.spec("cli:progress:a-photographs-line-names-no-flow")
+def test_a_photographs_progress_line_names_no_flow(tmp_path: Path) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    lines: list[dict[str, object]] = []
+    for argv in (
+        ["tag", "--progress", "json", str(photo)],
+        ["caption", "--progress", "json", str(photo)],
+        ["sheet", "--flow", "summon-anime-wai", "--progress", "json", str(photo)],
+    ):
+        wired = _wiring(tmp_path)
+        assert dispatch(build_parser().parse_args(argv), wired) == 0
+        assert isinstance(wired.out, io.StringIO)
+        lines += [json.loads(line) for line in wired.out.getvalue().splitlines()]
+
+    run = open_run(photo, tmp_path / "runs")
+    assert lines == [
+        {"run": run.id, "stage": "tag", "state": "start"},
+        {"run": run.id, "stage": "tag", "state": "done"},
+        {"run": run.id, "stage": "caption", "state": "start"},
+        {"run": run.id, "stage": "caption", "state": "done"},
+        {"run": run.id, "flow": "summon-anime-wai", "stage": "sheet", "state": "start"},
+        {"run": run.id, "flow": "summon-anime-wai", "stage": "sheet", "state": "done"},
+    ]
 
 
 @pytest.mark.spec("review:copy-from:the-source-is-another-tracked-flow")
@@ -785,7 +847,7 @@ def test_draft_assigns_a_target_with_no_sheet_and_fills_it_from_the_source(
     review(other, "summon-anime-wai")
     approve(other, "summon-anime-wai", schema, vocabulary)
     batch = [*argv, str(rendered_image(other, 1, 8))]
-    tags = other.directory("summon-anime-wai", "wd14") / "001.json"
+    tags = other.directory(PHOTO, "wd14") / "001.json"
     intact = tags.read_bytes()
     tags.write_text("{}")
     before = {one.id: snapshot(one.path) for one in (run, other)}

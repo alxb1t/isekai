@@ -8,7 +8,7 @@ outlives the page that started it.
 
 ```
 Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
-            └ answers ─▶ per flow: tag ─▶ caption ─▶ sheet ─▶ done
+            └ answers ─▶ tag ─▶ caption, once ─▶ sheet, per flow ─▶ done
 Render ─▶ volume up ─ lost ─▶ the volume alert, nothing renders
            └ up ─▶ render --limit … --session … --progress json <runs>…
                  ─▶ volume down, unless kept
@@ -42,7 +42,9 @@ from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
 
-# The stages Prepare runs for each flow, in order.
+# The stages Prepare runs, in order: tag and caption once over the photographs,
+# naming no flow, since every flow reads the one description (D17); then sheet
+# for each flow.
 PREPARE = ("tag", "caption", "sheet")
 
 # The cell stages a done line must read for its stage to count it; a stage absent
@@ -90,19 +92,23 @@ def refusal(code: int, refused: str | None, collection: str) -> str | None:
     return f"{lead}{quoted}; read {collection}/{LOG} for the cards it skipped"
 
 
-# How a stage is started: the verb, the flow, the runs root and the runs.
-Command = Callable[[str, str, Path, Sequence[str]], list[str]]
+# How a stage is started: the verb, the flow or None, the runs root and the runs.
+Command = Callable[[str, str | None, Path, Sequence[str]], list[str]]
 
 
-def isekai_command(verb: str, flow: str, runs: Path, ids: Sequence[str]) -> list[str]:
-    """Return the verb line a stage runs as. e.g. `python -m isekai tag --flow f …`."""
+def isekai_command(
+    verb: str, flow: str | None, runs: Path, ids: Sequence[str]
+) -> list[str]:
+    """Return the verb line a stage runs as; a photograph's stage names no flow.
+
+    e.g. `python -m isekai sheet --flow f …`, `python -m isekai tag --runs …`
+    """
     return [
         sys.executable,
         "-m",
         "isekai",
         verb,
-        "--flow",
-        flow,
+        *(() if flow is None else ("--flow", flow)),
         "--runs",
         str(runs),
         "--progress",
@@ -134,24 +140,31 @@ def render_command(limit: int, roots: Sequence[Path], session: str) -> list[str]
 
 @dataclass(frozen=True)
 class Step:
-    """One child: a verb over one flow's runs."""
+    """One child: a verb over one flow's runs, or over the photographs for None."""
 
-    flow: str
+    flow: str | None
     verb: str
     runs: tuple[str, ...]
 
 
 def plan(todo: Mapping[str, Sequence[str]], tagged: Mapping[str, bool]) -> list[Step]:
-    """Return the steps that prepare `todo`'s runs, by flow, skipping `tag` if untagged.
+    """Return the steps that prepare `todo`'s runs: the photographs once, then by flow.
 
-    e.g. {"summon": ["r1"]} -> tag, caption, sheet over r1 in summon
+    `tag` takes only the runs of a flow `tagged` names, and is left out when that
+    leaves none.
+    e.g. {"summon": ["r1"]} -> tag, caption over r1, then sheet over r1 in summon
     """
-    return [
-        Step(flow, verb, tuple(ids))
-        for flow, ids in todo.items()
-        if ids
-        for verb in PREPARE
-        if verb != "tag" or tagged[flow]
+    photographs = tuple(dict.fromkeys(run for ids in todo.values() for run in ids))
+    tag = tuple(
+        dict.fromkeys(run for flow, ids in todo.items() if tagged[flow] for run in ids)
+    )
+    described = [
+        Step(None, verb, runs)
+        for verb, runs in (("tag", tag), ("caption", photographs))
+        if runs
+    ]
+    return described + [
+        Step(flow, "sheet", tuple(ids)) for flow, ids in todo.items() if ids
     ]
 
 
@@ -170,10 +183,11 @@ class _Job:
     collections: tuple[str, ...] = ()
 
     started: str | None = None
-    # Each stage's cells, by flow and run, that reported it done.
-    completed: dict[str, set[tuple[str, str]]] = field(default_factory=dict)
+    # Each stage's cells, by flow and run, that reported it done; a photograph's
+    # stage is keyed `(None, run)`.
+    completed: dict[str, set[tuple[str | None, str]]] = field(default_factory=dict)
 
-    def asked(self, verb: str) -> set[tuple[str, str]]:
+    def asked(self, verb: str) -> set[tuple[str | None, str]]:
         """Return the cells, by flow and run, the job's steps run `verb` over."""
         return {
             (step.flow, run)
@@ -182,18 +196,22 @@ class _Job:
             for run in step.runs
         }
 
-    def complete(self, line: Mapping[str, Any], found: Mapping[str, Any]) -> bool:
+    def complete(
+        self, line: Mapping[str, Any], found: Sequence[Mapping[str, Any]]
+    ) -> bool:
         """Count `line`'s cell done for its stage once; return whether it counted.
 
-        `found` is the cell event the line made, its stage read from disk.
+        `found` is the cell events the line made, each stage read from disk; the
+        line counts when any of them reached the stage `REACHED` names.
         """
         verb = str(line.get("stage"))
-        identity = (str(line.get("flow")), str(line.get("run")))
-        reached = found.get("cell", {}).get("stage")
+        flow = line.get("flow")
+        identity = (None if flow is None else str(flow), str(line.get("run")))
+        reached = {event.get("cell", {}).get("stage") for event in found}
         done = self.completed.setdefault(verb, set())
         counts = (
             line.get("state") == "done"
-            and (verb not in REACHED or reached in REACHED[verb])
+            and (verb not in REACHED or bool(reached & REACHED[verb]))
             and identity in self.asked(verb)
             and identity not in done
         )
@@ -300,11 +318,11 @@ class Jobs:
         collection: str,
         folder: Path,
         steps: Sequence[Step],
-        cell: Callable[[dict[str, Any]], dict[str, Any] | None],
+        cell: Callable[[dict[str, Any]], list[dict[str, Any]]],
     ) -> dict[str, Any]:
         """Start Prepare over `steps`, or refuse: a Prepare running, or no answer.
 
-        `cell` turns a progress line into the event the page applies, or None.
+        `cell` turns a progress line into the events the page applies, or none.
         """
         self._refuse_running("prepare")
         # Outside the lock: a host that is slow to answer holds up no snapshot.
@@ -453,7 +471,7 @@ class Jobs:
         self,
         job: _Job,
         folder: Path,
-        cell: Callable[[dict[str, Any]], dict[str, Any] | None],
+        cell: Callable[[dict[str, Any]], list[dict[str, Any]]],
     ) -> None:
         """Run each step's child in turn, publishing each line it reports."""
         slot = self._slots[job.kind]
@@ -467,11 +485,13 @@ class Jobs:
                 reported = False
                 for raw in child.stdout:
                     event = progress_line(raw)
-                    reported = reported or event is not None
-                    found = cell(event) if event is not None else None
-                    if found is not None:
-                        self._broadcast.publish("cell", found)
-                        assert event is not None
+                    if event is None:
+                        continue
+                    reported = True
+                    found = cell(event)
+                    for one in found:
+                        self._broadcast.publish("cell", one)
+                    if found:
                         with self._lock:
                             completed = job.complete(event, found)
                         if completed:
@@ -482,9 +502,10 @@ class Jobs:
                     # A child that fails before its first line said nothing the
                     # page can show; its reason is in the log.
                     if code != 0 and not reported and not slot.stopping:
+                        on = "" if step.flow is None else f" on {step.flow}"
                         job.state = "failed"
                         job.message = (
-                            f"{step.verb} on {step.flow} ended before reporting "
+                            f"{step.verb}{on} ended before reporting "
                             f"(exit {code}); read {job.collection}/{LOG}, "
                             "then try again"
                         )

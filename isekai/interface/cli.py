@@ -5,9 +5,9 @@ Four separate scripts were rejected for the same reason one parser was chosen: i
 would multiply the import guard by four and give argument parsing four places to
 drift.
 
-**Schema migration is not a verb.** Every run file kind is at its first version,
-so an upgrade command would be a dispatch table with no entries and its refusal
-would be unreachable -- nothing writes a later one.
+**`migrate` moves a layout, not a schema.** Every run file kind is at its first
+version, so nothing upgrades one; `migrate` copies a run's per-flow description
+into `photo/` (D17).
 
     import        clean photographs into a collection's sources/
     assign        give a source a flow's empty directory, or take an empty one away
@@ -22,15 +22,18 @@ would be unreachable -- nothing writes a later one.
     show          print a run's artifacts, what produced each, and its failures
     ui        (3) serve the review surface for the library's collections
     compare       write a page of every run's photograph beside its renders
+    migrate       copy each run's per-flow description into photo/
 
 **`import` fills a collection, `assign` ticks a flow, `show` inspects a run, `ui`
-serves a surface, `compare` writes a page, and every other verb runs a stage.**
-The stage verbs and `assign` take `--flow` repeatably; `ui`, `show` and
-`compare` take none -- the surface serves every flow it offers, and the others
-report every flow the runs already hold. `show` reads a run and decides
-nothing, and `ui` is the second front end rather than a client of the first --
-it calls `wiring` and the stage functions directly, exactly as this module does,
-so neither surface is privileged and neither goes through the other.
+serves a surface, `compare` writes a page, `migrate` copies a layout, and every
+other verb runs a stage.** The stage verbs on a flow and `assign` take `--flow`
+repeatably; `tag` and `caption` take no flow, since they describe the
+photograph every flow reads (D17), and `ui`, `show`, `compare` and `migrate`
+take none -- the surface serves every flow it offers, and the others read every
+flow the runs already hold. `show` reads a
+run and decides nothing, and `ui` is the second front end rather than a client of
+the first -- it calls `wiring` and the stage functions directly, exactly as this
+module does, so neither surface is privileged and neither goes through the other.
 
 **`isekai/__main__.py` is a shim over this file.** `runpy` pins where the entry
 point's *path* is; it does not pin where the parser lives, and a package's largest
@@ -57,9 +60,11 @@ from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
+from isekai.foundation.migrate import migrate
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     FRAME_NAME,
+    PHOTOGRAPH_VERBS,
     RUNS_ROOT,
     Run,
     across,
@@ -122,7 +127,11 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("show", "print a run's artifacts, versions, producers and failures"),
     ("ui", "serve the app over the library of collections"),
     ("compare", "write a page of each run's photograph beside its renders"),
+    ("migrate", "copy each run's per-flow description into photo/"),
 )
+
+# What each of the photograph's verbs writes, for its refusal of `--flow`.
+_WRITES: Mapping[str, str] = {"caption": "prose", "tag": "tags"}
 
 # The review surface's loopback port. Declared here rather than in the package it
 # starts, because the parser is the one authority for what a flag defaults to --
@@ -216,11 +225,12 @@ def build_parser() -> argparse.ArgumentParser:
     # `compare` takes a collection directory instead: its runs root is the collection's
     # `runs/`, so a second way to name it could only disagree. `render` takes
     # each collection's runs root, and every run under each. `ui` serves the
-    # library, and `draft` takes images, whose paths name their runs.
+    # library, `draft` takes images, whose paths name their runs, and `migrate`
+    # walks every runs root unless one is named.
     for name in (
         name
         for name in made
-        if name not in ("compare", "draft", "import", "render", "ui")
+        if name not in ("compare", "draft", "import", "migrate", "render", "ui")
     ):
         made[name].add_argument(
             "photos",
@@ -242,12 +252,14 @@ def build_parser() -> argparse.ArgumentParser:
             default=RUNS_ROOT,
             help=f"the directory runs live under (default {RUNS_ROOT.name}/)",
         )
-    # Required, and repeatable, on every stage verb. A stage cannot act without
-    # knowing which flow asked, because the flow is what supplies what it reads:
-    # its schema, its graph and its dials. "Every tracked flow" is
-    # not a selection, it is the absence of one -- and at the last verb it spends
-    # money, at the first it burns a paid model call.
-    for name in ("assign", "caption", "tag", "sheet", "review", "approve", "generate"):
+    # Required, and repeatable, on every stage verb on a flow. Such a stage cannot
+    # act without knowing which flow asked, because the flow is what supplies what
+    # it reads: its schema, its graph and its dials. "Every tracked flow" is not a
+    # selection, it is the absence of one -- and at the last verb it spends money.
+    # `tag` and `caption` describe the photograph, which every flow reads, so they
+    # take no flow; the flag stays hidden so `dispatch` refuses it naming the
+    # command without it (D17).
+    for name in ("assign", "sheet", "review", "approve", "generate"):
         made[name].add_argument(
             "--flow",
             action="append",
@@ -255,6 +267,14 @@ def build_parser() -> argparse.ArgumentParser:
             required=True,
             metavar="FLOW",
             help="a flow to act on; repeatable, and required",
+        )
+    for name in PHOTOGRAPH_VERBS:
+        made[name].add_argument(
+            "--flow",
+            action="append",
+            dest="flows",
+            default=None,
+            help=argparse.SUPPRESS,
         )
     made["assign"].add_argument(
         "--remove",
@@ -345,6 +365,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     # Every namespace keeps one shape; `compare` reads its runs from the collection.
     made["compare"].set_defaults(photos=[], runs=RUNS_ROOT)
+
+    made["migrate"].add_argument(
+        "--runs",
+        type=Path,
+        default=None,
+        help=(
+            "walk this runs root alone; without it, .data/runs and every "
+            "collection's runs/ in the library"
+        ),
+    )
+    made["migrate"].set_defaults(photos=[])
 
     made["render"].add_argument(
         "targets",
@@ -448,6 +479,32 @@ def _ui(args: argparse.Namespace, wired: Wiring) -> int:
     from isekai.interface.ui import serve
 
     return serve(wired, port=int(args.port))
+
+
+def _migrate(args: argparse.Namespace, wired: Wiring) -> int:
+    """Copy each run's per-flow description into `photo/`, printing a line per run.
+
+    `--runs` walks that root alone; without it, `RUNS_ROOT` when it is a directory,
+    then each collection's `runs/` (D40). The library is imported here for `_ui`'s
+    reason: it is off `python -m isekai`'s import graph.
+    """
+    if args.runs is not None:
+        roots = [wired.runs_root]
+    else:
+        from isekai.interface.ui import collection_runs
+
+        roots = [*([RUNS_ROOT] if RUNS_ROOT.is_dir() else []), *collection_runs()]
+    refused = False
+    for root in roots:
+        named = sorted(path.name for path in root.iterdir()) if root.is_dir() else []
+        for name in (name for name in named if (root / name / FRAME_NAME).is_file()):
+            where = f"{root.parent.name}/{root.name}/{name}"
+            try:
+                print(f"{where}: {migrate(Run(name, root / name))}", file=wired.out)
+            except Refusal as unmigrated:
+                refused = True
+                print(f"{where}: refused: {unmigrated}", file=wired.err)
+    return 1 if refused else 0
 
 
 def _import(args: argparse.Namespace, wired: Wiring) -> int:
@@ -577,8 +634,9 @@ def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
     Resolved once, at selection, so an untracked name or a broken manifest is
     caught before any run is opened -- rather than at the flow's first use, which
     on `generate` is after a photograph has been uploaded. The parser has already
-    refused a stage verb naming none, and `show` names none by design, so an empty
-    selection is the inspection verb rather than a missing flag.
+    refused a stage verb on a flow naming none, and `show`, `tag` and `caption`
+    name none by design, so an empty selection is one of them rather than a
+    missing flag.
     """
     named: list[str] = list(getattr(args, "flows", None) or [])
     _require_tracked(named, wired)
@@ -611,8 +669,12 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             return 0
         if verb == "render":
             return run_session(args, wired, _dispatch_argv)
+        if verb == "migrate":
+            return _migrate(args, wired)
         if verb == "draft":
             return _draft(args.target, args.images, wired)
+        if verb in PHOTOGRAPH_VERBS and args.flows:
+            raise Refusal(_named_a_flow(args, targets))
         flows = _flows_for(args, wired)
         if verb == "approve":
             if args.cancel and args.source is not None:
@@ -629,8 +691,6 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
                     "--in-step-with checks before the session and renders nothing; "
                     f"drop `--server {args.server}` from the command"
                 )
-        if verb == "tag":
-            _require_tagged(flows, targets, args.runs)
     except Refusal as unselectable:
         print(f"refused: {unselectable}", file=wired.err)
         return 1
@@ -673,33 +733,22 @@ def _refuse_bad_source(
         )
 
 
-def _require_tagged(
-    flows: Mapping[str, Flow], targets: Sequence[str], runs: Path
-) -> None:
-    """Refuse a `tag` invocation naming any flow that declares no tagger.
+def _named_a_flow(args: argparse.Namespace, targets: Sequence[str]) -> str:
+    """Return the refusal of a photograph's verb named with `--flow`, and its command.
 
-    Before any identifier, so no flow named with it is tagged: a skip would report
-    success for a flow that wrote nothing (D31). With every flow untagged, "drop
-    `--flow`" would leave argparse nothing to accept, so the refusal names `sheet`
-    instead.
+    The command repeats `--runs` and `--new-version` where given, and the
+    identifiers; `--progress` is a job's, and is not repeated.
+    e.g. `caption --flow f a.jpg` -> "`caption` takes no --flow: …; run
+    `python -m isekai caption a.jpg`"
     """
-    untagged = [name for name, flow in flows.items() if not flow.tagger]
-    if untagged and len(untagged) == len(flows):
-        root = "" if runs == RUNS_ROOT else f" --runs {shlex.quote(str(runs))}"
-        photos = " ".join(shlex.quote(target) for target in targets) or "<photo>"
-        raise Refusal(
-            f"`tag` has nothing to do: {', '.join(untagged)} declare "
-            f'`"tagger": false`; run `python -m isekai sheet --flow '
-            f"{' --flow '.join(untagged)}{root} {photos}` next"
-        )
-    if untagged:
-        raise Refusal(
-            "; ".join(
-                f'{name}\'s manifest declares `"tagger": false`, so `tag` has '
-                f"nothing to do for it; drop `--flow {name}` from the command"
-                for name in untagged
-            )
-        )
+    verb = str(args.verb)
+    root = "" if args.runs == RUNS_ROOT else f" --runs {shlex.quote(str(args.runs))}"
+    again = " --new-version" if args.new_version else ""
+    photos = " ".join(shlex.quote(target) for target in targets) or "<photo>"
+    return (
+        f"`{verb}` takes no --flow: it writes the photograph's {_WRITES[verb]}, "
+        f"which every flow reads; run `python -m isekai {verb}{root}{again} {photos}`"
+    )
 
 
 def _seam(value: T | None, name: str, does: str) -> T:
@@ -761,9 +810,10 @@ def _per_item(
 
     The flows a verb acts on are a property of the invocation, not of the
     photograph, so they are resolved once by the caller rather than re-read from
-    disk per identifier. Every stage but the inspection one is per flow, because
-    the flow is what supplies what the stage reads: its schema and its dials. The
-    vocabulary is resolved at most once for the same reason and
+    disk per identifier. `tag` and `caption` run once per photograph and name no
+    flow, since every flow reads the one description (D17); every other stage
+    runs per flow, because the flow is what supplies what it reads: its schema
+    and its dials. The vocabulary is resolved at most once for the same reason and
     lazily for the old one: parsing the 308 KB tag list costs ~50 ms, and only
     two verbs need it at all.
     """
@@ -789,29 +839,19 @@ def _per_item(
         """
         return wired.field_map(vocabulary())
 
-    def tagger(flow: Flow) -> Callable[[], LocalTagger]:
+    def tagger() -> Callable[[], LocalTagger]:
         """Return a thunk that opens this invocation's local tagger, once.
-
-        **A thunk rather than a value, and one slot rather than one per flow.**
 
         Lazy, because opening it hashes 467 MB and loads a graph: an invocation whose
         lists are all already written must not pay for that to write nothing,
         and a completed run must still resume on a machine that has since
         emptied `models/`. `vocabulary()` above is a thunk for exactly this
         reason and says so.
-
-        One slot, because `wiring.tagger_for` takes a `Flow` and reads nothing
-        from it -- no manifest key names the local tagger's model (D31).
-        Keying the memo by flow would open the same graph once
-        per flow named on one command line and hold every copy for the rest of
-        the invocation. The parameter stays because the seam's shape is per flow
-        and the day one of them selects a different tagger is the day this needs
-        a key; giving it one before then buys two sessions and no behaviour.
         """
         resolve = _seam(wired.tagger, "tagger", "scores the photograph")
         if not opening:
             # A refusal is kept too, so the 467 MB hash is not re-run to meet it.
-            opening.append(_once(lambda: resolve(flow)))
+            opening.append(_once(resolve))
         return opening[0]
 
     def work(identifier: str) -> None:
@@ -821,47 +861,43 @@ def _per_item(
         try:
             run = _run_for(identifier, wired)
         except Refusal as unopened:
-            for name in flows:
+            names: list[str | None] = (
+                [None] if verb in PHOTOGRAPH_VERBS else list(flows)
+            )
+            for name in names:
                 reporter.item(identifier, name, verb, "refused", str(unopened))
             raise
         if verb == "show":
             for line in report(run, wired.flows_dir):
                 print(line, file=wired.out)
             return
-        step: Callable[[str], None]
+        step: Callable[[str], None] | None = None
+        describe: Callable[[], None] | None = None
         if verb == "caption":
 
-            def caption_flow(name: str) -> None:
-                flow = flows[name]
-                # **Resolved per flow, not once per invocation.** A reader that
-                # refuses refuses for this flow alone.
-                reader = _seam(wired.reader, "reader", "reads the photograph")(flow)
+            def caption_photo() -> None:
+                reader = _seam(wired.reader, "reader", "reads the photograph")()
                 _say(
                     reporter,
                     run,
                     "caption",
                     caption(
                         run,
-                        name,
                         reader,
                         briefing_path=load_caption_config().briefing_path,
                         new_version=new_version,
                     ),
                 )
 
-            step = caption_flow
+            describe = caption_photo
         elif verb == "tag":
 
-            def tag_flow(name: str) -> None:
-                flow = flows[name]
-
+            def tag_photo() -> None:
                 def hosted() -> None:
                     tagger_for = _seam(
                         wired.hosted_tagger, "hosted tagger", "tags the photograph"
                     )
-                    written = tag_hosted(
-                        run, name, tagger_for(flow), new_version=new_version
-                    )
+                    written = tag_hosted(run, tagger_for(), new_version=new_version)
                     _say(reporter, run, "tags", written)
 
                 # Each tagger's refusal is collected on its own, so neither costs
@@ -872,13 +908,13 @@ def _per_item(
                         reporter,
                         run,
                         "wd14",
-                        tag_wd14(run, name, tagger(flow), new_version=new_version),
+                        tag_wd14(run, tagger(), new_version=new_version),
                     ),
                     hosted,
                 )
                 collected.extend(across(steps, lambda step: step()))
 
-            step = tag_flow
+            describe = tag_photo
         elif verb == "sheet":
 
             def sheet_flow(name: str) -> None:
@@ -940,12 +976,12 @@ def _per_item(
         else:
             raise Refusal(f"{verb!r} is not a stage this build runs")
 
-        def reported(name: str) -> None:
-            """Run `step` for one flow between its `start` and its end."""
+        def reported(name: str | None, each: Callable[[], None]) -> None:
+            """Run `each` between its `start` and its end; `None` names no flow."""
             reporter.item(run.id, name, verb, "start")
             before = len(collected)
             try:
-                step(name)
+                each()
             except Refusal as refused:
                 reporter.item(run.id, name, verb, "refused", str(refused))
                 raise
@@ -957,9 +993,16 @@ def _per_item(
             else:
                 reporter.item(run.id, name, verb, "done")
 
-        # Each flow's refusal is collected on its own, so one flow's does not cost
-        # the input its other flows.
-        collected.extend(across(list(flows), reported))
+        if describe is not None:
+            # The photograph is described once, for every flow (D17).
+            collected.extend(across([describe], lambda one: reported(None, one)))
+        elif step is not None:
+            # Each flow's refusal is collected on its own, so one flow's does not
+            # cost the input its other flows.
+            per_flow = step
+            collected.extend(
+                across(list(flows), lambda name: reported(name, lambda: per_flow(name)))
+            )
 
     return work
 
@@ -1103,7 +1146,7 @@ class _Reporter:
     def item(
         self,
         run: str,
-        flow: str,
+        flow: str | None,
         stage: str,
         state: str,
         message: str | None = None,
@@ -1112,12 +1155,13 @@ class _Reporter:
         """Print one item's `start`, `done` or `refused` line, when asked for JSON.
 
         `more` adds what the item names beyond its run and flow, as a render its seed.
+        A photograph's stage names no flow, and its line carries none.
         """
         if not self.progress:
             return
         line: dict[str, str | int] = {
             "run": run,
-            "flow": flow,
+            **({} if flow is None else {"flow": flow}),
             "stage": stage,
             "state": state,
             **more,

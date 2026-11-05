@@ -19,22 +19,22 @@ its neighbours.
       │
   assign ── a flow ticked ──▶ runs/<input-id>/<flow-id>/   empty
       │
-  photograph
+  photograph                    written once into photo/, read by every flow
       │
-      ├──▶ ① tag ──────▶ wd14/      scored tags, from a local ONNX session
-      │               ──▶ tags/      raw tags, from the hosted model
+      ├──▶ ① tag ──────▶ photo/wd14/      scored tags, from a local ONNX session
+      │               ──▶ photo/tags/      raw tags, from the hosted model
       │
-      ├──▶ ① caption ──▶ captions/  prose, for a human to read
+      ├──▶ ① caption ──▶ photo/captions/  prose, for a human to read
       │
       ▼
-  ② sheet  ── reads wd14/ ──▶ sheets/   the flow's fields, filled
+  ② sheet  ── reads photo/wd14/ ──▶ sheets/   the flow's fields, filled
       │
       ▼
   ③ review ── reads sheets/ ──▶ review/NNN.draft.json
      approve ── reads the draft ──▶ review/NNN.approved.json
       │   with --from, reads the source flow's approval instead
      draft ── reads an image's approval, and another flow's own sheet ──▶ review/NNN.draft.json
-      │           its seed listed; another flow's sheet filled first from the image's tags where none
+      │           its seed listed; another flow's sheet filled first from the photograph's tags where none
       │           (or `ui`, the same stage in a browser)
       ▼
   ④ generate ── reads the approved sheet ──▶ prompts/   assembled, offline
@@ -70,13 +70,17 @@ outputs/001/7.png ─▶ draft ─▶ review/003.draft.json   {count 1, seeds [7
 ```
 
 Beside them, `show` reads a run's artifacts, versions, producers and failure records,
-names what below a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a collection's runs the
+names what below `photo/` or a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a collection's runs the
 same way and writes one page into the collection directory, `compare.html`: each run's
 photograph beside each flow's renders, linked and never embedded.
 
-Every stage verb takes `--flow`, required and repeatable, because the flow
-supplies the schema a stage fills against and the
-directory it writes into. `show`, `compare` and `ui`, which are not stage verbs,
+Every stage verb on a flow — `sheet`, `review`, `approve`, `generate` — takes
+`--flow`, required and repeatable, because the flow supplies the schema a stage
+fills against and the directory it writes into. `tag` and `caption` take no flow:
+they describe the photograph, once, into `photo/`, and every flow reads it, so a
+`--flow` is refused naming the command without it
+([D17](decisions.md#d17--input-above-flow-below)). `show`, `compare`, `migrate`
+and `ui`, which are not stage verbs,
 take no `--flow`: `show` and `compare` report every flow the runs already hold —
 `compare` takes the collection directory instead of `--runs` — and `ui` takes no
 argument at all. It serves the library `ISEKAI_LIBRARY` names, `~/isekai` by
@@ -91,8 +95,9 @@ sequence `draft --flow` runs too. Every other stage it runs only as the CLI's
 own verb, a child of the server
 ([D4](decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children)).
 
-**Prepare is a job of those children.** It asks Ollama first, then runs `tag`,
-`caption` and `sheet` per flow over every assigned cell with no sheet, each with
+**Prepare is a job of those children.** It asks Ollama first, then runs `tag` and
+`caption` once over the photographs of every assigned cell with no sheet, naming no
+flow, and `sheet` per flow over its cells, each with
 `--progress json`: one JSON line per item's start and end on stdout, its prose
 appended to the collection's `log.txt` as `[prepare] …`. One Prepare runs at a time,
 beside at most one render; Stop sends its child SIGINT, and the server stopping
@@ -124,8 +129,8 @@ tag list is an absent aid and never a refusal, while a missing *local* tag list 
 a refusal naming `tag`. An all-empty sheet is legal and therefore silent, which is
 why that refusal exists.
 
-**A flow that declares `"tagger": false` is the exception.** `tag` refuses it,
-and `sheet` writes its sheet with every field empty, for a person to fill on the
+**A flow that declares `"tagger": false` is the exception.** Prepare tags no
+photograph for it alone, and `sheet` writes its sheet with every field empty, for a person to fill on the
 review surface ([D31](decisions.md#d31--a-flow-declares-whether-it-is-tagged)).
 A caption skipped altogether reaches review as *no caption*, with the `caption`
 command that writes it.
@@ -137,23 +142,35 @@ seeing behind it is what these artifacts are for.
 ## The run directory
 
 ```
-  runs/<input-id>/<flow-id>/
-      captions/   ① prose
-      wd14/       ① the local tagger's scored list
-      tags/       ① the hosted tagger's raw list
-      sheets/     ② the flow's fields, filled from wd14/
-      review/     ③ NNN.draft.json, then NNN.approved.json
-      prompts/    ④ the assembled prompt, written before any endpoint is acquired
-      outputs/    ④ the rendered image
+  runs/<input-id>/
+      run.json, photo.<ext>   the input and its frame
+      photo/                  the photograph's description, every flow's
+          captions/   ① prose
+          wd14/       ① the local tagger's scored list
+          tags/       ① the hosted tagger's raw list
+      <flow-id>/              every directory but photo/
+          sheets/     ② the flow's fields, filled from photo/wd14/
+          review/     ③ NNN.draft.json, then NNN.approved.json
+          prompts/    ④ the assembled prompt, written before any endpoint is acquired
+          outputs/    ④ the rendered image
 ```
 
-**Input above, flow below.** Above the split is what every flow shares, and the
-only thing every flow shares is the input itself — the run holds a *copy of the
-photograph*, which is what makes it reconstructable from disk. Below the split is
-one subtree per flow, so adding a flow adds a subtree and no flow can read
-another's artifacts unless the operator names it as a source
-([D38](decisions.md#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
-Nesting stage-first would scatter a new flow across every stage directory instead.
+**Input and its description above, flow below.** Above the split is what every
+flow shares: the input — the run holds a *copy of the photograph*, which is what
+makes it reconstructable from disk — and its description, which one briefing, one
+model and one pinned tagger read alike for every flow
+([D17](decisions.md#d17--input-above-flow-below)). `photo` is a name the run
+keeps, never a flow. Below the split is one subtree per flow, so adding a flow
+adds a subtree and no flow can read another's work unless the operator names it as
+a source ([D38](decisions.md#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
+
+**A run written before the description was shared holds it under its flows**, and
+every stage that reads or writes the description refuses it, naming
+`python -m isekai migrate`. `isekai migrate` walks `.data/runs` and every
+collection's `runs/`, or the one `--runs` names, and copies each run's caption and
+tag lists into `photo/`, byte for byte: a list keeps its number, the newest caption
+wins, lists that differ between flows refuse that run, and the old files stay, which
+`show` names as not read.
 
 The names above are `run.py`'s, not each stage's: the run owns the layout. Inside
 a directory an artifact is `NNN.json`, with `NNN.draft.json` and

@@ -20,8 +20,8 @@ scan catch it. The arrangement is `ollama.py`'s: the transport here, the adapter
 
 **Opening the session is the expensive act and it happens once, on first use.**
 The graph is 467 MB and takes ~0.9 s to open, against ~0.4 s a photograph. So
-`wiring` resolves a tagger per flow and nothing is constructed until a flow asks
--- a machine that never captions must not open the file anyway.
+`wiring` resolves a tagger and nothing is constructed until a verb asks -- a
+machine that never captions must not open the file anyway.
 Nothing at module scope holds a session: an `__init__.py` in this package carries
 a docstring and no code by rule, and a module-level lazy handle is that rule
 broken one directory down.

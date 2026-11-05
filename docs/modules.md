@@ -24,9 +24,9 @@ Lazy — the import sits inside a function, so the edge does not exist at
 import time:
   interface ──▶ boundary      wiring.py, inside load_vocabulary(); provision.py
                               is on the entry point's graph through ollama.py
-  interface ──▶ interface/ui  cli.py, inside the `ui` handler — within the
-                              group, and listed because collapsing it away
-                              is what hid it before
+  interface ──▶ interface/ui  cli.py, inside the `ui` and `migrate` handlers —
+                              within the group, and listed because collapsing
+                              it away is what hid it before
   interface ──▶ a named module  wiring.py, inside _named_wiring(), only when
                               ISEKAI_WIRING names it — the browser tests'
                               doubles (D41)
@@ -39,17 +39,21 @@ no other stage imports; the CLI's `import` verb and the surface's staging routes
 both compose it, and `ui/library.py` reads `shared/image.py`'s `metadata_in` for the
 not-cleaned mark.
 `assign` is `foundation/run.py`'s, because a tick is the run's layout, and the CLI
-verb and the hub's route both call it. `--progress json` is a reporter inside
-`cli.py`. **Prepare and Render reach the CLI by process, never by import**:
-`interface/ui/jobs.py` runs `python -m isekai tag | caption | sheet`, and
+verb and the hub's route both call it. `migrate` is `foundation/migrate.py`'s,
+which imports `artifacts.py`, `run.py` and `refusal.py`: it moves the run's layout,
+and `cli.py`'s verb walks each runs root, reaching the library's collections
+through `interface/ui/`'s `collection_runs` inside the handler. `--progress json`
+is a reporter inside `cli.py`. **Prepare and Render reach the CLI by process, never
+by import**: `interface/ui/jobs.py` runs `python -m isekai tag | caption`, once per
+photograph and naming no flow, then `python -m isekai sheet` per flow, and
 `python -m isekai render` between `python -m gpunit volume up` and `volume down`,
 as children, so the CLI stays the one path a stage runs through, and
 `interface/ui/events.py` streams what they report to the page as `/events`.
 Every other write the server makes runs in its own process, through the function
 that owns it: stage ③'s review functions, import's reader, and `sheet()` for a
-target's first sheet when a draft is made from another flow —
-`interface/drafting.py`'s `draft_across` runs it, the same sequence the CLI's
-`draft` runs (D4).
+target's first sheet when a draft is made from another flow, filled from the
+photograph's tags — `interface/drafting.py`'s `draft_across` runs it, the same
+sequence the CLI's `draft` runs (D4).
 `wiring.py` imports `boundary/ollama.py` for the probe a job asks first.
 
 **`tests/test_layers.py` holds where the lazy edges point; review holds that they
@@ -144,7 +148,8 @@ what carries data at run time.
   file's JSON is written through `foundation/artifacts.py`'s `write`;
   `tests/test_artifact_bytes.py::test_only_the_contract_writes_a_run_file` holds
   that. The photograph's copy and a render's image are bytes, written by
-  `foundation/atomic_write.py`.
+  `foundation/atomic_write.py`; `foundation/migrate.py` copies a description's
+  files byte for byte into a partial directory it renames whole.
 - **A stage reaches a model, the GPU or the network through `boundary/`.**
 - **`foundation`'s run, artifacts, flow and refusal are what every layer uses.**
 - **`StageFailure` lives in `foundation/run.py`, not `refusal.py`.** `refusal.py`

@@ -5,7 +5,7 @@ using **open models** on a **rented GPU, on demand**. A reproducible, provider-a
 pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
 > **Status: released.** One render path: a **staged pipeline** —
-> `python -m isekai import | assign | tag | caption | sheet | review | approve | draft | generate | show | ui | compare` —
+> `python -m isekai import | assign | tag | caption | sheet | review | approve | draft | generate | show | ui | compare | migrate` —
 > which cleans a photograph into a collection, reads it into prose and tags, fills a sheet of canonical tags from the tags by a table, lets a
 > human correct the sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary —
 > and renders from it on a stack provisioned from a pinned, checksummed manifest.
@@ -95,11 +95,12 @@ operator supplies is an input rather than something a run generated, and it hold
 Then:
 
 ```sh
-python -m isekai tag --flow summon-anime-wai .inputs/me.jpg
-python -m isekai caption --flow summon-anime-wai .inputs/me.jpg
+python -m isekai tag .inputs/me.jpg
+python -m isekai caption .inputs/me.jpg
 ```
 
-Two independent verbs. `tag` writes a scored tag list from the local WD14 tagger, then a raw one from
+Two independent verbs, each run once per photograph: what they write is the photograph's, and every flow
+reads it. `tag` writes a scored tag list from the local WD14 tagger, then a raw one from
 the hosted model. **The local list is what fills the sheet**, so it needs
 `uv run python -m isekai.boundary.provision fetch config/vocabulary.json` to have been run.
 `caption` writes the prose, a reading aid with no machine consumer; skip it and the review surface
@@ -109,8 +110,8 @@ If Ollama is not running, `tag` still writes the WD14 list and refuses only the 
 `caption` refuses. Neither list is narrowed on disk; the review surface shows the WD14 list, and the
 hosted list filtered to what the vocabulary carries.
 
-`--flow` is required on every stage verb. A stage cannot act without knowing which flow asked, because
-the flow supplies the schema it fills against.
+`--flow` is required on every stage verb from here on. A stage on a flow cannot act without knowing which
+flow asked, because the flow supplies the schema it fills against; `tag` and `caption` refuse one.
 
 ### ② Fill the sheet
 
@@ -118,10 +119,13 @@ the flow supplies the schema it fills against.
 python -m isekai sheet --flow summon-anime-wai .inputs/me.jpg
 ```
 
-Each run gets a directory under `.data/runs/`, named for the photograph's digest and its filename,
-and every artifact sits under the flow that produced it:
-`<input-id>/<flow-id>/{captions,wd14,tags,sheets,review,prompts,outputs}/`. From here on, offer the
+Each run gets a directory under `.data/runs/`, named for the photograph's digest and its filename. The
+photograph's description sits in `<input-id>/photo/{captions,wd14,tags}/`, and every other artifact under
+the flow that produced it: `<input-id>/<flow-id>/{sheets,review,prompts,outputs}/`. From here on, offer the
 photograph again or the run's id — which one you meant is decided by what is on disk.
+
+A run written before the description was shared keeps it under its flows, and is refused until
+`python -m isekai migrate` copies it into `photo/`, once, leaving the old files in place.
 
 ### ③ Correct the sheet, and approve it
 
@@ -158,7 +162,7 @@ python -m isekai review --discard --flow summon-anime-wai .inputs/me.jpg   # dro
 
 `isekai draft --flow` takes image paths and checks every one before it writes: each run's flow gets a
 draft, or none does. A waiting draft with edits of its own refuses, and one equal to its sheet is replaced.
-A flow with no sheet is assigned and filled from the image's flow's tags first. Approval refuses a revision
+A flow with no sheet is assigned and filled from the photograph's tags first. Approval refuses a revision
 that would only re-render images that exist.
 
 ### ④ – ⑦ Render on a rented GPU — this is where it starts costing
@@ -204,7 +208,7 @@ left.
 python -m isekai show .inputs/me.jpg
 ```
 
-Prints a run's artifacts, versions, what produced each one and every failure record, and names anything below a
+Prints a run's artifacts, versions, what produced each one and every failure record, and names anything below `photo/` or a
 flow it does not read. It reaches no model and no GPU, and it works on a checkout that has provisioned nothing.
 
 ### A collection of photographs, through both flows
@@ -221,10 +225,10 @@ uv run python -m isekai import --collection $C ~/Pictures/trip/*.jpg
 P=($C/sources/*)        # every photograph in the collection
 uv run python -m isekai assign --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 
-# ① ② free: the stage verbs take every photograph and both flows at once
+# ① ② free: the stage verbs take every photograph at once; tag and caption once for both flows
 uv run python -m isekai.boundary.provision fetch config/reader.json   # once; it skips files already verified
-uv run python -m isekai tag     --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
-uv run python -m isekai caption --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
+uv run python -m isekai tag     --runs $R $P
+uv run python -m isekai caption --runs $R $P
 uv run python -m isekai sheet   --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 
 # ③ free: the library in a browser -- the collection's hub, then Review
@@ -265,7 +269,7 @@ It opens the library — `~/isekai`, or the directory `ISEKAI_LIBRARY` names, cr
 refused inside this repository outside `.data/` — prints a URL and blocks. Home lists the collections by
 their newest file, and *New collection* imports photographs chosen in the file dialog, each with its own
 upload bar. A collection's hub shows each photograph's stage in each flow `config/ui.json` offers: a tick
-runs `isekai assign`, and *Prepare* runs `tag`, `caption` and `sheet` over what changed as one job,
+runs `isekai assign`, and *Prepare* runs `tag` and `caption` once per photograph, then `sheet` per flow, over what changed as one job,
 the CLI's own verbs as children with `--progress json`, its cells moving live over `/events`. Review
 corrects one sheet, its ④ setting how many images it renders and at which seeds, and Approve stays on the sheet,
 read-only. **Render** opens a dialog quoting what renders and its price at most; **its confirmation is the one
@@ -292,7 +296,7 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   list **filtered to what the flow's vocabulary carries**, every chip with its post count. The
   asymmetry is the point — WD14 is scored against the vocabulary it emits, so every tag it returns is
   committable by construction, while the hosted model's is not. **The filter is on the way to the
-  page and never on the way to disk**: the artifact under `tags/` still holds every tag the model
+  page and never on the way to disk**: the artifact under `photo/tags/` still holds every tag the model
   returned, so a tag missing from the pane is one no field could have taken, not one that was lost.
   Both are read-only — the picker at stage ② is still the only path into a field — and an absent
   list simply draws nothing.
@@ -302,7 +306,8 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
 - `--runs RUNS` — the directory runs live under. It may point outside the repository entirely, but
   not inside the working tree and outside `.data/`: a run directory holds a copy of the photograph,
   so that would be one `git add` from publishing it.
-- `--flow FLOW` — a flow to act on. **Required on every stage verb and repeatable**: a stage
+- `--flow FLOW` — a flow to act on. **Required on every stage verb on a flow, and repeatable**;
+  `tag` and `caption` describe the photograph for every flow and refuse it. A stage on a flow
   cannot act without knowing which flow asked, because the flow is what supplies its schema,
   its graph and its dials. There is no fallback — the earlier one was every
   *tracked* flow, which at catalogue scale is the absence of a selection rather than one. It

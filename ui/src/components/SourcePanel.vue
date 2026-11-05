@@ -17,8 +17,6 @@ const props = defineProps<{
   photo: string
   caption: string | null
   captionCommand: string | null
-  /* The flow whose caption is shown in place of this flow's, or null. */
-  captionFrom?: string | null
   /* Both null where the artifact is absent, and an absent list draws nothing --
      no panel, no message. Three ways it is legitimately missing (a run
      captioned before v0.20, a flow that declares no tagger, a failed tagger) and
@@ -126,7 +124,6 @@ defineExpose({
     <CaptionPanel
       :prose="caption"
       :command="captionCommand"
-      :from="captionFrom"
       :loading="loading"
     />
     <section v-if="scored.length" class="caption">

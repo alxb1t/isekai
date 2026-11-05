@@ -28,12 +28,13 @@ from isekai.foundation.flow import (
     FLOWS_DIR,
     MANIFEST_NAME,
     SIBLINGS,
-    Flow,
     load_flow,
     tracked_flows,
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
+    CAPTIONS,
+    PHOTO,
     TAGS,
     WD14,
     Run,
@@ -117,7 +118,7 @@ def test_the_hosted_tagger_is_sent_the_photograph_and_one_fixed_prompt(
 ) -> None:
     transport = _answer("1girl, solo, brown hair")
 
-    tag_hosted(run, FLOW, hosted(transport))
+    tag_hosted(run, hosted(transport))
 
     (body,) = transport.bodies()
     assert body["prompt"] == TAG_PROMPT
@@ -164,11 +165,11 @@ def test_the_sampling_options_carry_the_sorters_repeat_penalty() -> None:
 
 
 @pytest.mark.spec("tagging:output:artifact-is-a-list-of-tags")
-def test_the_hosted_artifact_is_a_list_of_tags_under_the_flow(run: Run) -> None:
-    path = tag_hosted(run, FLOW, FakeTagger())
+def test_the_hosted_artifact_is_a_list_of_tags_under_photo(run: Run) -> None:
+    path = tag_hosted(run, FakeTagger())
 
     assert path is not None
-    assert path.parent == run.directory(FLOW, TAGS)
+    assert path.parent == run.directory(PHOTO, TAGS)
     assert read(path, TAGS_FILE)["tags"] == ["1girl", "solo", "looking at viewer"]
 
 
@@ -184,7 +185,7 @@ def test_every_tag_is_stored_exactly_as_it_came_including_the_unusable(
     answered = "1girl, fashion photography, blue eyes, high resolution, solo"
     transport = _answer(answered)
 
-    path = tag_hosted(run, FLOW, hosted(transport))
+    path = tag_hosted(run, hosted(transport))
 
     assert path is not None
     assert read(path, TAGS_FILE)["tags"] == answered.split(", ")
@@ -194,7 +195,7 @@ def test_every_tag_is_stored_exactly_as_it_came_including_the_unusable(
 def test_whitespace_is_stripped_and_nothing_else_is(run: Run, hosted: Hosted) -> None:
     transport = _answer("  1girl ,solo,   looking at viewer  ,, ")
 
-    path = tag_hosted(run, FLOW, hosted(transport))
+    path = tag_hosted(run, hosted(transport))
 
     assert path is not None
     # Empty elements go, because an empty chip is not a tag anyone offered. The
@@ -206,10 +207,10 @@ def test_whitespace_is_stripped_and_nothing_else_is(run: Run, hosted: Hosted) ->
 def test_the_local_artifact_is_scored_and_sorted_under_its_own_directory(
     run: Run, local: LocalTagger
 ) -> None:
-    path = tag_wd14(run, FLOW, lambda: local)
+    path = tag_wd14(run, lambda: local)
 
     assert path is not None
-    assert path.parent == run.directory(FLOW, WD14)
+    assert path.parent == run.directory(PHOTO, WD14)
     assert read(path, WD14_FILE)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
 
 
@@ -223,10 +224,10 @@ def test_a_response_with_no_comma_is_a_permanent_failure(
     transport = _answer("The photograph shows a person standing in a garden.")
 
     with pytest.raises(Refusal) as refused:
-        tag_hosted(run, FLOW, hosted(transport))
+        tag_hosted(run, hosted(transport))
 
     assert "permanent" in str(refused.value)
-    recorded = list(run.directory(FLOW, TAGS).glob("*.error.*.json"))
+    recorded = list(run.directory(PHOTO, TAGS).glob("*.error.*.json"))
     assert [path.name for path in recorded] == ["001.error.1.permanent.json"]
 
 
@@ -236,7 +237,7 @@ def test_a_single_comma_is_enough_and_content_is_never_judged(
 ) -> None:
     # One comma separates "not a list at all" from "wrong", and only the first is
     # a failure here. Anything richer starts filtering.
-    path = tag_hosted(run, FLOW, hosted(_answer("nonsense, drivel")))
+    path = tag_hosted(run, hosted(_answer("nonsense, drivel")))
 
     assert path is not None
     assert read(path, TAGS_FILE)["tags"] == ["nonsense", "drivel"]
@@ -250,23 +251,23 @@ def test_the_refusal_names_the_verb_the_operator_would_actually_run(
     # so naming the stage here would name a command that refuses with "unknown
     # verb".
     with pytest.raises(Refusal) as refused:
-        tag_hosted(run, FLOW, hosted(_answer("prose with no separator")))
+        tag_hosted(run, hosted(_answer("prose with no separator")))
 
     message = str(refused.value)
-    assert f"python -m isekai tag --flow {FLOW}{runs_flag(run)} {run.id}" in message
-    assert f"{FLOW}/{TAGS}/" in message
+    assert f"python -m isekai tag{runs_flag(run)} {run.id}" in message
+    assert f"{PHOTO}/{TAGS}/" in message
 
 
 @pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")
 def test_the_hosted_tagger_stops_after_its_own_three_attempts(run: Run) -> None:
-    directory = run.directory(FLOW, TAGS)
+    directory = run.directory(PHOTO, TAGS)
     directory.mkdir(parents=True, exist_ok=True)
     for _ in range(3):
         record_failure(directory, 1, "transient", {"stage": TAGS, "detail": "x"})
     tagger = FakeTagger()
 
     with pytest.raises(Refusal) as refused:
-        tag_hosted(run, FLOW, tagger)
+        tag_hosted(run, tagger)
 
     assert "3 attempts" in str(refused.value)
     assert tagger.calls == []
@@ -280,9 +281,9 @@ def test_a_second_pass_over_a_complete_hosted_artifact_makes_no_call(
     run: Run,
 ) -> None:
     tagger = FakeTagger()
-    assert tag_hosted(run, FLOW, tagger) is not None
+    assert tag_hosted(run, tagger) is not None
 
-    assert tag_hosted(run, FLOW, tagger) is None
+    assert tag_hosted(run, tagger) is None
     assert len(tagger.calls) == 1
 
 
@@ -290,9 +291,9 @@ def test_a_second_pass_over_a_complete_hosted_artifact_makes_no_call(
 def test_a_second_pass_over_a_complete_local_artifact_opens_no_session(
     run: Run, local: LocalTagger
 ) -> None:
-    assert tag_wd14(run, FLOW, lambda: local) is not None
+    assert tag_wd14(run, lambda: local) is not None
 
-    assert tag_wd14(run, FLOW, lambda: local) is None
+    assert tag_wd14(run, lambda: local) is None
     assert isinstance(local.session, FakeSession)
     assert local.session.calls == 1
 
@@ -301,23 +302,23 @@ def test_a_second_pass_over_a_complete_local_artifact_opens_no_session(
 def test_a_failed_hosted_tagger_leaves_the_local_artifact_complete(
     run: Run, hosted: Hosted, local: LocalTagger
 ) -> None:
-    written = tag_wd14(run, FLOW, lambda: local)
+    written = tag_wd14(run, lambda: local)
 
     with pytest.raises(Refusal):
-        tag_hosted(run, FLOW, hosted(_answer("prose, ".replace(", ", ""))))
+        tag_hosted(run, hosted(_answer("prose, ".replace(", ", ""))))
 
     assert written is not None and written.is_file()
     assert read(written, WD14_FILE)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
     # And the complete one is not re-run to repair the failed one.
-    assert tag_wd14(run, FLOW, lambda: fake_tagger([1.0, 1.0, 1.0])) is None
+    assert tag_wd14(run, lambda: fake_tagger([1.0, 1.0, 1.0])) is None
 
 
 @pytest.mark.spec("tagging:independence:each-tagger-resumes-on-its-own")
 def test_the_two_taggers_write_into_two_directories(
     run: Run, local: LocalTagger
 ) -> None:
-    scored = tag_wd14(run, FLOW, lambda: local)
-    hosted = tag_hosted(run, FLOW, FakeTagger())
+    scored = tag_wd14(run, lambda: local)
+    hosted = tag_hosted(run, FakeTagger())
 
     assert scored is not None and hosted is not None
     assert scored.parent != hosted.parent
@@ -331,7 +332,7 @@ def test_the_two_taggers_write_into_two_directories(
 def test_the_local_producer_claims_a_pin_and_names_both_digests(
     run: Run, local: LocalTagger
 ) -> None:
-    path = tag_wd14(run, FLOW, lambda: local)
+    path = tag_wd14(run, lambda: local)
 
     assert path is not None
     producer = read(path, WD14_FILE)["producer"]
@@ -358,7 +359,7 @@ def test_the_real_pins_are_the_two_the_manifest_commits(tmp_path: Path) -> None:
 
 @pytest.mark.spec("tagging:provenance:the-hosted-tagger-records-its-prompt-digest")
 def test_the_hosted_producer_records_the_prompt_digest_and_no_path(run: Run) -> None:
-    path = tag_hosted(run, FLOW, FakeTagger())
+    path = tag_hosted(run, FakeTagger())
 
     assert path is not None
     producer = read(path, TAGS_FILE)["producer"]
@@ -383,7 +384,7 @@ def test_the_producer_names_the_model_that_actually_answered(
 ) -> None:
     transport = _answer("1girl, solo")
 
-    path = tag_hosted(run, FLOW, hosted(transport))
+    path = tag_hosted(run, hosted(transport))
 
     assert path is not None
     producer = read(path, TAGS_FILE)["producer"]
@@ -395,7 +396,7 @@ def test_the_producer_names_the_model_that_actually_answered(
 def test_the_hosted_tagger_declares_its_pin_and_names_both_files(
     run: Run, hosted: Hosted
 ) -> None:
-    path = tag_hosted(run, FLOW, hosted(_answer("1girl, solo")))
+    path = tag_hosted(run, hosted(_answer("1girl, solo")))
 
     assert path is not None
     producer = read(path, TAGS_FILE)["producer"]
@@ -405,7 +406,7 @@ def test_the_hosted_tagger_declares_its_pin_and_names_both_files(
 
 @pytest.mark.spec("run-directory:provenance:unpinned-producer-is-declared")
 def test_a_hosted_tagger_that_verified_nothing_claims_no_pin(run: Run) -> None:
-    path = tag_hosted(run, FLOW, FakeTagger())
+    path = tag_hosted(run, FakeTagger())
 
     assert path is not None
     producer = read(path, TAGS_FILE)["producer"]
@@ -422,31 +423,23 @@ def test_the_separator_is_a_comma() -> None:
 
 
 @pytest.mark.spec("tagging:independence:the-local-tagger-needs-no-model-key")
-def test_the_local_tagger_resolves_identically_for_every_tracked_flow(
+def test_the_local_tagger_resolves_with_no_flow(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Proved by calling it, with the 467 MB open replaced: every tracked flow
-    # gets a tagger, none of them is refused, and **no flow is ever read** -- no
-    # manifest key names the local tagger's model, because it is a file this
-    # build pins and there is no flow for which it would be wrong (D7).
+    # Proved by calling it, with the 467 MB open replaced: the tagger resolves and
+    # **no flow is read** -- no manifest key names the local tagger's model,
+    # because it is a file this build pins and there is no flow for which it
+    # would be wrong (D7).
     opened = fake_tagger()
     monkeypatch.setattr(wiring, "open_session", lambda *_a, **_k: opened)
 
-    tracked = tracked_flows()
-
-    resolved = {flow_id: wiring.tagger_for(load_flow(flow_id)) for flow_id in tracked}
-
-    assert tracked
-    assert all(pair == opened for pair in resolved.values())
+    assert wiring.tagger_for() == opened
 
 
 @pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
-@pytest.mark.parametrize("flow_id", tracked_flows())
-def test_the_hosted_tagger_runs_the_configured_model(flow_id: str) -> None:
-    """Every flow's hosted tagger runs the model `config/caption.json` names."""
-    flow = load_flow(flow_id)
-
-    resolved = wiring.hosted_tagger_for(flow)
+def test_the_hosted_tagger_runs_the_configured_model() -> None:
+    """The hosted tagger runs the model `config/caption.json` names."""
+    resolved = wiring.hosted_tagger_for()
 
     assert isinstance(resolved, OllamaTagger)
     assert resolved.implementation == "ollama"
@@ -454,22 +447,19 @@ def test_the_hosted_tagger_runs_the_configured_model(flow_id: str) -> None:
 
 
 @pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
-def test_each_flow_gets_a_hosted_tagger_on_its_readers_model() -> None:
-    """Resolved per flow, on the reader's model.
+def test_the_hosted_tagger_runs_the_readers_model() -> None:
+    """Resolved on the reader's model.
 
     One alias answers both prompts, which is why the tag prompt is not
     chat-framed -- so the tagger's model being the reader's model is asserted,
     and both are the one `config/caption.json` names.
     """
-    for flow_id in tracked_flows():
-        flow = load_flow(flow_id)
+    tagger = wiring.hosted_tagger_for()
+    reader = wiring.reader_for()
 
-        tagger = wiring.hosted_tagger_for(flow)
-        reader = wiring.reader_for(flow)
-
-        assert isinstance(tagger, OllamaTagger)
-        assert isinstance(reader, OllamaReader)
-        assert tagger.model == reader.model == load_caption_config().model
+    assert isinstance(tagger, OllamaTagger)
+    assert isinstance(reader, OllamaReader)
+    assert tagger.model == reader.model == load_caption_config().model
 
 
 class Failing:
@@ -482,7 +472,7 @@ class Failing:
 def _wired(
     tmp_path: Path,
     *,
-    tagger: Callable[[Flow], LocalTagger] | None = None,
+    tagger: Callable[[], LocalTagger] | None = None,
     hosted: Tagger | None = None,
     flows_dir: Path = FLOWS_DIR,
 ) -> Wiring:
@@ -518,13 +508,13 @@ def test_a_failing_hosted_tagger_leaves_the_wd14_list_on_disk(
     photo = _photo(tmp_path)
     wired = _wired(tmp_path, hosted=Failing())
 
-    status = _dispatch(wired, "tag", "--flow", FLOW, str(photo))
+    status = _dispatch(wired, "tag", str(photo))
 
     assert status == 1
     run = open_run(photo, wired.runs_root)
-    assert (run.directory(FLOW, WD14) / "001.json").is_file()
-    assert not list(run.directory(FLOW, TAGS).glob("001.json"))
-    assert (run.directory(FLOW, TAGS) / "001.error.1.permanent.json").is_file()
+    assert (run.directory(PHOTO, WD14) / "001.json").is_file()
+    assert not list(run.directory(PHOTO, TAGS).glob("001.json"))
+    assert (run.directory(PHOTO, TAGS) / "001.error.1.permanent.json").is_file()
 
 
 @pytest.mark.spec("tagging:independence:an-unpinned-hosted-model-costs-no-local-list")
@@ -538,13 +528,13 @@ def test_an_unpinned_hosted_model_refuses_and_the_local_list_is_written(
     photo = _photo(tmp_path)
     wired = _wired(tmp_path, hosted=OllamaTagger(READER, transport))
 
-    status = _dispatch(wired, "tag", "--flow", FLOW, str(photo))
+    status = _dispatch(wired, "tag", str(photo))
 
     assert status == 1
     run = open_run(photo, wired.runs_root)
-    assert (run.directory(FLOW, WD14) / "001.json").is_file()
+    assert (run.directory(PHOTO, WD14) / "001.json").is_file()
     assert transport.sent == []
-    assert not list(run.directory(FLOW, TAGS).glob("*.json"))
+    assert not list(run.directory(PHOTO, TAGS).glob("*.json"))
     assert isinstance(wired.err, io.StringIO)
     assert other in wired.err.getvalue()
 
@@ -559,7 +549,7 @@ def _unreadable() -> LocalTagger:
     return dataclasses.replace(fake_tagger(), session=Broken())
 
 
-def _unopenable(flow: Flow) -> LocalTagger:
+def _unopenable() -> LocalTagger:
     """Refuse the way an absent model file does: for the build, not a photograph."""
     raise Refusal("wd14/model.onnx is absent; provision the vocabulary")
 
@@ -571,19 +561,19 @@ def _unopenable(flow: Flow) -> LocalTagger:
     ids=["a-failing-photograph", "an-unopenable-tagger"],
 )
 def test_a_failing_local_tagger_leaves_the_hosted_list_written(
-    tmp_path: Path, resolver: Callable[[Flow], LocalTagger], names: str
+    tmp_path: Path, resolver: Callable[[], LocalTagger], names: str
 ) -> None:
     photo = _photo(tmp_path)
     hosted = FakeTagger()
     wired = _wired(tmp_path, tagger=resolver, hosted=hosted)
 
-    status = _dispatch(wired, "tag", "--flow", FLOW, str(photo))
+    status = _dispatch(wired, "tag", str(photo))
 
     assert status == 1
     run = open_run(photo, wired.runs_root)
-    assert (run.directory(FLOW, TAGS) / "001.json").is_file()
+    assert (run.directory(PHOTO, TAGS) / "001.json").is_file()
     assert hosted.calls == [run.photo]
-    assert not (run.directory(FLOW, WD14) / "001.json").is_file()
+    assert not (run.directory(PHOTO, WD14) / "001.json").is_file()
     assert isinstance(wired.err, io.StringIO)
     assert names in wired.err.getvalue()
 
@@ -591,11 +581,11 @@ def test_a_failing_local_tagger_leaves_the_hosted_list_written(
 @pytest.mark.spec("tagging:order:a-local-failure-leaves-the-hosted-list-written")
 def test_an_unopenable_tagger_is_tried_once_per_invocation(tmp_path: Path) -> None:
     """Opening hashes 467 MB, and its refusal is the build's, so it is kept."""
-    attempts: list[Flow] = []
+    attempts: list[None] = []
 
-    def unopenable(flow: Flow) -> LocalTagger:
-        attempts.append(flow)
-        return _unopenable(flow)
+    def unopenable() -> LocalTagger:
+        attempts.append(None)
+        return _unopenable()
 
     photos = [_photo(tmp_path)]
     other = tmp_path / "other.jpg"
@@ -604,19 +594,11 @@ def test_an_unopenable_tagger_is_tried_once_per_invocation(tmp_path: Path) -> No
     hosted = FakeTagger()
     wired = _wired(tmp_path, tagger=unopenable, hosted=hosted)
 
-    status = _dispatch(
-        wired,
-        "tag",
-        "--flow",
-        FLOW,
-        "--flow",
-        "conjure-anime-wai",
-        *map(str, photos),
-    )
+    status = _dispatch(wired, "tag", *map(str, photos))
 
     assert status == 1
     assert len(attempts) == 1
-    assert len(hosted.calls) == 4
+    assert len(hosted.calls) == 2
 
 
 @pytest.mark.spec("tagging:order:captioning-writes-no-tag-list")
@@ -626,41 +608,37 @@ def test_captioning_writes_the_prose_and_calls_no_tagger(tmp_path: Path) -> None
     hosted = FakeTagger()
     wired = _wired(tmp_path, tagger=Always(local), hosted=hosted)
 
-    status = _dispatch(wired, "caption", "--flow", FLOW, str(photo))
+    status = _dispatch(wired, "caption", str(photo))
 
     assert status == 0
     run = open_run(photo, wired.runs_root)
-    assert (run.directory(FLOW, "captions") / "001.json").is_file()
-    assert not run.directory(FLOW, WD14).exists()
-    assert not run.directory(FLOW, TAGS).exists()
+    assert (run.directory(PHOTO, CAPTIONS) / "001.json").is_file()
+    assert not run.directory(PHOTO, WD14).exists()
+    assert not run.directory(PHOTO, TAGS).exists()
     assert isinstance(local.session, FakeSession)
     assert local.session.calls == 0
     assert hosted.calls == []
 
 
-@pytest.mark.spec(
-    "cli:resolution:a-pinned-seam-resolves-for-every-flow-that-declares-it"
-)
-@pytest.mark.parametrize("flow_id", tracked_flows())
-def test_tagging_a_tracked_flow_resolves_and_runs_the_local_tagger(
-    tmp_path: Path, flow_id: str
+@pytest.mark.spec("cli:resolution:the-pinned-tagger-needs-no-flow")
+def test_tagging_resolves_and_runs_the_local_tagger_with_no_flow(
+    tmp_path: Path,
 ) -> None:
     photo = _photo(tmp_path)
     local = fake_tagger()
     wired = _wired(tmp_path, tagger=Always(local))
 
-    status = _dispatch(wired, "tag", "--flow", flow_id, str(photo))
+    status = _dispatch(wired, "tag", str(photo))
 
     assert status == 0
     run = open_run(photo, wired.runs_root)
-    assert (run.directory(flow_id, WD14) / "001.json").is_file()
+    assert (run.directory(PHOTO, WD14) / "001.json").is_file()
     assert isinstance(local.session, FakeSession)
     assert local.session.calls == 1
-    # The label index is the flow's vocabulary, which the sheet reads; nothing
-    # in the manifest names the model the local tagger runs.
-    flow = load_flow(flow_id)
-    assert flow.tagger is True
-    assert MODEL_DEST not in (flow.path / MANIFEST_NAME).read_text()
+    # The label index is the vocabulary the sheet reads; no flow's manifest
+    # names the model the local tagger runs.
+    for flow_id in tracked_flows():
+        assert MODEL_DEST not in (load_flow(flow_id).path / MANIFEST_NAME).read_text()
 
 
 def _untagged_flows(tmp_path: Path) -> Path:
@@ -678,71 +656,22 @@ def _untagged_flows(tmp_path: Path) -> Path:
     return root
 
 
-@pytest.mark.spec("tagging:declaration:a-flow-without-a-tagger-is-refused")
-def test_tagging_a_flow_that_declares_no_tagger_is_refused_before_any_work(
-    tmp_path: Path,
-) -> None:
-    photo = _photo(tmp_path)
-    local = fake_tagger()
-    hosted = FakeTagger()
-    wired = _wired(
-        tmp_path,
-        tagger=Always(local),
-        hosted=hosted,
-        flows_dir=_untagged_flows(tmp_path),
-    )
-
-    status = _dispatch(wired, "tag", "--flow", FLOW, "--flow", "untagged", str(photo))
-
-    assert status == 1
-    assert isinstance(wired.err, io.StringIO)
-    message = wired.err.getvalue()
-    assert "untagged" in message
-    assert '"tagger": false' in message
-    assert "drop `--flow untagged`" in message
-    # Before any identifier: no run is opened, and the tagged flow named with it
-    # is not tagged either.
-    assert not wired.runs_root.exists()
-    assert isinstance(local.session, FakeSession)
-    assert local.session.calls == 0
-    assert hosted.calls == []
-
-
-@pytest.mark.spec_exempt("twin: the refusal above is the declaration's, not the root's")
+@pytest.mark.spec_exempt(
+    "twin: a root holding an untagged flow still tags the photograph"
+)
 def test_tagging_the_tagged_flow_alone_from_that_root_succeeds(
     tmp_path: Path,
 ) -> None:
-    """The twin: the refusal is the declaration's, not the scratch root's."""
+    """The twin: `tag` names no flow, so an untagged one beside it refuses nothing."""
     photo = _photo(tmp_path)
     wired = _wired(tmp_path, flows_dir=_untagged_flows(tmp_path))
 
-    assert _dispatch(wired, "tag", "--flow", FLOW, str(photo)) == 0
+    assert _dispatch(wired, "tag", str(photo)) == 0
+    run = open_run(photo, wired.runs_root)
+    assert (run.directory(PHOTO, WD14) / "001.json").is_file()
 
 
-@pytest.mark.spec("tagging:declaration:only-untagged-flows-name-the-next-verb")
-def test_only_untagged_flows_name_the_next_verb(tmp_path: Path) -> None:
-    photo = _photo(tmp_path)
-    wired = _wired(tmp_path, flows_dir=_untagged_flows(tmp_path))
-
-    status = _dispatch(wired, "tag", "--flow", "untagged", str(photo))
-
-    assert status == 1
-    assert isinstance(wired.err, io.StringIO)
-    message = wired.err.getvalue()
-    assert "`tag` has nothing to do" in message
-    assert "drop `--flow" not in message
-    # The remedy is a command this build parses, naming the photograph given.
-    command = message.split("`python -m isekai ")[1].split("`")[0]
-    parsed = build_parser().parse_args(command.split())
-    assert (parsed.verb, parsed.flows, parsed.photos) == (
-        "sheet",
-        ["untagged"],
-        [str(photo)],
-    )
-    assert not wired.runs_root.exists()
-
-
-@pytest.mark.spec_exempt("twin: a tagged flow beside the untagged keeps `drop --flow`")
+@pytest.mark.spec_exempt("twin: `tag` named with flows refuses, naming no other verb")
 def test_an_untagged_flow_beside_a_tagged_one_names_no_next_verb(
     tmp_path: Path,
 ) -> None:
@@ -753,7 +682,10 @@ def test_an_untagged_flow_beside_a_tagged_one_names_no_next_verb(
 
     assert status == 1
     assert isinstance(wired.err, io.StringIO)
-    assert "sheet" not in wired.err.getvalue()
+    message = wired.err.getvalue()
+    assert f"run `python -m isekai tag {photo}`" in message
+    assert "sheet" not in message
+    assert not wired.runs_root.exists()
 
 
 @pytest.mark.spec("tagging:independence:a-complete-tagger-makes-no-call")
@@ -764,12 +696,12 @@ def test_a_complete_local_artifact_is_not_paid_for_by_opening_the_graph(
     # loads a graph; a run whose list is already written must not pay for that
     # to return `None`, and a completed run must still resume on a machine that
     # has since emptied `models/`.
-    assert tag_wd14(run, FLOW, lambda: local) is not None
+    assert tag_wd14(run, lambda: local) is not None
 
     def refuse() -> LocalTagger:
         raise AssertionError("the completed stage opened the graph anyway")
 
-    assert tag_wd14(run, FLOW, refuse) is None
+    assert tag_wd14(run, refuse) is None
 
 
 @pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")
@@ -781,15 +713,15 @@ def test_a_photograph_the_decoder_cannot_read_is_recorded_and_is_permanent(
     # construction. Without a record, `show` and the run directory would carry
     # no trace of it while an identical `tags` failure leaves one.
     with pytest.raises(Refusal) as refused:
-        tag_wd14(run, FLOW, _unreadable)
+        tag_wd14(run, _unreadable)
 
     assert "permanent" in str(refused.value)
-    recorded = list(run.directory(FLOW, WD14).glob("*.error.*.json"))
+    recorded = list(run.directory(PHOTO, WD14).glob("*.error.*.json"))
     assert [path.name for path in recorded] == ["001.error.1.permanent.json"]
 
     # And the budget of one is then spent: a second pass refuses without calling.
     with pytest.raises(Refusal) as again:
-        tag_wd14(run, FLOW, _unreadable)
+        tag_wd14(run, _unreadable)
     assert "failed permanently" in str(again.value)
 
 
@@ -799,8 +731,8 @@ def test_the_hosted_tagger_records_its_options_and_the_local_its_floor(
 ) -> None:
     transport = _answer("1girl, solo")
 
-    tags = tag_hosted(run, FLOW, hosted(transport))
-    scored = tag_wd14(run, FLOW, fake_tagger)
+    tags = tag_hosted(run, hosted(transport))
+    scored = tag_wd14(run, fake_tagger)
 
     assert tags is not None and scored is not None
     (sent,) = transport.bodies()

@@ -12,7 +12,15 @@ import pytest
 
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import OUTPUTS, WD14, Run, open_run, record_failure
+from isekai.foundation.run import (
+    OUTPUTS,
+    PHOTO,
+    WD14,
+    Run,
+    assign,
+    open_run,
+    record_failure,
+)
 from isekai.interface.run_view import (
     FailureRecord,
     listings,
@@ -52,8 +60,8 @@ def run(tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> Run:
 def test_each_stage_lists_its_versions_and_marks_the_active_one(run: Run) -> None:
     by_name = {(item.stage, item.flow): item for item in listings(run)}
 
-    assert by_name[("captions", FLOW)].versions == [1]
-    assert by_name[("captions", FLOW)].active == 1
+    assert by_name[("captions", PHOTO)].versions == [1]
+    assert by_name[("captions", PHOTO)].active == 1
     assert by_name[("review", FLOW)].versions == [1, 2]
     # 002 is a draft; the active one is the highest *approved*, because that is
     # what a downstream stage may proceed from.
@@ -81,13 +89,13 @@ def test_the_report_marks_the_active_version_for_each_stage(run: Run) -> None:
 def test_each_artifacts_producer_is_shown(run: Run, vocabulary: Vocabulary) -> None:
     by_name = {(item.stage, item.flow): item for item in listings(run)}
 
-    assert "fake-reader" in by_name[("captions", FLOW)].producers[1]
-    assert "m1+m2" in by_name[("captions", FLOW)].producers[1]
-    assert "unpinned" in by_name[("captions", FLOW)].producers[1]
+    assert "fake-reader" in by_name[("captions", PHOTO)].producers[1]
+    assert "m1+m2" in by_name[("captions", PHOTO)].producers[1]
+    assert "unpinned" in by_name[("captions", PHOTO)].producers[1]
     assert "wd14" in by_name[("sheets", FLOW)].producers[1]
     assert "unedited" in by_name[("review", FLOW)].producers[1]
 
-    # A sheet filled from another flow's list names that flow beside its number.
+    # A first sheet a draft wrote names the photograph's list by its number alone.
     target = load_flow("conjure-anime-wai")
     sheet_stage.sheet(
         run,
@@ -101,22 +109,8 @@ def test_each_artifacts_producer_is_shown(run: Run, vocabulary: Vocabulary) -> N
     )
     by_name = {(item.stage, item.flow): item for item in listings(run)}
     assert "from 001" in by_name[("sheets", FLOW)].producers[1]
-    assert f"from {FLOW}/001" in by_name[("sheets", target.id)].producers[1]
-
-    # Two flows back, it names the flow whose list was read, not the one named.
-    onward = load_flow("summon-flat-anime-wai")
-    sheet_stage.sheet(
-        run,
-        onward.id,
-        onward.schema,
-        vocabulary,
-        FIELD_MAP,
-        tagged=onward.tagger,
-        flow_digest=onward.digest,
-        tags_from=target.id,
-    )
-    by_name = {(item.stage, item.flow): item for item in listings(run)}
-    assert f"from {FLOW}/001" in by_name[("sheets", onward.id)].producers[1]
+    assert "from 001" in by_name[("sheets", target.id)].producers[1]
+    assert FLOW not in by_name[("sheets", target.id)].producers[1]
 
 
 @pytest.mark.spec("cli:show:producers-are-reported")
@@ -148,9 +142,10 @@ def test_a_stage_with_nothing_in_it_says_so(
     photo = tmp_path / "bare.jpg"
     photo.write_bytes(jpeg_bytes(800, 600))
     bare = open_run(photo, tmp_path / "runs")
-    # A flow's directory exists as soon as the flow has done anything at all; the
-    # stages it has not reached yet are the ones that say "(none)".
+    # A flow's directory exists as soon as it is assigned; the stages it has not
+    # reached yet are the ones that say "(none)".
     caption(bare, FakeReader())
+    assign(bare, FLOW)
 
     lines = list(report(bare))
 
@@ -195,7 +190,7 @@ def test_renders_are_listed_under_the_approval_they_came_from(
     ],
 )
 def test_show_marks_a_file_it_cannot_read(run: Run, body: str, shown: str) -> None:
-    (run.directory(FLOW, "captions") / "002.json").write_text(body)
+    (run.directory(PHOTO, "captions") / "002.json").write_text(body)
 
     captions = next(item for item in listings(run) if item.stage == "captions")
 
@@ -213,22 +208,24 @@ def test_show_reports_both_tagging_stages_for_a_run_that_has_them(
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
-    tag_wd14(made, FLOW, fake_tagger)
-    tag_hosted(made, FLOW, FakeTagger())
+    tag_wd14(made, fake_tagger)
+    tag_hosted(made, FakeTagger())
+    assign(made, FLOW)
 
     by_name = {(item.stage, item.flow): item for item in listings(made)}
 
-    assert by_name[("wd14", FLOW)].versions == [1]
-    assert by_name[("tags", FLOW)].versions == [1]
+    assert by_name[("wd14", PHOTO)].versions == [1]
+    assert by_name[("tags", PHOTO)].versions == [1]
     # And in the order a run passes through them, between the caption and the
-    # sheet the two of them feed a human's reading of.
-    assert [item.stage for item in listings(made)] == [
-        "captions",
-        "wd14",
-        "tags",
-        "sheets",
-        "review",
-        "prompts",
+    # sheet the two of them feed a human's reading of: the photograph's, then
+    # the flow's.
+    assert [(item.flow, item.stage) for item in listings(made)] == [
+        (PHOTO, "captions"),
+        (PHOTO, "wd14"),
+        (PHOTO, "tags"),
+        (FLOW, "sheets"),
+        (FLOW, "review"),
+        (FLOW, "prompts"),
     ]
 
 
@@ -237,19 +234,18 @@ def test_show_does_not_refuse_for_a_run_captioned_before_these_stages_existed(
     run: Run,
 ) -> None:
     # An old run simply lacks the two directories, which is the same state as a
-    # run whose caption has not been produced. No migration, and nothing to
-    # detect.
+    # run whose tag lists have not been produced, and nothing to detect.
     #
     # `wd14/` is removed rather than never written: a sheet cannot be filled
     # without a tag list, so the fixture has one -- and a run older than the
     # tagging stages has a sheet and neither list, which is exactly this state on
     # disk.
-    for path in run.directory(FLOW, WD14).iterdir():
+    for path in run.directory(PHOTO, WD14).iterdir():
         path.unlink()
     by_name = {(item.stage, item.flow): item for item in listings(run)}
 
-    assert by_name[("wd14", FLOW)].versions == []
-    assert by_name[("tags", FLOW)].versions == []
+    assert by_name[("wd14", PHOTO)].versions == []
+    assert by_name[("tags", PHOTO)].versions == []
     assert any("wd14" in line for line in report(run))
 
 
@@ -263,15 +259,41 @@ def test_show_prints_the_wd14_artifact_without_the_word_unpinned(
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
-    tag_wd14(made, FLOW, fake_tagger)
-    tag_hosted(made, FLOW, FakeTagger())
+    tag_wd14(made, fake_tagger)
+    tag_hosted(made, FakeTagger())
 
     by_name = {(item.stage, item.flow): item for item in listings(made)}
 
-    assert "unpinned" not in by_name[("wd14", FLOW)].producers[1]
-    assert by_name[("wd14", FLOW)].producers[1].startswith("wd14")
+    assert "unpinned" not in by_name[("wd14", PHOTO)].producers[1]
+    assert by_name[("wd14", PHOTO)].producers[1].startswith("wd14")
     # The hosted one still is unpinned, so the absence above means something.
-    assert "unpinned" in by_name[("tags", FLOW)].producers[1]
+    assert "unpinned" in by_name[("tags", PHOTO)].producers[1]
+
+
+@pytest.mark.spec("cli:show:the-description-is-listed-once")
+def test_the_description_is_listed_once(run: Run) -> None:
+    other = "control-anime-wai"
+    assign(run, other)
+    left = run.directory(FLOW, "captions")
+    left.mkdir()
+    (left / "001.json").write_bytes(
+        (run.directory(PHOTO, "captions") / "001.json").read_bytes()
+    )
+
+    lines = report(run)
+
+    for stage in ("captions", "wd14", "tags"):
+        assert sum(line.startswith(f"  {PHOTO}/{stage}") for line in lines) == 1
+    first_flow = min(
+        index
+        for index, line in enumerate(lines)
+        if line.startswith((f"  {FLOW}/", f"  {other}/"))
+    )
+    assert (
+        max(index for index, line in enumerate(lines) if line.startswith(f"  {PHOTO}/"))
+        < first_flow
+    )
+    assert f"  not read  {FLOW}/captions/" in lines
 
 
 # --- the injected flows root, and where the refusal lands ---------------------
@@ -349,7 +371,8 @@ def test_an_unreadable_frame_is_marked(
     assert lines[0] == run.id
     assert lines[1].startswith("  photo    ") and shown in lines[1]
     assert "delete" in lines[1]
-    assert f"  {FLOW}/captions" in lines
+    assert f"  {PHOTO}/captions" in lines
+    assert f"  {FLOW}/sheets" in lines
     assert "* marks the active version for each stage" in lines[-1]
 
 
@@ -384,7 +407,7 @@ def _below(lines: list[str], header: str) -> list[str]:
 
 @pytest.mark.spec("cli:show:failure-records-are-listed")
 def test_failure_records_are_listed_under_their_stage(run: Run) -> None:
-    captions = run.directory(FLOW, "captions")
+    captions = run.directory(PHOTO, "captions")
     record_failure(captions, 2, "transient", {"stage": "caption", "detail": "x"})
     record_failure(captions, 2, "permanent", {"stage": "caption", "detail": "x"})
 
@@ -395,7 +418,7 @@ def test_failure_records_are_listed_under_their_stage(run: Run) -> None:
         FailureRecord(2, 1, "transient"),
         FailureRecord(2, 2, "permanent"),
     ]
-    assert _below(lines, f"  {FLOW}/captions")[1:] == [
+    assert _below(lines, f"  {PHOTO}/captions")[1:] == [
         "   ! 002  failed · attempt 1 · transient",
         "   ! 002  failed · attempt 2 · permanent",
     ]
@@ -405,13 +428,13 @@ def test_failure_records_are_listed_under_their_stage(run: Run) -> None:
 
 @pytest.mark.spec("cli:show:failure-records-are-listed")
 def test_a_stage_holding_only_failures_is_not_reported_empty(run: Run) -> None:
-    tags = run.directory(FLOW, "tags")
+    tags = run.directory(PHOTO, "tags")
     record_failure(tags, 1, "permanent", {"stage": "tags", "detail": "x"})
 
     lines = report(run)
 
-    assert not any(f"{FLOW}/tags" in line and "(none)" in line for line in lines)
-    assert _below(lines, f"  {FLOW}/tags") == [
+    assert not any(f"{PHOTO}/tags" in line and "(none)" in line for line in lines)
+    assert _below(lines, f"  {PHOTO}/tags") == [
         "   ! 001  failed · attempt 1 · permanent"
     ]
 
@@ -438,7 +461,7 @@ def test_render_failures_are_listed_under_their_group(run: Run) -> None:
         ("", "notes.txt", False),
         ("", "stray", True),
         ("", "captions.bak", True),
-        ("captions", "001.json.bak", False),
+        ("sheets", "001.json.bak", False),
         ("review", "old", True),
         ("outputs", "notes.txt", False),
         ("outputs", "latest", True),

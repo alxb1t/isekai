@@ -22,6 +22,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
     CAPTIONS,
+    PHOTO,
     Run,
     attempts,
     open_run,
@@ -196,10 +197,7 @@ def test_a_tag_list_missing_a_key_is_refused_naming_it(
 
     message = str(refused.value)
     assert "-- 001.json: " in message and named in message
-    assert (
-        f"`python -m isekai tag --flow {FLOW}{runs_flag(run)} --new-version {run.id}`"
-        in message
-    )
+    assert f"`python -m isekai tag{runs_flag(run)} --new-version {run.id}`" in message
     assert versions(run.directory(FLOW, "sheets")) == []
 
 
@@ -246,10 +244,7 @@ def test_a_sheet_failure_is_recorded_as_permanent(
     message = str(refused.value)
     assert named in message
     # No sheet exists yet to edit: the list is what moves, so re-tagging is the fix.
-    assert (
-        f"`python -m isekai tag --flow {FLOW}{runs_flag(run)} --new-version {run.id}`"
-        in message
-    )
+    assert f"`python -m isekai tag{runs_flag(run)} --new-version {run.id}`" in message
     assert "replace it with a tag" not in message
     assert f"see {FLOW}/sheets/001.error.1.permanent.json" in message
     assert (
@@ -455,7 +450,7 @@ def test_the_stage_reads_the_tag_list_and_never_opens_the_caption(
     reached for. The caption is on disk and is booby-trapped: any read of it
     fails the test by name.
     """
-    caption_path = run.directory(FLOW, CAPTIONS) / "001.json"
+    caption_path = run.directory(PHOTO, CAPTIONS) / "001.json"
     assert caption_path.exists()
     _trap_reads(monkeypatch, lambda path: path == caption_path, "the caption")
 
@@ -476,7 +471,8 @@ def test_an_absent_tag_list_is_refused_naming_the_verb_that_writes_it(
         sheet(run, schema, vocabulary, tags=None)
 
     message = str(refused.value)
-    assert f"python -m isekai tag --flow {FLOW}{runs_flag(run)} {run.id}" in message
+    assert f"python -m isekai tag{runs_flag(run)} {run.id}" in message
+    assert message.endswith("which writes photo/wd14/")
     assert versions(run.path / FLOW / "sheets") == []
 
 
@@ -565,9 +561,8 @@ def test_the_sheet_is_written_under_the_flow_that_asked_for_it(
 def test_a_second_flow_gets_its_own_fill_and_leaves_the_first_alone(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    # Nothing is shared: two flows over one input are two independent tag lists,
-    # so the class of error where a flow inherits another's answer cannot occur
-    # rather than being checked for (D17).
+    # Each flow's sheet sits in its own subtree, so a second flow's fill leaves
+    # the first flow's sheet as it was (D17).
     first = sheet(run, schema, vocabulary, tags=[DanbooruTag("brown_hair")])
 
     second = sheet(
@@ -622,8 +617,8 @@ def test_a_newer_tag_list_is_named(
     assert _kept(run, schema, vocabulary) == (
         None,
         [
-            f"{run.id}/{FLOW}: sheet 001 was filled from wd14/001.json, and "
-            f"wd14/002.json is newer; run `python -m isekai sheet --flow {FLOW}"
+            f"{run.id}/{FLOW}: sheet 001 was filled from photo/wd14/001.json, and "
+            f"photo/wd14/002.json is newer; run `python -m isekai sheet --flow {FLOW}"
             f"{runs_flag(run)} --new-version {run.id}`"
         ],
     )
@@ -710,17 +705,13 @@ def test_a_sheet_records_the_digest_it_is_handed_tagged_or_empty(
     assert read(empty, SHEET_FILE).get("flow_digest") == "c" * 64
 
 
-# --- another flow's tags ------------------------------------------------------
+# --- a draft's first sheet ----------------------------------------------------
 
 TARGET = "conjure-anime-wai"
 
 
-@pytest.mark.spec("sheet:tags-from:filled-from-the-sources-tag-list")
-def test_a_sheet_is_filled_from_the_named_flows_tag_list(
-    run: Run, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    write_wd14(run, [DanbooruTag("brown_hair"), DanbooruTag("long_hair")])
-
+def _drafted(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path | None:
+    """Write `TARGET`'s first sheet as a draft from `FLOW`'s approval writes it."""
     written, warnings = sheet_stage.sheet(
         run,
         TARGET,
@@ -731,111 +722,37 @@ def test_a_sheet_is_filled_from_the_named_flows_tag_list(
         flow_digest=FLOW_DIGEST,
         tags_from=FLOW,
     )
+    assert warnings == []
+    return written
+
+
+@pytest.mark.spec("sheet:output:a-drafted-sheet-names-its-source")
+def test_a_drafted_sheet_is_filled_from_the_photographs_list_and_names_its_source(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    write_wd14(run, [DanbooruTag("brown_hair"), DanbooruTag("long_hair")])
+
+    written = _drafted(run, schema, vocabulary)
 
     body = _body(written)
-    assert warnings == []
     assert written is not None and written.parent == run.path / TARGET / "sheets"
     assert body["fields"]["hair_colour"] == ["brown hair"]
     assert body["fields"]["hair_silhouette"] == ["long hair"]
     assert body["producer"]["tags_from"] == FLOW
     assert body["producer"]["from"] == 1
-    assert "listed_from" not in body["producer"]
     assert not (run.path / TARGET / "wd14").exists()
+    assert not (run.path / FLOW).exists()
 
 
-@pytest.mark.spec("sheet:tags-from:no-source-tag-list-gives-an-empty-sheet")
-def test_a_source_with_no_tag_list_gives_an_empty_sheet_naming_it(
+@pytest.mark.spec("sheet:superseded:a-drafted-sheet-is-silent")
+def test_a_sheet_a_draft_wrote_is_never_weighed(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    written, _ = sheet_stage.sheet(
-        run,
-        TARGET,
-        schema,
-        vocabulary,
-        FIELD_MAP,
-        tagged=True,
-        flow_digest=FLOW_DIGEST,
-        tags_from=FLOW,
-    )
-
-    body = _body(written)
-    assert body["fields"] == {name: [] for name in schema.names}
-    assert body["producer"]["tags_from"] == FLOW
-    assert "from" not in body["producer"]
-
-
-MIDDLE = "summon-flat-anime-wai"
-
-
-def _drafted(
-    run: Run, schema: Schema, vocabulary: Vocabulary, flow: str, source: str
-) -> Sheet:
-    """Write `flow`'s sheet filled from `source`'s tags, and return it."""
-    written, _ = sheet_stage.sheet(
-        run,
-        flow,
-        schema,
-        vocabulary,
-        FIELD_MAP,
-        tagged=True,
-        flow_digest=FLOW_DIGEST,
-        tags_from=source,
-        new_version=True,
-    )
-    return _body(written)
-
-
-@pytest.mark.spec("sheet:tags-from:a-source-without-a-list-leads-on")
-def test_a_source_without_a_list_leads_on_to_the_flow_that_tagged(
-    run: Run, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    write_wd14(run, [DanbooruTag("brown_hair")])
-    _drafted(run, schema, vocabulary, MIDDLE, FLOW)
-
-    body = _drafted(run, schema, vocabulary, TARGET, MIDDLE)
-
-    assert body["fields"]["hair_colour"] == ["brown hair"]
-    assert body["producer"]["tags_from"] == MIDDLE
-    assert body["producer"]["from"] == 1
-    assert body["producer"]["listed_from"] == FLOW
-
-
-@pytest.mark.spec("sheet:tags-from:a-source-without-a-list-leads-on")
-def test_the_walk_that_leads_on_ends_at_a_list_and_at_a_loop(
-    run: Run, schema: Schema, vocabulary: Vocabulary, tmp_path: Path
-) -> None:
     write_wd14(run)
-    _drafted(run, schema, vocabulary, MIDDLE, FLOW)
-    _drafted(run, schema, vocabulary, TARGET, MIDDLE)
-    assert sheet_stage.tagger_of(run, FLOW) == FLOW
-    assert sheet_stage.tagger_of(run, TARGET) == FLOW
-
-    # Each sheet names the other, and neither flow holds a list.
-    looped = open_run(run.photo, tmp_path / "looped")
-    _drafted(looped, schema, vocabulary, MIDDLE, TARGET)
-    _drafted(looped, schema, vocabulary, TARGET, MIDDLE)
-    assert sheet_stage.tagger_of(looped, TARGET) is None
-
-
-@pytest.mark.spec("sheet:superseded:a-borrowed-sheet-is-silent")
-@pytest.mark.parametrize("newer", [FLOW, TARGET], ids=["source", "target"])
-def test_a_sheet_filled_from_another_flows_tags_is_never_weighed(
-    run: Run, schema: Schema, vocabulary: Vocabulary, newer: str
-) -> None:
-    write_wd14(run)
-    filled, _ = sheet_stage.sheet(
-        run,
-        TARGET,
-        schema,
-        vocabulary,
-        FIELD_MAP,
-        tagged=True,
-        flow_digest=FLOW_DIGEST,
-        tags_from=FLOW,
-    )
+    filled = _drafted(run, schema, vocabulary)
     assert filled is not None
     before = filled.read_bytes()
-    write_wd14(run, flow=newer, version=2)
+    write_wd14(run, version=2)
 
     assert sheet_stage.sheet(
         run,

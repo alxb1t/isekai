@@ -142,10 +142,8 @@ class TagsProducer(TypedDict):
 
 
 # The functional form below, because `from` is a Python keyword. `from` is
-# absent from a sheet no tag list filled (D31); `tags_from` names the flow the
-# operator named as the source of its tags, when that is not its own, and
-# `listed_from` the flow whose `wd14/` holds list `from`, when that is not
-# `tags_from` but the flow its sheets lead to (`tagger_of`).
+# absent from a sheet no tag list filled (D31), and names a list in `photo/wd14/`;
+# `tags_from` names the flow a draft drew a first sheet from (D17).
 SheetProducer = TypedDict(
     "SheetProducer",
     {
@@ -156,7 +154,6 @@ SheetProducer = TypedDict(
         "from": NotRequired[int],
         "floor": NotRequired[float],
         "tags_from": NotRequired[str],
-        "listed_from": NotRequired[str],
     },
 )
 

@@ -107,6 +107,7 @@ def test_a_flows_counts_are_out_of_the_sources_that_have_it(
     _approved(_run(folder, "ada.jpg"), vocabulary)
     bea = _run(folder, "bea.jpg")
     write_wd14(bea)
+    bea.directory(SUMMON).mkdir()
     bea.directory(CONJURE).mkdir()
     _run(folder, "cid.jpg")
 
@@ -212,6 +213,22 @@ def test_a_cells_stage_is_the_furthest_its_run_directory_holds(
     (source,) = grid.sources
     assert source.cells[SUMMON] == done
     assert source.digest == run.digest
+
+
+@pytest.mark.spec("ui:hub:a-tagged-photograph-is-tagged-in-every-flow")
+def test_a_photograph_tagged_once_is_tagged_in_every_flow(tmp_path: Path) -> None:
+    folder = _collection(tmp_path, "b", "ada.jpg")
+    run = _run(folder, "ada.jpg")
+    for flow in OFFERED:
+        run.directory(flow).mkdir()
+
+    write_wd14(run)
+
+    (source,) = library.hub(folder, OFFERED, FLOWS_DIR).sources
+    assert {flow: source.cells[flow] for flow in OFFERED} == {
+        flow: Cell("tagged") for flow in OFFERED
+    }
+    assert not any(run.directory(flow, "wd14").exists() for flow in OFFERED)
 
 
 @pytest.mark.spec("ui:hub:a-cell-names-its-newest-image")

@@ -33,13 +33,17 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
     DATA_ROOT,
+    DESCRIPTION,
     FRAME_NAME,
+    PHOTO,
     RUNS_ROOT,
+    WD14,
     Kind,
     Run,
     across,
     approved_versions,
     artifact_name,
+    assign,
     attempts,
     check_budget,
     instructions_record,
@@ -47,6 +51,7 @@ from isekai.foundation.run import (
     latest,
     next_version,
     open_run,
+    photo_of,
     record_failure,
     refusal_for,
     run_id,
@@ -59,6 +64,7 @@ from isekai.interface.wiring import Wiring, wiring, wiring_from
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import approve, review
+from isekai.pipeline.tagging import FakeTagger, tag_hosted
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.fakes import FakeComfyClient
@@ -141,21 +147,21 @@ def test_two_photographs_sharing_a_filename_get_different_runs(
     second = open_run(_photo(tmp_path / "b", "p.jpg", jpeg_bytes(640, 480)), runs)
 
     assert first.id != second.id
-    write_json(first.directory(FLOW, "captions") / "001.json", {})
-    assert versions(second.path / FLOW / "captions") == []
+    write_json(first.directory(PHOTO, "captions") / "001.json", {})
+    assert versions(second.path / PHOTO / "captions") == []
 
 
 @pytest.mark.spec("run-directory:identity:same-bytes-resume-the-same-run")
 def test_the_same_photograph_twice_is_one_run(tmp_path: Path, runs: Path) -> None:
     body = jpeg_bytes(800, 600)
     first = open_run(_photo(tmp_path / "a", "p.jpg", body), runs)
-    write_json(first.path / FLOW / "captions" / "001.json", {})
+    write_json(first.path / PHOTO / "captions" / "001.json", {})
 
     second = open_run(_photo(tmp_path / "b", "renamed.jpg", body), runs)
 
     assert second.path == first.path
     assert sorted(os.listdir(runs)) == [first.id]
-    assert versions(second.path / FLOW / "captions") == [1]
+    assert versions(second.path / PHOTO / "captions") == [1]
 
 
 # --- the frame ----------------------------------------------------------------
@@ -314,7 +320,7 @@ def test_each_stage_numbers_within_its_own_directory(
     tmp_path: Path, runs: Path
 ) -> None:
     run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
-    captions, sheets = run.directory(FLOW, "captions"), run.directory(FLOW, "sheets")
+    captions, sheets = run.directory(PHOTO, "captions"), run.directory(FLOW, "sheets")
 
     write_json(captions / artifact_name(next_version(captions)), {})
     write_json(captions / artifact_name(next_version(captions)), {})
@@ -714,7 +720,7 @@ def test_a_deleted_record_is_never_overwritten(tmp_path: Path) -> None:
 def test_a_record_that_refuses_the_next_run_names_its_deletion(
     tmp_path: Path, kinds: list[Kind], remedy: str
 ) -> None:
-    directory = tmp_path / "summon-anime-wai" / "captions"
+    directory = tmp_path / PHOTO / "captions"
     directory.mkdir(parents=True)
     for kind in kinds:
         record = record_failure(directory, 1, kind, _FAILURE)
@@ -727,15 +733,15 @@ def test_a_record_that_refuses_the_next_run_names_its_deletion(
         record,
         "captions",
         "caption",
-        "summon-anime-wai",
+        None,
         "caption",
     )
 
     message = str(refusal)
-    assert f"see summon-anime-wai/captions/{record.name}," in message
+    assert f"see photo/captions/{record.name}," in message
     assert remedy in message
     assert message.endswith(
-        "`python -m isekai caption --flow summon-anime-wai aunt-ada`"
+        "`python -m isekai caption aunt-ada`"
         + ("" if "delete" in remedy else " again once what it names is fixed")
     )
 
@@ -1110,7 +1116,7 @@ def test_the_default_run_root_is_under_the_ignored_data_root() -> None:
     assert DATA_ROOT in wired.runs_root.parents
 
 
-# --- the layout: input above, flow below --------------------------------------
+# --- the layout: the input and its description above, flow below ------------
 
 
 def _carry(
@@ -1118,7 +1124,7 @@ def _carry(
 ) -> None:
     """Carry one run through every stage for one flow, with no network."""
     loaded = load_flow(flow)
-    caption(run, FakeReader(prose="Brown hair, brown eyes."), flow=flow)
+    caption(run, FakeReader(prose="Brown hair, brown eyes."))
     sheet(
         run,
         schema,
@@ -1137,6 +1143,16 @@ def _carry(
     )
 
 
+# A second flow, carried as far as its draft: its sheet reads the photograph's list.
+SECOND = "summon-v2"
+
+
+def _second(run: Run, schema: Schema, vocabulary: Vocabulary) -> None:
+    """Carry `SECOND` through its sheet and its draft over the photograph's list."""
+    sheet(run, schema, vocabulary, flow=SECOND)
+    review(run, SECOND)
+
+
 @pytest.mark.spec("run-directory:layout:stage-artifacts-live-under-the-flow")
 def test_the_layout_is_the_input_above_and_every_stage_below_the_flow(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
@@ -1147,13 +1163,16 @@ def test_the_layout_is_the_input_above_and_every_stage_below_the_flow(
 
     _carry(run, FLOW, schema, vocabulary)
 
-    for stage in ("captions", "sheets", "review", "prompts", "outputs"):
+    for stage in ("sheets", "review", "prompts", "outputs"):
         assert (run.path / FLOW / stage).is_dir(), stage
         assert not (run.path / stage).exists(), stage
+    for stage in DESCRIPTION[:2]:
+        assert (run.path / PHOTO / stage).is_dir(), stage
+        assert not (run.path / FLOW / stage).exists(), stage
 
 
 @pytest.mark.spec("run-directory:layout:stage-artifacts-live-under-the-flow")
-def test_the_layout_puts_nothing_above_the_flow_but_the_input_and_its_frame(
+def test_the_layout_puts_nothing_above_the_flow_but_the_input_its_frame_and_photo(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     run = open_run(
@@ -1165,7 +1184,28 @@ def test_the_layout_puts_nothing_above_the_flow_but_the_input_and_its_frame(
     files = sorted(path.name for path in run.path.iterdir() if path.is_file())
     directories = sorted(path.name for path in run.path.iterdir() if path.is_dir())
     assert files == sorted((FRAME_NAME, run.photo.name))
-    assert directories == [FLOW]
+    assert directories == sorted((PHOTO, FLOW))
+
+
+@pytest.mark.spec("run-directory:layout:every-flow-reads-the-description")
+def test_every_flow_reads_the_description(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+    tag_hosted(run, FakeTagger())
+
+    _carry(run, FLOW, schema, vocabulary)
+    _second(run, schema, vocabulary)
+
+    for stage in DESCRIPTION:
+        assert versions(run.path / PHOTO / stage) == [1], stage
+        for flow in (FLOW, SECOND):
+            assert not (run.path / flow / stage).exists(), (flow, stage)
+    for flow in (FLOW, SECOND):
+        filled = read(run.path / flow / "sheets" / "001.json", SHEET_FILE)
+        assert filled["producer"]["from"] == 1, flow
 
 
 @pytest.mark.spec("run-directory:layout:a-second-flow-adds-one-subtree")
@@ -1178,12 +1218,11 @@ def test_the_layout_gains_one_subtree_when_a_second_flow_is_added(
     _carry(run, FLOW, schema, vocabulary)
     before = snapshot(run.path / FLOW)
 
-    caption(run, FakeReader(prose="Brown hair."), flow="summon-v2")
+    _second(run, schema, vocabulary)
 
-    assert sorted(path.name for path in run.path.iterdir() if path.is_dir()) == [
-        FLOW,
-        "summon-v2",
-    ]
+    assert sorted(path.name for path in run.path.iterdir() if path.is_dir()) == sorted(
+        (PHOTO, FLOW, SECOND)
+    )
     assert snapshot(run.path / FLOW) == before
 
 
@@ -1196,7 +1235,7 @@ def test_the_layout_holds_one_copy_of_the_input_however_many_flows_run(
     )
 
     _carry(run, FLOW, schema, vocabulary)
-    caption(run, FakeReader(prose="Brown hair."), flow="summon-v2")
+    _second(run, schema, vocabulary)
 
     copies = [path for path in run.path.rglob("*.jpg") if path.is_file()]
     assert copies == [run.photo]
@@ -1212,14 +1251,71 @@ def test_the_layout_survives_one_flows_directory_being_removed(
         _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
     )
     _carry(run, FLOW, schema, vocabulary)
-    caption(run, FakeReader(prose="Brown hair."), flow="summon-v2")
+    _second(run, schema, vocabulary)
     kept = snapshot(run.path / FLOW)
+    described = snapshot(run.path / PHOTO)
 
-    shutil.rmtree(run.path / "summon-v2")
+    shutil.rmtree(run.path / SECOND)
 
     assert snapshot(run.path / FLOW) == kept
+    assert snapshot(run.path / PHOTO) == described
     assert run.photo.is_file()
     assert (run.path / FRAME_NAME).is_file()
+
+
+@pytest.mark.spec("run-directory:layout:photo-is-no-flow")
+def test_photo_is_no_flow(tmp_path: Path) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+    (run.path / PHOTO / WD14).mkdir(parents=True)
+    (run.path / FLOW).mkdir()
+
+    assert run.flows == [FLOW]
+    with pytest.raises(Refusal, match="a name a run keeps for its photograph's"):
+        assign(run, PHOTO)
+
+
+def _description(directory: Path, kind: str) -> None:
+    """Write one artifact of the description `kind` into `directory`."""
+    directory.mkdir(parents=True, exist_ok=True)
+    schema = {"captions": "caption", "wd14": "wd14", "tags": "tags"}[kind]
+    write_json(
+        directory / "001.json", {"schema": {"name": schema, "version": 1}, "tags": []}
+    )
+
+
+@pytest.mark.spec("run-directory:migration:an-unmigrated-run-is-refused")
+def test_an_unmigrated_run_is_refused_naming_migrate(tmp_path: Path) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+    _description(run.path / FLOW / WD14, WD14)
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal) as refused:
+        photo_of(run, WD14)
+
+    assert str(refused.value).startswith(f"{run.id}: its wd14 sits under its flows")
+    assert "`python -m isekai migrate --runs " in str(refused.value)
+    assert snapshot(run.path) == before
+    assert not (run.path / PHOTO).exists()
+
+
+@pytest.mark.spec("run-directory:migration:a-migrated-run-reads-photo")
+def test_a_migrated_run_reads_photo(tmp_path: Path) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+    for kind in DESCRIPTION:
+        _description(run.path / FLOW / kind, kind)
+        _description(run.path / PHOTO / kind, kind)
+    kept = snapshot(run.path / FLOW)
+
+    paths = [photo_of(run, kind) for kind in DESCRIPTION]
+
+    assert paths == [run.path / PHOTO / kind for kind in DESCRIPTION]
+    assert snapshot(run.path / FLOW) == kept
 
 
 @pytest.mark.spec("run-directory:schema:an-added-record-key-is-optional")

@@ -248,7 +248,7 @@ def test_importing_the_boundary_opens_no_file_and_computes_no_digest(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # A machine that never captions must not pay for a 467 MB file, so `wiring`
-    # resolves a tagger per flow and nothing is constructed until one asks.
+    # resolves a tagger and nothing is constructed until a verb asks.
     # Re-imported with both the manifest reader and the resolver rigged to
     # raise: reaching either at import time is the defect.
     def refuse(*_args: object, **_kwargs: object) -> object:

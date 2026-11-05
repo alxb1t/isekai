@@ -89,6 +89,7 @@ from isekai.foundation.run import (
     APPROVED,
     CAPTIONS,
     NEW_VERSION,
+    PHOTOGRAPH_VERBS,
     REVIEW,
     SHEETS,
     SIGNATURE_BYTES,
@@ -104,6 +105,7 @@ from isekai.foundation.run import (
     latest_artifact,
     media_type,
     open_run,
+    photo_of,
     sheet_of,
     stage_command,
 )
@@ -133,7 +135,6 @@ from isekai.pipeline.review import (
     waiting_edit,
 )
 from isekai.pipeline.review import state as review_state
-from isekai.pipeline.sheet import sheet_source, tagger_of
 from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.vocabulary import Vocabulary
@@ -722,7 +723,7 @@ def create_app(
             revision = _revision(one, body, renders)
             drafted = _drafted(one, draft, body, remedy)
         budget = token_budget(fields, one.flow.schema, one.flow)
-        caption, caption_from = _caption(one)
+        caption = latest_artifact(photo_of(one.run, CAPTIONS))
         width, height = _dimensions(one.run)
         return {
             "id": one.run.digest,
@@ -732,16 +733,11 @@ def create_app(
             "vocabulary": len(shared.vocabulary()),
             "width": width,
             "height": height,
-            "caption": (
-                _prose(one, caption, caption_from or one.flow.id) if caption else None
-            ),
+            "caption": _prose(one, caption) if caption else None,
             # The one artifact a skipped verb leaves missing on a page under
             # review, so the page names what writes it. Built here: the browser
             # never spells a command.
             "caption_command": None if caption else _command(one, "caption"),
-            # The flow whose caption is shown, where the sheet holds its tags
-            # and this flow holds no caption of its own; else null.
-            "caption_from": caption_from,
             # Both lists are `null` where the artifact is absent -- which is
             # three legitimate states, none of them a failure.
             "wd14": _wd14(one),
@@ -1207,30 +1203,39 @@ _DECIMAL = re.compile(r"[0-9]+")
 
 def cell_event(
     found: Path, grid: library.Hub, loaded: Mapping[str, Flow]
-) -> Callable[[Mapping[str, Any]], dict[str, Any] | None]:
-    """Return what turns a progress line into a `cell` event, its stage read from disk.
+) -> Callable[[Mapping[str, Any]], list[dict[str, Any]]]:
+    """Return what turns a progress line into `cell` events, each stage read from disk.
 
-    A line naming a run or a flow the job did not start reads None.
+    A line naming a flow gives that cell's event; a line naming no flow, a
+    photograph's stage, gives one per assigned flow, every cell reading the one
+    description (D17). A line naming a run or a flow the job did not start gives none.
     """
     collection = grid.name
     sources = {one.run.id: one.name for one in grid.sources if one.run}
 
-    def cell(line: Mapping[str, Any]) -> dict[str, Any] | None:
-        run_id, flow = str(line.get("run")), str(line.get("flow"))
-        if run_id not in sources or flow not in loaded:
-            return None
+    def cells(line: Mapping[str, Any]) -> list[dict[str, Any]]:
+        run_id, named = str(line.get("run")), line.get("flow")
+        if run_id not in sources:
+            return []
         run = Run(run_id, found / library.RUNS / run_id)
-        return {
-            "collection": collection,
-            "source": sources[run_id],
-            "flow": flow,
-            "stage": line.get("stage"),
-            "state": line.get("state"),
-            "message": line.get("message"),
-            "cell": _cell_out(library.stage(run, loaded[flow])),
-        }
+        if named is None:
+            flows = [flow for flow in loaded if run.directory(flow).is_dir()]
+        else:
+            flows = [str(named)] if str(named) in loaded else []
+        return [
+            {
+                "collection": collection,
+                "source": sources[run_id],
+                "flow": flow,
+                "stage": line.get("stage"),
+                "state": line.get("state"),
+                "message": line.get("message"),
+                "cell": _cell_out(library.stage(run, loaded[flow])),
+            }
+            for flow in flows
+        ]
 
-    return cell
+    return cells
 
 
 def _approved(approval: Path) -> tuple[ReviewApproved, dict[str, list[str]]]:
@@ -1295,30 +1300,6 @@ def _drafted(
     if (image := draft_image(body)) is not None:
         drafted["image"] = {**image, "seed": str(image["seed"])}
     return drafted
-
-
-def _caption(one: Held) -> tuple[Path | None, str | None]:
-    """Return `one`'s newest caption, and the flow it is borrowed from, or None.
-
-    Where `one` holds no caption, the newest caption of the flow its sheets lead
-    to is borrowed (`tagger_of`). An unreadable sheet borrows nothing.
-    """
-    path, flow = _listed(one, CAPTIONS)
-    return path, None if path is None or flow == one.flow.id else flow
-
-
-def _listed(one: Held, stage: str) -> tuple[Path | None, str]:
-    """Return `one`'s newest `stage` artifact, else its tagger's, and whose it is.
-
-    The walk starts at the flow `one`'s newest sheet names, never at `one`'s own
-    flow, so a flow holding a tag list of its own still borrows what it lacks.
-    """
-    own = latest_artifact(one.directory(stage))
-    source = None if own is not None else sheet_source(one.run, one.flow.id)
-    tagger = None if source is None else tagger_of(one.run, source)
-    if tagger is None:
-        return own, one.flow.id
-    return latest_artifact(one.run.directory(tagger, stage)), tagger
 
 
 def _side(flow: Flow, version: int, approval: Path) -> dict[str, Any]:
@@ -1580,13 +1561,13 @@ def _wd14(one: Held) -> list[dict[str, Any]] | None:
     Stored sorted by confidence descending, and passed through in that order:
     the sort is what makes a wrong tag arrive pre-refuted by the right one above
     it, so re-ordering here would throw away the reason the number is shown.
-    Where `one` holds none, its tagger's is shown.
+    The list is the photograph's, every flow's (D17).
     """
-    path, flow = _listed(one, WD14)
+    path = latest_artifact(photo_of(one.run, WD14))
     if path is None:
         return None
     found = read(path, WD14_FILE)
-    remedy = _remedy(one, "tag", flow)
+    remedy = _remedy(one, "tag")
     require(path, found, "tags", list, remedy)
     scored: list[dict[str, Any]] = []
     for index, entry in enumerate(found["tags"]):
@@ -1615,16 +1596,15 @@ def _tags(one: Held, vocabulary: Vocabulary) -> list[dict[str, Any]] | None:
     the artifact keeps every tag the model returned. Deduplicated here only:
     `{tag, posts}` repeats carry no information and would be duplicate Vue keys.
     The local tagger's list is not filtered -- it emits the vocabulary itself.
-    Where `one` holds none, its tagger's is shown.
+    The list is the photograph's, every flow's (D17).
     """
-    path, flow = _listed(one, TAGS)
+    path = latest_artifact(photo_of(one.run, TAGS))
     if path is None:
         return None
     listed = read(path, TAGS_FILE).get("tags")
     if not _strings(listed):
         raise Refusal(
-            f"{path.name}: its `tags` is not a list of strings; "
-            f"{_remedy(one, 'tag', flow)}"
+            f"{path.name}: its `tags` is not a list of strings; {_remedy(one, 'tag')}"
         )
     return [
         {"tag": name, "posts": vocabulary.count(name)}
@@ -1636,20 +1616,24 @@ def _tags(one: Held, vocabulary: Vocabulary) -> list[dict[str, Any]] | None:
 def _command(one: Held, verb: str, *flags: str) -> str:
     """Return the command that runs `verb` for `one`, as the operator pastes it.
 
-    e.g. "caption" -> "python -m isekai caption --flow f --runs b/runs r"
+    The photograph's verbs name no flow.
+    e.g. "review" -> "python -m isekai review --flow f --runs b/runs r"
     """
-    return stage_command(one.run, verb, one.flow.id, options=flags)
+    return stage_command(one.run, verb, *_flow_of(one, verb), options=flags)
 
 
-def _remedy(one: Held, verb: str, flow: str | None = None) -> str:
+def _remedy(one: Held, verb: str) -> str:
     """Return the remedy naming the command that rewrites `verb`'s file for `one`.
 
-    `flow` names another flow's file instead.
-
-    e.g. "tag" -> "rewrite it with `python -m isekai tag --flow f --new-version r`"
+    e.g. "tag" -> "rewrite it with `python -m isekai tag --new-version r`"
     """
-    command = stage_command(one.run, verb, flow or one.flow.id, options=NEW_VERSION)
+    command = stage_command(one.run, verb, *_flow_of(one, verb), options=NEW_VERSION)
     return f"rewrite it with `{command}`"
+
+
+def _flow_of(one: Held, verb: str) -> tuple[str, ...]:
+    """Return the flows `verb`'s command names: `one`'s, or none for a photograph's."""
+    return () if verb in PHOTOGRAPH_VERBS else (one.flow.id,)
 
 
 def _strings(value: object) -> TypeGuard[list[str]]:
@@ -1670,10 +1654,10 @@ def _fields(path: Path, body: Mapping[str, Any], remedy: str) -> dict[str, list[
     return dict(body["fields"])
 
 
-def _prose(one: Held, path: Path, flow: str) -> str:
-    """Return `flow`'s caption's prose, refusing by name a caption that has none."""
+def _prose(one: Held, path: Path) -> str:
+    """Return the photograph's caption's prose, refusing by name a caption with none."""
     body = read(path, CAPTION_FILE)
-    require(path, body, "prose", str, _remedy(one, "caption", flow))
+    require(path, body, "prose", str, _remedy(one, "caption"))
     return body["prose"]
 
 

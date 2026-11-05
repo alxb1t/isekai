@@ -26,6 +26,7 @@ from isekai.foundation.flow import Flow, Schema, assemble, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     NEW_VERSION,
+    PHOTO,
     Run,
     approved_versions,
     open_run,
@@ -1661,7 +1662,7 @@ def test_a_drafted_draft_is_undone_whole_and_a_tagged_flows_alone(
     assert discard(run, CONJURE) == drafted
     assert not run.directory(CONJURE).exists()
 
-    # The drafting's sheet beside a caption of the flow's own stays.
+    # The drafting's sheet beside a caption `isekai migrate` left under the flow stays.
     written, _ = sheet_stage.sheet(
         run,
         CONJURE,
@@ -1672,7 +1673,10 @@ def test_a_drafted_draft_is_undone_whole_and_a_tagged_flows_alone(
         flow_digest=conjure.digest,
         tags_from=FLOW,
     )
-    caption(run, FakeReader(prose="Short wavy hair."), flow=CONJURE)
+    caption(run, FakeReader(prose="Short wavy hair."))
+    shutil.copytree(
+        run.directory(PHOTO, "captions"), run.directory(CONJURE, "captions")
+    )
     draft_from(run, CONJURE, FLOW, 1, conjure.schema)
     discard(run, CONJURE)
     assert written is not None and written.exists()
