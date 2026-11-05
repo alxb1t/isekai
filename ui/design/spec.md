@@ -89,7 +89,7 @@ timer mono 40px/500.
   switcher is a segmented control; Review drops `all`. The `?` button at its right end, after the running render,
   opens the key list, as `⌃/` does; no screen draws a key bar. The key list is a modal dialog, centred over most of
   the window, a column per scope — everywhere's, then the screen's; `⌃/`, `esc` and the backdrop close it.
-- **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
+- **BillingBanner**, a filled accent band, text `band` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
 - **JobStrip**, `ground-deep`, mono 11px: one dot, then one item per running job, each a label (`job · prepare`)
   and its totals (`tag 6 of 6 · caption 3 of 6 · sheet 0 of 6 · 00:35`, `image 1 of 2 · 06:41 of ≤10:30`); with none

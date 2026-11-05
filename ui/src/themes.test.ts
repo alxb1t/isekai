@@ -142,6 +142,16 @@ spec('ui:themes:the-dialog-previews-keeps-and-restores', () => {
   expect(root.dataset.theme).toBe('latte')
   expect(kept.writes).toEqual([[KEPT, 'latte']])
 
+  // A browser that refuses storage still shows the theme kept, for this page.
+  const refused = { dataset: { theme: 'macchiato' } as DOMStringMap }
+  const refusing = chooser(refused, {
+    setItem: () => {
+      throw new Error('denied')
+    },
+  })
+  expect(() => refusing.keep('mocha')).not.toThrow()
+  expect(refused.dataset.theme).toBe('mocha')
+
   // A root with no theme, or one no theme has, shows Nocturne.
   expect(shown({ dataset: {} })).toBe('nocturne')
   expect(shown({ dataset: { theme: 'solarized' } })).toBe('nocturne')

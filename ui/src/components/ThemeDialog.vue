@@ -11,7 +11,10 @@ import KeyHint from './KeyHint.vue'
    shown one focused. `j` `k` move and preview, `↵` keeps, `Esc` and the
    backdrop restore the theme it opened on. */
 const emit = defineEmits<{ close: [] }>()
-const choice = chooser(document.documentElement, localStorage)
+// `localStorage` is read inside `setItem`, where `keep` catches a browser that refuses it.
+const choice = chooser(document.documentElement, {
+  setItem: (key, value) => localStorage.setItem(key, value),
+})
 const dialog = ref<HTMLDialogElement | null>(null)
 
 useHeldFocus(dialog, restore)

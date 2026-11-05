@@ -42,7 +42,11 @@ export function chooser(root: Root, kept: Kept) {
     preview,
     keep(theme: Theme): void {
       preview(theme)
-      kept.setItem(KEPT, theme)
+      try {
+        kept.setItem(KEPT, theme)
+      } catch {
+        // A browser that refuses storage keeps the theme for this page only.
+      }
     },
     restore: () => preview(opened),
   }

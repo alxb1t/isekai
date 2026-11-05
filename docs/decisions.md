@@ -448,8 +448,8 @@ halts nothing.**
 
 ### D48 · A theme is a token set, chosen in the browser
 
-**A theme sets every colour token the app and the sheet declare, in `ui/src/themes.css`, and nothing else; Nocturne,
-the vendored sheet's own, is the default. `⇧T` chooses one, and the browser keeps the choice in `localStorage` under
+**A theme sets every colour token the app and the sheet declare, in `ui/src/themes.css`, and nothing else but Latte's
+link colour; Nocturne, the vendored sheet's own, is the default. `⇧T` chooses one, and the browser keeps the choice in `localStorage` under
 `isekai.theme`, applied by `ui/index.html`'s head script before the first paint.**
 
 - **Why:** a look is the person's, not the library's, so no API or file holds it. A token set means no screen carries a
