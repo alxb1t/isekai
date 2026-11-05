@@ -14,6 +14,8 @@ its new digest.
   the drawer's backdrop and the tag cheatsheet read tokens, and a vitest holds each flavour to WCAG AA (0098 D1, D2, D7).
 - `⇧T` opens a theme dialog on every screen: each row is drawn in its own theme, a move previews, `↵` keeps and `Esc`
   restores; the browser keeps the choice and paints it before the app loads (0098 D4, D5, D6).
+- Docs D48 records that a theme is a token set, chosen in the browser; the design spec names the new tokens, the
+  themes and `⇧T` (0098 D8).
 
 ## [0.63.0] - 2026-11-04
 

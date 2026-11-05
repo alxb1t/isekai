@@ -6,7 +6,7 @@ The tokens, then the dialog, then the record, per [design](design.md).
 
 - [x] 1 — The tokens
 - [x] 2 — The dialog
-- [ ] 3 — The record
+- [x] 3 — The record
 
 ## 1 — The tokens
 
@@ -57,8 +57,8 @@ The tokens, then the dialog, then the record, per [design](design.md).
 
 ## 3 — The record
 
-- [ ] 3.1 Add [D48](design.md#the-decision) to `docs/decisions.md` after D47, per [D8](design.md#d8).
+- [x] 3.1 Add [D48](design.md#the-decision) to `docs/decisions.md` after D47, per [D8](design.md#d8).
   Verify: `grep -c '^### D48 · A theme is a token set, chosen in the browser$' docs/decisions.md` prints `1`.
-- [ ] 3.2 Add the `--band`, `--scrim-drawer` and `--overlay` rows and the **Themes.** paragraph to `ui/design/spec.md` §2, and `⇧T` to §7's
+- [x] 3.2 Add the `--band`, `--scrim-drawer` and `--overlay` rows and the **Themes.** paragraph to `ui/design/spec.md` §2, and `⇧T` to §7's
   everywhere row, per [the design spec](design.md#the-design-spec).
   Verify: `grep -c -F -e 'scrim-drawer' -e '**Themes.**' -e '⇧T the theme dialog' ui/design/spec.md` prints `3`.
