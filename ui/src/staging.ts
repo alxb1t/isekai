@@ -6,6 +6,21 @@ import { noun } from './words'
    cancels its folder once no commit is moving it: at closing, or when a commit
    in flight then is refused. Its tiles are a grid the keys step through, as on every grid. */
 
+/* `queued` before its upload starts; `waiting` and `converting` are the server's. */
+export type Phase = 'queued' | 'uploading' | 'waiting' | 'converting' | 'read' | 'refused'
+
+export interface Tile {
+  key: number
+  file: File
+  /* The server's id for this upload, once its request is answered. */
+  upload: string | null
+  phase: Phase
+  progress: number
+  result: StagedFile | null
+  refusal: string | null
+  asIs: boolean
+}
+
 /** Whether the sheet cancels `staging` now. e.g. ('s1', true, true, false) -> false */
 export function discards(
   staging: string | null,
@@ -18,10 +33,14 @@ export function discards(
 
 /** Return where removing a tile takes its file from: the staging folder, the sheet alone, or nowhere.
 
-    A skipped file staged nothing of its own; one still on its way offers no removal.
-    e.g. ('read', 'skipped') -> 'sheet' */
-export function removal(phase: string, state: string | undefined): 'staging' | 'sheet' | null {
-  if (phase !== 'read') return null
+    A skipped file staged nothing of its own; one still on its way, or `leaving`
+    by a removal in flight, offers no removal. e.g. ('read', 'skipped') -> 'sheet' */
+export function removal(
+  phase: string,
+  state: string | undefined,
+  leaving = false,
+): 'staging' | 'sheet' | null {
+  if (phase !== 'read' || leaving) return null
   return state === 'skipped' ? 'sheet' : 'staging'
 }
 
@@ -42,6 +61,32 @@ export function orphans(results: (StagedFile | null)[]): number[] {
   return results.flatMap((one, index) =>
     one?.state === 'skipped' && one.copyOf !== null && !held.has(one.copyOf) ? [index] : [],
   )
+}
+
+/** Return the staged name removing `one` takes from the folder, or null when a copy takes it over.
+
+    The first copy `heir` finds gets `one`'s upload, result and choice; with no
+    result there is nothing staged to name. e.g. a tile of 'b.jpg', no copy -> 'b.jpg' */
+export function handOff(tiles: Tile[], one: Tile): string | null {
+  if (!one.result) return null
+  const copy = tiles[heir(tiles.map((tile) => tile.result), one.result.name)]
+  if (!copy) return one.result.name
+  copy.upload = one.upload
+  copy.result = one.result
+  copy.asIs = one.asIs
+  return null
+}
+
+/** Return the tiles `orphans` names, each cleared and queued to be sent again. */
+export function requeue(tiles: Tile[]): Tile[] {
+  const lost = orphans(tiles.map((tile) => tile.result)).map((index) => tiles[index])
+  for (const one of lost) {
+    one.upload = null
+    one.phase = 'queued'
+    one.progress = 0
+    one.result = null
+  }
+  return lost
 }
 
 /** What Import's state is read from: the tiles chosen, read and ready, and the removals in flight. */

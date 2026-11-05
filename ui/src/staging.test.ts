@@ -1,5 +1,16 @@
 import { expect } from 'vitest'
-import { after, discards, heir, orphans, removal, stepped, withheld } from './staging'
+import {
+  type Tile,
+  after,
+  discards,
+  handOff,
+  heir,
+  orphans,
+  removal,
+  requeue,
+  stepped,
+  withheld,
+} from './staging'
 import { spec } from './test/spec'
 import type { StagedFile } from './types'
 
@@ -22,6 +33,9 @@ spec('ui:sheet:a-chosen-file-is-removed-alone', () => {
   // A file still on its way offers no removal.
   for (const phase of ['queued', 'uploading', 'waiting', 'converting'])
     expect(removal(phase, undefined)).toBeNull()
+  // A tile whose removal is in flight offers no second one.
+  expect(removal('read', 'ready', true)).toBeNull()
+  expect(removal('read', 'skipped', true)).toBeNull()
   // The focus moves to the next tile, the previous one from the last, none once all are gone.
   expect(after(1, 4)).toBe(1)
   expect(after(3, 4)).toBe(2)
@@ -49,7 +63,38 @@ spec('ui:sheet:a-removed-files-copy-keeps-it', () => {
   expect(orphans([null, copy, other])).toEqual([1, 2])
   // A copy whose file another tile holds is not.
   expect(orphans([null, copy, { ...read, name: 'c.jpg' }, other])).toEqual([1])
+  // The removed tile hands its upload, result and choice to the copy, and leaves nothing to remove.
+  const removed = tile(0, read, 'u1', true)
+  const heirTile = tile(1, copy, 'u2')
+  expect(handOff([removed, heirTile], removed)).toBeNull()
+  expect(heirTile).toMatchObject({ upload: 'u1', result: read, asIs: true })
+  // With no copy chosen, the staged file is named for removal; with no result, none is.
+  expect(handOff([tile(0, read, 'u1')], tile(0, read, 'u1'))).toBe('b.jpg')
+  expect(handOff([tile(0, null, null)], tile(0, null, null))).toBeNull()
+  // A lone copy is cleared and queued again; one whose file a tile holds stays as it was.
+  const lone = tile(2, copy, 'u3')
+  lone.phase = 'read'
+  lone.progress = 1
+  expect(requeue([lone])).toEqual([lone])
+  expect(lone).toMatchObject({ upload: null, result: null, phase: 'queued', progress: 0 })
+  const held = tile(3, copy, 'u4')
+  held.phase = 'read'
+  expect(requeue([tile(4, read, 'u5'), held])).toEqual([])
+  expect(held).toMatchObject({ upload: 'u4', result: copy, phase: 'read' })
 })
+
+function tile(key: number, result: StagedFile | null, upload: string | null, asIs = false): Tile {
+  return {
+    key,
+    file: new File([], result?.name ?? 'x.jpg'),
+    upload,
+    phase: 'read',
+    progress: 1,
+    result,
+    refusal: null,
+    asIs,
+  }
+}
 
 spec('ui:sheet:the-tiles-take-the-keys', () => {
   // Five tiles, three to a row: 0 1 2 / 3 4.
