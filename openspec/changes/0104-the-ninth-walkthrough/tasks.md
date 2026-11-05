@@ -7,7 +7,7 @@ its task names.
 
 - [x] 1 — The thumbnails
 - [x] 2 — The flip
-- [ ] 3 — The record
+- [x] 3 — The record
 
 ## 1 — The thumbnails
 
@@ -54,6 +54,6 @@ its task names.
 
 ## 3 — The record
 
-- [ ] 3.1 In `ui/design/spec.md`'s J4·1 block, replace the collections' lines with [the frame](design.md#frame), per
+- [x] 3.1 In `ui/design/spec.md`'s J4·1 block, replace the collections' lines with [the frame](design.md#frame), per
   [D6](design.md#d6).
   Verify: `grep -n -F -e 'Not included · a draft · summon-anime-wai' -e '[▒▒]×2' -e 'the rows scroll in a max height' ui/design/spec.md` prints a line for each.

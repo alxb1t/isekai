@@ -281,11 +281,15 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
 ```
 J4·1  RENDER · ON A RENTED GPU                                   Render 4 images
       ☑ 2026-10-19 3 images                                          a row per collection
-          summon-anime-wai 2 images · 00003 v1 count 2
-          conjure-anime-wai 1 image  · 00003 v1 count 1
-          Not included: cowboy_shot_2 · summon is a draft.
-      ☑ 2026-10-20 1 image
-          summon-anime-wai 1 image  · 16_01 v1 count 1
+          summon-anime-wai 2 images                                  96×128 thumbnails, 15 then +n
+          [▒▒]×2                                                     ×n above one · name vN on hover
+          conjure-anime-wai 1 image
+          [▒▒]
+          Not included · a draft · summon-anime-wai                  dimmed, by reason and flow
+          [░░]
+      ☑ 2026-10-20 1 image                                           the rows scroll in a max height
+          summon-anime-wai 1 image
+          [▒▒]
       ESTIMATE  boot 3:00 · 4 images × 1:00 · teardown 2:00             9 min
                 limit 1.5× the estimate                              13 min 30 s
                 gpunit.toml's ceiling                                3 h
