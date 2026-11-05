@@ -34,7 +34,7 @@ is on. The palette is `catppuccin/palette` v1.8.0.
 |---|---|---|---|
 | <a id="d1"></a>**D1** | **The escapes become tokens.** In `ui/src/styles.css`'s app block, after `--shadow-bar`, add `--band: #0f1018;`, `--scrim-drawer: color-mix(in srgb, var(--ground) 80%, transparent);` and `--overlay: color-mix(in srgb, var(--color-bg) 72%, black);`. In `ui/src/app.css`: `:182` and `:189` `color: #0f1018;` → `color: var(--band);`; `:396`'s `background: repeating-linear-gradient(…);` → `background: var(--placeholder);`; `:523` → `background: var(--scrim-drawer);`; `:1538`'s comment → `/* The cheatsheet's ground, a token each theme sets. */` and `:1539` → `background: var(--overlay);`. Nocturne draws the same | no theme rewrites a rule; `app.css`'s header (`:1-3`) holds again | a literal per theme in `app.css` |
 | <a id="d2"></a>**D2** | **`ui/src/themes.css`** opens with the [header](#the-header), then `[data-theme="latte"]`, `[data-theme="frappe"]`, `[data-theme="macchiato"]` and `[data-theme="mocha"]` blocks, in that order. Each declares every token in the [hex table](#the-hex-table), in its order, one `  --token: value;` line each, copied from its column. No `color-mix()`, `var()` or `rgba()` appears in a block; Latte's link rule is not a block. After the blocks: `:where([data-theme="latte"]) a { color: var(--accent-ink); }`, under the comment `/* Latte's accent is under 4.5:1 as link text; its links take the accent ink. */`. `ui/src/main.ts` imports `./themes.css` between `./styles.css` and `./app.css` | `[data-theme]` weighs what `:root` weighs, so the later file wins; `:where()` keeps app.css's class rules above Latte's link rule | `@catppuccin/palette`, a dependency; `:root[data-theme]`, which no dialog row could match ([D4](#d4)) |
-| <a id="d3"></a>**D3** | **The map is by Catppuccin's role**, the [hex table](#the-hex-table) its values. Grounds: `--ground`, `-deep`, `-media` base, mantle, crust; `--raised` mantle on Latte, else surface0; `--raised-2` surface1. Lines: `--line`, `-soft`, `-disabled`, `--chip-line` surface1; `--line-control`, `--tick-locked` surface2. Inks on Macchiato and Mocha: text, subtext1, subtext0, overlay1, overlay2, overlay0 for `--ink`, `-1b`, `-2`, `-3`, `-muted`, `-disabled`; on Frappé and Latte, `--ink-2` subtext1, `--ink-3` overlay2 and `--ink-muted` subtext0. `--accent` and `--color-accent` mauve; `--color-accent-2` blue; `--accent-dim` mauve 50% over base; `--accent-ink` mauve 80% over text. `--focus` lavender, on Latte lavender 80% over text. `--band` crust, on Latte base. `--overlay` crust. The **shade** is crust, on Latte text: `--scrim` the shade at 40%; `--shadow-sheet` and `-bar` at 50% and 55%, on Latte 20% and 22%; `--scrim-drawer` base at 80%, on Latte text at 60%. The sheet: `--color-bg` base, `-surface` as `--raised`, `-text` text, `-divider` text at 16%; `--color-neutral-100…900` text at 100, 88, 76, 64, 52, 40, 28, 18 and 10% over base; each accent ramp's `100…400` its role at 20, 40, 60 and 80% over text, `500` the role, `600…900` the role at 80, 60, 40 and 20% over base; `--color-section`, `-glow`, `-ghost` surface0, 1, 2; `--shadow-sm/md/lg` Nocturne's shapes on `neutral-800`, `-700`, `-500`, the shade at 55% and 65%, on Latte 20% and 25%. `--placeholder` Nocturne's gradient on surface0, then surface1. A mix is sRGB, each channel rounded half to even; an alpha is `#rrggbbaa` | Catppuccin's own roles; the ramps run from ink to ground on every flavour, so each `var(--…)` keeps its meaning on Latte; the Frappé and Latte inks pass AA where Q3's did not | lightness-matched ramps, which flip on Latte; `color-mix()` in the blocks, which the contrast test cannot read |
+| <a id="d3"></a>**D3** | **The map is by Catppuccin's role**, the [hex table](#the-hex-table) its values. Grounds: `--ground`, `-deep`, `-media` base, mantle, crust; `--raised` mantle on Latte, else surface0; `--raised-2` as `--raised`, since surface1 puts the inks and the focus a focused row draws under AA, and the inset `--focus` ring marks the row. Lines: `--line`, `-soft`, `-disabled`, `--chip-line` surface1; `--line-control`, `--tick-locked` surface2. Inks on Macchiato and Mocha: text, subtext1, subtext0, overlay1, overlay2, overlay0 for `--ink`, `-1b`, `-2`, `-3`, `-muted`, `-disabled`; on Frappé and Latte, `--ink-2` subtext1, `--ink-3` overlay2 and `--ink-muted` subtext0. `--accent` and `--color-accent` mauve; `--color-accent-2` blue; `--accent-dim` mauve 50% over base; `--accent-ink` mauve 80% over text. `--focus` lavender, on Latte lavender 80% over text. `--band` crust, on Latte base. `--overlay` crust. The **shade** is crust, on Latte text: `--scrim` the shade at 40%; `--shadow-sheet` and `-bar` at 50% and 55%, on Latte 20% and 22%; `--scrim-drawer` base at 80%, on Latte text at 60%. The sheet: `--color-bg` base, `-surface` as `--raised`, `-text` text, `-divider` text at 16%; `--color-neutral-100…900` text at 100, 88, 76, 64, 52, 40, 28, 18 and 10% over base; each accent ramp's `100…400` its role at 20, 40, 60 and 80% over text, `500` the role, `600…900` the role at 80, 60, 40 and 20% over base; `--color-section`, `-glow`, `-ghost` surface0, 1, 2; `--shadow-sm/md/lg` Nocturne's shapes on `neutral-800`, `-700`, `-500`, the shade at 55% and 65%, on Latte 20% and 25%. `--placeholder` Nocturne's gradient on surface0, then surface1. A mix is sRGB, each channel rounded half to even; an alpha is `#rrggbbaa` | Catppuccin's own roles; the ramps run from ink to ground on every flavour, so each `var(--…)` keeps its meaning on Latte; the Frappé and Latte inks pass AA where Q3's did not | lightness-matched ramps, which flip on Latte; `color-mix()` in the blocks, which the contrast test cannot read |
 | <a id="d4"></a>**D4** | **`ui/src/components/ThemeDialog.vue`** follows `DraftDialog.vue`: a `<dialog class="render-dialog" aria-label="Theme" data-theme-dialog @cancel.prevent>`, its head `<h2 class="render-dialog__title">Theme</h2>`, a `render-dialog__targets` div of a `<button class="theme-dialog__row" type="button" :data-theme="theme.id" data-theme-row @click="keep(theme.id)">` per `THEMES` entry showing its `name`, and a footer Close button with `<KeyHint command="cancel" />` that runs `restore`. `onMounted` runs `showModal()` and focuses the row of `choice.opened`; `useHeldFocus(dialog, restore)`. `useKeys('overlay', …)`: `cancel` `Escape` → `restore`; `down` `KeyJ` `ArrowDown` and `up` `KeyK` `ArrowUp` → focus the row `clamp`ed from the focused one by ±1, then `choice.preview` its theme; `keep` `Enter`, when a row is focused, → `keep` its theme. `keep` and `restore` call the chooser's, then emit `close`. `ui/src/App.vue` adds `{ id: 'theme', keys: [shifted('KeyT')], label: 'theme', run: () => (theming.value = true) }` after `renders`, a `theming` ref, and `<ThemeDialog v-if="theming" @close="theming = false" />` after `<KeyList …/>`. `ui/src/app.css` adds the [row rule](#the-row-rule). `styles.css`'s app block selector `:root {` → `:root,\n[data-theme="nocturne"] {` | a row's `data-theme` gives it its own theme's tokens, so each name is drawn in its own colours; ⇧T is free and D25's shape | a swatch map of hex per theme in TypeScript, a second copy of the values |
 | <a id="d5"></a>**D5** | **`ui/src/themes.ts`** exports `THEMES`, `[{ id: 'nocturne', name: 'Nocturne' }, { id: 'latte', name: 'Latte' }, { id: 'frappe', name: 'Frappé' }, { id: 'macchiato', name: 'Macchiato' }, { id: 'mocha', name: 'Mocha' }] as const`; `type Theme`, its ids; `KEPT = 'isekai.theme'`; `interface Root { dataset: DOMStringMap }`; `interface Kept { setItem(key: string, value: string): void }`; `shown(root: Root): Theme`, the root's `data-theme` when a `THEMES` id, else `'nocturne'`; and `chooser(root: Root, kept: Kept)`, returning `{ opened, preview, keep, restore }`: `opened` is `shown(root)`; `preview(theme)` sets `root.dataset.theme`; `keep(theme)` previews it, then `kept.setItem(KEPT, theme)`; `restore()` previews `opened`. The dialog passes `document.documentElement` and `localStorage` | the choice is testable in node with a fake root and a fake store | a Pinia store: nothing else reads the theme |
 | <a id="d6"></a>**D6** | **The first paint.** `ui/index.html`'s `<head>` gains, after `<title>`, the [head script](#the-head-script), a classic inline script. Nocturne is the absence of a kept name, and an unknown name is ignored | no flash; no CSP is sent (`isekai/interface/ui/app.py`), so an inline script runs | a module script, which runs after the first paint |
@@ -125,7 +125,7 @@ block, row for row; derive nothing.
 | `--ground-deep` | `#e6e9ef` | `#292c3c` | `#1e2030` | `#181825` |
 | `--ground-media` | `#dce0e8` | `#232634` | `#181926` | `#11111b` |
 | `--raised` | `#e6e9ef` | `#414559` | `#363a4f` | `#313244` |
-| `--raised-2` | `#bcc0cc` | `#51576d` | `#494d64` | `#45475a` |
+| `--raised-2` | `#e6e9ef` | `#414559` | `#363a4f` | `#313244` |
 | `--line` | `#bcc0cc` | `#51576d` | `#494d64` | `#45475a` |
 | `--line-soft` | `#bcc0cc` | `#51576d` | `#494d64` | `#45475a` |
 | `--line-control` | `#acb0be` | `#626880` | `#5b6078` | `#585b70` |
@@ -191,10 +191,10 @@ pair whose values are both hex, and fail nothing.
 
 | text | on | at least | from |
 |---|---|---|---|
-| `--ink`, `--ink-2` | `--ground`, `--raised` | 4.5 | Q6 |
-| `--ink-3`, `--ink-muted` | `--ground`, `--raised` | 3 | Q6 |
-| `--focus` | `--ground`, `--raised` | 3 | Q18 |
-| `--accent-ink` | `--ground`, `--raised` | 4.5 | Q18 |
+| `--ink`, `--ink-2` | `--ground`, `--raised`, `--raised-2` | 4.5 | Q6 |
+| `--ink-3`, `--ink-muted` | `--ground`, `--raised`, `--raised-2` | 3 | Q6 |
+| `--focus` | `--ground`, `--raised`, `--raised-2` | 3 | Q18 |
+| `--accent-ink` | `--ground`, `--raised`, `--raised-2` | 4.5 | Q18 |
 | `--band` | `--accent` | 4.5 | Q18 |
 | `--color-text` | `--color-bg`, `--color-surface` | 4.5 | Q18 |
 | `--color-text` | `--overlay` | 4.5 | Q17 |
@@ -204,10 +204,10 @@ script, outside the repository): every pair passes. The worst per flavour:
 
 | flavour | worst | pair |
 |---|---|---|
-| Latte | 3.10 | `--focus` on `--raised` |
-| Frappé | 3.48 | `--ink-3` on `--raised` |
-| Macchiato | 3.15 | `--ink-3` on `--raised` |
-| Mocha | 3.40 | `--ink-3` on `--raised` |
+| Latte | 3.10 | `--focus` on `--raised` and `--raised-2` |
+| Frappé | 3.48 | `--ink-3` on `--raised` and `--raised-2` |
+| Macchiato | 3.15 | `--ink-3` on `--raised` and `--raised-2` |
+| Mocha | 3.40 | `--ink-3` on `--raised` and `--raised-2` |
 
 ### The decision
 
@@ -271,6 +271,9 @@ None.
   `.btn-ghost`, `.card-kicker` and the other rules that colour text with `--accent` or `--color-accent`; Macchiato
   (5.21) and Mocha (6.19) pass → only Latte's links are re-routed ([D2](#d2)), as settled; no pair holds the accent
   as text.
+- **`--raised-2` is `--raised` on every flavour** → a focused row, cell or source and the Prepare bar take no fill
+  step above a raised surface; the inset `--focus` ring, and the bar's line and shadow, mark them, and their text
+  keeps AA, which surface1 did not.
 - **Native controls draw light on every theme** → no `color-scheme` is set, so Nocturne is unchanged; a dark
   flavour's checkbox is light.
 - **The hex is a hand copy** → the vitest reads the shipped file, so a mistyped value that breaks contrast fails it; a

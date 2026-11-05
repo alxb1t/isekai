@@ -15,10 +15,10 @@ const CATPPUCCIN = ['latte', 'frappe', 'macchiato', 'mocha']
 
 /* The text, the grounds it is drawn on and the ratio it must reach, per D48. */
 const PAIRS: [string[], string[], number][] = [
-  [['--ink', '--ink-2'], ['--ground', '--raised'], 4.5],
-  [['--ink-3', '--ink-muted'], ['--ground', '--raised'], 3],
-  [['--focus'], ['--ground', '--raised'], 3],
-  [['--accent-ink'], ['--ground', '--raised'], 4.5],
+  [['--ink', '--ink-2'], ['--ground', '--raised', '--raised-2'], 4.5],
+  [['--ink-3', '--ink-muted'], ['--ground', '--raised', '--raised-2'], 3],
+  [['--focus'], ['--ground', '--raised', '--raised-2'], 3],
+  [['--accent-ink'], ['--ground', '--raised', '--raised-2'], 4.5],
   [['--band'], ['--accent'], 4.5],
   [['--color-text'], ['--color-bg', '--color-surface'], 4.5],
   [['--color-text'], ['--overlay'], 4.5],
