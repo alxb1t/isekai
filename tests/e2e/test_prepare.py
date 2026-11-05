@@ -22,6 +22,7 @@ def _cell(page: Page, source: str, flow: str = FLOW) -> Locator:
 
 
 @pytest.mark.spec("ui:hub:a-tick-assigns-the-flow")
+@pytest.mark.spec("ui:hub:an-edge-row-shows-the-head")
 def test_a_tick_assigns_the_flow_and_survives_a_reload(
     page: Page, served: Served
 ) -> None:
@@ -39,6 +40,15 @@ def test_a_tick_assigns_the_flow_and_survives_a_reload(
 
     expect(_cell(page, "tick")).to_have_attribute("data-stage", "assigned")
     expect(page.locator(".prepare-bar")).to_contain_text("1 change · Prepare")
+    # In a short window the last row brings the foot into view, the first the head.
+    page.set_viewport_size({"width": 1280, "height": 300})
+    add = page.get_by_role("button", name="Add sources…")
+    page.keyboard.press("j")
+    page.keyboard.press("j")
+    expect(add).not_to_be_in_viewport()
+    page.keyboard.press("k")
+    page.keyboard.press("k")
+    expect(add).to_be_in_viewport()
 
 
 @pytest.mark.spec("ui:prepare:prepare-runs-the-assigned-cells")

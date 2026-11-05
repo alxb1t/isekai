@@ -7,7 +7,7 @@ names.
 
 - [x] 1 — The cards
 - [x] 2 — ⇧A
-- [ ] 3 — The edges
+- [x] 3 — The edges
 
 ## 1 — The cards
 
@@ -40,14 +40,14 @@ names.
 
 ## 3 — The edges
 
-- [ ] 3.1 Add `ui/src/composables/useEdges.ts` per [D5](design.md#d5), and `useEdges.test.ts` beside it under
+- [x] 3.1 Add `ui/src/composables/useEdges.ts` per [D5](design.md#d5), and `useEdges.test.ts` beside it under
   `ui:batch-folder:an-edge-row-shows-the-head`: over stubs, row 0 of 3 scrolls the page to its top, row 2 to its
   `scrollHeight`, row 1 neither, and each then scrolls its cell `nearest` (`invocationCallOrder`).
   Verify: `npm --prefix ui run test -- src/composables/useEdges.test.ts` exits 0.
-- [ ] 3.2 Reveal a key's move by `useEdges` in `ui/src/views/Hub.vue` and `ui/src/views/Home.vue`, per
+- [x] 3.2 Reveal a key's move by `useEdges` in `ui/src/views/Hub.vue` and `ui/src/views/Home.vue`, per
   [D6](design.md#d6).
   Verify: `grep -c 'useEdges(() => page.value)' ui/src/views/Hub.vue ui/src/views/Home.vue` prints `ui/src/views/Hub.vue:1` and `ui/src/views/Home.vue:1`.
-- [ ] 3.3 In `tests/e2e/test_prepare.py`'s `test_a_tick_assigns_the_flow_and_survives_a_reload`, add
+- [x] 3.3 In `tests/e2e/test_prepare.py`'s `test_a_tick_assigns_the_flow_and_survives_a_reload`, add
   `@pytest.mark.spec("ui:hub:an-edge-row-shows-the-head")` and a last step: `page.set_viewport_size({"width": 1280,
   "height": 300})`, `j` pressed twice, *Add sources…* `not_to_be_in_viewport()`, `k` pressed twice, `to_be_in_viewport()`.
   Verify: `grep -n -e 'ui:hub:an-edge-row-shows-the-head' -e 'set_viewport_size' tests/e2e/test_prepare.py` prints a line for each.

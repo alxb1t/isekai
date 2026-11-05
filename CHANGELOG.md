@@ -14,6 +14,8 @@ its new digest.
   file's hand-off to its copy and a lost copy's reset are each held by a unit test (0099 D1, D2, D3).
 - `⇧A` in the import sheet opens the file dialog, in New collection and Add sources alike, and *Add files…* shows
   its hint, so the sheet takes its files by key too (0099 D4).
+- A key's move to the first or last row scrolls the hub or the library to its top or its foot, so *Add sources…*,
+  the flow names and *New collection* come back into view (0099 D5, D6).
 
 ## [0.63.0] - 2026-11-04
 

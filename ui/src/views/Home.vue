@@ -6,6 +6,7 @@ import { library, sourceThumbAt } from '../api'
 import ImportSheet from '../components/ImportSheet.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import { useEdges } from '../composables/useEdges'
 import { useKeys } from '../composables/useKeys'
 import { plain, shifted } from '../stores/keys'
 import type { LibraryRow } from '../types'
@@ -20,6 +21,8 @@ const collections = computed(() => rows.value?.filter((row) => row.collection) ?
 const collectionCount = computed(() => collections.value.length)
 const refusal = ref<string | null>(null)
 const list = ref<HTMLElement | null>(null)
+const page = ref<HTMLElement | null>(null)
+const reveal = useEdges(() => page.value)
 const importing = ref(false)
 
 function imported(collection: string): void {
@@ -49,7 +52,11 @@ const at = () => cards().indexOf(document.activeElement as HTMLElement)
 
 function walk(step: -1 | 1): void {
   const held = cards()
-  held[Math.min(Math.max(at() + step, 0), held.length - 1)]?.focus()
+  const index = Math.min(Math.max(at() + step, 0), held.length - 1)
+  const row = held[index]
+  if (!row) return
+  row.focus({ preventScroll: true })
+  reveal(row, index, held.length)
 }
 
 const onRow = () => at() >= 0
@@ -97,7 +104,7 @@ onMounted(async () => {
 
 <template>
   <RefusalPage v-if="refusal" :refusal="refusal" />
-  <section v-else-if="rows" class="home">
+  <section v-else-if="rows" ref="page" class="home">
     <ImportSheet v-if="importing" @close="importing = false" @imported="imported" />
     <div v-if="rows.length === 0" class="home__empty">
       <p class="section-label">library · empty</p>
