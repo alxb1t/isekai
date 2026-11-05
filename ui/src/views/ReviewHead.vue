@@ -15,6 +15,7 @@ import { useKeys } from '../composables/useKeys'
 import { clamp, kept } from '../grid'
 import { useCollectionStore } from '../stores/collection'
 import { plain } from '../stores/keys'
+import { ROW_THUMBS } from '../thumbs'
 import { noun } from '../words'
 
 /* A collection's Review (design spec J3). With two or more flows waiting, a chooser:
@@ -29,9 +30,6 @@ const empty = ref(false)
 const choosing = ref(false)
 const list = ref<HTMLElement | null>(null)
 const waiting = computed(() => (store.hub ? flowsWaiting(store.hub) : []))
-
-/* How many of a flow's waiting photographs its row shows, before `+n`. */
-const ROW_THUMBS = 15
 
 function review(digest: string, flow: string): void {
   chosen.set(props.collection, flow)

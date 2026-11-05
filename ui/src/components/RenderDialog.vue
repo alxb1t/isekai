@@ -8,12 +8,14 @@ import { modded, plain } from '../stores/keys'
 import { useCollectionStore } from '../stores/collection'
 import { useDrawerStore } from '../stores/drawer'
 import { clock, collectionsOf, useLiveStore } from '../stores/live'
+import { leftOut, thumbs } from '../thumbs'
 import type { Quote, QuotedCollection } from '../types'
 import KeyHint from './KeyHint.vue'
 
 /* The Render dialog (design spec J4·1): a row per collection short of images, in
-   the Library's order, each ticked; per flow what renders and what is left out;
-   one session's estimate, its limit against the ceiling, and the price at most.
+   the Library's order, each ticked; per flow the thumbnails of what renders and,
+   dimmed, of what is left out; one session's estimate, its limit against the
+   ceiling, and the price at most.
    Unticking a row quotes the rest again. It has no URL, so a reload never reopens
    a confirmation that spends; ⌘↵ is the only act here that rents. It belongs to
    its page: confirming closes it and opens the render drawer over it. A modal
@@ -39,8 +41,19 @@ let asked = 0
 /* Each row as the newest quote reads it, else as the first did. */
 const shown = computed(() => {
   const fresh = new Map((quote.value?.collections ?? []).map((one) => [one.collection, one]))
-  return rows.value.map((one) => fresh.get(one.collection) ?? one)
+  return rows.value
+    .map((one) => fresh.get(one.collection) ?? one)
+    .map((row) => ({
+      ...row,
+      drawn: row.flows.map((one) => ({ ...one, ...thumbs(row.collection, one.flow, one.sources) })),
+      groups: leftOut(row.collection, row.left_out),
+    }))
 })
+/* The thumbnails whose source answered an error, drawn from the run's own photograph. */
+const fell = ref<Set<string>>(new Set())
+const fall = (key: string) => {
+  fell.value = new Set(fell.value).add(key)
+}
 const names = computed(() =>
   rows.value.map((one) => one.collection).filter((name) => ticked.value.has(name)),
 )
@@ -133,38 +146,76 @@ onMounted(async () => {
       <span class="refusal__mark" />{{ refusal }}
     </p>
     <template v-if="quote">
-      <section
-        v-for="row in shown"
-        :key="row.collection"
-        class="render-dialog__collection"
-        :class="{ 'render-dialog__collection--off': !ticked.has(row.collection) }"
-        :data-collection="row.collection"
-      >
-        <label class="render-dialog__tick mono">
-          <input
-            type="checkbox"
-            data-tick
-            :checked="ticked.has(row.collection)"
-            @change="toggle(row.collection)"
-          />
-          <span class="render-dialog__name">{{ row.collection }}</span>
-          {{ row.images }} {{ noun(row.images, 'image') }}
-        </label>
-        <p v-for="one in row.flows" :key="one.flow" class="render-dialog__flow mono">
-          <span class="render-dialog__name">{{ one.flow }}</span>
-          {{ one.images }} {{ noun(one.images, 'image') }}
-          <span v-for="source in one.sources" :key="source.digest">
-            · {{ source.name }} v{{ source.version }} ×{{ source.images }}</span
+      <div class="render-dialog__collections">
+        <section
+          v-for="row in shown"
+          :key="row.collection"
+          class="render-dialog__collection"
+          :class="{ 'render-dialog__collection--off': !ticked.has(row.collection) }"
+          :data-collection="row.collection"
+        >
+          <label class="render-dialog__tick mono">
+            <input
+              type="checkbox"
+              data-tick
+              :checked="ticked.has(row.collection)"
+              @change="toggle(row.collection)"
+            />
+            <span class="render-dialog__name">{{ row.collection }}</span>
+            {{ row.images }} {{ noun(row.images, 'image') }}
+          </label>
+          <div v-for="one in row.drawn" :key="one.flow" :data-flow="one.flow">
+            <p class="render-dialog__flow mono">
+              <span class="render-dialog__name">{{ one.flow }}</span>
+              {{ one.images }} {{ noun(one.images, 'image') }}
+            </p>
+            <div class="render-dialog__thumbs">
+              <span
+                v-for="thumb in one.thumbs"
+                :key="thumb.key"
+                class="render-dialog__thumb"
+                :title="thumb.title"
+              >
+                <img
+                  alt=""
+                  loading="lazy"
+                  :src="fell.has(thumb.key) ? thumb.fallback : thumb.src"
+                  @error="fall(thumb.key)"
+                />
+                <span v-if="thumb.times" class="render-dialog__times mono">×{{ thumb.times }}</span>
+              </span>
+              <span v-if="one.more" class="render-dialog__more mono">+{{ one.more }}</span>
+            </div>
+          </div>
+          <div
+            v-for="group in row.groups"
+            :key="`${group.reason}|${group.flow}`"
+            data-left-out
           >
-        </p>
-        <p v-if="row.left_out.length" class="render-dialog__left mono" data-left-out>
-          Not included:
-          <span v-for="(one, index) in row.left_out" :key="`${one.digest}|${one.flow}`"
-            >{{ index ? ' · ' : '' }}{{ one.name }} · {{ one.flow }} is {{ one.reason }}</span
-          >
-        </p>
-        <p v-if="row.refused" class="render-dialog__left mono">{{ row.refused }}</p>
-      </section>
+            <p class="render-dialog__left mono">
+              Not included · {{ group.reason }} ·
+              <span class="render-dialog__name">{{ group.flow }}</span>
+            </p>
+            <div class="render-dialog__thumbs">
+              <span
+                v-for="thumb in group.thumbs"
+                :key="thumb.key"
+                class="render-dialog__thumb render-dialog__thumb--left"
+                :title="thumb.title"
+              >
+                <img
+                  alt=""
+                  loading="lazy"
+                  :src="fell.has(thumb.key) ? thumb.fallback : thumb.src"
+                  @error="fall(thumb.key)"
+                />
+              </span>
+              <span v-if="group.more" class="render-dialog__more mono">+{{ group.more }}</span>
+            </div>
+          </div>
+          <p v-if="row.refused" class="render-dialog__left mono">{{ row.refused }}</p>
+        </section>
+      </div>
       <dl class="render-dialog__table mono">
         <dt class="section-label">Estimate</dt>
         <dd>

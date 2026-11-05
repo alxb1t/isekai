@@ -317,6 +317,62 @@ button.appbar__render {
   color: var(--ink-muted);
 }
 
+/* The Render dialog's thumbnails (J4·1): new rules, as DraftDialog and ThemeDialog share the ones above. */
+.render-dialog__collections {
+  max-height: max(160px, calc(100vh - 380px));
+  overflow-y: auto;
+}
+
+.render-dialog__thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 22px;
+  margin: 0 0 10px;
+}
+
+.render-dialog__collection--off .render-dialog__thumbs {
+  opacity: 0.5;
+}
+
+.render-dialog__thumb {
+  position: relative;
+  flex: none;
+  width: var(--tile-width);
+  height: var(--tile-height);
+  overflow: hidden;
+  background: var(--placeholder);
+  border-radius: 3px;
+}
+
+.render-dialog__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.render-dialog__thumb--left {
+  opacity: 0.4;
+}
+
+.render-dialog__times {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--ink);
+  background: var(--raised);
+}
+
+.render-dialog__more {
+  align-self: center;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
 /* — the render session (J4·2, J4·3, J8b) — */
 
 .session {
@@ -1519,6 +1575,19 @@ button.session__tile {
   font-size: 10.5px;
   color: var(--color-neutral-500);
   border-top: 1px solid var(--color-neutral-800);
+}
+
+/* Near the sheet's foot the list opens above its input, mirrored: row 1 nearest it, the footer on top. */
+.drop--above {
+  top: auto;
+  bottom: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.drop--above .drop__foot {
+  border-top: 0;
+  border-bottom: 1px solid var(--color-neutral-800);
 }
 
 /* The fragment: bare mono text with one accent caret. The caret is the
