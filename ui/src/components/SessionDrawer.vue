@@ -154,7 +154,7 @@ function view(at: Focus, index = 0): void {
 }
 
 /* Focus stacked `at`'s cell; a key's move reveals it by the edges' rule, a grid's first
-   row its collection's name too. */
+   row its collection's name too, keeping the cell's sideways scroll. */
 function place(at: Focus, key = false): void {
   focus.value = at
   void nextTick(() => {
@@ -163,11 +163,14 @@ function place(at: Focus, key = false): void {
     if (!key) return cell.focus()
     cell.focus({ preventScroll: true })
     reveal(cell, at.row, stack.value.last.length)
-    if (located(stack.value, at.row).row === 0)
+    if (located(stack.value, at.row).row === 0) {
+      const left = dialog.value?.scrollLeft ?? 0
       cell
         .closest('[data-session-collection]')
         ?.querySelector('.session__collection')
         ?.scrollIntoView({ block: 'nearest' })
+      dialog.value?.scrollTo({ left })
+    }
   })
 }
 
