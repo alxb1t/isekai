@@ -763,3 +763,28 @@ operator deletes them.
 - **Layers:** unit
 - **WHEN** a run holds a partial copy a stopped migration left
 - **THEN** the next run replaces it with the whole kind
+
+### Requirement: The discard verb deletes a render named by its image path
+
+The system SHALL offer `isekai discard <image>`, which reads the run, flow, approval and seed from the image's path,
+discards the render through the render stage, then deletes the image's thumbnails from the cache of the library whose
+collection holds the run, and prints each path it deleted, a run's file from its runs root and a thumbnail from its
+library. A path that names no render SHALL be refused, naming the form a render's path takes, the verb exiting 1 and
+deleting nothing.
+
+The hand path stays ([D3](../../../docs/decisions.md#d3--the-hand-path-stays)): the page's Delete is this verb's act,
+run in the server's process. An image's path names everything a discard needs, so the verb takes nothing else.
+
+#### Scenario: the render and its thumbnail are deleted
+- **Key:** `cli:discard:the-render-and-its-thumbnail-are-deleted`
+- **Layers:** unit
+- **WHEN** the verb is given the path of a render in a collection's run whose thumbnail is cached
+- **THEN** the image, its record and the thumbnail are deleted
+- **AND** each deleted path is printed, and the verb exits 0
+
+#### Scenario: a path naming no render is refused
+- **Key:** `cli:discard:a-path-naming-no-render-is-refused`
+- **Layers:** unit
+- **WHEN** the verb is given a path that is no render
+- **THEN** it exits 1, naming the path and the form a render's path takes
+- **AND** no file is deleted

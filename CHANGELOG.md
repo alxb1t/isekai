@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.71.0] - 2026-11-06
+
+Gate: local 0m27s · CI not read under mf-ship · 0.70.0: local 0m32s · CI not read under mf-ship
+
 - The render stage's `discard_render` deletes one render's image, then its record, then its group once empty, and
   the library's `drop_thumbnails` its cached thumbnails: a render is a likeness, so a failed one leaves (0106 D1, D2).
 - `isekai discard <image>` deletes one render and its thumbnails, printing each path deleted, and refuses a path

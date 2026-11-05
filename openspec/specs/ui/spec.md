@@ -1304,8 +1304,8 @@ input method's, closing nothing. `Esc` SHALL close an open suggestion list first
 top overlay, then go back on the screen, and SHALL never close a billing alert. On macOS Review's panes SHALL move by
 `⌃H` and `⌃L` alone, from a field or not, and `h` `l` and `←` `→` SHALL move within a pane; elsewhere `h` `l` and `←`
 `→` SHALL move between the panes. A plain letter SHALL move the focus, and a command SHALL take `⇧` and a letter, but
-for `⌫` on a chosen file, which removes it before anything is committed. No key SHALL spend money but the Render
-dialog's `Mod+↵`, which confirms the price it quotes.
+for `⌫` on a chosen file, which removes it before anything is committed, and `⇧⌫` on a large view, which asks before
+it deletes the render. No key SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it quotes.
 
 A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
 Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.
@@ -1417,11 +1417,11 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 
 ### Requirement: A dialog holds the focus while it is open
 
-The system SHALL open every confirming dialog — Render, Revise, and New collection or Add sources — and the key list as
-a modal dialog,
+The system SHALL open every confirming dialog — Render, Revise, Delete, and New collection or Add sources — and the key
+list as a modal dialog,
 the page behind it inert, the focus on its first control and held inside it, and SHALL return the focus to where it
 was when it closes. The Render dialog's first control SHALL be *Keep the volume open*, which `Space` toggles and
-`↵` leaves alone; the Revise dialog's SHALL be its confirm button. The key list
+`↵` leaves alone; the Revise dialog's SHALL be its confirm button, and the Delete dialog's its *No*. The key list
 SHALL stand centred over most of the window, its keys in columns by scope — everywhere, then the screen's — and `⌃/`,
 `Esc` and the backdrop SHALL close it.
 
@@ -2198,3 +2198,50 @@ runs root so it works when pasted: a collection's runs root in the library is ne
 - **WHEN** two flows of one run are opened, one of them drafted from the other
 - **THEN** both payloads carry the photograph's one caption
 - **AND** neither names a flow it came from
+
+### Requirement: The large view deletes its render after asking, and the Hub opens on its cell
+
+The system SHALL offer *Delete* on a render's large view, on `⇧⌫`, after *Compare with…*, opening a modal dialog,
+*Delete this render?*, whose *No* comes first and holds the focus; `h` `l` and `←` `→` SHALL move between *No* and
+*Yes*, `↵` SHALL press the focused one, and `Esc` SHALL answer *No*. *Yes* SHALL discard the render through the render
+stage, delete its thumbnails from the library's cache, and open the Hub focused on the render's cell, from whichever
+screen opened the view. The server SHALL refuse the delete while a render session runs for the collection, deleting
+nothing, and the dialog SHALL show the refusal.
+
+A failed render is deleted where it is seen. *No* first makes a stray `↵` harmless, and a write beside a running
+session is refused, as *Cancel approve* is. The cell is where the delete shows: one image fewer, or approved again.
+
+```
+large view ──⇧⌫──▶ Delete this render?  [No] [Yes]
+                     │ Esc · No              │ Yes
+                     ▼                       ▼
+                 large view           discard ─▶ the Hub, focused on the cell
+```
+
+#### Scenario: the dialog opens on No
+- **Key:** `ui:delete-render:the-dialog-opens-on-no`
+- **Layers:** e2e
+- **WHEN** `⇧⌫` is pressed on a large view, then `l`, `h` and `Esc`
+- **THEN** *Delete this render?* opens with *No* focused, `l` focusing *Yes* and `h` *No*
+- **AND** `Esc` closes it, the image still shown
+
+#### Scenario: Yes deletes the render and opens the Hub on its cell
+- **Key:** `ui:delete-render:yes-opens-the-hub-on-the-cell`
+- **Layers:** e2e
+- **WHEN** `⇧⌫`, `l` and `↵` are pressed on the large view of a cell's only image, opened at its address
+- **THEN** the Hub opens focused on that cell, approved again
+- **AND** the image is gone from the run
+
+#### Scenario: the route deletes the render and its thumbnail
+- **Key:** `ui:delete-render:the-route-deletes-the-render-and-its-thumbnail`
+- **Layers:** unit
+- **WHEN** a render whose thumbnail is cached is deleted at its address
+- **THEN** its image, its record and its thumbnail are gone
+- **AND** the other render and its thumbnail stay
+
+#### Scenario: the delete is refused while a render runs
+- **Key:** `ui:delete-render:refused-while-a-render-runs`
+- **Layers:** unit
+- **WHEN** a render is deleted while a render session runs for its collection
+- **THEN** the delete is refused, saying a render session is running
+- **AND** no file is deleted

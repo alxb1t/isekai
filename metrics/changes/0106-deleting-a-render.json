@@ -1,0 +1,58 @@
+{
+  "change": "0106-deleting-a-render",
+  "version": "0.71",
+  "base": "1b1e3f4e",
+  "analyzed": "c634f008",
+  "measured_on": "local",
+  "collected_at": "2026-11-06T01:07:43+02:00",
+  "mf_version": "v0.63.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1496
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 27
+    },
+    "open-backlog-cards": {
+      "value": 28
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1312
+    },
+    "diff-files": {
+      "value": 35
+    },
+    "phases": {
+      "value": 5
+    },
+    "shared-reading-set": {
+      "value": 12321
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 735
+    },
+    "decisions": {
+      "value": 49
+    }
+  }
+}
