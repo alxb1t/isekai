@@ -1,9 +1,9 @@
 """Render from the browser: the dialog, the drawer, the large view, Revise, Compare.
 
-A revision, a discard, a delete, a comparison and a draft from another flow each
-own a collection, so none leans on another's draft. The server renders on the e2e
-doubles: a session that rents nothing and a transport that answers at once. Each
-step waits on the page's own state.
+A revision, a discard, a comparison and a draft from another flow each own a
+collection, so none leans on another's draft. The server renders on the e2e doubles:
+a session that rents nothing and a transport that answers at once. Each step
+waits on the page's own state.
 """
 
 import re
@@ -18,7 +18,6 @@ from tests.e2e.conftest import (
     CONJURE,
     CONJURED,
     DAMAGED,
-    DELETED,
     DISCARDED,
     DRAWN,
     FLAT,
@@ -341,9 +340,12 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
 
 
 @pytest.mark.spec("ui:conjure-from:conjure-from-this-opens-review")
+@pytest.mark.spec("ui:delete-render:the-dialog-opens-on-no")
+@pytest.mark.spec("ui:delete-render:yes-opens-the-hub-on-the-cell")
 def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     digest = served.conjured.digest
-    page.goto(f"{served.url}/c/{CONJURED}/renders/{digest}/{FLOW}/v1/7")
+    large = f"{served.url}/c/{CONJURED}/renders/{digest}/{FLOW}/v1/7"
+    page.goto(large)
     expect(page.locator("[data-draft-from]")).to_contain_text("Draft from this")
     page.keyboard.press("Shift+D")
     rows = page.locator("[data-draft-dialog] [data-target]")
@@ -362,6 +364,35 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     expect(revised).to_contain_text(f"drafted from {FLOW} v1 · seed 7")
     expect(revised.locator("img")).to_have_js_property("complete", True)
     expect(revised.locator("img")).not_to_have_js_property("naturalWidth", 0)
+
+    # The delete asks on No, then Yes lands on the Hub on the cell. The conjure's
+    # draft is in CONJURE's cell, so FLOW's still reads approved.
+    page.goto(large)
+    expect(page.locator("[data-delete]")).to_be_visible()
+    page.keyboard.press("Shift+Backspace")
+    dialog = page.locator("dialog[data-delete-dialog]")
+    expect(dialog.locator(".render-dialog__title")).to_have_text("Delete this render?")
+    no, yes = dialog.locator("[data-delete-no]"), dialog.locator("[data-delete-yes]")
+    expect(no).to_be_focused()
+    page.keyboard.press("l")
+    expect(yes).to_be_focused()
+    page.keyboard.press("h")
+    expect(no).to_be_focused()
+    page.keyboard.press("Escape")
+    expect(dialog).to_have_count(0)
+    expect(page.locator(".large__media img")).to_be_visible()
+
+    page.keyboard.press("Shift+Backspace")
+    expect(no).to_be_focused()
+    page.keyboard.press("l")
+    expect(yes).to_be_focused()
+    page.keyboard.press("Enter")
+
+    expect(page).to_have_url(served.hub_of(CONJURED))
+    cell = page.locator(f'.hub__cell[data-row="0"][data-flow="{FLOW}"]')
+    expect(cell).to_have_attribute("data-stage", "approved")
+    expect(cell).to_be_focused()
+    assert not group_of(served.conjured, FLOW, 1).exists()
 
 
 @pytest.mark.spec("ui:revise:discard-asks-before-it-deletes")
@@ -404,39 +435,6 @@ def test_discard_asks_before_it_deletes(page: Page, served: Served) -> None:
     expect(viewer.locator("img")).to_have_attribute("src", re.compile(r"/photo$"))
     page.keyboard.press("Escape")
     expect(viewer).to_have_count(0)
-
-
-@pytest.mark.spec("ui:delete-render:the-dialog-opens-on-no")
-@pytest.mark.spec("ui:delete-render:yes-opens-the-hub-on-the-cell")
-def test_delete_asks_then_opens_the_hub_on_the_cell(page: Page, served: Served) -> None:
-    digest = served.deleted.digest
-    page.goto(f"{served.url}/c/{DELETED}/renders/{digest}/{FLOW}/v1/7")
-    expect(page.locator("[data-delete]")).to_be_visible()
-
-    page.keyboard.press("Shift+Backspace")
-    dialog = page.locator("dialog[data-delete-dialog]")
-    expect(dialog.locator(".render-dialog__title")).to_have_text("Delete this render?")
-    no, yes = dialog.locator("[data-delete-no]"), dialog.locator("[data-delete-yes]")
-    expect(no).to_be_focused()
-    page.keyboard.press("l")
-    expect(yes).to_be_focused()
-    page.keyboard.press("h")
-    expect(no).to_be_focused()
-    page.keyboard.press("Escape")
-    expect(dialog).to_have_count(0)
-    expect(page.locator(".large__media img")).to_be_visible()
-
-    page.keyboard.press("Shift+Backspace")
-    expect(no).to_be_focused()
-    page.keyboard.press("l")
-    expect(yes).to_be_focused()
-    page.keyboard.press("Enter")
-
-    expect(page).to_have_url(served.hub_of(DELETED))
-    cell = page.locator(f'.hub__cell[data-row="0"][data-flow="{FLOW}"]')
-    expect(cell).to_have_attribute("data-stage", "approved")
-    expect(cell).to_be_focused()
-    assert not group_of(served.deleted, FLOW, 1).exists()
 
 
 @pytest.mark.spec("ui:compare:compare-shows-the-pair-and-the-change")
