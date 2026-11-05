@@ -12,6 +12,8 @@ its new digest.
 
 - Catppuccin's Latte, Frappé, Macchiato and Mocha are token sets beside Nocturne; the billing band, the session tile,
   the drawer's backdrop and the tag cheatsheet read tokens, and a vitest holds each flavour to WCAG AA (0098 D1, D2, D7).
+- `⇧T` opens a theme dialog on every screen: each row is drawn in its own theme, a move previews, `↵` keeps and `Esc`
+  restores; the browser keeps the choice and paints it before the app loads (0098 D4, D5, D6).
 
 ## [0.63.0] - 2026-11-04
 

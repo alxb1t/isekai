@@ -249,6 +249,22 @@ button.appbar__render {
   font-size: 12px;
 }
 
+/* The theme dialog's rows, each drawn in its own theme's tokens (D48). */
+.theme-dialog__row {
+  padding: 8px 14px;
+  border: 1px solid var(--line-control);
+  border-radius: 4px;
+  background: var(--ground);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.theme-dialog__row:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .render-dialog__name {
   color: var(--ink);
   margin-right: 8px;

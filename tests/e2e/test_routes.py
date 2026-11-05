@@ -9,6 +9,7 @@ from tests.e2e.conftest import SHOWN, Served
 @pytest.mark.spec("ui:routes:a-reload-lands-on-the-same-screen")
 @pytest.mark.spec("ui:routes:an-unknown-batch-is-refused")
 @pytest.mark.spec("ui:batch-folder:the-row-draws-no-count-per-flow")
+@pytest.mark.spec("ui:themes:a-chosen-theme-survives-a-reload")
 def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     page: Page, served: Served
 ) -> None:
@@ -58,3 +59,16 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     page.get_by_role("link", name="Back to the library").click()
     expect(page).to_have_url(f"{served.url}/")
     expect(page.locator(".library__name", has_text=served.collection)).to_be_visible()
+
+    # ⇧T opens on Nocturne; ↓ previews Latte, ↵ keeps it, and a reload paints it first.
+    page.keyboard.press("Shift+T")
+    expect(page.locator('[data-theme-row][data-theme="nocturne"]')).to_be_focused()
+    page.keyboard.press("ArrowDown")
+    html = page.locator("html")
+    expect(html).to_have_attribute("data-theme", "latte")
+    page.keyboard.press("Enter")
+    expect(page.locator("[data-theme-dialog]")).to_have_count(0)
+    expect(page.locator("body")).to_have_css("background-color", "rgb(239, 241, 245)")
+    page.reload()
+    expect(html).to_have_attribute("data-theme", "latte")
+    expect(page.locator("body")).to_have_css("background-color", "rgb(239, 241, 245)")

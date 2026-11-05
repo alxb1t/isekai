@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import KeyHint from './components/KeyHint.vue'
 import KeyList from './components/KeyList.vue'
 import SessionDrawer from './components/SessionDrawer.vue'
+import ThemeDialog from './components/ThemeDialog.vue'
 import { useKeys } from './composables/useKeys'
 import { queue } from './composables/useQueue'
 import { lasted } from './sessions'
@@ -62,6 +63,7 @@ const unapproved = computed(() => {
   return held ? held.flows.reduce((sum, flow) => sum + queue(held, flow).length, 0) : 0
 })
 const listing = ref(false)
+const theming = ref(false)
 
 const onCollection = () => collection.value !== null
 function open(name: string): void {
@@ -91,6 +93,7 @@ useKeys('everywhere', [
     run: () => open('renders'),
     when: onCollection,
   },
+  { id: 'theme', keys: [shifted('KeyT')], label: 'theme', run: () => (theming.value = true) },
   { id: 'drawer', keys: [DRAWER], label: 'the render drawer', run: drawer.toggle, inField: true },
   keyList(() => (listing.value = true)),
 ])
@@ -174,6 +177,7 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
       <RouterView :key="key" />
     </main>
     <KeyList v-if="listing" @close="listing = false" />
+    <ThemeDialog v-if="theming" @close="theming = false" />
     <SessionDrawer v-if="drawer.open" :toggle="DRAWER" />
     <footer class="jobstrip">
       <span

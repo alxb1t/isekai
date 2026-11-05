@@ -1,7 +1,13 @@
-import { expect } from 'vitest'
+import { afterEach, expect, vi } from 'vitest'
+import page from '../index.html?raw'
 import styles from './styles.css?raw'
 import themes from './themes.css?raw'
 import { spec } from './test/spec'
+import { KEPT, THEMES, chooser, shown } from './themes'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 type Tokens = Record<string, string>
 
@@ -108,4 +114,63 @@ spec('ui:themes:a-theme-sets-every-colour-token', () => {
       expect(value, `${id} ${name}`).not.toMatch(/color-mix\(|var\(|rgba\(/)
     }
   }
+})
+
+/* A store that records each write. */
+function store(): { setItem(key: string, value: string): void; writes: [string, string][] } {
+  const writes: [string, string][] = []
+  return { setItem: (key, value) => void writes.push([key, value]), writes }
+}
+
+spec('ui:themes:the-dialog-previews-keeps-and-restores', () => {
+  const root = { dataset: { theme: 'frappe' } as DOMStringMap }
+  const kept = store()
+  const choice = chooser(root, kept)
+  expect(choice.opened).toBe('frappe')
+
+  choice.preview('mocha')
+  expect(root.dataset.theme).toBe('mocha')
+  choice.preview('nocturne')
+  expect(root.dataset.theme).toBe('nocturne')
+  expect(kept.writes).toEqual([])
+
+  choice.restore()
+  expect(root.dataset.theme).toBe('frappe')
+  expect(kept.writes).toEqual([])
+
+  choice.keep('latte')
+  expect(root.dataset.theme).toBe('latte')
+  expect(kept.writes).toEqual([[KEPT, 'latte']])
+
+  // A root with no theme, or one no theme has, shows Nocturne.
+  expect(shown({ dataset: {} })).toBe('nocturne')
+  expect(shown({ dataset: { theme: 'solarized' } })).toBe('nocturne')
+})
+
+spec('ui:themes:the-first-paint-shows-the-kept-theme', () => {
+  const head = page.slice(0, page.indexOf('</head>'))
+  const inline = /<script>([\s\S]*?)<\/script>/.exec(head)
+  expect(inline, 'a classic script in <head>').not.toBeNull()
+  // It stands before the module script, so it runs before the first paint.
+  expect(page.indexOf('<script>')).toBeLessThan(page.indexOf('<script type="module"'))
+  const run = new Function(inline![1])
+
+  const paint = (name: string | null) => {
+    const root = { dataset: {} as DOMStringMap }
+    vi.stubGlobal('localStorage', { getItem: (key: string) => (key === KEPT ? name : null) })
+    vi.stubGlobal('document', { documentElement: root })
+    run()
+    return root.dataset.theme
+  }
+  for (const { id } of THEMES) expect(paint(id), id).toBe(id)
+  expect(paint('solarized')).toBeUndefined()
+  expect(paint(null)).toBeUndefined()
+
+  // A browser that refuses `localStorage` paints Nocturne rather than failing.
+  vi.stubGlobal('localStorage', {
+    getItem: () => {
+      throw new Error('denied')
+    },
+  })
+  expect(() => run()).not.toThrow()
 })

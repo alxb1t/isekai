@@ -337,7 +337,8 @@ textarea.input { min-height: 90px; resize: vertical; }
 
 /* The app's tokens, from `ui/design/spec.md` §2. The shell, Home and the hub
    are drawn in these; the review surface keeps the sheet's above. */
-:root {
+:root,
+[data-theme="nocturne"] {
   --ground: #161724;
   --ground-deep: #11121c;
   --ground-media: #0e0f17;
