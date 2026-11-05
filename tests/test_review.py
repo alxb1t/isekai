@@ -25,10 +25,12 @@ from isekai.foundation.artifacts import (
 from isekai.foundation.flow import Flow, Schema, assemble, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
+    NEW_VERSION,
     Run,
     approved_versions,
     open_run,
     record_failure,
+    stage_command,
     versions,
 )
 from isekai.interface.cli import build_parser, dispatch
@@ -1024,6 +1026,12 @@ def test_an_excluded_tag_refuses_a_copied_approval(
     assert "glasses" in str(refused.value)
     assert "accessories" in str(refused.value)
     assert not (run.path / CONTROL / "review").exists()
+    # Neither flow has a draft, so the remedy re-opens the source's approval.
+    assert stage_command(run, "review", FLOW, options=NEW_VERSION) in str(refused.value)
+    assert stage_command(run, "approve", FLOW) in str(refused.value)
+    assert stage_command(run, "approve", CONTROL, options=("--from", FLOW)) in str(
+        refused.value
+    )
 
 
 @pytest.mark.spec("run-directory:layout:a-named-source-is-recorded")

@@ -1053,7 +1053,16 @@ def _copy_approval(
     ):
         require(path, body, key, shape, remedy)
     fields = {name: list(tags) for name, tags in body["fields"].items()}
-    validate(fields, schema, vocabulary, excluded=excluded)
+    # Neither flow has a draft to edit, so the fix goes through `source`'s own.
+    copy = stage_command(run, "approve", flow, options=("--from", source))
+    validate(
+        fields,
+        schema,
+        vocabulary,
+        excluded=excluded,
+        remedy=f"run {_again(run, source)}, delete it from that draft, run "
+        f"`{stage_command(run, 'approve', source)}`, then `{copy}` again",
+    )
 
     copied: ReviewApproved = {
         **body,
