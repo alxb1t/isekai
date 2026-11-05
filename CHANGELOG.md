@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- The field map excludes every tattoo tag beside `photorealistic`, and no group routes or browses one: a tattoo is
+  outside what `summon` preserves. The table is re-derived at revision 4 (0101 D1, D2).
+
 ## [0.66.0] - 2026-11-05
 
 Gate: local 0m28s · CI not read under mf-ship · 0.65.0: local 0m29s · CI not read under mf-ship

@@ -58,8 +58,8 @@ from isekai.shared.vocabulary import Vocabulary
 
 # The table's own monotonic counter. There is no upstream revision to name --
 # the artifact is authored here -- so it is bumped by whoever edits this spec.
-# 1 is the first table, 2 the seeded table, 3 the operator's pass.
-REVISION = 3
+# 1 is the first table, 2 the seeded table, 3 the operator's pass, 4 the exclusions.
+REVISION = 4
 
 # Where the operator's approved sheets live. Gitignored, and read by `--refresh`
 # and by nothing else: this script's *output* is committed, so an input that
@@ -145,14 +145,25 @@ SEEDS: Mapping[str, tuple[str, tuple[str, ...]]] = {
 # photograph* -- because the second kind would silently shrink `clothes` by seven
 # ordinary garments.
 #
-# **One entry, at the operator's call, and it is a start rather than a survey.**
+# **Two classes, at the operator's call, and a start rather than a survey.**
 # `photorealistic` describes how the picture was rendered and not the person in
-# it, so no identity criterion can hold it -- and the router drops it either way.
-# What the entry buys is the record: the absence is a decision somebody took
-# rather than a gap nobody had looked at. `realistic` 19,111 is the same kind of
-# tag and appears on all eight photographs of the collection `APPROVED` names; it is
-# deliberately not here yet, because the operator named one.
+# it, and a tattoo is outside what `summon` preserves, so no identity criterion
+# can hold either. `EXCLUDED_CONTAINING` is a word, expanded against the pinned
+# vocabulary, so every tag containing it is excluded; `build()` subtracts the
+# whole set from every group, which the loader's disjointness check needs.
+# `realistic` 19,111 is the same kind of tag as `photorealistic` and appears on
+# all eight photographs of the collection `APPROVED` names; it is deliberately
+# not here yet, because the operator named one.
 EXCLUDED: tuple[str, ...] = ("photorealistic",)
+EXCLUDED_CONTAINING: tuple[str, ...] = ("tattoo",)
+
+
+def exclusions(vocabulary: Vocabulary) -> set[str]:
+    """Return `EXCLUDED` and every tag containing an `EXCLUDED_CONTAINING` word."""
+    return set(EXCLUDED).union(
+        *(vocabulary.search(word) for word in EXCLUDED_CONTAINING)
+    )
+
 
 # The example tags `flows/conjure-v1/sheet.briefing.md` named, by the field it
 # named them under. The briefing is deleted; this holds its example tags.
@@ -485,7 +496,7 @@ def resolve(groups: Mapping[str, set[str]]) -> dict[str, str]:
 
 
 def build(
-    vocabulary: Vocabulary, fields: Iterable[str]
+    vocabulary: Vocabulary, fields: Iterable[str], excluded: set[str]
 ) -> tuple[dict[str, dict[str, list[str]]], dict[str, set[str]]]:
     """Return the table's `fields` document and the candidate groups behind it."""
     names = list(fields)
@@ -512,6 +523,9 @@ def build(
     for tag, field in primary.items():
         if tag in vocabulary:
             browsable[field].add(tag)
+    # No group holds an excluded tag, or the loader refuses the table.
+    for field in names:
+        browsable[field] -= excluded
 
     document = {
         field: {
@@ -619,7 +633,8 @@ def main() -> None:
 
     vocabulary = load_vocabulary()
     fields = sorted({name for names in declared_fields().values() for name in names})
-    document, groups = build(vocabulary, fields)
+    excluded = exclusions(vocabulary)
+    document, groups = build(vocabulary, fields, excluded)
 
     FIELD_MAP_PATH.write_text(
         json.dumps(
@@ -627,7 +642,7 @@ def main() -> None:
                 "name": "config/field_map.json",
                 "revision": REVISION,
                 "fields": document,
-                "excluded": list(vocabulary.rank(EXCLUDED)),
+                "excluded": vocabulary.rank(excluded),
             },
             indent=2,
             ensure_ascii=False,

@@ -1,6 +1,6 @@
 {
   "name": "config/field_map.json",
-  "revision": 3,
+  "revision": 4,
   "fields": {
     "accessories": {
       "primary": [
@@ -326,7 +326,6 @@
         "sagging breasts",
         "body markings",
         "no nipples",
-        "stomach tattoo",
         "dark nipples",
         "unaligned breasts",
         "lower body",
@@ -352,7 +351,6 @@
         "ass cutout",
         "scar on stomach",
         "strongman waist",
-        "full-body tattoo",
         "chocolate on breasts",
         "pointy breasts",
         "ass ripple",
@@ -397,7 +395,6 @@
         "hand on another's shoulder",
         "shoulder cutout",
         "navel cutout",
-        "shoulder tattoo",
         "arm under breasts",
         "shoulder blades",
         "single bare shoulder",
@@ -834,7 +831,6 @@
         "bare pectorals",
         "white cape",
         "partially unbuttoned",
-        "shoulder tattoo",
         "backless dress",
         "casual one-piece swimsuit",
         "torn thighhighs",
@@ -2609,7 +2605,6 @@
         "single side bun",
         "bun cover",
         "arm warmers",
-        "arm tattoo",
         "on head",
         "heart hands",
         "back-to-back",
@@ -2708,7 +2703,6 @@
         "leg warmers",
         "holding paper",
         "holding ball",
-        "leg tattoo",
         "bound legs",
         "covering face",
         "holding removed eyewear",
@@ -2832,7 +2826,6 @@
         "crossed bandaids",
         "anal fingering",
         "cover image",
-        "back tattoo",
         "hand on hilt",
         "head back",
         "bandaid on arm",
@@ -2931,7 +2924,6 @@
         "holding hose",
         "hand net",
         "head down",
-        "hand tattoo",
         "holding own tail",
         "diving mask on head",
         "sword on back",
@@ -3312,6 +3304,29 @@
     }
   },
   "excluded": [
-    "photorealistic"
+    "tattoo",
+    "arm tattoo",
+    "shoulder tattoo",
+    "facial tattoo",
+    "pubic tattoo",
+    "chest tattoo",
+    "leg tattoo",
+    "stomach tattoo",
+    "number tattoo",
+    "breast tattoo",
+    "neck tattoo",
+    "heart tattoo",
+    "back tattoo",
+    "barcode tattoo",
+    "full-body tattoo",
+    "hand tattoo",
+    "flower tattoo",
+    "star tattoo",
+    "glowing tattoo",
+    "forehead tattoo",
+    "teardrop tattoo",
+    "tribal tattoo",
+    "photorealistic",
+    "butterfly tattoo"
   ]
 }

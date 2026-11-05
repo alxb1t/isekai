@@ -4,23 +4,23 @@ The table, then the guards, per [design](design.md).
 
 ## Progress
 
-- [ ] 1 — The table
+- [x] 1 — The table
 - [ ] 2 — The guards
 
 ## 1 — The table
 
-- [ ] 1.1 **HALT CHECK** No `FILED` key, nor anything else in the deriver, names a tattoo tag at the base, as
+- [x] 1.1 **HALT CHECK** No `FILED` key, nor anything else in the deriver, names a tattoo tag at the base, as
   [Context](design.md#context) states.
   Verify: `git grep -c tattoo 7fdbad24 -- tools/derive_field_map.py` prints nothing and exits 1.
-- [ ] 1.2 In `tools/derive_field_map.py`, add `EXCLUDED_CONTAINING` and `exclusions()` below `EXCLUDED`, and replace
+- [x] 1.2 In `tools/derive_field_map.py`, add `EXCLUDED_CONTAINING` and `exclusions()` below `EXCLUDED`, and replace
   the comment at `:148-154` with [the comment](design.md#the-comment), per [D1](design.md#d1).
   Verify: `grep -c -F -e 'EXCLUDED_CONTAINING: tuple[str, ...] = ("tattoo",)' -e 'def exclusions(vocabulary: Vocabulary) -> set[str]:' tools/derive_field_map.py` prints `2`.
-- [ ] 1.3 In `tools/derive_field_map.py`, give `build()` its `excluded` parameter and subtraction, make `main()` pass
+- [x] 1.3 In `tools/derive_field_map.py`, give `build()` its `excluded` parameter and subtraction, make `main()` pass
   and write `exclusions(vocabulary)`, and set `REVISION = 4`, per [D2](design.md#d2).
   Verify: `grep -c -F -e 'REVISION = 4' -e 'browsable[field] -= excluded' -e '"excluded": vocabulary.rank(excluded),' tools/derive_field_map.py` prints `3`.
-- [ ] 1.4 Re-derive the table: `uv run python -m tools.derive_field_map`. Never hand-edit `config/field_map.json`.
+- [x] 1.4 Re-derive the table: `uv run python -m tools.derive_field_map`. Never hand-edit `config/field_map.json`.
   Verify: `grep -c tattoo config/field_map.json` prints `23`.
-- [ ] 1.5 Add `test_the_committed_table_excludes_every_tattoo_tag_and_photorealistic` to `tests/test_field_map.py`,
+- [x] 1.5 Add `test_the_committed_table_excludes_every_tattoo_tag_and_photorealistic` to `tests/test_field_map.py`,
   marked `field-map:excluded:tattoos-and-photorealistic-are-excluded`, per [Tests](design.md#tests).
   Verify: `uv run pytest tests/test_field_map.py::test_the_committed_table_excludes_every_tattoo_tag_and_photorealistic` exits 0.
 
