@@ -186,7 +186,7 @@ def prepare_sheet(
             "pinned": True,
             "artifacts": {},
         }
-        validate(fields, schema, vocabulary)
+        validate(fields, schema, vocabulary, excluded=field_map.excluded)
     else:
         fields, made_by = _from_tag_list(
             run, flow, directory, version, schema, vocabulary, field_map
@@ -267,7 +267,7 @@ def _from_tag_list(
     )
     try:
         fields, made_by = _route(run, flow, source, schema, field_map, remedy)
-        validate(fields, schema, vocabulary, remedy=remedy)
+        validate(fields, schema, vocabulary, excluded=field_map.excluded, remedy=remedy)
     except Refusal as failed:
         detail = str(failed)
         record = record_failure(
@@ -302,7 +302,7 @@ def _from_source(
     # The image a draft starts from is the draft verb's, never this stage's.
     remedy = f"run `{retag}`, then draft {flow} from the {source_flow} image again"
     fields, made_by = _route(run, tagger, source, schema, field_map, remedy)
-    validate(fields, schema, vocabulary, remedy=remedy)
+    validate(fields, schema, vocabulary, excluded=field_map.excluded, remedy=remedy)
     if tagger != source_flow:
         made_by["listed_from"] = tagger
     return fields, made_by

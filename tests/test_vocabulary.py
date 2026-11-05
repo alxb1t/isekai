@@ -69,6 +69,15 @@ def test_search_returns_most_posted_first(vocabulary: Vocabulary) -> None:
     ]
 
 
+@pytest.mark.spec("field-map:excluded:the-tag-search-skips-an-excluded-tag")
+def test_search_skips_the_tags_it_is_told_to(vocabulary: Vocabulary) -> None:
+    assert vocabulary.search("hair", skip=frozenset({"long hair"}))[:3] == [
+        "short hair",
+        "brown hair",
+        "very long hair",
+    ]
+
+
 @pytest.mark.spec("sheet:output:sheet-names-its-vocabulary")
 def test_the_vocabularys_identity_is_its_name_revision_and_digest(
     vocabulary: Vocabulary,

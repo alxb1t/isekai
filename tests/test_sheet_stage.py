@@ -131,6 +131,24 @@ def test_the_taggers_own_underscore_spelling_routes(
     assert fields["eye_colour"] == ["blue eyes"]
 
 
+@pytest.mark.spec("sheet:purity:an-excluded-tag-is-refused")
+def test_sheet_preparation_refuses_an_excluded_tag(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    with pytest.raises(Refusal) as refused:
+        sheet(
+            run,
+            schema,
+            vocabulary,
+            field_map=replace(FIELD_MAP, excluded=frozenset({"glasses"})),
+            tags=[DanbooruTag("glasses")],
+        )
+
+    assert "glasses" in str(refused.value)
+    assert "accessories" in str(refused.value)
+    assert versions(run.directory(FLOW, "sheets")) == []
+
+
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
 def test_a_non_string_tag_routes_nowhere(
     run: Run, schema: Schema, vocabulary: Vocabulary

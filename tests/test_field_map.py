@@ -280,6 +280,18 @@ def test_the_committed_table_resolves_in_the_provisioned_vocabulary(
     }
 
 
+@pytest.mark.spec("field-map:excluded:tattoos-and-photorealistic-are-excluded")
+def test_the_committed_table_excludes_every_tattoo_tag_and_photorealistic(
+    provisioned: Vocabulary,
+) -> None:
+    field_map = load(provisioned)
+
+    assert field_map.excluded == {"photorealistic", *provisioned.search("tattoo")}
+    assert {"tattoo", "butterfly tattoo"} <= field_map.excluded
+    for field in field_map.fields:
+        assert not field_map.excluded & set(field_map.group(field))
+
+
 @pytest.mark.spec_exempt("structural: the committed table's own shape, not a scenario")
 def test_the_committed_table_covers_every_declared_criterion() -> None:
     document = json.loads(FIELD_MAP_PATH.read_text())

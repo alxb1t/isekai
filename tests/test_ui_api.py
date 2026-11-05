@@ -1011,7 +1011,12 @@ def _update_during_approval(
         write(path, kind, artifact)
 
     def approve_(
-        run: Run, flow: str, schema: Schema, vocabulary: Vocabulary
+        run: Run,
+        flow: str,
+        schema: Schema,
+        vocabulary: Vocabulary,
+        *,
+        excluded: frozenset[str] = frozenset(),
     ) -> tuple[Path | None, list[str]]:
         update.start()
         assert reached.wait(WAIT), "the update reached neither lock nor check"
@@ -1021,7 +1026,7 @@ def _update_during_approval(
             else "the update found a lock the approval should not hold"
         )
         try:
-            return approving(run, flow, schema, vocabulary)
+            return approving(run, flow, schema, vocabulary, excluded=excluded)
         finally:
             approved.set()
 
@@ -1351,7 +1356,7 @@ def test_candidates_are_ordered_by_descending_post_count(
 def test_the_excluded_list_reaches_no_group_and_is_not_in_the_response(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
-    # The committed table's excluded list is empty, so the assertion is driven
+    # The fixture table's excluded list is empty, so the assertion is driven
     # from a table that has one -- otherwise it would pass vacuously.
     withheld = replace(FIELD_MAP, excluded=frozenset({"glasses"}))
     fields = dict(FIELD_MAP.fields)
@@ -1363,6 +1368,39 @@ def test_the_excluded_list_reaches_no_group_and_is_not_in_the_response(
 
     assert set(body) == {"fields"}
     assert "glasses" not in json.dumps(body)
+
+
+@pytest.mark.spec("field-map:excluded:the-tag-search-skips-an-excluded-tag")
+def test_the_tag_search_offers_no_excluded_tag(
+    wired: Wiring, made: Run, tmp_path: Path, vocabulary: Vocabulary
+) -> None:
+    withheld = replace(FIELD_MAP, excluded=frozenset({"glasses"}))
+    fields = dict(FIELD_MAP.fields)
+    fields["accessories"] = Group(primary=(), also=())
+    wired.field_map = lambda _: replace(withheld, fields=fields)
+
+    client = _client(wired, made, tmp_path)
+    body = client.get("/api/tags", params={"q": "s", "limit": 100}).json()
+
+    offered = [t for t in vocabulary.search("s") if t != "glasses"]
+    assert [match["tag"] for match in body["matches"]] == offered
+    assert body["total"] == len(offered)
+
+
+@pytest.mark.spec("field-map:excluded:approval-refuses-an-excluded-tag")
+def test_approve_refuses_an_excluded_tag_the_draft_saved(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    wired.field_map = lambda _: replace(FIELD_MAP, excluded=frozenset({"glasses"}))
+    client = _client(wired, made, tmp_path)
+    fields = {**client.get(_at(made)).json()["fields"], "accessories": ["glasses"]}
+
+    saved = client.put(_at(made, "/draft"), json={"fields": fields})
+    approved = client.post(_at(made, "/approve"))
+
+    assert saved.status_code == 200
+    assert approved.status_code == 409
+    assert "glasses" in approved.json()["refusal"]
 
 
 # --- damage is refused by name ------------------------------------------------
