@@ -779,7 +779,7 @@ def migrate_command(run: Run) -> str:
 def unmigrated(run: Run) -> list[str]:
     """Return the kinds of description a flow of `run` holds and `photo/` lacks.
 
-    In `DESCRIPTION`'s order; an error record alone is no artifact (D3).
+    In `DESCRIPTION`'s order; an error record alone is no artifact.
     e.g. a flow's `wd14/001.json` and no `photo/` -> ["wd14"]
     """
     return [
@@ -793,8 +793,9 @@ def unmigrated(run: Run) -> list[str]:
 def photo_of(run: Run, stage: str) -> Path:
     """Return the directory of the photograph's `stage` in `run`, or refuse.
 
-    An unmigrated run is refused (D3) before anything is written, so a stage that
-    refuses leaves the run as it found it.
+    A run whose description sits under its flows, not in `photo/` (D17), is
+    refused before anything is written, so a stage that refuses leaves the run as
+    it found it.
     e.g. (run, WD14) -> runs/<id>/photo/wd14
     """
     kinds = unmigrated(run)

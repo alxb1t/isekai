@@ -13,7 +13,15 @@ import shutil
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from isekai.foundation.artifacts import TAGS_FILE, WD14_FILE, Artifact, Tags, Wd14, read
+from isekai.foundation.artifacts import (
+    TAGS_FILE,
+    WD14_FILE,
+    Artifact,
+    Tags,
+    Wd14,
+    read,
+    require,
+)
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
@@ -106,8 +114,16 @@ def _lists(run: Run, kind: str, holders: Sequence[str]) -> list[Copy]:
 
 
 def _tags(run: Run, flow: str, kind: str, number: int) -> object:
-    """Return the `tags` of `flow`'s list of `kind` numbered `number`."""
-    return read(run.directory(flow, kind) / artifact_name(number), _LISTS[kind])["tags"]
+    """Return the `tags` of `flow`'s list of `kind` numbered `number`.
+
+    A list that cannot be read, or holds no `tags`, refuses the run by name; the
+    remedy drops that flow's copies, so the other holders' lists are copied.
+    """
+    path = run.directory(flow, kind) / artifact_name(number)
+    remedy = f"delete {flow}/{kind}/, then run `{migrate_command(run)}` again"
+    body = read(path, _LISTS[kind], remedy=remedy)
+    require(path, body, "tags", list, remedy)
+    return body["tags"]
 
 
 def _copy(run: Run, kind: str, copies: Sequence[Copy]) -> None:

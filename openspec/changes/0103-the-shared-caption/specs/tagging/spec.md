@@ -72,6 +72,38 @@ invocation produces exactly what is missing.
 - **THEN** the command refuses naming that tagger's own directory and the records in it
 - **AND** the refusal is a named refusal rather than an unhandled error
 
+### Requirement: Each tagger's failure is its own, and the local tagger runs first
+
+The system SHALL produce the local tag list, then the hosted tag list, under the tag verb, and a failure
+in either SHALL NOT remove, prevent or invalidate the other's artifact — whether the failure is the
+photograph's or the build's. The caption verb SHALL write no tag list.
+
+Failures are collected per photograph, and the local list is the sheet's only input, so a refusal of the prose or of
+the hosted list must not cost it ([D1](../../../docs/decisions.md#d1--stage--is-two-independent-verbs)). Inside the
+tag verb each tagger's refusal is collected on its own. The local tagger runs first because it is the sheet's input
+and reaches no network.
+
+#### Scenario: a hosted tagger failure leaves the local tag list on disk
+- **Key:** `tagging:order:a-late-failure-leaves-the-earlier-artifacts-complete`
+- **Layers:** unit
+- **WHEN** the hosted tagger fails for a photograph whose local tag list succeeded
+- **THEN** that list is complete on disk
+- **AND** the next invocation produces only the missing tag list
+
+#### Scenario: a local tagger failure leaves the hosted list written
+- **Key:** `tagging:order:a-local-failure-leaves-the-hosted-list-written`
+- **Layers:** unit
+- **WHEN** the local tagger fails for a photograph, or cannot be opened at all
+- **THEN** the hosted tagger still runs for that photograph and its list is written
+- **AND** the command refuses naming the local tagger's failure
+
+#### Scenario: captioning writes no tag list
+- **Key:** `tagging:order:captioning-writes-no-tag-list`
+- **Layers:** unit
+- **WHEN** a photograph is captioned
+- **THEN** the prose is written
+- **AND** no tag list is written and no tagger is called
+
 ## REMOVED Requirements
 
 ### Requirement: Both taggers run for a flow that declares the tagger, and the hosted one runs on the reader's model

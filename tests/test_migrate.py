@@ -143,6 +143,7 @@ def test_the_old_files_stay(library: Library) -> None:
 
 
 @pytest.mark.spec("cli:migrate:differing-lists-refuse-the-run")
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
 def test_differing_lists_refuse_the_run(library: Library) -> None:
     run = _run(library.runs("alpha"), "ada")
     _described(run)
@@ -155,6 +156,23 @@ def test_differing_lists_refuse_the_run(library: Library) -> None:
     assert f"differ between {FLOWS[0]}, {FLOWS[1]}" in refused
     assert "`python -m isekai migrate --runs " in refused
     assert not (run.path / PHOTO).exists()
+
+    # A hand-edited list with no `tags` refuses its run by name, and the walk goes on.
+    damaged = _run(library.default, "cy", width=1000)
+    _described(damaged)
+    tagless = damaged.path / FLOWS[1] / WD14 / "001.json"
+    tagless.write_text(json.dumps({"schema": {"name": WD14, "version": 1}}))
+    walked = _run(library.runs("beta"), "bea", width=900)
+    _list(walked, FLOWS[0], WD14, 1, "1girl")
+
+    assert library.migrate() == 1
+
+    assert (
+        f"default/runs/{damaged.id}: refused: 001.json: records no `tags` list; "
+        f"delete {FLOWS[1]}/{WD14}/, then run `python -m isekai migrate --runs "
+    ) in library.err.getvalue()
+    assert f"beta/runs/{walked.id}: migrated wd14" in library.out.getvalue()
+    assert not (damaged.path / PHOTO).exists()
 
 
 @pytest.mark.spec("cli:migrate:the-newest-caption-is-kept")

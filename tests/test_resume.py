@@ -422,6 +422,11 @@ def _migrate_refusals(
     stray.mkdir(parents=True)
     (stray / "notes.txt").write_text("not a list")
     collect(lambda: migrate(cluttered))
+    tagless = unmigrated("tagless", "smiling", "smiling")
+    (tagless.directory("control-anime-wai", WD14) / "001.json").write_text(
+        json.dumps({"schema": WD14_FILE.schema})
+    )
+    collect(lambda: migrate(tagless))
 
 
 def _draft_and_cancel_refusals(

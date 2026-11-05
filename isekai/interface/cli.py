@@ -485,7 +485,7 @@ def _migrate(args: argparse.Namespace, wired: Wiring) -> int:
     """Copy each run's per-flow description into `photo/`, printing a line per run.
 
     `--runs` walks that root alone; without it, `RUNS_ROOT` when it is a directory,
-    then each collection's `runs/` (D5). The library is imported here for `_ui`'s
+    then each collection's `runs/` (D40). The library is imported here for `_ui`'s
     reason: it is off `python -m isekai`'s import graph.
     """
     if args.runs is not None:

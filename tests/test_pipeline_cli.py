@@ -464,7 +464,7 @@ def test_a_flow_resolves_to_a_reader_running_the_configured_model(
 def test_composing_a_wiring_contacts_no_host_and_looks_up_no_binary(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Nothing is constructed until a flow asks, so no check can fire here.
+    """Nothing is constructed until a verb asks, so no check can fire here.
 
     Composing a wiring resolves nothing, so a machine with no Ollama running and
     no alias created still composes one. `shutil.which` and the transport both
