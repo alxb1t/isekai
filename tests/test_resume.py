@@ -384,7 +384,44 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
         )
     )
     _draft_and_cancel_refusals(wired, tmp_path, collect)
+    _migrate_refusals(wired, tmp_path, collect)
     return messages
+
+
+def _migrate_refusals(
+    wired: Wiring, tmp_path: Path, collect: Callable[[Callable[[], object]], None]
+) -> None:
+    """Provoke an unmigrated run's refusal and each of `migrate`'s own."""
+    from isekai.foundation.artifacts import WD14_FILE, write_json
+    from isekai.foundation.migrate import migrate
+    from isekai.foundation.run import WD14, Run, open_run, photo_of
+
+    def unmigrated(name: str, *tags: str) -> Run:
+        """Open a run whose flows each hold a WD14 list of one tag, in turn."""
+        shot = tmp_path / f"{name}.jpg"
+        shot.write_bytes(jpeg_bytes(560, 420 + 4 * len(tags) + len(name)))
+        run = open_run(shot, wired.runs_root)
+        for held, tag in zip((FLOW, "control-anime-wai"), tags, strict=False):
+            listed = run.directory(held, WD14)
+            listed.mkdir(parents=True)
+            write_json(
+                listed / "001.json",
+                {
+                    "schema": WD14_FILE.schema,
+                    "producer": {},
+                    "tags": [{"tag": tag, "confidence": 0.9}],
+                },
+            )
+        return run
+
+    differing = unmigrated("unmigrated", "smiling", "frowning")
+    collect(lambda: photo_of(differing, WD14))
+    collect(lambda: migrate(differing))
+    cluttered = unmigrated("cluttered", "smiling")
+    stray = cluttered.directory(PHOTO, WD14)
+    stray.mkdir(parents=True)
+    (stray / "notes.txt").write_text("not a list")
+    collect(lambda: migrate(cluttered))
 
 
 def _draft_and_cancel_refusals(
@@ -492,6 +529,7 @@ AVAILABLE: Sequence[str] = (
     "python -m isekai assign --flow ",
     "python -m isekai draft --flow ",
     "python -m isekai show ",
+    "python -m isekai migrate",
     "python -m isekai.boundary.provision fetch",
     # The two Ollama remedies.
     "ollama serve",
@@ -550,7 +588,8 @@ def _unrunnable(messages: Sequence[str]) -> list[str]:
 
     Parsed exactly as printed, with the parser that ships: a stage verb that
     names no run parses, does nothing and exits 0, so it is no remedy. A draft
-    names its run by its images, each of which must be on disk.
+    names its run by its images, each of which must be on disk, and `migrate` by
+    the runs root it walks, which must be a directory.
     e.g. "review --flow summon-anime-wai" -> listed
     """
     printed = _printed(messages)
@@ -565,6 +604,8 @@ def _names_its_run(command: str) -> bool:
     parsed = build_parser().parse_args(command.split())
     if parsed.verb == "draft":
         return all(image.is_file() for image in parsed.images)
+    if parsed.verb == "migrate":
+        return parsed.runs is not None and parsed.runs.is_dir()
     return bool(parsed.photos)
 
 
@@ -608,6 +649,8 @@ def test_the_command_guard_catches_a_command_that_names_no_run() -> None:
     ) == ["review --flow summon-anime-wai"]
     absent = "draft --flow conjure-anime-wai /nowhere/7.png"
     assert _unrunnable([f"x; run `python -m isekai {absent}`"]) == [absent]
+    for walked in ("migrate", "migrate --runs /nowhere/runs"):
+        assert _unrunnable([f"x; run `python -m isekai {walked}`"]) == [walked]
 
 
 @pytest.mark.spec("cli:refusals:refusal-exits-non-zero")
