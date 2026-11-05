@@ -10,6 +10,17 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.70.0] - 2026-11-06
+
+Gate: local 0m32s · CI not read under mf-ship · 0.69.1: local 0m33s · CI not read under mf-ship
+
+- The Render dialog shows each photograph as a 96×128 thumbnail under its flow, `×N` above one image, 15 then `+n`,
+  and the left out dimmed by reason and flow; a run not among the hub's sources falls back to its own photograph,
+  and the collections scroll in a max height (0104 D1–D3).
+- Review's tag list opens above its input, mirrored, when the room below to the sheet's foot cannot hold it and the
+  room above can or is larger, so the last rows' matches stay in view; the keys are unchanged (0104 D4, D5).
+- The design spec's J4·1 frame draws the Render dialog with thumbnails by flow, as it now shows (0104 D6).
+
 ## [0.69.1] - 2026-11-05
 
 Gate: local 0m33s · CI not read under mf-ship · 0.69.0: local 0m27s · CI not read under mf-ship
