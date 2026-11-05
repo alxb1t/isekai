@@ -28,15 +28,17 @@ import pytest
 
 from isekai.boundary import ollama
 from isekai.foundation.artifacts import APPROVED_FILE, DRAFT_FILE, SHEET_FILE, read
+from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Flow, Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import Run, open_run
+from isekai.interface import wiring
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
 from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import approve, review, save_draft
-from isekai.pipeline.tagging import FakeTagger
+from isekai.pipeline.tagging import FakeTagger, OllamaTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
 from tests.fakes import READER, FakeComfyClient, stub_comfy
@@ -114,40 +116,15 @@ def _two_flows(tmp_path: Path) -> Path:
     return root
 
 
-def _flow_declaring(
-    tmp_path: Path,
-    *,
-    model: str = "a-reader",
-    name: str = "declared-v1",
-) -> Flow:
-    """Return a scratch flow whose manifest names the given model."""
+def _flows_a_and_b(tmp_path: Path) -> Path:
+    """Return a flows root of `flow-a` and `flow-b`, copies of `summon-anime-wai`."""
     source = load_flow("summon-anime-wai").path
-    directory = tmp_path / "declaring" / name
-    directory.mkdir(parents=True)
-    manifest = json.loads((source / MANIFEST_NAME).read_text())
-    manifest["flow"] = name
-    manifest["model"] = model
-    (directory / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
-    for sibling in SIBLINGS:
-        (directory / sibling).write_bytes((source / sibling).read_bytes())
-    return load_flow(name, tmp_path / "declaring")
-
-
-def _two_models(tmp_path: Path) -> Path:
-    """Return a flows root with two flows naming two different models.
-
-    **Neither omits the key**, because omitting it is not expressible: with
-    `model` required there is no default to fall back to, and the case the
-    per-flow resolution still has real work in is two flows naming two *models*.
-    """
-    source = load_flow("summon-anime-wai").path
-    root = tmp_path / "two-models"
-    for name, model in (("flow-a", "a-reader"), ("flow-b", "b-reader")):
+    root = tmp_path / "flows-a-and-b"
+    for name in ("flow-a", "flow-b"):
         directory = root / name
         directory.mkdir(parents=True)
         manifest = json.loads((source / MANIFEST_NAME).read_text())
         manifest["flow"] = name
-        manifest["model"] = model
         (directory / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
         for sibling in SIBLINGS:
             (directory / sibling).write_bytes((source / sibling).read_bytes())
@@ -385,7 +362,7 @@ def test_an_untracked_flow_is_refused_before_any_run_is_opened(tmp_path: Path) -
     assert "summon-v9" in err.getvalue()
 
 
-# --- resolution: the flow names the model -------------------------------------
+# --- resolution: the config names the model -----------------------------------
 
 
 @pytest.mark.spec("caption:selection:an-unreachable-model-is-refused")
@@ -396,20 +373,19 @@ def test_a_model_this_build_cannot_reach_refuses_naming_it_and_the_remedy(
     """The refusal fires at the first call, not at resolution.
 
     There is no unknown-implementation case to refuse -- a one-entry registry
-    has no key to miss. What a manifest can still get wrong is the **model**, and
+    has no key to miss. What the config can still get wrong is the **model**, and
     an alias that was never created is the failure that will actually happen. It
     is named where it is discovered: at the call, by `ollama.py`, with the one
     command that fixes it.
     """
-    flow = _flow_declaring(tmp_path, model=READER)
-    reader = reader_for(flow)
+    reader = reader_for(load_flow("summon-anime-wai"))
     assert isinstance(reader, OllamaReader)
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
 
     with pytest.raises(Refusal) as refused:
         OllamaReader(
-            model=flow.model,
+            model=READER,
             transport=FakeTransport(payload={"error": "not found"}, status=404),
         ).read(photo, "brief", tmp_path)
 
@@ -418,7 +394,7 @@ def test_a_model_this_build_cannot_reach_refuses_naming_it_and_the_remedy(
     assert f"ollama create {READER}" in message
 
 
-@pytest.mark.spec("caption:selection:the-flow-names-the-model")
+@pytest.mark.spec("caption:selection:the-config-names-the-model")
 def test_the_implementation_the_artifacts_record_is_the_one_the_adapter_names() -> None:
     """The duplication between the record and the adapter cannot drift.
 
@@ -430,15 +406,27 @@ def test_the_implementation_the_artifacts_record_is_the_one_the_adapter_names() 
     assert OllamaReader(model="r").implementation == "ollama"
 
 
-@pytest.mark.spec("caption:selection:the-flow-names-the-model")
-def test_a_flow_resolves_to_a_reader_running_the_model_its_manifest_names(
-    tmp_path: Path,
+@pytest.mark.spec("caption:selection:the-config-names-the-model")
+@pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
+def test_a_flow_resolves_to_a_reader_running_the_configured_model(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    flow = _flow_declaring(tmp_path, model="a-reader")
-
+    flow = load_flow("summon-anime-wai")
     reader = reader_for(flow)
 
-    assert isinstance(reader, OllamaReader) and reader.model == "a-reader"
+    assert isinstance(reader, OllamaReader)
+    assert reader.model == load_caption_config().model
+
+    # A model no constant could fake: both seams read the config, not an alias.
+    configured = replace(load_caption_config(), model="a-reader")
+    monkeypatch.setattr(wiring, "load_caption_config", lambda: configured)
+
+    configured_reader = wiring.reader_for(flow)
+    configured_tagger = wiring.hosted_tagger_for(flow)
+
+    assert isinstance(configured_reader, OllamaReader)
+    assert isinstance(configured_tagger, OllamaTagger)
+    assert configured_reader.model == configured_tagger.model == "a-reader"
 
 
 @pytest.mark.spec("caption:reachability:the-check-fires-at-first-call")
@@ -508,46 +496,27 @@ def test_a_wiring_composed_without_a_reader_refuses_by_name(tmp_path: Path) -> N
     assert "composed without a reader" in err.getvalue()
 
 
-@pytest.mark.spec("cli:resolution:one-command-two-models")
-def test_one_command_over_two_flows_writes_two_artifacts_each_naming_its_own(
+@pytest.mark.spec("cli:resolution:one-command-one-model")
+def test_one_command_resolves_every_flow_on_the_configured_model(
     tmp_path: Path,
 ) -> None:
-    """The reason the resolution sits inside the loop, and it has work.
+    root = _flows_a_and_b(tmp_path)
 
-    Hoisted above it, one invocation naming two flows resolves a single reader
-    and hands it to both -- so one of the two captions records a producer that did
-    not produce it, with the whole gate green. With one arm, what it would get
-    wrong is the **model**, which differs per flow and is what the artifact has
-    to record.
-    """
-    wired = _wiring(tmp_path, flows_dir=_two_models(tmp_path))
-    wired.reader = lambda flow: FakeReader(prose="A person.", models=(flow.model,))
-    photo = tmp_path / "ada.jpg"
-    photo.write_bytes(jpeg_bytes(1200, 900))
+    for name in ("flow-a", "flow-b"):
+        reader = reader_for(load_flow(name, root))
 
-    status = dispatch(
-        _cli_args("caption", str(photo), tmp_path, flow=["flow-a", "flow-b"]),
-        wired,
-    )
-
-    assert status == 0
-    named = {
-        written.parent.parent.name: json.loads(written.read_text())["producer"][
-            "models"
-        ][0]
-        for written in sorted((tmp_path / "runs").glob("*/*/captions/001.json"))
-    }
-    assert named == {"flow-a": "a-reader", "flow-b": "b-reader"}
+        assert isinstance(reader, OllamaReader)
+        assert reader.model == load_caption_config().model
 
 
 def _caption_with_one_refusing(tmp_path: Path, refusing: str) -> tuple[int, Wiring]:
     """Caption one photograph over two flows, the reader refusing `refusing`'s."""
-    wired = _wiring(tmp_path, flows_dir=_two_models(tmp_path))
+    wired = _wiring(tmp_path, flows_dir=_flows_a_and_b(tmp_path))
 
     def reader(flow: Flow) -> FakeReader:
         if flow.id == refusing:
             raise Refusal(f"{flow.id}: its model is not running")
-        return FakeReader(prose="A person.", models=(flow.model,))
+        return FakeReader(prose="A person.")
 
     wired.reader = reader
     photo = tmp_path / "ada.jpg"

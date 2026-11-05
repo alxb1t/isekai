@@ -10,8 +10,8 @@ before any GPU is rented, and each render records what identifies the configurat
 ### Requirement: A flow is pinned by equality; changing any file in it is an explicit act
 
 The system SHALL hold each tracked flow against a committed digest computed over every file in its
-directory, so that altering a dial, a prompt fragment, the graph, the schema or either briefing fails the
-suite naming the flow. Re-pinning SHALL be possible only as a deliberate edit to the committed digest, in
+directory, so that altering a dial, a prompt fragment, the graph or the schema fails the suite naming
+the flow. Re-pinning SHALL be possible only as a deliberate edit to the committed digest, in
 a change that states what moved and why.
 
 The freeze makes nothing change silently; it does not stop change. Where the old configuration is still wanted — a
@@ -309,9 +309,9 @@ the suite green.
 ### Requirement: A flow is a flat directory of named files whose manifest declares and never computes
 
 The system SHALL define a flow as a directory containing exactly the manifest and its named siblings — a
-graph, a schema and a caption briefing — all of them directly in that directory, with no sub-directory
+graph and a schema — all of them directly in that directory, with no sub-directory
 and no other file. The manifest SHALL declare its required inputs, the vocabulary and the models its
-render is pinned to, the model its hosted stages run, whether it needs the tagger, its node roles, its
+render is pinned to, whether it needs the tagger, its node roles, its
 prompt fragments and its dials. The manifest SHALL NOT name any of its sibling files, SHALL declare the
 version of its own format, and SHALL contain no computed or conditional value.
 
@@ -319,12 +319,11 @@ version of its own format, and SHALL contain no computed or conditional value.
 flows/<id>/
 ├── flow.json              the manifest
 ├── graph.json
-├── schema.json
-└── caption.briefing.md
+└── schema.json
 ```
 
 A manifest that computes nothing is checkable without running anything, so a broken flow fails the suite, not a
-boot. The briefing and the schema shape the image, so they sit inside the freeze, and the digest covers regular
+boot. The schema shapes the image, so it sits inside the freeze, and the digest covers regular
 files only, so a nested file would escape it ([D14](../../../docs/decisions.md#d14--a-flow-is-one-flat-directory)).
 A key that can hold only one value is not a declaration, so the manifest names no filename.
 
@@ -332,8 +331,7 @@ A key that can hold only one value is not a declaration, so the manifest names n
 - **Key:** `image-generation:manifest:a-flow-is-flat-and-its-files-are-named`
 - **Layers:** unit
 - **WHEN** a tracked flow directory is read
-- **THEN** it holds exactly a manifest, a graph, a schema and a caption briefing, each directly in the
-  directory
+- **THEN** it holds exactly a manifest, a graph and a schema, each directly in the directory
 - **AND** the manifest declares no filename for any of them
 - **AND** the directory contains no sub-directory and no further file
 
@@ -365,7 +363,7 @@ A key that can hold only one value is not a declaration, so the manifest names n
 - **Layers:** unit
 - **WHEN** the suite runs
 - **THEN** every tracked flow manifest parses
-- **AND** the schema, the caption briefing and the graph each one needs are present in its own directory
+- **AND** the schema and the graph each one needs are present in its own directory
 
 #### Scenario: an invalid manifest is refused naming the field
 - **Key:** `image-generation:manifest:invalid-manifest-names-the-field`
@@ -373,62 +371,6 @@ A key that can hold only one value is not a declaration, so the manifest names n
 - **WHEN** a flow manifest is missing or malformed in a declared field
 - **THEN** loading it is refused naming that field
 - **AND** the refusal does not require the flow to be executed
-
-### Requirement: Every flow declares the model its hosted stages run
-
-The system SHALL require every flow manifest to declare, in one top-level key, the model its hosted
-stages run. It SHALL refuse a manifest that declares none, and SHALL refuse one whose value is not a
-non-empty string, naming the key in both cases. It SHALL derive no part of that value at load time.
-
-The key is a bare string, not a block: with one arm there is no choice to hold
-([D5](../../../docs/decisions.md#d5--one-arm)), and the loader's allowlist of top-level keys catches a misspelling.
-It is separate from the render's models, which a rented GPU loads by digest; this one the local runtime is asked for
-by alias. One key, not one per stage, makes *this flow is wholly one model* a property of the document — the reader
-and the hosted tagger share an alias, so two prompts reach one model framed alike.
-
-#### Scenario: a flow declares the model it runs
-- **Key:** `image-generation:model:flow-declares-the-model-it-runs`
-- **Layers:** unit
-- **WHEN** a flow manifest is loaded
-- **THEN** the loaded flow carries the model name its manifest declares
-- **AND** no part of that value is derived at load time
-
-#### Scenario: a manifest declaring no model is refused
-- **Key:** `image-generation:model:an-absent-model-is-refused`
-- **Layers:** unit
-- **WHEN** a flow manifest declares no model
-- **THEN** loading it is refused naming the key
-- **AND** the refusal does not require the flow to be executed
-
-#### Scenario: a model that is not a non-empty string is refused
-- **Key:** `image-generation:model:an-empty-model-is-refused`
-- **Layers:** unit
-- **WHEN** a flow manifest declares a model that is absent of characters or is not a string
-- **THEN** loading it is refused naming the key
-- **AND** the value is not coerced into a string
-
-### Requirement: An unrecognised manifest key is refused, naming what it carries
-
-The system SHALL refuse to load a flow whose manifest carries any top-level key the build does not
-recognise, naming the key. The refusal SHALL NOT require the flow to be executed.
-
-Every declared key is required, so a misspelt key is two failures: the key the build reads is absent, and a key it
-does not read is present. A manifest carrying `modl` and no `model`, refused for the absence alone, sends the
-operator to add a second key rather than fix the one they wrote.
-
-#### Scenario: an unrecognised manifest key is refused naming it
-- **Key:** `image-generation:manifest:unknown-key-is-refused`
-- **Layers:** unit
-- **WHEN** a flow manifest carries a top-level key the build does not recognise
-- **THEN** loading it is refused naming that key
-- **AND** the refusal does not require the flow to be executed
-
-#### Scenario: a misspelled model key is refused naming what it carries
-- **Key:** `image-generation:manifest:a-misspelled-model-key-is-refused`
-- **Layers:** unit
-- **WHEN** a flow manifest carries a near-miss spelling of the model key
-- **THEN** loading it is refused naming the key it carries
-- **AND** the refusal names the unrecognised key rather than only the absent one
 
 ### Requirement: A failure is recorded as the kind it was, and one flow's failure is its own
 
@@ -665,8 +607,8 @@ colour profile names a device and may carry free text, and the endpoint decodes 
 
 ### Requirement: A control flow equals its subject flow but for the dials it zeroes
 
-The system SHALL hold a control flow equal to its subject flow: the graph, the schema and the briefing
-byte for byte, and the manifest equal once the identifier and the face dials are set aside, with those
+The system SHALL hold a control flow equal to its subject flow: the graph and the schema byte for byte,
+and the manifest equal once the identifier and the face dials are set aside, with those
 dials at zero. A difference anywhere else SHALL fail the suite naming the file.
 
 ```
@@ -674,7 +616,6 @@ flows/summon-anime-wai/                    flows/control-anime-wai/
   flow.json   ip_weight 0.9, cn 0.8   ──▶    flow.json   the identifier; ip_weight 0, cn 0
   graph.json                          ══▶    graph.json           byte-identical
   schema.json                         ══▶    schema.json          byte-identical
-  caption.briefing.md                 ══▶    caption.briefing.md  byte-identical
 ```
 
 A control is a floor only while it differs from its subject in exactly the thing under test. Each flow is
@@ -685,7 +626,7 @@ and the two move together or not at all
 #### Scenario: the control's files equal the subject's
 - **Key:** `image-generation:control:files-equal-the-subject`
 - **Layers:** unit
-- **WHEN** the control flow's graph, schema and briefing are compared with the subject's
+- **WHEN** the control flow's graph and schema are compared with the subject's
 - **THEN** each is byte-identical
 
 #### Scenario: the manifests differ only in the identifier and the face dials
@@ -816,7 +757,7 @@ A session's limit is estimated from what renders actually took; a record without
 
 ### Requirement: A flat flow is its subject with the face chain ending early and a flat style
 
-The system SHALL hold a flat flow equal to its subject flow but for its style: the schema and the briefing byte for
+The system SHALL hold a flat flow equal to its subject flow but for its style: the schema byte for
 byte; the graph equal but for the identity node's `end_at`, below one; and the manifest equal once the identifier,
 `ip_weight` and the prompt's trailer and negative are set aside, the trailer gaining `flat color, cel shading, anime
 coloring, colorful` and the negative `realistic, photorealistic, 3d, semi-realistic`. A difference anywhere else SHALL
@@ -824,7 +765,7 @@ fail the suite naming the file.
 
 ```
 flows/summon-anime-wai/            flows/summon-flat-anime-wai/
-  schema.json, briefing    ══▶       byte-identical
+  schema.json              ══▶       byte-identical
   graph.json  end_at 1     ──▶       end_at below 1
   flow.json   ip_weight    ──▶       a lower ip_weight; the flat trailer and negative
 ```
@@ -836,8 +777,8 @@ migration of it ([D15](../../../docs/decisions.md#d15--a-flow-is-named-for-what-
 #### Scenario: the flat flow's files equal the subject's
 - **Key:** `image-generation:flat:files-equal-the-subject`
 - **Layers:** unit
-- **WHEN** a flat flow's schema and briefing are compared with its subject's
-- **THEN** each is byte-identical
+- **WHEN** a flat flow's schema is compared with its subject's
+- **THEN** it is byte-identical
 
 #### Scenario: the graph differs only in the face chain's end
 - **Key:** `image-generation:flat:the-graph-differs-in-the-face-chains-end`
@@ -856,7 +797,7 @@ migration of it ([D15](../../../docs/decisions.md#d15--a-flow-is-named-for-what-
 ### Requirement: A semireal and a vivid flow are their subject's face chain ending early, in a style of their own
 
 The system SHALL hold `summon-semireal-anime-wai` and `summon-vivid-anime-wai` each equal to `summon-anime-wai` but
-for its style, as a flat flow is held: the schema and the briefing byte for byte; the graph equal but for the identity
+for its style, as a flat flow is held: the schema byte for byte; the graph equal but for the identity
 node's `end_at`, below one; and the manifest equal once the identifier, `ip_weight` and the prompt's trailer and
 negative are set aside. The semireal flow's trailer and negative SHALL be its subject's; the vivid flow's trailer SHALL
 be its subject's, and its negative SHALL gain `realistic, photorealistic, 3d, semi-realistic, monochrome, greyscale,
@@ -875,8 +816,8 @@ was chosen by eye on the operator's photographs, as the cohort count cannot read
 #### Scenario: their files equal the subject's
 - **Key:** `image-generation:styled:files-equal-the-subject`
 - **Layers:** unit
-- **WHEN** the semireal or the vivid flow's schema and briefing are compared with its subject's
-- **THEN** each is byte-identical
+- **WHEN** the semireal or the vivid flow's schema is compared with its subject's
+- **THEN** it is byte-identical
 
 #### Scenario: their graph differs only in the face chain's end
 - **Key:** `image-generation:styled:the-graph-differs-in-the-face-chains-end`
@@ -891,3 +832,26 @@ was chosen by eye on the operator's photographs, as the cohort count cannot read
   prompt's trailer and negative set aside
 - **THEN** they are equal
 - **AND** the trailer and the negative hold that flow's terms
+
+### Requirement: An unrecognised or misspelled manifest key is refused, naming what it carries
+
+The system SHALL refuse to load a flow whose manifest carries any top-level key the build does not
+recognise, naming the key. The refusal SHALL NOT require the flow to be executed.
+
+Every declared key is required, so a misspelt key is two failures: the key the build reads is absent, and a key it
+does not read is present. A manifest carrying `taggr` and no `tagger`, refused for the absence alone, sends the
+operator to add a second key rather than fix the one they wrote.
+
+#### Scenario: an unrecognised manifest key is refused naming it
+- **Key:** `image-generation:manifest:unknown-key-is-refused`
+- **Layers:** unit
+- **WHEN** a flow manifest carries a top-level key the build does not recognise
+- **THEN** loading it is refused naming that key
+- **AND** the refusal does not require the flow to be executed
+
+#### Scenario: a misspelled key is refused naming what it carries
+- **Key:** `image-generation:manifest:a-misspelled-key-is-refused`
+- **Layers:** unit
+- **WHEN** a flow manifest carries a near-miss spelling of a key the build reads
+- **THEN** loading it is refused naming the key it carries
+- **AND** the refusal names the unrecognised key rather than only the absent one

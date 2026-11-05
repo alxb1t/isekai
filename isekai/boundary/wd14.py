@@ -2,11 +2,10 @@
 
 **The heavier of the pipeline's two tagger boundaries, and the only one that
 reaches no network at all.** `ollama.py` reaches a model over HTTP, on the alias
-the flow's manifest names in its `model` key -- a key every flow is required to
-declare, so it runs for every flow; this one opens a digest-verified file and
+`config/caption.json` names, for every flow; this one opens a digest-verified file and
 resolves through **no manifest key at all**. They are deliberately not two
-implementations of one Protocol: one is selected by a string in a frozen manifest,
-because which model answers is a claim a flow makes about itself, and the other by
+implementations of one Protocol: one is selected by a string in `config/caption.json`,
+and the other by
 a pin in this build that no flow has an opinion about. A Protocol whose two
 implementations resolve through different mechanisms is a shared name rather than
 a seam.

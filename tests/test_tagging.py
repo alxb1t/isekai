@@ -23,6 +23,7 @@ import pytest
 from isekai.boundary import ollama, provision
 from isekai.boundary.wd14 import FLOOR, MODEL_DEST, LocalTagger
 from isekai.foundation.artifacts import TAGS_FILE, WD14_FILE, read
+from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import (
     FLOWS_DIR,
     MANIFEST_NAME,
@@ -439,31 +440,26 @@ def test_the_local_tagger_resolves_identically_for_every_tracked_flow(
     assert all(pair == opened for pair in resolved.values())
 
 
-@pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-flows-model")
+@pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
 @pytest.mark.parametrize("flow_id", tracked_flows())
-def test_the_hosted_tagger_runs_the_model_the_flow_names(flow_id: str) -> None:
-    """There is no absence case: every flow names the model its tagger runs.
-
-    A flow declaring no hosted model is not merely unreached but unrepresentable:
-    `model` is required of every flow, so the loader refuses the manifest before
-    anything resolves. What is asserted is what the tagger does.
-    """
+def test_the_hosted_tagger_runs_the_configured_model(flow_id: str) -> None:
+    """Every flow's hosted tagger runs the model `config/caption.json` names."""
     flow = load_flow(flow_id)
 
     resolved = wiring.hosted_tagger_for(flow)
 
     assert isinstance(resolved, OllamaTagger)
     assert resolved.implementation == "ollama"
-    assert resolved.model == flow.model
+    assert resolved.model == load_caption_config().model
 
 
-@pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-flows-model")
-def test_each_flow_gets_a_hosted_tagger_on_the_model_its_own_reader_runs() -> None:
-    """Resolved per flow, on the key the reader also reads.
+@pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
+def test_each_flow_gets_a_hosted_tagger_on_its_readers_model() -> None:
+    """Resolved per flow, on the reader's model.
 
     One alias answers both prompts, which is why the tag prompt is not
-    chat-framed -- so the tagger's model being the reader's model is asserted
-    rather than left as a coincidence of the two flows shipping the same alias.
+    chat-framed -- so the tagger's model being the reader's model is asserted,
+    and both are the one `config/caption.json` names.
     """
     for flow_id in tracked_flows():
         flow = load_flow(flow_id)
@@ -473,7 +469,7 @@ def test_each_flow_gets_a_hosted_tagger_on_the_model_its_own_reader_runs() -> No
 
         assert isinstance(tagger, OllamaTagger)
         assert isinstance(reader, OllamaReader)
-        assert tagger.model == reader.model == flow.model
+        assert tagger.model == reader.model == load_caption_config().model
 
 
 class Failing:

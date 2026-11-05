@@ -388,10 +388,10 @@ loads it, because a vocabulary no loaded model indexes outlives any particular t
 - **WHEN** a caller asks a manifest for an artifact it does not declare
 - **THEN** the command refuses naming the artifact and the manifest it searched
 
-### Requirement: The reader's files are provisioned from their own manifest, keyed by the model they build
+### Requirement: The reader's files are provisioned from their own manifest, keyed by the model the caption config names
 
 The system SHALL declare the reader's model and projector files as pinned, digested entries in a manifest
-of their own, derived like every other manifest, and SHALL name, for each model a flow may declare, which
+of their own, derived like every other manifest, and SHALL name, for each model the caption config may name, which
 entry is its model file and which its projector. Provisioning SHALL fetch and verify that manifest's entries
 exactly as it does every other's.
 
@@ -406,11 +406,11 @@ check one place to read the pins from
 - **THEN** every entry carries a destination, a digest, a byte count and a source at an immutable revision
 - **AND** every model it names points at exactly one model file and one projector file among its entries
 
-#### Scenario: every model a tracked flow declares is pinned
-- **Key:** `model-provisioning:reader:every-flow-model-is-pinned`
+#### Scenario: the model the caption config names is pinned
+- **Key:** `model-provisioning:reader:the-caption-model-is-pinned`
 - **Layers:** unit
 - **WHEN** the suite runs
-- **THEN** the model every tracked flow declares has an entry in the reader's manifest
+- **THEN** the model the caption config names has an entry in the reader's manifest
 
 #### Scenario: the shipped driver provisions the reader's manifest
 - **Key:** `model-provisioning:reader:driver-provisions-the-manifest`

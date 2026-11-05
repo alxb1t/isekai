@@ -267,7 +267,7 @@ def ask(
 
     if status == 404:
         raise Refusal(
-            f"{HOST} does not carry the model {model!r} this flow declares; "
+            f"{HOST} does not carry the model {model!r} `config/caption.json` names; "
             f"{_rebuild(remedy)}"
         )
     if status >= 500:
@@ -351,7 +351,7 @@ def _verified_build(model: str, root: Path) -> Mapping[str, DigestRecord]:
     built = manifest.get("aliases", {}).get(model)
     if built is None:
         raise Refusal(
-            f"the model {model!r} this flow declares is pinned by no entry in "
+            f"the model {model!r} `config/caption.json` names is pinned by no entry in "
             "config/reader.json; add it to `tools/derive_reader.py`, run "
             "`uv run python -m tools.derive_reader`, then try again"
         )

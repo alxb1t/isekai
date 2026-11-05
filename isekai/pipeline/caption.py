@@ -18,10 +18,10 @@ routed around: substituting a different implementation would write an artifact
 whose provenance record is untrue, and the whole discipline of this pipeline is
 that a producer names what actually made the artifact.
 
-**One implementation ships, and the flow names the model it runs.**
+**One implementation ships, and `config/caption.json` names the model it runs.**
 `OllamaReader` reaches a runtime over HTTP to a socket on this machine, and the
-flow's manifest declares the alias -- `interface/wiring.py` resolves it per flow,
-so one command over two flows gives each its own. The adapter lives here, beside
+config declares the alias, which `interface/wiring.py` resolves for every flow.
+The adapter lives here, beside
 the Protocol and the double it shares, rather than in `boundary/`: an
 implementation of a Protocol in a different layer from the Protocol is the
 arrangement this avoids.
@@ -240,10 +240,8 @@ def caption(
 
     **The caption belongs to the flow that asked for it.** The reader still gets
     the photograph and its standing instructions and nothing else -- `flow` never
-    reaches it -- but the answer is written under that flow, because the briefing
-    it was produced under is part of that flow's frozen directory. Two flows over
-    one photograph read it twice, and a flow cannot inherit a reading written to
-    answer a different question.
+    reaches it -- but the answer is written under that flow, as every stage's
+    artifact is (D17). Two flows over one photograph read it twice.
 
     Returns the artifact's path when one is written, and None when the stage was
     already complete -- which is the whole of resume at this stage: no special

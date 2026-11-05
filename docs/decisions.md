@@ -118,8 +118,8 @@ image was rendered under, newest or not.
 
 ### D6 · Ollama at a fixed local address, on a checked model
 
-**Ollama is reached over plain HTTP at a fixed local address, never through a proxy, and the model a flow
-names is checked against `config/reader.json` before its first call.** The address is a constant, with no
+**Ollama is reached over plain HTTP at a fixed local address, never through a proxy, and the model
+`config/caption.json` names is checked against `config/reader.json` before its first call.** The address is a constant, with no
 flag and no environment variable. The call uses Ollama's own `/api/generate`, which carries the sampling
 options the OpenAI-compatible endpoint cannot. Ollama's own record of the model must name the model and
 projector files the manifest pins, or the call is refused and spends no attempt.
@@ -130,7 +130,7 @@ The ComfyUI transport ignores the environment's proxy the same way.
   behind it shape the prose, so a caption can claim a pin only once those files are checked.
 - **Accepts:** whatever holds port 11434 receives the photograph; nothing probes that it is Ollama.
   Reopen when a listener that is not Ollama is seen there, or the address stops being loopback-only.
-- **Made by:** `0019`, `0033`, `0037`, `0052`.
+- **Made by:** `0019`, `0033`, `0037`, `0052`, `0102`.
 
 ### D7 · WD14 is one artifact in two files
 
@@ -232,12 +232,12 @@ draft, approved without the repeat.
 
 ### D14 · A flow is one flat directory
 
-**A flow is one flat directory of named files — `flow.json`, `graph.json`, `schema.json`,
-`caption.briefing.md` — and it shares nothing with another flow.**
+**A flow is one flat directory of named files — `flow.json`, `graph.json`, `schema.json` — and it
+shares nothing with another flow.**
 
 - **Why:** the pin covers only the files directly in the directory, so a nested file would escape the
   freeze. Sharing nothing means a change to one flow can never change another.
-- **Made by:** `0016`, `0022`.
+- **Made by:** `0016`, `0022`, `0102`.
 
 ### D15 · A flow is named for what it is
 

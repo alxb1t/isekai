@@ -15,7 +15,6 @@ import pytest
 
 from isekai.boundary.provision import VOCABULARY_MANIFEST_PATH
 from isekai.foundation.flow import (
-    CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
     KNOWN,
     MANIFEST_NAME,
@@ -50,22 +49,22 @@ from isekai.foundation.refusal import Refusal
 # explains how to evade itself is one that gets evaded.
 PINNED: dict[str, str] = {
     "conjure-anime-wai": (
-        "f2bd3202079b1288068aed7ccf57e2b6b0e3b9a1db037973b4be99f83bf22a1f"
+        "8123c38d701748d41e7dc6d9aea2af647c4fbcc24435c2a3c351860f36dc0180"
     ),
     "control-anime-wai": (
-        "f44b0f40647d0c51fa0eecab5a501c8f0318992fe8aac631c7a6cd0d81b61f7d"
+        "a5e41ce47810b0c9d087bae51255ac3c31500e1fd90e97248d9a356241720bcf"
     ),
     "summon-anime-wai": (
-        "96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698"
+        "0b841d22d5d3e659541c1459d42fdf5281a7c6338a193a04189da199b8f83e47"
     ),
     "summon-flat-anime-wai": (
-        "fd8e9f08364172fa0effe13220134fffe76c5abae50c5cd1c68d31b23bdd81ab"
+        "fa87fed5ff33e169ca94f82740716535679ff0990f0a676bdca9fee33380eec1"
     ),
     "summon-semireal-anime-wai": (
-        "b96c1df1c1006fbf1f4445d4d52e6d24b5eb34250460dddc977e6d9f7aa2e3f4"
+        "fbed851f8d9b049672cf73004457c5d4b7c4c1948a7935fc7fd9dbf9dc872b70"
     ),
     "summon-vivid-anime-wai": (
-        "76d16cf6ab1139f0985ce9e1f01db957f5817cb7fcd6114709969166edea6850"
+        "f72aa506e5668be9982515654b659e3760ac9e05c71a0d28e533e281468d006e"
     ),
 }
 
@@ -183,16 +182,12 @@ def test_every_tracked_flow_parses(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec("image-generation:manifest:tracked-flows-are-gate-checked")
-def test_the_schema_briefings_and_graph_each_flow_needs_are_in_its_directory() -> None:
+def test_the_schema_and_graph_each_flow_needs_are_in_its_directory() -> None:
     vocabulary = json.loads(VOCABULARY_MANIFEST_PATH.read_text())["entries"][0]
 
     for name in tracked_flows():
         flow = load_flow(name)
-        for path in (
-            flow.graph_path,
-            flow.schema_path,
-            flow.caption_briefing_path,
-        ):
+        for path in (flow.graph_path, flow.schema_path):
             assert path.is_file(), path
             assert path.parent == flow.path
         assert flow.schema.names
@@ -211,8 +206,8 @@ def test_a_flow_is_flat_and_holds_its_named_files_and_nothing_else() -> None:
     the freeze exists to make loud. The count is pinned here, and only here, so
     the prose elsewhere carries no numeral.
     """
-    assert len(SIBLINGS) == 3
-    assert SIBLINGS == (GRAPH_NAME, SCHEMA_NAME, CAPTION_BRIEFING_NAME)
+    assert len(SIBLINGS) == 2
+    assert SIBLINGS == (GRAPH_NAME, SCHEMA_NAME)
 
     for name in tracked_flows():
         flow = load_flow(name)
@@ -661,7 +656,7 @@ def test_editing_any_of_its_named_files_changes_the_digest(
 def test_adding_a_new_file_to_a_flow_moves_its_digest(tmp_path: Path) -> None:
     # The property the fold rests on: the freeze covers the directory, not a
     # named pair. A further declared value has to move the digest, or holding the
-    # schema and the briefing inside the flow means less than its own sentence.
+    # schema inside the flow means less than its own sentence.
     root = _scratch(tmp_path)
     assert manifest_digest("summon-anime-wai", root) == PINNED["summon-anime-wai"]
 
@@ -753,68 +748,7 @@ def test_the_fields_appear_in_the_order_the_schema_declares(flow: Flow) -> None:
     assert order == sorted(order)
 
 
-# --- the model key, and the allowlist -----------------------------------------
-
-
-@pytest.mark.spec("image-generation:model:flow-declares-the-model-it-runs")
-def test_a_flow_declaring_a_model_is_loaded_with_it(tmp_path: Path) -> None:
-    """Read verbatim: what comes back is what the document said.
-
-    The same property the manifest as a whole has, asserted of the key that
-    replaced the `hosted` block. A derived value here would be a second place the
-    model a flow runs on is decided, and the manifest is the first.
-    """
-    root = _scratch(tmp_path, model="a-reader")
-
-    assert load_flow("summon-anime-wai", root).model == "a-reader"
-
-
-@pytest.mark.spec("image-generation:model:flow-declares-the-model-it-runs")
-def test_the_tracked_flows_each_declare_the_model_they_are_meant_to_run() -> None:
-    """The last hole, and the only thing that closes it.
-
-    `manifest_digest` freezes bytes without knowing whether they are the right
-    ones, so a flow committed naming the wrong alias would be frozen naming the
-    wrong alias. **The first commit is exactly where this mistake lives**, and one
-    assertion on the shipped flows is what it costs.
-    """
-    for name in tracked_flows():
-        assert load_flow(name).model == "joycaption-beta-one-q4k"
-
-
-@pytest.mark.spec("image-generation:model:an-absent-model-is-refused")
-def test_a_manifest_declaring_no_model_is_refused_naming_the_key(
-    tmp_path: Path,
-) -> None:
-    """`model` is required, not optional, so a manifest declaring none is refused."""
-    root = _scratch(tmp_path)
-    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
-    del document["model"]
-    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
-
-    with pytest.raises(Refusal) as refused:
-        load_flow("summon-anime-wai", root)
-
-    assert "model" in str(refused.value)
-
-
-@pytest.mark.spec("image-generation:model:an-empty-model-is-refused")
-@pytest.mark.parametrize("value", [None, "", "   ", 3, [], {}])
-def test_a_model_that_is_not_a_non_empty_string_is_refused(
-    tmp_path: Path, value: object
-) -> None:
-    """The value, not only its presence.
-
-    A bare `str()` would load `{"model": null}` as the Python string `"None"` and
-    send a run at an alias that cannot exist -- a refusal at the first call, with
-    the manifest looking correct the whole way there.
-    """
-    root = _scratch(tmp_path, model=value)
-
-    with pytest.raises(Refusal) as refused:
-        load_flow("summon-anime-wai", root)
-
-    assert "model" in str(refused.value)
+# --- the allowlist ------------------------------------------------------------
 
 
 @pytest.mark.spec("image-generation:manifest:unknown-key-is-refused")
@@ -846,10 +780,10 @@ def test_refusing_an_unknown_key_does_not_require_the_flow_to_be_executed(
 
 
 def _misspelled(tmp_path: Path, typo: str) -> Refusal:
-    """Return the refusal from a manifest whose model key is written `typo`."""
+    """Return the refusal from a manifest whose tagger key is written `typo`."""
     root = _scratch(tmp_path)
     document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
-    document[typo] = document.pop("model")
+    document[typo] = document.pop("tagger")
     (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
 
     with pytest.raises(Refusal) as refused:
@@ -857,9 +791,9 @@ def _misspelled(tmp_path: Path, typo: str) -> Refusal:
     return refused.value
 
 
-@pytest.mark.spec("image-generation:manifest:a-misspelled-model-key-is-refused")
-@pytest.mark.parametrize("typo", ["modl", "Model", "model_name"])
-def test_a_misspelled_model_key_is_refused_naming_what_was_written(
+@pytest.mark.spec("image-generation:manifest:a-misspelled-key-is-refused")
+@pytest.mark.parametrize("typo", ["taggr", "Tagger", "tagger_on"])
+def test_a_misspelled_key_is_refused_naming_what_was_written(
     tmp_path: Path, typo: str
 ) -> None:
     """What a flat manifest buys, and it costs no new check.
@@ -875,22 +809,6 @@ def test_a_misspelled_model_key_is_refused_naming_what_was_written(
     assert typo in str(_misspelled(tmp_path, typo))
 
 
-@pytest.mark.spec("image-generation:manifest:a-misspelled-model-key-is-refused")
-def test_a_typo_that_collides_with_a_real_key_is_refused_for_the_absence(
-    tmp_path: Path,
-) -> None:
-    """`models` is the one near-miss the allowlist cannot see, and it is still caught.
-
-    It is a real key -- the render weights -- so writing `model`'s value into it
-    is not an unknown key at all. What the loader has left is the absence, and
-    naming `model` is the correct diagnosis for this row: the operator did write
-    a key this build reads, just not that one.
-    """
-    assert "models" in KNOWN
-
-    assert "model" in str(_misspelled(tmp_path, "models"))
-
-
 @pytest.mark.spec("image-generation:manifest:unknown-key-is-refused")
 def test_every_key_this_build_reads_is_required() -> None:
     """There is no optional key, which is what leaves the allowlist doing it all.
@@ -899,9 +817,9 @@ def test_every_key_this_build_reads_is_required() -> None:
     indistinguishable from a deliberate omission, because there are no
     deliberate omissions.
     """
-    assert MANIFEST_VERSION == 4
+    assert MANIFEST_VERSION == 5
     assert KNOWN == REQUIRED
-    assert "model" in REQUIRED
+    assert "model" not in REQUIRED
     assert "tagger" in REQUIRED
 
 
@@ -1004,14 +922,13 @@ def _control_differences(control_dir: Path, subject_dir: Path) -> list[str]:
 
 @pytest.mark.spec("image-generation:control:files-equal-the-subject")
 @pytest.mark.parametrize("control", sorted(CONTROLS))
-def test_a_control_holds_the_subjects_graph_schema_and_briefing(control: str) -> None:
+def test_a_control_holds_the_subjects_graph_and_schema(control: str) -> None:
     differing = _control_differences(
         load_flow(control).path, load_flow(CONTROLS[control]).path
     )
 
     assert GRAPH_NAME not in differing
     assert SCHEMA_NAME not in differing
-    assert CAPTION_BRIEFING_NAME not in differing
 
 
 @pytest.mark.spec("image-generation:control:manifest-differs-only-in-the-face-dials")
@@ -1077,7 +994,7 @@ def _styled_differences(styled_dir: Path, subject_dir: Path) -> list[str]:
     return differing
 
 
-def _holds_the_subjects_schema_and_briefing(name: str, tmp_path: Path) -> None:
+def _holds_the_subjects_schema(name: str, tmp_path: Path) -> None:
     ours, subject = _pair(tmp_path, name, STYLED[name].subject)
     assert _styled_differences(ours, subject) == []
 
@@ -1115,8 +1032,8 @@ def _manifest_differs_only_in_its_name_and_its_style(name: str, tmp_path: Path) 
 
 
 @pytest.mark.spec("image-generation:flat:files-equal-the-subject")
-def test_a_flat_flow_holds_the_subjects_schema_and_briefing(tmp_path: Path) -> None:
-    _holds_the_subjects_schema_and_briefing(FLAT, tmp_path)
+def test_a_flat_flow_holds_the_subjects_schema(tmp_path: Path) -> None:
+    _holds_the_subjects_schema(FLAT, tmp_path)
 
 
 @pytest.mark.spec("image-generation:flat:the-graph-differs-in-the-face-chains-end")
@@ -1138,10 +1055,8 @@ LOOKS = sorted(set(STYLED) - {FLAT})
 
 @pytest.mark.spec("image-generation:styled:files-equal-the-subject")
 @pytest.mark.parametrize("look", LOOKS)
-def test_a_look_holds_the_subjects_schema_and_briefing(
-    look: str, tmp_path: Path
-) -> None:
-    _holds_the_subjects_schema_and_briefing(look, tmp_path)
+def test_a_look_holds_the_subjects_schema(look: str, tmp_path: Path) -> None:
+    _holds_the_subjects_schema(look, tmp_path)
 
 
 @pytest.mark.spec("image-generation:styled:the-graph-differs-in-the-face-chains-end")

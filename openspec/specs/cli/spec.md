@@ -231,44 +231,6 @@ fixed list: a flow with no identity leg declares none of that leg's dials.
 - **WHEN** each tracked flow is loaded
 - **THEN** every dial the roles it declares require is present in its manifest
 
-### Requirement: Every per-flow seam is resolved per flow, on the model that flow names, for a flow that declares its stage
-
-The system SHALL resolve every seam a stage reaches — the reader and each tagger — once per flow being acted
-on, rather than once for the whole invocation, so that a single command naming several flows runs each flow
-on the model its own manifest declares. A seam a flow selects by manifest key SHALL construct nothing until a
-flow asks for it, and a seam this build pins, whose model no manifest names, SHALL resolve for every flow
-whose manifest declares the stage that seam serves. A front end that serves no hosted-model stage SHALL remain
-able to compose a wiring with none of them at all, and SHALL refuse naming the seam if a verb that needs one is
-then invoked through it.
-
-A flow supplies everything a stage reads, its model included, so a seam resolved above the loop over flows would
-hand one flow's model to another while every artifact looked well-formed. A seam reaching a local runtime is named
-in the manifest, because which model answers is a claim the flow makes about itself; a seam reading a file this
-build pins makes no such claim, and the manifest names none of its files. Whether a flow is tagged at all is its
-manifest's own key ([D31](../../../docs/decisions.md#d31--a-flow-declares-whether-it-is-tagged)). A front end that
-only reviews sheets composes no seam rather than fabricating doubles.
-
-#### Scenario: a wiring composed without a hosted-model seam still refuses by name
-- **Key:** `cli:resolution:uncomposed-seam-refuses-by-name`
-- **Layers:** unit
-- **WHEN** a verb that reaches a hosted model is invoked through a wiring composed without one
-- **THEN** it refuses naming the seam and what that seam does
-- **AND** no double is substituted for it
-
-#### Scenario: a pinned seam resolves for every flow that declares its stage
-- **Key:** `cli:resolution:a-pinned-seam-resolves-for-every-flow-that-declares-it`
-- **Layers:** unit
-- **WHEN** the tag verb runs against a flow that declares the tagger and names no model for the local tagger
-- **THEN** the local tagger is resolved and runs
-- **AND** the flow's manifest names none of the local tagger's files
-
-#### Scenario: one command runs two flows on the models each declares
-- **Key:** `cli:resolution:one-command-two-models`
-- **Layers:** unit
-- **WHEN** a stage verb is given two flows whose manifests name different models
-- **THEN** each flow's artifact names the model its own manifest declared
-- **AND** neither flow is run on the other's
-
 ### Requirement: A comparison page shows every run's photograph beside its renders
 
 The system SHALL offer a verb that, given a collection directory holding a `runs/` directory, writes one HTML page into
@@ -316,7 +278,7 @@ approving and rendering — SHALL accept the selection more than once in a singl
 invocation that names none, naming the flows that are tracked. It SHALL NOT fall back to every tracked
 flow. It SHALL refuse a flow that is not tracked, at the point of selection, naming the flows that are.
 
-The flow supplies what a stage reads — its briefing, its schema, its graph and its dials — so a stage cannot act
+The flow supplies what a stage reads — its schema, its graph and its dials — so a stage cannot act
 without one, and every tracked flow is an unbounded default that spends at the last verb. The selection repeats
 because flows batch: every flow named in one rendering invocation shares one boot. The serving verb is not a stage
 verb: it serves the flows its configuration offers, of every collection, and its page selects one.
@@ -672,3 +634,39 @@ no Prepare: the source's tags are the target's.
 - **Layers:** unit
 - **WHEN** the verb is given a summon image and another flow
 - **THEN** the target's draft holds the image's approval's shared fields, its seed and its image
+
+### Requirement: Every per-flow seam is resolved per flow, for a flow that declares its stage
+
+The system SHALL resolve every seam a stage reaches — the reader and each tagger — once per flow being acted
+on, rather than once for the whole invocation, and SHALL run the reader and the hosted tagger, for every flow, on
+the one model the caption config names. A seam SHALL construct nothing until a flow asks for it, and a seam this
+build pins SHALL resolve for every flow whose manifest declares the stage that seam serves. A front end that serves
+no hosted-model stage SHALL remain able to compose a wiring with none of them at all, and SHALL refuse naming the
+seam if a verb that needs one is then invoked through it.
+
+A seam resolved per flow refuses for that flow alone, so the other flows named with it still run. Which model
+answers is a claim the library makes once, in its caption config, so no flow is read by one model and tagged by
+another ([D6](../../../docs/decisions.md#d6--ollama-at-a-fixed-local-address-on-a-checked-model)); a seam reading a
+file this build pins makes no such claim, and the manifest names none of its files. Whether a flow is tagged at
+all is its manifest's own key ([D31](../../../docs/decisions.md#d31--a-flow-declares-whether-it-is-tagged)). A
+front end that only reviews sheets composes no seam rather than fabricating doubles.
+
+#### Scenario: a wiring composed without a hosted-model seam still refuses by name
+- **Key:** `cli:resolution:uncomposed-seam-refuses-by-name`
+- **Layers:** unit
+- **WHEN** a verb that reaches a hosted model is invoked through a wiring composed without one
+- **THEN** it refuses naming the seam and what that seam does
+- **AND** no double is substituted for it
+
+#### Scenario: a pinned seam resolves for every flow that declares its stage
+- **Key:** `cli:resolution:a-pinned-seam-resolves-for-every-flow-that-declares-it`
+- **Layers:** unit
+- **WHEN** the tag verb runs against a flow that declares the tagger and names no model for the local tagger
+- **THEN** the local tagger is resolved and runs
+- **AND** the flow's manifest names none of the local tagger's files
+
+#### Scenario: one command runs every flow on the configured model
+- **Key:** `cli:resolution:one-command-one-model`
+- **Layers:** unit
+- **WHEN** the reader is resolved for each of two flows named in one command
+- **THEN** each runs the model the caption config names

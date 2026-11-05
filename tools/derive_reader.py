@@ -39,7 +39,7 @@ SPECS: tuple[Spec, ...] = tuple(
     for dest in (MODEL, PROJECTOR)
 )
 
-# The alias every tracked flow names, and the entries `ollama create` builds it from.
+# The alias `config/caption.json` names, and the entries `ollama create` builds it from.
 ALIASES: dict[str, ReaderModel] = {
     "joycaption-beta-one-q4k": {"model": MODEL, "projector": PROJECTOR},
 }

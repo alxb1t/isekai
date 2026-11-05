@@ -1,7 +1,7 @@
 """The repo-root anchors, pinned to the directory that holds `pyproject.toml`.
 
 Each constant in `ANCHORS` anchors a repository path on its own `__file__`
--- a schema and a briefing are a flow's, reached through `FLOWS_DIR`, and the
+-- a schema is a flow's, reached through `FLOWS_DIR`, and the
 repository root is `run.REPOSITORY`, named where `DATA_ROOT` already is. Each is
 asserted **absolutely**: strip the anchor's own suffix, and what remains must be
 the directory holding `pyproject.toml`. None of them is compared against another
@@ -24,7 +24,7 @@ import pytest
 
 from evaluation import eval_models
 from isekai.boundary import provision
-from isekai.foundation import flow, run
+from isekai.foundation import caption_config, flow, run
 from isekai.shared import field_map, vocabulary
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -71,6 +71,11 @@ ANCHORS = (
         field_map.FIELD_MAP_PATH,
         ("config", "field_map.json"),
         id="field_map.FIELD_MAP_PATH",
+    ),
+    pytest.param(
+        caption_config.CAPTION_CONFIG_PATH,
+        ("config", "caption.json"),
+        id="caption_config.CAPTION_CONFIG_PATH",
     ),
 )
 

@@ -27,6 +27,7 @@ from typing import TextIO
 from isekai.boundary import gpu, ollama
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
 from isekai.boundary.wd14 import LocalTagger, open_session
+from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import FLOWS_DIR, Flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import DATA_ROOT, REPOSITORY, RUNS_ROOT
@@ -62,16 +63,13 @@ class Wiring:
     # verbs that do reach one say so at their own call site instead.
     #
     # **Resolvers rather than values**, which is the shape `vocabulary` already
-    # has one line below and for a related reason: the flow decides which
-    # implementation runs, so a value composed here would have to be composed
-    # before any flow was loaded. One invocation naming two flows on two
-    # implementations would then resolve one reader and hand it to both, and the
-    # provenance the artifacts record would be false for one of them.
+    # has one line below and for a related reason: a resolver per flow refuses
+    # for that flow alone, and constructs nothing until a flow asks.
     reader: Callable[[Flow], Reader] | None
     # The two tagging seams, and they are deliberately not one. `tagger` resolves
     # for **every** tagged flow because no manifest key names its model;
-    # `hosted_tagger` resolves on the one key the reader also reads, because which
-    # model answers is a claim the flow makes about itself.
+    # `hosted_tagger` resolves on the model the reader runs, the one
+    # `config/caption.json` names.
     #
     # Both are `| None` on the dataclass for `reader`'s reason: a front end that
     # serves stage (3) alone reaches neither, and fabricating a tagger it never
@@ -112,15 +110,19 @@ class Wiring:
 # a table keyed on the arm a manifest named would be a dispatch mechanism with
 # nothing to dispatch.
 #
-# A manifest naming a model this build cannot reach still refuses by name, and it
-# refuses at the first call rather than here -- `ollama.py` is what checks that a
-# host is running and an alias created, and nothing is constructed until a flow
-# asks.
+# A model `config/caption.json` names that this build cannot reach still refuses
+# by name, and it refuses at the first call rather than here -- `ollama.py` is
+# what checks that a host is running and an alias created, and nothing is
+# constructed until a flow asks.
 
 
 def reader_for(flow: Flow) -> Reader:
-    """Return the reader running the model `flow`'s manifest names."""
-    return OllamaReader(model=flow.model)
+    """Return the reader running the model `config/caption.json` names.
+
+    **It takes a `Flow` and reads nothing from it**, as `tagger_for` does: every
+    flow is read by one model, and the parameter keeps the seam resolved per flow.
+    """
+    return OllamaReader(model=load_caption_config().model)
 
 
 def hosted_tagger_for(flow: Flow) -> Tagger:
@@ -128,15 +130,13 @@ def hosted_tagger_for(flow: Flow) -> Tagger:
 
     **One model answers both prompts**, which is exactly why `TAG_PROMPT` is not
     chat-framed: two calls to the same alias must not arrive framed differently.
-    The manifest carries no separate tagger name, and adding one would be a second
-    key saying what `model` already says once.
+    `config/caption.json` names that model once, for both.
 
-    It is not optional. `model` is required, so there is no flow whose manifest
-    leaves this unresolvable -- what can still go wrong is the alias not being
-    created, and that is a refusal at the first call naming the one command that
-    fixes it.
+    It is not optional: it resolves for every flow -- what can still go wrong is
+    the alias not being created, and that is a refusal at the first call naming
+    the one command that fixes it.
     """
-    return OllamaTagger(model=flow.model)
+    return OllamaTagger(model=load_caption_config().model)
 
 
 def tagger_for(flow: Flow) -> LocalTagger:

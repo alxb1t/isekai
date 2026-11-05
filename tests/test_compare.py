@@ -64,7 +64,6 @@ def _run(collection: Path, name: str, prose: str, height: int = 480) -> Run:
             run,
             FakeReader(prose=f"{prose} for {flow}"),
             flow=flow,
-            briefing_path=load_flow(flow).caption_briefing_path,
         )
     return run
 

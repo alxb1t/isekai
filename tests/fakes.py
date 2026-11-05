@@ -168,7 +168,7 @@ class FakeFetcher:
         into.write_bytes(self.served[url])
 
 
-# The alias every tracked flow names, and so the one a real adapter is tested on.
+# The alias `config/caption.json` names, and so the one a real adapter is tested on.
 READER = "joycaption-beta-one-q4k"
 
 # The reference a render session's pod boots, as gpunit names it.

@@ -75,7 +75,7 @@ same way and writes one page into the collection directory, `compare.html`: each
 photograph beside each flow's renders, linked and never embedded.
 
 Every stage verb takes `--flow`, required and repeatable, because the flow
-supplies the briefing a stage reads, the schema it fills against and the
+supplies the schema a stage fills against and the
 directory it writes into. `show`, `compare` and `ui`, which are not stage verbs,
 take no `--flow`: `show` and `compare` report every flow the runs already hold —
 `compare` takes the collection directory instead of `--runs` — and `ui` takes no

@@ -389,10 +389,7 @@ def test_a_producer_records_the_briefings_path_and_digest(
 
     one, other = written(BRIEFING_PATH), written(elsewhere)
 
-    assert (
-        one["producer"]["briefing"]["path"]
-        == "flows/summon-anime-wai/caption.briefing.md"
-    )
+    assert one["producer"]["briefing"]["path"] == "config/caption.briefing.md"
     assert (
         one["producer"]["briefing"]["sha256"] != other["producer"]["briefing"]["sha256"]
     )

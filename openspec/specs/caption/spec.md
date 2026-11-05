@@ -2,8 +2,9 @@
 
 ## Purpose
 
-Stage ①: read a photograph into descriptive English prose under the standing instructions of the flow that asked,
-knowing nothing of schemas, vocabularies or what happens next, and free to say that something is absent.
+Stage ①: read a photograph into descriptive English prose under the one standing briefing the caption config names,
+the same for every flow, knowing nothing of schemas, vocabularies or what happens next, and free to say that
+something is absent.
 
 ## Requirements
 
@@ -74,48 +75,6 @@ artifact assembled from something else ([D21](../../../docs/decisions.md#d21--re
 - **THEN** the failure is recorded as permanent
 - **AND** no caption artifact is written
 
-### Requirement: The reader takes a photograph and returns prose, for one flow
-
-The system SHALL pass a reader exactly one input — the photograph — and SHALL accept exactly one output:
-descriptive prose. It SHALL NOT pass a schema, a field list, a vocabulary or a flow identifier to the
-reader, and SHALL NOT accept tags into the caption. A caption SHALL be written inside the flow that
-asked for it, and SHALL NOT be read by any other flow.
-
-Pressing a reader into a schema makes it invent: told never to leave a field blank, a reader manufactures identity
-marks. A caption belongs to its flow because the flow's briefing is part of its frozen directory: a flow reusing
-another's caption would inherit an answer to a different question, and a second reading costs little beside a
-boot. The prohibition on tags is scoped to this artifact: the tag stage writes tag lists for the same photograph,
-into its own directories, from models given the photograph alone
-([D1](../../../docs/decisions.md#d1--stage--is-two-independent-verbs)).
-
-#### Scenario: the reader is given the photograph and nothing else
-- **Key:** `caption:inputs:only-the-photograph-is-passed`
-- **Layers:** unit
-- **WHEN** a caption is produced
-- **THEN** the reader receives the photograph and its standing instructions
-- **AND** it receives no schema, no field list, no vocabulary and no flow identifier
-
-#### Scenario: the artifact holds prose, not tags
-- **Key:** `caption:output:artifact-is-prose`
-- **Layers:** unit
-- **WHEN** the caption artifact is written
-- **THEN** its content is a single block of descriptive prose
-- **AND** no structured field or tag list is stored inside the caption artifact
-
-#### Scenario: a caption belongs to the flow that asked for it
-- **Key:** `caption:output:caption-belongs-to-one-flow`
-- **Layers:** unit
-- **WHEN** a second flow is added to a run that already has a caption
-- **THEN** the added flow produces its own caption
-- **AND** the existing flow's caption is neither read nor changed
-
-#### Scenario: the reader's standing instructions come from the flow
-- **Key:** `caption:inputs:briefing-comes-from-the-flow`
-- **Layers:** unit
-- **WHEN** a caption is produced for a flow
-- **THEN** the standing instructions are read from that flow's own directory
-- **AND** the caption records the digest of the instructions it was produced under
-
 ### Requirement: A hosted model that is not running or not installed is refused before any attempt is spent
 
 The system SHALL refuse, naming the command that would fix it, when the host serving a declared model
@@ -163,7 +122,7 @@ call lets a machine that never captions leave the reader untouched.
 #### Scenario: a model no manifest entry pins is refused
 - **Key:** `caption:reachability:an-unpinned-model-is-refused`
 - **Layers:** unit
-- **WHEN** a flow names a model the reader's manifest has no entry for
+- **WHEN** the caption config names a model the reader's manifest has no entry for
 - **THEN** the command refuses naming the model and the manifest
 - **AND** no host is contacted
 
@@ -172,32 +131,6 @@ call lets a machine that never captions leave the reader untouched.
 - **Layers:** unit
 - **WHEN** the runtime holds no readable record of the declared model
 - **THEN** the command refuses naming the command that fetches the pinned files, then the one that builds the model
-
-### Requirement: The flow names the model its reader runs
-
-The system SHALL read the model a flow's reader runs from a required key in that flow's manifest, SHALL
-construct no reader until a flow asks for one, and SHALL refuse — naming the model and the flow — when
-the manifest names a model this build cannot reach.
-
-The model differs between flows, and an alias never created is the failure that will happen, so the manifest names
-it and a refusal can too. The reader is built per flow so one command naming two flows never hands one flow's
-model to the other's artifact. The hosted tagger reads the same key: one alias answers both prompts, framed alike,
-and no flow can take its prose and its tags from different models
-([D5](../../../docs/decisions.md#d5--one-arm)).
-
-#### Scenario: the flow's manifest names the model that runs
-- **Key:** `caption:selection:the-flow-names-the-model`
-- **Layers:** unit
-- **WHEN** a flow is captioned
-- **THEN** the reader runs the model that flow's manifest names
-- **AND** the caption's producer records that model
-
-#### Scenario: a model this build cannot reach is refused, naming it
-- **Key:** `caption:selection:an-unreachable-model-is-refused`
-- **Layers:** unit
-- **WHEN** a flow names a model the runtime does not hold
-- **THEN** the stage refuses naming the model and the command that would create it
-- **AND** no attempt is spent and no artifact is written
 
 ### Requirement: A caption records the files its model was built from and the options it was sampled at
 
@@ -223,3 +156,99 @@ tells two captions under different options apart.
 - **Layers:** unit
 - **WHEN** a caption is written
 - **THEN** its producer records the sampling options the reader sent, key for key
+
+### Requirement: The caption config names the reader's model and its briefing
+
+The system SHALL read the model the reader and the hosted tagger run, and the briefing the reader is given, from
+one caption config, `config/caption.json`, holding exactly a `model` and a `briefing` naming a file beside it. It
+SHALL refuse, naming the key, a config that declares no model or one that is not a non-empty string, SHALL refuse a
+key it does not read, naming it, and SHALL refuse a briefing that is not a file beside the config, naming the file.
+It SHALL construct no reader until a flow asks for one, and SHALL refuse, naming the model, a model this build
+cannot reach.
+
+```
+config/
+├── caption.json          {"briefing": "caption.briefing.md", "model": "<alias>"}
+└── caption.briefing.md   the standing instructions every photograph is read under
+```
+
+Every flow reads a photograph the same way, so the briefing and the model are the library's, not a flow's: one file
+names them once, and no flow can take its prose and its tags from different models
+([D6](../../../docs/decisions.md#d6--ollama-at-a-fixed-local-address-on-a-checked-model)). An alias never created is
+the failure that will happen, so a refusal names it.
+
+#### Scenario: the caption config names the model that runs
+- **Key:** `caption:selection:the-config-names-the-model`
+- **Layers:** unit
+- **WHEN** any flow is captioned
+- **THEN** the reader runs the model the caption config names
+- **AND** the caption's producer records that model
+
+#### Scenario: a model this build cannot reach is refused, naming it
+- **Key:** `caption:selection:an-unreachable-model-is-refused`
+- **Layers:** unit
+- **WHEN** the caption config names a model the runtime does not hold
+- **THEN** the stage refuses naming the model and the command that would create it
+- **AND** no attempt is spent and no artifact is written
+
+#### Scenario: a config with no model, or an empty one, is refused
+- **Key:** `caption:selection:an-absent-or-empty-model-is-refused`
+- **Layers:** unit
+- **WHEN** the caption config declares no model, or one that is not a non-empty string
+- **THEN** loading it is refused naming the key
+- **AND** the value is not coerced into a string
+
+#### Scenario: a key the config does not read is refused
+- **Key:** `caption:selection:an-unknown-key-is-refused`
+- **Layers:** unit
+- **WHEN** the caption config carries a key this build does not read
+- **THEN** loading it is refused naming that key
+
+#### Scenario: a briefing that is not beside the config is refused
+- **Key:** `caption:selection:an-absent-briefing-is-refused`
+- **Layers:** unit
+- **WHEN** the caption config names a briefing that is not a file beside it
+- **THEN** loading it is refused naming the file
+
+### Requirement: The reader takes a photograph and its briefing, and returns prose for one flow
+
+The system SHALL pass a reader exactly the photograph and the briefing the caption config names, and SHALL
+accept exactly one output: descriptive prose. It SHALL NOT pass a schema, a field list, a vocabulary or a flow
+identifier to the reader, and SHALL NOT accept tags into the caption. A caption SHALL be written inside the flow
+that asked for it, and SHALL NOT be read by any other flow.
+
+Pressing a reader into a schema makes it invent: told never to leave a field blank, a reader manufactures identity
+marks. A caption is written under its flow, as every stage's artifact is
+([D17](../../../docs/decisions.md#d17--input-above-flow-below)), and a second reading costs little beside a boot.
+Every flow is read under one briefing, the caption config's, so a caption records the same instructions whichever
+flow asked. The prohibition on tags is scoped to this artifact: the tag stage writes tag lists for the same photograph,
+into its own directories, from models given the photograph alone
+([D1](../../../docs/decisions.md#d1--stage--is-two-independent-verbs)).
+
+#### Scenario: the reader is given the photograph and nothing else
+- **Key:** `caption:inputs:only-the-photograph-is-passed`
+- **Layers:** unit
+- **WHEN** a caption is produced
+- **THEN** the reader receives the photograph and its standing instructions
+- **AND** it receives no schema, no field list, no vocabulary and no flow identifier
+
+#### Scenario: the artifact holds prose, not tags
+- **Key:** `caption:output:artifact-is-prose`
+- **Layers:** unit
+- **WHEN** the caption artifact is written
+- **THEN** its content is a single block of descriptive prose
+- **AND** no structured field or tag list is stored inside the caption artifact
+
+#### Scenario: a caption belongs to the flow that asked for it
+- **Key:** `caption:output:caption-belongs-to-one-flow`
+- **Layers:** unit
+- **WHEN** a second flow is added to a run that already has a caption
+- **THEN** the added flow produces its own caption
+- **AND** the existing flow's caption is neither read nor changed
+
+#### Scenario: the reader's standing instructions come from the caption config
+- **Key:** `caption:inputs:briefing-comes-from-the-config`
+- **Layers:** unit
+- **WHEN** a caption is produced for any flow
+- **THEN** the standing instructions are read from the briefing the caption config names
+- **AND** the caption records the digest of the instructions it was produced under

@@ -4,7 +4,7 @@ One file per stage, in the order a photograph passes through them. No stage read
 another's output directly: each is handed a path inside a run and hands back a
 numbered artifact, and **no stage imports another** — the last such edge closed
 when `validate` moved to `shared/fields.py`. Every stage is per flow: the flow
-supplies the briefing it reads, the schema it fills against and the directory it
+supplies the schema it fills against and the directory it
 writes into.
 
 **The verbs are `import` · `caption` · `tag` · `sheet` · `review` · `approve` · `draft` · `generate`.**

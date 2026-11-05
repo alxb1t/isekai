@@ -1,6 +1,6 @@
 """The reader's manifest: the files each alias is built from, pinned like any other.
 
-A flow names its reader by an alias `ollama create` builds from
+`config/caption.json` names the reader by an alias `ollama create` builds from
 `config/joycaption.Modelfile`. `config/reader.json` pins the files behind it and
 says which is the model and which the projector, so the check in
 `isekai/boundary/ollama.py` has one place to read them from (D6).
@@ -20,7 +20,7 @@ from isekai.boundary.provision import (
     mirror_entries_without_an_alternate,
     sources_on_a_mutable_ref,
 )
-from isekai.foundation.flow import load_flow, tracked_flows
+from isekai.foundation.caption_config import load_caption_config
 from tests.fakes import fetched_by_main
 
 
@@ -65,14 +65,14 @@ def test_the_check_catches_an_alias_naming_a_file_no_entry_pins(
     assert aliases_off_the_entries(reader_manifest) == [f"{alias}.projector"]
 
 
-@pytest.mark.spec("model-provisioning:reader:every-flow-model-is-pinned")
-def test_every_model_a_tracked_flow_declares_is_pinned(
+@pytest.mark.spec("model-provisioning:reader:the-caption-model-is-pinned")
+def test_the_model_the_caption_config_names_is_pinned(
     reader_manifest: Manifest,
 ) -> None:
-    flows = tracked_flows()
-    assert flows
-    for flow in flows:
-        assert load_flow(flow).model in reader_manifest["aliases"], flow
+    model = load_caption_config().model
+
+    assert model == "joycaption-beta-one-q4k"
+    assert model in reader_manifest["aliases"]
 
 
 @pytest.mark.spec("model-provisioning:reader:driver-provisions-the-manifest")
