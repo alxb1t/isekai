@@ -107,18 +107,20 @@ command="delete" /></button>`; `<DeleteDialog v-if="deleting" :place="place" @cl
 
 ## Tests
 
-Every new test is a unit test but the one end-to-end test the page needs (`T1`). The vitest suite gains a step, not a
-test.
+Every new test is a unit test; the page's end-to-end keys are a step in an existing end-to-end test (`T1`, `T2`).
+The vitest suite gains a step, not a test.
 
 | layer | adds | removes |
 |---|---|---|
 | unit | `tests/test_generate.py`: the `image-generation:discard:*` keys, a test each but the short approval, held beside the delete; `tests/test_ui_library.py`: `drop_thumbnails`; `tests/test_pipeline_cli.py`: the `cli:discard:*` keys, and a `[discard]` row of `test_each_verb_is_reachable_as_a_subcommand`; `tests/test_ui_api.py`: the route's unit keys; `ui/src/stores/keys.test.ts`: a `⇧⌫` step in `ui:keys:hints-come-from-the-declarations` | none |
-| end-to-end | `tests/e2e/test_render.py`: `test_delete_asks_then_opens_the_hub_on_the_cell`, the `ui:delete-render` e2e keys, on Chromium alone | none |
+| end-to-end | `tests/e2e/test_render.py`: the `ui:delete-render` e2e keys, a closing step of `test_conjure_from_this_opens_review` on `CONJURED`'s `v1/7`, on Chromium alone | `test_delete_asks_then_opens_the_hub_on_the_cell`, which phase 4 added, merged into `test_conjure_from_this_opens_review`: it carries the test's assertions and its `ui:delete-render:the-dialog-opens-on-no` and `ui:delete-render:yes-opens-the-hub-on-the-cell` keys, and `DELETED`, its collection, goes (`I16`, R5) |
 
-The new end-to-end test is new because it deletes: a step in `test_a_rendered_cell_opens_its_newest_image` would empty
-`SHOWN`, which the routes test needs rendered (`T2`). It gets its own collection, `DELETED`, as `DISCARDED` is the
-discard's. Its keys run in one flow, the dialog then the delete (`T3`). Client behaviour, so it runs on every
-engine the suite has: Chromium (`T4`).
+The delete adds no end-to-end test: `test_conjure_from_this_opens_review` already opens `CONJURED`'s `v1/7` large view
+at its address, and nothing after its conjure reads that render, so the delete is its closing step (`T2`). The conjure's
+draft is in `CONJURE`'s cell, so the Hub's `FLOW` cell still reads `approved` after the delete. A step in
+`test_a_rendered_cell_opens_its_newest_image` would empty `SHOWN`, which the routes test needs rendered. The keys run
+in one flow, the dialog then the delete (`T3`). Client behaviour, so it runs on every engine the suite has: Chromium
+(`T4`).
 
 Counted with `uv run pytest <file> --collect-only -q | tail -1` at `a4bbbaa3`, and as planned:
 
@@ -129,9 +131,10 @@ Counted with `uv run pytest <file> --collect-only -q | tail -1` at `a4bbbaa3`, a
 | `tests/test_pipeline_cli.py` | 61 | 64 |
 | `tests/test_ui_api.py` | 95 | 97 |
 | the suite, `uv run pytest --ignore=tests/e2e --collect-only -q` | 1487 | 1496 |
-| `tests/e2e`, `uv run pytest tests/e2e --collect-only -q` | 19 | 20 |
+| `tests/e2e`, `uv run pytest tests/e2e --collect-only -q` | 19 | 19 |
 
-No test is deleted or merged (`I16`). `EXPECTED_VERBS` (`tests/test_pipeline_cli.py:59-74`) gains `"discard"` after
+No test at `a4bbbaa3` is deleted or merged; the one merge is phase 4's own end-to-end test, mapped in the table above
+(`I16`). `EXPECTED_VERBS` (`tests/test_pipeline_cli.py:59-74`) gains `"discard"` after
 `"draft"`, as `VERBS` does.
 
 ## Dependencies
@@ -146,8 +149,8 @@ None.
   → Q3 leaves what was made alone; the approval is rendered again, or stays approved.
 - [A seed listed in `renders.seeds` renders the same graph again] → Q2 accepted it: the graph, not the pixels, is what a
   seed reproduces (D13), so the re-render may differ.
-- [`DELETED`'s approval is short after its test] → the e2e fixture is per session; no other test reads `DELETED`, and a
-  quote names the collections it covers.
+- [`CONJURED`'s `FLOW` approval is short after its test] → the e2e fixture is per session; no other test reads
+  `CONJURED`, and a quote names the collections it covers.
 - [A glob on `<seed>.*.jpg` in a run's cache folder] → the folder is one approval's group of one run, so it holds that
   group's thumbnails alone, and a seed's stem is digits, so `42.*` never matches `420.…`.
 

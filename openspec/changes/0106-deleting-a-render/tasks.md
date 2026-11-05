@@ -95,14 +95,14 @@ from the repository root.
 - [x] 4.5 In `ui/src/views/Hub.vue`'s `onMounted`, focus the spot `window.history.state?.cell` names before
   `kept(spots, named, store.focus.hub)`, per [D6](design.md#d6), with a comment saying who sends it.
   Verify: `grep -n 'history.state?.cell' ui/src/views/Hub.vue` prints one line.
-- [x] 4.6 In `tests/e2e/conftest.py`, add `DELETED = "deleted"` after `CHOSEN`, commented as the collection a render is
-  deleted from; `deleted: Run` in `Served` after `discarded`, seeded `_rendered_at_seven(lib / DELETED, "rae", (860,
-  1000))` and passed to `Served`.
-  Verify: `grep -n '^DELETED = "deleted"$' tests/e2e/conftest.py` prints one line.
-- [x] 4.7 In `tests/e2e/test_render.py`, add `test_delete_asks_then_opens_the_hub_on_the_cell`
-  (`ui:delete-render:the-dialog-opens-on-no`, `ui:delete-render:yes-opens-the-hub-on-the-cell`) on `DELETED`'s
-  `v1/7` address: `⇧⌫`, `l`, `h`, `Esc`, then `⇧⌫`, `l`, `↵`; the Hub cell focused, `approved`, `group_of(…, 1)` gone.
-  Verify: `uv run pytest tests/e2e/test_render.py --collect-only -q` prints `tests/e2e/test_render.py::test_delete_asks_then_opens_the_hub_on_the_cell`.
+- [x] 4.6 In `tests/e2e/conftest.py`, add no collection: `CONJURED`'s comment gains ", then its seed-7 render deleted",
+  as the delete runs on it ([the Tests table](design.md#tests)); no `DELETED`, and no `deleted: Run` in `Served`.
+  Verify: `grep -n 'then its seed-7 render deleted' tests/e2e/conftest.py` prints one line.
+- [x] 4.7 In `tests/e2e/test_render.py`, end `test_conjure_from_this_opens_review` with the delete, its marks gaining
+  `ui:delete-render:the-dialog-opens-on-no` and `ui:delete-render:yes-opens-the-hub-on-the-cell`: back on
+  `CONJURED`'s `v1/7` address, `⇧⌫`, `l`, `h`, `Esc`, then `⇧⌫`, `l`, `↵`; the Hub's `FLOW` cell focused, `approved`,
+  `group_of(served.conjured, FLOW, 1)` gone. No test of its own (`T2`, R5).
+  Verify: `grep -n -B4 'def test_conjure_from_this_opens_review' tests/e2e/test_render.py` prints the `ui:delete-render:yes-opens-the-hub-on-the-cell` mark.
 
 ## 5 — The record
 
