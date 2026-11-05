@@ -31,7 +31,6 @@ from isekai.foundation.artifacts import (
     read,
 )
 from isekai.foundation.flow import (
-    CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
     MANIFEST_NAME,
     MANIFEST_VERSION,
@@ -179,15 +178,11 @@ def _fewer_roles_flow(tmp_path: Path) -> Flow:
         },
         "nodes": {"positive": "3", "negative": "4", "latent": "9", "sampler": "10"},
         "models": [],
-        # Required of every flow since manifest version 3, and this one never
-        # reaches it: nothing in the render path resolves a reader.
-        "model": "a-reader",
         "tagger": True,
     }
     (root / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
     (root / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
-    for name in (SCHEMA_NAME, CAPTION_BRIEFING_NAME):
-        (root / name).write_bytes((source.path / name).read_bytes())
+    (root / SCHEMA_NAME).write_bytes((source.path / SCHEMA_NAME).read_bytes())
     return load_flow(FEWER, root.parent)
 
 

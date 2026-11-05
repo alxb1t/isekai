@@ -5,7 +5,7 @@ The config, then the flows, then the record, per [design](design.md). Paths are 
 ## Progress
 
 - [x] 1 — The config
-- [ ] 2 — The flows
+- [x] 2 — The flows
 - [ ] 3 — The record
 
 ## 1 — The config
@@ -148,53 +148,53 @@ The config, then the flows, then the record, per [design](design.md). Paths are 
 
 ## 2 — The flows
 
-- [ ] 2.1 In `isekai/foundation/flow.py`, per [D4](design.md#d4): `MANIFEST_VERSION = 4` → `MANIFEST_VERSION = 5`;
+- [x] 2.1 In `isekai/foundation/flow.py`, per [D4](design.md#d4): `MANIFEST_VERSION = 4` → `MANIFEST_VERSION = 5`;
   delete `"model",` from `REQUIRED` and `load_flow`'s model value check, from `# The value, not only its presence.`
   through its `raise Refusal`; above `KNOWN`, delete the sentence opening "The model `model` names".
   Verify: `grep -n '"model"' isekai/foundation/flow.py` prints nothing.
-- [ ] 2.2 In `isekai/foundation/flow.py`, the misspelling examples: "`modl` is caught" → "`taggr` is caught", and
+- [x] 2.2 In `isekai/foundation/flow.py`, the misspelling examples: "`modl` is caught" → "`taggr` is caught", and
   "names `model` -- a key the operator did not misspell --" → "names `tagger` -- not the key the operator wrote --".
   Verify: `grep -n 'modl' isekai/foundation/flow.py` prints nothing.
-- [ ] 2.3 In `isekai/foundation/flow.py`, delete `CAPTION_BRIEFING_NAME`, and `SIBLINGS = (GRAPH_NAME, SCHEMA_NAME)`.
+- [x] 2.3 In `isekai/foundation/flow.py`, delete `CAPTION_BRIEFING_NAME`, and `SIBLINGS = (GRAPH_NAME, SCHEMA_NAME)`.
   Verify: `grep -n 'CAPTION_BRIEFING_NAME' isekai/foundation/flow.py` prints nothing.
-- [ ] 2.4 In `isekai/foundation/flow.py`, per [D8](design.md#d8): "the graph, the schema or the briefing" → "the graph
+- [x] 2.4 In `isekai/foundation/flow.py`, per [D8](design.md#d8): "the graph, the schema or the briefing" → "the graph
   or the schema"; "the schema and the briefing outside" → "the schema outside"; "the briefing decides the caption,
   the caption decides the sheet" → "the schema decides the sheet"; " and in the briefing that names it" → deleted.
   Verify: `grep -ni 'briefing' isekai/foundation/flow.py` prints nothing.
-- [ ] 2.5 In each `flows/<id>/flow.json`, `"manifest_version": 4,` → `"manifest_version": 5,`, and delete the line
+- [x] 2.5 In each `flows/<id>/flow.json`, `"manifest_version": 4,` → `"manifest_version": 5,`, and delete the line
   `"model": "joycaption-beta-one-q4k",`.
   Verify: `git grep -nE '"model": "|"manifest_version": 4' flows` prints nothing.
-- [ ] 2.6 `git rm flows/conjure-anime-wai/caption.briefing.md flows/control-anime-wai/caption.briefing.md
+- [x] 2.6 `git rm flows/conjure-anime-wai/caption.briefing.md flows/control-anime-wai/caption.briefing.md
   flows/summon-anime-wai/caption.briefing.md flows/summon-flat-anime-wai/caption.briefing.md
   flows/summon-semireal-anime-wai/caption.briefing.md flows/summon-vivid-anime-wai/caption.briefing.md`.
   Verify: `git ls-files -- 'flows/*/caption.briefing.md'` prints nothing.
-- [ ] 2.7 In `tests/test_flow.py`, drop `CAPTION_BRIEFING_NAME`'s import; `len(SIBLINGS) == 3` →
+- [x] 2.7 In `tests/test_flow.py`, drop `CAPTION_BRIEFING_NAME`'s import; `len(SIBLINGS) == 3` →
   `len(SIBLINGS) == 2` and `(GRAPH_NAME, SCHEMA_NAME, CAPTION_BRIEFING_NAME)` → `(GRAPH_NAME, SCHEMA_NAME)`; rename the
   control's files test per [Tests](design.md#tests), deleting its `CAPTION_BRIEFING_NAME` assertion.
   Verify: `grep -n 'CAPTION_BRIEFING_NAME' tests/test_flow.py` prints nothing.
-- [ ] 2.8 In `tests/test_flow.py`, rename `_holds_the_subjects_schema_and_briefing` and the flat and look tests that
+- [x] 2.8 In `tests/test_flow.py`, rename `_holds_the_subjects_schema_and_briefing` and the flat and look tests that
   call it per [Tests](design.md#tests); the new-file test's comment, "the schema and the briefing inside the flow" →
   "the schema inside the flow".
   Verify: `grep -nE 'schema_and_briefing|schema and the briefing' tests/test_flow.py` prints nothing.
-- [ ] 2.9 In `tests/test_flow.py`, delete the no-model, the not-a-non-empty-string and the `models` collision tests
+- [x] 2.9 In `tests/test_flow.py`, delete the no-model, the not-a-non-empty-string and the `models` collision tests
   named in [Tests](design.md#tests); in `test_every_key_this_build_reads_is_required`, `MANIFEST_VERSION == 4` →
   `MANIFEST_VERSION == 5` and `"model" in REQUIRED` → `"model" not in REQUIRED`.
   Verify: `grep -nE 'image-generation:model:|collides_with_a_real_key' tests/test_flow.py` prints nothing.
-- [ ] 2.10 In `tests/test_flow.py`, `_misspelled` pops `"tagger"` and its docstring says "whose tagger key"; rename the
+- [x] 2.10 In `tests/test_flow.py`, `_misspelled` pops `"tagger"` and its docstring says "whose tagger key"; rename the
   misspelled test per [Tests](design.md#tests), over `["taggr", "Tagger", "tagger_on"]`, bound to
   `image-generation:manifest:a-misspelled-key-is-refused`; the heading `the model key, and the allowlist` → `the allowlist`.
   Verify: `grep -nE 'a-misspelled-model-key-is-refused|whose model key' tests/test_flow.py` prints nothing.
-- [ ] 2.11 In `tests/test_generate.py`'s `_fewer_roles_flow`, delete `"model": "a-reader",` and the comment above it,
+- [x] 2.11 In `tests/test_generate.py`'s `_fewer_roles_flow`, delete `"model": "a-reader",` and the comment above it,
   and copy `SCHEMA_NAME` alone in place of the loop over `(SCHEMA_NAME, CAPTION_BRIEFING_NAME)`; drop that import.
   Verify: `grep -n 'CAPTION_BRIEFING_NAME' tests/test_generate.py` prints nothing.
-- [ ] 2.12 Re-pin each flow in `tests/test_flow.py`'s `PINNED`, per [D5](design.md#d5), to the digest
+- [x] 2.12 Re-pin each flow in `tests/test_flow.py`'s `PINNED`, per [D5](design.md#d5), to the digest
   `uv run python -c 'from isekai.foundation.flow import manifest_digest as d, tracked_flows as t; [print(f, d(f)) for f in t()]'`
   prints for it; `test_a_re_pin_leaves_a_record_a_later_reader_can_find` passes once the phase's CHANGELOG entry names each.
   Verify: `uv run pytest tests/test_flow.py -k 'not a_re_pin_leaves_a_record'` exits 0.
-- [ ] 2.13 In `tests/golden/prompt.json`, `tests/golden/render.json`, `tests/golden/sheet.json` and
+- [x] 2.13 In `tests/golden/prompt.json`, `tests/golden/render.json`, `tests/golden/sheet.json` and
   `tests/golden/sheet-empty.json`, `"flow_digest"`'s value → `summon-anime-wai`'s new digest from 2.12.
   Verify: `git grep -n 96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698 tests` prints nothing.
-- [ ] 2.14 **HALT CHECK** — every golden is written byte for byte with only the flow digest moved.
+- [x] 2.14 **HALT CHECK** — every golden is written byte for byte with only the flow digest moved.
   Verify: `uv run pytest tests/test_artifact_bytes.py` exits 0.
 
 ## 3 — The record

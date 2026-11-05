@@ -13,7 +13,7 @@ freezes a flow covers regular files only. The rule names its files rather than
 tallying them: a rule carrying a numeral is a rule that goes stale.
 
 **A flow never changes silently.** A divergence -- a dial, a prompt fragment, the
-graph, the schema or the briefing, while the old configuration is still wanted --
+graph or the schema, while the old configuration is still wanted --
 is a new identifier. A configuration that is abandoned is re-pinned in place, with
 what moved recorded. A tuned dial is not a variant of a flow, it is an untested
 flow, and an output's path identifies a configuration only if a flow identifier
@@ -49,12 +49,12 @@ FLOWS_DIR = Path(__file__).resolve().parent.parent.parent / "flows"
 # The only version of `flow.json`'s own format this build reads. It is the
 # manifest's format, not the schema document's -- the schema carries no version
 # at all, because inside a frozen directory a version protects nothing.
-MANIFEST_VERSION = 4
+MANIFEST_VERSION = 5
 
 # The files a flow is, none of them named by the manifest: a key that can only
 # ever hold one value is not a declaration. They sit directly in the directory
 # because `manifest_digest` covers regular files only, so a nested layout would
-# leave the schema and the briefing outside the freeze while the gate stayed
+# leave the schema outside the freeze while the gate stayed
 # green (D14).
 #
 # **Named, not counted.** A rule that tallies is a rule that goes stale, and
@@ -63,8 +63,7 @@ MANIFEST_VERSION = 4
 MANIFEST_NAME = "flow.json"
 GRAPH_NAME = "graph.json"
 SCHEMA_NAME = "schema.json"
-CAPTION_BRIEFING_NAME = "caption.briefing.md"
-SIBLINGS = (GRAPH_NAME, SCHEMA_NAME, CAPTION_BRIEFING_NAME)
+SIBLINGS = (GRAPH_NAME, SCHEMA_NAME)
 
 # Every key a flow must declare. Checked as a set, so a flow missing one is named
 # rather than crashing three frames later on a `KeyError`.
@@ -77,7 +76,6 @@ REQUIRED = (
     "dials",
     "nodes",
     "models",
-    "model",
     "tagger",
 )
 REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
@@ -85,10 +83,7 @@ REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 # Every top-level key this build knows, and a manifest carrying any other is
 # refused naming it -- `load_flow` is where that reason lives.
 #
-# **It is exactly `REQUIRED`: there is no optional key.** The model `model` names
-# is reached over a socket to this machine (D5), so a block marking one reached
-# over a network to a third party would distinguish nothing, and a block holding
-# a single key is not a declaration.
+# **It is exactly `REQUIRED`: there is no optional key.**
 KNOWN = REQUIRED
 
 # The node roles every image flow has, checked at load the way the prompt's
@@ -222,8 +217,7 @@ def load_schema(path: Path) -> Schema:
         raise Refusal(
             f"{path.name}: {', '.join(unsafe)} cannot be a structured-output "
             "property key, which must match "
-            f"{IDENTIFIER_SAFE.pattern}; rename the field in the schema document "
-            "and in the briefing that names it"
+            f"{IDENTIFIER_SAFE.pattern}; rename the field in the schema document"
         )
     return Schema(name=str(document["name"]), fields=fields)
 
@@ -341,7 +335,7 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
 
     **A key this build does not read is refused too, not ignored**, and with
     every key required the allowlist below is the whole of what closes a
-    misspelling: `modl` is caught as an unknown key *and* as a missing one, in
+    misspelling: `taggr` is caught as an unknown key *and* as a missing one, in
     the same load, with no check written for it. A nested block would need an
     allowlist of its own, or `{"sortr": "x"}` inside it would load clean.
     """
@@ -374,8 +368,8 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     # **The allowlist runs before the missing-key check, and the order is the
     # message.** Every key is required, so a misspelling fails twice at once: the
     # key this build reads is absent, and one it does not read is present.
-    # Reporting the absence first names `model` -- a key the operator did not
-    # misspell -- and sends him to add a second one rather than to fix the one he
+    # Reporting the absence first names `tagger` -- not the key the operator wrote --
+    # and sends him to add a second one rather than to fix the one he
     # wrote.
     unknown = [key for key in document if key not in KNOWN]
     if unknown:
@@ -396,17 +390,6 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
         raise Refusal(
             f"{flow}/{MANIFEST_NAME}: `prompt` declares no {', '.join(absent)}; "
             "every fragment a prompt is assembled from is stated by the flow"
-        )
-    # The value, not only its presence. A bare `str()` here would load
-    # `{"model": null}` as the string `"None"` and send a run at an alias that
-    # cannot exist, which is a refusal at first call with the manifest looking
-    # correct on the way there.
-    named = document["model"]
-    if not isinstance(named, str) or not named.strip():
-        raise Refusal(
-            f"{flow}/{MANIFEST_NAME}: `model` declares {named!r}; a flow names "
-            "the one model its reader and its hosted tagger run, as a non-empty "
-            "string"
         )
     # A boolean, never coerced: `bool("false")` is true, and a flow that said it
     # needs no tagger would be tagged (D31).
@@ -498,11 +481,11 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
 def manifest_digest(flow: str, flows_dir: Path = FLOWS_DIR) -> str:
     """Return the digest of every file in a flow's directory, as bytes on disk.
 
-    All of them, because each one changes what the flow renders: the briefing
-    decides the caption, the caption decides the sheet, and the sheet decides the
-    render. This is what the suite pins by equality -- a changed dial fails the
-    gate naming the flow, rather than quietly making an existing identifier mean
-    something else. It covers regular files only, which is why a flow is flat.
+    All of them, because each one changes what the flow renders: the schema
+    decides the sheet, and the sheet decides the render. This is what the suite
+    pins by equality -- a changed dial fails the gate naming the flow, rather than
+    quietly making an existing identifier mean something else. It covers regular
+    files only, which is why a flow is flat.
     """
     directory = flow_path(flow, flows_dir)
     digest = hashlib.sha256()

@@ -12,6 +12,20 @@ its new digest.
 
 - `config/caption.json` names the reader's model and its briefing, `config/caption.briefing.md`, for every flow; the
   reader and the hosted tagger run that model, and a caption records the new path with the same digest (0102 D1–D3).
+- BREAKING: manifest version 5. A flow is `flow.json`, `graph.json` and `schema.json`, and its manifest declares no
+  `model`; a version 4 flow is refused naming both versions (0102 D4).
+- `conjure-anime-wai` re-pinned in place, format only →
+  `8123c38d701748d41e7dc6d9aea2af647c4fbcc24435c2a3c351860f36dc0180` (0102 D5).
+- `control-anime-wai` re-pinned in place, format only →
+  `a5e41ce47810b0c9d087bae51255ac3c31500e1fd90e97248d9a356241720bcf` (0102 D5).
+- `summon-anime-wai` re-pinned in place, format only →
+  `0b841d22d5d3e659541c1459d42fdf5281a7c6338a193a04189da199b8f83e47` (0102 D5).
+- `summon-flat-anime-wai` re-pinned in place, format only →
+  `fa87fed5ff33e169ca94f82740716535679ff0990f0a676bdca9fee33380eec1` (0102 D5).
+- `summon-semireal-anime-wai` re-pinned in place, format only →
+  `fbed851f8d9b049672cf73004457c5d4b7c4c1948a7935fc7fd9dbf9dc872b70` (0102 D5).
+- `summon-vivid-anime-wai` re-pinned in place, format only →
+  `f72aa506e5668be9982515654b659e3760ac9e05c71a0d28e533e281468d006e` (0102 D5).
 
 ## [0.67.0] - 2026-11-05
 
