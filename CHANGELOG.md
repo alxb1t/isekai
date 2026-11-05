@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.66.0] - 2026-11-05
+
+Gate: local 0m28s · CI not read under mf-ship · 0.65.0: local 0m29s · CI not read under mf-ship
+
 - Catppuccin's Latte, Frappé, Macchiato and Mocha are token sets beside Nocturne; the billing band, the session tile,
   the drawer's backdrop and the tag cheatsheet read tokens, and a vitest holds each flavour to WCAG AA (0098 D1, D2, D7).
 - `⇧T` opens a theme dialog on every screen: each row is drawn in its own theme, a move previews, `↵` keeps and `Esc`

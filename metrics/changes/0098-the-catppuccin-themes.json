@@ -1,0 +1,58 @@
+{
+  "change": "0098-the-catppuccin-themes",
+  "version": "0.66",
+  "base": "0b87a006",
+  "analyzed": "114ccefe",
+  "measured_on": "local",
+  "collected_at": "2026-11-05T17:08:31+02:00",
+  "mf_version": "v0.59.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1481
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 28
+    },
+    "open-backlog-cards": {
+      "value": 22
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1213
+    },
+    "diff-files": {
+      "value": 19
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 12101
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 706
+    },
+    "decisions": {
+      "value": 49
+    }
+  }
+}

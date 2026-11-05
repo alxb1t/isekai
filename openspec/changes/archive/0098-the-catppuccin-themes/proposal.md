@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.66
 ---
 
 # 0098 — the Catppuccin themes
