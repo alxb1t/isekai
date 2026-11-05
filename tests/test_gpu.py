@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from isekai.boundary import gpu
-from isekai.boundary.gpu import run_gpunit
+from isekai.boundary.gpu import GpunitExit, run_gpunit
 
 POPEN = subprocess.Popen
 
@@ -24,6 +24,15 @@ deadline = time.monotonic() + 10
 while not marker.exists() and time.monotonic() < deadline:
     time.sleep(0.01)
 print("after" if marker.exists() else "late")
+"""
+
+# Two gpunit refusals, then a `refused:` line with no time, then no stock's exit.
+REFUSES = """
+import sys
+print("2026-11-03T09:14:01Z refused: no card in 'gpus' fits")
+print("2026-11-03T09:14:02Z refused: no card in 'gpus' was placed")
+print("refused: a line of isekai's own")
+sys.exit(4)
 """
 
 
@@ -51,3 +60,14 @@ def test_run_gpunit_says_a_line_before_the_verb_exits(
 
     run_gpunit(["status"], say)
     assert heard == ["first", "after"]
+
+
+@pytest.mark.spec("ui:render-job:a-refusal-names-its-kind-and-reason")
+def test_run_gpunit_returns_the_last_refused_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _runs(monkeypatch, REFUSES)
+
+    ended = run_gpunit(["volume", "up", "--yes"], lambda line: None)
+
+    assert ended == GpunitExit(4, "refused: no card in 'gpus' was placed")

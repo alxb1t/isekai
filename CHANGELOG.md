@@ -14,6 +14,8 @@ its new digest.
   `v0.7.0`'s boot script, its tag pinned on its own, so nothing is rebuilt (0097 D1, D2, D3).
 - gpunit's lines reach the log as gpunit writes them, not once its verb exits, so a window being opened shows its
   progress and a server that dies mid-verb keeps what was said (0097 D4).
+- A window or render refused for no card in stock or no card that fits leads the drawer's message with that kind,
+  quotes gpunit's `refused:` line and names the log; `isekai render` exits gpunit's code, 4 or 5 (0097 D5–D9).
 
 ## [0.63.0] - 2026-11-04
 

@@ -7,7 +7,7 @@ reason its task names.
 
 - [x] 1 — The pin
 - [x] 2 — The lines
-- [ ] 3 — The reason
+- [x] 3 — The reason
 
 ## 1 — The pin
 
@@ -37,28 +37,28 @@ reason its task names.
 
 ## 3 — The reason
 
-- [ ] 3.1 **HALT CHECK** gpunit's exits for no card in stock and no card that fits are 4 and 5, as
+- [x] 3.1 **HALT CHECK** gpunit's exits for no card in stock and no card that fits are 4 and 5, as
   [D6](design.md#d6) reads them.
   Verify: `uv run python -c "from gpunit.log import NO_CAPACITY, NO_FIT; print(NO_CAPACITY, NO_FIT)"` prints `4 5`.
-- [ ] 3.2 Add `REFUSED`, `refused_line` and `GpunitExit` to `isekai/boundary/gpu.py`; `run_gpunit`, `Gpunit` and
+- [x] 3.2 Add `REFUSED`, `refused_line` and `GpunitExit` to `isekai/boundary/gpu.py`; `run_gpunit`, `Gpunit` and
   `Volume` return a `GpunitExit` per [D5](design.md#d5). Add `test_run_gpunit_returns_the_last_refused_line` to
   `tests/test_gpu.py`, bound to `ui:render-job:a-refusal-names-its-kind-and-reason`.
   Verify: `uv run pytest tests/test_gpu.py -k refused` exits 0.
-- [ ] 3.3 `isekai/boundary/README.md`'s `gpu.py` row names `run_gpunit` and `GpunitExit` per [D5](design.md#d5).
+- [x] 3.3 `isekai/boundary/README.md`'s `gpu.py` row names `run_gpunit` and `GpunitExit` per [D5](design.md#d5).
   Verify: `grep -c 'and its .GpunitExit., the exit' isekai/boundary/README.md` prints `1`.
-- [ ] 3.4 Each gpunit double returns a `GpunitExit` per [D5](design.md#d5): `tests/stages.py`'s `_no_gpunit`,
+- [x] 3.4 Each gpunit double returns a `GpunitExit` per [D5](design.md#d5): `tests/stages.py`'s `_no_gpunit`,
   `tests/e2e/wiring.py`'s `_gpunit`, `tests/test_ui_billing.py`'s `_volume`, `tests/test_ui.py`'s `run=lambda`, and
   `tests/test_ui_jobs.py`'s `gpunit`, `_order`'s `run`, `unstartable` and `volume`; its `Volume().down` assert reads `.code`.
   Verify: `git grep -n 'say: Say) -> int' -- tests` prints nothing, and `grep -n 'run=lambda argv, say: 0' tests/test_ui.py` prints nothing.
-- [ ] 3.5 Add `REFUSALS` to `isekai/interface/render.py` per [D6](design.md#d6); `isekai render`'s `except Refused`
+- [x] 3.5 Add `REFUSALS` to `isekai/interface/render.py` per [D6](design.md#d6); `isekai render`'s `except Refused`
   prints the kind and returns `refused.code` per [D8](design.md#d8). Add `test_a_refused_session_exits_with_gpunits_code`
   to `tests/test_render.py`, bound to `cli:render-session:a-refused-session-exits-with-gpunits-code`.
   Verify: `uv run pytest tests/test_render.py -k refused` exits 0.
-- [ ] 3.6 `run_session`'s docstring in `isekai/interface/render.py` names exits 4 and 5 per [D8](design.md#d8).
+- [x] 3.6 `run_session`'s docstring in `isekai/interface/render.py` names exits 4 and 5 per [D8](design.md#d8).
   Verify: `grep -c '4 no card in stock · 5 no card fits' isekai/interface/render.py` prints `1`.
-- [ ] 3.7 Add `refusal` and `_Slot.refused` to `isekai/interface/ui/jobs.py` and read them per [D7](design.md#d7). Add
+- [x] 3.7 Add `refusal` and `_Slot.refused` to `isekai/interface/ui/jobs.py` and read them per [D7](design.md#d7). Add
   `test_a_refused_window_names_its_kind_and_reason` and `test_a_refused_render_names_its_kind_and_reason` to
   `tests/test_ui_jobs.py`, bound to `ui:render-job:a-refusal-names-its-kind-and-reason`.
   Verify: `uv run pytest tests/test_ui_jobs.py -k refused` exits 0.
-- [ ] 3.8 Amend D36 in `docs/decisions.md` per [D9](design.md#d9).
+- [x] 3.8 Amend D36 in `docs/decisions.md` per [D9](design.md#d9).
   Verify: `grep -c 'Refusals:.. .isekai render. exits' docs/decisions.md` prints `1`.

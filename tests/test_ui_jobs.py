@@ -25,7 +25,7 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from isekai.boundary import gpu, ollama  # noqa: E402
-from isekai.boundary.gpu import Say, Seams, Volume  # noqa: E402
+from isekai.boundary.gpu import GpunitExit, Say, Seams, Volume  # noqa: E402
 from isekai.foundation.flow import FLOWS_DIR, Schema, load_flow  # noqa: E402
 from isekai.foundation.refusal import Refusal  # noqa: E402
 from isekai.foundation.run import Run, approval_of, open_run  # noqa: E402
@@ -227,9 +227,9 @@ def test_each_line_a_job_writes_to_the_collections_log_names_its_job(
 ) -> None:
     folder, (run,) = _collection(tmp_path, "ada.jpg")
 
-    def gpunit(argv: Sequence[str], say: Say) -> int:
+    def gpunit(argv: Sequence[str], say: Say) -> GpunitExit:
         say(f"gpunit {' '.join(argv)}")
-        return 0
+        return GpunitExit(0)
 
     volume = Volume(run=gpunit, records=tmp_path / ".gpunit")
     # The last line ends with no newline, as a child cut short leaves it.
@@ -614,10 +614,10 @@ def _order(
     The render child is a real process, so the order is read from one file.
     """
 
-    def run(argv: Sequence[str], say: Say) -> int:
+    def run(argv: Sequence[str], say: Say) -> GpunitExit:
         with record.open("a") as acts:
             print(" ".join(argv), file=acts)
-        return LOST_EXIT if "up" in argv and "lost" in record.name else 0
+        return GpunitExit(LOST_EXIT if "up" in argv and "lost" in record.name else 0)
 
     def command(limit: int, roots: Sequence[Path], session: str) -> list[str]:
         script = (
@@ -670,7 +670,7 @@ def test_a_window_opening_that_raises_fails_the_job_and_its_step(
     folder, _ = _collection(tmp_path, "ada.jpg")
     rendered: list[int] = []
 
-    def unstartable(argv: Sequence[str], say: Say) -> int:
+    def unstartable(argv: Sequence[str], say: Say) -> GpunitExit:
         raise OSError("gpunit is not installed")
 
     jobs = Jobs(
@@ -713,6 +713,59 @@ def test_a_lost_window_opening_renders_nothing_and_raises_the_volume_alert(
     slot = jobs.slot("render") or {}
     assert slot["state"] == "failed"
     assert slot["session"]["steps"]["volume up"] == "lost"
+
+
+@pytest.mark.spec("ui:render-job:a-refusal-names-its-kind-and-reason")
+def test_a_refused_window_names_its_kind_and_reason(tmp_path: Path) -> None:
+    folder, _ = _collection(tmp_path, "ada.jpg")
+    refused = "refused: no card in 'gpus' meets vram_gb and max_hourly"
+    rendered: list[int] = []
+
+    def unfit(argv: Sequence[str], say: Say) -> GpunitExit:
+        return GpunitExit(5, refused)
+
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=Volume(run=unfit, records=tmp_path / ".gpunit"),
+        render=lambda limit, roots, session: rendered.append(limit) or [],
+    )
+
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
+    jobs.wait("render", WAIT)
+
+    slot = jobs.slot("render") or {}
+    assert slot["state"] == "failed"
+    assert slot["message"] == (
+        f"no card fits max_hourly / vram_gb; gpunit {refused}; "
+        "read b/log.txt for the cards it skipped"
+    )
+    assert rendered == []
+
+
+@pytest.mark.spec("ui:render-job:a-refusal-names-its-kind-and-reason")
+def test_a_refused_render_names_its_kind_and_reason(tmp_path: Path) -> None:
+    folder, _ = _collection(tmp_path, "ada.jpg")
+    volume, _ = _order(tmp_path / "acts")
+    refused = "refused: no card in 'gpus' was placed"
+    # The render child relays gpunit's lines to its stderr, as `isekai render` does.
+    said = f"2026-11-03T09:14:02Z {refused}\nrefused: a line of isekai's own\n"
+    script = f"import sys; sys.stderr.write({said!r}); sys.exit(4)"
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=lambda limit, roots, session: [sys.executable, "-c", script],
+    )
+
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
+    jobs.wait("render", WAIT)
+
+    slot = jobs.slot("render") or {}
+    assert slot["state"] == "failed"
+    assert slot["message"] == (
+        f"no card in stock; gpunit {refused}; read b/log.txt for the cards it skipped"
+    )
 
 
 @pytest.mark.spec("ui:render-job:a-stopped-surface-closes-the-window")
@@ -798,10 +851,10 @@ def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str
     folder, _ = _collection(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
 
-    def volume(argv: Sequence[str], say: Say) -> int:
+    def volume(argv: Sequence[str], say: Say) -> GpunitExit:
         with record.open("a") as acts:
             print(" ".join(argv), file=acts)
-        return 1 if "down" in argv else 0
+        return GpunitExit(1 if "down" in argv else 0)
 
     script = (
         "import signal, sys, time\n"
@@ -894,7 +947,7 @@ def test_a_gpunit_verb_runs_in_its_own_session(
 
     monkeypatch.setattr(gpu.subprocess, "Popen", recorded)
 
-    assert Volume().down(lambda line: None) == 0
+    assert Volume().down(lambda line: None).code == 0
     ((argv, kwargs),) = ran
     assert argv[1:] == ["-m", "gpunit", "volume", "down"]
     assert kwargs.get("start_new_session") is True

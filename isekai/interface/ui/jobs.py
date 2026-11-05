@@ -33,11 +33,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, TextIO, get_args
 
-from isekai.boundary.gpu import Say, Volume
+from isekai.boundary.gpu import GpunitExit, Say, Volume, refused_line
 from isekai.foundation.artifacts import session_id
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
-from isekai.interface.render import LOST_EXIT, load_timing, progress_line
+from isekai.interface.render import LOST_EXIT, REFUSALS, load_timing, progress_line
 from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
@@ -74,6 +74,20 @@ VOLUME_DOWN = "uv run --env-file .env gpunit volume down"
 def settle_s() -> float:
     """Return how long a stopping server waits for a render: its teardown and a verb."""
     return load_timing().teardown_s + VOLUME_S
+
+
+def refusal(code: int, refused: str | None, collection: str) -> str | None:
+    """Return a job's message for gpunit's exit `code` when it has a kind, else None.
+
+    e.g. (4, "refused: no card in 'gpus' was placed", "b") -> "no card in stock;
+    gpunit refused: no card in 'gpus' was placed; read b/log.txt for the cards it
+    skipped"
+    """
+    lead = REFUSALS.get(code)
+    if lead is None:
+        return None
+    quoted = "" if refused is None else f"; gpunit {refused}"
+    return f"{lead}{quoted}; read {collection}/{LOG} for the cards it skipped"
 
 
 # How a stage is started: the verb, the flow, the runs root and the runs.
@@ -229,6 +243,8 @@ class _Slot:
     tee: threading.Thread | None = None
     stopping: bool = False
     thread: threading.Thread | None = None
+    # The last gpunit `refused:` line its child wrote.
+    refused: str | None = None
 
     @property
     def running(self) -> bool:
@@ -487,15 +503,16 @@ class Jobs:
         opened = False
         try:
             self._mark(job, "volume up", "running")
-            code = _named(job.kind, folders, self._volume.up)
-            if code != 0:
-                self._mark(job, "volume up", "lost" if code == LOST_EXIT else "failed")
-                if code == LOST_EXIT:
+            ended = _named(job.kind, folders, self._volume.up)
+            if ended.code != 0:
+                lost = ended.code == LOST_EXIT
+                self._mark(job, "volume up", "lost" if lost else "failed")
+                if lost:
                     self._raise_volume()
                 job.state = "failed"
-                job.message = (
-                    f"gpunit volume up did not open the window (exit {code}); read "
-                    f"{job.collection}/{LOG}, and nothing was rendered"
+                job.message = refusal(ended.code, ended.refused, job.collection) or (
+                    f"gpunit volume up did not open the window (exit {ended.code}); "
+                    f"read {job.collection}/{LOG}, and nothing was rendered"
                 )
                 return
             opened = True
@@ -516,7 +533,7 @@ class Jobs:
         finally:
             if opened and steps["volume down"] != "kept":
                 self._mark(job, "volume down", "running")
-                code = _named(job.kind, folders, self._volume.down)
+                code = _named(job.kind, folders, self._volume.down).code
                 self._mark(job, "volume down", "done" if code == 0 else "failed")
                 if code != 0:
                     self._raise_volume()
@@ -559,7 +576,7 @@ class Jobs:
             slot.child = None
             if code != 0 and not slot.stopping:
                 job.state = "failed"
-                job.message = (
+                job.message = refusal(code, slot.refused, job.collection) or (
                     f"render ended with exit {code}"
                     + ("" if reported else " before reporting")
                     + f"; read {job.collection}/{LOG}"
@@ -612,8 +629,9 @@ class Jobs:
         assert child.stderr is not None
         slot = self._slots[kind]
         slot.child = child
+        slot.refused = None
         slot.tee = threading.Thread(
-            target=_tee, args=(child.stderr, logs, kind), daemon=True
+            target=_tee, args=(child.stderr, logs, kind, slot), daemon=True
         )
         slot.tee.start()
         return child
@@ -631,7 +649,9 @@ class Jobs:
         self._broadcast.publish("job", described)
 
 
-def _named(kind: Kind, folders: Sequence[Path], verb: Callable[[Say], int]) -> int:
+def _named(
+    kind: Kind, folders: Sequence[Path], verb: Callable[[Say], GpunitExit]
+) -> GpunitExit:
     """Run a gpunit `verb`, each line it says written to each log naming its job."""
     with contextlib.ExitStack() as held:
         # Line-buffered, so each line lands whole beside the other job's.
@@ -643,14 +663,19 @@ def _named(kind: Kind, folders: Sequence[Path], verb: Callable[[Say], int]) -> i
         return verb(lambda line: _say(logs, kind, line))
 
 
-def _tee(stream: TextIO, logs: Sequence[TextIO], kind: Kind) -> None:
-    """Write each line of `stream` to every log, naming its job. e.g. `[render] …`."""
+def _tee(stream: TextIO, logs: Sequence[TextIO], kind: Kind, slot: _Slot) -> None:
+    """Write each line of `stream` to every log, naming its job. e.g. `[render] …`.
+
+    Each gpunit `refused:` line among them becomes the slot's `refused`.
+    """
     with contextlib.ExitStack() as held:
         held.enter_context(stream)
         for log in logs:
             held.enter_context(log)
-        for line in stream:
-            _say(logs, kind, line.rstrip("\n"))
+        for raw in stream:
+            line = raw.rstrip("\n")
+            _say(logs, kind, line)
+            slot.refused = refused_line(line) or slot.refused
 
 
 def _say(logs: Sequence[TextIO], kind: Kind, line: str) -> None:

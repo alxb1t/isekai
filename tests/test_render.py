@@ -854,6 +854,30 @@ def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
     assert "--env-file" not in log(runs)
 
 
+@pytest.mark.spec("cli:render-session:a-refused-session-exits-with-gpunits-code")
+def test_a_refused_session_exits_with_gpunits_code(tmp_path: Path) -> None:
+    reason = "no card in 'gpus' was placed"
+
+    @contextmanager
+    def block(
+        cwd: Path,
+        environ: Mapping[str, str],
+        say: Callable[[str], None],
+        limit_s: int,
+    ) -> Iterator[FakeSession]:
+        say(f"2026-10-10T12:00:00Z refused: {reason}")
+        raise gpunit.Refused(reason, code=4)
+        yield FakeSession()
+
+    runs = collection(tmp_path)
+    assert session(runs, f"{FLOW}=1", opener=block) == 4
+    lines = log(runs).splitlines()
+    assert lines[-1].startswith("no card in stock, per gpunit's line above")
+    assert sum("refused:" in line for line in lines) == 1
+    (record,) = records(runs)
+    assert (record["outcome"], record["message"]) == ("failed", reason)
+
+
 @pytest.mark.spec("cli:render-progress:each-image-of-the-total")
 def test_a_session_reports_each_image_of_the_total_as_json(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
