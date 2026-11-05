@@ -715,15 +715,9 @@ def test_the_check_catches_a_host_key_kept_or_made_again() -> None:
 
 
 BOOT_SCRIPT = "/opt/gpunit/boot.sh"
-BOOT_SOURCE = "https://raw.githubusercontent.com/alxb1t/gpunit/{tag}/boot/boot.sh"
-
-
-def gpunit_tag(pyproject: str) -> str | None:
-    """Return the tag `pyproject.toml` pins gpunit at, or None if it pins none."""
-    pinned = re.search(
-        r'"gpunit @ git\+https://github\.com/alxb1t/gpunit@([\w.]+)"', pyproject
-    )
-    return pinned[1] if pinned else None
+BOOT_SOURCE = (
+    r"https://raw\.githubusercontent\.com/alxb1t/gpunit/v\d+\.\d+\.\d+/boot/boot\.sh"
+)
 
 
 def boots_the_boot_script(dockerfile: str) -> bool:
@@ -732,21 +726,19 @@ def boots_the_boot_script(dockerfile: str) -> bool:
     return entry == [f'ENTRYPOINT ["{BOOT_SCRIPT}", "--"]']
 
 
-def boot_script_faults(dockerfile: str, pyproject: str) -> list[str]:
-    """Return how the image's entrypoint departs from gpunit's boot script at its pin.
+def boot_script_faults(dockerfile: str) -> list[str]:
+    """Return how the entrypoint departs from the boot script at a pinned gpunit tag.
 
     e.g. a build file holding `CMD ["python", "serve.py"]` alone ->
     ["the boot script is not added ...", "the entrypoint is not ..."]
     """
     lines = [ln for ln in joined_lines(dockerfile) if not ln.lstrip().startswith("#")]
-    tag = gpunit_tag(pyproject)
-    source = re.escape(BOOT_SOURCE.format(tag=tag or "?"))
     added = re.compile(
-        rf"^ADD --checksum=sha256:[0-9a-f]{{64}}\s+{source}\s+{BOOT_SCRIPT}$"
+        rf"^ADD --checksum=sha256:[0-9a-f]{{64}}\s+{BOOT_SOURCE}\s+{BOOT_SCRIPT}$"
     )
     faults = []
-    if tag is None or not any(added.match(ln) for ln in lines):
-        faults.append("the boot script is not added at gpunit's pin with a checksum")
+    if not any(added.match(ln) for ln in lines):
+        faults.append("the boot script is not added from a gpunit tag with a checksum")
     if not boots_the_boot_script(dockerfile):
         faults.append("the entrypoint is not the boot script followed by --")
     return faults
@@ -754,30 +746,28 @@ def boot_script_faults(dockerfile: str, pyproject: str) -> list[str]:
 
 @pytest.mark.spec("pod-image:host-key:each-boot-makes-and-prints-one")
 def test_each_boot_runs_gpunits_boot_script_at_its_pin(dockerfile: str) -> None:
-    pyproject = (REPO / "pyproject.toml").read_text()
-    assert gpunit_tag(pyproject) is not None
-    assert boot_script_faults(dockerfile, pyproject) == []
+    assert boot_script_faults(dockerfile) == []
 
 
 @pytest.mark.spec_exempt(
     "structural: twin of test_each_boot_runs_gpunits_boot_script_at_its_pin"
 )
 def test_the_check_catches_a_boot_script_at_another_tag_or_unchecked() -> None:
-    pyproject = 'dependencies = ["gpunit @ git+https://github.com/alxb1t/gpunit@v9"]'
+    source = "https://raw.githubusercontent.com/alxb1t/gpunit/v9.0.0/boot/boot.sh"
     pinned = (
         f"ADD --checksum=sha256:{'0' * 64} \\\n    "
-        f"{BOOT_SOURCE.format(tag='v9')} {BOOT_SCRIPT}\n"
+        f"{source} {BOOT_SCRIPT}\n"
         f'ENTRYPOINT ["{BOOT_SCRIPT}", "--"]\n'
     )
-    assert boot_script_faults(pinned, pyproject) == []
-    elsewhere = pinned.replace("/v9/", "/v8/")
+    assert boot_script_faults(pinned) == []
+    elsewhere = pinned.replace("/v9.0.0/", "/main/")
     unchecked = pinned.replace(f"--checksum=sha256:{'0' * 64} ", "")
     for broken in (elsewhere, unchecked):
-        assert boot_script_faults(broken, pyproject) == [
-            "the boot script is not added at gpunit's pin with a checksum"
+        assert boot_script_faults(broken) == [
+            "the boot script is not added from a gpunit tag with a checksum"
         ]
-    assert boot_script_faults('CMD ["python", "serve.py"]\n', pyproject) == [
-        "the boot script is not added at gpunit's pin with a checksum",
+    assert boot_script_faults('CMD ["python", "serve.py"]\n') == [
+        "the boot script is not added from a gpunit tag with a checksum",
         "the entrypoint is not the boot script followed by --",
     ]
 

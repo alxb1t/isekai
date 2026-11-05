@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- gpunit moves to `v0.12.0`, whose `volume up` remakes a window volume the provider deleted; the image keeps
+  `v0.7.0`'s boot script, its tag pinned on its own, so nothing is rebuilt (0097 D1, D2, D3).
+
 ## [0.63.0] - 2026-11-04
 
 Gate: local 0m32s · CI not read under mf-ship · 0.62.2: local 0m35s · CI not read under mf-ship

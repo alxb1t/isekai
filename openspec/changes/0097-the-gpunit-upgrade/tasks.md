@@ -5,22 +5,22 @@ reason its task names.
 
 ## Progress
 
-- [ ] 1 — The pin
+- [x] 1 — The pin
 - [ ] 2 — The lines
 - [ ] 3 — The reason
 
 ## 1 — The pin
 
-- [ ] 1.1 **HALT CHECK** The `Dockerfile` still adds `v0.7.0`'s `boot.sh`, which [D2](design.md#d2) leaves in place.
+- [x] 1.1 **HALT CHECK** The `Dockerfile` still adds `v0.7.0`'s `boot.sh`, which [D2](design.md#d2) leaves in place.
   Verify: `grep -c 'gpunit/v0.7.0/boot/boot.sh' Dockerfile` prints `1`.
-- [ ] 1.2 Move `pyproject.toml:50`'s pin to `v0.12.0` per [D1](design.md#d1), then run `uv lock`.
+- [x] 1.2 Move `pyproject.toml:50`'s pin to `v0.12.0` per [D1](design.md#d1), then run `uv lock`.
   Verify: `grep -n 'rev=v0.7.0' uv.lock` prints nothing, and `uv run python -c "import gpunit; print(gpunit.__version__)"` prints `0.12.0`.
-- [ ] 1.3 Untie the boot script's tag in `tests/test_infra.py` per [D2](design.md#d2): `gpunit_tag` goes, `BOOT_SOURCE`
+- [x] 1.3 Untie the boot script's tag in `tests/test_infra.py` per [D2](design.md#d2): `gpunit_tag` goes, `BOOT_SOURCE`
   and `boot_script_faults` change, and both boot-script tests keep their names.
   Verify: `grep -n 'gpunit_tag' tests/test_infra.py` prints nothing, and `uv run pytest tests/test_infra.py -k boot` exits 0.
-- [ ] 1.4 Rewrite `docs/pins.md`'s boot-script row and its gpunit recipe per [D3](design.md#d3).
+- [x] 1.4 Rewrite `docs/pins.md`'s boot-script row and its gpunit recipe per [D3](design.md#d3).
   Verify: `grep -n 'too old for its gpunit' docs/pins.md` prints nothing, and `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 1.5 Name exits 4 and 5 in `Volume`'s docstring in `isekai/boundary/gpu.py` per [D3](design.md#d3).
+- [x] 1.5 Name exits 4 and 5 in `Volume`'s docstring in `isekai/boundary/gpu.py` per [D3](design.md#d3).
   Verify: `grep -c '4 no card in stock, 5 no card fits' isekai/boundary/gpu.py` prints `1`.
 
 ## 2 — The lines

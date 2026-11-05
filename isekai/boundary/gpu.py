@@ -154,7 +154,8 @@ def run_gpunit(argv: Sequence[str], say: Say) -> int:
 class Volume:
     """The window volume and gpunit's records, through gpunit's own verbs.
 
-    Each returns gpunit's exit: 0 done, 1 refused or failed, 3 a lost create.
+    Each returns gpunit's exit: 0 done, 1 refused or failed, 3 a lost create,
+    4 no card in stock, 5 no card fits.
     `records` is where gpunit keeps what it created, `.gpunit/` in its directory.
     """
 
