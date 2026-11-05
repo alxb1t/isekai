@@ -20,6 +20,8 @@ its new digest.
   Hub on its cell; the import sheet's remove hint reads `⌫` (0106 D5, D6).
 - D25 takes `⇧⌫` as the large view's Delete; principles' *Known breaks*, the data flow and the READMEs name the
   discard, and the interface README lists staging's per-file `GET` and `DELETE` (0106 D8).
+- A deleted render's address says no render is there, not that its record is; the delete is refused while a session
+  renders any of its collections; the Hub reads the deleted cell once, so Back keeps the last focus (0106 D4, D6).
 
 ## [0.70.0] - 2026-11-06
 

@@ -77,6 +77,7 @@ from isekai.foundation.artifacts import (
     DRAFT_FILE,
     ONE_RENDER,
     SHEET_FILE,
+    SIDECAR,
     TAGS_FILE,
     WD14_FILE,
     Renders,
@@ -858,11 +859,15 @@ def create_app(
         return {"back": None if left is None else left.name, "cancelled": changed}
 
     def _rendering(collection: str) -> str | None:
-        """Return what a render running for `collection` says, or None."""
+        """Return what a render running for `collection` says, or None.
+
+        A session over several collections renders each, not only the first its
+        slot names.
+        """
         slot = rendering_slot()
         return (
             "A render session is running."
-            if slot and slot["collection"] == collection
+            if slot and collection in slot.get("collections", [slot["collection"]])
             else None
         )
 
@@ -985,7 +990,11 @@ def create_app(
     def rendered(
         collection: str, digest: str, flow: str, version: str, seed: int
     ) -> tuple[Run, Path, Path]:
-        """Return a render's run, its image and the approval it was rendered from."""
+        """Return a render's run, its image and the approval it was rendered from.
+
+        A missing image is refused: with its record gone too, as a deleted render's
+        is, nothing is there to render again.
+        """
         found = folder(collection)
         run = library.run_named(found, digest)
         one = offered(flow)
@@ -993,6 +1002,11 @@ def create_app(
         approval = approval_of(run, flow, number)
         image = image_of(run, one, number, seed)
         if not image.is_file():
+            if not (image.parent / f"{seed}{SIDECAR}").is_file():
+                raise Refusal(
+                    f"{image.name}: no render is here, "
+                    "its record and its image are gone"
+                )
             raise Refusal(
                 f"{image.name}: its record is there, its image is gone; render it "
                 f"again with `python -m isekai render {found / library.RUNS}`"

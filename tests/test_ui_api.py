@@ -1703,6 +1703,13 @@ def test_deleting_a_render_deletes_its_files_and_thumbnail(
     assert list(cache.glob("001/11.*.jpg")) == []
     assert (outputs / "002" / "22.png").is_file()
     assert len(list(cache.glob("002/22.*.jpg"))) == 1
+    # Its address now names no render, and says so rather than a record left.
+    gone = client.get(f"{at}/v1/11")
+    assert gone.status_code == 409
+    assert (
+        gone.json()["refusal"]
+        == "11.png: no render is here, its record and its image are gone"
+    )
 
 
 @pytest.mark.spec("ui:delete-render:refused-while-a-render-runs")
@@ -1718,15 +1725,19 @@ def test_deleting_a_render_is_refused_while_a_render_runs(
     _rendered_twice(made, schema, vocabulary)
     client = _client(wired, made, tmp_path, drafted=False)
     before = snapshot(made.path)
-    monkeypatch.setattr(
-        Jobs, "slot", lambda self, kind: _rendering_slot("20261024T091200Z")
-    )
+    alone = _rendering_slot("20261024T091200Z")
+    # A session over two collections names the first; the second is rendering too.
+    second = {**alone, "collection": "earlier", "collections": ["earlier", COLLECTION]}
+    for slot in (alone, second):
+        monkeypatch.setattr(Jobs, "slot", lambda self, kind, slot=slot: slot)
 
-    refused = client.delete(f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/11")
+        refused = client.delete(
+            f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/11"
+        )
 
-    assert refused.status_code == 409
-    assert "A render session is running." in refused.json()["refusal"]
-    assert snapshot(made.path) == before
+        assert refused.status_code == 409
+        assert "A render session is running." in refused.json()["refusal"]
+        assert snapshot(made.path) == before
 
 
 @pytest.mark.spec("ui:renders:a-source-thumbnail-is-upright")
