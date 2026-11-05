@@ -17,6 +17,8 @@ its new digest.
   them once per photograph, and every reader takes `photo/`, so no flow borrows another's (0103 D6, D8–D10).
 - Review's source pane drops its "· from" heading and `caption_from`: every flow shows the photograph's caption
   (0103 D11).
+- D1, D17, D31 and D38 now record `photo/` as the photograph's description, read by every flow; the data flow,
+  the module graph, the README and the group READMEs say so and name `isekai migrate` (0103 D12).
 
 ## [0.68.0] - 2026-11-05
 

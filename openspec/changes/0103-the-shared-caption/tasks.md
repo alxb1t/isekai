@@ -8,7 +8,7 @@ the repository root.
 - [x] 1 — The store
 - [x] 2 — The switch
 - [x] 3 — The page
-- [ ] 4 — The record
+- [x] 4 — The record
 
 ## 1 — The store
 
@@ -212,23 +212,23 @@ the repository root.
 
 ## 4 — The record
 
-- [ ] 4.1 In `docs/decisions.md`, amend D1, D17, D31 and D38 per [the record](design.md#the-record), each `Made by:`
+- [x] 4.1 In `docs/decisions.md`, amend D1, D17, D31 and D38 per [the record](design.md#the-record), each `Made by:`
   gaining `` `0103` ``.
   Verify: `grep -c "Made by:.*0103" docs/decisions.md` prints `4`.
-- [ ] 4.2 In `docs/data-flow.md`: the diagram (`:14-42`) writes `tag` and `caption` into `photo/`; the `--flow`
+- [x] 4.2 In `docs/data-flow.md`: the diagram (`:14-42`) writes `tag` and `caption` into `photo/`; the `--flow`
   paragraph (`:77-92`) and Prepare's (`:94-97`) say `tag` and `caption` take no flow; the run directory (`:137-160`)
   draws [the layout](design.md#the-layout) and names `isekai migrate`.
   Verify: `grep -n "isekai migrate" docs/data-flow.md` prints the line naming it.
-- [ ] 4.3 In `README.md`: the verbs (`:97-113`) and the batch (`:222-228`) run `tag` and `caption` with no `--flow`;
+- [x] 4.3 In `README.md`: the verbs (`:97-113`) and the batch (`:222-228`) run `tag` and `caption` with no `--flow`;
   the layout (`:121-124`) names `photo/`; the draft (`:154-162`) fills from the photograph's tags; the flags
   (`:305-310`) say `--flow` is for a stage on a flow; a line names `isekai migrate`.
   Verify: `grep -n -E "(tag|caption) --flow" README.md` prints nothing.
-- [ ] 4.4 In `docs/modules.md`, `:44`'s jobs line says tag and caption run once per photograph, `:48-52` drop the
+- [x] 4.4 In `docs/modules.md`, `:44`'s jobs line says tag and caption run once per photograph, `:48-52` drop the
   borrow, and `foundation/migrate.py` is in the graph.
   Verify: `grep -n "migrate.py" docs/modules.md` prints the line naming it.
-- [ ] 4.5 In `isekai/foundation/README.md`, `run.py`'s row names `photo/` and `photo_of`, a `migrate.py` row is added,
+- [x] 4.5 In `isekai/foundation/README.md`, `run.py`'s row names `photo/` and `photo_of`, a `migrate.py` row is added,
   and the "Imported by" table names `migrate.py`'s importers.
   Verify: `grep -c -E "^[|] .migrate[.]py. [|]" isekai/foundation/README.md` prints `2`, its row in each table.
-- [ ] 4.6 In `isekai/pipeline/README.md` (`:6-8`, `:25`), `isekai/interface/README.md` (`:18`, `:26`) and
+- [x] 4.6 In `isekai/pipeline/README.md` (`:6-8`, `:25`), `isekai/interface/README.md` (`:18`, `:26`) and
   `isekai/interface/ui/README.md` (`:9`, `:25`), the description is the photograph's and tag and caption run once.
   Verify: `git grep -n -e "resolves the reader and the two taggers per flow" -e "Every stage is per flow" -- isekai` prints nothing.

@@ -50,12 +50,13 @@ restriction.
 ### D1 · Stage ① is two independent verbs
 
 **`tag` writes the WD14 tags, then the JoyCaption tags; `caption` writes the prose. Each writes only its
-own artifacts, and each tagger's refusal is collected on its own.**
+own artifacts, and each tagger's refusal is collected on its own. Both write the photograph's, under
+`photo/`, once for every flow.**
 
 - **Why:** the sheet reads WD14's tags, so its input must not wait on Ollama. `tag` is the sheet's input
   and `caption` is the reviewer's aid, and neither needs the other.
 - **`--new-version`** re-produces only what its own verb writes.
-- **Made by:** `0020`, `0032`.
+- **Made by:** `0020`, `0032`, `0103`.
 
 ### D2 · A table fills the sheet
 
@@ -251,23 +252,25 @@ same combination.**
 
 ### D31 · A flow declares whether it is tagged
 
-**`flow.json` declares `"tagger": true | false`, and the sheet reads the declaration.** `tag` refuses a
-flow that declares `false`; `sheet` fills such a flow's sheet with every field empty, for a person to fill.
+**`flow.json` declares `"tagger": true | false`, and the sheet reads the declaration.** `tag` names no
+flow; `sheet` fills an untagged flow's sheet with every field empty, for a person to fill, and Prepare tags a
+photograph only for a flow that declares `true`.
 
 - **Why:** flows that need no tag list are coming. A boolean, not a list of taggers: `tag` runs both
   together, so a list would declare a choice no flow makes.
-- **Made by:** `0032`.
+- **Made by:** `0032`, `0103`.
 
 ### D38 · A control flow is its subject with the face chain at zero
 
 **`control-anime-wai` is `summon-anime-wai`'s directory with `ip_weight` and `identity_cn_strength` at 0, held
 equal to it by a test; its approval is copied from `summon`'s and its renders take `summon`'s seeds, each
-recording the source. A stage reads another flow only when the operator names it as a source.**
+recording the source. A stage reads another flow's work only when the operator names it as a source; the
+photograph's description is every flow's (D17).**
 
 - **Why:** the count's floor is the same sheet and the same noise with the face mechanism off; the comparison
   is sound only while the two differ in exactly that. D17 forbids a flow reaching into another on its own, and
   an operator's named source is not that.
-- **Made by:** `0054`.
+- **Made by:** `0054`, `0103`.
 
 ### D44 · A flat flow is summon with the face chain ending early
 
@@ -304,11 +307,13 @@ again resumes the same run.**
 
 ### D17 · Input above, flow below
 
-**`runs/<input>/<flow>/<stage>/`.**
+**`runs/<input>/photo/` holds the photograph's caption and tag lists, read by every flow;
+`runs/<input>/<flow>/<stage>/` holds each flow's own work.**
 
-- **Why:** adding a flow adds one subtree, and no flow reads another's artifacts unless the operator names
-  it as a source ([D38](#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
-- **Made by:** `0016`.
+- **Why:** one briefing, one model and one pinned tagger read a photograph alike, so its description is
+  written once; a flow still adds one subtree, and reads another's work only when the operator names it
+  ([D38](#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
+- **Made by:** `0016`, `0103`.
 
 ### D18 · Runs stay out of what git tracks
 

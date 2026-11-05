@@ -3,9 +3,10 @@
 One file per stage, in the order a photograph passes through them. No stage reads
 another's output directly: each is handed a path inside a run and hands back a
 numbered artifact, and **no stage imports another** — the last such edge closed
-when `validate` moved to `shared/fields.py`. Every stage is per flow: the flow
-supplies the schema it fills against and the directory it
-writes into.
+when `validate` moved to `shared/fields.py`. `caption` and `tag` write the
+photograph's description into `photo/`, once for every flow; every other stage is
+per flow: the flow supplies the schema it fills against and the directory it
+writes into ([D17](../../docs/decisions.md#d17--input-above-flow-below)).
 
 **The verbs are `import` · `caption` · `tag` · `sheet` · `review` · `approve` · `draft` · `generate`.**
 `importing.py` is `import`: it fills a collection's `sources/` and comes before every run.
@@ -22,7 +23,7 @@ independent, and neither reads the other's output
 | `importing.py` | reads a file into staging — an upload in turn, by its open import's reader — cleans it to its pixels and orientation, verifies it, previews it, and commits the collection's `sources/` | free |
 | `caption.py` | ① `caption`: turns a photograph into descriptive prose | a model call |
 | `tagging.py` | ① `tag`: a scored tag list from a local ONNX session, then a raw one from a hosted model. **Neither is narrowed** — filtering is ②'s job | free, then a model call |
-| `sheet.py` | ② routes the local tag list into the flow's schema's fields, through the authored table | free |
+| `sheet.py` | ② routes the photograph's local tag list into the flow's schema's fields, through the authored table | free |
 | `review.py` | ③ copies a sheet somewhere a human may correct it, then approves it | a human — the largest measured gain in the pipeline |
 | `generate.py` | ④ assembles every prompt locally, then renders each against an endpoint | free, then **money** |
 
