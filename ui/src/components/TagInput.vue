@@ -51,6 +51,9 @@ const open = computed(() => props.focused && matches.value.length > 0)
 const above = ref(false)
 const drop = ref<InstanceType<typeof TagAutocomplete> | null>(null)
 
+/* `.drop`'s `top` in `app.css`: below opens this far under `.row__tags`' top. */
+const DROP_TOP = 30
+
 /* Measured once the list is drawn and before it is painted: the room to `.rows`'
    foot and top decides its side. */
 watch(
@@ -58,14 +61,15 @@ watch(
   () => {
     const rows = box.value?.closest('.rows')
     const list = drop.value?.$el as HTMLElement | undefined
-    if (!open.value || !rows || !box.value || !list) {
+    const tags = list?.offsetParent
+    if (!open.value || !rows || !list || !tags) {
       above.value = false
       return
     }
-    const field = box.value.getBoundingClientRect()
+    const { top } = tags.getBoundingClientRect()
     const room = rows.getBoundingClientRect()
     above.value =
-      placement(room.bottom - field.bottom, field.top - room.top, list.offsetHeight) === 'above'
+      placement(room.bottom - (top + DROP_TOP), top - room.top, list.offsetHeight) === 'above'
   },
   { flush: 'post' },
 )
