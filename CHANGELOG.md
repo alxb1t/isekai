@@ -10,6 +10,17 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.66.0] - 2026-11-05
+
+Gate: local 0m28s · CI not read under mf-ship · 0.65.0: local 0m29s · CI not read under mf-ship
+
+- Catppuccin's Latte, Frappé, Macchiato and Mocha are token sets beside Nocturne; the billing band, the session tile,
+  the drawer's backdrop and the tag cheatsheet read tokens, and a vitest holds each flavour to WCAG AA (0098 D1, D2, D7).
+- `⇧T` opens a theme dialog on every screen: each row is drawn in its own theme, a move previews, `↵` keeps and `Esc`
+  restores; the browser keeps the choice and paints it before the app loads (0098 D4, D5, D6).
+- Docs D48 records that a theme is a token set, chosen in the browser; the design spec names the new tokens, the
+  themes and `⇧T` (0098 D8).
+
 ## [0.65.0] - 2026-11-05
 
 Gate: local 0m29s · CI not read under mf-ship · 0.64.0: local 0m35s · CI not read under mf-ship

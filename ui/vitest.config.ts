@@ -6,6 +6,11 @@ import vite from './vite.config.ts'
 export default mergeConfig(
   vite,
   defineConfig({
-    test: { include: ['src/**/*.test.ts'], environment: 'node' },
+    test: {
+      include: ['src/**/*.test.ts'],
+      environment: 'node',
+      // A test reads a sheet as text, which vitest serves empty without this.
+      css: true,
+    },
   }),
 )

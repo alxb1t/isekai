@@ -54,6 +54,13 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 | `--chip-line` | `#2f3146` | an import row's badge border |
 | placeholder | `repeating-linear-gradient(135deg,#1f2030 0 5px,#26273b 5px 10px)` | an image not yet decoded |
 | scrim | `rgba(10,11,18,.4)` | behind sheets and dialogs |
+| `--band` | `#0f1018` | text on the billing band |
+| `--scrim-drawer` | `color-mix(in srgb, var(--ground) 80%, transparent)` | behind the session drawer |
+| `--overlay` | `color-mix(in srgb, var(--color-bg) 72%, black)` | the tag cheatsheet's ground |
+
+**Themes.** These are Nocturne's values, the default. Catppuccin's Latte, Frappé, Macchiato and Mocha set every token
+in `ui/src/themes.css`, mapped by role, and `⇧T` chooses one
+([D48](../../docs/decisions.md#d48--a-theme-is-a-token-set-chosen-in-the-browser)).
 
 **Type.** Sans: Helvetica Neue, Helvetica, Arial, for prose and buttons. Mono: JetBrains Mono 400/500/600, for names,
 counts, keys, stage words and commands. Body 13px. Buttons 13px, 500 when primary. Section labels mono 11px `ink-3`,
@@ -82,7 +89,7 @@ timer mono 40px/500.
   switcher is a segmented control; Review drops `all`. The `?` button at its right end, after the running render,
   opens the key list, as `⌃/` does; no screen draws a key bar. The key list is a modal dialog, centred over most of
   the window, a column per scope — everywhere's, then the screen's; `⌃/`, `esc` and the backdrop close it.
-- **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
+- **BillingBanner**, a filled accent band, text `band` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
 - **JobStrip**, `ground-deep`, mono 11px: one dot, then one item per running job, each a label (`job · prepare`)
   and its totals (`tag 6 of 6 · caption 3 of 6 · sheet 0 of 6 · 00:35`, `image 1 of 2 · 06:41 of ≤10:30`); with none
@@ -486,7 +493,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 
 | where | keys |
 |---|---|
-| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⌃; the render drawer, from a field too · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
+| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧T the theme dialog · ⌃; the render drawer, from a field too · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New collection · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ full size, j k or ↓↑ scroll it, ⇧↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | the panes: the rail, the photograph, the sheet, ④ — on macOS ⌃H ⌃L alone, from a field or not, elsewhere h l or ←→ · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows, ④'s grid of − + and its slots, from a slot too · h l or ←→ across − + on macOS · ⇧J ⇧K or ⇧↓↑ the rail, the sheet scrolled to its centre · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |

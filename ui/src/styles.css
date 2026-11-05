@@ -337,7 +337,8 @@ textarea.input { min-height: 90px; resize: vertical; }
 
 /* The app's tokens, from `ui/design/spec.md` §2. The shell, Home and the hub
    are drawn in these; the review surface keeps the sheet's above. */
-:root {
+:root,
+[data-theme="nocturne"] {
   --ground: #161724;
   --ground-deep: #11121c;
   --ground-media: #0e0f17;
@@ -363,4 +364,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   --scrim: rgba(10, 11, 18, 0.4);
   --shadow-sheet: 0 30px 80px rgba(0, 0, 0, 0.5);
   --shadow-bar: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --band: #0f1018;
+  --scrim-drawer: color-mix(in srgb, var(--ground) 80%, transparent);
+  --overlay: color-mix(in srgb, var(--color-bg) 72%, black);
 }
