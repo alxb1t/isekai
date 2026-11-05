@@ -718,6 +718,8 @@ BOOT_SCRIPT = "/opt/gpunit/boot.sh"
 BOOT_SOURCE = (
     r"https://raw\.githubusercontent\.com/alxb1t/gpunit/v\d+\.\d+\.\d+/boot/boot\.sh"
 )
+# The oldest gpunit tag whose boot script gpunit reads; it refuses an older one.
+BOOT_FLOOR = (0, 6, 0)
 
 
 def boots_the_boot_script(dockerfile: str) -> bool:
@@ -736,9 +738,15 @@ def boot_script_faults(dockerfile: str) -> list[str]:
     added = re.compile(
         rf"^ADD --checksum=sha256:[0-9a-f]{{64}}\s+{BOOT_SOURCE}\s+{BOOT_SCRIPT}$"
     )
+    tag = re.compile(r"/gpunit/v(\d+)\.(\d+)\.(\d+)/")
+    sources = [ln for ln in lines if added.match(ln)]
     faults = []
-    if not any(added.match(ln) for ln in lines):
+    if not sources:
         faults.append("the boot script is not added from a gpunit tag with a checksum")
+    elif any(tuple(map(int, t)) < BOOT_FLOOR for s in sources for t in tag.findall(s)):
+        faults.append(
+            "the boot script's gpunit tag is older than v0.6.0, which gpunit refuses"
+        )
     if not boots_the_boot_script(dockerfile):
         faults.append("the entrypoint is not the boot script followed by --")
     return faults
@@ -766,6 +774,9 @@ def test_the_check_catches_a_boot_script_at_another_tag_or_unchecked() -> None:
         assert boot_script_faults(broken) == [
             "the boot script is not added from a gpunit tag with a checksum"
         ]
+    assert boot_script_faults(pinned.replace("/v9.0.0/", "/v0.5.0/")) == [
+        "the boot script's gpunit tag is older than v0.6.0, which gpunit refuses"
+    ]
     assert boot_script_faults('CMD ["python", "serve.py"]\n') == [
         "the boot script is not added from a gpunit tag with a checksum",
         "the entrypoint is not the boot script followed by --",
