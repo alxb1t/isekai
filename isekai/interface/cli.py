@@ -55,6 +55,7 @@ from typing import TextIO, TypeVar, cast
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
+from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -243,7 +244,7 @@ def build_parser() -> argparse.ArgumentParser:
         )
     # Required, and repeatable, on every stage verb. A stage cannot act without
     # knowing which flow asked, because the flow is what supplies what it reads:
-    # its briefing, its schema, its graph and its dials. "Every tracked flow" is
+    # its schema, its graph and its dials. "Every tracked flow" is
     # not a selection, it is the absence of one -- and at the last verb it spends
     # money, at the first it burns a paid model call.
     for name in ("assign", "caption", "tag", "sheet", "review", "approve", "generate"):
@@ -761,8 +762,8 @@ def _per_item(
     The flows a verb acts on are a property of the invocation, not of the
     photograph, so they are resolved once by the caller rather than re-read from
     disk per identifier. Every stage but the inspection one is per flow, because
-    the flow is what supplies what the stage reads: its briefing, its schema and
-    its dials. The vocabulary is resolved at most once for the same reason and
+    the flow is what supplies what the stage reads: its schema and its dials. The
+    vocabulary is resolved at most once for the same reason and
     lazily for the old one: parsing the 308 KB tag list costs ~50 ms, and only
     two verbs need it at all.
     """
@@ -832,10 +833,8 @@ def _per_item(
 
             def caption_flow(name: str) -> None:
                 flow = flows[name]
-                # **Resolved per flow, not once per invocation.** One command
-                # naming two flows on two models would otherwise resolve one
-                # reader and hand it to both, and the provenance one of the two
-                # artifacts records would be false.
+                # **Resolved per flow, not once per invocation.** A reader that
+                # refuses refuses for this flow alone.
                 reader = _seam(wired.reader, "reader", "reads the photograph")(flow)
                 _say(
                     reporter,
@@ -845,7 +844,7 @@ def _per_item(
                         run,
                         name,
                         reader,
-                        briefing_path=flow.caption_briefing_path,
+                        briefing_path=load_caption_config().briefing_path,
                         new_version=new_version,
                     ),
                 )

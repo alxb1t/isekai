@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- `config/caption.json` names the reader's model and its briefing, `config/caption.briefing.md`, for every flow; the
+  reader and the hosted tagger run that model, and a caption records the new path with the same digest (0102 D1–D3).
+
 ## [0.67.0] - 2026-11-05
 
 Gate: local 0m28s · CI not read under mf-ship · 0.66.0: local 0m28s · CI not read under mf-ship

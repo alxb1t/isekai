@@ -1,10 +1,10 @@
-"""The two stages that read a briefing, bound to the one tracked flow's copies.
+"""The stages the suite drives, bound to the one tracked flow.
 
-A briefing is part of a flow, so `caption` and `sheet` are handed the path
-they read it from rather than defaulting to a file at the repository root. Almost
-every test in the suite drives them over `summon-anime-wai`; binding it once
-here keeps it from being repeated at seventy call sites, and a test that means to
-vary the briefing passes `briefing_path=` and overrides it.
+`caption` is handed the path of the briefing it reads rather than defaulting to
+a file at the repository root. Almost every test in the suite drives them over
+`summon-anime-wai`; binding it once here keeps it from being repeated at seventy
+call sites, and a test that means to vary the briefing passes `briefing_path=`
+and overrides it.
 
 Shared here rather than imported from one test module by another, which would
 make that module undeletable -- the same rule `tests/images.py` is under. That is
@@ -36,6 +36,7 @@ from isekai.foundation.artifacts import (
     read,
     write,
 )
+from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import Flow, Schema, load_flow, manifest_digest
 from isekai.foundation.run import (
     WD14,
@@ -53,7 +54,7 @@ from tests.fakes import FakeComfyClient
 
 FLOW = load_flow("summon-anime-wai")
 FLOW_DIGEST = manifest_digest(FLOW.id)
-CAPTION_BRIEFING = FLOW.caption_briefing_path
+CAPTION_BRIEFING = load_caption_config().briefing_path
 
 
 def runs_flag(run: Run) -> str:
@@ -83,7 +84,7 @@ def caption(
     briefing_path: Path = CAPTION_BRIEFING,
     new_version: bool = False,
 ) -> Path | None:
-    """Call the caption stage under `summon-anime-wai`'s standing instructions."""
+    """Call the caption stage under the caption config's standing instructions."""
     return caption_stage.caption(
         run, flow, reader, briefing_path=briefing_path, new_version=new_version
     )
@@ -218,9 +219,8 @@ def sheet(
 class Always[T]:
     """A resolver that hands every flow the same double.
 
-    `Wiring.reader` is a resolver now, because the flow is what decides which
-    implementation runs. A test that means to drive one double
-    over any number of flows says so with this rather than by repeating a lambda,
+    `Wiring.reader` is a resolver, called per flow. A test that means to drive one
+    double over any number of flows says so with this rather than by repeating a lambda,
     and `.double` is what keeps the counting assertions -- how many times was the
     reader actually reached -- reaching the object that did the counting.
     """

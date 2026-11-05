@@ -91,17 +91,6 @@ REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 # a single key is not a declaration.
 KNOWN = REQUIRED
 
-# What `model` names, and why it is not `reader`. **One alias answers the reader
-# and the hosted tagger**: `wiring.py` builds both from this single key, and
-# `TAG_PROMPT` is unframed for exactly that reason -- two calls to the same alias
-# must not arrive framed differently. A key named `reader` would name it after
-# one of its callers; `model` names what it is.
-#
-# Deliberately not `models`, which is required, holds the render weights a rented
-# GPU loads and pins every one by digest: one names a file on disk, the other a
-# name a host resolves at call time, and **nothing verifies the bytes behind
-# this one**.
-
 # The node roles every image flow has, checked at load the way the prompt's
 # fragments already are. Every other role is optional and guarded at the patch
 # site: a photograph, an identity adapter and a pose preprocessor are absent from
@@ -265,7 +254,6 @@ class Flow:
     dials: Mapping[str, Any]
     nodes: Mapping[str, str]
     models: tuple[Model, ...]
-    model: str
     tagger: bool
 
     @property
@@ -292,11 +280,6 @@ class Flow:
     def schema_path(self) -> Path:
         """Return this flow's schema document."""
         return self.path / SCHEMA_NAME
-
-    @property
-    def caption_briefing_path(self) -> Path:
-        """Return the standing instructions this flow reads a photograph under."""
-        return self.path / CAPTION_BRIEFING_NAME
 
     def graph(self) -> Workflow:
         """Return a fresh copy of this flow's graph, parsed."""
@@ -508,7 +491,6 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
             Model(str(entry["dest"]), str(entry["sha256"]))
             for entry in document["models"]
         ),
-        model=named,
         tagger=tagger,
     )
 

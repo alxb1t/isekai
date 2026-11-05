@@ -46,12 +46,16 @@ decision in `docs/decisions.md`.
 ### The loader
 
 ```python
-CAPTION_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "caption.json"
+CAPTION_CONFIG_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "config" / "caption.json"
+)
+
 
 @dataclass(frozen=True)
 class CaptionConfig:
     model: str
     briefing_path: Path
+
 
 def load_caption_config(path: Path = CAPTION_CONFIG_PATH) -> CaptionConfig: ...
 ```

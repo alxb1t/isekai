@@ -3,7 +3,7 @@
 **Two functions and two seams, deliberately not one Protocol with two
 implementations.** A Protocol earns its name when the thing behind it is
 interchangeable, and these are not. `tag_hosted` reaches a model over HTTP, on
-the alias the flow's manifest names in its `model` key; `tag_wd14` opens a
+the alias `config/caption.json` names; `tag_wd14` opens a
 digest-verified file on disk and resolves through **no key naming its model** --
 the manifest's `tagger` says whether a flow is tagged, never which model tags,
 and there is no tagged flow for which it would be wrong. A Protocol

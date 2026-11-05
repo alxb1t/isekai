@@ -183,16 +183,12 @@ def test_every_tracked_flow_parses(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec("image-generation:manifest:tracked-flows-are-gate-checked")
-def test_the_schema_briefings_and_graph_each_flow_needs_are_in_its_directory() -> None:
+def test_the_schema_and_graph_each_flow_needs_are_in_its_directory() -> None:
     vocabulary = json.loads(VOCABULARY_MANIFEST_PATH.read_text())["entries"][0]
 
     for name in tracked_flows():
         flow = load_flow(name)
-        for path in (
-            flow.graph_path,
-            flow.schema_path,
-            flow.caption_briefing_path,
-        ):
+        for path in (flow.graph_path, flow.schema_path):
             assert path.is_file(), path
             assert path.parent == flow.path
         assert flow.schema.names
@@ -754,32 +750,6 @@ def test_the_fields_appear_in_the_order_the_schema_declares(flow: Flow) -> None:
 
 
 # --- the model key, and the allowlist -----------------------------------------
-
-
-@pytest.mark.spec("image-generation:model:flow-declares-the-model-it-runs")
-def test_a_flow_declaring_a_model_is_loaded_with_it(tmp_path: Path) -> None:
-    """Read verbatim: what comes back is what the document said.
-
-    The same property the manifest as a whole has, asserted of the key that
-    replaced the `hosted` block. A derived value here would be a second place the
-    model a flow runs on is decided, and the manifest is the first.
-    """
-    root = _scratch(tmp_path, model="a-reader")
-
-    assert load_flow("summon-anime-wai", root).model == "a-reader"
-
-
-@pytest.mark.spec("image-generation:model:flow-declares-the-model-it-runs")
-def test_the_tracked_flows_each_declare_the_model_they_are_meant_to_run() -> None:
-    """The last hole, and the only thing that closes it.
-
-    `manifest_digest` freezes bytes without knowing whether they are the right
-    ones, so a flow committed naming the wrong alias would be frozen naming the
-    wrong alias. **The first commit is exactly where this mistake lives**, and one
-    assertion on the shipped flows is what it costs.
-    """
-    for name in tracked_flows():
-        assert load_flow(name).model == "joycaption-beta-one-q4k"
 
 
 @pytest.mark.spec("image-generation:model:an-absent-model-is-refused")

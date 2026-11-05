@@ -17,6 +17,7 @@ import pytest
 
 from isekai.boundary import ollama
 from isekai.foundation.artifacts import CAPTION_FILE, read
+from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
@@ -147,8 +148,7 @@ def test_a_second_flow_produces_its_own_caption(run: Run) -> None:
     first = caption(run, reader)
 
     # A flow arriving later asks the same stage for the same photograph, and gets
-    # its own reading: its briefing is part of its own frozen directory, so it
-    # cannot inherit a reading written to answer a different question.
+    # its own reading, written under its own flow.
     second = caption(run, reader, flow="summon-v2")
 
     assert first is not None and second is not None
@@ -169,8 +169,8 @@ def test_a_flows_caption_is_neither_read_nor_changed_by_another(run: Run) -> Non
     assert versions(run.path / FLOW.id / "captions") == [1]
 
 
-@pytest.mark.spec("caption:inputs:briefing-comes-from-the-flow")
-def test_the_standing_instructions_come_from_the_flows_own_directory(
+@pytest.mark.spec("caption:inputs:briefing-comes-from-the-config")
+def test_the_standing_instructions_come_from_the_caption_config(
     run: Run,
 ) -> None:
     reader = FakeReader()
@@ -178,7 +178,7 @@ def test_the_standing_instructions_come_from_the_flows_own_directory(
     path = caption(run, reader)
 
     assert path is not None
-    assert BRIEFING_PATH.parent == FLOW.path
+    assert BRIEFING_PATH == load_caption_config().briefing_path
     assert reader.calls[0][1] == BRIEFING_PATH.read_text()
     recorded = read(path, CAPTION_FILE)["producer"]["briefing"]
     assert recorded == instructions_record(BRIEFING_PATH)
@@ -214,9 +214,75 @@ def test_the_producer_records_the_briefings_path_and_digest(
     assert first is not None and second is not None
     one = read(first, CAPTION_FILE)["producer"]["briefing"]
     two = read(second, CAPTION_FILE)["producer"]["briefing"]
-    assert one["path"] == "flows/summon-anime-wai/caption.briefing.md"
+    assert one["path"] == "config/caption.briefing.md"
     assert one["sha256"] != two["sha256"]
     assert instructions_record(BRIEFING_PATH)["sha256"] == one["sha256"]
+
+
+# --- the caption config -------------------------------------------------------
+
+
+def _config(tmp_path: Path, document: object) -> Path:
+    """Return a caption config holding `document`, beside a briefing it can name."""
+    (tmp_path / "caption.briefing.md").write_text("Describe the person.")
+    path = tmp_path / "caption.json"
+    path.write_text(json.dumps(document))
+    return path
+
+
+@pytest.mark.spec("caption:selection:the-config-names-the-model")
+def test_the_config_is_loaded_with_the_model_and_briefing_it_names(
+    tmp_path: Path,
+) -> None:
+    path = _config(tmp_path, {"briefing": "caption.briefing.md", "model": "a-reader"})
+
+    config = load_caption_config(path)
+
+    assert config.model == "a-reader"
+    assert config.briefing_path == tmp_path / "caption.briefing.md"
+
+
+@pytest.mark.spec("caption:selection:an-absent-or-empty-model-is-refused")
+def test_a_config_declaring_no_model_is_refused(tmp_path: Path) -> None:
+    path = _config(tmp_path, {"briefing": "caption.briefing.md"})
+
+    with pytest.raises(Refusal, match="no model"):
+        load_caption_config(path)
+
+
+@pytest.mark.spec("caption:selection:an-absent-or-empty-model-is-refused")
+@pytest.mark.parametrize("value", [None, "", "   ", 3, [], {}])
+def test_a_config_model_that_is_not_a_non_empty_string_is_refused(
+    tmp_path: Path, value: object
+) -> None:
+    path = _config(tmp_path, {"briefing": "caption.briefing.md", "model": value})
+
+    with pytest.raises(Refusal, match=re.escape(f"`model` declares {value!r}")):
+        load_caption_config(path)
+
+
+@pytest.mark.spec("caption:selection:an-unknown-key-is-refused")
+def test_a_config_carrying_an_unknown_key_is_refused(tmp_path: Path) -> None:
+    path = _config(
+        tmp_path,
+        {"briefing": "caption.briefing.md", "model": "a-reader", "modl": "a-reader"},
+    )
+
+    with pytest.raises(Refusal, match="declares modl"):
+        load_caption_config(path)
+
+
+@pytest.mark.spec("caption:selection:an-absent-briefing-is-refused")
+@pytest.mark.parametrize("briefing", ["absent.md", "sub/caption.briefing.md", 3])
+def test_a_config_naming_no_briefing_beside_it_is_refused(
+    tmp_path: Path, briefing: object
+) -> None:
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "caption.briefing.md").write_text("Describe the person.")
+    path = _config(tmp_path, {"briefing": briefing, "model": "a-reader"})
+
+    with pytest.raises(Refusal, match=re.escape(str(briefing))):
+        load_caption_config(path)
 
 
 # --- failure classification ---------------------------------------------------
@@ -403,7 +469,7 @@ def test_the_open_readers_prompt_carries_no_path_from_this_machine(
     assert str(tmp_path) not in json.dumps(body["prompt"])
 
 
-@pytest.mark.spec("caption:selection:the-flow-names-the-model")
+@pytest.mark.spec("caption:selection:the-config-names-the-model")
 @pytest.mark.usefixtures("model_records")
 def test_the_readers_artifact_names_ollama_and_the_model_that_ran(run: Run) -> None:
     reader = OllamaReader(
