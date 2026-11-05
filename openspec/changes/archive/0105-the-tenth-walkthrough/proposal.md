@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.69.1
 ---
 
 # 0105 — the tenth walkthrough
