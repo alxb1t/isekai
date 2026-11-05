@@ -60,6 +60,7 @@ from isekai.pipeline.generate import (
     approved_artifact,
     approved_flows,
     build_graph,
+    discard_render,
     draw_seeds,
     graph_digest,
     prepare,
@@ -67,11 +68,13 @@ from isekai.pipeline.generate import (
     read_runtime,
     rendered_seeds,
     seeds_for,
+    shortfall,
 )
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.image import MAX_TARGET_LONG_SIDE, photo_resolution
 from isekai.shared.vocabulary import Vocabulary
+from tests.conftest import snapshot
 from tests.fakes import (
     FAKE_SYSTEM,
     SESSION_IMAGE,
@@ -1466,6 +1469,72 @@ def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
     directory = run.path / FLOW / OUTPUTS / "001"
     assert not (directory / f"42{flow.output_suffix}").exists()
     assert rendered_seeds(directory, flow.output_suffix) == []
+
+
+# --- discard ------------------------------------------------------------------
+
+
+def _kept(before: dict[str, bytes], run: Run, deleted: list[Path]) -> dict[str, bytes]:
+    """Return the snapshot `before` with the `deleted` files of `run` left out."""
+    gone = {str(path.relative_to(run.path)) for path in deleted}
+    return {name: body for name, body in before.items() if name not in gone}
+
+
+@pytest.mark.spec("image-generation:discard:the-image-and-its-record-are-deleted")
+@pytest.mark.spec("image-generation:discard:the-approval-is-left-short")
+def test_discarding_a_render_deletes_its_image_and_record_alone(
+    run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    group = reapprove(run, schema, vocabulary, {"count": 2, "seeds": [11, 22]})
+    prompt = prompt_artifact(run, flow, schema)
+    render(run, flow, FakeComfyClient(), poll=0)
+    _, approval = approved_artifact(run, FLOW)
+    assert shortfall(run, flow) == 0
+    before = snapshot(run.path)
+    image = group / f"11{flow.output_suffix}"
+
+    deleted = discard_render(image)
+
+    assert deleted == [image, group / "11.render.json"]
+    assert shortfall(run, flow) == 1
+    assert rendered_seeds(group, flow.output_suffix) == [22]
+    assert (group / "22.render.json").is_file()
+    assert approval.is_file() and prompt.is_file()
+    assert snapshot(run.path) == _kept(before, run, deleted)
+
+
+@pytest.mark.spec("image-generation:discard:an-emptied-group-is-removed")
+def test_discarding_a_groups_last_render_removes_the_group(
+    run: Run, flow: Flow, schema: Schema
+) -> None:
+    prompt = prompt_artifact(run, flow, schema)
+    render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
+    group = run.path / FLOW / OUTPUTS / "001"
+    _, approval = approved_artifact(run, FLOW)
+    before = snapshot(run.path)
+
+    deleted = discard_render(group / f"42{flow.output_suffix}")
+
+    assert deleted[-1] == group
+    assert not group.exists()
+    assert approval.is_file() and prompt.is_file()
+    assert snapshot(run.path) == _kept(before, run, deleted[:-1])
+
+
+@pytest.mark.spec("image-generation:discard:a-path-naming-no-render-is-refused")
+def test_discarding_a_path_naming_no_render_is_refused(
+    run: Run, flow: Flow, schema: Schema
+) -> None:
+    prompt = prompt_artifact(run, flow, schema)
+    render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
+    sidecar = run.path / FLOW / OUTPUTS / "001" / "42.render.json"
+    before = snapshot(run.path)
+
+    for path in (sidecar, prompt):
+        with pytest.raises(Refusal, match=re.escape("<seed>.png")):
+            discard_render(path)
+
+    assert snapshot(run.path) == before
 
 
 # --- the aspect-ratio ceiling -------------------------------------------------

@@ -22,6 +22,7 @@ own functions and they own the file's shape and its name -- held by one grep in
 
 from pathlib import Path
 
+from isekai.foundation.run import Run
 from isekai.interface.ui import library
 from isekai.interface.ui.bundle import ensure_built
 from isekai.interface.wiring import Wiring, wiring_from
@@ -45,6 +46,11 @@ def collection_runs() -> list[Path]:
         for folder in library.listed(opened)
         if library.is_collection(folder)
     ]
+
+
+def drop_thumbnails(run: Run, image: Path) -> list[Path]:
+    """Delete `image`'s thumbnails from its library's cache, for the `discard` verb."""
+    return library.drop_thumbnails(run, image)
 
 
 def serve(wired: Wiring, *, port: int) -> int:

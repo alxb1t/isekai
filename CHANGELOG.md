@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- The render stage's `discard_render` deletes one render's image, then its record, then its group once empty, and
+  the library's `drop_thumbnails` its cached thumbnails: a render is a likeness, so a failed one leaves (0106 D1, D2).
+
 ## [0.70.0] - 2026-11-06
 
 Gate: local 0m32s · CI not read under mf-ship · 0.69.1: local 0m33s · CI not read under mf-ship

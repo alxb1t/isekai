@@ -5,7 +5,7 @@ from the repository root.
 
 ## Progress
 
-- [ ] 1 — The function
+- [x] 1 — The function
 - [ ] 2 — The verb
 - [ ] 3 — The endpoint
 - [ ] 4 — The page
@@ -13,29 +13,29 @@ from the repository root.
 
 ## 1 — The function
 
-- [ ] 1.1 **HALT CHECK** — [D2](design.md#d2) reads a collection with `library.is_collection`.
+- [x] 1.1 **HALT CHECK** — [D2](design.md#d2) reads a collection with `library.is_collection`.
   Verify: `grep -n 'def is_collection' isekai/interface/ui/library.py` prints one line.
-- [ ] 1.2 In `isekai/pipeline/generate.py`, after `render_groups`, add `discard_render(image: Path) -> list[Path]` per
+- [x] 1.2 In `isekai/pipeline/generate.py`, after `render_groups`, add `discard_render(image: Path) -> list[Path]` per
   [D1](design.md#d1), importing `rendered_at` from `isekai/foundation/run.py`; its docstring says the order and why.
   Verify: `grep -n 'def discard_render(image: Path) -> list\[Path\]:' isekai/pipeline/generate.py` prints one line.
-- [ ] 1.3 In `tests/test_generate.py`, add `test_discarding_a_render_deletes_its_image_and_record_alone`
+- [x] 1.3 In `tests/test_generate.py`, add `test_discarding_a_render_deletes_its_image_and_record_alone`
   (`image-generation:discard:the-image-and-its-record-are-deleted`,
   `image-generation:discard:the-approval-is-left-short`): an approval whose `renders.count` is 2, rendered at seeds 11
   and 22; 11 discarded; `shortfall` goes from 0 to 1; 22's render, the approval and the prompt kept.
   Verify: `uv run pytest tests/test_generate.py -k discarding_a_render_deletes` exits 0.
-- [ ] 1.4 In `tests/test_generate.py`, add `test_discarding_a_groups_last_render_removes_the_group`
+- [x] 1.4 In `tests/test_generate.py`, add `test_discarding_a_groups_last_render_removes_the_group`
   (`image-generation:discard:an-emptied-group-is-removed`): an approval rendered at one seed, discarded; the group's
   directory is gone, and the approval and its prompt are unchanged.
   Verify: `uv run pytest tests/test_generate.py -k groups_last_render` exits 0.
-- [ ] 1.5 In `tests/test_generate.py`, add `test_discarding_a_path_naming_no_render_is_refused`
+- [x] 1.5 In `tests/test_generate.py`, add `test_discarding_a_path_naming_no_render_is_refused`
   (`image-generation:discard:a-path-naming-no-render-is-refused`): a sidecar's and a prompt's path each raise `Refusal`
   matching `<seed>.png`, and a snapshot of the run is unchanged.
   Verify: `uv run pytest tests/test_generate.py -k path_naming_no_render` exits 0.
-- [ ] 1.6 In `isekai/interface/ui/library.py`, after `thumbnail`, add `drop_thumbnails(run, image)` per
+- [x] 1.6 In `isekai/interface/ui/library.py`, after `thumbnail`, add `drop_thumbnails(run, image)` per
   [D2](design.md#d2); in `isekai/interface/ui/__init__.py`, after `collection_runs`, add `drop_thumbnails(run, image)`
   calling it, its docstring naming the CLI as its caller.
   Verify: `git grep -n 'def drop_thumbnails' -- isekai/interface/ui` prints two lines.
-- [ ] 1.7 In `tests/test_ui_library.py`, add `test_dropping_a_renders_thumbnails_leaves_the_others`
+- [x] 1.7 In `tests/test_ui_library.py`, add `test_dropping_a_renders_thumbnails_leaves_the_others`
   (`ui:delete-render:the-route-deletes-the-render-and-its-thumbnail`): in a `_collection` run, cache files written by
   hand for seeds 11 and 22; seed 11's are deleted and returned, 22's kept; a run under `.data/runs` returns `[]`.
   Verify: `uv run pytest tests/test_ui_library.py -k dropping_a_renders_thumbnails` exits 0.

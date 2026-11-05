@@ -74,6 +74,7 @@ from isekai.foundation.run import (
     group_of,
     is_seed,
     record_failure,
+    rendered_at,
     stage_command,
 )
 from isekai.shared.image import photo_resolution, strip_metadata
@@ -372,6 +373,30 @@ def render_groups(run: Run, flow: str) -> list[Path]:
         for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
         if group.is_dir() and group.name.isdigit()
     ]
+
+
+def discard_render(image: Path) -> list[Path]:
+    """Delete a render's image, its record and its emptied group; return them, absolute.
+
+    The image goes first, so a discard cut short leaves a record alone, which
+    reads as unrendered, as a render cut short does. An empty group would read as
+    work made from its approval. A path naming no render is refused, nothing
+    deleted.
+    e.g. outputs/001/42.png -> [.../001/42.png, .../001/42.render.json]
+    """
+    rendered_at(image)
+    image = image.absolute()
+    group = image.parent
+    record = group / f"{image.stem}{SIDECAR}"
+    image.unlink()
+    deleted = [image]
+    if record.is_file():
+        record.unlink()
+        deleted.append(record)
+    if not any(group.iterdir()):
+        group.rmdir()
+        deleted.append(group)
+    return deleted
 
 
 def source_seeds(
