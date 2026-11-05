@@ -23,7 +23,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from isekai.boundary.comfy import ComfyTransport
-from isekai.boundary.gpu import Say, Volume
+from isekai.boundary.gpu import GpunitExit, Say, Volume
 from isekai.boundary.wd14 import FLOOR, LocalTagger, read_labels
 from isekai.foundation.artifacts import (
     DRAFT_FILE,
@@ -370,7 +370,7 @@ def reapprove(
     return generate_stage.group_of(run, flow, int(approved.name[:3]))
 
 
-def _no_gpunit(argv: Sequence[str], say: Say) -> int:
+def _no_gpunit(argv: Sequence[str], say: Say) -> GpunitExit:
     raise AssertionError(f"a test reaches no gpunit: gpunit {' '.join(argv)}")
 
 

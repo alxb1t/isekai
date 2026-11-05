@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from isekai.boundary.gpu import Say, Seams, Volume
+from isekai.boundary.gpu import GpunitExit, Say, Seams, Volume
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader, Reading
 from isekai.pipeline.tagging import FakeTagger
@@ -41,10 +41,10 @@ def _opened(
     yield _Session()
 
 
-def _gpunit(argv: Sequence[str], say: Say) -> int:
+def _gpunit(argv: Sequence[str], say: Say) -> GpunitExit:
     """Answer every gpunit verb as done, saying its line."""
     say(f"fake gpunit {' '.join(argv)}")
-    return 0
+    return GpunitExit(0)
 
 
 # A render on these rents nothing and answers at once with an image that decodes;

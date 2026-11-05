@@ -17,6 +17,28 @@ its new digest.
 - Docs D48 records that a theme is a token set, chosen in the browser; the design spec names the new tokens, the
   themes and `⇧T` (0098 D8).
 
+## [0.65.0] - 2026-11-05
+
+Gate: local 0m29s · CI not read under mf-ship · 0.64.0: local 0m35s · CI not read under mf-ship
+
+- gpunit moves to `v0.12.0`, whose `volume up` remakes a window volume the provider deleted; the image keeps
+  `v0.7.0`'s boot script, its tag pinned on its own, so nothing is rebuilt (0097 D1, D2, D3).
+- gpunit's lines reach the log as gpunit writes them, not once its verb exits, so a window being opened shows its
+  progress and a server that dies mid-verb keeps what was said (0097 D4).
+- A window or render refused for no card in stock or no card that fits leads the drawer's message with that kind,
+  quotes gpunit's `refused:` line and names the log; `isekai render` exits gpunit's code, 4 or 5 (0097 D5–D9).
+
+## [0.64.0] - 2026-11-05
+
+Gate: local 0m35s · CI not read under mf-ship · 0.63.0: local 0m32s · CI not read under mf-ship
+
+- A second `×` or `⌫` on a file whose removal is in flight does nothing, so it sends no second removal; the removed
+  file's hand-off to its copy and a lost copy's reset are each held by a unit test (0099 D1, D2, D3).
+- `⇧A` in the import sheet opens the file dialog, in New collection and Add sources alike, and *Add files…* shows
+  its hint, so the sheet takes its files by key too (0099 D4).
+- A key's move to the first or last row scrolls the hub or the library to its top or its foot, so *Add sources…*,
+  the flow names and *New collection* come back into view (0099 D5, D6).
+
 ## [0.63.0] - 2026-11-04
 
 Gate: local 0m32s · CI not read under mf-ship · 0.62.2: local 0m35s · CI not read under mf-ship

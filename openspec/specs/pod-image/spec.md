@@ -154,7 +154,7 @@ checksum, which makes each pod's host key and prints its fingerprint for the ses
 
 A key baked into a public image is held by anyone who pulls it, so every pod presents the same identity and no check
 against it proves anything. A key made at boot is the pod's own, and the printed line is what a client reads to
-check it.
+check it. The boot script's tag is pinned on its own, so the laptop's gpunit moves without a rebuild.
 
 #### Scenario: the image carries no host key
 - **Key:** `pod-image:host-key:the-image-carries-none`
@@ -166,8 +166,7 @@ check it.
 - **Key:** `pod-image:host-key:each-boot-makes-and-prints-one`
 - **Layers:** unit
 - **WHEN** the image's build file is read
-- **THEN** its entrypoint is gpunit's boot script followed by `--`, added from the tag `pyproject.toml` pins gpunit at,
-  with a checksum
+- **THEN** its entrypoint is gpunit's boot script followed by `--`, added from a pinned gpunit tag, with a checksum
 
 ### Requirement: Everything ComfyUI writes lives in the pod's memory
 

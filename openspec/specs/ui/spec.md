@@ -604,12 +604,14 @@ them, `⇧↵` opening an image's large view; a tagged or unreadable cell SHALL 
 every one of them, oldest to newest, each marked with its version. A source's cell SHALL be the grid's first column,
 reached by `h` and `←`, and `↵` there SHALL open its photograph in the viewer, stepping through the collection's
 sources. The hub SHALL keep its focus across a large view, the Back button and a switch of tabs, a restored focus
-scrolled to the window's centre. The header SHALL leave a 12 px gap between items.
+scrolled to the window's centre. A key's move to the first row SHALL scroll the hub to its top, to the last row to its
+foot, and to any other row only as far as the row needs. The header SHALL leave a 12 px gap between items.
 
 A stage is a directory listing, the rule every stage already follows, so the grid cannot drift from the disk, and a tick
 survives a reload. The mark and the size are read from the source itself, so no file records them. An approved cell can
 hold an older version's images, so its newest image is named by the server rather than guessed by the page. A row's
-pictures share a foot, so a long name, a mark or a refusal moves only the text above them.
+pictures share a foot, so a long name, a mark or a refusal moves only the text above them. *Add sources…* and the flow
+names sit above the first row, so a move there shows them.
 
 #### Scenario: a cell's stage comes from its run's directory
 - **Key:** `ui:hub:a-cells-stage-comes-from-its-run`
@@ -695,6 +697,13 @@ pictures share a foot, so a long name, a mark or a refusal moves only the text a
 - **THEN** the row's photograph opens in the viewer
 - **AND** while the source cell holds the focus, its thumbnail's foot is level with the row's images' foot
 
+#### Scenario: a key's move to an edge row shows the hub's head
+- **Key:** `ui:hub:an-edge-row-shows-the-head`
+- **Layers:** e2e
+- **WHEN** in a window shorter than the grid, `j` moves the focus to the last row, then `k` back to the first
+- **THEN** Add sources… is out of view on the last row
+- **AND** it is in view again on the first
+
 ### Requirement: Sources are chosen in the file dialog, and each shows its own upload
 
 The system SHALL take sources through the browser's file dialog, sending each file in its own request, and SHALL show
@@ -707,13 +716,16 @@ no second Import and no cancel, by button, by `Esc` or by leaving the screen; a 
 left SHALL cancel its staged folder. Before Import commits, a read or a skipped file SHALL be removable alone,
 unasked — `×` on its tile, or `⌫` with its tile focused — a read file's removal taking it out of the staging folder,
 unless a file skipped as its copy is still chosen, which then holds it, and the focus moving to the next tile; a file
-still uploading SHALL offer neither. Once read, the tiles SHALL be a grid that `h j k l` and the arrows
-move through, the first tile taking the focus unless a field holds it, and `↵` SHALL open the focused file full size in
-the viewer.
+still uploading SHALL offer neither, and a second press on a file whose removal is in flight SHALL do nothing. Once
+read, the tiles SHALL be a grid that `h j k l` and the arrows move through, the first tile taking the focus unless a
+field holds it, and `↵` SHALL open the focused file full size in the viewer. `⇧A` SHALL open the file dialog from the
+sheet, whether it names a new collection or adds to one, except while Import commits or a text field holds the focus,
+and Add files… SHALL carry its key.
 
 Each file's bar answers which one is slow; each reason sits on the file it concerns, so two files of one name are
 two uploads. A file that lands while the folder is committed would be dropped from the collection unseen, and a cancel
-then would delete the folder the commit is moving.
+then would delete the folder the commit is moving. `⇧A` adds sources on the hub, so pressed again in the sheet it adds
+more files.
 
 #### Scenario: each file shows its own progress, then its result
 - **Key:** `ui:sheet:each-file-shows-its-progress`
@@ -812,6 +824,13 @@ then would delete the folder the commit is moving.
 - **WHEN** every chosen file is read and no field holds the focus
 - **THEN** the first tile takes the focus, `h j k l` move it, and `⌫` removes the focused file
 - **AND** `↵` opens it full size in the viewer
+
+#### Scenario: ⇧A opens the file dialog from the sheet
+- **Key:** `ui:sheet:shift-a-opens-the-file-dialog`
+- **Layers:** e2e
+- **WHEN** `⇧A` is pressed in the open sheet, no field holding the focus
+- **THEN** the browser's file dialog opens, and the files chosen in it join the sheet
+- **AND** Add files… carries `⇧A`
 
 ### Requirement: Prepare runs what changed as one job, and refuses before it starts when Ollama does not answer
 
@@ -1076,12 +1095,15 @@ stopping SHALL do the same, and SHALL wait for the pod's teardown and the window
 the teardown's estimate and one volume verb, saying so on its terminal as the wait begins. After that wait, a window
 not kept whose close has failed or remains unfinished SHALL cause the terminal to name the command that closes it,
 even when the worker has ended; kept and successfully closed windows SHALL need no close remedy. An interrupt at the
-surface's terminal SHALL reach no child of the job.
+surface's terminal SHALL reach no child of the job. A window opening or a rendering verb that gpunit refuses for no
+card in stock or no card that fits SHALL end the job failed, its message leading with that kind, then quoting gpunit's
+`refused:` line and naming the collection's log.
 
 The volume is the job's to open and to close, so no step depends on the operator remembering one, and a surface that
 exits mid-render leaves no window billing that was not kept. The wait is bounded so a hung verb cannot hold the
 surface forever; a stop that says nothing looks hung, and the kill it invites is the one exit that leaves a window
-open.
+open. gpunit's exit says the kind and its `refused:` line says why, so the message tells a wait for stock from a
+configuration to edit, and the log holds each card gpunit skipped.
 
 #### Scenario: a render job opens, renders and closes
 - **Key:** `ui:render-job:opens-renders-and-closes`
@@ -1134,6 +1156,13 @@ open.
 - **Layers:** unit
 - **WHEN** opening the window raises
 - **THEN** the job ends failed and the volume step reads failed
+
+#### Scenario: a refusal for stock or fit names its kind and gpunit's reason
+- **Key:** `ui:render-job:a-refusal-names-its-kind-and-reason`
+- **Layers:** unit
+- **WHEN** opening the window, or the rendering verb, is refused for no card in stock or no card that fits
+- **THEN** the job ends failed, its message leading with that kind and quoting gpunit's `refused:` line
+- **AND** the message names the collection's log
 
 ### Requirement: Billing state is read from gpunit's own records
 
@@ -1562,14 +1591,16 @@ is present the counts approved and rendered out of the sources that have that fl
 and the time and kind of the newest file written in it; Home SHALL draw the row with no count per flow, which the
 payload alone carries. Collections SHALL be ordered by that time, newest first, and folders that are not collections
 after them. Home SHALL carry New collection at the right of the library's header row, and on an empty library below the
-privacy line. Count labels on the surface SHALL use a singular noun at one and a plural noun otherwise.
+privacy line. A key's move to the first collection SHALL scroll Home to its top, to the last to its foot, and to any
+other only as far as the row needs. Count labels on the surface SHALL use a singular noun at one and a plural noun
+otherwise.
 
 A folder is a collection by its layout alone, so no marker file can disagree with what is on disk, and the row is a
 listing read on every request. A folder that is not a collection is shown rather than hidden so the screen matches the
 folder, and nothing in the app writes into it. The flows the surface offers are named in its configuration; a flow
 approved from another's sheet stays the CLI's. The per-flow counts are read where an approval is counted, and the row
 on screen keeps to the collection's name, its sources and its newest activity. On first start the privacy line is read
-before the first import.
+before the first import. New collection sits above the first row, so a move there shows it.
 
 #### Scenario: a folder with `sources/` is a collection
 - **Key:** `ui:batch-folder:a-folder-with-sources-is-a-batch`
@@ -1633,6 +1664,12 @@ before the first import.
 - **Layers:** e2e
 - **WHEN** Home opens on an empty library
 - **THEN** New collection sits below the privacy line
+
+#### Scenario: a key's move to an edge row shows Home's head
+- **Key:** `ui:batch-folder:an-edge-row-shows-the-head`
+- **Layers:** unit
+- **WHEN** a key moves the focus to the first collection, to the last, or to one between
+- **THEN** Home scrolls to its top, to its foot, or only as far as the row needs
 
 ### Requirement: Every screen has a URL naming its collection and its run
 

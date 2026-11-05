@@ -140,7 +140,7 @@ J1·1  LIBRARY · EMPTY
       metadata stripped, held only in the GPU pod's memory, and gone when the pod is.
       [ New collection ⇧N ]                                         ← the accent
 
-J1·4  ┌ New collection   6 files chosen · 5 sources · 1 refused            [ Add files… ] ┐
+J1·4  ┌ New collection   6 files chosen · 5 sources · 1 refused         [ Add files… ⇧A ] ┐
       │ SOURCES · 5 · 7.3 MB                                 │ NAME                       │
       │ [00003.png] [16_01.png] [IMG_0412.jpg]  [still_04.jpg] │ [ 2026-10-19            ]  │
       │                          HEIC → JPEG    WEBP → JPEG    │                            │
@@ -499,7 +499,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 | Review | the panes: the rail, the photograph, the sheet, ④ — on macOS ⌃H ⌃L alone, from a field or not, elsewhere h l or ←→ · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows, ④'s grid of − + and its slots, from a slot too · h l or ←→ across − + on macOS · ⇧J ⇧K or ⇧↓↑ the rail, the sheet scrolled to its centre · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
 | Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧D Draft from this · ⇧G Render · in the large view, h l or ←→ the screen's images, ⇧D Draft from this, ⇧C Compare with…, esc back · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
 | Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧I its collection's Renders · ⌃; or esc close |
-| dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
+| dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits · ⇧A Add files…, in the import sheet |
 
 No key spends money but the Render dialog's ⌘↵, which confirms the price it quotes: ⇧G only opens the dialog.
 

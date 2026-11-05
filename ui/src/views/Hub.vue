@@ -28,6 +28,7 @@ import KeyHint from '../components/KeyHint.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import { useEdges } from '../composables/useEdges'
 import { useKeys } from '../composables/useKeys'
 import { clamp, kept } from '../grid'
 import { at, useCollectionStore } from '../stores/collection'
@@ -43,6 +44,8 @@ const props = defineProps<{ collection: string }>()
 const router = useRouter()
 const refusal = ref<string | null>(null)
 const grid = ref<HTMLElement | null>(null)
+const page = ref<HTMLElement | null>(null)
+const reveal = useEdges(() => page.value)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
 /* What the viewer shows, from where, and what its ↵ opens; or null. */
@@ -311,9 +314,13 @@ function named(spot: { row: number; column: number }): string {
   return at(sources.value[spot.row]?.name ?? '', flows.value[spot.column - 1] ?? '')
 }
 
-/* Focus a cell and scroll it into view: a key's move `nearest`, a restored focus
-   to the window's centre, where the eye finds it. */
-function place(row: number, column: number, how: ScrollIntoViewOptions = { block: 'nearest' }): void {
+/* Focus a cell and scroll it into view: a click `nearest`, a key's move by the
+   edges' rule, a restored focus to the window's centre, where the eye finds it. */
+function place(
+  row: number,
+  column: number,
+  how: ScrollIntoViewOptions | 'key' = { block: 'nearest' },
+): void {
   const rows = sources.value.length
   if (rows === 0) return
   focus.value = {
@@ -323,8 +330,10 @@ function place(row: number, column: number, how: ScrollIntoViewOptions = { block
   store.focus.hub = named(focus.value)
   void nextTick(() => {
     const cell = focusedCell()
-    cell?.focus({ preventScroll: true })
-    cell?.scrollIntoView(how)
+    if (!cell) return
+    cell.focus({ preventScroll: true })
+    if (how === 'key') reveal(cell, focus.value.row, rows)
+    else cell.scrollIntoView(how)
   })
 }
 
@@ -340,11 +349,11 @@ function select(step: number): void {
   const { row, column } = focus.value
   const target = Math.min(Math.max(row + step, 0), sources.value.length - 1)
   selected.value = new Set([...selected.value, row, target])
-  place(target, column)
+  place(target, column, 'key')
 }
 
 const moveBy = (rows: number, columns: number) => () =>
-  place(focus.value.row + rows, focus.value.column + columns)
+  place(focus.value.row + rows, focus.value.column + columns, 'key')
 
 /* ↵ and Space are the grid's unless a button or a link holds the focus, which
    answers them itself. */
@@ -435,7 +444,7 @@ onUnmounted(() => {
 
 <template>
   <RefusalPage v-if="refusal" :refusal="refusal" />
-  <section v-else-if="info" class="hub">
+  <section v-else-if="info" ref="page" class="hub">
     <ImportSheet v-if="adding" :collection="collection" @close="adding = false" @imported="added" />
     <ImageViewer
       v-if="viewing"
