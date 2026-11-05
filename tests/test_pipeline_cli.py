@@ -65,6 +65,7 @@ EXPECTED_VERBS = (
     "review",
     "approve",
     "draft",
+    "discard",
     "generate",
     "render",
     "show",
@@ -168,11 +169,12 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
     # `compare` takes a collection directory, `render` its runs, `import` a
-    # collection and its files, `draft` a flow and images; `ui` and `migrate` take
-    # nothing.
+    # collection and its files, `draft` a flow and images, `discard` an image; `ui`
+    # and `migrate` take nothing.
     own = {
         "import": ["--collection", "collection", "photo.jpg"],
         "draft": ["--flow", "summon-anime-wai", "outputs/001/7.png"],
+        "discard": ["outputs/001/7.png"],
         "show": [],
         "ui": [],
         "compare": ["collection"],
@@ -826,6 +828,55 @@ def test_draft_writes_another_flow_from_the_images_approval_and_seed(
         "seed": 7,
     }
     assert draft["renders"] == {"count": 1, "seeds": [7]}
+
+
+@pytest.mark.spec("cli:discard:the-render-and-its-thumbnail-are-deleted")
+def test_discard_deletes_the_render_and_its_thumbnail(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lib = tmp_path / "lib"
+    (lib / "b" / "sources").mkdir(parents=True)
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    run = open_run(photo, lib / "b" / "runs")
+    image = rendered_image(run, 1, 7)
+    cached = lib / ".cache" / run.digest / "summon-anime-wai" / "outputs" / "001"
+    cached.mkdir(parents=True)
+    (cached / "7.abc.jpg").write_bytes(b"jpg")
+    monkeypatch.chdir(tmp_path)
+    wired = _wiring(tmp_path)
+    argv = ["discard", str(image.relative_to(tmp_path))]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 0
+
+    assert not image.exists() and not (image.parent / "7.render.json").exists()
+    assert not (cached / "7.abc.jpg").exists()
+    group = f"{run.id}/summon-anime-wai/outputs/001"
+    assert isinstance(wired.out, io.StringIO)
+    assert wired.out.getvalue().splitlines() == [
+        f"discard deleted {group}/7.png",
+        f"discard deleted {group}/7.render.json",
+        f"discard deleted {group}",
+        f"discard deleted .cache/{run.digest}/summon-anime-wai/outputs/001/7.abc.jpg",
+    ]
+
+
+@pytest.mark.spec("cli:discard:a-path-naming-no-render-is-refused")
+def test_discard_of_a_path_naming_no_render_is_refused(tmp_path: Path) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    run = open_run(photo, tmp_path / "runs")
+    sidecar = rendered_image(run, 1, 7).parent / "7.render.json"
+    before = snapshot(run.path)
+    wired = _wiring(tmp_path)
+
+    assert dispatch(build_parser().parse_args(["discard", str(sidecar)]), wired) == 1
+
+    assert isinstance(wired.err, io.StringIO)
+    message = wired.err.getvalue()
+    assert message.startswith(f"refused: {sidecar}: ")
+    assert "<run>/<flow>/outputs/<NNN>/<seed>.png" in message
+    assert snapshot(run.path) == before
 
 
 @pytest.mark.spec("cli:review-from:a-target-with-no-sheet-is-filled-first")

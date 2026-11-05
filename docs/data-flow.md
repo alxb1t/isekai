@@ -69,6 +69,9 @@ outputs/001/7.png ─▶ draft ─▶ review/003.draft.json   {count 1, seeds [7
                      outputs/003/7.png ─▶ Compare: 001 ⇄ 003, side by side
 ```
 
+**`isekai discard <image.png>`** deletes one render: its image, its record, its group when emptied, and its
+thumbnails in the library's cache. The newest approval it leaves short renders what it lacks at the next session.
+
 Beside them, `show` reads a run's artifacts, versions, producers and failure records,
 names what below `photo/` or a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a collection's runs the
 same way and writes one page into the collection directory, `compare.html`: each run's
@@ -88,8 +91,9 @@ default, where a collection is a folder holding `sources/` with its runs root `r
 beside it ([D40](decisions.md#d40--a-collection-is-a-library-folder-holding-sources)).
 Its page names the collection, the run's digest and the flow in every URL. It writes
 through the functions that own each write — import's for a source, `assign` for
-a tick, review's for a draft, its edits and an approval, and `sheet()` for a
-target's first sheet when a draft is made from another flow, which
+a tick, review's for a draft, its edits and an approval, the render stage's and
+the library's for a deleted render, and `sheet()` for a target's first sheet when
+a draft is made from another flow, which
 `interface/drafting.py`'s `draft_across` runs in the server's process, the
 sequence `draft --flow` runs too. Every other stage it runs only as the CLI's
 own verb, a child of the server

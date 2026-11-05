@@ -125,11 +125,13 @@ hash and no path, and a record that invented a path would assert a location that
 
 The system SHALL number each stage's artifacts within that stage's own directory, SHALL never overwrite
 a written artifact, and SHALL make a command whose artifact already exists do nothing — write nothing,
-call nothing — unless a new version is explicitly requested.
+call nothing — unless a new version is explicitly requested. It SHALL delete a render's image and
+record only when the operator discards that render.
 
 Idempotence is what makes resume ordinary: there is no special mode and no state machine, because
 running every command again is the whole of it. It is also the only defence against a shell loop
-retrying after a network blip and silently burning a call.
+retrying after a network blip and silently burning a call. A render is a likeness, so the one way it
+leaves a run is the operator's ask.
 
 #### Scenario: re-running a completed command changes nothing
 - **Key:** `run-directory:idempotence:rerun-is-a-no-op`

@@ -248,7 +248,9 @@ place. A stage whose file already exists does nothing unless asked for a new ver
 - **Known breaks:** `pipeline/review.py`'s `discard` deletes a file the sheet stage wrote: a draft from
   another flow's approval, in a flow holding only it and the sheet that drafting filled, is discarded with
   that sheet and the flow's directory — the undo of the sheet-then-draft sequence `interface/drafting.py`
-  composes, done inside the review stage.
+  composes, done inside the review stage. `pipeline/generate.py`'s `discard_render` deletes a render's image and
+  record, and the outputs group it empties, when the operator discards that render: a render is a likeness, so it
+  leaves the run rather than being hidden.
 
 ### Every artifact records what shaped it
 

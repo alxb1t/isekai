@@ -24,8 +24,8 @@ Lazy — the import sits inside a function, so the edge does not exist at
 import time:
   interface ──▶ boundary      wiring.py, inside load_vocabulary(); provision.py
                               is on the entry point's graph through ollama.py
-  interface ──▶ interface/ui  cli.py, inside the `ui` and `migrate` handlers —
-                              within the group, and listed because collapsing
+  interface ──▶ interface/ui  cli.py, inside the `ui`, `migrate` and `discard`
+                              handlers — within the group, and listed because collapsing
                               it away is what hid it before
   interface ──▶ a named module  wiring.py, inside _named_wiring(), only when
                               ISEKAI_WIRING names it — the browser tests'
@@ -50,10 +50,12 @@ photograph and naming no flow, then `python -m isekai sheet` per flow, and
 as children, so the CLI stays the one path a stage runs through, and
 `interface/ui/events.py` streams what they report to the page as `/events`.
 Every other write the server makes runs in its own process, through the function
-that owns it: stage ③'s review functions, import's reader, and `sheet()` for a
+that owns it: stage ③'s review functions, import's reader, `sheet()` for a
 target's first sheet when a draft is made from another flow, filled from the
 photograph's tags — `interface/drafting.py`'s `draft_across` runs it, the same
-sequence the CLI's `draft` runs (D4).
+sequence the CLI's `draft` runs (D4) — and, for a deleted render, the render
+stage's `discard_render` and the library's `drop_thumbnails`, as the CLI's
+`discard` calls them.
 `wiring.py` imports `boundary/ollama.py` for the probe a job asks first.
 
 **`tests/test_layers.py` holds where the lazy edges point; review holds that they

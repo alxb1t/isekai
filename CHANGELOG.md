@@ -10,6 +10,23 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.71.0] - 2026-11-06
+
+Gate: local 0m27s · CI not read under mf-ship · 0.70.0: local 0m32s · CI not read under mf-ship
+
+- The render stage's `discard_render` deletes one render's image, then its record, then its group once empty, and
+  the library's `drop_thumbnails` its cached thumbnails: a render is a likeness, so a failed one leaves (0106 D1, D2).
+- `isekai discard <image>` deletes one render and its thumbnails, printing each path deleted, and refuses a path
+  naming no render, deleting nothing (0106 D3).
+- `DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}` deletes that render and its thumbnails in
+  the server's process, refused while a render session runs for the collection (0106 D4).
+- `⇧⌫` or *Delete* on a render's large view asks *Delete this render?*, *No* first; *Yes* deletes it and opens the
+  Hub on its cell; the import sheet's remove hint reads `⌫` (0106 D5, D6).
+- D25 takes `⇧⌫` as the large view's Delete; principles' *Known breaks*, the data flow and the READMEs name the
+  discard, and the interface README lists staging's per-file `GET` and `DELETE` (0106 D8).
+- A deleted render's address says no render is there, not that its record is; the delete is refused while a session
+  renders any of its collections; the Hub reads the deleted cell once, so Back keeps the last focus (0106 D4, D6).
+
 ## [0.70.0] - 2026-11-06
 
 Gate: local 0m32s · CI not read under mf-ship · 0.69.1: local 0m33s · CI not read under mf-ship

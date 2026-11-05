@@ -17,6 +17,7 @@ into `photo/` (D17).
     review    (3) the machine's sheet copied somewhere a human may edit it
     approve   (3) validate the edited sheet and rename it
     draft     (3) a rendered image's approval copied into a flow's draft, its seed kept
+    discard   (4) a render's image, its record and its thumbnails deleted
     generate  (4) assemble every prompt locally, then render
     render    (4) one whole render session on a rented GPU, torn down on every exit
     show          print a run's artifacts, what produced each, and its failures
@@ -82,6 +83,7 @@ from isekai.pipeline.caption import caption
 from isekai.pipeline.generate import (
     STAGE_RENDER,
     Render,
+    discard_render,
     prepare,
     read_runtime,
     refuse_out_of_step,
@@ -122,6 +124,7 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("review", "copy a sheet somewhere a human may edit it"),
     ("approve", "validate an edited sheet and mark it approved"),
     ("draft", "copy the approval a rendered image came from into a flow's draft"),
+    ("discard", "delete a render: its image, its record and its thumbnails"),
     ("generate", "assemble the prompts for a run, then render them"),
     ("render", "run a whole render session on a rented GPU, then tear it down"),
     ("show", "print a run's artifacts, versions, producers and failures"),
@@ -230,7 +233,8 @@ def build_parser() -> argparse.ArgumentParser:
     for name in (
         name
         for name in made
-        if name not in ("compare", "draft", "import", "migrate", "render", "ui")
+        if name
+        not in ("compare", "discard", "draft", "import", "migrate", "render", "ui")
     ):
         made[name].add_argument(
             "photos",
@@ -336,6 +340,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="rendered images, each <run>/<flow>/outputs/<NNN>/<seed>.png",
     )
     made["draft"].set_defaults(photos=[], runs=RUNS_ROOT)
+    made["discard"].add_argument(
+        "image", type=Path, help="the render, <run>/<flow>/outputs/<NNN>/<seed>.png"
+    )
+    made["discard"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     # No flow, input or runs root: the app serves every collection of the library
     # `ISEKAI_LIBRARY` names, and its page selects one (D1).
@@ -586,6 +594,29 @@ def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
     return 1 if refused else 0
 
 
+def _discard(image: Path, wired: Wiring) -> int:
+    """Delete one render and its thumbnails, printing each path deleted.
+
+    The library is imported here for `_ui`'s reason: it is off `python -m isekai`'s
+    import graph.
+    """
+    try:
+        run = rendered_at(image)[0]
+        deleted = discard_render(image)
+    except Refusal as unrendered:
+        print(f"refused: {image}: {unrendered}", file=wired.err)
+        return 1
+    from isekai.interface.ui import drop_thumbnails
+
+    for path in deleted:
+        print(f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out)
+    for path in drop_thumbnails(run, image):
+        print(
+            f"discard deleted {path.relative_to(run.path.parents[2])}", file=wired.out
+        )
+    return 0
+
+
 def _run_for(identifier: str, wired: Wiring) -> Run:
     """Return the run an argument names: a photograph to open, or a run to resume."""
     named = _named(identifier, wired)
@@ -673,6 +704,8 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             return _migrate(args, wired)
         if verb == "draft":
             return _draft(args.target, args.images, wired)
+        if verb == "discard":
+            return _discard(args.image, wired)
         if verb in PHOTOGRAPH_VERBS and args.flows:
             raise Refusal(_named_a_flow(args, targets))
         flows = _flows_for(args, wired)

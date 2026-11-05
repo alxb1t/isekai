@@ -85,9 +85,10 @@ refuse one.
 another flow fills; the one act in it that spends is Render's confirmation, after its quote.** Prepare is
 `tag`, `caption` and `sheet` run as children, and Render is `render` between gpunit's `volume up` and
 `volume down`. Every other write goes through the function that owns it: a draft, its edits and an
-approval through `review`'s, a tick through the run's `assign`, a source through import, and a target's
-first sheet, when it is drafted from another flow, through `sheet()`, which `interface/drafting.py`'s
-`draft_across` runs in the server's process before the draft.
+approval through `review`'s, a tick through the run's `assign`, a source through import, a deleted render
+through the render stage's `discard_render` and its thumbnails through the library's `drop_thumbnails`, and
+a target's first sheet, when it is drafted from another flow, through `sheet()`, which
+`interface/drafting.py`'s `draft_across` runs in the server's process before the draft.
 
 - **Why:** the CLI is the one path, so a stage the page starts is exactly the stage the terminal runs,
   and a write no stage owns would give a run file a second author. `draft_across` is the sequence
@@ -95,7 +96,7 @@ first sheet, when it is drafted from another flow, through `sheet()`, which `int
   refuses before it writes. Spend behind a web page is bounded by what the operator read: the
   confirmation carries the quote it showed, and a quote grown since is refused. The quote compares
   image total and limit, not source or approval identity.
-- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`.
+- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`.
 
 ### D42 · A new draft starts from the last approval
 
@@ -418,8 +419,9 @@ as it is from a client that is not a browser.**
 ### D25 · Shortcuts match the physical key
 
 **A shortcut is matched on `event.code` and declared once, in the key store:
-a plain letter moves, a command is `⇧` + a letter, a plain letter only where nothing is typed, and Mod — `⌘`
-on macOS, `Ctrl` elsewhere — where a command must reach into a text field. Inside a text field only `Esc`,
+a plain letter moves, a command is `⇧` + a letter, or `⇧⌫`, the large view's Delete, which asks first, a plain
+letter only where nothing is typed, and Mod — `⌘` on macOS, `Ctrl` elsewhere — where a command must reach into a
+text field. Inside a text field only `Esc`,
 `Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;` run, Review's `⌃P`, on macOS Review's `⌃H` `⌃L`,
 which alone move between its panes, and `⌃J` `⌃K`, which move between its fields, and in ④'s seed slots
 `slot-down` and `slot-up`, `j` `k` `↓` `↑`, which move between the slots.**
@@ -429,8 +431,9 @@ which alone move between its panes, and `⌃J` `⌃K`, which move between its fi
   the key list read, so they cannot disagree with the keys. On macOS `⌃` is free of the window manager
   and of `⌘`'s shortcuts, but a text field's `⌃H` deletes backward, and Review's fields give that key up
   to the pair; elsewhere the pair is not offered, so a wrong platform guess only hides it. A seed slot takes
-  digits alone, so its letters are free to move.
-- **Made by:** `0021`, `0069`, `0076`, `0078`, `0091`.
+  digits alone, so its letters are free to move. `⌫` is the key a delete is pressed on, and the dialog's *No*
+  first keeps it two keys and a choice.
+- **Made by:** `0021`, `0069`, `0076`, `0078`, `0091`, `0106`.
 
 ### D41 · The test seam is a factory named in the environment
 

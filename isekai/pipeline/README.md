@@ -8,7 +8,7 @@ photograph's description into `photo/`, once for every flow; every other stage i
 per flow: the flow supplies the schema it fills against and the directory it
 writes into ([D17](../../docs/decisions.md#d17--input-above-flow-below)).
 
-**The verbs are `import` · `caption` · `tag` · `sheet` · `review` · `approve` · `draft` · `generate`.**
+**The verbs are `import` · `caption` · `tag` · `sheet` · `review` · `approve` · `draft` · `discard` · `generate`.**
 `importing.py` is `import`: it fills a collection's `sources/` and comes before every run.
 `review.py` holds `review`, `approve` and the revision and draft writers serving `draft`;
 `tagging.py` is `tag`: its two functions write
@@ -25,7 +25,7 @@ independent, and neither reads the other's output
 | `tagging.py` | ① `tag`: a scored tag list from a local ONNX session, then a raw one from a hosted model. **Neither is narrowed** — filtering is ②'s job | free, then a model call |
 | `sheet.py` | ② routes the photograph's local tag list into the flow's schema's fields, through the authored table | free |
 | `review.py` | ③ copies a sheet somewhere a human may correct it, then approves it | a human — the largest measured gain in the pipeline |
-| `generate.py` | ④ assembles every prompt locally, then renders each against an endpoint | free, then **money** |
+| `generate.py` | ④ assembles every prompt locally, then renders each against an endpoint, and discards one render | free, then **money** |
 
 ## Imported by
 

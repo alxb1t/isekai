@@ -473,6 +473,25 @@ def thumbnail(library: Path, run: Run, image: Path) -> Path:
     return cached
 
 
+def drop_thumbnails(run: Run, image: Path) -> list[Path]:
+    """Delete every thumbnail of `image`'s place in its library's cache; return them.
+
+    The library is read from the run's own path, so the verb and the route find one
+    cache; a run outside a collection has none. A glob on the seed finds each
+    thumbnail once the image is gone.
+    e.g. `<lib>/b/runs/<id>/…/001/42.png` -> [`<lib>/.cache/<digest>/…/001/42.<d>.jpg`]
+    """
+    folder = run.path.absolute()
+    if not (folder.parent.name == RUNS and is_collection(folder.parent.parent)):
+        return []
+    within = image.absolute().parent.relative_to(folder)
+    cached = folder.parents[2] / CACHE / run.digest / within
+    dropped = sorted(cached.glob(f"{image.stem}.*.jpg"))
+    for path in dropped:
+        path.unlink()
+    return dropped
+
+
 def _shrunk(image: Path) -> bytes:
     """Return `image` as a JPEG at most `THUMB_SIDE` on its long side."""
     # Here, not at module scope: Pillow is a wheel, and this module is read by

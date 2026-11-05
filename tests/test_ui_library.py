@@ -500,6 +500,26 @@ def test_one_source_at_one_seed_in_two_collections_has_two_thumbnails(
         assert (pixel[0] > pixel[2]) == (colour[0] > colour[2])
 
 
+@pytest.mark.spec("ui:delete-render:the-route-deletes-the-render-and-its-thumbnail")
+def test_dropping_a_renders_thumbnails_leaves_the_others(tmp_path: Path) -> None:
+    lib = tmp_path / "lib"
+    run = _run(_collection(lib, "b", "ada.jpg"), "ada.jpg")
+    group = run.path / SUMMON / OUTPUTS / "001"
+    cached = lib / library.CACHE / run.digest / SUMMON / OUTPUTS / "001"
+    cached.mkdir(parents=True)
+    for name in ("11.aaa.jpg", "11.bbb.jpg", "22.ccc.jpg"):
+        (cached / name).write_bytes(b"jpg")
+
+    dropped = library.drop_thumbnails(run, group / "11.png")
+
+    assert dropped == [cached / "11.aaa.jpg", cached / "11.bbb.jpg"]
+    assert sorted(path.name for path in cached.iterdir()) == ["22.ccc.jpg"]
+    # A run outside a collection has no library, so no cache.
+    loose = open_run(lib / "b" / "sources" / "ada.jpg", tmp_path / ".data" / "runs")
+    image = loose.path / SUMMON / OUTPUTS / "001" / "11.png"
+    assert library.drop_thumbnails(loose, image) == []
+
+
 @pytest.mark.spec("ui:renders:an-unreadable-image-is-refused")
 @pytest.mark.parametrize("read", ["_upright", "source_jpeg", "_shrunk"])
 def test_an_image_past_pillows_pixel_bound_is_refused_naming_it(

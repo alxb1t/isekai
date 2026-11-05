@@ -18,7 +18,8 @@ filename, when approval is legal, and what a token costs.
 `discard()` on theirs, the run's own `open_run()` and `assign()` on a tick,
 and stage ②'s `sheet()` when a draft from another flow fills a target with
 no sheet -- run in this process by `interface/drafting.py`'s `draft_across`,
-the sequence `draft --flow` runs too (D4).
+the sequence `draft --flow` runs too (D4); a render leaves through the render
+stage's `discard_render()` and its thumbnails through the library's.
 Nothing here builds an artifact body or an artifact filename, and
 `tests/test_ui.py`'s grep is what keeps it so.
 
@@ -45,6 +46,7 @@ POST /api/c/{collection}/review/{digest}/{flow}/discard
 POST /api/c/{collection}/draft         {flow, images: [{digest, flow, version, seed}]}
 GET  /api/c/{collection}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
      and its /image, /thumb, /compare/photo and /compare/{flow}/{version}/{seed}
+DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
 GET  /api/c/{collection}/sources/{name}   and its /thumb
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
@@ -75,6 +77,7 @@ from isekai.foundation.artifacts import (
     DRAFT_FILE,
     ONE_RENDER,
     SHEET_FILE,
+    SIDECAR,
     TAGS_FILE,
     WD14_FILE,
     Renders,
@@ -116,7 +119,7 @@ from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
-from isekai.pipeline.generate import image_of
+from isekai.pipeline.generate import discard_render, image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     Revision,
@@ -856,11 +859,15 @@ def create_app(
         return {"back": None if left is None else left.name, "cancelled": changed}
 
     def _rendering(collection: str) -> str | None:
-        """Return what a render running for `collection` says, or None."""
+        """Return what a render running for `collection` says, or None.
+
+        A session over several collections renders each, not only the first its
+        slot names.
+        """
         slot = rendering_slot()
         return (
             "A render session is running."
-            if slot and slot["collection"] == collection
+            if slot and collection in slot.get("collections", [slot["collection"]])
             else None
         )
 
@@ -983,7 +990,11 @@ def create_app(
     def rendered(
         collection: str, digest: str, flow: str, version: str, seed: int
     ) -> tuple[Run, Path, Path]:
-        """Return a render's run, its image and the approval it was rendered from."""
+        """Return a render's run, its image and the approval it was rendered from.
+
+        A missing image is refused: with its record gone too, as a deleted render's
+        is, nothing is there to render again.
+        """
         found = folder(collection)
         run = library.run_named(found, digest)
         one = offered(flow)
@@ -991,6 +1002,11 @@ def create_app(
         approval = approval_of(run, flow, number)
         image = image_of(run, one, number, seed)
         if not image.is_file():
+            if not (image.parent / f"{seed}{SIDECAR}").is_file():
+                raise Refusal(
+                    f"{image.name}: no render is here, "
+                    "its record and its image are gone"
+                )
             raise Refusal(
                 f"{image.name}: its record is there, its image is gone; render it "
                 f"again with `python -m isekai render {found / library.RUNS}`"
@@ -1114,6 +1130,22 @@ def create_app(
         return FileResponse(
             library.thumbnail(root, run, image), media_type="image/jpeg"
         )
+
+    @app.delete("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}")
+    def delete_render(
+        collection: str, digest: str, flow: str, version: str, seed: int
+    ) -> dict[str, Any]:
+        """Delete the render and its thumbnails, as `discard` does, while none runs."""
+        run, image, _ = rendered(collection, digest, flow, version, seed)
+        with _DRAFT_UPDATE:
+            rendering = _rendering(collection)
+            if rendering is not None:
+                raise Refusal(
+                    f"{rendering} Wait for it to end, then delete the render again."
+                )
+            discard_render(image)
+            library.drop_thumbnails(run, image)
+        return {"deleted": True}
 
     @app.get("/api/c/{collection}/sources/{name}")
     def read_source(collection: str, name: str) -> Response:

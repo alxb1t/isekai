@@ -1677,6 +1677,69 @@ def test_a_thumbnail_asked_for_twice_is_read_from_the_cache_the_second_time(
     assert thumb_file.read_bytes() == first.content
 
 
+@pytest.mark.spec("ui:delete-render:the-route-deletes-the-render-and-its-thumbnail")
+def test_deleting_a_render_deletes_its_files_and_thumbnail(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    at = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}"
+    for place in ("v1/11", "v2/22"):
+        assert client.get(f"{at}/{place}/thumb").status_code == 200
+    cache = tmp_path / "lib" / ".cache" / made.digest / FLOW / "outputs"
+    outputs = made.directory(FLOW, "outputs")
+
+    deleted = client.delete(f"{at}/v1/11")
+
+    assert deleted.status_code == 200
+    assert deleted.json() == {"deleted": True}
+    assert not (outputs / "001" / "11.png").exists()
+    assert not (outputs / "001" / "11.render.json").exists()
+    assert list(cache.glob("001/11.*.jpg")) == []
+    assert (outputs / "002" / "22.png").is_file()
+    assert len(list(cache.glob("002/22.*.jpg"))) == 1
+    # Its address now names no render, and says so rather than a record left.
+    gone = client.get(f"{at}/v1/11")
+    assert gone.status_code == 409
+    assert (
+        gone.json()["refusal"]
+        == "11.png: no render is here, its record and its image are gone"
+    )
+
+
+@pytest.mark.spec("ui:delete-render:refused-while-a-render-runs")
+def test_deleting_a_render_is_refused_while_a_render_runs(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    before = snapshot(made.path)
+    alone = _rendering_slot("20261024T091200Z")
+    # A session over two collections names the first; the second is rendering too.
+    second = {**alone, "collection": "earlier", "collections": ["earlier", COLLECTION]}
+    for slot in (alone, second):
+        monkeypatch.setattr(Jobs, "slot", lambda self, kind, slot=slot: slot)
+
+        refused = client.delete(
+            f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/11"
+        )
+
+        assert refused.status_code == 409
+        assert "A render session is running." in refused.json()["refusal"]
+        assert snapshot(made.path) == before
+
+
 @pytest.mark.spec("ui:renders:a-source-thumbnail-is-upright")
 def test_a_source_thumbnail_is_turned_upright_and_read_from_the_cache_again(
     client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
