@@ -3,8 +3,8 @@
 ## Purpose
 
 Producing a raw list of Danbooru tags for a photograph, from a model given the photograph alone, stored unnarrowed
-so the operator sees what was offered. Two taggers ship — a hosted one the flow's manifest names and a local one
-reading a pinned file — and neither blocks the other or the caption.
+so the operator sees what was offered. Two taggers ship — a hosted one on the reader's model, which the caption config
+names, and a local one reading a pinned file — and neither blocks the other or the caption.
 
 ## Requirements
 
@@ -220,19 +220,19 @@ and reaches no network.
 - **THEN** the prose is written
 - **AND** no tag list is written and no tagger is called
 
-### Requirement: Both taggers run for a flow that declares the tagger, and the hosted one runs on the model the flow names
+### Requirement: Both taggers run for a flow that declares the tagger, and the hosted one runs on the reader's model
 
 The system SHALL run both taggers for a flow whose manifest declares the tagger, SHALL resolve the local
-tagger through no key that names its model, and SHALL resolve the hosted tagger on the model that flow's
-manifest names. The tag verb SHALL refuse, before any artifact is written, an invocation naming a flow
+tagger through no key that names its model, and SHALL resolve the hosted tagger on the model the reader runs,
+which the caption config names. The tag verb SHALL refuse, before any artifact is written, an invocation naming a flow
 whose manifest declares no tagger, naming the flow and the key. A hosted tagger that cannot reach its
 model, or whose model is not built from the files the reader's manifest pins, SHALL refuse without
 spending an attempt, and that refusal SHALL NOT prevent the local tag list from being written.
 
-The two taggers are not one thing. The hosted tagger is chosen by a string in a frozen manifest, because which model
-answers is a claim the flow makes; the local tagger is a file this build pins, costs nothing, reaches no network and
-is never the wrong model. The hosted tagger reads the reader's key, so one alias answers both prompts, framed alike,
-and no flow can take its prose and its hosted tags from different models. Whether a flow is tagged is the
+The two taggers are not one thing. The hosted tagger runs the model the caption config names, because which model
+answers is a claim the library makes once; the local tagger is a file this build pins, costs nothing, reaches no
+network and is never the wrong model. The hosted tagger runs the reader's model, so one alias answers both prompts,
+framed alike, and no flow can take its prose and its hosted tags from different models. Whether a flow is tagged is the
 manifest's own key ([D31](../../../docs/decisions.md#d31--a-flow-declares-whether-it-is-tagged)); a flow that
 declares none is refused, not skipped, because a skip reports success for a flow that wrote nothing.
 
@@ -243,11 +243,11 @@ declares none is refused, not skipped, because a skip reports success for a flow
 - **THEN** the local tagger's artifact is written
 - **AND** the flow's manifest names none of the local tagger's files
 
-#### Scenario: the hosted tagger runs the model the flow names
-- **Key:** `tagging:independence:the-hosted-tagger-runs-the-flows-model`
+#### Scenario: the hosted tagger runs the reader's model
+- **Key:** `tagging:independence:the-hosted-tagger-runs-the-readers-model`
 - **Layers:** unit
 - **WHEN** a flow is tagged
-- **THEN** the hosted tag artifact's producer names the model that flow's manifest declares
+- **THEN** the hosted tag artifact's producer names the model the caption config names
 - **AND** it is the same model the caption's producer names
 
 #### Scenario: a flow that declares no tagger is refused by the tag verb

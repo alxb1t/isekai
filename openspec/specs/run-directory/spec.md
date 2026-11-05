@@ -90,8 +90,8 @@ The system SHALL write every artifact with a schema name and version and a produ
 record in the producer which upstream artifact version the work was derived from.
 
 A producer that names only a model cannot explain its result. The instruction text shapes what comes back, so its
-digest is recorded beside the model that read it. Instructions fixed by this build rather than by a flow have
-bytes to hash and no path, and a record that invented a path would assert a location that does not exist.
+digest is recorded beside the model that read it. Instructions this build holds as a constant have bytes to
+hash and no path, and a record that invented a path would assert a location that does not exist.
 
 #### Scenario: an artifact carries its schema name and version
 - **Key:** `run-directory:provenance:artifact-declares-its-schema`
@@ -380,7 +380,7 @@ runs/<input-id>/
 
 Above the split sits the one thing every flow shares, the input. A flow adds one subtree, and retiring one flow's
 work for one input removes one directory ([D17](../../../docs/decisions.md#d17--input-above-flow-below)). A caption
-written under one flow's briefing can never be picked up by another flow, because the two never name the same
+written for one flow can never be picked up by another flow, because the two never name the same
 directory, and a stage directory that is absent records that the flow did not declare what would fill it. A
 source flow the operator names is not a flow reaching into another on its own, and the record of it is what keeps
 the two flows comparable

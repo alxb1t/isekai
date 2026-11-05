@@ -1,0 +1,58 @@
+{
+  "change": "0102-the-one-briefing",
+  "version": "0.68",
+  "base": "a54433bc",
+  "analyzed": "fa73bbfc",
+  "measured_on": "local",
+  "collected_at": "2026-11-05T19:11:42+02:00",
+  "mf_version": "v0.61.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1490
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 26
+    },
+    "open-backlog-cards": {
+      "value": 25
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 2206
+    },
+    "diff-files": {
+      "value": 57
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 12178
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 710
+    },
+    "decisions": {
+      "value": 49
+    }
+  }
+}

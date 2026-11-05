@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.68.0] - 2026-11-05
+
+Gate: local 0m26s · CI not read under mf-ship · 0.67.0: local 0m28s · CI not read under mf-ship
+
 - `config/caption.json` names the reader's model and its briefing, `config/caption.briefing.md`, for every flow; the
   reader and the hosted tagger run that model, and a caption records the new path with the same digest (0102 D1–D3).
 - BREAKING: manifest version 5. A flow is `flow.json`, `graph.json` and `schema.json`, and its manifest declares no
