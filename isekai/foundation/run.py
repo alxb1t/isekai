@@ -121,14 +121,16 @@ _PHOTO_FIELDS: tuple[tuple[str, type], ...] = (
 # than importing the stage. `approved` is here for the same reason: `review` writes it
 # and both `generate` and the inspection command read it.
 #
-# **Every one of them sits under a flow**: `runs/<input-id>/<flow-id>/<stage>/`.
-# Above the flow split is what every flow shares, and the only thing every flow
-# shares is the input itself. Nesting stage-first meant adding a flow scattered
-# four entries across four stage directories; flow-first, adding a flow adds one
-# subtree and retiring one flow's work is removing one directory.
+# **The photograph's description sits in `photo/`, every other stage under a
+# flow**: `runs/<input-id>/photo/<stage>/` and `runs/<input-id>/<flow-id>/<stage>/`.
+# Above the flow split is what every flow shares: the input, and the caption and
+# tag lists every flow reads alike (D17). Adding a flow adds one subtree, and
+# retiring one flow's work is removing one directory.
 CAPTIONS = "captions"
 WD14 = "wd14"
 TAGS = "tags"
+PHOTO = "photo"
+DESCRIPTION = (CAPTIONS, WD14, TAGS)
 SHEETS = "sheets"
 REVIEW = "review"
 PROMPTS = "prompts"
@@ -309,11 +311,16 @@ class Run:
 
         The run owns the layout, so the fact that a flow's work is one directory
         directly under the run is stated here and asked for elsewhere rather than
-        re-derived by each caller.
+        re-derived by each caller. `photo/` is the photograph's description, not a
+        flow, and is left out.
         """
         if not self.path.is_dir():
             return []
-        return sorted(path.name for path in self.path.iterdir() if path.is_dir())
+        return sorted(
+            path.name
+            for path in self.path.iterdir()
+            if path.is_dir() and path.name != PHOTO
+        )
 
     def directory(self, *parts: str) -> Path:
         """Return a stage's directory inside this run, whether or not it exists.
@@ -412,6 +419,11 @@ def assign(run: Run, flow: str, *, remove: bool = False) -> bool:
     Return whether the run changed. A run holding a flow's directory is assigned
     to it, so a tick is the layout's own fact; an untick never deletes work.
     """
+    if flow == PHOTO:
+        raise Refusal(
+            f"{PHOTO}: a name a run keeps for its photograph's description, "
+            "never a flow"
+        )
     directory = run.directory(flow)
     if not remove:
         if directory.is_dir():
@@ -749,6 +761,51 @@ def stage_command(run: Run, verb: str, *flows: str, options: Sequence[str] = ())
     )
     words = " ".join((*options, run.id))
     return f"python -m isekai {verb}{naming}{runs} {words}"
+
+
+def migrate_command(run: Run) -> str:
+    """Return the command that copies `run`'s description into `photo/`, as pasted.
+
+    e.g. a run under `.data/runs` -> "python -m isekai migrate"
+    """
+    root = run.path.parent
+    if root.resolve() == RUNS_ROOT.resolve():
+        return "python -m isekai migrate"
+    return f"python -m isekai migrate --runs {shlex.quote(str(root))}"
+
+
+def unmigrated(run: Run) -> list[str]:
+    """Return the kinds of description a flow of `run` holds and `photo/` lacks.
+
+    In `DESCRIPTION`'s order; an error record alone is no artifact (D3).
+    e.g. a flow's `wd14/001.json` and no `photo/` -> ["wd14"]
+    """
+    return [
+        kind
+        for kind in DESCRIPTION
+        if not versions(run.directory(PHOTO, kind))
+        and any(versions(run.directory(flow, kind)) for flow in run.flows)
+    ]
+
+
+def photo_of(run: Run, stage: str) -> Path:
+    """Return the directory of the photograph's `stage` in `run`, or refuse.
+
+    An unmigrated run is refused (D3) before anything is written, so a stage that
+    refuses leaves the run as it found it.
+    e.g. (run, WD14) -> runs/<id>/photo/wd14
+    """
+    kinds = unmigrated(run)
+    if kinds:
+        named = (
+            kinds[0] if len(kinds) == 1 else f"{', '.join(kinds[:-1])} and {kinds[-1]}"
+        )
+        verb = "sits" if len(kinds) == 1 else "sit"
+        raise Refusal(
+            f"{run.id}: its {named} {verb} under its flows, not in {PHOTO}/; run "
+            f"`{migrate_command(run)}`, which copies them there"
+        )
+    return run.directory(PHOTO, stage)
 
 
 def refusal_for(

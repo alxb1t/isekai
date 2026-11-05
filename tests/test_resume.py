@@ -309,12 +309,12 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     flow = load_flow(FLOW)
     messages: list[str] = []
     # `reader` is an optional resolver on `Wiring` -- optional because a ③-only
-    # front end composes one without it, and a resolver because it is resolved
-    # per flow. The narrowing below is an assertion about this fixture, not
-    # about the code.
+    # front end composes one without it, and a resolver because nothing is
+    # constructed until a verb asks. The narrowing below is an assertion about
+    # this fixture, not about the code.
     resolve_reader = wired.reader
     assert resolve_reader is not None
-    reader = resolve_reader(flow)
+    reader = resolve_reader()
 
     def collect(work: Callable[[], object]) -> None:
         try:

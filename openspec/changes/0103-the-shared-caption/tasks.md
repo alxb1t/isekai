@@ -5,86 +5,86 @@ the repository root.
 
 ## Progress
 
-- [ ] 1 — The store
+- [x] 1 — The store
 - [ ] 2 — The switch
 - [ ] 3 — The page
 - [ ] 4 — The record
 
 ## 1 — The store
 
-- [ ] 1.1 In `isekai/foundation/run.py`, per [D1](design.md#d1): add `PHOTO = "photo"` and
+- [x] 1.1 In `isekai/foundation/run.py`, per [D1](design.md#d1): add `PHOTO = "photo"` and
   `DESCRIPTION = (CAPTIONS, WD14, TAGS)` beside the stage names; the layout comment above them says the description
   sits in `photo/` and every other stage under a flow; `Run.flows` leaves `PHOTO` out, its docstring saying so.
   Verify: `uv run python -c 'from isekai.foundation.run import PHOTO, DESCRIPTION; print(PHOTO, DESCRIPTION)'` prints `photo ('captions', 'wd14', 'tags')`.
-- [ ] 1.2 In `isekai/foundation/run.py`, `assign` refuses `PHOTO` before it touches the run, with
+- [x] 1.2 In `isekai/foundation/run.py`, `assign` refuses `PHOTO` before it touches the run, with
   [D1](design.md#d1)'s text.
   Verify: `grep -c "a name a run keeps for its photograph's description" isekai/foundation/run.py` prints `1`.
-- [ ] 1.3 In `isekai/foundation/run.py`, add `unmigrated(run)`, `migrate_command(run)` and `photo_of(run, stage)` per
+- [x] 1.3 In `isekai/foundation/run.py`, add `unmigrated(run)`, `migrate_command(run)` and `photo_of(run, stage)` per
   [D2](design.md#d2), [D3](design.md#d3) and [the refusal](design.md#the-refusal).
   Verify: `uv run python -c 'from isekai.foundation.run import photo_of, migrate_command, unmigrated'` exits 0.
-- [ ] 1.4 In `tests/test_run_directory.py`, add `test_photo_is_no_flow` (`run-directory:layout:photo-is-no-flow`):
+- [x] 1.4 In `tests/test_run_directory.py`, add `test_photo_is_no_flow` (`run-directory:layout:photo-is-no-flow`):
   `Run.flows` over a run holding `photo/` and one flow lists the flow alone, and `assign(run, PHOTO)` is refused.
   Verify: `uv run pytest tests/test_run_directory.py -k photo_is_no_flow` exits 0.
-- [ ] 1.5 In `tests/test_run_directory.py`, add `test_an_unmigrated_run_is_refused_naming_migrate`
+- [x] 1.5 In `tests/test_run_directory.py`, add `test_an_unmigrated_run_is_refused_naming_migrate`
   (`run-directory:migration:an-unmigrated-run-is-refused`): a flow's `wd14/001.json` and no `photo/`; `photo_of`
   refuses naming the run id and `python -m isekai migrate --runs`, and the run's files are unchanged.
   Verify: `uv run pytest tests/test_run_directory.py -k unmigrated_run_is_refused` exits 0.
-- [ ] 1.6 In `tests/test_run_directory.py`, add `test_a_migrated_run_reads_photo`
+- [x] 1.6 In `tests/test_run_directory.py`, add `test_a_migrated_run_reads_photo`
   (`run-directory:migration:a-migrated-run-reads-photo`): with the flow's copies and `photo/` holding each kind,
   `photo_of` returns `photo/<kind>` for each and the flow's copies are unchanged.
   Verify: `uv run pytest tests/test_run_directory.py -k migrated_run_reads_photo` exits 0.
-- [ ] 1.7 In `tests/test_flow.py`, add `test_no_tracked_flow_is_named_photo`, bound to
+- [x] 1.7 In `tests/test_flow.py`, add `test_no_tracked_flow_is_named_photo`, bound to
   `run-directory:layout:photo-is-no-flow`, asserting `PHOTO not in tracked_flows()`.
   Verify: `uv run pytest tests/test_flow.py -k named_photo` exits 0.
-- [ ] 1.8 Write `isekai/foundation/migrate.py`, `migrate(run) -> str`, per [D4](design.md#d4) and
+- [x] 1.8 Write `isekai/foundation/migrate.py`, `migrate(run) -> str`, per [D4](design.md#d4) and
   [the migration](design.md#the-migration). It imports `artifacts.py`, `run.py` and `refusal.py` alone; its module
   docstring says it copies and never deletes a source, and that a list keeps its number (D32).
   Verify: `uv run python -c 'from isekai.foundation.migrate import migrate'` exits 0.
-- [ ] 1.9 In `isekai/interface/ui/__init__.py`, add `collection_runs()` per [D5](design.md#d5): the `runs/` of every
+- [x] 1.9 In `isekai/interface/ui/__init__.py`, add `collection_runs()` per [D5](design.md#d5): the `runs/` of every
   collection in the library `library.root()` names, refusing a library git can reach as `open_library` does.
   Verify: `uv run python -c 'from isekai.interface.ui import collection_runs'` exits 0.
-- [ ] 1.10 In `isekai/interface/cli.py`, add the `migrate` verb per [D5](design.md#d5): its parser, `--runs` defaulting
+- [x] 1.10 In `isekai/interface/cli.py`, add the `migrate` verb per [D5](design.md#d5): its parser, `--runs` defaulting
   to none, and `_migrate`, importing `collection_runs` from `isekai.interface.ui` inside the function. In
   `isekai/interface/wiring.py`'s `wiring`, a `None` runs root is `RUNS_ROOT`; one given is checked as now.
   Verify: `uv run python -m isekai migrate --help` exits 0.
-- [ ] 1.11 In `tests/test_pipeline_cli.py`, `EXPECTED_VERBS` gains `"migrate"` after `"compare"`, and
+- [x] 1.11 In `tests/test_pipeline_cli.py`, `EXPECTED_VERBS` gains `"migrate"` after `"compare"`, and
   `test_each_verb_is_reachable_as_a_subcommand`'s `own` gains `"migrate": []`.
   Verify: `uv run pytest tests/test_pipeline_cli.py -k "verbs or subcommand"` exits 0.
-- [ ] 1.12 In `isekai/interface/cli.py`'s module docstring, per [D12](design.md#d12): the verb table gains `migrate`,
+- [x] 1.12 In `isekai/interface/cli.py`'s module docstring, per [D12](design.md#d12): the verb table gains `migrate`,
   "copy each run's per-flow description into photo/"; the paragraph opening "**Schema migration is not a verb.**" →
   "**`migrate` moves a layout, not a schema.** Every run file kind is at its first version, so nothing upgrades one;
   `migrate` copies a run's per-flow description into `photo/` (D17)."
   Verify: `grep -n "Schema migration is not a verb" isekai/interface/cli.py` prints nothing.
-- [ ] 1.13 **HALT CHECK** The verb line still imports with site-packages off the path, the library reached only inside
+- [x] 1.13 **HALT CHECK** The verb line still imports with site-packages off the path, the library reached only inside
   `_migrate` ([D5](design.md#d5)).
   Verify: `uv run pytest tests/test_pipeline_cli.py -k site_packages_off_the_path` exits 0.
-- [ ] 1.14 Write `tests/test_migrate.py`: one test per `cli:migrate:*` key in [the key moves](design.md#the-key-moves),
+- [x] 1.14 Write `tests/test_migrate.py`: one test per `cli:migrate:*` key in [the key moves](design.md#the-key-moves),
   over a library of two collections under `tmp_path`, through `cli.main`, with `ISEKAI_LIBRARY` and `RUNS_ROOT`, where
   `_migrate` reads it, pointed under `tmp_path` by `monkeypatch`. The first runs `migrate` twice and asserts every
   file's bytes after the second run equal those after the first.
   Verify: `uv run pytest tests/test_migrate.py` exits 0.
-- [ ] 1.15 In `isekai/interface/wiring.py`, per [D7](design.md#d7): `reader`, `tagger` and `hosted_tagger` are
+- [x] 1.15 In `isekai/interface/wiring.py`, per [D7](design.md#d7): `reader`, `tagger` and `hosted_tagger` are
   `Callable[[], …] | None`; `reader_for`, `tagger_for` and `hosted_tagger_for` take no argument, and their docstrings
   and the comments above the fields lose "takes a `Flow` and reads nothing from it" and "per flow".
   Verify: `git grep -n -E "def (reader_for|tagger_for|hosted_tagger_for)[(]flow" isekai` prints nothing.
-- [ ] 1.16 In `isekai/interface/cli.py`'s `_per_item`, call each seam with no flow: the `tagger` thunk takes nothing,
+- [x] 1.16 In `isekai/interface/cli.py`'s `_per_item`, call each seam with no flow: the `tagger` thunk takes nothing,
   its docstring's paragraph opening "One slot, because `wiring.tagger_for` takes a `Flow`" goes, and the caption and
   hosted steps call `_seam(...)()`; the caption step's comment "**Resolved per flow, not once per invocation.**…" goes.
   Verify: `grep -n -E "def tagger[(]flow|[)][(]flow[)]|tagger_for[(]flow[)]" isekai/interface/cli.py` prints nothing.
-- [ ] 1.17 In `tests/stages.py`, `Always.__call__(self)` takes no flow, its docstring "hands every caller the same
+- [x] 1.17 In `tests/stages.py`, `Always.__call__(self)` takes no flow, its docstring "hands every caller the same
   double"; `tests/test_tagging.py`'s `_unopenable` and `unopenable`, and the `Callable[[Flow], LocalTagger]` annotations
   of `_wired`'s `tagger` and the parametrised `resolver`, take none.
   Verify: `git grep -n -E "def __call__[(]self, flow|def _?unopenable[(]flow" tests` prints nothing.
-- [ ] 1.18 In `tests/test_tagging.py` and `tests/test_pipeline_cli.py`, every call of `reader_for`, `tagger_for` or
+- [x] 1.18 In `tests/test_tagging.py` and `tests/test_pipeline_cli.py`, every call of `reader_for`, `tagger_for` or
   `hosted_tagger_for` passes nothing; the tagging tests resolve once, per [the tests' tables](design.md#tests):
   `test_the_hosted_tagger_runs_the_configured_model` unparametrised, the two renamed.
   Verify: `uv run pytest tests/test_tagging.py -k "hosted_tagger or local_tagger_resolves"` exits 0.
-- [ ] 1.19 In `tests/test_pipeline_cli.py`, `_caption_with_one_refusing` and its `reader(flow)` give way to
+- [x] 1.19 In `tests/test_pipeline_cli.py`, `_caption_with_one_refusing` and its `reader(flow)` give way to
   `_review_with_one_refusing(tmp_path, refusing)`: the other flow alone holds a sheet, and `review --flow flow-a --flow
   flow-b` refuses `refusing`, naming it, and drafts the other; both tests bound to it assert that, per
   [Tests](design.md#tests).
   Verify: `uv run pytest tests/test_tagging.py tests/test_pipeline_cli.py` exits 0.
-- [ ] 1.20 No seam double in `tests/` takes a flow ([D7](design.md#d7)).
+- [x] 1.20 No seam double in `tests/` takes a flow ([D7](design.md#d7)).
   Verify: `git grep -n -E "def reader[(]flow" tests` prints nothing.
 
 ## 2 — The switch

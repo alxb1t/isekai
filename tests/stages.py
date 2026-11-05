@@ -217,18 +217,19 @@ def sheet(
 
 @dataclass(frozen=True)
 class Always[T]:
-    """A resolver that hands every flow the same double.
+    """A resolver that hands every caller the same double.
 
-    `Wiring.reader` is a resolver, called per flow. A test that means to drive one
-    double over any number of flows says so with this rather than by repeating a lambda,
-    and `.double` is what keeps the counting assertions -- how many times was the
-    reader actually reached -- reaching the object that did the counting.
+    `Wiring.reader` is a resolver, called each time a verb asks. A test that means to
+    drive one double over any number of calls says so with this rather than by
+    repeating a lambda, and `.double` is what keeps the counting assertions -- how
+    many times was the reader actually reached -- reaching the object that did the
+    counting.
     """
 
     double: T
 
-    def __call__(self, flow: Flow) -> T:
-        """Return the one double, whatever flow asked."""
+    def __call__(self) -> T:
+        """Return the one double."""
         return self.double
 
 
@@ -294,10 +295,10 @@ def fake_tagger(vector: list[float] | None = None) -> LocalTagger:
 
 
 def fake_wd14(vector: list[float] | None = None) -> Always[LocalTagger]:
-    """Return a resolver handing every flow one opened fake tagger.
+    """Return a resolver handing every caller one opened fake tagger.
 
     `Always`'s reason, applied to the local tagger: a test driving one double over
-    any number of flows should not repeat a lambda, and a wiring composed for a
+    any number of calls should not repeat a lambda, and a wiring composed for a
     verb that never tags still has to say what it *would* have tagged with.
     """
     return Always(fake_tagger(vector))

@@ -33,6 +33,7 @@ from isekai.foundation.flow import (
     tracked_flows,
 )
 from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import PHOTO
 
 # The digest of every tracked flow's whole directory, committed here.
 #
@@ -610,6 +611,11 @@ def test_a_re_pin_leaves_a_record_a_later_reader_can_find() -> None:
 @pytest.mark.spec("image-generation:immutability:flow-manifest-is-pinned-by-equality")
 def test_every_tracked_flow_is_pinned_at_all() -> None:
     assert sorted(PINNED) == tracked_flows()
+
+
+@pytest.mark.spec("run-directory:layout:photo-is-no-flow")
+def test_no_tracked_flow_is_named_photo() -> None:
+    assert PHOTO not in tracked_flows()
 
 
 @pytest.mark.spec("image-generation:immutability:flow-manifest-is-pinned-by-equality")

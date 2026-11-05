@@ -28,7 +28,7 @@ from isekai.boundary import gpu, ollama
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
 from isekai.boundary.wd14 import LocalTagger, open_session
 from isekai.foundation.caption_config import load_caption_config
-from isekai.foundation.flow import FLOWS_DIR, Flow
+from isekai.foundation.flow import FLOWS_DIR
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import DATA_ROOT, REPOSITORY, RUNS_ROOT
 from isekai.pipeline.caption import OllamaReader, Reader
@@ -63,19 +63,18 @@ class Wiring:
     # verbs that do reach one say so at their own call site instead.
     #
     # **Resolvers rather than values**, which is the shape `vocabulary` already
-    # has one line below and for a related reason: a resolver per flow refuses
-    # for that flow alone, and constructs nothing until a flow asks.
-    reader: Callable[[Flow], Reader] | None
-    # The two tagging seams, and they are deliberately not one. `tagger` resolves
-    # for **every** tagged flow because no manifest key names its model;
-    # `hosted_tagger` resolves on the model the reader runs, the one
-    # `config/caption.json` names.
+    # has one line below and for its reason: a resolver constructs nothing until
+    # a verb asks.
+    reader: Callable[[], Reader] | None
+    # The two tagging seams, and they are deliberately not one. `tagger` is the
+    # local tagger this build pins, which no manifest key names; `hosted_tagger`
+    # resolves on the model the reader runs, the one `config/caption.json` names.
     #
     # Both are `| None` on the dataclass for `reader`'s reason: a front end that
     # serves stage (3) alone reaches neither, and fabricating a tagger it never
     # calls would open a 467 MB file to be thrown away.
-    tagger: Callable[[Flow], LocalTagger] | None
-    hosted_tagger: Callable[[Flow], Tagger] | None
+    tagger: Callable[[], LocalTagger] | None
+    hosted_tagger: Callable[[], Tagger] | None
     client: ComfyTransport | None
     # A thunk, not a value. Only `sheet` and `approve` read the vocabulary, and
     # parsing the 308 KB tag list costs ~50 ms -- but the real cost is that an
@@ -113,47 +112,42 @@ class Wiring:
 # A model `config/caption.json` names that this build cannot reach still refuses
 # by name, and it refuses at the first call rather than here -- `ollama.py` is
 # what checks that a host is running and an alias created, and nothing is
-# constructed until a flow asks.
+# constructed until a verb asks.
 
 
-def reader_for(flow: Flow) -> Reader:
+def reader_for() -> Reader:
     """Return the reader running the model `config/caption.json` names.
 
-    **It takes a `Flow` and reads nothing from it**, as `tagger_for` does: every
-    flow is read by one model, and the parameter keeps the seam resolved per flow.
+    Every photograph is read by one model, so the seam takes nothing.
     """
     return OllamaReader(model=load_caption_config().model)
 
 
-def hosted_tagger_for(flow: Flow) -> Tagger:
+def hosted_tagger_for() -> Tagger:
     """Return the hosted tagger, on the same alias the reader runs.
 
     **One model answers both prompts**, which is exactly why `TAG_PROMPT` is not
     chat-framed: two calls to the same alias must not arrive framed differently.
     `config/caption.json` names that model once, for both.
 
-    It is not optional: it resolves for every flow -- what can still go wrong is
-    the alias not being created, and that is a refusal at the first call naming
-    the one command that fixes it.
+    It is not optional: what can still go wrong is the alias not being created,
+    and that is a refusal at the first call naming the one command that fixes it.
     """
     return OllamaTagger(model=load_caption_config().model)
 
 
-def tagger_for(flow: Flow) -> LocalTagger:
-    """Open the local tagger and read its label index, for any tagged flow.
+def tagger_for() -> LocalTagger:
+    """Open the local tagger and read its label index.
 
-    **It takes a `Flow` and reads nothing from it**, which is the whole point
-    rather than an oversight. The manifest's `tagger` key decides *whether* a
-    flow is tagged, and `cli.py` reads it; nothing in the manifest says *which*
-    model tags, because the local tagger is a file this build pins, it costs
-    nothing, it reaches no network, and there is no tagged flow for which it
-    would be wrong (D31). The parameter stays so that both tagging
-    seams have one shape and `cli.py` resolves them the same way.
+    The manifest's `tagger` key decides *whether* a flow is tagged; nothing in
+    the manifest says *which* model tags, because the local tagger is a file this
+    build pins, it costs nothing, it reaches no network, and there is no tagged
+    flow for which it would be wrong (D31).
 
     **Both digests are verified and 467 MB is opened here**, so nothing calls this
-    until a flow asks -- and `cli.py` calls it once per flow per invocation rather
-    than once per photograph, which is the difference between 0.89 s and 0.89 s
-    times the batch.
+    until a verb asks -- and `cli.py` calls it once per invocation rather than
+    once per photograph, which is the difference between 0.89 s and 0.89 s times
+    the batch.
     """
     return open_session()
 
@@ -322,8 +316,10 @@ def wiring(args: argparse.Namespace) -> Wiring:
     `getattr` rather than `args.server`: only `generate` declares the flag, so the
     attribute is genuinely absent on every other verb's namespace. `render` names
     a runs root per collection: each is checked, and the first is the wiring's.
+    `migrate` names none unless asked, and then the root is `RUNS_ROOT`.
     """
-    roots = args.runs if isinstance(args.runs, list) else [args.runs]
+    runs = RUNS_ROOT if args.runs is None else args.runs
+    roots = runs if isinstance(runs, list) else [runs]
     for runs in roots[1:]:
         _check_run_root(runs)
     return wiring_from(runs=roots[0], server=getattr(args, "server", None))

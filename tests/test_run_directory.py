@@ -33,13 +33,17 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
     DATA_ROOT,
+    DESCRIPTION,
     FRAME_NAME,
+    PHOTO,
     RUNS_ROOT,
+    WD14,
     Kind,
     Run,
     across,
     approved_versions,
     artifact_name,
+    assign,
     attempts,
     check_budget,
     instructions_record,
@@ -47,6 +51,7 @@ from isekai.foundation.run import (
     latest,
     next_version,
     open_run,
+    photo_of,
     record_failure,
     refusal_for,
     run_id,
@@ -1220,6 +1225,61 @@ def test_the_layout_survives_one_flows_directory_being_removed(
     assert snapshot(run.path / FLOW) == kept
     assert run.photo.is_file()
     assert (run.path / FRAME_NAME).is_file()
+
+
+@pytest.mark.spec("run-directory:layout:photo-is-no-flow")
+def test_photo_is_no_flow(tmp_path: Path) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+    (run.path / PHOTO / WD14).mkdir(parents=True)
+    (run.path / FLOW).mkdir()
+
+    assert run.flows == [FLOW]
+    with pytest.raises(Refusal, match="a name a run keeps for its photograph's"):
+        assign(run, PHOTO)
+
+
+def _description(directory: Path, kind: str) -> None:
+    """Write one artifact of the description `kind` into `directory`."""
+    directory.mkdir(parents=True, exist_ok=True)
+    schema = {"captions": "caption", "wd14": "wd14", "tags": "tags"}[kind]
+    write_json(
+        directory / "001.json", {"schema": {"name": schema, "version": 1}, "tags": []}
+    )
+
+
+@pytest.mark.spec("run-directory:migration:an-unmigrated-run-is-refused")
+def test_an_unmigrated_run_is_refused_naming_migrate(tmp_path: Path) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+    _description(run.path / FLOW / WD14, WD14)
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal) as refused:
+        photo_of(run, WD14)
+
+    assert str(refused.value).startswith(f"{run.id}: its wd14 sits under its flows")
+    assert "`python -m isekai migrate --runs " in str(refused.value)
+    assert snapshot(run.path) == before
+    assert not (run.path / PHOTO).exists()
+
+
+@pytest.mark.spec("run-directory:migration:a-migrated-run-reads-photo")
+def test_a_migrated_run_reads_photo(tmp_path: Path) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+    for kind in DESCRIPTION:
+        _description(run.path / FLOW / kind, kind)
+        _description(run.path / PHOTO / kind, kind)
+    kept = snapshot(run.path / FLOW)
+
+    paths = [photo_of(run, kind) for kind in DESCRIPTION]
+
+    assert paths == [run.path / PHOTO / kind for kind in DESCRIPTION]
+    assert snapshot(run.path / FLOW) == kept
 
 
 @pytest.mark.spec("run-directory:schema:an-added-record-key-is-optional")

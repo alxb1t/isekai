@@ -28,7 +28,6 @@ from isekai.foundation.flow import (
     FLOWS_DIR,
     MANIFEST_NAME,
     SIBLINGS,
-    Flow,
     load_flow,
     tracked_flows,
 )
@@ -422,31 +421,23 @@ def test_the_separator_is_a_comma() -> None:
 
 
 @pytest.mark.spec("tagging:independence:the-local-tagger-needs-no-model-key")
-def test_the_local_tagger_resolves_identically_for_every_tracked_flow(
+def test_the_local_tagger_resolves_with_no_flow(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Proved by calling it, with the 467 MB open replaced: every tracked flow
-    # gets a tagger, none of them is refused, and **no flow is ever read** -- no
-    # manifest key names the local tagger's model, because it is a file this
-    # build pins and there is no flow for which it would be wrong (D7).
+    # Proved by calling it, with the 467 MB open replaced: the tagger resolves and
+    # **no flow is read** -- no manifest key names the local tagger's model,
+    # because it is a file this build pins and there is no flow for which it
+    # would be wrong (D7).
     opened = fake_tagger()
     monkeypatch.setattr(wiring, "open_session", lambda *_a, **_k: opened)
 
-    tracked = tracked_flows()
-
-    resolved = {flow_id: wiring.tagger_for(load_flow(flow_id)) for flow_id in tracked}
-
-    assert tracked
-    assert all(pair == opened for pair in resolved.values())
+    assert wiring.tagger_for() == opened
 
 
 @pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
-@pytest.mark.parametrize("flow_id", tracked_flows())
-def test_the_hosted_tagger_runs_the_configured_model(flow_id: str) -> None:
-    """Every flow's hosted tagger runs the model `config/caption.json` names."""
-    flow = load_flow(flow_id)
-
-    resolved = wiring.hosted_tagger_for(flow)
+def test_the_hosted_tagger_runs_the_configured_model() -> None:
+    """The hosted tagger runs the model `config/caption.json` names."""
+    resolved = wiring.hosted_tagger_for()
 
     assert isinstance(resolved, OllamaTagger)
     assert resolved.implementation == "ollama"
@@ -454,22 +445,19 @@ def test_the_hosted_tagger_runs_the_configured_model(flow_id: str) -> None:
 
 
 @pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
-def test_each_flow_gets_a_hosted_tagger_on_its_readers_model() -> None:
-    """Resolved per flow, on the reader's model.
+def test_the_hosted_tagger_runs_the_readers_model() -> None:
+    """Resolved on the reader's model.
 
     One alias answers both prompts, which is why the tag prompt is not
     chat-framed -- so the tagger's model being the reader's model is asserted,
     and both are the one `config/caption.json` names.
     """
-    for flow_id in tracked_flows():
-        flow = load_flow(flow_id)
+    tagger = wiring.hosted_tagger_for()
+    reader = wiring.reader_for()
 
-        tagger = wiring.hosted_tagger_for(flow)
-        reader = wiring.reader_for(flow)
-
-        assert isinstance(tagger, OllamaTagger)
-        assert isinstance(reader, OllamaReader)
-        assert tagger.model == reader.model == load_caption_config().model
+    assert isinstance(tagger, OllamaTagger)
+    assert isinstance(reader, OllamaReader)
+    assert tagger.model == reader.model == load_caption_config().model
 
 
 class Failing:
@@ -482,7 +470,7 @@ class Failing:
 def _wired(
     tmp_path: Path,
     *,
-    tagger: Callable[[Flow], LocalTagger] | None = None,
+    tagger: Callable[[], LocalTagger] | None = None,
     hosted: Tagger | None = None,
     flows_dir: Path = FLOWS_DIR,
 ) -> Wiring:
@@ -559,7 +547,7 @@ def _unreadable() -> LocalTagger:
     return dataclasses.replace(fake_tagger(), session=Broken())
 
 
-def _unopenable(flow: Flow) -> LocalTagger:
+def _unopenable() -> LocalTagger:
     """Refuse the way an absent model file does: for the build, not a photograph."""
     raise Refusal("wd14/model.onnx is absent; provision the vocabulary")
 
@@ -571,7 +559,7 @@ def _unopenable(flow: Flow) -> LocalTagger:
     ids=["a-failing-photograph", "an-unopenable-tagger"],
 )
 def test_a_failing_local_tagger_leaves_the_hosted_list_written(
-    tmp_path: Path, resolver: Callable[[Flow], LocalTagger], names: str
+    tmp_path: Path, resolver: Callable[[], LocalTagger], names: str
 ) -> None:
     photo = _photo(tmp_path)
     hosted = FakeTagger()
@@ -591,11 +579,11 @@ def test_a_failing_local_tagger_leaves_the_hosted_list_written(
 @pytest.mark.spec("tagging:order:a-local-failure-leaves-the-hosted-list-written")
 def test_an_unopenable_tagger_is_tried_once_per_invocation(tmp_path: Path) -> None:
     """Opening hashes 467 MB, and its refusal is the build's, so it is kept."""
-    attempts: list[Flow] = []
+    attempts: list[None] = []
 
-    def unopenable(flow: Flow) -> LocalTagger:
-        attempts.append(flow)
-        return _unopenable(flow)
+    def unopenable() -> LocalTagger:
+        attempts.append(None)
+        return _unopenable()
 
     photos = [_photo(tmp_path)]
     other = tmp_path / "other.jpg"

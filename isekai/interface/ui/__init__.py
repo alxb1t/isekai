@@ -20,12 +20,31 @@ own functions and they own the file's shape and its name -- held by one grep in
 `tests/test_ui.py`.
 """
 
+from pathlib import Path
+
 from isekai.interface.ui import library
 from isekai.interface.ui.bundle import ensure_built
 from isekai.interface.wiring import Wiring, wiring_from
 from isekai.pipeline.importing import sweep
 
 HOST = "127.0.0.1"
+
+
+def collection_runs() -> list[Path]:
+    """Return the `runs/` of every collection in the library, by collection name.
+
+    A library git can reach is refused as `open_library` refuses it (D18); an absent
+    one holds no collection, and nothing is created.
+    """
+    found = library.root()
+    if not found.is_dir():
+        return []
+    opened = library.open_library(found)
+    return [
+        folder / library.RUNS
+        for folder in library.listed(opened)
+        if library.is_collection(folder)
+    ]
 
 
 def serve(wired: Wiring, *, port: int) -> int:
