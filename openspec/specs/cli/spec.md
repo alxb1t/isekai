@@ -564,9 +564,12 @@ the limit, what each flow was asked to render and what it plans for each photogr
 each image as its run digest, flow, version and seed in order, and the outcome — running, done, stopped or failed, with
 its message — and no price. A session refused before anything is rented SHALL write no record. An existing id SHALL be
 refused without replacing its record or asking for a pod, including when concurrent starts choose the same id.
+A session gpunit refuses after it asks for a pod, rented or not, SHALL end its record failed with gpunit's reason,
+and SHALL exit with gpunit's code.
 
 The state of a session lives on disk, so a page, a second tab, a restarted surface and a render started in the
-terminal all read the same truth; no price follows the quote.
+terminal all read the same truth; no price follows the quote. gpunit's code says its refusal's kind, so a caller tells
+no card in stock from no card that fits without reading the log.
 
 ```
 free checks ─▶ claim id + lifetime lock ─▶ running record ─▶ images ─▶ ended record ─▶ release lock
@@ -622,6 +625,13 @@ free checks ─▶ claim id + lifetime lock ─▶ running record ─▶ images 
 - **WHEN** a session renders two collections
 - **THEN** each collection's record holds the shared id, its own images and plan, and the complete collection order
 - **AND** both records hold the pod's and the teardown's steps, and both logs the session's lines
+
+#### Scenario: a refused session exits with gpunit's code
+- **Key:** `cli:render-session:a-refused-session-exits-with-gpunits-code`
+- **Layers:** unit
+- **WHEN** gpunit refuses a session for no card in stock
+- **THEN** the verb exits 4
+- **AND** its record ends failed with gpunit's reason
 
 ### Requirement: The draft verb drafts a flow from image paths, and writes every draft or none
 
