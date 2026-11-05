@@ -162,46 +162,6 @@ a person, and the acceptance looks for it specifically.
 - **THEN** each sentence is rendered as its own block
 - **AND** the prose's own text is unchanged, with nothing added, dropped or re-ordered
 
-### Requirement: Both tag lists are shown beside the prose, read-only, and neither is editable there
-
-The system SHALL show, beside the caption, the scored list the local tagger produced and the
-committable tags the hosted tagger offered — the input's flow's, else those of the flow its sheet's tags came from,
-followed from sheet to sheet as the caption is — and SHALL make neither list a way to change a sheet.
-
-**The two lists are narrowed differently, and the asymmetry is measured rather than chosen.** The local
-tagger is scored against the vocabulary it emits, so every tag it returns is committable by
-construction and all of them are shown, with the confidence beside each — a wrong tag sorted below a
-right one refutes itself. The hosted tagger free-associates: on the acceptance collection roughly nine in
-ten of its tags were outside the vocabulary, could not be committed to any field, and the operator's
-verdict was that only the marked ones carried any value. So its list is **filtered to what the
-vocabulary carries** before it is shown.
-
-**Filtered on the way to the page, never on the way to disk.** The artifact keeps every tag the model
-returned — that is `tagging`'s requirement and it is untouched — because narrowing what is *stored*
-would make the record disagree with what the model said, and the reason the artifact exists is to be
-able to look behind the sorter. What changes is only which of those tags the surface spends the
-operator's attention on.
-
-#### Scenario: the local list is shown whole and the hosted list is shown filtered
-- **Key:** `ui:source:both-tag-lists-are-shown-raw-and-read-only`
-- **Layers:** unit
-- **WHEN** an input whose tag artifacts contain tags outside the flow's vocabulary is opened
-- **THEN** every tag the local tagger scored is present in the response the surface renders
-- **AND** only the hosted tags the vocabulary contains are present in it
-- **AND** no interaction on either list writes to a draft
-
-#### Scenario: filtering the panel does not filter the artifact
-- **Key:** `ui:source:the-artifact-keeps-what-the-panel-drops`
-- **Layers:** unit
-- **WHEN** a hosted tag outside the vocabulary is withheld from the payload
-- **THEN** that tag is still present in the stored artifact, unchanged
-
-#### Scenario: a sheet filled from another flow's tags shows that flow's lists
-- **Key:** `ui:source:a-borrowed-sheet-shows-the-taggers-lists`
-- **Layers:** unit
-- **WHEN** a flow holding no tag lists has a sheet whose tags came, two flows back, from a flow that holds both
-- **THEN** the source pane shows both of that flow's lists
-
 ### Requirement: Vocabulary membership is decided by the server, not by the browser
 
 The system SHALL resolve, for each hosted tag, whether the flow's pinned vocabulary contains it and what
@@ -451,45 +411,6 @@ tagging capability's own rule and is untouched here.
 - **AND** every row the local tagger scored is present in it
 - **AND** both artifacts on disk are unchanged
 
-### Requirement: A missing caption is shown with the command that writes it
-
-The system SHALL, when an input's flow holds no caption, show in the source pane the caption of the flow its sheet's
-tags came from, followed from sheet to sheet to the flow that tagged, named as that flow's, and else that there is
-none and the command that writes it, naming the flow, the run and the runs root. It SHALL NOT refuse to open the
-surface for the absence.
-
-**The prose is the one artifact a skipped verb leaves missing on a page under review.** The tag lists keep
-their silence: a list is missing because a tagger failed, because the run predates it, or because the flow
-declares no tagger. Skipping `tag` never reaches review, because the sheet refuses without a tag list the
-flow declares.
-
-The caption is now its own verb and nothing downstream needs it, so an input can reach review having never
-been read. A blank pane cannot be told from a photograph with nothing to say, and the one-verb design kept
-the caption bundled for exactly that reason; naming the command keeps the reason without the bundle.
-
-The server builds the command, as it builds every other command a refusal prints, and it names the run and its
-runs root so it works when pasted: a collection's runs root in the library is never the default.
-
-#### Scenario: an input with no caption names the command that writes it
-- **Key:** `ui:source:a-missing-caption-names-its-command`
-- **Layers:** unit
-- **WHEN** an input whose flow holds no caption is opened
-- **THEN** the payload carries no prose and the command that writes it, naming the flow, the run and the runs root
-- **AND** the surface serves the input without a refusal
-
-#### Scenario: a sheet filled from another flow's tags shows that flow's caption
-- **Key:** `ui:source:a-borrowed-sheet-shows-its-sources-caption`
-- **Layers:** unit
-- **WHEN** an input is opened whose flow holds no caption and whose sheet names another flow's tags
-- **THEN** the payload carries that flow's caption prose and names that flow
-- **AND** it carries no command
-
-#### Scenario: a sheet two flows from its tags shows the tagger's caption
-- **Key:** `ui:source:a-two-hop-sheet-shows-the-taggers-caption`
-- **Layers:** unit
-- **WHEN** a flow's sheet takes its tags from a flow whose own sheet takes them from a third, which holds the caption
-- **THEN** the source pane shows the third flow's caption, named as its
-
 ### Requirement: A damaged run file or a malformed draft update is refused, never failed
 
 The system SHALL answer a request that reads a run file lacking a key it needs, or holding one in the wrong shape,
@@ -606,6 +527,8 @@ reached by `h` and `←`, and `↵` there SHALL open its photograph in the viewe
 sources. The hub SHALL keep its focus across a large view, the Back button and a switch of tabs, a restored focus
 scrolled to the window's centre. A key's move to the first row SHALL scroll the hub to its top, to the last row to its
 foot, and to any other row only as far as the row needs. The header SHALL leave a 12 px gap between items.
+An assigned cell SHALL read tagged from the photograph's tag list, so a photograph tagged once is tagged in
+every flow it is assigned to.
 
 A stage is a directory listing, the rule every stage already follows, so the grid cannot drift from the disk, and a tick
 survives a reload. The mark and the size are read from the source itself, so no file records them. An approved cell can
@@ -703,6 +626,12 @@ names sit above the first row, so a move there shows them.
 - **WHEN** in a window shorter than the grid, `j` moves the focus to the last row, then `k` back to the first
 - **THEN** Add sources… is out of view on the last row
 - **AND** it is in view again on the first
+
+#### Scenario: a photograph tagged once is tagged in every flow
+- **Key:** `ui:hub:a-tagged-photograph-is-tagged-in-every-flow`
+- **Layers:** unit
+- **WHEN** a photograph's tag list is written and two flows are assigned to it, neither with a sheet
+- **THEN** both cells read tagged
 
 ### Requirement: Sources are chosen in the file dialog, and each shows its own upload
 
@@ -834,20 +763,24 @@ more files.
 
 ### Requirement: Prepare runs what changed as one job, and refuses before it starts when Ollama does not answer
 
-The system SHALL run Prepare as one job over every assigned cell with no sheet: for each flow, the tagging, reading and
-sheet stages, each one invocation of the pipeline's own verb over that flow's cells. One job of each kind, a Prepare and
-a render, SHALL run at a time, the two side by side in any collections; a job SHALL keep running when its page closes;
-Stop SHALL interrupt the current stage of the job it names and start no other, leaving the other job running; stopping
-the surface SHALL interrupt every running job; each line a job's verbs write to the collection's log SHALL name its job;
-and a stage that fails having reported nothing SHALL end the job as failed, naming the collection's log, and start no
-other. Before any stage starts, the surface SHALL check that the local model server answers, and SHALL refuse with its
-message, starting nothing, when it does not. While Prepare runs, the job strip and Prepare bar SHALL show each stage's
-completed cells out of its asked total — `tag 6 of 6 · caption 3 of 6 · sheet 0 of 6 · 00:35` — the bar as wide as the
-stages done over the stages asked; each total SHALL stay fixed, a cell SHALL count once per stage it completes and a
-refused one in none, and elapsed time SHALL tick every second. Before it runs, the Prepare bar SHALL name how many
-photographs it prepares in its collection, `2 photographs to prepare in <collection>`, its button the changes.
+The system SHALL run Prepare as one job over every assigned cell with no sheet: the tagging and reading stages once
+each, one invocation of the pipeline's own verb over those cells' photographs, tagging only the photographs assigned a
+flow that declares the tagger, then, for each flow, the sheet stage, one invocation over that flow's cells. One job of
+each kind, a Prepare and a render, SHALL run at a time, the two side by side in any collections; a job SHALL keep
+running when its page closes; Stop SHALL interrupt the current stage of the job it names and start no other, leaving
+the other job running; stopping the surface SHALL interrupt every running job; each line a job's verbs write to the
+collection's log SHALL name its job; and a stage that fails having reported nothing SHALL end the job as failed, naming
+the collection's log, and start no other. Before any stage starts, the surface SHALL check that the local model server
+answers, and SHALL refuse with its message, starting nothing, when it does not. While Prepare runs, the job strip and
+Prepare bar SHALL show each stage's completed photographs or cells out of its asked total — `tag 3 of 3 · caption 2 of
+3 · sheet 0 of 6 · 00:35` — the bar as wide as the stages done over the stages asked; each total SHALL stay fixed, a
+photograph or a cell SHALL count once per stage it completes and a refused one in none, and elapsed time SHALL tick
+every second. Before it runs, the Prepare bar SHALL name how many photographs it prepares in its collection, `2
+photographs to prepare in <collection>`, its button the changes.
 
-The pipeline's verb is the one path, so Prepare is exactly what the verbs do. Prepare runs on the local models and a
+The pipeline's verb is the one path, so Prepare is exactly what the verbs do. A photograph's description is every
+flow's, so it is tagged and read once, whatever flows it is assigned to, and one already described costs its verbs
+nothing. Prepare runs on the local models and a
 render on a rented GPU, and they write no file in common, so neither waits for the other. A refusal before the start
 leaves every cell assigned, so pressing Prepare again is the whole fix.
 
@@ -896,8 +829,8 @@ leaves every cell assigned, so pressing Prepare again is the whole fix.
 #### Scenario: totals count cells rather than stage reports
 - **Key:** `ui:prepare:totals-count-cells-not-stages`
 - **Layers:** unit
-- **WHEN** assigned cells report tagging, reading, sheet completion and a refusal
-- **THEN** each stage's count grows once per cell completing it, against that stage's fixed total
+- **WHEN** assigned photographs report tagging and reading, their cells sheet completion, and one a refusal
+- **THEN** tagging and reading count once per photograph and the sheet once per cell, against fixed totals
 - **AND** a refused cell counts in no stage, and a repeated completion never increments a count again
 
 #### Scenario: a render runs beside a Prepare
@@ -924,6 +857,13 @@ leaves every cell assigned, so pressing Prepare again is the whole fix.
 - **WHEN** two photographs are assigned to two flows each
 - **THEN** the bar reads `2 photographs to prepare in <collection>`
 - **AND** its button reads `4 changes · Prepare`
+
+#### Scenario: a photograph is described once
+- **Key:** `ui:prepare:a-photograph-is-described-once`
+- **Layers:** unit
+- **WHEN** Prepare is planned over a photograph assigned two flows
+- **THEN** tagging and reading are each one invocation that names it once and names no flow
+- **AND** each flow's sheet stage is an invocation of its own
 
 ### Requirement: The page is told of a job as it runs
 
@@ -1195,7 +1135,6 @@ reaches nothing.
 - **Layers:** unit
 - **WHEN** gpunit's window record ends in the past and the volume is still recorded
 - **THEN** the alert band is shown in place of the quiet item
-
 
 #### Scenario: billing clearance requires known absence
 - **Key:** `ui:billing:clearance-requires-known-absence`
@@ -1848,8 +1787,8 @@ none                      ─▶ "No sheet waits for review"
 The system SHALL offer *Draft from this* on `⇧D` from an image's large view and over a selection in the Renders grid,
 opening a dialog that lists every flow the app offers, the image's own first, named *revise*, focused, and the others
 after it, assigned or not; `↵` SHALL draft the chosen flow from each image's approval, as the draft verb does — a
-revision for the image's own flow, a draft from that approval for another, assigning a target and filling its sheet
-from the source's tags where it holds none, the image's seed prefilled and the image recorded — then open Review on the
+revision for the image's own flow, a draft from that approval for another, assigning a target and filling its sheet from
+the photograph's tags where it holds none, the image's seed prefilled and the image recorded — then open Review on the
 first draft, the others of its flow in the rail. A target holding a waiting draft with edits of its own SHALL write
 nothing for that image and open Review on that draft; one equal to its sheet SHALL be replaced. A selection SHALL be
 drafted all or none, refusing by name an image of a flow this build does not track, and refusing a selection that names
@@ -1973,7 +1912,8 @@ never does.
 - **WHEN** `⇧D` is pressed on a summon image whose source is not assigned conjure, conjure chosen and `↵` pressed
 - **THEN** Review opens on conjure's draft, its kicker naming the summon approval
 - **AND** a field summon changed is marked against conjure's sheet
-- **AND** its caption pane shows summon's caption, named as summon's, and the summon image stands beside the photograph
+- **AND** its caption pane shows the photograph's caption, naming no flow, and the summon image stands beside the
+  photograph
 
 #### Scenario: an unedited waiting draft is replaced
 - **Key:** `ui:draft-from:an-unedited-waiting-draft-is-replaced`
@@ -2146,3 +2086,75 @@ reload ─▶ <head> reads the kept name ─▶ data-theme ─▶ first paint
 - **WHEN** `⇧T` opens the dialog, `↓` moves to Latte and `↵` keeps it
 - **THEN** the page is drawn in Latte
 - **AND** after a reload it still is
+
+### Requirement: Both tag lists are the photograph's, shown beside the prose, read-only, and neither is editable there
+
+The system SHALL show, beside the caption, the scored list the local tagger produced for the photograph and the
+committable tags the hosted tagger offered for it, the same for every flow, and SHALL make neither list a way to change
+a sheet.
+
+**The two lists are narrowed differently, and the asymmetry is measured rather than chosen.** The local
+tagger is scored against the vocabulary it emits, so every tag it returns is committable by
+construction and all of them are shown, with the confidence beside each — a wrong tag sorted below a
+right one refutes itself. The hosted tagger free-associates: on the acceptance collection roughly nine in
+ten of its tags were outside the vocabulary, could not be committed to any field, and the operator's
+verdict was that only the marked ones carried any value. So its list is **filtered to what the
+vocabulary carries** before it is shown.
+
+**Filtered on the way to the page, never on the way to disk.** The artifact keeps every tag the model
+returned — that is `tagging`'s requirement and it is untouched — because narrowing what is *stored*
+would make the record disagree with what the model said, and the reason the artifact exists is to be
+able to look behind the sorter. What changes is only which of those tags the surface spends the
+operator's attention on.
+
+#### Scenario: the local list is shown whole and the hosted list is shown filtered
+- **Key:** `ui:source:both-tag-lists-are-shown-raw-and-read-only`
+- **Layers:** unit
+- **WHEN** an input whose tag artifacts contain tags outside the flow's vocabulary is opened
+- **THEN** every tag the local tagger scored is present in the response the surface renders
+- **AND** only the hosted tags the vocabulary contains are present in it
+- **AND** no interaction on either list writes to a draft
+
+#### Scenario: filtering the panel does not filter the artifact
+- **Key:** `ui:source:the-artifact-keeps-what-the-panel-drops`
+- **Layers:** unit
+- **WHEN** a hosted tag outside the vocabulary is withheld from the payload
+- **THEN** that tag is still present in the stored artifact, unchanged
+
+#### Scenario: every flow shows the photograph's lists
+- **Key:** `ui:source:every-flow-shows-the-photographs-lists`
+- **Layers:** unit
+- **WHEN** two flows of one run are opened, one of them drafted from the other
+- **THEN** both show the photograph's two lists
+
+### Requirement: A photograph with no caption is shown with the command that writes it
+
+The system SHALL show in the source pane the photograph's caption, the same for every flow, and, when the photograph
+holds none, that there is none and the command that writes it, naming the run and the runs root and no flow. It SHALL
+NOT refuse to open the surface for the absence.
+
+**The prose is the one artifact a skipped verb leaves missing on a page under review.** The tag lists keep
+their silence: a list is missing because a tagger failed, because the run predates it, or because the flow
+declares no tagger. Skipping `tag` never reaches review, because the sheet refuses without a tag list the
+flow declares.
+
+The caption is now its own verb and nothing downstream needs it, so an input can reach review having never
+been read. A blank pane cannot be told from a photograph with nothing to say, and the one-verb design kept
+the caption bundled for exactly that reason; naming the command keeps the reason without the bundle.
+
+The server builds the command, as it builds every other command a refusal prints, and it names the run and its
+runs root so it works when pasted: a collection's runs root in the library is never the default.
+
+#### Scenario: an input with no caption names the command that writes it
+- **Key:** `ui:source:a-missing-caption-names-its-command`
+- **Layers:** unit
+- **WHEN** an input whose photograph holds no caption is opened
+- **THEN** the payload carries no prose and the command that writes it, naming the run and the runs root and no flow
+- **AND** the surface serves the input without a refusal
+
+#### Scenario: every flow shows the photograph's caption
+- **Key:** `ui:source:every-flow-shows-the-photographs-caption`
+- **Layers:** unit
+- **WHEN** two flows of one run are opened, one of them drafted from the other
+- **THEN** both payloads carry the photograph's one caption
+- **AND** neither names a flow it came from

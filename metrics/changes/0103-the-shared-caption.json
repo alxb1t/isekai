@@ -1,0 +1,58 @@
+{
+  "change": "0103-the-shared-caption",
+  "version": "v0.69",
+  "base": "6376b929",
+  "analyzed": "59f37df5",
+  "measured_on": "local",
+  "collected_at": "2026-11-05T21:40:17+02:00",
+  "mf_version": "v0.62.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1487
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 27
+    },
+    "open-backlog-cards": {
+      "value": 26
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 4862
+    },
+    "diff-files": {
+      "value": 60
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 12240
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 721
+    },
+    "decisions": {
+      "value": 49
+    }
+  }
+}

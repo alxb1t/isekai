@@ -221,7 +221,7 @@ The system SHALL record a stage's failure as a sibling of the artifact it failed
 carry the attempt's ordinal and its kind in that file's name, and SHALL NOT consume the artifact's
 version number with a failure.
 The sheet stage SHALL record a damaged tag list and a tag outside the vocabulary as permanent failures, and
-SHALL record nothing when the flow has no tag list.
+SHALL record nothing when the photograph has no tag list.
 
 Two stages take their version number from an upstream artifact rather than counting their own, so
 "a retry writes the next number" has no next number to write there. Putting the kind and the ordinal in
@@ -261,7 +261,7 @@ tests are held to. The sheet stage is deterministic, so what fails once fails ag
 #### Scenario: an absent tag list leaves no record
 - **Key:** `run-directory:failure:an-absent-tag-list-leaves-no-record`
 - **Layers:** unit
-- **WHEN** the sheet stage refuses a flow that declares the tagger and holds no tag list
+- **WHEN** the sheet stage refuses a flow that declares the tagger, for a photograph that holds no tag list
 - **THEN** no error record is written
 
 ### Requirement: A stage has a retry budget, and a permanent failure is never retried
@@ -363,64 +363,6 @@ one directory are one directory, and only its identity says so.
 - **Layers:** unit
 - **WHEN** no run root is given
 - **THEN** runs are created under the repository's ignored data root
-
-### Requirement: The run directory is input above, flow below, and every artifact is a flow's own
-
-The system SHALL place the input and its frame at the root of a run, and SHALL place every artifact any
-stage produces under a directory named for the flow that produced it. It SHALL NOT place any stage's
-artifacts above the flow level, and SHALL NOT let one flow read another flow's artifacts, except where the
-operator names a source flow; then what is written SHALL record the source.
-
-```
-runs/<input-id>/
-├── run.json, the photograph      shared by every flow, copied once
-└── <flow-id>/                    one subtree per flow
-    └── captions/ wd14/ tags/ sheets/ review/ prompts/ outputs/
-```
-
-Above the split sits the one thing every flow shares, the input. A flow adds one subtree, and retiring one flow's
-work for one input removes one directory ([D17](../../../docs/decisions.md#d17--input-above-flow-below)). A caption
-written for one flow can never be picked up by another flow, because the two never name the same
-directory, and a stage directory that is absent records that the flow did not declare what would fill it. A
-source flow the operator names is not a flow reaching into another on its own, and the record of it is what keeps
-the two flows comparable
-([D38](../../../docs/decisions.md#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
-
-#### Scenario: every stage writes under the flow
-- **Key:** `run-directory:layout:stage-artifacts-live-under-the-flow`
-- **Layers:** unit
-- **WHEN** a run has been carried through every stage for a flow
-- **THEN** that flow's captions, tag lists, sheets, reviews, prompts and outputs are all under one
-  directory named for the flow
-- **AND** the only entries above it are the input and its frame
-
-#### Scenario: a second flow adds one subtree
-- **Key:** `run-directory:layout:a-second-flow-adds-one-subtree`
-- **Layers:** unit
-- **WHEN** a second flow is carried through a run that already holds one
-- **THEN** exactly one new directory appears, named for that flow
-- **AND** the first flow's artifacts are unchanged
-
-#### Scenario: the input is copied once however many flows run
-- **Key:** `run-directory:layout:the-input-is-copied-once`
-- **Layers:** unit
-- **WHEN** several flows are run over one input
-- **THEN** the run holds exactly one copy of the input
-- **AND** its frame is written once
-
-#### Scenario: removing one flow's work leaves the others intact
-- **Key:** `run-directory:layout:one-flow-s-work-is-one-directory`
-- **Layers:** unit
-- **WHEN** one flow's directory is removed from a run
-- **THEN** every other flow's artifacts remain readable
-- **AND** the input and its frame remain
-
-#### Scenario: a named source is the one crossing, and it is recorded
-- **Key:** `run-directory:layout:a-named-source-is-recorded`
-- **Layers:** unit
-- **WHEN** a stage writes under one flow from another flow the operator named as its source
-- **THEN** the artifact written records the source flow
-- **AND** the source flow's artifacts are unchanged
 
 ### Requirement: A resume check asks the flow what it produces rather than assuming an image
 
@@ -530,3 +472,99 @@ nothing. The kind is the first thing a file says about itself, so it is the firs
 - **Layers:** unit
 - **WHEN** a run file declares another kind and a version this build does not read
 - **THEN** the refusal names the kind
+
+### Requirement: The run directory is the input and its photograph's description above, and each flow's work below
+
+The system SHALL place the input, its frame and the photograph's description at the root of a run — the caption and
+both tag lists, under `photo/` — and SHALL place every other artifact a stage produces under a directory named for the
+flow that produced it. Every flow SHALL read the one description under `photo/`. It SHALL NOT let one flow read another
+flow's artifacts, except where the operator names a source flow; then what is written SHALL record the source. It SHALL
+NOT count `photo/` among a run's flows, and SHALL refuse to assign a flow named `photo`.
+
+```
+runs/<input-id>/
+├── run.json, the photograph      shared by every flow, copied once
+├── photo/                        the photograph's description, read by every flow
+│   └── captions/ wd14/ tags/
+└── <flow-id>/                    one subtree per flow
+    └── sheets/ review/ prompts/ outputs/
+```
+
+Every flow reads a photograph under one briefing, one model, one pinned tagger and one prompt, so the description is the
+photograph's rather than a flow's, and it is written once. A flow adds one subtree, and retiring one flow's work for one
+input removes one directory ([D17](../../../docs/decisions.md#d17--input-above-flow-below)). A source flow the operator
+names is not a flow reaching into another on its own, and the record of it is what keeps the two flows comparable
+([D38](../../../docs/decisions.md#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
+
+#### Scenario: each flow's work is under the flow, and the description under photo/
+- **Key:** `run-directory:layout:stage-artifacts-live-under-the-flow`
+- **Layers:** unit
+- **WHEN** a run has been carried through every stage for a flow
+- **THEN** that flow's sheets, reviews, prompts and outputs are all under one directory named for the flow
+- **AND** the only entries above it are the input, its frame and `photo/`, which holds the caption and tag lists
+
+#### Scenario: every flow reads the one description
+- **Key:** `run-directory:layout:every-flow-reads-the-description`
+- **Layers:** unit
+- **WHEN** two flows are carried through a run
+- **THEN** `photo/` holds one caption and one list of each tagger's
+- **AND** neither flow's directory holds a caption or a tag list
+
+#### Scenario: a second flow adds one subtree
+- **Key:** `run-directory:layout:a-second-flow-adds-one-subtree`
+- **Layers:** unit
+- **WHEN** a second flow is carried through a run that already holds one
+- **THEN** exactly one new directory appears, named for that flow
+- **AND** the first flow's artifacts are unchanged
+
+#### Scenario: the input is copied once however many flows run
+- **Key:** `run-directory:layout:the-input-is-copied-once`
+- **Layers:** unit
+- **WHEN** several flows are run over one input
+- **THEN** the run holds exactly one copy of the input
+- **AND** its frame is written once
+
+#### Scenario: removing one flow's work leaves the others intact
+- **Key:** `run-directory:layout:one-flow-s-work-is-one-directory`
+- **Layers:** unit
+- **WHEN** one flow's directory is removed from a run
+- **THEN** every other flow's artifacts remain readable
+- **AND** the input, its frame and `photo/` remain
+
+#### Scenario: a named source is the one crossing, and it is recorded
+- **Key:** `run-directory:layout:a-named-source-is-recorded`
+- **Layers:** unit
+- **WHEN** a stage writes under one flow from another flow the operator named as its source
+- **THEN** the artifact written records the source flow
+- **AND** the source flow's artifacts are unchanged
+
+#### Scenario: photo is no flow
+- **Key:** `run-directory:layout:photo-is-no-flow`
+- **Layers:** unit
+- **WHEN** a run holding `photo/` is asked for its flows
+- **THEN** `photo` is not among them
+- **AND** assigning a flow named `photo` is refused, naming the name reserved
+
+### Requirement: A run whose description sits under its flows is refused until it is migrated
+
+The system SHALL refuse to read or write a run's description when a flow's directory in that run holds a caption, a
+WD14 list or a hosted tag list and `photo/` holds none of that kind, naming the run and the command that migrates it,
+and writing nothing. Inspection SHALL read such a run as it reads any other.
+
+A run written before the description was shared keeps it under its flows. Reading `photo/` alone would treat it as
+never tagged, and reading both would keep a second path alive for good; the refusal names the one fix, which copies
+the description once.
+
+#### Scenario: an unmigrated run is refused by name
+- **Key:** `run-directory:migration:an-unmigrated-run-is-refused`
+- **Layers:** unit
+- **WHEN** a stage reads or writes the description of a run whose flow holds a caption or a tag list `photo/` lacks
+- **THEN** it is refused, naming the run and `isekai migrate`
+- **AND** nothing is written
+
+#### Scenario: a migrated run is read from photo/
+- **Key:** `run-directory:migration:a-migrated-run-reads-photo`
+- **Layers:** unit
+- **WHEN** a run's flows still hold their old copies and `photo/` holds each kind they hold
+- **THEN** every stage reads the description from `photo/`
+- **AND** the old copies are neither read nor changed

@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.69.0] - 2026-11-05
+
+Gate: local 0m27s · CI not read under mf-ship · 0.68.0: local 0m26s · CI not read under mf-ship
+
 - `isekai migrate` copies each run's per-flow caption and tag lists into `runs/<id>/photo/`, leaving the old files;
   `photo` is no flow, and a run not yet migrated is refused naming the verb (0103 D1–D5). The reader and both
   taggers resolve with no flow (0103 D7).
