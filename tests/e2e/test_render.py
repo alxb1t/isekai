@@ -48,6 +48,7 @@ def _alone(page: Page, collection: str, images: int = 1) -> None:
 
 @pytest.mark.spec("ui:dialogs:the-render-dialog-opens-on-its-checkbox")
 @pytest.mark.spec("ui:render:the-confirmation-starts-the-render")
+@pytest.mark.spec("ui:render:the-dialog-shows-thumbnails-by-flow")
 def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> None:
     page.goto(served.hub_of(RENDER))
     cell = page.locator('.hub__source[data-row="0"]')
@@ -60,6 +61,16 @@ def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> 
     dialog = page.locator("dialog.render-dialog")
     keep = dialog.locator("[data-keep-open]")
     expect(keep).to_be_focused()
+    # Each photograph renders as its source's thumbnail, counted only above one image.
+    thumb = dialog.locator(
+        f'[data-collection="{RENDER}"] [data-flow="{FLOW}"] .render-dialog__thumb'
+    )
+    expect(thumb).to_have_count(1)
+    expect(thumb).to_have_attribute("title", "gia.jpg v1")
+    expect(thumb.locator("img")).to_have_attribute(
+        "src", re.compile(r"/sources/gia\.jpg/thumb$")
+    )
+    expect(thumb.locator(".render-dialog__times")).to_have_count(0)
     # ↵ on the checkbox neither ticks it nor renders.
     page.keyboard.press("Enter")
     expect(keep).not_to_be_checked()

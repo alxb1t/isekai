@@ -5,28 +5,28 @@ its task names.
 
 ## Progress
 
-- [ ] 1 — The thumbnails
+- [x] 1 — The thumbnails
 - [ ] 2 — The flip
 - [ ] 3 — The record
 
 ## 1 — The thumbnails
 
-- [ ] 1.1 Add `ui/src/thumbs.ts` per [D1](design.md#d1): `ROW_THUMBS`, the `Thumb` shape, `thumbs` and `leftOut`, from
+- [x] 1.1 Add `ui/src/thumbs.ts` per [D1](design.md#d1): `ROW_THUMBS`, the `Thumb` shape, `thumbs` and `leftOut`, from
   `./api` and `./types` alone.
   Verify: `grep -n -e '^export const ROW_THUMBS = 15$' -e '^export function thumbs(' -e '^export function leftOut(' ui/src/thumbs.ts` prints a line for each.
-- [ ] 1.2 In `ui/src/views/ReviewHead.vue`, delete `const ROW_THUMBS = 15` and the comment above it, and import
+- [x] 1.2 In `ui/src/views/ReviewHead.vue`, delete `const ROW_THUMBS = 15` and the comment above it, and import
   `ROW_THUMBS` from `../thumbs`, per [D1](design.md#d1); its template is unchanged.
   Verify: `grep -n "import { ROW_THUMBS } from '../thumbs'" ui/src/views/ReviewHead.vue` prints a line.
-- [ ] 1.3 Add `ui/src/components/RenderDialog.test.ts` under `ui:render:the-dialog-shows-thumbnails-by-flow`, the cases
+- [x] 1.3 Add `ui/src/components/RenderDialog.test.ts` under `ui:render:the-dialog-shows-thumbnails-by-flow`, the cases
   [design](design.md#tests)'s unit row names, over `thumbs` and `leftOut`.
   Verify: `npm --prefix ui run test -- src/components/RenderDialog.test.ts` exits 0.
-- [ ] 1.4 In `ui/src/components/RenderDialog.vue`, draw the flows and the left-out per [D2](design.md#d2), and its head
+- [x] 1.4 In `ui/src/components/RenderDialog.vue`, draw the flows and the left-out per [D2](design.md#d2), and its head
   comment's `per flow what renders and what is left out` → `per flow the thumbnails of what renders and, dimmed, of what is left out`.
   Verify: `grep -n -F -e 'class="render-dialog__collections"' -e 'render-dialog__thumb--left' -e 'class="render-dialog__times mono"' -e 'fell.has(thumb.key)' ui/src/components/RenderDialog.vue` prints a line for each.
-- [ ] 1.5 In `ui/src/app.css`, add [D3](design.md#d3)'s rules after `.render-dialog__reason`, under the comment
+- [x] 1.5 In `ui/src/app.css`, add [D3](design.md#d3)'s rules after `.render-dialog__reason`, under the comment
   `/* The Render dialog's thumbnails (J4·1): new rules, as DraftDialog and ThemeDialog share the ones above. */`.
   Verify: `grep -n -e '^\.render-dialog__collections {' -e '^\.render-dialog__thumbs {' -e '^\.render-dialog__thumb {' -e '^\.render-dialog__thumb--left {' -e '^\.render-dialog__times {' -e '^\.render-dialog__more {' ui/src/app.css` prints a line for each.
-- [ ] 1.6 In `tests/e2e/test_render.py`'s `test_the_render_dialog_opens_on_its_checkbox`, add the key
+- [x] 1.6 In `tests/e2e/test_render.py`'s `test_the_render_dialog_opens_on_its_checkbox`, add the key
   `ui:render:the-dialog-shows-thumbnails-by-flow` and, after `expect(keep).to_be_focused()`, a step: `render`'s `FLOW` row
   holds one `.render-dialog__thumb`, titled `gia.jpg v1`, its `img` `src` ending `/sources/gia.jpg/thumb`, no `.render-dialog__times`.
   Verify: `grep -n -e 'ui:render:the-dialog-shows-thumbnails-by-flow' -e 'render-dialog__thumb' tests/e2e/test_render.py` prints a line for each.
