@@ -26,6 +26,8 @@ its new digest.
   `fbed851f8d9b049672cf73004457c5d4b7c4c1948a7935fc7fd9dbf9dc872b70` (0102 D5).
 - `summon-vivid-anime-wai` re-pinned in place, format only →
   `f72aa506e5668be9982515654b659e3760ac9e05c71a0d28e533e281468d006e` (0102 D5).
+- Docs D14 and D6 name `config/caption.json` for the model and no briefing in a flow; the README, the data flow and
+  the pins table follow (0102 D6).
 
 ## [0.67.0] - 2026-11-05
 

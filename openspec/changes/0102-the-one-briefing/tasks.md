@@ -6,7 +6,7 @@ The config, then the flows, then the record, per [design](design.md). Paths are 
 
 - [x] 1 — The config
 - [x] 2 — The flows
-- [ ] 3 — The record
+- [x] 3 — The record
 
 ## 1 — The config
 
@@ -199,30 +199,30 @@ The config, then the flows, then the record, per [design](design.md). Paths are 
 
 ## 3 — The record
 
-- [ ] 3.1 In `docs/decisions.md`, per [D6](design.md#d6): D14's bold line, "`schema.json`, `caption.briefing.md` — and
+- [x] 3.1 In `docs/decisions.md`, per [D6](design.md#d6): D14's bold line, "`schema.json`, `caption.briefing.md` — and
   it shares nothing" → "`schema.json` — and it shares nothing"; D14's `Made by:` gains `` `0102` ``.
   Verify: `grep -n 'caption.briefing.md' docs/decisions.md` prints nothing.
-- [ ] 3.2 In `docs/decisions.md`, D6's bold line, "and the model a flow names is checked against" → "and the model
+- [x] 3.2 In `docs/decisions.md`, D6's bold line, "and the model a flow names is checked against" → "and the model
   `config/caption.json` names is checked against"; D6's `Made by:` gains `` `0102` ``.
   Verify: `grep -n 'the model a flow' docs/decisions.md` prints nothing.
-- [ ] 3.3 In `README.md`'s banner, "The flow's manifest names the one model it runs, in a required `model` key, and
+- [x] 3.3 In `README.md`'s banner, "The flow's manifest names the one model it runs, in a required `model` key, and
   every tracked flow names the same one." → "`config/caption.json` names the one model it runs, for every flow.";
   "the flow names it and nothing verifies" → "`config/caption.json` names it and nothing verifies".
   Verify: `grep -n 'required .model. key' README.md` prints nothing.
-- [ ] 3.4 In `README.md`, "the flow supplies the briefing it reads and the schema it fills against" → "the flow
+- [x] 3.4 In `README.md`, "the flow supplies the briefing it reads and the schema it fills against" → "the flow
   supplies the schema it fills against"; "the flow is what supplies its briefing, its schema, its graph and its
   dials" → "the flow is what supplies its schema, its graph and its dials".
   Verify: `grep -nE 'supplies (its|the) briefing' README.md` prints nothing.
-- [ ] 3.5 In `README.md`'s tree, `flow.json`'s comment loses "model, "; delete the `caption.briefing.md` line under
+- [x] 3.5 In `README.md`'s tree, `flow.json`'s comment loses "model, "; delete the `caption.briefing.md` line under
   `flows/summon-anime-wai/`, `schema.json` taking `└──`; under `config/`, above `joycaption.Modelfile`, add `caption.json`
   ("the reader's model and its briefing") and `caption.briefing.md` ("the standing instructions every photograph is read under").
   Verify: `grep -n 'inputs, vocabulary, model, tagger' README.md` prints nothing.
-- [ ] 3.6 In `docs/data-flow.md`, "supplies the briefing a stage reads, the schema it fills against" → "supplies the
+- [x] 3.6 In `docs/data-flow.md`, "supplies the briefing a stage reads, the schema it fills against" → "supplies the
   schema a stage fills against"; in `isekai/pipeline/README.md`, "supplies the briefing it reads, the schema it fills
   against" → "supplies the schema it fills against".
   Verify: `git grep -n 'supplies the briefing' docs isekai` prints nothing.
-- [ ] 3.7 In `docs/pins.md`'s table, below the reader's files row, add `| the caption briefing | git, and its sha256 in every caption |
+- [x] 3.7 In `docs/pins.md`'s table, below the reader's files row, add `| the caption briefing | git, and its sha256 in every caption |
   `config/caption.briefing.md` | the gate: `tests/golden/caption.json` holds its sha256 |`.
   Verify: `grep -c 'config/caption.briefing.md' docs/pins.md` prints `1`.
-- [ ] 3.8 **HALT CHECK** — the delta validates against the specs as this phase leaves them.
+- [x] 3.8 **HALT CHECK** — the delta validates against the specs as this phase leaves them.
   Verify: `openspec validate 0102-the-one-briefing --strict` exits 0.

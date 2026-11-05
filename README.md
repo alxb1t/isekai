@@ -15,11 +15,10 @@ pipeline: build once, spin up a GPU for minutes, convert, tear down.
 >
 > **The whole pipeline runs on open models.** Stage ① reaches JoyCaption over a local
 > [Ollama](https://ollama.com) and nothing here needs an API key or a subscription; stage ② reaches
-> no model at all. The flow's manifest names the one model it runs, in a required `model` key, and
-> every tracked flow names the same one. *(Until v0.22 there was a second arm over the `claude` CLI,
+> no model at all. `config/caption.json` names the one model it runs, for every flow. *(Until v0.22 there was a second arm over the `claude` CLI,
 > selected by a flow declaring no `hosted` block. Nothing had called it for anything measured since
 > v0.19, so v0.22 removed it and the block with it.)*
-> **The model is not digest-pinned**; the flow names it and nothing verifies the bytes behind the
+> **The model is not digest-pinned**; `config/caption.json` names it and nothing verifies the bytes behind the
 > name. That travels with provisioning, and this version does not claim it.
 
 ## Why this exists
@@ -111,7 +110,7 @@ If Ollama is not running, `tag` still writes the WD14 list and refuses only the 
 hosted list filtered to what the vocabulary carries.
 
 `--flow` is required on every stage verb. A stage cannot act without knowing which flow asked, because
-the flow supplies the briefing it reads and the schema it fills against.
+the flow supplies the schema it fills against.
 
 ### ② Fill the sheet
 
@@ -304,8 +303,8 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   not inside the working tree and outside `.data/`: a run directory holds a copy of the photograph,
   so that would be one `git add` from publishing it.
 - `--flow FLOW` — a flow to act on. **Required on every stage verb and repeatable**: a stage
-  cannot act without knowing which flow asked, because the flow is what supplies its briefing,
-  its schema, its graph and its dials. There is no fallback — the earlier one was every
+  cannot act without knowing which flow asked, because the flow is what supplies its schema,
+  its graph and its dials. There is no fallback — the earlier one was every
   *tracked* flow, which at catalogue scale is the absence of a selection rather than one. It
   repeats because flows batch: every flow named in one `generate` renders on one endpoint, and a
   second boot costs what eight more renders would.
@@ -435,10 +434,9 @@ isekai/
 ├── tests/                     # the suite and its fakes
 ├── models/                    # gitignored; wd14/ holds the tag list and the 467 MB graph
 ├── flows/summon-anime-wai/    # one flow: flat, named files, pinned by its digest, re-pinned only by a recorded change
-│   ├── flow.json              # the manifest: inputs, vocabulary, model, tagger, models, dials, prompt, nodes
+│   ├── flow.json              # the manifest: inputs, vocabulary, tagger, models, dials, prompt, nodes
 │   ├── graph.json             # the API graph
-│   ├── schema.json            # the sheet's field list, in prompt order
-│   └── caption.briefing.md    # the standing instructions the photograph is read under
+│   └── schema.json            # the sheet's field list, in prompt order
 ├── flows/control-anime-wai/   # summon's files with the face dials at 0, held equal by a test
 ├── flows/summon-flat-anime-wai/ # summon's files with InstantID ending early and a flat prompt, held equal by a test
 ├── flows/summon-semireal-anime-wai/ # flat's files with summon's whole prompt, held equal by a test
@@ -453,6 +451,8 @@ isekai/
 │   ├── reader.json            # the reader's model and projector, by digest, per alias
 │   ├── vocabulary.json        # the tag list AND the tagger it indexes — one revision, two digests
 │   ├── field_map.json         # tag → sheet field; derived by tools/derive_field_map.py
+│   ├── caption.json           # the reader's model and its briefing
+│   ├── caption.briefing.md    # the standing instructions every photograph is read under
 │   └── joycaption.Modelfile   # the local reader's recipe, for `ollama create`
 ├── tools/                     # operator tooling, run from the root: `python -m tools.<name>`
 │   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`

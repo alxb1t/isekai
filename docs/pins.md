@@ -48,6 +48,7 @@ Each pin: what fixes it, where it is declared, and when it is checked.
 | the render models | sha256 at an immutable revision | `config/models.json` | on landing, and on every boot |
 | the tag vocabulary and WD14 | sha256, one revision for both | `config/vocabulary.json` | on landing, and when the tagger opens |
 | the reader's files | sha256 at an immutable revision | `config/reader.json` | on landing, and the Ollama alias's layers before its first call ([D6](decisions.md#d6--ollama-at-a-fixed-local-address-on-a-checked-model)) |
+| the caption briefing | git, and its sha256 in every caption | `config/caption.briefing.md` | the gate: `tests/golden/caption.json` holds its sha256 |
 | the evaluator's models | sha256 at an immutable revision | `evaluation/eval_models.json` | when the evaluator resolves them |
 | each flow | a digest of every file in it | `tests/test_flow.py` | the gate |
 
