@@ -14,6 +14,8 @@ its new digest.
   the library's `drop_thumbnails` its cached thumbnails: a render is a likeness, so a failed one leaves (0106 D1, D2).
 - `isekai discard <image>` deletes one render and its thumbnails, printing each path deleted, and refuses a path
   naming no render, deleting nothing (0106 D3).
+- `DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}` deletes that render and its thumbnails in
+  the server's process, refused while a render session runs for the collection (0106 D4).
 
 ## [0.70.0] - 2026-11-06
 

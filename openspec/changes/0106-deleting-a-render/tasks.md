@@ -7,7 +7,7 @@ from the repository root.
 
 - [x] 1 — The function
 - [x] 2 — The verb
-- [ ] 3 — The endpoint
+- [x] 3 — The endpoint
 - [ ] 4 — The page
 - [ ] 5 — The record
 
@@ -63,15 +63,15 @@ from the repository root.
 
 ## 3 — The endpoint
 
-- [ ] 3.1 In `isekai/interface/ui/app.py`, add `delete_render` per [D4](design.md#d4), after `read_render_thumb`,
+- [x] 3.1 In `isekai/interface/ui/app.py`, add `delete_render` per [D4](design.md#d4), after `read_render_thumb`,
   importing `discard_render` beside `image_of`; the module docstring's route list gains, after the `…/compare/…` line,
   `DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}`.
   Verify: `grep -n '@app.delete("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}")' isekai/interface/ui/app.py` prints one line.
-- [ ] 3.2 In `tests/test_ui_api.py`, add `test_deleting_a_render_deletes_its_files_and_thumbnail`
+- [x] 3.2 In `tests/test_ui_api.py`, add `test_deleting_a_render_deletes_its_files_and_thumbnail`
   (`ui:delete-render:the-route-deletes-the-render-and-its-thumbnail`): `_rendered_twice`, both `/thumb`s read, then
   `client.delete` on `v1/11` answers 200; 11's image, record and thumbnail are gone, v2's seed 22's kept.
   Verify: `uv run pytest tests/test_ui_api.py -k deleting_a_render_deletes` exits 0.
-- [ ] 3.3 In `tests/test_ui_api.py`, add `test_deleting_a_render_is_refused_while_a_render_runs`
+- [x] 3.3 In `tests/test_ui_api.py`, add `test_deleting_a_render_is_refused_while_a_render_runs`
   (`ui:delete-render:refused-while-a-render-runs`): `Jobs.slot` faked with `_rendering_slot`, as
   `test_an_approved_sheet_carries_why_it_cannot_be_cancelled` does; 409, `A render session is running.`, files kept.
   Verify: `uv run pytest tests/test_ui_api.py -k refused_while_a_render_runs` exits 0.
