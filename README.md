@@ -15,7 +15,7 @@ pipeline: build once, spin up a GPU for minutes, convert, tear down.
 >
 > **The whole pipeline runs on open models.** Stage ① reaches JoyCaption over a local
 > [Ollama](https://ollama.com) and nothing here needs an API key or a subscription; stage ② reaches
-> no model at all. `config/caption.json` names the one model it runs, for every flow. *(Until v0.22 there was a second arm over the `claude` CLI,
+> no model at all. `config/caption.json` names the one model stage ① and the hosted tagger run, for every flow. *(Until v0.22 there was a second arm over the `claude` CLI,
 > selected by a flow declaring no `hosted` block. Nothing had called it for anything measured since
 > v0.19, so v0.22 removed it and the block with it.)*
 > **The model is not digest-pinned**; `config/caption.json` names it and nothing verifies the bytes behind the

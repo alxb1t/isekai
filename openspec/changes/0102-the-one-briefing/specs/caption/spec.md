@@ -55,10 +55,10 @@ the failure that will happen, so a refusal names it.
 
 ### Requirement: The reader takes a photograph and its briefing, and returns prose for one flow
 
-The system SHALL pass a reader exactly one input — the photograph — and SHALL accept exactly one output:
-descriptive prose. It SHALL NOT pass a schema, a field list, a vocabulary or a flow identifier to the
-reader, and SHALL NOT accept tags into the caption. A caption SHALL be written inside the flow that
-asked for it, and SHALL NOT be read by any other flow.
+The system SHALL pass a reader exactly the photograph and the briefing the caption config names, and SHALL
+accept exactly one output: descriptive prose. It SHALL NOT pass a schema, a field list, a vocabulary or a flow
+identifier to the reader, and SHALL NOT accept tags into the caption. A caption SHALL be written inside the flow
+that asked for it, and SHALL NOT be read by any other flow.
 
 Pressing a reader into a schema makes it invent: told never to leave a field blank, a reader manufactures identity
 marks. A caption is written under its flow, as every stage's artifact is

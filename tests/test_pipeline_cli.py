@@ -32,12 +32,13 @@ from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Flow, Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import Run, open_run
+from isekai.interface import wiring
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
 from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import approve, review, save_draft
-from isekai.pipeline.tagging import FakeTagger
+from isekai.pipeline.tagging import FakeTagger, OllamaTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
 from tests.fakes import READER, FakeComfyClient, stub_comfy
@@ -406,11 +407,26 @@ def test_the_implementation_the_artifacts_record_is_the_one_the_adapter_names() 
 
 
 @pytest.mark.spec("caption:selection:the-config-names-the-model")
-def test_a_flow_resolves_to_a_reader_running_the_configured_model() -> None:
-    reader = reader_for(load_flow("summon-anime-wai"))
+@pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
+def test_a_flow_resolves_to_a_reader_running_the_configured_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    flow = load_flow("summon-anime-wai")
+    reader = reader_for(flow)
 
     assert isinstance(reader, OllamaReader)
     assert reader.model == load_caption_config().model
+
+    # A model no constant could fake: both seams read the config, not an alias.
+    configured = replace(load_caption_config(), model="a-reader")
+    monkeypatch.setattr(wiring, "load_caption_config", lambda: configured)
+
+    configured_reader = wiring.reader_for(flow)
+    configured_tagger = wiring.hosted_tagger_for(flow)
+
+    assert isinstance(configured_reader, OllamaReader)
+    assert isinstance(configured_tagger, OllamaTagger)
+    assert configured_reader.model == configured_tagger.model == "a-reader"
 
 
 @pytest.mark.spec("caption:reachability:the-check-fires-at-first-call")
