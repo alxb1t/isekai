@@ -32,14 +32,17 @@ was false six times before two releases closed it.
 
 The system SHALL answer a tag query from the surface by returning matches from the vocabulary the
 pipeline itself searches, ranked as the pipeline ranks them, with each match's post count, and SHALL
-NOT transfer the whole vocabulary to the client for ranking there.
+NOT transfer the whole vocabulary to the client for ranking there. It SHALL open the list of matches below its input
+when the room below, to the foot of the sheet, holds it; else above when the room above, to the sheet's top, holds it;
+else on the side with more room. Above, its first match SHALL be nearest the input and its footer on top.
 
 The post count is the reason this surface exists at all: it predicts how strongly a tag lands, and an
 operator choosing between a tag with a million posts and one with nine hundred is making the decision
 the render will act on. Ranking in one place keeps that decision identical however it is reached, and
 the whole searchable corpus is 93.5 KiB over 8,106 tags — a query costs about 0.25 ms against a debounce
 two orders of magnitude longer, so serving it deletes a quarter-megabyte transfer and a second copy of
-the ranking rule and buys nothing but correctness.
+the ranking rule and buys nothing but correctness. A list below an input near the sheet's foot hangs past it; above
+it, mirrored, the best match stays next to the input.
 
 #### Scenario: matches come back ranked by post count with their counts
 - **Key:** `ui:vocabulary:matches-are-ranked-by-post-count`
@@ -54,6 +57,13 @@ the ranking rule and buys nothing but correctness.
 - **WHEN** the surface is queried with a fragment no tag contains
 - **THEN** no matches are returned
 - **AND** the surface offers nothing that could be committed as a tag
+
+#### Scenario: near the sheet's foot the list opens above its input
+- **Key:** `ui:vocabulary:the-list-opens-above-near-the-foot`
+- **Layers:** unit
+- **WHEN** a tag input's list fits above it and not below it, to the sheet's foot
+- **THEN** the list opens above the input, its first match nearest the input and its footer on top
+- **AND** with the room below, it opens below, and fitting neither side, it opens on the larger
 
 ### Requirement: An approved input is read-only on the surface until it is re-opened
 
@@ -945,20 +955,21 @@ render runs the bar SHALL show the session's totals and *Session* in place of th
 short that the session does not render as waiting for the next session. The bar SHALL be disabled, with its reason, when
 a pod may still be billing, when no RunPod key is in the surface's environment, and when an approval's count is refused.
 It SHALL open a dialog listing a row per collection short of images, in the Library's order, each ticked, and in each
-row per offered flow the images that will render and what is left out, with the reason; unticking a row SHALL quote the
-rest again; the session's estimate and limit, and its price at most — the limit at the hourly maximum `gpunit.toml`
-names, with the volume at its configured rate; an estimate past the ceiling `gpunit.toml` names SHALL disable the
-confirmation, saying so. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL, and SHALL
-close when its page is left, and the confirmation SHALL close it and open the session drawer over the page. The
-confirmation SHALL carry the ticked collections, the limit and the number of images the dialog showed, and SHALL be
-refused, starting nothing, when the ticked collections' quote taken again has a longer limit or another number of
-images. The bar SHALL show the newest offer asked for, whatever order the answers arrive in.
+row per offered flow the photographs that will render and those left out, with the reason, as thumbnails grouped by
+flow; unticking a row SHALL quote the rest again; the session's estimate and limit, and its price at most — the limit at
+the hourly maximum `gpunit.toml` names, with the volume at its configured rate; an estimate past the ceiling
+`gpunit.toml` names SHALL disable the confirmation, saying so. Its confirmation SHALL be the only act that rents; the
+dialog SHALL hold no URL, and SHALL close when its page is left, and the confirmation SHALL close it and open the
+session drawer over the page. The confirmation SHALL carry the ticked collections, the limit and the number of images
+the dialog showed, and SHALL be refused, starting nothing, when the ticked collections' quote taken again has a longer
+limit or another number of images. The bar SHALL show the newest offer asked for, whatever order the answers arrive in.
 
 The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
-not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires
-a fresh confirmation, even where the limit sits at its floor or cap. An equal-total change of sources or approvals
-is outside that comparison. A bar that is absent needs no reason, and one forward action holds the screen's accent;
-a refused count keeps the bar, so the refusal is never silent.
+not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires a fresh
+confirmation, even where the limit sits at its floor or cap. An equal-total change of sources or approvals is outside
+that comparison. A bar that is absent needs no reason, and one forward action holds the screen's accent; a refused count
+keeps the bar, so the refusal is never silent. A photograph is known by sight, so the dialog shows it rather than its
+file name.
 
 #### Scenario: the dialog lists what renders per flow
 - **Key:** `ui:render:the-dialog-lists-what-renders`
@@ -966,6 +977,13 @@ a refused count keeps the bar, so the refusal is never silent.
 - **WHEN** a collection's quote is asked for with approvals short of their count in two flows
 - **THEN** it lists each flow's images and what is left out, with the reason
 - **AND** it carries the estimate, the limit and the price at most
+
+#### Scenario: the dialog shows each photograph as a thumbnail by flow
+- **Key:** `ui:render:the-dialog-shows-thumbnails-by-flow`
+- **Layers:** unit
+- **WHEN** a collection's quote holds photographs to render in a flow and photographs left out
+- **THEN** each flow shows its photographs' thumbnails, 15 and then `+n`, each counted only above one image
+- **AND** those left out show dimmed, grouped by their reason and their flow
 
 #### Scenario: without a key Render is disabled
 - **Key:** `ui:render:without-a-key-render-is-disabled`

@@ -1,0 +1,58 @@
+{
+  "change": "0104-the-ninth-walkthrough",
+  "version": "0.70",
+  "base": "a4bbbaa3",
+  "analyzed": "8b5273d8",
+  "measured_on": "local",
+  "collected_at": "2026-11-06T00:03:30+02:00",
+  "mf_version": "v0.63.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1487
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 32
+    },
+    "open-backlog-cards": {
+      "value": 26
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 799
+    },
+    "diff-files": {
+      "value": 18
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 12240
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 725
+    },
+    "decisions": {
+      "value": 49
+    }
+  }
+}

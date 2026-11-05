@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.70.0] - 2026-11-06
+
+Gate: local 0m32s · CI not read under mf-ship · 0.69.1: local 0m33s · CI not read under mf-ship
+
 - The Render dialog shows each photograph as a 96×128 thumbnail under its flow, `×N` above one image, 15 then `+n`,
   and the left out dimmed by reason and flow; a run not among the hub's sources falls back to its own photograph,
   and the collections scroll in a max height (0104 D1–D3).

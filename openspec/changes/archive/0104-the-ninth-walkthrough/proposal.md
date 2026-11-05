@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.70
 ---
 
 # 0104 — the ninth walkthrough
