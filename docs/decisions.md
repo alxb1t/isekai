@@ -531,4 +531,6 @@ app's Render runs it as a child, between `gpunit volume up` and `volume down`, w
   from every collection, until the teardown.
 - **Accepts:** gpunit's signal handlers replace isekai's while the session is open, so isekai sets none.
   Reopen when isekai needs a handler of its own.
-- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`, `0083`.
+- **Refusals:** `isekai render` exits with gpunit's code, 1, 4 or 5, and the drawer names a 4 or a 5 by its kind and
+  quotes gpunit's `refused:` line, a form gpunit documents for callers to parse.
+- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`, `0083`, `0097`.

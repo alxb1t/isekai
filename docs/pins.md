@@ -38,7 +38,7 @@ Each pin: what fixes it, where it is declared, and when it is checked.
 | pin | pinned by | declared in | checked |
 |---|---|---|---|
 | the pod image | digest | `gpunit.toml`, and `config/image.json` beside it | gpunit boots only that digest; `tests/test_infra.py` holds the two equal |
-| gpunit's boot script | sha256, at gpunit's tag | `Dockerfile` | at build; `tests/test_infra.py` holds its tag to `pyproject.toml`'s |
+| gpunit's boot script | sha256, at a gpunit tag pinned on its own | `Dockerfile` | at build; `tests/test_infra.py` holds it to a gpunit tag, with a checksum |
 | the image's base and uv | digest | `Dockerfile` | at build |
 | the image's Python environment | a lock with every installed package's hash; Python by patch; the sdist builds' tools by hash | `image/pyproject.toml`, `image/uv.lock`, `image/.python-version` | `uv sync --locked` at build |
 | ComfyUI and its custom nodes | git commit | `Dockerfile` | at build; `tests/test_infra.py` holds each clone to a commit |
@@ -66,10 +66,9 @@ diff is what to review.
   equals `files`, copy the tag and digest from it into `config/image.json`, and the digest into `gpunit.toml`'s
   `image`; `tests/test_infra.py` holds the two equal. A new digest is proved on a pod, in a metered phase,
   before it merges ([D28](decisions.md#d28--the-image-carries-code-the-volume-carries-weights)).
-- **gpunit.** Move its tag in `pyproject.toml` and run `uv lock`; move the boot script's tag and checksum in
-  the `Dockerfile` (`curl -fsSL <url> | shasum -a 256`), then rebuild the image. `tests/test_infra.py` fails
-  while the two tags disagree. A session refuses an image whose `boot.sh` is too old for its gpunit, so the
-  rebuild comes before any render.
+- **gpunit.** Move its tag in `pyproject.toml` and run `uv lock`. The boot script keeps its own tag in the
+  `Dockerfile`, pinned on its own, and moves only with an image rebuild: gpunit reads a `boot.sh` from `v0.6.0`
+  on, and refuses an older one, whose host-key line carries no session nonce.
 - **The base or uv.** Resolve the new reference with `docker buildx imagetools inspect <ref>`, write it with its
   digest into the `Dockerfile`, then rebuild the image.
 - **The image's Python environment.** `make derive` runs `tools/derive_image_project.py`, which re-reads the

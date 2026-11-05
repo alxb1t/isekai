@@ -400,7 +400,7 @@ def test_sigint_ends_streams_without_cancellation_output(
     import uvicorn
     from fastapi.testclient import TestClient
 
-    from isekai.boundary.gpu import Volume
+    from isekai.boundary.gpu import GpunitExit, Volume
     from isekai.foundation.run import open_run
     from isekai.interface.ui import HOST
     from isekai.interface.ui import app as app_module
@@ -419,7 +419,9 @@ def test_sigint_ends_streams_without_cancellation_output(
     wired = replace(
         fake(runs=folder / "runs"),
         err=err,
-        volume=Volume(run=lambda argv, say: 0, records=tmp_path / ".gpunit"),
+        volume=Volume(
+            run=lambda argv, say: GpunitExit(0), records=tmp_path / ".gpunit"
+        ),
     )
     made: list[Jobs] = []
 

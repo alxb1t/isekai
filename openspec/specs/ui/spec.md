@@ -1095,12 +1095,15 @@ stopping SHALL do the same, and SHALL wait for the pod's teardown and the window
 the teardown's estimate and one volume verb, saying so on its terminal as the wait begins. After that wait, a window
 not kept whose close has failed or remains unfinished SHALL cause the terminal to name the command that closes it,
 even when the worker has ended; kept and successfully closed windows SHALL need no close remedy. An interrupt at the
-surface's terminal SHALL reach no child of the job.
+surface's terminal SHALL reach no child of the job. A window opening or a rendering verb that gpunit refuses for no
+card in stock or no card that fits SHALL end the job failed, its message leading with that kind, then quoting gpunit's
+`refused:` line and naming the collection's log.
 
 The volume is the job's to open and to close, so no step depends on the operator remembering one, and a surface that
 exits mid-render leaves no window billing that was not kept. The wait is bounded so a hung verb cannot hold the
 surface forever; a stop that says nothing looks hung, and the kill it invites is the one exit that leaves a window
-open.
+open. gpunit's exit says the kind and its `refused:` line says why, so the message tells a wait for stock from a
+configuration to edit, and the log holds each card gpunit skipped.
 
 #### Scenario: a render job opens, renders and closes
 - **Key:** `ui:render-job:opens-renders-and-closes`
@@ -1153,6 +1156,13 @@ open.
 - **Layers:** unit
 - **WHEN** opening the window raises
 - **THEN** the job ends failed and the volume step reads failed
+
+#### Scenario: a refusal for stock or fit names its kind and gpunit's reason
+- **Key:** `ui:render-job:a-refusal-names-its-kind-and-reason`
+- **Layers:** unit
+- **WHEN** opening the window, or the rendering verb, is refused for no card in stock or no card that fits
+- **THEN** the job ends failed, its message leading with that kind and quoting gpunit's `refused:` line
+- **AND** the message names the collection's log
 
 ### Requirement: Billing state is read from gpunit's own records
 

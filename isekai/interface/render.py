@@ -82,6 +82,8 @@ RECENT = 20
 FLOOR_S = HOLD_SECONDS + 300
 # gpunit's exit for a create whose answer was lost.
 LOST_EXIT = 3
+# gpunit's exits for a refusal with a kind, and how the terminal and the drawer name it.
+REFUSALS = {4: "no card in stock", 5: "no card fits max_hourly / vram_gb"}
 
 REQUEST = re.compile(r"([a-z0-9-]+)=([1-9][0-9]*|[a-z][a-z0-9-]*)")
 # The bare command a gpunit refusal names: a verb, or `volume` and its action.
@@ -474,8 +476,9 @@ def run_session(
     """Run one render session and return its exit status.
 
     0 every flow rendered · 1 a flow failed or a refusal · 3 the create's answer
-    was lost · 128+n a signal ended it. Every refusal reaches the collection's log too,
-    through the caller under `--progress json`.
+    was lost · 4 no card in stock · 5 no card fits · 128+n a signal ended it.
+    Every refusal reaches the collection's log too, through the caller under
+    `--progress json`.
     """
     seams = wired.session if seams is None else seams
     roots = [Path(runs) for runs in args.runs]
@@ -1079,16 +1082,22 @@ def _rendered(
     except Refused as refused:
         steps.step("pod", "refused")
         record.end("failed", str(refused))
-        # gpunit has written its own `refused:` line through `say`. Where it names a
-        # bare `gpunit <verb>`, the line after it is that command loading the key; a
-        # note, not a second refusal.
+        # gpunit has written its own `refused:` line through `say`, so its kind
+        # follows it. Where it names a bare `gpunit <verb>`, the line after it is
+        # that command loading the key; a note, not a second refusal.
+        if lead := REFUSALS.get(refused.code):
+            print(
+                f"{lead}, per gpunit's line above; "
+                "its skipped lines name each card it passed",
+                file=wired.err,
+            )
         if remedy := REMEDY.search(str(refused)):
             print(
                 "gpunit reads no .env, where the key lives: "
                 f"run `uv run --env-file .env gpunit {remedy[1]}`",
                 file=wired.err,
             )
-        return 1
+        return refused.code
     except Exception as failure:
         # A refusal inside the session, an endpoint that never answered among them,
         # leaves through gpunit's teardown, which a failure would have raised.

@@ -6,6 +6,7 @@ imports no third-party package at module scope (D20).
 
 import dataclasses
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -123,53 +124,80 @@ class Seams:
 # Where each line of gpunit's output goes, without its newline.
 Say = Callable[[str], None]
 
-# gpunit's verb line after `gpunit`, and where its output is said -> exit.
-Gpunit = Callable[[Sequence[str], Say], int]
+# gpunit's documented line for a refusal, `<UTC> refused: <reason>`, for callers
+# to parse; isekai's own `refused:` lines carry no time.
+REFUSED = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z (refused: .+)$")
 
 
-def run_gpunit(argv: Sequence[str], say: Say) -> int:
+def refused_line(line: str) -> str | None:
+    """Return gpunit's `refused: <reason>` in `line`, or None if it is not one.
+
+    e.g. "2026-11-03T09:14:02Z refused: no card in 'gpus' was placed"
+    -> "refused: no card in 'gpus' was placed"
+    """
+    found = REFUSED.match(line)
+    return found[1] if found else None
+
+
+@dataclass(frozen=True)
+class GpunitExit:
+    """A gpunit verb's exit code, and the last `refused:` line it wrote."""
+
+    code: int
+    refused: str | None = None
+
+
+# gpunit's verb line after `gpunit`, and where its output is said -> its exit.
+Gpunit = Callable[[Sequence[str], Say], GpunitExit]
+
+
+def run_gpunit(argv: Sequence[str], say: Say) -> GpunitExit:
     """Run `gpunit <argv>` in the repository on its `.env`, saying each line it writes.
 
     gpunit reads no `.env`, where the key lives, so it is handed one. It runs in
     its own session, so a Ctrl-C at the caller's terminal never cuts a create or
-    a delete halfway. Its output is handed on line by line, so the caller decides
-    how each line reads in its log.
+    a delete halfway. Its output is handed on line by line as it comes, so the
+    caller decides how each line reads in its log. The exit carries the last
+    `refused:` line gpunit wrote.
     """
-    done = subprocess.run(
+    refused = None
+    with subprocess.Popen(
         [sys.executable, "-m", "gpunit", *argv],
         cwd=REPOSITORY,
         env=_dotenv(),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        check=False,
         start_new_session=True,
-    )
-    for line in (done.stdout or "").splitlines():
-        say(line)
-    return done.returncode
+    ) as child:
+        for raw in child.stdout or ():
+            line = raw.removesuffix("\n")
+            say(line)
+            refused = refused_line(line) or refused
+    return GpunitExit(child.returncode, refused)
 
 
 @dataclass(frozen=True)
 class Volume:
     """The window volume and gpunit's records, through gpunit's own verbs.
 
-    Each returns gpunit's exit: 0 done, 1 refused or failed, 3 a lost create.
+    Each returns gpunit's exit and its last refused line: 0 done, 1 refused or
+    failed, 3 a lost create, 4 no card in stock, 5 no card fits.
     `records` is where gpunit keeps what it created, `.gpunit/` in its directory.
     """
 
     run: Gpunit = run_gpunit
     records: Path = REPOSITORY / ".gpunit"
 
-    def up(self, say: Say) -> int:
+    def up(self, say: Say) -> GpunitExit:
         """Open the window, or extend a live one, agreeing to its price."""
         return self.run(["volume", "up", "--yes"], say)
 
-    def down(self, say: Say) -> int:
+    def down(self, say: Say) -> GpunitExit:
         """Close the window."""
         return self.run(["volume", "down"], say)
 
-    def status(self, say: Say) -> int:
+    def status(self, say: Say) -> GpunitExit:
         """Ask gpunit what it holds; it sweeps a window past its end."""
         return self.run(["status", "--json"], say)
 
