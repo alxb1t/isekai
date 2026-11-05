@@ -1,0 +1,58 @@
+{
+  "change": "0101-the-review-tags-fixes",
+  "version": "0.67",
+  "base": "7fdbad24",
+  "analyzed": "b892edb3",
+  "measured_on": "local",
+  "collected_at": "2026-11-05T18:35:08+02:00",
+  "mf_version": "v0.61.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1490
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 28
+    },
+    "open-backlog-cards": {
+      "value": 25
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 765
+    },
+    "diff-files": {
+      "value": 23
+    },
+    "phases": {
+      "value": 2
+    },
+    "shared-reading-set": {
+      "value": 12178
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 710
+    },
+    "decisions": {
+      "value": 49
+    }
+  }
+}

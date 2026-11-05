@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.67.0] - 2026-11-05
+
+Gate: local 0m28s · CI not read under mf-ship · 0.66.0: local 0m28s · CI not read under mf-ship
+
 - The field map excludes every tattoo tag beside `photorealistic`, and no group routes or browses one: a tattoo is
   outside what `summon` preserves. The table is re-derived at revision 4 (0101 D1, D2).
 - The tag search skips an excluded tag, and approval and sheet preparation refuse one, naming the tag, its field and
