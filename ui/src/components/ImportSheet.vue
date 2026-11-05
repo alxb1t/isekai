@@ -9,6 +9,7 @@ import {
   stagedAt,
   stagedThumbAt,
 } from '../api'
+import { useEdges } from '../composables/useEdges'
 import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import type { Move } from '../grid'
@@ -223,15 +224,26 @@ function total(): string {
   return size(ready.value.reduce((sum, one) => sum + one.file.size, 0))
 }
 
-/* The tiles' grid, the focused tile's place in `shown`, and the viewer's place in `viewable`. */
+/* The body that scrolls, the tiles' grid, the focused tile's place in `shown`, and the
+   viewer's place in `viewable`. */
+const scroller = ref<HTMLElement | null>(null)
+const reveal = useEdges(() => scroller.value)
 const grid = ref<HTMLElement | null>(null)
 const focused = ref<number | null>(null)
 const viewing = ref<number | null>(null)
 let viewed: number | null = null
 
-function focusTile(index: number | null): void {
+/* Focus tile `index`; a key's move reveals it by the edges' rule, its row `stepped()`'s. */
+function focusTile(index: number | null, key = false): void {
   if (index === null) return
-  void nextTick(() => grid.value?.querySelectorAll<HTMLElement>('.import__tile')[index]?.focus())
+  void nextTick(() => {
+    const tile = grid.value?.querySelectorAll<HTMLElement>('.import__tile')[index]
+    if (!tile) return
+    if (!key) return tile.focus()
+    tile.focus({ preventScroll: true })
+    const wide = columns() || shown.value.length
+    reveal(tile, Math.floor(index / wide), Math.ceil(shown.value.length / wide))
+  })
 }
 
 /* The grid's columns, as the browser lays them out. */
@@ -241,7 +253,8 @@ function columns(): number {
 }
 
 function move(to: Move): void {
-  if (focused.value !== null) focusTile(stepped(focused.value, shown.value.length, columns(), to))
+  if (focused.value !== null)
+    focusTile(stepped(focused.value, shown.value.length, columns(), to), true)
 }
 
 /* The tiles whose removal is in flight: a second press removes nothing. */
@@ -446,7 +459,7 @@ onUnmounted(() => {
         @change="choose"
       />
     </header>
-    <div class="import__body">
+    <div ref="scroller" class="import__body">
       <div class="import__files">
         <p class="section-label">sources · {{ ready.length }} · {{ total() }}</p>
         <div ref="grid" class="import__tiles">

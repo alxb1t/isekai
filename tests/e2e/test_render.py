@@ -102,6 +102,7 @@ def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> 
 
 @pytest.mark.spec("ui:sessions:the-drawer-holds-the-render")
 @pytest.mark.spec("ui:sessions:the-drawer-fits-its-widest-grid")
+@pytest.mark.spec("ui:sessions:an-edge-row-shows-the-head")
 def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
     page.goto(served.hub_of(DRAWN))
     page.locator("[data-render]").click()
@@ -157,6 +158,16 @@ def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
     assert box is not None
     assert box["width"] > max(800 / 2, 480)
     assert box["width"] <= 800 - 100 + 1
+
+    # In a short window, a key's move to the last row shows the foot, and back the head.
+    expect(drawer.locator("[data-outcome]")).to_have_text("done")
+    page.set_viewport_size({"width": 800, "height": 520})
+    drawer.locator('[data-cell="0-0"]').focus()
+    page.keyboard.press("j")
+    expect(drawer.locator("[data-session-timer]")).not_to_be_in_viewport()
+    expect(drawer.locator("[data-renders]")).to_be_in_viewport()
+    page.keyboard.press("k")
+    expect(drawer.locator("[data-session-timer]")).to_be_in_viewport()
 
 
 @pytest.mark.spec("ui:renders:the-large-view-shows-its-sheet")

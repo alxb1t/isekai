@@ -107,6 +107,7 @@ def test_first_start_shows_new_collection_under_the_privacy_line(
 @pytest.mark.spec("ui:sheet:each-file-shows-its-progress")
 @pytest.mark.spec("ui:sheet:import-waits-for-reading")
 @pytest.mark.spec("ui:sheet:shift-a-opens-the-file-dialog")
+@pytest.mark.spec("ui:sheet:an-edge-row-shows-the-head")
 def test_each_chosen_file_shows_its_upload_then_its_result(
     page: Page, served: Served, tmp_path: Path
 ) -> None:
@@ -145,6 +146,16 @@ def test_each_chosen_file_shows_its_upload_then_its_result(
     _release(page, held)
     expect(_tile(page, "held.jpg")).to_have_attribute("data-state", "ready")
     expect(importing).to_be_enabled()
+    # In a short window, one tile a row, a key's move to the last row hides the label,
+    # and back to the first shows it.
+    page.set_viewport_size({"width": 560, "height": 520})
+    _tile(page, "held.jpg").focus()
+    label = page.locator(".import__files > .section-label").first
+    page.keyboard.press("j")
+    expect(_tile(page, "plain.heic")).to_be_focused()
+    expect(label).not_to_be_in_viewport()
+    page.keyboard.press("k")
+    expect(label).to_be_in_viewport()
     page.get_by_role("button", name="Cancel").click()
 
 

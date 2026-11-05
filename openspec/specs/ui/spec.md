@@ -650,11 +650,14 @@ read, the tiles SHALL be a grid that `h j k l` and the arrows move through, the 
 field holds it, and `↵` SHALL open the focused file full size in the viewer. `⇧A` SHALL open the file dialog from the
 sheet, whether it names a new collection or adds to one, except while Import commits or a text field holds the focus,
 and Add files… SHALL carry its key.
+A key's move to the tiles' first row SHALL scroll the sheet's body to its top, to the last row to its foot, and to
+any other row only as far as the row needs.
 
 Each file's bar answers which one is slow; each reason sits on the file it concerns, so two files of one name are
 two uploads. A file that lands while the folder is committed would be dropped from the collection unseen, and a cancel
 then would delete the folder the commit is moving. `⇧A` adds sources on the hub, so pressed again in the sheet it adds
 more files.
+The sources' label sits above the first row, so a move there shows it.
 
 #### Scenario: each file shows its own progress, then its result
 - **Key:** `ui:sheet:each-file-shows-its-progress`
@@ -760,6 +763,13 @@ more files.
 - **WHEN** `⇧A` is pressed in the open sheet, no field holding the focus
 - **THEN** the browser's file dialog opens, and the files chosen in it join the sheet
 - **AND** Add files… carries `⇧A`
+
+#### Scenario: a key's move to an edge row shows the sources' label
+- **Key:** `ui:sheet:an-edge-row-shows-the-head`
+- **Layers:** e2e
+- **WHEN** in a window holding the label and the first row, not the foot, `j` moves to the last row, then `k` back
+- **THEN** the sources' label above the tiles is out of view on the last row
+- **AND** it is in view again on the first
 
 ### Requirement: Prepare runs what changed as one job, and refuses before it starts when Ollama does not answer
 
@@ -1432,6 +1442,8 @@ grid's last row moving into the first row of the grid below and `k` `↑` back, 
 row's end. `↵` SHALL open the focused row in the viewer over the drawer, which SHALL follow its list when it changes
 while open; `⇧I` SHALL close the drawer and open the focused image's collection's Renders. A click on the backdrop,
 `⌃;` and `Esc` SHALL close it, `Esc` closing the viewer first.
+A key's move to the first row SHALL scroll the drawer to its top, to the last row to its foot, and to any other row
+only as far as the row needs, a grid's first row also bringing its collection's name into view.
 
 ```
 any screen ──⌃; or ●──▶ the drawer, half the window ──↵──▶ the viewer over it
@@ -1441,6 +1453,8 @@ any screen ──⌃; or ●──▶ the drawer, half the window ──↵─�
 A running render bills by the minute wherever the operator is, so it is the app's, not a collection's: it is glanced at,
 not gone to. A session is the record the render wrote, so the drawer and the terminal agree; once it ends its images are
 on Renders.
+The session's head sits above the first row, Stop below the last, and each collection's name above its own first
+row, so a move there shows them.
 
 #### Scenario: the drawer holds the render
 - **Key:** `ui:sessions:the-drawer-holds-the-render`
@@ -1520,6 +1534,14 @@ on Renders.
 - **Layers:** e2e
 - **WHEN** the drawer holds a session whose grid is wider than half the window
 - **THEN** the drawer is as wide as that grid, short of the window by 100 px at most
+
+#### Scenario: a key's move to an edge row shows the drawer's head
+- **Key:** `ui:sessions:an-edge-row-shows-the-head`
+- **Layers:** e2e
+- **WHEN** in a window holding the head and the first row, not the foot, `j` moves to the last row, then `k` back
+- **THEN** the timer is out of view on the last row
+- **AND** View in Renders is in view there
+- **AND** the timer is in view again on the first
 
 ### Requirement: A folder in the library is a collection when it holds `sources/`
 

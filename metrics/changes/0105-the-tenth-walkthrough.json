@@ -1,0 +1,58 @@
+{
+  "change": "0105-the-tenth-walkthrough",
+  "version": "0.69.1",
+  "base": "2c379d2a",
+  "analyzed": "89836d33",
+  "measured_on": "local",
+  "collected_at": "2026-11-05T23:46:07+02:00",
+  "mf_version": "v0.62.0",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1487
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 33
+    },
+    "open-backlog-cards": {
+      "value": 26
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 515
+    },
+    "diff-files": {
+      "value": 10
+    },
+    "phases": {
+      "value": 2
+    },
+    "shared-reading-set": {
+      "value": 12240
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 723
+    },
+    "decisions": {
+      "value": 49
+    }
+  }
+}

@@ -17,6 +17,15 @@ its new digest.
   room above can or is larger, so the last rows' matches stay in view; the keys are unchanged (0104 D4, D5).
 - The design spec's J4·1 frame draws the Render dialog with thumbnails by flow, as it now shows (0104 D6).
 
+## [0.69.1] - 2026-11-05
+
+Gate: local 0m33s · CI not read under mf-ship · 0.69.0: local 0m27s · CI not read under mf-ship
+
+- A key's move to the render drawer's first row scrolls it to its top, to its last row to its foot, so the timer
+  and Stop show; a grid's first row brings its collection's name into view (0105 D1, D2).
+- A key's move to the import sheet's first row of tiles scrolls its body to its top, so the sources' label shows, and
+  to its last row to its foot (0105 D3).
+
 ## [0.69.0] - 2026-11-05
 
 Gate: local 0m27s · CI not read under mf-ship · 0.68.0: local 0m26s · CI not read under mf-ship

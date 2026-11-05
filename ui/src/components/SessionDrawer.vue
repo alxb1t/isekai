@@ -6,6 +6,7 @@ import { progress } from '../bars'
 import { photoUrl, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer from './ImageViewer.vue'
 import KeyHint from './KeyHint.vue'
+import { useEdges } from '../composables/useEdges'
 import { useSessionViewer } from '../composables/useSessionViewer'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import { useKeys } from '../composables/useKeys'
@@ -33,6 +34,7 @@ const { shown: target, records, record, photographs: named } = storeToRefs(drawe
 const { jobs, billing, now } = storeToRefs(live)
 const stopRefusal = ref<string | null>(null)
 const dialog = ref<HTMLDialogElement | null>(null)
+const reveal = useEdges(() => dialog.value)
 
 const collections = computed(() => target.value?.collections ?? [])
 /* The render slot's session, while it is the shown one. */
@@ -151,11 +153,24 @@ function view(at: Focus, index = 0): void {
   openViewer({ row: located(stack.value, at.row).row, column: at.column }, index)
 }
 
-function place(at: Focus): void {
+/* Focus stacked `at`'s cell; a key's move reveals it by the edges' rule, a grid's first
+   row its collection's name too, keeping the sideways scroll the cell's reveal gave its
+   stack, which scrolls a wider grid, and the dialog. */
+function place(at: Focus, key = false): void {
   focus.value = at
-  void nextTick(() =>
-    dialog.value?.querySelector<HTMLElement>(`[data-cell="${at.row}-${at.column}"]`)?.focus(),
-  )
+  void nextTick(() => {
+    const cell = dialog.value?.querySelector<HTMLElement>(`[data-cell="${at.row}-${at.column}"]`)
+    if (!cell) return
+    if (!key) return cell.focus()
+    cell.focus({ preventScroll: true })
+    reveal(cell, at.row, stack.value.last.length)
+    if (located(stack.value, at.row).row === 0) {
+      const scrollers = [cell.closest<HTMLElement>('[data-session-collection]'), dialog.value]
+      const lefts = scrollers.map((one) => one?.scrollLeft ?? 0)
+      scrollers[0]?.querySelector('.session__collection')?.scrollIntoView({ block: 'nearest' })
+      scrollers.forEach((one, index) => one?.scrollTo({ left: lefts[index] }))
+    }
+  })
 }
 
 /* The first grid's first landed image, else the first cell. */
@@ -166,7 +181,7 @@ function start(): Focus {
   return { row: held.start + at.row, column: at.column }
 }
 
-const go = (move: Move) => () => place(moved(stack.value.last, focus.value, move))
+const go = (move: Move) => () => place(moved(stack.value.last, focus.value, move), true)
 
 function renders(): void {
   drawer.close()
