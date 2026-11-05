@@ -42,8 +42,9 @@ its task names.
 - [x] 2.3 In `ui/src/components/TagAutocomplete.vue`, add the `above: boolean` prop and the `drop--above` binding per
   [D5](design.md#d5); its comment's `under its row:` → `under its row, or above it, mirrored, when only the room above holds it, or neither does and above is larger:`.
   Verify: `grep -n -F -e 'above: boolean' -e "'drop--above': above" ui/src/components/TagAutocomplete.vue` prints a line for each.
-- [x] 2.4 In `ui/src/components/TagInput.vue`, measure and pass `above` per [D5](design.md#d5); `onKey` is unchanged.
-  Verify: `grep -n -F -e "closest('.rows')" -e 'placement(' -e ':above="above"' ui/src/components/TagInput.vue` prints a line for each.
+- [x] 2.4 In `ui/src/components/TagInput.vue`, measure and pass `above` per [D5](design.md#d5), the room from the list's
+  `offsetParent` (`.row__tags`), not the input; `onKey` is unchanged.
+  Verify: `grep -n -F -e "closest('.rows')" -e 'offsetParent' -e 'placement(' -e ':above="above"' ui/src/components/TagInput.vue` prints a line for each.
 - [x] 2.5 In `ui/src/app.css`, add [D5](design.md#d5)'s `.drop--above` rules after `.drop__foot`, under the comment
   `/* Near the sheet's foot the list opens above its input, mirrored: row 1 nearest it, the footer on top. */`.
   Verify: `grep -n -F -e '.drop--above {' -e '.drop--above .drop__foot {' ui/src/app.css` prints a line for each.
