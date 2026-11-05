@@ -22,6 +22,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
     CAPTIONS,
+    PHOTO,
     Run,
     StageFailure,
     attempts,
@@ -142,31 +143,22 @@ def test_the_artifact_is_one_block_of_prose_and_carries_no_structure(
     assert set(artifact) == {"schema", "producer", "prose"}
 
 
-@pytest.mark.spec("caption:output:caption-belongs-to-one-flow")
-def test_a_second_flow_produces_its_own_caption(run: Run) -> None:
-    reader = FakeReader()
+@pytest.mark.spec("caption:output:every-flow-reads-one-caption")
+def test_every_flow_reads_the_one_caption(run: Run) -> None:
+    reader = FakeReader(prose="One reading.")
     first = caption(run, reader)
-
-    # A flow arriving later asks the same stage for the same photograph, and gets
-    # its own reading, written under its own flow.
-    second = caption(run, reader, flow="summon-v2")
-
-    assert first is not None and second is not None
-    assert first.parent == run.path / FLOW.id / "captions"
-    assert second.parent == run.path / "summon-v2" / "captions"
-    assert len(reader.calls) == 2
-
-
-@pytest.mark.spec("caption:output:caption-belongs-to-one-flow")
-def test_a_flows_caption_is_neither_read_nor_changed_by_another(run: Run) -> None:
-    first = caption(run, FakeReader(prose="One reading."))
     assert first is not None
     frozen = first.read_bytes()
 
-    caption(run, FakeReader(prose="A different reading."), flow="summon-v2")
+    # A second flow's Prepare asks the same stage for the same photograph.
+    second = caption(run, FakeReader(prose="A different reading."))
 
+    assert second is None
+    assert first.parent == run.path / PHOTO / CAPTIONS
     assert first.read_bytes() == frozen
-    assert versions(run.path / FLOW.id / "captions") == [1]
+    assert versions(run.path / PHOTO / CAPTIONS) == [1]
+    assert not (run.path / FLOW.id).exists()
+    assert len(reader.calls) == 1
 
 
 @pytest.mark.spec("caption:inputs:briefing-comes-from-the-config")
@@ -295,9 +287,9 @@ def test_a_transient_failure_counts_against_the_budget(run: Run) -> None:
     with pytest.raises(Refusal):
         caption(run, reader)
 
-    recorded = attempts(run.path / FLOW.id / "captions", 1)
+    recorded = attempts(run.path / PHOTO / CAPTIONS, 1)
     assert [(a.attempt, a.kind) for a in recorded] == [(1, "transient")]
-    assert versions(run.path / FLOW.id / "captions") == []
+    assert versions(run.path / PHOTO / CAPTIONS) == []
 
 
 @pytest.mark.spec("caption:failure:rate-limit-is-transient")
@@ -328,7 +320,7 @@ def test_a_decline_names_the_photograph_and_writes_no_artifact(run: Run) -> None
 
     assert run.id in str(refused.value)
     assert "declined" in str(refused.value)
-    assert versions(run.path / FLOW.id / "captions") == []
+    assert versions(run.path / PHOTO / CAPTIONS) == []
 
 
 @pytest.mark.spec("caption:failure:unusable-response-is-permanent")
@@ -362,7 +354,7 @@ def test_no_caption_artifact_is_written_for_an_unusable_response(run: Run) -> No
     with pytest.raises(Refusal):
         caption(run, reader)
 
-    assert versions(run.path / FLOW.id / "captions") == []
+    assert versions(run.path / PHOTO / CAPTIONS) == []
 
 
 # --- the Ollama adapter -------------------------------------------------------
@@ -532,7 +524,7 @@ def test_an_unreachable_host_refuses_and_records_no_attempt(run: Run) -> None:
         caption(run, reader)
 
     assert "ollama serve" in str(refused.value)
-    directory = run.directory(FLOW.id, CAPTIONS)
+    directory = run.directory(PHOTO, CAPTIONS)
     assert attempts(directory, 1) == []
     assert not any(path.name.endswith(".json") for path in directory.glob("*.error.*"))
 
@@ -560,7 +552,7 @@ def test_an_absent_model_names_the_command_that_creates_it_and_costs_no_attempt(
     assert f"ollama create {READER}" in message
     assert "config/joycaption.Modelfile" in message
     assert _names_the_files_first(message)
-    directory = run.directory(FLOW.id, CAPTIONS)
+    directory = run.directory(PHOTO, CAPTIONS)
     assert attempts(directory, 1) == []
 
 
@@ -580,7 +572,7 @@ def test_an_open_reader_failure_is_recorded_with_its_kind(run: Run) -> None:
     with pytest.raises(Refusal):
         caption(run, reader)
 
-    recorded = attempts(run.directory(FLOW.id, CAPTIONS), 1)
+    recorded = attempts(run.directory(PHOTO, CAPTIONS), 1)
     assert [one.kind for one in recorded] == ["transient"]
 
 
@@ -603,7 +595,7 @@ def test_a_truncated_response_is_recorded_permanent_and_written_nowhere(
     with pytest.raises(Refusal):
         caption(run, reader)
 
-    directory = run.directory(FLOW.id, CAPTIONS)
+    directory = run.directory(PHOTO, CAPTIONS)
     recorded = attempts(directory, 1)
     assert [one.kind for one in recorded] == ["permanent"]
     assert "length" in json.loads(recorded[0].path.read_text())["detail"]
@@ -635,7 +627,7 @@ def test_a_model_built_from_other_files_refuses_naming_both_digests(
     )
     assert f"ollama create {READER} -f config/joycaption.Modelfile" in message
     assert transport.sent == []
-    directory = run.directory(FLOW.id, CAPTIONS)
+    directory = run.directory(PHOTO, CAPTIONS)
     assert attempts(directory, 1) == []
 
 
@@ -654,7 +646,7 @@ def test_a_model_no_manifest_entry_pins_refuses_and_contacts_no_host(
     assert "'a-reader'" in message
     assert "config/reader.json" in message
     assert transport.sent == []
-    assert attempts(run.directory(FLOW.id, CAPTIONS), 1) == []
+    assert attempts(run.directory(PHOTO, CAPTIONS), 1) == []
 
 
 @pytest.mark.spec("caption:reachability:absent-model-names-how-to-create-it")
@@ -672,7 +664,7 @@ def test_a_model_with_no_record_refuses_naming_the_command_that_builds_it(
     assert f"ollama create {READER} -f config/joycaption.Modelfile" in str(
         refused.value
     )
-    assert attempts(run.directory(FLOW.id, CAPTIONS), 1) == []
+    assert attempts(run.directory(PHOTO, CAPTIONS), 1) == []
 
 
 def _names_the_files_first(message: str) -> bool:
@@ -700,7 +692,7 @@ def test_no_record_names_the_files_first(
         caption(run, reader)
 
     assert _names_the_files_first(str(refused.value))
-    assert attempts(run.directory(FLOW.id, CAPTIONS), 1) == []
+    assert attempts(run.directory(PHOTO, CAPTIONS), 1) == []
 
 
 @pytest.mark.spec_exempt("twin: a build-only remedy does not name the files first")

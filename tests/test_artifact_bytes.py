@@ -69,14 +69,14 @@ def _caption(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
 
 
 def _wd14(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
-    path = tag_wd14(run, FLOW.id, fake_tagger)
+    path = tag_wd14(run, fake_tagger)
     assert path is not None
     return path
 
 
 def _tags(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     tagger = FakeTagger(artifacts=READER_ARTIFACTS, options=TAGGER_OPTIONS)
-    path = tag_hosted(run, FLOW.id, tagger)
+    path = tag_hosted(run, tagger)
     assert path is not None
     return path
 

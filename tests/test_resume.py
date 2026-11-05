@@ -26,7 +26,13 @@ import pytest
 from isekai.boundary.comfy import ComfyClient
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import BUDGETS, RUNS_ROOT, versions
+from isekai.foundation.run import (
+    BUDGETS,
+    PHOTO,
+    PHOTOGRAPH_VERBS,
+    RUNS_ROOT,
+    versions,
+)
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
@@ -79,10 +85,12 @@ def wired(tmp_path: Path) -> Wiring:
 def _args(verb: str, *photos: str, **extra: object) -> argparse.Namespace:
     """Parse one invocation the way the command line does.
 
-    Every stage verb requires `--flow`, so the helper supplies this suite's one
-    flow unless the caller names its own.
+    Every stage verb on a flow requires `--flow`, so the helper supplies this
+    suite's one flow unless the caller names its own; `show`, `tag` and `caption`
+    take none.
     """
-    selected = extra.pop("flow", FLOW if verb != "show" else None)
+    named = verb not in ("show", *PHOTOGRAPH_VERBS)
+    selected = extra.pop("flow", FLOW if named else None)
     flag = ["--flow", str(selected)] if selected is not None else []
     return build_parser().parse_args([verb, *photos, *flag, *_flags(extra)])
 
@@ -167,9 +175,9 @@ def test_the_first_pass_actually_produced_something_to_be_inert_about(
     files = snapshot(wired.runs_root)
 
     names = sorted(files)
-    assert any(name.endswith(f"{FLOW}/captions/001.json") for name in names)
-    assert any(name.endswith(f"{FLOW}/wd14/001.json") for name in names)
-    assert any(name.endswith(f"{FLOW}/tags/001.json") for name in names)
+    assert any(name.endswith(f"{PHOTO}/captions/001.json") for name in names)
+    assert any(name.endswith(f"{PHOTO}/wd14/001.json") for name in names)
+    assert any(name.endswith(f"{PHOTO}/tags/001.json") for name in names)
     assert any(name.endswith(f"{FLOW}/sheets/001.json") for name in names)
     assert any(name.endswith(f"{FLOW}/review/001.approved.json") for name in names)
     assert any(name.endswith(f"{FLOW}/prompts/001.json") for name in names)
@@ -214,12 +222,12 @@ def test_the_explicit_flag_writes_the_next_version_and_leaves_the_last_alone(
 ) -> None:
     dispatch(_args("caption", str(photo)), wired)
     run_id = next(path.name for path in wired.runs_root.iterdir())
-    first = wired.runs_root / run_id / FLOW / "captions" / "001.json"
+    first = wired.runs_root / run_id / PHOTO / "captions" / "001.json"
     frozen = first.read_bytes()
 
     assert dispatch(_args("caption", str(photo), new_version=True), wired) == 0
 
-    assert (wired.runs_root / run_id / FLOW / "captions" / "002.json").exists()
+    assert (wired.runs_root / run_id / PHOTO / "captions" / "002.json").exists()
     assert first.read_bytes() == frozen
     assert _calls(wired)[0] == 2
 
@@ -227,7 +235,7 @@ def test_the_explicit_flag_writes_the_next_version_and_leaves_the_last_alone(
 def _versions(wired: Wiring) -> dict[str, list[int]]:
     """Return each stage-1 directory's artifact versions, by directory name."""
     (run,) = wired.runs_root.iterdir()
-    return {area: versions(run / FLOW / area) for area in ("captions", "wd14", "tags")}
+    return {area: versions(run / PHOTO / area) for area in ("captions", "wd14", "tags")}
 
 
 @pytest.mark.spec("cli:explicit-versions:the-caption-flag-writes-prose-only")
@@ -266,7 +274,7 @@ def test_without_the_flag_no_next_version_appears_for_any_stage(
 
     _pass(wired, str(photo))
 
-    for directory in (f"{FLOW}/captions", f"{FLOW}/sheets", f"{FLOW}/review"):
+    for directory in (f"{PHOTO}/captions", f"{FLOW}/sheets", f"{FLOW}/review"):
         numbered = sorted(p.name for p in (run / directory).iterdir())
         assert len(numbered) == 1, (directory, numbered)
 
@@ -347,19 +355,19 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
         ).read(photo, "b", tmp_path)
     )
 
-    directory = bare.directory(FLOW, "captions")
+    directory = bare.directory(PHOTO, "captions")
     for _ in range(BUDGETS["caption"]):
         record_failure(directory, 1, "transient", {"stage": "caption", "detail": "x"})
     collect(lambda: caption(bare, reader, briefing_path=CAPTION_BRIEFING))
 
-    # A damaged tag list of the flow `draft --flow` fills a target's sheet from.
+    # A damaged tag list of the photograph `draft --flow` fills a target's sheet from.
     from isekai.foundation.artifacts import WD14_FILE
     from isekai.pipeline.sheet import sheet as fill
 
-    other = tmp_path / "borrowed.jpg"
+    other = tmp_path / "drafted-from.jpg"
     other.write_bytes(jpeg_bytes(480, 640))
     borrowed = open_run(other, wired.runs_root)
-    listed = borrowed.directory(FLOW, "wd14")
+    listed = borrowed.directory(PHOTO, "wd14")
     listed.mkdir(parents=True)
     (listed / "001.json").write_text(json.dumps({"schema": WD14_FILE.schema}))
     target = load_flow("conjure-anime-wai")
@@ -471,11 +479,12 @@ def _incomplete_flow(tmp_path: Path) -> Path:
 # The verbs and paths a refusal is allowed to send an operator to. A remedy this
 # build cannot perform is worse than no remedy, because it sends somebody looking
 # for something that is not there.
-# **Every stage verb carries `--flow`**, which every stage verb requires; the
-# guard below parses each printed command and requires it to name a run.
+# **Every stage verb on a flow carries `--flow`**, which it requires, and `caption`
+# and `tag` carry none; the guard below parses each printed command and requires
+# it to name a run.
 AVAILABLE: Sequence[str] = (
-    "python -m isekai caption --flow ",
-    "python -m isekai tag --flow ",
+    "python -m isekai caption ",
+    "python -m isekai tag ",
     "python -m isekai sheet --flow ",
     "python -m isekai review --flow ",
     "python -m isekai approve --flow ",
@@ -530,11 +539,8 @@ def test_every_refusal_names_an_action_this_build_can_perform(
 def test_no_refusal_offers_a_command_this_build_does_not_have(
     wired: Wiring, tmp_path: Path
 ) -> None:
-    # The migration verb is the one that would be most natural to promise and is
-    # deliberately absent: only schema version 1 exists, so its dispatch table
-    # would have no entries.
+    # Verbs that would be natural to promise and that this build lacks.
     for message in _every_refusal(wired, tmp_path):
-        assert "isekai migrate" not in message
         assert "isekai repair" not in message
         assert "isekai reset" not in message
 

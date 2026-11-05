@@ -6,7 +6,7 @@ the repository root.
 ## Progress
 
 - [x] 1 — The store
-- [ ] 2 — The switch
+- [x] 2 — The switch
 - [ ] 3 — The page
 - [ ] 4 — The record
 
@@ -89,109 +89,109 @@ the repository root.
 
 ## 2 — The switch
 
-- [ ] 2.1 In `isekai/foundation/run.py`, per [D6](design.md#d6): `refusal_for`'s `flow` is `str | None`; `None` names
+- [x] 2.1 In `isekai/foundation/run.py`, per [D6](design.md#d6): `refusal_for`'s `flow` is `str | None`; `None` names
   `photo/<area>/<record>` and a command with no `--flow`. Its docstring's paragraph opening "**`flow` is threaded in"
   says a stage on a flow threads it in and the photograph's stages pass `None`; `stage_command`'s example names
   `sheet`, not `tag --flow f`.
   Verify: `grep -n -e "verb requires .--flow." -e "tag --flow f" isekai/foundation/run.py` prints nothing.
-- [ ] 2.2 In `isekai/pipeline/caption.py`, `caption(run, reader, *, briefing_path, new_version=False)` writes
+- [x] 2.2 In `isekai/pipeline/caption.py`, `caption(run, reader, *, briefing_path, new_version=False)` writes
   `photo_of(run, CAPTIONS)` and passes `None` to `refusal_for`; its docstring's first paragraph → "**The caption is the
   photograph's.** … written once, under `photo/`, and every flow reads it (D17)."
   Verify: `grep -n -e "belongs to the flow" -e "run.directory(flow" isekai/pipeline/caption.py` prints nothing.
-- [ ] 2.3 In `isekai/pipeline/tagging.py`, `tag_wd14(run, open_tagger, *, new_version=False)` and
+- [x] 2.3 In `isekai/pipeline/tagging.py`, `tag_wd14(run, open_tagger, *, new_version=False)` and
   `tag_hosted(run, tagger, *, new_version=False)` write `photo_of(run, WD14)` and `photo_of(run, TAGS)`, passing `None`
   to `refusal_for`; a docstring or comment naming a flow's directory names `photo/`.
   Verify: `grep -n "run.directory(flow" isekai/pipeline/tagging.py` prints nothing.
-- [ ] 2.4 In `isekai/interface/cli.py`, per [D6](design.md#d6) and [the verbs](design.md#the-verbs): `caption` and
+- [x] 2.4 In `isekai/interface/cli.py`, per [D6](design.md#d6) and [the verbs](design.md#the-verbs): `caption` and
   `tag` leave the required `--flow` loop and keep it hidden; `dispatch` refuses one; `_require_tagged` is deleted.
   Verify: `git grep -n _require_tagged isekai` prints nothing.
-- [ ] 2.5 In `isekai/interface/cli.py`'s `_per_item`, `caption` and `tag` run once per identifier with no flow;
+- [x] 2.5 In `isekai/interface/cli.py`'s `_per_item`, `caption` and `tag` run once per identifier with no flow;
   `_Reporter.item` takes `flow: str | None` and leaves `flow` out of a line for `None`; a run that will not open
   reports one `refused` line naming no flow.
   Verify: `grep -n -e "def caption_flow" -e "def tag_flow" isekai/interface/cli.py` prints nothing.
-- [ ] 2.6 In `isekai/interface/cli.py`, the comment above the `--flow` loop, the module docstring's "The stage verbs
+- [x] 2.6 In `isekai/interface/cli.py`, the comment above the `--flow` loop, the module docstring's "The stage verbs
   and `assign` take `--flow` repeatably", `_per_item`'s docstring and `_flows_for`'s "The parser has already refused a
   stage verb naming none" say `tag` and `caption` take no flow ([D14](design.md#d14)).
   Verify: `grep -n "Every stage but the inspection one is per flow" isekai/interface/cli.py` prints nothing.
-- [ ] 2.7 In `isekai/pipeline/sheet.py`, per [D8](design.md#d8) and [the readers](design.md#the-readers): the fill,
+- [x] 2.7 In `isekai/pipeline/sheet.py`, per [D8](design.md#d8) and [the readers](design.md#the-readers): the fill,
   `_superseded` and `_route` read `photo_of(run, WD14)`; `_from_source`, `tagger_of` and `sheet_source` are deleted;
   `tags_from` is recorded only; the refusals and remedies name `photo/wd14/` and `python -m isekai tag`.
   Verify: `grep -n -w -e tagger_of -e sheet_source -e _from_source -e listed_from isekai/pipeline/sheet.py` prints nothing.
-- [ ] 2.8 In `isekai/pipeline/sheet.py`'s docstrings: the module's "the flow decides only which directory is read and
+- [x] 2.8 In `isekai/pipeline/sheet.py`'s docstrings: the module's "the flow decides only which directory is read and
   written" → "the flow decides only which directory is written"; `sheet`'s and `prepare_sheet`'s say `tags_from` is
   recorded and never read for the fill.
   Verify: `grep -n "which directory is read and written" isekai/pipeline/sheet.py` prints nothing.
-- [ ] 2.9 In `isekai/foundation/artifacts.py`, `SheetProducer` loses `listed_from`, and the comment above it says
+- [x] 2.9 In `isekai/foundation/artifacts.py`, `SheetProducer` loses `listed_from`, and the comment above it says
   `tags_from` names the flow a draft drew a first sheet from (D17).
   Verify: `grep -n listed_from isekai/foundation/artifacts.py` prints nothing.
-- [ ] 2.10 In `isekai/interface/drafting.py`, `draft_across`'s docstring: "has its sheet filled first from the tag
+- [x] 2.10 In `isekai/interface/drafting.py`, `draft_across`'s docstring: "has its sheet filled first from the tag
   list `source` leads to (`tagger_of`)" → "has its sheet filled first from the photograph's tag list, recording
   `source`".
   Verify: `grep -n tagger_of isekai/interface/drafting.py` prints nothing.
-- [ ] 2.11 In `isekai/interface/ui/app.py`, per [D9](design.md#d9): `_caption` and `_listed` and the import of
+- [x] 2.11 In `isekai/interface/ui/app.py`, per [D9](design.md#d9): `_caption` and `_listed` and the import of
   `sheet_source` and `tagger_of` go; the payload reads `photo_of`, loses `caption_from` and its comment; `_prose`,
   `_remedy` and `_command` name no flow for `tag` and `caption`.
   Verify: `grep -n -e caption_from -e tagger_of -e sheet_source -e "def _listed" isekai/interface/ui/app.py` prints nothing.
-- [ ] 2.12 In `isekai/interface/ui/app.py`, `cell_event` returns a list of events per [Prepare's
+- [x] 2.12 In `isekai/interface/ui/app.py`, `cell_event` returns a list of events per [Prepare's
   plan](design.md#prepares-plan), and its docstring says a line naming no flow gives one per assigned flow.
   Verify: `grep -n -F "Callable[[Mapping[str, Any]], dict[str, Any] | None]" isekai/interface/ui/app.py` prints nothing.
-- [ ] 2.13 In `isekai/interface/ui/jobs.py`, per [D10](design.md#d10): `Step.flow` is `str | None`, `plan`,
+- [x] 2.13 In `isekai/interface/ui/jobs.py`, per [D10](design.md#d10): `Step.flow` is `str | None`, `plan`,
   `isekai_command`, `Command`, `_Job.asked`, `_Job.complete`, `Jobs.prepare`'s `cell`, `_run` and its failure message
   follow [Prepare's plan](design.md#prepares-plan); the comment above `PREPARE` says tag and caption run once.
   Verify: `uv run python -c 'from isekai.interface.ui.jobs import plan; print([(s.flow, s.verb, s.runs) for s in plan({"a": ["r1"], "b": ["r1", "r2"]}, {"a": True, "b": True})])'` prints `[(None, 'tag', ('r1', 'r2')), (None, 'caption', ('r1', 'r2')), ('a', 'sheet', ('r1',)), ('b', 'sheet', ('r1', 'r2'))]`.
-- [ ] 2.14 In `isekai/interface/ui/library.py`'s `stage`, "tagged" reads `photo_of(run, WD14)` inside the cell's `try`
+- [x] 2.14 In `isekai/interface/ui/library.py`'s `stage`, "tagged" reads `photo_of(run, WD14)` inside the cell's `try`
   ([D9](design.md#d9)).
   Verify: `grep -n "run.directory(flow, WD14)" isekai/interface/ui/library.py` prints nothing.
-- [ ] 2.15 In `isekai/interface/run_view.py`, per [the readers](design.md#the-readers): `STAGES` gives way to
+- [x] 2.15 In `isekai/interface/run_view.py`, per [the readers](design.md#the-readers): `STAGES` gives way to
   `photo/`'s `DESCRIPTION`, listed first, and a flow's `(SHEETS, REVIEW, PROMPTS)`; `unread` reads `photo/` and names a
   flow's description directories; `_producer_of` prints `from NNN`; the comment above the stages states the layout.
   Verify: `grep -n -e listed_from -e tagged_from -e "Every one of them is a flow's own" isekai/interface/run_view.py` prints nothing.
-- [ ] 2.16 In `isekai/interface/compare_view.py`'s `_entry`, one caption per run from `photo_of(run, CAPTIONS)`, naming
+- [x] 2.16 In `isekai/interface/compare_view.py`'s `_entry`, one caption per run from `photo_of(run, CAPTIONS)`, naming
   no flow; its docstring says so.
   Verify: `grep -n "run.directory(name, CAPTIONS)" isekai/interface/compare_view.py` prints nothing.
-- [ ] 2.17 In `tests/stages.py`, `caption` and `write_wd14` take no `flow` and write `photo/`; `sheet` calls
+- [x] 2.17 In `tests/stages.py`, `caption` and `write_wd14` take no `flow` and write `photo/`; `sheet` calls
   `write_wd14` with none.
   Verify: `uv run python -c 'import inspect, tests.stages as s; print([n for f in (s.caption, s.write_wd14) for n in inspect.signature(f).parameters if n == "flow"])'` prints `[]`.
-- [ ] 2.18 In `tests/test_caption.py`, per [Tests](design.md#tests): the two second-flow tests go and
+- [x] 2.18 In `tests/test_caption.py`, per [Tests](design.md#tests): the two second-flow tests go and
   `test_every_flow_reads_the_one_caption` (`caption:output:every-flow-reads-one-caption`) is added; every other test
   calls `caption` with no flow and reads `photo/captions/`.
   Verify: `uv run pytest tests/test_caption.py` exits 0.
-- [ ] 2.19 In `tests/test_tagging.py`: the two untagged-flow refusals go, and their twin
+- [x] 2.19 In `tests/test_tagging.py`: the two untagged-flow refusals go, and their twin
   `test_tagging_the_tagged_flow_alone_from_that_root_succeeds` runs `tag <photo>` over `_untagged_flows`; `test_tagging_a_tracked_flow_resolves_and_runs_the_local_tagger`
   becomes `test_tagging_resolves_and_runs_the_local_tagger_with_no_flow` (`cli:resolution:the-pinned-tagger-needs-no-flow`);
   every other test tags with no flow, reads `photo/` and expects commands with no `--flow`.
   Verify: `uv run pytest tests/test_tagging.py` exits 0.
-- [ ] 2.20 In `tests/test_sheet_stage.py`, per [Tests](design.md#tests): the three borrow tests go, the two named there
+- [x] 2.20 In `tests/test_sheet_stage.py`, per [Tests](design.md#tests): the three borrow tests go, the two named there
   are rewritten in place, no test naming `listed_from` or `tagger_of`; every other test reads the list from
   `photo/wd14/` and expects `photo/wd14/` in its text.
   Verify: `uv run pytest tests/test_sheet_stage.py` exits 0.
-- [ ] 2.21 In `tests/test_pipeline_cli.py`: `STAGE_VERBS` is `("sheet", "review", "approve", "generate")`;
+- [x] 2.21 In `tests/test_pipeline_cli.py`: `STAGE_VERBS` is `("sheet", "review", "approve", "generate")`;
   `test_the_photographs_verbs_refuse_a_flow` over `caption` and `tag` and `test_a_photographs_progress_line_names_no_flow`
   are added, per [the key moves](design.md#the-key-moves); `tag` and `caption` argv name no flow.
   Verify: `uv run pytest tests/test_pipeline_cli.py` exits 0.
-- [ ] 2.22 In `tests/test_run_directory.py`, the layout tests assert [the layout](design.md#the-layout), and
+- [x] 2.22 In `tests/test_run_directory.py`, the layout tests assert [the layout](design.md#the-layout), and
   `test_every_flow_reads_the_description` (`run-directory:layout:every-flow-reads-the-description`) is added; the
   failure tests read `photo/`.
   Verify: `uv run pytest tests/test_run_directory.py` exits 0.
-- [ ] 2.23 In `tests/test_resume.py`, `tests/test_review.py`, `tests/test_progress.py`, `tests/test_generate.py` and
+- [x] 2.23 In `tests/test_resume.py`, `tests/test_review.py`, `tests/test_progress.py`, `tests/test_generate.py` and
   `tests/test_artifact_bytes.py`, `tag`, `caption`, `tag_wd14`, `tag_hosted` and `stages.caption` name no flow, and the
   description is read from `photo/`.
   Verify: `uv run pytest tests/test_resume.py tests/test_review.py tests/test_progress.py tests/test_generate.py tests/test_artifact_bytes.py` exits 0.
-- [ ] 2.24 In `tests/test_run_view.py`, `show`'s tests follow [the readers](design.md#the-readers), and
+- [x] 2.24 In `tests/test_run_view.py`, `show`'s tests follow [the readers](design.md#the-readers), and
   `test_the_description_is_listed_once` (`cli:show:the-description-is-listed-once`) is added; in
   `tests/test_compare.py`, each run carries one caption.
   Verify: `uv run pytest tests/test_run_view.py tests/test_compare.py` exits 0.
-- [ ] 2.25 In `tests/test_ui_api.py`, per [Tests](design.md#tests): the three borrow tests and `_two_hops` go;
+- [x] 2.25 In `tests/test_ui_api.py`, per [Tests](design.md#tests): the three borrow tests and `_two_hops` go;
   `test_every_flow_shows_the_photographs_caption` and `test_every_flow_shows_the_photographs_lists` are added; the
   missing-caption test expects a command naming no flow.
   Verify: `uv run pytest tests/test_ui_api.py` exits 0.
-- [ ] 2.26 In `tests/test_ui_jobs.py`, `test_a_photograph_is_described_once` (`ui:prepare:a-photograph-is-described-once`)
+- [x] 2.26 In `tests/test_ui_jobs.py`, `test_a_photograph_is_described_once` (`ui:prepare:a-photograph-is-described-once`)
   is added and the totals test counts photographs and cells; in `tests/test_ui_library.py`,
   `test_a_photograph_tagged_once_is_tagged_in_every_flow` (`ui:hub:a-tagged-photograph-is-tagged-in-every-flow`);
   `tests/test_ui.py`'s `Step` takes `None` for a photograph's stage; `tests/test_ui_jobs.py`'s `_Script.__call__` takes
   `flow: str | None`, and the `cell` doubles in `tests/test_ui.py` and `tests/test_ui_jobs.py` return a list.
   Verify: `uv run pytest tests/test_ui_jobs.py tests/test_ui_library.py tests/test_ui.py` exits 0.
-- [ ] 2.27 The borrow is gone from the Python side.
+- [x] 2.27 The borrow is gone from the Python side.
   Verify: `git grep -n -w -e tagger_of -e sheet_source -e _from_source -e listed_from -- isekai tests` prints nothing.
 
 ## 3 — The page

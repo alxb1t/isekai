@@ -30,6 +30,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     latest_artifact,
+    photo_of,
 )
 from isekai.pipeline.generate import rendered_seeds
 
@@ -102,16 +103,15 @@ def _link(path: Path, collection: Path) -> str:
     return html.escape(quote(path.relative_to(collection).as_posix()), quote=True)
 
 
-def _runs(collection: Path, flows_dir: Path) -> list[Run]:
+def _runs(collection: Path) -> list[Run]:
     """Return every run under the collection's `runs/`, by id, or refuse naming it."""
     root = collection / COLLECTION_RUNS
     if not root.is_dir():
-        flows = " ".join(f"--flow {flow}" for flow in tracked_flows(flows_dir))
         raise Refusal(
             f"{collection} holds no {COLLECTION_RUNS}/ directory, so it is not a "
             f"collection; give the path of the collection directory that holds "
             f"{COLLECTION_RUNS}/, or open its runs with "
-            f"`python -m isekai tag {flows} --runs {shlex.quote(str(root))} "
+            f"`python -m isekai tag --runs {shlex.quote(str(root))} "
             f"{shlex.quote(str(collection / COLLECTION_PHOTOS))}/*`"
         )
     return [
@@ -160,24 +160,22 @@ def _renders(run: Run, name: str, flow: Flow | None, collection: Path) -> list[s
 
 
 def _entry(run: Run, flows: Mapping[str, Flow | None], collection: Path) -> str:
-    """Return one run's section: the photograph and each flow's renders, then captions.
+    """Return one run's section: the photograph, each flow's renders, its caption.
 
-    Each render carries the positive prompt it came from; the captions span the
-    row, because a column is too narrow for prose.
+    Each render carries the positive prompt it came from. The caption is the
+    photograph's, one per run, naming no flow (D17); it spans the row, because a
+    column is too narrow for prose.
     """
     figures = [
         f"<figure><figcaption>photograph</figcaption>"
         f'<img loading=lazy src="{_link(run.photo, collection)}" alt=""></figure>'
     ]
     captions = []
+    path = latest_artifact(photo_of(run, CAPTIONS))
+    if path is not None:
+        prose = read(path, CAPTION_FILE)["prose"]
+        captions.append(f'<p class="caption">{html.escape(prose)}</p>')
     for name, flow in flows.items():
-        path = latest_artifact(run.directory(name, CAPTIONS))
-        if path is not None:
-            prose = read(path, CAPTION_FILE)["prose"]
-            captions.append(
-                f'<p class="caption"><b>{html.escape(name)}</b> '
-                f"{html.escape(prose)}</p>"
-            )
         figures.extend(_renders(run, name, flow, collection))
     return (
         f'<section><div class="id">{html.escape(run.id)}</div>'
@@ -202,7 +200,7 @@ def page(collection: Path, flows_dir: Path = FLOWS_DIR) -> str:
     the photograph sits beside it, then the rest, then any directory this build
     carries no flow for, marked so rather than failing the page: each group by name.
     """
-    runs = _runs(collection, flows_dir)
+    runs = _runs(collection)
     tracked = set(tracked_flows(flows_dir))
     loaded = {
         name: load_flow(name, flows_dir) if name in tracked else None

@@ -58,6 +58,7 @@ from isekai.foundation.run import (
     digest_of,
     group_of,
     latest_artifact,
+    photo_of,
 )
 from isekai.interface.render import record_running
 from isekai.interface.wiring import trackable
@@ -614,7 +615,8 @@ def stage(run: Run, loaded: Flow, *, newest: bool = True) -> Cell:
         if (sheet := latest_artifact(run.directory(flow, SHEETS))) is not None:
             _check(sheet, SHEET_FILE)
             return Cell("sheet", status=status)
-        if (tags := latest_artifact(run.directory(flow, WD14))) is not None:
+        # The photograph's list: a photograph tagged once is tagged in every flow (D17).
+        if (tags := latest_artifact(photo_of(run, WD14))) is not None:
             _check(tags, WD14_FILE)
             return Cell("tagged")
     except Refusal as refused:

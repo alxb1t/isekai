@@ -70,6 +70,8 @@ from isekai.foundation.flow import (  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
     APPROVED,
     CAPTIONS,
+    DESCRIPTION,
+    PHOTO,
     REVIEW,
     TAGS,
     WD14,
@@ -90,7 +92,6 @@ from isekai.interface.ui.app import (  # noqa: E402
 )
 from isekai.interface.ui.jobs import Jobs  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
-from isekai.pipeline import sheet as sheet_stage  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.generate import image_of, prepare, prompt_artifact  # noqa: E402
 from isekai.pipeline.review import (  # noqa: E402
@@ -183,7 +184,7 @@ def _source(run: Run) -> None:
 
 def _clear_wd14(run: Run) -> None:
     """Remove the tag list `stages.sheet` wrote, leaving the sheet in place."""
-    for path in run.directory(FLOW, WD14).iterdir():
+    for path in run.directory(PHOTO, WD14).iterdir():
         path.unlink()
 
 
@@ -395,7 +396,7 @@ def test_a_missing_caption_is_served_with_the_command_that_writes_it(
     assert beside["caption"] == "Dark brown hair, brown eyes."
     assert beside["caption_command"] is None
 
-    for path in made.directory(FLOW, CAPTIONS).iterdir():
+    for path in made.directory(PHOTO, CAPTIONS).iterdir():
         path.unlink()
     response = _client(wired, made, tmp_path).get(_at(made))
 
@@ -404,9 +405,9 @@ def test_a_missing_caption_is_served_with_the_command_that_writes_it(
     assert body["caption"] is None
     command = body["caption_command"]
     # The fixture's runs root is not the default, so the command works when
-    # pasted only if it names that root.
+    # pasted only if it names that root; the photograph's verb names no flow.
     parsed = build_parser().parse_args(shlex.split(command)[3:])
-    assert (parsed.verb, parsed.flows, parsed.photos) == ("caption", [FLOW], [made.id])
+    assert (parsed.verb, parsed.flows, parsed.photos) == ("caption", None, [made.id])
     assert parsed.runs == made.path.parent
 
 
@@ -1155,10 +1156,9 @@ def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
     # disk; this test is about what the *real* local tagger writes, so it replaces
     # it rather than writing a second version beside it.
     _clear_wd14(made)
-    tag_wd14(made, FLOW, fake_tagger)
+    tag_wd14(made, fake_tagger)
     tag_hosted(
         made,
-        FLOW,
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
     )
 
@@ -1185,16 +1185,15 @@ def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
     `ui:source:both-tag-lists-are-shown-raw-and-read-only`'s first `THEN`.
     """
     _clear_wd14(made)
-    tag_wd14(made, FLOW, fake_tagger)
+    tag_wd14(made, fake_tagger)
     tag_hosted(
         made,
-        FLOW,
         FakeTagger(tags=("brown hair", "blue eyes", "brown hair")),
     )
 
     # The two tag artifacts, and only those: opening the sheet takes a draft,
     # which is stage ③ starting normally rather than the panel writing anything.
-    before = {stage: snapshot(made.directory(FLOW, stage)) for stage in (WD14, TAGS)}
+    before = {stage: snapshot(made.directory(PHOTO, stage)) for stage in (WD14, TAGS)}
 
     body = _client(wired, made, tmp_path).get(_at(made)).json()
 
@@ -1207,7 +1206,7 @@ def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
     # this one is bound to the key that says *both* artifacts are untouched, so
     # it asserts that clause rather than borrowing it.
     assert {
-        stage: snapshot(made.directory(FLOW, stage)) for stage in (WD14, TAGS)
+        stage: snapshot(made.directory(PHOTO, stage)) for stage in (WD14, TAGS)
     } == before
 
 
@@ -1220,7 +1219,6 @@ def test_a_tag_withheld_from_the_page_is_still_in_the_artifact(
     # the router is the whole reason the artifact exists.
     written = tag_hosted(
         made,
-        FLOW,
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
     )
 
@@ -1243,7 +1241,6 @@ def test_membership_is_decided_server_side_and_the_count_travels_with_it(
     # has no membership form, so asking per tag would be one round trip each.
     tag_hosted(
         made,
-        FLOW,
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
     )
 
@@ -1287,7 +1284,7 @@ def test_one_list_present_and_the_other_absent_is_also_silent(
     # The state a run is in when the hosted tagger has not been reached: a WD14
     # list and no hosted one. A missing hosted list is an absent aid, never a
     # blocked review.
-    tag_wd14(made, FLOW, fake_tagger)
+    tag_wd14(made, fake_tagger)
 
     body = _client(wired, made, tmp_path).get(_at(made)).json()
 
@@ -1407,10 +1404,15 @@ def test_approve_refuses_an_excluded_tag_the_draft_saved(
 
 
 def _latest(stage: str, label: str | None = None) -> Callable[[TestClient, Run], Path]:
-    """Return a finder for the highest `label` artifact in `stage`."""
+    """Return a finder for the highest `label` artifact in `stage`.
+
+    The description's stages are the photograph's, under `photo/`; every other is
+    the flow's.
+    """
+    owner = PHOTO if stage in DESCRIPTION else FLOW
 
     def find(_client: TestClient, run: Run) -> Path:
-        path = latest_artifact(run.directory(FLOW, stage), label)
+        path = latest_artifact(run.directory(owner, stage), label)
         assert path is not None
         return path
 
@@ -1430,7 +1432,7 @@ def _approved(client: TestClient, run: Run) -> Path:
 
 
 def _hosted(client: TestClient, run: Run) -> Path:
-    tag_hosted(run, FLOW, FakeTagger(tags=("brown hair",)))
+    tag_hosted(run, FakeTagger(tags=("brown hair",)))
     return _latest(TAGS)(client, run)
 
 
@@ -1504,12 +1506,13 @@ def test_a_damaged_file_is_refused_by_name(
         assert "python -m isekai" not in refusal
     else:
         # Parsed, not matched: the fixture's runs root is not the default, so
-        # the command works when pasted only if it names that root.
+        # the command works when pasted only if it names that root. The
+        # photograph's verbs name no flow.
         command = refusal.split("`python -m isekai ")[1].split("`")[0]
         parsed = build_parser().parse_args(shlex.split(command))
         assert (parsed.verb, parsed.flows, parsed.new_version, parsed.photos) == (
             verb,
-            [FLOW],
+            None if verb in ("caption", "tag") else [FLOW],
             True,
             [made.id],
         )
@@ -1526,9 +1529,7 @@ def test_a_damage_remedy_under_the_default_root_names_no_runs_flag(
 
     refusal = client.get(_at(made)).json()["refusal"]
 
-    assert f"`python -m isekai caption --flow {FLOW} --new-version {made.id}`" in (
-        refusal
-    )
+    assert f"`python -m isekai caption --new-version {made.id}`" in refusal
 
 
 @pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
@@ -2083,9 +2084,9 @@ def test_a_draft_from_a_refused_source_writes_nothing(
     assert snapshot(made.path) == before
     assert not made.directory(CONJURE).exists()
 
-    # So is a damaged tag list of the source's, which would fill the target's sheet.
+    # So is a damaged tag list of the photograph's, which would fill the target's sheet.
     approved.write_bytes(intact)
-    (made.directory(FLOW, WD14) / "001.json").write_text("{}")
+    (made.directory(PHOTO, WD14) / "001.json").write_text("{}")
     before = snapshot(made.path)
 
     untagged = client.post(DRAFT_ROUTE, json=_into_conjure(made))
@@ -2185,8 +2186,8 @@ def test_review_names_an_approved_drafted_drafts_source_and_its_sheets_fields(
     assert "001.approved.json" not in refused.json()["refusal"]
 
 
-@pytest.mark.spec("ui:source:a-borrowed-sheet-shows-its-sources-caption")
-def test_a_sheet_filled_from_another_flows_tags_shows_that_flows_caption(
+@pytest.mark.spec("ui:source:every-flow-shows-the-photographs-caption")
+def test_every_flow_shows_the_photographs_caption(
     wired: Wiring,
     made: Run,
     tmp_path: Path,
@@ -2197,64 +2198,33 @@ def test_a_sheet_filled_from_another_flows_tags_shows_that_flows_caption(
     client = _client(wired, made, tmp_path, drafted=False)
     client.post(DRAFT_ROUTE, json=_into_conjure(made))
 
-    body = client.get(route).json()
+    bodies = [client.get(at).json() for at in (_at(made), route)]
 
-    assert body["caption"] == "Dark brown hair, brown eyes."
-    assert body["caption_from"] == FLOW
-    assert body["caption_command"] is None
-
-    # A tag list of conjure's own leaves its sheet's source the caption's.
-    tag_wd14(made, CONJURE, fake_tagger)
-    tagged = client.get(route).json()
-
-    assert tagged["caption"] == "Dark brown hair, brown eyes."
-    assert tagged["caption_from"] == FLOW
+    for body in bodies:
+        assert body["caption"] == "Dark brown hair, brown eyes."
+        assert body["caption_command"] is None
+        assert "caption_from" not in body
+    assert not made.directory(CONJURE, CAPTIONS).exists()
 
 
-def _two_hops(made: Run, vocabulary: Vocabulary) -> str:
-    """Fill conjure from summon's tags and flat from conjure's; return flat's route."""
-    for flow, source in ((CONJURE, FLOW), (FLAT, CONJURE)):
-        sheet_stage.sheet(
-            made,
-            flow,
-            load_flow(flow).schema,
-            vocabulary,
-            FIELD_MAP,
-            tagged=True,
-            flow_digest=manifest_digest(flow),
-            tags_from=source,
-        )
-    review(made, FLAT)
-    return f"/api/c/{COLLECTION}/review/{made.digest}/{FLAT}"
-
-
-@pytest.mark.spec("ui:source:a-two-hop-sheet-shows-the-taggers-caption")
-def test_a_sheet_two_flows_from_its_tags_shows_the_taggers_caption(
-    wired: Wiring, made: Run, tmp_path: Path, vocabulary: Vocabulary
+@pytest.mark.spec("ui:source:every-flow-shows-the-photographs-lists")
+def test_every_flow_shows_the_photographs_lists(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
 ) -> None:
-    route = _two_hops(made, vocabulary)
-    client = _client(wired, made, tmp_path, drafted=False, offered=(*OFFERED, FLAT))
+    tag_hosted(made, FakeTagger(tags=("brown hair", "fashion photography")))
+    route = _drafting(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    client.post(DRAFT_ROUTE, json=_into_conjure(made))
 
-    body = client.get(route).json()
+    own, drafted = (client.get(at).json() for at in (_at(made), route))
 
-    assert body["caption"] == "Dark brown hair, brown eyes."
-    assert body["caption_from"] == FLOW
-    assert body["caption_command"] is None
-
-
-@pytest.mark.spec("ui:source:a-borrowed-sheet-shows-the-taggers-lists")
-def test_a_borrowed_sheet_shows_the_taggers_lists(
-    wired: Wiring, made: Run, tmp_path: Path, vocabulary: Vocabulary
-) -> None:
-    tag_hosted(made, FLOW, FakeTagger(tags=("brown hair", "fashion photography")))
-    route = _two_hops(made, vocabulary)
-    client = _client(wired, made, tmp_path, offered=(*OFFERED, FLAT))
-    own = client.get(_at(made)).json()
-
-    body = client.get(route).json()
-
-    assert own["wd14"] and body["wd14"] == own["wd14"]
-    assert [one["tag"] for one in body["tags"]] == ["brown hair"]
+    assert own["wd14"] and drafted["wd14"] == own["wd14"]
+    assert [one["tag"] for one in drafted["tags"]] == ["brown hair"]
+    assert drafted["tags"] == own["tags"]
 
 
 @pytest.mark.spec("ui:draft-from:an-unedited-waiting-draft-is-replaced")
@@ -2300,7 +2270,7 @@ def test_a_selection_from_two_runs_drafts_each_into_the_flow_chosen(
     client = _client(wired, made, tmp_path, drafted=False)
 
     # A later source's damaged tags refuse the whole selection before any fill.
-    tags = other.directory(FLOW, WD14) / "001.json"
+    tags = other.directory(PHOTO, WD14) / "001.json"
     intact = tags.read_bytes()
     tags.write_text("{}")
     before = {run.id: snapshot(run.path) for run in (made, other)}

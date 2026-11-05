@@ -31,7 +31,7 @@ from isekai.foundation.artifacts import APPROVED_FILE, DRAFT_FILE, SHEET_FILE, r
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Schema, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import Run, open_run
+from isekai.foundation.run import PHOTO, Run, open_run
 from isekai.interface import wiring
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
@@ -258,7 +258,7 @@ def test_parsing_a_verb_succeeds() -> None:
 
 # --- the flow selection --------------------------------------------------------
 
-STAGE_VERBS = ("caption", "tag", "sheet", "review", "approve", "generate")
+STAGE_VERBS = ("sheet", "review", "approve", "generate")
 
 
 @pytest.mark.spec("cli:flow-selection:a-stage-verb-requires-a-flow")
@@ -324,6 +324,35 @@ def test_every_stage_verb_accepts_the_flag(verb: str) -> None:
     parsed = build_parser().parse_args([verb, "--flow", "summon-anime-wai"])
 
     assert parsed.flows == ["summon-anime-wai"]
+
+
+@pytest.mark.spec("cli:flow-selection:the-photographs-verbs-refuse-a-flow")
+@pytest.mark.parametrize(
+    ("verb", "writes"), [("caption", "prose"), ("tag", "tags")], ids=["caption", "tag"]
+)
+def test_the_photographs_verbs_refuse_a_flow(
+    tmp_path: Path, verb: str, writes: str
+) -> None:
+    wired = _wiring(tmp_path)
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    runs = tmp_path / "elsewhere"
+    parsed = build_parser().parse_args(
+        [verb, "--flow", "summon-anime-wai", "--runs", str(runs), "--new-version"]
+        + ["--progress", "json", str(photo)]
+    )
+
+    status = dispatch(parsed, wired)
+
+    assert status == 1
+    assert isinstance(wired.err, io.StringIO)
+    assert wired.err.getvalue() == (
+        f"refused: `{verb}` takes no --flow: it writes the photograph's {writes}, "
+        f"which every flow reads; run `python -m isekai {verb} --runs {runs} "
+        f"--new-version {photo}`\n"
+    )
+    assert not (tmp_path / "runs").exists()
+    assert not runs.exists()
 
 
 @pytest.mark.spec("cli:flow-selection:every-stage-verb-accepts-it")
@@ -490,9 +519,7 @@ def test_a_wiring_composed_without_a_reader_refuses_by_name(tmp_path: Path) -> N
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
 
-    status = dispatch(
-        _cli_args("caption", str(photo), tmp_path, flow=["summon-anime-wai"]), wired
-    )
+    status = dispatch(_cli_args("caption", str(photo), tmp_path, flow=[]), wired)
 
     assert status == 1
     assert "composed without a reader" in err.getvalue()
@@ -580,10 +607,37 @@ def test_sheet_prints_a_superseded_list_as_a_warning(
     assert isinstance(wired.out, io.StringIO) and isinstance(wired.err, io.StringIO)
     assert wired.err.getvalue() == (
         f"warning: {run.id}/summon-anime-wai: sheet 001 was filled from "
-        "wd14/001.json, and wd14/002.json is newer; run `python -m isekai sheet "
-        f"--flow summon-anime-wai{runs_flag(run)} --new-version {run.id}`\n"
+        "photo/wd14/001.json, and photo/wd14/002.json is newer; run "
+        f"`python -m isekai sheet --flow summon-anime-wai{runs_flag(run)} "
+        f"--new-version {run.id}`\n"
     )
     assert f"{run.id}: sheet is already complete" in wired.out.getvalue()
+
+
+@pytest.mark.spec("cli:progress:a-photographs-line-names-no-flow")
+def test_a_photographs_progress_line_names_no_flow(tmp_path: Path) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    lines: list[dict[str, object]] = []
+    for argv in (
+        ["tag", "--progress", "json", str(photo)],
+        ["caption", "--progress", "json", str(photo)],
+        ["sheet", "--flow", "summon-anime-wai", "--progress", "json", str(photo)],
+    ):
+        wired = _wiring(tmp_path)
+        assert dispatch(build_parser().parse_args(argv), wired) == 0
+        assert isinstance(wired.out, io.StringIO)
+        lines += [json.loads(line) for line in wired.out.getvalue().splitlines()]
+
+    run = open_run(photo, tmp_path / "runs")
+    assert lines == [
+        {"run": run.id, "stage": "tag", "state": "start"},
+        {"run": run.id, "stage": "tag", "state": "done"},
+        {"run": run.id, "stage": "caption", "state": "start"},
+        {"run": run.id, "stage": "caption", "state": "done"},
+        {"run": run.id, "flow": "summon-anime-wai", "stage": "sheet", "state": "start"},
+        {"run": run.id, "flow": "summon-anime-wai", "stage": "sheet", "state": "done"},
+    ]
 
 
 @pytest.mark.spec("review:copy-from:the-source-is-another-tracked-flow")
@@ -793,7 +847,7 @@ def test_draft_assigns_a_target_with_no_sheet_and_fills_it_from_the_source(
     review(other, "summon-anime-wai")
     approve(other, "summon-anime-wai", schema, vocabulary)
     batch = [*argv, str(rendered_image(other, 1, 8))]
-    tags = other.directory("summon-anime-wai", "wd14") / "001.json"
+    tags = other.directory(PHOTO, "wd14") / "001.json"
     intact = tags.read_bytes()
     tags.write_text("{}")
     before = {one.id: snapshot(one.path) for one in (run, other)}

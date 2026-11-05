@@ -35,8 +35,8 @@ def draft_across(
     """Return `target`'s draft from `source`'s approval `version`.
 
     `seed` names the image of that approval the draft records.
-    A target with no sheet has its sheet filled first from the tag list `source`
-    leads to (`tagger_of`), and that write is what assigns it. The approval is
+    A target with no sheet has its sheet filled first from the photograph's tag
+    list, recording `source`, and that write is what assigns it. The approval is
     checked whole, and the sheet stage checks the tag list before its write, so a
     refusal writes nothing.
     The vocabulary and the table are read only for that fill.

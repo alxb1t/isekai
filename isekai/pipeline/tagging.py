@@ -59,6 +59,7 @@ from isekai.foundation.run import (
     constant_record,
     latest,
     next_version,
+    photo_of,
     record_failure,
     refusal_for,
 )
@@ -246,14 +247,14 @@ class OllamaTagger:
 
 def tag_wd14(
     run: Run,
-    flow: str,
     open_tagger: Callable[[], wd14.LocalTagger],
     *,
     new_version: bool = False,
 ) -> Path | None:
     """Score `run`'s photograph against the local tagger, or do nothing.
 
-    The guard is `caption()`'s, against this stage's own directory: a stage that
+    The list is the photograph's, written under `photo/wd14/` once for every flow
+    (D17). The guard is `caption()`'s, against this stage's own directory: a stage that
     has already written is a stage that does nothing the second time, with no
     special mode and no state machine.
 
@@ -280,7 +281,7 @@ def tag_wd14(
     Returns the artifact's path when one is written, and None when the stage was
     already complete.
     """
-    directory = run.directory(flow, WD14)
+    directory = photo_of(run, WD14)
     if latest(directory) is not None and not new_version:
         return None
 
@@ -308,7 +309,7 @@ def tag_wd14(
             record,
             WD14,
             VERB,
-            flow,
+            None,
             WD14,
         ) from failed
 
@@ -330,14 +331,14 @@ def tag_wd14(
 
 def tag_hosted(
     run: Run,
-    flow: str,
     tagger: Tagger,
     *,
     new_version: bool = False,
 ) -> Path | None:
     """Ask the hosted tagger for `run`'s photograph, or do nothing.
 
-    The guard is `caption()`'s again, against this stage's **own** directory. The
+    The list is the photograph's, written under `photo/tags/` once for every flow
+    (D17). The guard is `caption()`'s again, against this stage's **own** directory. The
     two lists resume independently, so a complete WD14 list beside a failed
     hosted one is an ordinary, resumable state rather than a stuck one.
 
@@ -350,7 +351,7 @@ def tag_hosted(
     constant and a record that invented a path would assert a location that does
     not exist.
     """
-    directory = run.directory(flow, TAGS)
+    directory = photo_of(run, TAGS)
     if latest(directory) is not None and not new_version:
         return None
 
@@ -374,7 +375,7 @@ def tag_hosted(
             record,
             TAGS,
             VERB,
-            flow,
+            None,
             TAGS,
         ) from failed
 

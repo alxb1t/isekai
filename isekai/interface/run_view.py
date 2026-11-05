@@ -27,14 +27,13 @@ from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     ARTIFACT,
-    CAPTIONS,
+    DESCRIPTION,
     ERROR,
     OUTPUTS,
+    PHOTO,
     PROMPTS,
     REVIEW,
     SHEETS,
-    TAGS,
-    WD14,
     Kind,
     Run,
     failure_named,
@@ -46,17 +45,17 @@ from isekai.pipeline.generate import (
     render_groups,
     rendered_seeds,
 )
-from isekai.pipeline.sheet import tagged_from
 
-# The stages in the order a run passes through them. Every one of them is a
-# flow's own -- the run is input above and flow below -- so there is nothing for
-# a per-flow-ness column to say. Declared once here so the listing cannot drift
-# from the layout it describes.
+# The stages a flow holds, in the order a run passes through them. The
+# photograph's description, `DESCRIPTION`, sits in `photo/` above the flows and is
+# listed once, first; every other stage is a flow's own (D17). Declared once here
+# so the listing cannot drift from the layout it describes.
 #
 # **The tuple is explicit, so a new stage directory reads as `not read` until it
 # is named here.** Shipping a stage `show` cannot list is shipping a verb that
-# says less than a run holds.
-STAGES: tuple[str, ...] = (CAPTIONS, WD14, TAGS, SHEETS, REVIEW, PROMPTS)
+# says less than a run holds. A flow's own `captions/`, `wd14/` or `tags/`, which
+# `isekai migrate` leaves, is named `not read` for that reason.
+STAGES: tuple[str, ...] = (SHEETS, REVIEW, PROMPTS)
 
 
 @dataclass(frozen=True, order=True)
@@ -128,13 +127,8 @@ def _producer_of(path: Path) -> str:
     if origin is not None:
         if not isinstance(origin, int):
             return "unreadable"
-        # A sheet filled from another flow's tag list counts in the `wd14/` of the
-        # flow `tags_from` leads to: `listed_from` where it leads on, else itself.
-        listed = producer.get("listed_from")
-        borrowed = listed if isinstance(listed, str) else tagged_from(body)
-        parts.append(
-            f"from {borrowed}/{origin:03d}" if borrowed else f"from {origin:03d}"
-        )
+        # Every sheet counts in the photograph's `photo/wd14/`.
+        parts.append(f"from {origin:03d}")
     if producer.get("edited") is not None:
         parts.append("edited" if producer["edited"] else "unedited")
     return " · ".join(parts)
@@ -176,8 +170,13 @@ def _listing(stage: str, flow: str, directory: Path) -> Listing:
 
 
 def listings(run: Run) -> list[Listing]:
-    """Return one listing per stage per flow, in flow order then stage order."""
+    """Return `photo/`'s listings, then one per stage per flow, in flow order.
+
+    `photo/` is read as it stands, migrated or not: `show` reads a run in any state.
+    """
     return [
+        _listing(stage, PHOTO, run.directory(PHOTO, stage)) for stage in DESCRIPTION
+    ] + [
         _listing(stage, flow, run.directory(flow, stage))
         for flow in run.flows
         for stage in STAGES
@@ -239,14 +238,26 @@ def _unread_in(directory: Path, below: str, read: Callable[[Path], bool]) -> lis
 
 
 def unread(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
-    """Return every name below a flow that `show` does not read, sorted.
+    """Return every name below `photo/` or a flow that `show` does not read, sorted.
 
-    A flow reads its stage directories and `outputs`; a stage, its artifacts and
-    failure records; `outputs`, its numbered groups; a group, its renders, their
-    sidecars and its failure records. A directory ends in `/`, never descended.
-    e.g. `["summon-anime-wai/outputs/001/notes.txt", "summon-anime-wai/stray/"]`
+    `photo/` reads its description directories; a flow reads its stage directories
+    and `outputs`, so a flow's own `captions/`, `wd14/` or `tags/` is not read; a
+    stage, its artifacts and failure records; `outputs`, its numbered groups; a
+    group, its renders, their sidecars and its failure records. A directory ends in
+    `/`, never descended.
+    e.g. `["summon-anime-wai/outputs/001/notes.txt", "summon-anime-wai/wd14/"]`
     """
-    names: list[str] = []
+    names = _unread_in(
+        run.directory(PHOTO),
+        PHOTO,
+        lambda path: path.is_dir() and path.name in DESCRIPTION,
+    )
+    for stage in DESCRIPTION:
+        names += _unread_in(
+            run.directory(PHOTO, stage),
+            f"{PHOTO}/{stage}",
+            lambda path: bool(ARTIFACT.match(path.name) or ERROR.match(path.name)),
+        )
     for flow in run.flows:
         suffix = load_flow(flow, flows_dir).output_suffix
         names += _unread_in(

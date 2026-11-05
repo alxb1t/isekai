@@ -451,7 +451,9 @@ def test_sigint_ends_streams_without_cancellation_output(
         await asyncio.sleep(0)
 
     with TestClient(app, base_url=f"http://{HOST}:7717"):
-        jobs.prepare("b", folder, [Step("summon-anime-wai", "tag", (run.id,))], dict)
+        jobs.prepare(
+            "b", folder, [Step(None, "tag", (run.id,))], lambda line: [dict(line)]
+        )
         assert jobs.running("prepare")
         opened = [
             events.stream(broadcast, dict, heartbeat=3600) for _ in range(streams)

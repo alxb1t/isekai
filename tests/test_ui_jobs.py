@@ -34,7 +34,14 @@ from isekai.interface.render import LOST_EXIT  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
 from isekai.interface.ui import app as app_module  # noqa: E402
 from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
-from isekai.interface.ui.jobs import Jobs, Step, render_command, settle_s  # noqa: E402
+from isekai.interface.ui.jobs import (  # noqa: E402
+    Jobs,
+    Step,
+    isekai_command,
+    plan,
+    render_command,
+    settle_s,
+)
 from isekai.pipeline.generate import prepare  # noqa: E402
 from isekai.pipeline.review import approve, review  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
@@ -72,17 +79,22 @@ class _Script:
         self.asked: list[str] = []
 
     def __call__(
-        self, verb: str, flow: str, runs: Path, ids: Sequence[str]
+        self, verb: str, flow: str | None, runs: Path, ids: Sequence[str]
     ) -> list[str]:
         self.asked.append(verb)
         return [sys.executable, "-c", self.scripts.get(verb, "pass"), *ids]
 
 
+def _as_is(line: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return `line` as the one cell event it makes, its stage as the line says."""
+    return [dict(line)]
+
+
 def _line(state: str) -> str:
-    """Return a script that prints a progress line for the run in `argv[1]`."""
+    """Return a script printing `tag`'s progress line, naming no flow, for `argv[1]`."""
     return (
-        "import json, sys; print(json.dumps({'run': sys.argv[1], 'flow': "
-        f"'{FLOW}', 'stage': 'tag', 'state': '{state}'}}), flush=True)"
+        "import json, sys; print(json.dumps({'run': sys.argv[1], "
+        f"'stage': 'tag', 'state': '{state}'}}), flush=True)"
     )
 
 
@@ -97,7 +109,12 @@ def _until(found: "queue.Queue[events.Event]", kind: str) -> events.Event:
 
 
 def _steps(run: Run) -> list[Step]:
-    return [Step(FLOW, verb, (run.id,)) for verb in ("tag", "caption", "sheet")]
+    """Return Prepare's steps for `run` in `FLOW`: the photograph's, then the sheet."""
+    return [
+        Step(None, "tag", (run.id,)),
+        Step(None, "caption", (run.id,)),
+        Step(FLOW, "sheet", (run.id,)),
+    ]
 
 
 SLEEP = "import time; time.sleep(30)"
@@ -141,12 +158,12 @@ def test_a_second_job_of_a_kind_is_refused_naming_the_one_that_runs(
         volume=volume,
         render=_sleeping_render,
     )
-    jobs.prepare("b", folder, _steps(run), lambda line: None)
+    jobs.prepare("b", folder, _steps(run), lambda line: [])
     jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
 
     try:
         with pytest.raises(Refusal, match="a job is running: Prepare on b"):
-            jobs.prepare("other", folder, _steps(run), lambda line: None)
+            jobs.prepare("other", folder, _steps(run), lambda line: [])
         with pytest.raises(Refusal, match="a job is running: Render on b"):
             jobs.render({"other": folder}, limit=1500, total=1, keep_open=False)
     finally:
@@ -166,7 +183,7 @@ def test_a_render_runs_beside_a_prepare_and_its_stop_leaves_the_prepare(
         volume=volume,
         render=_sleeping_render,
     )
-    jobs.prepare("b", folder, _steps(run), lambda line: None)
+    jobs.prepare("b", folder, _steps(run), lambda line: [])
 
     try:
         jobs.render({"other": folder}, limit=1500, total=1, keep_open=False)
@@ -204,7 +221,7 @@ def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
         ],
         err=io.StringIO(),
     )
-    jobs.prepare("b", folder, _steps(run), dict)
+    jobs.prepare("b", folder, _steps(run), _as_is)
     _until(found, "cell")
     jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
     _until_rendering(record)
@@ -248,7 +265,7 @@ def test_each_line_a_job_writes_to_the_collections_log_names_its_job(
 
     other = folder.parent / "c"
     other.mkdir()
-    jobs.prepare("b", folder, _steps(run), lambda line: None)
+    jobs.prepare("b", folder, _steps(run), lambda line: [])
     jobs.render({"b": folder, "c": other}, limit=1500, total=1, keep_open=False)
     jobs.wait("prepare", WAIT)
     jobs.wait("render", WAIT)
@@ -282,7 +299,7 @@ def test_prepare_is_refused_with_the_readers_message_and_starts_nothing(
     jobs = Jobs(events.Broadcast(), ollama.probe, command=script)
 
     with pytest.raises(Refusal) as refused:
-        jobs.prepare("b", folder, _steps(run), lambda line: None)
+        jobs.prepare("b", folder, _steps(run), lambda line: [])
 
     assert str(refused.value) == ollama.NOT_LISTENING
     assert script.asked == []
@@ -300,8 +317,8 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
     found = broadcast.subscribe()
     script = _Script({"tag": _line("start") + "; import time; time.sleep(30)"})
     jobs = Jobs(broadcast, lambda: None, command=script, now=lambda: STARTED)
-    steps = [Step(FLOW, verb, (run.id, done.id)) for verb in ("tag", "caption")]
-    jobs.prepare("b", folder, steps, lambda line: dict(line))
+    steps = [Step(None, verb, (run.id, done.id)) for verb in ("tag", "caption")]
+    jobs.prepare("b", folder, steps, lambda line: [dict(line)])
     _until(found, "cell")
 
     jobs.stop("prepare")
@@ -312,7 +329,7 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
         "kind": "prepare",
         "collection": "b",
         "state": "stopped",
-        "flow": FLOW,
+        "flow": None,
         "stage": "tag",
         "message": None,
         "progress": {
@@ -334,7 +351,7 @@ def test_a_stage_that_fails_before_it_reports_ends_the_job_naming_the_log(
     script = _Script({"tag": "import sys; sys.exit('no module named onnxruntime')"})
     jobs = Jobs(events.Broadcast(), lambda: None, command=script)
 
-    jobs.prepare("b", folder, _steps(run), lambda line: None)
+    jobs.prepare("b", folder, _steps(run), lambda line: [])
     jobs.wait("prepare", WAIT)
 
     assert script.asked == ["tag"]
@@ -420,7 +437,7 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
     next(stream)
     jobs = Jobs(broadcast, lambda: None, command=_Script({"tag": copy}))
 
-    jobs.prepare("b", folder, [Step(FLOW, "tag", (run.id,))], cell)
+    jobs.prepare("b", folder, [Step(None, "tag", (run.id,))], cell)
 
     frames = []
     for frame in stream:
@@ -436,12 +453,15 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
 STARTED = "2026-10-22T10:00:00Z"
 
 
-def _reports(*lines: tuple[str, str, str, str, str]) -> str:
-    """Return a script printing a line per `(run, flow, stage, state, reached)`."""
+def _reports(*lines: tuple[str, str | None, str, str, str]) -> str:
+    """Return a script printing a line per `(run, flow, stage, state, reached)`.
+
+    A `None` flow is a photograph's stage, and its line names no flow.
+    """
     reports = [
         {
             "run": run_id,
-            "flow": flow,
+            **({} if flow is None else {"flow": flow}),
             "stage": stage,
             "state": state,
             "cell": {"stage": reached},
@@ -459,15 +479,16 @@ def test_prepare_totals_count_each_stages_cells_once(tmp_path: Path) -> None:
     other = OFFERED[1]
     scripts = {
         "tag": _reports(
-            (run.id, FLOW, "tag", "done", "tagged"),
-            (refused.id, FLOW, "tag", "refused", "assigned"),
-            (run.id, FLOW, "tag", "done", "tagged"),
+            (run.id, None, "tag", "done", "tagged"),
+            (refused.id, None, "tag", "refused", "assigned"),
+            (run.id, None, "tag", "done", "tagged"),
         ),
         "caption": _reports(
-            (run.id, FLOW, "caption", "done", "tagged"),
-            (refused.id, FLOW, "caption", "refused", "assigned"),
+            (run.id, None, "caption", "done", "tagged"),
+            (refused.id, None, "caption", "refused", "assigned"),
         ),
         "sheet": _reports(
+            # A tag line naming a flow is no photograph's, so it counts in none.
             (run.id, FLOW, "tag", "done", "tagged"),
             (refused.id, FLOW, "sheet", "refused", "sheet"),
             ("unknown", FLOW, "sheet", "done", "sheet"),
@@ -485,11 +506,11 @@ def test_prepare_totals_count_each_stages_cells_once(tmp_path: Path) -> None:
         "b",
         folder,
         [
-            *(Step(FLOW, verb, (run.id, refused.id)) for verb in ("tag", "caption")),
+            *(Step(None, verb, (run.id, refused.id)) for verb in ("tag", "caption")),
             Step(FLOW, "sheet", (run.id, refused.id)),
             Step(other, "sheet", (run.id,)),
         ],
-        dict,
+        _as_is,
     )
     jobs.wait("prepare", WAIT)
     slot = jobs.slot("prepare")
@@ -512,6 +533,23 @@ def test_prepare_totals_count_each_stages_cells_once(tmp_path: Path) -> None:
     copied = jobs.slot("prepare")
     assert copied is not None
     assert copied["progress"]["stages"][0]["done"] == 1
+
+
+@pytest.mark.spec("ui:prepare:a-photograph-is-described-once")
+def test_a_photograph_is_described_once(tmp_path: Path) -> None:
+    other = OFFERED[1]
+
+    steps = plan({FLOW: ["r1"], other: ["r1"]}, {FLOW: True, other: True})
+
+    lines = [
+        isekai_command(step.verb, step.flow, tmp_path, step.runs) for step in steps
+    ]
+    assert [step.verb for step in steps] == ["tag", "caption", "sheet", "sheet"]
+    for line in lines[:2]:
+        assert "--flow" not in line and line.count("r1") == 1
+        assert build_parser().parse_args(line[3:]).flows is None
+    assert [line[line.index("--flow") + 1] for line in lines[2:]] == [FLOW, other]
+    assert [step.runs for step in steps[2:]] == [("r1",), ("r1",)]
 
 
 @pytest.mark.spec("ui:events:a-reconnect-keeps-prepare-progress")
@@ -583,7 +621,7 @@ def test_reconnect_keeps_prepare_progress(
     client = TestClient(app, base_url=f"http://{HOST}:{PORT}")
     try:
         initial = jobs.prepare(
-            "b", folder, [Step(FLOW, "sheet", (run.id, later.id))], dict
+            "b", folder, [Step(FLOW, "sheet", (run.id, later.id))], _as_is
         )
         assert initial["progress"]["started"] == STARTED
         monkeypatch.setattr(jobs, "_now", lambda: "2026-10-22T10:05:00Z")

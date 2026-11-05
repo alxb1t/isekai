@@ -5,7 +5,7 @@ creates a footgun where a human edits the prompt block and a rebuild silently
 overwrites it. **The fill itself is told nothing about flows** but whether a tag
 list is expected: it is handed the tag list, the schema, the vocabulary and the
 table, so the same code serves every flow without learning that flows exist, and
-the flow decides only which directory is read and written.
+the flow decides only which directory is written.
 
 **Nothing here is a model and nothing here is a seam.** A seam behind a Protocol
 would exist so that a model's malformed answer is permanent for any
@@ -52,12 +52,14 @@ from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     NEW_VERSION,
+    PHOTO,
     SHEETS,
     WD14,
     Run,
     artifact_name,
     check_budget,
     latest,
+    photo_of,
     record_failure,
     refusal_for,
     stage_command,
@@ -97,25 +99,20 @@ def sheet(
     new_version: bool = False,
     tags_from: str | None = None,
 ) -> tuple[Path | None, list[str]]:
-    """Route this flow's tag list into a sheet, under that flow, with its warnings.
+    """Route the photograph's tag list into a sheet, under this flow, with its warnings.
 
     `tagged` says whether the flow declares the tagger, and has no default
     because a default decides silently. Untagged, no list is read and every
     field is written empty for the person to fill (D31).
-    `flow_digest` is recorded and never read. `tags_from` names the flow to take
-    the tags from instead of this flow's own, and is recorded; the list read is
-    its own, else the one its sheets lead to (`tagger_of`), and no list found
-    gives every field empty.
+    `flow_digest` is recorded and never read. `tags_from` names the flow a draft
+    drew this first sheet from; it is recorded and never read for the fill.
 
-    **The fill is told nothing about flows beyond `tagged` and `tags_from`, and
-    reaches nothing at all.** It is handed a tag list, the schema, the vocabulary
-    and the table, so the same code serves every flow without learning that flows
-    exist; `flow` decides which directory is written, and the list read is the
-    one under this flow's own directory, or the one the flow the operator names
-    as `tags_from` leads to (`tagger_of`) -- a flow reads another's only when it
-    is named (D17).
+    **The fill is told nothing about flows beyond `tagged`, and reaches nothing
+    at all.** It is handed the photograph's tag list, `photo/wd14/`'s, the schema,
+    the vocabulary and the table, so the same code serves every flow without
+    learning that flows exist; `flow` decides which directory is written (D17).
 
-    **For a tagged flow with no source named, an absent tag list is a
+    **For a tagged flow, an absent tag list is a
     refusal.** A sheet with every field empty is legal and therefore silent, so
     writing one when the tagger never ran would hide the only thing the operator
     needs told. The rule that a missing tag artifact is an absent aid still holds
@@ -163,22 +160,15 @@ def prepare_sheet(
 ) -> Sheet:
     """Prepare the sheet's checked contents before writing it.
 
-    A named source's tag list is validated without writing, so a draft batch
-    can check every fill before its first sheet. An own-flow tag failure keeps
-    the sheet stage's permanent-failure record.
+    A draft's first sheet is filled as `sheet` fills one, with `tags_from`
+    recorded and never read for the fill. A damaged tag list keeps the sheet
+    stage's permanent-failure record, but not for a draft: a draft batch checks
+    every fill before its first sheet, and that check writes nothing.
     """
     directory = run.directory(flow, SHEETS)
-    borrowed = (
-        None
-        if tags_from is None
-        else _from_source(run, flow, tags_from, schema, vocabulary, field_map)
-    )
-    if borrowed is not None:
-        fields, made_by = borrowed
-    elif tags_from is not None or not tagged:
-        # No tagger was going to run, or the named flow holds no tag list, so an
-        # empty sheet hides nothing; and nothing here can fail, so no budget is
-        # checked.
+    if not tagged:
+        # No tagger was going to run, so an empty sheet hides nothing; and
+        # nothing here can fail, so no budget is checked.
         fields = route((), field_map, schema)
         made_by: SheetProducer = {
             "implementation": EMPTY,
@@ -189,7 +179,7 @@ def prepare_sheet(
         validate(fields, schema, vocabulary, excluded=field_map.excluded)
     else:
         fields, made_by = _from_tag_list(
-            run, flow, directory, version, schema, vocabulary, field_map
+            run, flow, directory, version, schema, vocabulary, field_map, tags_from
         )
     if tags_from is not None:
         made_by["tags_from"] = tags_from
@@ -210,11 +200,11 @@ def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
     """Return a warning when the kept sheet's tag list is below the flow's latest.
 
     A sheet it cannot read, or one with no list number, gives none: review
-    refuses an unreadable sheet by name. Nor does a sheet filled from another
-    flow's tags: it is built from that flow's approval, so neither flow's later
-    list is weighed against it.
+    refuses an unreadable sheet by name. Nor does a first sheet a draft wrote:
+    it is built from another flow's approval, so a later list is not weighed
+    against it.
     """
-    newest = latest(run.directory(flow, WD14))
+    newest = latest(photo_of(run, WD14))
     if newest is None:
         return []
     try:
@@ -228,9 +218,10 @@ def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
     # `bool` is an `int`, and a hand-edited `true` is not a list number.
     if not isinstance(source, int) or isinstance(source, bool) or source >= newest:
         return []
+    listed = f"{PHOTO}/{WD14}"
     return [
         f"{run.id}/{flow}: sheet {kept:03d} was filled from "
-        f"{WD14}/{artifact_name(source)}, and {WD14}/{artifact_name(newest)} "
+        f"{listed}/{artifact_name(source)}, and {listed}/{artifact_name(newest)} "
         f"is newer; run `{stage_command(run, STAGE, flow, options=NEW_VERSION)}`"
     ]
 
@@ -243,30 +234,38 @@ def _from_tag_list(
     schema: Schema,
     vocabulary: Vocabulary,
     field_map: FieldMap,
+    drafted_from: str | None,
 ) -> tuple[dict[str, list[str]], SheetProducer]:
-    """Return the checked fields routed from this flow's tag list, and who filled them.
+    """Return the checked fields routed from the photograph's tag list, and who.
 
     Refuses naming `tag` when the list is absent, and records nothing: running
     `tag` is the fix, and a record would bar the sheet that follows. The budget is
     checked next; a damaged list or a tag outside the vocabulary is then recorded
-    as permanent, since this stage fails the same way every time (D21).
+    as permanent, since this stage fails the same way every time (D21) -- save for
+    a draft's fill, `drafted_from` set, which is refused and recorded nowhere.
     """
-    listed_dir = run.directory(flow, WD14)
-    source = latest(listed_dir)
+    source = latest(photo_of(run, WD14))
     if source is None:
         raise Refusal(
             f"{run.id}: there is no tag list to fill a sheet for {flow} from; run "
-            f"`{stage_command(run, 'tag', flow)}` first, which writes {flow}/{WD14}/"
+            f"`{stage_command(run, 'tag')}` first, which writes {PHOTO}/{WD14}/"
         )
+
+    retag = stage_command(run, "tag", options=NEW_VERSION)
+    if drafted_from is not None:
+        # The image a draft starts from is the draft verb's, never this stage's.
+        remedy = f"run `{retag}`, then draft {flow} from the {drafted_from} image again"
+        fields, made_by = _route(run, source, schema, field_map, remedy)
+        validate(fields, schema, vocabulary, excluded=field_map.excluded, remedy=remedy)
+        return fields, made_by
 
     check_budget(STAGE, directory, version, run)
     # No sheet exists yet to edit, so every fix is a new tag list.
     remedy = (
-        f"run `{stage_command(run, 'tag', flow, options=NEW_VERSION)}`, "
-        f"then `{stage_command(run, STAGE, flow, options=NEW_VERSION)}`"
+        f"run `{retag}`, then `{stage_command(run, STAGE, flow, options=NEW_VERSION)}`"
     )
     try:
-        fields, made_by = _route(run, flow, source, schema, field_map, remedy)
+        fields, made_by = _route(run, source, schema, field_map, remedy)
         validate(fields, schema, vocabulary, excluded=field_map.excluded, remedy=remedy)
     except Refusal as failed:
         detail = str(failed)
@@ -279,70 +278,8 @@ def _from_tag_list(
     return fields, made_by
 
 
-def _from_source(
-    run: Run,
-    flow: str,
-    source_flow: str,
-    schema: Schema,
-    vocabulary: Vocabulary,
-    field_map: FieldMap,
-) -> tuple[dict[str, list[str]], SheetProducer] | None:
-    """Return the checked fields routed from the list `source_flow` leads to, and who.
-
-    None when no flow it leads to holds a list. A list `source_flow` does not
-    hold itself is recorded as `listed_from`, so the sheet names the file it
-    came from. A damaged list is refused and recorded nowhere: its fix is the
-    tagger's, and a record here would bar the retry.
-    """
-    tagger = tagger_of(run, source_flow)
-    source = None if tagger is None else latest(run.directory(tagger, WD14))
-    if tagger is None or source is None:
-        return None
-    retag = stage_command(run, "tag", tagger, options=NEW_VERSION)
-    # The image a draft starts from is the draft verb's, never this stage's.
-    remedy = f"run `{retag}`, then draft {flow} from the {source_flow} image again"
-    fields, made_by = _route(run, tagger, source, schema, field_map, remedy)
-    validate(fields, schema, vocabulary, excluded=field_map.excluded, remedy=remedy)
-    if tagger != source_flow:
-        made_by["listed_from"] = tagger
-    return fields, made_by
-
-
-def tagger_of(run: Run, flow: str) -> str | None:
-    """Return the flow holding the tag list `flow` leads to, or None.
-
-    `flow` itself when it holds one, else the flow its newest sheet's `tags_from`
-    leads to, sheet to sheet. An unreadable sheet, a sheet naming no source and a
-    flow seen twice end the walk at None.
-    """
-    seen: set[str] = set()
-    at: str | None = flow
-    while at is not None and at not in seen:
-        if latest(run.directory(at, WD14)) is not None:
-            return at
-        seen.add(at)
-        at = sheet_source(run, at)
-    return None
-
-
-def sheet_source(run: Run, flow: str) -> str | None:
-    """Return the flow `flow`'s newest sheet names as `tags_from`, or None.
-
-    A flow with no sheet, an unreadable sheet and a sheet naming no source give
-    None.
-    """
-    sheets = run.directory(flow, SHEETS)
-    newest = latest(sheets)
-    if newest is None:
-        return None
-    try:
-        return tagged_from(read(sheets / artifact_name(newest), SHEET_FILE))
-    except Refusal:
-        return None
-
-
 def tagged_from(body: Mapping[str, object]) -> str | None:
-    """Return the flow the operator named as a sheet's tag source, else None.
+    """Return the flow a draft drew a sheet from, recorded as `tags_from`, else None.
 
     e.g. producer `{…, "tags_from": "summon-anime-wai"}` -> "summon-anime-wai"
     """
@@ -353,17 +290,16 @@ def tagged_from(body: Mapping[str, object]) -> str | None:
 
 def _route(
     run: Run,
-    flow: str,
     source: int,
     schema: Schema,
     field_map: FieldMap,
     remedy: str,
 ) -> tuple[dict[str, list[str]], SheetProducer]:
-    """Return the fields routed from tag list `source`, and who filled them.
+    """Return the fields routed from the photograph's tag list `source`, and who.
 
     Refuses naming `remedy` when the list is damaged.
     """
-    listed_path = run.directory(flow, WD14) / artifact_name(source)
+    listed_path = photo_of(run, WD14) / artifact_name(source)
     listed = read(listed_path, WD14_FILE)
     for key, shape in (("tags", list), ("producer", dict)):
         require(listed_path, listed, key, shape, remedy)

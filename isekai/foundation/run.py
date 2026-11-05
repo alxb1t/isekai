@@ -131,6 +131,8 @@ WD14 = "wd14"
 TAGS = "tags"
 PHOTO = "photo"
 DESCRIPTION = (CAPTIONS, WD14, TAGS)
+# The verbs that write the description, and so name no flow.
+PHOTOGRAPH_VERBS = ("caption", "tag")
 SHEETS = "sheets"
 REVIEW = "review"
 PROMPTS = "prompts"
@@ -692,7 +694,7 @@ def check_budget(stage: str, directory: Path, version: int, run: Run) -> None:
     time, so retrying it spends for nothing. A stage at its transient budget
     refuses too, because without one every resume retries every failure forever
     and at the rendering stage that costs money on every pass.
-    e.g. `see summon-anime-wai/wd14/001.error.1.permanent.json`
+    e.g. `see photo/wd14/001.error.1.permanent.json`
     """
     recorded = attempts(directory, version)
     why = _spent(stage, recorded)
@@ -746,8 +748,8 @@ NEW_VERSION = ("--new-version",)
 def stage_command(run: Run, verb: str, *flows: str, options: Sequence[str] = ()) -> str:
     """Return the command that runs `verb` on `run` for `flows`, as it is pasted.
 
-    e.g. (run, "tag", "f", options=NEW_VERSION)
-         -> "python -m isekai tag --flow f --new-version r"
+    e.g. (run, "sheet", "f", options=NEW_VERSION)
+         -> "python -m isekai sheet --flow f --new-version r"
 
     The run's own root is named whenever it is not the default, or the pasted
     command would look under `.data/runs` for a run that lives elsewhere.
@@ -816,7 +818,7 @@ def refusal_for(
     record: Path,
     area: str,
     verb: str,
-    flow: str,
+    flow: str | None,
     budget: str,
 ) -> Refusal:
     """Build the refusal a stage raises after recording a failed attempt.
@@ -825,18 +827,18 @@ def refusal_for(
     and the command to run once what it names is fixed. Stated here beside
     `StageFailure` rather than twice, because the two stages differ only in nouns.
 
-    **`flow` is threaded in rather than patched at the call sites.** Every stage
-    verb requires `--flow`, so a command built without it is one argparse
-    refuses -- and copy-pasting the remedy a refusal states would get an operator
-    a usage error instead of the fix. One argument makes
-    that true of every caller at once, including the ones a later stage adds.
+    **`flow` is threaded in rather than patched at the call sites.** A stage on a
+    flow threads its flow in, since its verb names one with `--flow`; the
+    photograph's stages, `caption` and `tag`, pass `None`, since theirs refuse one
+    (D17). One
+    argument makes the pasted command right for every caller at once.
 
     **And the flow is passed once, not twice.** The record's location is
-    `<flow>/<area>/`, so taking a ready-made `where` beside `flow` would be the
-    same fact in two forms, with nothing but caller discipline holding them in
-    agreement -- a refusal naming one flow's record and another flow's remedy is
-    the exact class of defect this argument exists to close. `area` is the stage
-    directory alone; this joins them.
+    `<flow>/<area>/`, or `photo/<area>/` for `None`, so taking a ready-made
+    `where` beside `flow` would be the same fact in two forms, with nothing but
+    caller discipline holding them in agreement -- a refusal naming one flow's
+    record and another flow's remedy is the exact class of defect this argument
+    exists to close. `area` is the stage directory alone; this joins them.
 
     `budget` is the `BUDGETS` key. When the record refuses the next run -- it is
     permanent, or fills the budget -- the remedy deletes it first, since running
@@ -850,8 +852,9 @@ def refusal_for(
     # `record_failure` names every record `NNN.error.…`.
     version = int(record.name[:3])
     asked = NEW_VERSION if version > 1 else ()
-    command = f"`{stage_command(run, verb, flow, options=asked)}`"
-    where = f"{flow}/{area}/{record.name}"
+    flows = () if flow is None else (flow,)
+    command = f"`{stage_command(run, verb, *flows, options=asked)}`"
+    where = f"{PHOTO if flow is None else flow}/{area}/{record.name}"
     if exhausted(budget, record.parent, version):
         return Refusal(
             f"{run.id}: the {stage} failed ({kind}) -- {detail}; see {where}, fix "
