@@ -14,8 +14,8 @@ its new digest.
   focused row into view, so the first row's edge shows the head (0109 D1).
 - A copy refused for the target's schema now offers `review --new-version`, which writes a draft when the target
   already holds an approval (0109 D2).
-- Latte's and Frappé's `--color-accent` take their theme's accent ink, so the accent as text meets AA in every
-  Catppuccin theme; Latte's link rule goes, and the theme test checks the accent (0109 D3).
+- Latte's and Frappé's `--color-accent` take their theme's accent ink, so the resting accent as text meets AA in
+  every Catppuccin theme; Latte's link rule goes, and the theme test checks the accent (0109 D3).
 - The UI design spec's state table gains the deleted-render row, and D48's lead drops Latte's link exception, so each
   says what holds now (0109 D4).
 
