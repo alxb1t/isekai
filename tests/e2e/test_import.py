@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page, Route, expect
+from playwright.sync_api import FileChooser, Page, Route, expect
 
 from isekai.pipeline.importing import UI_CONFIG
 from tests.e2e.conftest import Served
@@ -210,10 +210,14 @@ def test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned(
     expect(page.get_by_role("button", name="Cancel")).to_be_disabled()
     expect(page.get_by_role("button", name="Remove first.jpg")).to_be_disabled()
     page.locator(".import__tile").first.focus()
+    chosen: list[FileChooser] = []
+    page.on("filechooser", chosen.append)
+    page.keyboard.press("Shift+A")
     page.keyboard.press("Backspace")
     expect(page.locator(".import__tile")).to_have_count(len(files))
     page.keyboard.press("Escape")
     expect(page.locator(".import")).to_be_visible()
+    assert not chosen
     commit.continue_()
 
     expect(page).to_have_url(served.hub_of("e2e-imported"))

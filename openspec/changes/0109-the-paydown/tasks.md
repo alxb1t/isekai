@@ -5,22 +5,22 @@ The browser steps first, then the remedy, the accent and the record, per [design
 
 ## Progress
 
-- [ ] 1 — The tests
+- [x] 1 — The tests
 - [ ] 2 — The remedy
 - [ ] 3 — The accent
 - [ ] 4 — The record
 
 ## 1 — The tests
 
-- [ ] 1.1 In `tests/e2e/test_import.py`'s `test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned`,
+- [x] 1.1 In `tests/e2e/test_import.py`'s `test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned`,
   per [D1](design.md#d1): after `page.locator(".import__tile").first.focus()`, add `chosen: list[FileChooser] = []`,
   `page.on("filechooser", chosen.append)` and `page.keyboard.press("Shift+A")`; before `commit.continue_()`, add
   `assert not chosen`. Import `FileChooser` from `playwright.sync_api`.
   Verify: `grep -n -e 'page.on("filechooser", chosen.append)' -e 'assert not chosen' tests/e2e/test_import.py` prints a line for each.
-- [ ] 1.2 In `tests/e2e/test_routes.py`, add `@pytest.mark.spec("ui:batch-folder:an-edge-row-shows-the-head")` to
+- [x] 1.2 In `tests/e2e/test_routes.py`, add `@pytest.mark.spec("ui:batch-folder:an-edge-row-shows-the-head")` to
   `test_a_reload_lands_on_the_same_hub_and_the_same_review`, per [D1](design.md#d1).
   Verify: `grep -n 'ui:batch-folder:an-edge-row-shows-the-head' tests/e2e/test_routes.py` prints a line.
-- [ ] 1.3 After that test's first `to_be_focused()`, with `rows = page.locator(".library__row[data-collection]")` and
+- [x] 1.3 After that test's first `to_be_focused()`, with `rows = page.locator(".library__row[data-collection]")` and
   `new = page.get_by_role("button", name="New collection")`: a `1280`×`300` viewport; `j` `rows.count() - 1` times,
   `rows.last` focused, `new` `not_to_be_in_viewport()`; `k` as often, `rows.first` focused, `new` `to_be_in_viewport()`;
   then a `1280`×`720` viewport, per [D1](design.md#d1).

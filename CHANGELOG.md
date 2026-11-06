@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- The browser tests hold two guards no test held: `⇧A` opens no file dialog while Import commits, and Home scrolls the
+  focused row into view, so the first row's edge shows the head (0109 D1).
+
 ## [0.72.0] - 2026-11-06
 
 Gate: local 0m31s · CI not read under mf-ship · 0.71.0: local 0m27s · CI not read under mf-ship

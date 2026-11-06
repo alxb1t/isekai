@@ -10,11 +10,24 @@ from tests.e2e.conftest import SHOWN, Served
 @pytest.mark.spec("ui:routes:an-unknown-batch-is-refused")
 @pytest.mark.spec("ui:batch-folder:the-row-draws-no-count-per-flow")
 @pytest.mark.spec("ui:themes:a-chosen-theme-survives-a-reload")
+@pytest.mark.spec("ui:batch-folder:an-edge-row-shows-the-head")
 def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     page: Page, served: Served
 ) -> None:
     page.goto(served.url)
     expect(page.locator(".library__row[data-collection]").first).to_be_focused()
+    rows = page.locator(".library__row[data-collection]")
+    new = page.get_by_role("button", name="New collection")
+    page.set_viewport_size({"width": 1280, "height": 300})
+    for _ in range(rows.count() - 1):
+        page.keyboard.press("j")
+    expect(rows.last).to_be_focused()
+    expect(new).not_to_be_in_viewport()
+    for _ in range(rows.count() - 1):
+        page.keyboard.press("k")
+    expect(rows.first).to_be_focused()
+    expect(new).to_be_in_viewport()
+    page.set_viewport_size({"width": 1280, "height": 720})
     row = page.locator(".library__row", has_text=served.collection)
     # The row draws no chip per flow, though the collection holds an approval.
     expect(row).not_to_contain_text("approved")
