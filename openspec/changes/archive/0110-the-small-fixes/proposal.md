@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.73.1
 ---
 
 # 0110 — the small fixes
