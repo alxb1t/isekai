@@ -4,18 +4,18 @@ The count first, then the measure, per [design](design.md). No spec delta, per [
 
 ## Progress
 
-- [ ] 1 — The count
+- [x] 1 — The count
 - [ ] 2 — The metric
 
 ## 1 — The count
 
-- [ ] 1.1 In `ui/src/themes.test.ts`'s `PAIRS`, `[['--accent-ink'], ['--ground', '--raised', '--raised-2'], 4.5],` →
+- [x] 1.1 In `ui/src/themes.test.ts`'s `PAIRS`, `[['--accent-ink'], ['--ground', '--raised', '--raised-2'], 4.5],` →
   `[['--accent-ink'], ['--ground', '--raised', '--raised-2', '--ground-deep'], 4.5],`, per [D1](design.md#d1).
   Verify: `grep -n -F "'--raised-2', '--ground-deep'], 4.5]," ui/src/themes.test.ts` prints a line.
-- [ ] 1.2 In `ui/src/app.css`'s `.appbar__count`, `color: var(--accent);` → `color: var(--accent-ink);`, per
+- [x] 1.2 In `ui/src/app.css`'s `.appbar__count`, `color: var(--accent);` → `color: var(--accent-ink);`, per
   [D1](design.md#d1).
   Verify: `grep -n -x -F '  color: var(--accent);' ui/src/app.css` prints nothing.
-- [ ] 1.3 In `ui/design/spec.md`'s AppBar line, "unapproved sheets in mono 11 `accent`" → "unapproved sheets in mono 11
+- [x] 1.3 In `ui/design/spec.md`'s AppBar line, "unapproved sheets in mono 11 `accent`" → "unapproved sheets in mono 11
   `accent-ink`", per [D1](design.md#d1).
   Verify: `grep -n 'unapproved sheets in mono 11 .accent-ink.' ui/design/spec.md` prints a line.
 

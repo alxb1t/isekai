@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- The Review tab's count reads `--accent-ink`, so it meets 4.5:1 on Latte's app bar, and the themes test holds
+  `--accent-ink` on `--ground-deep` in every theme (0110 D1).
+
 ## [0.73.0] - 2026-11-06
 
 Gate: local 0m46s · CI not read under mf-ship · 0.72.1: local 0m31s · CI not read under mf-ship

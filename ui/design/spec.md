@@ -85,7 +85,7 @@ timer mono 40px/500.
 
 - **AppBar**, `ground-deep`, bottom border `line`. The wordmark goes Home. The place is mono 12px `ink-2`: `library`
   on Home, else the collection name. Tabs only inside a collection; the active one has a 2px accent underline. The Review
-  tab counts the collection's unapproved sheets in mono 11 `accent`, and opens the collection's Review. The flow
+  tab counts the collection's unapproved sheets in mono 11 `accent-ink`, and opens the collection's Review. The flow
   switcher is a segmented control; Review drops `all`. The `?` button at its right end, after the running render,
   opens the key list, as `⌃/` does; no screen draws a key bar. The key list is a modal dialog, centred over most of
   the window, a column per scope — everywhere's, then the screen's; `⌃/`, `esc` and the backdrop close it.
