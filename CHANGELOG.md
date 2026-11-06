@@ -10,6 +10,19 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.72.1] - 2026-11-06
+
+Gate: local 0m31s · CI not read under mf-ship · 0.72.0: local 0m31s · CI not read under mf-ship
+
+- The browser tests hold two guards no test held: `⇧A` opens no file dialog while Import commits, and Home scrolls the
+  focused row into view, so the first row's edge shows the head (0109 D1).
+- A copy refused for the target's schema now offers `review --new-version`, which writes a draft when the target
+  already holds an approval (0109 D2).
+- Latte's and Frappé's `--color-accent` take their theme's accent ink, so the resting accent as text meets AA in
+  every Catppuccin theme; Latte's link rule goes, and the theme test checks the accent (0109 D3).
+- The UI design spec's state table gains the deleted-render row, and D48's lead drops Latte's link exception, so each
+  says what holds now (0109 D4).
+
 ## [0.72.0] - 2026-11-06
 
 Gate: local 0m31s · CI not read under mf-ship · 0.71.0: local 0m27s · CI not read under mf-ship

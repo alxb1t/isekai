@@ -30,7 +30,7 @@
   --color-bg: #eff1f5;
   --color-surface: #e6e9ef;
   --color-text: #4c4f69;
-  --color-accent: #8839ef;
+  --color-accent: #7c3dd4;
   --color-accent-2: #1e66f5;
   --color-divider: #4c4f6929;
   --color-neutral-100: #4c4f69;
@@ -100,7 +100,7 @@
   --color-bg: #303446;
   --color-surface: #414559;
   --color-text: #c6d0f5;
-  --color-accent: #ca9ee6;
+  --color-accent: #c9a8e9;
   --color-accent-2: #8caaee;
   --color-divider: #c6d0f529;
   --color-neutral-100: #c6d0f5;
@@ -305,6 +305,3 @@
   --scrim-drawer: #1e1e2ecc;
   --overlay: #11111b;
 }
-
-/* Latte's accent is under 4.5:1 as link text; its links take the accent ink. */
-:where([data-theme="latte"]) a { color: var(--accent-ink); }

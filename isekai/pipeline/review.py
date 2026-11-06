@@ -1066,7 +1066,7 @@ def _copy_approval(
         f"`{stage_command(run, 'approve', source)}`, then `{copy}` again",
         schema_remedy=f"copy from a flow whose schema declares {schema.name}'s "
         f"fields, or run "
-        f"`{stage_command(run, STAGE, flow)}`, edit the draft, then "
+        f"{_again(run, flow)}, edit the draft, then "
         f"`{stage_command(run, 'approve', flow)}` to approve {flow} on its own",
     )
 
