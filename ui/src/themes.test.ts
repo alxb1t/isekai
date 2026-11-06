@@ -21,6 +21,7 @@ const PAIRS: [string[], string[], number][] = [
   [['--accent-ink'], ['--ground', '--raised', '--raised-2'], 4.5],
   [['--band'], ['--accent'], 4.5],
   [['--color-text'], ['--color-bg', '--color-surface'], 4.5],
+  [['--color-accent'], ['--color-bg', '--color-surface'], 4.5],
   [['--color-text'], ['--overlay'], 4.5],
 ]
 
