@@ -417,6 +417,14 @@ def build_parser() -> argparse.ArgumentParser:
             "the session's start in UTC names it"
         ),
     )
+    made["render"].add_argument(
+        "--without",
+        action="append",
+        type=Path,
+        default=None,
+        metavar="<runs>/<run-id>/<flow>",
+        help="take that run's flow out of what renders; repeatable, beside no request",
+    )
     made["render"].set_defaults(photos=[])
 
     # Mutually exclusive at parse time, so asking for both is refused before any

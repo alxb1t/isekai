@@ -10,6 +10,20 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.73.0] - 2026-11-06
+
+Gate: local 0m46s · CI not read under mf-ship · 0.72.1: local 0m31s · CI not read under mf-ship
+
+- `isekai render --without <runs>/<run-id>/<flow>`, repeatable, takes that run's flow out of a session with no
+  request; a damaged approval it names is still refused, and the retry the limit names keeps each one (0108 D1, D2).
+- The render quote and its confirmation take `without`, each source names its run, and the job passes each
+  photograph taken out to the verb as `--without`; an entry its collection does not hold is refused (0108 D3, D4).
+- The Render dialog's photographs are tiles: `×` or `⌫` takes one out and quotes the rest, `h j k l` move by flow, the
+  first tile holds the first focus, and a row with none left reads *all removed*; the left-out lines are gone, as the
+  dialog shows only what renders (0108 D5–D9).
+- D3, D4 and D36, `README.md` and the interface READMEs name `--without` and the photographs the confirmation carries,
+  so the docs say what the dialog and the verb do (0108 D10).
+
 ## [0.72.1] - 2026-11-06
 
 Gate: local 0m31s · CI not read under mf-ship · 0.72.0: local 0m31s · CI not read under mf-ship

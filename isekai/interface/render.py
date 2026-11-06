@@ -5,10 +5,12 @@
          python -m isekai render .data/b1/runs .data/b2/runs
          python -m isekai render .data/b1/runs summon-anime-wai=1 conjure-anime-wai=1
          python -m isekai render .data/b1/runs control-anime-wai=summon-anime-wai
+         python -m isekai render .data/b1/runs --without .data/b1/runs/<run-id>/<flow>
 
 With no request, every approval short of its count renders what it lacks, in each
-collection named, on one pod. A count draws that many seeds; a source flow renders
-its latest seeds again; a request takes one collection. A source rendered by count
+collection named, less each `--without`, on one pod. A count draws that many seeds;
+a source flow renders its latest seeds again; a request takes one collection, and
+no `--without`. A source rendered by count
 in the same line goes first, in the same session. Output is shown and appended to
 each collection's log, `<runs>/../log.txt` (D36); with `--progress json` the prose
 goes to stderr alone, which the caller keeps, as the app's job does. Once the pod
@@ -30,7 +32,7 @@ import signal
 import statistics
 import threading
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -149,11 +151,45 @@ def in_session_sources(requests: Sequence[Request]) -> list[bool]:
     return deferred
 
 
-def again(roots: Sequence[Path]) -> str:
-    """Return the command that renders what each of `roots` lacks, in one session."""
-    return shlex.join(
-        ["uv", "run", "python", "-m", "isekai", "render", *map(str, roots)]
-    )
+def again(roots: Sequence[Path], without: Sequence[Path] = ()) -> str:
+    """Return the command that renders what each of `roots` lacks, in one session.
+
+    Each of `without` stays out of it, as its `--without`.
+    """
+    command = ["uv", "run", "python", "-m", "isekai", "render", *map(str, roots)]
+    return shlex.join([*command, *without_flags(without)])
+
+
+def without_flags(without: Sequence[Path]) -> list[str]:
+    """Return a `--without` per path, as `isekai render` takes them.
+
+    e.g. [Path("b/runs/r1/f")] -> ["--without", "b/runs/r1/f"]
+    """
+    return [arg for path in without for arg in ("--without", str(path))]
+
+
+def _taken(roots: Sequence[Path], without: Sequence[Path]) -> list[Path]:
+    """Return each of `without` under the one of `roots` it names, as that is named.
+
+    Refuse a path under no root, or naming no run's flow there.
+    e.g. roots [Path("b/runs")], without [Path("./b/runs/r1/f")] -> [b/runs/r1/f]
+    """
+    named = {runs.resolve(): runs for runs in roots}
+    taken = []
+    for path in without:
+        runs = named.get(path.parent.parent.resolve())
+        if runs is None:
+            raise Refusal(
+                f"--without {path} is under no runs root this session names; "
+                "name its collection's runs/ too, or drop it"
+            )
+        run_id, flow = path.parent.name, path.name
+        if run_id not in run_ids(runs) or flow not in Run(run_id, runs / run_id).flows:
+            raise Refusal(
+                f"--without {path} names no run's flow; give <runs>/<run-id>/<flow>"
+            )
+        taken.append(runs / run_id / flow)
+    return taken
 
 
 def run_ids(runs: Path) -> list[str]:
@@ -489,11 +525,16 @@ def run_session(
                 file=wired.err,
             )
             return 1
+    without = list(getattr(args, "without", None) or [])
     once = list(dict.fromkeys(runs.resolve() for runs in roots))
     if len(once) < len(roots):
+        try:
+            retry = again(once, _taken(once, without))
+        except Refusal as refused:
+            print(f"refused: {refused}", file=wired.err)
+            return 1
         print(
-            f"refused: a collection's runs/ is named twice; name each once: "
-            f"`{again(once)}`",
+            f"refused: a collection's runs/ is named twice; name each once: `{retry}`",
             file=wired.err,
         )
         return 1
@@ -518,7 +559,15 @@ def run_session(
             limit = getattr(args, "limit", None)
             given = getattr(args, "session", None)
             return _session(
-                roots, list(args.requests), limit, given, logged, generate, seams, steps
+                roots,
+                list(args.requests),
+                without,
+                limit,
+                given,
+                logged,
+                generate,
+                seams,
+                steps,
             )
         except Refusal as refused:
             print(f"refused: {refused}", file=logged.err)
@@ -721,11 +770,14 @@ def _images(lines: Sequence[Line]) -> dict[str, int]:
     return found
 
 
-def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
+def short(
+    runs: Path, ids: Sequence[str], wired: Wiring, without: Collection[Path] = ()
+) -> Short:
     """Return a line per flow with approvals short of their count, and what is not.
 
     A run without a flow's directory is skipped; one holding it unapproved is left
-    out. A damaged approval is refused, so the session refuses before renting.
+    out. A damaged approval is refused, so the session refuses before renting, even
+    when `without` names it; any other `<runs>/<run-id>/<flow>` there lacks nothing.
     """
     tracked = tracked_flows(wired.flows_dir)
     loaded: dict[str, Flow] = {}
@@ -745,7 +797,7 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
             except Refusal as damaged:
                 refused.append(str(damaged))
                 continue
-            if lacking:
+            if lacking and runs / run_id / flow not in without:
                 wanted.append((run_id, flow, lacking))
     lines = []
     for flow in sorted({flow for _, flow, _ in wanted}):
@@ -795,10 +847,13 @@ class Quote:
         return None
 
 
-def quote(roots: Sequence[Path], wired: Wiring) -> Quote:
+def quote(
+    roots: Sequence[Path], wired: Wiring, without: Collection[Path] = ()
+) -> Quote:
     """Return the quote for one session over what each of `roots` is short of.
 
-    As the session would: one boot over every collection's images. The price is
+    As the session would: one boot over every collection's images, less each
+    `<runs>/<run-id>/<flow>` in `without`. The price is
     at `gpunit.toml`'s `max_hourly`, which gpunit refuses a card above, with the
     volume at `config/render.json`'s rate (D26).
     """
@@ -810,7 +865,7 @@ def quote(roots: Sequence[Path], wired: Wiring) -> Quote:
         )
     timing = load_timing()
     ids = {runs: run_ids(runs) for runs in roots}
-    found = {runs: short(runs, ids[runs], wired) for runs in roots}
+    found = {runs: short(runs, ids[runs], wired, without) for runs in roots}
     shorts = {runs: one for runs, one in found.items() if one.lines or one.refused}
     work = [(runs, ids[runs], one.images) for runs, one in shorts.items()]
     guess = estimated(work, timing, bound.ceiling_s)
@@ -838,6 +893,7 @@ def _unready(run: Run, flow: str) -> str:
 def _session(
     roots: list[Path],
     texts: list[str],
+    without: list[Path],
     asked: int | None,
     given: str | None,
     wired: Wiring,
@@ -846,8 +902,14 @@ def _session(
     steps: Steps,
 ) -> int:
     requests = [parse_request(text) for text in texts]
+    if requests and without:
+        raise Refusal(
+            "--without takes a run's flow out of what each approval lacks, and a "
+            "request names what renders; give one or the other"
+        )
     deferred = in_session_sources(requests)
-    retry = again(roots)
+    taken = _taken(roots, without)
+    retry = again(roots, taken)
     if requests and len(roots) > 1:
         raise Refusal(
             f"{requests[0]} renders one collection's runs; render each collection "
@@ -871,7 +933,7 @@ def _session(
         lines: list[Line] = []
         refused = False
         for runs in roots:
-            found = short(runs, ids[runs], wired)
+            found = short(runs, ids[runs], wired, taken)
             for message in found.refused:
                 print(f"refused: {message}", file=wired.err)
             for run_id, flow, reason in found.left_out:

@@ -1,0 +1,59 @@
+{
+  "change": "0108-removing-a-photo",
+  "version": "0.73",
+  "base": "f68f6ea7",
+  "analyzed": "4f3f49d3",
+  "measured_on": "local",
+  "collected_at": "2026-11-06T16:21:29+02:00",
+  "mf_version": "v0.67.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1511
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 46
+    },
+    "open-backlog-cards": {
+      "status": "unavailable",
+      "why": "backlog unreadable: [Errno 2] No such file or directory: '~/Developer/isekai/isekai/.minions/backlog.md'"
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1753
+    },
+    "diff-files": {
+      "value": 26
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 12397
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 750
+    },
+    "decisions": {
+      "value": 49
+    }
+  }
+}

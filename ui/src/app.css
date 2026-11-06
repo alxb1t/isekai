@@ -352,8 +352,27 @@ button.appbar__render {
   object-fit: cover;
 }
 
-.render-dialog__thumb--left {
-  opacity: 0.4;
+.render-dialog__thumb:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.render-dialog__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 0 5px;
+  border: none;
+  border-radius: 3px;
+  background: var(--ground-deep);
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.render-dialog__remove:hover {
+  color: var(--ink);
 }
 
 .render-dialog__times {

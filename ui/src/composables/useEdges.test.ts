@@ -30,3 +30,24 @@ spec('ui:batch-folder:an-edge-row-shows-the-head', () => {
   expect(page.scrollTo).not.toHaveBeenCalled()
   expect(middle.scrollIntoView).toHaveBeenCalledExactlyOnceWith({ block: 'nearest' })
 })
+
+spec('ui:render:a-key-move-centres-the-tile', () => {
+  const page = { scrollTo: vi.fn(), scrollHeight: 900 }
+  const reveal = useEdges(() => page as unknown as HTMLElement, true)
+  const cell = () => ({ scrollIntoView: vi.fn() })
+  // A middle row's cell scrolls to the centre, and the page to neither edge.
+  const middle = cell()
+  reveal(middle as unknown as HTMLElement, 1, 3)
+  expect(middle.scrollIntoView).toHaveBeenCalledExactlyOnceWith({ block: 'center' })
+  expect(page.scrollTo).not.toHaveBeenCalled()
+  // The first and the last rows scroll the page alone, to its top and its foot.
+  const first = cell()
+  reveal(first as unknown as HTMLElement, 0, 3)
+  expect(page.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 0 })
+  expect(first.scrollIntoView).not.toHaveBeenCalled()
+  page.scrollTo.mockClear()
+  const last = cell()
+  reveal(last as unknown as HTMLElement, 2, 3)
+  expect(page.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 900 })
+  expect(last.scrollIntoView).not.toHaveBeenCalled()
+})

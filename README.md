@@ -181,7 +181,8 @@ included. **Billing is per second, from the pod's create to its deletion.** With
 each approval lacks of the count Review set, its listed seeds first, and names each unapproved flow it leaves
 out. `render <runs>…` names many collections' runs roots and renders what each lacks, in that order, in one
 session. A request is `<flow>=<count>`, or `<flow>=<source>` to render on another flow's latest seeds, beside
-one runs root alone. The session stops at its limit — `--limit SECONDS`, or the work's estimate from recorded
+one runs root alone. `--without <runs>/<run-id>/<flow>`, repeatable and beside no request, takes that run's flow out
+of what renders. The session stops at its limit — `--limit SECONDS`, or the work's estimate from recorded
 durations — and prints `session limit <seconds>s` as it opens; everything it says is shown and appended to each
 `<runs>/../log.txt`. Beside each log, once the pod is asked for, its record `<runs>/../sessions/<id>.json` holds its steps, each image as it
 lands and how it ended, and no price.

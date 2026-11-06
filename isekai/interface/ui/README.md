@@ -28,9 +28,10 @@ render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─�
   /api/jobs/prepare/stop`, sends its child SIGINT; the server stopping interrupts both jobs.
 - **Render** has the other slot, its prose logged as `[render] …` in every collection it renders. `POST
   /api/render/quote` takes the render verb's own quote over the named collections, or every one short of images:
-  per collection and flow what renders, what is left out and why, and one estimate, limit and price at most.
+  per collection and flow what renders, each source with its run, less what `without` takes out, and one
+  estimate, limit and price at most.
   Only `POST /api/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --session <id>
-  --progress json <runs>…`, then `volume down` unless the window is kept.
+  --progress json <runs>… --without …`, then `volume down` unless the window is kept.
 - **Delete** on a large view, `⇧⌫`, asks first; Yes is `DELETE …/renders/{digest}/{flow}/{version}/{seed}`, refused
   while a render runs for the collection, then the Hub opens on the cell.
 - **Sessions** are read from the records the render verb writes, `<collection>/sessions/<id>.json`:

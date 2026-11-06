@@ -1,16 +1,21 @@
 import { photoUrl, sourceThumbAt } from './api'
+import { moved, type Move } from './grid'
 import type { QuotedCollection, QuoteSource } from './types'
 
 /* The Render dialog's thumbnails (design spec J4·1): per flow the photographs that
-   render, and the left out by reason and flow, each capped as Review's head is. */
+   render, less those taken out, capped as Review's head is. */
 
 /** How many thumbnails a row shows, before `+n`. */
 export const ROW_THUMBS = 15
+
+/** Why Render is off once every photograph of every row is taken out. */
+export const NOTHING_LEFT = 'Nothing left to render.'
 
 /** One photograph drawn as a thumbnail; `fallback` is the run's own, for a run not
     among the hub's sources, and `times` its images when above one. */
 export interface Thumb {
   key: string
+  run: string
   src: string
   fallback: string
   title: string
@@ -18,12 +23,15 @@ export interface Thumb {
 }
 
 type Flows = QuotedCollection['flows'][number]
-type Left = QuotedCollection['left_out'][number]
+
+const keyOf = (collection: string, flow: string, source: QuoteSource) =>
+  `${collection}|${source.digest}|${flow}`
 
 function thumb(collection: string, flow: string, source: QuoteSource, images: number): Thumb {
-  const { name, digest, version } = source
+  const { name, digest, run, version } = source
   return {
-    key: `${collection}|${digest}|${flow}`,
+    key: keyOf(collection, flow, source),
+    run,
     src: sourceThumbAt(collection, name),
     fallback: photoUrl({ collection, digest, flow }),
     title: version === null ? name : `${name} v${version}`,
@@ -31,32 +39,64 @@ function thumb(collection: string, flow: string, source: QuoteSource, images: nu
   }
 }
 
-function capped(all: Thumb[]): { thumbs: Thumb[]; more: number } {
-  return { thumbs: all.slice(0, ROW_THUMBS), more: Math.max(all.length - ROW_THUMBS, 0) }
-}
-
-/** Return a flow's first `ROW_THUMBS` thumbnails, and how many past them. */
+/** Return a flow's first `ROW_THUMBS` thumbnails, less each key in `out`, and how many
+    past them. */
 export function thumbs(
   collection: string,
   flow: string,
   sources: Flows['sources'],
+  out: ReadonlySet<string> = new Set(),
 ): { thumbs: Thumb[]; more: number } {
-  return capped(sources.map((one) => thumb(collection, flow, one, one.images)))
+  const all = sources
+    .filter((one) => !out.has(keyOf(collection, flow, one)))
+    .map((one) => thumb(collection, flow, one, one.images))
+  return { thumbs: all.slice(0, ROW_THUMBS), more: Math.max(all.length - ROW_THUMBS, 0) }
 }
 
-/** Return the left out grouped by reason and flow, in the order each pair first
-    appears, each group capped as a flow's thumbnails are.
-    e.g. [a·draft·s, b·new·s, c·draft·s] -> [draft·s: a c, new·s: b] */
-export function leftOut(
-  collection: string,
-  left: Left[],
-): { reason: string; flow: string; thumbs: Thumb[]; more: number }[] {
-  const groups = new Map<string, { reason: string; flow: string; all: Thumb[] }>()
-  for (const one of left) {
-    const at = `${one.reason}|${one.flow}`
-    const group = groups.get(at) ?? { reason: one.reason, flow: one.flow, all: [] }
-    group.all.push(thumb(collection, one.flow, one, 0))
-    groups.set(at, group)
-  }
-  return [...groups.values()].map(({ reason, flow, all }) => ({ reason, flow, ...capped(all) }))
+/** Return each of `row`'s flows with its thumbnails, less each key in `out` and each flow
+    with none left, so the dialog shows only what renders. */
+export function drawnFlows(
+  row: QuotedCollection,
+  out: ReadonlySet<string>,
+): (Flows & { thumbs: Thumb[]; more: number })[] {
+  return row.flows
+    .map((one) => ({ ...one, ...thumbs(row.collection, one.flow, one.sources, out) }))
+    .filter((one) => one.thumbs.length > 0)
+}
+
+/** Return whether `row` has a photograph and each is taken out, its key in `out`. */
+export function allOut(row: QuotedCollection, out: ReadonlySet<string>): boolean {
+  const keys = row.flows.flatMap((one) =>
+    one.sources.map((source) => keyOf(row.collection, one.flow, source)),
+  )
+  return keys.length > 0 && keys.every((key) => out.has(key))
+}
+
+/** Return why Render is off: `NOTHING_LEFT` once each of `rows` is all out, else `disabled`. */
+export function confirmReason(
+  rows: QuotedCollection[],
+  out: ReadonlySet<string>,
+  disabled: string | null,
+): string | null {
+  return rows.length > 0 && rows.every((row) => allOut(row, out)) ? NOTHING_LEFT : disabled
+}
+
+/** Return the tile index after `move`, across flows of `sizes` tiles in order, each above 0;
+    a flow is a grid row. e.g. sizes [3, 2], index 2, 'row+' -> 4 */
+export function tileMoved(sizes: number[], index: number, move: Move): number {
+  const at = moved(sizes.map((size) => size - 1), place(sizes, index), move)
+  return sizes.slice(0, at.row).reduce((sum, size) => sum + size, 0) + at.column
+}
+
+/** Return tile `index`'s grid row, its flow's, across flows of `sizes` tiles in order.
+    e.g. sizes [3, 2], index 3 -> 1 */
+export function tileRow(sizes: number[], index: number): number {
+  return place(sizes, index).row
+}
+
+function place(sizes: number[], index: number): { row: number; column: number } {
+  let row = 0
+  let column = index
+  while (row < sizes.length - 1 && column >= (sizes[row] ?? 0)) column -= sizes[row++] ?? 0
+  return { row, column }
 }

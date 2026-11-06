@@ -1,10 +1,19 @@
 import { expect } from 'vitest'
 import { spec } from '../test/spec'
-import { leftOut, ROW_THUMBS, thumbs } from '../thumbs'
+import {
+  confirmReason,
+  drawnFlows,
+  NOTHING_LEFT,
+  ROW_THUMBS,
+  thumbs,
+  tileMoved,
+  tileRow,
+} from '../thumbs'
 
 const source = (index: number, images = 1) => ({
   name: `p${index}.jpg`,
   digest: `d${index}`,
+  run: `r${index}`,
   version: 1,
   images,
 })
@@ -38,27 +47,48 @@ spec('ui:render:the-dialog-shows-thumbnails-by-flow', () => {
   expect(one.fallback).toBe('/api/c/my%20c/review/d0/summon-anime-wai/photo')
 })
 
-spec('ui:render:the-dialog-shows-thumbnails-by-flow', () => {
-  const left = (index: number, reason: string, flow: string) => ({
-    name: `p${index}.jpg`,
-    digest: `d${index}`,
-    version: 1,
-    flow,
-    reason,
-  })
-  const groups = leftOut('c', [
-    left(0, 'a draft', 'summon-anime-wai'),
-    left(1, 'not approved', 'summon-anime-wai'),
-    left(2, 'a draft', 'conjure-anime-wai'),
-    left(3, 'a draft', 'summon-anime-wai'),
-  ])
-  expect(groups.map(({ reason, flow }) => `${reason} · ${flow}`)).toEqual([
-    'a draft · summon-anime-wai',
-    'not approved · summon-anime-wai',
-    'a draft · conjure-anime-wai',
-  ])
-  expect(groups[0].thumbs.map((one) => one.title)).toEqual(['p0.jpg v1', 'p3.jpg v1'])
-  expect(groups[0].thumbs.every((one) => one.times === null)).toBe(true)
-  expect(groups[2].thumbs[0].key).toBe('c|d2|conjure-anime-wai')
-  expect(groups.every((one) => one.more === 0)).toBe(true)
+spec('ui:render:taking-out-shows-the-next', () => {
+  const sources = Array.from({ length: 17 }, (_, index) => source(index))
+  const row = thumbs('c', 'summon-anime-wai', sources, new Set(['c|d3|summon-anime-wai']))
+  expect(row.thumbs.map((one) => one.title)).toEqual(
+    [0, 1, 2, ...Array.from({ length: 12 }, (_, index) => index + 4)].map(
+      (index) => `p${index}.jpg v1`,
+    ),
+  )
+  expect(row.more).toBe(1)
+})
+
+spec('ui:render:nothing-left-disables-render', () => {
+  const row = {
+    collection: 'c',
+    images: 2,
+    flows: [{ flow: 'f', images: 2, sources: [source(0), source(1)] }],
+    refused: null,
+  }
+  expect(NOTHING_LEFT).toBe('Nothing left to render.')
+  expect(confirmReason([row], new Set(['c|d0|f', 'c|d1|f']), null)).toBe(NOTHING_LEFT)
+  expect(confirmReason([row], new Set(['c|d0|f']), null)).toBeNull()
+  // A flow with none left draws no line, so an all-removed row counts no images.
+  expect(drawnFlows(row, new Set(['c|d0|f', 'c|d1|f']))).toEqual([])
+  expect(drawnFlows(row, new Set(['c|d0|f'])).map((one) => one.thumbs.length)).toEqual([1])
+  const none = { ...row, flows: [] }
+  expect(confirmReason([none], new Set(), 'refused')).toBe('refused')
+})
+
+spec('ui:render:the-tiles-move-by-flow', () => {
+  const moves = [
+    [0, 'column+', 1],
+    [2, 'column+', 2],
+    [0, 'column-', 0],
+    [2, 'row+', 4],
+    [4, 'row-', 1],
+    [1, 'row+', 4],
+  ] as const
+  for (const [index, move, to] of moves) expect(tileMoved([3, 2], index, move)).toBe(to)
+})
+
+spec('ui:render:a-key-move-centres-the-tile', () => {
+  // A tile's grid row is its flow's, the edges' rule centring a middle flow's alone.
+  const rows = [0, 0, 0, 1, 1, 2, 2, 2, 2]
+  for (const [index, row] of rows.entries()) expect(tileRow([3, 2, 4], index)).toBe(row)
 })

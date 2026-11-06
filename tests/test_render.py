@@ -13,7 +13,7 @@ import json
 import socket
 import threading
 import tomllib
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -34,7 +34,7 @@ from isekai.foundation.artifacts import (
 )
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import REPOSITORY, Run, open_run
+from isekai.foundation.run import REPOSITORY, Run, approval_of, open_run
 from isekai.interface import render
 from isekai.interface.cli import _dispatch_argv, build_parser
 from isekai.interface.wiring import Wiring
@@ -156,6 +156,7 @@ def session(
     client: ComfyTransport | None = None,
     wiring: Wiring | None = None,
     given: str | None = None,
+    without: Sequence[Path] = (),
     **seams: Any,  # noqa: ANN401 -- `render.Seams`'s fields, by name
 ) -> int:
     defaults = render.Seams(
@@ -170,6 +171,7 @@ def session(
             runs=runs if isinstance(runs, list) else [runs],
             requests=list(requests),
             session=given,
+            without=list(without),
         ),
         wiring or wired(runs),
         generate if generate is not None else Calls(),
@@ -679,6 +681,119 @@ def test_many_collections_render_in_one_session_in_the_order_named(
     assert session([roots[0], roots[0]], opener=opener, wiring=twice) == 1
     assert isinstance(twice.err, io.StringIO)
     assert "refused: a collection's runs/ is named twice" in twice.err.getvalue()
+    out, twice = roots[0] / first.id / FLOW, wired(roots[0])
+    status = session([roots[0], roots[0]], without=[out], opener=opener, wiring=twice)
+    assert status == 1
+    assert isinstance(twice.err, io.StringIO)
+    kept = roots[0].resolve() / first.id / FLOW
+    assert f"--without {kept}`" in twice.err.getvalue()
+
+
+@pytest.mark.spec("cli:render-short:a-flow-named-without-is-not-rendered")
+def test_a_flow_named_without_is_not_rendered(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    ada = counted(tmp_path, schema, vocabulary, "ada", 1)
+    bea = counted(tmp_path, schema, vocabulary, "beatrix", 0)
+    root = tmp_path / "b" / "runs"
+    out = root / bea.id / FLOW
+    quoted = render.quote([root], real(root, vocabulary), [out])
+
+    status = session(
+        root, without=[out], generate=_dispatch_argv, wiring=real(root, vocabulary)
+    )
+
+    assert status == 0, log(root)
+    assert (images(ada), images(bea)) == (2, 0)
+    assert quoted.images == 1
+    parsed = build_parser().parse_args(["render", str(root), "--without", str(out)])
+    assert parsed.without == [out]
+
+
+@pytest.mark.spec("cli:render-short:a-without-naming-nothing-is-refused")
+@pytest.mark.parametrize("named", ["no-root", "no-flow"])
+def test_a_without_naming_nothing_is_refused(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, named: str
+) -> None:
+    ada = counted(tmp_path, schema, vocabulary, "ada", 1)
+    root = tmp_path / "b" / "runs"
+    if named == "no-root":
+        path = tmp_path / "c" / "runs" / ada.id / FLOW
+        path.mkdir(parents=True)
+    else:
+        path = root / ada.id / "no-such-flow"
+    opener = FakeOpen()
+
+    assert session(root, without=[path], opener=opener) == 1
+    assert opener.opened == 0
+    assert f"--without {path}" in log(root)
+
+
+@pytest.mark.spec("cli:render-short:a-without-beside-a-request-is-refused")
+def test_a_without_beside_a_request_is_refused(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    ada = counted(tmp_path, schema, vocabulary, "ada", 1)
+    root = tmp_path / "b" / "runs"
+    opener = FakeOpen()
+
+    status = session(root, f"{FLOW}=1", without=[root / ada.id / FLOW], opener=opener)
+
+    assert status == 1
+    assert opener.opened == 0
+    assert "give one or the other" in log(root)
+
+
+@pytest.mark.spec("cli:render-short:a-damaged-approval-taken-out-is-refused")
+def test_a_damaged_approval_taken_out_is_still_refused(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    ada = counted(tmp_path, schema, vocabulary, "ada", 1)
+    root = tmp_path / "b" / "runs"
+    approval = approval_of(ada, FLOW, 2)
+    body = json.loads(approval.read_text())
+    approval.write_text(json.dumps({**body, "renders": {"count": 0}}))
+    opener = FakeOpen()
+
+    status = session(
+        root,
+        without=[root / ada.id / FLOW],
+        opener=opener,
+        wiring=real(root, vocabulary),
+    )
+
+    assert status == 1
+    assert opener.opened == 0
+    assert f"{approval.name}: its renders count 0 renders nothing" in log(root)
+
+
+@pytest.mark.spec("cli:render-short:the-retry-keeps-without")
+def test_the_limits_retry_keeps_each_without(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    counted(tmp_path, schema, vocabulary, "ada", 1)
+    bea = counted(tmp_path, schema, vocabulary, "beatrix", 0)
+    root = tmp_path / "b" / "runs"
+    out = root / bea.id / FLOW
+    fired = threading.Event()
+
+    def held(argv: list[str], wired: Wiring) -> int:
+        if "--server" in argv:
+            assert fired.wait(5)
+            raise gpunit.Interrupted(15)
+        return 0
+
+    status = session(
+        root,
+        generate=Calls(held),
+        wiring=real(root, vocabulary),
+        without=[out],
+        kill=fired.set,
+        watchdog_s=0.05,
+    )
+
+    assert status == 143
+    assert f"isekai render {root} --without {out}` renders only the rest" in log(root)
 
 
 @pytest.mark.spec(

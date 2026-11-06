@@ -461,12 +461,13 @@ def create_app(
         return _flow(wired, flow)
 
     def quoted(
-        names: Sequence[str] | None,
-    ) -> tuple[dict[str, Path], render.Quote, dict[str, Any]]:
-        """Return the quoted collections' folders, their quote, and the dialog's view.
+        names: Sequence[str] | None, without: object = None
+    ) -> tuple[dict[str, Path], render.Quote, dict[str, Any], list[Path]]:
+        """Return the quoted folders, quote, dialog's view and photographs taken out.
 
         With no names, every collection, in the Library's order. Only those the
-        quote keeps, short of images or refusing a count, are returned.
+        quote keeps, short of images or refusing a count, are returned, and only
+        what `without` takes out of them.
         """
         if names is None:
             shelf = library.rows(root, flows, wired.flows_dir)
@@ -474,16 +475,21 @@ def create_app(
         else:
             asked = list(dict.fromkeys(names))
         found = {name: folder(name) for name in asked}
-        made = render.quote([one / library.RUNS for one in found.values()], wired)
+        taken = _taken_out(without, found)
+        made = render.quote(
+            [one / library.RUNS for one in found.values()], wired, taken
+        )
         found = {
             name: one
             for name, one in found.items()
             if one / library.RUNS in made.shorts
         }
+        kept = {one / library.RUNS for one in found.values()}
+        taken = [path for path in taken if path.parent.parent in kept]
         disabled = _held() or (
             made.blocked if asked else "Tick a collection to render."
         )
-        return found, made, _quote(found, made, disabled, wired.flows_dir)
+        return found, made, _quote(found, made, disabled, wired.flows_dir), taken
 
     def _held() -> str | None:
         """Return what holds Render back in any collection: a render, a pod, no key."""
@@ -533,14 +539,15 @@ def create_app(
         """Quote one render of the named collections, its limit and its price at most.
 
         `collections` names them; absent, every collection short of images is
-        quoted. It rents nothing; only the render's own `POST` does.
+        quoted. `without` lists each `{collection, run, flow}` taken out of it. It
+        rents nothing; only the render's own `POST` does.
         """
         names = (payload or {}).get("collections")
         if names is not None and not _strings(names):
             raise Refusal(
                 "the quote names no list of collections; close Render and open it again"
             )
-        return quoted(names)[2]
+        return quoted(names, (payload or {}).get("without"))[2]
 
     @app.post("/api/render")
     def post_render(payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -549,14 +556,14 @@ def create_app(
         The quote is taken again here, so what renders is what is on disk now; a
         limit longer than the one the dialog showed, `limit_s`, or another number
         of images than its `images`, is refused, so nothing renders past what the
-        operator agreed to.
+        operator agreed to. What `without` takes out stays out of the render.
         """
         body = payload or {}
         reopen = "close Render and open it again to read"
         names = body.get("collections")
         if not _strings(names) or not names:
             raise Refusal(f"the confirmation names no collections; {reopen} the quote")
-        found, made, described = quoted(names)
+        found, made, described, taken = quoted(names, body.get("without"))
         if described["disabled"] is not None:
             raise Refusal(described["disabled"])
         shown, listed = body.get("limit_s"), body.get("images")
@@ -581,6 +588,7 @@ def create_app(
             limit=made.estimate.limit_s,
             total=made.images,
             keep_open=bool(body.get("keep_open")),
+            without=taken,
         )
         return {"job": job}
 
@@ -1486,6 +1494,7 @@ def _quoted_row(
         return {
             "name": name,
             "digest": run.digest,
+            "run": run_id,
             "version": versions[-1] if versions else None,
         }
 
@@ -1505,12 +1514,45 @@ def _quoted_row(
         "collection": name,
         "images": sum(short.images.values()),
         "flows": flows,
-        "left_out": [
-            {**source(run_id, flow), "flow": flow, "reason": reason}
-            for run_id, flow, reason in short.left_out
-        ],
         "refused": short.refused[0] if short.refused else None,
     }
+
+
+def _taken_out(value: object, found: Mapping[str, Path]) -> list[Path]:
+    """Return the `<runs>/<run-id>/<flow>` each entry of a quote's `without` names.
+
+    Refuse an entry naming a run or flow its collection, one of `found`, does not
+    hold, so no path the page sends reaches the disk unchecked.
+    e.g. [{"collection": "b", "run": "0d4b…_ada", "flow": "f"}] -> [b/runs/0d4b…_ada/f]
+    """
+    if value is None:
+        return []
+    entries = [
+        [one.get(key) for key in ("collection", "run", "flow")]
+        if isinstance(one, dict)
+        else [None]
+        for one in (value if isinstance(value, list) else [None])
+    ]
+    named = [entry for entry in entries if _strings(entry)]
+    if len(named) < len(entries):
+        raise Refusal(
+            "the quote names no list of photographs taken out; "
+            "close Render and open it again"
+        )
+    taken = []
+    for collection, run_id, flow in named:
+        runs = found[collection] / library.RUNS if collection in found else None
+        if (
+            runs is None
+            or run_id not in render.run_ids(runs)
+            or flow not in Run(run_id, runs / run_id).flows
+        ):
+            raise Refusal(
+                f"the quote takes out {run_id}/{flow}, which {collection} does not "
+                "hold; close Render and open it again"
+            )
+        taken.append(runs / run_id / flow)
+    return taken
 
 
 def _photograph(
@@ -1669,7 +1711,7 @@ def _flow_of(one: Held, verb: str) -> tuple[str, ...]:
 
 
 def _strings(value: object) -> TypeGuard[list[str]]:
-    """Return whether `value` is a list of strings: tags, or collection names."""
+    """Return whether `value` is a list of strings: tags, names, or a run's flow."""
     return isinstance(value, list) and all(isinstance(one, str) for one in value)
 
 
