@@ -1,6 +1,14 @@
 import { expect } from 'vitest'
 import { spec } from '../test/spec'
-import { confirmReason, NOTHING_LEFT, ROW_THUMBS, thumbs, tileMoved } from '../thumbs'
+import {
+  confirmReason,
+  drawnFlows,
+  NOTHING_LEFT,
+  ROW_THUMBS,
+  thumbs,
+  tileMoved,
+  tileRow,
+} from '../thumbs'
 
 const source = (index: number, images = 1) => ({
   name: `p${index}.jpg`,
@@ -60,6 +68,9 @@ spec('ui:render:nothing-left-disables-render', () => {
   expect(NOTHING_LEFT).toBe('Nothing left to render.')
   expect(confirmReason([row], new Set(['c|d0|f', 'c|d1|f']), null)).toBe(NOTHING_LEFT)
   expect(confirmReason([row], new Set(['c|d0|f']), null)).toBeNull()
+  // A flow with none left draws no line, so an all-removed row counts no images.
+  expect(drawnFlows(row, new Set(['c|d0|f', 'c|d1|f']))).toEqual([])
+  expect(drawnFlows(row, new Set(['c|d0|f'])).map((one) => one.thumbs.length)).toEqual([1])
   const none = { ...row, flows: [] }
   expect(confirmReason([none], new Set(), 'refused')).toBe('refused')
 })
@@ -74,4 +85,10 @@ spec('ui:render:the-tiles-move-by-flow', () => {
     [1, 'row+', 4],
   ] as const
   for (const [index, move, to] of moves) expect(tileMoved([3, 2], index, move)).toBe(to)
+})
+
+spec('ui:render:a-key-move-centres-the-tile', () => {
+  // A tile's grid row is its flow's, the edges' rule centring a middle flow's alone.
+  const rows = [0, 0, 0, 1, 1, 2, 2, 2, 2]
+  for (const [index, row] of rows.entries()) expect(tileRow([3, 2, 4], index)).toBe(row)
 })

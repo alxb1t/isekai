@@ -10,7 +10,7 @@ import { modded, plain } from '../stores/keys'
 import { useCollectionStore } from '../stores/collection'
 import { useDrawerStore } from '../stores/drawer'
 import { clock, collectionsOf, useLiveStore } from '../stores/live'
-import { allOut, confirmReason, thumbs, tileMoved, type Thumb } from '../thumbs'
+import { allOut, confirmReason, drawnFlows, tileMoved, tileRow, type Thumb } from '../thumbs'
 import type { Quote, QuotedCollection, TakenOut } from '../types'
 import KeyHint from './KeyHint.vue'
 
@@ -55,10 +55,7 @@ const shown = computed(() => {
     return {
       ...row,
       gone: allOut(first, outKeys.value),
-      drawn: row.flows.map((one) => ({
-        ...one,
-        ...thumbs(row.collection, one.flow, one.sources, outKeys.value),
-      })),
+      drawn: drawnFlows(row, outKeys.value),
     }
   })
 })
@@ -71,9 +68,9 @@ const tiles = computed(() =>
   ),
 )
 const places = computed(() => new Map(tiles.value.map((one, index) => [one.thumb.key, index])))
-/* Each drawn flow's tile count, a flow with none left out: the tiles' grid rows. */
+/* Each drawn flow's tile count: the tiles' grid rows. */
 const sizes = computed(() =>
-  shown.value.flatMap((row) => row.drawn.map((one) => one.thumbs.length)).filter(Boolean),
+  shown.value.flatMap((row) => row.drawn.map((one) => one.thumbs.length)),
 )
 /* The thumbnails whose source answered an error, drawn from the run's own photograph. */
 const fell = ref<Set<string>>(new Set())
@@ -129,11 +126,7 @@ function focusTile(index: number, key = false): void {
     if (!tile) return
     if (!key) return tile.focus()
     tile.focus({ preventScroll: true })
-    const held = sizes.value
-    let row = 0
-    let left = index
-    while (row < held.length - 1 && left >= (held[row] ?? 0)) left -= held[row++] ?? 0
-    reveal(tile, row, held.length)
+    reveal(tile, tileRow(sizes.value, index), sizes.value.length)
   })
 }
 

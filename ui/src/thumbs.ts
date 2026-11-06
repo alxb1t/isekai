@@ -53,6 +53,17 @@ export function thumbs(
   return { thumbs: all.slice(0, ROW_THUMBS), more: Math.max(all.length - ROW_THUMBS, 0) }
 }
 
+/** Return each of `row`'s flows with its thumbnails, less each key in `out` and each flow
+    with none left, so the dialog shows only what renders. */
+export function drawnFlows(
+  row: QuotedCollection,
+  out: ReadonlySet<string>,
+): (Flows & { thumbs: Thumb[]; more: number })[] {
+  return row.flows
+    .map((one) => ({ ...one, ...thumbs(row.collection, one.flow, one.sources, out) }))
+    .filter((one) => one.thumbs.length > 0)
+}
+
 /** Return whether `row` has a photograph and each is taken out, its key in `out`. */
 export function allOut(row: QuotedCollection, out: ReadonlySet<string>): boolean {
   const keys = row.flows.flatMap((one) =>
@@ -73,9 +84,19 @@ export function confirmReason(
 /** Return the tile index after `move`, across flows of `sizes` tiles in order, each above 0;
     a flow is a grid row. e.g. sizes [3, 2], index 2, 'row+' -> 4 */
 export function tileMoved(sizes: number[], index: number, move: Move): number {
+  const at = moved(sizes.map((size) => size - 1), place(sizes, index), move)
+  return sizes.slice(0, at.row).reduce((sum, size) => sum + size, 0) + at.column
+}
+
+/** Return tile `index`'s grid row, its flow's, across flows of `sizes` tiles in order.
+    e.g. sizes [3, 2], index 3 -> 1 */
+export function tileRow(sizes: number[], index: number): number {
+  return place(sizes, index).row
+}
+
+function place(sizes: number[], index: number): { row: number; column: number } {
   let row = 0
   let column = index
   while (row < sizes.length - 1 && column >= (sizes[row] ?? 0)) column -= sizes[row++] ?? 0
-  const at = moved(sizes.map((size) => size - 1), { row, column }, move)
-  return sizes.slice(0, at.row).reduce((sum, size) => sum + size, 0) + at.column
+  return { row, column }
 }
