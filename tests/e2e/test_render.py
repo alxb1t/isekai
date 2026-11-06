@@ -46,10 +46,13 @@ def _alone(page: Page, collection: str, images: int = 1) -> None:
     expect(dialog.locator(".render-dialog__title")).to_have_text(f"Render {quoted}")
 
 
-@pytest.mark.spec("ui:dialogs:the-render-dialog-opens-on-its-checkbox")
+@pytest.mark.spec("ui:dialogs:the-render-dialog-opens-on-its-first-photograph")
 @pytest.mark.spec("ui:render:the-confirmation-starts-the-render")
 @pytest.mark.spec("ui:render:the-dialog-shows-thumbnails-by-flow")
-def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> None:
+@pytest.mark.spec("ui:render:a-tile-is-taken-out-by-its-key")
+def test_the_render_dialog_opens_on_its_first_photograph(
+    page: Page, served: Served
+) -> None:
     page.goto(served.hub_of(RENDER))
     cell = page.locator('.hub__source[data-row="0"]')
     expect(cell).to_be_focused()
@@ -60,7 +63,7 @@ def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> 
 
     dialog = page.locator("dialog.render-dialog")
     keep = dialog.locator("[data-keep-open]")
-    expect(keep).to_be_focused()
+    expect(dialog.locator("[data-tile]").first).to_be_focused()
     # Each photograph renders as its source's thumbnail, counted only above one image.
     thumb = dialog.locator(
         f'[data-collection="{RENDER}"] [data-flow="{FLOW}"] .render-dialog__thumb'
@@ -71,13 +74,30 @@ def test_the_render_dialog_opens_on_its_checkbox(page: Page, served: Served) -> 
         "src", re.compile(r"/sources/gia\.jpg/thumb$")
     )
     expect(thumb.locator(".render-dialog__times")).to_have_count(0)
-    # ↵ on the checkbox neither ticks it nor renders.
+    # ↵ on the first tile neither ticks the checkbox nor renders.
     page.keyboard.press("Enter")
     expect(keep).not_to_be_checked()
     expect(dialog).to_be_visible()
-    for _ in range(dialog.locator("button:enabled, input").count()):
+    tabbable = dialog.locator('button:enabled:not([tabindex="-1"]), input')
+    for _ in range(tabbable.count()):
         page.keyboard.press("Tab")
         assert dialog.evaluate("(held) => held.contains(document.activeElement)")
+    # A tile is taken out by ⌫ and by its ×; a row with none left says so.
+    wide = dialog.locator(f'[data-collection="{WIDE}"]')
+    tiles = wide.locator("[data-tile]")
+    expect(tiles).to_have_count(4)
+    tiles.first.focus()
+    page.keyboard.press("l")
+    expect(tiles.nth(1)).to_be_focused()
+    page.keyboard.press("Backspace")
+    expect(tiles).to_have_count(3)
+    expect(wide).to_contain_text("3 images")
+    expect(tiles.nth(1)).to_be_focused()
+    for _ in range(3):
+        tiles.first.locator(".render-dialog__remove").click()
+    expect(tiles).to_have_count(0)
+    expect(wide).to_contain_text("all removed")
+    expect(wide.locator("[data-tick]")).not_to_be_checked()
     page.keyboard.press("Escape")
     expect(dialog).to_have_count(0)
     expect(cell).to_be_focused()

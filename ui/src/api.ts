@@ -27,6 +27,7 @@ import type {
   SessionRecord,
   RunningSession,
   TagMatches,
+  TakenOut,
 } from './types'
 
 /** One run in one flow of one collection: what a review URL names. */
@@ -112,22 +113,25 @@ export function renderOffer(collection: string): Promise<RenderOffer> {
 
 /* One session's quote over `collections`, or, with none named, every collection
    short of images. It rents nothing; only `startRender` does. */
-export function quoteRender(collections?: string[]): Promise<Quote> {
-  return send('/api/render/quote', 'POST', collections ? { collections } : {})
+export function quoteRender(collections?: string[], without: TakenOut[] = []): Promise<Quote> {
+  return send('/api/render/quote', 'POST', collections ? { collections, without } : {})
 }
 
-/* Carries the limit and the images the dialog showed: a quote grown since is refused. */
+/* Carries the limit and the images the dialog showed, and what it took out: a quote grown
+   since is refused. */
 export function startRender(
   collections: string[],
   keepOpen: boolean,
   limitS: number,
   images: number,
+  without: TakenOut[],
 ): Promise<{ job: JobSlot }> {
   return send('/api/render', 'POST', {
     collections,
     keep_open: keepOpen,
     limit_s: limitS,
     images,
+    without,
   })
 }
 

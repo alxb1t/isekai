@@ -14,6 +14,9 @@ its new digest.
   request; a damaged approval it names is still refused, and the retry the limit names keeps each one (0108 D1, D2).
 - The render quote and its confirmation take `without`, each source names its run, and the job passes each
   photograph taken out to the verb as `--without`; an entry its collection does not hold is refused (0108 D3, D4).
+- The Render dialog's photographs are tiles: `×` or `⌫` takes one out and quotes the rest, `h j k l` move by flow, the
+  first tile holds the first focus, and a row with none left reads *all removed*; the left-out lines are gone, as the
+  dialog shows only what renders (0108 D5–D9).
 
 ## [0.72.0] - 2026-11-06
 

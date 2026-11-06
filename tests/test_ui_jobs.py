@@ -1031,11 +1031,11 @@ def _quoting(
 
 
 @pytest.mark.spec("ui:render:the-dialog-lists-what-renders")
-def test_the_quote_lists_each_flows_images_what_is_left_out_and_the_price(
+def test_the_quote_lists_each_flows_images_and_the_price(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
-    _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    ada = _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
     _approved(folder, "beatrix.jpg", CONTROL, schema, vocabulary)
     drafted = open_run(folder / "sources" / "ada.jpg", folder / "runs")
     sheet(drafted, schema, vocabulary, flow=CONTROL)
@@ -1049,16 +1049,8 @@ def test_the_quote_lists_each_flows_images_what_is_left_out_and_the_price(
         (FLOW, 1),
     ]
     assert row["flows"][1]["sources"][0]["name"] == "ada.jpg"
-    assert row["left_out"] == [
-        {
-            "name": "ada.jpg",
-            "digest": drafted.digest,
-            "run": drafted.id,
-            "version": None,
-            "flow": CONTROL,
-            "reason": "a draft",
-        }
-    ]
+    assert "left_out" not in row
+    assert row["flows"][1]["sources"][0]["run"] == ada.id
     assert quote["estimate"]["limit_s"] >= quote["estimate"]["seconds"]
     assert 0 < quote["price"]["about"] < quote["price"]["at_most"]
     assert quote["disabled"] is None

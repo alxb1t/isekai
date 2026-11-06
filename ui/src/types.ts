@@ -312,16 +312,23 @@ export interface Billing {
 export interface QuoteSource {
   name: string
   digest: string
+  run: string
   version: number | null
 }
 
-/* One collection's row of a quote: per flow what renders, what is left out and
-   why, and a count it refuses, or null. */
+/* A photograph the Render dialog takes out of its quote: its run's flow. */
+export interface TakenOut {
+  collection: string
+  run: string
+  flow: string
+}
+
+/* One collection's row of a quote: per flow what renders, and a count it refuses,
+   or null. */
 export interface QuotedCollection {
   collection: string
   images: number
   flows: { flow: string; images: number; sources: (QuoteSource & { images: number })[] }[]
-  left_out: (QuoteSource & { flow: string; reason: string })[]
   refused: string | null
 }
 

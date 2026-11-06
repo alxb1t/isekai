@@ -1514,10 +1514,6 @@ def _quoted_row(
         "collection": name,
         "images": sum(short.images.values()),
         "flows": flows,
-        "left_out": [
-            {**source(run_id, flow), "flow": flow, "reason": reason}
-            for run_id, flow, reason in short.left_out
-        ],
         "refused": short.refused[0] if short.refused else None,
     }
 

@@ -7,7 +7,7 @@ repository root.
 
 - [x] 1 — The planner
 - [x] 2 — The server
-- [ ] 3 — The dialog
+- [x] 3 — The dialog
 - [ ] 4 — The record
 
 ## 1 — The planner
@@ -74,46 +74,46 @@ repository root.
 
 ## 3 — The dialog
 
-- [ ] 3.1 In `ui/src/types.ts`, give `QuoteSource` its `run`, add `TakenOut`, and drop `QuotedCollection`'s
+- [x] 3.1 In `ui/src/types.ts`, give `QuoteSource` its `run`, add `TakenOut`, and drop `QuotedCollection`'s
   `left_out` and its comment's words for it, per [D5](design.md#d5) and [D9](design.md#d9).
   Verify: `grep -n 'export interface TakenOut' ui/src/types.ts` prints one line.
-- [ ] 3.2 In `ui/src/thumbs.ts`, make the edits of [D5](design.md#d5), and drop `leftOut`, `Left` and the header
+- [x] 3.2 In `ui/src/thumbs.ts`, make the edits of [D5](design.md#d5), and drop `leftOut`, `Left` and the header
   comment's left-out words per [D9](design.md#d9).
   Verify: `grep -n 'export function tileMoved(' ui/src/thumbs.ts` prints one line.
-- [ ] 3.3 In `ui/src/api.ts`, give `quoteRender` and `startRender` their `without` per [D5](design.md#d5).
+- [x] 3.3 In `ui/src/api.ts`, give `quoteRender` and `startRender` their `without` per [D5](design.md#d5).
   Verify: `grep -c 'without: TakenOut\[\]' ui/src/api.ts` prints `2`.
-- [ ] 3.4 In `ui/src/composables/useEdges.ts`, add the `centred` parameter per [D8](design.md#d8), its doc comment
+- [x] 3.4 In `ui/src/composables/useEdges.ts`, add the `centred` parameter per [D8](design.md#d8), its doc comment
   saying it.
   Verify: `grep -n 'centred = false' ui/src/composables/useEdges.ts` prints one line.
-- [ ] 3.5 In `ui/src/components/RenderDialog.vue`, make the edits of [D6](design.md#d6), [D7](design.md#d7),
+- [x] 3.5 In `ui/src/components/RenderDialog.vue`, make the edits of [D6](design.md#d6), [D7](design.md#d7),
   [D8](design.md#d8), [D9](design.md#d9) and [the dialog](design.md#the-dialog).
   Verify: `grep -n "id: 'take-out'" ui/src/components/RenderDialog.vue` prints one line.
-- [ ] 3.6 In `ui/src/app.css`, make the edits of [the dialog](design.md#the-dialog).
+- [x] 3.6 In `ui/src/app.css`, make the edits of [the dialog](design.md#the-dialog).
   Verify: `grep -n '^\.render-dialog__remove {' ui/src/app.css` prints one line.
-- [ ] 3.7 In `isekai/interface/ui/app.py`, drop `_quoted_row`'s `left_out` per [D9](design.md#d9).
+- [x] 3.7 In `isekai/interface/ui/app.py`, drop `_quoted_row`'s `left_out` per [D9](design.md#d9).
   Verify: `grep -L '"left_out": \[' isekai/interface/ui/app.py` prints `isekai/interface/ui/app.py`.
-- [ ] 3.8 In `tests/test_ui_jobs.py`, rename the quote test and replace its `left_out` assertion per
+- [x] 3.8 In `tests/test_ui_jobs.py`, rename the quote test and replace its `left_out` assertion per
   [the dialog's tests](design.md#the-dialogs-tests).
   Verify: `uv run pytest tests/test_ui_jobs.py -k quote_lists_each_flows_images_and_the_price` exits 0.
-- [ ] 3.9 In `ui/src/components/RenderDialog.test.ts`, drop the `leftOut` block and import, and give `source()` a
+- [x] 3.9 In `ui/src/components/RenderDialog.test.ts`, drop the `leftOut` block and import, and give `source()` a
   `run`, per [the dialog's tests](design.md#the-dialogs-tests).
   Verify: `grep -L 'leftOut' ui/src/components/RenderDialog.test.ts` prints `ui/src/components/RenderDialog.test.ts`.
-- [ ] 3.10 In `ui/src/components/RenderDialog.test.ts`, add the `ui:render:taking-out-shows-the-next` block per
+- [x] 3.10 In `ui/src/components/RenderDialog.test.ts`, add the `ui:render:taking-out-shows-the-next` block per
   [the dialog's tests](design.md#the-dialogs-tests).
   Verify: `grep -c 'ui:render:taking-out-shows-the-next' ui/src/components/RenderDialog.test.ts` prints `1`.
-- [ ] 3.11 In `ui/src/components/RenderDialog.test.ts`, add the `ui:render:nothing-left-disables-render` block per
+- [x] 3.11 In `ui/src/components/RenderDialog.test.ts`, add the `ui:render:nothing-left-disables-render` block per
   [the dialog's tests](design.md#the-dialogs-tests).
   Verify: `grep -c 'ui:render:nothing-left-disables-render' ui/src/components/RenderDialog.test.ts` prints `1`.
-- [ ] 3.12 In `ui/src/components/RenderDialog.test.ts`, add the `ui:render:the-tiles-move-by-flow` block per
+- [x] 3.12 In `ui/src/components/RenderDialog.test.ts`, add the `ui:render:the-tiles-move-by-flow` block per
   [the dialog's tests](design.md#the-dialogs-tests).
   Verify: `grep -c 'ui:render:the-tiles-move-by-flow' ui/src/components/RenderDialog.test.ts` prints `1`.
-- [ ] 3.13 In `ui/src/composables/useEdges.test.ts`, add the `ui:render:a-key-move-centres-the-tile` block per
+- [x] 3.13 In `ui/src/composables/useEdges.test.ts`, add the `ui:render:a-key-move-centres-the-tile` block per
   [the dialog's tests](design.md#the-dialogs-tests).
   Verify: `grep -c 'ui:render:a-key-move-centres-the-tile' ui/src/composables/useEdges.test.ts` prints `1`.
-- [ ] 3.14 In `tests/e2e/test_render.py`, rename the dialog test, swap its dialogs key and add the tile key, per
+- [x] 3.14 In `tests/e2e/test_render.py`, rename the dialog test, swap its dialogs key and add the tile key, per
   [the tests](design.md#tests); change its opening lines per [the end-to-end steps](design.md#the-end-to-end-steps).
   Verify: `grep -n 'def test_the_render_dialog_opens_on_its_first_photograph' tests/e2e/test_render.py` prints one line.
-- [ ] 3.15 In `tests/e2e/test_render.py`, add the `WIDE` step of [the end-to-end steps](design.md#the-end-to-end-steps),
+- [x] 3.15 In `tests/e2e/test_render.py`, add the `WIDE` step of [the end-to-end steps](design.md#the-end-to-end-steps),
   importing nothing new.
   Verify: `grep -c 'all removed' tests/e2e/test_render.py` prints `1`.
 
