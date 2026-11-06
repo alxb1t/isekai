@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- A render session's estimate takes each image at its recorded median or the configured time per image, whichever is
+  higher, and the boot and per-image figures rise to what the slowest card takes: a fast card's medians no longer
+  cut a slow card's session short (0107 D1, D2).
+
 ## [0.71.0] - 2026-11-06
 
 Gate: local 0m27s · CI not read under mf-ship · 0.70.0: local 0m32s · CI not read under mf-ship

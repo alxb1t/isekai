@@ -74,7 +74,7 @@ from isekai.pipeline.review import current_draft
 
 # The port `gpunit.toml` forwards, on both sides; a test holds the two equal.
 PORT = 8188
-# The figures a session's estimate takes where nothing is recorded (D26).
+# A session's figures, and the least time an image is quoted at (D26).
 RENDER_CONFIG = REPOSITORY / "config" / "render.json"
 # How many of a flow's newest recorded durations its time per image is the median of.
 RECENT = 20
@@ -546,7 +546,7 @@ class Line:
 
 @dataclass(frozen=True)
 class Timing:
-    """`config/render.json`: a session's figures where nothing is recorded.
+    """`config/render.json`: the figures, and the least time an image is quoted at.
 
     Seconds for the boot, an image and the teardown; the limit's factor over the
     estimate; and the volume's rate per hour.
@@ -616,12 +616,14 @@ def estimate[K](
 
     `images` and `recorded` share a key: a flow, or a collection's flow. The limit
     is the estimate times the factor, at least `FLOOR_S` and at most `ceiling_s`.
-    e.g. 4 images at a recorded median of 90 s, boot 180, teardown 120, factor 1.5
-         -> Estimate(660.0, 1200, False), the floor
+    Each key's images take its recorded median or `per_image_s`, whichever is higher.
+    e.g. 4 images at a recorded median of 90 s, per image 95, boot 480,
+         teardown 120, factor 1.5 -> Estimate(980.0, 1470, False)
     """
     seconds = timing.boot_s + timing.teardown_s
     for key, count in images.items():
-        seconds += count * statistics.median(recorded.get(key) or [timing.per_image_s])
+        median = statistics.median(recorded.get(key) or [timing.per_image_s])
+        seconds += count * max(median, timing.per_image_s)
     wanted = max(FLOOR_S, math.ceil(seconds * timing.limit_factor))
     return Estimate(seconds, min(ceiling_s, wanted), wanted > ceiling_s)
 

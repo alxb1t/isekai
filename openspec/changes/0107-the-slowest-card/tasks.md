@@ -4,23 +4,23 @@ The rule, then the card, then the record, per [design](design.md). Paths are fro
 
 ## Progress
 
-- [ ] 1 — The rule
+- [x] 1 — The rule
 - [ ] 2 — The card
 - [ ] 3 — The record
 
 ## 1 — The rule
 
-- [ ] 1.1 **HALT CHECK** — [D1](design.md#d1) edits the one line where `estimate` takes `per_image_s`.
+- [x] 1.1 **HALT CHECK** — [D1](design.md#d1) edits the one line where `estimate` takes `per_image_s`.
   Verify: `grep -n 'statistics.median(recorded.get(key) or \[timing.per_image_s\])' isekai/interface/render.py` prints one line.
-- [ ] 1.2 In `isekai/interface/render.py`, make `estimate` take each key's time per image per [D1](design.md#d1),
+- [x] 1.2 In `isekai/interface/render.py`, make `estimate` take each key's time per image per [D1](design.md#d1),
   and give its docstring the rule and [D1](design.md#d1)'s example.
   Verify: `grep -n 'Estimate(980.0, 1470, False)' isekai/interface/render.py` prints one line.
-- [ ] 1.3 In `isekai/interface/render.py`, replace the comment above `RENDER_CONFIG` and `Timing`'s first docstring
+- [x] 1.3 In `isekai/interface/render.py`, replace the comment above `RENDER_CONFIG` and `Timing`'s first docstring
   line with [D2](design.md#d2)'s text.
   Verify: `grep -c 'the least time an image is quoted at' isekai/interface/render.py` prints `2`.
-- [ ] 1.4 In `config/render.json`, set `"boot_s": 480` and `"per_image_s": 95` per [D2](design.md#d2).
+- [x] 1.4 In `config/render.json`, set `"boot_s": 480` and `"per_image_s": 95` per [D2](design.md#d2).
   Verify: `grep -c -E '"(boot_s": 480|per_image_s": 95),' config/render.json` prints `2`.
-- [ ] 1.5 In `tests/test_render.py`, after `test_with_no_recorded_duration_the_configured_time_per_image_is_used`, add
+- [x] 1.5 In `tests/test_render.py`, after `test_with_no_recorded_duration_the_configured_time_per_image_is_used`, add
   `test_a_median_below_the_configured_figure_takes_the_figure` (`cli:render-limit:a-fast-median-takes-the-figure`):
   `render.estimate({FLOW: 4}, {FLOW: [30.0, 36.0, 40.0]}, TIMING, 3 * 60 * 60)` has `seconds == 600 + 4 * 60 + 120`.
   Verify: `uv run pytest tests/test_render.py -k median_below_the_configured_figure` exits 0.
