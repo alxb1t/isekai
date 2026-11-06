@@ -6,7 +6,7 @@ The browser steps first, then the remedy, the accent and the record, per [design
 ## Progress
 
 - [x] 1 — The tests
-- [ ] 2 — The remedy
+- [x] 2 — The remedy
 - [ ] 3 — The accent
 - [ ] 4 — The record
 
@@ -28,14 +28,14 @@ The browser steps first, then the remedy, the accent and the record, per [design
 
 ## 2 — The remedy
 
-- [ ] 2.1 **HALT CHECK** `review` writes no draft for a flow holding a version unless `--new-version` asks, the premise
+- [x] 2.1 **HALT CHECK** `review` writes no draft for a flow holding a version unless `--new-version` asks, the premise
   of [D2](design.md#d2).
   Verify: `grep -n 'if versions(review_directory) and not new_version:' isekai/pipeline/review.py` prints a line.
-- [ ] 2.2 In `tests/test_review.py`'s `test_a_copy_carries_the_sources_fields_and_the_targets_schema_validates_them`,
+- [x] 2.2 In `tests/test_review.py`'s `test_a_copy_carries_the_sources_fields_and_the_targets_schema_validates_them`,
   `stage_command(run, "review", CONTROL) in str(refused.value)` → `stage_command(run, "review", CONTROL,
   options=NEW_VERSION) in str(refused.value)`.
   Verify: `grep -n 'stage_command(run, "review", CONTROL, options=NEW_VERSION)' tests/test_review.py` prints a line.
-- [ ] 2.3 In `isekai/pipeline/review.py`'s `schema_remedy`, ``f"`{stage_command(run, STAGE, flow)}`, edit the draft, then "``
+- [x] 2.3 In `isekai/pipeline/review.py`'s `schema_remedy`, ``f"`{stage_command(run, STAGE, flow)}`, edit the draft, then "``
   → `f"{_again(run, flow)}, edit the draft, then "`, per [D2](design.md#d2).
   Verify: `uv run pytest tests/test_review.py -k targets_schema_validates_them` exits 0.
 
