@@ -486,7 +486,8 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 | Render | refused before billing | the CLI's refusal: no GPU free, no key in `.env`; `nothing billed` when true |
 | Render | disabled | `A pod may still be billing.` |
 | Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, the Review tab's count |
-| Renders | a missing image | `its record is there, its image is gone`, the path in the fix |
+| Renders | a missing image, its record kept | `its record is there, its image is gone`, the path in the fix |
+| Renders | a deleted render | `no render is here, its record and its image are gone` |
 | Renders | *Draft from this* disabled | `No image selected` |
 
 ## 7 · Keys

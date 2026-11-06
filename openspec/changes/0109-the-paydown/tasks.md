@@ -8,7 +8,7 @@ The browser steps first, then the remedy, the accent and the record, per [design
 - [x] 1 — The tests
 - [x] 2 — The remedy
 - [x] 3 — The accent
-- [ ] 4 — The record
+- [x] 4 — The record
 
 ## 1 — The tests
 
@@ -54,11 +54,11 @@ The browser steps first, then the remedy, the accent and the record, per [design
 
 ## 4 — The record
 
-- [ ] 4.1 In `ui/design/spec.md`'s state table, per [D4](design.md#d4): `| Renders | a missing image |` → `| Renders |
+- [x] 4.1 In `ui/design/spec.md`'s state table, per [D4](design.md#d4): `| Renders | a missing image |` → `| Renders |
   a missing image, its record kept |`, and after that row add `| Renders | a deleted render | \`no render is here, its
   record and its image are gone\` |`.
   Verify: `grep -n -e 'a missing image, its record kept' -e 'no render is here, its record and its image are gone' ui/design/spec.md` prints a line for each.
-- [ ] 4.2 In `docs/decisions.md`'s D48 lead, the two lines ending "nothing else but Latte's" and "keeps the choice in
+- [x] 4.2 In `docs/decisions.md`'s D48 lead, the two lines ending "nothing else but Latte's" and "keeps the choice in
   `localStorage` under" become the two below, per [D4](design.md#d4); D48's **Made by:** `` `0098`. `` → `` `0098`,
   `0109`. ``.
   ```markdown
