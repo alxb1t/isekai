@@ -6,7 +6,7 @@ repository root.
 ## Progress
 
 - [x] 1 — The planner
-- [ ] 2 — The server
+- [x] 2 — The server
 - [ ] 3 — The dialog
 - [ ] 4 — The record
 
@@ -48,27 +48,27 @@ repository root.
 
 ## 2 — The server
 
-- [ ] 2.1 **HALT CHECK** — [D4](design.md#d4) appends to the one line `_render_child` builds.
+- [x] 2.1 **HALT CHECK** — [D4](design.md#d4) appends to the one line `_render_child` builds.
   Verify: `grep -n 'argv = self._render(limit, roots, job.session\["id"\])' isekai/interface/ui/jobs.py` prints one line.
-- [ ] 2.2 In `isekai/interface/ui/jobs.py`, give `Jobs.render`, `_run_render` and `_render_child` their `without` per
+- [x] 2.2 In `isekai/interface/ui/jobs.py`, give `Jobs.render`, `_run_render` and `_render_child` their `without` per
   [D4](design.md#d4).
   Verify: `grep -n 'without_flags(without)' isekai/interface/ui/jobs.py` prints one line.
-- [ ] 2.3 In `isekai/interface/ui/app.py`, after `_quoted_row`, add `_taken_out` per [D3](design.md#d3), raising
+- [x] 2.3 In `isekai/interface/ui/app.py`, after `_quoted_row`, add `_taken_out` per [D3](design.md#d3), raising
   [the flag](design.md#the-flag)'s server refusals.
   Verify: `grep -n 'def _taken_out(value: object, found: Mapping\[str, Path\]) -> list\[Path\]:' isekai/interface/ui/app.py` prints one line.
-- [ ] 2.4 In `isekai/interface/ui/app.py`, make `quoted`, `post_quote`, `post_render` and `source()` carry
+- [x] 2.4 In `isekai/interface/ui/app.py`, make `quoted`, `post_quote`, `post_render` and `source()` carry
   `without` and the run per [D3](design.md#d3).
   Verify: `grep -n '"run": run_id' isekai/interface/ui/app.py` prints one line.
-- [ ] 2.5 In `tests/test_ui_jobs.py`, give the `left_out` entry that
+- [x] 2.5 In `tests/test_ui_jobs.py`, give the `left_out` entry that
   `test_the_quote_lists_each_flows_images_what_is_left_out_and_the_price` expects `"run": drafted.id`, after `"digest"`.
   Verify: `uv run pytest tests/test_ui_jobs.py -k quote_lists_each_flows_images_what_is_left_out` exits 0.
-- [ ] 2.6 In `tests/test_ui_jobs.py`, make `_order`'s script write each argument after the session too, and add
+- [x] 2.6 In `tests/test_ui_jobs.py`, make `_order`'s script write each argument after the session too, and add
   `test_the_render_job_carries_each_photograph_taken_out` per [the server's tests](design.md#the-servers-tests).
   Verify: `uv run pytest tests/test_ui_jobs.py -k carries_each_photograph_taken_out` exits 0.
-- [ ] 2.7 In `tests/test_ui_jobs.py`, add `test_a_photograph_taken_out_leaves_the_quote_and_the_session` per
+- [x] 2.7 In `tests/test_ui_jobs.py`, add `test_a_photograph_taken_out_leaves_the_quote_and_the_session` per
   [the server's tests](design.md#the-servers-tests).
   Verify: `uv run pytest tests/test_ui_jobs.py -k photograph_taken_out_leaves_the_quote` exits 0.
-- [ ] 2.8 In `tests/test_ui_jobs.py`, add `test_a_photograph_no_quoted_run_holds_is_refused` per
+- [x] 2.8 In `tests/test_ui_jobs.py`, add `test_a_photograph_no_quoted_run_holds_is_refused` per
   [the server's tests](design.md#the-servers-tests).
   Verify: `uv run pytest tests/test_ui_jobs.py -k no_quoted_run_holds` exits 0.
 

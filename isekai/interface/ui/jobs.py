@@ -10,7 +10,7 @@ outlives the page that started it.
 Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
             └ answers ─▶ tag ─▶ caption, once ─▶ sheet, per flow ─▶ done
 Render ─▶ volume up ─ lost ─▶ the volume alert, nothing renders
-           └ up ─▶ render --limit … --session … --progress json <runs>…
+           └ up ─▶ render --limit … --session … --progress json <runs>… --without …
                  ─▶ volume down, unless kept
 Stop ─▶ SIGINT to its kind's child ─▶ no later stage of that job starts
 the server stopping ─▶ SIGINT to both children at once
@@ -37,7 +37,13 @@ from isekai.boundary.gpu import GpunitExit, Say, Volume, refused_line
 from isekai.foundation.artifacts import session_id
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
-from isekai.interface.render import LOST_EXIT, REFUSALS, load_timing, progress_line
+from isekai.interface.render import (
+    LOST_EXIT,
+    REFUSALS,
+    load_timing,
+    progress_line,
+    without_flags,
+)
 from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
@@ -351,10 +357,12 @@ class Jobs:
         limit: int,
         total: int,
         keep_open: bool,
+        without: Sequence[Path] = (),
     ) -> dict[str, Any]:
         """Start one render of each collection's runs within `limit` seconds, or refuse.
 
-        `collections` maps each name to its folder, in the order rendered.
+        `collections` maps each name to its folder, in the order rendered; each of
+        `without` is a `<runs>/<run-id>/<flow>` the verb takes out.
         """
         # Read before the job starts, so a stopping server reads no file.
         settle = self._settle()
@@ -377,7 +385,7 @@ class Jobs:
             names = tuple(collections)
             job = _Job(names[0], (), kind="render", session=session, collections=names)
             folders = tuple(collections.values())
-            self._occupy(job, self._run_render, (job, folders, limit))
+            self._occupy(job, self._run_render, (job, folders, limit, tuple(without)))
         self._publish(job)
         return job.describe()
 
@@ -516,7 +524,9 @@ class Jobs:
                     job.state = "stopped" if slot.stopping else "done"
             self._publish(job)
 
-    def _run_render(self, job: _Job, folders: Sequence[Path], limit: int) -> None:
+    def _run_render(
+        self, job: _Job, folders: Sequence[Path], limit: int, without: Sequence[Path]
+    ) -> None:
         """Open the window, run the render verb, and close the window unless kept."""
         assert job.session is not None
         slot = self._slots[job.kind]
@@ -538,7 +548,7 @@ class Jobs:
                 return
             opened = True
             self._mark(job, "volume up", "done")
-            self._render_child(job, folders, limit)
+            self._render_child(job, folders, limit, without)
         except OSError as error:
             # A verb that could not be started, or a log that could not be opened:
             # nothing rendered, and the page says so rather than showing an end.
@@ -564,7 +574,9 @@ class Jobs:
                 job.session["ended"] = self._now()
             self._publish(job)
 
-    def _render_child(self, job: _Job, folders: Sequence[Path], limit: int) -> None:
+    def _render_child(
+        self, job: _Job, folders: Sequence[Path], limit: int, without: Sequence[Path]
+    ) -> None:
         """Run the render verb, reading its steps; start none once Stop was asked."""
         assert job.session is not None
         slot = self._slots[job.kind]
@@ -572,7 +584,10 @@ class Jobs:
             if slot.stopping:
                 return
             roots = [folder / RUNS for folder in folders]
-            argv = self._render(limit, roots, job.session["id"])
+            argv = [
+                *self._render(limit, roots, job.session["id"]),
+                *without_flags(without),
+            ]
             child = self._spawn(job.kind, argv, folders)
         assert child.stdout is not None
         reported = False

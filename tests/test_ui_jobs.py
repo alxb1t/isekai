@@ -30,7 +30,7 @@ from isekai.foundation.flow import FLOWS_DIR, Schema, load_flow  # noqa: E402
 from isekai.foundation.refusal import Refusal  # noqa: E402
 from isekai.foundation.run import Run, approval_of, open_run  # noqa: E402
 from isekai.interface.cli import build_parser  # noqa: E402
-from isekai.interface.render import LOST_EXIT  # noqa: E402
+from isekai.interface.render import LOST_EXIT, without_flags  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
 from isekai.interface.ui import app as app_module  # noqa: E402
 from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
@@ -660,7 +660,7 @@ def _order(
     def command(limit: int, roots: Sequence[Path], session: str) -> list[str]:
         script = (
             "import sys; open(sys.argv[1], 'a')"
-            ".write(f'render {sys.argv[2]} {sys.argv[3]}\\n')"
+            ".write(' '.join(['render', *sys.argv[2:]]) + '\\n')"
         )
         return [sys.executable, "-c", script, str(record), str(limit), session]
 
@@ -1053,6 +1053,7 @@ def test_the_quote_lists_each_flows_images_what_is_left_out_and_the_price(
         {
             "name": "ada.jpg",
             "digest": drafted.digest,
+            "run": drafted.id,
             "version": None,
             "flow": CONTROL,
             "reason": "a draft",
@@ -1140,3 +1141,90 @@ def test_a_confirmation_shorter_than_the_quote_now_gives_is_refused(
 
     assert grown.status_code == 409
     assert "2 images, not 1" in grown.json()["refusal"]
+
+
+@pytest.mark.spec("ui:render:a-photograph-taken-out-leaves-the-quote")
+def test_the_render_job_carries_each_photograph_taken_out(tmp_path: Path) -> None:
+    folder, (ada,) = _collection(tmp_path, "ada.jpg")
+    path = folder / "runs" / ada.id / FLOW
+    record = tmp_path / "acts"
+    volume, command = _order(record)
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=command,
+        now=lambda: "ended",
+    )
+
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False, without=[path])
+    jobs.wait("render", WAIT)
+
+    session = (jobs.slot("render") or {})["session"]["id"]
+    assert f"render 1500 {session} --without {path}" in record.read_text().splitlines()
+    line = render_command(1500, [folder / "runs"], session)[3:]
+    parsed = build_parser().parse_args([*line, *without_flags([path])])
+    assert parsed.without == [path]
+
+
+@pytest.mark.spec("ui:render:a-photograph-taken-out-leaves-the-quote")
+def test_a_photograph_taken_out_leaves_the_quote_and_the_session(
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
+    ada = _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    beatrix = _approved(folder, "beatrix.jpg", FLOW, schema, vocabulary)
+    asked = {
+        "collections": ["b"],
+        "without": [{"collection": "b", "run": ada.id, "flow": FLOW}],
+    }
+
+    quote = client.post("/api/render/quote", json=asked).json()
+
+    (row,) = quote["collections"]
+    (flow,) = row["flows"]
+    assert [(one["name"], one["run"]) for one in flow["sources"]] == [
+        ("beatrix.jpg", beatrix.id)
+    ]
+    assert row["images"] == 1
+    seen: dict[str, object] = {}
+
+    def started(self: Jobs, collections: object, **kwargs: object) -> dict[str, Any]:
+        seen.update(kwargs)
+        return {}
+
+    monkeypatch.setattr(Jobs, "render", started)
+    limit = quote["estimate"]["limit_s"]
+    confirmed = client.post(
+        "/api/render",
+        json={**asked, "keep_open": False, "limit_s": limit, "images": 1},
+    )
+
+    assert confirmed.status_code == 200
+    assert seen["without"] == [folder / "runs" / ada.id / FLOW]
+
+
+@pytest.mark.spec("ui:render:a-photograph-not-quoted-is-refused")
+@pytest.mark.parametrize("run_id", ["nobody", "../b"], ids=["no-run", "outside"])
+def test_a_photograph_no_quoted_run_holds_is_refused(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run_id: str
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
+    _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    asked = {
+        "collections": ["b"],
+        "without": [{"collection": "b", "run": run_id, "flow": FLOW}],
+    }
+
+    quote = client.post("/api/render/quote", json=asked)
+    started = client.post(
+        "/api/render",
+        json={**asked, "keep_open": False, "limit_s": 1200, "images": 1},
+    )
+
+    for answered in (quote, started):
+        assert answered.status_code == 409
+        assert "close Render and open it again" in answered.json()["refusal"]
