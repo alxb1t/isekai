@@ -5,44 +5,44 @@ repository root.
 
 ## Progress
 
-- [ ] 1 — The planner
+- [x] 1 — The planner
 - [ ] 2 — The server
 - [ ] 3 — The dialog
 - [ ] 4 — The record
 
 ## 1 — The planner
 
-- [ ] 1.1 **HALT CHECK** — [D1](design.md#d1) checks a removal after the one `shortfall()` call in `short()`.
+- [x] 1.1 **HALT CHECK** — [D1](design.md#d1) checks a removal after the one `shortfall()` call in `short()`.
   Verify: `grep -n 'lacking = shortfall(run, loaded\[flow\])' isekai/interface/render.py` prints one line.
-- [ ] 1.2 In `isekai/interface/render.py`, give `short` and `quote` their `without` per [D1](design.md#d1), the check
+- [x] 1.2 In `isekai/interface/render.py`, give `short` and `quote` their `without` per [D1](design.md#d1), the check
   written `runs / run_id / flow not in without`, `Collection` imported from `collections.abc`.
   Verify: `grep -n 'runs / run_id / flow not in without' isekai/interface/render.py` prints one line.
-- [ ] 1.3 In `isekai/interface/render.py`, after `again`, add `without_flags`, and give `again` its `without`, per
+- [x] 1.3 In `isekai/interface/render.py`, after `again`, add `without_flags`, and give `again` its `without`, per
   [D2](design.md#d2) and [the flag](design.md#the-flag).
   Verify: `grep -n 'def without_flags(without: Sequence\[Path\]) -> list\[str\]:' isekai/interface/render.py` prints one line.
-- [ ] 1.4 In `isekai/interface/render.py`, add `_taken` after `without_flags`, and make `run_session` and `_session`
+- [x] 1.4 In `isekai/interface/render.py`, add `_taken` after `without_flags`, and make `run_session` and `_session`
   take `without`, per [D2](design.md#d2), raising [the flag](design.md#the-flag)'s refusals.
   Verify: `grep -n 'def _taken(roots: Sequence\[Path\], without: Sequence\[Path\]) -> list\[Path\]:' isekai/interface/render.py` prints one line.
-- [ ] 1.5 In `isekai/interface/cli.py`, add `render`'s `--without` after `--session`, as [the flag](design.md#the-flag)
+- [x] 1.5 In `isekai/interface/cli.py`, add `render`'s `--without` after `--session`, as [the flag](design.md#the-flag)
   writes it.
   Verify: `uv run python -m isekai render --help` exits 0 and prints `--without <runs>/<run-id>/<flow>`.
-- [ ] 1.6 In `tests/test_render.py`, import `Sequence` from `collections.abc`, and give `session()` a
+- [x] 1.6 In `tests/test_render.py`, import `Sequence` from `collections.abc`, and give `session()` a
   `without: Sequence[Path] = ()` parameter, before `**seams`, set on its `Namespace` as `without=list(without)`.
   Verify: `grep -n 'without=list(without)' tests/test_render.py` prints one line.
-- [ ] 1.7 In `tests/test_render.py`, after `test_many_collections_render_in_one_session_in_the_order_named`, add
+- [x] 1.7 In `tests/test_render.py`, after `test_many_collections_render_in_one_session_in_the_order_named`, add
   `test_a_flow_named_without_is_not_rendered` (`cli:render-short:a-flow-named-without-is-not-rendered`) per
   [the planner's tests](design.md#the-planners-tests).
   Verify: `uv run pytest tests/test_render.py -k flow_named_without` exits 0.
-- [ ] 1.8 In `tests/test_render.py`, add `test_a_without_naming_nothing_is_refused`
+- [x] 1.8 In `tests/test_render.py`, add `test_a_without_naming_nothing_is_refused`
   (`cli:render-short:a-without-naming-nothing-is-refused`) per [the planner's tests](design.md#the-planners-tests).
   Verify: `uv run pytest tests/test_render.py -k without_naming_nothing` exits 0.
-- [ ] 1.9 In `tests/test_render.py`, add `test_a_without_beside_a_request_is_refused`
+- [x] 1.9 In `tests/test_render.py`, add `test_a_without_beside_a_request_is_refused`
   (`cli:render-short:a-without-beside-a-request-is-refused`) per [the planner's tests](design.md#the-planners-tests).
   Verify: `uv run pytest tests/test_render.py -k without_beside_a_request` exits 0.
-- [ ] 1.10 In `tests/test_render.py`, add `test_a_damaged_approval_taken_out_is_still_refused`
+- [x] 1.10 In `tests/test_render.py`, add `test_a_damaged_approval_taken_out_is_still_refused`
   (`cli:render-short:a-damaged-approval-taken-out-is-refused`) per [the planner's tests](design.md#the-planners-tests).
   Verify: `uv run pytest tests/test_render.py -k damaged_approval_taken_out` exits 0.
-- [ ] 1.11 In `tests/test_render.py`, add `test_the_limits_retry_keeps_each_without`
+- [x] 1.11 In `tests/test_render.py`, add `test_the_limits_retry_keeps_each_without`
   (`cli:render-short:the-retry-keeps-without`) per [the planner's tests](design.md#the-planners-tests).
   Verify: `uv run pytest tests/test_render.py -k retry_keeps_each_without` exits 0.
 
