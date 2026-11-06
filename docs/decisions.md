@@ -74,10 +74,11 @@ refuse one.
 
 ### D3 · The hand path stays
 
-**`review` and `approve` stay working verbs.** The review UI is the guided path; the hand path stays.
+**`review` and `approve` stay working verbs.** The review UI is the guided path; the hand path stays. The Render
+dialog's removal is `render --without`, so a session the page starts is one the terminal can run.
 
 - **Why:** deleting it would make stage ③ a single point of failure for the whole pipeline.
-- **Made by:** `0018`.
+- **Made by:** `0018`, `0108`.
 
 ### D4 · The UI runs stages only as the CLI's children
 
@@ -94,9 +95,10 @@ a target's first sheet, when it is drafted from another flow, through `sheet()`,
   and a write no stage owns would give a run file a second author. `draft_across` is the sequence
   `draft --flow` runs too, so the in-process fill is still the terminal's path; it is free, and it
   refuses before it writes. Spend behind a web page is bounded by what the operator read: the
-  confirmation carries the quote it showed, and a quote grown since is refused. The quote compares
+  confirmation carries the quote it showed and the photographs taken out of it, and a quote grown since is
+  refused. The quote compares
   image total and limit, not source or approval identity.
-- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`.
+- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`.
 
 ### D42 · A new draft starts from the last approval
 
@@ -547,7 +549,8 @@ the key would sit in the same memory.**
 
 **It assembles every prompt before any pod exists, opens a gpunit session, waits for the endpoint through its
 tunnel, renders, and closes the session on every exit.** With no request it renders what each approval lacks of
-its count, in each collection it names, on one pod. Three bounds hold it: the laptop's watchdog at the session's
+its count, in each collection it names, less each `--without`, on one pod. Three bounds hold it: the laptop's
+watchdog at the session's
 limit; the pod's own stop at that limit, armed by gpunit's boot script and never past `gpunit.toml`'s ceiling;
 and gpunit, which refuses a session beside a recorded or listed pod of the project and leaves none listed at
 teardown. One session runs at a time; the
@@ -561,4 +564,4 @@ app's Render runs it as a child, between `gpunit volume up` and `volume down`, w
   Reopen when isekai needs a handler of its own.
 - **Refusals:** `isekai render` exits with gpunit's code, 1, 4 or 5, and the drawer names a 4 or a 5 by its kind and
   quotes gpunit's `refused:` line, a form gpunit documents for callers to parse.
-- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`, `0083`, `0097`.
+- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`, `0083`, `0097`, `0108`.

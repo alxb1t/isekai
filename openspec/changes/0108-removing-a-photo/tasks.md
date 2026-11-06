@@ -8,7 +8,7 @@ repository root.
 - [x] 1 — The planner
 - [x] 2 — The server
 - [x] 3 — The dialog
-- [ ] 4 — The record
+- [x] 4 — The record
 
 ## 1 — The planner
 
@@ -119,12 +119,12 @@ repository root.
 
 ## 4 — The record
 
-- [ ] 4.1 In `docs/decisions.md`, replace docs D3's, D4's and D36's lines with those of
+- [x] 4.1 In `docs/decisions.md`, replace docs D3's, D4's and D36's lines with those of
   [the record](design.md#the-record).
   Verify: `grep -c '0108' docs/decisions.md` prints `3`.
-- [ ] 4.2 In `README.md`, replace line `:184` with the lines of [the record](design.md#the-record).
+- [x] 4.2 In `README.md`, replace line `:184` with the lines of [the record](design.md#the-record).
   Verify: `grep -n 'repeatable and beside no request, takes that run' README.md` prints one line.
-- [ ] 4.3 In `isekai/interface/README.md`, edit the `render.py` row per [the record](design.md#the-record).
+- [x] 4.3 In `isekai/interface/README.md`, edit the `render.py` row per [the record](design.md#the-record).
   Verify: `grep -n 'finds what each approval lacks, less each' isekai/interface/README.md` prints one line.
-- [ ] 4.4 In `isekai/interface/ui/README.md`, replace lines `:31` and `:33` per [the record](design.md#the-record).
+- [x] 4.4 In `isekai/interface/ui/README.md`, replace lines `:31` and `:33` per [the record](design.md#the-record).
   Verify: `grep -n 'each source with its run, less what' isekai/interface/ui/README.md` prints one line.

@@ -17,6 +17,8 @@ its new digest.
 - The Render dialog's photographs are tiles: `×` or `⌫` takes one out and quotes the rest, `h j k l` move by flow, the
   first tile holds the first focus, and a row with none left reads *all removed*; the left-out lines are gone, as the
   dialog shows only what renders (0108 D5–D9).
+- D3, D4 and D36, `README.md` and the interface READMEs name `--without` and the photographs the confirmation carries,
+  so the docs say what the dialog and the verb do (0108 D10).
 
 ## [0.72.0] - 2026-11-06
 
