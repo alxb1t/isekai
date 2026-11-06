@@ -10,6 +10,18 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.72.0] - 2026-11-06
+
+Gate: local 0m31s · CI not read under mf-ship · 0.71.0: local 0m27s · CI not read under mf-ship
+
+- A render session's estimate takes each image at its recorded median or the configured time per image, whichever is
+  higher, and the boot and per-image figures rise to what the slowest card takes: a fast card's medians no longer
+  cut a slow card's session short (0107 D1, D2).
+- Each render's `runtime` records the name of the first device the endpoint reports, so a later quote can be read
+  per card; a report naming no device is read as before (0107 D3, D4, D5).
+- D26, the data flow and the UI's design spec state the per-image figure and the recorded device, so the docs say
+  what the estimate does (0107 D6).
+
 ## [0.71.0] - 2026-11-06
 
 Gate: local 0m27s · CI not read under mf-ship · 0.70.0: local 0m32s · CI not read under mf-ship

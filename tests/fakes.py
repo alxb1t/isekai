@@ -41,6 +41,9 @@ FAKE_SYSTEM = {
     "pytorch_version": "2.8.0+cu128",
 }
 
+# The device FakeComfyClient lists first, as ComfyUI names it.
+FAKE_DEVICE = "cuda:0 NVIDIA L4 : cudaMallocAsync"
+
 
 class FakeComfyClient:
     """In-memory stand-in for ComfyClient: records calls, replays canned responses.
@@ -60,7 +63,10 @@ class FakeComfyClient:
         self.pending_polls = pending_polls
         # the system report, or the failure asking for it raises
         if report is None:
-            report = {"system": dict(FAKE_SYSTEM), "devices": []}
+            report = {
+                "system": dict(FAKE_SYSTEM),
+                "devices": [{"name": FAKE_DEVICE, "type": "cuda", "index": 0}],
+            }
         self.report = report
         self.report_failure = report_failure
         self.image: Image = image or {

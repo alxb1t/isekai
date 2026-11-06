@@ -1,0 +1,59 @@
+{
+  "change": "0107-the-slowest-card",
+  "version": "0.72",
+  "base": "e404f132",
+  "analyzed": "975282c0",
+  "measured_on": "local",
+  "collected_at": "2026-11-06T15:09:12+02:00",
+  "mf_version": "v0.65.0",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1501
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 31
+    },
+    "open-backlog-cards": {
+      "status": "unavailable",
+      "why": "backlog unreadable: [Errno 2] No such file or directory: '~/Developer/isekai/isekai/.minions/backlog.md'"
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 526
+    },
+    "diff-files": {
+      "value": 19
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 12368
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 738
+    },
+    "decisions": {
+      "value": 49
+    }
+  }
+}

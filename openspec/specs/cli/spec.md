@@ -401,19 +401,28 @@ collection named, so a second collection costs its images and no second pod.
 ### Requirement: A render session's limit is estimated from its work, at most the configured ceiling
 
 The system SHALL bound a render session by a limit: the one `--limit` names, or else one boot plus the images it will
-render, of every collection it names, times the median duration of that flow's last recorded renders in that
-collection, plus teardown, times the configured factor,
-with configured figures where nothing is recorded, and never below the pod's provisioning hold plus five minutes. It
-SHALL refuse a limit above the ceiling `gpunit.toml` names, and SHALL give the same estimate the surface quotes.
+render, of every collection it names, each at the median duration of that flow's last recorded renders in that
+collection or the configured time per image, whichever is higher, plus teardown, times the configured factor,
+and never below the pod's provisioning hold plus five minutes. It SHALL refuse a limit above the ceiling `gpunit.toml`
+names, and SHALL give the same estimate the surface quotes.
 
 A fixed limit caps a batch at what fits in it; a limit from the work fits the work, and the ceiling still bounds the
-spend. A pod held for diagnosis must stop after its hold ends, not before.
+spend. A median recorded on a fast card says nothing of a slow one, and gpunit takes whichever card is in stock, so
+the configured time per image is the slowest card's
+([D26](../../../docs/decisions.md#d26--renders-run-on-a-rented-gpu)). A pod held for diagnosis must stop after its
+hold ends, not before.
 
 #### Scenario: the estimate comes from recorded durations
 - **Key:** `cli:render-limit:the-estimate-comes-from-durations`
 - **Layers:** unit
-- **WHEN** a flow's last renders took a median of ninety seconds and four images will render
+- **WHEN** four images will render at a recorded median of ninety seconds, above the configured time per image
 - **THEN** the limit is boot plus four times ninety seconds plus teardown, times the factor
+
+#### Scenario: a median below the configured figure takes the figure
+- **Key:** `cli:render-limit:a-fast-median-takes-the-figure`
+- **Layers:** unit
+- **WHEN** a flow's last renders took a median below the configured time per image
+- **THEN** the estimate uses the configured time per image
 
 #### Scenario: with nothing recorded the configured figure is used
 - **Key:** `cli:render-limit:the-configured-figure-without-records`

@@ -579,22 +579,36 @@ def graph_digest(graph: Workflow) -> str:
 
 
 def read_runtime(client: ComfyTransport) -> Runtime:
-    """Return the ComfyUI, Python and PyTorch versions the endpoint reports.
+    """Return the versions the endpoint reports, and its first device's name.
 
     A report without them is an answer in a shape this build does not read, and
     `render` records it as permanent rather than claim a runtime it never read.
     A failed request keeps the transport's own kind.
+    A report naming no device is read without one; the device decides nothing.
     """
     report = client.system_stats()
     try:
         system = report["system"]
-        return {
+        ran_on: Runtime = {
             "comfyui_version": str(system["comfyui_version"]),
             "python_version": str(system["python_version"]),
             "pytorch_version": str(system["pytorch_version"]),
         }
     except (KeyError, TypeError) as answer:
         raise unread(answer) from answer
+    if (device := _first_device(report)) is not None:
+        ran_on["device"] = device
+    return ran_on
+
+
+def _first_device(report: dict[str, Any]) -> str | None:
+    """Return the name of the first device `report` lists, or None for no name."""
+    devices = report.get("devices")
+    if not isinstance(devices, list) or not devices:
+        return None
+    first = devices[0]
+    name = first.get("name") if isinstance(first, dict) else None
+    return name if isinstance(name, str) else None
 
 
 def render(

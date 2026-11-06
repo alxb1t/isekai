@@ -321,8 +321,9 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
   approved source × flow whose newest version holds fewer images than its Count, grouped by flow. What is left out is
   named. Unticking a row quotes the rest again; one session renders every ticked collection on one pod. The bar
   counts its own collection's images and `+n in other collections`.
-- **The estimate**: boot + images × time per image + teardown; until durations are recorded, 3:00, 1:00 and
-  2:00, one boot and one teardown for every ticked collection. The limit is 1.5× the estimate, under the configured
+- **The estimate**: boot + images × time per image + teardown; boot 8:00 and teardown 2:00, each image at its
+  recorded median or 1:35, whichever is higher; one boot and one teardown for every ticked collection.
+  The limit is 1.5× the estimate, under the configured
   maximum, and teardown starts by itself at the limit; an estimate past the ceiling disables Render — *untick a
   collection*. The price comes from the estimate: the pod at `pod_rate` (about $0.40/h), the volume at about
   $0.005/h.

@@ -477,13 +477,16 @@ link colour; Nocturne, the vendored sheet's own, is the default. `⇧T` chooses 
 
 **A RunPod pod runs this project's own ComfyUI image, with PyTorch built for CUDA 12.8. A session's limit
 and price are its quote's, at most `gpunit.toml`'s `ceiling` and `max_hourly`**: the limit is the work's
-estimate from recorded durations, never below the provisioning hold plus five minutes, and gpunit refuses a
-card dearer than `max_hourly`.
+estimate from recorded durations, each image at no less than `config/render.json`'s `per_image_s`, never
+below the provisioning hold plus five minutes, and gpunit refuses a card dearer than `max_hourly`. Each
+render records the device it ran on.
 
 - **Why:** the render is the only work that needs a GPU, and renting by the second costs less than owning
   one. The Blackwell GPU has no kernels in older CUDA builds. A fixed limit caps a batch at what fits in it;
   a limit from the work fits the work, and a price at the hourly maximum is a bound rather than a guess.
-- **Made by:** the founding setup, `0063`.
+  A median recorded on a fast card says nothing of a slow one, and gpunit takes whichever card is in
+  stock, so the figure per image is the slowest card's.
+- **Made by:** the founding setup, `0063`, `0107`.
 
 ### D27 · The models live on a network volume
 
