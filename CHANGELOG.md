@@ -15,6 +15,8 @@ its new digest.
   cut a slow card's session short (0107 D1, D2).
 - Each render's `runtime` records the name of the first device the endpoint reports, so a later quote can be read
   per card; a report naming no device is read as before (0107 D3, D4, D5).
+- D26, the data flow and the UI's design spec state the per-image figure and the recorded device, so the docs say
+  what the estimate does (0107 D6).
 
 ## [0.71.0] - 2026-11-06
 

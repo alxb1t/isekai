@@ -6,7 +6,7 @@ The rule, then the card, then the record, per [design](design.md). Paths are fro
 
 - [x] 1 — The rule
 - [x] 2 — The card
-- [ ] 3 — The record
+- [x] 3 — The record
 
 ## 1 — The rule
 
@@ -55,12 +55,12 @@ The rule, then the card, then the record, per [design](design.md). Paths are fro
 
 ## 3 — The record
 
-- [ ] 3.1 In `docs/decisions.md`, replace D26's rule, extend its Why and replace its Made by with the lines of
+- [x] 3.1 In `docs/decisions.md`, replace D26's rule, extend its Why and replace its Made by with the lines of
   [the record](design.md#the-record).
   Verify: `grep -n 'each image at no less than' docs/decisions.md` prints one line.
-- [ ] 3.2 In `docs/data-flow.md`, replace the line `records its` … `estimated from them` with the lines of
+- [x] 3.2 In `docs/data-flow.md`, replace the line `records its` … `estimated from them` with the lines of
   [the record](design.md#the-record).
   Verify: `grep -n 'and the card it ran on, and the next session' docs/data-flow.md` prints one line.
-- [ ] 3.3 In `ui/design/spec.md`, replace the estimate's first lines with the lines of
+- [x] 3.3 In `ui/design/spec.md`, replace the estimate's first lines with the lines of
   [the record](design.md#the-record).
   Verify: `grep -n 'recorded median or 1:35, whichever is higher' ui/design/spec.md` prints one line.
