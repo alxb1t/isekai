@@ -76,7 +76,7 @@ from isekai.pipeline.review import current_draft
 PORT = 8188
 # A session's figures, and the least time an image is quoted at (D26).
 RENDER_CONFIG = REPOSITORY / "config" / "render.json"
-# How many of a flow's newest recorded durations its time per image is the median of.
+# How many of a flow's newest recorded durations its median is taken over.
 RECENT = 20
 # A pod held for diagnosis stops after its hold ends, never before.
 FLOOR_S = HOLD_SECONDS + 300
