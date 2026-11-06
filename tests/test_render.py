@@ -681,6 +681,12 @@ def test_many_collections_render_in_one_session_in_the_order_named(
     assert session([roots[0], roots[0]], opener=opener, wiring=twice) == 1
     assert isinstance(twice.err, io.StringIO)
     assert "refused: a collection's runs/ is named twice" in twice.err.getvalue()
+    out, twice = roots[0] / first.id / FLOW, wired(roots[0])
+    status = session([roots[0], roots[0]], without=[out], opener=opener, wiring=twice)
+    assert status == 1
+    assert isinstance(twice.err, io.StringIO)
+    kept = roots[0].resolve() / first.id / FLOW
+    assert f"--without {kept}`" in twice.err.getvalue()
 
 
 @pytest.mark.spec("cli:render-short:a-flow-named-without-is-not-rendered")

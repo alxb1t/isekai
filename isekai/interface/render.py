@@ -525,11 +525,16 @@ def run_session(
                 file=wired.err,
             )
             return 1
+    without = list(getattr(args, "without", None) or [])
     once = list(dict.fromkeys(runs.resolve() for runs in roots))
     if len(once) < len(roots):
+        try:
+            retry = again(once, _taken(once, without))
+        except Refusal as refused:
+            print(f"refused: {refused}", file=wired.err)
+            return 1
         print(
-            f"refused: a collection's runs/ is named twice; name each once: "
-            f"`{again(once)}`",
+            f"refused: a collection's runs/ is named twice; name each once: `{retry}`",
             file=wired.err,
         )
         return 1
@@ -553,7 +558,6 @@ def run_session(
         try:
             limit = getattr(args, "limit", None)
             given = getattr(args, "session", None)
-            without = list(getattr(args, "without", None) or [])
             return _session(
                 roots,
                 list(args.requests),
