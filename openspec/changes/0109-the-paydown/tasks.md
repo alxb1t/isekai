@@ -7,7 +7,7 @@ The browser steps first, then the remedy, the accent and the record, per [design
 
 - [x] 1 — The tests
 - [x] 2 — The remedy
-- [ ] 3 — The accent
+- [x] 3 — The accent
 - [ ] 4 — The record
 
 ## 1 — The tests
@@ -41,13 +41,13 @@ The browser steps first, then the remedy, the accent and the record, per [design
 
 ## 3 — The accent
 
-- [ ] 3.1 In `ui/src/themes.test.ts`'s `PAIRS`, after `[['--color-text'], ['--color-bg', '--color-surface'], 4.5],`
+- [x] 3.1 In `ui/src/themes.test.ts`'s `PAIRS`, after `[['--color-text'], ['--color-bg', '--color-surface'], 4.5],`
   add `[['--color-accent'], ['--color-bg', '--color-surface'], 4.5],`, per [D3](design.md#d3).
   Verify: `grep -n -F "[['--color-accent'], ['--color-bg', '--color-surface'], 4.5]," ui/src/themes.test.ts` prints a line.
-- [ ] 3.2 In `ui/src/themes.css`, Latte's `--color-accent: #8839ef;` → `--color-accent: #7c3dd4;` and Frappé's
+- [x] 3.2 In `ui/src/themes.css`, Latte's `--color-accent: #8839ef;` → `--color-accent: #7c3dd4;` and Frappé's
   `--color-accent: #ca9ee6;` → `--color-accent: #c9a8e9;`, per [D3](design.md#d3).
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 3.3 At the end of `ui/src/themes.css`, delete the comment `/* Latte's accent is under 4.5:1 as link text; its
+- [x] 3.3 At the end of `ui/src/themes.css`, delete the comment `/* Latte's accent is under 4.5:1 as link text; its
   links take the accent ink. */`, the rule `:where([data-theme="latte"]) a { color: var(--accent-ink); }` and the blank
   line above them, per [D3](design.md#d3).
   Verify: `grep -n -F ':where(' ui/src/themes.css` prints nothing.

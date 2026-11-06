@@ -14,6 +14,8 @@ its new digest.
   focused row into view, so the first row's edge shows the head (0109 D1).
 - A copy refused for the target's schema now offers `review --new-version`, which writes a draft when the target
   already holds an approval (0109 D2).
+- Latte's and Frappé's `--color-accent` take their theme's accent ink, so the accent as text meets AA in every
+  Catppuccin theme; Latte's link rule goes, and the theme test checks the accent (0109 D3).
 
 ## [0.72.0] - 2026-11-06
 
