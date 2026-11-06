@@ -1191,6 +1191,13 @@ def test_with_no_recorded_duration_the_configured_time_per_image_is_used() -> No
     assert got.limit_s == (600 + 10 * 60 + 120) * 1.5
 
 
+@pytest.mark.spec("cli:render-limit:a-fast-median-takes-the-figure")
+def test_a_median_below_the_configured_figure_takes_the_figure() -> None:
+    got = render.estimate({FLOW: 4}, {FLOW: [30.0, 36.0, 40.0]}, TIMING, 3 * 60 * 60)
+
+    assert got.seconds == 600 + 4 * 60 + 120
+
+
 @pytest.mark.spec("cli:render-limit:a-short-session-takes-the-floor")
 def test_a_short_sessions_limit_is_the_hold_plus_five_minutes(tmp_path: Path) -> None:
     runs = collection(tmp_path)

@@ -86,11 +86,12 @@ class SchemaDocument(TypedDict):
 
 
 class Runtime(TypedDict):
-    """The versions a ComfyUI endpoint reports about itself."""
+    """The versions a ComfyUI endpoint reports, and its first device's name."""
 
     comfyui_version: str
     python_version: str
     pytorch_version: str
+    device: NotRequired[str]
 
 
 class ScoredTag(TypedDict):

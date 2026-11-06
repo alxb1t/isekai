@@ -512,13 +512,16 @@ number lets a render name the sheet the person corrected, not only its approval.
 The system SHALL record in every render the image reference the render session booted, and declare the render
 pinned, when a session names one; otherwise it SHALL record no image and declare the render
 unpinned. It SHALL also record the ComfyUI, Python and PyTorch versions the endpoint reports about itself,
-read only when a render will run, once per session unless a reading fails transiently.
+read only when a render will run, once per session unless a reading fails transiently, and with them the name of the
+first device the report lists, as reported; a report that names no device SHALL record none, and SHALL not be refused
+for it.
 
 The declared image says what should have run; the endpoint's own report says what did. Recording both is
 what catches a pod that is not what the pin says, and an endpoint that is not a pod at all declares itself
 unpinned rather than borrowing a pin it never had. Reading the report only when a render will run keeps a
 completed batch inert. A transient failure may be over by the next render, so it costs one photograph and not
-the session.
+the session. The device is what a render's duration depends on, so a quote can one day be read per card; it records
+and decides nothing, so its absence refuses nothing.
 
 #### Scenario: a render on a pinned pod records its image and runtime
 - **Key:** `image-generation:runtime:a-pinned-pod-is-recorded`
@@ -526,6 +529,19 @@ the session.
 - **WHEN** a render is written inside a session that names an image
 - **THEN** the render records that image and declares itself pinned
 - **AND** it records the ComfyUI, Python and PyTorch versions the endpoint reported
+
+#### Scenario: a render records the device it ran on
+- **Key:** `image-generation:runtime:a-render-records-its-device`
+- **Layers:** unit
+- **WHEN** a render is written and the endpoint's report lists a device
+- **THEN** the render's runtime records the first device's name as reported
+
+#### Scenario: a report naming no device records none
+- **Key:** `image-generation:runtime:no-device-records-none`
+- **Layers:** unit
+- **WHEN** the endpoint's report lists no device, or a first device with no name
+- **THEN** the runtime records no device
+- **AND** the report is read as it is without one
 
 #### Scenario: a render on an endpoint no pod-boot record names is unpinned
 - **Key:** `image-generation:runtime:an-unrecorded-endpoint-is-unpinned`
