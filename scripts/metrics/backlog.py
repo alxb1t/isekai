@@ -2,7 +2,7 @@
 # requires-python = ">=3.12"
 # dependencies = []
 # ///
-"""Print how many open cards the primary checkout's backlog holds.
+"""Print how many open cards the primary checkout's debt file holds.
 
 Run from any checkout of the repository: `backlog.py`.
 """
@@ -16,7 +16,7 @@ CARD = re.compile(r"^- \*\*\S+·", re.MULTILINE)
 
 
 def cards(text: str) -> int:
-    """Return the number of cards in a backlog.
+    """Return the number of cards in a debt file.
 
     e.g. a line "- **0060·R5 — a**" and a line "- **op·x — b**" -> 2
     """
@@ -24,14 +24,14 @@ def cards(text: str) -> int:
 
 
 def backlog_path() -> Path:
-    """Return the backlog file in the primary checkout's `.minions/`."""
+    """Return the debt file in the primary checkout's `.minions/`."""
     common = subprocess.run(
         ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
         capture_output=True,
         text=True,
         check=True,
     ).stdout.strip()
-    return Path(common).parent / ".minions" / "backlog.md"
+    return Path(common).parent / ".minions" / "debt.md"
 
 
 def main() -> int:
@@ -40,7 +40,7 @@ def main() -> int:
         path = backlog_path()
         text = path.read_text(encoding="utf-8")
     except (subprocess.CalledProcessError, OSError) as refusal:
-        print(f"backlog unreadable: {refusal}", file=sys.stderr)
+        print(f"debt unreadable: {refusal}", file=sys.stderr)
         return 1
     print(cards(text))
     return 0

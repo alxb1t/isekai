@@ -12,6 +12,8 @@ its new digest.
 
 - The Review tab's count reads `--accent-ink`, so it meets 4.5:1 on Latte's app bar, and the themes test holds
   `--accent-ink` on `--ground-deep` in every theme (0110 D1).
+- The *Open debt cards* measure reads the primary checkout's `.minions/debt.md`, the file MF keeps, so it reports a
+  number again; its id and past records stay (0110 D2).
 
 ## [0.73.0] - 2026-11-06
 

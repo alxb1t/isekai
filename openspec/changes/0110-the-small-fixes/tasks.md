@@ -5,7 +5,7 @@ The count first, then the measure, per [design](design.md). No spec delta, per [
 ## Progress
 
 - [x] 1 — The count
-- [ ] 2 — The metric
+- [x] 2 — The metric
 
 ## 1 — The count
 
@@ -21,15 +21,15 @@ The count first, then the measure, per [design](design.md). No spec delta, per [
 
 ## 2 — The metric
 
-- [ ] 2.1 In `tests/test_metric_scripts.py`'s `test_the_backlog_is_in_the_primary_checkouts_minions`,
+- [x] 2.1 In `tests/test_metric_scripts.py`'s `test_the_backlog_is_in_the_primary_checkouts_minions`,
   `/ ".minions" / "backlog.md"` → `/ ".minions" / "debt.md"`, per [D2](design.md#d2).
   Verify: `grep -n -F '/ ".minions" / "debt.md"' tests/test_metric_scripts.py` prints a line.
-- [ ] 2.2 In `scripts/metrics/backlog.py`, per [D2](design.md#d2): `"backlog.md"` → `"debt.md"`; "the primary checkout's
+- [x] 2.2 In `scripts/metrics/backlog.py`, per [D2](design.md#d2): `"backlog.md"` → `"debt.md"`; "the primary checkout's
   backlog holds" → "the primary checkout's debt file holds"; "cards in a backlog" → "cards in a debt file"; "Return the
   backlog file" → "Return the debt file"; `backlog unreadable:` → `debt unreadable:`.
   Verify: `uv run pytest tests/test_metric_scripts.py` exits 0.
-- [ ] 2.3 **HALT CHECK** The script reads the primary's `.minions/debt.md`, the premise of [D2](design.md#d2).
+- [x] 2.3 **HALT CHECK** The script reads the primary's `.minions/debt.md`, the premise of [D2](design.md#d2).
   Verify: `uv run --script scripts/metrics/backlog.py` exits 0 and prints a number.
-- [ ] 2.4 In `metrics/catalogue.toml`, `title = "Open backlog cards"` → `title = "Open debt cards"`, per
+- [x] 2.4 In `metrics/catalogue.toml`, `title = "Open backlog cards"` → `title = "Open debt cards"`, per
   [D2](design.md#d2).
   Verify: `grep -n -F 'title = "Open debt cards"' metrics/catalogue.toml` prints a line.
