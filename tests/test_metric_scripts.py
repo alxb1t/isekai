@@ -129,7 +129,7 @@ def test_the_backlog_is_in_the_primary_checkouts_minions(
 ) -> None:
     monkeypatch.chdir(repo)
 
-    assert backlog.backlog_path() == repo.resolve() / ".minions" / "backlog.md"
+    assert backlog.backlog_path() == repo.resolve() / ".minions" / "debt.md"
 
 
 @pytest.mark.spec_exempt("structural: a commit needs the change's trailer")

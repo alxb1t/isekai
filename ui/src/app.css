@@ -2386,7 +2386,7 @@ dialog::backdrop {
 .appbar__count {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--accent);
+  color: var(--accent-ink);
   margin-left: 6px;
 }
 
