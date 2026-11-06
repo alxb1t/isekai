@@ -76,6 +76,7 @@ from isekai.shared.image import MAX_TARGET_LONG_SIDE, photo_resolution
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.fakes import (
+    FAKE_DEVICE,
     FAKE_SYSTEM,
     SESSION_IMAGE,
     FakeComfyClient,
@@ -1745,6 +1746,7 @@ def test_the_runtime_is_read_from_the_endpoints_own_report() -> None:
         "comfyui_version": FAKE_SYSTEM["comfyui_version"],
         "python_version": FAKE_SYSTEM["python_version"],
         "pytorch_version": FAKE_SYSTEM["pytorch_version"],
+        "device": FAKE_DEVICE,
     }
     assert client.stats_calls == 1
 
@@ -1799,7 +1801,27 @@ def test_an_unfetched_report_keeps_the_transports_kind(kind: Kind) -> None:
     assert refused.value is failure
 
 
+@pytest.mark.spec("image-generation:runtime:no-device-records-none")
+@pytest.mark.parametrize(
+    "report",
+    [
+        {"system": dict(FAKE_SYSTEM), "devices": []},
+        {"system": dict(FAKE_SYSTEM)},
+        {"system": dict(FAKE_SYSTEM), "devices": [{"type": "cuda"}]},
+        {"system": dict(FAKE_SYSTEM), "devices": [{"name": 7}]},
+    ],
+    ids=["empty", "absent", "unnamed", "not-text"],
+)
+def test_a_report_naming_no_device_records_none(report: dict[str, Any]) -> None:
+    assert read_runtime(FakeComfyClient(report=report)) == {
+        "comfyui_version": FAKE_SYSTEM["comfyui_version"],
+        "python_version": FAKE_SYSTEM["python_version"],
+        "pytorch_version": FAKE_SYSTEM["pytorch_version"],
+    }
+
+
 @pytest.mark.spec("image-generation:runtime:a-pinned-pod-is-recorded")
+@pytest.mark.spec("image-generation:runtime:a-render-records-its-device")
 def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
     tmp_path: Path,
     schema: Schema,
@@ -1833,6 +1855,9 @@ def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
         assert sidecar.get("image") == SESSION_IMAGE
         assert sidecar.get("pinned") is True
         assert sidecar.get("runtime") == read_runtime(FakeComfyClient())
+        runtime = sidecar.get("runtime")
+        assert runtime is not None
+        assert runtime.get("device") == FAKE_DEVICE
     # One report for the session, however many renders it served.
     assert client.stats_calls == 1
 

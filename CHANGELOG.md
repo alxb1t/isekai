@@ -13,6 +13,8 @@ its new digest.
 - A render session's estimate takes each image at its recorded median or the configured time per image, whichever is
   higher, and the boot and per-image figures rise to what the slowest card takes: a fast card's medians no longer
   cut a slow card's session short (0107 D1, D2).
+- Each render's `runtime` records the name of the first device the endpoint reports, so a later quote can be read
+  per card; a report naming no device is read as before (0107 D3, D4, D5).
 
 ## [0.71.0] - 2026-11-06
 

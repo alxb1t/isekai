@@ -5,7 +5,7 @@ The rule, then the card, then the record, per [design](design.md). Paths are fro
 ## Progress
 
 - [x] 1 — The rule
-- [ ] 2 — The card
+- [x] 2 — The card
 - [ ] 3 — The record
 
 ## 1 — The rule
@@ -27,28 +27,28 @@ The rule, then the card, then the record, per [design](design.md). Paths are fro
 
 ## 2 — The card
 
-- [ ] 2.1 **HALT CHECK** — [D3](design.md#d3) reads the report `read_runtime` already fetches.
+- [x] 2.1 **HALT CHECK** — [D3](design.md#d3) reads the report `read_runtime` already fetches.
   Verify: `grep -n 'report = client.system_stats()' isekai/pipeline/generate.py` prints one line.
-- [ ] 2.2 In `isekai/foundation/artifacts.py`, give `Runtime` the `device` key and the docstring of
+- [x] 2.2 In `isekai/foundation/artifacts.py`, give `Runtime` the `device` key and the docstring of
   [D4](design.md#d4).
   Verify: `grep -n '    device: NotRequired\[str\]' isekai/foundation/artifacts.py` prints one line.
-- [ ] 2.3 In `isekai/pipeline/generate.py`, add `_first_device` after `read_runtime`, and make `read_runtime` keep
+- [x] 2.3 In `isekai/pipeline/generate.py`, add `_first_device` after `read_runtime`, and make `read_runtime` keep
   its name, per [D3](design.md#d3); `read_runtime`'s docstring takes D3's summary line and body line.
   Verify: `grep -n 'def _first_device(report: dict\[str, Any\]) -> str | None:' isekai/pipeline/generate.py` prints one line.
-- [ ] 2.4 In `tests/fakes.py`, add `FAKE_DEVICE` and its comment after `FAKE_SYSTEM`, and list it in the default
+- [x] 2.4 In `tests/fakes.py`, add `FAKE_DEVICE` and its comment after `FAKE_SYSTEM`, and list it in the default
   report, per [D5](design.md#d5).
   Verify: `grep -n '^FAKE_DEVICE = "cuda:0 NVIDIA L4 : cudaMallocAsync"$' tests/fakes.py` prints one line.
-- [ ] 2.5 In `tests/golden/render.json`, add `"device": "cuda:0 NVIDIA L4 : cudaMallocAsync"` after
+- [x] 2.5 In `tests/golden/render.json`, add `"device": "cuda:0 NVIDIA L4 : cudaMallocAsync"` after
   `"pytorch_version"` in `runtime`, a comma ending the line before it, per [D5](design.md#d5).
   Verify: `uv run pytest tests/test_artifact_bytes.py` exits 0.
-- [ ] 2.6 In `tests/test_generate.py`, import `FAKE_DEVICE` from `tests.fakes`; give
+- [x] 2.6 In `tests/test_generate.py`, import `FAKE_DEVICE` from `tests.fakes`; give
   `test_the_runtime_is_read_from_the_endpoints_own_report`'s expected mapping `"device": FAKE_DEVICE`, last.
   Verify: `uv run pytest tests/test_generate.py -k runtime_is_read_from_the_endpoints_own_report` exits 0.
-- [ ] 2.7 In `tests/test_generate.py`, give `test_a_render_on_a_pinned_pod_records_its_image_and_runtime` the key
+- [x] 2.7 In `tests/test_generate.py`, give `test_a_render_on_a_pinned_pod_records_its_image_and_runtime` the key
   `image-generation:runtime:a-render-records-its-device`; in its loop add `runtime = sidecar.get("runtime")`,
   `assert runtime is not None` and `assert runtime.get("device") == FAKE_DEVICE`.
   Verify: `grep -c 'image-generation:runtime:a-render-records-its-device' tests/test_generate.py` prints `1`.
-- [ ] 2.8 In `tests/test_generate.py`, after `test_an_unfetched_report_keeps_the_transports_kind`, add
+- [x] 2.8 In `tests/test_generate.py`, after `test_an_unfetched_report_keeps_the_transports_kind`, add
   `test_a_report_naming_no_device_records_none` (`image-generation:runtime:no-device-records-none`), parametrized
   over the reports of [the device's absence](design.md#the-devices-absence); `read_runtime` returns the versions alone.
   Verify: `uv run pytest tests/test_generate.py -k report_naming_no_device` exits 0.
