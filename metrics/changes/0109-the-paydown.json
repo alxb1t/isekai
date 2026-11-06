@@ -1,0 +1,59 @@
+{
+  "change": "0109-the-paydown",
+  "version": "0.72.1",
+  "base": "eea5ebd9",
+  "analyzed": "6e3a7088",
+  "measured_on": "local",
+  "collected_at": "2026-11-06T16:10:36+02:00",
+  "mf_version": "v0.67.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1501
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 31
+    },
+    "open-backlog-cards": {
+      "status": "unavailable",
+      "why": "backlog unreadable: [Errno 2] No such file or directory: '~/Developer/isekai/isekai/.minions/backlog.md'"
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 284
+    },
+    "diff-files": {
+      "value": 14
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 12365
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 738
+    },
+    "decisions": {
+      "value": 49
+    }
+  }
+}
