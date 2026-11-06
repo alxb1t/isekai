@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.73.0] - 2026-11-06
+
+Gate: local 0m46s · CI not read under mf-ship · 0.72.1: local 0m31s · CI not read under mf-ship
+
 - `isekai render --without <runs>/<run-id>/<flow>`, repeatable, takes that run's flow out of a session with no
   request; a damaged approval it names is still refused, and the retry the limit names keeps each one (0108 D1, D2).
 - The render quote and its confirmation take `without`, each source names its run, and the job passes each

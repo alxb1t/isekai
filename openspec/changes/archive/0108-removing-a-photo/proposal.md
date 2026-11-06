@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.73
 after: [0107-the-slowest-card]
 ---
 
