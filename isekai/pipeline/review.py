@@ -63,6 +63,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
     NEW_VERSION,
+    OUTPUTS,
     PROMPTS,
     REVIEW,
     SHEETS,
@@ -581,37 +582,56 @@ def cancel(run: Run, flow: str) -> Cancelled:
 
 
 def withdraw(run: Run, flow: str, version: int) -> list[Path]:
-    """Cancel approval `version` of `flow` with its last render; return what went.
+    """Delete approval `version` once its group is gone; return what went, absolute.
 
-    Only the newest approval goes, when its outputs group is gone and no draft
-    waits above it. Its prompt and failure records go first, then `cancel` takes
-    it back to its draft, or deletes a copy. A damaged approval refuses.
-    e.g. (run, f, 2) -> [f/prompts/002.json, f/review/002.approved.json]
+    With it go each older approval with no group, each with its prompt, failure
+    records and source copy, and, where it was the newest, the draft waiting above
+    it and that draft's source copy. A flow left with no approval keeps only its
+    directory, its assignment: every path under sheets/, review/, prompts/ and
+    sources/ goes, then those directories, then outputs/ when empty. Nothing is
+    read, so nothing refuses.
+    e.g. (run, f, 2), 001 rendered -> [f/prompts/002.json, f/review/002.approved.json]
     """
     directory = run.directory(flow, REVIEW)
     approved = approved_versions(directory)
-    if (
-        not approved
-        or approved[-1] != version
-        or group_of(run, flow, version).exists()
-        or current_draft(directory) is not None
-    ):
+    if version not in approved or group_of(run, flow, version).exists():
         return []
-    again = f"`{stage_command(run, 'approve', flow, options=CANCEL)}`"
-    body = _approval(run, flow, version, f"run {again}")
-    copied = approval_of(run, flow, version)
-    # `cancel` refuses without a producer, so that is read before any file goes.
-    require(copied, body, "producer", dict, f"restore it in {copied}, then {again}")
-    prompts = run.directory(flow, PROMPTS)
-    made = [
-        prompts / artifact_name(version),
-        *(attempt.path for attempt in attempts(prompts, version)),
+    going = [
+        one
+        for one in approved
+        if one == version or (one < version and not group_of(run, flow, one).exists())
     ]
+    prompts = run.directory(flow, PROMPTS)
+    made: list[Path] = []
+    for one in going:
+        made += [
+            prompts / artifact_name(one),
+            *(attempt.path for attempt in attempts(prompts, one)),
+            source_copy(run, flow, one),
+            approval_of(run, flow, one),
+        ]
+    if version == approved[-1] and (draft := current_draft(directory)) is not None:
+        made += [draft, source_copy(run, flow, int(draft.name[:3]))]
     gone = [path.absolute() for path in made if path.exists()]
     for path in gone:
         path.unlink()
-    cancel(run, flow)
-    return [*gone, approval_of(run, flow, version).absolute()]
+    if len(going) < len(approved):
+        return gone
+    for name in (SHEETS, REVIEW, PROMPTS, SOURCES):
+        held = run.directory(flow, name)
+        if not held.exists():
+            continue
+        for path in [*sorted(held.rglob("*"), reverse=True), held]:
+            if path.is_dir():
+                path.rmdir()
+            else:
+                path.unlink()
+            gone.append(path.absolute())
+    outputs = run.directory(flow, OUTPUTS)
+    if outputs.is_dir() and not any(outputs.iterdir()):
+        outputs.rmdir()
+        gone.append(outputs.absolute())
+    return gone
 
 
 def _at_draft(directory: Path) -> Path | None:

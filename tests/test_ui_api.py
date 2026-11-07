@@ -1704,6 +1704,9 @@ def test_deleting_a_render_deletes_its_files_and_thumbnail(
     assert list(cache.glob("001/11.*.jpg")) == []
     assert (outputs / "002" / "22.png").is_file()
     assert len(list(cache.glob("002/22.*.jpg"))) == 1
+    reviewed = made.directory(FLOW, "review")
+    assert not (reviewed / "001.approved.json").exists()
+    assert (reviewed / "002.approved.json").is_file()
     # Its address now names no render, and says so rather than a record left.
     gone = client.get(f"{at}/v1/11")
     assert gone.status_code == 409
@@ -1712,12 +1715,9 @@ def test_deleting_a_render_deletes_its_files_and_thumbnail(
         == "11.png: no render is here, its record and its image are gone"
     )
 
-    # The newest approval's only render goes, and its approval with it.
+    # The last approval's only render goes, and the flow keeps only its assignment.
     assert client.delete(f"{at}/v2/22").status_code == 200
-    reviewed = made.directory(FLOW, "review")
-    assert (reviewed / "002.draft.json").is_file()
-    assert not (reviewed / "002.approved.json").exists()
-    assert (reviewed / "001.approved.json").is_file()
+    assert list(made.directory(FLOW).iterdir()) == []
 
 
 @pytest.mark.spec("ui:delete-render:refused-while-a-render-runs")

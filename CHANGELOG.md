@@ -19,6 +19,9 @@ its new digest.
   no `tags_from`, so it is weighed against a newer tag list like any other (0112 D4, D5).
 - `approve --from` fills a target with no sheet from the photograph's tags first, and the copy names the target's own
   newest sheet, so a revision of the copy compares against it (0112 D6).
+- Deleting an approval's last render, from `discard` or the app, deletes that approval, older ones with no render and
+  the newest's waiting draft; nothing goes back to a draft. A flow left with no approval keeps only its assignment, so
+  the Hub reads *tagged* (0112 D1).
 
 ## [0.74.0] - 2026-11-07
 

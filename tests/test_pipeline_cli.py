@@ -941,9 +941,14 @@ def test_discarding_the_last_render_takes_its_approval_with_it(
         f"discard deleted {flow}/outputs/001",
         f"discard deleted {flow}/prompts/001.json",
         f"discard deleted {flow}/review/001.approved.json",
+        f"discard deleted {flow}/sheets/001.json",
+        f"discard deleted {flow}/sheets",
+        f"discard deleted {flow}/review",
+        f"discard deleted {flow}/prompts",
+        f"discard deleted {flow}/outputs",
         f"discard deleted .cache/{run.digest}/summon-anime-wai/outputs/001/{own}",
     ]
-    assert (run.directory("summon-anime-wai", "review") / "001.draft.json").is_file()
+    assert list(run.directory("summon-anime-wai").iterdir()) == []
     # Another collection's thumbnail of the same photograph and seed stays.
     assert not (cached / own).exists() and (cached / "7.other.jpg").is_file()
 

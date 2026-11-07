@@ -9,7 +9,7 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 - [x] 2 — The page
 - [x] 3 — The discard and the records
 - [x] 4 — The copy's own sheet
-- [ ] 5 — The delete
+- [x] 5 — The delete
 - [ ] 6 — The record
 
 ## 1 — The source copy
@@ -115,25 +115,25 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 
 ## 5 — The delete
 
-- [ ] 5.1 **HALT CHECK** — [D1](design.md#d1) drops the one call that takes an approval back to its draft on a delete.
+- [x] 5.1 **HALT CHECK** — [D1](design.md#d1) drops the one call that takes an approval back to its draft on a delete.
   Verify: `grep -nx '    cancel(run, flow)' isekai/pipeline/review.py` prints one line.
-- [ ] 5.2 In `isekai/pipeline/review.py`, rewrite `withdraw` per [the delete](design.md#the-delete).
+- [x] 5.2 In `isekai/pipeline/review.py`, rewrite `withdraw` per [the delete](design.md#the-delete).
   Verify: `grep -n 'once its group is gone; return what went, absolute' isekai/pipeline/review.py` prints one line.
-- [ ] 5.3 In `isekai/interface/cli.py`, make `_discard` print what `discard_render` and `withdraw` return with no
+- [x] 5.3 In `isekai/interface/cli.py`, make `_discard` print what `discard_render` and `withdraw` return with no
   refusal branch, its docstring saying the last render takes its approval, per [D1](design.md#d1).
   Verify: `grep -n 'refused = refusal' isekai/interface/cli.py` prints nothing.
-- [ ] 5.4 In `isekai/interface/ui/app.py`, make the module docstring and `delete_render`'s say what `withdraw` deletes,
+- [x] 5.4 In `isekai/interface/ui/app.py`, make the module docstring and `delete_render`'s say what `withdraw` deletes,
   per [D1](design.md#d1).
   Verify: `grep -n 'back to its draft once its last render' isekai/interface/ui/app.py` prints nothing.
-- [ ] 5.5 In `tests/test_review.py`, rewrite the `withdraw` rows of [the pipeline's tests](design.md#the-pipelines-tests).
+- [x] 5.5 In `tests/test_review.py`, rewrite the `withdraw` rows of [the pipeline's tests](design.md#the-pipelines-tests).
   Verify: `uv run pytest tests/test_review.py -k "takes_its_approval_and_the_waiting_draft or older_approvals_with_no_render or keeps_only_its_assignment"` exits 0.
-- [ ] 5.6 In `tests/test_pipeline_cli.py`, edit `test_discarding_the_last_render_takes_its_approval_with_it`, per
+- [x] 5.6 In `tests/test_pipeline_cli.py`, edit `test_discarding_the_last_render_takes_its_approval_with_it`, per
   [the server's and the verb's tests](design.md#the-servers-and-the-verbs-tests).
   Verify: `uv run pytest tests/test_pipeline_cli.py -k last_render_takes_its_approval` exits 0.
-- [ ] 5.7 In `tests/test_ui_api.py`, edit `test_deleting_a_render_deletes_its_files_and_thumbnail`, per
+- [x] 5.7 In `tests/test_ui_api.py`, edit `test_deleting_a_render_deletes_its_files_and_thumbnail`, per
   [the server's and the verb's tests](design.md#the-servers-and-the-verbs-tests).
   Verify: `grep -n "# The last approval's only render goes, and the flow keeps only its assignment." tests/test_ui_api.py` prints one line.
-- [ ] 5.8 In `tests/e2e/test_render.py`, make the comment and the cell step of
+- [x] 5.8 In `tests/e2e/test_render.py`, make the comment and the cell step of
   [the end-to-end steps](design.md#the-end-to-end-steps).
   Verify: `grep -n 'to_have_attribute("data-stage", "tagged")' tests/e2e/test_render.py` prints one line.
 

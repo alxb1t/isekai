@@ -24,6 +24,7 @@ from isekai.foundation.flow import Flow, Schema, assemble, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     NEW_VERSION,
+    PHOTO,
     Run,
     approved_versions,
     open_run,
@@ -1980,73 +1981,82 @@ def test_a_cancel_interrupted_before_its_delete_finishes_when_run_again(
 # --- withdraw: an approval leaves with its last render -------------------------
 
 
-@pytest.mark.spec(
-    "image-generation:discard:the-newest-approval-goes-with-its-last-render"
-)
+@pytest.mark.spec("image-generation:discard:the-approval-goes-with-its-last-render")
 @pytest.mark.spec(
     "run-directory:idempotence:the-newest-approval-goes-with-its-last-render"
 )
-def test_the_newest_approvals_last_render_takes_it_back_to_its_draft(
+def test_the_last_render_takes_its_approval_and_the_waiting_draft(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    approved = _approved_source(run, schema, vocabulary)
-    copy, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
-    assert copy is not None
+    _approved_source(run, schema, vocabulary)
+    _image(run, 1, 11)
+    approved = _approved(run, schema, vocabulary, hair_silhouette=["very long hair"])
     prompt = prompt_artifact(run, load_flow(FLOW), schema)
     failure = record_failure(
         run.directory(FLOW, "prompts"),
-        1,
+        2,
         "permanent",
         {"stage": "assemble", "detail": "x"},
     )
-    # An approval its cancel would refuse keeps the prompt and the failure record.
-    held = approved.read_bytes()
-    _damage(approved, "producer", None)
-    with pytest.raises(Refusal):
-        withdraw(run, FLOW, 1)
-    assert prompt.exists() and failure.exists() and approved.exists()
-    approved.write_bytes(held)
+    copy = source_copy(run, FLOW, 2)
+    copy.parent.mkdir()
+    copy.write_bytes(b"png")
+    draft = review(run, FLOW, new_version=True)
+    assert draft is not None
     before = snapshot(run.path)
 
-    assert withdraw(run, FLOW, 1) == [prompt, failure, approved]
+    went = [prompt, failure, copy, approved, draft]
+    assert withdraw(run, FLOW, 2) == [path.absolute() for path in went]
 
-    assert not prompt.exists() and not failure.exists() and not approved.exists()
-    draft = run.directory(FLOW, "review") / "001.draft.json"
-    assert draft.is_file()
-    assert state(run.directory(FLOW, "review")) == "draft"
+    assert sorted(path.name for path in draft.parent.iterdir()) == ["001.approved.json"]
     # Every other file of the run is as it was.
-    gone = {str(path.relative_to(run.path)) for path in (prompt, failure, approved)}
+    gone = {str(path.relative_to(run.path)) for path in went}
     assert snapshot(run.path) == {
-        **{name: body for name, body in before.items() if name not in gone},
-        str(draft.relative_to(run.path)): draft.read_bytes(),
+        name: body for name, body in before.items() if name not in gone
     }
-    # A copy has no draft to go back to, so it is deleted.
-    assert withdraw(run, CONTROL, 1) == [copy]
-    assert not copy.exists()
 
 
-@pytest.mark.spec("image-generation:discard:an-older-approval-stays")
-def test_an_older_approvals_last_render_leaves_it(
+@pytest.mark.spec("image-generation:discard:older-render-less-approvals-go")
+def test_older_approvals_with_no_render_go_and_rendered_ones_stay(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _approved_source(run, schema, vocabulary)
-    _approved(run, schema, vocabulary, hair_silhouette=["very long hair"])
+    image = _image(run, 1, 11)
+    second = _approved(run, schema, vocabulary, hair_silhouette=["very long hair"])
+    third = _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
     before = snapshot(run.path)
 
     assert withdraw(run, FLOW, 1) == []
-
     assert snapshot(run.path) == before
 
+    assert withdraw(run, FLOW, 3) == [second.absolute(), third.absolute()]
+    assert approved_versions(run.directory(FLOW, "review")) == [1]
+    assert image.is_file()
 
-@pytest.mark.spec("image-generation:discard:a-waiting-draft-keeps-the-approval")
-def test_a_waiting_draft_keeps_the_approval_its_last_render_left(
+
+@pytest.mark.spec(
+    "image-generation:discard:a-flow-with-no-approval-keeps-its-assignment"
+)
+def test_a_flow_left_with_no_approval_keeps_only_its_assignment(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    _approved_source(run, schema, vocabulary)
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
     prompt_artifact(run, load_flow(FLOW), schema)
-    assert review(run, FLOW, new_version=True) is not None
-    before = snapshot(run.path)
+    photo = snapshot(run.directory(PHOTO))
 
-    assert withdraw(run, FLOW, 1) == []
+    withdraw(run, FLOW, 1)
 
-    assert snapshot(run.path) == before
+    assert list(run.directory(FLOW).iterdir()) == []
+    assert snapshot(run.directory(PHOTO)) == photo
+
+    # A group no approval names, holding an image, keeps outputs/ in place.
+    sheet(run, schema, vocabulary)
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
+    _image(run, 5, 11)
+
+    withdraw(run, FLOW, 1)
+
+    assert [path.name for path in run.directory(FLOW).iterdir()] == ["outputs"]
+    assert run.directory(FLOW, "outputs", "005").is_dir()
