@@ -1,0 +1,58 @@
+{
+  "change": "0116-prepare-per-photograph",
+  "version": "0.76",
+  "base": "a441b8b5",
+  "analyzed": "b74736fb",
+  "measured_on": "local",
+  "collected_at": "2026-11-07T22:50:17+02:00",
+  "mf_version": "v0.73.0",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1521
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 30
+    },
+    "open-backlog-cards": {
+      "value": 10
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1160
+    },
+    "diff-files": {
+      "value": 19
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 12860
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 766
+    },
+    "decisions": {
+      "value": 51
+    }
+  }
+}

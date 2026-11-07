@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.76
 ---
 
 # 0116 — Prepare per photograph
