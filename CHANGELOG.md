@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.74.0] - 2026-11-07
+
+Gate: local 0m30s · CI not read under mf-ship · 0.73.1: local 0m33s · CI not read under mf-ship
+
 - Only an approval's own prompt, failure records and renders refuse its cancel: another flow's copy, drafted
   approval or waiting draft no longer holds it, so what another flow took can't pin its source (0111 D2).
 - `refuse_out_of_step` and `generate --in-step-with` are deleted, and `render` runs no check before the pod for a
