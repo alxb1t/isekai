@@ -50,8 +50,8 @@ seed, checks every image before writing anything — the image exists, its appro
 waiting draft with edits of its own, and no two images share a run and target — and then writes, through the review
 stage, a revision where `FLOW` is the image's own flow and a draft from its approval where it is another, assigning a
 target with no sheet and filling its sheet from the photograph's tags, and copying another flow's image into the
-target's sources; when any check fails it SHALL write nothing and name every image that failed, with its reason. It SHALL tell two images' runs apart by the identity of their
-directories, never by the text of their paths.
+target's sources; when any check fails it SHALL write nothing and name every image that failed, with its reason. It
+SHALL tell two images' runs apart by the identity of their directories, never by the text of their paths.
 
 An image's path names everything a draft needs but its target, so the verb takes nothing else. A selection is drafted
 whole or not at all, so a retry after a fix does not meet the drafts the first try wrote. A target with no sheet needs

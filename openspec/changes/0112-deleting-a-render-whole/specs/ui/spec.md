@@ -7,16 +7,17 @@ opening a dialog that lists every flow the app offers, the image's own first, na
 after it, assigned or not; `↵` SHALL draft the chosen flow from each image's approval, as the draft verb does — a
 revision for the image's own flow, a draft from that approval for another, assigning a target and filling its sheet from
 the photograph's tags where it holds none, the image's seed prefilled and, for another flow, the image copied into the
-target's sources — then open Review on the
-first draft, the others of its flow in the rail. A target holding a waiting draft with edits of its own SHALL write
-nothing for that image and open Review on that draft; one equal to its sheet SHALL be replaced. A selection SHALL be
-drafted all or none, refusing by name an image of a flow this build does not track, and refusing a selection that names
-a version or a seed no run can hold. On such a draft, draft or approved, Review SHALL show the photograph and, for a
-revision, while its file exists, the image the draft records — whatever its seeds became, else the first of its seeds
-rendered under its approval — headed by its seed, or, for a draft from another flow, its source copy, headed *the image
-it was drafted from* and naming no flow, version or seed; on one line, at equal height under one header row, and offer *Side by side*, also on `⌃P`, both in one dialog, `⌃P` in it showing the photograph alone and back; it SHALL
-mark each field that differs from the approval a revision came from, or from the target's sheet for another flow; on a
-draft it SHALL offer to discard it from the approve bar, deleting it only once the operator confirms.
+target's sources — then open Review on the first draft, the others of its flow in the rail. A target holding a waiting
+draft with edits of its own SHALL write nothing for that image and open Review on that draft; one equal to its sheet
+SHALL be replaced. A selection SHALL be drafted all or none, refusing by name an image of a flow this build does not
+track, and refusing a selection that names a version or a seed no run can hold. On such a draft, draft or approved,
+Review SHALL show the photograph and, for a revision, while its file exists, the image the draft records — whatever its
+seeds became, else the first of its seeds rendered under its approval — headed by its seed, or, for a draft from another
+flow, its source copy, headed *the image it was drafted from* and naming no flow, version or seed; on one line, at equal
+height under one header row, and offer *Side by side*, also on `⌃P`, both in one dialog, `⌃P` in it showing the
+photograph alone and back; it SHALL mark each field that differs from the approval a revision came from, or from the
+target's sheet for another flow; on a draft it SHALL offer to discard it from the approve bar, deleting it only once the
+operator confirms.
 
 ```
 large view · summon-anime-wai v2 · seed 9423…   ⇧D
@@ -155,15 +156,16 @@ came from, or the whole source flow, leaves it as it was
 
 The system SHALL offer *Delete* on a render's large view, on `⇧⌫`, after *Compare with…*, opening a modal dialog,
 *Delete this render?*, whose *No* comes first and holds the focus; `h` `l` and `←` `→` SHALL move between *No* and
-*Yes*, `↵` SHALL press the focused one, and `Esc` SHALL answer *No*. *Yes* SHALL delete the render's own thumbnails
-from the library's cache, discard the render through the render stage — its approval going with its last render, and a
-flow left with no approval keeping only its assignment — and open the Hub focused on the render's cell, from whichever screen opened the view. The server SHALL refuse the
-delete while a render session runs for the collection, deleting nothing, and the dialog SHALL show the refusal.
+*Yes*, `↵` SHALL press the focused one, and `Esc` SHALL answer *No*. *Yes* SHALL delete the render's own thumbnails from
+the library's cache, discard the render through the render stage — its approval going with its last render, and a flow
+left with no approval keeping only its assignment — and open the Hub focused on the render's cell, from whichever screen
+opened the view. The server SHALL refuse the delete while a render session runs for the collection, deleting nothing,
+and the dialog SHALL show the refusal.
 
-A failed render is deleted where it is seen. *No* first makes a stray `↵` harmless, and a write beside a running
-session is refused, as *Cancel approve* is. The cell is where the delete shows: one image fewer, an older approval's
-images once the newest's last image goes, or *tagged* once the flow's last approval goes, with nothing to review. A thumbnail is told from another collection's of the same photograph
-and seed by its image's digest, so only the render's own goes.
+A failed render is deleted where it is seen. *No* first makes a stray `↵` harmless, and a write beside a running session
+is refused, as *Cancel approve* is. The cell is where the delete shows: one image fewer, an older approval's images once
+the newest's last image goes, or *tagged* once the flow's last approval goes, with nothing to review. A thumbnail is
+told from another collection's of the same photograph and seed by its image's digest, so only the render's own goes.
 
 ```
 large view ──⇧⌫──▶ Delete this render?  [No] [Yes]

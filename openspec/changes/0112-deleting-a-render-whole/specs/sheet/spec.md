@@ -5,11 +5,11 @@
 The system SHALL fill a sheet from a schema, a vocabulary, a field map and, for a flow that declares the tagger, the
 photograph's local tag list, and SHALL store fields only. It SHALL NOT store an assembled prompt in a sheet, SHALL NOT
 be told which flow requested the work beyond whether a tag list is expected and the flow's digest it records, SHALL
-record no other flow, a first sheet a draft writes included, and SHALL NOT read prose. For a flow that declares the tagger
-it SHALL refuse naming the verb that produces the tag list when that list is absent, and for a flow that declares none
-it SHALL write every field empty, and the sheet's producer SHALL record that no tag list and no model filled it. Every
-sheet SHALL record the digest of the flow it was filled for, and SHALL carry the tag list's confidence floor into its
-producer where the list records one.
+record no other flow, a first sheet a draft writes included, and SHALL NOT read prose. For a flow that declares the
+tagger it SHALL refuse naming the verb that produces the tag list when that list is absent, and for a flow that declares
+none it SHALL write every field empty, and the sheet's producer SHALL record that no tag list and no model filled it.
+Every sheet SHALL record the digest of the flow it was filled for, and SHALL carry the tag list's confidence floor into
+its producer where the list records one.
 
 ```
 flow declares the tagger? ──yes──▶ photo/wd14/ holds a list? ──yes──▶ fill through the field map
@@ -20,11 +20,12 @@ every field empty; the producer names no tag list and no model
 ```
 
 A prompt stored in the sheet would be edited by a person and silently overwritten by a rebuild. The stage learns only
-whether a tag list is expected and the flow's digest, which it records and never reads, so one stage serves every
-flow; a sheet naming another flow would tie the two
-([D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)); the digest ties a sheet to the schema it was filled against across a re-pin. Every flow reads the
-photograph's one tag list ([D17](../../../docs/decisions.md#d17--input-above-flow-below)). It reads a tag list, not
-prose, because a tagger whose output layer is the vocabulary cannot name a tag outside it
+whether a tag list is expected and the flow's digest, which it records and never reads, so one stage serves every flow;
+a sheet naming another flow would tie the two
+([D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)); the
+digest ties a sheet to the schema it was filled against across a re-pin. Every flow reads the photograph's one tag list
+([D17](../../../docs/decisions.md#d17--input-above-flow-below)). It reads a tag list, not prose, because a tagger whose
+output layer is the vocabulary cannot name a tag outside it
 ([D2](../../../docs/decisions.md#d2--a-table-fills-the-sheet)). An empty sheet is legal and so silent: for a tagged flow
 it would hide a tagger that never ran, and for a flow that declares none there is nothing to hide — a person fills it,
 and approval still gates the render ([D31](../../../docs/decisions.md#d31--a-flow-declares-whether-it-is-tagged)).
