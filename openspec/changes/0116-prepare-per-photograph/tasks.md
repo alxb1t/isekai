@@ -4,30 +4,30 @@ The verb, then the job that runs it, then the prose, per [design](design.md). Pa
 
 ## Progress
 
-- [ ] 1 — The verb
+- [x] 1 — The verb
 - [ ] 2 — The job
 - [ ] 3 — The prose
 
 ## 1 — The verb
 
-- [ ] 1.1 **HALT CHECK** — `_per_item` opens the tagger once per call, through `opening`, as
+- [x] 1.1 **HALT CHECK** — `_per_item` opens the tagger once per call, through `opening`, as
   [Context](design.md#context) says. Verify: `grep -n -F 'opening.append(_once(resolve))' isekai/interface/cli.py`
   prints one line.
-- [ ] 1.2 In `isekai/interface/cli.py`, add `("prepare", "tag, caption, then sheet each photograph in turn, for the
+- [x] 1.2 In `isekai/interface/cli.py`, add `("prepare", "tag, caption, then sheet each photograph in turn, for the
   cells named")` to `VERBS` after `sheet`. In `build_parser`, leave `prepare` out of the `photos` and `--runs` loop, give
   it a `cells` positional (`nargs="+"`, `metavar="<run-id>/<flow>"`), its own `--runs` as the loop's, and
   `set_defaults(photos=[])`, and add it to the `--progress` tuple, per [D1](design.md#d1).
   Verify: `grep -n -F 'metavar="<run-id>/<flow>"' isekai/interface/cli.py` prints one line.
-- [ ] 1.3 In `isekai/interface/cli.py`, add `_prepare(args: argparse.Namespace, wired: Wiring) -> int` per
+- [x] 1.3 In `isekai/interface/cli.py`, add `_prepare(args: argparse.Namespace, wired: Wiring) -> int` per
   [D1](design.md#d1), [D2](design.md#d2), [D3](design.md#d3) and [D4](design.md#d4), and route `verb == "prepare"` to
   it inside `dispatch`'s `try`, beside `migrate`. Verify: `grep -n -F 'def _prepare(args: argparse.Namespace, wired: Wiring) -> int:' isekai/interface/cli.py` prints one line.
-- [ ] 1.4 In `isekai/interface/cli.py`'s module docstring, add the line `prepare   (1)(2) each photograph's tags,
+- [x] 1.4 In `isekai/interface/cli.py`'s module docstring, add the line `prepare   (1)(2) each photograph's tags,
   prose, then its cells' sheets, in turn` after `sheet`'s, and in the paragraph below it, after "`tag` and `caption`
   take no flow, since they describe the photograph every flow reads (D17)," add "`prepare` names each flow in a cell,". Verify: `grep -n -F "each photograph's tags," isekai/interface/cli.py` prints one line.
-- [ ] 1.5 In `tests/test_pipeline_cli.py`, add `"prepare"` to `EXPECTED_VERBS` after `"sheet"`, and
+- [x] 1.5 In `tests/test_pipeline_cli.py`, add `"prepare"` to `EXPECTED_VERBS` after `"sheet"`, and
   `"prepare": ["r1/summon-anime-wai"]` to `test_each_verb_is_reachable_as_a_subcommand`'s `own`, per
   [Tests](design.md#tests). Verify: `uv run pytest tests/test_pipeline_cli.py -k "verbs or subcommand or help"` exits 0.
-- [ ] 1.6 In `tests/test_pipeline_cli.py`, add `test_prepare_takes_each_photograph_in_turn`,
+- [x] 1.6 In `tests/test_pipeline_cli.py`, add `test_prepare_takes_each_photograph_in_turn`,
   `test_prepare_opens_the_tagger_once`, `test_prepare_refuses_a_cell_no_longer_assigned` and
   `test_prepare_refuses_a_bad_cell_before_any_run_opens`, with the markers [Tests](design.md#tests) names.
   Verify: `uv run pytest tests/test_pipeline_cli.py -k test_prepare_` exits 0.

@@ -28,6 +28,7 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary import ollama
+from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
@@ -38,7 +39,7 @@ from isekai.foundation.artifacts import (
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Schema, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import PHOTO, Run, open_run
+from isekai.foundation.run import PHOTO, Run, assign, open_run
 from isekai.interface import wiring
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.ui import library
@@ -70,6 +71,7 @@ EXPECTED_VERBS = (
     "caption",
     "tag",
     "sheet",
+    "prepare",
     "review",
     "approve",
     "draft",
@@ -177,10 +179,11 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
     # `compare` takes a collection directory, `render` its runs, `import` a
-    # collection and its files, `draft` a flow and images, `discard` an image; `ui`
-    # and `migrate` take nothing.
+    # collection and its files, `draft` a flow and images, `discard` an image,
+    # `prepare` cells; `ui` and `migrate` take nothing.
     own = {
         "import": ["--collection", "collection", "photo.jpg"],
+        "prepare": ["r1/summon-anime-wai"],
         "draft": ["--flow", "summon-anime-wai", "outputs/001/7.png"],
         "discard": ["outputs/001/7.png"],
         "show": [],
@@ -648,6 +651,149 @@ def test_a_photographs_progress_line_names_no_flow(tmp_path: Path) -> None:
         {"run": run.id, "flow": "summon-anime-wai", "stage": "sheet", "state": "start"},
         {"run": run.id, "flow": "summon-anime-wai", "stage": "sheet", "state": "done"},
     ]
+
+
+def _photographs(tmp_path: Path, runs: Path, *sizes: tuple[int, int]) -> list[Run]:
+    """Open a run per size, each a photograph of that size, in order."""
+    opened: list[Run] = []
+    for number, (width, height) in enumerate(sizes):
+        photo = tmp_path / f"p{number}.jpg"
+        photo.write_bytes(jpeg_bytes(width, height))
+        opened.append(open_run(photo, runs))
+    return opened
+
+
+def _prepared(wired: Wiring, *cells: str) -> int:
+    """Run `prepare --progress json` over `cells` on `wired`."""
+    argv = ["prepare", "--progress", "json", *cells]
+    return dispatch(build_parser().parse_args(argv), wired)
+
+
+def _lines(wired: Wiring) -> list[dict[str, object]]:
+    """Return the JSON lines `wired` printed."""
+    assert isinstance(wired.out, io.StringIO)
+    return [json.loads(line) for line in wired.out.getvalue().splitlines()]
+
+
+@pytest.mark.spec("cli:prepare:each-photograph-in-turn")
+@pytest.mark.spec("cli:prepare:a-photograph-is-described-once")
+def test_prepare_takes_each_photograph_in_turn(tmp_path: Path) -> None:
+    wired = _wiring(tmp_path, flows_dir=_two_flows(tmp_path))
+    first, second = _photographs(tmp_path, wired.runs_root, (1200, 900), (900, 1200))
+    for run, flow in (
+        (first, "summon-anime-wai"),
+        (first, "other-v1"),
+        (second, "summon-anime-wai"),
+    ):
+        assign(run, flow)
+
+    status = _prepared(
+        wired,
+        f"{first.id}/summon-anime-wai",
+        f"{second.id}/summon-anime-wai",
+        f"{first.id}/other-v1",
+    )
+
+    def stages(run: Run, *flows: str) -> list[dict[str, object]]:
+        steps = [{"stage": "tag"}, {"stage": "caption"}] + [
+            {"flow": flow, "stage": "sheet"} for flow in flows
+        ]
+        return [
+            {"run": run.id, **step, "state": state}
+            for step in steps
+            for state in ("start", "done")
+        ]
+
+    assert status == 0
+    assert _lines(wired) == [
+        *stages(first, "summon-anime-wai", "other-v1"),
+        *stages(second, "summon-anime-wai"),
+    ]
+
+
+@pytest.mark.spec("cli:prepare:the-tagger-opens-once")
+def test_prepare_opens_the_tagger_once(tmp_path: Path) -> None:
+    opened: list[str] = []
+    resolve = fake_wd14()
+
+    def counting() -> LocalTagger:
+        opened.append("tagger")
+        return resolve()
+
+    wired = replace(_wiring(tmp_path), tagger=counting)
+    runs = _photographs(tmp_path, wired.runs_root, (1200, 900), (900, 1200))
+    for run in runs:
+        assign(run, "summon-anime-wai")
+
+    status = _prepared(wired, *(f"{run.id}/summon-anime-wai" for run in runs))
+
+    assert status == 0
+    assert all((run.path / PHOTO / "wd14" / "001.json").is_file() for run in runs)
+    assert opened == ["tagger"]
+
+
+@pytest.mark.spec("cli:prepare:an-unassigned-cell-refuses")
+def test_prepare_refuses_a_cell_no_longer_assigned(tmp_path: Path) -> None:
+    wired = _wiring(tmp_path, flows_dir=_two_flows(tmp_path))
+    [run] = _photographs(tmp_path, wired.runs_root, (1200, 900))
+    assign(run, "summon-anime-wai")
+
+    status = _prepared(wired, f"{run.id}/other-v1", f"{run.id}/summon-anime-wai")
+
+    assert status == 1
+    assert not (run.path / "other-v1").exists()
+    assert (run.path / "summon-anime-wai" / "sheets" / "001.json").is_file()
+    other = [line for line in _lines(wired) if line.get("flow") == "other-v1"]
+    [refused] = _refused(wired)
+    assert [line["state"] for line in other] == ["refused"]
+    assert other[0]["message"] == refused.removeprefix("refused: ")
+    assert f"`python -m isekai assign --flow other-v1 --runs {wired.runs_root}" in (
+        refused
+    )
+
+
+@pytest.mark.spec("cli:prepare:a-bad-cell-is-refused")
+@pytest.mark.parametrize(
+    ("bad", "says"),
+    [
+        pytest.param(
+            "{run}", "{run}: not a cell; name one as <run-id>/<flow>", id="no-slash"
+        ),
+        pytest.param(
+            "{run}/nope-v1",
+            "nope-v1: not a flow this build tracks; the flows it carries are "
+            "other-v1, summon-anime-wai",
+            id="untracked",
+        ),
+        pytest.param(
+            "missing/summon-anime-wai",
+            "missing/summon-anime-wai: no run missing under {runs}; run "
+            "`python -m isekai assign --flow summon-anime-wai --runs {runs} <photo>`",
+            id="no-run",
+        ),
+    ],
+)
+def test_prepare_refuses_a_bad_cell_before_any_run_opens(
+    tmp_path: Path, bad: str, says: str
+) -> None:
+    wired = _wiring(tmp_path, flows_dir=_two_flows(tmp_path))
+    [run] = _photographs(tmp_path, wired.runs_root, (1200, 900))
+    assign(run, "summon-anime-wai")
+    before = snapshot(wired.runs_root)
+
+    status = _prepared(
+        wired,
+        f"{run.id}/summon-anime-wai",
+        bad.format(run=run.id),
+    )
+
+    assert status == 1
+    [refused] = _refused(wired)
+    assert refused.startswith(
+        f"refused: {says.format(run=run.id, runs=wired.runs_root)}"
+    )
+    assert _lines(wired) == []
+    assert snapshot(wired.runs_root) == before
 
 
 @pytest.mark.spec("review:copy-from:the-source-is-another-tracked-flow")

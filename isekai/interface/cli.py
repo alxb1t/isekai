@@ -14,6 +14,7 @@ into `photo/` (D17).
     caption   (1) a photograph in, prose out
     tag       (1) a photograph in; the WD14 tags, then the hosted tags, out
     sheet     (2) the WD14 tag list in, a sheet of canonical tags out
+    prepare   (1)(2) each photograph's tags, prose, then its cells' sheets, in turn
     review    (3) the machine's sheet copied somewhere a human may edit it
     approve   (3) validate the edited sheet and rename it
     draft     (3) a rendered image's approval copied into a flow's draft, its seed kept
@@ -29,12 +30,13 @@ into `photo/` (D17).
 serves a surface, `compare` writes a page, `migrate` copies a layout, and every
 other verb runs a stage.** The stage verbs on a flow and `assign` take `--flow`
 repeatably; `tag` and `caption` take no flow, since they describe the
-photograph every flow reads (D17), and `ui`, `show`, `compare` and `migrate`
-take none -- the surface serves every flow it offers, and the others read every
-flow the runs already hold. `show` reads a
-run and decides nothing, and `ui` is the second front end rather than a client of
-the first -- it calls `wiring` and the stage functions directly, exactly as this
-module does, so neither surface is privileged and neither goes through the other.
+photograph every flow reads (D17), `prepare` names each flow in a cell, and
+`ui`, `show`, `compare` and `migrate` take none -- the surface serves every
+flow it offers, and the others read every flow the runs already hold. `show`
+reads a run and decides nothing, and `ui` is the second front end rather than a
+client of the first -- it calls `wiring` and the stage functions directly,
+exactly as this module does, so neither surface is privileged and neither goes
+through the other.
 
 **`isekai/__main__.py` is a shim over this file.** `runpy` pins where the entry
 point's *path* is; it does not pin where the parser lives, and a package's largest
@@ -125,6 +127,10 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("caption", "read a photograph into prose"),
     ("tag", "score a photograph with WD14, then list the JoyCaption tags"),
     ("sheet", "fill a sheet of canonical tags from the WD14 tag list"),
+    (
+        "prepare",
+        "tag, caption, then sheet each photograph in turn, for the cells named",
+    ),
     ("review", "copy a sheet somewhere a human may edit it"),
     ("approve", "validate an edited sheet and mark it approved"),
     ("draft", "copy the approval a rendered image came from into a flow's draft"),
@@ -232,13 +238,22 @@ def build_parser() -> argparse.ArgumentParser:
     # `compare` takes a collection directory instead: its runs root is the collection's
     # `runs/`, so a second way to name it could only disagree. `render` takes
     # each collection's runs root, and every run under each. `ui` serves the
-    # library, `draft` takes images, whose paths name their runs, and `migrate`
-    # walks every runs root unless one is named.
+    # library, `draft` takes images, whose paths name their runs, `migrate`
+    # walks every runs root unless one is named, and `prepare` takes cells.
     for name in (
         name
         for name in made
         if name
-        not in ("compare", "discard", "draft", "import", "migrate", "render", "ui")
+        not in (
+            "compare",
+            "discard",
+            "draft",
+            "import",
+            "migrate",
+            "prepare",
+            "render",
+            "ui",
+        )
     ):
         made[name].add_argument(
             "photos",
@@ -303,8 +318,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="turn each flow's newest approval back into its draft instead, "
         "deleting a copy and refusing one anything was made from",
     )
+    # A cell names its flow, so `prepare` takes no `--flow` and no photograph.
+    made["prepare"].add_argument(
+        "cells",
+        nargs="+",
+        metavar="<run-id>/<flow>",
+        help="cells to prepare, each photograph in the order its first cell is named",
+    )
+    made["prepare"].add_argument(
+        "--runs",
+        type=Path,
+        default=RUNS_ROOT,
+        help=f"the directory runs live under (default {RUNS_ROOT.name}/)",
+    )
+    made["prepare"].set_defaults(photos=[])
     # The job runner's channel: a line per item it can parse, the prose kept apart.
-    for name in ("caption", "tag", "sheet", "generate"):
+    for name in ("caption", "tag", "sheet", "prepare", "generate"):
         made[name].add_argument(
             "--progress",
             choices=["json"],
@@ -515,6 +544,90 @@ def _migrate(args: argparse.Namespace, wired: Wiring) -> int:
     return 1 if refused else 0
 
 
+def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
+    """Take each photograph through `tag`, `caption`, then its cells' sheets, in turn.
+
+    Each step is the work `_per_item` gives its verb, so its lines and refusals are
+    that verb's; the one `tag` work opens the tagger once. A refusal costs only its
+    own step (D1), and an unassigned cell's sheet refuses rather than making its
+    directory again.
+    e.g. r1/f r2/f r2/g -> r1: tag, caption, f; then r2: tag, caption, f, g
+    """
+    cells = _cells(args.cells, wired)
+    vocabulary = _once(wired.vocabulary)
+    mapped = _once(lambda: wired.field_map(vocabulary()))
+    shared = dataclasses.replace(
+        wired, vocabulary=vocabulary, field_map=lambda _: mapped()
+    )
+    flows = {
+        name: load_flow(name, wired.flows_dir)
+        for name in dict.fromkeys(flow for _, flow in cells)
+    }
+    collected: list[str] = []
+    tag = _per_item("tag", args, shared, {}, collected)
+    describe = _per_item("caption", args, shared, {}, collected)
+    sheets = {
+        name: _per_item("sheet", args, shared, {name: flow}, collected)
+        for name, flow in flows.items()
+    }
+    reporter = _Reporter(wired.out, wired.err, args.progress == "json")
+    runs = shlex.quote(str(wired.runs_root))
+
+    def sheet_of(flow: str) -> Callable[[str], None]:
+        def sheet_cell(run_id: str) -> None:
+            if not (wired.runs_root / run_id / flow).is_dir():
+                unassigned = (
+                    f"{run_id}/{flow} is not assigned, so prepare makes no sheet for "
+                    f"it; run `python -m isekai assign --flow {flow} --runs {runs} "
+                    f"{run_id}` first"
+                )
+                reporter.item(run_id, flow, "sheet", "refused", unassigned)
+                raise Refusal(unassigned)
+            sheets[flow](run_id)
+
+        return sheet_cell
+
+    def photograph(run_id: str, named: Sequence[str]) -> None:
+        steps = [
+            *([tag] if any(flows[flow].tagger for flow in named) else []),
+            describe,
+            *(sheet_of(flow) for flow in named),
+        ]
+        collected.extend(across(steps, lambda step: step(run_id)))
+
+    by_run: dict[str, list[str]] = {}
+    for run_id, flow in cells:
+        by_run.setdefault(run_id, []).append(flow)
+    for run_id, named in by_run.items():
+        photograph(run_id, named)
+    for message in collected:
+        print(f"refused: {message}", file=wired.err)
+    return 1 if collected else 0
+
+
+def _cells(named: Sequence[str], wired: Wiring) -> list[tuple[str, str]]:
+    """Return each cell's run id and flow, refusing a bad cell before any run opens.
+
+    A cell is split at its last `/`, and naming one twice names it once.
+    e.g. ["r1/summon-anime-wai"] -> [("r1", "summon-anime-wai")]
+    """
+    cells: dict[str, tuple[str, str]] = {}
+    for cell in named:
+        run_id, _, flow = cell.rpartition("/")
+        if not run_id or not flow:
+            raise Refusal(f"{cell}: not a cell; name one as <run-id>/<flow>")
+        cells[cell] = (run_id, flow)
+    _require_tracked(list(dict.fromkeys(flow for _, flow in cells.values())), wired)
+    runs = shlex.quote(str(wired.runs_root))
+    for cell, (run_id, flow) in cells.items():
+        if not (wired.runs_root / run_id / FRAME_NAME).is_file():
+            raise Refusal(
+                f"{cell}: no run {run_id} under {wired.runs_root}; run "
+                f"`python -m isekai assign --flow {flow} --runs {runs} <photo>` first"
+            )
+    return list(cells.values())
+
+
 def _import(args: argparse.Namespace, wired: Wiring) -> int:
     """Read each file into the collection's staging, commit what is clean, and report.
 
@@ -714,6 +827,8 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             return run_session(args, wired, _dispatch_argv)
         if verb == "migrate":
             return _migrate(args, wired)
+        if verb == "prepare":
+            return _prepare(args, wired)
         if verb == "draft":
             return _draft(args.target, args.images, wired)
         if verb == "discard":
