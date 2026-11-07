@@ -53,9 +53,9 @@ Every other write the server makes runs in its own process, through the function
 that owns it: stage ③'s review functions, import's reader, `sheet()` for a
 target's first sheet when a draft is made from another flow, filled from the
 photograph's tags — `interface/drafting.py`'s `draft_across` runs it, the same
-sequence the CLI's `draft` runs (D4) — and, for a deleted render, the render
-stage's `discard_render` and the library's `drop_thumbnails`, as the CLI's
-`discard` calls them.
+sequence the CLI's `draft` runs (D4) — and, for a deleted render, the library's
+`drop_thumbnails`, the render stage's `discard_render` and review's `withdraw`,
+as the CLI's `discard` calls them.
 `wiring.py` imports `boundary/ollama.py` for the probe a job asks first.
 
 **`tests/test_layers.py` holds where the lazy edges point; review holds that they

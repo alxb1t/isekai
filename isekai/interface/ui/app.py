@@ -18,8 +18,10 @@ filename, when approval is legal, and what a token costs.
 `discard()` on theirs, the run's own `open_run()` and `assign()` on a tick,
 and stage ②'s `sheet()` when a draft from another flow fills a target with
 no sheet -- run in this process by `interface/drafting.py`'s `draft_across`,
-the sequence `draft --flow` runs too (D4); a render leaves through the render
-stage's `discard_render()` and its thumbnails through the library's.
+the sequence `draft --flow` runs too (D4); a render's thumbnails leave through
+the library's `drop_thumbnails()`, the render through the render stage's
+`discard_render()`, and the newest approval its last render leaves through
+`withdraw()`.
 Nothing here builds an artifact body or an artifact filename, and
 `tests/test_ui.py`'s grep is what keeps it so.
 
@@ -103,6 +105,7 @@ from isekai.foundation.run import (
     approved_versions,
     assign,
     find_run,
+    group_of,
     is_seed,
     is_version,
     latest_artifact,
@@ -131,11 +134,11 @@ from isekai.pipeline.review import (
     current_draft,
     discard,
     draft_image,
-    drafted_from,
     review,
     save_draft,
     token_budget,
     waiting_edit,
+    withdraw,
 )
 from isekai.pipeline.review import state as review_state
 from isekai.shared.field_map import FieldMap
@@ -760,8 +763,8 @@ def create_app(
             # The approval a draft or the approval shown was copied from, its
             # fields and the image being revised; null for a copy of a sheet.
             "revision": revision,
-            # The other flow's approval a draft was drafted from, and the fields
-            # of its own sheet; null for any other draft.
+            # The fields of a draft's own sheet and the other flow's image it was
+            # drafted from while that file exists; null for any other draft.
             "drafted": drafted,
             # **Approval with nothing newer beside it is what makes a sheet
             # read-only**, which is precisely `state() == "approved"`.
@@ -1143,7 +1146,11 @@ def create_app(
     def delete_render(
         collection: str, digest: str, flow: str, version: str, seed: int
     ) -> dict[str, Any]:
-        """Delete the render and its thumbnails, as `discard` does, while none runs."""
+        """Delete the render and its thumbnails, as `discard` does, while none runs.
+
+        The thumbnails go while the image still names them; then `withdraw` takes
+        the newest approval back to its draft once its last render is gone.
+        """
         run, image, _ = rendered(collection, digest, flow, version, seed)
         with _DRAFT_UPDATE:
             rendering = _rendering(collection)
@@ -1151,8 +1158,9 @@ def create_app(
                 raise Refusal(
                     f"{rendering} Wait for it to end, then delete the render again."
                 )
-            discard_render(image)
             library.drop_thumbnails(run, image)
+            discard_render(image)
+            withdraw(run, flow, _version(version))
         return {"deleted": True}
 
     @app.get("/api/c/{collection}/sources/{name}")
@@ -1322,23 +1330,26 @@ def _revision(
 def _drafted(
     one: Held, draft: Path, body: Mapping[str, Any], remedy: str
 ) -> dict[str, Any] | None:
-    """Describe the other flow's approval a draft was drafted from, and its sheet.
+    """Describe the sheet a draft from another flow's image was drafted on.
 
-    `image`, its seed a decimal string, is the one the draft records, if any.
-    `remedy` repairs the draft or approval; a damaged sheet names itself, since
-    no command rewrites a sheet one records: `review` copies the same damage.
-    e.g. from summon 1, on sheet 1 -> {"flow": "summon-…", "approval": 1, "fields": …}
+    None unless the draft records an image of another flow. `image`, its seed a
+    decimal string, is that image while its file exists. `remedy` repairs the
+    draft or approval; a damaged sheet names itself, since no command rewrites a
+    sheet one records: `review` copies the same damage.
+    e.g. from summon 1 seed 7, on sheet 1 -> {"fields": …, "image": {…, "seed": "7"}}
     """
-    origin = drafted_from(body)
-    if origin is None:
+    image = draft_image(body)
+    if image is None or image["flow"] == one.flow.id:
         return None
     require(draft, body, "sheet", int, remedy)
     sheet = sheet_of(one.run, one.flow.id, body["sheet"])
     restore = f"restore {sheet} by hand, then reload the page"
     held = read(sheet, SHEET_FILE, remedy=restore)
-    drafted: dict[str, Any] = {**origin, "fields": _fields(sheet, held, restore)}
-    if (image := draft_image(body)) is not None:
-        drafted["image"] = {**image, "seed": str(image["seed"])}
+    drafted: dict[str, Any] = {"fields": _fields(sheet, held, restore)}
+    group = group_of(one.run, image["flow"], image["version"])
+    seed = str(image["seed"])
+    if group.is_dir() and any(path.stem == seed for path in group.iterdir()):
+        drafted["image"] = {**image, "seed": seed}
     return drafted
 
 

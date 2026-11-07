@@ -153,8 +153,8 @@ export interface InputDetail {
   /* The approval a draft was copied from, its fields, and the seed of the image
      being revised; null for a draft of a sheet. */
   revision: Revision | null
-  /* The other flow's approval the draft or the approval shown was drafted
-     from, and its own sheet's fields; null for any other. */
+  /* For a draft or approval written from another flow's image: its own sheet's
+     fields, and that image; null for any other. */
   drafted: Drafted | null
   readonly: boolean
   draft: string | null
@@ -173,10 +173,8 @@ export interface Revision {
 }
 
 export interface Drafted {
-  flow: string
-  approval: number
   fields: Record<string, string[]>
-  /* The image of that approval the draft was written from, where it names one. */
+  /* The image the draft was written from, while its file exists. */
   image?: Omit<ImageRef, 'digest'>
 }
 

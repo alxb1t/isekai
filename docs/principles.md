@@ -250,7 +250,9 @@ place. A stage whose file already exists does nothing unless asked for a new ver
   that sheet and the flow's directory — the undo of the sheet-then-draft sequence `interface/drafting.py`
   composes, done inside the review stage. `pipeline/generate.py`'s `discard_render` deletes a render's image and
   record, and the outputs group it empties, when the operator discards that render: a render is a likeness, so it
-  leaves the run rather than being hidden.
+  leaves the run rather than being hidden. `pipeline/review.py`'s `withdraw` deletes the prompt and failure records
+  the generate stage wrote, numbered for the newest approval whose last render the operator discarded, before it
+  cancels that approval.
 
 ### Every artifact records what shaped it
 

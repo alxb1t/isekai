@@ -6,7 +6,6 @@ this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 
 import io
 import json
-import re
 import shutil
 from dataclasses import replace
 from pathlib import Path
@@ -54,6 +53,7 @@ from isekai.pipeline.review import (
     save_draft,
     state,
     token_budget,
+    withdraw,
 )
 from isekai.shared.field_map import Group
 from isekai.shared.vocabulary import Vocabulary
@@ -996,18 +996,22 @@ def test_a_copy_carries_the_sources_fields_and_the_targets_schema_validates_them
     )
 
 
-@pytest.mark.spec("review:copy-from:the-origin-is-recorded")
-def test_a_copied_approval_names_its_flow_and_the_approval_it_came_from(
+@pytest.mark.spec("review:copy-from:the-copy-carries-the-seeds")
+def test_a_copy_carries_the_sources_seeds_and_names_no_source(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     source = _approved_source(run, schema, vocabulary)
+    _image(run, 1, 11)
+    _image(run, 1, 12)
 
     copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
 
     assert copied is not None
     body = read(copied, APPROVED_FILE)
     assert body["flow"] == CONTROL
-    assert body["producer"]["copied_from"] == {"flow": FLOW, "approval": 1}
+    assert body["producer"]["copied"] is True
+    assert "copied_from" not in body["producer"]
+    assert body["renders"] == {"count": 2, "seeds": [11, 12]}
     assert body["sheet"] == read(source, APPROVED_FILE)["sheet"]
 
 
@@ -1041,8 +1045,8 @@ def test_an_excluded_tag_refuses_a_copied_approval(
     )
 
 
-@pytest.mark.spec("run-directory:layout:a-named-source-is-recorded")
-def test_a_copy_records_its_source_and_leaves_the_sources_files_alone(
+@pytest.mark.spec("review:copy-from:the-copy-carries-the-seeds")
+def test_a_copy_leaves_the_sources_files_alone(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _approved_source(run, schema, vocabulary)
@@ -1051,7 +1055,7 @@ def test_a_copy_records_its_source_and_leaves_the_sources_files_alone(
     copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
 
     assert copied is not None
-    assert read(copied, APPROVED_FILE)["producer"]["copied_from"]["flow"] == FLOW
+    assert "copied_from" not in read(copied, APPROVED_FILE)["producer"]
     assert snapshot(run.path / FLOW) == before
 
 
@@ -1102,7 +1106,7 @@ def test_a_target_not_copied_from_the_sources_latest_is_copied_again(
     frozen = held.read_bytes()
     draft = review(run, FLOW, new_version=True)
     assert draft is not None
-    _edit(draft, hair_silhouette=["long hair"])
+    _edit(draft, hair_silhouette=["very long hair"])
     newer, _ = approve(run, FLOW, schema, vocabulary)
     assert newer is not None
 
@@ -1110,7 +1114,7 @@ def test_a_target_not_copied_from_the_sources_latest_is_copied_again(
 
     assert copied == run.path / CONTROL / "review" / "002.approved.json"
     body = read(copied, APPROVED_FILE)
-    assert body["producer"]["copied_from"] == {"flow": FLOW, "approval": 2}
+    assert body["producer"]["copied"] is True
     assert body["fields"] == read(newer, APPROVED_FILE)["fields"]
     assert held.read_bytes() == frozen
 
@@ -1165,8 +1169,8 @@ def test_a_drafted_draft_takes_the_shared_fields_and_keeps_its_own(
     assert own["hair_silhouette"] != source["fields"]["hair_silhouette"]
 
 
-@pytest.mark.spec("review:draft-from:the-draft-names-where-it-came-from")
-def test_a_drafted_draft_names_its_sheet_and_the_approval_it_came_from(
+@pytest.mark.spec("review:draft-from:the-draft-records-no-source-approval")
+def test_a_drafted_draft_records_its_sheet_and_no_source_approval(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _summon_approved(run, schema, vocabulary)
@@ -1181,9 +1185,21 @@ def test_a_drafted_draft_names_its_sheet_and_the_approval_it_came_from(
         "implementation": "review",
         "from": 1,
         "source": "sheets",
-        "drafted_from": {"flow": FLOW, "approval": 1},
     }
-    assert "renders" not in body
+    assert body["renders"] == {"count": 1, "seeds": []}
+
+
+@pytest.mark.spec("review:draft-from:a-draft-from-no-image-carries-the-seeds")
+def test_a_draft_from_no_image_carries_the_approvals_seeds(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    _image(run, 1, 11)
+
+    draft = draft_from(run, CONJURE, FLOW, None, conjure)
+
+    assert read(draft, DRAFT_FILE)["renders"] == {"count": 1, "seeds": [11]}
 
 
 @pytest.mark.spec("review:draft-from:a-draft-from-an-image-records-it")
@@ -1248,6 +1264,7 @@ def test_a_drafted_draft_approves_as_an_edited_approval_and_no_copy(
     producer = read(approved, APPROVED_FILE)["producer"]
     assert producer["edited"] is True
     assert "copied_from" not in producer
+    assert "copied" not in producer
     assert cancel(run, CONJURE) == Cancelled(draft, changed=True)
     assert draft.read_bytes() == held
 
@@ -1320,7 +1337,7 @@ def test_an_unedited_waiting_draft_is_replaced_at_its_number(
 
     assert draft == waiting == run.path / CONJURE / "review" / "001.draft.json"
     assert versions(run.path / CONJURE / "review") == [1]
-    assert read(draft, DRAFT_FILE)["producer"]["drafted_from"]["flow"] == FLOW
+    assert "drafted_from" not in read(draft, DRAFT_FILE)["producer"]
 
 
 @pytest.mark.spec("review:draft-from:an-edited-waiting-draft-is-refused")
@@ -1354,49 +1371,20 @@ def test_an_edited_waiting_draft_is_refused_naming_its_discard(
     assert waiting.read_bytes() == before
 
 
-def _run_printed(run: Run, command: str) -> Cancelled | Path:
-    """Run a cancel or a discard a refusal prints, and return what it returns."""
-    if found := re.search(r"review --flow (\S+) .*--discard", command):
-        return discard(run, found[1])
-    found = re.search(r"approve --flow (\S+) .*--cancel", command)
-    assert found is not None
-    return cancel(run, found[1])
-
-
-@pytest.mark.spec(
-    "review:draft-from:what-is-drafted-from-it-refuses-the-sources-cancel"
-)
-def test_an_approval_drafted_from_a_source_refuses_the_sources_cancel(
+@pytest.mark.spec("review:draft-from:what-is-drafted-from-it-holds-no-source-cancel")
+def test_what_is_drafted_from_an_approval_holds_no_source_cancel(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _summon_approved(run, schema, vocabulary)
     conjure = _conjure(run, vocabulary)
-    draft = draft_from(run, CONJURE, FLOW, None, conjure)
+    draft_from(run, CONJURE, FLOW, None, conjure)
     assert approve(run, CONJURE, conjure, vocabulary)[0] is not None
-    before = snapshot(run.path)
+    draft_from(run, CONJURE, FLOW, None, conjure)
+    held = snapshot(run.directory(CONJURE))
 
-    with pytest.raises(Refusal, match=f"{CONJURE}/review/001.approved.json came"):
-        cancel(run, FLOW)
-    chain = str(cancellable(run, FLOW))
-    assert f"drops {CONJURE}'s fields" in chain
-    first, then, last = re.findall(r"`(python -m isekai [^`]*)`", chain)
-    assert re.search(f"approve --flow {CONJURE} .*--cancel", first)
-    assert re.search(f"approve --flow {FLOW} .*--cancel", last)
-
-    assert snapshot(run.path) == before
-    assert _run_printed(run, first) == Cancelled(draft, changed=True)
-    waiting = snapshot(run.path)
-
-    with pytest.raises(Refusal, match=f"{CONJURE}/review/001.draft.json came"):
-        cancel(run, FLOW)
-    assert re.search(
-        f"review --flow {CONJURE} .*--discard", str(cancellable(run, FLOW))
-    )
-
-    assert snapshot(run.path) == waiting
-    assert _run_printed(run, then) == draft
     restored = run.directory(FLOW, "review") / "001.draft.json"
-    assert _run_printed(run, last) == Cancelled(restored, changed=True)
+    assert cancel(run, FLOW) == Cancelled(restored, changed=True)
+    assert snapshot(run.directory(CONJURE)) == held
 
 
 # --- ④ renders: how many images, and which seeds -------------------------------
@@ -1890,24 +1878,17 @@ def test_anything_made_from_an_approval_refuses_its_cancel_and_changes_nothing(
     assert "--discard" not in reopened
 
 
-@pytest.mark.spec("review:cancel:a-copy-taken-from-it-refuses")
-def test_a_copy_in_another_flow_refuses_the_sources_cancel(
+@pytest.mark.spec("review:cancel:what-another-flow-took-holds-no-cancel")
+def test_what_another_flow_took_holds_no_cancel(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _approved_source(run, schema, vocabulary)
     approve(run, CONTROL, schema, vocabulary, source=FLOW)
-    before = snapshot(run.path)
+    held = snapshot(run.directory(CONTROL))
 
-    with pytest.raises(Refusal, match=f"{CONTROL}/review/001.approved.json came"):
-        cancel(run, FLOW)
-    assert re.search(
-        f"approve --flow {CONTROL} .*--cancel", str(cancellable(run, FLOW))
-    )
-
-    assert snapshot(run.path) == before
-    assert cancel(run, CONTROL) == Cancelled(None, changed=True)
     restored = run.directory(FLOW, "review") / "001.draft.json"
     assert cancel(run, FLOW) == Cancelled(restored, changed=True)
+    assert snapshot(run.directory(CONTROL)) == held
 
 
 @pytest.mark.spec("review:cancel:a-copy-is-deleted-and-a-reopened-sheet-refused")
@@ -1975,3 +1956,78 @@ def test_a_cancel_interrupted_before_its_delete_finishes_when_run_again(
 
     assert sorted(path.name for path in beside.parent.iterdir()) == [beside.name]
     assert beside.read_bytes() == held
+
+
+# --- withdraw: an approval leaves with its last render -------------------------
+
+
+@pytest.mark.spec(
+    "image-generation:discard:the-newest-approval-goes-with-its-last-render"
+)
+@pytest.mark.spec(
+    "run-directory:idempotence:the-newest-approval-goes-with-its-last-render"
+)
+def test_the_newest_approvals_last_render_takes_it_back_to_its_draft(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    approved = _approved_source(run, schema, vocabulary)
+    copy, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    assert copy is not None
+    prompt = prompt_artifact(run, load_flow(FLOW), schema)
+    failure = record_failure(
+        run.directory(FLOW, "prompts"),
+        1,
+        "permanent",
+        {"stage": "assemble", "detail": "x"},
+    )
+    # An approval its cancel would refuse keeps the prompt and the failure record.
+    held = approved.read_bytes()
+    _damage(approved, "producer", None)
+    with pytest.raises(Refusal):
+        withdraw(run, FLOW, 1)
+    assert prompt.exists() and failure.exists() and approved.exists()
+    approved.write_bytes(held)
+    before = snapshot(run.path)
+
+    assert withdraw(run, FLOW, 1) == [prompt, failure, approved]
+
+    assert not prompt.exists() and not failure.exists() and not approved.exists()
+    draft = run.directory(FLOW, "review") / "001.draft.json"
+    assert draft.is_file()
+    assert state(run.directory(FLOW, "review")) == "draft"
+    # Every other file of the run is as it was.
+    gone = {str(path.relative_to(run.path)) for path in (prompt, failure, approved)}
+    assert snapshot(run.path) == {
+        **{name: body for name, body in before.items() if name not in gone},
+        str(draft.relative_to(run.path)): draft.read_bytes(),
+    }
+    # A copy has no draft to go back to, so it is deleted.
+    assert withdraw(run, CONTROL, 1) == [copy]
+    assert not copy.exists()
+
+
+@pytest.mark.spec("image-generation:discard:an-older-approval-stays")
+def test_an_older_approvals_last_render_leaves_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    _approved(run, schema, vocabulary, hair_silhouette=["very long hair"])
+    before = snapshot(run.path)
+
+    assert withdraw(run, FLOW, 1) == []
+
+    assert snapshot(run.path) == before
+
+
+@pytest.mark.spec("image-generation:discard:a-waiting-draft-keeps-the-approval")
+def test_a_waiting_draft_keeps_the_approval_its_last_render_left(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    prompt_artifact(run, load_flow(FLOW), schema)
+    assert review(run, FLOW, new_version=True) is not None
+    before = snapshot(run.path)
+
+    assert withdraw(run, FLOW, 1) == []
+
+    assert snapshot(run.path) == before

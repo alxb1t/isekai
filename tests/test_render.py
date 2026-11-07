@@ -796,38 +796,6 @@ def test_the_limits_retry_keeps_each_without(
     assert f"isekai render {root} --without {out}` renders only the rest" in log(root)
 
 
-@pytest.mark.spec(
-    "image-generation:seeds-from:a-copy-behind-a-source-rendering-first-is-refused-first"
-)
-def test_a_dependent_behind_its_source_in_one_session_refuses_before_the_pod(
-    tmp_path: Path,
-) -> None:
-    runs = collection(tmp_path)
-    opener = FakeOpen()
-    calls = Calls(lambda argv, wired: 1 if "--in-step-with" in argv else 0)
-
-    status = session(
-        runs,
-        "summon-anime-wai=1",
-        "control-anime-wai=summon-anime-wai",
-        generate=calls,
-        opener=opener,
-    )
-
-    assert status == 1
-    assert opener.opened == 0
-    assert calls.lines[-1] == [
-        "generate",
-        "--flow",
-        "control-anime-wai",
-        "--in-step-with",
-        "summon-anime-wai",
-        "--runs",
-        str(runs),
-        "r1",
-    ]
-
-
 @pytest.mark.spec_exempt("structural: a session's line names its source after it")
 def test_a_dependent_before_its_source_is_refused_naming_both(tmp_path: Path) -> None:
     runs = collection(tmp_path)

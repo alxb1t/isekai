@@ -170,7 +170,7 @@ const refusal = computed(
    artifact, and that input is re-opened -- editable, and carrying a correction
    the tagger did not write. */
 const kicker = computed(() => {
-  if (drafted.value) return `from ${drafted.value.flow} v${drafted.value.approval}`
+  if (drafted.value && !sheet.detail.value?.approved) return 'draft'
   // No approved artifact is the tagger's draft, whether or not the payload has
   // arrived -- `readonly` defaults to true while `detail` is null, so testing
   // it first would call an unloaded sheet approved.

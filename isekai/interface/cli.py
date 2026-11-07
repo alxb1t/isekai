@@ -86,7 +86,6 @@ from isekai.pipeline.generate import (
     discard_render,
     prepare,
     read_runtime,
-    refuse_out_of_step,
     render,
     source_seeds,
 )
@@ -104,6 +103,7 @@ from isekai.pipeline.review import (
     approve,
     discard,
     review,
+    withdraw,
 )
 from isekai.pipeline.review import cancel as cancel_approval
 from isekai.pipeline.sheet import sheet
@@ -455,18 +455,6 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="FLOW",
         help="render this flow's latest seeds for each run; not with the others",
     )
-    # The free check for a source rendered by count earlier in the same session,
-    # whose seeds do not exist until the pod is up: it renders nothing.
-    render.add_argument(
-        "--in-step-with",
-        dest="in_step_with",
-        default=None,
-        metavar="FLOW",
-        help=(
-            "check that each copy of this flow's approval is of its latest, and "
-            "render nothing; for a source that renders first in the same session"
-        ),
-    )
     # No default, deliberately. Assembly is free and rendering is not, so the
     # invocation that costs money is the one that names where to spend it --
     # `generate` without `--server` assembles every prompt and stops, which is
@@ -605,23 +593,43 @@ def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
 def _discard(image: Path, wired: Wiring) -> int:
     """Delete one render and its thumbnails, printing each path deleted.
 
-    The library is imported here for `_ui`'s reason: it is off `python -m isekai`'s
-    import graph.
+    Refused, deleting nothing, while a render session holds the image's
+    collection, as the app's delete is. The thumbnails go while the image still
+    names them. A render that was its
+    approval's last, the newest, takes that approval back to its draft with
+    `withdraw`; the run's files print before the thumbnails. The library is
+    imported here for `_ui`'s reason: it is off `python -m isekai`'s import graph.
     """
     try:
-        run = rendered_at(image)[0]
-        deleted = discard_render(image)
+        run, flow, version, _ = rendered_at(image)
     except Refusal as unrendered:
         print(f"refused: {image}: {unrendered}", file=wired.err)
         return 1
-    from isekai.interface.ui import drop_thumbnails
+    from isekai.interface.ui import drop_thumbnails, render_running
 
+    if render_running(run):
+        print(
+            f"refused: {image}: A render session is running. Wait for it to end, "
+            "then discard the render again.",
+            file=wired.err,
+        )
+        return 1
+    thumbnails = drop_thumbnails(run, image)
+    deleted = discard_render(image)
+    refused: Refusal | None = None
+    try:
+        deleted += withdraw(run, flow, version)
+    except Refusal as refusal:
+        refused = refusal
     for path in deleted:
         print(f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out)
-    for path in drop_thumbnails(run, image):
+    for path in thumbnails:
         print(
             f"discard deleted {path.relative_to(run.path.parents[2])}", file=wired.out
         )
+    if refused is not None:
+        print(f"refused: {image}: {refused}", file=wired.err)
+        return 1
     return 0
 
 
@@ -726,12 +734,6 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             _refuse_bad_source(args.source, "from", flows, wired)
         if verb == "generate":
             _refuse_bad_source(args.seeds_from, "seeds-from", flows, wired)
-            _refuse_bad_source(args.in_step_with, "in-step-with", flows, wired)
-            if args.in_step_with is not None and args.server is not None:
-                raise Refusal(
-                    "--in-step-with checks before the session and renders nothing; "
-                    f"drop `--server {args.server}` from the command"
-                )
     except Refusal as unselectable:
         print(f"refused: {unselectable}", file=wired.err)
         return 1
@@ -1114,21 +1116,16 @@ def _generate(
         assembled, refusals = prepare(run, flows)
         broken.extend(refusals)
         if args.seeds_from is not None:
-            group, borrowed[run.id] = source_seeds(
+            borrowed[run.id] = source_seeds(
                 run, args.seeds_from, source_suffix, list(flows)
-            )
-            for flow in assembled:
-                refuse_out_of_step(run, flow, args.seeds_from, group)
-        if args.in_step_with is not None:
-            for flow in assembled:
-                refuse_out_of_step(run, flow, args.in_step_with)
+            )[1]
         for flow, path in assembled.items():
             reporter.say(f"{run.id}: assembled {flow}/{path.name}")
             ready.append((run, flow))
 
     refused = across(list(targets), assemble_one) + broken
     client = wired.client
-    if client is None or args.in_step_with is not None:
+    if client is None:
         return refused
     # One report per session, read only when a render will run.
     ran_on = _once(lambda: read_runtime(client))

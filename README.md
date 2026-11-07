@@ -318,13 +318,9 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
 - `--count COUNT` — how many renders per photograph per flow, seeds drawn (default: the approval's count, else 1).
 - `--seed SEEDS` — render exactly this seed; repeatable, and not combinable with `--count`.
 - `--seeds-from FLOW` — render each run on the seeds of that flow's latest render; not combinable with
-  `--count` or `--seed`. A flow whose approval is a copy made from another approval than the one those
-  renders came from is refused before any boot.
-- `--in-step-with FLOW` — refuse a flow whose approval is a copy of an older approval than that flow's latest, and
-  render nothing; `render` runs it before the pod for a source it renders first in the same session.
-- `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, recording the source;
-  a copy already of the source's latest writes nothing, and any other approval is copied over under the next
-  number.
+  `--count` or `--seed`.
+- `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, once, its seeds listed; a copy
+  equal to it writes nothing, and any other approval is copied over under the next number.
 - `--cancel` — on `approve`: turn each flow's newest approval back into its draft instead, refusing one
   anything was made from; a copy is deleted, as `--from` copies the source's newest approval again, leaving the
   flow on what lies beneath it, which the line names; a flow at its draft is left as it is, and the line says so;

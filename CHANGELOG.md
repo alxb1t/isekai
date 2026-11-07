@@ -10,6 +10,25 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.74.0] - 2026-11-07
+
+Gate: local 0m30s · CI not read under mf-ship · 0.73.1: local 0m33s · CI not read under mf-ship
+
+- Only an approval's own prompt, failure records and renders refuse its cancel: another flow's copy, drafted
+  approval or waiting draft no longer holds it, so what another flow took can't pin its source (0111 D2).
+- `refuse_out_of_step` and `generate --in-step-with` are deleted, and `render` runs no check before the pod for a
+  source it renders first: a copy will carry its own seeds, so nothing is left to check (0111 D5).
+- `approve --from` copies the source's fields and seeds once, marked `copied`, and names no source; a draft from
+  another flow names none either, and Review shows its image only while that file exists (0111 D3, D4, D6).
+- Deleting the newest approval's last render, from `discard` or the app, takes that approval back to its draft with
+  its prompt and failure records, so the Hub reads *draft* again; `discard` refuses while a render session holds
+  the collection, as the app's delete does (0111 D1).
+- A delete drops the render's own thumbnail alone: another collection's thumbnail of the same seed stays (0111 D7).
+- Review's kicker reads *draft* on a draft from another flow's image, in place of `from FLOW vN`: the draft names no
+  source approval now (0111 D6).
+- D49 supersedes D38: a control flow's approval is copied once, fields and seeds, naming no source; D4, the data
+  flow, the principles, the module map and the README name `withdraw` and drop `--in-step-with` (0111 D8).
+
 ## [0.73.1] - 2026-11-06
 
 Gate: local 0m33s · CI not read under mf-ship · 0.73.0: local 0m46s · CI not read under mf-ship

@@ -1,0 +1,58 @@
+{
+  "change": "0111-deleting-with-its-approval",
+  "version": "0.74",
+  "base": "2c89c4dd",
+  "analyzed": "aa88555e",
+  "measured_on": "local",
+  "collected_at": "2026-11-07T12:19:51+02:00",
+  "mf_version": "v0.70.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1507
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 30
+    },
+    "open-backlog-cards": {
+      "value": 11
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 2305
+    },
+    "diff-files": {
+      "value": 34
+    },
+    "phases": {
+      "value": 6
+    },
+    "shared-reading-set": {
+      "value": 12501
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 753
+    },
+    "decisions": {
+      "value": 50
+    }
+  }
+}

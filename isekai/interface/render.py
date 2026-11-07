@@ -134,9 +134,9 @@ def parse_request(text: str) -> Request:
 def in_session_sources(requests: Sequence[Request]) -> list[bool]:
     """Return, per request, whether its source renders by count earlier in the line.
 
-    Such a source has no seeds until the pod is up, so its dependent is checked
-    against the source's latest approval instead; one placed before its source
-    could never be, and is refused.
+    Such a source has no seeds until the pod is up, so its dependent has no check
+    before the pod; one placed before its source could never take its seeds, and
+    is refused.
     """
     counted = {r.flow: i for i, r in enumerate(requests) if r.by_count}
     deferred = []
@@ -1023,10 +1023,9 @@ def _asked(
     if generate([*verb, *flows, *where], free) != 0:
         return None
     for request, late in zip(requests, deferred, strict=True):
-        if request.by_count:
+        if request.by_count or late:
             continue
-        check = "--in-step-with" if late else "--seeds-from"
-        argv = [*verb, "--flow", request.flow, check, request.value, *where]
+        argv = [*verb, "--flow", request.flow, "--seeds-from", request.value, *where]
         if generate(argv, free) != 0:
             return None
     counts = {r.flow: int(r.value) for r in requests if r.by_count}
