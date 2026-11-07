@@ -2008,6 +2008,7 @@ def test_a_flow_renders_the_seeds_of_its_sources_latest_group(
         approve(made, FLOW, schema, vocabulary)
         prepare(made, {FLOW: subject})
         render(made, subject, FakeComfyClient(), seeds=[11, 12], poll=0)
+        sheet(made, schema, vocabulary, flow=CONTROL)
         approve(made, CONTROL, schema, vocabulary, source=FLOW)
     sources = [snapshot(made.path / FLOW) for made in runs]
     wired = _seeded_session(tmp_path, vocabulary, FakeComfyClient(), io.StringIO())
@@ -2031,6 +2032,7 @@ def test_a_run_without_a_source_render_is_refused_before_any_endpoint(
 ) -> None:
     from isekai.interface.cli import build_parser, dispatch
 
+    sheet(run, schema, vocabulary, flow=CONTROL)
     approve(run, CONTROL, schema, vocabulary, source=FLOW)
     client = FakeComfyClient()
     err = io.StringIO()

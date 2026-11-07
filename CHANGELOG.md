@@ -17,6 +17,8 @@ its new digest.
   reference to the flow it came from (0112 D3).
 - Discarding a draft deletes it and its source copy alone: the flow and its sheet stay. A sheet a draft fills records
   no `tags_from`, so it is weighed against a newer tag list like any other (0112 D4, D5).
+- `approve --from` fills a target with no sheet from the photograph's tags first, and the copy names the target's own
+  newest sheet, so a revision of the copy compares against it (0112 D6).
 
 ## [0.74.0] - 2026-11-07
 

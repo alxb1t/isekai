@@ -75,7 +75,11 @@ from isekai.foundation.run import (
     rendered_at,
 )
 from isekai.interface.compare_view import write_page
-from isekai.interface.drafting import draft_from_image, refuse_image_drafts
+from isekai.interface.drafting import (
+    approve_across,
+    draft_from_image,
+    refuse_image_drafts,
+)
 from isekai.interface.render import run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
@@ -1003,13 +1007,18 @@ def _per_item(
                     back = "a copy, deleted" if left is None else f"back to {left.name}"
                     reporter.say(f"{run.id}: approve cancelled {name}, {back}")
                     return
-                written, warnings = approve(
-                    run,
-                    name,
-                    flows[name].schema,
-                    vocabulary(),
-                    source=args.source,
-                    excluded=field_map().excluded,
+                written, warnings = (
+                    approve(
+                        run,
+                        name,
+                        flows[name].schema,
+                        vocabulary(),
+                        excluded=field_map().excluded,
+                    )
+                    if args.source is None
+                    else approve_across(
+                        run, flows[name], args.source, vocabulary, field_map
+                    )
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)

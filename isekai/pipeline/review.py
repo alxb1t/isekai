@@ -990,8 +990,8 @@ def _copy_approval(
     `flow` is in step when its latest approval is a copy holding the fields and
     renders a copy of `source`'s latest would; anything else is copied over under
     the next number. The fields are validated against `flow`'s schema, so a copy
-    the target cannot hold is refused like any draft. `sheet` stays `source`'s:
-    it is provenance.
+    the target cannot hold is refused like any draft. `sheet` is `flow`'s newest sheet,
+    which a revision of the copy is compared against; a `flow` with none refuses.
     """
     origin = run.directory(source, REVIEW)
     versions_held = approved_versions(origin)
@@ -1017,14 +1017,14 @@ def _copy_approval(
     renders = copied_renders(run, source, approval, body)
     mine = latest_artifact(directory, APPROVED)
     if mine is not None:
-        latest = read(mine, APPROVED_FILE)
+        newest = read(mine, APPROVED_FILE)
         afresh = f"delete {mine}, then run {_again(run, flow)} to approve it afresh"
-        require(mine, latest, "producer", dict, afresh)
-        require(mine, latest, "fields", dict, afresh)
+        require(mine, newest, "producer", dict, afresh)
+        require(mine, newest, "fields", dict, afresh)
         if (
-            is_copy(latest["producer"])
-            and same_fields(latest["fields"], fields)
-            and renders_of(mine, latest, afresh) == renders
+            is_copy(newest["producer"])
+            and same_fields(newest["fields"], fields)
+            and renders_of(mine, newest, afresh) == renders
         ):
             return None
     # Neither flow has a draft to edit, so a tag's fix goes through `source`'s own;
@@ -1043,19 +1043,34 @@ def _copy_approval(
         f"{_again(run, flow)}, edit the draft, then "
         f"`{stage_command(run, 'approve', flow)}` to approve {flow} on its own",
     )
+    sheet_version = latest(run.directory(flow, SHEETS))
+    if sheet_version is None:
+        raise Refusal(
+            f"{run.id}: flow {flow} has no sheet to copy {source}'s approval onto; "
+            f"run `{stage_command(run, 'sheet', flow)}`, then `{copy}` again"
+        )
+    again = (
+        f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, "
+        f"then `{copy}` again"
+    )
+    target = sheet_of(run, flow, sheet_version)
+    held = read(target, SHEET_FILE, remedy=again)
+    require(target, held, "fields", dict, again)
 
     kept = {k: v for k, v in body["producer"].items() if k not in _NOT_COPIED}
-    producer = cast(ApprovedProducer, kept | {"copied": True})
+    edited = not same_fields(held["fields"], fields)
+    producer = cast(ApprovedProducer, kept | {"copied": True, "edited": edited})
     copied: ReviewApproved = {
         **body,
         "producer": producer,
         "flow": flow,
+        "sheet": sheet_version,
         "fields": fields,
         "renders": renders,
     }
-    target = directory / artifact_name(next_version(directory), APPROVED)
-    write(target, APPROVED_FILE, copied)
-    return target
+    written = directory / artifact_name(next_version(directory), APPROVED)
+    write(written, APPROVED_FILE, copied)
+    return written
 
 
 def _refuse_unchanged(

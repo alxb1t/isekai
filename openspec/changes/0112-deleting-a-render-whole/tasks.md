@@ -8,7 +8,7 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 - [x] 1 — The source copy
 - [x] 2 — The page
 - [x] 3 — The discard and the records
-- [ ] 4 — The copy's own sheet
+- [x] 4 — The copy's own sheet
 - [ ] 5 — The delete
 - [ ] 6 — The record
 
@@ -93,23 +93,23 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 
 ## 4 — The copy's own sheet
 
-- [ ] 4.1 **HALT CHECK** — [D6](design.md#d6) replaces the one line saying a copy keeps its source's sheet.
+- [x] 4.1 **HALT CHECK** — [D6](design.md#d6) replaces the one line saying a copy keeps its source's sheet.
   Verify: `grep -n 'it is provenance' isekai/pipeline/review.py` prints one line.
-- [ ] 4.2 In `isekai/pipeline/review.py`, make `_copy_approval` name the target's newest sheet and compute `edited`
+- [x] 4.2 In `isekai/pipeline/review.py`, make `_copy_approval` name the target's newest sheet and compute `edited`
   against it, refusing a target with none, its local `latest` renamed `newest`, per [the copy](design.md#the-copy).
   Verify: `grep -n 'which a revision of the copy' isekai/pipeline/review.py` prints one line.
-- [ ] 4.3 In `isekai/interface/drafting.py`, add `approve_across` after `draft_across`, per [the copy](design.md#the-copy).
+- [x] 4.3 In `isekai/interface/drafting.py`, add `approve_across` after `draft_across`, per [the copy](design.md#the-copy).
   Verify: `grep -n 'def approve_across(' isekai/interface/drafting.py` prints one line.
-- [ ] 4.4 In `isekai/interface/cli.py`, make `approve_flow` call `approve_across` for `--from`, per
+- [x] 4.4 In `isekai/interface/cli.py`, make `approve_flow` call `approve_across` for `--from`, per
   [the copy](design.md#the-copy).
   Verify: `grep -n 'approve_across(' isekai/interface/cli.py` prints one line.
-- [ ] 4.5 In `tests/test_review.py`, make `_approved_source` fill CONTROL's sheet and add
+- [x] 4.5 In `tests/test_review.py`, make `_approved_source` fill CONTROL's sheet and add
   `test_a_copy_names_the_targets_own_sheet`, per [the pipeline's tests](design.md#the-pipelines-tests).
   Verify: `uv run pytest tests/test_review.py` exits 0.
-- [ ] 4.6 In `tests/test_generate.py`, `tests/test_ui_api.py` and `tests/test_pipeline_cli.py`, fill a CONTROL sheet
+- [x] 4.6 In `tests/test_generate.py`, `tests/test_ui_api.py` and `tests/test_pipeline_cli.py`, fill a CONTROL sheet
   before each copy, per [the pipeline's tests](design.md#the-pipelines-tests).
   Verify: `uv run pytest tests/test_generate.py tests/test_ui_api.py tests/test_pipeline_cli.py` exits 0.
-- [ ] 4.7 In `tests/test_pipeline_cli.py`, add `test_approve_from_fills_a_target_with_no_sheet_first`, per
+- [x] 4.7 In `tests/test_pipeline_cli.py`, add `test_approve_from_fills_a_target_with_no_sheet_first`, per
   [the server's and the verb's tests](design.md#the-servers-and-the-verbs-tests).
   Verify: `uv run pytest tests/test_pipeline_cli.py -k approve_from_fills_a_target_with_no_sheet_first` exits 0.
 

@@ -1138,6 +1138,7 @@ def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
 
     # A copy has no draft to go back to: its cancel deletes it.
     control = "control-anime-wai"
+    sheet(made, schema, vocabulary, flow=control)
     copy, _ = approve(made, control, schema, vocabulary, source=FLOW)
     assert copy is not None
     at_control = f"/api/c/{COLLECTION}/review/{made.digest}/{control}/cancel"

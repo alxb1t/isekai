@@ -1,7 +1,7 @@
-"""Draft a flow from an image's approval, filling a flow with no sheet first.
+"""Draft or copy a flow from another's approval, filling a flow with no sheet first.
 
-The verb and the page run one sequence: sheet, draft. No stage may call
-another, so the sequence is composed here, and each step stays its stage's.
+The verbs and the page run one sequence: sheet, then draft or copy. No stage may
+call another, so the sequence is composed here, and each step stays its stage's.
 """
 
 from collections.abc import Callable, Sequence
@@ -12,6 +12,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import SHEETS, Run, latest
 from isekai.pipeline.review import (
     Revision,
+    approve,
     draft_from,
     drafting_approval,
     drafting_sheet,
@@ -54,6 +55,39 @@ def draft_across(
             drafted_from=source,
         )
     return draft_from(run, target.id, source, approval, target.schema, seed)
+
+
+def approve_across(
+    run: Run,
+    target: Flow,
+    source: str,
+    vocabulary: Callable[[], Vocabulary],
+    field_map: Callable[[], FieldMap],
+) -> tuple[Path | None, list[str]]:
+    """Return `approve`'s answer for copying `source`'s latest approval under `target`.
+
+    A target with no sheet has its sheet filled first from the photograph's tag
+    list, as the sheet verb fills one, so the copy names a sheet of its own.
+    e.g. (run, control, summon, …) -> (control/review/001.approved.json, [])
+    """
+    if latest(run.directory(target.id, SHEETS)) is None:
+        sheet(
+            run,
+            target.id,
+            target.schema,
+            vocabulary(),
+            field_map(),
+            tagged=target.tagger,
+            flow_digest=target.digest,
+        )
+    return approve(
+        run,
+        target.id,
+        target.schema,
+        vocabulary(),
+        source=source,
+        excluded=field_map().excluded,
+    )
 
 
 def draft_from_image(

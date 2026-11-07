@@ -699,6 +699,7 @@ def test_approve_cancel_answers_each_run_on_its_own(
     ).exists()
 
     # A copy's cancel deletes it; a flow at its draft has nothing to cancel.
+    sheet(rendered, schema, vocabulary, flow="control-anime-wai")
     approve(
         rendered, "control-anime-wai", schema, vocabulary, source="summon-anime-wai"
     )
@@ -786,6 +787,32 @@ def test_an_untracked_approval_source_is_refused_naming_the_flows_there_are(
 
     assert not (tmp_path / "runs").exists()
     assert "summon-v9: not a flow this build tracks" in err.getvalue()
+
+
+@pytest.mark.spec("review:copy-from:a-target-with-no-sheet-is-filled-first")
+def test_approve_from_fills_a_target_with_no_sheet_first(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    run = open_run(photo, tmp_path / "runs")
+    sheet(run, schema, vocabulary)
+    review(run, "summon-anime-wai")
+    approve(run, "summon-anime-wai", schema, vocabulary)
+    argv = [
+        "approve",
+        "--flow",
+        "control-anime-wai",
+        "--from",
+        "summon-anime-wai",
+        str(photo),
+    ]
+
+    assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
+
+    assert run.directory("control-anime-wai", "sheets", "001.json").is_file()
+    copied = run.directory("control-anime-wai", "review") / "001.approved.json"
+    assert read(copied, APPROVED_FILE)["sheet"] == 1
 
 
 CONJURE = "conjure-anime-wai"

@@ -961,10 +961,11 @@ CONTROL = "control-anime-wai"
 
 
 def _approved_source(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
-    """Approve `FLOW` unedited and return its approval."""
+    """Approve `FLOW` unedited, fill `CONTROL`'s sheet, and return the approval."""
     review(run, FLOW)
     approved, _ = approve(run, FLOW, schema, vocabulary)
     assert approved is not None
+    sheet(run, schema, vocabulary, flow=CONTROL)
     return approved
 
 
@@ -1116,6 +1117,37 @@ def test_a_target_not_copied_from_the_sources_latest_is_copied_again(
     assert body["producer"]["copied"] is True
     assert body["fields"] == read(newer, APPROVED_FILE)["fields"]
     assert held.read_bytes() == frozen
+
+
+@pytest.mark.spec("review:copy-from:the-copy-names-the-targets-own-sheet")
+def test_a_copy_names_the_targets_own_sheet(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    sheets = run.directory(CONTROL, "sheets")
+    (sheets / "001.json").unlink()
+    sheets.rmdir()
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    assert "no sheet" in str(refused.value)
+    assert stage_command(run, "sheet", CONTROL) in str(refused.value)
+    assert snapshot(run.path) == before
+
+    sheet(run, schema, vocabulary, flow=CONTROL)
+    copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    assert copied is not None
+    body = read(copied, APPROVED_FILE)
+    assert body["sheet"] == 1
+    assert body["producer"]["edited"] is False
+
+    _image(run, 1, 11, CONTROL)
+    draft = revise(run, CONTROL, 1, 11)
+    _edit(draft, hair_silhouette=["very long hair"])
+    revised, _ = approve(run, CONTROL, schema, vocabulary)
+    assert revised == run.path / CONTROL / "review" / "002.approved.json"
 
 
 # --- drafting from another flow's approval ------------------------------------
