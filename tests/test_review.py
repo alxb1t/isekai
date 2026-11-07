@@ -2078,3 +2078,26 @@ def test_a_flow_left_with_no_approval_keeps_only_its_assignment(
 
     assert [path.name for path in run.directory(FLOW).iterdir()] == ["outputs"]
     assert run.directory(FLOW, "outputs", "005").is_dir()
+
+
+@pytest.mark.spec("image-generation:discard:a-flows-own-description-goes")
+def test_a_flows_own_description_goes_where_photo_holds_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
+    assert not run.directory(PHOTO, "tags").exists()
+    for kind in ("captions", "wd14"):
+        own = run.directory(FLOW, kind, "001.json")
+        own.parent.mkdir()
+        own.write_bytes(run.directory(PHOTO, kind, "001.json").read_bytes())
+    tags = run.directory(FLOW, "tags", "001.json")
+    tags.parent.mkdir()
+    tags.write_text("{}")
+    photo = snapshot(run.directory(PHOTO))
+
+    withdraw(run, FLOW, 1)
+
+    assert [path.name for path in run.directory(FLOW).iterdir()] == ["tags"]
+    assert tags.is_file()
+    assert snapshot(run.directory(PHOTO)) == photo

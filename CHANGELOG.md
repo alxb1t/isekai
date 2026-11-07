@@ -13,6 +13,8 @@ its new digest.
 - Deleting a render group's last image deletes the failure records left in it, and the group; an older approval whose
   group holds failure records alone goes with the delete, so a render that once failed no longer keeps its approval
   (0114 D1).
+- A flow left with no approval also loses its own tags and caption from before the shared ones, each kind where the
+  photograph holds it, so deleting its last render empties its folder (0114 D2).
 
 ## [0.75.0] - 2026-11-07
 

@@ -6,7 +6,7 @@ repository root.
 ## Progress
 
 - [x] 1 — The failure records
-- [ ] 2 — The own description
+- [x] 2 — The own description
 - [ ] 3 — The record
 
 ## 1 — The failure records
@@ -30,12 +30,12 @@ repository root.
 
 ## 2 — The own description
 
-- [ ] 2.1 **HALT CHECK** — [D2](design.md#d2) extends the one loop that clears a flow with no approval left.
+- [x] 2.1 **HALT CHECK** — [D2](design.md#d2) extends the one loop that clears a flow with no approval left.
   Verify: `grep -n 'for name in (SHEETS, REVIEW, PROMPTS, SOURCES):' isekai/pipeline/review.py` prints one line.
-- [ ] 2.2 In `isekai/pipeline/review.py`, make `withdraw`'s no-approval loop also clear each kind of `DESCRIPTION`
+- [x] 2.2 In `isekai/pipeline/review.py`, make `withdraw`'s no-approval loop also clear each kind of `DESCRIPTION`
   that `photo/` holds, after `SOURCES`, per [phase 2's `withdraw`](design.md#the-code).
   Verify: `grep -n 'shared = \[kind for kind in DESCRIPTION if versions(run.directory(PHOTO, kind))\]' isekai/pipeline/review.py` prints one line.
-- [ ] 2.3 In `tests/test_review.py`, add `test_a_flows_own_description_goes_where_photo_holds_it`, per
+- [x] 2.3 In `tests/test_review.py`, add `test_a_flows_own_description_goes_where_photo_holds_it`, per
   [Tests](design.md#tests).
   Verify: `uv run pytest tests/test_review.py -k own_description_goes_where_photo_holds_it` exits 0.
 

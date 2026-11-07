@@ -62,8 +62,10 @@ from isekai.foundation.flow import OUTPUT_SUFFIX, Flow, Schema, assemble
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
+    DESCRIPTION,
     NEW_VERSION,
     OUTPUTS,
+    PHOTO,
     PROMPTS,
     REVIEW,
     SHEETS,
@@ -595,7 +597,8 @@ def withdraw(run: Run, flow: str, version: int) -> list[Path]:
     alone, each with its prompt, failure records, group and source copy, and,
     where it was the newest, the draft waiting above it and that draft's source
     copy. A flow left with no approval keeps only its directory, its assignment:
-    every path under sheets/, review/, prompts/ and sources/ goes, then those
+    every path under sheets/, review/, prompts/ and sources/ goes, and under its
+    own captions/, wd14/ and tags/, each where photo/ holds that kind, then those
     directories, then outputs/ when empty. Nothing is read, so nothing refuses.
     e.g. (run, f, 2), 001 rendered -> [f/prompts/002.json, f/review/002.approved.json]
     """
@@ -630,7 +633,8 @@ def withdraw(run: Run, flow: str, version: int) -> list[Path]:
             path.unlink()
     if len(going) < len(approved):
         return gone
-    for name in (SHEETS, REVIEW, PROMPTS, SOURCES):
+    shared = [kind for kind in DESCRIPTION if versions(run.directory(PHOTO, kind))]
+    for name in (SHEETS, REVIEW, PROMPTS, SOURCES, *shared):
         held = run.directory(flow, name)
         if not held.exists():
             continue
