@@ -720,14 +720,14 @@ def _drafted(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path | None:
         FIELD_MAP,
         tagged=True,
         flow_digest=FLOW_DIGEST,
-        tags_from=FLOW,
+        drafted_from=FLOW,
     )
     assert warnings == []
     return written
 
 
-@pytest.mark.spec("sheet:output:a-drafted-sheet-names-its-source")
-def test_a_drafted_sheet_is_filled_from_the_photographs_list_and_names_its_source(
+@pytest.mark.spec("sheet:output:a-drafted-sheet-names-no-source")
+def test_a_drafted_sheet_is_filled_from_the_photographs_list_and_names_no_source(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     write_wd14(run, [DanbooruTag("brown_hair"), DanbooruTag("long_hair")])
@@ -738,30 +738,7 @@ def test_a_drafted_sheet_is_filled_from_the_photographs_list_and_names_its_sourc
     assert written is not None and written.parent == run.path / TARGET / "sheets"
     assert body["fields"]["hair_colour"] == ["brown hair"]
     assert body["fields"]["hair_silhouette"] == ["long hair"]
-    assert body["producer"]["tags_from"] == FLOW
+    assert "tags_from" not in body["producer"]
     assert body["producer"]["from"] == 1
     assert not (run.path / TARGET / "wd14").exists()
     assert not (run.path / FLOW).exists()
-
-
-@pytest.mark.spec("sheet:superseded:a-drafted-sheet-is-silent")
-def test_a_sheet_a_draft_wrote_is_never_weighed(
-    run: Run, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    write_wd14(run)
-    filled = _drafted(run, schema, vocabulary)
-    assert filled is not None
-    before = filled.read_bytes()
-    write_wd14(run, version=2)
-
-    assert sheet_stage.sheet(
-        run,
-        TARGET,
-        schema,
-        vocabulary,
-        FIELD_MAP,
-        tagged=True,
-        flow_digest=FLOW_DIGEST,
-    ) == (None, [])
-    assert filled.read_bytes() == before
-    assert versions(run.directory(TARGET, "sheets")) == [1]

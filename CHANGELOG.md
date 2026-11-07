@@ -15,6 +15,8 @@ its new digest.
   D2, D3).
 - Review shows a drafted draft's source copy beside the photograph, headed *the image it was drafted from*, with no
   reference to the flow it came from (0112 D3).
+- Discarding a draft deletes it and its source copy alone: the flow and its sheet stay. A sheet a draft fills records
+  no `tags_from`, so it is weighed against a newer tag list like any other (0112 D4, D5).
 
 ## [0.74.0] - 2026-11-07
 

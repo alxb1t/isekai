@@ -7,7 +7,7 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 
 - [x] 1 — The source copy
 - [x] 2 — The page
-- [ ] 3 — The discard and the records
+- [x] 3 — The discard and the records
 - [ ] 4 — The copy's own sheet
 - [ ] 5 — The delete
 - [ ] 6 — The record
@@ -66,28 +66,28 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 
 ## 3 — The discard and the records
 
-- [ ] 3.1 **HALT CHECK** — [D5](design.md#d5) removes the one write of `tags_from`.
+- [x] 3.1 **HALT CHECK** — [D5](design.md#d5) removes the one write of `tags_from`.
   Verify: `grep -n 'made_by\["tags_from"\] = tags_from' isekai/pipeline/sheet.py` prints one line.
-- [ ] 3.2 In `isekai/pipeline/sheet.py`, rename `sheet`'s and `prepare_sheet`'s `tags_from` to `drafted_from`, record
+- [x] 3.2 In `isekai/pipeline/sheet.py`, rename `sheet`'s and `prepare_sheet`'s `tags_from` to `drafted_from`, record
   it nowhere, and delete `tagged_from` and `_superseded`'s branch on it, each docstring saying so, per [D5](design.md#d5).
   Verify: `grep -n 'tags_from\|tagged_from' isekai/pipeline/sheet.py` prints nothing.
-- [ ] 3.3 In `isekai/foundation/artifacts.py`, delete `SheetProducer`'s `tags_from` and end the comment above it at
+- [x] 3.3 In `isekai/foundation/artifacts.py`, delete `SheetProducer`'s `tags_from` and end the comment above it at
   `` names a list in `photo/wd14/`. ``, per [D5](design.md#d5).
   Verify: `grep -n 'tags_from' isekai/foundation/artifacts.py` prints nothing.
-- [ ] 3.4 In `isekai/interface/drafting.py`, pass `drafted_from=source` for `tags_from=source`, and make
+- [x] 3.4 In `isekai/interface/drafting.py`, pass `drafted_from=source` for `tags_from=source`, and make
   `draft_across`'s docstring say the image is copied and the sheet records no source, per [D5](design.md#d5).
   Verify: `grep -n 'tags_from' isekai/interface/drafting.py` prints nothing.
-- [ ] 3.5 In `isekai/pipeline/review.py`, make `discard` delete the draft and its source copy alone and delete
+- [x] 3.5 In `isekai/pipeline/review.py`, make `discard` delete the draft and its source copy alone and delete
   `_drafting_wrote` and any import only it used, the docstring saying so, per [D4](design.md#d4).
   Verify: `grep -n '_drafting_wrote' isekai/pipeline/review.py` prints nothing.
-- [ ] 3.6 In `tests/test_review.py`, rewrite the discard row of [the pipeline's tests](design.md#the-pipelines-tests).
+- [x] 3.6 In `tests/test_review.py`, rewrite the discard row of [the pipeline's tests](design.md#the-pipelines-tests).
   Verify: `uv run pytest tests/test_review.py -k drafted_draft_goes_alone` exits 0.
-- [ ] 3.7 In `tests/test_sheet_stage.py`, make the edits and the deletion of
+- [x] 3.7 In `tests/test_sheet_stage.py`, make the edits and the deletion of
   [the pipeline's tests](design.md#the-pipelines-tests).
   Verify: `uv run pytest tests/test_sheet_stage.py` exits 0.
-- [ ] 3.8 In `tests/test_run_view.py` and `tests/test_resume.py`, pass `drafted_from=FLOW` for `tags_from=FLOW`.
+- [x] 3.8 In `tests/test_run_view.py` and `tests/test_resume.py`, pass `drafted_from=FLOW` for `tags_from=FLOW`.
   Verify: `uv run pytest tests/test_run_view.py tests/test_resume.py` exits 0.
-- [ ] 3.9 In `tests/test_pipeline_cli.py`, assert `"tags_from" not in filled["producer"]`, per
+- [x] 3.9 In `tests/test_pipeline_cli.py`, assert `"tags_from" not in filled["producer"]`, per
   [the server's and the verb's tests](design.md#the-servers-and-the-verbs-tests).
   Verify: `uv run pytest tests/test_pipeline_cli.py -k fills_it_from_the_source` exits 0.
 

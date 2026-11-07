@@ -34,9 +34,9 @@ def draft_across(
 ) -> Path:
     """Return `target`'s draft from `source`'s approval `version`.
 
-    `seed` names the image of that approval the draft records.
+    `seed` names the image of that approval, copied into the target's sources.
     A target with no sheet has its sheet filled first from the photograph's tag
-    list, recording `source`, and that write is what assigns it. The approval is
+    list, recording no source, and that write is what assigns it. The approval is
     checked whole, and the sheet stage checks the tag list before its write, so a
     refusal writes nothing.
     The vocabulary and the table are read only for that fill.
@@ -51,7 +51,7 @@ def draft_across(
             field_map(),
             tagged=target.tagger,
             flow_digest=target.digest,
-            tags_from=source,
+            drafted_from=source,
         )
     return draft_from(run, target.id, source, approval, target.schema, seed)
 
@@ -100,7 +100,7 @@ def refuse_image_drafts(
                     field_map(),
                     tagged=target.tagger,
                     flow_digest=target.digest,
-                    tags_from=source,
+                    drafted_from=source,
                 )
             else:
                 drafting_sheet(run, target.id, version)

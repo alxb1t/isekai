@@ -6,7 +6,6 @@ this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 
 import io
 import json
-import shutil
 from dataclasses import replace
 from pathlib import Path
 
@@ -25,7 +24,6 @@ from isekai.foundation.flow import Flow, Schema, assemble, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     NEW_VERSION,
-    PHOTO,
     Run,
     approved_versions,
     open_run,
@@ -1641,11 +1639,12 @@ def test_discarding_an_approved_flow_is_refused_and_changes_nothing(
     assert snapshot(run.directory(FLOW, "review")) == before
 
 
-@pytest.mark.spec("review:discard:a-drafted-draft-is-undone-whole")
-def test_a_drafted_draft_is_undone_whole_and_a_tagged_flows_alone(
+@pytest.mark.spec("review:discard:a-drafted-draft-goes-alone")
+def test_a_drafted_draft_goes_alone_and_the_flow_stays(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _summon_approved(run, schema, vocabulary)
+    _image(run, 1, SEED)
     conjure = load_flow(CONJURE)
     sheet_stage.sheet(
         run,
@@ -1655,39 +1654,17 @@ def test_a_drafted_draft_is_undone_whole_and_a_tagged_flows_alone(
         FIELD_MAP,
         tagged=conjure.tagger,
         flow_digest=conjure.digest,
-        tags_from=FLOW,
+        drafted_from=FLOW,
     )
-    drafted = draft_from(run, CONJURE, FLOW, 1, conjure.schema)
+    drafted = draft_from(run, CONJURE, FLOW, 1, conjure.schema, seed=SEED)
+    copy = source_copy(run, CONJURE, 1)
+    assert copy.is_file()
 
     assert discard(run, CONJURE) == drafted
-    assert not run.directory(CONJURE).exists()
-
-    # The drafting's sheet beside a caption `isekai migrate` left under the flow stays.
-    written, _ = sheet_stage.sheet(
-        run,
-        CONJURE,
-        conjure.schema,
-        vocabulary,
-        FIELD_MAP,
-        tagged=conjure.tagger,
-        flow_digest=conjure.digest,
-        tags_from=FLOW,
-    )
-    caption(run, FakeReader(prose="Short wavy hair."))
-    shutil.copytree(
-        run.directory(PHOTO, "captions"), run.directory(CONJURE, "captions")
-    )
-    draft_from(run, CONJURE, FLOW, 1, conjure.schema)
-    discard(run, CONJURE)
-    assert written is not None and written.exists()
-    shutil.rmtree(run.directory(CONJURE))
-
-    # A flow with its own tagged sheet keeps it: the draft alone goes.
-    _conjure(run, vocabulary)
-    kept = draft_from(run, CONJURE, FLOW, 1, conjure.schema)
-    assert discard(run, CONJURE) == kept
-    assert not kept.exists()
+    assert not drafted.exists()
+    assert not copy.parent.exists()
     assert versions(run.directory(CONJURE, "sheets")) == [1]
+    assert run.directory(CONJURE).is_dir()
 
 
 def _revise_verb(vocabulary: Vocabulary, *images: Path) -> tuple[int, str]:

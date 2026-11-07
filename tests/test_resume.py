@@ -380,7 +380,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
             FIELD_MAP,
             tagged=target.tagger,
             flow_digest=target.digest,
-            tags_from=FLOW,
+            drafted_from=FLOW,
         )
     )
     _draft_and_cancel_refusals(wired, tmp_path, collect)

@@ -976,7 +976,7 @@ def test_draft_assigns_a_target_with_no_sheet_and_fills_it_from_the_source(
     assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
 
     filled = read(run.directory(CONJURE, "sheets") / "001.json", SHEET_FILE)
-    assert filled["producer"]["tags_from"] == "summon-anime-wai"
+    assert "tags_from" not in filled["producer"]
     assert (run.directory(CONJURE, "review") / "001.draft.json").is_file()
     assert sorted(child.name for child in run.directory(CONJURE).iterdir()) == [
         "review",

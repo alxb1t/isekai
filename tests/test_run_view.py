@@ -105,7 +105,7 @@ def test_each_artifacts_producer_is_shown(run: Run, vocabulary: Vocabulary) -> N
         FIELD_MAP,
         tagged=target.tagger,
         flow_digest=target.digest,
-        tags_from=FLOW,
+        drafted_from=FLOW,
     )
     by_name = {(item.stage, item.flow): item for item in listings(run)}
     assert "from 001" in by_name[("sheets", FLOW)].producers[1]
