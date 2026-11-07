@@ -2034,6 +2034,24 @@ def test_older_approvals_with_no_render_go_and_rendered_ones_stay(
     assert image.is_file()
 
 
+@pytest.mark.spec("image-generation:discard:a-group-of-failure-records-is-no-render")
+def test_an_older_approval_whose_group_holds_failure_records_alone_goes(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    image = _image(run, 1, 11)
+    second = _approved(run, schema, vocabulary, hair_silhouette=["very long hair"])
+    group = run.directory(FLOW, "outputs", "002")
+    group.mkdir()
+    failure = record_failure(group, 2, "permanent", {"stage": "render", "detail": "x"})
+    third = _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+
+    went = [failure, group, second, third]
+    assert withdraw(run, FLOW, 3) == [path.absolute() for path in went]
+    assert approved_versions(run.directory(FLOW, "review")) == [1]
+    assert image.is_file()
+
+
 @pytest.mark.spec(
     "image-generation:discard:a-flow-with-no-approval-keeps-its-assignment"
 )
@@ -2060,3 +2078,28 @@ def test_a_flow_left_with_no_approval_keeps_only_its_assignment(
 
     assert [path.name for path in run.directory(FLOW).iterdir()] == ["outputs"]
     assert run.directory(FLOW, "outputs", "005").is_dir()
+
+
+@pytest.mark.spec("image-generation:discard:a-flows-own-description-goes")
+def test_a_flows_own_description_goes_where_photo_holds_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
+    assert not run.directory(PHOTO, "tags").exists()
+    for kind in ("captions", "wd14"):
+        own = run.directory(FLOW, kind, "001.json")
+        own.parent.mkdir()
+        own.write_bytes(run.directory(PHOTO, kind, "001.json").read_bytes())
+    # an older own caption `photo/` holds no copy of goes with the kind (D50)
+    run.directory(FLOW, "captions", "002.json").write_text("{}")
+    tags = run.directory(FLOW, "tags", "001.json")
+    tags.parent.mkdir()
+    tags.write_text("{}")
+    photo = snapshot(run.directory(PHOTO))
+
+    withdraw(run, FLOW, 1)
+
+    assert [path.name for path in run.directory(FLOW).iterdir()] == ["tags"]
+    assert tags.is_file()
+    assert snapshot(run.directory(PHOTO)) == photo

@@ -20,8 +20,9 @@ and stage ②'s `sheet()` when a draft from another flow fills a target with
 no sheet -- run in this process by `interface/drafting.py`'s `draft_across`,
 the sequence `draft --flow` runs too (D4); a render's thumbnails leave through
 the library's `drop_thumbnails()`, the render through the render stage's
-`discard_render()`, and the approvals, drafts, sheets and source copies its
-last render leaves through `withdraw()`.
+`discard_render()`, and the approvals, drafts, sheets, source copies and
+own copies of the photograph's description its last render leaves through
+`withdraw()`.
 Nothing here builds an artifact body or an artifact filename, and
 `tests/test_ui.py`'s grep is what keeps it so.
 

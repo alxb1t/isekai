@@ -10,6 +10,18 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.75.1] - 2026-11-07
+
+Gate: local 0m30s · CI not read under mf-ship · 0.75.0: local 0m50s · CI not read under mf-ship
+
+- Deleting a render group's last image deletes the failure records left in it, and the group; an older approval whose
+  group holds failure records alone goes with the delete, so a render that once failed no longer keeps its approval
+  (0114 D1).
+- A flow left with no approval also loses its own tags and caption from before the shared ones, each kind where the
+  photograph holds it, so deleting its last render empties its folder (0114 D2).
+- docs D4 and D50, the principles, the data flow, the threat model and the migrate and app docstrings now say the
+  delete takes a group's failure records and a flow's own description (0114 D3).
+
 ## [0.75.0] - 2026-11-07
 
 Gate: local 0m50s · CI not read under mf-ship · 0.74.0: local 0m30s · CI not read under mf-ship

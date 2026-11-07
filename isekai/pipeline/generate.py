@@ -70,6 +70,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     check_budget,
+    failures_alone,
     group_of,
     is_seed,
     record_failure,
@@ -375,13 +376,16 @@ def render_groups(run: Run, flow: str) -> list[Path]:
 
 
 def discard_render(image: Path) -> list[Path]:
-    """Delete a render's image, its record and its emptied group; return them, absolute.
+    """Delete a render's image, its record, and a group left with only failure records.
 
-    The image goes first, so a discard cut short leaves a record alone, which
-    reads as unrendered, as a render cut short does. An empty group would read as
-    work made from its approval. A path naming no render is refused, nothing
-    deleted.
+    Those records go with the group; return every path deleted, absolute. The
+    image goes first, so a discard cut short leaves a record alone, which reads as
+    unrendered, as a render cut short does. A group left holding failure records
+    alone would keep an approval whose last image went. A path naming no render is
+    refused, nothing deleted.
     e.g. outputs/001/42.png -> [.../001/42.png, .../001/42.render.json]
+    e.g. outputs/001/7.png, the last beside 001.error.1.transient.json
+    -> [.../7.png, .../7.render.json, .../001.error.1.transient.json, .../001]
     """
     rendered_at(image)
     image = image.absolute()
@@ -392,9 +396,12 @@ def discard_render(image: Path) -> list[Path]:
     if record.is_file():
         record.unlink()
         deleted.append(record)
-    if not any(group.iterdir()):
+    records = failures_alone(group)
+    if records is not None:
+        for path in records:
+            path.unlink()
         group.rmdir()
-        deleted.append(group)
+        deleted += [*records, group]
     return deleted
 
 

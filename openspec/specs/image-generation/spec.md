@@ -842,28 +842,35 @@ between them; a fresh seed would add a difference of its own as large as the one
 ### Requirement: A render is discarded whole, and its approval goes with its last render
 
 The system SHALL let the operator discard one render by its image's path: it SHALL delete the image, then its record,
-then its outputs group when that leaves the group empty. It SHALL refuse a path that names no render, deleting nothing.
-A discard that removes an approval's group SHALL then delete that approval, its prompt, its failure records and its
-source copy; every older approval of the flow with no group SHALL go the same way, and, where the approval was the
-flow's newest, so SHALL the draft waiting above it and that draft's source copy. Nothing SHALL be cancelled back to a
-draft. A flow left with no approval SHALL lose every file under its sheets, reviews, prompts and sources and those
-directories, and its outputs directory when empty, keeping its own empty directory, which is its assignment; the
-photograph's caption and tag lists SHALL stay. An approval whose group still holds an image SHALL stay, lacking the
-discarded image, and the next render SHALL render what it lacks, its listed seeds first. A newer approval with no
-group, and every outputs group no approval going names, SHALL stay.
+then, when that leaves the outputs group empty or holding failure records alone, those records and the group. It SHALL
+refuse a path that names no render, deleting nothing. A discard that removes an approval's group SHALL then delete that
+approval, its prompt, its failure records and its source copy; every older approval of the flow with no render — no
+group, or one holding failure records alone — SHALL go the same way, its group's failure records and its group with it,
+and, where the approval was the flow's newest, so SHALL the draft waiting above it and that draft's source copy. Nothing
+SHALL be cancelled back to a draft. A flow left with no approval SHALL lose every file under its sheets, reviews,
+prompts and sources and those directories, and its outputs directory when empty, and its own caption, WD14 and tag
+lists, each kind where `photo/` holds that kind, keeping its own empty directory, which is its assignment; the
+photograph's caption and tag lists in `photo/` SHALL stay. An approval whose group still holds an image SHALL stay,
+lacking the discarded image, and the next render SHALL render what it lacks, its listed seeds first. A newer approval
+with no group, and every outputs group no approval going names, SHALL stay.
 
 A render is a likeness of a person ([the threat model](../../../THREAT_MODEL.md)), so a failed one is deleted, never
 hidden. The image goes first, so a discard cut short leaves a record with no image, which reads as unrendered, as a
 render cut short does. An approval with no image left would read as *approved* and render the same seed again, and a
 draft or a sheet left behind would offer the deleted work for review again: the operator deleted it to be rid of it
 ([D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)). A
-newer approval with no render yet is waiting for its render, not left by one.
+failure record is no render, so a group holding nothing else would keep an approval the operator deleted the last image
+of. A flow written before the shared description (D17) holds its own copy of it; every flow reads `photo/`'s, so the
+copy goes once `photo/` holds that kind, and the flow's folder empties. A newer approval with no render yet is waiting
+for its render, not left by one.
 
 ```
-outputs/001/ 42.png 42.render.json 77.png 77.render.json   review/ 001.approved.json   sheets/ 001.json
-   discard 42 ─▶ outputs/001/ 77.png 77.render.json         001 stays, short of one
-   discard 77 ─▶ outputs/001/ removed ─▶ prompts/001.json, review/001.approved.json gone
-              ─▶ no approval left ─▶ sheets/ review/ prompts/ outputs/ gone ─▶ <flow>/ empty: assigned
+outputs/001/ 42.png 42.render.json 77.png 77.render.json 001.error.1.transient.json   review/ 001.approved.json
+   discard 42 ─▶ outputs/001/ 77.png 77.render.json 001.error.1.transient.json   001 stays, short of one
+   discard 77 ─▶ outputs/001/ failure records alone ─▶ they and the group go
+              ─▶ prompts/001.json, review/001.approved.json gone
+              ─▶ no approval left ─▶ sheets/ review/ prompts/ outputs/ gone, and wd14/ tags/ captions/ where
+                 photo/ holds that kind ─▶ <flow>/ empty: assigned
 ```
 
 #### Scenario: the image and its record are deleted, and nothing else
@@ -879,6 +886,14 @@ outputs/001/ 42.png 42.render.json 77.png 77.render.json   review/ 001.approved.
 - **WHEN** the only render of a group is discarded through the render stage alone
 - **THEN** the group's directory is gone
 - **AND** the approval and its prompt are as they were
+
+#### Scenario: failure records go with the group's last render
+- **Key:** `image-generation:discard:failure-records-go-with-the-last-render`
+- **Layers:** unit
+- **WHEN** the renders of a group also holding a failure record are discarded one by one through the render stage alone
+- **THEN** the group and its failure record stay while a render is left
+- **AND** the last discard deletes the image, its record, the failure record and the group's directory, and the
+  approval and its prompt are as they were
 
 #### Scenario: the approval is left short
 - **Key:** `image-generation:discard:the-approval-is-left-short`
@@ -900,12 +915,28 @@ outputs/001/ 42.png 42.render.json 77.png 77.render.json   review/ 001.approved.
 - **THEN** the approval and the older one with no group are deleted
 - **AND** the oldest stays, and an approval whose group holds an image is never deleted
 
+#### Scenario: a group holding failure records alone is no render
+- **Key:** `image-generation:discard:a-group-of-failure-records-is-no-render`
+- **Layers:** unit
+- **WHEN** an approval's group is gone, an older approval's group holds a failure record alone, and the oldest still
+  holds an image
+- **THEN** the approval, the older one, its failure record and its group are deleted
+- **AND** the oldest and its group stay
+
 #### Scenario: a flow with no approval left keeps only its assignment
 - **Key:** `image-generation:discard:a-flow-with-no-approval-keeps-its-assignment`
 - **Layers:** unit
 - **WHEN** the group of a flow's only approval is gone
 - **THEN** the flow's directory is empty, and the photograph's caption and tag lists are as they were
 - **AND** an outputs group no approval names, holding an image, stays with its outputs directory
+
+#### Scenario: a flow's own description goes where photo/ holds it
+- **Key:** `image-generation:discard:a-flows-own-description-goes`
+- **Layers:** unit
+- **WHEN** the group of a flow's only approval is gone, and the flow holds its own caption, WD14 and tag lists while
+  `photo/` holds a caption and a WD14 list but no tag list
+- **THEN** the flow's own caption and WD14 lists and their directories are gone
+- **AND** its own tag list stays, and `photo/` is as it was
 
 #### Scenario: a path naming no render is refused
 - **Key:** `image-generation:discard:a-path-naming-no-render-is-refused`
