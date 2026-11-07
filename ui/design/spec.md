@@ -47,7 +47,7 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 | `--ink` · `--ink-1b` · `--ink-2` · `--ink-3` | `#e4e4ec` · `#c9cad6` · `#a3a5b8` · `#74768a` | text levels |
 | `--ink-muted` | `#8a8ca0` | disabled reasons, secondary meta |
 | `--ink-disabled` | `#5d5f73` | disabled button label |
-| `--accent` | `#8d82e6` | the primary outline, assigned tick, running dot, refusal square, billing band |
+| `--accent` | `#8d82e6` | the primary outline, pending (assigned or tagged) tick, running dot, refusal square, billing band |
 | `--accent-dim` | `#5a5296` | the running segment of a stage track |
 | `--accent-ink` | `#b3abf4` | commands, running words (`captioning…`) |
 | `--tick-locked` | `#34364a` | a prepared, locked tick |
