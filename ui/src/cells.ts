@@ -37,8 +37,8 @@ export function action(cell: HubCell): CellAction {
   switch (cell.stage) {
     case null:
     case 'assigned':
-      return { action: 'tick', hint: null }
     case 'tagged':
+      return { action: 'tick', hint: null }
     case 'unreadable':
       return { action: 'none', hint: null }
     case 'sheet':
@@ -50,6 +50,16 @@ export function action(cell: HubCell): CellAction {
         ? { action: 'sheet', hint: '↵ review' }
         : { action: 'view', hint: '↵ view' }
   }
+}
+
+/** Return whether `cell` is waiting for Prepare: assigned, or tagged with no sheet yet. */
+export function pending(cell: HubCell): boolean {
+  return cell.stage === 'assigned' || cell.stage === 'tagged'
+}
+
+/** Return whether `cell`'s tick stays: a stage past pending holds work. */
+export function locked(cell: HubCell): boolean {
+  return cell.stage !== null && !pending(cell)
 }
 
 /** Return the rows a tick lands on: a click's own row; space's, the selection's.

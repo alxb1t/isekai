@@ -20,7 +20,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar as barOf, dismiss, failed, held, prepared, progress } from '../bars'
-import { EMPTY_CELL, action, clicks, targets } from '../cells'
+import { EMPTY_CELL, action, clicks, locked, pending, targets } from '../cells'
 import { assign, imageAt, prepare, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer, { type Shown } from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
@@ -103,7 +103,7 @@ const RUNNING: Record<string, { segment: number; word: string }> = {
 const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
 
-/* What Prepare would run: every assigned cell with no sheet. */
+/* What Prepare would run: every pending cell. */
 const changes = computed(() =>
   sources.value.flatMap((source) =>
     flows.value
@@ -140,15 +140,6 @@ function cell(source: HubSource, flow: string): HubCell {
 /* Whether the focus is on `row` at grid column `column`: 0 the source, the flows from 1. */
 function focused(row: number, column: number): boolean {
   return focus.value.row === row && focus.value.column === column
-}
-
-function pending(found: HubCell): boolean {
-  return found.stage === 'assigned' || found.stage === 'tagged'
-}
-
-/* A tick can be taken back only while the cell is assigned: past it, it stays. */
-function locked(found: HubCell): boolean {
-  return found.stage !== null && found.stage !== 'assigned'
 }
 
 function word(source: HubSource, flow: string): string {
@@ -257,7 +248,7 @@ async function tick(targets: HubSource[], flow: string, remove: boolean): Promis
   }
 }
 
-/* Space on a cell: tick it, or untick it while it is only assigned. With rows
+/* Space on a cell: tick it, or untick it while it is pending. With rows
    selected, the focused column is ticked for every one of them; a pointer's
    click ticks its own cell alone. The source column ticks nothing. */
 function toggle(row: number, column: number, pointer = false): void {
@@ -303,7 +294,7 @@ function discard(): void {
   barRefusal.value = null
   dismiss(jobs.value.prepare, props.collection)
   for (const flow of flows.value) {
-    const rows = sources.value.filter((one) => cell(one, flow).stage === 'assigned')
+    const rows = sources.value.filter((one) => pending(cell(one, flow)))
     if (rows.length) void tick(rows, flow, true)
   }
 }
@@ -540,7 +531,7 @@ onUnmounted(() => {
           <span class="hub__line">
             <input
               class="hub__tick"
-              :class="{ 'hub__tick--assigned': cell(source, flow).stage === 'assigned' }"
+              :class="{ 'hub__tick--pending': pending(cell(source, flow)) }"
               type="checkbox"
               :checked="cell(source, flow).stage !== null"
               :disabled="locked(cell(source, flow))"

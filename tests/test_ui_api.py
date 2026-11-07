@@ -330,7 +330,8 @@ def test_the_hub_and_the_input_name_the_flow_the_schema_and_the_vocabulary(
 
 
 @pytest.mark.spec("ui:hub:a-prepared-tick-stays")
-def test_unticking_a_cell_past_assigned_is_refused_and_changes_nothing(
+@pytest.mark.spec("ui:hub:a-tagged-cell-with-no-work-unticks")
+def test_an_untick_is_refused_on_work_and_takes_an_empty_tagged_flow(
     client: TestClient, made: Run
 ) -> None:
     _source(made)
@@ -343,6 +344,24 @@ def test_unticking_a_cell_past_assigned_is_refused_and_changes_nothing(
 
     assert f"{made.id}: {FLOW} holds work" in answered["refused"]["ada.jpg"]
     assert snapshot(made.path) == before
+
+    def stage() -> str | None:
+        hub = client.get(f"/api/c/{COLLECTION}/hub").json()
+        return hub["sources"][0]["cells"][CONJURE]["stage"]
+
+    def assign(remove: bool) -> None:
+        client.post(
+            f"/api/c/{COLLECTION}/assign",
+            json={"sources": ["ada.jpg"], "flow": CONJURE, "remove": remove},
+        )
+
+    tags = snapshot(made.directory(PHOTO, WD14))
+    assign(remove=False)
+    assert stage() == "tagged"
+    assign(remove=True)
+    assert stage() is None
+    assert not made.directory(CONJURE).exists()
+    assert snapshot(made.directory(PHOTO, WD14)) == tags
 
 
 @pytest.mark.spec("ui:routes:a-run-is-named-by-its-digest")
