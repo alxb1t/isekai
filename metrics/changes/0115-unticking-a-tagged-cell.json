@@ -1,0 +1,58 @@
+{
+  "change": "0115-unticking-a-tagged-cell",
+  "version": "0.75.2",
+  "base": "63620b01",
+  "analyzed": "07ec7325",
+  "measured_on": "local",
+  "collected_at": "2026-11-07T17:41:39+02:00",
+  "mf_version": "v0.71.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1512
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 33
+    },
+    "open-backlog-cards": {
+      "value": 10
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 465
+    },
+    "diff-files": {
+      "value": 14
+    },
+    "phases": {
+      "value": 2
+    },
+    "shared-reading-set": {
+      "value": 12824
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 758
+    },
+    "decisions": {
+      "value": 51
+    }
+  }
+}

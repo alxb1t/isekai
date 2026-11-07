@@ -2232,7 +2232,7 @@ dialog::backdrop {
   background: var(--raised-2);
 }
 
-.hub__tick--assigned {
+.hub__tick--pending {
   accent-color: var(--accent);
 }
 

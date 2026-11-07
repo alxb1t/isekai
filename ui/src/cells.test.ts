@@ -3,7 +3,9 @@ import {
   EMPTY_CELL,
   action,
   clicks,
+  locked,
   movePick,
+  pending,
   pickHead,
   placeOf,
   screenOrder,
@@ -24,7 +26,7 @@ spec('ui:hub:a-click-follows-the-cells-stage', () => {
   const cases: [HubCell, string, string | null][] = [
     [cell(null), 'tick', null],
     [cell('assigned'), 'tick', null],
-    [cell('tagged'), 'none', null],
+    [cell('tagged'), 'tick', null],
     [cell('unreadable'), 'none', null],
     [cell('sheet'), 'review', '↵ review'],
     [cell('draft'), 'review', '↵ review'],
@@ -45,6 +47,39 @@ spec('ui:hub:a-click-follows-the-cells-stage', () => {
   expect(clicks(on(false), '')).toBe(true)
   expect(clicks(on(true), '')).toBe(false)
   expect(clicks(on(false), 'python -m isekai')).toBe(false)
+})
+
+spec('ui:hub:a-tagged-cell-with-no-work-unticks', () => {
+  const stages: HubCell['stage'][] = [
+    null,
+    'assigned',
+    'tagged',
+    'sheet',
+    'draft',
+    'approved',
+    'rendered',
+    'unreadable',
+  ]
+  expect(stages.map((stage) => pending(cell(stage)))).toEqual([
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+  ])
+  expect(stages.map((stage) => locked(cell(stage)))).toEqual([
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+  ])
 })
 
 spec('ui:compare:the-pick-moves-by-row-and-column', () => {

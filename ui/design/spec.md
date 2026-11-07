@@ -47,7 +47,7 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 | `--ink` · `--ink-1b` · `--ink-2` · `--ink-3` | `#e4e4ec` · `#c9cad6` · `#a3a5b8` · `#74768a` | text levels |
 | `--ink-muted` | `#8a8ca0` | disabled reasons, secondary meta |
 | `--ink-disabled` | `#5d5f73` | disabled button label |
-| `--accent` | `#8d82e6` | the primary outline, assigned tick, running dot, refusal square, billing band |
+| `--accent` | `#8d82e6` | the primary outline, pending (assigned or tagged) tick, running dot, refusal square, billing band |
 | `--accent-dim` | `#5a5296` | the running segment of a stage track |
 | `--accent-ink` | `#b3abf4` | commands, running words (`captioning…`) |
 | `--tick-locked` | `#34364a` | a prepared, locked tick |
@@ -185,12 +185,12 @@ y_long_name            │                                  │
   13×4 segments, gap 3: assigned · tag · caption · sheet · approved · rendered; done `accent`, running `accent-dim`,
   the rest `line-disabled`; a draft shares the sheet segment — and the stage word in mono 12: `assigned`,
   `tagging…`, `captioning…`, `sheet`, `draft`, `approved`, `rendered ×n`. Running words are `accent-ink`.
-- **The tick:** accent fill is assigned and can be unticked; `tick-locked` is prepared and stays, with no word
-  saying so.
+- **The tick:** accent fill is pending — assigned or tagged — and can be unticked; `tick-locked` is prepared and
+  stays, with no word saying so.
 - **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`,
   `↵ view` or, on the source cell, `↵ view photo`), at the cell's top right, taking no line. The hub keeps its focus for the open collection: `Esc` from a large
   view, the Back button and a tab switch come back to the cell left, else the first row's source cell.
-- **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
+- **A click or ↵ follows the stage**: unassigned, assigned or tagged ticks and unticks; unreadable does nothing; a
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
   cell holding images opens the viewer on its newest (`↵ view`), `← →` `h l` step its images and `⇧↵` opens the
   shown one's large view. The checkbox's own click only ticks.

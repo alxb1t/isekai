@@ -86,7 +86,7 @@ export function hub(collection: string): Promise<HubInfo> {
   return get<HubInfo>(`/api/c/${encodeURIComponent(collection)}/hub`)
 }
 
-/* A tick or an untick, for each named source; an untick past assigned is refused
+/* A tick or an untick, for each named source; an untick of a directory holding work is refused
    on its own, beside the cells that changed. */
 export function assign(
   collection: string,
