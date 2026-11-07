@@ -4,8 +4,8 @@
 
 Stage ②: fill a sheet's fields with vocabulary tags from the photograph's WD14 tag list, through the field map,
 against the schema inside the flow that asked — or leave them empty for a flow that declares no tagger. The stage
-knows nothing of flows beyond the directory it reads and writes, whether a tag list is expected, and, for a first
-sheet a draft writes, the source flow it records.
+knows nothing of flows beyond the directory it reads and writes and whether a tag list is expected, and records no
+other flow.
 
 ## Requirements
 
@@ -76,16 +76,16 @@ producer that does not route through the table meets it as well.
 - **THEN** preparation is refused naming the tag and its field
 - **AND** no sheet is written
 
-### Requirement: The stage fills fields from the tag list of a flow that declares the tagger, and leaves them empty for a flow that declares none
+### Requirement: The stage fills fields from the tag list of a flow that declares the tagger, leaves them empty for a flow that declares none, and names no other flow
 
 The system SHALL fill a sheet from a schema, a vocabulary, a field map and, for a flow that declares the tagger, the
 photograph's local tag list, and SHALL store fields only. It SHALL NOT store an assembled prompt in a sheet, SHALL NOT
-be told which flow requested the work beyond whether a tag list is expected, the flow's digest it records and, for a
-first sheet a draft writes, the source flow it records, and SHALL NOT read prose. For a flow that declares the tagger
-it SHALL refuse naming the verb that produces the tag list when that list is absent, and for a flow that declares none
-it SHALL write every field empty, and the sheet's producer SHALL record that no tag list and no model filled it. Every
-sheet SHALL record the digest of the flow it was filled for, and SHALL carry the tag list's confidence floor into its
-producer where the list records one.
+be told which flow requested the work beyond whether a tag list is expected and the flow's digest it records, SHALL
+record no other flow, a first sheet a draft writes included, and SHALL NOT read prose. For a flow that declares the
+tagger it SHALL refuse naming the verb that produces the tag list when that list is absent, and for a flow that declares
+none it SHALL write every field empty, and the sheet's producer SHALL record that no tag list and no model filled it.
+Every sheet SHALL record the digest of the flow it was filled for, and SHALL carry the tag list's confidence floor into
+its producer where the list records one.
 
 ```
 flow declares the tagger? ──yes──▶ photo/wd14/ holds a list? ──yes──▶ fill through the field map
@@ -96,10 +96,12 @@ every field empty; the producer names no tag list and no model
 ```
 
 A prompt stored in the sheet would be edited by a person and silently overwritten by a rebuild. The stage learns only
-whether a tag list is expected, the flow's digest and a draft's source, which it records and never reads, so one stage
-serves every flow; the digest ties a sheet to the schema it was filled against across a re-pin. Every flow reads the
-photograph's one tag list ([D17](../../../docs/decisions.md#d17--input-above-flow-below)). It reads a tag list, not
-prose, because a tagger whose output layer is the vocabulary cannot name a tag outside it
+whether a tag list is expected and the flow's digest, which it records and never reads, so one stage serves every flow;
+a sheet naming another flow would tie the two
+([D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)); the
+digest ties a sheet to the schema it was filled against across a re-pin. Every flow reads the photograph's one tag list
+([D17](../../../docs/decisions.md#d17--input-above-flow-below)). It reads a tag list, not prose, because a tagger whose
+output layer is the vocabulary cannot name a tag outside it
 ([D2](../../../docs/decisions.md#d2--a-table-fills-the-sheet)). An empty sheet is legal and so silent: for a tagged flow
 it would hide a tagger that never ran, and for a flow that declares none there is nothing to hide — a person fills it,
 and approval still gates the render ([D31](../../../docs/decisions.md#d31--a-flow-declares-whether-it-is-tagged)).
@@ -167,27 +169,23 @@ and approval still gates the render ([D31](../../../docs/decisions.md#d31--a-flo
 - **THEN** the sheet's producer records the same floor
 - **AND** a tag list that records none yields a sheet that records none
 
-#### Scenario: a first sheet a draft writes names its source
-- **Key:** `sheet:output:a-drafted-sheet-names-its-source`
+#### Scenario: a first sheet a draft writes names no source
+- **Key:** `sheet:output:a-drafted-sheet-names-no-source`
 - **Layers:** unit
 - **WHEN** a draft from another flow's approval writes a target's first sheet
 - **THEN** its fields are routed from the photograph's tag list through the target's schema and field map
-- **AND** its producer names the source flow
+- **AND** its producer names no other flow
 
-### Requirement: A kept sheet filled from a tag list older than the photograph's newest is named
+### Requirement: A kept sheet filled from a tag list older than the photograph's newest is named, whoever filled it
 
 When a flow that declares the tagger already has a sheet and no new version is asked for, the system SHALL write
 nothing, and SHALL warn where the photograph holds a tag list numbered above the one its latest sheet was filled from,
-naming both numbers and the command that fills a new sheet. A kept sheet it cannot read, or a first sheet a draft
-wrote, SHALL leave the command silent.
+naming both numbers and the command that fills a new sheet, whoever filled it. A kept sheet it cannot read SHALL leave
+the command silent.
 
 ```
 sheet, no new version asked, a sheet exists
         │
-        ▼
-written by a draft? ──yes──▶ silent
-        │
-        no
         ▼
 photo/wd14/'s latest above the sheet's source? ──yes──▶ warn: both numbers, the command
         │
@@ -198,8 +196,8 @@ nothing written, either way
 
 `tag --new-version` writes a newer list and leaves the sheet filled from the old one, so "already complete" alone
 hides it. The warning names the fix and changes nothing: a new version is an explicit act. A sheet that cannot be
-read is refused by name at review. A first sheet a draft wrote is built from another flow's approval, so a later tag
-list does not supersede it.
+read is refused by name at review. A first sheet a draft wrote is filled from the photograph's tag list like any
+other, so a later list supersedes it too.
 
 #### Scenario: a newer tag list is named
 - **Key:** `sheet:superseded:a-newer-tag-list-is-named`
@@ -230,10 +228,3 @@ list does not supersede it.
 - **WHEN** the sheet verb runs without a new version for a flow whose latest sheet cannot be read
 - **THEN** nothing is written
 - **AND** no warning is given
-
-#### Scenario: a first sheet a draft wrote is silent
-- **Key:** `sheet:superseded:a-drafted-sheet-is-silent`
-- **Layers:** unit
-- **WHEN** the sheet verb runs without a new version for a flow whose sheet a draft wrote
-- **THEN** nothing is written
-- **AND** no warning is given, though the photograph holds a newer tag list

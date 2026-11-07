@@ -619,9 +619,9 @@ The system SHALL offer `isekai draft --flow FLOW <image>…`, which reads from e
 seed, checks every image before writing anything — the image exists, its approval can be read, the target holds no
 waiting draft with edits of its own, and no two images share a run and target — and then writes, through the review
 stage, a revision where `FLOW` is the image's own flow and a draft from its approval where it is another, assigning a
-target with no sheet and filling its sheet from the photograph's tags; when any check fails it SHALL write nothing and
-name every image that failed, with its reason. It SHALL tell two images' runs apart by the identity of their
-directories, never by the text of their paths.
+target with no sheet and filling its sheet from the photograph's tags, and copying another flow's image into the
+target's sources; when any check fails it SHALL write nothing and name every image that failed, with its reason. It
+SHALL tell two images' runs apart by the identity of their directories, never by the text of their paths.
 
 An image's path names everything a draft needs but its target, so the verb takes nothing else. A selection is drafted
 whole or not at all, so a retry after a fix does not meet the drafts the first try wrote. A target with no sheet needs
@@ -651,7 +651,8 @@ no Prepare: the photograph's tags are every flow's.
 - **Key:** `cli:draft:another-flow-is-drafted-from-the-image`
 - **Layers:** unit
 - **WHEN** the verb is given a summon image and another flow
-- **THEN** the target's draft holds the image's approval's shared fields, its seed and its image
+- **THEN** the target's draft holds the image's approval's shared fields and its seed, and records no image
+- **AND** the target's sources hold a copy of the image under the draft's number
 
 ### Requirement: A stage verb on a flow requires the flows it acts on, and the photograph's verbs take none
 
@@ -816,11 +817,12 @@ operator deletes them.
 
 The system SHALL offer `isekai discard <image>`, which reads the run, flow, approval and seed from the image's path,
 deletes the image's own thumbnail from the cache of the library whose collection holds the run, discards the render
-through the render stage, then, where that removed the group of the flow's newest approval with no draft waiting above
-it, deletes that approval's prompt and failure records and cancels it back to its draft; it prints each path it
-deleted, a run's file from its runs root and a thumbnail from its library. A path that names no render SHALL be
-refused, naming the form a render's path takes, the verb exiting 1 and deleting nothing; so SHALL a discard while a
-render session holds the image's collection, as the app's delete is.
+through the render stage, then, where that removed an approval's group, deletes that approval and what goes with it,
+as the render stage's discard says — older approvals with no render, the newest's waiting draft and, once no approval
+is left, the flow's sheets — writing no draft; it prints each path it deleted, a run's file from its runs root and a
+thumbnail from its library. A path that names no render SHALL be refused, naming the form a render's path takes, the
+verb exiting 1 and deleting nothing; so SHALL a discard while a render session holds the image's collection, as the
+app's delete is.
 
 The hand path stays ([D3](../../../docs/decisions.md#d3--the-hand-path-stays)): the page's Delete is this verb's act,
 run in the server's process. An image's path names everything a discard needs, so the verb takes nothing else.
@@ -835,8 +837,9 @@ run in the server's process. An image's path names everything a discard needs, s
 #### Scenario: the last render takes its approval with it
 - **Key:** `cli:discard:the-last-render-takes-its-approval`
 - **Layers:** unit
-- **WHEN** the verb is given the path of the only render of the flow's newest approval, its prompt assembled
-- **THEN** the group, the prompt and the approval are deleted, each printed, and the draft is back
+- **WHEN** the verb is given the path of the only render of the flow's only approval, its prompt assembled
+- **THEN** the group, the prompt, the approval, the sheet and the emptied directories are deleted, each printed
+- **AND** no draft is written, and the flow's directory is left empty
 - **AND** another collection's thumbnail of the same photograph and seed stays
 
 #### Scenario: a running render refuses it

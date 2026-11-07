@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.75.0] - 2026-11-07
+
+Gate: local 0m50s · CI not read under mf-ship · 0.74.0: local 0m30s · CI not read under mf-ship
+
 - *Draft from this* into another flow copies the image into that flow's `sources/`, under the draft's number, and the
   draft records no image of another flow; Review reads the copy through its own route, so it outlives the source (0112
   D2, D3).

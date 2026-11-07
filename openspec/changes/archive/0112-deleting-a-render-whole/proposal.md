@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.75
 ---
 
 # 0112 — deleting a render whole

@@ -126,14 +126,16 @@ hash and no path, and a record that invented a path would assert a location that
 The system SHALL number each stage's artifacts within that stage's own directory, SHALL never overwrite
 a written artifact, and SHALL make a command whose artifact already exists do nothing — write nothing,
 call nothing — unless a new version is explicitly requested. It SHALL delete a render's image and
-record only when the operator discards that render, and SHALL delete an approval, its prompt and its
-failure records with the newest approval's last render.
+record only when the operator discards that render, SHALL delete an approval, its prompt, its failure
+records and its source copy with its last render, and SHALL delete a flow's sheets only when that
+leaves the flow with no approval; nothing SHALL go back to a draft.
 
 Idempotence is what makes resume ordinary: there is no special mode and no state machine, because
 running every command again is the whole of it. It is also the only defence against a shell loop
 retrying after a network blip and silently burning a call. A render is a likeness, so the one way it
-leaves a run is the operator's ask; an approval with nothing left made from it goes with it, so the
-Hub reads a draft rather than an approval short of the image just deleted.
+leaves a run is the operator's ask; an approval with no render left goes with it, and a flow with no
+approval left keeps only its assignment, so neither the Hub nor Review offers what was just deleted
+([D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)).
 
 #### Scenario: re-running a completed command changes nothing
 - **Key:** `run-directory:idempotence:rerun-is-a-no-op`
@@ -166,8 +168,8 @@ Hub reads a draft rather than an approval short of the image just deleted.
 #### Scenario: the newest approval goes with its last render
 - **Key:** `run-directory:idempotence:the-newest-approval-goes-with-its-last-render`
 - **Layers:** unit
-- **WHEN** the operator discards the only render of a flow's newest approval
-- **THEN** that approval, its prompt and its failure records are gone, and its draft is back
+- **WHEN** the operator discards the only render of a flow's newest approval, an older approval still holding an image
+- **THEN** that approval, its prompt and its failure records are gone, and no draft is written
 - **AND** every other file of the run is as it was
 
 ### Requirement: An artifact is written atomically or not at all
@@ -490,7 +492,8 @@ The system SHALL place the input, its frame and the photograph's description at 
 both tag lists, under `photo/` — and SHALL place every other artifact a stage produces under a directory named for the
 flow that produced it. Every flow SHALL read the one description under `photo/`. It SHALL NOT let one flow read another
 flow's artifacts, except where the operator names a source flow; then a render SHALL record the source, and a copied
-approval or a draft from it SHALL hold its own fields and seeds, reading the source no more. It SHALL
+approval or a draft from it SHALL hold its own fields, seeds and sheet, and a draft from another flow's image its own
+copy of that image under its `sources/`, reading the source no more and naming none of its files. It SHALL
 NOT count `photo/` among a run's flows, and SHALL refuse to assign a flow named `photo`.
 
 ```
@@ -499,14 +502,14 @@ runs/<input-id>/
 ├── photo/                        the photograph's description, read by every flow
 │   └── captions/ wd14/ tags/
 └── <flow-id>/                    one subtree per flow
-    └── sheets/ review/ prompts/ outputs/
+    └── sheets/ review/ prompts/ outputs/ sources/
 ```
 
 Every flow reads a photograph under one briefing, one model, one pinned tagger and one prompt, so the description is the
 photograph's rather than a flow's, and it is written once. A flow adds one subtree, and retiring one flow's work for one
 input removes one directory ([D17](../../../docs/decisions.md#d17--input-above-flow-below)). A source flow the operator
 names is not a flow reaching into another on its own. A copy is taken once and holds what it took, so the source's
-approval can always go
+approval, its renders or its whole flow can always go
 ([D49](../../../docs/decisions.md#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
 
 #### Scenario: each flow's work is under the flow, and the description under photo/

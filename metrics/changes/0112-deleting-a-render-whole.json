@@ -1,0 +1,58 @@
+{
+  "change": "0112-deleting-a-render-whole",
+  "version": "0.75",
+  "base": "41560908",
+  "analyzed": "3395a73c",
+  "measured_on": "local",
+  "collected_at": "2026-11-07T16:00:27+02:00",
+  "mf_version": "v0.70.1",
+  "executor": "Claude Code",
+  "model": "Sonnet 5.5",
+  "values": {
+    "tests-unit": {
+      "value": 1509
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 50
+    },
+    "open-backlog-cards": {
+      "value": 10
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 3
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 2304
+    },
+    "diff-files": {
+      "value": 38
+    },
+    "phases": {
+      "value": 6
+    },
+    "shared-reading-set": {
+      "value": 12687
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 754
+    },
+    "decisions": {
+      "value": 51
+    }
+  }
+}

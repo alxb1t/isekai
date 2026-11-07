@@ -1859,16 +1859,18 @@ The system SHALL offer *Draft from this* on `⇧D` from an image's large view an
 opening a dialog that lists every flow the app offers, the image's own first, named *revise*, focused, and the others
 after it, assigned or not; `↵` SHALL draft the chosen flow from each image's approval, as the draft verb does — a
 revision for the image's own flow, a draft from that approval for another, assigning a target and filling its sheet from
-the photograph's tags where it holds none, the image's seed prefilled and the image recorded — then open Review on the
-first draft, the others of its flow in the rail. A target holding a waiting draft with edits of its own SHALL write
-nothing for that image and open Review on that draft; one equal to its sheet SHALL be replaced. A selection SHALL be
-drafted all or none, refusing by name an image of a flow this build does not track, and refusing a selection that names
-a version or a seed no run can hold. On such a draft, draft or approved, Review SHALL show the photograph and, while
-its file exists, the image the draft records — whatever its seeds became, else, for a revision, the first of its seeds
-rendered under its approval — on one line, at equal height under one header row, headed by its flow, version and seed,
-and offer *Side by side*, also on `⌃P`, both in one dialog, `⌃P` in it showing the photograph alone and back; it SHALL
-mark each field that differs from the approval a revision came from, or from the target's sheet for another flow; on a
-draft it SHALL offer to discard it from the approve bar, deleting it only once the operator confirms.
+the photograph's tags where it holds none, the image's seed prefilled and, for another flow, the image copied into the
+target's sources — then open Review on the first draft, the others of its flow in the rail. A target holding a waiting
+draft with edits of its own SHALL write nothing for that image and open Review on that draft; one equal to its sheet
+SHALL be replaced. A selection SHALL be drafted all or none, refusing by name an image of a flow this build does not
+track, and refusing a selection that names a version or a seed no run can hold. On such a draft, draft or approved,
+Review SHALL show the photograph and, for a revision, while its file exists, the image the draft records — whatever its
+seeds became, else the first of its seeds rendered under its approval — headed by its seed, or, for a draft from another
+flow, its source copy, headed *the image it was drafted from* and naming no flow, version or seed; on one line, at equal
+height under one header row, and offer *Side by side*, also on `⌃P`, both in one dialog, `⌃P` in it showing the
+photograph alone and back; it SHALL mark each field that differs from the approval a revision came from, or from the
+target's sheet for another flow; on a draft it SHALL offer to discard it from the approve bar, deleting it only once the
+operator confirms.
 
 ```
 large view · summon-anime-wai v2 · seed 9423…   ⇧D
@@ -1884,8 +1886,9 @@ large view · summon-anime-wai v2 · seed 9423…   ⇧D
 An image the operator approved is where the next draft starts, in its own flow or another: one act, whatever the flows
 become. The comparison that matters is the render against the photograph, read against the sheet. A waiting edit is the
 work in hand; a draft the operator never touched holds no work. A discard deletes the operator's edits, so one click
-never does. A draft from another flow holds its own fields, so once the image it came from is deleted it shows the
-photograph alone.
+never does. A draft from another flow holds its own fields and its own copy of the image, so deleting the image it
+came from, or the whole source flow, leaves it as it was
+([D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)).
 
 #### Scenario: Revise opens Review on the revision
 - **Key:** `ui:revise:revise-opens-review-on-the-revision`
@@ -1969,25 +1972,26 @@ photograph alone.
 - **Key:** `ui:conjure-from:an-approved-draft-keeps-its-marks`
 - **Layers:** unit
 - **WHEN** Review reads the approval of a draft written from another flow's approval
-- **THEN** it carries the target sheet's fields and the image the draft records
+- **THEN** it carries the target sheet's fields and the number of its source copy
 
 #### Scenario: Review reads the draft against the target's sheet
 - **Key:** `ui:conjure-from:review-reads-the-draft-against-the-sheet`
 - **Layers:** unit
 - **WHEN** Review reads a draft written from another flow's approval
-- **THEN** it carries the target sheet's fields and the image the draft records, naming no source approval
-- **AND** once that image's file is gone, it carries the fields and no image
+- **THEN** it carries the target sheet's fields and the number of its source copy, naming no source approval
+- **AND** the source copy is served at that number, and still is once the source image's file is gone
 
 #### Scenario: Conjure from this opens Review on the draft
 - **Key:** `ui:conjure-from:conjure-from-this-opens-review`
 - **Layers:** e2e
 - **WHEN** `⇧D` is pressed on a summon image whose source is not assigned conjure, conjure chosen and `↵` pressed
-- **THEN** Review opens on conjure's draft, its kicker naming no summon approval
+- **THEN** Review opens on conjure's draft, its kicker naming no summon approval, the image headed *the image it was
+  drafted from*
 - **AND** a field summon changed is marked against conjure's sheet
 - **AND** its caption pane shows the photograph's caption, naming no flow, and the summon image stands beside the
   photograph
-- **AND** once summon's only render is deleted, summon's cell reads *draft* and conjure's draft still opens, showing
-  the photograph alone
+- **AND** once summon's only render is deleted, summon's cell reads *tagged* and conjure's draft still opens, showing
+  the photograph and its source copy
 
 #### Scenario: an unedited waiting draft is replaced
 - **Key:** `ui:draft-from:an-unedited-waiting-draft-is-replaced`
@@ -2237,15 +2241,16 @@ runs root so it works when pasted: a collection's runs root in the library is ne
 
 The system SHALL offer *Delete* on a render's large view, on `⇧⌫`, after *Compare with…*, opening a modal dialog,
 *Delete this render?*, whose *No* comes first and holds the focus; `h` `l` and `←` `→` SHALL move between *No* and
-*Yes*, `↵` SHALL press the focused one, and `Esc` SHALL answer *No*. *Yes* SHALL delete the render's own thumbnails
-from the library's cache, discard the render through the render stage — the newest approval going with its last render
-— and open the Hub focused on the render's cell, from whichever screen opened the view. The server SHALL refuse the
-delete while a render session runs for the collection, deleting nothing, and the dialog SHALL show the refusal.
+*Yes*, `↵` SHALL press the focused one, and `Esc` SHALL answer *No*. *Yes* SHALL delete the render's own thumbnails from
+the library's cache, discard the render through the render stage — its approval going with its last render, and a flow
+left with no approval keeping only its assignment — and open the Hub focused on the render's cell, from whichever screen
+opened the view. The server SHALL refuse the delete while a render session runs for the collection, deleting nothing,
+and the dialog SHALL show the refusal.
 
-A failed render is deleted where it is seen. *No* first makes a stray `↵` harmless, and a write beside a running
-session is refused, as *Cancel approve* is. The cell is where the delete shows: one image fewer, *draft* once the newest
-approval's last image goes, or approved again. A thumbnail is told from another collection's of the same photograph
-and seed by its image's digest, so only the render's own goes.
+A failed render is deleted where it is seen. *No* first makes a stray `↵` harmless, and a write beside a running session
+is refused, as *Cancel approve* is. The cell is where the delete shows: one image fewer, an older approval's images once
+the newest's last image goes, or *tagged* once the flow's last approval goes, with nothing to review. A thumbnail is
+told from another collection's of the same photograph and seed by its image's digest, so only the render's own goes.
 
 ```
 large view ──⇧⌫──▶ Delete this render?  [No] [Yes]
@@ -2265,8 +2270,8 @@ large view ──⇧⌫──▶ Delete this render?  [No] [Yes]
 - **Key:** `ui:delete-render:yes-opens-the-hub-on-the-cell`
 - **Layers:** e2e
 - **WHEN** `⇧⌫`, `l` and `↵` are pressed on the large view of a cell's only image, opened at its address
-- **THEN** the Hub opens focused on that cell, reading *draft*
-- **AND** the image and its approval's prompt are gone from the run
+- **THEN** the Hub opens focused on that cell, reading *tagged*
+- **AND** the image, its approval's prompt and the flow's sheet are gone from the run
 
 #### Scenario: the route deletes the render and its thumbnail
 - **Key:** `ui:delete-render:the-route-deletes-the-render-and-its-thumbnail`
