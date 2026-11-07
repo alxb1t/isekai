@@ -587,19 +587,16 @@ def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
 
         return sheet_cell
 
-    def photograph(run_id: str, named: Sequence[str]) -> None:
+    by_run: dict[str, list[str]] = {}
+    for run_id, flow in cells:
+        by_run.setdefault(run_id, []).append(flow)
+    for run_id, named in by_run.items():
         steps = [
             *([tag] if any(flows[flow].tagger for flow in named) else []),
             describe,
             *(sheet_of(flow) for flow in named),
         ]
         collected.extend(across(steps, lambda step: step(run_id)))
-
-    by_run: dict[str, list[str]] = {}
-    for run_id, flow in cells:
-        by_run.setdefault(run_id, []).append(flow)
-    for run_id, named in by_run.items():
-        photograph(run_id, named)
     for message in collected:
         print(f"refused: {message}", file=wired.err)
     return 1 if collected else 0
