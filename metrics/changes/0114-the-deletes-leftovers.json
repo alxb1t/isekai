@@ -1,0 +1,58 @@
+{
+  "change": "0114-the-deletes-leftovers",
+  "version": "0.75.1",
+  "base": "aaefd7a9",
+  "analyzed": "7b64ad65",
+  "measured_on": "local",
+  "collected_at": "2026-11-07T17:36:24+02:00",
+  "mf_version": "v0.71.0",
+  "executor": "Claude Code",
+  "model": "Sonnet 5.5 (claude-sonnet-5-5)",
+  "values": {
+    "tests-unit": {
+      "value": 1512
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 30
+    },
+    "open-backlog-cards": {
+      "value": 10
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 648
+    },
+    "diff-files": {
+      "value": 17
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 12824
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 757
+    },
+    "decisions": {
+      "value": 51
+    }
+  }
+}
