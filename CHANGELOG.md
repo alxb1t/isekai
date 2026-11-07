@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- Deleting a render group's last image deletes the failure records left in it, and the group; an older approval whose
+  group holds failure records alone goes with the delete, so a render that once failed no longer keeps its approval
+  (0114 D1).
+
 ## [0.75.0] - 2026-11-07
 
 Gate: local 0m50s · CI not read under mf-ship · 0.74.0: local 0m30s · CI not read under mf-ship

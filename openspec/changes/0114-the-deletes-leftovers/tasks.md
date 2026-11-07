@@ -5,26 +5,26 @@ repository root.
 
 ## Progress
 
-- [ ] 1 — The failure records
+- [x] 1 — The failure records
 - [ ] 2 — The own description
 - [ ] 3 — The record
 
 ## 1 — The failure records
 
-- [ ] 1.1 **HALT CHECK** — [D1](design.md#d1) replaces the one test that removes a render group only when empty.
+- [x] 1.1 **HALT CHECK** — [D1](design.md#d1) replaces the one test that removes a render group only when empty.
   Verify: `grep -n 'if not any(group.iterdir()):' isekai/pipeline/generate.py` prints one line.
-- [ ] 1.2 In `isekai/foundation/run.py`, add `failures_alone` after `failure_named`, per [the code](design.md#the-code).
+- [x] 1.2 In `isekai/foundation/run.py`, add `failures_alone` after `failure_named`, per [the code](design.md#the-code).
   Verify: `grep -n 'def failures_alone(directory: Path) -> list\[Path\] | None:' isekai/foundation/run.py` prints one line.
-- [ ] 1.3 In `isekai/pipeline/generate.py`, make `discard_render` delete a group holding failure records alone, with
+- [x] 1.3 In `isekai/pipeline/generate.py`, make `discard_render` delete a group holding failure records alone, with
   them, its docstring edited, per [the code](design.md#the-code).
   Verify: `grep -n 'records = failures_alone(group)' isekai/pipeline/generate.py` prints one line.
-- [ ] 1.4 In `isekai/pipeline/review.py`, add `_holds_render` before `withdraw`, and make `withdraw` read it and delete
+- [x] 1.4 In `isekai/pipeline/review.py`, add `_holds_render` before `withdraw`, and make `withdraw` read it and delete
   each going approval's group records and group, per [phase 1's `withdraw`](design.md#the-code), not phase 2's.
   Verify: `grep -n 'def _holds_render(run: Run, flow: str, version: int) -> bool:' isekai/pipeline/review.py` prints one line.
-- [ ] 1.5 In `tests/test_generate.py`, add `test_a_groups_failure_records_go_with_its_last_render`, per
+- [x] 1.5 In `tests/test_generate.py`, add `test_a_groups_failure_records_go_with_its_last_render`, per
   [Tests](design.md#tests).
   Verify: `uv run pytest tests/test_generate.py -k groups_failure_records_go_with_its_last_render` exits 0.
-- [ ] 1.6 In `tests/test_review.py`, add `test_an_older_approval_whose_group_holds_failure_records_alone_goes`, per
+- [x] 1.6 In `tests/test_review.py`, add `test_an_older_approval_whose_group_holds_failure_records_alone_goes`, per
   [Tests](design.md#tests).
   Verify: `uv run pytest tests/test_review.py -k whose_group_holds_failure_records_alone` exits 0.
 

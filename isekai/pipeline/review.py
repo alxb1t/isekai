@@ -73,6 +73,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     attempts,
+    failures_alone,
     group_of,
     is_seed,
     latest,
@@ -581,32 +582,41 @@ def cancel(run: Run, flow: str) -> Cancelled:
     return Cancelled(path, changed=True)
 
 
-def withdraw(run: Run, flow: str, version: int) -> list[Path]:
-    """Delete approval `version` once its group is gone; return what went, absolute.
+def _holds_render(run: Run, flow: str, version: int) -> bool:
+    """Return whether approval `version`'s group holds more than failure records."""
+    group = group_of(run, flow, version)
+    return group.exists() and failures_alone(group) is None
 
-    With it go each older approval with no group, each with its prompt, failure
-    records and source copy, and, where it was the newest, the draft waiting above
-    it and that draft's source copy. A flow left with no approval keeps only its
-    directory, its assignment: every path under sheets/, review/, prompts/ and
-    sources/ goes, then those directories, then outputs/ when empty. Nothing is
-    read, so nothing refuses.
+
+def withdraw(run: Run, flow: str, version: int) -> list[Path]:
+    """Delete approval `version` once it holds no render; return what went, absolute.
+
+    With it go each older approval whose group is gone or holds failure records
+    alone, each with its prompt, failure records, group and source copy, and,
+    where it was the newest, the draft waiting above it and that draft's source
+    copy. A flow left with no approval keeps only its directory, its assignment:
+    every path under sheets/, review/, prompts/ and sources/ goes, then those
+    directories, then outputs/ when empty. Nothing is read, so nothing refuses.
     e.g. (run, f, 2), 001 rendered -> [f/prompts/002.json, f/review/002.approved.json]
     """
     directory = run.directory(flow, REVIEW)
     approved = approved_versions(directory)
-    if version not in approved or group_of(run, flow, version).exists():
+    if version not in approved or _holds_render(run, flow, version):
         return []
     going = [
         one
         for one in approved
-        if one == version or (one < version and not group_of(run, flow, one).exists())
+        if one == version or (one < version and not _holds_render(run, flow, one))
     ]
     prompts = run.directory(flow, PROMPTS)
     made: list[Path] = []
     for one in going:
+        group = group_of(run, flow, one)
         made += [
             prompts / artifact_name(one),
             *(attempt.path for attempt in attempts(prompts, one)),
+            *(failures_alone(group) or []),
+            group,
             source_copy(run, flow, one),
             approval_of(run, flow, one),
         ]
@@ -614,7 +624,10 @@ def withdraw(run: Run, flow: str, version: int) -> list[Path]:
         made += [draft, source_copy(run, flow, int(draft.name[:3]))]
     gone = [path.absolute() for path in made if path.exists()]
     for path in gone:
-        path.unlink()
+        if path.is_dir():
+            path.rmdir()
+        else:
+            path.unlink()
     if len(going) < len(approved):
         return gone
     for name in (SHEETS, REVIEW, PROMPTS, SOURCES):

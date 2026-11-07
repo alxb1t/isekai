@@ -1522,6 +1522,33 @@ def test_discarding_a_groups_last_render_removes_the_group(
     assert snapshot(run.path) == _kept(before, run, deleted[:-1])
 
 
+@pytest.mark.spec("image-generation:discard:failure-records-go-with-the-last-render")
+def test_a_groups_failure_records_go_with_its_last_render(
+    run: Run, flow: Flow, schema: Schema
+) -> None:
+    prompt = prompt_artifact(run, flow, schema)
+    render(run, flow, FakeComfyClient(), seeds=[42, 77], poll=0)
+    group = (run.path / FLOW / OUTPUTS / "001").absolute()
+    failure = record_failure(
+        group, 1, "transient", {"stage": "render", "seed": 7, "detail": "x"}
+    )
+    _, approval = approved_artifact(run, FLOW)
+
+    first = discard_render(group / f"42{flow.output_suffix}")
+    assert first == [group / f"42{flow.output_suffix}", group / "42.render.json"]
+    assert failure.is_file() and group.is_dir()
+
+    last = discard_render(group / f"77{flow.output_suffix}")
+    assert last == [
+        group / f"77{flow.output_suffix}",
+        group / "77.render.json",
+        failure.absolute(),
+        group,
+    ]
+    assert not group.exists()
+    assert approval.is_file() and prompt.is_file()
+
+
 @pytest.mark.spec("image-generation:discard:a-path-naming-no-render-is-refused")
 def test_discarding_a_path_naming_no_render_is_refused(
     run: Run, flow: Flow, schema: Schema
