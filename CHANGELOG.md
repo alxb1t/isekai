@@ -22,6 +22,8 @@ its new digest.
 - Deleting an approval's last render, from `discard` or the app, deletes that approval, older ones with no render and
   the newest's waiting draft; nothing goes back to a draft. A flow left with no approval keeps only its assignment, so
   the Hub reads *tagged* (0112 D1).
+- docs D4 and D49 now say what the last render takes and that a copy sits on the target's own sheet, and D50 records
+  the rule; data-flow, principles and both READMEs follow (0112 D7).
 
 ## [0.74.0] - 2026-11-07
 

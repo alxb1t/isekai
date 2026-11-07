@@ -245,14 +245,11 @@ place. A stage whose file already exists does nothing unless asked for a new ver
   - `tests/test_artifact_bytes.py::test_each_kind_is_written_byte_for_byte`
   - `tests/test_artifact_bytes.py::test_only_the_contract_writes_a_run_file`
   - `tests/test_review.py::test_approving_an_approved_flow_writes_nothing`
-- **Known breaks:** `pipeline/review.py`'s `discard` deletes a file the sheet stage wrote: a draft from
-  another flow's approval, in a flow holding only it and the sheet that drafting filled, is discarded with
-  that sheet and the flow's directory — the undo of the sheet-then-draft sequence `interface/drafting.py`
-  composes, done inside the review stage. `pipeline/generate.py`'s `discard_render` deletes a render's image and
-  record, and the outputs group it empties, when the operator discards that render: a render is a likeness, so it
-  leaves the run rather than being hidden. `pipeline/review.py`'s `withdraw` deletes the prompt and failure records
-  the generate stage wrote, numbered for the newest approval whose last render the operator discarded, before it
-  cancels that approval.
+- **Known breaks:** `pipeline/generate.py`'s `discard_render` deletes a render's image and record, and the outputs
+  group it empties, when the operator discards that render: a render is a likeness, so it leaves the run rather than
+  being hidden. `pipeline/review.py`'s `withdraw` deletes the prompts and failure records the generate stage wrote,
+  numbered for each approval it deletes, and, once the flow holds no approval, the sheets the sheet stage wrote and
+  the flow's emptied `outputs/`.
 
 ### Every artifact records what shaped it
 

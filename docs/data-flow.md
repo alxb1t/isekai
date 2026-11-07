@@ -32,7 +32,7 @@ its neighbours.
       ▼
   ③ review ── reads sheets/ ──▶ review/NNN.draft.json
      approve ── reads the draft ──▶ review/NNN.approved.json
-      │   with --from, reads the source flow's approval instead
+      │   with --from, reads the source flow's approval instead, onto its own sheet
      draft ── reads an image's approval, and another flow's own sheet ──▶ review/NNN.draft.json
       │           its seed listed; another flow's sheet filled first from the photograph's tags where none
       │           (or `ui`, the same stage in a browser)
@@ -51,7 +51,8 @@ render would refuse are refused by name. **`isekai assign`** ticks a flow: it op
 run and gives it that flow's empty directory, which is the stage the hub calls
 *assigned*; `--remove` takes one away only while it is empty.
 
-**`isekai draft --flow FLOW <image.png> …`** sends a render back to ③. Each path names its
+**`isekai draft --flow FLOW <image.png> …`** sends a render back to ③. Into another flow,
+the image is copied into that flow's `sources/` under the draft's number. Each path names its
 run, flow, approval and seed, `outputs/<NNN>/<seed>.png`; the draft is copied from
 that approval, newest or not, with a count of one and the seed listed — into the image's
 own flow a revision, into another its fields both flows declare, the rest from that flow's
@@ -70,9 +71,9 @@ outputs/001/7.png ─▶ draft ─▶ review/003.draft.json   {count 1, seeds [7
 ```
 
 **`isekai discard <image.png>`** deletes one render: its image, its record, its group when emptied, and its
-thumbnails in the library's cache. A delete that empties the newest approval's group
-takes that approval back to its draft, with its prompt and failure records; one that leaves images renders what it
-lacks at the next session.
+thumbnails in the library's cache. A delete that empties an approval's group deletes that approval, older ones with
+no render and the newest's waiting draft; a flow left with no approval keeps only its assignment (D50). One that
+leaves images renders what it lacks at the next session.
 
 Beside them, `show` reads a run's artifacts, versions, producers and failure records,
 names what below `photo/` or a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a collection's runs the
@@ -159,6 +160,7 @@ seeing behind it is what these artifacts are for.
           review/     ③ NNN.draft.json, then NNN.approved.json
           prompts/    ④ the assembled prompt, written before any endpoint is acquired
           outputs/    ④ the rendered image
+          sources/    ③ the image a draft from another flow was drafted from
 ```
 
 **Input and its description above, flow below.** Above the split is what every

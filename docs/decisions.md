@@ -88,9 +88,9 @@ another flow fills; the one act in it that spends is Render's confirmation, afte
 `volume down`. Every other write goes through the function that owns it: a draft, its edits and an
 approval through `review`'s, a tick through the run's `assign`, a source through import, a deleted render's
 thumbnails through the library's `drop_thumbnails`, the render through the render stage's `discard_render`, and
-the newest approval its last render leaves through review's `withdraw`, and a target's first sheet, when it is
-drafted from another flow, through `sheet()`, which `interface/drafting.py`'s `draft_across` runs in the server's
-process before the draft.
+the approvals, drafts, sheets and source copies its last render leaves through review's `withdraw`, and a target's
+first sheet, when it is drafted from another flow, through `sheet()`, which `interface/drafting.py`'s `draft_across`
+runs in the server's process before the draft.
 
 - **Why:** the CLI is the one path, so a stage the page starts is exactly the stage the terminal runs,
   and a write no stage owns would give a run file a second author. `draft_across` is the sequence
@@ -99,7 +99,7 @@ process before the draft.
   confirmation carries the quote it showed and the photographs taken out of it, and a quote grown since is
   refused. The quote compares
   image total and limit, not source or approval identity.
-- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`.
+- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`, `0112`.
 
 ### D42 · A new draft starts from the last approval
 
@@ -275,14 +275,26 @@ no longer names its source, and its seeds are copied rather than checked.**
 
 **`control-anime-wai` is `summon-anime-wai`'s directory with `ip_weight` and `identity_cn_strength` at 0, held equal
 to it by a test. `approve --from` copies `summon`'s approval once — its fields and its seeds — and records neither
-the source flow nor its approval; a draft from another flow's approval is taken once the same way. A stage reads
-another flow's work only when the operator names it as a source; the photograph's description is every flow's
-(D17).**
+the source flow nor its approval; a draft from another flow's approval is taken once the same way; the copy names
+the target's own sheet, filled first where it holds none, and a draft from another flow's image holds a copy of that
+image in the target's `sources/`. A stage reads another flow's work only when the operator names it as a source; the
+photograph's description is every flow's (D17).**
 
 - **Why:** the floor is the same sheet and the same noise with the face mechanism off, and the seeds travel with the
   copy, so that holds with no later check; a copy naming its source kept the source's approval from being cancelled
   or deleted with its renders.
-- **Made by:** `0054`, `0103`, `0111`.
+- **Made by:** `0054`, `0103`, `0111`, `0112`.
+
+### D50 · The last render takes its approval, and a flow holds only its own files
+
+**Deleting an approval's last render deletes that approval, its prompt, its failure records and its source copy,
+every older approval with no render, and the newest's waiting draft; nothing goes back to a draft. A flow left with no
+approval keeps only its directory, its assignment: its sheets go too, and the photograph's tags and caption stay
+(D17). No file of one flow names a file of another.**
+
+- **Why:** the operator deletes a render to be rid of it; an approval, a draft or a sheet left behind kept the Hub and
+  Review offering what was deleted, and a reference into another flow breaks when that flow's work goes.
+- **Made by:** `0111`, `0112`.
 
 ### D44 · A flat flow is summon with the face chain ending early
 

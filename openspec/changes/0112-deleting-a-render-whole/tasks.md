@@ -10,7 +10,7 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 - [x] 3 — The discard and the records
 - [x] 4 — The copy's own sheet
 - [x] 5 — The delete
-- [ ] 6 — The record
+- [x] 6 — The record
 
 ## 1 — The source copy
 
@@ -139,14 +139,14 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 
 ## 6 — The record
 
-- [ ] 6.1 In `docs/decisions.md`, edit D4 and D49 and add D50 after D49, per [the record](design.md#the-record).
+- [x] 6.1 In `docs/decisions.md`, edit D4 and D49 and add D50 after D49, per [the record](design.md#the-record).
   Verify: `grep -n '^### D50 · The last render takes its approval, and a flow holds only its own files' docs/decisions.md` prints one line.
-- [ ] 6.2 In `docs/data-flow.md`, edit the discard paragraph, the `--from` line, the draft paragraph and the run tree,
+- [x] 6.2 In `docs/data-flow.md`, edit the discard paragraph, the `--from` line, the draft paragraph and the run tree,
   per [the record](design.md#the-record).
   Verify: `grep -n 'a flow left with no approval keeps only its assignment' docs/data-flow.md` prints one line.
-- [ ] 6.3 In `docs/principles.md`, edit *Known breaks* per [the record](design.md#the-record).
+- [x] 6.3 In `docs/principles.md`, edit *Known breaks* per [the record](design.md#the-record).
   Verify: `grep -n 'once the flow holds no approval, the sheets the sheet stage' docs/principles.md` prints one line.
-- [ ] 6.4 In `README.md`, edit the `--from` and `--discard` bullets, per [the record](design.md#the-record).
+- [x] 6.4 In `README.md`, edit the `--from` and `--discard` bullets, per [the record](design.md#the-record).
   Verify: `grep -n 'drafting wrote, takes that sheet' README.md` prints nothing.
-- [ ] 6.5 In `isekai/interface/README.md`, edit `drafting.py`'s row, per [the record](design.md#the-record).
+- [x] 6.5 In `isekai/interface/README.md`, edit `drafting.py`'s row, per [the record](design.md#the-record).
   Verify: `grep -n 'copies an approval across for' isekai/interface/README.md` prints one line.
