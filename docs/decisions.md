@@ -291,7 +291,8 @@ photograph's description is every flow's (D17).**
 and its source copy, every older approval with no render — a group of failure records alone is none — and the
 newest's waiting draft; nothing goes back to a draft. A flow left with no approval keeps only its directory, its
 assignment: its sheets go too, and so does its own copy of each kind of the photograph's description that `photo/`
-holds; `photo/`'s stay (D17). No file of one flow names a file of another.**
+holds, every numbered list of it, so an own caption older than the newest, which `isekai migrate` never copied, is
+lost; `photo/`'s stay (D17). No file of one flow names a file of another.**
 
 - **Why:** the operator deletes a render to be rid of it; an approval, a draft or a sheet left behind kept the Hub and
   Review offering what was deleted, and a reference into another flow breaks when that flow's work goes, and a

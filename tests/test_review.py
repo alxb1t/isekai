@@ -2091,6 +2091,8 @@ def test_a_flows_own_description_goes_where_photo_holds_it(
         own = run.directory(FLOW, kind, "001.json")
         own.parent.mkdir()
         own.write_bytes(run.directory(PHOTO, kind, "001.json").read_bytes())
+    # an older own caption `photo/` holds no copy of goes with the kind (D50)
+    run.directory(FLOW, "captions", "002.json").write_text("{}")
     tags = run.directory(FLOW, "tags", "001.json")
     tags.parent.mkdir()
     tags.write_text("{}")
