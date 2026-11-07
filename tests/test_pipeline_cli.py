@@ -16,6 +16,7 @@ resolves rather than failing, so this guard is what catches one appearing here;
 """
 
 import argparse
+import fcntl
 import io
 import json
 import os
@@ -27,7 +28,13 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary import ollama
-from isekai.foundation.artifacts import APPROVED_FILE, DRAFT_FILE, SHEET_FILE, read
+from isekai.foundation.artifacts import (
+    APPROVED_FILE,
+    DRAFT_FILE,
+    SESSIONS,
+    SHEET_FILE,
+    read,
+)
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Schema, load_flow
 from isekai.foundation.refusal import Refusal
@@ -829,6 +836,7 @@ def test_draft_writes_another_flow_from_the_images_approval_and_seed(
 
 
 @pytest.mark.spec("cli:discard:the-render-and-its-thumbnail-are-deleted")
+@pytest.mark.spec("cli:discard:a-running-render-refuses-it")
 def test_discard_deletes_the_render_and_its_thumbnail(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -846,6 +854,19 @@ def test_discard_deletes_the_render_and_its_thumbnail(
     monkeypatch.chdir(tmp_path)
     wired = _wiring(tmp_path)
     argv = ["discard", str(image.relative_to(tmp_path))]
+
+    # A render session holds the collection while it locks its record: nothing goes.
+    record = lib / "b" / SESSIONS / "20261024T091200Z"
+    record.parent.mkdir()
+    record.with_suffix(".json").write_text("{}")
+    with record.with_suffix(".lock").open("w") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        assert dispatch(build_parser().parse_args(argv), wired) == 1
+    assert image.is_file() and (cached / own).is_file()
+    assert isinstance(wired.err, io.StringIO)
+    assert f"refused: {image.relative_to(tmp_path)}: A render session" in (
+        wired.err.getvalue()
+    )
 
     assert dispatch(build_parser().parse_args(argv), wired) == 0
 
@@ -867,14 +888,21 @@ def test_discard_deletes_the_render_and_its_thumbnail(
 def test_discarding_the_last_render_takes_its_approval_with_it(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
 ) -> None:
+    lib = tmp_path / "lib"
+    (lib / "b" / "sources").mkdir(parents=True)
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(640, 480))
-    run = open_run(photo, tmp_path / "runs")
+    run = open_run(photo, lib / "b" / "runs")
     sheet(run, schema, vocabulary)
     review(run, "summon-anime-wai")
     approve(run, "summon-anime-wai", schema, vocabulary)
     prompt_artifact(run, load_flow("summon-anime-wai"), schema)
     image = rendered_image(run, 1, 7)
+    own = f"7.{library._digest(image)}.jpg"
+    cached = lib / ".cache" / run.digest / "summon-anime-wai" / "outputs" / "001"
+    cached.mkdir(parents=True)
+    (cached / own).write_bytes(b"jpg")
+    (cached / "7.other.jpg").write_bytes(b"jpg")
     wired = _wiring(tmp_path)
 
     assert dispatch(build_parser().parse_args(["discard", str(image)]), wired) == 0
@@ -887,8 +915,11 @@ def test_discarding_the_last_render_takes_its_approval_with_it(
         f"discard deleted {flow}/outputs/001",
         f"discard deleted {flow}/prompts/001.json",
         f"discard deleted {flow}/review/001.approved.json",
+        f"discard deleted .cache/{run.digest}/summon-anime-wai/outputs/001/{own}",
     ]
     assert (run.directory("summon-anime-wai", "review") / "001.draft.json").is_file()
+    # Another collection's thumbnail of the same photograph and seed stays.
+    assert not (cached / own).exists() and (cached / "7.other.jpg").is_file()
 
 
 @pytest.mark.spec("cli:discard:a-path-naming-no-render-is-refused")

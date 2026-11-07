@@ -1980,12 +1980,27 @@ def test_the_newest_approvals_last_render_takes_it_back_to_its_draft(
         "permanent",
         {"stage": "assemble", "detail": "x"},
     )
+    # An approval its cancel would refuse keeps the prompt and the failure record.
+    held = approved.read_bytes()
+    _damage(approved, "producer", None)
+    with pytest.raises(Refusal):
+        withdraw(run, FLOW, 1)
+    assert prompt.exists() and failure.exists() and approved.exists()
+    approved.write_bytes(held)
+    before = snapshot(run.path)
 
     assert withdraw(run, FLOW, 1) == [prompt, failure, approved]
 
     assert not prompt.exists() and not failure.exists() and not approved.exists()
-    assert (run.directory(FLOW, "review") / "001.draft.json").is_file()
+    draft = run.directory(FLOW, "review") / "001.draft.json"
+    assert draft.is_file()
     assert state(run.directory(FLOW, "review")) == "draft"
+    # Every other file of the run is as it was.
+    gone = {str(path.relative_to(run.path)) for path in (prompt, failure, approved)}
+    assert snapshot(run.path) == {
+        **{name: body for name, body in before.items() if name not in gone},
+        str(draft.relative_to(run.path)): draft.read_bytes(),
+    }
     # A copy has no draft to go back to, so it is deleted.
     assert withdraw(run, CONTROL, 1) == [copy]
     assert not copy.exists()

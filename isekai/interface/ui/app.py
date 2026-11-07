@@ -763,8 +763,8 @@ def create_app(
             # The approval a draft or the approval shown was copied from, its
             # fields and the image being revised; null for a copy of a sheet.
             "revision": revision,
-            # The other flow's approval a draft was drafted from, and the fields
-            # of its own sheet; null for any other draft.
+            # The fields of a draft's own sheet and the other flow's image it was
+            # drafted from while that file exists; null for any other draft.
             "drafted": drafted,
             # **Approval with nothing newer beside it is what makes a sheet
             # read-only**, which is precisely `state() == "approved"`.

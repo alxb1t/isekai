@@ -17,7 +17,8 @@ its new digest.
 - `approve --from` copies the source's fields and seeds once, marked `copied`, and names no source; a draft from
   another flow names none either, and Review shows its image only while that file exists (0111 D3, D4, D6).
 - Deleting the newest approval's last render, from `discard` or the app, takes that approval back to its draft with
-  its prompt and failure records, so the Hub reads *draft* again (0111 D1).
+  its prompt and failure records, so the Hub reads *draft* again; `discard` refuses while a render session holds
+  the collection, as the app's delete does (0111 D1).
 - A delete drops the render's own thumbnail alone: another collection's thumbnail of the same seed stays (0111 D7).
 - Review's kicker reads *draft* on a draft from another flow's image, in place of `from FLOW vN`: the draft names no
   source approval now (0111 D6).

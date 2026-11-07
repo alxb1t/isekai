@@ -2009,11 +2009,14 @@ def test_a_flow_renders_the_seeds_of_its_sources_latest_group(
         prepare(made, {FLOW: subject})
         render(made, subject, FakeComfyClient(), seeds=[11, 12], poll=0)
         approve(made, CONTROL, schema, vocabulary, source=FLOW)
+    sources = [snapshot(made.path / FLOW) for made in runs]
     wired = _seeded_session(tmp_path, vocabulary, FakeComfyClient(), io.StringIO())
     argv = ["generate", "--flow", CONTROL, "--seeds-from", FLOW, *(r.id for r in runs)]
 
     assert dispatch(build_parser().parse_args(argv), wired) == 0
 
+    # The source flow's artifacts are as they were.
+    assert [snapshot(made.path / FLOW) for made in runs] == sources
     for made in runs:
         group = made.path / CONTROL / OUTPUTS / "001"
         assert rendered_seeds(group, load_flow(CONTROL).output_suffix) == [11, 12]

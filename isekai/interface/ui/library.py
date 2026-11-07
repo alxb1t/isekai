@@ -309,6 +309,19 @@ def running(folder: Path) -> list[dict[str, Any]]:
     return [one for one in found if one["outcome"] == "running"]
 
 
+def render_running(run: Run) -> bool:
+    """Return whether a render process holds the collection `run` sits in.
+
+    Liveness alone is read, from each session's lock, so a record that does not
+    read still counts; a run outside a collection is held by none.
+    e.g. `<lib>/b/runs/<id>` with `<lib>/b/sessions/<t>.lock` locked -> True
+    """
+    runs = run.path.absolute().parent
+    if not (runs.name == RUNS and is_collection(runs.parent)):
+        return False
+    return any(record_running(path) for path in (runs.parent / SESSIONS).glob("*.json"))
+
+
 def session(folder: Path, name: str) -> dict[str, Any]:
     """Return the session record `name` names, refusing an id no record holds."""
     path = folder / SESSIONS / f"{name}.json"

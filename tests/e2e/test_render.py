@@ -11,7 +11,7 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from isekai.foundation.run import REVIEW, group_of
+from isekai.foundation.run import PROMPTS, REVIEW, group_of
 from isekai.pipeline.review import current_draft
 from tests.e2e.conftest import (
     COMPARED,
@@ -387,6 +387,8 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     # The delete asks on No, then Yes lands on the Hub on the cell. FLOW's only
     # render goes, so FLOW's approval goes back to its draft; CONJURE's draft
     # holds its own.
+    prompt = served.conjured.directory(FLOW, PROMPTS) / "001.json"
+    assert prompt.is_file()
     page.goto(large)
     expect(page.locator("[data-delete]")).to_be_visible()
     page.keyboard.press("Shift+Backspace")
@@ -412,7 +414,7 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     cell = page.locator(f'.hub__cell[data-row="0"][data-flow="{FLOW}"]')
     expect(cell).to_have_attribute("data-stage", "draft")
     expect(cell).to_be_focused()
-    assert not group_of(served.conjured, FLOW, 1).exists()
+    assert not group_of(served.conjured, FLOW, 1).exists() and not prompt.exists()
     page.goto(f"{served.url}/c/{CONJURED}/review/{digest}/{CONJURE}")
     expect(page.locator(".form")).to_be_visible()
     expect(page.locator("[data-revised]")).to_have_count(0)

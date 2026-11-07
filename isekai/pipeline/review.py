@@ -616,7 +616,10 @@ def withdraw(run: Run, flow: str, version: int) -> list[Path]:
     ):
         return []
     again = f"`{stage_command(run, 'approve', flow, options=CANCEL)}`"
-    _approval(run, flow, version, f"run {again}")
+    body = _approval(run, flow, version, f"run {again}")
+    copied = approval_of(run, flow, version)
+    # `cancel` refuses without a producer, so that is read before any file goes.
+    require(copied, body, "producer", dict, f"restore it in {copied}, then {again}")
     prompts = run.directory(flow, PROMPTS)
     made = [
         prompts / artifact_name(version),

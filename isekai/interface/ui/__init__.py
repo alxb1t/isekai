@@ -53,6 +53,11 @@ def drop_thumbnails(run: Run, image: Path) -> list[Path]:
     return library.drop_thumbnails(run, image)
 
 
+def render_running(run: Run) -> bool:
+    """Return whether a render holds `run`'s collection, for the `discard` verb."""
+    return library.render_running(run)
+
+
 def serve(wired: Wiring, *, port: int) -> int:
     """Open the library, print the address, and serve until stopped.
 

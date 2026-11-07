@@ -593,7 +593,9 @@ def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
 def _discard(image: Path, wired: Wiring) -> int:
     """Delete one render and its thumbnails, printing each path deleted.
 
-    The thumbnails go while the image still names them. A render that was its
+    Refused, deleting nothing, while a render session holds the image's
+    collection, as the app's delete is. The thumbnails go while the image still
+    names them. A render that was its
     approval's last, the newest, takes that approval back to its draft with
     `withdraw`; the run's files print before the thumbnails. The library is
     imported here for `_ui`'s reason: it is off `python -m isekai`'s import graph.
@@ -603,8 +605,15 @@ def _discard(image: Path, wired: Wiring) -> int:
     except Refusal as unrendered:
         print(f"refused: {image}: {unrendered}", file=wired.err)
         return 1
-    from isekai.interface.ui import drop_thumbnails
+    from isekai.interface.ui import drop_thumbnails, render_running
 
+    if render_running(run):
+        print(
+            f"refused: {image}: A render session is running. Wait for it to end, "
+            "then discard the render again.",
+            file=wired.err,
+        )
+        return 1
     thumbnails = drop_thumbnails(run, image)
     deleted = discard_render(image)
     refused: Refusal | None = None
