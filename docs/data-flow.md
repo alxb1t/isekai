@@ -70,7 +70,9 @@ outputs/001/7.png ─▶ draft ─▶ review/003.draft.json   {count 1, seeds [7
 ```
 
 **`isekai discard <image.png>`** deletes one render: its image, its record, its group when emptied, and its
-thumbnails in the library's cache. The newest approval it leaves short renders what it lacks at the next session.
+thumbnails in the library's cache. A delete that empties the newest approval's group
+takes that approval back to its draft, with its prompt and failure records; one that leaves images renders what it
+lacks at the next session.
 
 Beside them, `show` reads a run's artifacts, versions, producers and failure records,
 names what below `photo/` or a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a collection's runs the
@@ -166,7 +168,7 @@ model and one pinned tagger read alike for every flow
 ([D17](decisions.md#d17--input-above-flow-below)). `photo` is a name the run
 keeps, never a flow. Below the split is one subtree per flow, so adding a flow
 adds a subtree and no flow can read another's work unless the operator names it as
-a source ([D38](decisions.md#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
+a source ([D49](decisions.md#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
 
 **A run written before the description was shared holds it under its flows**, and
 every stage that reads or writes the description refuses it, naming

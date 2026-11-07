@@ -86,10 +86,11 @@ dialog's removal is `render --without`, so a session the page starts is one the 
 another flow fills; the one act in it that spends is Render's confirmation, after its quote.** Prepare is
 `tag`, `caption` and `sheet` run as children, and Render is `render` between gpunit's `volume up` and
 `volume down`. Every other write goes through the function that owns it: a draft, its edits and an
-approval through `review`'s, a tick through the run's `assign`, a source through import, a deleted render
-through the render stage's `discard_render` and its thumbnails through the library's `drop_thumbnails`, and
-a target's first sheet, when it is drafted from another flow, through `sheet()`, which
-`interface/drafting.py`'s `draft_across` runs in the server's process before the draft.
+approval through `review`'s, a tick through the run's `assign`, a source through import, a deleted render's
+thumbnails through the library's `drop_thumbnails`, the render through the render stage's `discard_render`, and
+the newest approval its last render leaves through review's `withdraw`, and a target's first sheet, when it is
+drafted from another flow, through `sheet()`, which `interface/drafting.py`'s `draft_across` runs in the server's
+process before the draft.
 
 - **Why:** the CLI is the one path, so a stage the page starts is exactly the stage the terminal runs,
   and a write no stage owns would give a run file a second author. `draft_across` is the sequence
@@ -98,7 +99,7 @@ a target's first sheet, when it is drafted from another flow, through `sheet()`,
   confirmation carries the quote it showed and the photographs taken out of it, and a quote grown since is
   refused. The quote compares
   image total and limit, not source or approval identity.
-- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`.
+- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`.
 
 ### D42 · A new draft starts from the last approval
 
@@ -265,15 +266,23 @@ photograph only for a flow that declares `true`.
 
 ### D38 · A control flow is its subject with the face chain at zero
 
-**`control-anime-wai` is `summon-anime-wai`'s directory with `ip_weight` and `identity_cn_strength` at 0, held
-equal to it by a test; its approval is copied from `summon`'s and its renders take `summon`'s seeds, each
-recording the source. A stage reads another flow's work only when the operator names it as a source; the
-photograph's description is every flow's (D17).**
+**Superseded by [D49](#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once) in `0111`: a copy
+no longer names its source, and its seeds are copied rather than checked.**
 
-- **Why:** the count's floor is the same sheet and the same noise with the face mechanism off; the comparison
-  is sound only while the two differ in exactly that. D17 forbids a flow reaching into another on its own, and
-  an operator's named source is not that.
-- **Made by:** `0054`, `0103`.
+- **Made by:** `0054`, `0103`; superseded by `0111`.
+
+### D49 · A control flow is its subject with the face chain at zero, copied once
+
+**`control-anime-wai` is `summon-anime-wai`'s directory with `ip_weight` and `identity_cn_strength` at 0, held equal
+to it by a test. `approve --from` copies `summon`'s approval once — its fields and its seeds — and records neither
+the source flow nor its approval; a draft from another flow's approval is taken once the same way. A stage reads
+another flow's work only when the operator names it as a source; the photograph's description is every flow's
+(D17).**
+
+- **Why:** the floor is the same sheet and the same noise with the face mechanism off, and the seeds travel with the
+  copy, so that holds with no later check; a copy naming its source kept the source's approval from being cancelled
+  or deleted with its renders.
+- **Made by:** `0054`, `0103`, `0111`.
 
 ### D44 · A flat flow is summon with the face chain ending early
 
@@ -315,7 +324,7 @@ again resumes the same run.**
 
 - **Why:** one briefing, one model and one pinned tagger read a photograph alike, so its description is
   written once; a flow still adds one subtree, and reads another's work only when the operator names it
-  ([D38](#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
+  ([D49](#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
 - **Made by:** `0016`, `0103`.
 
 ### D18 · Runs stay out of what git tracks

@@ -21,6 +21,8 @@ its new digest.
 - A delete drops the render's own thumbnail alone: another collection's thumbnail of the same seed stays (0111 D7).
 - Review's kicker reads *draft* on a draft from another flow's image, in place of `from FLOW vN`: the draft names no
   source approval now (0111 D6).
+- D49 supersedes D38: a control flow's approval is copied once, fields and seeds, naming no source; D4, the data
+  flow, the principles, the module map and the README name `withdraw` and drop `--in-step-with` (0111 D8).
 
 ## [0.73.1] - 2026-11-06
 

@@ -10,7 +10,7 @@ the repository root.
 - [x] 3 — The copy and the draft
 - [x] 4 — The delete
 - [x] 5 — The page
-- [ ] 6 — The record
+- [x] 6 — The record
 
 ## 1 — The cancel
 
@@ -125,19 +125,19 @@ the repository root.
 
 ## 6 — The record
 
-- [ ] 6.1 In `docs/decisions.md`, edit D4 per [the record](design.md#the-record).
+- [x] 6.1 In `docs/decisions.md`, edit D4 per [the record](design.md#the-record).
   Verify: `grep -n "the newest approval its last render leaves through review" docs/decisions.md` prints one line.
-- [ ] 6.2 In `docs/decisions.md`, mark D38 superseded and add D49 after it, per [the record](design.md#the-record).
+- [x] 6.2 In `docs/decisions.md`, mark D38 superseded and add D49 after it, per [the record](design.md#the-record).
   Verify: `grep -n '^### D49 · A control flow is its subject with the face chain at zero, copied once' docs/decisions.md` prints one line.
-- [ ] 6.3 In `docs/decisions.md`, point D17's link at D49, per [the record](design.md#the-record).
+- [x] 6.3 In `docs/decisions.md`, point D17's link at D49, per [the record](design.md#the-record).
   Verify: `grep -n 'd38--a-control-flow' docs/decisions.md` prints nothing.
-- [ ] 6.4 In `docs/data-flow.md`, edit the discard paragraph and point the D38 link at D49, per
+- [x] 6.4 In `docs/data-flow.md`, edit the discard paragraph and point the D38 link at D49, per
   [the record](design.md#the-record).
   Verify: `grep -n 'takes that approval back to its draft' docs/data-flow.md` prints one line.
-- [ ] 6.5 In `docs/principles.md`, add the `withdraw` sentence to *Known breaks*, per [the record](design.md#the-record).
+- [x] 6.5 In `docs/principles.md`, add the `withdraw` sentence to *Known breaks*, per [the record](design.md#the-record).
   Verify: `grep -n "withdraw. deletes the prompt and failure records" docs/principles.md` prints one line.
-- [ ] 6.6 In `docs/modules.md`, name `withdraw` beside `discard_render`, per [the record](design.md#the-record).
+- [x] 6.6 In `docs/modules.md`, name `withdraw` beside `discard_render`, per [the record](design.md#the-record).
   Verify: `grep -n "and review's .withdraw." docs/modules.md` prints one line.
-- [ ] 6.7 In `README.md`, edit `--seeds-from` and `--from` and delete `--in-step-with`, per
+- [x] 6.7 In `README.md`, edit `--seeds-from` and `--from` and delete `--in-step-with`, per
   [the record](design.md#the-record).
   Verify: `grep -n 'in-step-with' README.md` prints nothing.
