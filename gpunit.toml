@@ -17,7 +17,9 @@ ports = [8188]
 # The hard maximum on a session; each session stops at its own limit, the work's
 # estimate, which `isekai render` hands gpunit as its ceiling (D26).
 ceiling = "3h"
-timeout = 420
+# Seconds for a pod to map port 22; a host without the image cached pulls it first,
+# and that pull outran 420 s on 2026-11-06.
+timeout = 900
 # gpunit refuses a card dearer than this per hour, so a quote at it is a bound (D26).
 max_hourly = 0.90
 # The models volume of a working window: `gpunit volume up` makes it, in a data
