@@ -54,8 +54,8 @@ Hub reads a draft rather than an approval short of the image just deleted.
 The system SHALL place the input, its frame and the photograph's description at the root of a run — the caption and
 both tag lists, under `photo/` — and SHALL place every other artifact a stage produces under a directory named for the
 flow that produced it. Every flow SHALL read the one description under `photo/`. It SHALL NOT let one flow read another
-flow's artifacts, except where the operator names a source flow; then a render SHALL record the source, and a copied approval or a
-draft from it SHALL hold its own fields and seeds, reading the source no more. It SHALL
+flow's artifacts, except where the operator names a source flow; then a render SHALL record the source, and a copied
+approval or a draft from it SHALL hold its own fields and seeds, reading the source no more. It SHALL
 NOT count `photo/` among a run's flows, and SHALL refuse to assign a flow named `photo`.
 
 ```
@@ -71,7 +71,8 @@ Every flow reads a photograph under one briefing, one model, one pinned tagger a
 photograph's rather than a flow's, and it is written once. A flow adds one subtree, and retiring one flow's work for one
 input removes one directory ([D17](../../../docs/decisions.md#d17--input-above-flow-below)). A source flow the operator
 names is not a flow reaching into another on its own. A copy is taken once and holds what it took, so the source's
-approval can always go ([D49](../../../docs/decisions.md#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
+approval can always go
+([D49](../../../docs/decisions.md#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
 
 #### Scenario: each flow's work is under the flow, and the description under photo/
 - **Key:** `run-directory:layout:stage-artifacts-live-under-the-flow`

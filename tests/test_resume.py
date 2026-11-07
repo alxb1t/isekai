@@ -486,7 +486,6 @@ def _draft_and_cancel_refusals(
     sheet(drafted, conjure.schema, vocabulary, flow=conjure.id, tagged=conjure.tagger)
     draft_from(drafted, conjure.id, FLOW, None, conjure.schema)
     approve(drafted, conjure.id, conjure.schema, vocabulary)
-    collect(lambda: cancel(drafted, FLOW))
     edited(drafted, conjure.id)
     collect(lambda: draft_from(drafted, conjure.id, FLOW, None, conjure.schema))
 

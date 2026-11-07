@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- Only an approval's own prompt, failure records and renders refuse its cancel: another flow's copy, drafted
+  approval or waiting draft no longer holds it, so what another flow took can't pin its source (0111 D2).
+
 ## [0.73.1] - 2026-11-06
 
 Gate: local 0m33s · CI not read under mf-ship · 0.73.0: local 0m46s · CI not read under mf-ship

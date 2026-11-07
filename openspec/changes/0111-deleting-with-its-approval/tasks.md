@@ -5,7 +5,7 @@ the repository root.
 
 ## Progress
 
-- [ ] 1 — The cancel
+- [x] 1 — The cancel
 - [ ] 2 — The checks
 - [ ] 3 — The copy and the draft
 - [ ] 4 — The delete
@@ -14,19 +14,19 @@ the repository root.
 
 ## 1 — The cancel
 
-- [ ] 1.1 **HALT CHECK** — [D2](design.md#d2) drops the one branch that reads `firsts`.
+- [x] 1.1 **HALT CHECK** — [D2](design.md#d2) drops the one branch that reads `firsts`.
   Verify: `grep -n 'elif len(firsts) == len(derived):' isekai/pipeline/review.py` prints one line.
-- [ ] 1.2 In `isekai/pipeline/review.py`, cut `_derived` to the approval's own files and drop `firsts` from
+- [x] 1.2 In `isekai/pipeline/review.py`, cut `_derived` to the approval's own files and drop `firsts` from
   `_cancelling`, per [D2](design.md#d2), each docstring saying so.
   Verify: `grep -n 'def _derived(run: Run, flow: str, version: int) -> list\[str\]:' isekai/pipeline/review.py` prints one line.
-- [ ] 1.3 In `tests/test_review.py`, rewrite `test_an_approval_drafted_from_a_source_refuses_the_sources_cancel` as
+- [x] 1.3 In `tests/test_review.py`, rewrite `test_an_approval_drafted_from_a_source_refuses_the_sources_cancel` as
   `test_what_is_drafted_from_an_approval_holds_no_source_cancel`, per
   [the pipeline's tests](design.md#the-pipelines-tests); drop `_run_printed` if nothing else calls it.
   Verify: `uv run pytest tests/test_review.py -k what_is_drafted_from_an_approval_holds_no_source_cancel` exits 0.
-- [ ] 1.4 In `tests/test_review.py`, rewrite `test_a_copy_in_another_flow_refuses_the_sources_cancel` as
+- [x] 1.4 In `tests/test_review.py`, rewrite `test_a_copy_in_another_flow_refuses_the_sources_cancel` as
   `test_what_another_flow_took_holds_no_cancel`, per [the pipeline's tests](design.md#the-pipelines-tests).
   Verify: `uv run pytest tests/test_review.py -k what_another_flow_took_holds_no_cancel` exits 0.
-- [ ] 1.5 In `tests/test_resume.py`'s `_draft_and_cancel_refusals`, delete the `collect(lambda: cancel(drafted, FLOW))`
+- [x] 1.5 In `tests/test_resume.py`'s `_draft_and_cancel_refusals`, delete the `collect(lambda: cancel(drafted, FLOW))`
   after `approve(drafted, conjure.id, …)`: per [D2](design.md#d2) that cancel no longer refuses.
   Verify: `uv run pytest tests/test_resume.py` exits 0.
 

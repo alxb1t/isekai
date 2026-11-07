@@ -12,9 +12,9 @@ newest one under a waiting draft, SHALL be left as they are.
 
 A render is a likeness of a person ([the threat model](../../../THREAT_MODEL.md)), so a failed one is deleted, never
 hidden. The image goes first, so a discard cut short leaves a record with no image, which reads as unrendered, as a
-render cut short does. An empty group would still read as work made from its approval. An approval with no image left would read as
-*approved* and render the same seed again; cancelled, it reads as a draft, its edits kept, and approving it again
-undoes the delete. A cancel never replaces a waiting draft, so that draft keeps the approval.
+render cut short does. An empty group would still read as work made from its approval. An approval with no image left
+would read as *approved* and render the same seed again; cancelled, it reads as a draft, its edits kept, and approving
+it again undoes the delete. A cancel never replaces a waiting draft, so that draft keeps the approval.
 
 ```
 outputs/001/  42.png  42.render.json  77.png  77.render.json
@@ -75,7 +75,8 @@ render group for the same run, reading the seeds from filenames alone, and SHALL
 each render. It SHALL refuse a run whose source flow has no render before any endpoint is acquired, SHALL
 refuse a flow named as its own source, and SHALL accept neither a count nor an explicit seed beside a source.
 It SHALL NOT read the flow's approval for where it came from: a copy holds
-its own fields and seeds ([D49](../../../docs/decisions.md#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
+its own fields and seeds
+([D49](../../../docs/decisions.md#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
 
 ```
 isekai render <runs> S=1 T=S
@@ -149,7 +150,8 @@ and the two move together or not at all
 
 ### Requirement: A render is discarded whole, and its approval is left short
 
-**Reason**: the newest approval now goes with its last render ([D1](../../changes/0111-deleting-with-its-approval/design.md#d1)).
+**Reason**: the newest approval now goes with its last render
+([D1](../../changes/0111-deleting-with-its-approval/design.md#d1)).
 **Migration**: replaced by *A render is discarded whole, and the newest approval goes with its last render*; nothing on
 disk moves.
 

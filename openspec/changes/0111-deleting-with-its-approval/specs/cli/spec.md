@@ -6,8 +6,8 @@ The system SHALL offer `isekai discard <image>`, which reads the run, flow, appr
 deletes the image's own thumbnail from the cache of the library whose collection holds the run, discards the render
 through the render stage, then, where that removed the group of the flow's newest approval with no draft waiting above
 it, deletes that approval's prompt and failure records and cancels it back to its draft; it prints each path it
-deleted, a run's file from its runs root and a thumbnail from its library. A path that names no render SHALL be refused, naming the form a render's path takes, the verb exiting 1 and
-deleting nothing.
+deleted, a run's file from its runs root and a thumbnail from its library. A path that names no render SHALL be
+refused, naming the form a render's path takes, the verb exiting 1 and deleting nothing.
 
 The hand path stays ([D3](../../../docs/decisions.md#d3--the-hand-path-stays)): the page's Delete is this verb's act,
 run in the server's process. An image's path names everything a discard needs, so the verb takes nothing else.

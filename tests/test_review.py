@@ -6,7 +6,6 @@ this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 
 import io
 import json
-import re
 import shutil
 from dataclasses import replace
 from pathlib import Path
@@ -1354,49 +1353,20 @@ def test_an_edited_waiting_draft_is_refused_naming_its_discard(
     assert waiting.read_bytes() == before
 
 
-def _run_printed(run: Run, command: str) -> Cancelled | Path:
-    """Run a cancel or a discard a refusal prints, and return what it returns."""
-    if found := re.search(r"review --flow (\S+) .*--discard", command):
-        return discard(run, found[1])
-    found = re.search(r"approve --flow (\S+) .*--cancel", command)
-    assert found is not None
-    return cancel(run, found[1])
-
-
-@pytest.mark.spec(
-    "review:draft-from:what-is-drafted-from-it-refuses-the-sources-cancel"
-)
-def test_an_approval_drafted_from_a_source_refuses_the_sources_cancel(
+@pytest.mark.spec("review:draft-from:what-is-drafted-from-it-holds-no-source-cancel")
+def test_what_is_drafted_from_an_approval_holds_no_source_cancel(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _summon_approved(run, schema, vocabulary)
     conjure = _conjure(run, vocabulary)
-    draft = draft_from(run, CONJURE, FLOW, None, conjure)
+    draft_from(run, CONJURE, FLOW, None, conjure)
     assert approve(run, CONJURE, conjure, vocabulary)[0] is not None
-    before = snapshot(run.path)
+    draft_from(run, CONJURE, FLOW, None, conjure)
+    held = snapshot(run.directory(CONJURE))
 
-    with pytest.raises(Refusal, match=f"{CONJURE}/review/001.approved.json came"):
-        cancel(run, FLOW)
-    chain = str(cancellable(run, FLOW))
-    assert f"drops {CONJURE}'s fields" in chain
-    first, then, last = re.findall(r"`(python -m isekai [^`]*)`", chain)
-    assert re.search(f"approve --flow {CONJURE} .*--cancel", first)
-    assert re.search(f"approve --flow {FLOW} .*--cancel", last)
-
-    assert snapshot(run.path) == before
-    assert _run_printed(run, first) == Cancelled(draft, changed=True)
-    waiting = snapshot(run.path)
-
-    with pytest.raises(Refusal, match=f"{CONJURE}/review/001.draft.json came"):
-        cancel(run, FLOW)
-    assert re.search(
-        f"review --flow {CONJURE} .*--discard", str(cancellable(run, FLOW))
-    )
-
-    assert snapshot(run.path) == waiting
-    assert _run_printed(run, then) == draft
     restored = run.directory(FLOW, "review") / "001.draft.json"
-    assert _run_printed(run, last) == Cancelled(restored, changed=True)
+    assert cancel(run, FLOW) == Cancelled(restored, changed=True)
+    assert snapshot(run.directory(CONJURE)) == held
 
 
 # --- ④ renders: how many images, and which seeds -------------------------------
@@ -1890,24 +1860,17 @@ def test_anything_made_from_an_approval_refuses_its_cancel_and_changes_nothing(
     assert "--discard" not in reopened
 
 
-@pytest.mark.spec("review:cancel:a-copy-taken-from-it-refuses")
-def test_a_copy_in_another_flow_refuses_the_sources_cancel(
+@pytest.mark.spec("review:cancel:what-another-flow-took-holds-no-cancel")
+def test_what_another_flow_took_holds_no_cancel(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _approved_source(run, schema, vocabulary)
     approve(run, CONTROL, schema, vocabulary, source=FLOW)
-    before = snapshot(run.path)
+    held = snapshot(run.directory(CONTROL))
 
-    with pytest.raises(Refusal, match=f"{CONTROL}/review/001.approved.json came"):
-        cancel(run, FLOW)
-    assert re.search(
-        f"approve --flow {CONTROL} .*--cancel", str(cancellable(run, FLOW))
-    )
-
-    assert snapshot(run.path) == before
-    assert cancel(run, CONTROL) == Cancelled(None, changed=True)
     restored = run.directory(FLOW, "review") / "001.draft.json"
     assert cancel(run, FLOW) == Cancelled(restored, changed=True)
+    assert snapshot(run.directory(CONTROL)) == held
 
 
 @pytest.mark.spec("review:cancel:a-copy-is-deleted-and-a-reopened-sheet-refused")

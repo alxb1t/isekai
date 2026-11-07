@@ -21,7 +21,8 @@ runs/<id>/control-anime-wai/review/001.approved.json     same fields; renders {c
 Two flows are compared only on one prompt and one noise. A copy by hand carries the source's identifier; a second
 approval by hand lets the prompts drift. The target's own validation keeps the copy honest. The seeds travel with the
 copy, so control and subject render the same seeds with no later check, and the source's approval can always be
-cancelled or deleted with its renders ([D49](../../../docs/decisions.md#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
+cancelled or deleted with its renders
+([D49](../../../docs/decisions.md#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
 
 #### Scenario: the fields are copied and validated against the target
 - **Key:** `review:copy-from:fields-are-copied-and-validated`
@@ -34,8 +35,8 @@ cancelled or deleted with its renders ([D49](../../../docs/decisions.md#d49--a-c
 - **Key:** `review:copy-from:the-copy-carries-the-seeds`
 - **Layers:** unit
 - **WHEN** a target flow is approved from a source approval whose group holds images
-- **THEN** the approval's identifier is the target flow's, and its renders list the source's listed seeds, then each seed
-  rendered
+- **THEN** the approval's identifier is the target flow's, and its renders list the source's listed seeds, then each
+  seed rendered
 - **AND** its record says it is a copy and names neither the source flow nor its approval
 
 #### Scenario: no source approval refuses the copy
@@ -72,16 +73,17 @@ sheet, vocabulary, schema document and field map, and its producer without what 
 approval, leaving every older approval in place, and SHALL cancel an approval that is itself a copy by deleting it,
 naming what the flow is left on: the draft open above what lies beneath, else the approval beneath, which stays
 approved. It SHALL refuse, writing nothing and naming the reason and a way on that succeeds, while anything derives
-from the approval — a prompt, a render group or a failure record numbered for it — and while a later draft exists, naming a waiting draft rather than its discard while anything
-derives. A cancel interrupted between its writing and its deleting SHALL be finished by running it again. A cancel
-asked of a flow with no approval SHALL change nothing: with a draft open it SHALL say the flow is at its draft, and
-with none it SHALL refuse naming `review`. Another flow's copy of the approval, an approval drafted from it and a
-waiting draft drafted from it SHALL NOT hold the cancel.
+from the approval — a prompt, a render group or a failure record numbered for it — and while a later draft exists,
+naming a waiting draft rather than its discard while anything derives. A cancel interrupted between its writing and
+its deleting SHALL be finished by running it again. A cancel asked of a flow with no approval SHALL change nothing:
+with a draft open it SHALL say the flow is at its draft, and with none it SHALL refuse naming `review`. Another flow's
+copy of the approval, an approval drafted from it and a waiting draft drafted from it SHALL NOT hold the cancel.
 
 An approved artifact is never silently replaced: cancelling is an explicit act, and it is refused once anything has
-been made from the approval, so no output loses the sheet that made it. What another flow took holds its own copy, so it holds nothing here. A copy has no draft of its own, and `approve
---from` copies the source's newest approval again; deleting it takes back only the copy, so what it was written over
-stands. A draft written before the delete leaves a crash reading as still approved, which approving already does.
+been made from the approval, so no output loses the sheet that made it. What another flow took holds its own copy, so
+it holds nothing here. A copy has no draft of its own, and `approve --from` copies the source's newest approval
+again; deleting it takes back only the copy, so what it was written over stands. A draft written before the delete
+leaves a crash reading as still approved, which approving already does.
 
 ```
 NNN.approved.json ─▶ write NNN.draft.json ─▶ delete NNN.approved.json
@@ -141,14 +143,15 @@ NNN.approved.json ─▶ write NNN.draft.json ─▶ delete NNN.approved.json
 
 When the operator names a source flow and one of its approvals, the system SHALL write the target flow's draft whose
 every field both flows' schemas declare is the source approval's, and whose every other field the target declares is the
-target's newest sheet's, recording the target's sheet and not the source approval, and, where the operator names one of that approval's images,
-the image itself — its flow, version and seed — with a count of one and that seed listed; naming no image, its renders
-are the approval's seeds, as a copy's are. It SHALL approve that
+target's newest sheet's, recording the target's sheet and not the source approval, and, where the operator names one of
+that approval's images, the image itself — its flow, version and seed — with a count of one and that seed listed;
+naming no image, its renders are the approval's seeds, as a copy's are. It SHALL approve that
 draft as an ordinary approval of the target, never as a copy. It SHALL refuse, naming the way out: a target holding no
 sheet; a source holding no such approval; a named image that approval never rendered; a source that is the target or
 no tracked flow; and a waiting draft of the target whose fields differ from its sheet's or that renders anything but one
 drawn seed. A waiting draft equal to its
-sheet, rendering one drawn seed, SHALL be replaced at its own number. A target approval or waiting draft drafted from a source approval SHALL NOT hold that approval's cancel.
+sheet, rendering one drawn seed, SHALL be replaced at its own number. A target approval or waiting draft drafted from a
+source approval SHALL NOT hold that approval's cancel.
 
 ```
 source approval vN ──▶ every field both declare ─┐
@@ -157,7 +160,8 @@ target newest sheet ──▶ every field it alone has ┴─▶ target draft ·
 
 The operator corrects a sheet once, in the flow that reads the photograph, and finishes only the fields another flow
 adds. A draft the operator never touched holds no work, so replacing it loses nothing; an edited one does, and a
-count, a seed or a revision's seed is an edit. A draft from another flow is taken once: it holds its own fields and seeds, so the source approval can go
+count, a seed or a revision's seed is an edit. A draft from another flow is taken once: it holds its own fields and
+seeds, so the source approval can go
 ([D49](../../../docs/decisions.md#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
 
 #### Scenario: the shared fields come from the source and the rest from the sheet
@@ -245,13 +249,15 @@ count, a seed or a revision's seed is an edit. A draft from another flow is take
 
 ### Requirement: An approval is copied from another flow's approval, recording where it came from
 
-**Reason**: a copy no longer records the approval it came from, and no longer checks it again ([D3](../../changes/0111-deleting-with-its-approval/design.md#d3)).
+**Reason**: a copy no longer records the approval it came from, and no longer checks it again
+([D3](../../changes/0111-deleting-with-its-approval/design.md#d3)).
 **Migration**: replaced by *An approval is copied once from another flow's approval, its seeds with it*; an existing
 copy's `copied_from` is left as it is, and its value is never read.
 
 ### Requirement: An approval nothing derives from can be cancelled back to its draft
 
-**Reason**: what another flow took no longer holds the cancel ([D2](../../changes/0111-deleting-with-its-approval/design.md#d2)).
+**Reason**: what another flow took no longer holds the cancel
+([D2](../../changes/0111-deleting-with-its-approval/design.md#d2)).
 **Migration**: replaced by *An approval nothing of its own flow derives from can be cancelled back to its draft*.
 
 ### Requirement: A draft is written from another flow's approval, its own fields from its own sheet
