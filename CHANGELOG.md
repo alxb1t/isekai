@@ -15,6 +15,8 @@ its new digest.
   (0114 D1).
 - A flow left with no approval also loses its own tags and caption from before the shared ones, each kind where the
   photograph holds it, so deleting its last render empties its folder (0114 D2).
+- docs D4 and D50, the principles, the data flow, the threat model and the migrate and app docstrings now say the
+  delete takes a group's failure records and a flow's own description (0114 D3).
 
 ## [0.75.0] - 2026-11-07
 

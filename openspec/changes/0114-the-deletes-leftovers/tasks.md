@@ -7,7 +7,7 @@ repository root.
 
 - [x] 1 — The failure records
 - [x] 2 — The own description
-- [ ] 3 — The record
+- [x] 3 — The record
 
 ## 1 — The failure records
 
@@ -43,17 +43,17 @@ repository root.
 
 Each edit keeps its grepped phrase on one line, rewrapping around it.
 
-- [ ] 3.1 In `docs/decisions.md`, edit D4 and D50, per [the record](design.md#the-record).
+- [x] 3.1 In `docs/decisions.md`, edit D4 and D50, per [the record](design.md#the-record).
   Verify: `grep -n 'failure records alone is none' docs/decisions.md` prints one line.
-- [ ] 3.2 In `docs/principles.md`, edit *Known breaks*, per [the record](design.md#the-record).
+- [x] 3.2 In `docs/principles.md`, edit *Known breaks*, per [the record](design.md#the-record).
   Verify: `grep -n 'render groups of failure' docs/principles.md` prints one line.
-- [ ] 3.3 In `docs/data-flow.md`, edit the discard paragraph and the migrate paragraph, per
+- [x] 3.3 In `docs/data-flow.md`, edit the discard paragraph and the migrate paragraph, per
   [the record](design.md#the-record).
   Verify: `grep -n 'leaves the flow no approval (D50)' docs/data-flow.md` prints one line.
-- [ ] 3.4 In `THREAT_MODEL.md`, edit *Out of scope*'s delete line, per [the record](design.md#the-record).
+- [x] 3.4 In `THREAT_MODEL.md`, edit *Out of scope*'s delete line, per [the record](design.md#the-record).
   Verify: `grep -n 'its failure records with it' THREAT_MODEL.md` prints one line.
-- [ ] 3.5 In `isekai/foundation/migrate.py`, edit the module docstring, per [the record](design.md#the-record).
+- [x] 3.5 In `isekai/foundation/migrate.py`, edit the module docstring, per [the record](design.md#the-record).
   Verify: `grep -n 'leaves the flow no approval (D50)' isekai/foundation/migrate.py` prints one line.
-- [ ] 3.6 In `isekai/interface/ui/app.py`, edit the module docstring's D4 sentence, per
+- [x] 3.6 In `isekai/interface/ui/app.py`, edit the module docstring's D4 sentence, per
   [the record](design.md#the-record).
   Verify: `grep -n 'own copies of the photograph' isekai/interface/ui/app.py` prints one line.

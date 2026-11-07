@@ -70,10 +70,10 @@ outputs/001/7.png ─▶ draft ─▶ review/003.draft.json   {count 1, seeds [7
                      outputs/003/7.png ─▶ Compare: 001 ⇄ 003, side by side
 ```
 
-**`isekai discard <image.png>`** deletes one render: its image, its record, its group when emptied, and its
-thumbnails in the library's cache. A delete that empties an approval's group deletes that approval, older ones with
-no render and the newest's waiting draft; a flow left with no approval keeps only its assignment (D50). One that
-leaves images renders what it lacks at the next session.
+**`isekai discard <image.png>`** deletes one render: its image, its record, its group when that leaves it empty or
+holding failure records alone, and its thumbnails in the library's cache. A delete that empties an approval's group
+deletes that approval, older ones with no render and the newest's waiting draft; a flow left with no approval keeps
+only its assignment (D50). One that leaves images renders what it lacks at the next session.
 
 Beside them, `show` reads a run's artifacts, versions, producers and failure records,
 names what below `photo/` or a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a collection's runs the
@@ -178,7 +178,7 @@ every stage that reads or writes the description refuses it, naming
 collection's `runs/`, or the one `--runs` names, and copies each run's caption and
 tag lists into `photo/`, byte for byte: a list keeps its number, the newest caption
 wins, lists that differ between flows refuse that run, and the old files stay, which
-`show` names as not read.
+`show` names as not read, until a delete leaves the flow no approval (D50).
 
 The names above are `run.py`'s, not each stage's: the run owns the layout. Inside
 a directory an artifact is `NNN.json`, with `NNN.draft.json` and
