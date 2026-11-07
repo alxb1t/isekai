@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.75.2
 ---
 
 # 0115 — unticking a tagged cell

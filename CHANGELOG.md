@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.75.2] - 2026-11-07
+
+Gate: local 0m33s · CI not read under mf-ship · 0.75.1: local 0m30s · CI not read under mf-ship
+
 - A tagged cell's tick and Discard take it back when its flow directory holds no work: the Hub offers the untick, as
   it does for an assigned cell, and the verb still refuses a directory holding files. The tick's accent fill marks a
   cell that can be unticked (0115 D1, D2, D3).
