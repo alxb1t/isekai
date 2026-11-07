@@ -19,6 +19,8 @@ its new digest.
 - Deleting the newest approval's last render, from `discard` or the app, takes that approval back to its draft with
   its prompt and failure records, so the Hub reads *draft* again (0111 D1).
 - A delete drops the render's own thumbnail alone: another collection's thumbnail of the same seed stays (0111 D7).
+- Review's kicker reads *draft* on a draft from another flow's image, in place of `from FLOW vN`: the draft names no
+  source approval now (0111 D6).
 
 ## [0.73.1] - 2026-11-06
 

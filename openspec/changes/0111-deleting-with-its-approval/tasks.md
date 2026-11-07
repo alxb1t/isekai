@@ -9,7 +9,7 @@ the repository root.
 - [x] 2 — The checks
 - [x] 3 — The copy and the draft
 - [x] 4 — The delete
-- [ ] 5 — The page
+- [x] 5 — The page
 - [ ] 6 — The record
 
 ## 1 — The cancel
@@ -115,12 +115,12 @@ the repository root.
 
 ## 5 — The page
 
-- [ ] 5.1 In `ui/src/types.ts`, cut `Drafted` to `fields` and `image?`, the latter's comment
+- [x] 5.1 In `ui/src/types.ts`, cut `Drafted` to `fields` and `image?`, the latter's comment
   `/* The image the draft was written from, while its file exists. */`, per [D6](design.md#d6).
   Verify: `grep -n 'The image the draft was written from, while its file exists.' ui/src/types.ts` prints one line.
-- [ ] 5.2 In `ui/src/views/Review.vue`, replace the kicker's `from FLOW vN` line per [D6](design.md#d6).
+- [x] 5.2 In `ui/src/views/Review.vue`, replace the kicker's `from FLOW vN` line per [D6](design.md#d6).
   Verify: `grep -n "if (drafted.value && !sheet.detail.value?.approved) return 'draft'" ui/src/views/Review.vue` prints one line.
-- [ ] 5.3 In `tests/e2e/test_render.py`, make the edits of [the end-to-end steps](design.md#the-end-to-end-steps).
+- [x] 5.3 In `tests/e2e/test_render.py`, make the edits of [the end-to-end steps](design.md#the-end-to-end-steps).
   Verify: `grep -n 'to_have_attribute("data-stage", "draft")' tests/e2e/test_render.py` prints one line.
 
 ## 6 — The record
