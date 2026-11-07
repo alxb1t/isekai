@@ -47,7 +47,6 @@ from isekai.foundation.artifacts import (
     Runtime,
     read,
     renders_of,
-    require,
     write,
 )
 from isekai.foundation.artifacts import Render as RenderSidecar
@@ -422,52 +421,6 @@ def source_seeds(
             f"{_dependents(flows, source)}` to render it first"
         )
     return int(groups[-1].name), seeds
-
-
-def refuse_out_of_step(
-    run: Run, flow: str, source: str, group: int | None = None
-) -> None:
-    """Refuse a `flow` whose approval is a copy of another of `source`'s than `group`.
-
-    `group` is the approval `source`'s latest renders came from. None stands for
-    `source`'s latest approval, the group a source that renders first in the same
-    session writes into, so the copy is checked before that source has rendered.
-
-    A flow whose approval does not name `source` as its origin is not checked: it
-    is rendered on `source`'s seeds under its own sheet, a different experiment.
-    The remedy depends on which side is behind, so each is told which command
-    brings the two in step.
-    """
-    version, path = approved_artifact(run, flow)
-    remedy = f"restore it in {path} by hand"
-    body = read(path, APPROVED_FILE, remedy=remedy)
-    require(path, body, "producer", dict, remedy)
-    producer = body["producer"]
-    if producer.get("copied_from") is None:
-        return
-    require(path, producer, "copied_from", dict, remedy)
-    copied = producer["copied_from"]
-    require(path, copied, "flow", str, remedy)
-    require(path, copied, "approval", int, remedy)
-    if copied["flow"] != source:
-        return
-    latest = f"{source}'s latest renders came from approval"
-    if group is None:
-        latest = f"{source}'s latest approval is"
-        group = approved_artifact(run, source)[0]
-    if copied["approval"] == group:
-        return
-    head = (
-        f"{run.id}: {flow}'s approval {version:03d} is a copy of {source}'s approval "
-        f"{copied['approval']:03d}, and {latest} {group:03d}; run "
-    )
-    if copied["approval"] < group:
-        again = stage_command(run, "approve", flow, options=("--from", source))
-        raise Refusal(f"{head}`{again}` to copy the newer one")
-    raise Refusal(
-        f"{head}`python -m isekai render {_runs_root(run)} {source}=1"
-        f"{_dependents([flow], source)}` to render {source} again first"
-    )
 
 
 def _dependents(flows: Sequence[str], source: str) -> str:

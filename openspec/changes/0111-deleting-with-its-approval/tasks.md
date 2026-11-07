@@ -6,7 +6,7 @@ the repository root.
 ## Progress
 
 - [x] 1 — The cancel
-- [ ] 2 — The checks
+- [x] 2 — The checks
 - [ ] 3 — The copy and the draft
 - [ ] 4 — The delete
 - [ ] 5 — The page
@@ -32,20 +32,20 @@ the repository root.
 
 ## 2 — The checks
 
-- [ ] 2.1 **HALT CHECK** — [D5](design.md#d5) deletes the one function that checks a copy against its source.
+- [x] 2.1 **HALT CHECK** — [D5](design.md#d5) deletes the one function that checks a copy against its source.
   Verify: `grep -n 'def refuse_out_of_step' isekai/pipeline/generate.py` prints one line.
-- [ ] 2.2 In `isekai/pipeline/generate.py`, delete `refuse_out_of_step` and any import only it used, per [D5](design.md#d5).
+- [x] 2.2 In `isekai/pipeline/generate.py`, delete `refuse_out_of_step` and any import only it used, per [D5](design.md#d5).
   Verify: `grep -n 'refuse_out_of_step' isekai/pipeline/generate.py` prints nothing.
-- [ ] 2.3 In `isekai/interface/cli.py`, delete `--in-step-with`, its import, guards, loop and `return` clause, per
+- [x] 2.3 In `isekai/interface/cli.py`, delete `--in-step-with`, its import, guards, loop and `return` clause, per
   [D5](design.md#d5).
   Verify: `grep -n 'in_step_with' isekai/interface/cli.py` prints nothing.
-- [ ] 2.4 In `isekai/interface/render.py`, make `_asked` skip a late request and say `--seeds-from` alone, and say in
+- [x] 2.4 In `isekai/interface/render.py`, make `_asked` skip a late request and say `--seeds-from` alone, and say in
   `in_session_sources`'s docstring that such a dependent has no check before the pod, per [D5](design.md#d5).
   Verify: `grep -n 'in-step-with' isekai/interface/render.py` prints nothing.
-- [ ] 2.5 In `tests/test_generate.py`, delete the four tests [the Tests table](design.md#tests) retires, and any import
+- [x] 2.5 In `tests/test_generate.py`, delete the four tests [the Tests table](design.md#tests) retires, and any import
   only they used.
   Verify: `grep -n 'in-step-with' tests/test_generate.py` prints nothing.
-- [ ] 2.6 In `tests/test_render.py`, delete `test_a_dependent_behind_its_source_in_one_session_refuses_before_the_pod`.
+- [x] 2.6 In `tests/test_render.py`, delete `test_a_dependent_behind_its_source_in_one_session_refuses_before_the_pod`.
   Verify: `grep -n 'in-step-with' tests/test_render.py` prints nothing.
 
 ## 3 — The copy and the draft

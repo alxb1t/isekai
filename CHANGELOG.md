@@ -12,6 +12,8 @@ its new digest.
 
 - Only an approval's own prompt, failure records and renders refuse its cancel: another flow's copy, drafted
   approval or waiting draft no longer holds it, so what another flow took can't pin its source (0111 D2).
+- `refuse_out_of_step` and `generate --in-step-with` are deleted, and `render` runs no check before the pod for a
+  source it renders first: a copy will carry its own seeds, so nothing is left to check (0111 D5).
 
 ## [0.73.1] - 2026-11-06
 
