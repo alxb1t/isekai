@@ -400,7 +400,7 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
   per offered flow, assigned or not — the image's own first, named *revise*, and focused. `j` `k` move, `↵` drafts
   the focused flow and opens Review on the first draft, the rest in the rail, `Esc` closes. Its own flow is a
   revision; another is drafted from the image's approval, its own fields from its sheet, and Review shows the image
-  beside the photograph, marks the draft against that flow's sheet and names the approval in the kicker. All or
+  beside the photograph, marks the draft against that flow's sheet and heads it *the image it was drafted from*. All or
   nothing: a refusal lists every selected image, those that could be drafted too, and offers
   `Deselect those 2 and draft 1 ⇧↵`. A target's waiting draft with edits of its own opens Review on that draft,
   writing nothing; one equal to its sheet is replaced. In a selection it is left out, the rest written, and the
