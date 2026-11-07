@@ -72,8 +72,8 @@ In `isekai/pipeline/review.py`, beside `came_from`:
 def is_copy(producer: Mapping[str, object]) -> bool:
     """Return whether an approval's producer says it is a copy of another flow's.
 
-    A copy written before 0111 says so by `copied_from`, whose value is not read.
-    e.g. {"copied": True} -> True; {"copied_from": {…}} -> True; {"from": 1} -> False
+    An older copy says so by `copied_from`, whose value is not read.
+    e.g. {'copied': True} -> True; {'copied_from': {…}} -> True; {'from': 1} -> False
     """
     return producer.get("copied") is True or "copied_from" in producer
 
@@ -147,7 +147,7 @@ In `tests/test_review.py`, with the existing `_approved_source`, `_summon_approv
 |---|---|---|
 | `test_a_copy_carries_the_sources_seeds_and_names_no_source`, renamed from `test_a_copied_approval_names_its_flow_and_the_approval_it_came_from` | `review:copy-from:the-copy-carries-the-seeds` | `_image(run, 1, 11)` and `_image(run, 1, 12)` before the copy; the copy's `flow` is `CONTROL`, `producer["copied"] is True`, no `copied_from`, `renders == {"count": 2, "seeds": [11, 12]}` |
 | `test_a_copy_leaves_the_sources_files_alone`, renamed from `test_a_copy_records_its_source_and_leaves_the_sources_files_alone` | `review:copy-from:the-copy-carries-the-seeds` | the source's snapshot is unchanged; the copy holds no `copied_from` |
-| `test_a_target_not_copied_from_the_sources_latest_is_copied_again` | as now | `body["producer"]["copied"] is True` for `copied_from == …` |
+| `test_a_target_not_copied_from_the_sources_latest_is_copied_again` | as now | `body["producer"]["copied"] is True` for `copied_from == …`; the newer source approval edits `hair_silhouette` to `very long hair`, as `long hair` is the sheet's own value and an equal copy writes nothing |
 | `test_a_drafted_draft_records_its_sheet_and_no_source_approval`, renamed from `test_a_drafted_draft_names_its_sheet_and_the_approval_it_came_from` | `review:draft-from:the-draft-records-no-source-approval` | the producer equality loses `drafted_from`; `assert "renders" not in body` becomes `body["renders"] == {"count": 1, "seeds": []}`, the source approval having rendered nothing |
 | `test_a_draft_from_no_image_carries_the_approvals_seeds`, new | `review:draft-from:a-draft-from-no-image-carries-the-seeds` | `_image(run, 1, 11)`; `draft_from(run, CONJURE, FLOW, None, conjure)`'s renders are `{"count": 1, "seeds": [11]}` |
 | `test_what_is_drafted_from_an_approval_holds_no_source_cancel`, rewritten from `test_an_approval_drafted_from_a_source_refuses_the_sources_cancel` | `review:draft-from:what-is-drafted-from-it-holds-no-source-cancel` | CONJURE approved from FLOW, then a CONJURE draft waiting from FLOW; `cancel(run, FLOW)` returns FLOW's `001.draft.json`; CONJURE's directory snapshot unchanged |

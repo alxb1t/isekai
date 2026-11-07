@@ -50,36 +50,37 @@ the repository root.
 
 ## 3 — The copy and the draft
 
-- [ ] 3.1 **HALT CHECK** — [D3](design.md#d3) replaces the one place a copy's origin is written.
+- [x] 3.1 **HALT CHECK** — [D3](design.md#d3) replaces the one place a copy's origin is written.
   Verify: `grep -n '"copied_from": {"flow": source, "approval": approval}' isekai/pipeline/review.py` prints one line.
-- [ ] 3.2 In `isekai/foundation/artifacts.py`, delete `CopiedFrom` and `ChainProducer`'s `drafted_from`, and give
+- [x] 3.2 In `isekai/foundation/artifacts.py`, delete `CopiedFrom` and `ChainProducer`'s `drafted_from`, and give
   `ApprovedProducer` `copied: NotRequired[bool]` for `copied_from`, per [D3](design.md#d3) and [D4](design.md#d4).
   Verify: `grep -n 'CopiedFrom' isekai/foundation/artifacts.py` prints nothing.
-- [ ] 3.3 In `isekai/pipeline/review.py`, add `is_copy` and `copied_renders` beside `came_from`, as
+- [x] 3.3 In `isekai/pipeline/review.py`, add `is_copy` and `copied_renders` beside `came_from`, as
   [the copy](design.md#the-copy) writes them.
   Verify: `grep -n 'def copied_renders(run: Run, flow: str, version: int, body: ReviewApproved) -> Renders:' isekai/pipeline/review.py` prints one line.
-- [ ] 3.4 In `isekai/pipeline/review.py`, rewrite `_copy_approval` and the docstrings of `approve` and `state` per
+- [x] 3.4 In `isekai/pipeline/review.py`, rewrite `_copy_approval` and the docstrings of `approve` and `state` per
   [the copy](design.md#the-copy).
   Verify: `grep -n '"copied": True' isekai/pipeline/review.py` prints one line.
-- [ ] 3.5 In `isekai/pipeline/review.py`, make `cancel` test `is_copy(body["producer"])` and `came_from` test
+- [x] 3.5 In `isekai/pipeline/review.py`, make `cancel` test `is_copy(body["producer"])` and `came_from` test
   `is_copy(producer)` where each tests `copied_from`, per [D3](design.md#d3).
   Verify: `grep -n 'if is_copy(body\["producer"\]):' isekai/pipeline/review.py` prints one line.
 - [ ] 3.6 In `isekai/pipeline/review.py`, edit `draft_from`, `_write_draft`, `cancel`'s draft call and
-  `_drafting_wrote`, and delete `drafted_from()`, per [D4](design.md#d4).
-  Verify: `grep -n 'drafted_from' isekai/pipeline/review.py` prints nothing.
-- [ ] 3.7 In `isekai/interface/ui/app.py`, rewrite `_drafted` per [D6](design.md#d6) and drop the `drafted_from` import.
+  `_drafting_wrote`, and delete `drafted_from()`, per [D4](design.md#d4). The one `drafted_from` left is the key
+  [the copy](design.md#the-copy)'s `_NOT_COPIED` strips, per [D3](design.md#d3).
+  Verify: `grep -n 'drafted_from' isekai/pipeline/review.py` prints one line, `_NOT_COPIED = frozenset({"copied_from", "drafted_from", "image"})`.
+- [x] 3.7 In `isekai/interface/ui/app.py`, rewrite `_drafted` per [D6](design.md#d6) and drop the `drafted_from` import.
   Verify: `grep -n 'drafted_from' isekai/interface/ui/app.py` prints nothing.
-- [ ] 3.8 In `tests/test_review.py`, make the copy rows of [the pipeline's tests](design.md#the-pipelines-tests).
+- [x] 3.8 In `tests/test_review.py`, make the copy rows of [the pipeline's tests](design.md#the-pipelines-tests).
   Verify: `uv run pytest tests/test_review.py -k "copy_carries_the_sources_seeds or copy_leaves_the_sources_files or copied_again"` exits 0.
-- [ ] 3.9 In `tests/test_review.py`, make the draft rows and the readers changed in place of
+- [x] 3.9 In `tests/test_review.py`, make the draft rows and the readers changed in place of
   [the pipeline's tests](design.md#the-pipelines-tests), bar the cancel rows.
   Verify: `uv run pytest tests/test_review.py -k "records_its_sheet_and_no_source or draft_from_no_image_carries or unedited_waiting_draft"` exits 0.
-- [ ] 3.10 In `tests/test_pipeline_cli.py:821`, assert `"drafted_from" not in draft["producer"]` for its
+- [x] 3.10 In `tests/test_pipeline_cli.py:821`, assert `"drafted_from" not in draft["producer"]` for its
   `drafted_from` value, per [the pipeline's tests](design.md#the-pipelines-tests).
   Verify: `uv run pytest tests/test_pipeline_cli.py -k draft_writes_another_flow` exits 0.
-- [ ] 3.11 In `tests/test_ui_api.py`, make the `drafted` edits of [the server's tests](design.md#the-servers-tests).
+- [x] 3.11 In `tests/test_ui_api.py`, make the `drafted` edits of [the server's tests](design.md#the-servers-tests).
   Verify: `uv run pytest tests/test_ui_api.py -k "drafted_draft_against_its_sheet_and_its_image or approved_drafted_drafts_marks or selection_from_two_runs or waiting_draft_is_its_sheet"` exits 0.
-- [ ] 3.12 In `tests/test_generate.py`, mark `test_a_flow_renders_the_seeds_of_its_sources_latest_group`
+- [x] 3.12 In `tests/test_generate.py`, mark `test_a_flow_renders_the_seeds_of_its_sources_latest_group`
   `run-directory:layout:a-named-source-is-recorded`, above its present mark.
   Verify: `grep -n 'run-directory:layout:a-named-source-is-recorded' tests/test_generate.py` prints one line.
 
