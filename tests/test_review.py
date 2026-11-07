@@ -51,6 +51,7 @@ from isekai.pipeline.review import (
     review,
     revise,
     save_draft,
+    source_copy,
     state,
     token_budget,
     withdraw,
@@ -1202,8 +1203,8 @@ def test_a_draft_from_no_image_carries_the_approvals_seeds(
     assert read(draft, DRAFT_FILE)["renders"] == {"count": 1, "seeds": [11]}
 
 
-@pytest.mark.spec("review:draft-from:a-draft-from-an-image-records-it")
-def test_a_drafted_draft_records_the_image_it_names_and_none_without(
+@pytest.mark.spec("review:draft-from:a-draft-from-an-image-copies-it")
+def test_a_draft_from_an_image_copies_it_into_the_targets_sources(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _summon_approved(run, schema, vocabulary)
@@ -1211,12 +1212,13 @@ def test_a_drafted_draft_records_the_image_it_names_and_none_without(
 
     unnamed = draft_from(run, CONJURE, FLOW, 1, conjure)
     assert "image" not in read(unnamed, DRAFT_FILE)["producer"]
+    assert not source_copy(run, CONJURE, 1).exists()
     discard(run, CONJURE)
-    _image(run, 1, SEED)
+    image = _image(run, 1, SEED)
     named = draft_from(run, CONJURE, FLOW, 1, conjure, seed=SEED)
 
-    image = read(named, DRAFT_FILE)["producer"].get("image")
-    assert image == {"flow": FLOW, "version": 1, "seed": SEED}
+    assert "image" not in read(named, DRAFT_FILE)["producer"]
+    assert source_copy(run, CONJURE, 1).read_bytes() == image.read_bytes()
 
 
 @pytest.mark.spec("review:draft-from:a-draft-from-an-image-prefills-its-seed")
@@ -1246,6 +1248,14 @@ def test_a_draft_naming_a_seed_its_approval_never_rendered_is_refused(
 
     assert "rendered no seed 999 under 001.approved.json" in str(refused.value)
     assert f"`python -m isekai show{runs_flag(run)} {run.id}`" in str(refused.value)
+    assert snapshot(run.path) == before
+
+    (run.directory(FLOW, "outputs", "001") / f"{SEED}.png").unlink()
+    before = snapshot(run.path)
+    with pytest.raises(Refusal) as refused:
+        draft_from(run, CONJURE, FLOW, 1, conjure, seed=SEED)
+
+    assert f"rendered no seed {SEED}" in str(refused.value)
     assert snapshot(run.path) == before
 
 

@@ -41,7 +41,7 @@ POST /api/billing/check
 POST /api/staging   ·   PUT, GET and DELETE …/{id}/files/{name}, and GET its /thumb
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {collection, as_is, add}
 GET  /events[?collection=&staging=], either or both    Server-Sent Events
-GET  /api/c/{collection}/review/{digest}/{flow}         and /photo
+GET  /api/c/{collection}/review/{digest}/{flow}         and /photo, /source/{version}
 PUT  /api/c/{collection}/review/{digest}/{flow}/draft
 POST /api/c/{collection}/review/{digest}/{flow}/approve   ·   POST …/cancel
 POST /api/c/{collection}/review/{digest}/{flow}/discard
@@ -105,7 +105,6 @@ from isekai.foundation.run import (
     approved_versions,
     assign,
     find_run,
-    group_of,
     is_seed,
     is_version,
     latest_artifact,
@@ -136,6 +135,7 @@ from isekai.pipeline.review import (
     draft_image,
     review,
     save_draft,
+    source_copy,
     token_budget,
     waiting_edit,
     withdraw,
@@ -763,8 +763,8 @@ def create_app(
             # The approval a draft or the approval shown was copied from, its
             # fields and the image being revised; null for a copy of a sheet.
             "revision": revision,
-            # The fields of a draft's own sheet and the other flow's image it was
-            # drafted from while that file exists; null for any other draft.
+            # The fields of a draft's own sheet and the number of its source copy,
+            # the image it was drafted from; null for a draft holding none.
             "drafted": drafted,
             # **Approval with nothing newer beside it is what makes a sheet
             # read-only**, which is precisely `state() == "approved"`.
@@ -784,6 +784,20 @@ def create_app(
     def read_photo(collection: str, digest: str, flow: str) -> Response:
         """Serve the photograph's bytes, whole. `image.py` reads headers, not pixels."""
         return _photograph(held(collection, digest, flow).run.photo)
+
+    @app.get("/api/c/{collection}/review/{digest}/{flow}/source/{version}")
+    def read_source_copy(
+        collection: str, digest: str, flow: str, version: int
+    ) -> Response:
+        """Serve the image draft `version` was drafted from, refusing one not held."""
+        one = held(collection, digest, flow)
+        copy = source_copy(one.run, one.flow.id, version)
+        if not copy.is_file():
+            raise Refusal(
+                f"{one.run.id}: flow {one.flow.id} holds no image a draft numbered "
+                f"{version} was drafted from; go back to Review to reload the page"
+            )
+        return _photograph(copy)
 
     @app.put("/api/c/{collection}/review/{digest}/{flow}/draft")
     def put_draft(
@@ -1328,29 +1342,24 @@ def _revision(
 
 
 def _drafted(
-    one: Held, draft: Path, body: Mapping[str, Any], remedy: str
+    one: Held, path: Path, body: Mapping[str, Any], remedy: str
 ) -> dict[str, Any] | None:
     """Describe the sheet a draft from another flow's image was drafted on.
 
-    None unless the draft records an image of another flow. `image`, its seed a
-    decimal string, is that image while its file exists. `remedy` repairs the
-    draft or approval; a damaged sheet names itself, since no command rewrites a
-    sheet one records: `review` copies the same damage.
-    e.g. from summon 1 seed 7, on sheet 1 -> {"fields": …, "image": {…, "seed": "7"}}
+    None unless the flow holds a source copy under the number of `path`, a draft
+    or an approval; `version` is that number. `remedy` repairs the draft or
+    approval; a damaged sheet names itself, since no command rewrites a sheet one
+    records: `review` copies the same damage.
+    e.g. review/001.draft.json, sources/001.png there -> {"fields": …, "version": 1}
     """
-    image = draft_image(body)
-    if image is None or image["flow"] == one.flow.id:
+    version = int(path.name[:3])
+    if not source_copy(one.run, one.flow.id, version).is_file():
         return None
-    require(draft, body, "sheet", int, remedy)
+    require(path, body, "sheet", int, remedy)
     sheet = sheet_of(one.run, one.flow.id, body["sheet"])
     restore = f"restore {sheet} by hand, then reload the page"
     held = read(sheet, SHEET_FILE, remedy=restore)
-    drafted: dict[str, Any] = {"fields": _fields(sheet, held, restore)}
-    group = group_of(one.run, image["flow"], image["version"])
-    seed = str(image["seed"])
-    if group.is_dir() and any(path.stem == seed for path in group.iterdir()):
-        drafted["image"] = {**image, "seed": seed}
-    return drafted
+    return {"fields": _fields(sheet, held, restore), "version": version}
 
 
 def _side(flow: Flow, version: int, approval: Path) -> dict[str, Any]:

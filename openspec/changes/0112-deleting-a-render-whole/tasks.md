@@ -5,7 +5,7 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 
 ## Progress
 
-- [ ] 1 — The source copy
+- [x] 1 — The source copy
 - [ ] 2 — The page
 - [ ] 3 — The discard and the records
 - [ ] 4 — The copy's own sheet
@@ -14,32 +14,32 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 
 ## 1 — The source copy
 
-- [ ] 1.1 **HALT CHECK** — [D2](design.md#d2) replaces the one place a draft records another flow's image.
+- [x] 1.1 **HALT CHECK** — [D2](design.md#d2) replaces the one place a draft records another flow's image.
   Verify: `grep -n 'else {"flow": source, "version": approval, "seed": seed},' isekai/pipeline/review.py` prints one line.
-- [ ] 1.2 In `isekai/foundation/run.py`, add `SOURCES = "sources"` after `OUTPUTS`, per [D2](design.md#d2).
+- [x] 1.2 In `isekai/foundation/run.py`, add `SOURCES = "sources"` after `OUTPUTS`, per [D2](design.md#d2).
   Verify: `grep -n '^SOURCES = "sources"$' isekai/foundation/run.py` prints one line.
-- [ ] 1.3 In `isekai/pipeline/review.py`, add `source_copy` beside `group_of`'s readers, and make `drafting_approval`
+- [x] 1.3 In `isekai/pipeline/review.py`, add `source_copy` beside `group_of`'s readers, and make `drafting_approval`
   refuse a seed whose image file is gone as it refuses one never rendered, per [D2](design.md#d2).
   Verify: `grep -n 'def source_copy(run: Run, flow: str, version: int) -> Path:' isekai/pipeline/review.py` prints one line.
-- [ ] 1.4 In `isekai/pipeline/review.py`, make `draft_from` copy a named seed's image to the source copy of its draft's
+- [x] 1.4 In `isekai/pipeline/review.py`, make `draft_from` copy a named seed's image to the source copy of its draft's
   number after `_refuse_edited`, immediately before `_write_draft`, and record no `image`, per [D2](design.md#d2).
   Verify: `grep -n '"seed": seed},' isekai/pipeline/review.py` prints one line.
-- [ ] 1.5 In `isekai/interface/run_view.py`, make `unread` read a flow's `sources/` and each file in it named a
+- [x] 1.5 In `isekai/interface/run_view.py`, make `unread` read a flow's `sources/` and each file in it named a
   three-digit number and the flow's output suffix, per [D2](design.md#d2).
   Verify: `grep -n 'SOURCES' isekai/interface/run_view.py` prints at least one line.
-- [ ] 1.6 In `isekai/interface/ui/app.py`, rewrite `_drafted` and add the source copy's route, listed in the module
+- [x] 1.6 In `isekai/interface/ui/app.py`, rewrite `_drafted` and add the source copy's route, listed in the module
   docstring's routes, per [D3](design.md#d3).
   Verify: `grep -n '"/api/c/{collection}/review/{digest}/{flow}/source/{version}"' isekai/interface/ui/app.py` prints one line.
-- [ ] 1.7 In `tests/test_review.py`, make the copy and refusal rows of [the pipeline's tests](design.md#the-pipelines-tests)
+- [x] 1.7 In `tests/test_review.py`, make the copy and refusal rows of [the pipeline's tests](design.md#the-pipelines-tests)
   for `draft_from`.
   Verify: `uv run pytest tests/test_review.py -k "copies_it_into_the_targets_sources or never_rendered_is_refused or records_the_image_it_names"` exits 0.
-- [ ] 1.8 In `tests/test_pipeline_cli.py`, make the draft edits of
+- [x] 1.8 In `tests/test_pipeline_cli.py`, make the draft edits of
   [the server's and the verb's tests](design.md#the-servers-and-the-verbs-tests), bar `tags_from`.
   Verify: `uv run pytest tests/test_pipeline_cli.py -k "images_approval_and_seed or fills_it_from_the_source"` exits 0.
-- [ ] 1.9 In `tests/test_ui_api.py`, make the `drafted` edits of
+- [x] 1.9 In `tests/test_ui_api.py`, make the `drafted` edits of
   [the server's and the verb's tests](design.md#the-servers-and-the-verbs-tests).
   Verify: `uv run pytest tests/test_ui_api.py -k "drafted_draft_against_its_sheet or approved_drafted_drafts_marks or waiting_draft_is_its_sheet or selection_from_two_runs"` exits 0.
-- [ ] 1.10 In `tests/test_run_view.py`, make the `sources/` edits of
+- [x] 1.10 In `tests/test_run_view.py`, make the `sources/` edits of
   [the pipeline's tests](design.md#the-pipelines-tests).
   Verify: `uv run pytest tests/test_run_view.py -k "name_show_does_not_read and sources"` exits 0.
 

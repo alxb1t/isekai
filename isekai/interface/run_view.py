@@ -17,6 +17,7 @@ Stdlib only.
 
 import json
 import os
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,7 @@ from isekai.foundation.run import (
     PROMPTS,
     REVIEW,
     SHEETS,
+    SOURCES,
     Kind,
     Run,
     failure_named,
@@ -240,11 +242,11 @@ def _unread_in(directory: Path, below: str, read: Callable[[Path], bool]) -> lis
 def unread(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
     """Return every name below `photo/` or a flow that `show` does not read, sorted.
 
-    `photo/` reads its description directories; a flow reads its stage directories
-    and `outputs`, so a flow's own `captions/`, `wd14/` or `tags/` is not read; a
-    stage, its artifacts and failure records; `outputs`, its numbered groups; a
-    group, its renders, their sidecars and its failure records. A directory ends in
-    `/`, never descended.
+    `photo/` reads its description directories; a flow reads its stage directories,
+    `outputs` and `sources`, so a flow's own `captions/`, `wd14/` or `tags/` is not
+    read; a stage, its artifacts and failure records; `outputs`, its numbered
+    groups; a group, its renders, their sidecars and its failure records;
+    `sources`, its numbered copies. A directory ends in `/`, never descended.
     e.g. `["summon-anime-wai/outputs/001/notes.txt", "summon-anime-wai/wd14/"]`
     """
     names = _unread_in(
@@ -263,7 +265,13 @@ def unread(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
         names += _unread_in(
             run.directory(flow),
             flow,
-            lambda path: path.is_dir() and path.name in (*STAGES, OUTPUTS),
+            lambda path: path.is_dir() and path.name in (*STAGES, OUTPUTS, SOURCES),
+        )
+        copy = re.compile(rf"[0-9]{{3}}{re.escape(suffix)}")
+        names += _unread_in(
+            run.directory(flow, SOURCES),
+            f"{flow}/{SOURCES}",
+            lambda path: copy.fullmatch(path.name) is not None,
         )
         for stage in STAGES:
             names += _unread_in(

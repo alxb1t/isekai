@@ -57,7 +57,8 @@ from isekai.foundation.artifacts import (
     require,
     write,
 )
-from isekai.foundation.flow import Flow, Schema, assemble
+from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.flow import OUTPUT_SUFFIX, Flow, Schema, assemble
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
@@ -65,6 +66,7 @@ from isekai.foundation.run import (
     PROMPTS,
     REVIEW,
     SHEETS,
+    SOURCES,
     Run,
     approval_of,
     approved_versions,
@@ -244,12 +246,12 @@ def draft_from(
     Each field of `schema` the approval holds is the approval's; every other is
     `flow`'s newest sheet's, as are the records the fields came through. The
     draft names neither `source` nor its approval. `seed` names the image of that
-    approval the draft is written from, recorded beside it and listed as its one
-    render, and refuses as `drafting_approval` refuses; with no `seed`, the
-    renders are the approval's seeds, as `copied_renders` lists them. A waiting
-    draft equal to its sheet, rendering one drawn seed, holds no work, so it is
-    replaced at its number; one with edited fields, or a count or seeds of its
-    own, refuses.
+    approval the draft is written from, copied to the draft's `source_copy` and
+    listed as its one render, and refuses as `drafting_approval` refuses; with no
+    `seed`, the renders are the approval's seeds, as `copied_renders` lists them.
+    A waiting draft equal to its sheet, rendering one drawn seed, holds no work,
+    so it is replaced at its number; one with edited fields, or a count or seeds
+    of its own, refuses.
     e.g. (run, conjure, summon, None, schema) -> conjure/review/001.draft.json
     """
     approval = drafting_approval(run, flow, source, version, seed)
@@ -264,6 +266,10 @@ def draft_from(
     _refuse_edited(run, flow)
     merged = {**body["fields"], **carried["fields"]}
     fields = {name: list(merged[name]) for name in schema.names if name in merged}
+    number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))
+    if seed is not None:
+        image = group_of(run, source, approval) / f"{seed}{OUTPUT_SUFFIX}"
+        write_atomically(source_copy(run, flow, number), image.read_bytes())
     return _write_draft(
         run,
         flow,
@@ -274,10 +280,7 @@ def draft_from(
         copied_renders(run, source, approval, carried)
         if seed is None
         else {"count": 1, "seeds": [seed]},
-        version=_waiting_number(run, flow),
-        image=None
-        if seed is None
-        else {"flow": source, "version": approval, "seed": seed},
+        version=number,
     )
 
 
@@ -317,9 +320,9 @@ def drafting_approval(
             f"{_held_way(run, flow, source, held)}"
         )
     _approval(run, source, approval, f"draft {flow} again")
-    if (
-        seed is not None
-        and not (group_of(run, source, approval) / f"{seed}{SIDECAR}").is_file()
+    group = group_of(run, source, approval)
+    if seed is not None and not all(
+        (group / f"{seed}{suffix}").is_file() for suffix in (SIDECAR, OUTPUT_SUFFIX)
     ):
         raise Refusal(
             f"{run.id}: flow {source} rendered no seed {seed} under "
@@ -358,6 +361,14 @@ def _first_image(group: Path) -> Path | None:
     if not group.is_dir():
         return None
     return min((path for path in group.iterdir() if is_seed(path.stem)), default=None)
+
+
+def source_copy(run: Run, flow: str, version: int) -> Path:
+    """Return where `flow` holds the image its draft `version` was drafted from.
+
+    e.g. (run, conjure, 2) -> conjure/sources/002.png
+    """
+    return run.directory(flow, SOURCES) / f"{version:03d}{OUTPUT_SUFFIX}"
 
 
 def waiting_edit(run: Run, flow: str) -> Path | None:

@@ -2206,14 +2206,19 @@ def test_review_reads_a_drafted_draft_against_its_sheet_and_its_image(
     assert drafted.json() == _drafted(made)
     target = made.path / CONJURE / "sheets" / "001.json"
     own = read(target, SHEET_FILE)["fields"]
-    assert body["drafted"] == {
-        "fields": own,
-        "image": {"flow": FLOW, "version": 1, "seed": "7"},
-    }
+    assert body["drafted"] == {"fields": own, "version": 1}
     assert body["fields"]["expression"] == [] != own["expression"]
+    image = image_of(made, load_flow(FLOW), 1, 7)
+    held = image.read_bytes()
+    copy = client.get(f"{route}/source/1")
+    assert copy.status_code == 200
+    assert copy.content == held
 
-    image_of(made, load_flow(FLOW), 1, 7).unlink()
-    assert client.get(route).json()["drafted"] == {"fields": own}
+    # The copy outlives the image it was drafted from.
+    image.unlink()
+    assert client.get(route).json()["drafted"] == {"fields": own, "version": 1}
+    assert client.get(f"{route}/source/1").content == held
+    assert client.get(f"{route}/source/2").status_code == 409
 
     _damage(target, _drop("fields"))
     refused = client.get(route)
@@ -2241,10 +2246,7 @@ def test_review_keeps_an_approved_drafted_drafts_marks(
     target = made.path / CONJURE / "sheets" / "001.json"
     own = read(target, SHEET_FILE)["fields"]
     assert body["readonly"] is True
-    assert body["drafted"] == {
-        "fields": own,
-        "image": {"flow": FLOW, "version": 1, "seed": "7"},
-    }
+    assert body["drafted"] == {"fields": own, "version": 1}
 
     _damage(target, _drop("fields"))
     refused = client.get(route)
@@ -2313,7 +2315,7 @@ def test_a_draft_into_a_target_whose_waiting_draft_is_its_sheet_replaces_it(
 
     assert answered.json() == _drafted(made)
     assert versions(made.directory(CONJURE, REVIEW)) == [1]
-    assert client.get(route).json()["drafted"]["image"]["flow"] == FLOW
+    assert client.get(route).json()["drafted"]["version"] == 1
 
 
 @pytest.mark.spec("ui:draft-from:a-selection-drafts-into-the-flow-chosen")
@@ -2366,6 +2368,7 @@ def test_a_selection_from_two_runs_drafts_each_into_the_flow_chosen(
     for run, seed in ((made, 7), (other, 8)):
         draft = read(run.directory(CONJURE, REVIEW) / "001.draft.json", DRAFT_FILE)
         assert "drafted_from" not in draft["producer"]
+        assert "image" not in draft["producer"]
         assert draft["renders"] == {"count": 1, "seeds": [seed]}
 
 

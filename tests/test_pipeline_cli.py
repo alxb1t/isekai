@@ -816,7 +816,8 @@ def test_draft_writes_another_flow_from_the_images_approval_and_seed(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     run = _two_approvals(tmp_path, "ada", schema, vocabulary)
-    argv = ["draft", "--flow", CONJURE, str(rendered_image(run, 1, 7))]
+    image = rendered_image(run, 1, 7)
+    argv = ["draft", "--flow", CONJURE, str(image)]
 
     assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
 
@@ -827,11 +828,9 @@ def test_draft_writes_another_flow_from_the_images_approval_and_seed(
     )
     assert draft["fields"]["hair_silhouette"] == first["fields"]["hair_silhouette"]
     assert "drafted_from" not in draft["producer"]
-    assert draft["producer"]["image"] == {
-        "flow": "summon-anime-wai",
-        "version": 1,
-        "seed": 7,
-    }
+    assert "image" not in draft["producer"]
+    copy = run.directory(CONJURE, "sources") / "001.png"
+    assert copy.read_bytes() == image.read_bytes()
     assert draft["renders"] == {"count": 1, "seeds": [7]}
 
 
@@ -982,4 +981,5 @@ def test_draft_assigns_a_target_with_no_sheet_and_fills_it_from_the_source(
     assert sorted(child.name for child in run.directory(CONJURE).iterdir()) == [
         "review",
         "sheets",
+        "sources",
     ]
