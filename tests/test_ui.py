@@ -441,7 +441,7 @@ def test_sigint_ends_streams_without_cancellation_output(
     )
     (jobs,) = made
     sleep = [sys.executable, "-c", "import time; time.sleep(30)"]
-    monkeypatch.setattr(jobs, "_command", lambda verb, flow, runs, ids: sleep)
+    monkeypatch.setattr(jobs, "_command", lambda runs, cells: sleep)
     broadcast: events.Broadcast = app.state.broadcast
     server = app_module.Server(uvicorn.Config(app), broadcast)
 
@@ -452,7 +452,13 @@ def test_sigint_ends_streams_without_cancellation_output(
 
     with TestClient(app, base_url=f"http://{HOST}:7717"):
         jobs.prepare(
-            "b", folder, [Step(None, "tag", (run.id,))], lambda line: [dict(line)]
+            "b",
+            folder,
+            [
+                Step(None, "tag", (run.id,)),
+                Step("summon-anime-wai", "sheet", (run.id,)),
+            ],
+            lambda line: [dict(line)],
         )
         assert jobs.running("prepare")
         opened = [

@@ -13,7 +13,7 @@ from tests.e2e.conftest import RENDER, Served
 
 FLOW = "summon-anime-wai"
 OTHER = "conjure-anime-wai"
-# Three CLI children start in turn, each importing the package.
+# One CLI child imports the package, then prepares the photograph.
 PREPARED = 60_000
 
 

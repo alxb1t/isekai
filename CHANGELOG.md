@@ -13,6 +13,8 @@ its new digest.
 - A new verb, `prepare <run-id>/<flow>…`, takes each photograph through `tag`, `caption`, then its cells' sheets
   before the next, opening the tagger once; a cell no longer assigned refuses its sheet rather than making its
   directory again (0116 D1, D2, D3, D4).
+- Prepare runs one `prepare` child over the job's cells, so a photograph's cells reach *sheet* while later
+  photographs wait; the bar keeps its totals from the plan (0116 D5).
 
 ## [0.75.2] - 2026-11-07
 

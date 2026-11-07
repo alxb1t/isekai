@@ -5,7 +5,7 @@ The verb, then the job that runs it, then the prose, per [design](design.md). Pa
 ## Progress
 
 - [x] 1 — The verb
-- [ ] 2 — The job
+- [x] 2 — The job
 - [ ] 3 — The prose
 
 ## 1 — The verb
@@ -34,14 +34,14 @@ The verb, then the job that runs it, then the prose, per [design](design.md). Pa
 
 ## 2 — The job
 
-- [ ] 2.1 In `isekai/interface/ui/jobs.py`, per [D5](design.md#d5): retype `Command`; replace `isekai_command` with
+- [x] 2.1 In `isekai/interface/ui/jobs.py`, per [D5](design.md#d5): retype `Command`; replace `isekai_command` with
   `prepare_command`; add `cells_of`; make `_run` and `_start` start one child and set `job.flow` and `job.stage` from each
   line. Rewrite the module docstring's Prepare line as `└ answers ─▶ prepare <cells>: each photograph tag ─▶ caption ─▶
   its sheets ─▶ done`, and `PREPARE`'s comment to say the one child takes each photograph through them in turn.
   Verify: `grep -n -F 'def prepare_command(runs: Path, cells: Sequence[str]) -> list[str]:' isekai/interface/ui/jobs.py` prints one line.
-- [ ] 2.2 In `isekai/interface/ui/jobs.py`, confirm `isekai_command` has no reader left.
+- [x] 2.2 In `isekai/interface/ui/jobs.py`, confirm `isekai_command` has no reader left.
   Verify: `git grep -n isekai_command -- isekai` prints nothing.
-- [ ] 2.3 In `tests/test_ui_jobs.py`, make `_Script` take one script: `__call__(runs, cells)` appends `list(cells)` to
+- [x] 2.3 In `tests/test_ui_jobs.py`, make `_Script` take one script: `__call__(runs, cells)` appends `list(cells)` to
   `asked` and returns `[sys.executable, "-c", script, *run ids]`, each cell's run id once, in order. Update each caller:
   - `_Script({"<verb>": X})` → `_Script(X)`, and `_Script({})` → `_Script("pass")`;
   - `test_prepare_totals_count_each_stages_cells_once`: one `_reports` of its tag, caption and sheet lines, in that order;
@@ -57,12 +57,12 @@ The verb, then the job that runs it, then the prose, per [design](design.md). Pa
     `["r1/<FLOW>", "r2/<FLOW>", "r2/<other>"]`.
 
   Verify: `uv run pytest tests/test_ui_jobs.py` exits 0.
-- [ ] 2.4 In `tests/test_ui.py`'s `test_sigint_ends_streams_without_cancellation_output`, the patched `_command`
+- [x] 2.4 In `tests/test_ui.py`'s `test_sigint_ends_streams_without_cancellation_output`, the patched `_command`
   `lambda verb, flow, runs, ids: sleep` → `lambda runs, cells: sleep`, and its steps `[Step(None, "tag", (run.id,))]`
   → `[Step(None, "tag", (run.id,)), Step("summon-anime-wai", "sheet", (run.id,))]`.
   The type change forces this edit; the Verify proves the test passes after it, and may pass before by a race.
   Verify: `uv run pytest tests/test_ui.py -k test_sigint_ends_streams_without_cancellation_output` exits 0.
-- [ ] 2.5 In `tests/e2e/test_prepare.py`, the comment above `PREPARED`: "Three CLI children start in turn, each importing
+- [x] 2.5 In `tests/e2e/test_prepare.py`, the comment above `PREPARED`: "Three CLI children start in turn, each importing
   the package." → "One CLI child imports the package, then prepares the photograph."
   Verify: `grep -n -F 'One CLI child imports the package' tests/e2e/test_prepare.py` prints one line.
 

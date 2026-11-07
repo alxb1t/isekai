@@ -37,8 +37,9 @@ from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
 from isekai.interface.ui.jobs import (  # noqa: E402
     Jobs,
     Step,
-    isekai_command,
+    cells_of,
     plan,
+    prepare_command,
     render_command,
     settle_s,
 )
@@ -72,17 +73,19 @@ def _collection(tmp_path: Path, *names: str) -> tuple[Path, list[Run]]:
 
 
 class _Script:
-    """A command that runs `scripts[verb]` as the child, recording each verb asked."""
+    """A command that runs `script` as the child, recording the cells each asked.
 
-    def __init__(self, scripts: dict[str, str]) -> None:
-        self.scripts = scripts
-        self.asked: list[str] = []
+    The child's arguments are each cell's run id once, in order.
+    """
 
-    def __call__(
-        self, verb: str, flow: str | None, runs: Path, ids: Sequence[str]
-    ) -> list[str]:
-        self.asked.append(verb)
-        return [sys.executable, "-c", self.scripts.get(verb, "pass"), *ids]
+    def __init__(self, script: str) -> None:
+        self.script = script
+        self.asked: list[list[str]] = []
+
+    def __call__(self, runs: Path, cells: Sequence[str]) -> list[str]:
+        self.asked.append(list(cells))
+        ids = dict.fromkeys(cell.rpartition("/")[0] for cell in cells)
+        return [sys.executable, "-c", self.script, *ids]
 
 
 def _as_is(line: dict[str, Any]) -> list[dict[str, Any]]:
@@ -154,7 +157,7 @@ def test_a_second_job_of_a_kind_is_refused_naming_the_one_that_runs(
     jobs = Jobs(
         events.Broadcast(),
         lambda: None,
-        command=_Script({"tag": SLEEP}),
+        command=_Script(SLEEP),
         volume=volume,
         render=_sleeping_render,
     )
@@ -179,7 +182,7 @@ def test_a_render_runs_beside_a_prepare_and_its_stop_leaves_the_prepare(
     jobs = Jobs(
         events.Broadcast(),
         lambda: None,
-        command=_Script({"tag": SLEEP}),
+        command=_Script(SLEEP),
         volume=volume,
         render=_sleeping_render,
     )
@@ -207,7 +210,7 @@ def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
     volume, _ = _order(record)
     broadcast = events.Broadcast()
     found = broadcast.subscribe()
-    prepared = _Script({"tag": _line("start") + "; import time; time.sleep(30)"})
+    prepared = _Script(_line("start") + "; import time; time.sleep(30)")
     jobs = Jobs(
         broadcast,
         lambda: None,
@@ -235,7 +238,7 @@ def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
         "volume down",
     ]
     assert (jobs.slot("prepare") or {})["state"] == "stopped"
-    assert prepared.asked == ["tag"]
+    assert prepared.asked == [[f"{run.id}/{FLOW}"]]
 
 
 @pytest.mark.spec("ui:prepare:the-log-names-each-job")
@@ -254,7 +257,7 @@ def test_each_line_a_job_writes_to_the_collections_log_names_its_job(
     jobs = Jobs(
         events.Broadcast(),
         lambda: None,
-        command=_Script({"tag": said.format("tag one\ntag two")}),
+        command=_Script(said.format("tag one\ntag two")),
         volume=volume,
         render=lambda limit, roots, session: [
             sys.executable,
@@ -295,7 +298,7 @@ def test_prepare_is_refused_with_the_readers_message_and_starts_nothing(
 
     monkeypatch.setattr(ollama, "OPENER", Closed())
     folder, (run,) = _collection(tmp_path, "ada.jpg")
-    script = _Script({})
+    script = _Script("pass")
     jobs = Jobs(events.Broadcast(), ollama.probe, command=script)
 
     with pytest.raises(Refusal) as refused:
@@ -315,16 +318,16 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
     before = snapshot(done.path)
     broadcast = events.Broadcast()
     found = broadcast.subscribe()
-    script = _Script({"tag": _line("start") + "; import time; time.sleep(30)"})
+    script = _Script(_line("start") + "; import time; time.sleep(30)")
     jobs = Jobs(broadcast, lambda: None, command=script, now=lambda: STARTED)
-    steps = [Step(None, verb, (run.id, done.id)) for verb in ("tag", "caption")]
+    steps = plan({FLOW: [run.id, done.id]}, {FLOW: True})
     jobs.prepare("b", folder, steps, lambda line: [dict(line)])
     _until(found, "cell")
 
     jobs.stop("prepare")
     jobs.wait("prepare", WAIT)
 
-    assert script.asked == ["tag"]
+    assert script.asked == [[f"{run.id}/{FLOW}", f"{done.id}/{FLOW}"]]
     assert jobs.slot("prepare") == {
         "kind": "prepare",
         "collection": "b",
@@ -337,6 +340,7 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
             "stages": [
                 {"stage": "tag", "done": 0, "of": 2},
                 {"stage": "caption", "done": 0, "of": 2},
+                {"stage": "sheet", "done": 0, "of": 2},
             ],
         },
     }
@@ -348,16 +352,17 @@ def test_a_stage_that_fails_before_it_reports_ends_the_job_naming_the_log(
     tmp_path: Path,
 ) -> None:
     folder, (run,) = _collection(tmp_path, "ada.jpg")
-    script = _Script({"tag": "import sys; sys.exit('no module named onnxruntime')"})
+    script = _Script("import sys; sys.exit('no module named onnxruntime')")
     jobs = Jobs(events.Broadcast(), lambda: None, command=script)
 
     jobs.prepare("b", folder, _steps(run), lambda line: [])
     jobs.wait("prepare", WAIT)
 
-    assert script.asked == ["tag"]
+    assert script.asked == [[f"{run.id}/{FLOW}"]]
     slot = jobs.slot("prepare")
     assert slot is not None
-    assert (slot["state"], slot["stage"]) == ("failed", "tag")
+    assert (slot["state"], slot["stage"]) == ("failed", None)
+    assert "prepare ended before reporting" in slot["message"]
     assert "b/log.txt" in slot["message"]
 
 
@@ -435,9 +440,9 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
         broadcast, lambda: {"jobs": {}}, collection="b", heartbeat=WAIT
     )
     next(stream)
-    jobs = Jobs(broadcast, lambda: None, command=_Script({"tag": copy}))
+    jobs = Jobs(broadcast, lambda: None, command=_Script(copy))
 
-    jobs.prepare("b", folder, [Step(None, "tag", (run.id,))], cell)
+    jobs.prepare("b", folder, _steps(run), cell)
 
     frames = []
     for frame in stream:
@@ -477,31 +482,25 @@ def _reports(*lines: tuple[str, str | None, str, str, str]) -> str:
 def test_prepare_totals_count_each_stages_cells_once(tmp_path: Path) -> None:
     folder, (run, refused) = _collection(tmp_path, "ada.jpg", "bea.jpg")
     other = OFFERED[1]
-    scripts = {
-        "tag": _reports(
-            (run.id, None, "tag", "done", "tagged"),
-            (refused.id, None, "tag", "refused", "assigned"),
-            (run.id, None, "tag", "done", "tagged"),
-        ),
-        "caption": _reports(
-            (run.id, None, "caption", "done", "tagged"),
-            (refused.id, None, "caption", "refused", "assigned"),
-        ),
-        "sheet": _reports(
-            # A tag line naming a flow is no photograph's, so it counts in none.
-            (run.id, FLOW, "tag", "done", "tagged"),
-            (refused.id, FLOW, "sheet", "refused", "sheet"),
-            ("unknown", FLOW, "sheet", "done", "sheet"),
-            (refused.id, other, "sheet", "done", "sheet"),
-            (refused.id, FLOW, "sheet", "done", "tagged"),
-            (run.id, FLOW, "sheet", "done", "sheet"),
-            (run.id, FLOW, "sheet", "done", "sheet"),
-            (run.id, other, "sheet", "done", "rendered"),
-        ),
-    }
+    script = _reports(
+        (run.id, None, "tag", "done", "tagged"),
+        (refused.id, None, "tag", "refused", "assigned"),
+        (run.id, None, "tag", "done", "tagged"),
+        (run.id, None, "caption", "done", "tagged"),
+        (refused.id, None, "caption", "refused", "assigned"),
+        # A tag line naming a flow is no photograph's, so it counts in none.
+        (run.id, FLOW, "tag", "done", "tagged"),
+        (refused.id, FLOW, "sheet", "refused", "sheet"),
+        ("unknown", FLOW, "sheet", "done", "sheet"),
+        (refused.id, other, "sheet", "done", "sheet"),
+        (refused.id, FLOW, "sheet", "done", "tagged"),
+        (run.id, FLOW, "sheet", "done", "sheet"),
+        (run.id, FLOW, "sheet", "done", "sheet"),
+        (run.id, other, "sheet", "done", "rendered"),
+    )
     broadcast = events.Broadcast()
     found = broadcast.subscribe()
-    jobs = Jobs(broadcast, lambda: None, command=_Script(scripts), now=lambda: STARTED)
+    jobs = Jobs(broadcast, lambda: None, command=_Script(script), now=lambda: STARTED)
     jobs.prepare(
         "b",
         folder,
@@ -536,20 +535,22 @@ def test_prepare_totals_count_each_stages_cells_once(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec("ui:prepare:a-photograph-is-described-once")
+@pytest.mark.spec("ui:prepare:each-photograph-in-turn")
 def test_a_photograph_is_described_once(tmp_path: Path) -> None:
     other = OFFERED[1]
+    tagged = {FLOW: True, other: True}
 
-    steps = plan({FLOW: ["r1"], other: ["r1"]}, {FLOW: True, other: True})
+    steps = plan({FLOW: ["r1"], other: ["r1"]}, tagged)
 
-    lines = [
-        isekai_command(step.verb, step.flow, tmp_path, step.runs) for step in steps
-    ]
     assert [step.verb for step in steps] == ["tag", "caption", "sheet", "sheet"]
-    for line in lines[:2]:
-        assert "--flow" not in line and line.count("r1") == 1
-        assert build_parser().parse_args(line[3:]).flows is None
-    assert [line[line.index("--flow") + 1] for line in lines[2:]] == [FLOW, other]
-    assert [step.runs for step in steps[2:]] == [("r1",), ("r1",)]
+    assert [step.runs for step in steps] == [("r1",)] * 4
+    line = build_parser().parse_args(prepare_command(tmp_path, cells_of(steps))[3:])
+    assert (line.verb, line.cells) == ("prepare", [f"r1/{FLOW}", f"r1/{other}"])
+    assert cells_of(plan({FLOW: ["r1", "r2"], other: ["r2"]}, tagged)) == [
+        f"r1/{FLOW}",
+        f"r2/{FLOW}",
+        f"r2/{other}",
+    ]
 
 
 @pytest.mark.spec("ui:events:a-reconnect-keeps-prepare-progress")
@@ -607,7 +608,7 @@ def test_reconnect_keeps_prepare_progress(
         "\nwhile not release.exists() and time.monotonic() < deadline:"
         "\n time.sleep(.01)"
     )
-    monkeypatch.setattr(jobs, "_command", _Script({"sheet": script}))
+    monkeypatch.setattr(jobs, "_command", _Script(script))
     monkeypatch.setattr(jobs, "_now", lambda: STARTED)
     subscribe = broadcast.subscribe
     updates = subscribe()
