@@ -159,13 +159,6 @@ SheetProducer = TypedDict(
 )
 
 
-class CopiedFrom(TypedDict):
-    """Another flow's approval: one a draft was drafted from, or one copied."""
-
-    flow: str
-    approval: int
-
-
 class DraftImage(TypedDict):
     """The rendered image a draft was written from: its flow, version and seed."""
 
@@ -180,7 +173,6 @@ ChainProducer = TypedDict(
         "implementation": str,
         "from": int,
         "source": str,
-        "drafted_from": NotRequired[CopiedFrom],
         "image": NotRequired[DraftImage],
     },
 )
@@ -191,7 +183,7 @@ class ApprovedProducer(ChainProducer):
 
     edited: bool
     approved_from: int
-    copied_from: NotRequired[CopiedFrom]
+    copied: NotRequired[bool]
 
 
 # --- the kinds ----------------------------------------------------------------

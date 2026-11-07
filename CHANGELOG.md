@@ -14,6 +14,8 @@ its new digest.
   approval or waiting draft no longer holds it, so what another flow took can't pin its source (0111 D2).
 - `refuse_out_of_step` and `generate --in-step-with` are deleted, and `render` runs no check before the pod for a
   source it renders first: a copy will carry its own seeds, so nothing is left to check (0111 D5).
+- `approve --from` copies the source's fields and seeds once, marked `copied`, and names no source; a draft from
+  another flow names none either, and Review shows its image only while that file exists (0111 D3, D4, D6).
 
 ## [0.73.1] - 2026-11-06
 

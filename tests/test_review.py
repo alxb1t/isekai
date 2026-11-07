@@ -995,18 +995,22 @@ def test_a_copy_carries_the_sources_fields_and_the_targets_schema_validates_them
     )
 
 
-@pytest.mark.spec("review:copy-from:the-origin-is-recorded")
-def test_a_copied_approval_names_its_flow_and_the_approval_it_came_from(
+@pytest.mark.spec("review:copy-from:the-copy-carries-the-seeds")
+def test_a_copy_carries_the_sources_seeds_and_names_no_source(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     source = _approved_source(run, schema, vocabulary)
+    _image(run, 1, 11)
+    _image(run, 1, 12)
 
     copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
 
     assert copied is not None
     body = read(copied, APPROVED_FILE)
     assert body["flow"] == CONTROL
-    assert body["producer"]["copied_from"] == {"flow": FLOW, "approval": 1}
+    assert body["producer"]["copied"] is True
+    assert "copied_from" not in body["producer"]
+    assert body["renders"] == {"count": 2, "seeds": [11, 12]}
     assert body["sheet"] == read(source, APPROVED_FILE)["sheet"]
 
 
@@ -1040,8 +1044,8 @@ def test_an_excluded_tag_refuses_a_copied_approval(
     )
 
 
-@pytest.mark.spec("run-directory:layout:a-named-source-is-recorded")
-def test_a_copy_records_its_source_and_leaves_the_sources_files_alone(
+@pytest.mark.spec("review:copy-from:the-copy-carries-the-seeds")
+def test_a_copy_leaves_the_sources_files_alone(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _approved_source(run, schema, vocabulary)
@@ -1050,7 +1054,7 @@ def test_a_copy_records_its_source_and_leaves_the_sources_files_alone(
     copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
 
     assert copied is not None
-    assert read(copied, APPROVED_FILE)["producer"]["copied_from"]["flow"] == FLOW
+    assert "copied_from" not in read(copied, APPROVED_FILE)["producer"]
     assert snapshot(run.path / FLOW) == before
 
 
@@ -1101,7 +1105,7 @@ def test_a_target_not_copied_from_the_sources_latest_is_copied_again(
     frozen = held.read_bytes()
     draft = review(run, FLOW, new_version=True)
     assert draft is not None
-    _edit(draft, hair_silhouette=["long hair"])
+    _edit(draft, hair_silhouette=["very long hair"])
     newer, _ = approve(run, FLOW, schema, vocabulary)
     assert newer is not None
 
@@ -1109,7 +1113,7 @@ def test_a_target_not_copied_from_the_sources_latest_is_copied_again(
 
     assert copied == run.path / CONTROL / "review" / "002.approved.json"
     body = read(copied, APPROVED_FILE)
-    assert body["producer"]["copied_from"] == {"flow": FLOW, "approval": 2}
+    assert body["producer"]["copied"] is True
     assert body["fields"] == read(newer, APPROVED_FILE)["fields"]
     assert held.read_bytes() == frozen
 
@@ -1164,8 +1168,8 @@ def test_a_drafted_draft_takes_the_shared_fields_and_keeps_its_own(
     assert own["hair_silhouette"] != source["fields"]["hair_silhouette"]
 
 
-@pytest.mark.spec("review:draft-from:the-draft-names-where-it-came-from")
-def test_a_drafted_draft_names_its_sheet_and_the_approval_it_came_from(
+@pytest.mark.spec("review:draft-from:the-draft-records-no-source-approval")
+def test_a_drafted_draft_records_its_sheet_and_no_source_approval(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _summon_approved(run, schema, vocabulary)
@@ -1180,9 +1184,21 @@ def test_a_drafted_draft_names_its_sheet_and_the_approval_it_came_from(
         "implementation": "review",
         "from": 1,
         "source": "sheets",
-        "drafted_from": {"flow": FLOW, "approval": 1},
     }
-    assert "renders" not in body
+    assert body["renders"] == {"count": 1, "seeds": []}
+
+
+@pytest.mark.spec("review:draft-from:a-draft-from-no-image-carries-the-seeds")
+def test_a_draft_from_no_image_carries_the_approvals_seeds(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    _image(run, 1, 11)
+
+    draft = draft_from(run, CONJURE, FLOW, None, conjure)
+
+    assert read(draft, DRAFT_FILE)["renders"] == {"count": 1, "seeds": [11]}
 
 
 @pytest.mark.spec("review:draft-from:a-draft-from-an-image-records-it")
@@ -1247,6 +1263,7 @@ def test_a_drafted_draft_approves_as_an_edited_approval_and_no_copy(
     producer = read(approved, APPROVED_FILE)["producer"]
     assert producer["edited"] is True
     assert "copied_from" not in producer
+    assert "copied" not in producer
     assert cancel(run, CONJURE) == Cancelled(draft, changed=True)
     assert draft.read_bytes() == held
 
@@ -1319,7 +1336,7 @@ def test_an_unedited_waiting_draft_is_replaced_at_its_number(
 
     assert draft == waiting == run.path / CONJURE / "review" / "001.draft.json"
     assert versions(run.path / CONJURE / "review") == [1]
-    assert read(draft, DRAFT_FILE)["producer"]["drafted_from"]["flow"] == FLOW
+    assert "drafted_from" not in read(draft, DRAFT_FILE)["producer"]
 
 
 @pytest.mark.spec("review:draft-from:an-edited-waiting-draft-is-refused")

@@ -7,7 +7,7 @@ the repository root.
 
 - [x] 1 — The cancel
 - [x] 2 — The checks
-- [ ] 3 — The copy and the draft
+- [x] 3 — The copy and the draft
 - [ ] 4 — The delete
 - [ ] 5 — The page
 - [ ] 6 — The record
@@ -64,7 +64,7 @@ the repository root.
 - [x] 3.5 In `isekai/pipeline/review.py`, make `cancel` test `is_copy(body["producer"])` and `came_from` test
   `is_copy(producer)` where each tests `copied_from`, per [D3](design.md#d3).
   Verify: `grep -n 'if is_copy(body\["producer"\]):' isekai/pipeline/review.py` prints one line.
-- [ ] 3.6 In `isekai/pipeline/review.py`, edit `draft_from`, `_write_draft`, `cancel`'s draft call and
+- [x] 3.6 In `isekai/pipeline/review.py`, edit `draft_from`, `_write_draft`, `cancel`'s draft call and
   `_drafting_wrote`, and delete `drafted_from()`, per [D4](design.md#d4). The one `drafted_from` left is the key
   [the copy](design.md#the-copy)'s `_NOT_COPIED` strips, per [D3](design.md#d3).
   Verify: `grep -n 'drafted_from' isekai/pipeline/review.py` prints one line, `_NOT_COPIED = frozenset({"copied_from", "drafted_from", "image"})`.

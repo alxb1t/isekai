@@ -103,6 +103,7 @@ from isekai.foundation.run import (
     approved_versions,
     assign,
     find_run,
+    group_of,
     is_seed,
     is_version,
     latest_artifact,
@@ -131,7 +132,6 @@ from isekai.pipeline.review import (
     current_draft,
     discard,
     draft_image,
-    drafted_from,
     review,
     save_draft,
     token_budget,
@@ -1322,23 +1322,26 @@ def _revision(
 def _drafted(
     one: Held, draft: Path, body: Mapping[str, Any], remedy: str
 ) -> dict[str, Any] | None:
-    """Describe the other flow's approval a draft was drafted from, and its sheet.
+    """Describe the sheet a draft from another flow's image was drafted on.
 
-    `image`, its seed a decimal string, is the one the draft records, if any.
-    `remedy` repairs the draft or approval; a damaged sheet names itself, since
-    no command rewrites a sheet one records: `review` copies the same damage.
-    e.g. from summon 1, on sheet 1 -> {"flow": "summon-…", "approval": 1, "fields": …}
+    None unless the draft records an image of another flow. `image`, its seed a
+    decimal string, is that image while its file exists. `remedy` repairs the
+    draft or approval; a damaged sheet names itself, since no command rewrites a
+    sheet one records: `review` copies the same damage.
+    e.g. from summon 1 seed 7, on sheet 1 -> {"fields": …, "image": {…, "seed": "7"}}
     """
-    origin = drafted_from(body)
-    if origin is None:
+    image = draft_image(body)
+    if image is None or image["flow"] == one.flow.id:
         return None
     require(draft, body, "sheet", int, remedy)
     sheet = sheet_of(one.run, one.flow.id, body["sheet"])
     restore = f"restore {sheet} by hand, then reload the page"
     held = read(sheet, SHEET_FILE, remedy=restore)
-    drafted: dict[str, Any] = {**origin, "fields": _fields(sheet, held, restore)}
-    if (image := draft_image(body)) is not None:
-        drafted["image"] = {**image, "seed": str(image["seed"])}
+    drafted: dict[str, Any] = {"fields": _fields(sheet, held, restore)}
+    group = group_of(one.run, image["flow"], image["version"])
+    seed = str(image["seed"])
+    if group.is_dir() and any(path.stem == seed for path in group.iterdir()):
+        drafted["image"] = {**image, "seed": seed}
     return drafted
 
 

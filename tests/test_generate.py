@@ -1991,6 +1991,7 @@ def _assert_nothing_rented(client: FakeComfyClient, run: Run, flow: str) -> None
     assert not (run.path / flow / OUTPUTS).exists()
 
 
+@pytest.mark.spec("run-directory:layout:a-named-source-is-recorded")
 @pytest.mark.spec("image-generation:seeds-from:one-render-per-source-seed")
 def test_a_flow_renders_the_seeds_of_its_sources_latest_group(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary

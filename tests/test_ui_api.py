@@ -2182,7 +2182,7 @@ def test_a_draft_from_onto_an_edited_waiting_draft_answers_it_and_writes_nothing
 
 
 @pytest.mark.spec("ui:conjure-from:review-reads-the-draft-against-the-sheet")
-def test_review_names_a_drafted_drafts_source_and_carries_its_sheets_fields(
+def test_review_reads_a_drafted_draft_against_its_sheet_and_its_image(
     wired: Wiring,
     made: Run,
     tmp_path: Path,
@@ -2200,12 +2200,13 @@ def test_review_names_a_drafted_drafts_source_and_carries_its_sheets_fields(
     target = made.path / CONJURE / "sheets" / "001.json"
     own = read(target, SHEET_FILE)["fields"]
     assert body["drafted"] == {
-        "flow": FLOW,
-        "approval": 1,
         "fields": own,
         "image": {"flow": FLOW, "version": 1, "seed": "7"},
     }
     assert body["fields"]["expression"] == [] != own["expression"]
+
+    image_of(made, load_flow(FLOW), 1, 7).unlink()
+    assert client.get(route).json()["drafted"] == {"fields": own}
 
     _damage(target, _drop("fields"))
     refused = client.get(route)
@@ -2216,7 +2217,7 @@ def test_review_names_a_drafted_drafts_source_and_carries_its_sheets_fields(
 
 
 @pytest.mark.spec("ui:conjure-from:an-approved-draft-keeps-its-marks")
-def test_review_names_an_approved_drafted_drafts_source_and_its_sheets_fields(
+def test_review_keeps_an_approved_drafted_drafts_marks(
     wired: Wiring,
     made: Run,
     tmp_path: Path,
@@ -2234,8 +2235,6 @@ def test_review_names_an_approved_drafted_drafts_source_and_its_sheets_fields(
     own = read(target, SHEET_FILE)["fields"]
     assert body["readonly"] is True
     assert body["drafted"] == {
-        "flow": FLOW,
-        "approval": 1,
         "fields": own,
         "image": {"flow": FLOW, "version": 1, "seed": "7"},
     }
@@ -2307,7 +2306,7 @@ def test_a_draft_into_a_target_whose_waiting_draft_is_its_sheet_replaces_it(
 
     assert answered.json() == _drafted(made)
     assert versions(made.directory(CONJURE, REVIEW)) == [1]
-    assert client.get(route).json()["drafted"]["flow"] == FLOW
+    assert client.get(route).json()["drafted"]["image"]["flow"] == FLOW
 
 
 @pytest.mark.spec("ui:draft-from:a-selection-drafts-into-the-flow-chosen")
@@ -2359,7 +2358,7 @@ def test_a_selection_from_two_runs_drafts_each_into_the_flow_chosen(
     assert answered.status_code == 200
     for run, seed in ((made, 7), (other, 8)):
         draft = read(run.directory(CONJURE, REVIEW) / "001.draft.json", DRAFT_FILE)
-        assert draft["producer"]["drafted_from"] == {"flow": FLOW, "approval": 1}
+        assert "drafted_from" not in draft["producer"]
         assert draft["renders"] == {"count": 1, "seeds": [seed]}
 
 

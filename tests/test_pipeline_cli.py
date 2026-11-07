@@ -818,10 +818,7 @@ def test_draft_writes_another_flow_from_the_images_approval_and_seed(
         APPROVED_FILE,
     )
     assert draft["fields"]["hair_silhouette"] == first["fields"]["hair_silhouette"]
-    assert draft["producer"]["drafted_from"] == {
-        "flow": "summon-anime-wai",
-        "approval": 1,
-    }
+    assert "drafted_from" not in draft["producer"]
     assert draft["producer"]["image"] == {
         "flow": "summon-anime-wai",
         "version": 1,
