@@ -45,6 +45,21 @@ prepare r1/summon r2/summon r2/conjure
 - **WHEN** `prepare` tags two photographs
 - **THEN** the local tagger is opened once
 
+#### Scenario: a photograph no cell's flow tags is not tagged
+- **Key:** `cli:prepare:no-tagger-no-tag-step`
+- **Layers:** unit
+- **WHEN** `prepare` runs over a photograph whose named cells' flows all declare no tagger, and another photograph with
+  one that does
+- **THEN** the first photograph has no `tag` line and no tag list, and its caption and sheet run
+- **AND** the second photograph is tagged, and the local tagger is opened once
+
+#### Scenario: a caption refusal leaves the photograph's sheets to run
+- **Key:** `cli:prepare:a-caption-refusal-leaves-the-sheets`
+- **Layers:** unit
+- **WHEN** the reader refuses a photograph's caption
+- **THEN** the refusal is reported at the end and the invocation exits 1
+- **AND** the photograph's sheets still run, and so does the next photograph's caption
+
 #### Scenario: a cell no longer assigned refuses its sheet
 - **Key:** `cli:prepare:an-unassigned-cell-refuses`
 - **Layers:** unit

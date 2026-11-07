@@ -39,7 +39,7 @@ from isekai.foundation.artifacts import (
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Schema, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import PHOTO, Run, assign, open_run
+from isekai.foundation.run import PHOTO, Run, StageFailure, assign, open_run
 from isekai.interface import wiring
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.ui import library
@@ -749,6 +749,87 @@ def test_prepare_refuses_a_cell_no_longer_assigned(tmp_path: Path) -> None:
     assert other[0]["message"] == refused.removeprefix("refused: ")
     assert f"`python -m isekai assign --flow other-v1 --runs {wired.runs_root}" in (
         refused
+    )
+
+
+def _untagged_flows(tmp_path: Path) -> Path:
+    """Return `_two_flows`' root with `other-v1` declaring it needs no tagger."""
+    root = _two_flows(tmp_path)
+    manifest = root / "other-v1" / MANIFEST_NAME
+    document = json.loads(manifest.read_text())
+    document["tagger"] = False
+    manifest.write_text(json.dumps(document, indent=2) + "\n")
+    return root
+
+
+@pytest.mark.spec("cli:prepare:no-tagger-no-tag-step")
+def test_prepare_leaves_out_tag_for_a_photograph_no_flow_tags(tmp_path: Path) -> None:
+    opened: list[str] = []
+    resolve = fake_wd14()
+
+    def counting() -> LocalTagger:
+        opened.append("tagger")
+        return resolve()
+
+    wired = replace(
+        _wiring(tmp_path, flows_dir=_untagged_flows(tmp_path)), tagger=counting
+    )
+    untagged, tagged = _photographs(tmp_path, wired.runs_root, (1200, 900), (900, 1200))
+    assign(untagged, "other-v1")
+    assign(tagged, "summon-anime-wai")
+
+    status = _prepared(
+        wired, f"{untagged.id}/other-v1", f"{tagged.id}/summon-anime-wai"
+    )
+
+    assert status == 0
+    stages = [
+        (line["run"], line["stage"])
+        for line in _lines(wired)
+        if line["state"] == "done"
+    ]
+    assert stages == [
+        (untagged.id, "caption"),
+        (untagged.id, "sheet"),
+        (tagged.id, "tag"),
+        (tagged.id, "caption"),
+        (tagged.id, "sheet"),
+    ]
+    assert not (untagged.path / PHOTO / "wd14").exists()
+    assert (tagged.path / PHOTO / "wd14" / "001.json").is_file()
+    assert opened == ["tagger"]
+
+
+@pytest.mark.spec("cli:prepare:a-caption-refusal-leaves-the-sheets")
+def test_prepare_sheets_a_photograph_whose_caption_refuses(tmp_path: Path) -> None:
+    refusing = FakeReader(failure=StageFailure("permanent", "the reader declined"))
+    wired = replace(
+        _wiring(tmp_path, flows_dir=_untagged_flows(tmp_path)),
+        reader=Always(refusing),
+    )
+    first, second = _photographs(tmp_path, wired.runs_root, (1200, 900), (900, 1200))
+    for run in (first, second):
+        assign(run, "other-v1")
+
+    status = _prepared(wired, f"{first.id}/other-v1", f"{second.id}/other-v1")
+
+    assert status == 1
+    assert len(refusing.calls) == 2
+    sheets = [
+        (line["run"], line["state"])
+        for line in _lines(wired)
+        if line["stage"] == "sheet"
+    ]
+    assert sheets == [
+        (first.id, "start"),
+        (first.id, "done"),
+        (second.id, "start"),
+        (second.id, "done"),
+    ]
+    assert len(_refused(wired)) == 2
+    assert all(
+        (run.path / "other-v1" / "sheets" / "001.json").is_file()
+        for run in (first, second)
     )
 
 

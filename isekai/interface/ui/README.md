@@ -6,7 +6,7 @@ with them.
 
 ```
 Home ─ New collection ─▶ import sheet ─▶ <collection>/sources/
-hub ─ tick ─▶ assign ─▶ Prepare ─▶ tag → caption, once ─▶ sheet, per flow ─▶ /events ─▶ the cells
+hub ─ tick ─▶ assign ─▶ Prepare ─▶ prepare: per photograph tag → caption → its sheets ─▶ /events ─▶ the cells
 Review ─▶ /c/<collection>/review ─▶ the head ─▶ Review ─▶ approve
 hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶ volume down ─▶ /events ─▶ the drawer
 render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─▶ the render drawer
