@@ -598,6 +598,37 @@ def cancel(run: Run, flow: str) -> Cancelled:
     return Cancelled(path, changed=True)
 
 
+def withdraw(run: Run, flow: str, version: int) -> list[Path]:
+    """Cancel approval `version` of `flow` with its last render; return what went.
+
+    Only the newest approval goes, when its outputs group is gone and no draft
+    waits above it. Its prompt and failure records go first, then `cancel` takes
+    it back to its draft, or deletes a copy. A damaged approval refuses.
+    e.g. (run, f, 2) -> [f/prompts/002.json, f/review/002.approved.json]
+    """
+    directory = run.directory(flow, REVIEW)
+    approved = approved_versions(directory)
+    if (
+        not approved
+        or approved[-1] != version
+        or group_of(run, flow, version).exists()
+        or current_draft(directory) is not None
+    ):
+        return []
+    again = f"`{stage_command(run, 'approve', flow, options=CANCEL)}`"
+    _approval(run, flow, version, f"run {again}")
+    prompts = run.directory(flow, PROMPTS)
+    made = [
+        prompts / artifact_name(version),
+        *(attempt.path for attempt in attempts(prompts, version)),
+    ]
+    gone = [path.absolute() for path in made if path.exists()]
+    for path in gone:
+        path.unlink()
+    cancel(run, flow)
+    return [*gone, approval_of(run, flow, version).absolute()]
+
+
 def _at_draft(directory: Path) -> Path | None:
     """Return the draft a flow holding no approval is at, or None."""
     return None if approved_versions(directory) else current_draft(directory)

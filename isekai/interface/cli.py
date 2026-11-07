@@ -103,6 +103,7 @@ from isekai.pipeline.review import (
     approve,
     discard,
     review,
+    withdraw,
 )
 from isekai.pipeline.review import cancel as cancel_approval
 from isekai.pipeline.sheet import sheet
@@ -592,23 +593,34 @@ def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
 def _discard(image: Path, wired: Wiring) -> int:
     """Delete one render and its thumbnails, printing each path deleted.
 
-    The library is imported here for `_ui`'s reason: it is off `python -m isekai`'s
-    import graph.
+    The thumbnails go while the image still names them. A render that was its
+    approval's last, the newest, takes that approval back to its draft with
+    `withdraw`; the run's files print before the thumbnails. The library is
+    imported here for `_ui`'s reason: it is off `python -m isekai`'s import graph.
     """
     try:
-        run = rendered_at(image)[0]
-        deleted = discard_render(image)
+        run, flow, version, _ = rendered_at(image)
     except Refusal as unrendered:
         print(f"refused: {image}: {unrendered}", file=wired.err)
         return 1
     from isekai.interface.ui import drop_thumbnails
 
+    thumbnails = drop_thumbnails(run, image)
+    deleted = discard_render(image)
+    refused: Refusal | None = None
+    try:
+        deleted += withdraw(run, flow, version)
+    except Refusal as refusal:
+        refused = refusal
     for path in deleted:
         print(f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out)
-    for path in drop_thumbnails(run, image):
+    for path in thumbnails:
         print(
             f"discard deleted {path.relative_to(run.path.parents[2])}", file=wired.out
         )
+    if refused is not None:
+        print(f"refused: {image}: {refused}", file=wired.err)
+        return 1
     return 0
 
 

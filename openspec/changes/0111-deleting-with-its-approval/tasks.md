@@ -8,7 +8,7 @@ the repository root.
 - [x] 1 — The cancel
 - [x] 2 — The checks
 - [x] 3 — The copy and the draft
-- [ ] 4 — The delete
+- [x] 4 — The delete
 - [ ] 5 — The page
 - [ ] 6 — The record
 
@@ -86,30 +86,30 @@ the repository root.
 
 ## 4 — The delete
 
-- [ ] 4.1 **HALT CHECK** — [D7](design.md#d7) replaces the one glob `0106·R1` names.
+- [x] 4.1 **HALT CHECK** — [D7](design.md#d7) replaces the one glob `0106·R1` names.
   Verify: `grep -n 'dropped = sorted(cached.glob(f"{image.stem}.\*.jpg"))' isekai/interface/ui/library.py` prints one line.
-- [ ] 4.2 In `isekai/interface/ui/library.py`, make `drop_thumbnails` delete the image's own thumbnail alone, its
+- [x] 4.2 In `isekai/interface/ui/library.py`, make `drop_thumbnails` delete the image's own thumbnail alone, its
   docstring saying the image must still exist, the digest read after the collection check, per [D7](design.md#d7).
   Verify: `grep -n 'f"{image.stem}.{_digest(image)}.jpg"' isekai/interface/ui/library.py` prints one line.
-- [ ] 4.3 In `isekai/pipeline/review.py`, add `withdraw` after `cancel`, per [D1](design.md#d1).
+- [x] 4.3 In `isekai/pipeline/review.py`, add `withdraw` after `cancel`, per [D1](design.md#d1).
   Verify: `grep -n 'def withdraw(run: Run, flow: str, version: int) -> list\[Path\]:' isekai/pipeline/review.py` prints one line.
-- [ ] 4.4 In `isekai/interface/cli.py`, make `_discard` take `(run, flow, version, _)` from `rendered_at`, drop the
+- [x] 4.4 In `isekai/interface/cli.py`, make `_discard` take `(run, flow, version, _)` from `rendered_at`, drop the
   thumbnails, discard, then `withdraw`, printing the run's files before the thumbnails, a `withdraw` refusal printed
   as `refused: {image}: {refusal}` with exit 1, per [D1](design.md#d1) and [D7](design.md#d7); its docstring says so.
   Verify: `grep -n 'withdraw(run, flow, version)' isekai/interface/cli.py` prints one line.
-- [ ] 4.5 In `isekai/interface/ui/app.py`, make `delete_render` drop the thumbnails, discard, then `withdraw` under
+- [x] 4.5 In `isekai/interface/ui/app.py`, make `delete_render` drop the thumbnails, discard, then `withdraw` under
   `_DRAFT_UPDATE`, per [D1](design.md#d1) and [D7](design.md#d7); its docstring says so.
   Verify: `grep -n 'withdraw(run, flow, _version(version))' isekai/interface/ui/app.py` prints one line.
-- [ ] 4.6 In `tests/test_ui_library.py`, rewrite `test_dropping_a_renders_thumbnails_leaves_the_others` per
+- [x] 4.6 In `tests/test_ui_library.py`, rewrite `test_dropping_a_renders_thumbnails_leaves_the_others` per
   [the server's tests](design.md#the-servers-tests).
   Verify: `uv run pytest tests/test_ui_library.py -k dropping_a_renders_thumbnails` exits 0.
-- [ ] 4.7 In `tests/test_pipeline_cli.py`, edit `test_discard_deletes_the_render_and_its_thumbnail` and add
+- [x] 4.7 In `tests/test_pipeline_cli.py`, edit `test_discard_deletes_the_render_and_its_thumbnail` and add
   `test_discarding_the_last_render_takes_its_approval_with_it`, per [the server's tests](design.md#the-servers-tests).
   Verify: `uv run pytest tests/test_pipeline_cli.py -k "discard_deletes_the_render or last_render_takes_its_approval"` exits 0.
-- [ ] 4.8 In `tests/test_review.py`, add the three `withdraw` rows of
+- [x] 4.8 In `tests/test_review.py`, add the three `withdraw` rows of
   [the pipeline's tests](design.md#the-pipelines-tests).
   Verify: `uv run pytest tests/test_review.py -k "takes_it_back_to_its_draft or older_approvals_last_render or waiting_draft_keeps_the_approval"` exits 0.
-- [ ] 4.9 In `tests/test_ui_api.py`, add the `v2/22` step to `test_deleting_a_render_deletes_its_files_and_thumbnail`,
+- [x] 4.9 In `tests/test_ui_api.py`, add the `v2/22` step to `test_deleting_a_render_deletes_its_files_and_thumbnail`,
   per [the server's tests](design.md#the-servers-tests).
   Verify: `grep -n "# The newest approval's only render goes, and its approval with it." tests/test_ui_api.py` prints one line.
 

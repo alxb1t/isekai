@@ -34,6 +34,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import PHOTO, Run, open_run
 from isekai.interface import wiring
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
+from isekai.interface.ui import library
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
 from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.generate import prompt_artifact
@@ -837,9 +838,11 @@ def test_discard_deletes_the_render_and_its_thumbnail(
     photo.write_bytes(jpeg_bytes(640, 480))
     run = open_run(photo, lib / "b" / "runs")
     image = rendered_image(run, 1, 7)
+    own = f"7.{library._digest(image)}.jpg"
     cached = lib / ".cache" / run.digest / "summon-anime-wai" / "outputs" / "001"
     cached.mkdir(parents=True)
-    (cached / "7.abc.jpg").write_bytes(b"jpg")
+    (cached / own).write_bytes(b"jpg")
+    (cached / "7.other.jpg").write_bytes(b"jpg")
     monkeypatch.chdir(tmp_path)
     wired = _wiring(tmp_path)
     argv = ["discard", str(image.relative_to(tmp_path))]
@@ -847,15 +850,45 @@ def test_discard_deletes_the_render_and_its_thumbnail(
     assert dispatch(build_parser().parse_args(argv), wired) == 0
 
     assert not image.exists() and not (image.parent / "7.render.json").exists()
-    assert not (cached / "7.abc.jpg").exists()
+    assert not (cached / own).exists()
+    # Another collection's thumbnail of the same seed stays.
+    assert (cached / "7.other.jpg").is_file()
     group = f"{run.id}/summon-anime-wai/outputs/001"
     assert isinstance(wired.out, io.StringIO)
     assert wired.out.getvalue().splitlines() == [
         f"discard deleted {group}/7.png",
         f"discard deleted {group}/7.render.json",
         f"discard deleted {group}",
-        f"discard deleted .cache/{run.digest}/summon-anime-wai/outputs/001/7.abc.jpg",
+        f"discard deleted .cache/{run.digest}/summon-anime-wai/outputs/001/{own}",
     ]
+
+
+@pytest.mark.spec("cli:discard:the-last-render-takes-its-approval")
+def test_discarding_the_last_render_takes_its_approval_with_it(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    run = open_run(photo, tmp_path / "runs")
+    sheet(run, schema, vocabulary)
+    review(run, "summon-anime-wai")
+    approve(run, "summon-anime-wai", schema, vocabulary)
+    prompt_artifact(run, load_flow("summon-anime-wai"), schema)
+    image = rendered_image(run, 1, 7)
+    wired = _wiring(tmp_path)
+
+    assert dispatch(build_parser().parse_args(["discard", str(image)]), wired) == 0
+
+    flow = f"{run.id}/summon-anime-wai"
+    assert isinstance(wired.out, io.StringIO)
+    assert wired.out.getvalue().splitlines() == [
+        f"discard deleted {flow}/outputs/001/7.png",
+        f"discard deleted {flow}/outputs/001/7.render.json",
+        f"discard deleted {flow}/outputs/001",
+        f"discard deleted {flow}/prompts/001.json",
+        f"discard deleted {flow}/review/001.approved.json",
+    ]
+    assert (run.directory("summon-anime-wai", "review") / "001.draft.json").is_file()
 
 
 @pytest.mark.spec("cli:discard:a-path-naming-no-render-is-refused")

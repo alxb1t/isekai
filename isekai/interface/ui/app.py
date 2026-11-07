@@ -18,8 +18,10 @@ filename, when approval is legal, and what a token costs.
 `discard()` on theirs, the run's own `open_run()` and `assign()` on a tick,
 and stage ②'s `sheet()` when a draft from another flow fills a target with
 no sheet -- run in this process by `interface/drafting.py`'s `draft_across`,
-the sequence `draft --flow` runs too (D4); a render leaves through the render
-stage's `discard_render()` and its thumbnails through the library's.
+the sequence `draft --flow` runs too (D4); a render's thumbnails leave through
+the library's `drop_thumbnails()`, the render through the render stage's
+`discard_render()`, and the newest approval its last render leaves through
+`withdraw()`.
 Nothing here builds an artifact body or an artifact filename, and
 `tests/test_ui.py`'s grep is what keeps it so.
 
@@ -136,6 +138,7 @@ from isekai.pipeline.review import (
     save_draft,
     token_budget,
     waiting_edit,
+    withdraw,
 )
 from isekai.pipeline.review import state as review_state
 from isekai.shared.field_map import FieldMap
@@ -1143,7 +1146,11 @@ def create_app(
     def delete_render(
         collection: str, digest: str, flow: str, version: str, seed: int
     ) -> dict[str, Any]:
-        """Delete the render and its thumbnails, as `discard` does, while none runs."""
+        """Delete the render and its thumbnails, as `discard` does, while none runs.
+
+        The thumbnails go while the image still names them; then `withdraw` takes
+        the newest approval back to its draft once its last render is gone.
+        """
         run, image, _ = rendered(collection, digest, flow, version, seed)
         with _DRAFT_UPDATE:
             rendering = _rendering(collection)
@@ -1151,8 +1158,9 @@ def create_app(
                 raise Refusal(
                     f"{rendering} Wait for it to end, then delete the render again."
                 )
-            discard_render(image)
             library.drop_thumbnails(run, image)
+            discard_render(image)
+            withdraw(run, flow, _version(version))
         return {"deleted": True}
 
     @app.get("/api/c/{collection}/sources/{name}")

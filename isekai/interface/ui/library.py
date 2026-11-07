@@ -474,11 +474,12 @@ def thumbnail(library: Path, run: Run, image: Path) -> Path:
 
 
 def drop_thumbnails(run: Run, image: Path) -> list[Path]:
-    """Delete every thumbnail of `image`'s place in its library's cache; return them.
+    """Delete `image`'s own thumbnail in its library's cache; return it, if there.
 
     The library is read from the run's own path, so the verb and the route find one
-    cache; a run outside a collection has none. A glob on the seed finds each
-    thumbnail once the image is gone.
+    cache; a run outside a collection has none. The thumbnail is named by the
+    image's digest, so `image` must still exist: another collection's thumbnail of
+    the same seed stays.
     e.g. `<lib>/b/runs/<id>/…/001/42.png` -> [`<lib>/.cache/<digest>/…/001/42.<d>.jpg`]
     """
     folder = run.path.absolute()
@@ -486,10 +487,11 @@ def drop_thumbnails(run: Run, image: Path) -> list[Path]:
         return []
     within = image.absolute().parent.relative_to(folder)
     cached = folder.parents[2] / CACHE / run.digest / within
-    dropped = sorted(cached.glob(f"{image.stem}.*.jpg"))
-    for path in dropped:
-        path.unlink()
-    return dropped
+    own = cached / f"{image.stem}.{_digest(image)}.jpg"
+    if not own.is_file():
+        return []
+    own.unlink()
+    return [own]
 
 
 def _shrunk(image: Path) -> bytes:

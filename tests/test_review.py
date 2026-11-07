@@ -53,6 +53,7 @@ from isekai.pipeline.review import (
     save_draft,
     state,
     token_budget,
+    withdraw,
 )
 from isekai.shared.field_map import Group
 from isekai.shared.vocabulary import Vocabulary
@@ -1955,3 +1956,63 @@ def test_a_cancel_interrupted_before_its_delete_finishes_when_run_again(
 
     assert sorted(path.name for path in beside.parent.iterdir()) == [beside.name]
     assert beside.read_bytes() == held
+
+
+# --- withdraw: an approval leaves with its last render -------------------------
+
+
+@pytest.mark.spec(
+    "image-generation:discard:the-newest-approval-goes-with-its-last-render"
+)
+@pytest.mark.spec(
+    "run-directory:idempotence:the-newest-approval-goes-with-its-last-render"
+)
+def test_the_newest_approvals_last_render_takes_it_back_to_its_draft(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    approved = _approved_source(run, schema, vocabulary)
+    copy, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    assert copy is not None
+    prompt = prompt_artifact(run, load_flow(FLOW), schema)
+    failure = record_failure(
+        run.directory(FLOW, "prompts"),
+        1,
+        "permanent",
+        {"stage": "assemble", "detail": "x"},
+    )
+
+    assert withdraw(run, FLOW, 1) == [prompt, failure, approved]
+
+    assert not prompt.exists() and not failure.exists() and not approved.exists()
+    assert (run.directory(FLOW, "review") / "001.draft.json").is_file()
+    assert state(run.directory(FLOW, "review")) == "draft"
+    # A copy has no draft to go back to, so it is deleted.
+    assert withdraw(run, CONTROL, 1) == [copy]
+    assert not copy.exists()
+
+
+@pytest.mark.spec("image-generation:discard:an-older-approval-stays")
+def test_an_older_approvals_last_render_leaves_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    _approved(run, schema, vocabulary, hair_silhouette=["very long hair"])
+    before = snapshot(run.path)
+
+    assert withdraw(run, FLOW, 1) == []
+
+    assert snapshot(run.path) == before
+
+
+@pytest.mark.spec("image-generation:discard:a-waiting-draft-keeps-the-approval")
+def test_a_waiting_draft_keeps_the_approval_its_last_render_left(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    prompt_artifact(run, load_flow(FLOW), schema)
+    assert review(run, FLOW, new_version=True) is not None
+    before = snapshot(run.path)
+
+    assert withdraw(run, FLOW, 1) == []
+
+    assert snapshot(run.path) == before

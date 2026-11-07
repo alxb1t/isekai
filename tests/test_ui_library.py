@@ -505,15 +505,23 @@ def test_dropping_a_renders_thumbnails_leaves_the_others(tmp_path: Path) -> None
     lib = tmp_path / "lib"
     run = _run(_collection(lib, "b", "ada.jpg"), "ada.jpg")
     group = run.path / SUMMON / OUTPUTS / "001"
+    group.mkdir(parents=True)
+    image = group / "11.png"
+    image.write_bytes(b"png")
+    own = f"11.{library._digest(image)}.jpg"
     cached = lib / library.CACHE / run.digest / SUMMON / OUTPUTS / "001"
     cached.mkdir(parents=True)
-    for name in ("11.aaa.jpg", "11.bbb.jpg", "22.ccc.jpg"):
+    for name in (own, "11.bbb.jpg", "22.ccc.jpg"):
         (cached / name).write_bytes(b"jpg")
 
-    dropped = library.drop_thumbnails(run, group / "11.png")
+    dropped = library.drop_thumbnails(run, image)
 
-    assert dropped == [cached / "11.aaa.jpg", cached / "11.bbb.jpg"]
-    assert sorted(path.name for path in cached.iterdir()) == ["22.ccc.jpg"]
+    assert dropped == [cached / own]
+    # Another collection's thumbnail of the same seed stays.
+    assert sorted(path.name for path in cached.iterdir()) == [
+        "11.bbb.jpg",
+        "22.ccc.jpg",
+    ]
     # A run outside a collection has no library, so no cache.
     loose = open_run(lib / "b" / "sources" / "ada.jpg", tmp_path / ".data" / "runs")
     image = loose.path / SUMMON / OUTPUTS / "001" / "11.png"

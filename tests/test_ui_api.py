@@ -1711,6 +1711,13 @@ def test_deleting_a_render_deletes_its_files_and_thumbnail(
         == "11.png: no render is here, its record and its image are gone"
     )
 
+    # The newest approval's only render goes, and its approval with it.
+    assert client.delete(f"{at}/v2/22").status_code == 200
+    reviewed = made.directory(FLOW, "review")
+    assert (reviewed / "002.draft.json").is_file()
+    assert not (reviewed / "002.approved.json").exists()
+    assert (reviewed / "001.approved.json").is_file()
+
 
 @pytest.mark.spec("ui:delete-render:refused-while-a-render-runs")
 def test_deleting_a_render_is_refused_while_a_render_runs(
