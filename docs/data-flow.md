@@ -102,9 +102,9 @@ sequence `draft --flow` runs too. Every other stage it runs only as the CLI's
 own verb, a child of the server
 ([D4](decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children)).
 
-**Prepare is a job of those children.** It asks Ollama first, then runs `tag` and
-`caption` once over the photographs of every assigned cell with no sheet, naming no
-flow, and `sheet` per flow over its cells, each with
+**Prepare is a job of those children.** It asks Ollama first, then runs `prepare`
+once over every assigned cell with no sheet,
+each photograph tagged, captioned and sheeted before the next, with
 `--progress json`: one JSON line per item's start and end on stdout, its prose
 appended to the collection's `log.txt` as `[prepare] …`. One Prepare runs at a time,
 beside at most one render; Stop sends its child SIGINT, and the server stopping
@@ -113,9 +113,9 @@ and the collection's hub on every connect, then a `cell` event per line,
 its stage read again from disk.
 
 ```
-  Prepare ─▶ probe ─▶ tag ─▶ caption ─▶ sheet      children, --progress json
-                        │       │          │
-                        └───────┴──────────┴──▶ /events ─▶ the hub's cells
+  Prepare ─▶ probe ─▶ prepare: per photograph tag ─▶ caption ─▶ sheet   one child, --progress json
+                                               │        │         │
+                                               └────────┴─────────┴──▶ /events ─▶ the hub's cells
 ```
 
 ## What a reader needs first

@@ -6,7 +6,7 @@ The verb, then the job that runs it, then the prose, per [design](design.md). Pa
 
 - [x] 1 — The verb
 - [x] 2 — The job
-- [ ] 3 — The prose
+- [x] 3 — The prose
 
 ## 1 — The verb
 
@@ -70,32 +70,32 @@ The verb, then the job that runs it, then the prose, per [design](design.md). Pa
 
 Each edit keeps its grepped phrase on one line, rewrapping around it.
 
-- [ ] 3.1 In `docs/decisions.md`'s D4, "Prepare is `tag`, `caption` and `sheet` run as children" → "Prepare is `prepare`
+- [x] 3.1 In `docs/decisions.md`'s D4, "Prepare is `tag`, `caption` and `sheet` run as children" → "Prepare is `prepare`
   run as one child, each photograph through `tag`, `caption` and its sheets in turn", and add `0116` to its *Made by*,
   per [D6](design.md#d6). Verify: `grep -n -F 'run as one child, each photograph through' docs/decisions.md` prints one line.
-- [ ] 3.2 In `docs/decisions.md`'s D1, add after `--new-version`'s bullet: "- **`prepare`** runs `tag`, then `caption`,
+- [x] 3.2 In `docs/decisions.md`'s D1, add after `--new-version`'s bullet: "- **`prepare`** runs `tag`, then `caption`,
   per photograph, then its sheets; each refusal costs only its own step, so a caption's never holds back a sheet." Add
   `0116` to its *Made by*. Verify: `grep -n -F "so a caption's never holds back a sheet" docs/decisions.md` prints one line.
-- [ ] 3.3 In `README.md`: add `prepare` after `sheet` in the verb list `import | assign | tag | caption | sheet`; "and
+- [x] 3.3 In `README.md`: add `prepare` after `sheet` in the verb list `import | assign | tag | caption | sheet`; "and
   *Prepare* runs `tag` and `caption` once per photograph, then `sheet` per flow, over what changed as one job, the CLI's
   own verbs as children" → "and *Prepare* runs `isekai prepare` over what changed as one job, each photograph tagged,
   captioned and sheeted before the next, the CLI's own verb as a child"; "`--progress json` — on `tag`, `caption` and
   `sheet`" → "`--progress json` — on `tag`, `caption`, `sheet` and `prepare`".
   Verify: `grep -n -F 'captioned and sheeted before the next, the CLI' README.md` prints one line.
-- [ ] 3.4 In `docs/data-flow.md`, the paragraph *Prepare is a job of those children*: "runs `tag` and `caption` once over
+- [x] 3.4 In `docs/data-flow.md`, the paragraph *Prepare is a job of those children*: "runs `tag` and `caption` once over
   the photographs of every assigned cell with no sheet, naming no flow, and `sheet` per flow over its cells, each with"
   → "runs `prepare` once over every assigned cell with no sheet, each photograph tagged, captioned and sheeted before
   the next, with"; its diagram's `Prepare ─▶ probe ─▶ tag ─▶ caption ─▶ sheet      children, --progress json` →
   `Prepare ─▶ probe ─▶ prepare: per photograph tag ─▶ caption ─▶ sheet   one child, --progress json`, the arrows below
   rewrapped to it. Verify: `grep -n -F 'each photograph tagged, captioned and sheeted before' docs/data-flow.md` prints one line.
-- [ ] 3.5 In `docs/modules.md`, "runs `python -m isekai tag | caption`, once per photograph and naming no flow, then
+- [x] 3.5 In `docs/modules.md`, "runs `python -m isekai tag | caption`, once per photograph and naming no flow, then
   `python -m isekai sheet` per flow," → "runs `python -m isekai prepare` over the cells, each photograph tagged,
   captioned and sheeted in turn,". Verify: `grep -n -F 'over the cells, each photograph tagged, captioned and sheeted in turn' docs/modules.md` prints one line.
-- [ ] 3.6 In `isekai/interface/README.md`: `cli.py`'s row, after "`tag` and `caption` once per photograph, naming none —"
+- [x] 3.6 In `isekai/interface/README.md`: `cli.py`'s row, after "`tag` and `caption` once per photograph, naming none —"
   add "and `prepare` over cells, each photograph through both and its sheets in turn —"; `ui/jobs.py`'s row, "`tag` →
   `caption` once per photograph, then `sheet` per flow, run as CLI children" → "one `prepare` child, each photograph
   through `tag` → `caption` → its sheets". Verify: `grep -n -F 'child, each photograph through' isekai/interface/README.md` prints one line.
-- [ ] 3.7 In `isekai/interface/ui/README.md`'s *Prepare* bullet, "runs `isekai tag` and `caption` once over the
+- [x] 3.7 In `isekai/interface/ui/README.md`'s *Prepare* bullet, "runs `isekai tag` and `caption` once over the
   photographs, naming no flow — the description is every flow's — then `sheet` per flow, as children, each with
   `--progress json`, each line of their prose" → "runs `isekai prepare` over the cells as one child, each photograph
   tagged, captioned and sheeted before the next, with `--progress json`, each line of its prose".

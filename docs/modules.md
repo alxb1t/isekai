@@ -44,8 +44,8 @@ which imports `artifacts.py`, `run.py` and `refusal.py`: it moves the run's layo
 and `cli.py`'s verb walks each runs root, reaching the library's collections
 through `interface/ui/`'s `collection_runs` inside the handler. `--progress json`
 is a reporter inside `cli.py`. **Prepare and Render reach the CLI by process, never
-by import**: `interface/ui/jobs.py` runs `python -m isekai tag | caption`, once per
-photograph and naming no flow, then `python -m isekai sheet` per flow, and
+by import**: `interface/ui/jobs.py` runs `python -m isekai prepare`
+over the cells, each photograph tagged, captioned and sheeted in turn, and
 `python -m isekai render` between `python -m gpunit volume up` and `volume down`,
 as children, so the CLI stays the one path a stage runs through, and
 `interface/ui/events.py` streams what they report to the page as `/events`.
