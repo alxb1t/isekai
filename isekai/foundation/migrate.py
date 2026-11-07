@@ -3,8 +3,9 @@
 A run written before the description was shared holds its caption and tag lists
 under each flow. `migrate` copies each kind `photo/` lacks there, byte for byte,
 and never deletes a source: the per-flow copies stay until the operator removes
-them. A list keeps its number, so a sheet's `from` names the same list under
-`photo/` and no kind's meaning moves (D32).
+them, or a delete leaves the flow no approval (D50). A list keeps its number, so
+a sheet's `from` names the same list under `photo/` and no kind's meaning moves
+(D32).
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """

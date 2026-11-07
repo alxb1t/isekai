@@ -637,6 +637,20 @@ def failure_named(name: str) -> tuple[int, int, Kind] | None:
     return int(match.group("version")), int(match.group("attempt")), kind
 
 
+def failures_alone(directory: Path) -> list[Path] | None:
+    """Return the failure records `directory` holds when they are all it holds, sorted.
+
+    None when it is no directory or holds anything else; an empty one gives [].
+    e.g. outputs/002/ holding 002.error.1.permanent.json alone -> [that record]
+    """
+    if not directory.is_dir():
+        return None
+    held = sorted(directory.iterdir())
+    if any(not path.is_file() or failure_named(path.name) is None for path in held):
+        return None
+    return held
+
+
 def record_failure(
     directory: Path,
     version: int,
