@@ -20,7 +20,7 @@ render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─�
   seals the reader, so no upload lands once it commits the collection's `sources/` in one move. A staging
   folder left behind is swept when the server starts.
 - **A tick** is `POST /api/c/{collection}/assign`, the same `assign` `isekai assign` runs: a flow's empty
-  directory in the source's run. An untick past assigned is refused, so a tick never deletes work.
+  directory in the source's run. An untick of a directory holding work is refused, so a tick never deletes work.
 - **Prepare** is one job in its own slot (`jobs.py`), beside the render's. It asks Ollama first, then
   runs `isekai tag` and `caption` once over the photographs, naming no flow — the description is every
   flow's — then `sheet` per flow, as children, each with `--progress json`, each line

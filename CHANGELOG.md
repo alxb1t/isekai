@@ -13,6 +13,8 @@ its new digest.
 - A tagged cell's tick and Discard take it back when its flow directory holds no work: the Hub offers the untick, as
   it does for an assigned cell, and the verb still refuses a directory holding files. The tick's accent fill marks a
   cell that can be unticked (0115 D1, D2, D3).
+- The design spec, the UI README and `assign`'s comment say an untick is refused on a directory holding work, and a
+  tagged cell ticks and unticks (0115 D1, D4).
 
 ## [0.75.0] - 2026-11-07
 

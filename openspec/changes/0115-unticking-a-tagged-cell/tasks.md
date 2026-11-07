@@ -5,7 +5,7 @@ The untick and its tests, then the prose, per [design](design.md). Paths are fro
 ## Progress
 
 - [x] 1 — The untick
-- [ ] 2 — The prose
+- [x] 2 — The prose
 
 ## 1 — The untick
 
@@ -31,12 +31,12 @@ The untick and its tests, then the prose, per [design](design.md). Paths are fro
 
 Each edit keeps its grepped phrase on one line, rewrapping around it.
 
-- [ ] 2.1 In `ui/design/spec.md`, *The tick*: "accent fill is assigned and can be unticked" → "accent fill is pending —
+- [x] 2.1 In `ui/design/spec.md`, *The tick*: "accent fill is assigned and can be unticked" → "accent fill is pending —
   assigned or tagged — and can be unticked". Verify: `grep -n -F 'accent fill is pending' ui/design/spec.md` prints one line.
-- [ ] 2.2 In `ui/design/spec.md`, *A click or ↵ follows the stage*: "unassigned or assigned ticks and unticks; tagged or
+- [x] 2.2 In `ui/design/spec.md`, *A click or ↵ follows the stage*: "unassigned or assigned ticks and unticks; tagged or
   unreadable does nothing" → "unassigned, assigned or tagged ticks and unticks; unreadable does nothing".
   Verify: `grep -n -F 'assigned or tagged ticks and unticks; unreadable does nothing' ui/design/spec.md` prints one line.
-- [ ] 2.3 In `isekai/interface/ui/README.md`, *A tick*: "An untick past assigned is refused" → "An untick of a
+- [x] 2.3 In `isekai/interface/ui/README.md`, *A tick*: "An untick past assigned is refused" → "An untick of a
   directory holding work is refused". Verify: `grep -n -F 'An untick of a directory holding work is refused' isekai/interface/ui/README.md` prints one line.
-- [ ] 2.4 In `ui/src/api.ts`, `assign`'s comment: "an untick past assigned is refused" → "an untick of a directory
+- [x] 2.4 In `ui/src/api.ts`, `assign`'s comment: "an untick past assigned is refused" → "an untick of a directory
   holding work is refused". Verify: `grep -n -F 'an untick of a directory holding work is refused' ui/src/api.ts` prints one line.
