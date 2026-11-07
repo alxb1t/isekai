@@ -231,6 +231,10 @@ export function photoUrl(place: Place): string {
   return `${at(place)}/photo`
 }
 
+export function sourceCopyUrl(place: Place, version: number): string {
+  return `${at(place)}/source/${version}`
+}
+
 /* An import: a staging folder the chosen files are read into, then committed
    into a collection's `sources/` in one move, or cancelled. */
 export function openStaging(): Promise<{ id: string }> {

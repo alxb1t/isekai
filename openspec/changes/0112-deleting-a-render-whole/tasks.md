@@ -6,7 +6,7 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 ## Progress
 
 - [x] 1 — The source copy
-- [ ] 2 — The page
+- [x] 2 — The page
 - [ ] 3 — The discard and the records
 - [ ] 4 — The copy's own sheet
 - [ ] 5 — The delete
@@ -45,22 +45,22 @@ The source copy, then the page, the discard and the records, the copy's sheet, t
 
 ## 2 — The page
 
-- [ ] 2.1 In `ui/src/types.ts`, make `Drafted` `{ fields; version: number }`, `version`'s comment
+- [x] 2.1 In `ui/src/types.ts`, make `Drafted` `{ fields; version: number }`, `version`'s comment
   `/* The number its source copy is held under: the image it was drafted from. */`, and the `drafted` field's comment
   say its own sheet's fields and its source copy, per [D3](design.md#d3).
   Verify: `grep -n 'The number its source copy is held under' ui/src/types.ts` prints one line.
-- [ ] 2.2 In `ui/src/api.ts`, add `sourceCopyUrl(place: Place, version: number): string` after `photoUrl`, returning
+- [x] 2.2 In `ui/src/api.ts`, add `sourceCopyUrl(place: Place, version: number): string` after `photoUrl`, returning
   `` `${at(place)}/source/${version}` ``, per [D3](design.md#d3).
   Verify: `grep -n 'export function sourceCopyUrl(place: Place, version: number): string' ui/src/api.ts` prints one line.
-- [ ] 2.3 In `ui/src/views/Review.vue`, make `revised` a revision's image with its seed, else a drafted draft's
+- [x] 2.3 In `ui/src/views/Review.vue`, make `revised` a revision's image with its seed, else a drafted draft's
   `sourceCopyUrl` with `seed: null`, and name the lens's image `the image it was drafted from` where `seed` is null,
   per [D3](design.md#d3).
   Verify: `grep -n 'sourceCopyUrl(' ui/src/views/Review.vue` prints one line.
-- [ ] 2.4 In `ui/src/components/SourcePanel.vue`, make `revised` `{ src: string; seed: string | null }`, its kicker
+- [x] 2.4 In `ui/src/components/SourcePanel.vue`, make `revised` `{ src: string; seed: string | null }`, its kicker
   and its image's `alt` `render being revised · seed N` with a seed, else `the image it was drafted from`, per
   [D3](design.md#d3).
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.5 In `tests/e2e/test_render.py`, make the kicker step and the `[data-revised]` step of
+- [x] 2.5 In `tests/e2e/test_render.py`, make the kicker step and the `[data-revised]` step of
   [the end-to-end steps](design.md#the-end-to-end-steps).
   Verify: `grep -n 'to_contain_text("the image it was drafted from")' tests/e2e/test_render.py` prints one line.
 

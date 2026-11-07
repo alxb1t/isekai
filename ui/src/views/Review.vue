@@ -7,6 +7,7 @@ import {
   fieldCandidates,
   imageAt,
   photoUrl as photoAt,
+  sourceCopyUrl,
 } from '../api'
 import ApproveBar from '../components/ApproveBar.vue'
 import CollectionRail from '../components/CollectionRail.vue'
@@ -56,18 +57,13 @@ const revision = computed(() => sheet.detail.value?.revision ?? null)
 /* A draft drafted from another flow's approval, and once approved too: its own
    sheet's fields mark what that approval changed, read-only once approved. */
 const drafted = computed(() => sheet.detail.value?.drafted ?? null)
-/* The image a draft came from: a revision's, else the one a drafted draft names. */
+/* The image a draft came from: a revision's, else a drafted draft's source copy. */
 const revised = computed(() => {
   const held = revision.value
-  const image = held?.seed
-    ? { flow: props.flow, version: held.version, seed: held.seed }
-    : drafted.value?.image
-  if (!image) return null
-  return {
-    src: imageAt({ ...props, ...image }),
-    seed: image.seed,
-    from: held?.seed ? null : `${image.flow} v${image.version}`,
-  }
+  if (held?.seed)
+    return { src: imageAt({ ...props, version: held.version, seed: held.seed }), seed: held.seed }
+  if (!drafted.value) return null
+  return { src: sourceCopyUrl(props, drafted.value.version), seed: null }
 })
 const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 
@@ -133,7 +129,8 @@ const opened = computed(() =>
 const viewed = computed(() => {
   if (lens.value === 'photo') return { images: photos.value, start: opened.value }
   if (!revised.value) return null
-  const render = { src: revised.value.src, name: `render · seed ${revised.value.seed}` }
+  const { src, seed } = revised.value
+  const render = { src, name: seed === null ? 'the image it was drafted from' : `render · seed ${seed}` }
   if (lens.value === 'render') return { images: [render], start: 0 }
   const photo = photos.value[opened.value]
   if (lens.value === 'pair' && photo) return { images: [photo, render], start: 0 }

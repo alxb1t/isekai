@@ -380,7 +380,7 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     expect(page.locator("[data-changed='clothes']")).to_contain_text("was")
     expect(page.locator("[data-caption-heading]")).to_have_text("② caption")
     revised = page.locator("[data-revised]")
-    expect(revised).to_contain_text(f"drafted from {FLOW} v1 · seed 7")
+    expect(revised).to_contain_text("the image it was drafted from")
     expect(revised.locator("img")).to_have_js_property("complete", True)
     expect(revised.locator("img")).not_to_have_js_property("naturalWidth", 0)
 
@@ -417,7 +417,9 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     assert not group_of(served.conjured, FLOW, 1).exists() and not prompt.exists()
     page.goto(f"{served.url}/c/{CONJURED}/review/{digest}/{CONJURE}")
     expect(page.locator(".form")).to_be_visible()
-    expect(page.locator("[data-revised]")).to_have_count(0)
+    copy = page.locator("[data-revised] img")
+    expect(copy).to_have_js_property("complete", True)
+    expect(copy).not_to_have_js_property("naturalWidth", 0)
 
 
 @pytest.mark.spec("ui:revise:discard-asks-before-it-deletes")

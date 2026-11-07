@@ -13,6 +13,8 @@ its new digest.
 - *Draft from this* into another flow copies the image into that flow's `sources/`, under the draft's number, and the
   draft records no image of another flow; Review reads the copy through its own route, so it outlives the source (0112
   D2, D3).
+- Review shows a drafted draft's source copy beside the photograph, headed *the image it was drafted from*, with no
+  reference to the flow it came from (0112 D3).
 
 ## [0.74.0] - 2026-11-07
 
