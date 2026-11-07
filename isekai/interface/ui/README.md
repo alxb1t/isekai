@@ -6,7 +6,7 @@ with them.
 
 ```
 Home ─ New collection ─▶ import sheet ─▶ <collection>/sources/
-hub ─ tick ─▶ assign ─▶ Prepare ─▶ tag → caption, once ─▶ sheet, per flow ─▶ /events ─▶ the cells
+hub ─ tick ─▶ assign ─▶ Prepare ─▶ prepare: per photograph tag → caption → its sheets ─▶ /events ─▶ the cells
 Review ─▶ /c/<collection>/review ─▶ the head ─▶ Review ─▶ approve
 hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶ volume down ─▶ /events ─▶ the drawer
 render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─▶ the render drawer
@@ -22,9 +22,8 @@ render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─�
 - **A tick** is `POST /api/c/{collection}/assign`, the same `assign` `isekai assign` runs: a flow's empty
   directory in the source's run. An untick of a directory holding work is refused, so a tick never deletes work.
 - **Prepare** is one job in its own slot (`jobs.py`), beside the render's. It asks Ollama first, then
-  runs `isekai tag` and `caption` once over the photographs, naming no flow — the description is every
-  flow's — then `sheet` per flow, as children, each with `--progress json`, each line
-  of their prose appended to the collection's `log.txt` as `[prepare] …`. Stop, `POST
+  runs `isekai prepare` over the cells as one child, each photograph tagged, captioned and sheeted before
+  the next, with `--progress json`, each line of its prose appended to the collection's `log.txt` as `[prepare] …`. Stop, `POST
   /api/jobs/prepare/stop`, sends its child SIGINT; the server stopping interrupts both jobs.
 - **Render** has the other slot, its prose logged as `[render] …` in every collection it renders. `POST
   /api/render/quote` takes the render verb's own quote over the named collections, or every one short of images:

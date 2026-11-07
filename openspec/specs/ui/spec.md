@@ -791,26 +791,27 @@ The sources' label sits above the first row, so a move there shows it.
 
 ### Requirement: Prepare runs what changed as one job, and refuses before it starts when Ollama does not answer
 
-The system SHALL run Prepare as one job over every assigned cell with no sheet: the tagging and reading stages once
-each, one invocation of the pipeline's own verb over those cells' photographs, tagging only the photographs assigned a
-flow that declares the tagger, then, for each flow, the sheet stage, one invocation over that flow's cells. One job of
-each kind, a Prepare and a render, SHALL run at a time, the two side by side in any collections; a job SHALL keep
-running when its page closes; Stop SHALL interrupt the current stage of the job it names and start no other, leaving
-the other job running; stopping the surface SHALL interrupt every running job; each line a job's verbs write to the
-collection's log SHALL name its job; and a stage that fails having reported nothing SHALL end the job as failed, naming
-the collection's log, and start no other. Before any stage starts, the surface SHALL check that the local model server
-answers, and SHALL refuse with its message, starting nothing, when it does not. While Prepare runs, the job strip and
-Prepare bar SHALL show each stage's completed photographs or cells out of its asked total — `tag 3 of 3 · caption 2 of
-3 · sheet 0 of 6 · 00:35` — the bar as wide as the stages done over the stages asked; each total SHALL stay fixed, a
-photograph or a cell SHALL count once per stage it completes and a refused one in none, and elapsed time SHALL tick
-every second. Before it runs, the Prepare bar SHALL name how many photographs it prepares in its collection, `2
-photographs to prepare in <collection>`, its button the changes.
+The system SHALL run Prepare as one job over every assigned cell with no sheet: one invocation of the pipeline's own
+`prepare` verb over those cells, which takes each photograph in turn through tagging, only when it is assigned a flow
+that declares the tagger, then reading, then the sheet stage of each of its cells, so a photograph's cells reach sheet
+while later photographs wait. One job of each kind, a Prepare and a render, SHALL run at a time, the two side by side
+in any collections; a job SHALL keep running when its page closes; Stop SHALL interrupt the current stage of the job it
+names and start no other, leaving the other job running; stopping the surface SHALL interrupt every running job; each
+line a job's verb writes to the collection's log SHALL name its job; and a job whose verb fails having reported nothing
+SHALL end as failed, naming the collection's log. Before any stage starts, the surface SHALL check that the local model
+server answers, and SHALL refuse with its message, starting nothing, when it does not. While Prepare runs, the job
+strip and Prepare bar SHALL show each stage's completed photographs or cells out of its asked total — `tag 3 of 3 ·
+caption 2 of 3 · sheet 0 of 6 · 00:35` — the bar as wide as the stages done over the stages asked; each total SHALL
+stay fixed, a photograph or a cell SHALL count once per stage it completes and a refused one in none, a cell unticked
+while the job runs among them, and elapsed time SHALL tick every second. Before it runs, the Prepare bar SHALL name how
+many photographs it prepares in its collection, `2 photographs to prepare in <collection>`, its button the changes.
 
 The pipeline's verb is the one path, so Prepare is exactly what the verbs do. A photograph's description is every
 flow's, so it is tagged and read once, whatever flows it is assigned to, and one already described costs its verbs
-nothing. Prepare runs on the local models and a
-render on a rented GPU, and they write no file in common, so neither waits for the other. A refusal before the start
-leaves every cell assigned, so pressing Prepare again is the whole fix.
+nothing. Each photograph is taken end to end, so its sheet is ready for review while the rest prepare; no route waits
+on Prepare. Prepare runs on the local models and a render on a rented GPU, and they write no file in common, so
+neither waits for the other. A refusal before the start leaves every cell assigned, so pressing Prepare again is the
+whole fix.
 
 #### Scenario: Prepare runs each stage over the assigned cells
 - **Key:** `ui:prepare:prepare-runs-the-assigned-cells`
@@ -850,7 +851,7 @@ leaves every cell assigned, so pressing Prepare again is the whole fix.
 #### Scenario: a stage that fails before it reports ends the job
 - **Key:** `ui:prepare:a-silent-failure-ends-the-job`
 - **Layers:** unit
-- **WHEN** a stage exits in failure having reported no item
+- **WHEN** the job's verb exits in failure having reported no item
 - **THEN** the job ends as failed, naming the collection's log
 - **AND** no later stage starts
 
@@ -890,8 +891,14 @@ leaves every cell assigned, so pressing Prepare again is the whole fix.
 - **Key:** `ui:prepare:a-photograph-is-described-once`
 - **Layers:** unit
 - **WHEN** Prepare is planned over a photograph assigned two flows
-- **THEN** tagging and reading are each one invocation that names it once and names no flow
-- **AND** each flow's sheet stage is an invocation of its own
+- **THEN** the job is one invocation of `prepare` naming each of its cells once
+- **AND** tagging and reading are each asked once for it, and each flow's sheet stage once
+
+#### Scenario: each photograph in turn
+- **Key:** `ui:prepare:each-photograph-in-turn`
+- **Layers:** unit
+- **WHEN** Prepare is planned over two photographs, the second assigned a flow the first is not
+- **THEN** its one invocation names every cell of the first photograph before any cell of the second
 
 ### Requirement: The page is told of a job as it runs
 

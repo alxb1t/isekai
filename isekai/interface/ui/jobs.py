@@ -8,7 +8,8 @@ outlives the page that started it.
 
 ```
 Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
-            └ answers ─▶ tag ─▶ caption, once ─▶ sheet, per flow ─▶ done
+            └ answers ─▶ prepare <cells>: each photograph tag ─▶ caption
+                         ─▶ its sheets ─▶ done
 Render ─▶ volume up ─ lost ─▶ the volume alert, nothing renders
            └ up ─▶ render --limit … --session … --progress json <runs>… --without …
                  ─▶ volume down, unless kept
@@ -48,9 +49,9 @@ from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
 
-# The stages Prepare runs, in order: tag and caption once over the photographs,
-# naming no flow, since every flow reads the one description (D17); then sheet
-# for each flow.
+# The stages Prepare counts, in order. Its one child takes each photograph through
+# them in turn: tag and caption once, naming no flow, since every flow reads the
+# one description (D17); then sheet for each of its cells.
 PREPARE = ("tag", "caption", "sheet")
 
 # The cell stages a done line must read for its stage to count it; a stage absent
@@ -98,28 +99,25 @@ def refusal(code: int, refused: str | None, collection: str) -> str | None:
     return f"{lead}{quoted}; read {collection}/{LOG} for the cards it skipped"
 
 
-# How a stage is started: the verb, the flow or None, the runs root and the runs.
-Command = Callable[[str, str | None, Path, Sequence[str]], list[str]]
+# How Prepare is started: the runs root and the cells, each `<run-id>/<flow>`.
+Command = Callable[[Path, Sequence[str]], list[str]]
 
 
-def isekai_command(
-    verb: str, flow: str | None, runs: Path, ids: Sequence[str]
-) -> list[str]:
-    """Return the verb line a stage runs as; a photograph's stage names no flow.
+def prepare_command(runs: Path, cells: Sequence[str]) -> list[str]:
+    """Return the verb line Prepare runs as.
 
-    e.g. `python -m isekai sheet --flow f …`, `python -m isekai tag --runs …`
+    e.g. `python -m isekai prepare --runs … --progress json r1/f r2/f`
     """
     return [
         sys.executable,
         "-m",
         "isekai",
-        verb,
-        *(() if flow is None else ("--flow", flow)),
+        "prepare",
         "--runs",
         str(runs),
         "--progress",
         "json",
-        *ids,
+        *cells,
     ]
 
 
@@ -146,7 +144,7 @@ def render_command(limit: int, roots: Sequence[Path], session: str) -> list[str]
 
 @dataclass(frozen=True)
 class Step:
-    """One child: a verb over one flow's runs, or over the photographs for None."""
+    """One stage of the plan: a verb over a flow's runs, or the photographs for None."""
 
     flow: str | None
     verb: str
@@ -172,6 +170,19 @@ def plan(todo: Mapping[str, Sequence[str]], tagged: Mapping[str, bool]) -> list[
     return described + [
         Step(flow, "sheet", tuple(ids)) for flow, ids in todo.items() if ids
     ]
+
+
+def cells_of(steps: Sequence[Step]) -> list[str]:
+    """Return the sheet steps' cells, each run's together, in the order first named.
+
+    e.g. sheet f over r1, r2 and sheet g over r2 -> ["r1/f", "r2/f", "r2/g"]
+    """
+    flows: dict[str, list[str]] = {}
+    for step in steps:
+        if step.verb == "sheet" and step.flow is not None:
+            for run in step.runs:
+                flows.setdefault(run, []).append(step.flow)
+    return [f"{run}/{flow}" for run, named in flows.items() for flow in named]
 
 
 @dataclass
@@ -284,7 +295,7 @@ class Jobs:
         broadcast: Broadcast,
         probe: Callable[[], None],
         *,
-        command: Command = isekai_command,
+        command: Command = prepare_command,
         volume: Volume | None = None,
         render: RenderCommand = render_command,
         raise_volume: Callable[[], None] = lambda: None,
@@ -481,43 +492,41 @@ class Jobs:
         folder: Path,
         cell: Callable[[dict[str, Any]], list[dict[str, Any]]],
     ) -> None:
-        """Run each step's child in turn, publishing each line it reports."""
+        """Run the job's one `prepare` child, publishing each line it reports."""
         slot = self._slots[job.kind]
         try:
-            for step in job.steps:
-                child = self._start(job, step, folder)
-                if child is None:
-                    break
-                self._publish(job)
-                assert child.stdout is not None
-                reported = False
-                for raw in child.stdout:
-                    event = progress_line(raw)
-                    if event is None:
-                        continue
-                    reported = True
-                    found = cell(event)
-                    for one in found:
-                        self._broadcast.publish("cell", one)
-                    if found:
-                        with self._lock:
-                            completed = job.complete(event, found)
-                        if completed:
-                            self._publish(job)
-                code = self._reap(slot, child)
+            child = self._start(job, folder)
+            if child is None:
+                return
+            self._publish(job)
+            assert child.stdout is not None
+            reported = False
+            for raw in child.stdout:
+                event = progress_line(raw)
+                if event is None:
+                    continue
+                reported = True
                 with self._lock:
-                    slot.child = None
-                    # A child that fails before its first line said nothing the
-                    # page can show; its reason is in the log.
-                    if code != 0 and not reported and not slot.stopping:
-                        on = "" if step.flow is None else f" on {step.flow}"
-                        job.state = "failed"
-                        job.message = (
-                            f"{step.verb}{on} ended before reporting "
-                            f"(exit {code}); read {job.collection}/{LOG}, "
-                            "then try again"
-                        )
-                        break
+                    job.flow, job.stage = event.get("flow"), event.get("stage")
+                found = cell(event)
+                for one in found:
+                    self._broadcast.publish("cell", one)
+                if found:
+                    with self._lock:
+                        completed = job.complete(event, found)
+                    if completed:
+                        self._publish(job)
+            code = self._reap(slot, child)
+            with self._lock:
+                slot.child = None
+                # A child that fails before its first line said nothing the
+                # page can show; its reason is in the log.
+                if code != 0 and not reported and not slot.stopping:
+                    job.state = "failed"
+                    job.message = (
+                        f"prepare ended before reporting (exit {code}); read "
+                        f"{job.collection}/{LOG}, then try again"
+                    )
         finally:
             with self._lock:
                 if job.state == "running":
@@ -625,15 +634,12 @@ class Jobs:
             job.session["steps"][step] = state
         self._publish(job)
 
-    def _start(
-        self, job: _Job, step: Step, folder: Path
-    ) -> subprocess.Popen[str] | None:
-        """Start `step`'s child, or return None once Stop was asked for."""
+    def _start(self, job: _Job, folder: Path) -> subprocess.Popen[str] | None:
+        """Start the job's `prepare` child, or return None once Stop was asked for."""
         with self._lock:
             if self._slots[job.kind].stopping:
                 return None
-            argv = self._command(step.verb, step.flow, folder / RUNS, step.runs)
-            job.flow, job.stage = step.flow, step.verb
+            argv = self._command(folder / RUNS, cells_of(job.steps))
             return self._spawn(job.kind, argv, (folder,))
 
     def _spawn(

@@ -10,6 +10,18 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.76.0] - 2026-11-07
+
+Gate: local 0m30s · CI not read under mf-ship · 0.75.2: local 0m33s · CI not read under mf-ship
+
+- A new verb, `prepare <run-id>/<flow>…`, takes each photograph through `tag`, `caption`, then its cells' sheets
+  before the next, opening the tagger once; a cell no longer assigned refuses its sheet rather than making its
+  directory again (0116 D1, D2, D3, D4).
+- Prepare runs one `prepare` child over the job's cells, so a photograph's cells reach *sheet* while later
+  photographs wait; the bar keeps its totals from the plan (0116 D5).
+- docs D1 and D4, the README, the data flow, the module map and the interface READMEs say Prepare runs `prepare` as
+  one child, each photograph in turn (0116 D6).
+
 ## [0.75.2] - 2026-11-07
 
 Gate: local 0m33s · CI not read under mf-ship · 0.75.1: local 0m30s · CI not read under mf-ship

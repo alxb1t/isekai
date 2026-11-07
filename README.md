@@ -5,7 +5,7 @@ using **open models** on a **rented GPU, on demand**. A reproducible, provider-a
 pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
 > **Status: released.** One render path: a **staged pipeline** —
-> `python -m isekai import | assign | tag | caption | sheet | review | approve | draft | generate | show | ui | compare | migrate` —
+> `python -m isekai import | assign | tag | caption | sheet | prepare | review | approve | draft | generate | show | ui | compare | migrate` —
 > which cleans a photograph into a collection, reads it into prose and tags, fills a sheet of canonical tags from the tags by a table, lets a
 > human correct the sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary —
 > and renders from it on a stack provisioned from a pinned, checksummed manifest.
@@ -271,8 +271,9 @@ It opens the library — `~/isekai`, or the directory `ISEKAI_LIBRARY` names, cr
 refused inside this repository outside `.data/` — prints a URL and blocks. Home lists the collections by
 their newest file, and *New collection* imports photographs chosen in the file dialog, each with its own
 upload bar. A collection's hub shows each photograph's stage in each flow `config/ui.json` offers: a tick
-runs `isekai assign`, and *Prepare* runs `tag` and `caption` once per photograph, then `sheet` per flow, over what changed as one job,
-the CLI's own verbs as children with `--progress json`, its cells moving live over `/events`. Review
+runs `isekai assign`, and *Prepare* runs `isekai prepare` over what changed as one job, each photograph tagged,
+captioned and sheeted before the next, the CLI's own verb as a child with `--progress json`, its cells moving live
+over `/events`. Review
 corrects one sheet, its ④ setting how many images it renders and at which seeds, and Approve stays on the sheet,
 read-only. **Render** opens a dialog quoting what renders and its price at most; **its confirmation is the one
 act on the page that spends money**, and the session view shows it to *Nothing is billing.* Renders shows
@@ -334,7 +335,7 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
 - `--remove` — on `assign`: delete each flow's directory instead, refusing one that holds work.
 - `--discard` — on `review`: delete each flow's waiting draft instead, refusing a flow whose highest
   number is approved. A draft goes with the image it was drafted from, and leaves the flow and its sheet.
-- `--progress json` — on `tag`, `caption` and `sheet`: one JSON line per item's start and end on
+- `--progress json` — on `tag`, `caption`, `sheet` and `prepare`: one JSON line per item's start and end on
   stdout, the prose on stderr. It is how Prepare reads a stage's progress.
 - `--session ID` — on `render`: name the session's record `<runs>/../sessions/<ID>.json`, an ID such as
   `20261024T091200Z`; without it, the session's start in UTC names it.

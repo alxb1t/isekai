@@ -1,7 +1,7 @@
 """The hub in a browser: a tick assigns a flow, and Prepare runs what changed.
 
-Prepare's stages are the real verbs, run as the server's children on the
-suite's doubles, so a cell reaches its sheet exactly as it would by hand.
+Prepare is the real `prepare` verb, run as the server's child on the suite's
+doubles, so a cell reaches its sheet exactly as it would by hand.
 """
 
 import re
@@ -13,7 +13,7 @@ from tests.e2e.conftest import RENDER, Served
 
 FLOW = "summon-anime-wai"
 OTHER = "conjure-anime-wai"
-# Three CLI children start in turn, each importing the package.
+# One CLI child imports the package, then prepares the photograph.
 PREPARED = 60_000
 
 
