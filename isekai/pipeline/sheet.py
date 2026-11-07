@@ -35,7 +35,6 @@ name everywhere removes the class of error.
 Stdlib only.
 """
 
-from collections.abc import Mapping
 from pathlib import Path
 
 from isekai.foundation.artifacts import (
@@ -97,15 +96,16 @@ def sheet(
     tagged: bool,
     flow_digest: str,
     new_version: bool = False,
-    tags_from: str | None = None,
+    drafted_from: str | None = None,
 ) -> tuple[Path | None, list[str]]:
     """Route the photograph's tag list into a sheet, under this flow, with its warnings.
 
     `tagged` says whether the flow declares the tagger, and has no default
     because a default decides silently. Untagged, no list is read and every
     field is written empty for the person to fill (D31).
-    `flow_digest` is recorded and never read. `tags_from` names the flow a draft
-    drew this first sheet from; it is recorded and never read for the fill.
+    `flow_digest` is recorded and never read. `drafted_from` names the flow a
+    draft is drawing this first sheet from; it shapes a refusal's remedy and is
+    recorded nowhere.
 
     **The fill is told nothing about flows beyond `tagged`, and reaches nothing
     at all.** It is handed the photograph's tag list, `photo/wd14/`'s, the schema,
@@ -138,7 +138,7 @@ def sheet(
         field_map,
         tagged=tagged,
         flow_digest=flow_digest,
-        tags_from=tags_from,
+        drafted_from=drafted_from,
         version=version,
     )
     path = directory / artifact_name(version)
@@ -155,13 +155,13 @@ def prepare_sheet(
     *,
     tagged: bool,
     flow_digest: str,
-    tags_from: str | None = None,
+    drafted_from: str | None = None,
     version: int = 1,
 ) -> Sheet:
     """Prepare the sheet's checked contents before writing it.
 
-    A draft's first sheet is filled as `sheet` fills one, with `tags_from`
-    recorded and never read for the fill. A damaged tag list keeps the sheet
+    A draft's first sheet is filled as `sheet` fills one, and `drafted_from` is
+    recorded nowhere. A damaged tag list keeps the sheet
     stage's permanent-failure record, but not for a draft: a draft batch checks
     every fill before its first sheet, and that check writes nothing.
     """
@@ -179,10 +179,8 @@ def prepare_sheet(
         validate(fields, schema, vocabulary, excluded=field_map.excluded)
     else:
         fields, made_by = _from_tag_list(
-            run, flow, directory, version, schema, vocabulary, field_map, tags_from
+            run, flow, directory, version, schema, vocabulary, field_map, drafted_from
         )
-    if tags_from is not None:
-        made_by["tags_from"] = tags_from
 
     artifact: Sheet = {
         "schema": SHEET_FILE.schema,
@@ -200,9 +198,8 @@ def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
     """Return a warning when the kept sheet's tag list is below the flow's latest.
 
     A sheet it cannot read, or one with no list number, gives none: review
-    refuses an unreadable sheet by name. Nor does a first sheet a draft wrote:
-    it is built from another flow's approval, so a later list is not weighed
-    against it.
+    refuses an unreadable sheet by name. A first sheet a draft wrote is weighed
+    as any other: it is filled from the photograph's list too.
     """
     newest = latest(photo_of(run, WD14))
     if newest is None:
@@ -210,8 +207,6 @@ def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
     try:
         filled = read(directory / artifact_name(kept), SHEET_FILE)
     except Refusal:
-        return []
-    if tagged_from(filled) is not None:
         return []
     producer = filled.get("producer")
     source = producer.get("from") if isinstance(producer, dict) else None
@@ -276,16 +271,6 @@ def _from_tag_list(
             STAGE, run, "permanent", detail, record, SHEETS, STAGE, flow, STAGE
         ) from failed
     return fields, made_by
-
-
-def tagged_from(body: Mapping[str, object]) -> str | None:
-    """Return the flow a draft drew a sheet from, recorded as `tags_from`, else None.
-
-    e.g. producer `{…, "tags_from": "summon-anime-wai"}` -> "summon-anime-wai"
-    """
-    producer = body.get("producer")
-    source = producer.get("tags_from") if isinstance(producer, Mapping) else None
-    return source if isinstance(source, str) else None
 
 
 def _route(

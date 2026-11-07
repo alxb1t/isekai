@@ -1138,6 +1138,7 @@ def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
 
     # A copy has no draft to go back to: its cancel deletes it.
     control = "control-anime-wai"
+    sheet(made, schema, vocabulary, flow=control)
     copy, _ = approve(made, control, schema, vocabulary, source=FLOW)
     assert copy is not None
     at_control = f"/api/c/{COLLECTION}/review/{made.digest}/{control}/cancel"
@@ -1703,6 +1704,9 @@ def test_deleting_a_render_deletes_its_files_and_thumbnail(
     assert list(cache.glob("001/11.*.jpg")) == []
     assert (outputs / "002" / "22.png").is_file()
     assert len(list(cache.glob("002/22.*.jpg"))) == 1
+    reviewed = made.directory(FLOW, "review")
+    assert not (reviewed / "001.approved.json").exists()
+    assert (reviewed / "002.approved.json").is_file()
     # Its address now names no render, and says so rather than a record left.
     gone = client.get(f"{at}/v1/11")
     assert gone.status_code == 409
@@ -1711,12 +1715,9 @@ def test_deleting_a_render_deletes_its_files_and_thumbnail(
         == "11.png: no render is here, its record and its image are gone"
     )
 
-    # The newest approval's only render goes, and its approval with it.
+    # The last approval's only render goes, and the flow keeps only its assignment.
     assert client.delete(f"{at}/v2/22").status_code == 200
-    reviewed = made.directory(FLOW, "review")
-    assert (reviewed / "002.draft.json").is_file()
-    assert not (reviewed / "002.approved.json").exists()
-    assert (reviewed / "001.approved.json").is_file()
+    assert list(made.directory(FLOW).iterdir()) == []
 
 
 @pytest.mark.spec("ui:delete-render:refused-while-a-render-runs")
@@ -2206,14 +2207,19 @@ def test_review_reads_a_drafted_draft_against_its_sheet_and_its_image(
     assert drafted.json() == _drafted(made)
     target = made.path / CONJURE / "sheets" / "001.json"
     own = read(target, SHEET_FILE)["fields"]
-    assert body["drafted"] == {
-        "fields": own,
-        "image": {"flow": FLOW, "version": 1, "seed": "7"},
-    }
+    assert body["drafted"] == {"fields": own, "version": 1}
     assert body["fields"]["expression"] == [] != own["expression"]
+    image = image_of(made, load_flow(FLOW), 1, 7)
+    held = image.read_bytes()
+    copy = client.get(f"{route}/source/1")
+    assert copy.status_code == 200
+    assert copy.content == held
 
-    image_of(made, load_flow(FLOW), 1, 7).unlink()
-    assert client.get(route).json()["drafted"] == {"fields": own}
+    # The copy outlives the image it was drafted from.
+    image.unlink()
+    assert client.get(route).json()["drafted"] == {"fields": own, "version": 1}
+    assert client.get(f"{route}/source/1").content == held
+    assert client.get(f"{route}/source/2").status_code == 409
 
     _damage(target, _drop("fields"))
     refused = client.get(route)
@@ -2241,10 +2247,7 @@ def test_review_keeps_an_approved_drafted_drafts_marks(
     target = made.path / CONJURE / "sheets" / "001.json"
     own = read(target, SHEET_FILE)["fields"]
     assert body["readonly"] is True
-    assert body["drafted"] == {
-        "fields": own,
-        "image": {"flow": FLOW, "version": 1, "seed": "7"},
-    }
+    assert body["drafted"] == {"fields": own, "version": 1}
 
     _damage(target, _drop("fields"))
     refused = client.get(route)
@@ -2313,7 +2316,7 @@ def test_a_draft_into_a_target_whose_waiting_draft_is_its_sheet_replaces_it(
 
     assert answered.json() == _drafted(made)
     assert versions(made.directory(CONJURE, REVIEW)) == [1]
-    assert client.get(route).json()["drafted"]["image"]["flow"] == FLOW
+    assert client.get(route).json()["drafted"]["version"] == 1
 
 
 @pytest.mark.spec("ui:draft-from:a-selection-drafts-into-the-flow-chosen")
@@ -2366,6 +2369,7 @@ def test_a_selection_from_two_runs_drafts_each_into_the_flow_chosen(
     for run, seed in ((made, 7), (other, 8)):
         draft = read(run.directory(CONJURE, REVIEW) / "001.draft.json", DRAFT_FILE)
         assert "drafted_from" not in draft["producer"]
+        assert "image" not in draft["producer"]
         assert draft["renders"] == {"count": 1, "seeds": [seed]}
 
 

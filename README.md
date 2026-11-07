@@ -319,8 +319,9 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
 - `--seed SEEDS` — render exactly this seed; repeatable, and not combinable with `--count`.
 - `--seeds-from FLOW` — render each run on the seeds of that flow's latest render; not combinable with
   `--count` or `--seed`.
-- `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, once, its seeds listed; a copy
-  equal to it writes nothing, and any other approval is copied over under the next number.
+- `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, once, its seeds listed, onto its
+  own sheet, filled first from the photograph's tags where it holds none; a copy equal to it writes nothing, and any
+  other approval is copied over under the next number.
 - `--cancel` — on `approve`: turn each flow's newest approval back into its draft instead, refusing one
   anything was made from; a copy is deleted, as `--from` copies the source's newest approval again, leaving the
   flow on what lies beneath it, which the line names; a flow at its draft is left as it is, and the line says so;
@@ -332,8 +333,7 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   `sources/`. A file with a source's bytes is skipped, and one with a taken name becomes `<stem>-2`.
 - `--remove` — on `assign`: delete each flow's directory instead, refusing one that holds work.
 - `--discard` — on `review`: delete each flow's waiting draft instead, refusing a flow whose highest
-  number is approved. A draft from another flow's image, in a flow holding only it and the sheet
-  drafting wrote, takes that sheet and the flow's directory with it.
+  number is approved. A draft goes with the image it was drafted from, and leaves the flow and its sheet.
 - `--progress json` — on `tag`, `caption` and `sheet`: one JSON line per item's start and end on
   stdout, the prose on stderr. It is how Prepare reads a stage's progress.
 - `--session ID` — on `render`: name the session's record `<runs>/../sessions/<ID>.json`, an ID such as

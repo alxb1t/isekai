@@ -699,6 +699,7 @@ def test_approve_cancel_answers_each_run_on_its_own(
     ).exists()
 
     # A copy's cancel deletes it; a flow at its draft has nothing to cancel.
+    sheet(rendered, schema, vocabulary, flow="control-anime-wai")
     approve(
         rendered, "control-anime-wai", schema, vocabulary, source="summon-anime-wai"
     )
@@ -788,6 +789,32 @@ def test_an_untracked_approval_source_is_refused_naming_the_flows_there_are(
     assert "summon-v9: not a flow this build tracks" in err.getvalue()
 
 
+@pytest.mark.spec("review:copy-from:a-target-with-no-sheet-is-filled-first")
+def test_approve_from_fills_a_target_with_no_sheet_first(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    run = open_run(photo, tmp_path / "runs")
+    sheet(run, schema, vocabulary)
+    review(run, "summon-anime-wai")
+    approve(run, "summon-anime-wai", schema, vocabulary)
+    argv = [
+        "approve",
+        "--flow",
+        "control-anime-wai",
+        "--from",
+        "summon-anime-wai",
+        str(photo),
+    ]
+
+    assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
+
+    assert run.directory("control-anime-wai", "sheets", "001.json").is_file()
+    copied = run.directory("control-anime-wai", "review") / "001.approved.json"
+    assert read(copied, APPROVED_FILE)["sheet"] == 1
+
+
 CONJURE = "conjure-anime-wai"
 
 
@@ -816,7 +843,8 @@ def test_draft_writes_another_flow_from_the_images_approval_and_seed(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     run = _two_approvals(tmp_path, "ada", schema, vocabulary)
-    argv = ["draft", "--flow", CONJURE, str(rendered_image(run, 1, 7))]
+    image = rendered_image(run, 1, 7)
+    argv = ["draft", "--flow", CONJURE, str(image)]
 
     assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
 
@@ -827,11 +855,9 @@ def test_draft_writes_another_flow_from_the_images_approval_and_seed(
     )
     assert draft["fields"]["hair_silhouette"] == first["fields"]["hair_silhouette"]
     assert "drafted_from" not in draft["producer"]
-    assert draft["producer"]["image"] == {
-        "flow": "summon-anime-wai",
-        "version": 1,
-        "seed": 7,
-    }
+    assert "image" not in draft["producer"]
+    copy = run.directory(CONJURE, "sources") / "001.png"
+    assert copy.read_bytes() == image.read_bytes()
     assert draft["renders"] == {"count": 1, "seeds": [7]}
 
 
@@ -915,9 +941,14 @@ def test_discarding_the_last_render_takes_its_approval_with_it(
         f"discard deleted {flow}/outputs/001",
         f"discard deleted {flow}/prompts/001.json",
         f"discard deleted {flow}/review/001.approved.json",
+        f"discard deleted {flow}/sheets/001.json",
+        f"discard deleted {flow}/sheets",
+        f"discard deleted {flow}/review",
+        f"discard deleted {flow}/prompts",
+        f"discard deleted {flow}/outputs",
         f"discard deleted .cache/{run.digest}/summon-anime-wai/outputs/001/{own}",
     ]
-    assert (run.directory("summon-anime-wai", "review") / "001.draft.json").is_file()
+    assert list(run.directory("summon-anime-wai").iterdir()) == []
     # Another collection's thumbnail of the same photograph and seed stays.
     assert not (cached / own).exists() and (cached / "7.other.jpg").is_file()
 
@@ -977,9 +1008,10 @@ def test_draft_assigns_a_target_with_no_sheet_and_fills_it_from_the_source(
     assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
 
     filled = read(run.directory(CONJURE, "sheets") / "001.json", SHEET_FILE)
-    assert filled["producer"]["tags_from"] == "summon-anime-wai"
+    assert "tags_from" not in filled["producer"]
     assert (run.directory(CONJURE, "review") / "001.draft.json").is_file()
     assert sorted(child.name for child in run.directory(CONJURE).iterdir()) == [
         "review",
         "sheets",
+        "sources",
     ]

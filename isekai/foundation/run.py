@@ -137,6 +137,7 @@ SHEETS = "sheets"
 REVIEW = "review"
 PROMPTS = "prompts"
 OUTPUTS = "outputs"
+SOURCES = "sources"
 APPROVED = "approved"
 
 # `001`, and `001.draft` / `001.approved` where a stage has that concept. No

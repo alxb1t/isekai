@@ -75,7 +75,11 @@ from isekai.foundation.run import (
     rendered_at,
 )
 from isekai.interface.compare_view import write_page
-from isekai.interface.drafting import draft_from_image, refuse_image_drafts
+from isekai.interface.drafting import (
+    approve_across,
+    draft_from_image,
+    refuse_image_drafts,
+)
 from isekai.interface.render import run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
@@ -595,10 +599,10 @@ def _discard(image: Path, wired: Wiring) -> int:
 
     Refused, deleting nothing, while a render session holds the image's
     collection, as the app's delete is. The thumbnails go while the image still
-    names them. A render that was its
-    approval's last, the newest, takes that approval back to its draft with
-    `withdraw`; the run's files print before the thumbnails. The library is
-    imported here for `_ui`'s reason: it is off `python -m isekai`'s import graph.
+    names them. A render that was its approval's last takes that approval with
+    it, through `withdraw`; the run's files print before the thumbnails. The
+    library is imported here for `_ui`'s reason: it is off `python -m isekai`'s
+    import graph.
     """
     try:
         run, flow, version, _ = rendered_at(image)
@@ -615,21 +619,13 @@ def _discard(image: Path, wired: Wiring) -> int:
         )
         return 1
     thumbnails = drop_thumbnails(run, image)
-    deleted = discard_render(image)
-    refused: Refusal | None = None
-    try:
-        deleted += withdraw(run, flow, version)
-    except Refusal as refusal:
-        refused = refusal
+    deleted = [*discard_render(image), *withdraw(run, flow, version)]
     for path in deleted:
         print(f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out)
     for path in thumbnails:
         print(
             f"discard deleted {path.relative_to(run.path.parents[2])}", file=wired.out
         )
-    if refused is not None:
-        print(f"refused: {image}: {refused}", file=wired.err)
-        return 1
     return 0
 
 
@@ -1003,13 +999,18 @@ def _per_item(
                     back = "a copy, deleted" if left is None else f"back to {left.name}"
                     reporter.say(f"{run.id}: approve cancelled {name}, {back}")
                     return
-                written, warnings = approve(
-                    run,
-                    name,
-                    flows[name].schema,
-                    vocabulary(),
-                    source=args.source,
-                    excluded=field_map().excluded,
+                written, warnings = (
+                    approve(
+                        run,
+                        name,
+                        flows[name].schema,
+                        vocabulary(),
+                        excluded=field_map().excluded,
+                    )
+                    if args.source is None
+                    else approve_across(
+                        run, flows[name], args.source, vocabulary, field_map
+                    )
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)

@@ -27,8 +27,8 @@ const props = defineProps<{
   tags?: OfferedTag[] | null
   loading?: boolean
   /* The image a draft came from, drawn beside the photograph (J5·4): a
-     revision's, or, `from` naming its flow and version, a drafted draft's. */
-  revised?: { src: string; seed: string; from: string | null } | null
+     revision's, with its seed, or a drafted draft's source copy, `seed` null. */
+  revised?: { src: string; seed: string | null } | null
 }>()
 
 defineEmits<{ open: []; render: []; pair: [] }>()
@@ -46,6 +46,10 @@ const frame = computed(() => ({
 const loaded = ref<number | null>(null)
 const ratio = computed(() => props.width / props.height)
 const renderRatio = computed(() => loaded.value ?? ratio.value)
+const revisedName = computed(() => {
+  const seed = props.revised?.seed
+  return seed == null ? 'the image it was drafted from' : `render being revised · seed ${seed}`
+})
 
 watch(
   () => props.revised?.src,
@@ -99,16 +103,13 @@ defineExpose({
       </figure>
       <figure class="source__side source__revised" :style="{ flexGrow: renderRatio }" data-revised>
         <span class="source__row">
-          <span class="kicker source__label"
-            >{{ revised.from ? `drafted from ${revised.from}` : 'render being revised' }} · seed
-            {{ revised.seed }}</span
-          >
+          <span class="kicker source__label">{{ revisedName }}</span>
           <button class="btn btn-secondary source__pair-open" type="button" @click="$emit('pair')">
             Side by side<KeyHint command="photograph" />
           </button>
         </span>
         <button class="photo-frame" type="button" @click="$emit('render')">
-          <img :src="revised.src" :alt="`render ${revised.seed}`" @load="measured" />
+          <img :src="revised.src" :alt="revisedName" @load="measured" />
         </button>
       </figure>
     </div>

@@ -380,13 +380,13 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     expect(page.locator("[data-changed='clothes']")).to_contain_text("was")
     expect(page.locator("[data-caption-heading]")).to_have_text("② caption")
     revised = page.locator("[data-revised]")
-    expect(revised).to_contain_text(f"drafted from {FLOW} v1 · seed 7")
+    expect(revised).to_contain_text("the image it was drafted from")
     expect(revised.locator("img")).to_have_js_property("complete", True)
     expect(revised.locator("img")).not_to_have_js_property("naturalWidth", 0)
 
     # The delete asks on No, then Yes lands on the Hub on the cell. FLOW's only
-    # render goes, so FLOW's approval goes back to its draft; CONJURE's draft
-    # holds its own.
+    # render goes, and FLOW keeps only its assignment; CONJURE's draft holds its
+    # own copy.
     prompt = served.conjured.directory(FLOW, PROMPTS) / "001.json"
     assert prompt.is_file()
     page.goto(large)
@@ -412,12 +412,14 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
 
     expect(page).to_have_url(served.hub_of(CONJURED))
     cell = page.locator(f'.hub__cell[data-row="0"][data-flow="{FLOW}"]')
-    expect(cell).to_have_attribute("data-stage", "draft")
+    expect(cell).to_have_attribute("data-stage", "tagged")
     expect(cell).to_be_focused()
     assert not group_of(served.conjured, FLOW, 1).exists() and not prompt.exists()
     page.goto(f"{served.url}/c/{CONJURED}/review/{digest}/{CONJURE}")
     expect(page.locator(".form")).to_be_visible()
-    expect(page.locator("[data-revised]")).to_have_count(0)
+    copy = page.locator("[data-revised] img")
+    expect(copy).to_have_js_property("complete", True)
+    expect(copy).not_to_have_js_property("naturalWidth", 0)
 
 
 @pytest.mark.spec("ui:revise:discard-asks-before-it-deletes")

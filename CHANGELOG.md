@@ -10,6 +10,25 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.75.0] - 2026-11-07
+
+Gate: local 0m50s · CI not read under mf-ship · 0.74.0: local 0m30s · CI not read under mf-ship
+
+- *Draft from this* into another flow copies the image into that flow's `sources/`, under the draft's number, and the
+  draft records no image of another flow; Review reads the copy through its own route, so it outlives the source (0112
+  D2, D3).
+- Review shows a drafted draft's source copy beside the photograph, headed *the image it was drafted from*, with no
+  reference to the flow it came from (0112 D3).
+- Discarding a draft deletes it and its source copy alone: the flow and its sheet stay. A sheet a draft fills records
+  no `tags_from`, so it is weighed against a newer tag list like any other (0112 D4, D5).
+- `approve --from` fills a target with no sheet from the photograph's tags first, and the copy names the target's own
+  newest sheet, so a revision of the copy compares against it (0112 D6).
+- Deleting an approval's last render, from `discard` or the app, deletes that approval, older ones with no render and
+  the newest's waiting draft; nothing goes back to a draft. A flow left with no approval keeps only its assignment, so
+  the Hub reads *tagged* (0112 D1).
+- docs D4 and D49 now say what the last render takes and that a copy sits on the target's own sheet, and D50 records
+  the rule; data-flow, principles and both READMEs follow (0112 D7).
+
 ## [0.74.0] - 2026-11-07
 
 Gate: local 0m30s · CI not read under mf-ship · 0.73.1: local 0m33s · CI not read under mf-ship

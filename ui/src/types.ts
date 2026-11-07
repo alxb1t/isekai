@@ -154,7 +154,7 @@ export interface InputDetail {
      being revised; null for a draft of a sheet. */
   revision: Revision | null
   /* For a draft or approval written from another flow's image: its own sheet's
-     fields, and that image; null for any other. */
+     fields, and the number of its source copy; null for any other. */
   drafted: Drafted | null
   readonly: boolean
   draft: string | null
@@ -174,8 +174,8 @@ export interface Revision {
 
 export interface Drafted {
   fields: Record<string, string[]>
-  /* The image the draft was written from, while its file exists. */
-  image?: Omit<ImageRef, 'digest'>
+  /* The number its source copy is held under: the image it was drafted from. */
+  version: number
 }
 
 export interface VocabEntry {

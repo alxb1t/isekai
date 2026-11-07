@@ -105,7 +105,7 @@ def test_each_artifacts_producer_is_shown(run: Run, vocabulary: Vocabulary) -> N
         FIELD_MAP,
         tagged=target.tagger,
         flow_digest=target.digest,
-        tags_from=FLOW,
+        drafted_from=FLOW,
     )
     by_name = {(item.stage, item.flow): item for item in listings(run)}
     assert "from 001" in by_name[("sheets", FLOW)].producers[1]
@@ -467,6 +467,7 @@ def test_render_failures_are_listed_under_their_group(run: Run) -> None:
         ("outputs", "latest", True),
         ("outputs/001", "42.json", False),
         ("outputs/001", "thumbs", True),
+        ("sources", "notes.txt", False),
     ],
     ids=[
         "flow-file",
@@ -478,12 +479,16 @@ def test_render_failures_are_listed_under_their_group(run: Run) -> None:
         "outputs-directory",
         "group-file",
         "group-directory",
+        "sources-file",
     ],
 )
 def test_a_name_show_does_not_read_is_named(
     run: Run, place: str, name: str, is_directory: bool
 ) -> None:
     _rendered(run)
+    copy = run.directory(FLOW, "sources", "001.png")
+    copy.parent.mkdir()
+    copy.write_bytes(b"png")
     # Every name a stage writes is read, which is what makes the stray one news.
     assert unread(run) == []
     target = run.directory(FLOW, *filter(None, place.split("/")), name)

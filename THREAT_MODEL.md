@@ -55,4 +55,9 @@ guardrails; a link here names the decision in force.
 - A weight mirror publishing bad weights under a pinned digest's name: a pin freezes bytes, not intent
   ([D27](docs/decisions.md#d27--the-models-live-on-a-network-volume)).
 - What the operator chooses to render ([D33](docs/decisions.md#d33--the-operator-decides-what-is-rendered)).
+- What deleting a render takes with it: its approval, each older approval with no render (one queued for the next
+  render session too), and the newest's waiting draft, edited or not; and, with no approval left, every file under
+  the flow's `sheets/`, `review/`, `prompts/` and `sources/`. The operator asked for it, and the confirm stays
+  *Delete this render?*
+  ([D50](docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)).
 - A hosted service, other users and access control: the UI serves one operator on one machine.

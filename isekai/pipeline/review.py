@@ -57,19 +57,21 @@ from isekai.foundation.artifacts import (
     require,
     write,
 )
-from isekai.foundation.flow import Flow, Schema, assemble
+from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.flow import OUTPUT_SUFFIX, Flow, Schema, assemble
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
     NEW_VERSION,
+    OUTPUTS,
     PROMPTS,
     REVIEW,
     SHEETS,
+    SOURCES,
     Run,
     approval_of,
     approved_versions,
     artifact_name,
-    assign,
     attempts,
     group_of,
     is_seed,
@@ -244,12 +246,12 @@ def draft_from(
     Each field of `schema` the approval holds is the approval's; every other is
     `flow`'s newest sheet's, as are the records the fields came through. The
     draft names neither `source` nor its approval. `seed` names the image of that
-    approval the draft is written from, recorded beside it and listed as its one
-    render, and refuses as `drafting_approval` refuses; with no `seed`, the
-    renders are the approval's seeds, as `copied_renders` lists them. A waiting
-    draft equal to its sheet, rendering one drawn seed, holds no work, so it is
-    replaced at its number; one with edited fields, or a count or seeds of its
-    own, refuses.
+    approval the draft is written from, copied to the draft's `source_copy` and
+    listed as its one render, and refuses as `drafting_approval` refuses; with no
+    `seed`, the renders are the approval's seeds, as `copied_renders` lists them.
+    A waiting draft equal to its sheet, rendering one drawn seed, holds no work,
+    so it is replaced at its number; one with edited fields, or a count or seeds
+    of its own, refuses.
     e.g. (run, conjure, summon, None, schema) -> conjure/review/001.draft.json
     """
     approval = drafting_approval(run, flow, source, version, seed)
@@ -264,6 +266,10 @@ def draft_from(
     _refuse_edited(run, flow)
     merged = {**body["fields"], **carried["fields"]}
     fields = {name: list(merged[name]) for name in schema.names if name in merged}
+    number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))
+    if seed is not None:
+        image = group_of(run, source, approval) / f"{seed}{OUTPUT_SUFFIX}"
+        write_atomically(source_copy(run, flow, number), image.read_bytes())
     return _write_draft(
         run,
         flow,
@@ -274,10 +280,7 @@ def draft_from(
         copied_renders(run, source, approval, carried)
         if seed is None
         else {"count": 1, "seeds": [seed]},
-        version=_waiting_number(run, flow),
-        image=None
-        if seed is None
-        else {"flow": source, "version": approval, "seed": seed},
+        version=number,
     )
 
 
@@ -317,9 +320,9 @@ def drafting_approval(
             f"{_held_way(run, flow, source, held)}"
         )
     _approval(run, source, approval, f"draft {flow} again")
-    if (
-        seed is not None
-        and not (group_of(run, source, approval) / f"{seed}{SIDECAR}").is_file()
+    group = group_of(run, source, approval)
+    if seed is not None and not all(
+        (group / f"{seed}{suffix}").is_file() for suffix in (SIDECAR, OUTPUT_SUFFIX)
     ):
         raise Refusal(
             f"{run.id}: flow {source} rendered no seed {seed} under "
@@ -358,6 +361,14 @@ def _first_image(group: Path) -> Path | None:
     if not group.is_dir():
         return None
     return min((path for path in group.iterdir() if is_seed(path.stem)), default=None)
+
+
+def source_copy(run: Run, flow: str, version: int) -> Path:
+    """Return where `flow` holds the image its draft `version` was drafted from.
+
+    e.g. (run, conjure, 2) -> conjure/sources/002.png
+    """
+    return run.directory(flow, SOURCES) / f"{version:03d}{OUTPUT_SUFFIX}"
 
 
 def waiting_edit(run: Run, flow: str) -> Path | None:
@@ -493,21 +504,19 @@ def refuse_revision(
 def discard(run: Run, flow: str) -> Path:
     """Delete `flow`'s highest draft while it is unapproved, and return its path.
 
-    A draft from another flow's approval, in a flow holding only it and the
-    sheet that drafting wrote, takes the sheet and the flow's directory with it,
-    so the flow is unassigned again. An approval is never discarded, so a highest
+    The draft's source copy goes with it, and `sources/` when that empties it;
+    the flow and its sheets stay. An approval is never discarded, so a highest
     number that is approved refuses; `cancel` takes back one nothing was made from.
     """
     directory = run.directory(flow, REVIEW)
     draft = current_draft(directory)
     if draft is not None:
-        written = _drafting_wrote(run, flow, draft)
         draft.unlink()
-        if written is not None:
-            written.unlink()
-            directory.rmdir()
-            written.parent.rmdir()
-            assign(run, flow, remove=True)
+        copy = source_copy(run, flow, int(draft.name[:3]))
+        if copy.is_file():
+            copy.unlink()
+            if not any(copy.parent.iterdir()):
+                copy.parent.rmdir()
         return draft
     approved = approved_versions(directory)
     if approved:
@@ -520,32 +529,6 @@ def discard(run: Run, flow: str) -> Path:
         f"{run.id}: flow {flow} has no draft to discard; run "
         f"`{stage_command(run, STAGE, flow)}` to take a copy"
     )
-
-
-def _drafting_wrote(run: Run, flow: str, draft: Path) -> Path | None:
-    """Return the sheet the drafting of `draft` wrote, when `flow` holds only the two.
-
-    The sheet is the drafting's when its producer's `tags_from` names a flow, as
-    only a draft from another flow fills a first sheet. An unreadable draft or
-    sheet gives None.
-    """
-    try:
-        body = read(draft, DRAFT_FILE)
-    except Refusal:
-        return None
-    version = body.get("sheet")
-    if not isinstance(version, int) or isinstance(version, bool):
-        return None
-    sheet = sheet_of(run, flow, version)
-    held = set(run.directory(flow).rglob("*"))
-    if held != {draft.parent, draft, sheet.parent, sheet}:
-        return None
-    try:
-        producer = read(sheet, SHEET_FILE).get("producer")
-    except Refusal:
-        return None
-    tags_from = producer.get("tags_from") if isinstance(producer, Mapping) else None
-    return sheet if isinstance(tags_from, str) else None
 
 
 def cancellable(run: Run, flow: str) -> str | None:
@@ -599,37 +582,56 @@ def cancel(run: Run, flow: str) -> Cancelled:
 
 
 def withdraw(run: Run, flow: str, version: int) -> list[Path]:
-    """Cancel approval `version` of `flow` with its last render; return what went.
+    """Delete approval `version` once its group is gone; return what went, absolute.
 
-    Only the newest approval goes, when its outputs group is gone and no draft
-    waits above it. Its prompt and failure records go first, then `cancel` takes
-    it back to its draft, or deletes a copy. A damaged approval refuses.
-    e.g. (run, f, 2) -> [f/prompts/002.json, f/review/002.approved.json]
+    With it go each older approval with no group, each with its prompt, failure
+    records and source copy, and, where it was the newest, the draft waiting above
+    it and that draft's source copy. A flow left with no approval keeps only its
+    directory, its assignment: every path under sheets/, review/, prompts/ and
+    sources/ goes, then those directories, then outputs/ when empty. Nothing is
+    read, so nothing refuses.
+    e.g. (run, f, 2), 001 rendered -> [f/prompts/002.json, f/review/002.approved.json]
     """
     directory = run.directory(flow, REVIEW)
     approved = approved_versions(directory)
-    if (
-        not approved
-        or approved[-1] != version
-        or group_of(run, flow, version).exists()
-        or current_draft(directory) is not None
-    ):
+    if version not in approved or group_of(run, flow, version).exists():
         return []
-    again = f"`{stage_command(run, 'approve', flow, options=CANCEL)}`"
-    body = _approval(run, flow, version, f"run {again}")
-    copied = approval_of(run, flow, version)
-    # `cancel` refuses without a producer, so that is read before any file goes.
-    require(copied, body, "producer", dict, f"restore it in {copied}, then {again}")
-    prompts = run.directory(flow, PROMPTS)
-    made = [
-        prompts / artifact_name(version),
-        *(attempt.path for attempt in attempts(prompts, version)),
+    going = [
+        one
+        for one in approved
+        if one == version or (one < version and not group_of(run, flow, one).exists())
     ]
+    prompts = run.directory(flow, PROMPTS)
+    made: list[Path] = []
+    for one in going:
+        made += [
+            prompts / artifact_name(one),
+            *(attempt.path for attempt in attempts(prompts, one)),
+            source_copy(run, flow, one),
+            approval_of(run, flow, one),
+        ]
+    if version == approved[-1] and (draft := current_draft(directory)) is not None:
+        made += [draft, source_copy(run, flow, int(draft.name[:3]))]
     gone = [path.absolute() for path in made if path.exists()]
     for path in gone:
         path.unlink()
-    cancel(run, flow)
-    return [*gone, approval_of(run, flow, version).absolute()]
+    if len(going) < len(approved):
+        return gone
+    for name in (SHEETS, REVIEW, PROMPTS, SOURCES):
+        held = run.directory(flow, name)
+        if not held.exists():
+            continue
+        for path in [*sorted(held.rglob("*"), reverse=True), held]:
+            if path.is_dir():
+                path.rmdir()
+            else:
+                path.unlink()
+            gone.append(path.absolute())
+    outputs = run.directory(flow, OUTPUTS)
+    if outputs.is_dir() and not any(outputs.iterdir()):
+        outputs.rmdir()
+        gone.append(outputs.absolute())
+    return gone
 
 
 def _at_draft(directory: Path) -> Path | None:
@@ -1008,8 +1010,8 @@ def _copy_approval(
     `flow` is in step when its latest approval is a copy holding the fields and
     renders a copy of `source`'s latest would; anything else is copied over under
     the next number. The fields are validated against `flow`'s schema, so a copy
-    the target cannot hold is refused like any draft. `sheet` stays `source`'s:
-    it is provenance.
+    the target cannot hold is refused like any draft. `sheet` is `flow`'s newest sheet,
+    which a revision of the copy is compared against; a `flow` with none refuses.
     """
     origin = run.directory(source, REVIEW)
     versions_held = approved_versions(origin)
@@ -1035,14 +1037,14 @@ def _copy_approval(
     renders = copied_renders(run, source, approval, body)
     mine = latest_artifact(directory, APPROVED)
     if mine is not None:
-        latest = read(mine, APPROVED_FILE)
+        newest = read(mine, APPROVED_FILE)
         afresh = f"delete {mine}, then run {_again(run, flow)} to approve it afresh"
-        require(mine, latest, "producer", dict, afresh)
-        require(mine, latest, "fields", dict, afresh)
+        require(mine, newest, "producer", dict, afresh)
+        require(mine, newest, "fields", dict, afresh)
         if (
-            is_copy(latest["producer"])
-            and same_fields(latest["fields"], fields)
-            and renders_of(mine, latest, afresh) == renders
+            is_copy(newest["producer"])
+            and same_fields(newest["fields"], fields)
+            and renders_of(mine, newest, afresh) == renders
         ):
             return None
     # Neither flow has a draft to edit, so a tag's fix goes through `source`'s own;
@@ -1061,19 +1063,34 @@ def _copy_approval(
         f"{_again(run, flow)}, edit the draft, then "
         f"`{stage_command(run, 'approve', flow)}` to approve {flow} on its own",
     )
+    sheet_version = latest(run.directory(flow, SHEETS))
+    if sheet_version is None:
+        raise Refusal(
+            f"{run.id}: flow {flow} has no sheet to copy {source}'s approval onto; "
+            f"run `{stage_command(run, 'sheet', flow)}`, then `{copy}` again"
+        )
+    again = (
+        f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, "
+        f"then `{copy}` again"
+    )
+    target = sheet_of(run, flow, sheet_version)
+    held = read(target, SHEET_FILE, remedy=again)
+    require(target, held, "fields", dict, again)
 
     kept = {k: v for k, v in body["producer"].items() if k not in _NOT_COPIED}
-    producer = cast(ApprovedProducer, kept | {"copied": True})
+    edited = not same_fields(held["fields"], fields)
+    producer = cast(ApprovedProducer, kept | {"copied": True, "edited": edited})
     copied: ReviewApproved = {
         **body,
         "producer": producer,
         "flow": flow,
+        "sheet": sheet_version,
         "fields": fields,
         "renders": renders,
     }
-    target = directory / artifact_name(next_version(directory), APPROVED)
-    write(target, APPROVED_FILE, copied)
-    return target
+    written = directory / artifact_name(next_version(directory), APPROVED)
+    write(written, APPROVED_FILE, copied)
+    return written
 
 
 def _refuse_unchanged(

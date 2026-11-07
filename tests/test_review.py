@@ -6,7 +6,6 @@ this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 
 import io
 import json
-import shutil
 from dataclasses import replace
 from pathlib import Path
 
@@ -51,6 +50,7 @@ from isekai.pipeline.review import (
     review,
     revise,
     save_draft,
+    source_copy,
     state,
     token_budget,
     withdraw,
@@ -962,10 +962,11 @@ CONTROL = "control-anime-wai"
 
 
 def _approved_source(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
-    """Approve `FLOW` unedited and return its approval."""
+    """Approve `FLOW` unedited, fill `CONTROL`'s sheet, and return the approval."""
     review(run, FLOW)
     approved, _ = approve(run, FLOW, schema, vocabulary)
     assert approved is not None
+    sheet(run, schema, vocabulary, flow=CONTROL)
     return approved
 
 
@@ -1119,6 +1120,37 @@ def test_a_target_not_copied_from_the_sources_latest_is_copied_again(
     assert held.read_bytes() == frozen
 
 
+@pytest.mark.spec("review:copy-from:the-copy-names-the-targets-own-sheet")
+def test_a_copy_names_the_targets_own_sheet(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    sheets = run.directory(CONTROL, "sheets")
+    (sheets / "001.json").unlink()
+    sheets.rmdir()
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    assert "no sheet" in str(refused.value)
+    assert stage_command(run, "sheet", CONTROL) in str(refused.value)
+    assert snapshot(run.path) == before
+
+    sheet(run, schema, vocabulary, flow=CONTROL)
+    copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    assert copied is not None
+    body = read(copied, APPROVED_FILE)
+    assert body["sheet"] == 1
+    assert body["producer"]["edited"] is False
+
+    _image(run, 1, 11, CONTROL)
+    draft = revise(run, CONTROL, 1, 11)
+    _edit(draft, hair_silhouette=["very long hair"])
+    revised, _ = approve(run, CONTROL, schema, vocabulary)
+    assert revised == run.path / CONTROL / "review" / "002.approved.json"
+
+
 # --- drafting from another flow's approval ------------------------------------
 
 CONJURE = "conjure-anime-wai"
@@ -1202,8 +1234,8 @@ def test_a_draft_from_no_image_carries_the_approvals_seeds(
     assert read(draft, DRAFT_FILE)["renders"] == {"count": 1, "seeds": [11]}
 
 
-@pytest.mark.spec("review:draft-from:a-draft-from-an-image-records-it")
-def test_a_drafted_draft_records_the_image_it_names_and_none_without(
+@pytest.mark.spec("review:draft-from:a-draft-from-an-image-copies-it")
+def test_a_draft_from_an_image_copies_it_into_the_targets_sources(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _summon_approved(run, schema, vocabulary)
@@ -1211,12 +1243,13 @@ def test_a_drafted_draft_records_the_image_it_names_and_none_without(
 
     unnamed = draft_from(run, CONJURE, FLOW, 1, conjure)
     assert "image" not in read(unnamed, DRAFT_FILE)["producer"]
+    assert not source_copy(run, CONJURE, 1).exists()
     discard(run, CONJURE)
-    _image(run, 1, SEED)
+    image = _image(run, 1, SEED)
     named = draft_from(run, CONJURE, FLOW, 1, conjure, seed=SEED)
 
-    image = read(named, DRAFT_FILE)["producer"].get("image")
-    assert image == {"flow": FLOW, "version": 1, "seed": SEED}
+    assert "image" not in read(named, DRAFT_FILE)["producer"]
+    assert source_copy(run, CONJURE, 1).read_bytes() == image.read_bytes()
 
 
 @pytest.mark.spec("review:draft-from:a-draft-from-an-image-prefills-its-seed")
@@ -1246,6 +1279,14 @@ def test_a_draft_naming_a_seed_its_approval_never_rendered_is_refused(
 
     assert "rendered no seed 999 under 001.approved.json" in str(refused.value)
     assert f"`python -m isekai show{runs_flag(run)} {run.id}`" in str(refused.value)
+    assert snapshot(run.path) == before
+
+    (run.directory(FLOW, "outputs", "001") / f"{SEED}.png").unlink()
+    before = snapshot(run.path)
+    with pytest.raises(Refusal) as refused:
+        draft_from(run, CONJURE, FLOW, 1, conjure, seed=SEED)
+
+    assert f"rendered no seed {SEED}" in str(refused.value)
     assert snapshot(run.path) == before
 
 
@@ -1631,11 +1672,12 @@ def test_discarding_an_approved_flow_is_refused_and_changes_nothing(
     assert snapshot(run.directory(FLOW, "review")) == before
 
 
-@pytest.mark.spec("review:discard:a-drafted-draft-is-undone-whole")
-def test_a_drafted_draft_is_undone_whole_and_a_tagged_flows_alone(
+@pytest.mark.spec("review:discard:a-drafted-draft-goes-alone")
+def test_a_drafted_draft_goes_alone_and_the_flow_stays(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _summon_approved(run, schema, vocabulary)
+    _image(run, 1, SEED)
     conjure = load_flow(CONJURE)
     sheet_stage.sheet(
         run,
@@ -1645,39 +1687,17 @@ def test_a_drafted_draft_is_undone_whole_and_a_tagged_flows_alone(
         FIELD_MAP,
         tagged=conjure.tagger,
         flow_digest=conjure.digest,
-        tags_from=FLOW,
+        drafted_from=FLOW,
     )
-    drafted = draft_from(run, CONJURE, FLOW, 1, conjure.schema)
+    drafted = draft_from(run, CONJURE, FLOW, 1, conjure.schema, seed=SEED)
+    copy = source_copy(run, CONJURE, 1)
+    assert copy.is_file()
 
     assert discard(run, CONJURE) == drafted
-    assert not run.directory(CONJURE).exists()
-
-    # The drafting's sheet beside a caption `isekai migrate` left under the flow stays.
-    written, _ = sheet_stage.sheet(
-        run,
-        CONJURE,
-        conjure.schema,
-        vocabulary,
-        FIELD_MAP,
-        tagged=conjure.tagger,
-        flow_digest=conjure.digest,
-        tags_from=FLOW,
-    )
-    caption(run, FakeReader(prose="Short wavy hair."))
-    shutil.copytree(
-        run.directory(PHOTO, "captions"), run.directory(CONJURE, "captions")
-    )
-    draft_from(run, CONJURE, FLOW, 1, conjure.schema)
-    discard(run, CONJURE)
-    assert written is not None and written.exists()
-    shutil.rmtree(run.directory(CONJURE))
-
-    # A flow with its own tagged sheet keeps it: the draft alone goes.
-    _conjure(run, vocabulary)
-    kept = draft_from(run, CONJURE, FLOW, 1, conjure.schema)
-    assert discard(run, CONJURE) == kept
-    assert not kept.exists()
+    assert not drafted.exists()
+    assert not copy.parent.exists()
     assert versions(run.directory(CONJURE, "sheets")) == [1]
+    assert run.directory(CONJURE).is_dir()
 
 
 def _revise_verb(vocabulary: Vocabulary, *images: Path) -> tuple[int, str]:
@@ -1961,73 +1981,82 @@ def test_a_cancel_interrupted_before_its_delete_finishes_when_run_again(
 # --- withdraw: an approval leaves with its last render -------------------------
 
 
-@pytest.mark.spec(
-    "image-generation:discard:the-newest-approval-goes-with-its-last-render"
-)
+@pytest.mark.spec("image-generation:discard:the-approval-goes-with-its-last-render")
 @pytest.mark.spec(
     "run-directory:idempotence:the-newest-approval-goes-with-its-last-render"
 )
-def test_the_newest_approvals_last_render_takes_it_back_to_its_draft(
+def test_the_last_render_takes_its_approval_and_the_waiting_draft(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    approved = _approved_source(run, schema, vocabulary)
-    copy, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
-    assert copy is not None
+    _approved_source(run, schema, vocabulary)
+    _image(run, 1, 11)
+    approved = _approved(run, schema, vocabulary, hair_silhouette=["very long hair"])
     prompt = prompt_artifact(run, load_flow(FLOW), schema)
     failure = record_failure(
         run.directory(FLOW, "prompts"),
-        1,
+        2,
         "permanent",
         {"stage": "assemble", "detail": "x"},
     )
-    # An approval its cancel would refuse keeps the prompt and the failure record.
-    held = approved.read_bytes()
-    _damage(approved, "producer", None)
-    with pytest.raises(Refusal):
-        withdraw(run, FLOW, 1)
-    assert prompt.exists() and failure.exists() and approved.exists()
-    approved.write_bytes(held)
+    copy = source_copy(run, FLOW, 2)
+    copy.parent.mkdir()
+    copy.write_bytes(b"png")
+    draft = review(run, FLOW, new_version=True)
+    assert draft is not None
     before = snapshot(run.path)
 
-    assert withdraw(run, FLOW, 1) == [prompt, failure, approved]
+    went = [prompt, failure, copy, approved, draft]
+    assert withdraw(run, FLOW, 2) == [path.absolute() for path in went]
 
-    assert not prompt.exists() and not failure.exists() and not approved.exists()
-    draft = run.directory(FLOW, "review") / "001.draft.json"
-    assert draft.is_file()
-    assert state(run.directory(FLOW, "review")) == "draft"
+    assert sorted(path.name for path in draft.parent.iterdir()) == ["001.approved.json"]
     # Every other file of the run is as it was.
-    gone = {str(path.relative_to(run.path)) for path in (prompt, failure, approved)}
+    gone = {str(path.relative_to(run.path)) for path in went}
     assert snapshot(run.path) == {
-        **{name: body for name, body in before.items() if name not in gone},
-        str(draft.relative_to(run.path)): draft.read_bytes(),
+        name: body for name, body in before.items() if name not in gone
     }
-    # A copy has no draft to go back to, so it is deleted.
-    assert withdraw(run, CONTROL, 1) == [copy]
-    assert not copy.exists()
 
 
-@pytest.mark.spec("image-generation:discard:an-older-approval-stays")
-def test_an_older_approvals_last_render_leaves_it(
+@pytest.mark.spec("image-generation:discard:older-render-less-approvals-go")
+def test_older_approvals_with_no_render_go_and_rendered_ones_stay(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _approved_source(run, schema, vocabulary)
-    _approved(run, schema, vocabulary, hair_silhouette=["very long hair"])
+    image = _image(run, 1, 11)
+    second = _approved(run, schema, vocabulary, hair_silhouette=["very long hair"])
+    third = _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
     before = snapshot(run.path)
 
     assert withdraw(run, FLOW, 1) == []
-
     assert snapshot(run.path) == before
 
+    assert withdraw(run, FLOW, 3) == [second.absolute(), third.absolute()]
+    assert approved_versions(run.directory(FLOW, "review")) == [1]
+    assert image.is_file()
 
-@pytest.mark.spec("image-generation:discard:a-waiting-draft-keeps-the-approval")
-def test_a_waiting_draft_keeps_the_approval_its_last_render_left(
+
+@pytest.mark.spec(
+    "image-generation:discard:a-flow-with-no-approval-keeps-its-assignment"
+)
+def test_a_flow_left_with_no_approval_keeps_only_its_assignment(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    _approved_source(run, schema, vocabulary)
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
     prompt_artifact(run, load_flow(FLOW), schema)
-    assert review(run, FLOW, new_version=True) is not None
-    before = snapshot(run.path)
+    photo = snapshot(run.directory(PHOTO))
 
-    assert withdraw(run, FLOW, 1) == []
+    withdraw(run, FLOW, 1)
 
-    assert snapshot(run.path) == before
+    assert list(run.directory(FLOW).iterdir()) == []
+    assert snapshot(run.directory(PHOTO)) == photo
+
+    # A group no approval names, holding an image, keeps outputs/ in place.
+    sheet(run, schema, vocabulary)
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
+    _image(run, 5, 11)
+
+    withdraw(run, FLOW, 1)
+
+    assert [path.name for path in run.directory(FLOW).iterdir()] == ["outputs"]
+    assert run.directory(FLOW, "outputs", "005").is_dir()
