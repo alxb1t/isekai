@@ -328,8 +328,8 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
     tile = modal.locator('[data-version="1"][data-seed="7"]')
     expect(tile).to_be_focused()
     expect(tile.locator("img")).to_have_js_property("complete", True)
-    thumb = older.locator("img").bounding_box()
-    shown = tile.locator("img").bounding_box()
+    thumb = older.bounding_box()
+    shown = tile.bounding_box()
     assert thumb is not None and shown is not None
     assert shown["width"] == pytest.approx(thumb["width"] * 2, abs=1)
     expect(modal.locator("[data-shared]")).to_have_count(2)
