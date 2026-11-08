@@ -22,14 +22,14 @@ under another version too. Up to three rows SHALL show whole, each image at twic
 fit the window, and more rows SHALL scroll. The arrows and `h j k l` SHALL move it, a move between rows keeping the
 column, held at a shorter row's last image, `l` at a row's end going on to the next row's first and `h` at a row's
 start back to the previous row's last; `↵` or a click SHALL open the focused image's large view, and `Esc` SHALL close
-it. A cell holding images SHALL show every one of them in that order, each marked with its version, a click on one opening the cell modal on it,
-and last, while its newest approval lacks images of its count, a tile naming the number it lacks, as the render stage
-counts it. A source's cell SHALL be the grid's first column, reached by `h` and `←`, and `↵` there SHALL open its
-photograph in the viewer, stepping through the collection's sources. The hub SHALL keep its focus across the Back button
-and a switch of tabs, a restored focus scrolled to the window's centre. A key's move to the first row SHALL scroll the
-hub to its top, to the last row to its foot, and to any other row only as far as the row needs. The header SHALL leave a
-12 px gap between items. An assigned cell SHALL read tagged from the photograph's tag list, so a photograph tagged once
-is tagged in every flow it is assigned to.
+it. A cell holding images SHALL show every one of them in that order, each marked with its version, a click on one
+opening the cell modal on it, and last, while its newest approval lacks images of its count, a tile naming the number it
+lacks, as the render stage counts it. A source's cell SHALL be the grid's first column, reached by `h` and `←`, and `↵`
+there SHALL open its photograph in the viewer, stepping through the collection's sources. The hub SHALL keep its focus
+across the Back button and a switch of tabs, a restored focus scrolled to the window's centre. A key's move to the first
+row SHALL scroll the hub to its top, to the last row to its foot, and to any other row only as far as the row needs. The
+header SHALL leave a 12 px gap between items. An assigned cell SHALL read tagged from the photograph's tag list, so a
+photograph tagged once is tagged in every flow it is assigned to.
 
 A stage is a directory listing, the rule every stage already follows, so the grid cannot drift from the disk, and a tick
 survives a reload. A tagged cell holds no sheet: its tag list is the photograph's, so its untick deletes no work, and
@@ -369,8 +369,8 @@ flow, the photographs' row at the foot, a cell holding that flow's images of tha
 each still to come, drawn at a thumbnail's size and moved through by `h j k l` and the arrows, `j` `↓` on a
 grid's last row moving into the first row of the grid below and `k` `↑` back, keeping the column, held at a shorter
 row's end. `↵` SHALL open the focused row in the viewer over the drawer, which SHALL follow its list when it changes
-while open; `⇧H` SHALL close the drawer and open the focused image's collection's hub, as *View in Hub* does. A click on the backdrop,
-`⌃;` and `Esc` SHALL close it, `Esc` closing the viewer first.
+while open; `⇧H` SHALL close the drawer and open the focused image's collection's hub, as *View in Hub* does. A click
+on the backdrop, `⌃;` and `Esc` SHALL close it, `Esc` closing the viewer first.
 A key's move to the first row SHALL scroll the drawer to its top, to the last row to its foot, and to any other row
 only as far as the row needs, a grid's first row also bringing its collection's name into view.
 

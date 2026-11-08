@@ -5,7 +5,9 @@ import {
   cellGrid,
   cellOrder,
   clicks,
+  gridColumns,
   locked,
+  moveCell,
   movePick,
   pending,
   pickHead,
@@ -91,10 +93,12 @@ spec('ui:hub:the-cell-modal-moves-by-version-and-seed', () => {
     { version: 1, seed: '9' },
     { version: 1, seed: '2' },
     { version: 2, seed: '4' },
+    { version: 2, seed: '6' },
+    { version: 2, seed: '8' },
   ]
   // The cell's thumbnails and the modal stand in one order: versions oldest
   // first, seeds as numbers, past a number's safe range too.
-  expect(cellOrder(images)).toEqual([images[1], images[0], images[2]])
+  expect(cellOrder(images)).toEqual([images[1], images[0], images[2], images[3], images[4]])
   expect(
     cellOrder([
       { version: 1, seed: '18446744073709551615' },
@@ -106,18 +110,50 @@ spec('ui:hub:the-cell-modal-moves-by-version-and-seed', () => {
   const grid = cellGrid(flow, images, { version: 1, seed: '9' })
   expect(grid.rows).toEqual([
     {
-      version: 1,
       tiles: [
         { flow, version: 1, seed: '2' },
         { flow, version: 1, seed: '9' },
+        { flow, version: 2, seed: '4' },
       ],
     },
-    { version: 2, tiles: [{ flow, version: 2, seed: '4' }] },
+    {
+      tiles: [
+        { flow, version: 2, seed: '6' },
+        { flow, version: 2, seed: '8' },
+      ],
+    },
   ])
   expect(grid.start).toEqual({ row: 0, column: 1 })
-  // A row move keeps the column, held at the shorter row's end.
-  expect(movePick(grid, grid.start, 'row+')).toEqual({ row: 1, column: 0 })
-  expect(movePick(grid, { row: 0, column: 0 }, 'column+')).toEqual({ row: 0, column: 1 })
+  // l at a row's end goes on to the next row's first, and h comes back.
+  expect(moveCell(grid, { row: 0, column: 2 }, 'column+')).toEqual({ row: 1, column: 0 })
+  expect(moveCell(grid, { row: 1, column: 0 }, 'column-')).toEqual({ row: 0, column: 2 })
+  // j onto a missing tile lands on the shorter row's last.
+  expect(moveCell(grid, { row: 0, column: 2 }, 'row+')).toEqual({ row: 1, column: 1 })
+  // At the grid's ends the focus holds.
+  expect(moveCell(grid, { row: 1, column: 1 }, 'column+')).toEqual({ row: 1, column: 1 })
+  expect(moveCell(grid, { row: 0, column: 0 }, 'column-')).toEqual({ row: 0, column: 0 })
+})
+
+spec('ui:hub:the-cell-modal-balances-its-rows', () => {
+  const lengths = (count: number) =>
+    cellGrid(
+      'summon-anime-wai',
+      Array.from({ length: count }, (_, seed) => ({ version: 1, seed: `${seed}` })),
+      { version: 1, seed: '0' },
+    ).rows.map((one) => one.tiles.length)
+  expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(lengths)).toEqual([
+    [1],
+    [2],
+    [3],
+    [2, 2],
+    [3, 2],
+    [3, 3],
+    [3, 3, 1],
+    [3, 3, 2],
+    [3, 3, 3],
+    [3, 3, 3, 1],
+  ])
+  expect(gridColumns(0)).toBe(0)
 })
 
 spec('ui:hub:a-seed-under-two-versions-is-marked', () => {
@@ -132,7 +168,7 @@ spec('ui:hub:a-seed-under-two-versions-is-marked', () => {
   )
   expect(grid.shared.has('7')).toBe(true)
   expect(grid.shared.has('5')).toBe(false)
-  expect(grid.start).toEqual({ row: 1, column: 1 })
+  expect(grid.start).toEqual({ row: 0, column: 2 })
 })
 
 spec('ui:hub:a-cell-shows-what-is-ready', () => {

@@ -1770,11 +1770,13 @@ dialog::backdrop {
   color: var(--ink-2);
 }
 
-/* The cell modal's tiles, at twice a thumbnail's size; a caption longer than its
-   tile is cut by an ellipsis rather than widening it. */
+/* The cell modal's tiles fit the window: twice a thumbnail's size, scaled down so up
+   to three rows show whole; 96px is the dialog's chrome, 44px a row's caption and gap.
+   A caption longer than its tile is cut by an ellipsis rather than widening it. */
 .pick--cell .renders__image {
-  width: calc(var(--tile-width) * 2);
-  height: calc(var(--tile-height) * 2);
+  width: auto;
+  aspect-ratio: 3 / 4;
+  height: min(calc(var(--tile-height) * 2), calc((100vh - 96px) / var(--rows) - 44px));
 }
 
 .pick--cell figcaption {

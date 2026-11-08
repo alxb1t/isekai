@@ -4,32 +4,32 @@ The grid first, then Renders deleted, then the prose, per [design](design.md). P
 
 ## Progress
 
-- [ ] 1 — The grid
+- [x] 1 — The grid
 - [ ] 2 — Renders deleted
 - [ ] 3 — The prose
 
 ## 1 — The grid
 
-- [ ] 1.1 **HALT CHECK** — `cellGrid` still takes `(flow, images, at)`, as [D1](design.md#d1) keeps it.
+- [x] 1.1 **HALT CHECK** — `cellGrid` still takes `(flow, images, at)`, as [D1](design.md#d1) keeps it.
   Verify: `grep -n -F 'export function cellGrid(' ui/src/cells.ts` prints one line.
-- [ ] 1.2 In `ui/src/cells.ts`, add `gridColumns(count)` and make `CellGrid` and `cellGrid` one balanced grid, their doc
+- [x] 1.2 In `ui/src/cells.ts`, add `gridColumns(count)` and make `CellGrid` and `cellGrid` one balanced grid, their doc
   comments and examples with them, per [D1](design.md#d1).
   Verify: `grep -n -E 'export (const|function) gridColumns' ui/src/cells.ts` prints one line.
-- [ ] 1.3 In `ui/src/cells.ts`, add `moveCell(grid, at, move)` with its doc comment and example, per [D2](design.md#d2).
+- [x] 1.3 In `ui/src/cells.ts`, add `moveCell(grid, at, move)` with its doc comment and example, per [D2](design.md#d2).
   Verify: `grep -n -F 'export function moveCell(' ui/src/cells.ts` prints one line.
-- [ ] 1.4 In `ui/src/cells.test.ts`, rewrite `ui:hub:the-cell-modal-moves-by-version-and-seed` over `cellGrid` and
+- [x] 1.4 In `ui/src/cells.test.ts`, rewrite `ui:hub:the-cell-modal-moves-by-version-and-seed` over `cellGrid` and
   `moveCell`, set `ui:hub:a-seed-under-two-versions-is-marked`'s `start` to `{ row: 0, column: 2 }`, and add
   `spec('ui:hub:the-cell-modal-balances-its-rows', …)`, per [Tests](design.md#tests).
   Verify: `grep -c '^spec(' ui/src/cells.test.ts` prints `10`.
-- [ ] 1.5 In `ui/src/components/CellModal.vue`, draw the rows, tiles and badge as [D3](design.md#d3) says and set
+- [x] 1.5 In `ui/src/components/CellModal.vue`, draw the rows, tiles and badge as [D3](design.md#d3) says and set
   `--rows` on `.pick--cell` per [D4](design.md#d4); walk by `moveCell`; the head comment says one balanced grid, badged. Verify: `grep -n -F 'moveCell(props.grid' ui/src/components/CellModal.vue` prints one line.
-- [ ] 1.6 In `ui/src/app.css`, give `.pick--cell .renders__image` `width: auto`, `aspect-ratio: 3 / 4` and D4's
+- [x] 1.6 In `ui/src/app.css`, give `.pick--cell .renders__image` `width: auto`, `aspect-ratio: 3 / 4` and D4's
   `height`, its comment saying the tiles fit the window, per [D4](design.md#d4).
   Verify: `grep -n -F 'calc((100vh - 96px) / var(--rows) - 44px)' ui/src/app.css` prints one line.
-- [ ] 1.7 In `tests/e2e/test_render.py`'s `test_a_rendered_cell_opens_its_newest_image`, add the
+- [x] 1.7 In `tests/e2e/test_render.py`'s `test_a_rendered_cell_opens_its_newest_image`, add the
   `ui:renders:the-large-view-shows-its-sheet` marker, `hair_colour` on the sheet, and the `COMPARED` steps
   [Tests](design.md#tests) names, the short window at 1280 × 320. Verify: `grep -n -F '"height": 320' tests/e2e/test_render.py` prints one line.
-- [ ] 1.8 In `openspec/changes/0118-the-cell-modal-grid/specs/ui/spec.md`, rewrap the paragraphs holding *A cell
+- [x] 1.8 In `openspec/changes/0118-the-cell-modal-grid/specs/ui/spec.md`, rewrap the paragraphs holding *A cell
   holding images SHALL show every one of them* and *`⇧H` SHALL close the drawer* to 120 characters, whitespace
   only, every word, code span and emphasis kept: the gate reads the effective spec, which reads this delta.
   Verify: `uv run pytest tests/test_spec_prose.py -k test_no_spec_line_passes_120_characters` exits 0.
