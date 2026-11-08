@@ -249,7 +249,7 @@ exits; the app reads these locks across the library every two seconds, so a term
 
 ```
 dialog: quote ─▶ confirm ─▶ gpunit volume up ─▶ render --limit … --session <id> --progress json
-          ─▶ gpunit volume down, unless kept ─▶ the render drawer ─▶ Renders
+          ─▶ gpunit volume down, unless kept ─▶ the render drawer ─▶ the hub
 ```
 
 `caption` and `tag` reach a model too, but a local one: Ollama over HTTP to this

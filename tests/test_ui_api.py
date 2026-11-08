@@ -1595,7 +1595,7 @@ def test_a_malformed_update_is_refused_naming_the_field(
     assert snapshot(made.path) == before
 
 
-# --- Renders ------------------------------------------------------------------
+# --- The large view -----------------------------------------------------------
 
 
 def _rendered_twice(
@@ -1931,7 +1931,7 @@ def test_compare_takes_any_two_images_of_a_source(
     rendered(7)
     _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
     rendered(7)
-    # The hub follows write time within an approval, Renders seed order.
+    # The hub follows write time within an approval, the large view seed order.
     image = image_of(made, flow, 4, 7)
     for seed, at in ((7, 1), (9, 2), (2, 3)):
         target = image_of(made, flow, 4, seed)
@@ -1953,7 +1953,7 @@ def test_compare_takes_any_two_images_of_a_source(
     photo = client.get(f"{large}/v4/7/compare/photo").json()
     itself = client.get(f"{large}/v4/7/compare/{FLOW}/v4/7")
 
-    # Renders and Compare retain seed order.
+    # The large view and Compare retain seed order.
     assert "images" not in view
     assert [
         (row["flow"], [(one["version"], one["seed"]) for one in row["images"]])

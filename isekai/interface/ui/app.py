@@ -1043,7 +1043,7 @@ def create_app(
             # Every offered flow, this one first, assigned or not: a draft assigns.
             "targets": sorted(flows, key=lambda name: name != flow),
             # The source's images, a row per offered flow holding any, each oldest
-            # version first, then by seed: Renders and the pick.
+            # version first, then by seed: the large view's walk and the pick.
             "source": [
                 {"flow": name, "images": _images_out(images)}
                 for name in flows
@@ -1387,7 +1387,7 @@ def _image_out(digest: str, flow: str, version: int, seed: int) -> dict[str, Any
 
 
 def _images_out(images: Sequence[tuple[int, int]]) -> list[dict[str, Any]]:
-    """Describe rendered images by version and decimal seed, as Renders names them.
+    """Describe rendered images by version and decimal seed, as the page names them.
 
     e.g. [(1, 7)] -> [{"version": 1, "seed": "7"}]
     """

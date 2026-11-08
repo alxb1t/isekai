@@ -70,7 +70,7 @@ WIDE_SOURCES = (
     ("quy", (840, 1000)),
     ("rex", (850, 1000)),
 )
-# The collection the Renders view is read from: one source already rendered once;
+# The collection the hub's cell modal is read from: one source already rendered once;
 # a routes test needs it to hold no sheet waiting for review.
 SHOWN = "shown"
 # The collection a revision is written in: one source rendered once at seed 7.

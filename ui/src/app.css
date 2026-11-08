@@ -7,7 +7,7 @@
      for the autocomplete: the post count is read by digit count, which only
      works if the digits align. */
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  /* One image's tile on the hub and on Renders: a source's thumbnail and a
+  /* One image's tile on the hub: a source's thumbnail and a
      render's are drawn the same size, so a row reads across at one scale. */
   --tile-width: 96px;
   --tile-height: 128px;
@@ -620,7 +620,7 @@ button.session__tile {
   color: var(--ink-2);
 }
 
-/* — Renders and the large view (J5·1, J5·2) — */
+/* — the tile and the large view (J5·2) — */
 
 .tile__badge {
   position: absolute;
@@ -1657,7 +1657,7 @@ dialog::backdrop {
   background: var(--scrim);
 }
 
-/* Compare with…'s tiles, at a Renders tile's size, each named under it. */
+/* Compare with…'s tiles, at a thumbnail's size, each named under it. */
 /* A row per flow, its tiles in one line: `j k` keep the column. The longest row
    sets the width; the head, cut at its lines' ends, never does. Past the window's
    height the rows scroll inside. */
@@ -1925,7 +1925,7 @@ dialog::backdrop {
   color: var(--ink-2);
 }
 
-/* A cell's images at its foot, at a Renders tile's size. */
+/* A cell's images at its foot, at a thumbnail's size. */
 .hub__images {
   display: flex;
   flex-wrap: wrap;

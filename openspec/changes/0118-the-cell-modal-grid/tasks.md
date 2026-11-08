@@ -6,7 +6,7 @@ The grid first, then Renders deleted, then the prose, per [design](design.md). P
 
 - [x] 1 — The grid
 - [x] 2 — Renders deleted
-- [ ] 3 — The prose
+- [x] 3 — The prose
 
 ## 1 — The grid
 
@@ -88,14 +88,14 @@ The grid first, then Renders deleted, then the prose, per [design](design.md). P
 
 Each edit keeps its `after` phrase on one line, rewrapping around it, per [the words](design.md#the-words).
 
-- [ ] 3.1 In `ui/design/spec.md`, apply [S1](design.md#s1) to [S6](design.md#s6): the AppBar line, the routes table
+- [x] 3.1 In `ui/design/spec.md`, apply [S1](design.md#s1) to [S6](design.md#s6): the AppBar line, the routes table
   and J2. Verify: `grep -n -F 'One grid of every image of the cell' ui/design/spec.md` prints one line.
-- [ ] 3.2 In `ui/design/spec.md`, apply [S7](design.md#s7) to [S14](design.md#s14): J4 and J5.
+- [x] 3.2 In `ui/design/spec.md`, apply [S7](design.md#s7) to [S14](design.md#s14): J4 and J5.
   Verify: `grep -n -F 'whatever opened it.' ui/design/spec.md` prints one line.
-- [ ] 3.3 In `ui/design/spec.md`, apply [S15](design.md#s15) to [S20](design.md#s20): J6, the states table and §7.
+- [x] 3.3 In `ui/design/spec.md`, apply [S15](design.md#s15) to [S20](design.md#s20): J6, the states table and §7.
   Verify: `grep -n -E '⇧I|^\| Renders \|' ui/design/spec.md` prints nothing.
-- [ ] 3.4 Apply [W1](design.md#w1) to [W4](design.md#w4), [W14](design.md#w14) and [W15](design.md#w15) in `README.md`,
+- [x] 3.4 Apply [W1](design.md#w1) to [W4](design.md#w4), [W14](design.md#w14) and [W15](design.md#w15) in `README.md`,
   `isekai/interface/ui/README.md`, `docs/data-flow.md`, `isekai/interface/README.md` and `docs/principles.md`. Verify: `grep -n -F 'cell modal sets a cell' README.md` prints one line.
-- [ ] 3.5 Apply [W5](design.md#w5) to [W13](design.md#w13) in `isekai/interface/ui/app.py`, `ui/src/bars.ts`,
+- [x] 3.5 Apply [W5](design.md#w5) to [W13](design.md#w13) in `isekai/interface/ui/app.py`, `ui/src/bars.ts`,
   `ui/src/app.css`, `ui/src/grid.ts`, `tests/test_ui_api.py` and `tests/e2e/conftest.py`.
   Verify: `git grep -n -E 'Renders (shows|and|names|seed|tile|view|draws|a row|---)|[Oo]n Renders|\*\*Renders\*\*|─▶ Renders|or Renders' -- ui/src isekai tests README.md docs` prints nothing.

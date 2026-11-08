@@ -14,6 +14,8 @@ its new digest.
   version and scaled to fit up to three rows in the window; `l` and `h` go on across rows (0118 D1, D2, D3, D4).
 - Renders is deleted, with its tab, `⇧I` and the list endpoint: the hub shows every image. Every large view goes back
   to the hub; the drawer's link is *View in Hub*, on `⇧H` (0118 D5, D6, D7, D8, D10).
+- The design spec, the READMEs, the data flow and the comments describe the cell modal's grid and the hub in Renders'
+  place (0118 D1, D2, D5, D7).
 
 ## [0.77.0] - 2026-11-08
 
