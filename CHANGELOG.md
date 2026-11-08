@@ -13,6 +13,8 @@ its new digest.
 - `↵` or a thumbnail's click on a rendered Hub cell opens the cell modal: its renders a row per version at twice the
   thumbnail size, `↵` opening the large view. The viewer loses `⇧↵`; a Hub cell shows its ready tile
   (0117 D1, D2, D5, D6, D7).
+- A large view's `h` `l` walk the photograph's whole row wherever it was opened, and its `Esc` and *Back to Hub* land
+  on the Hub cell of the image it closed. The render detail drops `cell` (0117 D2, D3, D4).
 
 ## [0.76.0] - 2026-11-07
 

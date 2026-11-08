@@ -202,18 +202,12 @@ export const movePick = (
     move,
   )
 
-/** Return the images a large view steps through, in the order of the screen it
-    was opened from: Renders' row, the source's images across its flows; the
-    hub's cell, its flow's images alone.
+/** Return the images a large view walks, wherever it was opened: the photograph's
+    row, its flows in the hub's column order, each version oldest first, seeds as numbers.
 
-    e.g. summon [v1·7, v2·7], flat [v1·5], from the hub on summon -> summon's two */
-export function screenOrder(
-  detail: RenderDetail,
-  from: 'hub' | 'renders',
-): NonNullable<PickTile>[] {
-  if (from === 'hub') return detail.cell.map((one) => ({ flow: detail.flow, ...one }))
-  return detail.source
-    .flatMap(({ flow, images }) => images.map((one) => ({ flow, ...one })))
+    e.g. summon [v1·7, v2·7], flat [v1·5] -> summon v1·7, summon v2·7, flat v1·5 */
+export function rowOrder(detail: RenderDetail): NonNullable<PickTile>[] {
+  return detail.source.flatMap(({ flow, images }) => images.map((one) => ({ flow, ...one })))
 }
 
 /** Return where `at` stands in `order`, or -1. */

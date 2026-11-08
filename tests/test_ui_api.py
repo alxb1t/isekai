@@ -2002,7 +2002,7 @@ def test_compare_takes_any_two_images_of_a_source(
     photo = client.get(f"{large}/v4/7/compare/photo").json()
     itself = client.get(f"{large}/v4/7/compare/{FLOW}/v4/7")
 
-    # Renders and Compare retain seed order; the hub carries its write order.
+    # Renders and Compare retain seed order.
     assert "images" not in view
     assert [
         (row["flow"], [(one["version"], one["seed"]) for one in row["images"]])
@@ -2011,14 +2011,7 @@ def test_compare_takes_any_two_images_of_a_source(
         (FLOW, [(1, "7"), (2, "5"), (3, "7"), (4, "2"), (4, "7"), (4, "9")]),
         (FLAT, [(1, "5")]),
     ]
-    assert [(one["version"], one["seed"]) for one in view["cell"]] == [
-        (1, "7"),
-        (2, "5"),
-        (3, "7"),
-        (4, "7"),
-        (4, "9"),
-        (4, "2"),
-    ]
+    assert "cell" not in view
     # The image picked is on the left, the one compare started from on the right,
     # each served by its head, and no changed field.
     assert [

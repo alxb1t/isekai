@@ -6,7 +6,7 @@ Paths are from the repository root.
 ## Progress
 
 - [x] 1 — The cell modal
-- [ ] 2 — The walk
+- [x] 2 — The walk
 - [ ] 3 — The prose
 
 ## 1 — The cell modal
@@ -44,24 +44,24 @@ Paths are from the repository root.
 
 ## 2 — The walk
 
-- [ ] 2.1 In `ui/src/cells.ts`, replace `screenOrder(detail, from)` with `rowOrder(detail)` and its doc, per
+- [x] 2.1 In `ui/src/cells.ts`, replace `screenOrder(detail, from)` with `rowOrder(detail)` and its doc, per
   [D2](design.md#d2). Verify: `grep -n -F 'export function rowOrder(detail: RenderDetail)' ui/src/cells.ts` prints one line.
-- [ ] 2.2 In `ui/src/views/RenderLarge.vue`, read `order` from `rowOrder(detail.value)`, per [D2](design.md#d2).
+- [x] 2.2 In `ui/src/views/RenderLarge.vue`, read `order` from `rowOrder(detail.value)`, per [D2](design.md#d2).
   Verify: `grep -n -F 'rowOrder(detail.value)' ui/src/views/RenderLarge.vue` prints one line.
-- [ ] 2.3 In `ui/src/views/RenderLarge.vue`, add `const hubCell`, the Hub on the shown image's cell, and make `back`'s
+- [x] 2.3 In `ui/src/views/RenderLarge.vue`, add `const hubCell`, the Hub on the shown image's cell, and make `back`'s
   Hub branch and `deleted` push it, per [D4](design.md#d4); the head comment says `h` `l` walk the photograph's row.
   Verify: `grep -n -F 'const hubCell' ui/src/views/RenderLarge.vue` prints one line.
-- [ ] 2.4 In `ui/src/cells.test.ts`, turn `spec('ui:renders:the-large-view-steps-its-screens-order', …)` into
+- [x] 2.4 In `ui/src/cells.test.ts`, turn `spec('ui:renders:the-large-view-steps-its-screens-order', …)` into
   `spec('ui:renders:the-large-view-walks-the-photographs-row', …)` over `rowOrder`, per [Tests](design.md#tests).
   Verify: `grep -n -F "spec('ui:renders:the-large-view-walks-the-photographs-row'" ui/src/cells.test.ts` prints one line.
-- [ ] 2.5 In `ui/src/views/Hub.vue`, `onMounted`'s comment: "A large view's Delete sends the cell it deleted from" →
+- [x] 2.5 In `ui/src/views/Hub.vue`, `onMounted`'s comment: "A large view's Delete sends the cell it deleted from" →
   "A large view's Esc, Back to Hub and Delete send the cell of the image it closed"; in `ui/src/stores/collection.ts`,
   `focus`'s comment: "Esc from a large view" → "Renders' Esc from a large view", per [D4](design.md#d4).
   Verify: `grep -n -F "A large view's Esc, Back to Hub and Delete send" ui/src/views/Hub.vue` prints one line.
-- [ ] 2.6 In `isekai/interface/ui/app.py`'s `read_render`, remove the `"cell"` entry and its comment; in
+- [x] 2.6 In `isekai/interface/ui/app.py`'s `read_render`, remove the `"cell"` entry and its comment; in
   `ui/src/types.ts`, remove `RenderDetail.cell` and its comment, per [D3](design.md#d3).
   Verify: `grep -n -F 'cell: { version: number; seed: string }[]' ui/src/types.ts` prints nothing.
-- [ ] 2.7 In `tests/test_ui_api.py`'s `test_compare_takes_any_two_images_of_a_source`, replace the `view["cell"]`
+- [x] 2.7 In `tests/test_ui_api.py`'s `test_compare_takes_any_two_images_of_a_source`, replace the `view["cell"]`
   assertion with `assert "cell" not in view`, and drop "; the hub carries its write order" from its comment, per
   [D3](design.md#d3). Verify: `uv run pytest tests/test_ui_api.py -k any_two_images_of_a_source` exits 0.
 
