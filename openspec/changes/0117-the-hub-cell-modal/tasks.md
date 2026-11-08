@@ -7,7 +7,7 @@ Paths are from the repository root.
 
 - [x] 1 — The cell modal
 - [x] 2 — The walk
-- [ ] 3 — The prose
+- [x] 3 — The prose
 
 ## 1 — The cell modal
 
@@ -69,25 +69,25 @@ Paths are from the repository root.
 
 Each edit in `ui/design/spec.md` keeps its grepped phrase on one line, rewrapping around it.
 
-- [ ] 3.1 J2, *Focus*: "`Esc` from a large view, the Back button and a tab switch come back to the cell left" → "the
+- [x] 3.1 J2, *Focus*: "`Esc` from a large view, the Back button and a tab switch come back to the cell left" → "the
   Back button and a tab switch come back to the cell left, and `Esc` from a large view to the cell of the image it closed".
   Verify: `grep -n -F 'to the cell of the image it closed' ui/design/spec.md` prints one line.
-- [ ] 3.2 J2, *A click or ↵ follows the stage*: "opens the viewer on its newest (`↵ view`), `← →` `h l` step its images
+- [x] 3.2 J2, *A click or ↵ follows the stage*: "opens the viewer on its newest (`↵ view`), `← →` `h l` step its images
   and `⇧↵` opens the shown one's large view" → "opens the cell modal on its newest (`↵ view`)".
   Verify: `grep -n -F 'opens the cell modal on its newest' ui/design/spec.md` prints one line.
-- [ ] 3.3 J2, after *A click or ↵ follows the stage*, add a bullet **The cell modal** stating [D1](design.md#d1): its
+- [x] 3.3 J2, after *A click or ↵ follows the stage*, add a bullet **The cell modal** stating [D1](design.md#d1): its
   head, a row per version, numeric seeds, tiles twice 96×128, `⇄`, the keys, `↵` or a click the large view, `Esc` closing.
   Verify: `grep -n -F '**The cell modal**' ui/design/spec.md` prints one line.
-- [ ] 3.4 J2, *A cell's images*: "oldest to newest" → "versions oldest first, seeds in numeric order"; after "wrapping"
+- [x] 3.4 J2, *A cell's images*: "oldest to newest" → "versions oldest first, seeds in numeric order"; after "wrapping"
   add "and last the ready tile, `ready · n images`, as on Renders"; "opens the viewer on it" → "opens the cell modal on it".
   Verify: `grep -n -F 'a click on one opens the cell modal on it' ui/design/spec.md` prints one line.
-- [ ] 3.5 J2, *The viewer* (the second bullet so named): delete "A hub image's name is `ada.jpg · summon-anime-wai ·
+- [x] 3.5 J2, *The viewer* (the second bullet so named): delete "A hub image's name is `ada.jpg · summon-anime-wai ·
   v2`, without its seed." Verify: `grep -n -F "A hub image's name is" ui/design/spec.md` prints nothing.
-- [ ] 3.6 J5, *↵ always opens the large view*: "go back to where it was opened, the hub or else Renders, focused on the
+- [x] 3.6 J5, *↵ always opens the large view*: "go back to where it was opened, the hub or else Renders, focused on the
   cell or the image left" → "go back to where it was opened: the hub, on the cell of the image it closed, or else
   Renders, on that image". Verify: `grep -n -F 'the hub, on the cell of the image it closed' ui/design/spec.md` prints one line.
-- [ ] 3.7 J5, the same bullet: "step through the images of that screen, in its order — Renders' row across its flows,
+- [x] 3.7 J5, the same bullet: "step through the images of that screen, in its order — Renders' row across its flows,
   the hub's cell —" → "walk the photograph's row wherever it was opened — its flows in the hub's column order, versions
   oldest first, seeds in numeric order —". Verify: `grep -n -F "walk the photograph's row wherever it was opened" ui/design/spec.md` prints one line.
-- [ ] 3.8 §7, the Hub row: ", ⇧↵ the large view" → " · in the cell modal, h j k l or ←↓↑→ move, ↵ the large view,
+- [x] 3.8 §7, the Hub row: ", ⇧↵ the large view" → " · in the cell modal, h j k l or ←↓↑→ move, ↵ the large view,
   esc closes". Verify: `grep -n -F 'in the cell modal, h j k l' ui/design/spec.md` prints one line.

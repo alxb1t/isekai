@@ -15,6 +15,8 @@ its new digest.
   (0117 D1, D2, D5, D6, D7).
 - A large view's `h` `l` walk the photograph's whole row wherever it was opened, and its `Esc` and *Back to Hub* land
   on the Hub cell of the image it closed. The render detail drops `cell` (0117 D2, D3, D4).
+- The design spec's J2, J5 and key list describe the cell modal, the Hub cell's ready tile, the row a large view
+  walks and its way back to the Hub cell (0117 D1, D2, D4, D5).
 
 ## [0.76.0] - 2026-11-07
 
