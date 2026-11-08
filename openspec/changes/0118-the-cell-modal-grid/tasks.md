@@ -29,6 +29,10 @@ The grid first, then Renders deleted, then the prose, per [design](design.md). P
 - [ ] 1.7 In `tests/e2e/test_render.py`'s `test_a_rendered_cell_opens_its_newest_image`, add the
   `ui:renders:the-large-view-shows-its-sheet` marker, `hair_colour` on the sheet, and the `COMPARED` steps
   [Tests](design.md#tests) names, the short window at 1280 × 320. Verify: `grep -n -F '"height": 320' tests/e2e/test_render.py` prints one line.
+- [ ] 1.8 In `openspec/changes/0118-the-cell-modal-grid/specs/ui/spec.md`, rewrap the paragraphs holding *A cell
+  holding images SHALL show every one of them* and *`⇧H` SHALL close the drawer* to 120 characters, whitespace
+  only, every word, code span and emphasis kept: the gate reads the effective spec, which reads this delta.
+  Verify: `uv run pytest tests/test_spec_prose.py -k test_no_spec_line_passes_120_characters` exits 0.
 
 ## 2 — Renders deleted
 
