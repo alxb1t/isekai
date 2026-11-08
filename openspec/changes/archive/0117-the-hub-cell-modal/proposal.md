@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.77
 ---
 
 # 0117 — the Hub cell modal
