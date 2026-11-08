@@ -12,6 +12,8 @@ its new digest.
 
 - The cell modal sets a cell's renders as one grid, at most three to a row, its rows balanced, each tile badged with its
   version and scaled to fit up to three rows in the window; `l` and `h` go on across rows (0118 D1, D2, D3, D4).
+- Renders is deleted, with its tab, `⇧I` and the list endpoint: the hub shows every image. Every large view goes back
+  to the hub; the drawer's link is *View in Hub*, on `⇧H` (0118 D5, D6, D7, D8, D10).
 
 ## [0.77.0] - 2026-11-08
 

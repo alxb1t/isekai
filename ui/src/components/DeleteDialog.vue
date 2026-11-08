@@ -76,7 +76,7 @@ useKeys('overlay', [
     <header class="render-dialog__head">
       <h2 class="render-dialog__title">Delete this render?</h2>
     </header>
-    <p v-if="refusal" class="renders__refusal" data-delete-refusal>
+    <p v-if="refusal" class="large__refusal" data-delete-refusal>
       <span class="refusal__mark" />{{ refusal }}
     </p>
     <footer class="render-dialog__actions">

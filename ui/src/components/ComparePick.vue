@@ -87,8 +87,8 @@ onMounted(() => {
             class="pick__tile"
           >
             <button
-              class="renders__image"
-              :class="{ 'renders__image--selected': isOrigin(row, column) }"
+              class="tile"
+              :class="{ 'tile--selected': isOrigin(row, column) }"
               type="button"
               :data-row="row"
               :data-column="column"

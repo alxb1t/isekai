@@ -183,9 +183,9 @@ function start(): Focus {
 
 const go = (move: Move) => () => place(moved(stack.value.last, focus.value, move), true)
 
-function renders(): void {
+function hub(): void {
   drawer.close()
-  void router.push({ name: 'renders', params: { collection: current.value?.collection ?? '' } })
+  void router.push({ name: 'hub', params: { collection: current.value?.collection ?? '' } })
 }
 
 useKeys('overlay', [
@@ -201,10 +201,10 @@ useKeys('overlay', [
     when: () => stack.value.last.length > 0 && !isControl(document.activeElement),
   },
   {
-    id: 'renders',
-    keys: [shifted('KeyI')],
-    label: 'renders',
-    run: renders,
+    id: 'view-hub',
+    keys: [shifted('KeyH')],
+    label: 'view in hub',
+    run: hub,
     when: () => target.value !== null,
   },
   {
@@ -350,10 +350,10 @@ onMounted(() => {
           <span class="mono">{{ done }} of {{ of }} rendered</span>
           <RouterLink
             class="btn btn-primary"
-            data-renders
-            :to="{ name: 'renders', params: { collection: current?.collection ?? collections[0] } }"
+            data-view-hub
+            :to="{ name: 'hub', params: { collection: current?.collection ?? collections[0] } }"
             @click="drawer.close"
-            >View in Renders<KeyHint command="renders" /></RouterLink
+            >View in Hub<KeyHint command="view-hub" /></RouterLink
           >
         </template>
       </footer>

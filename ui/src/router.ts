@@ -4,7 +4,6 @@ import Home from './views/Home.vue'
 import Compare from './views/Compare.vue'
 import Hub from './views/Hub.vue'
 import RenderLarge from './views/RenderLarge.vue'
-import Renders from './views/Renders.vue'
 import Review from './views/Review.vue'
 import ReviewHead from './views/ReviewHead.vue'
 
@@ -18,7 +17,6 @@ export const router = createRouter({
     { path: '/c/:collection/hub', name: 'hub', component: Hub, props: true },
     { path: '/c/:collection/review', name: 'review-head', component: ReviewHead, props: true },
     { path: '/c/:collection/review/:digest/:flow', name: 'review', component: Review, props: true },
-    { path: '/c/:collection/renders', name: 'renders', component: Renders, props: true },
     {
       path: '/c/:collection/renders/:digest/:flow/:version/:seed',
       name: 'render',

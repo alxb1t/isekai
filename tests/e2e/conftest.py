@@ -6,7 +6,6 @@ points it at a library under `tmp_path`, and `ISEKAI_WIRING` swaps the seams for
 `tests/e2e/wiring.py`'s doubles (D41): no GPU, no Ollama.
 """
 
-import json
 import os
 import socket
 import subprocess
@@ -22,7 +21,7 @@ import pytest
 
 from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import load_flow, manifest_digest
-from isekai.foundation.run import Run, approval_of, open_run
+from isekai.foundation.run import Run, open_run
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare
 from isekai.pipeline.review import approve, review, revise, save_draft
@@ -82,10 +81,6 @@ DISCARDED = "discarded"
 # The collection Compare reads: one source with seed 7 rendered under v1 and under v2,
 # which changes `clothes`, and flat summon's v1 rendered at seed 9.
 COMPARED = "compared"
-# The collection whose one approval is damaged: a source rendered at seed 7 under an
-# approval holding a count no render takes.
-DAMAGED = "damaged"
-
 # The collection Draft from this drafts conjure in: one source whose summon approval
 # changes `clothes`, rendered at seed 7, and no conjure sheet: the draft fills it,
 # then its seed-7 render deleted.
@@ -240,10 +235,6 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     review(compared, FLAT)
     approve(compared, FLAT, flat.schema, VOCABULARY)
     _render_at(compared, seed=9, flow=FLAT)
-    damaged = _rendered_at_seven(lib / DAMAGED, "kim", (790, 1000))
-    approval = approval_of(damaged, FLOW, 1)
-    body = json.loads(approval.read_text())
-    approval.write_text(json.dumps({**body, "renders": {"count": 0}}))
     (lib / CONJURED / "sources").mkdir(parents=True)
     conjured = _run(lib / CONJURED, "lu", (800, 1000))
     draft_of = review(conjured, FLOW)

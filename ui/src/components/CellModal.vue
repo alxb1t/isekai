@@ -67,7 +67,7 @@ onMounted(() => {
           class="pick__tile"
         >
           <button
-            class="renders__image"
+            class="tile"
             type="button"
             :data-row="row"
             :data-column="column"
@@ -78,7 +78,7 @@ onMounted(() => {
             @click="emit('open', tile)"
           >
             <img :src="src(tile)" alt="" />
-            <span class="renders__badge mono" data-badge>v{{ tile.version }}</span>
+            <span class="tile__badge mono" data-badge>v{{ tile.version }}</span>
           </button>
           <figcaption class="mono">
             seed {{ tile.seed }}<span v-if="grid.shared.has(tile.seed)" data-shared> ⇄</span>

@@ -38,16 +38,16 @@ spec('ui:render:a-stale-offer-is-dropped', async () => {
   expect(store.offer.images).toBe(2)
 })
 
-spec('ui:renders:a-grid-keeps-its-focus', () => {
+spec('ui:hub:the-hub-keeps-its-focus', () => {
   const store = useCollectionStore()
   const name = (one: string) => one
   store.open('b')
-  expect(kept(['a', 'b', 'c'], name, store.focus.renders)).toBe('a')
-  store.focus.renders = 'b'
+  expect(kept(['a', 'b', 'c'], name, store.focus.hub)).toBe('a')
+  store.focus.hub = 'b'
   store.open('b')
-  expect(kept(['a', 'b', 'c'], name, store.focus.renders)).toBe('b')
+  expect(kept(['a', 'b', 'c'], name, store.focus.hub)).toBe('b')
   // A spot gone since is the first; another collection starts from the first.
-  expect(kept(['a', 'c'], name, store.focus.renders)).toBe('a')
+  expect(kept(['a', 'c'], name, store.focus.hub)).toBe('a')
   store.open('c')
-  expect(store.focus).toEqual({ hub: null, renders: null })
+  expect(store.focus).toEqual({ hub: null })
 })

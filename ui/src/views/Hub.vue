@@ -233,7 +233,6 @@ function openLarge(tile: NonNullable<PickTile>): void {
       ...tile,
       version: `v${tile.version}`,
     },
-    state: { from: 'hub' },
   })
 }
 
@@ -599,7 +598,7 @@ onUnmounted(() => {
             <button
               v-for="one in cellOrder(cell(source, flow).images)"
               :key="`${one.version}/${one.seed}`"
-              class="renders__image"
+              class="tile"
               type="button"
               :data-version="one.version"
               :data-seed="one.seed"
@@ -610,11 +609,11 @@ onUnmounted(() => {
                 :alt="`${source.name} ${flow} v${one.version} seed ${one.seed}`"
                 loading="lazy"
               />
-              <span class="renders__badge mono">v{{ one.version }}</span>
+              <span class="tile__badge mono">v{{ one.version }}</span>
             </button>
             <span
               v-if="ready(cell(source, flow))"
-              class="renders__image renders__image--ready mono"
+              class="tile tile--ready mono"
               data-ready
               >{{ ready(cell(source, flow)) }}</span
             >

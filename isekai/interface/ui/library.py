@@ -62,7 +62,7 @@ from isekai.foundation.run import (
 )
 from isekai.interface.render import record_running
 from isekai.interface.wiring import trackable
-from isekai.pipeline.generate import is_render, lacks, rendered_seeds, shortfall
+from isekai.pipeline.generate import is_render, lacks, rendered_seeds
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
@@ -368,26 +368,24 @@ def unprepared(grid: Hub) -> dict[str, list[str]]:
 
 @dataclass(frozen=True)
 class Version:
-    """One approval of a source in a flow, and the seeds rendered under it.
+    """One approval of a source in a flow.
 
-    `at` is when the approval was written; `count` and `seeds` are its renders.
+    `count` and `seeds` are its renders.
     `damaged` is the refusal of an approval no hand can read, whose count is None.
     `came_from` is the approval it was copied from, and `kind` says what changed:
     a `revision` changes a field, a `re-roll` only the count or the seeds.
     """
 
     version: int
-    at: float
     count: int | None
     seeds: tuple[int, ...]
-    rendered: tuple[int, ...]
     damaged: str | None = None
     came_from: int | None = None
     kind: Literal["revision", "re-roll"] | None = None
 
 
-def versions(run: Run, flow: str, suffix: str) -> list[Version]:
-    """Return `run`'s approvals in `flow`, newest first, each with its rendered seeds.
+def versions(run: Run, flow: str) -> list[Version]:
+    """Return `run`'s approvals in `flow`, newest first.
 
     An approval no hand can read is marked damaged with its refusal, naming the
     file, and every other version is still read: one file costs only its own.
@@ -405,21 +403,16 @@ def versions(run: Run, flow: str, suffix: str) -> list[Version]:
             bodies[number] = refused
     found = []
     for number, body in reversed(bodies.items()):
-        path = approval_of(run, flow, number)
-        rendered = tuple(rendered_seeds(group_of(run, flow, number), suffix))
-        at = path.stat().st_mtime
         if isinstance(body, Refusal):
-            found.append(Version(number, at, None, (), rendered, str(body)))
+            found.append(Version(number, None, (), str(body)))
             continue
         approved, held = body
         origin, kind = _origin(approved, bodies)
         found.append(
             Version(
                 number,
-                at,
                 held["count"],
                 tuple(held["seeds"]),
-                rendered,
                 came_from=origin,
                 kind=kind,
             )
@@ -656,20 +649,6 @@ def stage(run: Run, loaded: Flow, *, newest: bool = True) -> Cell:
     except Refusal as refused:
         return Cell("unreadable", refusal=str(refused))
     return Cell("assigned")
-
-
-def lacking(run: Run | None, loaded: Flow) -> int:
-    """Return how many images `loaded`'s newest approval in `run` lacks, or 0.
-
-    An unapproved flow lacks none, and a damaged approval is already marked on
-    its own version, so neither refuses the page.
-    """
-    if run is None:
-        return 0
-    try:
-        return shortfall(run, loaded)
-    except Refusal:
-        return 0
 
 
 def _images(
