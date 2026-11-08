@@ -269,6 +269,7 @@ def test_a_damaged_versions_images_are_drawn_and_hold_the_focus(
 
 @pytest.mark.spec("ui:hub:a-rendered-cell-opens-its-newest-image")
 @pytest.mark.spec("ui:hub:the-source-cell-opens-its-photograph")
+@pytest.mark.spec("ui:hub:a-thumbnail-opens-the-cell-modal-on-it")
 def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> None:
     page.goto(served.hub_of(SHOWN))
     rendered = page.locator(f'.hub__cell[data-flow="{FLOW}"][data-stage="rendered"]')
@@ -278,10 +279,10 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
 
     rendered.click()
 
-    viewer = page.locator("dialog[data-viewer]")
-    expect(viewer.locator("img")).to_have_attribute("src", re.compile(r"/v1/7/image$"))
+    modal = page.locator("dialog[data-cell-modal]")
+    expect(modal.locator("[data-version='1'][data-seed='7']")).to_be_focused()
     expect(page).to_have_url(served.hub_of(SHOWN))
-    page.keyboard.press("Shift+Enter")
+    page.keyboard.press("Enter")
     expect(page).to_have_url(
         f"{served.url}/c/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
     )
@@ -310,10 +311,28 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
         images["y"] + images["height"], abs=1
     )
     page.keyboard.press("Enter")
+    viewer = page.locator("dialog[data-viewer]")
     expect(viewer.locator("img")).to_have_attribute(
         "src", f"/api/c/{SHOWN}/sources/hal.jpg"
     )
     expect(viewer.locator("img")).to_have_js_property("complete", True)
+
+    # A click on a cell's older thumbnail opens the cell modal on it, at twice its size,
+    # each tile of the seed rendered under both versions marked ⇄.
+    page.goto(served.hub_of(COMPARED))
+    older = page.locator(
+        f'.hub__cell[data-flow="{FLOW}"] [data-version="1"][data-seed="7"]'
+    )
+    expect(older.locator("img")).to_have_js_property("complete", True)
+    older.click()
+    tile = modal.locator('[data-version="1"][data-seed="7"]')
+    expect(tile).to_be_focused()
+    expect(tile.locator("img")).to_have_js_property("complete", True)
+    thumb = older.locator("img").bounding_box()
+    shown = tile.locator("img").bounding_box()
+    assert thumb is not None and shown is not None
+    assert shown["width"] == pytest.approx(thumb["width"] * 2, abs=1)
+    expect(modal.locator("[data-shared]")).to_have_count(2)
 
 
 @pytest.mark.spec("ui:revise:revise-opens-review-on-the-revision")

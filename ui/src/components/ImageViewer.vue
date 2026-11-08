@@ -7,8 +7,7 @@ import type { Command } from '../stores/keys'
 
 /* Images in a native dialog, fitted to the window. A click on the image or `↵`
    toggles 1:1 pixels, scrolled inside the dialog by `j` `k` `↓` `↑`; `←` `→` `h` `l`
-   step through the images, `⇧↵` runs `open` on the shown one where it is given, and
-   Esc or a click outside closes. With `pair`, every image stands side by side at one
+   step through the images, and Esc or a click outside closes. With `pair`, every image stands side by side at one
    height, fit only.
    `commands` are the opener's own keys while it is open, as Review's `⌃P`.
    The list may grow while open, as a live session's does.
@@ -24,7 +23,6 @@ const props = defineProps<{
   images: Shown[]
   start?: number
   pair?: boolean
-  open?: (index: number) => void
   commands?: Command[]
 }>()
 
@@ -88,7 +86,6 @@ useKeys('overlay', [
     close: () => dialog.value?.close(),
     scroll: (by) => frame.value?.scrollBy({ top: by }),
     pair: () => props.pair === true,
-    open: props.open && (() => props.open?.(at.value)),
   }),
   ...(props.commands ?? []),
 ])

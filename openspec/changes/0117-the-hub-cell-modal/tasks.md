@@ -5,40 +5,40 @@ Paths are from the repository root.
 
 ## Progress
 
-- [ ] 1 — The cell modal
+- [x] 1 — The cell modal
 - [ ] 2 — The walk
 - [ ] 3 — The prose
 
 ## 1 — The cell modal
 
-- [ ] 1.1 **HALT CHECK** — the Hub payload carries the pending count `HubCell.short`, as [D5](design.md#d5) says.
+- [x] 1.1 **HALT CHECK** — the Hub payload carries the pending count `HubCell.short`, as [D5](design.md#d5) says.
   Verify: `grep -n -F 'short: number | null' ui/src/types.ts` prints one line.
-- [ ] 1.2 In `ui/src/cells.ts`, add `cellOrder(images)` per [D2](design.md#d2), the `CellGrid` interface and
+- [x] 1.2 In `ui/src/cells.ts`, add `cellOrder(images)` per [D2](design.md#d2), the `CellGrid` interface and
   `cellGrid(flow, images, at)` per [D1](design.md#d1), and `ready(cell)` per [D5](design.md#d5); widen `movePick`'s
   parameter per [D7](design.md#d7). Verify: `grep -n -F 'export function cellGrid(' ui/src/cells.ts` prints one line.
-- [ ] 1.3 In `ui/src/cells.test.ts`, add `spec('ui:hub:the-cell-modal-moves-by-version-and-seed', …)`,
+- [x] 1.3 In `ui/src/cells.test.ts`, add `spec('ui:hub:the-cell-modal-moves-by-version-and-seed', …)`,
   `spec('ui:hub:a-seed-under-two-versions-is-marked', …)` and `spec('ui:hub:a-cell-shows-what-is-ready', …)`, per
   [Tests](design.md#tests). Verify: `grep -c -F "spec('ui:hub:" ui/src/cells.test.ts` prints `5`.
-- [ ] 1.4 Create `ui/src/components/CellModal.vue` from `ComparePick.vue`, per [D1](design.md#d1): props `title`,
+- [x] 1.4 Create `ui/src/components/CellModal.vue` from `ComparePick.vue`, per [D1](design.md#d1): props `title`,
   `grid: CellGrid` and `src`, emits `open` with a `PickTile` and `close`, the dialog `data-cell-modal`, grid classes
   `pick pick--cell`, the data attributes where D1 puts them. Verify: `grep -n -F 'data-cell-modal' ui/src/components/CellModal.vue` prints one line.
-- [ ] 1.5 In `ui/src/app.css`, after the `.pick__tile` rules, size `.pick--cell .renders__image` at
+- [x] 1.5 In `ui/src/app.css`, after the `.pick__tile` rules, size `.pick--cell .renders__image` at
   `calc(var(--tile-width) * 2)` by `calc(var(--tile-height) * 2)`, and cut its caption by an ellipsis, per
   [D1](design.md#d1). Verify: `grep -n -F 'calc(var(--tile-width) * 2)' ui/src/app.css` prints one line.
-- [ ] 1.6 In `ui/src/views/Hub.vue`, make `view(source, flow, at?)` open `<CellModal>` on `at`, else `cell.newest`,
+- [x] 1.6 In `ui/src/views/Hub.vue`, make `view(source, flow, at?)` open `<CellModal>` on `at`, else `cell.newest`,
   its grid taken once at opening, `src` from `thumbAt`, `open` pushing route `render` with `state: { from: 'hub' }`;
   `viewing`, its comment and `<ImageViewer>` drop `open`, and the unread `imageAt` import goes, per [D1](design.md#d1). Verify: `grep -n -F '<CellModal' ui/src/views/Hub.vue` prints one line.
-- [ ] 1.7 In `ui/src/views/Hub.vue`, draw a cell's thumbnails by `cellOrder`, a click opening the modal on that image,
+- [x] 1.7 In `ui/src/views/Hub.vue`, draw a cell's thumbnails by `cellOrder`, a click opening the modal on that image,
   and the pending tile last, `.hub__images` shown for either, per [D5](design.md#d5).
   Verify: `grep -n -F 'data-ready' ui/src/views/Hub.vue` prints one line.
-- [ ] 1.8 In `ui/src/composables/useViewer.ts`, remove `viewerKeys`' `open` option, its `open` command, their doc
+- [x] 1.8 In `ui/src/composables/useViewer.ts`, remove `viewerKeys`' `open` option, its `open` command, their doc
   words and the `shifted` import it leaves unused, per [D6](design.md#d6). Verify: `grep -n -F 'dialog.open' ui/src/composables/useViewer.ts` prints nothing.
-- [ ] 1.9 In `ui/src/components/ImageViewer.vue`, remove the `open` prop, its line in the `viewerKeys` call and its
+- [x] 1.9 In `ui/src/components/ImageViewer.vue`, remove the `open` prop, its line in the `viewerKeys` call and its
   words in the head comment, per [D6](design.md#d6). Verify: `grep -n -F 'props.open' ui/src/components/ImageViewer.vue` prints nothing.
-- [ ] 1.10 In `ui/src/components/ImageViewer.test.ts`, drop `opened`'s `open` parameter, and turn
+- [x] 1.10 In `ui/src/components/ImageViewer.test.ts`, drop `opened`'s `open` parameter, and turn
   `ui:viewer:enter-toggles-full-size`'s `⇧↵` step into `⇧↵` matching no command, per [Tests](design.md#tests).
   Verify: `grep -n -w open ui/src/components/ImageViewer.test.ts` prints nothing.
-- [ ] 1.11 In `tests/e2e/test_render.py`, rewrite `test_a_rendered_cell_opens_its_newest_image` for the cell modal and
+- [x] 1.11 In `tests/e2e/test_render.py`, rewrite `test_a_rendered_cell_opens_its_newest_image` for the cell modal and
   add its `COMPARED` step and marker, per [Tests](design.md#tests).
   Verify: `grep -n -F 'ui:hub:a-thumbnail-opens-the-cell-modal-on-it' tests/e2e/test_render.py` prints one line.
 

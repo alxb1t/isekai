@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- `↵` or a thumbnail's click on a rendered Hub cell opens the cell modal: its renders a row per version at twice the
+  thumbnail size, `↵` opening the large view. The viewer loses `⇧↵`; a Hub cell shows its ready tile
+  (0117 D1, D2, D5, D6, D7).
+
 ## [0.76.0] - 2026-11-07
 
 Gate: local 0m30s · CI not read under mf-ship · 0.75.2: local 0m33s · CI not read under mf-ship

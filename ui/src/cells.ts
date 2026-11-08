@@ -1,5 +1,6 @@
 import { type Focus, type Move, moved } from './grid'
 import type { HubCell, ImageRef, RenderDetail } from './types'
+import { noun } from './words'
 
 /** Return an image as a selection holds it. e.g. "0d4b…|summon-anime-wai|1|42" */
 export function imageKey(one: ImageRef): string {
@@ -50,6 +51,26 @@ export function action(cell: HubCell): CellAction {
         ? { action: 'sheet', hint: '↵ review' }
         : { action: 'view', hint: '↵ view' }
   }
+}
+
+/** Return the ready tile's words while `cell`'s newest approval lacks images, else null.
+
+    e.g. short 2 -> "ready · 2 images" */
+export function ready(cell: HubCell): string | null {
+  return cell.short !== null && cell.short > 0
+    ? `ready · ${cell.short} ${noun(cell.short, 'image')}`
+    : null
+}
+
+/* Seeds are decimal strings past a number's safe range: a shorter one is smaller. */
+const bySeed = (a: string, b: string): number =>
+  a.length - b.length || (a < b ? -1 : a > b ? 1 : 0)
+
+/** Return a cell's images by version, then by seed as a number.
+
+    e.g. [v2·4, v1·9, v1·2] -> [v1·2, v1·9, v2·4] */
+export function cellOrder<T extends { version: number; seed: string }>(images: readonly T[]): T[] {
+  return [...images].sort((a, b) => a.version - b.version || bySeed(a.seed, b.seed))
 }
 
 /** Return whether `cell` is waiting for Prepare: assigned, or tagged with no sheet yet. */
@@ -136,9 +157,45 @@ export function pickHead(
   return [`Compare ${named(from)}`, `with ${tile === null ? 'photograph' : named(tile)}`]
 }
 
+/** The cell modal's grid: a row per version holding images, oldest first. */
+export interface CellGrid {
+  rows: { version: number; tiles: NonNullable<PickTile>[] }[]
+  /* The seeds rendered under more than one version, each marked ⇄. */
+  shared: ReadonlySet<string>
+  /* Where the focus opens. */
+  start: Focus
+}
+
+/** Return the cell modal's grid of `flow`'s `images`, focused on `at`.
+
+    e.g. v1 [7, 2], v2 [7] at v1·7 -> rows v1 [2, 7], v2 [7], shared {7}, start {row 0, column 1} */
+export function cellGrid(
+  flow: string,
+  images: readonly { version: number; seed: string }[],
+  at: { version: number; seed: string },
+): CellGrid {
+  const rows: CellGrid['rows'] = []
+  for (const one of cellOrder(images)) {
+    const last = rows.at(-1)
+    if (last?.version === one.version) last.tiles.push({ flow, ...one })
+    else rows.push({ version: one.version, tiles: [{ flow, ...one }] })
+  }
+  const versions = new Map<string, number>()
+  for (const { seed } of rows.flatMap((one) => one.tiles))
+    versions.set(seed, (versions.get(seed) ?? 0) + 1)
+  const shared = new Set([...versions].filter(([, count]) => count > 1).map(([seed]) => seed))
+  const row = rows.findIndex((one) => one.version === at.version)
+  const column = rows[row]?.tiles.findIndex((one) => one.seed === at.seed) ?? -1
+  return { rows, shared, start: column < 0 ? { row: 0, column: 0 } : { row, column } }
+}
+
 /** Return the pick's focus after `move`: a row move keeps the column, held at a
     shorter row's end. */
-export const movePick = (grid: SourceGrid, at: Focus, move: Move): Focus =>
+export const movePick = (
+  grid: { rows: { tiles: readonly unknown[] }[] },
+  at: Focus,
+  move: Move,
+): Focus =>
   moved(
     grid.rows.map((one) => one.tiles.length - 1),
     at,

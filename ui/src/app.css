@@ -1770,6 +1770,20 @@ dialog::backdrop {
   color: var(--ink-2);
 }
 
+/* The cell modal's tiles, at twice a thumbnail's size; a caption longer than its
+   tile is cut by an ellipsis rather than widening it. */
+.pick--cell .renders__image {
+  width: calc(var(--tile-width) * 2);
+  height: calc(var(--tile-height) * 2);
+}
+
+.pick--cell figcaption {
+  contain: inline-size;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* No name widens the dialog: the title is one line, cut by an ellipsis. */
 .viewer__title {
   contain: inline-size;
