@@ -107,6 +107,12 @@ Deleted, each mapped:
 | `test_a_damaged_versions_images_are_drawn_and_hold_the_focus` | `tests/e2e/test_render.py` | retired by [D5](#d5); its Render bar's refusal by `test_an_offer_whose_only_short_approval_is_damaged_carries_its_refusal` and `ui/src/bars.test.ts` (`ui:render:a-refused-count-is-shown`); `ui:renders:a-damaged-versions-images-are-drawn` goes |
 | `spec('ui:keys:renders-moves-by-cell-and-by-image', …)` | `ui/src/grid.test.ts` | retired by [D5](#d5); `moved`'s holds at a row's ends by `ui:hub:the-cell-modal-moves-by-version-and-seed`, its row moves by `ui:keys:a-row-move-keeps-the-column` |
 
+The retirements above are this change's own [D5](#d5) and [D6](#d6), which stand in the cut commit `420a36e6` before
+any build commit: a change that deletes a page retires that page's tests in its own design. The person accepts them as
+the decisions in force for `T5` (converge R1). The browser suite is Chromium alone by the repo's declaration
+(`CONTRIBUTING.md:94`); a second engine is out of this change's scope, and the person accepts the extended layout test
+on Chromium alone against `T4` (converge R2).
+
 With its one test gone, the `DAMAGED` collection leaves `tests/e2e/conftest.py`, and the `json` and `approval_of` imports only it read.
 
 Counted at `fc1c49df`, and as planned:
