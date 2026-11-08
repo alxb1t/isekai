@@ -28,7 +28,7 @@ export const useCollectionStore = defineStore('collection', () => {
   const renders = ref<RendersInfo | null>(null)
   const offer = ref<RenderOffer>({ ...NO_OFFER })
   const dialog = ref(false)
-  /* Each grid's focus, by its spot's name, written on every move: Esc from a
+  /* Each grid's focus, by its spot's name, written on every move: Renders' Esc from a
      large view, the Back button and a tab switch all come back to it. */
   const focus = ref<{ hub: string | null; renders: string | null }>({ hub: null, renders: null })
   /* A render session running for this collection, among those it renders. */

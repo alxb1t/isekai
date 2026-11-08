@@ -2,13 +2,16 @@ import { expect } from 'vitest'
 import {
   EMPTY_CELL,
   action,
+  cellGrid,
+  cellOrder,
   clicks,
   locked,
   movePick,
   pending,
   pickHead,
   placeOf,
-  screenOrder,
+  ready,
+  rowOrder,
   sourceGrid,
   stepped,
   targets,
@@ -80,6 +83,64 @@ spec('ui:hub:a-tagged-cell-with-no-work-unticks', () => {
     true,
     true,
   ])
+})
+
+spec('ui:hub:the-cell-modal-moves-by-version-and-seed', () => {
+  const flow = 'summon-anime-wai'
+  const images = [
+    { version: 1, seed: '9' },
+    { version: 1, seed: '2' },
+    { version: 2, seed: '4' },
+  ]
+  // The cell's thumbnails and the modal stand in one order: versions oldest
+  // first, seeds as numbers, past a number's safe range too.
+  expect(cellOrder(images)).toEqual([images[1], images[0], images[2]])
+  expect(
+    cellOrder([
+      { version: 1, seed: '18446744073709551615' },
+      { version: 1, seed: '18446744073709551614' },
+      { version: 1, seed: '9' },
+    ]).map((one) => one.seed),
+  ).toEqual(['9', '18446744073709551614', '18446744073709551615'])
+
+  const grid = cellGrid(flow, images, { version: 1, seed: '9' })
+  expect(grid.rows).toEqual([
+    {
+      version: 1,
+      tiles: [
+        { flow, version: 1, seed: '2' },
+        { flow, version: 1, seed: '9' },
+      ],
+    },
+    { version: 2, tiles: [{ flow, version: 2, seed: '4' }] },
+  ])
+  expect(grid.start).toEqual({ row: 0, column: 1 })
+  // A row move keeps the column, held at the shorter row's end.
+  expect(movePick(grid, grid.start, 'row+')).toEqual({ row: 1, column: 0 })
+  expect(movePick(grid, { row: 0, column: 0 }, 'column+')).toEqual({ row: 0, column: 1 })
+})
+
+spec('ui:hub:a-seed-under-two-versions-is-marked', () => {
+  const grid = cellGrid(
+    'summon-anime-wai',
+    [
+      { version: 1, seed: '7' },
+      { version: 2, seed: '5' },
+      { version: 2, seed: '7' },
+    ],
+    { version: 2, seed: '7' },
+  )
+  expect(grid.shared.has('7')).toBe(true)
+  expect(grid.shared.has('5')).toBe(false)
+  expect(grid.start).toEqual({ row: 1, column: 1 })
+})
+
+spec('ui:hub:a-cell-shows-what-is-ready', () => {
+  const lacking = (short: number | null) => ready({ ...EMPTY_CELL, stage: 'rendered', short })
+  expect(lacking(2)).toBe('ready · 2 images')
+  expect(lacking(1)).toBe('ready · 1 image')
+  expect(lacking(0)).toBeNull()
+  expect(lacking(null)).toBeNull()
 })
 
 spec('ui:compare:the-pick-moves-by-row-and-column', () => {
@@ -177,7 +238,7 @@ spec('ui:compare:the-pick-names-the-focused-tile', () => {
   ])
 })
 
-spec('ui:renders:the-large-view-steps-its-screens-order', () => {
+spec('ui:renders:the-large-view-walks-the-photographs-row', () => {
   const detail = {
     flow: 'summon-anime-wai',
     version: 1,
@@ -197,26 +258,11 @@ spec('ui:renders:the-large-view-steps-its-screens-order', () => {
   const second = { flow: 'summon-anime-wai', version: 2, seed: '7' }
   const flat = { flow: 'summon-flat-anime-wai', version: 1, seed: '5' }
 
-  // From Renders, the row runs on across the flows; at its last image l holds.
-  const row = screenOrder(detail, 'renders')
+  // The row runs on across the flows, in the hub's column order; at its last image l holds.
+  const row = rowOrder(detail)
   expect(stepped(row, first, 1)).toEqual(second)
   expect(stepped(row, second, 1)).toEqual(flat)
   expect(stepped(row, flat, 1)).toBeNull()
   expect(stepped(row, first, -1)).toBeNull()
-  detail.cell = detail.source[0].images
-  // From the hub, the cell's images alone.
-  const cell = screenOrder(detail, 'hub')
-  expect(stepped(cell, first, 1)).toEqual(second)
-  expect(stepped(cell, second, 1)).toBeNull()
-
-  // One approval's seeds were written 9 then 2; Renders sorts them numerically.
-  const nine = { flow: detail.flow, version: 1, seed: '9' }
-  const two = { flow: detail.flow, version: 1, seed: '2' }
-  detail.source[0].images = [two, nine]
-  detail.cell = [nine, two]
-  const hub = screenOrder(detail, 'hub')
-  expect(stepped(hub, nine, 1)).toEqual(two)
-  expect(stepped(hub, two, 1)).toBeNull()
-  expect(placeOf(hub, two)).toBe(1)
-  expect(stepped(screenOrder(detail, 'renders'), two, 1)).toEqual(nine)
+  expect(placeOf(row, flat)).toBe(2)
 })

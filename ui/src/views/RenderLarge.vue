@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { imageAt, photoUrl, renderDetail, thumbAt, versionOf } from '../api'
-import { type PickTile, imageKey, placeOf, screenOrder, sourceGrid, stepped } from '../cells'
+import { type PickTile, imageKey, placeOf, rowOrder, sourceGrid, stepped } from '../cells'
 import ComparePick from '../components/ComparePick.vue'
 import DeleteDialog from '../components/DeleteDialog.vue'
 import DraftDialog from '../components/DraftDialog.vue'
@@ -18,7 +18,7 @@ import type { RenderDetail } from '../types'
    drafts a flow from it, its own a revision (J5·3); ⇧C compares it with any
    image of its source, the photograph among them, picked in a grid (J5·8).
    ⇧⌫ asks, then deletes the render and opens the Hub on its cell.
-   `h` `l` step through the screen it was opened from, in that screen's order. */
+   `h` `l` walk the photograph's row, wherever it was opened. */
 const props = defineProps<{
   collection: string
   digest: string
@@ -77,7 +77,7 @@ function compare(other: PickTile): void {
 }
 
 /* The images `h` `l` step through, and where this one stands among them. */
-const order = computed(() => (detail.value ? screenOrder(detail.value, from) : []))
+const order = computed(() => (detail.value ? rowOrder(detail.value) : []))
 const index = computed(() => placeOf(order.value, place.value))
 
 /* Show the image `by` steps away in place of this one, so esc returns focused on
@@ -93,22 +93,26 @@ function step(by: -1 | 1): void {
   })
 }
 
-/* Where esc and the back button go: the hub when it opened this view, else
-   Renders, which holds every image. A pasted address carries no state. */
+/* The Hub, focused on the shown image's cell, named by digest: the view knows it,
+   not the source's name `store.focus.hub` keys on. `h` `l` cross flows, so the
+   cell may not be the one this view was opened from. */
+const hubCell = computed(() => ({
+  name: 'hub',
+  params: { collection: props.collection },
+  state: { cell: { digest: props.digest, flow: props.flow } },
+}))
+
+/* Where esc and the back button go: the hub's cell when the hub opened this view,
+   else Renders, which holds every image. A pasted address carries no state. */
 const back = computed(() =>
   from === 'hub'
-    ? { to: { name: 'hub', params: { collection: props.collection } }, label: 'Back to Hub' }
+    ? { to: hubCell.value, label: 'Back to Hub' }
     : { to: { name: 'renders', params: { collection: props.collection } }, label: 'Back to Renders' },
 )
 
-/* The Hub, focused on the deleted render's cell from either screen, named by
-   digest: the view knows it, not the source's name `store.focus.hub` keys on. */
+/* The Hub, focused on the deleted render's cell, from either screen. */
 function deleted(): void {
-  void router.push({
-    name: 'hub',
-    params: { collection: props.collection },
-    state: { cell: { digest: props.digest, flow: props.flow } },
-  })
+  void router.push(hubCell.value)
 }
 
 useKeys('screen', [

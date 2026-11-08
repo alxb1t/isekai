@@ -531,21 +531,27 @@ sit at the foot of their cells, level across the row, whatever text stands above
 above its images, and `↵ view photo` SHALL take no line of the source's cell. A cell SHALL name its newest image — the
 newest version holding images, then its last-written image — and a click or `↵` SHALL follow the cell's stage: tick
 while unassigned, assigned or tagged, open Review on a sheet or a draft, open the sheet read-only on an approval with no
-image, and open the viewer on the newest of the cell's images where it holds any, stepping through them, `⇧↵` opening an
-image's large view; an unreadable cell SHALL do nothing. A cell holding images SHALL show every one of them, oldest to
-newest, each marked with its version. A source's cell SHALL be the grid's first column, reached by `h` and `←`, and `↵`
-there SHALL open its photograph in the viewer, stepping through the collection's sources. The hub SHALL keep its focus
-across a large view, the Back button and a switch of tabs, a restored focus scrolled to the window's centre. A key's
-move to the first row SHALL scroll the hub to its top, to the last row to its foot, and to any other row only as far as
-the row needs. The header SHALL leave a 12 px gap between items. An assigned cell SHALL read tagged from the
-photograph's tag list, so a photograph tagged once is tagged in every flow it is assigned to.
+image, and open the cell modal on the cell's newest image where it holds any; an unreadable cell SHALL do nothing. The
+cell modal SHALL show the cell's images as a row per version, oldest first, each row's seeds in numeric order, each
+image at twice a thumbnail's size, a seed rendered under more than one version marked `⇄`; the arrows and `h j k l`
+SHALL move it, `↵` or a click SHALL open the focused image's large view, and `Esc` SHALL close it. A cell holding images
+SHALL show every one of them in that order, each marked with its version, a click on one opening the cell modal on it,
+and last, while its newest approval lacks images of its count, a tile naming the number it lacks, as the render stage
+counts it. A source's cell SHALL be the grid's first column, reached by `h` and `←`, and `↵` there SHALL open its
+photograph in the viewer, stepping through the collection's sources. The hub SHALL keep its focus across the Back button
+and a switch of tabs, a restored focus scrolled to the window's centre. A key's move to the first row SHALL scroll the
+hub to its top, to the last row to its foot, and to any other row only as far as the row needs. The header SHALL leave a
+12 px gap between items. An assigned cell SHALL read tagged from the photograph's tag list, so a photograph tagged once
+is tagged in every flow it is assigned to.
 
 A stage is a directory listing, the rule every stage already follows, so the grid cannot drift from the disk, and a tick
 survives a reload. A tagged cell holds no sheet: its tag list is the photograph's, so its untick deletes no work, and
 the verb's refusal of a directory holding files is the guard. The mark and the size are read from the source itself, so
 no file records them. An approved cell can hold an older version's images, so its newest image is named by the server
 rather than guessed by the page. A row's pictures share a foot, so a long name, a mark or a refusal moves only the text
-above them. *Add sources…* and the flow names sit above the first row, so a move there shows them.
+above them. *Add sources…* and the flow names sit above the first row, so a move there shows them. The cell modal
+shows a cell's renders together, at a size to compare them, in the order every screen walks, so a render keeps its place
+from the cell to the large view. The pending count is the render stage's own, the one Renders shows.
 
 #### Scenario: a cell's stage comes from its run's directory
 - **Key:** `ui:hub:a-cells-stage-comes-from-its-run`
@@ -615,14 +621,14 @@ above them. *Add sources…* and the flow names sit above the first row, so a mo
 - **Key:** `ui:hub:a-click-follows-the-cells-stage`
 - **Layers:** unit
 - **WHEN** a cell is clicked at each stage
-- **THEN** it ticks up to tagged, opens Review on a sheet, a draft or an unrendered approval, and opens an image
+- **THEN** it ticks up to tagged, opens Review on a sheet, a draft or an unrendered approval, and opens the cell modal
 - **AND** an unreadable cell does nothing
 
 #### Scenario: a rendered cell opens its newest image
 - **Key:** `ui:hub:a-rendered-cell-opens-its-newest-image`
 - **Layers:** e2e
-- **WHEN** a rendered cell is clicked, then `⇧↵` is pressed in the viewer
-- **THEN** the viewer opens on its newest image, then that image's large view
+- **WHEN** a rendered cell is clicked, then `↵` is pressed in the cell modal
+- **THEN** the cell modal opens on its newest image, then that image's large view
 - **AND** `Esc` returns to the hub, focused on that cell, and that cell in view
 
 #### Scenario: a cell lists its images
@@ -630,6 +636,33 @@ above them. *Add sources…* and the flow names sit above the first row, so a mo
 - **Layers:** unit
 - **WHEN** a cell holds images under two versions
 - **THEN** the hub carries them oldest to newest, each with its version and seed
+
+#### Scenario: the cell modal moves by version and seed
+- **Key:** `ui:hub:the-cell-modal-moves-by-version-and-seed`
+- **Layers:** unit
+- **WHEN** the cell modal opens on an image of a cell holding seeds 9 then 2 under v1, and seed 4 under v2
+- **THEN** its rows are v1 holding 2 then 9, then v2, as the cell's thumbnails stand, the focus on that image
+- **AND** a row move keeps the column, held at a shorter row's end
+
+#### Scenario: a seed under two versions is marked
+- **Key:** `ui:hub:a-seed-under-two-versions-is-marked`
+- **Layers:** unit
+- **WHEN** a cell holds seed 7 under v1 and v2, and seed 5 under v2 alone
+- **THEN** the cell modal marks seed 7 `⇄` and leaves seed 5 unmarked
+
+#### Scenario: a thumbnail opens the cell modal on it
+- **Key:** `ui:hub:a-thumbnail-opens-the-cell-modal-on-it`
+- **Layers:** e2e
+- **WHEN** a cell's older thumbnail is clicked
+- **THEN** the cell modal opens focused on that image, its tiles at twice a thumbnail's width
+- **AND** each tile of a seed rendered under both versions is marked `⇄`
+
+#### Scenario: a cell shows what is ready
+- **Key:** `ui:hub:a-cell-shows-what-is-ready`
+- **Layers:** unit
+- **WHEN** a cell's newest approval lacks two images of its count
+- **THEN** the cell's last tile reads `ready · 2 images`
+- **AND** a cell lacking none, or unapproved, draws no such tile
 
 #### Scenario: the source cell opens its photograph
 - **Key:** `ui:hub:the-source-cell-opens-its-photograph`
@@ -1242,124 +1275,6 @@ reaches nothing.
 - **Layers:** unit
 - **WHEN** billing is unknown, a volume is open, or both resources are known absent
 - **THEN** the page respectively shows pending state, the open volume, or nothing billing
-
-### Requirement: The Renders view shows each source's images by flow and version
-
-The system SHALL list a collection's images by source and offered flow, each cell's approval versions newest first, and
-SHALL show them as a grid of sources by flows, each cell one row of its images, its versions oldest to newest, each
-image marked with its version, and open an image's large view, with the sheet it was rendered from, from any of them. A
-cell whose newest approval lacks images of its count SHALL carry the number it lacks, as the render stage counts it.
-Each source SHALL show its photograph's thumbnail, upright, opening the photograph in a viewer, its cell the grid's
-first column, reached by the keys and opened by `↵`. `h` `l` and the arrows on a large view SHALL step through the
-renders of the screen it was opened from — Renders: the source's row across its flows; the hub: the cell's images —
-replacing its address, held at either end, its head naming the step, `2 of 5`. `Esc` on a large view SHALL return to the
-screen it was opened from, focused on the image it closed and scrolled to the window's centre, and Renders SHALL keep
-its focus across the Back button and a switch of tabs. It SHALL mark an approval it cannot read as damaged, naming the
-file, and show every image, that version's own among them; and SHALL refuse an address whose version is not `v` and
-ASCII digits. It SHALL serve each thumbnail, a render's or a source's, from a cache in the library's `.cache/`, made on
-first request and named by the image's own bytes. It SHALL refuse an image it cannot read, one past Pillow's pixel bound
-among them, naming the file. It SHALL serve a photograph, a source or a run's copy, as the image its bytes are, whatever
-its name ends in, and a source in a format the render does not read as an upright JPEG of it.
-
-The images come back to where the sheets were decided, version by version in the order they were approved; a cache the
-library can lose costs only its rebuild. Two collections can hold one source rendered at one seed, so only the bytes say
-which image a thumbnail shows. One damaged file costs only its own version, never the collection's page. The count a
-cell lacks is the render stage's own, so the page and the render agree on what is ready. A source keeps the name it
-arrived with, and one ending `.html` served by its name would run as a page on the surface's own origin; one placed by
-hand in another format is still shown, as its thumbnail is.
-
-#### Scenario: versions are listed newest first
-- **Key:** `ui:renders:versions-newest-first`
-- **Layers:** unit
-- **WHEN** a cell holds images under two approvals
-- **THEN** the newer approval's images are listed first
-
-#### Scenario: a damaged approval marks its own version
-- **Key:** `ui:renders:a-damaged-approval-marks-its-version`
-- **Layers:** unit
-- **WHEN** one of a cell's two approvals holds a count no render takes
-- **THEN** its version is marked damaged, naming the file
-- **AND** the other version and every image are still listed
-
-#### Scenario: an address naming no version is refused
-- **Key:** `ui:renders:an-address-naming-no-version-is-refused`
-- **Layers:** unit
-- **WHEN** an image is asked for at a version spelled in digits outside ASCII
-- **THEN** the request is refused naming the version, never failed
-
-#### Scenario: a thumbnail is made once
-- **Key:** `ui:renders:a-thumbnail-is-made-once`
-- **Layers:** unit
-- **WHEN** an image's thumbnail is asked for twice
-- **THEN** the second answer is read from `.cache/` without decoding the image
-
-#### Scenario: a thumbnail is its own image's
-- **Key:** `ui:renders:a-thumbnail-is-its-own-images`
-- **Layers:** unit
-- **WHEN** two collections hold different images of one source, flow, version and seed
-- **THEN** each image's thumbnail is made from that image
-
-#### Scenario: a source's thumbnail is upright
-- **Key:** `ui:renders:a-source-thumbnail-is-upright`
-- **Layers:** unit
-- **WHEN** a source's thumbnail is asked for and its file declares a turning orientation
-- **THEN** the thumbnail is drawn upright
-- **AND** a second request reads it from `.cache/`
-
-#### Scenario: a cell counts what is ready
-- **Key:** `ui:renders:a-cell-counts-what-is-ready`
-- **Layers:** unit
-- **WHEN** a cell's newest approval holds fewer images than its count
-- **THEN** the cell carries the number of images it lacks
-
-#### Scenario: the large view shows its sheet
-- **Key:** `ui:renders:the-large-view-shows-its-sheet`
-- **Layers:** e2e
-- **WHEN** an image is opened from the grid
-- **THEN** its large view shows the approval it was rendered from
-- **AND** `Esc` returns to the grid focused on that image, and that image in view
-- **AND** `h` from a row's first image reaches its source, and `↵` there opens its photograph
-
-#### Scenario: a source opens in the viewer
-- **Key:** `ui:renders:a-source-opens-in-the-viewer`
-- **Layers:** e2e
-- **WHEN** a source's thumbnail is clicked in the Renders view
-- **THEN** its photograph opens in a dialog, fitted to the window
-- **AND** `Esc` closes the dialog and leaves the address unchanged
-
-#### Scenario: a damaged version's images are drawn
-- **Key:** `ui:renders:a-damaged-versions-images-are-drawn`
-- **Layers:** e2e
-- **WHEN** the Renders view opens on a cell whose one approval is damaged
-- **THEN** that version's images are drawn beside its damaged mark
-- **AND** the first of them holds the focus
-
-#### Scenario: a photograph is served as the image its bytes are
-- **Key:** `ui:renders:a-photograph-is-served-as-its-bytes`
-- **Layers:** unit
-- **WHEN** a source whose name ends `.html` holds a PNG and is asked for whole
-- **THEN** it is served as `image/png`, and the browser is told not to guess another type
-- **AND** a run's photograph is served the same way
-- **AND** a source in another format is served as an upright JPEG of it
-
-#### Scenario: an image it cannot read is refused
-- **Key:** `ui:renders:an-unreadable-image-is-refused`
-- **Layers:** unit
-- **WHEN** an image past Pillow's pixel bound is read for a thumbnail, or served whole
-- **THEN** it is refused, naming the file
-
-#### Scenario: a grid keeps its focus
-- **Key:** `ui:renders:a-grid-keeps-its-focus`
-- **Layers:** unit
-- **WHEN** a collection's grid focus is moved, then its view is opened again
-- **THEN** the focus is where it was left, or on the first spot when that one is gone
-
-#### Scenario: the large view steps through its screen's order
-- **Key:** `ui:renders:the-large-view-steps-its-screens-order`
-- **Layers:** unit
-- **WHEN** `l` is pressed on the large view of a source's first image, opened from Renders, then from the hub
-- **THEN** it shows the row's next image across the flows, then the cell's next image
-- **AND** at the last image `l` holds
 
 ### Requirement: Every command has one key, declared once, and none fires while typing
 
@@ -2331,3 +2246,123 @@ after; only `Mod+↵` spends money, so `↵` on a tile or the checkbox never ren
 - **WHEN** `⌃/` opens the key list on a screen
 - **THEN** it is a modal dialog holding the focus, the everywhere keys in one column and the screen's in another
 - **AND** `⌃/`, `Esc` and a click on the backdrop each close it
+
+### Requirement: The Renders view shows each source's images by flow, and a large view walks the photograph's row
+
+The system SHALL list a collection's images by source and offered flow, each cell's approval versions newest first, and
+SHALL show them as a grid of sources by flows, each cell one row of its images, its versions oldest to newest, each
+image marked with its version, and open an image's large view, with the sheet it was rendered from, from any of them. A
+cell whose newest approval lacks images of its count SHALL carry the number it lacks, as the render stage counts it.
+Each source SHALL show its photograph's thumbnail, upright, opening the photograph in a viewer, its cell the grid's
+first column, reached by the keys and opened by `↵`. `h` `l` and the arrows on a large view SHALL walk the
+photograph's row wherever it was opened — its flows in the hub's column order, each version oldest first, each
+version's seeds in numeric order — replacing its address, held at either end, its head naming the step, `2 of 5`. `Esc`
+and the back button on a large view SHALL return to the screen it was opened from — the hub focused on the cell of the
+image it closed, Renders focused on that image — scrolled to the window's centre, and Renders SHALL keep its focus
+across the Back button and a switch of tabs. It SHALL mark an approval it cannot read as damaged, naming the
+file, and show every image, that version's own among them; and SHALL refuse an address whose version is not `v` and
+ASCII digits. It SHALL serve each thumbnail, a render's or a source's, from a cache in the library's `.cache/`, made on
+first request and named by the image's own bytes. It SHALL refuse an image it cannot read, one past Pillow's pixel bound
+among them, naming the file. It SHALL serve a photograph, a source or a run's copy, as the image its bytes are, whatever
+its name ends in, and a source in a format the render does not read as an upright JPEG of it.
+
+The images come back to where the sheets were decided, version by version in the order they were approved; a cache the
+library can lose costs only its rebuild. Two collections can hold one source rendered at one seed, so only the bytes say
+which image a thumbnail shows. One damaged file costs only its own version, never the collection's page. The count a
+cell lacks is the render stage's own, so the page and the render agree on what is ready. A source keeps the name it
+arrived with, and one ending `.html` served by its name would run as a page on the surface's own origin; one placed by
+hand in another format is still shown, as its thumbnail is. One order on every screen keeps a render's place, and the
+image a large view closes may be another flow's than the one it opened on, so the hub lands on that image's cell.
+
+#### Scenario: versions are listed newest first
+- **Key:** `ui:renders:versions-newest-first`
+- **Layers:** unit
+- **WHEN** a cell holds images under two approvals
+- **THEN** the newer approval's images are listed first
+
+#### Scenario: a damaged approval marks its own version
+- **Key:** `ui:renders:a-damaged-approval-marks-its-version`
+- **Layers:** unit
+- **WHEN** one of a cell's two approvals holds a count no render takes
+- **THEN** its version is marked damaged, naming the file
+- **AND** the other version and every image are still listed
+
+#### Scenario: an address naming no version is refused
+- **Key:** `ui:renders:an-address-naming-no-version-is-refused`
+- **Layers:** unit
+- **WHEN** an image is asked for at a version spelled in digits outside ASCII
+- **THEN** the request is refused naming the version, never failed
+
+#### Scenario: a thumbnail is made once
+- **Key:** `ui:renders:a-thumbnail-is-made-once`
+- **Layers:** unit
+- **WHEN** an image's thumbnail is asked for twice
+- **THEN** the second answer is read from `.cache/` without decoding the image
+
+#### Scenario: a thumbnail is its own image's
+- **Key:** `ui:renders:a-thumbnail-is-its-own-images`
+- **Layers:** unit
+- **WHEN** two collections hold different images of one source, flow, version and seed
+- **THEN** each image's thumbnail is made from that image
+
+#### Scenario: a source's thumbnail is upright
+- **Key:** `ui:renders:a-source-thumbnail-is-upright`
+- **Layers:** unit
+- **WHEN** a source's thumbnail is asked for and its file declares a turning orientation
+- **THEN** the thumbnail is drawn upright
+- **AND** a second request reads it from `.cache/`
+
+#### Scenario: a cell counts what is ready
+- **Key:** `ui:renders:a-cell-counts-what-is-ready`
+- **Layers:** unit
+- **WHEN** a cell's newest approval holds fewer images than its count
+- **THEN** the cell carries the number of images it lacks
+
+#### Scenario: the large view shows its sheet
+- **Key:** `ui:renders:the-large-view-shows-its-sheet`
+- **Layers:** e2e
+- **WHEN** an image is opened from the grid
+- **THEN** its large view shows the approval it was rendered from
+- **AND** `Esc` returns to the grid focused on that image, and that image in view
+- **AND** `h` from a row's first image reaches its source, and `↵` there opens its photograph
+
+#### Scenario: a source opens in the viewer
+- **Key:** `ui:renders:a-source-opens-in-the-viewer`
+- **Layers:** e2e
+- **WHEN** a source's thumbnail is clicked in the Renders view
+- **THEN** its photograph opens in a dialog, fitted to the window
+- **AND** `Esc` closes the dialog and leaves the address unchanged
+
+#### Scenario: a damaged version's images are drawn
+- **Key:** `ui:renders:a-damaged-versions-images-are-drawn`
+- **Layers:** e2e
+- **WHEN** the Renders view opens on a cell whose one approval is damaged
+- **THEN** that version's images are drawn beside its damaged mark
+- **AND** the first of them holds the focus
+
+#### Scenario: a photograph is served as the image its bytes are
+- **Key:** `ui:renders:a-photograph-is-served-as-its-bytes`
+- **Layers:** unit
+- **WHEN** a source whose name ends `.html` holds a PNG and is asked for whole
+- **THEN** it is served as `image/png`, and the browser is told not to guess another type
+- **AND** a run's photograph is served the same way
+- **AND** a source in another format is served as an upright JPEG of it
+
+#### Scenario: an image it cannot read is refused
+- **Key:** `ui:renders:an-unreadable-image-is-refused`
+- **Layers:** unit
+- **WHEN** an image past Pillow's pixel bound is read for a thumbnail, or served whole
+- **THEN** it is refused, naming the file
+
+#### Scenario: a grid keeps its focus
+- **Key:** `ui:renders:a-grid-keeps-its-focus`
+- **Layers:** unit
+- **WHEN** a collection's grid focus is moved, then its view is opened again
+- **THEN** the focus is where it was left, or on the first spot when that one is gone
+
+#### Scenario: the large view walks the photograph's row
+- **Key:** `ui:renders:the-large-view-walks-the-photographs-row`
+- **Layers:** unit
+- **WHEN** `l` is pressed on the large view of a source's first image, the hub its opener
+- **THEN** it shows the row's next image, then the next flow's first image, in the hub's column order
+- **AND** at the last image `l` holds

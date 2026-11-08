@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { clamp } from '../grid'
-import { type Command, plain, shifted } from '../stores/keys'
+import { type Command, plain } from '../stores/keys'
 
 /** How far one of `j` `k` `↓` `↑` scrolls an image at full size, in px. */
 export const SCROLL = 120
@@ -42,7 +42,7 @@ export function useViewer<T extends { src: string }>(
 }
 
 /** Return the viewer's keys, each matched on the physical key per D25: `↵` toggles full size, `j` `k` `↓` `↑` scroll at full size,
-    `h` `l` `←` `→` step, `⇧↵` runs the opener's `open` where it is given, and Esc closes.
+    `h` `l` `←` `→` step, and Esc closes.
 
     A pair is fitted alone, so `↵` is not offered on one. */
 export function viewerKeys(
@@ -51,7 +51,6 @@ export function viewerKeys(
     close: () => void
     scroll: (by: number) => void
     pair: () => boolean
-    open?: () => void
   },
 ): Command[] {
   const stepping = () => !dialog.pair() && viewer.last() > 0
@@ -92,13 +91,6 @@ export function viewerKeys(
       label: 'scroll up',
       run: () => dialog.scroll(-SCROLL),
       when: full,
-    },
-    {
-      id: 'open',
-      keys: [shifted('Enter')],
-      label: 'large view',
-      run: () => dialog.open?.(),
-      when: () => dialog.open !== undefined,
     },
   ]
 }

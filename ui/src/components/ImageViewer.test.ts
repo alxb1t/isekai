@@ -28,16 +28,13 @@ function press(code: string, given: Partial<Press> = {}): Press {
 }
 
 /* A viewer over `count` images, its keys declared as the dialog declares them. */
-function opened(count: number, pair = false, open?: () => void) {
+function opened(count: number, pair = false) {
   const images = Array.from({ length: count }, (_, index) => ({ src: `/${index}` }))
   const scope = effectScope()
   const viewer = scope.run(() => useViewer(() => images, 0, vi.fn()))!
   const scroll = vi.fn()
   const keys = useKeyStore()
-  keys.declare(
-    'overlay',
-    viewerKeys(viewer, { close: vi.fn(), scroll, pair: () => pair, open }),
-  )
+  keys.declare('overlay', viewerKeys(viewer, { close: vi.fn(), scroll, pair: () => pair }))
   return { viewer, keys, scroll, scope }
 }
 
@@ -74,17 +71,15 @@ spec('ui:sessions:the-viewer-follows-image-identity', async () => {
 })
 
 spec('ui:viewer:enter-toggles-full-size', () => {
-  const open = vi.fn()
-  const one = opened(1, false, open)
+  const one = opened(1, false)
   expect(one.viewer.actual.value).toBe(false)
   expect(one.keys.press(press('Enter'))).toBe(true)
   expect(one.viewer.actual.value).toBe(true)
   one.keys.press(press('Enter'))
   expect(one.viewer.actual.value).toBe(false)
-  // The opener's large view is ⇧↵, never ↵.
-  expect(open).not.toHaveBeenCalled()
-  one.keys.press(press('Enter', { shiftKey: true }))
-  expect(open).toHaveBeenCalledOnce()
+  // ⇧↵ is no viewer key: it neither toggles nor runs a command.
+  expect(one.keys.press(press('Enter', { shiftKey: true }))).toBe(false)
+  expect(one.viewer.actual.value).toBe(false)
   one.scope.stop()
 
   // A pair is fitted alone: ↵ changes nothing.

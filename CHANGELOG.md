@@ -10,6 +10,18 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.77.0] - 2026-11-08
+
+Gate: local 0m55s · CI not read under mf-ship · 0.76.0: local 0m30s · CI not read under mf-ship
+
+- `↵` or a thumbnail's click on a rendered Hub cell opens the cell modal: its renders a row per version at twice the
+  thumbnail size, `↵` opening the large view. The viewer loses `⇧↵`; a Hub cell shows its ready tile
+  (0117 D1, D2, D5, D6, D7).
+- A large view's `h` `l` walk the photograph's whole row wherever it was opened, and its `Esc` and *Back to Hub* land
+  on the Hub cell of the image it closed. The render detail drops `cell` (0117 D2, D3, D4).
+- The design spec's J2, J5 and key list describe the cell modal, the Hub cell's ready tile, the row a large view
+  walks and its way back to the Hub cell (0117 D1, D2, D4, D5).
+
 ## [0.76.0] - 2026-11-07
 
 Gate: local 0m30s · CI not read under mf-ship · 0.75.2: local 0m33s · CI not read under mf-ship

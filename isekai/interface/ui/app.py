@@ -1075,8 +1075,6 @@ def create_app(
             "compare": library.paired(run, flow, number, seed, suffix),
             # Every offered flow, this one first, assigned or not: a draft assigns.
             "targets": sorted(flows, key=lambda name: name != flow),
-            # The hub's cell keeps each approval's images in write order.
-            "cell": _cell_out(library.stage(run, offered(flow)))["images"],
             # The source's images, a row per offered flow holding any, each oldest
             # version first, then by seed: Renders and the pick.
             "source": [

@@ -20,8 +20,21 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { bar as barOf, dismiss, failed, held, prepared, progress } from '../bars'
-import { EMPTY_CELL, action, clicks, locked, pending, targets } from '../cells'
-import { assign, imageAt, prepare, sourceAt, sourceThumbAt, thumbAt } from '../api'
+import {
+  type CellGrid,
+  EMPTY_CELL,
+  type PickTile,
+  action,
+  cellGrid,
+  cellOrder,
+  clicks,
+  locked,
+  pending,
+  ready,
+  targets,
+} from '../cells'
+import { assign, prepare, sourceAt, sourceThumbAt, thumbAt } from '../api'
+import CellModal from '../components/CellModal.vue'
 import ImageViewer, { type Shown } from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
 import KeyHint from '../components/KeyHint.vue'
@@ -48,10 +61,10 @@ const page = ref<HTMLElement | null>(null)
 const reveal = useEdges(() => page.value)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
-/* What the viewer shows, from where, and what its ↵ opens; or null. */
-const viewing = ref<{ images: Shown[]; start: number; open?: (index: number) => void } | null>(
-  null,
-)
+/* The photographs the viewer shows, and from where; or null. */
+const viewing = ref<{ images: Shown[]; start: number } | null>(null)
+/* The cell the cell modal shows: its source's name and digest, and its grid; or null. */
+const modal = ref<{ title: string; digest: string; grid: CellGrid } | null>(null)
 /* The collection's hub, its running cells and refusals, and its Render offer, shared
    with every screen of the collection and kept live from the page's one stream. */
 const store = useCollectionStore()
@@ -190,33 +203,38 @@ function viewSource(row: number): void {
   }
 }
 
-/* A cell's images in the viewer, from `index` or its newest; ⇧↵ there opens the
-   shown image's large view, as ↵ toggles full size, and Esc there comes back here. */
-function view(source: HubSource, flow: string, index?: number): void {
+/* A cell's images in the cell modal, on `at` or its newest. Its grid is taken once,
+   so a render landing meanwhile moves nothing under the focus. */
+function view(
+  source: HubSource,
+  flow: string,
+  at?: { version: number; seed: string },
+): void {
   const { digest } = source
-  const images = cell(source, flow).images
-  if (digest === null || images.length === 0) return
-  const address = (one: { version: number; seed: string }) => ({
-    collection: props.collection,
-    digest,
-    flow,
-    ...one,
-  })
-  viewing.value = {
-    images: images.map((one) => ({
-      src: imageAt(address(one)),
-      name: `${source.name} · ${flow} · v${one.version}`,
-    })),
-    start: index ?? images.length - 1,
-    open: (at) => {
-      const one = images[at]
-      void router.push({
-        name: 'render',
-        params: { ...address(one), version: `v${one.version}` },
-        state: { from: 'hub' },
-      })
+  const found = cell(source, flow)
+  const start = at ?? found.newest
+  if (digest === null || start === null || found.images.length === 0) return
+  modal.value = { title: source.name, digest, grid: cellGrid(flow, found.images, start) }
+}
+
+/* A cell modal tile's thumbnail, under its source's `digest`. */
+const tileThumb = (digest: string) => (tile: NonNullable<PickTile>) =>
+  thumbAt({ collection: props.collection, digest, ...tile })
+
+/* ↵ or a click in the cell modal opens that image's large view, whose Esc comes back here. */
+function openLarge(tile: NonNullable<PickTile>): void {
+  const held = modal.value
+  if (held === null) return
+  void router.push({
+    name: 'render',
+    params: {
+      collection: props.collection,
+      digest: held.digest,
+      ...tile,
+      version: `v${tile.version}`,
     },
-  }
+    state: { from: 'hub' },
+  })
 }
 
 /* A click or ↵ on a cell: whatever its stage offers. A click ticks its own cell
@@ -423,8 +441,8 @@ onMounted(async () => {
   const spots = sources.value.flatMap((_, row) =>
     Array.from({ length: flows.value.length + 1 }, (_, column) => ({ row, column })),
   )
-  // A large view's Delete sends the cell it deleted from, by digest and flow,
-  // read once, so a later visit to this entry keeps where the focus last was.
+  // A large view's Esc, Back to Hub and Delete send the cell of the image it closed, by digest
+  // and flow, read once, so a later visit to this entry keeps where the focus last was.
   const sent = window.history.state?.cell as { digest: string; flow: string } | undefined
   if (sent) window.history.replaceState({ ...window.history.state, cell: undefined }, '')
   const deletedFrom = sent
@@ -451,8 +469,15 @@ onUnmounted(() => {
       v-if="viewing"
       :images="viewing.images"
       :start="viewing.start"
-      :open="viewing.open"
       @close="viewing = null"
+    />
+    <CellModal
+      v-if="modal"
+      :title="modal.title"
+      :grid="modal.grid"
+      :src="tileThumb(modal.digest)"
+      @open="openLarge"
+      @close="modal = null"
     />
     <RenderDialog v-if="dialog" @close="store.closeDialog" />
     <div class="hub__head">
@@ -565,15 +590,20 @@ onUnmounted(() => {
           <p v-if="refusals[key(source, flow)]" class="hub__refusal">
             <span class="refusal__mark" />{{ refusals[key(source, flow)] }}
           </p>
-          <span v-if="source.digest && cell(source, flow).images.length" class="hub__images">
+          <span
+            v-if="
+              source.digest && (cell(source, flow).images.length || ready(cell(source, flow)))
+            "
+            class="hub__images"
+          >
             <button
-              v-for="(one, index) in cell(source, flow).images"
+              v-for="one in cellOrder(cell(source, flow).images)"
               :key="`${one.version}/${one.seed}`"
               class="renders__image"
               type="button"
               :data-version="one.version"
               :data-seed="one.seed"
-              @click.stop="place(row, column + 1), view(source, flow, index)"
+              @click.stop="place(row, column + 1), view(source, flow, one)"
             >
               <img
                 :src="thumbAt({ collection, digest: source.digest, flow, ...one })"
@@ -582,6 +612,12 @@ onUnmounted(() => {
               />
               <span class="renders__badge mono">v{{ one.version }}</span>
             </button>
+            <span
+              v-if="ready(cell(source, flow))"
+              class="renders__image renders__image--ready mono"
+              data-ready
+              >{{ ready(cell(source, flow)) }}</span
+            >
           </span>
         </div>
       </template>

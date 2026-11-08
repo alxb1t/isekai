@@ -188,17 +188,23 @@ y_long_name            │                                  │
 - **The tick:** accent fill is pending — assigned or tagged — and can be unticked; `tick-locked` is prepared and
   stays, with no word saying so.
 - **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`,
-  `↵ view` or, on the source cell, `↵ view photo`), at the cell's top right, taking no line. The hub keeps its focus for the open collection: `Esc` from a large
-  view, the Back button and a tab switch come back to the cell left, else the first row's source cell.
+  `↵ view` or, on the source cell, `↵ view photo`), at the cell's top right, taking no line. The hub keeps its focus
+  for the open collection: the Back button and a tab switch come back to the cell left,
+  and `Esc` from a large view to the cell of the image it closed, else the first row's source cell.
 - **A click or ↵ follows the stage**: unassigned, assigned or tagged ticks and unticks; unreadable does nothing; a
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
-  cell holding images opens the viewer on its newest (`↵ view`), `← →` `h l` step its images and `⇧↵` opens the
-  shown one's large view. The checkbox's own click only ticks.
+  cell holding images opens the cell modal on its newest (`↵ view`). The checkbox's own click only ticks.
+- **The cell modal** is a dialog holding the focus, its head one line, `ada.jpg · summon-anime-wai · v2 · seed 7`,
+  naming the focused image. A row per version holding images, oldest first, labelled `vN`; each row's seeds in
+  numeric order, each tile twice 96×128, `seed N` under it, then `⇄` where the seed was rendered under more than one
+  version of the cell. `h j k l` and `←↓↑→` move, a row move keeping the column, held at a shorter row's end; `↵` or
+  a click opens the focused image's large view; `Esc` closes it, the hub's focus kept.
 - **The viewer** opens an image fitted; a click or `↵` toggles full size, where `j k` `↓ ↑` scroll it by 120 px, and
   `h l` `← →` step to the next image, fitted. On a pair `↵` does nothing.
 - **A cell's images** sit at its foot, level with the source's thumbnail, under its stage track and any refusal,
-  every approved version's, oldest to newest, each a 96×128 tile
-  with its `vN` badge, wrapping; a click on one opens the viewer on it.
+  every approved version's, versions oldest first, seeds in numeric order, each a 96×128 tile
+  with its `vN` badge, wrapping, and last the ready tile, `ready · n images`, as on Renders;
+  a click on one opens the cell modal on it.
 - **A cell's refusal** sits inside the cell with its fix; the cell returns to assigned, so the next Prepare retries
   it.
 - **The PrepareBar** floats centred, bottom 50, 940 wide, `raised-2`, 1px `line-control`, radius 8. Pending:
@@ -224,9 +230,9 @@ y_long_name            │                                  │
   on the thumbnail or `↵` opens the viewer on its photograph, `← →` stepping the collection's sources; space does nothing
   there.
 - **The viewer** is a dialog over the page, its URL unchanged: the image fitted, a click for 1:1 pixels, `Esc` or a
-  click outside to close, titled with the name, the dimensions and `fit n%` or `1:1`. A hub image's name is
-  `ada.jpg · summon-anime-wai · v2`, without its seed. The title is one line, cut by an ellipsis, so no name widens
-  the dialog; the frame is the window less 64 × 96 px whatever is loading, the image centred in it.
+  click outside to close, titled with the name, the dimensions and `fit n%` or `1:1`. The title is one line, cut by
+  an ellipsis, so no name widens the dialog; the frame is the window less 64 × 96 px whatever is loading, the image
+  centred in it.
 
 ### J3 · Review and approve
 
@@ -380,9 +386,10 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
   (filled fields only, read-only). Its actions stand under the heading, above the fields: a column of full-width buttons, label left
   and key right, in groups 12 px apart — the writes, the comparisons, the way back. `Esc` and its back button go
-  back to where it was opened, the hub or else Renders, focused on the cell or the image left. `h` `l` and `←` `→`
-  step through the images of that screen, in its order — Renders' row across its flows, the hub's cell — held at
-  either end, the head naming the step, `summon-anime-wai · v2 · seed 1840266731 · 2 of 5`.
+  back to where it was opened: the hub, on the cell of the image it closed, or else Renders, on that image. `h` `l`
+  and `←` `→` walk the photograph's row wherever it was opened — its flows in the hub's column order, versions oldest
+  first, seeds in numeric order — held at either end, the head naming the step,
+  `summon-anime-wai · v2 · seed 1840266731 · 2 of 5`.
   `Compare with…  ⇧C` opens a pick of the source's images: the photograph's row on top, then a row per flow
   holding images, headed by its name, tiles at Renders' size oldest first, `vN` under each, the image
   compare started from marked, the pick's head naming the focused tile on two lines, each cut at its end —
@@ -501,9 +508,9 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 |---|---|
 | everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧T the theme dialog · ⌃; the render drawer, from a field too · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New collection · j k or ↓↑ ↵ the library |
-| Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ full size, j k or ↓↑ scroll it, ⇧↵ the large view · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
+| Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ full size, j k or ↓↑ scroll it · in the cell modal, h j k l or ←↓↑→ move, ↵ the large view, esc closes · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | the panes: the rail, the photograph, the sheet, ④ — on macOS ⌃H ⌃L alone, from a field or not, elsewhere h l or ←→ · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows, ④'s grid of − + and its slots, from a slot too · h l or ←→ across − + on macOS · ⇧J ⇧K or ⇧↓↑ the rail, the sheet scrolled to its centre · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
-| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧D Draft from this · ⇧G Render · in the large view, h l or ←→ the screen's images, ⇧D Draft from this, ⇧C Compare with…, esc back · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
+| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧D Draft from this · ⇧G Render · in the large view, h l or ←→ the photograph's row, ⇧D Draft from this, ⇧C Compare with…, esc back · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
 | Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧I its collection's Renders · ⌃; or esc close |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits · ⇧A Add files…, in the import sheet |
 
