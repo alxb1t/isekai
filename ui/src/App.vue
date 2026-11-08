@@ -53,6 +53,9 @@ watch(
 )
 const place = computed(() => collection.value ?? 'library')
 const screen = computed(() => route.name)
+/* The large view and Compare open from the hub, so its tab stays lit on them. */
+const HUB_SCREENS = ['hub', 'render', 'compare', 'compare-photo']
+const hubLit = computed(() => HUB_SCREENS.includes(String(screen.value)))
 const key = computed(() =>
   route.name === 'review' ? `${route.params.collection}/${route.params.flow}` : route.path,
 )
@@ -86,13 +89,6 @@ useKeys('everywhere', [
   { id: 'library', keys: [shifted('KeyL')], label: 'library', run: () => open('home') },
   { id: 'hub', keys: [shifted('KeyH')], label: 'hub', run: () => open('hub'), when: onCollection },
   { id: 'review', keys: [shifted('KeyR')], label: 'review', run: () => open('review-head'), when: onCollection },
-  {
-    id: 'renders',
-    keys: [shifted('KeyI')],
-    label: 'renders',
-    run: () => open('renders'),
-    when: onCollection,
-  },
   { id: 'theme', keys: [shifted('KeyT')], label: 'theme', run: () => (theming.value = true) },
   { id: 'drawer', keys: [DRAWER], label: 'the render drawer', run: drawer.toggle, inField: true },
   keyList(() => (listing.value = true)),
@@ -113,7 +109,7 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
         <RouterLink
           :to="{ name: 'hub', params: { collection } }"
           class="appbar__tab"
-          :class="{ 'appbar__tab--active': screen === 'hub' }"
+          :class="{ 'appbar__tab--active': hubLit }"
           >Hub<KeyHint command="hub" /></RouterLink
         >
         <RouterLink
@@ -123,12 +119,6 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
           data-review-tab
           >Review<span v-if="unapproved" class="appbar__count">{{ unapproved }}</span
           ><KeyHint command="review" /></RouterLink
-        >
-        <RouterLink
-          :to="{ name: 'renders', params: { collection } }"
-          class="appbar__tab"
-          :class="{ 'appbar__tab--active': screen === 'renders' || screen === 'render' }"
-          >Renders<KeyHint command="renders" /></RouterLink
         >
       </template>
       <!-- A running render bills by the minute, so every screen shows it. -->

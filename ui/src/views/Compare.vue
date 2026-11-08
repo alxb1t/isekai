@@ -69,13 +69,8 @@ useKeys('screen', [
     id: 'back',
     keys: plain('Escape'),
     label: 'back',
-    // Back to the large view, with the way back it was opened with.
-    run: () =>
-      void router.push({
-        name: 'render',
-        params: large.value,
-        state: { from: window.history.state?.from ?? null },
-      }),
+    // Back to the large view.
+    run: () => void router.push({ name: 'render', params: large.value }),
   },
 ])
 

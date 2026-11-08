@@ -1,6 +1,6 @@
 import type { JobSlot } from './types'
 
-/* Which bar a hub or Renders shows: one forward action at a time (design spec
+/* Which bar the hub shows: one forward action at a time (design spec
    J2). Changes waiting for Prepare take it first, then a session running with its
    totals, then images short of their count, then a render running. */
 export type Bar = 'prepare' | 'session' | 'render' | null

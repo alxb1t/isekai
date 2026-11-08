@@ -357,33 +357,6 @@ export interface Assigned {
   refused: Record<string, string>
 }
 
-/* One approval of a source in a flow: when, its count and seeds, and the seeds
-   rendered under it, each a decimal string as in `Renders`. An approval no hand
-   can read carries its refusal in `damaged`, and no count. */
-export interface RenderVersion {
-  version: number
-  at: number
-  count: number | null
-  seeds: string[]
-  rendered: string[]
-  damaged: string | null
-  /* The version this one was copied from, and what changed: a field, or only
-     the count and seeds. Null for an approval of a sheet. */
-  came_from: number | null
-  kind: 'revision' | 're-roll' | null
-}
-
-export interface RendersInfo {
-  flows: string[]
-  sources: {
-    name: string
-    digest: string | null
-    /* How many images each flow's newest approval lacks, as the render stage counts. */
-    ready: Record<string, number>
-    cells: Record<string, RenderVersion[]>
-  }[]
-}
-
 /* A collection's Render offer: the images it lacks and every other collection
    lacks, why Render is disabled, and why an approval's count is refused, each
    null when there is none. */
@@ -401,7 +374,8 @@ export interface RenderDetail {
   seed: string
   fields: Record<string, string[]>
   approved_at: number | null
-  /* The version this one was copied from and what changed, as `RenderVersion`'s. */
+  /* The version this one was copied from, and what changed: a field, or only
+     the count and seeds. Null for an approval of a sheet. */
   came_from: number | null
   kind: 'revision' | 're-roll' | null
   /* Null where the approval is damaged. */
@@ -412,7 +386,7 @@ export interface RenderDetail {
   /* The newest older version that rendered this seed, or null. */
   compare: number | null
   /* The source's images, a row per offered flow holding any, each oldest version
-     first, then by seed, as Renders draws them. */
+     first, then by seed. */
   source: { flow: string; images: { version: number; seed: string }[] }[]
   /* Every offered flow, this one first, assigned or not. */
   targets: string[]

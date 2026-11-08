@@ -157,36 +157,58 @@ export function pickHead(
   return [`Compare ${named(from)}`, `with ${tile === null ? 'photograph' : named(tile)}`]
 }
 
-/** The cell modal's grid: a row per version holding images, oldest first. */
+/** The cell modal's grid: a cell's images in one order, cut into balanced rows. */
 export interface CellGrid {
-  rows: { version: number; tiles: NonNullable<PickTile>[] }[]
+  rows: { tiles: NonNullable<PickTile>[] }[]
   /* The seeds rendered under more than one version, each marked ⇄. */
   shared: ReadonlySet<string>
   /* Where the focus opens. */
   start: Focus
 }
 
+/** Return how many tiles a row of the cell modal holds: at most three, the rows balanced.
+
+    e.g. 4 -> 2, 5 -> 3, 7 -> 3, 0 -> 0 */
+export function gridColumns(count: number): number {
+  return count === 0 ? 0 : Math.ceil(count / Math.ceil(count / 3))
+}
+
 /** Return the cell modal's grid of `flow`'s `images`, focused on `at`.
 
-    e.g. v1 [7, 2], v2 [7] at v1·7 -> rows v1 [2, 7], v2 [7], shared {7}, start {row 0, column 1} */
+    e.g. v1 [7, 2], v2 [7] at v1·7 -> rows [v1·2, v1·7, v2·7], shared {7}, start {row 0, column 1} */
 export function cellGrid(
   flow: string,
   images: readonly { version: number; seed: string }[],
   at: { version: number; seed: string },
 ): CellGrid {
+  const tiles = cellOrder(images).map((one) => ({ flow, ...one }))
+  const columns = gridColumns(tiles.length)
   const rows: CellGrid['rows'] = []
-  for (const one of cellOrder(images)) {
-    const last = rows.at(-1)
-    if (last?.version === one.version) last.tiles.push({ flow, ...one })
-    else rows.push({ version: one.version, tiles: [{ flow, ...one }] })
-  }
+  for (let from = 0; from < tiles.length; from += columns)
+    rows.push({ tiles: tiles.slice(from, from + columns) })
   const versions = new Map<string, number>()
-  for (const { seed } of rows.flatMap((one) => one.tiles))
-    versions.set(seed, (versions.get(seed) ?? 0) + 1)
+  for (const { seed } of tiles) versions.set(seed, (versions.get(seed) ?? 0) + 1)
   const shared = new Set([...versions].filter(([, count]) => count > 1).map(([seed]) => seed))
-  const row = rows.findIndex((one) => one.version === at.version)
-  const column = rows[row]?.tiles.findIndex((one) => one.seed === at.seed) ?? -1
-  return { rows, shared, start: column < 0 ? { row: 0, column: 0 } : { row, column } }
+  const index = tiles.findIndex((one) => one.version === at.version && one.seed === at.seed)
+  const start =
+    index < 0
+      ? { row: 0, column: 0 }
+      : { row: Math.floor(index / columns), column: index % columns }
+  return { rows, shared, start }
+}
+
+/** Return the cell modal's focus after `move`: `l` at a row's end goes on to the
+    next row's first, `h` at a row's start back to the previous row's last; a row
+    move keeps the column, held at a shorter row's last tile.
+
+    e.g. rows [3, 2], {row 0, column 2}: 'column+' -> {row 1, column 0} */
+export function moveCell(grid: CellGrid, at: Focus, move: Move): Focus {
+  const last = grid.rows.map((one) => one.tiles.length - 1)
+  if (move === 'column+' && at.column === last[at.row] && at.row + 1 < last.length)
+    return { row: at.row + 1, column: 0 }
+  if (move === 'column-' && at.column === 0 && at.row > 0)
+    return { row: at.row - 1, column: last[at.row - 1] }
+  return moved(last, at, move)
 }
 
 /** Return the pick's focus after `move`: a row move keeps the column, held at a

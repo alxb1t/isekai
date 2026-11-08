@@ -2,14 +2,13 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { imageAt, photoUrl, renderDetail, thumbAt, versionOf } from '../api'
-import { type PickTile, imageKey, placeOf, rowOrder, sourceGrid, stepped } from '../cells'
+import { type PickTile, placeOf, rowOrder, sourceGrid, stepped } from '../cells'
 import ComparePick from '../components/ComparePick.vue'
 import DeleteDialog from '../components/DeleteDialog.vue'
 import DraftDialog from '../components/DraftDialog.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
-import { useCollectionStore } from '../stores/collection'
 import { plain, shifted } from '../stores/keys'
 import type { RenderDetail } from '../types'
 
@@ -18,7 +17,7 @@ import type { RenderDetail } from '../types'
    drafts a flow from it, its own a revision (J5·3); ⇧C compares it with any
    image of its source, the photograph among them, picked in a grid (J5·8).
    ⇧⌫ asks, then deletes the render and opens the Hub on its cell.
-   `h` `l` walk the photograph's row, wherever it was opened. */
+   `h` `l` walk the photograph's row; esc goes back to the Hub, on the shown image's cell. */
 const props = defineProps<{
   collection: string
   digest: string
@@ -27,7 +26,6 @@ const props = defineProps<{
   seed: string
 }>()
 const router = useRouter()
-const store = useCollectionStore()
 const detail = ref<RenderDetail | null>(null)
 const refusal = ref<string | null>(null)
 const drafting = ref(false)
@@ -52,17 +50,10 @@ const grid = computed(() => (detail.value ? sourceGrid(detail.value) : null))
 const tileSrc = (tile: PickTile) =>
   tile === null ? photoUrl(place.value) : thumbAt({ ...place.value, ...tile })
 
-/* The screen this view was opened from. A pasted address carries no state, so
-   it counts as Renders. */
-const from = window.history.state?.from === 'hub' ? 'hub' : 'renders'
-
-/* Compare carries where this view was opened from, so its esc returns here
-   with the same way back. */
 function compare(other: PickTile): void {
-  const state = { from }
   void router.push(
     other === null
-      ? { name: 'compare-photo', params: props, state }
+      ? { name: 'compare-photo', params: props }
       : {
           name: 'compare',
           params: {
@@ -71,7 +62,6 @@ function compare(other: PickTile): void {
             withVersion: `v${other.version}`,
             withSeed: other.seed,
           },
-          state,
         },
   )
 }
@@ -80,16 +70,13 @@ function compare(other: PickTile): void {
 const order = computed(() => (detail.value ? rowOrder(detail.value) : []))
 const index = computed(() => placeOf(order.value, place.value))
 
-/* Show the image `by` steps away in place of this one, so esc returns focused on
-   it; held at either end. */
+/* Show the image `by` steps away in place of this one; held at either end. */
 function step(by: -1 | 1): void {
   const next = stepped(order.value, place.value, by)
   if (next === null) return
-  if (from === 'renders') store.focus.renders = imageKey({ digest: props.digest, ...next })
   void router.replace({
     name: 'render',
     params: { ...props, flow: next.flow, version: `v${next.version}`, seed: next.seed },
-    state: { from },
   })
 }
 
@@ -102,15 +89,7 @@ const hubCell = computed(() => ({
   state: { cell: { digest: props.digest, flow: props.flow } },
 }))
 
-/* Where esc and the back button go: the hub's cell when the hub opened this view,
-   else Renders, which holds every image. A pasted address carries no state. */
-const back = computed(() =>
-  from === 'hub'
-    ? { to: hubCell.value, label: 'Back to Hub' }
-    : { to: { name: 'renders', params: { collection: props.collection } }, label: 'Back to Renders' },
-)
-
-/* The Hub, focused on the deleted render's cell, from either screen. */
+/* The Hub, focused on the deleted render's cell. */
 function deleted(): void {
   void router.push(hubCell.value)
 }
@@ -143,7 +122,7 @@ useKeys('screen', [
     id: 'back',
     keys: plain('Escape'),
     label: 'back',
-    run: () => void router.push(back.value.to),
+    run: () => void router.push(hubCell.value),
   },
 ])
 
@@ -180,7 +159,7 @@ onMounted(async () => {
           ></template
         ><template v-else> · damaged</template>
       </span>
-      <p v-if="detail.damaged" class="renders__refusal">
+      <p v-if="detail.damaged" class="large__refusal">
         <span class="refusal__mark" />{{ detail.damaged }}
       </p>
       <div class="large__actions">
@@ -215,8 +194,8 @@ onMounted(async () => {
           </button>
         </div>
         <div class="large__group">
-          <RouterLink class="btn btn-secondary" :to="back.to"
-            >{{ back.label }}<KeyHint command="back" /></RouterLink
+          <RouterLink class="btn btn-secondary" :to="hubCell"
+            >Back to Hub<KeyHint command="back" /></RouterLink
           >
         </div>
       </div>

@@ -23,7 +23,6 @@ import type {
   RenderDetail,
   RenderOffer,
   Renders,
-  RendersInfo,
   SessionRecord,
   RunningSession,
   TagMatches,
@@ -281,10 +280,6 @@ export function sourceAt(collection: string, name: string): string {
 /* The source's thumbnail, upright. */
 export function sourceThumbAt(collection: string, name: string): string {
   return `${sourceAt(collection, name)}/thumb`
-}
-
-export function renders(collection: string): Promise<RendersInfo> {
-  return get<RendersInfo>(`/api/c/${encodeURIComponent(collection)}/renders`)
 }
 
 /* One image of a source in a flow: `version` is the approval's number. */

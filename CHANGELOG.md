@@ -10,6 +10,17 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.78.0] - 2026-11-08
+
+Gate: local 0m36s · CI not read under mf-ship · 0.77.0: local 0m55s · CI not read under mf-ship
+
+- The cell modal sets a cell's renders as one grid, at most three to a row, its rows balanced, each tile badged with its
+  version and scaled to fit up to three rows in the window; `l` and `h` go on across rows (0118 D1, D2, D3, D4).
+- Renders is deleted, with its tab, `⇧I` and the list endpoint: the hub shows every image. Every large view goes back
+  to the hub; the drawer's link is *View in Hub*, on `⇧H` (0118 D5, D6, D7, D8, D10).
+- The design spec, the READMEs, the data flow and the comments describe the cell modal's grid and the hub in Renders'
+  place (0118 D1, D2, D5, D7).
+
 ## [0.77.0] - 2026-11-08
 
 Gate: local 0m55s · CI not read under mf-ship · 0.76.0: local 0m30s · CI not read under mf-ship

@@ -532,17 +532,21 @@ above its images, and `↵ view photo` SHALL take no line of the source's cell. 
 newest version holding images, then its last-written image — and a click or `↵` SHALL follow the cell's stage: tick
 while unassigned, assigned or tagged, open Review on a sheet or a draft, open the sheet read-only on an approval with no
 image, and open the cell modal on the cell's newest image where it holds any; an unreadable cell SHALL do nothing. The
-cell modal SHALL show the cell's images as a row per version, oldest first, each row's seeds in numeric order, each
-image at twice a thumbnail's size, a seed rendered under more than one version marked `⇄`; the arrows and `h j k l`
-SHALL move it, `↵` or a click SHALL open the focused image's large view, and `Esc` SHALL close it. A cell holding images
-SHALL show every one of them in that order, each marked with its version, a click on one opening the cell modal on it,
-and last, while its newest approval lacks images of its count, a tile naming the number it lacks, as the render stage
-counts it. A source's cell SHALL be the grid's first column, reached by `h` and `←`, and `↵` there SHALL open its
-photograph in the viewer, stepping through the collection's sources. The hub SHALL keep its focus across the Back button
-and a switch of tabs, a restored focus scrolled to the window's centre. A key's move to the first row SHALL scroll the
-hub to its top, to the last row to its foot, and to any other row only as far as the row needs. The header SHALL leave a
-12 px gap between items. An assigned cell SHALL read tagged from the photograph's tag list, so a photograph tagged once
-is tagged in every flow it is assigned to.
+cell modal SHALL show every image of the cell as one grid, versions oldest first, each version's seeds in numeric
+order, at most three to a row, its rows balanced — ⌈n/3⌉ rows of ⌈n/rows⌉ images, the last row holding the rest — each
+image badged with its version, as on the hub, and captioned with its seed, marked `⇄` when that seed was rendered
+under another version too. Up to three rows SHALL show whole, each image at twice a thumbnail's size or scaled down to
+fit the window, and more rows SHALL scroll. The arrows and `h j k l` SHALL move it, a move between rows keeping the
+column, held at a shorter row's last image, `l` at a row's end going on to the next row's first and `h` at a row's
+start back to the previous row's last; `↵` or a click SHALL open the focused image's large view, and `Esc` SHALL close
+it. A cell holding images SHALL show every one of them in that order, each marked with its version, a click on one
+opening the cell modal on it, and last, while its newest approval lacks images of its count, a tile naming the number it
+lacks, as the render stage counts it. A source's cell SHALL be the grid's first column, reached by `h` and `←`, and `↵`
+there SHALL open its photograph in the viewer, stepping through the collection's sources. The hub SHALL keep its focus
+across the Back button and a switch of tabs, a restored focus scrolled to the window's centre. A key's move to the first
+row SHALL scroll the hub to its top, to the last row to its foot, and to any other row only as far as the row needs. The
+header SHALL leave a 12 px gap between items. An assigned cell SHALL read tagged from the photograph's tag list, so a
+photograph tagged once is tagged in every flow it is assigned to.
 
 A stage is a directory listing, the rule every stage already follows, so the grid cannot drift from the disk, and a tick
 survives a reload. A tagged cell holds no sheet: its tag list is the photograph's, so its untick deletes no work, and
@@ -550,8 +554,9 @@ the verb's refusal of a directory holding files is the guard. The mark and the s
 no file records them. An approved cell can hold an older version's images, so its newest image is named by the server
 rather than guessed by the page. A row's pictures share a foot, so a long name, a mark or a refusal moves only the text
 above them. *Add sources…* and the flow names sit above the first row, so a move there shows them. The cell modal
-shows a cell's renders together, at a size to compare them, in the order every screen walks, so a render keeps its place
-from the cell to the large view. The pending count is the render stage's own, the one Renders shows.
+shows a cell's renders together, as large as the window lets them be, in the order every screen walks, so a render
+keeps its place from the cell to the large view; balanced rows of at most three keep a cell's few renders one set. The
+pending count is the render stage's own.
 
 #### Scenario: a cell's stage comes from its run's directory
 - **Key:** `ui:hub:a-cells-stage-comes-from-its-run`
@@ -640,9 +645,17 @@ from the cell to the large view. The pending count is the render stage's own, th
 #### Scenario: the cell modal moves by version and seed
 - **Key:** `ui:hub:the-cell-modal-moves-by-version-and-seed`
 - **Layers:** unit
-- **WHEN** the cell modal opens on an image of a cell holding seeds 9 then 2 under v1, and seed 4 under v2
-- **THEN** its rows are v1 holding 2 then 9, then v2, as the cell's thumbnails stand, the focus on that image
-- **AND** a row move keeps the column, held at a shorter row's end
+- **WHEN** the cell modal opens on an image of a cell holding seeds 9 then 2 under v1, and seeds 4, 6 and 8 under v2
+- **THEN** its rows hold v1 seed 2, v1 seed 9 and v2 seed 4, then v2 seeds 6 and 8, as the cell's thumbnails stand,
+  the focus on that image
+- **AND** `l` at a row's end moves to the next row's first image, `h` back, and `j` onto a missing image lands on the
+  last
+
+#### Scenario: the cell modal balances its rows
+- **Key:** `ui:hub:the-cell-modal-balances-its-rows`
+- **Layers:** unit
+- **WHEN** the cell modal opens on cells holding one to ten images
+- **THEN** its rows hold 1; 2; 3; 2 and 2; 3 and 2; 3 and 3; 3, 3 and 1; 3, 3 and 2; 3, 3 and 3; and 3, 3, 3 and 1
 
 #### Scenario: a seed under two versions is marked
 - **Key:** `ui:hub:a-seed-under-two-versions-is-marked`
@@ -654,8 +667,10 @@ from the cell to the large view. The pending count is the render stage's own, th
 - **Key:** `ui:hub:a-thumbnail-opens-the-cell-modal-on-it`
 - **Layers:** e2e
 - **WHEN** a cell's older thumbnail is clicked
-- **THEN** the cell modal opens focused on that image, its tiles at twice a thumbnail's width
+- **THEN** the cell modal opens focused on that image, its tiles in one row at twice a thumbnail's width, each badged
+  with its version
 - **AND** each tile of a seed rendered under both versions is marked `⇄`
+- **AND** in a window too short for that, its tiles shrink to fit and the grid does not scroll
 
 #### Scenario: a cell shows what is ready
 - **Key:** `ui:hub:a-cell-shows-what-is-ready`
@@ -663,6 +678,13 @@ from the cell to the large view. The pending count is the render stage's own, th
 - **WHEN** a cell's newest approval lacks two images of its count
 - **THEN** the cell's last tile reads `ready · 2 images`
 - **AND** a cell lacking none, or unapproved, draws no such tile
+
+#### Scenario: the hub keeps its focus
+- **Key:** `ui:hub:the-hub-keeps-its-focus`
+- **Layers:** unit
+- **WHEN** a collection's hub focus is moved, then its hub is opened again
+- **THEN** the focus is where it was left, or on the first spot when that one is gone
+- **AND** another collection's hub starts from the first spot
 
 #### Scenario: the source cell opens its photograph
 - **Key:** `ui:hub:the-source-cell-opens-its-photograph`
@@ -996,7 +1018,7 @@ One connection a page leaves the browser's others free.
 
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
-The system SHALL offer Render from a bar on a collection's hub and its Renders view that counts the images short of
+The system SHALL offer Render from a bar on a collection's hub that counts the images short of
 their approvals' counts, its collection's and, as `+n in other collections`, every other collection's, and SHALL show no
 such bar when no collection is short and no count is refused, nor on the hub while changes wait for Prepare. While a
 render runs the bar SHALL show the session's totals and *Session* in place of the count and Render, and name the images
@@ -1276,133 +1298,6 @@ reaches nothing.
 - **WHEN** billing is unknown, a volume is open, or both resources are known absent
 - **THEN** the page respectively shows pending state, the open volume, or nothing billing
 
-### Requirement: Every command has one key, declared once, and none fires while typing
-
-The system SHALL declare each keyboard command once, with its key and its label, on the screen or overlay that offers
-it, and SHALL draw every key hint and the key list from those declarations, the list opening on `⌃/` on every screen
-and on the app bar's `?` button; no screen SHALL carry a key bar. It SHALL match a key by the physical key, whatever
-the keyboard layout, and SHALL treat Mod as `⌘` on macOS and `Ctrl` elsewhere. An open overlay SHALL take every key
-before the screen beneath it, and the screen before the keys offered everywhere. While focus is in a text field, no
-command SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;`, Review's `⌃P`, and on macOS Review's
-`⌃H` and `⌃L`, which move between its panes, and `⌃J` and `⌃K`, which move between its fields as `↓` and `↑` do, and
-in ④'s seed slots `j` `k` `↓` `↑`, which move between the slots; the field SHALL keep its own editing keys. On a grid,
-a move between rows SHALL keep the column it is in, held at a shorter row's end. On the hub and in the session drawer,
-a focused button or link SHALL keep `↵` and `Space`. An `Esc` that ends an input method's composition SHALL be the
-input method's, closing nothing. `Esc` SHALL close an open suggestion list first, then leave the field, then close the
-top overlay, then go back on the screen, and SHALL never close a billing alert. On macOS Review's panes SHALL move by
-`⌃H` and `⌃L` alone, from a field or not, and `h` `l` and `←` `→` SHALL move within a pane; elsewhere `h` `l` and `←`
-`→` SHALL move between the panes. A plain letter SHALL move the focus, and a command SHALL take `⇧` and a letter, but
-for `⌫` on a chosen file, which removes it before anything is committed, and `⇧⌫` on a large view, which asks before
-it deletes the render. No key SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it quotes.
-
-A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
-Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.
-On Linux `Ctrl+J` is the browser's and `Ctrl+K` is `Mod+K`, so the field moves are macOS's alone. A shifted letter is
-not pressed in passing, so it guards what writes.
-
-```
-keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod+Z · Mod+K · ⌃/ · ⌃;, Review's ⌃P,
-               │                     on macOS Review's ⌃H ⌃L ⌃J ⌃K, else the field's own
-               │ no
-               ▼
-           top overlay ─▶ screen ─▶ everywhere        the first that declares the key runs
-```
-
-#### Scenario: a key is matched by the physical key
-- **Key:** `ui:keys:a-key-is-matched-by-the-physical-key`
-- **Layers:** unit
-- **WHEN** `⇧H` is pressed on a Cyrillic layout
-- **THEN** the command declared for `⇧H` runs
-
-#### Scenario: Mod is Command or Control
-- **Key:** `ui:keys:mod-is-command-or-control`
-- **Layers:** unit
-- **WHEN** a command declared for `Mod+K` is offered
-- **THEN** `⌘K` and `Ctrl+K` each run it
-
-#### Scenario: no command fires in a text field
-- **Key:** `ui:keys:no-command-fires-in-a-text-field`
-- **Layers:** unit
-- **WHEN** a declared letter is pressed with focus in a text field
-- **THEN** no command runs
-- **AND** `Esc`, `Mod+↵`, `Mod+Z` and `Mod+K` still do
-
-#### Scenario: a command waits until the field is left
-- **Key:** `ui:keys:a-command-waits-until-the-field-is-left`
-- **Layers:** e2e
-- **WHEN** `⇧H` is typed into a tag field, then `Esc` and `⇧H` are pressed
-- **THEN** the field holds the typed text and Review stays open
-- **AND** the second `⇧H` opens the hub
-
-#### Scenario: a focused control keeps Enter and Space
-- **Key:** `ui:keys:a-focused-control-keeps-enter-and-space`
-- **Layers:** unit
-- **WHEN** `↵` or `Space` is pressed on the hub or in the session drawer with focus on a button or a link
-- **THEN** the control answers it and the cell's command does not run
-
-#### Scenario: an overlay takes the keys first
-- **Key:** `ui:keys:an-overlay-takes-the-keys-first`
-- **Layers:** unit
-- **WHEN** an overlay and the screen beneath it both declare a key
-- **THEN** only the overlay's command runs
-
-#### Scenario: Esc closes the nearest thing first
-- **Key:** `ui:keys:esc-closes-the-nearest-thing-first`
-- **Layers:** unit
-- **WHEN** `Esc` is pressed with a suggestion list open in a field inside an overlay
-- **THEN** the list closes, and the next `Esc` leaves the field, and the next closes the overlay
-
-#### Scenario: the key list and the hints come from the declarations
-- **Key:** `ui:keys:hints-come-from-the-declarations`
-- **Layers:** unit
-- **WHEN** a screen declares its commands
-- **THEN** its button hints and the key list name each command's key and label
-- **AND** no key bar is drawn
-
-#### Scenario: Renders moves by cell and by image
-- **Key:** `ui:keys:renders-moves-by-cell-and-by-image`
-- **Layers:** unit
-- **WHEN** `l` and then `→` are pressed on a cell's last image of the Renders grid
-- **THEN** each moves to the next image, crossing into the next cell, and `h` at a row's start reaches its source
-
-#### Scenario: Review moves between its panes
-- **Key:** `ui:keys:review-moves-between-its-panes`
-- **Layers:** unit
-- **WHEN** on macOS `⌃L` is pressed from the rail three times, then `l` once
-- **THEN** focus moves through the source pane and the sheet to ④
-- **AND** `l` moves within ④, and no pane changes
-
-#### Scenario: a row move keeps the column
-- **Key:** `ui:keys:a-row-move-keeps-the-column`
-- **Layers:** unit
-- **WHEN** `j` is pressed on the Renders grid's third image of a row whose next row holds two
-- **THEN** the focus moves to that row's second image
-
-#### Scenario: an Esc that ends a composition closes nothing
-- **Key:** `ui:keys:an-esc-ending-a-composition-closes-nothing`
-- **Layers:** unit
-- **WHEN** `Esc` ends an input method's composition in a field inside an overlay
-- **THEN** the field keeps the focus and the overlay stays open
-
-#### Scenario: Review's panes move from a field on macOS
-- **Key:** `ui:keys:review-panes-move-from-a-field-on-macos`
-- **Layers:** unit
-- **WHEN** `⌃L` is pressed with focus in a tag field, on macOS and then on Linux
-- **THEN** on macOS the next pane takes the focus, and on Linux nothing moves
-
-#### Scenario: the key list opens from a field
-- **Key:** `ui:keys:the-key-list-opens-from-a-field`
-- **Layers:** unit
-- **WHEN** `?` and then `⌃/` are pressed with focus in a text field
-- **THEN** `?` is typed into the field and `⌃/` opens the key list
-
-#### Scenario: Review's fields move from a field on macOS
-- **Key:** `ui:keys:review-fields-move-from-a-field-on-macos`
-- **Layers:** unit
-- **WHEN** Review's commands are declared on macOS and then on Linux
-- **THEN** on macOS `⌃J` and `⌃K` move to the next and the previous field from a text field
-- **AND** on Linux neither is declared
-
 ### Requirement: The running render opens in a drawer every screen offers
 
 The system SHALL show the running render in a session drawer: a modal dialog as wide as its widest grid, at least half
@@ -1416,11 +1311,11 @@ the app reloads or another render starts; with neither it SHALL say no render ru
 collection the session renders, stacked in its recorded collection order, retaining scan order for older records
 without it, each headed by its name: a column for each photograph the session was asked to render, a row for each
 flow, the photographs' row at the foot, a cell holding that flow's images of that photograph and a waiting tile for
-each still to come, drawn at the tile size Renders draws and moved through by `h j k l` and the arrows, `j` `↓` on a
+each still to come, drawn at a thumbnail's size and moved through by `h j k l` and the arrows, `j` `↓` on a
 grid's last row moving into the first row of the grid below and `k` `↑` back, keeping the column, held at a shorter
 row's end. `↵` SHALL open the focused row in the viewer over the drawer, which SHALL follow its list when it changes
-while open; `⇧I` SHALL close the drawer and open the focused image's collection's Renders. A click on the backdrop,
-`⌃;` and `Esc` SHALL close it, `Esc` closing the viewer first.
+while open; `⇧H` SHALL close the drawer and open the focused image's collection's hub, as *View in Hub* does. A click
+on the backdrop, `⌃;` and `Esc` SHALL close it, `Esc` closing the viewer first.
 A key's move to the first row SHALL scroll the drawer to its top, to the last row to its foot, and to any other row
 only as far as the row needs, a grid's first row also bringing its collection's name into view.
 
@@ -1431,7 +1326,7 @@ any screen ──⌃; or ●──▶ the drawer, half the window ──↵─�
 
 A running render bills by the minute wherever the operator is, so it is the app's, not a collection's: it is glanced at,
 not gone to. A session is the record the render wrote, so the drawer and the terminal agree; once it ends its images are
-on Renders.
+on the hub.
 The session's head sits above the first row, Stop below the last, and each collection's name above its own first
 row, so a move there shows them.
 
@@ -1519,7 +1414,7 @@ row, so a move there shows them.
 - **Layers:** e2e
 - **WHEN** in a window holding the head and the first row, not the foot, `j` moves to the last row, then `k` back
 - **THEN** the timer is out of view on the last row
-- **AND** View in Renders is in view there
+- **AND** View in Hub is in view there
 - **AND** the timer is in view again on the first
 
 ### Requirement: A folder in the library is a collection when it holds `sources/`
@@ -1785,7 +1680,7 @@ none                      ─▶ "No sheet waits for review"
 
 ### Requirement: Draft from this starts from an image, for any flow the app offers, and opens Review on the draft
 
-The system SHALL offer *Draft from this* on `⇧D` from an image's large view and over a selection in the Renders grid,
+The system SHALL offer *Draft from this* on `⇧D` from an image's large view,
 opening a dialog that lists every flow the app offers, the image's own first, named *revise*, focused, and the others
 after it, assigned or not; `↵` SHALL draft the chosen flow from each image's approval, as the draft verb does — a
 revision for the image's own flow, a draft from that approval for another, assigning a target and filling its sheet from
@@ -2247,45 +2142,25 @@ after; only `Mod+↵` spends money, so `↵` on a tile or the checkbox never ren
 - **THEN** it is a modal dialog holding the focus, the everywhere keys in one column and the screen's in another
 - **AND** `⌃/`, `Esc` and a click on the backdrop each close it
 
-### Requirement: The Renders view shows each source's images by flow, and a large view walks the photograph's row
+### Requirement: An image's large view shows its sheet and walks the photograph's row, and its thumbnail is made once
 
-The system SHALL list a collection's images by source and offered flow, each cell's approval versions newest first, and
-SHALL show them as a grid of sources by flows, each cell one row of its images, its versions oldest to newest, each
-image marked with its version, and open an image's large view, with the sheet it was rendered from, from any of them. A
-cell whose newest approval lacks images of its count SHALL carry the number it lacks, as the render stage counts it.
-Each source SHALL show its photograph's thumbnail, upright, opening the photograph in a viewer, its cell the grid's
-first column, reached by the keys and opened by `↵`. `h` `l` and the arrows on a large view SHALL walk the
-photograph's row wherever it was opened — its flows in the hub's column order, each version oldest first, each
-version's seeds in numeric order — replacing its address, held at either end, its head naming the step, `2 of 5`. `Esc`
-and the back button on a large view SHALL return to the screen it was opened from — the hub focused on the cell of the
-image it closed, Renders focused on that image — scrolled to the window's centre, and Renders SHALL keep its focus
-across the Back button and a switch of tabs. It SHALL mark an approval it cannot read as damaged, naming the
-file, and show every image, that version's own among them; and SHALL refuse an address whose version is not `v` and
-ASCII digits. It SHALL serve each thumbnail, a render's or a source's, from a cache in the library's `.cache/`, made on
-first request and named by the image's own bytes. It SHALL refuse an image it cannot read, one past Pillow's pixel bound
-among them, naming the file. It SHALL serve a photograph, a source or a run's copy, as the image its bytes are, whatever
-its name ends in, and a source in a format the render does not read as an upright JPEG of it.
+The system SHALL open an image's large view, with the sheet it was rendered from, from the hub's cell modal. `h` `l` and
+the arrows on a large view SHALL walk the photograph's row — its flows in the hub's column order, each version oldest
+first, each version's seeds in numeric order — replacing its address, held at either end, its head naming the step, `2
+of 5`. `Esc` and *Back to Hub* on a large view SHALL open the hub focused on the cell of the image it closed, scrolled
+to the window's centre, whatever opened the view. The large view of an image whose approval no hand can read SHALL be
+headed damaged, naming the file, and count nothing. It SHALL refuse an address whose version is not `v` and ASCII
+digits. It SHALL serve each thumbnail, a render's or a source's, from a cache in the library's `.cache/`, made on first
+request and named by the image's own bytes, a source's upright. It SHALL refuse an image it cannot read, one past
+Pillow's pixel bound among them, naming the file. It SHALL serve a photograph, a source or a run's copy, as the image
+its bytes are, whatever its name ends in, and a source in a format the render does not read as an upright JPEG of it.
 
-The images come back to where the sheets were decided, version by version in the order they were approved; a cache the
-library can lose costs only its rebuild. Two collections can hold one source rendered at one seed, so only the bytes say
-which image a thumbnail shows. One damaged file costs only its own version, never the collection's page. The count a
-cell lacks is the render stage's own, so the page and the render agree on what is ready. A source keeps the name it
-arrived with, and one ending `.html` served by its name would run as a page on the surface's own origin; one placed by
-hand in another format is still shown, as its thumbnail is. One order on every screen keeps a render's place, and the
-image a large view closes may be another flow's than the one it opened on, so the hub lands on that image's cell.
-
-#### Scenario: versions are listed newest first
-- **Key:** `ui:renders:versions-newest-first`
-- **Layers:** unit
-- **WHEN** a cell holds images under two approvals
-- **THEN** the newer approval's images are listed first
-
-#### Scenario: a damaged approval marks its own version
-- **Key:** `ui:renders:a-damaged-approval-marks-its-version`
-- **Layers:** unit
-- **WHEN** one of a cell's two approvals holds a count no render takes
-- **THEN** its version is marked damaged, naming the file
-- **AND** the other version and every image are still listed
+A cache the library can lose costs only its rebuild. Two collections can hold one source rendered at one seed, so only
+the bytes say which image a thumbnail shows. One damaged file costs only its own image's heading. A source keeps the
+name it arrived with, and one ending `.html` served by its name would run as a page on the surface's own origin; one
+placed by hand in another format is still shown, as its thumbnail is. One order on every screen keeps a render's place,
+and the image a large view closes may be another flow's than the one it opened on, so the hub lands on that image's
+cell; the hub is the one screen of images, so a pasted address goes back there too.
 
 #### Scenario: an address naming no version is refused
 - **Key:** `ui:renders:an-address-naming-no-version-is-refused`
@@ -2312,33 +2187,19 @@ image a large view closes may be another flow's than the one it opened on, so th
 - **THEN** the thumbnail is drawn upright
 - **AND** a second request reads it from `.cache/`
 
-#### Scenario: a cell counts what is ready
-- **Key:** `ui:renders:a-cell-counts-what-is-ready`
-- **Layers:** unit
-- **WHEN** a cell's newest approval holds fewer images than its count
-- **THEN** the cell carries the number of images it lacks
-
 #### Scenario: the large view shows its sheet
 - **Key:** `ui:renders:the-large-view-shows-its-sheet`
 - **Layers:** e2e
-- **WHEN** an image is opened from the grid
+- **WHEN** an image is opened from the cell modal
 - **THEN** its large view shows the approval it was rendered from
-- **AND** `Esc` returns to the grid focused on that image, and that image in view
-- **AND** `h` from a row's first image reaches its source, and `↵` there opens its photograph
+- **AND** `Esc` returns to the hub focused on that image's cell, and that cell in view
 
-#### Scenario: a source opens in the viewer
-- **Key:** `ui:renders:a-source-opens-in-the-viewer`
-- **Layers:** e2e
-- **WHEN** a source's thumbnail is clicked in the Renders view
-- **THEN** its photograph opens in a dialog, fitted to the window
-- **AND** `Esc` closes the dialog and leaves the address unchanged
-
-#### Scenario: a damaged version's images are drawn
-- **Key:** `ui:renders:a-damaged-versions-images-are-drawn`
-- **Layers:** e2e
-- **WHEN** the Renders view opens on a cell whose one approval is damaged
-- **THEN** that version's images are drawn beside its damaged mark
-- **AND** the first of them holds the focus
+#### Scenario: a damaged approval marks its own version
+- **Key:** `ui:renders:a-damaged-approval-marks-its-version`
+- **Layers:** unit
+- **WHEN** one of a cell's two approvals holds a count no render takes
+- **THEN** its image's large view is headed damaged, naming the file, and counts nothing
+- **AND** the other version's large view is not damaged
 
 #### Scenario: a photograph is served as the image its bytes are
 - **Key:** `ui:renders:a-photograph-is-served-as-its-bytes`
@@ -2354,15 +2215,130 @@ image a large view closes may be another flow's than the one it opened on, so th
 - **WHEN** an image past Pillow's pixel bound is read for a thumbnail, or served whole
 - **THEN** it is refused, naming the file
 
-#### Scenario: a grid keeps its focus
-- **Key:** `ui:renders:a-grid-keeps-its-focus`
-- **Layers:** unit
-- **WHEN** a collection's grid focus is moved, then its view is opened again
-- **THEN** the focus is where it was left, or on the first spot when that one is gone
-
 #### Scenario: the large view walks the photograph's row
 - **Key:** `ui:renders:the-large-view-walks-the-photographs-row`
 - **Layers:** unit
-- **WHEN** `l` is pressed on the large view of a source's first image, the hub its opener
+- **WHEN** `l` is pressed on the large view of a source's first image
 - **THEN** it shows the row's next image, then the next flow's first image, in the hub's column order
 - **AND** at the last image `l` holds
+
+### Requirement: Each command has one key, declared once, and none fires while typing
+
+The system SHALL declare each keyboard command once, with its key and its label, on the screen or overlay that offers
+it, and SHALL draw every key hint and the key list from those declarations, the list opening on `⌃/` on every screen
+and on the app bar's `?` button; no screen SHALL carry a key bar. It SHALL match a key by the physical key, whatever
+the keyboard layout, and SHALL treat Mod as `⌘` on macOS and `Ctrl` elsewhere. An open overlay SHALL take every key
+before the screen beneath it, and the screen before the keys offered everywhere. While focus is in a text field, no
+command SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`, `⇧Mod+Z`, `Mod+K`, `⌃/` and `⌃;`, Review's `⌃P`, and on macOS Review's
+`⌃H` and `⌃L`, which move between its panes, and `⌃J` and `⌃K`, which move between its fields as `↓` and `↑` do, and
+in ④'s seed slots `j` `k` `↓` `↑`, which move between the slots; the field SHALL keep its own editing keys. On a grid,
+a move between rows SHALL keep the column it is in, held at a shorter row's end. On the hub and in the session drawer,
+a focused button or link SHALL keep `↵` and `Space`. An `Esc` that ends an input method's composition SHALL be the
+input method's, closing nothing. `Esc` SHALL close an open suggestion list first, then leave the field, then close the
+top overlay, then go back on the screen, and SHALL never close a billing alert. On macOS Review's panes SHALL move by
+`⌃H` and `⌃L` alone, from a field or not, and `h` `l` and `←` `→` SHALL move within a pane; elsewhere `h` `l` and `←`
+`→` SHALL move between the panes. A plain letter SHALL move the focus, and a command SHALL take `⇧` and a letter, but
+for `⌫` on a chosen file, which removes it before anything is committed, and `⇧⌫` on a large view, which asks before
+it deletes the render. No key SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it quotes.
+
+A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
+Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.
+On Linux `Ctrl+J` is the browser's and `Ctrl+K` is `Mod+K`, so the field moves are macOS's alone. A shifted letter is
+not pressed in passing, so it guards what writes.
+
+```
+keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod+Z · Mod+K · ⌃/ · ⌃;, Review's ⌃P,
+               │                     on macOS Review's ⌃H ⌃L ⌃J ⌃K, else the field's own
+               │ no
+               ▼
+           top overlay ─▶ screen ─▶ everywhere        the first that declares the key runs
+```
+
+#### Scenario: a key is matched by the physical key
+- **Key:** `ui:keys:a-key-is-matched-by-the-physical-key`
+- **Layers:** unit
+- **WHEN** `⇧H` is pressed on a Cyrillic layout
+- **THEN** the command declared for `⇧H` runs
+
+#### Scenario: Mod is Command or Control
+- **Key:** `ui:keys:mod-is-command-or-control`
+- **Layers:** unit
+- **WHEN** a command declared for `Mod+K` is offered
+- **THEN** `⌘K` and `Ctrl+K` each run it
+
+#### Scenario: no command fires in a text field
+- **Key:** `ui:keys:no-command-fires-in-a-text-field`
+- **Layers:** unit
+- **WHEN** a declared letter is pressed with focus in a text field
+- **THEN** no command runs
+- **AND** `Esc`, `Mod+↵`, `Mod+Z` and `Mod+K` still do
+
+#### Scenario: a command waits until the field is left
+- **Key:** `ui:keys:a-command-waits-until-the-field-is-left`
+- **Layers:** e2e
+- **WHEN** `⇧H` is typed into a tag field, then `Esc` and `⇧H` are pressed
+- **THEN** the field holds the typed text and Review stays open
+- **AND** the second `⇧H` opens the hub
+
+#### Scenario: a focused control keeps Enter and Space
+- **Key:** `ui:keys:a-focused-control-keeps-enter-and-space`
+- **Layers:** unit
+- **WHEN** `↵` or `Space` is pressed on the hub or in the session drawer with focus on a button or a link
+- **THEN** the control answers it and the cell's command does not run
+
+#### Scenario: an overlay takes the keys first
+- **Key:** `ui:keys:an-overlay-takes-the-keys-first`
+- **Layers:** unit
+- **WHEN** an overlay and the screen beneath it both declare a key
+- **THEN** only the overlay's command runs
+
+#### Scenario: Esc closes the nearest thing first
+- **Key:** `ui:keys:esc-closes-the-nearest-thing-first`
+- **Layers:** unit
+- **WHEN** `Esc` is pressed with a suggestion list open in a field inside an overlay
+- **THEN** the list closes, and the next `Esc` leaves the field, and the next closes the overlay
+
+#### Scenario: the key list and the hints come from the declarations
+- **Key:** `ui:keys:hints-come-from-the-declarations`
+- **Layers:** unit
+- **WHEN** a screen declares its commands
+- **THEN** its button hints and the key list name each command's key and label
+- **AND** no key bar is drawn
+
+#### Scenario: Review moves between its panes
+- **Key:** `ui:keys:review-moves-between-its-panes`
+- **Layers:** unit
+- **WHEN** on macOS `⌃L` is pressed from the rail three times, then `l` once
+- **THEN** focus moves through the source pane and the sheet to ④
+- **AND** `l` moves within ④, and no pane changes
+
+#### Scenario: a row move keeps the column
+- **Key:** `ui:keys:a-row-move-keeps-the-column`
+- **Layers:** unit
+- **WHEN** `j` is pressed on the cell modal's third image of a row whose next row holds two
+- **THEN** the focus moves to that row's second image
+
+#### Scenario: an Esc that ends a composition closes nothing
+- **Key:** `ui:keys:an-esc-ending-a-composition-closes-nothing`
+- **Layers:** unit
+- **WHEN** `Esc` ends an input method's composition in a field inside an overlay
+- **THEN** the field keeps the focus and the overlay stays open
+
+#### Scenario: Review's panes move from a field on macOS
+- **Key:** `ui:keys:review-panes-move-from-a-field-on-macos`
+- **Layers:** unit
+- **WHEN** `⌃L` is pressed with focus in a tag field, on macOS and then on Linux
+- **THEN** on macOS the next pane takes the focus, and on Linux nothing moves
+
+#### Scenario: the key list opens from a field
+- **Key:** `ui:keys:the-key-list-opens-from-a-field`
+- **Layers:** unit
+- **WHEN** `?` and then `⌃/` are pressed with focus in a text field
+- **THEN** `?` is typed into the field and `⌃/` opens the key list
+
+#### Scenario: Review's fields move from a field on macOS
+- **Key:** `ui:keys:review-fields-move-from-a-field-on-macos`
+- **Layers:** unit
+- **WHEN** Review's commands are declared on macOS and then on Linux
+- **THEN** on macOS `⌃J` and `⌃K` move to the next and the previous field from a text field
+- **AND** on Linux neither is declared

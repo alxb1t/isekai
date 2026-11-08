@@ -1,8 +1,8 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch, type Ref } from 'vue'
 import { planOf } from '../bars'
-import { hub as readHub, renderOffer, renders as readRenders } from '../api'
-import type { CellEvent, HubCell, HubInfo, JobSlot, RenderOffer, RendersInfo } from '../types'
+import { hub as readHub, renderOffer } from '../api'
+import type { CellEvent, HubCell, HubInfo, JobSlot, RenderOffer } from '../types'
 import { type Snapshot, useLiveStore } from './live'
 
 const NO_OFFER: RenderOffer = { disabled: null, images: 0, others: 0, refused: null }
@@ -13,9 +13,8 @@ export function at(name: string, flow: string): string {
 }
 
 /* The open collection, one copy for every screen of it: its hub, the stages running
-   in its cells and their refusals, its renders once a screen reads them, and its
-   Render offer and dialog, which has no URL of its own
-   (design spec §1 rule 8). */
+   in its cells and their refusals, and its Render offer and dialog, which has no
+   URL of its own (design spec §1 rule 8). */
 export const useCollectionStore = defineStore('collection', () => {
   const live = useLiveStore()
   const { jobs, billing, renderRunning, activeRender } = storeToRefs(live)
@@ -25,12 +24,11 @@ export const useCollectionStore = defineStore('collection', () => {
   const running = ref<Record<string, string>>({})
   /* Each cell's refusal from a tick or from the job, by `source|flow`. */
   const refusals = ref<Record<string, string>>({})
-  const renders = ref<RendersInfo | null>(null)
   const offer = ref<RenderOffer>({ ...NO_OFFER })
   const dialog = ref(false)
-  /* Each grid's focus, by its spot's name, written on every move: Renders' Esc from a
-     large view, the Back button and a tab switch all come back to it. */
-  const focus = ref<{ hub: string | null; renders: string | null }>({ hub: null, renders: null })
+  /* The hub's focus, by its spot's name, written on every move: the Back button and a
+     tab switch come back to it. */
+  const focus = ref<{ hub: string | null }>({ hub: null })
   /* A render session running for this collection, among those it renders. */
   const rendering = computed(
     () =>
@@ -54,10 +52,9 @@ export const useCollectionStore = defineStore('collection', () => {
     hub.value = null
     running.value = {}
     refusals.value = {}
-    renders.value = null
     offer.value = { ...NO_OFFER }
     dialog.value = false
-    focus.value = { hub: null, renders: null }
+    focus.value = { hub: null }
     asked += 1
   }
 
@@ -71,8 +68,6 @@ export const useCollectionStore = defineStore('collection', () => {
 
   /** Read the hub again; a refusal is thrown to the caller, who decides where it shows. */
   const reloadHub = () => reload(readHub, hub)
-  /** Read the renders again; a refusal is thrown to the caller. */
-  const reloadRenders = () => reload(readRenders, renders)
 
   /* Read the offer again. One that cannot be read is refused, so its reason shows. */
   async function check(): Promise<void> {
@@ -127,7 +122,6 @@ export const useCollectionStore = defineStore('collection', () => {
   /* A job that ends changes the cells and the images. */
   function ended(): void {
     void reloadHub().catch(() => undefined)
-    if (renders.value) void reloadRenders().catch(() => undefined)
   }
   /* A Prepare's end changes the offer and clears the cells its reports marked running. */
   watch(() => jobs.value.prepare, (slot, before) => {
@@ -162,7 +156,6 @@ export const useCollectionStore = defineStore('collection', () => {
     hub,
     running,
     refusals,
-    renders,
     offer,
     dialog,
     focus,
@@ -171,7 +164,6 @@ export const useCollectionStore = defineStore('collection', () => {
     preparing,
     open,
     reloadHub,
-    reloadRenders,
     check,
     openDialog,
     closeDialog,

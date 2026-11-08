@@ -1595,7 +1595,7 @@ def test_a_malformed_update_is_refused_naming_the_field(
     assert snapshot(made.path) == before
 
 
-# --- Renders ------------------------------------------------------------------
+# --- The large view -----------------------------------------------------------
 
 
 def _rendered_twice(
@@ -1616,51 +1616,6 @@ def _rendered_twice(
     prepare(made, {FLOW: flow})
     second = [one.seed for one in render(made, flow, client, seeds=[22], poll=0)]
     return first, second
-
-
-@pytest.mark.spec("ui:renders:versions-newest-first")
-def test_a_cells_approvals_are_listed_newest_first_with_their_images(
-    wired: Wiring,
-    made: Run,
-    tmp_path: Path,
-    schema: Schema,
-    vocabulary: Vocabulary,
-) -> None:
-    _source(made)
-    _rendered_twice(made, schema, vocabulary)
-    client = _client(wired, made, tmp_path, drafted=False)
-
-    body = client.get(f"/api/c/{COLLECTION}/renders").json()
-
-    (source,) = body["sources"]
-    cell = source["cells"][FLOW]
-    assert [(one["version"], one["rendered"]) for one in cell] == [
-        (2, ["22"]),
-        (1, ["11"]),
-    ]
-
-
-@pytest.mark.spec("ui:renders:a-cell-counts-what-is-ready")
-def test_a_cell_counts_the_images_its_newest_approval_lacks(
-    wired: Wiring,
-    made: Run,
-    tmp_path: Path,
-    schema: Schema,
-    vocabulary: Vocabulary,
-) -> None:
-    _source(made)
-    _rendered_twice(made, schema, vocabulary)
-    _approved_again(made, schema, vocabulary, {"count": 3, "seeds": [22]})
-    flow = load_flow(FLOW)
-    prepare(made, {FLOW: flow})
-    comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
-    render(made, flow, comfy, seeds=[22], poll=0)
-    client = _client(wired, made, tmp_path, drafted=False)
-
-    body = client.get(f"/api/c/{COLLECTION}/renders").json()
-
-    (source,) = body["sources"]
-    assert source["ready"] == {FLOW: 2, "conjure-anime-wai": 0}
 
 
 @pytest.mark.spec("ui:renders:a-thumbnail-is-made-once")
@@ -1839,7 +1794,7 @@ def test_a_source_named_as_a_page_is_served_as_the_image_it_is(
 
 
 @pytest.mark.spec("ui:renders:a-damaged-approval-marks-its-version")
-def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
+def test_a_damaged_approval_heads_its_large_view_damaged(
     wired: Wiring,
     made: Run,
     tmp_path: Path,
@@ -1852,19 +1807,15 @@ def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
     older = approval_of(made, FLOW, 1)
     body = json.loads(older.read_text())
     older.write_text(json.dumps({**body, "renders": {"count": 0}}))
+    renders = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}"
 
-    answered = client.get(f"/api/c/{COLLECTION}/renders")
+    damaged = client.get(f"{renders}/v1/11")
+    newer = client.get(f"{renders}/v2/22")
 
-    assert answered.status_code == 200
-    (source,) = answered.json()["sources"]
-    newer, damaged = source["cells"][FLOW]
-    assert (newer["version"], newer["rendered"], newer["damaged"]) == (2, ["22"], None)
-    assert (damaged["version"], damaged["rendered"]) == (1, ["11"])
-    assert older.name in damaged["damaged"]
-    # Its image's large view is headed damaged too, naming the file, not counted.
-    large = client.get(f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/11").json()
-    assert older.name in large["damaged"]
-    assert large["count"] is None
+    assert damaged.status_code == 200
+    assert older.name in damaged.json()["damaged"]
+    assert damaged.json()["count"] is None
+    assert newer.json()["damaged"] is None
 
 
 def _approved_again(
@@ -1980,7 +1931,7 @@ def test_compare_takes_any_two_images_of_a_source(
     rendered(7)
     _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
     rendered(7)
-    # The hub follows write time within an approval, Renders seed order.
+    # The hub follows write time within an approval, the large view seed order.
     image = image_of(made, flow, 4, 7)
     for seed, at in ((7, 1), (9, 2), (2, 3)):
         target = image_of(made, flow, 4, seed)
@@ -2002,7 +1953,7 @@ def test_compare_takes_any_two_images_of_a_source(
     photo = client.get(f"{large}/v4/7/compare/photo").json()
     itself = client.get(f"{large}/v4/7/compare/{FLOW}/v4/7")
 
-    # Renders and Compare retain seed order.
+    # The large view and Compare retain seed order.
     assert "images" not in view
     assert [
         (row["flow"], [(one["version"], one["seed"]) for one in row["images"]])

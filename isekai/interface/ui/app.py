@@ -47,7 +47,7 @@ PUT  /api/c/{collection}/review/{digest}/{flow}/draft
 POST /api/c/{collection}/review/{digest}/{flow}/approve   ·   POST …/cancel
 POST /api/c/{collection}/review/{digest}/{flow}/discard
 POST /api/c/{collection}/draft         {flow, images: [{digest, flow, version, seed}]}
-GET  /api/c/{collection}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
+GET  /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
      and its /image, /thumb, /compare/photo and /compare/{flow}/{version}/{seed}
 DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
 GET  /api/c/{collection}/sources/{name}   and its /thumb
@@ -980,39 +980,6 @@ def create_app(
                 ).name
         return {"drafts": drafts}
 
-    @app.get("/api/c/{collection}/renders")
-    def read_renders(collection: str) -> dict[str, Any]:
-        """Return each source's images by offered flow, approvals newest first.
-
-        `ready` is how many images each flow's newest approval lacks, as the
-        render stage counts them.
-        """
-        suffixes = {flow: offered(flow).output_suffix for flow in flows}
-        return {
-            "flows": list(flows),
-            "sources": [
-                {
-                    "name": one.name,
-                    "digest": one.digest,
-                    "ready": {
-                        flow: library.lacking(one.run, offered(flow)) for flow in flows
-                    },
-                    "cells": {
-                        flow: [
-                            _version_out(version)
-                            for version in library.versions(
-                                one.run, flow, suffixes[flow]
-                            )
-                        ]
-                        if one.run is not None
-                        else []
-                        for flow in flows
-                    },
-                }
-                for one in library.sources(folder(collection))
-            ],
-        }
-
     def rendered(
         collection: str, digest: str, flow: str, version: str, seed: int
     ) -> tuple[Run, Path, Path]:
@@ -1053,7 +1020,7 @@ def create_app(
         _, fields = _approved(approval)
         number = _version(version)
         suffix = offered(flow).output_suffix
-        listed = library.versions(run, flow, suffix)
+        listed = library.versions(run, flow)
         held = next((one for one in listed if one.version == number), None)
         if held is None:
             raise Refusal(
@@ -1076,7 +1043,7 @@ def create_app(
             # Every offered flow, this one first, assigned or not: a draft assigns.
             "targets": sorted(flows, key=lambda name: name != flow),
             # The source's images, a row per offered flow holding any, each oldest
-            # version first, then by seed: Renders and the pick.
+            # version first, then by seed: the large view's walk and the pick.
             "source": [
                 {"flow": name, "images": _images_out(images)}
                 for name in flows
@@ -1419,17 +1386,8 @@ def _image_out(digest: str, flow: str, version: int, seed: int) -> dict[str, Any
     return {"digest": digest, "flow": flow, "version": version, "seed": str(seed)}
 
 
-def _version_out(version: library.Version) -> dict[str, Any]:
-    """Describe an approval's version, each seed a decimal string as `renders` is."""
-    return {
-        **asdict(version),
-        "seeds": _decimal(version.seeds),
-        "rendered": _decimal(version.rendered),
-    }
-
-
 def _images_out(images: Sequence[tuple[int, int]]) -> list[dict[str, Any]]:
-    """Describe rendered images by version and decimal seed, as Renders names them.
+    """Describe rendered images by version and decimal seed, as the page names them.
 
     e.g. [(1, 7)] -> [{"version": 1, "seed": "7"}]
     """
@@ -1463,7 +1421,7 @@ def _version(text: str) -> int:
     if not _DECIMAL.fullmatch(digits):
         raise Refusal(
             f"{text!r} names no version; a version is v and the approval's number, "
-            "e.g. v1 -- go back to the collection's Renders to choose one"
+            "e.g. v1 -- go back to the collection's hub to choose one"
         )
     return int(digits)
 

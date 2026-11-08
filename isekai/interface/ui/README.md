@@ -40,8 +40,8 @@ render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─�
   terminal renders show on every screen too. A failed poll marks the last
   answer unconfirmed on every screen, and an unconfirmed render never hides the billing alert.
   The alert's way out is `/billing`, which distinguishes unknown billing, an open volume and confirmed absence.
-- **Renders** reads each cell's images, versions oldest to newest, with how many its newest approval still lacks,
-  the render stage's own count; Render comes from its bar, as on the hub. The large view shows an image
+- **The large view** shows an image, headed by its version, and walks the photograph's row; the hub's cells
+  carry each image and what each newest approval lacks. The large view sets an image
   beside the approval's filled fields. A thumbnail, a render's or a source's, is made once, into the
   library's `.cache/`.
 - **Billing** (`billing.py`) is read from gpunit's records in `.gpunit/`: a pod alert, the window's quiet

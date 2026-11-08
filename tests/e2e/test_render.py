@@ -17,7 +17,6 @@ from tests.e2e.conftest import (
     COMPARED,
     CONJURE,
     CONJURED,
-    DAMAGED,
     DISCARDED,
     DRAWN,
     FLAT,
@@ -185,91 +184,15 @@ def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
     drawer.locator('[data-cell="0-0"]').focus()
     page.keyboard.press("j")
     expect(drawer.locator("[data-session-timer]")).not_to_be_in_viewport()
-    expect(drawer.locator("[data-renders]")).to_be_in_viewport()
+    expect(drawer.locator("[data-view-hub]")).to_be_in_viewport()
     page.keyboard.press("k")
     expect(drawer.locator("[data-session-timer]")).to_be_in_viewport()
-
-
-@pytest.mark.spec("ui:renders:the-large-view-shows-its-sheet")
-@pytest.mark.spec("ui:renders:a-source-opens-in-the-viewer")
-def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
-    page: Page, served: Served
-) -> None:
-    page.goto(f"{served.url}/c/{SHOWN}/renders")
-    tile = page.locator("[data-version='1'][data-seed='7']")
-    expect(tile.locator("img")).to_have_js_property("complete", True)
-
-    tile.click()
-
-    expect(page).to_have_url(
-        f"{served.url}/c/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
-    )
-    sheet = page.locator("[data-sheet]")
-    expect(sheet).to_contain_text("v1")
-    expect(sheet).to_contain_text("hair_colour")
-    page.keyboard.press("Escape")
-    expect(page).to_have_url(f"{served.url}/c/{SHOWN}/renders")
-    expect(tile).to_have_class(re.compile("renders__image--focused"))
-    page.keyboard.press("Enter")
-    expect(page.locator("[data-sheet]")).to_contain_text("v1")
-    # Esc comes back focused on the image it closed, not the grid's first.
-    page.goto(f"{served.url}/c/{COMPARED}/renders")
-    second = page.locator("[data-version='2'][data-seed='7']")
-    expect(second.locator("img")).to_have_js_property("complete", True)
-    second.click()
-    expect(page.locator("[data-sheet]")).to_contain_text("v2")
-    page.keyboard.press("Escape")
-    expect(second).to_have_class(re.compile("renders__image--focused"))
-    expect(second).to_be_in_viewport()
-    expect(page.locator("[data-version='1'][data-seed='7']")).not_to_have_class(
-        re.compile("renders__image--focused")
-    )
-    # From a row's first image, h reaches its source, and ↵ opens its photograph.
-    page.goto(f"{served.url}/c/{SHOWN}/renders")
-    expect(tile).to_have_class(re.compile("renders__image--focused"))
-    page.keyboard.press("h")
-    expect(page.locator("[data-source]")).to_have_class(
-        re.compile("renders__source--focused")
-    )
-    page.keyboard.press("Enter")
-    viewer = page.locator("dialog[data-viewer]")
-    expect(viewer.locator("img")).to_have_attribute(
-        "src", f"/api/c/{SHOWN}/sources/hal.jpg"
-    )
-
-    # A click on the source's thumbnail opens it in the viewer, inside the window.
-    grid = f"{served.url}/c/{SHOWN}/renders"
-    page.goto(grid)
-    page.locator("[data-source-thumb]").click()
-    expect(viewer).to_be_visible()
-    expect(viewer).to_contain_text("hal.jpg")
-    box, size = viewer.bounding_box(), page.viewport_size
-    assert box is not None and size is not None
-    assert box["width"] <= size["width"] and box["height"] <= size["height"]
-    page.keyboard.press("Escape")
-    expect(viewer).to_have_count(0)
-    expect(page).to_have_url(grid)
-
-
-@pytest.mark.spec("ui:renders:a-damaged-versions-images-are-drawn")
-def test_a_damaged_versions_images_are_drawn_and_hold_the_focus(
-    page: Page, served: Served
-) -> None:
-    page.goto(f"{served.url}/c/{DAMAGED}/renders")
-
-    expect(page.locator("[data-damaged]")).to_be_visible()
-    image = page.locator("[data-version='1'][data-seed='7']")
-    expect(image.locator("img")).to_have_js_property("complete", True)
-    expect(image).to_have_class(re.compile("renders__image--focused"))
-    # Its count refuses, so the Render bar stays, disabled, with that reason.
-    bar = page.locator("[data-render-bar]")
-    expect(bar.locator("[data-render-reason]")).to_contain_text("restore it in")
-    expect(bar.locator("[data-render]")).to_be_disabled()
 
 
 @pytest.mark.spec("ui:hub:a-rendered-cell-opens-its-newest-image")
 @pytest.mark.spec("ui:hub:the-source-cell-opens-its-photograph")
 @pytest.mark.spec("ui:hub:a-thumbnail-opens-the-cell-modal-on-it")
+@pytest.mark.spec("ui:renders:the-large-view-shows-its-sheet")
 def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> None:
     page.goto(served.hub_of(SHOWN))
     rendered = page.locator(f'.hub__cell[data-flow="{FLOW}"][data-stage="rendered"]')
@@ -286,7 +209,9 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
     expect(page).to_have_url(
         f"{served.url}/c/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
     )
-    expect(page.locator("[data-sheet]")).to_contain_text("v1")
+    sheet = page.locator("[data-sheet]")
+    expect(sheet).to_contain_text("v1")
+    expect(sheet).to_contain_text("hair_colour")
     page.keyboard.press("Escape")
     expect(page).to_have_url(served.hub_of(SHOWN))
     expect(rendered).to_have_class(re.compile("hub__cell--focused"))
@@ -318,7 +243,8 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
     expect(viewer.locator("img")).to_have_js_property("complete", True)
 
     # A click on a cell's older thumbnail opens the cell modal on it, at twice its size,
-    # each tile of the seed rendered under both versions marked ⇄.
+    # its tiles in one row, each badged with its version, each tile of the seed
+    # rendered under both versions marked ⇄.
     page.goto(served.hub_of(COMPARED))
     older = page.locator(
         f'.hub__cell[data-flow="{FLOW}"] [data-version="1"][data-seed="7"]'
@@ -326,13 +252,26 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
     expect(older.locator("img")).to_have_js_property("complete", True)
     older.click()
     tile = modal.locator('[data-version="1"][data-seed="7"]')
+    newer = modal.locator('[data-version="2"][data-seed="7"]')
     expect(tile).to_be_focused()
     expect(tile.locator("img")).to_have_js_property("complete", True)
     thumb = older.bounding_box()
     shown = tile.bounding_box()
-    assert thumb is not None and shown is not None
+    beside = newer.bounding_box()
+    assert thumb is not None and shown is not None and beside is not None
     assert shown["width"] == pytest.approx(thumb["width"] * 2, abs=1)
+    assert beside["y"] == pytest.approx(shown["y"], abs=1)
+    expect(tile.locator("[data-badge]")).to_have_text("v1")
+    expect(newer.locator("[data-badge]")).to_have_text("v2")
     expect(modal.locator("[data-shared]")).to_have_count(2)
+
+    # In a short window the tiles shrink to fit, and the grid does not scroll.
+    page.set_viewport_size({"width": 1280, "height": 320})
+    short = tile.bounding_box()
+    assert short is not None
+    assert short["height"] < thumb["height"] * 2
+    grid = modal.locator(".pick--cell")
+    assert grid.evaluate("(held) => held.scrollHeight <= held.clientHeight")
 
 
 @pytest.mark.spec("ui:revise:revise-opens-review-on-the-revision")

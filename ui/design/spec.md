@@ -74,7 +74,7 @@ timer mono 40px/500.
 ## 3 · The shell
 
 ```
-┌ isekai  2026-09-17   Hub ⇧H  Review 3 ⇧R  Renders ⇧I    flow [all|summon|conjure] ⇧F         [ ? ] ┐ AppBar 40
+┌ isekai  2026-09-17   Hub ⇧H  Review 3 ⇧R                flow [all|summon|conjure] ⇧F         [ ? ] ┐ AppBar 40
 ├─ BillingBanner (only when something may be billing; filled accent, cannot be dismissed) ───────────┤
 │                                                                                                     │
 │                                   <the route's screen>                                              │
@@ -106,7 +106,6 @@ timer mono 40px/500.
 | `/c/<collection>/hub` | Hub | the Add sources sheet, the Prepare bar, the Render dialog |
 | `/c/<collection>/review` | Review's head, replaced by its sheet's URL | — |
 | `/c/<collection>/review/<run>/<flow>` | Review | the cheatsheet, the viewer, *Side by side* |
-| `/c/<collection>/renders` | Renders grid | *Draft from this* |
 | `/c/<collection>/renders/<run>/<flow>/<version>/<seed>` | large view | *Draft from this*, *Compare with…* |
 | `/c/<collection>/renders/<run>/<flow>/<version>/<seed>/compare/<flow>/<version>/<seed>` and `…/compare/photo` | Compare | — |
 | `/billing` | the billing alert's way out | — |
@@ -195,15 +194,13 @@ y_long_name            │                                  │
   sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
   cell holding images opens the cell modal on its newest (`↵ view`). The checkbox's own click only ticks.
 - **The cell modal** is a dialog holding the focus, its head one line, `ada.jpg · summon-anime-wai · v2 · seed 7`,
-  naming the focused image. A row per version holding images, oldest first, labelled `vN`; each row's seeds in
-  numeric order, each tile twice 96×128, `seed N` under it, then `⇄` where the seed was rendered under more than one
-  version of the cell. `h j k l` and `←↓↑→` move, a row move keeping the column, held at a shorter row's end; `↵` or
-  a click opens the focused image's large view; `Esc` closes it, the hub's focus kept.
+  naming the focused image.
+  One grid of every image of the cell, versions oldest first, seeds in numeric order, at most three to a row, rows balanced — 4 is 2 and 2, 5 is 3 and 2, 7 is 3, 3 and 1; each tile twice 96×128, scaled down so up to three rows show whole, a fourth scrolling, its `vN` badge on the image, `seed N` under it, then `⇄` where the seed was rendered under another version too. `h j k l` and `←↓↑→` move, a row move keeping the column, held at a shorter row's last tile, `l` at a row's end going on to the next row's first and `h` at a row's start back to the previous row's last; `↵` or a click opens the focused image's large view; `Esc` closes it, the hub's focus kept.
 - **The viewer** opens an image fitted; a click or `↵` toggles full size, where `j k` `↓ ↑` scroll it by 120 px, and
   `h l` `← →` step to the next image, fitted. On a pair `↵` does nothing.
 - **A cell's images** sit at its foot, level with the source's thumbnail, under its stage track and any refusal,
   every approved version's, versions oldest first, seeds in numeric order, each a 96×128 tile
-  with its `vN` badge, wrapping, and last the ready tile, `ready · n images`, as on Renders;
+  with its `vN` badge, wrapping, and last the ready tile, `ready · n images`;
   a click on one opens the cell modal on it.
 - **A cell's refusal** sits inside the cell with its fix; the cell returns to assigned, so the next Prepare retries
   it.
@@ -216,8 +213,8 @@ y_long_name            │                                  │
   is as wide as the stages' cells done over those asked, `progress` in `bars.ts` sizing it as it sizes the RenderBar's
   and the drawer's; with nothing to size it, the line slides. A running segment pulses `accent-dim` ↔ `accent`; under
   `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
-- **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
-  to render`, the render stage's own count, and primary `Render ⇧G`, disabled with its reason. With nothing short it
+- **The RenderBar** takes the PrepareBar's place on the hub once no change waits: `n images ready to render`, the
+  render stage's own count, and primary `Render ⇧G`, disabled with its reason. With nothing short it
   is absent. While a render runs it shows the session's totals, `image 2 of 4 · 06:41 of ≤10:30`, the images
   short outside its plan, `1 image waits` or `n images wait for the next session`, and `Session ⌃;`, in place of the
   count and Render. Its line, and the drawer's bar, are as wide as the images done over those asked; the drawer keeps
@@ -226,7 +223,7 @@ y_long_name            │                                  │
   first column, `h` from the first flow cell, and a column itself: the file's stem in mono 13, its first line level
   with the cells' tick line, the size in the viewer's title, then a 96×128 thumbnail at the cell's foot, a
   render tile's size, upright; a row checkbox appears in selection mode. A long name breaks inside the column, as
-  it does on Renders, Review's rail and Home, never spilling out. A click
+  it does on Review's rail and Home, never spilling out. A click
   on the thumbnail or `↵` opens the viewer on its photograph, `← →` stepping the collection's sources; space does nothing
   there.
 - **The viewer** is a dialog over the page, its URL unchanged: the image fitted, a click for 1:1 pixels, `Esc` or a
@@ -282,7 +279,7 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
 | J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⇧G Render | `…/c/2026-10-19/hub` — the dialog has none |
 | J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.06 | the drawer over the hub |
 | J4·3 done: `Nothing is billing.` | the last image lands; teardown and volume down confirm | same |
-| J4·4 Renders with the four new images | ⇧I View in Renders | `…/c/2026-10-19/renders` |
+| J4·4 the hub with the four new images | ⇧H View in Hub | `…/c/2026-10-19/hub` |
 
 ```
 J4·1  RENDER · ON A RENTED GPU                                   Render 4 images
@@ -341,7 +338,7 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
   striped tile per image still to come, stacked, so a column stays one tile wide. A record that plans nothing places
   what landed. The first render takes the focus on opening and is the grids' tab stop; `h l` move between
   photographs, `j k` between rows and from a grid's photographs' row into the next grid's first row, the column kept,
-  and `↵` opens the viewer over the row, each image named `summon-anime-wai · v1`. `⇧I` opens the focused image's collection's Renders. Stop goes straight to
+  and `↵` opens the viewer over the row, each image named `summon-anime-wai · v1`. `⇧H` opens the focused image's collection's hub. Stop goes straight to
   teardown; finished images are kept.
 - **Done** is the step list all confirmed, the count and the duration, and `Nothing is billing.` only when both
   teardown steps are confirmed.
@@ -350,14 +347,14 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 
 | frame | trigger | URL |
 |---|---|---|
-| J5·1 Renders, before the revision | — | `…/c/2026-09-17/renders` |
+| J5·1 the hub's cell modal, before the revision | ↵ on the cell | `…/c/2026-09-17/hub` — the modal has none |
 | J5·2 the large view, no Compare yet | ↵ | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731` |
 | J5·3 *Draft from this* over it, its own flow focused | ⇧D Draft from this | same |
 | J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ↵ on *revise* | `…/c/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
 | J5·6 the revision approved, read-only; the hub's Render bar, `1 image ready to render` | ⌘↵ Approve · ⇧H | `…/c/2026-09-17/hub` |
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⇧G · ⌘↵ | the drawer over the hub |
-| J5·7 Renders: v2 after v1, both marked `⇄` | ⇧I View in Renders | `…/c/2026-09-17/renders` |
+| J5·7 the hub's cell modal: v2 after v1, both marked `⇄` | ⇧H View in Hub · ↵ on the cell | `…/c/2026-09-17/hub` |
 | J5·8 the large view of v2, with `Compare with…  ⇧C` | ↵ on v2 | `…/v2/1840266731` |
 | J5·9 Compare | ⇧C, ↵ on v1 in the pick | `…/v2/1840266731/compare/summon-anime-wai/v1/1840266731` |
 
@@ -377,21 +374,15 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
       the photograph picked:  the photograph left, the image right
 ```
 
-- **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer. A
-  cell is one wrapped row of thumbnails, versions oldest to newest, each with a `vN` badge and `⇄` in `accent-ink` when its
-  seed is shared across versions. A damaged version is a striped tile before its images, its refusal under the
-  cell. Last comes the ready tile, `ready · n images`, while the newest version lacks images of its Count, the render
-  stage's own count. The Render bar offers them. The version's heading — `revision of v1` or `re-roll of v1`, the
-  approval time, the Count and the seeds — is in the large view.
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
   (filled fields only, read-only). Its actions stand under the heading, above the fields: a column of full-width buttons, label left
   and key right, in groups 12 px apart — the writes, the comparisons, the way back. `Esc` and its back button go
-  back to where it was opened: the hub, on the cell of the image it closed, or else Renders, on that image. `h` `l`
-  and `←` `→` walk the photograph's row wherever it was opened — its flows in the hub's column order, versions oldest
-  first, seeds in numeric order — held at either end, the head naming the step,
+  back to the hub, on the cell of the image it closed, whatever opened it. `h` `l` and `←` `→` walk the
+  photograph's row wherever it was opened — its flows in the hub's column order, versions oldest first, seeds in
+  numeric order — held at either end, the head naming the step,
   `summon-anime-wai · v2 · seed 1840266731 · 2 of 5`.
   `Compare with…  ⇧C` opens a pick of the source's images: the photograph's row on top, then a row per flow
-  holding images, headed by its name, tiles at Renders' size oldest first, `vN` under each, the image
+  holding images, headed by its name, tiles at a thumbnail's size oldest first, `vN` under each, the image
   compare started from marked, the pick's head naming the focused tile on two lines, each cut at its end —
   `Compare summon-anime-wai v2 · seed 1840266731` over `with summon-anime-wai v1 · seed 1840266731`. The pick is as
   wide as its longest row, whatever is focused: at least 480 px, at most the window less 96 px, its rows and its
@@ -402,11 +393,10 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
   each headed by its flow, version and seed and nothing else: the pair centred, as tall as the window less the app
   bar and the heads, on the app's 12 px padding.
   *Draft from this* `⇧D` heads the writes.
-- **Draft from this** (the verb `isekai draft --flow`), on the large view and over a Renders selection: a dialog
-  headed `Draft from this · summon-anime-wai v1 · seed 1840266731`, or `· 3 images` over a selection, with a row
-  per offered flow, assigned or not — the image's own first, named *revise*, and focused. `j` `k` move, `↵` drafts
-  the focused flow and opens Review on the first draft, the rest in the rail, `Esc` closes. Its own flow is a
-  revision; another is drafted from the image's approval, its own fields from its sheet, and Review shows the image
+- **Draft from this** (the verb `isekai draft --flow`), on the large view: a dialog headed
+  `Draft from this · summon-anime-wai v1 · seed 1840266731`, with a row per offered flow, assigned or not — the
+  image's own first, named *revise*, and focused. `j` `k` move, `↵` drafts the focused flow and opens Review on the
+  first draft, the rest in the rail, `Esc` closes. Its own flow is a revision; another is drafted from the image's approval, its own fields from its sheet, and Review shows the image
   beside the photograph, marks the draft against that flow's sheet and heads it *the image it was drafted from*. All or
   nothing: a refusal lists every selected image, those that could be drafted too, and offers
   `Deselect those 2 and draft 1 ⇧↵`. A target's waiting draft with edits of its own opens Review on that draft,
@@ -429,7 +419,7 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
 | (the large view of 00003 · conjure v1, as J5·2; *Draft from this*, as J5·3) | ↵ · ⇧D · ↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
 | J6·1 Review: the seed cleared, Count 3, the tags untouched | × the seed · count + + | `…/review/0d4b7e6fb2a8/conjure-anime-wai` |
 | (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⇧G · ⌘↵ | the drawer over the hub |
-| J6·2 Renders: three new images after v1, no pair | ⇧I | `…/c/2026-09-17/renders` |
+| J6·2 the hub's cell modal: three new images after v1, no pair | ⇧H View in Hub · ↵ on the cell | `…/c/2026-09-17/hub` |
 
 Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`, `was 1840266731 · cleared`.
 
@@ -492,10 +482,8 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 | Hub | the collection is gone | a full-page refusal, `Back to the library ⇧L` |
 | Render | refused before billing | the CLI's refusal: no GPU free, no key in `.env`; `nothing billed` when true |
 | Render | disabled | `A pod may still be billing.` |
-| Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, the Review tab's count |
-| Renders | a missing image, its record kept | `its record is there, its image is gone`, the path in the fix |
-| Renders | a deleted render | `no render is here, its record and its image are gone` |
-| Renders | *Draft from this* disabled | `No image selected` |
+| large view | a missing image, its record kept | `its record is there, its image is gone`, the path in the fix |
+| large view | a deleted render | `no render is here, its record and its image are gone` |
 
 ## 7 · Keys
 
@@ -506,12 +494,12 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 
 | where | keys |
 |---|---|
-| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧I Renders · ⇧T the theme dialog · ⌃; the render drawer, from a field too · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
+| everywhere | ⇧L the library · ⇧H Hub · ⇧R Review's head · ⇧T the theme dialog · ⌃; the render drawer, from a field too · ⌃/ the key list, from a field too · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New collection · j k or ↓↑ ↵ the library |
-| Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ full size, j k or ↓↑ scroll it · in the cell modal, h j k l or ←↓↑→ move, ↵ the large view, esc closes · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
+| Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ full size, j k or ↓↑ scroll it · in the cell modal, h j k l or ←↓↑→ move, l and h going on across rows, ↵ the large view, esc closes · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | the panes: the rail, the photograph, the sheet, ④ — on macOS ⌃H ⌃L alone, from a field or not, elsewhere h l or ←→ · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows, ④'s grid of − + and its slots, from a slot too · h l or ←→ across − + on macOS · ⇧J ⇧K or ⇧↓↑ the rail, the sheet scrolled to its centre · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
-| Renders | h l or ←→ images, across cells, into the source at a row's start · j k or ↓↑ sources, keeping the column · space select · ↵ the large view, on the source the viewer · ⇧D Draft from this · ⇧G Render · in the large view, h l or ←→ the photograph's row, ⇧D Draft from this, ⇧C Compare with…, esc back · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
-| Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧I its collection's Renders · ⌃; or esc close |
+| Large view | h l or ←→ the photograph's row · ⇧D Draft from this · ⇧C Compare with… · esc back to the hub · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
+| Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧H its collection's hub · ⌃; or esc close |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits · ⇧A Add files…, in the import sheet |
 
 No key spends money but the Render dialog's ⌘↵, which confirms the price it quotes: ⇧G only opens the dialog.

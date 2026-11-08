@@ -7,7 +7,7 @@
      for the autocomplete: the post count is read by digit count, which only
      works if the digits align. */
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  /* One image's tile on the hub and on Renders: a source's thumbnail and a
+  /* One image's tile on the hub: a source's thumbnail and a
      render's are drawn the same size, so a row reads across at one scale. */
   --tile-width: 96px;
   --tile-height: 128px;
@@ -545,25 +545,8 @@ button.session__tile {
   border-radius: 3px;
 }
 
-.renders__image--selected {
+.tile--selected {
   outline: 2px solid var(--accent);
-}
-
-.renders__bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.renders__reason {
-  font-size: 12px;
-  color: var(--ink-2);
-}
-
-.renders__image--focused {
-  outline: 1px solid var(--focus);
-  outline-offset: 2px;
 }
 
 .session__actions {
@@ -637,39 +620,9 @@ button.session__tile {
   color: var(--ink-2);
 }
 
-/* — Renders and the large view (J5·1, J5·2) — */
+/* — the tile and the large view (J5·2) — */
 
-.renders {
-  flex: 1;
-  overflow: auto;
-  padding: 16px;
-}
-
-.renders__grid {
-  display: grid;
-  gap: 1px;
-  background: var(--line);
-}
-
-.renders__grid > * {
-  padding: 10px;
-  background: var(--ground);
-}
-
-.renders__source {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  min-width: 0;
-}
-
-.renders__cell {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.renders__badge {
+.tile__badge {
   position: absolute;
   left: 4px;
   bottom: 4px;
@@ -680,25 +633,17 @@ button.session__tile {
   border-radius: 3px;
 }
 
-.renders__shared {
-  color: var(--accent-ink);
-}
-
-.renders__image--damaged,
-.renders__image--ready {
+.tile--ready {
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: default;
-}
-
-.renders__image--ready {
   font-size: 11px;
   color: var(--ink-2);
   border-style: dashed;
 }
 
-.renders__refusal {
+.large__refusal {
   display: flex;
   gap: 8px;
   margin: 0;
@@ -706,7 +651,7 @@ button.session__tile {
   color: var(--ink-2);
 }
 
-.renders__refusal .refusal__mark {
+.large__refusal .refusal__mark {
   margin-top: 4px;
 }
 
@@ -715,13 +660,7 @@ button.session__tile {
   color: var(--ink-2);
 }
 
-.renders__images {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.renders__image {
+.tile {
   position: relative;
   width: var(--tile-width);
   height: var(--tile-height);
@@ -732,7 +671,7 @@ button.session__tile {
   cursor: pointer;
 }
 
-.renders__image img {
+.tile img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1718,7 +1657,7 @@ dialog::backdrop {
   background: var(--scrim);
 }
 
-/* Compare with…'s tiles, at a Renders tile's size, each named under it. */
+/* Compare with…'s tiles, at a thumbnail's size, each named under it. */
 /* A row per flow, its tiles in one line: `j k` keep the column. The longest row
    sets the width; the head, cut at its lines' ends, never does. Past the window's
    height the rows scroll inside. */
@@ -1770,11 +1709,13 @@ dialog::backdrop {
   color: var(--ink-2);
 }
 
-/* The cell modal's tiles, at twice a thumbnail's size; a caption longer than its
-   tile is cut by an ellipsis rather than widening it. */
-.pick--cell .renders__image {
-  width: calc(var(--tile-width) * 2);
-  height: calc(var(--tile-height) * 2);
+/* The cell modal's tiles fit the window: twice a thumbnail's size, scaled down so up
+   to three rows show whole; 96px is the dialog's chrome, 44px a row's caption and gap.
+   A caption longer than its tile is cut by an ellipsis rather than widening it. */
+.pick--cell .tile {
+  width: auto;
+  aspect-ratio: 3 / 4;
+  height: min(calc(var(--tile-height) * 2), calc((100vh - 96px) / var(--rows) - 44px));
 }
 
 .pick--cell figcaption {
@@ -1885,8 +1826,7 @@ dialog::backdrop {
   gap: 8px;
 }
 
-.hub__cell--focused,
-.renders__grid > .renders__source--focused {
+.hub__cell--focused {
   background: var(--raised-2);
   box-shadow: inset 0 0 0 1px var(--focus);
 }
@@ -1985,7 +1925,7 @@ dialog::backdrop {
   color: var(--ink-2);
 }
 
-/* A cell's images at its foot, at a Renders tile's size. */
+/* A cell's images at its foot, at a thumbnail's size. */
 .hub__images {
   display: flex;
   flex-wrap: wrap;

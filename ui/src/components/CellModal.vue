@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useHeldFocus } from '../composables/useHeldFocus'
-import { type CellGrid, type PickTile, imageName, movePick } from '../cells'
+import { type CellGrid, type PickTile, imageName, moveCell } from '../cells'
 import { useKeys } from '../composables/useKeys'
 import type { Focus, Move } from '../grid'
 import { plain } from '../stores/keys'
 
-/* The cell modal (design spec J2): a hub cell's renders as a grid in a modal
-   dialog that holds the focus — a row per version, oldest first, each its seeds
-   in numeric order, at twice a thumbnail's size, a seed rendered under more than
-   one version marked ⇄, the head naming the source and the focused image.
-   `h j k l` and the arrows move, `↵` or a click opens its large view, `Esc` closes. */
+/* The cell modal (design spec J2): a hub cell's renders as one balanced grid in a
+   modal dialog that holds the focus — each tile badged with its version, fitted to
+   the window, a seed rendered under more than one version marked ⇄, the head naming
+   the source and the focused image. `h j k l` and the arrows move, `↵` or a click
+   opens its large view, `Esc` closes. */
 const props = defineProps<{
   title: string
   grid: CellGrid
@@ -34,7 +34,7 @@ async function show(at: Focus): Promise<void> {
     ?.focus()
 }
 
-const walk = (move: Move) => void show(movePick(props.grid, focus.value, move))
+const walk = (move: Move) => void show(moveCell(props.grid, focus.value, move))
 
 function choose(): void {
   if (focused.value) emit('open', focused.value)
@@ -59,29 +59,31 @@ onMounted(() => {
 <template>
   <dialog ref="dialog" class="viewer" :aria-label="head" data-cell-modal @close="emit('close')">
     <p class="viewer__title mono">{{ head }}</p>
-    <div class="pick pick--cell">
-      <div v-for="(line, row) in grid.rows" :key="line.version" class="pick__row">
-        <span class="pick__flow mono">v{{ line.version }}</span>
-        <div class="pick__tiles">
-          <figure v-for="(tile, column) in line.tiles" :key="tile.seed" class="pick__tile">
-            <button
-              class="renders__image"
-              type="button"
-              :data-row="row"
-              :data-column="column"
-              :data-version="tile.version"
-              :data-seed="tile.seed"
-              :aria-label="imageName(tile)"
-              @focus="focus = { row, column }"
-              @click="emit('open', tile)"
-            >
-              <img :src="src(tile)" alt="" />
-            </button>
-            <figcaption class="mono">
-              seed {{ tile.seed }}<span v-if="grid.shared.has(tile.seed)" data-shared> ⇄</span>
-            </figcaption>
-          </figure>
-        </div>
+    <div class="pick pick--cell" :style="{ '--rows': Math.min(grid.rows.length, 3) }">
+      <div v-for="(line, row) in grid.rows" :key="row" class="pick__tiles">
+        <figure
+          v-for="(tile, column) in line.tiles"
+          :key="`${tile.version}/${tile.seed}`"
+          class="pick__tile"
+        >
+          <button
+            class="tile"
+            type="button"
+            :data-row="row"
+            :data-column="column"
+            :data-version="tile.version"
+            :data-seed="tile.seed"
+            :aria-label="imageName(tile)"
+            @focus="focus = { row, column }"
+            @click="emit('open', tile)"
+          >
+            <img :src="src(tile)" alt="" />
+            <span class="tile__badge mono" data-badge>v{{ tile.version }}</span>
+          </button>
+          <figcaption class="mono">
+            seed {{ tile.seed }}<span v-if="grid.shared.has(tile.seed)" data-shared> ⇄</span>
+          </figcaption>
+        </figure>
       </div>
     </div>
   </dialog>
