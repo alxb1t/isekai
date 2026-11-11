@@ -2,9 +2,14 @@
 
 ### Requirement: An edit is one flat directory, pinned by its digest
 
-The system SHALL keep each edit as one flat directory under `edits/`, named for what it does and its base, holding `edit.json` and `graph.json`. It SHALL read the manifest at load, refusing a key it does not read and a key it requires and lacks, naming each. Every tracked edit SHALL be held by equality to a committed digest over every regular file of its directory, and each committed digest SHALL appear in the changelog.
+The system SHALL keep each edit as one flat directory under `edits/`, named for what it does and its base, holding
+`edit.json` and `graph.json`. It SHALL read the manifest at load, refusing a key it does not read and a key it
+requires and lacks, naming each. Every tracked edit SHALL be held by equality to a committed digest over every
+regular file of its directory, and each committed digest SHALL appear in the changelog.
 
-An edit changes a finished image, so an identifier that silently meant another configuration would make two records of one name disagree. The directory is flat because the digest covers regular files only ([D14](../../../docs/decisions.md#d14--a-flow-is-one-flat-directory) holds the same for a flow).
+An edit changes a finished image, so an identifier that silently meant another configuration would make two
+records of one name disagree. The directory is flat because the digest covers regular files only
+([D14](../../../docs/decisions.md#d14--a-flow-is-one-flat-directory) holds the same for a flow).
 
 #### Scenario: a tracked edit loads with every dial declared
 - **Key:** `edit:directory:a-tracked-edit-loads`
@@ -39,9 +44,15 @@ An edit changes a finished image, so an identifier that silently meant another c
 
 ### Requirement: The ink is cut by `isekai ink`
 
-The system SHALL offer `isekai ink <image> <out>` with `--outline <mask.png>`, `--neutral` or `--no-neutral`, and `--depth` between 1.0 and 2.0, free and local. It SHALL write a PNG layer to be multiplied over a render: bare skin white, the ink its colour where there is ink. With an outline it SHALL keep the ink inside the outline only, as the layer's alpha, neutral on and depth 1.6; with none it SHALL keep the whole image, neutral off and depth 1.0; a flag SHALL override its default. **Neutral** SHALL set the three channels to the layer's luminance, and **depth** SHALL raise the layer's Multiply factor to the power.
+The system SHALL offer `isekai ink <image> <out>` with `--outline <mask.png>`, `--neutral` or `--no-neutral`, and
+`--depth` between 1.0 and 2.0, free and local. It SHALL write a PNG layer to be multiplied over a render: bare
+skin white, the ink its colour where there is ink. With an outline it SHALL keep the ink inside the outline only,
+as the layer's alpha, neutral on and depth 1.6; with none it SHALL keep the whole image, neutral off and depth 1.0;
+a flag SHALL override its default. **Neutral** SHALL set the three channels to the layer's luminance, and
+**depth** SHALL raise the layer's Multiply factor to the power.
 
-The tattoo photograph is read here and nowhere else, and the layer carries pixels only, so the photograph never reaches a run or a pod.
+The tattoo photograph is read here and nowhere else, and the layer carries pixels only, so the photograph never
+reaches a run or a pod.
 
 #### Scenario: a photograph with an outline
 - **Key:** `edit:ink:a-photograph-with-an-outline`
@@ -78,9 +89,17 @@ The tattoo photograph is read here and nowhere else, and the layer carries pixel
 
 ### Requirement: An edit request is made from a render and its composite
 
-The system SHALL offer `isekai edit <edit> <render> --composite <png>`, free and local, taking `--denoise`, `--strength`, `--lines` and `--seed`. It SHALL derive the ink as the composite divided by the render, and from it the mask, the crop box and the control, and SHALL write into the render's outputs group `<seed>.edit-<k>.composite.png` and then `<seed>.edit-<k>.json`, `k` the next free number of that seed. The composite SHALL be kept as pixels only. The record SHALL name the edit and its digest, the source and the digests of the source and the composite, the sampling seed, every dial as it ran, the dials overridden, and the crop. The seed SHALL be drawn as a render's is, and `--seed` SHALL repeat it. A request with no image beside it is pending. A source that is an edit's image SHALL chain: the next edit is made from it.
+The system SHALL offer `isekai edit <edit> <render> --composite <png>`, free and local, taking `--denoise`,
+`--strength`, `--lines` and `--seed`. It SHALL derive the ink as the composite divided by the render, and from it
+the mask, the crop box and the control, and SHALL write into the render's outputs group
+`<seed>.edit-<k>.composite.png` and then `<seed>.edit-<k>.json`, `k` the next free number of that seed. The
+composite SHALL be kept as pixels only. The record SHALL name the edit and its digest, the source and the digests
+of the source and the composite, the sampling seed, every dial as it ran, the dials overridden, and the crop. The
+seed SHALL be drawn as a render's is, and `--seed` SHALL repeat it. A request with no image beside it is pending.
+A source that is an edit's image SHALL chain: the next edit is made from it.
 
-An edit lives beside its source because a run's one channel is its directory, and every artifact records what shaped it. The tattoo photograph is never a part of the request.
+An edit lives beside its source because a run's one channel is its directory, and every artifact records what
+shaped it. The tattoo photograph is never a part of the request.
 
 #### Scenario: a request writes the composite and a pending record
 - **Key:** `edit:request:a-request-writes-a-pending-record`
@@ -123,7 +142,10 @@ An edit lives beside its source because a run's one channel is its directory, an
 
 ### Requirement: A request the composite cannot support is refused
 
-The system SHALL refuse a composite that does not decode or carries transparency; one that is not the render's size; one darker nowhere past the ink threshold; and one lighter than the render anywhere past 8-bit rounding. Each refusal SHALL name its fix. Where the render is near black no ink SHALL be read. A refused request SHALL write nothing.
+The system SHALL refuse a composite that does not decode or carries transparency; one that is not the render's
+size; one darker nowhere past the ink threshold; and one lighter than the render anywhere past 8-bit rounding.
+Each refusal SHALL name its fix. Where the render is near black no ink SHALL be read. A refused request SHALL
+write nothing.
 
 The division is defined only on a Multiply composite over a lit pixel, so anything else would bake the wrong ink.
 
@@ -160,7 +182,10 @@ The division is defined only on a Multiply composite over a lit pixel, so anythi
 
 ### Requirement: The crop is the tattoo's own, widened and grown by two guards
 
-The system SHALL take the crop box as the mask's box plus the margin, clipped to the image; SHALL widen it to an aspect no thinner than the declared minimum; and SHALL grow it until the upscale to the sampling size is at most the declared maximum, refusing a box the image cannot grow to that. The sampling size SHALL be the box scaled to the declared long side, each side a multiple of 8. The record SHALL say whether either guard moved the box.
+The system SHALL take the crop box as the mask's box plus the margin, clipped to the image; SHALL widen it to an
+aspect no thinner than the declared minimum; and SHALL grow it until the upscale to the sampling size is at most
+the declared maximum, refusing a box the image cannot grow to that. The sampling size SHALL be the box scaled to
+the declared long side, each side a multiple of 8. The record SHALL say whether either guard moved the box.
 
 A thin strip and a tiny tattoo sample badly, and the pod sees only the crop.
 
@@ -184,9 +209,16 @@ A thin strip and a tiny tattoo sample badly, and the pod sees only the crop.
 
 ### Requirement: A render session runs every pending edit
 
-The system SHALL, when `isekai render` names collections and no request, run every pending edit of each in the same pod, after its renders, in each run's flow less each `--without` flow. It SHALL derive and check each pending edit before anything is rented, refusing one whose source no longer has the recorded digest. A session SHALL be allowed to hold edits alone. A request SHALL run no edit. The pod SHALL receive only the crop, its mask and its control; the sampled crop SHALL be scaled, stitched through the mask and multiplied by the ink's lines here, and `<seed>.edit-<k>.png` SHALL be written last, beside its source, after the record is completed with the graph's digest, the runtime and the duration. A failed sampling SHALL leave its request pending.
+The system SHALL, when `isekai render` names collections and no request, run every pending edit of each in the
+same pod, after its renders, in each run's flow less each `--without` flow. It SHALL derive and check each pending
+edit before anything is rented, refusing one whose source no longer has the recorded digest. A session SHALL be
+allowed to hold edits alone. A request SHALL run no edit. The pod SHALL receive only the crop, its mask and its
+control; the sampled crop SHALL be scaled, stitched through the mask and multiplied by the ink's lines here, and
+`<seed>.edit-<k>.png` SHALL be written last, beside its source, after the record is completed with the graph's
+digest, the runtime and the duration. A failed sampling SHALL leave its request pending.
 
-One verb creates a pod ([D36](../../../docs/decisions.md#d36--a-render-session-is-isekai-render)), so an edit is run by it.
+One verb creates a pod ([D36](../../../docs/decisions.md#d36--a-render-session-is-isekai-render)), so an edit is
+run by it.
 
 #### Scenario: a pending edit runs beside the renders
 - **Key:** `edit:session:a-pending-edit-runs-beside-the-renders`
@@ -235,9 +267,12 @@ One verb creates a pod ([D36](../../../docs/decisions.md#d36--a-render-session-i
 
 ### Requirement: An edit's time is estimated from its work
 
-The system SHALL add to a session's estimate, for each collection's pending edits, each at the higher of the median of the newest recorded edit durations and the configured time per edit, and SHALL give the quote and the session the same estimate.
+The system SHALL add to a session's estimate, for each collection's pending edits, each at the higher of the
+median of the newest recorded edit durations and the configured time per edit, and SHALL give the quote and the
+session the same estimate.
 
-An edit's median says nothing of a slower card, so the configured figure is the floor, as an image's is ([D26](../../../docs/decisions.md#d26--renders-run-on-a-rented-gpu)).
+An edit's median says nothing of a slower card, so the configured figure is the floor, as an image's is
+([D26](../../../docs/decisions.md#d26--renders-run-on-a-rented-gpu)).
 
 #### Scenario: with nothing recorded the configured figure is used
 - **Key:** `edit:edit-limit:the-configured-figure-without-records`
@@ -259,7 +294,9 @@ An edit's median says nothing of a slower card, so the configured figure is the 
 
 ### Requirement: An edit image is no render
 
-The system SHALL leave an edit's image, its record and its composite out of every render listing: the seeds a flow has rendered, a cell's newest image, the evaluator's runs. `isekai show` SHALL read an edit's files in a group.
+The system SHALL leave an edit's image, its record and its composite out of every render listing: the seeds a
+flow has rendered, a cell's newest image, the evaluator's runs. `isekai show` SHALL read an edit's files in a
+group.
 
 An edit is not a render: it carries no sheet, and counting it would make an approval look complete.
 
@@ -277,9 +314,12 @@ An edit is not a render: it carries no sheet, and counting it would make an appr
 
 ### Requirement: A discard takes edits
 
-The system SHALL delete, with a discarded render, every edit of its seed: images, records and composites, before it decides whether the group and its approval go. Given an edit image's path it SHALL delete that edit and every edit whose source chain reaches it. Both SHALL be refused while a render session holds the collection.
+The system SHALL delete, with a discarded render, every edit of its seed: images, records and composites, before
+it decides whether the group and its approval go. Given an edit image's path it SHALL delete that edit and every
+edit whose source chain reaches it. Both SHALL be refused while a render session holds the collection.
 
-An edit left in the group would keep the group and its approval alive, unseen on the hub ([D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)).
+An edit left in the group would keep the group and its approval alive, unseen on the hub
+([D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)).
 
 #### Scenario: a render takes its edits
 - **Key:** `edit:discard:a-render-takes-its-edits`
@@ -307,7 +347,9 @@ An edit left in the group would keep the group and its approval alive, unseen on
 
 ### Requirement: Every file an edit's graph names has a manifest entry
 
-The manifest SHALL declare every model file the graph of a tracked edit names, promax included, and every node class of that graph SHALL be classified by name. A graph naming an undeclared file, or a class no list holds, MUST fail the suite offline.
+The manifest SHALL declare every model file the graph of a tracked edit names, promax included, and every node
+class of that graph SHALL be classified by name. A graph naming an undeclared file, or a class no list holds, MUST
+fail the suite offline.
 
 The checkpoint and the ControlNet an edit loads are found missing on a metered pod otherwise.
 
