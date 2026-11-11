@@ -536,11 +536,6 @@ def _laid_out(path: Path) -> bool:
     )
 
 
-def _in_a_group(image: Path) -> bool:
-    """Return whether `image` is a file in an outputs group of a run with a frame."""
-    return image.is_file() and _laid_out(image)
-
-
 def rendered_at(image: Path) -> tuple[Run, str, int, int]:
     """Return the run, flow, approval and seed a rendered image's path names.
 
@@ -551,7 +546,7 @@ def rendered_at(image: Path) -> tuple[Run, str, int, int]:
     flow_directory = group.parent.parent
     run_directory = flow_directory.parent
     run = Run(run_directory.name, run_directory)
-    if not (is_seed(image.stem) and _in_a_group(image)):
+    if not (is_seed(image.stem) and image.is_file() and _laid_out(image)):
         # A path inside a run names the run whose renders it can list.
         listed = (
             f"run `{stage_command(run, 'show')}` to list the seeds its renders "

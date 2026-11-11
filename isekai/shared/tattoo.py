@@ -257,7 +257,7 @@ def plan_crop(mask: "NDArray[np.uint8]", dials: Mapping[str, Any]) -> Crop:
     )
 
 
-def _png(image: "Image") -> bytes:
+def png_of(image: "Image") -> bytes:
     """Return `image` as a PNG that carries no profile and no metadata."""
     body = io.BytesIO()
     image.save(body, "PNG")
@@ -279,7 +279,7 @@ def sampling_images(
 
     def scaled(array: "NDArray[np.uint8]", resample: "Image.Resampling") -> bytes:
         box = Image.fromarray(array[top:bottom, left:right])
-        return _png(box.resize(crop.size, resample))
+        return png_of(box.resize(crop.size, resample))
 
     return (
         scaled(composite, Image.Resampling.LANCZOS),

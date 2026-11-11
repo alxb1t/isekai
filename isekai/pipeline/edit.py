@@ -23,7 +23,6 @@ failure, and the refusal names the discard.
 Stdlib only at module scope: Pillow is imported inside the functions.
 """
 
-import io
 import os
 import random
 import shlex
@@ -65,6 +64,7 @@ from isekai.shared.tattoo import (
     decode_render,
     derive,
     plan_crop,
+    png_of,
     sampling_images,
     stitch,
 )
@@ -149,9 +149,7 @@ def _kept(pixels: "NDArray[np.uint8]") -> bytes:
     """Return `pixels` as a PNG that carries no profile and no metadata."""
     from PIL import Image
 
-    body = io.BytesIO()
-    Image.fromarray(pixels).save(body, "PNG")
-    return body.getvalue()
+    return png_of(Image.fromarray(pixels))
 
 
 def request(

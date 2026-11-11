@@ -14,7 +14,6 @@ not travel into the render.
 numpy are imported inside the functions, so `python -m isekai` loads no wheel.
 """
 
-import io
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -23,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
+from isekai.shared.tattoo import png_of
 
 if TYPE_CHECKING:
     import numpy as np
@@ -212,6 +212,4 @@ def cut_ink(
     layer = extract_ink(
         _open(image), _open(outline) if outline else None, neutral, depth
     )
-    body = io.BytesIO()
-    layer.save(body, "PNG")
-    write_atomically(out, body.getvalue())
+    write_atomically(out, png_of(layer))
