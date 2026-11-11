@@ -5,7 +5,7 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 ## Progress
 
 - [x] 1 — Registry · moderate
-- [ ] 2 — Ink · hard
+- [x] 2 — Ink · hard
 - [ ] 3 — Request · hard
 - [ ] 4 — Session · hard
 - [ ] 5 — Model and image **HUMAN**
@@ -27,17 +27,17 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 
 ## 2 — Ink
 
-- [ ] 2.1 **HALT CHECK** Pillow and numpy are declared, so the extraction adds no dependency.
+- [x] 2.1 **HALT CHECK** Pillow and numpy are declared, so the extraction adds no dependency.
   Verify: `git grep -n "numpy==" pyproject.toml` prints the pin.
-- [ ] 2.2 Add `config/ink.json` and `isekai/shared/ink.py` per [D3](design.md#d3): `extract_ink` computes the skin's envelope, the layer as the photograph over it, bare skin white, the stretch by `floor`; Pillow and numpy imported inside the functions; tests in `tests/test_ink.py` carry `ink_extract`.
+- [x] 2.2 Add `config/ink.json` and `isekai/shared/ink.py` per [D3](design.md#d3): `extract_ink` computes the skin's envelope, the layer as the photograph over it, bare skin white, the stretch by `floor`; Pillow and numpy imported inside the functions; tests in `tests/test_ink.py` carry `ink_extract`.
   Verify: `uv run pytest tests/test_ink.py -k ink_extract` passes.
-- [ ] 2.3 Extend `isekai/shared/ink.py` with the outline as the layer's alpha, neutral, and depth as a power of the Multiply factor, each default by its input and each overridable; tests carry `ink_flags`.
+- [x] 2.3 Extend `isekai/shared/ink.py` with the outline as the layer's alpha, neutral, and depth as a power of the Multiply factor, each default by its input and each overridable; tests carry `ink_flags`.
   Verify: `uv run pytest tests/test_ink.py -k ink_flags` passes.
-- [ ] 2.4 Add the `ink` verb to `isekai/interface/cli.py`: `<image> <out>`, `--outline`, `--neutral`/`--no-neutral`, `--depth` refused outside the range at parse time, the layer written atomically; add `ink` last in `VERBS` and in the tuple of verbs that take no `photos` positional, and last in `EXPECTED_VERBS` with its argv in the per-verb table of `tests/test_pipeline_cli.py`; tests carry `ink_verb`.
+- [x] 2.4 Add the `ink` verb to `isekai/interface/cli.py`: `<image> <out>`, `--outline`, `--neutral`/`--no-neutral`, `--depth` refused outside the range at parse time, the layer written atomically; add `ink` last in `VERBS` and in the tuple of verbs that take no `photos` positional, and last in `EXPECTED_VERBS` with its argv in the per-verb table of `tests/test_pipeline_cli.py`; tests carry `ink_verb`.
   Verify: `uv run pytest tests/test_ink.py -k ink_verb` passes.
-- [ ] 2.5 Hold that the entry point's import graph reaches no wheel and the layers hold.
+- [x] 2.5 Hold that the entry point's import graph reaches no wheel and the layers hold.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_layers.py` passes.
-- [ ] 2.6 Hold the phase's tests under the acceptance's selector.
+- [x] 2.6 Hold the phase's tests under the acceptance's selector.
   Verify: `uv run pytest tests/test_ink.py -k ink` passes.
 
 ## 3 — Request

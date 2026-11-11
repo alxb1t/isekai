@@ -25,6 +25,7 @@ into `photo/` (D17).
     ui        (3) serve the review surface for the library's collections
     compare       write a page of every run's photograph beside its renders
     migrate       copy each run's per-flow description into photo/
+    ink           cut a tattoo's photograph or image into a layer, free and local
 
 **`import` fills a collection, `assign` ticks a flow, `show` inspects a run, `ui`
 serves a surface, `compare` writes a page, `migrate` copies a layout, and every
@@ -115,6 +116,7 @@ from isekai.pipeline.review import cancel as cancel_approval
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
 from isekai.shared.field_map import FieldMap
+from isekai.shared.ink import cut_ink, load_ink_config
 from isekai.shared.vocabulary import Vocabulary
 
 # One line of prose per verb, used for both the subcommand list and its own help,
@@ -141,6 +143,7 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("ui", "serve the app over the library of collections"),
     ("compare", "write a page of each run's photograph beside its renders"),
     ("migrate", "copy each run's per-flow description into photo/"),
+    ("ink", "cut a tattoo photograph or image into a layer to multiply over a render"),
 )
 
 # What each of the photograph's verbs writes, for its refusal of `--flow`.
@@ -199,6 +202,24 @@ def _session_id(value: str) -> str:
     return value
 
 
+def _depth(value: str) -> float:
+    """Parse a depth: a number in the ink config's range, refused at parse time.
+
+    e.g. "1.6" -> 1.6
+    """
+    config = load_ink_config()
+    try:
+        depth = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a number") from None
+    if not config.depth_min <= depth <= config.depth_max:
+        raise argparse.ArgumentTypeError(
+            f"{value} is outside {config.depth_min} to {config.depth_max}; "
+            "give a depth in that range"
+        )
+    return depth
+
+
 class _Targets(argparse.Action):
     """Split `render`'s positionals into its runs roots and its requests.
 
@@ -249,6 +270,7 @@ def build_parser() -> argparse.ArgumentParser:
             "discard",
             "draft",
             "import",
+            "ink",
             "migrate",
             "prepare",
             "render",
@@ -459,6 +481,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="take that run's flow out of what renders; repeatable, beside no request",
     )
     made["render"].set_defaults(photos=[])
+
+    made["ink"].add_argument(
+        "image", type=Path, help="the tattoo's photograph or image"
+    )
+    made["ink"].add_argument("out", type=Path, help="the PNG layer to write")
+    made["ink"].add_argument(
+        "--outline",
+        type=Path,
+        default=None,
+        metavar="MASK.png",
+        help="white keeps the ink; the layer's alpha, for a photograph",
+    )
+    made["ink"].add_argument(
+        "--neutral",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="the ink as grey (default with an outline), or in colour",
+    )
+    made["ink"].add_argument(
+        "--depth",
+        type=_depth,
+        default=None,
+        help="the power the layer's Multiply factor is raised to; a fill darkens "
+        "(default 1.6 with an outline, 1.0 without)",
+    )
+    made["ink"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     # Mutually exclusive at parse time, so asking for both is refused before any
     # work begins rather than discovered on a rented machine. One verb explores
@@ -739,6 +787,13 @@ def _discard(image: Path, wired: Wiring) -> int:
     return 0
 
 
+def _ink(args: argparse.Namespace, wired: Wiring) -> int:
+    """Write the ink layer of an image, printing its path."""
+    cut_ink(args.image, args.out, args.outline, args.neutral, args.depth)
+    print(f"ink wrote {args.out}", file=wired.out)
+    return 0
+
+
 def _run_for(identifier: str, wired: Wiring) -> Run:
     """Return the run an argument names: a photograph to open, or a run to resume."""
     named = _named(identifier, wired)
@@ -830,6 +885,8 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             return _draft(args.target, args.images, wired)
         if verb == "discard":
             return _discard(args.image, wired)
+        if verb == "ink":
+            return _ink(args, wired)
         if verb in PHOTOGRAPH_VERBS and args.flows:
             raise Refusal(_named_a_flow(args, targets))
         flows = _flows_for(args, wired)
