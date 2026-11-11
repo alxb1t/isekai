@@ -4,7 +4,7 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 
 ## Progress
 
-- [ ] 1 — Registry · moderate
+- [x] 1 — Registry · moderate
 - [ ] 2 — Ink · hard
 - [ ] 3 — Request · hard
 - [ ] 4 — Session · hard
@@ -14,15 +14,15 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 
 ## 1 — Registry
 
-- [ ] 1.1 Add `isekai/foundation/edit.py` per [D1](design.md#d1): `EDITS_DIR`, `load_edit`, `tracked_edits`, `edit_digest` and the manifest's refusals, stdlib only; its tests in `tests/test_flow.py` carry `edit_load` in their names.
+- [x] 1.1 Add `isekai/foundation/edit.py` per [D1](design.md#d1): `EDITS_DIR`, `load_edit`, `tracked_edits`, `edit_digest` and the manifest's refusals, stdlib only; its tests in `tests/test_flow.py` carry `edit_load` in their names.
   Verify: `uv run pytest tests/test_flow.py -k edit_load` passes.
-- [ ] 1.2 Add `edits/tattoo-wai/edit.json` with the keys and values of [D2](design.md#d2), and `edits/tattoo-wai/graph.json`, the prototype's graph, its node ids named by `nodes`; tests carry `edit_tracked` and hold `checkpoint`, `controlnet` and `union_type` equal to what the graph names.
+- [x] 1.2 Add `edits/tattoo-wai/edit.json` with the keys and values of [D2](design.md#d2), and `edits/tattoo-wai/graph.json`, the prototype's graph, its node ids named by `nodes`; tests carry `edit_tracked` and hold `checkpoint`, `controlnet` and `union_type` equal to what the graph names.
   Verify: `uv run pytest tests/test_flow.py -k edit_tracked` passes.
-- [ ] 1.3 Pin `tattoo-wai` in `tests/test_flow.py` by an `EDIT_PINNED` entry held equal to `edit_digest`, with a test carrying `edit_changelog` that each digest is in `CHANGELOG.md`, which the phase's bullet satisfies; the pin test carries `edit_pinned`.
+- [x] 1.3 Pin `tattoo-wai` in `tests/test_flow.py` by an `EDIT_PINNED` entry held equal to `edit_digest`, with a test carrying `edit_changelog` that each digest is in `CHANGELOG.md`, which the phase's bullet satisfies; the pin test carries `edit_pinned`.
   Verify: `uv run pytest tests/test_flow.py -k edit_pinned` passes.
-- [ ] 1.4 Add `EDITS_DIR` to the anchors `tests/test_package_paths.py` pins, so it resolves inside the repository.
+- [x] 1.4 Add `EDITS_DIR` to the anchors `tests/test_package_paths.py` pins, so it resolves inside the repository.
   Verify: `uv run pytest tests/test_package_paths.py -k EDITS_DIR` passes.
-- [ ] 1.5 Hold the phase's tests together in one run.
+- [x] 1.5 Hold the phase's tests together in one run.
   Verify: `uv run pytest tests/test_flow.py -k "edit_load or edit_tracked or edit_pinned"` passes.
 
 ## 2 — Ink

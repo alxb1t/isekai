@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- An edit is one flat directory, `edits/tattoo-wai/`, its `edit.json` and `graph.json` loaded by
+  `isekai/foundation/edit.py` and pinned by digest in `EDIT_PINNED`; `tattoo-wai` is new, at digest
+  `fcf0c974352632061e46e97e534ee83b0ca6cb21a25e7ff01857c7682b719348` (0119 D1, D2).
+
 ## [0.78.0] - 2026-11-08
 
 Gate: local 0m36s · CI not read under mf-ship · 0.77.0: local 0m55s · CI not read under mf-ship

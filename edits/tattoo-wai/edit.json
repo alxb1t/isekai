@@ -1,0 +1,46 @@
+{
+  "edit": "tattoo-wai",
+  "manifest_version": 1,
+  "prompt": {
+    "positive": "masterpiece, best quality, tattoo, ink tattoo, lineart, anime screencap",
+    "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust"
+  },
+  "dials": {
+    "denoise": 0.2,
+    "strength": 1.0,
+    "lines": 0.4,
+    "start_percent": 0.0,
+    "end_percent": 1.0,
+    "long_side": 1216,
+    "margin": 48,
+    "min_aspect": 0.5,
+    "max_upscale": 4,
+    "grow": 6,
+    "feather": 4,
+    "ink_threshold": 0.03,
+    "control_gain": 1.6,
+    "lit_floor": 8,
+    "rounding": 1,
+    "steps": 28,
+    "cfg": 5,
+    "sampler_name": "euler_ancestral",
+    "scheduler": "normal",
+    "clip_skip": -2
+  },
+  "nodes": {
+    "checkpoint": "1",
+    "clip_skip": "2",
+    "positive": "3",
+    "negative": "4",
+    "image": "5",
+    "mask": "6",
+    "control": "7",
+    "controlnet": "8",
+    "union": "9",
+    "apply": "10",
+    "sampler": "14"
+  },
+  "checkpoint": "waiIllustriousSDXL_v170.safetensors",
+  "controlnet": "union-promax/diffusion_pytorch_model_promax.safetensors",
+  "union_type": "canny/lineart/anime_lineart/mlsd"
+}
