@@ -6,7 +6,7 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 
 - [x] 1 — Registry · moderate
 - [x] 2 — Ink · hard
-- [ ] 3 — Request · hard
+- [x] 3 — Request · hard
 - [ ] 4 — Session · hard
 - [ ] 5 — Model and image **HUMAN**
 - [ ] 6 — Proof on a pod **HUMAN · METERED**
@@ -42,19 +42,19 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 
 ## 3 — Request
 
-- [ ] 3.1 Add to `isekai/foundation/artifacts.py` the kind `EDIT_FILE` and its `EditRecord`, and to `isekai/foundation/run.py` the names of an edit's files and the parse of an edit image's path ([D5](design.md#d5)); tests in `tests/test_edit.py` carry `edit_names`.
+- [x] 3.1 Add to `isekai/foundation/artifacts.py` the kind `EDIT_FILE` and its `EditRecord`, and to `isekai/foundation/run.py` the names of an edit's files and the parse of an edit image's path ([D5](design.md#d5)); tests in `tests/test_edit.py` carry `edit_names`.
   Verify: `uv run pytest tests/test_edit.py -k edit_names` passes.
-- [ ] 3.2 Add `isekai/shared/tattoo.py` per [D4](design.md#d4): the ink as composite over render, the darkness, the mask grown and feathered, the control, Pillow and numpy imported inside the functions; tests carry `edit_derive`.
+- [x] 3.2 Add `isekai/shared/tattoo.py` per [D4](design.md#d4): the ink as composite over render, the darkness, the mask grown and feathered, the control, Pillow and numpy imported inside the functions; tests carry `edit_derive`.
   Verify: `uv run pytest tests/test_edit.py -k edit_derive` passes.
-- [ ] 3.3 Extend `isekai/shared/tattoo.py` with the refusals of [D4](design.md#d4), each naming its fix, and the near-black rule; tests carry `edit_refuse`.
+- [x] 3.3 Extend `isekai/shared/tattoo.py` with the refusals of [D4](design.md#d4), each naming its fix, and the near-black rule; tests carry `edit_refuse`.
   Verify: `uv run pytest tests/test_edit.py -k edit_refuse` passes.
-- [ ] 3.4 Extend `isekai/shared/tattoo.py` with the crop box: the mask's box plus the margin, widened, grown, the sampling size; tests carry `edit_crop`.
+- [x] 3.4 Extend `isekai/shared/tattoo.py` with the crop box: the mask's box plus the margin, widened, grown, the sampling size; tests carry `edit_crop`.
   Verify: `uv run pytest tests/test_edit.py -k edit_crop` passes.
-- [ ] 3.5 Add `isekai/pipeline/edit.py` with the request ([D5](design.md#d5)): the composite kept as RGB pixels, composite then record written, the seed drawn, the overrides marked, the chain's next `k`, a refusal writing nothing, Pillow imported inside the functions; tests carry `edit_request`.
+- [x] 3.5 Add `isekai/pipeline/edit.py` with the request ([D5](design.md#d5)): the composite kept as RGB pixels, composite then record written, the seed drawn, the overrides marked, the chain's next `k`, a refusal writing nothing, Pillow imported inside the functions; tests carry `edit_request`.
   Verify: `uv run pytest tests/test_edit.py -k edit_request` passes.
-- [ ] 3.6 Add the `edit` verb's request form to `isekai/interface/cli.py`: `<edit> <render> --composite`, `--denoise`, `--strength`, `--lines`, `--seed`, an untracked edit refused naming the tracked ones, no endpoint used; add `edit` after `ink` in `VERBS`, in the tuple of verbs that take no `photos` positional and in `EXPECTED_VERBS`, with its argv in the per-verb table of `tests/test_pipeline_cli.py`; tests carry `edit_verb`.
+- [x] 3.6 Add the `edit` verb's request form to `isekai/interface/cli.py`: `<edit> <render> --composite`, `--denoise`, `--strength`, `--lines`, `--seed`, an untracked edit refused naming the tracked ones, no endpoint used; add `edit` after `ink` in `VERBS`, in the tuple of verbs that take no `photos` positional and in `EXPECTED_VERBS`, with its argv in the per-verb table of `tests/test_pipeline_cli.py`; tests carry `edit_verb`.
   Verify: `uv run pytest tests/test_edit.py -k edit_verb` passes.
-- [ ] 3.7 Hold that the verb table, the entry point's imports and the layers stand with the new verbs and modules.
+- [x] 3.7 Hold that the verb table, the entry point's imports and the layers stand with the new verbs and modules.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_layers.py` passes.
 
 ## 4 — Session

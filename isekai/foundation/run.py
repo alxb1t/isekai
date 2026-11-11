@@ -525,6 +525,18 @@ def is_seed(text: str) -> bool:
     )
 
 
+def _in_a_group(image: Path) -> bool:
+    """Return whether `image` is a file in an outputs group of a run with a frame."""
+    group = image.absolute().parent
+    return (
+        image.is_file()
+        and len(group.name) == 3
+        and _DIGITS.fullmatch(group.name) is not None
+        and group.parent.name == OUTPUTS
+        and (group.parent.parent.parent / FRAME_NAME).is_file()
+    )
+
+
 def rendered_at(image: Path) -> tuple[Run, str, int, int]:
     """Return the run, flow, approval and seed a rendered image's path names.
 
@@ -535,14 +547,7 @@ def rendered_at(image: Path) -> tuple[Run, str, int, int]:
     flow_directory = group.parent.parent
     run_directory = flow_directory.parent
     run = Run(run_directory.name, run_directory)
-    if not (
-        image.is_file()
-        and is_seed(image.stem)
-        and len(group.name) == 3
-        and _DIGITS.fullmatch(group.name)
-        and group.parent.name == OUTPUTS
-        and (run_directory / FRAME_NAME).is_file()
-    ):
+    if not (is_seed(image.stem) and _in_a_group(image)):
         # A path inside a run names the run whose renders it can list.
         listed = (
             f"run `{stage_command(run, 'show')}` to list the seeds its renders "
@@ -555,6 +560,85 @@ def rendered_at(image: Path) -> tuple[Run, str, int, int]:
             f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.png"
         )
     return run, flow_directory.name, int(group.name), int(image.stem)
+
+
+# An edit's image is `<seed>.edit-<k>.png`: the seed of the render it descends
+# from, then its number in that seed's chain. Its stem is no seed, so no render
+# listing reads it as one.
+EDIT_STEM = re.compile(r"^(?P<seed>[0-9]+)\.edit-(?P<k>[1-9][0-9]*)$")
+
+# An edit's files beside its image, after the stem: the composite it was made from
+# and its record.
+EDIT_COMPOSITE = ".composite.png"
+EDIT_RECORD = ".json"
+
+
+def edit_stem(seed: int, k: int) -> str:
+    """Return the stem every file of edit `k` of `seed` starts with.
+
+    e.g. (42, 2) -> "42.edit-2"
+    """
+    return f"{seed}.edit-{k}"
+
+
+def edit_files(group: Path, seed: int, k: int) -> tuple[Path, Path, Path]:
+    """Return the image, record and composite of edit `k` of `seed`, in `group`.
+
+    e.g. (group, 42, 1) -> (42.edit-1.png, 42.edit-1.json, 42.edit-1.composite.png)
+    """
+    stem = group / edit_stem(seed, k)
+    return (
+        stem.with_name(f"{stem.name}.png"),
+        stem.with_name(f"{stem.name}{EDIT_RECORD}"),
+        stem.with_name(f"{stem.name}{EDIT_COMPOSITE}"),
+    )
+
+
+def edit_numbers(group: Path, seed: int) -> list[int]:
+    """Return the numbers of `seed`'s edits that hold any file in `group`, ascending.
+
+    A listing: an image, a record or a composite each holds its number.
+    e.g. a group holding 42.edit-1.json and 42.edit-3.png -> [1, 3]
+    """
+    if not group.is_dir():
+        return []
+    found: set[int] = set()
+    for name in os.listdir(group):
+        for suffix in (".png", EDIT_COMPOSITE, EDIT_RECORD):
+            match = EDIT_STEM.fullmatch(name.removesuffix(suffix))
+            if name.endswith(suffix) and match and int(match["seed"]) == seed:
+                found.add(int(match["k"]))
+                break
+    return sorted(found)
+
+
+def next_edit(group: Path, seed: int) -> int:
+    """Return the number the next edit of `seed` takes in `group`."""
+    numbered = edit_numbers(group, seed)
+    return numbered[-1] + 1 if numbered else 1
+
+
+def edit_at(image: Path) -> tuple[Run, str, int, int, int]:
+    """Return the run, flow, approval, seed and number an edit image's path names.
+
+    e.g. runs/0d4b…_ada/summon-anime-wai/outputs/001/42.edit-2.png
+         -> (that run, "summon-anime-wai", 1, 42, 2)
+    """
+    group = image.absolute().parent
+    run_directory = group.parent.parent.parent
+    named = EDIT_STEM.match(image.stem) if image.suffix == ".png" else None
+    if named is None or not is_seed(named.group("seed")) or not _in_a_group(image):
+        raise Refusal(
+            "is not an edit's image; give the path of one, "
+            f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.edit-<k>.png"
+        )
+    return (
+        Run(run_directory.name, run_directory),
+        group.parent.parent.name,
+        int(group.name),
+        int(named.group("seed")),
+        int(named.group("k")),
+    )
 
 
 def latest_artifact(directory: Path, label: str | None = None) -> Path | None:

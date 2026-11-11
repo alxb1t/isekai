@@ -83,6 +83,7 @@ EXPECTED_VERBS = (
     "compare",
     "migrate",
     "ink",
+    "edit",
 )
 
 
@@ -181,9 +182,11 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
     # `compare` takes a collection directory, `render` its runs, `import` a
     # collection and its files, `draft` a flow and images, `discard` an image,
-    # `prepare` cells, `ink` an image and its layer; `ui` and `migrate` take nothing.
+    # `prepare` cells, `ink` an image and its layer, `edit` an edit, a render and its
+    # composite; `ui` and `migrate` take nothing.
     own = {
         "ink": ["photo.jpg", "layer.png"],
+        "edit": ["tattoo-wai", "outputs/001/7.png", "--composite", "composite.png"],
         "import": ["--collection", "collection", "photo.jpg"],
         "prepare": ["r1/summon-anime-wai"],
         "draft": ["--flow", "summon-anime-wai", "outputs/001/7.png"],

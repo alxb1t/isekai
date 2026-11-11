@@ -26,6 +26,7 @@ into `photo/` (D17).
     compare       write a page of every run's photograph beside its renders
     migrate       copy each run's per-flow description into photo/
     ink           cut a tattoo's photograph or image into a layer, free and local
+    edit      (5) request an edit of a render from a composite, free and local
 
 **`import` fills a collection, `assign` ticks a flow, `show` inspects a run, `ui`
 serves a surface, `compare` writes a page, `migrate` copies a layout, and every
@@ -63,6 +64,7 @@ from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.caption_config import load_caption_config
+from isekai.foundation.edit import load_edit, tracked_edits
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.migrate import migrate
 from isekai.foundation.refusal import Refusal
@@ -87,6 +89,8 @@ from isekai.interface.render import run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
 from isekai.pipeline.caption import caption
+from isekai.pipeline.edit import OVERRIDES
+from isekai.pipeline.edit import request as request_edit
 from isekai.pipeline.generate import (
     STAGE_RENDER,
     Render,
@@ -144,6 +148,7 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("compare", "write a page of each run's photograph beside its renders"),
     ("migrate", "copy each run's per-flow description into photo/"),
     ("ink", "cut a tattoo photograph or image into a layer to multiply over a render"),
+    ("edit", "request an edit of a render from a composite of it, free and local"),
 )
 
 # What each of the photograph's verbs writes, for its refusal of `--flow`.
@@ -269,6 +274,7 @@ def build_parser() -> argparse.ArgumentParser:
             "compare",
             "discard",
             "draft",
+            "edit",
             "import",
             "ink",
             "migrate",
@@ -507,6 +513,41 @@ def build_parser() -> argparse.ArgumentParser:
         "(default 1.6 with an outline, 1.0 without)",
     )
     made["ink"].set_defaults(photos=[], runs=RUNS_ROOT)
+
+    # An edit's image is written beside its source, so the render's path names the
+    # run and no runs root is given.
+    made["edit"].add_argument("edit", help="the edit to request, e.g. tattoo-wai")
+    made["edit"].add_argument(
+        "render",
+        type=Path,
+        help="the render, <run>/<flow>/outputs/<NNN>/<seed>.png, or an edit's "
+        "image <seed>.edit-<k>.png to chain from",
+    )
+    made["edit"].add_argument(
+        "--composite",
+        type=Path,
+        required=True,
+        metavar="COMPOSITE.png",
+        help="the render with the tattoo multiplied on, at the render's size",
+    )
+    for dial, meaning in (
+        ("denoise", "how far the pass repaints under the mask"),
+        ("strength", "how firmly the control holds the ink's lines"),
+        ("lines", "how much of the ink is multiplied back after the pass"),
+    ):
+        made["edit"].add_argument(
+            f"--{dial}",
+            type=float,
+            default=None,
+            help=f"{meaning}; for this edit only (default: the edit's own)",
+        )
+    made["edit"].add_argument(
+        "--seed",
+        type=_seed,
+        default=None,
+        help="repeat this sampling seed (default: drawn)",
+    )
+    made["edit"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     # Mutually exclusive at parse time, so asking for both is refused before any
     # work begins rather than discovered on a rented machine. One verb explores
@@ -794,6 +835,37 @@ def _ink(args: argparse.Namespace, wired: Wiring) -> int:
     return 0
 
 
+def _edit(args: argparse.Namespace, wired: Wiring) -> int:
+    """Request an edit of a render, printing the files written and how to run it.
+
+    Free and local: no endpoint is used and no session opens. An edit this build
+    does not track is refused, naming the ones it does.
+    """
+    tracked = tracked_edits()
+    if args.edit not in tracked:
+        raise Refusal(
+            f"{args.edit}: not an edit this build tracks; the edits it carries are "
+            f"{', '.join(tracked) or '(none)'}"
+        )
+    asked = request_edit(
+        load_edit(args.edit),
+        args.render,
+        args.composite,
+        overrides={name: getattr(args, name) for name in OVERRIDES},
+        seed=args.seed,
+        rng=wired.rng,
+    )
+    runs = asked.record.parents[4]
+    for path in (asked.composite, asked.record):
+        print(f"edit wrote {path.relative_to(runs)}", file=wired.out)
+    print(
+        f"edit pending: run `python -m isekai render {shlex.quote(str(runs))}` "
+        "to sample it on a rented GPU",
+        file=wired.out,
+    )
+    return 0
+
+
 def _run_for(identifier: str, wired: Wiring) -> Run:
     """Return the run an argument names: a photograph to open, or a run to resume."""
     named = _named(identifier, wired)
@@ -887,6 +959,8 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             return _discard(args.image, wired)
         if verb == "ink":
             return _ink(args, wired)
+        if verb == "edit":
+            return _edit(args, wired)
         if verb in PHOTOGRAPH_VERBS and args.flows:
             raise Refusal(_named_a_flow(args, targets))
         flows = _flows_for(args, wired)

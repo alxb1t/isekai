@@ -16,6 +16,9 @@ its new digest.
 - `isekai ink <image> <out>` cuts a tattoo photograph or image into a Multiply layer, free and local: with `--outline`
   grey at depth 1.6, without it in colour at depth 1.0, `--neutral`/`--no-neutral` and `--depth` 1.0 to 2.0 overriding
   (0119 D3).
+- `isekai edit <edit> <render> --composite <png>` requests an edit, free and local: it derives the ink, mask, control
+  and crop from the composite, refuses what no Multiply could make, and writes the composite and a pending record
+  beside the render (0119 D4, D5).
 
 ## [0.78.0] - 2026-11-08
 
