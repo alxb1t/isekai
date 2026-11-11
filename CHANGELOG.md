@@ -23,6 +23,9 @@ its new digest.
   anything is rented; `isekai edit --pending <run-id>/<flow>…` samples them on `--server` (0119 D6, D7).
 - `isekai discard` takes an edit's path, and a render's deletion takes its edits; `isekai show` reads an edit's files
   and no listing counts an edit as a render (0119 D8, D9).
+- The pod image is re-pinned to `v0.79-rc1`, `sha256:79306642…26c6c2f`, which carries the promax ControlNet the edit
+  loads; WAI is looked up on Civitai by its new file name, its digest unchanged, and a mirror that answers 401 is
+  dropped (0119 D10).
 
 ## [0.78.0] - 2026-11-08
 

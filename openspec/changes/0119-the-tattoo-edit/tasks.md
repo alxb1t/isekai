@@ -8,7 +8,7 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 - [x] 2 — Ink · hard
 - [x] 3 — Request · hard
 - [x] 4 — Session · hard
-- [ ] 5 — Model and image **HUMAN**
+- [x] 5 — Model and image **HUMAN**
 - [ ] 6 — Proof on a pod **HUMAN · METERED**
 - [ ] 7 — Docs · moderate
 
@@ -102,11 +102,11 @@ The phases: the registry, the ink, the request, the session, the image's files, 
   Verify: `git grep -L "0.30" isekai/boundary/pod_start.py` prints the file's path.
 - [x] 5.8 Run `uv run python -m tools.image_record`, which prints the record, and copy each changed value into `files` of `config/image.json`.
   Verify: `uv run pytest tests/test_infra.py -k record` passes.
-- [ ] 5.9 Push the branch with `git push origin 0119-the-tattoo-edit`, dispatch `gh workflow run build-image.yml --ref 0119-the-tattoo-edit -f tag=v0.79-rc1`, read the run's id with `gh run list --workflow build-image.yml --limit 1`, and wait with `gh run watch` on that id.
+- [x] 5.9 Push the branch with `git push origin 0119-the-tattoo-edit`, dispatch `gh workflow run build-image.yml --ref 0119-the-tattoo-edit -f tag=v0.79-rc1`, read the run's id with `gh run list --workflow build-image.yml --limit 1`, and wait with `gh run watch` on that id.
   Verify: `gh run list --workflow build-image.yml --limit 1` prints the run completed.
-- [ ] 5.10 Check the run summary's build record equals `files` of `config/image.json`, then copy the tag `v0.79-rc1` and the digest into `config/image.json`, and the digest into `image` of `gpunit.toml`.
+- [x] 5.10 Check the run summary's build record equals `files` of `config/image.json`, then copy the tag `v0.79-rc1` and the digest into `config/image.json`, and the digest into `image` of `gpunit.toml`.
   Verify: `git grep -n v0.79-rc1 config/image.json` prints the tag line.
-- [ ] 5.11 Hold the record and the digest equal to the tree, and the pod start's tests green on the edits.
+- [x] 5.11 Hold the record and the digest equal to the tree, and the pod start's tests green on the edits.
   Verify: `uv run pytest tests/test_infra.py tests/test_pod_start.py -k "digest or record or pod_start"` passes.
 
 ## 6 — Proof on a pod ⚠️ GPU
