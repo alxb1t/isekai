@@ -84,21 +84,23 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 
 ## 5 — Model and image
 
-- [ ] 5.1 Read the promax revision with `curl -s https://huggingface.co/api/models/xinsir/controlnet-union-sdxl-1.0`, whose `sha` field is it; in `tools/derive_manifest.py` add after `OPENPOSE` a constant `PROMAX` holding that sha, and after the openpose `Spec` one for `controlnet/union-promax/diffusion_pytorch_model_promax.safetensors` with the source `Source("xinsir/controlnet-union-sdxl-1.0", PROMAX, "diffusion_pytorch_model_promax.safetensors")`.
+- [x] 5.0 In `tools/derive_manifest.py` look up WAI's Civitai file (version 2883731) by its new name `WAI-Nsfw-Illustrious-17.safetensors`, keeping the dest `checkpoints/waiIllustriousSDXL_v170.safetensors`, and drop the `mogaru99/waiIllustriousSDXL_v170` mirror, which answers 401.
+  Verify: `git grep -L mogaru99 tools/derive_manifest.py` prints the file's path.
+- [x] 5.1 Read the promax revision with `curl -s https://huggingface.co/api/models/xinsir/controlnet-union-sdxl-1.0`, whose `sha` field is it; in `tools/derive_manifest.py` add after `OPENPOSE` a constant `PROMAX` holding that sha, and after the openpose `Spec` one for `controlnet/union-promax/diffusion_pytorch_model_promax.safetensors` with the source `Source("xinsir/controlnet-union-sdxl-1.0", PROMAX, "diffusion_pytorch_model_promax.safetensors")`.
   Verify: `git grep -n union-promax tools/derive_manifest.py` prints the spec's dest.
-- [ ] 5.2 Run `uv run python -m tools.derive_manifest`, which rewrites `config/models.json` with the entry `controlnet/union-promax/diffusion_pytorch_model_promax.safetensors`, its SHA-256 and its size.
+- [x] 5.2 Run `uv run python -m tools.derive_manifest`, which rewrites `config/models.json` with the entry `controlnet/union-promax/diffusion_pytorch_model_promax.safetensors`, its SHA-256 and its size.
   Verify: `git grep -n diffusion_pytorch_model_promax config/models.json` prints the entry's dest line.
-- [ ] 5.3 In `isekai/boundary/provision.py` add to `SELF_FETCHING_MODELS`, under the nodes that fetch nothing, the entries `"DifferentialDiffusion": ()`, `"LoadImageMask": ()`, `"SetLatentNoiseMask": ()` and `"SetUnionControlNetType": ()`, in the dict's sorted order.
+- [x] 5.3 In `isekai/boundary/provision.py` add to `SELF_FETCHING_MODELS`, under the nodes that fetch nothing, the entries `"DifferentialDiffusion": ()`, `"LoadImageMask": ()`, `"SetLatentNoiseMask": ()` and `"SetUnionControlNetType": ()`, in the dict's sorted order.
   Verify: `git grep -n SetUnionControlNetType isekai/boundary/provision.py` prints its entry.
-- [ ] 5.4 In `tests/test_manifest_binding.py` add tests carrying `edit` in their names that load `edits/tattoo-wai/graph.json` with `json.loads` and assert `undeclared_files(graph_model_files(graph), manifest) == []` and `unclassified_node_classes(graph) == []`, marked `@pytest.mark.spec("edit:models:the-edits-files-are-declared")` and `@pytest.mark.spec("edit:models:a-class-absent-from-the-mapping-fails")`, the second also adding a node of an unknown class and asserting it is named.
+- [x] 5.4 In `tests/test_manifest_binding.py` add tests carrying `edit` in their names that load `edits/tattoo-wai/graph.json` with `json.loads` and assert `undeclared_files(graph_model_files(graph), manifest) == []` and `unclassified_node_classes(graph) == []`, marked `@pytest.mark.spec("edit:models:the-edits-files-are-declared")` and `@pytest.mark.spec("edit:models:a-class-absent-from-the-mapping-fails")`, the second also adding a node of an unknown class and asserting it is named.
   Verify: `uv run pytest tests/test_manifest_binding.py -k edit` passes.
-- [ ] 5.5 In `isekai/boundary/pod_start.py` delete from `shm_type`'s docstring the clause `the last line wins, as a later mount shadows an earlier one` (`0060·R5`), and end the sentence before it with `.` where it now ends with `;`, at `under the directory.`
+- [x] 5.5 In `isekai/boundary/pod_start.py` delete from `shm_type`'s docstring the clause `the last line wins, as a later mount shadows an earlier one` (`0060·R5`), and end the sentence before it with `.` where it now ends with `;`, at `under the directory.`
   Verify: `git grep -L "the last line wins" isekai/boundary/pod_start.py` prints the file's path.
-- [ ] 5.6 In `isekai/boundary/pod_start.py` replace `os.statvfs(pod.shm)` with `os.statvfs(pod.memory)` in the memory check (`0060·R6`), and in `tests/test_pod_start.py` key the fake's `figures` on the memory directory's path, `pod.memory`, where it keys on `pod.shm`.
+- [x] 5.6 In `isekai/boundary/pod_start.py` replace `os.statvfs(pod.shm)` with `os.statvfs(pod.memory)` in the memory check (`0060·R6`), and in `tests/test_pod_start.py` key the fake's `figures` on the memory directory's path, `pod.memory`, where it keys on `pod.shm`.
   Verify: `git grep -n "statvfs(pod.memory)" isekai/boundary/pod_start.py` prints the line.
-- [ ] 5.7 In `isekai/boundary/pod_start.py` replace the comment's `inside the ~$0.30 per-session ceiling.` with `inside the session's limit, its quote's.` (`op·pod-start-comment`).
+- [x] 5.7 In `isekai/boundary/pod_start.py` replace the comment's `inside the ~$0.30 per-session ceiling.` with `inside the session's limit, its quote's.` (`op·pod-start-comment`).
   Verify: `git grep -L "0.30" isekai/boundary/pod_start.py` prints the file's path.
-- [ ] 5.8 Run `uv run python -m tools.image_record`, which prints the record, and copy each changed value into `files` of `config/image.json`.
+- [x] 5.8 Run `uv run python -m tools.image_record`, which prints the record, and copy each changed value into `files` of `config/image.json`.
   Verify: `uv run pytest tests/test_infra.py -k record` passes.
 - [ ] 5.9 Push the branch with `git push origin 0119-the-tattoo-edit`, dispatch `gh workflow run build-image.yml --ref 0119-the-tattoo-edit -f tag=v0.79-rc1`, read the run's id with `gh run list --workflow build-image.yml --limit 1`, and wait with `gh run watch` on that id.
   Verify: `gh run list --workflow build-image.yml --limit 1` prints the run completed.
