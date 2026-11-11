@@ -5,7 +5,9 @@ before it runs.
 """
 
 import io
+import json
 import random
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -13,8 +15,11 @@ import pytest
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
-from isekai.foundation.artifacts import EDIT_FILE, VERSIONS, read
+import isekai.pipeline.edit as edit_module
+from isekai.boundary.comfy import TransportFailure, read_runtime
+from isekai.foundation.artifacts import EDIT_FILE, VERSIONS, read, write
 from isekai.foundation.edit import load_edit
+from isekai.foundation.flow import graph_digest
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     FRAME_NAME,
@@ -26,7 +31,7 @@ from isekai.foundation.run import (
     next_edit,
 )
 from isekai.interface.cli import build_parser, dispatch
-from isekai.pipeline.edit import Requested, request
+from isekai.pipeline.edit import Requested, check, pending, records, request, sample
 from isekai.shared.tattoo import (
     MASK_FLOOR,
     decode_composite,
@@ -34,7 +39,9 @@ from isekai.shared.tattoo import (
     derive,
     ink_of,
     plan_crop,
+    stitch,
 )
+from tests.fakes import FakeComfyClient, RecordingComfyClient
 from tests.stages import bare_wiring
 
 DIALS = load_edit("tattoo-wai").dials
@@ -833,3 +840,438 @@ def test_edit_verb_a_seed_past_the_sampler_is_refused_at_parse_time(
         )
 
     assert "unsigned 64-bit range" in capsys.readouterr().err
+
+
+# --- the sampling --------------------------------------------------------------
+
+SAMPLED = (10, 200, 30)
+# The crop of the request scene: the whole top-left 304 px, sampled at 1216 px.
+CROP_SIZE = 1216
+
+
+def _pod(rejects: TransportFailure | None = None) -> RecordingComfyClient:
+    """Return a client whose pod answers with a flat sampled crop."""
+    flat = np.full((CROP_SIZE, CROP_SIZE, 3), SAMPLED, dtype=np.uint8)
+    return RecordingComfyClient(rejects=rejects, view_bytes=_png(flat))
+
+
+def _sampled(
+    tmp_path: Path, pod: RecordingComfyClient | None = None, **overrides: float | None
+) -> tuple[Path, Path, RecordingComfyClient]:
+    """Request an edit in a scene and sample it; return the group, record and pod."""
+    group, image, composite = _scene(tmp_path)
+    asked = _ask(image, composite, overrides=overrides, seed=77)
+    pod = pod or _pod()
+    sample(pod, asked.record, runtime=lambda: read_runtime(pod))
+    return group, asked.record, pod
+
+
+@pytest.mark.spec("edit:session:the-pod-receives-only-crops")
+def test_edit_sample_uploads_the_crop_its_mask_and_its_control_and_no_other_image(
+    tmp_path: Path,
+) -> None:
+    _, _, pod = _sampled(tmp_path)
+
+    assert [name for name, _ in pod.uploads] == [
+        "42.edit-1.crop.png",
+        "42.edit-1.mask.png",
+        "42.edit-1.control.png",
+    ]
+    for _, body in pod.uploads:
+        with Image.open(io.BytesIO(body)) as sent:
+            assert sent.size == (CROP_SIZE, CROP_SIZE)
+    # The tattoo's square, at (100, 100) of a 304 px box, lands at (400, 400).
+    with Image.open(io.BytesIO(pod.uploads[0][1])) as crop:
+        assert np.asarray(crop.convert("RGB"))[400, 400].tolist() == [100, 75, 60]
+
+
+@pytest.mark.spec("edit:session:the-pod-receives-only-crops")
+def test_edit_sample_the_graph_is_patched_from_the_manifest_and_the_record(
+    tmp_path: Path,
+) -> None:
+    _, _, pod = _sampled(tmp_path, denoise=0.3, strength=0.9)
+
+    (graph,) = pod.submissions
+    nodes = EDIT.nodes
+    assert graph[nodes["image"]]["inputs"]["image"] == "stored-42.edit-1.crop.png"
+    assert graph[nodes["mask"]]["inputs"]["image"] == "stored-42.edit-1.mask.png"
+    assert graph[nodes["control"]]["inputs"]["image"] == "stored-42.edit-1.control.png"
+    sampler = graph[nodes["sampler"]]["inputs"]
+    assert (sampler["seed"], sampler["denoise"], sampler["steps"]) == (77, 0.3, 28)
+    assert graph[nodes["apply"]]["inputs"]["strength"] == 0.9
+    assert graph[nodes["positive"]]["inputs"]["text"] == EDIT.prompt["positive"]
+    assert graph[nodes["controlnet"]]["inputs"]["control_net_name"] == EDIT.controlnet
+    assert graph[nodes["union"]]["inputs"]["type"] == EDIT.union_type
+    assert EDIT.graph()[nodes["sampler"]]["inputs"]["seed"] == 0
+
+
+@pytest.mark.spec("edit:session:a-pending-edit-runs-beside-the-renders")
+def test_edit_sample_completes_the_record_and_writes_the_image_beside_the_source(
+    tmp_path: Path,
+) -> None:
+    group, record, pod = _sampled(tmp_path)
+
+    body = read(record, EDIT_FILE)
+    assert body["graph_sha256"] == graph_digest(pod.submissions[0])
+    assert body["runtime"] == read_runtime(FakeComfyClient())
+    assert isinstance(body["duration"], float)
+    assert _listing(group) == [
+        "42.edit-1.composite.png",
+        "42.edit-1.json",
+        "42.edit-1.png",
+        "42.png",
+    ]
+    assert pending(group) == []
+
+
+@pytest.mark.spec("edit:session:a-failed-sampling-leaves-the-request-pending")
+def test_edit_sample_a_rejected_graph_leaves_the_request_pending_and_names_the_discard(
+    tmp_path: Path,
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    asked = _ask(image, composite)
+    before = asked.record.read_bytes()
+    pod = _pod(TransportFailure("permanent", "the endpoint rejected the graph"))
+
+    with pytest.raises(Refusal) as refused:
+        sample(pod, asked.record, runtime=lambda: read_runtime(pod))
+
+    assert "the sampling failed (permanent) -- the endpoint rejected the graph" in str(
+        refused.value
+    )
+    assert f"python -m isekai discard {group / '42.edit-1.png'}" in str(refused.value)
+    assert asked.record.read_bytes() == before
+    assert pending(group) == [asked.record]
+    assert _listing(group) == ["42.edit-1.composite.png", "42.edit-1.json", "42.png"]
+
+
+@pytest.mark.spec("edit:session:a-changed-source-refuses-before-the-pod")
+def test_edit_sample_a_source_that_changed_is_refused_before_anything_is_sent(
+    tmp_path: Path,
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    asked = _ask(image, composite)
+    image.write_bytes(_png(_render(REQUEST_SIDE, (190, 150, 120))))
+    pod = _pod()
+
+    with pytest.raises(
+        Refusal, match=r"42\.edit-1\.json: its source 42\.png has changed"
+    ):
+        check(asked.record)
+    with pytest.raises(Refusal, match="its source 42.png has changed"):
+        sample(pod, asked.record, runtime=lambda: read_runtime(pod))
+
+    assert (pod.uploads, pod.submissions, pod.stats_calls) == ([], [], 0)
+
+
+@pytest.mark.spec("edit:session:a-changed-source-refuses-before-the-pod")
+def test_edit_sample_a_changed_composite_or_edit_is_refused_naming_the_discard(
+    tmp_path: Path,
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    asked = _ask(image, composite)
+    asked.composite.write_bytes(_png(_multiplied(_render(REQUEST_SIDE), 0.4)))
+
+    with pytest.raises(Refusal, match=r"its composite 42\.edit-1\.composite\.png has"):
+        check(asked.record)
+
+    other = _ask(image, composite)
+    body = read(other.record, EDIT_FILE)
+    body["edit_digest"] = "0" * 64
+    write(other.record, EDIT_FILE, body)
+    with pytest.raises(Refusal, match="edit tattoo-wai has changed since"):
+        check(other.record)
+    assert "python -m isekai discard" in _refusal(lambda: check(other.record))
+
+
+def _refusal(act: "Callable[[], object]") -> str:
+    """Return the text of the refusal `act` raises."""
+    with pytest.raises(Refusal) as refused:
+        act()
+    return str(refused.value)
+
+
+@pytest.mark.spec("edit:session:a-changed-source-refuses-before-the-pod")
+def test_edit_sample_a_source_another_edit_will_write_is_not_yet_checked(
+    tmp_path: Path,
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    _ask(image, composite)
+    first = group / "42.edit-1.png"
+    first.write_bytes(_png(_multiplied(_render(REQUEST_SIDE), 0.9)))
+    again = tmp_path / "again.png"
+    again.write_bytes(_png(_multiplied(_multiplied(_render(REQUEST_SIDE), 0.9), 0.5)))
+    chained = _ask(first, again)
+    first.unlink()
+
+    check(chained.record, waiting=[first])
+    with pytest.raises(Refusal, match=r"its source 42\.edit-1\.png cannot be read"):
+        check(chained.record)
+
+
+@pytest.mark.spec_exempt(
+    "structural: pending lists the records with no image, in order"
+)
+def test_edit_sample_pending_lists_the_requests_with_no_image_in_chain_order(
+    tmp_path: Path,
+) -> None:
+    group = _group(tmp_path)
+    for name in ("9.edit-2.json", "9.edit-1.json", "7.edit-1.json", "7.edit-1.png"):
+        (group / name).write_bytes(b"{}")
+    (group / "9.edit-1.composite.png").write_bytes(b"png")
+    (group / "notes.json").write_bytes(b"{}")
+
+    assert [path.name for path in pending(group)] == ["9.edit-1.json", "9.edit-2.json"]
+    assert [path.name for path in records(group)] == [
+        "7.edit-1.json",
+        "9.edit-1.json",
+        "9.edit-2.json",
+    ]
+    assert pending(tmp_path / "gone") == []
+
+
+# --- the stitch ----------------------------------------------------------------
+
+
+def _stitched(lines: float = 0.4) -> "np.ndarray":
+    """Return the stitch of a flat sampled crop into the request scene's composite."""
+    render = _render(REQUEST_SIDE)
+    composite = _multiplied(render)
+    derived = derive(render, composite, DIALS)
+    crop = plan_crop(derived.mask, DIALS)
+    flat = np.full((CROP_SIZE, CROP_SIZE, 3), SAMPLED, dtype=np.uint8)
+    return stitch(composite, _png(flat), derived, crop, lines)
+
+
+@pytest.mark.spec("edit:session:a-pending-edit-runs-beside-the-renders")
+def test_edit_stitch_the_crop_replaces_the_composite_where_the_mask_is_full() -> None:
+    stitched = _stitched(lines=0.0)
+
+    assert stitched[100, 100].tolist() == list(SAMPLED)
+    # Far from the tattoo the composite stands, whatever the crop held.
+    assert stitched[300, 300].tolist() == list(SKIN)
+    assert stitched[5, 5].tolist() == list(SKIN)
+
+
+@pytest.mark.spec("edit:session:a-pending-edit-runs-beside-the-renders")
+def test_edit_stitch_the_feather_blends_the_crop_with_the_composite() -> None:
+    render = _render(REQUEST_SIDE)
+    derived = derive(render, _multiplied(render), DIALS)
+    weight = derived.mask[100, 80 - 3] / 255
+    assert 0.5 < weight < 1.0
+
+    edge = _stitched(lines=0.0)[100, 80 - 3]
+
+    for now, skin, sampled in zip(edge, SKIN, SAMPLED, strict=True):
+        assert abs(int(now) - (skin * (1 - weight) + sampled * weight)) <= 1
+
+
+@pytest.mark.spec("edit:session:a-pending-edit-runs-beside-the-renders")
+def test_edit_stitch_the_lines_are_multiplied_by_one_minus_lines_of_the_darkness() -> (
+    None
+):
+    held = _stitched(lines=0.4)
+    none = _stitched(lines=0.0)
+
+    # Darkness 0.5 under the ink: the sampled colour times 1 - 0.4 * 0.5.
+    assert held[100, 100].tolist() == [round(level * 0.8) for level in SAMPLED]
+    assert none[100, 100].tolist() == list(SAMPLED)
+    assert (held[300, 300] == none[300, 300]).all()
+    full = _stitched(lines=1.0)
+    assert full[100, 100].tolist() == [round(level * 0.5) for level in SAMPLED]
+
+
+@pytest.mark.spec("edit:session:a-pending-edit-runs-beside-the-renders")
+def test_edit_stitch_the_written_image_is_the_stitch_of_the_samplers_answer(
+    tmp_path: Path,
+) -> None:
+    group, _, _ = _sampled(tmp_path)
+
+    with Image.open(group / "42.edit-1.png") as written:
+        assert written.mode == "RGB"
+        assert written.size == (REQUEST_SIDE, REQUEST_SIDE)
+        pixels = np.asarray(written)
+    assert pixels[100, 100].tolist() == [round(level * 0.8) for level in SAMPLED]
+    assert pixels[300, 300].tolist() == list(SKIN)
+
+
+@pytest.mark.spec("edit:session:a-failed-sampling-leaves-the-request-pending")
+def test_edit_stitch_a_crash_before_the_image_leaves_a_completed_record_pending(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    asked = _ask(image, composite)
+
+    def crashed(path: Path, body: bytes) -> None:
+        raise OSError("disk gone")
+
+    monkeypatch.setattr(edit_module, "write_atomically", crashed)
+    pod = _pod()
+    with pytest.raises(OSError, match="disk gone"):
+        sample(pod, asked.record, runtime=lambda: read_runtime(pod))
+
+    assert "duration" in read(asked.record, EDIT_FILE)
+    assert not (group / "42.edit-1.png").exists()
+    assert pending(group) == [asked.record]
+
+
+@pytest.mark.spec_exempt("structural: bytes the endpoint sent that are no image refuse")
+def test_edit_stitch_an_answer_that_is_no_image_is_refused() -> None:
+    render = _render(REQUEST_SIDE)
+    composite = _multiplied(render)
+    derived = derive(render, composite, DIALS)
+
+    with pytest.raises(Refusal, match="sampled crop cannot be read; check the pod"):
+        stitch(composite, b"not a png", derived, plan_crop(derived.mask, DIALS), 0.4)
+
+
+# --- the verb's pending form ---------------------------------------------------
+
+CELL = "0123456789ab_a/summon-anime-wai"
+
+
+def _pending(
+    tmp_path: Path, *flags: str, client: RecordingComfyClient | None = None
+) -> tuple[int, str, str]:
+    """Run `edit --pending` over the scene's cell; return its exit and streams."""
+    wired = bare_wiring(runs_root=tmp_path / "runs", client=client)
+    args = build_parser().parse_args(["edit", "--pending", CELL, *flags])
+    assert isinstance(wired.out, io.StringIO)
+    assert isinstance(wired.err, io.StringIO)
+    return dispatch(args, wired), wired.out.getvalue(), wired.err.getvalue()
+
+
+@pytest.mark.spec("edit:session:a-changed-source-refuses-before-the-pod")
+def test_edit_pending_without_a_client_derives_and_checks_and_rents_nothing(
+    tmp_path: Path,
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    _ask(image, composite)
+    before = _listing(group)
+
+    code, out, err = _pending(tmp_path)
+
+    assert (code, err) == (0, "")
+    assert "0123456789ab_a: summon-anime-wai/42.edit-1.json is ready to sample" in out
+    assert _listing(group) == before
+
+
+@pytest.mark.spec("edit:session:a-changed-source-refuses-before-the-pod")
+def test_edit_pending_a_changed_source_refuses_naming_the_edit_and_the_discard(
+    tmp_path: Path,
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    _ask(image, composite)
+    image.write_bytes(_png(_render(REQUEST_SIDE, (190, 150, 120))))
+    pod = _pod()
+
+    code, out, err = _pending(tmp_path, client=pod)
+
+    assert (code, out) == (1, "")
+    assert "refused: 42.edit-1.json: its source 42.png has changed" in err
+    assert "python -m isekai discard" in err
+    assert (pod.uploads, pod.submissions, pod.stats_calls) == ([], [], 0)
+
+
+@pytest.mark.spec("edit:session:a-pending-edit-runs-beside-the-renders")
+def test_edit_pending_with_a_client_samples_each_pending_edit_in_chain_order(
+    tmp_path: Path,
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    _ask(image, composite, seed=5)
+    _ask(image, composite, seed=6)
+    pod = _pod()
+
+    code, out, err = _pending(tmp_path, client=pod)
+
+    assert (code, err) == (0, "")
+    assert (group / "42.edit-1.png").is_file()
+    assert (group / "42.edit-2.png").is_file()
+    assert [
+        graph[EDIT.nodes["sampler"]]["inputs"]["seed"] for graph in pod.submissions
+    ] == [5, 6]
+    assert out.splitlines() == [
+        "0123456789ab_a: edited summon-anime-wai/42.edit-1.png",
+        "0123456789ab_a: edited summon-anime-wai/42.edit-2.png",
+    ]
+    assert pod.stats_calls == 1
+
+
+@pytest.mark.spec("edit:session:a-failed-sampling-leaves-the-request-pending")
+def test_edit_pending_a_failed_sampling_does_not_cost_the_next_its_turn(
+    tmp_path: Path,
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    _ask(image, composite)
+    pod = _pod(TransportFailure("permanent", "rejected"))
+
+    code, out, err = _pending(tmp_path, client=pod)
+
+    assert (code, out) == (1, "")
+    assert "refused: 42.edit-1.json: the sampling failed (permanent) -- rejected" in err
+    assert [path.name for path in pending(group)] == ["42.edit-1.json"]
+
+
+@pytest.mark.spec_exempt("structural: --progress json prints one line per sampled edit")
+def test_edit_pending_progress_json_prints_a_line_per_sampled_edit(
+    tmp_path: Path,
+) -> None:
+    _, image, composite = _scene(tmp_path)
+    _ask(image, composite)
+
+    code, out, err = _pending(tmp_path, "--progress", "json", client=_pod())
+
+    (line,) = [json.loads(text) for text in out.splitlines()]
+    assert code == 0
+    assert line["run"] == "0123456789ab_a"
+    assert (line["flow"], line["stage"], line["state"]) == (
+        "summon-anime-wai",
+        "edit",
+        "done",
+    )
+    assert (line["version"], line["file"]) == (1, "42.edit-1.png")
+    assert "edited summon-anime-wai/42.edit-1.png" in err
+
+
+@pytest.mark.spec_exempt("structural: a cell is named as <run-id>/<flow>")
+@pytest.mark.parametrize(
+    ("cell", "message"),
+    [
+        ("nowhere", "not a cell"),
+        ("0123456789ab_b/summon-anime-wai", "no run 0123456789ab_b under"),
+        ("0123456789ab_a/not-a-flow", "not-a-flow: not a flow this build tracks"),
+    ],
+)
+def test_edit_pending_a_bad_cell_is_refused_before_any_check(
+    cell: str, message: str, tmp_path: Path
+) -> None:
+    _scene(tmp_path)
+    wired = bare_wiring(runs_root=tmp_path / "runs")
+    args = build_parser().parse_args(["edit", "--pending", cell])
+
+    assert dispatch(args, wired) == 1
+    assert isinstance(wired.err, io.StringIO)
+    assert message in wired.err.getvalue()
+
+
+@pytest.mark.spec_exempt(
+    "structural: a request and --pending are two forms, never both"
+)
+def test_edit_pending_takes_cells_alone_and_a_request_takes_its_names(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    wired = bare_wiring(runs_root=tmp_path / "runs")
+    assert isinstance(wired.err, io.StringIO)
+    mixed = build_parser().parse_args(["edit", "tattoo-wai", "--pending", CELL])
+    assert dispatch(mixed, wired) == 1
+    assert "--pending takes cells alone" in wired.err.getvalue()
+
+    bare = build_parser().parse_args(["edit", "--composite", "c.png"])
+    assert dispatch(bare, wired) == 1
+    assert "a request names its edit and its render" in wired.err.getvalue()
+
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(
+            ["edit", "tattoo-wai", "a.png", "--composite", "c.png", "--pending", CELL]
+        )
+    assert "not allowed with argument" in capsys.readouterr().err

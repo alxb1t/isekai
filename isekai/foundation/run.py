@@ -33,7 +33,7 @@ import hashlib
 import os
 import re
 import shlex
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TypeVar
@@ -525,16 +525,20 @@ def is_seed(text: str) -> bool:
     )
 
 
-def _in_a_group(image: Path) -> bool:
-    """Return whether `image` is a file in an outputs group of a run with a frame."""
-    group = image.absolute().parent
+def _laid_out(path: Path) -> bool:
+    """Return whether `path` names a place in an outputs group of a run with a frame."""
+    group = path.absolute().parent
     return (
-        image.is_file()
-        and len(group.name) == 3
+        len(group.name) == 3
         and _DIGITS.fullmatch(group.name) is not None
         and group.parent.name == OUTPUTS
         and (group.parent.parent.parent / FRAME_NAME).is_file()
     )
+
+
+def _in_a_group(image: Path) -> bool:
+    """Return whether `image` is a file in an outputs group of a run with a frame."""
+    return image.is_file() and _laid_out(image)
 
 
 def rendered_at(image: Path) -> tuple[Run, str, int, int]:
@@ -571,6 +575,19 @@ EDIT_STEM = re.compile(r"^(?P<seed>[0-9]+)\.edit-(?P<k>[1-9][0-9]*)$")
 # and its record.
 EDIT_COMPOSITE = ".composite.png"
 EDIT_RECORD = ".json"
+
+
+def is_edit_file(name: str) -> bool:
+    """Return whether `name` is a file an edit writes beside its source.
+
+    The image, the record and the composite of an edit of a render's seed.
+    e.g. "42.edit-1.composite.png" -> True; "42.edit-0.png", "x.edit-1.json" -> False
+    """
+    for suffix in (EDIT_COMPOSITE, EDIT_RECORD, ".png"):
+        named = EDIT_STEM.fullmatch(name.removesuffix(suffix))
+        if name.endswith(suffix) and named and is_seed(named["seed"]):
+            return True
+    return False
 
 
 def edit_stem(seed: int, k: int) -> str:
@@ -618,16 +635,39 @@ def next_edit(group: Path, seed: int) -> int:
     return numbered[-1] + 1 if numbered else 1
 
 
+def delete_edits(group: Path, seed: int, numbers: Iterable[int]) -> list[Path]:
+    """Delete each file of the edits `numbers` of `seed` in `group`; return those gone.
+
+    Each edit's image goes first, then its record, then its composite, so a delete
+    cut short leaves a request that reads as pending rather than an image no record
+    explains.
+    e.g. (group, 42, [1]) -> [42.edit-1.png, 42.edit-1.json, 42.edit-1.composite.png]
+    """
+    deleted: list[Path] = []
+    for number in numbers:
+        for path in edit_files(group, seed, number):
+            if path.is_file():
+                path.unlink()
+                deleted.append(path)
+    return deleted
+
+
 def edit_at(image: Path) -> tuple[Run, str, int, int, int]:
     """Return the run, flow, approval, seed and number an edit image's path names.
 
+    The image is on disk, or its record is: a pending edit has no image yet.
     e.g. runs/0d4b…_ada/summon-anime-wai/outputs/001/42.edit-2.png
          -> (that run, "summon-anime-wai", 1, 42, 2)
     """
     group = image.absolute().parent
     run_directory = group.parent.parent.parent
     named = EDIT_STEM.match(image.stem) if image.suffix == ".png" else None
-    if named is None or not is_seed(named.group("seed")) or not _in_a_group(image):
+    present = image.is_file() or image.with_suffix(EDIT_RECORD).is_file()
+    if (
+        named is None
+        or not is_seed(named.group("seed"))
+        or not (present and _laid_out(image))
+    ):
         raise Refusal(
             "is not an edit's image; give the path of one, "
             f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.edit-<k>.png"

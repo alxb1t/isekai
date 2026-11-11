@@ -355,7 +355,9 @@ class EditRecord(TypedDict):
     """The record beside an edit's image, written when the edit is requested.
 
     `source` is the file of the same group the edit was made from, `dials` every
-    dial as it ran and `overridden` the names a request changed.
+    dial as it ran and `overridden` the names a request changed. A sampling
+    completes the record with the graph it submitted, the runtime it ran on and
+    the seconds it took, before the image is written.
     """
 
     schema: SchemaBlock
@@ -368,6 +370,9 @@ class EditRecord(TypedDict):
     dials: dict[str, Any]
     overridden: list[str]
     crop: CropRecord
+    graph_sha256: NotRequired[str]
+    runtime: NotRequired[Runtime]
+    duration: NotRequired[float]
 
 
 class SessionImage(TypedDict):

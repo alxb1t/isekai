@@ -3,7 +3,8 @@
 A composite is the render with the tattoo multiplied on, so dividing it by the render
 leaves the ink, and the ink's darkness says where the tattoo is. From it come the
 mask the sampler repaints under, the control that holds the lines, and the box of the
-render the pod is sent. Each is a function over arrays.
+render the pod is sent. The sampled crop is stitched back through the mask, and the
+ink's lines are multiplied over it. Each is a function over arrays.
 
 The division is defined on a Multiply composite over a lit pixel, so a composite that
 is anything else is refused with the fix, rather than baked as the wrong ink.
@@ -254,6 +255,76 @@ def plan_crop(mask: "NDArray[np.uint8]", dials: Mapping[str, Any]) -> Crop:
         widened=widened,
         grown=grown,
     )
+
+
+def _png(image: "Image") -> bytes:
+    """Return `image` as a PNG that carries no profile and no metadata."""
+    body = io.BytesIO()
+    image.save(body, "PNG")
+    return body.getvalue()
+
+
+def sampling_images(
+    composite: "NDArray[np.uint8]", derived: Derivation, crop: Crop
+) -> tuple[bytes, bytes, bytes]:
+    """Return the PNGs the pod is sent: the composite's crop, its mask and its control.
+
+    Each is the box of the render scaled to the sampling size, so the pod sees the
+    tattoo's crop and nothing of the rest of the image.
+    e.g. a 304 px box sampled at 1216 -> three 1216x1216 PNGs
+    """
+    from PIL import Image
+
+    left, top, right, bottom = crop.box
+
+    def scaled(array: "NDArray[np.uint8]", resample: "Image.Resampling") -> bytes:
+        box = Image.fromarray(array[top:bottom, left:right])
+        return _png(box.resize(crop.size, resample))
+
+    return (
+        scaled(composite, Image.Resampling.LANCZOS),
+        scaled(derived.mask, Image.Resampling.BILINEAR),
+        scaled(derived.control, Image.Resampling.BILINEAR),
+    )
+
+
+def stitch(
+    composite: "NDArray[np.uint8]",
+    sampled: bytes,
+    derived: Derivation,
+    crop: Crop,
+    lines: float,
+) -> "NDArray[np.uint8]":
+    """Return the composite with the sampled crop blended in and the lines multiplied.
+
+    The crop is scaled to its box and blended over the composite by the mask; the
+    result is multiplied by one minus `lines` times the ink's darkness. A mask of
+    nothing leaves the composite, and `lines` of 0 multiplies nothing back.
+    e.g. mask 255, lines 0.4, darkness 0.5 -> the sampled pixel times 0.8
+    """
+    import numpy as np
+    from PIL import Image
+
+    left, top, right, bottom = crop.box
+    try:
+        body = _decode(sampled, "the sampled crop", "sampled crop")
+    except Refusal as unreadable:
+        raise Refusal(
+            "the endpoint's image for the sampled crop cannot be read; check the "
+            "pod's ComfyUI log"
+        ) from unreadable
+    resized = body.convert("RGB").resize(
+        (right - left, bottom - top), Image.Resampling.LANCZOS
+    )
+    weight = derived.mask[top:bottom, left:right].astype(np.float32) / 255.0
+    weight = weight[..., np.newaxis]
+    out = composite.astype(np.float32)
+    out[top:bottom, left:right] = (
+        out[top:bottom, left:right] * (1.0 - weight)
+        + np.asarray(resized, dtype=np.float32) * weight
+    )
+    out *= (1.0 - lines * derived.darkness)[..., np.newaxis]
+    return np.clip(out + 0.5, 0.0, 255.0).astype(np.uint8)
 
 
 def derive(

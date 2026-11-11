@@ -14,35 +14,60 @@ and the record last, so a record always has its composite.
 **The photograph a tattoo was cut from never enters a run.** The request reads
 the composite and the render, and nothing else.
 
+**A sampling sends the pod the tattoo's crop, its mask and its control, and nothing
+else.** The sampled crop is stitched back and the ink's lines multiplied over it
+here. The record is completed first and the image written last, so a crash between
+the two leaves a request that is still pending; a failed sampling records no
+failure, and the refusal names the discard.
+
 Stdlib only at module scope: Pillow is imported inside the functions.
 """
 
 import io
+import os
 import random
-from collections.abc import Mapping
+import shlex
+import time
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from isekai.boundary.comfy import ComfyTransport, TransportFailure, submit_and_wait
 from isekai.foundation.artifacts import (
     EDIT_FILE,
     SEED_BITS,
     CropRecord,
     EditRecord,
+    Runtime,
+    read,
     write,
 )
 from isekai.foundation.atomic_write import write_atomically
-from isekai.foundation.edit import Edit
+from isekai.foundation.edit import Edit, load_edit
+from isekai.foundation.flow import Workflow, graph_digest
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
+    EDIT_RECORD,
     EDIT_STEM,
+    delete_edits,
     digest_of,
     edit_at,
     edit_files,
+    edit_numbers,
     next_edit,
     rendered_at,
 )
-from isekai.shared.tattoo import decode_composite, decode_render, derive, plan_crop
+from isekai.shared.tattoo import (
+    Crop,
+    Derivation,
+    decode_composite,
+    decode_render,
+    derive,
+    plan_crop,
+    sampling_images,
+    stitch,
+)
 
 if TYPE_CHECKING:
     import numpy as np
@@ -50,6 +75,10 @@ if TYPE_CHECKING:
 
 # The dials a request may change for one edit, in the order a record lists them.
 OVERRIDES = ("denoise", "strength", "lines")
+
+# Seconds a queued sampling may take before it gives up: a ComfyUI restarted in
+# place loses the prompt, and the pod bills while the poll waits.
+EDIT_DEADLINE = 600
 
 
 @dataclass(frozen=True)
@@ -176,3 +205,232 @@ def request(
     write_atomically(composite_path, kept)
     write(record_path, EDIT_FILE, record)
     return Requested(composite_path, record_path, number, sampling_seed)
+
+
+def records(group: Path) -> list[Path]:
+    """Return the edit records in `group`, by the seed of the render, then the number.
+
+    A record with its image beside it is as much a record as a pending one.
+    e.g. a group holding 42.edit-2.json and 42.edit-1.json -> [edit-1, edit-2]
+    """
+    if not group.is_dir():
+        return []
+    found: list[tuple[int, int, Path]] = []
+    for name in os.listdir(group):
+        named = EDIT_STEM.fullmatch(name.removesuffix(EDIT_RECORD))
+        if name.endswith(EDIT_RECORD) and named:
+            found.append((int(named["seed"]), int(named["k"]), group / name))
+    return [path for _, _, path in sorted(found)]
+
+
+def pending(group: Path) -> list[Path]:
+    """Return the records in `group` that have no image beside them, in chain order."""
+    return [path for path in records(group) if not image_of(path).exists()]
+
+
+def image_of(record: Path) -> Path:
+    """Return the path of the image an edit record's sampling writes.
+
+    e.g. outputs/001/42.edit-1.json -> outputs/001/42.edit-1.png
+    """
+    return record.with_suffix(".png")
+
+
+def discard_edit(image: Path) -> list[Path]:
+    """Delete an edit, pending or run, and every edit whose source chain reaches it.
+
+    Return every path deleted, absolute. An edit whose record cannot be read is
+    refused before anything is deleted, so a chain is never left half taken.
+    e.g. 42.edit-1.png, with 42.edit-2 made from it -> both edits' three files
+    """
+    _, _, _, seed, number = edit_at(image)
+    group = image.absolute().parent
+    sources: dict[int, str | None] = {}
+    for held in edit_numbers(group, seed):
+        record = edit_files(group, seed, held)[1]
+        sources[held] = read(record, EDIT_FILE)["source"] if record.is_file() else None
+    taken = {number}
+    while grown := {
+        held
+        for held, source in sources.items()
+        if held not in taken
+        and source in {edit_files(group, seed, each)[0].name for each in taken}
+    }:
+        taken |= grown
+    return delete_edits(group, seed, sorted(taken))
+
+
+def duration_of(record: Path) -> float | None:
+    """Return the seconds a sampling recorded, or None for a request not yet run."""
+    seconds = read(record, EDIT_FILE).get("duration")
+    if isinstance(seconds, int | float) and not isinstance(seconds, bool):
+        return float(seconds)
+    return None
+
+
+@dataclass(frozen=True)
+class _Ready:
+    """A pending edit checked and derived again, as its sampling reads it."""
+
+    edit: Edit
+    body: EditRecord
+    composite: "NDArray[np.uint8]"
+    derived: Derivation
+    crop: Crop
+
+
+def _stale(record: Path, why: str) -> Refusal:
+    """Return the refusal of a pending edit that cannot run as requested."""
+    image = shlex.quote(str(image_of(record)))
+    return Refusal(
+        f"{record.name}: {why}; run `python -m isekai discard {image}` to remove "
+        "the request, then request the edit again"
+    )
+
+
+def _ready(record: Path) -> _Ready:
+    """Return the edit `record` asks for, derived again from the files it names.
+
+    Refused, naming the discard, when the edit's files, the source or the composite
+    are not what the record holds the digests of, or the crop derives differently.
+    """
+    body = read(record, EDIT_FILE)
+    edit = load_edit(body["edit"])
+    if edit.digest != body["edit_digest"]:
+        raise _stale(record, f"edit {edit.id} has changed since it was requested")
+    group = record.parent
+    held: dict[str, bytes] = {}
+    for what, name, digest in (
+        ("source", body["source"], body["source_sha256"]),
+        (
+            "composite",
+            f"{record.name.removesuffix(EDIT_RECORD)}.composite.png",
+            body["composite_sha256"],
+        ),
+    ):
+        try:
+            held[what] = (group / name).read_bytes()
+        except OSError:
+            raise _stale(record, f"its {what} {name} cannot be read") from None
+        if digest_of(held[what]) != digest:
+            raise _stale(record, f"its {what} {name} has changed since the request")
+    dials = body["dials"]
+    composite = decode_composite(held["composite"])
+    derived = derive(decode_render(held["source"], body["source"]), composite, dials)
+    crop = plan_crop(derived.mask, dials)
+    recorded = body["crop"]
+    if [*crop.box] != recorded["box"] or [*crop.size] != recorded["size"]:
+        raise _stale(record, "its crop no longer derives as it was recorded")
+    return _Ready(edit, body, composite, derived, crop)
+
+
+def check(record: Path, waiting: Collection[Path] = ()) -> None:
+    """Refuse a pending edit that would not run as requested, reading files alone.
+
+    `waiting` is the images other pending edits will write: a source among them
+    does not exist yet, so only the edit and the composite are checked, and the
+    sampling checks the source once it does.
+    """
+    body = read(record, EDIT_FILE)
+    if (record.parent / body["source"]) in waiting:
+        edit = load_edit(body["edit"])
+        if edit.digest != body["edit_digest"]:
+            raise _stale(record, f"edit {edit.id} has changed since it was requested")
+        return
+    _ready(record)
+
+
+def _patched(edit: Edit, body: EditRecord, names: tuple[str, str, str]) -> Workflow:
+    """Return the edit's graph with its dials, words and the uploaded images set.
+
+    `names` are the stored names of the crop, the mask and the control.
+    """
+    graph = edit.graph()
+    dials = body["dials"]
+
+    def patch(role: str, **inputs: object) -> None:
+        graph[edit.node(role)]["inputs"].update(inputs)
+
+    crop, mask, control = names
+    patch("checkpoint", ckpt_name=edit.checkpoint)
+    patch("clip_skip", stop_at_clip_layer=dials["clip_skip"])
+    patch("positive", text=edit.prompt["positive"])
+    patch("negative", text=edit.prompt["negative"])
+    patch("image", image=crop)
+    patch("mask", image=mask)
+    patch("control", image=control)
+    patch("controlnet", control_net_name=edit.controlnet)
+    patch("union", type=edit.union_type)
+    patch(
+        "apply",
+        strength=dials["strength"],
+        start_percent=dials["start_percent"],
+        end_percent=dials["end_percent"],
+    )
+    patch(
+        "sampler",
+        seed=body["seed"],
+        steps=dials["steps"],
+        cfg=dials["cfg"],
+        sampler_name=dials["sampler_name"],
+        scheduler=dials["scheduler"],
+        denoise=dials["denoise"],
+    )
+    return graph
+
+
+def sample(
+    client: ComfyTransport,
+    record: Path,
+    *,
+    runtime: Callable[[], Runtime],
+    poll: float = 1.0,
+    deadline: float = EDIT_DEADLINE,
+    clock: Callable[[], float] = time.monotonic,
+) -> Path:
+    """Sample one pending edit on `client` and write its image, returning its path.
+
+    The crops are derived again from the source and the composite, uploaded, and
+    the edit's graph is patched from its manifest and the record. The record is
+    completed with the graph's digest, the runtime and the seconds taken before the
+    image is written, atomically and last. A failure leaves the request pending.
+    e.g. outputs/001/42.edit-1.json -> outputs/001/42.edit-1.png
+    """
+    ready = _ready(record)
+    image = image_of(record)
+    stem = record.name.removesuffix(EDIT_RECORD)
+    crop_png, mask_png, control_png = sampling_images(
+        ready.composite, ready.derived, ready.crop
+    )
+    try:
+        ran_on = runtime()
+        names = (
+            client.upload_image(f"{stem}.crop.png", crop_png),
+            client.upload_image(f"{stem}.mask.png", mask_png),
+            client.upload_image(f"{stem}.control.png", control_png),
+        )
+        graph = _patched(ready.edit, ready.body, names)
+        started = clock()
+        body = submit_and_wait(client, graph, poll, deadline)
+        took = round(clock() - started, 1)
+    except Refusal as failed:
+        kind = failed.kind if isinstance(failed, TransportFailure) else "permanent"
+        raise _stale(
+            record, f"the sampling failed ({kind}) -- {failed}; it stays pending"
+        ) from failed
+    stitched = stitch(
+        ready.composite,
+        body,
+        ready.derived,
+        ready.crop,
+        float(ready.body["dials"]["lines"]),
+    )
+    completed: EditRecord = {
+        **ready.body,
+        "graph_sha256": graph_digest(graph),
+        "runtime": ran_on,
+        "duration": took,
+    }
+    write(record, EDIT_FILE, completed)
+    write_atomically(image, _kept(stitched))
+    return image

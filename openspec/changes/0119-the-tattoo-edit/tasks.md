@@ -7,7 +7,7 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 - [x] 1 — Registry · moderate
 - [x] 2 — Ink · hard
 - [x] 3 — Request · hard
-- [ ] 4 — Session · hard
+- [x] 4 — Session · hard
 - [ ] 5 — Model and image **HUMAN**
 - [ ] 6 — Proof on a pod **HUMAN · METERED**
 - [ ] 7 — Docs · moderate
@@ -59,27 +59,27 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 
 ## 4 — Session
 
-- [ ] 4.1 Move `_submit` as `submit_and_wait`, with `_history`, `read_runtime` and `_first_device`, from `isekai/pipeline/generate.py` to `isekai/boundary/comfy/prompt.py`, exported by `isekai/boundary/comfy/__init__.py`, and `graph_digest` to `isekai/foundation/flow.py` ([D6](design.md#d6)); point `isekai/interface/cli.py`, `isekai/interface/render.py`, `tests/test_generate.py`, `tests/test_artifact_bytes.py` and `tests/stages.py` at their new places, and `generate.py` at `submit_and_wait`.
+- [x] 4.1 Move `_submit` as `submit_and_wait`, with `_history`, `read_runtime` and `_first_device`, from `isekai/pipeline/generate.py` to `isekai/boundary/comfy/prompt.py`, exported by `isekai/boundary/comfy/__init__.py`, and `graph_digest` to `isekai/foundation/flow.py` ([D6](design.md#d6)); point `isekai/interface/cli.py`, `isekai/interface/render.py`, `tests/test_generate.py`, `tests/test_artifact_bytes.py` and `tests/stages.py` at their new places, and `generate.py` at `submit_and_wait`.
   Verify: `git grep -n submit_and_wait isekai/pipeline/generate.py` prints the call.
-- [ ] 4.2 Extend `isekai/pipeline/edit.py` with `sample`: re-derive the crops, upload them, patch `graph.json` from `edit.json` and the record, submit, wait; a rejected graph leaves the request pending and names the discard; tests in `tests/test_edit.py` carry `edit_sample`.
+- [x] 4.2 Extend `isekai/pipeline/edit.py` with `sample`: re-derive the crops, upload them, patch `graph.json` from `edit.json` and the record, submit, wait; a rejected graph leaves the request pending and names the discard; tests in `tests/test_edit.py` carry `edit_sample`.
   Verify: `uv run pytest tests/test_edit.py -k edit_sample` passes.
-- [ ] 4.3 Extend `isekai/shared/tattoo.py` and `sample` with the stitch and the lines ([D6](design.md#d6)): the crop scaled to its box, blended by the mask over the composite, multiplied by one minus `lines` of the darkness; the record completed first, the image written last; tests carry `edit_stitch`.
+- [x] 4.3 Extend `isekai/shared/tattoo.py` and `sample` with the stitch and the lines ([D6](design.md#d6)): the crop scaled to its box, blended by the mask over the composite, multiplied by one minus `lines` of the darkness; the record completed first, the image written last; tests carry `edit_stitch`.
   Verify: `uv run pytest tests/test_edit.py -k edit_stitch` passes.
-- [ ] 4.4 Add the `--pending` form to the `edit` verb in `isekai/interface/cli.py`: `<run-id>/<flow>` cells, `--server`, `--progress json`; with no client it derives and checks each pending edit and rents nothing; tests carry `edit_pending`.
+- [x] 4.4 Add the `--pending` form to the `edit` verb in `isekai/interface/cli.py`: `<run-id>/<flow>` cells, `--server`, `--progress json`; with no client it derives and checks each pending edit and rents nothing; tests carry `edit_pending`.
   Verify: `uv run pytest tests/test_edit.py -k edit_pending` passes.
-- [ ] 4.5 Add `per_edit_s` 30 to `config/render.json` and the edits to the estimate in `isekai/interface/render.py`: `Timing`, the recorded edit durations, `estimated`, `quote` ([D7](design.md#d7)); tests in `tests/test_render.py` carry `edit_limit`.
+- [x] 4.5 Add `per_edit_s` 30 to `config/render.json` and the edits to the estimate in `isekai/interface/render.py`: `Timing`, the recorded edit durations, `estimated`, `quote` ([D7](design.md#d7)); tests in `tests/test_render.py` carry `edit_limit`.
   Verify: `uv run pytest tests/test_render.py -k edit_limit` passes.
-- [ ] 4.6 Run the pending edits in the session of `isekai/interface/render.py` per [D7](design.md#d7): cells less each `--without`, checked free before the pod, run after the renders, a session of edits alone allowed, a request running none; its tests open `tests/test_edit_session.py`.
+- [x] 4.6 Run the pending edits in the session of `isekai/interface/render.py` per [D7](design.md#d7): cells less each `--without`, checked free before the pod, run after the renders, a session of edits alone allowed, a request running none; its tests open `tests/test_edit_session.py`.
   Verify: `uv run pytest tests/test_edit_session.py` passes.
-- [ ] 4.7 Hold that the listings and the evaluator's runs skip an edit, and make `isekai/interface/run_view.py` read an edit's files in a group ([D8](design.md#d8)); tests in `tests/test_edit_session.py` carry `edit_listing`, and one in `tests/test_run_view.py` the unread list.
+- [x] 4.7 Hold that the listings and the evaluator's runs skip an edit, and make `isekai/interface/run_view.py` read an edit's files in a group ([D8](design.md#d8)); tests in `tests/test_edit_session.py` carry `edit_listing`, and one in `tests/test_run_view.py` the unread list.
   Verify: `uv run pytest tests/test_edit_session.py -k edit_listing` passes.
-- [ ] 4.8 **HALT CHECK** A group holding an edit's file is no group of failure records alone, which is why a discard takes the edits first; a test in `tests/test_edit_session.py` carrying `edit_group` holds it.
+- [x] 4.8 **HALT CHECK** A group holding an edit's file is no group of failure records alone, which is why a discard takes the edits first; a test in `tests/test_edit_session.py` carrying `edit_group` holds it.
   Verify: `uv run pytest tests/test_edit_session.py -k edit_group` passes.
-- [ ] 4.9 Make `discard_render` in `isekai/pipeline/generate.py` delete every edit of the seed before it tests the group, add the edit stage's discard to `isekai/pipeline/edit.py`, and let `_discard` in `isekai/interface/cli.py` take an edit's path ([D9](design.md#d9)); tests carry `edit_discard`.
+- [x] 4.9 Make `discard_render` in `isekai/pipeline/generate.py` delete every edit of the seed before it tests the group, add the edit stage's discard to `isekai/pipeline/edit.py`, and let `_discard` in `isekai/interface/cli.py` take an edit's path ([D9](design.md#d9)); tests carry `edit_discard`.
   Verify: `uv run pytest tests/test_edit_session.py -k edit_discard` passes.
-- [ ] 4.10 Pay `0111·R6`: add `(image.parent / "7.render.json").is_file()` to the assert after the lock in the refusal test of `tests/test_pipeline_cli.py`, so the render's record stays beside its image and thumbnail.
+- [x] 4.10 Pay `0111·R6`: add `(image.parent / "7.render.json").is_file()` to the assert after the lock in the refusal test of `tests/test_pipeline_cli.py`, so the render's record stays beside its image and thumbnail.
   Verify: `git grep -nF '7.render.json").is_file()' tests/test_pipeline_cli.py` prints the assert's line.
-- [ ] 4.11 Hold the phase's tests under the acceptance's selector.
+- [x] 4.11 Hold the phase's tests under the acceptance's selector.
   Verify: `uv run pytest tests/test_edit_session.py -k "edit and (render or discard)"` passes.
 
 ## 5 — Model and image

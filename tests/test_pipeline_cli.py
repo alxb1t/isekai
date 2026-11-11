@@ -1121,6 +1121,7 @@ def test_discard_deletes_the_render_and_its_thumbnail(
         fcntl.flock(held, fcntl.LOCK_EX)
         assert dispatch(build_parser().parse_args(argv), wired) == 1
     assert image.is_file() and (cached / own).is_file()
+    assert (image.parent / "7.render.json").is_file()
     assert isinstance(wired.err, io.StringIO)
     assert f"refused: {image.relative_to(tmp_path)}: A render session" in (
         wired.err.getvalue()

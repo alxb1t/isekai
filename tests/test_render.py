@@ -26,6 +26,7 @@ import pytest
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyClient, ComfyTransport, TransportFailure
 from isekai.foundation.artifacts import (
+    EDIT_FILE,
     RENDER_FILE,
     SESSION_ID,
     SESSIONS,
@@ -1217,7 +1218,12 @@ def test_a_folder_without_links_or_locks_refuses_before_renting(
 
 
 TIMING = render.Timing(
-    boot_s=600, per_image_s=60, teardown_s=120, limit_factor=1.5, volume_rate=0.005
+    boot_s=600,
+    per_image_s=60,
+    per_edit_s=30,
+    teardown_s=120,
+    limit_factor=1.5,
+    volume_rate=0.005,
 )
 
 
@@ -1272,6 +1278,84 @@ def test_with_no_recorded_duration_the_configured_time_per_image_is_used() -> No
 
     assert got.seconds == 600 + 10 * 60 + 120
     assert got.limit_s == (600 + 10 * 60 + 120) * 1.5
+
+
+def _edit_records(group: Path, seeds: Sequence[int], **recorded: float) -> None:
+    """Write an edit record for each of `seeds` in `group`, holding `recorded` more."""
+    group.mkdir(parents=True, exist_ok=True)
+    for seed in seeds:
+        record = {"schema": EDIT_FILE.schema, **recorded}
+        (group / f"{seed}.edit-1.json").write_text(json.dumps(record))
+
+
+@pytest.mark.spec("edit:edit-limit:the-configured-figure-without-records")
+def test_edit_limit_with_no_recorded_edit_the_configured_time_per_edit_is_used() -> (
+    None
+):
+    held = Path("b/runs")
+
+    got = render.estimate({}, {}, TIMING, 3 * 60 * 60, {held: 4}, {held: []})
+
+    assert got.seconds == 600 + 4 * 30 + 120
+    assert got.limit_s == (600 + 4 * 30 + 120) * 1.5
+
+
+@pytest.mark.spec("edit:edit-limit:the-configured-figure-without-records")
+def test_edit_limit_a_median_below_the_figure_takes_the_figure() -> None:
+    held = Path("b/runs")
+
+    got = render.estimate({}, {}, TIMING, 3 * 60 * 60, {held: 2}, {held: [5.0, 9.0]})
+
+    assert got.seconds == 600 + 2 * 30 + 120
+
+
+@pytest.mark.spec("edit:edit-limit:a-median-above-the-figure-is-used")
+def test_edit_limit_a_median_above_the_figure_is_used_for_each_pending_edit() -> None:
+    held = Path("b/runs")
+    recorded = {held: [40.0, 50.0, 200.0]}
+
+    got = render.estimate({}, {}, TIMING, 3 * 60 * 60, {held: 2}, recorded)
+
+    assert got.seconds == 600 + 2 * 50 + 120
+
+
+@pytest.mark.spec("edit:edit-limit:a-median-above-the-figure-is-used")
+def test_edit_limit_the_recorded_durations_are_the_newest_records_in_the_collection(
+    tmp_path: Path,
+) -> None:
+    root = collection(tmp_path, "r1", "r2")
+    _edit_records(root / "r1" / FLOW / "outputs" / "001", [1, 2], duration=90.0)
+    _edit_records(root / "r2" / FLOW / "outputs" / "001", [3], duration=300.0)
+    _edit_records(root / "r2" / FLOW / "outputs" / "001", [4])
+
+    assert sorted(render.recent_edits(root, ["r1", "r2"])) == [90.0, 90.0, 300.0]
+
+    got = render.estimated([(root, ["r1", "r2"], {})], TIMING, 3 * 60 * 60, {root: 3})
+
+    # The median of 90, 90 and 300 is 90, and each of three pending edits takes it.
+    assert got.seconds == 600 + 3 * 90 + 120
+
+
+@pytest.mark.spec("edit:edit-limit:the-quote-and-the-session-agree")
+def test_edit_limit_the_quote_and_the_session_take_the_edits_from_one_function(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    short = counted(tmp_path, schema, vocabulary, "ada", 1)
+    root = tmp_path / "b" / "runs"
+    group = short.path / FLOW / "outputs" / "002"
+    _edit_records(group, range(100, 140))
+    quoted = render.quote([root], real(root, vocabulary))
+    opener = FakeOpen()
+
+    status = session(root, opener=opener, generate=Calls())
+
+    timing = render.load_timing()
+    assert status == 0, log(root)
+    assert quoted.estimate.seconds == (
+        timing.boot_s + timing.per_image_s + 40 * timing.per_edit_s + timing.teardown_s
+    )
+    assert quoted.estimate.limit_s > render.FLOOR_S
+    assert opener.limits == [quoted.estimate.limit_s]
 
 
 @pytest.mark.spec("cli:render-limit:a-fast-median-takes-the-figure")

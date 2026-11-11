@@ -19,6 +19,10 @@ its new digest.
 - `isekai edit <edit> <render> --composite <png>` requests an edit, free and local: it derives the ink, mask, control
   and crop from the composite, refuses what no Multiply could make, and writes the composite and a pending record
   beside the render (0119 D4, D5).
+- `isekai render` runs every pending edit in its pod after the renders, quoted at `per_edit_s` and checked free before
+  anything is rented; `isekai edit --pending <run-id>/<flow>…` samples them on `--server` (0119 D6, D7).
+- `isekai discard` takes an edit's path, and a render's deletion takes its edits; `isekai show` reads an edit's files
+  and no listing counts an edit as a render (0119 D8, D9).
 
 ## [0.78.0] - 2026-11-08
 

@@ -22,7 +22,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from isekai.boundary.comfy import ComfyTransport
+from isekai.boundary.comfy import ComfyTransport, read_runtime
 from isekai.boundary.gpu import GpunitExit, Say, Volume
 from isekai.boundary.wd14 import FLOOR, LocalTagger, read_labels
 from isekai.foundation.artifacts import (
@@ -305,7 +305,7 @@ def fake_wd14(vector: list[float] | None = None) -> Always[LocalTagger]:
 
 # What a render is told it ran on, where a test is not about the runtime: what
 # `FakeComfyClient` reports, so the suite has one fake runtime.
-RUNTIME: Runtime = generate_stage.read_runtime(FakeComfyClient())
+RUNTIME: Runtime = read_runtime(FakeComfyClient())
 
 
 def on_runtime() -> Runtime:

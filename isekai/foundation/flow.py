@@ -495,6 +495,13 @@ def manifest_digest(flow: str, flows_dir: Path = FLOWS_DIR) -> str:
     return digest.hexdigest()
 
 
+def graph_digest(graph: Workflow) -> str:
+    """Return the digest of the graph as submitted, keys sorted so it is stable."""
+    return hashlib.sha256(
+        json.dumps(graph, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
 def assemble(
     fields: Mapping[str, Sequence[str]],
     order: Sequence[str],

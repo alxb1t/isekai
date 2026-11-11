@@ -60,7 +60,7 @@ from functools import cache
 from pathlib import Path
 from typing import TextIO, TypeVar, cast
 
-from isekai.boundary.comfy import TransportFailure
+from isekai.boundary.comfy import TransportFailure, read_runtime
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.caption_config import load_caption_config
@@ -69,12 +69,14 @@ from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.migrate import migrate
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
+    EDIT_STEM,
     FRAME_NAME,
     PHOTOGRAPH_VERBS,
     RUNS_ROOT,
     Run,
     across,
     assign,
+    edit_at,
     find_run,
     open_run,
     rendered_at,
@@ -85,18 +87,19 @@ from isekai.interface.drafting import (
     draft_from_image,
     refuse_image_drafts,
 )
-from isekai.interface.render import run_session
+from isekai.interface.render import pending_edits, run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
 from isekai.pipeline.caption import caption
-from isekai.pipeline.edit import OVERRIDES
+from isekai.pipeline.edit import OVERRIDES, discard_edit, image_of
+from isekai.pipeline.edit import check as check_edit
 from isekai.pipeline.edit import request as request_edit
+from isekai.pipeline.edit import sample as sample_edit
 from isekai.pipeline.generate import (
     STAGE_RENDER,
     Render,
     discard_render,
     prepare,
-    read_runtime,
     render,
     source_seeds,
 )
@@ -514,21 +517,48 @@ def build_parser() -> argparse.ArgumentParser:
     )
     made["ink"].set_defaults(photos=[], runs=RUNS_ROOT)
 
-    # An edit's image is written beside its source, so the render's path names the
-    # run and no runs root is given.
-    made["edit"].add_argument("edit", help="the edit to request, e.g. tattoo-wai")
+    # An edit's image is written beside its source, so a request's render path names
+    # the run; `--pending` names cells, and the runs root they live under.
+    made["edit"].add_argument(
+        "edit", nargs="?", help="the edit to request, e.g. tattoo-wai"
+    )
     made["edit"].add_argument(
         "render",
+        nargs="?",
         type=Path,
         help="the render, <run>/<flow>/outputs/<NNN>/<seed>.png, or an edit's "
         "image <seed>.edit-<k>.png to chain from",
     )
-    made["edit"].add_argument(
+    form = made["edit"].add_mutually_exclusive_group(required=True)
+    form.add_argument(
         "--composite",
         type=Path,
-        required=True,
         metavar="COMPOSITE.png",
         help="the render with the tattoo multiplied on, at the render's size",
+    )
+    form.add_argument(
+        "--pending",
+        nargs="+",
+        metavar="<run-id>/<flow>",
+        help="sample every pending edit of these cells; with no --server, only "
+        "derive and check them",
+    )
+    made["edit"].add_argument(
+        "--runs",
+        type=Path,
+        default=RUNS_ROOT,
+        help=f"the directory --pending's runs live under (default {RUNS_ROOT.name}/)",
+    )
+    made["edit"].add_argument(
+        "--server",
+        default=None,
+        help="the ComfyUI endpoint --pending samples on, reached through the tunnel",
+    )
+    made["edit"].add_argument(
+        "--progress",
+        choices=["json"],
+        default=None,
+        help="print a JSON line per sampled edit; prose goes to stderr",
     )
     for dial, meaning in (
         ("denoise", "how far the pass repaints under the mask"),
@@ -547,7 +577,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="repeat this sampling seed (default: drawn)",
     )
-    made["edit"].set_defaults(photos=[], runs=RUNS_ROOT)
+    made["edit"].set_defaults(photos=[])
 
     # Mutually exclusive at parse time, so asking for both is refused before any
     # work begins rather than discovered on a rented machine. One verb explores
@@ -794,19 +824,27 @@ def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
 
 
 def _discard(image: Path, wired: Wiring) -> int:
-    """Delete one render and its thumbnails, printing each path deleted.
+    """Delete one render or edit, printing each path deleted.
 
-    Refused, deleting nothing, while a render session holds the image's
+    A path that is an edit's image deletes that edit and every edit made from it,
+    and nothing else. Any other path is a render's: it goes with its edits and its
+    thumbnails. Refused, deleting nothing, while a render session holds the
     collection, as the app's delete is. The thumbnails go while the image still
     names them. A render that was its approval's last takes that approval with
     it, through `withdraw`; the run's files print before the thumbnails. The
     library is imported here for `_ui`'s reason: it is off `python -m isekai`'s
     import graph.
     """
+    edited = EDIT_STEM.match(image.stem) is not None
     try:
-        run, flow, version, _ = rendered_at(image)
-    except Refusal as unrendered:
-        print(f"refused: {image}: {unrendered}", file=wired.err)
+        run, flow, version = (edit_at if edited else rendered_at)(image)[:3]
+    except Refusal as unnamed:
+        print(
+            f"refused: {image}: {unnamed}; a render's path is "
+            "<run>/<flow>/outputs/<NNN>/<seed>.png and an edit's is "
+            "<run>/<flow>/outputs/<NNN>/<seed>.edit-<k>.png",
+            file=wired.err,
+        )
         return 1
     from isekai.interface.ui import drop_thumbnails, render_running
 
@@ -817,6 +855,13 @@ def _discard(image: Path, wired: Wiring) -> int:
             file=wired.err,
         )
         return 1
+    if edited:
+        deleted = discard_edit(image)
+        for path in deleted:
+            print(
+                f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out
+            )
+        return 0
     thumbnails = drop_thumbnails(run, image)
     deleted = [*discard_render(image), *withdraw(run, flow, version)]
     for path in deleted:
@@ -839,8 +884,21 @@ def _edit(args: argparse.Namespace, wired: Wiring) -> int:
     """Request an edit of a render, printing the files written and how to run it.
 
     Free and local: no endpoint is used and no session opens. An edit this build
-    does not track is refused, naming the ones it does.
+    does not track is refused, naming the ones it does. With `--pending` it runs
+    the pending edits of cells instead, `_pending`'s form.
     """
+    if args.pending is not None:
+        if args.edit is not None or args.render is not None:
+            raise Refusal(
+                "--pending takes cells alone; drop the edit and the render from the "
+                "command, or drop --pending to request an edit"
+            )
+        return _pending(args, wired)
+    if args.edit is None or args.render is None:
+        raise Refusal(
+            "a request names its edit and its render: "
+            "`python -m isekai edit <edit> <render> --composite <png>`"
+        )
     tracked = tracked_edits()
     if args.edit not in tracked:
         raise Refusal(
@@ -864,6 +922,55 @@ def _edit(args: argparse.Namespace, wired: Wiring) -> int:
         file=wired.out,
     )
     return 0
+
+
+def _pending(args: argparse.Namespace, wired: Wiring) -> int:
+    """Check every pending edit of the cells, then sample them when there is a client.
+
+    Without a client each edit is derived and checked from its files and nothing is
+    rented, so a stale request refuses before a pod is. With one the edits run in
+    chain order, one refusal not costing the next its turn, and each prints a line.
+    e.g. r1/f holding 42.edit-1.json with no image -> "r1: edited f/42.edit-1.png"
+    """
+    cells = _cells(args.pending, wired)
+    reporter = _Reporter(
+        wired.out, wired.err, getattr(args, "progress", None) == "json"
+    )
+    found: list[tuple[Run, str, Path]] = []
+    for run_id, flow in cells:
+        run = Run(run_id, wired.runs_root / run_id)
+        found += [(run, flow, record) for record in pending_edits(run, flow)]
+    waiting = {image_of(record) for _, _, record in found}
+    refused = across(
+        found, lambda one: check_edit(one[2], waiting=waiting - {image_of(one[2])})
+    )
+    client = wired.client
+    if client is None or refused:
+        for message in refused:
+            print(f"refused: {message}", file=wired.err)
+        if not refused:
+            for run, flow, record in found:
+                reporter.say(f"{run.id}: {flow}/{record.name} is ready to sample")
+        return 1 if refused else 0
+    ran_on = _once(lambda: read_runtime(client))
+
+    def sample_one(one: tuple[Run, str, Path]) -> None:
+        run, flow, record = one
+        image = sample_edit(client, record, runtime=ran_on)
+        reporter.say(f"{run.id}: edited {flow}/{image.name}")
+        reporter.item(
+            run.id,
+            flow,
+            "edit",
+            "done",
+            digest=run.digest,
+            version=int(image.parent.name),
+            file=image.name,
+        )
+
+    for message in (failed := across(found, sample_one)):
+        print(f"refused: {message}", file=wired.err)
+    return 1 if failed else 0
 
 
 def _run_for(identifier: str, wired: Wiring) -> Run:
