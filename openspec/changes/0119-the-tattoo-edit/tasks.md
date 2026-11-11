@@ -1,6 +1,6 @@
 # The tattoo edit — tasks
 
-The phases: the registry, the ink, the request, the session, the image's files, the pod proof, the docs. The image's files and the pod proof are a person's.
+The phases: the registry, the ink, the request, the session, the image's files, the docs. The image's files are a person's; the pod proof is waived (design D14).
 
 ## Progress
 
@@ -9,8 +9,7 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 - [x] 3 — Request · hard
 - [x] 4 — Session · hard
 - [x] 5 — Model and image **HUMAN**
-- [ ] 6 — Proof on a pod **HUMAN · METERED**
-- [ ] 7 — Docs · moderate
+- [ ] 6 — Docs · moderate
 
 ## 1 — Registry
 
@@ -109,24 +108,15 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 - [x] 5.11 Hold the record and the digest equal to the tree, and the pod start's tests green on the edits.
   Verify: `uv run pytest tests/test_infra.py tests/test_pod_start.py -k "digest or record or pod_start"` passes.
 
-## 6 — Proof on a pod ⚠️ GPU
+## 6 — Docs
 
-- [ ] 6.1 Announce the session to the person: at most 20 minutes, at most $0.90 an hour, and the volume for the window. List the collections' runs roots with `ls -d .data/*/runs` and take one holding an approval short of one image.
-  Verify: `ls -d .data/*/runs` prints the runs root taken.
-- [ ] 6.2 On the person's go, run `uv run --env-file .env gpunit volume up --yes`, then `uv run python -m isekai render <that runs> --limit 1200`; read the collection's `log.txt` for `host key verified`, no `no CA store`, promax fetched and verified, and the render's image downloaded.
-  Verify: `git grep -n "host key verified" CHANGELOG.md` prints the phase's bullet, which records the lines read.
-- [ ] 6.3 Tear down: the session deletes the pod on its exit; confirm with the RunPod MCP that no gpunit-isekai pod is listed, and on the person's word run `uv run --env-file .env gpunit volume down`; write "no gpunit-isekai pod" and what the MCP returned in the phase's bullet.
-  Verify: `git grep -n "no gpunit-isekai pod" CHANGELOG.md` prints the phase's bullet.
-
-## 7 — Docs
-
-- [ ] 7.1 Add D51 to `docs/decisions.md` after D50 per [D11](design.md#d11): an edit is one flat directory, `edit.json` and `graph.json`, pinned by its digest, named `<what>-<base>`, its image written beside its source.
+- [ ] 6.1 Add D51 to `docs/decisions.md` after D50 per [D11](design.md#d11): an edit is one flat directory, `edit.json` and `graph.json`, pinned by its digest, named `<what>-<base>`, its image written beside its source.
   Verify: `git grep -n D51 docs/decisions.md` prints its heading.
-- [ ] 7.2 Amend in `docs/decisions.md` D50 (a render's deletion takes its edits and their chain), D36 (a session renders and edits), D29 (a tattoo is added by an edit after the flow; the flows carry no ink) and D14 (an edit is not a flow), each by one sentence.
+- [ ] 6.2 Amend in `docs/decisions.md` D50 (a render's deletion takes its edits and their chain), D36 (a session renders and edits), D29 (a tattoo is added by an edit after the flow; the flows carry no ink) and D14 (an edit is not a flow), each by one sentence.
   Verify: `git grep -n "not a flow" docs/decisions.md` prints the D14 sentence.
-- [ ] 7.3 In `docs/data-flow.md` scope the line *img2img is a closed avenue*: an edit encodes a render, never the photograph, so composition still comes from noise, and describe `ink`, `edit` and the session's edits where the verbs are.
+- [ ] 6.3 In `docs/data-flow.md` scope the line *img2img is a closed avenue*: an edit encodes a render, never the photograph, so composition still comes from noise, and describe `ink`, `edit` and the session's edits where the verbs are.
   Verify: `git grep -n "encodes a render" docs/data-flow.md` prints the sentence.
-- [ ] 7.4 Add `docs/edit-tattoo.md`, the Krita-first guide, `isekai ink` its first step, the composite, `isekai edit`, `isekai render`, the overrides and `isekai discard`, with no path of the operator's notebook, and link it from `README.md`.
+- [ ] 6.4 Add `docs/edit-tattoo.md`, the Krita-first guide, `isekai ink` its first step, the composite, `isekai edit`, `isekai render`, the overrides and `isekai discard`, with no path of the operator's notebook, and link it from `README.md`.
   Verify: `git grep -n edit-tattoo.md README.md` prints the link.
-- [ ] 7.5 Name the new files and edges in `docs/modules.md`, `isekai/shared/README.md`, `isekai/pipeline/README.md` and `isekai/boundary/README.md`: the shared maths, the edit stage, the transport helpers' new home.
+- [ ] 6.5 Name the new files and edges in `docs/modules.md`, `isekai/shared/README.md`, `isekai/pipeline/README.md` and `isekai/boundary/README.md`: the shared maths, the edit stage, the transport helpers' new home.
   Verify: `git grep -n "prompt.py" isekai/boundary/README.md` prints the line.

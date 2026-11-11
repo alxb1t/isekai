@@ -137,6 +137,12 @@ See [Tests](#tests). Every new test carries its `spec` marker.
 
 The extraction of a photograph carries the skin's highlight rim into the layer; it is seen on one case. The cut writes no card: the rim is recorded as a debt card when the build or the release writes its own, and fixed when a second case shows its shape.
 
+### D14
+
+No pod proof in this change. The person waived D28's metered pod proof of `v0.79-rc1` on 2026-11-11: the image is
+built and re-pinned (phase 5), and the operator's own test of the tattoo screens, after the placement versions, is
+its first run on a pod. D28 itself is unchanged and may be revisited.
+
 ## Tests
 
 Tests sit at the lowest layer that can fail: arrays for the maths, the stage over `FakeComfyClient` for the sampling, `dispatch` for the verbs. No test boots a pod or a browser, and the end-to-end suite gains none: `git diff --name-only main -- tests/e2e` prints nothing at the release.
