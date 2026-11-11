@@ -213,6 +213,11 @@ python -m isekai show .inputs/me.jpg
 Prints a run's artifacts, versions, what produced each one and every failure record, and names anything below `photo/` or a
 flow it does not read. It reaches no model and no GPU, and it works on a checkout that has provisioned nothing.
 
+### A tattoo, added to a render
+
+`python -m isekai ink` cuts a tattoo into a layer, `python -m isekai edit` requests its bake into a finished render,
+and `python -m isekai render` runs it. The guide is [`docs/edit-tattoo.md`](docs/edit-tattoo.md).
+
 ### A collection of photographs, through both flows
 
 The same steps for a directory of photographs and `summon` and `conjure`, one command per step. Written
@@ -445,6 +450,7 @@ isekai/
 ├── flows/summon-flat-anime-wai/ # summon's files with InstantID ending early and a flat prompt, held equal by a test
 ├── flows/summon-semireal-anime-wai/ # flat's files with summon's whole prompt, held equal by a test
 ├── flows/summon-vivid-anime-wai/ # flat's files with summon's trailer and a negative against muted colour
+├── edits/tattoo-wai/          # one edit: flat, `edit.json` and `graph.json`, pinned by its digest
 ├── ui/                        # the app: Vue 3 + Vite + vue-router; design/spec.md; dist/ and node_modules/ ignored
 │   ├── src/                   # the app; styles.css is the vendored stylesheet, Inter beside it
 │   └── design/                # spec.md, the design the app is built to

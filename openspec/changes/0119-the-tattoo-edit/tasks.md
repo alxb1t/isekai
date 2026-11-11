@@ -9,7 +9,7 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 - [x] 3 — Request · hard
 - [x] 4 — Session · hard
 - [x] 5 — Model and image **HUMAN**
-- [ ] 6 — Docs · moderate
+- [x] 6 — Docs · moderate
 
 ## 1 — Registry
 
@@ -110,13 +110,13 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 
 ## 6 — Docs
 
-- [ ] 6.1 Add D51 to `docs/decisions.md` after D50 per [D11](design.md#d11): an edit is one flat directory, `edit.json` and `graph.json`, pinned by its digest, named `<what>-<base>`, its image written beside its source.
+- [x] 6.1 Add D51 to `docs/decisions.md` after D50 per [D11](design.md#d11): an edit is one flat directory, `edit.json` and `graph.json`, pinned by its digest, named `<what>-<base>`, its image written beside its source.
   Verify: `git grep -n D51 docs/decisions.md` prints its heading.
-- [ ] 6.2 Amend in `docs/decisions.md` D50 (a render's deletion takes its edits and their chain), D36 (a session renders and edits), D29 (a tattoo is added by an edit after the flow; the flows carry no ink) and D14 (an edit is not a flow), each by one sentence.
+- [x] 6.2 Amend in `docs/decisions.md` D50 (a render's deletion takes its edits and their chain), D36 (a session renders and edits), D29 (a tattoo is added by an edit after the flow; the flows carry no ink) and D14 (an edit is not a flow), each by one sentence.
   Verify: `git grep -n "not a flow" docs/decisions.md` prints the D14 sentence.
-- [ ] 6.3 In `docs/data-flow.md` scope the line *img2img is a closed avenue*: an edit encodes a render, never the photograph, so composition still comes from noise, and describe `ink`, `edit` and the session's edits where the verbs are.
+- [x] 6.3 In `docs/data-flow.md` scope the line *img2img is a closed avenue*: an edit encodes a render, never the photograph, so composition still comes from noise, and describe `ink`, `edit` and the session's edits where the verbs are.
   Verify: `git grep -n "encodes a render" docs/data-flow.md` prints the sentence.
-- [ ] 6.4 Add `docs/edit-tattoo.md`, the Krita-first guide, `isekai ink` its first step, the composite, `isekai edit`, `isekai render`, the overrides and `isekai discard`, with no path of the operator's notebook, and link it from `README.md`.
+- [x] 6.4 Add `docs/edit-tattoo.md`, the Krita-first guide, `isekai ink` its first step, the composite, `isekai edit`, `isekai render`, the overrides and `isekai discard`, with no path of the operator's notebook, and link it from `README.md`.
   Verify: `git grep -n edit-tattoo.md README.md` prints the link.
-- [ ] 6.5 Name the new files and edges in `docs/modules.md`, `isekai/shared/README.md`, `isekai/pipeline/README.md` and `isekai/boundary/README.md`: the shared maths, the edit stage, the transport helpers' new home.
+- [x] 6.5 Name the new files and edges in `docs/modules.md`, `isekai/shared/README.md`, `isekai/pipeline/README.md` and `isekai/boundary/README.md`: the shared maths, the edit stage, the transport helpers' new home.
   Verify: `git grep -n "prompt.py" isekai/boundary/README.md` prints the line.
