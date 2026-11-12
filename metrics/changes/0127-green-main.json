@@ -1,0 +1,58 @@
+{
+  "change": "0127-green-main",
+  "version": "0.86.1",
+  "base": "d1646184",
+  "analyzed": "103be235",
+  "measured_on": "local",
+  "collected_at": "2026-11-12T22:38:52+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2156
+    },
+    "tests-browser": {
+      "value": 18
+    },
+    "gate-seconds": {
+      "value": 59
+    },
+    "open-backlog-cards": {
+      "value": 9
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 340
+    },
+    "diff-files": {
+      "value": 12
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 13787
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1034
+    },
+    "decisions": {
+      "value": 55
+    }
+  }
+}

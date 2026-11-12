@@ -56,8 +56,9 @@ jobs:
           ISEKAI_PLACEMENT: absent
 
       # The browser tests, out of the gate while an unattended run's sandbox
-      # cannot run them; CI holds them on every push.
+      # cannot run them; CI runs them after the gate, red or green.
       - name: Browser tests
+        if: always()
         run: make e2e
         env:
           ISEKAI_VOCABULARY: absent

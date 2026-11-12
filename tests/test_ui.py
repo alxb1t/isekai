@@ -468,7 +468,7 @@ def test_sigint_ends_streams_without_cancellation_output(
         port=7717,
     )
     (jobs,) = made
-    sleep = [sys.executable, "-c", "import time; time.sleep(30)"]
+    sleep = [sys.executable, "-c", "import time\nwhile True: time.sleep(0.05)"]
     monkeypatch.setattr(jobs, "_command", lambda runs, cells: sleep)
     broadcast: events.Broadcast = app.state.broadcast
     server = app_module.Server(uvicorn.Config(app), broadcast)
