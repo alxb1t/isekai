@@ -367,6 +367,8 @@ textarea.input { min-height: 90px; resize: vertical; }
   --band: #0f1018;
   --scrim-drawer: color-mix(in srgb, var(--ground) 80%, transparent);
   --overlay: color-mix(in srgb, var(--color-bg) 72%, black);
+  --outline-fill: #8d82e640;
+  --point-ring: #e4e4ec;
   --chain-ground: #1f2036;
   --chain-ring: #8d82e6;
 }

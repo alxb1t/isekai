@@ -10,6 +10,25 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.81.0] - 2026-11-12
+
+Gate: local 0m47s · CI not read under mf-ship · 0.80.0: local 0m40s · CI not read under mf-ship
+
+- A tattoo is kept whole in the library's `.tattoos/<name>/`, never listed as a collection: an upload is upright and
+  bounded, a cut holds no image, an outline is saved atomically; none is deleted or renamed (0121 D1, D2, D3, D4).
+- Ink is placed by thin-plate splines in `isekai/shared/chain.py`: a spline fitted backwards, the lookup, the clip, the
+  Multiply and the crop box, over arrays; `extract_ink` takes a `white` scale on its automatic point and `white_grey`
+  reads that point as one grey (0121 D5, D6).
+- The app serves the tattoo library and its ink view: list, read, upload from staging, cut from a render's photograph
+  and save an outline, and one `POST` answers a `no-store` JPEG of the ink on the outline's crop (0121 D2, D3, D4, D7).
+- The browser has the placement panel's parts: the view and the outline as tested geometry, `ImagePanel.vue` to draw
+  the image with its zoom, the picker's reads, the tattoo calls, and two outline tokens in each theme (0121 D8, D10).
+- A render's large view offers *Place a tattoo*, a button and `⇧P`, opening the placement screen's route `…/place/<step>`:
+  the picker and the outline step, kept mounted across steps, with no key of their own (0121 D9). `/api/tattoos` also
+  carries each kind's start depth, for *Reset*.
+- The docs say what holds: D52 keeps the library, D43 and D40 name a tattoo and `.tattoos/`, the design spec has the
+  route, `⇧P` and journey J9, and `docs/edit-tattoo.md` has an app section (0121 D12).
+
 ## [0.80.0] - 2026-11-12
 
 Gate: local 0m40s · CI not read under mf-ship · 0.79.0: local 0m37s · CI not read under mf-ship

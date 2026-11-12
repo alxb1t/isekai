@@ -181,33 +181,16 @@ def _skin_beside(
     return np.percentile(transmittance[ring], config.white, axis=0)
 
 
-def extract_ink(
-    image: "Image",
-    outline: "Image | None",
-    neutral: bool | None,
-    depth: float | None,
-    config: InkConfig | None = None,
-) -> "Image":
-    """Return the Multiply layer of `image`: bare skin white, the ink its colour.
+def _automatic_point(
+    image: "Image", outline: "Image | None", config: InkConfig
+) -> "tuple[NDArray[np.float32], Image, NDArray[np.float32]]":
+    """Return the transmittance, the outline's alpha and the automatic white point.
 
-    With an outline the layer keeps the ink inside it, as its alpha, neutral and at
-    `photo_depth`; without one it keeps the whole image, in colour at `image_depth`.
-    A `neutral` or a `depth` that is not None overrides its default.
-    e.g. a photograph and its outline, no flags -> grey ink at depth 1.6
+    The point is the skin's transmittance per channel, read at the config's percentile
+    inside the outline; a point that reads ink, not skin, is refused.
     """
     import numpy as np
     from PIL import Image
-
-    config = config or load_ink_config()
-    outlined = outline is not None
-    neutral = outlined if neutral is None else neutral
-    if depth is None:
-        depth = config.photo_depth if outlined else config.image_depth
-    if not config.depth_min <= depth <= config.depth_max:
-        raise Refusal(
-            f"depth {depth} is outside {config.depth_min} to {config.depth_max}; "
-            "give a depth in that range"
-        )
 
     rgb = _flattened(image)
     pixels = np.asarray(rgb, dtype=np.float32) / 255.0
@@ -235,6 +218,44 @@ def extract_ink(
             "are all darker than the skin around them, so the ink would be taken "
             "for skin and washed out; widen the outline over the skin"
         )
+    return transmittance, alpha, skin
+
+
+def extract_ink(
+    image: "Image",
+    outline: "Image | None",
+    neutral: bool | None,
+    depth: float | None,
+    config: InkConfig | None = None,
+    *,
+    white: float = 1.0,
+) -> "Image":
+    """Return the Multiply layer of `image`: bare skin white, the ink its colour.
+
+    With an outline the layer keeps the ink inside it, as its alpha, neutral and at
+    `photo_depth`; without one it keeps the whole image, in colour at `image_depth`.
+    A `neutral` or a `depth` that is not None overrides its default, and `white` scales
+    the automatic white point: below 1.0 the paler ink turns white.
+    e.g. a photograph and its outline, no flags -> grey ink at depth 1.6
+    """
+    import numpy as np
+    from PIL import Image
+
+    config = config or load_ink_config()
+    outlined = outline is not None
+    neutral = outlined if neutral is None else neutral
+    if depth is None:
+        depth = config.photo_depth if outlined else config.image_depth
+    if not config.depth_min <= depth <= config.depth_max:
+        raise Refusal(
+            f"depth {depth} is outside {config.depth_min} to {config.depth_max}; "
+            "give a depth in that range"
+        )
+    if white <= 0:
+        raise Refusal(f"white scale {white} is not above 0; give a scale above 0")
+
+    transmittance, alpha, skin = _automatic_point(image, outline, config)
+    skin = skin * white
     transmittance = np.clip(transmittance / np.maximum(skin, 1e-3), 0.0, 1.0)
     transmittance = np.clip(transmittance / (1.0 - config.floor), 0.0, 1.0)
     if neutral:
@@ -245,6 +266,21 @@ def extract_ink(
     layer = Image.fromarray((transmittance * 255.0 + 0.5).astype(np.uint8))
     layer.putalpha(alpha)
     return layer
+
+
+def white_grey(
+    image: "Image", outline: "Image | None", config: InkConfig | None = None
+) -> int:
+    """Return the automatic white point's luminance as a whole number, 0 to 255.
+
+    The weights are the neutral layer's, so the grey is the one the layer divides by.
+    e.g. skin that reads 0.8 of its lit neighbours at every channel -> 204
+    """
+    import numpy as np
+
+    _, _, skin = _automatic_point(image, outline, config or load_ink_config())
+    luminance = float(skin @ np.array(_LUMA, dtype=np.float32))
+    return min(255, max(0, round(luminance * 255.0)))
 
 
 def _open(path: Path) -> "Image":

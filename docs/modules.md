@@ -66,6 +66,12 @@ stage: the transport helpers it shares with `pipeline/generate.py` — `submit_a
 `edit --pending` lines, so the render verb creates the pod and an edit rents nothing of its own (D36).
 `wiring.py` imports `boundary/ollama.py` for the probe a job asks first.
 
+**The placement's pieces.** `chain` is `shared/chain.py`'s, over arrays, importing only `foundation/refusal.py`; the
+ink view and the tattoo library are `pipeline/tattoos.py`'s, which imports `shared/chain.py`, `shared/ink.py` and
+`shared/tattoo.py` and no stage, and which the tattoo routes of `interface/ui/app.py` call, writing no file of their
+own ([D52](decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)). Pillow, and numpy in `chain`,
+are imported inside functions, so neither module puts a wheel on the entry point's graph.
+
 **`tests/test_layers.py` holds where the lazy edges point; review holds that they
 stay lazy.** The `-S` guard goes red only when a chain of module-scope imports
 from the entry point reaches a wheel. The lazy edges above are between this

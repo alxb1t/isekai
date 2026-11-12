@@ -4,6 +4,7 @@ import json
 import os
 import struct
 import zlib
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,7 @@ from isekai.interface.ui import library
 from isekai.interface.ui.library import Cell, FlowCount, Rendered
 from isekai.pipeline import generate
 from isekai.pipeline.review import approve, review, save_draft
+from isekai.pipeline.tattoos import cut, keep
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import tree
 from tests.images import jpeg_bytes, jpeg_with_header, photo_jpeg
@@ -104,6 +106,21 @@ def test_a_dot_folder_is_not_listed(tmp_path: Path) -> None:
     assert [row.name for row in library.rows(tmp_path, OFFERED, FLOWS_DIR)] == ["kept"]
     with pytest.raises(Refusal):
         library.collection(tmp_path, ".staging")
+
+
+@pytest.mark.spec("tattoo:library:the-library-lists-no-collection-from-it")
+def test_tattoo_listing_a_library_holding_the_tattoos_lists_no_collection_from_it(
+    tmp_path: Path,
+) -> None:
+    keep(tmp_path, "bow", photo_jpeg(), at=datetime(2026, 11, 12, tzinfo=UTC))
+    cut(tmp_path, "arm", "0123456789ab", (600, 800))
+    _collection(tmp_path, "kept", "ada.jpg")
+
+    assert (tmp_path / ".tattoos" / "bow" / "design.png").is_file()
+    assert [row.name for row in library.rows(tmp_path, OFFERED, FLOWS_DIR)] == ["kept"]
+    assert library.listed(tmp_path) == [tmp_path / "kept"]
+    with pytest.raises(Refusal):
+        library.collection(tmp_path, ".tattoos")
 
 
 @pytest.mark.spec("ui:batch-folder:a-flows-counts-are-of-its-sources")

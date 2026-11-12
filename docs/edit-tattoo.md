@@ -85,3 +85,31 @@ python -m isekai discard .data/runs/<run>/<flow>/outputs/<NNN>/<seed>.edit-<k>.p
 
 An edit's path deletes that edit and every edit chained from it; the render stays. Discarding the render takes all
 its edits. Both refuse while a render session holds the collection.
+
+## The app
+
+`isekai ui` starts the placement screen's first steps. They keep and outline a tattoo; the composite is still made in
+Krita (§2) until the stages that click point pairs are built.
+
+```
+render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view
+                              │             └─ the ink as the server draws it, on the outline's crop
+                .tattoos/<name>/ in the library
+```
+
+- **Open it** with `⇧P` or *Place a tattoo* on a render's large view.
+- **The library** is `.tattoos/<name>/` beside the collections, in the folder `ISEKAI_LIBRARY` names, so one tattoo
+  serves every render in every collection ([D52](decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)).
+  It holds `design.png`, `tattoo.json` and `outline.json`. The app deletes and renames nothing.
+- **An upload** goes through the import's staging, is cleaned as a source is, and is kept upright, scaled down to the
+  `long_side` of `config/tattoo.json`, under a name kept once.
+- **A cut** is a tattoo with no image: *Cut from this photo* keeps the render's photograph as the source of the ink, so
+  the photograph stays in its run and serves only its own renders. A second cut from the same photograph starts from
+  the newest cut's tone.
+- **The outline** is clicked on the tattoo, or on the photograph for a cut, and closed on its first point. It is saved
+  as it changes, with the white point and the tone.
+- **The ink view** is the same extraction as §1, drawn by the server on the outline's crop. The white point is the
+  automatic one as a grey from 0 to 255, set by hand or back to *Auto*. *Neutral* and *depth* are `--neutral` and
+  `--depth`, and *Reset* returns them to the kind's defaults.
+
+The stages come later: the point pairs, the warp's preview and the bake.
