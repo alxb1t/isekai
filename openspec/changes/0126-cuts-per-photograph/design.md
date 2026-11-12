@@ -70,7 +70,7 @@ name asked + digest
    └─ neither → refused (names the photograph of a cut elsewhere)
 ```
 
-The functions that take the digest, third, after the name: `named`, `design_bytes`, `read_outline`, `save_outline`. `listed(library, digest)` lists for it. `ink_layer`, `ink_view`, `preview` and `composite` already take it; its type is `str`, never `None`. `read_stage1`, `save_stage1` and `stage1_states` already take it. `_on_its_photograph` goes: the resolver is its check.
+The functions that take the digest, third, after the name: `named`, `design_bytes`, `read_outline`, `save_outline`. `listed(library, digest)` lists for it. `ink_layer`, `ink_view`, `preview` and `composite` already take it; its type is `str`, never `None`. `read_stage1`, `save_stage1` and `stage1_states` already take it. The old per-photograph filter goes: the resolver is its check.
 
 A writer or a path builder takes the folder from `_find`, never from `_folder(library, name)`: `save_outline` writes the outline there, and `_stage1_path` builds from it.
 
@@ -125,6 +125,7 @@ The library and the routes are tested in Python and the page's rules in vitest. 
 | the `choosable` and `reason` assertions of `spec('ui:picker:a-cut-of-another-photograph-cannot-be-chosen', …)` in `ui/src/tattoos.test.ts` | the same spec, rewritten over `tattoosPath` and `card`; it keeps its assertion that an upload reads the same on every render, and `choosable` and `reason` are retired with the disabled card |
 | the *other photograph's cut* lines of `ui:picker:a-card-is-ready-for-this-photograph` and `ui:picker:not-on-this-photo-is-offered-on-an-upload-alone` in `ui/src/tattoos.test.ts` | retired with the path: no cut of another photograph reaches a card; the same tests keep every other assertion |
 | `test_tattoo_route_guard_none_under_api_tattoos_deletes_or_renames` and its twin, `test_placement_route_guard_no_route_naming_a_tattoo_deletes_or_renames_one` and its twin | the same tests, rewritten for rename alone; the delete half is retired by [D4](#d4) |
+| `test_tattoo_route_guard_twin_finds_a_delete_and_a_rename_when_one_is_added` | `test_tattoo_route_guard_twin_finds_a_rename_and_a_delete_elsewhere_when_added`, the same twin renamed for the route guard it now holds |
 
 ## Dependencies
 

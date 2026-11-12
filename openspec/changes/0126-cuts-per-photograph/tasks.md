@@ -16,7 +16,7 @@ The library and its routes, then the picker. Each `Verify:` runs after its task.
 - [x] 1.3 In `tattoos.py` replace `_load_named(library, name)` with `_load_named(library, name, digest)` over a new `_find(library, name, digest)` of [D2](design.md#d2). Replace `_every(library)` with `_every(library, digest)`, which lists the uploads and `.cuts/<digest>/*`. `_find` and `_every` refuse a cut whose `cut_from` is not its folder's digest as damaged, and `_damaged` names a cut's folder as `.tattoos/.cuts/<digest>/<name>`.
   Verify: `grep -c "^def _find(library: Path, name: str, digest: str)" isekai/pipeline/tattoos.py` prints `1`.
 - [x] 1.4 In `tattoos.py` delete `_on_its_photograph` and its calls in `_view_image`, `preview` and `composite`, which `_find` replaces.
-  Verify: `grep -L "^def _on_its_photograph" isekai/pipeline/tattoos.py` prints `isekai/pipeline/tattoos.py`.
+  Verify: `git grep -c "^def _on_its_photograph" -- isekai/pipeline/tattoos.py` prints nothing.
 - [x] 1.5 In `tattoos.py` give `listed(library, digest)`, `named`, `design_bytes`, `read_outline` and `save_outline` the digest (after `name`, and after `library` for `listed`). Pass it on in `_view_image`, `read_stage1`, `save_stage1`, `stage1_states`, `preview`, `composite`, `ink_layer` and `_newest_cut_tone`, and type the digest of `ink_layer` and `ink_view` as `str`. `save_outline` writes into the folder `_find` returns, and `_stage1_path` resolves its folder by `_find`, per [D2](design.md#d2).
   Verify: `grep -c "^def listed(library: Path, digest: str)" isekai/pipeline/tattoos.py` prints `1`.
 - [x] 1.6 In `tattoos.py` add `_settle(library)` of [D3](design.md#d3) and call it first in `_find`, `_every`, `keep` and `cut`.
@@ -59,14 +59,14 @@ The library and its routes, then the picker. Each `Verify:` runs after its task.
 - [x] 2.4 In `ui/src/composables/usePlacing.ts` replace `SERVER` by `serverPorts(place)`, whose `read` is `(name) => tattooNamed(place.digest, name)`, and default `ports` to it, so `load` and `reload` do not change.
   Verify: `grep -c "^const serverPorts" ui/src/composables/usePlacing.ts` prints `1`.
 - [x] 2.5 Pass the digest at each other call: `designAt`, `saveOutline`, `inkView` and `tattooNamed` in `OutlineStep.vue`; `designAt` in `StagePhoto.vue`; `inkView` in `StageRender.vue`, with `props.place`; the card `src` in `TattooPicker.vue`. Delete the `held.choosable` refusal line of `OutlineStep.vue`, which no card can reach once a cut of another photograph is not listed.
-  Verify: `grep -L "designAt(props.name)" ui/src/components/OutlineStep.vue` prints `ui/src/components/OutlineStep.vue`.
+  Verify: `git grep -c "designAt(props.name)" -- ui/src/components/OutlineStep.vue` prints nothing.
 - [x] 2.6 In `ui/src/components/TattooPicker.vue` add the lines under both headings from `formLine` in a `picker__note mono` paragraph. Add *Remove* on each card from `armRemoval`: a second click calls `removeTattoo` and emits `removed`, and losing focus disarms it. Delete the disabled card, its `reason` line and the `choosable` test on the flag.
   Verify: `grep -l "removeTattoo" ui/src/components/TattooPicker.vue` prints `ui/src/components/TattooPicker.vue`.
 - [x] 2.7 In `ui/src/views/Place.vue` handle `removed(name)`: call `placing.forget()` when the screen holds that tattoo, then `refresh()`, showing a refusal as `kept` does.
   Verify: `grep -l "removed" ui/src/views/Place.vue` prints `ui/src/views/Place.vue`.
 - [x] 2.8 In `ui/src/app.css` delete the rules `.picker__card:disabled` and `.picker__reason`, and add `.picker__remove[data-armed='true']` in the accent the armed state of a button uses elsewhere.
-  Verify: `grep -L "picker__reason" ui/src/app.css` prints `ui/src/app.css`.
+  Verify: `git grep -c "picker__reason" -- ui/src/app.css` prints nothing.
 - [x] 2.9 In `docs/edit-tattoo.md` rewrite the library bullet and the cut bullet of *The app* for the upload folder and the cut folder, the list per photograph, the removal and that a baked edit keeps its own copy, and drop `The app deletes and renames nothing.`
-  Verify: `grep -L "The app deletes and renames nothing" docs/edit-tattoo.md` prints `docs/edit-tattoo.md`.
+  Verify: `git grep -c "The app deletes and renames nothing" -- docs/edit-tattoo.md` prints nothing.
 - [x] 2.10 In `ui/design/spec.md` replace the bullet *A cut of another photograph stays listed…* by one for *Remove* and its second click, and add the form lines to the J9·1 frame.
-  Verify: `grep -L "stays listed" ui/design/spec.md` prints `ui/design/spec.md`.
+  Verify: `git grep -c "stays listed" -- ui/design/spec.md` prints nothing.
