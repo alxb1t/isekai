@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.2] - 2026-11-12
+
+Gate: local 0m59s · CI not read under mf-ship · 0.86.1: local 0m59s · CI not read under mf-ship
+
 - The binding guard reads each scenario's key and layer, holds a key to a test on its own layer, and refuses a blank
   reason or a key whose tests are all skipped; a symlink test binds containment and the reachability test reads
   `FILED` (0128 D1, D2, D3).

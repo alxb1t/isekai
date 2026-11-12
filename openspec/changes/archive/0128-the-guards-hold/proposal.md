@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.2
 after: [0127-green-main]
 debt: [0123·R2]
 ---
