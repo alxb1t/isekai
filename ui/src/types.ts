@@ -502,6 +502,13 @@ export interface Stage1 {
   not_on_photo: boolean
 }
 
+/* The pairs the server proposes for a render, and the arm they lie on, `null` with no pair:
+   each a point on the photograph and the point it matches on the render. */
+export interface Proposal {
+  arm: 'left' | 'right' | null
+  pairs: Pair[]
+}
+
 export interface TattooList {
   tattoos: Tattoo[]
   limits: TattooLimits

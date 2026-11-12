@@ -19,6 +19,7 @@ import dataclasses
 import os
 import random
 import sys
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,12 +27,17 @@ from typing import TextIO
 
 from isekai.boundary import gpu, ollama
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
+from isekai.boundary.pose import open_pose
+from isekai.boundary.provision import DigestMismatch
+from isekai.boundary.sam2 import open_segmenter
+from isekai.boundary.unpack import PLACEMENT_REMEDY
 from isekai.boundary.wd14 import LocalTagger, open_session
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import FLOWS_DIR
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import DATA_ROOT, REPOSITORY, RUNS_ROOT
 from isekai.pipeline.caption import OllamaReader, Reader
+from isekai.pipeline.proposing import Proposer
 from isekai.pipeline.tagging import OllamaTagger, Tagger
 from isekai.shared.field_map import FieldMap
 from isekai.shared.field_map import load as load_field_map
@@ -102,6 +108,9 @@ class Wiring:
     # render child and the render job run on doubles under `ISEKAI_WIRING` (D41).
     session: gpu.Seams = dataclasses.field(default_factory=gpu.Seams)
     volume: gpu.Volume = dataclasses.field(default_factory=gpu.Volume)
+    # The pose finder and the segmenter behind the proposed pairs, as a thunk: the
+    # models open on the first ask. Absent for a front end that proposes nothing.
+    proposer: Callable[[], Proposer] | None = None
 
 
 # **What the seams resolve on is the model, not an implementation string.** There
@@ -150,6 +159,47 @@ def tagger_for() -> LocalTagger:
     the batch.
     """
     return open_session()
+
+
+_proposer: Proposer | None = None
+_PROPOSER_OPENING = threading.Lock()
+
+
+def proposer_for() -> Proposer:
+    """Open the pose finder and the segmenter once, and keep them for the process.
+
+    Each verifies its files against the placement manifest before a session opens, and
+    refuses naming the fetch when a file is absent. A refusal is not kept: the next
+    ask opens again. The check and the opening share one lock, since the route runs in
+    a thread each and two first asks must not open the models twice.
+    """
+    global _proposer
+    with _PROPOSER_OPENING:
+        if _proposer is None:
+            _proposer = Proposer(open_pose(), open_segmenter())
+        return _proposer
+
+
+def proposer_of(wired: Wiring) -> Proposer:
+    """Return the wiring's proposer, opened on the first ask, or refuse its absence.
+
+    A model whose bytes disagree with its pin is a refusal too, naming the file and both
+    digests, so the page shows what to repair and not a bare server error.
+    """
+    if wired.proposer is None:
+        raise Refusal(
+            "this wiring has no proposer, so no pairs can be proposed; place the "
+            "pairs by clicking"
+        )
+    try:
+        return wired.proposer()
+    except DigestMismatch as damaged:
+        raise Refusal(
+            f"a placement model does not match its pinned digest ({damaged}); "
+            "remove that file from the models directory, then run "
+            f"`{PLACEMENT_REMEDY}` from the repository root to fetch and verify it "
+            "again"
+        ) from damaged
 
 
 # `REPOSITORY` is imported rather than re-derived, so the two halves of the check
@@ -289,6 +339,7 @@ def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:
         vocabulary=load_vocabulary,
         field_map=load_field_map,
         runs_root=runs,
+        proposer=proposer_for,
     )
 
 

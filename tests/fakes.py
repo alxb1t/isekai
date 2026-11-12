@@ -1,18 +1,23 @@
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from email.message import Message
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError
 from urllib.request import Request
 
+import numpy as np
 import pytest
+from numpy.typing import NDArray
+from PIL import Image as Picture
 
 from isekai.boundary import provision
 from isekai.boundary.comfy import Image, TransportFailure
 from isekai.boundary.comfy import client as comfy_client
 from isekai.boundary.ollama import LAYERS
+from isekai.boundary.pose import Pose
 from isekai.boundary.provision import READER_MANIFEST_PATH, Manifest, load_manifest
+from isekai.boundary.sam2 import Embedding
 from isekai.foundation.artifacts import DigestRecord
 from isekai.foundation.flow import Workflow
 
@@ -237,3 +242,79 @@ def ollama_records(
     record.parent.mkdir(parents=True, exist_ok=True)
     record.write_text(json.dumps({"layers": layers}))
     return root
+
+
+class FakePoseFinder:
+    """A pose finder that answers each `find` with the next pose it was given.
+
+    The photograph is found first and the render second, as `propose` asks. A call
+    past the poses given is an `IndexError`, so a test names every call it expects.
+    """
+
+    def __init__(self, *poses: Pose | None) -> None:
+        """Hold `poses`, one per call, a `None` for an image with no person."""
+        self._poses = list(poses)
+        self.seen: list[Picture.Image] = []
+
+    def find(self, image: Picture.Image) -> Pose | None:
+        """Record `image` and return the next pose."""
+        self.seen.append(image)
+        return self._poses.pop(0)
+
+
+class _NoDecoder:
+    """A decoder session that is never run: a fake embedding paints its own masks."""
+
+    def get_inputs(self) -> list[Any]:
+        raise AssertionError("a fake embedding has no decoder")
+
+    def run(self, outputs: Sequence[str], feed: Mapping[str, Any]) -> list[Any]:
+        raise AssertionError("a fake embedding has no decoder")
+
+
+Point = tuple[float, float]
+Painter = Callable[
+    [tuple[int, int], Sequence[Point], Sequence[Point]], NDArray[np.bool_]
+]
+
+
+class _Painted(Embedding):
+    """An embedding whose mask is `paint`'s, and which records each prompt."""
+
+    def __init__(
+        self,
+        size: tuple[int, int],
+        paint: Painter,
+        prompts: list[tuple[int, Any]],
+        number: int,
+    ) -> None:
+        super().__init__(_NoDecoder(), {}, size)
+        self._paint = paint
+        self._prompts = prompts
+        self._number = number
+
+    def mask(
+        self, positive: Sequence[Point], negative: Sequence[Point]
+    ) -> NDArray[np.bool_]:
+        """Record the prompt and return what `paint` makes of it."""
+        self._prompts.append((self._number, (list(positive), list(negative))))
+        return self._paint(self.size, positive, negative)
+
+
+class FakeSegmenter:
+    """A segmenter whose masks are painted by a function of the size and the prompt.
+
+    `embedded` holds each image given to `embed`, in order; `prompts` holds each
+    prompt as the number of the embedding that took it and its positives and negatives.
+    """
+
+    def __init__(self, paint: Painter) -> None:
+        """Hold `paint`, called with the image's size and the prompt's points."""
+        self._paint = paint
+        self.embedded: list[Picture.Image] = []
+        self.prompts: list[tuple[int, Any]] = []
+
+    def embed(self, image: Picture.Image) -> Embedding:
+        """Record `image` and return an embedding that paints its masks."""
+        self.embedded.append(image)
+        return _Painted(image.size, self._paint, self.prompts, len(self.embedded) - 1)

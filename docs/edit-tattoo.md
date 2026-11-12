@@ -116,6 +116,13 @@ render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─
   directly, and a cut takes stage 2 alone. Stage 1 is kept per photograph in
   `.tattoos/<name>/stage1/<digest>.json` as it changes, so a second render of the photograph needs only its own stage;
   stage 2, the limb and the exclusions stay in the page until the bake. The floors are in `config/tattoo.json`.
+- **The proposed pairs** of stage 2 open it for a two-stage tattoo or a cut with no pair held. The server finds a
+  person's pose in the photograph and the render with DWPose, cuts each bone of the arm nearest the tattoo's points out
+  with SAM 2.1, and proposes pairs along the bones and at the joints. The page shows them dashed; *Accept*, *Accept
+  all* or a drag makes them its own, and forward waits for each. Nothing is kept: a proposal is one answer, run on this
+  machine's CPU, and the bake records only the pairs held ([D54](decisions.md#d54--automatic-pairs-run-on-the-operators-machine-and-are-kept-nowhere)).
+  The files are in `config/placement.json`: `make setup` fetches them, or
+  `uv run python -m isekai.boundary.unpack fetch config/placement.json`, which the refusal names when they are absent.
 - **The preview** is the ink on white as a JPEG over a crop of the target, which the page multiplies over it a second
   after the last change. It is made on the server and kept nowhere.
 - **The limb and the exclusions** are drawn on the render: the ink stays inside the limb and goes under each

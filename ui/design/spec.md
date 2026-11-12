@@ -511,6 +511,7 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 | J9·11 ③ tattoo ↔ render, for a tattoo `not on this photo`: its ink view and the render; no ③ photograph and no stage-1 pairs asked | the card's *not on this photo*, then Next | `…/place/render` |
 | J9·12 ⑤ review: the render with the tattoo over it, its crop `before` and `after`, the summary, `Back to ③ …` and `Back to ④ …`, *Bake*; waiting with `stage 2 · 8 pairs needed · 5 placed`, then `queued · edit 3 · next render session` | Next: review, then Bake | `…/place/review` |
 | J9·13 Leave this stage?: `Point 8 has no match on the photograph`, `7 pairs stand · saved 14:05`, *Stay* and *Leave* | ① tattoo, or a step, or Back to the render, with a lone point | the step asked for |
+| J9·14 ④ photograph ↔ render opened with no pair held: `Proposing pairs…` under the list while the clicks work; then the proposed pairs numbered after the held ones, each point ringed dashed and its row marked, *Accept* and *Accept all*, forward waiting `4 proposed · accept or delete them`; after a refusal its words with their fix, after an empty answer `Nothing proposed — place the pairs by clicking` | Next: ④ photograph ↔ render, on a two-stage tattoo or a cut, then Accept all | `…/place/render` |
 
 ```
 J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tattoo   ② outline   [ Back to the render ]
@@ -543,6 +544,12 @@ J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tatt
   has no ③, and a tattoo `not on this photo` pairs the tattoo with the render at ③ `render`.
 - **The preview** is asked the declared time after the last change once the preview's floor of complete pairs stand;
   only the newest answer is drawn. A refusal clears the answer and shows its fix under the pairs.
+- **The proposed pairs** are asked once, when ④ opens with no pair for a two-stage tattoo or a cut; the direct stage
+  asks nothing. The line under the list reads `Proposing pairs…`, then the refusal's words, or `Nothing proposed —
+  place the pairs by clicking` after an empty answer, and the clicks keep working. A proposed pair is dashed on both
+  images and in its row; *Accept* makes the selected one ordinary, *Accept all* makes every one, and a drag of either
+  point accepts that pair. Forward waits `4 proposed · accept or delete them` before any other reason, and *Undo*
+  leaves the proposal in place.
 - **The limb and the exclusions** are drawn on the render with *Draw limb* and *Draw exclusion*, each a row with *Edit*
   and no way to remove one; a second *Draw limb* edits the first. A refusal names the region that has too few points.
 - **The review** waits with the stage that lacks pairs; *Bake* then reads `baking…` and `queued · edit 3 · next render
@@ -642,4 +649,5 @@ endings once, for both surfaces. The key is `RUNPOD_API_KEY` in `.env` (`.env.ex
 | **revise** | `isekai draft --flow`, *Draft from this* and its refusal; Review of a revision (J5·4–J5·6); `review --discard`; compare (J5·8, J5·9); re-roll (J6) |
 | **the placement core** | *Place a tattoo* `⇧P` on a render's large view; the placement screen's route (§4) and its first two steps, ① the tattoo and ② the outline with its ink view (J9); the tattoo library `.tattoos/` ([D52](../../docs/decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)); the panel's zoom, pan and outline; `--outline-fill` and `--point-ring` in each theme. The stages, the live warp and the bake are the next version's |
 | **the placement** | the placement screen's steps ③ `photo`, ④ `render` and ⑤ `review` (§4, J9·8–J9·13): the pairs on two images, the live preview, the limb and exclusions, the review and *Bake*, which queues an edit request, and the Leave dialog; a tattoo's stage-1 pairs kept per photograph; the placement record beside its edit ([D53](../../docs/decisions.md#d53--a-placement-is-recorded-beside-its-edit)); `--limb-fill` and `--exclusion-fill` in each theme |
+| **automatic placement** | stage ④'s proposed pairs (J9·14): asked once when it opens with no pair, a spinner or a refusal, dashed points and rows, *Accept* and *Accept all*, and forward's wait for them; the pose and the segmenter run on the operator's machine ([D54](../../docs/decisions.md#d54--automatic-pairs-run-on-the-operators-machine-and-are-kept-nowhere)) |
 | **bakes** | the bake's route `…/<seed>/edit/:k` and its view; the chain and the photograph's thumbnail on the large view; bakes in the Render bar and the dialog, their `×`, the titles and the confirmation that carries them (J4·1, J5) |

@@ -10,6 +10,28 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.83.0] - 2026-11-12
+
+Gate: local 0m54s · CI not read under mf-ship · 0.82.0: local 0m51s · CI not read under mf-ship
+
+- The placement models are one manifest, `config/placement.json`, which `make setup` fetches and `make drift`
+  re-derives; `isekai/boundary/unpack.py` unpacks a zip entry's declared members, each verified, and
+  `provision.py` stays as the pod image holds it (0123 D3, D4, D5).
+- The placement manifest carries its pins: the pose detector, byte for byte the pod's, the pose estimator, and
+  the segmenter's archive with its encoder and decoder as members, each at a revision with its digest and size
+  (0123 D3, D5).
+- A person's pose is read by `isekai/boundary/pose.py`: the detector's highest-scoring box, the estimator's crop of
+  it, and each keypoint the highest value on each axis, on the CPU after the digests verify (0123 D2, D3, D6).
+- A silhouette is read by `isekai/boundary/sam2.py`: the encoder once an image, the decoder once a bone, and the mask
+  is the candidate scored highest, its logits resized to the image and taken above 0 (0123 D2, D7).
+- Stage 2's pairs are proposed: `isekai/shared/proposal.py` pairs the edges and the joints of the arm nearest the
+  tattoo, and `POST /api/c/{collection}/place/propose` answers `{arm, pairs}`, kept nowhere (0123 D8, D9, D10).
+- Stage 2 asks once for proposed pairs and draws them dashed; *Accept*, *Accept all* or a drag accepts them, and forward
+  waits while one is proposed (0123 D11, D12).
+- D54 records that automatic pairs run on the operator's machine and are kept nowhere; the README names the pose
+  estimator's non-commercial training data, and the pins guide, the design spec, the edit guide and the modules say
+  what they hold (0123 D13, D14).
+
 ## [0.82.0] - 2026-11-12
 
 Gate: local 0m51s · CI not read under mf-ship · 0.81.0: local 0m47s · CI not read under mf-ship

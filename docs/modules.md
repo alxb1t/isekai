@@ -75,6 +75,15 @@ route calls `composite` and then `request_placed` of `pipeline/edit.py`, which w
 record and the edit's record ([D53](decisions.md#d53--a-placement-is-recorded-beside-its-edit)). Pillow, and numpy in
 `chain`, are imported inside functions, so neither module puts a wheel on the entry point's graph.
 
+**The proposal's pieces.** `unpack` is `boundary/unpack.py`'s and imports `boundary/provision.py`, which it leaves
+unedited because the pod image copies it; `pose` and `sam2` are `boundary/pose.py`'s and `boundary/sam2.py`'s, each
+importing `provision`, `unpack`, `wd14`'s `silence_onnxruntime` and `foundation/refusal.py`, with `onnxruntime`, numpy
+and Pillow imported inside their functions. `proposal` is `shared/proposal.py`'s, the geometry over arrays, importing no
+other module of the package. `proposing` is `pipeline/proposing.py`'s: it imports `pose`, `sam2` and `proposal` and no
+stage. `interface/wiring.py` opens `pose` and `sam2` once into a `Proposer`, and the propose route of
+`interface/ui/app.py` calls it in the server's process and writes no file
+([D54](decisions.md#d54--automatic-pairs-run-on-the-operators-machine-and-are-kept-nowhere)).
+
 **`tests/test_layers.py` holds where the lazy edges point; review holds that they
 stay lazy.** The `-S` guard goes red only when a chain of module-scope imports
 from the entry point reaches a wheel. The lazy edges above are between this

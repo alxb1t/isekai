@@ -48,6 +48,7 @@ Each pin: what fixes it, where it is declared, and when it is checked.
 | the render models | sha256 at an immutable revision | `config/models.json` | on landing, and on every boot |
 | the tag vocabulary and WD14 | sha256, one revision for both | `config/vocabulary.json` | on landing, and when the tagger opens |
 | the reader's files | sha256 at an immutable revision | `config/reader.json` | on landing, and the Ollama alias's layers before its first call ([D6](decisions.md#d6--ollama-at-a-fixed-local-address-on-a-checked-model)) |
+| the placement models | sha256 at an immutable revision; the archive's members by sha256 and size | `config/placement.json` | on landing, on unpacking, and when the pose or the segmenter opens |
 | the caption briefing | git, and its sha256 in every caption | `config/caption.briefing.md` | the gate: `tests/golden/caption.json` holds its sha256 |
 | the evaluator's models | sha256 at an immutable revision | `evaluation/eval_models.json` | when the evaluator resolves them |
 | each flow | a digest of every file in it | `tests/test_flow.py` | the gate |
@@ -84,9 +85,11 @@ diff is what to review.
 - **An action.** Replace its SHA and the release in its comment; `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`
   resolves one.
 - **A model manifest.** Move the revision constant in its deriver — `tools/derive_manifest.py`,
-  `tools/derive_vocabulary.py`, `tools/derive_reader.py` — run `make derive`, and review the diff under
-  `config/`. For the reader, then run `uv run python -m isekai.boundary.provision fetch config/reader.json` and
-  `ollama create joycaption-beta-one-q4k -f config/joycaption.Modelfile`.
+  `tools/derive_vocabulary.py`, `tools/derive_reader.py`, `tools/derive_placement.py` — run `make derive`, and
+  review the diff under `config/`. For the reader, then run
+  `uv run python -m isekai.boundary.provision fetch config/reader.json` and
+  `ollama create joycaption-beta-one-q4k -f config/joycaption.Modelfile`. For the placement models, then run
+  `uv run python -m isekai.boundary.unpack fetch config/placement.json`, which also unpacks the archive.
 - **A flow.** A variant is a new flow; an abandoned configuration is re-pinned — update `PINNED` in
   `tests/test_flow.py` and name the new digest in `CHANGELOG.md`
   ([D14](decisions.md#d14--a-flow-is-one-flat-directory)).

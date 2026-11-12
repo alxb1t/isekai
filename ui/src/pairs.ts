@@ -10,6 +10,8 @@ export type Side = 'a' | 'b'
 export interface Slot {
   a: Point | null
   b: Point | null
+  /* True for a pair the server proposed and the operator has not accepted; absent otherwise. */
+  proposed?: true
 }
 
 interface Held {
@@ -47,6 +49,46 @@ export function complete(state: Pairs): Pair[] {
   const done: Pair[] = []
   for (const { a, b } of state.slots) if (a && b) done.push([a, b])
   return done
+}
+
+/** Return the complete pairs as the server takes them, proposed or not, each its two points
+    and nothing else. e.g. a proposed pair and an ordinary one -> [[[1, 2], [3, 4]], [[5, 6], [7, 8]]] */
+export function sent(state: Pairs): Pair[] {
+  return complete(state).map(([a, b]): Pair => [[a[0], a[1]], [b[0], b[1]]])
+}
+
+/** Return the proposed slots, in their places. */
+export function proposals(state: Pairs): Slot[] {
+  return state.slots.filter((slot) => slot.proposed)
+}
+
+/** Return the state with `pairs` after the pairs held, each marked proposed. The arrival is
+    no step of the history and joins every snapshot of it, so undo never removes it.
+    e.g. 2 pairs held, 4 arrive -> pairs 3 to 6 are proposed */
+export function arrived(state: Pairs, pairs: readonly Pair[]): Pairs {
+  if (pairs.length === 0) return state
+  const added = held(pairs).slots.map((slot): Slot => ({ ...slot, proposed: true }))
+  return {
+    slots: [...state.slots, ...added],
+    selected: state.selected,
+    past: state.past.map((before) => ({ ...before, slots: [...before.slots, ...added] })),
+  }
+}
+
+/** Return the state with the selected pair ordinary, as a change that can be undone; no
+    change when the selected pair is not proposed. */
+export function accepted(state: Pairs): Pairs {
+  const at = state.selected
+  if (at === null || !state.slots[at]?.proposed) return state
+  const slots = state.slots.map((slot, index): Slot => (index === at ? { a: slot.a, b: slot.b } : slot))
+  return changed(state, { slots, selected: state.selected })
+}
+
+/** Return the state with every pair ordinary, as one change; no change when none is proposed. */
+export function acceptedAll(state: Pairs): Pairs {
+  if (proposals(state).length === 0) return state
+  const slots = state.slots.map((slot): Slot => ({ a: slot.a, b: slot.b }))
+  return changed(state, { slots, selected: state.selected })
 }
 
 /** Return the lone pair, or null when every pair is complete. */
@@ -152,10 +194,13 @@ export function cleared(state: Pairs): Pairs {
   return state.slots.length === 0 ? state : changed(state, { slots: [], selected: null })
 }
 
-/** Return why a stage waits, or null when it may go forward: a lone point has no match, or
-    the floor of pairs is not placed.
-    e.g. 2 pairs against 6 -> "6 pairs needed · 2 placed"; a lone seventh -> "point 7 has no match" */
+/** Return why a stage waits, or null when it may go forward: a pair is proposed, a lone
+    point has no match, or the floor of pairs is not placed.
+    e.g. 4 proposed -> "4 proposed · accept or delete them"; 2 pairs against 6 -> "6 pairs needed · 2 placed";
+    a lone seventh -> "point 7 has no match" */
 export function forward(state: Pairs, floor: number): string | null {
+  const waiting = proposals(state).length
+  if (waiting > 0) return `${waiting} proposed · accept or delete them`
   const alone = lone(state)
   if (alone !== null) return `point ${alone.index + 1} has no match`
   const count = complete(state).length

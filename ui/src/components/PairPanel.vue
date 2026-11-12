@@ -12,7 +12,8 @@ import ImagePanel, { type Press } from './ImagePanel.vue'
    the operator's opacity with a way to hide it. A panel that waits for its match takes
    the accent edge. `offset` is where the shown pixels start in the points' own pixels, for a
    crop of the tattoo. On the target it also draws the limb and the exclusions, and while
-   `locked` its points cannot be grabbed. It declares no command. */
+   `locked` its points cannot be grabbed. A proposed point is ringed with a dashed line. It
+   declares no command. */
 const props = defineProps<{
   src: string
   alt: string
@@ -52,9 +53,12 @@ const marks = computed(() =>
     const point = slot[props.side]
     if (!point) return []
     const alone = (slot.a === null) !== (slot.b === null)
-    return [{ index, point, alone, on: index === props.pairs.selected }]
+    return [{ index, point, alone, proposed: slot.proposed === true, on: index === props.pairs.selected }]
   }),
 )
+
+/* A proposed point has a dashed ring round it, in the ring's own colour, until it is accepted. */
+const RING = { fill: 'none', stroke: 'var(--point-ring)', strokeWidth: 1.5, strokeDasharray: '3 3' }
 
 const at = (view: Parameters<typeof toScreen>[0], point: Point): Point =>
   toScreen(view, [point[0] - origin.value[0], point[1] - origin.value[1]])
@@ -132,6 +136,14 @@ function setOpacity(event: Event): void {
           </template>
         </template>
         <g v-for="mark in marks" :key="mark.index">
+          <circle
+            v-if="mark.proposed"
+            class="pair__proposed"
+            :style="RING"
+            :cx="at(view, mark.point)[0]"
+            :cy="at(view, mark.point)[1]"
+            :r="mark.on ? 12 : 10"
+          />
           <circle
             class="pair__point"
             :class="{ 'pair__point--on': mark.on, 'pair__point--lone': mark.alone }"

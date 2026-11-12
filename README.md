@@ -536,3 +536,4 @@ session, `up`, `status`, `down`, `volume up` or `volume down` sweeps the volume,
 ## License
 
 [Apache-2.0](LICENSE). Model weights are licensed separately by their publishers.
+The placement screen's pose estimator was trained on COCO-WholeBody, whose annotations are CC BY-NC 4.0, so the automatic pairs are for non-commercial use.

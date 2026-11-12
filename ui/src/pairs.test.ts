@@ -1,6 +1,9 @@
 import { expect } from 'vitest'
 import {
   type Pairs,
+  accepted,
+  acceptedAll,
+  arrived,
   chosen,
   clicked,
   cleared,
@@ -11,7 +14,9 @@ import {
   lone,
   moved,
   none,
+  proposals,
   selected,
+  sent,
   undone,
 } from './pairs'
 import { spec } from './test/spec'
@@ -167,4 +172,139 @@ spec('ui:pairs:the-pairs-stay-across-steps', () => {
 
   expect(complete(again)).toEqual(complete(state))
   expect(complete(state)).toEqual([[[10, 10], [500, 500]]])
+})
+
+/* `count` proposed pairs, spread as `stand` spreads them, after `before`. */
+function proposed(before: Pairs, count: number): Pairs {
+  const answer: Pair[] = Array.from({ length: count }, (_, n): Pair => [
+    [1000 + 100 * n, 10],
+    [1000 + 100 * n, 500],
+  ])
+  return arrived(before, answer)
+}
+
+spec('ui:proposal:proposed-pairs-arrive-numbered-after-the-held-ones', () => {
+  const state = proposed(stand(2), 4)
+
+  expect(state.slots).toHaveLength(6)
+  expect(state.slots.map((slot) => slot.proposed === true)).toEqual([false, false, true, true, true, true])
+  expect(state.slots.map((slot) => slot.a?.[0])).toEqual([0, 100, 1000, 1100, 1200, 1300])
+  expect(proposals(state)).toEqual(state.slots.slice(2))
+  // An ordinary slot carries no key at all, and the arrival is no change of the history.
+  expect('proposed' in state.slots[0]).toBe(false)
+  expect(state.past).toHaveLength(0)
+  expect(arrived(state, [])).toBe(state)
+})
+
+spec('ui:proposal:accept-takes-the-selected-pair', () => {
+  const state = click(proposed(none, 4), 'a', [1200, 10])
+  expect(state.selected).toBe(2)
+
+  const after = accepted(state)
+
+  expect(after.slots[2]).toEqual({ a: [1200, 10], b: [1200, 500] })
+  expect('proposed' in after.slots[2]).toBe(false)
+  expect(proposals(after)).toHaveLength(3)
+  expect(after.selected).toBe(2)
+  // With no pair selected, or an ordinary one, an accept changes nothing.
+  expect(accepted(proposed(none, 2))).toEqual(proposed(none, 2))
+  expect(accepted(click(stand(1), 'a', [0, 10]))).toEqual(click(stand(1), 'a', [0, 10]))
+})
+
+spec('ui:proposal:accept-all-takes-every-pair', () => {
+  const state = proposed(stand(1), 4)
+
+  const after = acceptedAll(state)
+
+  expect(after.slots).toHaveLength(5)
+  expect(proposals(after)).toEqual([])
+  expect(after.slots.every((slot) => !('proposed' in slot))).toBe(true)
+  expect(complete(after)).toEqual(complete(state))
+  // With none proposed it changes nothing.
+  expect(acceptedAll(after)).toBe(after)
+})
+
+spec('ui:proposal:a-drag-accepts-the-pair-it-moves', () => {
+  const state = proposed(none, 4)
+
+  const dragged = moved(state, 1, 'b', [1120, 480])
+
+  expect(dragged.slots[1]).toEqual({ a: [1100, 10], b: [1120, 480] })
+  expect('proposed' in dragged.slots[1]).toBe(false)
+  expect(proposals(dragged)).toHaveLength(3)
+  // The rest of a drag keeps the pair ordinary.
+  const longer = moved(dragged, 1, 'b', [1130, 470], false)
+  expect(longer.slots[1].proposed).toBeUndefined()
+  expect(proposals(longer)).toHaveLength(3)
+})
+
+spec('ui:proposal:undo-restores-a-proposed-pair', () => {
+  const state = click(proposed(none, 4), 'a', [1200, 10])
+  const after = accepted(state)
+
+  const back = undone(after)
+
+  expect(back.slots).toEqual(state.slots)
+  expect(back.slots[2].proposed).toBe(true)
+  // Accept all is one step, and undo gives every pair its mark again.
+  expect(undone(acceptedAll(state)).slots).toEqual(state.slots)
+})
+
+spec('ui:proposal:undo-never-removes-the-arrival', () => {
+  // A point is clicked while the ask is pending, then the answer arrives.
+  const state = proposed(click(none, 'a', [10, 10]), 4)
+  expect(state.slots).toHaveLength(5)
+
+  const first = undone(state)
+  const second = undone(first)
+
+  expect(first.slots).toHaveLength(4)
+  expect(proposals(first)).toHaveLength(4)
+  expect(first.slots.map((slot) => slot.a?.[0])).toEqual([1000, 1100, 1200, 1300])
+  expect(second).toBe(first)
+  // Every older step of the history holds the arrival too.
+  const placed = proposed(click(click(none, 'a', [10, 10]), 'b', [500, 500]), 4)
+  const dragged = moved(placed, 0, 'a', [40, 40])
+  expect(proposals(undone(dragged))).toHaveLength(4)
+  expect(proposals(undone(undone(dragged)))).toHaveLength(4)
+})
+
+spec('ui:proposal:a-proposed-pair-is-sent-as-an-ordinary-pair', () => {
+  const state = proposed(stand(1), 2)
+
+  expect(sent(state)).toEqual([
+    [[0, 10], [0, 500]],
+    [[1000, 10], [1000, 500]],
+    [[1100, 10], [1100, 500]],
+  ])
+  expect(JSON.stringify(sent(state))).not.toContain('proposed')
+  // A lone point is left out, as `complete` leaves it.
+  expect(sent(click(state, 'a', [5000, 5]))).toHaveLength(3)
+})
+
+spec('ui:proposal:a-deleted-proposed-pair-is-gone', () => {
+  const state = click(proposed(none, 4), 'a', [1100, 10])
+  expect(state.selected).toBe(1)
+
+  const after = deleted(state)
+
+  expect(after.slots).toHaveLength(3)
+  expect(after.slots.map((slot) => slot.a?.[0])).toEqual([1000, 1200, 1300])
+  expect(proposals(after)).toHaveLength(3)
+})
+
+spec('ui:proposal:forward-waits-while-a-pair-is-proposed-and-says-so', () => {
+  const state = proposed(none, 4)
+
+  // Before the floor and before the lone point.
+  expect(forward(state, 8)).toBe('4 proposed · accept or delete them')
+  expect(forward(click(state, 'a', [5000, 5]), 8)).toBe('4 proposed · accept or delete them')
+  expect(forward(accepted(click(state, 'a', [1000, 10])), 8)).toBe('3 proposed · accept or delete them')
+})
+
+spec('ui:proposal:forward-goes-when-every-pair-is-accepted', () => {
+  const state = proposed(none, 9)
+
+  expect(forward(state, 8)).not.toBeNull()
+  expect(forward(acceptedAll(state), 8)).toBeNull()
 })

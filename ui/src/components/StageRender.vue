@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { type Place, imageAt, inkView, photoUrl, versionOf } from '../api'
+import { type Place, imageAt, inkView, photoUrl, proposePairs, versionOf } from '../api'
 import { PLACING } from '../composables/usePlacing'
 import { useNatural } from '../composables/useNatural'
 import { usePreview } from '../composables/usePreview'
@@ -17,9 +17,25 @@ import {
   shapes as shapesOf,
   stopped,
 } from '../outlines'
-import { type Pairs, clicked, cleared, complete, deleted, forward, lone, moved, undone } from '../pairs'
+import {
+  type Pairs,
+  accepted,
+  acceptedAll,
+  arrived,
+  clicked,
+  cleared,
+  complete,
+  deleted,
+  forward,
+  lone,
+  moved,
+  proposals,
+  sent,
+  undone,
+} from '../pairs'
 import { added, closed as closedDraft, closes, undone as undoneDraft, vertexAt } from '../polygon'
 import { opacityOf } from '../preview'
+import { answered, asked, due, keyOf, pointsOf, refused, stands, view } from '../propose'
 import { floorOf } from '../stages'
 import type { InkView, Point, TattooLimits } from '../types'
 import PairList from './PairList.vue'
@@ -30,7 +46,9 @@ import type { Press } from './ImagePanel.vue'
    render. For a two-stage tattoo or a cut the left image is the photograph; for a tattoo
    that is not on this photo it is the tattoo's ink view. The warp is previewed over the
    render with the limb and the exclusions drawn on it, which the pairs give way to while
-   one is drawn, and the stage goes forward with its floor of pairs and no lone point. */
+   one is drawn, and the stage goes forward with its floor of pairs, no lone point and no
+   proposed pair. A two-stage tattoo or a cut that opens here with no pair asks the server once
+   for proposed pairs and holds them dashed until they are accepted. */
 const props = defineProps<{
   place: Place
   version: string
@@ -117,10 +135,10 @@ const preview = usePreview({
     version: props.version,
     seed: props.seed,
     edit: null,
-    pairs: complete(pairs.value),
+    pairs: sent(pairs.value),
     ...regions(outlines.value),
   }),
-  count: () => complete(pairs.value).length,
+  count: () => sent(pairs.value).length,
   floor: props.limits.preview_floor,
   wait: props.limits.preview_wait_ms,
   collection: props.place.collection,
@@ -128,8 +146,41 @@ const preview = usePreview({
 })
 
 watch(
-  () => JSON.stringify([complete(pairs.value), regions(outlines.value)]),
+  () => JSON.stringify([sent(pairs.value), regions(outlines.value)]),
   () => preview.changed(),
+  { immediate: true },
+)
+
+const key = computed(() => keyOf(tattoo.value?.name ?? '', props.version, props.seed))
+const line = computed(() => view(placing.proposalAsked.value, key.value))
+const waitingProposals = computed(() => proposals(pairs.value).length)
+
+/* Ask once for the tattoo's proposed pairs on this render. The answer is kept whether or not
+   this stage is still on screen, but only by the ask that made it: a later ask under the same
+   key is another; a refusal is shown and the clicks still work. */
+const propose = async (): Promise<void> => {
+  const held = tattoo.value
+  const at = key.value
+  if (!held || !mode.value) return
+  const points = pointsOf(mode.value, complete(placing.first.value), held.outline)
+  placing.proposalAsked.value = asked(placing.proposalAsked.value, at)
+  const mine = placing.proposalAsked.value[at]
+  const stillAsking = (): boolean => stands(placing.proposalAsked.value, at, mine)
+  try {
+    const answer = await proposePairs(props.place, props.version, props.seed, points)
+    if (!stillAsking()) return
+    if (key.value === at) placing.editSecond(arrived(placing.second.value, answer.pairs))
+    placing.proposalAsked.value = answered(placing.proposalAsked.value, at, answer.pairs.length)
+  } catch (reason) {
+    if (stillAsking()) placing.proposalAsked.value = refused(placing.proposalAsked.value, at, (reason as Error).message)
+  }
+}
+
+watch(
+  () => due(mode.value, pairs.value, placing.proposalAsked.value, key.value),
+  (now) => {
+    if (now) void propose()
+  },
   { immediate: true },
 )
 
@@ -222,6 +273,18 @@ const undoPoint = (): void => {
         @remove="edit(deleted(pairs))"
         @clear="edit(cleared(pairs))"
       />
+      <p v-if="line" class="stage__note mono" data-proposal>{{ line }}</p>
+      <div v-if="waitingProposals > 0" class="outline__row" data-proposed-bar>
+        <button
+          class="btn btn-secondary"
+          type="button"
+          :disabled="accepted(pairs) === pairs"
+          @click="edit(accepted(pairs))"
+        >
+          Accept
+        </button>
+        <button class="btn btn-secondary" type="button" @click="edit(acceptedAll(pairs))">Accept all</button>
+      </div>
       <span class="section-label">limb and exclusions</span>
       <div class="outline__row">
         <button class="btn btn-secondary" type="button" @click="draw('limb')">Draw limb</button>

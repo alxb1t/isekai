@@ -26,6 +26,7 @@ import type {
   Pair,
   Point,
   Preview,
+  Proposal,
   Quote,
   RenderDetail,
   RenderOffer,
@@ -494,6 +495,24 @@ export function placementPreview(
     url,
     { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal },
     'X-Preview-Box',
+  )
+}
+
+/* The pairs proposed between a run's photograph and its render `version` and `seed`, for a
+   tattoo whose points on the photograph are `points`; made now and kept nowhere. A refusal
+   names its fix. */
+export function proposePairs(
+  place: Place,
+  version: string,
+  seed: string,
+  points: Point[],
+  signal?: AbortSignal,
+): Promise<Proposal> {
+  return send(
+    `/api/c/${encodeURIComponent(place.collection)}/place/propose`,
+    'POST',
+    { digest: place.digest, flow: place.flow, version, seed, points },
+    { signal },
   )
 }
 

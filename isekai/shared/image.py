@@ -633,6 +633,18 @@ def upright_jpeg(path: Path) -> bytes:
         return out.getvalue()
 
 
+def upright_image(path: Path) -> "Image":
+    """Return the image at `path` turned as its orientation says, decoded, as RGB.
+
+    Raises `OSError` for a file Pillow cannot decode, and `DecompressionBombError` for
+    one past its pixel bound; each caller words its refusal.
+    """
+    from PIL import Image, ImageOps
+
+    with Image.open(path) as opened:
+        return ImageOps.exif_transpose(opened).convert("RGB")
+
+
 def thumbnail_jpeg(image: "Image") -> bytes:
     """Return `image` as a JPEG at most `THUMB_SIDE` on its long side."""
     small = image.convert("RGB")

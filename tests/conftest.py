@@ -9,6 +9,7 @@ import pytest
 
 from isekai.boundary import ollama
 from isekai.boundary.provision import Manifest, load_manifest
+from isekai.boundary.unpack import PLACEMENT_REMEDY
 from isekai.foundation.flow import Schema, Workflow, load_flow
 from isekai.shared.vocabulary import VOCABULARY_REMEDY, Vocabulary, read_tags
 from tests.fakes import ollama_records
@@ -167,6 +168,22 @@ def require_vocabulary(path: Path) -> None:
     pytest.fail(
         f"{path} is not provisioned; run `{VOCABULARY_REMEDY}` from the repository "
         "root, or set ISEKAI_VOCABULARY=absent where it cannot be fetched"
+    )
+
+
+def require_placement(path: Path) -> None:
+    """Return if the placement model file at `path` exists; otherwise skip or fail.
+
+    It skips only where `ISEKAI_PLACEMENT=absent` declares the models missing, as CI
+    does; anywhere else a check that reads them fails rather than skip silently.
+    """
+    if path.exists():
+        return
+    if os.environ.get("ISEKAI_PLACEMENT") == "absent":
+        pytest.skip(f"{path} is declared absent: ISEKAI_PLACEMENT=absent")
+    pytest.fail(
+        f"{path} is not provisioned; run `{PLACEMENT_REMEDY}` from the repository "
+        "root, or set ISEKAI_PLACEMENT=absent where it cannot be fetched"
     )
 
 
