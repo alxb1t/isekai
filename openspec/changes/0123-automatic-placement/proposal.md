@@ -41,11 +41,11 @@ This change builds that into the screen as proposals. Nothing is applied: each p
 
 ## Impact
 
-- New: `isekai/boundary/pose.py`, `isekai/boundary/sam2.py`, `isekai/shared/proposal.py`, `isekai/pipeline/proposing.py`, `tools/derive_placement.py`, `config/placement.json`, `ui/src/propose.ts`, and a test beside each module.
-- Changed: `isekai/boundary/provision.py`, `isekai/interface/wiring.py`, `isekai/interface/ui/app.py`, `tools/manifest.py`, `Makefile`, `.github/workflows/ci.yml`, `ui/src/types.ts`, `ui/src/api.ts`, `ui/src/pairs.ts`, `ui/src/composables/usePlacing.ts`, `ui/src/components/PairPanel.vue`, `ui/src/components/PairList.vue`, `ui/src/components/StageRender.vue`.
+- New: `isekai/boundary/unpack.py`, `isekai/boundary/pose.py`, `isekai/boundary/sam2.py`, `isekai/shared/proposal.py`, `isekai/pipeline/proposing.py`, `tools/derive_placement.py`, `config/placement.json`, `ui/src/propose.ts`, and a test beside each module.
+- Changed: `isekai/interface/wiring.py`, `isekai/interface/ui/app.py`, `tools/manifest.py`, `Makefile`, `.github/workflows/ci.yml`, `ui/src/types.ts`, `ui/src/api.ts`, `ui/src/pairs.ts`, `ui/src/composables/usePlacing.ts`, `ui/src/components/PairPanel.vue`, `ui/src/components/PairList.vue`, `ui/src/components/StageRender.vue`.
 - Tests: `tests/test_provision_unpack.py`, `tests/test_derivation.py`, `tests/test_infra.py`, `tests/test_package_paths.py`, `tests/conftest.py`, `tests/test_placement_manifest.py`, `tests/test_pose.py`, `tests/test_sam2.py`, `tests/test_proposal.py`, `tests/test_propose.py`, `tests/test_ui_propose.py`, `tests/fakes.py`, and in `ui/src/` the tests of `pairs`, `propose`, `usePlacing` and `nokeys`.
 - Docs: `docs/decisions.md`, `docs/pins.md`, `docs/edit-tattoo.md`, `docs/modules.md`, `ui/design/spec.md`, `README.md`, `isekai/boundary/README.md`, `isekai/shared/README.md`, `isekai/pipeline/README.md`.
-- No dependency, no flow, no pinned digest of a flow, no format version and no end-to-end test changes. The models are a new manifest, fetched and never committed.
+- No dependency, no flow, no pinned digest of a flow, no format version and no end-to-end test changes. The models are a new manifest, fetched and never committed. `isekai/boundary/provision.py`, which the pod image copies, is unchanged, so no image is rebuilt.
 
 ## Not in this change
 

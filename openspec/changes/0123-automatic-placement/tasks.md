@@ -14,16 +14,16 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 ## 1 — Models
 
-- [ ] 1.1 Add to `isekai/boundary/provision.py` `PLACEMENT_MANIFEST_PATH`, `PLACEMENT_REMEDY` (its fetch command), `Member` and the optional `unpack` of `Entry`
-  per [D3](design.md#d3) and [D4](design.md#d4); add the path's anchor to `tests/test_package_paths.py`.
+- [ ] 1.1 Add `isekai/boundary/unpack.py`, a new module, with `PLACEMENT_MANIFEST_PATH`, `PLACEMENT_REMEDY` (its fetch command), `Member` and `ZipEntry`, `provision.Entry` with the optional `unpack`,
+  per [D3](design.md#d3) and [D4](design.md#d4); add the path's anchor to `tests/test_package_paths.py`. `isekai/boundary/provision.py` is not edited by any task.
   Verify: `uv run pytest tests/test_package_paths.py -k PLACEMENT_MANIFEST_PATH` passes.
-- [ ] 1.2 Add to `provision.py` `unpack_members(entry, archive, models_dir)` per [D4](design.md#d4); tests in `tests/test_provision_unpack.py` carry `unpack_lands`,
+- [ ] 1.2 Add to `unpack.py` `unpack_members(entry, archive, models_dir)` per [D4](design.md#d4); tests in `tests/test_provision_unpack.py` carry `unpack_lands`,
   `unpack_names`, `unpack_digest`, `unpack_size` and `unpack_missing`.
   Verify: `uv run pytest tests/test_provision_unpack.py -k "unpack_lands or unpack_names or unpack_digest or unpack_size or unpack_missing"` passes.
-- [ ] 1.3 Make `fetch` in `provision.py` decide each declared member's destination with the entries, before a transfer, and unpack after an
-  entry lands, and after it is skipped, per [D4](design.md#d4); tests carry `unpack_gone` and `unpack_stop`.
+- [ ] 1.3 Add to `unpack.py` `fetch` and the `fetch` verb of `python -m isekai.boundary.unpack`: it decides each declared member's destination before a transfer, lands the entries through
+  `provision.fetch`, and unpacks after an entry lands, and after it is skipped, per [D4](design.md#d4); tests carry `unpack_gone` and `unpack_stop`.
   Verify: `uv run pytest tests/test_provision_unpack.py -k "unpack_gone or unpack_stop"` passes.
-- [ ] 1.4 Add to `provision.py` `member_for` and `resolve_member` per [D4](design.md#d4); tests carry `unpack_resolve`.
+- [ ] 1.4 Add to `unpack.py` `member_for` and `resolve_member` per [D4](design.md#d4); tests carry `unpack_resolve`.
   Verify: `uv run pytest tests/test_provision_unpack.py -k unpack_resolve` passes.
 - [ ] 1.5 Hold that the entry point's import graph reaches no wheel and the layers hold.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_layers.py` passes.
@@ -38,19 +38,21 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
   ```diff
   - # Chromium and the vocabulary. Not part of the gate, which never fetches.
   + # Chromium, the vocabulary and the placement models. Not part of the gate, which never fetches.
-  +     uv run python -m isekai.boundary.provision fetch config/placement.json
+  +     uv run python -m isekai.boundary.unpack fetch config/placement.json
   +     uv run python -m tools.derive_placement
   ```
   Verify: `grep -c "placement" Makefile` prints `3`.
 - [ ] 1.9 Add `ISEKAI_PLACEMENT: absent` to the `env` of the gate step and of the browser-test step in `.github/workflows/ci.yml`; tests in
   `tests/test_infra.py` carry `infra_placement`: `setup` fetches the manifest, `drift` derives it, `gate` names neither, each CI step declares it absent.
   Verify: `uv run pytest tests/test_infra.py -k infra_placement` passes.
+- [ ] 1.10 Hold that the pod image's record agrees with the tree per [D4](design.md#d4): `isekai/boundary/provision.py` is as the image holds it, and `config/image.json` is not edited.
+  Verify: `uv run pytest tests/test_infra.py -k build_record_agrees` passes.
 
 ## 2 — 🛑 **HUMAN** — the model pins
 
 - [ ] 2.1 From this worktree's root, on a machine that reaches `huggingface.co`, run `uv run python -m tools.derive_placement`. It writes `config/placement.json`.
   Verify: `ls config/placement.json` prints the path.
-- [ ] 2.2 In the same worktree run `uv run python -m isekai.boundary.provision fetch config/placement.json`. It lands the detector, the estimator and the archive, and unpacks the archive into `models/sam2/`.
+- [ ] 2.2 In the same worktree run `uv run python -m isekai.boundary.unpack fetch config/placement.json`. It lands the detector, the estimator and the archive, and unpacks the archive into `models/sam2/`.
   Verify: `ls models/dwpose/yolox_l.onnx models/dwpose/dw-ll_ucoco_384.onnx models/sam2/encoder.onnx models/sam2/decoder.onnx` prints each path.
 - [ ] 2.3 Read the manifest: the detector's digest is the pod's pin, `7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411`, as the render manifest has it.
   Verify: `grep -c 7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411 config/placement.json` prints `1`.
@@ -96,7 +98,7 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 - [ ] 4.5 Add to `sam2.py` `Embedding.mask(positive, negative)` per [D7](design.md#d7): the points scaled to the input and labelled 1 and 0, every input the decoder declares given
   from the table of known names, one without a value refused by name, the mask the logits above 0 at the image's size; tests carry `sam_prompt` and `sam_inputs`.
   Verify: `uv run pytest tests/test_sam2.py -k "sam_prompt or sam_inputs"` passes.
-- [ ] 4.6 Add to `sam2.py` `open_segmenter(models_dir)` per [D2](design.md#d2): the encoder and decoder through `resolve_member`, each session on the CPU provider alone, an absent file
+- [ ] 4.6 Add to `sam2.py` `open_segmenter(models_dir)` per [D2](design.md#d2): the encoder and decoder through `unpack.resolve_member`, each session on the CPU provider alone, an absent file
   refused naming `PLACEMENT_REMEDY`; tests carry `sam_open`.
   Verify: `uv run pytest tests/test_sam2.py -k sam_open` passes.
 - [ ] 4.7 Add to `tests/test_sam2.py` `sam_real`: through `require_placement`, it opens the real segmenter, embeds a synthetic image, prompts a point, and holds that the mask is a boolean
@@ -179,5 +181,5 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
   Verify: `git grep -n "automatic placement\*\*" ui/design/spec.md` prints the row.
 - [ ] 7.7 Add to the `## The app` section of `docs/edit-tattoo.md` the proposed pairs of stage 2: what proposes them, that nothing is kept, and the fetch; no path of the operator's notebook.
   Verify: `grep -n "proposed pairs" docs/edit-tattoo.md` prints a line.
-- [ ] 7.8 Name `pose`, `sam2`, `proposal` and `proposing` and their edges in `docs/modules.md`, `isekai/boundary/README.md`, `isekai/shared/README.md` and `isekai/pipeline/README.md`.
+- [ ] 7.8 Name `unpack`, `pose`, `sam2`, `proposal` and `proposing` and their edges in `docs/modules.md`, `isekai/boundary/README.md`, `isekai/shared/README.md` and `isekai/pipeline/README.md`.
   Verify: `git grep -n "proposing" isekai/pipeline/README.md` prints the line.

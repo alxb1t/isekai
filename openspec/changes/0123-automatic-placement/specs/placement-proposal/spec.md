@@ -82,7 +82,7 @@ mask cannot part the arm from the chest.
 - **Key:** `placement-proposal:pairs:a-missing-model-refuses-naming-the-fetch`
 - **Layers:** unit
 - **WHEN** a proposal is asked and the models are not provisioned
-- **THEN** it is refused, and the refusal names `uv run python -m isekai.boundary.provision fetch config/placement.json`
+- **THEN** it is refused, and the refusal names `uv run python -m isekai.boundary.unpack fetch config/placement.json`
 
 #### Scenario: a bad point is refused
 - **Key:** `placement-proposal:pairs:a-bad-point-is-refused`
@@ -186,7 +186,7 @@ A stale pin must cost a refusal and not a loaded model, and a machine without th
 - **Layers:** unit
 - **WHEN** a file the manifest declares is absent from the models directory
 - **THEN** opening is refused
-- **AND** the refusal names `uv run python -m isekai.boundary.provision fetch config/placement.json`
+- **AND** the refusal names `uv run python -m isekai.boundary.unpack fetch config/placement.json`
 
 #### Scenario: the sessions are opened once
 - **Key:** `placement-proposal:models:the-sessions-are-opened-once`

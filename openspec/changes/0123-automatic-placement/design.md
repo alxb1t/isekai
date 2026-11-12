@@ -22,7 +22,7 @@ The build runs stacked on 0122's, which runs on the core's and the tattoo edit's
 
 ## Goals / Non-Goals
 
-- **Goals:** the placement manifest and its deriver; a zip entry unpacked by `provision`; the pose and segmenter seams over the declared runtime; the pairs as numpy functions; the propose route; proposed pairs on stage 2 with *Accept* and *Accept all*; the decision and the docs.
+- **Goals:** the placement manifest and its deriver; a zip entry unpacked by `unpack`, a module the pod image does not copy; the pose and segmenter seams over the declared runtime; the pairs as numpy functions; the propose route; proposed pairs on stage 2 with *Accept* and *Accept all*; the decision and the docs.
 - **Non-Goals:** stage 1 and the ink outline made automatic, the direct stage, several people in one image, a second runtime or CoreML, a keyboard, a draft file, a browser test, a pod. See the proposal's *Not in this change*.
 
 ## Decisions
@@ -32,7 +32,7 @@ The build runs stacked on 0122's, which runs on the core's and the tattoo edit's
 | [D1](#d1) | the proposal is stage 2 only, for a two-stage tattoo and a cut | only stage 2 is proven, against the operator's clicks | stage 1 by optimisation; the direct stage |
 | [D2](#d2) | the models run through the declared `onnxruntime`, `numpy` and `Pillow`, on the CPU, and no package is added | SAM 2.1 small as ONNX gave the PyTorch mask exactly | torch on MPS; CoreML; OpenCV |
 | [D3](#d3) | the files are pinned in `config/placement.json`, fetched by `make setup` | the tagger's precedent: the gate never fetches | one section of `config/models.json` |
-| [D4](#d4) | a zip entry declares its members, and `provision` unpacks each by its declared destination | the archive's own names must decide nothing | extracting by the archive's names; the archive loaded in place |
+| [D4](#d4) | a zip entry declares its members, and `isekai/boundary/unpack.py` unpacks each by its declared destination; `provision.py` is unchanged | the archive's own names must decide nothing, and the pod image copies `provision.py` | extracting by the archive's names; the archive loaded in place; the unpack in `provision.py`, which is an image rebuild |
 | [D5](#d5) | a deriver writes the manifest, and a person runs it in phase 2 | the cut and the run cannot reach the model host | digests written from memory |
 | [D6](#d6) | the pose is the detector's highest-scoring box and the estimator's crop of it, read as the prototype read it | the prototype's pose held on both images | a person-score floor; non-maximum suppression |
 | [D7](#d7) | the segmenter embeds an image once and prompts a bone once | the encoder costs seconds and the decoder milliseconds | one encode a bone |
@@ -66,15 +66,17 @@ The build runs stacked on 0122's, which runs on the core's and the tattoo edit's
 | `sam2/sam2.1_hiera_small_20260221.zip` | `vietanhdev/segment-anything-2.1-onnx-models` at `6a3ac868340a3196a349050a6efae22a5acc0330` | the archive |
 | `sam2/encoder.onnx`, `sam2/decoder.onnx` | members of the archive | the segmenter |
 
-- `provision.PLACEMENT_MANIFEST_PATH` names the file, beside the reader's. `make setup` fetches it, `make drift` re-derives it, and CI declares it absent through `ISEKAI_PLACEMENT: absent`, as `ISEKAI_VOCABULARY` is.
+- `unpack.PLACEMENT_MANIFEST_PATH` names the file, and `unpack.PLACEMENT_REMEDY` is its fetch, `uv run python -m isekai.boundary.unpack fetch config/placement.json`. `make setup` fetches it, `make drift` re-derives it, and CI declares it absent through `ISEKAI_PLACEMENT: absent`, as `ISEKAI_VOCABULARY` is.
 - The alternative, `onnx-community/sam2.1-hiera-small-ONNX`, has no licence field and no README; the chosen export is Apache-2.0 weights under an MIT exporter.
 
 ### D4
 
-- `Entry` gains `unpack`, optional: a list of `{member, dest, sha256, bytes}`. `ENTRY_KEYS` stays the required keys, so the other manifests are unchanged.
-- `fetch` decides each member's destination with the entries, before any transfer: a member present with other bytes aborts, left where it is. After the archive lands or is skipped, each absent member is read from it by the declared `member` name, written to `dest.partial` and renamed once its digest verifies.
+- The unpack is `isekai/boundary/unpack.py`, and `isekai/boundary/provision.py` does not change. The `Dockerfile` copies `provision.py` into the pod image and `config/image.json` records its digest ([D28](../../../docs/decisions.md#d28--the-image-carries-code-the-volume-carries-weights), `docs/pins.md`), so an edit to it is an image rebuild, a push and a pod; these models never reach a pod.
+- `unpack.Member` is `{member, dest, sha256, bytes}`, and `unpack.ZipEntry` is `provision.Entry` with `unpack`, optional: a list of members. `provision.Entry` and `ENTRY_KEYS` are unchanged, and `provision.fetch` reads no key it does not name, so it lands an archive as it lands any file.
+- `unpack.fetch(manifest, models_dir, fetcher, wait)` decides each member's destination before any transfer: a member present with other bytes aborts, left where it is, and no entry is asked for. It then lands the entries through `provision.fetch`, and after the archive lands or is skipped, each absent member is read from it by the declared `member` name, written to `dest.partial` and renamed once its digest verifies.
+- `python -m isekai.boundary.unpack fetch [--models-dir DIR] [manifest]` is that `fetch` over `provision.HuggingFaceFetcher`, the manifest defaulting to the placement's. `provision`'s own command line still lands the entries of any manifest and unpacks nothing.
 - The read is capped at the declared size plus one byte, and a name in the archive is never joined onto a path. The archive stays, so a gone member is unpacked with no transfer.
-- `member_for(manifest, dest)` and `resolve_member(dest, models_dir, manifest)` are `entry_for` and `resolve` for a member: the archive's sources must be pinned, the destination resolves through `resolve_dest`, and the member's digest verifies.
+- `unpack.member_for(manifest, dest)` and `unpack.resolve_member(dest, models_dir, manifest)` are `provision.entry_for` and `provision.resolve` for a member: the archive's sources must be pinned, the destination resolves through `provision.resolve_dest`, and the member's digest verifies. The detector and the estimator are plain entries and resolve through `provision.resolve`.
 
 ### D5
 
@@ -167,7 +169,7 @@ Every new test carries its `spec` marker. No test boots a browser, and the end-t
 |---|---|---|
 | `tests/test_provision_unpack.py` | unit | `unpack`, the fetch order, `member_for`, `resolve_member` |
 | `tests/test_derivation.py` | unit | the new deriver and its member digests |
-| `tests/test_infra.py` | unit | setup, drift and CI carry the manifest |
+| `tests/test_infra.py` | unit | setup, drift and CI carry the manifest; the image record still agrees with the tree |
 | `tests/test_package_paths.py` | unit | `PLACEMENT_MANIFEST_PATH` anchors in the repository |
 | `tests/conftest.py` | unit | `require_placement` |
 | `tests/test_placement_manifest.py` | unit | the manifest's pins, digests, members and the detector's equality |
@@ -195,6 +197,7 @@ None.
 - **A proposal is a guess.** The prototype's overlap was 0.83 and 0.78; the operator reads every pair before forward, and forward waits for it.
 - **DWPose may label the arm it does not need.** The bent case put a shoulder on the face; the nearest-arm rule keeps that arm out of the answer.
 - **One ask takes seconds on the CPU.** It is a spinner, and the clicks still work.
+- **Two commands fetch.** `provision fetch` lands a manifest's entries and `unpack fetch` lands them and unpacks; `PLACEMENT_REMEDY` and `make setup` name the second, and the first on the placement manifest leaves the members absent, which the next `unpack fetch` fills with no transfer.
 - **The archive stays on disk.** It costs the operator its size, and saves a transfer for a gone member.
 - **`make setup` fetches the models in every fresh worktree.** The files are large, as the tagger's are, and a worktree that has not run setup fails the checks that read them unless `ISEKAI_PLACEMENT=absent` says otherwise. Phase 2 is run in the build's own worktree for that reason.
 - **0122 is not built at the cut.** Phases 5 and 6 begin with halt checks on its route, its photograph read and its editor files.
