@@ -15,9 +15,11 @@ import ast
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -32,6 +34,8 @@ LINKED = ("models", "ui/node_modules", "ui/dist")
 VERDICTS = ("killed", "survived", "invalid", "timeout")
 
 DEFAULT_TIMEOUT = 300
+
+TIMEOUT_FACTOR = 3
 
 BASELINE_SECONDS = 1800
 
@@ -297,19 +301,37 @@ def pytest_args(tests: Sequence[str], everything: bool) -> list[str]:
 def run_tests(
     copy: Path, args: Sequence[str], timeout: float
 ) -> tuple[int | None, str]:
-    """Return pytest's `(exit code, output)` in `copy`, the code None on a timeout."""
-    try:
-        done = subprocess.run(
-            [sys.executable, "-m", "pytest", *args],
-            cwd=copy,
-            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-    except subprocess.TimeoutExpired:
-        return None, ""
-    return done.returncode, done.stdout + done.stderr
+    """Return pytest's `(exit code, output)` in `copy`, the code None on a timeout.
+
+    Pytest runs in its own session, and a timeout kills the whole group, so a process
+    a test started does not outlive the verdict.
+    """
+    with subprocess.Popen(
+        [sys.executable, "-m", "pytest", *args],
+        cwd=copy,
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        start_new_session=True,
+    ) as pytest:
+        try:
+            output, _ = pytest.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(pytest.pid, signal.SIGKILL)
+            pytest.communicate()
+            return None, ""
+    return pytest.returncode, output
+
+
+def mutant_timeout(timeout: float, baseline: float) -> float:
+    """Return the seconds one mutant may run: `timeout`, or more for a slow suite.
+
+    A survivor runs every test, as the unmutated baseline did, so no limit is
+    shorter than a multiple of the baseline's own time.
+    e.g. `mutant_timeout(300, 1.0)` -> 300, `mutant_timeout(0.1, 40.0)` -> 120.0
+    """
+    return max(timeout, TIMEOUT_FACTOR * baseline)
 
 
 def verdict(code: int | None) -> str:
@@ -348,7 +370,7 @@ def verdict_line(mutant: Mutant, result: str) -> str:
 
 
 def report(results: Sequence[tuple[Mutant, str]]) -> None:
-    """Print the count of each verdict, then each survivor."""
+    """Print the count of each verdict, then each survivor and each timeout."""
     tally = [sum(result == name for _, result in results) for name in VERDICTS]
     killed, survived, invalid, timeout = tally
     print(
@@ -358,6 +380,9 @@ def report(results: Sequence[tuple[Mutant, str]]) -> None:
     for mutant, result in results:
         if result == "survived":
             print(f"survivor {mutant.path}:{mutant.line} {mutant.operator}")
+    for mutant, result in results:
+        if result == "timeout":
+            print(f"timeout {mutant.path}:{mutant.line} {mutant.operator}")
 
 
 class Parser(argparse.ArgumentParser):
@@ -402,11 +427,14 @@ def run_mutants(
     """Return each mutant with its verdict, tried alone in a copy of `root`.
 
     The tests run unmutated first, and a baseline that is not green is a `Refused`.
+    A mutant's limit is `timeout`, or a multiple of that baseline's time if more.
     """
     with tempfile.TemporaryDirectory() as scratch:
         copy = Path(scratch) / "repo"
         copy_tree(root, copy)
+        started = time.monotonic()
         code, output = run_tests(copy, args, BASELINE_SECONDS)
+        timeout = mutant_timeout(timeout, time.monotonic() - started)
         if code != 0:
             tail = "\n".join(output.splitlines()[-TAIL_LINES:])
             raise Refused(

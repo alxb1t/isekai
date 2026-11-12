@@ -4,12 +4,26 @@ Each operator makes its one edit; a range, a function body and a statement over
 several lines limit where; a small repository of its own shows the run.
 """
 
+import contextlib
+import os
+import signal
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
 
-from tools.mutate import OPERATORS, copy_tree, main, pytest_args, sites, verdict
+from tools.mutate import (
+    OPERATORS,
+    TIMEOUT_FACTOR,
+    copy_tree,
+    main,
+    mutant_timeout,
+    pytest_args,
+    run_tests,
+    sites,
+    verdict,
+)
 
 CALC = """\
 def add(a, b):
@@ -265,7 +279,53 @@ def test_a_mutant_that_hangs_is_timed_out(
 
     assert status == 0
     assert "timeout calc.py:11 arith: n = n - 1 -> n = n + 1" in printed
+    assert printed[-2:] == [
+        "mutate: 1 killed, 0 survived, 0 invalid, 1 timeout",
+        "timeout calc.py:11 arith",
+    ]
     assert not any(line.startswith("survivor") for line in printed)
+
+
+@pytest.mark.spec_exempt(
+    "structural: a mutant's time limit is never below a multiple of the baseline's run"
+)
+def test_a_mutant_gets_a_multiple_of_the_baseline_time() -> None:
+    assert mutant_timeout(0.1, 40.0) == 40.0 * TIMEOUT_FACTOR
+    assert mutant_timeout(300, 1.0) == 300
+
+
+@pytest.mark.spec_exempt(
+    "structural: a timeout kills the processes the tests started, not pytest alone"
+)
+def test_a_timeout_kills_a_process_the_tests_started(tmp_path: Path) -> None:
+    (tmp_path / "test_spawn.py").write_text(
+        "import subprocess, sys, time\n"
+        "from pathlib import Path\n"
+        "\n"
+        "def test_hang():\n"
+        "    child = subprocess.Popen(\n"
+        "        [sys.executable, '-c', 'import time; time.sleep(60)']\n"
+        "    )\n"
+        "    Path(__file__).with_name('child.pid').write_text(str(child.pid))\n"
+        "    time.sleep(60)\n"
+    )
+
+    code, _ = run_tests(tmp_path, ["-q", "-p", "no:cacheprovider", "test_spawn.py"], 3)
+
+    child = int((tmp_path / "child.pid").read_text())
+    try:
+        for _ in range(50):
+            try:
+                os.kill(child, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.1)
+        else:
+            pytest.fail("the process the test started outlived the timeout")
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(child, signal.SIGKILL)
+    assert code is None
 
 
 @pytest.mark.spec_exempt("structural: one of --tests and --all is required")

@@ -10,7 +10,7 @@ built under `tmp_path`.
 """
 
 import ast
-from collections.abc import Collection, Iterator
+from collections.abc import Collection, Iterable, Iterator
 from pathlib import Path
 
 import pytest
@@ -278,12 +278,80 @@ def _dotted(root: Path, path: Path) -> str:
     return ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
 
 
+_FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
+
+
+def _locals(function: ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda) -> set[str]:
+    """Return the names a function binds for itself, its parameters and its stores.
+
+    A nested function's own names are not counted, and a `global` name is not local.
+    e.g. `def f(root): return root` -> `{"root"}`
+    """
+    arguments = function.args
+    names = {
+        argument.arg
+        for argument in [
+            *arguments.posonlyargs,
+            *arguments.args,
+            *arguments.kwonlyargs,
+            *filter(None, [arguments.vararg, arguments.kwarg]),
+        ]
+    }
+    declared: set[str] = set()
+    pending: list[ast.AST] = (
+        [function.body] if isinstance(function, ast.Lambda) else list(function.body)
+    )
+    while pending:
+        node = pending.pop()
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            names.add(node.id)
+        elif isinstance(node, ast.Global):
+            declared.update(node.names)
+        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            names.add(node.name)
+            continue
+        elif isinstance(node, ast.Import | ast.ImportFrom):
+            names.update(
+                (alias.asname or alias.name).split(".")[0] for alias in node.names
+            )
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            names.add(node.name)
+        pending.extend(ast.iter_child_nodes(node))
+    return names - declared
+
+
+def _bare_loads(nodes: Iterable[ast.AST], shadowed: frozenset[str]) -> set[str]:
+    """Return the names loaded under `nodes` that no enclosing function binds itself.
+
+    e.g. `def f(root): return root` loads nothing, `def f(): return root` loads `root`
+    """
+    loads: set[str] = set()
+    for node in nodes:
+        if isinstance(node, ast.Name):
+            if isinstance(node.ctx, ast.Load) and node.id not in shadowed:
+                loads.add(node.id)
+        elif isinstance(node, _FUNCTIONS):
+            outside = [
+                *getattr(node, "decorator_list", []),
+                *node.args.defaults,
+                *filter(None, node.args.kw_defaults),
+            ]
+            body = [node.body] if isinstance(node.body, ast.expr) else node.body
+            loads |= _bare_loads(outside, shadowed)
+            loads |= _bare_loads(body, shadowed | _locals(node))
+        else:
+            loads |= _bare_loads(ast.iter_child_nodes(node), shadowed)
+    return loads
+
+
 def names_read(root: Path) -> dict[str, set[str]]:
     """Return, for each module under the patch packages, the names the product reads.
 
-    A read is a load of the bare name in the module's own source, an attribute load
-    through the module in any file, or an import of the name from the module. A store
-    is not a read, and a test is not product.
+    A read is a load of a bare name no enclosing function binds for itself, in the
+    module's own source; an attribute load through the module in any file; or an
+    import of the name from the module inside a function. A store is not a read, a
+    test is not product, and an import at module level is not a read: it copies the
+    name when the importer loads, so a later patch of the source does not reach it.
     e.g. `{"isekai.boundary.ollama": {"MODEL_RECORDS", "OPENER"}}`
     """
     read: dict[str, set[str]] = {}
@@ -292,20 +360,23 @@ def names_read(root: Path) -> dict[str, set[str]]:
             tree = ast.parse(path.read_text(), filename=_key(root, path))
             module = _dotted(root, path)
             bound = _bound_modules(root, tree, PATCH_PACKAGES)
+            read.setdefault(module, set()).update(_bare_loads([tree], frozenset()))
             for node in ast.walk(tree):
-                if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
-                    read.setdefault(module, set()).add(node.id)
-                elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load):
+                if isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load):
                     chain = _chain(node)
                     if chain and chain[0] in bound:
                         target = ".".join([bound[chain[0]], *chain[1:-1]])
                         read.setdefault(target, set()).add(chain[-1])
-                elif (
-                    isinstance(node, ast.ImportFrom) and node.level == 0 and node.module
-                ):
-                    read.setdefault(node.module, set()).update(
-                        alias.name for alias in node.names
-                    )
+                elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                    for inner in ast.walk(node):
+                        if (
+                            isinstance(inner, ast.ImportFrom)
+                            and inner.level == 0
+                            and inner.module
+                        ):
+                            read.setdefault(inner.module, set()).update(
+                                alias.name for alias in inner.names
+                            )
     return read
 
 
@@ -585,11 +656,16 @@ def _patched_tree(root: Path) -> None:
             "attribute = 1\n"
             "imported = 1\n"
             "stored = 1\n"
+            "shadowed = 1\n"
+            "copied = 1\n"
             "def use():\n"
             "    return loaded\n"
+            "def local(shadowed):\n"
+            "    return shadowed\n"
         ),
         "isekai/n.py": (
             "from isekai import m\n"
+            "from isekai.m import copied\n"
             "def read():\n"
             "    return m.attribute\n"
             "def pull():\n"
@@ -603,6 +679,8 @@ def _patched_tree(root: Path) -> None:
             "    monkeypatch.setattr(m, 'attribute', 1)\n"
             "    monkeypatch.setattr(m, 'imported', 1)\n"
             "    monkeypatch.setattr(m, 'stored', 1)\n"
+            "    monkeypatch.setattr(m, 'shadowed', 1)\n"
+            "    monkeypatch.setattr(m, 'copied', 1)\n"
         ),
     }.items():
         path = root / name
@@ -632,7 +710,7 @@ def test_the_check_catches_a_patch_of_a_name_nothing_reads(tmp_path: Path) -> No
 
 
 @pytest.mark.spec_exempt(
-    "structural: a name is read by a load, an attribute or an import, "
+    "structural: a name is read by a load, an attribute or an import in a function, "
     "and by nothing else"
 )
 def test_a_name_is_read_by_a_load_an_attribute_or_an_import(tmp_path: Path) -> None:
@@ -640,5 +718,7 @@ def test_a_name_is_read_by_a_load_an_attribute_or_an_import(tmp_path: Path) -> N
 
     assert names_read(tmp_path)["isekai.m"] == {"loaded", "attribute", "imported"}
     assert unread_patches(tmp_path) == [
-        "tests/test_patch.py:6 patches isekai.m.stored, which nothing reads"
+        "tests/test_patch.py:6 patches isekai.m.stored, which nothing reads",
+        "tests/test_patch.py:7 patches isekai.m.shadowed, which nothing reads",
+        "tests/test_patch.py:8 patches isekai.m.copied, which nothing reads",
     ]
