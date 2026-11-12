@@ -16,9 +16,10 @@ its new digest.
 - The placement manifest carries its pins: the pose detector, byte for byte the pod's, the pose estimator, and
   the segmenter's archive with its encoder and decoder as members, each at a revision with its digest and size
   (0123 D3, D5).
-- A person's pose is read by `isekai/boundary/pose.py`: the detector's highest-scoring box, the estimator's crop of it
-  grown by a quarter, and each keypoint the highest value on each axis, opened on the CPU after the digests verify;
-  the manifest's checks and `require_placement` skip only under `ISEKAI_PLACEMENT=absent` (0123 D2, D3, D6).
+- A person's pose is read by `isekai/boundary/pose.py`: the detector's highest-scoring box, the estimator's crop of
+  it, and each keypoint the highest value on each axis, on the CPU after the digests verify (0123 D2, D3, D6).
+- A silhouette is read by `isekai/boundary/sam2.py`: the encoder once an image, the decoder once a bone, and the mask
+  is the candidate scored highest, its logits resized to the image and taken above 0 (0123 D2, D7).
 
 ## [0.82.0] - 2026-11-12
 
