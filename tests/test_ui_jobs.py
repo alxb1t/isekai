@@ -120,7 +120,7 @@ def _steps(run: Run) -> list[Step]:
     ]
 
 
-SLEEP = "import time; time.sleep(30)"
+SLEEP = "import time\nwhile True: time.sleep(0.05)"
 
 # A render child that takes a while to tear its pod down once interrupted.
 SLOW_TEARDOWN = (
@@ -131,7 +131,7 @@ SLOW_TEARDOWN = (
     "    sys.exit(130)\n"
     "signal.signal(signal.SIGINT, down)\n"
     "open(sys.argv[1], 'a').write('render\\n')\n"
-    "time.sleep(30)\n"
+    "while True: time.sleep(0.05)\n"
 )
 
 
@@ -210,7 +210,7 @@ def test_stopping_the_surface_interrupts_both_and_closes_the_window_first(
     volume, _ = _order(record)
     broadcast = events.Broadcast()
     found = broadcast.subscribe()
-    prepared = _Script(_line("start") + "; import time; time.sleep(30)")
+    prepared = _Script(_line("start") + "\nimport time\nwhile True: time.sleep(0.05)")
     jobs = Jobs(
         broadcast,
         lambda: None,
@@ -318,7 +318,7 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
     before = snapshot(done.path)
     broadcast = events.Broadcast()
     found = broadcast.subscribe()
-    script = _Script(_line("start") + "; import time; time.sleep(30)")
+    script = _Script(_line("start") + "\nimport time\nwhile True: time.sleep(0.05)")
     jobs = Jobs(broadcast, lambda: None, command=script, now=lambda: STARTED)
     steps = plan({FLOW: [run.id, done.id]}, {FLOW: True})
     jobs.prepare("b", folder, steps, lambda line: [dict(line)])
@@ -883,7 +883,7 @@ def test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window(
         "import signal, sys, time\n"
         "signal.signal(signal.SIGINT, lambda *_: (time.sleep(1), sys.exit(130)))\n"
         "open(sys.argv[1], 'a').write('render\\n')\n"
-        "time.sleep(30)\n"
+        "while True: time.sleep(0.05)\n"
     )
     err = io.StringIO()
     jobs = Jobs(
@@ -928,7 +928,7 @@ def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str
         "    sys.exit(130)\n"
         "signal.signal(signal.SIGINT, down)\n"
         "open(sys.argv[1], 'a').write('render\\n')\n"
-        "time.sleep(30)\n"
+        "while True: time.sleep(0.05)\n"
     )
     err = io.StringIO()
     jobs = Jobs(
@@ -941,7 +941,7 @@ def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str
             script,
             str(record),
         ],
-        settle=lambda: 2,
+        settle=lambda: 10,
         err=err,
     )
     jobs.render({"b": folder}, limit=1500, total=1, keep_open=keep_open)

@@ -10,6 +10,15 @@ its new digest.
 
 ## [Unreleased]
 
+- `main`'s reds are fixed in tests and the workflow: the import test hands Playwright a lambda as the file chooser's
+  handler, the chunked spline matches the whole within a tolerance, and CI runs the browser tests after a red gate
+  (0127 D1, D2).
+- The load-bound tests hold at any load: the lock pair is ordered so the unlocked twin commits both updates, the
+  refusal is asserted by its sentence, the imports stream reads each import off one feed, each idle child waits on
+  short sleeps, and the shutdown test settles in ten seconds (0127 D1).
+- The imports stream test closes the broadcast once the stream has framed `converted`, so the body no longer ends at
+  `converting` under load (0127 D1).
+
 ## [0.86.0] - 2026-11-12
 
 Gate: local 1m0s · CI not read under mf-ship · 0.85.0: local 0m59s · CI not read under mf-ship
