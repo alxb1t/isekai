@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- A pipeline stage may be a package: the stage guard flags an import between stages and lets a package's modules
+  import each other, with twins; the rule is written in the component principle and recorded as D55 (0129 D1, D2).
+
 ## [0.86.2] - 2026-11-12
 
 Gate: local 0m59s · CI not read under mf-ship · 0.86.1: local 0m59s · CI not read under mf-ship

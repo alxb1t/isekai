@@ -4,26 +4,26 @@ Tests, tools and documents alone: the stage rule, the ratchets, the importer tab
 
 ## Progress
 
-- [ ] 4 — The stage rule · moderate
+- [x] 4 — The stage rule · moderate
 - [ ] 5 — The ratchets · moderate
 - [ ] 6 — The importer tables · moderate
 - [ ] 7 — The frozen files and the documents · moderate
 
 ## 4 — The stage rule
 
-- [ ] 4.1 In `tests/test_layers.py`, rewrite `stage_imports` per [D1](design.md#d1): add `def _stage(dotted)`, which returns the segment after `isekai.pipeline.`, and flag an edge when importer and module both have a stage and the stages differ. Reword the docstring to say so.
+- [x] 4.1 In `tests/test_layers.py`, rewrite `stage_imports` per [D1](design.md#d1): add `def _stage(dotted)`, which returns the segment after `isekai.pipeline.`, and flag an edge when importer and module both have a stage and the stages differ. Reword the docstring to say so.
   Verify: `git grep -n -F "def _stage(" -- tests/test_layers.py` prints the definition.
 
-- [ ] 4.2 In `tests/test_layers.py`, add `test_a_stage_package_may_import_its_own_modules`, whose `_package` tree holds `isekai/pipeline/review/__init__.py` importing `isekai.pipeline.review.drafts` and expects `set()`, and `test_the_check_catches_a_stage_package_importing_another`, whose tree has `review/drafts.py` importing `isekai.pipeline.generate` and `generate.py` importing the package `isekai.pipeline.review`, and expects both edges. Each carries `spec_exempt("structural: twin of test_no_stage_imports_another")`.
+- [x] 4.2 In `tests/test_layers.py`, add `test_a_stage_package_may_import_its_own_modules`, whose `_package` tree holds `isekai/pipeline/review/__init__.py` importing `isekai.pipeline.review.drafts` and expects `set()`, and `test_the_check_catches_a_stage_package_importing_another`, whose tree has `review/drafts.py` importing `isekai.pipeline.generate` and `generate.py` importing the package `isekai.pipeline.review`, and expects both edges. Each carries `spec_exempt("structural: twin of test_no_stage_imports_another")`.
   Verify: `uv run pytest tests/test_layers.py -k stage_package -q` exits 0.
 
-- [ ] 4.3 **HALT CHECK** Run the repository's guard after the rewrite: a red `test_no_stage_imports_another` means a stage package already stands that the plan did not read. Edit nothing and stop.
+- [x] 4.3 **HALT CHECK** Run the repository's guard after the rewrite: a red `test_no_stage_imports_another` means a stage package already stands that the plan did not read. Edit nothing and stop.
   Verify: `uv run pytest tests/test_layers.py -k no_stage_imports_another -q` exits 0.
 
-- [ ] 4.4 In `docs/principles.md`, add the sentence of [D2](design.md#d2) to the component principle, after *a package earns its place when the contract needs more than one file*, linking `decisions.md#d55--a-stage-may-be-a-package`.
+- [x] 4.4 In `docs/principles.md`, add the sentence of [D2](design.md#d2) to the component principle, after *a package earns its place when the contract needs more than one file*, linking `decisions.md#d55--a-stage-may-be-a-package`.
   Verify: `git grep -n -F "a stage is the first segment under" -- docs/principles.md` prints the edited line.
 
-- [ ] 4.5 In `docs/decisions.md`, add D55 under *Code and environment*, after D48 and before `## Infrastructure`, with the text of [D2](design.md#d2).
+- [x] 4.5 In `docs/decisions.md`, add D55 under *Code and environment*, after D48 and before `## Infrastructure`, with the text of [D2](design.md#d2).
   Verify: `git grep -n -F "### D55 · A stage may be a package" -- docs/decisions.md` prints the heading.
 
 ## 5 — The ratchets

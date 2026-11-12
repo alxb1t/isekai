@@ -42,7 +42,7 @@ a test can pass a fake.
 door is the contract: other components import only it, and it assembles the package's own modules.
 
 Everything else in the package is private — only the component's own tests reach inside. One module is
-the default; a package earns its place when the contract needs more than one file.
+the default; a package earns its place when the contract needs more than one file. In `pipeline/`, a stage is the first segment under `isekai.pipeline` — one module, or one package. A package's modules import each other; no stage imports another, and a package's front door is as much another stage's as any of its modules is ([D55](decisions.md#d55--a-stage-may-be-a-package)).
 
 - **Why:** a contract is what lets a part be tested alone and swapped without its callers noticing. A
   component that nothing could use or replace is indirection, not structure. The same rule holds at

@@ -117,14 +117,26 @@ def evaluation_imports(root: Path) -> set[Edge]:
     }
 
 
+def _stage(dotted: str) -> str | None:
+    """Return the segment after `isekai.pipeline.`, else None.
+
+    e.g. `isekai.pipeline.review.drafts` -> `review`
+    """
+    prefix = "isekai.pipeline."
+    if not dotted.startswith(prefix):
+        return None
+    return dotted.removeprefix(prefix).split(".")[0]
+
+
 def stage_imports(root: Path) -> set[Edge]:
-    """Return every import of one pipeline module by another."""
+    """Return every import of one pipeline stage by another.
+
+    A stage is a module or a package; a package's modules may import each other.
+    """
     return {
         (importer, module)
         for importer, module in _edges(root)
-        if importer.startswith("isekai.pipeline.")
-        and module.startswith("isekai.pipeline.")
-        and module != importer
+        if _stage(importer) and _stage(module) and _stage(importer) != _stage(module)
     }
 
 
@@ -288,6 +300,38 @@ def test_the_check_catches_a_stage_importing_another(tmp_path: Path) -> None:
     )
     assert stage_imports(root) == {
         ("isekai.pipeline.generate", "isekai.pipeline.review")
+    }
+
+
+@pytest.mark.spec_exempt("structural: twin of test_no_stage_imports_another")
+def test_a_stage_package_may_import_its_own_modules(tmp_path: Path) -> None:
+    root = _package(
+        tmp_path,
+        {
+            "isekai/pipeline/review/__init__.py": (
+                "from isekai.pipeline.review import drafts\n"
+            ),
+            "isekai/pipeline/review/drafts.py": "state = 1\n",
+        },
+    )
+    assert stage_imports(root) == set()
+
+
+@pytest.mark.spec_exempt("structural: twin of test_no_stage_imports_another")
+def test_the_check_catches_a_stage_package_importing_another(tmp_path: Path) -> None:
+    root = _package(
+        tmp_path,
+        {
+            "isekai/pipeline/review/__init__.py": '"""Review."""\n',
+            "isekai/pipeline/review/drafts.py": (
+                "from isekai.pipeline import generate\n"
+            ),
+            "isekai/pipeline/generate.py": "from isekai.pipeline import review\n",
+        },
+    )
+    assert stage_imports(root) == {
+        ("isekai.pipeline.review.drafts", "isekai.pipeline.generate"),
+        ("isekai.pipeline.generate", "isekai.pipeline.review"),
     }
 
 

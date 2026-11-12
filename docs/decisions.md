@@ -563,6 +563,13 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
   when the UI is served from more than one origin.
 - **Made by:** `0098`, `0109`.
 
+### D55 · A stage may be a package
+
+**A stage is the first segment under `isekai.pipeline`: one module, or one package whose `__init__.py` is its front door. The modules of a stage import each other; no stage imports another, its front door included.**
+
+- **Why:** the layer guard read a stage as any file under `pipeline/`, so a stage that grew past one file would have tripped it on its own modules, and its private maths went down into `shared/` instead.
+- **Made by:** `0129`.
+
 ## Infrastructure
 
 ### D26 · Renders run on a rented GPU
