@@ -51,6 +51,11 @@ _BRIGHT_ENVELOPE = 0.45
 # it the sample is ink, the outline holds no bare skin, and dividing by it erases ink.
 _MIN_SKIN = 0.7
 
+# How far the white point's sample may read below the skin just outside the outline,
+# as a share of that skin. Past it the outline's sample is ink, not skin: a fill
+# lighter than `_MIN_SKIN` still fills a tight outline and would be erased.
+_SKIN_GAP = 0.05
+
 
 @dataclass(frozen=True)
 class InkConfig:
@@ -144,6 +149,36 @@ def _skin_envelope(rgb: "Image", reach: int) -> "NDArray[np.float32]":
     return np.asarray(envelope, dtype=np.float32) / 255.0
 
 
+def _skin_beside(
+    alpha: "Image",
+    envelope: "NDArray[np.float32]",
+    transmittance: "NDArray[np.float32]",
+    config: InkConfig,
+) -> float:
+    """Return the white point's mean in a ring of lit pixels just outside `alpha`.
+
+    The ring is the bare skin the outline stands in; 0.0 when the outline has none
+    beside it (it covers the image, or the ring is dark), so nothing is compared.
+    """
+    import numpy as np
+    from PIL import Image, ImageFilter
+
+    factor = max(1, config.reach // 16)
+    inside = alpha.point(lambda value: 255 if value > 127 else 0)
+    small = inside.resize(
+        (max(1, inside.width // factor), max(1, inside.height // factor)),
+        Image.Resampling.BOX,
+    )
+    grown = small.filter(ImageFilter.MaxFilter(max(3, (config.reach // factor) | 1)))
+    reached = np.asarray(grown.resize(inside.size, Image.Resampling.NEAREST)) > 0
+    ring = (
+        reached & ~(np.asarray(inside) > 0) & (envelope.mean(axis=2) > _BRIGHT_ENVELOPE)
+    )
+    if not ring.any():
+        return 0.0
+    return float(np.percentile(transmittance[ring], config.white, axis=0).mean())
+
+
 def extract_ink(
     image: "Image",
     outline: "Image | None",
@@ -189,7 +224,11 @@ def extract_ink(
             "is dark; widen the outline over the skin, or light the photograph"
         )
     skin = np.percentile(transmittance[kept], config.white, axis=0)
-    if skin.mean() < _MIN_SKIN:
+    if (
+        skin.mean() < _MIN_SKIN
+        or skin.mean()
+        < _skin_beside(alpha, envelope, transmittance, config) - _SKIN_GAP
+    ):
         raise Refusal(
             "no bare skin inside the outline to read the ink against: its pixels "
             "are all darker than the skin around them, so the ink would be taken "
