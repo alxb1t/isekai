@@ -26,7 +26,7 @@ from isekai.interface.ui import HOST  # noqa: E402
 from isekai.interface.ui.app import create_app  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.importing import STAGING  # noqa: E402
-from isekai.pipeline.tattoos import DESIGN, OUTLINE, TATTOOS  # noqa: E402
+from isekai.pipeline.tattoos import CUTS, DESIGN, OUTLINE, TATTOOS  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.stages import FIELD_MAP, NO_GPUNIT  # noqa: E402
@@ -34,6 +34,8 @@ from tests.stages import FIELD_MAP, NO_GPUNIT  # noqa: E402
 COLLECTION = "2026-10-19"
 FLOW = "summon-anime-wai"
 PORT = 8765
+ANY = "0123456789ab"
+BOW_OUTLINE = f"/api/tattoos/bow/outline?digest={ANY}"
 ADDRESS = f"http://{HOST}:{PORT}"
 SKIN = (200, 150, 120)
 ARM = (400, 300)
@@ -192,12 +194,14 @@ def _cut(client: TestClient, run: Run, name: str = "arm") -> dict[str, Any]:
 def test_tattoo_route_read_lists_each_in_the_order_kept_with_the_limits(
     library: Path, client: TestClient, photographed: Callable[..., Run]
 ) -> None:
-    assert client.get("/api/tattoos").json()["tattoos"] == []
+    run = photographed()
+    assert client.get(f"/api/tattoos?digest={run.digest}").json()["tattoos"] == []
     _upload(library, client, "bow")
-    _cut(client, photographed(), "arm")
+    _cut(client, run, "arm")
 
-    listed = client.get("/api/tattoos").json()
+    listed = client.get(f"/api/tattoos?digest={run.digest}").json()
 
+    assert listed["stage1"] == {}
     assert [one["name"] for one in listed["tattoos"]] == ["bow", "arm"]
     bow, arm = listed["tattoos"]
     assert (bow["kind"], bow["size"], bow["outlined"]) == ("image", [60, 40], False)
@@ -227,10 +231,14 @@ def test_tattoo_route_read_one_answers_its_record_and_outline_or_refuses_the_nam
 ) -> None:
     _upload(library, client, "bow")
 
-    one = client.get("/api/tattoos/bow")
-    missing = client.get("/api/tattoos/ghost")
-    hidden = client.get("/api/tattoos/.keep")
+    one = client.get(f"/api/tattoos/bow?digest={ANY}")
+    missing = client.get(f"/api/tattoos/ghost?digest={ANY}")
+    hidden = client.get(f"/api/tattoos/.keep?digest={ANY}")
+    undigested = client.get("/api/tattoos/bow")
 
+    assert undigested.status_code == 409
+    assert "digest" in undigested.json()["refusal"]
+    assert client.get("/api/tattoos").status_code == 409
     assert one.status_code == 200
     assert one.json()["name"] == "bow"
     assert one.json()["outline"] == {
@@ -249,18 +257,20 @@ def test_tattoo_route_read_one_answers_its_record_and_outline_or_refuses_the_nam
 def test_tattoo_route_read_design_serves_the_png_and_refuses_a_cut(
     library: Path, client: TestClient, photographed: Callable[..., Run]
 ) -> None:
+    run = photographed()
     _upload(library, client, "bow")
-    _cut(client, photographed(), "arm")
+    _cut(client, run, "arm")
 
-    design = client.get("/api/tattoos/bow/design")
-    cut = client.get("/api/tattoos/arm/design")
+    design = client.get(f"/api/tattoos/bow/design?digest={run.digest}")
+    cut = client.get(f"/api/tattoos/arm/design?digest={run.digest}")
 
     assert design.status_code == 200
     assert design.headers["content-type"] == "image/png"
     assert design.content == (library / TATTOOS / "bow" / DESIGN).read_bytes()
     assert cut.status_code == 409
     assert "cut from a photograph" in cut.json()["refusal"]
-    assert client.get("/api/tattoos/ghost/design").status_code == 409
+    assert client.get(f"/api/tattoos/ghost/design?digest={ANY}").status_code == 409
+    assert client.get("/api/tattoos/bow/design").status_code == 409
 
 
 @pytest.mark.spec("tattoo:library:an-upload-is-kept-upright-and-bounded")
@@ -342,10 +352,9 @@ def test_tattoo_route_keep_cuts_a_tattoo_from_a_runs_photograph(
     assert made["kind"] == "cut"
     assert made["cut_from"] == run.digest
     assert made["size"] == list(ARM)
-    assert sorted(item.name for item in (library / TATTOOS / "arm").iterdir()) == [
-        OUTLINE,
-        "tattoo.json",
-    ]
+    folder = library / TATTOOS / CUTS / run.digest / "arm"
+    assert sorted(item.name for item in folder.iterdir()) == [OUTLINE, "tattoo.json"]
+    assert not (library / TATTOOS / "arm").exists()
 
 
 @pytest.mark.spec_exempt("structural: a cut of an unknown run or a bad name is refused")
@@ -384,14 +393,14 @@ def test_tattoo_route_outline_saves_each_send_and_reads_as_outlined_once_closed(
     _upload(library, client, "bow", _arm())
     ring = _around_the_fill()
 
-    opened = client.put("/api/tattoos/bow/outline", json=_body(ring[:5], False))
-    closed = client.put("/api/tattoos/bow/outline", json=_body(ring, True))
+    opened = client.put(BOW_OUTLINE, json=_body(ring[:5], False))
+    closed = client.put(BOW_OUTLINE, json=_body(ring, True))
 
     assert opened.status_code == 200
     assert opened.json()["closed"] is False
     assert len(opened.json()["points"]) == 5
     assert closed.json()["closed"] is True
-    read = client.get("/api/tattoos/bow").json()
+    read = client.get(f"/api/tattoos/bow?digest={ANY}").json()
     assert read["outline"]["points"] == closed.json()["points"]
     assert read["outlined"] is True
 
@@ -401,12 +410,10 @@ def test_tattoo_route_outline_refuses_as_every_refusal_does_and_leaves_the_file(
     library: Path, client: TestClient
 ) -> None:
     _upload(library, client, "bow")
-    client.put("/api/tattoos/bow/outline", json=_body(_around_the_fill()[:3], False))
+    client.put(BOW_OUTLINE, json=_body(_around_the_fill()[:3], False))
     before = (library / TATTOOS / "bow" / OUTLINE).read_bytes()
 
-    outside = client.put(
-        "/api/tattoos/bow/outline", json=_body([[1.0, 2.0], [61.0, 2.0]], False)
-    )
+    outside = client.put(BOW_OUTLINE, json=_body([[1.0, 2.0], [61.0, 2.0]], False))
 
     assert outside.status_code == 409
     assert "point 2 (61, 2) lies outside the 60x40 image" in outside.json()["refusal"]
@@ -419,10 +426,12 @@ def test_tattoo_route_outline_refuses_a_tone_out_of_range_and_a_missing_key(
 ) -> None:
     _upload(library, client, "bow")
 
-    deep = client.put("/api/tattoos/bow/outline", json=_body([], False, depth=9))
-    flat = client.put("/api/tattoos/bow/outline", json=_body([], False, white=0))
-    short = client.put("/api/tattoos/bow/outline", json={"points": []})
-    ghost = client.put("/api/tattoos/ghost/outline", json=_body([], False))
+    deep = client.put(BOW_OUTLINE, json=_body([], False, depth=9))
+    flat = client.put(BOW_OUTLINE, json=_body([], False, white=0))
+    short = client.put(BOW_OUTLINE, json={"points": []})
+    ghost = client.put(
+        f"/api/tattoos/ghost/outline?digest={ANY}", json=_body([], False)
+    )
 
     assert "depth 9 is outside 1 to 2" in deep.json()["refusal"]
     assert "white scale 0" in flat.json()["refusal"]
@@ -438,7 +447,7 @@ def _outlined(
 ) -> dict[str, Any]:
     """Cut `name` from `run` and save the closed ring round the fill; return the cut."""
     made = _cut(client, run, name)
-    saved = client.put(f"/api/tattoos/{name}/outline", json=_body())
+    saved = client.put(f"/api/tattoos/{name}/outline?digest={run.digest}", json=_body())
     assert saved.status_code == 200, saved.text
     return made
 
@@ -500,20 +509,29 @@ def test_ink_preview_route_is_no_store_and_writes_nothing(
     assert snapshot(library) == before
 
 
-@pytest.mark.spec_exempt("structural: an upload's ink view needs no run")
+@pytest.mark.spec_exempt(
+    "structural: an upload's ink view reads its design.png, on a named run"
+)
 def test_ink_preview_route_of_an_upload_reads_its_design(
-    library: Path, client: TestClient
+    library: Path, client: TestClient, photographed: Callable[..., Run]
 ) -> None:
+    run = photographed()
     _upload(library, client, "ink", _arm())
-    client.put("/api/tattoos/ink/outline", json=_body(neutral=False, depth=1.0))
+    client.put(
+        f"/api/tattoos/ink/outline?digest={run.digest}",
+        json=_body(neutral=False, depth=1.0),
+    )
 
-    answered = client.post(
+    answered = _ink(client, run, "ink", neutral=False, depth=1.0)
+    undigested = client.post(
         f"/api/c/{COLLECTION}/tattoos/ink/ink", json=_ask(neutral=False, depth=1.0)
     )
 
     assert answered.status_code == 200, answered.text
     assert answered.headers["content-type"] == "image/jpeg"
     assert answered.headers["x-ink-white"].isdigit()
+    assert undigested.status_code == 409
+    assert "digest, flow" in undigested.json()["refusal"]
 
 
 @pytest.mark.spec("tattoo:ink-view:an-open-outline-is-refused")
@@ -522,7 +540,9 @@ def test_ink_preview_route_refuses_an_open_outline(
 ) -> None:
     run = photographed()
     _cut(client, run)
-    client.put("/api/tattoos/arm/outline", json=_body(closed=False))
+    client.put(
+        f"/api/tattoos/arm/outline?digest={run.digest}", json=_body(closed=False)
+    )
 
     answered = _ink(client, run)
 
@@ -572,16 +592,22 @@ def test_ink_preview_route_refuses_a_request_from_another_site(
     assert answered.json() == {"refusal": "not from this page"}
 
 
+REMOVAL = "/api/tattoos/{name}"
+
+
 def _taking_away(app: FastAPI) -> list[str]:
-    """Return each route under `/api/tattoos` that deletes or renames a tattoo."""
+    """Return each tattoo route that renames, or removes other than by `REMOVAL`."""
     found = []
     for route in app.routes:
         path = getattr(route, "path", "")
         methods = getattr(route, "methods", None) or set()
         if not path.startswith("/api/tattoos"):
             continue
-        if methods & {"DELETE", "PATCH"} or any(
-            word in path for word in ("delete", "remove", "rename")
+        removes_elsewhere = "DELETE" in methods and path != REMOVAL
+        if (
+            removes_elsewhere
+            or "PATCH" in methods
+            or any(word in path for word in ("delete", "remove", "rename"))
         ):
             found.append(f"{sorted(methods)} {path}")
     return found
@@ -598,8 +624,8 @@ def _new_routes(app: FastAPI) -> list[tuple[str, str]]:
     ]
 
 
-@pytest.mark.spec("tattoo:library:no-route-deletes-or-renames")
-def test_tattoo_route_guard_none_under_api_tattoos_deletes_or_renames(
+@pytest.mark.spec("tattoo:library:no-route-renames")
+def test_tattoo_route_guard_none_under_api_tattoos_renames_and_one_removes(
     client: TestClient,
 ) -> None:
     app = client.app
@@ -607,22 +633,67 @@ def test_tattoo_route_guard_none_under_api_tattoos_deletes_or_renames(
 
     assert _taking_away(app) == []
     assert ("GET", "/api/tattoos") in _new_routes(app)
+    assert ("DELETE", REMOVAL) in _new_routes(app)
 
 
-@pytest.mark.spec("tattoo:library:no-route-deletes-or-renames")
-def test_tattoo_route_guard_twin_finds_a_delete_and_a_rename_when_one_is_added(
+@pytest.mark.spec("tattoo:library:no-route-renames")
+def test_tattoo_route_guard_twin_finds_a_rename_and_a_delete_elsewhere_when_added(
     client: TestClient,
 ) -> None:
     app = client.app
     assert isinstance(app, FastAPI)
 
-    app.add_api_route("/api/tattoos/{name}", lambda name: {}, methods=["DELETE"])
+    app.add_api_route("/api/tattoos/{name}/design", lambda name: {}, methods=["DELETE"])
     app.add_api_route("/api/tattoos/{name}/rename", lambda name: {}, methods=["PUT"])
 
     taken = _taking_away(app)
     assert len(taken) == 2
     assert any("DELETE" in line for line in taken)
     assert any("rename" in line for line in taken)
+
+
+@pytest.mark.spec("tattoo:library:a-removed-tattoo-is-gone")
+def test_tattoo_route_delete_removes_an_upload_and_a_cut(
+    library: Path, client: TestClient, photographed: Callable[..., Run]
+) -> None:
+    run = photographed()
+    _upload(library, client, "bow")
+    _upload(library, client, "wing")
+    _cut(client, run, "arm")
+
+    upload = client.delete(f"/api/tattoos/bow?digest={run.digest}")
+    cut = client.delete(f"/api/tattoos/arm?digest={run.digest}")
+
+    assert (upload.status_code, upload.json()) == (200, {})
+    assert (cut.status_code, cut.json()) == (200, {})
+    listed = client.get(f"/api/tattoos?digest={run.digest}").json()["tattoos"]
+    assert [one["name"] for one in listed] == ["wing"]
+    assert not (library / TATTOOS / "bow").exists()
+    assert not (library / TATTOOS / CUTS / run.digest).exists()
+    assert _upload(library, client, "bow")["name"] == "bow"
+
+
+@pytest.mark.spec("tattoo:library:a-removal-reaches-only-the-named-tattoo")
+def test_tattoo_route_delete_refuses_a_missing_digest_and_an_unknown_name(
+    library: Path, client: TestClient, photographed: Callable[..., Run]
+) -> None:
+    run = photographed()
+    _upload(library, client, "bow")
+    _cut(client, run, "arm")
+    before = snapshot(library)
+
+    undigested = client.delete("/api/tattoos/bow")
+    unknown = client.delete(f"/api/tattoos/ghost?digest={run.digest}")
+    hidden = client.delete(f"/api/tattoos/.cuts?digest={run.digest}")
+    bad = client.delete(f"/api/tattoos/bow?digest={'../' * 4}")
+    other = client.delete(f"/api/tattoos/arm?digest={ANY}")
+
+    for answered in (undigested, unknown, hidden, bad, other):
+        assert answered.status_code == 409
+    assert "digest" in undigested.json()["refusal"]
+    assert "ghost" in unknown.json()["refusal"]
+    assert f"cut from photograph {run.digest}" in other.json()["refusal"]
+    assert snapshot(library) == before
 
 
 @pytest.mark.spec("tattoo:ink-view:a-request-from-another-site-is-refused")

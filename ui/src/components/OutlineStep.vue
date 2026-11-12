@@ -72,7 +72,9 @@ const rules = computed<Rules>(() => ({
   width: tattoo.value?.size[0] ?? 0,
   height: tattoo.value?.size[1] ?? 0,
 }))
-const src = computed(() => (isCut.value ? photoUrl(props.place) : designAt(props.name)))
+const src = computed(() =>
+  isCut.value ? photoUrl(props.place) : designAt(props.place.digest, props.name),
+)
 const wait = computed(() => controlsWait(draft.value))
 const line = computed(() => closeLine(draft.value))
 const complete = computed(() => ready(draft.value, rules.value))
@@ -108,7 +110,7 @@ function flush(): void {
   const outline = current()
   saving = saving.then(async () => {
     try {
-      await saveOutline(props.name, outline)
+      await saveOutline(props.place.digest, props.name, outline)
       if (saveTimer === undefined) status.value = 'saved'
     } catch (reason) {
       status.value = (reason as Error).message
@@ -157,7 +159,7 @@ function askInk(): void {
         props.place.collection,
         props.name,
         current(),
-        isCut.value ? props.place : null,
+        props.place,
         mine.signal,
       )
       if (mine.signal.aborted) return
@@ -271,7 +273,7 @@ const waiting = (view: View, points: readonly Point[]) => {
 
 onMounted(async () => {
   try {
-    const { outline, ...record } = await tattooNamed(props.name)
+    const { outline, ...record } = await tattooNamed(props.place.digest, props.name)
     tattoo.value = record
     draft.value = drafted(outline.points, outline.closed)
     tone.value = { neutral: outline.neutral, depth: outline.depth }
@@ -292,7 +294,6 @@ onUnmounted(() => {
 
 <template>
   <RefusalPage v-if="refusal" :refusal="refusal" />
-  <RefusalPage v-else-if="held && !held.choosable" :refusal="held.reason ?? ''" />
   <section v-else-if="tattoo" class="outline">
     <ImagePanel
       :src="src"

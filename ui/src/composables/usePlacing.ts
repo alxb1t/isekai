@@ -23,7 +23,11 @@ export interface Ports {
   save: (digest: string, name: string, stage: Stage1) => Promise<Stage1>
 }
 
-const SERVER: Ports = { read: tattooNamed, stageOne, save: saveStageOne }
+const serverPorts = (place: Place): Ports => ({
+  read: (name) => tattooNamed(place.digest, name),
+  stageOne,
+  save: saveStageOne,
+})
 
 /* How long a change of the pairs waits for the next before it is saved, in ms. */
 const SAVE_DELAY = 300
@@ -31,7 +35,7 @@ const SAVE_DELAY = 300
 const sameAs = (a: readonly Pair[], b: readonly Pair[]): boolean =>
   JSON.stringify(a) === JSON.stringify(b)
 
-export function usePlacing(place: Place, ports: Ports = SERVER) {
+export function usePlacing(place: Place, ports: Ports = serverPorts(place)) {
   const tattoo = shallowRef<Named | null>(null)
   const read = shallowRef<Stage1 | null>(null)
   const first = shallowRef<Pairs>(none)
