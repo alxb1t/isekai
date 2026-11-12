@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.4
 after: [0129-the-refactors-rails]
 ---
 
