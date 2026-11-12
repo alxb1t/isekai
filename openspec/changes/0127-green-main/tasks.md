@@ -4,21 +4,21 @@ Tests and the workflow alone: the reds of `main`, then the tests that fail under
 
 ## Progress
 
-- [ ] 1 — The reds · moderate
+- [x] 1 — The reds · moderate
 - [ ] 2 — The load-bound tests · moderate
 
 ## 1 — The reds
 
-- [ ] 1.1 In `tests/e2e/test_import.py`, hand Playwright a lambda as the file chooser's handler: replace `page.on("filechooser", chosen.append)` with `page.on("filechooser", lambda chooser: chosen.append(chooser))`. Keep the `chosen` list and the `assert not chosen` below it.
+- [x] 1.1 In `tests/e2e/test_import.py`, hand Playwright a lambda as the file chooser's handler: replace `page.on("filechooser", chosen.append)` with `page.on("filechooser", lambda chooser: chosen.append(chooser))`. Keep the `chosen` list and the `assert not chosen` below it.
   Verify: `git grep -n -F 'lambda chooser: chosen.append(chooser)' -- tests/e2e/test_import.py` prints the edited line.
 
-- [ ] 1.2 In `tests/test_chain.py`, change the last line of `test_chain_spline_chunks_a_large_grid_without_changing_it` per [D2](design.md#d2): replace `assert np.array_equal(spline(grid), whole)` with `np.testing.assert_allclose(spline(grid), whole, rtol=0, atol=1e-9)`. Keep the test's name and its `spec_exempt` mark.
+- [x] 1.2 In `tests/test_chain.py`, change the last line of `test_chain_spline_chunks_a_large_grid_without_changing_it` per [D2](design.md#d2): replace `assert np.array_equal(spline(grid), whole)` with `np.testing.assert_allclose(spline(grid), whole, rtol=0, atol=1e-9)`. Keep the test's name and its `spec_exempt` mark.
   Verify: `git grep -n -F 'atol=1e-9' -- tests/test_chain.py` prints the edited line.
 
-- [ ] 1.3 In `.github/workflows/ci.yml`, add the line `        if: always()` under `      - name: Browser tests`, above its `run: make e2e`. Reword the comment above the step, `# cannot run them; CI holds them on every push.`, to `# cannot run them; CI runs them after the gate, red or green.`
+- [x] 1.3 In `.github/workflows/ci.yml`, add the line `        if: always()` under `      - name: Browser tests`, above its `run: make e2e`. Reword the comment above the step, `# cannot run them; CI holds them on every push.`, to `# cannot run them; CI runs them after the gate, red or green.`
   Verify: `git grep -n -F 'if: always()' -- .github/workflows/ci.yml` prints one line, in the step named *Browser tests*.
 
-- [ ] 1.4 **HALT CHECK** The workflow's guards in `tests/test_infra.py` hold with the edited step, and the spline's test passes: a failure in `tests/test_infra.py` means `if: always()` breaks a guard the plan says it keeps. Edit nothing.
+- [x] 1.4 **HALT CHECK** The workflow's guards in `tests/test_infra.py` hold with the edited step, and the spline's test passes: a failure in `tests/test_infra.py` means `if: always()` breaks a guard the plan says it keeps. Edit nothing.
   Verify: `uv run pytest tests/test_chain.py tests/test_infra.py -q` exits 0.
 
 ## 2 — The load-bound tests

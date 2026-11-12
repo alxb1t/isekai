@@ -99,7 +99,7 @@ def test_chain_spline_chunks_a_large_grid_without_changing_it(
 
     monkeypatch.setattr(chain, "CHUNK", 7)
 
-    assert np.array_equal(spline(grid), whole)
+    np.testing.assert_allclose(spline(grid), whole, rtol=0, atol=1e-9)
 
 
 def _ink(width: int, height: int) -> np.ndarray:
