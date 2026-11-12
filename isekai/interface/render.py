@@ -749,10 +749,14 @@ def estimated(
 
 @dataclass(frozen=True)
 class Edits:
-    """A collection's pending edits: the cells that hold them, and how many."""
+    """A collection's pending edits: the cells that hold them, and how many.
+
+    `records` is each pending edit's record, by run, flow, then chain.
+    """
 
     cells: tuple[str, ...]
     count: int
+    records: tuple[Path, ...] = ()
 
 
 def edits_of(
@@ -765,15 +769,15 @@ def edits_of(
          -> Edits(("r1/f",), 2)
     """
     cells: list[str] = []
-    count = 0
+    found: list[Path] = []
     for run_id in ids:
         run = Run(run_id, runs / run_id)
         for flow in (name for name in run.flows if name in tracked):
             held = [] if runs / run_id / flow in without else pending_edits(run, flow)
             if held:
                 cells.append(f"{run_id}/{flow}")
-                count += len(held)
-    return Edits(tuple(cells), count)
+                found += held
+    return Edits(tuple(cells), len(found), tuple(found))
 
 
 def progress_line(raw: str) -> dict[str, Any] | None:
@@ -890,11 +894,11 @@ def short(
 class Quote:
     """What one session over many collections would do, how long, and its price."""
 
-    # The shortfall of each collection quoted that is short or refuses a count,
-    # by its runs root, in the order quoted.
+    # The shortfall of each collection quoted that is short, refuses a count or
+    # holds a queued bake, by its runs root, in the order quoted.
     shorts: dict[Path, Short]
-    # The pending edits of each collection quoted, by its runs root.
-    pending: dict[Path, int]
+    # The pending edits, a bake each, of every collection asked, by its runs root.
+    edits: dict[Path, Edits]
     estimate: Estimate
     timing: Timing
     ceiling_s: int
@@ -909,22 +913,22 @@ class Quote:
         return sum(sum(found.images.values()) for found in self.shorts.values())
 
     @property
-    def edits(self) -> int:
-        """Return how many pending edits the session runs, across its collections."""
-        return sum(self.pending.values())
+    def bakes(self) -> int:
+        """Return how many bakes the session runs, across its collections."""
+        return sum(held.count for held in self.edits.values())
 
     @property
     def blocked(self) -> str | None:
         """Return why nothing would render, or None while the session may start.
 
-        A refused count first, then no image short and no edit pending, then an
+        A refused count first, then no image short and no bake queued, then an
         estimate whose limit would pass the ceiling: the session would end before
         its work.
         """
         refused = (found.blocked for found in self.shorts.values() if found.refused)
         if (first := next(refused, None)) is not None:
             return first
-        if not self.images and not self.edits:
+        if not self.images and not self.bakes:
             return NOTHING_SHORT
         if self.estimate.capped:
             return (
@@ -954,19 +958,19 @@ def quote(
     ids = {runs: run_ids(runs) for runs in roots}
     found = {runs: short(runs, ids[runs], wired, without) for runs in roots}
     tracked = tracked_flows(wired.flows_dir)
-    held = {runs: edits_of(runs, ids[runs], tracked, without).count for runs in roots}
+    held = {runs: edits_of(runs, ids[runs], tracked, without) for runs in roots}
     shorts = {
         runs: one
         for runs, one in found.items()
-        if one.lines or one.refused or held[runs]
+        if one.lines or one.refused or held[runs].count
     }
     work = [(runs, ids[runs], one.images) for runs, one in shorts.items()]
-    pending_count = {runs: held[runs] for runs in shorts}
+    pending_count = {runs: held[runs].count for runs in shorts}
     guess = estimated(work, timing, bound.ceiling_s, pending_count)
     hourly = bound.max_hourly + timing.volume_rate
     return Quote(
         shorts,
-        pending_count,
+        held,
         guess,
         timing,
         bound.ceiling_s,

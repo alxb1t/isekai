@@ -24,6 +24,12 @@ export const router = createRouter({
       props: true,
     },
     {
+      path: '/c/:collection/renders/:digest/:flow/:version/:seed/edit/:k',
+      name: 'bake',
+      component: RenderLarge,
+      props: true,
+    },
+    {
       path: '/c/:collection/renders/:digest/:flow/:version/:seed/compare/photo',
       name: 'compare-photo',
       component: Compare,

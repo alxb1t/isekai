@@ -702,6 +702,32 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
     assert (parsed.runs, parsed.requests, parsed.limit) == (roots, [], 1500)
 
 
+@pytest.mark.spec("ui:render-job:opens-renders-and-closes")
+def test_bake_confirm_a_job_of_bakes_alone_plans_no_image(tmp_path: Path) -> None:
+    folder, _ = _collection(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+    volume, command = _order(record)
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=command,
+        now=lambda: "ended",
+    )
+
+    jobs.render({"b": folder}, limit=1500, total=0, keep_open=False)
+    jobs.wait("render", WAIT)
+
+    slot = jobs.slot("render") or {}
+    assert slot["state"] == "done"
+    assert (slot["session"]["of"], slot["session"]["images"]) == (0, [])
+    assert record.read_text().splitlines() == [
+        "volume up --yes",
+        f"render 1500 {slot['session']['id']}",
+        "volume down",
+    ]
+
+
 @pytest.mark.spec("ui:render-job:an-opening-that-raises-fails-its-step")
 def test_a_window_opening_that_raises_fails_the_job_and_its_step(
     tmp_path: Path,
@@ -1118,7 +1144,8 @@ def test_a_confirmation_shorter_than_the_quote_now_gives_is_refused(
     shown = client.post("/api/render/quote", json=asked).json()["estimate"]["limit_s"]
 
     started = client.post(
-        "/api/render", json={**asked, "keep_open": False, "limit_s": shown - 1}
+        "/api/render",
+        json={**asked, "keep_open": False, "limit_s": shown - 1, "bakes": 0},
     )
 
     assert started.status_code == 409
@@ -1129,7 +1156,7 @@ def test_a_confirmation_shorter_than_the_quote_now_gives_is_refused(
     _approved(folder, "beatrix.jpg", FLOW, schema, vocabulary)
     grown = client.post(
         "/api/render",
-        json={**asked, "keep_open": False, "limit_s": shown, "images": 1},
+        json={**asked, "keep_open": False, "limit_s": shown, "images": 1, "bakes": 0},
     )
 
     assert grown.status_code == 409
@@ -1193,7 +1220,7 @@ def test_a_photograph_taken_out_leaves_the_quote_and_the_session(
     limit = quote["estimate"]["limit_s"]
     confirmed = client.post(
         "/api/render",
-        json={**asked, "keep_open": False, "limit_s": limit, "images": 1},
+        json={**asked, "keep_open": False, "limit_s": limit, "images": 1, "bakes": 0},
     )
 
     assert confirmed.status_code == 200
@@ -1215,7 +1242,7 @@ def test_a_photograph_no_quoted_run_holds_is_refused(
     quote = client.post("/api/render/quote", json=asked)
     started = client.post(
         "/api/render",
-        json={**asked, "keep_open": False, "limit_s": 1200, "images": 1},
+        json={**asked, "keep_open": False, "limit_s": 1200, "images": 1, "bakes": 0},
     )
 
     for answered in (quote, started):
