@@ -131,7 +131,7 @@ Each table is the scan's output at the build: a task prints it, and the task wri
 
 ### D7
 
-`tools/import_graph.py` holds `PACKAGES`, `Edge`, and the functions, public and stdlib only: `module_name(root, path)`, `is_module(root, name)`, `sources(root, scope)`, `imports(root, path)` and `edges(root, scope)`, the last cached. Their bodies are those of `_module_name`, `_is_module`, `_sources`, `_imports` and `_edges` in `tests/test_layers.py`.
+`tools/import_graph.py` holds `PACKAGES`, `Edge`, and the functions, public and stdlib only: `module_name(root, path)`, `is_module(root, name)`, `sources(root, scope)`, `imports(root, path)` and `edges(root, scope)`, the last cached. Their bodies are those of the private graph functions that stood in `tests/test_layers.py` before the move, which the move deletes.
 
 The layer rules stay in the test, which imports the graph from the tool, so a test reaches a tool and a tool never reaches a test. The readers of the moved names are all in `tests/test_layers.py`, per the cut notes.
 
