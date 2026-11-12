@@ -2,9 +2,50 @@
 
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
-The system SHALL offer Render from a bar on a collection's hub that counts the images short of their approvals' counts and the bakes queued, its collection's and, as `+n in other collections`, every other collection's, and SHALL show no such bar when no collection is short of images or holds a queued bake and no count is refused, nor on the hub while changes wait for Prepare. While a render runs the bar SHALL show the session's totals and *Session* in place of the counts and Render, and name the images short that the session does not render as waiting for the next session. The bar SHALL be disabled, with its reason, when a pod may still be billing, when no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a dialog titled *Render n images*, *Render n images · m bakes* or, with no image short, *Bake m*, listing a row per collection short of images or holding a queued bake, in the Library's order, each ticked, and in each row per offered flow the photographs that will render, as tiles grouped by flow, then a row per queued bake naming its photograph, version, seed and edit number, and none that is left out; unticking a row SHALL quote the rest again; the session's estimate, counting each bake, and limit, and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its configured rate; an estimate past the ceiling `gpunit.toml` names SHALL disable the confirmation, saying so. A tile's `×`, or `⌫` while the tile holds the focus, SHALL take its photograph's flow out of the session, its bakes with it, and quote the rest again, show the next photograph past the cap, and move the focus to the next tile; a bake row's `×` SHALL take its photograph's flow out the same way; a refused count SHALL show no tile. A row whose every tile and bake is taken out SHALL read *all removed*, unticked, and leave the confirmation, and with every row so emptied the confirmation SHALL be disabled, saying *Nothing left to render.* The tiles SHALL be one stop in the `Tab` order: `h` and `l` SHALL move the focus along a flow's tiles, `j` and `k` to the next and the previous flow's, its place held at the shorter's end, and a key's move SHALL scroll the focused tile to the centre of the list where the scroll allows, the first flow's to the list's top and the last's to its foot. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL, and SHALL close when its page is left, and the confirmation SHALL close it and open the session drawer over the page. The confirmation SHALL carry the ticked collections, the limit, the number of images and the number of bakes the dialog showed and the photographs taken out, which the session SHALL not render, and SHALL be refused, starting nothing, when the ticked collections' quote taken again has a longer limit, another number of images or another number of bakes, or names a photograph that is not one of a quoted collection's runs. A session of bakes alone SHALL be allowed. The bar SHALL show the newest offer asked for, whatever order the answers arrive in.
+The system SHALL offer Render from a bar on a collection's hub that counts the images short of their
+approvals' counts and the bakes queued, its collection's and, as `+n in other collections`, every other
+collection's, and SHALL show no such bar when no collection is short of images or holds a queued bake and no
+count is refused, nor on the hub while changes wait for Prepare. While a render runs the bar SHALL show the
+session's totals and *Session* in place of the counts and Render, and name the images short that the session
+does not render as waiting for the next session. The bar SHALL be disabled, with its reason, when a pod may
+still be billing, when no RunPod key is in the surface's environment, and when an approval's count is
+refused. It SHALL open a dialog titled *Render n images*, *Render n images · m bakes* or, with no image
+short, *Bake m*, listing a row per collection short of images or holding a queued bake, in the Library's
+order, each ticked, and in each row per offered flow the photographs that will render, as tiles grouped by
+flow, then a row per queued bake naming its photograph, version, seed and edit number, and none that is left
+out; unticking a row SHALL quote the rest again; the session's estimate, counting each bake, and limit, and
+its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its configured
+rate; an estimate past the ceiling `gpunit.toml` names SHALL disable the confirmation, saying so. A tile's
+`×`, or `⌫` while the tile holds the focus, SHALL take its photograph's flow out of the session, its bakes
+with it, and quote the rest again, show the next photograph past the cap, and move the focus to the next
+tile; a bake row's `×` SHALL take its photograph's flow out the same way; a refused count SHALL show no
+tile. A row whose every tile and bake is taken out SHALL read *all removed*, unticked, and leave the
+confirmation, and with every row so emptied the confirmation SHALL be disabled, saying *Nothing left to
+render.* The tiles SHALL be one stop in the `Tab` order: `h` and `l` SHALL move the focus along a flow's
+tiles, `j` and `k` to the next and the previous flow's, its place held at the shorter's end, and a key's move
+SHALL scroll the focused tile to the centre of the list where the scroll allows, the first flow's to the
+list's top and the last's to its foot. Its confirmation SHALL be the only act that rents; the dialog SHALL
+hold no URL, and SHALL close when its page is left, and the confirmation SHALL close it and open the session
+drawer over the page. The confirmation SHALL carry the ticked collections, the limit, the number of images
+and the number of bakes the dialog showed and the photographs taken out, which the session SHALL not render,
+and SHALL be refused, starting nothing, when the ticked collections' quote taken again has a longer limit,
+another number of images or another number of bakes, or names a photograph that is not one of a quoted
+collection's runs. A session of bakes alone SHALL be allowed. The bar SHALL show the newest offer asked for,
+whatever order the answers arrive in.
 
-The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and not a guess. A reload never reopens a confirmation that spends; a changed image total, bake total or longer limit requires a fresh confirmation, even where the limit sits at its floor or cap. An equal-total change of sources or approvals is outside that comparison. A bar that is absent needs no reason, and one forward action holds the screen's accent; a refused count keeps the bar, so the refusal is never silent. A photograph is known by sight, so the dialog shows it rather than its file name, and is taken out where it is seen; the dialog shows only what renders, as that is what the operator agrees to. A removal is the render verb's `--without`, so the page's session is one the terminal can run ([D3](../../../docs/decisions.md#d3--the-hand-path-stays)). A bake is an edit request with no image, run by the same session as the images ([D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children), [D36](../../../docs/decisions.md#d36--a-render-session-is-isekai-render)), and `--without` names a photograph's flow, so a bake leaves with its photograph's flow and no other way.
+The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a
+bound and not a guess. A reload never reopens a confirmation that spends; a changed image total, bake total or
+longer limit requires a fresh confirmation, even where the limit sits at its floor or cap. An equal-total
+change of sources or approvals is outside that comparison. A bar that is absent needs no reason, and one
+forward action holds the screen's accent; a refused count keeps the bar, so the refusal is never silent. A
+photograph is known by sight, so the dialog shows it rather than its file name, and is taken out where it is
+seen; the dialog shows only what renders, as that is what the operator agrees to. A removal is the render
+verb's `--without`, so the page's session is one the terminal can run
+([D3](../../../docs/decisions.md#d3--the-hand-path-stays)). A bake is an edit request with no image, run by
+the same session as the images
+([D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children),
+[D36](../../../docs/decisions.md#d36--a-render-session-is-isekai-render)), and `--without` names a
+photograph's flow, so a bake leaves with its photograph's flow and no other way.
 
 #### Scenario: the dialog lists what renders per flow
 - **Key:** `ui:render:the-dialog-lists-what-renders`
@@ -16,7 +57,8 @@ The quote is what the operator agrees to; gpunit refuses a card above the hourly
 #### Scenario: the dialog lists each queued bake
 - **Key:** `ui:render:the-dialog-lists-each-queued-bake`
 - **Layers:** unit
-- **WHEN** a collection's quote is asked for with an approval short of its count and a queued bake of another photograph's render
+- **WHEN** a collection's quote is asked for with an approval short of its count and a queued bake of another
+  photograph's render
 - **THEN** it lists the images by flow, and the bake with its photograph, version, seed and edit number
 - **AND** the estimate counts the bake beside the images
 
@@ -179,9 +221,25 @@ The quote is what the operator agrees to; gpunit refuses a card above the hourly
 
 ### Requirement: A render's large view shows its photograph and its bakes, and each bake has its own address
 
-The system SHALL show on an image's large view the photograph it was rendered from as a thumbnail and, when the render has bakes, the chain of them: the render first, then each bake of its seed by its number, each one level further in for each bake it descends through, a row naming its number and, baked, its time, or, queued, that it waits for the next session. A baked row SHALL open that bake's large view at `…/<seed>/edit/<k>`, showing the bake's image, the approval's fields the render has, and the bake's record: its edit, the image it was placed on and its time. A queued bake's view SHALL show the image it is placed on, marked queued. A bake's view SHALL offer no *Draft from this*, no *Compare with…* and no *Delete*; `Esc`, *Back to Hub*, `h` and `l` SHALL act as on its render's. The server SHALL serve a bake's record, its image and its thumbnail, made in the library's cache once, and SHALL refuse a number the seed has no edit for and the image of a queued bake, naming the render session that bakes it. A bake whose record cannot be read SHALL be listed damaged, naming its file, and open no view, and SHALL not hide the render's other bakes. Deleting a render SHALL delete its bakes' thumbnails with its own.
+The system SHALL show on an image's large view the photograph it was rendered from as a thumbnail and, when the
+render has bakes, the chain of them: the render first, then each bake of its seed by its number, each one level
+further in for each bake it descends through, a row naming its number and, baked, its time, or, queued, that
+it waits for the next session. A baked row SHALL open that bake's large view at `…/<seed>/edit/<k>`, showing
+the bake's image, the approval's fields the render has, and the bake's record: its edit, the image it was
+placed on and its time. A queued bake's view SHALL show the image it is placed on, marked queued. A bake's view
+SHALL offer no *Draft from this*, no *Compare with…* and no *Delete*; `Esc`, *Back to Hub*, `h` and `l` SHALL
+act as on its render's. The server SHALL serve a bake's record, its image and its thumbnail, made in the
+library's cache once, and SHALL refuse a number the seed has no edit for and the image of a queued bake,
+naming the render session that bakes it. A bake whose record cannot be read SHALL be listed damaged, naming
+its file, and open no view, and SHALL not hide the render's other bakes. Deleting a render SHALL delete its
+bakes' thumbnails with its own.
 
-A bake is not a render: it holds no sheet of its own and no seed, so its view borrows its render's, and a delete there would take the render and every bake with it ([D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children), [D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)). A bake's files are named by the run's own functions, never by the surface ([D3](../../../docs/decisions.md#d3--the-hand-path-stays)).
+A bake is not a render: it holds no sheet of its own and no seed, so its view borrows its render's, and a
+delete there would take the render and every bake with it
+([D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children),
+[D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)).
+A bake's files are named by the run's own functions, never by the surface
+([D3](../../../docs/decisions.md#d3--the-hand-path-stays)).
 
 ```
 the render      ·  seed 42              the large view of the render
@@ -218,7 +276,8 @@ the render      ·  seed 42              the large view of the render
 #### Scenario: a number the seed has no edit for is refused
 - **Key:** `ui:bakes:an-unknown-bake-is-refused`
 - **Layers:** unit
-- **WHEN** a bake's record, image or thumbnail is asked for at a number the seed has no edit for, or one that is no number
+- **WHEN** a bake's record, image or thumbnail is asked for at a number the seed has no edit for, or one that
+  is no number
 - **THEN** the request is refused, naming the number and the render, never failed
 
 #### Scenario: a damaged record marks its own bake
