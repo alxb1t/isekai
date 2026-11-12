@@ -17,6 +17,7 @@ from PIL import Image, ImageDraw
 from isekai.foundation.refusal import Refusal
 from isekai.pipeline import tattoos
 from isekai.pipeline.tattoos import (
+    CUTS,
     DESIGN,
     INK_CONFIG,
     OUTLINE,
@@ -31,6 +32,7 @@ from isekai.pipeline.tattoos import (
     load_tattoo_config,
     named,
     read_outline,
+    remove,
     save_outline,
 )
 from isekai.shared.ink import load_ink_config
@@ -82,6 +84,16 @@ def _ring(count: int, size: tuple[int, int] = (40, 20)) -> list[list[float]]:
     ]
 
 
+def _upload(library: Path, name: str) -> Path:
+    """Return the folder of the upload `name`."""
+    return library / TATTOOS / name
+
+
+def _cut_at(library: Path, digest: str, name: str) -> Path:
+    """Return the folder of the cut `name` of the photograph `digest`."""
+    return library / TATTOOS / CUTS / digest / name
+
+
 def _open(path: Path) -> Image.Image:
     """Return the image at `path`, decoded."""
     image = Image.open(path)
@@ -116,7 +128,7 @@ def test_tattoo_names_a_taken_name_is_refused_and_the_tattoo_is_as_it_was(
         cut(tmp_path, "bow", DIGEST, PHOTO, at=_at(2))
 
     assert (tmp_path / TATTOOS / "bow" / DESIGN).read_bytes() == before
-    assert [tattoo.name for tattoo in listed(tmp_path)] == ["bow"]
+    assert [tattoo.name for tattoo in listed(tmp_path, DIGEST)] == ["bow"]
     assert sorted(item.name for item in (tmp_path / TATTOOS).iterdir()) == ["bow"]
 
 
@@ -124,13 +136,13 @@ def test_tattoo_names_a_taken_name_is_refused_and_the_tattoo_is_as_it_was(
 def test_tattoo_names_are_listed_with_their_kind_and_size_in_the_order_kept(
     tmp_path: Path,
 ) -> None:
-    assert listed(tmp_path) == []
+    assert listed(tmp_path, DIGEST) == []
     cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(5))
     keep(tmp_path, "bow", _png((40, 20)), at=_at(9))
     keep(tmp_path, "anchor", _png((10, 30)), at=_at(1))
-    save_outline(tmp_path, "bow", _ring(24), True, 1.0, False, 1.0)
+    save_outline(tmp_path, "bow", DIGEST, _ring(24), True, 1.0, False, 1.0)
 
-    rows = [(t.name, t.kind, t.size, t.outlined) for t in listed(tmp_path)]
+    rows = [(t.name, t.kind, t.size, t.outlined) for t in listed(tmp_path, DIGEST)]
 
     assert rows == [
         ("anchor", "image", (10, 30), False),
@@ -150,7 +162,7 @@ def test_tattoo_names_one_folder_each_and_a_dot_folder_is_no_tattoo(
     (tmp_path / TATTOOS / "empty").mkdir()
     (tmp_path / TATTOOS / "note.txt").write_text("not a tattoo")
 
-    assert [tattoo.name for tattoo in listed(tmp_path)] == ["bow"]
+    assert [tattoo.name for tattoo in listed(tmp_path, DIGEST)] == ["bow"]
 
 
 @pytest.mark.spec_exempt(
@@ -164,9 +176,9 @@ def test_tattoo_names_an_unknown_name_is_refused_by_every_reader(
 
     for reader in (named, read_outline, design_bytes):
         with pytest.raises(Refusal):
-            reader(tmp_path, name)
+            reader(tmp_path, name, DIGEST)
     with pytest.raises(Refusal, match="ghost"):
-        named(tmp_path, "ghost")
+        named(tmp_path, "ghost", DIGEST)
 
 
 @pytest.mark.spec_exempt("structural: a cut holds no image, so its design is refused")
@@ -175,10 +187,10 @@ def test_tattoo_names_a_cuts_design_is_refused_saying_it_is_cut(tmp_path: Path) 
     keep(tmp_path, "bow", _png(), at=_at(1))
 
     with pytest.raises(Refusal, match="arm is cut from a photograph"):
-        design_bytes(tmp_path, "arm")
+        design_bytes(tmp_path, "arm", DIGEST)
 
     assert (
-        design_bytes(tmp_path, "bow")
+        design_bytes(tmp_path, "bow", DIGEST)
         == (tmp_path / TATTOOS / "bow" / DESIGN).read_bytes()
     )
 
@@ -191,9 +203,9 @@ def test_tattoo_names_a_damaged_record_is_refused_naming_the_folder(
     (tmp_path / TATTOOS / "bow" / RECORD).write_text("{not json")
 
     for call in (
-        lambda: named(tmp_path, "bow"),
-        lambda: listed(tmp_path),
-        lambda: read_outline(tmp_path, "bow"),
+        lambda: named(tmp_path, "bow", DIGEST),
+        lambda: listed(tmp_path, DIGEST),
+        lambda: read_outline(tmp_path, "bow", DIGEST),
     ):
         with pytest.raises(Refusal, match=r"\.tattoos/bow"):
             call()
@@ -202,11 +214,11 @@ def test_tattoo_names_a_damaged_record_is_refused_naming_the_folder(
         json.dumps({"kind": "sticker", "size": [1, 1], "kept": "x"})
     )
     with pytest.raises(Refusal, match=r"\.tattoos/bow"):
-        named(tmp_path, "bow")
+        named(tmp_path, "bow", DIGEST)
 
     (tmp_path / TATTOOS / "bow" / RECORD).write_text("[1, 2]")
     with pytest.raises(Refusal, match="no JSON object"):
-        named(tmp_path, "bow")
+        named(tmp_path, "bow", DIGEST)
 
 
 @pytest.mark.spec_exempt(
@@ -279,21 +291,21 @@ def test_tattoo_outline_is_saved_as_it_is_sent_and_outlined_once_closed(
     keep(tmp_path, "bow", _png(), at=_at(0))
     ring = _ring(24)
 
-    save_outline(tmp_path, "bow", ring[:5], False, 1.0, False, 1.0)
-    assert read_outline(tmp_path, "bow").points == tuple(map(tuple, ring[:5]))
-    assert not named(tmp_path, "bow").outlined
+    save_outline(tmp_path, "bow", DIGEST, ring[:5], False, 1.0, False, 1.0)
+    assert read_outline(tmp_path, "bow", DIGEST).points == tuple(map(tuple, ring[:5]))
+    assert not named(tmp_path, "bow", DIGEST).outlined
 
-    save_outline(tmp_path, "bow", ring[:12], False, 1.0, False, 1.0)
-    assert len(read_outline(tmp_path, "bow").points) == 12
-    assert not named(tmp_path, "bow").outlined
+    save_outline(tmp_path, "bow", DIGEST, ring[:12], False, 1.0, False, 1.0)
+    assert len(read_outline(tmp_path, "bow", DIGEST).points) == 12
+    assert not named(tmp_path, "bow", DIGEST).outlined
 
-    saved = save_outline(tmp_path, "bow", ring, True, 0.9, True, 1.4)
-    read = read_outline(tmp_path, "bow")
+    saved = save_outline(tmp_path, "bow", DIGEST, ring, True, 0.9, True, 1.4)
+    read = read_outline(tmp_path, "bow", DIGEST)
 
     assert read == saved
     assert (read.closed, read.white, read.neutral, read.depth) == (True, 0.9, True, 1.4)
-    assert named(tmp_path, "bow").outlined
-    assert [t.outlined for t in listed(tmp_path)] == [True]
+    assert named(tmp_path, "bow", DIGEST).outlined
+    assert [t.outlined for t in listed(tmp_path, DIGEST)] == [True]
 
 
 @pytest.mark.spec("tattoo:outline:the-defaults-follow-the-kind")
@@ -301,8 +313,8 @@ def test_tattoo_outline_defaults_follow_the_kind(tmp_path: Path) -> None:
     keep(tmp_path, "bow", _png(), at=_at(0))
     cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(1))
 
-    uploaded = read_outline(tmp_path, "bow")
-    cut_out = read_outline(tmp_path, "arm")
+    uploaded = read_outline(tmp_path, "bow", DIGEST)
+    cut_out = read_outline(tmp_path, "arm", DIGEST)
 
     assert (uploaded.neutral, uploaded.depth) == (False, 1.0)
     assert (cut_out.neutral, cut_out.depth) == (True, 1.6)
@@ -318,11 +330,11 @@ def test_tattoo_outline_a_tattoo_with_no_file_reads_the_defaults_of_its_kind(
 ) -> None:
     keep(tmp_path, "bow", _png(), at=_at(0))
     cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(1))
-    for name in ("bow", "arm"):
-        (tmp_path / TATTOOS / name / OUTLINE).unlink()
+    for folder in (_upload(tmp_path, "bow"), _cut_at(tmp_path, DIGEST, "arm")):
+        (folder / OUTLINE).unlink()
 
-    assert read_outline(tmp_path, "bow") == defaults("image")
-    assert read_outline(tmp_path, "arm") == defaults("cut")
+    assert read_outline(tmp_path, "bow", DIGEST) == defaults("image")
+    assert read_outline(tmp_path, "arm", DIGEST) == defaults("cut")
 
 
 @pytest.mark.spec("tattoo:outline:a-point-outside-the-image-is-refused")
@@ -331,11 +343,13 @@ def test_tattoo_outline_a_point_outside_the_image_is_refused_naming_it(
     tmp_path: Path, point: list[float]
 ) -> None:
     keep(tmp_path, "bow", _png((40, 20)), at=_at(0))
-    save_outline(tmp_path, "bow", [[1, 1], [2, 2]], False, 1.0, False, 1.0)
+    save_outline(tmp_path, "bow", DIGEST, [[1, 1], [2, 2]], False, 1.0, False, 1.0)
     before = (tmp_path / TATTOOS / "bow" / OUTLINE).read_bytes()
 
     with pytest.raises(Refusal, match=r"point 3 .* outside the 40x20 image"):
-        save_outline(tmp_path, "bow", [[1, 1], [2, 2], point], False, 1.0, False, 1.0)
+        save_outline(
+            tmp_path, "bow", DIGEST, [[1, 1], [2, 2], point], False, 1.0, False, 1.0
+        )
 
     assert (tmp_path / TATTOOS / "bow" / OUTLINE).read_bytes() == before
 
@@ -347,10 +361,12 @@ def test_tattoo_outline_the_image_edge_is_inside_and_a_cut_is_bounded_by_its_pho
     keep(tmp_path, "bow", _png((40, 20)), at=_at(0))
     cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(1))
 
-    save_outline(tmp_path, "bow", [[0, 0], [40, 20]], False, 1.0, False, 1.0)
-    save_outline(tmp_path, "arm", [[3999, 2999], [4000, 3000]], False, 1.0, True, 1.6)
+    save_outline(tmp_path, "bow", DIGEST, [[0, 0], [40, 20]], False, 1.0, False, 1.0)
+    save_outline(
+        tmp_path, "arm", DIGEST, [[3999, 2999], [4000, 3000]], False, 1.0, True, 1.6
+    )
     with pytest.raises(Refusal, match="outside the 4000x3000 image"):
-        save_outline(tmp_path, "arm", [[4001, 5]], False, 1.0, True, 1.6)
+        save_outline(tmp_path, "arm", DIGEST, [[4001, 5]], False, 1.0, True, 1.6)
 
 
 @pytest.mark.spec("tattoo:outline:a-point-outside-the-image-is-refused")
@@ -374,9 +390,11 @@ def test_tattoo_outline_a_point_that_is_not_a_pair_of_numbers_is_refused(
     keep(tmp_path, "bow", _png(), at=_at(0))
 
     with pytest.raises(Refusal, match=r"point|points"):
-        save_outline(tmp_path, "bow", cast("Any", points), False, 1.0, False, 1.0)
+        save_outline(
+            tmp_path, "bow", DIGEST, cast("Any", points), False, 1.0, False, 1.0
+        )
 
-    assert read_outline(tmp_path, "bow") == defaults("image")
+    assert read_outline(tmp_path, "bow", DIGEST) == defaults("image")
 
 
 @pytest.mark.spec("tattoo:outline:the-bounds-are-held")
@@ -385,16 +403,26 @@ def test_tattoo_outline_the_bounds_are_held(tmp_path: Path) -> None:
     keep(tmp_path, "bow", _png((400, 400)), at=_at(0))
 
     open_up_to_the_ceiling = _ring(config.outline_max, (400, 400))
-    save_outline(tmp_path, "bow", open_up_to_the_ceiling, False, 1.0, False, 1.0)
     save_outline(
-        tmp_path, "bow", _ring(config.outline_min, (400, 400)), True, 1, False, 1
+        tmp_path, "bow", DIGEST, open_up_to_the_ceiling, False, 1.0, False, 1.0
     )
-    save_outline(tmp_path, "bow", open_up_to_the_ceiling, True, 1.0, False, 1.0)
+    save_outline(
+        tmp_path,
+        "bow",
+        DIGEST,
+        _ring(config.outline_min, (400, 400)),
+        True,
+        1,
+        False,
+        1,
+    )
+    save_outline(tmp_path, "bow", DIGEST, open_up_to_the_ceiling, True, 1.0, False, 1.0)
 
     with pytest.raises(Refusal, match=f"at least {config.outline_min} points"):
         save_outline(
             tmp_path,
             "bow",
+            DIGEST,
             _ring(config.outline_min - 1, (400, 400)),
             True,
             1.0,
@@ -405,6 +433,7 @@ def test_tattoo_outline_the_bounds_are_held(tmp_path: Path) -> None:
         save_outline(
             tmp_path,
             "bow",
+            DIGEST,
             _ring(config.outline_max + 1, (400, 400)),
             False,
             1.0,
@@ -415,14 +444,15 @@ def test_tattoo_outline_the_bounds_are_held(tmp_path: Path) -> None:
         save_outline(
             tmp_path,
             "bow",
+            DIGEST,
             _ring(config.outline_max + 1, (400, 400)),
             True,
             1.0,
             False,
             1.0,
         )
-    assert len(read_outline(tmp_path, "bow").points) == config.outline_max
-    save_outline(tmp_path, "bow", [], False, 1.0, False, 1.0)
+    assert len(read_outline(tmp_path, "bow", DIGEST).points) == config.outline_max
+    save_outline(tmp_path, "bow", DIGEST, [], False, 1.0, False, 1.0)
 
 
 @pytest.mark.spec("tattoo:outline:a-tone-out-of-range-is-refused")
@@ -449,12 +479,12 @@ def test_tattoo_outline_a_tone_out_of_range_is_refused_naming_the_value(
     tmp_path: Path, white: object, neutral: object, depth: object, match: str
 ) -> None:
     keep(tmp_path, "bow", _png(), at=_at(0))
-    save_outline(tmp_path, "bow", [[1, 1]], False, 1.0, False, 1.0)
+    save_outline(tmp_path, "bow", DIGEST, [[1, 1]], False, 1.0, False, 1.0)
     before = (tmp_path / TATTOOS / "bow" / OUTLINE).read_bytes()
 
     with pytest.raises(Refusal, match=match):
         tone: Any = (white, neutral, depth)
-        save_outline(tmp_path, "bow", [[2, 2]], False, *tone)
+        save_outline(tmp_path, "bow", DIGEST, [[2, 2]], False, *tone)
 
     assert (tmp_path / TATTOOS / "bow" / OUTLINE).read_bytes() == before
 
@@ -466,15 +496,18 @@ def test_tattoo_outline_the_depth_bounds_themselves_are_kept(tmp_path: Path) -> 
 
     for depth in (ink.depth_min, ink.depth_max):
         assert (
-            save_outline(tmp_path, "bow", [], False, 0.001, True, depth).depth == depth
+            save_outline(tmp_path, "bow", DIGEST, [], False, 0.001, True, depth).depth
+            == depth
         )
-    assert save_outline(tmp_path, "bow", [], False, 255, True, 1.0).white == 255.0
+    assert (
+        save_outline(tmp_path, "bow", DIGEST, [], False, 255, True, 1.0).white == 255.0
+    )
 
 
 @pytest.mark.spec_exempt("structural: saving an outline to no tattoo is refused")
 def test_tattoo_outline_saved_for_an_unknown_tattoo_is_refused(tmp_path: Path) -> None:
     with pytest.raises(Refusal, match="ghost"):
-        save_outline(tmp_path, "ghost", [], False, 1.0, False, 1.0)
+        save_outline(tmp_path, "ghost", DIGEST, [], False, 1.0, False, 1.0)
 
     assert not (tmp_path / TATTOOS).exists()
 
@@ -505,7 +538,7 @@ def test_tattoo_keep_turns_the_pixels_upright_and_leaves_no_metadata(
     assert record["downscaled_from"] is None
     assert record["cut_from"] is None
     assert kept.size == (20, 40)
-    assert kept == named(tmp_path, "bow")
+    assert kept == named(tmp_path, "bow", DIGEST)
 
 
 @pytest.mark.spec("tattoo:library:an-upload-is-kept-upright-and-bounded")
@@ -617,7 +650,7 @@ def _outlined_cut(library: Path, photograph: Path, name: str = "arm") -> list[An
     photograph.write_bytes(_arm_png())
     cut(library, name, DIGEST, ARM, at=_at(0))
     points = _around_the_fill()
-    save_outline(library, name, points, True, 1.0, True, 1.6)
+    save_outline(library, name, DIGEST, points, True, 1.0, True, 1.6)
     return points
 
 
@@ -689,9 +722,9 @@ def test_ink_view_of_an_upload_reads_its_design_not_a_photograph(
 ) -> None:
     keep(tmp_path, "bow", _arm_png(), at=_at(0))
     points = _around_the_fill()
-    save_outline(tmp_path, "bow", points, True, 1.0, False, 1.0)
+    save_outline(tmp_path, "bow", DIGEST, points, True, 1.0, False, 1.0)
 
-    view = tattoos.ink_view(tmp_path, "bow", None, None, points, 1.0, False, 1.0)
+    view = tattoos.ink_view(tmp_path, "bow", None, DIGEST, points, 1.0, False, 1.0)
 
     assert Image.open(io.BytesIO(view.jpeg)).size == view.box[2:]
 
@@ -700,7 +733,7 @@ def test_ink_view_of_an_upload_reads_its_design_not_a_photograph(
 def test_ink_view_refuses_an_open_outline_saying_so(tmp_path: Path) -> None:
     photograph = tmp_path / "photo.png"
     points = _outlined_cut(tmp_path, photograph)
-    save_outline(tmp_path, "arm", points, False, 1.0, True, 1.6)
+    save_outline(tmp_path, "arm", DIGEST, points, False, 1.0, True, 1.6)
 
     with pytest.raises(Refusal, match="outline is open"):
         _view(tmp_path, photograph, points)
@@ -719,7 +752,7 @@ def test_ink_view_refuses_points_too_few_to_close_saying_so(tmp_path: Path) -> N
 def test_ink_view_refuses_an_unknown_tattoo_naming_it(tmp_path: Path) -> None:
     with pytest.raises(Refusal, match="ghost"):
         tattoos.ink_view(
-            tmp_path, "ghost", None, None, _around_the_fill(), 1.0, False, 1.0
+            tmp_path, "ghost", None, DIGEST, _around_the_fill(), 1.0, False, 1.0
         )
 
 
@@ -735,7 +768,7 @@ def test_ink_view_refuses_a_cut_asked_on_another_digest(tmp_path: Path) -> None:
             tmp_path, "arm", photograph, OTHER_DIGEST, points, 1.0, True, 1.6
         )
     with pytest.raises(Refusal, match="cut from a photograph"):
-        tattoos.ink_view(tmp_path, "arm", None, None, points, 1.0, True, 1.6)
+        tattoos.ink_view(tmp_path, "arm", None, DIGEST, points, 1.0, True, 1.6)
 
 
 @pytest.mark.spec_exempt("structural: a photograph that moved on refuses its cut")
@@ -781,7 +814,9 @@ def test_tattoo_keep_a_failed_write_leaves_no_folder_behind(
     with pytest.raises(OSError, match="disk full"):
         cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(2))
 
-    assert sorted(item.name for item in (tmp_path / TATTOOS).iterdir()) == ["bow"]
+    assert sorted(item.name for item in (tmp_path / TATTOOS).iterdir()) == [CUTS, "bow"]
+    assert list(tmp_path.rglob(".keep-*")) == []
+    assert [tattoo.name for tattoo in listed(tmp_path, DIGEST)] == ["bow"]
 
 
 @pytest.mark.spec("tattoo:cut:a-cut-holds-no-image")
@@ -790,14 +825,14 @@ def test_tattoo_cut_holds_a_record_naming_the_photograph_and_no_image(
 ) -> None:
     made = cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(0))
 
-    folder = tmp_path / TATTOOS / "arm"
+    folder = _cut_at(tmp_path, DIGEST, "arm")
     assert sorted(item.name for item in folder.iterdir()) == [OUTLINE, RECORD]
     record = json.loads((folder / RECORD).read_text())
     assert record["kind"] == "cut"
     assert record["cut_from"] == DIGEST
     assert record["size"] == list(PHOTO)
     assert record["downscaled_from"] is None
-    assert made == named(tmp_path, "arm")
+    assert made == named(tmp_path, "arm", DIGEST)
     assert (made.kind, made.cut_from, made.size) == ("cut", DIGEST, PHOTO)
 
 
@@ -806,14 +841,14 @@ def test_tattoo_cut_a_first_cut_starts_from_the_photographs_defaults(
     tmp_path: Path,
 ) -> None:
     keep(tmp_path, "bow", _png(), at=_at(0))
-    save_outline(tmp_path, "bow", [], False, 0.5, True, 1.9)
+    save_outline(tmp_path, "bow", DIGEST, [], False, 0.5, True, 1.9)
     cut(tmp_path, "other", OTHER_DIGEST, PHOTO, at=_at(1))
-    save_outline(tmp_path, "other", [], False, 0.7, False, 1.3)
+    save_outline(tmp_path, "other", OTHER_DIGEST, [], False, 0.7, False, 1.3)
 
     cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(2))
 
-    assert read_outline(tmp_path, "arm") == defaults("cut")
-    assert json.loads((tmp_path / TATTOOS / "arm" / OUTLINE).read_text()) == {
+    assert read_outline(tmp_path, "arm", DIGEST) == defaults("cut")
+    assert json.loads((_cut_at(tmp_path, DIGEST, "arm") / OUTLINE).read_text()) == {
         "points": [],
         "closed": False,
         "white": 1.0,
@@ -827,14 +862,14 @@ def test_tattoo_cut_a_second_cut_starts_from_the_first_cuts_tone(
     tmp_path: Path,
 ) -> None:
     cut(tmp_path, "first", DIGEST, PHOTO, at=_at(0))
-    save_outline(tmp_path, "first", _ring(30, PHOTO), True, 0.9, False, 1.2)
+    save_outline(tmp_path, "first", DIGEST, _ring(30, PHOTO), True, 0.9, False, 1.2)
 
     cut(tmp_path, "second", DIGEST, PHOTO, at=_at(1))
 
-    second = read_outline(tmp_path, "second")
+    second = read_outline(tmp_path, "second", DIGEST)
     assert (second.neutral, second.depth, second.white) == (False, 1.2, 0.9)
     assert (second.points, second.closed) == ((), False)
-    assert read_outline(tmp_path, "first").closed
+    assert read_outline(tmp_path, "first", DIGEST).closed
 
 
 @pytest.mark.spec("tattoo:cut:a-second-cut-starts-from-the-first-cuts-tone")
@@ -842,20 +877,20 @@ def test_tattoo_cut_the_newest_cut_gives_the_tone_and_a_tie_goes_to_the_later_na
     tmp_path: Path,
 ) -> None:
     cut(tmp_path, "older", DIGEST, PHOTO, at=_at(0))
-    save_outline(tmp_path, "older", [], False, 0.8, False, 1.1)
+    save_outline(tmp_path, "older", DIGEST, [], False, 0.8, False, 1.1)
     cut(tmp_path, "newer", DIGEST, PHOTO, at=_at(10))
-    save_outline(tmp_path, "newer", [], False, 0.6, True, 1.5)
+    save_outline(tmp_path, "newer", DIGEST, [], False, 0.6, True, 1.5)
 
     cut(tmp_path, "third", DIGEST, PHOTO, at=_at(20))
-    assert read_outline(tmp_path, "third").white == 0.6
+    assert read_outline(tmp_path, "third", DIGEST).white == 0.6
 
     cut(tmp_path, "tie-a", DIGEST, PHOTO, at=_at(30))
-    save_outline(tmp_path, "tie-a", [], False, 0.3, False, 1.7)
+    save_outline(tmp_path, "tie-a", DIGEST, [], False, 0.3, False, 1.7)
     cut(tmp_path, "tie-b", DIGEST, PHOTO, at=_at(30))
-    save_outline(tmp_path, "tie-b", [], False, 0.4, False, 1.8)
+    save_outline(tmp_path, "tie-b", DIGEST, [], False, 0.4, False, 1.8)
 
     cut(tmp_path, "after-tie", DIGEST, PHOTO, at=_at(40))
-    tone = read_outline(tmp_path, "after-tie")
+    tone = read_outline(tmp_path, "after-tie", DIGEST)
     assert (tone.white, tone.depth) == (0.4, 1.8)
 
 
@@ -864,13 +899,13 @@ def test_tattoo_cut_another_photograph_and_an_upload_give_no_tone(
     tmp_path: Path,
 ) -> None:
     keep(tmp_path, "bow", _png(), at=_at(0))
-    save_outline(tmp_path, "bow", [], False, 0.5, True, 1.9)
+    save_outline(tmp_path, "bow", DIGEST, [], False, 0.5, True, 1.9)
     cut(tmp_path, "elsewhere", OTHER_DIGEST, PHOTO, at=_at(1))
-    save_outline(tmp_path, "elsewhere", [], False, 0.7, False, 1.3)
+    save_outline(tmp_path, "elsewhere", OTHER_DIGEST, [], False, 0.7, False, 1.3)
 
     cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(2))
 
-    assert read_outline(tmp_path, "arm") == defaults("cut")
+    assert read_outline(tmp_path, "arm", DIGEST) == defaults("cut")
 
 
 @pytest.mark.spec_exempt(
@@ -896,3 +931,177 @@ def test_tattoo_cut_a_digest_or_size_that_names_no_photograph_is_refused(
         cut(tmp_path, "arm", digest, size)
 
     assert not (tmp_path / TATTOOS).exists()
+
+
+def _kept_the_old_way(library: Path, name: str, digest: str) -> Path:
+    """Keep a cut, then put its folder where a cut was kept before cuts had a folder."""
+    cut(library, name, digest, PHOTO, at=_at(0))
+    old = _upload(library, name)
+    _cut_at(library, digest, name).rename(old)
+    _cut_at(library, digest, name).parent.rmdir()
+    return old
+
+
+@pytest.mark.spec("tattoo:cut:a-cut-holds-no-image")
+def test_tattoo_cutdir_a_cut_is_kept_under_its_photographs_folder(
+    tmp_path: Path,
+) -> None:
+    cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(0))
+    keep(tmp_path, "bow", _png(), at=_at(1))
+
+    folder = _cut_at(tmp_path, DIGEST, "arm")
+    assert sorted(item.name for item in folder.iterdir()) == [OUTLINE, RECORD]
+    assert json.loads((folder / RECORD).read_text())["cut_from"] == DIGEST
+    assert not _upload(tmp_path, "arm").exists()
+    assert sorted(item.name for item in (tmp_path / TATTOOS).iterdir()) == [CUTS, "bow"]
+    assert _upload(tmp_path, "bow").joinpath(DESIGN).is_file()
+
+
+@pytest.mark.spec("tattoo:library:a-name-resolves-by-the-renders-digest")
+def test_tattoo_cutdir_a_name_resolves_by_the_digest(tmp_path: Path) -> None:
+    other_size = (800, 600)
+    cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(0))
+    cut(tmp_path, "arm", OTHER_DIGEST, other_size, at=_at(1))
+    cut(tmp_path, "leg", OTHER_DIGEST, PHOTO, at=_at(2))
+
+    assert named(tmp_path, "arm", DIGEST).size == PHOTO
+    assert named(tmp_path, "arm", OTHER_DIGEST).size == other_size
+    assert read_outline(tmp_path, "arm", OTHER_DIGEST) == defaults("cut")
+    with pytest.raises(
+        Refusal, match=f"leg is cut from photograph {OTHER_DIGEST}, not this render's"
+    ):
+        named(tmp_path, "leg", DIGEST)
+    with pytest.raises(Refusal, match="no tattoo named 'ghost'"):
+        named(tmp_path, "ghost", DIGEST)
+
+
+@pytest.mark.spec("tattoo:library:the-list-names-each-tattoo")
+def test_tattoo_cutdir_a_cut_is_listed_on_its_photograph_alone(tmp_path: Path) -> None:
+    keep(tmp_path, "bow", _png(), at=_at(0))
+    cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(1))
+    cut(tmp_path, "leg", OTHER_DIGEST, PHOTO, at=_at(2))
+
+    here = [(t.name, t.kind, t.size) for t in listed(tmp_path, DIGEST)]
+    there = [t.name for t in listed(tmp_path, OTHER_DIGEST)]
+
+    assert here == [("bow", "image", (40, 20)), ("arm", "cut", PHOTO)]
+    assert there == ["bow", "leg"]
+    assert [t.name for t in listed(tmp_path, "ffffffffffff")] == ["bow"]
+
+
+@pytest.mark.spec("tattoo:library:a-name-is-one-tattoo-on-a-render")
+def test_tattoo_cutdir_an_upload_and_a_cut_refuse_each_others_names(
+    tmp_path: Path,
+) -> None:
+    cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(0))
+    keep(tmp_path, "bow", _png(), at=_at(1))
+    cut(tmp_path, "wing", OTHER_DIGEST, PHOTO, at=_at(2))
+
+    with pytest.raises(Refusal, match="arm is kept; choose another name"):
+        keep(tmp_path, "arm", _png(), at=_at(3))
+    with pytest.raises(Refusal, match="wing is kept; choose another name"):
+        keep(tmp_path, "wing", _png(), at=_at(3))
+    with pytest.raises(Refusal, match="bow is kept; choose another name"):
+        cut(tmp_path, "bow", DIGEST, PHOTO, at=_at(3))
+    with pytest.raises(Refusal, match="arm is kept; choose another name"):
+        cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(3))
+    elsewhere = cut(tmp_path, "arm", OTHER_DIGEST, PHOTO, at=_at(4))
+
+    assert elsewhere.cut_from == OTHER_DIGEST
+    assert [t.name for t in listed(tmp_path, DIGEST)] == ["arm", "bow"]
+    assert [t.name for t in listed(tmp_path, OTHER_DIGEST)] == ["bow", "wing", "arm"]
+
+
+@pytest.mark.spec_exempt(
+    "structural: a record naming another digest than its folder is damaged"
+)
+def test_tattoo_cutdir_a_cut_whose_record_names_another_digest_is_refused(
+    tmp_path: Path,
+) -> None:
+    cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(0))
+    folder = _cut_at(tmp_path, DIGEST, "arm")
+    record = json.loads((folder / RECORD).read_text())
+    (folder / RECORD).write_text(json.dumps(record | {"cut_from": OTHER_DIGEST}))
+
+    where = rf"\.tattoos/\.cuts/{DIGEST}/arm"
+    with pytest.raises(Refusal, match=where):
+        named(tmp_path, "arm", DIGEST)
+    with pytest.raises(Refusal, match=where):
+        listed(tmp_path, DIGEST)
+
+
+@pytest.mark.spec("tattoo:library:a-cut-kept-the-old-way-moves")
+def test_tattoo_move_a_cut_kept_the_old_way_moves_once(tmp_path: Path) -> None:
+    keep(tmp_path, "bow", _png(), at=_at(0))
+    old = _kept_the_old_way(tmp_path, "arm", DIGEST)
+    record = (old / RECORD).read_bytes()
+    outline = (old / OUTLINE).read_bytes()
+
+    assert [t.name for t in listed(tmp_path, DIGEST)] == ["arm", "bow"]
+    assert [t.name for t in listed(tmp_path, DIGEST)] == ["arm", "bow"]
+
+    moved = _cut_at(tmp_path, DIGEST, "arm")
+    assert not old.exists()
+    assert (moved / RECORD).read_bytes() == record
+    assert (moved / OUTLINE).read_bytes() == outline
+    assert (_upload(tmp_path, "bow") / DESIGN).is_file()
+
+
+@pytest.mark.spec("tattoo:library:a-cut-kept-the-old-way-moves")
+def test_tattoo_move_leaves_an_upload_and_a_damaged_record(tmp_path: Path) -> None:
+    keep(tmp_path, "bow", _png(), at=_at(0))
+    broken = _upload(tmp_path, "broken")
+    broken.mkdir()
+    (broken / RECORD).write_text("{not json")
+
+    with pytest.raises(Refusal, match=r"\.tattoos/broken"):
+        listed(tmp_path, DIGEST)
+
+    assert (_upload(tmp_path, "bow") / DESIGN).is_file()
+    assert (broken / RECORD).read_text() == "{not json"
+    assert not (tmp_path / TATTOOS / CUTS).exists()
+
+
+@pytest.mark.spec("tattoo:library:a-removed-tattoo-is-gone")
+def test_tattoo_remove_takes_an_upload_and_a_cut_and_frees_the_name(
+    tmp_path: Path,
+) -> None:
+    keep(tmp_path, "bow", _png(), at=_at(0))
+    keep(tmp_path, "wing", _png(), at=_at(1))
+    cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(2))
+    cut(tmp_path, "leg", OTHER_DIGEST, PHOTO, at=_at(3))
+    leg = (_cut_at(tmp_path, OTHER_DIGEST, "leg") / RECORD).read_bytes()
+
+    remove(tmp_path, "bow", DIGEST)
+    remove(tmp_path, "arm", DIGEST)
+
+    assert not _upload(tmp_path, "bow").exists()
+    assert not (tmp_path / TATTOOS / CUTS / DIGEST).exists()
+    assert (_upload(tmp_path, "wing") / DESIGN).is_file()
+    assert (_cut_at(tmp_path, OTHER_DIGEST, "leg") / RECORD).read_bytes() == leg
+    assert [t.name for t in listed(tmp_path, DIGEST)] == ["wing"]
+    assert list(tmp_path.rglob(".removed-*")) == []
+    keep(tmp_path, "bow", _png(), at=_at(4))
+    cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(5))
+    assert [t.name for t in listed(tmp_path, DIGEST)] == ["wing", "bow", "arm"]
+
+
+@pytest.mark.spec("tattoo:library:a-removal-reaches-only-the-named-tattoo")
+def test_tattoo_remove_reaches_only_the_named_tattoo(tmp_path: Path) -> None:
+    keep(tmp_path, "bow", _png(), at=_at(0))
+    cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(1))
+    before = sorted(item.relative_to(tmp_path) for item in tmp_path.rglob("*"))
+
+    for name, digest in (
+        ("ghost", DIGEST),
+        (CUTS, DIGEST),
+        ("..", DIGEST),
+        ("a/b", DIGEST),
+        ("bow", "nope"),
+        ("bow", "../../x"),
+        ("arm", OTHER_DIGEST),
+    ):
+        with pytest.raises(Refusal):
+            remove(tmp_path, name, digest)
+
+    assert sorted(item.relative_to(tmp_path) for item in tmp_path.rglob("*")) == before

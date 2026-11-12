@@ -99,7 +99,7 @@ render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─
 
 - **Open it** with `⇧P` or *Place a tattoo* on a render's large view.
 - **The library** is `.tattoos/<name>/` beside the collections, in the folder `ISEKAI_LIBRARY` names, so one tattoo
-  serves every render in every collection ([D52](decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)).
+  serves every render in every collection ([D52](decisions.md#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed)).
   It holds `design.png`, `tattoo.json` and `outline.json`. The app deletes and renames nothing.
 - **An upload** goes through the import's staging, is cleaned as a source is, and is kept upright, scaled down to the
   `long_side` of `config/tattoo.json`, under a name kept once.

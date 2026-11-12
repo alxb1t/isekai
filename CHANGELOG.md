@@ -10,6 +10,12 @@ its new digest.
 
 ## [Unreleased]
 
+- A cut is kept at `.tattoos/.cuts/<digest>/<name>/` and every name call and tattoo route takes the render's digest, so
+  a cut is listed and named on its photograph alone; a cut kept at `.tattoos/<name>/` moves there on the first read
+  (0126 D1, D2, D3).
+- A tattoo is removed by `remove` and `DELETE /api/tattoos/{name}`; D52 reads *kept whole until a tattoo is removed*
+  and the threat model names the removal (0126 D4).
+
 ## [0.83.0] - 2026-11-12
 
 Gate: local 0m54s · CI not read under mf-ship · 0.82.0: local 0m51s · CI not read under mf-ship

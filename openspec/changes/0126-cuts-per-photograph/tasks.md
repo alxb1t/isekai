@@ -4,48 +4,48 @@ The library and its routes, then the picker. Each `Verify:` runs after its task.
 
 ## Progress
 
-- [ ] 1 — The library, its routes and the decision · hard
+- [x] 1 — The library, its routes and the decision · hard
 - [ ] 2 — The picker and the page's calls · moderate
 
 ## 1 — The library, its routes and the decision
 
-- [ ] 1.1 **HALT CHECK** The library's folder paths are built in `isekai/pipeline/tattoos.py` alone. If another module builds one, the plan misses a reader: stop and say so.
+- [x] 1.1 **HALT CHECK** The library's folder paths are built in `isekai/pipeline/tattoos.py` alone. If another module builds one, the plan misses a reader: stop and say so.
   Verify: `git grep -c "TATTOOS" -- isekai/interface isekai/foundation isekai/shared` prints nothing.
-- [ ] 1.2 In `isekai/pipeline/tattoos.py` add `CUTS = ".cuts"` beside `TATTOOS`, `_digest_of(digest)` that returns a twelve-hex digest or raises the refusal `cut` and `_stage1_path` raise today (both call it), and `_cut_folder(library, digest, name)` returning `library / TATTOOS / CUTS / digest / name`, per [D1](design.md#d1).
+- [x] 1.2 In `isekai/pipeline/tattoos.py` add `CUTS = ".cuts"` beside `TATTOOS`, `_digest_of(digest)` that returns a twelve-hex digest or raises the refusal `cut` and `_stage1_path` raise today (both call it), and `_cut_folder(library, digest, name)` returning `library / TATTOOS / CUTS / digest / name`, per [D1](design.md#d1).
   Verify: `grep -c "^CUTS = \".cuts\"" isekai/pipeline/tattoos.py` prints `1`.
-- [ ] 1.3 In `tattoos.py` replace `_load_named(library, name)` with `_load_named(library, name, digest)` over a new `_find(library, name, digest)` of [D2](design.md#d2). Replace `_every(library)` with `_every(library, digest)`, which lists the uploads and `.cuts/<digest>/*`. `_find` and `_every` refuse a cut whose `cut_from` is not its folder's digest as damaged, and `_damaged` names a cut's folder as `.tattoos/.cuts/<digest>/<name>`.
+- [x] 1.3 In `tattoos.py` replace `_load_named(library, name)` with `_load_named(library, name, digest)` over a new `_find(library, name, digest)` of [D2](design.md#d2). Replace `_every(library)` with `_every(library, digest)`, which lists the uploads and `.cuts/<digest>/*`. `_find` and `_every` refuse a cut whose `cut_from` is not its folder's digest as damaged, and `_damaged` names a cut's folder as `.tattoos/.cuts/<digest>/<name>`.
   Verify: `grep -c "^def _find(library: Path, name: str, digest: str)" isekai/pipeline/tattoos.py` prints `1`.
-- [ ] 1.4 In `tattoos.py` delete `_on_its_photograph` and its calls in `_view_image`, `preview` and `composite`, which `_find` replaces.
+- [x] 1.4 In `tattoos.py` delete `_on_its_photograph` and its calls in `_view_image`, `preview` and `composite`, which `_find` replaces.
   Verify: `grep -L "^def _on_its_photograph" isekai/pipeline/tattoos.py` prints `isekai/pipeline/tattoos.py`.
-- [ ] 1.5 In `tattoos.py` give `listed(library, digest)`, `named`, `design_bytes`, `read_outline` and `save_outline` the digest (after `name`, and after `library` for `listed`). Pass it on in `_view_image`, `read_stage1`, `save_stage1`, `stage1_states`, `preview`, `composite`, `ink_layer` and `_newest_cut_tone`, and type the digest of `ink_layer` and `ink_view` as `str`. `save_outline` writes into the folder `_find` returns, and `_stage1_path` resolves its folder by `_find`, per [D2](design.md#d2).
+- [x] 1.5 In `tattoos.py` give `listed(library, digest)`, `named`, `design_bytes`, `read_outline` and `save_outline` the digest (after `name`, and after `library` for `listed`). Pass it on in `_view_image`, `read_stage1`, `save_stage1`, `stage1_states`, `preview`, `composite`, `ink_layer` and `_newest_cut_tone`, and type the digest of `ink_layer` and `ink_view` as `str`. `save_outline` writes into the folder `_find` returns, and `_stage1_path` resolves its folder by `_find`, per [D2](design.md#d2).
   Verify: `grep -c "^def listed(library: Path, digest: str)" isekai/pipeline/tattoos.py` prints `1`.
-- [ ] 1.6 In `tattoos.py` add `_settle(library)` of [D3](design.md#d3) and call it first in `_find`, `_every`, `keep` and `cut`.
+- [x] 1.6 In `tattoos.py` add `_settle(library)` of [D3](design.md#d3) and call it first in `_find`, `_every`, `keep` and `cut`.
   Verify: `grep -c "^def _settle" isekai/pipeline/tattoos.py` prints `1`.
-- [ ] 1.7 In `tattoos.py` make `keep` refuse a name any upload or any cut holds, make `cut` refuse a name an upload or a cut of its own photograph holds and keep into `_cut_folder`, and let `_publish` take the folder it publishes into, per [D2](design.md#d2).
+- [x] 1.7 In `tattoos.py` make `keep` refuse a name any upload or any cut holds, make `cut` refuse a name an upload or a cut of its own photograph holds and keep into `_cut_folder`, and let `_publish` take the folder it publishes into, per [D2](design.md#d2).
   Verify: `grep -c "^def _publish(parent: Path" isekai/pipeline/tattoos.py` prints `1`.
-- [ ] 1.8 In `tattoos.py` add `remove(library, name, digest)` of [D4](design.md#d4), and rewrite the module docstring's tree and last line: the cut folder, and that a tattoo is removed and never renamed.
+- [x] 1.8 In `tattoos.py` add `remove(library, name, digest)` of [D4](design.md#d4), and rewrite the module docstring's tree and last line: the cut folder, and that a tattoo is removed and never renamed.
   Verify: `grep -c "^def remove(library: Path, name: str, digest: str)" isekai/pipeline/tattoos.py` prints `1`.
-- [ ] 1.9 In `tests/test_tattoo_library.py` and `tests/test_tattoo_placement.py` pass `DIGEST` in each call of the functions task 1.5 changed. Point the stage-1 assertions of `tests/test_tattoo_placement.py` on the cut `arm` at `TATTOOS / ".cuts" / DIGEST / "arm"`, and assert that folder exists, so a missing folder cannot pass them.
+- [x] 1.9 In `tests/test_tattoo_library.py` and `tests/test_tattoo_placement.py` pass `DIGEST` in each call of the functions task 1.5 changed. Point the stage-1 assertions of `tests/test_tattoo_placement.py` on the cut `arm` at `TATTOOS / ".cuts" / DIGEST / "arm"`, and assert that folder exists, so a missing folder cannot pass them.
   Verify: `uv run pytest tests/test_tattoo_library.py tests/test_tattoo_placement.py -q` exits 0.
-- [ ] 1.10 Add to `tests/test_tattoo_library.py` the tests named for `tattoo_cutdir` in the Tests table of [design](design.md#tests): a cut kept under `.cuts/<digest>/`, a name read by each photograph's digest, a list for one digest, the names an upload and a cut refuse each other, and a cut whose record names another digest than its folder refused by name and by list.
+- [x] 1.10 Add to `tests/test_tattoo_library.py` the tests named for `tattoo_cutdir` in the Tests table of [design](design.md#tests): a cut kept under `.cuts/<digest>/`, a name read by each photograph's digest, a list for one digest, the names an upload and a cut refuse each other, and a cut whose record names another digest than its folder refused by name and by list.
   Verify: `uv run pytest tests/test_tattoo_library.py -q -k tattoo_cutdir` exits 0.
-- [ ] 1.11 Add to `tests/test_tattoo_library.py` the tests named for `tattoo_move`: a cut written at `.tattoos/<name>/` by hand moves once on a `listed` call with its record and outline as they were, and an upload and a folder with a damaged record stay.
+- [x] 1.11 Add to `tests/test_tattoo_library.py` the tests named for `tattoo_move`: a cut written at `.tattoos/<name>/` by hand moves once on a `listed` call with its record and outline as they were, and an upload and a folder with a damaged record stay.
   Verify: `uv run pytest tests/test_tattoo_library.py -q -k tattoo_move` exits 0.
-- [ ] 1.12 Add to `tests/test_tattoo_library.py` the tests named for `tattoo_remove`: an upload and a cut removed leave the others and free their names, and `..`, `.cuts`, `a/b`, an unknown name and a bad digest are refused with nothing removed.
+- [x] 1.12 Add to `tests/test_tattoo_library.py` the tests named for `tattoo_remove`: an upload and a cut removed leave the others and free their names, and `..`, `.cuts`, `a/b`, an unknown name and a bad digest are refused with nothing removed.
   Verify: `uv run pytest tests/test_tattoo_library.py -q -k tattoo_remove` exits 0.
-- [ ] 1.13 In `isekai/interface/ui/app.py` add `_digest_asked(digest)`, which refuses a missing digest with a refusal naming the field. Make `read_tattoos` always take it and always answer `stage1`, and make `read_tattoo`, `read_tattoo_design` and `put_outline` take `?digest=`.
+- [x] 1.13 In `isekai/interface/ui/app.py` add `_digest_asked(digest)`, which refuses a missing digest with a refusal naming the field. Make `read_tattoos` always take it and always answer `stage1`, and make `read_tattoo`, `read_tattoo_design` and `put_outline` take `?digest=`.
   Verify: `grep -l "_digest_asked" isekai/interface/ui/app.py` prints `isekai/interface/ui/app.py`.
-- [ ] 1.14 In `app.py` add `digest` and `flow` to `INK_KEYS`, make `post_ink` always read `held(...)` and pass its photograph and digest, and add `DELETE /api/tattoos/{name}` as `delete_tattoo`, per [D4](design.md#d4). Rewrite the route list in the module docstring.
+- [x] 1.14 In `app.py` add `digest` and `flow` to `INK_KEYS`, make `post_ink` always read `held(...)` and pass its photograph and digest, and add `DELETE /api/tattoos/{name}` as `delete_tattoo`, per [D4](design.md#d4). Rewrite the route list in the module docstring.
   Verify: `grep -c "delete_tattoo" isekai/interface/ui/app.py` prints `1`.
-- [ ] 1.15 In `tests/test_ui_tattoo.py` and `tests/test_ui_placement.py` add the digest to each request tasks 1.13 and 1.14 changed, and rewrite the route guards `_taking_away` to find a rename and a `DELETE` of anything but `/api/tattoos/{name}`, bound to `tattoo:library:no-route-renames`. Point the stage-1 assertions of `tests/test_ui_placement.py` on the cut `arm` at `.cuts/<digest>/arm` as task 1.9 does, and add the `test_tattoo_route_delete_*` tests of the [Tests](design.md#tests) table.
+- [x] 1.15 In `tests/test_ui_tattoo.py` and `tests/test_ui_placement.py` add the digest to each request tasks 1.13 and 1.14 changed, and rewrite the route guards `_taking_away` to find a rename and a `DELETE` of anything but `/api/tattoos/{name}`, bound to `tattoo:library:no-route-renames`. Point the stage-1 assertions of `tests/test_ui_placement.py` on the cut `arm` at `.cuts/<digest>/arm` as task 1.9 does, and add the `test_tattoo_route_delete_*` tests of the [Tests](design.md#tests) table.
   Verify: `uv run pytest tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ui_library.py -q` exits 0.
-- [ ] 1.16 In `docs/decisions.md` rewrite D52 under the heading `### D52 · The tattoo library is kept whole until a tattoo is removed`. Its body and *Why* name the upload folder and the cut folder, the names, the digest, the removal, and that a baked edit keeps its own copy.
+- [x] 1.16 In `docs/decisions.md` rewrite D52 under the heading `### D52 · The tattoo library is kept whole until a tattoo is removed`. Its body and *Why* name the upload folder and the cut folder, the names, the digest, the removal, and that a baked edit keeps its own copy.
   Verify: `grep -c "^### D52 · The tattoo library is kept whole until a tattoo is removed" docs/decisions.md` prints `1`.
-- [ ] 1.17 Change each link whose anchor ends `never-deleted` to `d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed`, in `docs/decisions.md`, `docs/edit-tattoo.md`, `docs/modules.md`, `isekai/pipeline/README.md` and `ui/design/spec.md`.
+- [x] 1.17 Change each link whose anchor ends `never-deleted` to `d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed`, in `docs/decisions.md`, `docs/edit-tattoo.md`, `docs/modules.md`, `isekai/pipeline/README.md` and `ui/design/spec.md`.
   Verify: `git grep -c "never-deleted" -- docs isekai ui/design THREAT_MODEL.md` prints nothing.
-- [ ] 1.18 In `THREAT_MODEL.md` add to *Entry points* the bullet **A tattoo's removal**: `DELETE /api/tattoos/{name}` deletes one folder of the library's `.tattoos/`, found from a checked name and a checked digest and never from a path in the request, behind the guard every route has, and the page asks a second click first. Link [D52](docs/decisions.md#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed).
+- [x] 1.18 In `THREAT_MODEL.md` add to *Entry points* the bullet **A tattoo's removal**: `DELETE /api/tattoos/{name}` deletes one folder of the library's `.tattoos/`, found from a checked name and a checked digest and never from a path in the request, behind the guard every route has, and the page asks a second click first. Link [D52](docs/decisions.md#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed).
   Verify: `grep -c "A tattoo's removal" THREAT_MODEL.md` prints `1`.
-- [ ] 1.19 In `isekai/pipeline/README.md` rewrite the `tattoos.py` row: the cut folder under `.tattoos/.cuts/<digest>/`, the digest every name call takes, and that it removes a tattoo.
+- [x] 1.19 In `isekai/pipeline/README.md` rewrite the `tattoos.py` row: the cut folder under `.tattoos/.cuts/<digest>/`, the digest every name call takes, and that it removes a tattoo.
   Verify: `grep -c "\.cuts/<digest>/" isekai/pipeline/README.md` prints `1`.
 
 ## 2 — The picker and the page's calls

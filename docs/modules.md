@@ -70,7 +70,7 @@ stage: the transport helpers it shares with `pipeline/generate.py` — `submit_a
 `place` carries an ink layer through the stages' splines and `flatten` puts it on white. The ink view, the stage-1
 file, `preview` and `composite` are `pipeline/tattoos.py`'s, with the tattoo library: it imports `shared/chain.py`,
 `shared/ink.py` and `shared/tattoo.py` and no stage, and the tattoo routes of `interface/ui/app.py` call it, writing no
-file of their own ([D52](decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)). A bake's
+file of their own ([D52](decisions.md#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed)). A bake's
 route calls `composite` and then `request_placed` of `pipeline/edit.py`, which writes the composite, the placement
 record and the edit's record ([D53](decisions.md#d53--a-placement-is-recorded-beside-its-edit)). Pillow, and numpy in
 `chain`, are imported inside functions, so neither module puts a wheel on the entry point's graph.

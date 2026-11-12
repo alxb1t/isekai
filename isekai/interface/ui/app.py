@@ -53,9 +53,10 @@ GET  /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
 GET  …/renders/{digest}/{flow}/{version}/{seed}/edit/{k}   and its /image and /thumb
 DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
 GET  /api/c/{collection}/sources/{name}   and its /thumb
-GET  /api/tattoos[?digest=]   ·   POST /api/tattoos   {staging, file, name}
-GET  /api/tattoos/{name}   and its /design   ·   PUT …/{name}/outline
-     {points, closed, white, neutral, depth}
+GET  /api/tattoos?digest=   ·   POST /api/tattoos   {staging, file, name}
+GET  /api/tattoos/{name}?digest=   and its /design
+DELETE /api/tattoos/{name}?digest=
+PUT  /api/tattoos/{name}/outline?digest=   {points, closed, white, neutral, depth}
 GET  and PUT /api/tattoos/{name}/stage1/{digest}   {pairs, not_on_photo}
 POST /api/c/{collection}/tattoos   {name, digest, flow}
 POST /api/c/{collection}/tattoos/{name}/ink
@@ -204,7 +205,7 @@ FORBIDDEN = 403
 
 # What a body names to save an outline, and to ask the ink view of one.
 OUTLINE_KEYS = ("points", "closed", "white", "neutral", "depth")
-INK_KEYS = ("points", "white", "neutral", "depth")
+INK_KEYS = ("points", "white", "neutral", "depth", "digest", "flow")
 
 # What a body names to save a tattoo's pairs on a photograph, and to ask a preview.
 STAGE1_KEYS = ("pairs", "not_on_photo")
@@ -489,34 +490,41 @@ def create_app(
 
     @app.get("/api/tattoos")
     def read_tattoos(digest: str | None = None) -> dict[str, Any]:
-        """List the kept tattoos in the order kept, with the limits the page reads.
+        """List the tattoos a render lists, with the limits the page reads.
 
-        With a photograph's `digest`, each tattoo's stage-1 state on it comes too.
+        The uploads and the cuts of the photograph `digest`, each with its stage-1
+        state on it.
         """
-        listing: dict[str, Any] = {
-            "tattoos": [asdict(one) for one in tattoos.listed(root)],
+        asked = _digest_asked(digest)
+        return {
+            "tattoos": [asdict(one) for one in tattoos.listed(root, asked)],
             "limits": _tattoo_limits(),
-        }
-        if digest is not None:
-            listing["stage1"] = {
+            "stage1": {
                 name: asdict(state)
-                for name, state in tattoos.stage1_states(root, digest).items()
-            }
-        return listing
+                for name, state in tattoos.stage1_states(root, asked).items()
+            },
+        }
 
     @app.get("/api/tattoos/{name}")
-    def read_tattoo(name: str) -> dict[str, Any]:
+    def read_tattoo(name: str, digest: str | None = None) -> dict[str, Any]:
         """Return one tattoo with its outline, refusing an unknown name."""
+        asked = _digest_asked(digest)
         return {
-            **asdict(tattoos.named(root, name)),
-            "outline": asdict(tattoos.read_outline(root, name)),
+            **asdict(tattoos.named(root, name, asked)),
+            "outline": asdict(tattoos.read_outline(root, name, asked)),
         }
 
+    @app.delete("/api/tattoos/{name}")
+    def delete_tattoo(name: str, digest: str | None = None) -> dict[str, Any]:
+        """Remove one tattoo of the library, found from the checked name and digest."""
+        tattoos.remove(root, name, _digest_asked(digest))
+        return {}
+
     @app.get("/api/tattoos/{name}/design")
-    def read_tattoo_design(name: str) -> Response:
+    def read_tattoo_design(name: str, digest: str | None = None) -> Response:
         """Serve an uploaded tattoo's image whole, refusing a cut, which has none."""
         return Response(
-            tattoos.design_bytes(root, name),
+            tattoos.design_bytes(root, name, _digest_asked(digest)),
             media_type="image/png",
             headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
         )
@@ -557,13 +565,16 @@ def create_app(
         return asdict(tattoos.cut(root, name, one.run.digest, _dimensions(one.run)))
 
     @app.put("/api/tattoos/{name}/outline")
-    def put_outline(name: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def put_outline(
+        name: str, payload: dict[str, Any], digest: str | None = None
+    ) -> dict[str, Any]:
         """Replace a tattoo's outline and tone with what the page sent, whole."""
         _needs(payload, OUTLINE_KEYS)
         return asdict(
             tattoos.save_outline(
                 root,
                 name,
+                _digest_asked(digest),
                 payload["points"],
                 payload["closed"],
                 payload["white"],
@@ -591,20 +602,17 @@ def create_app(
     def post_ink(collection: str, name: str, payload: dict[str, Any]) -> Response:
         """Return a tattoo's ink on its outline's crop, a JPEG made now, kept nowhere.
 
-        A cut is asked on a render of its own photograph, named by `digest` and
-        `flow`; an upload reads its image and needs neither.
+        The tattoo is found on the render named by `digest` and `flow`, whose
+        photograph a cut reads.
         """
         folder(collection)
         _needs(payload, INK_KEYS)
-        photograph = digest = None
-        if tattoos.named(root, name).kind == "cut":
-            one = held(collection, str(payload.get("digest")), str(payload.get("flow")))
-            photograph, digest = one.run.photo, one.run.digest
+        one = held(collection, str(payload["digest"]), str(payload["flow"]))
         view = tattoos.ink_view(
             root,
             name,
-            photograph,
-            digest,
+            one.run.photo,
+            one.run.digest,
             payload["points"],
             payload["white"],
             payload["neutral"],
@@ -1990,6 +1998,16 @@ def _needs(payload: Mapping[str, Any], keys: Sequence[str]) -> None:
     missing = [key for key in keys if key not in payload]
     if missing:
         raise Refusal(f"the request lacks {', '.join(missing)}; send {', '.join(keys)}")
+
+
+def _digest_asked(digest: str | None) -> str:
+    """Return the `digest` a tattoo request names, refusing a request with none."""
+    if digest is None:
+        raise Refusal(
+            "the request's `digest` is the render's photograph digest, as its address "
+            "shows; send it as `?digest=`"
+        )
+    return digest
 
 
 def _is_point(value: object) -> TypeGuard[list[float]]:
