@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.3] - 2026-11-13
+
+Gate: local 1m2s · CI not read under mf-ship · 0.86.2: local 0m59s · CI not read under mf-ship
+
 - A pipeline stage may be a package: the stage guard flags an import between stages and lets a package's modules
   import each other, with twins; the rule is written in the component principle and recorded as D55 (0129 D1, D2).
 - Ratchets hold the size of a file, of a function, of its positional parameters and of a `ui/src` file, and the

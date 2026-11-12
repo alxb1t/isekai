@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.3
 after: [0128-the-guards-hold]
 ---
 
