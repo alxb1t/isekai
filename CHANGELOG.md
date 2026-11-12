@@ -28,6 +28,8 @@ its new digest.
   dropped (0119 D10).
 - D51 records the edit's directory, and D50, D36, D29 and D14 are amended; `docs/edit-tattoo.md` is the Krita-first
   guide, and the data flow and the module READMEs name `ink`, `edit`, `tattoo.py` and `prompt.py` (0119 D11).
+- `isekai ink` refuses a tight outline whose ink falls short of the bare skin beside it in any one colour channel, so
+  a fill cannot become its own white point and wipe the tattoo out (0119 D15).
 
 ## [0.78.0] - 2026-11-08
 

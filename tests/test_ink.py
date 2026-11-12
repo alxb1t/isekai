@@ -64,26 +64,42 @@ def test_ink_extract_a_fill_is_darker_than_the_skin_at_every_channel() -> None:
     assert (layer[80, 80, :3] < layer[10, 10, :3]).all()
 
 
-@pytest.mark.spec("edit:ink:bare-skin-is-white")
+def _tight() -> Image.Image:
+    """Return a mask that is white exactly over the fill and black elsewhere."""
+    mask = Image.new("L", (160, 160), 0)
+    ImageDraw.Draw(mask).rectangle(FILL, fill=255)
+    return mask
+
+
+@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")
 def test_ink_extract_an_outline_that_holds_no_bare_skin_is_refused_naming_the_fix() -> (
     None
 ):
-    tight = Image.new("L", (160, 160), 0)
-    ImageDraw.Draw(tight).rectangle(FILL, fill=255)
-
     with pytest.raises(Refusal, match="no bare skin inside the outline.*widen"):
-        extract_ink(_arm(), tight, None, None)
+        extract_ink(_arm(), _tight(), None, None)
 
 
-@pytest.mark.spec("edit:ink:bare-skin-is-white")
+@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")
 def test_ink_extract_a_tight_outline_over_a_light_fill_is_refused_naming_the_fix() -> (
     None
 ):
-    tight = Image.new("L", (160, 160), 0)
-    ImageDraw.Draw(tight).rectangle(FILL, fill=255)
-
     with pytest.raises(Refusal, match="no bare skin inside the outline.*widen"):
-        extract_ink(_arm((160, 120, 96)), tight, None, None)
+        extract_ink(_arm((160, 120, 96)), _tight(), None, None)
+
+
+@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")
+def test_ink_extract_a_tight_outline_over_a_fill_short_in_one_channel_is_refused() -> (
+    None
+):
+    with pytest.raises(Refusal, match="no bare skin inside the outline.*widen"):
+        extract_ink(_arm((172, 150, 120)), _tight(), None, None)
+
+
+@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")
+def test_ink_extract_a_one_channel_fill_keeps_its_ink_under_a_wider_outline() -> None:
+    layer = extract_ink(_arm((172, 150, 120)), _outline(), None, None)
+
+    assert _at(layer, 80, 80)[:3] != (255, 255, 255)
 
 
 @pytest.mark.spec("edit:ink:bare-skin-is-white")
