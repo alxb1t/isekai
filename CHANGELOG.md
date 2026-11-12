@@ -16,6 +16,8 @@ its new digest.
   of the copy against its source (0124 D2).
 - A render line whose source request names another source request's flow is refused before the pod, naming the
   request that renders the same seeds; `_requested`'s docstring says what it plans (0124 D3).
+- Review reads an approved sheet again when a render for its collection starts or ends, so *Cancel approve* follows
+  the render (0124 D4).
 
 ## [0.78.0] - 2026-11-08
 

@@ -7,7 +7,7 @@ A phase per debt card, in the order of [design](design.md)'s decisions.
 - [x] 1 — The copy in step · moderate
 - [x] 2 — The copy's prose · moderate
 - [x] 3 — The chained source · moderate
-- [ ] 4 — The cancel follows the render · moderate
+- [x] 4 — The cancel follows the render · moderate
 - [ ] 5 — The save queue · hard
 - [ ] 6 — The modal's rows · moderate
 
@@ -48,15 +48,15 @@ Closes op·chained-source: a chained source is refused before the pod ([D3](desi
 
 Closes 0072·R5: Review reads an approved sheet again when a render for its collection starts or ends ([D4](design.md#d4)).
 
-- [ ] 4.1 **HALT CHECK** The stream is open on Review: `ui/src/App.vue` follows each route's collection, so `jobs.render` moves there ([D4](design.md#d4)).
+- [x] 4.1 **HALT CHECK** The stream is open on Review: `ui/src/App.vue` follows each route's collection, so `jobs.render` moves there ([D4](design.md#d4)).
   Verify: `git grep -n "live.follow" -- ui/src/App.vue` prints a line.
-- [ ] 4.2 Create `ui/src/cancel.ts` with `export function holdsCancel` and `export function readsAgain` as [D4](design.md#d4) defines them, importing `collectionsOf` from `./stores/live`.
+- [x] 4.2 Create `ui/src/cancel.ts` with `export function holdsCancel` and `export function readsAgain` as [D4](design.md#d4) defines them, importing `collectionsOf` from `./stores/live`.
   Verify: `git grep -n "export function readsAgain" -- ui/src` prints a line.
-- [ ] 4.3 Create `ui/src/cancel.test.ts` with `spec('ui:review:the-cancel-follows-the-render', …)`: a render starting and ending for the collection reads again; one for another collection, and any move on a sheet that is not approved, does not.
+- [x] 4.3 Create `ui/src/cancel.test.ts` with `spec('ui:review:the-cancel-follows-the-render', …)`: a render starting and ending for the collection reads again; one for another collection, and any move on a sheet that is not approved, does not.
   Verify: `npm run test --prefix ui -- cancel` exits 0.
-- [ ] 4.4 In `ui/src/views/Review.vue`, import `useLiveStore` and `readsAgain`, and add a `watch` on `live.jobs.render` that calls `reread(current.value)` when `readsAgain` answers true, as [D4](design.md#d4) states.
+- [x] 4.4 In `ui/src/views/Review.vue`, import `useLiveStore` and `readsAgain`, and add a `watch` on `live.jobs.render` that calls `reread(current.value)` when `readsAgain` answers true, as [D4](design.md#d4) states.
   Verify: `git grep -n "readsAgain" -- ui/src/views/Review.vue` prints a line.
-- [ ] 4.5 In `ui/design/spec.md`, the Cancel approve bullet: before `while a render session runs for the collection, the reason says so.`, after `while a render session runs for the collection, the reason says so, and it follows the render as it starts and ends.`
+- [x] 4.5 In `ui/design/spec.md`, the Cancel approve bullet: before `while a render session runs for the collection, the reason says so.`, after `while a render session runs for the collection, the reason says so, and it follows the render as it starts and ends.`
   Verify: `git grep -n "follows the render as it starts and ends" -- ui/design/spec.md` prints a line.
 
 ## 5 — The save queue
