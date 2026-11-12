@@ -9,7 +9,7 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 - [x] 3 — Pose · hard
 - [x] 4 — Segment · hard
 - [x] 5 — Proposal · hard
-- [ ] 6 — Stage 2 · moderate
+- [x] 6 — Stage 2 · moderate
 - [ ] 7 — Docs · moderate
 
 ## 1 — Models
@@ -139,31 +139,31 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 ## 6 — Stage 2
 
-- [ ] 6.1 **HALT CHECK** 0122's editor, render stage and placing state are built.
+- [x] 6.1 **HALT CHECK** 0122's editor, render stage and placing state are built.
   Verify: `ls ui/src/pairs.ts ui/src/components/StageRender.vue ui/src/components/PairPanel.vue ui/src/components/PairList.vue ui/src/composables/usePlacing.ts` prints each path.
-- [ ] 6.2 **HALT CHECK** `Slot` in `ui/src/pairs.ts` is the editor's pair, holding its point on each image and numbered by its place, as [D11](design.md#d11) takes it.
+- [x] 6.2 **HALT CHECK** `Slot` in `ui/src/pairs.ts` is the editor's pair, holding its point on each image and numbered by its place, as [D11](design.md#d11) takes it.
   Verify: `grep -n "export interface Slot" ui/src/pairs.ts` prints its declaration.
-- [ ] 6.3 Add to `Slot` in `ui/src/pairs.ts` the key `proposed`, to `ui/src/types.ts` `Proposal` alone, with `Pair` left the tuple it is, and to `ui/src/api.ts` `export function proposePairs`, which posts the body of [D10](design.md#d10).
+- [x] 6.3 Add to `Slot` in `ui/src/pairs.ts` the key `proposed`, to `ui/src/types.ts` `Proposal` alone, with `Pair` left the tuple it is, and to `ui/src/api.ts` `export function proposePairs`, which posts the body of [D10](design.md#d10).
   Verify: `git grep -n "export function proposePairs" ui/src/api.ts` prints it.
-- [ ] 6.4 Add to `ui/src/pairs.ts` per [D11](design.md#d11) `arrived`, `accepted`, `export function acceptedAll`, `proposals` and `sent`, `arrived` written into every snapshot of the history; make `moved` clear
+- [x] 6.4 Add to `ui/src/pairs.ts` per [D11](design.md#d11) `arrived`, `accepted`, `export function acceptedAll`, `proposals` and `sent`, `arrived` written into every snapshot of the history; make `moved` clear
   `proposed` of the slot it moves and `forward` wait while a pair is proposed; its tests in `ui/src/pairs.test.ts` bind through `spec`.
   Verify: `grep -n "export function acceptedAll" ui/src/pairs.ts` prints it.
-- [ ] 6.5 Add `ui/src/propose.ts` per [D12](design.md#d12): `due`, `asked`, `answered`, `refused`, `view` and `pointsOf`; its tests in `ui/src/propose.test.ts` bind through `spec`.
+- [x] 6.5 Add `ui/src/propose.ts` per [D12](design.md#d12): `due`, `asked`, `answered`, `refused`, `view` and `pointsOf`; its tests in `ui/src/propose.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/propose.test.ts` passes.
-- [ ] 6.6 Make `ui/src/composables/usePlacing.ts` hold `proposalAsked`, keyed by tattoo and render, per [D12](design.md#d12); its tests in `ui/src/composables/usePlacing.test.ts`
+- [x] 6.6 Make `ui/src/composables/usePlacing.ts` hold `proposalAsked`, keyed by tattoo and render, per [D12](design.md#d12); its tests in `ui/src/composables/usePlacing.test.ts`
   hold that it stays across steps and that a second opening asks nothing.
   Verify: `grep -n "proposalAsked" ui/src/composables/usePlacing.ts` prints the use.
-- [ ] 6.7 Draw a proposed point with a dashed ring in `ui/src/components/PairPanel.vue` per [D11](design.md#d11).
+- [x] 6.7 Draw a proposed point with a dashed ring in `ui/src/components/PairPanel.vue` per [D11](design.md#d11).
   Verify: `grep -n "proposed" ui/src/components/PairPanel.vue` prints the use.
-- [ ] 6.8 Mark a proposed pair's row in `ui/src/components/PairList.vue` per [D11](design.md#d11).
+- [x] 6.8 Mark a proposed pair's row in `ui/src/components/PairList.vue` per [D11](design.md#d11).
   Verify: `grep -n "proposed" ui/src/components/PairList.vue` prints the use.
-- [ ] 6.9 Make `ui/src/components/StageRender.vue` ask through `proposePairs` when `due`, sending `pointsOf`, show the line of `view`, offer *Accept* and *Accept all*, and send the preview's pairs through `sent`.
+- [x] 6.9 Make `ui/src/components/StageRender.vue` ask through `proposePairs` when `due`, sending `pointsOf`, show the line of `view`, offer *Accept* and *Accept all*, and send the preview's pairs through `sent`.
   Verify: `grep -n "Accept all" ui/src/components/StageRender.vue` prints the label.
-- [ ] 6.10 Hold that no changed component declares a key.
+- [x] 6.10 Hold that no changed component declares a key.
   Verify: `npm --prefix ui run test -- src/nokeys.test.ts` passes.
-- [ ] 6.11 Hold the browser's types.
+- [x] 6.11 Hold the browser's types.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 6.12 Hold the browser's unit tests.
+- [x] 6.12 Hold the browser's unit tests.
   Verify: `uv run python -m tools.test_ui` exits 0.
 
 ## 7 — Docs

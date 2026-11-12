@@ -3,6 +3,7 @@ import { type Named, type Ports, usePlacing } from './usePlacing'
 import { begun, closed, drawn, none as outlinesNone, regions } from '../outlines'
 import { clicked, complete, held, none } from '../pairs'
 import { drafted } from '../polygon'
+import { answered, asked, due, keyOf, noAsks } from '../propose'
 import { spec } from '../test/spec'
 import type { Pair, Point, Stage1 } from '../types'
 
@@ -150,6 +151,24 @@ spec(['ui:direct:the-flag-skips-stage-1', 'tattoo:stage1:the-flag-keeps-the-pair
   await placing.settled()
   expect(saved[1]).toEqual({ pairs: pairs(6), not_on_photo: false })
   expect(placing.mode.value).toBe('two-stage')
+})
+
+spec('ui:proposal:a-stage-with-no-pairs-asks-once', async () => {
+  const { ports } = server({ pairs: pairs(6), not_on_photo: false })
+  const placing = usePlacing(PLACE, ports)
+  await placing.load('bow')
+  const key = keyOf('bow', 'v1', '7')
+
+  // The first opening of stage 2 is due and records its ask.
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)).toBe(true)
+  placing.proposalAsked.value = answered(asked(placing.proposalAsked.value, key), key, 0)
+
+  // The screen moves on and back: the same tattoo is not read again, and the ask stays.
+  await placing.load('bow')
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)).toBe(false)
+  // Another tattoo starts clean.
+  await placing.load('arm')
+  expect(placing.proposalAsked.value).toBe(noAsks)
 })
 
 spec('ui:direct:a-cut-does-not-offer-the-flag', async () => {

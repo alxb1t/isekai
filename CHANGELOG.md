@@ -22,6 +22,8 @@ its new digest.
   is the candidate scored highest, its logits resized to the image and taken above 0 (0123 D2, D7).
 - Stage 2's pairs are proposed: `isekai/shared/proposal.py` pairs the edges and the joints of the arm nearest the
   tattoo, and `POST /api/c/{collection}/place/propose` answers `{arm, pairs}`, kept nowhere (0123 D8, D9, D10).
+- Stage 2 asks once for proposed pairs and draws them dashed; *Accept*, *Accept all* or a drag accepts them, and forward
+  waits while one is proposed (0123 D11, D12).
 
 ## [0.82.0] - 2026-11-12
 

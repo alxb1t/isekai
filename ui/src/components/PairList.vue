@@ -2,8 +2,8 @@
 import { computed } from 'vue'
 import { type Pairs, chosen, lone } from '../pairs'
 
-/* The pairs of a stage as rows, the selected one marked, with undo, delete and clear as
-   buttons. It declares no command. */
+/* The pairs of a stage as rows, the selected one marked and a proposed pair's row saying
+   *proposed*, with undo, delete and clear as buttons. It declares no command. */
 const props = defineProps<{ pairs: Pairs; names: [string, string] }>()
 const emit = defineEmits<{
   change: [next: Pairs]
@@ -18,8 +18,11 @@ const rows = computed(() =>
     number: index + 1,
     text:
       slot.a && slot.b
-        ? 'placed'
+        ? slot.proposed
+          ? 'proposed'
+          : 'placed'
         : `no match on the ${alone.value?.waiting === 'a' ? props.names[0] : props.names[1]}`,
+    proposed: slot.proposed === true,
     on: index === props.pairs.selected,
   })),
 )
@@ -33,6 +36,7 @@ const rows = computed(() =>
         <button
           class="pairlist__row mono"
           :class="{ 'pairlist__row--on': row.on }"
+          :data-proposed="row.proposed || undefined"
           type="button"
           @click="emit('change', chosen(pairs, row.on ? null : row.number - 1))"
         >
