@@ -343,6 +343,20 @@ the exclusions are held by the page until the bake writes them.**
   held work is a later change, when losing it on a leave is missed.
 - **Made by:** `0122`.
 
+### D54 · Automatic pairs run on the operator's machine and are kept nowhere
+
+**The pairs stage 2 proposes are found by DWPose and SAM 2.1 on the operator's machine, in the server's process, over files
+pinned in `config/placement.json` and fetched by `make setup`; each file is digest-verified before a session opens, and a
+proposal is an answer to one request, never a stage, an artifact or a file. The operator accepts or corrects it, and a
+placement records only the pairs the operator holds ([D53](#d53--a-placement-is-recorded-beside-its-edit)).**
+
+- **Why:** a proposal is a guess the operator reads before forward, so it is no run's output and nothing in a
+  run directory could hold it truthfully. The models are the tagger's precedent
+  ([D7](#d7--wd14-is-one-artifact-in-two-files)): the gate never fetches, a missing file refuses by naming
+  its fetch, and the entry point loads no package for them
+  ([D20](#d20--the-entry-point-loads-no-third-party-package)). The pod image takes no part.
+- **Made by:** `0123`.
+
 ### D44 · A flat flow is summon with the face chain ending early
 
 **`summon-flat-anime-wai` is `summon-anime-wai`'s directory with InstantID ending at 0.65 of the steps, a lower

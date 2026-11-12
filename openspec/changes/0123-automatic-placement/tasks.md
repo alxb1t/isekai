@@ -10,7 +10,7 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 - [x] 4 — Segment · hard
 - [x] 5 — Proposal · hard
 - [x] 6 — Stage 2 · moderate
-- [ ] 7 — Docs · moderate
+- [x] 7 — Docs · moderate
 
 ## 1 — Models
 
@@ -168,19 +168,19 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 ## 7 — Docs
 
-- [ ] 7.1 **HALT CHECK** 0122's decision D53 stands on the decisions page.
+- [x] 7.1 **HALT CHECK** 0122's decision D53 stands on the decisions page.
   Verify: `git grep -n "### D53" docs/decisions.md` prints its heading.
-- [ ] 7.2 Add `### D54` to `docs/decisions.md` after D53 per [D14](design.md#d14): automatic pairs run on the operator's machine, from pinned files, and are kept nowhere; its `Made by` is `0123`.
+- [x] 7.2 Add `### D54` to `docs/decisions.md` after D53 per [D14](design.md#d14): automatic pairs run on the operator's machine, from pinned files, and are kept nowhere; its `Made by` is `0123`.
   Verify: `git grep -n "### D54" docs/decisions.md` prints its heading.
-- [ ] 7.3 Add to the `## License` section of `README.md` the sentence of [D13](design.md#d13): the pose estimator's COCO-WholeBody training data is CC BY-NC 4.0, and the automatic pairs are for non-commercial use.
+- [x] 7.3 Add to the `## License` section of `README.md` the sentence of [D13](design.md#d13): the pose estimator's COCO-WholeBody training data is CC BY-NC 4.0, and the automatic pairs are for non-commercial use.
   Verify: `git grep -n "COCO-WholeBody" README.md` prints the line.
-- [ ] 7.4 In `docs/pins.md` add a row for `config/placement.json` to the inventory and `tools/derive_placement.py` to *A model manifest*.
+- [x] 7.4 In `docs/pins.md` add a row for `config/placement.json` to the inventory and `tools/derive_placement.py` to *A model manifest*.
   Verify: `git grep -n "config/placement.json" docs/pins.md` prints the row.
-- [ ] 7.5 In `ui/design/spec.md` extend the journey `### J9 · Place a tattoo` with the proposed state: the spinner, the refusal, *Accept*, *Accept all*, the dashed marker and forward's wait, state and refusals only.
+- [x] 7.5 In `ui/design/spec.md` extend the journey `### J9 · Place a tattoo` with the proposed state: the spinner, the refusal, *Accept*, *Accept all*, the dashed marker and forward's wait, state and refusals only.
   Verify: `git grep -n "Accept all" ui/design/spec.md` prints the line.
-- [ ] 7.6 In `ui/design/spec.md` add a row `**automatic placement**` to §10's table.
+- [x] 7.6 In `ui/design/spec.md` add a row `**automatic placement**` to §10's table.
   Verify: `git grep -n "automatic placement\*\*" ui/design/spec.md` prints the row.
-- [ ] 7.7 Add to the `## The app` section of `docs/edit-tattoo.md` the proposed pairs of stage 2: what proposes them, that nothing is kept, and the fetch; no path of the operator's notebook.
+- [x] 7.7 Add to the `## The app` section of `docs/edit-tattoo.md` the proposed pairs of stage 2: what proposes them, that nothing is kept, and the fetch; no path of the operator's notebook.
   Verify: `grep -n "proposed pairs" docs/edit-tattoo.md` prints a line.
-- [ ] 7.8 Name `unpack`, `pose`, `sam2`, `proposal` and `proposing` and their edges in `docs/modules.md`, `isekai/boundary/README.md`, `isekai/shared/README.md` and `isekai/pipeline/README.md`.
+- [x] 7.8 Name `unpack`, `pose`, `sam2`, `proposal` and `proposing` and their edges in `docs/modules.md`, `isekai/boundary/README.md`, `isekai/shared/README.md` and `isekai/pipeline/README.md`.
   Verify: `git grep -n "proposing" isekai/pipeline/README.md` prints the line.

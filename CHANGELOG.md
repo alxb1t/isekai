@@ -24,6 +24,9 @@ its new digest.
   tattoo, and `POST /api/c/{collection}/place/propose` answers `{arm, pairs}`, kept nowhere (0123 D8, D9, D10).
 - Stage 2 asks once for proposed pairs and draws them dashed; *Accept*, *Accept all* or a drag accepts them, and forward
   waits while one is proposed (0123 D11, D12).
+- D54 records that automatic pairs run on the operator's machine and are kept nowhere; the README names the pose
+  estimator's non-commercial training data, and the pins guide, the design spec, the edit guide and the modules say
+  what they hold (0123 D13, D14).
 
 ## [0.82.0] - 2026-11-12
 
