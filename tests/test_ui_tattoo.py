@@ -509,7 +509,9 @@ def test_ink_preview_route_is_no_store_and_writes_nothing(
     assert snapshot(library) == before
 
 
-@pytest.mark.spec_exempt("structural: an upload's ink view needs no run")
+@pytest.mark.spec_exempt(
+    "structural: an upload's ink view reads its design.png, on a named run"
+)
 def test_ink_preview_route_of_an_upload_reads_its_design(
     library: Path, client: TestClient, photographed: Callable[..., Run]
 ) -> None:

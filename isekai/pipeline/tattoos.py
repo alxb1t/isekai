@@ -25,6 +25,7 @@ import os
 import re
 import shutil
 import tempfile
+import threading
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from dataclasses import asdict, dataclass, replace
@@ -85,6 +86,12 @@ _TIME = "%Y-%m-%dT%H:%M:%S.%fZ"
 _WHITE_SCALE_MAX = 255.0
 
 _DIGEST = re.compile(f"[0-9a-f]{{{ID_DIGEST_CHARS}}}")
+
+# Held across each change to the library's folders and files, and across the lookup a
+# change rests on, so a name is checked and kept, or found and saved to or removed, as
+# one step: the server runs routes on threads, and a save must not land in a tattoo a
+# removal freed the name of. Re-entrant, for a change that looks a name up.
+_LIBRARY = threading.RLock()
 
 Kind = Literal["image", "cut"]
 Mode = Literal["cut", "direct", "two-stage"]
@@ -366,35 +373,36 @@ def _settle(library: Path) -> None:
     A folder with a design, an unreadable record or no digest stays where it is for
     the read that follows to refuse; a destination that exists is left alone.
     """
-    for item in _folders(library / TATTOOS):
-        record = item / RECORD
-        if (item / DESIGN).exists() or not record.is_file():
-            continue
-        try:
-            document = json.loads(record.read_text())
-        except (OSError, ValueError):
-            continue
-        digest = document.get("cut_from") if isinstance(document, dict) else None
-        if (
-            not isinstance(document, dict)
-            or document.get("kind") != "cut"
-            or not isinstance(digest, str)
-            or not _DIGEST.fullmatch(digest)
-        ):
-            continue
-        target = _cut_folder(library, digest, item.name)
-        if target.exists():
-            continue
-        try:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            os.rename(item, target)
-        except FileNotFoundError:
-            continue
-        except OSError as failed:
-            raise Refusal(
-                f"{_library_name(item)} cannot move to {_library_name(target)} "
-                f"({failed.strerror}); move the folder there by hand"
-            ) from failed
+    with _LIBRARY:
+        for item in _folders(library / TATTOOS):
+            record = item / RECORD
+            if (item / DESIGN).exists() or not record.is_file():
+                continue
+            try:
+                document = json.loads(record.read_text())
+            except (OSError, ValueError):
+                continue
+            digest = document.get("cut_from") if isinstance(document, dict) else None
+            if (
+                not isinstance(document, dict)
+                or document.get("kind") != "cut"
+                or not isinstance(digest, str)
+                or not _DIGEST.fullmatch(digest)
+            ):
+                continue
+            target = _cut_folder(library, digest, item.name)
+            if target.exists():
+                continue
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                os.rename(item, target)
+            except FileNotFoundError:
+                continue
+            except OSError as failed:
+                raise Refusal(
+                    f"{_library_name(item)} cannot move to {_library_name(target)} "
+                    f"({failed.strerror}); move the folder there by hand"
+                ) from failed
 
 
 def _cut_loaded(folder: Path, digest: str) -> tuple[Tattoo, Outline]:
@@ -550,24 +558,27 @@ def save_outline(
 
     Refused, naming the value, for a point outside the image, more points than the
     ceiling, a closed outline under the floor, a depth outside the ink config's range
-    and a white scale of zero or less or past 255; the file is then as it was.
+    and a white scale of zero or less or past 255; the file is then as it was. The
+    tattoo is found and written to under the library lock, so a save cannot land in a
+    folder a removal has freed, or in a replacement kept under the same name.
     """
-    folder = _find(library, name, digest)
-    tattoo, _ = _load(folder)
-    config = load_tattoo_config()
-    ink = load_ink_config(INK_CONFIG)
-    checked = _checked_points(points, tattoo.size, config)
-    if not isinstance(closed, bool) or not isinstance(neutral, bool):
-        raise Refusal("closed and neutral are true or false; send one of them")
-    if closed and len(checked) < config.outline_min:
-        raise Refusal(
-            f"a closed outline holds at least {config.outline_min} points and this "
-            f"one has {len(checked)}; add points before closing it"
-        )
-    scale, tone = _checked_tone(white, depth, ink)
-    outline = Outline(checked, closed, scale, neutral, tone)
-    write_atomically(folder / OUTLINE, _json_bytes(asdict(outline)))
-    return outline
+    with _LIBRARY:
+        folder = _find(library, name, digest)
+        tattoo, _ = _load(folder)
+        config = load_tattoo_config()
+        ink = load_ink_config(INK_CONFIG)
+        checked = _checked_points(points, tattoo.size, config)
+        if not isinstance(closed, bool) or not isinstance(neutral, bool):
+            raise Refusal("closed and neutral are true or false; send one of them")
+        if closed and len(checked) < config.outline_min:
+            raise Refusal(
+                f"a closed outline holds at least {config.outline_min} points and "
+                f"this one has {len(checked)}; add points before closing it"
+            )
+        scale, tone = _checked_tone(white, depth, ink)
+        outline = Outline(checked, closed, scale, neutral, tone)
+        write_atomically(folder / OUTLINE, _json_bytes(asdict(outline)))
+        return outline
 
 
 def _checked_tone(white: object, depth: object, ink: InkConfig) -> tuple[float, float]:
@@ -654,6 +665,14 @@ def _upright(body: bytes) -> "Image":
         ) from unreadable
 
 
+def _refuse_if_taken(library: Path, name: str) -> None:
+    """Refuse `name` when an upload or a cut of any photograph already has it."""
+    with _LIBRARY:
+        _settle(library)
+        if _folder(library, name).exists() or _cuts_named(library, name):
+            raise _taken(name)
+
+
 def keep(
     library: Path, name: str, body: bytes, *, at: datetime | None = None
 ) -> Tattoo:
@@ -667,9 +686,7 @@ def keep(
     from PIL import Image
 
     check_name(name)
-    _settle(library)
-    if _folder(library, name).exists() or _cuts_named(library, name):
-        raise _taken(name)
+    _refuse_if_taken(library, name)
     image = _upright(body)
     came_with = image.size
     long_side = load_tattoo_config().long_side
@@ -686,16 +703,16 @@ def keep(
         scaled_from = came_with
     stamp = _stamp(at)
     record = _record_document(name, "image", image.size, stamp, scaled_from, None)
-    _publish(
-        library / TATTOOS,
-        name,
-        {
-            DESIGN: png_of(image),
-            RECORD: _json_bytes(record),
-            OUTLINE: _json_bytes(asdict(defaults("image"))),
-        },
-    )
-    return _load(_folder(library, name))[0]
+    files = {
+        DESIGN: png_of(image),
+        RECORD: _json_bytes(record),
+        OUTLINE: _json_bytes(asdict(defaults("image"))),
+    }
+    with _LIBRARY:
+        # Checked again: a cut of the name may have been kept while the image decoded.
+        _refuse_if_taken(library, name)
+        _publish(library / TATTOOS, name, files)
+        return _load(_folder(library, name))[0]
 
 
 def _newest_cut_tone(library: Path, digest: str) -> Outline:
@@ -719,24 +736,28 @@ def cut(
     """
     check_name(name)
     _digest_of(digest)
-    _settle(library)
-    if _folder(library, name).exists() or _cut_folder(library, digest, name).exists():
-        raise _taken(name)
-    try:
-        checked = _size(list(size))
-    except ValueError as unsized:
-        raise Refusal(
-            f"the photograph's size is {size!r}; it is a width and a height in whole "
-            "pixels"
-        ) from unsized
-    tone = _newest_cut_tone(library, digest)
-    record = _record_document(name, "cut", checked, _stamp(at), None, digest)
-    _publish(
-        library / TATTOOS / CUTS / digest,
-        name,
-        {RECORD: _json_bytes(record), OUTLINE: _json_bytes(asdict(tone))},
-    )
-    return _load(_cut_folder(library, digest, name))[0]
+    with _LIBRARY:
+        _settle(library)
+        if (
+            _folder(library, name).exists()
+            or _cut_folder(library, digest, name).exists()
+        ):
+            raise _taken(name)
+        try:
+            checked = _size(list(size))
+        except ValueError as unsized:
+            raise Refusal(
+                f"the photograph's size is {size!r}; it is a width and a height in "
+                "whole pixels"
+            ) from unsized
+        tone = _newest_cut_tone(library, digest)
+        record = _record_document(name, "cut", checked, _stamp(at), None, digest)
+        _publish(
+            library / TATTOOS / CUTS / digest,
+            name,
+            {RECORD: _json_bytes(record), OUTLINE: _json_bytes(asdict(tone))},
+        )
+        return _load(_cut_folder(library, digest, name))[0]
 
 
 def remove(library: Path, name: str, digest: str) -> None:
@@ -744,23 +765,34 @@ def remove(library: Path, name: str, digest: str) -> None:
 
     The folder is renamed to a hidden one, then deleted, so a reader sees the whole
     tattoo or none. A cut's photograph folder goes when it is left empty. A bad name,
-    a bad digest or an unknown tattoo is refused before anything is touched.
+    a bad digest or an unknown tattoo is refused before anything is touched. Found and
+    removed under the library lock. When the rename succeeds and the deletion does
+    not, the tattoo is gone and its name free, and the refusal names the hidden folder
+    that still holds files, for the operator to delete.
     """
-    folder = _find(library, name, digest)
-    parent = folder.parent
-    going = Path(tempfile.mkdtemp(dir=parent, prefix=".removed-"))
-    try:
-        os.rename(folder, going)
-    except OSError as failed:
-        going.rmdir()
-        raise Refusal(
-            f"{_library_name(folder)} cannot be removed ({failed.strerror}); check "
-            "the folder's permissions"
-        ) from failed
-    shutil.rmtree(going, ignore_errors=True)
-    if parent != library / TATTOOS:
-        with suppress(OSError):
-            parent.rmdir()
+    with _LIBRARY:
+        folder = _find(library, name, digest)
+        parent = folder.parent
+        going = Path(tempfile.mkdtemp(dir=parent, prefix=".removed-"))
+        try:
+            os.rename(folder, going)
+        except OSError as failed:
+            going.rmdir()
+            raise Refusal(
+                f"{_library_name(folder)} cannot be removed ({failed.strerror}); "
+                "check the folder's permissions"
+            ) from failed
+        try:
+            shutil.rmtree(going)
+        except OSError as failed:
+            raise Refusal(
+                f"{name} is removed from the library, but {_library_name(going)} "
+                f"still holds some of its files ({failed.strerror}); fix that "
+                "folder's permissions and delete it"
+            ) from failed
+        if parent != library / TATTOOS:
+            with suppress(OSError):
+                parent.rmdir()
 
 
 @dataclass(frozen=True)
@@ -979,29 +1011,31 @@ def save_stage1(
 
     Refused, naming the pair, for a coordinate that is no finite non-negative number
     and a tattoo-side point outside the tattoo's image; refused for a cut, whose ink
-    is already in the photograph's pixels. The file is then as it was.
+    is already in the photograph's pixels. The file is then as it was. The tattoo is
+    found and written to under the library lock, as `save_outline`'s is.
     """
-    tattoo, _ = _load_named(library, name, digest)
-    path = _stage1_path(library, name, digest)
-    if tattoo.kind == "cut":
-        raise Refusal(
-            f"{name} is cut from a photograph, so its ink is already in the "
-            "photograph's pixels; place it on a render with the pairs of the "
-            "photograph and the render"
-        )
-    if not isinstance(not_on_photo, bool):
-        raise Refusal("not_on_photo is true or false; send one of them")
-    checked = _placed_pairs(pairs)
-    width, height = tattoo.size
-    for number, ((x, y), _) in enumerate(checked, 1):
-        if x > width or y > height:
+    with _LIBRARY:
+        tattoo, _ = _load_named(library, name, digest)
+        path = _stage1_path(library, name, digest)
+        if tattoo.kind == "cut":
             raise Refusal(
-                f"pair {number}'s tattoo point ({x:g}, {y:g}) lies outside the "
-                f"{width}x{height} image; click inside the tattoo"
+                f"{name} is cut from a photograph, so its ink is already in the "
+                "photograph's pixels; place it on a render with the pairs of the "
+                "photograph and the render"
             )
-    state = Stage1(checked, not_on_photo)
-    write_atomically(path, _json_bytes(asdict(state)))
-    return state
+        if not isinstance(not_on_photo, bool):
+            raise Refusal("not_on_photo is true or false; send one of them")
+        checked = _placed_pairs(pairs)
+        width, height = tattoo.size
+        for number, ((x, y), _) in enumerate(checked, 1):
+            if x > width or y > height:
+                raise Refusal(
+                    f"pair {number}'s tattoo point ({x:g}, {y:g}) lies outside the "
+                    f"{width}x{height} image; click inside the tattoo"
+                )
+        state = Stage1(checked, not_on_photo)
+        write_atomically(path, _json_bytes(asdict(state)))
+        return state
 
 
 def stage1_states(library: Path, digest: str) -> dict[str, Stage1]:

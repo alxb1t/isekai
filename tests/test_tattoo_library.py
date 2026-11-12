@@ -7,6 +7,8 @@ is known before it runs.
 import io
 import json
 import math
+import threading
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
@@ -1105,3 +1107,103 @@ def test_tattoo_remove_reaches_only_the_named_tattoo(tmp_path: Path) -> None:
             remove(tmp_path, name, digest)
 
     assert sorted(item.relative_to(tmp_path) for item in tmp_path.rglob("*")) == before
+
+
+@pytest.mark.spec_exempt(
+    "structural: a removal whose deletion fails refuses naming what is left"
+)
+def test_tattoo_remove_refuses_when_the_files_cannot_all_be_deleted(
+    tmp_path: Path,
+) -> None:
+    keep(tmp_path, "bow", _png(), at=_at(0))
+    stage = _upload(tmp_path, "bow") / "stage1"
+    stage.mkdir()
+    (stage / f"{DIGEST}.json").write_text("{}")
+    stage.chmod(0o500)
+    try:
+        with pytest.raises(Refusal, match=r"\.tattoos/\.removed-"):
+            remove(tmp_path, "bow", DIGEST)
+        assert not _upload(tmp_path, "bow").exists()
+        assert listed(tmp_path, DIGEST) == []
+        keep(tmp_path, "bow", _png(), at=_at(1))
+    finally:
+        for hidden in (tmp_path / TATTOOS).glob(".removed-*/stage1"):
+            hidden.chmod(0o700)
+
+
+def _between(
+    patched: pytest.MonkeyPatch, action: Callable[[], None], target: str
+) -> list[threading.Thread]:
+    """Run `action` on a thread the first time `tattoos.<target>` is called.
+
+    The call waits up to half a second for the thread, then goes on, so an action a
+    lock holds back finishes after the call, and one that nothing holds back before it.
+    Return the list the thread joins, for the test to wait on.
+    """
+    original = cast(Callable[..., object], getattr(tattoos, target))
+    started = threading.Event()
+    threads: list[threading.Thread] = []
+
+    def wrapped(*args: object, **kwargs: object) -> object:
+        if not started.is_set():
+            started.set()
+            thread = threading.Thread(target=action)
+            thread.start()
+            thread.join(0.5)
+            threads.append(thread)
+        return original(*args, **kwargs)
+
+    patched.setattr(tattoos, target, wrapped)
+    return threads
+
+
+@pytest.mark.spec_exempt(
+    "structural: a save for a removed tattoo does not reach its replacement"
+)
+def test_tattoo_save_outline_across_a_removal_leaves_the_replacements_outline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    keep(tmp_path, "arm", _png(), at=_at(0))
+    mine = [[1.0, 2.0], [3.0, 4.0], [5.0, 2.0]]
+    theirs = [[9.0, 9.0], [10.0, 9.0], [10.0, 10.0]]
+    config = load_ink_config(INK_CONFIG)
+
+    def replace() -> None:
+        remove(tmp_path, "arm", DIGEST)
+        keep(tmp_path, "arm", _png(), at=_at(1))
+        save_outline(
+            tmp_path, "arm", DIGEST, theirs, False, 1.0, True, config.image_depth
+        )
+
+    threads = _between(monkeypatch, replace, "write_atomically")
+    try:
+        save_outline(
+            tmp_path, "arm", DIGEST, mine, False, 0.5, True, config.image_depth
+        )
+    finally:
+        for thread in threads:
+            thread.join()
+
+    assert read_outline(tmp_path, "arm", DIGEST).points == tuple(map(tuple, theirs))
+
+
+@pytest.mark.spec_exempt(
+    "structural: an upload and a cut cannot both keep one name at once"
+)
+def test_tattoo_keep_beside_a_cut_made_meanwhile_refuses_the_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def meanwhile() -> None:
+        cut(tmp_path, "arm", DIGEST, PHOTO, at=_at(0))
+
+    threads = _between(monkeypatch, meanwhile, "_upright")
+    try:
+        with pytest.raises(Refusal, match="arm is kept"):
+            keep(tmp_path, "arm", _png(), at=_at(1))
+    finally:
+        for thread in threads:
+            thread.join()
+
+    assert [(t.name, t.kind) for t in listed(tmp_path, DIGEST)] == [("arm", "cut")]
+    remove(tmp_path, "arm", DIGEST)
+    assert listed(tmp_path, DIGEST) == []

@@ -94,7 +94,7 @@ clicks, previews the warp, and bakes it as an edit request in place of Krita (§
 ```
 render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─┬─▶ ③ tattoo ↔ photograph ─▶ ④ photograph ↔ render ─┐
                               │             └─ the ink on the outline's crop  ├─▶ ③ tattoo ↔ render (not on this photo) ──┼─▶ ⑤ review ─ Bake
-                .tattoos/<name>/ in the library                               └─▶ ④ photograph ↔ render (a cut) ──────────┘
+                .tattoos/ in the library                                      └─▶ ④ photograph ↔ render (a cut) ──────────┘
 ```
 
 - **Open it** with `⇧P` or *Place a tattoo* on a render's large view.
