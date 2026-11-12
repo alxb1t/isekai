@@ -10,6 +10,32 @@ its new digest.
 
 ## [Unreleased]
 
+- A pipeline stage may be a package: the stage guard flags an import between stages and lets a package's modules
+  import each other, with twins; the rule is written in the component principle and recorded as D55 (0129 D1, D2).
+- Ratchets hold the size of a file, of a function, of its positional parameters and of a `ui/src` file, and the
+  patches of a module's own names: each offender is a listed row, an unlisted one or a stale row is red, and each rule
+  has a twin; the rule is recorded as D56 (0129 D3, D4, D5, D6).
+- The import graph moves to `tools/import_graph.py`, and `tools/derive_imported_by.py` writes each README's *Imported by*
+  table from it, without the tests column; a test re-derives each table, `make derive` runs the tool, and the
+  `ui/app.py` route list goes (0129 D7, D8, D9, D10).
+- `AGENTS.md` names the files the pod image freezes, a test holds the list equal to the image record's, and a red
+  record names its files and the recipe (0129 D11).
+- The documents say what holds: *Known breaks* name what the audit found, and the layer roles, the lazy edge, the
+  delete's sentence, the sibling paragraph and the model-manifest recipe are corrected (0129 D12, D13).
+- `tests/record.py` runs one offline pass over every flow and writes `tests/record/graphs.json`, each flow's graph and the
+  edit's whole; a test re-derives it, and `uv run python -m tests.record` writes it again (0130 D1, D2, D3, D9).
+- `tests/record/run.json` holds every path of the pass under the runs root: a JSON file with its duration `0.0` and the
+  pass's directory `<root>`, a PNG by its pixels, any other file by its bytes; a second pass over the same runs moves
+  nothing (0130 D4).
+- `tests/record/verbs.json` holds each verb's positionals, options and exclusive groups, walked from the parser with no
+  help text; a default inside the repository is written relative, and one outside it is refused (0130 D5).
+- `tests/record/routes.json` holds each route of the app that needs no running child: the status of one ordered call over
+  a copy of the pass's library, and the shape of its answer, keys and types with no value; a test fails on a route
+  no call covers and on a status of 500 or more (0130 D6, D7).
+- `tests/record/wire.json` holds the sheet's and the render's done lines the CLI prints under `--progress json`; the
+  session's `progress_line` and `_Images`, and the cell and the job, are fed those lines instead of a copy typed beside
+  each reader (0130 D8).
+
 ## [0.86.2] - 2026-11-12
 
 Gate: local 0m59s · CI not read under mf-ship · 0.86.1: local 0m59s · CI not read under mf-ship

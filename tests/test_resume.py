@@ -41,6 +41,7 @@ from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
 from tests.fakes import READER, FakeComfyClient, stub_comfy, url_of
 from tests.images import jpeg_bytes
+from tests.record import drive, offline, paths
 from tests.stages import FIELD_MAP, Always, FakeSession, fake_wd14
 from tests.transports import FakeTransport
 
@@ -164,6 +165,18 @@ def test_a_second_full_pass_changes_nothing_and_calls_nothing(
 
     assert snapshot(wired.runs_root) == after_first
     assert _calls(wired) == calls
+
+
+@pytest.mark.spec("cli:resume:second-pass-is-inert")
+def test_a_second_pass_over_the_same_runs_moves_nothing(tmp_path: Path) -> None:
+    done = offline(tmp_path)
+    submitted = list(done.renders.submissions)
+    recorded = paths(done)
+
+    drive(done)
+
+    assert done.renders.submissions == submitted
+    assert paths(done) == recorded
 
 
 @pytest.mark.spec("cli:resume:second-pass-is-inert")
