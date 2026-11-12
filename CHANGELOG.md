@@ -35,6 +35,9 @@ its new digest.
 - `tests/record/wire.json` holds the sheet's and the render's done lines the CLI prints under `--progress json`; the
   session's `progress_line` and `_Images`, and the cell and the job, are fed those lines instead of a copy typed beside
   each reader (0130 D8).
+- A patch whose stand-in no test shows was reached gains its proof: a sentinel for the model records, twins that fire
+  the tripwires, and records of calls the tests read; a ratchet holds each patch to a name its module reads, with a
+  twin (0131 D1, D2, D3, D4).
 
 ## [0.86.2] - 2026-11-12
 

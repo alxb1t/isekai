@@ -637,13 +637,17 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
     racing = stage(library)
     together = threading.Barrier(2)
     clean, write = importing._clean, importing.write_atomically
+    cleaned: list[Path] = []
+    written: list[Path] = []
 
     def cleaned_together(file: Path) -> tuple[bytes, bool]:
+        cleaned.append(file)
         made = clean(file)
         together.wait(timeout=5)
         return made
 
     def slow(path: Path, body: bytes) -> None:
+        written.append(path)
         time.sleep(0.05)
         write(path, body)
 
@@ -659,6 +663,9 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
 
     assert sorted(one.name for one in both) == ["IMG_0001-2.jpg", "IMG_0001.jpg"]
     assert len({p.read_bytes() for p in racing.glob("IMG_0001*")}) == 2
+    assert len(cleaned) == len(files)
+    assert len(written) >= len(files)
+    assert not together.broken
 
 
 @pytest.mark.spec("import:stage:an-unusable-name-is-refused")

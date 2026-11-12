@@ -293,8 +293,11 @@ def test_each_line_a_job_writes_to_the_collections_log_names_its_job(
 def test_prepare_is_refused_with_the_readers_message_and_starts_nothing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    opened: list[object] = []
+
     class Closed:
         def open(self, *args: object, **kwargs: object) -> None:
+            opened.append(args)
             raise urllib.error.URLError("connection refused")
 
     monkeypatch.setattr(ollama, "OPENER", Closed())
@@ -306,6 +309,7 @@ def test_prepare_is_refused_with_the_readers_message_and_starts_nothing(
         jobs.prepare("b", folder, _steps(run), lambda line: [])
 
     assert str(refused.value) == ollama.NOT_LISTENING
+    assert len(opened) == 1
     assert script.asked == []
     assert jobs.slot("prepare") is None
 

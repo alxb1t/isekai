@@ -40,7 +40,7 @@ import pytest
 
 pytest.importorskip("fastapi")
 
-from fastapi import FastAPI  # noqa: E402
+from fastapi import FastAPI, Response  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 import isekai.foundation.run as run_module  # noqa: E402
@@ -281,6 +281,27 @@ def test_a_cross_site_request_without_origin_is_refused(
     assert answered.status_code == 403
     assert answered.json() == {"refusal": "not from this page"}
     assert read == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_cross_site_request_without_origin_is_refused"
+)
+def test_a_request_from_this_page_reads_the_photograph(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    read: list[object] = []
+
+    def record(path: object, **_keywords: object) -> Response:
+        read.append(path)
+        return Response()
+
+    monkeypatch.setattr(app_module, "FileResponse", record)
+    answered = client.get(
+        _at(made, "/photo"), headers={"sec-fetch-site": "same-origin"}
+    )
+
+    assert answered.status_code == 200
+    assert read == [made.photo]
 
 
 @pytest.mark.spec_exempt("structural: this page's own requests are answered")

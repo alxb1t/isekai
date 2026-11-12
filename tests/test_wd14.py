@@ -264,6 +264,26 @@ def test_importing_the_boundary_opens_no_file_and_computes_no_digest(
     assert callable(boundary.open_session)
 
 
+@pytest.mark.spec_exempt(
+    "structural: twin of "
+    "test_importing_the_boundary_opens_no_file_and_computes_no_digest"
+)
+def test_the_boundary_reaches_provisioning_at_its_first_use(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def refuse(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("provisioning was reached")
+
+    monkeypatch.setattr(provision, "load_manifest", refuse)
+    monkeypatch.setattr(provision, "resolve", refuse)
+    monkeypatch.delitem(sys.modules, "isekai.boundary.wd14")
+
+    boundary = importlib.import_module("isekai.boundary.wd14")
+
+    with pytest.raises(AssertionError, match="provisioning was reached"):
+        boundary.verified_paths()
+
+
 @pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
 def test_no_wheel_the_tagger_needs_is_imported_at_module_scope() -> None:
     # The rule the `-S` guard rests on: `boundary/wd14.py` reaches `onnxruntime`,
