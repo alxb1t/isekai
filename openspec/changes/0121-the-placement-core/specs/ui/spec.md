@@ -2,9 +2,11 @@
 
 ### Requirement: The large view of a render offers Place a tattoo
 
-The large view of a render SHALL offer *Place a tattoo* as a button and as the command `⇧P`, declared once in the key store, and SHALL open the placement screen's first step on that render.
+The large view of a render SHALL offer *Place a tattoo* as a button and as the command `⇧P`,
+declared once in the key store, and SHALL open the placement screen's first step on that render.
 
-The placement screen is reached from the image it places on. `⇧T` stays the theme's ([D48](../../../docs/decisions.md#d48--a-theme-is-a-token-set-chosen-in-the-browser)).
+The placement screen is reached from the image it places on. `⇧T` stays the theme's
+([D48](../../../docs/decisions.md#d48--a-theme-is-a-token-set-chosen-in-the-browser)).
 
 #### Scenario: the button opens the picker on the render
 - **Key:** `ui:place-offer:the-button-opens-the-picker`
@@ -20,9 +22,13 @@ The placement screen is reached from the image it places on. `⇧T` stays the th
 
 ### Requirement: The placement screen has a route of its own per step
 
-The system SHALL give the placement screen the route `/c/<collection>/renders/<run>/<flow>/<version>/<seed>/place/<step>`, with the tattoo's name after the step where the step needs one, and SHALL not mount the screen again when only its step or name changes. A step the screen does not know SHALL redirect to its first.
+The system SHALL give the placement screen the route
+`/c/<collection>/renders/<run>/<flow>/<version>/<seed>/place/<step>`, with the tattoo's name after the step
+where the step needs one, and SHALL not mount the screen again when only its step or name changes.
+A step the screen does not know SHALL redirect to its first.
 
-A route under a render's path would collide with `compare` unless it is its own segment, and the screen keeps its state across steps.
+A route under a render's path would collide with `compare` unless it is its own segment,
+and the screen keeps its state across steps.
 
 #### Scenario: a step change keeps the screen mounted
 - **Key:** `ui:place-route:a-step-change-keeps-the-screen-mounted`
@@ -44,7 +50,8 @@ A route under a render's path would collide with `compare` unless it is its own 
 
 ### Requirement: The placement screen holds no key of its own
 
-The placement screen and the components it holds SHALL declare no command. The keys the app answers everywhere SHALL stay, and a dialog SHALL close on `esc` as every dialog does.
+The placement screen and the components it holds SHALL declare no command.
+The keys the app answers everywhere SHALL stay, and a dialog SHALL close on `esc` as every dialog does.
 
 The keys come once the screen has been used and shows which are useful; one declared now would be one to keep.
 
@@ -56,7 +63,10 @@ The keys come once the screen has been used and shows which are useful; one decl
 
 ### Requirement: The panel zooms at the pointer, pans by a drag, and fits or shows 1:1
 
-The panel SHALL show one image in a viewport, zoom it at the pointer by the wheel between the declared floor and ceiling, pan it by a drag on the image, and offer *Fit* and *1:1*. A zoom SHALL keep the image point under the pointer under it. A pan SHALL keep part of the image in the viewport. The panel SHALL show its zoom as a percentage.
+The panel SHALL show one image in a viewport, zoom it at the pointer by the wheel between the declared floor
+and ceiling, pan it by a drag on the image, and offer *Fit* and *1:1*.
+A zoom SHALL keep the image point under the pointer under it. A pan SHALL keep part of the image in the viewport.
+The panel SHALL show its zoom as a percentage.
 
 The ink is judged at 1:1, so the panel keeps the pixel under the pointer where it was.
 
@@ -82,7 +92,8 @@ The ink is judged at 1:1, so the panel keeps the pixel under the pointer where i
 - **Key:** `ui:panel:fit-and-one-to-one`
 - **Layers:** unit
 - **WHEN** the view is fitted, and then set to 1:1
-- **THEN** fit shows the whole image centred, and 1:1 shows one image pixel for one screen pixel about the viewport's centre
+- **THEN** fit shows the whole image centred, and 1:1 shows one image pixel for one screen pixel about the
+  viewport's centre
 
 #### Scenario: a point converts both ways
 - **Key:** `ui:panel:a-point-converts-both-ways`
@@ -92,7 +103,12 @@ The ink is judged at 1:1, so the panel keeps the pixel under the pointer where i
 
 ### Requirement: An outline is clicked, closed on its first point and edited by dragging
 
-The outline editor SHALL add a vertex at each click on the image while the outline is open, close the outline on a click within the declared radius of the first vertex, move a vertex by a drag on it, insert a vertex on an edge by a shift-click, remove a vertex by a double click, undo its last change and clear itself. A closed outline SHALL need at least the declared floor of vertices and SHALL take no more than the ceiling. The radius SHALL be the same on screen at every zoom.
+The outline editor SHALL add a vertex at each click on the image while the outline is open,
+close the outline on a click within the declared radius of the first vertex, move a vertex by a drag on it,
+insert a vertex on an edge by a shift-click, remove a vertex by a double click,
+undo its last change and clear itself.
+A closed outline SHALL need at least the declared floor of vertices and SHALL take no more than the ceiling.
+The radius SHALL be the same on screen at every zoom.
 
 A click that moves is a pan, not a vertex.
 
@@ -140,7 +156,13 @@ A click that moves is a pan, not a vertex.
 
 ### Requirement: The picker lists the kept tattoos and takes an upload or a cut
 
-The picker, the first step, SHALL list every kept tattoo as a card with its image, its name, its state, *outlined* or *not outlined*, and what it came from: when it was kept, the size it came with when downscaled, or the photograph a cut is from. It SHALL take an upload through the import's staging and keep it under a name the operator may change, and SHALL offer *Cut from this photo*, which keeps a cut of the render's photograph under a name. A cut of another photograph SHALL stay listed and SHALL not be chosen on this render, saying whose it is. A refusal SHALL be shown with its fix. Choosing a card SHALL open the outline step on it.
+The picker, the first step, SHALL list every kept tattoo as a card with its image, its name, its state,
+*outlined* or *not outlined*, and what it came from: when it was kept, the size it came with when downscaled,
+or the photograph a cut is from.
+It SHALL take an upload through the import's staging and keep it under a name the operator may change,
+and SHALL offer *Cut from this photo*, which keeps a cut of the render's photograph under a name.
+A cut of another photograph SHALL stay listed and SHALL not be chosen on this render, saying whose it is.
+A refusal SHALL be shown with its fix. Choosing a card SHALL open the outline step on it.
 
 The picker is where a tattoo enters the screen, so it shows nothing but state and the way forward.
 
@@ -170,7 +192,16 @@ The picker is where a tattoo enters the screen, so it shows nothing but state an
 
 ### Requirement: The outline step shows the ink and keeps its white point and tone
 
-The outline step SHALL show the tattoo in the panel and let its outline be drawn, saving it as it changes. Once the outline is closed it SHALL offer the ink view beside the photograph or image, drawn from the server's answer on the crop's offset. It SHALL show the automatic white point as an 8-bit grey and let the operator set one by hand, stored as the scale on the automatic point, and return to automatic. It SHALL offer *neutral* and *depth* from 1.0 to 2.0, and *Reset* to the kind's defaults once either differs. On a cut it SHALL show the photograph with the ink at full strength inside the outline and the photograph dimmed around it, and the size of the ink on the photograph, and offer *Upload a tattoo instead*, which keeps a new tattoo under its own name and leaves the cut kept. While the outline is open the controls SHALL be disabled with their reason.
+The outline step SHALL show the tattoo in the panel and let its outline be drawn, saving it as it changes.
+Once the outline is closed it SHALL offer the ink view beside the photograph or image,
+drawn from the server's answer on the crop's offset.
+It SHALL show the automatic white point as an 8-bit grey and let the operator set one by hand,
+stored as the scale on the automatic point, and return to automatic.
+It SHALL offer *neutral* and *depth* from 1.0 to 2.0, and *Reset* to the kind's defaults once either differs.
+On a cut it SHALL show the photograph with the ink at full strength inside the outline
+and the photograph dimmed around it, and the size of the ink on the photograph,
+and offer *Upload a tattoo instead*, which keeps a new tattoo under its own name and leaves the cut kept.
+While the outline is open the controls SHALL be disabled with their reason.
 
 The ink view is the judge: nothing on the screen grades the cut.
 

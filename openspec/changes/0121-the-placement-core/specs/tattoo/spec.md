@@ -2,9 +2,19 @@
 
 ### Requirement: A tattoo is kept in the library, whole and never deleted
 
-The system SHALL keep each tattoo under the library's `.tattoos/<name>/`, one folder a tattoo, outside every collection. An uploaded tattoo SHALL be taken from the import's staging, where it was cleaned to pixels and orientation, and kept upright, with its metadata gone, at most the declared long side, its size and the size it came with recorded. A name SHALL be kept once, and SHALL be refused when it is empty, starts with a dot, holds a separator or a NUL, or is taken; a file still carrying metadata SHALL be refused. The system SHALL offer no way to delete or rename a kept tattoo.
+The system SHALL keep each tattoo under the library's `.tattoos/<name>/`, one folder a tattoo,
+outside every collection.
+An uploaded tattoo SHALL be taken from the import's staging, where it was cleaned to pixels and orientation,
+and kept upright, with its metadata gone, at most the declared long side,
+its size and the size it came with recorded.
+A name SHALL be kept once, and SHALL be refused when it is empty, starts with a dot, holds a separator or a NUL,
+or is taken; a file still carrying metadata SHALL be refused.
+The system SHALL offer no way to delete or rename a kept tattoo.
 
-A tattoo is one input to many renders, in any collection, so it lives beside the collections and is never listed as one ([D40](../../../docs/decisions.md#d40--a-collection-is-a-library-folder-holding-sources)). The photograph of a tattoo never leaves the machine.
+A tattoo is one input to many renders, in any collection, so it lives beside the collections
+and is never listed as one
+([D40](../../../docs/decisions.md#d40--a-collection-is-a-library-folder-holding-sources)).
+The photograph of a tattoo never leaves the machine.
 
 #### Scenario: an upload is kept upright and bounded
 - **Key:** `tattoo:library:an-upload-is-kept-upright-and-bounded`
@@ -60,9 +70,13 @@ A tattoo is one input to many renders, in any collection, so it lives beside the
 
 ### Requirement: A tattoo is cut from a photograph
 
-The system SHALL keep a cut: a tattoo with no image of its own, whose record names the digest of the photograph it is cut from, and whose outline is in that photograph's pixels. It SHALL start from the newest cut of the same photograph's tone, its neutral, depth and white point, else from the photograph's defaults. A cut SHALL serve only the renders of its own photograph.
+The system SHALL keep a cut: a tattoo with no image of its own, whose record names the digest of the photograph
+it is cut from, and whose outline is in that photograph's pixels.
+It SHALL start from the newest cut of the same photograph's tone, its neutral, depth and white point,
+else from the photograph's defaults. A cut SHALL serve only the renders of its own photograph.
 
-A cut carries that photograph's light and angle, so it is no input for another photograph; another photograph takes an uploaded tattoo.
+A cut carries that photograph's light and angle, so it is no input for another photograph;
+another photograph takes an uploaded tattoo.
 
 #### Scenario: a cut holds no image and names its photograph
 - **Key:** `tattoo:cut:a-cut-holds-no-image`
@@ -79,7 +93,8 @@ A cut carries that photograph's light and angle, so it is no input for another p
 #### Scenario: a second cut starts from the first cut's tone
 - **Key:** `tattoo:cut:a-second-cut-starts-from-the-first-cuts-tone`
 - **Layers:** unit
-- **WHEN** a first cut of a photograph has neutral off, depth 1.2 and a white scale of 0.9, and a second is cut from the same photograph
+- **WHEN** a first cut of a photograph has neutral off, depth 1.2 and a white scale of 0.9,
+  and a second is cut from the same photograph
 - **THEN** the second holds neutral off, depth 1.2 and a white scale of 0.9, and no points
 
 #### Scenario: a cut serves only its own photograph
@@ -90,7 +105,14 @@ A cut carries that photograph's light and angle, so it is no input for another p
 
 ### Requirement: An outline and its ink tone are kept with the tattoo
 
-The system SHALL keep, per tattoo, one outline file: the points of a polygon in the pixels of the tattoo's image, or of the photograph for a cut; whether it is closed; the white scale; neutral; and depth. It SHALL save the file each time the page sends it, and SHALL refuse a point outside the image, more points than the declared ceiling, a closed outline with fewer than the declared floor, a depth outside the declared range and a white scale of zero or less. A tattoo SHALL read as outlined when its outline is closed. A tattoo cut from a photograph SHALL default to neutral on and the photograph's depth, an uploaded one to neutral off and the image's depth.
+The system SHALL keep, per tattoo, one outline file: the points of a polygon in the pixels of the tattoo's image,
+or of the photograph for a cut; whether it is closed; the white scale; neutral; and depth.
+It SHALL save the file each time the page sends it, and SHALL refuse a point outside the image,
+more points than the declared ceiling, a closed outline with fewer than the declared floor,
+a depth outside the declared range and a white scale of zero or less.
+A tattoo SHALL read as outlined when its outline is closed.
+A tattoo cut from a photograph SHALL default to neutral on and the photograph's depth,
+an uploaded one to neutral off and the image's depth.
 
 Saving happens as the operator goes, so a closed page loses nothing.
 
@@ -127,9 +149,12 @@ Saving happens as the operator goes, so a closed page loses nothing.
 
 ### Requirement: The white point is a scale on the automatic point
 
-The system SHALL accept on `extract_ink` a white scale, 1.0 by default, that multiplies the automatic per-channel white point before the layer is divided by it; 1.0 SHALL give the layer the extraction gave without it. It SHALL offer the automatic point as one 8-bit grey, the point's luminance, for the page to show.
+The system SHALL accept on `extract_ink` a white scale, 1.0 by default, that multiplies the automatic per-channel
+white point before the layer is divided by it; 1.0 SHALL give the layer the extraction gave without it.
+It SHALL offer the automatic point as one 8-bit grey, the point's luminance, for the page to show.
 
-The automatic point is a vector of three channels and the page shows one number, so one scale carries the operator's choice without losing the tint the point removes.
+The automatic point is a vector of three channels and the page shows one number,
+so one scale carries the operator's choice without losing the tint the point removes.
 
 #### Scenario: a scale of one changes nothing
 - **Key:** `tattoo:white:a-scale-of-one-changes-nothing`
@@ -152,9 +177,17 @@ The automatic point is a vector of three channels and the page shows one number,
 
 ### Requirement: Ink is placed by thin-plate splines
 
-The system SHALL warp a tattoo's ink onto a target image by thin-plate splines fitted backwards from the target's pixels through each stage's pairs, so each target pixel looks up the ink it shows and the warp leaves no hole. A spline SHALL be exact at its pairs and SHALL refuse fewer than the declared floor of pairs, naming it, and pairs that lie on one line. A lookup outside the tattoo SHALL be transparent white. The ink SHALL be clipped to a polygon, softened by one pixel, and SHALL be removed completely under each exclusion polygon. The composite SHALL be a Multiply of the ink over the target. The module SHALL import numpy and Pillow only, inside its functions.
+The system SHALL warp a tattoo's ink onto a target image by thin-plate splines fitted backwards from the target's
+pixels through each stage's pairs, so each target pixel looks up the ink it shows and the warp leaves no hole.
+A spline SHALL be exact at its pairs and SHALL refuse fewer than the declared floor of pairs, naming it,
+and pairs that lie on one line. A lookup outside the tattoo SHALL be transparent white.
+The ink SHALL be clipped to a polygon, softened by one pixel,
+and SHALL be removed completely under each exclusion polygon.
+The composite SHALL be a Multiply of the ink over the target.
+The module SHALL import numpy and Pillow only, inside its functions.
 
-A thin-plate spline is an exact interpolator, so no per-pair error is shown. The module is shared so the server and, later, a verb run one implementation.
+A thin-plate spline is an exact interpolator, so no per-pair error is shown.
+The module is shared so the server and, later, a verb run one implementation.
 
 #### Scenario: a spline is exact at its pairs
 - **Key:** `tattoo:chain:a-spline-is-exact-at-its-pairs`
@@ -206,7 +239,13 @@ A thin-plate spline is an exact interpolator, so no per-pair error is shown. The
 
 ### Requirement: The ink view is made on the server
 
-The system SHALL answer a `POST` naming a tattoo, the outline and the tone with the ink view: the tattoo's ink on white, as a JPEG, on the crop of the outline's box grown by the extraction's reach, clipped to the image. The answer SHALL be `no-store`, SHALL name the crop's box and the automatic white point as an 8-bit grey in its headers, and SHALL be made now and kept nowhere. It SHALL refuse an outline that is not closed, an unknown tattoo and a cut asked on another photograph, and SHALL be answered only to a request addressed to this server.
+The system SHALL answer a `POST` naming a tattoo, the outline and the tone with the ink view:
+the tattoo's ink on white, as a JPEG, on the crop of the outline's box grown by the extraction's reach,
+clipped to the image.
+The answer SHALL be `no-store`, SHALL name the crop's box and the automatic white point as an 8-bit grey
+in its headers, and SHALL be made now and kept nowhere.
+It SHALL refuse an outline that is not closed, an unknown tattoo and a cut asked on another photograph,
+and SHALL be answered only to a request addressed to this server.
 
 The page holds no extraction: one implementation is tested, and the photograph of a tattoo never leaves the machine.
 
