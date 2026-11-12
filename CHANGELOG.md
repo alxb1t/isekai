@@ -15,6 +15,9 @@ its new digest.
 - Ratchets hold the size of a file, of a function, of its positional parameters and of a `ui/src` file, and the
   patches of a module's own names: each offender is a listed row, an unlisted one or a stale row is red, and each rule
   has a twin; the rule is recorded as D56 (0129 D3, D4, D5, D6).
+- The import graph moves to `tools/import_graph.py`, and `tools/derive_imported_by.py` writes each README's *Imported by*
+  table from it, without the tests column; a test re-derives each table, `make derive` runs the tool, and the
+  `ui/app.py` route list goes (0129 D7, D8, D9, D10).
 
 ## [0.86.2] - 2026-11-12
 

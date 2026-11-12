@@ -26,22 +26,21 @@ neither is privileged and neither goes through the other.
 | `ui/jobs.py` | Prepare and Render as jobs, a slot per kind, side by side: one `prepare` child, each photograph through `tag` → `caption` → its sheets, after a probe of the model server; `gpunit volume up` → `render` → `volume down` unless kept; Stop and server stop sending SIGINT |
 | `ui/billing.py` | what may be billing, read from gpunit's records in `.gpunit/`: the pod alert, the window's quiet item and the band; gpunit asked at start, every half minute while needed, and on Check again |
 | `ui/events.py` | the event stream: a snapshot on connect, then each `job`, `cell` and `billing` change, to every open page |
-| `ui/app.py` | the endpoints — `GET /api/library`, `/api/c/{collection}/hub`, `POST /api/c/{collection}/assign`, `/api/c/{collection}/review/{digest}/{flow}` with `/photo`, `/source/{version}`, `PUT …/draft`, `POST …/approve`, `POST …/cancel`, `POST …/discard`, `POST /api/c/{collection}/draft`, `POST /api/c/{collection}/prepare`, `GET /api/c/{collection}/render`, `POST /api/render/quote`, `POST /api/render`, `GET /api/sessions/running`, `GET /api/c/{collection}/sessions/{id}`, `POST /api/jobs/{kind}/stop`, `POST /api/billing/check`, `GET /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}`, its `DELETE`, and its `/image`, `/thumb` and `/compare/photo` and `/compare/{flow}/{version}/{seed}`, `GET /events` with `?collection=` and `?staging=`, either or both, the import's `POST /api/staging` with `PUT`, `GET` and `DELETE …/{id}/files/{name}` and its `/thumb`, `DELETE …/{id}` and `POST …/{id}/commit`, `/api/tags`, `/api/fields`, and the bundle's `index.html` for every other path — and the only module in the package that imports FastAPI or uvicorn |
+| `ui/app.py` | the endpoints, which `create_app` declares, and the bundle's `index.html` for every other path; the only module in the package that imports FastAPI or uvicorn |
 
 ## Imported by
 
-**Named, not counted.** A count in this column has gone stale in every group here
-at least once; a list of names cannot.
+**Derived.** `uv run python -m tools.derive_imported_by` writes this table from the import graph of `tools/import_graph.py`, the one the layer guards read, and a test re-derives it. It names importers in `isekai/`, `evaluation/` and `tools/`, never a test.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `cli.py` | `__main__.py` | `tests/test_assign.py`, `tests/test_compare.py`, `tests/test_generate.py`, `tests/test_importing.py`, `tests/test_pipeline_cli.py`, `tests/test_progress.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
-| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py` | `evaluation/record.py`, `tools/derive_field_map.py`, `tests/conftest.py`, `tests/e2e/wiring.py`, `tests/stages.py`, `tests/test_assign.py`, `tests/test_compare.py`, `tests/test_evaluation_cli.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_recall_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
+| `cli.py` | `__main__.py` | — |
+| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
 | `drafting.py` | `cli.py`, `ui/app.py` | — |
-| `render.py` | `cli.py`, `ui/app.py`, `ui/jobs.py`, `ui/library.py` | `tests/test_infra.py`, `tests/test_render.py`, `tests/test_ui_api.py`, `tests/test_ui_jobs.py` |
-| `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py`, `tests/test_run_view.py` |
-| `compare_view.py` | `cli.py`, `render.py` | `tests/test_compare.py` |
-| `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_ui_billing.py`, `tests/test_ui_jobs.py`, `tests/test_ui_library.py` |
+| `render.py` | `cli.py`, `ui/app.py`, `ui/jobs.py`, `ui/library.py` | — |
+| `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py` |
+| `compare_view.py` | `cli.py`, `render.py` | — |
+| `ui/` | `cli.py` | — |
 
 > The file is `run_view.py`; the **verb is still `show`**, and the entry-point
 > tests pin it.

@@ -177,7 +177,8 @@ a test re-derives it and expects the same bytes.**
   `tests/test_flow.py::test_a_manifest_missing_a_dial_its_own_roles_read_is_refused_naming_it`,
   `tests/test_flow.py::test_every_dial_a_tracked_flow_declares_is_one_of_its_roles_reads`,
   `tests/test_flow.py::test_every_model_a_flow_declares_carries_the_manifests_digest_for_it`,
-  `tests/test_field_map.py::test_the_committed_table_re_derives_without_reading_the_gitignored_runs`.
+  `tests/test_field_map.py::test_the_committed_table_re_derives_without_reading_the_gitignored_runs`,
+  `tests/test_docs.py::test_every_imported_by_table_is_the_one_the_deriver_writes`.
 - **Known breaks:** the sampling options do not say they are not manifest keys. The field map's
   re-derivation skips in CI, which declares the vocabulary absent, and the derivers that fetch from the
   network run weekly in `drift.yml`, outside the gate.

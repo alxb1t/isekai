@@ -6,7 +6,7 @@ Tests, tools and documents alone: the stage rule, the ratchets, the importer tab
 
 - [x] 4 — The stage rule · moderate
 - [x] 5 — The ratchets · moderate
-- [ ] 6 — The importer tables · moderate
+- [x] 6 — The importer tables · moderate
 - [ ] 7 — The frozen files and the documents · moderate
 
 ## 4 — The stage rule
@@ -51,25 +51,25 @@ Tests, tools and documents alone: the stage rule, the ratchets, the importer tab
 
 ## 6 — The importer tables
 
-- [ ] 6.1 Create `tools/import_graph.py` per [D7](design.md#d7): `PACKAGES`, `Edge`, and `module_name`, `is_module`, `sources`, `imports` and `edges`, moved from `tests/test_layers.py` with their bodies, stdlib only.
+- [x] 6.1 Create `tools/import_graph.py` per [D7](design.md#d7): `PACKAGES`, `Edge`, and `module_name`, `is_module`, `sources`, `imports` and `edges`, moved from `tests/test_layers.py` with their bodies, stdlib only.
   Verify: `uv run python -c "import tools.import_graph"` exits 0.
 
-- [ ] 6.2 In `tests/test_layers.py`, import the graph from `tools.import_graph`, delete `def _edges` and the other definitions it replaces, rename each reader of `_edges`, `_module_name`, `_is_module`, `_sources` and `_imports` to the public name, and update the module docstring to say the graph lives in the tool.
+- [x] 6.2 In `tests/test_layers.py`, import the graph from `tools.import_graph`, delete `def _edges` and the other definitions it replaces, rename each reader of `_edges`, `_module_name`, `_is_module`, `_sources` and `_imports` to the public name, and update the module docstring to say the graph lives in the tool.
   Verify: `git grep -n -F "def _edges" -- tests/test_layers.py` prints nothing and exits 1.
 
-- [ ] 6.3 Create `tools/derive_imported_by.py` per [D8](design.md#d8): `TABLES`, the note, `derive(root, readme)` and a `main` that writes each table in `TABLES`, run as `python -m tools.derive_imported_by`.
+- [x] 6.3 Create `tools/derive_imported_by.py` per [D8](design.md#d8): `TABLES`, the note, `derive(root, readme)` and a `main` that writes each table in `TABLES`, run as `python -m tools.derive_imported_by`.
   Verify: `uv run python -c "import tools.derive_imported_by"` exits 0.
 
-- [ ] 6.4 Run `uv run python -m tools.derive_imported_by`, which replaces each note that begins `Named, not counted` and writes the table of each README it names. Move the prose of the old cell of the boundary table's `pod_start.py` row into a note under the table, and read each README's diff against its old cells before keeping it.
+- [x] 6.4 Run `uv run python -m tools.derive_imported_by`, which replaces each note that begins `Named, not counted` and writes the table of each README it names. Move the prose of the old cell of the boundary table's `pod_start.py` row into a note under the table, and read each README's diff against its old cells before keeping it.
   Verify: `git grep -n -F "Named, not counted" -- isekai/foundation/README.md isekai/shared/README.md isekai/boundary/README.md isekai/pipeline/README.md isekai/interface/README.md evaluation/README.md` prints nothing and exits 1.
 
-- [ ] 6.5 The tests column is gone from each table the deriver wrote.
+- [x] 6.5 The tests column is gone from each table the deriver wrote.
   Verify: `git grep -n -E '^\|.*.tests/' -- isekai/foundation/README.md isekai/shared/README.md isekai/boundary/README.md isekai/pipeline/README.md isekai/interface/README.md evaluation/README.md` prints nothing and exits 1.
 
-- [ ] 6.6 In `isekai/interface/README.md`, replace the `ui/app.py` row's route list, which begins `GET /api/library`, with what [D10](design.md#d10) says.
+- [x] 6.6 In `isekai/interface/README.md`, replace the `ui/app.py` row's route list, which begins `GET /api/library`, with what [D10](design.md#d10) says.
   Verify: `git grep -n -F "GET /api/library" -- isekai/interface/README.md` prints nothing and exits 1.
 
-- [ ] 6.7 In the `derive` recipe of `Makefile`, which is not the `gate` recipe, add the deriver's line after the `derive_field_map` line and before the `$(MAKE) drift` line, and say so in the comment above:
+- [x] 6.7 In the `derive` recipe of `Makefile`, which is not the `gate` recipe, add the deriver's line after the `derive_field_map` line and before the `$(MAKE) drift` line, and say so in the comment above:
   ```diff
   - # vocabulary, then the fetched ones.
   + # vocabulary, the READMEs' importer tables, then the fetched ones.
@@ -77,10 +77,10 @@ Tests, tools and documents alone: the stage rule, the ratchets, the importer tab
   ```
   Verify: `git grep -n -F "tools.derive_imported_by" -- Makefile` prints the added line.
 
-- [ ] 6.8 In `docs/principles.md`, add the test of 6.9 that re-derives each table, `test_every_imported_by_table_is_the_one_the_deriver_writes` of `tests/test_docs.py`, to the *Held by* of *Configuration is declared, never computed, and declared once*, in the form its other lines take.
+- [x] 6.8 In `docs/principles.md`, add the test of 6.9 that re-derives each table, `test_every_imported_by_table_is_the_one_the_deriver_writes` of `tests/test_docs.py`, to the *Held by* of *Configuration is declared, never computed, and declared once*, in the form its other lines take.
   Verify: `git grep -n -F "test_every_imported_by_table_is_the_one_the_deriver_writes" -- docs/principles.md` prints the added line.
 
-- [ ] 6.9 In `tests/test_docs.py`, per [D9](design.md#d9), add `test_every_imported_by_table_is_the_one_the_deriver_writes`, parametrized over each README the deriver names, the guard `test_every_readme_with_an_imported_by_table_is_derived`, and the twins `test_the_deriver_catches_a_stale_table` and `test_the_deriver_refuses_a_row_naming_no_module`, over `tmp_path` trees that hold `isekai`, `evaluation` and `tools`. Each carries `spec_exempt("structural: …")`, a twin `structural: twin of <the guard>`.
+- [x] 6.9 In `tests/test_docs.py`, per [D9](design.md#d9), add `test_every_imported_by_table_is_the_one_the_deriver_writes`, parametrized over each README the deriver names, the guard `test_every_readme_with_an_imported_by_table_is_derived`, and the twins `test_the_deriver_catches_a_stale_table` and `test_the_deriver_refuses_a_row_naming_no_module`, over `tmp_path` trees that hold `isekai`, `evaluation` and `tools`. Each carries `spec_exempt("structural: …")`, a twin `structural: twin of <the guard>`.
   Verify: `uv run pytest tests/test_docs.py -k "imported_by or deriver" -q` exits 0.
 
 ## 7 — The frozen files and the documents

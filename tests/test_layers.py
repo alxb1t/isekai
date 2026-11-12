@@ -3,88 +3,23 @@
 Each rule is a function over a root directory, so the twins can run it on a small
 package built under `tmp_path`. Imports inside functions count: a lazy import is
 still an edge. `tests/` is not scanned -- a component's own tests reach inside it.
+The graph itself lives in `tools/import_graph.py`, which the importer tables read too.
 """
 
 import ast
-from collections.abc import Iterator
-from functools import cache
-from importlib.util import resolve_name
 from pathlib import Path
 
 import pytest
+
+from tools.import_graph import PACKAGES, Edge, edges, module_name
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Lowest first: a layer may import itself and the layers before it.
 LAYERS = ("foundation", "shared", "boundary", "pipeline", "interface")
 
-# The top-level packages whose imports the rules read.
-PACKAGES = ("isekai", "evaluation")
-
 # Importers whose sub-package imports must go through the front door.
 FRONT_DOOR_SCOPE = (*PACKAGES, "tools")
-
-Edge = tuple[str, str]
-
-
-def _module_name(root: Path, path: Path) -> str:
-    """Return the dotted name of a file under `root`.
-
-    e.g. `isekai/interface/ui/__init__.py` -> `isekai.interface.ui`
-    """
-    parts = list(path.relative_to(root).with_suffix("").parts)
-    if parts[-1] == "__init__":
-        parts.pop()
-    return ".".join(parts)
-
-
-def _is_module(root: Path, name: str) -> bool:
-    base = root.joinpath(*name.split("."))
-    return base.with_suffix(".py").is_file() or (base / "__init__.py").is_file()
-
-
-def _sources(root: Path, scope: tuple[str, ...]) -> Iterator[Path]:
-    """Yield every Python file under `scope`, failing on an entry that is not there.
-
-    A missing entry would narrow the check with no failure.
-    """
-    for entry in scope:
-        path = root / entry
-        if path.is_file():
-            yield path
-        elif path.is_dir():
-            yield from sorted(path.rglob("*.py"))
-        else:
-            raise FileNotFoundError(f"scope path {entry!r} does not exist under {root}")
-
-
-def _imports(root: Path, path: Path) -> set[str]:
-    """Return every `isekai` or `evaluation` module a file imports, anywhere in it.
-
-    `from isekai.x import n` names `isekai.x.n` when that is a module, else `isekai.x`.
-    """
-    name = _module_name(root, path)
-    package = name if path.name == "__init__.py" else name.rpartition(".")[0]
-    found: set[str] = set()
-    for node in ast.walk(ast.parse(path.read_text(), filename=str(path))):
-        if isinstance(node, ast.Import):
-            found.update(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom):
-            base = resolve_name("." * node.level + (node.module or ""), package)
-            for alias in node.names:
-                full = f"{base}.{alias.name}"
-                found.add(full if _is_module(root, full) else base)
-    return {module for module in found if module.split(".")[0] in PACKAGES}
-
-
-@cache
-def _edges(root: Path, scope: tuple[str, ...] = ("isekai",)) -> tuple[Edge, ...]:
-    """Return every (importer, imported) pair under `scope`, both as dotted names."""
-    return tuple(
-        (_module_name(root, path), module)
-        for path in _sources(root, scope)
-        for module in sorted(_imports(root, path))
-    )
 
 
 def _layer(dotted: str) -> str | None:
@@ -101,7 +36,7 @@ def _within(module: str, package: str) -> bool:
 def upward_imports(root: Path) -> set[Edge]:
     """Return every import that names a layer above its importer's."""
     found: set[Edge] = set()
-    for importer, module in _edges(root):
+    for importer, module in edges(root):
         low, high = _layer(importer), _layer(module)
         if low and high and LAYERS.index(high) > LAYERS.index(low):
             found.add((importer, module))
@@ -112,7 +47,7 @@ def evaluation_imports(root: Path) -> set[Edge]:
     """Return every import of `evaluation` from inside `isekai`."""
     return {
         (importer, module)
-        for importer, module in _edges(root)
+        for importer, module in edges(root)
         if _within(module, "evaluation")
     }
 
@@ -135,7 +70,7 @@ def stage_imports(root: Path) -> set[Edge]:
     """
     return {
         (importer, module)
-        for importer, module in _edges(root)
+        for importer, module in edges(root)
         if _stage(importer) and _stage(module) and _stage(importer) != _stage(module)
     }
 
@@ -149,7 +84,7 @@ def _group(dotted: str) -> str | None:
 def layer_cycles(root: Path) -> list[list[str]]:
     """Return one path per import cycle inside a single layer or `evaluation`."""
     graph: dict[str, set[str]] = {}
-    for importer, module in _edges(root, PACKAGES):
+    for importer, module in edges(root, PACKAGES):
         if (
             _group(importer)
             and _group(importer) == _group(module)
@@ -195,13 +130,13 @@ def busy_inits(root: Path) -> list[str]:
 def past_front_doors(root: Path) -> set[Edge]:
     """Return every import of a module inside a layer's sub-package from outside it."""
     doors = {
-        _module_name(root, init)
+        module_name(root, init)
         for layer in LAYERS
         for init in (root / "isekai" / layer).glob("*/__init__.py")
     }
     return {
         (importer, module)
-        for importer, module in _edges(root, FRONT_DOOR_SCOPE)
+        for importer, module in edges(root, FRONT_DOOR_SCOPE)
         for door in doors
         if module.startswith(door + ".") and not _within(importer, door)
     }
@@ -401,4 +336,4 @@ def test_the_check_catches_an_import_past_a_front_door(tmp_path: Path) -> None:
 def test_a_scope_path_that_does_not_exist_fails(tmp_path: Path) -> None:
     root = _package(tmp_path, {})
     with pytest.raises(FileNotFoundError, match="'gone'"):
-        _edges(root, ("isekai", "gone"))
+        edges(root, ("isekai", "gone"))
