@@ -88,13 +88,13 @@ its edits. Both refuse while a render session holds the collection.
 
 ## The app
 
-`isekai ui` starts the placement screen's first steps. They keep and outline a tattoo; the composite is still made in
-Krita (§2) until the stages that click point pairs are built.
+`isekai ui` starts the placement screen. It keeps and outlines a tattoo, pairs it with the photograph and the render by
+clicks, previews the warp, and bakes it as an edit request in place of Krita (§2).
 
 ```
-render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view
-                              │             └─ the ink as the server draws it, on the outline's crop
-                .tattoos/<name>/ in the library
+render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─┬─▶ ③ tattoo ↔ photograph ─▶ ④ photograph ↔ render ─┐
+                              │             └─ the ink on the outline's crop  ├─▶ ③ tattoo ↔ render (not on this photo) ──┼─▶ ⑤ review ─ Bake
+                .tattoos/<name>/ in the library                               └─▶ ④ photograph ↔ render (a cut) ──────────┘
 ```
 
 - **Open it** with `⇧P` or *Place a tattoo* on a render's large view.
@@ -111,5 +111,18 @@ render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view
 - **The ink view** is the same extraction as §1, drawn by the server on the outline's crop. The white point is the
   automatic one as a grey from 0 to 255, set by hand or back to *Auto*. *Neutral* and *depth* are `--neutral` and
   `--depth`, and *Reset* returns them to the kind's defaults.
-
-The stages come later: the point pairs, the warp's preview and the bake.
+- **The stages** pair the tattoo's ink view with the photograph (③, stage 1), then the photograph with the render (④,
+  stage 2), by clicks on either image first. An upload flagged *not on this photo* pairs the tattoo with the render
+  directly, and a cut takes stage 2 alone. Stage 1 is kept per photograph in
+  `.tattoos/<name>/stage1/<digest>.json` as it changes, so a second render of the photograph needs only its own stage;
+  stage 2, the limb and the exclusions stay in the page until the bake. The floors are in `config/tattoo.json`.
+- **The preview** is the ink on white as a JPEG over a crop of the target, which the page multiplies over it a second
+  after the last change. It is made on the server and kept nowhere.
+- **The limb and the exclusions** are drawn on the render: the ink stays inside the limb and goes under each
+  exclusion, so hair or clothing in front of the skin stays clear.
+- **A bake** only queues a request, through the edit stage as §3 does, and spends nothing. It writes the composite, the
+  edit's record and `<seed>.edit-<k>.placement.json`, never the image; the next render session samples it (§5). The
+  placement record holds the tattoo and its kind, the mode, the edit it is placed on, the outline with its white point
+  and tone, a copy of the stage-1 pairs the bake used, its own pairs, the limb and the exclusions
+  ([D53](decisions.md#d53--a-placement-is-recorded-beside-its-edit)). A discard takes it with its edit (§6).
+- **Leaving** a stage that holds a point with no match asks first; *Leave* drops that point alone.

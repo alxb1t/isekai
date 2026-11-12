@@ -19,6 +19,8 @@ its new digest.
   the edit stage, placed on a render or a baked edit; the review step shows the placement and bakes it (0122 D5, D6, D8, D9).
 - Leaving a stage that holds a point with no match asks first in a native dialog, naming the point and the pairs that
   stand; *Leave* drops that point alone (0122 D7, D8).
+- The docs say what holds: D53, a placement recorded beside its edit; D4 names the edit request among the writes the
+  owning stage makes; the design spec, the tattoo guide and the module maps carry the stages and the bake (0122 D12).
 
 ## [0.81.0] - 2026-11-12
 

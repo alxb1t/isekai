@@ -14,7 +14,7 @@ does is reach a boundary or decide a stage's order.
 
 | file | does |
 |---|---|
-| `chain.py` | the maths of a placement, each a function over arrays: a thin-plate `Spline` exact at its pairs, the `lookup` of ink through a chain of them, the polygon mask, the `clip` to an outline, the `multiply` over a render and the `crop_box` every caller crops to; Pillow and numpy are imported inside its functions |
+| `chain.py` | the maths of a placement, each a function over arrays: a thin-plate `Spline` exact at its pairs, the `lookup` of ink through a chain of them, the polygon mask, the `clip` to an outline, the `multiply` over a render, the `place` of an ink layer through the stages' splines, its `flatten` on white and the `crop_box` every caller crops to; Pillow and numpy are imported inside its functions |
 | `field_map.py` | answers *which identity criterion does this tag belong to* — one authored table, read `tag → field` to route and `field → tags` to browse |
 | `fields.py` | answers *is this filled sheet exactly the schema's fields of canonical tags* |
 | `image.py` | reads a JPEG or PNG header and derives the render target the image's own dimensions imply, refusing what render cannot take; strips a photograph's metadata for upload, names what a file carries beyond its pixels, and makes a thumbnail |
@@ -29,7 +29,7 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `chain.py` | `pipeline/tattoos.py` | `tests/test_chain.py` |
+| `chain.py` | `pipeline/tattoos.py` | `tests/test_chain.py`, `tests/test_tattoo_placement.py` |
 | `field_map.py` | `interface/cli.py`, `interface/drafting.py`, `interface/ui/app.py`, `interface/wiring.py`, `pipeline/sheet.py` | `tools/derive_field_map.py`, `tests/stages.py`, `tests/test_field_map.py`, `tests/test_package_paths.py`, `tests/test_ui_api.py` |
 | `fields.py` | `pipeline/review.py`, `pipeline/sheet.py` | `tests/test_sheet_schema.py` |
 | `image.py` | `interface/ui/app.py`, `interface/ui/library.py`, `pipeline/generate.py`, `pipeline/importing.py` | `tests/test_generate.py`, `tests/test_image.py`, `tests/test_importing.py`, `tests/test_resume.py` |

@@ -8,7 +8,7 @@ The phases: the stages with the preview, the limb and exclusions, the bake, the 
 - [x] 2 — Limb and exclusions · moderate
 - [x] 3 — Bake · hard
 - [x] 4 — Leave · moderate
-- [ ] 5 — Docs · moderate
+- [x] 5 — Docs · moderate
 
 ## 1 — Stages
 
@@ -122,17 +122,17 @@ The phases: the stages with the preview, the limb and exclusions, the bake, the 
 
 ## 5 — Docs
 
-- [ ] 5.1 Add `### D53` to `docs/decisions.md` after D52 per [D12](design.md#d12): a placement is recorded beside its edit, the placement record, the held stage state, and that stage-1 pairs are the tattoo's.
+- [x] 5.1 Add `### D53` to `docs/decisions.md` after D52 per [D12](design.md#d12): a placement is recorded beside its edit, the placement record, the held stage state, and that stage-1 pairs are the tattoo's.
   Verify: `git grep -n "### D53" docs/decisions.md` prints its heading.
-- [ ] 5.2 Amend [D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children) in `docs/decisions.md` by one sentence: an edit request goes through the edit stage's own function.
+- [x] 5.2 Amend [D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children) in `docs/decisions.md` by one sentence: an edit request goes through the edit stage's own function.
   Verify: `git grep -n "through the edit stage" docs/decisions.md` prints the sentence.
-- [ ] 5.3 In `ui/design/spec.md` extend §4's row for `…/place/<step>` with the steps `photo`, `render` and `review`.
+- [x] 5.3 In `ui/design/spec.md` extend §4's row for `…/place/<step>` with the steps `photo`, `render` and `review`.
   Verify: `git grep -n "place/<step>" ui/design/spec.md` prints the row.
-- [ ] 5.4 In `ui/design/spec.md` add a row `**the placement**` to §10's table.
+- [x] 5.4 In `ui/design/spec.md` add a row `**the placement**` to §10's table.
   Verify: `git grep -n "the placement\*\*" ui/design/spec.md` prints the row.
-- [ ] 5.5 Extend the journey `### J9 · Place a tattoo` in `ui/design/spec.md` with the stages, the preview, the limb and exclusions, the review and the Leave dialog as built, state and refusals only.
+- [x] 5.5 Extend the journey `### J9 · Place a tattoo` in `ui/design/spec.md` with the stages, the preview, the limb and exclusions, the review and the Leave dialog as built, state and refusals only.
   Verify: `git grep -n "Leave dialog" ui/design/spec.md` prints the line.
-- [ ] 5.6 Add to the `## The app` section of `docs/edit-tattoo.md` the stages and the placement record, `<seed>.edit-<k>.placement.json`, what it holds and that a bake only queues a request; no path of the operator's notebook.
+- [x] 5.6 Add to the `## The app` section of `docs/edit-tattoo.md` the stages and the placement record, `<seed>.edit-<k>.placement.json`, what it holds and that a bake only queues a request; no path of the operator's notebook.
   Verify: `git grep -n "placement.json" -- docs` prints a line.
-- [ ] 5.7 Name `place`, `preview`, `composite` and `request_placed` and their edges in `docs/modules.md`, `isekai/pipeline/README.md` and `isekai/shared/README.md`.
+- [x] 5.7 Name `place`, `preview`, `composite` and `request_placed` and their edges in `docs/modules.md`, `isekai/pipeline/README.md` and `isekai/shared/README.md`.
   Verify: `git grep -n "request_placed" isekai/pipeline/README.md` prints the line.

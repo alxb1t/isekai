@@ -93,7 +93,7 @@ approval through `review`'s, a tick through the run's `assign`, a source through
 thumbnails through the library's `drop_thumbnails`, the render through the render stage's `discard_render`, and
 the approvals, drafts, sheets, source copies and own copies of the photograph's description its last render leaves
 through review's `withdraw`, and a target's first sheet, when it is drafted from another flow, through `sheet()`,
-which `interface/drafting.py`'s `draft_across` runs in the server's process before the draft.
+which `interface/drafting.py`'s `draft_across` runs in the server's process before the draft, and an edit request through the edit stage's own function.
 
 - **Why:** the CLI is the one path, so a stage the page starts is exactly the stage the terminal runs,
   and a write no stage owns would give a run file a second author. `draft_across` is the sequence
@@ -102,7 +102,7 @@ which `interface/drafting.py`'s `draft_across` runs in the server's process befo
   confirmation carries the quote it showed and the photographs taken out of it, and a quote grown since is
   refused. The quote compares
   image total, bake total and limit, not source or approval identity.
-- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`, `0112`, `0114`, `0116`, `0120`.
+- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`, `0112`, `0114`, `0116`, `0120`, `0122`.
 
 ### D42 · A new draft starts from the last approval
 
@@ -328,6 +328,20 @@ and the photograph a cut is taken from, and every tattoo, stays on this machine.
   ink of a cut is already in the photograph's pixels, so copying the photograph would only keep a likeness twice.
   Nothing needs a delete yet, and a kept name that never moves is one a later placement can cite.
 - **Made by:** `0121`.
+
+### D53 · A placement is recorded beside its edit
+
+**A bake is recorded as `<seed>.edit-<k>.placement.json` beside its edit's record, written by the edit stage with the
+composite and never an image: the tattoo, the mode, the image it is placed on, the outline and tone, a copy of the
+stage-1 pairs it used, its own pairs, the limb and the exclusions. A tattoo's stage-1 pairs are the tattoo's, kept per
+photograph in `.tattoos/<name>/stage1/<digest>.json` as the page sends them; the stage-2 or direct pairs, the limb and
+the exclusions are held by the page until the bake writes them.**
+
+- **Why:** a bake is a request the render session fulfils, so its record sits where the edit's does and goes with it.
+  Stage 1 depends on the tattoo and the photograph and not on the render, so a second render of one photograph
+  needs only its own stage; the record's copy keeps it whole when those pairs change later. A draft file for the
+  held work is a later change, when losing it on a leave is missed.
+- **Made by:** `0122`.
 
 ### D44 · A flat flow is summon with the face chain ending early
 
