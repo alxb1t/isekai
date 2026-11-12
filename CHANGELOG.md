@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.0] - 2026-11-12
+
+Gate: local 1m0s · CI not read under mf-ship · 0.85.0: local 0m59s · CI not read under mf-ship
+
 - A cut is kept at `.tattoos/.cuts/<digest>/<name>/` and every name call and tattoo route takes the render's digest, so
   a cut is listed and named on its photograph alone; a cut kept at `.tattoos/<name>/` moves there on the first read
   (0126 D1, D2, D3).

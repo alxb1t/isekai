@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: v0.86
 beside: [0125-the-outline-gestures]
 ---
 
