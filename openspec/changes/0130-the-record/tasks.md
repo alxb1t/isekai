@@ -4,7 +4,7 @@ Tests alone: the graphs, the run, the verbs, the routes, then the wire. Decision
 
 ## Progress
 
-- [ ] 1 — The graphs · moderate
+- [x] 1 — The graphs · moderate
 - [ ] 2 — The run · moderate
 - [ ] 3 — The verbs · moderate
 - [ ] 4 — The routes · moderate
@@ -12,28 +12,28 @@ Tests alone: the graphs, the run, the verbs, the routes, then the wire. Decision
 
 ## 1 — The graphs
 
-- [ ] 1.1 Create `tests/record.py` per [D1](design.md#d1): a module docstring saying what the record is and that `uv run python -m tests.record` writes it, then `REPO_ROOT`, `RECORD`, `FLOWS` (the flow ids under `flows/`, `summon-anime-wai` first), `dump(value)`, `recorded(name)`, an empty `FILES`, `derive(done)`, `write(directory)` and `main()`.
+- [x] 1.1 Create `tests/record.py` per [D1](design.md#d1): a module docstring saying what the record is and that `uv run python -m tests.record` writes it, then `REPO_ROOT`, `RECORD`, `FLOWS` (the flow ids under `flows/`, `summon-anime-wai` first), `dump(value)`, `recorded(name)`, an empty `FILES`, `derive(done)`, `write(directory)` and `main()`.
   Verify: `uv run python -c "import tests.record"` exits 0.
 
-- [ ] 1.2 In `tests/record.py`, add `def wiring(*, runs)` and `def using(client)` per [D2](design.md#d2) and [D3](design.md#d3): `wiring` returns `dataclasses.replace(fake(runs=runs), client=<the module variable>, out=<a new StringIO, kept in OUTS>, err=<a new StringIO>)`, `fake` from `tests/e2e/wiring.py`; `using` sets `ISEKAI_WIRING` through `os.environ` and the module variable, and restores both.
+- [x] 1.2 In `tests/record.py`, add `def wiring(*, runs)` and `def using(client)` per [D2](design.md#d2) and [D3](design.md#d3): `wiring` returns `dataclasses.replace(fake(runs=runs), client=<the module variable>, out=<a new StringIO, kept in OUTS>, err=<a new StringIO>)`, `fake` from `tests/e2e/wiring.py`; `using` sets `ISEKAI_WIRING` through `os.environ` and the module variable, and restores both.
   Verify: `grep -n -F "def using(" tests/record.py` prints the definition.
 
-- [ ] 1.3 In `tests/record.py`, add `Done` (the fields `root`, `library`, `collection`, `runs`, `run`, `renders`, `edits` and `said`: the pass's directory, library, collection, runs root and run, the render client, the edit client and the stdout of each verb) and `def drive(done)` per [D2](design.md#d2): `caption` and `tag` over the photograph with no `--flow`, then `assign`, `sheet`, `review`, `approve` and `generate --seed 42` over every flow of `FLOWS` with `--flow` repeated, each through `main` with `--runs` the collection's runs root. `sheet` and `generate` take `--progress json`. Each call asserts exit status 0, naming the wiring's `err` text.
+- [x] 1.3 In `tests/record.py`, add `Done` (the fields `root`, `library`, `collection`, `runs`, `run`, `renders`, `edits` and `said`: the pass's directory, library, collection, runs root and run, the render client, the edit client and the stdout of each verb) and `def drive(done)` per [D2](design.md#d2): `caption` and `tag` over the photograph with no `--flow`, then `assign`, `sheet`, `review`, `approve` and `generate --seed 42` over every flow of `FLOWS` with `--flow` repeated, each through `main` with `--runs` the collection's runs root. `sheet` and `generate` take `--progress json`. Each call asserts exit status 0, naming the wiring's `err` text.
   Verify: `grep -n -F "def drive(" tests/record.py` prints the definition.
 
-- [ ] 1.4 In `tests/record.py`, add `offline(root)`: write `jpeg_bytes(1200, 900)` as `ada.jpg` in the collection's `sources/`, open its run, restate `_png(pixels)`, `SIDE` and `SKIN` from `tests/test_edit_session.py`, set the render client to a `FakeComfyClient` answering a PNG of `np.full((SIDE, SIDE, 3), SKIN, dtype=np.uint8)`, and `drive` it. **HALT CHECK** Run it: a flow that refuses a verb — a sheet its field map cannot fill, an approval that wants a hand edit — means the plan is wrong. Edit nothing else and stop.
+- [x] 1.4 In `tests/record.py`, add `offline(root)`: write `jpeg_bytes(1200, 900)` as `ada.jpg` in the collection's `sources/`, open its run, restate `_png(pixels)`, `SIDE` and `SKIN` from `tests/test_edit_session.py`, set the render client to a `FakeComfyClient` answering a PNG of `np.full((SIDE, SIDE, 3), SKIN, dtype=np.uint8)`, and `drive` it. **HALT CHECK** Run it: a flow that refuses a verb — a sheet its field map cannot fill, an approval that wants a hand edit — means the plan is wrong. Edit nothing else and stop.
   Verify: `uv run python -c "import pathlib, tempfile; from tests.record import offline; offline(pathlib.Path(tempfile.mkdtemp()))"` exits 0.
 
-- [ ] 1.5 In `tests/record.py`, add the edit to `offline` per [D2](design.md#d2): request an edit of the first flow's render `outputs/001/42.png`, whose composite equals the render but for the tattoo's square multiplied in, written under the pass's directory; set the edit client to a `RecordingComfyClient` answering a flat crop; run `edit --pending <run id>/<flow>`; and assert the edit client's last submission holds the node class `SetUnionControlNetType`. **HALT CHECK** A refused request or sampling means the plan is wrong: edit nothing else and stop.
+- [x] 1.5 In `tests/record.py`, add the edit to `offline` per [D2](design.md#d2): request an edit of the first flow's render `outputs/001/42.png`, whose composite equals the render but for the tattoo's square multiplied in, written under the pass's directory; set the edit client to a `RecordingComfyClient` answering a flat crop; run `edit --pending <run id>/<flow>`; and assert the edit client's last submission holds the node class `SetUnionControlNetType`. **HALT CHECK** A refused request or sampling means the plan is wrong: edit nothing else and stop.
   Verify: `uv run python -c "import pathlib, tempfile; from tests.record import offline; print(any(offline(pathlib.Path(tempfile.mkdtemp())).runs.rglob('42.edit-1.png')))"` prints `True`.
 
-- [ ] 1.6 In `tests/record.py`, add `graphs(done)`, returning `{"flows": {<flow id>: <graph>}, "edit": <graph>}` from the render client's submissions in the order of `FLOWS` and the edit client's last, asserting the submissions cover every flow, and register it as `FILES["graphs"]`.
+- [x] 1.6 In `tests/record.py`, add `graphs(done)`, returning `{"flows": {<flow id>: <graph>}, "edit": <graph>}` from the render client's submissions in the order of `FLOWS` and the edit client's last, asserting the submissions cover every flow, and register it as `FILES["graphs"]`.
   Verify: `uv run python -c "import tests.record as r; print(sorted(r.FILES))"` prints `['graphs']`.
 
-- [ ] 1.7 Create `tests/test_record.py` per [D9](design.md#d9): a module-scoped fixture running `offline` under `tmp_path_factory` and `derive`; `test_the_pass_renders_every_flow_and_the_edit` (each flow's `outputs/001/42.png` and the edit's `42.edit-1.png` exist); `test_each_record_file_is_what_the_writer_derives`, parametrized over `sorted(FILES)`; `test_the_record_directory_holds_the_files_the_writer_names`; and its twin `test_a_stale_record_file_is_caught` over `differing(directory, derived)`, added to `tests/record.py`. Each carries `spec_exempt("structural: …")`, the twin `structural: twin of test_the_record_directory_holds_the_files_the_writer_names`.
+- [x] 1.7 Create `tests/test_record.py` per [D9](design.md#d9): a module-scoped fixture running `offline` under `tmp_path_factory` and `derive`; `test_the_pass_renders_every_flow_and_the_edit` (each flow's `outputs/001/42.png` and the edit's `42.edit-1.png` exist); `test_each_record_file_is_what_the_writer_derives`, parametrized over `sorted(FILES)`; `test_the_record_directory_holds_the_files_the_writer_names`; and its twin `test_a_stale_record_file_is_caught` over `differing(directory, derived)`, added to `tests/record.py`. Each carries `spec_exempt("structural: …")`, the twin `structural: twin of test_the_record_directory_holds_the_files_the_writer_names`.
   Verify: `uv run pytest tests/test_record.py -k "renders_every_flow or stale_record_file" -q` exits 0.
 
-- [ ] 1.8 Run `uv run python -m tests.record`, which writes `tests/record/graphs.json`, and read it: each graph under `"flows"` holds its flow's nodes, and the `"edit"` graph holds the union ControlNet node.
+- [x] 1.8 Run `uv run python -m tests.record`, which writes `tests/record/graphs.json`, and read it: each graph under `"flows"` holds its flow's nodes, and the `"edit"` graph holds the union ControlNet node.
   Verify: `uv run pytest tests/test_record.py -q` exits 0.
 
 ## 2 — The run

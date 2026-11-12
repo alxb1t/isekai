@@ -22,6 +22,8 @@ its new digest.
   record names its files and the recipe (0129 D11).
 - The documents say what holds: *Known breaks* name what the audit found, and the layer roles, the lazy edge, the
   delete's sentence, the sibling paragraph and the model-manifest recipe are corrected (0129 D12, D13).
+- `tests/record.py` runs one offline pass over every flow and writes `tests/record/graphs.json`, each flow's graph and the
+  edit's whole; a test re-derives it, and `uv run python -m tests.record` writes it again (0130 D1, D2, D3, D9).
 
 ## [0.86.2] - 2026-11-12
 
