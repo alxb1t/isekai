@@ -24,6 +24,7 @@ import re
 import shutil
 import tempfile
 from collections.abc import Mapping, Sequence
+from contextlib import suppress
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from io import BytesIO
@@ -39,9 +40,8 @@ from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.ink import (
     INK_CONFIG_PATH,
     InkConfig,
-    extract_ink,
+    extract_ink_grey,
     load_ink_config,
-    white_grey,
 )
 from isekai.shared.tattoo import decode_render, png_of
 
@@ -716,8 +716,8 @@ def ink_layer(
     crop = image.crop((left, top, right, bottom))
     inside = polygon_mask([(x - left, y - top) for x, y in checked], crop.size)
     mask = Image.fromarray(inside)
-    layer = extract_ink(crop, mask, neutral, tone, ink, white=scale)
-    return InkLayer(layer.convert("RGBA"), (left, top), white_grey(crop, mask, ink))
+    layer, grey = extract_ink_grey(crop, mask, neutral, tone, ink, white=scale)
+    return InkLayer(layer.convert("RGBA"), (left, top), grey)
 
 
 def _jpeg(flat: "Image", quality: int) -> bytes:
@@ -873,13 +873,15 @@ def save_stage1(
 def stage1_states(library: Path, digest: str) -> dict[str, Stage1]:
     """Return each tattoo's pairs and flag on the photograph `digest`, by name.
 
-    A tattoo placed on no such photograph is left out.
+    A tattoo placed on no such photograph is left out, and so is one whose file is
+    damaged: it costs only its own row, and `read_stage1` still refuses it by name.
     """
     states: dict[str, Stage1] = {}
     for tattoo in listed(library):
         path = _stage1_path(library, tattoo.name, digest)
         if path.is_file():
-            states[tattoo.name] = _stage1_of(path, tattoo.name)
+            with suppress(Refusal):
+                states[tattoo.name] = _stage1_of(path, tattoo.name)
     return states
 
 

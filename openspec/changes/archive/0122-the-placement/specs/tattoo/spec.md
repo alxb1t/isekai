@@ -62,9 +62,7 @@ stages. It SHALL refuse fewer than the preview's floor of pairs, a lone point, a
 the declared floor of points, a second stage whose first holds fewer pairs than its floor, a cut asked on another
 photograph, and an outline that is not closed.
 
-A preview over a full grid takes seconds and over a crop about one
-([D53](../../../docs/decisions.md#d53--a-placement-is-recorded-beside-its-edit)). The page multiplies the JPEG over
-the target, which is the Multiply the bake makes.
+The page multiplies the JPEG over the target, which is the Multiply the bake makes.
 
 #### Scenario: the preview is a JPEG on the crop of the target's points
 - **Key:** `tattoo:placement-preview:a-jpeg-on-the-crop-of-the-targets-points`

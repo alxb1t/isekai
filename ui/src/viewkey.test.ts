@@ -27,6 +27,12 @@ spec('ui:place-route:a-step-change-keeps-the-screen-mounted', async () => {
   await router.push({ name: 'place', params: { ...RENDER, step: 'outline', name: 'arm' } })
   expect(viewKey(router.currentRoute.value)).toBe(first)
 
+  for (const step of ['photo', 'render', 'review']) {
+    await router.push({ name: 'place', params: { ...RENDER, step, name: 'bow' } })
+    expect(router.currentRoute.value.path).toBe(`${BASE}/place/${step}/bow`)
+    expect(viewKey(router.currentRoute.value)).toBe(first)
+  }
+
   // Another render is another screen, and the other screens keep the keys they had.
   await router.push(offerTo({ ...RENDER, seed: '42' }))
   expect(viewKey(router.currentRoute.value)).not.toBe(first)

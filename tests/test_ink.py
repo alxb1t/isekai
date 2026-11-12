@@ -17,6 +17,7 @@ from isekai.interface.cli import build_parser, dispatch
 from isekai.shared.ink import (
     INK_CONFIG_PATH,
     extract_ink,
+    extract_ink_grey,
     load_ink_config,
     white_grey,
 )
@@ -329,6 +330,21 @@ def test_ink_grey_follows_the_point_extract_ink_divides_by() -> None:
 
     assert white_grey(image, outline) == 204
     assert layer[10, 10, 0] == 255
+
+
+@pytest.mark.spec_exempt(
+    "structural: the layer and the grey from one read are the two reads' answers"
+)
+def test_ink_grey_with_the_layer_is_what_each_asked_alone_gives() -> None:
+    image = _striped((160, 120, 96))
+    outline = Image.new("L", (160, 160), 255)
+
+    layer, grey = extract_ink_grey(image, outline, False, 1.0, white=0.8)
+
+    assert (
+        layer.tobytes() == extract_ink(image, outline, False, 1.0, white=0.8).tobytes()
+    )
+    assert grey == white_grey(image, outline) == 204
 
 
 @pytest.mark.spec_exempt(

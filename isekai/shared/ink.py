@@ -238,6 +238,22 @@ def extract_ink(
     the automatic white point: below 1.0 the paler ink turns white.
     e.g. a photograph and its outline, no flags -> grey ink at depth 1.6
     """
+    return extract_ink_grey(image, outline, neutral, depth, config, white=white)[0]
+
+
+def extract_ink_grey(
+    image: "Image",
+    outline: "Image | None",
+    neutral: bool | None,
+    depth: float | None,
+    config: InkConfig | None = None,
+    *,
+    white: float = 1.0,
+) -> "tuple[Image, int]":
+    """Return `extract_ink`'s layer and `white_grey`'s grey, the skin read once.
+
+    e.g. a photograph and its outline, no flags -> the grey layer and 204
+    """
     import numpy as np
     from PIL import Image
 
@@ -255,6 +271,7 @@ def extract_ink(
         raise Refusal(f"white scale {white} is not above 0; give a scale above 0")
 
     transmittance, alpha, skin = _automatic_point(image, outline, config)
+    grey = _grey(skin)
     skin = skin * white
     transmittance = np.clip(transmittance / np.maximum(skin, 1e-3), 0.0, 1.0)
     transmittance = np.clip(transmittance / (1.0 - config.floor), 0.0, 1.0)
@@ -265,7 +282,18 @@ def extract_ink(
 
     layer = Image.fromarray((transmittance * 255.0 + 0.5).astype(np.uint8))
     layer.putalpha(alpha)
-    return layer
+    return layer, grey
+
+
+def _grey(skin: "NDArray[np.float32]") -> int:
+    """Return the point `skin`'s luminance as a whole number, 0 to 255.
+
+    e.g. a point that reads 0.8 at every channel -> 204
+    """
+    import numpy as np
+
+    luminance = float(skin @ np.array(_LUMA, dtype=np.float32))
+    return min(255, max(0, round(luminance * 255.0)))
 
 
 def white_grey(
@@ -276,11 +304,8 @@ def white_grey(
     The weights are the neutral layer's, so the grey is the one the layer divides by.
     e.g. skin that reads 0.8 of its lit neighbours at every channel -> 204
     """
-    import numpy as np
-
     _, _, skin = _automatic_point(image, outline, config or load_ink_config())
-    luminance = float(skin @ np.array(_LUMA, dtype=np.float32))
-    return min(255, max(0, round(luminance * 255.0)))
+    return _grey(skin)
 
 
 def _open(path: Path) -> "Image":

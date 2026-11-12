@@ -18,7 +18,7 @@ does is reach a boundary or decide a stage's order.
 | `field_map.py` | answers *which identity criterion does this tag belong to* — one authored table, read `tag → field` to route and `field → tags` to browse |
 | `fields.py` | answers *is this filled sheet exactly the schema's fields of canonical tags* |
 | `image.py` | reads a JPEG or PNG header and derives the render target the image's own dimensions imply, refusing what render cannot take; strips a photograph's metadata for upload, names what a file carries beyond its pixels, and makes a thumbnail |
-| `ink.py` | the maths of `isekai ink`: cuts a tattoo's photograph or image into a layer to multiply over a render, under `config/ink.json`, at a `white` scale on the automatic white point, whose grey `white_grey` reads; Pillow and numpy are imported inside its functions |
+| `ink.py` | the maths of `isekai ink`: cuts a tattoo's photograph or image into a layer to multiply over a render, under `config/ink.json`, at a `white` scale on the automatic white point, whose grey `white_grey` reads, or `extract_ink_grey` with the layer from one read; Pillow and numpy are imported inside its functions |
 | `tattoo.py` | the maths of an edit, each a function over arrays: the ink, darkness, mask and control of a composite over its render, the crop box and sampling size, the refusals, and the stitch of a sampled crop back; Pillow and numpy are imported inside its functions |
 | `vocabulary.py` | answers *is this a real tag* and *how strong is it* |
 
