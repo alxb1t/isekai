@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 
 from evaluation import eval_models
-from isekai.boundary import provision
+from isekai.boundary import provision, unpack
 from isekai.foundation import caption_config, edit, flow, run
 from isekai.pipeline import tattoos
 from isekai.shared import field_map, vocabulary
@@ -53,6 +53,11 @@ ANCHORS = (
         provision.READER_MANIFEST_PATH,
         ("config", "reader.json"),
         id="provision.READER_MANIFEST_PATH",
+    ),
+    pytest.param(
+        unpack.PLACEMENT_MANIFEST_PATH,
+        ("config", "placement.json"),
+        id="unpack.PLACEMENT_MANIFEST_PATH",
     ),
     pytest.param(
         eval_models.EVAL_MANIFEST_PATH,

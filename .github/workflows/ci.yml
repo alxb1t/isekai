@@ -46,12 +46,14 @@ jobs:
 
       # The gate is the Makefile's `gate` target. CI runs it rather than keeping
       # its own copy of the commands, which would drift.
-      # CI fetches nothing from Hugging Face, so it declares the vocabulary absent
-      # and the checks that read it skip; anywhere else they fail without it.
+      # CI fetches nothing from Hugging Face, so it declares the vocabulary and the
+      # placement models absent and the checks that read them skip; anywhere else
+      # they fail without them.
       - name: Gate
         run: make gate
         env:
           ISEKAI_VOCABULARY: absent
+          ISEKAI_PLACEMENT: absent
 
       # The browser tests, out of the gate while an unattended run's sandbox
       # cannot run them; CI holds them on every push.
@@ -59,3 +61,4 @@ jobs:
         run: make e2e
         env:
           ISEKAI_VOCABULARY: absent
+          ISEKAI_PLACEMENT: absent

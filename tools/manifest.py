@@ -35,11 +35,16 @@ difference is the refactor's fault.
 
 import hashlib
 import json
+import shutil
+import tempfile
 import urllib.request
+import zipfile
 from pathlib import Path
 from typing import NamedTuple, NotRequired, TypedDict
 
 from isekai.boundary.provision import ReaderModel
+from isekai.boundary.provision import digest_of as digest_of_file
+from isekai.boundary.unpack import Member
 
 # The agent string every derivation reaches upstream with. One value, so a
 # publisher reading its logs sees one client rather than three.
@@ -70,6 +75,7 @@ class ManifestEntry(TypedDict):
     sha256: str
     bytes: int
     sources: list[str]
+    unpack: NotRequired[list[Member]]
 
 
 class Manifest(TypedDict):
@@ -93,6 +99,13 @@ class Source(NamedTuple):
         return f"https://huggingface.co/{self.repo}/resolve/{self.revision}/{self.path}"
 
 
+class Wanted(NamedTuple):
+    """A member of a zip: the name it ends with there, and where it lands."""
+
+    suffix: str
+    dest: str
+
+
 class Spec(NamedTuple):
     """A destination, the ordered sources that fill it, and how to digest them.
 
@@ -107,12 +120,16 @@ class Spec(NamedTuple):
 
     Sources are ordered: the first is the primary and the rest are alternates,
     cross-checked against it by every deriver that declares more than one.
+
+    `unpack` is for a zip: the members to declare, each found in the archive by a
+    name suffix, which `members_of` digests.
     """
 
     dest: str
     sources: tuple[Source, ...]
     expect_sha256: str | None = None
     lfs: bool = True
+    unpack: tuple[Wanted, ...] = ()
 
 
 def published_digest(source: Source) -> tuple[str, int]:
@@ -216,12 +233,67 @@ def digest_of(source: Source, lfs: bool) -> tuple[str, int]:
     return published_digest(source) if lfs else blob_digest(source)
 
 
+def members_of(source: Source, sha256: str, wanted: tuple[Wanted, ...]) -> list[Member]:
+    """Return each wanted member of the zip at `source`, with its digest and size.
+
+    The archive is streamed once to a file in a temporary directory and hashed
+    against `sha256`, its published id, before a member is read: a digest of a
+    member of the wrong archive pins nothing. A wanted suffix that matches none
+    or several of the archive's names is refused.
+
+    e.g. Wanted("encoder.onnx", "sam2/encoder.onnx") finds `net/encoder.onnx`
+    """
+    request = urllib.request.Request(
+        source.url(),
+        headers={"User-Agent": USER_AGENT, "Accept-Encoding": IDENTITY_ONLY},
+    )
+    with tempfile.TemporaryDirectory() as scratch:
+        archive = Path(scratch) / "archive.zip"
+        with urllib.request.urlopen(request, timeout=300) as response:
+            with archive.open("wb") as handle:
+                shutil.copyfileobj(response, handle, 1 << 20)
+        actual = digest_of_file(archive)
+        if actual != sha256:
+            raise SystemExit(
+                f"{source.url()}: served {actual}, but the published id is {sha256}; "
+                "no member was read"
+            )
+        with zipfile.ZipFile(archive) as bundle:
+            return [_member_of(bundle, source, want) for want in wanted]
+
+
+def _member_of(bundle: zipfile.ZipFile, source: Source, want: Wanted) -> Member:
+    """Return the one member of `bundle` ending in `want.suffix`, digested."""
+    names = [
+        info.filename
+        for info in bundle.infolist()
+        if not info.is_dir() and info.filename.endswith(want.suffix)
+    ]
+    if len(names) != 1:
+        raise SystemExit(
+            f"{source.url()}: {len(names)} members end in {want.suffix!r}, "
+            f"wanted one: {names}"
+        )
+    digest = hashlib.sha256()
+    size = 0
+    with bundle.open(names[0]) as member:
+        for chunk in iter(lambda: member.read(1 << 20), b""):
+            digest.update(chunk)
+            size += len(chunk)
+    return {
+        "member": names[0],
+        "dest": want.dest,
+        "sha256": digest.hexdigest(),
+        "bytes": size,
+    }
+
+
 def entry_for(spec: Spec) -> ManifestEntry:
     """Derive one entry, cross-checking every alternate and any stated digest.
 
     An alternate that publishes different bytes is a failure, not a fallback: the
     whole point of an ordered source list is that any of them serves the artifact
-    the digest names.
+    the digest names. A spec with `unpack` adds the archive's members to the entry.
     """
     sha256, size = digest_of(spec.sources[0], spec.lfs)
     if spec.expect_sha256 is not None and sha256 != spec.expect_sha256:
@@ -236,12 +308,15 @@ def entry_for(spec: Spec) -> ManifestEntry:
                 f"{spec.dest}: alternate {alternate.url()} publishes {alt_sha}, "
                 f"primary {spec.sources[0].url()} publishes {sha256}"
             )
-    return {
+    entry: ManifestEntry = {
         "dest": spec.dest,
         "sha256": sha256,
         "bytes": size,
         "sources": [source.url() for source in spec.sources],
     }
+    if spec.unpack:
+        entry["unpack"] = members_of(spec.sources[0], sha256, spec.unpack)
+    return entry
 
 
 def write(manifest: Manifest, path: Path) -> None:

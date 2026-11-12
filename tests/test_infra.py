@@ -815,6 +815,110 @@ def test_the_check_catches_a_plain_run_line_holding_a_colon() -> None:
     assert unparseable_run_lines(broken) == ['- run: echo "a: b"']
 
 
+# The placement models are one manifest: `setup` fetches it, `drift` re-derives
+# it, the gate names neither, and each CI step that could read them declares
+# them absent.
+
+PLACEMENT_FETCH = "isekai.boundary.unpack fetch config/placement.json"
+PLACEMENT_DERIVE = "tools.derive_placement"
+
+
+def recipe(makefile: str, target: str) -> list[str]:
+    r"""Return a target's command lines, with the comments and blanks left out.
+
+    e.g. "gate:\n# lint\n\truff check .\n" -> ["ruff check ."]
+    """
+    lines = makefile.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith(f"{target}:"))
+    commands: list[str] = []
+    for line in lines[start + 1 :]:
+        if line.startswith("\t"):
+            commands.append(line.strip())
+        elif line.strip() and not line.startswith("#"):
+            break
+    return commands
+
+
+def placement_faults(makefile: str) -> list[str]:
+    """Return where the Makefile's route for the placement manifest is wrong."""
+    setup = " | ".join(recipe(makefile, "setup"))
+    drift = " | ".join(recipe(makefile, "drift"))
+    faults: list[str] = []
+    if (
+        f"fetch config/vocabulary.json | uv run python -m {PLACEMENT_FETCH}"
+        not in setup
+    ):
+        faults.append(
+            "setup does not fetch the placement manifest after the vocabulary"
+        )
+    if f"tools.derive_reader | uv run python -m {PLACEMENT_DERIVE}" not in drift:
+        faults.append("drift does not derive the placement manifest after the reader's")
+    if any("placement" in command for command in recipe(makefile, "gate")):
+        faults.append("gate names the placement models")
+    return faults
+
+
+@pytest.mark.spec("model-provisioning:placement:setup-and-drift-carry-the-manifest")
+def test_infra_placement_route_is_in_setup_and_drift_and_not_the_gate() -> None:
+    assert placement_faults((REPO / "Makefile").read_text()) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of the test that reads the Makefile's placement route"
+)
+def test_infra_placement_check_catches_a_broken_route() -> None:
+    fetch_vocabulary = (
+        "uv run python -m isekai.boundary.provision fetch config/vocabulary.json"
+    )
+    makefile = (
+        "gate:\n\tuv run pytest\n\tuv run python -m tools.derive_placement\n\n"
+        f"setup:\n\t{fetch_vocabulary}\n\n"
+        "drift:\n\tuv run python -m tools.derive_reader\n"
+    )
+    assert placement_faults(makefile) == [
+        "setup does not fetch the placement manifest after the vocabulary",
+        "drift does not derive the placement manifest after the reader's",
+        "gate names the placement models",
+    ]
+
+
+def steps_not_declaring_placement_absent(workflow: str) -> list[str]:
+    """Return each `make gate` or `make e2e` step that does not declare them absent.
+
+    e.g. a `make e2e` step with only `ISEKAI_VOCABULARY: absent` -> ["make e2e"]
+    """
+    steps = re.split(r"(?m)^      - ", workflow)
+    return [
+        run.group(1)
+        for step in steps
+        if (run := re.search(r"(?m)^\s+run: (make (?:gate|e2e))$", step))
+        and not re.search(r"(?m)^\s+ISEKAI_PLACEMENT: absent$", step)
+    ]
+
+
+@pytest.mark.spec_exempt(
+    "structural: CI fetches no model, so each step that could read one says so"
+)
+def test_infra_placement_each_ci_step_declares_absent() -> None:
+    workflow = (REPO / ".github" / "workflows" / "ci.yml").read_text()
+    assert "run: make gate" in workflow and "run: make e2e" in workflow
+    assert steps_not_declaring_placement_absent(workflow) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_infra_placement_each_ci_step_declares_absent"
+)
+def test_infra_placement_check_catches_a_step_without_it() -> None:
+    workflow = (
+        "      - name: Gate\n        run: make gate\n        env:\n"
+        "          ISEKAI_VOCABULARY: absent\n"
+        "          ISEKAI_PLACEMENT: absent\n"
+        "      - name: Browser tests\n        run: make e2e\n        env:\n"
+        "          ISEKAI_VOCABULARY: absent\n"
+    )
+    assert steps_not_declaring_placement_absent(workflow) == ["make e2e"]
+
+
 # A pod boots the digest `config/image.json` pins, and nothing else (D28).
 
 IMAGE_CONFIG = REPO / "config" / "image.json"

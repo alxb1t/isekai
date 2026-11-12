@@ -4,7 +4,7 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 ## Progress
 
-- [ ] 1 — Models · hard
+- [x] 1 — Models · hard
 - [ ] 2 — 🛑 **HUMAN** — the model pins
 - [ ] 3 — Pose · hard
 - [ ] 4 — Segment · hard
@@ -14,26 +14,26 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 ## 1 — Models
 
-- [ ] 1.1 Add `isekai/boundary/unpack.py`, a new module, with `PLACEMENT_MANIFEST_PATH`, `PLACEMENT_REMEDY` (its fetch command), `Member` and `ZipEntry`, `provision.Entry` with the optional `unpack`,
+- [x] 1.1 Add `isekai/boundary/unpack.py`, a new module, with `PLACEMENT_MANIFEST_PATH`, `PLACEMENT_REMEDY` (its fetch command), `Member` and `ZipEntry`, `provision.Entry` with the optional `unpack`,
   per [D3](design.md#d3) and [D4](design.md#d4); add the path's anchor to `tests/test_package_paths.py`. `isekai/boundary/provision.py` is not edited by any task.
   Verify: `uv run pytest tests/test_package_paths.py -k PLACEMENT_MANIFEST_PATH` passes.
-- [ ] 1.2 Add to `unpack.py` `unpack_members(entry, archive, models_dir)` per [D4](design.md#d4); tests in `tests/test_provision_unpack.py` carry `unpack_lands`,
+- [x] 1.2 Add to `unpack.py` `unpack_members(entry, archive, models_dir)` per [D4](design.md#d4); tests in `tests/test_provision_unpack.py` carry `unpack_lands`,
   `unpack_names`, `unpack_digest`, `unpack_size` and `unpack_missing`.
   Verify: `uv run pytest tests/test_provision_unpack.py -k "unpack_lands or unpack_names or unpack_digest or unpack_size or unpack_missing"` passes.
-- [ ] 1.3 Add to `unpack.py` `fetch` and the `fetch` verb of `python -m isekai.boundary.unpack`: it decides each declared member's destination before a transfer, lands the entries through
+- [x] 1.3 Add to `unpack.py` `fetch` and the `fetch` verb of `python -m isekai.boundary.unpack`: it decides each declared member's destination before a transfer, lands the entries through
   `provision.fetch`, and unpacks after an entry lands, and after it is skipped, per [D4](design.md#d4); tests carry `unpack_gone` and `unpack_stop`.
   Verify: `uv run pytest tests/test_provision_unpack.py -k "unpack_gone or unpack_stop"` passes.
-- [ ] 1.4 Add to `unpack.py` `member_for` and `resolve_member` per [D4](design.md#d4); tests carry `unpack_resolve`.
+- [x] 1.4 Add to `unpack.py` `member_for` and `resolve_member` per [D4](design.md#d4); tests carry `unpack_resolve`.
   Verify: `uv run pytest tests/test_provision_unpack.py -k unpack_resolve` passes.
-- [ ] 1.5 Hold that the entry point's import graph reaches no wheel and the layers hold.
+- [x] 1.5 Hold that the entry point's import graph reaches no wheel and the layers hold.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_layers.py` passes.
-- [ ] 1.6 Give `tools/manifest.py` the optional `unpack` of `ManifestEntry` and `Spec`, and `members_of`, per [D5](design.md#d5); tests in `tests/test_derivation.py`
+- [x] 1.6 Give `tools/manifest.py` the optional `unpack` of `ManifestEntry` and `Spec`, and `members_of`, per [D5](design.md#d5); tests in `tests/test_derivation.py`
   carry `derive_unpack` over a fake download.
   Verify: `uv run pytest tests/test_derivation.py -k derive_unpack` passes.
-- [ ] 1.7 Add `tools/derive_placement.py` per [D3](design.md#d3) and [D5](design.md#d5): `PINNED` 2026-11-11, `PUBLISHERS` `yzd-v` and `vietanhdev`, a spec for each file
+- [x] 1.7 Add `tools/derive_placement.py` per [D3](design.md#d3) and [D5](design.md#d5): `PINNED` 2026-11-11, `PUBLISHERS` `yzd-v` and `vietanhdev`, a spec for each file
   of the table, and `main` writing `PLACEMENT_MANIFEST_PATH`; add it to the derivers `tests/test_derivation.py` lists, with tests carrying `derive_placement`.
   Verify: `uv run pytest tests/test_derivation.py -k derive_placement` passes.
-- [ ] 1.8 Edit `Makefile` per [D3](design.md#d3): `setup` fetches `config/placement.json` after the vocabulary, and `drift` runs the deriver directly after `tools.derive_reader`. The `gate` recipe
+- [x] 1.8 Edit `Makefile` per [D3](design.md#d3): `setup` fetches `config/placement.json` after the vocabulary, and `drift` runs the deriver directly after `tools.derive_reader`. The `gate` recipe
   keeps its lines, and `make -n gate` prints what it did. `Makefile` changes by exactly these lines:
   ```diff
   - # Chromium and the vocabulary. Not part of the gate, which never fetches.
@@ -42,10 +42,10 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
   +     uv run python -m tools.derive_placement
   ```
   Verify: `grep -c "placement" Makefile` prints `3`.
-- [ ] 1.9 Add `ISEKAI_PLACEMENT: absent` to the `env` of the gate step and of the browser-test step in `.github/workflows/ci.yml`; tests in
+- [x] 1.9 Add `ISEKAI_PLACEMENT: absent` to the `env` of the gate step and of the browser-test step in `.github/workflows/ci.yml`; tests in
   `tests/test_infra.py` carry `infra_placement`: `setup` fetches the manifest, `drift` derives it, `gate` names neither, each CI step declares it absent.
   Verify: `uv run pytest tests/test_infra.py -k infra_placement` passes.
-- [ ] 1.10 Hold that the pod image's record agrees with the tree per [D4](design.md#d4): `isekai/boundary/provision.py` is as the image holds it, and `config/image.json` is not edited.
+- [x] 1.10 Hold that the pod image's record agrees with the tree per [D4](design.md#d4): `isekai/boundary/provision.py` is as the image holds it, and `config/image.json` is not edited.
   Verify: `uv run pytest tests/test_infra.py -k build_record_agrees` passes.
 
 ## 2 — 🛑 **HUMAN** — the model pins

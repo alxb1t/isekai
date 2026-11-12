@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- The placement models are one manifest, `config/placement.json`, which `make setup` fetches and `make drift`
+  re-derives; `isekai/boundary/unpack.py` unpacks a zip entry's declared members, each verified, and
+  `provision.py` stays as the pod image holds it (0123 D3, D4, D5).
+
 ## [0.82.0] - 2026-11-12
 
 Gate: local 0m51s · CI not read under mf-ship · 0.81.0: local 0m47s · CI not read under mf-ship

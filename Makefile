@@ -28,12 +28,13 @@ e2e:
 	uv run pytest tests/e2e
 
 # Restore what a fresh worktree lacks: the environment, the browser toolchain,
-# Chromium and the vocabulary. Not part of the gate, which never fetches.
+# Chromium, the vocabulary and the placement models. Not part of the gate, which never fetches.
 setup:
 	uv sync --locked
 	npm ci --prefix ui
 	$(MAKE) browsers
 	uv run python -m isekai.boundary.provision fetch config/vocabulary.json
+	uv run python -m isekai.boundary.unpack fetch config/placement.json
 
 # Fetch the Chromium the browser tests in `tests/e2e/` drive. Not part of the
 # gate, because it downloads a browser; CI runs it before the gate and `make e2e`.
@@ -48,6 +49,7 @@ drift:
 	uv run python -m tools.derive_eval_manifest
 	uv run python -m tools.derive_vocabulary
 	uv run python -m tools.derive_reader
+	uv run python -m tools.derive_placement
 	uv run python -m tools.derive_image_project
 	git diff --exit-code --stat -- config/ evaluation/eval_models.json image/
 
