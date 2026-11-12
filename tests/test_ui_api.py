@@ -883,7 +883,7 @@ def _overlap(
     monkeypatch: pytest.MonkeyPatch,
     *,
     unlocked: bool = False,
-) -> dict[str, int]:
+) -> dict[str, tuple[int, dict[str, Any]]]:
     """Send two updates stating one precondition, the second inside the first.
 
     The second starts while the first is between its check and its write. The
@@ -893,7 +893,7 @@ def _overlap(
     body = client.get(_at(made)).json()
     saved = body["saved"]
     reached = threading.Event()
-    answers: dict[str, int] = {}
+    answers: dict[str, tuple[int, dict[str, Any]]] = {}
     threads: list[threading.Thread] = []
     precondition, save = app_module._precondition, app_module.save_draft
     lock = app_module._DRAFT_UPDATE
@@ -910,16 +910,15 @@ def _overlap(
             lock.release()
 
     def check(one: Held, payload: Mapping[str, Any]) -> None:
+        precondition(one, payload)
         # By its payload: the endpoint runs on a worker thread, not on `second`.
         if payload["fields"]["hair_colour"] == ["black hair"]:
             reached.set()
-        precondition(one, payload)
 
     def put(name: str, hair: str) -> None:
         fields = {**body["fields"], "hair_colour": [hair]}
-        answers[name] = client.put(
-            _at(made, "/draft"), json={"fields": fields, "saved": saved}
-        ).status_code
+        reply = client.put(_at(made, "/draft"), json={"fields": fields, "saved": saved})
+        answers[name] = (reply.status_code, reply.json())
 
     def write(
         run: Run,
@@ -954,7 +953,8 @@ def test_overlapping_draft_updates_cannot_both_commit(
 ) -> None:
     answers = _overlap(client, made, monkeypatch)
 
-    assert answers == {"first": 200, "second": 409}
+    assert (answers["first"][0], answers["second"][0]) == (200, 409)
+    assert "changed since this page last read it" in answers["second"][1]["refusal"]
     on_disk = json.loads((made.directory(FLOW, REVIEW) / "001.draft.json").read_text())
     assert on_disk["fields"]["hair_colour"] == ["blonde"]
 
@@ -965,10 +965,9 @@ def test_without_the_lock_overlapping_updates_both_commit(
 ) -> None:
     monkeypatch.setattr(app_module, "_DRAFT_UPDATE", contextlib.nullcontext())
 
-    assert _overlap(client, made, monkeypatch, unlocked=True) == {
-        "first": 200,
-        "second": 200,
-    }
+    answers = _overlap(client, made, monkeypatch, unlocked=True)
+
+    assert (answers["first"][0], answers["second"][0]) == (200, 200)
 
 
 def _update_during_approval(
@@ -2904,19 +2903,26 @@ def _upload(
     return answer.status_code, answer.json()
 
 
+def _until_each_read(
+    feed: "queue.Queue[events.Event]", uploads: Mapping[str, set[str]]
+) -> dict[str, list[Any]]:
+    """Return each import's `file` events, in order, until every upload is read."""
+    seen: dict[str, list[Any]] = {staged: [] for staged in uploads}
+    left = {staged: set(each) for staged, each in uploads.items()}
+    while any(left.values()):
+        kind, data = feed.get(timeout=WAIT)
+        if kind == "file" and data["staging"] in seen:
+            seen[data["staging"]].append(data)
+            if data["state"] in _READ:
+                left[data["staging"]].discard(data["upload"])
+    return seen
+
+
 def _until_read(
     feed: "queue.Queue[events.Event]", staged: str, uploads: set[str]
 ) -> list[Any]:
     """Return import `staged`'s `file` events, in order, until every upload is read."""
-    seen: list[Any] = []
-    left = set(uploads)
-    while left:
-        kind, data = feed.get(timeout=WAIT)
-        if kind == "file" and data["staging"] == staged:
-            seen.append(data)
-            if data["state"] in _READ:
-                left.discard(data["upload"])
-    return seen
+    return _until_each_read(feed, {staged: uploads})[staged]
 
 
 @pytest.mark.spec("ui:sheet:an-upload-is-answered-before-reading")
@@ -2982,8 +2988,7 @@ def test_the_imports_stream_reports_a_file_waiting_converting_then_converted(
             _, away = _upload(
                 client, other, "elsewhere.jpg", photo_jpeg((9, 9, 9), (40, 30))
             )
-            _until_read(feed, staged, {plain["upload"]})
-            _until_read(feed, other, {away["upload"]})
+            _until_each_read(feed, {staged: {plain["upload"]}, other: {away["upload"]}})
         except BaseException as failed:  # re-raised on the test's own thread
             failures.append(failed)
         finally:
