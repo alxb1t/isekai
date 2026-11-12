@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.81.0] - 2026-11-12
+
+Gate: local 0m47s · CI not read under mf-ship · 0.80.0: local 0m40s · CI not read under mf-ship
+
 - A tattoo is kept whole in the library's `.tattoos/<name>/`, never listed as a collection: an upload is upright and
   bounded, a cut holds no image, an outline is saved atomically; none is deleted or renamed (0121 D1, D2, D3, D4).
 - Ink is placed by thin-plate splines in `isekai/shared/chain.py`: a spline fitted backwards, the lookup, the clip, the

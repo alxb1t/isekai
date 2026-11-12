@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.81
 after: [0119-the-tattoo-edit]
 beside: [0120-the-bakes-in-the-app]
 ---
