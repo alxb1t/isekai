@@ -7,7 +7,7 @@ Tests, tools and documents alone: the stage rule, the ratchets, the importer tab
 - [x] 4 — The stage rule · moderate
 - [x] 5 — The ratchets · moderate
 - [x] 6 — The importer tables · moderate
-- [ ] 7 — The frozen files and the documents · moderate
+- [x] 7 — The frozen files and the documents · moderate
 
 ## 4 — The stage rule
 
@@ -85,26 +85,26 @@ Tests, tools and documents alone: the stage rule, the ratchets, the importer tab
 
 ## 7 — The frozen files and the documents
 
-- [ ] 7.1 In `AGENTS.md`, add one bullet to *Guardrails* with the text of [D11](design.md#d11), naming each file `config/image.json` records in backticks and linking `docs/pins.md`.
+- [x] 7.1 In `AGENTS.md`, add one bullet to *Guardrails* with the text of [D11](design.md#d11), naming each file `config/image.json` records in backticks and linking `docs/pins.md`.
   Verify: `git grep -n -F "isekai/boundary/pod_start.py" -- AGENTS.md` prints the bullet.
 
-- [ ] 7.2 In `tests/test_infra.py`, add `record_failure(faults)` per [D11](design.md#d11), make `test_the_build_record_agrees_with_the_tree` assert its fault list against `record_failure(...)` as the message, and add `test_the_record_failure_names_the_files_and_the_recipe`, asserting a fault, `tools.image_record` and `docs/pins.md` in the message, with the reasons of [Tests](design.md#tests).
+- [x] 7.2 In `tests/test_infra.py`, add `record_failure(faults)` per [D11](design.md#d11), make `test_the_build_record_agrees_with_the_tree` assert its fault list against `record_failure(...)` as the message, and add `test_the_record_failure_names_the_files_and_the_recipe`, asserting a fault, `tools.image_record` and `docs/pins.md` in the message, with the reasons of [Tests](design.md#tests).
   Verify: `uv run pytest tests/test_infra.py -k record_failure -q` exits 0.
 
-- [ ] 7.3 In `tests/test_infra.py`, add `unnamed_frozen_files(text, config)`, the guard `test_agents_names_every_file_the_image_record_holds` over `AGENTS.md` and `IMAGE_CONFIG`, and its twin `test_the_guardrail_check_catches_a_file_left_out`, over a text that names all but one, with the reasons of [Tests](design.md#tests).
+- [x] 7.3 In `tests/test_infra.py`, add `unnamed_frozen_files(text, config)`, the guard `test_agents_names_every_file_the_image_record_holds` over `AGENTS.md` and `IMAGE_CONFIG`, and its twin `test_the_guardrail_check_catches_a_file_left_out`, over a text that names all but one, with the reasons of [Tests](design.md#tests).
   Verify: `uv run pytest tests/test_infra.py -k "guardrail or every_file_the_image_record" -q` exits 0.
 
-- [ ] 7.4 In `docs/principles.md`, add the *Known breaks* and *Not yet held* entries of [D12](design.md#d12) to the principles it names.
+- [x] 7.4 In `docs/principles.md`, add the *Known breaks* and *Not yet held* entries of [D12](design.md#d12) to the principles it names.
   Verify: `git grep -n -F "_refuse_bad_source" -- docs/principles.md` prints the entry.
 
-- [ ] 7.5 In `ARCHITECTURE.md` and `docs/principles.md`, correct the layer roles of `shared` and `foundation`, and in `docs/principles.md` the role of `boundary`, as [D13](design.md#d13) says.
+- [x] 7.5 In `ARCHITECTURE.md` and `docs/principles.md`, correct the layer roles of `shared` and `foundation`, and in `docs/principles.md` the role of `boundary`, as [D13](design.md#d13) says.
   Verify: `git grep -n -F "the placement's maths" -- ARCHITECTURE.md docs/principles.md` prints a line in each file.
 
-- [ ] 7.6 In `docs/modules.md`, correct the lazy edge of `wiring.py` and the delete's sentence, as [D13](design.md#d13) says.
+- [x] 7.6 In `docs/modules.md`, correct the lazy edge of `wiring.py` and the delete's sentence, as [D13](design.md#d13) says.
   Verify: `git grep -n -F "DigestMismatch" -- docs/modules.md` prints the edited line.
 
-- [ ] 7.7 In `isekai/interface/README.md`, replace the sibling paragraph with the text of [D13](design.md#d13).
+- [x] 7.7 In `isekai/interface/README.md`, replace the sibling paragraph with the text of [D13](design.md#d13).
   Verify: `git grep -n -F "the UI imports no CLI module" -- isekai/interface/README.md` prints the edited line.
 
-- [ ] 7.8 In `docs/pins.md`, add `tools/derive_eval_manifest.py` and `evaluation/eval_models.json` to *A model manifest*, and in the docstring of `write` in `tools/manifest.py`, say *every manifest deriver*.
+- [x] 7.8 In `docs/pins.md`, add `tools/derive_eval_manifest.py` and `evaluation/eval_models.json` to *A model manifest*, and in the docstring of `write` in `tools/manifest.py`, say *every manifest deriver*.
   Verify: `git grep -n -F "tools/derive_eval_manifest.py" -- docs/pins.md` prints the added line.

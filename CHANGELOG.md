@@ -18,6 +18,10 @@ its new digest.
 - The import graph moves to `tools/import_graph.py`, and `tools/derive_imported_by.py` writes each README's *Imported by*
   table from it, without the tests column; a test re-derives each table, `make derive` runs the tool, and the
   `ui/app.py` route list goes (0129 D7, D8, D9, D10).
+- `AGENTS.md` names the files the pod image freezes, a test holds the list equal to the image record's, and a red
+  record names its files and the recipe (0129 D11).
+- The documents say what holds: *Known breaks* name what the audit found, and the layer roles, the lazy edge, the
+  delete's sentence, the sibling paragraph and the model-manifest recipe are corrected (0129 D12, D13).
 
 ## [0.86.2] - 2026-11-12
 

@@ -8,7 +8,8 @@ is a shim over `cli.py` and holds nothing else.
 
 **`ui/` is a sibling of `cli.py`, not a client of it.** Both reach the pipeline
 the same way — `wiring_from()` and the stage functions, called directly — so
-neither is privileged and neither goes through the other.
+neither is privileged. The CLI imports `isekai.interface.ui` inside the handlers of
+`ui`, `migrate` and `discard`, never at module scope, and the UI imports no CLI module.
 
 ## Files
 

@@ -22,8 +22,10 @@ Module-level, cross-group:
 
 Lazy — the import sits inside a function, so the edge does not exist at
 import time:
-  interface ──▶ boundary      wiring.py, inside load_vocabulary(); provision.py
-                              is on the entry point's graph through ollama.py
+  interface ──▶ boundary      wiring.py, inside load_vocabulary(), except
+                              DigestMismatch, which it imports at module scope;
+                              provision.py is on the entry point's graph through
+                              ollama.py and wiring.py
   interface ──▶ interface/ui  cli.py, inside the `ui`, `migrate` and `discard`
                               handlers — within the group, and listed because collapsing
                               it away is what hid it before
@@ -54,8 +56,9 @@ that owns it: stage ③'s review functions, import's reader, `sheet()` for a
 target's first sheet when a draft is made from another flow, filled from the
 photograph's tags — `interface/drafting.py`'s `draft_across` runs it, the same
 sequence the CLI's `draft` runs (D4) — and, for a deleted render, the library's
-`drop_thumbnails`, the render stage's `discard_render` and review's `withdraw`,
-as the CLI's `discard` calls them.
+`drop_thumbnails`, the render stage's `discard_render` and review's `withdraw`;
+the CLI's `discard` calls them too, but drops the render's thumbnails and not each
+edit image's.
 
 **The edit's pieces.** `ink` is `shared/ink.py`'s, which `cli.py`'s verb calls; the maths of an edit is
 `shared/tattoo.py`'s, over arrays, and Pillow and numpy are imported inside both modules' functions. The edit stage is
