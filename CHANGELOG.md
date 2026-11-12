@@ -10,6 +10,12 @@ its new digest.
 
 ## [Unreleased]
 
+- The app's server counts, quotes and serves a bake, the tattoo edit's queued request: the quote and the offer count
+  bakes with images, a session of bakes alone starts, and `POST /api/render` carries `bakes` and is refused when the
+  quote taken again has another number (0120 D1–D4).
+- A bake has an address, `…/<seed>/edit/<k>`, serving its record, its image and its thumbnail; a render's detail lists
+  its bakes, and deleting a render deletes their thumbnails too. D4 of the decisions names the bake total (0120 D6, D13).
+
 ## [0.79.0] - 2026-11-12
 
 Gate: local 0m37s · CI not read under mf-ship · 0.78.1: local 0m32s · CI not read under mf-ship

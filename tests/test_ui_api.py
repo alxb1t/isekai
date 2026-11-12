@@ -52,6 +52,7 @@ from isekai.boundary.gpu import Seams  # noqa: E402
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
+    EDIT_FILE,
     SESSION_FILE,
     SHEET_FILE,
     TAGS_FILE,
@@ -1722,6 +1723,228 @@ def test_deleting_a_render_is_refused_while_a_render_runs(
         assert snapshot(made.path) == before
 
 
+def _bake(
+    made: Run, k: int, source: str, *, colour: tuple[int, int, int] | None = None
+) -> Path:
+    """Write bake `k` of seed 11 under version 1, an image of `colour` when given.
+
+    Return its record.
+    """
+    from PIL import Image
+
+    group = made.directory(FLOW, "outputs", "001")
+    image, record, _ = run_module.edit_files(group, 11, k)
+    body = {"schema": EDIT_FILE.schema, "edit": "tattoo", "source": source}
+    record.write_text(json.dumps(body))
+    if colour is not None:
+        Image.new("RGB", (64, 80), colour).save(image)
+    return record
+
+
+def _baked(
+    wired: Wiring, made: Run, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> tuple[TestClient, str]:
+    """Return a client and the large view's path over a render with two bakes.
+
+    Bake 1 is imaged and made from the render, bake 2 is queued and made from bake 1.
+    """
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    _bake(made, 1, "11.png", colour=(200, 30, 30))
+    _bake(made, 2, "11.edit-1.png")
+    at = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v1/11"
+    return _client(wired, made, tmp_path, drafted=False), at
+
+
+@pytest.mark.spec("ui:bakes:a-bakes-image-and-thumbnail-are-served")
+@pytest.mark.spec("ui:bakes:a-bakes-record-names-its-edit")
+def test_bake_routes_serve_a_bakes_record_image_and_thumbnail(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, at = _baked(wired, made, tmp_path, schema, vocabulary)
+    shrinks: list[Path] = []
+    shrink = library._shrunk
+
+    def counted(image: Path) -> bytes:
+        shrinks.append(image)
+        return shrink(image)
+
+    monkeypatch.setattr(library, "_shrunk", counted)
+    image = run_module.edit_files(made.directory(FLOW, "outputs", "001"), 11, 1)[0]
+
+    first, second = client.get(f"{at}/edit/1"), client.get(f"{at}/edit/2")
+
+    assert first.json() == {
+        "k": 1,
+        "state": "baked",
+        "placed_on": None,
+        "baked_at": image.stat().st_mtime,
+        "edit": "tattoo",
+        "reason": None,
+    }
+    assert second.json() == {
+        "k": 2,
+        "state": "queued",
+        "placed_on": 1,
+        "baked_at": None,
+        "edit": "tattoo",
+        "reason": None,
+    }
+    served = client.get(f"{at}/edit/1/image")
+    assert served.status_code == 200
+    assert served.content == image.read_bytes()
+    thumbs = [client.get(f"{at}/edit/1/thumb") for _ in range(2)]
+    assert [one.status_code for one in thumbs] == [200, 200]
+    assert thumbs[0].headers["content-type"] == "image/jpeg"
+    assert thumbs[0].content.startswith(b"\xff\xd8")
+    assert thumbs[1].content == thumbs[0].content
+    assert shrinks == [image]
+
+
+@pytest.mark.spec("ui:bakes:a-queued-bake-has-no-image")
+def test_bake_routes_a_queued_bake_has_no_image_and_names_its_session(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    client, at = _baked(wired, made, tmp_path, schema, vocabulary)
+    runs = tmp_path / "lib" / COLLECTION / "runs"
+
+    for tail in ("image", "thumb"):
+        refused = client.get(f"{at}/edit/2/{tail}")
+
+        assert refused.status_code == 409
+        assert f"`python -m isekai render {runs}`" in refused.json()["refusal"]
+
+
+@pytest.mark.spec("ui:bakes:an-unknown-bake-is-refused")
+@pytest.mark.parametrize("k", ["3", "0", "x", "1.5", "-1", "²", "4"])
+def test_bake_routes_a_number_the_seed_has_no_edit_for_is_refused(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    k: str,
+) -> None:
+    client, at = _baked(wired, made, tmp_path, schema, vocabulary)
+    # An image or a composite alone is no bake.
+    group = made.directory(FLOW, "outputs", "001")
+    run_module.edit_files(group, 11, 4)[2].write_bytes(b"png")
+
+    for tail in ("", "/image", "/thumb"):
+        refused = client.get(f"{at}/edit/{k}{tail}")
+
+        assert refused.status_code == 409, tail
+        assert f"holds no bake {k!r}" in refused.json()["refusal"]
+
+
+@pytest.mark.spec("ui:bakes:a-damaged-record-marks-its-bake")
+def test_bake_routes_a_damaged_record_refuses_each_route_naming_its_file(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    client, at = _baked(wired, made, tmp_path, schema, vocabulary)
+    record = _bake(made, 2, "11.edit-1.png", colour=(30, 30, 200))
+    record.write_text("{ not json")
+
+    for tail in ("", "/image", "/thumb"):
+        refused = client.get(f"{at}/edit/2{tail}")
+
+        assert refused.status_code == 409, tail
+        assert record.name in refused.json()["refusal"]
+    assert client.get(f"{at}/edit/1/image").status_code == 200
+
+
+@pytest.mark.spec("ui:bakes:the-chain-lists-the-bakes-in-order")
+def test_bake_detail_a_renders_detail_lists_its_bakes_by_number(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    client, at = _baked(wired, made, tmp_path, schema, vocabulary)
+    image = run_module.edit_files(made.directory(FLOW, "outputs", "001"), 11, 1)[0]
+
+    detail = client.get(at).json()
+
+    assert detail["bakes"] == [
+        {
+            "k": 1,
+            "state": "baked",
+            "placed_on": None,
+            "baked_at": image.stat().st_mtime,
+            "edit": "tattoo",
+            "reason": None,
+        },
+        {
+            "k": 2,
+            "state": "queued",
+            "placed_on": 1,
+            "baked_at": None,
+            "edit": "tattoo",
+            "reason": None,
+        },
+    ]
+    other = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}/v2/22"
+    assert client.get(other).json()["bakes"] == []
+
+
+@pytest.mark.spec("ui:bakes:a-damaged-record-marks-its-bake")
+def test_bake_detail_a_damaged_record_marks_its_own_bake(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    client, at = _baked(wired, made, tmp_path, schema, vocabulary)
+    record = _bake(made, 2, "11.edit-1.png")
+    record.write_text("{ not json")
+
+    first, second = client.get(at).json()["bakes"]
+
+    assert (first["k"], first["state"], first["reason"]) == (1, "baked", None)
+    assert (second["k"], second["state"]) == (2, "damaged")
+    assert record.name in second["reason"]
+    assert (second["edit"], second["placed_on"]) == (None, None)
+
+
+@pytest.mark.spec("ui:bakes:deleting-a-render-deletes-its-bakes-thumbnails")
+def test_bake_detail_deleting_a_render_deletes_its_bakes_thumbnails(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    client, at = _baked(wired, made, tmp_path, schema, vocabulary)
+    for place in ("", "/edit/1"):
+        assert client.get(f"{at}{place}/thumb").status_code == 200
+    cached = tmp_path / "lib" / ".cache" / made.digest / FLOW / "outputs" / "001"
+    # Another collection's thumbnail of the same bake stays.
+    elsewhere = cached / "11.edit-1.bbb.jpg"
+    elsewhere.write_bytes(b"jpg")
+    assert len(list(cached.glob("11.edit-1.*.jpg"))) == 2
+
+    assert client.delete(at).status_code == 200
+
+    assert list(cached.glob("11.*.jpg")) == [elsewhere]
+    group = made.directory(FLOW, "outputs", "001")
+    assert not run_module.edit_files(group, 11, 1)[0].exists()
+
+
 @pytest.mark.spec("ui:renders:a-source-thumbnail-is-upright")
 def test_a_source_thumbnail_is_turned_upright_and_read_from_the_cache_again(
     client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -2430,7 +2653,9 @@ def test_one_quote_covers_every_ticked_collection(
     # The bar counts the images other collections lack, which its dialog renders.
     offer = client.get(f"/api/c/{COLLECTION}/render").json()
     assert (offer["images"], offer["others"]) == (1, 1)
-    refused = client.post("/api/render", json={"collections": [], "images": 2})
+    refused = client.post(
+        "/api/render", json={"collections": [], "images": 2, "bakes": 0}
+    )
     assert refused.status_code == 409
     assert "names no collections" in refused.json()["refusal"]
 
@@ -2456,6 +2681,7 @@ def test_an_estimate_past_the_ceiling_disables_render_naming_it(
             "collections": both,
             "limit_s": quoted["estimate"]["limit_s"],
             "images": 2,
+            "bakes": 0,
         },
     )
 
@@ -2465,6 +2691,179 @@ def test_an_estimate_past_the_ceiling_disables_render_naming_it(
     )
     assert started.status_code == 409
     assert f"ceiling of {ceiling}s" in started.json()["refusal"]
+
+
+def _counted(made: Run, schema: Schema, vocabulary: Vocabulary) -> None:
+    """Approve `made` and render its one image, seed 7, so no image is short."""
+    flow = load_flow(FLOW)
+    review(made, FLOW)
+    approve(made, FLOW, schema, vocabulary)
+    prepare(made, {FLOW: flow})
+    client = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+    render(made, flow, client, seeds=[7], poll=0)
+
+
+def _queue(made: Run, k: int = 1) -> Path:
+    """Queue bake `k` of seed 7 under version 1: its record and no image."""
+    group = made.directory(FLOW, "outputs", "001")
+    group.mkdir(parents=True, exist_ok=True)
+    record = run_module.edit_files(group, 7, k)[1]
+    body = {"schema": EDIT_FILE.schema, "edit": "tattoo", "source": "7.png"}
+    record.write_text(json.dumps(body))
+    return record
+
+
+def _keyed(wired: Wiring) -> Wiring:
+    """Return `wired` with a RunPod key in the surface's environment."""
+    return replace(wired, session=Seams(environ={"RUNPOD_API_KEY": "k"}))
+
+
+@pytest.mark.spec("ui:render:a-bake-alone-is-a-session")
+def test_bake_offer_a_bake_alone_is_offered_and_quoted(
+    wired: Wiring, made: Run, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _source(made)
+    _counted(made, schema, vocabulary)
+    client = _client(_keyed(wired), made, tmp_path, drafted=False)
+    offer = f"/api/c/{COLLECTION}/render"
+
+    bare = client.get(offer).json()
+    _queue(made)
+    offered = client.get(offer).json()
+    quote = client.post("/api/render/quote", json={"collections": [COLLECTION]}).json()
+
+    assert (bare["images"], bare["bakes"], bare["other_bakes"]) == (0, 0, 0)
+    assert "already has its Count" in bare["disabled"]
+    assert (offered["images"], offered["bakes"], offered["others"]) == (0, 1, 0)
+    assert (offered["other_bakes"], offered["disabled"]) == (0, None)
+    (row,) = quote["collections"]
+    assert (row["images"], row["flows"]) == (0, [])
+    assert row["bakes"] == [
+        {
+            "flow": FLOW,
+            "name": "ada.jpg",
+            "digest": made.digest,
+            "run": made.id,
+            "version": 1,
+            "seed": "7",
+            "k": 1,
+        }
+    ]
+    timing = render_module.load_timing()
+    assert quote["estimate"]["seconds"] == (
+        timing.boot_s + timing.per_edit_s + timing.teardown_s
+    )
+    assert quote["disabled"] is None
+
+
+@pytest.mark.spec("ui:render:the-dialog-lists-each-queued-bake")
+def test_bake_offer_the_quote_lists_each_bake_beside_the_images_and_counts_the_others(
+    wired: Wiring, made: Run, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    client = _quoting_two(wired, made, tmp_path, schema, vocabulary)
+    _queue(made)
+    both = [COLLECTION, "second"]
+
+    here = client.get(f"/api/c/{COLLECTION}/render").json()
+    there = client.get("/api/c/second/render").json()
+    quoted = client.post("/api/render/quote", json={"collections": both}).json()
+
+    assert [(one["images"], one["bakes"]) for one in (here, there)] == [(1, 1), (1, 0)]
+    assert [(one["others"], one["other_bakes"]) for one in (here, there)] == [
+        (1, 0),
+        (1, 1),
+    ]
+    first, second = quoted["collections"]
+    assert [(one["flow"], one["images"]) for one in first["flows"]] == [(FLOW, 1)]
+    assert [(one["seed"], one["k"], one["version"]) for one in first["bakes"]] == [
+        ("7", 1, 1)
+    ]
+    assert second["bakes"] == []
+    timing = render_module.load_timing()
+    assert quoted["estimate"]["seconds"] == (
+        timing.boot_s + timing.teardown_s + 2 * timing.per_image_s + timing.per_edit_s
+    )
+
+
+@pytest.mark.spec("ui:render:a-changed-bake-count-is-refused")
+def test_bake_confirm_a_confirmation_naming_no_bakes_or_another_number_is_refused(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _source(made)
+    _counted(made, schema, vocabulary)
+    _queue(made)
+    client = _client(_keyed(wired), made, tmp_path, drafted=False)
+    started: list[object] = []
+    monkeypatch.setattr(Jobs, "render", lambda self, *args, **kw: started.append(kw))
+    asked = {"collections": [COLLECTION], "keep_open": False}
+    limit = client.post("/api/render/quote", json=asked).json()["estimate"]["limit_s"]
+    body = {**asked, "limit_s": limit, "images": 0}
+
+    for odd in ({}, {"bakes": True}, {"bakes": "1"}):
+        refused = client.post("/api/render", json={**body, **odd})
+
+        assert refused.status_code == 409, odd
+        assert "names no quoted bakes" in refused.json()["refusal"]
+    for shown in (0, 2):
+        refused = client.post("/api/render", json={**body, "bakes": shown})
+
+        assert refused.status_code == 409, shown
+        assert f"it now renders 1 bakes, not {shown}" in refused.json()["refusal"]
+    assert started == []
+
+
+@pytest.mark.spec("ui:render:a-bake-alone-is-a-session")
+def test_bake_confirm_a_bake_alone_starts_a_render_that_plans_no_image(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _source(made)
+    _counted(made, schema, vocabulary)
+    _queue(made)
+    client = _client(_keyed(wired), made, tmp_path, drafted=False)
+    seen: dict[str, object] = {}
+
+    def start(self: Jobs, collections: object, **kwargs: object) -> dict[str, Any]:
+        seen.update(kwargs)
+        return {}
+
+    monkeypatch.setattr(Jobs, "render", start)
+    asked = {"collections": [COLLECTION], "keep_open": False}
+    limit = client.post("/api/render/quote", json=asked).json()["estimate"]["limit_s"]
+
+    confirmed = client.post(
+        "/api/render", json={**asked, "limit_s": limit, "images": 0, "bakes": 1}
+    )
+
+    assert confirmed.status_code == 200
+    assert (seen["total"], seen["limit"], seen["without"]) == (0, limit, [])
+
+
+@pytest.mark.spec("ui:render:a-photograph-taken-out-takes-its-bakes")
+def test_bake_offer_a_photograph_taken_out_leaves_the_quote_with_its_bakes(
+    wired: Wiring, made: Run, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    client = _quoting_two(wired, made, tmp_path, schema, vocabulary)
+    _queue(made)
+    taken = {"collection": COLLECTION, "run": made.id, "flow": FLOW}
+    asked = {"collections": [COLLECTION], "without": [taken]}
+
+    kept = client.post("/api/render/quote", json={"collections": [COLLECTION]}).json()
+    out = client.post("/api/render/quote", json=asked).json()
+
+    (row,) = kept["collections"]
+    assert (row["images"], len(row["bakes"])) == (1, 1)
+    assert out["collections"] == []
+    assert out["disabled"] == render_module.NOTHING_SHORT
 
 
 # --- the import sheet ---------------------------------------------------------

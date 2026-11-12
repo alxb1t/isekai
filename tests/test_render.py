@@ -1405,6 +1405,65 @@ def test_edit_limit_a_collection_with_only_pending_edits_is_quoted_as_it_runs(
     )
 
 
+@pytest.mark.spec("ui:render:a-bake-alone-is-a-session")
+def test_bake_quote_a_collection_holding_a_bake_alone_is_kept_and_priced(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    done = counted(tmp_path, schema, vocabulary, "bea", 2, held="done")
+    only = tmp_path / "done" / "runs"
+    group = done.path / FLOW / "outputs" / "002"
+    _edit_records(group, [100, 101])
+
+    quoted = render.quote([only], real(only, vocabulary))
+
+    timing = render.load_timing()
+    assert list(quoted.shorts) == [only]
+    assert quoted.images == 0
+    assert quoted.bakes == 2
+    assert quoted.edits[only].records == (
+        group / "100.edit-1.json",
+        group / "101.edit-1.json",
+    )
+    assert quoted.blocked is None
+    assert quoted.estimate.seconds == (
+        timing.boot_s + 2 * timing.per_edit_s + timing.teardown_s
+    )
+
+
+@pytest.mark.spec_exempt("structural: the quote holds the edits of each root asked")
+def test_bake_quote_every_root_asked_has_its_edits_and_the_bakes_add_up(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    counted(tmp_path, schema, vocabulary, "ada", 1, held="short")
+    done = counted(tmp_path, schema, vocabulary, "bea", 2, held="done")
+    _edit_records(done.path / FLOW / "outputs" / "002", [100, 101, 102])
+    both = [tmp_path / "short" / "runs", tmp_path / "done" / "runs"]
+
+    quoted = render.quote(both, real(both[0], vocabulary))
+
+    assert list(quoted.edits) == both
+    assert [held.count for held in quoted.edits.values()] == [0, 3]
+    assert quoted.edits[both[0]].records == ()
+    assert quoted.bakes == 3
+
+
+@pytest.mark.spec("ui:render:nothing-short-disables-render")
+def test_bake_quote_blocked_names_nothing_short_only_without_images_and_bakes(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    done = counted(tmp_path, schema, vocabulary, "bea", 2, held="done")
+    only = tmp_path / "done" / "runs"
+
+    bare = render.quote([only], real(only, vocabulary))
+    _edit_records(done.path / FLOW / "outputs" / "002", [100])
+    baked = render.quote([only], real(only, vocabulary))
+
+    assert (bare.images, bare.bakes) == (0, 0)
+    assert bare.blocked == render.NOTHING_SHORT
+    assert (baked.images, baked.bakes) == (0, 1)
+    assert baked.blocked is None
+
+
 @pytest.mark.spec("cli:render-limit:a-fast-median-takes-the-figure")
 def test_a_median_below_the_configured_figure_takes_the_figure() -> None:
     got = render.estimate({FLOW: 4}, {FLOW: [30.0, 36.0, 40.0]}, TIMING, 3 * 60 * 60)

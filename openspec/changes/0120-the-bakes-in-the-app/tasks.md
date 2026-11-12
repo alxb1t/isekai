@@ -4,32 +4,32 @@ The phases: the server, the large view, the dialog and the bar, the docs. The se
 
 ## Progress
 
-- [ ] 1 — Server · hard
+- [x] 1 — Server · hard
 - [ ] 2 — Large view · moderate
 - [ ] 3 — Dialog and bar · moderate
 - [ ] 4 — Docs · moderate
 
 ## 1 — Server
 
-- [ ] 1.1 **HALT CHECK** The tattoo edit's names are on the base: `edits_of` in `isekai/interface/render.py`, `edit_numbers` in `isekai/foundation/run.py`, `records` in `isekai/pipeline/edit.py`.
+- [x] 1.1 **HALT CHECK** The tattoo edit's names are on the base: `edits_of` in `isekai/interface/render.py`, `edit_numbers` in `isekai/foundation/run.py`, `records` in `isekai/pipeline/edit.py`.
   Verify: `git grep -n "def edits_of" -- isekai/interface/render.py` prints the definition.
-- [ ] 1.2 Extend `isekai/interface/render.py` per [D1](design.md#d1): `Edits.records`, `Quote.edits`, `Quote.bakes`, a collection holding a bake kept in `shorts`, `blocked` naming nothing short only without images and bakes; tests in `tests/test_render.py` carry `bake_quote`.
+- [x] 1.2 Extend `isekai/interface/render.py` per [D1](design.md#d1): `Edits.records`, `Quote.edits`, `Quote.bakes`, a collection holding a bake kept in `shorts`, `blocked` naming nothing short only without images and bakes; tests in `tests/test_render.py` carry `bake_quote`.
   Verify: `uv run pytest tests/test_render.py -k bake_quote` passes.
-- [ ] 1.3 Add `Bake` and `bakes(group, seed)` to `isekai/interface/ui/library.py` per [D6](design.md#d6): numbers from `edit_numbers`, a number with no record skipped, a record that cannot be read listed `damaged` with its `reason`; its docstring spells no `.edit-`; tests in `tests/test_ui_library.py` carry `bake_library`.
+- [x] 1.3 Add `Bake` and `bakes(group, seed)` to `isekai/interface/ui/library.py` per [D6](design.md#d6): numbers from `edit_numbers`, a number with no record skipped, a record that cannot be read listed `damaged` with its `reason`; its docstring spells no `.edit-`; tests in `tests/test_ui_library.py` carry `bake_library`.
   Verify: `uv run pytest tests/test_ui_library.py -k bake_library` passes.
-- [ ] 1.4 Add to `isekai/interface/ui/app.py` the routes `…/{seed}/edit/{k}`, `…/edit/{k}/image` and `…/edit/{k}/thumb` per [D6](design.md#d6): `k` taken as text and refused unless a number the seed has an edit for, a damaged record refused on each route, naming its file, the image of a queued bake refused naming the render session; tests in `tests/test_ui_api.py` carry `bake_routes`.
+- [x] 1.4 Add to `isekai/interface/ui/app.py` the routes `…/{seed}/edit/{k}`, `…/edit/{k}/image` and `…/edit/{k}/thumb` per [D6](design.md#d6): `k` taken as text and refused unless a number the seed has an edit for, a damaged record refused on each route, naming its file, the image of a queued bake refused naming the render session; tests in `tests/test_ui_api.py` carry `bake_routes`.
   Verify: `uv run pytest tests/test_ui_api.py -k bake_routes` passes.
-- [ ] 1.5 Add `bakes` to `read_render`'s answer in `isekai/interface/ui/app.py`, and make `delete_render` drop each of the seed's edit images' thumbnails before `discard_render` ([D6](design.md#d6)); tests in `tests/test_ui_api.py` carry `bake_detail`.
+- [x] 1.5 Add `bakes` to `read_render`'s answer in `isekai/interface/ui/app.py`, and make `delete_render` drop each of the seed's edit images' thumbnails before `discard_render` ([D6](design.md#d6)); tests in `tests/test_ui_api.py` carry `bake_detail`.
   Verify: `uv run pytest tests/test_ui_api.py -k bake_detail` passes.
-- [ ] 1.6 In `isekai/interface/ui/app.py` add `bakes` and `other_bakes` to the offer of `read_render_offer`, with `idle` reading them, and pass `made.edits[<runs root>]` to `_quoted_row`, which adds each bake with its version from `edit_at` and leaves `source()` as it is ([D3](design.md#d3), [D4](design.md#d4)); tests in `tests/test_ui_api.py` carry `bake_offer`.
+- [x] 1.6 In `isekai/interface/ui/app.py` add `bakes` and `other_bakes` to the offer of `read_render_offer`, with `idle` reading them, and pass `made.edits[<runs root>]` to `_quoted_row`, which adds each bake with its version from `edit_at` and leaves `source()` as it is ([D3](design.md#d3), [D4](design.md#d4)); tests in `tests/test_ui_api.py` carry `bake_offer`.
   Verify: `uv run pytest tests/test_ui_api.py -k bake_offer` passes.
-- [ ] 1.7 Make `post_render` in `isekai/interface/ui/app.py` require `bakes` and refuse another number per [D2](design.md#d2); add `bakes` to each `/api/render` body in `tests/test_ui_api.py` and `tests/test_ui_jobs.py`, and tests carrying `bake_confirm` for the refusals and a bakes-alone job.
+- [x] 1.7 Make `post_render` in `isekai/interface/ui/app.py` require `bakes` and refuse another number per [D2](design.md#d2); add `bakes` to each `/api/render` body in `tests/test_ui_api.py` and `tests/test_ui_jobs.py`, and tests carrying `bake_confirm` for the refusals and a bakes-alone job.
   Verify: `uv run pytest tests/test_ui_api.py tests/test_ui_jobs.py -k bake_confirm` passes.
-- [ ] 1.8 Add a test in `tests/test_ui.py` carrying `bake_names` that no module of `isekai/interface/ui` holds the spelling `.edit-`, so every edit file's name comes from `isekai/foundation/run.py`.
+- [x] 1.8 Add a test in `tests/test_ui.py` carrying `bake_names` that no module of `isekai/interface/ui` holds the spelling `.edit-`, so every edit file's name comes from `isekai/foundation/run.py`.
   Verify: `uv run pytest tests/test_ui.py -k bake_names` passes.
-- [ ] 1.9 In `docs/decisions.md` amend [D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children) per [D13](design.md#d13): the bold sentence and *Why* name image total, bake total and limit; add `0120` to *Made by*.
+- [x] 1.9 In `docs/decisions.md` amend [D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children) per [D13](design.md#d13): the bold sentence and *Why* name image total, bake total and limit; add `0120` to *Made by*.
   Verify: `git grep -n "bake total" docs/decisions.md` prints the amended line.
-- [ ] 1.10 Hold the phase's tests under the acceptance's selector.
+- [x] 1.10 Hold the phase's tests under the acceptance's selector.
   Verify: `uv run pytest tests/test_ui.py -k "bake or edit"` passes.
 
 ## 2 — Large view
