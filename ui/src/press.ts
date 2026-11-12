@@ -56,6 +56,10 @@ export function pressing(slop: number) {
     get held(): boolean {
       return held !== null
     },
+    /** Whether a pan or a move is under way: past the slop, and no placement press. */
+    get active(): boolean {
+      return held !== null && held.moved && held.gesture !== 'place'
+    },
     down(at: Point, shift: boolean, grabbed: number | null): void {
       const gesture = gestureOf(shift, grabbed)
       held = { start: at, last: at, gesture, grabbed, shift, moved: false, fresh: true }

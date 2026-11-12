@@ -85,4 +85,24 @@ spec('ui:panel:the-cursor-follows-shift-and-the-pan', () => {
   expect(cursorOf(false, true)).toBe('grabbing')
   // A pan or a move under way is the grabbing hand whatever Shift says.
   expect(cursorOf(true, true)).toBe('grabbing')
+
+  // Active is the press's own: a pan or a move past the slop, never a placement press nor one
+  // still within the slop, and a modifier key (Control under Shift) leaves it as it was.
+  const hold = pressing(4)
+  hold.down([0, 0], true, null)
+  hold.key({ key: 'Control', ctrlKey: true, metaKey: false })
+  expect(hold.held).toBe(true)
+  expect(cursorOf(true, hold.active)).toBe('crosshair')
+  hold.move([20, 0])
+  expect(cursorOf(true, hold.active)).toBe('crosshair')
+  hold.cancel()
+  hold.down([0, 0], false, null)
+  expect(hold.active).toBe(false)
+  hold.move([20, 0])
+  hold.key({ key: 'Control', ctrlKey: true, metaKey: false })
+  expect(hold.active).toBe(true)
+  // A command key ends the press, and the hand with it.
+  hold.key({ key: 'z', ctrlKey: false, metaKey: true })
+  expect(hold.active).toBe(false)
+  expect(hold.held).toBe(false)
 })

@@ -133,7 +133,7 @@ function shiftKey(event: KeyboardEvent): void {
   if (event.key === 'Shift') shifting.value = event.type === 'keydown'
   else if (event.type === 'keydown' && press.held) {
     press.key(event)
-    active.value = press.held
+    active.value = press.active
   }
 }
 
