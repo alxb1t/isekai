@@ -47,6 +47,10 @@ _LUMA = (0.299, 0.587, 0.114)
 # Envelope brightness below which a pixel is clothing or shadow, not skin or wall.
 _BRIGHT_ENVELOPE = 0.45
 
+# The least the white point's sample may read, as a share of the skin around it. Below
+# it the sample is ink, the outline holds no bare skin, and dividing by it erases ink.
+_MIN_SKIN = 0.7
+
 
 @dataclass(frozen=True)
 class InkConfig:
@@ -110,6 +114,19 @@ def load_ink_config(path: Path = INK_CONFIG_PATH) -> InkConfig:
     )
 
 
+def _flattened(image: "Image") -> "Image":
+    """Return `image` as opaque RGB, its transparency laid over white.
+
+    White is Multiply's neutral, so a transparent pixel is bare skin whatever colour
+    it stores, and only what the image shows is read as ink.
+    """
+    from PIL import Image
+
+    rgba = image.convert("RGBA")
+    white = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+    return Image.alpha_composite(white, rgba).convert("RGB")
+
+
 def _skin_envelope(rgb: "Image", reach: int) -> "NDArray[np.float32]":
     """Return each pixel's nearby bare-skin colour, as floats in 0..1."""
     import numpy as np
@@ -155,7 +172,7 @@ def extract_ink(
             "give a depth in that range"
         )
 
-    rgb = image.convert("RGB")
+    rgb = _flattened(image)
     pixels = np.asarray(rgb, dtype=np.float32) / 255.0
     envelope = _skin_envelope(rgb, config.reach)
     transmittance = np.clip(pixels / np.maximum(envelope, 1e-3), 0.0, 1.0)
@@ -172,6 +189,12 @@ def extract_ink(
             "is dark; widen the outline over the skin, or light the photograph"
         )
     skin = np.percentile(transmittance[kept], config.white, axis=0)
+    if skin.mean() < _MIN_SKIN:
+        raise Refusal(
+            "no bare skin inside the outline to read the ink against: its pixels "
+            "are all darker than the skin around them, so the ink would be taken "
+            "for skin and washed out; widen the outline over the skin"
+        )
     transmittance = np.clip(transmittance / np.maximum(skin, 1e-3), 0.0, 1.0)
     transmittance = np.clip(transmittance / (1.0 - config.floor), 0.0, 1.0)
     if neutral:

@@ -1358,6 +1358,32 @@ def test_edit_limit_the_quote_and_the_session_take_the_edits_from_one_function(
     assert opener.limits == [quoted.estimate.limit_s]
 
 
+@pytest.mark.spec("edit:edit-limit:the-quote-and-the-session-agree")
+def test_edit_limit_a_collection_with_only_pending_edits_is_quoted_as_it_runs(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    short = counted(tmp_path, schema, vocabulary, "ada", 1, held="short")
+    done = counted(tmp_path, schema, vocabulary, "bea", 2, held="done")
+    only = tmp_path / "done" / "runs"
+    _edit_records(done.path / FLOW / "outputs" / "002", range(100, 140))
+    both = [tmp_path / "short" / "runs", only]
+
+    alone = render.quote([only], real(only, vocabulary))
+    mixed = render.quote(both, real(both[0], vocabulary))
+
+    timing = render.load_timing()
+    edits = 40 * timing.per_edit_s
+    assert short.path.parent.parent == both[0].parent
+    assert list(alone.shorts) == [only]
+    assert alone.images == 0
+    assert alone.blocked is None
+    assert alone.estimate.seconds == timing.boot_s + edits + timing.teardown_s
+    assert list(mixed.shorts) == both
+    assert mixed.estimate.seconds == (
+        timing.boot_s + timing.per_image_s + edits + timing.teardown_s
+    )
+
+
 @pytest.mark.spec("cli:render-limit:a-fast-median-takes-the-figure")
 def test_a_median_below_the_configured_figure_takes_the_figure() -> None:
     got = render.estimate({FLOW: 4}, {FLOW: [30.0, 36.0, 40.0]}, TIMING, 3 * 60 * 60)

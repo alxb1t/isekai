@@ -231,7 +231,7 @@ own version — stages depend on that contract, never on each other. What is don
 from filenames, never from a status file.
 
 **Every file in it is written whole, numbered, and never changed** — a draft is the one file edited in
-place. A stage whose file already exists does nothing unless asked for a new version.
+place, and an edit's request record is the one completed in place, by its sampling. A stage whose file already exists does nothing unless asked for a new version.
 
 - **Why:** stages can run days apart, be tested alone and resume from disk. A failure in one cannot
   reach into another. A human's correction survives beside the machine's draft, so the two can be

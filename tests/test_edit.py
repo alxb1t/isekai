@@ -375,6 +375,19 @@ def test_edit_crop_a_strip_at_one_to_two_is_left_as_it_is() -> None:
     assert (crop.box, crop.widened) == ((252, 352, 748, 608), False)
 
 
+@pytest.mark.spec("edit:crop:a-thin-strip-is-widened")
+def test_edit_crop_an_image_too_narrow_to_widen_the_box_is_refused_naming_the_fix() -> (
+    None
+):
+    tall = np.zeros((1200, 400), dtype=np.uint8)
+    tall[100:1100, 180:220] = 255
+
+    with pytest.raises(
+        Refusal, match=r"400x1200 render cannot widen it to the 548 px.*larger"
+    ):
+        plan_crop(tall, DIALS)
+
+
 @pytest.mark.spec("edit:crop:a-tiny-tattoo-is-grown")
 def test_edit_crop_a_tiny_tattoo_is_grown_until_the_upscale_is_allowed() -> None:
     crop = plan_crop(_mask(1000, 500, 500, 540, 540), DIALS)
@@ -519,6 +532,35 @@ def test_edit_request_a_repeated_seed_is_held_by_both_records(tmp_path: Path) ->
 
     assert [read(it.record, EDIT_FILE)["seed"] for it in (first, second)] == [77, 77]
     assert (first.number, second.number) == (1, 2)
+
+
+@pytest.mark.spec("edit:request:a-request-writes-a-pending-record")
+def test_edit_request_a_number_taken_after_its_choice_is_not_overwritten(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    chosen = edit_module.next_edit
+    calls: list[int] = []
+
+    def raced(where: Path, seed: int) -> int:
+        number = chosen(where, seed)
+        calls.append(number)
+        if len(calls) == 1:
+            # Another request takes the number after this one has chosen it.
+            _ask(image, composite, seed=88)
+        return number
+
+    monkeypatch.setattr(edit_module, "next_edit", raced)
+
+    mine = _ask(image, composite, seed=77)
+
+    # The other request's own choice sits between this one's two.
+    assert calls == [1, 1, 2]
+    assert mine.number == 2
+    assert [read(group / f"42.edit-{k}.json", EDIT_FILE)["seed"] for k in (1, 2)] == [
+        88,
+        77,
+    ]
 
 
 @pytest.mark.spec("edit:request:a-repeated-seed-repeats-the-draw")

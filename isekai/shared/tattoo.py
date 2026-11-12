@@ -230,6 +230,13 @@ def plan_crop(mask: "NDArray[np.uint8]", dials: Mapping[str, Any]) -> Crop:
     if min(right - left, bottom - top) < thin:
         left, right = _extend(left, right, thin, width)
         top, bottom = _extend(top, bottom, thin, height)
+        if min(right - left, bottom - top) < thin:
+            raise Refusal(
+                f"the tattoo's crop is {max(right - left, bottom - top)} px on its "
+                f"long side and the {width}x{height} render cannot widen it to the "
+                f"{thin} px that keeps its aspect at {dials['min_aspect']} or more; "
+                "draw the tattoo wider, or make the edit on a larger render"
+            )
     widened = (left, top, right, bottom) != box
     widened_box = (left, top, right, bottom)
 

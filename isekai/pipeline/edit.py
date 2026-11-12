@@ -152,6 +152,23 @@ def _kept(pixels: "NDArray[np.uint8]") -> bytes:
     return png_of(Image.fromarray(pixels))
 
 
+def _reserved(group: Path, seed: int, kept: bytes) -> tuple[int, Path, Path]:
+    """Publish `kept` as the next free edit's composite; return its number and paths.
+
+    The composite is published only where none exists, so the number is the
+    request's own: one a concurrent request took since it was chosen is chosen again.
+    e.g. 42.edit-1.composite.png taken meanwhile -> 42.edit-2.composite.png
+    """
+    while True:
+        number = next_edit(group, seed)
+        _, record_path, composite_path = edit_files(group, seed, number)
+        try:
+            write_atomically(composite_path, kept, exclusive=True)
+        except FileExistsError:
+            continue
+        return number, record_path, composite_path
+
+
 def request(
     edit: Edit,
     source: Path,
@@ -178,8 +195,6 @@ def request(
     derived = derive(render, pixels, dials)
     crop = plan_crop(derived.mask, dials)
 
-    number = next_edit(group, render_seed)
-    _, record_path, composite_path = edit_files(group, render_seed, number)
     kept = _kept(pixels)
     sampling_seed = rng.getrandbits(SEED_BITS) if seed is None else seed
     cropped: CropRecord = {
@@ -200,7 +215,7 @@ def request(
         "overridden": [name for name in OVERRIDES if overrides.get(name) is not None],
         "crop": cropped,
     }
-    write_atomically(composite_path, kept)
+    number, record_path, composite_path = _reserved(group, render_seed, kept)
     write(record_path, EDIT_FILE, record)
     return Requested(composite_path, record_path, number, sampling_seed)
 

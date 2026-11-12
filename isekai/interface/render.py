@@ -885,6 +885,8 @@ class Quote:
     # The shortfall of each collection quoted that is short or refuses a count,
     # by its runs root, in the order quoted.
     shorts: dict[Path, Short]
+    # The pending edits of each collection quoted, by its runs root.
+    pending: dict[Path, int]
     estimate: Estimate
     timing: Timing
     ceiling_s: int
@@ -899,16 +901,22 @@ class Quote:
         return sum(sum(found.images.values()) for found in self.shorts.values())
 
     @property
+    def edits(self) -> int:
+        """Return how many pending edits the session runs, across its collections."""
+        return sum(self.pending.values())
+
+    @property
     def blocked(self) -> str | None:
         """Return why nothing would render, or None while the session may start.
 
-        A refused count first, then nothing short, then an estimate whose limit
-        would pass the ceiling: the session would end before its work.
+        A refused count first, then no image short and no edit pending, then an
+        estimate whose limit would pass the ceiling: the session would end before
+        its work.
         """
         refused = (found.blocked for found in self.shorts.values() if found.refused)
         if (first := next(refused, None)) is not None:
             return first
-        if not self.images:
+        if not self.images and not self.edits:
             return NOTHING_SHORT
         if self.estimate.capped:
             return (
@@ -937,16 +945,20 @@ def quote(
     timing = load_timing()
     ids = {runs: run_ids(runs) for runs in roots}
     found = {runs: short(runs, ids[runs], wired, without) for runs in roots}
-    shorts = {runs: one for runs, one in found.items() if one.lines or one.refused}
-    work = [(runs, ids[runs], one.images) for runs, one in shorts.items()]
     tracked = tracked_flows(wired.flows_dir)
-    pending_count = {
-        runs: edits_of(runs, ids[runs], tracked, without).count for runs in shorts
+    held = {runs: edits_of(runs, ids[runs], tracked, without).count for runs in roots}
+    shorts = {
+        runs: one
+        for runs, one in found.items()
+        if one.lines or one.refused or held[runs]
     }
+    work = [(runs, ids[runs], one.images) for runs, one in shorts.items()]
+    pending_count = {runs: held[runs] for runs in shorts}
     guess = estimated(work, timing, bound.ceiling_s, pending_count)
     hourly = bound.max_hourly + timing.volume_rate
     return Quote(
         shorts,
+        pending_count,
         guess,
         timing,
         bound.ceiling_s,

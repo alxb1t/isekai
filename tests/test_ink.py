@@ -64,6 +64,32 @@ def test_ink_extract_a_fill_is_darker_than_the_skin_at_every_channel() -> None:
     assert (layer[80, 80, :3] < layer[10, 10, :3]).all()
 
 
+@pytest.mark.spec("edit:ink:bare-skin-is-white")
+def test_ink_extract_an_outline_that_holds_no_bare_skin_is_refused_naming_the_fix() -> (
+    None
+):
+    tight = Image.new("L", (160, 160), 0)
+    ImageDraw.Draw(tight).rectangle(FILL, fill=255)
+
+    with pytest.raises(Refusal, match="no bare skin inside the outline.*widen"):
+        extract_ink(_arm(), tight, None, None)
+
+
+@pytest.mark.spec("edit:ink:bare-skin-is-white")
+def test_ink_extract_a_transparent_pixel_is_bare_skin_whatever_colour_it_stores() -> (
+    None
+):
+    art = Image.new("RGBA", (160, 160), (255, 255, 255, 0))
+    drawn = ImageDraw.Draw(art)
+    drawn.rectangle(FILL, fill=(*BLUE_INK, 255))
+    drawn.rectangle((10, 10, 29, 29), fill=(0, 0, 0, 0))
+
+    layer = extract_ink(art, None, None, None)
+
+    assert _at(layer, 20, 20)[:3] == (255, 255, 255)
+    assert _at(layer, 80, 80)[2] > _at(layer, 80, 80)[0]
+
+
 @pytest.mark.spec_exempt("structural: an image with nothing lit has no skin to read")
 def test_ink_extract_refuses_an_image_with_no_skin() -> None:
     dark = Image.new("RGB", (64, 64), (5, 5, 5))
