@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.1] - 2026-11-12
+
+Gate: local 0m59s · CI not read under mf-ship · 0.86.0: local 1m0s · CI not read under mf-ship
+
 - `main`'s reds are fixed in tests and the workflow: the import test hands Playwright a lambda as the file chooser's
   handler, the chunked spline matches the whole within a tolerance, and CI runs the browser tests after a red gate
   (0127 D1, D2).
