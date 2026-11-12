@@ -5,7 +5,7 @@ The phases: the server, the large view, the dialog and the bar, the docs. The se
 ## Progress
 
 - [x] 1 — Server · hard
-- [ ] 2 — Large view · moderate
+- [x] 2 — Large view · moderate
 - [ ] 3 — Dialog and bar · moderate
 - [ ] 4 — Docs · moderate
 
@@ -34,21 +34,21 @@ The phases: the server, the large view, the dialog and the bar, the docs. The se
 
 ## 2 — Large view
 
-- [ ] 2.1 In `ui/src/types.ts` add `Bake`, with its `reason`, and `RenderDetail.bakes`; in `ui/src/api.ts` add `bakeAt`, `bakeThumbAt` and `bakeDetail` over the routes of [D6](design.md#d6).
+- [x] 2.1 In `ui/src/types.ts` add `Bake`, with its `reason`, and `RenderDetail.bakes`; in `ui/src/api.ts` add `bakeAt`, `bakeThumbAt` and `bakeDetail` over the routes of [D6](design.md#d6).
   Verify: `git grep -n "bakeAt" -- ui/src/api.ts` prints the function.
-- [ ] 2.2 Add `ui/src/bakes.ts` with `chainRows` and `offered` per [D7](design.md#d7), and `ui/src/bakes.test.ts` binding `ui:bakes:the-chain-lists-the-bakes-in-order` and `ui:bakes:a-bakes-view-offers-no-writes`.
+- [x] 2.2 Add `ui/src/bakes.ts` with `chainRows` and `offered` per [D7](design.md#d7), and `ui/src/bakes.test.ts` binding `ui:bakes:the-chain-lists-the-bakes-in-order` and `ui:bakes:a-bakes-view-offers-no-writes`.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 2.3 Add the route `name: 'bake'` to `ui/src/router.ts` and name it in `HUB_SCREENS` of `ui/src/App.vue` per [D5](design.md#d5).
+- [x] 2.3 Add the route `name: 'bake'` to `ui/src/router.ts` and name it in `HUB_SCREENS` of `ui/src/App.vue` per [D5](design.md#d5).
   Verify: `git grep -n "name: 'bake'" -- ui/src/router.ts` prints the route.
-- [ ] 2.4 Add `--chain-ground` and `--chain-ring` to `:root` in `ui/src/styles.css` and to each Catppuccin block of `ui/src/themes.css` per [D10](design.md#d10).
+- [x] 2.4 Add `--chain-ground` and `--chain-ring` to `:root` in `ui/src/styles.css` and to each Catppuccin block of `ui/src/themes.css` per [D10](design.md#d10).
   Verify: `git grep -c "chain-ring" -- ui/src/themes.css` prints a count.
-- [ ] 2.5 Add `ui/src/components/BakeChain.vue`, the chain's list drawn from `chainRows` with the shown row framed by the tokens, each baked row a `RouterLink` to the `bake` route, a queued or damaged row none, and its styles in `ui/src/app.css` framing the shown row with `--chain-ring`.
+- [x] 2.5 Add `ui/src/components/BakeChain.vue`, the chain's list drawn from `chainRows` with the shown row framed by the tokens, each baked row a `RouterLink` to the `bake` route, a queued or damaged row none, and its styles in `ui/src/app.css` framing the shown row with `--chain-ring`.
   Verify: `git grep -n "chain-ring" -- ui/src/app.css` prints the frame's rule.
-- [ ] 2.6 In `ui/src/views/RenderLarge.vue` take the optional prop `k`; with it show `bakeAt`'s image, the bake's record rows and the refusal `bakeDetail` raises, and gate *Draft from this*, *Compare with…*, *Delete* and their keys on `offered` ([D8](design.md#d8)); `k` is left out of the params it passes to the `compare`, `compare-photo` and `render` routes.
+- [x] 2.6 In `ui/src/views/RenderLarge.vue` take the optional prop `k`; with it show `bakeAt`'s image, the bake's record rows and the refusal `bakeDetail` raises, and gate *Draft from this*, *Compare with…*, *Delete* and their keys on `offered` ([D8](design.md#d8)); `k` is left out of the params it passes to the `compare`, `compare-photo` and `render` routes.
   Verify: `git grep -n "offered" -- ui/src/views/RenderLarge.vue` prints the gate.
-- [ ] 2.7 In `ui/src/views/RenderLarge.vue` show the photograph's thumbnail from `photoUrl` above the actions ([D9](design.md#d9)), and `BakeChain` when the render has bakes.
+- [x] 2.7 In `ui/src/views/RenderLarge.vue` show the photograph's thumbnail from `photoUrl` above the actions ([D9](design.md#d9)), and `BakeChain` when the render has bakes.
   Verify: `git grep -n "BakeChain" -- ui/src/views/RenderLarge.vue` prints the import.
-- [ ] 2.8 Hold the unit tests, the themes' among them, with the new route and tokens.
+- [x] 2.8 Hold the unit tests, the themes' among them, with the new route and tokens.
   Verify: `uv run python -m tools.test_ui` exits 0.
 
 ## 3 — Dialog and bar

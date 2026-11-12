@@ -707,6 +707,15 @@ button.session__tile {
   border-left: 1px solid var(--line);
 }
 
+.large__photo {
+  align-self: flex-start;
+  max-width: 96px;
+  max-height: 96px;
+  border: 1px solid var(--line-control);
+  border-radius: 3px;
+  object-fit: cover;
+}
+
 .large__fields {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -736,6 +745,41 @@ button.session__tile {
 
 .large__group > .btn {
   justify-content: space-between;
+}
+
+/* The chain of a render and its bakes: one row each, indented by `--depth`; the
+   shown row is framed in the chain's tokens. */
+.chain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.chain__row {
+  display: flex;
+  gap: 6px;
+  padding: 4px 8px 4px calc(8px + (var(--depth, 0) * 14px));
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--ink-2);
+}
+
+.chain__row--shown {
+  border-color: var(--chain-ring);
+  background: var(--chain-ground);
+  color: var(--ink);
+}
+
+.chain__link {
+  color: var(--accent-ink);
+}
+
+.chain__label {
+  overflow-wrap: anywhere;
 }
 
 /* — Compare: two images at equal size, top-aligned, centred (J5·9) — */

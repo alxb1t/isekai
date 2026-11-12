@@ -94,6 +94,8 @@
   --band: #eff1f5;
   --scrim-drawer: #4c4f6999;
   --overlay: #dce0e8;
+  --chain-ground: #ccd0da;
+  --chain-ring: #8839ef;
 }
 
 [data-theme="frappe"] {
@@ -164,6 +166,8 @@
   --band: #232634;
   --scrim-drawer: #303446cc;
   --overlay: #232634;
+  --chain-ground: #51576d;
+  --chain-ring: #ca9ee6;
 }
 
 [data-theme="macchiato"] {
@@ -234,6 +238,8 @@
   --band: #181926;
   --scrim-drawer: #24273acc;
   --overlay: #181926;
+  --chain-ground: #494d64;
+  --chain-ring: #c6a0f6;
 }
 
 [data-theme="mocha"] {
@@ -304,4 +310,6 @@
   --band: #11111b;
   --scrim-drawer: #1e1e2ecc;
   --overlay: #11111b;
+  --chain-ground: #45475a;
+  --chain-ring: #cba6f7;
 }

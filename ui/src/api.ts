@@ -6,6 +6,7 @@
 
 import type {
   Assigned,
+  Bake,
   Billing,
   Budget,
   Committed,
@@ -309,6 +310,22 @@ export function imageAt(place: RenderPlace): string {
 
 export function renderDetail(place: RenderPlace): Promise<RenderDetail> {
   return get<RenderDetail>(renderAt(place))
+}
+
+const bakeBase = (place: RenderPlace, k: number): string => `${renderAt(place)}/edit/${k}`
+
+/* A bake's image, whole; a queued or damaged bake is refused. */
+export function bakeAt(place: RenderPlace, k: number): string {
+  return `${bakeBase(place, k)}/image`
+}
+
+export function bakeThumbAt(place: RenderPlace, k: number): string {
+  return `${bakeBase(place, k)}/thumb`
+}
+
+/* A bake's record; a number the seed has no edit for, or a damaged record, is refused. */
+export function bakeDetail(place: RenderPlace, k: number): Promise<Bake> {
+  return get<Bake>(bakeBase(place, k))
 }
 
 /* Delete the render and its thumbnails; refused while a render runs for its collection. */

@@ -15,6 +15,9 @@ its new digest.
   quote taken again has another number (0120 D1–D4).
 - A bake has an address, `…/<seed>/edit/<k>`, serving its record, its image and its thumbnail; a render's detail lists
   its bakes, and deleting a render deletes their thumbnails too. D4 of the decisions names the bake total (0120 D6, D13).
+- A render's large view shows its photograph's thumbnail and the chain of its bakes, each baked row opening that
+  bake's view at `…/<seed>/edit/<k>`, which offers no draft, compare or delete; the chain's frame has the tokens
+  `--chain-ground` and `--chain-ring` in every theme (0120 D5, D7–D10).
 
 ## [0.79.0] - 2026-11-12
 
