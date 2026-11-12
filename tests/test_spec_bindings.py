@@ -71,7 +71,7 @@ def nameable(root: Path) -> set[str]:
     return spec_keys(root) | living_keys(root)
 
 
-def _names_marker(node: ast.expr, names: tuple[str, ...] = _MARKERS) -> bool:
+def _names_marker(node: ast.AST, names: tuple[str, ...] = _MARKERS) -> bool:
     """Return whether `node` is `<x>.mark.<name>` for one of `names`.
 
     e.g. `pytest.mark.spec` -> True for the default names `spec` and `spec_exempt`.
@@ -281,7 +281,7 @@ def layer_faults(root: Path, tests: list[Test]) -> list[str]:
     """Return each demanded key with no binder on its layer, as `key (layer)`.
 
     An `e2e` key needs a binder under `tests/e2e/`, a `unit` key one outside it.
-    A vitest binder is outside.
+    A vitest binder is outside. A caller passes the tests that run, via `running`.
     """
     layers = {
         key: layer for _, _, key, layer in scenarios(root) if key and layer in LAYERS
@@ -299,18 +299,60 @@ def layer_faults(root: Path, tests: list[Test]) -> list[str]:
     )
 
 
-def skipped(root: Path) -> set[tuple[str, str]]:
-    """Return each collected test a `skip` or `skipif` decorator marks, as (file, test).
+def _pytestmark_skips(body: list[ast.stmt]) -> bool:
+    """Return whether `body` assigns a `pytestmark` holding a `skip` or `skipif` mark.
 
-    e.g. `@pytest.mark.skipif(cond, reason="x") def test_y` in `tests/test_z.py`
-    -> ("tests/test_z.py", "test_y").
+    e.g. `pytestmark = [pytest.mark.slow, pytest.mark.skip(reason="x")]` -> True.
+    """
+    return any(
+        isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets)
+        and any(_names_marker(n, _SKIPS) for n in ast.walk(node.value))
+        for node in body
+    )
+
+
+def _skipped_in(
+    body: list[ast.stmt], prefix: str = "", inherited: bool = False
+) -> set[str]:
+    """Return each test id in `body` a skip marks, its own or one it inherits.
+
+    A skip on a `Test*` class or in a `pytestmark` of the class or the module
+    disables every test beneath it, as pytest does.
+    """
+    skips = inherited or _pytestmark_skips(body)
+    found: set[str] = set()
+    for node in body:
+        if not isinstance(node, Function | ast.ClassDef):
+            continue
+        skips_here = skips or any(
+            _names_marker(_target(d), _SKIPS) for d in node.decorator_list
+        )
+        if isinstance(node, Function) and node.name.startswith("test_"):
+            if skips_here:
+                found.add(prefix + node.name)
+        elif isinstance(node, ast.ClassDef) and node.name.startswith("Test"):
+            found |= _skipped_in(node.body, f"{prefix}{node.name}::", skips_here)
+    return found
+
+
+def skipped(root: Path) -> set[tuple[str, str]]:
+    """Return each collected test a skip disables, as (file, test).
+
+    A `skip` or `skipif` on the test, on a `Test*` class around it, or in a
+    `pytestmark` of its class or module. e.g. `@pytest.mark.skipif(cond, reason="x")
+    def test_y` in `tests/test_z.py` -> ("tests/test_z.py", "test_y").
     """
     return {
         (file, name)
         for file, module in _modules(root)
-        for name, node in _collected(module.body)
-        if any(_names_marker(_target(d), _SKIPS) for d in node.decorator_list)
+        for name in _skipped_in(module.body)
     }
+
+
+def running(tests: list[Test], skipped: set[tuple[str, str]]) -> list[Test]:
+    """Return `tests` less each one in `skipped`, the tests that run."""
+    return [t for t in tests if (t[0], t[1]) not in skipped]
 
 
 def rests_on_skips(
@@ -509,8 +551,8 @@ def test_every_scenario_names_its_key_and_its_layer() -> None:
 
 @pytest.mark.spec_exempt("structural: every key has a test on its own layer")
 def test_every_key_has_a_test_on_its_layer(tests: list[Test]) -> None:
-    faults = layer_faults(REPO_ROOT, tests)
-    assert not faults, f"keys with no test on their layer: {faults[:5]}"
+    faults = layer_faults(REPO_ROOT, running(tests, skipped(REPO_ROOT)))
+    assert not faults, f"keys with no running test on their layer: {faults[:5]}"
 
 
 @pytest.mark.spec_exempt("structural: no key rests on skipped tests alone")
@@ -879,6 +921,17 @@ def test_{name}():
 """
 
 
+_SKIPPED_PAGE = """\
+import pytest
+
+
+@pytest.mark.spec("cap:shown:page")
+@pytest.mark.skip(reason="disabled")
+def test_page():
+    pass
+"""
+
+
 @pytest.mark.spec_exempt("structural: twin of test_every_key_has_a_test_on_its_layer")
 def test_a_key_whose_only_test_is_on_the_other_layer_is_caught(tmp_path: Path) -> None:
     root = write_tree(tmp_path, _BY_LAYER)
@@ -892,6 +945,22 @@ def test_a_key_whose_only_test_is_on_the_other_layer_is_caught(tmp_path: Path) -
     assert layer_faults(root, marked_tests(root)) == [
         "cap:shown:page (e2e)",
         "cap:shown:rule (unit)",
+    ]
+    # A skipped binder on the right layer beside a running one on the wrong layer.
+    masked = write_tree(tmp_path / "masked", _BY_LAYER)
+    (masked / "tests" / "e2e").mkdir(parents=True)
+    (masked / "tests" / "e2e" / "test_page.py").write_text(_SKIPPED_PAGE)
+    (masked / "tests" / "test_unit.py").write_text(
+        _BOUND.format(key="cap:shown:page", name="unit")
+    )
+    (masked / "tests" / "test_rule.py").write_text(
+        _BOUND.format(key="cap:shown:rule", name="rule")
+    )
+    (masked / "tests" / "test_placed.py").write_text(
+        _BOUND.format(key="cap:shown:placed", name="placed")
+    )
+    assert layer_faults(masked, running(marked_tests(masked), skipped(masked))) == [
+        "cap:shown:page (e2e)"
     ]
 
 
@@ -917,6 +986,58 @@ def test_gone_runs():
 """
 
 
+_CLASS_SKIP = """\
+import pytest
+
+
+@pytest.mark.skip(reason="disabled")
+class TestPage:
+    @pytest.mark.spec("cap:kept:kept")
+    def test_kept(self):
+        pass
+
+
+@pytest.mark.spec("cap:gone:gone")
+def test_gone_runs():
+    pass
+"""
+
+_MODULE_SKIP = """\
+import pytest
+
+pytestmark = pytest.mark.skip(reason="disabled")
+
+
+@pytest.mark.spec("cap:kept:kept")
+def test_kept():
+    pass
+"""
+
+_MODULE_LIST_SKIP = """\
+import pytest
+
+pytestmark = [pytest.mark.slow, pytest.mark.skipif(True, reason="disabled")]
+
+
+@pytest.mark.spec("cap:kept:kept")
+def test_kept():
+    pass
+"""
+
+_NESTED_SKIP = """\
+import pytest
+
+
+class TestOuter:
+    pytestmark = pytest.mark.skip(reason="disabled")
+
+    class TestInner:
+        @pytest.mark.spec("cap:kept:kept")
+        def test_kept(self):
+            pass
+"""
+
+
 @pytest.mark.spec_exempt("structural: twin of test_no_key_rests_only_on_skipped_tests")
 def test_a_key_whose_every_test_is_skipped_is_caught(tmp_path: Path) -> None:
     root = _tree(tmp_path, _SKIPS_TREE)
@@ -927,6 +1048,11 @@ def test_a_key_whose_every_test_is_skipped_is_caught(tmp_path: Path) -> None:
     assert rests_on_skips(demanded(root), marked_tests(root), skipped(root)) == [
         "cap:kept:kept"
     ]
+    for inherited in (_CLASS_SKIP, _MODULE_SKIP, _MODULE_LIST_SKIP, _NESTED_SKIP):
+        (root / "tests" / "test_cap.py").write_text(inherited)
+        assert rests_on_skips(demanded(root), marked_tests(root), skipped(root)) == [
+            "cap:kept:kept"
+        ], inherited
 
 
 @pytest.mark.spec_exempt(
