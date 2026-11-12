@@ -1,6 +1,9 @@
 """`propose` over the fakes, and the wiring seam that opens the models once."""
 
+import threading
+import time
 from collections.abc import Iterator, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 
@@ -11,6 +14,7 @@ from PIL import Image, ImageDraw
 
 from isekai.boundary import pose as pose_boundary
 from isekai.boundary.pose import Pose
+from isekai.boundary.provision import DigestMismatch
 from isekai.boundary.unpack import PLACEMENT_REMEDY
 from isekai.foundation.refusal import Refusal
 from isekai.interface import wiring
@@ -113,7 +117,9 @@ def test_propose_pipeline_the_right_arm_is_proposed_when_the_points_lie_along_it
     assert [pair[0] for pair in answer.pairs[-3:]] == _approx(list(RIGHT.values()))
 
 
-@pytest.mark.spec_exempt("structural: an image is embedded once, a bone prompted once")
+@pytest.mark.spec(
+    "placement-proposal:segment:an-image-is-embedded-once-for-all-its-bones"
+)
 def test_propose_pipeline_each_image_is_embedded_once_and_each_bone_prompted_once() -> (
     None
 ):
@@ -214,7 +220,7 @@ def test_propose_pipeline_masks_with_no_edge_leave_the_joints() -> None:
     assert [pair[0] for pair in answer.pairs] == _approx(list(LEFT.values()))
 
 
-@pytest.mark.spec_exempt("structural: a render's dark line is read from its luminance")
+@pytest.mark.spec("placement-proposal:pairs:a-render-edge-stops-at-the-first-dark-line")
 def test_propose_pipeline_the_renders_luminance_stops_its_edge() -> None:
     photograph, render = _images()
     ImageDraw.Draw(render).line([(0, 107), (SIZE[0] - 1, 107)], fill=(0, 0, 0))
@@ -253,11 +259,10 @@ def test_propose_pipeline_a_proposer_answers_as_propose_does() -> None:
 
 
 @pytest.fixture(autouse=True)
-def _unopened() -> Iterator[None]:
+def _unopened(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Forget the models a test opened, so no test sees another's."""
-    proposer_for.cache_clear()
+    monkeypatch.setattr(wiring, "_proposer", None)
     yield
-    proposer_for.cache_clear()
 
 
 def _opening(monkeypatch: pytest.MonkeyPatch) -> list[str]:
@@ -292,6 +297,59 @@ def test_propose_wiring_the_models_open_once_for_two_proposals(
 
     assert first is second
     assert opened == ["pose", "segmenter"]
+
+
+@pytest.mark.spec("placement-proposal:models:the-sessions-are-opened-once")
+def test_propose_wiring_overlapping_first_proposals_open_the_models_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    opened: list[str] = []
+
+    def slow_pose() -> FakePoseFinder:
+        opened.append("pose")
+        time.sleep(0.1)
+        return FakePoseFinder()
+
+    def segmenter() -> FakeSegmenter:
+        opened.append("segmenter")
+        return FakeSegmenter(_band)
+
+    monkeypatch.setattr(wiring, "open_pose", slow_pose)
+    monkeypatch.setattr(wiring, "open_segmenter", segmenter)
+    monkeypatch.delenv("ISEKAI_WIRING", raising=False)
+    wired = wiring_from(runs=tmp_path / "runs")
+    start = threading.Barrier(2)
+
+    def first_ask() -> Proposer:
+        start.wait()
+        return proposer_of(wired)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        asks = [pool.submit(first_ask) for _ in range(2)]
+        answers = [ask.result() for ask in asks]
+
+    assert answers[0] is answers[1]
+    assert opened == ["pose", "segmenter"]
+
+
+@pytest.mark.spec("placement-proposal:pairs:a-missing-model-refuses-naming-the-fetch")
+def test_propose_wiring_a_damaged_model_refuses_naming_the_file_and_the_fetch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def damaged() -> object:
+        raise DigestMismatch(
+            "SHA-256 mismatch for models/pose.onnx: expected aa, computed bb"
+        )
+
+    monkeypatch.setattr(wiring, "open_pose", damaged)
+    monkeypatch.delenv("ISEKAI_WIRING", raising=False)
+    wired = wiring_from(runs=tmp_path / "runs")
+
+    with pytest.raises(Refusal) as refused:
+        proposer_of(wired)
+
+    assert "models/pose.onnx: expected aa, computed bb" in str(refused.value)
+    assert PLACEMENT_REMEDY in str(refused.value)
 
 
 @pytest.mark.spec_exempt("structural: a wiring built by hand proposes nothing")

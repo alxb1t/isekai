@@ -35,7 +35,7 @@ import {
 } from '../pairs'
 import { added, closed as closedDraft, closes, undone as undoneDraft, vertexAt } from '../polygon'
 import { opacityOf } from '../preview'
-import { answered, asked, due, keyOf, pointsOf, refused, view } from '../propose'
+import { answered, asked, due, keyOf, pointsOf, refused, stands, view } from '../propose'
 import { floorOf } from '../stages'
 import type { InkView, Point, TattooLimits } from '../types'
 import PairList from './PairList.vue'
@@ -156,15 +156,16 @@ const line = computed(() => view(placing.proposalAsked.value, key.value))
 const waitingProposals = computed(() => proposals(pairs.value).length)
 
 /* Ask once for the tattoo's proposed pairs on this render. The answer is kept whether or not
-   this stage is still on screen, unless the tattoo was read again meanwhile; a refusal is shown
-   and the clicks still work. */
+   this stage is still on screen, but only by the ask that made it: a later ask under the same
+   key is another; a refusal is shown and the clicks still work. */
 const propose = async (): Promise<void> => {
   const held = tattoo.value
   const at = key.value
   if (!held || !mode.value) return
   const points = pointsOf(mode.value, complete(placing.first.value), held.outline)
   placing.proposalAsked.value = asked(placing.proposalAsked.value, at)
-  const stillAsking = (): boolean => placing.proposalAsked.value[at]?.state === 'asking'
+  const mine = placing.proposalAsked.value[at]
+  const stillAsking = (): boolean => stands(placing.proposalAsked.value, at, mine)
   try {
     const answer = await proposePairs(props.place, props.version, props.seed, points)
     if (!stillAsking()) return

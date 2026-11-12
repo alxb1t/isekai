@@ -30,6 +30,12 @@ export function due(mode: Mode | null, pairs: Pairs, asks: Asks, key: string): b
 /** Return `asks` with `key` asked and not yet answered. */
 export const asked = (asks: Asks, key: string): Asks => ({ ...asks, [key]: { state: 'asking' } })
 
+/** Return whether `ask`, as `asked` recorded it under `key`, is still the entry held there:
+    a later ask or an answer replaces it, so its own response no longer applies.
+    e.g. the entry of the first ask, after a second ask under the same key -> false */
+export const stands = (asks: Asks, key: string, ask: Ask | undefined): boolean =>
+  ask !== undefined && asks[key] === ask
+
 /** Return `asks` with `key` answered by `count` pairs. */
 export const answered = (asks: Asks, key: string, count: number): Asks => ({
   ...asks,

@@ -60,6 +60,26 @@ mask cannot part the arm from the chest.
 - **WHEN** the wrist scores 0.23 in the photograph and the rest score above the cut
 - **THEN** the forearm and the wrist joint give no pair, and the upper arm and the other joints give theirs
 
+#### Scenario: a keypoint at the cut is usable
+- **Key:** `placement-proposal:pairs:a-keypoint-at-the-cut-is-usable`
+- **Layers:** unit
+- **WHEN** the keypoints of a bone score exactly the declared cut, and then one scores a hundredth under it
+- **THEN** the bone is usable in the first case and is not in the second
+
+#### Scenario: a bone is prompted along its length and negatively off it
+- **Key:** `placement-proposal:pairs:a-bone-is-prompted-along-its-length-and-negatively-off-it`
+- **Layers:** unit
+- **WHEN** a bone is prompted with the other bone of its arm at hand
+- **THEN** the positive points lie at the fixed fractions along the bone
+- **AND** the negative points are the other bone's middle and the torso's centre
+
+#### Scenario: the torso is the corners that score
+- **Key:** `placement-proposal:pairs:the-torso-is-the-corners-that-score`
+- **Layers:** unit
+- **WHEN** a shoulder and a hip score under the cut, and then every keypoint scores under it
+- **THEN** the torso's centre is the mean of the corners at or over the cut
+- **AND** in the second case there is no torso negative
+
 #### Scenario: the arm nearest the tattoo is proposed
 - **Key:** `placement-proposal:pairs:the-arm-nearest-the-tattoo-is-proposed`
 - **Layers:** unit

@@ -214,7 +214,7 @@ def test_propose_pairs_a_wrist_under_the_cut_drops_its_bone_and_its_joint() -> N
     assert [pair[0] for pair in joints] == [seen[5], seen[7]]
 
 
-@pytest.mark.spec_exempt("structural: the cut is inclusive")
+@pytest.mark.spec("placement-proposal:pairs:a-keypoint-at-the-cut-is-usable")
 def test_propose_pairs_a_score_at_the_cut_is_usable() -> None:
     scores = [SCORE_CUT] * 17
 
@@ -222,8 +222,8 @@ def test_propose_pairs_a_score_at_the_cut_is_usable() -> None:
     assert not usable_bone((5, 7), scores, [SCORE_CUT - 0.01] * 17)
 
 
-@pytest.mark.spec_exempt(
-    "structural: the prompts are along the bone, the negatives off it"
+@pytest.mark.spec(
+    "placement-proposal:pairs:a-bone-is-prompted-along-its-length-and-negatively-off-it"
 )
 def test_propose_pairs_prompts_lie_along_the_bone_and_negatives_off_it() -> None:
     points, scores = _body()
@@ -245,9 +245,7 @@ def test_propose_pairs_prompts_lie_along_the_bone_and_negatives_off_it() -> None
     ]
 
 
-@pytest.mark.spec_exempt(
-    "structural: the torso is the corners that score, and may be none"
-)
+@pytest.mark.spec("placement-proposal:pairs:the-torso-is-the-corners-that-score")
 def test_propose_pairs_the_torso_takes_the_corners_over_the_cut_alone() -> None:
     points, scores = _body()
     scores[6] = scores[11] = 0.1

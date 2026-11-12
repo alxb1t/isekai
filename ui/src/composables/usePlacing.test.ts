@@ -166,9 +166,18 @@ spec('ui:proposal:a-stage-with-no-pairs-asks-once', async () => {
   // The screen moves on and back: the same tattoo is not read again, and the ask stays.
   await placing.load('bow')
   expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)).toBe(false)
-  // Another tattoo starts clean.
+  // Another tattoo has its own key, and is due.
+  const other = keyOf('arm', 'v1', '7')
   await placing.load('arm')
-  expect(placing.proposalAsked.value).toBe(noAsks)
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other)).toBe(true)
+  // Back on the first, with the other's ask recorded too: the first's record stands, so a
+  // completed ask is not made again, and the other's is kept as well.
+  placing.proposalAsked.value = answered(asked(placing.proposalAsked.value, other), other, 2)
+  await placing.load('bow')
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)).toBe(false)
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other)).toBe(false)
+  // A fresh placing, as after a reload of the page, holds no ask.
+  expect(usePlacing(PLACE, ports).proposalAsked.value).toBe(noAsks)
 })
 
 spec('ui:direct:a-cut-does-not-offer-the-flag', async () => {

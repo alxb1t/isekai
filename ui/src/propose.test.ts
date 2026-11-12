@@ -1,6 +1,6 @@
 import { expect } from 'vitest'
 import { arrived, clicked, held, none } from './pairs'
-import { answered, asked, due, keyOf, noAsks, pointsOf, refused, view } from './propose'
+import { answered, asked, due, keyOf, noAsks, pointsOf, refused, stands, view } from './propose'
 import { spec } from './test/spec'
 import type { Outline, Pair } from './types'
 
@@ -27,6 +27,14 @@ spec('ui:proposal:a-stage-with-no-pairs-asks-once', () => {
   expect(due('two-stage', none, refused(asking, KEY, 'no proposer'), KEY)).toBe(false)
   // Another render of the tattoo is its own ask.
   expect(due('two-stage', none, asking, keyOf('bow', 'v1', '8'))).toBe(true)
+
+  // An answer belongs to the ask that made it: a later ask under the same key is not it,
+  // and neither is an ask already answered.
+  const mine = asking[KEY]
+  expect(stands(asking, KEY, mine)).toBe(true)
+  expect(stands(asked(asking, KEY), KEY, mine)).toBe(false)
+  expect(stands(answered(asking, KEY, 4), KEY, mine)).toBe(false)
+  expect(stands(noAsks, KEY, undefined)).toBe(false)
 })
 
 spec('ui:proposal:a-stage-with-pairs-asks-nothing', () => {
