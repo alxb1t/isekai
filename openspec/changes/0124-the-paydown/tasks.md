@@ -9,7 +9,7 @@ A phase per debt card, in the order of [design](design.md)'s decisions.
 - [x] 3 — The chained source · moderate
 - [x] 4 — The cancel follows the render · moderate
 - [x] 5 — The save queue · hard
-- [ ] 6 — The modal's rows · moderate
+- [x] 6 — The modal's rows · moderate
 
 ## 1 — The copy in step
 
@@ -75,10 +75,10 @@ Closes 0070·R20: a queued, unsent save takes the newest payload, and a failed s
 
 Closes 0118·S1: a cell modal's rows keep their height and the grid scrolls ([D6](design.md#d6)).
 
-- [ ] 6.1 In `ui/src/app.css`, add `.pick--cell .pick__tiles { flex-shrink: 0; }` after the `.pick--cell figcaption` rule, with a one-line comment saying the column scrolls, not each row.
+- [x] 6.1 In `ui/src/app.css`, add `.pick--cell .pick__tiles { flex-shrink: 0; }` after the `.pick--cell figcaption` rule, with a one-line comment saying the column scrolls, not each row.
   Verify: `git grep -n "flex-shrink: 0" -- ui/src/app.css` prints a line.
-- [ ] 6.2 In `tests/e2e/conftest.py`, add the constant `TENFOLD = "tenfold"` with a comment, and in `served` make its collection: one source approved with `_approved`, rendered at every seed from 1 to 10 with `_render_at`.
+- [x] 6.2 In `tests/e2e/conftest.py`, add the constant `TENFOLD = "tenfold"` with a comment, and in `served` make its collection: one source approved with `_approved`, rendered at every seed from 1 to 10 with `_render_at`.
   Verify: `git grep -n "TENFOLD" -- tests/e2e/conftest.py` prints a line.
-- [ ] 6.3 In `tests/e2e/test_render.py`, add `test_a_cell_of_ten_renders_keeps_its_rows_whole`, bound to `ui:hub:a-cell-of-ten-renders-scrolls-its-grid`, after the steps [D6](design.md#d6) lists; the commit body says why no existing test fits.
+- [x] 6.3 In `tests/e2e/test_render.py`, add `test_a_cell_of_ten_renders_keeps_its_rows_whole`, bound to `ui:hub:a-cell-of-ten-renders-scrolls-its-grid`, after the steps [D6](design.md#d6) lists; the commit body says why no existing test fits.
   Where Chromium starts, `uv run pytest tests/e2e/test_render.py -k rows` runs it, and CI holds it.
   Verify: `git grep -n "a-cell-of-ten-renders-scrolls-its-grid" -- tests/e2e/test_render.py` prints a line.

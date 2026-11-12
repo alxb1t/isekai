@@ -20,6 +20,8 @@ its new digest.
   the render (0124 D4).
 - A save waiting behind another takes later edits instead of queueing a second request, and a failed save leaves
   the draft pending only when no later save of its input holds it (0124 D5).
+- A cell modal's rows keep their height and the grid scrolls to a fourth row; a browser test over a cell of ten
+  renders holds it (0124 D6).
 
 ## [0.78.0] - 2026-11-08
 

@@ -89,6 +89,9 @@ CONJURED = "conjured"
 # The collection the chooser opens on: one source with an unapproved sheet in each flow.
 CHOSEN = "chosen"
 
+# The collection whose cell modal holds four rows: one source rendered at seeds 1 to 10.
+TENFOLD = "tenfold"
+
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
 STARTUP = 300
 
@@ -246,6 +249,9 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     (lib / CHOSEN / "sources").mkdir(parents=True)
     chosen = _run(lib / CHOSEN, "mo", (810, 1000))
     sheet(chosen, load_flow(CONJURE).schema, VOCABULARY, flow=CONJURE)
+    tenfold = _approved(lib / TENFOLD, "kit", (815, 1000))
+    for seed in range(1, 11):
+        _render_at(tenfold, seed=seed)
 
     port = _free_port()
     url = f"http://127.0.0.1:{port}"
