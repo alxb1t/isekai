@@ -1,6 +1,7 @@
 {
   "boot_s": 480,
   "per_image_s": 95,
+  "per_edit_s": 30,
   "teardown_s": 120,
   "limit_factor": 1.5,
   "volume_rate": 0.005

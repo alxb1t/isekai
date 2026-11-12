@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from isekai.boundary.provision import (
@@ -7,6 +9,7 @@ from isekai.boundary.provision import (
     unclassified_node_classes,
     undeclared_files,
 )
+from isekai.foundation.edit import EDITS_DIR
 from isekai.foundation.flow import Workflow
 
 
@@ -148,3 +151,31 @@ def test_dropping_an_antelopev2_entry_from_the_manifest_fails_the_check(
     assert undeclared_files(self_fetched_model_files(workflow), manifest) == [
         "genderage.onnx"
     ]
+
+
+def _edit_graph() -> Workflow:
+    """Read the tracked `tattoo-wai` edit's graph."""
+    return json.loads((EDITS_DIR / "tattoo-wai" / "graph.json").read_text())
+
+
+@pytest.mark.spec("edit:models:the-edits-files-are-declared")
+def test_every_model_file_the_edit_graph_names_has_a_manifest_entry(
+    manifest: Manifest,
+) -> None:
+    graph = _edit_graph()
+    assert "union-promax/diffusion_pytorch_model_promax.safetensors" in (
+        graph_model_files(graph)
+    )
+    assert undeclared_files(graph_model_files(graph), manifest) == []
+
+
+@pytest.mark.spec("edit:models:the-edits-files-are-declared")
+def test_every_class_the_edit_graph_uses_is_classified_by_name() -> None:
+    assert unclassified_node_classes(_edit_graph()) == []
+
+
+@pytest.mark.spec("edit:models:a-class-absent-from-the-mapping-fails")
+def test_a_class_absent_from_the_mapping_fails_the_edit_check() -> None:
+    graph = _edit_graph()
+    graph["99"] = {"class_type": "SomeNewMaskLoader", "inputs": {}}
+    assert unclassified_node_classes(graph) == ["SomeNewMaskLoader"]

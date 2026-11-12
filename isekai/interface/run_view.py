@@ -40,6 +40,7 @@ from isekai.foundation.run import (
     Run,
     failure_named,
     is_approved,
+    is_edit_file,
 )
 from isekai.pipeline.generate import (
     is_render,
@@ -245,7 +246,8 @@ def unread(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
     `photo/` reads its description directories; a flow reads its stage directories,
     `outputs` and `sources`, so a flow's own `captions/`, `wd14/` or `tags/` is not
     read; a stage, its artifacts and failure records; `outputs`, its numbered
-    groups; a group, its renders, their sidecars and its failure records;
+    groups; a group, its renders, their sidecars, its edits' files and its failure
+    records;
     `sources`, its numbered copies. A directory ends in `/`, never descended.
     e.g. `["summon-anime-wai/outputs/001/notes.txt", "summon-anime-wai/wd14/"]`
     """
@@ -291,6 +293,7 @@ def unread(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
                 lambda path: (
                     is_render(path, suffix)
                     or is_sidecar(path)
+                    or is_edit_file(path.name)
                     or bool(ERROR.match(path.name))
                 ),
             )

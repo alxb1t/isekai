@@ -12,10 +12,11 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 
 | file | does | reaches |
 |---|---|---|
-| `comfy/__init__.py` | the ComfyUI transport's front door: `ComfyTransport`, `ComfyClient`, `Image`, `TransportFailure`, `unread` | nothing |
+| `comfy/__init__.py` | the ComfyUI transport's front door: `ComfyTransport`, `ComfyClient`, `Image`, `TransportFailure`, `unread`, `submit_and_wait`, `read_runtime` | nothing |
 | `comfy/contract.py` | the `ComfyTransport` Protocol, the image type, `TransportFailure`, which carries its kind, and `unread`, the permanent failure for an answer in a shape this build does not read — the network boundary's shape, with no network in it | nothing |
 | `comfy/client.py` | upload · submit · poll · retrieve · the server's own report, over `urllib`, never through a proxy and never past `TIMEOUT`; every failure it meets is raised as a `TransportFailure`: a 4xx or an unreadable answer permanent, a 5xx, a closed tunnel or a timeout transient | the rented GPU |
 | `comfy/multipart.py` | builds one multipart body; private to the package | nothing |
+| `comfy/prompt.py` | the helpers a stage submits a graph with: `submit_and_wait` queues one graph, waits for its history and returns the image's bytes, `read_runtime` returns the versions the server reports and its first device; the render and the edit share them, so neither stage imports the other | the rented GPU, over the transport it is handed |
 | `gpu.py` | `read_env`, the `.env` file read into the session's environment; `bounds`, what `gpunit.toml` bounds; `open_session`, gpunit's session stopping at the session's limit; `Seams`, what a session reaches through; and `Volume`, the window volume and `.gpunit/` through gpunit's verbs; `run_gpunit`, a gpunit verb whose lines reach `say` as they come, and its `GpunitExit`, the exit with the last `refused:` line `refused_line` reads; gpunit is imported inside each | the rented GPU, through gpunit |
 | `ollama.py` | one POST to a local runtime, the classification of what comes back, the check that a model is built from the files `config/reader.json` pins, and the probe a job asks before it starts | the hosted model, over HTTP to localhost; Ollama's model records on disk |
 | `pod_start.py` | the pod's start, run as the image's command: the volume, the models link, `provision.py fetch`, the memory checks, then `exec` into ComfyUI; stdlib only | the pod's volume and memory, and `provision.py` as a process |
@@ -29,8 +30,9 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `comfy/` | `gpu.py`, `interface/cli.py`, `interface/render.py`, `interface/wiring.py`, `pipeline/generate.py` | `tests/fakes.py`, `tests/stages.py`, `tests/test_generate.py`, `tests/test_render.py`, `tests/test_resume.py` |
+| `comfy/` | `gpu.py`, `interface/cli.py`, `interface/render.py`, `interface/wiring.py`, `pipeline/edit.py`, `pipeline/generate.py` | `tests/fakes.py`, `tests/stages.py`, `tests/test_artifact_bytes.py`, `tests/test_edit.py`, `tests/test_edit_session.py`, `tests/test_generate.py`, `tests/test_render.py`, `tests/test_resume.py` |
 | `comfy/multipart.py` | `comfy/client.py` | `tests/test_multipart.py` |
+| `comfy/prompt.py` | `comfy/__init__.py` | — |
 | `gpu.py` | `interface/render.py`, `interface/wiring.py`, `interface/ui/app.py`, `interface/ui/billing.py`, `interface/ui/jobs.py` | `tests/e2e/wiring.py`, `tests/stages.py`, `tests/test_gpu.py`, `tests/test_infra.py`, `tests/test_render.py`, `tests/test_ui_billing.py`, `tests/test_ui_jobs.py` |
 | `ollama.py` | `interface/wiring.py`, `pipeline/caption.py`, `pipeline/tagging.py` | `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_ollama.py`, `tests/test_pipeline_cli.py`, `tests/test_tagging.py`, `tests/test_ui_jobs.py` |
 | `pod_start.py` | `interface/render.py`, for the hold its limit's floor is above; the image runs it as a file | `tests/test_infra.py`, `tests/test_pod_start.py` |

@@ -231,7 +231,7 @@ own version — stages depend on that contract, never on each other. What is don
 from filenames, never from a status file.
 
 **Every file in it is written whole, numbered, and never changed** — a draft is the one file edited in
-place. A stage whose file already exists does nothing unless asked for a new version.
+place, and an edit's request record is the one completed in place, by its sampling. A stage whose file already exists does nothing unless asked for a new version.
 
 - **Why:** stages can run days apart, be tested alone and resume from disk. A failure in one cannot
   reach into another. A human's correction survives beside the machine's draft, so the two can be
@@ -245,9 +245,9 @@ place. A stage whose file already exists does nothing unless asked for a new ver
   - `tests/test_artifact_bytes.py::test_each_kind_is_written_byte_for_byte`
   - `tests/test_artifact_bytes.py::test_only_the_contract_writes_a_run_file`
   - `tests/test_review.py::test_approving_an_approved_flow_writes_nothing`
-- **Known breaks:** `pipeline/generate.py`'s `discard_render` deletes a render's image and record, and the outputs
-  group it leaves empty or holding failure records alone, those with it, when the operator discards that render: a
-  render is a likeness, so it leaves the run rather than being hidden. `pipeline/review.py`'s `withdraw` deletes the
+- **Known breaks:** `pipeline/generate.py`'s `discard_render` deletes a render's image, record and every edit of its
+  seed, and the outputs group it leaves empty or holding failure records alone, those with it, when the operator
+  discards that render: a render and its edits are likenesses, so they leave the run rather than being hidden. `pipeline/review.py`'s `withdraw` deletes the
   prompts, failure records and render groups of failure records alone the generate stage wrote, numbered for each
   approval it deletes, and, once the flow holds no approval, the sheets the sheet stage wrote, the flow's emptied
   `outputs/`, and the flow's own caption and tag lists from before D17, each kind where `photo/` holds it.
