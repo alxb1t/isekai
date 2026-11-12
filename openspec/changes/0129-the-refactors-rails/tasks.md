@@ -5,7 +5,7 @@ Tests, tools and documents alone: the stage rule, the ratchets, the importer tab
 ## Progress
 
 - [x] 4 — The stage rule · moderate
-- [ ] 5 — The ratchets · moderate
+- [x] 5 — The ratchets · moderate
 - [ ] 6 — The importer tables · moderate
 - [ ] 7 — The frozen files and the documents · moderate
 
@@ -28,25 +28,25 @@ Tests, tools and documents alone: the stage rule, the ratchets, the importer tab
 
 ## 5 — The ratchets
 
-- [ ] 5.1 Create `tests/test_ratchets.py` with a module docstring, `REPO_ROOT`, the ceilings `FILE_LINES`, `FUNCTION_LINES`, `POSITIONAL` and `UI_FILE_LINES` of [D4](design.md#d4), and `ratchet_faults(measured, listed, rows)` of [D3](design.md#d3). Add `test_the_ratchet_catches_each_way_a_table_goes_wrong`, asserting an unlisted offender, a stale row and a row count off its ceiling, each its own fault, with `spec_exempt("structural: a ratchet reads each way a table goes wrong")`.
+- [x] 5.1 Create `tests/test_ratchets.py` with a module docstring, `REPO_ROOT`, the ceilings `FILE_LINES`, `FUNCTION_LINES`, `POSITIONAL` and `UI_FILE_LINES` of [D4](design.md#d4), and `ratchet_faults(measured, listed, rows)` of [D3](design.md#d3). Add `test_the_ratchet_catches_each_way_a_table_goes_wrong`, asserting an unlisted offender, a stale row and a row count off its ceiling, each its own fault, with `spec_exempt("structural: a ratchet reads each way a table goes wrong")`.
   Verify: `uv run pytest tests/test_ratchets.py -k ratchet_catches -q` exits 0.
 
-- [ ] 5.2 In `tests/test_ratchets.py`, add `long_files(root)` per [D4](design.md#d4), the guard `test_no_long_file_is_unlisted` over `REPO_ROOT`, and its twin `test_the_check_catches_a_long_file`, whose `tmp_path` tree holds a file at the ceiling and one past it, with the reasons of [Tests](design.md#tests). Print the offenders with `uv run python -c "from pathlib import Path; from tests.test_ratchets import long_files; print(long_files(Path('.')))"`, write them as `LONG_FILES`, and set `FILE_ROWS` to its length.
+- [x] 5.2 In `tests/test_ratchets.py`, add `long_files(root)` per [D4](design.md#d4), the guard `test_no_long_file_is_unlisted` over `REPO_ROOT`, and its twin `test_the_check_catches_a_long_file`, whose `tmp_path` tree holds a file at the ceiling and one past it, with the reasons of [Tests](design.md#tests). Print the offenders with `uv run python -c "from pathlib import Path; from tests.test_ratchets import long_files; print(long_files(Path('.')))"`, write them as `LONG_FILES`, and set `FILE_ROWS` to its length.
   Verify: `uv run pytest tests/test_ratchets.py -k long_file -q` exits 0.
 
-- [ ] 5.3 In `tests/test_ratchets.py`, add `long_functions(root)` per [D4](design.md#d4), the guard `test_no_long_function_is_unlisted` and its twin `test_the_check_catches_a_long_function`, whose tree holds a method and a nested function past the ceiling and a decorated one at it, with the reasons of [Tests](design.md#tests). Print with `long_functions`, write `LONG_FUNCTIONS` and set `FUNCTION_ROWS`, as in 5.2.
+- [x] 5.3 In `tests/test_ratchets.py`, add `long_functions(root)` per [D4](design.md#d4), the guard `test_no_long_function_is_unlisted` and its twin `test_the_check_catches_a_long_function`, whose tree holds a method and a nested function past the ceiling and a decorated one at it, with the reasons of [Tests](design.md#tests). Print with `long_functions`, write `LONG_FUNCTIONS` and set `FUNCTION_ROWS`, as in 5.2.
   Verify: `uv run pytest tests/test_ratchets.py -k long_function -q` exits 0.
 
-- [ ] 5.4 In `tests/test_ratchets.py`, add `wide_functions(root)` per [D4](design.md#d4), the guard `test_no_wide_function_is_unlisted` and its twin `test_the_check_catches_a_wide_function`, whose tree holds a method with `self` and a full list, one with `*args` and keyword-only parameters past the list, and a positional-only one, with the reasons of [Tests](design.md#tests). Write `WIDE_FUNCTIONS` and set `WIDE_ROWS`, as in 5.2.
+- [x] 5.4 In `tests/test_ratchets.py`, add `wide_functions(root)` per [D4](design.md#d4), the guard `test_no_wide_function_is_unlisted` and its twin `test_the_check_catches_a_wide_function`, whose tree holds a method with `self` and a full list, one with `*args` and keyword-only parameters past the list, and a positional-only one, with the reasons of [Tests](design.md#tests). Write `WIDE_FUNCTIONS` and set `WIDE_ROWS`, as in 5.2.
   Verify: `uv run pytest tests/test_ratchets.py -k wide_function -q` exits 0.
 
-- [ ] 5.5 In `tests/test_ratchets.py`, add `big_ui_files(root)` per [D4](design.md#d4), the guard `test_no_big_ui_file_is_unlisted` and its twin `test_the_check_catches_a_big_ui_file`, whose `ui/src` tree holds a `.vue`, a `.css` and a `.test.ts` past the ceiling, with the reasons of [Tests](design.md#tests). Write `BIG_UI_FILES` and set `UI_ROWS`, as in 5.2.
+- [x] 5.5 In `tests/test_ratchets.py`, add `big_ui_files(root)` per [D4](design.md#d4), the guard `test_no_big_ui_file_is_unlisted` and its twin `test_the_check_catches_a_big_ui_file`, whose `ui/src` tree holds a `.vue`, a `.css` and a `.test.ts` past the ceiling, with the reasons of [Tests](design.md#tests). Write `BIG_UI_FILES` and set `UI_ROWS`, as in 5.2.
   Verify: `uv run pytest tests/test_ratchets.py -k big_ui_file -q` exits 0.
 
-- [ ] 5.6 In `tests/test_ratchets.py`, add `patched_modules(root)` per [D5](design.md#d5), the guard `test_no_patched_module_is_unlisted` and its twin `test_the_check_catches_a_patched_module`, whose tree patches a name through each form of [D5](design.md#d5), a name the module does not bind, an unresolved target and a module of `evaluation`, with the reasons of [Tests](design.md#tests). Write `PATCHED_MODULES` from its output and set `PATCHED_ROWS`, as in 5.2.
+- [x] 5.6 In `tests/test_ratchets.py`, add `patched_modules(root)` per [D5](design.md#d5), the guard `test_no_patched_module_is_unlisted` and its twin `test_the_check_catches_a_patched_module`, whose tree patches a name through each form of [D5](design.md#d5), a name the module does not bind, an unresolved target and a module of `evaluation`, with the reasons of [Tests](design.md#tests). Write `PATCHED_MODULES` from its output and set `PATCHED_ROWS`, as in 5.2.
   Verify: `uv run pytest tests/test_ratchets.py -k patched_module -q` exits 0.
 
-- [ ] 5.7 In `docs/decisions.md`, add D56 under *Code and environment*, after D55, with the text of [D6](design.md#d6).
+- [x] 5.7 In `docs/decisions.md`, add D56 under *Code and environment*, after D55, with the text of [D6](design.md#d6).
   Verify: `git grep -n -F "### D56 · Size and patches are held by ratchets" -- docs/decisions.md` prints the heading.
 
 ## 6 — The importer tables

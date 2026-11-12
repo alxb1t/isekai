@@ -12,6 +12,9 @@ its new digest.
 
 - A pipeline stage may be a package: the stage guard flags an import between stages and lets a package's modules
   import each other, with twins; the rule is written in the component principle and recorded as D55 (0129 D1, D2).
+- Ratchets hold the size of a file, of a function, of its positional parameters and of a `ui/src` file, and the
+  patches of a module's own names: each offender is a listed row, an unlisted one or a stale row is red, and each rule
+  has a twin; the rule is recorded as D56 (0129 D3, D4, D5, D6).
 
 ## [0.86.2] - 2026-11-12
 
