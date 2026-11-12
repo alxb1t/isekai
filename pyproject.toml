@@ -1,9 +1,9 @@
 [project]
 name = "isekai"
-version = "0.86.1"
+version = "0.86.2"
 requires-python = ">=3.12"
 # **What running a flow needs, declared rather than optional.** This list was
-# empty until v0.22.3, held by the `-S` guard in `tests/test_pipeline_cli.py`,
+# empty once, held by the `-S` guard in `tests/test_pipeline_cli.py`,
 # and the claim it carried -- *the runtime is stdlib-only* -- was retired because
 # the environment kept disagreeing with it. `uv sync` makes the environment match
 # exactly what it is told and REMOVES extras it is not told about, and the gate's
@@ -14,8 +14,7 @@ requires-python = ">=3.12"
 # `[tool.uv] default-extras` would have silenced that and kept `dependencies = []`
 # literally true, but only inside a test -- every real checkout would carry 2 GB of
 # onnxruntime while the manifest said it needed nothing. The local tagger runs on
-# every `caption` for every flow, so *"optional"* was false in the plainest sense
-# (design.md D3).
+# every `caption` for every flow, so *"optional"* was false in the plainest sense.
 #
 # **The narrower claim survives, and it is the one the architecture rests on: the
 # entry point imports no third-party package at MODULE SCOPE.** `wd14.py`'s
@@ -24,7 +23,7 @@ requires-python = ">=3.12"
 # the same way. That is why `isekai show` works on a checkout that has provisioned
 # nothing, and the `-S` guard now proves *it* -- a job that matters more, not less,
 # now that the packages are installed by default and nothing else would fail when
-# a module-scope import appears (design.md D4).
+# a module-scope import appears.
 #
 # **Pinned exactly, at what `uv.lock` resolved.** The lock pins this checkout; this
 # list is what a second machine resolves against, and the tagger's output feeds
@@ -62,7 +61,7 @@ dependencies = [
 # in a `ui` extra that gate command one never installed: `tests/test_ui_api.py`'s
 # `importorskip` fired, and four `ui` scenarios bound only there were proved by a
 # test that never ran -- a binding that looks exactly like a binding and binds
-# nothing. v0.22.3 made both required instead, so the duplication has nothing left
+# nothing. Both are required now, so the duplication has nothing left
 # to repair and is gone; the gate installs them because the project declares them.
 [dependency-groups]
 dev = [
@@ -74,7 +73,7 @@ dev = [
 ]
 
 # The same uv here, in CI and in the image, so a lock one of them writes is a lock
-# the others read the same way (0033 design D1).
+# the others read the same way.
 [tool.uv]
 required-version = "==0.12.19"
 
@@ -95,8 +94,8 @@ ignore = ["D203", "D213"]
 # asking whether the path exists on disk, so once `isekai/pipeline/` became a
 # package directory the archived probe's single import block split across two
 # sections -- `isekai.pipeline` resolved, `isekai.comfy_client` and
-# `isekai.workflow` (deleted at v0.14) did not -- and I001 fired on a file that had
-# not been touched since v0.10. Naming the package states the fact directly, so
+# `isekai.workflow` (since deleted) did not -- and I001 fired on a file that had
+# not been touched for many releases. Naming the package states the fact directly, so
 # classification no longer depends on what happens to exist in the tree today.
 #
 # This is NOT a suppression, and deliberately not one: an archived change records

@@ -337,7 +337,7 @@ def test_a_named_unapproved_flow_is_refused_beside_an_approved_one(
     assert FLOW not in refused[0].replace(run.id, "")
 
 
-@pytest.mark.spec_exempt("twin: every named flow approved leaves nothing refused")
+@pytest.mark.spec_exempt("structural: every named flow approved leaves nothing refused")
 def test_named_flows_all_approved_are_refused_nothing(
     run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
 ) -> None:

@@ -910,7 +910,7 @@ def test_a_failed_body_is_named_beside_a_failed_teardown(tmp_path: Path) -> None
     assert body < written.index("refused: the session's teardown failed")
 
 
-@pytest.mark.spec_exempt("structural: gpunit's outcomes become the verb's exit")
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
 def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
     tmp_path: Path,
 ) -> None:

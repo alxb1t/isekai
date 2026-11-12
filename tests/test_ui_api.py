@@ -283,7 +283,7 @@ def test_a_cross_site_request_without_origin_is_refused(
     assert read == []
 
 
-@pytest.mark.spec_exempt("structural: twin -- this page's own requests are answered")
+@pytest.mark.spec_exempt("structural: this page's own requests are answered")
 def test_a_request_without_origin_from_this_page_or_no_browser_is_answered(
     client: TestClient,
 ) -> None:
@@ -959,7 +959,9 @@ def test_overlapping_draft_updates_cannot_both_commit(
     assert on_disk["fields"]["hair_colour"] == ["blonde"]
 
 
-@pytest.mark.spec_exempt("twin: the overlap test fails once the lock is gone")
+@pytest.mark.spec_exempt(
+    "structural: twin of test_overlapping_draft_updates_cannot_both_commit"
+)
 def test_without_the_lock_overlapping_updates_both_commit(
     client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1073,7 +1075,9 @@ def test_an_update_overlapping_an_approval_is_refused(
     assert read(directory / "001.approved.json", APPROVED_FILE)["fields"] == fields
 
 
-@pytest.mark.spec_exempt("twin: the approval test fails once approval takes no lock")
+@pytest.mark.spec_exempt(
+    "structural: twin of test_an_update_overlapping_an_approval_is_refused"
+)
 def test_without_the_lock_an_update_writes_after_the_approval(
     client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
 ) -> None:

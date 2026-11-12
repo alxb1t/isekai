@@ -16,6 +16,7 @@ the assertion that catches it: a vector whose only high value sits at index 1
 must yield the tag on row 1 and no other.
 """
 
+import ast
 import hashlib
 import importlib
 import os
@@ -404,3 +405,66 @@ def test_the_telemetry_check_catches_an_import_with_it_on() -> None:
     assert telemetry_left_on([None])
     assert telemetry_left_on(["1", None])
     assert telemetry_left_on([])
+
+
+def session_openers(root: Path) -> dict[str, bool]:
+    """Return each module that opens an ONNX session, and whether it silences telemetry.
+
+    e.g. a module calling `runtime.InferenceSession(...)` and `silence_onnxruntime()`
+    -> {"isekai/boundary/pose.py": True}
+    """
+    openers: dict[str, bool] = {}
+    for package in ("isekai", "evaluation"):
+        for path in sorted((root / package).rglob("*.py")):
+            called = {
+                _called(node.func)
+                for node in ast.walk(ast.parse(path.read_text()))
+                if isinstance(node, ast.Call)
+            }
+            if "InferenceSession" in called:
+                openers[path.relative_to(root).as_posix()] = (
+                    "silence_onnxruntime" in called
+                )
+    return openers
+
+
+def _called(func: ast.expr) -> str | None:
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return None
+
+
+@pytest.mark.spec_exempt(
+    "structural: every module that opens an ONNX session silences its telemetry"
+)
+def test_every_module_that_opens_an_onnx_session_silences_telemetry() -> None:
+    openers = session_openers(Path(__file__).resolve().parent.parent)
+
+    assert openers, "the scan found no module that opens an ONNX session"
+    assert [name for name, silenced in openers.items() if not silenced] == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of "
+    "test_every_module_that_opens_an_onnx_session_silences_telemetry"
+)
+def test_the_check_catches_a_module_that_opens_a_session_unsilenced(
+    tmp_path: Path,
+) -> None:
+    for name, text in {
+        "isekai/loud.py": "def f(ort):\n    ort.InferenceSession('m')\n",
+        "isekai/quiet.py": (
+            "def g(ort):\n    silence_onnxruntime()\n    ort.InferenceSession('m')\n"
+        ),
+        "evaluation/other.py": "def h():\n    return 1\n",
+    }.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    assert session_openers(tmp_path) == {
+        "isekai/loud.py": False,
+        "isekai/quiet.py": True,
+    }

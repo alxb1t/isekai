@@ -1,0 +1,49 @@
+{
+  "schema": {
+    "name": "edit",
+    "version": 1
+  },
+  "edit": "tattoo-wai",
+  "edit_digest": "fcf0c974352632061e46e97e534ee83b0ca6cb21a25e7ff01857c7682b719348",
+  "source": "42.png",
+  "source_sha256": "854c985a20e7b68bd637b4fc680f4e27462f3ab42713c40546798ab2756befc0",
+  "composite_sha256": "831b33c0b80a4addcb99fd741b6dc47472bb0716a5fba5925b80d90a6bfb3af7",
+  "seed": 5,
+  "dials": {
+    "denoise": 0.2,
+    "strength": 1.0,
+    "lines": 0.4,
+    "start_percent": 0.0,
+    "end_percent": 1.0,
+    "long_side": 1216,
+    "margin": 48,
+    "min_aspect": 0.5,
+    "max_upscale": 4,
+    "grow": 6,
+    "feather": 4,
+    "ink_threshold": 0.03,
+    "control_gain": 1.6,
+    "lit_floor": 8,
+    "rounding": 1,
+    "steps": 28,
+    "cfg": 5,
+    "sampler_name": "euler_ancestral",
+    "scheduler": "normal",
+    "clip_skip": -2
+  },
+  "overridden": [],
+  "crop": {
+    "box": [
+      0,
+      0,
+      304,
+      304
+    ],
+    "size": [
+      1216,
+      1216
+    ],
+    "widened": false,
+    "grown": true
+  }
+}

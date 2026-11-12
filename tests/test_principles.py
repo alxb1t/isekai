@@ -13,10 +13,14 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PRINCIPLES = REPO_ROOT / "docs" / "principles.md"
+PRINCIPLES_FILE = REPO_ROOT / "docs" / "principles.md"
+# The `### ` headings of the page when the guard was written; a parse below it
+# dropped one.
+PRINCIPLES = 17
 
 _NAMED = re.compile(r"`(tests/[\w/]+\.py)::(\w+)`")
 _HEADING = re.compile(r"^(#+ .*)$", re.M)
+_TOO_DEEP = re.compile(r"^#{4,} .*$", re.M)
 # A *Held by* bullet runs to the next top-level `- **` bullet, sub-bullets in.
 _HELD_BY = re.compile(r"^- \*\*Held by:\*\*.*?(?=^- \*\*|\Z)", re.M | re.S)
 
@@ -56,14 +60,31 @@ def without_one_held_by(text: str) -> list[str]:
     return [title for title, bullets in _principles(text).items() if len(bullets) != 1]
 
 
+def heading_faults(text: str, floor: int) -> list[str]:
+    """Return each heading deeper than `###`, and a shortfall of principles read.
+
+    e.g. a principle moved to `####` -> ["#### Rule", "<n> principles read, floor <f>"]
+    """
+    found = _TOO_DEEP.findall(text)
+    read = len(_principles(text))
+    if read < floor:
+        found.append(f"{read} principles read, floor {floor}")
+    return found
+
+
 @pytest.mark.spec_exempt("structural: every test a principle names exists")
 def test_every_test_a_principle_names_exists() -> None:
-    assert missing_tests(PRINCIPLES.read_text(), REPO_ROOT) == []
+    assert missing_tests(PRINCIPLES_FILE.read_text(), REPO_ROOT) == []
 
 
 @pytest.mark.spec_exempt("structural: every principle says once what holds it")
 def test_every_principle_has_one_held_by_line() -> None:
-    assert without_one_held_by(PRINCIPLES.read_text()) == []
+    assert without_one_held_by(PRINCIPLES_FILE.read_text()) == []
+
+
+@pytest.mark.spec_exempt("structural: every principle heading is one the parser reads")
+def test_every_principle_heading_is_one_the_parser_reads() -> None:
+    assert heading_faults(PRINCIPLES_FILE.read_text(), PRINCIPLES) == []
 
 
 @pytest.mark.spec_exempt("structural: twin of test_every_test_a_principle_names_exists")
@@ -91,3 +112,15 @@ def test_the_check_catches_a_principle_without_a_held_by_line() -> None:
     )
 
     assert without_one_held_by(text) == ["Unheld"]
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_principle_heading_is_one_the_parser_reads"
+)
+def test_the_check_catches_a_principle_under_a_deeper_heading() -> None:
+    held = "\n- **Held by:** review.\n\n"
+    whole = f"### A{held}### B{held}### C{held}### D{held}"
+    moved = f"### A{held}#### B{held}## C{held}### D{held}"
+
+    assert heading_faults(whole, 4) == []
+    assert heading_faults(moved, 4) == ["#### B", "2 principles read, floor 4"]

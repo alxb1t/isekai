@@ -646,7 +646,9 @@ def test_every_command_a_refusal_prints_is_one_this_build_accepts(
     assert defaulted == []
 
 
-@pytest.mark.spec_exempt("twin: the guard above catches a command naming no run")
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_command_a_refusal_prints_is_one_this_build_accepts"
+)
 def test_the_command_guard_catches_a_command_that_names_no_run() -> None:
     assert _unrunnable(
         ["x; run `python -m isekai review --flow summon-anime-wai` again"]

@@ -4,6 +4,7 @@ The shutdown harness stops the app's own uvicorn server in-process, over the
 suite's offline wiring. Endpoint contracts live in `tests/test_ui_api.py`.
 """
 
+import ast
 import asyncio
 import importlib.util
 import io
@@ -34,14 +35,43 @@ _CONFIGS = ("vite.config.ts", "tsconfig.json", "package.json", "package-lock.jso
 # --- the invariant that stands in for a structural guarantee ------------------
 
 
+_ARTIFACT_WRITERS = {
+    "isekai.foundation.artifacts": frozenset(
+        {"write_json", "write", "create", "replace"}
+    ),
+    "isekai.foundation.run": frozenset({"artifact_name"}),
+}
+SURFACE = Path(__file__).resolve().parent.parent / "isekai" / "interface" / "ui"
+
+
+def artifact_imports(surface: Path) -> tuple[list[str], int]:
+    """Return each artifact writer a module of `surface` imports, and the modules read.
+
+    The import is read whatever its alias.
+    e.g. `from isekai.foundation.artifacts import write as put` in `app.py`
+    -> (["app.py: write"], the modules read)
+    """
+    paths = sorted(surface.rglob("*.py"))
+    named = [
+        f"{path.name}: {alias.name}"
+        for path in paths
+        for node in ast.walk(ast.parse(path.read_text()))
+        if isinstance(node, ast.ImportFrom) and node.module in _ARTIFACT_WRITERS
+        for alias in node.names
+        if alias.name in _ARTIFACT_WRITERS[node.module]
+    ]
+    return named, len(paths)
+
+
 @pytest.mark.spec("ui:invariant:server-never-names-an-artifact")
 def test_the_invariant_holds_no_module_of_the_surface_names_an_artifact() -> None:
     """A tripwire, and deliberately not a proof.
 
-    `import artifact_name as name_it` walks straight past this, and a filename
-    built by hand in an f-string is invisible to it. A check that overstated
-    itself would be worse than none, so what it is worth is written down here
-    rather than inferred from the fact that it exists.
+    It reads each import, so an alias walks no further than the name does. A
+    filename built by hand in an f-string, or a writer reached as an attribute of
+    the module, is invisible to it. A check that overstated itself would be worse
+    than none, so what it is worth is written down here rather than inferred from
+    the fact that it exists.
 
     What it does buy is the one failure that matters: an approved artifact
     written around `approve()`'s `validate()` carries a tag outside the
@@ -49,19 +79,33 @@ def test_the_invariant_holds_no_module_of_the_surface_names_an_artifact() -> Non
     minutes and money later. The same claim held by habit alone would go false
     with nothing to say so.
     """
-    surface = Path(__file__).resolve().parent.parent / "isekai" / "interface" / "ui"
-    forbidden = ("artifact_name(", "write_json(", "write(")
+    named, read = artifact_imports(SURFACE)
 
-    named = {
-        f"{path.name}: {name}"
-        for path in sorted(surface.rglob("*.py"))
-        for name in forbidden
-        if name in path.read_text()
-    }
-
-    assert named == set(), (
+    assert read >= 5, "the scan read too few modules of the surface"
+    assert named == [], (
         "the surface passes field values to pipeline functions, and they own the "
         "file's shape and its name"
+    )
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of "
+    "test_the_invariant_holds_no_module_of_the_surface_names_an_artifact"
+)
+def test_the_check_catches_a_module_importing_an_artifact_writer(
+    tmp_path: Path,
+) -> None:
+    for name, text in {
+        "plain.py": "from isekai.foundation.artifacts import write_json\n",
+        "aliased.py": "from isekai.foundation.artifacts import write_json as put\n",
+        "named.py": "from isekai.foundation.run import artifact_name as name_it\n",
+        "reads.py": "from isekai.foundation.artifacts import read\n",
+    }.items():
+        (tmp_path / name).write_text(text)
+
+    assert artifact_imports(tmp_path) == (
+        ["aliased.py: write_json", "named.py: artifact_name", "plain.py: write_json"],
+        4,
     )
 
 
@@ -83,7 +127,10 @@ def test_bake_names_no_module_of_the_surface_spells_an_edits_file_stem() -> None
     )
 
 
-@pytest.mark.spec_exempt("structural: twin of the surface's edit-stem check")
+@pytest.mark.spec_exempt(
+    "structural: "
+    "twin of test_bake_names_no_module_of_the_surface_spells_an_edits_file_stem"
+)
 def test_bake_names_the_check_names_a_module_that_spells_the_stem(
     tmp_path: Path,
 ) -> None:

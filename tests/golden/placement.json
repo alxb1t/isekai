@@ -1,0 +1,56 @@
+{
+  "schema": {
+    "name": "placement",
+    "version": 1
+  },
+  "tattoo": "swallow",
+  "kind": "image",
+  "cut_from": null,
+  "mode": "two-stage",
+  "outline": {
+    "points": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        40.0,
+        0.0
+      ],
+      [
+        40.0,
+        40.0
+      ]
+    ],
+    "white": 1.0,
+    "neutral": false,
+    "depth": 1.0
+  },
+  "stage1": [
+    [
+      [
+        1.0,
+        2.0
+      ],
+      [
+        3.0,
+        4.0
+      ]
+    ]
+  ],
+  "pairs": [
+    [
+      [
+        5.0,
+        6.0
+      ],
+      [
+        7.0,
+        8.0
+      ]
+    ]
+  ],
+  "limb": null,
+  "exclusions": [],
+  "places_on": null
+}
