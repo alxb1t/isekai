@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- A tattoo is kept whole in the library's `.tattoos/<name>/`, never listed as a collection: an upload is made upright and
+  scaled to `long_side`, a cut holds no image and takes the newest cut's tone of its photograph, and an outline is saved
+  atomically within the bounds of `config/tattoo.json`; nothing deletes or renames one (0121 D1, D2, D3, D4).
+
 ## [0.79.0] - 2026-11-12
 
 Gate: local 0m37s · CI not read under mf-ship · 0.78.1: local 0m32s · CI not read under mf-ship

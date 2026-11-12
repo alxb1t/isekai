@@ -4,7 +4,7 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 
 ## Progress
 
-- [ ] 1 — Store · moderate
+- [x] 1 — Store · moderate
 - [ ] 2 — Chain · hard
 - [ ] 3 — Preview · moderate
 - [ ] 4 — Panel · hard
@@ -13,23 +13,23 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 
 ## 1 — Store
 
-- [ ] 1.1 **HALT CHECK** 0119's extraction is built: its tests carry `ink_extract`.
+- [x] 1.1 **HALT CHECK** 0119's extraction is built: its tests carry `ink_extract`.
   Verify: `uv run pytest tests/test_ink.py -k ink_extract` passes.
-- [ ] 1.2 **HALT CHECK** Pillow and numpy are declared, so the library and the chain add no dependency.
+- [x] 1.2 **HALT CHECK** Pillow and numpy are declared, so the library and the chain add no dependency.
   Verify: `git grep -n "Pillow==" pyproject.toml` prints the pin.
-- [ ] 1.3 Add `config/tattoo.json` (`long_side`, `outline_min`, `outline_max`, `view_quality`) and `isekai/pipeline/tattoos.py` with `TATTOOS`, `TATTOO_CONFIG`, `INK_CONFIG`, `check_name`, `listed`, `named` per [D1](design.md#d1); tests in `tests/test_tattoo_library.py` carry `tattoo_names`, and `tattoo_config` reads the keys of both configs.
+- [x] 1.3 Add `config/tattoo.json` (`long_side`, `outline_min`, `outline_max`, `view_quality`) and `isekai/pipeline/tattoos.py` with `TATTOOS`, `TATTOO_CONFIG`, `INK_CONFIG`, `check_name`, `listed`, `named` per [D1](design.md#d1); tests in `tests/test_tattoo_library.py` carry `tattoo_names`, and `tattoo_config` reads the keys of both configs.
   Verify: `uv run pytest tests/test_tattoo_library.py -k "tattoo_names or tattoo_config"` passes.
-- [ ] 1.4 Extend `tattoos.py` with `save_outline`, `read_outline` and the defaults of a kind per [D4](design.md#d4): the bounds, the atomic write; tests carry `tattoo_outline`.
+- [x] 1.4 Extend `tattoos.py` with `save_outline`, `read_outline` and the defaults of a kind per [D4](design.md#d4): the bounds, the atomic write; tests carry `tattoo_outline`.
   Verify: `uv run pytest tests/test_tattoo_library.py -k tattoo_outline` passes.
-- [ ] 1.5 Extend `tattoos.py` with `keep(library, name, body)` and `design_bytes` per [D2](design.md#d2): upright, scaled to `long_side`, `design.png`, `tattoo.json` and the default outline written atomically, Pillow imported inside; tests carry `tattoo_keep`.
+- [x] 1.5 Extend `tattoos.py` with `keep(library, name, body)` and `design_bytes` per [D2](design.md#d2): upright, scaled to `long_side`, `design.png`, `tattoo.json` and the default outline written atomically, Pillow imported inside; tests carry `tattoo_keep`.
   Verify: `uv run pytest tests/test_tattoo_library.py -k tattoo_keep` passes.
-- [ ] 1.6 Extend `tattoos.py` with `cut(library, name, digest, size)` per [D3](design.md#d3), the neutral, depth and white scale from the newest cut of that digest, a tie to the later name; tests carry `tattoo_cut`.
+- [x] 1.6 Extend `tattoos.py` with `cut(library, name, digest, size)` per [D3](design.md#d3), the neutral, depth and white scale from the newest cut of that digest, a tie to the later name; tests carry `tattoo_cut`.
   Verify: `uv run pytest tests/test_tattoo_library.py -k tattoo_cut` passes.
-- [ ] 1.7 Add `tattoos.TATTOO_CONFIG` to `ANCHORS` of `tests/test_package_paths.py` as `pytest.param(tattoos.TATTOO_CONFIG, ("config", "tattoo.json"), id="tattoos.TATTOO_CONFIG")`, importing `tattoos` from `isekai.pipeline`.
+- [x] 1.7 Add `tattoos.TATTOO_CONFIG` to `ANCHORS` of `tests/test_package_paths.py` as `pytest.param(tattoos.TATTOO_CONFIG, ("config", "tattoo.json"), id="tattoos.TATTOO_CONFIG")`, importing `tattoos` from `isekai.pipeline`.
   Verify: `uv run pytest tests/test_package_paths.py -k TATTOO_CONFIG` passes.
-- [ ] 1.8 Add to `tests/test_ui_library.py` a test carrying `tattoo_listing`: a library holding `.tattoos/<name>/` lists no collection from it.
+- [x] 1.8 Add to `tests/test_ui_library.py` a test carrying `tattoo_listing`: a library holding `.tattoos/<name>/` lists no collection from it.
   Verify: `uv run pytest tests/test_ui_library.py -k tattoo_listing` passes.
-- [ ] 1.9 Hold that the entry point's import graph reaches no wheel and the layers hold.
+- [x] 1.9 Hold that the entry point's import graph reaches no wheel and the layers hold.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_layers.py` passes.
 
 ## 2 — Chain
