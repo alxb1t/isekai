@@ -60,6 +60,10 @@ _NAME_BYTES = 255
 # A time that sorts as text, to the microsecond.
 _TIME = "%Y-%m-%dT%H:%M:%S.%fZ"
 
+# The most a white scale may be: the page's top grey, 255, over the least automatic
+# grey, 1; a larger scale overflows the float32 skin it multiplies and draws solid ink.
+_WHITE_SCALE_MAX = 255.0
+
 _DIGEST = re.compile(f"[0-9a-f]{{{ID_DIGEST_CHARS}}}")
 
 Kind = Literal["image", "cut"]
@@ -299,7 +303,7 @@ def _every(library: Path) -> list[tuple[Tattoo, Outline]]:
 
 
 def listed(library: Path) -> list[Tattoo]:
-    """Return each kept tattoo, in the order kept, the later name first on a tie."""
+    """Return each kept tattoo, in the order kept, the later name last on a tie."""
     return [tattoo for tattoo, _ in _every(library)]
 
 
@@ -332,7 +336,11 @@ def _number(value: object) -> float | None:
     """Return `value` as a finite float, or None when it is no such number."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         return None
-    return float(value) if math.isfinite(value) else None
+    try:
+        number = float(value)
+    except OverflowError:
+        return None
+    return number if math.isfinite(number) else None
 
 
 def _pair(point: object) -> Point | None:
@@ -388,7 +396,7 @@ def save_outline(
 
     Refused, naming the value, for a point outside the image, more points than the
     ceiling, a closed outline under the floor, a depth outside the ink config's range
-    and a white scale of zero or less; the file is then as it was.
+    and a white scale of zero or less or past 255; the file is then as it was.
     """
     tattoo, _ = _load_named(library, name)
     config = load_tattoo_config()
@@ -410,9 +418,10 @@ def save_outline(
 def _checked_tone(white: object, depth: object, ink: InkConfig) -> tuple[float, float]:
     """Return the white scale and the depth as numbers in range, or refuse the value."""
     scale = _number(white)
-    if scale is None or scale <= 0:
+    if scale is None or not 0 < scale <= _WHITE_SCALE_MAX:
         raise Refusal(
-            f"white scale {white!r} must be above zero; 1 is the automatic white point"
+            f"white scale {white!r} must be above zero and at most "
+            f"{_WHITE_SCALE_MAX:g}; 1 is the automatic white point"
         )
     tone = _number(depth)
     if tone is None or not ink.depth_min <= tone <= ink.depth_max:
@@ -602,8 +611,8 @@ def _view_image(
             )
         if tattoo.cut_from != digest:
             raise Refusal(
-                f"{tattoo.name} is cut from another photograph than this render's; "
-                "open it on a render of its own photograph"
+                f"{tattoo.name} is cut from photograph {tattoo.cut_from}, not this "
+                "render's; open it on a render of that photograph"
             )
         try:
             body = photograph.read_bytes()

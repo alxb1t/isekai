@@ -544,7 +544,7 @@ def test_ink_preview_route_refuses_a_cut_asked_on_another_photograph(
 
     assert other.digest != run.digest
     assert answered.status_code == 409
-    assert "cut from another photograph" in answered.json()["refusal"]
+    assert f"cut from photograph {run.digest}" in answered.json()["refusal"]
 
 
 @pytest.mark.spec("tattoo:ink-view:a-request-from-another-site-is-refused")

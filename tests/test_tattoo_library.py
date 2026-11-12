@@ -363,6 +363,7 @@ def test_tattoo_outline_the_image_edge_is_inside_and_a_cut_is_bounded_by_its_pho
         [[True, 2]],
         [[math.nan, 2]],
         [[math.inf, 2]],
+        [[10**400, 2]],
         [None],
     ],
 )
@@ -435,6 +436,10 @@ def test_tattoo_outline_the_bounds_are_held(tmp_path: Path) -> None:
         (math.inf, False, 1.0, "white scale inf"),
         (math.nan, False, 1.0, "white scale nan"),
         (True, False, 1.0, "white scale"),
+        (255.5, False, 1.0, "white scale 255.5 .* at most 255"),
+        (1e300, False, 1.0, "white scale 1e\\+300 .* at most 255"),
+        (10**400, False, 1.0, "white scale 1000"),
+        (1.0, False, 10**400, "depth 1000"),
         (1.0, "yes", 1.0, "neutral"),
         (1.0, False, "deep", "depth"),
     ],
@@ -462,6 +467,7 @@ def test_tattoo_outline_the_depth_bounds_themselves_are_kept(tmp_path: Path) -> 
         assert (
             save_outline(tmp_path, "bow", [], False, 0.001, True, depth).depth == depth
         )
+    assert save_outline(tmp_path, "bow", [], False, 255, True, 1.0).white == 255.0
 
 
 @pytest.mark.spec_exempt("structural: saving an outline to no tattoo is refused")
@@ -721,7 +727,9 @@ def test_ink_view_refuses_a_cut_asked_on_another_digest(tmp_path: Path) -> None:
     photograph = tmp_path / "photo.png"
     points = _outlined_cut(tmp_path, photograph)
 
-    with pytest.raises(Refusal, match="cut from another photograph"):
+    with pytest.raises(
+        Refusal, match=f"cut from photograph {DIGEST}, not this render's"
+    ):
         tattoos.ink_view(
             tmp_path, "arm", photograph, OTHER_DIGEST, points, 1.0, True, 1.6
         )
