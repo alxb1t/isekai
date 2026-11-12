@@ -127,8 +127,9 @@ The estimator sees the person and little else, so a crowded image gives one pers
 ### Requirement: A silhouette is segmented once an image and prompted once a bone
 
 The system SHALL embed each image once, scaled to the segmenter's square input and normalised, and SHALL prompt the
-embedding once for each bone with positive and negative points in the input's pixels, answering a mask at the image's
-size. It SHALL give the decoder every input it declares, and refuse, naming it, an input it has no value for.
+embedding once for each bone with positive and negative points in the input's pixels, answering as the mask the
+candidate the decoder scores highest, its logits resized to the image's size and taken above 0. It SHALL give the
+decoder every input it declares, and refuse, naming it, an input it has no value for.
 
 The encoder costs seconds and the decoder milliseconds, so a bone's prompt is cheap and an image's embedding is not
 repeated.
@@ -145,6 +146,13 @@ repeated.
 - **WHEN** a bone is prompted with three positive points and two negative points
 - **THEN** the decoder's coordinates are the five points scaled to the input
 - **AND** the first three are labelled 1 and the others 0
+
+#### Scenario: the mask is the candidate scored highest, at the image's size
+- **Key:** `placement-proposal:segment:the-mask-is-the-candidate-scored-highest`
+- **Layers:** unit
+- **WHEN** the decoder answers three candidate masks at its low resolution and scores the second highest
+- **THEN** the mask is the second candidate's logits above 0
+- **AND** it has the image's size
 
 #### Scenario: the image is scaled and normalised for the encoder
 - **Key:** `placement-proposal:segment:the-image-is-scaled-and-normalised-for-the-encoder`

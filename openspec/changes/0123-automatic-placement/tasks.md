@@ -85,10 +85,10 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 ## 4 — Segment
 
-- [ ] 4.1 **HALT CHECK** The encoder answers the names [D7](design.md#d7) expects.
+- [x] 4.1 **HALT CHECK** The encoder answers the names [D7](design.md#d7) expects.
   Verify: `uv run python -c "import onnxruntime; print([o.name for o in onnxruntime.InferenceSession('models/sam2/encoder.onnx').get_outputs()])"` prints a list holding `image_embed`, `high_res_feats_0` and `high_res_feats_1`.
-- [ ] 4.2 **HALT CHECK** The decoder takes and answers the names [D7](design.md#d7) expects.
-  Verify: `uv run python -c "import onnxruntime; s = onnxruntime.InferenceSession('models/sam2/decoder.onnx'); print([i.name for i in s.get_inputs()], [o.name for o in s.get_outputs()])"` prints the inputs `image_embed`, `high_res_feats_0`, `high_res_feats_1`, `point_coords`, `point_labels`, `mask_input` and `has_mask_input`, and the output `masks`.
+- [x] 4.2 **HALT CHECK** The decoder takes and answers the names [D7](design.md#d7) expects.
+  Verify: `uv run python -c "import onnxruntime; s = onnxruntime.InferenceSession('models/sam2/decoder.onnx'); print([i.name for i in s.get_inputs()], [o.name for o in s.get_outputs()])"` prints the inputs `image_embed`, `high_res_feats_0`, `high_res_feats_1`, `point_coords`, `point_labels`, `mask_input` and `has_mask_input`, and the outputs `masks` and `iou_predictions`.
 - [ ] 4.3 Add `isekai/boundary/sam2.py` with `prepare(image)` per [D7](design.md#d7): the image resized bilinear to the encoder's square, normalised by the ImageNet mean and deviation,
   channels first, numpy and Pillow imported inside; tests in `tests/test_sam2.py` carry `sam_prepare`.
   Verify: `uv run pytest tests/test_sam2.py -k sam_prepare` passes.
@@ -96,8 +96,9 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
   tests over a recording session carry `sam_embed`.
   Verify: `uv run pytest tests/test_sam2.py -k sam_embed` passes.
 - [ ] 4.5 Add to `sam2.py` `Embedding.mask(positive, negative)` per [D7](design.md#d7): the points scaled to the input and labelled 1 and 0, every input the decoder declares given
-  from the table of known names, one without a value refused by name, the mask the logits above 0 at the image's size; tests carry `sam_prompt` and `sam_inputs`.
-  Verify: `uv run pytest tests/test_sam2.py -k "sam_prompt or sam_inputs"` passes.
+  from the table of known names, `mask_input` zeros and `has_mask_input` 0, one without a value refused by name; the mask the candidate `iou_predictions` scores highest, its logits
+  resized bilinear to the image's size and taken above 0; tests over a recording session whose `masks` is `[1, 3, 256, 256]` carry `sam_prompt`, `sam_inputs` and `sam_choice`.
+  Verify: `uv run pytest tests/test_sam2.py -k "sam_prompt or sam_inputs or sam_choice"` passes.
 - [ ] 4.6 Add to `sam2.py` `open_segmenter(models_dir)` per [D2](design.md#d2): the encoder and decoder through `unpack.resolve_member`, each session on the CPU provider alone, an absent file
   refused naming `PLACEMENT_REMEDY`; tests carry `sam_open`.
   Verify: `uv run pytest tests/test_sam2.py -k sam_open` passes.

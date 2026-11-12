@@ -94,8 +94,10 @@ The build runs stacked on 0122's, which runs on the core's and the tattoo edit's
 ### D7
 
 - The encoder takes the image resized to 1024 by 1024, bilinear, normalised by the ImageNet mean and deviation, channels first. `embed(image)` runs it once and returns an `Embedding` holding the features and the image's size.
-- `Embedding.mask(positive, negative)` scales the points to the input, labels them 1 and 0, and runs the decoder. The decoder is given every input it declares from a table of known names and refuses, naming it, one the table lacks. The mask is the logit map above 0, at the image's size.
-- The expected names are samexporter's: the encoder answers `image_embed`, `high_res_feats_0` and `high_res_feats_1`; the decoder takes them with `point_coords`, `point_labels`, `mask_input` and `has_mask_input`, and answers `masks`. Phase 4's first task checks them against the unpacked files.
+- `Embedding.mask(positive, negative)` scales the points to the input, labels them 1 and 0, and runs the decoder. The decoder is given every input it declares from a table of known names and refuses, naming it, one the table lacks. `mask_input` is zeros and `has_mask_input` is 0: no earlier mask is given.
+- The decoder answers three candidate masks as logits at 256 by 256, `masks` `[1, 3, 256, 256]`, and a predicted overlap for each, `iou_predictions` `[1, 3]`. The mask is the candidate with the highest predicted overlap, its logits resized bilinear to the image's size as a Pillow float image, then taken above 0. The resize is on the logits, never on the thresholded mask, as the prototype's post-processing resized them.
+- The prototype took SAM's single-mask answer, which this export does not give; the candidate scored highest is the one SAM 2 itself falls back to when that answer is unstable.
+- The expected names are samexporter's: the encoder answers `image_embed`, `high_res_feats_0` and `high_res_feats_1`; the decoder takes them with `point_coords`, `point_labels`, `mask_input` and `has_mask_input`, and answers `masks` and `iou_predictions`. Phase 4's first task checks them against the unpacked files.
 
 ### D8
 
