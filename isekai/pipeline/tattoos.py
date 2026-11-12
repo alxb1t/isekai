@@ -912,8 +912,8 @@ def _preview_pairs(pairs: object, floor: int) -> tuple[Pair, ...]:
     return checked
 
 
-def _region(points: object, label: str) -> tuple[Point, ...]:
-    """Return a region's points, refusing what is no list of finite [x, y] points."""
+def _region(points: object, label: str, floor: int) -> tuple[Point, ...]:
+    """Return a region's points, refusing a bad point and fewer than `floor`."""
     if not isinstance(points, list | tuple):
         raise Refusal(f"the {label} is a list of [x, y] points; send that list")
     found: list[Point] = []
@@ -925,6 +925,11 @@ def _region(points: object, label: str) -> tuple[Point, ...]:
                 "x and y"
             )
         found.append(pair)
+    if len(found) < floor:
+        raise Refusal(
+            f"the {label} holds {len(found)} points and a region needs at least "
+            f"{floor}; draw more points or remove it"
+        )
     return tuple(found)
 
 
@@ -944,9 +949,9 @@ def preview(
     `target` is `photo` for stage 1 and `render` for every other stage; `pairs` are
     the stage's, `a` the earlier image's point and `b` the target's. The crop is the
     box of the target-side points and the limb, grown by the preview margin. Refused
-    for fewer pairs than the preview floor, a lone point, a second stage whose first
-    is short of its floor, a cut on another photograph and an open outline. Nothing
-    is written.
+    for fewer pairs than the preview floor, a lone point, a limb or an exclusion with
+    fewer points than the region floor, a second stage whose first is short of its
+    floor, a cut on another photograph and an open outline. Nothing is written.
     """
     import numpy as np
     from PIL import Image
@@ -968,9 +973,10 @@ def preview(
             "photograph; ask it with the target `render`"
         )
     placed = _preview_pairs(pairs, config.preview_floor)
-    shape = _region(limb, "limb") if limb else None
+    shape = _region(limb, "limb", config.region_min) if limb else None
     holes = [
-        _region(one, f"exclusion {n}") for n, one in enumerate(_listed(exclusions), 1)
+        _region(one, f"exclusion {n}", config.region_min)
+        for n, one in enumerate(_listed(exclusions), 1)
     ]
     if (
         mode == "two-stage"

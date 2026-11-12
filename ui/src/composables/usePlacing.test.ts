@@ -1,6 +1,8 @@
 import { expect } from 'vitest'
 import { type Named, type Ports, usePlacing } from './usePlacing'
+import { begun, closed, drawn, none as outlinesNone, regions } from '../outlines'
 import { clicked, complete, held, none } from '../pairs'
+import { drafted } from '../polygon'
 import { spec } from '../test/spec'
 import type { Pair, Point, Stage1 } from '../types'
 
@@ -50,15 +52,19 @@ spec('ui:pairs:the-pairs-stay-across-steps', async () => {
   // Pairs placed on the later stage, then the screen moves on and back: the same name is
   // not read again, so what the steps held stands.
   placing.editSecond(click(click(none, 'a', [30, 40]), 'b', [300, 400]))
+  const ring: Point[] = [[10, 10], [200, 10], [200, 200]]
+  placing.editOutlines(closed(drawn(begun(outlinesNone, 'limb'), drafted(ring, true))))
   await placing.load('bow')
   await placing.load('bow')
 
   expect(reads).toEqual(['bow'])
   expect(complete(placing.second.value)).toEqual([[[30, 40], [300, 400]]])
   expect(complete(placing.first.value)).toEqual(pairs(6))
+  expect(regions(placing.outlines.value).limb).toEqual(ring)
   // Another tattoo starts clean.
   await placing.load('arm')
   expect(placing.second.value).toBe(none)
+  expect(placing.outlines.value).toBe(outlinesNone)
 
   // A tattoo the library refuses is shown as its refusal, and none is held.
   const refusing = usePlacing(PLACE, {

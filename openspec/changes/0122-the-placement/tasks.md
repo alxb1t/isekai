@@ -5,7 +5,7 @@ The phases: the stages with the preview, the limb and exclusions, the bake, the 
 ## Progress
 
 - [x] 1 — Stages · hard
-- [ ] 2 — Limb and exclusions · moderate
+- [x] 2 — Limb and exclusions · moderate
 - [ ] 3 — Bake · hard
 - [ ] 4 — Leave · moderate
 - [ ] 5 — Docs · moderate
@@ -59,23 +59,23 @@ The phases: the stages with the preview, the limb and exclusions, the bake, the 
 
 ## 2 — Limb and exclusions
 
-- [ ] 2.1 Declare `--limb-fill` and `--exclusion-fill` per [D10](design.md#d10) in the Nocturne block of `ui/src/styles.css`, `:root, [data-theme="nocturne"]`, and in each Catppuccin block of `ui/src/themes.css`.
+- [x] 2.1 Declare `--limb-fill` and `--exclusion-fill` per [D10](design.md#d10) in the Nocturne block of `ui/src/styles.css`, `:root, [data-theme="nocturne"]`, and in each Catppuccin block of `ui/src/themes.css`.
   Verify: `git grep -c -e "--limb-fill" -e "--exclusion-fill" -- ui/src/styles.css ui/src/themes.css` prints `ui/src/styles.css:2` and `ui/src/themes.css:8`.
-- [ ] 2.2 Hold that each theme sets every token Nocturne does.
+- [x] 2.2 Hold that each theme sets every token Nocturne does.
   Verify: `npm --prefix ui run test -- src/themes.test.ts` passes.
-- [ ] 2.3 Make `preview` in `tattoos.py` refuse a limb or an exclusion with fewer points than `region_min`, naming the region; tests carry `placement_region`.
+- [x] 2.3 Make `preview` in `tattoos.py` refuse a limb or an exclusion with fewer points than `region_min`, naming the region; tests carry `placement_region`.
   Verify: `uv run pytest tests/test_tattoo_placement.py -k placement_region` passes.
-- [ ] 2.4 Add `ui/src/outlines.ts` per [D8](design.md#d8): `begun`, `closed`, `rows` and `held` over `polygon.ts`, the floor read from the list's limits; its tests in `ui/src/outlines.test.ts` bind through `spec`.
+- [x] 2.4 Add `ui/src/outlines.ts` per [D8](design.md#d8): `begun`, `closed`, `rows` and `held` over `polygon.ts`, the floor read from the list's limits; its tests in `ui/src/outlines.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/outlines.test.ts` passes.
-- [ ] 2.5 Draw the limb and the exclusions in `PairPanel.vue` from `--limb-fill`, `--exclusion-fill` and `--accent-ink`, the open outline's dashed segment included.
+- [x] 2.5 Draw the limb and the exclusions in `PairPanel.vue` from `--limb-fill`, `--exclusion-fill` and `--accent-ink`, the open outline's dashed segment included.
   Verify: `git grep -n -e "--limb-fill" -e "--exclusion-fill" -- ui/src/components` prints the uses.
-- [ ] 2.6 Add to `StageRender.vue` the outlines' rows with *Draw limb*, *Draw exclusion* and *Edit*, the pair editor held while an outline is drawn, and the limb and exclusions sent with each preview.
+- [x] 2.6 Add to `StageRender.vue` the outlines' rows with *Draw limb*, *Draw exclusion* and *Edit*, the pair editor held while an outline is drawn, and the limb and exclusions sent with each preview.
   Verify: `git grep -n "Draw exclusion" -- ui/src/components` prints the label.
-- [ ] 2.7 Make `usePlacing.ts` hold the limb and the exclusions beside the pairs, and extend `ui/src/composables/usePlacing.test.ts` with a test that they stay across steps.
+- [x] 2.7 Make `usePlacing.ts` hold the limb and the exclusions beside the pairs, and extend `ui/src/composables/usePlacing.test.ts` with a test that they stay across steps.
   Verify: `npm --prefix ui run test -- src/composables/usePlacing.test.ts` passes.
-- [ ] 2.8 Hold the browser's types.
+- [x] 2.8 Hold the browser's types.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.9 Hold the browser's unit tests.
+- [x] 2.9 Hold the browser's unit tests.
   Verify: `uv run python -m tools.test_ui` exits 0.
 
 ## 3 — Bake

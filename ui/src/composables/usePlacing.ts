@@ -1,12 +1,14 @@
 import { type InjectionKey, computed, ref, shallowRef } from 'vue'
 import { type Place, saveStageOne, stageOne, tattooNamed } from '../api'
+import { type Outlines, none as noOutlines } from '../outlines'
 import { type Pairs, complete, held, none } from '../pairs'
 import { modeOf } from '../stages'
 import type { Outline, Pair, Stage1, Tattoo } from '../types'
 
 /* What the placement screen holds across its steps: the tattoo, the stage-1 pairs read for
-   this photograph, the stage-1 pairs held, and the pairs of stage 2 or the direct stage.
-   Stage 1 is saved as it changes; the later stage is held until a bake. `Place.vue` creates
+   this photograph, the stage-1 pairs held, the pairs of stage 2 or the direct stage, and the
+   limb and the exclusions. Stage 1 is saved as it changes; the later stage and the outlines
+   are held until a bake. `Place.vue` creates
    it and provides it, so a step change keeps what it holds. */
 
 export type Named = Tattoo & { outline: Outline }
@@ -32,6 +34,7 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
   const first = shallowRef<Pairs>(none)
   const notOnPhoto = ref(false)
   const second = shallowRef<Pairs>(none)
+  const outlines = shallowRef<Outlines>(noOutlines)
   const status = ref('')
   const refusal = ref<string | null>(null)
 
@@ -52,6 +55,7 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
         first.value = held(stage.pairs)
         notOnPhoto.value = stage.not_on_photo
         second.value = none
+        outlines.value = noOutlines
         refusal.value = null
       } catch (reason) {
         refusal.value = (reason as Error).message
@@ -112,6 +116,11 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
     second.value = next
   }
 
+  /** Hold the limb and the exclusions `next` until the bake. */
+  function editOutlines(next: Outlines): void {
+    outlines.value = next
+  }
+
   /** Choose or clear *not on this photo*, which keeps the stage-1 pairs; a cut has none. */
   function setNotOnPhoto(flag: boolean): void {
     if (tattoo.value === null || tattoo.value.kind === 'cut' || flag === notOnPhoto.value) return
@@ -137,6 +146,7 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
     first,
     notOnPhoto,
     second,
+    outlines,
     mode,
     status,
     refusal,
@@ -144,6 +154,7 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
     reload,
     editFirst,
     editSecond,
+    editOutlines,
     setNotOnPhoto,
     forget,
     settled,

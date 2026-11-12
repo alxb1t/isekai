@@ -444,6 +444,27 @@ def test_placement_preview_too_few_pairs_and_a_lone_point_are_refused(
         _ask(tmp_path, files, "photo", pairs)
 
 
+@pytest.mark.spec(
+    "tattoo:placement-preview:too-few-pairs-a-lone-point-and-a-short-region-are-refused"
+)
+def test_placement_region_a_short_limb_or_exclusion_is_refused_naming_it(
+    tmp_path: Path,
+) -> None:
+    files = _two_stage(tmp_path)
+    floor = load_tattoo_config().region_min
+    short = [[10, 10], [20, 10]]
+    whole = [[10, 10], [60, 10], [60, 60]]
+    pairs = _pairs(3, ONTO_PHOTO)
+
+    with pytest.raises(Refusal, match=rf"limb .*2 points.* at least {floor}"):
+        _ask(tmp_path, files, "photo", pairs, limb=short)
+    with pytest.raises(Refusal, match=rf"exclusion 2 .*2 points.* at least {floor}"):
+        _ask(tmp_path, files, "photo", pairs, exclusions=[whole, short])
+
+    made = _ask(tmp_path, files, "photo", pairs, limb=whole, exclusions=[whole])
+    assert made.jpeg
+
+
 @pytest.mark.spec("tattoo:placement-preview:a-cut-on-another-photograph-is-refused")
 def test_placement_preview_a_cut_on_another_photograph_is_refused_naming_its_own(
     tmp_path: Path,

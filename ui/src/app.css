@@ -2810,6 +2810,30 @@ dialog::backdrop {
   mix-blend-mode: multiply;
 }
 
+.pair__shape {
+  stroke-width: 1.5;
+}
+
+.pair__shape--exclusion {
+  stroke-dasharray: 6 3;
+}
+
+.pair__shape-line {
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.pair__shape-waiting {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.pair__vertex {
+  fill: var(--accent-ink);
+  stroke: var(--point-ring);
+  stroke-width: 1.5;
+}
+
 .pair__point {
   fill: var(--accent-ink);
   stroke: var(--point-ring);
@@ -2891,6 +2915,27 @@ dialog::backdrop {
   margin: 0;
   font-size: 11px;
   color: var(--ink-2);
+}
+
+.outlinelist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outlinelist__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.outlinelist__text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--ink);
 }
 
 .picker__item {

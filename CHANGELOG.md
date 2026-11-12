@@ -10,10 +10,11 @@ its new digest.
 
 ## [Unreleased]
 
-- The placement screen has its stages: a tattoo's stage-1 pairs with a photograph are kept as sent under
-  `.tattoos/<name>/stage1/`, one `POST` answers a `no-store` JPEG of the warped ink on a crop of the photograph or the
-  render, and the pairs are clicked on two images, with the preview, the steps of the tattoo's mode and the picker's
-  *ready for this photograph* and *not on this photo* (0122 D1–D4, D7–D10).
+- The placement screen has its stages: stage-1 pairs kept per photograph, a `no-store` JPEG preview of the warped ink
+  on a crop, pairs clicked on two images, and the picker's *ready for this photograph* and *not on this photo*
+  (0122 D1–D4, D7–D10).
+- The render stage draws a limb that keeps the ink and exclusions that remove it, a colour token in each theme, and the
+  preview refuses a region short of `region_min` points (0122 D2, D8, D10).
 
 ## [0.81.0] - 2026-11-12
 
