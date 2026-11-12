@@ -12,6 +12,8 @@ writes into ([D17](../../docs/decisions.md#d17--input-above-flow-below)).
 `importing.py` is `import`: it fills a collection's `sources/` and comes before every run. `edit.py` is `edit`: it
 works on a finished render after `generate`, and writes its files beside the render's own
 ([D51](../../docs/decisions.md#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)).
+`tattoos.py` is no verb: it keeps the library's tattoos and makes the app's ink view, and imports no stage
+([D52](../../docs/decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)).
 `review.py` holds `review`, `approve` and the revision and draft writers serving `draft`;
 `tagging.py` is `tag`: its two functions write
 the two tag lists, each refusal collected on its own. `caption` and `tag` are
@@ -29,6 +31,7 @@ independent, and neither reads the other's output
 | `review.py` | ③ copies a sheet somewhere a human may correct it, then approves it | a human — the largest measured gain in the pipeline |
 | `generate.py` | ④ assembles every prompt locally, then renders each against an endpoint, and discards one render | free, then **money** |
 | `edit.py` | `edit`: requests an edit from a render and its composite and lists the pending ones, then samples a pending one over the transport and stitches it; discards an edit. It takes its transport helpers from `boundary/comfy/prompt.py` and its maths from `shared/tattoo.py`, and imports no stage | free to request and check, then **money** to sample |
+| `tattoos.py` | the library's `.tattoos/<name>/`: keeps an upload upright and bounded, cuts a tattoo from a photograph, saves and reads an outline with its tone, and makes the ink view on the outline's crop. It takes bytes and paths, takes its maths from `shared/chain.py`, `shared/ink.py` and `shared/tattoo.py`, and imports no stage; Pillow is imported inside its functions | free |
 
 ## Imported by
 
@@ -43,6 +46,7 @@ at least once; a list of names cannot.
 | `sheet.py` | `interface/cli.py`, `interface/drafting.py`, `interface/run_view.py`, `interface/ui/app.py` | `tests/stages.py`, `tests/test_run_view.py`, `tests/test_sheet_stage.py` |
 | `review.py` | `interface/cli.py`, `interface/drafting.py`, `interface/render.py`, `interface/ui/app.py`, `interface/ui/library.py` | `tests/e2e/conftest.py`, `tests/e2e/test_review.py`, `tests/test_artifact_bytes.py`, `tests/test_generate.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_ui_jobs.py`, `tests/test_ui_library.py` |
 | `edit.py` | `interface/cli.py`, `interface/render.py` | `tests/test_edit.py`, `tests/test_edit_session.py` |
+| `tattoos.py` | `interface/ui/app.py` | `tests/test_package_paths.py`, `tests/test_tattoo_library.py`, `tests/test_ui_library.py`, `tests/test_ui_tattoo.py` |
 | `generate.py` | `interface/cli.py`, `interface/compare_view.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/library.py` | `tests/e2e/conftest.py`, `tests/test_artifact_bytes.py`, `tests/test_generate.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_ui_api.py` |
 
 > Files and importers only. What a component *is* is

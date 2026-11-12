@@ -22,6 +22,8 @@ its new digest.
 - A render's large view offers *Place a tattoo*, a button and `⇧P`, opening the placement screen's route `…/place/<step>`:
   the picker and the outline step, kept mounted across steps, with no key of their own (0121 D9). `/api/tattoos` also
   carries each kind's start depth, for *Reset*.
+- The docs say what holds: D52 keeps the library, D43 and D40 name a tattoo and `.tattoos/`, the design spec has the
+  route, `⇧P` and journey J9, and `docs/edit-tattoo.md` has an app section (0121 D12).
 
 ## [0.79.0] - 2026-11-12
 

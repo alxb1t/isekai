@@ -9,7 +9,7 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 - [x] 3 — Preview · moderate
 - [x] 4 — Panel · hard
 - [x] 5 — Screens · moderate
-- [ ] 6 — Docs · moderate
+- [x] 6 — Docs · moderate
 
 ## 1 — Store
 
@@ -110,19 +110,19 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 
 ## 6 — Docs
 
-- [ ] 6.1 Add `### D52` to `docs/decisions.md` after D51 per [D12](design.md#d12): the tattoo library is library-wide, `.tattoos/<name>/`, its files, the cut, no deleting, the photograph never leaving the machine.
+- [x] 6.1 Add `### D52` to `docs/decisions.md` after D51 per [D12](design.md#d12): the tattoo library is library-wide, `.tattoos/<name>/`, its files, the cut, no deleting, the photograph never leaving the machine.
   Verify: `git grep -n "### D52" docs/decisions.md` prints its heading.
-- [ ] 6.2 Amend D43 in `docs/decisions.md` by one sentence: a tattoo is cleaned as a source is, and bounded.
+- [x] 6.2 Amend D43 in `docs/decisions.md` by one sentence: a tattoo is cleaned as a source is, and bounded.
   Verify: `git grep -n "cleaned as a source is" docs/decisions.md` prints the sentence.
-- [ ] 6.3 Amend D40 in `docs/decisions.md` by one sentence: `.tattoos/` is a dot-folder of the library, never a collection.
+- [x] 6.3 Amend D40 in `docs/decisions.md` by one sentence: `.tattoos/` is a dot-folder of the library, never a collection.
   Verify: `git grep -n "never a collection" docs/decisions.md` prints the sentence.
-- [ ] 6.4 In `ui/design/spec.md` add to §4's table the row for `…/<seed>/place/<step>`, the placement screen, opening over it nothing.
+- [x] 6.4 In `ui/design/spec.md` add to §4's table the row for `…/<seed>/place/<step>`, the placement screen, opening over it nothing.
   Verify: `git grep -n "/place/<step>" ui/design/spec.md` prints the row.
-- [ ] 6.5 In `ui/design/spec.md` add `⇧P` *Place a tattoo* to §7's large-view row, and a row `**the placement core**` to §10's table.
+- [x] 6.5 In `ui/design/spec.md` add `⇧P` *Place a tattoo* to §7's large-view row, and a row `**the placement core**` to §10's table.
   Verify: `git grep -n "the placement core" ui/design/spec.md` prints the row.
-- [ ] 6.6 In `ui/design/spec.md` add the journey `### J9 · Place a tattoo` after J8: the picker and the outline step as built, in the spec's own style, state and refusals only.
+- [x] 6.6 In `ui/design/spec.md` add the journey `### J9 · Place a tattoo` after J8: the picker and the outline step as built, in the spec's own style, state and refusals only.
   Verify: `git grep -n "### J9" ui/design/spec.md` prints its heading.
-- [ ] 6.7 Add to `docs/edit-tattoo.md` the section `## The app`: `⇧P` on a render, the library, the cut, the outline and the ink view, and that the stages come later; no path of the operator's notebook.
+- [x] 6.7 Add to `docs/edit-tattoo.md` the section `## The app`: `⇧P` on a render, the library, the cut, the outline and the ink view, and that the stages come later; no path of the operator's notebook.
   Verify: `git grep -n "## The app" -- docs` prints the section's heading.
-- [ ] 6.8 Name `tattoos.py` and `chain.py` and their edges in `docs/modules.md`, `isekai/pipeline/README.md` and `isekai/shared/README.md`.
+- [x] 6.8 Name `tattoos.py` and `chain.py` and their edges in `docs/modules.md`, `isekai/pipeline/README.md` and `isekai/shared/README.md`.
   Verify: `git grep -n "chain.py" isekai/shared/README.md` prints the line.

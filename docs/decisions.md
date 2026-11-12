@@ -316,6 +316,19 @@ source, in the render's group, as `<seed>.edit-<k>.png`; no edit is a flow, and 
   already holds a render's files, and the next free `k` chains edits.
 - **Made by:** `0119`.
 
+### D52 · The tattoo library is library-wide, kept whole and never deleted
+
+**A tattoo is a folder `.tattoos/<name>/` of the library, outside every collection: `design.png` upright with no
+metadata and at most `long_side` of `config/tattoo.json` on its long side, `tattoo.json` and `outline.json`. A cut is a
+tattoo with no `design.png`, whose record names the run digest of the photograph it is cut from and whose size is that
+photograph's; a cut serves only that photograph's renders. A name is kept once, no route deletes or renames a tattoo,
+and the photograph a cut is taken from, and every tattoo, stays on this machine.**
+
+- **Why:** one tattoo is an input for many renders in many collections, so a folder in a collection would copy it. The
+  ink of a cut is already in the photograph's pixels, so copying the photograph would only keep a likeness twice.
+  Nothing needs a delete yet, and a kept name that never moves is one a later placement can cite.
+- **Made by:** `0121`.
+
 ### D44 · A flat flow is summon with the face chain ending early
 
 **`summon-flat-anime-wai` is `summon-anime-wai`'s directory with InstantID ending at 0.65 of the steps, a lower
@@ -383,8 +396,10 @@ reader after it.
 ### D40 · A collection is a library folder holding `sources/`
 
 **A folder in the library is a collection when it holds `sources/`; its runs root is `runs/` beside it. No
-file records a collection, and a dot-folder is never listed. Every figure the UI shows of a collection — its
-counts, each cell's stage — is a listing read on each request. A batch is not a folder: it is the
+file records a collection, and a dot-folder is never listed; `.tattoos/` is a dot-folder of the library,
+never a collection
+([D52](#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)). Every figure the UI shows of a
+collection — its counts, each cell's stage — is a listing read on each request. A batch is not a folder: it is the
 photographs one GPU session renders.**
 
 - **Why:** layout alone decides, so no marker file can disagree with the disk, and a stage is a
@@ -397,7 +412,8 @@ photographs one GPU session renders.**
 **Import writes into `sources/` a JPEG or PNG carrying its pixels and its orientation, and nothing else:
 no location, camera or time, its colour in sRGB.** Each file is verified by the strip's own walk before
 it is committed; one that cannot be cleaned is left out unless the operator imports it as it is, and the
-hub marks it.
+hub marks it. A tattoo is cleaned as a source is, and bounded to its long side
+([D52](#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)).
 
 - **Why:** a library holds personal photographs, and every run copies its source, so metadata kept at
   import is metadata kept everywhere. A profile dropped without conversion shifts every colour.
