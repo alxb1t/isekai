@@ -5,7 +5,7 @@ The library and its routes, then the picker. Each `Verify:` runs after its task.
 ## Progress
 
 - [x] 1 — The library, its routes and the decision · hard
-- [ ] 2 — The picker and the page's calls · moderate
+- [x] 2 — The picker and the page's calls · moderate
 
 ## 1 — The library, its routes and the decision
 
@@ -50,23 +50,23 @@ The library and its routes, then the picker. Each `Verify:` runs after its task.
 
 ## 2 — The picker and the page's calls
 
-- [ ] 2.1 In `ui/src/tattoos.ts` add `tattoosPath(digest)` returning `/api/tattoos?digest=<digest>`, `armRemoval(armed, name)` returning `{ armed, remove }` and `formLine(form)` returning the upload's line and the cut's line of [D5](design.md#d5). Delete the `choosable` and `reason` fields of `Card` and the cut-of-another-photograph branch of `card`.
+- [x] 2.1 In `ui/src/tattoos.ts` add `tattoosPath(digest)` returning `/api/tattoos?digest=<digest>`, `armRemoval(armed, name)` returning `{ armed, remove }` and `formLine(form)` returning the upload's line and the cut's line of [D5](design.md#d5). Delete the `choosable` and `reason` fields of `Card` and the cut-of-another-photograph branch of `card`.
   Verify: `grep -c "^export function armRemoval" ui/src/tattoos.ts` prints `1`.
-- [ ] 2.2 In `ui/src/tattoos.test.ts` rewrite the specs of the *removed or merged* rows of [design](design.md#tests): drop the `choosable` and `reason` assertions and the other-photograph cuts, and rewrite `ui:picker:a-cut-of-another-photograph-cannot-be-chosen` over `tattoosPath` and `card`. Add `ui:picker:remove-takes-a-second-click` and `ui:picker:each-form-says-what-it-takes`.
+- [x] 2.2 In `ui/src/tattoos.test.ts` rewrite the specs of the *removed or merged* rows of [design](design.md#tests): drop the `choosable` and `reason` assertions and the other-photograph cuts, and rewrite `ui:picker:a-cut-of-another-photograph-cannot-be-chosen` over `tattoosPath` and `card`. Add `ui:picker:remove-takes-a-second-click` and `ui:picker:each-form-says-what-it-takes`.
   Verify: `grep -c "ui:picker:remove-takes-a-second-click" ui/src/tattoos.test.ts` prints `1`.
-- [ ] 2.3 In `ui/src/api.ts` make `tattoos` read `tattoosPath(digest)`, and give `tattooNamed`, `saveOutline` and `designAt` the digest first, sent as `?digest=`. Add `removeTattoo(digest, name)` as a `DELETE` of `/api/tattoos/<name>?digest=<digest>`, and make `inkView` take a `Place`, never `null`, whose `digest` and `flow` it always sends, per [D6](design.md#d6).
+- [x] 2.3 In `ui/src/api.ts` make `tattoos` read `tattoosPath(digest)`, and give `tattooNamed`, `saveOutline` and `designAt` the digest first, sent as `?digest=`. Add `removeTattoo(digest, name)` as a `DELETE` of `/api/tattoos/<name>?digest=<digest>`, and make `inkView` take a `Place`, never `null`, whose `digest` and `flow` it always sends, per [D6](design.md#d6).
   Verify: `grep -c "^export function removeTattoo" ui/src/api.ts` prints `1`.
-- [ ] 2.4 In `ui/src/composables/usePlacing.ts` replace `SERVER` by `serverPorts(place)`, whose `read` is `(name) => tattooNamed(place.digest, name)`, and default `ports` to it, so `load` and `reload` do not change.
+- [x] 2.4 In `ui/src/composables/usePlacing.ts` replace `SERVER` by `serverPorts(place)`, whose `read` is `(name) => tattooNamed(place.digest, name)`, and default `ports` to it, so `load` and `reload` do not change.
   Verify: `grep -c "^const serverPorts" ui/src/composables/usePlacing.ts` prints `1`.
-- [ ] 2.5 Pass the digest at each other call: `designAt`, `saveOutline`, `inkView` and `tattooNamed` in `OutlineStep.vue`; `designAt` in `StagePhoto.vue`; `inkView` in `StageRender.vue`, with `props.place`; the card `src` in `TattooPicker.vue`. Delete the `held.choosable` refusal line of `OutlineStep.vue`, which no card can reach once a cut of another photograph is not listed.
+- [x] 2.5 Pass the digest at each other call: `designAt`, `saveOutline`, `inkView` and `tattooNamed` in `OutlineStep.vue`; `designAt` in `StagePhoto.vue`; `inkView` in `StageRender.vue`, with `props.place`; the card `src` in `TattooPicker.vue`. Delete the `held.choosable` refusal line of `OutlineStep.vue`, which no card can reach once a cut of another photograph is not listed.
   Verify: `grep -L "designAt(props.name)" ui/src/components/OutlineStep.vue` prints `ui/src/components/OutlineStep.vue`.
-- [ ] 2.6 In `ui/src/components/TattooPicker.vue` add the lines under both headings from `formLine` in a `picker__note mono` paragraph. Add *Remove* on each card from `armRemoval`: a second click calls `removeTattoo` and emits `removed`, and losing focus disarms it. Delete the disabled card, its `reason` line and the `choosable` test on the flag.
+- [x] 2.6 In `ui/src/components/TattooPicker.vue` add the lines under both headings from `formLine` in a `picker__note mono` paragraph. Add *Remove* on each card from `armRemoval`: a second click calls `removeTattoo` and emits `removed`, and losing focus disarms it. Delete the disabled card, its `reason` line and the `choosable` test on the flag.
   Verify: `grep -l "removeTattoo" ui/src/components/TattooPicker.vue` prints `ui/src/components/TattooPicker.vue`.
-- [ ] 2.7 In `ui/src/views/Place.vue` handle `removed(name)`: call `placing.forget()` when the screen holds that tattoo, then `refresh()`, showing a refusal as `kept` does.
+- [x] 2.7 In `ui/src/views/Place.vue` handle `removed(name)`: call `placing.forget()` when the screen holds that tattoo, then `refresh()`, showing a refusal as `kept` does.
   Verify: `grep -l "removed" ui/src/views/Place.vue` prints `ui/src/views/Place.vue`.
-- [ ] 2.8 In `ui/src/app.css` delete the rules `.picker__card:disabled` and `.picker__reason`, and add `.picker__remove[data-armed='true']` in the accent the armed state of a button uses elsewhere.
+- [x] 2.8 In `ui/src/app.css` delete the rules `.picker__card:disabled` and `.picker__reason`, and add `.picker__remove[data-armed='true']` in the accent the armed state of a button uses elsewhere.
   Verify: `grep -L "picker__reason" ui/src/app.css` prints `ui/src/app.css`.
-- [ ] 2.9 In `docs/edit-tattoo.md` rewrite the library bullet and the cut bullet of *The app* for the upload folder and the cut folder, the list per photograph, the removal and that a baked edit keeps its own copy, and drop `The app deletes and renames nothing.`
+- [x] 2.9 In `docs/edit-tattoo.md` rewrite the library bullet and the cut bullet of *The app* for the upload folder and the cut folder, the list per photograph, the removal and that a baked edit keeps its own copy, and drop `The app deletes and renames nothing.`
   Verify: `grep -L "The app deletes and renames nothing" docs/edit-tattoo.md` prints `docs/edit-tattoo.md`.
-- [ ] 2.10 In `ui/design/spec.md` replace the bullet *A cut of another photograph stays listed…* by one for *Remove* and its second click, and add the form lines to the J9·1 frame.
+- [x] 2.10 In `ui/design/spec.md` replace the bullet *A cut of another photograph stays listed…* by one for *Remove* and its second click, and add the form lines to the J9·1 frame.
   Verify: `grep -L "stays listed" ui/design/spec.md` prints `ui/design/spec.md`.

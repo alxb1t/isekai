@@ -86,7 +86,7 @@ watch(
     const held = tattoo.value
     if (!direct.value || !held) return
     try {
-      const made = await inkView(props.place.collection, held.name, held.outline, null)
+      const made = await inkView(props.place.collection, held.name, held.outline, props.place)
       ink.value = { url: URL.createObjectURL(made.image), box: made.box }
     } catch (reason) {
       inkRefusal.value = (reason as Error).message

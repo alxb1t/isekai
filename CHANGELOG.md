@@ -15,6 +15,8 @@ its new digest.
   (0126 D1, D2, D3).
 - A tattoo is removed by `remove` and `DELETE /api/tattoos/{name}`; D52 reads *kept whole until a tattoo is removed*
   and the threat model names the removal (0126 D4).
+- The picker lists the uploads and the cuts of the render's photograph, offers *Remove* with a second click, and says
+  what each form takes; the page sends the render's digest on every tattoo call (0126 D5, D6).
 
 ## [0.83.0] - 2026-11-12
 

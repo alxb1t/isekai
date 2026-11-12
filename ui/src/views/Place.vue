@@ -94,6 +94,16 @@ async function flagged(): Promise<void> {
   }
 }
 
+/* A tattoo was removed: what the screen holds of it goes, and the list is read again. */
+async function removed(name: string): Promise<void> {
+  if (placing.tattoo.value?.name === name) placing.forget()
+  try {
+    await refresh()
+  } catch (reason) {
+    refusal.value = (reason as Error).message
+  }
+}
+
 function uploadInstead(cut: string): void {
   void router.push({ ...picking.value, query: { instead: cut } })
 }
@@ -257,6 +267,7 @@ onUnmounted(() => void placing.settled())
       @choose="choose"
       @kept="kept"
       @flagged="flagged"
+      @removed="removed"
     />
     <OutlineStep
       v-else-if="step === 'outline' && name"

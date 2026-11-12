@@ -8,20 +8,27 @@ import {
   keepTattoo,
   openStaging,
   photoUrl,
+  removeTattoo,
   saveStageOne,
   stageFile,
 } from '../api'
 import type { Step } from '../stages'
 import { useLiveStore } from '../stores/live'
-import { card, refusalField, uploadName } from '../tattoos'
+import { armRemoval, card, formLine, refusalField, uploadName } from '../tattoos'
 import type { Stage1, TattooList } from '../types'
 
 /* The placement screen's first step: every kept tattoo as a card, an upload through the
    import's staging under a name, and a cut of this render's photograph under a name.
-   It shows state and the way forward; a card opens the step its state asks, and an upload's
-   card offers *not on this photo*, which keeps the tattoo's stage-1 pairs. */
+   It shows state and the way forward; a card opens the step its state asks, an upload's
+   card offers *not on this photo*, which keeps the tattoo's stage-1 pairs, and every card
+   offers *Remove*, which asks a second click. */
 const props = defineProps<{ place: Place; list: TattooList; instead: string | null }>()
-const emit = defineEmits<{ choose: [name: string, step: Step]; kept: [name: string]; flagged: [] }>()
+const emit = defineEmits<{
+  choose: [name: string, step: Step]
+  kept: [name: string]
+  flagged: []
+  removed: [name: string]
+}>()
 
 interface Chosen {
   file: File
@@ -157,10 +164,32 @@ const cards = computed(() =>
       tattoo,
       held,
       ...card(tattoo, props.place.digest, held, props.list.limits.floor_stage1),
-      src: tattoo.kind === 'image' ? designAt(tattoo.name) : photoUrl(props.place),
+      src: tattoo.kind === 'image' ? designAt(props.place.digest, tattoo.name) : photoUrl(props.place),
     }
   }),
 )
+
+const armed = ref<string | null>(null)
+const removeRefusal = ref<{ name: string; reason: string } | null>(null)
+
+/* The first press on *Remove* arms the card, the second on it removes the tattoo. */
+async function remove(name: string): Promise<void> {
+  const pressed = armRemoval(armed.value, name)
+  armed.value = pressed.armed
+  removeRefusal.value = null
+  if (!pressed.remove) return
+  try {
+    await removeTattoo(props.place.digest, name)
+    emit('removed', name)
+  } catch (reason) {
+    removeRefusal.value = { name, reason: (reason as Error).message }
+  }
+}
+
+/* A card that loses focus is no longer armed. */
+function disarm(name: string): void {
+  if (armed.value === name) armed.value = null
+}
 
 const flagRefusal = ref<{ name: string; reason: string } | null>(null)
 
@@ -191,6 +220,7 @@ onUnmounted(() => {
     <div class="picker__make">
       <div class="picker__form" data-upload>
         <p class="section-label">upload a tattoo</p>
+        <p class="picker__note mono">{{ formLine('upload') }}</p>
         <p v-if="instead" class="picker__note mono">
           instead of {{ instead }}, which stays kept
         </p>
@@ -237,6 +267,7 @@ onUnmounted(() => {
       </div>
       <div class="picker__form" data-cut>
         <p class="section-label">cut from this photo</p>
+        <p class="picker__note mono">{{ formLine('cut') }}</p>
         <label class="picker__name">
           <span class="section-label">name</span>
           <input
@@ -265,20 +296,16 @@ onUnmounted(() => {
         <button
           class="picker__card"
           type="button"
-          :disabled="!one.choosable"
-          :title="one.reason ?? ''"
           :data-tattoo="one.tattoo.name"
           @click="emit('choose', one.tattoo.name, one.opens)"
         >
-          <img v-if="one.choosable" class="picker__image" :src="one.src" :alt="one.tattoo.name" loading="lazy" />
-          <span v-else class="picker__image picker__image--none" />
+          <img class="picker__image" :src="one.src" :alt="one.tattoo.name" loading="lazy" />
           <span class="picker__title mono">{{ one.tattoo.name }}</span>
           <span class="picker__state mono" :data-state="one.state">{{ one.state }}</span>
           <span class="picker__source mono">{{ one.source }}</span>
           <span v-if="one.stage" class="picker__source mono" data-stage>{{ one.stage }}</span>
-          <span v-if="one.reason" class="picker__reason mono">{{ one.reason }}</span>
         </button>
-        <label v-if="one.offers && one.choosable" class="picker__flag mono">
+        <label v-if="one.offers" class="picker__flag mono">
           <input
             type="checkbox"
             :checked="one.held?.not_on_photo === true"
@@ -287,6 +314,23 @@ onUnmounted(() => {
         </label>
         <p v-if="flagRefusal && flagRefusal.name === one.tattoo.name" class="picker__refusal" data-flag-refusal>
           <span class="refusal__mark" />{{ flagRefusal.reason }}
+        </p>
+        <button
+          class="btn btn-secondary picker__remove"
+          type="button"
+          :data-armed="armed === one.tattoo.name"
+          :data-remove="one.tattoo.name"
+          @click="remove(one.tattoo.name)"
+          @blur="disarm(one.tattoo.name)"
+        >
+          Remove
+        </button>
+        <p
+          v-if="removeRefusal && removeRefusal.name === one.tattoo.name"
+          class="picker__refusal"
+          data-remove-refusal
+        >
+          <span class="refusal__mark" />{{ removeRefusal.reason }}
         </p>
       </div>
     </div>

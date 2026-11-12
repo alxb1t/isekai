@@ -98,14 +98,18 @@ render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─
 ```
 
 - **Open it** with `⇧P` or *Place a tattoo* on a render's large view.
-- **The library** is `.tattoos/<name>/` beside the collections, in the folder `ISEKAI_LIBRARY` names, so one tattoo
-  serves every render in every collection ([D52](decisions.md#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed)).
-  It holds `design.png`, `tattoo.json` and `outline.json`. The app deletes and renames nothing.
+- **The library** is `.tattoos/` beside the collections, in the folder `ISEKAI_LIBRARY` names
+  ([D52](decisions.md#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed)). An upload is
+  `.tattoos/<name>/` with `design.png`, `tattoo.json` and `outline.json`, and serves every render in every
+  collection. A cut is `.tattoos/.cuts/<digest>/<name>/` with `tattoo.json` and `outline.json`, `<digest>` the
+  photograph's run digest. A picker lists the uploads and the cuts of its render's photograph, and a name is one
+  tattoo on it. *Remove* asks a second click, then deletes the tattoo's folder and frees its name. A baked edit keeps
+  its own copy, so a removal changes no edit. The app renames nothing.
 - **An upload** goes through the import's staging, is cleaned as a source is, and is kept upright, scaled down to the
   `long_side` of `config/tattoo.json`, under a name kept once.
 - **A cut** is a tattoo with no image: *Cut from this photo* keeps the render's photograph as the source of the ink, so
-  the photograph stays in its run and serves only its own renders. A second cut from the same photograph starts from
-  the newest cut's tone.
+  the photograph stays in its run. It is kept under that photograph's folder, listed and named on its renders alone, in
+  every collection. A second cut from the same photograph starts from the newest cut's tone.
 - **The outline** is clicked on the tattoo, or on the photograph for a cut, and closed on its first point. It is saved
   as it changes, with the white point and the tone.
 - **The ink view** is the same extraction as §1, drawn by the server on the outline's crop. The white point is the

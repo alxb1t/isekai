@@ -1,14 +1,17 @@
 import { expect } from 'vitest'
 import { spec } from './test/spec'
 import {
+  armRemoval,
   card,
   controlsWait,
   defaultTone,
   differs,
+  formLine,
   greyOf,
   inkSize,
   refusalField,
   scaleOf,
+  tattoosPath,
   uploadName,
   whiteState,
 } from './tattoos'
@@ -41,8 +44,6 @@ spec('ui:picker:the-cards-show-the-state-and-the-source', () => {
   expect(upload).toEqual({
     state: 'outlined',
     source: 'kept 2026-11-12',
-    choosable: true,
-    reason: null,
     stage: null,
     offers: true,
     opens: 'photo',
@@ -68,10 +69,8 @@ spec('ui:picker:a-card-is-ready-for-this-photograph', () => {
   const flagged = card(tattoo({ outlined: true }), DIGEST, stage(0, true), FLOOR)
   expect(flagged.state).toBe('ready for this photograph')
   expect(flagged.stage).toBe('not on this photo')
-  // Not outlined is never ready, and a cut of another photograph is not either.
+  // Not outlined is never ready.
   expect(card(tattoo({ outlined: false }), DIGEST, stage(9), FLOOR).state).toBe('not outlined')
-  const other = card(tattoo({ kind: 'cut', cut_from: 'ffffffffffff', outlined: true }), DIGEST, undefined, FLOOR)
-  expect(other.state).toBe('outlined')
   expect(card(tattoo({ outlined: true }), DIGEST, stage(1), FLOOR).stage).toBe('stage 1 · 1 pair')
 })
 
@@ -88,7 +87,6 @@ spec('ui:picker:a-card-opens-the-step-its-state-asks', () => {
 spec(['ui:picker:not-on-this-photo-is-offered-on-an-upload-alone', 'ui:direct:a-cut-does-not-offer-the-flag'], () => {
   expect(card(tattoo({}), DIGEST, undefined, FLOOR).offers).toBe(true)
   expect(card(tattoo({ kind: 'cut', cut_from: DIGEST }), DIGEST, undefined, FLOOR).offers).toBe(false)
-  expect(card(tattoo({ kind: 'cut', cut_from: 'ffffffffffff' }), DIGEST, undefined, FLOOR).offers).toBe(false)
 })
 
 spec('ui:picker:an-uploads-name-starts-as-the-files-stem', () => {
@@ -99,12 +97,28 @@ spec('ui:picker:an-uploads-name-starts-as-the-files-stem', () => {
 })
 
 spec('ui:picker:a-cut-of-another-photograph-cannot-be-chosen', () => {
-  const other = card(tattoo({ kind: 'cut', cut_from: 'ffffffffffff' }), DIGEST, undefined, FLOOR)
-  expect(other.choosable).toBe(false)
-  expect(other.reason).toContain('ffffffffffff')
-  expect(card(tattoo({ kind: 'cut', cut_from: DIGEST }), DIGEST, undefined, FLOOR).choosable).toBe(true)
+  expect(tattoosPath(DIGEST)).toBe(`/api/tattoos?digest=${DIGEST}`)
+  expect(tattoosPath('ffffffffffff')).not.toBe(tattoosPath(DIGEST))
+  // A cut reads as its photograph's own, and carries no state for being another's.
+  const cut = card(tattoo({ kind: 'cut', cut_from: DIGEST, outlined: true }), DIGEST, undefined, FLOOR)
+  expect(cut.state).toBe('ready for this photograph')
+  expect(Object.keys(cut)).toEqual(['state', 'source', 'stage', 'offers', 'opens'])
   // An upload serves every render.
-  expect(card(tattoo({}), 'ffffffffffff', undefined, FLOOR).choosable).toBe(true)
+  expect(card(tattoo({}), 'ffffffffffff', undefined, FLOOR)).toEqual(card(tattoo({}), DIGEST, undefined, FLOOR))
+})
+
+spec('ui:picker:remove-takes-a-second-click', () => {
+  const first = armRemoval(null, 'bow')
+  expect(first).toEqual({ armed: 'bow', remove: false })
+  expect(armRemoval(first.armed, 'bow')).toEqual({ armed: null, remove: true })
+  // A press on another card arms that card and removes nothing.
+  expect(armRemoval('bow', 'arm')).toEqual({ armed: 'arm', remove: false })
+})
+
+spec('ui:picker:each-form-says-what-it-takes', () => {
+  expect(formLine('upload')).toContain("the tattoo's design on its own")
+  expect(formLine('upload')).toContain('a flat image, not a photo of skin')
+  expect(formLine('cut')).toBe("the tattoo as it shows on this render's photograph")
 })
 
 spec('ui:picker:a-refusal-shows-its-fix', () => {

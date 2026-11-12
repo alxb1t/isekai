@@ -498,7 +498,7 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 
 | frame | trigger | URL |
 |---|---|---|
-| J9·1 the picker, nothing kept: `none kept yet`, the upload form, the cut form | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
+| J9·1 the picker, nothing kept: `none kept yet`, the upload form with `the tattoo's design on its own — a flat image, not a photo of skin`, the cut form with `the tattoo as it shows on this render's photograph` | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
 | J9·2 a file chosen: its name `IMG_5521`, `reading…`, then `converted`; Keep waits `reading the file` | Upload a tattoo…, choose `IMG_5521.heic` | same |
 | J9·3 the outline step on it, the outline open: the ink view, the white point and the tone read `outline open` | Keep | `…/place/outline/IMG_5521` |
 | J9·4 the outline closed: the ink view, the white point `auto` with its grey, the tone, `saved` | click the first point again | same |
@@ -537,7 +537,9 @@ J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tatt
 - **Refusals**, each with its fix: a taken name, `bow is kept; choose another name`, beside the name; a file that is
   not an image or still carries metadata, on the file; an outline the server refuses, as the ink view's refusal under
   the ink view; an unknown render or tattoo, a full-page refusal with `Back to the library ⇧L`.
-- **A cut of another photograph** stays listed, disabled, reading `from photograph 5c19e0a47d3b, not this render's`.
+- **Remove** is a button on each card. The first press arms it in the accent and removes nothing, a second press on the
+  same card removes the tattoo and lists the rest again, and a press elsewhere, or losing focus, disarms it. A refusal
+  shows under the card.
 - **The stages** pair the images by clicks, either image first; the image that waits for a match takes the accent, a
   click near a point selects its pair, a drag moves a point, and the list has *Undo*, *Delete* and *Clear*. Forward
   waits with `6 pairs needed · 2 placed` or `point 7 has no match`. The steps of a mode keep their numbers (§4): a cut
