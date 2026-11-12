@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { type Gesture, cursorOf, gestureOf } from '../press'
+import { type Gesture, cursorOf, endsPress, gestureOf } from '../press'
 import type { Point } from '../types'
 import { SCALE_FLOOR, type View, actual, fitted, panned, toImage, zoomedAt } from '../zoom'
 
@@ -69,6 +69,11 @@ function local(event: MouseEvent): Point {
   return [event.clientX - (box?.left ?? 0), event.clientY - (box?.top ?? 0)]
 }
 
+function inside(event: MouseEvent): boolean {
+  const [x, y] = local(event)
+  return x >= 0 && y >= 0 && x <= room.value.width && y <= room.value.height
+}
+
 function pressed(event: MouseEvent): Press {
   return { at: toImage(view.value, local(event)), scale: view.value.scale, shift: event.shiftKey }
 }
@@ -132,6 +137,9 @@ function up(event: PointerEvent): void {
   held = null
   active.value = false
   if (was && !was.moved) emit('click', { ...pressed(event), shift: was.shift })
+  // The pointer is idle again: a point dragged under it, or a view panned beneath it, moves
+  // what it hovers, so the hover is read afresh unless the pointer is off the viewport.
+  else if (was && inside(event)) emit('hover', toImage(view.value, local(event)))
 }
 
 function cancel(): void {
@@ -141,6 +149,7 @@ function cancel(): void {
 
 function shiftKey(event: KeyboardEvent): void {
   if (event.key === 'Shift') shifting.value = event.type === 'keydown'
+  else if (event.type === 'keydown' && held && endsPress(event)) cancel()
 }
 
 function blur(): void {
