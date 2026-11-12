@@ -141,12 +141,12 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 - [ ] 6.1 **HALT CHECK** 0122's editor, render stage and placing state are built.
   Verify: `ls ui/src/pairs.ts ui/src/components/StageRender.vue ui/src/components/PairPanel.vue ui/src/components/PairList.vue ui/src/composables/usePlacing.ts` prints each path.
-- [ ] 6.2 **HALT CHECK** `Pair` is an object that holds its number and its point on each image, as [D11](design.md#d11) takes it.
-  Verify: `grep -n -e "interface Pair" -e "type Pair" ui/src/types.ts` prints its declaration.
-- [ ] 6.3 Add to `ui/src/types.ts` the key `proposed` of `Pair` and `Proposal`, and to `ui/src/api.ts` `export function proposePairs`, which posts the body of [D10](design.md#d10).
+- [ ] 6.2 **HALT CHECK** `Slot` in `ui/src/pairs.ts` is the editor's pair, holding its point on each image and numbered by its place, as [D11](design.md#d11) takes it.
+  Verify: `grep -n "export interface Slot" ui/src/pairs.ts` prints its declaration.
+- [ ] 6.3 Add to `Slot` in `ui/src/pairs.ts` the key `proposed`, to `ui/src/types.ts` `Proposal` alone, with `Pair` left the tuple it is, and to `ui/src/api.ts` `export function proposePairs`, which posts the body of [D10](design.md#d10).
   Verify: `git grep -n "export function proposePairs" ui/src/api.ts` prints it.
 - [ ] 6.4 Add to `ui/src/pairs.ts` per [D11](design.md#d11) `arrived`, `accepted`, `export function acceptedAll`, `proposals` and `sent`, `arrived` written into every snapshot of the history; make `moved` clear
-  `proposed` of the pair it moves and `forward` wait while a pair is proposed; its tests in `ui/src/pairs.test.ts` bind through `spec`.
+  `proposed` of the slot it moves and `forward` wait while a pair is proposed; its tests in `ui/src/pairs.test.ts` bind through `spec`.
   Verify: `grep -n "export function acceptedAll" ui/src/pairs.ts` prints it.
 - [ ] 6.5 Add `ui/src/propose.ts` per [D12](design.md#d12): `due`, `asked`, `answered`, `refused`, `view` and `pointsOf`; its tests in `ui/src/propose.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/propose.test.ts` passes.
