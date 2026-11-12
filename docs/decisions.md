@@ -563,6 +563,21 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
   when the UI is served from more than one origin.
 - **Made by:** `0098`, `0109`.
 
+### D55 · A stage may be a package
+
+**A stage is the first segment under `isekai.pipeline`: one module, or one package whose `__init__.py` is its front door. The modules of a stage import each other; no stage imports another, its front door included.**
+
+- **Why:** the layer guard read a stage as any file under `pipeline/`, so a stage that grew past one file would have tripped it on its own modules, and its private maths went down into `shared/` instead.
+- **Made by:** `0129`.
+
+### D56 · Size and patches are held by ratchets
+
+**`tests/test_ratchets.py` holds a ceiling for the lines of a file under `isekai/`, the lines of a function, a function's positional parameters, the lines of a file under `ui/src/` and the patches of a module's own names. An offender past its ceiling is a listed row of its table; one unlisted is red, and a row whose offender no longer offends is red until it is removed. A listed offender may grow; a row is removed by the version that removes the offender, and none is added.**
+
+- **Why:** the gate held no rule of size or shape, so the largest files and the most-patched modules grew with every feature. A ceiling on the unlisted stops a new one; leaving a listed offender free to grow keeps the next route or screen from halting on a refactor that is queued and not yet built.
+- **Accepts:** a listed offender grows unchecked until its row goes. Reopen when a refactor version leaves a row standing past its work.
+- **Made by:** `0129`.
+
 ## Infrastructure
 
 ### D26 · Renders run on a rented GPU

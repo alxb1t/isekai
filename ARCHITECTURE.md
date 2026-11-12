@@ -11,8 +11,10 @@ Imports point down; `tests/test_layers.py` holds that. [`docs/modules.md`](docs/
 - **`interface`** — the CLI and the review UI; they compose.
 - **`pipeline`** — the stages.
 - **`boundary`** — every way to a model, the GPU or the network.
-- **`shared`** — what the stages share: the vocabulary, the field map, image headers.
-- **`foundation`** — the run directory, the flow and the refusal.
+- **`shared`** — what the stages share: the vocabulary, the field map, image headers, and the placement's maths:
+  the ink, the tattoo, the chain and the proposal's geometry.
+- **`foundation`** — the run directory, the flow and the refusal, and what rides with them: the artifacts'
+  contract, the edit registry, the caption config, the migration and the command text a refusal prints.
 
 Evaluation is a separate sub-system beside the code it measures.
 

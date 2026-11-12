@@ -28,22 +28,24 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 
 ## Imported by
 
-**Named, not counted.** A count in this column has gone stale in every group here
-at least once; a list of names cannot.
+**Derived.** `uv run python -m tools.derive_imported_by` writes this table from the import graph of `tools/import_graph.py`, the one the layer guards read, and a test re-derives it. It names importers in `isekai/`, `evaluation/` and `tools/`, never a test.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `comfy/` | `gpu.py`, `interface/cli.py`, `interface/render.py`, `interface/wiring.py`, `pipeline/edit.py`, `pipeline/generate.py` | `tests/fakes.py`, `tests/stages.py`, `tests/test_artifact_bytes.py`, `tests/test_edit.py`, `tests/test_edit_session.py`, `tests/test_generate.py`, `tests/test_render.py`, `tests/test_resume.py` |
-| `comfy/multipart.py` | `comfy/client.py` | `tests/test_multipart.py` |
+| `comfy/` | `gpu.py`, `interface/cli.py`, `interface/render.py`, `interface/wiring.py`, `pipeline/edit.py`, `pipeline/generate.py` | — |
+| `comfy/multipart.py` | `comfy/client.py` | — |
 | `comfy/prompt.py` | `comfy/__init__.py` | — |
-| `gpu.py` | `interface/render.py`, `interface/wiring.py`, `interface/ui/app.py`, `interface/ui/billing.py`, `interface/ui/jobs.py` | `tests/e2e/wiring.py`, `tests/stages.py`, `tests/test_gpu.py`, `tests/test_infra.py`, `tests/test_render.py`, `tests/test_ui_billing.py`, `tests/test_ui_jobs.py` |
-| `ollama.py` | `interface/wiring.py`, `pipeline/caption.py`, `pipeline/tagging.py` | `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_ollama.py`, `tests/test_pipeline_cli.py`, `tests/test_tagging.py`, `tests/test_ui_jobs.py` |
-| `pod_start.py` | `interface/render.py`, for the hold its limit's floor is above; the image runs it as a file | `tests/test_infra.py`, `tests/test_pod_start.py` |
-| `pose.py` | `interface/wiring.py`, `pipeline/proposing.py` | `tests/fakes.py`, `tests/test_pose.py`, `tests/test_propose.py`, `tests/test_ui_propose.py` |
-| `provision.py` | `ollama.py`, `pose.py`, `sam2.py`, `unpack.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/eval_models.py`, `evaluation/face.py`, `evaluation/recall.py`, `tests/conftest.py`, `tests/fakes.py`, `tests/test_cohort.py`, `tests/test_eval_manifest.py`, `tests/test_evaluation_cli.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_placement_manifest.py`, `tests/test_pod_start.py`, `tests/test_pose.py`, `tests/test_provision.py`, `tests/test_provision_unpack.py`, `tests/test_reader_manifest.py`, `tests/test_recall_cli.py`, `tests/test_sam2.py`, `tests/test_sheet_schema.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |
-| `sam2.py` | `interface/wiring.py`, `pipeline/proposing.py` | `tests/fakes.py`, `tests/test_sam2.py`, `tests/test_ui_propose.py` |
-| `unpack.py` | `pose.py`, `sam2.py` | `tests/conftest.py`, `tests/test_derivation.py`, `tests/test_infra.py`, `tests/test_package_paths.py`, `tests/test_placement_manifest.py`, `tests/test_pose.py`, `tests/test_propose.py`, `tests/test_provision_unpack.py`, `tests/test_sam2.py`, `tests/test_ui_propose.py`, `tools/derive_placement.py`, `tools/manifest.py` |
-| `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py`, `pose.py`, `sam2.py` | `evaluation/face.py`, `evaluation/recall.py`, `tests/stages.py`, `tests/test_recall.py`, `tests/test_recall_cli.py`, `tests/test_resume.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
+| `gpu.py` | `interface/render.py`, `interface/ui/app.py`, `interface/ui/billing.py`, `interface/ui/jobs.py`, `interface/wiring.py` | — |
+| `ollama.py` | `interface/wiring.py`, `pipeline/caption.py`, `pipeline/tagging.py` | — |
+| `pod_start.py` | `interface/render.py` | — |
+| `pose.py` | `interface/wiring.py`, `pipeline/proposing.py` | — |
+| `provision.py` | `ollama.py`, `pose.py`, `sam2.py`, `unpack.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/eval_models.py`, `evaluation/face.py`, `evaluation/recall.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |
+| `sam2.py` | `interface/wiring.py`, `pipeline/proposing.py` | — |
+| `unpack.py` | `pose.py`, `sam2.py`, `interface/wiring.py` | `tools/derive_placement.py`, `tools/manifest.py` |
+| `wd14.py` | `pose.py`, `sam2.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `evaluation/face.py`, `evaluation/recall.py` |
+
+> `interface/render.py` imports `pod_start.py` for the hold its limit's floor is
+> above; the image runs it as a file.
 
 > `provision.py` is on `python -m isekai`'s import graph, through `ollama.py`'s
 > check of the reader's manifest. It imports only the standard library, so the
