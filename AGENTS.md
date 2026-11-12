@@ -128,6 +128,11 @@ they decide.**
   fails.
 - **Never weaken the gate to pass.** A deleted or skipped test, a blanket suppression, a loosened config —
   each is a *plan* problem, not a coding shortcut. **Halt and say so.**
+- **These files are frozen into the pod image:** `Dockerfile`, `image/pyproject.toml`, `image/uv.lock`,
+  `image/.python-version`, `config/models.json`, `isekai/boundary/provision.py` and
+  `isekai/boundary/pod_start.py`. An edit turns `tests/test_infra.py` red until `config/image.json` is
+  re-derived, and the image holds it only after a rebuild and a metered proof. The recipe is
+  [`docs/pins.md`](docs/pins.md).
 - **State lives on disk.** Reconstruct "where are we" from the active change's `tasks.md` + git — never
   from memory.
 - **Some phases spend real money**, and the active change's `tasks.md` marks them (⚠️ GPU). The protocol
