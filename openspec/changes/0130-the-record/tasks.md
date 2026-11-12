@@ -6,7 +6,7 @@ Tests alone: the graphs, the run, the verbs, the routes, then the wire. Decision
 
 - [x] 1 — The graphs · moderate
 - [x] 2 — The run · moderate
-- [ ] 3 — The verbs · moderate
+- [x] 3 — The verbs · moderate
 - [ ] 4 — The routes · moderate
 - [ ] 5 — The wire · moderate
 
@@ -58,16 +58,16 @@ Tests alone: the graphs, the run, the verbs, the routes, then the wire. Decision
 
 ## 3 — The verbs
 
-- [ ] 3.1 In `tests/record.py`, add `def relative(default)` and `def walk(parser)` per [D5](design.md#d5): `walk` reads `parser._actions`, each subparser's arguments and its mutually exclusive groups into `{dest, flags, nargs, required, default, choices, type, metavar, action}`, no help text; a `Path` default under `REPO_ROOT` is written relative, one outside raises.
+- [x] 3.1 In `tests/record.py`, add `def relative(default)` and `def walk(parser)` per [D5](design.md#d5): `walk` reads `parser._actions`, each subparser's arguments and its mutually exclusive groups into `{dest, flags, nargs, required, default, choices, type, metavar, action}`, no help text; a `Path` default under `REPO_ROOT` is written relative, one outside raises.
   Verify: `grep -n -F "def walk(" tests/record.py` prints the definition.
 
-- [ ] 3.2 In `tests/record.py`, add `flags(done)`, returning `walk(build_parser())` from `isekai/interface/cli.py`, and register it as `FILES["verbs"]`.
+- [x] 3.2 In `tests/record.py`, add `flags(done)`, returning `walk(build_parser())` from `isekai/interface/cli.py`, and register it as `FILES["verbs"]`.
   Verify: `uv run python -c "import tests.record as r; print(sorted(r.FILES))"` prints `['graphs', 'run', 'verbs']`.
 
-- [ ] 3.3 In `tests/test_record.py`, add `test_the_walk_reads_each_flag_of_a_parser`, over a parser the test builds, holding a flag, a positional, a choice, a repeatable flag and an exclusive group, and `test_a_default_inside_the_repository_is_recorded_relative_and_one_outside_is_refused`.
+- [x] 3.3 In `tests/test_record.py`, add `test_the_walk_reads_each_flag_of_a_parser`, over a parser the test builds, holding a flag, a positional, a choice, a repeatable flag and an exclusive group, and `test_a_default_inside_the_repository_is_recorded_relative_and_one_outside_is_refused`.
   Verify: `uv run pytest tests/test_record.py -k "walk_reads or default_inside" -q` exits 0.
 
-- [ ] 3.4 Run `uv run python -m tests.record`, which writes `tests/record/verbs.json`, and read it: the `--runs` default is `".data/runs"`, and every verb of `VERBS` in `isekai/interface/cli.py` is there.
+- [x] 3.4 Run `uv run python -m tests.record`, which writes `tests/record/verbs.json`, and read it: the `--runs` default is `".data/runs"`, and every verb of `VERBS` in `isekai/interface/cli.py` is there.
   Verify: `uv run pytest tests/test_record.py tests/test_pipeline_cli.py -q` exits 0.
 
 ## 4 — The routes

@@ -5,6 +5,7 @@ changes only when a person runs it; `tests/test_record.py` derives each file aga
 a temporary directory and compares.
 """
 
+import argparse
 import dataclasses
 import hashlib
 import io
@@ -16,6 +17,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 from PIL import Image
@@ -25,6 +27,7 @@ from isekai.foundation.artifacts import RENDER_FILE, read
 from isekai.foundation.edit import load_edit
 from isekai.foundation.flow import Workflow, graph_digest
 from isekai.foundation.run import Run, open_run
+from isekai.interface.cli import build_parser
 from isekai.interface.cli import main as cli
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.edit import request
@@ -297,6 +300,73 @@ def paths(done: Done) -> dict[str, object]:
 
 
 FILES["run"] = paths
+
+
+def relative(default: object) -> object:
+    """Return `default`, a path inside the repository written relative to it.
+
+    A path outside the repository names a machine, and is refused.
+    e.g. REPO_ROOT / ".data" / "runs" -> ".data/runs"
+    """
+    if not isinstance(default, Path):
+        return default
+    try:
+        return default.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        raise ValueError(f"{default} is outside the repository") from None
+
+
+def _argument(action: argparse.Action) -> dict[str, object]:
+    """Return one argument as the record holds it, with no help text."""
+    return {
+        "dest": action.dest,
+        "flags": action.option_strings,
+        "nargs": action.nargs,
+        "required": action.required,
+        "default": relative(action.default),
+        "choices": None if action.choices is None else list(action.choices),
+        "type": None if action.type is None else cast("type", action.type).__name__,
+        "metavar": action.metavar,
+        "action": type(action).__name__,
+    }
+
+
+def walk(parser: argparse.ArgumentParser) -> dict[str, object]:
+    """Return each verb of `parser` with its positionals, options and exclusive groups.
+
+    e.g. {"sheet": {"positionals": [...], "options": [...], "groups": []}}
+    """
+    verbs: dict[str, object] = {}
+    for action in parser._actions:
+        if not isinstance(action, argparse._SubParsersAction):
+            continue
+        chosen = cast("dict[str, argparse.ArgumentParser]", action.choices)
+        for name, verb in chosen.items():
+            verbs[name] = {
+                "positionals": [
+                    _argument(each) for each in verb._actions if not each.option_strings
+                ],
+                "options": [
+                    _argument(each) for each in verb._actions if each.option_strings
+                ],
+                "groups": [
+                    {
+                        "required": group.required,
+                        "members": [each.dest for each in group._group_actions],
+                    }
+                    for group in verb._mutually_exclusive_groups
+                ],
+            }
+    return verbs
+
+
+def flags(done: Done) -> dict[str, object]:
+    """Return every verb of the CLI's parser, walked."""
+    del done
+    return walk(build_parser())
+
+
+FILES["verbs"] = flags
 
 
 if __name__ == "__main__":

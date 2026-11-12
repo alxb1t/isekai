@@ -27,6 +27,8 @@ its new digest.
 - `tests/record/run.json` holds every path of the pass under the runs root: a JSON file with its duration `0.0` and the
   pass's directory `<root>`, a PNG by its pixels, any other file by its bytes; a second pass over the same runs moves
   nothing (0130 D4).
+- `tests/record/verbs.json` holds each verb's positionals, options and exclusive groups, walked from the parser with no
+  help text; a default inside the repository is written relative, and one outside it is refused (0130 D5).
 
 ## [0.86.2] - 2026-11-12
 

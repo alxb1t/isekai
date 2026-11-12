@@ -4,6 +4,7 @@ A red test here means an output moved. `uv run python -m tests.record` writes th
 files again, and the diff shows what moved.
 """
 
+import argparse
 from pathlib import Path
 from typing import Any, cast
 
@@ -20,6 +21,7 @@ from tests.record import (
     FLOWS,
     RECORD,
     REGENERATE,
+    REPO_ROOT,
     SEED,
     Done,
     derive,
@@ -28,6 +30,8 @@ from tests.record import (
     normalised,
     offline,
     recorded,
+    relative,
+    walk,
 )
 
 
@@ -151,3 +155,82 @@ def test_each_recorded_graph_is_the_one_its_render_record_digests(done: Done) ->
         assert graph_digest(held["flows"][flow]) == digest, flow
     edit = _group(done.run, FIRST_FLOW) / f"{SEED}.edit-1.json"
     assert graph_digest(held["edit"]) == read(edit, EDIT_FILE)["graph_sha256"]
+
+
+def _argument(
+    dest: str,
+    flags: list[str],
+    *,
+    nargs: str | None = None,
+    required: bool = False,
+    default: object = None,
+    choices: list[str] | None = None,
+    type_: str | None = None,
+    action: str = "_StoreAction",
+) -> dict[str, object]:
+    return {
+        "dest": dest,
+        "flags": flags,
+        "nargs": nargs,
+        "required": required,
+        "default": default,
+        "choices": choices,
+        "type": type_,
+        "metavar": None,
+        "action": action,
+    }
+
+
+@pytest.mark.spec_exempt("structural: the walk reads each flag of a parser")
+def test_the_walk_reads_each_flag_of_a_parser() -> None:
+    parser = argparse.ArgumentParser()
+    verb = parser.add_subparsers(dest="verb").add_parser("go", help="never recorded")
+    verb.add_argument("name", nargs="*", help="never recorded")
+    verb.add_argument("--look", choices=["flat", "vivid"], default="flat")
+    verb.add_argument("--tag", action="append", dest="tags", required=True)
+    verb.add_argument("--depth", type=float, default=1.5)
+    either = verb.add_mutually_exclusive_group(required=True)
+    either.add_argument("--left")
+    either.add_argument("--right")
+
+    walked = cast("dict[str, Any]", walk(parser))
+
+    assert list(walked) == ["go"]
+    assert walked["go"]["positionals"] == [_argument("name", [], nargs="*")]
+    options = {each["dest"]: each for each in walked["go"]["options"]}
+    assert set(options) == {"help", "look", "tags", "depth", "left", "right"}
+    assert options["look"] == _argument(
+        "look", ["--look"], default="flat", choices=["flat", "vivid"]
+    )
+    assert options["tags"] == _argument(
+        "tags", ["--tag"], required=True, action="_AppendAction"
+    )
+    assert options["depth"] == _argument(
+        "depth", ["--depth"], default=1.5, type_="float"
+    )
+    assert walked["go"]["groups"] == [{"required": True, "members": ["left", "right"]}]
+    assert "never recorded" not in str(walked)
+
+
+@pytest.mark.spec_exempt(
+    "structural: a default inside the repository is recorded relative and one "
+    "outside is refused"
+)
+def test_a_default_inside_the_repository_is_recorded_relative_and_outside_refused(
+    tmp_path: Path,
+) -> None:
+    inside = REPO_ROOT / ".data" / "runs"
+    assert relative(inside) == ".data/runs"
+    assert relative("kept") == "kept"
+    assert relative(None) is None
+    with pytest.raises(ValueError, match="outside the repository"):
+        relative(tmp_path / "runs")
+
+    parser = argparse.ArgumentParser()
+    verb = parser.add_subparsers(dest="verb").add_parser("go")
+    verb.add_argument("--runs", type=Path, default=inside)
+    held = cast("dict[str, Any]", walk(parser))
+    assert held["go"]["options"][1]["default"] == ".data/runs"
+    verb.add_argument("--elsewhere", type=Path, default=tmp_path)
+    with pytest.raises(ValueError, match="outside the repository"):
+        walk(parser)
