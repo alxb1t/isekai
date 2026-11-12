@@ -275,7 +275,8 @@ A pair is saved as it is made, so the one thing a leave loses is the point that 
 
 The system SHALL give the placement screen the route
 `/c/<collection>/renders/<run>/<flow>/<version>/<seed>/place/<step>`, with the tattoo's name after the step where the
-step needs one, and SHALL not mount the screen again when only its step or name changes. The steps SHALL be `tattoo`, `outline`, `photo`, `render` and `review`. A step the screen does
+step needs one, and SHALL not mount the screen again when only its step or name changes. The steps SHALL be `tattoo`,
+`outline`, `photo`, `render` and `review`. A step the screen does
 not know SHALL redirect to its first, and a step the tattoo's mode skips SHALL redirect to the step the mode takes in
 its place.
 
