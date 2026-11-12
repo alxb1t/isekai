@@ -92,13 +92,15 @@ def _functions_of(
 def long_functions(root: Path) -> dict[str, int]:
     """Return each function under `isekai/` past `FUNCTION_LINES` lines, with its lines.
 
-    The lines run from the `def` to its last line, decorators out.
+    The lines run from the `def` to its last line, decorators out. A name defined twice,
+    as a property's getter and setter are, counts its longest definition.
     e.g. `{"isekai/interface/ui/app.py::create_app": 1400}`
     """
-    sizes = {
-        key: (node.end_lineno or node.lineno) - node.lineno + 1
-        for key, node in _functions_of(root)
-    }
+    sizes: dict[str, int] = {}
+    for key, node in _functions_of(root):
+        size = (node.end_lineno or node.lineno) - node.lineno + 1
+        # A property's getter and setter share a name: the longest definition counts.
+        sizes[key] = max(size, sizes.get(key, 0))
     return {key: size for key, size in sizes.items() if size > FUNCTION_LINES}
 
 
@@ -407,10 +409,16 @@ def test_the_check_catches_a_long_function(tmp_path: Path) -> None:
         + "def outer():\n"
         + _def("def inner():", FUNCTION_LINES + 1, "    ")
         + "@cache\n"
-        + _def("def decorated():", FUNCTION_LINES),
+        + _def("def decorated():", FUNCTION_LINES)
+        + "class Prop:\n"
+        + "    @property\n"
+        + _def("def value(self):", FUNCTION_LINES + 1, "    ")
+        + "    @value.setter\n"
+        + _def("def value(self, new):", 2, "    "),
     )
     assert long_functions(tmp_path) == {
         "isekai/m.py::Box.method": FUNCTION_LINES + 1,
+        "isekai/m.py::Prop.value": FUNCTION_LINES + 1,
         "isekai/m.py::outer": FUNCTION_LINES + 2,
         "isekai/m.py::outer.inner": FUNCTION_LINES + 1,
     }
