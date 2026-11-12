@@ -10,9 +10,11 @@ its new digest.
 
 ## [Unreleased]
 
-- A tattoo is kept whole in the library's `.tattoos/<name>/`, never listed as a collection: an upload is made upright and
-  scaled to `long_side`, a cut holds no image and takes the newest cut's tone of its photograph, and an outline is saved
-  atomically within the bounds of `config/tattoo.json`; nothing deletes or renames one (0121 D1, D2, D3, D4).
+- A tattoo is kept whole in the library's `.tattoos/<name>/`, never listed as a collection: an upload is upright and
+  bounded, a cut holds no image, an outline is saved atomically; none is deleted or renamed (0121 D1, D2, D3, D4).
+- Ink is placed by thin-plate splines in `isekai/shared/chain.py`: a spline fitted backwards, the lookup, the clip, the
+  Multiply and the crop box, over arrays; `extract_ink` takes a `white` scale on its automatic point and `white_grey`
+  reads that point as one grey (0121 D5, D6).
 
 ## [0.79.0] - 2026-11-12
 

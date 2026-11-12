@@ -5,7 +5,7 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 ## Progress
 
 - [x] 1 — Store · moderate
-- [ ] 2 — Chain · hard
+- [x] 2 — Chain · hard
 - [ ] 3 — Preview · moderate
 - [ ] 4 — Panel · hard
 - [ ] 5 — Screens · moderate
@@ -34,21 +34,21 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 
 ## 2 — Chain
 
-- [ ] 2.1 **HALT CHECK** 0119's extraction takes the outline, neutral and depth this phase extends: its tests carry `ink_flags`.
+- [x] 2.1 **HALT CHECK** 0119's extraction takes the outline, neutral and depth this phase extends: its tests carry `ink_flags`.
   Verify: `uv run pytest tests/test_ink.py -k ink_flags` passes.
-- [ ] 2.2 Add to `extract_ink` in `isekai/shared/ink.py` the keyword `white: float = 1.0` per [D5](design.md#d5), a scale on the automatic per-channel point; tests in `tests/test_ink.py` carry `ink_white`.
+- [x] 2.2 Add to `extract_ink` in `isekai/shared/ink.py` the keyword `white: float = 1.0` per [D5](design.md#d5), a scale on the automatic per-channel point; tests in `tests/test_ink.py` carry `ink_white`.
   Verify: `uv run pytest tests/test_ink.py -k ink_white` passes.
-- [ ] 2.3 Add `white_grey(image, outline)` to `isekai/shared/ink.py` per [D5](design.md#d5): the automatic point's luminance as a whole number from 0 to 255; tests carry `ink_grey`.
+- [x] 2.3 Add `white_grey(image, outline)` to `isekai/shared/ink.py` per [D5](design.md#d5): the automatic point's luminance as a whole number from 0 to 255; tests carry `ink_grey`.
   Verify: `uv run pytest tests/test_ink.py -k ink_grey` passes.
-- [ ] 2.4 Add `isekai/shared/chain.py` with `Spline` per [D6](design.md#d6): thin-plate, exact at its pairs, chunked, refusing too few pairs and pairs on a line; numpy imported inside; tests in `tests/test_chain.py` carry `chain_spline`.
+- [x] 2.4 Add `isekai/shared/chain.py` with `Spline` per [D6](design.md#d6): thin-plate, exact at its pairs, chunked, refusing too few pairs and pairs on a line; numpy imported inside; tests in `tests/test_chain.py` carry `chain_spline`.
   Verify: `uv run pytest tests/test_chain.py -k chain_spline` passes.
-- [ ] 2.5 Extend `chain.py` with `lookup`, the prototype's: the target grid backwards through each stage's spline, a bilinear sample, transparent white outside; tests carry `chain_lookup`.
+- [x] 2.5 Extend `chain.py` with `lookup`, the prototype's: the target grid backwards through each stage's spline, a bilinear sample, transparent white outside; tests carry `chain_lookup`.
   Verify: `uv run pytest tests/test_chain.py -k chain_lookup` passes.
-- [ ] 2.6 Extend `chain.py` with `polygon_mask`, `clip` (softened by one pixel, an exclusion removing the ink) and `multiply`; Pillow imported inside; tests carry `chain_composite`.
+- [x] 2.6 Extend `chain.py` with `polygon_mask`, `clip` (softened by one pixel, an exclusion removing the ink) and `multiply`; Pillow imported inside; tests carry `chain_composite`.
   Verify: `uv run pytest tests/test_chain.py -k chain_composite` passes.
-- [ ] 2.7 Extend `chain.py` with `crop_box(points, margin, size)`; tests carry `chain_crop`.
+- [x] 2.7 Extend `chain.py` with `crop_box(points, margin, size)`; tests carry `chain_crop`.
   Verify: `uv run pytest tests/test_chain.py -k chain_crop` passes.
-- [ ] 2.8 Hold that the entry point's import graph reaches no wheel and the layers hold.
+- [x] 2.8 Hold that the entry point's import graph reaches no wheel and the layers hold.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_layers.py` passes.
 
 ## 3 — Preview
