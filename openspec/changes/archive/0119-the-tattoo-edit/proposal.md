@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: v0.79
 debt: [0060·R5, 0060·R6, op·pod-start-comment, 0111·R6]
 ---
 
