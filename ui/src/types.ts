@@ -451,6 +451,9 @@ export interface TattooLimits {
   outline_max: number
   depth_min: number
   depth_max: number
+  /* The depth a cut and an upload start at, which *Reset* returns to. */
+  photo_depth: number
+  image_depth: number
 }
 
 export interface TattooList {

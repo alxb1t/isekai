@@ -8,7 +8,7 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 - [x] 2 — Chain · hard
 - [x] 3 — Preview · moderate
 - [x] 4 — Panel · hard
-- [ ] 5 — Screens · moderate
+- [x] 5 — Screens · moderate
 - [ ] 6 — Docs · moderate
 
 ## 1 — Store
@@ -91,21 +91,21 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 
 ## 5 — Screens
 
-- [ ] 5.1 Add `ui/src/components/TattooPicker.vue`, the first step, per its requirement: the cards, the upload through staging with its name field, *Cut from this photo*, the refusal beside the name, a click opening the outline step.
+- [x] 5.1 Add `ui/src/components/TattooPicker.vue`, the first step, per its requirement: the cards, the upload through staging with its name field, *Cut from this photo*, the refusal beside the name, a click opening the outline step.
   Verify: `ls ui/src/components/TattooPicker.vue` prints the path.
-- [ ] 5.2 Add `ui/src/components/OutlineStep.vue`, the second step, per [D8](design.md#d8): the panel, the outline saved as it changes, the ink view, the white point, the tone, *Reset*, and on a cut the source line and *Upload a tattoo instead*.
+- [x] 5.2 Add `ui/src/components/OutlineStep.vue`, the second step, per [D8](design.md#d8): the panel, the outline saved as it changes, the ink view, the white point, the tone, *Reset*, and on a cut the source line and *Upload a tattoo instead*.
   Verify: `ls ui/src/components/OutlineStep.vue` prints the path.
-- [ ] 5.3 Add `ui/src/views/Place.vue`: the render's context, the stepper of the steps built, *Back to the render*, the refusal page for an unknown render, and the step's component by the route's `step`.
+- [x] 5.3 Add `ui/src/views/Place.vue`: the render's context, the stepper of the steps built, *Back to the render*, the refusal page for an unknown render, and the step's component by the route's `step`.
   Verify: `ls ui/src/views/Place.vue` prints the path.
-- [ ] 5.4 Per [D9](design.md#d9) move the routes of `ui/src/router.ts` into `ui/src/routes.ts` and add the route `place` and its redirect of an unknown step; move the `key` and `HUB_SCREENS` of `ui/src/App.vue` into `ui/src/viewkey.ts`, `viewKey` stopping at `/place`, and add `offerTo`; tests in `ui/src/viewkey.test.ts` bind through `spec`.
+- [x] 5.4 Per [D9](design.md#d9) move the routes of `ui/src/router.ts` into `ui/src/routes.ts` and add the route `place` and its redirect of an unknown step; move the `key` and `HUB_SCREENS` of `ui/src/App.vue` into `ui/src/viewkey.ts`, `viewKey` stopping at `/place`, and add `offerTo`; tests in `ui/src/viewkey.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/viewkey.test.ts` passes.
-- [ ] 5.5 In `ui/src/views/RenderLarge.vue` declare the command `place` on `shifted('KeyP')` and add a *Place a tattoo* button in its own `.large__group`, both going to `offerTo`'s location; tests in `ui/src/offer.test.ts` read that `KeyP` is declared once and that the button's location is the first step.
+- [x] 5.5 In `ui/src/views/RenderLarge.vue` declare the command `place` on `shifted('KeyP')` and add a *Place a tattoo* button in its own `.large__group`, both going to `offerTo`'s location; tests in `ui/src/offer.test.ts` read that `KeyP` is declared once and that the button's location is the first step.
   Verify: `npm --prefix ui run test -- src/offer.test.ts` passes.
-- [ ] 5.6 Hold that the screen and its components declare no command: a test in `ui/src/nokeys.test.ts` reads their sources for `useKeys`.
+- [x] 5.6 Hold that the screen and its components declare no command: a test in `ui/src/nokeys.test.ts` reads their sources for `useKeys`.
   Verify: `npm --prefix ui run test -- src/nokeys.test.ts` passes.
-- [ ] 5.7 Hold the browser's types.
+- [x] 5.7 Hold the browser's types.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 5.8 Hold the browser's unit tests.
+- [x] 5.8 Hold the browser's unit tests.
   Verify: `uv run python -m tools.test_ui` exits 0.
 
 ## 6 — Docs

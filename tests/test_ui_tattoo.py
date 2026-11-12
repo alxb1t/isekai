@@ -208,6 +208,8 @@ def test_tattoo_route_read_lists_each_in_the_order_kept_with_the_limits(
         "outline_max": 120,
         "depth_min": 1.0,
         "depth_max": 2.0,
+        "photo_depth": 1.6,
+        "image_depth": 1.0,
     }
 
 

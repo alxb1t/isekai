@@ -1720,6 +1720,8 @@ def _tattoo_limits() -> dict[str, Any]:
         "outline_max": config.outline_max,
         "depth_min": ink.depth_min,
         "depth_max": ink.depth_max,
+        "photo_depth": ink.photo_depth,
+        "image_depth": ink.image_depth,
     }
 
 

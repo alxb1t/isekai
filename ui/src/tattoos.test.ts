@@ -3,6 +3,7 @@ import { spec } from './test/spec'
 import {
   card,
   controlsWait,
+  defaultTone,
   differs,
   greyOf,
   inkSize,
@@ -83,7 +84,10 @@ spec('ui:outline-step:a-scale-of-one-is-automatic', () => {
 })
 
 spec('ui:outline-step:reset-appears-when-the-tone-differs', () => {
-  const cut = { neutral: true, depth: 1.6 }
+  const limits = { photo_depth: 1.6, image_depth: 1.0 }
+  const cut = defaultTone('cut', limits)
+  expect(cut).toEqual({ neutral: true, depth: 1.6 })
+  expect(defaultTone('image', limits)).toEqual({ neutral: false, depth: 1.0 })
   expect(differs(cut, cut)).toBe(false)
   expect(differs({ neutral: true, depth: 1.4 }, cut)).toBe(true)
   expect(differs({ neutral: false, depth: 1.6 }, cut)).toBe(true)

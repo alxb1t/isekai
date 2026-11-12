@@ -1,4 +1,4 @@
-import type { Outline, Tattoo } from './types'
+import type { Outline, Tattoo, TattooLimits } from './types'
 
 /* What the picker and the outline step read of a tattoo, as plain functions. */
 
@@ -64,6 +64,17 @@ export function whiteState(scale: number): 'auto' | 'set by hand' {
 export interface Tone {
   neutral: boolean
   depth: number
+}
+
+/** Return the tone a kind starts at: a cut neutral at the photograph's depth, an upload
+    in colour at the image's. e.g. a cut with a photo depth of 1.6 -> neutral on, depth 1.6 */
+export function defaultTone(
+  kind: Tattoo['kind'],
+  limits: Pick<TattooLimits, 'photo_depth' | 'image_depth'>,
+): Tone {
+  return kind === 'cut'
+    ? { neutral: true, depth: limits.photo_depth }
+    : { neutral: false, depth: limits.image_depth }
 }
 
 /** Tell whether the tone differs from `defaults`, the kind's, so *Reset* is offered. */

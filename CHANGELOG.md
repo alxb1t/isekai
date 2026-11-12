@@ -19,6 +19,9 @@ its new digest.
   and save an outline, and one `POST` answers a `no-store` JPEG of the ink on the outline's crop (0121 D2, D3, D4, D7).
 - The browser has the placement panel's parts: the view and the outline as tested geometry, `ImagePanel.vue` to draw
   the image with its zoom, the picker's reads, the tattoo calls, and two outline tokens in each theme (0121 D8, D10).
+- A render's large view offers *Place a tattoo*, a button and `⇧P`, opening the placement screen's route `…/place/<step>`:
+  the picker and the outline step, kept mounted across steps, with no key of their own (0121 D9). `/api/tattoos` also
+  carries each kind's start depth, for *Reset*.
 
 ## [0.79.0] - 2026-11-12
 
