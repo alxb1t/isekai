@@ -18,7 +18,12 @@ from tests.specs import effective, write_tree
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 _KEY = re.compile(r"^- \*\*Key:\*\* `([^`]+)`", re.M)
+_SCENARIO = re.compile(r"^#### Scenario: (.*)$", re.M)
+_LAYERS_LINE = re.compile(r"^- \*\*Layers:\*\* (.*)$", re.M)
+LAYERS = ("unit", "e2e")
+E2E_DIR = "tests/e2e/"
 _MARKERS = ("spec", "spec_exempt")
+_SKIPS = ("skip", "skipif")
 _LITERAL = r"(['\"])([^'\"\n]+)\1"
 _VITEST_SPEC = re.compile(rf"\bspec\(\s*(?:{_LITERAL}\s*,|\[([^\]]*)\]\s*,)?")
 _VITEST_ITEM = re.compile(_LITERAL)
@@ -28,6 +33,7 @@ _VITEST_BARE = re.compile(r"^\s*(?:test|it)(?:\.\w+)*\(", re.M)
 
 Marker = tuple[str, str | None]
 Test = tuple[str, str, list[Marker]]
+Scenario = tuple[str, str, str | None, str | None]
 
 
 def spec_keys(root: Path) -> set[str]:
@@ -63,10 +69,14 @@ def nameable(root: Path) -> set[str]:
     return spec_keys(root) | living_keys(root)
 
 
-def _names_marker(node: ast.Attribute) -> bool:
-    """Return whether `node` is `<x>.mark.spec` or `<x>.mark.spec_exempt`."""
+def _names_marker(node: ast.expr, names: tuple[str, ...] = _MARKERS) -> bool:
+    """Return whether `node` is `<x>.mark.<name>` for one of `names`.
+
+    e.g. `pytest.mark.spec` -> True for the default names `spec` and `spec_exempt`.
+    """
     return (
-        node.attr in _MARKERS
+        isinstance(node, ast.Attribute)
+        and node.attr in names
         and isinstance(node.value, ast.Attribute)
         and node.value.attr == "mark"
     )
@@ -210,7 +220,8 @@ def unknown(keys: set[str], tests: list[Test]) -> list[str]:
 def unmarked(tests: list[Test]) -> list[str]:
     """Return every test without its `spec` keys or one `spec_exempt`, as `file::test`.
 
-    That is a test with no marker, a marker not read, or `spec_exempt` beside another.
+    That is a test with no marker, a marker not read, `spec_exempt` beside another,
+    or a `spec_exempt` whose reason is blank.
     """
     return sorted(
         f"{file}::{name}"
@@ -218,7 +229,101 @@ def unmarked(tests: list[Test]) -> list[str]:
         if not markers
         or any(arg is None for _, arg in markers)
         or (len(markers) > 1 and any(kind == "spec_exempt" for kind, _ in markers))
+        or any(
+            kind == "spec_exempt" and not (arg or "").strip() for kind, arg in markers
+        )
     )
+
+
+def scenarios(root: Path) -> list[Scenario]:
+    """Return each scenario of the effective spec as (capability, title, key, layers).
+
+    e.g. a block holding `- **Key:** `a:b:c`` and `- **Layers:** unit`
+    -> ("a", "the title", "a:b:c", "unit"). A line the block lacks reads as None.
+    """
+    found: list[Scenario] = []
+    for capability, (_, reqs) in effective(root).items():
+        for body in reqs.values():
+            parts = _SCENARIO.split(body)
+            for title, block in zip(parts[1::2], parts[2::2], strict=True):
+                key, layers = _KEY.search(block), _LAYERS_LINE.search(block)
+                found.append(
+                    (
+                        capability,
+                        title.strip(),
+                        key.group(1) if key else None,
+                        layers.group(1).strip() if layers else None,
+                    )
+                )
+    return found
+
+
+def scenario_faults(root: Path) -> list[str]:
+    """Return each scenario with no key, no layers, or a layers value off the list.
+
+    e.g. `- **Layers:** both` -> "cap: the title: Layers `both` is not unit or e2e".
+    """
+    faults: list[str] = []
+    for capability, title, key, layers in scenarios(root):
+        at = f"{capability}: {title}"
+        if key is None:
+            faults.append(f"{at}: no Key")
+        if layers is None:
+            faults.append(f"{at}: no Layers")
+        elif layers not in LAYERS:
+            faults.append(f"{at}: Layers `{layers}` is not unit or e2e")
+    return sorted(faults)
+
+
+def layer_faults(root: Path, tests: list[Test]) -> list[str]:
+    """Return each demanded key with no binder on its layer, as `key (layer)`.
+
+    An `e2e` key needs a binder under `tests/e2e/`, a `unit` key one outside it.
+    A vitest binder is outside.
+    """
+    layers = {
+        key: layer for _, _, key, layer in scenarios(root) if key and layer in LAYERS
+    }
+    bound = {
+        (arg, file.startswith(E2E_DIR))
+        for file, _, markers in tests
+        for kind, arg in markers
+        if kind == "spec" and arg
+    }
+    return sorted(
+        f"{key} ({layer})"
+        for key in demanded(root)
+        if (layer := layers.get(key)) and (key, layer == "e2e") not in bound
+    )
+
+
+def skipped(root: Path) -> set[tuple[str, str]]:
+    """Return each collected test a `skip` or `skipif` decorator marks, as (file, test).
+
+    e.g. `@pytest.mark.skipif(cond, reason="x") def test_y` in `tests/test_z.py`
+    -> ("tests/test_z.py", "test_y").
+    """
+    return {
+        (file, name)
+        for file, module in _modules(root)
+        for name, node in _collected(module.body)
+        if any(_names_marker(_target(d), _SKIPS) for d in node.decorator_list)
+    }
+
+
+def rests_on_skips(
+    keys: set[str], tests: list[Test], skipped: set[tuple[str, str]]
+) -> list[str]:
+    """Return every key whose binders are all in `skipped`, sorted.
+
+    A key no test names is `unbound`'s, not this one's.
+    """
+    binders: dict[str, list[bool]] = {}
+    for file, name, markers in tests:
+        for kind, arg in markers:
+            if kind == "spec" and arg is not None and arg in keys:
+                binders.setdefault(arg, []).append((file, name) in skipped)
+    return sorted(key for key, each in binders.items() if all(each))
 
 
 @pytest.fixture(scope="module")
@@ -261,6 +366,26 @@ def test_every_test_carries_its_keys_or_its_exemption(tests: list[Test]) -> None
 def test_no_marker_sits_where_none_is_read() -> None:
     loose = stray(REPO_ROOT)
     assert not loose, f"spec markers off a test's decorators: {loose[:5]}"
+
+
+@pytest.mark.spec_exempt("structural: every scenario names its key and its layer")
+def test_every_scenario_names_its_key_and_its_layer() -> None:
+    faults = scenario_faults(REPO_ROOT)
+    assert not faults, f"scenarios without their key or layer: {faults[:5]}"
+
+
+@pytest.mark.spec_exempt("structural: every key has a test on its own layer")
+def test_every_key_has_a_test_on_its_layer(tests: list[Test]) -> None:
+    faults = layer_faults(REPO_ROOT, tests)
+    assert not faults, f"keys with no test on their layer: {faults[:5]}"
+
+
+@pytest.mark.spec_exempt("structural: no key rests on skipped tests alone")
+def test_no_key_rests_only_on_skipped_tests(
+    required: set[str], tests: list[Test]
+) -> None:
+    loose = rests_on_skips(required, tests, skipped(REPO_ROOT))
+    assert not loose, f"keys whose every test a decorator skips: {loose[:5]}"
 
 
 _LIVING = """\
@@ -545,3 +670,129 @@ def test_a_vitest_key_with_no_living_key_is_caught(tmp_path: Path) -> None:
         "ui/src/composables/x.test.ts::line 7",
         "ui/src/composables/x.test.ts::line 9",
     ]
+
+
+_LAYERED = """\
+## Requirements
+
+### Requirement: Shown
+#### Scenario: no key
+- **Layers:** unit
+
+#### Scenario: no layers
+- **Key:** `cap:shown:no-layers`
+
+#### Scenario: both layers
+- **Key:** `cap:shown:both-layers`
+- **Layers:** both
+
+#### Scenario: whole
+- **Key:** `cap:shown:whole`
+- **Layers:** e2e
+"""
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_scenario_names_its_key_and_its_layer"
+)
+def test_a_scenario_without_its_key_or_layer_is_caught(tmp_path: Path) -> None:
+    root = write_tree(tmp_path, _LAYERED)
+    assert scenario_faults(root) == [
+        "cap: both layers: Layers `both` is not unit or e2e",
+        "cap: no key: no Key",
+        "cap: no layers: no Layers",
+    ]
+    assert scenarios(root)[-1] == ("cap", "whole", "cap:shown:whole", "e2e")
+
+
+_BY_LAYER = """\
+## Requirements
+
+### Requirement: Shown
+#### Scenario: page
+- **Key:** `cap:shown:page`
+- **Layers:** e2e
+
+#### Scenario: rule
+- **Key:** `cap:shown:rule`
+- **Layers:** unit
+
+#### Scenario: placed
+- **Key:** `cap:shown:placed`
+- **Layers:** unit
+"""
+
+_BOUND = """\
+import pytest
+
+
+@pytest.mark.spec("{key}")
+def test_{name}():
+    pass
+"""
+
+
+@pytest.mark.spec_exempt("structural: twin of test_every_key_has_a_test_on_its_layer")
+def test_a_key_whose_only_test_is_on_the_other_layer_is_caught(tmp_path: Path) -> None:
+    root = write_tree(tmp_path, _BY_LAYER)
+    (root / "tests" / "e2e").mkdir(parents=True)
+    for file, key, name in (
+        ("test_page.py", "cap:shown:page", "page"),
+        ("e2e/test_rule.py", "cap:shown:rule", "rule"),
+        ("test_placed.py", "cap:shown:placed", "placed"),
+    ):
+        (root / "tests" / file).write_text(_BOUND.format(key=key, name=name))
+    assert layer_faults(root, marked_tests(root)) == [
+        "cap:shown:page (e2e)",
+        "cap:shown:rule (unit)",
+    ]
+
+
+_SKIPS_TREE = """\
+import pytest
+
+
+@pytest.mark.spec("cap:kept:kept")
+@pytest.mark.skipif(True, reason="never runs")
+def test_kept_skipped():
+    pass
+
+
+@pytest.mark.spec("cap:gone:gone")
+@pytest.mark.skipif(True, reason="never runs")
+def test_gone_skipped():
+    pass
+
+
+@pytest.mark.spec("cap:gone:gone")
+def test_gone_runs():
+    pass
+"""
+
+
+@pytest.mark.spec_exempt("structural: twin of test_no_key_rests_only_on_skipped_tests")
+def test_a_key_whose_every_test_is_skipped_is_caught(tmp_path: Path) -> None:
+    root = _tree(tmp_path, _SKIPS_TREE)
+    assert skipped(root) == {
+        ("tests/test_cap.py", "test_kept_skipped"),
+        ("tests/test_cap.py", "test_gone_skipped"),
+    }
+    assert rests_on_skips(demanded(root), marked_tests(root), skipped(root)) == [
+        "cap:kept:kept"
+    ]
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_test_carries_its_keys_or_its_exemption"
+)
+def test_a_blank_exemption_reason_is_caught(tmp_path: Path) -> None:
+    tests = """\
+import pytest
+
+
+@pytest.mark.spec_exempt("  ")
+def test_blank():
+    pass
+"""
+    root = _tree(tmp_path, tests)
+    assert unmarked(marked_tests(root)) == ["tests/test_cap.py::test_blank"]

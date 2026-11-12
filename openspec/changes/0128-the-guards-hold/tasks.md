@@ -4,31 +4,31 @@ Tests, goldens and config comments alone: the binding guard, the exemptions, the
 
 ## Progress
 
-- [ ] 1 — The binding guard · moderate
+- [x] 1 — The binding guard · moderate
 - [ ] 2 — The exemptions · moderate
 - [ ] 3 — No guard passes blind · moderate
 
 ## 1 — The binding guard
 
-- [ ] 1.1 In `tests/test_spec_bindings.py`, add `scenarios(root)` and `scenario_faults(root)` per [D1](design.md#d1), the guard `test_every_scenario_names_its_key_and_its_layer` over `REPO_ROOT`, and its twin `test_a_scenario_without_its_key_or_layer_is_caught` over a `tmp_path` spec with one block missing each line and one with the layers value `both`.
+- [x] 1.1 In `tests/test_spec_bindings.py`, add `scenarios(root)` and `scenario_faults(root)` per [D1](design.md#d1), the guard `test_every_scenario_names_its_key_and_its_layer` over `REPO_ROOT`, and its twin `test_a_scenario_without_its_key_or_layer_is_caught` over a `tmp_path` spec with one block missing each line and one with the layers value `both`.
   Verify: `uv run pytest tests/test_spec_bindings.py -k "names_its_key_and_its_layer or without_its_key_or_layer" -q` exits 0.
 
-- [ ] 1.2 **HALT CHECK** In `tests/test_spec_bindings.py`, add `layer_faults(root, tests)` per [D1](design.md#d1), the guard `test_every_key_has_a_test_on_its_layer` and its twin `test_a_key_whose_only_test_is_on_the_other_layer_is_caught`, whose tree binds an `e2e` key from outside `tests/e2e/` and a `unit` key from inside it. A guard red on the repository means the plan is wrong: stop.
+- [x] 1.2 **HALT CHECK** In `tests/test_spec_bindings.py`, add `layer_faults(root, tests)` per [D1](design.md#d1), the guard `test_every_key_has_a_test_on_its_layer` and its twin `test_a_key_whose_only_test_is_on_the_other_layer_is_caught`, whose tree binds an `e2e` key from outside `tests/e2e/` and a `unit` key from inside it. A guard red on the repository means the plan is wrong: stop.
   Verify: `uv run pytest tests/test_spec_bindings.py -k "has_a_test_on_its_layer or on_the_other_layer" -q` exits 0.
 
-- [ ] 1.3 **HALT CHECK** In `tests/test_run_directory.py`, add `test_containment_is_decided_by_identity_through_a_symlink`, bound to `run-directory:containment:containment-is-decided-by-identity`: per [D2](design.md#d2), link `tmp_path / "link"` to `REPO`, assert `_is_within(link / "x", REPO)` and `not _is_within(tmp_path / "x", REPO)`, importing `_is_within` from `isekai.interface.wiring`. A failure means the identity walk does not read as the plan says, and the product would have to move: edit nothing else, and stop.
+- [x] 1.3 **HALT CHECK** In `tests/test_run_directory.py`, add `test_containment_is_decided_by_identity_through_a_symlink`, bound to `run-directory:containment:containment-is-decided-by-identity`: per [D2](design.md#d2), link `tmp_path / "link"` to `REPO`, assert `_is_within(link / "x", REPO)` and `not _is_within(tmp_path / "x", REPO)`, importing `_is_within` from `isekai.interface.wiring`. A failure means the identity walk does not read as the plan says, and the product would have to move: edit nothing else, and stop.
   Verify: `uv run pytest tests/test_run_directory.py -k through_a_symlink -q` exits 0.
 
-- [ ] 1.4 In `tests/test_spec_bindings.py`, add `skipped(root)` and `rests_on_skips(keys, tests, skipped)` per [D2](design.md#d2), the guard `test_no_key_rests_only_on_skipped_tests` over the demanded keys and its twin `test_a_key_whose_every_test_is_skipped_is_caught`, whose tree binds one key by a `skipif` test alone and another by that test and a plain one.
+- [x] 1.4 In `tests/test_spec_bindings.py`, add `skipped(root)` and `rests_on_skips(keys, tests, skipped)` per [D2](design.md#d2), the guard `test_no_key_rests_only_on_skipped_tests` over the demanded keys and its twin `test_a_key_whose_every_test_is_skipped_is_caught`, whose tree binds one key by a `skipif` test alone and another by that test and a plain one.
   Verify: `uv run pytest tests/test_spec_bindings.py -k "rests_only_on_skipped or every_test_is_skipped" -q` exits 0.
 
-- [ ] 1.5 In `tests/test_spec_bindings.py`, make `unmarked` fail a `spec_exempt` whose reason is blank after `strip()` ([D3](design.md#d3)), and add `test_a_blank_exemption_reason_is_caught`, whose `tmp_path` source holds `@pytest.mark.spec_exempt("  ")` on a `def test_blank():` and expects `["tests/test_cap.py::test_blank"]` from `unmarked`.
+- [x] 1.5 In `tests/test_spec_bindings.py`, make `unmarked` fail a `spec_exempt` whose reason is blank after `strip()` ([D3](design.md#d3)), and add `test_a_blank_exemption_reason_is_caught`, whose `tmp_path` source holds `@pytest.mark.spec_exempt("  ")` on a `def test_blank():` and expects `["tests/test_cap.py::test_blank"]` from `unmarked`.
   Verify: `uv run pytest tests/test_spec_bindings.py -k blank_exemption_reason -q` exits 0.
 
-- [ ] 1.6 In `tests/test_field_map.py`, rewrite `test_every_approved_tag_is_reachable_in_the_field_it_was_approved_in` over `FILED` per [the binding guard](design.md#the-binding-guard): build `filed` as `{tag: set(counts) for tag, counts in FILED.items()}`, drop the `APPROVED` glob, the `skip` and the imports they leave unused, and make its reason `structural: the committed table against the transcribed filings`. Keep `assert len(filed) == 113` and the reachability assertion.
+- [x] 1.6 In `tests/test_field_map.py`, rewrite `test_every_approved_tag_is_reachable_in_the_field_it_was_approved_in` over `FILED` per [the binding guard](design.md#the-binding-guard): build `filed` as `{tag: set(counts) for tag, counts in FILED.items()}`, drop the `APPROVED` glob, the `skip` and the imports they leave unused, and make its reason `structural: the committed table against the transcribed filings`. Keep `assert len(filed) == 113` and the reachability assertion.
   Verify: `git grep -c -F 'APPROVED' -- tests/test_field_map.py` prints nothing and exits 1.
 
-- [ ] 1.7 Run phase 1's test files together: edit nothing.
+- [x] 1.7 Run phase 1's test files together: edit nothing.
   Verify: `uv run pytest tests/test_spec_bindings.py tests/test_run_directory.py tests/test_field_map.py -q` exits 0.
 
 ## 2 — The exemptions

@@ -18,6 +18,9 @@ its new digest.
   short sleeps, and the shutdown test settles in ten seconds (0127 D1).
 - The imports stream test closes the broadcast once the stream has framed `converted`, so the body no longer ends at
   `converting` under load (0127 D1).
+- The binding guard reads each scenario's key and layer, holds a key to a test on its own layer, and refuses a blank
+  exemption reason and a key whose every test is skipped; a symlink case holds the containment key on any
+  filesystem, and the reachability test reads the committed `FILED` table, not the gitignored runs (0128 D1, D2, D3).
 
 ## [0.86.0] - 2026-11-12
 
