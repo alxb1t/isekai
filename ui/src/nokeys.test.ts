@@ -25,11 +25,25 @@ const SCREEN = {
   'LeaveDialog.vue': leave,
 }
 
-spec('ui:place-keys:the-screen-declares-no-command', () => {
+/* The outline step and the stages that hold pairs declare the keys, through `placeCommands`
+   alone: its three ids are `undo`, `redo` and `close`. The panel alone reads the keyboard. */
+const DECLARES = ['OutlineStep.vue', 'StagePhoto.vue', 'StageRender.vue']
+const LISTENS = ['ImagePanel.vue']
+
+spec('ui:place-keys:the-screen-declares-only-undo-redo-and-close', () => {
   for (const [file, source] of Object.entries(SCREEN)) {
-    expect(source, file).not.toMatch(/useKeys|useKeyStore|\.declare\(/)
-    expect(source, file).not.toMatch(/keydown|keyup|keypress/)
+    expect(source, file).not.toMatch(/useKeyStore|\.declare\(/)
+    expect(source, file).not.toMatch(/keypress/)
+    if (!LISTENS.includes(file)) expect(source, file).not.toMatch(/keydown|keyup/)
+    if (DECLARES.includes(file)) {
+      expect(source, file).not.toMatch(/useKeys\((?!'screen', placeCommands\()/)
+    } else {
+      expect(source, file).not.toMatch(/useKeys/)
+    }
   }
-  // The read sees a declaration where there is one.
+  // The read sees a declaration where there is one, and a listener.
   expect(large).toContain('useKeys(')
+  expect(panel).toContain('keydown')
+  expect(panel).toContain('keyup')
+  expect('useKeys(`screen`, () => [])').toMatch(/useKeys\((?!'screen', placeCommands\()/)
 })

@@ -44,9 +44,6 @@ const rows = computed(() =>
         </button>
       </li>
     </ol>
-    <p v-if="rows.length === 0" class="pairlist__note mono">
-      click a point on either image, then its match on the other
-    </p>
     <div class="pairlist__row-bar">
       <button class="btn btn-secondary" type="button" :disabled="pairs.past.length === 0" @click="emit('undo')">
         Undo

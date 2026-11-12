@@ -3,7 +3,7 @@ import { type Named, type Ports, usePlacing } from './usePlacing'
 import { begun, closed, drawn, none as outlinesNone, regions } from '../outlines'
 import { clicked, complete, held, none } from '../pairs'
 import { drafted } from '../polygon'
-import { answered, asked, due, keyOf, noAsks } from '../propose'
+import { answered, asked, due, keyOf, noAsks, stands } from '../propose'
 import { spec } from '../test/spec'
 import type { Pair, Point, Stage1 } from '../types'
 
@@ -163,21 +163,45 @@ spec('ui:proposal:a-stage-with-no-pairs-asks-once', async () => {
   expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)).toBe(true)
   placing.proposalAsked.value = answered(asked(placing.proposalAsked.value, key), key, 0)
 
-  // The screen moves on and back: the same tattoo is not read again, and the ask stays.
+  // A step change holds the same tattoo, which is not read again: its ask stays.
   await placing.load('bow')
   expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)).toBe(false)
   // Another tattoo has its own key, and is due.
   const other = keyOf('arm', 'v1', '7')
   await placing.load('arm')
   expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other)).toBe(true)
-  // Back on the first, with the other's ask recorded too: the first's record stands, so a
-  // completed ask is not made again, and the other's is kept as well.
+  // Its own ask is recorded once and not made again while the tattoo is held.
   placing.proposalAsked.value = answered(asked(placing.proposalAsked.value, other), other, 2)
-  await placing.load('bow')
-  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)).toBe(false)
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other)).toBe(false)
+  await placing.load('arm')
   expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other)).toBe(false)
   // A fresh placing, as after a reload of the page, holds no ask.
   expect(usePlacing(PLACE, ports).proposalAsked.value).toBe(noAsks)
+})
+
+spec('ui:proposal:returning-to-a-tattoo-asks-again', async () => {
+  const { ports } = server({ pairs: pairs(6), not_on_photo: false })
+  const placing = usePlacing(PLACE, ports)
+  await placing.load('bow')
+  const key = keyOf('bow', 'v1', '7')
+  const dueNow = () => due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)
+
+  // Answered, then another tattoo, then back: the pairs were cleared, so the ask goes too.
+  placing.proposalAsked.value = answered(asked(placing.proposalAsked.value, key), key, 3)
+  expect(dueNow()).toBe(false)
+  await placing.load('arm')
+  await placing.load('bow')
+  expect(placing.proposalAsked.value).toBe(noAsks)
+  expect(dueNow()).toBe(true)
+
+  // An answer still on its way when another tattoo is held no longer stands.
+  placing.proposalAsked.value = asked(placing.proposalAsked.value, key)
+  const coming = placing.proposalAsked.value[key]
+  expect(stands(placing.proposalAsked.value, key, coming)).toBe(true)
+  await placing.load('arm')
+  expect(stands(placing.proposalAsked.value, key, coming)).toBe(false)
+  await placing.load('bow')
+  expect(dueNow()).toBe(true)
 })
 
 spec('ui:direct:a-cut-does-not-offer-the-flag', async () => {

@@ -2476,9 +2476,20 @@ dialog::backdrop {
   min-height: 360px;
   overflow: hidden;
   background: var(--ground-media);
-  cursor: grab;
   touch-action: none;
   user-select: none;
+}
+
+.panel__viewport--crosshair {
+  cursor: crosshair;
+}
+
+.panel__viewport--grab {
+  cursor: grab;
+}
+
+.panel__viewport--grabbing {
+  cursor: grabbing;
 }
 
 .panel__image {
@@ -2976,12 +2987,6 @@ dialog::backdrop {
 .pairlist__row-bar {
   display: flex;
   gap: 8px;
-}
-
-.pairlist__note {
-  margin: 0;
-  font-size: 11px;
-  color: var(--ink-2);
 }
 
 .outlinelist {

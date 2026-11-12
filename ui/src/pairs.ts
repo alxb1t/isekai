@@ -21,6 +21,7 @@ interface Held {
 
 export interface Pairs extends Held {
   past: readonly Held[]
+  future: readonly Held[]
 }
 
 /* The pair that holds a point alone: its 0-based index, the side that has the point and the
@@ -31,16 +32,17 @@ export interface Lone {
   waiting: Side
 }
 
-export const none: Pairs = { slots: [], selected: null, past: [] }
+export const none: Pairs = { slots: [], selected: null, past: [], future: [] }
 
 const other = (side: Side): Side => (side === 'a' ? 'b' : 'a')
 
-/** Return the editor holding `pairs`, every one complete and nothing to undo. */
+/** Return the editor holding `pairs`, every one complete and nothing to undo or redo. */
 export function held(pairs: readonly Pair[]): Pairs {
   return {
     slots: pairs.map(([a, b]): Slot => ({ a: [a[0], a[1]], b: [b[0], b[1]] })),
     selected: null,
     past: [],
+    future: [],
   }
 }
 
@@ -63,15 +65,18 @@ export function proposals(state: Pairs): Slot[] {
 }
 
 /** Return the state with `pairs` after the pairs held, each marked proposed. The arrival is
-    no step of the history and joins every snapshot of it, so undo never removes it.
+    no step of the history and joins every snapshot of it, past and future, so neither undo
+    nor redo removes it.
     e.g. 2 pairs held, 4 arrive -> pairs 3 to 6 are proposed */
 export function arrived(state: Pairs, pairs: readonly Pair[]): Pairs {
   if (pairs.length === 0) return state
   const added = held(pairs).slots.map((slot): Slot => ({ ...slot, proposed: true }))
+  const joined = (before: Held): Held => ({ ...before, slots: [...before.slots, ...added] })
   return {
     slots: [...state.slots, ...added],
     selected: state.selected,
-    past: state.past.map((before) => ({ ...before, slots: [...before.slots, ...added] })),
+    past: state.past.map(joined),
+    future: state.future.map(joined),
   }
 }
 
@@ -100,7 +105,7 @@ export function lone(state: Pairs): Lone | null {
 }
 
 function changed(state: Pairs, next: Held): Pairs {
-  return { ...next, past: [...state.past, { slots: state.slots, selected: state.selected }] }
+  return { ...next, past: [...state.past, { slots: state.slots, selected: state.selected }], future: [] }
 }
 
 /** Return the index of the pair with a point of `side` within `radius` screen pixels of `at`
@@ -133,7 +138,20 @@ export function chosen(state: Pairs, index: number | null): Pairs {
   return index === state.selected ? state : { ...state, selected: index }
 }
 
-/** Return the state after a click on `side` at the image point `at`.
+/** Return the state after a plain click on `side` at the image point `at`: a click within the
+    radius of a point selects its pair, and one elsewhere changes nothing. */
+export function touched(
+  state: Pairs,
+  side: Side,
+  at: Point,
+  scale: number,
+  radius: number,
+): Pairs {
+  const near = selected(state, side, at, scale, radius)
+  return near === null ? state : chosen(state, near)
+}
+
+/** Return the state after a shift-click on `side` at the image point `at`.
     A click within the radius of a point selects its pair; else it completes the lone pair
     from the waiting image, moves the lone point from the image that holds it, or places the
     next point on this image with the other image waiting. */
@@ -171,7 +189,7 @@ export function moved(
     return side === 'a' ? { a: to, b: slot.b } : { a: slot.a, b: to }
   })
   const next = { slots, selected: index }
-  return fresh ? changed(state, next) : { ...next, past: state.past }
+  return fresh ? changed(state, next) : { ...next, past: state.past, future: state.future }
 }
 
 /** Return the state without the selected pair, the later pairs renumbered by their place.
@@ -182,11 +200,29 @@ export function deleted(state: Pairs): Pairs {
   return changed(state, { slots, selected: null })
 }
 
-/** Return the state as it was before its last change; unchanged with nothing to undo. */
+/** Return the state as it was before its last change, which `redone` brings back; unchanged
+    with nothing to undo. */
 export function undone(state: Pairs): Pairs {
   const last = state.past[state.past.length - 1]
   if (!last) return state
-  return { slots: last.slots, selected: last.selected, past: state.past.slice(0, -1) }
+  return {
+    slots: last.slots,
+    selected: last.selected,
+    past: state.past.slice(0, -1),
+    future: [...state.future, { slots: state.slots, selected: state.selected }],
+  }
+}
+
+/** Return the state as it was before its last undo; unchanged with nothing to redo. */
+export function redone(state: Pairs): Pairs {
+  const next = state.future[state.future.length - 1]
+  if (!next) return state
+  return {
+    slots: next.slots,
+    selected: next.selected,
+    past: [...state.past, { slots: state.slots, selected: state.selected }],
+    future: state.future.slice(0, -1),
+  }
 }
 
 /** Return the state with no pair, as a change that can be undone. */
