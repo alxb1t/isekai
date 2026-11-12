@@ -88,7 +88,7 @@ class Boot:
         # path -> (total, free) in bytes; None reads as an unreadable figure
         self.figures: dict[str, tuple[int, int] | None] = {
             str(self.volume): (VOLUME_SIZE_FLOOR * 2, VOLUME_SIZE_FLOOR),
-            str(shm): (SHM_FREE_FLOOR * 8, SHM_FREE_FLOOR * 8),
+            str(self.pod.memory): (SHM_FREE_FLOOR * 8, SHM_FREE_FLOOR * 8),
         }
         self.fetch_code = 0
         self.ran: list[list[str]] = []
@@ -182,14 +182,14 @@ def test_comfyui_writes_to_memory(boot: Boot) -> None:
 
 @pytest.mark.spec("pod-image:memory:too-little-memory-holds")
 def test_too_little_memory_holds_the_pod(boot: Boot) -> None:
-    boot.figures[str(boot.pod.shm)] = (SHM_FREE_FLOOR * 8, SHM_FREE_FLOOR - 1)
+    boot.figures[str(boot.pod.memory)] = (SHM_FREE_FLOOR * 8, SHM_FREE_FLOOR - 1)
     assert held(boot)
     assert f"{SHM_FREE_FLOOR - 1} B free" in boot.err
 
 
 @pytest.mark.spec("pod-image:memory:too-little-memory-holds")
 def test_memory_at_the_floor_is_enough(boot: Boot) -> None:
-    boot.figures[str(boot.pod.shm)] = (SHM_FREE_FLOOR * 8, SHM_FREE_FLOOR)
+    boot.figures[str(boot.pod.memory)] = (SHM_FREE_FLOOR * 8, SHM_FREE_FLOOR)
     boot.start()
     assert len(boot.execs) == 1
 
@@ -224,7 +224,7 @@ def test_the_type_is_read_from_the_memory_directorys_device(boot: Boot) -> None:
 
 @pytest.mark.spec("pod-image:memory:an-unread-figure-holds")
 def test_an_unread_figure_holds_the_pod(boot: Boot) -> None:
-    boot.figures[str(boot.pod.shm)] = None
+    boot.figures[str(boot.pod.memory)] = None
     assert held(boot)
     assert "could not read" in boot.err
     assert "free space" in boot.err
@@ -297,7 +297,7 @@ def test_each_boot_step_prints_a_utc_time_before_it_begins(boot: Boot) -> None:
 
 @pytest.mark.spec("pod-image:stop:a-hold-ends-in-the-stop")
 def test_a_memory_hold_exits_non_zero_after_its_window(boot: Boot) -> None:
-    boot.figures[str(boot.pod.shm)] = None
+    boot.figures[str(boot.pod.memory)] = None
     assert boot.start() == 1
     assert boot.slept == [HOLD_SECONDS]
     assert boot.events[-2][0] == "sleep"
@@ -456,7 +456,7 @@ def test_a_provisioning_hold_writes_its_marker_off_the_volume(boot: Boot) -> Non
 
 @pytest.mark.spec("model-provisioning:reachability:the-hold-is-bounded-and-marked")
 def test_a_memory_hold_writes_no_provisioning_marker(boot: Boot) -> None:
-    boot.figures[str(boot.pod.shm)] = None
+    boot.figures[str(boot.pod.memory)] = None
     boot.start()
     assert not boot.pod.marker.exists()
 

@@ -454,6 +454,37 @@ def test_render_failures_are_listed_under_their_group(run: Run) -> None:
     assert not any("not read" in line for line in lines)
 
 
+@pytest.mark.spec("edit:listing:show-reads-an-edits-files")
+def test_show_reads_the_files_an_edit_writes_beside_its_render(run: Run) -> None:
+    group = _rendered(run).directory(FLOW, OUTPUTS, "001")
+    for name in ("42.edit-1.png", "42.edit-1.json", "42.edit-1.composite.png"):
+        (group / name).write_bytes(b"x")
+
+    lines = report(run)
+
+    assert unread(run) == []
+    assert not any("not read" in line for line in lines)
+    assert _below(lines, f"  {FLOW}/outputs/001") == ["     42"]
+
+
+@pytest.mark.spec("edit:listing:show-reads-an-edits-files")
+@pytest.mark.parametrize(
+    "name",
+    [
+        "42.edit-0.png",
+        "x.edit-1.json",
+        "42.edit-1.txt",
+        "042.edit-1.png",
+        "42.edit-1.composite.json",
+    ],
+)
+def test_show_still_names_a_file_that_is_no_edits(run: Run, name: str) -> None:
+    group = _rendered(run).directory(FLOW, OUTPUTS, "001")
+    (group / name).write_bytes(b"x")
+
+    assert unread(run) == [f"{FLOW}/outputs/001/{name}"]
+
+
 @pytest.mark.spec("cli:show:an-unread-name-is-named")
 @pytest.mark.parametrize(
     ("place", "name", "is_directory"),

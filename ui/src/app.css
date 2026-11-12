@@ -1725,6 +1725,11 @@ dialog::backdrop {
   white-space: nowrap;
 }
 
+/* The column scrolls, not each row: a row keeps its height. */
+.pick--cell .pick__tiles {
+  flex-shrink: 0;
+}
+
 /* No name widens the dialog: the title is one line, cut by an ellipsis. */
 .viewer__title {
   contain: inline-size;

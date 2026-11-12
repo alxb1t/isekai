@@ -23,8 +23,9 @@ server, a rented GPU. The repository is public, under Apache-2.0.
 - **Why:** these are what a viewer checks first. The graph carries the face and the pose, and the
   approved sheet's tags carry hair and clothes
   ([D10](#d10--the-face-and-the-pose-are-carried-by-the-graph)). A tattoo is local and arbitrary;
-  neither holds it, and bundling it would make every version a research version.
-- **Made by:** the project's founding decision.
+  neither holds it, and bundling it would make every version a research version. A tattoo is added by an edit
+after the flow ([D51](#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)); the flows carry no ink.
+- **Made by:** the project's founding decision; `0119`.
 
 ### D30 · A public repository, for learning
 
@@ -240,11 +241,12 @@ draft, approved without the repeat.
 ### D14 · A flow is one flat directory
 
 **A flow is one flat directory of named files — `flow.json`, `graph.json`, `schema.json` — and it
-shares nothing with another flow.**
+shares nothing with another flow.** An edit is not a flow: it lives under `edits/`
+([D51](#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)).
 
 - **Why:** the pin covers only the files directly in the directory, so a nested file would escape the
   freeze. Sharing nothing means a change to one flow can never change another.
-- **Made by:** `0016`, `0022`, `0102`.
+- **Made by:** `0016`, `0022`, `0102`, `0119`.
 
 ### D15 · A flow is named for what it is
 
@@ -269,7 +271,7 @@ photograph only for a flow that declares `true`.
 ### D38 · A control flow is its subject with the face chain at zero
 
 **Superseded by [D49](#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once) in `0111`: a copy
-no longer names its source, and its seeds are copied rather than checked.**
+no longer names its source, and no check holds it to its source: a `T=S` render reads the source's seeds when it runs.**
 
 - **Made by:** `0054`, `0103`; superseded by `0111`.
 
@@ -282,9 +284,10 @@ the target's own sheet, filled first where it holds none, and a draft from anoth
 image in the target's `sources/`. A stage reads another flow's work only when the operator names it as a source; the
 photograph's description is every flow's (D17).**
 
-- **Why:** the floor is the same sheet and the same noise with the face mechanism off, and the seeds travel with the
-  copy, so that holds with no later check; a copy naming its source kept the source's approval from being cancelled
-  or deleted with its renders.
+- **Why:** the floor is the same sheet and the same noise with the face mechanism off. The copy lists the source's
+  seeds; a `T=S` render reads the source's latest seeds when it runs, and the copy's fields follow the source's only
+  when `approve --from` is run again. A copy naming its source kept the source's approval from being cancelled or
+  deleted with its renders.
 - **Made by:** `0054`, `0103`, `0111`, `0112`.
 
 ### D50 · The last render takes its approval, and a flow holds only its own files
@@ -294,12 +297,24 @@ and its source copy, every older approval with no render — a group of failure 
 newest's waiting draft; nothing goes back to a draft. A flow left with no approval keeps only its directory, its
 assignment: its sheets go too, and so does its own copy of each kind of the photograph's description that `photo/`
 holds, every numbered list of it, so an own caption older than the newest, which `isekai migrate` never copied, is
-lost; `photo/`'s stay (D17). No file of one flow names a file of another.**
+lost; `photo/`'s stay (D17). No file of one flow names a file of another. Deleting a render also deletes every edit of its seed, and their chain
+([D51](#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)).**
 
 - **Why:** the operator deletes a render to be rid of it; an approval, a draft or a sheet left behind kept the Hub and
   Review offering what was deleted, and a reference into another flow breaks when that flow's work goes, and a
   failure record or a flow's own description left behind kept its folder from emptying.
-- **Made by:** `0111`, `0112`, `0114`.
+- **Made by:** `0111`, `0112`, `0114`, `0119`.
+
+### D51 · An edit is one flat directory, pinned by its digest
+
+**An edit is one flat directory under `edits/` — `edit.json` and `graph.json` — named `<what>-<base>`, and a test
+holds its digest against a pin and a recorded entry as it does a flow's. An edit's image is written beside its
+source, in the render's group, as `<seed>.edit-<k>.png`; no edit is a flow, and no run-level directory holds one.**
+
+- **Why:** a flow takes one photograph and gates on a sheet, and an edit takes a finished render and a composite.
+  `Run.flows` reads every run-level directory as a flow, so an edit kept there would be read as one; the group
+  already holds a render's files, and the next free `k` chains edits.
+- **Made by:** `0119`.
 
 ### D44 · A flat flow is summon with the face chain ending early
 
@@ -575,7 +590,8 @@ the key would sit in the same memory.**
 
 **It assembles every prompt before any pod exists, opens a gpunit session, waits for the endpoint through its
 tunnel, renders, and closes the session on every exit.** With no request it renders what each approval lacks of
-its count, in each collection it names, less each `--without`, on one pod. Three bounds hold it: the laptop's
+its count, in each collection it names, less each `--without`, on one pod, then runs the pending edits of those
+collections. Three bounds hold it: the laptop's
 watchdog at the session's
 limit; the pod's own stop at that limit, armed by gpunit's boot script and never past `gpunit.toml`'s ceiling;
 and gpunit, which refuses a session beside a recorded or listed pod of the project and leaves none listed at
@@ -590,4 +606,4 @@ app's Render runs it as a child, between `gpunit volume up` and `volume down`, w
   Reopen when isekai needs a handler of its own.
 - **Refusals:** `isekai render` exits with gpunit's code, 1, 4 or 5, and the drawer names a 4 or a 5 by its kind and
   quotes gpunit's `refused:` line, a form gpunit documents for callers to parse.
-- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`, `0083`, `0097`, `0108`.
+- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`, `0083`, `0097`, `0108`, `0119`.

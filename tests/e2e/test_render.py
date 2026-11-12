@@ -24,6 +24,7 @@ from tests.e2e.conftest import (
     RENDER,
     REVISED,
     SHOWN,
+    TENFOLD,
     WIDE,
     WIDE_SOURCES,
     Served,
@@ -272,6 +273,30 @@ def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> N
     assert short["height"] < thumb["height"] * 2
     grid = modal.locator(".pick--cell")
     assert grid.evaluate("(held) => held.scrollHeight <= held.clientHeight")
+
+
+@pytest.mark.spec("ui:hub:a-cell-of-ten-renders-scrolls-its-grid")
+def test_a_cell_of_ten_renders_keeps_its_rows_whole(page: Page, served: Served) -> None:
+    page.set_viewport_size({"width": 1280, "height": 768})
+    page.goto(served.hub_of(TENFOLD))
+    rendered = page.locator(f'.hub__cell[data-flow="{FLOW}"][data-stage="rendered"]')
+    expect(
+        rendered.locator("[data-version='1'][data-seed='1'] img")
+    ).to_have_js_property("complete", True)
+
+    rendered.click()
+
+    modal = page.locator("dialog[data-cell-modal]")
+    grid = modal.locator(".pick--cell")
+    rows = grid.locator(".pick__tiles")
+    expect(rows).to_have_count(4)
+    for index in range(4):
+        assert rows.nth(index).evaluate(
+            "(held) => held.scrollHeight <= held.clientHeight"
+        )
+    assert grid.evaluate("(held) => held.scrollHeight > held.clientHeight")
+    rows.nth(3).scroll_into_view_if_needed()
+    assert grid.evaluate("(held) => held.scrollTop > 0")
 
 
 @pytest.mark.spec("ui:revise:revise-opens-review-on-the-revision")

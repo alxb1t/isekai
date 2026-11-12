@@ -78,6 +78,8 @@ PUBLISHERS = (
 # every published WAI version reports the same one.
 WAI_VERSION_ID = 2883731
 WAI_FILE = "waiIllustriousSDXL_v170.safetensors"
+# The name Civitai serves the same bytes under, renamed upstream from WAI_FILE.
+WAI_CIVITAI_FILE = "WAI-Nsfw-Illustrious-17.safetensors"
 WAI_DEST = f"checkpoints/{WAI_FILE}"
 
 # From the sibling project, which pins the same repo and the same files.
@@ -85,6 +87,7 @@ INSTANTID = "57b32dfee076092ad2930c71fd6d439c2c3b1820"
 ANTELOPE = "ba0c3e10f4548361eb9a63265d87ce1140ab5a05"
 ANTELOPE_ALT = "397cafa6d8310e96e302e96528c20a4c92a884f2"
 OPENPOSE = "23f966cd5cfdd3f7729c903e243d87152162d2b7"
+PROMAX = "801a4a3fa3d4c936f4feea95b98607bc6726f80c"
 DWPOSE = "1a7144101628d69ee7a3768d1ee3a094070dc388"
 YOLOX_ALT = "a124b32c3b7c5cebda1c7cd96178f0f9d2050125"
 DWPOSE_TS = "359d662a9b33b73f6d0f21732baf8845f17bb4be"
@@ -147,11 +150,6 @@ SPECS: tuple[Spec, ...] = (
                 WAI_FILE,
             ),
             Source(
-                "mogaru99/waiIllustriousSDXL_v170",
-                "a39fd9086cf0d20c99233d94546a6468c83dffab",
-                WAI_FILE,
-            ),
-            Source(
                 "hiusduh/waiIllustriousSDXL_v170",
                 "3e2d67a43d078b1860fbc80984235906b1823101",
                 WAI_FILE,
@@ -204,6 +202,16 @@ SPECS: tuple[Spec, ...] = (
                 "xinsir/controlnet-openpose-sdxl-1.0",
                 OPENPOSE,
                 "diffusion_pytorch_model.safetensors",
+            ),
+        ),
+    ),
+    Spec(
+        "controlnet/union-promax/diffusion_pytorch_model_promax.safetensors",
+        (
+            Source(
+                "xinsir/controlnet-union-sdxl-1.0",
+                PROMAX,
+                "diffusion_pytorch_model_promax.safetensors",
             ),
         ),
     ),
@@ -291,7 +299,7 @@ def derive() -> Manifest:
     """Build the whole manifest, cross-checking every alternate against the primary."""
     # The one artifact no publisher hosts, so its publisher's own record is what
     # the mirrors are held against.
-    wai_sha256 = civitai_file(civitai_version(WAI_VERSION_ID), WAI_FILE)
+    wai_sha256 = civitai_file(civitai_version(WAI_VERSION_ID), WAI_CIVITAI_FILE)
     # The other publisher-less artifact, whose publisher states no digest at all,
     # so its own bytes are what its mirrors are held against.
     upscaler_sha256, _ = digest_of_url(UPSCALER_RELEASE, UPSCALER_CAP_BYTES)
