@@ -451,7 +451,7 @@ def create_app(
     def read_tattoos() -> dict[str, Any]:
         """List the kept tattoos in the order kept, with the limits the page reads."""
         return {
-            "tattoos": [_tattoo_out(one) for one in tattoos.listed(root)],
+            "tattoos": [asdict(one) for one in tattoos.listed(root)],
             "limits": _tattoo_limits(),
         }
 
@@ -459,8 +459,8 @@ def create_app(
     def read_tattoo(name: str) -> dict[str, Any]:
         """Return one tattoo with its outline, refusing an unknown name."""
         return {
-            **_tattoo_out(tattoos.named(root, name)),
-            "outline": _outline_out(tattoos.read_outline(root, name)),
+            **asdict(tattoos.named(root, name)),
+            "outline": asdict(tattoos.read_outline(root, name)),
         }
 
     @app.get("/api/tattoos/{name}/design")
@@ -496,7 +496,7 @@ def create_app(
             )
         kept = tattoos.keep(root, name, path.read_bytes())
         imports.cancel(staged)
-        return _tattoo_out(kept)
+        return asdict(kept)
 
     @app.post("/api/c/{collection}/tattoos")
     def post_cut(collection: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -505,15 +505,13 @@ def create_app(
         name = payload.get("name")
         if not isinstance(name, str):
             raise Refusal("the request's `name` is the tattoo's name; send one")
-        return _tattoo_out(
-            tattoos.cut(root, name, one.run.digest, _dimensions(one.run))
-        )
+        return asdict(tattoos.cut(root, name, one.run.digest, _dimensions(one.run)))
 
     @app.put("/api/tattoos/{name}/outline")
     def put_outline(name: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Replace a tattoo's outline and tone with what the page sent, whole."""
         _needs(payload, OUTLINE_KEYS)
-        return _outline_out(
+        return asdict(
             tattoos.save_outline(
                 root,
                 name,
@@ -1682,32 +1680,6 @@ def _needs(payload: Mapping[str, Any], keys: Sequence[str]) -> None:
     missing = [key for key in keys if key not in payload]
     if missing:
         raise Refusal(f"the request lacks {', '.join(missing)}; send {', '.join(keys)}")
-
-
-def _tattoo_out(one: tattoos.Tattoo) -> dict[str, Any]:
-    """Describe a kept tattoo as the page reads it."""
-    return {
-        "name": one.name,
-        "kind": one.kind,
-        "size": list(one.size),
-        "kept": one.kept,
-        "outlined": one.outlined,
-        "downscaled_from": None
-        if one.downscaled_from is None
-        else list(one.downscaled_from),
-        "cut_from": one.cut_from,
-    }
-
-
-def _outline_out(one: tattoos.Outline) -> dict[str, Any]:
-    """Describe an outline and its tone as the page reads it."""
-    return {
-        "points": [list(point) for point in one.points],
-        "closed": one.closed,
-        "white": one.white,
-        "neutral": one.neutral,
-        "depth": one.depth,
-    }
 
 
 def _tattoo_limits() -> dict[str, Any]:

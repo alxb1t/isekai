@@ -23,7 +23,7 @@ import re
 import shutil
 import tempfile
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
@@ -403,9 +403,7 @@ def save_outline(
         )
     scale, tone = _checked_tone(white, depth, ink)
     outline = Outline(checked, closed, scale, neutral, tone)
-    write_atomically(
-        _folder(library, name) / OUTLINE, _json_bytes(_outline_document(outline))
-    )
+    write_atomically(_folder(library, name) / OUTLINE, _json_bytes(asdict(outline)))
     return outline
 
 
@@ -423,17 +421,6 @@ def _checked_tone(white: object, depth: object, ink: InkConfig) -> tuple[float, 
             "a depth in that range"
         )
     return scale, tone
-
-
-def _outline_document(outline: Outline) -> dict[str, Any]:
-    """Return `outline` as the document `outline.json` holds."""
-    return {
-        "points": [list(point) for point in outline.points],
-        "closed": outline.closed,
-        "white": outline.white,
-        "neutral": outline.neutral,
-        "depth": outline.depth,
-    }
 
 
 def _stamp(at: datetime | None) -> str:
@@ -541,7 +528,7 @@ def keep(
         {
             DESIGN: png_of(image),
             RECORD: _json_bytes(record),
-            OUTLINE: _json_bytes(_outline_document(defaults("image"))),
+            OUTLINE: _json_bytes(asdict(defaults("image"))),
         },
     )
     return _load(_folder(library, name))[0]
@@ -586,7 +573,7 @@ def cut(
     _publish(
         library,
         name,
-        {RECORD: _json_bytes(record), OUTLINE: _json_bytes(_outline_document(tone))},
+        {RECORD: _json_bytes(record), OUTLINE: _json_bytes(asdict(tone))},
     )
     return _load(_folder(library, name))[0]
 
