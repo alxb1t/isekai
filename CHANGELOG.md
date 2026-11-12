@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.4] - 2026-11-13
+
+Gate: local 1m2s · CI not read under mf-ship · 0.86.3: local 1m2s · CI not read under mf-ship
+
 - `tests/record.py` runs one offline pass over every flow and writes `tests/record/graphs.json`, each flow's graph and the
   edit's whole; a test re-derives it, and `uv run python -m tests.record` writes it again (0130 D1, D2, D3, D9).
 - `tests/record/run.json` holds every path of the pass under the runs root: a JSON file with its duration `0.0` and the
