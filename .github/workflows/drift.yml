@@ -1,7 +1,7 @@
 name: drift
 
 # Re-derives every fetched manifest and goes red on a diff, so a pinned source
-# that moved is seen without anyone re-running a deriver (0049 design D7).
+# that moved is seen without anyone re-running a deriver.
 on:
   schedule:
     - cron: "17 6 * * 1"

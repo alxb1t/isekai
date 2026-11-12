@@ -265,7 +265,9 @@ def test_an_undeclared_artifact_is_refused(
     assert "tools.derive_vocabulary" in str(refused.value)
 
 
-@pytest.mark.spec_exempt("twin: why the refusal is the callers', not provision.py's")
+@pytest.mark.spec_exempt(
+    "structural: why the refusal is the callers', not provision.py's"
+)
 def test_provision_runs_by_path_without_the_package() -> None:
     # The image copies `provision.py` alone and runs it by path; an `isekai`
     # import there would fail every pod's provisioning.

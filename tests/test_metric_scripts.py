@@ -66,7 +66,7 @@ def test_the_collected_count_is_the_selected_one(summary: str, count: int) -> No
     assert tests_collected.selected(f"tests/a.py::test_a\n\n{summary}\n") == count
 
 
-@pytest.mark.spec_exempt("structural: twin of the collected count")
+@pytest.mark.spec_exempt("structural: the collected count")
 def test_a_collect_output_with_no_summary_is_refused() -> None:
     with pytest.raises(ValueError, match="collected"):
         tests_collected.selected("tests/a.py::test_a\n")
@@ -289,7 +289,7 @@ def test_the_reading_set_is_its_files_words(
     assert capsys.readouterr().out == f"{3 * len(reading_set.READING_SET)}\n"
 
 
-@pytest.mark.spec_exempt("structural: twin of the reading set's count")
+@pytest.mark.spec_exempt("structural: the reading set's count")
 def test_a_missing_reading_set_file_is_refused(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

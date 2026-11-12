@@ -18,15 +18,17 @@ photograph by construction -- one `git add` from publication quietly narrowed to
 the package (D18).
 """
 
+import ast
+from collections.abc import Container
 from pathlib import Path
 
 import pytest
 
 from evaluation import eval_models
-from isekai.boundary import provision, unpack
+from isekai.boundary import pod_start, provision, unpack
 from isekai.foundation import caption_config, edit, flow, run
 from isekai.pipeline import tattoos
-from isekai.shared import field_map, vocabulary
+from isekai.shared import field_map, ink, vocabulary
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -87,6 +89,12 @@ ANCHORS = (
     pytest.param(
         tattoos.TATTOO_CONFIG, ("config", "tattoo.json"), id="tattoos.TATTOO_CONFIG"
     ),
+    pytest.param(ink.INK_CONFIG_PATH, ("config", "ink.json"), id="ink.INK_CONFIG_PATH"),
+    pytest.param(
+        pod_start.PROVISION,
+        ("isekai", "boundary", "provision.py"),
+        id="pod_start.PROVISION",
+    ),
 )
 
 
@@ -95,7 +103,8 @@ def _assert_anchors_the_repository_root(anchor: Path, suffix: tuple[str, ...]) -
 
     The root is identified by `pyproject.toml` rather than by another constant,
     because a constant that moves with the anchor proves nothing about where
-    either one landed.
+    either one landed. The segments are then compared by name, which the strip
+    counts but never reads.
     """
     root = anchor
     for _ in suffix:
@@ -104,6 +113,40 @@ def _assert_anchors_the_repository_root(anchor: Path, suffix: tuple[str, ...]) -
     assert (root / "pyproject.toml").is_file(), (
         f"{root} holds no pyproject.toml, so it is not the repository root"
     )
+    assert anchor == REPO_ROOT.joinpath(*suffix), (
+        f"{anchor} is not the repository root joined to {suffix}"
+    )
+
+
+def file_anchored(root: Path) -> list[str]:
+    """Return each module-level constant built on `__file__`, as `module.NAME`.
+
+    e.g. `ink.py` holding `INK_CONFIG_PATH = Path(__file__)...` → `ink.INK_CONFIG_PATH`
+    """
+    found = []
+    for package in ("isekai", "evaluation"):
+        for path in sorted((root / package).rglob("*.py")):
+            for node in ast.parse(path.read_text()).body:
+                if isinstance(node, ast.Assign):
+                    names = [t for t in node.targets if isinstance(t, ast.Name)]
+                elif isinstance(node, ast.AnnAssign) and isinstance(
+                    node.target, ast.Name
+                ):
+                    names = [node.target]
+                else:
+                    continue
+                uses_file = any(
+                    isinstance(n, ast.Name) and n.id == "__file__"
+                    for n in ast.walk(node.value or node)
+                )
+                if uses_file:
+                    found += [f"{path.stem}.{name.id}" for name in names]
+    return found
+
+
+def unlisted(found: list[str], listed: Container[object]) -> list[str]:
+    """Return each constant of `found` that no id of `listed` names."""
+    return [name for name in found if name not in listed]
 
 
 @pytest.mark.spec_exempt(
@@ -130,3 +173,42 @@ def test_the_assertion_fails_when_it_lands_on_the_package_instead(
     # every one reduces to one of these paths.
     with pytest.raises(AssertionError):
         _assert_anchors_the_repository_root(REPO_ROOT / package, ())
+
+
+@pytest.mark.spec_exempt(
+    "structural: every constant anchored on `__file__` is listed in `ANCHORS`"
+)
+def test_every_file_anchored_constant_is_listed() -> None:
+    found = file_anchored(REPO_ROOT)
+
+    assert found, "the scan read no constant anchored on `__file__`"
+    assert unlisted(found, {param.id for param in ANCHORS}) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_file_anchored_constant_is_listed"
+)
+def test_the_check_catches_a_constant_missing_from_the_list(tmp_path: Path) -> None:
+    package = tmp_path / "isekai"
+    package.mkdir()
+    (package / "here.py").write_text(
+        "from pathlib import Path\n"
+        "LISTED = Path(__file__).parent\n"
+        "MISSING: Path = Path(__file__).parent / 'x'\n"
+        "PLAIN = 1\n"
+        "def f():\n"
+        "    LOCAL = __file__\n"
+    )
+
+    found = file_anchored(tmp_path)
+
+    assert found == ["here.LISTED", "here.MISSING"]
+    assert unlisted(found, {"here.LISTED"}) == ["here.MISSING"]
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_each_anchor_resolves_to_the_repository_root"
+)
+def test_the_assertion_fails_when_a_segment_is_misnamed() -> None:
+    with pytest.raises(AssertionError):
+        _assert_anchors_the_repository_root(REPO_ROOT / "data", (".data",))

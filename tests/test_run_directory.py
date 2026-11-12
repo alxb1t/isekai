@@ -60,7 +60,7 @@ from isekai.foundation.run import (
     write_atomically,
 )
 from isekai.interface.cli import build_parser
-from isekai.interface.wiring import Wiring, wiring, wiring_from
+from isekai.interface.wiring import Wiring, _is_within, wiring, wiring_from
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import approve, review
@@ -1073,6 +1073,15 @@ def test_containment_is_decided_by_identity_not_by_the_text_of_the_path() -> Non
 
     assert ".data" in str(refused.value)
     assert not inside.exists()
+
+
+@pytest.mark.spec("run-directory:containment:containment-is-decided-by-identity")
+def test_containment_is_decided_by_identity_through_a_symlink(tmp_path: Path) -> None:
+    link = tmp_path / "link"
+    link.symlink_to(REPO)
+
+    assert _is_within(link / "x", REPO)
+    assert not _is_within(tmp_path / "x", REPO)
 
 
 @pytest.mark.spec("run-directory:containment:in-tree-run-root-is-refused")

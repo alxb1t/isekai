@@ -370,23 +370,15 @@ def test_a_bare_word_boundary_loses_the_plurals_the_inflections_keep(
     ]
 
 
-@pytest.mark.spec_exempt("structural: the committed table against the operator's runs")
+@pytest.mark.spec_exempt(
+    "structural: the committed table against the transcribed filings"
+)
 def test_every_approved_tag_is_reachable_in_the_field_it_was_approved_in(
     provisioned: Vocabulary,
 ) -> None:
-    from collections import defaultdict
+    from tools.derive_field_map import FILED
 
-    from tools.derive_field_map import APPROVED
-
-    approved = sorted(Path().glob(APPROVED))
-    if not approved:
-        pytest.skip("the v0.20 runs are not on disk in this environment")
-
-    filed: dict[str, set[str]] = defaultdict(set)
-    for path in approved:
-        for field, tags in json.loads(path.read_text())["fields"].items():
-            for tag in tags:
-                filed[tag].add(field)
+    filed = {tag: set(counts) for tag, counts in FILED.items()}
 
     field_map = load(provisioned)
     unreachable = sorted(

@@ -68,7 +68,7 @@ def test_every_path_the_pins_guide_names_exists() -> None:
     assert missing(text, REPO_ROOT) == []
 
 
-@pytest.mark.spec_exempt("structural: the twin of the pins guide's path check")
+@pytest.mark.spec_exempt("structural: the pins guide's path check")
 def test_the_check_reports_a_path_that_does_not_exist(tmp_path: Path) -> None:
     (tmp_path / "config").mkdir()
     (tmp_path / "config" / "image.json").write_text("{}")

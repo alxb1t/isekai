@@ -141,7 +141,7 @@ def test_ink_extract_refuses_an_image_with_no_skin() -> None:
         extract_ink(dark, None, None, None)
 
 
-@pytest.mark.spec_exempt("structural: the twin of the dark image's refusal")
+@pytest.mark.spec_exempt("structural: the dark image's refusal")
 def test_ink_extract_reads_a_lit_image_the_dark_one_is_refused_beside() -> None:
     lit = Image.new("RGB", (64, 64), SKIN)
 

@@ -497,7 +497,7 @@ def test_a_flow_without_a_tagger_gets_every_field_empty_and_no_list_is_read(
     assert "from" not in body["producer"]
 
 
-@pytest.mark.spec_exempt("twin: the same run, tagged, reads the trapped list")
+@pytest.mark.spec_exempt("structural: the same run, tagged, reads the trapped list")
 def test_the_same_run_tagged_reads_the_list_the_twin_leaves_unread(
     run: Run, schema: Schema, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
 ) -> None:

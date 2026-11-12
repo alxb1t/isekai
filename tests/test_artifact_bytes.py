@@ -6,16 +6,30 @@ into one contract is proven to move no byte. The tripwire is an AST scan like
 """
 
 import ast
+import io
+import random
 from collections.abc import Callable, Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
+import numpy as np
 import pytest
+from PIL import Image
 
 from isekai.boundary.comfy import read_runtime
-from isekai.foundation.artifacts import DRAFT_FILE, read
+from isekai.foundation.artifacts import DRAFT_FILE, PlacementValues, read
+from isekai.foundation.edit import load_edit
 from isekai.foundation.flow import Schema
-from isekai.foundation.run import OUTPUTS, Run, open_run, record_failure
+from isekai.foundation.run import (
+    OUTPUTS,
+    Run,
+    open_run,
+    placement_file,
+    record_failure,
+)
+from isekai.interface.render import Record
 from isekai.pipeline.caption import READER_OPTIONS, FakeReader
+from isekai.pipeline.edit import Requested, request_placed
 from isekai.pipeline.generate import prompt_artifact, render
 from isekai.pipeline.review import approve, review, save_draft
 from isekai.pipeline.tagging import TAGGER_OPTIONS, FakeTagger, tag_hosted, tag_wd14
@@ -32,6 +46,21 @@ CONTRACT = "isekai/foundation/artifacts.py"
 
 # The call that writes a run file by hand.
 WRITER = "write_json"
+
+# The call that writes bytes, and the modules that call it for a byte or a library
+# file and never a run file, each with what it writes.
+BYTE_WRITER = "write_atomically"
+BYTE_WRITERS = {
+    "isekai/foundation/run.py": "the photograph's copy",
+    "isekai/interface/compare_view.py": "the comparison page",
+    "isekai/interface/ui/library.py": "a thumbnail or an upright source",
+    "isekai/pipeline/edit.py": "an edit's composite and its stitched image",
+    "isekai/pipeline/generate.py": "a render's image",
+    "isekai/pipeline/importing.py": "an imported source image",
+    "isekai/pipeline/review.py": "a source image's copy",
+    "isekai/pipeline/tattoos.py": "a tattoo library's outline, files and stage record",
+    "isekai/shared/ink.py": "an ink layer's image",
+}
 
 
 # --- the golden bytes ---------------------------------------------------------
@@ -143,6 +172,84 @@ def _render(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     return made.provenance
 
 
+# The edit and the placement come from `tests/test_edit_placement.py`'s inputs,
+# restated: a flat render, and a composite that multiplies the tattoo's square.
+SKIN = (200, 150, 120)
+SIDE = 400
+INKED = slice(80, 120)
+RENDER_SEED = 42
+SESSION_ID = "20261024T091200Z"
+
+
+def _png(pixels: "np.ndarray") -> bytes:
+    body = io.BytesIO()
+    Image.fromarray(pixels).save(body, "PNG")
+    return body.getvalue()
+
+
+def _flat_render(factor: float = 1.0) -> "np.ndarray":
+    """Return a flat render, its tattoo's square multiplied by `factor`."""
+    pixels = np.full((SIDE, SIDE, 3), SKIN, dtype=np.uint8)
+    square = pixels[INKED, INKED].astype(np.float32) * factor
+    pixels[INKED, INKED] = (square + 0.5).astype(np.uint8)
+    return pixels
+
+
+def _values() -> PlacementValues:
+    return {
+        "tattoo": "swallow",
+        "kind": "image",
+        "cut_from": None,
+        "mode": "two-stage",
+        "outline": {
+            "points": [[0.0, 0.0], [40.0, 0.0], [40.0, 40.0]],
+            "white": 1.0,
+            "neutral": False,
+            "depth": 1.0,
+        },
+        "stage1": [[[1.0, 2.0], [3.0, 4.0]]],
+        "pairs": [[[5.0, 6.0], [7.0, 8.0]]],
+        "limb": None,
+        "exclusions": [],
+    }
+
+
+def _placed(run: Run) -> Requested:
+    group = run.directory(FLOW.id, OUTPUTS, "001")
+    group.mkdir(parents=True)
+    source = group / f"{RENDER_SEED}.png"
+    source.write_bytes(_png(_flat_render()))
+    return request_placed(
+        load_edit("tattoo-wai"),
+        source,
+        _png(_flat_render(0.5)),
+        _values(),
+        overrides={},
+        seed=5,
+        rng=random.Random(1),
+    )
+
+
+def _edit(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
+    return _placed(run).record
+
+
+def _placement(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
+    asked = _placed(run)
+    return placement_file(asked.composite.parent, RENDER_SEED, asked.number)
+
+
+def _session(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
+    # Not ended: `end` reads the clock.
+    folder = run.path.parent / "sessions"
+    record = Record(folder, SESSION_ID, 1200, {FLOW.id: 1})
+    record.open(datetime(2026, 10, 24, 9, 12, tzinfo=UTC))
+    record.step("pod", "ready")
+    record.image({"digest": "a" * 64, "flow": FLOW.id, "version": 1, "seed": 42})
+    record.close()
+    return folder / f"{SESSION_ID}.json"
+
+
 # Each kind, and the production path that writes it from fixed inputs.
 KINDS: dict[str, Callable[[Run, Schema, Vocabulary], Path]] = {
     "run": _frame,
@@ -157,6 +264,9 @@ KINDS: dict[str, Callable[[Run, Schema, Vocabulary], Path]] = {
     "approved": _approved,
     "prompt": _prompt,
     "render": _render,
+    "edit": _edit,
+    "placement": _placement,
+    "session": _session,
 }
 
 
@@ -183,6 +293,7 @@ def test_each_kind_is_written_byte_for_byte(
 def json_writers(root: Path) -> set[str]:
     """Return every module under `root/isekai` that writes a run file by hand.
 
+    A call to `write_atomically` counts unless the module is in `BYTE_WRITERS`.
     e.g. a module calling `write_json(...)` -> `isekai/pipeline/sheet.py`
     """
     found: set[str] = set()
@@ -190,7 +301,10 @@ def json_writers(root: Path) -> set[str]:
         if name == CONTRACT:
             continue
         for node in ast.walk(tree):
-            if isinstance(node, ast.Call) and _called(node.func) == WRITER:
+            if not isinstance(node, ast.Call):
+                continue
+            called = _called(node.func)
+            if called == WRITER or (called == BYTE_WRITER and name not in BYTE_WRITERS):
                 found.add(name)
     return found
 
@@ -208,6 +322,11 @@ def _called(func: ast.expr) -> str | None:
     if isinstance(func, ast.Attribute):
         return func.attr
     return None
+
+
+@pytest.mark.spec_exempt("structural: the scan reads the contract and the modules")
+def test_the_scan_reads_the_contract() -> None:
+    assert CONTRACT in {name for name, _ in _modules(REPO_ROOT)}
 
 
 @pytest.mark.spec_exempt("structural: only the contract writes a run file")
@@ -232,38 +351,96 @@ def test_the_check_catches_a_module_writing_json(tmp_path: Path) -> None:
     }
 
 
+@pytest.mark.spec_exempt("structural: twin of test_only_the_contract_writes_a_run_file")
+def test_the_check_catches_a_byte_writer_outside_its_table(tmp_path: Path) -> None:
+    table = next(iter(BYTE_WRITERS))
+    for name, text in {
+        CONTRACT: "def write(path, body):\n    write_atomically(path, body)\n",
+        table: "def f(p, b):\n    write_atomically(p, b)\n",
+        "isekai/pipeline/loose.py": "def g(p, b):\n    write_atomically(p, b)\n",
+        "isekai/shared/dotted.py": "def h(p, b):\n    atomic.write_atomically(p, b)\n",
+        "isekai/shared/reads.py": "def i(p):\n    return p.read_bytes()\n",
+    }.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    assert json_writers(tmp_path) == {
+        "isekai/pipeline/loose.py",
+        "isekai/shared/dotted.py",
+    }
+
+
 # --- the annotation -----------------------------------------------------------
 
-# The contract's one writer. `ty` checks its artifact key by key only when the
-# caller annotated it, so the guard below makes the annotation a rule.
-TYPED_WRITER = "write"
+# The contract's writers. `ty` checks an artifact key by key only when the caller
+# annotated it, so the guard below makes the annotation a rule.
+TYPED_WRITERS = ("write", "create", "replace")
+_FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
+
+
+def _annotated_target(node: ast.AST) -> str | None:
+    """Return the name or `self.<name>` an annotated assignment binds, else None."""
+    if not isinstance(node, ast.AnnAssign):
+        return None
+    target = node.target
+    if isinstance(target, ast.Name):
+        return target.id
+    if (
+        isinstance(target, ast.Attribute)
+        and isinstance(target.value, ast.Name)
+        and target.value.id == "self"
+    ):
+        return f"self.{target.attr}"
+    return None
+
+
+def _class_attributes(tree: ast.Module) -> dict[int, set[str]]:
+    """Map each method's id to the `self.<name>` attributes its class annotates."""
+    inherited: dict[int, set[str]] = {}
+    for cls in ast.walk(tree):
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        attributes = {
+            target
+            for node in ast.walk(cls)
+            if (target := _annotated_target(node)) and target.startswith("self.")
+        }
+        for method in ast.walk(cls):
+            if isinstance(method, _FUNCTIONS):
+                inherited[id(method)] = attributes
+    return inherited
 
 
 def unannotated_writes(root: Path) -> set[str]:
-    """Return each `write(` call under `root/isekai` whose artifact is not annotated.
+    """Return each typed-writer call under `root/isekai` with an unannotated artifact.
 
-    Annotated means a name bound by an annotated assignment in the same function.
+    Annotated means a name bound by an annotated assignment in the same function, or
+    a `self.<name>` that any method of the same class annotates.
     e.g. `write(p, KIND, {})` on line 3 of `isekai/x.py` -> `isekai/x.py:3`
     """
     found: set[str] = set()
     for name, tree in _modules(root):
+        inherited = _class_attributes(tree)
         for scope in ast.walk(tree):
-            if not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if not isinstance(scope, _FUNCTIONS):
                 continue
             annotated = {
-                node.target.id
+                target
                 for node in ast.walk(scope)
-                if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
-            }
+                if (target := _annotated_target(node))
+            } | inherited.get(id(scope), set())
             for node in ast.walk(scope):
                 if not (
                     isinstance(node, ast.Call)
-                    and _called(node.func) == TYPED_WRITER
+                    and _called(node.func) in TYPED_WRITERS
                     and len(node.args) == 3
                 ):
                     continue
                 artifact = node.args[2]
-                if not (isinstance(artifact, ast.Name) and artifact.id in annotated):
+                if not (
+                    isinstance(artifact, (ast.Name, ast.Attribute))
+                    and ast.unparse(artifact) in annotated
+                ):
                     found.add(f"{name}:{node.lineno}")
     return found
 
@@ -293,4 +470,27 @@ def test_the_check_catches_a_bare_literal(tmp_path: Path) -> None:
     assert unannotated_writes(tmp_path) == {
         "isekai/pipeline/bare.py:2",
         "isekai/pipeline/unannotated.py:3",
+    }
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_write_gets_an_annotated_artifact"
+)
+def test_the_check_learns_a_classs_annotated_attribute(tmp_path: Path) -> None:
+    path = tmp_path / "isekai/interface/session.py"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "class Record:\n"
+        "    def __init__(self, p):\n"
+        "        self._body: SessionRecord = {}\n"
+        "        self._loose = {}\n"
+        "    def start(self, p):\n"
+        "        create(p, KIND, self._body)\n"
+        "    def end(self, p):\n"
+        "        replace(p, KIND, self._loose)\n"
+        "        replace(p, KIND, {})\n"
+    )
+    assert unannotated_writes(tmp_path) == {
+        "isekai/interface/session.py:8",
+        "isekai/interface/session.py:9",
     }

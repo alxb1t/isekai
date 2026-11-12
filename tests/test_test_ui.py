@@ -30,7 +30,7 @@ def test_absent_node_modules_is_refused_naming_npm_install(tmp_path: Path) -> No
     assert "run `npm install` in ui/" in NO_MODULES
 
 
-@pytest.mark.spec_exempt("structural: twin of the browser tests' refusals")
+@pytest.mark.spec_exempt("structural: the browser tests' refusals")
 def test_a_ready_tree_is_not_refused(tmp_path: Path) -> None:
     root = _ui(tmp_path, modules=True)
     assert refusal(root, which=lambda name: f"/bin/{name}") is None

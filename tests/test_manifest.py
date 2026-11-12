@@ -154,7 +154,7 @@ def _checkpoints(manifest: Manifest) -> list[Entry]:
 
 
 @pytest.mark.spec_exempt(
-    "the one-path rule, not a provisioning scenario: D8 admits one base"
+    "structural: the one-path rule, not a provisioning scenario: D8 admits one base"
 )
 def test_the_manifest_declares_exactly_one_base_checkpoint(manifest: Manifest) -> None:
     # A second declared checkpoint would be a second path in everything but name.
