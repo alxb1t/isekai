@@ -210,6 +210,14 @@ def test_tattoo_route_read_lists_each_in_the_order_kept_with_the_limits(
         "depth_max": 2.0,
         "photo_depth": 1.6,
         "image_depth": 1.0,
+        "floor_stage1": 6,
+        "floor_stage2": 8,
+        "floor_direct": 6,
+        "preview_floor": 3,
+        "preview_margin": 96,
+        "preview_wait_ms": 1000,
+        "pair_radius": 8,
+        "region_min": 3,
     }
 
 

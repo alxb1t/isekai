@@ -5,6 +5,7 @@
   design.png      the image, upright, no metadata; absent for a cut
   tattoo.json     name, kind (image | cut), size, downscaled_from, cut_from, kept
   outline.json    points, closed, white, neutral, depth
+  stage1/<digest>.json   pairs, not_on_photo: the tattoo's pairs with one photograph
 ```
 
 A tattoo is one input to many renders in many collections, so it sits beside the
@@ -32,7 +33,8 @@ from typing import TYPE_CHECKING, Any, Literal
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import ID_DIGEST_CHARS, REPOSITORY
-from isekai.shared.chain import crop_box, polygon_mask
+from isekai.shared.chain import crop_box, flatten, place, polygon_mask
+from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.ink import (
     INK_CONFIG_PATH,
     InkConfig,
@@ -49,10 +51,24 @@ TATTOOS = ".tattoos"
 DESIGN = "design.png"
 RECORD = "tattoo.json"
 OUTLINE = "outline.json"
+STAGE1 = "stage1"
 TATTOO_CONFIG = REPOSITORY / "config" / "tattoo.json"
 INK_CONFIG = INK_CONFIG_PATH
 
-KEYS = ("long_side", "outline_min", "outline_max", "view_quality")
+KEYS = (
+    "long_side",
+    "outline_min",
+    "outline_max",
+    "view_quality",
+    "floor_stage1",
+    "floor_stage2",
+    "floor_direct",
+    "preview_floor",
+    "preview_margin",
+    "preview_wait_ms",
+    "pair_radius",
+    "region_min",
+)
 
 # The longest a folder name may be on the filesystems this runs on.
 _NAME_BYTES = 255
@@ -67,18 +83,28 @@ _WHITE_SCALE_MAX = 255.0
 _DIGEST = re.compile(f"[0-9a-f]{{{ID_DIGEST_CHARS}}}")
 
 Kind = Literal["image", "cut"]
+Mode = Literal["cut", "direct", "two-stage"]
 Point = tuple[float, float]
+Pair = tuple[Point, Point]
 Size = tuple[int, int]
 
 
 @dataclass(frozen=True)
 class TattooConfig:
-    """The library's bounds: the image's long side, the outline's points, the view."""
+    """The library's bounds: the image, the outline, the view and the placement."""
 
     long_side: int
     outline_min: int
     outline_max: int
     view_quality: int
+    floor_stage1: int
+    floor_stage2: int
+    floor_direct: int
+    preview_floor: int
+    preview_margin: int
+    preview_wait_ms: int
+    pair_radius: int
+    region_min: int
 
 
 @dataclass(frozen=True)
@@ -596,6 +622,15 @@ class InkView:
     white: int
 
 
+def _on_its_photograph(tattoo: Tattoo, digest: str | None) -> None:
+    """Refuse a cut asked on a photograph it is not cut from, naming the right one."""
+    if tattoo.kind == "cut" and tattoo.cut_from != digest:
+        raise Refusal(
+            f"{tattoo.name} is cut from photograph {tattoo.cut_from}, not this "
+            "render's; open it on a render of that photograph"
+        )
+
+
 def _view_image(
     library: Path,
     tattoo: Tattoo,
@@ -609,11 +644,7 @@ def _view_image(
                 f"{tattoo.name} is cut from a photograph; ask its ink on a render of "
                 "that photograph"
             )
-        if tattoo.cut_from != digest:
-            raise Refusal(
-                f"{tattoo.name} is cut from photograph {tattoo.cut_from}, not this "
-                "render's; open it on a render of that photograph"
-            )
+        _on_its_photograph(tattoo, digest)
         try:
             body = photograph.read_bytes()
         except OSError as unreadable:
@@ -632,7 +663,16 @@ def _view_image(
     return image
 
 
-def ink_view(
+@dataclass(frozen=True)
+class InkLayer:
+    """The ink's RGBA layer on its crop, the crop's corner `origin` and the grey."""
+
+    image: "Image"
+    origin: tuple[int, int]
+    white: int
+
+
+def ink_layer(
     library: Path,
     name: str,
     photograph: Path | None,
@@ -641,14 +681,14 @@ def ink_view(
     white: float,
     neutral: bool,
     depth: float,
-) -> InkView:
-    """Return `name`'s ink on the crop of its outline, as a JPEG flattened on white.
+) -> InkLayer:
+    """Return `name`'s ink as the Multiply layer on the crop of its outline.
 
-    The crop is the outline's box grown by the extraction's reach. `photograph` and
+    The crop is the outline's box grown by the extraction's reach; `origin` is its
+    corner in the tattoo's pixels, the photograph's for a cut. `photograph` and
     `digest` are the render's, for a cut only; an upload reads its `design.png`.
     Refused for an open outline, an unknown tattoo and a cut asked on another
     photograph. Nothing is written.
-    e.g. a closed outline over a 160x160 photograph -> a JPEG of the box it names
     """
     from PIL import Image
 
@@ -676,10 +716,303 @@ def ink_view(
     inside = polygon_mask([(x - left, y - top) for x, y in checked], crop.size)
     mask = Image.fromarray(inside)
     layer = extract_ink(crop, mask, neutral, tone, ink, white=scale)
-    grey = white_grey(crop, mask, ink)
+    return InkLayer(layer.convert("RGBA"), (left, top), white_grey(crop, mask, ink))
 
-    page = Image.new("RGBA", layer.size, (255, 255, 255, 255))
-    flat = Image.alpha_composite(page, layer.convert("RGBA")).convert("RGB")
+
+def _jpeg(flat: "Image", quality: int) -> bytes:
+    """Return `flat` as a JPEG of `quality`."""
     out = BytesIO()
-    flat.save(out, "JPEG", quality=config.view_quality)
-    return InkView(out.getvalue(), (left, top, right - left, bottom - top), grey)
+    flat.save(out, "JPEG", quality=quality)
+    return out.getvalue()
+
+
+def ink_view(
+    library: Path,
+    name: str,
+    photograph: Path | None,
+    digest: str | None,
+    points: Sequence[Sequence[float]],
+    white: float,
+    neutral: bool,
+    depth: float,
+) -> InkView:
+    """Return `name`'s ink on the crop of its outline, as a JPEG flattened on white.
+
+    The values are the page's, so the view follows the sliders before they are saved;
+    refusals are `ink_layer`'s. Nothing is written.
+    e.g. a closed outline over a 160x160 photograph -> a JPEG of the box it names
+    """
+    from PIL import Image
+
+    layer = ink_layer(library, name, photograph, digest, points, white, neutral, depth)
+    page = Image.new("RGBA", layer.image.size, (255, 255, 255, 255))
+    flat = Image.alpha_composite(page, layer.image).convert("RGB")
+    width, height = layer.image.size
+    return InkView(
+        _jpeg(flat, load_tattoo_config().view_quality),
+        (*layer.origin, width, height),
+        layer.white,
+    )
+
+
+@dataclass(frozen=True)
+class Stage1:
+    """A tattoo's pairs on one photograph, the tattoo's point first, and its flag."""
+
+    pairs: tuple[Pair, ...]
+    not_on_photo: bool
+
+
+def _stage1_path(library: Path, name: str, digest: str) -> Path:
+    """Return where `name`'s stage-1 file on the photograph `digest` is, or would be."""
+    if not isinstance(digest, str) or not _DIGEST.fullmatch(digest):
+        raise Refusal(
+            f"{digest!r} is no photograph's digest; it is {ID_DIGEST_CHARS} lowercase "
+            "hexadecimal characters, as the render's address shows"
+        )
+    return _folder(library, name) / STAGE1 / f"{digest}.json"
+
+
+def _placed_pairs(pairs: object) -> tuple[Pair, ...]:
+    """Return `pairs` as pairs of two finite, non-negative points, or refuse the pair.
+
+    e.g. [[[3, 4], [30, 40]]] -> (((3.0, 4.0), (30.0, 40.0)),)
+    """
+    if not isinstance(pairs, list | tuple):
+        raise Refusal("pairs is a list of [[x, y], [x, y]] pairs; send that list")
+    checked: list[Pair] = []
+    for number, pair in enumerate(pairs, 1):
+        sides = pair if isinstance(pair, list | tuple) and len(pair) == 2 else None
+        if sides is not None and sum(side is None for side in sides) == 1:
+            raise Refusal(
+                f"pair {number} has a point with no match; click its other point or "
+                "delete it"
+            )
+        first = None if sides is None else _pair(sides[0])
+        second = None if sides is None else _pair(sides[1])
+        if first is None or second is None:
+            raise Refusal(
+                f"pair {number} is {pair!r}; a pair is two points, [[x, y], [x, y]], "
+                "each two finite numbers"
+            )
+        for x, y in (first, second):
+            if x < 0 or y < 0:
+                raise Refusal(
+                    f"pair {number} holds ({x:g}, {y:g}); a coordinate is zero or "
+                    "more, so click inside the image"
+                )
+        checked.append((first, second))
+    return tuple(checked)
+
+
+def read_stage1(library: Path, name: str, digest: str) -> Stage1:
+    """Return `name`'s pairs and flag on the photograph `digest`.
+
+    A photograph with no file holds no pairs and the tattoo on the photograph;
+    nothing is written.
+    """
+    _load_named(library, name)
+    path = _stage1_path(library, name, digest)
+    if not path.is_file():
+        return Stage1((), False)
+    return _stage1_of(path, name)
+
+
+def _stage1_of(path: Path, name: str) -> Stage1:
+    """Return the stage-1 file at `path`, or refuse a damaged one naming the file."""
+    try:
+        document = json.loads(path.read_text())
+        flag = document["not_on_photo"]
+        if not isinstance(flag, bool):
+            raise TypeError("not_on_photo is true or false")
+        return Stage1(_placed_pairs(document["pairs"]), flag)
+    except (OSError, KeyError, TypeError, ValueError, Refusal) as damaged:
+        raise Refusal(
+            f"{TATTOOS}/{name}/{STAGE1}/{path.name} cannot be read ({damaged}); "
+            "delete that file and place the tattoo again"
+        ) from damaged
+
+
+def save_stage1(
+    library: Path,
+    name: str,
+    digest: str,
+    pairs: object,
+    not_on_photo: object,
+) -> Stage1:
+    """Replace `name`'s pairs and flag on the photograph `digest`, whole or not at all.
+
+    Refused, naming the pair, for a coordinate that is no finite non-negative number
+    and a tattoo-side point outside the tattoo's image; refused for a cut, whose ink
+    is already in the photograph's pixels. The file is then as it was.
+    """
+    tattoo, _ = _load_named(library, name)
+    path = _stage1_path(library, name, digest)
+    if tattoo.kind == "cut":
+        raise Refusal(
+            f"{name} is cut from a photograph, so its ink is already in the "
+            "photograph's pixels; place it on a render with the pairs of the "
+            "photograph and the render"
+        )
+    if not isinstance(not_on_photo, bool):
+        raise Refusal("not_on_photo is true or false; send one of them")
+    checked = _placed_pairs(pairs)
+    width, height = tattoo.size
+    for number, ((x, y), _) in enumerate(checked, 1):
+        if x > width or y > height:
+            raise Refusal(
+                f"pair {number}'s tattoo point ({x:g}, {y:g}) lies outside the "
+                f"{width}x{height} image; click inside the tattoo"
+            )
+    state = Stage1(checked, not_on_photo)
+    write_atomically(path, _json_bytes(asdict(state)))
+    return state
+
+
+def stage1_states(library: Path, digest: str) -> dict[str, Stage1]:
+    """Return each tattoo's pairs and flag on the photograph `digest`, by name.
+
+    A tattoo placed on no such photograph is left out.
+    """
+    states: dict[str, Stage1] = {}
+    for tattoo in listed(library):
+        path = _stage1_path(library, tattoo.name, digest)
+        if path.is_file():
+            states[tattoo.name] = _stage1_of(path, tattoo.name)
+    return states
+
+
+def mode_of(kind: Kind, not_on_photo: bool) -> Mode:
+    """Return how a tattoo is placed: a cut, directly on a render, or in two stages.
+
+    e.g. an upload flagged not on this photo -> "direct"
+    """
+    if kind == "cut":
+        return "cut"
+    return "direct" if not_on_photo else "two-stage"
+
+
+@dataclass(frozen=True)
+class Preview:
+    """The placement preview: a JPEG of the ink on white, its crop and the grey."""
+
+    jpeg: bytes
+    box: tuple[int, int, int, int]
+    white: int
+
+
+def _preview_pairs(pairs: object, floor: int) -> tuple[Pair, ...]:
+    """Return the pairs of a stage, refusing a lone point and fewer than `floor`."""
+    checked = _placed_pairs(pairs)
+    if len(checked) < floor:
+        raise Refusal(
+            f"a preview needs at least {floor} pairs and this holds {len(checked)}; "
+            "click more pairs"
+        )
+    return checked
+
+
+def _region(points: object, label: str) -> tuple[Point, ...]:
+    """Return a region's points, refusing what is no list of finite [x, y] points."""
+    if not isinstance(points, list | tuple):
+        raise Refusal(f"the {label} is a list of [x, y] points; send that list")
+    found: list[Point] = []
+    for number, point in enumerate(points, 1):
+        pair = _pair(point)
+        if pair is None:
+            raise Refusal(
+                f"the {label}'s point {number} is {point!r}; a point is two numbers, "
+                "x and y"
+            )
+        found.append(pair)
+    return tuple(found)
+
+
+def preview(
+    library: Path,
+    name: str,
+    photograph: Path,
+    digest: str,
+    target_path: Path,
+    target: str,
+    pairs: object,
+    limb: object,
+    exclusions: object,
+) -> Preview:
+    """Return `name`'s warped ink on white, as a JPEG on a crop of the target.
+
+    `target` is `photo` for stage 1 and `render` for every other stage; `pairs` are
+    the stage's, `a` the earlier image's point and `b` the target's. The crop is the
+    box of the target-side points and the limb, grown by the preview margin. Refused
+    for fewer pairs than the preview floor, a lone point, a second stage whose first
+    is short of its floor, a cut on another photograph and an open outline. Nothing
+    is written.
+    """
+    import numpy as np
+    from PIL import Image
+
+    tattoo, outline = _load_named(library, name)
+    config = load_tattoo_config()
+    _on_its_photograph(tattoo, digest)
+    held = (
+        Stage1((), False)
+        if tattoo.kind == "cut"
+        else read_stage1(library, name, digest)
+    )
+    mode = mode_of(tattoo.kind, held.not_on_photo)
+    if target not in ("photo", "render"):
+        raise Refusal(f"target {target!r} is `photo` or `render`; send one of them")
+    if target == "photo" and mode != "two-stage":
+        raise Refusal(
+            f"{name} is placed on the render alone, with no stage on the "
+            "photograph; ask it with the target `render`"
+        )
+    placed = _preview_pairs(pairs, config.preview_floor)
+    shape = _region(limb, "limb") if limb else None
+    holes = [
+        _region(one, f"exclusion {n}") for n, one in enumerate(_listed(exclusions), 1)
+    ]
+    if (
+        mode == "two-stage"
+        and target == "render"
+        and len(held.pairs) < config.floor_stage1
+    ):
+        raise Refusal(
+            f"stage 1 holds {len(held.pairs)} pairs and the render stage needs "
+            f"{config.floor_stage1}; pair {name} with the photograph first"
+        )
+    size = dimensions_or_refuse(
+        photograph if target == "photo" else target_path,
+        "the preview reads the target's own header -- reload the page",
+    )
+    stages = [([b for _, b in placed], [a for a, _ in placed])]
+    if mode == "two-stage" and target == "render":
+        stages.append(([b for _, b in held.pairs], [a for a, _ in held.pairs]))
+    layer = ink_layer(
+        library,
+        name,
+        photograph,
+        digest,
+        outline.points,
+        outline.white,
+        outline.neutral,
+        outline.depth,
+    )
+    left, top, right, bottom = crop_box(
+        [*stages[0][0], *(shape or ())], config.preview_margin, size
+    )
+    if right <= left or bottom <= top:
+        raise Refusal(
+            f"the points lie outside the {size[0]}x{size[1]} target; click inside it"
+        )
+    box = (left, top, right - left, bottom - top)
+    ink = np.asarray(layer.image, dtype=np.float32) / 255.0
+    flat = flatten(place(ink, layer.origin, stages, box, shape, holes))
+    return Preview(_jpeg(Image.fromarray(flat), config.view_quality), box, layer.white)
+
+
+def _listed(value: object) -> list[object]:
+    """Return `value` as a list, refusing what is none."""
+    if not isinstance(value, list | tuple):
+        raise Refusal("exclusions is a list of regions; send that list")
+    return list(value)

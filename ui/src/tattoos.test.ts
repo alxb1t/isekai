@@ -12,7 +12,7 @@ import {
   uploadName,
   whiteState,
 } from './tattoos'
-import type { Tattoo } from './types'
+import type { Pair, Stage1, Tattoo } from './types'
 
 const DIGEST = 'a1b2c3d4e5f6'
 
@@ -29,20 +29,66 @@ function tattoo(over: Partial<Tattoo>): Tattoo {
   }
 }
 
+const FLOOR = 6
+
+const stage = (count: number, flag = false): Stage1 => ({
+  pairs: Array.from({ length: count }, (_, n): Pair => [[n, 0], [n, 1]]),
+  not_on_photo: flag,
+})
+
 spec('ui:picker:the-cards-show-the-state-and-the-source', () => {
-  const upload = card(tattoo({ outlined: true }), DIGEST)
+  const upload = card(tattoo({ outlined: true }), DIGEST, undefined, FLOOR)
   expect(upload).toEqual({
     state: 'outlined',
     source: 'kept 2026-11-12',
     choosable: true,
     reason: null,
+    stage: null,
+    offers: true,
+    opens: 'photo',
   })
-  const cut = card(tattoo({ kind: 'cut', cut_from: DIGEST }), DIGEST)
+  const cut = card(tattoo({ kind: 'cut', cut_from: DIGEST }), DIGEST, undefined, FLOOR)
   expect(cut.state).toBe('not outlined')
   expect(cut.source).toBe(`from photograph ${DIGEST}`)
   // The size an upload came with, when it was scaled down.
-  const scaled = card(tattoo({ downscaled_from: [5000, 3000] }), DIGEST)
+  const scaled = card(tattoo({ downscaled_from: [5000, 3000] }), DIGEST, undefined, FLOOR)
   expect(scaled.source).toBe('kept 2026-11-12 · downscaled from 5000×3000')
+})
+
+spec('ui:picker:a-card-is-ready-for-this-photograph', () => {
+  const upload = card(tattoo({ outlined: true }), DIGEST, stage(6), FLOOR)
+  const cut = card(tattoo({ kind: 'cut', cut_from: DIGEST, outlined: true }), DIGEST, undefined, FLOOR)
+
+  expect(upload.state).toBe('ready for this photograph')
+  expect(upload.stage).toBe('stage 1 · 6 pairs')
+  expect(cut.state).toBe('ready for this photograph')
+  // Short of the floor, an upload is outlined and no more; flagged, it is ready.
+  expect(card(tattoo({ outlined: true }), DIGEST, stage(5), FLOOR).state).toBe('outlined')
+  expect(card(tattoo({ outlined: true }), DIGEST, stage(5), FLOOR).stage).toBe('stage 1 · 5 pairs')
+  const flagged = card(tattoo({ outlined: true }), DIGEST, stage(0, true), FLOOR)
+  expect(flagged.state).toBe('ready for this photograph')
+  expect(flagged.stage).toBe('not on this photo')
+  // Not outlined is never ready, and a cut of another photograph is not either.
+  expect(card(tattoo({ outlined: false }), DIGEST, stage(9), FLOOR).state).toBe('not outlined')
+  const other = card(tattoo({ kind: 'cut', cut_from: 'ffffffffffff', outlined: true }), DIGEST, undefined, FLOOR)
+  expect(other.state).toBe('outlined')
+  expect(card(tattoo({ outlined: true }), DIGEST, stage(1), FLOOR).stage).toBe('stage 1 · 1 pair')
+})
+
+spec('ui:picker:a-card-opens-the-step-its-state-asks', () => {
+  expect(card(tattoo({ outlined: false }), DIGEST, undefined, FLOOR).opens).toBe('outline')
+  expect(card(tattoo({ outlined: true }), DIGEST, stage(2), FLOOR).opens).toBe('photo')
+  expect(card(tattoo({ outlined: true }), DIGEST, stage(6), FLOOR).opens).toBe('render')
+  expect(card(tattoo({ outlined: true }), DIGEST, stage(0, true), FLOOR).opens).toBe('render')
+  expect(
+    card(tattoo({ kind: 'cut', cut_from: DIGEST, outlined: true }), DIGEST, undefined, FLOOR).opens,
+  ).toBe('render')
+})
+
+spec(['ui:picker:not-on-this-photo-is-offered-on-an-upload-alone', 'ui:direct:a-cut-does-not-offer-the-flag'], () => {
+  expect(card(tattoo({}), DIGEST, undefined, FLOOR).offers).toBe(true)
+  expect(card(tattoo({ kind: 'cut', cut_from: DIGEST }), DIGEST, undefined, FLOOR).offers).toBe(false)
+  expect(card(tattoo({ kind: 'cut', cut_from: 'ffffffffffff' }), DIGEST, undefined, FLOOR).offers).toBe(false)
 })
 
 spec('ui:picker:an-uploads-name-starts-as-the-files-stem', () => {
@@ -53,12 +99,12 @@ spec('ui:picker:an-uploads-name-starts-as-the-files-stem', () => {
 })
 
 spec('ui:picker:a-cut-of-another-photograph-cannot-be-chosen', () => {
-  const other = card(tattoo({ kind: 'cut', cut_from: 'ffffffffffff' }), DIGEST)
+  const other = card(tattoo({ kind: 'cut', cut_from: 'ffffffffffff' }), DIGEST, undefined, FLOOR)
   expect(other.choosable).toBe(false)
   expect(other.reason).toContain('ffffffffffff')
-  expect(card(tattoo({ kind: 'cut', cut_from: DIGEST }), DIGEST).choosable).toBe(true)
+  expect(card(tattoo({ kind: 'cut', cut_from: DIGEST }), DIGEST, undefined, FLOOR).choosable).toBe(true)
   // An upload serves every render.
-  expect(card(tattoo({}), 'ffffffffffff').choosable).toBe(true)
+  expect(card(tattoo({}), 'ffffffffffff', undefined, FLOOR).choosable).toBe(true)
 })
 
 spec('ui:picker:a-refusal-shows-its-fix', () => {

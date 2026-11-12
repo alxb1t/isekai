@@ -4,7 +4,7 @@ The phases: the stages with the preview, the limb and exclusions, the bake, the 
 
 ## Progress
 
-- [ ] 1 — Stages · hard
+- [x] 1 — Stages · hard
 - [ ] 2 — Limb and exclusions · moderate
 - [ ] 3 — Bake · hard
 - [ ] 4 — Leave · moderate
@@ -12,49 +12,49 @@ The phases: the stages with the preview, the limb and exclusions, the bake, the 
 
 ## 1 — Stages
 
-- [ ] 1.1 **HALT CHECK** The core's chain and ink view are built: its tests carry `chain_composite` and `ink_view`.
+- [x] 1.1 **HALT CHECK** The core's chain and ink view are built: its tests carry `chain_composite` and `ink_view`.
   Verify: `uv run pytest tests/test_chain.py tests/test_tattoo_library.py -k "chain_composite or ink_view"` passes.
-- [ ] 1.2 **HALT CHECK** The core's panel, outline editor, picker, outline step and screen exist.
+- [x] 1.2 **HALT CHECK** The core's panel, outline editor, picker, outline step and screen exist.
   Verify: `ls ui/src/polygon.ts ui/src/components/ImagePanel.vue ui/src/components/TattooPicker.vue ui/src/components/OutlineStep.vue ui/src/views/Place.vue` prints each path.
-- [ ] 1.3 Add to `config/tattoo.json` the keys `floor_stage1`, `floor_stage2`, `floor_direct`, `preview_floor`, `preview_margin`, `preview_wait_ms`, `pair_radius` and `region_min` 3 per [D2](design.md#d2), and make `tattoo_config` in `tests/test_tattoo_library.py` read each.
+- [x] 1.3 Add to `config/tattoo.json` the keys `floor_stage1`, `floor_stage2`, `floor_direct`, `preview_floor`, `preview_margin`, `preview_wait_ms`, `pair_radius` and `region_min` 3 per [D2](design.md#d2), and make `tattoo_config` in `tests/test_tattoo_library.py` read each.
   Verify: `uv run pytest tests/test_tattoo_library.py -k tattoo_config` passes.
-- [ ] 1.4 Add to `isekai/pipeline/tattoos.py` `read_stage1`, `save_stage1` and `stage1_states` per [D1](design.md#d1); tests in `tests/test_tattoo_placement.py` carry `placement_stage1`.
+- [x] 1.4 Add to `isekai/pipeline/tattoos.py` `read_stage1`, `save_stage1` and `stage1_states` per [D1](design.md#d1); tests in `tests/test_tattoo_placement.py` carry `placement_stage1`.
   Verify: `uv run pytest tests/test_tattoo_placement.py -k placement_stage1` passes.
-- [ ] 1.5 Add to `isekai/shared/chain.py` `place` and `flatten` per [D3](design.md#d3), over `lookup`, `polygon_mask` and `clip`, numpy and Pillow imported inside; tests in `tests/test_chain.py` carry `chain_place`.
+- [x] 1.5 Add to `isekai/shared/chain.py` `place` and `flatten` per [D3](design.md#d3), over `lookup`, `polygon_mask` and `clip`, numpy and Pillow imported inside; tests in `tests/test_chain.py` carry `chain_place`.
   Verify: `uv run pytest tests/test_chain.py -k chain_place` passes.
-- [ ] 1.6 Add to `tattoos.py` `mode_of`, `ink_layer`, `Preview` and `preview` per [D2](design.md#d2), [D3](design.md#d3) and [D4](design.md#d4), and make `ink_view` flatten `ink_layer`'s result with the values the page sent; tests carry `placement_preview`.
+- [x] 1.6 Add to `tattoos.py` `mode_of`, `ink_layer`, `Preview` and `preview` per [D2](design.md#d2), [D3](design.md#d3) and [D4](design.md#d4), and make `ink_view` flatten `ink_layer`'s result with the values the page sent; tests carry `placement_preview`.
   Verify: `uv run pytest tests/test_tattoo_placement.py tests/test_tattoo_library.py -k "placement_preview or ink_view"` passes.
-- [ ] 1.7 Add to `isekai/interface/ui/app.py` `GET` and `PUT /api/tattoos/{name}/stage1/{digest}`, the `digest` query and the new limits on `GET /api/tattoos`, and the routes in the module's route table; update the list's expectation in `tests/test_ui_tattoo.py` carrying `tattoo_route_read`; tests in `tests/test_ui_placement.py` carry `placement_route_stage1`.
+- [x] 1.7 Add to `isekai/interface/ui/app.py` `GET` and `PUT /api/tattoos/{name}/stage1/{digest}`, the `digest` query and the new limits on `GET /api/tattoos`, and the routes in the module's route table; update the list's expectation in `tests/test_ui_tattoo.py` carrying `tattoo_route_read`; tests in `tests/test_ui_placement.py` carry `placement_route_stage1`.
   Verify: `uv run pytest tests/test_ui_placement.py tests/test_ui_tattoo.py -k "placement_route_stage1 or tattoo_route_read"` passes.
-- [ ] 1.8 Add to `app.py` `POST /api/c/{collection}/tattoos/{name}/preview` per [D4](design.md#d4): the run's photograph as `held(...).run.photo`, the target as `rendered(...)` resolves a render or, for an `edit`, `edit_files(group, seed, edit)[0]`, a JPEG with `no-store`, `X-Preview-Box` and `X-Ink-White`; tests carry `placement_route_preview`.
+- [x] 1.8 Add to `app.py` `POST /api/c/{collection}/tattoos/{name}/preview` per [D4](design.md#d4): the run's photograph as `held(...).run.photo`, the target as `rendered(...)` resolves a render or, for an `edit`, `edit_files(group, seed, edit)[0]`, a JPEG with `no-store`, `X-Preview-Box` and `X-Ink-White`; tests carry `placement_route_preview`.
   Verify: `uv run pytest tests/test_ui_placement.py -k placement_route_preview` passes.
-- [ ] 1.9 Hold that the guard answers each new route and no route deletes or renames a tattoo; tests carry `placement_route_guard`.
+- [x] 1.9 Hold that the guard answers each new route and no route deletes or renames a tattoo; tests carry `placement_route_guard`.
   Verify: `uv run pytest tests/test_ui_placement.py -k placement_route_guard` passes.
-- [ ] 1.10 Hold that `app.py` writes no file of its own.
+- [x] 1.10 Hold that `app.py` writes no file of its own.
   Verify: `uv run pytest tests/test_ui.py -k invariant` passes.
-- [ ] 1.11 Hold that the entry point's import graph reaches no wheel and the layers hold.
+- [x] 1.11 Hold that the entry point's import graph reaches no wheel and the layers hold.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_layers.py` passes.
-- [ ] 1.12 Add to `ui/src/types.ts` `Pair`, `Stage1` and `Preview`, and to `ui/src/api.ts` `stageOne`, `saveStageOne` and `export function placementPreview`, which reads the headers of [D4](design.md#d4).
+- [x] 1.12 Add to `ui/src/types.ts` `Pair`, `Stage1` and `Preview`, and to `ui/src/api.ts` `stageOne`, `saveStageOne` and `export function placementPreview`, which reads the headers of [D4](design.md#d4).
   Verify: `git grep -n "export function placementPreview" ui/src/api.ts` prints it.
-- [ ] 1.13 Add `ui/src/pairs.ts` per [D8](design.md#d8): `clicked`, `moved`, `deleted`, `undone`, `cleared`, `selected`, `lone` and `forward`; its tests in `ui/src/pairs.test.ts` bind through `spec`.
+- [x] 1.13 Add `ui/src/pairs.ts` per [D8](design.md#d8): `clicked`, `moved`, `deleted`, `undone`, `cleared`, `selected`, `lone` and `forward`; its tests in `ui/src/pairs.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/pairs.test.ts` passes.
-- [ ] 1.14 Add `ui/src/preview.ts` per [D8](design.md#d8): `due`, `asked`, `answered`, `dimmed`, `refused` and `previewable`; its tests in `ui/src/preview.test.ts` bind through `spec`.
+- [x] 1.14 Add `ui/src/preview.ts` per [D8](design.md#d8): `due`, `asked`, `answered`, `dimmed`, `refused` and `previewable`; its tests in `ui/src/preview.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/preview.test.ts` passes.
-- [ ] 1.15 Add `ui/src/stages.ts` per [D8](design.md#d8) and [D9](design.md#d9): `modeOf`, `stepsOf`, `forwardOf`, `startStep` and `skipped`; its tests in `ui/src/stages.test.ts` bind through `spec`, among them the skipped step's redirect.
+- [x] 1.15 Add `ui/src/stages.ts` per [D8](design.md#d8) and [D9](design.md#d9): `modeOf`, `stepsOf`, `forwardOf`, `startStep` and `skipped`; its tests in `ui/src/stages.test.ts` bind through `spec`, among them the skipped step's redirect.
   Verify: `npm --prefix ui run test -- src/stages.test.ts` passes.
-- [ ] 1.16 Add `ui/src/composables/usePlacing.ts` per [D7](design.md#d7): the tattoo, the stage-1 pairs read, the pairs held, and a `saveStageOne` on each change of the complete stage-1 pairs; its tests in `ui/src/composables/usePlacing.test.ts` bind through `spec`.
+- [x] 1.16 Add `ui/src/composables/usePlacing.ts` per [D7](design.md#d7): the tattoo, the stage-1 pairs read, the pairs held, and a `saveStageOne` on each change of the complete stage-1 pairs; its tests in `ui/src/composables/usePlacing.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/composables/usePlacing.test.ts` passes.
-- [ ] 1.17 Add `ui/src/components/PairPanel.vue` (the panel with the point markers, the waiting edge, the preview multiplied over it, its opacity and a hide control), `PairList.vue`, `StagePhoto.vue`, the stage-1 step, and `StageRender.vue`, the render step, whose left panel is the photograph for a two-stage tattoo or a cut and the tattoo's ink view for a direct one; each ends in the forward action of `forward` in `pairs.ts`, waiting with its reason, per [D8](design.md#d8).
+- [x] 1.17 Add `ui/src/components/PairPanel.vue` (the panel with the point markers, the waiting edge, the preview multiplied over it, its opacity and a hide control), `PairList.vue`, `StagePhoto.vue`, the stage-1 step, and `StageRender.vue`, the render step, whose left panel is the photograph for a two-stage tattoo or a cut and the tattoo's ink view for a direct one; each ends in the forward action of `forward` in `pairs.ts`, waiting with its reason, per [D8](design.md#d8).
   Verify: `ls ui/src/components/PairPanel.vue ui/src/components/PairList.vue ui/src/components/StagePhoto.vue ui/src/components/StageRender.vue` prints each path.
-- [ ] 1.18 Per [D9](design.md#d9) add the steps `photo` and `render` to the step set of `ui/src/routes.ts`; fix any test in `ui/src/viewkey.test.ts` that names either as an unknown step, and add one there that both resolve to the `place` route.
+- [x] 1.18 Per [D9](design.md#d9) add the steps `photo` and `render` to the step set of `ui/src/routes.ts`; fix any test in `ui/src/viewkey.test.ts` that names either as an unknown step, and add one there that both resolve to the `place` route.
   Verify: `npm --prefix ui run test -- src/viewkey.test.ts` passes.
-- [ ] 1.19 Give `ui/src/views/Place.vue` the `usePlacing`, a stepper from `stepsOf`, `StagePhoto` for `photo`, `StageRender` for `render`, and the replace of the route by `skipped`'s step once the tattoo is read.
+- [x] 1.19 Give `ui/src/views/Place.vue` the `usePlacing`, a stepper from `stepsOf`, `StagePhoto` for `photo`, `StageRender` for `render`, and the replace of the route by `skipped`'s step once the tattoo is read.
   Verify: `git grep -n "skipped" -- ui/src/views` prints the use.
-- [ ] 1.20 In `ui/src/tattoos.ts` add the state *ready for this photograph*, the stage-1 sub-line and the card's `startStep`; in `ui/src/components/TattooPicker.vue` the *not on this photo* tick on an upload's card, saved through `saveStageOne`, and the card opening `startStep`; in `ui/src/components/OutlineStep.vue` the forward action from `forwardOf`; tests in `ui/src/tattoos.test.ts` bind through `spec`.
+- [x] 1.20 In `ui/src/tattoos.ts` add the state *ready for this photograph*, the stage-1 sub-line and the card's `startStep`; in `ui/src/components/TattooPicker.vue` the *not on this photo* tick on an upload's card, saved through `saveStageOne`, and the card opening `startStep`; in `ui/src/components/OutlineStep.vue` the forward action from `forwardOf`; tests in `ui/src/tattoos.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/tattoos.test.ts` passes.
-- [ ] 1.21 Hold the browser's types.
+- [x] 1.21 Hold the browser's types.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 1.22 Hold the browser's unit tests.
+- [x] 1.22 Hold the browser's unit tests.
   Verify: `uv run python -m tools.test_ui` exits 0.
 
 ## 2 — Limb and exclusions

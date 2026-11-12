@@ -1,22 +1,27 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { renderDetail, tattoos, thumbAt, versionOf } from '../api'
+import { PLACING, usePlacing } from '../composables/usePlacing'
 import OutlineStep from '../components/OutlineStep.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import StagePhoto from '../components/StagePhoto.vue'
+import StageRender from '../components/StageRender.vue'
 import TattooPicker from '../components/TattooPicker.vue'
+import { type Step, circled, skipped, stepsOf } from '../stages'
 import type { RenderDetail, TattooList } from '../types'
 
 /* The placement screen (design spec J9): the render it places on, the steps built, and
    the step's component by the route. It stays mounted as the step changes, and holds the
-   kept tattoos both steps read. It declares no key: the app-wide ones stay. */
+   kept tattoos and what the stages place, which every step reads. It declares no key: the
+   app-wide ones stay. */
 const props = defineProps<{
   collection: string
   digest: string
   flow: string
   version: string
   seed: string
-  step: 'tattoo' | 'outline'
+  step: Step
   name?: string
 }>()
 const router = useRouter()
@@ -25,6 +30,9 @@ const route = useRoute()
 const detail = ref<RenderDetail | null>(null)
 const list = ref<TattooList | null>(null)
 const refusal = ref<string | null>(null)
+
+const placing = usePlacing({ collection: props.collection, digest: props.digest, flow: props.flow })
+provide(PLACING, placing)
 
 const render = computed(() => ({
   collection: props.collection,
@@ -46,13 +54,18 @@ const picking = computed(() => ({ name: 'place', params: { ...render.value, step
 const outlining = computed(() =>
   props.name ? { name: 'place', params: { ...render.value, step: 'outline', name: props.name } } : null,
 )
+const steps = computed(() => (props.name && placing.mode.value ? stepsOf(placing.mode.value) : null))
+const at = (step: Step) => ({
+  name: 'place',
+  params: { ...render.value, step, name: props.name },
+})
 
 async function refresh(): Promise<void> {
-  list.value = await tattoos()
+  list.value = await tattoos(props.digest)
 }
 
-function choose(name: string): void {
-  void router.push({ name: 'place', params: { ...render.value, step: 'outline', name } })
+function choose(name: string, step: Step): void {
+  void router.push({ name: 'place', params: { ...render.value, step, name } })
 }
 
 async function kept(name: string): Promise<void> {
@@ -62,23 +75,61 @@ async function kept(name: string): Promise<void> {
     refusal.value = (reason as Error).message
     return
   }
-  choose(name)
+  choose(name, 'outline')
+}
+
+/* The flag changed on a card: the picker reads the list again, and what the screen holds of
+   the tattoo is read again when it is next chosen. */
+async function flagged(): Promise<void> {
+  placing.forget()
+  try {
+    await refresh()
+  } catch (reason) {
+    refusal.value = (reason as Error).message
+  }
 }
 
 function uploadInstead(cut: string): void {
   void router.push({ ...picking.value, query: { instead: cut } })
 }
 
-/* An outline step with no tattoo named goes back to the picker. */
+function forwardTo(step: Step): void {
+  void router.push(at(step))
+}
+
+/* A step that needs a tattoo with none named goes back to the picker. */
 watch(
   () => [props.step, props.name],
   () => {
-    if (props.step === 'outline' && !props.name) void router.replace(picking.value)
+    if (props.step !== 'tattoo' && !props.name) void router.replace(picking.value)
   },
   { immediate: true },
 )
 
-/* The picker shows each tattoo's state as the outline step left it. */
+/* The tattoo a step names is read once, and again for the outline the step before it saved. */
+watch(
+  () => [props.step, props.name] as const,
+  ([now, name], before) => {
+    if (name === undefined || now === 'tattoo') return
+    void placing.load(name)
+    if (before?.[0] === 'outline' && now !== 'outline') void placing.reload()
+  },
+  { immediate: true },
+)
+
+/* The mode is read data, so the route cannot know a step it skips: once the tattoo is read,
+   the route is replaced by the step its mode takes in place. */
+watch(
+  () => [placing.mode.value, props.step] as const,
+  ([mode, step]) => {
+    if (mode === null || !props.name) return
+    const taken = skipped(mode, step)
+    if (taken !== step) void router.replace(at(taken))
+  },
+  { immediate: true },
+)
+
+/* The picker shows each tattoo's state as the stages left it. */
 watch(
   () => props.step,
   (now) => {
@@ -89,17 +140,20 @@ watch(
 onMounted(async () => {
   try {
     const own = { ...render.value, version: versionOf(props.version) }
-    const [shown, listed] = await Promise.all([renderDetail(own), tattoos()])
+    const [shown, listed] = await Promise.all([renderDetail(own), tattoos(props.digest)])
     detail.value = shown
     list.value = listed
   } catch (reason) {
     refusal.value = (reason as Error).message
   }
 })
+
+onUnmounted(() => void placing.settled())
 </script>
 
 <template>
   <RefusalPage v-if="refusal" :refusal="refusal" />
+  <RefusalPage v-else-if="placing.refusal.value" :refusal="placing.refusal.value" />
   <section v-else-if="detail && list" class="place">
     <header class="place__head">
       <img
@@ -111,18 +165,31 @@ onMounted(async () => {
         place a tattoo · {{ detail.flow }} · v{{ detail.version }} · seed {{ detail.seed }}
       </span>
       <nav class="place__steps" aria-label="steps">
-        <RouterLink class="place__step" :class="{ 'place__step--on': step === 'tattoo' }" :to="picking">
-          ① tattoo
-        </RouterLink>
-        <RouterLink
-          v-if="outlining"
-          class="place__step"
-          :class="{ 'place__step--on': step === 'outline' }"
-          :to="outlining"
-        >
-          ② outline
-        </RouterLink>
-        <span v-else class="place__step place__step--wait">② outline</span>
+        <template v-if="steps">
+          <RouterLink
+            v-for="one in steps"
+            :key="one.step"
+            class="place__step"
+            :class="{ 'place__step--on': step === one.step }"
+            :to="one.step === 'tattoo' ? picking : at(one.step)"
+          >
+            {{ circled(one.number) }} {{ one.label }}
+          </RouterLink>
+        </template>
+        <template v-else>
+          <RouterLink class="place__step" :class="{ 'place__step--on': step === 'tattoo' }" :to="picking">
+            ① tattoo
+          </RouterLink>
+          <RouterLink
+            v-if="outlining"
+            class="place__step"
+            :class="{ 'place__step--on': step === 'outline' }"
+            :to="outlining"
+          >
+            ② outline
+          </RouterLink>
+          <span v-else class="place__step place__step--wait">② outline</span>
+        </template>
       </nav>
       <RouterLink class="btn btn-secondary place__back" :to="back">Back to the render</RouterLink>
     </header>
@@ -133,14 +200,34 @@ onMounted(async () => {
       :instead="instead"
       @choose="choose"
       @kept="kept"
+      @flagged="flagged"
     />
     <OutlineStep
-      v-else-if="name"
+      v-else-if="step === 'outline' && name"
       :key="name"
       :place="place"
       :name="name"
       :limits="list.limits"
+      :mode="placing.mode.value"
       @instead="uploadInstead"
+      @forward="forwardTo"
+    />
+    <StagePhoto
+      v-else-if="step === 'photo' && name && placing.tattoo.value"
+      :key="`photo-${name}`"
+      :place="place"
+      :version="version"
+      :seed="seed"
+      :limits="list.limits"
+      @forward="forwardTo('render')"
+    />
+    <StageRender
+      v-else-if="step === 'render' && name && placing.tattoo.value"
+      :key="`render-${name}`"
+      :place="place"
+      :version="version"
+      :seed="seed"
+      :limits="list.limits"
     />
   </section>
 </template>

@@ -3,7 +3,8 @@
 A stage is a `Spline` fitted backwards, from the target's pixels to the pixels of the
 image before it, so each target pixel looks up the ink it shows and the warp leaves no
 hole. `lookup` runs the stages and samples the ink; `clip` keeps it inside a limb
-and out of the exclusions; `multiply` lays it over the render.
+and out of the exclusions; `place` fits the stages from point pairs and clips over a
+crop of the target; `flatten` lays that on white; `multiply` lays it over the render.
 
 Images are float arrays in 0..1, `(height, width, channels)`; ink is RGBA. Stdlib
 only at module scope: numpy and Pillow are imported inside the functions, so
@@ -172,6 +173,60 @@ def clip(
     for exclusion in exclusions:
         clipped[polygon_mask(exclusion, (width, height)) > 0, 3] = 0.0
     return clipped
+
+
+def place(
+    ink: "NDArray[np.float64]",
+    origin: tuple[int, int],
+    stages: Sequence[tuple[Points, Points]],
+    box: tuple[int, int, int, int],
+    limb: Points | None = None,
+    exclusions: Sequence[Points] = (),
+) -> "NDArray[np.float64]":
+    """Return the ink as it shows over `box` of the target, RGBA, clipped to the limb.
+
+    Each stage is `(target_side, source_side)` points, the stage nearest the target
+    first, in the pixels of the image each side belongs to. `ink` is a crop of the
+    last source image whose corner is `origin`; `box` is `(x, y, width, height)` in
+    the target's pixels. Transparent white shows where nothing lands.
+    e.g. one stage shifting by (+5, 0), origin (0, 0) -> target pixel (0, 0) shows
+    ink pixel (5, 0)
+    """
+    import numpy as np
+
+    left, top, width, height = box
+    last = len(stages) - 1
+    splines = []
+    for index, (target_side, source_side) in enumerate(stages):
+        target = np.asarray(target_side, dtype=np.float64).reshape(-1, 2)
+        source = np.asarray(source_side, dtype=np.float64).reshape(-1, 2)
+        if index == 0:
+            target = target - (left, top)
+        if index == last:
+            source = source - origin
+        splines.append(Spline(target, source))
+    layer = lookup(ink, splines, (width, height))
+    outline = (
+        [(-2.0, -2.0), (width + 2.0, -2.0), (width + 2.0, height + 2.0)]
+        + [(-2.0, height + 2.0)]
+        if limb is None
+        else [(x - left, y - top) for x, y in limb]
+    )
+    return clip(
+        layer, outline, [[(x - left, y - top) for x, y in one] for one in exclusions]
+    )
+
+
+def flatten(layer: "NDArray[np.float64]") -> "NDArray[np.uint8]":
+    """Return the RGBA `layer` laid on white, as 8-bit RGB.
+
+    e.g. black at half alpha -> (128, 128, 128)
+    """
+    import numpy as np
+
+    alpha = layer[..., 3:]
+    flat = layer[..., :3] * alpha + (1.0 - alpha)
+    return np.clip(flat * 255.0 + 0.5, 0.0, 255.0).astype(np.uint8)
 
 
 def multiply(

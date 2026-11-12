@@ -22,12 +22,16 @@ import type {
   JobSlot,
   LibraryInfo,
   Outline,
+  Pair,
+  Point,
+  Preview,
   Quote,
   RenderDetail,
   RenderOffer,
   Renders,
   SessionRecord,
   RunningSession,
+  Stage1,
   TagMatches,
   TakenOut,
   Tattoo,
@@ -351,9 +355,25 @@ export function comparison(
 }
 
 /* The tattoo library, which belongs to no collection: every kept tattoo and the
-   limits the server holds an outline to. */
-export function tattoos(): Promise<TattooList> {
-  return get<TattooList>('/api/tattoos')
+   limits the server holds an outline and the stages to. With a photograph's `digest`,
+   each tattoo's stage-1 state on it comes too. */
+export function tattoos(digest?: string): Promise<TattooList> {
+  const query = digest === undefined ? '' : `?${new URLSearchParams({ digest })}`
+  return get<TattooList>(`/api/tattoos${query}`)
+}
+
+/* A tattoo's pairs with one photograph, and the flag; no pairs for one never placed. */
+export function stageOne(digest: string, name: string): Promise<Stage1> {
+  return get(`/api/tattoos/${encodeURIComponent(name)}/stage1/${encodeURIComponent(digest)}`)
+}
+
+/* Replace a tattoo's pairs with a photograph, and the flag, with `stage`, whole. */
+export function saveStageOne(digest: string, name: string, stage: Stage1): Promise<Stage1> {
+  return send(
+    `/api/tattoos/${encodeURIComponent(name)}/stage1/${encodeURIComponent(digest)}`,
+    'PUT',
+    stage,
+  )
 }
 
 /* One kept tattoo with its outline and tone. */
@@ -417,14 +437,61 @@ export function inkView(
 }
 
 async function readInk(url: string, init: RequestInit): Promise<InkView> {
+  return readBox(url, init, 'X-Ink-Box')
+}
+
+/* Read an answer that is a JPEG, its crop in `boxHeader` as `x,y,w,h`, and the grey in
+   `X-Ink-White`. */
+async function readBox(url: string, init: RequestInit, boxHeader: string): Promise<InkView> {
   const response = await fetch(url, init)
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as { refusal?: string }
     throw new Error(body.refusal ?? `${url} answered ${response.status}`)
   }
-  const [x, y, width, height] = (response.headers.get('X-Ink-Box') ?? '').split(',').map(Number)
+  const [x, y, width, height] = (response.headers.get(boxHeader) ?? '').split(',').map(Number)
   const white = Number(response.headers.get('X-Ink-White'))
   if ([x, y, width, height, white].some((one) => one === undefined || Number.isNaN(one)))
     throw new Error(`${url} answered no ink box or white point`)
   return { image: await response.blob(), box: { x, y, width, height }, white }
+}
+
+/* What a placement preview is asked with: the target (`photo` for stage 1, `render` for the
+   others), the render it is placed on, the baked edit of it or none, and the stage's pairs,
+   limb and exclusions. */
+export interface PreviewAsk {
+  target: 'photo' | 'render'
+  place: Place
+  version: string
+  seed: string
+  edit: number | null
+  pairs: Pair[]
+  limb: Point[] | null
+  exclusions: Point[][]
+}
+
+/* The warped ink of `name` for a stage's pairs, as a JPEG on white over a crop of the target,
+   made now and kept nowhere. The crop comes in `X-Preview-Box` as `x,y,w,h`. */
+export function placementPreview(
+  collection: string,
+  name: string,
+  ask: PreviewAsk,
+  signal?: AbortSignal,
+): Promise<Preview> {
+  const url = `/api/c/${encodeURIComponent(collection)}/tattoos/${encodeURIComponent(name)}/preview`
+  const body = {
+    target: ask.target,
+    digest: ask.place.digest,
+    flow: ask.place.flow,
+    version: ask.version,
+    seed: ask.seed,
+    edit: ask.edit,
+    pairs: ask.pairs,
+    limb: ask.limb,
+    exclusions: ask.exclusions,
+  }
+  return readBox(
+    url,
+    { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal },
+    'X-Preview-Box',
+  )
 }
