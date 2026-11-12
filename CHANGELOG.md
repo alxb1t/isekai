@@ -13,6 +13,9 @@ its new digest.
 - The placement models are one manifest, `config/placement.json`, which `make setup` fetches and `make drift`
   re-derives; `isekai/boundary/unpack.py` unpacks a zip entry's declared members, each verified, and
   `provision.py` stays as the pod image holds it (0123 D3, D4, D5).
+- The placement manifest carries its pins: the pose detector, byte for byte the pod's, the pose estimator, and
+  the segmenter's archive with its encoder and decoder as members, each at a revision with its digest and size
+  (0123 D3, D5).
 
 ## [0.82.0] - 2026-11-12
 

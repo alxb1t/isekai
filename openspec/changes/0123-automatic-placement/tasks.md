@@ -5,7 +5,7 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 ## Progress
 
 - [x] 1 — Models · hard
-- [ ] 2 — 🛑 **HUMAN** — the model pins
+- [x] 2 — 🛑 **HUMAN** — the model pins
 - [ ] 3 — Pose · hard
 - [ ] 4 — Segment · hard
 - [ ] 5 — Proposal · hard
@@ -50,11 +50,11 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 ## 2 — 🛑 **HUMAN** — the model pins
 
-- [ ] 2.1 From this worktree's root, on a machine that reaches `huggingface.co`, run `uv run python -m tools.derive_placement`. It writes `config/placement.json`.
+- [x] 2.1 From this worktree's root, on a machine that reaches `huggingface.co`, run `uv run python -m tools.derive_placement`. It writes `config/placement.json`.
   Verify: `ls config/placement.json` prints the path.
-- [ ] 2.2 In the same worktree run `uv run python -m isekai.boundary.unpack fetch config/placement.json`. It lands the detector, the estimator and the archive, and unpacks the archive into `models/sam2/`.
+- [x] 2.2 In the same worktree run `uv run python -m isekai.boundary.unpack fetch config/placement.json`. It lands the detector, the estimator and the archive, and unpacks the archive into `models/sam2/`.
   Verify: `ls models/dwpose/yolox_l.onnx models/dwpose/dw-ll_ucoco_384.onnx models/sam2/encoder.onnx models/sam2/decoder.onnx` prints each path.
-- [ ] 2.3 Read the manifest: the detector's digest is the pod's pin, `7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411`, as the render manifest has it.
+- [x] 2.3 Read the manifest: the detector's digest is the pod's pin, `7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411`, as the render manifest has it.
   Verify: `grep -c 7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411 config/placement.json` prints `1`.
 
 ## 3 — Pose

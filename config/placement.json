@@ -1,0 +1,47 @@
+{
+  "pinned": "2026-11-11",
+  "publishers": [
+    "yzd-v",
+    "vietanhdev"
+  ],
+  "entries": [
+    {
+      "dest": "dwpose/yolox_l.onnx",
+      "sha256": "7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411",
+      "bytes": 216746733,
+      "sources": [
+        "https://huggingface.co/yzd-v/DWPose/resolve/1a7144101628d69ee7a3768d1ee3a094070dc388/yolox_l.onnx"
+      ]
+    },
+    {
+      "dest": "dwpose/dw-ll_ucoco_384.onnx",
+      "sha256": "724f4ff2439ed61afb86fb8a1951ec39c6220682803b4a8bd4f598cd913b1843",
+      "bytes": 134399116,
+      "sources": [
+        "https://huggingface.co/yzd-v/DWPose/resolve/1a7144101628d69ee7a3768d1ee3a094070dc388/dw-ll_ucoco_384.onnx"
+      ]
+    },
+    {
+      "dest": "sam2/sam2.1_hiera_small_20260221.zip",
+      "sha256": "7c232acd0a95053704aa2ae9f9a3e8f9e93899fa51335b14d38e34bb7267973d",
+      "bytes": 142896844,
+      "sources": [
+        "https://huggingface.co/vietanhdev/segment-anything-2.1-onnx-models/resolve/6a3ac868340a3196a349050a6efae22a5acc0330/sam2.1_hiera_small_20260221.zip"
+      ],
+      "unpack": [
+        {
+          "member": "sam2.1_hiera_small.encoder.onnx",
+          "dest": "sam2/encoder.onnx",
+          "sha256": "275013f35a03fcf9d9f32f0490bfb7acd8b8fb86f145ba173123eb3886c8d4b2",
+          "bytes": 138018779
+        },
+        {
+          "member": "sam2.1_hiera_small.decoder.onnx",
+          "dest": "sam2/decoder.onnx",
+          "sha256": "d158eb26a43d39eed23ef677d6826d17eb9eda951921f9a252fa5d36d871b57d",
+          "bytes": 16519569
+        }
+      ]
+    }
+  ]
+}
