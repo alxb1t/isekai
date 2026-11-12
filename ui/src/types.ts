@@ -480,11 +480,46 @@ export interface TattooLimits {
   /* The depth a cut and an upload start at, which *Reset* returns to. */
   photo_depth: number
   image_depth: number
+  /* The pairs a stage goes forward with, and the least a preview is asked with. */
+  floor_stage1: number
+  floor_stage2: number
+  floor_direct: number
+  preview_floor: number
+  /* The preview's crop margin in pixels, and the wait after the last change in ms. */
+  preview_margin: number
+  preview_wait_ms: number
+  /* The selection radius in screen pixels, and the least points of a limb or exclusion. */
+  pair_radius: number
+  region_min: number
+}
+
+/* A tattoo point and the point it matches on the other image: `[a, b]`, `a` first. */
+export type Pair = [Point, Point]
+
+/* A tattoo's pairs with one photograph, and whether it is *not on this photo*. */
+export interface Stage1 {
+  pairs: Pair[]
+  not_on_photo: boolean
 }
 
 export interface TattooList {
   tattoos: Tattoo[]
   limits: TattooLimits
+  /* With a photograph's digest asked: the state of each tattoo placed on it, by name. */
+  stage1?: Record<string, Stage1>
+}
+
+/* A bake's answer: the number of the edit it queued. */
+export interface Baked {
+  edit: number
+}
+
+/* The placement preview: the ink on white as a JPEG, its crop in the target's pixels,
+   and the automatic white point as a grey from 0 to 255. */
+export interface Preview {
+  image: Blob
+  box: { x: number; y: number; width: number; height: number }
+  white: number
 }
 
 /* The ink on an outline's crop: a JPEG, its box in the image's pixels, and the

@@ -29,7 +29,7 @@ export const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
-    path: `${RENDER}/place/:step(tattoo|outline)/:name?`,
+    path: `${RENDER}/place/:step(tattoo|outline|photo|render|review)/:name?`,
     name: 'place',
     component: Place,
     props: true,

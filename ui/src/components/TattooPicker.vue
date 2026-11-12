@@ -8,17 +8,20 @@ import {
   keepTattoo,
   openStaging,
   photoUrl,
+  saveStageOne,
   stageFile,
 } from '../api'
+import type { Step } from '../stages'
 import { useLiveStore } from '../stores/live'
 import { card, refusalField, uploadName } from '../tattoos'
-import type { TattooList } from '../types'
+import type { Stage1, TattooList } from '../types'
 
 /* The placement screen's first step: every kept tattoo as a card, an upload through the
    import's staging under a name, and a cut of this render's photograph under a name.
-   It shows state and the way forward; a card opens the outline step on its tattoo. */
+   It shows state and the way forward; a card opens the step its state asks, and an upload's
+   card offers *not on this photo*, which keeps the tattoo's stage-1 pairs. */
 const props = defineProps<{ place: Place; list: TattooList; instead: string | null }>()
-const emit = defineEmits<{ choose: [name: string]; kept: [name: string] }>()
+const emit = defineEmits<{ choose: [name: string, step: Step]; kept: [name: string]; flagged: [] }>()
 
 interface Chosen {
   file: File
@@ -148,12 +151,32 @@ async function cut(): Promise<void> {
 }
 
 const cards = computed(() =>
-  props.list.tattoos.map((tattoo) => ({
-    tattoo,
-    ...card(tattoo, props.place.digest),
-    src: tattoo.kind === 'image' ? designAt(tattoo.name) : photoUrl(props.place),
-  })),
+  props.list.tattoos.map((tattoo) => {
+    const held = props.list.stage1?.[tattoo.name]
+    return {
+      tattoo,
+      held,
+      ...card(tattoo, props.place.digest, held, props.list.limits.floor_stage1),
+      src: tattoo.kind === 'image' ? designAt(tattoo.name) : photoUrl(props.place),
+    }
+  }),
 )
+
+const flagRefusal = ref<{ name: string; reason: string } | null>(null)
+
+/* Choose or clear *not on this photo*: the pairs the tattoo holds are sent with the flag. */
+async function flag(name: string, held: Stage1 | undefined, event: Event): Promise<void> {
+  const box = event.target as HTMLInputElement
+  const on = box.checked
+  flagRefusal.value = null
+  try {
+    await saveStageOne(props.place.digest, name, { pairs: held?.pairs ?? [], not_on_photo: on })
+    emit('flagged')
+  } catch (reason) {
+    flagRefusal.value = { name, reason: (reason as Error).message }
+    box.checked = !on
+  }
+}
 
 onUnmounted(() => {
   const id = staging.value
@@ -238,23 +261,34 @@ onUnmounted(() => {
     <p class="section-label">kept tattoos · {{ cards.length }}</p>
     <p v-if="cards.length === 0" class="picker__note mono">none kept yet</p>
     <div class="picker__cards">
-      <button
-        v-for="one in cards"
-        :key="one.tattoo.name"
-        class="picker__card"
-        type="button"
-        :disabled="!one.choosable"
-        :title="one.reason ?? ''"
-        :data-tattoo="one.tattoo.name"
-        @click="emit('choose', one.tattoo.name)"
-      >
-        <img v-if="one.choosable" class="picker__image" :src="one.src" :alt="one.tattoo.name" loading="lazy" />
-        <span v-else class="picker__image picker__image--none" />
-        <span class="picker__title mono">{{ one.tattoo.name }}</span>
-        <span class="picker__state mono" :data-state="one.state">{{ one.state }}</span>
-        <span class="picker__source mono">{{ one.source }}</span>
-        <span v-if="one.reason" class="picker__reason mono">{{ one.reason }}</span>
-      </button>
+      <div v-for="one in cards" :key="one.tattoo.name" class="picker__item">
+        <button
+          class="picker__card"
+          type="button"
+          :disabled="!one.choosable"
+          :title="one.reason ?? ''"
+          :data-tattoo="one.tattoo.name"
+          @click="emit('choose', one.tattoo.name, one.opens)"
+        >
+          <img v-if="one.choosable" class="picker__image" :src="one.src" :alt="one.tattoo.name" loading="lazy" />
+          <span v-else class="picker__image picker__image--none" />
+          <span class="picker__title mono">{{ one.tattoo.name }}</span>
+          <span class="picker__state mono" :data-state="one.state">{{ one.state }}</span>
+          <span class="picker__source mono">{{ one.source }}</span>
+          <span v-if="one.stage" class="picker__source mono" data-stage>{{ one.stage }}</span>
+          <span v-if="one.reason" class="picker__reason mono">{{ one.reason }}</span>
+        </button>
+        <label v-if="one.offers && one.choosable" class="picker__flag mono">
+          <input
+            type="checkbox"
+            :checked="one.held?.not_on_photo === true"
+            @change="flag(one.tattoo.name, one.held, $event)"
+          />not on this photo
+        </label>
+        <p v-if="flagRefusal && flagRefusal.name === one.tattoo.name" class="picker__refusal" data-flag-refusal>
+          <span class="refusal__mark" />{{ flagRefusal.reason }}
+        </p>
+      </div>
     </div>
   </section>
 </template>

@@ -180,6 +180,97 @@ def test_chain_composite_a_polygon_mask_is_filled_inside_and_empty_outside() -> 
     assert mask[5, 10] == 0
 
 
+CORNERS = [(0.0, 0.0), (60.0, 0.0), (0.0, 60.0), (60.0, 60.0)]
+
+
+def _moved(dx: float, dy: float) -> list[tuple[float, float]]:
+    """Return `CORNERS` moved by (dx, dy)."""
+    return [(x + dx, y + dy) for x, y in CORNERS]
+
+
+@pytest.mark.spec_exempt("structural: place reads the pairs, the box and the origin")
+def test_chain_place_a_target_pixel_shows_the_ink_pixel_its_pairs_name() -> None:
+    ink = np.zeros((20, 20, 4))
+    ink[..., 3] = 1.0
+    ink[2, 3, :3] = 0.5
+
+    layer = chain.place(ink, (0, 0), [(CORNERS, _moved(3, 2))], (0, 0, 10, 10))
+
+    assert layer.shape == (10, 10, 4)
+    assert layer[0, 0].tolist() == pytest.approx([0.5, 0.5, 0.5, 1.0], abs=0.01)
+    assert layer[1, 1].tolist() == pytest.approx([0.0, 0.0, 0.0, 1.0], abs=0.01)
+
+
+@pytest.mark.spec_exempt("structural: the box and the origin shift one side each")
+def test_chain_place_the_box_shifts_the_target_and_the_origin_the_source() -> None:
+    ink = np.zeros((20, 20, 4))
+    ink[..., 3] = 1.0
+    ink[5, 6, :3] = 0.5
+
+    layer = chain.place(ink, (10, 10), [(_moved(4, 4), _moved(16, 15))], (4, 4, 8, 8))
+
+    assert layer[0, 0].tolist() == pytest.approx([0.5, 0.5, 0.5, 1.0], abs=0.01)
+    assert layer[3, 3].tolist() == pytest.approx([0.0, 0.0, 0.0, 1.0], abs=0.01)
+
+
+@pytest.mark.spec_exempt("structural: stages chain from the target back to the ink")
+def test_chain_place_two_stages_are_carried_one_after_the_other() -> None:
+    ink = np.zeros((20, 20, 4))
+    ink[..., 3] = 1.0
+    ink[4, 5, :3] = 0.5
+    stages = [(CORNERS, _moved(2, 0)), (_moved(2, 0), _moved(5, 3))]
+
+    layer = chain.place(ink, (0, 0), stages, (0, 0, 10, 10))
+
+    assert layer[1, 0].tolist() == pytest.approx([0.5, 0.5, 0.5, 1.0], abs=0.01)
+
+
+@pytest.mark.spec_exempt(
+    "structural: the limb and an exclusion are in the box's pixels"
+)
+def test_chain_place_clips_to_the_limb_and_removes_each_exclusion() -> None:
+    ink = np.zeros((40, 40, 4))
+    ink[..., 3] = 1.0
+    limb = [(14, 14), (30, 14), (30, 30), (14, 30)]
+    hole = [(20, 20), (24, 20), (24, 24), (20, 24)]
+
+    layer = chain.place(
+        ink, (0, 0), [(CORNERS, CORNERS)], (10, 10, 30, 30), limb, [hole]
+    )
+
+    assert layer[2, 2, 3] == 0.0
+    assert layer[18, 18, 3] == pytest.approx(1.0, abs=0.01)
+    assert layer[12, 12, 3] == 0.0
+    assert layer[25, 25, 3] == 0.0
+
+
+@pytest.mark.spec_exempt("structural: no limb keeps the whole box")
+def test_chain_place_with_no_limb_keeps_the_ink_to_the_edge_of_the_box() -> None:
+    ink = np.zeros((40, 40, 4))
+    ink[..., 3] = 1.0
+
+    layer = chain.place(ink, (0, 0), [(CORNERS, CORNERS)], (0, 0, 30, 30))
+
+    assert layer[1, 1, 3] == pytest.approx(1.0, abs=0.01)
+    assert layer[28, 28, 3] == pytest.approx(1.0, abs=0.01)
+
+
+@pytest.mark.spec_exempt("structural: flatten lays a layer on white as 8-bit RGB")
+def test_chain_place_flatten_lays_the_layer_on_white() -> None:
+    layer = np.zeros((1, 3, 4))
+    layer[0, 0] = (0.0, 0.0, 0.0, 1.0)
+    layer[0, 1] = (0.0, 0.0, 0.0, 0.5)
+    layer[0, 2] = (0.2, 0.2, 0.2, 0.0)
+
+    flat = chain.flatten(layer)
+
+    assert flat.dtype == np.uint8
+    assert flat.shape == (1, 3, 3)
+    assert flat[0, 0].tolist() == [0, 0, 0]
+    assert flat[0, 1].tolist() == [128, 128, 128]
+    assert flat[0, 2].tolist() == [255, 255, 255]
+
+
 @pytest.mark.spec("tattoo:chain:the-composite-is-a-multiply")
 def test_chain_composite_a_dark_pixel_darkens_the_render_there_alone() -> None:
     render = np.full((4, 4, 3), 0.8)

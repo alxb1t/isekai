@@ -2753,3 +2753,283 @@ dialog::backdrop {
   fill: var(--point-ring);
   font-size: 10px;
 }
+
+/* — The stages: the outline step's forward action, the panels, the pairs beside them — */
+.stage {
+  display: flex;
+  flex: 1;
+  gap: 16px;
+  min-height: 0;
+}
+
+.stage__panels {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  min-width: 0;
+}
+
+.stage__side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 280px;
+}
+
+.stage__status,
+.stage__note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.stage__forward {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* The review: the image with the tattoo multiplied over it, the crop before and after, and the
+   summary beside them. */
+.review__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  overflow: auto;
+}
+
+.review__image {
+  position: relative;
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.review__render {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+}
+
+.review__ink {
+  position: absolute;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.review__ink--crop {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.review__crops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.review__crop {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.review__pixels {
+  position: relative;
+  max-width: 100%;
+  background-repeat: no-repeat;
+}
+
+.reviewlist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--ink);
+  list-style: none;
+}
+
+/* A panel that waits for its match takes the accent edge; the preview multiplies over the
+   image it sits on, as the bake does. */
+.pair {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pair--waiting .panel__viewport {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.pair__preview {
+  mix-blend-mode: multiply;
+}
+
+.pair__shape {
+  stroke-width: 1.5;
+}
+
+.pair__shape--exclusion {
+  stroke-dasharray: 6 3;
+}
+
+.pair__shape-line {
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.pair__shape-waiting {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.pair__vertex {
+  fill: var(--accent-ink);
+  stroke: var(--point-ring);
+  stroke-width: 1.5;
+}
+
+.pair__point {
+  fill: var(--accent-ink);
+  stroke: var(--point-ring);
+  stroke-width: 1.5;
+}
+
+.pair__point--lone {
+  stroke-dasharray: 3 2;
+}
+
+.pair__point--on {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.pair__tag {
+  fill: var(--point-ring);
+  font-size: 10px;
+}
+
+.pair__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pair__opacity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.pair__note {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.pairlist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pairlist__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.pairlist__row {
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 12px;
+  color: var(--ink);
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.pairlist__row--on {
+  border-color: var(--accent);
+}
+
+.pairlist__row-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.pairlist__note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.outlinelist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outlinelist__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.outlinelist__text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.picker__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.picker__flag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+/* The Leave dialog: the lone point, the pairs that stand, then Stay and Leave. */
+.leave-dialog {
+  width: 480px;
+}
+
+.leave-dialog__point {
+  margin: 0 0 8px;
+}
+
+.leave-dialog__standing {
+  margin: 0 0 16px;
+  font-size: 11px;
+  color: var(--ink-2);
+}

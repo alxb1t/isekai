@@ -14,7 +14,7 @@ export interface Viewed {
   params: Record<string, string | string[]>
 }
 
-const STEP = /\/place\/(?:tattoo|outline)(?:\/[^/]*)?$/
+const STEP = /\/place\/(?:tattoo|outline|photo|render|review)(?:\/[^/]*)?$/
 
 /** Return the key a screen is mounted under, so a new key mounts it again. A review is
     one per collection and flow; the placement screen is one per render, whatever its

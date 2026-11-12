@@ -10,6 +10,22 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.82.0] - 2026-11-12
+
+Gate: local 0m51s · CI not read under mf-ship · 0.81.0: local 0m47s · CI not read under mf-ship
+
+- The placement screen has its stages: stage-1 pairs kept per photograph, a `no-store` JPEG preview of the warped ink
+  on a crop, pairs clicked on two images, and the picker's *ready for this photograph* and *not on this photo*
+  (0122 D1–D4, D7–D10).
+- The render stage draws a limb that keeps the ink and exclusions that remove it, a colour token in each theme, and the
+  preview refuses a region short of `region_min` points (0122 D2, D8, D10).
+- A bake queues an edit request: the composite over the whole render and a `<seed>.edit-<k>.placement.json` go through
+  the edit stage, placed on a render or a baked edit; the review step shows the placement and bakes it (0122 D5, D6, D8, D9).
+- Leaving a stage that holds a point with no match asks first in a native dialog, naming the point and the pairs that
+  stand; *Leave* drops that point alone (0122 D7, D8).
+- The docs say what holds: D53, a placement recorded beside its edit; D4 names the edit request among the writes the
+  owning stage makes; the design spec, the tattoo guide and the module maps carry the stages and the bake (0122 D12).
+
 ## [0.81.0] - 2026-11-12
 
 Gate: local 0m47s · CI not read under mf-ship · 0.80.0: local 0m40s · CI not read under mf-ship

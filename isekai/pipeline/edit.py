@@ -35,9 +35,12 @@ from typing import TYPE_CHECKING
 from isekai.boundary.comfy import ComfyTransport, TransportFailure, submit_and_wait
 from isekai.foundation.artifacts import (
     EDIT_FILE,
+    PLACEMENT_FILE,
     SEED_BITS,
     CropRecord,
     EditRecord,
+    PlacementRecord,
+    PlacementValues,
     Runtime,
     read,
     write,
@@ -55,6 +58,7 @@ from isekai.foundation.run import (
     edit_files,
     edit_numbers,
     next_edit,
+    placement_file,
     rendered_at,
 )
 from isekai.shared.tattoo import (
@@ -186,12 +190,76 @@ def request(
     Nothing is written when any check refuses.
     e.g. outputs/001/42.png -> outputs/001/42.edit-1.composite.png, then 42.edit-1.json
     """
+    return _requested(
+        edit,
+        source,
+        _read(composite, "the composite"),
+        None,
+        overrides=overrides,
+        seed=seed,
+        rng=rng,
+    )
+
+
+def request_placed(
+    edit: Edit,
+    source: Path,
+    composite: bytes,
+    placement: PlacementValues,
+    *,
+    overrides: Mapping[str, float | None],
+    seed: int | None,
+    rng: random.Random,
+) -> Requested:
+    """Write the composite, the placement record and the pending record of an edit.
+
+    `source` is a render or the image of a baked edit to place on, and `composite` is
+    the composite as bytes. The placement record is written between the composite and
+    the edit's record, and names the edit placed on, None for the render. A source
+    that is the image of an edit with no image yet is refused, and nothing is written
+    when any check refuses.
+    e.g. outputs/001/42.edit-1.png -> 42.edit-2's composite, placement, then record
+    """
+    places_on: int | None = None
+    if EDIT_STEM.match(source.stem):
+        places_on = edit_at(source)[4]
+        if not source.is_file():
+            raise Refusal(
+                f"edit {places_on} has no image yet, so nothing can be placed on it; "
+                "run its render session, then place on it"
+            )
+    return _requested(
+        edit,
+        source,
+        composite,
+        (placement, places_on),
+        overrides=overrides,
+        seed=seed,
+        rng=rng,
+    )
+
+
+def _requested(
+    edit: Edit,
+    source: Path,
+    composite: bytes,
+    placed: tuple[PlacementValues, int | None] | None,
+    *,
+    overrides: Mapping[str, float | None],
+    seed: int | None,
+    rng: random.Random,
+) -> Requested:
+    """Check an edit of `source` from `composite`, then write its files.
+
+    `placed` is what the placement record beside the composite holds and the edit it
+    is placed on, or None for no placement record.
+    """
     image, render_seed = _located(source)
     group = image.parent
     source_bytes = _read(image, "the source")
     dials = _dials(edit, overrides)
     render = decode_render(source_bytes, image.name)
-    pixels = decode_composite(_read(composite, "the composite"))
+    pixels = decode_composite(composite)
     derived = derive(render, pixels, dials)
     crop = plan_crop(derived.mask, dials)
 
@@ -216,6 +284,14 @@ def request(
         "crop": cropped,
     }
     number, record_path, composite_path = _reserved(group, render_seed, kept)
+    if placed is not None:
+        values, places_on = placed
+        placement: PlacementRecord = {
+            "schema": PLACEMENT_FILE.schema,
+            **values,
+            "places_on": places_on,
+        }
+        write(placement_file(group, render_seed, number), PLACEMENT_FILE, placement)
     write(record_path, EDIT_FILE, record)
     return Requested(composite_path, record_path, number, sampling_seed)
 

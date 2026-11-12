@@ -1,28 +1,74 @@
-import type { Outline, Tattoo, TattooLimits } from './types'
+import { type Step, startStep } from './stages'
+import type { Outline, Stage1, Tattoo, TattooLimits } from './types'
 
 /* What the picker and the outline step read of a tattoo, as plain functions. */
 
 export interface Card {
-  state: 'outlined' | 'not outlined'
+  state: 'outlined' | 'not outlined' | 'ready for this photograph'
   /* What it came from: when it was kept and the size it came with, or its photograph. */
   source: string
   /* A cut of another photograph is listed and cannot be chosen on this render. */
   choosable: boolean
   reason: string | null
+  /* An upload's stage 1 on this photograph: its pairs, or the flag; null if never placed. */
+  stage: string | null
+  /* The card offers *not on this photo*: an upload's does, a cut's does not. */
+  offers: boolean
+  /* The step choosing the card opens. */
+  opens: Step
 }
 
-/** Return what a card shows of `tattoo` on the render whose run digest is `digest`.
+/** Tell whether a tattoo is ready for the photograph: outlined and, if uploaded, holding the
+    floor of stage-1 pairs on it or flagged *not on this photo*. */
+export function ready(tattoo: Tattoo, state: Stage1 | undefined, floor: number): boolean {
+  if (!tattoo.outlined) return false
+  return tattoo.kind === 'cut' || state?.not_on_photo === true || (state?.pairs.length ?? 0) >= floor
+}
+
+/** Return the sub-line of an upload's stage 1: `stage 1 · 6 pairs`, or *not on this photo*. */
+export function stageLine(state: Stage1 | undefined): string | null {
+  if (!state) return null
+  if (state.not_on_photo) return 'not on this photo'
+  const count = state.pairs.length
+  return `stage 1 · ${count} ${count === 1 ? 'pair' : 'pairs'}`
+}
+
+/** Return what a card shows of `tattoo` on the render whose run digest is `digest`, with the
+    tattoo's stage-1 `held` on that photograph and the stage-1 `floor`.
     e.g. an upload kept on 2026-11-12 -> source "kept 2026-11-12" */
-export function card(tattoo: Tattoo, digest: string): Card {
-  const state = tattoo.outlined ? 'outlined' : 'not outlined'
+export function card(
+  tattoo: Tattoo,
+  digest: string,
+  held: Stage1 | undefined,
+  floor: number,
+): Card {
+  const placed = ready(tattoo, held, floor)
+  const state = placed ? 'ready for this photograph' : tattoo.outlined ? 'outlined' : 'not outlined'
+  const opens = startStep(tattoo, held, floor)
   if (tattoo.kind === 'cut') {
     const source = `from photograph ${tattoo.cut_from}`
     const other = tattoo.cut_from !== digest
-    return { state, source, choosable: !other, reason: other ? `${source}, not this render's` : null }
+    return {
+      state: other ? (tattoo.outlined ? 'outlined' : 'not outlined') : state,
+      source,
+      choosable: !other,
+      reason: other ? `${source}, not this render's` : null,
+      stage: null,
+      offers: false,
+      opens,
+    }
   }
   const scaled = tattoo.downscaled_from
   const was = scaled ? ` · downscaled from ${scaled[0]}×${scaled[1]}` : ''
-  return { state, source: `kept ${tattoo.kept.slice(0, 10)}${was}`, choosable: true, reason: null }
+  return {
+    state,
+    source: `kept ${tattoo.kept.slice(0, 10)}${was}`,
+    choosable: true,
+    reason: null,
+    stage: stageLine(held),
+    offers: true,
+    opens,
+  }
 }
 
 /** Return the name an upload starts under: the file's stem, or `<cut>_closeup` when it

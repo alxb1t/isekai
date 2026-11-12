@@ -98,6 +98,8 @@
   --point-ring: #4c4f69;
   --chain-ground: #ccd0da;
   --chain-ring: #8839ef;
+  --limb-fill: #40a02b40;
+  --exclusion-fill: #d20f3940;
 }
 
 [data-theme="frappe"] {
@@ -172,6 +174,8 @@
   --point-ring: #c6d0f5;
   --chain-ground: #51576d;
   --chain-ring: #ca9ee6;
+  --limb-fill: #a6d18940;
+  --exclusion-fill: #e7828440;
 }
 
 [data-theme="macchiato"] {
@@ -246,6 +250,8 @@
   --point-ring: #cad3f5;
   --chain-ground: #494d64;
   --chain-ring: #c6a0f6;
+  --limb-fill: #a6da9540;
+  --exclusion-fill: #ed879640;
 }
 
 [data-theme="mocha"] {
@@ -320,4 +326,6 @@
   --point-ring: #cdd6f4;
   --chain-ground: #45475a;
   --chain-ring: #cba6f7;
+  --limb-fill: #a6e3a140;
+  --exclusion-fill: #f38ba840;
 }

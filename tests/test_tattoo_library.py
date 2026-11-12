@@ -221,11 +221,31 @@ def test_tattoo_config_reads_the_keys_of_both_configs() -> None:
         "outline_min": config.outline_min,
         "outline_max": config.outline_max,
         "view_quality": config.view_quality,
+        "floor_stage1": config.floor_stage1,
+        "floor_stage2": config.floor_stage2,
+        "floor_direct": config.floor_direct,
+        "preview_floor": config.preview_floor,
+        "preview_margin": config.preview_margin,
+        "preview_wait_ms": config.preview_wait_ms,
+        "pair_radius": config.pair_radius,
+        "region_min": config.region_min,
     }
     assert (config.long_side, config.outline_min, config.outline_max) == (4096, 20, 120)
     assert config.view_quality == 90
+    assert (config.floor_stage1, config.floor_stage2, config.floor_direct) == (6, 8, 6)
+    assert (config.preview_floor, config.preview_margin) == (3, 96)
+    assert (config.preview_wait_ms, config.pair_radius, config.region_min) == (
+        1000,
+        8,
+        3,
+    )
     assert (ink.photo_depth, ink.image_depth) == (1.6, 1.0)
     assert (ink.depth_min, ink.depth_max, ink.reach) == (1.0, 2.0, 64)
+
+
+def _declared(**changed: object) -> dict[str, object]:
+    """Return a whole config document, each key at 1, with `changed` laid over it."""
+    return {key: 1 for key in tattoos.KEYS} | changed
 
 
 @pytest.mark.spec_exempt("structural: a config that is wrong refuses naming its key")
@@ -233,32 +253,13 @@ def test_tattoo_config_reads_the_keys_of_both_configs() -> None:
     ("document", "match"),
     [
         ({"long_side": 4096}, "declares no outline_min"),
-        (
-            {
-                "long_side": 1,
-                "outline_min": 1,
-                "outline_max": 1,
-                "view_quality": 1,
-                "x": 1,
-            },
-            "declares x",
-        ),
-        (
-            {"long_side": "big", "outline_min": 1, "outline_max": 1, "view_quality": 9},
-            "`long_side`",
-        ),
-        (
-            {"long_side": True, "outline_min": 1, "outline_max": 1, "view_quality": 9},
-            "`long_side`",
-        ),
-        (
-            {"long_side": 9, "outline_min": 30, "outline_max": 20, "view_quality": 9},
-            "`outline_min`",
-        ),
-        (
-            {"long_side": 9, "outline_min": 1, "outline_max": 2, "view_quality": 101},
-            "`view_quality`",
-        ),
+        (_declared(x=1), "declares x"),
+        (_declared(long_side="big"), "`long_side`"),
+        (_declared(long_side=True), "`long_side`"),
+        (_declared(outline_min=30, outline_max=20), "`outline_min`"),
+        (_declared(view_quality=101), "`view_quality`"),
+        (_declared(preview_floor=0), "`preview_floor`"),
+        (_declared(pair_radius="wide"), "`pair_radius`"),
     ],
 )
 def test_tattoo_config_refuses_a_wrong_key_naming_it(

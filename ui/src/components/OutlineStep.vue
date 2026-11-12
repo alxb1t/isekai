@@ -29,6 +29,7 @@ import {
   scaleOf,
   whiteState,
 } from '../tattoos'
+import { type Mode, type Step, circled, forwardOf, stepsOf } from '../stages'
 import type { InkView, Outline, Point, Tattoo, TattooLimits } from '../types'
 import { type View, toScreen } from '../zoom'
 import ImagePanel, { type Press } from './ImagePanel.vue'
@@ -38,8 +39,14 @@ import RefusalPage from './RefusalPage.vue'
    panel with its outline drawn on it; the outline and its tone are saved as they
    change, and once it is closed the server's ink view is drawn beside it. The ink view
    is the judge: nothing here grades the cut. */
-const props = defineProps<{ place: Place; name: string; limits: TattooLimits }>()
-const emit = defineEmits<{ instead: [cut: string] }>()
+const props = defineProps<{
+  place: Place
+  name: string
+  limits: TattooLimits
+  /* How the tattoo is placed, once the screen has read it; the forward action follows it. */
+  mode: Mode | null
+}>()
+const emit = defineEmits<{ instead: [cut: string]; forward: [step: Step] }>()
 
 const SAVE_DELAY = 400
 const INK_DELAY = 250
@@ -52,7 +59,9 @@ const scale = ref(1)
 const status = ref('')
 
 const isCut = computed(() => tattoo.value?.kind === 'cut')
-const held = computed(() => (tattoo.value ? card(tattoo.value, props.place.digest) : null))
+const held = computed(() =>
+  tattoo.value ? card(tattoo.value, props.place.digest, undefined, props.limits.floor_stage1) : null,
+)
 const rules = computed<Rules>(() => ({
   min: props.limits.outline_min,
   max: props.limits.outline_max,
@@ -66,6 +75,12 @@ const standard = computed(() =>
   tattoo.value ? defaultTone(tattoo.value.kind, props.limits) : null,
 )
 const resettable = computed(() => standard.value !== null && differs(tone.value, standard.value))
+const onward = computed(() => {
+  if (props.mode === null) return null
+  const to = forwardOf(props.mode, { closed: draft.value.closed, points: draft.value.points.length })
+  const held = stepsOf(props.mode).find((one) => one.step === to.step)
+  return { ...to, label: held ? `${circled(held.number)} ${held.label}` : '' }
+})
 
 function current(): Outline {
   const { points, closed } = draft.value
@@ -94,6 +109,13 @@ function flush(): void {
       status.value = (reason as Error).message
     }
   })
+}
+
+/* Go forward once the outline as it stands is saved: the next stage reads it from the server. */
+async function goForward(step: Step): Promise<void> {
+  if (saveTimer !== undefined) flush()
+  await saving
+  emit('forward', step)
 }
 
 const ink = shallowRef<{ url: string; box: InkView['box']; white: number } | null>(null)
@@ -380,6 +402,17 @@ onUnmounted(() => {
       <button v-if="isCut" class="btn btn-secondary" type="button" @click="emit('instead', name)">
         Upload a tattoo instead
       </button>
+      <div v-if="onward" class="stage__forward">
+        <span v-if="onward.wait" class="stage__note mono" data-forward-wait>{{ onward.wait }}</span>
+        <button
+          class="btn btn-primary"
+          type="button"
+          :disabled="onward.step === null"
+          @click="onward.step && goForward(onward.step)"
+        >
+          Next: {{ onward.label || 'the stage' }}
+        </button>
+      </div>
     </aside>
   </section>
 </template>
