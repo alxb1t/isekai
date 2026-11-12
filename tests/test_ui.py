@@ -83,7 +83,10 @@ def test_bake_names_no_module_of_the_surface_spells_an_edits_file_stem() -> None
     )
 
 
-@pytest.mark.spec_exempt("structural: twin of the surface's edit-stem check")
+@pytest.mark.spec_exempt(
+    "structural: "
+    "twin of test_bake_names_no_module_of_the_surface_spells_an_edits_file_stem"
+)
 def test_bake_names_the_check_names_a_module_that_spells_the_stem(
     tmp_path: Path,
 ) -> None:

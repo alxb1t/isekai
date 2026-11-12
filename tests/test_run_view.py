@@ -376,7 +376,9 @@ def test_an_unreadable_frame_is_marked(
     assert "* marks the active version for each stage" in lines[-1]
 
 
-@pytest.mark.spec_exempt("twin: a readable frame prints its photograph, not a refusal")
+@pytest.mark.spec_exempt(
+    "structural: a readable frame prints its photograph, not a refusal"
+)
 def test_a_readable_frame_prints_its_photograph(run: Run) -> None:
     lines = report(run)
 

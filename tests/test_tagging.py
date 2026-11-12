@@ -657,7 +657,7 @@ def _untagged_flows(tmp_path: Path) -> Path:
 
 
 @pytest.mark.spec_exempt(
-    "twin: a root holding an untagged flow still tags the photograph"
+    "structural: a root holding an untagged flow still tags the photograph"
 )
 def test_tagging_the_tagged_flow_alone_from_that_root_succeeds(
     tmp_path: Path,
@@ -671,7 +671,9 @@ def test_tagging_the_tagged_flow_alone_from_that_root_succeeds(
     assert (run.directory(PHOTO, WD14) / "001.json").is_file()
 
 
-@pytest.mark.spec_exempt("twin: `tag` named with flows refuses, naming no other verb")
+@pytest.mark.spec_exempt(
+    "structural: `tag` named with flows refuses, naming no other verb"
+)
 def test_an_untagged_flow_beside_a_tagged_one_names_no_next_verb(
     tmp_path: Path,
 ) -> None:

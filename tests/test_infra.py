@@ -864,7 +864,8 @@ def test_infra_placement_route_is_in_setup_and_drift_and_not_the_gate() -> None:
 
 
 @pytest.mark.spec_exempt(
-    "structural: twin of the test that reads the Makefile's placement route"
+    "structural: "
+    "twin of test_infra_placement_route_is_in_setup_and_drift_and_not_the_gate"
 )
 def test_infra_placement_check_catches_a_broken_route() -> None:
     fetch_vocabulary = (
@@ -933,7 +934,7 @@ def pinned_reference(config: dict[str, str]) -> str | None:
 
 
 @pytest.mark.spec_exempt(
-    "structural: twin of test_the_pod_is_created_from_the_pinned_digest"
+    "structural: twin of test_the_session_boots_the_digest_the_image_config_pins"
 )
 def test_the_check_catches_an_image_config_naming_only_a_tag() -> None:
     assert pinned_reference({"image": "ghcr.io/a/b", "tag": "latest"}) is None

@@ -24,6 +24,8 @@ LAYERS = ("unit", "e2e")
 E2E_DIR = "tests/e2e/"
 _MARKERS = ("spec", "spec_exempt")
 _SKIPS = ("skip", "skipif")
+_STRUCTURAL = "structural: "
+_TWIN_OF = "twin of "
 _LITERAL = r"(['\"])([^'\"\n]+)\1"
 _VITEST_SPEC = re.compile(rf"\bspec\(\s*(?:{_LITERAL}\s*,|\[([^\]]*)\]\s*,)?")
 _VITEST_ITEM = re.compile(_LITERAL)
@@ -326,6 +328,137 @@ def rests_on_skips(
     return sorted(key for key, each in binders.items() if all(each))
 
 
+def _reason_fault(reason: str, known: set[str]) -> str | None:
+    """Return why `reason` is off both forms, or None when it is one of them."""
+    if not reason.startswith(_STRUCTURAL):
+        return f"`{reason}` does not begin `{_STRUCTURAL}`"
+    rule = reason.removeprefix(_STRUCTURAL).strip()
+    if not rule:
+        return "no rule after `structural:`"
+    if not rule.startswith(("twin", "the twin")):
+        return None
+    if not rule.startswith(_TWIN_OF):
+        return f"`{reason}` is a twin that does not read `twin of <test>`"
+    absent = [t for t in rule.removeprefix(_TWIN_OF).split(" and ") if t not in known]
+    return f"names no collected test: {absent}" if absent else None
+
+
+def reason_faults(tests: list[Test]) -> list[str]:
+    """Return each `spec_exempt` reason off both forms, as `file::test: why`, sorted.
+
+    A reason opens `structural: `, then a rule that does not open with `twin`, or
+    `twin of` and each test it names, joined by `and`, each collected under `tests/`.
+    """
+    known = {name.rsplit("::", 1)[-1] for _, name, _ in tests}
+    faults = (
+        (file, name, _reason_fault(reason, known))
+        for file, name, markers in tests
+        for kind, reason in markers
+        if kind == "spec_exempt" and reason is not None
+    )
+    return sorted(f"{file}::{name}: {why}" for file, name, why in faults if why)
+
+
+# Behaviour tests exempt as structural, each with the scenario it waits for. A row
+# goes when its test is bound or gone; the table never grows past its ceiling.
+_EDIT_REQUEST = "edit · An edit request is made from a render and its composite"
+_EDIT_REFUSED = "edit · A request the composite cannot support is refused"
+_EDIT_SESSION = "edit · A render session runs every pending edit"
+_RENDER_RECORD = (
+    "cli · A render session writes its record into the collection, "
+    "from its start to its end"
+)
+_NONE_FITS = "no requirement fits"
+BEHAVIOUR_EXEMPT = {
+    "tests/test_edit.py::"
+    "test_edit_derive_the_ink_is_the_composite_divided_by_the_render": _EDIT_REQUEST,
+    "tests/test_edit.py::"
+    "test_edit_derive_darkness_follows_the_darkest_channel": _EDIT_REQUEST,
+    "tests/test_edit.py::"
+    "test_edit_derive_the_mask_covers_the_ink_and_reaches_past_its_edge": _EDIT_REQUEST,
+    "tests/test_edit.py::"
+    "test_edit_derive_a_feather_of_nothing_leaves_a_hard_edge": _EDIT_REQUEST,
+    "tests/test_edit.py::"
+    "test_edit_derive_the_control_is_darkness_times_the_gain_clipped": _EDIT_REQUEST,
+    "tests/test_edit.py::test_edit_derive_a_png_decodes_to_the_pixels_it_holds": (
+        _NONE_FITS
+    ),
+    "tests/test_edit.py::"
+    "test_edit_refuse_a_composite_that_does_not_decode_names_the_export": (
+        _EDIT_REFUSED
+    ),
+    "tests/test_edit.py::"
+    "test_edit_crop_the_sampling_size_is_a_multiple_of_eight_on_its_long_side": (
+        "edit · The crop is the tattoo's own, widened and grown by two guards"
+    ),
+    "tests/test_edit.py::"
+    "test_edit_request_a_composite_that_is_missing_is_refused_and_writes_nothing": (
+        _EDIT_REFUSED
+    ),
+    "tests/test_edit.py::"
+    "test_edit_request_a_source_that_is_no_render_is_refused": _EDIT_REQUEST,
+    "tests/test_edit.py::"
+    "test_edit_verb_an_untracked_edit_is_refused_naming_the_tracked_ones": (
+        "edit · An edit is one flat directory, pinned by its digest"
+    ),
+    "tests/test_edit.py::"
+    "test_edit_sample_pending_lists_the_requests_with_no_image_in_chain_order": (
+        _EDIT_SESSION
+    ),
+    "tests/test_edit.py::"
+    "test_edit_stitch_an_answer_that_is_no_image_is_refused": _EDIT_SESSION,
+    "tests/test_edit.py::"
+    "test_edit_pending_progress_json_prints_a_line_per_sampled_edit": _NONE_FITS,
+    "tests/test_edit_placement.py::"
+    "test_placement_request_writes_in_the_order_a_request_is_read": (
+        "tattoo · A bake writes the edit request and its placement record"
+    ),
+    "tests/test_edit_session.py::"
+    "test_edit_group_a_group_holding_an_edits_file_is_no_group_of_failure_records": (
+        "edit · A discard takes edits"
+    ),
+    "tests/test_render.py::test_a_dependent_before_its_source_is_refused_naming_both": (
+        "cli · A render session's limit is estimated from its work"
+    ),
+    "tests/test_render.py::"
+    "test_a_request_of_another_shape_is_refused_into_the_log": _NONE_FITS,
+    "tests/test_render.py::"
+    "test_a_port_that_already_answers_is_refused_before_the_session": _NONE_FITS,
+    "tests/test_render.py::"
+    "test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down": (
+        _RENDER_RECORD
+    ),
+    "tests/test_render.py::"
+    "test_a_failed_body_is_named_beside_a_failed_teardown": _RENDER_RECORD,
+    "tests/test_render.py::"
+    "test_bake_quote_every_root_asked_has_its_edits_and_the_bakes_add_up": (
+        "edit · An edit's time is estimated from its work"
+    ),
+}
+BEHAVIOUR_CEILING = 22
+
+
+def behaviour_faults(
+    tests: list[Test], table: dict[str, str], ceiling: int
+) -> list[str]:
+    """Return each stale row of `table`, and the table itself when past `ceiling`.
+
+    A row is stale when its test is gone or carries a `spec` marker.
+
+    e.g. a row `tests/a.py::test_b` whose test carries a `spec` marker
+    -> "tests/a.py::test_b: bound to a key".
+    """
+    marked = {f"{file}::{name}": markers for file, name, markers in tests}
+    faults = [
+        f"{row}: no such test" if row not in marked else f"{row}: bound to a key"
+        for row in table
+        if row not in marked or any(kind == "spec" for kind, _ in marked[row])
+    ]
+    if len(table) > ceiling:
+        faults.append(f"the table holds {len(table)} rows, past its ceiling {ceiling}")
+    return sorted(faults)
+
+
 @pytest.fixture(scope="module")
 def keys() -> set[str]:
     """Read the repository's nameable keys once for the module."""
@@ -386,6 +519,20 @@ def test_no_key_rests_only_on_skipped_tests(
 ) -> None:
     loose = rests_on_skips(required, tests, skipped(REPO_ROOT))
     assert not loose, f"keys whose every test a decorator skips: {loose[:5]}"
+
+
+@pytest.mark.spec_exempt("structural: every exemption reason is a rule or a twin")
+def test_every_exemption_reason_is_a_rule_or_a_twin_of_a_test(
+    tests: list[Test],
+) -> None:
+    faults = reason_faults(tests)
+    assert not faults, f"exemption reasons off both forms: {faults[:5]}"
+
+
+@pytest.mark.spec_exempt("structural: the behaviour exemptions only shrink")
+def test_the_behaviour_exemptions_only_shrink(tests: list[Test]) -> None:
+    faults = behaviour_faults(tests, BEHAVIOUR_EXEMPT, BEHAVIOUR_CEILING)
+    assert not faults, f"behaviour exemptions that grew or went stale: {faults[:5]}"
 
 
 _LIVING = """\
@@ -509,7 +656,7 @@ def test_built():
     ]
 
 
-@pytest.mark.spec_exempt("structural: twin of the active deltas' keys")
+@pytest.mark.spec_exempt("structural: the active deltas' keys")
 def test_an_added_key_is_known_and_neither_it_nor_a_removed_one_is_demanded(
     tmp_path: Path,
 ) -> None:
@@ -591,7 +738,7 @@ def test_kept(x):
     assert stray(_tree(tmp_path, tests)) == ["tests/test_cap.py:5"]
 
 
-@pytest.mark.spec_exempt("structural: twin of the active deltas' keys")
+@pytest.mark.spec_exempt("structural: the active deltas' keys")
 def test_a_modified_requirement_that_re_keys_a_scenario_drops_the_old_key(
     tmp_path: Path,
 ) -> None:
@@ -607,7 +754,7 @@ def test_a_modified_requirement_that_re_keys_a_scenario_drops_the_old_key(
     assert unbound(spec_keys(root), marked_tests(root)) == []
 
 
-@pytest.mark.spec_exempt("structural: twin of the active deltas' keys")
+@pytest.mark.spec_exempt("structural: the active deltas' keys")
 def test_a_renamed_requirement_keeps_its_keys_until_a_modified_one_re_keys_them(
     tmp_path: Path,
 ) -> None:
@@ -796,3 +943,89 @@ def test_blank():
 """
     root = _tree(tmp_path, tests)
     assert unmarked(marked_tests(root)) == ["tests/test_cap.py::test_blank"]
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_exemption_reason_is_a_rule_or_a_twin_of_a_test"
+)
+def test_a_reason_off_both_forms_or_naming_no_test_is_caught(tmp_path: Path) -> None:
+    tests = """\
+import pytest
+
+
+@pytest.mark.spec_exempt("x")
+def test_bare():
+    pass
+
+
+@pytest.mark.spec_exempt("twin of test_here")
+def test_unprefixed():
+    pass
+
+
+@pytest.mark.spec_exempt("structural: twin of test_nowhere")
+def test_names_nothing():
+    pass
+
+
+@pytest.mark.spec_exempt("structural: ")
+def test_blank():
+    pass
+
+
+@pytest.mark.spec_exempt("structural: twin of test_here and test_nowhere")
+def test_names_one_of_two():
+    pass
+
+
+@pytest.mark.spec_exempt("structural: the rule alone")
+def test_here():
+    pass
+
+
+@pytest.mark.spec_exempt("structural: twin of test_here and test_bare")
+def test_names_two():
+    pass
+"""
+    root = _tree(tmp_path, tests)
+    assert reason_faults(marked_tests(root)) == [
+        "tests/test_cap.py::test_bare: `x` does not begin `structural: `",
+        "tests/test_cap.py::test_blank: no rule after `structural:`",
+        "tests/test_cap.py::test_names_nothing: "
+        "names no collected test: ['test_nowhere']",
+        "tests/test_cap.py::test_names_one_of_two: "
+        "names no collected test: ['test_nowhere']",
+        "tests/test_cap.py::test_unprefixed: "
+        "`twin of test_here` does not begin `structural: `",
+    ]
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_behaviour_exemptions_only_shrink"
+)
+def test_a_stale_row_or_a_table_past_its_ceiling_is_caught(tmp_path: Path) -> None:
+    tests = """\
+import pytest
+
+
+@pytest.mark.spec_exempt("structural: waits")
+def test_waits():
+    pass
+
+
+@pytest.mark.spec("cap:kept:kept")
+def test_bound():
+    pass
+"""
+    found = marked_tests(_tree(tmp_path, tests))
+    waits, bound, gone = (
+        f"tests/test_cap.py::test_{n}" for n in ("waits", "bound", "gone")
+    )
+    assert behaviour_faults(found, {waits: "cap"}, 1) == []
+    assert behaviour_faults(found, {waits: "cap", bound: "cap", gone: "cap"}, 3) == [
+        f"{bound}: bound to a key",
+        f"{gone}: no such test",
+    ]
+    assert behaviour_faults(found, {waits: "cap"}, 0) == [
+        "the table holds 1 rows, past its ceiling 0"
+    ]

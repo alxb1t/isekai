@@ -695,7 +695,9 @@ def test_no_record_names_the_files_first(
     assert attempts(run.directory(PHOTO, CAPTIONS), 1) == []
 
 
-@pytest.mark.spec_exempt("twin: a build-only remedy does not name the files first")
+@pytest.mark.spec_exempt(
+    "structural: a build-only remedy does not name the files first"
+)
 def test_a_build_only_remedy_is_not_read_as_naming_the_files_first() -> None:
     build = f"ollama create {READER} -f config/joycaption.Modelfile"
 

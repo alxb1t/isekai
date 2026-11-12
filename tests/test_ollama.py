@@ -31,7 +31,9 @@ REMEDY = "ollama pull a-model"
 # --- the request --------------------------------------------------------------
 
 
-@pytest.mark.spec_exempt("the endpoint and the ceiling are constants, not behaviour")
+@pytest.mark.spec_exempt(
+    "structural: the endpoint and the ceiling are constants, not behaviour"
+)
 def test_the_boundary_speaks_one_endpoint_at_one_ceiling() -> None:
     assert GENERATE == "/api/generate"
     assert HOST == "http://127.0.0.1:11434"
@@ -101,7 +103,9 @@ def test_the_models_own_answer_is_what_comes_back() -> None:
 # --- the two that refuse rather than spending an attempt ----------------------
 
 
-@pytest.mark.spec_exempt("the reachability scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the reachability scenarios are bound at the adapters"
+)
 def test_nothing_listening_refuses_naming_the_command_that_starts_it() -> None:
     transport = FakeTransport(error=urllib.error.URLError("Connection refused"))
 
@@ -113,7 +117,9 @@ def test_nothing_listening_refuses_naming_the_command_that_starts_it() -> None:
     assert "ollama serve" in message
 
 
-@pytest.mark.spec_exempt("the reachability scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the reachability scenarios are bound at the adapters"
+)
 def test_an_absent_model_refuses_naming_the_callers_own_remedy() -> None:
     transport = FakeTransport(
         payload={"error": 'model "a-model" not found'}, status=404
@@ -130,7 +136,9 @@ def test_an_absent_model_refuses_naming_the_callers_own_remedy() -> None:
 # --- transient: worth another attempt -----------------------------------------
 
 
-@pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the failure-kind scenarios are bound at the adapters"
+)
 @pytest.mark.parametrize("status", [500, 502, 503])
 def test_a_server_error_is_transient(status: int) -> None:
     transport = FakeTransport(payload={"error": "unable to load model"}, status=status)
@@ -142,7 +150,9 @@ def test_a_server_error_is_transient(status: int) -> None:
     assert str(status) in failed.value.detail
 
 
-@pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the failure-kind scenarios are bound at the adapters"
+)
 def test_a_timeout_is_transient() -> None:
     transport = FakeTransport(error=TimeoutError("timed out"))
 
@@ -153,7 +163,9 @@ def test_a_timeout_is_transient() -> None:
     assert str(TIMEOUT) in failed.value.detail
 
 
-@pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the failure-kind scenarios are bound at the adapters"
+)
 def test_a_timeout_wrapped_in_a_url_error_is_still_transient() -> None:
     """The wrapped form must not be read as an unreachable host.
 
@@ -170,7 +182,9 @@ def test_a_timeout_wrapped_in_a_url_error_is_still_transient() -> None:
     assert failed.value.kind == "transient"
 
 
-@pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the failure-kind scenarios are bound at the adapters"
+)
 @pytest.mark.parametrize(
     "dropped",
     [
@@ -202,7 +216,9 @@ def test_a_connection_dropped_mid_answer_is_transient(dropped: BaseException) ->
 # --- permanent: it will fail the same way every time --------------------------
 
 
-@pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the failure-kind scenarios are bound at the adapters"
+)
 def test_a_body_that_is_not_json_is_permanent() -> None:
     transport = FakeTransport(raw=b"<html>gateway</html>")
 
@@ -212,7 +228,9 @@ def test_a_body_that_is_not_json_is_permanent() -> None:
     assert failed.value.kind == "permanent"
 
 
-@pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the failure-kind scenarios are bound at the adapters"
+)
 def test_a_body_that_is_not_an_object_is_permanent() -> None:
     transport = FakeTransport(raw=b"[1, 2, 3]")
 
@@ -222,7 +240,9 @@ def test_a_body_that_is_not_an_object_is_permanent() -> None:
     assert failed.value.kind == "permanent"
 
 
-@pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the failure-kind scenarios are bound at the adapters"
+)
 @pytest.mark.parametrize("answer", [b"{}", b'{"response": ""}', b'{"response": "   "}'])
 def test_an_answerless_body_is_permanent(answer: bytes) -> None:
     transport = FakeTransport(raw=answer)
@@ -233,7 +253,9 @@ def test_an_answerless_body_is_permanent(answer: bytes) -> None:
     assert failed.value.kind == "permanent"
 
 
-@pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the failure-kind scenarios are bound at the adapters"
+)
 def test_truncation_is_permanent_and_the_detail_says_so() -> None:
     """`done_reason` is in the detail, because without it two failures look alike.
 
@@ -251,7 +273,9 @@ def test_truncation_is_permanent_and_the_detail_says_so() -> None:
     assert "length" in failed.value.detail
 
 
-@pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
+@pytest.mark.spec_exempt(
+    "structural: the failure-kind scenarios are bound at the adapters"
+)
 def test_a_status_that_is_neither_ok_nor_a_server_error_is_permanent() -> None:
     transport = FakeTransport(payload={"error": "invalid options"}, status=400)
 

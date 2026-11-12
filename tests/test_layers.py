@@ -353,7 +353,7 @@ def test_the_check_catches_an_import_past_a_front_door(tmp_path: Path) -> None:
     }
 
 
-@pytest.mark.spec_exempt("structural: twin of the scope every scan reads")
+@pytest.mark.spec_exempt("structural: the scope every scan reads")
 def test_a_scope_path_that_does_not_exist_fails(tmp_path: Path) -> None:
     root = _package(tmp_path, {})
     with pytest.raises(FileNotFoundError, match="'gone'"):

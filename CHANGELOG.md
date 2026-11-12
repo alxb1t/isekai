@@ -19,8 +19,10 @@ its new digest.
 - The imports stream test closes the broadcast once the stream has framed `converted`, so the body no longer ends at
   `converting` under load (0127 D1).
 - The binding guard reads each scenario's key and layer, holds a key to a test on its own layer, and refuses a blank
-  exemption reason and a key whose every test is skipped; a symlink case holds the containment key on any
-  filesystem, and the reachability test reads the committed `FILED` table, not the gitignored runs (0128 D1, D2, D3).
+  reason or a key whose tests are all skipped; a symlink test binds containment and the reachability test reads
+  `FILED` (0128 D1, D2, D3).
+- An exemption reason is `structural: <rule>` or `structural: twin of <test>`, and a guard checks it; four behaviour
+  tests are bound to their scenarios, and the rest wait in a table that only shrinks (0128 D4, D5, D6).
 
 ## [0.86.0] - 2026-11-12
 

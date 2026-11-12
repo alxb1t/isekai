@@ -436,7 +436,7 @@ def test_edit_crop_the_sampling_size_is_a_multiple_of_eight_on_its_long_side(
     assert max(crop.size) == DIALS["long_side"]
 
 
-@pytest.mark.spec_exempt("structural: a mask with nothing above the floor has no box")
+@pytest.mark.spec("edit:refusals:a-composite-with-no-ink-is-refused")
 def test_edit_crop_a_mask_with_no_tattoo_is_refused() -> None:
     faint = np.full((300, 300), MASK_FLOOR, dtype=np.uint8)
 
@@ -835,9 +835,7 @@ def test_edit_verb_an_untracked_edit_is_refused_naming_the_tracked_ones(
     assert _listing(group) == ["42.png"]
 
 
-@pytest.mark.spec_exempt(
-    "structural: a refused request prints the refusal and writes nothing"
-)
+@pytest.mark.spec("edit:refusals:a-composite-with-no-ink-is-refused")
 def test_edit_verb_a_refused_request_exits_one_and_writes_nothing(
     tmp_path: Path,
 ) -> None:

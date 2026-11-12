@@ -5,7 +5,7 @@ Tests, goldens and config comments alone: the binding guard, the exemptions, the
 ## Progress
 
 - [x] 1 — The binding guard · moderate
-- [ ] 2 — The exemptions · moderate
+- [x] 2 — The exemptions · moderate
 - [ ] 3 — No guard passes blind · moderate
 
 ## 1 — The binding guard
@@ -33,28 +33,28 @@ Tests, goldens and config comments alone: the binding guard, the exemptions, the
 
 ## 2 — The exemptions
 
-- [ ] 2.1 **HALT CHECK** The scenario keys [D6](design.md#d6) rebinds exist in the living spec: a missing key means the plan is wrong, and the rebinds need a scenario a patch may not add. Edit nothing.
+- [x] 2.1 **HALT CHECK** The scenario keys [D6](design.md#d6) rebinds exist in the living spec: a missing key means the plan is wrong, and the rebinds need a scenario a patch may not add. Edit nothing.
   Verify: `git grep -c -E -e 'Key:\*\* .(edit:refusals:a-composite-with-no-ink-is-refused|cli:refusals:refusal-names-the-remedy|cli:pipeline-surface:verbs-are-subcommands).' -- openspec/specs/edit/spec.md openspec/specs/cli/spec.md` prints `openspec/specs/cli/spec.md:2` and `openspec/specs/edit/spec.md:1`.
 
-- [ ] 2.2 Prefix `structural: ` to each unprefixed reason of the first table of [D5](design.md#d5): each `spec_exempt("the ` of `tests/test_ollama.py`, and the reason `"the one-path rule` on its own line in `tests/test_manifest.py`. Then run `uv run ruff format` over those files, which rewraps a decorator the prefix pushes past the width.
+- [x] 2.2 Prefix `structural: ` to each unprefixed reason of the first table of [D5](design.md#d5): each `spec_exempt("the ` of `tests/test_ollama.py`, and the reason `"the one-path rule` on its own line in `tests/test_manifest.py`. Then run `uv run ruff format` over those files, which rewraps a decorator the prefix pushes past the width.
   Verify: `git grep -n -F -e 'spec_exempt("the ' -e '"the one-path rule' -- tests/test_ollama.py tests/test_manifest.py` prints nothing and exits 1.
 
-- [ ] 2.3 Reword the reasons of [D5](design.md#d5) that name a test, in `tests/test_ui_api.py`, `tests/test_resume.py`, `tests/test_infra.py` and `tests/test_ui.py`, each to `structural: twin of <the test the table names>`. Then run `uv run ruff format` over the files edited.
+- [x] 2.3 Reword the reasons of [D5](design.md#d5) that name a test, in `tests/test_ui_api.py`, `tests/test_resume.py`, `tests/test_infra.py` and `tests/test_ui.py`, each to `structural: twin of <the test the table names>`. Then run `uv run ruff format` over the files edited.
   Verify: `git grep -n -F 'twin of test_bake_names_no_module_of_the_surface_spells_an_edits_file_stem' -- tests/test_ui.py` prints the edited line.
 
-- [ ] 2.4 Reword each other reason of [D5](design.md#d5)'s tables to the rule form the table gives: `twin:` dropped, `twin of` dropped where it names no test, `the twin of` and `twin --` dropped, and `structural: ` before each. Then run `uv run ruff format` over the files edited.
+- [x] 2.4 Reword each other reason of [D5](design.md#d5)'s tables to the rule form the table gives: `twin:` dropped, `twin of` dropped where it names no test, `the twin of` and `twin --` dropped, and `structural: ` before each. Then run `uv run ruff format` over the files edited.
   Verify: `git grep -n -E '"twin: |structural: (the twin|twin --)|structural: twin of (t[^e]|[^t"])' -- tests` prints nothing and exits 1.
 
-- [ ] 2.5 Bind the behaviour tests of [D6](design.md#d6) to their keys: replace `@pytest.mark.spec_exempt(...)` with `@pytest.mark.spec("<key>")` on the tests of `tests/test_edit.py`, `tests/test_render.py` and `tests/test_pipeline_cli.py` that the first table lists.
+- [x] 2.5 Bind the behaviour tests of [D6](design.md#d6) to their keys: replace `@pytest.mark.spec_exempt(...)` with `@pytest.mark.spec("<key>")` on the tests of `tests/test_edit.py`, `tests/test_render.py` and `tests/test_pipeline_cli.py` that the first table lists.
   Verify: `git grep -n -E 'structural: (a mask with nothing above the floor has no box|a refused request prints the refusal and writes nothing|the parser dispatches nothing yet)' -- tests/test_edit.py tests/test_pipeline_cli.py` prints nothing and exits 1.
 
-- [ ] 2.6 In `tests/test_spec_bindings.py`, add `reason_faults(tests)` per [D4](design.md#d4), the guard `test_every_exemption_reason_is_a_rule_or_a_twin_of_a_test` over the repository's tests, and its twin `test_a_reason_off_both_forms_or_naming_no_test_is_caught`, whose reasons are `x`, `twin of test_here`, `structural: twin of test_nowhere` and `structural: `. The twin's text holds none of the needles of tasks 2.2 to 2.5.
+- [x] 2.6 In `tests/test_spec_bindings.py`, add `reason_faults(tests)` per [D4](design.md#d4), the guard `test_every_exemption_reason_is_a_rule_or_a_twin_of_a_test` over the repository's tests, and its twin `test_a_reason_off_both_forms_or_naming_no_test_is_caught`, whose reasons are `x`, `twin of test_here`, `structural: twin of test_nowhere` and `structural: `. The twin's text holds none of the needles of tasks 2.2 to 2.5.
   Verify: `uv run pytest tests/test_spec_bindings.py -k "every_exemption_reason or off_both_forms" -q` exits 0.
 
-- [ ] 2.7 In `tests/test_spec_bindings.py`, add `BEHAVIOUR_EXEMPT` with the rows of [D6](design.md#d6)'s second table, `BEHAVIOUR_CEILING` as its length, `behaviour_faults(tests, table, ceiling)`, the guard `test_the_behaviour_exemptions_only_shrink` and its twin `test_a_stale_row_or_a_table_past_its_ceiling_is_caught`.
+- [x] 2.7 In `tests/test_spec_bindings.py`, add `BEHAVIOUR_EXEMPT` with the rows of [D6](design.md#d6)'s second table, `BEHAVIOUR_CEILING` as its length, `behaviour_faults(tests, table, ceiling)`, the guard `test_the_behaviour_exemptions_only_shrink` and its twin `test_a_stale_row_or_a_table_past_its_ceiling_is_caught`.
   Verify: `uv run pytest tests/test_spec_bindings.py -k "only_shrink or stale_row" -q` exits 0.
 
-- [ ] 2.8 Run phase 2's test files together: edit nothing.
+- [x] 2.8 Run phase 2's test files together: edit nothing.
   Verify: `uv run pytest tests/test_spec_bindings.py tests/test_spec_prose.py tests/test_edit.py tests/test_render.py tests/test_pipeline_cli.py tests/test_ollama.py -q` exits 0.
 
 ## 3 — No guard passes blind
