@@ -20,6 +20,8 @@ its new digest.
   it, and each keypoint the highest value on each axis, on the CPU after the digests verify (0123 D2, D3, D6).
 - A silhouette is read by `isekai/boundary/sam2.py`: the encoder once an image, the decoder once a bone, and the mask
   is the candidate scored highest, its logits resized to the image and taken above 0 (0123 D2, D7).
+- Stage 2's pairs are proposed: `isekai/shared/proposal.py` pairs the edges and the joints of the arm nearest the
+  tattoo, and `POST /api/c/{collection}/place/propose` answers `{arm, pairs}`, kept nowhere (0123 D8, D9, D10).
 
 ## [0.82.0] - 2026-11-12
 

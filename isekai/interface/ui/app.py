@@ -65,12 +65,15 @@ POST /api/c/{collection}/tattoos/{name}/preview
      a JPEG, no-store
 POST /api/c/{collection}/tattoos/{name}/bake
      {digest, flow, version, seed, edit, pairs, limb, exclusions}      {edit: k}
+POST /api/c/{collection}/place/propose
+     {digest, flow, version, seed, points}      {arm, pairs}, no-store
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
 """
 
 import asyncio
+import math
 import re
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
@@ -79,7 +82,7 @@ from dataclasses import asdict, dataclass
 from functools import cache
 from pathlib import Path
 from types import FrameType
-from typing import Any, TypeGuard
+from typing import TYPE_CHECKING, Any, TypeGuard
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
@@ -138,7 +141,7 @@ from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
-from isekai.interface.wiring import Wiring
+from isekai.interface.wiring import Wiring, proposer_of
 from isekai.pipeline import importing, tattoos
 from isekai.pipeline.edit import image_of as edit_image_of
 from isekai.pipeline.edit import request_placed
@@ -163,9 +166,12 @@ from isekai.pipeline.review import (
 )
 from isekai.pipeline.review import state as review_state
 from isekai.shared.field_map import FieldMap
-from isekai.shared.image import dimensions_or_refuse
+from isekai.shared.image import dimensions_or_refuse, upright_image
 from isekai.shared.ink import load_ink_config
 from isekai.shared.vocabulary import Vocabulary
+
+if TYPE_CHECKING:
+    from PIL.Image import Image
 
 # The dropdown's `· rare` marker. This number exists nowhere else in the
 # repository: the vocabulary ranks by post count and never calls anything rare,
@@ -212,6 +218,9 @@ PREVIEW_KEYS = (
     "limb",
     "exclusions",
 )
+
+# What a body names to ask proposed pairs: the render, and the tattoo's points.
+PROPOSE_KEYS = ("digest", "flow", "version", "seed", "points")
 
 # What a body names to bake a tattoo, and the tracked edit a bake requests.
 BAKE_KEYS = ("digest", "flow", "version", "seed", "pairs", "limb", "exclusions")
@@ -709,6 +718,31 @@ def create_app(
             rng=wired.rng,
         )
         return {"edit": asked.number}
+
+    @app.post("/api/c/{collection}/place/propose")
+    def post_propose(collection: str, payload: dict[str, Any]) -> JSONResponse:
+        """Return the pairs proposed for a render, `{arm, pairs}`, made now.
+
+        `points` are the tattoo's on the photograph, in its upright pixels. A pair is
+        the photograph's point then the render's. Nothing is kept, and an answer with
+        no pair is no refusal.
+        """
+        _needs(payload, PROPOSE_KEYS)
+        points = _points_of(payload["points"])
+        one, image = placed_on(collection, {key: payload[key] for key in PROPOSE_KEYS})
+        proposer = proposer_of(wired)
+        answer = proposer.propose(
+            _upright_of(one.run.photo, "the photograph"),
+            _upright_of(image, "the render"),
+            points,
+        )
+        return JSONResponse(
+            {
+                "arm": answer.arm,
+                "pairs": [[[*seen], [*drawn]] for seen, drawn in answer.pairs],
+            },
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.post("/api/c/{collection}/prepare")
     def post_prepare(collection: str) -> dict[str, Any]:
@@ -1956,6 +1990,54 @@ def _needs(payload: Mapping[str, Any], keys: Sequence[str]) -> None:
     missing = [key for key in keys if key not in payload]
     if missing:
         raise Refusal(f"the request lacks {', '.join(missing)}; send {', '.join(keys)}")
+
+
+def _is_point(value: object) -> TypeGuard[list[float]]:
+    """Return whether `value` is `[x, y]`, two finite numbers from 0 up."""
+    return (
+        isinstance(value, list)
+        and len(value) == 2
+        and all(
+            isinstance(each, int | float)
+            and not isinstance(each, bool)
+            and math.isfinite(each)
+            and each >= 0
+            for each in value
+        )
+    )
+
+
+def _points_of(value: object) -> list[tuple[float, float]]:
+    """Return the tattoo's points a body names, each a finite, non-negative `[x, y]`.
+
+    e.g. [[10, 20.5]] -> [(10.0, 20.5)]; a negative, a non-number or none is refused.
+    """
+    if not isinstance(value, list) or not value:
+        raise Refusal(
+            "points is the tattoo's points on the photograph, `[[x, y], ...]`; "
+            "send at least one"
+        )
+    found: list[tuple[float, float]] = []
+    for number, point in enumerate(value, 1):
+        if not _is_point(point):
+            raise Refusal(
+                f"point {number} is {point!r}; send each as `[x, y]`, two finite "
+                "numbers from 0 up, in the photograph's pixels"
+            )
+        found.append((float(point[0]), float(point[1])))
+    return found
+
+
+def _upright_of(path: Path, what: str) -> "Image":
+    """Return the image at `path` upright, as RGB, or refuse in words naming `what`."""
+    from PIL.Image import DecompressionBombError
+
+    try:
+        return upright_image(path)
+    except (OSError, DecompressionBombError) as unreadable:
+        raise Refusal(
+            f"{what} cannot be read ({unreadable}); reload the page"
+        ) from unreadable
 
 
 def _tattoo_limits() -> dict[str, Any]:

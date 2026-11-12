@@ -8,7 +8,7 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 - [x] 2 — 🛑 **HUMAN** — the model pins
 - [x] 3 — Pose · hard
 - [x] 4 — Segment · hard
-- [ ] 5 — Proposal · hard
+- [x] 5 — Proposal · hard
 - [ ] 6 — Stage 2 · moderate
 - [ ] 7 — Docs · moderate
 
@@ -110,31 +110,31 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 ## 5 — Proposal
 
-- [ ] 5.1 **HALT CHECK** 0122's preview route is built: its tests carry `placement_route_preview`.
+- [x] 5.1 **HALT CHECK** 0122's preview route is built: its tests carry `placement_route_preview`.
   Verify: `grep -n "placement_route_preview" tests/test_ui_placement.py` prints it.
-- [ ] 5.2 **HALT CHECK** The photograph the preview reads is the upright one.
+- [x] 5.2 **HALT CHECK** The photograph the preview reads is the upright one.
   Verify: `grep -n -e "exif_transpose" -e "upright" isekai/pipeline/tattoos.py` prints the use.
-- [ ] 5.3 Add `isekai/shared/proposal.py` per [D8](design.md#d8): the constants, `usable_bone`, `prompt_points`, and `edge_pair(mask, centre, normal, reach, luminance)` bounded by the band
+- [x] 5.3 Add `isekai/shared/proposal.py` per [D8](design.md#d8): the constants, `usable_bone`, `prompt_points`, and `edge_pair(mask, centre, normal, reach, luminance)` bounded by the band
   and, with a luminance, by the first dark line past `DARK_AFTER`; numpy imported inside; tests in `tests/test_proposal.py` carry `propose_edges`.
   Verify: `uv run pytest tests/test_proposal.py -k propose_edges` passes.
-- [ ] 5.4 Add to `proposal.py` `bone_pairs` and `joint_pairs` per [D8](design.md#d8): the order of bones, fractions and edges, the keypoint cut on each bone and joint; tests carry `propose_pairs`.
+- [x] 5.4 Add to `proposal.py` `bone_pairs` and `joint_pairs` per [D8](design.md#d8): the order of bones, fractions and edges, the keypoint cut on each bone and joint; tests carry `propose_pairs`.
   Verify: `uv run pytest tests/test_proposal.py -k propose_pairs` passes.
-- [ ] 5.5 Add to `proposal.py` `nearest_side` per [D9](design.md#d9): the mean of the points against each usable arm's polyline in the photograph, the left on a tie; tests carry `propose_side`.
+- [x] 5.5 Add to `proposal.py` `nearest_side` per [D9](design.md#d9): the mean of the points against each usable arm's polyline in the photograph, the left on a tie; tests carry `propose_side`.
   Verify: `uv run pytest tests/test_proposal.py -k propose_side` passes.
-- [ ] 5.6 Add `isekai/pipeline/proposing.py` with `Proposal`, `Proposer` and `propose` per [D10](design.md#d10), an answer with no pair for no person, and for no usable bone; add `FakePoseFinder`
+- [x] 5.6 Add `isekai/pipeline/proposing.py` with `Proposal`, `Proposer` and `propose` per [D10](design.md#d10), an answer with no pair for no person, and for no usable bone; add `FakePoseFinder`
   and `FakeSegmenter` to `tests/fakes.py`; tests in `tests/test_propose.py` carry `propose_pipeline`.
   Verify: `uv run pytest tests/test_propose.py -k propose_pipeline` passes.
-- [ ] 5.7 Add to `isekai/interface/wiring.py` the `proposer` thunk of `Wiring`, `None` by default, and the cached `proposer_for`, set by `wiring_from`, per [D10](design.md#d10);
+- [x] 5.7 Add to `isekai/interface/wiring.py` the `proposer` thunk of `Wiring`, `None` by default, and the cached `proposer_for`, set by `wiring_from`, per [D10](design.md#d10);
   tests in `tests/test_propose.py` carry `propose_wiring`: the models opened once, a wiring with none refused.
   Verify: `uv run pytest tests/test_propose.py -k propose_wiring` passes.
-- [ ] 5.8 Add to `isekai/interface/ui/app.py` `POST /api/c/{collection}/place/propose` per [D10](design.md#d10): the body `{digest, flow, version, seed, points}` checked, the photograph and the render
+- [x] 5.8 Add to `isekai/interface/ui/app.py` `POST /api/c/{collection}/place/propose` per [D10](design.md#d10): the body `{digest, flow, version, seed, points}` checked, the photograph and the render
   read as the preview route reads them, `{arm, pairs}` answered `no-store`, and the route in the module's table; tests in `tests/test_ui_propose.py` carry `propose_route`.
   Verify: `uv run pytest tests/test_ui_propose.py -k propose_route` passes.
-- [ ] 5.9 Hold that the guard answers the new route and `app.py` writes no file of its own; tests carry `propose_guard`.
+- [x] 5.9 Hold that the guard answers the new route and `app.py` writes no file of its own; tests carry `propose_guard`.
   Verify: `uv run pytest tests/test_ui_propose.py tests/test_ui.py -k "propose_guard or invariant"` passes.
-- [ ] 5.10 Hold that the entry point's import graph reaches no wheel and the layers hold.
+- [x] 5.10 Hold that the entry point's import graph reaches no wheel and the layers hold.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_layers.py` passes.
-- [ ] 5.11 Hold the phase's tests under the acceptance's selector.
+- [x] 5.11 Hold the phase's tests under the acceptance's selector.
   Verify: `uv run pytest tests/test_pose.py tests/test_sam2.py tests/test_propose.py tests/test_ui_propose.py -k "pose or sam or propose"` passes.
 
 ## 6 — Stage 2
