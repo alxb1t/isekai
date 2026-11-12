@@ -52,6 +52,8 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 | `--accent-ink` | `#b3abf4` | commands, running words (`captioning…`) |
 | `--tick-locked` | `#34364a` | a prepared, locked tick |
 | `--chip-line` | `#2f3146` | an import row's badge border |
+| `--chain-ground` | `#1f2036` | the ground of the shown row of a render's chain |
+| `--chain-ring` | `#8d82e6` | the frame of the shown row of a render's chain |
 | placeholder | `repeating-linear-gradient(135deg,#1f2030 0 5px,#26273b 5px 10px)` | an image not yet decoded |
 | scrim | `rgba(10,11,18,.4)` | behind sheets and dialogs |
 | `--band` | `#0f1018` | text on the billing band |
@@ -107,12 +109,15 @@ timer mono 40px/500.
 | `/c/<collection>/review` | Review's head, replaced by its sheet's URL | — |
 | `/c/<collection>/review/<run>/<flow>` | Review | the cheatsheet, the viewer, *Side by side* |
 | `/c/<collection>/renders/<run>/<flow>/<version>/<seed>` | large view | *Draft from this*, *Compare with…* |
+| `/c/<collection>/renders/<run>/<flow>/<version>/<seed>/edit/:k` | large view of a bake | — |
 | `/c/<collection>/renders/<run>/<flow>/<version>/<seed>/compare/<flow>/<version>/<seed>` and `…/compare/photo` | Compare | — |
 | `/billing` | the billing alert's way out | — |
 
 - `<run>` is the run's **12-hex digest** (`0d4b7e6fb2a8`), unique by construction; the screen shows the short name
  .
 - `<version>` is `v` + the approval's number (`v2` is `review/002.approved.json`, rendered into `outputs/002/`).
+- `:k` is the number of an edit of that seed (`edit/1`); an address whose `k` is no edit of the seed shows the server's
+  refusal. The Hub tab stays lit on it, as on the large view.
 - `/c/<collection>/review` opens the first unapproved sheet of the first flow that has one, in the hub's order; else
   the first approved sheet short of its images, read-only; else *No sheet waits for review* and the way to the hub.
 - While a render runs, every screen shows `● render 06:41`, its clock, opening the render drawer, which holds no URL.
@@ -276,34 +281,35 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
 
 | frame | trigger | URL |
 |---|---|---|
-| J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⇧G Render | `…/c/2026-10-19/hub` — the dialog has none |
-| J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.06 | the drawer over the hub |
+| J4·1 the Render dialog: 4 images and 1 bake, 10 min, limit 15 min, about $0.07 | ⇧G Render | `…/c/2026-10-19/hub` — the dialog has none |
+| J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.07 | the drawer over the hub |
 | J4·3 done: `Nothing is billing.` | the last image lands; teardown and volume down confirm | same |
 | J4·4 the hub with the four new images | ⇧H View in Hub | `…/c/2026-10-19/hub` |
 
 ```
-J4·1  RENDER · ON A RENTED GPU                                   Render 4 images
-      ☑ 2026-10-19 3 images                                          a row per collection
+J4·1  RENDER · ON A RENTED GPU                           Render 4 images · 1 bake
+      ☑ 2026-10-19 3 images · 1 bake                                 a row per collection
           summon-anime-wai 2 images                                  96×128 thumbnails, 15 then +n
-          [▒▒]×2                                                     ×n above one · name vN on hover
+          [▒▒×]×2                                                    × takes the photograph out · ×n above one
           conjure-anime-wai 1 image
-          [▒▒]
-          Not included · a draft · summon-anime-wai                  dimmed, by reason and flow
-          [░░]
+          [▒▒×]
+          bakes 1 bake                                               the bakes of the collection, a row each
+          [▒] 00003 · v1 · 1840266731 · edit 1 [×]                   × takes its flow out with its bakes
       ☑ 2026-10-20 1 image                                           the rows scroll in a max height
           summon-anime-wai 1 image
-          [▒▒]
-      ESTIMATE  boot 3:00 · 4 images × 1:00 · teardown 2:00             9 min
-                limit 1.5× the estimate                              13 min 30 s
+          [▒▒×]
+      ☐ 2026-10-21 all removed                                       every photograph out: no tick
+      ESTIMATE  boot 3:00 · 4 images · 1 bake · teardown 2:00          10 min
+                limit 1.5× the estimate                              15 min
                 gpunit.toml's ceiling                                3 h
-      PRICE     pod 9 min at about $0.40/h                          about $0.06
+      PRICE     pod 10 min at about $0.40/h                         about $0.07
                 volume attached for the session                 under $0.01
-                                     at the limit about $0.09
+                                     at the limit about $0.10
       ☐ Keep the volume open for 4 hours after the session        about $0.02
-                                           [ Cancel esc ]  [ Render · about $0.06 ⌘↵ ]
+                                           [ Cancel esc ]  [ Render · about $0.07 ⌘↵ ]
 
 J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
-      06:41 of 13:30 at most      [▰▰▰▰▰▰▱▱▱▱▱▱]  images done over asked
+      06:41 of 15:00 at most      [▰▰▰▰▰▰▱▱▱▱▱▱]  images done over asked
       ● volume up         gpunit-isekai · attached                 0:21
       ● pod boot          gpunit-isekai                            2:04
       ◐ rendering         image 2 of 4 · 00003 · conjure-anime-wai · 4:16
@@ -320,12 +326,20 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
                                                                [ Stop session now ]
 ```
 
-- **What renders**: a row per collection short of images, in the Library's order, each ticked; in each, every
-  approved source × flow whose newest version holds fewer images than its Count, grouped by flow. What is left out is
-  named. Unticking a row quotes the rest again; one session renders every ticked collection on one pod. The bar
-  counts its own collection's images and `+n in other collections`.
-- **The estimate**: boot + images × time per image + teardown; boot 8:00 and teardown 2:00, each image at its
-  recorded median or 1:35, whichever is higher; one boot and one teardown for every ticked collection.
+- **What renders**: a row per collection short of images or holding a bake, in the Library's order, each ticked; in
+  each, every approved source × flow whose newest version holds fewer images than its Count, grouped by flow, then
+  the collection's bakes, a row each. The row's count line reads `<n> images · <m> bakes`, a part left out for zero.
+  Unticking a row quotes the rest again; one session renders every ticked collection on one pod, its bakes after its
+  images. The bar counts its own collection's images and bakes, and `+n in other collections` counts both.
+- **Taking out**: a tile's `×`, or `⌫` on a focused tile, takes the photograph's flow out of the session; a bake
+  row's `×` takes its flow out with its bakes, since `render --without` names a flow of a run. The rest is quoted
+  again; a row with none left reads *all removed* and cannot be ticked. The confirmation carries what was taken out.
+- **The title and the button**: the title is *Render 2 images*, *Render 2 images · 1 bake* or *Bake 1*, as what the
+  session does; the button reads *Render*, and *Bake* when no image is short. A session of bakes alone opens from the
+  bar, which shows with bakes alone, as `⇧G` does.
+- **The estimate**: boot + images × time per image + bakes × time per bake + teardown; boot 8:00 and teardown 2:00,
+  each image at its recorded median or 1:35, whichever is higher, each bake at the edit's configured time; one boot
+  and one teardown for every ticked collection. The estimate line names each of images and bakes, none for zero.
   The limit is 1.5× the estimate, under the configured
   maximum, and teardown starts by itself at the limit; an estimate past the ceiling disables Render — *untick a
   collection*. The price comes from the estimate: the pod at `pod_rate` (about $0.40/h), the volume at about
@@ -389,6 +403,18 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
   tiles 20 px apart. Its rows stand no taller than the window less 96 px, scrolling inside. It opens on the newest older version of this seed, else the image before this one,
   else the photograph; `h j k l` and the arrows move, keeping the column, held at a shorter row's end; `↵` or a
   click compares, `Esc` closes.
+- **The photograph** shows on the large view's sheet at its thumbnail size, above the actions. It has no link and no
+  key: a key belongs to the placement screen.
+- **The chain** stands under the actions, above the fields, when the render has bakes: the render first, then each bake of its seed
+  by number, one level further in for each bake it descends through, so a bake placed on another is drawn under it.
+  The shown row is framed with `--chain-ring` on `--chain-ground`. A baked row (`edit 1 · baked 15:40:12`) opens that
+  bake's view; a queued row (`edit 2 · queued, waits for the next session`) and a damaged row (`edit 3 · damaged`,
+  with its reason) open none, and one damaged record costs only its own row.
+- **A bake's view** (`…/<seed>/edit/:k`) is the large view with the bake's image, or for a queued bake the image it
+  was placed on, under the line `queued · the image it was placed on, until the next session bakes it`. The sheet
+  keeps its head and fields, and adds the bake's record rows: *placed on* (`the render` or `edit 1`), *edit* and
+  *baked*. It offers no write — no *Draft from this*, *Compare with…* or *Delete*, and none of their keys — since a
+  delete there would take the render and every bake; the way back is *Back to Hub* and the chain's rows.
 - **Compare** sets the image picked on the left and the image compare started from on the right, at one height,
   each headed by its flow, version and seed and nothing else: the pair centred, as tall as the window less the app
   bar and the heads, on the app's 12 px padding.
@@ -397,11 +423,11 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
   `Draft from this · summon-anime-wai v1 · seed 1840266731`, with a row per offered flow, assigned or not — the
   image's own first, named *revise*, and focused. `j` `k` move, `↵` drafts the focused flow and opens Review on the
   first draft, the rest in the rail, `Esc` closes. Its own flow is a revision; another is drafted from the image's approval, its own fields from its sheet, and Review shows the image
-  beside the photograph, marks the draft against that flow's sheet and heads it *the image it was drafted from*. All or
-  nothing: a refusal lists every selected image, those that could be drafted too, and offers
-  `Deselect those 2 and draft 1 ⇧↵`. A target's waiting draft with edits of its own opens Review on that draft,
-  writing nothing; one equal to its sheet is replaced. In a selection it is left out, the rest written, and the
-  dialog names it `already waiting`, then offers `Review ↵`.
+  beside the photograph, marks the draft against that flow's sheet and heads it *the image it was drafted from*. It
+  drafts the one image the large view shows: a refusal names why that image cannot be drafted, and writes nothing. A
+  target's waiting draft with edits of its own opens Review on that draft, writing nothing; one equal to its sheet is
+  replaced. The endpoint takes a list of images and refuses all or nothing; that list is the API's, and the page
+  sends one image.
 - **The revision's sheet** marks changed rows with an accent gutter dot and a `was` line against the rendered sheet,
   and keeps them once approved; the image it revises stays, whatever its seeds become.
 - **Approve refuses an unchanged revision** — neither fields nor ④ changed — naming the image it would reproduce
@@ -552,3 +578,4 @@ endings once, for both surfaces. The key is `RUNPOD_API_KEY` in `.env` (`.env.ex
 | **run flow** | New collection and Add sources (J1, J7) — the upload, staging, `isekai import` and conversion; `isekai assign`; ticking, multi-select, the PrepareBar and Prepare as a job (J2, J8a); `--progress json` on the stage verbs; the job slot; SSE `/events` with the snapshot |
 | **render** | the Render dialog, the session, done (J4); ④ editable, Count and Seeds through approve; `render <runs>` rendering what is short; the scaled limit and recorded durations; Renders, the large view; the billing alerts and the volume item (J8b, J8c); `--progress json` on `render` |
 | **revise** | `isekai draft --flow`, *Draft from this* and its refusal; Review of a revision (J5·4–J5·6); `review --discard`; compare (J5·8, J5·9); re-roll (J6) |
+| **bakes** | the bake's route `…/<seed>/edit/:k` and its view; the chain and the photograph's thumbnail on the large view; bakes in the Render bar and the dialog, their `×`, the titles and the confirmation that carries them (J4·1, J5) |

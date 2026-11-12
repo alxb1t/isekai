@@ -20,6 +20,9 @@ its new digest.
   `--chain-ground` and `--chain-ring` in every theme (0120 D5, D7–D10).
 - The Render dialog lists each queued bake with a `×` and sends `bakes` with the confirmation; its title names what
   it does (*Bake 1*). The bar shows with bakes alone, and `⇧G` opens the dialog on them (0120 D11, D12).
+- The design spec draws the Render dialog with its `×`, *all removed*, bake rows and titles, and the large view with the
+  photograph, the chain and a bake's route, one-image drafting; the READMEs say the same, and the debts `0108·R3` and
+  `0118·R3` are paid (0120 D5–D12).
 
 ## [0.79.0] - 2026-11-12
 

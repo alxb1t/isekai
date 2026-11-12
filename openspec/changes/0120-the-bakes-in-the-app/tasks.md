@@ -7,7 +7,7 @@ The phases: the server, the large view, the dialog and the bar, the docs. The se
 - [x] 1 — Server · hard
 - [x] 2 — Large view · moderate
 - [x] 3 — Dialog and bar · moderate
-- [ ] 4 — Docs · moderate
+- [x] 4 — Docs · moderate
 
 ## 1 — Server
 
@@ -72,15 +72,15 @@ The phases: the server, the large view, the dialog and the bar, the docs. The se
 
 ## 4 — Docs
 
-- [ ] 4.1 In `ui/design/spec.md` §4 add the row of the bake's route, `…/<seed>/edit/:k`, the large view of a bake.
+- [x] 4.1 In `ui/design/spec.md` §4 add the row of the bake's route, `…/<seed>/edit/:k`, the large view of a bake.
   Verify: `git grep -n 'edit/:k' -- ui/design/spec.md` prints the bake route.
-- [ ] 4.2 Pay `0108·R3`: redraw J4·1 in `ui/design/spec.md` without the *Not included* lines and the sentence *What is left out is named*, with the tiles' `×`, *all removed*, the bakes' rows and the titles of [D7](design.md#d7).
+- [x] 4.2 Pay `0108·R3`: redraw J4·1 in `ui/design/spec.md` without the *Not included* lines and the sentence *What is left out is named*, with the tiles' `×`, *all removed*, the bakes' rows and the titles of [D7](design.md#d7).
   Verify: `git grep -n 'Not included' -- ui/design/spec.md` prints nothing and exits 1.
-- [ ] 4.3 Pay `0118·R3`: in J5 of `ui/design/spec.md` describe the one-image drafting, dropping `Deselect those 2 and draft 1 ⇧↵` and *In a selection it is left out*; the endpoint's list stays described as the API's.
+- [x] 4.3 Pay `0118·R3`: in J5 of `ui/design/spec.md` describe the one-image drafting, dropping `Deselect those 2 and draft 1 ⇧↵` and *In a selection it is left out*; the endpoint's list stays described as the API's.
   Verify: `git grep -n -E 'Deselect those|In a selection' -- ui/design/spec.md` prints nothing and exits 1.
-- [ ] 4.4 In J5 of `ui/design/spec.md` describe the large view's photograph thumbnail, the chain and a bake's view; in §10 add the row `bakes`: the bake's route, the chain, the bakes in the bar and the dialog.
+- [x] 4.4 In J5 of `ui/design/spec.md` describe the large view's photograph thumbnail, the chain and a bake's view; in §10 add the row `bakes`: the bake's route, the chain, the bakes in the bar and the dialog.
   Verify: `git grep -n '| \*\*bakes\*\*' -- ui/design/spec.md` prints the row.
-- [ ] 4.5 In §2 of `ui/design/spec.md` add `--chain-ground` and `--chain-ring` to the token table, each with its role.
+- [x] 4.5 In §2 of `ui/design/spec.md` add `--chain-ground` and `--chain-ring` to the token table, each with its role.
   Verify: `git grep -n -E "^\| .*chain-ground" -- ui/design/spec.md` prints the row.
-- [ ] 4.6 In `isekai/interface/ui/README.md` say the Render bullet quotes and confirms bakes beside images, and the large view bullet the chain and a bake's routes; in `README.md` say the same in the paragraph on Render and the large view.
+- [x] 4.6 In `isekai/interface/ui/README.md` say the Render bullet quotes and confirms bakes beside images, and the large view bullet the chain and a bake's routes; in `README.md` say the same in the paragraph on Render and the large view.
   Verify: `git grep -n "bakes" -- isekai/interface/ui/README.md README.md` prints the lines.
