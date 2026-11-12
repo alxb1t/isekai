@@ -6,6 +6,7 @@ Tests and the workflow alone: the reds of `main`, then the tests that fail under
 
 - [x] 1 — The reds · moderate
 - [x] 2 — The load-bound tests · moderate
+- [ ] 3 — The stream's close · moderate
 
 ## 1 — The reds
 
@@ -52,3 +53,8 @@ Tests and the workflow alone: the reds of `main`, then the tests that fail under
 
 - [x] 2.10 Run phase 2's test files together, as the load-bound tests are read: edit nothing.
   Verify: `uv run pytest tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui.py -q` exits 0.
+
+## 3 — The stream's close
+
+- [ ] 3.1 In `test_the_imports_stream_reports_a_file_waiting_converting_then_converted` of `tests/test_ui_api.py`, close the broadcast only once the stream has framed `plain.heic`'s `converted` event, per [the imports stream](design.md#load-bound-tests): add `converted = threading.Event()` beside `snapshotted`; in the test's `frame` wrapper, call `converted.set()` when `kind == "file"` and `data["state"] == "converted"`; in `upload_once_open`, after the `_until_each_read(...)` call and inside the `try`, add `assert converted.wait(WAIT), "the stream framed no converted event"`. Keep `broadcast.close()` in the `finally`, and edit no product file.
+  Verify: `uv run pytest tests/test_ui_api.py -k imports_stream -q` exits 0, and `git grep -n -F 'converted.wait(WAIT)' -- tests/test_ui_api.py` prints the added line.

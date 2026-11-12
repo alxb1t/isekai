@@ -11,6 +11,7 @@ Tests in `tests/test_ui_api.py`, `tests/test_ui_jobs.py` and `tests/test_ui.py` 
 ```
 phase 1  the reds       chooser · spline · CI's browser step
 phase 2  under load     lock pair · refusal sentence · imports stream · idle children · settle
+phase 3  the close      the imports stream closed once its converted frame is made
 ```
 
 The change is built after `0126-cuts-per-photograph` releases, for the machine's load. The two share no file known at the cut.
@@ -46,7 +47,7 @@ The edits, by file:
 | `tests/e2e/test_import.py` | the chooser's handler is a lambda |
 | `tests/test_chain.py` | the spline's chunks are compared within a tolerance |
 | `.github/workflows/ci.yml` | the *Browser tests* step carries `if: always()` |
-| `tests/test_ui_api.py` | the lock pair is ordered; the refusal is asserted by its sentence; the stream test reads one feed in one loop |
+| `tests/test_ui_api.py` | the lock pair is ordered; the refusal is asserted by its sentence; the stream test reads one feed in one loop, and closes the stream once it has framed `converted` |
 | `tests/test_ui_jobs.py` | each child that runs until interrupted waits on short sleeps; the shutdown test settles in ten seconds |
 | `tests/test_ui.py` | the stream test's idle child waits on short sleeps |
 
@@ -84,6 +85,13 @@ With the lock, the second waits at `Waited`, which sets `reached`, so the first 
 **The refusal's sentence.** `_overlap` returns each update's status and body. The locked test asserts the second's `refusal` holds `changed since this page last read it`, the sentence of `_precondition` in `isekai/interface/ui/app.py`, as the other tests of that refusal in `tests/test_ui_api.py` do.
 
 **The imports stream.** The test reads each import off one feed in turn, and the first read drops the other import's events. `_until_each_read` takes each import with its uploads, reads the feed once and keeps each import's `file` events apart. `_until_read` stays as the one-import call over it, so its other callers do not change.
+
+The helper thread then closes the broadcast, and that close races the stream. `Broadcast.close` in `isekai/interface/ui/events.py` sets `closed` before it publishes its close event, and `stream` returns on `closed` without draining its queue. The stream's queue gets `converted` when the helper's feed does, so under load the close can win and the body ends at `converting`. The test's `frame` wrapper sees every frame the stream makes, so it sets a second event on `plain.heic`'s `converted`, and the helper waits on that event before it closes. No product file moves: the race is in when the test closes, not in what the stream sends.
+
+```
+before   helper: feed reads converted -> close()               stream may not have framed converted
+after    helper: feed reads converted -> stream framed it -> close()
+```
 
 **The idle children.** A child that sleeps thirty seconds loses an interrupt that lands before its sleep starts, for the whole sleep. Each child becomes `while True: time.sleep(0.05)`, so a lost interrupt costs the next turn of the loop. The children are `SLEEP` and the scripts around it in `tests/test_ui_jobs.py`, and the stream test's child in `tests/test_ui.py`.
 

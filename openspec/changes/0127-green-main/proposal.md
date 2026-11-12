@@ -30,7 +30,7 @@ Edits to tests and `.github/workflows/ci.yml` alone. No product file moves.
 - The *Browser tests* step of `.github/workflows/ci.yml` runs whatever the gate says.
 - The lock pair in `tests/test_ui_api.py` is ordered so the unlocked twin always commits both updates, and the locked test fails with the lock removed.
 - The lock's refusal is asserted by its sentence, not its status alone.
-- The imports-stream test reads each import's events off one feed in one loop.
+- The imports-stream test reads each import's events off one feed in one loop, and closes the stream only once the stream has framed the `converted` event it asserts.
 - Each child that runs until interrupted, in `tests/test_ui_jobs.py` and `tests/test_ui.py`, waits on short sleeps.
 - The shutdown test in `tests/test_ui_jobs.py` settles in ten seconds.
 
