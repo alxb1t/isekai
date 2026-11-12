@@ -1,0 +1,1098 @@
+{
+  "ed706d21a2c3_ada/conjure-anime-wai/outputs/001/42.png": {
+    "pixels": "0e493e014180aa6a0d2a1bdf26300fd9170dda75922561aeab78a5de4e8473df"
+  },
+  "ed706d21a2c3_ada/conjure-anime-wai/outputs/001/42.render.json": {
+    "json": {
+      "duration": 0.0,
+      "edited": false,
+      "flow": "conjure-anime-wai",
+      "flow_digest": "8123c38d701748d41e7dc6d9aea2af647c4fbcc24435c2a3c351860f36dc0180",
+      "flow_graph_sha256": "70d049fb44bb9969ffb3b1ebb5264d4fd2df0510ecc54a64db38dd954e6283c1",
+      "graph_sha256": "4efedfabd19abc768b482c8faad89875117b70348566cd2b0eabaa18e260d388",
+      "pinned": false,
+      "producer": {
+        "from": 1,
+        "implementation": "render",
+        "source": "prompts"
+      },
+      "runtime": {
+        "comfyui_version": "0.3.60",
+        "device": "cuda:0 NVIDIA L4 : cudaMallocAsync",
+        "python_version": "3.12.14 (main, Oct 1 2025, 00:00:00) [GCC 13.3.0]",
+        "pytorch_version": "2.8.0+cu128"
+      },
+      "schema": {
+        "name": "render",
+        "version": 1
+      },
+      "seed": 42,
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/conjure-anime-wai/prompts/001.json": {
+    "json": {
+      "edited": false,
+      "flow": "conjure-anime-wai",
+      "flow_digest": "8123c38d701748d41e7dc6d9aea2af647c4fbcc24435c2a3c351860f36dc0180",
+      "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust",
+      "positive": "masterpiece, best quality, amazing quality, newest, anime screencap, detailed eyes, soft lighting",
+      "producer": {
+        "from": 1,
+        "implementation": "assemble",
+        "source": "review"
+      },
+      "schema": {
+        "name": "prompt",
+        "version": 1
+      },
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/conjure-anime-wai/review/001.approved.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "bangs": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "eyelashes": [],
+        "facial_hair": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "lips": [],
+        "marks": [],
+        "nose": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow": "conjure-anime-wai",
+      "producer": {
+        "approved_from": 1,
+        "edited": false,
+        "from": 1,
+        "implementation": "review",
+        "source": "sheets"
+      },
+      "schema": {
+        "name": "review",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "sheet": 1,
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/conjure-anime-wai/sheets/001.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "bangs": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "eyelashes": [],
+        "facial_hair": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "lips": [],
+        "marks": [],
+        "nose": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow_digest": "8123c38d701748d41e7dc6d9aea2af647c4fbcc24435c2a3c351860f36dc0180",
+      "producer": {
+        "artifacts": {
+          "wd14/model.onnx": {
+            "sha256": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+          },
+          "wd14/selected_tags.csv": {
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        },
+        "floor": 0.15,
+        "from": 1,
+        "implementation": "wd14",
+        "models": [
+          "wd14/model.onnx"
+        ],
+        "pinned": true
+      },
+      "schema": {
+        "name": "sheet",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/control-anime-wai/outputs/001/42.png": {
+    "pixels": "0e493e014180aa6a0d2a1bdf26300fd9170dda75922561aeab78a5de4e8473df"
+  },
+  "ed706d21a2c3_ada/control-anime-wai/outputs/001/42.render.json": {
+    "json": {
+      "duration": 0.0,
+      "edited": false,
+      "flow": "control-anime-wai",
+      "flow_digest": "a5e41ce47810b0c9d087bae51255ac3c31500e1fd90e97248d9a356241720bcf",
+      "flow_graph_sha256": "3484f852557c497c2f4ef65c7d1694555e4fb2051d1df66183ef1ac256c86bdb",
+      "graph_sha256": "2d2c0d188b9e6b0670c737fc109d06666ae67480f73b14821e79d5cba20d713c",
+      "pinned": false,
+      "producer": {
+        "from": 1,
+        "implementation": "render",
+        "source": "prompts"
+      },
+      "runtime": {
+        "comfyui_version": "0.3.60",
+        "device": "cuda:0 NVIDIA L4 : cudaMallocAsync",
+        "python_version": "3.12.14 (main, Oct 1 2025, 00:00:00) [GCC 13.3.0]",
+        "pytorch_version": "2.8.0+cu128"
+      },
+      "schema": {
+        "name": "render",
+        "version": 1
+      },
+      "seed": 42,
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/control-anime-wai/prompts/001.json": {
+    "json": {
+      "edited": false,
+      "flow": "control-anime-wai",
+      "flow_digest": "a5e41ce47810b0c9d087bae51255ac3c31500e1fd90e97248d9a356241720bcf",
+      "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust",
+      "positive": "masterpiece, best quality, amazing quality, newest, anime screencap, detailed eyes, soft lighting",
+      "producer": {
+        "from": 1,
+        "implementation": "assemble",
+        "source": "review"
+      },
+      "schema": {
+        "name": "prompt",
+        "version": 1
+      },
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/control-anime-wai/review/001.approved.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow": "control-anime-wai",
+      "producer": {
+        "approved_from": 1,
+        "edited": false,
+        "from": 1,
+        "implementation": "review",
+        "source": "sheets"
+      },
+      "schema": {
+        "name": "review",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "sheet": 1,
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/control-anime-wai/sheets/001.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow_digest": "a5e41ce47810b0c9d087bae51255ac3c31500e1fd90e97248d9a356241720bcf",
+      "producer": {
+        "artifacts": {
+          "wd14/model.onnx": {
+            "sha256": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+          },
+          "wd14/selected_tags.csv": {
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        },
+        "floor": 0.15,
+        "from": 1,
+        "implementation": "wd14",
+        "models": [
+          "wd14/model.onnx"
+        ],
+        "pinned": true
+      },
+      "schema": {
+        "name": "sheet",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/photo.jpg": {
+    "bytes": "ed706d21a2c3268978800efbca3f9c3ac0ce18ebf139999fd68cf50a39750c01"
+  },
+  "ed706d21a2c3_ada/photo/captions/001.json": {
+    "json": {
+      "producer": {
+        "briefing": {
+          "path": "config/caption.briefing.md",
+          "sha256": "033bd182cbb5bf1ef627310c7fc07e386335c0274aef49f4536d6f6c778ca134"
+        },
+        "implementation": "fake-reader",
+        "models": [
+          "fake-model"
+        ],
+        "pinned": false
+      },
+      "prose": "Dark brown hair, brown eyes.",
+      "schema": {
+        "name": "caption",
+        "version": 1
+      }
+    }
+  },
+  "ed706d21a2c3_ada/photo/tags/001.json": {
+    "json": {
+      "producer": {
+        "implementation": "fake-tagger",
+        "models": [
+          "fake-model"
+        ],
+        "pinned": false,
+        "prompt": {
+          "sha256": "3ce90e9fcf084c092d5086b50a78f9c8b12096a1ef4bbae63e963d88b50dad49"
+        }
+      },
+      "schema": {
+        "name": "tags",
+        "version": 1
+      },
+      "tags": [
+        "1girl",
+        "solo",
+        "looking at viewer"
+      ]
+    }
+  },
+  "ed706d21a2c3_ada/photo/wd14/001.json": {
+    "json": {
+      "producer": {
+        "artifacts": {
+          "wd14/model.onnx": {
+            "sha256": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+          },
+          "wd14/selected_tags.csv": {
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        },
+        "floor": 0.15,
+        "implementation": "wd14",
+        "models": [
+          "wd14/model.onnx"
+        ],
+        "pinned": true
+      },
+      "schema": {
+        "name": "wd14",
+        "version": 1
+      },
+      "tags": [
+        {
+          "confidence": 0.9,
+          "tag": "1girl"
+        }
+      ]
+    }
+  },
+  "ed706d21a2c3_ada/run.json": {
+    "json": {
+      "id": "ed706d21a2c3_ada",
+      "photo": {
+        "bytes": 41,
+        "media_type": "image/jpeg",
+        "name": "photo.jpg",
+        "sha256": "ed706d21a2c3268978800efbca3f9c3ac0ce18ebf139999fd68cf50a39750c01"
+      },
+      "schema": {
+        "name": "run",
+        "version": 1
+      }
+    }
+  },
+  "ed706d21a2c3_ada/summon-anime-wai/outputs/001/42.edit-1.composite.png": {
+    "pixels": "0a05f8b654bbcf99f47f5864a894d1203b432b5f337fdc4c0d5226e0a8c44108"
+  },
+  "ed706d21a2c3_ada/summon-anime-wai/outputs/001/42.edit-1.json": {
+    "json": {
+      "composite_sha256": "831b33c0b80a4addcb99fd741b6dc47472bb0716a5fba5925b80d90a6bfb3af7",
+      "crop": {
+        "box": [
+          0,
+          0,
+          304,
+          304
+        ],
+        "grown": true,
+        "size": [
+          1216,
+          1216
+        ],
+        "widened": false
+      },
+      "dials": {
+        "cfg": 5,
+        "clip_skip": -2,
+        "control_gain": 1.6,
+        "denoise": 0.2,
+        "end_percent": 1.0,
+        "feather": 4,
+        "grow": 6,
+        "ink_threshold": 0.03,
+        "lines": 0.4,
+        "lit_floor": 8,
+        "long_side": 1216,
+        "margin": 48,
+        "max_upscale": 4,
+        "min_aspect": 0.5,
+        "rounding": 1,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "start_percent": 0.0,
+        "steps": 28,
+        "strength": 1.0
+      },
+      "duration": 0.0,
+      "edit": "tattoo-wai",
+      "edit_digest": "fcf0c974352632061e46e97e534ee83b0ca6cb21a25e7ff01857c7682b719348",
+      "graph_sha256": "37a27aa1de8e462e6ed95b0607ee6ce672eaa6bbe44aca13d30d5958b643b126",
+      "overridden": [],
+      "runtime": {
+        "comfyui_version": "0.3.60",
+        "device": "cuda:0 NVIDIA L4 : cudaMallocAsync",
+        "python_version": "3.12.14 (main, Oct 1 2025, 00:00:00) [GCC 13.3.0]",
+        "pytorch_version": "2.8.0+cu128"
+      },
+      "schema": {
+        "name": "edit",
+        "version": 1
+      },
+      "seed": 5,
+      "source": "42.png",
+      "source_sha256": "854c985a20e7b68bd637b4fc680f4e27462f3ab42713c40546798ab2756befc0"
+    }
+  },
+  "ed706d21a2c3_ada/summon-anime-wai/outputs/001/42.edit-1.png": {
+    "pixels": "67a1ddaffcc37bb187741d0261ed167e9239c96e75eab36e7a8eb4526057ef83"
+  },
+  "ed706d21a2c3_ada/summon-anime-wai/outputs/001/42.png": {
+    "pixels": "0e493e014180aa6a0d2a1bdf26300fd9170dda75922561aeab78a5de4e8473df"
+  },
+  "ed706d21a2c3_ada/summon-anime-wai/outputs/001/42.render.json": {
+    "json": {
+      "duration": 0.0,
+      "edited": false,
+      "flow": "summon-anime-wai",
+      "flow_digest": "0b841d22d5d3e659541c1459d42fdf5281a7c6338a193a04189da199b8f83e47",
+      "flow_graph_sha256": "3484f852557c497c2f4ef65c7d1694555e4fb2051d1df66183ef1ac256c86bdb",
+      "graph_sha256": "32aaacff280a561e24311b75e2415118839690f930a7c40028e000a099f69f5a",
+      "pinned": false,
+      "producer": {
+        "from": 1,
+        "implementation": "render",
+        "source": "prompts"
+      },
+      "runtime": {
+        "comfyui_version": "0.3.60",
+        "device": "cuda:0 NVIDIA L4 : cudaMallocAsync",
+        "python_version": "3.12.14 (main, Oct 1 2025, 00:00:00) [GCC 13.3.0]",
+        "pytorch_version": "2.8.0+cu128"
+      },
+      "schema": {
+        "name": "render",
+        "version": 1
+      },
+      "seed": 42,
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/summon-anime-wai/prompts/001.json": {
+    "json": {
+      "edited": false,
+      "flow": "summon-anime-wai",
+      "flow_digest": "0b841d22d5d3e659541c1459d42fdf5281a7c6338a193a04189da199b8f83e47",
+      "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust",
+      "positive": "masterpiece, best quality, amazing quality, newest, anime screencap, detailed eyes, soft lighting",
+      "producer": {
+        "from": 1,
+        "implementation": "assemble",
+        "source": "review"
+      },
+      "schema": {
+        "name": "prompt",
+        "version": 1
+      },
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/summon-anime-wai/review/001.approved.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow": "summon-anime-wai",
+      "producer": {
+        "approved_from": 1,
+        "edited": false,
+        "from": 1,
+        "implementation": "review",
+        "source": "sheets"
+      },
+      "schema": {
+        "name": "review",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "sheet": 1,
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/summon-anime-wai/sheets/001.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow_digest": "0b841d22d5d3e659541c1459d42fdf5281a7c6338a193a04189da199b8f83e47",
+      "producer": {
+        "artifacts": {
+          "wd14/model.onnx": {
+            "sha256": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+          },
+          "wd14/selected_tags.csv": {
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        },
+        "floor": 0.15,
+        "from": 1,
+        "implementation": "wd14",
+        "models": [
+          "wd14/model.onnx"
+        ],
+        "pinned": true
+      },
+      "schema": {
+        "name": "sheet",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/summon-flat-anime-wai/outputs/001/42.png": {
+    "pixels": "0e493e014180aa6a0d2a1bdf26300fd9170dda75922561aeab78a5de4e8473df"
+  },
+  "ed706d21a2c3_ada/summon-flat-anime-wai/outputs/001/42.render.json": {
+    "json": {
+      "duration": 0.0,
+      "edited": false,
+      "flow": "summon-flat-anime-wai",
+      "flow_digest": "fa87fed5ff33e169ca94f82740716535679ff0990f0a676bdca9fee33380eec1",
+      "flow_graph_sha256": "bbc7e52b7bb299f21843260dc955be90b48095e87897834ba0313a441b9c86a9",
+      "graph_sha256": "8d99b29c6462e0419837a1d7cc1d44cb2a5d65e82c63c406ee9620f9f4cf51df",
+      "pinned": false,
+      "producer": {
+        "from": 1,
+        "implementation": "render",
+        "source": "prompts"
+      },
+      "runtime": {
+        "comfyui_version": "0.3.60",
+        "device": "cuda:0 NVIDIA L4 : cudaMallocAsync",
+        "python_version": "3.12.14 (main, Oct 1 2025, 00:00:00) [GCC 13.3.0]",
+        "pytorch_version": "2.8.0+cu128"
+      },
+      "schema": {
+        "name": "render",
+        "version": 1
+      },
+      "seed": 42,
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/summon-flat-anime-wai/prompts/001.json": {
+    "json": {
+      "edited": false,
+      "flow": "summon-flat-anime-wai",
+      "flow_digest": "fa87fed5ff33e169ca94f82740716535679ff0990f0a676bdca9fee33380eec1",
+      "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust, realistic, photorealistic, 3d, semi-realistic",
+      "positive": "masterpiece, best quality, amazing quality, newest, anime screencap, detailed eyes, soft lighting, flat color, cel shading, anime coloring, colorful",
+      "producer": {
+        "from": 1,
+        "implementation": "assemble",
+        "source": "review"
+      },
+      "schema": {
+        "name": "prompt",
+        "version": 1
+      },
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/summon-flat-anime-wai/review/001.approved.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow": "summon-flat-anime-wai",
+      "producer": {
+        "approved_from": 1,
+        "edited": false,
+        "from": 1,
+        "implementation": "review",
+        "source": "sheets"
+      },
+      "schema": {
+        "name": "review",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "sheet": 1,
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/summon-flat-anime-wai/sheets/001.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow_digest": "fa87fed5ff33e169ca94f82740716535679ff0990f0a676bdca9fee33380eec1",
+      "producer": {
+        "artifacts": {
+          "wd14/model.onnx": {
+            "sha256": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+          },
+          "wd14/selected_tags.csv": {
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        },
+        "floor": 0.15,
+        "from": 1,
+        "implementation": "wd14",
+        "models": [
+          "wd14/model.onnx"
+        ],
+        "pinned": true
+      },
+      "schema": {
+        "name": "sheet",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/summon-semireal-anime-wai/outputs/001/42.png": {
+    "pixels": "0e493e014180aa6a0d2a1bdf26300fd9170dda75922561aeab78a5de4e8473df"
+  },
+  "ed706d21a2c3_ada/summon-semireal-anime-wai/outputs/001/42.render.json": {
+    "json": {
+      "duration": 0.0,
+      "edited": false,
+      "flow": "summon-semireal-anime-wai",
+      "flow_digest": "fbed851f8d9b049672cf73004457c5d4b7c4c1948a7935fc7fd9dbf9dc872b70",
+      "flow_graph_sha256": "bbc7e52b7bb299f21843260dc955be90b48095e87897834ba0313a441b9c86a9",
+      "graph_sha256": "5ad38875dff7cd8b069ac1c9c83f837f922f803ec13d594392233c47ffc7b10f",
+      "pinned": false,
+      "producer": {
+        "from": 1,
+        "implementation": "render",
+        "source": "prompts"
+      },
+      "runtime": {
+        "comfyui_version": "0.3.60",
+        "device": "cuda:0 NVIDIA L4 : cudaMallocAsync",
+        "python_version": "3.12.14 (main, Oct 1 2025, 00:00:00) [GCC 13.3.0]",
+        "pytorch_version": "2.8.0+cu128"
+      },
+      "schema": {
+        "name": "render",
+        "version": 1
+      },
+      "seed": 42,
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/summon-semireal-anime-wai/prompts/001.json": {
+    "json": {
+      "edited": false,
+      "flow": "summon-semireal-anime-wai",
+      "flow_digest": "fbed851f8d9b049672cf73004457c5d4b7c4c1948a7935fc7fd9dbf9dc872b70",
+      "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust",
+      "positive": "masterpiece, best quality, amazing quality, newest, anime screencap, detailed eyes, soft lighting",
+      "producer": {
+        "from": 1,
+        "implementation": "assemble",
+        "source": "review"
+      },
+      "schema": {
+        "name": "prompt",
+        "version": 1
+      },
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/summon-semireal-anime-wai/review/001.approved.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow": "summon-semireal-anime-wai",
+      "producer": {
+        "approved_from": 1,
+        "edited": false,
+        "from": 1,
+        "implementation": "review",
+        "source": "sheets"
+      },
+      "schema": {
+        "name": "review",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "sheet": 1,
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/summon-semireal-anime-wai/sheets/001.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow_digest": "fbed851f8d9b049672cf73004457c5d4b7c4c1948a7935fc7fd9dbf9dc872b70",
+      "producer": {
+        "artifacts": {
+          "wd14/model.onnx": {
+            "sha256": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+          },
+          "wd14/selected_tags.csv": {
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        },
+        "floor": 0.15,
+        "from": 1,
+        "implementation": "wd14",
+        "models": [
+          "wd14/model.onnx"
+        ],
+        "pinned": true
+      },
+      "schema": {
+        "name": "sheet",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/summon-vivid-anime-wai/outputs/001/42.png": {
+    "pixels": "0e493e014180aa6a0d2a1bdf26300fd9170dda75922561aeab78a5de4e8473df"
+  },
+  "ed706d21a2c3_ada/summon-vivid-anime-wai/outputs/001/42.render.json": {
+    "json": {
+      "duration": 0.0,
+      "edited": false,
+      "flow": "summon-vivid-anime-wai",
+      "flow_digest": "f72aa506e5668be9982515654b659e3760ac9e05c71a0d28e533e281468d006e",
+      "flow_graph_sha256": "bbc7e52b7bb299f21843260dc955be90b48095e87897834ba0313a441b9c86a9",
+      "graph_sha256": "c9c685920dbad83aca0cfb834c736f5b90a351ba1096fdecec6b074a1b84d462",
+      "pinned": false,
+      "producer": {
+        "from": 1,
+        "implementation": "render",
+        "source": "prompts"
+      },
+      "runtime": {
+        "comfyui_version": "0.3.60",
+        "device": "cuda:0 NVIDIA L4 : cudaMallocAsync",
+        "python_version": "3.12.14 (main, Oct 1 2025, 00:00:00) [GCC 13.3.0]",
+        "pytorch_version": "2.8.0+cu128"
+      },
+      "schema": {
+        "name": "render",
+        "version": 1
+      },
+      "seed": 42,
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/summon-vivid-anime-wai/prompts/001.json": {
+    "json": {
+      "edited": false,
+      "flow": "summon-vivid-anime-wai",
+      "flow_digest": "f72aa506e5668be9982515654b659e3760ac9e05c71a0d28e533e281468d006e",
+      "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust, realistic, photorealistic, 3d, semi-realistic, monochrome, greyscale, muted color",
+      "positive": "masterpiece, best quality, amazing quality, newest, anime screencap, detailed eyes, soft lighting",
+      "producer": {
+        "from": 1,
+        "implementation": "assemble",
+        "source": "review"
+      },
+      "schema": {
+        "name": "prompt",
+        "version": 1
+      },
+      "sheet": 1
+    }
+  },
+  "ed706d21a2c3_ada/summon-vivid-anime-wai/review/001.approved.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow": "summon-vivid-anime-wai",
+      "producer": {
+        "approved_from": 1,
+        "edited": false,
+        "from": 1,
+        "implementation": "review",
+        "source": "sheets"
+      },
+      "schema": {
+        "name": "review",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "sheet": 1,
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "ed706d21a2c3_ada/summon-vivid-anime-wai/sheets/001.json": {
+    "json": {
+      "field_map": {
+        "name": "tests/stages.py",
+        "revision": 1,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow_digest": "f72aa506e5668be9982515654b659e3760ac9e05c71a0d28e533e281468d006e",
+      "producer": {
+        "artifacts": {
+          "wd14/model.onnx": {
+            "sha256": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+          },
+          "wd14/selected_tags.csv": {
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        },
+        "floor": 0.15,
+        "from": 1,
+        "implementation": "wd14",
+        "models": [
+          "wd14/model.onnx"
+        ],
+        "pinned": true
+      },
+      "schema": {
+        "name": "sheet",
+        "version": 1
+      },
+      "schema_document": {
+        "name": "identity"
+      },
+      "vocabulary": {
+        "name": "wd14/selected_tags.csv",
+        "revision": "ffffffffffffffffffffffffffffffffffffffff",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  }
+}

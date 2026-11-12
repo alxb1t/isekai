@@ -5,7 +5,7 @@ Tests alone: the graphs, the run, the verbs, the routes, then the wire. Decision
 ## Progress
 
 - [x] 1 — The graphs · moderate
-- [ ] 2 — The run · moderate
+- [x] 2 — The run · moderate
 - [ ] 3 — The verbs · moderate
 - [ ] 4 — The routes · moderate
 - [ ] 5 — The wire · moderate
@@ -38,22 +38,22 @@ Tests alone: the graphs, the run, the verbs, the routes, then the wire. Decision
 
 ## 2 — The run
 
-- [ ] 2.1 In `tests/record.py`, add `def normalised(value, root)` and `def entry(path, root)` per [D4](design.md#d4): a `duration` is asserted a number and set to `0.0`, a string holding `root.resolve()` is rewritten with `<root>`, then one holding `root`; a `.json` file is `{"json": …}`, a `.png` is `{"pixels": <sha256 of the mode, the size and the decoded bytes>}`, any other file `{"bytes": <sha256>}`.
+- [x] 2.1 In `tests/record.py`, add `def normalised(value, root)` and `def entry(path, root)` per [D4](design.md#d4): a `duration` is asserted a number and set to `0.0`, a string holding `root.resolve()` is rewritten with `<root>`, then one holding `root`; a `.json` file is `{"json": …}`, a `.png` is `{"pixels": <sha256 of the mode, the size and the decoded bytes>}`, any other file `{"bytes": <sha256>}`.
   Verify: `grep -n -F "def entry(" tests/record.py` prints the definition.
 
-- [ ] 2.2 In `tests/record.py`, add `paths(done)`, mapping each file under the runs root, relative and sorted, to its `entry`, and register it as `FILES["run"]`.
+- [x] 2.2 In `tests/record.py`, add `paths(done)`, mapping each file under the runs root, relative and sorted, to its `entry`, and register it as `FILES["run"]`.
   Verify: `uv run python -c "import tests.record as r; print(sorted(r.FILES))"` prints `['graphs', 'run']`.
 
-- [ ] 2.3 In `tests/test_record.py`, add `test_a_duration_and_the_root_are_normalised`, `test_a_png_is_recorded_by_its_pixels_and_any_other_file_by_its_bytes` (encodings of the same pixels give the same entry, a changed pixel another) and `test_each_recorded_graph_is_the_one_its_render_record_digests`, comparing `graph_digest` of each flow's graph with `graph_sha256` of its `42.render.json`, and the edit's with its record's.
+- [x] 2.3 In `tests/test_record.py`, add `test_a_duration_and_the_root_are_normalised`, `test_a_png_is_recorded_by_its_pixels_and_any_other_file_by_its_bytes` (encodings of the same pixels give the same entry, a changed pixel another) and `test_each_recorded_graph_is_the_one_its_render_record_digests`, comparing `graph_digest` of each flow's graph with `graph_sha256` of its `42.render.json`, and the edit's with its record's.
   Verify: `uv run pytest tests/test_record.py -k "normalised or recorded_by or digests" -q` exits 0.
 
-- [ ] 2.4 In `test_each_record_file_is_what_the_writer_derives`, assert before the comparison that the derived text names neither the pass's directory, as given or resolved, nor `Path.home()`.
+- [x] 2.4 In `test_each_record_file_is_what_the_writer_derives`, assert before the comparison that the derived text names neither the pass's directory, as given or resolved, nor `Path.home()`.
   Verify: `grep -n -F "Path.home()" tests/test_record.py` prints the assertion.
 
-- [ ] 2.5 In `tests/test_resume.py`, add `test_a_second_pass_over_the_same_runs_moves_nothing`, bound to `cli:resume:second-pass-is-inert`: `offline(tmp_path)`, then `drive` again over the same `Done`, and the render client's submissions and `paths(done)` are as they were.
+- [x] 2.5 In `tests/test_resume.py`, add `test_a_second_pass_over_the_same_runs_moves_nothing`, bound to `cli:resume:second-pass-is-inert`: `offline(tmp_path)`, then `drive` again over the same `Done`, and the render client's submissions and `paths(done)` are as they were.
   Verify: `uv run pytest tests/test_resume.py -k second_pass_over_the_same_runs -q` exits 0.
 
-- [ ] 2.6 Run `uv run python -m tests.record`, which writes `tests/record/run.json`, and read it: every path is relative, every duration is `0.0`, no file names this machine.
+- [x] 2.6 Run `uv run python -m tests.record`, which writes `tests/record/run.json`, and read it: every path is relative, every duration is `0.0`, no file names this machine.
   Verify: `uv run pytest tests/test_record.py tests/test_resume.py -q` exits 0.
 
 ## 3 — The verbs

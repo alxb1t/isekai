@@ -6,6 +6,7 @@ a temporary directory and compares.
 """
 
 import dataclasses
+import hashlib
 import io
 import json
 import os
@@ -246,6 +247,56 @@ def graphs(done: Done) -> dict[str, object]:
 
 
 FILES["graphs"] = graphs
+
+
+def normalised(value: object, root: Path) -> object:
+    """Return `value` with each `duration` set to 0.0 and `root` written `<root>`.
+
+    The resolved spelling of `root` is rewritten before the given one, so a
+    temporary directory under `/var` and one under `/private/var` read the same.
+    e.g. {"duration": 1.5} -> {"duration": 0.0}, "<given>/a.jpg" -> "<root>/a.jpg"
+    """
+    if isinstance(value, dict):
+        return {
+            key: _zeroed(item) if key == "duration" else normalised(item, root)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [normalised(item, root) for item in value]
+    if isinstance(value, str):
+        return value.replace(str(root.resolve()), "<root>").replace(str(root), "<root>")
+    return value
+
+
+def _zeroed(seconds: object) -> float:
+    """Return 0.0 for a number of seconds, and refuse anything else."""
+    assert isinstance(seconds, int | float) and not isinstance(seconds, bool), seconds
+    return 0.0
+
+
+def entry(path: Path, root: Path) -> dict[str, object]:
+    """Return a file's record: its JSON, its PNG's pixels, or its bytes' digest."""
+    if path.suffix == ".json":
+        return {"json": normalised(json.loads(path.read_text()), root)}
+    if path.suffix == ".png":
+        with Image.open(path) as image:
+            pixels = hashlib.sha256()
+            pixels.update(f"{image.mode} {image.size[0]}x{image.size[1]}".encode())
+            pixels.update(image.tobytes())
+        return {"pixels": pixels.hexdigest()}
+    return {"bytes": hashlib.sha256(path.read_bytes()).hexdigest()}
+
+
+def paths(done: Done) -> dict[str, object]:
+    """Return every file under the runs root, by relative path, with its entry."""
+    return {
+        str(path.relative_to(done.runs)): entry(path, done.root)
+        for path in sorted(done.runs.rglob("*"))
+        if path.is_file()
+    }
+
+
+FILES["run"] = paths
 
 
 if __name__ == "__main__":

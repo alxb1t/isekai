@@ -24,6 +24,9 @@ its new digest.
   delete's sentence, the sibling paragraph and the model-manifest recipe are corrected (0129 D12, D13).
 - `tests/record.py` runs one offline pass over every flow and writes `tests/record/graphs.json`, each flow's graph and the
   edit's whole; a test re-derives it, and `uv run python -m tests.record` writes it again (0130 D1, D2, D3, D9).
+- `tests/record/run.json` holds every path of the pass under the runs root: a JSON file with its duration `0.0` and the
+  pass's directory `<root>`, a PNG by its pixels, any other file by its bytes; a second pass over the same runs moves
+  nothing (0130 D4).
 
 ## [0.86.2] - 2026-11-12
 
