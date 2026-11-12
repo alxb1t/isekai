@@ -12,6 +12,8 @@ its new digest.
 
 - A second `approve --from` after both flows rendered writes nothing: a copy is in step when the target holds the
   copy's seeds, listed or rendered (0124 D1).
+- D49, D38 and the README say what a `T=S` render takes: the source's latest seeds, read when it runs, with no check
+  of the copy against its source (0124 D2).
 
 ## [0.78.0] - 2026-11-08
 

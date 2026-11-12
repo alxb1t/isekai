@@ -5,7 +5,7 @@ A phase per debt card, in the order of [design](design.md)'s decisions.
 ## Progress
 
 - [x] 1 — The copy in step · moderate
-- [ ] 2 — The copy's prose · moderate
+- [x] 2 — The copy's prose · moderate
 - [ ] 3 — The chained source · moderate
 - [ ] 4 — The cancel follows the render · moderate
 - [ ] 5 — The save queue · hard
@@ -25,11 +25,11 @@ Closes 0111·R1: a second `approve --from` after both flows rendered writes noth
 
 Closes 0111·R2: the prose says what a `T=S` render takes, and no check is added ([D2](design.md#d2)). The review spec's rationale is in the delta and folds at release.
 
-- [ ] 2.1 In `docs/decisions.md`, D49's *Why*, across its line wrap: before ``off, and the seeds travel with the copy, so that holds with no later check; a copy naming its source kept``, after ``off. The copy lists the source's seeds; a `T=S` render reads the source's latest seeds when it runs, and the copy's fields follow the source's only when `approve --from` is run again. A copy naming its source kept``.
+- [x] 2.1 In `docs/decisions.md`, D49's *Why*, across its line wrap: before ``off, and the seeds travel with the copy, so that holds with no later check; a copy naming its source kept``, after ``off. The copy lists the source's seeds; a `T=S` render reads the source's latest seeds when it runs, and the copy's fields follow the source's only when `approve --from` is run again. A copy naming its source kept``.
   Verify: `git grep -n "holds with no later check" -- docs/decisions.md` prints nothing.
-- [ ] 2.2 In `docs/decisions.md`, D38's note: before ``and its seeds are copied rather than checked.``, after ``and no check holds it to its source: a `T=S` render reads the source's seeds when it runs.``
+- [x] 2.2 In `docs/decisions.md`, D38's note: before ``and its seeds are copied rather than checked.``, after ``and no check holds it to its source: a `T=S` render reads the source's seeds when it runs.``
   Verify: `git grep -n "copied rather than checked" -- docs/decisions.md` prints nothing.
-- [ ] 2.3 In `README.md`, the `--seeds-from` line: before `render each run on the seeds of that flow's latest render;`, after `render each run on the seeds of that flow's latest render, read when the render runs;`.
+- [x] 2.3 In `README.md`, the `--seeds-from` line: before `render each run on the seeds of that flow's latest render;`, after `render each run on the seeds of that flow's latest render, read when the render runs;`.
   Verify: `git grep -n "read when the render runs" -- README.md` prints a line.
 
 ## 3 — The chained source
