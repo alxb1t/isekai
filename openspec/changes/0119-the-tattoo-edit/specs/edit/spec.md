@@ -33,7 +33,7 @@ records of one name disagree. The directory is flat because the digest covers re
 #### Scenario: a pinned digest is recorded in the changelog
 - **Key:** `edit:directory:the-digest-is-recorded`
 - **Layers:** unit
-- **WHEN** a tracked edit's committed digest is looked up in `CHANGELOG.md`
+- **WHEN** a tracked edit's committed digest is looked up in the changelog
 - **THEN** an entry carries it
 
 #### Scenario: the graph names the models the manifest declares
