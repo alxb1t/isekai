@@ -2971,11 +2971,14 @@ def test_the_imports_stream_reports_a_file_waiting_converting_then_converted(
     feed = broadcast.subscribe()
     # The snapshot is read before its frame is made, so nothing uploads first.
     snapshotted = threading.Event()
+    converted = threading.Event()
     framed = events.frame
 
     def frame(kind: str, data: dict[str, Any]) -> str:
         if kind == "snapshot":
             snapshotted.set()
+        if kind == "file" and data["state"] == "converted":
+            converted.set()
         return framed(kind, data)
 
     monkeypatch.setattr(events, "frame", frame)
@@ -2989,6 +2992,7 @@ def test_the_imports_stream_reports_a_file_waiting_converting_then_converted(
                 client, other, "elsewhere.jpg", photo_jpeg((9, 9, 9), (40, 30))
             )
             _until_each_read(feed, {staged: {plain["upload"]}, other: {away["upload"]}})
+            assert converted.wait(WAIT), "the stream framed no converted event"
         except BaseException as failed:  # re-raised on the test's own thread
             failures.append(failed)
         finally:

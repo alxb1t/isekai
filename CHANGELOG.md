@@ -16,6 +16,8 @@ its new digest.
 - The load-bound tests hold at any load: the lock pair is ordered so the unlocked twin commits both updates, the
   refusal is asserted by its sentence, the imports stream reads each import off one feed, each idle child waits on
   short sleeps, and the shutdown test settles in ten seconds (0127 D1).
+- The imports stream test closes the broadcast once the stream has framed `converted`, so the body no longer ends at
+  `converting` under load (0127 D1).
 
 ## [0.86.0] - 2026-11-12
 
