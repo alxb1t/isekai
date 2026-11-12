@@ -323,7 +323,7 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   second boot costs what eight more renders would.
 - `--count COUNT` — how many renders per photograph per flow, seeds drawn (default: the approval's count, else 1).
 - `--seed SEEDS` — render exactly this seed; repeatable, and not combinable with `--count`.
-- `--seeds-from FLOW` — render each run on the seeds of that flow's latest render; not combinable with
+- `--seeds-from FLOW` — render each run on the seeds of that flow's latest render, read when the render runs; not combinable with
   `--count` or `--seed`.
 - `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, once, its seeds listed, onto its
   own sheet, filled first from the photograph's tags where it holds none; a copy equal to it writes nothing, and any
