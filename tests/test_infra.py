@@ -287,11 +287,35 @@ def record_faults(config: dict[str, object], derived: dict[str, str]) -> list[st
     return [name for name in names if files.get(name) != derived.get(name)]
 
 
+def record_failure(faults: list[str]) -> str:
+    """Return the message a red image record prints: the files and the recipe.
+
+    e.g. ["config/models.json"] -> "... config/models.json ... docs/pins.md ..."
+    """
+    return (
+        f"config/image.json disagrees with the tree: {', '.join(faults)}. "
+        "Re-derive it with `uv run python -m tools.image_record`. The image holds "
+        "an edit only after a rebuild and a metered proof: docs/pins.md, "
+        "*Re-pinning*, 'The pod image'."
+    )
+
+
 @pytest.mark.spec("pod-image:build:the-record-matches-the-tree")
 def test_the_build_record_agrees_with_the_tree() -> None:
     derived = record()
     assert {"Dockerfile", "isekai/boundary/pod_start.py"} <= set(derived)
-    assert record_faults(json.loads(IMAGE_CONFIG.read_text()), derived) == []
+    faults = record_faults(json.loads(IMAGE_CONFIG.read_text()), derived)
+    assert faults == [], record_failure(faults)
+
+
+@pytest.mark.spec_exempt(
+    "structural: a red image record names its files and the recipe"
+)
+def test_the_record_failure_names_the_files_and_the_recipe() -> None:
+    message = record_failure(["config/models.json", "Dockerfile"])
+    assert "config/models.json, Dockerfile" in message
+    assert "tools.image_record" in message
+    assert "docs/pins.md" in message
 
 
 @pytest.mark.spec_exempt(
@@ -310,6 +334,34 @@ def test_the_record_check_catches_a_file_edited_after_the_record(
     (tmp_path / "b.sh").write_text("")
     assert record_faults(config, record(tmp_path)) == ["Dockerfile", "a.sh", "b.sh"]
     assert record_faults({}, record(tmp_path)) == ["config/image.json records no files"]
+
+
+def unnamed_frozen_files(text: str, config: dict[str, object]) -> list[str]:
+    """Return each file the image record holds that the text does not name.
+
+    e.g. a text naming all but `Dockerfile` -> ["Dockerfile"]
+    """
+    files = config.get("files")
+    if not isinstance(files, dict):
+        return ["config/image.json records no files"]
+    return sorted(str(name) for name in files if f"`{name}`" not in text)
+
+
+@pytest.mark.spec_exempt("structural: AGENTS.md names each file the image freezes")
+def test_agents_names_every_file_the_image_record_holds() -> None:
+    text = (REPO / "AGENTS.md").read_text()
+    config = json.loads(IMAGE_CONFIG.read_text())
+    assert unnamed_frozen_files(text, config) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_agents_names_every_file_the_image_record_holds"
+)
+def test_the_guardrail_check_catches_a_file_left_out() -> None:
+    config: dict[str, object] = {"files": {"Dockerfile": "a", "image/uv.lock": "b"}}
+    assert unnamed_frozen_files("`Dockerfile` and `image/uv.lock`", config) == []
+    assert unnamed_frozen_files("`Dockerfile` only", config) == ["image/uv.lock"]
+    assert unnamed_frozen_files("", {}) == ["config/image.json records no files"]
 
 
 @pytest.mark.spec("pod-image:build:the-record-matches-the-tree")

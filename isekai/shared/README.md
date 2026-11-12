@@ -25,19 +25,18 @@ does is reach a boundary or decide a stage's order.
 
 ## Imported by
 
-**Named, not counted.** A count in this column has gone stale in every group here
-at least once; a list of names cannot.
+**Derived.** `uv run python -m tools.derive_imported_by` writes this table from the import graph of `tools/import_graph.py`, the one the layer guards read, and a test re-derives it. It names importers in `isekai/`, `evaluation/` and `tools/`, never a test.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `chain.py` | `pipeline/tattoos.py` | `tests/test_chain.py`, `tests/test_tattoo_placement.py` |
-| `field_map.py` | `interface/cli.py`, `interface/drafting.py`, `interface/ui/app.py`, `interface/wiring.py`, `pipeline/sheet.py` | `tools/derive_field_map.py`, `tests/stages.py`, `tests/test_field_map.py`, `tests/test_package_paths.py`, `tests/test_ui_api.py` |
-| `fields.py` | `pipeline/review.py`, `pipeline/sheet.py` | `tests/test_sheet_schema.py` |
-| `image.py` | `interface/ui/app.py`, `interface/ui/library.py`, `pipeline/generate.py`, `pipeline/importing.py` | `tests/test_generate.py`, `tests/test_image.py`, `tests/test_importing.py`, `tests/test_resume.py` |
-| `ink.py` | `interface/cli.py`, `interface/ui/app.py`, `pipeline/tattoos.py` | `tests/test_ink.py`, `tests/test_tattoo_library.py` |
-| `proposal.py` | `pipeline/proposing.py` | `tests/test_proposal.py`, `tests/test_propose.py` |
-| `tattoo.py` | `pipeline/edit.py`, `pipeline/tattoos.py`, `ink.py` | `tests/test_edit.py` |
-| `vocabulary.py` | `boundary/wd14.py`, `interface/cli.py`, `interface/drafting.py`, `interface/ui/app.py`, `interface/wiring.py`, `pipeline/review.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `evaluation/__main__.py`, `evaluation/face.py`, `evaluation/recall.py`, `tests/conftest.py`, `tests/stages.py`, `tests/test_artifact_bytes.py`, `tests/test_compare.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_progress.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui_api.py`, `tests/test_ui_jobs.py`, `tests/test_ui_library.py`, `tests/test_vocabulary.py`, `tools/derive_field_map.py` |
+| `chain.py` | `pipeline/tattoos.py` | — |
+| `field_map.py` | `interface/cli.py`, `interface/drafting.py`, `interface/ui/app.py`, `interface/wiring.py`, `pipeline/sheet.py` | `tools/derive_field_map.py` |
+| `fields.py` | `pipeline/review.py`, `pipeline/sheet.py` | — |
+| `image.py` | `interface/ui/app.py`, `interface/ui/library.py`, `pipeline/generate.py`, `pipeline/importing.py`, `pipeline/tattoos.py` | — |
+| `ink.py` | `interface/cli.py`, `interface/ui/app.py`, `pipeline/tattoos.py` | — |
+| `proposal.py` | `pipeline/proposing.py` | — |
+| `tattoo.py` | `pipeline/edit.py`, `pipeline/tattoos.py`, `ink.py` | — |
+| `vocabulary.py` | `boundary/wd14.py`, `interface/cli.py`, `interface/drafting.py`, `interface/ui/app.py`, `interface/wiring.py`, `pipeline/review.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `evaluation/__main__.py`, `evaluation/face.py`, `evaluation/recall.py`, `tools/derive_field_map.py` |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are

@@ -54,7 +54,8 @@ drift:
 	git diff --exit-code --stat -- config/ evaluation/eval_models.json image/
 
 # Re-derive every derived file: the field map, which needs the provisioned
-# vocabulary, then the fetched ones.
+# vocabulary, the READMEs' importer tables, then the fetched ones.
 derive:
 	uv run python -m tools.derive_field_map
+	uv run python -m tools.derive_imported_by
 	$(MAKE) drift

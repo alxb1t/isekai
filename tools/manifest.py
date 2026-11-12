@@ -322,7 +322,7 @@ def entry_for(spec: Spec) -> ManifestEntry:
 def write(manifest: Manifest, path: Path) -> None:
     """Write `manifest` to `path` and report what landed there.
 
-    One writer for all three derivers, so the byte-for-byte format -- two-space
+    One writer for every manifest deriver, so the byte-for-byte format -- two-space
     indent, one trailing newline -- cannot drift between them. That format is what
     makes `git diff --exit-code` the re-derivation check.
     """

@@ -38,20 +38,19 @@ independent, and neither reads the other's output
 
 ## Imported by
 
-**Named, not counted.** A count in this column has gone stale in every group here
-at least once; a list of names cannot.
+**Derived.** `uv run python -m tools.derive_imported_by` writes this table from the import graph of `tools/import_graph.py`, the one the layer guards read, and a test re-derives it. It names importers in `isekai/`, `evaluation/` and `tools/`, never a test.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `importing.py` | `interface/cli.py`, `interface/ui/__init__.py`, `interface/ui/app.py`, `interface/ui/library.py` | `tests/test_importing.py` |
-| `caption.py` | `interface/cli.py`, `interface/wiring.py` | `tests/stages.py`, `tests/test_caption.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
-| `tagging.py` | `interface/cli.py`, `interface/wiring.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_view.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
-| `sheet.py` | `interface/cli.py`, `interface/drafting.py`, `interface/run_view.py`, `interface/ui/app.py` | `tests/stages.py`, `tests/test_run_view.py`, `tests/test_sheet_stage.py` |
-| `review.py` | `interface/cli.py`, `interface/drafting.py`, `interface/render.py`, `interface/ui/app.py`, `interface/ui/library.py` | `tests/e2e/conftest.py`, `tests/e2e/test_review.py`, `tests/test_artifact_bytes.py`, `tests/test_generate.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_ui_jobs.py`, `tests/test_ui_library.py` |
-| `edit.py` | `interface/cli.py`, `interface/render.py`, `interface/ui/app.py` | `tests/test_edit.py`, `tests/test_edit_placement.py`, `tests/test_edit_session.py` |
-| `proposing.py` | `interface/wiring.py` | `tests/test_propose.py`, `tests/test_ui_propose.py` |
-| `tattoos.py` | `interface/ui/app.py` | `tests/test_package_paths.py`, `tests/test_tattoo_library.py`, `tests/test_tattoo_placement.py`, `tests/test_ui_library.py`, `tests/test_ui_placement.py`, `tests/test_ui_tattoo.py` |
-| `generate.py` | `interface/cli.py`, `interface/compare_view.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/library.py` | `tests/e2e/conftest.py`, `tests/test_artifact_bytes.py`, `tests/test_generate.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_ui_api.py` |
+| `importing.py` | `interface/cli.py`, `interface/ui/__init__.py`, `interface/ui/app.py`, `interface/ui/library.py` | — |
+| `caption.py` | `interface/cli.py`, `interface/wiring.py` | — |
+| `tagging.py` | `interface/cli.py`, `interface/wiring.py` | — |
+| `sheet.py` | `interface/cli.py`, `interface/drafting.py` | — |
+| `review.py` | `interface/cli.py`, `interface/drafting.py`, `interface/render.py`, `interface/ui/app.py`, `interface/ui/library.py` | — |
+| `edit.py` | `interface/cli.py`, `interface/render.py`, `interface/ui/app.py` | — |
+| `proposing.py` | `interface/wiring.py` | — |
+| `tattoos.py` | `interface/ui/app.py` | — |
+| `generate.py` | `interface/cli.py`, `interface/compare_view.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/library.py` | — |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are
