@@ -60,17 +60,16 @@ The control row is the floor; the difference from the `summon` row is the face m
 
 ## Imported by
 
-**Named, not counted.** A count in this column has gone stale in every group here
-at least once; a list of names cannot.
+**Derived.** `uv run python -m tools.derive_imported_by` writes this table from the import graph of `tools/import_graph.py`, the one the layer guards read, and a test re-derives it. It names importers in `isekai/`, `evaluation/` and `tools/`, never a test.
 
 | file | inside `evaluation/` | outside |
 |---|---|---|
-| `__main__.py` | — | `tests/test_evaluation_cli.py`, `tests/test_eval_manifest.py` |
-| `recall.py` | — | `tests/test_recall.py`, `tests/test_recall_cli.py` |
-| `record.py` | `__main__.py`, `recall.py` | `tests/test_recall_cli.py` |
-| `cohort.py` | `__main__.py` | `tests/test_cohort.py`, `tests/test_evaluation_cli.py` |
-| `face.py` | `__main__.py`, `recall.py` | `tests/test_evaluation_cli.py`, `tests/test_face.py`, `tests/test_wd14.py` |
-| `eval_models.py` | `__main__.py`, `face.py` | `tools/derive_eval_manifest.py`, `tests/test_eval_manifest.py`, `tests/test_evaluation_cli.py`, `tests/test_package_paths.py`, `tests/test_vocabulary_manifest.py` |
+| `__main__.py` | — | — |
+| `recall.py` | — | — |
+| `record.py` | `__main__.py`, `recall.py` | — |
+| `cohort.py` | `__main__.py` | — |
+| `face.py` | `__main__.py`, `recall.py` | — |
+| `eval_models.py` | `__main__.py`, `face.py` | `tools/derive_eval_manifest.py` |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../docs/principles.md)'s, and the choices in force are

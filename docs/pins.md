@@ -85,8 +85,9 @@ diff is what to review.
 - **An action.** Replace its SHA and the release in its comment; `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`
   resolves one.
 - **A model manifest.** Move the revision constant in its deriver — `tools/derive_manifest.py`,
-  `tools/derive_vocabulary.py`, `tools/derive_reader.py`, `tools/derive_placement.py` — run `make derive`, and
-  review the diff under `config/`. For the reader, then run
+  `tools/derive_vocabulary.py`, `tools/derive_reader.py`, `tools/derive_placement.py`,
+  `tools/derive_eval_manifest.py` — run `make derive`, and
+  review the diff under `config/` and `evaluation/eval_models.json`. For the reader, then run
   `uv run python -m isekai.boundary.provision fetch config/reader.json` and
   `ollama create joycaption-beta-one-q4k -f config/joycaption.Modelfile`. For the placement models, then run
   `uv run python -m isekai.boundary.unpack fetch config/placement.json`, which also unpacks the archive.

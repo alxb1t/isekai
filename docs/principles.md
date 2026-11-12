@@ -42,7 +42,7 @@ a test can pass a fake.
 door is the contract: other components import only it, and it assembles the package's own modules.
 
 Everything else in the package is private — only the component's own tests reach inside. One module is
-the default; a package earns its place when the contract needs more than one file.
+the default; a package earns its place when the contract needs more than one file. In `pipeline/`, a stage is the first segment under `isekai.pipeline` — one module, or one package. A package's modules import each other; no stage imports another, and a package's front door is as much another stage's as any of its modules is ([D55](decisions.md#d55--a-stage-may-be-a-package)).
 
 - **Why:** a contract is what lets a part be tested alone and swapped without its callers noticing. A
   component that nothing could use or replace is indirection, not structure. The same rule holds at
@@ -50,7 +50,8 @@ the default; a package earns its place when the contract needs more than one fil
 - **Held by:** review. The suite passes fakes through those parameters — `FakeReader`,
   `FakeComfyClient`.
 - **Known breaks:** `boundary/ollama.py`'s `MODEL_RECORDS` is a module global the suite patches, not a
-  parameter, so two roots in one process means patching global state.
+  parameter, so two roots in one process means patching global state; so is every name of a module
+  `PATCHED_MODULES` of `tests/test_ratchets.py` lists.
 
 ### Only a front end composes
 
@@ -82,7 +83,11 @@ classified or what state a sheet is in, belongs to the component that owns that 
   needing the rendered seeds the render stage lists, which the review stage may not import.
   `interface/ui/library.py`'s `stage` decides that an unapproved or damaged flow lacks no image, and
   `interface/ui/library.py`'s `_images` decides by the time each was written which image is a
-  cell's newest — the render stage's work.
+  cell's newest — the render stage's work. `interface/cli.py`'s `_refuse_bad_source` decides that a flow
+  is not its own source, the review stage's rule. `interface/wiring.py`'s `proposer_of` turns a placement
+  model's digest mismatch into a refusal, as `load_vocabulary` does for the vocabulary. The discard of a
+  render is spelled twice, `interface/cli.py`'s `_discard` and `interface/ui/app.py`'s `delete_render`,
+  and the two differ: the app drops each edit image's thumbnails, the CLI the render's alone.
 
 ### The code is layered
 
@@ -96,9 +101,11 @@ Each layer has one role:
   themselves.
 - **pipeline** — the stages.
 - **boundary** — every way to a model, the GPU or the network: Ollama, the ComfyUI transport, the WD14
-  session, downloads.
-- **shared** — what the stages share: the vocabulary, the field map, image headers.
-- **foundation** — the run directory, the flow and the refusal.
+  session, the pose finder, the segmenter, the pod's start, downloads.
+- **shared** — what the stages share: the vocabulary, the field map, image headers, and
+  the placement's maths: the ink, the tattoo, the chain and the proposal's geometry.
+- **foundation** — the run directory, the flow and the refusal, and what rides with them: the artifacts'
+  contract, the edit registry, the caption config, the migration and the command text a refusal prints.
 
 A layer's `__init__.py` holds only a docstring: a layer is a folder, not a front door. Evaluation is a
 separate sub-system beside the code it measures: it may import isekai, and isekai never imports it.
@@ -147,6 +154,9 @@ in the run after the run's id.
   `tests/test_resume.py::test_no_refusal_offers_a_command_this_build_does_not_have`,
   `tests/test_resume.py::test_every_command_a_refusal_prints_is_one_this_build_accepts` — these last
   check that a printed stage command parses and names a run, not that it succeeds.
+- **Known breaks:** `pipeline/edit.py` records no failure for a failed sampling and keeps no retry
+  budget. The request stays pending, so a later session samples it again, and the refusal names the
+  discard.
 
 ### Free work first
 
@@ -177,7 +187,8 @@ a test re-derives it and expects the same bytes.**
   `tests/test_flow.py::test_a_manifest_missing_a_dial_its_own_roles_read_is_refused_naming_it`,
   `tests/test_flow.py::test_every_dial_a_tracked_flow_declares_is_one_of_its_roles_reads`,
   `tests/test_flow.py::test_every_model_a_flow_declares_carries_the_manifests_digest_for_it`,
-  `tests/test_field_map.py::test_the_committed_table_re_derives_without_reading_the_gitignored_runs`.
+  `tests/test_field_map.py::test_the_committed_table_re_derives_without_reading_the_gitignored_runs`,
+  `tests/test_docs.py::test_every_imported_by_table_is_the_one_the_deriver_writes`.
 - **Known breaks:** the sampling options do not say they are not manifest keys. The field map's
   re-derivation skips in CI, which declares the vocabulary absent, and the derivers that fetch from the
   network run weekly in `drift.yml`, outside the gate.
@@ -206,7 +217,8 @@ gap is recorded with its trigger, and every artifact it shapes says `pinned: fal
   gate's first command, which installs the Python dependencies from the lock file. Review holds the CI
   actions, pinned by commit.
 - **Not yet held** for the image's system packages, which `apt-get` installs at build time with no
-  version named.
+  version named, and for the edit's checkpoint and ControlNet, which `edits/tattoo-wai/edit.json` names by
+  file name with no digest, as a flow pins each.
 - **How:** [pins](pins.md) — where each pin is declared, when it is checked, and how it is moved.
 
 ### Hold a guarantee by construction, not by a filter
