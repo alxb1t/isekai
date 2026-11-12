@@ -4,18 +4,21 @@
 
 The placement screen SHALL declare, through the app's key store, `Mod+Z` to undo, `⇧Mod+Z` to redo and `↵` to close an
 outline that can close, on the outline step, on the stages that hold pairs and on the render stage's sketch, and SHALL
-declare no other command. The keys SHALL be listed with the app's keys. A text field SHALL keep its own `Mod+Z`, `⇧Mod+Z`
+declare no other command. The keys SHALL be listed with the app's keys. A text field SHALL keep its own `Mod+Z`,
+`⇧Mod+Z`
 and `↵`, and a focused control SHALL keep `↵`. Only the panel SHALL listen to the keyboard, for Shift alone, to draw its
 cursor. The keys the app answers everywhere SHALL stay, and a dialog SHALL close on `esc` as every dialog does.
 
-A key of the screen is one the hand reaches for while it holds the mouse; every other key waits until the screen has been
+A key of the screen is one the hand reaches for while it holds the mouse; every other key waits until the screen has
+been
 used and shows which are useful.
 
 #### Scenario: the screen declares only undo, redo and close
 - **Key:** `ui:place-keys:the-screen-declares-only-undo-redo-and-close`
 - **Layers:** unit
 - **WHEN** the sources of the screen and its components are read
-- **THEN** only the outline step and the two stages that hold pairs declare commands, each only `undo`, `redo` and `close`, and only the panel reads `keydown` and `keyup`
+- **THEN** only the outline step and the two stages that hold pairs declare commands, each only `undo`, `redo` and
+  `close`, and only the panel reads `keydown` and `keyup`
 
 #### Scenario: undo, redo and close run from the keys
 - **Key:** `ui:place-keys:undo-redo-and-close-run-from-the-keys`
@@ -41,7 +44,8 @@ The panel SHALL show its zoom as a percentage.
 
 A press SHALL be one of three gestures. With Shift held it places, and a press that travels past the declared slop
 does nothing. With Shift up on a point that the screen's editor names it moves that point, and with Shift up
-elsewhere it pans. The cursor SHALL be a crosshair while Shift is held, the hand otherwise, and the grabbing hand while a
+elsewhere it pans. The cursor SHALL be a crosshair while Shift is held, the hand otherwise, and the grabbing hand while
+a
 pan or a move is under way.
 
 The ink is judged at 1:1, so the panel keeps the pixel under the pointer where it was.
@@ -91,10 +95,12 @@ The ink is judged at 1:1, so the panel keeps the pixel under the pointer where i
 
 ### Requirement: An outline is clicked, closed on its first point and edited by dragging
 
-With Shift held the outline editor SHALL close the outline on a click within the declared radius of the first vertex once
+With Shift held the outline editor SHALL close the outline on a click within the declared radius of the first vertex
+once
 it holds the declared floor of vertices, insert a vertex on an edge within the radius, and otherwise add a vertex at the
 click while the outline is open. A click within the radius of a vertex SHALL never add a vertex there: on the first it
-closes when the outline can, and on any other it does nothing. With Shift up the editor SHALL pan by a drag, move a vertex
+closes when the outline can, and on any other it does nothing. With Shift up the editor SHALL pan by a drag, move a
+vertex
 by a drag on it and remove a vertex by a double click on it. It SHALL close an open outline that holds the floor on `↵`,
 undo its last change, redo what was undone until a new change, and clear itself.
 A closed outline SHALL need at least the declared floor of vertices and SHALL take no more than the ceiling.
@@ -148,13 +154,16 @@ A press that moves is a pan or a drag, not a vertex.
 #### Scenario: a shift-click places by where it lands
 - **Key:** `ui:outline-edit:a-shift-click-places-by-where-it-lands`
 - **Layers:** unit
-- **WHEN** an open outline is shift-clicked on its first vertex, on another vertex, on an edge and on bare image, and a closed outline on bare image
-- **THEN** the first closes it, another vertex changes nothing, the edge takes a vertex on it, bare image adds one, and a closed outline takes none
+- **WHEN** an open outline is shift-clicked on its first vertex, on another vertex, on an edge and on bare image, and a
+  closed outline on bare image
+- **THEN** the first closes it, another vertex changes nothing, the edge takes a vertex on it, bare image adds one, and
+  a closed outline takes none
 
 #### Scenario: a near miss never adds a vertex
 - **Key:** `ui:outline-edit:a-near-miss-never-adds-a-vertex`
 - **Layers:** unit
-- **WHEN** an outline below the floor is shift-clicked within the radius of its first vertex, and one at the floor is shift-clicked a few image pixels from it
+- **WHEN** an outline below the floor is shift-clicked within the radius of its first vertex, and one at the floor is
+  shift-clicked a few image pixels from it
 - **THEN** the first adds no vertex and the second closes
 
 #### Scenario: redo restores what undo took
@@ -214,7 +223,8 @@ The ink view is the judge: nothing on the screen grades the cut.
 - **Key:** `ui:outline-step:one-line-says-how-to-close`
 - **Layers:** unit
 - **WHEN** an outline of one vertex and of five vertices is open, and then closed
-- **THEN** the line reads *close the outline on its first point · 1 point* and then *· 5 points*, and a closed outline has none
+- **THEN** the line reads *close the outline on its first point · 1 point* and then *· 5 points*, and a closed outline
+  has none
 
 #### Scenario: the size of the cut's ink is the outline's box
 - **Key:** `ui:outline-step:the-size-of-the-cuts-ink-is-the-outlines-box`
@@ -230,13 +240,19 @@ The ink view is the judge: nothing on the screen grades the cut.
 
 ### Requirement: Pairs are placed by clicks on two images
 
-With Shift held the pair editor SHALL place the next point on the image clicked and let the other image wait for its match,
-complete the pair by a click on the waiting image, and move the lone point by a click on the image that holds it. A click
-within the declared radius of a point SHALL select its pair and place nothing, with Shift held or not. With Shift up a drag
-SHALL move a point that it starts on and otherwise pan. The editor SHALL delete the selected pair so that the later pairs
+With Shift held the pair editor SHALL place the next point on the image clicked and let the other image wait for its
+match,
+complete the pair by a click on the waiting image, and move the lone point by a click on the image that holds it. A
+click
+within the declared radius of a point SHALL select its pair and place nothing, with Shift held or not. With Shift up a
+drag
+SHALL move a point that it starts on and otherwise pan. The editor SHALL delete the selected pair so that the later
+pairs
 renumber, undo the last placement, move or delete, redo what was undone until a new change, and clear every pair. The
-radius SHALL be the same on screen at every zoom, and the pairs SHALL have no maximum. A stage SHALL go forward only with
-its floor of pairs and no lone point, and SHALL say why it waits, by the pairs it lacks or the point that has no match. The
+radius SHALL be the same on screen at every zoom, and the pairs SHALL have no maximum. A stage SHALL go forward only
+with
+its floor of pairs and no lone point, and SHALL say why it waits, by the pairs it lacks or the point that has no match.
+The
 pairs SHALL stay when the screen moves from one step to another.
 
 Either image may go first, so the operator clicks where the tattoo is clearest. The floors are declared once and read
@@ -325,7 +341,8 @@ by the page and the server alike.
 The render stage and the direct stage SHALL let the operator draw one limb outline, which keeps the ink inside it, and
 any number of exclusion outlines, each removing the ink inside it, by shift-clicks closed on the first point or on `↵`
 as the outline editor does, and edit any of them by its row. While an outline is drawn, the pairs SHALL not take a
-click, and `Mod+Z`, `⇧Mod+Z` and `↵` SHALL act on the outline. Each outline SHALL list as a row saying its points and what
+click, and `Mod+Z`, `⇧Mod+Z` and `↵` SHALL act on the outline. Each outline SHALL list as a row saying its points and
+what
 it does. The page SHALL offer no way to remove an outline and SHALL carry no line that explains the gestures.
 
 The hair or the clothing in front of a limb must stay free of ink, and the render's pixels, not the photograph's, show
@@ -355,8 +372,10 @@ The photograph-to-render stage, for a tattoo placed in two stages and for a cut,
 once, when it opens on a tattoo and render with no pair held, sending the tattoo's points on the photograph: the
 photograph side of the stage-1 pairs, or a cut's outline. It SHALL show that it is asking, and SHALL show a refusal with
 its fix, with the pair editor still taking clicks. An answer with no pair SHALL say so. A stage that holds a pair, the
-direct stage, and a stage already asked on this tattoo and render while the tattoo is held SHALL ask nothing. Leaving the
-tattoo for another SHALL forget the ask, with any answer still on its way, so that returning to the tattoo with no pair held
+direct stage, and a stage already asked on this tattoo and render while the tattoo is held SHALL ask nothing. Leaving
+the
+tattoo for another SHALL forget the ask, with any answer still on its way, so that returning to the tattoo with no pair
+held
 asks again.
 
 Proposing is a convenience on top of clicking, so it never blocks the editor and never asks twice for the same work.
