@@ -85,3 +85,44 @@ python -m isekai discard .data/runs/<run>/<flow>/outputs/<NNN>/<seed>.edit-<k>.p
 
 An edit's path deletes that edit and every edit chained from it; the render stays. Discarding the render takes all
 its edits. Both refuse while a render session holds the collection.
+
+## The app
+
+`isekai ui` starts the placement screen. It keeps and outlines a tattoo, pairs it with the photograph and the render by
+clicks, previews the warp, and bakes it as an edit request in place of Krita (§2).
+
+```
+render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─┬─▶ ③ tattoo ↔ photograph ─▶ ④ photograph ↔ render ─┐
+                              │             └─ the ink on the outline's crop  ├─▶ ③ tattoo ↔ render (not on this photo) ──┼─▶ ⑤ review ─ Bake
+                .tattoos/<name>/ in the library                               └─▶ ④ photograph ↔ render (a cut) ──────────┘
+```
+
+- **Open it** with `⇧P` or *Place a tattoo* on a render's large view.
+- **The library** is `.tattoos/<name>/` beside the collections, in the folder `ISEKAI_LIBRARY` names, so one tattoo
+  serves every render in every collection ([D52](decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)).
+  It holds `design.png`, `tattoo.json` and `outline.json`. The app deletes and renames nothing.
+- **An upload** goes through the import's staging, is cleaned as a source is, and is kept upright, scaled down to the
+  `long_side` of `config/tattoo.json`, under a name kept once.
+- **A cut** is a tattoo with no image: *Cut from this photo* keeps the render's photograph as the source of the ink, so
+  the photograph stays in its run and serves only its own renders. A second cut from the same photograph starts from
+  the newest cut's tone.
+- **The outline** is clicked on the tattoo, or on the photograph for a cut, and closed on its first point. It is saved
+  as it changes, with the white point and the tone.
+- **The ink view** is the same extraction as §1, drawn by the server on the outline's crop. The white point is the
+  automatic one as a grey from 0 to 255, set by hand or back to *Auto*. *Neutral* and *depth* are `--neutral` and
+  `--depth`, and *Reset* returns them to the kind's defaults.
+- **The stages** pair the tattoo's ink view with the photograph (③, stage 1), then the photograph with the render (④,
+  stage 2), by clicks on either image first. An upload flagged *not on this photo* pairs the tattoo with the render
+  directly, and a cut takes stage 2 alone. Stage 1 is kept per photograph in
+  `.tattoos/<name>/stage1/<digest>.json` as it changes, so a second render of the photograph needs only its own stage;
+  stage 2, the limb and the exclusions stay in the page until the bake. The floors are in `config/tattoo.json`.
+- **The preview** is the ink on white as a JPEG over a crop of the target, which the page multiplies over it a second
+  after the last change. It is made on the server and kept nowhere.
+- **The limb and the exclusions** are drawn on the render: the ink stays inside the limb and goes under each
+  exclusion, so hair or clothing in front of the skin stays clear.
+- **A bake** only queues a request, through the edit stage as §3 does, and spends nothing. It writes the composite, the
+  edit's record and `<seed>.edit-<k>.placement.json`, never the image; the next render session samples it (§5). The
+  placement record holds the tattoo and its kind, the mode, the edit it is placed on, the outline with its white point
+  and tone, a copy of the stage-1 pairs the bake used, its own pairs, the limb and the exclusions
+  ([D53](decisions.md#d53--a-placement-is-recorded-beside-its-edit)). A discard takes it with its edit (§6).
+- **Leaving** a stage that holds a point with no match asks first; *Leave* drops that point alone.

@@ -375,6 +375,44 @@ class EditRecord(TypedDict):
     duration: NotRequired[float]
 
 
+class OutlineValues(TypedDict):
+    """The outline a bake read: its points and the tone its ink was extracted with."""
+
+    points: list[list[float]]
+    white: float
+    neutral: bool
+    depth: float
+
+
+class PlacementValues(TypedDict):
+    """What a bake placed: every field of the placement record the bake itself knows.
+
+    `stage1` is a copy of the tattoo's pairs with the photograph the bake used, None
+    when it used none; a pair is `[[ax, ay], [bx, by]]`, the tattoo's point first for
+    stage 1 and the direct stage. `pairs` are the stage's own.
+    """
+
+    tattoo: str
+    kind: str
+    cut_from: str | None
+    mode: str
+    outline: OutlineValues
+    stage1: list[list[list[float]]] | None
+    pairs: list[list[list[float]]]
+    limb: list[list[float]] | None
+    exclusions: list[list[list[float]]]
+
+
+class PlacementRecord(PlacementValues):
+    """The record beside an edit's record for a tattoo placed by clicks.
+
+    `places_on` is the number of the edit the bake is placed on, None for the render.
+    """
+
+    schema: SchemaBlock
+    places_on: int | None
+
+
 class SessionImage(TypedDict):
     """One image a render session landed: its run's digest, flow, approval and seed.
 
@@ -457,6 +495,7 @@ RENDER_FILE: Artifact[Render] = Artifact("render", 1)
 # A render's sidecar is `<seed>` and this; its image is `<seed>` and the flow's suffix.
 SIDECAR = ".render.json"
 EDIT_FILE: Artifact[EditRecord] = Artifact("edit", 1)
+PLACEMENT_FILE: Artifact[PlacementRecord] = Artifact("placement", 1)
 SESSION_FILE: Artifact[SessionRecord] = Artifact("session", 1)
 # A collection's session records, beside its log; each is named by its session's id.
 SESSIONS = "sessions"

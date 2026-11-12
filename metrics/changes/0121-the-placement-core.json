@@ -1,0 +1,58 @@
+{
+  "change": "0121-the-placement-core",
+  "version": "0.81",
+  "base": "3be9dc51",
+  "analyzed": "8bd5afbb",
+  "measured_on": "local",
+  "collected_at": "2026-11-12T13:18:33+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1915
+    },
+    "tests-browser": {
+      "value": 18
+    },
+    "gate-seconds": {
+      "value": 47
+    },
+    "open-backlog-cards": {
+      "value": 7
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 2
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 6337
+    },
+    "diff-files": {
+      "value": 48
+    },
+    "phases": {
+      "value": 6
+    },
+    "shared-reading-set": {
+      "value": 13294
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 894
+    },
+    "decisions": {
+      "value": 53
+    }
+  }
+}

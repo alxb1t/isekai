@@ -13,14 +13,15 @@ import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
 import { plain, shifted } from '../stores/keys'
 import type { Bake, RenderDetail } from '../types'
+import { offerTo } from '../viewkey'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
    sheet it was rendered from beside it — filled fields only, read-only. ⇧D
    drafts a flow from it, its own a revision (J5·3); ⇧C compares it with any
    image of its source, the photograph among them, picked in a grid (J5·8).
-   ⇧⌫ asks, then deletes the render and opens the Hub on its cell.
+   ⇧P opens the placement screen's first step on it. ⇧⌫ asks, then deletes the render and opens the Hub on its cell.
    `h` `l` walk the photograph's row; esc goes back to the Hub, on the shown image's cell.
-   With `k` it is a bake's view: the bake's image and record, and none of the writes. */
+   With `k` it is a bake's view: the bake's image and record, and none of the writes, *Place a tattoo* among them. */
 const props = defineProps<{
   collection: string
   digest: string
@@ -139,6 +140,13 @@ useKeys('screen', [
     when: () => offered(props.k) && grid.value !== null,
   },
   {
+    id: 'place',
+    keys: [shifted('KeyP')],
+    label: 'place a tattoo',
+    run: () => void router.push(offerTo(props)),
+    when: () => offered(props.k) && detail.value !== null,
+  },
+  {
     id: 'delete',
     keys: [shifted('Backspace')],
     label: 'delete this render',
@@ -211,6 +219,11 @@ onMounted(async () => {
           >
             Compare with…<KeyHint command="compare" />
           </button>
+        </div>
+        <div v-if="offered(k)" class="large__group">
+          <RouterLink class="btn btn-secondary" :to="offerTo(props)" data-place
+            >Place a tattoo<KeyHint command="place"
+          /></RouterLink>
         </div>
         <div v-if="offered(k)" class="large__group">
           <button

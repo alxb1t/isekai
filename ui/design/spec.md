@@ -109,6 +109,7 @@ timer mono 40px/500.
 | `/c/<collection>/review` | Review's head, replaced by its sheet's URL | — |
 | `/c/<collection>/review/<run>/<flow>` | Review | the cheatsheet, the viewer, *Side by side* |
 | `/c/<collection>/renders/<run>/<flow>/<version>/<seed>` | large view | *Draft from this*, *Compare with…* |
+| `/c/<collection>/renders/<run>/<flow>/<version>/<seed>/place/<step>` and `…/place/outline/<tattoo>` | the placement screen, its steps `tattoo`, `outline`, `photo`, `render` and `review` | the Leave dialog |
 | `/c/<collection>/renders/<run>/<flow>/<version>/<seed>/edit/:k` | large view of a bake | — |
 | `/c/<collection>/renders/<run>/<flow>/<version>/<seed>/compare/<flow>/<version>/<seed>` and `…/compare/photo` | Compare | — |
 | `/billing` | the billing alert's way out | — |
@@ -120,6 +121,9 @@ timer mono 40px/500.
   refusal. The Hub tab stays lit on it, as on the large view.
 - `/c/<collection>/review` opens the first unapproved sheet of the first flow that has one, in the hub's order; else
   the first approved sheet short of its images, read-only; else *No sheet waits for review* and the way to the hub.
+- `<step>` is `tattoo`, `outline`, `photo`, `render` or `review`; any other step redirects to `tattoo` of the same
+  render, and a step the tattoo's mode skips redirects to the step the mode takes in its place: `photo` of a cut or of
+  a tattoo not on this photo goes to `render`. A step or tattoo change keeps the placement screen mounted.
 - While a render runs, every screen shows `● render 06:41`, its clock, opening the render drawer, which holds no URL.
 
 ## 5 · The journeys
@@ -490,6 +494,63 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
   `or uv run --env-file .env gpunit volume down`, **Close volume** (the same command). gpunit confirms → J7·1.
 - **A volume that may be billing** after a session is J8b's shape with `uv run --env-file .env gpunit volume down`.
 
+### J9 · Place a tattoo
+
+| frame | trigger | URL |
+|---|---|---|
+| J9·1 the picker, nothing kept: `none kept yet`, the upload form, the cut form | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
+| J9·2 a file chosen: its name `IMG_5521`, `reading…`, then `converted`; Keep waits `reading the file` | Upload a tattoo…, choose `IMG_5521.heic` | same |
+| J9·3 the outline step on it, the outline open: the ink view, the white point and the tone read `outline open` | Keep | `…/place/outline/IMG_5521` |
+| J9·4 the outline closed: the ink view, the white point `auto` with its grey, the tone, `saved` | click the first point again | same |
+| J9·5 the picker: the card `IMG_5521`, `outlined` | ① tattoo | `…/place/tattoo` |
+| J9·6 a cut: the photograph dimmed outside the outline, the source line `from photograph 0d4b7e6fb2a8 · ink 412×301 on the photograph`, neutral on, depth 1.6 | name `bow`, Cut from this photo, close its outline | `…/place/outline/bow` |
+| J9·7 the picker: `instead of bow, which stays kept`, the name starting `bow_closeup` | Upload a tattoo instead | `…/place/tattoo?instead=bow` |
+| J9·8 ③ tattoo ↔ photograph: the ink view and the photograph, the waiting image in the accent; forward waits `6 pairs needed · 2 placed`, then `point 7 has no match` | Next: ③ tattoo ↔ photograph, on J9·4 | `…/place/photo` |
+| J9·9 the preview: the ink multiplied over the photograph, `Hide the preview` and its opacity; the last answer at half opacity while the next is asked | the third complete pair, then a second without a change | same |
+| J9·10 ④ photograph ↔ render: the photograph and the render, the preview over the render, the rows `limb · 9 points · keeps` and `exclusion 1 · 8 points · removes` with *Edit*; the pairs wait while one is drawn, `drawing · 3 points`, `click on the render adds a point · the first point closes · the pairs wait` | Next: ④ photograph ↔ render, then Draw limb, Draw exclusion | `…/place/render` |
+| J9·11 ③ tattoo ↔ render, for a tattoo `not on this photo`: its ink view and the render; no ③ photograph and no stage-1 pairs asked | the card's *not on this photo*, then Next | `…/place/render` |
+| J9·12 ⑤ review: the render with the tattoo over it, its crop `before` and `after`, the summary, `Back to ③ …` and `Back to ④ …`, *Bake*; waiting with `stage 2 · 8 pairs needed · 5 placed`, then `queued · edit 3 · next render session` | Next: review, then Bake | `…/place/review` |
+| J9·13 Leave this stage?: `Point 8 has no match on the photograph`, `7 pairs stand · saved 14:05`, *Stay* and *Leave* | ① tattoo, or a step, or Back to the render, with a lone point | the step asked for |
+
+```
+J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tattoo   ② outline   [ Back to the render ]
+      ┌──────────────────────────────────┐   IMG_5521 · outlined
+      │  the tattoo, its outline closed, │   kept 2026-11-12
+      │  a numbered ring on each vertex  │   [ Undo ] [ Clear ]                           saved
+      │                                  │   ink view          crop at 120,80 · 310×420
+      │                   Fit · 1:1 100% │   white point · auto   [ 212 ] [ Auto ]
+      └──────────────────────────────────┘   tone   ☐ neutral   depth [ 1.0 ]
+```
+
+- **The panel** zooms at the pointer, pans by a drag, and has *Fit*, *1:1* and the zoom as a percentage. A click adds
+  a vertex, the first vertex closes the outline, a drag moves one, ⇧-click inserts on an edge and a double click
+  removes one. It reads no key.
+- **The outline and the tone** are saved as they change: `saving…`, then `saved`. The ink view asks again after each
+  save, `drawing the ink…` until it lands. The white point waits `reading the ink` until the first ink view has read
+  the automatic grey. *Reset* shows only while the tone differs from its kind's default: neutral off and depth 1.0
+  for an upload, neutral on and depth 1.6 for a cut.
+- **A card** shows the image, the name, `outlined` or `not outlined`, and `kept 2026-11-12`, with
+  `· downscaled from 6000×4000` when it was scaled, or `from photograph 0d4b7e6fb2a8` for a cut.
+- **Keep and Cut wait with their reason**: `reading the file`, `the file is refused`, `name the tattoo`, `name the cut`,
+  `keeping`.
+- **Refusals**, each with its fix: a taken name, `bow is kept; choose another name`, beside the name; a file that is
+  not an image or still carries metadata, on the file; an outline the server refuses, as the ink view's refusal under
+  the ink view; an unknown render or tattoo, a full-page refusal with `Back to the library ⇧L`.
+- **A cut of another photograph** stays listed, disabled, reading `from photograph 5c19e0a47d3b, not this render's`.
+- **The stages** pair the images by clicks, either image first; the image that waits for a match takes the accent, a
+  click near a point selects its pair, a drag moves a point, and the list has *Undo*, *Delete* and *Clear*. Forward
+  waits with `6 pairs needed · 2 placed` or `point 7 has no match`. The steps of a mode keep their numbers (§4): a cut
+  has no ③, and a tattoo `not on this photo` pairs the tattoo with the render at ③ `render`.
+- **The preview** is asked the declared time after the last change once the preview's floor of complete pairs stand;
+  only the newest answer is drawn. A refusal clears the answer and shows its fix under the pairs.
+- **The limb and the exclusions** are drawn on the render with *Draw limb* and *Draw exclusion*, each a row with *Edit*
+  and no way to remove one; a second *Draw limb* edits the first. A refusal names the region that has too few points.
+- **The review** waits with the stage that lacks pairs; *Bake* then reads `baking…` and `queued · edit 3 · next render
+  session`, or shows the server's refusal beside it and stays enabled. A bake spends nothing.
+- **The Leave dialog** opens on a step change or a way out of the screen while a stage holds a lone point. *Stay* and
+  `esc` close it and keep the stage; *Leave* drops the lone point and keeps the pairs. A stage with no lone point is
+  left without asking. The stage-1 line reads `saved 14:05`, and the stages of ④ read no time.
+
 ## 6 · States no journey draws
 
 | screen | state | what shows |
@@ -524,7 +585,8 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 | Home | ⇧N New collection · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ full size, j k or ↓↑ scroll it · in the cell modal, h j k l or ←↓↑→ move, l and h going on across rows, ↵ the large view, esc closes · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | the panes: the rail, the photograph, the sheet, ④ — on macOS ⌃H ⌃L alone, from a field or not, elsewhere h l or ←→ · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows, ④'s grid of − + and its slots, from a slot too · h l or ←→ across − + on macOS · ⇧J ⇧K or ⇧↓↑ the rail, the sheet scrolled to its centre · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
-| Large view | h l or ←→ the photograph's row · ⇧D Draft from this · ⇧C Compare with… · esc back to the hub · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
+| Large view | h l or ←→ the photograph's row · ⇧D Draft from this · ⇧C Compare with… · ⇧P Place a tattoo · esc back to the hub · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
+| Placement | none of its own: the mouse draws and the everywhere keys stay |
 | Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧H its collection's hub · ⌃; or esc close |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits · ⇧A Add files…, in the import sheet |
 
@@ -578,4 +640,6 @@ endings once, for both surfaces. The key is `RUNPOD_API_KEY` in `.env` (`.env.ex
 | **run flow** | New collection and Add sources (J1, J7) — the upload, staging, `isekai import` and conversion; `isekai assign`; ticking, multi-select, the PrepareBar and Prepare as a job (J2, J8a); `--progress json` on the stage verbs; the job slot; SSE `/events` with the snapshot |
 | **render** | the Render dialog, the session, done (J4); ④ editable, Count and Seeds through approve; `render <runs>` rendering what is short; the scaled limit and recorded durations; Renders, the large view; the billing alerts and the volume item (J8b, J8c); `--progress json` on `render` |
 | **revise** | `isekai draft --flow`, *Draft from this* and its refusal; Review of a revision (J5·4–J5·6); `review --discard`; compare (J5·8, J5·9); re-roll (J6) |
+| **the placement core** | *Place a tattoo* `⇧P` on a render's large view; the placement screen's route (§4) and its first two steps, ① the tattoo and ② the outline with its ink view (J9); the tattoo library `.tattoos/` ([D52](../../docs/decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)); the panel's zoom, pan and outline; `--outline-fill` and `--point-ring` in each theme. The stages, the live warp and the bake are the next version's |
+| **the placement** | the placement screen's steps ③ `photo`, ④ `render` and ⑤ `review` (§4, J9·8–J9·13): the pairs on two images, the live preview, the limb and exclusions, the review and *Bake*, which queues an edit request, and the Leave dialog; a tattoo's stage-1 pairs kept per photograph; the placement record beside its edit ([D53](../../docs/decisions.md#d53--a-placement-is-recorded-beside-its-edit)); `--limb-fill` and `--exclusion-fill` in each theme |
 | **bakes** | the bake's route `…/<seed>/edit/:k` and its view; the chain and the photograph's thumbnail on the large view; bakes in the Render bar and the dialog, their `×`, the titles and the confirmation that carries them (J4·1, J5) |

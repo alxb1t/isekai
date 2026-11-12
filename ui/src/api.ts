@@ -7,6 +7,7 @@
 import type {
   Assigned,
   Bake,
+  Baked,
   Billing,
   Budget,
   Committed,
@@ -16,18 +17,26 @@ import type {
   FieldCandidates,
   HubInfo,
   ImageRef,
+  InkView,
   InputDetail,
   JobKind,
   JobSlot,
   LibraryInfo,
+  Outline,
+  Pair,
+  Point,
+  Preview,
   Quote,
   RenderDetail,
   RenderOffer,
   Renders,
   SessionRecord,
   RunningSession,
+  Stage1,
   TagMatches,
   TakenOut,
+  Tattoo,
+  TattooList,
 } from './types'
 
 /** One run in one flow of one collection: what a review URL names. */
@@ -344,4 +353,170 @@ export function comparison(
     ? [other.flow, `v${other.version}`, other.seed].map(encodeURIComponent).join('/')
     : 'photo'
   return get<Comparison>(`${renderAt(place)}/compare/${pair}`)
+}
+
+/* The tattoo library, which belongs to no collection: every kept tattoo and the
+   limits the server holds an outline and the stages to. With a photograph's `digest`,
+   each tattoo's stage-1 state on it comes too. */
+export function tattoos(digest?: string): Promise<TattooList> {
+  const query = digest === undefined ? '' : `?${new URLSearchParams({ digest })}`
+  return get<TattooList>(`/api/tattoos${query}`)
+}
+
+/* A tattoo's pairs with one photograph, and the flag; no pairs for one never placed. */
+export function stageOne(digest: string, name: string): Promise<Stage1> {
+  return get(`/api/tattoos/${encodeURIComponent(name)}/stage1/${encodeURIComponent(digest)}`)
+}
+
+/* Replace a tattoo's pairs with a photograph, and the flag, with `stage`, whole. */
+export function saveStageOne(digest: string, name: string, stage: Stage1): Promise<Stage1> {
+  return send(
+    `/api/tattoos/${encodeURIComponent(name)}/stage1/${encodeURIComponent(digest)}`,
+    'PUT',
+    stage,
+  )
+}
+
+/* One kept tattoo with its outline and tone. */
+export function tattooNamed(name: string): Promise<Tattoo & { outline: Outline }> {
+  return get(`/api/tattoos/${encodeURIComponent(name)}`)
+}
+
+/* Put a file into an import's staging as the import does; answers its upload id, and
+   the server reports its reading on the page's stream. */
+export function stageFile(id: string, file: File): Promise<{ upload: string }> {
+  return request(`/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(file.name)}`, {
+    method: 'PUT',
+    body: file,
+  })
+}
+
+/* Keep a staged file as a tattoo under `name`; a refusal leaves the staging open. */
+export function keepTattoo(staging: string, file: string, name: string): Promise<Tattoo> {
+  return send('/api/tattoos', 'POST', { staging, file, name })
+}
+
+/* Keep a cut of a run's photograph under `name`: a tattoo with no image. */
+export function cutTattoo(place: Place, name: string): Promise<Tattoo> {
+  return send(`/api/c/${encodeURIComponent(place.collection)}/tattoos`, 'POST', {
+    name,
+    digest: place.digest,
+    flow: place.flow,
+  })
+}
+
+/* Replace a tattoo's outline and tone with `outline`, whole. */
+export function saveOutline(name: string, outline: Outline): Promise<Outline> {
+  return send(`/api/tattoos/${encodeURIComponent(name)}/outline`, 'PUT', outline)
+}
+
+/* An uploaded tattoo's image, whole. */
+export function designAt(name: string): string {
+  return `/api/tattoos/${encodeURIComponent(name)}/design`
+}
+
+/* The ink on `outline`'s crop, made now and kept nowhere. A cut is asked on a run's
+   photograph, named by `place`; an upload takes none. The box comes in `X-Ink-Box` as
+   `x,y,w,h` and the automatic white grey in `X-Ink-White`. */
+export function inkView(
+  collection: string,
+  name: string,
+  outline: Outline,
+  place: Place | null,
+  signal?: AbortSignal,
+): Promise<InkView> {
+  const asked = place ? { digest: place.digest, flow: place.flow } : {}
+  const url = `/api/c/${encodeURIComponent(collection)}/tattoos/${encodeURIComponent(name)}/ink`
+  const body = {
+    points: outline.points,
+    white: outline.white,
+    neutral: outline.neutral,
+    depth: outline.depth,
+    ...asked,
+  }
+  return readInk(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal })
+}
+
+async function readInk(url: string, init: RequestInit): Promise<InkView> {
+  return readBox(url, init, 'X-Ink-Box')
+}
+
+/* Read an answer that is a JPEG, its crop in `boxHeader` as `x,y,w,h`, and the grey in
+   `X-Ink-White`. */
+async function readBox(url: string, init: RequestInit, boxHeader: string): Promise<InkView> {
+  const response = await fetch(url, init)
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { refusal?: string }
+    throw new Error(body.refusal ?? `${url} answered ${response.status}`)
+  }
+  const [x, y, width, height] = (response.headers.get(boxHeader) ?? '').split(',').map(Number)
+  const white = Number(response.headers.get('X-Ink-White'))
+  if ([x, y, width, height, white].some((one) => one === undefined || Number.isNaN(one)))
+    throw new Error(`${url} answered no ink box or white point`)
+  return { image: await response.blob(), box: { x, y, width, height }, white }
+}
+
+/* What a placement preview is asked with: the target (`photo` for stage 1, `render` for the
+   others), the render it is placed on, the baked edit of it or none, and the stage's pairs,
+   limb and exclusions. */
+export interface PreviewAsk {
+  target: 'photo' | 'render'
+  place: Place
+  version: string
+  seed: string
+  edit: number | null
+  pairs: Pair[]
+  limb: Point[] | null
+  exclusions: Point[][]
+}
+
+/* The warped ink of `name` for a stage's pairs, as a JPEG on white over a crop of the target,
+   made now and kept nowhere. The crop comes in `X-Preview-Box` as `x,y,w,h`. */
+export function placementPreview(
+  collection: string,
+  name: string,
+  ask: PreviewAsk,
+  signal?: AbortSignal,
+): Promise<Preview> {
+  const url = `/api/c/${encodeURIComponent(collection)}/tattoos/${encodeURIComponent(name)}/preview`
+  const body = {
+    target: ask.target,
+    digest: ask.place.digest,
+    flow: ask.place.flow,
+    version: ask.version,
+    seed: ask.seed,
+    edit: ask.edit,
+    pairs: ask.pairs,
+    limb: ask.limb,
+    exclusions: ask.exclusions,
+  }
+  return readBox(
+    url,
+    { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal },
+    'X-Preview-Box',
+  )
+}
+
+/* Queue the edit request of `name` placed by `ask`'s pairs, limb and exclusions on the render,
+   or the baked edit `ask.edit` of it: the server writes the composite and the placement, never
+   the image, and answers the edit's number. A refusal names its fix. */
+export function bakeTattoo(
+  collection: string,
+  name: string,
+  ask: Omit<PreviewAsk, 'target'>,
+): Promise<Baked> {
+  return send(
+    `/api/c/${encodeURIComponent(collection)}/tattoos/${encodeURIComponent(name)}/bake`,
+    'POST',
+    {
+      digest: ask.place.digest,
+      flow: ask.place.flow,
+      version: ask.version,
+      seed: ask.seed,
+      edit: ask.edit,
+      pairs: ask.pairs,
+      limb: ask.limb,
+      exclusions: ask.exclusions,
+    },
+  )
 }

@@ -14,6 +14,7 @@ import { useDrawerStore } from './stores/drawer'
 import { type Key, keyList, shifted, useKeyStore } from './stores/keys'
 import { alerting, clock, useLiveStore } from './stores/live'
 import type { JobSlot } from './types'
+import { HUB_SCREENS, viewKey } from './viewkey'
 
 /* The shell: the AppBar, the BillingBanner's slot, the route's screen and the
    JobStrip (design spec §3). Review is keyed by collection and flow, so moving to
@@ -53,12 +54,8 @@ watch(
 )
 const place = computed(() => collection.value ?? 'library')
 const screen = computed(() => route.name)
-/* The large view, a bake's and Compare open from the hub, so its tab stays lit on them. */
-const HUB_SCREENS = ['hub', 'render', 'bake', 'compare', 'compare-photo']
 const hubLit = computed(() => HUB_SCREENS.includes(String(screen.value)))
-const key = computed(() =>
-  route.name === 'review' ? `${route.params.collection}/${route.params.flow}` : route.path,
-)
+const key = computed(() => viewKey(route))
 
 /* The Review tab counts the collection's unapproved sheets, every flow's. */
 const unapproved = computed(() => {

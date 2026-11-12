@@ -53,6 +53,18 @@ GET  /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
 GET  …/renders/{digest}/{flow}/{version}/{seed}/edit/{k}   and its /image and /thumb
 DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
 GET  /api/c/{collection}/sources/{name}   and its /thumb
+GET  /api/tattoos[?digest=]   ·   POST /api/tattoos   {staging, file, name}
+GET  /api/tattoos/{name}   and its /design   ·   PUT …/{name}/outline
+     {points, closed, white, neutral, depth}
+GET  and PUT /api/tattoos/{name}/stage1/{digest}   {pairs, not_on_photo}
+POST /api/c/{collection}/tattoos   {name, digest, flow}
+POST /api/c/{collection}/tattoos/{name}/ink
+     {points, white, neutral, depth, digest, flow}      a JPEG, no-store
+POST /api/c/{collection}/tattoos/{name}/preview
+     {target, digest, flow, version, seed, edit, pairs, limb, exclusions}
+     a JPEG, no-store
+POST /api/c/{collection}/tattoos/{name}/bake
+     {digest, flow, version, seed, edit, pairs, limb, exclusions}      {edit: k}
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
@@ -91,6 +103,7 @@ from isekai.foundation.artifacts import (
     renders_of,
     require,
 )
+from isekai.foundation.edit import load_edit
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -126,8 +139,9 @@ from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
 from isekai.interface.wiring import Wiring
-from isekai.pipeline import importing
+from isekai.pipeline import importing, tattoos
 from isekai.pipeline.edit import image_of as edit_image_of
+from isekai.pipeline.edit import request_placed
 from isekai.pipeline.generate import discard_render, image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
@@ -150,6 +164,7 @@ from isekai.pipeline.review import (
 from isekai.pipeline.review import state as review_state
 from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse
+from isekai.shared.ink import load_ink_config
 from isekai.shared.vocabulary import Vocabulary
 
 # The dropdown's `· rare` marker. This number exists nowhere else in the
@@ -180,6 +195,27 @@ REFUSED = 409
 # conflict, the request is simply not one this surface answers, so it carries no
 # string for the page and never reaches a handler.
 FORBIDDEN = 403
+
+# What a body names to save an outline, and to ask the ink view of one.
+OUTLINE_KEYS = ("points", "closed", "white", "neutral", "depth")
+INK_KEYS = ("points", "white", "neutral", "depth")
+
+# What a body names to save a tattoo's pairs on a photograph, and to ask a preview.
+STAGE1_KEYS = ("pairs", "not_on_photo")
+PREVIEW_KEYS = (
+    "target",
+    "digest",
+    "flow",
+    "version",
+    "seed",
+    "pairs",
+    "limb",
+    "exclusions",
+)
+
+# What a body names to bake a tattoo, and the tracked edit a bake requests.
+BAKE_KEYS = ("digest", "flow", "version", "seed", "pairs", "limb", "exclusions")
+BAKE_EDIT = "tattoo-wai"
 
 # Where gpunit's status answers are appended, in the library: a dot-file is listed
 # as no collection.
@@ -441,6 +477,238 @@ def create_app(
             "skipped": list(done.skipped),
             "left_out": list(done.left_out),
         }
+
+    @app.get("/api/tattoos")
+    def read_tattoos(digest: str | None = None) -> dict[str, Any]:
+        """List the kept tattoos in the order kept, with the limits the page reads.
+
+        With a photograph's `digest`, each tattoo's stage-1 state on it comes too.
+        """
+        listing: dict[str, Any] = {
+            "tattoos": [asdict(one) for one in tattoos.listed(root)],
+            "limits": _tattoo_limits(),
+        }
+        if digest is not None:
+            listing["stage1"] = {
+                name: asdict(state)
+                for name, state in tattoos.stage1_states(root, digest).items()
+            }
+        return listing
+
+    @app.get("/api/tattoos/{name}")
+    def read_tattoo(name: str) -> dict[str, Any]:
+        """Return one tattoo with its outline, refusing an unknown name."""
+        return {
+            **asdict(tattoos.named(root, name)),
+            "outline": asdict(tattoos.read_outline(root, name)),
+        }
+
+    @app.get("/api/tattoos/{name}/design")
+    def read_tattoo_design(name: str) -> Response:
+        """Serve an uploaded tattoo's image whole, refusing a cut, which has none."""
+        return Response(
+            tattoos.design_bytes(root, name),
+            media_type="image/png",
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+        )
+
+    @app.post("/api/tattoos")
+    def post_tattoo(payload: dict[str, Any]) -> dict[str, Any]:
+        """Keep a staged file as a tattoo, then cancel the import it came in.
+
+        A file that still carries metadata is refused, and a refusal leaves the
+        import open so the name can be changed.
+        """
+        staged, file, name = (payload.get(key) for key in ("staging", "file", "name"))
+        if not (isinstance(staged, str) and isinstance(file, str)):
+            raise Refusal(
+                "the request's `staging` and `file` are the import's id and the staged "
+                "file's name; send both"
+            )
+        if not isinstance(name, str):
+            raise Refusal("the request's `name` is the tattoo's name; send one")
+        path = importing.staged_file(imports.folder(staged), file)
+        carried = importing.verify(path)
+        if carried:
+            raise Refusal(
+                f"{file} still carries {', '.join(carried)}; clean it as an import "
+                "does, then keep it"
+            )
+        kept = tattoos.keep(root, name, path.read_bytes())
+        imports.cancel(staged)
+        return asdict(kept)
+
+    @app.post("/api/c/{collection}/tattoos")
+    def post_cut(collection: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Keep a cut: a tattoo with no image, from the photograph of a run."""
+        one = held(collection, str(payload.get("digest")), str(payload.get("flow")))
+        name = payload.get("name")
+        if not isinstance(name, str):
+            raise Refusal("the request's `name` is the tattoo's name; send one")
+        return asdict(tattoos.cut(root, name, one.run.digest, _dimensions(one.run)))
+
+    @app.put("/api/tattoos/{name}/outline")
+    def put_outline(name: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Replace a tattoo's outline and tone with what the page sent, whole."""
+        _needs(payload, OUTLINE_KEYS)
+        return asdict(
+            tattoos.save_outline(
+                root,
+                name,
+                payload["points"],
+                payload["closed"],
+                payload["white"],
+                payload["neutral"],
+                payload["depth"],
+            )
+        )
+
+    @app.get("/api/tattoos/{name}/stage1/{digest}")
+    def get_stage1(name: str, digest: str) -> dict[str, Any]:
+        """Return a tattoo's pairs and flag on a photograph; none if never placed."""
+        return asdict(tattoos.read_stage1(root, name, digest))
+
+    @app.put("/api/tattoos/{name}/stage1/{digest}")
+    def put_stage1(name: str, digest: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Replace a tattoo's pairs and flag on a photograph with what the page sent."""
+        _needs(payload, STAGE1_KEYS)
+        return asdict(
+            tattoos.save_stage1(
+                root, name, digest, payload["pairs"], payload["not_on_photo"]
+            )
+        )
+
+    @app.post("/api/c/{collection}/tattoos/{name}/ink")
+    def post_ink(collection: str, name: str, payload: dict[str, Any]) -> Response:
+        """Return a tattoo's ink on its outline's crop, a JPEG made now, kept nowhere.
+
+        A cut is asked on a render of its own photograph, named by `digest` and
+        `flow`; an upload reads its image and needs neither.
+        """
+        folder(collection)
+        _needs(payload, INK_KEYS)
+        photograph = digest = None
+        if tattoos.named(root, name).kind == "cut":
+            one = held(collection, str(payload.get("digest")), str(payload.get("flow")))
+            photograph, digest = one.run.photo, one.run.digest
+        view = tattoos.ink_view(
+            root,
+            name,
+            photograph,
+            digest,
+            payload["points"],
+            payload["white"],
+            payload["neutral"],
+            payload["depth"],
+        )
+        return Response(
+            view.jpeg,
+            media_type="image/jpeg",
+            headers={
+                "Cache-Control": "no-store",
+                "X-Ink-Box": ",".join(str(side) for side in view.box),
+                "X-Ink-White": str(view.white),
+            },
+        )
+
+    def placed_on(collection: str, payload: Mapping[str, Any]) -> tuple[Held, Path]:
+        """Return the run a placement body names and the image it is placed on.
+
+        The image is the render's, or the baked edit `edit` of it when the body
+        names one; an edit with no image yet is refused.
+        """
+        one = held(collection, str(payload["digest"]), str(payload["flow"]))
+        seed = str(payload["seed"])
+        if not is_seed(seed):
+            raise Refusal(
+                f"{seed!r} is no seed; send the render's seed as its address shows it"
+            )
+        _, image, _ = rendered(
+            collection,
+            one.run.digest,
+            str(payload["flow"]),
+            str(payload["version"]),
+            int(seed),
+        )
+        edit = payload.get("edit")
+        if edit is None:
+            return one, image
+        if isinstance(edit, bool) or not isinstance(edit, int) or edit < 1:
+            raise Refusal(
+                f"edit {edit!r} is no edit's number; send the number of a baked "
+                "edit, or none for the render"
+            )
+        own = edit_files(image.parent, int(seed), edit)[0]
+        if not own.is_file():
+            raise Refusal(
+                f"edit {edit} of {seed} has no image yet; it waits for its render "
+                "session, or is gone"
+            )
+        return one, own
+
+    @app.post("/api/c/{collection}/tattoos/{name}/preview")
+    def post_preview(collection: str, name: str, payload: dict[str, Any]) -> Response:
+        """Return a tattoo's warped ink for a stage's pairs, a JPEG made now.
+
+        `target` is `photo` for stage 1 and `render` for every other stage; the
+        image is the crop of that target the pairs and the limb name. Nothing is
+        kept.
+        """
+        _needs(payload, PREVIEW_KEYS)
+        one, image = placed_on(collection, payload)
+        made = tattoos.preview(
+            root,
+            name,
+            one.run.photo,
+            one.run.digest,
+            image,
+            str(payload["target"]),
+            payload["pairs"],
+            payload["limb"],
+            payload["exclusions"],
+        )
+        return Response(
+            made.jpeg,
+            media_type="image/jpeg",
+            headers={
+                "Cache-Control": "no-store",
+                "X-Preview-Box": ",".join(str(side) for side in made.box),
+                "X-Ink-White": str(made.white),
+            },
+        )
+
+    @app.post("/api/c/{collection}/tattoos/{name}/bake")
+    def post_bake(
+        collection: str, name: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Queue the edit request of a tattoo placed by pairs; answer its number.
+
+        The composite and the placement are made now and handed to the edit stage,
+        which writes the request's files and never its image: the render session
+        samples it.
+        """
+        _needs(payload, BAKE_KEYS)
+        one, image = placed_on(collection, payload)
+        made = tattoos.composite(
+            root,
+            name,
+            one.run.photo,
+            one.run.digest,
+            image,
+            payload["pairs"],
+            payload["limb"],
+            payload["exclusions"],
+        )
+        asked = request_placed(
+            load_edit(BAKE_EDIT),
+            image,
+            made.png,
+            made.values,
+            overrides={},
+            seed=None,
+            rng=wired.rng,
+        )
+        return {"edit": asked.number}
 
     @app.post("/api/c/{collection}/prepare")
     def post_prepare(collection: str) -> dict[str, Any]:
@@ -1681,6 +1949,36 @@ def _photograph(
             raise
         return Response(other(path), media_type="image/jpeg", headers=headers)
     return FileResponse(path, media_type=kind, headers=headers)
+
+
+def _needs(payload: Mapping[str, Any], keys: Sequence[str]) -> None:
+    """Refuse a body that lacks any of `keys`, naming each."""
+    missing = [key for key in keys if key not in payload]
+    if missing:
+        raise Refusal(f"the request lacks {', '.join(missing)}; send {', '.join(keys)}")
+
+
+def _tattoo_limits() -> dict[str, Any]:
+    """Return the bounds the page and the server both read: one source, two configs."""
+    config = tattoos.load_tattoo_config()
+    ink = load_ink_config(tattoos.INK_CONFIG)
+    return {
+        "long_side": config.long_side,
+        "outline_min": config.outline_min,
+        "outline_max": config.outline_max,
+        "depth_min": ink.depth_min,
+        "depth_max": ink.depth_max,
+        "photo_depth": ink.photo_depth,
+        "image_depth": ink.image_depth,
+        "floor_stage1": config.floor_stage1,
+        "floor_stage2": config.floor_stage2,
+        "floor_direct": config.floor_direct,
+        "preview_floor": config.preview_floor,
+        "preview_margin": config.preview_margin,
+        "preview_wait_ms": config.preview_wait_ms,
+        "pair_radius": config.pair_radius,
+        "region_min": config.region_min,
+    }
 
 
 def _hub(grid: library.Hub) -> dict[str, Any]:

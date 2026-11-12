@@ -2460,3 +2460,576 @@ dialog::backdrop {
   font-size: 12px;
   color: var(--ink-2);
 }
+
+/* The image panel: the viewport clips the image, which is placed by one transform;
+   the overlay is the viewport's size and takes no pointer. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.panel__viewport {
+  position: relative;
+  flex: 1;
+  min-height: 360px;
+  overflow: hidden;
+  background: var(--ground-media);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.panel__image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.panel__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.panel__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel__zoom {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+/* — The placement screen (design spec J9): the render's context and the steps — */
+.place {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  padding: 16px 20px;
+  overflow: auto;
+}
+
+.place__head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.place__render {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.place__steps {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.place__step {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.place__step--on {
+  color: var(--accent-ink);
+}
+
+.place__step--wait {
+  color: var(--ink-3);
+}
+
+/* — The picker: the forms, then the kept tattoos as cards — */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.picker__make {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.picker__form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 260px;
+}
+
+.picker__name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.picker__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.picker__file,
+.picker__note {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.picker__refusal {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.picker__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.picker__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 8px;
+  color: var(--ink);
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.picker__card:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.picker__card:disabled {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.picker__image {
+  width: 100%;
+  height: 120px;
+  object-fit: contain;
+  background: var(--ground-media);
+}
+
+.picker__title {
+  font-size: 13px;
+}
+
+.picker__state,
+.picker__source,
+.picker__reason {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.picker__state[data-state='outlined'] {
+  color: var(--accent-ink);
+}
+
+/* — The outline step: the panel, and the controls beside it — */
+.outline {
+  display: flex;
+  flex: 1;
+  gap: 16px;
+  min-height: 0;
+}
+
+.outline > .panel {
+  flex: 1;
+}
+
+.outline__side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 340px;
+}
+
+.outline__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.outline__source,
+.outline__hint,
+.outline__status,
+.outline__wait {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.outline__status {
+  margin-left: auto;
+}
+
+.outline__ink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  background: var(--ground-media);
+}
+
+.outline__ink-image {
+  max-width: 100%;
+  max-height: 260px;
+}
+
+.outline__number {
+  width: 72px;
+}
+
+.outline__check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+/* The outline drawn over the image, from the tokens of each theme. */
+.outline__shape {
+  fill: var(--outline-fill);
+  stroke: var(--accent-ink);
+  stroke-width: 1.5;
+}
+
+.outline__line {
+  fill: none;
+  stroke: var(--accent-ink);
+  stroke-width: 1.5;
+}
+
+.outline__waiting {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.outline__dim {
+  fill: var(--ground-media);
+  fill-opacity: 0.65;
+}
+
+.outline__vertex {
+  fill: var(--accent-ink);
+  stroke: var(--point-ring);
+  stroke-width: 1.5;
+}
+
+.outline__vertex--first {
+  stroke-width: 3;
+}
+
+.outline__tag {
+  fill: var(--point-ring);
+  font-size: 10px;
+}
+
+/* — The stages: the outline step's forward action, the panels, the pairs beside them — */
+.stage {
+  display: flex;
+  flex: 1;
+  gap: 16px;
+  min-height: 0;
+}
+
+.stage__panels {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  min-width: 0;
+}
+
+.stage__side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 280px;
+}
+
+.stage__status,
+.stage__note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.stage__forward {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* The review: the image with the tattoo multiplied over it, the crop before and after, and the
+   summary beside them. */
+.review__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  overflow: auto;
+}
+
+.review__image {
+  position: relative;
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.review__render {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+}
+
+.review__ink {
+  position: absolute;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.review__ink--crop {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.review__crops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.review__crop {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.review__pixels {
+  position: relative;
+  max-width: 100%;
+  background-repeat: no-repeat;
+}
+
+.reviewlist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--ink);
+  list-style: none;
+}
+
+/* A panel that waits for its match takes the accent edge; the preview multiplies over the
+   image it sits on, as the bake does. */
+.pair {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pair--waiting .panel__viewport {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.pair__preview {
+  mix-blend-mode: multiply;
+}
+
+.pair__shape {
+  stroke-width: 1.5;
+}
+
+.pair__shape--exclusion {
+  stroke-dasharray: 6 3;
+}
+
+.pair__shape-line {
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.pair__shape-waiting {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.pair__vertex {
+  fill: var(--accent-ink);
+  stroke: var(--point-ring);
+  stroke-width: 1.5;
+}
+
+.pair__point {
+  fill: var(--accent-ink);
+  stroke: var(--point-ring);
+  stroke-width: 1.5;
+}
+
+.pair__point--lone {
+  stroke-dasharray: 3 2;
+}
+
+.pair__point--on {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.pair__tag {
+  fill: var(--point-ring);
+  font-size: 10px;
+}
+
+.pair__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pair__opacity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.pair__note {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.pairlist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pairlist__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.pairlist__row {
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 12px;
+  color: var(--ink);
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.pairlist__row--on {
+  border-color: var(--accent);
+}
+
+.pairlist__row-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.pairlist__note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.outlinelist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outlinelist__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.outlinelist__text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.picker__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.picker__flag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+/* The Leave dialog: the lone point, the pairs that stand, then Stay and Leave. */
+.leave-dialog {
+  width: 480px;
+}
+
+.leave-dialog__point {
+  margin: 0 0 8px;
+}
+
+.leave-dialog__standing {
+  margin: 0 0 16px;
+  font-size: 11px;
+  color: var(--ink-2);
+}

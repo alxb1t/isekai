@@ -14,7 +14,12 @@ from PIL import Image, ImageDraw
 
 from isekai.foundation.refusal import Refusal
 from isekai.interface.cli import build_parser, dispatch
-from isekai.shared.ink import INK_CONFIG_PATH, extract_ink, load_ink_config
+from isekai.shared.ink import (
+    INK_CONFIG_PATH,
+    extract_ink,
+    load_ink_config,
+    white_grey,
+)
 from tests.stages import bare_wiring
 
 SKIN = (200, 150, 120)
@@ -248,6 +253,90 @@ def test_ink_flags_a_depth_out_of_range_is_refused(depth: float) -> None:
 @pytest.mark.parametrize("depth", [1.0, 2.0])
 def test_ink_flags_a_depth_at_the_range_ends_is_taken(depth: float) -> None:
     assert extract_ink(_arm(), None, None, depth).size == (160, 160)
+
+
+PALE_PATCH = (190, 140, 110)
+PALE_AT = (110, 110, 129, 129)
+
+
+def _arm_with_pale_patch() -> Image.Image:
+    """Return `_arm()` with a pale patch beside its dark fill."""
+    arm = _arm()
+    ImageDraw.Draw(arm).rectangle(PALE_AT, fill=PALE_PATCH)
+    return arm
+
+
+@pytest.mark.spec("tattoo:white:a-scale-of-one-changes-nothing")
+def test_ink_white_a_scale_of_one_changes_nothing() -> None:
+    image = _arm_with_pale_patch()
+    outline = _outline()
+
+    assert extract_ink(image, outline, None, None, white=1.0).tobytes() == (
+        extract_ink(image, outline, None, None).tobytes()
+    )
+    assert extract_ink(image, None, None, None, white=1.0).tobytes() == (
+        extract_ink(image, None, None, None).tobytes()
+    )
+
+
+@pytest.mark.spec("tattoo:white:a-lower-scale-whitens-paler-ink")
+def test_ink_white_a_lower_scale_whitens_paler_ink() -> None:
+    image = _arm_with_pale_patch()
+    automatic = _pixels(extract_ink(image, None, None, None))
+    lowered = _pixels(extract_ink(image, None, None, None, white=0.8))
+
+    assert lowered[120, 120, 0] > automatic[120, 120, 0]
+    assert lowered[80, 80, 0] < lowered[120, 120, 0]
+
+
+@pytest.mark.spec_exempt("structural: a scale of zero or less would divide by nothing")
+@pytest.mark.parametrize("white", [0.0, -0.5])
+def test_ink_white_a_scale_of_zero_or_less_is_refused(white: float) -> None:
+    with pytest.raises(Refusal, match="white scale"):
+        extract_ink(_arm(), None, None, None, white=white)
+
+
+def _striped(dark: tuple[int, int, int]) -> Image.Image:
+    """Return skin with a lit band at the start of each period and `dark` elsewhere.
+
+    A band lies within the extraction's reach of every dark column, so the skin
+    around reads `SKIN` throughout and most of the image reads `dark` against it.
+    """
+    pixels = np.empty((160, 160, 3), dtype=np.uint8)
+    pixels[:, :] = dark
+    pixels[:, np.arange(160) % 64 < 8] = SKIN
+    return Image.fromarray(pixels)
+
+
+@pytest.mark.spec("tattoo:white:the-automatic-point-is-one-grey")
+def test_ink_grey_the_automatic_point_is_one_whole_number_of_8_bits() -> None:
+    grey = white_grey(_striped((160, 120, 96)), Image.new("L", (160, 160), 255))
+
+    assert isinstance(grey, int)
+    assert grey == 204
+
+
+@pytest.mark.spec("tattoo:white:the-automatic-point-is-one-grey")
+def test_ink_grey_lit_skin_reads_the_top_of_the_scale() -> None:
+    assert white_grey(_arm(), _outline()) == 255
+
+
+@pytest.mark.spec("tattoo:white:the-automatic-point-is-one-grey")
+def test_ink_grey_follows_the_point_extract_ink_divides_by() -> None:
+    image = _striped((160, 120, 96))
+    outline = Image.new("L", (160, 160), 255)
+    layer = _pixels(extract_ink(image, outline, False, 1.0))
+
+    assert white_grey(image, outline) == 204
+    assert layer[10, 10, 0] == 255
+
+
+@pytest.mark.spec_exempt(
+    "structural: the grey is read through the extraction's refusals"
+)
+def test_ink_grey_an_outline_with_no_bare_skin_is_refused() -> None:
+    with pytest.raises(Refusal, match="no bare skin"):
+        white_grey(_arm(), _tight())
 
 
 def _saved(tmp_path: Path) -> tuple[Path, Path]:

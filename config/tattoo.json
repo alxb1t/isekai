@@ -1,0 +1,14 @@
+{
+  "long_side": 4096,
+  "outline_min": 20,
+  "outline_max": 120,
+  "view_quality": 90,
+  "floor_stage1": 6,
+  "floor_stage2": 8,
+  "floor_direct": 6,
+  "preview_floor": 3,
+  "preview_margin": 96,
+  "preview_wait_ms": 1000,
+  "pair_radius": 8,
+  "region_min": 3
+}

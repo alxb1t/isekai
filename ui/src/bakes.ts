@@ -25,7 +25,8 @@ export function chainRows(bakes: readonly Bake[]): ChainRow[] {
   return [...bakes].sort((a, b) => a.k - b.k).map((one) => ({ ...one, depth: depth(one) }))
 }
 
-/** Return whether the large view offers *Draft from this*, *Compare with…* and *Delete*: on a render's address, `k` absent.
+/** Return whether the large view offers *Draft from this*, *Compare with…*, *Place a tattoo* and *Delete*: on a
+    render's address, `k` absent.
 
     e.g. undefined -> true, "1" -> false */
 export const offered = (k: string | undefined): boolean => k === undefined
