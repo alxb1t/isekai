@@ -449,7 +449,9 @@ A fixed limit caps a batch at what fits in it; a limit from the work fits the wo
 spend. A median recorded on a fast card says nothing of a slow one, and gpunit takes whichever card is in stock, so
 the configured time per image is the slowest card's
 ([D26](../../../docs/decisions.md#d26--renders-run-on-a-rented-gpu)). A pod held for diagnosis must stop after its
-hold ends, not before.
+hold ends, not before. A source request's images are the seeds its source holds when it runs, so a line chaining two
+source requests would be estimated short of its work: it is refused before the pod, and the second request names the
+first's source instead, which renders the same seeds.
 
 #### Scenario: the estimate comes from recorded durations
 - **Key:** `cli:render-limit:the-estimate-comes-from-durations`
@@ -487,6 +489,13 @@ hold ends, not before.
 - **Layers:** unit
 - **WHEN** the limit is estimated for two collections
 - **THEN** it holds one boot and one teardown, and both collections' images
+
+#### Scenario: a chained source is refused before the pod
+- **Key:** `cli:render-limit:a-chained-source-is-refused-before-the-pod`
+- **Layers:** unit
+- **WHEN** a session's line holds a source request whose source is the flow of another source request
+- **THEN** the invocation is refused naming both requests and the source request that renders the same seeds
+- **AND** no session is opened
 
 ### Requirement: A render session reports its steps as JSON lines when asked
 
@@ -820,9 +829,10 @@ deletes the image's own thumbnail from the cache of the library whose collection
 through the render stage, then, where that removed an approval's group, deletes that approval and what goes with it,
 as the render stage's discard says — older approvals with no render, the newest's waiting draft and, once no approval
 is left, the flow's sheets — writing no draft; it prints each path it deleted, a run's file from its runs root and a
-thumbnail from its library. A path that names no render SHALL be refused, naming the form a render's path takes, the
-verb exiting 1 and deleting nothing; so SHALL a discard while a render session holds the image's collection, as the
-app's delete is.
+thumbnail from its library. A render's edits go with it, and a path that is an edit's image SHALL discard that edit and
+every edit made from it, as the edit stage's discard says, and nothing else. A path that names neither a render nor an
+edit SHALL be refused, naming the forms a render's path and an edit's path take, the verb exiting 1 and deleting
+nothing; so SHALL a discard while a render session holds the image's collection, as the app's delete is.
 
 The hand path stays ([D3](../../../docs/decisions.md#d3--the-hand-path-stays)): the page's Delete is this verb's act,
 run in the server's process. An image's path names everything a discard needs, so the verb takes nothing else.
@@ -852,9 +862,22 @@ run in the server's process. An image's path names everything a discard needs, s
 #### Scenario: a path naming no render is refused
 - **Key:** `cli:discard:a-path-naming-no-render-is-refused`
 - **Layers:** unit
-- **WHEN** the verb is given a path that is no render
-- **THEN** it exits 1, naming the path and the form a render's path takes
+- **WHEN** the verb is given a path that is neither a render nor an edit
+- **THEN** it exits 1, naming the path and the forms a render's path and an edit's path take
 - **AND** no file is deleted
+
+#### Scenario: an edit's path discards the edit
+- **Key:** `cli:discard:an-edits-path-discards-the-edit`
+- **Layers:** unit
+- **WHEN** the verb is given the path of an edit's image beside its render
+- **THEN** the edit's image, record and composite are deleted, each printed, and the verb exits 0
+- **AND** the render and its approval stay
+
+#### Scenario: a render takes its edits with it
+- **Key:** `cli:discard:a-render-takes-its-edits-with-it`
+- **Layers:** unit
+- **WHEN** the verb is given the path of a render that has an edit
+- **THEN** the edit's image, record and composite are deleted with the render, each printed
 
 ### Requirement: The prepare verb takes each photograph through tagging, reading and its cells' sheets in turn
 

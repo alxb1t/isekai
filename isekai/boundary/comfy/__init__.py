@@ -11,5 +11,14 @@ from isekai.boundary.comfy.contract import (
     TransportFailure,
     unread,
 )
+from isekai.boundary.comfy.prompt import read_runtime, submit_and_wait
 
-__all__ = ["ComfyClient", "ComfyTransport", "Image", "TransportFailure", "unread"]
+__all__ = [
+    "ComfyClient",
+    "ComfyTransport",
+    "Image",
+    "TransportFailure",
+    "read_runtime",
+    "submit_and_wait",
+    "unread",
+]

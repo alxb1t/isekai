@@ -8,12 +8,14 @@ renders.
 
 import json
 import shutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import pytest
 
 from isekai.boundary.provision import VOCABULARY_MANIFEST_PATH
+from isekai.foundation import edit as registry
 from isekai.foundation.flow import (
     GRAPH_NAME,
     KNOWN,
@@ -67,6 +69,13 @@ PINNED: dict[str, str] = {
     "summon-vivid-anime-wai": (
         "f72aa506e5668be9982515654b659e3760ac9e05c71a0d28e533e281468d006e"
     ),
+}
+
+# The digest of every tracked edit's whole directory, committed here. An edit never
+# changes silently either: a move is a change that says so and records what moved
+# in `CHANGELOG.md`, which `test_edit_changelog_carries_each_digest` holds.
+EDIT_PINNED: dict[str, str] = {
+    "tattoo-wai": "fcf0c974352632061e46e97e534ee83b0ca6cb21a25e7ff01857c7682b719348",
 }
 
 # A control flow and the subject it is held equal to; a second control is one line.
@@ -1079,3 +1088,205 @@ def test_a_look_manifest_differs_only_in_its_name_and_its_style(
     look: str, tmp_path: Path
 ) -> None:
     _manifest_differs_only_in_its_name_and_its_style(look, tmp_path)
+
+
+# --- an edit -------------------------------------------------------------------
+
+EDIT = "tattoo-wai"
+
+
+def _edit_scratch(tmp_path: Path, change: Callable[[dict[str, Any]], None]) -> Path:
+    """Copy `tattoo-wai` into a scratch edits root, its manifest changed by `change`.
+
+    Every file, not one: the digest covers the whole directory.
+    """
+    root = tmp_path / "edits"
+    shutil.copytree(registry.edit_path(EDIT), root / EDIT)
+    manifest = root / EDIT / registry.MANIFEST_NAME
+    document: dict[str, Any] = json.loads(manifest.read_text())
+    change(document)
+    manifest.write_text(json.dumps(document))
+    return root
+
+
+def _unrecorded(pinned: dict[str, str], changelog: str) -> list[str]:
+    """Return the edits whose pinned digest no changelog entry carries."""
+    return sorted(name for name, digest in pinned.items() if digest not in changelog)
+
+
+@pytest.mark.spec("edit:directory:a-tracked-edit-loads")
+def test_edit_load_reads_the_values_the_manifest_states() -> None:
+    edit = registry.load_edit(EDIT)
+    document = json.loads((edit.path / registry.MANIFEST_NAME).read_text())
+
+    assert edit.id == document["edit"] == EDIT
+    assert dict(edit.prompt) == document["prompt"]
+    assert dict(edit.dials) == document["dials"]
+    assert dict(edit.nodes) == document["nodes"]
+    assert edit.checkpoint == document["checkpoint"]
+    assert edit.controlnet == document["controlnet"]
+    assert edit.union_type == document["union_type"]
+    assert edit.digest == registry.edit_digest(EDIT)
+
+
+@pytest.mark.spec("edit:directory:a-wrong-key-is-refused")
+def test_edit_load_refuses_a_key_it_does_not_read_naming_the_keys_it_reads(
+    tmp_path: Path,
+) -> None:
+    root = _edit_scratch(tmp_path, lambda document: document.update(taggr=True))
+
+    with pytest.raises(Refusal, match="taggr") as refused:
+        registry.load_edit(EDIT, root)
+
+    assert ", ".join(registry.KNOWN) in str(refused.value)
+
+
+@pytest.mark.spec("edit:directory:a-wrong-key-is-refused")
+@pytest.mark.parametrize("key", registry.REQUIRED)
+def test_edit_load_refuses_a_key_it_requires_and_lacks_naming_it(
+    key: str, tmp_path: Path
+) -> None:
+    root = _edit_scratch(tmp_path, lambda document: document.pop(key))
+
+    with pytest.raises(Refusal, match=key):
+        registry.load_edit(EDIT, root)
+
+
+@pytest.mark.spec_exempt("structural: a manifest of another version is refused")
+def test_edit_load_refuses_a_manifest_version_it_does_not_read(
+    tmp_path: Path,
+) -> None:
+    root = _edit_scratch(
+        tmp_path,
+        lambda document: document.update(
+            manifest_version=registry.MANIFEST_VERSION + 1
+        ),
+    )
+
+    with pytest.raises(Refusal, match="manifest version"):
+        registry.load_edit(EDIT, root)
+
+
+@pytest.mark.spec_exempt("structural: an edit is named by its directory")
+def test_edit_load_refuses_a_manifest_that_names_another_edit(tmp_path: Path) -> None:
+    root = _edit_scratch(tmp_path, lambda document: document.update(edit="other"))
+
+    with pytest.raises(Refusal, match="calls itself 'other'"):
+        registry.load_edit(EDIT, root)
+
+
+@pytest.mark.spec_exempt("structural: every value the sampling reads is declared")
+@pytest.mark.parametrize(
+    ("block", "name"),
+    [
+        *(("prompt", name) for name in registry.REQUIRED_PROMPT),
+        *(("dials", name) for name in registry.REQUIRED_DIALS),
+        *(("nodes", name) for name in registry.REQUIRED_NODES),
+    ],
+)
+def test_edit_load_refuses_a_block_that_lacks_a_value_naming_it(
+    block: str, name: str, tmp_path: Path
+) -> None:
+    root = _edit_scratch(tmp_path, lambda document: document[block].pop(name))
+
+    with pytest.raises(Refusal, match=f"`{block}` declares no {name}"):
+        registry.load_edit(EDIT, root)
+
+
+@pytest.mark.spec_exempt("structural: a role names a node the graph carries")
+def test_edit_load_refuses_a_role_whose_node_the_graph_lacks(tmp_path: Path) -> None:
+    root = _edit_scratch(
+        tmp_path, lambda document: document["nodes"].update(sampler="999")
+    )
+
+    with pytest.raises(Refusal, match="sampler -> 999"):
+        registry.load_edit(EDIT, root)
+
+
+@pytest.mark.spec_exempt("structural: an edit is a manifest and its graph")
+def test_edit_load_refuses_a_directory_without_its_graph(tmp_path: Path) -> None:
+    root = _edit_scratch(tmp_path, lambda document: None)
+    (root / EDIT / registry.GRAPH_NAME).unlink()
+
+    with pytest.raises(Refusal, match=registry.GRAPH_NAME):
+        registry.load_edit(EDIT, root)
+
+
+@pytest.mark.spec_exempt("structural: an untracked edit names the tracked ones")
+def test_edit_load_refuses_an_untracked_edit_naming_the_tracked_ones() -> None:
+    with pytest.raises(Refusal, match=EDIT):
+        registry.load_edit("no-such-edit")
+
+
+@pytest.mark.spec_exempt("structural: the tracked listing reads manifests")
+def test_edit_tracked_lists_a_directory_holding_a_manifest(tmp_path: Path) -> None:
+    root = _edit_scratch(tmp_path, lambda document: None)
+    (root / "stray").mkdir()
+
+    assert registry.tracked_edits(root) == [EDIT]
+    assert registry.tracked_edits(tmp_path / "absent") == []
+
+
+@pytest.mark.spec("edit:directory:the-graph-names-the-declared-models")
+@pytest.mark.parametrize("name", registry.tracked_edits())
+def test_edit_tracked_graph_names_the_models_the_manifest_declares(name: str) -> None:
+    edit = registry.load_edit(name)
+    graph = edit.graph()
+
+    assert graph[edit.node("checkpoint")]["inputs"]["ckpt_name"] == edit.checkpoint
+    assert graph[edit.node("controlnet")]["inputs"]["control_net_name"] == (
+        edit.controlnet
+    )
+    assert graph[edit.node("union")]["inputs"]["type"] == edit.union_type
+
+
+@pytest.mark.spec_exempt("structural: a tracked edit's directory is flat")
+@pytest.mark.parametrize("name", registry.tracked_edits())
+def test_edit_tracked_holds_its_two_files_flat(name: str) -> None:
+    entries = sorted(path.name for path in registry.edit_path(name).iterdir())
+
+    assert entries == sorted([registry.MANIFEST_NAME, registry.GRAPH_NAME])
+
+
+@pytest.mark.spec("edit:directory:a-changed-file-fails-the-pin")
+@pytest.mark.parametrize("name", sorted(EDIT_PINNED))
+def test_edit_pinned_every_tracked_edit_matches_its_committed_digest(
+    name: str,
+) -> None:
+    assert registry.edit_digest(name) == EDIT_PINNED[name], (
+        f"edit {name} has changed. A changed dial, prompt or graph does not edit "
+        "an edit -- it means a new edit identifier, or a re-pin recorded in "
+        "CHANGELOG.md."
+    )
+
+
+@pytest.mark.spec("edit:directory:a-changed-file-fails-the-pin")
+@pytest.mark.parametrize("file", [registry.MANIFEST_NAME, registry.GRAPH_NAME])
+def test_edit_pinned_a_changed_byte_moves_the_digest(file: str, tmp_path: Path) -> None:
+    root = _edit_scratch(tmp_path, lambda document: None)
+    before = registry.edit_digest(EDIT, root)
+    with (root / EDIT / file).open("a") as changed:
+        changed.write(" ")
+
+    assert registry.edit_digest(EDIT, root) != before
+
+
+@pytest.mark.spec("edit:directory:a-changed-file-fails-the-pin")
+def test_edit_pinned_every_tracked_edit_is_pinned_at_all() -> None:
+    assert sorted(EDIT_PINNED) == registry.tracked_edits()
+
+
+@pytest.mark.spec("edit:directory:the-digest-is-recorded")
+def test_edit_changelog_carries_each_digest() -> None:
+    changelog = (Path(__file__).resolve().parent.parent / "CHANGELOG.md").read_text()
+
+    assert _unrecorded(EDIT_PINNED, changelog) == [], (
+        "an edit is pinned at a digest no CHANGELOG.md entry carries. A re-pin "
+        "owes a statement of what moved, and a new edit a statement of what it is."
+    )
+
+
+@pytest.mark.spec("edit:directory:the-digest-is-recorded")
+def test_edit_changelog_twin_names_a_digest_no_entry_carries() -> None:
+    assert _unrecorded({EDIT: "abc"}, "a changelog without it") == [EDIT]
+    assert _unrecorded({EDIT: "abc"}, "a changelog carrying abc") == []

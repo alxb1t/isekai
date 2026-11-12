@@ -22,7 +22,7 @@ import pytest
 
 import isekai.foundation.run as run_module
 import isekai.pipeline.generate as generate_module
-from isekai.boundary.comfy import ComfyClient, TransportFailure, unread
+from isekai.boundary.comfy import ComfyClient, TransportFailure, read_runtime, unread
 from isekai.boundary.comfy.client import TIMEOUT
 from isekai.foundation.artifacts import (
     PROMPT_FILE,
@@ -37,6 +37,7 @@ from isekai.foundation.flow import (
     SCHEMA_NAME,
     Flow,
     Schema,
+    graph_digest,
     load_flow,
     manifest_digest,
 )
@@ -62,10 +63,8 @@ from isekai.pipeline.generate import (
     build_graph,
     discard_render,
     draw_seeds,
-    graph_digest,
     prepare,
     prompt_artifact,
-    read_runtime,
     rendered_seeds,
     seeds_for,
     shortfall,

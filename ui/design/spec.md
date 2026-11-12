@@ -270,7 +270,7 @@ rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59     
   no prompt, render group or copy — and the sheet is editable again; a copy's cancel deletes only the copy, and the
   sheet opens on the draft open above what lies beneath, else the approval beneath, read-only, the bar's note naming
   it as it names every approval shown. No key, no ask. Otherwise it is disabled, the review stage's reason beside it; while a render
-  session runs for the collection, the reason says so.
+  session runs for the collection, the reason says so, and it follows the render as it starts and ends.
 
 ### J4 · Render
 

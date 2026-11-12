@@ -1091,6 +1091,30 @@ def test_an_approved_target_is_not_copied_over(
     assert snapshot(run.path / CONTROL) == before
 
 
+@pytest.mark.spec("review:copy-from:a-copy-is-in-step-once-both-have-rendered")
+@pytest.mark.parametrize("target_rendered", [True, False])
+def test_a_copy_in_step_after_both_rendered_writes_nothing(
+    run: Run, schema: Schema, vocabulary: Vocabulary, target_rendered: bool
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    assert copied is not None
+    for seed in (11, 12):
+        _image(run, 1, seed)
+        if target_rendered:
+            _image(run, 1, seed, CONTROL)
+    before = snapshot(run.path / CONTROL)
+
+    again, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    if target_rendered:
+        assert again is None
+        assert snapshot(run.path / CONTROL) == before
+    else:
+        assert again == run.path / CONTROL / "review" / "002.approved.json"
+        assert read(again, APPROVED_FILE)["renders"] == {"count": 2, "seeds": [11, 12]}
+
+
 @pytest.mark.spec("review:copy-from:a-newer-source-approval-is-copied-again")
 @pytest.mark.parametrize("target", ["an older copy", "a hand approval"])
 def test_a_target_not_copied_from_the_sources_latest_is_copied_again(

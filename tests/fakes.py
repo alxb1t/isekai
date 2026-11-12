@@ -112,6 +112,30 @@ class FakeComfyClient:
         return self.report
 
 
+class RecordingComfyClient(FakeComfyClient):
+    """A `FakeComfyClient` that keeps every upload, and may reject every graph.
+
+    Each upload is stored under its own name behind `stored-`, so a graph patched
+    with the stored names says which image went where.
+    """
+
+    def __init__(
+        self, *, rejects: TransportFailure | None = None, view_bytes: bytes
+    ) -> None:
+        super().__init__(view_bytes=view_bytes)
+        self.uploads: list[tuple[str, bytes]] = []
+        self.rejects = rejects
+
+    def upload_image(self, name: str, data: bytes) -> str:
+        self.uploads.append((name, data))
+        return f"stored-{name}"
+
+    def submit(self, workflow: Workflow) -> str:
+        if self.rejects is not None:
+            raise self.rejects
+        return super().submit(workflow)
+
+
 def fetched_by_main(
     monkeypatch: pytest.MonkeyPatch, argv: list[str]
 ) -> tuple[Manifest, Path]:

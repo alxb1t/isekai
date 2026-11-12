@@ -11,11 +11,12 @@ from pathlib import Path
 
 import pytest
 
+from isekai.boundary.comfy import read_runtime
 from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import Schema
 from isekai.foundation.run import OUTPUTS, Run, open_run, record_failure
 from isekai.pipeline.caption import READER_OPTIONS, FakeReader
-from isekai.pipeline.generate import prompt_artifact, read_runtime, render
+from isekai.pipeline.generate import prompt_artifact, render
 from isekai.pipeline.review import approve, review, save_draft
 from isekai.pipeline.tagging import TAGGER_OPTIONS, FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary

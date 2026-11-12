@@ -1025,10 +1025,11 @@ def _copy_approval(
     """Write `source`'s latest approval under `flow`, or None if `flow` is in step.
 
     `flow` is in step when its latest approval is a copy holding the fields and
-    renders a copy of `source`'s latest would; anything else is copied over under
-    the next number. The fields are validated against `flow`'s schema, so a copy
-    the target cannot hold is refused like any draft. `sheet` is `flow`'s newest sheet,
-    which a revision of the copy is compared against; a `flow` with none refuses.
+    renders a copy of `source`'s latest would, listed or rendered; anything else
+    is copied over under the next number. The fields are validated against
+    `flow`'s schema, so a copy the target cannot hold is refused like any draft.
+    `sheet` is `flow`'s newest sheet, which a revision of the copy is compared
+    against; a `flow` with none refuses.
     """
     origin = run.directory(source, REVIEW)
     versions_held = approved_versions(origin)
@@ -1058,12 +1059,14 @@ def _copy_approval(
         afresh = f"delete {mine}, then run {_again(run, flow)} to approve it afresh"
         require(mine, newest, "producer", dict, afresh)
         require(mine, newest, "fields", dict, afresh)
-        if (
-            is_copy(newest["producer"])
-            and same_fields(newest["fields"], fields)
-            and renders_of(mine, newest, afresh) == renders
-        ):
-            return None
+        if is_copy(newest["producer"]) and same_fields(newest["fields"], fields):
+            mine_renders = copied_renders(
+                run, flow, approved_versions(directory)[-1], newest
+            )
+            if mine_renders["count"] == renders["count"] and set(
+                mine_renders["seeds"]
+            ) == set(renders["seeds"]):
+                return None
     # Neither flow has a draft to edit, so a tag's fix goes through `source`'s own;
     # a field `flow`'s schema does not fit is no edit to `source`, so it goes
     # through `flow`'s own sheet instead.

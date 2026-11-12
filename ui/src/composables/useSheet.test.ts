@@ -10,6 +10,7 @@ interface Call {
   url: string
   init: RequestInit | undefined
   answer: (body: unknown) => void
+  refuse: (message: string) => void
 }
 
 let calls: Call[] = []
@@ -53,6 +54,14 @@ async function answer(url: string, body: unknown): Promise<void> {
   await vi.runAllTimersAsync()
 }
 
+/* Refuse the oldest unanswered call to `url`, as the server's 409 does. */
+async function refuse(url: string, message: string): Promise<void> {
+  const at = calls.findIndex((call) => call.url === url)
+  const [call] = calls.splice(at, 1)
+  call.refuse(message)
+  await vi.runAllTimersAsync()
+}
+
 beforeEach(() => {
   vi.useFakeTimers()
   calls = []
@@ -64,6 +73,7 @@ beforeEach(() => {
           url,
           init,
           answer: (body) => resolve({ ok: true, json: async () => body }),
+          refuse: (message) => resolve({ ok: false, status: 409, json: async () => ({ refusal: message }) }),
         }),
       ),
   )
@@ -180,4 +190,83 @@ spec('ui:save:an-approval-waits-for-a-save-in-flight', async () => {
   await answer('/api/c/b/review/a/f/approve', { approved: '001.approved.json', warnings: [], at: 13 })
   await approving
   expect(approval.at.value).toBe(13)
+})
+
+spec('ui:save:edits-inside-a-slow-save-are-sent-as-one-request', async () => {
+  const sheet = useSheet({ collection: 'b', flow: 'f' })
+  const opened = sheet.open('a')
+  await answer('/api/c/b/review/a/f', detail('a', 10))
+  await opened
+
+  // The first save is unanswered; each later edit pauses past the debounce.
+  sheet.commit('hair', 'brown hair', null)
+  await vi.advanceTimersByTimeAsync(500)
+  sheet.commit('hair', 'short hair', null)
+  await vi.advanceTimersByTimeAsync(500)
+  sheet.commit('hair', 'curly hair', null)
+  await vi.advanceTimersByTimeAsync(500)
+  expect(calls.map((call) => call.url)).toEqual(['/api/c/b/review/a/f/draft'])
+
+  // One further request, stating the receipt and holding every edit.
+  await answer('/api/c/b/review/a/f/draft', receipt(11))
+  const [second] = calls
+  expect(second.url).toBe('/api/c/b/review/a/f/draft')
+  const sent = JSON.parse(String(second.init?.body))
+  expect(sent.saved).toBe(11)
+  expect(sent.fields.hair).toEqual(['long hair', 'brown hair', 'short hair', 'curly hair'])
+
+  await answer('/api/c/b/review/a/f/draft', receipt(12))
+  expect(calls).toHaveLength(0)
+  expect(sheet.saving.value).toBe(false)
+})
+
+spec('ui:save:a-failed-save-leaves-nothing-to-send-again', async () => {
+  const sheet = useSheet({ collection: 'b', flow: 'f' })
+  const opened = sheet.open('a')
+  await answer('/api/c/b/review/a/f', detail('a', 10))
+  await opened
+
+  // The first save is refused while a second, holding every edit, waits behind it.
+  sheet.commit('hair', 'brown hair', null)
+  await vi.advanceTimersByTimeAsync(500)
+  sheet.commit('hair', 'short hair', null)
+  await vi.advanceTimersByTimeAsync(500)
+  await refuse('/api/c/b/review/a/f/draft', 'a draft is not at that save')
+
+  const [second] = calls
+  expect(JSON.parse(String(second.init?.body)).fields.hair).toEqual(['long hair', 'brown hair', 'short hair'])
+  await answer('/api/c/b/review/a/f/draft', receipt(11))
+
+  // The second save holds everything, so nothing is left to send.
+  void sheet.flush()
+  expect(calls).toHaveLength(0)
+})
+
+spec('ui:save:the-newest-read-of-a-sheet-is-the-one-that-lands', async () => {
+  const sheet = useSheet({ collection: 'b', flow: 'f' })
+  const opened = sheet.open('a')
+  await answer('/api/c/b/review/a/f', detail('a', 10))
+  await opened
+
+  // Two reads of one input are in flight: the navigation's, and a render refresh's.
+  const first = sheet.open('b')
+  const second = sheet.open('b')
+  await answer('/api/c/b/review/b/f', detail('b', 20))
+  await first
+  // The older answer is not the newest read: the sheet is still loading, still the old one.
+  expect(sheet.loading.value).toBe(true)
+  expect(sheet.detail.value?.id).toBe('a')
+
+  await answer('/api/c/b/review/b/f', detail('b', 21))
+  await second
+  expect(sheet.loading.value).toBe(false)
+  expect(sheet.detail.value?.id).toBe('b')
+  expect(sheet.saved.value).toBe(21)
+
+  // An edit made once the sheet is editable is saved with the edit in it.
+  sheet.commit('hair', 'brown hair', null)
+  await vi.advanceTimersByTimeAsync(500)
+  const [save] = calls
+  expect(save.url).toBe('/api/c/b/review/b/f/draft')
+  expect(JSON.parse(String(save.init?.body)).fields.hair).toEqual(['long hair', 'brown hair'])
 })
