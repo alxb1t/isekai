@@ -2,9 +2,9 @@
 
 ## Purpose
 
-A tattoo kept in the library and placed on a render: each tattoo is kept whole under the library's `.tattoos/`,
-never deleted, with its outline and ink tone, and its ink is warped onto a render by thin-plate splines and
-shown as a view the server makes and never stores.
+A tattoo kept in the library and placed on a render: an upload is kept whole under the library's `.tattoos/`,
+a cut under its photograph's `.tattoos/.cuts/<digest>/`, each until it is removed, with its outline and ink tone,
+and its ink is warped onto a render by thin-plate splines and shown as a view the server makes and never stores.
 
 ## Requirements
 
