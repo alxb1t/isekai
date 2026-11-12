@@ -7,7 +7,7 @@ The phases: the stages with the preview, the limb and exclusions, the bake, the 
 - [x] 1 — Stages · hard
 - [x] 2 — Limb and exclusions · moderate
 - [x] 3 — Bake · hard
-- [ ] 4 — Leave · moderate
+- [x] 4 — Leave · moderate
 - [ ] 5 — Docs · moderate
 
 ## 1 — Stages
@@ -111,13 +111,13 @@ The phases: the stages with the preview, the limb and exclusions, the bake, the 
 
 ## 4 — Leave
 
-- [ ] 4.1 Add `ui/src/leave.ts` per [D8](design.md#d8): `lone`, `asks` and `left`; its tests in `ui/src/leave.test.ts` bind through `spec`.
+- [x] 4.1 Add `ui/src/leave.ts` per [D8](design.md#d8): `lone`, `asks` and `left`; its tests in `ui/src/leave.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/leave.test.ts` passes.
-- [ ] 4.2 Add `ui/src/components/LeaveDialog.vue`, a native dialog that closes on `esc`, and ask it from `ui/src/views/Place.vue` on a step change and on `onBeforeRouteLeave` while a stage holds a lone point.
+- [x] 4.2 Add `ui/src/components/LeaveDialog.vue`, a native dialog that closes on `esc`, and ask it from `ui/src/views/Place.vue` on a step change and on `onBeforeRouteLeave` while a stage holds a lone point.
   Verify: `git grep -n "LeaveDialog" -- ui/src/views` prints the use.
-- [ ] 4.3 Make `ui/src/nokeys.test.ts` read the sources of every component the stages add, so none declares a command.
+- [x] 4.3 Make `ui/src/nokeys.test.ts` read the sources of every component the stages add, so none declares a command.
   Verify: `npm --prefix ui run test -- src/nokeys.test.ts` passes.
-- [ ] 4.4 Hold the browser's types and unit tests.
+- [x] 4.4 Hold the browser's types and unit tests.
   Verify: `uv run python -m tools.test_ui` exits 0.
 
 ## 5 — Docs

@@ -3018,3 +3018,18 @@ dialog::backdrop {
   font-size: 11px;
   color: var(--ink-2);
 }
+
+/* The Leave dialog: the lone point, the pairs that stand, then Stay and Leave. */
+.leave-dialog {
+  width: 480px;
+}
+
+.leave-dialog__point {
+  margin: 0 0 8px;
+}
+
+.leave-dialog__standing {
+  margin: 0 0 16px;
+  font-size: 11px;
+  color: var(--ink-2);
+}

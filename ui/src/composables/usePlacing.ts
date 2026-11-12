@@ -36,6 +36,7 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
   const second = shallowRef<Pairs>(none)
   const outlines = shallowRef<Outlines>(noOutlines)
   const status = ref('')
+  const savedAt = shallowRef<Date | null>(null)
   const refusal = ref<string | null>(null)
 
   const mode = computed(() => (tattoo.value ? modeOf(tattoo.value.kind, notOnPhoto.value) : null))
@@ -56,6 +57,7 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
         notOnPhoto.value = stage.not_on_photo
         second.value = none
         outlines.value = noOutlines
+        savedAt.value = null
         refusal.value = null
       } catch (reason) {
         refusal.value = (reason as Error).message
@@ -88,6 +90,7 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
     saving = saving.then(async () => {
       try {
         read.value = await ports.save(place.digest, name, stage)
+        savedAt.value = new Date()
         if (timer === undefined) status.value = 'saved'
       } catch (reason) {
         status.value = (reason as Error).message
@@ -149,6 +152,7 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
     outlines,
     mode,
     status,
+    savedAt,
     refusal,
     load,
     reload,

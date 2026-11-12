@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { renderDetail, tattoos, thumbAt, versionOf } from '../api'
 import { PLACING, usePlacing } from '../composables/usePlacing'
+import LeaveDialog from '../components/LeaveDialog.vue'
 import OutlineStep from '../components/OutlineStep.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import ReviewBake from '../components/ReviewBake.vue'
 import StagePhoto from '../components/StagePhoto.vue'
 import StageRender from '../components/StageRender.vue'
 import TattooPicker from '../components/TattooPicker.vue'
+import { type Ask, type Stage, asks, left } from '../leave'
 import { complete } from '../pairs'
 import { type Step, circled, shortStep, skipped, stepsOf } from '../stages'
 import type { RenderDetail, TattooList } from '../types'
@@ -142,6 +144,46 @@ watch(
   { immediate: true },
 )
 
+/* The stage the route is on, with the pairs it holds; the other steps pair no images. */
+const stage = computed<Stage | null>(() => {
+  const mode = placing.mode.value
+  if (mode === null) return null
+  if (props.step === 'photo') {
+    return { mode, step: 'photo', pairs: placing.first.value, saved: placing.savedAt.value }
+  }
+  if (props.step === 'render') return { mode, step: 'render', pairs: placing.second.value, saved: null }
+  return null
+})
+
+/* The Leave dialog: a navigation off a stage that holds a lone point waits for the answer.
+   *Stay* cancels it; *Leave* drops the lone point and lets it go. */
+const asking = ref<Ask | null>(null)
+let decide: ((go: boolean) => void) | null = null
+
+const leaving = (): Promise<boolean> => {
+  const now = stage.value
+  const ask = now ? asks(now) : null
+  if (ask === null) return Promise.resolve(true)
+  decide?.(false)
+  asking.value = ask
+  return new Promise((resolve) => {
+    decide = resolve
+  })
+}
+
+const answer = (go: boolean): void => {
+  const now = stage.value
+  if (go && now) (now.step === 'photo' ? placing.editFirst : placing.editSecond)(left(now.pairs))
+  asking.value = null
+  decide?.(go)
+  decide = null
+}
+
+onBeforeRouteUpdate((to) =>
+  to.params.step === props.step && to.params.name === props.name ? true : leaving(),
+)
+onBeforeRouteLeave(leaving)
+
 /* The picker shows each tattoo's state as the stages left it. */
 watch(
   () => props.step,
@@ -252,5 +294,6 @@ onUnmounted(() => void placing.settled())
       :limits="list.limits"
       @back="forwardTo"
     />
+    <LeaveDialog v-if="asking" :ask="asking" @stay="answer(false)" @leave="answer(true)" />
   </section>
 </template>

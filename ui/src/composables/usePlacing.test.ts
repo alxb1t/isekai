@@ -97,6 +97,8 @@ spec('tattoo:stage1:pairs-are-saved-as-they-are-sent', async () => {
   expect(saved).toEqual([{ pairs: [[[10, 10], [500, 500]]], not_on_photo: false }])
   expect(placing.read.value?.pairs).toHaveLength(1)
   expect(placing.status.value).toBe('saved')
+  // The moment of the last save is what the Leave dialog names.
+  expect(placing.savedAt.value).toBeInstanceOf(Date)
 })
 
 spec('tattoo:stage1:pairs-are-saved-as-they-are-sent', async () => {

@@ -17,6 +17,8 @@ its new digest.
   preview refuses a region short of `region_min` points (0122 D2, D8, D10).
 - A bake queues an edit request: the composite over the whole render and a `<seed>.edit-<k>.placement.json` go through
   the edit stage, placed on a render or a baked edit; the review step shows the placement and bakes it (0122 D5, D6, D8, D9).
+- Leaving a stage that holds a point with no match asks first in a native dialog, naming the point and the pairs that
+  stand; *Leave* drops that point alone (0122 D7, D8).
 
 ## [0.81.0] - 2026-11-12
 
