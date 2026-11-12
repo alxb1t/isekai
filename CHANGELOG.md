@@ -15,6 +15,8 @@ its new digest.
 - Ink is placed by thin-plate splines in `isekai/shared/chain.py`: a spline fitted backwards, the lookup, the clip, the
   Multiply and the crop box, over arrays; `extract_ink` takes a `white` scale on its automatic point and `white_grey`
   reads that point as one grey (0121 D5, D6).
+- The app serves the tattoo library and its ink view: list, read, upload from staging, cut from a render's photograph
+  and save an outline, and one `POST` answers a `no-store` JPEG of the ink on the outline's crop (0121 D2, D3, D4, D7).
 
 ## [0.79.0] - 2026-11-12
 

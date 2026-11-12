@@ -51,6 +51,12 @@ GET  /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
      and its /image, /thumb, /compare/photo and /compare/{flow}/{version}/{seed}
 DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
 GET  /api/c/{collection}/sources/{name}   and its /thumb
+GET  /api/tattoos   ·   POST /api/tattoos   {staging, file, name}
+GET  /api/tattoos/{name}   and its /design   ·   PUT …/{name}/outline
+     {points, closed, white, neutral, depth}
+POST /api/c/{collection}/tattoos   {name, digest, flow}
+POST /api/c/{collection}/tattoos/{name}/ink
+     {points, white, neutral, depth, digest, flow}      a JPEG, no-store
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
@@ -121,7 +127,7 @@ from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
 from isekai.interface.wiring import Wiring
-from isekai.pipeline import importing
+from isekai.pipeline import importing, tattoos
 from isekai.pipeline.generate import discard_render, image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
@@ -144,6 +150,7 @@ from isekai.pipeline.review import (
 from isekai.pipeline.review import state as review_state
 from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse
+from isekai.shared.ink import load_ink_config
 from isekai.shared.vocabulary import Vocabulary
 
 # The dropdown's `· rare` marker. This number exists nowhere else in the
@@ -174,6 +181,10 @@ REFUSED = 409
 # conflict, the request is simply not one this surface answers, so it carries no
 # string for the page and never reaches a handler.
 FORBIDDEN = 403
+
+# What a body names to save an outline, and to ask the ink view of one.
+OUTLINE_KEYS = ("points", "closed", "white", "neutral", "depth")
+INK_KEYS = ("points", "white", "neutral", "depth")
 
 # Where gpunit's status answers are appended, in the library: a dot-file is listed
 # as no collection.
@@ -435,6 +446,117 @@ def create_app(
             "skipped": list(done.skipped),
             "left_out": list(done.left_out),
         }
+
+    @app.get("/api/tattoos")
+    def read_tattoos() -> dict[str, Any]:
+        """List the kept tattoos in the order kept, with the limits the page reads."""
+        return {
+            "tattoos": [_tattoo_out(one) for one in tattoos.listed(root)],
+            "limits": _tattoo_limits(),
+        }
+
+    @app.get("/api/tattoos/{name}")
+    def read_tattoo(name: str) -> dict[str, Any]:
+        """Return one tattoo with its outline, refusing an unknown name."""
+        return {
+            **_tattoo_out(tattoos.named(root, name)),
+            "outline": _outline_out(tattoos.read_outline(root, name)),
+        }
+
+    @app.get("/api/tattoos/{name}/design")
+    def read_tattoo_design(name: str) -> Response:
+        """Serve an uploaded tattoo's image whole, refusing a cut, which has none."""
+        return Response(
+            tattoos.design_bytes(root, name),
+            media_type="image/png",
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+        )
+
+    @app.post("/api/tattoos")
+    def post_tattoo(payload: dict[str, Any]) -> dict[str, Any]:
+        """Keep a staged file as a tattoo, then cancel the import it came in.
+
+        A file that still carries metadata is refused, and a refusal leaves the
+        import open so the name can be changed.
+        """
+        staged, file, name = (payload.get(key) for key in ("staging", "file", "name"))
+        if not (isinstance(staged, str) and isinstance(file, str)):
+            raise Refusal(
+                "the request's `staging` and `file` are the import's id and the staged "
+                "file's name; send both"
+            )
+        if not isinstance(name, str):
+            raise Refusal("the request's `name` is the tattoo's name; send one")
+        path = importing.staged_file(imports.folder(staged), file)
+        carried = importing.verify(path)
+        if carried:
+            raise Refusal(
+                f"{file} still carries {', '.join(carried)}; clean it as an import "
+                "does, then keep it"
+            )
+        kept = tattoos.keep(root, name, path.read_bytes())
+        imports.cancel(staged)
+        return _tattoo_out(kept)
+
+    @app.post("/api/c/{collection}/tattoos")
+    def post_cut(collection: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Keep a cut: a tattoo with no image, from the photograph of a run."""
+        one = held(collection, str(payload.get("digest")), str(payload.get("flow")))
+        name = payload.get("name")
+        if not isinstance(name, str):
+            raise Refusal("the request's `name` is the tattoo's name; send one")
+        return _tattoo_out(
+            tattoos.cut(root, name, one.run.digest, _dimensions(one.run))
+        )
+
+    @app.put("/api/tattoos/{name}/outline")
+    def put_outline(name: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Replace a tattoo's outline and tone with what the page sent, whole."""
+        _needs(payload, OUTLINE_KEYS)
+        return _outline_out(
+            tattoos.save_outline(
+                root,
+                name,
+                payload["points"],
+                payload["closed"],
+                payload["white"],
+                payload["neutral"],
+                payload["depth"],
+            )
+        )
+
+    @app.post("/api/c/{collection}/tattoos/{name}/ink")
+    def post_ink(collection: str, name: str, payload: dict[str, Any]) -> Response:
+        """Return a tattoo's ink on its outline's crop, a JPEG made now, kept nowhere.
+
+        A cut is asked on a render of its own photograph, named by `digest` and
+        `flow`; an upload reads its image and needs neither.
+        """
+        folder(collection)
+        _needs(payload, INK_KEYS)
+        photograph = digest = None
+        if tattoos.named(root, name).kind == "cut":
+            one = held(collection, str(payload.get("digest")), str(payload.get("flow")))
+            photograph, digest = one.run.photo, one.run.digest
+        view = tattoos.ink_view(
+            root,
+            name,
+            photograph,
+            digest,
+            payload["points"],
+            payload["white"],
+            payload["neutral"],
+            payload["depth"],
+        )
+        return Response(
+            view.jpeg,
+            media_type="image/jpeg",
+            headers={
+                "Cache-Control": "no-store",
+                "X-Ink-Box": ",".join(str(side) for side in view.box),
+                "X-Ink-White": str(view.white),
+            },
+        )
 
     @app.post("/api/c/{collection}/prepare")
     def post_prepare(collection: str) -> dict[str, Any]:
@@ -1553,6 +1675,52 @@ def _photograph(
             raise
         return Response(other(path), media_type="image/jpeg", headers=headers)
     return FileResponse(path, media_type=kind, headers=headers)
+
+
+def _needs(payload: Mapping[str, Any], keys: Sequence[str]) -> None:
+    """Refuse a body that lacks any of `keys`, naming each."""
+    missing = [key for key in keys if key not in payload]
+    if missing:
+        raise Refusal(f"the request lacks {', '.join(missing)}; send {', '.join(keys)}")
+
+
+def _tattoo_out(one: tattoos.Tattoo) -> dict[str, Any]:
+    """Describe a kept tattoo as the page reads it."""
+    return {
+        "name": one.name,
+        "kind": one.kind,
+        "size": list(one.size),
+        "kept": one.kept,
+        "outlined": one.outlined,
+        "downscaled_from": None
+        if one.downscaled_from is None
+        else list(one.downscaled_from),
+        "cut_from": one.cut_from,
+    }
+
+
+def _outline_out(one: tattoos.Outline) -> dict[str, Any]:
+    """Describe an outline and its tone as the page reads it."""
+    return {
+        "points": [list(point) for point in one.points],
+        "closed": one.closed,
+        "white": one.white,
+        "neutral": one.neutral,
+        "depth": one.depth,
+    }
+
+
+def _tattoo_limits() -> dict[str, Any]:
+    """Return the bounds the page and the server both read: one source, two configs."""
+    config = tattoos.load_tattoo_config()
+    ink = load_ink_config(tattoos.INK_CONFIG)
+    return {
+        "long_side": config.long_side,
+        "outline_min": config.outline_min,
+        "outline_max": config.outline_max,
+        "depth_min": ink.depth_min,
+        "depth_max": ink.depth_max,
+    }
 
 
 def _hub(grid: library.Hub) -> dict[str, Any]:

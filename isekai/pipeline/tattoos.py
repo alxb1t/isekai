@@ -32,7 +32,14 @@ from typing import TYPE_CHECKING, Any, Literal
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import ID_DIGEST_CHARS, REPOSITORY
-from isekai.shared.ink import INK_CONFIG_PATH, load_ink_config
+from isekai.shared.chain import crop_box, polygon_mask
+from isekai.shared.ink import (
+    INK_CONFIG_PATH,
+    InkConfig,
+    extract_ink,
+    load_ink_config,
+    white_grey,
+)
 from isekai.shared.tattoo import png_of
 
 if TYPE_CHECKING:
@@ -394,6 +401,16 @@ def save_outline(
             f"a closed outline holds at least {config.outline_min} points and this "
             f"one has {len(checked)}; add points before closing it"
         )
+    scale, tone = _checked_tone(white, depth, ink)
+    outline = Outline(checked, closed, scale, neutral, tone)
+    write_atomically(
+        _folder(library, name) / OUTLINE, _json_bytes(_outline_document(outline))
+    )
+    return outline
+
+
+def _checked_tone(white: object, depth: object, ink: InkConfig) -> tuple[float, float]:
+    """Return the white scale and the depth as numbers in range, or refuse the value."""
     scale = _number(white)
     if scale is None or scale <= 0:
         raise Refusal(
@@ -405,11 +422,7 @@ def save_outline(
             f"depth {depth!r} is outside {ink.depth_min:g} to {ink.depth_max:g}; give "
             "a depth in that range"
         )
-    outline = Outline(checked, closed, scale, neutral, tone)
-    write_atomically(
-        _folder(library, name) / OUTLINE, _json_bytes(_outline_document(outline))
-    )
-    return outline
+    return scale, tone
 
 
 def _outline_document(outline: Outline) -> dict[str, Any]:
@@ -576,3 +589,101 @@ def cut(
         {RECORD: _json_bytes(record), OUTLINE: _json_bytes(_outline_document(tone))},
     )
     return _load(_folder(library, name))[0]
+
+
+@dataclass(frozen=True)
+class InkView:
+    """The ink view: a JPEG, its crop `(x, y, width, height)` and the automatic grey."""
+
+    jpeg: bytes
+    box: tuple[int, int, int, int]
+    white: int
+
+
+def _view_image(
+    library: Path,
+    tattoo: Tattoo,
+    photograph: Path | None,
+    digest: str | None,
+) -> "Image":
+    """Return the pixels the ink is read from: a cut's photograph, else the design."""
+    if tattoo.kind == "cut":
+        if photograph is None or digest is None:
+            raise Refusal(
+                f"{tattoo.name} is cut from a photograph; ask its ink on a render of "
+                "that photograph"
+            )
+        if tattoo.cut_from != digest:
+            raise Refusal(
+                f"{tattoo.name} is cut from another photograph than this render's; "
+                "open it on a render of its own photograph"
+            )
+        try:
+            body = photograph.read_bytes()
+        except OSError as unreadable:
+            raise Refusal(
+                f"the photograph cannot be read ({unreadable}); reload the page"
+            ) from unreadable
+    else:
+        body = design_bytes(library, tattoo.name)
+    image = _upright(body)
+    if image.size != tattoo.size:
+        (width, height), (was_width, was_height) = image.size, tattoo.size
+        raise Refusal(
+            f"{tattoo.name}: the photograph is {width}x{height}, the cut was made on "
+            f"{was_width}x{was_height}; cut the tattoo again"
+        )
+    return image
+
+
+def ink_view(
+    library: Path,
+    name: str,
+    photograph: Path | None,
+    digest: str | None,
+    points: Sequence[Sequence[float]],
+    white: float,
+    neutral: bool,
+    depth: float,
+) -> InkView:
+    """Return `name`'s ink on the crop of its outline, as a JPEG flattened on white.
+
+    The crop is the outline's box grown by the extraction's reach. `photograph` and
+    `digest` are the render's, for a cut only; an upload reads its `design.png`.
+    Refused for an open outline, an unknown tattoo and a cut asked on another
+    photograph. Nothing is written.
+    e.g. a closed outline over a 160x160 photograph -> a JPEG of the box it names
+    """
+    from PIL import Image
+
+    tattoo, outline = _load_named(library, name)
+    config = load_tattoo_config()
+    ink = load_ink_config(INK_CONFIG)
+    image = _view_image(library, tattoo, photograph, digest)
+    checked = _checked_points(points, tattoo.size, config)
+    if not outline.closed:
+        raise Refusal(
+            f"the outline is open; {name}'s ink is read inside a closed outline, so "
+            "close it on its first point"
+        )
+    if len(checked) < config.outline_min:
+        raise Refusal(
+            f"the outline is open; it holds {len(checked)} points and a closed one "
+            f"holds at least {config.outline_min}"
+        )
+    if not isinstance(neutral, bool):
+        raise Refusal("neutral is true or false; send one of them")
+    scale, tone = _checked_tone(white, depth, ink)
+
+    left, top, right, bottom = crop_box(checked, ink.reach, image.size)
+    crop = image.crop((left, top, right, bottom))
+    inside = polygon_mask([(x - left, y - top) for x, y in checked], crop.size)
+    mask = Image.fromarray(inside)
+    layer = extract_ink(crop, mask, neutral, tone, ink, white=scale)
+    grey = white_grey(crop, mask, ink)
+
+    page = Image.new("RGBA", layer.size, (255, 255, 255, 255))
+    flat = Image.alpha_composite(page, layer.convert("RGBA")).convert("RGB")
+    out = BytesIO()
+    flat.save(out, "JPEG", quality=config.view_quality)
+    return InkView(out.getvalue(), (left, top, right - left, bottom - top), grey)

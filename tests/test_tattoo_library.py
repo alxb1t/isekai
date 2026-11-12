@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from isekai.foundation.refusal import Refusal
 from isekai.pipeline import tattoos
@@ -577,6 +577,180 @@ def test_tattoo_keep_bytes_that_are_no_image_are_refused_and_leave_nothing(
         keep(tmp_path, "junk", b"not an image")
 
     assert sorted(item.name for item in (tmp_path / TATTOOS).iterdir()) == ["bow"]
+
+
+SKIN = (200, 150, 120)
+FILL = (180, 130, 219, 169)
+ARM = (400, 300)
+CENTRE = (200, 150)
+
+
+def _arm_png() -> bytes:
+    """Return flat skin with one dark square fill, the ink a ring of points holds."""
+    arm = Image.new("RGB", ARM, SKIN)
+    ImageDraw.Draw(arm).rectangle(FILL, fill=(40, 30, 30))
+    out = io.BytesIO()
+    arm.save(out, "PNG")
+    return out.getvalue()
+
+
+def _around_the_fill(count: int = 24) -> list[list[float]]:
+    """Return `count` points on a circle that holds the fill with skin to spare."""
+    return [
+        [
+            CENTRE[0] + 34 * math.cos(2 * math.pi * step / count),
+            CENTRE[1] + 34 * math.sin(2 * math.pi * step / count),
+        ]
+        for step in range(count)
+    ]
+
+
+def _outlined_cut(library: Path, photograph: Path, name: str = "arm") -> list[Any]:
+    """Keep a cut of `photograph` with a closed outline round the fill; return it."""
+    photograph.write_bytes(_arm_png())
+    cut(library, name, DIGEST, ARM, at=_at(0))
+    points = _around_the_fill()
+    save_outline(library, name, points, True, 1.0, True, 1.6)
+    return points
+
+
+def _view(
+    library: Path, photograph: Path, points: list[Any], **tone: float | bool
+) -> tattoos.InkView:
+    """Ask the ink view of the cut `arm` on `photograph` with the tone's defaults."""
+    asked: dict[str, Any] = {"white": 1.0, "neutral": True, "depth": 1.6} | tone
+    return tattoos.ink_view(
+        library, "arm", photograph, DIGEST, points, asked["white"],
+        asked["neutral"], asked["depth"],
+    )  # fmt: skip
+
+
+@pytest.mark.spec("tattoo:ink-view:a-jpeg-on-the-outlines-crop")
+def test_ink_view_is_a_jpeg_the_size_of_the_outlines_crop(tmp_path: Path) -> None:
+    photograph = tmp_path / "photo.png"
+    points = _outlined_cut(tmp_path, photograph)
+
+    view = _view(tmp_path, photograph, points)
+
+    reach = load_ink_config(INK_CONFIG).reach
+    x, y, width, height = view.box
+    xs, ys = [p[0] for p in points], [p[1] for p in points]
+    assert (x, y) == (
+        max(0, math.floor(min(xs)) - reach),
+        max(0, math.floor(min(ys)) - reach),
+    )
+    assert x + width == min(ARM[0], math.floor(max(xs)) + 1 + reach)
+    assert y + height == min(ARM[1], math.floor(max(ys)) + 1 + reach)
+    image = Image.open(io.BytesIO(view.jpeg))
+    assert image.format == "JPEG"
+    assert image.size == (width, height)
+    assert image.size != ARM
+    inside = image.getpixel((CENTRE[0] - x, CENTRE[1] - y))
+    outside = image.getpixel((2, 2))
+    assert isinstance(inside, tuple) and isinstance(outside, tuple)
+    assert max(inside) < 128
+    assert min(outside) > 250
+
+
+@pytest.mark.spec("tattoo:ink-view:the-answer-carries-the-automatic-white-point")
+def test_ink_view_names_the_automatic_grey_as_a_whole_number(tmp_path: Path) -> None:
+    photograph = tmp_path / "photo.png"
+    points = _outlined_cut(tmp_path, photograph)
+
+    scaled = _view(tmp_path, photograph, points, white=0.5)
+    automatic = _view(tmp_path, photograph, points)
+
+    assert isinstance(automatic.white, int)
+    assert 0 <= automatic.white <= 255
+    assert scaled.white == automatic.white
+
+
+@pytest.mark.spec("tattoo:ink-view:the-answer-is-kept-nowhere")
+def test_ink_view_writes_no_file(tmp_path: Path) -> None:
+    photograph = tmp_path / "photo.png"
+    points = _outlined_cut(tmp_path, photograph)
+    before = sorted(item.relative_to(tmp_path) for item in tmp_path.rglob("*"))
+
+    _view(tmp_path, photograph, points)
+
+    assert sorted(item.relative_to(tmp_path) for item in tmp_path.rglob("*")) == before
+
+
+@pytest.mark.spec_exempt("structural: an upload's ink view reads its design.png")
+def test_ink_view_of_an_upload_reads_its_design_not_a_photograph(
+    tmp_path: Path,
+) -> None:
+    keep(tmp_path, "bow", _arm_png(), at=_at(0))
+    points = _around_the_fill()
+    save_outline(tmp_path, "bow", points, True, 1.0, False, 1.0)
+
+    view = tattoos.ink_view(tmp_path, "bow", None, None, points, 1.0, False, 1.0)
+
+    assert Image.open(io.BytesIO(view.jpeg)).size == view.box[2:]
+
+
+@pytest.mark.spec("tattoo:ink-view:an-open-outline-is-refused")
+def test_ink_view_refuses_an_open_outline_saying_so(tmp_path: Path) -> None:
+    photograph = tmp_path / "photo.png"
+    points = _outlined_cut(tmp_path, photograph)
+    save_outline(tmp_path, "arm", points, False, 1.0, True, 1.6)
+
+    with pytest.raises(Refusal, match="outline is open"):
+        _view(tmp_path, photograph, points)
+
+
+@pytest.mark.spec("tattoo:ink-view:an-open-outline-is-refused")
+def test_ink_view_refuses_points_too_few_to_close_saying_so(tmp_path: Path) -> None:
+    photograph = tmp_path / "photo.png"
+    points = _outlined_cut(tmp_path, photograph)
+
+    with pytest.raises(Refusal, match="outline is open"):
+        _view(tmp_path, photograph, points[:3])
+
+
+@pytest.mark.spec("tattoo:ink-view:an-unknown-tattoo-is-refused")
+def test_ink_view_refuses_an_unknown_tattoo_naming_it(tmp_path: Path) -> None:
+    with pytest.raises(Refusal, match="ghost"):
+        tattoos.ink_view(
+            tmp_path, "ghost", None, None, _around_the_fill(), 1.0, False, 1.0
+        )
+
+
+@pytest.mark.spec("tattoo:cut:a-cut-serves-only-its-own-photograph")
+def test_ink_view_refuses_a_cut_asked_on_another_digest(tmp_path: Path) -> None:
+    photograph = tmp_path / "photo.png"
+    points = _outlined_cut(tmp_path, photograph)
+
+    with pytest.raises(Refusal, match="cut from another photograph"):
+        tattoos.ink_view(
+            tmp_path, "arm", photograph, OTHER_DIGEST, points, 1.0, True, 1.6
+        )
+    with pytest.raises(Refusal, match="cut from a photograph"):
+        tattoos.ink_view(tmp_path, "arm", None, None, points, 1.0, True, 1.6)
+
+
+@pytest.mark.spec_exempt("structural: a photograph that moved on refuses its cut")
+def test_ink_view_refuses_a_photograph_of_another_size_than_the_cut(
+    tmp_path: Path,
+) -> None:
+    photograph = tmp_path / "photo.png"
+    points = _outlined_cut(tmp_path, photograph)
+    Image.new("RGB", (80, 80), SKIN).save(photograph)
+
+    with pytest.raises(Refusal, match="is 80x80, the cut was made on 400x300"):
+        _view(tmp_path, photograph, points)
+
+
+@pytest.mark.spec_exempt(
+    "structural: a view of no bare skin is the extraction's refusal"
+)
+def test_ink_view_passes_the_extractions_refusal_on(tmp_path: Path) -> None:
+    photograph = tmp_path / "photo.png"
+    points = _outlined_cut(tmp_path, photograph)
+    Image.new("RGB", ARM, (10, 10, 10)).save(photograph)
+
+    with pytest.raises(Refusal, match="no bare skin"):
+        _view(tmp_path, photograph, points)
 
 
 @pytest.mark.spec_exempt("structural: a failed write leaves no half-kept tattoo")

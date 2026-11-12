@@ -6,7 +6,7 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 
 - [x] 1 — Store · moderate
 - [x] 2 — Chain · hard
-- [ ] 3 — Preview · moderate
+- [x] 3 — Preview · moderate
 - [ ] 4 — Panel · hard
 - [ ] 5 — Screens · moderate
 - [ ] 6 — Docs · moderate
@@ -53,21 +53,21 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 
 ## 3 — Preview
 
-- [ ] 3.1 Add `ink_view(library, name, photograph, digest, points, white, neutral, depth)` to `isekai/pipeline/tattoos.py` per [D7](design.md#d7): the crop, the mask, `extract_ink`, the flattened JPEG, an `InkView` returned; it refuses an open outline and a cut asked on another digest; tests carry `ink_view`.
+- [x] 3.1 Add `ink_view(library, name, photograph, digest, points, white, neutral, depth)` to `isekai/pipeline/tattoos.py` per [D7](design.md#d7): the crop, the mask, `extract_ink`, the flattened JPEG, an `InkView` returned; it refuses an open outline and a cut asked on another digest; tests carry `ink_view`.
   Verify: `uv run pytest tests/test_tattoo_library.py -k ink_view` passes.
-- [ ] 3.2 Add to `isekai/interface/ui/app.py` `GET /api/tattoos` (the list and the limits), `GET /api/tattoos/{name}` (`named`) and `GET /api/tattoos/{name}/design` (`design_bytes`), and to the module's route table; tests in `tests/test_ui_tattoo.py` carry `tattoo_route_read`.
+- [x] 3.2 Add to `isekai/interface/ui/app.py` `GET /api/tattoos` (the list and the limits), `GET /api/tattoos/{name}` (`named`) and `GET /api/tattoos/{name}/design` (`design_bytes`), and to the module's route table; tests in `tests/test_ui_tattoo.py` carry `tattoo_route_read`.
   Verify: `uv run pytest tests/test_ui_tattoo.py -k tattoo_route_read` passes.
-- [ ] 3.3 Add `POST /api/tattoos` (a staged file per [D2](design.md#d2), refused when `importing.verify` reports metadata) and `POST /api/c/{collection}/tattoos` (a cut per [D3](design.md#d3)); tests carry `tattoo_route_keep`.
+- [x] 3.3 Add `POST /api/tattoos` (a staged file per [D2](design.md#d2), refused when `importing.verify` reports metadata) and `POST /api/c/{collection}/tattoos` (a cut per [D3](design.md#d3)); tests carry `tattoo_route_keep`.
   Verify: `uv run pytest tests/test_ui_tattoo.py -k tattoo_route_keep` passes.
-- [ ] 3.4 Add `PUT /api/tattoos/{name}/outline` per [D4](design.md#d4); a refusal answers as every refusal does; tests carry `tattoo_route_outline`.
+- [x] 3.4 Add `PUT /api/tattoos/{name}/outline` per [D4](design.md#d4); a refusal answers as every refusal does; tests carry `tattoo_route_outline`.
   Verify: `uv run pytest tests/test_ui_tattoo.py -k tattoo_route_outline` passes.
-- [ ] 3.5 Add `POST /api/c/{collection}/tattoos/{name}/ink` per [D7](design.md#d7), calling `ink_view`: a JPEG, `no-store`, `X-Ink-Box` and `X-Ink-White`; tests carry `ink_preview_route`.
+- [x] 3.5 Add `POST /api/c/{collection}/tattoos/{name}/ink` per [D7](design.md#d7), calling `ink_view`: a JPEG, `no-store`, `X-Ink-Box` and `X-Ink-White`; tests carry `ink_preview_route`.
   Verify: `uv run pytest tests/test_ui_tattoo.py -k ink_preview_route` passes.
-- [ ] 3.6 Hold that no route under `/api/tattoos` takes a tattoo away or changes its name, and that the guard answers each new route; tests carry `tattoo_route_guard`.
+- [x] 3.6 Hold that no route under `/api/tattoos` takes a tattoo away or changes its name, and that the guard answers each new route; tests carry `tattoo_route_guard`.
   Verify: `uv run pytest tests/test_ui_tattoo.py -k tattoo_route_guard` passes.
-- [ ] 3.7 Hold that `app.py` writes no file of its own.
+- [x] 3.7 Hold that `app.py` writes no file of its own.
   Verify: `uv run pytest tests/test_ui.py -k invariant` passes.
-- [ ] 3.8 Hold the phase's tests under the acceptance's selector.
+- [x] 3.8 Hold the phase's tests under the acceptance's selector.
   Verify: `uv run pytest tests/test_tattoo_library.py tests/test_chain.py tests/test_ui_tattoo.py -k "tattoo or chain or preview"` passes.
 
 ## 4 — Panel
