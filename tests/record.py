@@ -831,6 +831,28 @@ def answers(done: Done) -> dict[str, object]:
 FILES["routes"] = answers
 
 
+def _done_line(printed: str, flow: str, stage: str) -> dict[str, Any]:
+    """Return the `done` line `flow` printed for `stage` in `printed`, parsed."""
+    found = [json.loads(line) for line in printed.splitlines() if line.startswith("{")]
+    (line,) = [
+        item
+        for item in found
+        if item["flow"] == flow and item["stage"] == stage and item["state"] == "done"
+    ]
+    return line
+
+
+def lines(done: Done) -> dict[str, object]:
+    """Return the first flow's sheet and render done lines, as the CLI printed them."""
+    return {
+        "sheet": _done_line(done.said["sheet"], FIRST_FLOW, "sheet"),
+        "render": _done_line(done.said["generate"], FIRST_FLOW, "render"),
+    }
+
+
+FILES["wire"] = lines
+
+
 if __name__ == "__main__":
     # The wiring factory is imported as `tests.record`, so the pass runs in that
     # copy of the module and not in `__main__`, where `CLIENT` would never be set.

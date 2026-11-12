@@ -32,6 +32,9 @@ its new digest.
 - `tests/record/routes.json` holds each route of the app that needs no running child: the status of one ordered call over
   a copy of the pass's library, and the shape of its answer, keys and types with no value; a test fails on a route
   no call covers and on a status of 500 or more (0130 D6, D7).
+- `tests/record/wire.json` holds the sheet's and the render's done lines the CLI prints under `--progress json`; the
+  session's `progress_line` and `_Images`, and the cell and the job, are fed those lines instead of a copy typed beside
+  each reader (0130 D8).
 
 ## [0.86.2] - 2026-11-12
 

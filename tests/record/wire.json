@@ -1,0 +1,17 @@
+{
+  "render": {
+    "digest": "ed706d21a2c3",
+    "flow": "summon-anime-wai",
+    "run": "ed706d21a2c3_ada",
+    "seed": "42",
+    "stage": "render",
+    "state": "done",
+    "version": 1
+  },
+  "sheet": {
+    "flow": "summon-anime-wai",
+    "run": "ed706d21a2c3_ada",
+    "stage": "sheet",
+    "state": "done"
+  }
+}

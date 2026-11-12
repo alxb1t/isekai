@@ -2,14 +2,18 @@
 
 import io
 import json
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
 from isekai.foundation.run import Run, open_run
 from isekai.interface.cli import build_parser, dispatch
+from isekai.interface.render import Steps, _Images, progress_line
 from isekai.shared.vocabulary import Vocabulary
 from tests.images import jpeg_bytes
+from tests.record import recorded
 from tests.stages import bare_wiring, write_wd14
 
 FLOW = "summon-anime-wai"
@@ -48,6 +52,31 @@ def test_each_item_reports_its_start_and_its_end_as_json(
         {"run": run.id, "flow": FLOW, "stage": "sheet", "state": "done"},
     ]
     assert f"{run.id}: sheet wrote 001.json" in err
+
+
+class _Landed:
+    """Stand in for `Steps`: keep each image item it is handed."""
+
+    def __init__(self) -> None:
+        self.items: list[Mapping[str, Any]] = []
+
+    def image(self, item: Mapping[str, Any], total: int, runs: Path | None) -> None:
+        self.items.append(item)
+
+
+@pytest.mark.spec_exempt("structural: the session reads the lines the CLI prints")
+def test_the_session_reads_the_lines_the_cli_prints() -> None:
+    wire = cast("dict[str, dict[str, Any]]", recorded("wire"))
+    assert progress_line(json.dumps(wire["sheet"])) == wire["sheet"]
+    assert progress_line(json.dumps(wire["render"])) == wire["render"]
+    landed = _Landed()
+    images = _Images(cast("Steps", landed), 1, None)
+
+    images.write(json.dumps(wire["sheet"]) + "\n")
+    assert landed.items == []
+
+    images.write(json.dumps(wire["render"]) + "\n")
+    assert landed.items == [wire["render"]]
 
 
 @pytest.mark.spec("cli:progress:a-refusal-is-a-line")

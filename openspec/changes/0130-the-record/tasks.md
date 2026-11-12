@@ -8,7 +8,7 @@ Tests alone: the graphs, the run, the verbs, the routes, then the wire. Decision
 - [x] 2 — The run · moderate
 - [x] 3 — The verbs · moderate
 - [x] 4 — The routes · moderate
-- [ ] 5 — The wire · moderate
+- [x] 5 — The wire · moderate
 
 ## 1 — The graphs
 
@@ -98,14 +98,14 @@ Tests alone: the graphs, the run, the verbs, the routes, then the wire. Decision
 
 ## 5 — The wire
 
-- [ ] 5.1 In `tests/record.py`, add `lines(done)`, returning `{"sheet": <the sheet's done line of the first flow>, "render": <its render's done line>}` read from the stdout `drive` kept, each parsed from its JSON line, and register it as `FILES["wire"]`.
+- [x] 5.1 In `tests/record.py`, add `lines(done)`, returning `{"sheet": <the sheet's done line of the first flow>, "render": <its render's done line>}` read from the stdout `drive` kept, each parsed from its JSON line, and register it as `FILES["wire"]`.
   Verify: `uv run python -c "import tests.record as r; print(sorted(r.FILES))"` prints `['graphs', 'routes', 'run', 'verbs', 'wire']`.
 
-- [ ] 5.2 Run `uv run python -m tests.record`, which writes `tests/record/wire.json`, and read it: the sheet's line names a run, a flow, `"stage": "sheet"` and the state `done`.
+- [x] 5.2 Run `uv run python -m tests.record`, which writes `tests/record/wire.json`, and read it: the sheet's line names a run, a flow, `"stage": "sheet"` and the state `done`.
   Verify: `grep -n -F '"stage": "sheet"' tests/record/wire.json` prints the line.
 
-- [ ] 5.3 In `tests/test_progress.py`, add `test_the_session_reads_the_lines_the_cli_prints`: `progress_line` of `isekai/interface/render.py` returns each recorded line as the mapping, and `_Images`, over a stand-in for its steps, takes one image from the render's line and none from the sheet's. It carries `spec_exempt("structural: the session reads the lines the CLI prints")`.
+- [x] 5.3 In `tests/test_progress.py`, add `test_the_session_reads_the_lines_the_cli_prints`: `progress_line` of `isekai/interface/render.py` returns each recorded line as the mapping, and `_Images`, over a stand-in for its steps, takes one image from the render's line and none from the sheet's. It carries `spec_exempt("structural: the session reads the lines the CLI prints")`.
   Verify: `uv run pytest tests/test_progress.py -k session_reads -q` exits 0.
 
-- [ ] 5.4 In `tests/test_ui_jobs.py`, add `test_the_cell_and_the_job_read_the_sheet_line_the_cli_prints`: a child prints the recorded sheet line with `run` set to the test's run, over a collection whose run holds a sheet; `cell_event` publishes a `cell` event for `FLOW` in the state `done`, and `complete` of `isekai/interface/ui/jobs.py` counts the `sheet` stage done once. It carries `spec_exempt("structural: the cell and the job read the line the CLI prints")`.
+- [x] 5.4 In `tests/test_ui_jobs.py`, add `test_the_cell_and_the_job_read_the_sheet_line_the_cli_prints`: a child prints the recorded sheet line with `run` set to the test's run, over a collection whose run holds a sheet; `cell_event` publishes a `cell` event for `FLOW` in the state `done`, and `complete` of `isekai/interface/ui/jobs.py` counts the `sheet` stage done once. It carries `spec_exempt("structural: the cell and the job read the line the CLI prints")`.
   Verify: `uv run pytest tests/test_ui_jobs.py -k sheet_line_the_cli_prints -q` exits 0.
