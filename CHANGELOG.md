@@ -18,6 +18,8 @@ its new digest.
   request that renders the same seeds; `_requested`'s docstring says what it plans (0124 D3).
 - Review reads an approved sheet again when a render for its collection starts or ends, so *Cancel approve* follows
   the render (0124 D4).
+- A save waiting behind another takes later edits instead of queueing a second request, and a failed save leaves
+  the draft pending only when no later save of its input holds it (0124 D5).
 
 ## [0.78.0] - 2026-11-08
 

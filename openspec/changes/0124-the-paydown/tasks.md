@@ -8,7 +8,7 @@ A phase per debt card, in the order of [design](design.md)'s decisions.
 - [x] 2 — The copy's prose · moderate
 - [x] 3 — The chained source · moderate
 - [x] 4 — The cancel follows the render · moderate
-- [ ] 5 — The save queue · hard
+- [x] 5 — The save queue · hard
 - [ ] 6 — The modal's rows · moderate
 
 ## 1 — The copy in step
@@ -63,12 +63,12 @@ Closes 0072·R5: Review reads an approved sheet again when a render for its coll
 
 Closes 0070·R20: a queued, unsent save takes the newest payload, and a failed save restores `dirty` only when none waits ([D5](design.md#d5)).
 
-- [ ] 5.1 In `ui/src/composables/useSheet.test.ts`, give each `Call` a `refuse(message)` that answers `{ ok: false, status: 409, json: async () => ({ refusal: message }) }`.
+- [x] 5.1 In `ui/src/composables/useSheet.test.ts`, give each `Call` a `refuse(message)` that answers `{ ok: false, status: 409, json: async () => ({ refusal: message }) }`.
   Add `spec('ui:save:edits-inside-a-slow-save-are-sent-as-one-request', …)`: the first save unanswered, edits each past the debounce, then the first save answers; a further request states its receipt and holds every edit, and none follows its answer.
   Verify: `git grep -n "edits-inside-a-slow-save-are-sent-as-one-request" -- ui/src/composables/useSheet.test.ts` prints a line.
-- [ ] 5.2 Add `spec('ui:save:a-failed-save-leaves-nothing-to-send-again', …)` to the same file: the first save is refused while a second waits, the second holds every edit, and after it answers a `flush()` sends nothing.
+- [x] 5.2 Add `spec('ui:save:a-failed-save-leaves-nothing-to-send-again', …)` to the same file: the first save is refused while a second waits, the second holds every edit, and after it answers a `flush()` sends nothing.
   Verify: `git grep -n "a-failed-save-leaves-nothing-to-send-again" -- ui/src/composables/useSheet.test.ts` prints a line.
-- [ ] 5.3 In `ui/src/composables/useSheet.ts`, add `queued` to each `inFlight` entry, replace a queued save's draft in `send()`, read the draft in `write()` after its wait, and gate `dirty = true` in its catch, as [D5](design.md#d5) sketches.
+- [x] 5.3 In `ui/src/composables/useSheet.ts`, add `queued` to each `inFlight` entry, replace a queued save's draft in `send()`, read the draft in `write()` after its wait, and gate `dirty = true` in its catch, as [D5](design.md#d5) sketches.
   Verify: `npm run test --prefix ui -- useSheet` exits 0.
 
 ## 6 — The modal's rows
