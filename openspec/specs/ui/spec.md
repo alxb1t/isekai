@@ -495,7 +495,10 @@ it goes. An approval SHALL wait for a save in flight, and state the draft that s
 The saved receipt is the only thing on the page that speaks about saving, so a counter one stale answer can drive
 below zero silences it for the rest of the input. An edit typed inside the debounce is the operator's work, and
 closing the tab is an ordinary way to leave. An edit or an approval pressed inside a save's round trip is the
-operator's own, not another tab's, and a closing page never reads the receipt it would have to state.
+operator's own, not another tab's, and a closing page never reads the receipt it would have to state. A save waiting
+behind another carries the whole draft, so a later edit replaces its payload instead of queueing a second request, and
+a failed save leaves the draft pending only when no later save of the sheet waits. Of two reads of one sheet in
+flight, only the newest SHALL land, so an older read answering late never replaces the operator's edits.
 
 #### Scenario: a stale save cannot clear the saving state
 - **Key:** `ui:save:a-stale-save-cannot-clear-saving`
@@ -516,6 +519,26 @@ operator's own, not another tab's, and a closing page never reads the receipt it
 - **Layers:** unit
 - **WHEN** Approve is pressed while a save is unanswered
 - **THEN** the approval is sent once that save answers, stating the draft it wrote
+
+#### Scenario: edits inside one slow save are sent as one request
+- **Key:** `ui:save:edits-inside-a-slow-save-are-sent-as-one-request`
+- **Layers:** unit
+- **WHEN** several edits each pause past the debounce while one save is unanswered
+- **THEN** one further save is sent once it answers, holding every edit
+
+#### Scenario: a failed save leaves nothing to send again
+- **Key:** `ui:save:a-failed-save-leaves-nothing-to-send-again`
+- **Layers:** unit
+- **WHEN** a save fails while a later save of the sheet waits behind it
+- **THEN** the later save holds every edit
+- **AND** nothing is sent again once it answers
+
+#### Scenario: the newest read of a sheet is the one that lands
+- **Key:** `ui:save:the-newest-read-of-a-sheet-is-the-one-that-lands`
+- **Layers:** unit
+- **WHEN** two reads of one sheet are in flight and the older answers first
+- **THEN** the sheet stays loading until the newest read answers
+- **AND** an edit made after that is saved with the edit in it
 
 ### Requirement: The hub shows each source's stage in each offered flow, and a tick assigns it
 
@@ -671,6 +694,13 @@ pending count is the render stage's own.
   with its version
 - **AND** each tile of a seed rendered under both versions is marked `⇄`
 - **AND** in a window too short for that, its tiles shrink to fit and the grid does not scroll
+
+#### Scenario: a cell of ten renders scrolls its grid
+- **Key:** `ui:hub:a-cell-of-ten-renders-scrolls-its-grid`
+- **Layers:** e2e
+- **WHEN** the cell modal opens on a cell of ten renders in a 1280×768 window
+- **THEN** its four rows keep their height, and none scrolls on its own
+- **AND** the grid scrolls to the fourth row
 
 #### Scenario: a cell shows what is ready
 - **Key:** `ui:hub:a-cell-shows-what-is-ready`
@@ -1658,6 +1688,13 @@ none                      ─▶ "No sheet waits for review"
 - **Layers:** unit
 - **WHEN** Review reads an approved sheet whose prompt is assembled
 - **THEN** its payload carries the review stage's reason
+
+#### Scenario: Cancel approve follows the render
+- **Key:** `ui:review:the-cancel-follows-the-render`
+- **Layers:** unit
+- **WHEN** a render running for the collection starts or ends while an approved sheet is open
+- **THEN** Review reads the sheet again, so *Cancel approve* follows the render
+- **AND** a render that starts or ends beside a sheet that is not approved leaves it unread
 
 #### Scenario: the rail names the other flows' waiting sheets
 - **Key:** `ui:review:the-rail-names-the-other-flows-waiting`

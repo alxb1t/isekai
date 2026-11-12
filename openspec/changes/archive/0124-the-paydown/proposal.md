@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: v0.78.1
 beside: [0119-the-tattoo-edit, 0120-the-bakes-in-the-app]
 debt: [0111·R1, 0111·R2, op·chained-source, 0072·R5, 0070·R20, 0118·S1]
 ---

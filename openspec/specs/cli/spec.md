@@ -449,7 +449,9 @@ A fixed limit caps a batch at what fits in it; a limit from the work fits the wo
 spend. A median recorded on a fast card says nothing of a slow one, and gpunit takes whichever card is in stock, so
 the configured time per image is the slowest card's
 ([D26](../../../docs/decisions.md#d26--renders-run-on-a-rented-gpu)). A pod held for diagnosis must stop after its
-hold ends, not before.
+hold ends, not before. A source request's images are the seeds its source holds when it runs, so a line chaining two
+source requests would be estimated short of its work: it is refused before the pod, and the second request names the
+first's source instead, which renders the same seeds.
 
 #### Scenario: the estimate comes from recorded durations
 - **Key:** `cli:render-limit:the-estimate-comes-from-durations`
@@ -487,6 +489,13 @@ hold ends, not before.
 - **Layers:** unit
 - **WHEN** the limit is estimated for two collections
 - **THEN** it holds one boot and one teardown, and both collections' images
+
+#### Scenario: a chained source is refused before the pod
+- **Key:** `cli:render-limit:a-chained-source-is-refused-before-the-pod`
+- **Layers:** unit
+- **WHEN** a session's line holds a source request whose source is the flow of another source request
+- **THEN** the invocation is refused naming both requests and the source request that renders the same seeds
+- **AND** no session is opened
 
 ### Requirement: A render session reports its steps as JSON lines when asked
 

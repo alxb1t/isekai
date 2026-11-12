@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.78.1] - 2026-11-12
+
+Gate: local 0m32s · CI not read under mf-ship · 0.78.0: local 0m36s · CI not read under mf-ship
+
 - A second `approve --from` after both flows rendered writes nothing: a copy is in step when the target holds the
   copy's seeds, listed or rendered (0124 D1).
 - D49, D38 and the README say what a `T=S` render takes: the source's latest seeds, read when it runs, with no check
