@@ -23,6 +23,9 @@ its new digest.
   `FILED` (0128 D1, D2, D3).
 - An exemption reason is `structural: <rule>` or `structural: twin of <test>`, and a guard checks it; four behaviour
   tests are bound to their scenarios, and the rest wait in a table that only shrinks (0128 D4, D5, D6).
+- The guards that passed blind read what they missed, each with a twin that goes red without it: history, principles,
+  anchors, writers, the surface's imports, schema order and ONNX telemetry. Goldens pin an edit, a placement and a
+  session record (0128 D7, D8, D9, D10, D11, D12, D13, D14).
 
 ## [0.86.0] - 2026-11-12
 

@@ -23,8 +23,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 WIDTH = 120
 
 _HISTORY = re.compile(
-    r"\bv0\.\d{1,2}(?:\.\d{1,2})?(?!\.?\d)"  # an isekai version, not v0.2.2.4
-    r"|\b00\d\d(?:-[a-z]|`?\s+(?:design|proposal|tasks|D\d))"  # a change id cited
+    r"\bv0\.\d{1,3}(?:\.\d{1,3})?(?!\.?\d)"  # an isekai version, not v0.2.2.4
+    r"|\b0\d{3}(?:-[a-z]|`?\s+(?:design|proposal|tasks|D\d))"  # a change id cited
     r"|design\.md`?,?\s*D\d+"  # a design citation
     r"|`[0-9a-f]{7,12}`"  # a commit hash, backticked
 )
@@ -109,7 +109,9 @@ def _tree(root: Path, told: str, delta: str | None = None, cap: str = "cap") -> 
 # Each form `_HISTORY` reads, fed to both guards' twins.
 _CITED = [
     "since v0.21",
+    "since v0.100",
     "see 0044-the-session",
+    "see 0125-the-outline-gestures",
     "`0045` design D2",
     "design.md D4",
     "deleted in `8baf2b3`",
@@ -163,7 +165,7 @@ def test_a_line_past_120_characters_is_caught(tmp_path: Path) -> None:
 
 # The trees whose comments carry no history. `ui/` and `evaluation/` keep theirs
 # until the work that reshapes each rewrites it.
-_COMMENT_TREES = ("isekai", "tools", "tests", "Dockerfile")
+_COMMENT_TREES = ("isekai", "tools", "tests", "Dockerfile", "pyproject.toml", ".github")
 _DEFINITIONS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
 
 
@@ -187,7 +189,7 @@ def _python_prose(text: str) -> Iterator[tuple[int, str]]:
 
 
 def _shell_prose(text: str) -> Iterator[tuple[int, str]]:
-    """Yield each `#` line of a shell script or a `Dockerfile`, with its line."""
+    """Yield each `#` line of a shell script, `Dockerfile`, TOML or YAML file."""
     for number, line in enumerate(text.splitlines(), 1):
         if line.lstrip().startswith("#"):
             yield number, line
@@ -202,7 +204,7 @@ def comment_history(root: Path, paths: list[str]) -> list[str]:
     for name in paths:
         if name.endswith(".py"):
             reader = _python_prose
-        elif name.endswith(".sh") or Path(name).name == "Dockerfile":
+        elif name.endswith((".sh", ".toml", ".yml")) or Path(name).name == "Dockerfile":
             reader = _shell_prose
         else:
             continue
@@ -239,13 +241,24 @@ def test_history_in_a_comment_or_a_docstring_is_caught(
         f'@pytest.mark.spec_exempt("{cited}")\ndef test() -> None: ...\n'
     )
     (tmp_path / "Dockerfile").write_text(f"FROM x\n# kept, {cited}\n")
-    names = ["comment.py", "docstring.py", "reason.py", "Dockerfile"]
+    (tmp_path / "config.toml").write_text(f"x = 1\n# kept, {cited}\n")
+    (tmp_path / "workflow.yml").write_text(f"on: push\n# kept, {cited}\n")
+    names = [
+        "comment.py",
+        "docstring.py",
+        "reason.py",
+        "Dockerfile",
+        "config.toml",
+        "workflow.yml",
+    ]
 
     assert comment_history(tmp_path, names) == [
         "comment.py:1",
         "docstring.py:2",
         "reason.py:1",
         "Dockerfile:2",
+        "config.toml:2",
+        "workflow.yml:2",
     ]
 
 
@@ -256,6 +269,8 @@ def test_a_third_partys_version_and_code_are_not_history(tmp_path: Path) -> None
     (tmp_path / "data.py").write_text(
         '"""The pack at v0.2.2.4."""\nRUNS = ".data/v0.20"  # the pack, v0.2.2.4\n'
     )
-    (tmp_path / "Dockerfile").write_text("FROM base:v0.21\n# the pack at v0.2.2.4\n")
+    (tmp_path / "Dockerfile").write_text(
+        "FROM base:v0.21\n# the pack at v0.2.2.4\n# pinned; v1.1.5 and v17.0\n"
+    )
 
     assert comment_history(tmp_path, ["data.py", "Dockerfile"]) == []

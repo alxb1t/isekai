@@ -6,6 +6,7 @@ through the flow that owns it, because there is no schema document outside a
 flow directory.
 """
 
+import ast
 import json
 from pathlib import Path
 
@@ -65,6 +66,43 @@ def test_the_schema_declares_the_sixteen_fields_in_prompt_order(
     assert schema.names == PROMPT_ORDER
 
 
+# A literal holding this many schema names is an ordering of them; a pair such as
+# `("pose", "gaze")` is not.
+ORDERING_THRESHOLD = 3
+# Its literals are the field map's criteria, not an order.
+ORDERING_CARVE_OUT = "tools/derive_field_map.py"
+
+
+def field_name_literals(root: Path) -> list[str]:
+    """Return each tuple, list, set or dict literal holding the names of the schema.
+
+    A literal counts when it holds `ORDERING_THRESHOLD` or more distinct names.
+    e.g. `("pose", "gaze", "count")` on line 3 of `isekai/x.py` -> `isekai/x.py:3`
+    """
+    found = []
+    for tree in ("isekai", "evaluation", "tools"):
+        for path in sorted((root / tree).rglob("*.py")):
+            name = path.relative_to(root).as_posix()
+            if name == ORDERING_CARVE_OUT:
+                continue
+            for node in ast.walk(ast.parse(path.read_text())):
+                if isinstance(node, ast.Dict):
+                    items = [key for key in node.keys if key is not None]
+                    items += node.values
+                elif isinstance(node, ast.Tuple | ast.List | ast.Set):
+                    items = node.elts
+                else:
+                    continue
+                held = {
+                    item.value
+                    for item in items
+                    if isinstance(item, ast.Constant) and item.value in PROMPT_ORDER
+                }
+                if len(held) >= ORDERING_THRESHOLD:
+                    found.append(f"{name}:{node.lineno}")
+    return found
+
+
 @pytest.mark.spec("sheet:schema:field-order-is-declared-once")
 def test_no_second_ordering_is_defined_anywhere_else() -> None:
     # The field list appears in the schema document and in this test, which pins
@@ -76,6 +114,24 @@ def test_no_second_ordering_is_defined_anywhere_else() -> None:
         if "hair_silhouette" in path.read_text()
     ]
     assert carriers == []
+    assert field_name_literals(root) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_no_second_ordering_is_defined_anywhere_else"
+)
+def test_the_ordering_check_catches_a_literal_of_field_names(tmp_path: Path) -> None:
+    for name, text in {
+        "isekai/a.py": 'ORDER = ("count", "pose", "gaze")\n',
+        "evaluation/b.py": 'BY = {"count": 1, "pose": 2, "gaze": 3}\n',
+        "isekai/c.py": 'PAIR = ("pose", "gaze")\n',
+        "tools/derive_field_map.py": 'CRITERIA = ("count", "pose", "gaze")\n',
+    }.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    assert field_name_literals(tmp_path) == ["isekai/a.py:1", "evaluation/b.py:1"]
 
 
 @pytest.mark.spec("sheet:schema:field-order-is-declared-once")
