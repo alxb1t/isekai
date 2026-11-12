@@ -211,7 +211,7 @@ def test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned(
     expect(page.get_by_role("button", name="Remove first.jpg")).to_be_disabled()
     page.locator(".import__tile").first.focus()
     chosen: list[FileChooser] = []
-    page.on("filechooser", chosen.append)
+    page.on("filechooser", lambda chooser: chosen.append(chooser))
     page.keyboard.press("Shift+A")
     page.keyboard.press("Backspace")
     expect(page.locator(".import__tile")).to_have_count(len(files))
