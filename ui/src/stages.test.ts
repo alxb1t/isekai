@@ -2,7 +2,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { expect } from 'vitest'
 import { forward, held, none } from './pairs'
 import { routes } from './routes'
-import { circled, floorOf, forwardOf, modeOf, skipped, startStep, stepsOf } from './stages'
+import { circled, floorOf, forwardOf, modeOf, shortStep, skipped, startStep, stepsOf } from './stages'
 import { spec } from './test/spec'
 import type { Pair, Stage1, Tattoo, TattooLimits } from './types'
 
@@ -33,9 +33,9 @@ const marked = (mode: Parameters<typeof stepsOf>[0]) =>
   stepsOf(mode).map(({ step, number }) => `${circled(number)} ${step}`)
 
 spec('ui:stages:the-stepper-lists-the-steps-of-the-mode', () => {
-  expect(marked('two-stage')).toEqual(['① tattoo', '② outline', '③ photo', '④ render'])
-  expect(marked('direct')).toEqual(['① tattoo', '② outline', '③ render'])
-  expect(marked('cut')).toEqual(['① tattoo', '② outline', '④ render'])
+  expect(marked('two-stage')).toEqual(['① tattoo', '② outline', '③ photo', '④ render', '⑤ review'])
+  expect(marked('direct')).toEqual(['① tattoo', '② outline', '③ render', '⑤ review'])
+  expect(marked('cut')).toEqual(['① tattoo', '② outline', '④ render', '⑤ review'])
   // A number names one screen: the photograph stage is 3 and the render after it is 4.
   expect(stepsOf('two-stage').map((one) => one.label)).toContain('photograph ↔ render')
   expect(stepsOf('direct').map((one) => one.label)).toContain('tattoo ↔ render')
@@ -96,6 +96,16 @@ spec('ui:place-route:a-skipped-step-redirects-to-the-step-in-its-place', async (
   expect(skipped('two-stage', 'photo')).toBe('photo')
   expect(skipped('cut', 'render')).toBe('render')
   expect(skipped('direct', 'outline')).toBe('outline')
+  // The review before the stages' floors goes to the earliest stage short of its floor.
+  expect(skipped('two-stage', 'review', 'photo')).toBe('photo')
+  expect(skipped('cut', 'review', 'render')).toBe('render')
+  expect(skipped('cut', 'review')).toBe('review')
+  expect(shortStep('two-stage', { first: 5, second: 0 }, LIMITS)).toBe('photo')
+  expect(shortStep('two-stage', { first: 6, second: 7 }, LIMITS)).toBe('render')
+  expect(shortStep('two-stage', { first: 6, second: 8 }, LIMITS)).toBeNull()
+  expect(shortStep('direct', { first: 0, second: 5 }, LIMITS)).toBe('render')
+  expect(shortStep('direct', { first: 0, second: 6 }, LIMITS)).toBeNull()
+  expect(shortStep('cut', { first: 0, second: 7 }, LIMITS)).toBe('render')
 
   // The route knows the steps; the screen replaces it with the step the read mode takes.
   const router = createRouter({ history: createMemoryHistory(), routes })

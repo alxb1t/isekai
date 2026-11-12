@@ -509,6 +509,11 @@ export interface TattooList {
   stage1?: Record<string, Stage1>
 }
 
+/* A bake's answer: the number of the edit it queued. */
+export interface Baked {
+  edit: number
+}
+
 /* The placement preview: the ink on white as a JPEG, its crop in the target's pixels,
    and the automatic white point as a grey from 0 to 255. */
 export interface Preview {

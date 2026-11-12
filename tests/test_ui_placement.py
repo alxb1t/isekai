@@ -21,7 +21,13 @@ from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from PIL import Image, ImageDraw  # noqa: E402
 
-from isekai.foundation.run import Run, edit_files, open_run  # noqa: E402
+from isekai.foundation.artifacts import EDIT_FILE, PLACEMENT_FILE, read  # noqa: E402
+from isekai.foundation.run import (  # noqa: E402
+    Run,
+    edit_files,
+    open_run,
+    placement_file,
+)
 from isekai.interface.ui import HOST  # noqa: E402
 from isekai.interface.ui.app import create_app  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
@@ -465,6 +471,158 @@ def test_placement_route_preview_names_each_key_a_body_lacks(
         assert key in refused.json()["refusal"]
 
 
+def _bake(
+    client: TestClient, name: str, run: Run, pairs: object, **more: object
+) -> httpx2.Response:
+    """Post a bake of tattoo `name` on `run`'s render of seed 42."""
+    body = {k: v for k, v in _ask(run, "render", pairs).items() if k != "target"}
+    return client.post(f"/api/c/{COLLECTION}/tattoos/{name}/bake", json=body | more)
+
+
+def _stage1_held(client: TestClient, run: Run) -> None:
+    """Save six stage-1 pairs of `bow` on `run`'s photograph."""
+    saved = client.put(
+        _stage1(run.digest),
+        json={"pairs": _pairs(6, ONTO_PHOTO), "not_on_photo": False},
+    )
+    assert saved.status_code == 200, saved.text
+
+
+@pytest.mark.spec(
+    "tattoo:bake:a-bake-writes-the-composite-the-placement-and-the-record"
+)
+def test_placement_route_bake_queues_the_composite_the_placement_and_the_record(
+    library: Path, client: TestClient, photographed: Run
+) -> None:
+    _upload(library, client)
+    _stage1_held(client, photographed)
+    group = photographed.directory(FLOW, "outputs", "001")
+    before = snapshot(library)
+
+    baked = _bake(client, "bow", photographed, _pairs(8, ONTO_RENDER, ONTO_PHOTO))
+
+    assert baked.status_code == 200, baked.text
+    assert baked.json() == {"edit": 1}
+    image, record, composite = edit_files(group, SEED, 1)
+    added = set(snapshot(library)) - set(before)
+    assert {Path(name).name for name in added} == {
+        record.name,
+        composite.name,
+        placement_file(group, SEED, 1).name,
+    }
+    assert not image.exists()
+    placement = read(placement_file(group, SEED, 1), PLACEMENT_FILE)
+    assert (placement["tattoo"], placement["mode"]) == ("bow", "two-stage")
+    assert placement["places_on"] is None
+    assert placement["stage1"] == _pairs(6, ONTO_PHOTO)
+    assert read(record, EDIT_FILE)["source"] == f"{SEED}.png"
+    with Image.open(composite) as kept:
+        assert kept.size == ARM
+
+
+@pytest.mark.spec("tattoo:bake-chain:a-bake-on-a-baked-edit-chains")
+def test_placement_route_bake_on_a_baked_edit_is_placed_on_that_edit(
+    library: Path, client: TestClient, photographed: Run
+) -> None:
+    _upload(library, client)
+    _stage1_held(client, photographed)
+    group = photographed.directory(FLOW, "outputs", "001")
+    stage2 = _pairs(8, ONTO_RENDER, ONTO_PHOTO)
+    assert _bake(client, "bow", photographed, stage2).status_code == 200
+    Image.new("RGB", ARM, (90, 90, 90)).save(edit_files(group, SEED, 1)[0])
+
+    chained = _bake(client, "bow", photographed, stage2, edit=1)
+
+    assert chained.status_code == 200, chained.text
+    assert chained.json() == {"edit": 2}
+    assert read(placement_file(group, SEED, 2), PLACEMENT_FILE)["places_on"] == 1
+    assert (
+        read(edit_files(group, SEED, 2)[1], EDIT_FILE)["source"] == f"{SEED}.edit-1.png"
+    )
+    assert read(placement_file(group, SEED, 1), PLACEMENT_FILE)["places_on"] is None
+
+
+@pytest.mark.spec("tattoo:bake-chain:a-pending-edit-cannot-be-placed-on")
+def test_placement_route_bake_on_an_edit_with_no_image_is_refused_and_writes_nothing(
+    library: Path, client: TestClient, photographed: Run
+) -> None:
+    _upload(library, client)
+    _stage1_held(client, photographed)
+    group = photographed.directory(FLOW, "outputs", "001")
+    edit_files(group, SEED, 1)[1].write_text("{}")
+    before = snapshot(library)
+
+    pending = _bake(
+        client, "bow", photographed, _pairs(8, ONTO_RENDER, ONTO_PHOTO), edit=1
+    )
+
+    assert pending.status_code == 409
+    assert "edit 1 of 42 has no image yet" in pending.json()["refusal"]
+    assert snapshot(library) == before
+
+
+@pytest.mark.spec("tattoo:bake:a-bake-short-of-its-floor-writes-nothing")
+def test_placement_route_bake_a_stage_short_of_its_floor_is_refused_and_writes_nothing(
+    library: Path, client: TestClient, photographed: Run
+) -> None:
+    _upload(library, client)
+    _stage1_held(client, photographed)
+    before = snapshot(library)
+
+    short = _bake(client, "bow", photographed, _pairs(7, ONTO_RENDER, ONTO_PHOTO))
+
+    assert short.status_code == 409
+    assert "at least 8 pairs" in short.json()["refusal"]
+    assert snapshot(library) == before
+
+
+@pytest.mark.spec("tattoo:bake:the-photograph-never-enters-the-run")
+def test_placement_route_bake_of_a_cut_copies_no_photograph_into_the_run(
+    library: Path, client: TestClient, photographed: Run
+) -> None:
+    _cut(client, photographed)
+    client.put(
+        "/api/tattoos/arm/outline",
+        json={
+            "points": _around(34, 24),
+            "closed": True,
+            "white": 1.0,
+            "neutral": True,
+            "depth": 1.6,
+        },
+    )
+    before = snapshot(library)
+
+    baked = _bake(client, "arm", photographed, _pairs(8, ONTO_RENDER))
+
+    assert baked.status_code == 200, baked.text
+    after = snapshot(library)
+    added = {name: body for name, body in after.items() if name not in before}
+    assert len(added) == 3
+    assert _arm() not in added.values()
+    assert {name: after[name] for name in before} == before
+
+
+@pytest.mark.spec_exempt(
+    "structural: a bake names what a body lacks and refuses a bad one"
+)
+def test_placement_route_bake_refuses_a_body_lacking_a_key_or_naming_no_render(
+    library: Path, client: TestClient, photographed: Run
+) -> None:
+    _upload(library, client)
+    before = snapshot(library)
+
+    lacking = client.post(f"/api/c/{COLLECTION}/tattoos/bow/bake", json={"seed": "42"})
+    absent = _bake(client, "bow", photographed, _pairs(8, ONTO_RENDER), seed="43")
+
+    assert lacking.status_code == 409
+    for key in ("digest", "flow", "version", "pairs", "limb", "exclusions"):
+        assert key in lacking.json()["refusal"]
+    assert absent.status_code == 409
+    assert "no render is here" in absent.json()["refusal"]
+    assert snapshot(library) == before
+
+
 def _taking_away(app: FastAPI) -> list[str]:
     """Return each route under `/api` that names a tattoo and deletes or renames one."""
     found = []
@@ -486,7 +644,7 @@ def _placement_routes(app: FastAPI) -> list[tuple[str, str]]:
         (method, getattr(route, "path", ""))
         for route in app.routes
         if "/stage1/" in getattr(route, "path", "")
-        or getattr(route, "path", "").endswith("/preview")
+        or getattr(route, "path", "").endswith(("/preview", "/bake"))
         for method in sorted(getattr(route, "methods", None) or ())
         if method != "HEAD"
     ]
@@ -502,6 +660,7 @@ def test_placement_route_guard_no_route_naming_a_tattoo_deletes_or_renames_one(
     assert _taking_away(app) == []
     assert sorted(_placement_routes(app)) == [
         ("GET", "/api/tattoos/{name}/stage1/{digest}"),
+        ("POST", "/api/c/{collection}/tattoos/{name}/bake"),
         ("POST", "/api/c/{collection}/tattoos/{name}/preview"),
         ("PUT", "/api/tattoos/{name}/stage1/{digest}"),
     ]
@@ -536,7 +695,7 @@ def test_placement_route_guard_answers_each_new_route_before_its_handler(
     app = client.app
     assert isinstance(app, FastAPI)
     routes = _placement_routes(app)
-    assert len(routes) == 3
+    assert len(routes) == 4
 
     for method, path in routes:
         url = (

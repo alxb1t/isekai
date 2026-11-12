@@ -6,7 +6,7 @@ The phases: the stages with the preview, the limb and exclusions, the bake, the 
 
 - [x] 1 — Stages · hard
 - [x] 2 — Limb and exclusions · moderate
-- [ ] 3 — Bake · hard
+- [x] 3 — Bake · hard
 - [ ] 4 — Leave · moderate
 - [ ] 5 — Docs · moderate
 
@@ -80,33 +80,33 @@ The phases: the stages with the preview, the limb and exclusions, the bake, the 
 
 ## 3 — Bake
 
-- [ ] 3.1 **HALT CHECK** The tattoo edit's request, its numbering and its discard are built: its tests carry `edit_request` and `edit_discard`.
+- [x] 3.1 **HALT CHECK** The tattoo edit's request, its numbering and its discard are built: its tests carry `edit_request` and `edit_discard`.
   Verify: `uv run pytest tests/test_edit.py tests/test_edit_session.py -k "edit_request or edit_discard"` passes.
-- [ ] 3.2 Add to `isekai/foundation/artifacts.py` `PLACEMENT_FILE` and `PlacementRecord`, and to `isekai/foundation/run.py` `placement_file` per [D5](design.md#d5); tests in `tests/test_edit_placement.py` carry `placement_names`.
+- [x] 3.2 Add to `isekai/foundation/artifacts.py` `PLACEMENT_FILE` and `PlacementRecord`, and to `isekai/foundation/run.py` `placement_file` per [D5](design.md#d5); tests in `tests/test_edit_placement.py` carry `placement_names`.
   Verify: `uv run pytest tests/test_edit_placement.py -k placement_names` passes.
-- [ ] 3.3 Add to `isekai/pipeline/edit.py` `request_placed` per [D5](design.md#d5), sharing `request`'s body, the composite as bytes, the composite then the placement then the record written, a refusal writing nothing; tests carry `placement_request`.
+- [x] 3.3 Add to `isekai/pipeline/edit.py` `request_placed` per [D5](design.md#d5), sharing `request`'s body, the composite as bytes, the composite then the placement then the record written, a refusal writing nothing; tests carry `placement_request`.
   Verify: `uv run pytest tests/test_edit_placement.py -k placement_request` passes.
-- [ ] 3.4 Make `request_placed` refuse an edit image that is not on disk, naming that edit's wait, and record `places_on` per [D6](design.md#d6); tests carry `placement_chain`.
+- [x] 3.4 Make `request_placed` refuse an edit image that is not on disk, naming that edit's wait, and record `places_on` per [D6](design.md#d6); tests carry `placement_chain`.
   Verify: `uv run pytest tests/test_edit_placement.py -k placement_chain` passes.
-- [ ] 3.5 Make the unread list of `isekai/interface/run_view.py` and the listings skip a placement record, and make the edit stage's discard and `discard_render` in `isekai/pipeline/generate.py` delete it with its edit; tests carry `placement_listing` and `placement_discard`, one in `tests/test_run_view.py`.
+- [x] 3.5 Make the unread list of `isekai/interface/run_view.py` and the listings skip a placement record, and make the edit stage's discard and `discard_render` in `isekai/pipeline/generate.py` delete it with its edit; tests carry `placement_listing` and `placement_discard`, one in `tests/test_run_view.py`.
   Verify: `uv run pytest tests/test_edit_placement.py tests/test_run_view.py -k "placement_listing or placement_discard"` passes.
-- [ ] 3.6 Add to `tattoos.py` `Composite` and `composite` per [D5](design.md#d5): the layer over the whole render, Multiplied, as PNG bytes, and `values`, every field of the placement but `places_on` and the schema; tests carry `placement_composite` and hold that set.
+- [x] 3.6 Add to `tattoos.py` `Composite` and `composite` per [D5](design.md#d5): the layer over the whole render, Multiplied, as PNG bytes, and `values`, every field of the placement but `places_on` and the schema; tests carry `placement_composite` and hold that set.
   Verify: `uv run pytest tests/test_tattoo_placement.py -k placement_composite` passes.
-- [ ] 3.7 Add to `app.py` `POST /api/c/{collection}/tattoos/{name}/bake` per [D5](design.md#d5), calling `composite` and `request_placed` with the tracked edit `tattoo-wai` and the wiring's `rng`, and the route in the module's route table; tests in `tests/test_ui_placement.py` carry `placement_route_bake`, and `placement_route_guard` names the bake route among those the guard answers.
+- [x] 3.7 Add to `app.py` `POST /api/c/{collection}/tattoos/{name}/bake` per [D5](design.md#d5), calling `composite` and `request_placed` with the tracked edit `tattoo-wai` and the wiring's `rng`, and the route in the module's route table; tests in `tests/test_ui_placement.py` carry `placement_route_bake`, and `placement_route_guard` names the bake route among those the guard answers.
   Verify: `uv run pytest tests/test_ui_placement.py -k "placement_route_bake or placement_route_guard"` passes.
-- [ ] 3.8 Hold that `app.py` writes no file of its own and that the imports and layers hold.
+- [x] 3.8 Hold that `app.py` writes no file of its own and that the imports and layers hold.
   Verify: `uv run pytest tests/test_ui.py tests/test_pipeline_cli.py tests/test_layers.py` passes.
-- [ ] 3.9 Add `ui/src/review.ts` per [D8](design.md#d8): `summary` and `bakeState`; its tests in `ui/src/review.test.ts` bind through `spec`.
+- [x] 3.9 Add `ui/src/review.ts` per [D8](design.md#d8): `summary` and `bakeState`; its tests in `ui/src/review.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/review.test.ts` passes.
-- [ ] 3.10 Add to `ui/src/api.ts` `export function bakeTattoo` and to `ui/src/types.ts` `Bake`.
+- [x] 3.10 Add to `ui/src/api.ts` `export function bakeTattoo` and to `ui/src/types.ts` `Bake`.
   Verify: `git grep -n "export function bakeTattoo" ui/src/api.ts` prints it.
-- [ ] 3.11 Add `ui/src/components/ReviewBake.vue`, the review step: the image with the tattoo over it, the crop before and after, the summary from `summary`, a button back to each earlier stage, and *Bake*; show it in `ui/src/views/Place.vue` for the step `review`.
+- [x] 3.11 Add `ui/src/components/ReviewBake.vue`, the review step: the image with the tattoo over it, the crop before and after, the summary from `summary`, a button back to each earlier stage, and *Bake*; show it in `ui/src/views/Place.vue` for the step `review`.
   Verify: `git grep -n "ReviewBake" -- ui/src/views` prints the use.
-- [ ] 3.12 Add the step `review` to the step set of `ui/src/routes.ts`, and a test in `ui/src/viewkey.test.ts` that it resolves to the `place` route.
+- [x] 3.12 Add the step `review` to the step set of `ui/src/routes.ts`, and a test in `ui/src/viewkey.test.ts` that it resolves to the `place` route.
   Verify: `npm --prefix ui run test -- src/viewkey.test.ts` passes.
-- [ ] 3.13 Hold the phase's tests under the acceptance's selector.
+- [x] 3.13 Hold the phase's tests under the acceptance's selector.
   Verify: `uv run pytest tests/test_tattoo_placement.py tests/test_edit_placement.py tests/test_ui_placement.py -k placement` passes.
-- [ ] 3.14 Hold the browser's types and unit tests.
+- [x] 3.14 Hold the browser's types and unit tests.
   Verify: `uv run python -m tools.test_ui` exits 0.
 
 ## 4 — Leave

@@ -9,9 +9,11 @@ import json
 import math
 from pathlib import Path
 
+import numpy as np
 import pytest
 from PIL import Image, ImageDraw
 
+from isekai.foundation.artifacts import PlacementRecord
 from isekai.foundation.refusal import Refusal
 from isekai.pipeline import tattoos
 from isekai.pipeline.tattoos import (
@@ -541,3 +543,136 @@ def test_placement_preview_ink_view_is_the_layer_flattened_on_white(
     assert layer.image.mode == "RGBA"
     assert (*layer.origin, *layer.image.size) == view.box
     assert layer.white == view.white
+
+
+def _baked(
+    tmp_path: Path,
+    files: tuple[Path, Path],
+    pairs: object,
+    name: str = "bow",
+    limb: object = None,
+    exclusions: object = (),
+) -> tattoos.Composite:
+    """Bake `name` on the render of `files` with the stage's `pairs`."""
+    photograph, render = files
+    return tattoos.composite(
+        tmp_path, name, photograph, DIGEST, render, pairs, limb, exclusions
+    )
+
+
+def _pixels(made: tattoos.Composite) -> "np.ndarray":
+    """Return the composite's PNG, decoded to RGB levels."""
+    return np.asarray(Image.open(io.BytesIO(made.png)).convert("RGB"))
+
+
+@pytest.mark.spec("tattoo:bake:the-composite-is-the-render-with-the-ink-multiplied-on")
+def test_placement_composite_is_the_render_away_from_the_ink_and_darker_on_it(
+    tmp_path: Path,
+) -> None:
+    files = _two_stage(tmp_path)
+    landed = (
+        CENTRE[0] + ONTO_PHOTO[0] + ONTO_RENDER[0],
+        CENTRE[1] + ONTO_PHOTO[1] + ONTO_RENDER[1],
+    )
+
+    made = _baked(tmp_path, files, _pairs(8, ONTO_RENDER, ONTO_PHOTO))
+
+    pixels = _pixels(made)
+    assert pixels.shape == (ARM[1], ARM[0], 3)
+    assert (pixels[0:20, 0:20] == 90).all()
+    assert (pixels[landed[1], landed[0]] < 70).all()
+    assert (pixels[landed[1] + 80, landed[0] + 80] == 90).all()
+
+
+@pytest.mark.spec("tattoo:bake:the-placement-holds-what-was-placed")
+def test_placement_composite_values_hold_every_field_of_the_placement_but_two(
+    tmp_path: Path,
+) -> None:
+    cut(tmp_path, "arm", DIGEST, ARM)
+    save_outline(tmp_path, "arm", _around(34, 24), True, 1.0, True, 1.6)
+    pairs = _pairs(8, ONTO_RENDER)
+    limb = [[100.0, 80.0], [330.0, 80.0], [330.0, 260.0]]
+    hole = [[200.0, 150.0], [220.0, 150.0], [220.0, 170.0]]
+
+    made = _baked(tmp_path, _files(tmp_path), pairs, "arm", limb, [hole])
+
+    assert set(made.values) == PlacementRecord.__required_keys__ - {
+        "schema",
+        "places_on",
+    }
+    assert (made.values["tattoo"], made.values["kind"]) == ("arm", "cut")
+    assert (made.values["mode"], made.values["cut_from"]) == ("cut", DIGEST)
+    assert made.values["outline"] == {
+        "points": _around(34, 24),
+        "white": 1.0,
+        "neutral": True,
+        "depth": 1.6,
+    }
+    assert made.values["pairs"] == pairs
+    assert made.values["limb"] == limb
+    assert made.values["exclusions"] == [hole]
+    assert made.values["stage1"] is None
+
+
+@pytest.mark.spec("tattoo:bake:the-placement-keeps-the-stage-1-pairs-it-used")
+def test_placement_composite_values_copy_the_stage_one_pairs_of_the_bake(
+    tmp_path: Path,
+) -> None:
+    files = _two_stage(tmp_path)
+    used = _pairs(6, ONTO_PHOTO)
+    stage2 = _pairs(8, ONTO_RENDER, ONTO_PHOTO)
+
+    made = _baked(tmp_path, files, stage2)
+    save_stage1(tmp_path, "bow", DIGEST, _pairs(7, (31, 21)), False)
+
+    assert made.values["stage1"] == used
+    assert _baked(tmp_path, files, stage2).values["stage1"] == _pairs(7, (31, 21))
+
+
+@pytest.mark.spec("tattoo:bake:a-bake-short-of-its-floor-writes-nothing")
+def test_placement_composite_a_stage_short_of_its_floor_is_refused_and_writes_nothing(
+    tmp_path: Path,
+) -> None:
+    files = _two_stage(tmp_path)
+    stage2 = _pairs(8, ONTO_RENDER, ONTO_PHOTO)
+
+    def kept() -> dict[Path, bytes]:
+        return {
+            item: item.read_bytes() for item in tmp_path.rglob("*") if item.is_file()
+        }
+
+    before = kept()
+    with pytest.raises(Refusal, match="at least 8 pairs .* holds 7"):
+        _baked(tmp_path, files, stage2[:7])
+    assert kept() == before
+
+    save_stage1(tmp_path, "bow", DIGEST, _pairs(5, ONTO_PHOTO), False)
+    before = kept()
+    with pytest.raises(Refusal, match=r"stage 1 holds 5 pairs .* needs 6"):
+        _baked(tmp_path, files, stage2)
+    assert kept() == before
+
+    save_stage1(tmp_path, "bow", DIGEST, [], True)
+    before = kept()
+    with pytest.raises(Refusal, match="at least 6 pairs .* holds 5"):
+        _baked(tmp_path, files, _pairs(5, ONTO_RENDER))
+    assert _baked(tmp_path, files, _pairs(6, ONTO_RENDER)).png
+    assert kept() == before
+
+
+@pytest.mark.spec_exempt(
+    "structural: a lone point, a short region and an unreadable render are refused"
+)
+def test_placement_composite_a_lone_point_a_short_limb_and_a_missing_render_refuse(
+    tmp_path: Path,
+) -> None:
+    files = _two_stage(tmp_path)
+    stage2 = _pairs(8, ONTO_RENDER, ONTO_PHOTO)
+
+    with pytest.raises(Refusal, match="pair 9 has a point with no match"):
+        _baked(tmp_path, files, [*stage2, [[3, 4], None]])
+    with pytest.raises(Refusal, match=r"limb .*2 points.* at least 3"):
+        _baked(tmp_path, files, stage2, limb=[[1, 1], [5, 5]])
+    files[1].unlink()
+    with pytest.raises(Refusal, match="render.png cannot be read"):
+        _baked(tmp_path, files, stage2)

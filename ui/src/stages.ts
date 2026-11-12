@@ -5,11 +5,11 @@ import type { Stage1, Tattoo, TattooLimits } from './types'
    mode takes in place of one it skips. A number names one screen in every mode. */
 
 export type Mode = 'cut' | 'direct' | 'two-stage'
-export type Step = 'tattoo' | 'outline' | 'photo' | 'render'
+export type Step = 'tattoo' | 'outline' | 'photo' | 'render' | 'review'
 
 export interface StepInfo {
   step: Step
-  /* The step's number: 1 to 4, kept in every mode, so a step a mode skips is absent. */
+  /* The step's number: 1 to 5, kept in every mode, so a step a mode skips is absent. */
   number: number
   label: string
 }
@@ -28,22 +28,24 @@ export function modeOf(kind: Tattoo['kind'], notOnPhoto: boolean): Mode {
   return notOnPhoto ? 'direct' : 'two-stage'
 }
 
-/** Return the steps of `mode`, each with the number it keeps.
-    e.g. a cut -> tattoo ①, outline ②, photograph ↔ render ④ */
+/** Return the steps of `mode`, each with the number it keeps, the review last.
+    e.g. a cut -> tattoo ①, outline ②, photograph ↔ render ④, review ⑤ */
 export function stepsOf(mode: Mode): StepInfo[] {
   const first: StepInfo[] = [
     { step: 'tattoo', number: 1, label: 'tattoo' },
     { step: 'outline', number: 2, label: 'outline' },
   ]
+  const last: StepInfo = { step: 'review', number: 5, label: 'review' }
   if (mode === 'two-stage') {
     return [
       ...first,
       { step: 'photo', number: 3, label: 'tattoo ↔ photograph' },
       { step: 'render', number: 4, label: 'photograph ↔ render' },
+      last,
     ]
   }
-  if (mode === 'direct') return [...first, { step: 'render', number: 3, label: 'tattoo ↔ render' }]
-  return [...first, { step: 'render', number: 4, label: 'photograph ↔ render' }]
+  if (mode === 'direct') return [...first, { step: 'render', number: 3, label: 'tattoo ↔ render' }, last]
+  return [...first, { step: 'render', number: 4, label: 'photograph ↔ render' }, last]
 }
 
 /* Where the outline step goes forward: to a step, or waiting with its reason. */
@@ -72,9 +74,23 @@ export function startStep(tattoo: Tattoo, state: Stage1 | undefined, floor: numb
 }
 
 /** Return the step `mode` takes in place of `step`: the render stage for the photograph
-    stage of a mode that has none, else `step` itself. e.g. a cut asked `photo` -> "render" */
-export function skipped(mode: Mode, step: Step): Step {
+    stage of a mode that has none, the earliest stage `short` of its floor for the review, else
+    `step` itself. e.g. a cut asked `photo` -> "render"; `review` with `short` "render" -> "render" */
+export function skipped(mode: Mode, step: Step, short: Step | null = null): Step {
+  if (step === 'review' && short !== null) return short
   return step === 'photo' && mode !== 'two-stage' ? 'render' : step
+}
+
+/** Return the earliest stage of `mode` whose pairs, `first` for stage 1 and `second` for the
+    later stage, are short of their floor, or null when none is.
+    e.g. a two-stage tattoo with 4 stage-1 pairs against 6 -> "photo" */
+export function shortStep(
+  mode: Mode,
+  held: { first: number; second: number },
+  limits: TattooLimits,
+): Step | null {
+  if (mode === 'two-stage' && held.first < floorOf(mode, 'photo', limits)) return 'photo'
+  return held.second < floorOf(mode, 'render', limits) ? 'render' : null
 }
 
 /** Return the pairs a stage goes forward with: stage 1's floor on the photograph, else the

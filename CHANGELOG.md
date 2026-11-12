@@ -15,6 +15,8 @@ its new digest.
   (0122 D1–D4, D7–D10).
 - The render stage draws a limb that keeps the ink and exclusions that remove it, a colour token in each theme, and the
   preview refuses a region short of `region_min` points (0122 D2, D8, D10).
+- A bake queues an edit request: the composite over the whole render and a `<seed>.edit-<k>.placement.json` go through
+  the edit stage, placed on a render or a baked edit; the review step shows the placement and bakes it (0122 D5, D6, D8, D9).
 
 ## [0.81.0] - 2026-11-12
 

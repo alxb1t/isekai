@@ -566,19 +566,20 @@ def rendered_at(image: Path) -> tuple[Run, str, int, int]:
 # listing reads it as one.
 EDIT_STEM = re.compile(r"^(?P<seed>[0-9]+)\.edit-(?P<k>[1-9][0-9]*)$")
 
-# An edit's files beside its image, after the stem: the composite it was made from
-# and its record.
+# An edit's files beside its image, after the stem: the composite it was made from,
+# its record and, for a placed tattoo, the placement it was made from.
 EDIT_COMPOSITE = ".composite.png"
 EDIT_RECORD = ".json"
+EDIT_PLACEMENT = ".placement.json"
 
 
 def is_edit_file(name: str) -> bool:
     """Return whether `name` is a file an edit writes beside its source.
 
-    The image, the record and the composite of an edit of a render's seed.
-    e.g. "42.edit-1.composite.png" -> True; "42.edit-0.png", "x.edit-1.json" -> False
+    The image, record, composite and placement of an edit of a render's seed.
+    e.g. "42.edit-1.placement.json" -> True; "42.edit-0.png", "x.edit-1.json" -> False
     """
-    for suffix in (EDIT_COMPOSITE, EDIT_RECORD, ".png"):
+    for suffix in (EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD, ".png"):
         named = EDIT_STEM.fullmatch(name.removesuffix(suffix))
         if name.endswith(suffix) and named and is_seed(named["seed"]):
             return True
@@ -606,17 +607,25 @@ def edit_files(group: Path, seed: int, k: int) -> tuple[Path, Path, Path]:
     )
 
 
+def placement_file(group: Path, seed: int, k: int) -> Path:
+    """Return the placement record of edit `k` of `seed`, in `group`.
+
+    e.g. (group, 42, 1) -> 42.edit-1.placement.json
+    """
+    return group / f"{edit_stem(seed, k)}{EDIT_PLACEMENT}"
+
+
 def edit_numbers(group: Path, seed: int) -> list[int]:
     """Return the numbers of `seed`'s edits that hold any file in `group`, ascending.
 
-    A listing: an image, a record or a composite each holds its number.
+    A listing: an image, a record, a composite or a placement each holds its number.
     e.g. a group holding 42.edit-1.json and 42.edit-3.png -> [1, 3]
     """
     if not group.is_dir():
         return []
     found: set[int] = set()
     for name in os.listdir(group):
-        for suffix in (".png", EDIT_COMPOSITE, EDIT_RECORD):
+        for suffix in (".png", EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD):
             match = EDIT_STEM.fullmatch(name.removesuffix(suffix))
             if name.endswith(suffix) and match and int(match["seed"]) == seed:
                 found.add(int(match["k"]))
@@ -633,14 +642,15 @@ def next_edit(group: Path, seed: int) -> int:
 def delete_edits(group: Path, seed: int, numbers: Iterable[int]) -> list[Path]:
     """Delete each file of the edits `numbers` of `seed` in `group`; return those gone.
 
-    Each edit's image goes first, then its record, then its composite, so a delete
-    cut short leaves a request that reads as pending rather than an image no record
-    explains.
+    Each edit's image goes first, then its record, its placement and its composite, so
+    a delete cut short leaves a request that reads as pending rather than an image no
+    record explains.
     e.g. (group, 42, [1]) -> [42.edit-1.png, 42.edit-1.json, 42.edit-1.composite.png]
     """
     deleted: list[Path] = []
     for number in numbers:
-        for path in edit_files(group, seed, number):
+        image, record, composite = edit_files(group, seed, number)
+        for path in (image, record, placement_file(group, seed, number), composite):
             if path.is_file():
                 path.unlink()
                 deleted.append(path)

@@ -63,6 +63,8 @@ POST /api/c/{collection}/tattoos/{name}/ink
 POST /api/c/{collection}/tattoos/{name}/preview
      {target, digest, flow, version, seed, edit, pairs, limb, exclusions}
      a JPEG, no-store
+POST /api/c/{collection}/tattoos/{name}/bake
+     {digest, flow, version, seed, edit, pairs, limb, exclusions}      {edit: k}
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
@@ -101,6 +103,7 @@ from isekai.foundation.artifacts import (
     renders_of,
     require,
 )
+from isekai.foundation.edit import load_edit
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -138,6 +141,7 @@ from isekai.interface.ui.jobs import KINDS, Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing, tattoos
 from isekai.pipeline.edit import image_of as edit_image_of
+from isekai.pipeline.edit import request_placed
 from isekai.pipeline.generate import discard_render, image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
@@ -208,6 +212,10 @@ PREVIEW_KEYS = (
     "limb",
     "exclusions",
 )
+
+# What a body names to bake a tattoo, and the tracked edit a bake requests.
+BAKE_KEYS = ("digest", "flow", "version", "seed", "pairs", "limb", "exclusions")
+BAKE_EDIT = "tattoo-wai"
 
 # Where gpunit's status answers are appended, in the library: a dot-file is listed
 # as no collection.
@@ -668,6 +676,39 @@ def create_app(
                 "X-Ink-White": str(made.white),
             },
         )
+
+    @app.post("/api/c/{collection}/tattoos/{name}/bake")
+    def post_bake(
+        collection: str, name: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Queue the edit request of a tattoo placed by pairs; answer its number.
+
+        The composite and the placement are made now and handed to the edit stage,
+        which writes the request's files and never its image: the render session
+        samples it.
+        """
+        _needs(payload, BAKE_KEYS)
+        one, image = placed_on(collection, payload)
+        made = tattoos.composite(
+            root,
+            name,
+            one.run.photo,
+            one.run.digest,
+            image,
+            payload["pairs"],
+            payload["limb"],
+            payload["exclusions"],
+        )
+        asked = request_placed(
+            load_edit(BAKE_EDIT),
+            image,
+            made.png,
+            made.values,
+            overrides={},
+            seed=None,
+            rng=wired.rng,
+        )
+        return {"edit": asked.number}
 
     @app.post("/api/c/{collection}/prepare")
     def post_prepare(collection: str) -> dict[str, Any]:

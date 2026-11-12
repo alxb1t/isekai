@@ -30,10 +30,11 @@ from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+from isekai.foundation.artifacts import PlacementValues
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import ID_DIGEST_CHARS, REPOSITORY
-from isekai.shared.chain import crop_box, flatten, place, polygon_mask
+from isekai.shared.chain import crop_box, flatten, multiply, place, polygon_mask
 from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.ink import (
     INK_CONFIG_PATH,
@@ -42,7 +43,7 @@ from isekai.shared.ink import (
     load_ink_config,
     white_grey,
 )
-from isekai.shared.tattoo import png_of
+from isekai.shared.tattoo import decode_render, png_of
 
 if TYPE_CHECKING:
     from PIL.Image import Image
@@ -933,6 +934,41 @@ def _region(points: object, label: str, floor: int) -> tuple[Point, ...]:
     return tuple(found)
 
 
+def _regions(
+    limb: object, exclusions: object, config: TattooConfig
+) -> tuple[tuple[Point, ...] | None, list[tuple[Point, ...]]]:
+    """Return the limb, or None for none, and each exclusion, refusing a short one."""
+    shape = _region(limb, "limb", config.region_min) if limb else None
+    holes = [
+        _region(one, f"exclusion {n}", config.region_min)
+        for n, one in enumerate(_listed(exclusions), 1)
+    ]
+    return shape, holes
+
+
+def _first_stage_held(name: str, held: Stage1, config: TattooConfig) -> None:
+    """Refuse a second stage whose first holds fewer pairs than its floor."""
+    if len(held.pairs) < config.floor_stage1:
+        raise Refusal(
+            f"stage 1 holds {len(held.pairs)} pairs and the render stage needs "
+            f"{config.floor_stage1}; pair {name} with the photograph first"
+        )
+
+
+def _stages(
+    placed: Sequence[Pair], held: Stage1, chained: bool
+) -> list[tuple[list[Point], list[Point]]]:
+    """Return the stages `place` takes, the one nearest the target first.
+
+    A stage's target side is each pair's second point and its source side the first;
+    `chained` adds the tattoo's pairs with the photograph behind the stage's own.
+    """
+    stages = [([b for _, b in placed], [a for a, _ in placed])]
+    if chained:
+        stages.append(([b for _, b in held.pairs], [a for a, _ in held.pairs]))
+    return stages
+
+
 def preview(
     library: Path,
     name: str,
@@ -973,27 +1009,15 @@ def preview(
             "photograph; ask it with the target `render`"
         )
     placed = _preview_pairs(pairs, config.preview_floor)
-    shape = _region(limb, "limb", config.region_min) if limb else None
-    holes = [
-        _region(one, f"exclusion {n}", config.region_min)
-        for n, one in enumerate(_listed(exclusions), 1)
-    ]
-    if (
-        mode == "two-stage"
-        and target == "render"
-        and len(held.pairs) < config.floor_stage1
-    ):
-        raise Refusal(
-            f"stage 1 holds {len(held.pairs)} pairs and the render stage needs "
-            f"{config.floor_stage1}; pair {name} with the photograph first"
-        )
+    shape, holes = _regions(limb, exclusions, config)
+    chained = mode == "two-stage" and target == "render"
+    if chained:
+        _first_stage_held(name, held, config)
     size = dimensions_or_refuse(
         photograph if target == "photo" else target_path,
         "the preview reads the target's own header -- reload the page",
     )
-    stages = [([b for _, b in placed], [a for a, _ in placed])]
-    if mode == "two-stage" and target == "render":
-        stages.append(([b for _, b in held.pairs], [a for a, _ in held.pairs]))
+    stages = _stages(placed, held, chained)
     layer = ink_layer(
         library,
         name,
@@ -1015,6 +1039,110 @@ def preview(
     ink = np.asarray(layer.image, dtype=np.float32) / 255.0
     flat = flatten(place(ink, layer.origin, stages, box, shape, holes))
     return Preview(_jpeg(Image.fromarray(flat), config.view_quality), box, layer.white)
+
+
+@dataclass(frozen=True)
+class Composite:
+    """A bake's composite as PNG bytes, and the placement values it was made from."""
+
+    png: bytes
+    values: PlacementValues
+
+
+def _lists(pairs: Sequence[Pair]) -> list[list[list[float]]]:
+    """Return `pairs` as the lists a record holds, the tattoo's point first."""
+    return [[[*first], [*second]] for first, second in pairs]
+
+
+def composite(
+    library: Path,
+    name: str,
+    photograph: Path,
+    digest: str,
+    render: Path,
+    pairs: object,
+    limb: object,
+    exclusions: object,
+) -> Composite:
+    """Return `render` with `name`'s warped ink multiplied on, over its whole grid.
+
+    `render` is the image the bake is placed on and `pairs` are the stage's own, `a`
+    the earlier image's point and `b` the render's. `values` is every field of the
+    placement but `places_on` and the schema. Refused for fewer pairs than the stage's
+    floor, a lone point, a short region, a second stage whose first is short, a cut
+    on another photograph, an open outline and a render that cannot be read. Nothing
+    is written.
+    """
+    import numpy as np
+    from PIL import Image
+
+    tattoo, outline = _load_named(library, name)
+    config = load_tattoo_config()
+    _on_its_photograph(tattoo, digest)
+    held = (
+        Stage1((), False)
+        if tattoo.kind == "cut"
+        else read_stage1(library, name, digest)
+    )
+    mode = mode_of(tattoo.kind, held.not_on_photo)
+    floor = config.floor_direct if mode == "direct" else config.floor_stage2
+    placed = _placed_pairs(pairs)
+    if len(placed) < floor:
+        raise Refusal(
+            f"a bake needs at least {floor} pairs on the render and this holds "
+            f"{len(placed)}; click more pairs"
+        )
+    shape, holes = _regions(limb, exclusions, config)
+    chained = mode == "two-stage"
+    if chained:
+        _first_stage_held(name, held, config)
+    try:
+        body = render.read_bytes()
+    except OSError as unreadable:
+        raise Refusal(
+            f"the render {render.name} cannot be read ({unreadable.strerror}); "
+            "reload the page"
+        ) from unreadable
+    skin = decode_render(body, render.name)
+    height, width = skin.shape[:2]
+    layer = ink_layer(
+        library,
+        name,
+        photograph,
+        digest,
+        outline.points,
+        outline.white,
+        outline.neutral,
+        outline.depth,
+    )
+    ink = np.asarray(layer.image, dtype=np.float32) / 255.0
+    over = place(
+        ink,
+        layer.origin,
+        _stages(placed, held, chained),
+        (0, 0, width, height),
+        shape,
+        holes,
+    )
+    darkened = multiply(skin.astype(np.float64), over)
+    kept = Image.fromarray(np.clip(darkened + 0.5, 0.0, 255.0).astype(np.uint8))
+    values: PlacementValues = {
+        "tattoo": name,
+        "kind": tattoo.kind,
+        "cut_from": tattoo.cut_from,
+        "mode": mode,
+        "outline": {
+            "points": [[*point] for point in outline.points],
+            "white": outline.white,
+            "neutral": outline.neutral,
+            "depth": outline.depth,
+        },
+        "stage1": _lists(held.pairs) if chained else None,
+        "pairs": _lists(placed),
+        "limb": [[*point] for point in shape] if shape else None,
+        "exclusions": [[[*point] for point in hole] for hole in holes],
+    }
+    return Composite(png_of(kept), values)
 
 
 def _listed(value: object) -> list[object]:

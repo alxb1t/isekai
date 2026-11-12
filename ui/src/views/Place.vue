@@ -5,10 +5,12 @@ import { renderDetail, tattoos, thumbAt, versionOf } from '../api'
 import { PLACING, usePlacing } from '../composables/usePlacing'
 import OutlineStep from '../components/OutlineStep.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import ReviewBake from '../components/ReviewBake.vue'
 import StagePhoto from '../components/StagePhoto.vue'
 import StageRender from '../components/StageRender.vue'
 import TattooPicker from '../components/TattooPicker.vue'
-import { type Step, circled, skipped, stepsOf } from '../stages'
+import { complete } from '../pairs'
+import { type Step, circled, shortStep, skipped, stepsOf } from '../stages'
 import type { RenderDetail, TattooList } from '../types'
 
 /* The placement screen (design spec J9): the render it places on, the steps built, and
@@ -117,13 +119,24 @@ watch(
   { immediate: true },
 )
 
+/* The earliest stage short of its floor: the review goes there until the pairs stand. */
+const short = computed(() =>
+  placing.mode.value && list.value
+    ? shortStep(
+        placing.mode.value,
+        { first: complete(placing.first.value).length, second: complete(placing.second.value).length },
+        list.value.limits,
+      )
+    : null,
+)
+
 /* The mode is read data, so the route cannot know a step it skips: once the tattoo is read,
    the route is replaced by the step its mode takes in place. */
 watch(
-  () => [placing.mode.value, props.step] as const,
-  ([mode, step]) => {
+  () => [placing.mode.value, props.step, short.value] as const,
+  ([mode, step, earliest]) => {
     if (mode === null || !props.name) return
-    const taken = skipped(mode, step)
+    const taken = skipped(mode, step, earliest)
     if (taken !== step) void router.replace(at(taken))
   },
   { immediate: true },
@@ -228,6 +241,16 @@ onUnmounted(() => void placing.settled())
       :version="version"
       :seed="seed"
       :limits="list.limits"
+      @forward="forwardTo('review')"
+    />
+    <ReviewBake
+      v-else-if="step === 'review' && name && placing.tattoo.value"
+      :key="`review-${name}`"
+      :place="place"
+      :version="version"
+      :seed="seed"
+      :limits="list.limits"
+      @back="forwardTo"
     />
   </section>
 </template>

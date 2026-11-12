@@ -54,7 +54,7 @@ spec('ui:place-route:the-route-does-not-collide-with-compare', () => {
   expect(router.resolve(`${BASE}/place/tattoo`).name).toBe('place')
   expect(router.resolve(`${BASE}/place/outline/bow`).params.name).toBe('bow')
   // The stages are steps of the same route, each with the tattoo's name.
-  for (const step of ['photo', 'render']) {
+  for (const step of ['photo', 'render', 'review']) {
     const resolved = router.resolve(`${BASE}/place/${step}/bow`)
     expect(resolved.name).toBe('place')
     expect(resolved.params).toMatchObject({ step, name: 'bow' })

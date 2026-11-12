@@ -467,11 +467,26 @@ def test_show_reads_the_files_an_edit_writes_beside_its_render(run: Run) -> None
     assert _below(lines, f"  {FLOW}/outputs/001") == ["     42"]
 
 
+@pytest.mark.spec("tattoo:placement-file:the-listings-skip-the-placement")
+def test_placement_listing_show_names_no_placement_record_unread(run: Run) -> None:
+    group = _rendered(run).directory(FLOW, OUTPUTS, "001")
+    for name in ("42.edit-1.json", "42.edit-1.placement.json"):
+        (group / name).write_bytes(b"x")
+
+    lines = report(run)
+
+    assert unread(run) == []
+    assert not any("not read" in line for line in lines)
+    assert _below(lines, f"  {FLOW}/outputs/001") == ["     42"]
+
+
 @pytest.mark.spec("edit:listing:show-reads-an-edits-files")
 @pytest.mark.parametrize(
     "name",
     [
         "42.edit-0.png",
+        "42.edit-1.placement.png",
+        "x.edit-1.placement.json",
         "x.edit-1.json",
         "42.edit-1.txt",
         "042.edit-1.png",

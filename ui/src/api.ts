@@ -7,6 +7,7 @@
 import type {
   Assigned,
   Bake,
+  Baked,
   Billing,
   Budget,
   Committed,
@@ -493,5 +494,29 @@ export function placementPreview(
     url,
     { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal },
     'X-Preview-Box',
+  )
+}
+
+/* Queue the edit request of `name` placed by `ask`'s pairs, limb and exclusions on the render,
+   or the baked edit `ask.edit` of it: the server writes the composite and the placement, never
+   the image, and answers the edit's number. A refusal names its fix. */
+export function bakeTattoo(
+  collection: string,
+  name: string,
+  ask: Omit<PreviewAsk, 'target'>,
+): Promise<Baked> {
+  return send(
+    `/api/c/${encodeURIComponent(collection)}/tattoos/${encodeURIComponent(name)}/bake`,
+    'POST',
+    {
+      digest: ask.place.digest,
+      flow: ask.place.flow,
+      version: ask.version,
+      seed: ask.seed,
+      edit: ask.edit,
+      pairs: ask.pairs,
+      limb: ask.limb,
+      exclusions: ask.exclusions,
+    },
   )
 }
