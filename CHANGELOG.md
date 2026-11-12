@@ -10,14 +10,6 @@ its new digest.
 
 ## [Unreleased]
 
-- `main`'s reds are fixed in tests and the workflow: the import test hands Playwright a lambda as the file chooser's
-  handler, the chunked spline matches the whole within a tolerance, and CI runs the browser tests after a red gate
-  (0127 D1, D2).
-- The load-bound tests hold at any load: the lock pair is ordered so the unlocked twin commits both updates, the
-  refusal is asserted by its sentence, the imports stream reads each import off one feed, each idle child waits on
-  short sleeps, and the shutdown test settles in ten seconds (0127 D1).
-- The imports stream test closes the broadcast once the stream has framed `converted`, so the body no longer ends at
-  `converting` under load (0127 D1).
 - The binding guard reads each scenario's key and layer, holds a key to a test on its own layer, and refuses a blank
   reason or a key whose tests are all skipped; a symlink test binds containment and the reachability test reads
   `FILED` (0128 D1, D2, D3).
@@ -26,6 +18,19 @@ its new digest.
 - The guards that passed blind read what they missed, each with a twin that goes red without it: history, principles,
   anchors, writers, the surface's imports, schema order and ONNX telemetry. Goldens pin an edit, a placement and a
   session record (0128 D7, D8, D9, D10, D11, D12, D13, D14).
+
+## [0.86.1] - 2026-11-12
+
+Gate: local 0m59s · CI not read under mf-ship · 0.86.0: local 1m0s · CI not read under mf-ship
+
+- `main`'s reds are fixed in tests and the workflow: the import test hands Playwright a lambda as the file chooser's
+  handler, the chunked spline matches the whole within a tolerance, and CI runs the browser tests after a red gate
+  (0127 D1, D2).
+- The load-bound tests hold at any load: the lock pair is ordered so the unlocked twin commits both updates, the
+  refusal is asserted by its sentence, the imports stream reads each import off one feed, each idle child waits on
+  short sleeps, and the shutdown test settles in ten seconds (0127 D1).
+- The imports stream test closes the broadcast once the stream has framed `converted`, so the body no longer ends at
+  `converting` under load (0127 D1).
 
 ## [0.86.0] - 2026-11-12
 

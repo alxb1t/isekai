@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.1
 after: [0126-cuts-per-photograph]
 ---
 
