@@ -6,7 +6,7 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 - [x] 1 — Models · hard
 - [x] 2 — 🛑 **HUMAN** — the model pins
-- [ ] 3 — Pose · hard
+- [x] 3 — Pose · hard
 - [ ] 4 — Segment · hard
 - [ ] 5 — Proposal · hard
 - [ ] 6 — Stage 2 · moderate
@@ -59,28 +59,28 @@ The phases: the models and the unpack, a person's pins, the pose, the segmenter,
 
 ## 3 — Pose
 
-- [ ] 3.1 Add to `tests/conftest.py` `require_placement(path)` after `require_vocabulary`: it returns when the file exists, skips under `ISEKAI_PLACEMENT=absent`, and else fails
+- [x] 3.1 Add to `tests/conftest.py` `require_placement(path)` after `require_vocabulary`: it returns when the file exists, skips under `ISEKAI_PLACEMENT=absent`, and else fails
   naming `PLACEMENT_REMEDY`; its tests in `tests/test_placement_manifest.py` carry `placement_require`.
   Verify: `uv run pytest tests/test_placement_manifest.py -k placement_require` passes.
-- [ ] 3.2 Add to `tests/test_placement_manifest.py` the tests of the real manifest per [D3](design.md#d3): `placement_pins` for each source and digest, `placement_detector` for the
+- [x] 3.2 Add to `tests/test_placement_manifest.py` the tests of the real manifest per [D3](design.md#d3): `placement_pins` for each source and digest, `placement_detector` for the
   detector's equality with the pod's pin, `placement_members` for the archive's encoder and decoder.
   Verify: `uv run pytest tests/test_placement_manifest.py -k "placement_pins or placement_detector or placement_members"` passes.
-- [ ] 3.3 Add `isekai/boundary/pose.py` with `Pose`, `PoseFinder` and `verified_paths(models_dir)` per [D6](design.md#d6): the detector and the estimator through
+- [x] 3.3 Add `isekai/boundary/pose.py` with `Pose`, `PoseFinder` and `verified_paths(models_dir)` per [D6](design.md#d6): the detector and the estimator through
   `provision.resolve`, an absent file refused naming `PLACEMENT_REMEDY`; tests in `tests/test_pose.py` carry `pose_verified`.
   Verify: `uv run pytest tests/test_pose.py -k pose_verified` passes.
-- [ ] 3.4 Add to `pose.py` `fit` and `person_box` per [D6](design.md#d6): the image fitted into the detector's square input and padded, the output rows decoded on their strides, the
+- [x] 3.4 Add to `pose.py` `fit` and `person_box` per [D6](design.md#d6): the image fitted into the detector's square input and padded, the output rows decoded on their strides, the
   highest objectness times person score the box; tests carry `pose_box`.
   Verify: `uv run pytest tests/test_pose.py -k pose_box` passes.
-- [ ] 3.5 Add to `pose.py` `crop_for` and `read_keypoints` per [D6](design.md#d6): the box grown by a quarter, held to the estimator's aspect and scaled, the highest value on each
+- [x] 3.5 Add to `pose.py` `crop_for` and `read_keypoints` per [D6](design.md#d6): the box grown by a quarter, held to the estimator's aspect and scaled, the highest value on each
   axis divided by the split ratio and mapped back, the score the lower of the two; tests carry `pose_keypoints`.
   Verify: `uv run pytest tests/test_pose.py -k pose_keypoints` passes.
-- [ ] 3.6 Add to `pose.py` `OnnxPoseFinder` and `open_pose(models_dir)` per [D2](design.md#d2) and [D6](design.md#d6): `onnxruntime`, numpy and Pillow imported inside, each session on
+- [x] 3.6 Add to `pose.py` `OnnxPoseFinder` and `open_pose(models_dir)` per [D2](design.md#d2) and [D6](design.md#d6): `onnxruntime`, numpy and Pillow imported inside, each session on
   the CPU provider alone, `find` returning a `Pose`, and none when the detector finds no person; tests over a recording runtime carry `pose_find` and `pose_cpu`.
   Verify: `uv run pytest tests/test_pose.py -k "pose_find or pose_cpu"` passes.
-- [ ] 3.7 Add to `tests/test_pose.py` `pose_real`: through `require_placement`, it opens the real finder over the provisioned files, reads a synthetic image, and holds that
+- [x] 3.7 Add to `tests/test_pose.py` `pose_real`: through `require_placement`, it opens the real finder over the provisioned files, reads a synthetic image, and holds that
   the body points and their scores are finite and of one length.
   Verify: `uv run pytest tests/test_pose.py -k pose_real` passes.
-- [ ] 3.8 Hold that the entry point's import graph reaches no wheel and the layers hold.
+- [x] 3.8 Hold that the entry point's import graph reaches no wheel and the layers hold.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_layers.py` passes.
 
 ## 4 — Segment
