@@ -7,7 +7,7 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 - [x] 1 — Store · moderate
 - [x] 2 — Chain · hard
 - [x] 3 — Preview · moderate
-- [ ] 4 — Panel · hard
+- [x] 4 — Panel · hard
 - [ ] 5 — Screens · moderate
 - [ ] 6 — Docs · moderate
 
@@ -72,21 +72,21 @@ The phases: the store, the chain, the routes and the ink view, the panel, the sc
 
 ## 4 — Panel
 
-- [ ] 4.1 Add `ui/src/zoom.ts` per [D8](design.md#d8): `fitted`, `actual`, `zoomedAt`, `panned`, `toImage`, `toScreen`; its tests in `ui/src/zoom.test.ts` bind through `spec`.
+- [x] 4.1 Add `ui/src/zoom.ts` per [D8](design.md#d8): `fitted`, `actual`, `zoomedAt`, `panned`, `toImage`, `toScreen`; its tests in `ui/src/zoom.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/zoom.test.ts` passes.
-- [ ] 4.2 Add `ui/src/polygon.ts` per [D8](design.md#d8): `added`, `closes`, `moved`, `inserted`, `removed`, `undone`, `box` and `ready` over an immutable state; its tests in `ui/src/polygon.test.ts` bind through `spec`.
+- [x] 4.2 Add `ui/src/polygon.ts` per [D8](design.md#d8): `added`, `closes`, `moved`, `inserted`, `removed`, `undone`, `box` and `ready` over an immutable state; its tests in `ui/src/polygon.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/polygon.test.ts` passes.
-- [ ] 4.3 Add `ui/src/tattoos.ts`: the card's state and source line, the upload's default name, `refusalField`, `controlsWait`, the white grey and scale of [D5](design.md#d5), the reset test; its tests in `ui/src/tattoos.test.ts` bind through `spec`.
+- [x] 4.3 Add `ui/src/tattoos.ts`: the card's state and source line, the upload's default name, `refusalField`, `controlsWait`, the white grey and scale of [D5](design.md#d5), the reset test; its tests in `ui/src/tattoos.test.ts` bind through `spec`.
   Verify: `npm --prefix ui run test -- src/tattoos.test.ts` passes.
-- [ ] 4.4 Add to `ui/src/types.ts` `Tattoo`, `Outline` and `InkView`, and to `ui/src/api.ts` `tattoos`, `stageFile`, `keepTattoo`, `cutTattoo`, `saveOutline`, `export function inkView` and `designAt`; `inkView` reads the headers of [D7](design.md#d7).
+- [x] 4.4 Add to `ui/src/types.ts` `Tattoo`, `Outline` and `InkView`, and to `ui/src/api.ts` `tattoos`, `stageFile`, `keepTattoo`, `cutTattoo`, `saveOutline`, `export function inkView` and `designAt`; `inkView` reads the headers of [D7](design.md#d7).
   Verify: `git grep -n "export function inkView" ui/src/api.ts` prints it.
-- [ ] 4.5 Add `ui/src/components/ImagePanel.vue` per [D8](design.md#d8): the image in a viewport, the wheel zoom, the drag pan, *Fit*, *1:1*, the zoom as a percentage, a slot for the overlay.
+- [x] 4.5 Add `ui/src/components/ImagePanel.vue` per [D8](design.md#d8): the image in a viewport, the wheel zoom, the drag pan, *Fit*, *1:1*, the zoom as a percentage, a slot for the overlay.
   Verify: `ls ui/src/components/ImagePanel.vue` prints the path.
-- [ ] 4.6 Declare `--outline-fill` and `--point-ring` per [D10](design.md#d10) in the Nocturne block of `ui/src/styles.css`, `:root, [data-theme="nocturne"]`, and in each Catppuccin block of `ui/src/themes.css`.
+- [x] 4.6 Declare `--outline-fill` and `--point-ring` per [D10](design.md#d10) in the Nocturne block of `ui/src/styles.css`, `:root, [data-theme="nocturne"]`, and in each Catppuccin block of `ui/src/themes.css`.
   Verify: `git grep -c -e "--outline-fill" -e "--point-ring" -- ui/src/styles.css ui/src/themes.css` prints `ui/src/styles.css:2` and `ui/src/themes.css:8`.
-- [ ] 4.7 Hold that each theme sets every token Nocturne does.
+- [x] 4.7 Hold that each theme sets every token Nocturne does.
   Verify: `npm --prefix ui run test -- src/themes.test.ts` passes.
-- [ ] 4.8 Hold the browser's types.
+- [x] 4.8 Hold the browser's types.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
 
 ## 5 — Screens
