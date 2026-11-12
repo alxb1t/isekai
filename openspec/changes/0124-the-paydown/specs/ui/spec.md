@@ -13,7 +13,8 @@ below zero silences it for the rest of the input. An edit typed inside the debou
 closing the tab is an ordinary way to leave. An edit or an approval pressed inside a save's round trip is the
 operator's own, not another tab's, and a closing page never reads the receipt it would have to state. A save waiting
 behind another carries the whole draft, so a later edit replaces its payload instead of queueing a second request, and
-a failed save leaves the draft pending only when no later save of the sheet waits.
+a failed save leaves the draft pending only when no later save of the sheet waits. Of two reads of one sheet in
+flight, only the newest SHALL land, so an older read answering late never replaces the operator's edits.
 
 #### Scenario: a stale save cannot clear the saving state
 - **Key:** `ui:save:a-stale-save-cannot-clear-saving`
@@ -47,6 +48,13 @@ a failed save leaves the draft pending only when no later save of the sheet wait
 - **WHEN** a save fails while a later save of the sheet waits behind it
 - **THEN** the later save holds every edit
 - **AND** nothing is sent again once it answers
+
+#### Scenario: the newest read of a sheet is the one that lands
+- **Key:** `ui:save:the-newest-read-of-a-sheet-is-the-one-that-lands`
+- **Layers:** unit
+- **WHEN** two reads of one sheet are in flight and the older answers first
+- **THEN** the sheet stays loading until the newest read answers
+- **AND** an edit made after that is saved with the edit in it
 
 ### Requirement: The hub shows each source's stage in each offered flow, and a tick assigns it
 

@@ -93,8 +93,16 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
 
   const readonly = computed(() => detail.value?.readonly ?? true)
 
+  /* **Only the newest read of a sheet lands.** Two reads of one input can be in
+     flight -- the navigation's and a refresh's -- and the older one answering
+     after the sheet became editable would replace the operator's edits with the
+     fields it read before them, for the next autosave to write. An older read is
+     dropped whether it answers or fails, and `loading` stays up for the newest. */
+  let reads = 0
+
   async function open(id: string): Promise<void> {
     current = id
+    const mine = (reads += 1)
     dirty = false
     loading.value = true
     done.length = 0
@@ -103,7 +111,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     try {
       body = await inputDetail({ ...scope, digest: id })
     } catch (reason) {
-      if (current !== id) return
+      if (mine !== reads) return
       // A read that fails has to land somewhere, and the approve bar is where
       // every other refusal lands. Without this the page sits on the skeleton
       // for ever and says nothing at all, which is the one outcome the surface
@@ -112,7 +120,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
       loading.value = false
       return
     }
-    if (current !== id) return
+    if (mine !== reads) return
     generation += 1
     detail.value = body
     fields.value = { ...body.fields }
