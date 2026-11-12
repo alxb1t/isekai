@@ -336,8 +336,9 @@ its fields differ from that sheet's, and SHALL record that it is a copy and SHAL
 approval. The approve verb SHALL first fill a target holding no sheet from the photograph's tag list, as the sheet verb
 fills one; asked of a target holding no sheet without that fill, the copy SHALL be refused, naming the sheet verb and
 writing nothing. It SHALL refuse a run whose source flow has no approval, naming the way out. It SHALL write nothing
-where the target's newest approval is a copy holding the same fields and renders, and SHALL otherwise copy under the
-target's next number. It SHALL refuse a source that is the target itself or no tracked flow, before any run is opened.
+where the target's newest approval is a copy holding the same fields and the same seeds, listed or rendered, and SHALL
+otherwise copy under the target's next number. It SHALL refuse a source that is the target itself or no tracked flow,
+before any run is opened.
 
 ```
 runs/<id>/summon-anime-wai/review/001.approved.json      renders {count 2, seeds []} · outputs/001/ 11.png 12.png
@@ -349,10 +350,12 @@ runs/<id>/control-anime-wai/review/001.approved.json     same fields; renders {c
 ```
 
 Two flows are compared only on one prompt and one noise. A copy by hand carries the source's identifier; a second
-approval by hand lets the prompts drift. The target's own validation keeps the copy honest. The seeds travel with the
-copy, so control and subject render the same seeds with no later check, and the source's approval can always be
-cancelled or deleted with its renders. The copy's sheet is the target's own, so a revision of the copy compares
-against a sheet the target holds
+approval by hand lets the prompts drift. The target's own validation keeps the copy honest. The copy lists the source's
+seeds, so control and subject render the same seeds until a render names the source (`T=S`): that render reads the
+source's latest seeds when it runs, and the copy's fields follow the source's only when the approve verb copies again. A
+target that has rendered the seeds the source lists is in step, so a copy made before the source rendered is not
+copied again once both have. The source's approval can always be cancelled or deleted with its renders. The copy's
+sheet is the target's own, so a revision of the copy compares against a sheet the target holds
 ([D49](../../../docs/decisions.md#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once)).
 
 #### Scenario: the fields are copied and validated against the target
@@ -396,6 +399,13 @@ against a sheet the target holds
 - **WHEN** the target's newest approval is a copy holding the fields and renders the copy would hold
 - **THEN** nothing is written
 - **AND** the existing approval is unchanged
+
+#### Scenario: a copy made before the source rendered is in step once both have
+- **Key:** `review:copy-from:a-copy-is-in-step-once-both-have-rendered`
+- **Layers:** unit
+- **WHEN** a target copied before its source rendered is copied again after both rendered the same seeds
+- **THEN** nothing is written
+- **AND** a target that has not rendered them is copied again, its renders listing the seeds
 
 #### Scenario: a changed source approval is copied again
 - **Key:** `review:copy-from:a-newer-source-approval-is-copied-again`

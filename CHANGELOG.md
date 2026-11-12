@@ -10,6 +10,85 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.81.0] - 2026-11-12
+
+Gate: local 0m47s · CI not read under mf-ship · 0.80.0: local 0m40s · CI not read under mf-ship
+
+- A tattoo is kept whole in the library's `.tattoos/<name>/`, never listed as a collection: an upload is upright and
+  bounded, a cut holds no image, an outline is saved atomically; none is deleted or renamed (0121 D1, D2, D3, D4).
+- Ink is placed by thin-plate splines in `isekai/shared/chain.py`: a spline fitted backwards, the lookup, the clip, the
+  Multiply and the crop box, over arrays; `extract_ink` takes a `white` scale on its automatic point and `white_grey`
+  reads that point as one grey (0121 D5, D6).
+- The app serves the tattoo library and its ink view: list, read, upload from staging, cut from a render's photograph
+  and save an outline, and one `POST` answers a `no-store` JPEG of the ink on the outline's crop (0121 D2, D3, D4, D7).
+- The browser has the placement panel's parts: the view and the outline as tested geometry, `ImagePanel.vue` to draw
+  the image with its zoom, the picker's reads, the tattoo calls, and two outline tokens in each theme (0121 D8, D10).
+- A render's large view offers *Place a tattoo*, a button and `⇧P`, opening the placement screen's route `…/place/<step>`:
+  the picker and the outline step, kept mounted across steps, with no key of their own (0121 D9). `/api/tattoos` also
+  carries each kind's start depth, for *Reset*.
+- The docs say what holds: D52 keeps the library, D43 and D40 name a tattoo and `.tattoos/`, the design spec has the
+  route, `⇧P` and journey J9, and `docs/edit-tattoo.md` has an app section (0121 D12).
+
+## [0.80.0] - 2026-11-12
+
+Gate: local 0m40s · CI not read under mf-ship · 0.79.0: local 0m37s · CI not read under mf-ship
+
+- The app's server counts, quotes and serves a bake, the tattoo edit's queued request: the quote and the offer count
+  bakes with images, a session of bakes alone starts, and `POST /api/render` carries `bakes` and is refused when the
+  quote taken again has another number (0120 D1–D4).
+- A bake has an address, `…/<seed>/edit/<k>`, serving its record, its image and its thumbnail; a render's detail lists
+  its bakes, and deleting a render deletes their thumbnails too. D4 of the decisions names the bake total (0120 D6, D13).
+- A render's large view shows its photograph's thumbnail and the chain of its bakes, each baked row opening that
+  bake's view at `…/<seed>/edit/<k>`, which offers no draft, compare or delete; the chain's frame has the tokens
+  `--chain-ground` and `--chain-ring` in every theme (0120 D5, D7–D10).
+- The Render dialog lists each queued bake with a `×` and sends `bakes` with the confirmation; its title names what
+  it does (*Bake 1*). The bar shows with bakes alone, and `⇧G` opens the dialog on them (0120 D11, D12).
+- The design spec draws the Render dialog with its `×`, *all removed*, bake rows and titles, and the large view with the
+  photograph, the chain and a bake's route, one-image drafting; the READMEs say the same, and the debts `0108·R3` and
+  `0118·R3` are paid (0120 D5–D12).
+
+## [0.79.0] - 2026-11-12
+
+Gate: local 0m37s · CI not read under mf-ship · 0.78.1: local 0m32s · CI not read under mf-ship
+
+- An edit is one flat directory, `edits/tattoo-wai/`, its `edit.json` and `graph.json` loaded by
+  `isekai/foundation/edit.py` and pinned by digest in `EDIT_PINNED`; `tattoo-wai` is new, at digest
+  `fcf0c974352632061e46e97e534ee83b0ca6cb21a25e7ff01857c7682b719348` (0119 D1, D2).
+- `isekai ink <image> <out>` cuts a tattoo photograph or image into a Multiply layer, free and local: with `--outline`
+  grey at depth 1.6, without it in colour at depth 1.0, `--neutral`/`--no-neutral` and `--depth` 1.0 to 2.0 overriding
+  (0119 D3).
+- `isekai edit <edit> <render> --composite <png>` requests an edit, free and local: it derives the ink, mask, control
+  and crop from the composite, refuses what no Multiply could make, and writes the composite and a pending record
+  beside the render (0119 D4, D5).
+- `isekai render` runs every pending edit in its pod after the renders, quoted at `per_edit_s` and checked free before
+  anything is rented; `isekai edit --pending <run-id>/<flow>…` samples them on `--server` (0119 D6, D7).
+- `isekai discard` takes an edit's path, and a render's deletion takes its edits; `isekai show` reads an edit's files
+  and no listing counts an edit as a render (0119 D8, D9).
+- The pod image is re-pinned to `v0.79-rc1`, `sha256:79306642…26c6c2f`, which carries the promax ControlNet the edit
+  loads; WAI is looked up on Civitai by its new file name, its digest unchanged, and a mirror that answers 401 is
+  dropped (0119 D10).
+- D51 records the edit's directory, and D50, D36, D29 and D14 are amended; `docs/edit-tattoo.md` is the Krita-first
+  guide, and the data flow and the module READMEs name `ink`, `edit`, `tattoo.py` and `prompt.py` (0119 D11).
+- `isekai ink` refuses a tight outline whose ink falls short of the bare skin beside it in any one colour channel, so
+  a fill cannot become its own white point and wipe the tattoo out (0119 D15).
+
+## [0.78.1] - 2026-11-12
+
+Gate: local 0m32s · CI not read under mf-ship · 0.78.0: local 0m36s · CI not read under mf-ship
+
+- A second `approve --from` after both flows rendered writes nothing: a copy is in step when the target holds the
+  copy's seeds, listed or rendered (0124 D1).
+- D49, D38 and the README say what a `T=S` render takes: the source's latest seeds, read when it runs, with no check
+  of the copy against its source (0124 D2).
+- A render line whose source request names another source request's flow is refused before the pod, naming the
+  request that renders the same seeds; `_requested`'s docstring says what it plans (0124 D3).
+- Review reads an approved sheet again when a render for its collection starts or ends, so *Cancel approve* follows
+  the render (0124 D4).
+- A save waiting behind another takes later edits instead of queueing a second request, and a failed save leaves
+  the draft pending only when no later save of its input holds it (0124 D5).
+- A cell modal's rows keep their height and the grid scrolls to a fourth row; a browser test over a cell of ten
+  renders holds it (0124 D6).
+
 ## [0.78.0] - 2026-11-08
 
 Gate: local 0m36s · CI not read under mf-ship · 0.77.0: local 0m55s · CI not read under mf-ship

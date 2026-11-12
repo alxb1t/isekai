@@ -39,7 +39,7 @@ from pathlib import Path
 from typing import Any, TextIO, cast
 
 from isekai.boundary import gpu
-from isekai.boundary.comfy import ComfyTransport
+from isekai.boundary.comfy import ComfyTransport, read_runtime
 from isekai.boundary.gpu import Seams
 from isekai.boundary.pod_start import HOLD_SECONDS
 from isekai.foundation.artifacts import (
@@ -64,9 +64,9 @@ from isekai.foundation.run import (
 )
 from isekai.interface.compare_view import COLLECTION_PHOTOS
 from isekai.interface.wiring import Wiring
+from isekai.pipeline.edit import duration_of, pending, records
 from isekai.pipeline.generate import (
     duration,
-    read_runtime,
     render_groups,
     rendered_seeds,
     shortfall,
@@ -136,11 +136,19 @@ def in_session_sources(requests: Sequence[Request]) -> list[bool]:
 
     Such a source has no seeds until the pod is up, so its dependent has no check
     before the pod; one placed before its source could never take its seeds, and
-    is refused.
+    is refused. So is a request whose source is another source request's flow, in
+    either order: its seeds are the ones that request takes, so it names them.
     """
     counted = {r.flow: i for i, r in enumerate(requests) if r.by_count}
+    sourced = {r.flow: r for r in requests if not r.by_count}
     deferred = []
     for i, request in enumerate(requests):
+        chain = None if request.by_count else sourced.get(request.value)
+        if chain is not None and chain is not request:
+            raise Refusal(
+                f"'{request}' takes its seeds from '{chain}', itself a source "
+                f"request; write '{request.flow}={chain.value}' for the same seeds"
+            )
         j = None if request.by_count else counted.get(request.value)
         if j is not None and j > i:
             raise Refusal(
@@ -597,12 +605,13 @@ class Line:
 class Timing:
     """`config/render.json`: the figures, and the least time an image is quoted at.
 
-    Seconds for the boot, an image and the teardown; the limit's factor over the
-    estimate; and the volume's rate per hour.
+    Seconds for the boot, an image, an edit and the teardown; the limit's factor
+    over the estimate; and the volume's rate per hour.
     """
 
     boot_s: float
     per_image_s: float
+    per_edit_s: float
     teardown_s: float
     limit_factor: float
     volume_rate: float
@@ -655,17 +664,43 @@ def recent(runs: Path, ids: Sequence[str], flow: str) -> list[float]:
     return taken
 
 
-def estimate[K](
+def recent_edits(runs: Path, ids: Sequence[str]) -> list[float]:
+    """Return the durations of the newest recorded edits under `runs`.
+
+    Newest first by when each record was written, so only those `RECENT` takes are
+    read. A request that has not run records none.
+    """
+    found = [
+        record
+        for run_id in ids
+        for flow in Run(run_id, runs / run_id).flows
+        for record in edit_records(Run(run_id, runs / run_id), flow)
+    ]
+    found.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    taken: list[float] = []
+    for path in found:
+        if (seconds := duration_of(path)) is not None:
+            taken.append(seconds)
+            if len(taken) == RECENT:
+                break
+    return taken
+
+
+def estimate[K, E](
     images: Mapping[K, int],
     recorded: Mapping[K, Sequence[float]],
     timing: Timing,
     ceiling_s: int,
+    edits: Mapping[E, int] | None = None,
+    edit_recorded: Mapping[E, Sequence[float]] | None = None,
 ) -> Estimate:
     """Return a session's estimate and its limit, both in seconds.
 
-    `images` and `recorded` share a key: a flow, or a collection's flow. The limit
-    is the estimate times the factor, at least `FLOOR_S` and at most `ceiling_s`.
-    Each key's images take its recorded median or `per_image_s`, whichever is higher.
+    `images` and `recorded` share a key: a flow, or a collection's flow; `edits` and
+    `edit_recorded` share another: a collection. The limit is the estimate times the
+    factor, at least `FLOOR_S` and at most `ceiling_s`. Each key's images take its
+    recorded median or `per_image_s`, whichever is higher, and its edits the same
+    with `per_edit_s`.
     e.g. 4 images at a recorded median of 90 s, per image 95, boot 480,
          teardown 120, factor 1.5 -> Estimate(980.0, 1470, False)
     """
@@ -673,6 +708,11 @@ def estimate[K](
     for key, count in images.items():
         median = statistics.median(recorded.get(key) or [timing.per_image_s])
         seconds += count * max(median, timing.per_image_s)
+    for held, count in (edits or {}).items():
+        median = statistics.median(
+            (edit_recorded or {}).get(held) or [timing.per_edit_s]
+        )
+        seconds += count * max(median, timing.per_edit_s)
     wanted = max(FLOOR_S, math.ceil(seconds * timing.limit_factor))
     return Estimate(seconds, min(ceiling_s, wanted), wanted > ceiling_s)
 
@@ -681,11 +721,17 @@ def estimate[K](
 Work = tuple[Path, Sequence[str], Mapping[str, int]]
 
 
-def estimated(work: Sequence[Work], timing: Timing, ceiling_s: int) -> Estimate:
+def estimated(
+    work: Sequence[Work],
+    timing: Timing,
+    ceiling_s: int,
+    edits: Mapping[Path, int] | None = None,
+) -> Estimate:
     """Return one session's estimate for every collection's images in `work`.
 
     One boot and one teardown; each collection's images at its own recorded
-    durations. The quote and the session both take it here, so the two cannot
+    durations, and its pending edits, `edits` by runs root, at its own recorded
+    edit durations. The quote and the session both take it here, so the two cannot
     disagree.
     """
     images = {(runs, flow): n for runs, _, found in work for flow, n in found.items()}
@@ -694,7 +740,44 @@ def estimated(work: Sequence[Work], timing: Timing, ceiling_s: int) -> Estimate:
         for runs, ids, found in work
         for flow in found
     }
-    return estimate(images, recorded, timing, ceiling_s)
+    held = {runs: ids for runs, ids, _ in work}
+    edit_recorded = {
+        runs: recent_edits(runs, held.get(runs, [])) for runs in edits or {}
+    }
+    return estimate(images, recorded, timing, ceiling_s, edits, edit_recorded)
+
+
+@dataclass(frozen=True)
+class Edits:
+    """A collection's pending edits: the cells that hold them, and how many.
+
+    `records` is each pending edit's record, by run, flow, then chain.
+    """
+
+    cells: tuple[str, ...]
+    count: int
+    records: tuple[Path, ...] = ()
+
+
+def edits_of(
+    runs: Path, ids: Sequence[str], tracked: Collection[str], without: Collection[Path]
+) -> Edits:
+    """Return the pending edits of each tracked flow of `ids` under `runs`.
+
+    Each `<run-id>/<flow>` in `without` is left out.
+    e.g. r1 holding f's 42.edit-1.json and 42.edit-2.json with no images
+         -> Edits(("r1/f",), 2)
+    """
+    cells: list[str] = []
+    found: list[Path] = []
+    for run_id in ids:
+        run = Run(run_id, runs / run_id)
+        for flow in (name for name in run.flows if name in tracked):
+            held = [] if runs / run_id / flow in without else pending_edits(run, flow)
+            if held:
+                cells.append(f"{run_id}/{flow}")
+                found += held
+    return Edits(tuple(cells), len(found), tuple(found))
 
 
 def progress_line(raw: str) -> dict[str, Any] | None:
@@ -811,9 +894,11 @@ def short(
 class Quote:
     """What one session over many collections would do, how long, and its price."""
 
-    # The shortfall of each collection quoted that is short or refuses a count,
-    # by its runs root, in the order quoted.
+    # The shortfall of each collection quoted that is short, refuses a count or
+    # holds a queued bake, by its runs root, in the order quoted.
     shorts: dict[Path, Short]
+    # The pending edits, a bake each, of every collection asked, by its runs root.
+    edits: dict[Path, Edits]
     estimate: Estimate
     timing: Timing
     ceiling_s: int
@@ -828,16 +913,22 @@ class Quote:
         return sum(sum(found.images.values()) for found in self.shorts.values())
 
     @property
+    def bakes(self) -> int:
+        """Return how many bakes the session runs, across its collections."""
+        return sum(held.count for held in self.edits.values())
+
+    @property
     def blocked(self) -> str | None:
         """Return why nothing would render, or None while the session may start.
 
-        A refused count first, then nothing short, then an estimate whose limit
-        would pass the ceiling: the session would end before its work.
+        A refused count first, then no image short and no bake queued, then an
+        estimate whose limit would pass the ceiling: the session would end before
+        its work.
         """
         refused = (found.blocked for found in self.shorts.values() if found.refused)
         if (first := next(refused, None)) is not None:
             return first
-        if not self.images:
+        if not self.images and not self.bakes:
             return NOTHING_SHORT
         if self.estimate.capped:
             return (
@@ -852,8 +943,8 @@ def quote(
 ) -> Quote:
     """Return the quote for one session over what each of `roots` is short of.
 
-    As the session would: one boot over every collection's images, less each
-    `<runs>/<run-id>/<flow>` in `without`. The price is
+    As the session would: one boot over every collection's images and pending
+    edits, less each `<runs>/<run-id>/<flow>` in `without`. The price is
     at `gpunit.toml`'s `max_hourly`, which gpunit refuses a card above, with the
     volume at `config/render.json`'s rate (D26).
     """
@@ -866,12 +957,20 @@ def quote(
     timing = load_timing()
     ids = {runs: run_ids(runs) for runs in roots}
     found = {runs: short(runs, ids[runs], wired, without) for runs in roots}
-    shorts = {runs: one for runs, one in found.items() if one.lines or one.refused}
+    tracked = tracked_flows(wired.flows_dir)
+    held = {runs: edits_of(runs, ids[runs], tracked, without) for runs in roots}
+    shorts = {
+        runs: one
+        for runs, one in found.items()
+        if one.lines or one.refused or held[runs].count
+    }
     work = [(runs, ids[runs], one.images) for runs, one in shorts.items()]
-    guess = estimated(work, timing, bound.ceiling_s)
+    pending_count = {runs: held[runs].count for runs in shorts}
+    guess = estimated(work, timing, bound.ceiling_s, pending_count)
     hourly = bound.max_hourly + timing.volume_rate
     return Quote(
         shorts,
+        held,
         guess,
         timing,
         bound.ceiling_s,
@@ -879,6 +978,19 @@ def quote(
         at_most=guess.limit_s / 3600 * hourly,
         keep_open=bound.volume_ceiling_s / 3600 * timing.volume_rate,
     )
+
+
+def edit_records(run: Run, flow: str) -> list[Path]:
+    """Return every edit record of `flow` in `run`, by group then chain."""
+    return [record for group in render_groups(run, flow) for record in records(group)]
+
+
+def pending_edits(run: Run, flow: str) -> list[Path]:
+    """Return the records of `flow`'s pending edits in `run`, by group then chain.
+
+    e.g. outputs/001/42.edit-1.json, then outputs/002/7.edit-1.json
+    """
+    return [record for group in render_groups(run, flow) for record in pending(group)]
 
 
 def _unready(run: Run, flow: str) -> str:
@@ -920,10 +1032,11 @@ def _session(
     timing = load_timing()
     ids = {runs: run_ids(runs) for runs in roots}
 
-    # Free work first: every prompt is assembled, and every source checked, before
-    # anything is rented.
+    # Free work first: every prompt is assembled, and every source and pending edit
+    # checked, before anything is rented. A request names renders and runs no edit.
     free = dataclasses.replace(wired, client=None, image=None, out=steps.child())
     verb = ["generate", *steps.flag]
+    edits: dict[Path, Edits] = {}
     if requests:
         (runs,) = roots
         lines = _asked(runs, ids[runs], requests, deferred, free, verb, generate)
@@ -932,6 +1045,7 @@ def _session(
     else:
         lines: list[Line] = []
         refused = False
+        tracked = tracked_flows(wired.flows_dir)
         for runs in roots:
             found = short(runs, ids[runs], wired, taken)
             for message in found.refused:
@@ -940,13 +1054,17 @@ def _session(
                 print(f"left out: {run_id}: {flow} is {reason}", file=wired.err)
             refused |= bool(found.refused)
             lines += found.lines
+            edits[runs] = edits_of(runs, ids[runs], tracked, taken)
         if refused:
             return 1
-        if not lines:
+        if not lines and not any(held.cells for held in edits.values()):
             print("nothing is short of its count; nothing was rented", file=wired.err)
             return 0
         for line in lines:
             if generate([*verb, *line.head, *line.where], free) != 0:
+                return 1
+        for runs, held in edits.items():
+            if held.cells and generate(_edit_argv(runs, held, steps.flag), free) != 0:
                 return 1
 
     if seams.busy(PORT):
@@ -956,10 +1074,14 @@ def _session(
         )
 
     held = {
-        runs: its for runs in roots if (its := [li for li in lines if li.runs == runs])
+        runs: its
+        for runs in roots
+        if (its := [li for li in lines if li.runs == runs])
+        or (runs in edits and edits[runs].cells)
     }
     work = [(runs, ids[runs], _images(its)) for runs, its in held.items()]
-    limit = asked or estimated(work, timing, ceiling_s).limit_s
+    pending_count = {runs: edits[runs].count for runs in held if runs in edits}
+    limit = asked or estimated(work, timing, ceiling_s, pending_count).limit_s
     rest = "".join(f" {text}" for text in texts)
     names = [runs.parent.name for runs in held]
     record = Records(
@@ -995,7 +1117,7 @@ def _session(
     watchdog.daemon = True
     watchdog.start()
     try:
-        return _rendered(lines, limit, wired, generate, seams, steps, record)
+        return _rendered(lines, edits, limit, wired, generate, seams, steps, record)
     finally:
         watchdog.cancel()
         record.close()
@@ -1039,11 +1161,11 @@ def _requested(
     counts: Mapping[str, int],
     wired: Wiring,
 ) -> Line:
-    """Return a request's line, with the most images it renders across `ids`.
+    """Return a request's line, planned per run in `ids`.
 
-    `counts` is each by-count request's count, by flow. A count renders at most
-    that many per run; a source renders its latest seeds, or its own count where
-    it renders first in this session.
+    `counts` is each by-count request's count, by flow. A by-count request plans
+    its count; a source request plans the count of a by-count source in the line,
+    else the images its source holds now. A source of a source never reaches it.
     """
     if request.by_count:
         planned = [(run_id, counts[request.flow]) for run_id in ids]
@@ -1061,8 +1183,21 @@ def _requested(
     return Line(runs, request.flow, head, where, tuple(planned))
 
 
+def _edit_argv(
+    runs: Path, held: Edits, flag: Sequence[str], server: str | None = None
+) -> list[str]:
+    """Return the `edit --pending` line over `held`'s cells, on `server` when given.
+
+    e.g. ("r1/f",) -> edit --pending r1/f --runs <runs>; with a server, only the
+    checks are skipped and the edits are sampled
+    """
+    where = ["--server", server] if server is not None else []
+    return ["edit", *flag, "--pending", *held.cells, *where, "--runs", str(runs)]
+
+
 def _rendered(
     lines: list[Line],
+    edits: Mapping[Path, Edits],
     limit: int,
     wired: Wiring,
     generate: Generate,
@@ -1111,6 +1246,16 @@ def _rendered(
                     server,
                     *line.where,
                 ]
+                failed |= generate(argv, live) != 0
+            # After the renders, in the pod they were rendered in; an edit's own
+            # record says what it did, and the session's stay a render's.
+            for runs, held in edits.items():
+                if not held.cells:
+                    continue
+                live = dataclasses.replace(
+                    wired, client=client, image=session.image, out=steps.child(0, runs)
+                )
+                argv = _edit_argv(runs, held, ("--progress", "json"), server)
                 failed |= generate(argv, live) != 0
         steps.step("teardown", "done")
         if failed:

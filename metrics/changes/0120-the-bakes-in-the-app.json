@@ -1,0 +1,58 @@
+{
+  "change": "0120-the-bakes-in-the-app",
+  "version": "v0.80",
+  "base": "739a9f09",
+  "analyzed": "922bebea",
+  "measured_on": "local",
+  "collected_at": "2026-11-12T12:34:33+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1770
+    },
+    "tests-browser": {
+      "value": 18
+    },
+    "gate-seconds": {
+      "value": 40
+    },
+    "open-backlog-cards": {
+      "value": 7
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 2232
+    },
+    "diff-files": {
+      "value": 38
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 13098
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 832
+    },
+    "decisions": {
+      "value": 52
+    }
+  }
+}

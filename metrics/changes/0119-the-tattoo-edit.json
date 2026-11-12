@@ -1,0 +1,58 @@
+{
+  "change": "0119-the-tattoo-edit",
+  "version": "v0.79",
+  "base": "5de47962",
+  "analyzed": "81c2a0a5",
+  "measured_on": "local",
+  "collected_at": "2026-11-12T11:07:44+02:00",
+  "mf_version": "v0.97.0",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 1743
+    },
+    "tests-browser": {
+      "value": 18
+    },
+    "gate-seconds": {
+      "value": 37
+    },
+    "open-backlog-cards": {
+      "value": 10
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 4
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 6207
+    },
+    "diff-files": {
+      "value": 54
+    },
+    "phases": {
+      "value": 7
+    },
+    "shared-reading-set": {
+      "value": 13088
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 818
+    },
+    "decisions": {
+      "value": 52
+    }
+  }
+}

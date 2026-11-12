@@ -338,6 +338,43 @@ class Render(TypedDict):
     seeds_from: NotRequired[str]
 
 
+class CropRecord(TypedDict):
+    """The box an edit samples: `box` as left, top, right, bottom in the source.
+
+    `size` is the sampling size, width then height. `widened` and `grown` say
+    whether a guard moved the box.
+    """
+
+    box: list[int]
+    size: list[int]
+    widened: bool
+    grown: bool
+
+
+class EditRecord(TypedDict):
+    """The record beside an edit's image, written when the edit is requested.
+
+    `source` is the file of the same group the edit was made from, `dials` every
+    dial as it ran and `overridden` the names a request changed. A sampling
+    completes the record with the graph it submitted, the runtime it ran on and
+    the seconds it took, before the image is written.
+    """
+
+    schema: SchemaBlock
+    edit: str
+    edit_digest: str
+    source: str
+    source_sha256: str
+    composite_sha256: str
+    seed: int
+    dials: dict[str, Any]
+    overridden: list[str]
+    crop: CropRecord
+    graph_sha256: NotRequired[str]
+    runtime: NotRequired[Runtime]
+    duration: NotRequired[float]
+
+
 class SessionImage(TypedDict):
     """One image a render session landed: its run's digest, flow, approval and seed.
 
@@ -419,6 +456,7 @@ PROMPT_FILE: Artifact[Prompt] = Artifact("prompt", 1)
 RENDER_FILE: Artifact[Render] = Artifact("render", 1)
 # A render's sidecar is `<seed>` and this; its image is `<seed>` and the flow's suffix.
 SIDECAR = ".render.json"
+EDIT_FILE: Artifact[EditRecord] = Artifact("edit", 1)
 SESSION_FILE: Artifact[SessionRecord] = Artifact("session", 1)
 # A collection's session records, beside its log; each is named by its session's id.
 SESSIONS = "sessions"

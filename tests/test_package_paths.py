@@ -24,7 +24,8 @@ import pytest
 
 from evaluation import eval_models
 from isekai.boundary import provision
-from isekai.foundation import caption_config, flow, run
+from isekai.foundation import caption_config, edit, flow, run
+from isekai.pipeline import tattoos
 from isekai.shared import field_map, vocabulary
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -37,6 +38,7 @@ ANCHORS = (
     pytest.param(run.DATA_ROOT, (".data",), id="run.DATA_ROOT"),
     pytest.param(run.REPOSITORY, (), id="run.REPOSITORY"),
     pytest.param(flow.FLOWS_DIR, ("flows",), id="flow.FLOWS_DIR"),
+    pytest.param(edit.EDITS_DIR, ("edits",), id="edit.EDITS_DIR"),
     pytest.param(
         provision.MANIFEST_PATH,
         ("config", "models.json"),
@@ -76,6 +78,9 @@ ANCHORS = (
         caption_config.CAPTION_CONFIG_PATH,
         ("config", "caption.json"),
         id="caption_config.CAPTION_CONFIG_PATH",
+    ),
+    pytest.param(
+        tattoos.TATTOO_CONFIG, ("config", "tattoo.json"), id="tattoos.TATTOO_CONFIG"
     ),
 )
 

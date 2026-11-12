@@ -23,8 +23,9 @@ server, a rented GPU. The repository is public, under Apache-2.0.
 - **Why:** these are what a viewer checks first. The graph carries the face and the pose, and the
   approved sheet's tags carry hair and clothes
   ([D10](#d10--the-face-and-the-pose-are-carried-by-the-graph)). A tattoo is local and arbitrary;
-  neither holds it, and bundling it would make every version a research version.
-- **Made by:** the project's founding decision.
+  neither holds it, and bundling it would make every version a research version. A tattoo is added by an edit
+after the flow ([D51](#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)); the flows carry no ink.
+- **Made by:** the project's founding decision; `0119`.
 
 ### D30 · A public repository, for learning
 
@@ -85,7 +86,7 @@ dialog's removal is `render --without`, so a session the page starts is one the 
 ### D4 · The UI runs stages only as the CLI's children
 
 **The browser runs a stage only as the CLI's own verb, a child of the server, save the sheet a draft from
-another flow fills; the one act in it that spends is Render's confirmation, after its quote.**
+another flow fills; the one act in it that spends is Render's confirmation, after its quote of image total, bake total and limit.**
 Prepare is `prepare` run as one child, each photograph through `tag`, `caption` and its sheets in turn,
 and Render is `render` between gpunit's `volume up` and `volume down`. Every other write goes through the function that owns it: a draft, its edits and an
 approval through `review`'s, a tick through the run's `assign`, a source through import, a deleted render's
@@ -100,8 +101,8 @@ which `interface/drafting.py`'s `draft_across` runs in the server's process befo
   refuses before it writes. Spend behind a web page is bounded by what the operator read: the
   confirmation carries the quote it showed and the photographs taken out of it, and a quote grown since is
   refused. The quote compares
-  image total and limit, not source or approval identity.
-- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`, `0112`, `0114`, `0116`.
+  image total, bake total and limit, not source or approval identity.
+- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`, `0112`, `0114`, `0116`, `0120`.
 
 ### D42 · A new draft starts from the last approval
 
@@ -240,11 +241,12 @@ draft, approved without the repeat.
 ### D14 · A flow is one flat directory
 
 **A flow is one flat directory of named files — `flow.json`, `graph.json`, `schema.json` — and it
-shares nothing with another flow.**
+shares nothing with another flow.** An edit is not a flow: it lives under `edits/`
+([D51](#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)).
 
 - **Why:** the pin covers only the files directly in the directory, so a nested file would escape the
   freeze. Sharing nothing means a change to one flow can never change another.
-- **Made by:** `0016`, `0022`, `0102`.
+- **Made by:** `0016`, `0022`, `0102`, `0119`.
 
 ### D15 · A flow is named for what it is
 
@@ -269,7 +271,7 @@ photograph only for a flow that declares `true`.
 ### D38 · A control flow is its subject with the face chain at zero
 
 **Superseded by [D49](#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once) in `0111`: a copy
-no longer names its source, and its seeds are copied rather than checked.**
+no longer names its source, and no check holds it to its source: a `T=S` render reads the source's seeds when it runs.**
 
 - **Made by:** `0054`, `0103`; superseded by `0111`.
 
@@ -282,9 +284,10 @@ the target's own sheet, filled first where it holds none, and a draft from anoth
 image in the target's `sources/`. A stage reads another flow's work only when the operator names it as a source; the
 photograph's description is every flow's (D17).**
 
-- **Why:** the floor is the same sheet and the same noise with the face mechanism off, and the seeds travel with the
-  copy, so that holds with no later check; a copy naming its source kept the source's approval from being cancelled
-  or deleted with its renders.
+- **Why:** the floor is the same sheet and the same noise with the face mechanism off. The copy lists the source's
+  seeds; a `T=S` render reads the source's latest seeds when it runs, and the copy's fields follow the source's only
+  when `approve --from` is run again. A copy naming its source kept the source's approval from being cancelled or
+  deleted with its renders.
 - **Made by:** `0054`, `0103`, `0111`, `0112`.
 
 ### D50 · The last render takes its approval, and a flow holds only its own files
@@ -294,12 +297,37 @@ and its source copy, every older approval with no render — a group of failure 
 newest's waiting draft; nothing goes back to a draft. A flow left with no approval keeps only its directory, its
 assignment: its sheets go too, and so does its own copy of each kind of the photograph's description that `photo/`
 holds, every numbered list of it, so an own caption older than the newest, which `isekai migrate` never copied, is
-lost; `photo/`'s stay (D17). No file of one flow names a file of another.**
+lost; `photo/`'s stay (D17). No file of one flow names a file of another. Deleting a render also deletes every edit of its seed, and their chain
+([D51](#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)).**
 
 - **Why:** the operator deletes a render to be rid of it; an approval, a draft or a sheet left behind kept the Hub and
   Review offering what was deleted, and a reference into another flow breaks when that flow's work goes, and a
   failure record or a flow's own description left behind kept its folder from emptying.
-- **Made by:** `0111`, `0112`, `0114`.
+- **Made by:** `0111`, `0112`, `0114`, `0119`.
+
+### D51 · An edit is one flat directory, pinned by its digest
+
+**An edit is one flat directory under `edits/` — `edit.json` and `graph.json` — named `<what>-<base>`, and a test
+holds its digest against a pin and a recorded entry as it does a flow's. An edit's image is written beside its
+source, in the render's group, as `<seed>.edit-<k>.png`; no edit is a flow, and no run-level directory holds one.**
+
+- **Why:** a flow takes one photograph and gates on a sheet, and an edit takes a finished render and a composite.
+  `Run.flows` reads every run-level directory as a flow, so an edit kept there would be read as one; the group
+  already holds a render's files, and the next free `k` chains edits.
+- **Made by:** `0119`.
+
+### D52 · The tattoo library is library-wide, kept whole and never deleted
+
+**A tattoo is a folder `.tattoos/<name>/` of the library, outside every collection: `design.png` upright with no
+metadata and at most `long_side` of `config/tattoo.json` on its long side, `tattoo.json` and `outline.json`. A cut is a
+tattoo with no `design.png`, whose record names the run digest of the photograph it is cut from and whose size is that
+photograph's; a cut serves only that photograph's renders. A name is kept once, no route deletes or renames a tattoo,
+and the photograph a cut is taken from, and every tattoo, stays on this machine.**
+
+- **Why:** one tattoo is an input for many renders in many collections, so a folder in a collection would copy it. The
+  ink of a cut is already in the photograph's pixels, so copying the photograph would only keep a likeness twice.
+  Nothing needs a delete yet, and a kept name that never moves is one a later placement can cite.
+- **Made by:** `0121`.
 
 ### D44 · A flat flow is summon with the face chain ending early
 
@@ -368,8 +396,10 @@ reader after it.
 ### D40 · A collection is a library folder holding `sources/`
 
 **A folder in the library is a collection when it holds `sources/`; its runs root is `runs/` beside it. No
-file records a collection, and a dot-folder is never listed. Every figure the UI shows of a collection — its
-counts, each cell's stage — is a listing read on each request. A batch is not a folder: it is the
+file records a collection, and a dot-folder is never listed; `.tattoos/` is a dot-folder of the library,
+never a collection
+([D52](#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)). Every figure the UI shows of a
+collection — its counts, each cell's stage — is a listing read on each request. A batch is not a folder: it is the
 photographs one GPU session renders.**
 
 - **Why:** layout alone decides, so no marker file can disagree with the disk, and a stage is a
@@ -382,7 +412,8 @@ photographs one GPU session renders.**
 **Import writes into `sources/` a JPEG or PNG carrying its pixels and its orientation, and nothing else:
 no location, camera or time, its colour in sRGB.** Each file is verified by the strip's own walk before
 it is committed; one that cannot be cleaned is left out unless the operator imports it as it is, and the
-hub marks it.
+hub marks it. A tattoo is cleaned as a source is, and bounded to its long side
+([D52](#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)).
 
 - **Why:** a library holds personal photographs, and every run copies its source, so metadata kept at
   import is metadata kept everywhere. A profile dropped without conversion shifts every colour.
@@ -575,7 +606,8 @@ the key would sit in the same memory.**
 
 **It assembles every prompt before any pod exists, opens a gpunit session, waits for the endpoint through its
 tunnel, renders, and closes the session on every exit.** With no request it renders what each approval lacks of
-its count, in each collection it names, less each `--without`, on one pod. Three bounds hold it: the laptop's
+its count, in each collection it names, less each `--without`, on one pod, then runs the pending edits of those
+collections. Three bounds hold it: the laptop's
 watchdog at the session's
 limit; the pod's own stop at that limit, armed by gpunit's boot script and never past `gpunit.toml`'s ceiling;
 and gpunit, which refuses a session beside a recorded or listed pod of the project and leaves none listed at
@@ -590,4 +622,4 @@ app's Render runs it as a child, between `gpunit volume up` and `volume down`, w
   Reopen when isekai needs a handler of its own.
 - **Refusals:** `isekai render` exits with gpunit's code, 1, 4 or 5, and the drawer names a 4 or a 5 by its kind and
   quotes gpunit's `refused:` line, a form gpunit documents for callers to parse.
-- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`, `0083`, `0097`, `0108`.
+- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`, `0083`, `0097`, `0108`, `0119`.

@@ -6,6 +6,7 @@
 
 import type {
   Assigned,
+  Bake,
   Billing,
   Budget,
   Committed,
@@ -15,10 +16,12 @@ import type {
   FieldCandidates,
   HubInfo,
   ImageRef,
+  InkView,
   InputDetail,
   JobKind,
   JobSlot,
   LibraryInfo,
+  Outline,
   Quote,
   RenderDetail,
   RenderOffer,
@@ -27,6 +30,8 @@ import type {
   RunningSession,
   TagMatches,
   TakenOut,
+  Tattoo,
+  TattooList,
 } from './types'
 
 /** One run in one flow of one collection: what a review URL names. */
@@ -111,18 +116,19 @@ export function renderOffer(collection: string): Promise<RenderOffer> {
 }
 
 /* One session's quote over `collections`, or, with none named, every collection
-   short of images. It rents nothing; only `startRender` does. */
+   short of images or holding a bake. It rents nothing; only `startRender` does. */
 export function quoteRender(collections?: string[], without: TakenOut[] = []): Promise<Quote> {
   return send('/api/render/quote', 'POST', collections ? { collections, without } : {})
 }
 
-/* Carries the limit and the images the dialog showed, and what it took out: a quote grown
-   since is refused. */
+/* Carries the limit, the images and the bakes the dialog showed, and what it took out: a
+   quote grown since is refused. */
 export function startRender(
   collections: string[],
   keepOpen: boolean,
   limitS: number,
   images: number,
+  bakes: number,
   without: TakenOut[],
 ): Promise<{ job: JobSlot }> {
   return send('/api/render', 'POST', {
@@ -130,6 +136,7 @@ export function startRender(
     keep_open: keepOpen,
     limit_s: limitS,
     images,
+    bakes,
     without,
   })
 }
@@ -311,6 +318,22 @@ export function renderDetail(place: RenderPlace): Promise<RenderDetail> {
   return get<RenderDetail>(renderAt(place))
 }
 
+const bakeBase = (place: RenderPlace, k: number): string => `${renderAt(place)}/edit/${k}`
+
+/* A bake's image, whole; a queued or damaged bake is refused. */
+export function bakeAt(place: RenderPlace, k: number): string {
+  return `${bakeBase(place, k)}/image`
+}
+
+export function bakeThumbAt(place: RenderPlace, k: number): string {
+  return `${bakeBase(place, k)}/thumb`
+}
+
+/* A bake's record; a number the seed has no edit for, or a damaged record, is refused. */
+export function bakeDetail(place: RenderPlace, k: number): Promise<Bake> {
+  return get<Bake>(bakeBase(place, k))
+}
+
 /* Delete the render and its thumbnails; refused while a render runs for its collection. */
 export function deleteRender(place: RenderPlace): Promise<{ deleted: boolean }> {
   return request(renderAt(place), { method: 'DELETE' })
@@ -325,4 +348,83 @@ export function comparison(
     ? [other.flow, `v${other.version}`, other.seed].map(encodeURIComponent).join('/')
     : 'photo'
   return get<Comparison>(`${renderAt(place)}/compare/${pair}`)
+}
+
+/* The tattoo library, which belongs to no collection: every kept tattoo and the
+   limits the server holds an outline to. */
+export function tattoos(): Promise<TattooList> {
+  return get<TattooList>('/api/tattoos')
+}
+
+/* One kept tattoo with its outline and tone. */
+export function tattooNamed(name: string): Promise<Tattoo & { outline: Outline }> {
+  return get(`/api/tattoos/${encodeURIComponent(name)}`)
+}
+
+/* Put a file into an import's staging as the import does; answers its upload id, and
+   the server reports its reading on the page's stream. */
+export function stageFile(id: string, file: File): Promise<{ upload: string }> {
+  return request(`/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(file.name)}`, {
+    method: 'PUT',
+    body: file,
+  })
+}
+
+/* Keep a staged file as a tattoo under `name`; a refusal leaves the staging open. */
+export function keepTattoo(staging: string, file: string, name: string): Promise<Tattoo> {
+  return send('/api/tattoos', 'POST', { staging, file, name })
+}
+
+/* Keep a cut of a run's photograph under `name`: a tattoo with no image. */
+export function cutTattoo(place: Place, name: string): Promise<Tattoo> {
+  return send(`/api/c/${encodeURIComponent(place.collection)}/tattoos`, 'POST', {
+    name,
+    digest: place.digest,
+    flow: place.flow,
+  })
+}
+
+/* Replace a tattoo's outline and tone with `outline`, whole. */
+export function saveOutline(name: string, outline: Outline): Promise<Outline> {
+  return send(`/api/tattoos/${encodeURIComponent(name)}/outline`, 'PUT', outline)
+}
+
+/* An uploaded tattoo's image, whole. */
+export function designAt(name: string): string {
+  return `/api/tattoos/${encodeURIComponent(name)}/design`
+}
+
+/* The ink on `outline`'s crop, made now and kept nowhere. A cut is asked on a run's
+   photograph, named by `place`; an upload takes none. The box comes in `X-Ink-Box` as
+   `x,y,w,h` and the automatic white grey in `X-Ink-White`. */
+export function inkView(
+  collection: string,
+  name: string,
+  outline: Outline,
+  place: Place | null,
+  signal?: AbortSignal,
+): Promise<InkView> {
+  const asked = place ? { digest: place.digest, flow: place.flow } : {}
+  const url = `/api/c/${encodeURIComponent(collection)}/tattoos/${encodeURIComponent(name)}/ink`
+  const body = {
+    points: outline.points,
+    white: outline.white,
+    neutral: outline.neutral,
+    depth: outline.depth,
+    ...asked,
+  }
+  return readInk(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal })
+}
+
+async function readInk(url: string, init: RequestInit): Promise<InkView> {
+  const response = await fetch(url, init)
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { refusal?: string }
+    throw new Error(body.refusal ?? `${url} answered ${response.status}`)
+  }
+  const [x, y, width, height] = (response.headers.get('X-Ink-Box') ?? '').split(',').map(Number)
+  const white = Number(response.headers.get('X-Ink-White'))
+  if ([x, y, width, height, white].some((one) => one === undefined || Number.isNaN(one)))
+    throw new Error(`${url} answered no ink box or white point`)
+  return { image: await response.blob(), box: { x, y, width, height }, white }
 }

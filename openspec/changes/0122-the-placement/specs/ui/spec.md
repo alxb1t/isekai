@@ -309,18 +309,20 @@ state across steps.
 
 ### Requirement: The picker lists the kept tattoos and takes an upload or a cut
 
-The picker, the first step, SHALL list every kept tattoo as a card with its image, its name, its state, *outlined*,
-*not outlined* or *ready for this photograph*, and what it came from: when it was kept, the size it came with when
-downscaled, its stage-1 pairs on this photograph, or the photograph a cut is from. It SHALL take an upload through the
-import's staging and keep it under a name the operator may change, and SHALL offer *Cut from this photo*, which keeps
-a cut of the render's photograph under a name. A tattoo is ready for this photograph when it is outlined and, if
-uploaded, holds the floor of stage-1 pairs on it or is flagged *not on this photo*. An uploaded card SHALL offer *not
-on this photo*, a cut's SHALL not. A cut of another photograph SHALL stay listed and SHALL not be chosen on this
-render, saying whose it is. A refusal SHALL be shown with its fix. Choosing a card SHALL open the step its state
-asks: the outline until the tattoo is outlined, then stage 1, the direct stage or stage 2 as its mode takes.
+The picker, the first step, SHALL list every kept tattoo as a card with its image, its name, its state,
+*outlined*, *not outlined* or *ready for this photograph*, and what it came from: when it was kept,
+the size it came with when downscaled, its stage-1 pairs on this photograph, or the photograph a cut is from.
+It SHALL take an upload through the import's staging and keep it under a name the operator may change,
+and SHALL offer *Cut from this photo*, which keeps a cut of the render's photograph under a name.
+A tattoo is ready for this photograph when it is outlined and, if uploaded,
+holds the floor of stage-1 pairs on it or is flagged *not on this photo*.
+An uploaded card SHALL offer *not on this photo*, a cut's SHALL not.
+A cut of another photograph SHALL stay listed and SHALL not be chosen on this render, saying whose it is.
+A refusal SHALL be shown with its fix. Choosing a card SHALL open the step its state asks:
+the outline until the tattoo is outlined, then stage 1, the direct stage or stage 2 as its mode takes.
 
-The picker is where a tattoo enters the screen, so it shows state and the way forward, and a ready tattoo goes
-straight to the stage that places it.
+The picker is where a tattoo enters the screen, so it shows state and the way forward,
+and a ready tattoo goes straight to the stage that places it.
 
 #### Scenario: the cards show the state and the source
 - **Key:** `ui:picker:the-cards-show-the-state-and-the-source`

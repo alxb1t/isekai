@@ -321,12 +321,22 @@ export interface TakenOut {
   flow: string
 }
 
-/* One collection's row of a quote: per flow what renders, and a count it refuses,
-   or null. */
+/* A queued bake in a quote: its photograph's run and flow, the approval's version, the
+   seed as text and the edit's number. */
+export interface QuoteBake extends QuoteSource {
+  flow: string
+  version: number
+  seed: string
+  k: number
+}
+
+/* One collection's row of a quote: per flow what renders, its queued bakes, and a count
+   it refuses, or null. */
 export interface QuotedCollection {
   collection: string
   images: number
   flows: { flow: string; images: number; sources: (QuoteSource & { images: number })[] }[]
+  bakes: QuoteBake[]
   refused: string | null
 }
 
@@ -357,14 +367,28 @@ export interface Assigned {
   refused: Record<string, string>
 }
 
-/* A collection's Render offer: the images it lacks and every other collection
-   lacks, why Render is disabled, and why an approval's count is refused, each
+/* A collection's Render offer: the images and the queued bakes it holds and every other
+   collection holds, why Render is disabled, and why an approval's count is refused, each
    null when there is none. */
 export interface RenderOffer {
   disabled: string | null
   images: number
   others: number
+  bakes: number
+  other_bakes: number
   refused: string | null
+}
+
+/* One edit request of a render's seed: `placed_on` is the number of the bake whose image it
+   edits, null for the render's own; `baked_at` the image's time, null while queued; `edit` its
+   name, and `reason` the refusal naming the file of a damaged record, each null otherwise. */
+export interface Bake {
+  k: number
+  state: 'baked' | 'queued' | 'damaged'
+  placed_on: number | null
+  baked_at: number | null
+  edit: string | null
+  reason: string | null
 }
 
 /* An image's large view: the approval it was rendered from, filled fields only. */
@@ -390,6 +414,8 @@ export interface RenderDetail {
   source: { flow: string; images: { version: number; seed: string }[] }[]
   /* Every offered flow, this one first, assigned or not. */
   targets: string[]
+  /* The seed's bakes by number, each with what it was placed on. */
+  bakes: Bake[]
 }
 
 /* One image a draft is written from, its seed a decimal string. */
@@ -416,6 +442,57 @@ export interface RefusedImage extends ImageRef {
 export interface DraftRefused {
   refusal: string
   images: RefusedImage[]
+}
+
+/* A point in an image's own pixels, `[x, y]`; a cut's image is its photograph. */
+export type Point = [number, number]
+
+/* A kept tattoo. `kind` is `image` for an upload and `cut` for a tattoo with no image of
+   its own; `cut_from` is a cut's run digest, `downscaled_from` an upload's first size. */
+export interface Tattoo {
+  name: string
+  kind: 'image' | 'cut'
+  size: [number, number]
+  /* When it was kept: an ISO time in UTC. */
+  kept: string
+  outlined: boolean
+  downscaled_from: [number, number] | null
+  cut_from: string | null
+}
+
+/* A tattoo's outline and ink tone as the server keeps them; `white` is a scale on the
+   automatic white point, 1 being automatic. */
+export interface Outline {
+  points: Point[]
+  closed: boolean
+  white: number
+  neutral: boolean
+  depth: number
+}
+
+/* The bounds the page and the server both read. */
+export interface TattooLimits {
+  long_side: number
+  outline_min: number
+  outline_max: number
+  depth_min: number
+  depth_max: number
+  /* The depth a cut and an upload start at, which *Reset* returns to. */
+  photo_depth: number
+  image_depth: number
+}
+
+export interface TattooList {
+  tattoos: Tattoo[]
+  limits: TattooLimits
+}
+
+/* The ink on an outline's crop: a JPEG, its box in the image's pixels, and the
+   automatic white point as a grey from 0 to 255. */
+export interface InkView {
+  image: Blob
+  box: { x: number; y: number; width: number; height: number }
+  white: number
 }
 
 /* One side of a comparison: a render, headed by its flow, version and seed. */

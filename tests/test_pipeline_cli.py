@@ -82,6 +82,8 @@ EXPECTED_VERBS = (
     "ui",
     "compare",
     "migrate",
+    "ink",
+    "edit",
 )
 
 
@@ -180,8 +182,11 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
     # `compare` takes a collection directory, `render` its runs, `import` a
     # collection and its files, `draft` a flow and images, `discard` an image,
-    # `prepare` cells; `ui` and `migrate` take nothing.
+    # `prepare` cells, `ink` an image and its layer, `edit` an edit, a render and its
+    # composite; `ui` and `migrate` take nothing.
     own = {
+        "ink": ["photo.jpg", "layer.png"],
+        "edit": ["tattoo-wai", "outputs/001/7.png", "--composite", "composite.png"],
         "import": ["--collection", "collection", "photo.jpg"],
         "prepare": ["r1/summon-anime-wai"],
         "draft": ["--flow", "summon-anime-wai", "outputs/001/7.png"],
@@ -1116,6 +1121,7 @@ def test_discard_deletes_the_render_and_its_thumbnail(
         fcntl.flock(held, fcntl.LOCK_EX)
         assert dispatch(build_parser().parse_args(argv), wired) == 1
     assert image.is_file() and (cached / own).is_file()
+    assert (image.parent / "7.render.json").is_file()
     assert isinstance(wired.err, io.StringIO)
     assert f"refused: {image.relative_to(tmp_path)}: A render session" in (
         wired.err.getvalue()

@@ -56,7 +56,21 @@ photograph's tags — `interface/drafting.py`'s `draft_across` runs it, the same
 sequence the CLI's `draft` runs (D4) — and, for a deleted render, the library's
 `drop_thumbnails`, the render stage's `discard_render` and review's `withdraw`,
 as the CLI's `discard` calls them.
+
+**The edit's pieces.** `ink` is `shared/ink.py`'s, which `cli.py`'s verb calls; the maths of an edit is
+`shared/tattoo.py`'s, over arrays, and Pillow and numpy are imported inside both modules' functions. The edit stage is
+`pipeline/edit.py`, which `cli.py`'s `edit` verb and `interface/render.py`'s session both call, and which imports no
+stage: the transport helpers it shares with `pipeline/generate.py` — `submit_and_wait` and `read_runtime` — moved to
+`boundary/comfy/prompt.py`, behind the package's front door, for that reason
+([D51](decisions.md#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)). A session runs a pending edit as
+`edit --pending` lines, so the render verb creates the pod and an edit rents nothing of its own (D36).
 `wiring.py` imports `boundary/ollama.py` for the probe a job asks first.
+
+**The placement's pieces.** `chain` is `shared/chain.py`'s, over arrays, importing only `foundation/refusal.py`; the
+ink view and the tattoo library are `pipeline/tattoos.py`'s, which imports `shared/chain.py`, `shared/ink.py` and
+`shared/tattoo.py` and no stage, and which the tattoo routes of `interface/ui/app.py` call, writing no file of their
+own ([D52](decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)). Pillow, and numpy in `chain`,
+are imported inside functions, so neither module puts a wheel on the entry point's graph.
 
 **`tests/test_layers.py` holds where the lazy edges point; review holds that they
 stay lazy.** The `-S` guard goes red only when a chain of module-scope imports
@@ -74,7 +88,8 @@ modules inside each group and inside `evaluation/`.
 `atomic_write` writes bytes to a path and knows nothing about a run, `artifacts`
 declares what every run file holds, and `flow` defines `Workflow`, the ComfyUI
 graph a flow manifest names the nodes of.
-`boundary/comfy/` and `pipeline/generate.py` import them rather than define them.
+`boundary/comfy/` and `pipeline/generate.py` import them rather than define them. `edit` is the same
+(`foundation/edit.py`): the registry of an edit, loaded and pinned as a flow is, and `graph_digest` lives in `flow`.
 
 ## Reading this graph
 

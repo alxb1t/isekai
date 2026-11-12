@@ -495,7 +495,10 @@ it goes. An approval SHALL wait for a save in flight, and state the draft that s
 The saved receipt is the only thing on the page that speaks about saving, so a counter one stale answer can drive
 below zero silences it for the rest of the input. An edit typed inside the debounce is the operator's work, and
 closing the tab is an ordinary way to leave. An edit or an approval pressed inside a save's round trip is the
-operator's own, not another tab's, and a closing page never reads the receipt it would have to state.
+operator's own, not another tab's, and a closing page never reads the receipt it would have to state. A save waiting
+behind another carries the whole draft, so a later edit replaces its payload instead of queueing a second request, and
+a failed save leaves the draft pending only when no later save of the sheet waits. Of two reads of one sheet in
+flight, only the newest SHALL land, so an older read answering late never replaces the operator's edits.
 
 #### Scenario: a stale save cannot clear the saving state
 - **Key:** `ui:save:a-stale-save-cannot-clear-saving`
@@ -516,6 +519,26 @@ operator's own, not another tab's, and a closing page never reads the receipt it
 - **Layers:** unit
 - **WHEN** Approve is pressed while a save is unanswered
 - **THEN** the approval is sent once that save answers, stating the draft it wrote
+
+#### Scenario: edits inside one slow save are sent as one request
+- **Key:** `ui:save:edits-inside-a-slow-save-are-sent-as-one-request`
+- **Layers:** unit
+- **WHEN** several edits each pause past the debounce while one save is unanswered
+- **THEN** one further save is sent once it answers, holding every edit
+
+#### Scenario: a failed save leaves nothing to send again
+- **Key:** `ui:save:a-failed-save-leaves-nothing-to-send-again`
+- **Layers:** unit
+- **WHEN** a save fails while a later save of the sheet waits behind it
+- **THEN** the later save holds every edit
+- **AND** nothing is sent again once it answers
+
+#### Scenario: the newest read of a sheet is the one that lands
+- **Key:** `ui:save:the-newest-read-of-a-sheet-is-the-one-that-lands`
+- **Layers:** unit
+- **WHEN** two reads of one sheet are in flight and the older answers first
+- **THEN** the sheet stays loading until the newest read answers
+- **AND** an edit made after that is saved with the edit in it
 
 ### Requirement: The hub shows each source's stage in each offered flow, and a tick assigns it
 
@@ -671,6 +694,13 @@ pending count is the render stage's own.
   with its version
 - **AND** each tile of a seed rendered under both versions is marked `⇄`
 - **AND** in a window too short for that, its tiles shrink to fit and the grid does not scroll
+
+#### Scenario: a cell of ten renders scrolls its grid
+- **Key:** `ui:hub:a-cell-of-ten-renders-scrolls-its-grid`
+- **Layers:** e2e
+- **WHEN** the cell modal opens on a cell of ten renders in a 1280×768 window
+- **THEN** its four rows keep their height, and none scrolls on its own
+- **AND** the grid scrolls to the fourth row
 
 #### Scenario: a cell shows what is ready
 - **Key:** `ui:hub:a-cell-shows-what-is-ready`
@@ -1018,38 +1048,50 @@ One connection a page leaves the browser's others free.
 
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
-The system SHALL offer Render from a bar on a collection's hub that counts the images short of
-their approvals' counts, its collection's and, as `+n in other collections`, every other collection's, and SHALL show no
-such bar when no collection is short and no count is refused, nor on the hub while changes wait for Prepare. While a
-render runs the bar SHALL show the session's totals and *Session* in place of the count and Render, and name the images
-short that the session does not render as waiting for the next session. The bar SHALL be disabled, with its reason, when
-a pod may still be billing, when no RunPod key is in the surface's environment, and when an approval's count is refused.
-It SHALL open a dialog listing a row per collection short of images, in the Library's order, each ticked, and in each
-row per offered flow the photographs that will render, as tiles grouped by flow, and none that is left out; unticking a
-row SHALL quote the rest again; the session's estimate and limit, and its price at most — the limit at the hourly
-maximum `gpunit.toml` names, with the volume at its configured rate; an estimate past the ceiling `gpunit.toml` names
-SHALL disable the confirmation, saying so. A tile's `×`, or `⌫` while the tile holds the focus, SHALL take its
-photograph's flow out of the session and quote the rest again, show the next photograph past the cap, and move the focus
-to the next tile; a refused count SHALL show no tile. A row whose every tile is taken out SHALL read *all removed*,
-unticked, and leave the confirmation, and with every row so emptied the confirmation SHALL be disabled, saying *Nothing
-left to render.* The tiles SHALL be one stop in the `Tab` order: `h` and `l` SHALL move the focus along a flow's tiles,
-`j` and `k` to the next and the previous flow's, its place held at the shorter's end, and a key's move SHALL scroll the
-focused tile to the centre of the list where the scroll allows, the first flow's to the list's top and the last's to its
-foot. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL, and SHALL close when its page is
-left, and the confirmation SHALL close it and open the session drawer over the page. The confirmation SHALL carry the
-ticked collections, the limit, the number of images the dialog showed and the photographs taken out, which the session
-SHALL not render, and SHALL be refused, starting nothing, when the ticked collections' quote taken again has a longer
-limit or another number of images, or names a photograph that is not one of a quoted collection's runs. The bar SHALL
-show the newest offer asked for, whatever order the answers arrive in.
+The system SHALL offer Render from a bar on a collection's hub that counts the images short of their
+approvals' counts and the bakes queued, its collection's and, as `+n in other collections`, every other
+collection's, and SHALL show no such bar when no collection is short of images or holds a queued bake and no
+count is refused, nor on the hub while changes wait for Prepare. While a render runs the bar SHALL show the
+session's totals and *Session* in place of the counts and Render, and name the images short that the session
+does not render as waiting for the next session. The bar SHALL be disabled, with its reason, when a pod may
+still be billing, when no RunPod key is in the surface's environment, and when an approval's count is refused.
+It SHALL open a dialog titled *Render n images*, *Render n images · m bakes* or, with no image
+short, *Bake m*, listing a row per collection short of images or holding a queued bake, in the Library's
+order, each ticked, and in each row per offered flow the photographs that will render, as tiles grouped by
+flow, then a row per queued bake naming its photograph, version, seed and edit number, and none that is left
+out; unticking a row SHALL quote the rest again; the session's estimate, counting each bake, and limit, and
+its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its configured
+rate; an estimate past the ceiling `gpunit.toml` names SHALL disable the confirmation, saying so. A tile's
+`×`, or `⌫` while the tile holds the focus, SHALL take its photograph's flow out of the session, its bakes
+with it, and quote the rest again, show the next photograph past the cap, and move the focus to the next
+tile; a bake row's `×` SHALL take its photograph's flow out the same way; a refused count SHALL show no
+tile. A row whose every tile and bake is taken out SHALL read *all removed*, unticked, and leave the
+confirmation, and with every row so emptied the confirmation SHALL be disabled, saying *Nothing left to
+render.* The tiles SHALL be one stop in the `Tab` order: `h` and `l` SHALL move the focus along a flow's
+tiles, `j` and `k` to the next and the previous flow's, its place held at the shorter's end, and a key's move
+SHALL scroll the focused tile to the centre of the list where the scroll allows, the first flow's to the
+list's top and the last's to its foot. Its confirmation SHALL be the only act that rents; the dialog SHALL
+hold no URL, and SHALL close when its page is left, and the confirmation SHALL close it and open the session
+drawer over the page. The confirmation SHALL carry the ticked collections, the limit, the number of images
+and the number of bakes the dialog showed and the photographs taken out, which the session SHALL not render,
+and SHALL be refused, starting nothing, when the ticked collections' quote taken again has a longer limit,
+another number of images or another number of bakes, or names a photograph that is not one of a quoted
+collection's runs. A session of bakes alone SHALL be allowed. The bar SHALL show the newest offer asked for,
+whatever order the answers arrive in.
 
-The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
-not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires a fresh
-confirmation, even where the limit sits at its floor or cap. An equal-total change of sources or approvals is outside
-that comparison. A bar that is absent needs no reason, and one forward action holds the screen's accent; a refused count
-keeps the bar, so the refusal is never silent. A photograph is known by sight, so the dialog shows it rather than its
-file name, and is taken out where it is seen; the dialog shows only what renders, as that is what the operator agrees
-to. A removal is the render verb's `--without`, so the page's session is one the terminal can run
-([D3](../../../docs/decisions.md#d3--the-hand-path-stays)).
+The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a
+bound and not a guess. A reload never reopens a confirmation that spends; a changed image total, bake total or
+longer limit requires a fresh confirmation, even where the limit sits at its floor or cap. An equal-total
+change of sources or approvals is outside that comparison. A bar that is absent needs no reason, and one
+forward action holds the screen's accent; a refused count keeps the bar, so the refusal is never silent. A
+photograph is known by sight, so the dialog shows it rather than its file name, and is taken out where it is
+seen; the dialog shows only what renders, as that is what the operator agrees to. A removal is the render
+verb's `--without`, so the page's session is one the terminal can run
+([D3](../../../docs/decisions.md#d3--the-hand-path-stays)). A bake is an edit request with no image, run by
+the same session as the images
+([D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children),
+[D36](../../../docs/decisions.md#d36--a-render-session-is-isekai-render)), and `--without` names a
+photograph's flow, so a bake leaves with its photograph's flow and no other way.
 
 #### Scenario: the dialog lists what renders per flow
 - **Key:** `ui:render:the-dialog-lists-what-renders`
@@ -1057,6 +1099,14 @@ to. A removal is the render verb's `--without`, so the page's session is one the
 - **WHEN** a collection's quote is asked for with approvals short of their count in two flows, and a draft in one
 - **THEN** it lists each flow's images, each photograph with its run, and nothing left out
 - **AND** it carries the estimate, the limit and the price at most
+
+#### Scenario: the dialog lists each queued bake
+- **Key:** `ui:render:the-dialog-lists-each-queued-bake`
+- **Layers:** unit
+- **WHEN** a collection's quote is asked for with an approval short of its count and a queued bake of another
+  photograph's render
+- **THEN** it lists the images by flow, and the bake with its photograph, version, seed and edit number
+- **AND** the estimate counts the bake beside the images
 
 #### Scenario: the dialog shows each photograph as a thumbnail by flow
 - **Key:** `ui:render:the-dialog-shows-thumbnails-by-flow`
@@ -1070,6 +1120,13 @@ to. A removal is the render verb's `--without`, so the page's session is one the
 - **WHEN** the quote and the confirmation name one run's flow taken out of a collection short in two runs
 - **THEN** the quote counts the other run's images alone
 - **AND** the render job's verb carries a `--without` for the run's flow
+
+#### Scenario: a photograph taken out takes its bakes
+- **Key:** `ui:render:a-photograph-taken-out-takes-its-bakes`
+- **Layers:** unit
+- **WHEN** one run's flow holds an image short and a queued bake, and the quote names that run's flow taken out
+- **THEN** the quote lists neither the image nor the bake
+- **AND** the confirmation carries the number of bakes of the runs that stay
 
 #### Scenario: a photograph no quoted run holds is refused
 - **Key:** `ui:render:a-photograph-not-quoted-is-refused`
@@ -1095,7 +1152,7 @@ to. A removal is the render verb's `--without`, so the page's session is one the
 #### Scenario: with every row taken out nothing is left to render
 - **Key:** `ui:render:nothing-left-disables-render`
 - **Layers:** unit
-- **WHEN** every tile of every row is taken out
+- **WHEN** every tile and every bake of every row is taken out
 - **THEN** each row reads *all removed*
 - **AND** the confirmation is disabled, saying *Nothing left to render.*
 
@@ -1122,16 +1179,35 @@ to. A removal is the render verb's `--without`, so the page's session is one the
 #### Scenario: nothing short disables Render
 - **Key:** `ui:render:nothing-short-disables-render`
 - **Layers:** unit
-- **WHEN** every approval in a collection already has its count of images
-- **THEN** the collection's Render offer counts no image
+- **WHEN** every approval in a collection already has its count of images and no bake is queued
+- **THEN** the collection's Render offer counts no image and no bake
 - **AND** it names why
+
+#### Scenario: a bake alone is a session
+- **Key:** `ui:render:a-bake-alone-is-a-session`
+- **Layers:** unit
+- **WHEN** every approval has its count of images and one bake is queued
+- **THEN** the offer counts the bake and no image, and the quote lists the collection and prices the bake
+- **AND** the confirmation starts a render that plans no image
+
+#### Scenario: the dialog is titled for what it does
+- **Key:** `ui:render:the-dialog-is-titled-for-what-it-does`
+- **Layers:** unit
+- **WHEN** the quote holds images alone, images and a bake, and a bake alone
+- **THEN** the titles read *Render 2 images*, *Render 2 images · 1 bake* and *Bake 1*
 
 #### Scenario: Prepare takes the bar first
 - **Key:** `ui:render:prepare-takes-the-bar-first`
 - **Layers:** unit
 - **WHEN** a hub has images short and changes waiting for Prepare
 - **THEN** the Prepare bar shows and the Render bar does not
-- **AND** with nothing waiting the Render bar shows, and with nothing short neither does
+- **AND** with nothing waiting the Render bar shows, and with nothing short and no bake queued neither does
+
+#### Scenario: a bar counts a bake alone
+- **Key:** `ui:render:a-bar-counts-a-bake-alone`
+- **Layers:** unit
+- **WHEN** a hub has no image short and a bake queued, here or in another collection
+- **THEN** the Render bar shows, counting the bakes, with Render
 
 #### Scenario: a refused count is shown
 - **Key:** `ui:render:a-refused-count-is-shown`
@@ -1151,6 +1227,13 @@ to. A removal is the render verb's `--without`, so the page's session is one the
 - **Key:** `ui:render:a-grown-quote-is-refused`
 - **Layers:** unit
 - **WHEN** Render is confirmed with a shorter limit, or fewer images, than the collection's quote now gives
+- **THEN** the confirmation is refused, naming that the quote changed
+- **AND** no job starts
+
+#### Scenario: a changed bake count is refused
+- **Key:** `ui:render:a-changed-bake-count-is-refused`
+- **Layers:** unit
+- **WHEN** Render is confirmed with fewer bakes than the quote now gives, or none named
 - **THEN** the confirmation is refused, naming that the quote changed
 - **AND** no job starts
 
@@ -1658,6 +1741,13 @@ none                      ─▶ "No sheet waits for review"
 - **Layers:** unit
 - **WHEN** Review reads an approved sheet whose prompt is assembled
 - **THEN** its payload carries the review stage's reason
+
+#### Scenario: Cancel approve follows the render
+- **Key:** `ui:review:the-cancel-follows-the-render`
+- **Layers:** unit
+- **WHEN** a render running for the collection starts or ends while an approved sheet is open
+- **THEN** Review reads the sheet again, so *Cancel approve* follows the render
+- **AND** a render that starts or ends beside a sheet that is not approved leaves it unread
 
 #### Scenario: the rail names the other flows' waiting sheets
 - **Key:** `ui:review:the-rail-names-the-other-flows-waiting`
@@ -2342,3 +2432,326 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 - **WHEN** Review's commands are declared on macOS and then on Linux
 - **THEN** on macOS `⌃J` and `⌃K` move to the next and the previous field from a text field
 - **AND** on Linux neither is declared
+
+### Requirement: A render's large view shows its photograph and its bakes, and each bake has its own address
+
+The system SHALL show on an image's large view the photograph it was rendered from as a thumbnail and, when the
+render has bakes, the chain of them: the render first, then each bake of its seed by its number, each one level
+further in for each bake it descends through, a row naming its number and, baked, its time, or, queued, that
+it waits for the next session. A baked row SHALL open that bake's large view at `…/<seed>/edit/<k>`, showing
+the bake's image, the approval's fields the render has, and the bake's record: its edit, the image it was
+placed on and its time. A queued bake's view SHALL show the image it is placed on, marked queued. A bake's view
+SHALL offer no *Draft from this*, no *Compare with…* and no *Delete*; `Esc`, *Back to Hub*, `h` and `l` SHALL
+act as on its render's. The server SHALL serve a bake's record, its image and its thumbnail, made in the
+library's cache once, and SHALL refuse a number the seed has no edit for and the image of a queued bake,
+naming the render session that bakes it. A bake whose record cannot be read SHALL be listed damaged, naming
+its file, and open no view, and SHALL not hide the render's other bakes. Deleting a render SHALL delete its
+bakes' thumbnails with its own.
+
+A bake is not a render: it holds no sheet of its own and no seed, so its view borrows its render's, and a
+delete there would take the render and every bake with it
+([D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children),
+[D50](../../../docs/decisions.md#d50--the-last-render-takes-its-approval-and-a-flow-holds-only-its-own-files)).
+A bake's files are named by the run's own functions, never by the surface
+([D3](../../../docs/decisions.md#d3--the-hand-path-stays)).
+
+```
+the render      ·  seed 42              the large view of the render
+  ↳ edit 1      ·  baked 21:52:40       opens …/42/edit/1
+      ↳ edit 2  ·  queued               waits for the next session
+```
+
+#### Scenario: the chain lists the bakes in order
+- **Key:** `ui:bakes:the-chain-lists-the-bakes-in-order`
+- **Layers:** unit
+- **WHEN** a render's seed holds a baked edit placed on the render and a queued edit placed on it
+- **THEN** the render's detail lists both by number, each with its state and what it was placed on
+- **AND** the page draws the second one level in from the first
+
+#### Scenario: a bake's image and thumbnail are served
+- **Key:** `ui:bakes:a-bakes-image-and-thumbnail-are-served`
+- **Layers:** unit
+- **WHEN** a baked edit's image and thumbnail are asked for, the thumbnail twice
+- **THEN** the image is served as its bytes, and the thumbnail is a JPEG
+- **AND** the second thumbnail is read from `.cache/` without decoding the image
+
+#### Scenario: a bake's record names its edit and what it was placed on
+- **Key:** `ui:bakes:a-bakes-record-names-its-edit`
+- **Layers:** unit
+- **WHEN** the record of an edit placed on another edit's image is asked for
+- **THEN** it names the edit, that other edit's number and the state
+
+#### Scenario: a queued bake has no image
+- **Key:** `ui:bakes:a-queued-bake-has-no-image`
+- **Layers:** unit
+- **WHEN** the image of an edit with no image is asked for
+- **THEN** the request is refused, naming the render session that bakes it
+
+#### Scenario: a number the seed has no edit for is refused
+- **Key:** `ui:bakes:an-unknown-bake-is-refused`
+- **Layers:** unit
+- **WHEN** a bake's record, image or thumbnail is asked for at a number the seed has no edit for, or one that
+  is no number
+- **THEN** the request is refused, naming the number and the render, never failed
+
+#### Scenario: a damaged record marks its own bake
+- **Key:** `ui:bakes:a-damaged-record-marks-its-bake`
+- **Layers:** unit
+- **WHEN** a render's seed holds a baked edit and an edit whose record is not valid JSON
+- **THEN** the render's detail lists the first as baked and the second as damaged, naming its file
+- **AND** the second's record, image and thumbnail routes are refused, naming the file
+
+#### Scenario: deleting a render deletes its bakes' thumbnails
+- **Key:** `ui:bakes:deleting-a-render-deletes-its-bakes-thumbnails`
+- **Layers:** unit
+- **WHEN** a render with a baked edit whose thumbnail is cached is deleted
+- **THEN** the render's thumbnail and the bake's are deleted
+- **AND** another collection's thumbnail of the same seed stays
+
+#### Scenario: a bake's view offers no writes
+- **Key:** `ui:bakes:a-bakes-view-offers-no-writes`
+- **Layers:** unit
+- **WHEN** the large view is opened on a bake's address, and on a render's
+- **THEN** the bake's offers no *Draft from this*, no *Compare with…* and no *Delete*
+- **AND** the render's offers each
+
+### Requirement: The large view of a render offers Place a tattoo
+
+The large view of a render SHALL offer *Place a tattoo* as a button and as the command `⇧P`,
+declared once in the key store, and SHALL open the placement screen's first step on that render.
+
+The placement screen is reached from the image it places on. `⇧T` stays the theme's
+([D48](../../../docs/decisions.md#d48--a-theme-is-a-token-set-chosen-in-the-browser)).
+
+#### Scenario: the button opens the picker on the render
+- **Key:** `ui:place-offer:the-button-opens-the-picker`
+- **Layers:** unit
+- **WHEN** *Place a tattoo* is chosen on a render's large view
+- **THEN** the route is the render's `place` route at the first step
+
+#### Scenario: the command is declared once
+- **Key:** `ui:place-offer:the-command-is-declared-once`
+- **Layers:** unit
+- **WHEN** the large view's commands are read
+- **THEN** `place` is declared on `⇧P` and no other command takes that key
+
+### Requirement: The placement screen has a route of its own per step
+
+The system SHALL give the placement screen the route
+`/c/<collection>/renders/<run>/<flow>/<version>/<seed>/place/<step>`, with the tattoo's name after the step
+where the step needs one, and SHALL not mount the screen again when only its step or name changes.
+A step the screen does not know SHALL redirect to its first.
+
+A route under a render's path would collide with `compare` unless it is its own segment,
+and the screen keeps its state across steps.
+
+#### Scenario: a step change keeps the screen mounted
+- **Key:** `ui:place-route:a-step-change-keeps-the-screen-mounted`
+- **Layers:** unit
+- **WHEN** the route moves from the first step to the outline step of one tattoo
+- **THEN** the view's key is the same
+
+#### Scenario: an unknown step redirects to the first
+- **Key:** `ui:place-route:an-unknown-step-redirects-to-the-first`
+- **Layers:** unit
+- **WHEN** the route names a step the screen does not know
+- **THEN** it redirects to the first step of the same render
+
+#### Scenario: the route does not collide with compare
+- **Key:** `ui:place-route:the-route-does-not-collide-with-compare`
+- **Layers:** unit
+- **WHEN** a render's `compare` and `place` paths are resolved
+- **THEN** each resolves to its own route
+
+### Requirement: The placement screen holds no key of its own
+
+The placement screen and the components it holds SHALL declare no command.
+The keys the app answers everywhere SHALL stay, and a dialog SHALL close on `esc` as every dialog does.
+
+The keys come once the screen has been used and shows which are useful; one declared now would be one to keep.
+
+#### Scenario: the screen declares no command
+- **Key:** `ui:place-keys:the-screen-declares-no-command`
+- **Layers:** unit
+- **WHEN** the sources of the screen and its components are read
+- **THEN** none declares a command through `useKeys`
+
+### Requirement: The panel zooms at the pointer, pans by a drag, and fits or shows 1:1
+
+The panel SHALL show one image in a viewport, zoom it at the pointer by the wheel between the declared floor
+and ceiling, pan it by a drag on the image, and offer *Fit* and *1:1*.
+A zoom SHALL keep the image point under the pointer under it. A pan SHALL keep part of the image in the viewport.
+The panel SHALL show its zoom as a percentage.
+
+The ink is judged at 1:1, so the panel keeps the pixel under the pointer where it was.
+
+#### Scenario: a zoom keeps the point under the pointer
+- **Key:** `ui:panel:a-zoom-keeps-the-point-under-the-pointer`
+- **Layers:** unit
+- **WHEN** the view is zoomed at a pointer position
+- **THEN** the image point that was under the pointer is still under it
+
+#### Scenario: a zoom is held between the floor and the ceiling
+- **Key:** `ui:panel:a-zoom-is-held-between-the-floor-and-the-ceiling`
+- **Layers:** unit
+- **WHEN** the view is zoomed in past the ceiling, or out past the floor
+- **THEN** its scale is the ceiling, or the floor
+
+#### Scenario: a pan keeps part of the image in view
+- **Key:** `ui:panel:a-pan-keeps-part-of-the-image-in-view`
+- **Layers:** unit
+- **WHEN** the view is panned far past an edge
+- **THEN** some of the image is still in the viewport
+
+#### Scenario: fit and 1:1
+- **Key:** `ui:panel:fit-and-one-to-one`
+- **Layers:** unit
+- **WHEN** the view is fitted, and then set to 1:1
+- **THEN** fit shows the whole image centred, and 1:1 shows one image pixel for one screen pixel about the
+  viewport's centre
+
+#### Scenario: a point converts both ways
+- **Key:** `ui:panel:a-point-converts-both-ways`
+- **Layers:** unit
+- **WHEN** a screen point is turned into an image point and back
+- **THEN** it is the screen point
+
+### Requirement: An outline is clicked, closed on its first point and edited by dragging
+
+The outline editor SHALL add a vertex at each click on the image while the outline is open,
+close the outline on a click within the declared radius of the first vertex, move a vertex by a drag on it,
+insert a vertex on an edge by a shift-click, remove a vertex by a double click,
+undo its last change and clear itself.
+A closed outline SHALL need at least the declared floor of vertices and SHALL take no more than the ceiling.
+The radius SHALL be the same on screen at every zoom.
+
+A click that moves is a pan, not a vertex.
+
+#### Scenario: a click adds a vertex and the first closes
+- **Key:** `ui:outline-edit:a-click-adds-a-vertex-and-the-first-closes`
+- **Layers:** unit
+- **WHEN** vertices are clicked and then the first is clicked
+- **THEN** each click added a vertex, and the last closed the outline without adding one
+
+#### Scenario: the closing radius is the same on screen at every zoom
+- **Key:** `ui:outline-edit:the-radius-is-the-same-on-screen`
+- **Layers:** unit
+- **WHEN** a click lies the radius's screen distance from the first vertex at two zooms
+- **THEN** it closes at both
+
+#### Scenario: a drag moves a vertex
+- **Key:** `ui:outline-edit:a-drag-moves-a-vertex`
+- **Layers:** unit
+- **WHEN** a vertex is dragged
+- **THEN** it moves to the pointer's image point and the others stay
+
+#### Scenario: a shift-click inserts on the nearest edge
+- **Key:** `ui:outline-edit:a-shift-click-inserts-on-the-nearest-edge`
+- **Layers:** unit
+- **WHEN** a closed outline is shift-clicked near one edge
+- **THEN** a vertex lies on that edge, between its ends
+
+#### Scenario: a double click removes a vertex
+- **Key:** `ui:outline-edit:a-double-click-removes-a-vertex`
+- **Layers:** unit
+- **WHEN** a vertex is double-clicked and the outline then has fewer than the floor
+- **THEN** the vertex is gone and the outline reads as not ready
+
+#### Scenario: undo and clear
+- **Key:** `ui:outline-edit:undo-and-clear`
+- **Layers:** unit
+- **WHEN** a vertex is added, moved and removed, then undone three times, then cleared
+- **THEN** each undo restores the state before its change, and clear leaves no vertex and an open outline
+
+#### Scenario: the ceiling is held
+- **Key:** `ui:outline-edit:the-ceiling-is-held`
+- **Layers:** unit
+- **WHEN** an outline of the ceiling's vertices is clicked once more
+- **THEN** no vertex is added
+
+### Requirement: The picker lists the kept tattoos and takes an upload or a cut
+
+The picker, the first step, SHALL list every kept tattoo as a card with its image, its name, its state,
+*outlined* or *not outlined*, and what it came from: when it was kept, the size it came with when downscaled,
+or the photograph a cut is from.
+It SHALL take an upload through the import's staging and keep it under a name the operator may change,
+and SHALL offer *Cut from this photo*, which keeps a cut of the render's photograph under a name.
+A cut of another photograph SHALL stay listed and SHALL not be chosen on this render, saying whose it is.
+A refusal SHALL be shown with its fix. Choosing a card SHALL open the outline step on it.
+
+The picker is where a tattoo enters the screen, so it shows nothing but state and the way forward.
+
+#### Scenario: the cards show the state and the source
+- **Key:** `ui:picker:the-cards-show-the-state-and-the-source`
+- **Layers:** unit
+- **WHEN** an outlined upload and a cut that is not outlined are listed
+- **THEN** the upload's card reads *outlined* and the cut's reads *not outlined* and *from* its photograph
+
+#### Scenario: an upload's name starts as the file's stem
+- **Key:** `ui:picker:an-uploads-name-starts-as-the-files-stem`
+- **Layers:** unit
+- **WHEN** `IMG_5521.heic` is chosen for upload
+- **THEN** its name field starts as `IMG_5521`
+
+#### Scenario: a cut of another photograph cannot be chosen here
+- **Key:** `ui:picker:a-cut-of-another-photograph-cannot-be-chosen`
+- **Layers:** unit
+- **WHEN** a cut from another photograph is listed on this render
+- **THEN** its card cannot be chosen and says whose photograph it is
+
+#### Scenario: a refusal shows its fix
+- **Key:** `ui:picker:a-refusal-shows-its-fix`
+- **Layers:** unit
+- **WHEN** an upload is refused because its name is taken
+- **THEN** the card's form shows the refusal beside the name
+
+### Requirement: The outline step shows the ink and keeps its white point and tone
+
+The outline step SHALL show the tattoo in the panel and let its outline be drawn, saving it as it changes.
+Once the outline is closed it SHALL offer the ink view beside the photograph or image,
+drawn from the server's answer on the crop's offset.
+It SHALL show the automatic white point as an 8-bit grey and let the operator set one by hand,
+stored as the scale on the automatic point, and return to automatic.
+It SHALL offer *neutral* and *depth* from 1.0 to 2.0, and *Reset* to the kind's defaults once either differs.
+On a cut it SHALL show the photograph with the ink at full strength inside the outline
+and the photograph dimmed around it, and the size of the ink on the photograph,
+and offer *Upload a tattoo instead*, which keeps a new tattoo under its own name and leaves the cut kept.
+While the outline is open the controls SHALL be disabled with their reason.
+
+The ink view is the judge: nothing on the screen grades the cut.
+
+#### Scenario: the white grey converts to a scale and back
+- **Key:** `ui:outline-step:the-white-grey-converts-to-a-scale-and-back`
+- **Layers:** unit
+- **WHEN** an 8-bit grey is set by hand against an automatic grey
+- **THEN** the stored scale is their ratio, and the grey shown is the automatic grey times the scale, rounded
+
+#### Scenario: a scale of one is automatic
+- **Key:** `ui:outline-step:a-scale-of-one-is-automatic`
+- **Layers:** unit
+- **WHEN** the white scale is 1.0
+- **THEN** the state reads *auto*, and any other scale reads *set by hand*
+
+#### Scenario: reset appears when the tone differs from the default
+- **Key:** `ui:outline-step:reset-appears-when-the-tone-differs`
+- **Layers:** unit
+- **WHEN** a cut's depth is changed from 1.6
+- **THEN** *Reset* is offered, and choosing it restores neutral on and depth 1.6
+
+#### Scenario: the controls wait for a closed outline
+- **Key:** `ui:outline-step:the-controls-wait-for-a-closed-outline`
+- **Layers:** unit
+- **WHEN** the outline is open
+- **THEN** the ink view, the white point and the tone are disabled, each with *outline open*
+
+#### Scenario: the size of the cut's ink is the outline's box
+- **Key:** `ui:outline-step:the-size-of-the-cuts-ink-is-the-outlines-box`
+- **Layers:** unit
+- **WHEN** a cut's closed outline spans a box of the photograph
+- **THEN** the source line gives that box's width and height in photograph pixels
+
+#### Scenario: uploading instead keeps the cut
+- **Key:** `ui:outline-step:uploading-instead-keeps-the-cut`
+- **Layers:** unit
+- **WHEN** a tattoo is uploaded instead of a cut named `bow`
+- **THEN** its name starts as `bow_closeup`, and `bow` is still kept

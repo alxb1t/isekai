@@ -213,6 +213,11 @@ python -m isekai show .inputs/me.jpg
 Prints a run's artifacts, versions, what produced each one and every failure record, and names anything below `photo/` or a
 flow it does not read. It reaches no model and no GPU, and it works on a checkout that has provisioned nothing.
 
+### A tattoo, added to a render
+
+`python -m isekai ink` cuts a tattoo into a layer, `python -m isekai edit` requests its bake into a finished render,
+and `python -m isekai render` runs it. The guide is [`docs/edit-tattoo.md`](docs/edit-tattoo.md).
+
 ### A collection of photographs, through both flows
 
 The same steps for a directory of photographs and `summon` and `conjure`, one command per step. Written
@@ -275,10 +280,11 @@ runs `isekai assign`, and *Prepare* runs `isekai prepare` over what changed as o
 captioned and sheeted before the next, the CLI's own verb as a child with `--progress json`, its cells moving live
 over `/events`. Review
 corrects one sheet, its ④ setting how many images it renders and at which seeds, and Approve stays on the sheet,
-read-only. **Render** opens a dialog quoting what renders and its price at most; **its confirmation is the one
-act on the page that spends money**, and the session view shows it to *Nothing is billing.* The hub's
-cell modal sets a cell's images side by side, each marked with its version, and an image's large view
-shows the sheet it came from, headed a revision or a re-roll of the one it came from. **Draft from this** (`⇧D`),
+read-only. **Render** opens a dialog quoting what renders, the images and the tattoo edit's bakes queued beside them, and its
+price at most; **its confirmation is the one act on the page that spends money**, and the session view shows it to
+*Nothing is billing.* The hub's cell modal sets a cell's images side by side, each marked with its version, and an
+image's large view shows the sheet it came from, headed a revision or a re-roll of the one it came from, the
+photograph's thumbnail, and the chain of its bakes, each baked one opening its own view. **Draft from this** (`⇧D`),
 from the large view, lists every flow the app offers, the image's own first; `↵` runs what
 `isekai draft --flow` does and opens Review on the first draft it wrote, the others of its flow in the rail, with the
 render beside the photograph; **Compare** (`⇧C`) sets the image beside any image of its source — another
@@ -318,7 +324,7 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   second boot costs what eight more renders would.
 - `--count COUNT` — how many renders per photograph per flow, seeds drawn (default: the approval's count, else 1).
 - `--seed SEEDS` — render exactly this seed; repeatable, and not combinable with `--count`.
-- `--seeds-from FLOW` — render each run on the seeds of that flow's latest render; not combinable with
+- `--seeds-from FLOW` — render each run on the seeds of that flow's latest render, read when the render runs; not combinable with
   `--count` or `--seed`.
 - `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, once, its seeds listed, onto its
   own sheet, filled first from the photograph's tags where it holds none; a copy equal to it writes nothing, and any
@@ -445,6 +451,7 @@ isekai/
 ├── flows/summon-flat-anime-wai/ # summon's files with InstantID ending early and a flat prompt, held equal by a test
 ├── flows/summon-semireal-anime-wai/ # flat's files with summon's whole prompt, held equal by a test
 ├── flows/summon-vivid-anime-wai/ # flat's files with summon's trailer and a negative against muted colour
+├── edits/tattoo-wai/          # one edit: flat, `edit.json` and `graph.json`, pinned by its digest
 ├── ui/                        # the app: Vue 3 + Vite + vue-router; design/spec.md; dist/ and node_modules/ ignored
 │   ├── src/                   # the app; styles.css is the vendored stylesheet, Inter beside it
 │   └── design/                # spec.md, the design the app is built to

@@ -7,6 +7,7 @@ const idle = {
   changes: 0,
   preparing: false,
   images: 0,
+  bakes: 0,
   refused: false,
   rendering: false,
   plan: null,
@@ -14,12 +15,23 @@ const idle = {
 
 spec('ui:render:prepare-takes-the-bar-first', () => {
   expect(bar({ ...idle, changes: 2, images: 3 })).toBe('prepare')
+  expect(bar({ ...idle, changes: 2, bakes: 1 })).toBe('prepare')
   expect(bar({ ...idle, preparing: true, images: 3 })).toBe('prepare')
   expect(bar({ ...idle, images: 3 })).toBe('render')
   expect(bar({ ...idle, rendering: true })).toBe('render')
   expect(bar(idle)).toBeNull()
   // A count the render stage refuses keeps the bar, so its reason is on screen.
   expect(bar({ ...idle, refused: true })).toBe('render')
+})
+
+spec('ui:render:a-bar-counts-a-bake-alone', () => {
+  // No image short and a bake queued, here or elsewhere: the hub passes both counts summed.
+  expect(bar({ ...idle, bakes: 1 })).toBe('render')
+  expect(bar(idle)).toBeNull()
+  // A session running keeps its own bar over the bakes waiting.
+  const session = { id: 's', started: '', ended: null, limit: 630, of: 0, steps: {}, images: [] }
+  const running = slot({ kind: 'render', state: 'running', message: null, session })
+  expect(bar({ ...idle, bakes: 1, rendering: true, plan: planOf(running) })).toBe('session')
 })
 
 spec('ui:render:a-refused-count-is-shown', () => {
