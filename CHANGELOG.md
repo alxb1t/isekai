@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.82.0] - 2026-11-12
+
+Gate: local 0m51s · CI not read under mf-ship · 0.81.0: local 0m47s · CI not read under mf-ship
+
 - The placement screen has its stages: stage-1 pairs kept per photograph, a `no-store` JPEG preview of the warped ink
   on a crop, pairs clicked on two images, and the picker's *ready for this photograph* and *not on this photo*
   (0122 D1–D4, D7–D10).

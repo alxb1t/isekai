@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.82
 after: [0121-the-placement-core]
 beside: [0120-the-bakes-in-the-app]
 ---
