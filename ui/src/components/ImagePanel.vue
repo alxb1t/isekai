@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { type Gesture, cursorOf, endsPress, gestureOf } from '../press'
+import { cursorOf, pressing } from '../press'
 import type { Point } from '../types'
 import { SCALE_FLOOR, type View, actual, fitted, panned, toImage, zoomedAt } from '../zoom'
 
@@ -84,17 +84,7 @@ function wheel(event: WheelEvent): void {
   fitting.value = false
 }
 
-interface Held {
-  start: Point
-  last: Point
-  gesture: Gesture
-  grabbed: number | null
-  shift: boolean
-  moved: boolean
-  fresh: boolean
-}
-
-let held: Held | null = null
+const press = pressing(SLOP)
 
 /* Shift as the cursor knows it, and whether a pan or a move is under way. */
 const shifting = ref(false)
@@ -106,50 +96,45 @@ function down(event: PointerEvent): void {
   shifting.value = event.shiftKey
   const at = local(event)
   const grabbed = event.shiftKey ? null : (props.grab?.(toImage(view.value, at), view.value.scale) ?? null)
-  const gesture = gestureOf(event.shiftKey, grabbed)
-  held = { start: at, last: at, gesture, grabbed, shift: event.shiftKey, moved: false, fresh: true }
+  press.down(at, event.shiftKey, grabbed)
   frame.value?.setPointerCapture(event.pointerId)
 }
 
 function move(event: PointerEvent): void {
   shifting.value = event.shiftKey
-  if (!held) {
-    emit('hover', toImage(view.value, local(event)))
-    return
-  }
   const at = local(event)
-  if (!held.moved && Math.hypot(at[0] - held.start[0], at[1] - held.start[1]) <= SLOP) return
-  held.moved = true
-  if (held.gesture === 'move' && held.grabbed !== null) {
+  const step = press.move(at)
+  if (step.kind === 'hover') emit('hover', toImage(view.value, at))
+  else if (step.kind === 'drag') {
     active.value = true
-    emit('drag', held.grabbed, toImage(view.value, at), held.fresh)
-    held.fresh = false
-  } else if (held.gesture === 'pan') {
+    emit('drag', step.index, toImage(view.value, at), step.fresh)
+  } else if (step.kind === 'pan') {
     active.value = true
-    view.value = panned(view.value, at[0] - held.last[0], at[1] - held.last[1], image.value, room.value)
+    view.value = panned(view.value, step.dx, step.dy, image.value, room.value)
     fitting.value = false
   }
-  held.last = at
 }
 
 function up(event: PointerEvent): void {
-  const was = held
-  held = null
+  const was = press.up()
   active.value = false
-  if (was && !was.moved) emit('click', { ...pressed(event), shift: was.shift })
+  if (was?.click) emit('click', { ...pressed(event), shift: was.shift })
   // The pointer is idle again: a point dragged under it, or a view panned beneath it, moves
   // what it hovers, so the hover is read afresh unless the pointer is off the viewport.
   else if (was && inside(event)) emit('hover', toImage(view.value, local(event)))
 }
 
 function cancel(): void {
-  held = null
+  press.cancel()
   active.value = false
 }
 
 function shiftKey(event: KeyboardEvent): void {
   if (event.key === 'Shift') shifting.value = event.type === 'keydown'
-  else if (event.type === 'keydown' && held && endsPress(event)) cancel()
+  else if (event.type === 'keydown' && press.held) {
+    press.key(event)
+    active.value = press.held
+  }
 }
 
 function blur(): void {
