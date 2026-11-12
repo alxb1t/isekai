@@ -20,6 +20,7 @@ export const routes: RouteRecordRaw[] = [
   { path: '/c/:collection/review', name: 'review-head', component: ReviewHead, props: true },
   { path: '/c/:collection/review/:digest/:flow', name: 'review', component: Review, props: true },
   { path: RENDER, name: 'render', component: RenderLarge, props: true },
+  { path: `${RENDER}/edit/:k`, name: 'bake', component: RenderLarge, props: true },
   { path: `${RENDER}/compare/photo`, name: 'compare-photo', component: Compare, props: true },
   {
     path: `${RENDER}/compare/:withFlow/:withVersion/:withSeed`,

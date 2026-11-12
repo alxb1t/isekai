@@ -2,6 +2,7 @@
 import { noun } from '../words'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { quoteRender, startRender } from '../api'
+import { dialogTitle } from '../bakes'
 import { useEdges } from '../composables/useEdges'
 import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
@@ -10,15 +11,24 @@ import { modded, plain } from '../stores/keys'
 import { useCollectionStore } from '../stores/collection'
 import { useDrawerStore } from '../stores/drawer'
 import { clock, collectionsOf, useLiveStore } from '../stores/live'
-import { allOut, confirmReason, drawnFlows, tileMoved, tileRow, type Thumb } from '../thumbs'
+import {
+  allOut,
+  confirmReason,
+  drawnBakes,
+  drawnFlows,
+  tileMoved,
+  tileRow,
+  type Thumb,
+} from '../thumbs'
 import type { Quote, QuotedCollection, TakenOut } from '../types'
 import KeyHint from './KeyHint.vue'
 
-/* The Render dialog (design spec J4·1): a row per collection short of images, in
+/* The Render dialog (design spec J4·1): a row per collection short of images or holding a bake, in
    the Library's order, each ticked; per flow the tiles of what renders; one
    session's estimate, its limit against the ceiling, and the price at most.
    Unticking a row quotes the rest again, and so does taking a photograph out by
-   its tile's `×` or `⌫`; a row with none left reads *all removed*. It has no URL,
+   its tile's `×` or `⌫`, or by its bake row's `×`, which takes its flow out with its
+   bakes; a row with none left reads *all removed*. It has no URL,
    so a reload never reopens a confirmation that spends; ⌘↵ is the only act here
    that rents. It belongs to its page: confirming closes it and opens the render
    drawer over it. A modal dialog: the focus opens on the first tile, where `↵`
@@ -56,6 +66,7 @@ const shown = computed(() => {
       ...row,
       gone: allOut(first, outKeys.value),
       drawn: drawnFlows(row, outKeys.value),
+      baked: drawnBakes(row, outKeys.value),
     }
   })
 })
@@ -90,6 +101,16 @@ const reason = computed(() =>
 )
 const total = computed(
   () => quote.value?.collections.reduce((sum, one) => sum + one.images, 0) ?? 0,
+)
+const bakes = computed(
+  () => quote.value?.collections.reduce((sum, one) => sum + one.bakes.length, 0) ?? 0,
+)
+/* The estimate's parts, none for a count of zero. */
+const counts = computed(() =>
+  [
+    total.value > 0 ? `${total.value} ${noun(total.value, 'image')}` : null,
+    bakes.value > 0 ? `${bakes.value} ${noun(bakes.value, 'bake')}` : null,
+  ].filter((part) => part !== null),
 )
 const dollars = (amount: number) => (amount < 0.01 ? 'under $0.01' : `$${amount.toFixed(2)}`)
 const minutes = (seconds: number) => `${Math.ceil(seconds / 60)} min`
@@ -156,6 +177,7 @@ async function confirm(): Promise<void> {
       keepOpen.value,
       quote.value.estimate.limit_s,
       total.value,
+      bakes.value,
       taken.value,
     )
     // Held at once, so the drawer draws from the render slot as it opens.
@@ -226,9 +248,7 @@ onMounted(async () => {
   >
     <header class="render-dialog__head">
       <span class="section-label">Render · on a rented GPU</span>
-      <h2 class="render-dialog__title">
-        Render {{ total }} image{{ total === 1 ? '' : 's' }}
-      </h2>
+      <h2 class="render-dialog__title">{{ dialogTitle(total, bakes) }}</h2>
     </header>
     <p v-if="refusal" class="render-dialog__refusal">
       <span class="refusal__mark" />{{ refusal }}
@@ -252,7 +272,12 @@ onMounted(async () => {
             />
             <span class="render-dialog__name">{{ row.collection }}</span>
             <template v-if="row.gone">all removed</template>
-            <template v-else>{{ row.images }} {{ noun(row.images, 'image') }}</template>
+            <template v-else>
+              {{ row.images }} {{ noun(row.images, 'image') }}
+              <template v-if="row.bakes.length">
+                · {{ row.bakes.length }} {{ noun(row.bakes.length, 'bake') }}
+              </template>
+            </template>
           </label>
           <div v-for="one in row.drawn" :key="one.flow" :data-flow="one.flow">
             <p class="render-dialog__flow mono">
@@ -290,14 +315,47 @@ onMounted(async () => {
               <span v-if="one.more" class="render-dialog__more mono">+{{ one.more }}</span>
             </div>
           </div>
+          <div v-if="row.baked.length" data-bakes>
+            <p class="render-dialog__flow mono">
+              <span class="render-dialog__name">bakes</span>
+              {{ row.baked.length }} {{ noun(row.baked.length, 'bake') }}
+            </p>
+            <ul class="render-dialog__bakes">
+              <li
+                v-for="(one, at) in row.baked"
+                :key="`${one.key}|${at}`"
+                class="render-dialog__bake"
+                data-bake
+              >
+                <img
+                  class="render-dialog__bake-thumb"
+                  alt=""
+                  loading="lazy"
+                  :src="fell.has(one.key) ? one.fallback : one.src"
+                  @error="fall(one.key)"
+                />
+                <span class="render-dialog__bake-name">{{ one.title }}</span>
+                <span class="render-dialog__bake-label mono">{{ one.label }}</span>
+                <button
+                  class="render-dialog__bake-remove"
+                  type="button"
+                  :aria-label="`Take ${one.title} out, with its bakes`"
+                  @click="takeOut(row.collection, one.flow, one)"
+                >
+                  ×
+                </button>
+              </li>
+            </ul>
+          </div>
           <p v-if="row.refused" class="render-dialog__left mono">{{ row.refused }}</p>
         </section>
       </div>
       <dl class="render-dialog__table mono">
         <dt class="section-label">Estimate</dt>
         <dd>
-          boot {{ clock(quote.estimate.boot_s) }} · {{ total }} {{ noun(total, 'image') }} ·
-          teardown {{ clock(quote.estimate.teardown_s) }}
+          boot {{ clock(quote.estimate.boot_s) }} ·
+          <template v-for="part in counts" :key="part">{{ part }} · </template>teardown
+          {{ clock(quote.estimate.teardown_s) }}
         </dd>
         <dd class="render-dialog__figure">{{ minutes(quote.estimate.seconds) }}</dd>
         <dt />
@@ -331,7 +389,8 @@ onMounted(async () => {
         :disabled="!quote || reason !== null || quoting || starting"
         @click="confirm"
       >
-        Render<template v-if="quote"> · at most {{ dollars(quote.price.at_most) }}</template
+        {{ total === 0 && bakes > 0 ? 'Bake' : 'Render'
+        }}<template v-if="quote"> · at most {{ dollars(quote.price.at_most) }}</template
         ><KeyHint command="confirm" />
       </button>
     </footer>

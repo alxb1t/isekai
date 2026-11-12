@@ -64,11 +64,35 @@ export function drawnFlows(
     .filter((one) => one.thumbs.length > 0)
 }
 
-/** Return whether `row` has a photograph and each is taken out, its key in `out`. */
+/** One queued bake drawn as a row: its photograph's thumbnail, and `label` for its place. */
+export interface DrawnBake extends Thumb {
+  flow: string
+  label: string
+}
+
+/** Return `row`'s bakes less each whose photograph's key is in `out`, each with its row's label.
+
+    A bake leaves with its photograph's flow, so its key is the tile's.
+    e.g. a bake of version 2, seed 7, number 1 -> label "v2 · 7 · edit 1" */
+export function drawnBakes(row: QuotedCollection, out: ReadonlySet<string>): DrawnBake[] {
+  return row.bakes
+    .filter((one) => !out.has(keyOf(row.collection, one.flow, one)))
+    .map((one) => ({
+      ...thumb(row.collection, one.flow, one, 1),
+      title: one.name,
+      flow: one.flow,
+      label: `v${one.version} · ${one.seed} · edit ${one.k}`,
+    }))
+}
+
+/** Return whether `row` has a photograph or a bake and each is taken out, its key in `out`. */
 export function allOut(row: QuotedCollection, out: ReadonlySet<string>): boolean {
-  const keys = row.flows.flatMap((one) =>
-    one.sources.map((source) => keyOf(row.collection, one.flow, source)),
-  )
+  const keys = [
+    ...row.flows.flatMap((one) =>
+      one.sources.map((source) => keyOf(row.collection, one.flow, source)),
+    ),
+    ...row.bakes.map((one) => keyOf(row.collection, one.flow, one)),
+  ]
   return keys.length > 0 && keys.every((key) => out.has(key))
 }
 

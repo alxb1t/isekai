@@ -5,7 +5,14 @@ import { hub as readHub, renderOffer } from '../api'
 import type { CellEvent, HubCell, HubInfo, JobSlot, RenderOffer } from '../types'
 import { type Snapshot, useLiveStore } from './live'
 
-const NO_OFFER: RenderOffer = { disabled: null, images: 0, others: 0, refused: null }
+const NO_OFFER: RenderOffer = {
+  disabled: null,
+  images: 0,
+  others: 0,
+  bakes: 0,
+  other_bakes: 0,
+  refused: null,
+}
 
 /* A cell's key in the maps of refusals and running stages. */
 export function at(name: string, flow: string): string {
@@ -84,8 +91,10 @@ export const useCollectionStore = defineStore('collection', () => {
   }
 
   function openDialog(): void {
-    const short = offer.value.images + offer.value.others
-    if (short > 0 && offer.value.disabled === null) dialog.value = true
+    const { images, others, bakes, other_bakes } = offer.value
+    if (images + others + bakes + other_bakes > 0 && offer.value.disabled === null) {
+      dialog.value = true
+    }
   }
 
   function closeDialog(): void {

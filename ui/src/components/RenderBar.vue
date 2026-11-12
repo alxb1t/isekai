@@ -7,7 +7,7 @@ import { useDrawerStore } from '../stores/drawer'
 import { collectionsOf, useLiveStore } from '../stores/live'
 import { noun } from '../words'
 
-/* The Render bar (design spec J2): the images short of their count, its
+/* The Render bar (design spec J2): the images short of their count and the bakes queued, its
    collection's and every other's, with Render; or, while a session runs, its
    totals, the images short outside its plan, and the drawer's button. Its button
    keeps `data-render`; a disabled one has its reason beside it. A count the render
@@ -17,6 +17,8 @@ import { noun } from '../words'
 const props = defineProps<{
   images: number
   others: number
+  bakes: number
+  otherBakes: number
   disabled: string | null
   refused: string | null
   rendering: boolean
@@ -41,12 +43,20 @@ const filled = computed(() => progress(plan.value))
     :style="filled === null ? undefined : { '--progress': `${filled * 100}%` }"
     data-render-bar
   >
-    <template v-if="plan === null && (images + others > 0 || (refused !== null && !rendering))">
+    <template
+      v-if="
+        plan === null &&
+        (images + others + bakes + otherBakes > 0 || (refused !== null && !rendering))
+      "
+    >
       <span v-if="images > 0" class="prepare-bar__cells mono">
         {{ images }} {{ noun(images, 'image') }} ready to render
       </span>
-      <span v-if="others > 0" class="prepare-bar__cells mono" data-render-others>
-        +{{ others }} in other collections
+      <span v-if="bakes > 0" class="prepare-bar__cells mono" data-render-bakes>
+        {{ bakes }} {{ noun(bakes, 'bake') }} queued
+      </span>
+      <span v-if="others + otherBakes > 0" class="prepare-bar__cells mono" data-render-others>
+        +{{ others + otherBakes }} in other collections
       </span>
       <span
         v-for="reason in reasons(disabled, refused)"

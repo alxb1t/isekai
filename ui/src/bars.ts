@@ -2,7 +2,7 @@ import type { JobSlot } from './types'
 
 /* Which bar the hub shows: one forward action at a time (design spec
    J2). Changes waiting for Prepare take it first, then a session running with its
-   totals, then images short of their count, then a render running. */
+   totals, then images short of their count or bakes queued, then a render running. */
 export type Bar = 'prepare' | 'session' | 'render' | null
 
 /* A running session's plan: the images it renders, and how many have landed. */
@@ -18,6 +18,8 @@ export interface BarState {
   preparing: boolean
   /* Images short of their approvals' counts, as the render stage counts them. */
   images: number
+  /* Queued bakes, this collection's and every other's: a session of bakes alone is one. */
+  bakes: number
   /* The render stage refused a count, or the offer could not be read: the bar
      stays so its reason is on screen. */
   refused: boolean
@@ -31,7 +33,7 @@ export interface BarState {
 export function bar(state: BarState): Bar {
   if (state.preparing || state.changes > 0) return 'prepare'
   if (state.plan !== null) return 'session'
-  if (state.images > 0 || state.refused || state.rendering) return 'render'
+  if (state.images > 0 || state.bakes > 0 || state.refused || state.rendering) return 'render'
   return null
 }
 

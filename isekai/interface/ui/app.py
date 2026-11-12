@@ -36,7 +36,8 @@ and `python -m isekai`'s import graph never reaches it at all.
 GET  /api/library
 GET  /api/c/{collection}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/c/{collection}/prepare   ·   POST /api/jobs/{prepare,render}/stop
-GET  /api/c/{collection}/render  ·  POST …/render{/quote,}  {keep_open, limit_s, images}
+GET  /api/c/{collection}/render  ·  POST …/render{/quote,}
+     {keep_open, limit_s, images, bakes}
 GET  /api/sessions/running   ·   GET /api/c/{collection}/sessions/{id}
 POST /api/billing/check
 POST /api/staging   ·   PUT, GET and DELETE …/{id}/files/{name}, and GET its /thumb
@@ -49,6 +50,7 @@ POST /api/c/{collection}/review/{digest}/{flow}/discard
 POST /api/c/{collection}/draft         {flow, images: [{digest, flow, version, seed}]}
 GET  /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
      and its /image, /thumb, /compare/photo and /compare/{flow}/{version}/{seed}
+GET  …/renders/{digest}/{flow}/{version}/{seed}/edit/{k}   and its /image and /thumb
 DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}
 GET  /api/c/{collection}/sources/{name}   and its /thumb
 GET  /api/tattoos   ·   POST /api/tattoos   {staging, file, name}
@@ -111,6 +113,9 @@ from isekai.foundation.run import (
     approval_of,
     approved_versions,
     assign,
+    edit_at,
+    edit_files,
+    edit_numbers,
     find_run,
     is_seed,
     is_version,
@@ -128,6 +133,7 @@ from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing, tattoos
+from isekai.pipeline.edit import image_of as edit_image_of
 from isekai.pipeline.generate import discard_render, image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
@@ -590,7 +596,8 @@ def create_app(
         """Return the quoted folders, quote, dialog's view and photographs taken out.
 
         With no names, every collection, in the Library's order. Only those the
-        quote keeps, short of images or refusing a count, are returned, and only
+        quote keeps, short of images, refusing a count or holding a bake, are
+        returned, and only
         what `without` takes out of them.
         """
         if names is None:
@@ -633,28 +640,43 @@ def create_app(
         runs = found / library.RUNS
         return render.short(runs, render.run_ids(runs), wire(runs))
 
+    def bakes_in(found: Path) -> int:
+        """Return how many bakes a collection folder holds, none taken out."""
+        runs = found / library.RUNS
+        return render.edits_of(
+            runs, render.run_ids(runs), tracked_flows(wired.flows_dir), ()
+        ).count
+
     @app.get("/api/c/{collection}/render")
     def read_render_offer(collection: str) -> dict[str, Any]:
-        """Return how many images a collection lacks, and why Render is off, or null.
+        """Return how many images and bakes a collection holds, and why Render is off.
 
-        It prices nothing; the count is the render stage's own. `others` is the
-        images every other collection lacks, which the same dialog renders. `refused`
-        is why an approval's count cannot be read, or null: the bar shows it with
-        none short.
+        It prices nothing; the counts are the render stage's own. `others` and
+        `other_bakes` are what every other collection lacks and holds queued, which
+        the same dialog renders. `refused` is why an approval's count cannot be
+        read, or null: the bar shows it with none short.
         """
-        short = short_of(folder(collection))
-        others = sum(
-            sum(short_of(child).images.values())
+        here = folder(collection)
+        short = short_of(here)
+        elsewhere = [
+            child
             for child in library.listed(root)
             if library.is_collection(child) and child.name != collection
-        )
-        # Nothing short here is no reason while another collection is short.
+        ]
+        others = sum(sum(short_of(child).images.values()) for child in elsewhere)
+        bakes = bakes_in(here)
+        other_bakes = sum(bakes_in(child) for child in elsewhere)
+        # Nothing short here is no reason while another collection is short or holds
+        # a bake.
         refused = short.refused[0] if short.refused else None
-        idle = None if short.lines or others else short.blocked
+        busy = short.lines or others or bakes or other_bakes
+        idle = None if busy else short.blocked
         return {
             "disabled": _held() or refused or idle,
             "images": sum(short.images.values()),
             "others": others,
+            "bakes": bakes,
+            "other_bakes": other_bakes,
             "refused": short.refused[0] if short.refused else None,
         }
 
@@ -662,9 +684,9 @@ def create_app(
     def post_quote(payload: dict[str, Any] | None = None) -> dict[str, Any]:
         """Quote one render of the named collections, its limit and its price at most.
 
-        `collections` names them; absent, every collection short of images is
-        quoted. `without` lists each `{collection, run, flow}` taken out of it. It
-        rents nothing; only the render's own `POST` does.
+        `collections` names them; absent, every collection short of images or
+        holding a bake is quoted. `without` lists each `{collection, run, flow}`
+        taken out of it. It rents nothing; only the render's own `POST` does.
         """
         names = (payload or {}).get("collections")
         if names is not None and not _strings(names):
@@ -679,8 +701,9 @@ def create_app(
 
         The quote is taken again here, so what renders is what is on disk now; a
         limit longer than the one the dialog showed, `limit_s`, or another number
-        of images than its `images`, is refused, so nothing renders past what the
-        operator agreed to. What `without` takes out stays out of the render.
+        of images than its `images` or of bakes than its `bakes`, is refused, so
+        nothing renders past what the operator agreed to. What `without` takes out
+        stays out of the render.
         """
         body = payload or {}
         reopen = "close Render and open it again to read"
@@ -706,6 +729,14 @@ def create_app(
             raise Refusal(
                 f"the quote changed since it was shown: it now renders {made.images} "
                 f"images, not {listed}; {reopen} it"
+            )
+        shown_bakes = body.get("bakes")
+        if not _whole(shown_bakes):
+            raise Refusal(f"the confirmation names no quoted bakes; {reopen} the quote")
+        if made.bakes != shown_bakes:
+            raise Refusal(
+                f"the quote changed since it was shown: it now renders {made.bakes} "
+                f"bakes, not {shown_bakes}; {reopen} it"
             )
         job = jobs.render(
             found,
@@ -1136,7 +1167,7 @@ def create_app(
         a re-roll, and its count and seeds; or, where its `renders` no render
         takes, damaged, naming the file, with no count.
         """
-        run, _, approval = rendered(collection, digest, flow, version, seed)
+        run, image, approval = rendered(collection, digest, flow, version, seed)
         _, fields = _approved(approval)
         number = _version(version)
         suffix = offered(flow).output_suffix
@@ -1158,6 +1189,8 @@ def create_app(
             "count": held.count,
             "seeds": _decimal(held.seeds),
             "damaged": held.damaged,
+            # The seed's edits by number, the chain the large view draws.
+            "bakes": [asdict(one) for one in library.bakes(image.parent, seed)],
             # The newest older version that rendered this seed, or null.
             "compare": library.paired(run, flow, number, seed, suffix),
             # Every offered flow, this one first, assigned or not: a draft assigns.
@@ -1242,6 +1275,69 @@ def create_app(
             library.thumbnail(root, run, image), media_type="image/jpeg"
         )
 
+    def baked(
+        collection: str, digest: str, flow: str, version: str, seed: int, k: str
+    ) -> tuple[Run, library.Bake, Path]:
+        """Return a render's bake `k`: its run, its listing and where its image is.
+
+        `k` is text, so no number a request spells is a 422: one the seed has no
+        edit for is refused, as is a bake whose record cannot be read.
+        """
+        run, image, _ = rendered(collection, digest, flow, version, seed)
+        held = {one.k: one for one in library.bakes(image.parent, seed)}
+        # A held number is small: a spelling too long to convert holds none.
+        number = int(k) if _DECIMAL.fullmatch(k) and len(k) <= _BAKE_DIGITS else None
+        if number is None or number not in held:
+            raise Refusal(
+                f"{flow} {version} · {seed} holds no bake {k!r}; go back to its "
+                "large view to choose one"
+            )
+        bake = held[number]
+        if bake.state == "damaged":
+            raise Refusal(str(bake.reason))
+        return run, bake, edit_files(image.parent, seed, number)[0]
+
+    def bake_image(
+        collection: str, digest: str, flow: str, version: str, seed: int, k: str
+    ) -> tuple[Run, Path]:
+        """Return a baked bake's run and image, refusing one still queued."""
+        run, bake, image = baked(collection, digest, flow, version, seed, k)
+        if bake.state == "queued":
+            raise Refusal(
+                f"bake {k} of {seed} is queued and has no image yet; the next "
+                f"render session bakes it, `python -m isekai render "
+                f"{folder(collection) / library.RUNS}`"
+            )
+        return run, image
+
+    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}")
+    def read_bake(
+        collection: str, digest: str, flow: str, version: str, seed: int, k: str
+    ) -> dict[str, Any]:
+        """Return one bake's record: its state, what it was placed on and its time."""
+        return asdict(baked(collection, digest, flow, version, seed, k)[1])
+
+    @app.get(
+        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/image"
+    )
+    def read_bake_image(
+        collection: str, digest: str, flow: str, version: str, seed: int, k: str
+    ) -> FileResponse:
+        """Serve a bake's image bytes, whole."""
+        return FileResponse(bake_image(collection, digest, flow, version, seed, k)[1])
+
+    @app.get(
+        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/thumb"
+    )
+    def read_bake_thumb(
+        collection: str, digest: str, flow: str, version: str, seed: int, k: str
+    ) -> FileResponse:
+        """Serve a bake's thumbnail, made in the library's cache the first time."""
+        run, image = bake_image(collection, digest, flow, version, seed, k)
+        return FileResponse(
+            library.thumbnail(root, run, image), media_type="image/jpeg"
+        )
+
     @app.delete("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}")
     def delete_render(
         collection: str, digest: str, flow: str, version: str, seed: int
@@ -1260,6 +1356,9 @@ def create_app(
                     f"{rendering} Wait for it to end, then delete the render again."
                 )
             library.drop_thumbnails(run, image)
+            for number in edit_numbers(image.parent, seed):
+                if (own := edit_files(image.parent, seed, number)[0]).is_file():
+                    library.drop_thumbnails(run, own)
             discard_render(image)
             withdraw(run, flow, _version(version))
         return {"deleted": True}
@@ -1348,6 +1447,8 @@ class _Shared:
 # A number a request spells: ASCII digits alone, since `str.isdigit` also passes
 # a superscript `int` cannot read.
 _DECIMAL = re.compile(r"[0-9]+")
+# The most digits a bake number is read from: `int` refuses a longer spelling.
+_BAKE_DIGITS = 18
 
 
 def cell_event(
@@ -1555,7 +1656,13 @@ def _quote(
     """Describe a quote as the Render dialog shows it: a row per collection."""
     return {
         "collections": [
-            _quoted_row(name, one, made.shorts[one / library.RUNS], flows_dir)
+            _quoted_row(
+                name,
+                one,
+                made.shorts[one / library.RUNS],
+                made.edits[one / library.RUNS],
+                flows_dir,
+            )
             for name, one in found.items()
         ],
         "estimate": {
@@ -1575,9 +1682,17 @@ def _quote(
 
 
 def _quoted_row(
-    name: str, found: Path, short: render.Short, flows_dir: Path
+    name: str,
+    found: Path,
+    short: render.Short,
+    edits: render.Edits,
+    flows_dir: Path,
 ) -> dict[str, Any]:
-    """Describe one collection's part of a quote, each run by its source."""
+    """Describe one collection's part of a quote, each run by its source.
+
+    Each bake is listed beside the images, by its photograph, the approval that
+    holds it, its seed and its number.
+    """
     runs = {
         one.run.id: (one.name, one.run)
         for one in library.hub(found, (), flows_dir).sources
@@ -1608,10 +1723,23 @@ def _quoted_row(
         }
         for line in short.lines
     ]
+    bakes = []
+    for record in edits.records:
+        baked, flow, version, seed, k = edit_at(edit_image_of(record))
+        bakes.append(
+            {
+                "flow": flow,
+                **source(baked.id, flow),
+                "version": version,
+                "seed": str(seed),
+                "k": k,
+            }
+        )
     return {
         "collection": name,
         "images": sum(short.images.values()),
         "flows": flows,
+        "bakes": bakes,
         "refused": short.refused[0] if short.refused else None,
     }
 

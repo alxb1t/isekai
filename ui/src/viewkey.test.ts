@@ -35,6 +35,7 @@ spec('ui:place-route:a-step-change-keeps-the-screen-mounted', async () => {
 
   // The Hub stays lit on the placement screen.
   expect(HUB_SCREENS).toContain('place')
+  expect(HUB_SCREENS).toContain('bake')
 })
 
 spec('ui:place-route:an-unknown-step-redirects-to-the-first', async () => {

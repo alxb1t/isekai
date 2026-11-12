@@ -6,6 +6,7 @@
 
 import type {
   Assigned,
+  Bake,
   Billing,
   Budget,
   Committed,
@@ -115,18 +116,19 @@ export function renderOffer(collection: string): Promise<RenderOffer> {
 }
 
 /* One session's quote over `collections`, or, with none named, every collection
-   short of images. It rents nothing; only `startRender` does. */
+   short of images or holding a bake. It rents nothing; only `startRender` does. */
 export function quoteRender(collections?: string[], without: TakenOut[] = []): Promise<Quote> {
   return send('/api/render/quote', 'POST', collections ? { collections, without } : {})
 }
 
-/* Carries the limit and the images the dialog showed, and what it took out: a quote grown
-   since is refused. */
+/* Carries the limit, the images and the bakes the dialog showed, and what it took out: a
+   quote grown since is refused. */
 export function startRender(
   collections: string[],
   keepOpen: boolean,
   limitS: number,
   images: number,
+  bakes: number,
   without: TakenOut[],
 ): Promise<{ job: JobSlot }> {
   return send('/api/render', 'POST', {
@@ -134,6 +136,7 @@ export function startRender(
     keep_open: keepOpen,
     limit_s: limitS,
     images,
+    bakes,
     without,
   })
 }
@@ -313,6 +316,22 @@ export function imageAt(place: RenderPlace): string {
 
 export function renderDetail(place: RenderPlace): Promise<RenderDetail> {
   return get<RenderDetail>(renderAt(place))
+}
+
+const bakeBase = (place: RenderPlace, k: number): string => `${renderAt(place)}/edit/${k}`
+
+/* A bake's image, whole; a queued or damaged bake is refused. */
+export function bakeAt(place: RenderPlace, k: number): string {
+  return `${bakeBase(place, k)}/image`
+}
+
+export function bakeThumbAt(place: RenderPlace, k: number): string {
+  return `${bakeBase(place, k)}/thumb`
+}
+
+/* A bake's record; a number the seed has no edit for, or a damaged record, is refused. */
+export function bakeDetail(place: RenderPlace, k: number): Promise<Bake> {
+  return get<Bake>(bakeBase(place, k))
 }
 
 /* Delete the render and its thumbnails; refused while a render runs for its collection. */

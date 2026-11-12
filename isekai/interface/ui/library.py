@@ -26,6 +26,7 @@ from typing import Any, Literal
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
+    EDIT_FILE,
     SESSION_FILE,
     SESSION_ID,
     SESSIONS,
@@ -56,6 +57,8 @@ from isekai.foundation.run import (
     approval_of,
     approved_versions,
     digest_of,
+    edit_files,
+    edit_numbers,
     group_of,
     latest_artifact,
     photo_of,
@@ -455,6 +458,60 @@ def rendered_images(run: Run, flow: str, suffix: str) -> list[tuple[int, int]]:
         for number in approved_versions(run.directory(flow, REVIEW))
         for seed in rendered_seeds(group_of(run, flow, number), suffix)
     ]
+
+
+@dataclass(frozen=True)
+class Bake:
+    """One edit of a render's seed: its number, state and what it was placed on.
+
+    `state` is `baked` with its image, `queued` without, `damaged` where its record
+    cannot be read, which `reason` then names. `placed_on` is the number of the
+    edit whose image this one was made from, None for the render itself;
+    `baked_at` is the image's time, None while queued.
+    """
+
+    k: int
+    placed_on: int | None
+    baked_at: float | None
+    edit: str | None
+    state: Literal["baked", "queued", "damaged"]
+    reason: str | None = None
+
+
+def bakes(group: Path, seed: int) -> list[Bake]:
+    """Return `seed`'s edits in `group` by number; a number with no record is no bake.
+
+    One record that cannot be read is listed damaged, so it costs only its own row.
+    e.g. edit 1 imaged and edit 2 made from it, no image yet -> [baked, queued]
+    """
+    numbers = edit_numbers(group, seed)
+    images = {edit_files(group, seed, k)[0].name: k for k in numbers}
+    found: list[Bake] = []
+    for k in numbers:
+        image, record, _ = edit_files(group, seed, k)
+        if not record.is_file():
+            continue
+        baked_at = image.stat().st_mtime if image.is_file() else None
+        try:
+            body = read(
+                record,
+                EDIT_FILE,
+                remedy=f"delete {record}, then reload the page",
+            )
+        except Refusal as refused:
+            found.append(Bake(k, None, baked_at, None, "damaged", str(refused)))
+            continue
+        source, edit = body.get("source"), body.get("edit")
+        found.append(
+            Bake(
+                k,
+                images.get(source) if isinstance(source, str) else None,
+                baked_at,
+                edit if isinstance(edit, str) else None,
+                "baked" if baked_at is not None else "queued",
+            )
+        )
+    return found
 
 
 def thumbnail(library: Path, run: Run, image: Path) -> Path:

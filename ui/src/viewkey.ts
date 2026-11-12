@@ -3,8 +3,9 @@ import type { RouteLocationRaw } from 'vue-router'
 /* What the shell keys its screen by, which screens keep the Hub's tab lit, and where
    a render's *Place a tattoo* goes. Plain functions, so a test reads them in node. */
 
-/** The screens the Hub's tab stays lit on: the Hub, and what opens from it. */
-export const HUB_SCREENS = ['hub', 'render', 'compare', 'compare-photo', 'place']
+/** The screens the Hub's tab stays lit on: the Hub, and what opens from it — the large
+    view, a bake's, Compare and the placement screen. */
+export const HUB_SCREENS = ['hub', 'render', 'bake', 'compare', 'compare-photo', 'place']
 
 /** What `viewKey` reads of a route. */
 export interface Viewed {
