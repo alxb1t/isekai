@@ -79,7 +79,7 @@ The prototypes proved the chain and the extraction: a thin-plate spline in numpy
 - `config/tattoo.json` holds `long_side` 4096, `outline_min` 20, `outline_max` 120 and `view_quality` 90. `GET /api/tattoos` carries the limits, so the page and the server read one source.
 - `tattoos.py` reads `photo_depth`, `image_depth`, `depth_min`, `depth_max` and `reach` from `config/ink.json` through `INK_CONFIG`, as `importing.upload_limit` reads `config/ui.json`.
 - `outline.json`'s defaults come from one function of the kind, so `keep`, `cut` and a read of a tattoo with no file agree.
-- `PUT /api/tattoos/<name>/outline` replaces the file, atomically. It refuses a point outside the image, more than `outline_max` points, a closed outline under `outline_min`, a depth outside `depth_min`–`depth_max` of `config/ink.json`, and a white scale of zero or less. An open outline may hold any number of points up to the ceiling.
+- `PUT /api/tattoos/<name>/outline` replaces the file, atomically. It refuses a point outside the image, more than `outline_max` points, a closed outline under `outline_min`, a depth outside `depth_min`–`depth_max` of `config/ink.json`, and a white scale of zero or less or past 255. An open outline may hold any number of points up to the ceiling.
 - A tattoo is **outlined** when its outline is closed.
 
 ### D5

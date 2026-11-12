@@ -109,7 +109,7 @@ The system SHALL keep, per tattoo, one outline file: the points of a polygon in 
 or of the photograph for a cut; whether it is closed; the white scale; neutral; and depth.
 It SHALL save the file each time the page sends it, and SHALL refuse a point outside the image,
 more points than the declared ceiling, a closed outline with fewer than the declared floor,
-a depth outside the declared range and a white scale of zero or less.
+a depth outside the declared range and a white scale of zero or less, or past 255.
 A tattoo SHALL read as outlined when its outline is closed.
 A tattoo cut from a photograph SHALL default to neutral on and the photograph's depth,
 an uploaded one to neutral off and the image's depth.
@@ -144,7 +144,8 @@ Saving happens as the operator goes, so a closed page loses nothing.
 #### Scenario: a depth or a white scale out of range is refused
 - **Key:** `tattoo:outline:a-tone-out-of-range-is-refused`
 - **Layers:** unit
-- **WHEN** the depth is below the declared minimum or above the declared maximum, or the white scale is zero
+- **WHEN** the depth is below the declared minimum or above the declared maximum,
+  or the white scale is zero or past 255
 - **THEN** the save is refused naming the value
 
 ### Requirement: The white point is a scale on the automatic point
