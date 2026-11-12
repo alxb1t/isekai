@@ -1,0 +1,27 @@
+{
+  "schema": {
+    "name": "session",
+    "version": 1
+  },
+  "id": "20261024T091200Z",
+  "started": "2026-10-24T09:12:00Z",
+  "ended": null,
+  "limit": 1200,
+  "asked": {
+    "summon-anime-wai": 1
+  },
+  "planned": [],
+  "steps": {
+    "pod": "ready"
+  },
+  "images": [
+    {
+      "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "flow": "summon-anime-wai",
+      "version": 1,
+      "seed": 42
+    }
+  ],
+  "outcome": "running",
+  "message": null
+}

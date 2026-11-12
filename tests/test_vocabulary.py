@@ -105,7 +105,7 @@ def test_the_provisioned_vocabulary_carries_its_pin(tmp_path: Path) -> None:
 # --- require_vocabulary: strict unless the vocabulary is declared absent ------
 
 
-@pytest.mark.spec_exempt("structural: twin of require_vocabulary's failure")
+@pytest.mark.spec_exempt("structural: require_vocabulary's failure")
 def test_a_missing_vocabulary_fails_where_it_is_not_declared_absent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -115,7 +115,7 @@ def test_a_missing_vocabulary_fails_where_it_is_not_declared_absent(
         require_vocabulary(tmp_path / "selected_tags.csv")
 
 
-@pytest.mark.spec_exempt("structural: twin of require_vocabulary's skip")
+@pytest.mark.spec_exempt("structural: require_vocabulary's skip")
 def test_a_missing_vocabulary_skips_where_it_is_declared_absent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

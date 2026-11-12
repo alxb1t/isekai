@@ -269,7 +269,7 @@ def test_the_stdlib_guard_would_actually_catch_a_third_party_import() -> None:
     assert "No module named 'onnxruntime'" in result.stderr
 
 
-@pytest.mark.spec_exempt("structural: the parser dispatches nothing yet")
+@pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
 def test_parsing_a_verb_succeeds() -> None:
     assert main(["show"]) == 0
 
@@ -516,7 +516,7 @@ def test_a_named_factory_builds_the_wiring_after_the_guard(
         wiring_from(runs=Path(__file__).resolve().parent.parent / "lib")
 
 
-@pytest.mark.spec_exempt("structural: twin -- ISEKAI_WIRING without a factory refuses")
+@pytest.mark.spec_exempt("structural: ISEKAI_WIRING without a factory refuses")
 def test_a_named_wiring_without_a_factory_is_refused(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -596,7 +596,9 @@ def test_one_flows_refusal_leaves_the_others(tmp_path: Path) -> None:
     assert "flow-a" in refused and "flow-b" not in refused
 
 
-@pytest.mark.spec_exempt("twin: the named-first flow runs whatever the per-flow guard")
+@pytest.mark.spec_exempt(
+    "structural: the named-first flow runs whatever the per-flow guard"
+)
 def test_a_refusal_after_the_first_flow_leaves_it_written(tmp_path: Path) -> None:
     status, wired = _review_with_one_refusing(tmp_path, "flow-b")
 
