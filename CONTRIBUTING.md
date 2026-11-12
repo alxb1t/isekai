@@ -82,6 +82,11 @@ unattended run's sandbox cannot run them; CI runs them after the gate, on every 
 `metrics/changes/<change-id>.json` ([D47](docs/decisions.md#d47--a-change-is-measured-from-isekais-own-catalogue)).
 A measure that cannot be read is recorded unavailable; nothing halts.
 
+**A move is pre-flighted.** A change that moves or rewrites lines of `isekai/` or `evaluation/` runs
+`uv run python -m tools.mutate <path:lines> --tests <files>` over those lines, before the move and over the same lines after
+it, on the tests that cover them. A survivor is killed by a test, or the change says why it is equivalent. It is not in the gate:
+a run takes minutes.
+
 Every command green, or the phase is not done. **Never weaken the gate to pass** — see `AGENTS.md`'s guardrails.
 
 Beyond the gate, **image-as-code phases also run `docker build --check`**.

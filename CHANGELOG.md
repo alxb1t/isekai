@@ -38,6 +38,9 @@ its new digest.
 - A patch whose stand-in no test shows was reached gains its proof: a sentinel for the model records, twins that fire
   the tripwires, and records of calls the tests read; a ratchet holds each patch to a name its module reads, with a
   twin (0131 D1, D2, D3, D4).
+- `tools/mutate.py` says which one-line mutants of a function body the named tests kill, in a copy of the tracked files;
+  `CONTRIBUTING.md` asks for a run over the lines a move touches, and a test runs it over a small repository (0131 D5,
+  D6, D7, D8, D9).
 
 ## [0.86.2] - 2026-11-12
 

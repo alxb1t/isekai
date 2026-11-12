@@ -5,7 +5,7 @@ Tests, a tool and one document alone: the silent patches and the guard, then the
 ## Progress
 
 - [x] 6 — No blind patch · moderate
-- [ ] 7 — The pre-flight · hard
+- [x] 7 — The pre-flight · hard
 
 ## 6 — No blind patch
 
@@ -50,32 +50,32 @@ Tests, a tool and one document alone: the silent patches and the guard, then the
 
 ## 7 — The pre-flight
 
-- [ ] 7.1 Create `tools/mutate.py` per [D5](design.md#d5) and [D6](design.md#d6): a module docstring with the command line, `REPO_ROOT`, `OPERATORS` as the names of the table, `LINKED` as `models`, `ui/node_modules` and `ui/dist`, `Mutant`, `Refused`, and `parse_target(text)`, which returns `(path, lo, hi)` and raises `Refused` on a form other than `<path>:<lo>[-<hi>]` or on `lo` past `hi`. Imports of the standard library alone.
+- [x] 7.1 Create `tools/mutate.py` per [D5](design.md#d5) and [D6](design.md#d6): a module docstring with the command line, `REPO_ROOT`, `OPERATORS` as the names of the table, `LINKED` as `models`, `ui/node_modules` and `ui/dist`, `Mutant`, `Refused`, and `parse_target(text)`, which returns `(path, lo, hi)` and raises `Refused` on a form other than `<path>:<lo>[-<hi>]` or on `lo` past `hi`. Imports of the standard library alone.
   Verify: `uv run python -c "import tools.mutate"` exits 0.
 
-- [ ] 7.2 In `tools/mutate.py`, add a function for each operator of [D6](design.md#d6) on an operand — `edit_cmp`, `edit_bool`, `edit_not`, `edit_const` and `def edit_arith(` — each taking the line and the node and returning the new line, or `None`.
+- [x] 7.2 In `tools/mutate.py`, add a function for each operator of [D6](design.md#d6) on an operand — `edit_cmp`, `edit_bool`, `edit_not`, `edit_const` and `def edit_arith(` — each taking the line and the node and returning the new line, or `None`.
   Verify: `grep -n -F "def edit_arith(" tools/mutate.py` prints the definition.
 
-- [ ] 7.3 In `tools/mutate.py`, add `edit_raise`, `edit_ret` and `edit_call`, and `def sites(text, lo, hi)` per [D6](design.md#d6): the mutants on the lines, inside function bodies, a docstring and a node over several lines left alone, a node that nested functions share listed without a repeat.
+- [x] 7.3 In `tools/mutate.py`, add `edit_raise`, `edit_ret` and `edit_call`, and `def sites(text, lo, hi)` per [D6](design.md#d6): the mutants on the lines, inside function bodies, a docstring and a node over several lines left alone, a node that nested functions share listed without a repeat.
   Verify: `grep -n -F "def sites(" tools/mutate.py` prints the definition.
 
-- [ ] 7.4 Create `tests/test_mutate.py` with a module docstring, `test_each_operator_makes_its_one_edit` parametrized over a table of an operator, a source line and its new line, one row for each of `OPERATORS` and a `cmp` row whose line holds a non-ASCII string before the comparison, `test_a_line_range_limits_the_sites`, `test_only_a_function_body_is_mutated`, and `test_a_statement_over_several_lines_is_left_alone`. Each carries `spec_exempt("structural: …")` naming the rule it holds.
+- [x] 7.4 Create `tests/test_mutate.py` with a module docstring, `test_each_operator_makes_its_one_edit` parametrized over a table of an operator, a source line and its new line, one row for each of `OPERATORS` and a `cmp` row whose line holds a non-ASCII string before the comparison, `test_a_line_range_limits_the_sites`, `test_only_a_function_body_is_mutated`, and `test_a_statement_over_several_lines_is_left_alone`. Each carries `spec_exempt("structural: …")` naming the rule it holds.
   Verify: `uv run pytest tests/test_mutate.py -k "each_operator_makes or line_range_limits or only_a_function_body or over_several_lines" -q` exits 0.
 
-- [ ] 7.5 In `tools/mutate.py`, add `copy_tree(root, into)` per [D7](design.md#d7). In `tests/test_mutate.py`, add `build_repo(path, *, failing=False)`, which runs `git init` in `path` and adds every file but an untracked `models/` directory: `calc.py` holding `add`, `label` (`return "big" if n >= 100 else "small"`) and `drain` (`while n > 0:` then `n = n - 1`, returning `n`), and `tests/test_calc.py` asserting `add(2, 3) == 5`, `label(5) == "small"`, `label(500) == "big"` and `drain(3) == 0`, plus a failing assertion when `failing` is set. Add the fixture `small_repo`, which calls it under `tmp_path_factory`, and `test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones`.
+- [x] 7.5 In `tools/mutate.py`, add `copy_tree(root, into)` per [D7](design.md#d7). In `tests/test_mutate.py`, add `build_repo(path, *, failing=False)`, which runs `git init` in `path` and adds every file but an untracked `models/` directory: `calc.py` holding `add`, `label` (`return "big" if n >= 100 else "small"`) and `drain` (`while n > 0:` then `n = n - 1`, returning `n`), and `tests/test_calc.py` asserting `add(2, 3) == 5`, `label(5) == "small"`, `label(500) == "big"` and `drain(3) == 0`, plus a failing assertion when `failing` is set. Add the fixture `small_repo`, which calls it under `tmp_path_factory`, and `test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones`.
   Verify: `uv run pytest tests/test_mutate.py -k the_copy_holds -q` exits 0.
 
-- [ ] 7.6 In `tools/mutate.py`, add `pytest_args(tests, everything)`, `run_tests(copy, args, timeout)` and `verdict(code)` per [D8](design.md#d8), the run under `PYTHONDONTWRITEBYTECODE=1`. In `tests/test_mutate.py`, add `test_all_runs_the_suite_without_the_browser_tests` over `pytest_args`, and `test_a_mutant_that_cannot_run_is_invalid_not_a_survivor` over `verdict`.
+- [x] 7.6 In `tools/mutate.py`, add `pytest_args(tests, everything)`, `run_tests(copy, args, timeout)` and `verdict(code)` per [D8](design.md#d8), the run under `PYTHONDONTWRITEBYTECODE=1`. In `tests/test_mutate.py`, add `test_all_runs_the_suite_without_the_browser_tests` over `pytest_args`, and `test_a_mutant_that_cannot_run_is_invalid_not_a_survivor` over `verdict`.
   Verify: `uv run pytest tests/test_mutate.py -k "all_runs_the_suite or cannot_run" -q` exits 0.
 
-- [ ] 7.7 In `tools/mutate.py`, add `try_mutant(copy, mutant, args, timeout)`, which writes the mutant, runs, and writes the original back whatever happened, `report(results)` printing the lines of [D8](design.md#d8), and `def main(argv=None, *, root=REPO_ROOT)`, which reads `sys.argv[1:]` when `argv` is absent, with `if __name__ == "__main__": raise SystemExit(main())`. It refuses an untracked file, a range with no mutant, both or neither of `--tests` and `--all`, and a baseline that does not exit 0.
+- [x] 7.7 In `tools/mutate.py`, add `try_mutant(copy, mutant, args, timeout)`, which writes the mutant, runs, and writes the original back whatever happened, `report(results)` printing the lines of [D8](design.md#d8), and `def main(argv=None, *, root=REPO_ROOT)`, which reads `sys.argv[1:]` when `argv` is absent, with `if __name__ == "__main__": raise SystemExit(main())`. It refuses an untracked file, a range with no mutant, both or neither of `--tests` and `--all`, and a baseline that does not exit 0.
   Verify: `grep -n -F "def main(" tools/mutate.py` prints the definition.
 
-- [ ] 7.8 In `tests/test_mutate.py`, over `small_repo` and `main(argv, root=…)`, add `test_a_red_baseline_refuses_before_any_mutant` (a repository from `build_repo(tmp_path, failing=True)`, exit status 2 and no verdict line), `test_a_surviving_mutant_is_reported_with_its_operator_and_exits_one` (the `const` of `label`'s line survives and its `cmp` is killed), `test_a_run_with_no_survivor_exits_zero` (the line of `add`), `test_a_mutant_that_hangs_is_timed_out` (a `timeout` line naming `arith` on `drain`'s `n = n - 1` under `--timeout 2`, and no survivor) and `test_one_of_tests_and_all_is_required`. Each carries `spec_exempt("structural: …")` naming the rule it holds.
+- [x] 7.8 In `tests/test_mutate.py`, over `small_repo` and `main(argv, root=…)`, add `test_a_red_baseline_refuses_before_any_mutant` (a repository from `build_repo(tmp_path, failing=True)`, exit status 2 and no verdict line), `test_a_surviving_mutant_is_reported_with_its_operator_and_exits_one` (the `const` of `label`'s line survives and its `cmp` is killed), `test_a_run_with_no_survivor_exits_zero` (the line of `add`), `test_a_mutant_that_hangs_is_timed_out` (a `timeout` line naming `arith` on `drain`'s `n = n - 1` under `--timeout 2`, and no survivor) and `test_one_of_tests_and_all_is_required`. Each carries `spec_exempt("structural: …")` naming the rule it holds.
   Verify: `uv run pytest tests/test_mutate.py -q` exits 0.
 
-- [ ] 7.9 In `CONTRIBUTING.md`, add the paragraph of [D9](design.md#d9), after the paragraph that opens `**A change is measured as well as gated.**`.
+- [x] 7.9 In `CONTRIBUTING.md`, add the paragraph of [D9](design.md#d9), after the paragraph that opens `**A change is measured as well as gated.**`.
   Verify: `git grep -n -F "A move is pre-flighted." -- CONTRIBUTING.md` prints the paragraph's first line.
 
-- [ ] 7.10 **HALT CHECK** Run the runner over a real range: the loop line of `isekai/shared/chain.py` holds one mutant, its first bound, which the chain tests kill. A baseline that is red in the copy, or a survivor, means the plan is wrong: edit nothing else and stop.
+- [x] 7.10 **HALT CHECK** Run the runner over a real range: the loop line of `isekai/shared/chain.py` holds one mutant, its first bound, which the chain tests kill. A baseline that is red in the copy, or a survivor, means the plan is wrong: edit nothing else and stop.
   Verify: `uv run python -m tools.mutate isekai/shared/chain.py:97 --tests tests/test_chain.py` exits 0.
