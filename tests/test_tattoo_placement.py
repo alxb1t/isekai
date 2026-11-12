@@ -272,16 +272,17 @@ def test_placement_stage1_a_cut_is_refused_saying_its_ink_is_in_the_photograph(
 @pytest.mark.spec_exempt("structural: a damaged stage-1 file refuses naming the file")
 def test_placement_stage1_a_damaged_file_is_refused_naming_it(tmp_path: Path) -> None:
     _library(tmp_path)
+    _library(tmp_path, "wing")
     path = tmp_path / TATTOOS / "bow" / STAGE1 / f"{DIGEST}.json"
     path.parent.mkdir()
     path.write_text("{not json")
+    save_stage1(tmp_path, "wing", DIGEST, _pairs(6, ONTO_PHOTO), False)
 
-    for call in (
-        lambda: read_stage1(tmp_path, "bow", DIGEST),
-        lambda: stage1_states(tmp_path, DIGEST),
-    ):
-        with pytest.raises(Refusal, match=rf"bow/stage1/{DIGEST}\.json cannot be read"):
-            call()
+    with pytest.raises(Refusal, match=rf"bow/stage1/{DIGEST}\.json cannot be read"):
+        read_stage1(tmp_path, "bow", DIGEST)
+
+    # The list costs only the damaged tattoo its row: the others are still chosen.
+    assert sorted(stage1_states(tmp_path, DIGEST)) == ["wing"]
 
 
 @pytest.mark.spec_exempt("structural: the mode is read from the kind and the flag")
@@ -543,6 +544,30 @@ def test_placement_preview_ink_view_is_the_layer_flattened_on_white(
     assert layer.image.mode == "RGBA"
     assert (*layer.origin, *layer.image.size) == view.box
     assert layer.white == view.white
+
+
+@pytest.mark.spec_exempt(
+    "structural: a preview reads the skin point once, the time D3 gives it"
+)
+def test_placement_preview_ink_layer_reads_the_skin_point_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from isekai.shared import ink
+
+    _library(tmp_path)
+    outline = tattoos.read_outline(tmp_path, "bow")
+    reads: list[int] = []
+    read = ink._automatic_point
+
+    def counted(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        reads.append(1)
+        return read(*args, **kwargs)
+
+    monkeypatch.setattr(ink, "_automatic_point", counted)
+
+    tattoos.ink_layer(tmp_path, "bow", None, None, outline.points, 1.0, True, 1.6)
+
+    assert len(reads) == 1
 
 
 def _baked(

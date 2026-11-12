@@ -142,6 +142,12 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
     return saving
   }
 
+  /** Run `ask` once every save has been answered, so what it reads is never older than the file. */
+  async function after<T>(ask: () => Promise<T>): Promise<T> {
+    await settled()
+    return ask()
+  }
+
   return {
     place,
     tattoo,
@@ -162,6 +168,7 @@ export function usePlacing(place: Place, ports: Ports = SERVER) {
     setNotOnPhoto,
     forget,
     settled,
+    after,
   }
 }
 

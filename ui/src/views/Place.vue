@@ -64,8 +64,9 @@ const at = (step: Step) => ({
   params: { ...render.value, step, name: props.name },
 })
 
+/* The list is read after the saves on their way, so a card never sends pairs older than the file. */
 async function refresh(): Promise<void> {
-  list.value = await tattoos(props.digest)
+  list.value = await placing.after(() => tattoos(props.digest))
 }
 
 function choose(name: string, step: Step): void {
@@ -163,7 +164,7 @@ let decide: ((go: boolean) => void) | null = null
 const leaving = (): Promise<boolean> => {
   const now = stage.value
   const ask = now ? asks(now) : null
-  if (ask === null) return Promise.resolve(true)
+  if (ask === null) return placing.settled().then(() => true)
   decide?.(false)
   asking.value = ask
   return new Promise((resolve) => {

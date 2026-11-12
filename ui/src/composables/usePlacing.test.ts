@@ -99,6 +99,20 @@ spec('tattoo:stage1:pairs-are-saved-as-they-are-sent', async () => {
   expect(placing.status.value).toBe('saved')
   // The moment of the last save is what the Leave dialog names.
   expect(placing.savedAt.value).toBeInstanceOf(Date)
+
+  // A read made `after` a change waits for its save, so a list is never older than the file.
+  const landed: Stage1[] = []
+  const slow = usePlacing(PLACE, {
+    ...ports,
+    save: async (_digest, _name, stage) => {
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      landed.push(stage)
+      return stage
+    },
+  })
+  await slow.load('bow')
+  slow.editFirst(click(click(none, 'a', [10, 10]), 'b', [500, 500]))
+  expect(await slow.after(async () => landed.length)).toBe(1)
 })
 
 spec('tattoo:stage1:pairs-are-saved-as-they-are-sent', async () => {
