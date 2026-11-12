@@ -151,13 +151,13 @@ def edit_const(line: bytes, node: ast.Constant) -> bytes | None:
 
     e.g. b"n = 5" -> b"n = (5 + 1)"
     """
-    start, end = columns(node)
     if node.value is True:
-        return line[:start] + b"False" + line[end:]
+        return replace_node(line, node, b"False")
     if node.value is False:
-        return line[:start] + b"True" + line[end:]
+        return replace_node(line, node, b"True")
     if type(node.value) is int:
-        return line[:start] + b"(" + line[start:end] + b" + 1)" + line[end:]
+        start, end = columns(node)
+        return replace_node(line, node, b"(" + line[start:end] + b" + 1)")
     return None
 
 
