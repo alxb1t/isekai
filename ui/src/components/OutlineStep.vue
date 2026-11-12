@@ -4,15 +4,12 @@ import { type Place, designAt, inkView, photoUrl, saveOutline, tattooNamed } fro
 import {
   type Draft,
   type Rules,
-  added,
   blank,
   box,
   cleared,
-  closed,
-  closes,
   drafted,
-  inserted,
   moved,
+  placed,
   ready,
   removed,
   undone,
@@ -189,16 +186,12 @@ function setTone(next: Tone): void {
 const grab = (at: Point, zoom: number) => vertexAt(draft.value, at, zoom)
 
 function clicked(press: Press): void {
-  const now = draft.value
-  if (press.shift) return edit(inserted(now, press.at, rules.value))
-  if (now.closed) return
-  if (closes(now, press.at, press.scale, rules.value)) return edit(closed(now, rules.value))
-  // A click on a vertex is the double click's first, not a new vertex.
-  if (vertexAt(now, press.at, press.scale) !== null) return
-  edit(added(now, press.at, rules.value))
+  if (!press.shift) return
+  edit(placed(draft.value, press.at, press.scale, rules.value))
 }
 
 function doubled(press: Press): void {
+  if (press.shift) return
   const index = vertexAt(draft.value, press.at, press.scale)
   if (index !== null) edit(removed(draft.value, index, rules.value))
 }

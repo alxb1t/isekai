@@ -31,9 +31,10 @@ import {
   moved,
   proposals,
   sent,
+  touched,
   undone,
 } from '../pairs'
-import { added, closed as closedDraft, closes, undone as undoneDraft, vertexAt } from '../polygon'
+import { placed as placedDraft, undone as undoneDraft } from '../polygon'
 import { opacityOf } from '../preview'
 import { answered, asked, due, keyOf, pointsOf, refused, stands, view } from '../propose'
 import { floorOf } from '../stages'
@@ -186,17 +187,17 @@ watch(
 
 const edit = (next: Pairs): void => placing.editSecond(next)
 
-/* A click while an outline is drawn goes to the outline, on the render alone: it adds a
-   point, or closes the outline on its first. */
+/* A shift-click while an outline is drawn goes to the outline, on the render alone: `placed`
+   adds a point, takes one on an edge, or closes the outline on its first. A drawing ends when
+   the click closes an open outline. */
 const sketched = (press: Press): void => {
   const draft = sketch.value
   const held = rules.value
-  if (!draft || !held) return
-  if (closes(draft, press.at, press.scale, held)) {
-    placing.editOutlines(closed(drawn(outlines.value, closedDraft(draft, held))))
-  } else if (vertexAt(draft, press.at, press.scale) === null) {
-    placing.editOutlines(drawn(outlines.value, added(draft, press.at, held)))
-  }
+  if (!draft || !held || !press.shift) return
+  const next = placedDraft(draft, press.at, press.scale, held)
+  if (next === draft) return
+  const now = drawn(outlines.value, next)
+  placing.editOutlines(!draft.closed && next.closed ? closed(now) : now)
 }
 
 function placed(side: 'a' | 'b', press: Press): void {
@@ -204,7 +205,12 @@ function placed(side: 'a' | 'b', press: Press): void {
     if (side === 'b') sketched(press)
     return
   }
-  edit(clicked(pairs.value, side, press.at, press.scale, props.limits.pair_radius))
+  const radius = props.limits.pair_radius
+  edit(
+    press.shift
+      ? clicked(pairs.value, side, press.at, press.scale, radius)
+      : touched(pairs.value, side, press.at, press.scale, radius),
+  )
 }
 
 function dragged(side: 'a' | 'b', index: number, at: Point, fresh: boolean): void {

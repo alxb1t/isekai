@@ -4,28 +4,28 @@ The press rule, the placing rule and the redo first; the keys, the words and the
 
 ## Progress
 
-- [ ] 1 — The gestures · hard
+- [x] 1 — The gestures · hard
 - [ ] 2 — The keys and words · moderate
 
 ## 1 — The gestures
 
-- [ ] 1.1 **HALT CHECK** `ui/src/components/ImagePanel.vue` still holds the press rule [D1](design.md#d1) rewrites: `SLOP`, `grab` and `Press.shift`. A panel that no longer has them means the plan reads stale code.
+- [x] 1.1 **HALT CHECK** `ui/src/components/ImagePanel.vue` still holds the press rule [D1](design.md#d1) rewrites: `SLOP`, `grab` and `Press.shift`. A panel that no longer has them means the plan reads stale code.
   Verify: `git grep -q "SLOP" -- ui/src/components/ImagePanel.vue` exits 0.
-- [ ] 1.2 Add `ui/src/press.ts` with `gestureOf` and `cursorOf` per [D1](design.md#d1) and [D2](design.md#d2), and `ui/src/press.test.ts` bound to `ui:panel:shift-places-and-a-plain-press-pans` and `ui:panel:the-cursor-follows-shift-and-the-pan`.
+- [x] 1.2 Add `ui/src/press.ts` with `gestureOf` and `cursorOf` per [D1](design.md#d1) and [D2](design.md#d2), and `ui/src/press.test.ts` bound to `ui:panel:shift-places-and-a-plain-press-pans` and `ui:panel:the-cursor-follows-shift-and-the-pan`.
   Verify: `grep -rq "cursorOf" ui/src` exits 0.
-- [ ] 1.3 In `ui/src/polygon.ts` add `future` to `Draft` and `redone`, per [D5](design.md#d5): `changed` clears it, `undone` fills it, `blank` and `drafted` start it empty, a drag's later moves keep it. Test it in `ui/src/polygon.test.ts` as `ui:outline-edit:redo-restores-what-undo-took`.
+- [x] 1.3 In `ui/src/polygon.ts` add `future` to `Draft` and `redone`, per [D5](design.md#d5): `changed` clears it, `undone` fills it, `blank` and `drafted` start it empty, a drag's later moves keep it. Test it in `ui/src/polygon.test.ts` as `ui:outline-edit:redo-restores-what-undo-took`.
   Verify: `git grep -q "redone" -- ui/src/polygon.ts` exits 0.
-- [ ] 1.4 In `ui/src/polygon.ts` add `canClose` and `placed` per the table of [D3](design.md#d3). Test them in `ui/src/polygon.test.ts` as `ui:outline-edit:a-shift-click-places-by-where-it-lands`, `ui:outline-edit:a-near-miss-never-adds-a-vertex` and `ui:outline-edit:closing-needs-the-floor`; the near miss is an outline below the floor and another at it, a few image pixels off the first vertex.
+- [x] 1.4 In `ui/src/polygon.ts` add `canClose` and `placed` per the table of [D3](design.md#d3). Test them in `ui/src/polygon.test.ts` as `ui:outline-edit:a-shift-click-places-by-where-it-lands`, `ui:outline-edit:a-near-miss-never-adds-a-vertex` and `ui:outline-edit:closing-needs-the-floor`; the near miss is an outline below the floor and another at it, a few image pixels off the first vertex.
   Verify: `git grep -q "canClose" -- ui/src/polygon.ts` exits 0.
-- [ ] 1.5 In `ui/src/pairs.ts` add `future` to `Pairs`, `redone` and `touched` per [D4](design.md#d4) and [D5](design.md#d5); `arrived` joins the arrival to every snapshot of `future` too. Test them in `ui/src/pairs.test.ts` as `ui:pairs:a-plain-click-selects-and-places-nothing` and `ui:pairs:redo-restores-what-undo-took`.
+- [x] 1.5 In `ui/src/pairs.ts` add `future` to `Pairs`, `redone` and `touched` per [D4](design.md#d4) and [D5](design.md#d5); `arrived` joins the arrival to every snapshot of `future` too. Test them in `ui/src/pairs.test.ts` as `ui:pairs:a-plain-click-selects-and-places-nothing` and `ui:pairs:redo-restores-what-undo-took`.
   Verify: `git grep -q "touched" -- ui/src/pairs.ts` exits 0.
-- [ ] 1.6 Rewrite the test in `ui/src/nokeys.test.ts` as `ui:place-keys:the-screen-declares-only-undo-redo-and-close` ([D6](design.md#d6)), before the panel listens: `useKeys` only in the outline step and the stages that hold pairs, only the ids `undo`, `redo` and `close`, `keydown` and `keyup` only in `ImagePanel.vue`, and `useKeyStore` and `.declare(` in none.
+- [x] 1.6 Rewrite the test in `ui/src/nokeys.test.ts` as `ui:place-keys:the-screen-declares-only-undo-redo-and-close` ([D6](design.md#d6)), before the panel listens: `useKeys` only in the outline step and the stages that hold pairs, only the ids `undo`, `redo` and `close`, `keydown` and `keyup` only in `ImagePanel.vue`, and `useKeyStore` and `.declare(` in none.
   Verify: `git grep -q "the-screen-declares-only-undo-redo-and-close" -- ui/src/nokeys.test.ts` exits 0.
-- [ ] 1.7 In `ui/src/components/ImagePanel.vue` read each press with `gestureOf`: `grab` is asked only with Shift up, a `place` press that travels past `SLOP` is dropped, `Press.shift` is the Shift held at the press, and `dblclick` carries it. Draw `cursorOf`'s cursor from a class on `.panel__viewport`, kept by `keydown` and `keyup` of Shift on `window`, `shiftKey` on each pointer move and `blur`, and map the classes in `ui/src/app.css` to `cursor: crosshair`, `grab` and `grabbing`, replacing the fixed `cursor: grab` of `.panel__viewport`.
+- [x] 1.7 In `ui/src/components/ImagePanel.vue` read each press with `gestureOf`: `grab` is asked only with Shift up, a `place` press that travels past `SLOP` is dropped, `Press.shift` is the Shift held at the press, and `dblclick` carries it. Draw `cursorOf`'s cursor from a class on `.panel__viewport`, kept by `keydown` and `keyup` of Shift on `window`, `shiftKey` on each pointer move and `blur`, and map the classes in `ui/src/app.css` to `cursor: crosshair`, `grab` and `grabbing`, replacing the fixed `cursor: grab` of `.panel__viewport`.
   Verify: `git grep -q "cursor: crosshair" -- ui/src/app.css` exits 0.
-- [ ] 1.8 In `ui/src/components/OutlineStep.vue` make `clicked` call `placed` for a press with `shift` and return for one without, and make `doubled` act only without `shift`. In `ui/src/components/StageRender.vue` make `sketched` do the same, importing `placed as placedDraft` because the file's pair `placed` function holds the name, and drop its own `closes` and `vertexAt` branches and every import they leave unused, in both files.
+- [x] 1.8 In `ui/src/components/OutlineStep.vue` make `clicked` call `placed` for a press with `shift` and return for one without, and make `doubled` act only without `shift`. In `ui/src/components/StageRender.vue` make `sketched` do the same, importing `placed as placedDraft` because the file's pair `placed` function holds the name, and drop its own `closes` and `vertexAt` branches and every import they leave unused, in both files.
   Verify: `git grep -q "placed(" -- ui/src/components/OutlineStep.vue` exits 0.
-- [ ] 1.9 In `ui/src/components/StagePhoto.vue` and `ui/src/components/StageRender.vue` make the pair editor's `placed` call `clicked` for a press with `shift` and `touched` for one without.
+- [x] 1.9 In `ui/src/components/StagePhoto.vue` and `ui/src/components/StageRender.vue` make the pair editor's `placed` call `clicked` for a press with `shift` and `touched` for one without.
   Verify: `git grep -q "touched(" -- ui/src/components/StagePhoto.vue` exits 0.
 
 ## 2 — The keys and words

@@ -2476,9 +2476,20 @@ dialog::backdrop {
   min-height: 360px;
   overflow: hidden;
   background: var(--ground-media);
-  cursor: grab;
   touch-action: none;
   user-select: none;
+}
+
+.panel__viewport--crosshair {
+  cursor: crosshair;
+}
+
+.panel__viewport--grab {
+  cursor: grab;
+}
+
+.panel__viewport--grabbing {
+  cursor: grabbing;
 }
 
 .panel__image {

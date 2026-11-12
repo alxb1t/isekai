@@ -4,7 +4,7 @@ import { type Place, designAt, photoUrl } from '../api'
 import { PLACING } from '../composables/usePlacing'
 import { useNatural } from '../composables/useNatural'
 import { usePreview } from '../composables/usePreview'
-import { type Pairs, clicked, cleared, complete, deleted, forward, lone, moved, undone } from '../pairs'
+import { type Pairs, clicked, cleared, complete, deleted, forward, lone, moved, touched, undone } from '../pairs'
 import { opacityOf } from '../preview'
 import { circled, stepsOf } from '../stages'
 import type { Point, TattooLimits } from '../types'
@@ -65,7 +65,12 @@ watch(
 const edit = (next: Pairs): void => placing.editFirst(next)
 
 function placed(side: 'a' | 'b', press: Press): void {
-  edit(clicked(pairs.value, side, press.at, press.scale, props.limits.pair_radius))
+  const radius = props.limits.pair_radius
+  edit(
+    press.shift
+      ? clicked(pairs.value, side, press.at, press.scale, radius)
+      : touched(pairs.value, side, press.at, press.scale, radius),
+  )
 }
 
 function dragged(side: 'a' | 'b', index: number, at: Point, fresh: boolean): void {

@@ -1,6 +1,6 @@
 import type { Point } from './types'
 
-/* An outline being drawn: its vertices, whether it is closed, and what to undo.
+/* An outline being drawn: its vertices, whether it is closed, what to undo and what to redo.
    Every function returns a new state and leaves its argument as it was. */
 interface Shape {
   points: readonly Point[]
@@ -9,6 +9,7 @@ interface Shape {
 
 export interface Draft extends Shape {
   past: readonly Shape[]
+  future: readonly Shape[]
 }
 
 /* What an outline is held to: its least and most vertices, and the image it lies in. */
@@ -22,16 +23,16 @@ export interface Rules {
 /* The closing and picking radius, in screen pixels: at every zoom it is the same on screen. */
 export const RADIUS = 10
 
-export const blank: Draft = { points: [], closed: false, past: [] }
+export const blank: Draft = { points: [], closed: false, past: [], future: [] }
 
-/** Return a draft holding `points`, with nothing to undo. */
+/** Return a draft holding `points`, with nothing to undo or redo. */
 export function drafted(points: readonly Point[], closed: boolean): Draft {
-  return { points: points.map(([x, y]): Point => [x, y]), closed, past: [] }
+  return { points: points.map(([x, y]): Point => [x, y]), closed, past: [], future: [] }
 }
 
 function changed(draft: Draft, next: Shape): Draft {
   const { points, closed } = draft
-  return { ...next, past: [...draft.past, { points, closed }] }
+  return { ...next, past: [...draft.past, { points, closed }], future: [] }
 }
 
 function inside(at: Point, rules: Rules): boolean {
@@ -48,10 +49,15 @@ export function added(draft: Draft, at: Point, rules: Rules): Draft {
   return changed(draft, { points: [...draft.points, at], closed: false })
 }
 
-/** Tell whether a click at `at` closes an open outline: it has the floor's vertices and
-    lies within `RADIUS` screen pixels of the first, at `scale`. */
+/** Tell whether the outline can close: it is open and holds the floor's vertices. */
+export function canClose(draft: Draft, rules: Rules): boolean {
+  return !draft.closed && draft.points.length >= rules.min
+}
+
+/** Tell whether a click at `at` closes an open outline: it can close and lies within
+    `RADIUS` screen pixels of the first vertex, at `scale`. */
 export function closes(draft: Draft, at: Point, scale: number, rules: Rules): boolean {
-  if (draft.closed || draft.points.length < rules.min) return false
+  if (!canClose(draft, rules)) return false
   return distance(draft.points[0], at) * scale <= RADIUS
 }
 
@@ -81,23 +87,49 @@ export function moved(draft: Draft, index: number, to: Point, rules: Rules, fres
   if (index < 0 || index >= draft.points.length) return draft
   const points = draft.points.map((point, at): Point => (at === index ? held(to, rules) : point))
   const next = { points, closed: draft.closed }
-  return fresh ? changed(draft, next) : { ...next, past: draft.past }
+  return fresh ? changed(draft, next) : { ...next, past: draft.past, future: draft.future }
+}
+
+interface Edge {
+  gap: number
+  after: number
+  on: Point
+}
+
+/* The edge nearest `at`, the closing edge too once the outline is closed, or null with fewer than two vertices. */
+function nearestEdge(draft: Draft, at: Point): Edge | null {
+  const { points } = draft
+  if (points.length < 2) return null
+  const edges = draft.closed ? points.length : points.length - 1
+  let best: Edge = { gap: Infinity, after: 0, on: points[0] }
+  for (let after = 0; after < edges; after++) {
+    const on = nearestOn(points[after], points[(after + 1) % points.length], at)
+    const gap = distance(on, at)
+    if (gap < best.gap) best = { gap, after, on }
+  }
+  return best
 }
 
 /** Return the draft with a vertex on the edge nearest `at`, after the edge's first end.
     e.g. a click beside the edge (0,0)-(10,0) at (4,3) -> a vertex at (4,0) */
 export function inserted(draft: Draft, at: Point, rules: Rules): Draft {
   const { points } = draft
-  if (points.length < 2 || points.length >= rules.max) return draft
-  const edges = draft.closed ? points.length : points.length - 1
-  let best = { gap: Infinity, after: 0, on: points[0] }
-  for (let after = 0; after < edges; after++) {
-    const on = nearestOn(points[after], points[(after + 1) % points.length], at)
-    const gap = distance(on, at)
-    if (gap < best.gap) best = { gap, after, on }
-  }
+  const best = nearestEdge(draft, at)
+  if (best === null || points.length >= rules.max) return draft
   const next = [...points.slice(0, best.after + 1), best.on, ...points.slice(best.after + 1)]
   return changed(draft, { points: next, closed: draft.closed })
+}
+
+/** Return the draft after a shift-click at `at`, by where it lands: the first vertex closes
+    an outline that can close, any other vertex or a first that cannot close changes nothing,
+    an edge within `RADIUS` screen pixels takes a vertex, and bare image adds one to an open outline.
+    e.g. 2 vertices of a floor of 3, a click 3 pixels from the first -> the same draft */
+export function placed(draft: Draft, at: Point, scale: number, rules: Rules): Draft {
+  if (closes(draft, at, scale, rules)) return closed(draft, rules)
+  if (vertexAt(draft, at, scale) !== null) return draft
+  const edge = nearestEdge(draft, at)
+  if (edge !== null && edge.gap * scale <= RADIUS) return inserted(draft, at, rules)
+  return added(draft, at, rules)
 }
 
 /** Return the draft without vertex `index`; a closed outline left under the floor opens. */
@@ -112,11 +144,31 @@ export function cleared(draft: Draft): Draft {
   return draft.points.length === 0 && !draft.closed ? draft : changed(draft, { points: [], closed: false })
 }
 
-/** Return the draft as it was before its last change; unchanged with nothing to undo. */
+/** Return the draft as it was before its last change, which `redone` brings back; unchanged
+    with nothing to undo. */
 export function undone(draft: Draft): Draft {
   const last = draft.past[draft.past.length - 1]
   if (!last) return draft
-  return { points: last.points, closed: last.closed, past: draft.past.slice(0, -1) }
+  const { points, closed } = draft
+  return {
+    points: last.points,
+    closed: last.closed,
+    past: draft.past.slice(0, -1),
+    future: [...draft.future, { points, closed }],
+  }
+}
+
+/** Return the draft as it was before its last undo; unchanged with nothing to redo. */
+export function redone(draft: Draft): Draft {
+  const next = draft.future[draft.future.length - 1]
+  if (!next) return draft
+  const { points, closed } = draft
+  return {
+    points: next.points,
+    closed: next.closed,
+    past: [...draft.past, { points, closed }],
+    future: draft.future.slice(0, -1),
+  }
 }
 
 /** Return the vertices' bounding box, or null with none. e.g. (2,3) and (10,9) -> 2,3 8x6 */

@@ -4,13 +4,16 @@ import {
   added,
   blank,
   box,
+  canClose,
   cleared,
   closed,
   closes,
   drafted,
   inserted,
   moved,
+  placed,
   ready,
+  redone,
   removed,
   undone,
   vertexAt,
@@ -141,4 +144,83 @@ spec('ui:outline-edit:the-ceiling-is-held', () => {
   expect(ready(shut, RULES)).toBe(true)
   // A click off the image adds nothing.
   expect(added(blank, [101, 5], RULES)).toBe(blank)
+})
+
+spec('ui:outline-edit:a-shift-click-places-by-where-it-lands', () => {
+  const open = clicked(SQUARE.slice(0, 3))
+
+  // The first vertex closes an outline that can close, and adds nothing.
+  const shut = placed(open, [12, 11], 1, RULES)
+  expect(shut.closed).toBe(true)
+  expect(shut.points).toEqual(open.points)
+  // Another vertex changes nothing.
+  expect(placed(open, [91, 89], 1, RULES)).toBe(open)
+  // An edge within the radius takes a vertex on it, after the edge's first end.
+  expect(placed(open, [50, 14], 1, RULES).points).toEqual([SQUARE[0], [50, 10], SQUARE[1], SQUARE[2]])
+  // Bare image adds a vertex at the click.
+  const more = placed(open, [40, 60], 1, RULES)
+  expect(more.points).toEqual([...open.points, [40, 60]])
+  expect(more.closed).toBe(false)
+  // The radius is on screen: 4 image pixels from an edge is 16 screen pixels at zoom 4.
+  expect(placed(open, [50, 14], 4, RULES).points).toEqual([...open.points, [50, 14]])
+
+  // A closed outline takes a vertex on an edge, and nothing on its first vertex or bare image.
+  expect(placed(shut, [50, 14], 1, RULES).points).toEqual([SQUARE[0], [50, 10], SQUARE[1], SQUARE[2]])
+  expect(placed(shut, [11, 11], 1, RULES)).toBe(shut)
+  expect(placed(shut, [40, 60], 1, RULES)).toBe(shut)
+})
+
+spec('ui:outline-edit:a-near-miss-never-adds-a-vertex', () => {
+  // Below the floor the first vertex does not close, and a click by it adds no vertex under it.
+  const below = clicked(SQUARE.slice(0, 2))
+  expect(placed(below, [13, 12], 1, RULES)).toBe(below)
+  // At the floor the same click a few image pixels off closes, and adds none.
+  const atFloor = clicked(SQUARE.slice(0, 3))
+  const shut = placed(atFloor, [13, 12], 1, RULES)
+  expect(shut.closed).toBe(true)
+  expect(shut.points).toHaveLength(3)
+  // A near miss of any other vertex adds none either.
+  expect(placed(atFloor, [88, 12], 1, RULES)).toBe(atFloor)
+})
+
+spec('ui:outline-edit:redo-restores-what-undo-took', () => {
+  const start = clicked(SQUARE.slice(0, 3))
+  const more = added(start, [50, 50], RULES)
+
+  const back = undone(more)
+  expect(back.future).toHaveLength(1)
+  const again = redone(back)
+  expect(again.points).toEqual(more.points)
+  expect(again.past).toEqual(more.past)
+  expect(again.future).toEqual([])
+  // Every undo is redone, the last first.
+  const shifted = moved(more, 0, [20, 20], RULES)
+  const twice = undone(undone(shifted))
+  expect(redone(twice).points).toEqual(more.points)
+  expect(redone(redone(twice)).points).toEqual(shifted.points)
+  // A new change after an undo leaves nothing to redo.
+  const fresh = added(back, [60, 60], RULES)
+  expect(fresh.future).toEqual([])
+  expect(redone(fresh)).toBe(fresh)
+  expect(cleared(back).future).toEqual([])
+  // The later moves of a drag keep what is held, and nothing to redo leaves the draft as it was.
+  expect(moved(back, 0, [30, 30], RULES, false).future).toEqual(back.future)
+  expect(redone(blank)).toBe(blank)
+  expect(blank.future).toEqual([])
+  expect(drafted(SQUARE, true).future).toEqual([])
+})
+
+spec('ui:outline-edit:closing-needs-the-floor', () => {
+  const fewer = clicked(SQUARE.slice(0, RULES.min - 1))
+  expect(canClose(fewer, RULES)).toBe(false)
+  expect(closed(fewer, RULES)).toBe(fewer)
+
+  const atFloor = clicked(SQUARE.slice(0, RULES.min))
+  expect(canClose(atFloor, RULES)).toBe(true)
+  const shut = closed(atFloor, RULES)
+  expect(shut.closed).toBe(true)
+  // Closing it again leaves it closed, and a closed outline cannot close.
+  expect(canClose(shut, RULES)).toBe(false)
+  expect(closed(shut, RULES)).toBe(shut)
+  expect(canClose(blank, RULES)).toBe(false)
 })

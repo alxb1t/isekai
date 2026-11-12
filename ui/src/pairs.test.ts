@@ -15,8 +15,10 @@ import {
   moved,
   none,
   proposals,
+  redone,
   selected,
   sent,
+  touched,
   undone,
 } from './pairs'
 import { spec } from './test/spec'
@@ -153,6 +155,57 @@ spec('ui:pairs:there-is-no-maximum', () => {
 
   expect(complete(state)).toHaveLength(40)
   expect(lone(state)).toBeNull()
+})
+
+spec('ui:pairs:a-plain-click-selects-and-places-nothing', () => {
+  const state = stand(3)
+
+  const near = touched(state, 'a', [203, 12], 1, RADIUS)
+  expect(near.selected).toBe(2)
+  expect(near.slots).toEqual(state.slots)
+  expect(near.past).toHaveLength(0)
+  // A selection is no change: the same click again leaves the state as it was.
+  expect(touched(near, 'a', [203, 12], 1, RADIUS)).toBe(near)
+  // Bare image places nothing and changes nothing.
+  expect(touched(state, 'a', [150, 300], 1, RADIUS)).toBe(state)
+  expect(touched(none, 'a', [150, 300], 1, RADIUS)).toBe(none)
+  // The radius is on screen: 8 image pixels away is out of reach at zoom 4.
+  expect(touched(state, 'a', [8, 10], 4, RADIUS)).toBe(state)
+  // A lone point's pair is selected by its own image alone.
+  const lonely = click(none, 'a', [30, 40])
+  expect(touched(lonely, 'a', [31, 41], 1, RADIUS).selected).toBe(0)
+  expect(touched(lonely, 'b', [31, 41], 1, RADIUS)).toBe(lonely)
+})
+
+spec('ui:pairs:redo-restores-what-undo-took', () => {
+  const placed = click(click(none, 'a', [10, 10]), 'b', [500, 500])
+  const dragged = moved(placed, 0, 'a', [40, 40])
+
+  const back = undone(dragged)
+  expect(back.future).toHaveLength(1)
+  const again = redone(back)
+  expect(again.slots).toEqual(dragged.slots)
+  expect(again.selected).toBe(dragged.selected)
+  expect(again.past).toEqual(dragged.past)
+  expect(again.future).toEqual([])
+  // Every undo is redone, the last first.
+  const twice = undone(undone(dragged))
+  expect(redone(twice).slots).toEqual(placed.slots)
+  expect(redone(redone(twice)).slots).toEqual(dragged.slots)
+  // A new change after an undo leaves nothing to redo; a selection is no change and keeps it.
+  const fresh = click(back, 'a', [300, 300])
+  expect(fresh.future).toEqual([])
+  expect(redone(fresh)).toBe(fresh)
+  expect(touched(back, 'a', [10, 10], 1, RADIUS).future).toEqual(back.future)
+  // The later moves of a drag keep what is held, and nothing to redo leaves the state as it was.
+  expect(moved(back, 0, 'a', [50, 50], false).future).toEqual(back.future)
+  expect(redone(none)).toBe(none)
+  // An arrival while an undo is held joins what redo brings back.
+  const arrival = proposed(back, 2)
+  const redoneArrival = redone(arrival)
+  expect(redoneArrival.slots[0].a).toEqual([40, 40])
+  expect(proposals(redoneArrival)).toHaveLength(2)
+  expect(proposals(undone(redoneArrival))).toHaveLength(2)
 })
 
 spec('ui:pairs:forward-waits-for-the-floor-and-says-why', () => {
