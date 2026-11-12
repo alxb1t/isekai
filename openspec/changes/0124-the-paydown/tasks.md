@@ -6,7 +6,7 @@ A phase per debt card, in the order of [design](design.md)'s decisions.
 
 - [x] 1 — The copy in step · moderate
 - [x] 2 — The copy's prose · moderate
-- [ ] 3 — The chained source · moderate
+- [x] 3 — The chained source · moderate
 - [ ] 4 — The cancel follows the render · moderate
 - [ ] 5 — The save queue · hard
 - [ ] 6 — The modal's rows · moderate
@@ -36,12 +36,12 @@ Closes 0111·R2: the prose says what a `T=S` render takes, and no check is added
 
 Closes op·chained-source: a chained source is refused before the pod ([D3](design.md#d3)).
 
-- [ ] 3.1 Add `test_a_chained_source_is_refused_before_the_pod` to `tests/test_render.py` after the dependent-before-source test, bound to `cli:render-limit:a-chained-source-is-refused-before-the-pod`.
+- [x] 3.1 Add `test_a_chained_source_is_refused_before_the_pod` to `tests/test_render.py` after the dependent-before-source test, bound to `cli:render-limit:a-chained-source-is-refused-before-the-pod`.
   It runs `session(runs, "control-anime-wai=summon-anime-wai", "summon-flat-anime-wai=control-anime-wai", opener=opener)` and expects status 1, no session opened, and the concrete message of [D3](design.md#d3) in `log(runs)`.
   Verify: `git grep -n "a-chained-source-is-refused-before-the-pod" -- tests/test_render.py` prints a line.
-- [ ] 3.2 In `in_session_sources` in `isekai/interface/render.py`, refuse a source request whose source is another source request's flow, with the message of [D3](design.md#d3), and add the rule to its docstring. The test of 3.1 is red until this task is done.
+- [x] 3.2 In `in_session_sources` in `isekai/interface/render.py`, refuse a source request whose source is another source request's flow, with the message of [D3](design.md#d3), and add the rule to its docstring. The test of 3.1 is red until this task is done.
   Verify: `uv run pytest tests/test_render.py -k chained` exits 0.
-- [ ] 3.3 Rewrite the docstring of `_requested` in `isekai/interface/render.py` to say what it plans, as [D3](design.md#d3) states it: before ``with the most images it renders across `ids`.``, after the plan of each request kind.
+- [x] 3.3 Rewrite the docstring of `_requested` in `isekai/interface/render.py` to say what it plans, as [D3](design.md#d3) states it: before ``with the most images it renders across `ids`.``, after the plan of each request kind.
   Verify: `git grep -n "with the most images it renders" -- isekai/interface/render.py` prints nothing.
 
 ## 4 — The cancel follows the render

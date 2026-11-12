@@ -14,6 +14,8 @@ its new digest.
   copy's seeds, listed or rendered (0124 D1).
 - D49, D38 and the README say what a `T=S` render takes: the source's latest seeds, read when it runs, with no check
   of the copy against its source (0124 D2).
+- A render line whose source request names another source request's flow is refused before the pod, naming the
+  request that renders the same seeds; `_requested`'s docstring says what it plans (0124 D3).
 
 ## [0.78.0] - 2026-11-08
 

@@ -136,11 +136,19 @@ def in_session_sources(requests: Sequence[Request]) -> list[bool]:
 
     Such a source has no seeds until the pod is up, so its dependent has no check
     before the pod; one placed before its source could never take its seeds, and
-    is refused.
+    is refused. So is a request whose source is another source request's flow, in
+    either order: its seeds are the ones that request takes, so it names them.
     """
     counted = {r.flow: i for i, r in enumerate(requests) if r.by_count}
+    sourced = {r.flow: r for r in requests if not r.by_count}
     deferred = []
     for i, request in enumerate(requests):
+        chain = None if request.by_count else sourced.get(request.value)
+        if chain is not None and chain is not request:
+            raise Refusal(
+                f"'{request}' takes its seeds from '{chain}', itself a source "
+                f"request; write '{request.flow}={chain.value}' for the same seeds"
+            )
         j = None if request.by_count else counted.get(request.value)
         if j is not None and j > i:
             raise Refusal(
@@ -1039,11 +1047,11 @@ def _requested(
     counts: Mapping[str, int],
     wired: Wiring,
 ) -> Line:
-    """Return a request's line, with the most images it renders across `ids`.
+    """Return a request's line, planned per run in `ids`.
 
-    `counts` is each by-count request's count, by flow. A count renders at most
-    that many per run; a source renders its latest seeds, or its own count where
-    it renders first in this session.
+    `counts` is each by-count request's count, by flow. A by-count request plans
+    its count; a source request plans the count of a by-count source in the line,
+    else the images its source holds now. A source of a source never reaches it.
     """
     if request.by_count:
         planned = [(run_id, counts[request.flow]) for run_id in ids]
