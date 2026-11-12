@@ -49,7 +49,9 @@ The system SHALL offer `isekai ink <image> <out>` with `--outline <mask.png>`, `
 skin white, the ink its colour where there is ink. With an outline it SHALL keep the ink inside the outline only,
 as the layer's alpha, neutral on and depth 1.6; with none it SHALL keep the whole image, neutral off and depth 1.0;
 a flag SHALL override its default. **Neutral** SHALL set the three channels to the layer's luminance, and
-**depth** SHALL raise the layer's Multiply factor to the power.
+**depth** SHALL raise the layer's Multiply factor to the power. An outline whose inside reads darker than the bare
+skin beside it, in any one channel, by more than the skin's own variation SHALL be refused, and the refusal SHALL
+name its fix. Such ink would otherwise be read as skin and wiped out.
 
 The tattoo photograph is read here and nowhere else, and the layer carries pixels only, so the photograph never
 reaches a run or a pod.
@@ -80,6 +82,14 @@ reaches a run or a pod.
 - **WHEN** a photograph of an arm with a dark fill is extracted
 - **THEN** the skin away from the fill is white in the layer
 - **AND** the fill is darker than the skin
+
+#### Scenario: an outline with no bare skin inside it is refused
+- **Key:** `edit:ink:an-outline-with-no-bare-skin-is-refused`
+- **Layers:** unit
+- **WHEN** an outline fitted to a solid fill is extracted, and the fill is darker than the skin around it in one
+  channel alone
+- **THEN** the extraction is refused, naming the fix: widen the outline over the skin
+- **AND** the same fill, under an outline that also covers bare skin, keeps visible ink
 
 #### Scenario: a depth out of range is refused at parse time
 - **Key:** `edit:ink:a-depth-out-of-range-is-refused`

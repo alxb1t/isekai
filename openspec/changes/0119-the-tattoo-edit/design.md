@@ -38,6 +38,7 @@ The change touches the image's record (`config/models.json`, `isekai/boundary/pr
 | [D11](#d11) | the decisions in force are edited where they live: D51 new; D50, D36, D29, D14 amended | the decisions page says what holds | prose only in `design.md` |
 | [D12](#d12) | tests sit at the lowest layer; no end-to-end test | the standards' lowest-layer rule | a browser test for a verb |
 | [D13](#d13) | the skin-highlight rim of a photograph's extraction is recorded, not fixed | seen on one case | a fix without a second case |
+| [D15](#d15) | an outline's white point is refused when any one channel reads darker than the bare skin beside the outline by more than `_SKIN_GAP` | a channel mean lets a one-channel fill become its own white point and wipes the tattoo out | the channel mean; a white point read outside the outline |
 
 ### D1
 
@@ -68,6 +69,7 @@ The change touches the image's record (`config/models.json`, `isekai/boundary/pr
 - `isekai/shared/ink.py` holds `extract_ink(image, outline, neutral, depth)` and reads `config/ink.json`: `reach`, `white`, `floor`, `photo_depth`, `image_depth`, `depth_min`, `depth_max`, at the prototype's values (64, 80, 0.04, 1.6, 1.0, 1.0, 2.0).
 - The mechanics are `extract.py` of the prototype: the skin under the ink is a max filter lifted and blurred, the layer is the photograph divided by it, bare skin scaled to white, the rest stretched by `floor`.
 - An outline keeps the ink inside it only and is the layer's alpha, with neutral on and `photo_depth`; no outline keeps the whole image with neutral off and `image_depth`; each flag overrides its default.
+- With an outline the white point is read inside it and checked against the bare skin beside it, channel by channel ([D15](#d15)).
 - **Neutral** sets every channel to the layer's luminance. **Depth** raises the layer's Multiply factor to the power, so that a fill darkens; the brief's "on the ink's alpha" is read this way, because a power on an alpha would lighten it.
 - Pillow and numpy are imported inside the functions.
 
@@ -142,6 +144,26 @@ The extraction of a photograph carries the skin's highlight rim into the layer; 
 No pod proof in this change. The person waived D28's metered pod proof of `v0.79-rc1` on 2026-11-11: the image is
 built and re-pinned (phase 5), and the operator's own test of the tattoo screens, after the placement versions, is
 its first run on a pod. D28 itself is unchanged and may be revisited.
+
+### D15
+
+Converge card S2 found that a tight outline over a solid fill makes the fill its own white point. The extraction
+then returns a layer with no ink in it.
+
+- `extract_ink` reads the white point inside the outline, at the `white` percentile, as now. It also reads the same
+  percentile per channel in the ring of lit pixels just outside the outline (`_skin_beside`).
+- The outline is refused, with the same message naming the fix (widen the outline over the skin), when **any one
+  channel** of the inside sample is lower than the ring's sample in that channel by more than `_SKIN_GAP`. The
+  three channels are no longer averaged first. Ink at `(172,150,120)` on skin at `(200,150,120)` is about 14 % short
+  in red, so it is refused, even though its mean shortfall is only about 0.047.
+- The `_MIN_SKIN` floor on the mean, and the refusal when the outline has no lit ring (`_skin_beside`'s 0.0), are
+  unchanged.
+- **The bound accepted:** ink within `_SKIN_GAP` of the skin in every channel is read as the skin's own variation.
+  The gap absorbs the lighting difference between inside and beside, and ink that faint barely darkens a Multiply
+  composite anyway.
+- Rejected: reading the white point from the ring alone. It moves the white point of every outline, not just the
+  tight ones. It also greys bare skin inside an outline wherever the lighting is not fully flattened, which is
+  the bare-skin-is-white scenario.
 
 ## Tests
 

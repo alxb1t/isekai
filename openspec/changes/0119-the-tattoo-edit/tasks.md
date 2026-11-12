@@ -1,6 +1,6 @@
 # The tattoo edit — tasks
 
-The phases: the registry, the ink, the request, the session, the image's files, the docs. The image's files are a person's; the pod proof is waived (design D14).
+The phases: the registry, the ink, the request, the session, the image's files, the docs, the white point. The image's files are a person's; the pod proof is waived (design D14).
 
 ## Progress
 
@@ -10,6 +10,7 @@ The phases: the registry, the ink, the request, the session, the image's files, 
 - [x] 4 — Session · hard
 - [x] 5 — Model and image **HUMAN**
 - [x] 6 — Docs · moderate
+- [ ] 7 — White point · moderate
 
 ## 1 — Registry
 
@@ -120,3 +121,12 @@ The phases: the registry, the ink, the request, the session, the image's files, 
   Verify: `git grep -n edit-tattoo.md README.md` prints the link.
 - [x] 6.5 Name the new files and edges in `docs/modules.md`, `isekai/shared/README.md`, `isekai/pipeline/README.md` and `isekai/boundary/README.md`: the shared maths, the edit stage, the transport helpers' new home.
   Verify: `git grep -n "prompt.py" isekai/boundary/README.md` prints the line.
+
+## 7 — White point
+
+- [ ] 7.1 In `isekai/shared/ink.py`, compare the outline's white point with the ring channel by channel ([D15](design.md#d15)). `_skin_beside` returns the ring's per-channel sample, or no sample when there is no lit ring. `extract_ink` refuses, with its present message, when any channel of `skin` is below the ring's same channel by more than `_SKIN_GAP`. The `_MIN_SKIN` test on `skin.mean()` stays as it is. Rewrite the comments above `_MIN_SKIN` and `_SKIN_GAP` to describe the per-channel comparison.
+  Verify: `uv run pytest tests/test_ink.py -k ink_extract` passes.
+- [ ] 7.2 In `tests/test_ink.py`, add tests carrying `ink_extract` and the marker `@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")`. The fill is `_arm((172, 150, 120))`. Under an outline exactly over `FILL` it is refused, matching `no bare skin inside the outline.*widen`. Under `_outline()` its pixel at (80, 80) is not white. Move the two existing tight-outline refusal tests to the same marker. Record the new refusal test's red run against `9cabbf16`'s `isekai/shared/ink.py`.
+  Verify: `uv run pytest tests/test_ink.py -k "ink_extract and outline"` passes.
+- [ ] 7.3 Hold the phase's tests together with the quote's edits-only regression (converge card S4).
+  Verify: `uv run pytest tests/test_ink.py tests/test_render.py -k "ink or only_pending_edits"` passes.
