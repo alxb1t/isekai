@@ -476,7 +476,8 @@ def create_app(
         """Return the quoted folders, quote, dialog's view and photographs taken out.
 
         With no names, every collection, in the Library's order. Only those the
-        quote keeps, short of images or refusing a count, are returned, and only
+        quote keeps, short of images, refusing a count or holding a bake, are
+        returned, and only
         what `without` takes out of them.
         """
         if names is None:
@@ -563,9 +564,9 @@ def create_app(
     def post_quote(payload: dict[str, Any] | None = None) -> dict[str, Any]:
         """Quote one render of the named collections, its limit and its price at most.
 
-        `collections` names them; absent, every collection short of images is
-        quoted. `without` lists each `{collection, run, flow}` taken out of it. It
-        rents nothing; only the render's own `POST` does.
+        `collections` names them; absent, every collection short of images or
+        holding a bake is quoted. `without` lists each `{collection, run, flow}`
+        taken out of it. It rents nothing; only the render's own `POST` does.
         """
         names = (payload or {}).get("collections")
         if names is not None and not _strings(names):
@@ -1164,7 +1165,8 @@ def create_app(
         """
         run, image, _ = rendered(collection, digest, flow, version, seed)
         held = {one.k: one for one in library.bakes(image.parent, seed)}
-        number = int(k) if _DECIMAL.fullmatch(k) else None
+        # A held number is small: a spelling too long to convert holds none.
+        number = int(k) if _DECIMAL.fullmatch(k) and len(k) <= _BAKE_DIGITS else None
         if number is None or number not in held:
             raise Refusal(
                 f"{flow} {version} · {seed} holds no bake {k!r}; go back to its "
@@ -1325,6 +1327,8 @@ class _Shared:
 # A number a request spells: ASCII digits alone, since `str.isdigit` also passes
 # a superscript `int` cannot read.
 _DECIMAL = re.compile(r"[0-9]+")
+# The most digits a bake number is read from: `int` refuses a longer spelling.
+_BAKE_DIGITS = 18
 
 
 def cell_event(

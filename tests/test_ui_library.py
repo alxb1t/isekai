@@ -566,7 +566,7 @@ def _bake(group: Path, seed: int, k: int, source: str, *, image: bool = False) -
     return record
 
 
-@pytest.mark.spec_exempt("structural: the chain a render's detail is drawn from")
+@pytest.mark.spec("ui:bakes:the-chain-lists-the-bakes-in-order")
 def test_bake_library_lists_each_edit_of_the_seed_by_number(tmp_path: Path) -> None:
     group = tmp_path / "001"
     _bake(group, 42, 2, "42.edit-1.png")
@@ -584,7 +584,7 @@ def test_bake_library_lists_each_edit_of_the_seed_by_number(tmp_path: Path) -> N
     assert library.bakes(tmp_path / "absent", 42) == []
 
 
-@pytest.mark.spec_exempt("structural: a damaged record costs only its own row")
+@pytest.mark.spec("ui:bakes:a-damaged-record-marks-its-bake")
 def test_bake_library_a_record_that_cannot_be_read_is_listed_damaged(
     tmp_path: Path,
 ) -> None:

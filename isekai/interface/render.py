@@ -894,8 +894,8 @@ def short(
 class Quote:
     """What one session over many collections would do, how long, and its price."""
 
-    # The shortfall of each collection quoted that is short or refuses a count,
-    # by its runs root, in the order quoted.
+    # The shortfall of each collection quoted that is short, refuses a count or
+    # holds a queued bake, by its runs root, in the order quoted.
     shorts: dict[Path, Short]
     # The pending edits, a bake each, of every collection asked, by its runs root.
     edits: dict[Path, Edits]

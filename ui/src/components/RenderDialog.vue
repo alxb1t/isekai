@@ -23,7 +23,7 @@ import {
 import type { Quote, QuotedCollection, TakenOut } from '../types'
 import KeyHint from './KeyHint.vue'
 
-/* The Render dialog (design spec J4·1): a row per collection short of images, in
+/* The Render dialog (design spec J4·1): a row per collection short of images or holding a bake, in
    the Library's order, each ticked; per flow the tiles of what renders; one
    session's estimate, its limit against the ceiling, and the price at most.
    Unticking a row quotes the rest again, and so does taking a photograph out by

@@ -328,7 +328,7 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 
 - **What renders**: a row per collection short of images or holding a bake, in the Library's order, each ticked; in
   each, every approved source × flow whose newest version holds fewer images than its Count, grouped by flow, then
-  the collection's bakes, a row each. The row's count line reads `<n> images · <m> bakes`, a part left out for zero.
+  the collection's bakes, a row each. The row's count line reads `<n> images · <m> bakes`, the bakes left out for zero; the images stay, even at zero.
   Unticking a row quotes the rest again; one session renders every ticked collection on one pod, its bakes after its
   images. The bar counts its own collection's images and bakes, and `+n in other collections` counts both.
 - **Taking out**: a tile's `×`, or `⌫` on a focused tile, takes the photograph's flow out of the session; a bake

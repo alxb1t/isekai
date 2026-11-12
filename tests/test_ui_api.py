@@ -1825,7 +1825,20 @@ def test_bake_routes_a_queued_bake_has_no_image_and_names_its_session(
 
 
 @pytest.mark.spec("ui:bakes:an-unknown-bake-is-refused")
-@pytest.mark.parametrize("k", ["3", "0", "x", "1.5", "-1", "²", "4"])
+@pytest.mark.parametrize(
+    "k",
+    [
+        "3",
+        "0",
+        "x",
+        "1.5",
+        "-1",
+        "²",
+        "4",
+        # Past the digits Python converts to an int by default.
+        pytest.param("9" * 4301, id="past-the-int-conversion-limit"),
+    ],
+)
 def test_bake_routes_a_number_the_seed_has_no_edit_for_is_refused(
     wired: Wiring,
     made: Run,

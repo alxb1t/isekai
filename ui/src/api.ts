@@ -112,7 +112,7 @@ export function renderOffer(collection: string): Promise<RenderOffer> {
 }
 
 /* One session's quote over `collections`, or, with none named, every collection
-   short of images. It rents nothing; only `startRender` does. */
+   short of images or holding a bake. It rents nothing; only `startRender` does. */
 export function quoteRender(collections?: string[], without: TakenOut[] = []): Promise<Quote> {
   return send('/api/render/quote', 'POST', collections ? { collections, without } : {})
 }
