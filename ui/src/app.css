@@ -2632,13 +2632,8 @@ dialog::backdrop {
   cursor: pointer;
 }
 
-.picker__card:hover:not(:disabled) {
+.picker__card:hover {
   border-color: var(--accent);
-}
-
-.picker__card:disabled {
-  color: var(--ink-3);
-  cursor: not-allowed;
 }
 
 .picker__image {
@@ -2653,8 +2648,7 @@ dialog::backdrop {
 }
 
 .picker__state,
-.picker__source,
-.picker__reason {
+.picker__source {
   font-size: 11px;
   color: var(--ink-2);
 }
@@ -3022,6 +3016,16 @@ dialog::backdrop {
   gap: 6px;
   font-size: 11px;
   color: var(--ink-2);
+}
+
+.picker__remove {
+  align-self: flex-start;
+}
+
+.picker__remove[data-armed='true'] {
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  background: var(--accent-dim);
 }
 
 /* The Leave dialog: the lone point, the pairs that stand, then Stay and Leave. */

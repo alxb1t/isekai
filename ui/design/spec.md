@@ -498,7 +498,7 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 
 | frame | trigger | URL |
 |---|---|---|
-| J9·1 the picker, nothing kept: `none kept yet`, the upload form, the cut form | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
+| J9·1 the picker, nothing kept: `none kept yet`, the upload form with `the tattoo's design on its own — a flat image, not a photo of skin`, the cut form with `the tattoo as it shows on this render's photograph` | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
 | J9·2 a file chosen: its name `IMG_5521`, `reading…`, then `converted`; Keep waits `reading the file` | Upload a tattoo…, choose `IMG_5521.heic` | same |
 | J9·3 the outline step on it, the outline open: the ink view, the white point and the tone disabled, the line `close the outline on its first point · 0 points` above them | Keep | `…/place/outline/IMG_5521` |
 | J9·4 the outline closed: the ink view, the white point `auto` with its grey, the tone, `saved` | shift-click the first point again | same |
@@ -536,7 +536,9 @@ J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tatt
 - **Refusals**, each with its fix: a taken name, `bow is kept; choose another name`, beside the name; a file that is
   not an image or still carries metadata, on the file; an outline the server refuses, as the ink view's refusal under
   the ink view; an unknown render or tattoo, a full-page refusal with `Back to the library ⇧L`.
-- **A cut of another photograph** stays listed, disabled, reading `from photograph 5c19e0a47d3b, not this render's`.
+- **Remove** is a button on each card. The first press arms it in the accent and removes nothing, a second press on the
+  same card removes the tattoo and lists the rest again, and a press elsewhere, or losing focus, disarms it. A refusal
+  shows under the card.
 - **The stages** pair the images by clicks, either image first; the image that waits for a match takes the accent, a
   click near a point selects its pair, a drag moves a point, and the list has *Undo*, *Delete* and *Clear*. Forward
   waits with `6 pairs needed · 2 placed` or `point 7 has no match`. The steps of a mode keep their numbers (§4): a cut
@@ -646,7 +648,7 @@ endings once, for both surfaces. The key is `RUNPOD_API_KEY` in `.env` (`.env.ex
 | **run flow** | New collection and Add sources (J1, J7) — the upload, staging, `isekai import` and conversion; `isekai assign`; ticking, multi-select, the PrepareBar and Prepare as a job (J2, J8a); `--progress json` on the stage verbs; the job slot; SSE `/events` with the snapshot |
 | **render** | the Render dialog, the session, done (J4); ④ editable, Count and Seeds through approve; `render <runs>` rendering what is short; the scaled limit and recorded durations; Renders, the large view; the billing alerts and the volume item (J8b, J8c); `--progress json` on `render` |
 | **revise** | `isekai draft --flow`, *Draft from this* and its refusal; Review of a revision (J5·4–J5·6); `review --discard`; compare (J5·8, J5·9); re-roll (J6) |
-| **the placement core** | *Place a tattoo* `⇧P` on a render's large view; the placement screen's route (§4) and its first two steps, ① the tattoo and ② the outline with its ink view (J9); the tattoo library `.tattoos/` ([D52](../../docs/decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)); the panel's zoom, pan and outline; `--outline-fill` and `--point-ring` in each theme. The stages, the live warp and the bake are the next version's |
+| **the placement core** | *Place a tattoo* `⇧P` on a render's large view; the placement screen's route (§4) and its first two steps, ① the tattoo and ② the outline with its ink view (J9); the tattoo library `.tattoos/` ([D52](../../docs/decisions.md#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed)); the panel's zoom, pan and outline; `--outline-fill` and `--point-ring` in each theme. The stages, the live warp and the bake are the next version's |
 | **the placement** | the placement screen's steps ③ `photo`, ④ `render` and ⑤ `review` (§4, J9·8–J9·13): the pairs on two images, the live preview, the limb and exclusions, the review and *Bake*, which queues an edit request, and the Leave dialog; a tattoo's stage-1 pairs kept per photograph; the placement record beside its edit ([D53](../../docs/decisions.md#d53--a-placement-is-recorded-beside-its-edit)); `--limb-fill` and `--exclusion-fill` in each theme |
 | **automatic placement** | stage ④'s proposed pairs (J9·14): asked once when it opens with no pair, a spinner or a refusal, dashed points and rows, *Accept* and *Accept all*, and forward's wait for them; the pose and the segmenter run on the operator's machine ([D54](../../docs/decisions.md#d54--automatic-pairs-run-on-the-operators-machine-and-are-kept-nowhere)) |
 | **bakes** | the bake's route `…/<seed>/edit/:k` and its view; the chain and the photograph's thumbnail on the large view; bakes in the Render bar and the dialog, their `×`, the titles and the confirmation that carries them (J4·1, J5) |

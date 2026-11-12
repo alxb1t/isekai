@@ -38,6 +38,7 @@ from tests.conftest import snapshot  # noqa: E402
 from tests.stages import FIELD_MAP, NO_GPUNIT, rendered_image  # noqa: E402
 
 COLLECTION = "2026-10-19"
+ANY = "0123456789ab"
 FLOW = "summon-anime-wai"
 PORT = 8765
 ADDRESS = f"http://{HOST}:{PORT}"
@@ -152,7 +153,8 @@ def _upload(library: Path, client: TestClient, name: str = "bow") -> None:
         "neutral": True,
         "depth": 1.6,
     }
-    assert client.put(f"/api/tattoos/{name}/outline", json=outline).status_code == 200
+    outlined = client.put(f"/api/tattoos/{name}/outline?digest={ANY}", json=outline)
+    assert outlined.status_code == 200
 
 
 def _cut(client: TestClient, run: Run, name: str = "arm") -> None:
@@ -245,7 +247,7 @@ def test_placement_route_stage1_the_list_carries_each_states_on_the_digest_asked
         "bow": {"pairs": pairs, "not_on_photo": False},
         "wing": {"pairs": [], "not_on_photo": True},
     }
-    assert "stage1" not in client.get("/api/tattoos").json()
+    assert client.get("/api/tattoos").status_code == 409
     assert client.get("/api/tattoos?digest=ffffffffffff").json()["stage1"] == {}
 
 
@@ -294,7 +296,9 @@ def test_placement_route_stage1_a_cut_is_refused(
 
     assert refused.status_code == 409
     assert "already in the photograph's pixels" in refused.json()["refusal"]
-    assert not (library / TATTOOS / "arm" / STAGE1).exists()
+    folder = library / TATTOOS / ".cuts" / photographed.digest / "arm"
+    assert folder.is_dir()
+    assert not (folder / STAGE1).exists()
 
 
 @pytest.mark.spec("tattoo:placement-preview:a-jpeg-on-the-crop-of-the-targets-points")
@@ -355,7 +359,7 @@ def test_placement_route_preview_of_a_cut_needs_no_stage_one_file(
 ) -> None:
     _cut(client, photographed)
     client.put(
-        "/api/tattoos/arm/outline",
+        f"/api/tattoos/arm/outline?digest={photographed.digest}",
         json={
             "points": _around(34, 24),
             "closed": True,
@@ -370,7 +374,9 @@ def test_placement_route_preview_of_a_cut_needs_no_stage_one_file(
     )
 
     assert answered.status_code == 200, answered.text
-    assert not (library / TATTOOS / "arm" / STAGE1).exists()
+    folder = library / TATTOOS / ".cuts" / photographed.digest / "arm"
+    assert folder.is_dir()
+    assert not (folder / STAGE1).exists()
 
 
 @pytest.mark.spec("tattoo:placement-preview:the-answer-is-kept-nowhere")
@@ -582,7 +588,7 @@ def test_placement_route_bake_of_a_cut_copies_no_photograph_into_the_run(
 ) -> None:
     _cut(client, photographed)
     client.put(
-        "/api/tattoos/arm/outline",
+        f"/api/tattoos/arm/outline?digest={photographed.digest}",
         json={
             "points": _around(34, 24),
             "closed": True,
@@ -623,16 +629,22 @@ def test_placement_route_bake_refuses_a_body_lacking_a_key_or_naming_no_render(
     assert snapshot(library) == before
 
 
+REMOVAL = "/api/tattoos/{name}"
+
+
 def _taking_away(app: FastAPI) -> list[str]:
-    """Return each route under `/api` that names a tattoo and deletes or renames one."""
+    """Return each tattoo route that renames, or removes other than by `REMOVAL`."""
     found = []
     for route in app.routes:
         path = getattr(route, "path", "")
         methods = getattr(route, "methods", None) or set()
         if "/tattoos" not in path:
             continue
-        if methods & {"DELETE", "PATCH"} or any(
-            word in path for word in ("delete", "remove", "rename")
+        removes_elsewhere = "DELETE" in methods and path != REMOVAL
+        if (
+            removes_elsewhere
+            or "PATCH" in methods
+            or any(word in path for word in ("delete", "remove", "rename"))
         ):
             found.append(f"{sorted(methods)} {path}")
     return found
@@ -650,8 +662,8 @@ def _placement_routes(app: FastAPI) -> list[tuple[str, str]]:
     ]
 
 
-@pytest.mark.spec("tattoo:library:no-route-deletes-or-renames")
-def test_placement_route_guard_no_route_naming_a_tattoo_deletes_or_renames_one(
+@pytest.mark.spec("tattoo:library:no-route-renames")
+def test_placement_route_guard_no_route_naming_a_tattoo_renames_one(
     client: TestClient,
 ) -> None:
     app = client.app
@@ -666,7 +678,7 @@ def test_placement_route_guard_no_route_naming_a_tattoo_deletes_or_renames_one(
     ]
 
 
-@pytest.mark.spec("tattoo:library:no-route-deletes-or-renames")
+@pytest.mark.spec("tattoo:library:no-route-renames")
 def test_placement_route_guard_twin_finds_a_delete_under_a_placement_route(
     client: TestClient,
 ) -> None:

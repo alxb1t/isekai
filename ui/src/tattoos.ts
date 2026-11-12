@@ -7,9 +7,6 @@ export interface Card {
   state: 'outlined' | 'not outlined' | 'ready for this photograph'
   /* What it came from: when it was kept and the size it came with, or its photograph. */
   source: string
-  /* A cut of another photograph is listed and cannot be chosen on this render. */
-  choosable: boolean
-  reason: string | null
   /* An upload's stage 1 on this photograph: its pairs, or the flag; null if never placed. */
   stage: string | null
   /* The card offers *not on this photo*: an upload's does, a cut's does not. */
@@ -33,6 +30,12 @@ export function stageLine(state: Stage1 | undefined): string | null {
   return `stage 1 · ${count} ${count === 1 ? 'pair' : 'pairs'}`
 }
 
+/** Return the path that lists the tattoos of the render whose run digest is `digest`.
+    e.g. "a1b2c3d4e5f6" -> "/api/tattoos?digest=a1b2c3d4e5f6" */
+export function tattoosPath(digest: string): string {
+  return `/api/tattoos?${new URLSearchParams({ digest })}`
+}
+
 /** Return what a card shows of `tattoo` on the render whose run digest is `digest`, with the
     tattoo's stage-1 `held` on that photograph and the stage-1 `floor`.
     e.g. an upload kept on 2026-11-12 -> source "kept 2026-11-12" */
@@ -46,29 +49,34 @@ export function card(
   const state = placed ? 'ready for this photograph' : tattoo.outlined ? 'outlined' : 'not outlined'
   const opens = startStep(tattoo, held, floor)
   if (tattoo.kind === 'cut') {
-    const source = `from photograph ${tattoo.cut_from}`
-    const other = tattoo.cut_from !== digest
-    return {
-      state: other ? (tattoo.outlined ? 'outlined' : 'not outlined') : state,
-      source,
-      choosable: !other,
-      reason: other ? `${source}, not this render's` : null,
-      stage: null,
-      offers: false,
-      opens,
-    }
+    return { state, source: `from photograph ${tattoo.cut_from}`, stage: null, offers: false, opens }
   }
   const scaled = tattoo.downscaled_from
   const was = scaled ? ` · downscaled from ${scaled[0]}×${scaled[1]}` : ''
   return {
     state,
     source: `kept ${tattoo.kept.slice(0, 10)}${was}`,
-    choosable: true,
-    reason: null,
     stage: stageLine(held),
     offers: true,
     opens,
   }
+}
+
+/** Return what a press of *Remove* on the card `name` does when `armed` is the card armed
+    before it: the first press arms the card, the second on it removes. e.g. (null, "bow") ->
+    { armed: "bow", remove: false }; ("bow", "bow") -> { armed: null, remove: true } */
+export function armRemoval(
+  armed: string | null,
+  name: string,
+): { armed: string | null; remove: boolean } {
+  return armed === name ? { armed: null, remove: true } : { armed: name, remove: false }
+}
+
+/** Return the line under a picker form's heading: what the form takes. */
+export function formLine(form: 'upload' | 'cut'): string {
+  return form === 'upload'
+    ? "the tattoo's design on its own — a flat image, not a photo of skin"
+    : "the tattoo as it shows on this render's photograph"
 }
 
 /** Return the name an upload starts under: the file's stem, or `<cut>_closeup` when it

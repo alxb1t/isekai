@@ -13,7 +13,7 @@ writes into ([D17](../../docs/decisions.md#d17--input-above-flow-below)).
 works on a finished render after `generate`, and writes its files beside the render's own
 ([D51](../../docs/decisions.md#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)).
 `tattoos.py` is no verb: it keeps the library's tattoos and makes the app's ink view, `preview` and `composite`, and
-imports no stage ([D52](../../docs/decisions.md#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)).
+imports no stage ([D52](../../docs/decisions.md#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed)).
 `proposing.py` is no verb either: it proposes the pairs of stage 2 for the app and keeps nothing
 ([D54](../../docs/decisions.md#d54--automatic-pairs-run-on-the-operators-machine-and-are-kept-nowhere)).
 `review.py` holds `review`, `approve` and the revision and draft writers serving `draft`;
@@ -34,7 +34,7 @@ independent, and neither reads the other's output
 | `generate.py` | ④ assembles every prompt locally, then renders each against an endpoint, and discards one render | free, then **money** |
 | `edit.py` | `edit`: requests an edit from a render and its composite, or with `request_placed` from a bake's composite and its placement record, and lists the pending ones, then samples a pending one over the transport and stitches it; discards an edit. It takes its transport helpers from `boundary/comfy/prompt.py` and its maths from `shared/tattoo.py`, and imports no stage | free to request and check, then **money** to sample |
 | `proposing.py` | `propose`: the pairs stage 2 proposes from a photograph, a render and the tattoo's points on the photograph, as `Proposal(arm, pairs)`, none for no person and none for no usable bone; a `Proposer` holds the pose finder and the segmenter it is given. It reads no file, takes the pose from `boundary/pose.py`, the segmenter from `boundary/sam2.py` and its geometry from `shared/proposal.py`, and imports no stage | free |
-| `tattoos.py` | the library's `.tattoos/<name>/`: keeps an upload upright and bounded, cuts a tattoo from a photograph, saves and reads an outline with its tone and a tattoo's stage-1 pairs per photograph, makes the ink view on the outline's crop, the `preview` of a warp on a crop of its target and the `composite` over a whole render. It takes bytes and paths, takes its maths from `shared/chain.py`, `shared/ink.py` and `shared/tattoo.py`, and imports no stage; Pillow is imported inside its functions | free |
+| `tattoos.py` | the library's `.tattoos/<name>/` and its cuts under `.tattoos/.cuts/<digest>/<name>/`: keeps an upload upright and bounded, cuts a tattoo from a photograph, reads every name by the render's digest, removes a tattoo, saves and reads an outline with its tone and a tattoo's stage-1 pairs per photograph, makes the ink view on the outline's crop, the `preview` of a warp on a crop of its target and the `composite` over a whole render. It takes bytes and paths, takes its maths from `shared/chain.py`, `shared/ink.py` and `shared/tattoo.py`, and imports no stage; Pillow is imported inside its functions | free |
 
 ## Imported by
 
