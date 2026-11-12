@@ -1069,7 +1069,7 @@ def create_app(
             "seeds": _decimal(held.seeds),
             "damaged": held.damaged,
             # The seed's edits by number, the chain the large view draws.
-            "bakes": [_bake_out(one) for one in library.bakes(image.parent, seed)],
+            "bakes": [asdict(one) for one in library.bakes(image.parent, seed)],
             # The newest older version that rendered this seed, or null.
             "compare": library.paired(run, flow, number, seed, suffix),
             # Every offered flow, this one first, assigned or not: a draft assigns.
@@ -1193,7 +1193,7 @@ def create_app(
         collection: str, digest: str, flow: str, version: str, seed: int, k: str
     ) -> dict[str, Any]:
         """Return one bake's record: its state, what it was placed on and its time."""
-        return _bake_out(baked(collection, digest, flow, version, seed, k)[1])
+        return asdict(baked(collection, digest, flow, version, seed, k)[1])
 
     @app.get(
         "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/image"
@@ -1521,18 +1521,6 @@ def _version(text: str) -> int:
             "e.g. v1 -- go back to the collection's hub to choose one"
         )
     return int(digits)
-
-
-def _bake_out(one: library.Bake) -> dict[str, Any]:
-    """Describe a bake as the large view draws it, its edit number `k` a number."""
-    return {
-        "k": one.k,
-        "state": one.state,
-        "placed_on": one.placed_on,
-        "baked_at": one.baked_at,
-        "edit": one.edit,
-        "reason": one.reason,
-    }
 
 
 def _quote(
