@@ -39,6 +39,7 @@ import type {
   Tattoo,
   TattooList,
 } from './types'
+import { tattoosPath } from './tattoos'
 
 /** One run in one flow of one collection: what a review URL names. */
 export interface Place {
@@ -356,13 +357,14 @@ export function comparison(
   return get<Comparison>(`${renderAt(place)}/compare/${pair}`)
 }
 
-/* The tattoo library, which belongs to no collection: every kept tattoo and the
-   limits the server holds an outline and the stages to. With a photograph's `digest`,
-   each tattoo's stage-1 state on it comes too. */
-export function tattoos(digest?: string): Promise<TattooList> {
-  const query = digest === undefined ? '' : `?${new URLSearchParams({ digest })}`
-  return get<TattooList>(`/api/tattoos${query}`)
+/* The tattoo library, which belongs to no collection: the uploads and the cuts of the
+   photograph `digest`, each with its stage-1 state on it, and the limits the server holds
+   an outline and the stages to. */
+export function tattoos(digest: string): Promise<TattooList> {
+  return get<TattooList>(tattoosPath(digest))
 }
+
+const asked = (digest: string): string => `?${new URLSearchParams({ digest })}`
 
 /* A tattoo's pairs with one photograph, and the flag; no pairs for one never placed. */
 export function stageOne(digest: string, name: string): Promise<Stage1> {
@@ -378,9 +380,14 @@ export function saveStageOne(digest: string, name: string, stage: Stage1): Promi
   )
 }
 
-/* One kept tattoo with its outline and tone. */
-export function tattooNamed(name: string): Promise<Tattoo & { outline: Outline }> {
-  return get(`/api/tattoos/${encodeURIComponent(name)}`)
+/* One kept tattoo of the photograph `digest`, with its outline and tone. */
+export function tattooNamed(digest: string, name: string): Promise<Tattoo & { outline: Outline }> {
+  return get(`/api/tattoos/${encodeURIComponent(name)}${asked(digest)}`)
+}
+
+/* Remove one tattoo, an upload or a cut of the photograph `digest`; it is gone for good. */
+export function removeTattoo(digest: string, name: string): Promise<unknown> {
+  return request(`/api/tattoos/${encodeURIComponent(name)}${asked(digest)}`, { method: 'DELETE' })
 }
 
 /* Put a file into an import's staging as the import does; answers its upload id, and
@@ -407,33 +414,33 @@ export function cutTattoo(place: Place, name: string): Promise<Tattoo> {
 }
 
 /* Replace a tattoo's outline and tone with `outline`, whole. */
-export function saveOutline(name: string, outline: Outline): Promise<Outline> {
-  return send(`/api/tattoos/${encodeURIComponent(name)}/outline`, 'PUT', outline)
+export function saveOutline(digest: string, name: string, outline: Outline): Promise<Outline> {
+  return send(`/api/tattoos/${encodeURIComponent(name)}/outline${asked(digest)}`, 'PUT', outline)
 }
 
 /* An uploaded tattoo's image, whole. */
-export function designAt(name: string): string {
-  return `/api/tattoos/${encodeURIComponent(name)}/design`
+export function designAt(digest: string, name: string): string {
+  return `/api/tattoos/${encodeURIComponent(name)}/design${asked(digest)}`
 }
 
-/* The ink on `outline`'s crop, made now and kept nowhere. A cut is asked on a run's
-   photograph, named by `place`; an upload takes none. The box comes in `X-Ink-Box` as
-   `x,y,w,h` and the automatic white grey in `X-Ink-White`. */
+/* The ink on `outline`'s crop, made now and kept nowhere, on the run's photograph named by
+   `place`. The box comes in `X-Ink-Box` as `x,y,w,h` and the automatic white grey in
+   `X-Ink-White`. */
 export function inkView(
   collection: string,
   name: string,
   outline: Outline,
-  place: Place | null,
+  place: Place,
   signal?: AbortSignal,
 ): Promise<InkView> {
-  const asked = place ? { digest: place.digest, flow: place.flow } : {}
   const url = `/api/c/${encodeURIComponent(collection)}/tattoos/${encodeURIComponent(name)}/ink`
   const body = {
     points: outline.points,
     white: outline.white,
     neutral: outline.neutral,
     depth: outline.depth,
-    ...asked,
+    digest: place.digest,
+    flow: place.flow,
   }
   return readInk(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal })
 }

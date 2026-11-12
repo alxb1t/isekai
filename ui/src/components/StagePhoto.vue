@@ -89,7 +89,7 @@ function dragged(side: 'a' | 'b', index: number, at: Point, fresh: boolean): voi
   <section v-if="tattoo" class="stage" data-stage="photo">
     <div class="stage__panels">
       <PairPanel
-        :src="designAt(tattoo.name)"
+        :src="designAt(place.digest, tattoo.name)"
         :alt="tattoo.name"
         :width="tattoo.size[0]"
         :height="tattoo.size[1]"

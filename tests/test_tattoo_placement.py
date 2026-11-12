@@ -76,7 +76,7 @@ def _pairs(
 def _library(tmp_path: Path, name: str = "bow") -> Path:
     """Return a library keeping the upload `name`, its outline closed round the fill."""
     keep(tmp_path, name, _arm())
-    save_outline(tmp_path, name, _around(34, 24), True, 1.0, True, 1.6)
+    save_outline(tmp_path, name, DIGEST, _around(34, 24), True, 1.0, True, 1.6)
     return tmp_path
 
 
@@ -265,7 +265,9 @@ def test_placement_stage1_a_cut_is_refused_saying_its_ink_is_in_the_photograph(
     with pytest.raises(Refusal, match="already in the photograph's pixels"):
         save_stage1(tmp_path, "arm", DIGEST, _pairs(6, ONTO_PHOTO), False)
 
-    assert not (tmp_path / TATTOOS / "arm" / STAGE1).exists()
+    folder = tmp_path / TATTOOS / ".cuts" / DIGEST / "arm"
+    assert folder.is_dir()
+    assert not (folder / STAGE1).exists()
     assert read_stage1(tmp_path, "arm", DIGEST).pairs == ()
 
 
@@ -379,7 +381,7 @@ def test_placement_preview_a_cut_lands_on_the_render_with_no_stage_one_file(
     tmp_path: Path,
 ) -> None:
     cut(tmp_path, "arm", DIGEST, ARM)
-    save_outline(tmp_path, "arm", _around(34, 24), True, 1.0, True, 1.6)
+    save_outline(tmp_path, "arm", DIGEST, _around(34, 24), True, 1.0, True, 1.6)
     files = _files(tmp_path)
 
     made = _ask(tmp_path, files, "render", _pairs(4, ONTO_RENDER), "arm")
@@ -389,7 +391,9 @@ def test_placement_preview_a_cut_lands_on_the_render_with_no_stage_one_file(
         _at(shown, made, CENTRE[0] + ONTO_RENDER[0], CENTRE[1] + ONTO_RENDER[1]) < 128
     )
     assert _at(shown, made, made.box[0] + 2, made.box[1] + 2) > 250
-    assert not (tmp_path / TATTOOS / "arm" / STAGE1).exists()
+    folder = tmp_path / TATTOOS / ".cuts" / DIGEST / "arm"
+    assert folder.is_dir()
+    assert not (folder / STAGE1).exists()
     with pytest.raises(Refusal, match="placed on the render alone"):
         _ask(tmp_path, files, "photo", _pairs(4, ONTO_RENDER), "arm")
 
@@ -473,7 +477,7 @@ def test_placement_preview_a_cut_on_another_photograph_is_refused_naming_its_own
     tmp_path: Path,
 ) -> None:
     cut(tmp_path, "arm", DIGEST, ARM)
-    save_outline(tmp_path, "arm", _around(34, 24), True, 1.0, True, 1.6)
+    save_outline(tmp_path, "arm", DIGEST, _around(34, 24), True, 1.0, True, 1.6)
     files = _files(tmp_path)
 
     with pytest.raises(Refusal, match=f"cut from photograph {DIGEST}"):
@@ -515,7 +519,7 @@ def test_placement_preview_an_open_outline_an_unknown_tattoo_and_a_bad_target_re
         _ask(tmp_path, files, "photo", pairs, "ghost")
     with pytest.raises(Refusal, match="`photo` or `render`"):
         _ask(tmp_path, files, "sky", pairs)
-    save_outline(tmp_path, "bow", _around(34, 24), False, 1.0, True, 1.6)
+    save_outline(tmp_path, "bow", DIGEST, _around(34, 24), False, 1.0, True, 1.6)
     with pytest.raises(Refusal, match="outline is open"):
         _ask(tmp_path, files, "photo", pairs)
 
@@ -534,12 +538,14 @@ def test_placement_preview_ink_view_is_the_layer_flattened_on_white(
     tmp_path: Path,
 ) -> None:
     _library(tmp_path)
-    outline = tattoos.read_outline(tmp_path, "bow")
+    outline = tattoos.read_outline(tmp_path, "bow", DIGEST)
 
     layer = tattoos.ink_layer(
-        tmp_path, "bow", None, None, outline.points, 1.0, True, 1.6
+        tmp_path, "bow", None, DIGEST, outline.points, 1.0, True, 1.6
     )
-    view = tattoos.ink_view(tmp_path, "bow", None, None, outline.points, 1.0, True, 1.6)
+    view = tattoos.ink_view(
+        tmp_path, "bow", None, DIGEST, outline.points, 1.0, True, 1.6
+    )
 
     assert layer.image.mode == "RGBA"
     assert (*layer.origin, *layer.image.size) == view.box
@@ -555,7 +561,7 @@ def test_placement_preview_ink_layer_reads_the_skin_point_once(
     from isekai.shared import ink
 
     _library(tmp_path)
-    outline = tattoos.read_outline(tmp_path, "bow")
+    outline = tattoos.read_outline(tmp_path, "bow", DIGEST)
     reads: list[int] = []
     read = ink._automatic_point
 
@@ -565,7 +571,7 @@ def test_placement_preview_ink_layer_reads_the_skin_point_once(
 
     monkeypatch.setattr(ink, "_automatic_point", counted)
 
-    tattoos.ink_layer(tmp_path, "bow", None, None, outline.points, 1.0, True, 1.6)
+    tattoos.ink_layer(tmp_path, "bow", None, DIGEST, outline.points, 1.0, True, 1.6)
 
     assert len(reads) == 1
 
@@ -614,7 +620,7 @@ def test_placement_composite_values_hold_every_field_of_the_placement_but_two(
     tmp_path: Path,
 ) -> None:
     cut(tmp_path, "arm", DIGEST, ARM)
-    save_outline(tmp_path, "arm", _around(34, 24), True, 1.0, True, 1.6)
+    save_outline(tmp_path, "arm", DIGEST, _around(34, 24), True, 1.0, True, 1.6)
     pairs = _pairs(8, ONTO_RENDER)
     limb = [[100.0, 80.0], [330.0, 80.0], [330.0, 260.0]]
     hole = [[200.0, 150.0], [220.0, 150.0], [220.0, 170.0]]

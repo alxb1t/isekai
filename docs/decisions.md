@@ -316,18 +316,23 @@ source, in the render's group, as `<seed>.edit-<k>.png`; no edit is a flow, and 
   already holds a render's files, and the next free `k` chains edits.
 - **Made by:** `0119`.
 
-### D52 · The tattoo library is library-wide, kept whole and never deleted
+### D52 · The tattoo library is kept whole until a tattoo is removed
 
-**A tattoo is a folder `.tattoos/<name>/` of the library, outside every collection: `design.png` upright with no
+**An upload is a folder `.tattoos/<name>/` of the library, outside every collection: `design.png` upright with no
 metadata and at most `long_side` of `config/tattoo.json` on its long side, `tattoo.json` and `outline.json`. A cut is a
 tattoo with no `design.png`, whose record names the run digest of the photograph it is cut from and whose size is that
-photograph's; a cut serves only that photograph's renders. A name is kept once, no route deletes or renames a tattoo,
-and the photograph a cut is taken from, and every tattoo, stays on this machine.**
+photograph's; it is the folder `.tattoos/.cuts/<digest>/<name>/` and serves only that photograph's renders. A name is
+one tattoo on a render: it is found by the render's digest, an upload refuses a name any cut holds, and a cut refuses
+an upload's name and a cut of its own photograph's. A tattoo is removed by `DELETE /api/tattoos/{name}`, and no route
+renames one. A baked edit keeps its own copy of what it was placed with, so a removal changes no edit. The photograph
+a cut is taken from, and every tattoo, stays on this machine.**
 
 - **Why:** one tattoo is an input for many renders in many collections, so a folder in a collection would copy it. The
-  ink of a cut is already in the photograph's pixels, so copying the photograph would only keep a likeness twice.
-  Nothing needs a delete yet, and a kept name that never moves is one a later placement can cite.
-- **Made by:** `0121`.
+  ink of a cut is already in the photograph's pixels, so copying the photograph would only keep a likeness twice. A
+  cut carries its photograph's light and angle, so it is kept by that photograph and no other render lists it. A test
+  cut and a tattoo kept by mistake must be able to go, and nothing reads the library back once an edit is baked, so
+  removal costs no edit; the name a removal frees can be kept again.
+- **Made by:** `0121`, `0126`.
 
 ### D53 · A placement is recorded beside its edit
 
@@ -426,7 +431,7 @@ reader after it.
 **A folder in the library is a collection when it holds `sources/`; its runs root is `runs/` beside it. No
 file records a collection, and a dot-folder is never listed; `.tattoos/` is a dot-folder of the library,
 never a collection
-([D52](#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)). Every figure the UI shows of a
+([D52](#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed)). Every figure the UI shows of a
 collection — its counts, each cell's stage — is a listing read on each request. A batch is not a folder: it is the
 photographs one GPU session renders.**
 
@@ -441,7 +446,7 @@ photographs one GPU session renders.**
 no location, camera or time, its colour in sRGB.** Each file is verified by the strip's own walk before
 it is committed; one that cannot be cleaned is left out unless the operator imports it as it is, and the
 hub marks it. A tattoo is cleaned as a source is, and bounded to its long side
-([D52](#d52--the-tattoo-library-is-library-wide-kept-whole-and-never-deleted)).
+([D52](#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed)).
 
 - **Why:** a library holds personal photographs, and every run copies its source, so metadata kept at
   import is metadata kept everywhere. A profile dropped without conversion shifts every colour.
