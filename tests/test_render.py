@@ -816,6 +816,27 @@ def test_a_dependent_before_its_source_is_refused_naming_both(tmp_path: Path) ->
     ) in log(runs)
 
 
+@pytest.mark.spec("cli:render-limit:a-chained-source-is-refused-before-the-pod")
+def test_a_chained_source_is_refused_before_the_pod(tmp_path: Path) -> None:
+    runs = collection(tmp_path)
+    opener = FakeOpen()
+
+    status = session(
+        runs,
+        "control-anime-wai=summon-anime-wai",
+        "summon-flat-anime-wai=control-anime-wai",
+        opener=opener,
+    )
+
+    assert status == 1
+    assert opener.opened == 0
+    assert (
+        "refused: 'summon-flat-anime-wai=control-anime-wai' takes its seeds from "
+        "'control-anime-wai=summon-anime-wai', itself a source request; "
+        "write 'summon-flat-anime-wai=summon-anime-wai' for the same seeds"
+    ) in log(runs)
+
+
 @pytest.mark.spec_exempt("structural: the verb's argument shape")
 def test_a_request_of_another_shape_is_refused_into_the_log(tmp_path: Path) -> None:
     runs = collection(tmp_path)

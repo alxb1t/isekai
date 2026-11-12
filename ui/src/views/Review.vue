@@ -9,6 +9,7 @@ import {
   photoUrl as photoAt,
   sourceCopyUrl,
 } from '../api'
+import { readsAgain } from '../cancel'
 import ApproveBar from '../components/ApproveBar.vue'
 import CollectionRail from '../components/CollectionRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
@@ -27,6 +28,7 @@ import type { Move } from '../grid'
 import { nextPane, type Pane, paneKeys } from '../panes'
 import { nearest, stepFour } from '../slots'
 import { type Command, modded, plain, shifted, useKeyStore } from '../stores/keys'
+import { useLiveStore } from '../stores/live'
 import type { FieldCandidates } from '../types'
 
 /* Review: one collection in one flow, the run in the URL. It shows the loading state
@@ -48,6 +50,7 @@ const refused = ref<string | null>(null)
 const cancelling = ref(false)
 const sheet = useSheet({ collection: props.collection, flow: props.flow })
 const approval = useApproval()
+const live = useLiveStore()
 const current = computed(() => props.digest)
 const photoUrl = (digest: string) => photoAt({ collection: props.collection, digest, flow: props.flow })
 const schema = computed(() => sheet.detail.value?.schema ?? [])
@@ -550,6 +553,16 @@ onMounted(async () => {
 })
 
 onUnmounted(() => window.removeEventListener('beforeunload', onLeave))
+
+/* The server's reason for Cancel approve follows the render slot, so an approved
+   sheet is read again when a render for its collection starts or ends. */
+watch(
+  () => live.jobs.render,
+  (after, before) => {
+    const approved = sheet.readonly.value && sheet.detail.value !== null
+    if (readsAgain(before, after, props.collection, approved)) void reread(current.value)
+  },
+)
 
 watch(current, (id) => {
   if (!id) return

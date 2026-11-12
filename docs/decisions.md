@@ -269,7 +269,7 @@ photograph only for a flow that declares `true`.
 ### D38 · A control flow is its subject with the face chain at zero
 
 **Superseded by [D49](#d49--a-control-flow-is-its-subject-with-the-face-chain-at-zero-copied-once) in `0111`: a copy
-no longer names its source, and its seeds are copied rather than checked.**
+no longer names its source, and no check holds it to its source: a `T=S` render reads the source's seeds when it runs.**
 
 - **Made by:** `0054`, `0103`; superseded by `0111`.
 
@@ -282,9 +282,10 @@ the target's own sheet, filled first where it holds none, and a draft from anoth
 image in the target's `sources/`. A stage reads another flow's work only when the operator names it as a source; the
 photograph's description is every flow's (D17).**
 
-- **Why:** the floor is the same sheet and the same noise with the face mechanism off, and the seeds travel with the
-  copy, so that holds with no later check; a copy naming its source kept the source's approval from being cancelled
-  or deleted with its renders.
+- **Why:** the floor is the same sheet and the same noise with the face mechanism off. The copy lists the source's
+  seeds; a `T=S` render reads the source's latest seeds when it runs, and the copy's fields follow the source's only
+  when `approve --from` is run again. A copy naming its source kept the source's approval from being cancelled or
+  deleted with its renders.
 - **Made by:** `0054`, `0103`, `0111`, `0112`.
 
 ### D50 · The last render takes its approval, and a flow holds only its own files

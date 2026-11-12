@@ -10,6 +10,23 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.78.1] - 2026-11-12
+
+Gate: local 0m32s · CI not read under mf-ship · 0.78.0: local 0m36s · CI not read under mf-ship
+
+- A second `approve --from` after both flows rendered writes nothing: a copy is in step when the target holds the
+  copy's seeds, listed or rendered (0124 D1).
+- D49, D38 and the README say what a `T=S` render takes: the source's latest seeds, read when it runs, with no check
+  of the copy against its source (0124 D2).
+- A render line whose source request names another source request's flow is refused before the pod, naming the
+  request that renders the same seeds; `_requested`'s docstring says what it plans (0124 D3).
+- Review reads an approved sheet again when a render for its collection starts or ends, so *Cancel approve* follows
+  the render (0124 D4).
+- A save waiting behind another takes later edits instead of queueing a second request, and a failed save leaves
+  the draft pending only when no later save of its input holds it (0124 D5).
+- A cell modal's rows keep their height and the grid scrolls to a fourth row; a browser test over a cell of ten
+  renders holds it (0124 D6).
+
 ## [0.78.0] - 2026-11-08
 
 Gate: local 0m36s · CI not read under mf-ship · 0.77.0: local 0m55s · CI not read under mf-ship

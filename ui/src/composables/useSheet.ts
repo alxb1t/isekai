@@ -14,6 +14,18 @@ interface Edit {
   after: string[]
 }
 
+/** The whole draft one save sends, and the generation that asked for it. */
+interface Draft {
+  payload: Record<string, string[]>
+  asking: Renders
+  asked: number
+}
+
+/** A save's draft while it waits behind an earlier save; null once sent. */
+interface Queued {
+  unsent: Draft | null
+}
+
 /**
  * The draft under correction: its fields, its autosave, its undo stack.
  *
@@ -52,7 +64,10 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
      holds its input, its answer, and the `saved` it leaves the draft at -- the
      receipt's, or the precondition it stated if it failed -- so `flush` can
      wait for its own input's and the next save of that input can state it. */
-  const inFlight = new Map<number, { id: string; landed: Promise<boolean>; leaves: Promise<number | null> }>()
+  const inFlight = new Map<
+    number,
+    { id: string; queued: Queued; landed: Promise<boolean>; leaves: Promise<number | null> }
+  >()
   let token = 0
   /* Saves started and not yet sent, each waiting for an earlier save of its input. */
   let waiting = 0
@@ -70,15 +85,24 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
      a banner blaming another tab that did not exist. */
   let generation = 0
   /* An edit not yet on disk. Set by every edit, cleared when a save starts and
-     restored if it fails, so a flush with nothing to send sends nothing. */
+     restored if it fails and no later save of its input holds the draft, so a
+     flush with nothing to send sends nothing. */
   let dirty = false
   let timer: ReturnType<typeof setTimeout> | undefined
   let current = ''
 
   const readonly = computed(() => detail.value?.readonly ?? true)
 
+  /* **Only the newest read of a sheet lands.** Two reads of one input can be in
+     flight -- the navigation's and a refresh's -- and the older one answering
+     after the sheet became editable would replace the operator's edits with the
+     fields it read before them, for the next autosave to write. An older read is
+     dropped whether it answers or fails, and `loading` stays up for the newest. */
+  let reads = 0
+
   async function open(id: string): Promise<void> {
     current = id
+    const mine = (reads += 1)
     dirty = false
     loading.value = true
     done.length = 0
@@ -87,7 +111,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     try {
       body = await inputDetail({ ...scope, digest: id })
     } catch (reason) {
-      if (current !== id) return
+      if (mine !== reads) return
       // A read that fails has to land somewhere, and the approve bar is where
       // every other refusal lands. Without this the page sits on the skeleton
       // for ever and says nothing at all, which is the one outcome the surface
@@ -96,7 +120,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
       loading.value = false
       return
     }
-    if (current !== id) return
+    if (mine !== reads) return
     generation += 1
     detail.value = body
     fields.value = { ...body.fields }
@@ -152,26 +176,40 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
      until it answers. **Saves of one input are sent in order**: a save is sent
      at once when none of its input is in flight, else after the last one
      answers, stating the `saved` that one leaves -- two sent side by side would
-     state the same precondition and the second be refused as another tab's. */
+     state the same precondition and the second be refused as another tab's.
+
+     **A save finding the newest of its input still unsent replaces that save's
+     draft** and starts nothing: the queued save carries the whole draft, so a
+     second one waiting behind it would send the same fields again. */
   function send(): void {
     dirty = false
     const id = current
-    const payload = { ...fields.value }
-    const asking = { count: renders.value.count, seeds: [...renders.value.seeds] }
-    const asked = (generation += 1)
-    const mine = (token += 1)
+    const draft: Draft = {
+      payload: { ...fields.value },
+      asking: { count: renders.value.count, seeds: [...renders.value.seeds] },
+      asked: (generation += 1),
+    }
     const last = [...inFlight.values()].filter((save) => save.id === id).at(-1)
+    if (last?.queued.unsent) {
+      last.queued.unsent = draft
+      return
+    }
+    const mine = (token += 1)
+    const queued: Queued = { unsent: draft }
     if (last !== undefined) waiting += 1
-    const outcome = write(id, payload, asking, asked, mine, last?.leaves ?? saved.value)
-    inFlight.set(mine, { id, landed: outcome.then((it) => it.ok), leaves: outcome.then((it) => it.saved) })
+    const outcome = write(id, queued, mine, last?.leaves ?? saved.value)
+    inFlight.set(mine, { id, queued, landed: outcome.then((it) => it.ok), leaves: outcome.then((it) => it.saved) })
     saving.value = true
+  }
+
+  /* A save of input `id` started after save `mine`: it holds the draft `mine` was to leave on disk. */
+  function superseded(id: string, mine: number): boolean {
+    return [...inFlight.entries()].some(([started, save]) => started > mine && save.id === id)
   }
 
   async function write(
     id: string,
-    payload: Record<string, string[]>,
-    asking: Renders,
-    asked: number,
+    queued: Queued,
     mine: number,
     after: Promise<number | null> | number | null,
   ): Promise<{ ok: boolean; saved: number | null }> {
@@ -181,22 +219,26 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
       precondition = await after
       waiting -= 1
     } else precondition = after
+    // Read after the wait: a later edit may have replaced the draft while this save queued.
+    const draft = queued.unsent
+    queued.unsent = null
     try {
-      const receipt = await saveDraft({ ...scope, digest: id }, payload, asking, precondition)
+      if (draft === null) throw new Error('a save was sent with no draft')
+      const receipt = await saveDraft({ ...scope, digest: id }, draft.payload, draft.asking, precondition)
       if (current === id) {
         // The server's clock, never the browser's: a receipt the client wrote
         // for itself is a claim about a save rather than a record of one. Taken
         // whatever the generation, and only ever forwards -- see above.
         saved.value = Math.max(saved.value ?? 0, receipt.saved)
-        if (asked === generation) {
+        if (draft.asked === generation) {
           budget.value = receipt.budget
           refusal.value = null
         }
       }
       return { ok: true, saved: receipt.saved }
     } catch (reason) {
-      if (current === id) dirty = true
-      if (current === id && asked === generation) refusal.value = (reason as Error).message
+      if (current === id && !superseded(id, mine)) dirty = true
+      if (current === id && draft?.asked === generation) refusal.value = (reason as Error).message
       return { ok: false, saved: precondition }
     } finally {
       inFlight.delete(mine)
