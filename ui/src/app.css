@@ -392,6 +392,60 @@ button.appbar__render {
   color: var(--ink-2);
 }
 
+/* A queued bake in the Render dialog (J4·1): its photograph's thumbnail, name and place, and a ×. */
+.render-dialog__bakes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 0 0 22px;
+  margin: 0 0 10px;
+  list-style: none;
+}
+
+.render-dialog__collection--off .render-dialog__bakes {
+  opacity: 0.5;
+}
+
+.render-dialog__bake {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.render-dialog__bake-thumb {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  background: var(--placeholder);
+  border-radius: 3px;
+}
+
+.render-dialog__bake-name {
+  color: var(--ink);
+}
+
+.render-dialog__bake-label {
+  margin-right: auto;
+}
+
+.render-dialog__bake-remove {
+  padding: 0 5px;
+  border: none;
+  border-radius: 3px;
+  background: var(--ground-deep);
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.render-dialog__bake-remove:hover {
+  color: var(--ink);
+}
+
 /* — the render session (J4·2, J4·3, J8b) — */
 
 .session {

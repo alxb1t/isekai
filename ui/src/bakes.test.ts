@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import { chainRows, offered } from './bakes'
+import { chainRows, dialogTitle, offered } from './bakes'
 import { spec } from './test/spec'
 import type { Bake } from './types'
 
@@ -31,6 +31,14 @@ spec('ui:bakes:the-chain-lists-the-bakes-in-order', () => {
   // A chain that loops on itself ends rather than hangs.
   expect(chainRows([bake(1, 2), bake(2, 1)]).map((row) => row.depth)).toEqual([1, 1])
   expect(chainRows([])).toEqual([])
+})
+
+spec('ui:render:the-dialog-is-titled-for-what-it-does', () => {
+  expect(dialogTitle(2, 0)).toBe('Render 2 images')
+  expect(dialogTitle(2, 1)).toBe('Render 2 images · 1 bake')
+  expect(dialogTitle(0, 1)).toBe('Bake 1')
+  expect(dialogTitle(1, 2)).toBe('Render 1 image · 2 bakes')
+  expect(dialogTitle(0, 0)).toBe('Render 0 images')
 })
 
 spec('ui:bakes:a-bakes-view-offers-no-writes', () => {

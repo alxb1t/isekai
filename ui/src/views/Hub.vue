@@ -130,6 +130,7 @@ const shown = computed(() =>
     changes: changes.value.length,
     preparing: busy.value || barRefusal.value !== null,
     images: offer.value.images + offer.value.others,
+    bakes: offer.value.bakes + offer.value.other_bakes,
     refused: offer.value.refused !== null,
     rendering: rendering.value,
     plan: plan.value,
@@ -625,6 +626,8 @@ onUnmounted(() => {
       v-if="shown === 'render' || shown === 'session'"
       :images="offer.images"
       :others="offer.others"
+      :bakes="offer.bakes"
+      :other-bakes="offer.other_bakes"
       :disabled="offer.disabled"
       :refused="offer.refused"
       :rendering="rendering"

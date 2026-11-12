@@ -321,12 +321,22 @@ export interface TakenOut {
   flow: string
 }
 
-/* One collection's row of a quote: per flow what renders, and a count it refuses,
-   or null. */
+/* A queued bake in a quote: its photograph's run and flow, the approval's version, the
+   seed as text and the edit's number. */
+export interface QuoteBake extends QuoteSource {
+  flow: string
+  version: number
+  seed: string
+  k: number
+}
+
+/* One collection's row of a quote: per flow what renders, its queued bakes, and a count
+   it refuses, or null. */
 export interface QuotedCollection {
   collection: string
   images: number
   flows: { flow: string; images: number; sources: (QuoteSource & { images: number })[] }[]
+  bakes: QuoteBake[]
   refused: string | null
 }
 
@@ -357,13 +367,15 @@ export interface Assigned {
   refused: Record<string, string>
 }
 
-/* A collection's Render offer: the images it lacks and every other collection
-   lacks, why Render is disabled, and why an approval's count is refused, each
+/* A collection's Render offer: the images and the queued bakes it holds and every other
+   collection holds, why Render is disabled, and why an approval's count is refused, each
    null when there is none. */
 export interface RenderOffer {
   disabled: string | null
   images: number
   others: number
+  bakes: number
+  other_bakes: number
   refused: string | null
 }
 

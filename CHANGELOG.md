@@ -18,6 +18,8 @@ its new digest.
 - A render's large view shows its photograph's thumbnail and the chain of its bakes, each baked row opening that
   bake's view at `…/<seed>/edit/<k>`, which offers no draft, compare or delete; the chain's frame has the tokens
   `--chain-ground` and `--chain-ring` in every theme (0120 D5, D7–D10).
+- The Render dialog lists each queued bake with a `×` and sends `bakes` with the confirmation; its title names what
+  it does (*Bake 1*). The bar shows with bakes alone, and `⇧G` opens the dialog on them (0120 D11, D12).
 
 ## [0.79.0] - 2026-11-12
 

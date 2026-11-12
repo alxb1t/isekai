@@ -6,7 +6,7 @@ The phases: the server, the large view, the dialog and the bar, the docs. The se
 
 - [x] 1 — Server · hard
 - [x] 2 — Large view · moderate
-- [ ] 3 — Dialog and bar · moderate
+- [x] 3 — Dialog and bar · moderate
 - [ ] 4 — Docs · moderate
 
 ## 1 — Server
@@ -53,21 +53,21 @@ The phases: the server, the large view, the dialog and the bar, the docs. The se
 
 ## 3 — Dialog and bar
 
-- [ ] 3.1 In `ui/src/types.ts` give `QuotedCollection` its `bakes` and `RenderOffer` its `bakes` and `other_bakes`; in `ui/src/api.ts` give `startRender` a `bakes` parameter after `images`, sent in the body.
+- [x] 3.1 In `ui/src/types.ts` give `QuotedCollection` its `bakes` and `RenderOffer` its `bakes` and `other_bakes`; in `ui/src/api.ts` give `startRender` a `bakes` parameter after `images`, sent in the body.
   Verify: `git grep -n "other_bakes" -- ui/src/types.ts` prints the key.
-- [ ] 3.2 In `ui/src/stores/collection.ts` give `NO_OFFER` the keys `bakes` and `other_bakes` and let `openDialog` open on bakes alone ([D12](design.md#d12)); update the offer fixtures of `ui/src/stores/collection.test.ts`.
+- [x] 3.2 In `ui/src/stores/collection.ts` give `NO_OFFER` the keys `bakes` and `other_bakes` and let `openDialog` open on bakes alone ([D12](design.md#d12)); update the offer fixtures of `ui/src/stores/collection.test.ts`.
   Verify: `git grep -n "other_bakes" -- ui/src/stores/collection.ts` prints the key.
-- [ ] 3.3 In `ui/src/thumbs.ts` add `drawnBakes` and make `allOut` and `confirmReason` count bake keys ([D11](design.md#d11)); tests in `ui/src/components/RenderDialog.test.ts` bind `ui:render:a-photograph-taken-out-takes-its-bakes` and `ui:render:nothing-left-disables-render`, and its existing rows gain `bakes`.
+- [x] 3.3 In `ui/src/thumbs.ts` add `drawnBakes` and make `allOut` and `confirmReason` count bake keys ([D11](design.md#d11)); tests in `ui/src/components/RenderDialog.test.ts` bind `ui:render:a-photograph-taken-out-takes-its-bakes` and `ui:render:nothing-left-disables-render`, and its existing rows gain `bakes`.
   Verify: `git grep -n "drawnBakes" -- ui/src/thumbs.ts` prints the function.
-- [ ] 3.4 In `ui/src/bakes.ts` add `dialogTitle` ([D7](design.md#d7)); its test in `ui/src/bakes.test.ts` binds `ui:render:the-dialog-is-titled-for-what-it-does`.
+- [x] 3.4 In `ui/src/bakes.ts` add `dialogTitle` ([D7](design.md#d7)); its test in `ui/src/bakes.test.ts` binds `ui:render:the-dialog-is-titled-for-what-it-does`.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 3.5 In `ui/src/bars.ts` give `BarState` its `bakes` and let `bar()` return `render` above zero; pass the offer's bakes from `ui/src/views/Hub.vue`; show them in `ui/src/components/RenderBar.vue` ([D12](design.md#d12)); tests in `ui/src/bars.test.ts` bind `ui:render:a-bar-counts-a-bake-alone` and `ui:render:prepare-takes-the-bar-first`, and its existing states gain `bakes`.
+- [x] 3.5 In `ui/src/bars.ts` give `BarState` its `bakes` and let `bar()` return `render` above zero; pass the offer's bakes from `ui/src/views/Hub.vue`; show them in `ui/src/components/RenderBar.vue` ([D12](design.md#d12)); tests in `ui/src/bars.test.ts` bind `ui:render:a-bar-counts-a-bake-alone` and `ui:render:prepare-takes-the-bar-first`, and its existing states gain `bakes`.
   Verify: `git grep -n "bakes" -- ui/src/bars.ts` prints the lines.
-- [ ] 3.6 In `ui/src/components/RenderDialog.vue` draw the title from `dialogTitle`, a row per bake from `drawnBakes` with its `×`, the estimate's bakes and the confirm label, and send `bakes` in `startRender`; style the rows in `ui/src/app.css` with existing tokens ([D11](design.md#d11)).
+- [x] 3.6 In `ui/src/components/RenderDialog.vue` draw the title from `dialogTitle`, a row per bake from `drawnBakes` with its `×`, the estimate's bakes and the confirm label, and send `bakes` in `startRender`; style the rows in `ui/src/app.css` with existing tokens ([D11](design.md#d11)).
   Verify: `git grep -n "dialogTitle" -- ui/src/components/RenderDialog.vue` prints the use.
-- [ ] 3.7 Hold the types with the dialog and the bar.
+- [x] 3.7 Hold the types with the dialog and the bar.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.8 Hold the unit tests with the dialog and the bar.
+- [x] 3.8 Hold the unit tests with the dialog and the bar.
   Verify: `uv run python -m tools.test_ui` exits 0.
 
 ## 4 — Docs

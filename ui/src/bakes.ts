@@ -1,4 +1,5 @@
 import type { Bake } from './types'
+import { noun } from './words'
 
 /** One row of a render's chain: a bake and the bakes it descends through. */
 export interface ChainRow extends Bake {
@@ -28,3 +29,12 @@ export function chainRows(bakes: readonly Bake[]): ChainRow[] {
 
     e.g. undefined -> true, "1" -> false */
 export const offered = (k: string | undefined): boolean => k === undefined
+
+/** Return the Render dialog's title for the images and bakes the quote holds.
+
+    e.g. (2, 0) -> "Render 2 images", (2, 1) -> "Render 2 images · 1 bake", (0, 1) -> "Bake 1" */
+export function dialogTitle(images: number, bakes: number): string {
+  if (images === 0 && bakes > 0) return `Bake ${bakes}`
+  const title = `Render ${images} ${noun(images, 'image')}`
+  return bakes > 0 ? `${title} · ${bakes} ${noun(bakes, 'bake')}` : title
+}
