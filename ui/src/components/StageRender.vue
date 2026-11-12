@@ -30,11 +30,20 @@ import {
   lone,
   moved,
   proposals,
+  redone,
   sent,
   touched,
   undone,
 } from '../pairs'
-import { placed as placedDraft, undone as undoneDraft } from '../polygon'
+import { useKeys } from '../composables/useKeys'
+import { placeCommands } from '../placeKeys'
+import {
+  canClose,
+  closed as closedDraft,
+  placed as placedDraft,
+  redone as redoneDraft,
+  undone as undoneDraft,
+} from '../polygon'
 import { opacityOf } from '../preview'
 import { answered, asked, due, keyOf, pointsOf, refused, stands, view } from '../propose'
 import { floorOf } from '../stages'
@@ -223,6 +232,20 @@ const draw = (kind: Kind, index?: number): void =>
 const undoPoint = (): void => {
   if (sketch.value) placing.editOutlines(drawn(outlines.value, undoneDraft(sketch.value)))
 }
+
+useKeys('screen', placeCommands({
+  undo: () => (sketch.value ? undoPoint() : edit(undone(pairs.value))),
+  redo: () => {
+    if (!sketch.value) edit(redone(pairs.value))
+    else placing.editOutlines(drawn(outlines.value, redoneDraft(sketch.value)))
+  },
+  close: () => {
+    const draft = sketch.value
+    const held = rules.value
+    if (!draft || !held || !canClose(draft, held)) return
+    placing.editOutlines(closed(drawn(outlines.value, closedDraft(draft, held))))
+  },
+}))
 </script>
 
 <template>
@@ -296,9 +319,6 @@ const undoPoint = (): void => {
         <button class="btn btn-secondary" type="button" @click="draw('limb')">Draw limb</button>
         <button class="btn btn-secondary" type="button" @click="draw('exclusion')">Draw exclusion</button>
       </div>
-      <p v-if="locked" class="stage__note mono" data-outline-hint>
-        click on the render adds a point · the first point closes · the pairs wait
-      </p>
       <ul v-if="outlineRows.length" class="outlinelist" data-outlines>
         <li v-for="row in outlineRows" :key="`${row.kind}-${row.index}`" class="outlinelist__row">
           <span class="outlinelist__text mono">{{ row.title }} · {{ row.label }}</span>

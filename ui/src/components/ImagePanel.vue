@@ -30,6 +30,8 @@ const emit = defineEmits<{
   click: [press: Press]
   dblclick: [press: Press]
   drag: [index: number, at: Point, fresh: boolean]
+  /* The image point under an idle pointer, or null once it leaves. */
+  hover: [at: Point | null]
 }>()
 
 const SLOP = 4
@@ -106,7 +108,10 @@ function down(event: PointerEvent): void {
 
 function move(event: PointerEvent): void {
   shifting.value = event.shiftKey
-  if (!held) return
+  if (!held) {
+    emit('hover', toImage(view.value, local(event)))
+    return
+  }
   const at = local(event)
   if (!held.moved && Math.hypot(at[0] - held.start[0], at[1] - held.start[1]) <= SLOP) return
   held.moved = true
@@ -177,6 +182,7 @@ watch(
       @wheel.prevent="wheel"
       @pointerdown="down"
       @pointermove="move"
+      @pointerleave="emit('hover', null)"
       @pointerup="up"
       @pointercancel="cancel"
       @dblclick="emit('dblclick', pressed($event))"

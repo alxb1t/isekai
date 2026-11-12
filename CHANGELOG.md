@@ -14,6 +14,9 @@ its new digest.
   the first point no longer stacks a hidden one (0125 D1, D2, D3).
 - The pair editor places with Shift and selects with a plain click; the outline and the pairs keep a redo beside
   their undo (0125 D4, D5).
+- The placement screen answers `⌘Z`, `⇧⌘Z` and `↵` (Ctrl off a Mac), listed with the app's keys. The outline step
+  says once how to close and grows its first point to *close* under the pointer; the hint lines go, and returning
+  to a tattoo proposes its pairs again (0125 D6, D7, D8, D9).
 
 ## [0.83.0] - 2026-11-12
 

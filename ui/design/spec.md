@@ -500,14 +500,14 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 |---|---|---|
 | J9·1 the picker, nothing kept: `none kept yet`, the upload form, the cut form | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
 | J9·2 a file chosen: its name `IMG_5521`, `reading…`, then `converted`; Keep waits `reading the file` | Upload a tattoo…, choose `IMG_5521.heic` | same |
-| J9·3 the outline step on it, the outline open: the ink view, the white point and the tone read `outline open` | Keep | `…/place/outline/IMG_5521` |
-| J9·4 the outline closed: the ink view, the white point `auto` with its grey, the tone, `saved` | click the first point again | same |
+| J9·3 the outline step on it, the outline open: the ink view, the white point and the tone disabled, the line `close the outline on its first point · 0 points` above them | Keep | `…/place/outline/IMG_5521` |
+| J9·4 the outline closed: the ink view, the white point `auto` with its grey, the tone, `saved` | shift-click the first point again | same |
 | J9·5 the picker: the card `IMG_5521`, `outlined` | ① tattoo | `…/place/tattoo` |
 | J9·6 a cut: the photograph dimmed outside the outline, the source line `from photograph 0d4b7e6fb2a8 · ink 412×301 on the photograph`, neutral on, depth 1.6 | name `bow`, Cut from this photo, close its outline | `…/place/outline/bow` |
 | J9·7 the picker: `instead of bow, which stays kept`, the name starting `bow_closeup` | Upload a tattoo instead | `…/place/tattoo?instead=bow` |
 | J9·8 ③ tattoo ↔ photograph: the ink view and the photograph, the waiting image in the accent; forward waits `6 pairs needed · 2 placed`, then `point 7 has no match` | Next: ③ tattoo ↔ photograph, on J9·4 | `…/place/photo` |
 | J9·9 the preview: the ink multiplied over the photograph, `Hide the preview` and its opacity; the last answer at half opacity while the next is asked | the third complete pair, then a second without a change | same |
-| J9·10 ④ photograph ↔ render: the photograph and the render, the preview over the render, the rows `limb · 9 points · keeps` and `exclusion 1 · 8 points · removes` with *Edit*; the pairs wait while one is drawn, `drawing · 3 points`, `click on the render adds a point · the first point closes · the pairs wait` | Next: ④ photograph ↔ render, then Draw limb, Draw exclusion | `…/place/render` |
+| J9·10 ④ photograph ↔ render: the photograph and the render, the preview over the render, the rows `limb · 9 points · keeps` and `exclusion 1 · 8 points · removes` with *Edit*; the pairs wait while one is drawn, `drawing · 3 points` | Next: ④ photograph ↔ render, then Draw limb, Draw exclusion | `…/place/render` |
 | J9·11 ③ tattoo ↔ render, for a tattoo `not on this photo`: its ink view and the render; no ③ photograph and no stage-1 pairs asked | the card's *not on this photo*, then Next | `…/place/render` |
 | J9·12 ⑤ review: the render with the tattoo over it, its crop `before` and `after`, the summary, `Back to ③ …` and `Back to ④ …`, *Bake*; waiting with `stage 2 · 8 pairs needed · 5 placed`, then `queued · edit 3 · next render session` | Next: review, then Bake | `…/place/review` |
 | J9·13 Leave this stage?: `Point 8 has no match on the photograph`, `7 pairs stand · saved 14:05`, *Stay* and *Leave* | ① tattoo, or a step, or Back to the render, with a lone point | the step asked for |
@@ -523,9 +523,8 @@ J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tatt
       └──────────────────────────────────┘   tone   ☐ neutral   depth [ 1.0 ]
 ```
 
-- **The panel** zooms at the pointer, pans by a drag, and has *Fit*, *1:1* and the zoom as a percentage. A click adds
-  a vertex, the first vertex closes the outline, a drag moves one, ⇧-click inserts on an edge and a double click
-  removes one. It reads no key.
+- **The panel** zooms at the pointer, and has *Fit*, *1:1* and the zoom as a percentage. Shift places, a plain drag
+  pans or moves, a double click removes, and `⌘Z` `⇧⌘Z` `↵` are read.
 - **The outline and the tone** are saved as they change: `saving…`, then `saved`. The ink view asks again after each
   save, `drawing the ink…` until it lands. The white point waits `reading the ink` until the first ink view has read
   the automatic grey. *Reset* shows only while the tone differs from its kind's default: neutral off and depth 1.0
@@ -593,7 +592,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z, ⌘K, �
 | Hub | h j k l or ←↓↑→ cells, the source column first · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action, on the source the viewer · in the viewer, ← → h l step, ↵ full size, j k or ↓↑ scroll it · in the cell modal, h j k l or ←↓↑→ move, l and h going on across rows, ↵ the large view, esc closes · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | the panes: the rail, the photograph, the sheet, ④ — on macOS ⌃H ⌃L alone, from a field or not, elsewhere h l or ←→ · ⌃J ⌃K the fields from a field on macOS · j k or ↓↑ in each: the input, a scroll, the rows, ④'s grid of − + and its slots, from a slot too · h l or ←→ across − + on macOS · ⇧J ⇧K or ⇧↓↑ the rail, the sheet scrolled to its centre · ⌃P the photograph, on a revision or a draft from an image Side by side, from a field too, ← → its photographs · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · the collapsed caption, its key named when built |
 | Large view | h l or ←→ the photograph's row · ⇧D Draft from this · ⇧C Compare with… · ⇧P Place a tattoo · esc back to the hub · in its pick, h j k l or the arrows, ↵ compare, esc close · in compare, `\` swap, esc back |
-| Placement | none of its own: the mouse draws and the everywhere keys stay |
+| Placement | ⌘Z ⇧⌘Z undo and redo · ↵ closes the outline · the everywhere keys stay |
 | Drawer | h l or ←→ photographs · j k or ↓↑ rows, held at the photographs' row · ↵ the viewer over the row · ⇧H its collection's hub · ⌃; or esc close |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits · ⇧A Add files…, in the import sheet |
 

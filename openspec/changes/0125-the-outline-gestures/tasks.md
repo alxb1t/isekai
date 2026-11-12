@@ -5,7 +5,7 @@ The press rule, the placing rule and the redo first; the keys, the words and the
 ## Progress
 
 - [x] 1 — The gestures · hard
-- [ ] 2 — The keys and words · moderate
+- [x] 2 — The keys and words · moderate
 
 ## 1 — The gestures
 
@@ -30,19 +30,19 @@ The press rule, the placing rule and the redo first; the keys, the words and the
 
 ## 2 — The keys and words
 
-- [ ] 2.1 Add `ui/src/placeKeys.ts` with `placeCommands({ undo, redo, close })` per [D6](design.md#d6), and `ui/src/placeKeys.test.ts` bound to `ui:place-keys:undo-redo-and-close-run-from-the-keys` and `ui:place-keys:the-keys-are-listed-with-the-apps`, built on `useKeyStore` as `ui/src/stores/keys.test.ts` builds it.
+- [x] 2.1 Add `ui/src/placeKeys.ts` with `placeCommands({ undo, redo, close })` per [D6](design.md#d6), and `ui/src/placeKeys.test.ts` bound to `ui:place-keys:undo-redo-and-close-run-from-the-keys` and `ui:place-keys:the-keys-are-listed-with-the-apps`, built on `useKeyStore` as `ui/src/stores/keys.test.ts` builds it.
   Verify: `grep -rq "placeCommands" ui/src` exits 0.
-- [ ] 2.2 Call `useKeys('screen', placeCommands(…))` in `ui/src/components/OutlineStep.vue` (its draft, `close` through `canClose`), `ui/src/components/StagePhoto.vue` (its pairs, no `close`) and `ui/src/components/StageRender.vue` (the sketch while one is drawn, else its pairs; `close` closes the sketch), per [D6](design.md#d6).
+- [x] 2.2 Call `useKeys('screen', placeCommands(…))` in `ui/src/components/OutlineStep.vue` (its draft, `close` through `canClose`), `ui/src/components/StagePhoto.vue` (its pairs, no `close`) and `ui/src/components/StageRender.vue` (the sketch while one is drawn, else its pairs; `close` closes the sketch), per [D6](design.md#d6).
   Verify: `git grep -q "placeCommands" -- ui/src/components/StageRender.vue` exits 0.
-- [ ] 2.3 Delete the hint lines: the gesture `<p class="outline__hint mono">` of `ui/src/components/OutlineStep.vue`, whose text begins `click adds` (keep the crop line's), the `data-outline-hint` note of `ui/src/components/StageRender.vue`, and the empty-list note of `ui/src/components/PairList.vue` with its `.pairlist__note` rule in `ui/src/app.css`.
+- [x] 2.3 Delete the hint lines: the gesture `<p class="outline__hint mono">` of `ui/src/components/OutlineStep.vue`, whose text begins `click adds` (keep the crop line's), the `data-outline-hint` note of `ui/src/components/StageRender.vue`, and the empty-list note of `ui/src/components/PairList.vue` with its `.pairlist__note` rule in `ui/src/app.css`.
   Verify: `git grep -L "click adds" -- ui/src/components/OutlineStep.vue` prints `ui/src/components/OutlineStep.vue`.
-- [ ] 2.4 Add `closeLine` to `ui/src/tattoos.ts` per [D7](design.md#d7) and test it in `ui/src/tattoos.test.ts` as `ui:outline-step:one-line-says-how-to-close`. In `ui/src/components/OutlineStep.vue` draw it above the ink view's heading and stop drawing `wait` in the ink view, the white point (keep *reading the ink*) and the tone; leave `controlsWait` as the predicate.
+- [x] 2.4 Add `closeLine` to `ui/src/tattoos.ts` per [D7](design.md#d7) and test it in `ui/src/tattoos.test.ts` as `ui:outline-step:one-line-says-how-to-close`. In `ui/src/components/OutlineStep.vue` draw it above the ink view's heading and stop drawing `wait` in the ink view, the white point (keep *reading the ink*) and the tone; leave `controlsWait` as the predicate.
   Verify: `git grep -q "closeLine" -- ui/src/tattoos.ts` exits 0.
-- [ ] 2.5 Per [D8](design.md#d8) make `ui/src/components/ImagePanel.vue` emit `hover`, and `ui/src/components/OutlineStep.vue` draw the first vertex larger with the text *close* while `closes` holds at the pointer.
+- [x] 2.5 Per [D8](design.md#d8) make `ui/src/components/ImagePanel.vue` emit `hover`, and `ui/src/components/OutlineStep.vue` draw the first vertex larger with the text *close* while `closes` holds at the pointer.
   Verify: `git grep -q "hover" -- ui/src/components/OutlineStep.vue` exits 0.
-- [ ] 2.6 Per [D9](design.md#d9) set `proposalAsked` to `noAsks` in the replacing branch of `load` in `ui/src/composables/usePlacing.ts`, and reverse the kept-ask assertions of `ui:proposal:a-stage-with-no-pairs-asks-once` in `ui/src/composables/usePlacing.test.ts`. Add `ui:proposal:returning-to-a-tattoo-asks-again` there: answered, another tattoo, back, due, and an answer still on its way is not applied.
+- [x] 2.6 Per [D9](design.md#d9) set `proposalAsked` to `noAsks` in the replacing branch of `load` in `ui/src/composables/usePlacing.ts`, and reverse the kept-ask assertions of `ui:proposal:a-stage-with-no-pairs-asks-once` in `ui/src/composables/usePlacing.test.ts`. Add `ui:proposal:returning-to-a-tattoo-asks-again` there: answered, another tattoo, back, due, and an answer still on its way is not applied.
   Verify: `git grep -q "returning-to-a-tattoo-asks-again" -- ui/src/composables/usePlacing.test.ts` exits 0.
-- [ ] 2.7 In `docs/edit-tattoo.md` say in *The outline* and *The stages* bullets that Shift places and the plain mouse pans, and name `⌘Z`, `⇧⌘Z` (Ctrl off a Mac) and `↵`.
+- [x] 2.7 In `docs/edit-tattoo.md` say in *The outline* and *The stages* bullets that Shift places and the plain mouse pans, and name `⌘Z`, `⇧⌘Z` (Ctrl off a Mac) and `↵`.
   Verify: `git grep -q "⇧⌘Z" -- docs/edit-tattoo.md` exits 0.
-- [ ] 2.8 In `ui/design/spec.md` change the J9·3 frame to "the ink view, the white point and the tone disabled, the line `close the outline on its first point · 0 points` above them", the J9·4 trigger to "shift-click the first point again", the J9·10 frame without its `click on the render adds a point` hint, and *The panel* bullet to: Shift places, a plain drag pans or moves, a double click removes, `⌘Z` `⇧⌘Z` `↵` are read. Make the Placement row of §7 Keys read `⌘Z ⇧⌘Z undo and redo · ↵ closes the outline · the everywhere keys stay`.
+- [x] 2.8 In `ui/design/spec.md` change the J9·3 frame to "the ink view, the white point and the tone disabled, the line `close the outline on its first point · 0 points` above them", the J9·4 trigger to "shift-click the first point again", the J9·10 frame without its `click on the render adds a point` hint, and *The panel* bullet to: Shift places, a plain drag pans or moves, a double click removes, `⌘Z` `⇧⌘Z` `↵` are read. Make the Placement row of §7 Keys read `⌘Z ⇧⌘Z undo and redo · ↵ closes the outline · the everywhere keys stay`.
   Verify: `git grep -q "shift-click the first point again" -- ui/design/spec.md` exits 0.

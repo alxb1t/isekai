@@ -2989,12 +2989,6 @@ dialog::backdrop {
   gap: 8px;
 }
 
-.pairlist__note {
-  margin: 0;
-  font-size: 11px;
-  color: var(--ink-2);
-}
-
 .outlinelist {
   display: flex;
   flex-direction: column;
