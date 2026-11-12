@@ -3,6 +3,7 @@ import { spec } from './test/spec'
 import {
   armRemoval,
   card,
+  closeLine,
   controlsWait,
   defaultTone,
   differs,
@@ -156,6 +157,16 @@ spec('ui:outline-step:reset-appears-when-the-tone-differs', () => {
 spec('ui:outline-step:the-controls-wait-for-a-closed-outline', () => {
   expect(controlsWait({ closed: false })).toBe('outline open')
   expect(controlsWait({ closed: true })).toBeNull()
+})
+
+spec('ui:outline-step:one-line-says-how-to-close', () => {
+  const open = (count: number) => ({
+    closed: false,
+    points: Array.from({ length: count }, (_, at): [number, number] => [at, at]),
+  })
+  expect(closeLine(open(1))).toBe('close the outline on its first point · 1 point')
+  expect(closeLine(open(5))).toBe('close the outline on its first point · 5 points')
+  expect(closeLine({ ...open(5), closed: true })).toBeNull()
 })
 
 spec('ui:outline-step:the-size-of-the-cuts-ink-is-the-outlines-box', () => {

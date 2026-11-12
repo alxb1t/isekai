@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { cursorOf, pressing } from '../press'
 import type { Point } from '../types'
 import { SCALE_FLOOR, type View, actual, fitted, panned, toImage, zoomedAt } from '../zoom'
 
-/* One image in a viewport: the wheel zooms at the pointer, a drag pans, *Fit* and *1:1*
-   set the view, and the zoom shows as a percentage. The geometry is `zoom.ts`; this
-   draws it. A press that moves a few pixels is a click, one that moves more a pan,
-   and a press on what `grab` names is a drag of it. The overlay slot is drawn in
-   viewport pixels with the view. */
+/* One image in a viewport: the wheel zooms at the pointer, *Fit* and *1:1* set the view,
+   and the zoom shows as a percentage. The geometry is `zoom.ts`; this draws it. A press
+   is one gesture, read by `gestureOf`: with Shift it places, and a press that moves
+   past the slop is dropped; with Shift up on what `grab` names it drags that, and
+   elsewhere it pans. A press that stays within the slop is a click. The cursor follows
+   Shift and the pan. The overlay slot is drawn in viewport pixels with the view. */
 export interface Press {
-  /* The image point under the pointer, and the zoom it was pressed at. */
+  /* The image point under the pointer, the zoom it was pressed at, and Shift held at the press. */
   at: Point
   scale: number
   shift: boolean
@@ -20,7 +22,7 @@ const props = defineProps<{
   alt: string
   width: number
   height: number
-  /* The index of what lies under an image point at a zoom, or null. */
+  /* The index of what lies under an image point at a zoom, or null; asked with Shift up. */
   grab?: (at: Point, scale: number) => number | null
 }>()
 
@@ -28,6 +30,8 @@ const emit = defineEmits<{
   click: [press: Press]
   dblclick: [press: Press]
   drag: [index: number, at: Point, fresh: boolean]
+  /* The image point under an idle pointer, or null once it leaves. */
+  hover: [at: Point | null]
 }>()
 
 const SLOP = 4
@@ -65,6 +69,11 @@ function local(event: MouseEvent): Point {
   return [event.clientX - (box?.left ?? 0), event.clientY - (box?.top ?? 0)]
 }
 
+function inside(event: MouseEvent): boolean {
+  const [x, y] = local(event)
+  return x >= 0 && y >= 0 && x <= room.value.width && y <= room.value.height
+}
+
 function pressed(event: MouseEvent): Press {
   return { at: toImage(view.value, local(event)), scale: view.value.scale, shift: event.shiftKey }
 }
@@ -75,47 +84,61 @@ function wheel(event: WheelEvent): void {
   fitting.value = false
 }
 
-interface Held {
-  start: Point
-  last: Point
-  grabbed: number | null
-  moved: boolean
-  fresh: boolean
-}
+const press = pressing(SLOP)
 
-let held: Held | null = null
+/* Shift as the cursor knows it, and whether a pan or a move is under way. */
+const shifting = ref(false)
+const active = ref(false)
+const cursor = computed(() => cursorOf(shifting.value, active.value))
 
 function down(event: PointerEvent): void {
   if (event.button !== 0) return
+  shifting.value = event.shiftKey
   const at = local(event)
-  const grabbed = props.grab?.(toImage(view.value, at), view.value.scale) ?? null
-  held = { start: at, last: at, grabbed, moved: false, fresh: true }
+  const grabbed = event.shiftKey ? null : (props.grab?.(toImage(view.value, at), view.value.scale) ?? null)
+  press.down(at, event.shiftKey, grabbed)
   frame.value?.setPointerCapture(event.pointerId)
 }
 
 function move(event: PointerEvent): void {
-  if (!held) return
+  shifting.value = event.shiftKey
   const at = local(event)
-  if (!held.moved && Math.hypot(at[0] - held.start[0], at[1] - held.start[1]) <= SLOP) return
-  held.moved = true
-  if (held.grabbed !== null) {
-    emit('drag', held.grabbed, toImage(view.value, at), held.fresh)
-    held.fresh = false
-  } else {
-    view.value = panned(view.value, at[0] - held.last[0], at[1] - held.last[1], image.value, room.value)
+  const step = press.move(at)
+  if (step.kind === 'hover') emit('hover', toImage(view.value, at))
+  else if (step.kind === 'drag') {
+    active.value = true
+    emit('drag', step.index, toImage(view.value, at), step.fresh)
+  } else if (step.kind === 'pan') {
+    active.value = true
+    view.value = panned(view.value, step.dx, step.dy, image.value, room.value)
     fitting.value = false
   }
-  held.last = at
 }
 
 function up(event: PointerEvent): void {
-  const was = held
-  held = null
-  if (was && !was.moved) emit('click', pressed(event))
+  const was = press.up()
+  active.value = false
+  if (was?.click) emit('click', { ...pressed(event), shift: was.shift })
+  // The pointer is idle again: a point dragged under it, or a view panned beneath it, moves
+  // what it hovers, so the hover is read afresh unless the pointer is off the viewport.
+  else if (was && inside(event)) emit('hover', toImage(view.value, local(event)))
 }
 
 function cancel(): void {
-  held = null
+  press.cancel()
+  active.value = false
+}
+
+function shiftKey(event: KeyboardEvent): void {
+  if (event.key === 'Shift') shifting.value = event.type === 'keydown'
+  else if (event.type === 'keydown' && press.held) {
+    press.key(event)
+    active.value = press.active
+  }
+}
+
+function blur(): void {
+  shifting.value = false
 }
 
 let watching: ResizeObserver | null = null
@@ -126,9 +149,17 @@ onMounted(() => {
     watching = new ResizeObserver(measure)
     watching.observe(frame.value)
   }
+  window.addEventListener('keydown', shiftKey)
+  window.addEventListener('keyup', shiftKey)
+  window.addEventListener('blur', blur)
 })
 
-onUnmounted(() => watching?.disconnect())
+onUnmounted(() => {
+  watching?.disconnect()
+  window.removeEventListener('keydown', shiftKey)
+  window.removeEventListener('keyup', shiftKey)
+  window.removeEventListener('blur', blur)
+})
 
 watch(
   () => [props.src, props.width, props.height],
@@ -141,9 +172,11 @@ watch(
     <div
       ref="frame"
       class="panel__viewport"
+      :class="`panel__viewport--${cursor}`"
       @wheel.prevent="wheel"
       @pointerdown="down"
       @pointermove="move"
+      @pointerleave="emit('hover', null)"
       @pointerup="up"
       @pointercancel="cancel"
       @dblclick="emit('dblclick', pressed($event))"

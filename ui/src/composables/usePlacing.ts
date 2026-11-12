@@ -9,7 +9,7 @@ import type { Outline, Pair, Stage1, Tattoo } from '../types'
 /* What the placement screen holds across its steps: the tattoo, the stage-1 pairs read for
    this photograph, the stage-1 pairs held, the pairs of stage 2 or the direct stage, the
    limb and the exclusions, and the asks for proposed pairs, keyed by tattoo and render so
-   that a stage asks once, whichever tattoo the screen has since held. Stage 1
+   that a stage asks once while the tattoo is held; another tattoo forgets them. Stage 1
    is saved as it changes; the later stage, the outlines and the asks
    are held until a bake. `Place.vue` creates
    it and provides it, so a step change keeps what it holds. */
@@ -64,6 +64,7 @@ export function usePlacing(place: Place, ports: Ports = serverPorts(place)) {
         first.value = held(stage.pairs)
         notOnPhoto.value = stage.not_on_photo
         second.value = none
+        proposalAsked.value = noAsks
         outlines.value = noOutlines
         savedAt.value = null
         refusal.value = null

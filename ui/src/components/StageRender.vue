@@ -30,10 +30,20 @@ import {
   lone,
   moved,
   proposals,
+  redone,
   sent,
+  touched,
   undone,
 } from '../pairs'
-import { added, closed as closedDraft, closes, undone as undoneDraft, vertexAt } from '../polygon'
+import { useKeys } from '../composables/useKeys'
+import { placeCommands } from '../placeKeys'
+import {
+  canClose,
+  closed as closedDraft,
+  placed as placedDraft,
+  redone as redoneDraft,
+  undone as undoneDraft,
+} from '../polygon'
 import { opacityOf } from '../preview'
 import { answered, asked, due, keyOf, pointsOf, refused, stands, view } from '../propose'
 import { floorOf } from '../stages'
@@ -186,17 +196,17 @@ watch(
 
 const edit = (next: Pairs): void => placing.editSecond(next)
 
-/* A click while an outline is drawn goes to the outline, on the render alone: it adds a
-   point, or closes the outline on its first. */
+/* A shift-click while an outline is drawn goes to the outline, on the render alone: `placed`
+   adds a point, takes one on an edge, or closes the outline on its first. A drawing ends when
+   the click closes an open outline. */
 const sketched = (press: Press): void => {
   const draft = sketch.value
   const held = rules.value
-  if (!draft || !held) return
-  if (closes(draft, press.at, press.scale, held)) {
-    placing.editOutlines(closed(drawn(outlines.value, closedDraft(draft, held))))
-  } else if (vertexAt(draft, press.at, press.scale) === null) {
-    placing.editOutlines(drawn(outlines.value, added(draft, press.at, held)))
-  }
+  if (!draft || !held || !press.shift) return
+  const next = placedDraft(draft, press.at, press.scale, held)
+  if (next === draft) return
+  const now = drawn(outlines.value, next)
+  placing.editOutlines(!draft.closed && next.closed ? closed(now) : now)
 }
 
 function placed(side: 'a' | 'b', press: Press): void {
@@ -204,7 +214,12 @@ function placed(side: 'a' | 'b', press: Press): void {
     if (side === 'b') sketched(press)
     return
   }
-  edit(clicked(pairs.value, side, press.at, press.scale, props.limits.pair_radius))
+  const radius = props.limits.pair_radius
+  edit(
+    press.shift
+      ? clicked(pairs.value, side, press.at, press.scale, radius)
+      : touched(pairs.value, side, press.at, press.scale, radius),
+  )
 }
 
 function dragged(side: 'a' | 'b', index: number, at: Point, fresh: boolean): void {
@@ -217,6 +232,20 @@ const draw = (kind: Kind, index?: number): void =>
 const undoPoint = (): void => {
   if (sketch.value) placing.editOutlines(drawn(outlines.value, undoneDraft(sketch.value)))
 }
+
+useKeys('screen', placeCommands({
+  undo: () => (sketch.value ? undoPoint() : edit(undone(pairs.value))),
+  redo: () => {
+    if (!sketch.value) edit(redone(pairs.value))
+    else placing.editOutlines(drawn(outlines.value, redoneDraft(sketch.value)))
+  },
+  close: () => {
+    const draft = sketch.value
+    const held = rules.value
+    if (!draft || !held || !canClose(draft, held)) return
+    placing.editOutlines(closed(drawn(outlines.value, closedDraft(draft, held))))
+  },
+}))
 </script>
 
 <template>
@@ -290,9 +319,6 @@ const undoPoint = (): void => {
         <button class="btn btn-secondary" type="button" @click="draw('limb')">Draw limb</button>
         <button class="btn btn-secondary" type="button" @click="draw('exclusion')">Draw exclusion</button>
       </div>
-      <p v-if="locked" class="stage__note mono" data-outline-hint>
-        click on the render adds a point · the first point closes · the pairs wait
-      </p>
       <ul v-if="outlineRows.length" class="outlinelist" data-outlines>
         <li v-for="row in outlineRows" :key="`${row.kind}-${row.index}`" class="outlinelist__row">
           <span class="outlinelist__text mono">{{ row.title }} · {{ row.label }}</span>

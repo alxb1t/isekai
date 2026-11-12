@@ -110,16 +110,18 @@ render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─
 - **A cut** is a tattoo with no image: *Cut from this photo* keeps the render's photograph as the source of the ink, so
   the photograph stays in its run. It is kept under that photograph's folder, listed and named on its renders alone, in
   every collection. A second cut from the same photograph starts from the newest cut's tone.
-- **The outline** is clicked on the tattoo, or on the photograph for a cut, and closed on its first point. It is saved
-  as it changes, with the white point and the tone.
+- **The outline** is placed by Shift-click on the tattoo, or on the photograph for a cut, and closed by a Shift-click on
+  its first point or on `↵`. The plain mouse pans, or moves a point it grabs, and a double click removes one. `⌘Z`
+  undoes and `⇧⌘Z` redoes (Ctrl off a Mac). It is saved as it changes, with the white point and the tone.
 - **The ink view** is the same extraction as §1, drawn by the server on the outline's crop. The white point is the
   automatic one as a grey from 0 to 255, set by hand or back to *Auto*. *Neutral* and *depth* are `--neutral` and
   `--depth`, and *Reset* returns them to the kind's defaults.
 - **The stages** pair the tattoo's ink view with the photograph (③, stage 1), then the photograph with the render (④,
-  stage 2), by clicks on either image first. An upload flagged *not on this photo* pairs the tattoo with the render
+  stage 2), by Shift-clicks on either image first. An upload flagged *not on this photo* pairs the tattoo with the render
   directly, and a cut takes stage 2 alone. Stage 1 is kept per photograph in
   `.tattoos/<name>/stage1/<digest>.json` as it changes, so a second render of the photograph needs only its own stage;
-  stage 2, the limb and the exclusions stay in the page until the bake. The floors are in `config/tattoo.json`.
+  stage 2, the limb and the exclusions stay in the page until the bake. A plain click selects a pair, a plain drag pans
+  or moves a point, and `⌘Z`, `⇧⌘Z` and `↵` undo, redo and close a limb or exclusion outline. The floors are in `config/tattoo.json`.
 - **The proposed pairs** of stage 2 open it for a two-stage tattoo or a cut with no pair held. The server finds a
   person's pose in the photograph and the render with DWPose, cuts each bone of the arm nearest the tattoo's points out
   with SAM 2.1, and proposes pairs along the bones and at the joints. The page shows them dashed; *Accept*, *Accept

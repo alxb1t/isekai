@@ -1,5 +1,5 @@
 import { type Step, startStep } from './stages'
-import type { Outline, Stage1, Tattoo, TattooLimits } from './types'
+import type { Outline, Point, Stage1, Tattoo, TattooLimits } from './types'
 
 /* What the picker and the outline step read of a tattoo, as plain functions. */
 
@@ -95,6 +95,14 @@ export function refusalField(refusal: string): 'name' | 'file' {
 /** Return why the ink view, the white point and the tone wait, or null when they do not. */
 export function controlsWait(outline: Pick<Outline, 'closed'>): string | null {
   return outline.closed ? null : 'outline open'
+}
+
+/** Return the one line that says how to close an open outline, or null once it is closed.
+    e.g. an open outline of one vertex -> "close the outline on its first point · 1 point" */
+export function closeLine(outline: { closed: boolean; points: readonly Point[] }): string | null {
+  if (outline.closed) return null
+  const count = outline.points.length
+  return `close the outline on its first point · ${count} ${count === 1 ? 'point' : 'points'}`
 }
 
 /** Return the grey a scale shows against the automatic grey, a whole number.

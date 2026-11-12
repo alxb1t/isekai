@@ -4,23 +4,27 @@ import { type Place, designAt, inkView, photoUrl, saveOutline, tattooNamed } fro
 import {
   type Draft,
   type Rules,
-  added,
   blank,
   box,
+  canClose,
   cleared,
-  closed,
+  closed as closedDraft,
   closes,
   drafted,
-  inserted,
   moved,
+  placed,
   ready,
+  redone,
   removed,
   undone,
   vertexAt,
 } from '../polygon'
+import { useKeys } from '../composables/useKeys'
+import { placeCommands } from '../placeKeys'
 import {
   type Tone,
   card,
+  closeLine,
   controlsWait,
   defaultTone,
   differs,
@@ -72,6 +76,7 @@ const src = computed(() =>
   isCut.value ? photoUrl(props.place) : designAt(props.place.digest, props.name),
 )
 const wait = computed(() => controlsWait(draft.value))
+const line = computed(() => closeLine(draft.value))
 const complete = computed(() => ready(draft.value, rules.value))
 const standard = computed(() =>
   tattoo.value ? defaultTone(tattoo.value.kind, props.limits) : null,
@@ -191,30 +196,40 @@ function setTone(next: Tone): void {
 const grab = (at: Point, zoom: number) => vertexAt(draft.value, at, zoom)
 
 function clicked(press: Press): void {
-  const now = draft.value
-  if (press.shift) return edit(inserted(now, press.at, rules.value))
-  if (now.closed) return
-  if (closes(now, press.at, press.scale, rules.value)) return edit(closed(now, rules.value))
-  // A click on a vertex is the double click's first, not a new vertex.
-  if (vertexAt(now, press.at, press.scale) !== null) return
-  edit(added(now, press.at, rules.value))
+  if (!press.shift) return
+  edit(placed(draft.value, press.at, press.scale, rules.value))
 }
 
 function doubled(press: Press): void {
+  if (press.shift) return
   const index = vertexAt(draft.value, press.at, press.scale)
   if (index !== null) edit(removed(draft.value, index, rules.value))
 }
 
+/* The image point under an idle pointer; the first vertex reads *close* while a click would close. */
+const hovered = ref<Point | null>(null)
+const closing = (view: View): boolean =>
+  hovered.value !== null && closes(draft.value, hovered.value, view.scale, rules.value)
+
 function dragged(index: number, at: Point, fresh: boolean): void {
   edit(moved(draft.value, index, at, rules.value, fresh))
 }
+
+useKeys('screen', placeCommands({
+  undo: () => edit(undone(draft.value)),
+  redo: () => edit(redone(draft.value)),
+  close: () => {
+    if (canClose(draft.value, rules.value)) edit(closedDraft(draft.value, rules.value))
+  },
+}))
 
 /* The automatic white point's grey, once the ink view has read it, and the grey shown. */
 const automatic = computed(() => ink.value?.white ?? null)
 const grey = computed(() =>
   automatic.value === null ? null : greyOf(automatic.value, scale.value),
 )
-const whiteWait = computed(() => wait.value ?? (automatic.value === null ? 'reading the ink' : null))
+const reading = computed(() => (wait.value === null && automatic.value === null ? 'reading the ink' : null))
+const whiteWait = computed(() => wait.value ?? reading.value)
 
 function setGrey(event: Event): void {
   const value = Number((event.target as HTMLInputElement).value)
@@ -289,6 +304,7 @@ onUnmounted(() => {
       @click="clicked"
       @dblclick="doubled"
       @drag="dragged"
+      @hover="hovered = $event"
     >
       <template #default="{ view }">
         <path
@@ -316,14 +332,14 @@ onUnmounted(() => {
             :class="{ 'outline__vertex--first': index === 0 }"
             :cx="toScreen(view, point)[0]"
             :cy="toScreen(view, point)[1]"
-            r="5"
+            :r="index === 0 && closing(view) ? 8 : 5"
           />
           <text
             class="outline__tag mono"
             :x="toScreen(view, point)[0] + 8"
             :y="toScreen(view, point)[1] - 8"
           >
-            {{ index + 1 }}
+            {{ index === 0 && closing(view) ? 'close' : index + 1 }}
           </text>
         </g>
       </template>
@@ -335,9 +351,6 @@ onUnmounted(() => {
           · ink {{ inkSize(box(draft)) }} on the photograph</template
         >
       </p>
-      <p class="outline__hint mono">
-        click adds · the first point closes · drag moves · ⇧-click inserts · double click removes
-      </p>
       <div class="outline__row">
         <button class="btn btn-secondary" type="button" :disabled="draft.past.length === 0" @click="edit(undone(draft))">
           Undo
@@ -347,10 +360,10 @@ onUnmounted(() => {
         </button>
         <span class="outline__status mono" data-save>{{ status }}</span>
       </div>
+      <p v-if="line" class="outline__hint mono" data-close-line>{{ line }}</p>
       <p class="section-label">ink view</p>
       <div class="outline__ink" data-ink>
         <img v-if="ink" class="outline__ink-image" :src="ink.url" :alt="`the ink of ${name}`" />
-        <span v-else-if="wait" class="outline__wait mono">{{ wait }}</span>
         <span v-else-if="drawing" class="outline__wait mono">drawing the ink…</span>
       </div>
       <p v-if="ink" class="outline__hint mono">
@@ -376,7 +389,7 @@ onUnmounted(() => {
         <button class="btn btn-secondary" type="button" :disabled="whiteWait !== null || scale === 1" @click="setAuto">
           Auto
         </button>
-        <span v-if="whiteWait" class="outline__wait mono">{{ whiteWait }}</span>
+        <span v-if="reading" class="outline__wait mono">{{ reading }}</span>
       </div>
       <p class="section-label">tone</p>
       <div class="outline__row">
@@ -398,7 +411,6 @@ onUnmounted(() => {
           />
         </label>
         <button v-if="resettable" class="btn btn-secondary" type="button" @click="reset">Reset</button>
-        <span v-if="wait" class="outline__wait mono">{{ wait }}</span>
       </div>
       <button v-if="isCut" class="btn btn-secondary" type="button" @click="emit('instead', name)">
         Upload a tattoo instead
