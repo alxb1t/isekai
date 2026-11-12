@@ -4,7 +4,7 @@ A phase per debt card, in the order of [design](design.md)'s decisions.
 
 ## Progress
 
-- [ ] 1 — The copy in step · moderate
+- [x] 1 — The copy in step · moderate
 - [ ] 2 — The copy's prose · moderate
 - [ ] 3 — The chained source · moderate
 - [ ] 4 — The cancel follows the render · moderate
@@ -15,10 +15,10 @@ A phase per debt card, in the order of [design](design.md)'s decisions.
 
 Closes 0111·R1: a second `approve --from` after both flows rendered writes nothing ([D1](design.md#d1)).
 
-- [ ] 1.1 Add `test_a_copy_in_step_after_both_rendered_writes_nothing` to `tests/test_review.py`, after `test_an_approved_target_is_not_copied_over`, bound to `review:copy-from:a-copy-is-in-step-once-both-have-rendered`.
+- [x] 1.1 Add `test_a_copy_in_step_after_both_rendered_writes_nothing` to `tests/test_review.py`, after `test_an_approved_target_is_not_copied_over`, bound to `review:copy-from:a-copy-is-in-step-once-both-have-rendered`.
   It copies, writes `<seed>.png` files into the source's `001` group and, in one case, the target's, then copies again: no new approval where the target rendered, and `002` listing the seeds where it did not.
   Verify: `git grep -n "a-copy-is-in-step-once-both-have-rendered" -- tests/test_review.py` prints a line.
-- [ ] 1.2 In `_copy_approval` in `isekai/pipeline/review.py`, replace the `renders_of(mine, newest, afresh) == renders` clause with the `copied_renders` comparison of [D1](design.md#d1), and reword the docstring to "listed or rendered". The test of 1.1 is red until this task is done.
+- [x] 1.2 In `_copy_approval` in `isekai/pipeline/review.py`, replace the `renders_of(mine, newest, afresh) == renders` clause with the `copied_renders` comparison of [D1](design.md#d1), and reword the docstring to "listed or rendered". The test of 1.1 is red until this task is done.
   Verify: `uv run pytest tests/test_review.py -k in_step` exits 0.
 
 ## 2 — The copy's prose

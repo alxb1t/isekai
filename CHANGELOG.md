@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- A second `approve --from` after both flows rendered writes nothing: a copy is in step when the target holds the
+  copy's seeds, listed or rendered (0124 D1).
+
 ## [0.78.0] - 2026-11-08
 
 Gate: local 0m36s · CI not read under mf-ship · 0.77.0: local 0m55s · CI not read under mf-ship
