@@ -9,7 +9,8 @@ An uploaded tattoo SHALL be taken from the import's staging, where it was cleane
 and kept upright, with its metadata gone, at most the declared long side,
 its size and the size it came with recorded.
 A name SHALL be refused when it is empty, starts with a dot, holds a separator or a NUL,
-or is taken: an upload's by an upload or by a cut of any photograph, a cut's by an upload or by a cut of the same photograph.
+or is taken: an upload's by an upload or by a cut of any photograph,
+a cut's by an upload or by a cut of the same photograph.
 A file still carrying metadata SHALL be refused.
 The system SHALL list for a photograph's digest the uploads and that photograph's cuts, and no other cut,
 and SHALL take that digest with every name it reads a tattoo by, so one name resolves to one tattoo.
@@ -69,8 +70,10 @@ so a removal changes no edit.
 #### Scenario: the list names each tattoo of a photograph
 - **Key:** `tattoo:library:the-list-names-each-tattoo`
 - **Layers:** unit
-- **WHEN** the library holds an upload, a cut of one photograph and a cut of another, and the list is read for the first photograph's digest
-- **THEN** it holds the upload and the first photograph's cut, each with its name, kind, size and whether it is outlined, in the order kept
+- **WHEN** the library holds an upload, a cut of one photograph and a cut of another,
+  and the list is read for the first photograph's digest
+- **THEN** it holds the upload and the first photograph's cut,
+  each with its name, kind, size and whether it is outlined, in the order kept
 - **AND** the other photograph's cut is not in it
 
 #### Scenario: a name resolves by the render's digest
@@ -78,7 +81,8 @@ so a removal changes no edit.
 - **Layers:** unit
 - **WHEN** two photographs each hold a cut of one name, and the name is read with each digest
 - **THEN** each read gives its own photograph's cut
-- **AND** a name read with a digest that holds none of that name is refused, naming the photograph a cut of it is from when one is
+- **AND** a name read with a digest that holds none of that name is refused,
+  naming the photograph a cut of it is from when one is
 
 #### Scenario: a removed tattoo is gone
 - **Key:** `tattoo:library:a-removed-tattoo-is-gone`
@@ -90,7 +94,8 @@ so a removal changes no edit.
 #### Scenario: a removal reaches only the named tattoo
 - **Key:** `tattoo:library:a-removal-reaches-only-the-named-tattoo`
 - **Layers:** unit
-- **WHEN** a removal is asked of an unknown name, of `.cuts`, of `..`, of a name holding a separator, and of a name with a digest that is no photograph's
+- **WHEN** a removal is asked of an unknown name, of `.cuts`, of `..`, of a name holding a separator,
+  and of a name with a digest that is no photograph's
 - **THEN** each is refused and nothing is removed
 
 #### Scenario: a cut kept the old way moves
@@ -154,5 +159,8 @@ another photograph takes an uploaded tattoo.
 
 ### Requirement: A tattoo is kept in the library, whole and never deleted
 
-**Reason:** A tattoo can now be removed, and a cut is kept by its photograph, so the title and the rule it states no longer hold.
-**Migration:** *A tattoo is kept in the library, whole until it is removed* carries each of its scenarios under the same keys, adds the folders of a cut, the names, the digest and the removal, and replaces *no route deletes or renames* with *no route renames*.
+**Reason:** A tattoo can now be removed, and a cut is kept by its photograph,
+so the title and the rule it states no longer hold.
+**Migration:** *A tattoo is kept in the library, whole until it is removed*
+carries each of its scenarios under the same keys, adds the folders of a cut, the names, the digest and the removal,
+and replaces *no route deletes or renames* with *no route renames*.
