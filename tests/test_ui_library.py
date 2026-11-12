@@ -9,10 +9,17 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from isekai.foundation.artifacts import DRAFT_FILE, read
+from isekai.foundation.artifacts import DRAFT_FILE, EDIT_FILE, read
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import OUTPUTS, REVIEW, Run, approval_of, open_run
+from isekai.foundation.run import (
+    OUTPUTS,
+    REVIEW,
+    Run,
+    approval_of,
+    edit_files,
+    open_run,
+)
 from isekai.interface.ui import library
 from isekai.interface.ui.library import Cell, FlowCount, Rendered
 from isekai.pipeline import generate
@@ -546,3 +553,56 @@ def test_an_image_past_pillows_pixel_bound_is_refused_naming_it(
 
     with pytest.raises(Refusal, match="huge.png: is not an image this build can read"):
         getattr(library, read)(huge)
+
+
+def _bake(group: Path, seed: int, k: int, source: str, *, image: bool = False) -> Path:
+    """Write edit `k` of `seed` in `group`, made from `source`; return its record."""
+    picture, record, _ = edit_files(group, seed, k)
+    group.mkdir(parents=True, exist_ok=True)
+    body = {"schema": EDIT_FILE.schema, "edit": "tattoo", "source": source}
+    record.write_text(json.dumps(body))
+    if image:
+        picture.write_bytes(b"png")
+    return record
+
+
+@pytest.mark.spec("ui:bakes:the-chain-lists-the-bakes-in-order")
+def test_bake_library_lists_each_edit_of_the_seed_by_number(tmp_path: Path) -> None:
+    group = tmp_path / "001"
+    _bake(group, 42, 2, "42.edit-1.png")
+    _bake(group, 42, 1, "42.png", image=True)
+    _bake(group, 7, 1, "7.png")
+    edit_files(group, 42, 3)[0].write_bytes(b"png")
+    baked = edit_files(group, 42, 1)[0].stat().st_mtime
+
+    found = library.bakes(group, 42)
+
+    assert found == [
+        library.Bake(1, None, baked, "tattoo", "baked"),
+        library.Bake(2, 1, None, "tattoo", "queued"),
+    ]
+    assert library.bakes(tmp_path / "absent", 42) == []
+
+
+@pytest.mark.spec("ui:bakes:a-damaged-record-marks-its-bake")
+def test_bake_library_a_record_that_cannot_be_read_is_listed_damaged(
+    tmp_path: Path,
+) -> None:
+    group = tmp_path / "001"
+    _bake(group, 42, 1, "42.png", image=True)
+    broken = _bake(group, 42, 2, "42.edit-1.png")
+    broken.write_text("{ not json")
+    _bake(group, 42, 3, "42.edit-2.png")
+
+    found = library.bakes(group, 42)
+
+    assert [(one.k, one.state) for one in found] == [
+        (1, "baked"),
+        (2, "damaged"),
+        (3, "queued"),
+    ]
+    damaged = found[1]
+    assert (damaged.edit, damaged.placed_on) == (None, None)
+    assert damaged.reason is not None and broken.name in damaged.reason
+    assert found[2].placed_on == 2
+    assert all(one.reason is None for one in (found[0], found[2]))

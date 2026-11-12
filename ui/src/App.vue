@@ -53,8 +53,8 @@ watch(
 )
 const place = computed(() => collection.value ?? 'library')
 const screen = computed(() => route.name)
-/* The large view and Compare open from the hub, so its tab stays lit on them. */
-const HUB_SCREENS = ['hub', 'render', 'compare', 'compare-photo']
+/* The large view, a bake's and Compare open from the hub, so its tab stays lit on them. */
+const HUB_SCREENS = ['hub', 'render', 'bake', 'compare', 'compare-photo']
 const hubLit = computed(() => HUB_SCREENS.includes(String(screen.value)))
 const key = computed(() =>
   route.name === 'review' ? `${route.params.collection}/${route.params.flow}` : route.path,

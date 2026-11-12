@@ -65,6 +65,34 @@ def test_the_invariant_holds_no_module_of_the_surface_names_an_artifact() -> Non
     )
 
 
+def _spelling(surface: Path, needle: str) -> set[str]:
+    """Return the modules under `surface` whose text holds `needle`, by file name."""
+    return {
+        path.name
+        for path in sorted(surface.rglob("*.py"))
+        if needle in path.read_text()
+    }
+
+
+@pytest.mark.spec_exempt("structural: every edit file's name comes from the run")
+def test_bake_names_no_module_of_the_surface_spells_an_edits_file_stem() -> None:
+    surface = Path(__file__).resolve().parent.parent / "isekai" / "interface" / "ui"
+
+    assert _spelling(surface, ".edit-") == set(), (
+        "the run's own functions name an edit's files; the surface asks them"
+    )
+
+
+@pytest.mark.spec_exempt("structural: twin of the surface's edit-stem check")
+def test_bake_names_the_check_names_a_module_that_spells_the_stem(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "clean.py").write_text("NAME = 'x'\n")
+    (tmp_path / "spelled.py").write_text("NAME = '42.edit-1.png'\n")
+
+    assert _spelling(tmp_path, ".edit-") == {"spelled.py"}
+
+
 # --- the bundle: built when it is free, refused when it is not ----------------
 
 

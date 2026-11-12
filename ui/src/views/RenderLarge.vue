@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { imageAt, photoUrl, renderDetail, thumbAt, versionOf } from '../api'
+import { bakeAt, bakeDetail, imageAt, photoUrl, renderDetail, thumbAt, versionOf } from '../api'
+import { offered } from '../bakes'
 import { type PickTile, placeOf, rowOrder, sourceGrid, stepped } from '../cells'
+import BakeChain from '../components/BakeChain.vue'
 import ComparePick from '../components/ComparePick.vue'
 import DeleteDialog from '../components/DeleteDialog.vue'
 import DraftDialog from '../components/DraftDialog.vue'
@@ -10,23 +12,26 @@ import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
 import { plain, shifted } from '../stores/keys'
-import type { RenderDetail } from '../types'
+import type { Bake, RenderDetail } from '../types'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
    sheet it was rendered from beside it — filled fields only, read-only. ⇧D
    drafts a flow from it, its own a revision (J5·3); ⇧C compares it with any
    image of its source, the photograph among them, picked in a grid (J5·8).
    ⇧⌫ asks, then deletes the render and opens the Hub on its cell.
-   `h` `l` walk the photograph's row; esc goes back to the Hub, on the shown image's cell. */
+   `h` `l` walk the photograph's row; esc goes back to the Hub, on the shown image's cell.
+   With `k` it is a bake's view: the bake's image and record, and none of the writes. */
 const props = defineProps<{
   collection: string
   digest: string
   flow: string
   version: string
   seed: string
+  k?: string
 }>()
 const router = useRouter()
 const detail = ref<RenderDetail | null>(null)
+const bake = ref<Bake | null>(null)
 const refusal = ref<string | null>(null)
 const drafting = ref(false)
 /* The pick of an image to compare with, while it is open. */
@@ -41,8 +46,30 @@ const place = computed(() => ({
   seed: props.seed,
 }))
 
+/* The address's params without `k`: the render, compare and compare-photo routes have none. */
+const params = computed(() => ({
+  collection: props.collection,
+  digest: props.digest,
+  flow: props.flow,
+  version: props.version,
+  seed: props.seed,
+}))
+
 const clock = (at: number) =>
   new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
+
+/* The bake's number, or null on the render's own address. */
+const shown = computed(() => (props.k === undefined ? null : Number(props.k)))
+
+/* The image drawn: the render's, a baked bake's own, and for a queued one the image it was placed on. */
+const media = computed(() => {
+  const held = bake.value
+  if (shown.value === null || held === null) return imageAt(place.value)
+  const at = held.state === 'queued' ? held.placed_on : shown.value
+  return at === null ? imageAt(place.value) : bakeAt(place.value, at)
+})
+
+const placedOn = (one: Bake) => (one.placed_on === null ? 'the render' : `edit ${one.placed_on}`)
 
 const grid = computed(() => (detail.value ? sourceGrid(detail.value) : null))
 
@@ -53,11 +80,11 @@ const tileSrc = (tile: PickTile) =>
 function compare(other: PickTile): void {
   void router.push(
     other === null
-      ? { name: 'compare-photo', params: props }
+      ? { name: 'compare-photo', params: params.value }
       : {
           name: 'compare',
           params: {
-            ...props,
+            ...params.value,
             withFlow: other.flow,
             withVersion: `v${other.version}`,
             withSeed: other.seed,
@@ -76,7 +103,7 @@ function step(by: -1 | 1): void {
   if (next === null) return
   void router.replace({
     name: 'render',
-    params: { ...props, flow: next.flow, version: `v${next.version}`, seed: next.seed },
+    params: { ...params.value, flow: next.flow, version: `v${next.version}`, seed: next.seed },
   })
 }
 
@@ -102,21 +129,21 @@ useKeys('screen', [
     keys: [shifted('KeyD')],
     label: 'draft from this',
     run: () => (drafting.value = true),
-    when: () => detail.value !== null,
+    when: () => offered(props.k) && detail.value !== null,
   },
   {
     id: 'compare',
     keys: [shifted('KeyC')],
     label: 'compare with…',
     run: () => (picking.value = true),
-    when: () => grid.value !== null,
+    when: () => offered(props.k) && grid.value !== null,
   },
   {
     id: 'delete',
     keys: [shifted('Backspace')],
     label: 'delete this render',
     run: () => (deleting.value = true),
-    when: () => detail.value !== null,
+    when: () => offered(props.k) && detail.value !== null,
   },
   {
     id: 'back',
@@ -129,6 +156,7 @@ useKeys('screen', [
 onMounted(async () => {
   try {
     detail.value = await renderDetail(place.value)
+    if (shown.value !== null) bake.value = await bakeDetail(place.value, shown.value)
   } catch (reason) {
     refusal.value = (reason as Error).message
   }
@@ -139,7 +167,7 @@ onMounted(async () => {
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="detail" class="large">
     <div class="large__media">
-      <img :src="imageAt(place)" :alt="`seed ${detail.seed}`" />
+      <img :src="media" :alt="k === undefined ? `seed ${detail.seed}` : `edit ${k} of seed ${detail.seed}`" />
     </div>
     <aside class="large__sheet" data-sheet>
       <span class="section-label">
@@ -162,8 +190,9 @@ onMounted(async () => {
       <p v-if="detail.damaged" class="large__refusal">
         <span class="refusal__mark" />{{ detail.damaged }}
       </p>
+      <img class="large__photo" :src="photoUrl(place)" alt="the photograph" data-photo />
       <div class="large__actions">
-        <div class="large__group">
+        <div v-if="offered(k)" class="large__group">
           <button
             class="btn btn-secondary"
             type="button"
@@ -173,7 +202,7 @@ onMounted(async () => {
             Draft from this<KeyHint command="draft-from" />
           </button>
         </div>
-        <div class="large__group">
+        <div v-if="offered(k)" class="large__group">
           <button
             class="btn btn-secondary"
             type="button"
@@ -183,7 +212,7 @@ onMounted(async () => {
             Compare with…<KeyHint command="compare" />
           </button>
         </div>
-        <div class="large__group">
+        <div v-if="offered(k)" class="large__group">
           <button
             class="btn btn-secondary"
             type="button"
@@ -199,6 +228,20 @@ onMounted(async () => {
           >
         </div>
       </div>
+      <BakeChain v-if="detail.bakes.length" :bakes="detail.bakes" :shown="shown" :params="params" />
+      <template v-if="bake">
+        <p v-if="bake.state === 'queued'" class="large__head mono" data-queued>
+          queued · the image it was placed on, until the next session bakes it
+        </p>
+        <dl class="large__fields" data-bake-record>
+          <dt class="mono">placed on</dt>
+          <dd>{{ placedOn(bake) }}</dd>
+          <dt class="mono">edit</dt>
+          <dd>{{ bake.edit }}</dd>
+          <dt class="mono">baked</dt>
+          <dd>{{ bake.baked_at === null ? 'queued' : clock(bake.baked_at) }}</dd>
+        </dl>
+      </template>
       <dl class="large__fields">
         <template v-for="(tags, name) in detail.fields" :key="name">
           <dt class="mono">{{ name }}</dt>

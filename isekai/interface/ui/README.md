@@ -26,9 +26,11 @@ render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─�
   the next, with `--progress json`, each line of its prose appended to the collection's `log.txt` as `[prepare] …`. Stop, `POST
   /api/jobs/prepare/stop`, sends its child SIGINT; the server stopping interrupts both jobs.
 - **Render** has the other slot, its prose logged as `[render] …` in every collection it renders. `POST
-  /api/render/quote` takes the render verb's own quote over the named collections, or every one short of images:
-  per collection and flow what renders, each source with its run, less what `without` takes out, and one
-  estimate, limit and price at most.
+  /api/render/quote` takes the render verb's own quote over the named collections, or every one short of images or
+  holding a bake: per collection and flow what renders, each source with its run, each bake with its photograph
+  and version, less what `without` takes out, and one estimate, limit and price at most. The confirmation carries
+  `images` and `bakes` beside the limit, and a quote taken again that differs is refused; a session of bakes alone
+  runs. The offer of `GET …/render` carries `bakes` and `other_bakes`, which the Render bar counts beside images.
   Only `POST /api/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --session <id>
   --progress json <runs>… --without …`, then `volume down` unless the window is kept.
 - **Delete** on a large view, `⇧⌫`, asks first; Yes is `DELETE …/renders/{digest}/{flow}/{version}/{seed}`, refused
@@ -42,7 +44,10 @@ render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─�
   The alert's way out is `/billing`, which distinguishes unknown billing, an open volume and confirmed absence.
 - **The large view** shows an image, headed by its version, and walks the photograph's row; the hub's cells
   carry each image and what each newest approval lacks. The large view sets an image
-  beside the approval's filled fields. A thumbnail, a render's or a source's, is made once, into the
+  beside the approval's filled fields, the photograph's thumbnail above its actions, and the chain of its bakes, as
+  `GET …/{seed}` carries them. A bake has its own routes, `…/{seed}/edit/{k}` for its record and `/image` and
+  `/thumb` under it; a queued bake's image and a damaged record are refused, naming the session or the file, and no
+  route writes or deletes a bake. A thumbnail, a render's or a source's, is made once, into the
   library's `.cache/`.
 - **Billing** (`billing.py`) is read from gpunit's records in `.gpunit/`: a pod alert, the window's quiet
   item, or the band. gpunit is asked at start, every half minute while a session runs or an alert is

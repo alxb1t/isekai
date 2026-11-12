@@ -321,12 +321,22 @@ export interface TakenOut {
   flow: string
 }
 
-/* One collection's row of a quote: per flow what renders, and a count it refuses,
-   or null. */
+/* A queued bake in a quote: its photograph's run and flow, the approval's version, the
+   seed as text and the edit's number. */
+export interface QuoteBake extends QuoteSource {
+  flow: string
+  version: number
+  seed: string
+  k: number
+}
+
+/* One collection's row of a quote: per flow what renders, its queued bakes, and a count
+   it refuses, or null. */
 export interface QuotedCollection {
   collection: string
   images: number
   flows: { flow: string; images: number; sources: (QuoteSource & { images: number })[] }[]
+  bakes: QuoteBake[]
   refused: string | null
 }
 
@@ -357,14 +367,28 @@ export interface Assigned {
   refused: Record<string, string>
 }
 
-/* A collection's Render offer: the images it lacks and every other collection
-   lacks, why Render is disabled, and why an approval's count is refused, each
+/* A collection's Render offer: the images and the queued bakes it holds and every other
+   collection holds, why Render is disabled, and why an approval's count is refused, each
    null when there is none. */
 export interface RenderOffer {
   disabled: string | null
   images: number
   others: number
+  bakes: number
+  other_bakes: number
   refused: string | null
+}
+
+/* One edit request of a render's seed: `placed_on` is the number of the bake whose image it
+   edits, null for the render's own; `baked_at` the image's time, null while queued; `edit` its
+   name, and `reason` the refusal naming the file of a damaged record, each null otherwise. */
+export interface Bake {
+  k: number
+  state: 'baked' | 'queued' | 'damaged'
+  placed_on: number | null
+  baked_at: number | null
+  edit: string | null
+  reason: string | null
 }
 
 /* An image's large view: the approval it was rendered from, filled fields only. */
@@ -390,6 +414,8 @@ export interface RenderDetail {
   source: { flow: string; images: { version: number; seed: string }[] }[]
   /* Every offered flow, this one first, assigned or not. */
   targets: string[]
+  /* The seed's bakes by number, each with what it was placed on. */
+  bakes: Bake[]
 }
 
 /* One image a draft is written from, its seed a decimal string. */

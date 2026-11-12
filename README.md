@@ -280,10 +280,11 @@ runs `isekai assign`, and *Prepare* runs `isekai prepare` over what changed as o
 captioned and sheeted before the next, the CLI's own verb as a child with `--progress json`, its cells moving live
 over `/events`. Review
 corrects one sheet, its ④ setting how many images it renders and at which seeds, and Approve stays on the sheet,
-read-only. **Render** opens a dialog quoting what renders and its price at most; **its confirmation is the one
-act on the page that spends money**, and the session view shows it to *Nothing is billing.* The hub's
-cell modal sets a cell's images side by side, each marked with its version, and an image's large view
-shows the sheet it came from, headed a revision or a re-roll of the one it came from. **Draft from this** (`⇧D`),
+read-only. **Render** opens a dialog quoting what renders, the images and the tattoo edit's bakes queued beside them, and its
+price at most; **its confirmation is the one act on the page that spends money**, and the session view shows it to
+*Nothing is billing.* The hub's cell modal sets a cell's images side by side, each marked with its version, and an
+image's large view shows the sheet it came from, headed a revision or a re-roll of the one it came from, the
+photograph's thumbnail, and the chain of its bakes, each baked one opening its own view. **Draft from this** (`⇧D`),
 from the large view, lists every flow the app offers, the image's own first; `↵` runs what
 `isekai draft --flow` does and opens Review on the first draft it wrote, the others of its flow in the rail, with the
 render beside the photograph; **Compare** (`⇧C`) sets the image beside any image of its source — another

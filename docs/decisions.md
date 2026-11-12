@@ -86,7 +86,7 @@ dialog's removal is `render --without`, so a session the page starts is one the 
 ### D4 · The UI runs stages only as the CLI's children
 
 **The browser runs a stage only as the CLI's own verb, a child of the server, save the sheet a draft from
-another flow fills; the one act in it that spends is Render's confirmation, after its quote.**
+another flow fills; the one act in it that spends is Render's confirmation, after its quote of image total, bake total and limit.**
 Prepare is `prepare` run as one child, each photograph through `tag`, `caption` and its sheets in turn,
 and Render is `render` between gpunit's `volume up` and `volume down`. Every other write goes through the function that owns it: a draft, its edits and an
 approval through `review`'s, a tick through the run's `assign`, a source through import, a deleted render's
@@ -101,8 +101,8 @@ which `interface/drafting.py`'s `draft_across` runs in the server's process befo
   refuses before it writes. Spend behind a web page is bounded by what the operator read: the
   confirmation carries the quote it showed and the photographs taken out of it, and a quote grown since is
   refused. The quote compares
-  image total and limit, not source or approval identity.
-- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`, `0112`, `0114`, `0116`.
+  image total, bake total and limit, not source or approval identity.
+- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`, `0112`, `0114`, `0116`, `0120`.
 
 ### D42 · A new draft starts from the last approval
 
