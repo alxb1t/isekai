@@ -24,8 +24,6 @@ creating, tunnelling to and tearing down the pod is `isekai render`'s
 Stdlib only; the endpoint is behind the repository's existing `ComfyTransport`.
 """
 
-import hashlib
-import json
 import random
 import shlex
 import time
@@ -34,7 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.boundary.comfy import ComfyTransport, TransportFailure, unread
+from isekai.boundary.comfy import ComfyTransport, TransportFailure, submit_and_wait
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     PROMPT_FILE,
@@ -58,6 +56,7 @@ from isekai.foundation.flow import (
     Schema,
     Workflow,
     assemble,
+    graph_digest,
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -70,6 +69,8 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     check_budget,
+    delete_edits,
+    edit_numbers,
     failures_alone,
     group_of,
     is_seed,
@@ -376,18 +377,19 @@ def render_groups(run: Run, flow: str) -> list[Path]:
 
 
 def discard_render(image: Path) -> list[Path]:
-    """Delete a render's image, its record, and a group left with only failure records.
+    """Delete a render's image, its record, its edits, and a group left with failures.
 
-    Those records go with the group; return every path deleted, absolute. The
-    image goes first, so a discard cut short leaves a record alone, which reads as
-    unrendered, as a render cut short does. A group left holding failure records
-    alone would keep an approval whose last image went. A path naming no render is
-    refused, nothing deleted.
+    Every edit of the seed goes with it, images, records and composites, before the
+    group is tested: an edit left in the group would keep it, and the approval, alive
+    with no render to show. A group left holding failure records alone goes too, those
+    records with it; return every path deleted, absolute. The image goes first, so a
+    discard cut short leaves a record alone, which reads as unrendered, as a render
+    cut short does. A path naming no render is refused, nothing deleted.
     e.g. outputs/001/42.png -> [.../001/42.png, .../001/42.render.json]
     e.g. outputs/001/7.png, the last beside 001.error.1.transient.json
     -> [.../7.png, .../7.render.json, .../001.error.1.transient.json, .../001]
     """
-    rendered_at(image)
+    *_, seed = rendered_at(image)
     image = image.absolute()
     group = image.parent
     record = group / f"{image.stem}{SIDECAR}"
@@ -396,6 +398,7 @@ def discard_render(image: Path) -> list[Path]:
     if record.is_file():
         record.unlink()
         deleted.append(record)
+    deleted += delete_edits(group, seed, edit_numbers(group, seed))
     records = failures_alone(group)
     if records is not None:
         for path in records:
@@ -531,46 +534,6 @@ def _hires_target(flow: Flow, width: int, height: int) -> dict[str, int]:
     return scaled
 
 
-def graph_digest(graph: Workflow) -> str:
-    """Return the digest of the graph as submitted, keys sorted so it is stable."""
-    return hashlib.sha256(
-        json.dumps(graph, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
-
-
-def read_runtime(client: ComfyTransport) -> Runtime:
-    """Return the versions the endpoint reports, and its first device's name.
-
-    A report without them is an answer in a shape this build does not read, and
-    `render` records it as permanent rather than claim a runtime it never read.
-    A failed request keeps the transport's own kind.
-    A report naming no device is read without one; the device decides nothing.
-    """
-    report = client.system_stats()
-    try:
-        system = report["system"]
-        ran_on: Runtime = {
-            "comfyui_version": str(system["comfyui_version"]),
-            "python_version": str(system["python_version"]),
-            "pytorch_version": str(system["pytorch_version"]),
-        }
-    except (KeyError, TypeError) as answer:
-        raise unread(answer) from answer
-    if (device := _first_device(report)) is not None:
-        ran_on["device"] = device
-    return ran_on
-
-
-def _first_device(report: dict[str, Any]) -> str | None:
-    """Return the name of the first device `report` lists, or None for no name."""
-    devices = report.get("devices")
-    if not isinstance(devices, list) or not devices:
-        return None
-    first = devices[0]
-    name = first.get("name") if isinstance(first, dict) else None
-    return name if isinstance(name, str) else None
-
-
 def render(
     run: Run,
     flow: Flow,
@@ -655,7 +618,7 @@ def render(
         try:
             graph = build_graph(flow, run.photo, image_name, prompt, seed)
             started = clock()
-            body = _submit(client, graph, poll, deadline)
+            body = submit_and_wait(client, graph, poll, deadline)
             took = round(clock() - started, 1)
         except Refusal as failed:
             raise _recorded(run, flow, directory, version, failed, seed) from failed
@@ -719,49 +682,3 @@ def _recorded(
         f"{run.id}: flow {flow.id}'s render failed ({kind}) -- {failed}; see "
         f"{record.relative_to(run.path)}, and delete it before rendering again"
     )
-
-
-def _submit(
-    client: ComfyTransport, graph: Workflow, poll: float, deadline: float
-) -> bytes:
-    """Queue one graph, wait up to `deadline` seconds, and return the image's bytes."""
-    prompt_id = client.submit(graph)
-    end = time.monotonic() + deadline
-    while prompt_id not in (history := _history(client, prompt_id)):
-        if time.monotonic() >= end:
-            raise TransportFailure(
-                "transient",
-                f"prompt {prompt_id} did not finish within {deadline:g} s; check "
-                "the pod's ComfyUI log",
-            )
-        time.sleep(poll)
-    record = history[prompt_id]
-    outputs = record.get("outputs") if isinstance(record, dict) else None
-    if not isinstance(outputs, dict):
-        raise Refusal(
-            "the endpoint's history for a graph it accepted carries no outputs; "
-            "check the pod's ComfyUI log"
-        )
-    for output in outputs.values():
-        images = output.get("images") if isinstance(output, dict) else None
-        if isinstance(images, list) and images:
-            return client.view(images[0])
-    raise Refusal(
-        "the endpoint returned no image for a graph it accepted; check the pod's "
-        "ComfyUI log"
-    )
-
-
-def _history(client: ComfyTransport, prompt_id: str) -> dict[str, Any]:
-    """Return the endpoint's history, refusing one that is not a JSON object.
-
-    `in` on a list never matches, so without this a list would be polled until the
-    deadline.
-    """
-    history: object = client.history(prompt_id)
-    if not isinstance(history, dict):
-        raise Refusal(
-            "the endpoint's history is not a JSON object; check that `--server` "
-            "names a ComfyUI"
-        )
-    return history

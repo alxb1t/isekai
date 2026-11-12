@@ -1,7 +1,7 @@
 # The render session's GPU, read by gpunit when `isekai render` opens a session.
 # `image` is `config/image.json`'s reference and digest; a test holds them equal.
 project = "isekai"
-image = "ghcr.io/alxb1t/isekai@sha256:21b715d99bdd2b5d2452275533366e43e7e2b6fcfd048d08a65e9e7ebd9a1d3f"
+image = "ghcr.io/alxb1t/isekai@sha256:79306642db03daa1e9fd07f103e8bbd779648a2eaa620c0674495d16326c6c2f"
 gpus = [
     "NVIDIA RTX PRO 4500 Blackwell",
     "NVIDIA L4",

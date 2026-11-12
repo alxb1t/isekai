@@ -25,6 +25,8 @@ into `photo/` (D17).
     ui        (3) serve the review surface for the library's collections
     compare       write a page of every run's photograph beside its renders
     migrate       copy each run's per-flow description into photo/
+    ink           cut a tattoo's photograph or image into a layer, free and local
+    edit      (5) request an edit of a render from a composite, free and local
 
 **`import` fills a collection, `assign` ticks a flow, `show` inspects a run, `ui`
 serves a surface, `compare` writes a page, `migrate` copies a layout, and every
@@ -58,20 +60,23 @@ from functools import cache
 from pathlib import Path
 from typing import TextIO, TypeVar, cast
 
-from isekai.boundary.comfy import TransportFailure
+from isekai.boundary.comfy import TransportFailure, read_runtime
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.caption_config import load_caption_config
+from isekai.foundation.edit import load_edit, tracked_edits
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.migrate import migrate
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
+    EDIT_STEM,
     FRAME_NAME,
     PHOTOGRAPH_VERBS,
     RUNS_ROOT,
     Run,
     across,
     assign,
+    edit_at,
     find_run,
     open_run,
     rendered_at,
@@ -82,16 +87,19 @@ from isekai.interface.drafting import (
     draft_from_image,
     refuse_image_drafts,
 )
-from isekai.interface.render import run_session
+from isekai.interface.render import pending_edits, run_session
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
 from isekai.pipeline.caption import caption
+from isekai.pipeline.edit import OVERRIDES, discard_edit, image_of
+from isekai.pipeline.edit import check as check_edit
+from isekai.pipeline.edit import request as request_edit
+from isekai.pipeline.edit import sample as sample_edit
 from isekai.pipeline.generate import (
     STAGE_RENDER,
     Render,
     discard_render,
     prepare,
-    read_runtime,
     render,
     source_seeds,
 )
@@ -115,6 +123,7 @@ from isekai.pipeline.review import cancel as cancel_approval
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
 from isekai.shared.field_map import FieldMap
+from isekai.shared.ink import cut_ink, load_ink_config
 from isekai.shared.vocabulary import Vocabulary
 
 # One line of prose per verb, used for both the subcommand list and its own help,
@@ -141,6 +150,8 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("ui", "serve the app over the library of collections"),
     ("compare", "write a page of each run's photograph beside its renders"),
     ("migrate", "copy each run's per-flow description into photo/"),
+    ("ink", "cut a tattoo photograph or image into a layer to multiply over a render"),
+    ("edit", "request an edit of a render from a composite of it, free and local"),
 )
 
 # What each of the photograph's verbs writes, for its refusal of `--flow`.
@@ -199,6 +210,24 @@ def _session_id(value: str) -> str:
     return value
 
 
+def _depth(value: str) -> float:
+    """Parse a depth: a number in the ink config's range, refused at parse time.
+
+    e.g. "1.6" -> 1.6
+    """
+    config = load_ink_config()
+    try:
+        depth = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a number") from None
+    if not config.depth_min <= depth <= config.depth_max:
+        raise argparse.ArgumentTypeError(
+            f"{value} is outside {config.depth_min} to {config.depth_max}; "
+            "give a depth in that range"
+        )
+    return depth
+
+
 class _Targets(argparse.Action):
     """Split `render`'s positionals into its runs roots and its requests.
 
@@ -248,7 +277,9 @@ def build_parser() -> argparse.ArgumentParser:
             "compare",
             "discard",
             "draft",
+            "edit",
             "import",
+            "ink",
             "migrate",
             "prepare",
             "render",
@@ -459,6 +490,94 @@ def build_parser() -> argparse.ArgumentParser:
         help="take that run's flow out of what renders; repeatable, beside no request",
     )
     made["render"].set_defaults(photos=[])
+
+    made["ink"].add_argument(
+        "image", type=Path, help="the tattoo's photograph or image"
+    )
+    made["ink"].add_argument("out", type=Path, help="the PNG layer to write")
+    made["ink"].add_argument(
+        "--outline",
+        type=Path,
+        default=None,
+        metavar="MASK.png",
+        help="white keeps the ink; the layer's alpha, for a photograph",
+    )
+    made["ink"].add_argument(
+        "--neutral",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="the ink as grey (default with an outline), or in colour",
+    )
+    made["ink"].add_argument(
+        "--depth",
+        type=_depth,
+        default=None,
+        help="the power the layer's Multiply factor is raised to; a fill darkens "
+        "(default 1.6 with an outline, 1.0 without)",
+    )
+    made["ink"].set_defaults(photos=[], runs=RUNS_ROOT)
+
+    # An edit's image is written beside its source, so a request's render path names
+    # the run; `--pending` names cells, and the runs root they live under.
+    made["edit"].add_argument(
+        "edit", nargs="?", help="the edit to request, e.g. tattoo-wai"
+    )
+    made["edit"].add_argument(
+        "render",
+        nargs="?",
+        type=Path,
+        help="the render, <run>/<flow>/outputs/<NNN>/<seed>.png, or an edit's "
+        "image <seed>.edit-<k>.png to chain from",
+    )
+    form = made["edit"].add_mutually_exclusive_group(required=True)
+    form.add_argument(
+        "--composite",
+        type=Path,
+        metavar="COMPOSITE.png",
+        help="the render with the tattoo multiplied on, at the render's size",
+    )
+    form.add_argument(
+        "--pending",
+        nargs="+",
+        metavar="<run-id>/<flow>",
+        help="sample every pending edit of these cells; with no --server, only "
+        "derive and check them",
+    )
+    made["edit"].add_argument(
+        "--runs",
+        type=Path,
+        default=RUNS_ROOT,
+        help=f"the directory --pending's runs live under (default {RUNS_ROOT.name}/)",
+    )
+    made["edit"].add_argument(
+        "--server",
+        default=None,
+        help="the ComfyUI endpoint --pending samples on, reached through the tunnel",
+    )
+    made["edit"].add_argument(
+        "--progress",
+        choices=["json"],
+        default=None,
+        help="print a JSON line per sampled edit; prose goes to stderr",
+    )
+    for dial, meaning in (
+        ("denoise", "how far the pass repaints under the mask"),
+        ("strength", "how firmly the control holds the ink's lines"),
+        ("lines", "how much of the ink is multiplied back after the pass"),
+    ):
+        made["edit"].add_argument(
+            f"--{dial}",
+            type=float,
+            default=None,
+            help=f"{meaning}; for this edit only (default: the edit's own)",
+        )
+    made["edit"].add_argument(
+        "--seed",
+        type=_seed,
+        default=None,
+        help="repeat this sampling seed (default: drawn)",
+    )
+    made["edit"].set_defaults(photos=[])
 
     # Mutually exclusive at parse time, so asking for both is refused before any
     # work begins rather than discovered on a rented machine. One verb explores
@@ -705,19 +824,27 @@ def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
 
 
 def _discard(image: Path, wired: Wiring) -> int:
-    """Delete one render and its thumbnails, printing each path deleted.
+    """Delete one render or edit, printing each path deleted.
 
-    Refused, deleting nothing, while a render session holds the image's
+    A path that is an edit's image deletes that edit and every edit made from it,
+    and nothing else. Any other path is a render's: it goes with its edits and its
+    thumbnails. Refused, deleting nothing, while a render session holds the
     collection, as the app's delete is. The thumbnails go while the image still
     names them. A render that was its approval's last takes that approval with
     it, through `withdraw`; the run's files print before the thumbnails. The
     library is imported here for `_ui`'s reason: it is off `python -m isekai`'s
     import graph.
     """
+    edited = EDIT_STEM.match(image.stem) is not None
     try:
-        run, flow, version, _ = rendered_at(image)
-    except Refusal as unrendered:
-        print(f"refused: {image}: {unrendered}", file=wired.err)
+        run, flow, version = (edit_at if edited else rendered_at)(image)[:3]
+    except Refusal as unnamed:
+        print(
+            f"refused: {image}: {unnamed}; a render's path is "
+            "<run>/<flow>/outputs/<NNN>/<seed>.png and an edit's is "
+            "<run>/<flow>/outputs/<NNN>/<seed>.edit-<k>.png",
+            file=wired.err,
+        )
         return 1
     from isekai.interface.ui import drop_thumbnails, render_running
 
@@ -728,6 +855,13 @@ def _discard(image: Path, wired: Wiring) -> int:
             file=wired.err,
         )
         return 1
+    if edited:
+        deleted = discard_edit(image)
+        for path in deleted:
+            print(
+                f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out
+            )
+        return 0
     thumbnails = drop_thumbnails(run, image)
     deleted = [*discard_render(image), *withdraw(run, flow, version)]
     for path in deleted:
@@ -737,6 +871,106 @@ def _discard(image: Path, wired: Wiring) -> int:
             f"discard deleted {path.relative_to(run.path.parents[2])}", file=wired.out
         )
     return 0
+
+
+def _ink(args: argparse.Namespace, wired: Wiring) -> int:
+    """Write the ink layer of an image, printing its path."""
+    cut_ink(args.image, args.out, args.outline, args.neutral, args.depth)
+    print(f"ink wrote {args.out}", file=wired.out)
+    return 0
+
+
+def _edit(args: argparse.Namespace, wired: Wiring) -> int:
+    """Request an edit of a render, printing the files written and how to run it.
+
+    Free and local: no endpoint is used and no session opens. An edit this build
+    does not track is refused, naming the ones it does. With `--pending` it runs
+    the pending edits of cells instead, `_pending`'s form.
+    """
+    if args.pending is not None:
+        if args.edit is not None or args.render is not None:
+            raise Refusal(
+                "--pending takes cells alone; drop the edit and the render from the "
+                "command, or drop --pending to request an edit"
+            )
+        return _pending(args, wired)
+    if args.edit is None or args.render is None:
+        raise Refusal(
+            "a request names its edit and its render: "
+            "`python -m isekai edit <edit> <render> --composite <png>`"
+        )
+    tracked = tracked_edits()
+    if args.edit not in tracked:
+        raise Refusal(
+            f"{args.edit}: not an edit this build tracks; the edits it carries are "
+            f"{', '.join(tracked) or '(none)'}"
+        )
+    asked = request_edit(
+        load_edit(args.edit),
+        args.render,
+        args.composite,
+        overrides={name: getattr(args, name) for name in OVERRIDES},
+        seed=args.seed,
+        rng=wired.rng,
+    )
+    runs = asked.record.parents[4]
+    for path in (asked.composite, asked.record):
+        print(f"edit wrote {path.relative_to(runs)}", file=wired.out)
+    print(
+        f"edit pending: run `python -m isekai render {shlex.quote(str(runs))}` "
+        "to sample it on a rented GPU",
+        file=wired.out,
+    )
+    return 0
+
+
+def _pending(args: argparse.Namespace, wired: Wiring) -> int:
+    """Check every pending edit of the cells, then sample them when there is a client.
+
+    Without a client each edit is derived and checked from its files and nothing is
+    rented, so a stale request refuses before a pod is. With one the edits run in
+    chain order, one refusal not costing the next its turn, and each prints a line.
+    e.g. r1/f holding 42.edit-1.json with no image -> "r1: edited f/42.edit-1.png"
+    """
+    cells = _cells(args.pending, wired)
+    reporter = _Reporter(
+        wired.out, wired.err, getattr(args, "progress", None) == "json"
+    )
+    found: list[tuple[Run, str, Path]] = []
+    for run_id, flow in cells:
+        run = Run(run_id, wired.runs_root / run_id)
+        found += [(run, flow, record) for record in pending_edits(run, flow)]
+    waiting = {image_of(record) for _, _, record in found}
+    refused = across(
+        found, lambda one: check_edit(one[2], waiting=waiting - {image_of(one[2])})
+    )
+    client = wired.client
+    if client is None or refused:
+        for message in refused:
+            print(f"refused: {message}", file=wired.err)
+        if not refused:
+            for run, flow, record in found:
+                reporter.say(f"{run.id}: {flow}/{record.name} is ready to sample")
+        return 1 if refused else 0
+    ran_on = _once(lambda: read_runtime(client))
+
+    def sample_one(one: tuple[Run, str, Path]) -> None:
+        run, flow, record = one
+        image = sample_edit(client, record, runtime=ran_on)
+        reporter.say(f"{run.id}: edited {flow}/{image.name}")
+        reporter.item(
+            run.id,
+            flow,
+            "edit",
+            "done",
+            digest=run.digest,
+            version=int(image.parent.name),
+            file=image.name,
+        )
+
+    for message in (failed := across(found, sample_one)):
+        print(f"refused: {message}", file=wired.err)
+    return 1 if failed else 0
 
 
 def _run_for(identifier: str, wired: Wiring) -> Run:
@@ -830,6 +1064,10 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             return _draft(args.target, args.images, wired)
         if verb == "discard":
             return _discard(args.image, wired)
+        if verb == "ink":
+            return _ink(args, wired)
+        if verb == "edit":
+            return _edit(args, wired)
         if verb in PHOTOGRAPH_VERBS and args.flows:
             raise Refusal(_named_a_flow(args, targets))
         flows = _flows_for(args, wired)

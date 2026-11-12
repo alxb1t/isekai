@@ -73,7 +73,29 @@ outputs/001/7.png ─▶ draft ─▶ review/003.draft.json   {count 1, seeds [7
 **`isekai discard <image.png>`** deletes one render: its image, its record, its group when that leaves it empty or
 holding failure records alone, and its thumbnails in the library's cache. A delete that empties an approval's group
 deletes that approval, older ones with no render and the newest's waiting draft; a flow left with no approval keeps
-only its assignment (D50). One that leaves images renders what it lacks at the next session.
+only its assignment (D50). One that leaves images renders what it lacks at the next session. It takes every edit of
+the render's seed with it, and given an edit's image it deletes that edit and every edit chained from it.
+
+**A tattoo is added by an edit, after the flow** ([D51](decisions.md#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)).
+The operator places it by hand on a finished render; the verbs below cut it, request the bake and run it:
+
+```
+  photo ─ isekai ink ─▶ ink.png ─ Krita ─▶ composite.png      free, local, the photograph stays on the machine
+  render.png + composite.png ─ isekai edit ─▶ outputs/NNN/<seed>.edit-<k>.{composite.png,json}   pending
+  isekai render ─ the session ─▶ crop, mask and control to the pod ─▶ <seed>.edit-<k>.png        the one paid step
+```
+
+**`isekai ink <image> <out>`** cuts a tattoo's photograph or image into a layer to multiply over a render. It reads
+`config/ink.json`; `--outline` keeps the ink inside a mask and makes it the layer's alpha, `--neutral` and `--depth`
+override what the input implies. **`isekai edit <edit> <render> --composite <png>`** derives the ink, the mask, the
+crop and the control from the render and its composite, refuses what a Multiply composite cannot be, and writes the
+composite and a pending record into the render's group, `<seed>.edit-<k>.*`; the edit is `edits/<id>/`, and its
+dials, `--denoise`, `--strength` and `--lines`, may be overridden for one request. Naming an edit's
+`<seed>.edit-<k>.png` as the render chains the next edit. **`isekai render <runs>…`**, with no request, then runs each named collection's pending
+edits on its pod, after its renders and less each `--without`; every cell is derived and checked first, free, so a
+source that changed since the request refuses before anything is rented. The pod receives the crop, its mask and its
+control alone; the stitch and the lines are multiplied back here. `show` reads an edit's files, and no render
+listing counts an edit.
 
 Beside them, `show` reads a run's artifacts, versions, producers and failure records,
 names what below `photo/` or a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a collection's runs the
@@ -205,7 +227,8 @@ disagree with itself.
 | Register | the prompts, **assembled per run** from an approved sheet | the manifest's prefix, trailer and negative |
 
 **Composition comes from noise, and that is settled.** Taking the photograph out of the latent is what
-removed the blur; img2img is a closed avenue here.
+removed the blur; img2img is a closed avenue for a flow. An edit encodes a render, never the photograph, so
+composition still comes from noise ([D51](decisions.md#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)).
 
 **Register is the one a human touches.** The manifest carries a prefix, a trailer and the negative;
 the subject's own canonical tags come from the sheet a human corrected. That correction is the single

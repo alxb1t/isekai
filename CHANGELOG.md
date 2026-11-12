@@ -10,6 +10,31 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.79.0] - 2026-11-12
+
+Gate: local 0m37s · CI not read under mf-ship · 0.78.1: local 0m32s · CI not read under mf-ship
+
+- An edit is one flat directory, `edits/tattoo-wai/`, its `edit.json` and `graph.json` loaded by
+  `isekai/foundation/edit.py` and pinned by digest in `EDIT_PINNED`; `tattoo-wai` is new, at digest
+  `fcf0c974352632061e46e97e534ee83b0ca6cb21a25e7ff01857c7682b719348` (0119 D1, D2).
+- `isekai ink <image> <out>` cuts a tattoo photograph or image into a Multiply layer, free and local: with `--outline`
+  grey at depth 1.6, without it in colour at depth 1.0, `--neutral`/`--no-neutral` and `--depth` 1.0 to 2.0 overriding
+  (0119 D3).
+- `isekai edit <edit> <render> --composite <png>` requests an edit, free and local: it derives the ink, mask, control
+  and crop from the composite, refuses what no Multiply could make, and writes the composite and a pending record
+  beside the render (0119 D4, D5).
+- `isekai render` runs every pending edit in its pod after the renders, quoted at `per_edit_s` and checked free before
+  anything is rented; `isekai edit --pending <run-id>/<flow>…` samples them on `--server` (0119 D6, D7).
+- `isekai discard` takes an edit's path, and a render's deletion takes its edits; `isekai show` reads an edit's files
+  and no listing counts an edit as a render (0119 D8, D9).
+- The pod image is re-pinned to `v0.79-rc1`, `sha256:79306642…26c6c2f`, which carries the promax ControlNet the edit
+  loads; WAI is looked up on Civitai by its new file name, its digest unchanged, and a mirror that answers 401 is
+  dropped (0119 D10).
+- D51 records the edit's directory, and D50, D36, D29 and D14 are amended; `docs/edit-tattoo.md` is the Krita-first
+  guide, and the data flow and the module READMEs name `ink`, `edit`, `tattoo.py` and `prompt.py` (0119 D11).
+- `isekai ink` refuses a tight outline whose ink falls short of the bare skin beside it in any one colour channel, so
+  a fill cannot become its own white point and wipe the tattoo out (0119 D15).
+
 ## [0.78.1] - 2026-11-12
 
 Gate: local 0m32s · CI not read under mf-ship · 0.78.0: local 0m36s · CI not read under mf-ship

@@ -32,5 +32,6 @@ character is drawn from a corrected sheet alone (`conjure`). Self-hosted, on ope
 | [modules](modules.md) | the layers, and which module imports which |
 | [data-flow](data-flow.md) | the verbs, the stages, the run directory |
 | [pins](pins.md) | what each pin buys, where it is declared, and how it is moved |
+| [edit-tattoo](edit-tattoo.md) | how a tattoo is placed by hand and baked into a render |
 
 Evaluation, a separate sub-system, is not covered here yet.

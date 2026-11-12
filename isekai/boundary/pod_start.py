@@ -19,7 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 # The hold bills while it holds, so it is bounded: 900 s is ~$0.19 at the 4090 rate,
-# inside the ~$0.30 per-session ceiling.
+# inside the session's limit, its quote's.
 HOLD_SECONDS = 900
 
 # A floor on total size, never on free space: it proves which disk this is (D27).
@@ -146,8 +146,7 @@ def shm_type(pod: Pod) -> str | None:
     """Return the type of the mount the memory directory's device is, or None.
 
     e.g. "36 25 0:5 / /dev/shm rw - tmpfs tmpfs rw" on device 0:5 -> "tmpfs". The
-    device, not the mount point's text, says which filesystem is under the directory;
-    the last line wins, as a later mount shadows an earlier one.
+    device, not the mount point's text, says which filesystem is under the directory.
     """
     try:
         lines = pod.mountinfo.read_text().splitlines()
@@ -193,7 +192,7 @@ def prepare_memory(pod: Pod, env: dict[str, str]) -> None:
     env["TMPDIR"] = str(pod.memory / "tmp")
     kind = shm_type(pod)
     try:
-        stats = os.statvfs(pod.shm)
+        stats = os.statvfs(pod.memory)
         free: int | None = stats.f_bavail * stats.f_frsize
         size: int | None = stats.f_blocks * stats.f_frsize
     except OSError:
