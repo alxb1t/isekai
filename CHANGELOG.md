@@ -29,6 +29,9 @@ its new digest.
   nothing (0130 D4).
 - `tests/record/verbs.json` holds each verb's positionals, options and exclusive groups, walked from the parser with no
   help text; a default inside the repository is written relative, and one outside it is refused (0130 D5).
+- `tests/record/routes.json` holds each route of the app that needs no running child: the status of one ordered call over
+  a copy of the pass's library, and the shape of its answer, keys and types with no value; a test fails on a route
+  no call covers and on a status of 500 or more (0130 D6, D7).
 
 ## [0.86.2] - 2026-11-12
 

@@ -7,7 +7,7 @@ Tests alone: the graphs, the run, the verbs, the routes, then the wire. Decision
 - [x] 1 — The graphs · moderate
 - [x] 2 — The run · moderate
 - [x] 3 — The verbs · moderate
-- [ ] 4 — The routes · moderate
+- [x] 4 — The routes · moderate
 - [ ] 5 — The wire · moderate
 
 ## 1 — The graphs
@@ -72,28 +72,28 @@ Tests alone: the graphs, the run, the verbs, the routes, then the wire. Decision
 
 ## 4 — The routes
 
-- [ ] 4.1 In `tests/record.py`, add `shape(value)` per [D6](design.md#d6), and in `tests/test_record.py` `test_a_shape_names_keys_and_types_and_no_value`, over a mapping, an empty list, a list of mappings and each scalar.
+- [x] 4.1 In `tests/record.py`, add `shape(value)` per [D6](design.md#d6), and in `tests/test_record.py` `test_a_shape_names_keys_and_types_and_no_value`, over a mapping, an empty list, a list of mappings and each scalar.
   Verify: `uv run pytest tests/test_record.py -k a_shape_names -q` exits 0.
 
-- [ ] 4.2 In `tests/record.py`, add `Call(method, template, fill, body)`, whose `fill` and `body` take `done` and `seen` per [D7](design.md#d7), `CHILD_ROUTES` as the table there, `served(done)` copying the pass's library under its directory and building `create_app` of `isekai/interface/ui/app.py` over the copy as `_client` of `tests/test_ui_api.py` does, on the wiring of `tests/e2e/wiring.py` and a bundle stand-in, and `answer(client, call)`, returning the status and the `shape` of a JSON answer or the `media_type` of another.
+- [x] 4.2 In `tests/record.py`, add `Call(method, template, fill, body)`, whose `fill` and `body` take `done` and `seen` per [D7](design.md#d7), `CHILD_ROUTES` as the table there, `served(done)` copying the pass's library under its directory and building `create_app` of `isekai/interface/ui/app.py` over the copy as `_client` of `tests/test_ui_api.py` does, on the wiring of `tests/e2e/wiring.py` and a bundle stand-in, and `answer(client, call)`, returning the status and the `shape` of a JSON answer or the `media_type` of another.
   Verify: `grep -n -F "CHILD_ROUTES" tests/record.py` prints the table.
 
-- [ ] 4.3 In `tests/record.py`, add `CALLS` and a call for every GET route of `create_app` that is not in `CHILD_ROUTES` and not a tattoo's, `Call("GET", "/api/library")` first: the hub, the tags and the fields, the review with its photograph and its source, a render with its image, its thumbnail, its comparisons and its edits, a source with its thumbnail, a collection's render dialog, an unknown `/api/` path and the page.
+- [x] 4.3 In `tests/record.py`, add `CALLS` and a call for every GET route of `create_app` that is not in `CHILD_ROUTES` and not a tattoo's, `Call("GET", "/api/library")` first: the hub, the tags and the fields, the review with its photograph and its source, a render with its image, its thumbnail, its comparisons and its edits, a source with its thumbnail, a collection's render dialog, an unknown `/api/` path and the page.
   Verify: `grep -n -F 'Call("GET", "/api/library"' tests/record.py` prints the call.
 
-- [ ] 4.4 In `CALLS`, add a call for every POST and PUT route of the library's runs not in `CHILD_ROUTES`, each in the state the calls above left: assign, draft, a draft's update, approval, cancel and discard; the placement's proposal; the render's quote; the billing check, `Call("POST", "/api/billing/check")`; and Stop, which refuses with nothing running.
+- [x] 4.4 In `CALLS`, add a call for every POST and PUT route of the library's runs not in `CHILD_ROUTES`, each in the state the calls above left: assign, draft, a draft's update, approval, cancel and discard; the placement's proposal; the render's quote; the billing check, `Call("POST", "/api/billing/check")`; and Stop, which refuses with nothing running.
   Verify: `grep -n -F 'Call("POST", "/api/billing/check"' tests/record.py` prints the call.
 
-- [ ] 4.5 In `CALLS`, add the calls that use a staging, `Call("POST", "/api/staging")` first, each consuming a staging of its own: an upload polled until its `GET` answers 200 and its commit; a tattoo's creation, then the tattoo's GET routes, its outline, stage-1 pairs, ink, preview and bake.
+- [x] 4.5 In `CALLS`, add the calls that use a staging, `Call("POST", "/api/staging")` first, each consuming a staging of its own: an upload polled until its `GET` answers 200 and its commit; a tattoo's creation, then the tattoo's GET routes, its outline, stage-1 pairs, ink, preview and bake.
   Verify: `grep -n -F 'Call("POST", "/api/staging"' tests/record.py` prints the call.
 
-- [ ] 4.6 In `CALLS`, add a call for every DELETE route last: a render, a tattoo (`Call("DELETE", "/api/tattoos/…")`), and, from a staging of their own and a poll of the file's `GET`, a staged file and the staging.
+- [x] 4.6 In `CALLS`, add a call for every DELETE route last: a render, a tattoo (`Call("DELETE", "/api/tattoos/…")`), and, from a staging of their own and a poll of the file's `GET`, a staged file and the staging.
   Verify: `grep -n -F 'Call("DELETE", "/api/tattoos/' tests/record.py` prints the call.
 
-- [ ] 4.7 In `tests/record.py`, add `answers(done)`, running `CALLS` in order and returning each `"<METHOD> <template>"` with its answer, and register it as `FILES["routes"]`. In `tests/test_record.py`, add `test_every_route_of_the_app_is_recorded_or_left_to_a_child`, over the routes of `app.routes` that answer a method, its twin `test_the_route_check_catches_a_route_no_call_covers` over a small app, and `test_no_route_answers_a_valid_call_with_a_server_error`. **HALT CHECK** A recorded status of 500 or more is a product defect a patch may not fix: edit nothing else and stop.
+- [x] 4.7 In `tests/record.py`, add `answers(done)`, running `CALLS` in order and returning each `"<METHOD> <template>"` with its answer, and register it as `FILES["routes"]`. In `tests/test_record.py`, add `test_every_route_of_the_app_is_recorded_or_left_to_a_child`, over the routes of `app.routes` that answer a method, its twin `test_the_route_check_catches_a_route_no_call_covers` over a small app, and `test_no_route_answers_a_valid_call_with_a_server_error`. **HALT CHECK** A recorded status of 500 or more is a product defect a patch may not fix: edit nothing else and stop.
   Verify: `uv run pytest tests/test_record.py -k "every_route or route_check or server_error" -q` exits 0.
 
-- [ ] 4.8 Run `uv run python -m tests.record`, which writes `tests/record/routes.json`, and read each shape: a key that varies from run to run is a halt, never a normalisation of the product. The file holds `"GET /api/library"`.
+- [x] 4.8 Run `uv run python -m tests.record`, which writes `tests/record/routes.json`, and read each shape: a key that varies from run to run is a halt, never a normalisation of the product. The file holds `"GET /api/library"`.
   Verify: `uv run pytest tests/test_record.py tests/test_ui_api.py -q` exits 0.
 
 ## 5 — The wire

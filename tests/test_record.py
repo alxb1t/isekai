@@ -5,17 +5,21 @@ files again, and the diff shows what moved.
 """
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
 import pytest
+from fastapi import FastAPI
 from PIL import Image
 
 from isekai.foundation.artifacts import EDIT_FILE, RENDER_FILE, read
 from isekai.foundation.flow import graph_digest
 from isekai.foundation.run import Run
 from tests.record import (
+    CALLS,
+    CHILD_ROUTES,
     FILES,
     FIRST_FLOW,
     FLOWS,
@@ -31,6 +35,9 @@ from tests.record import (
     offline,
     recorded,
     relative,
+    served,
+    shape,
+    uncovered,
     walk,
 )
 
@@ -234,3 +241,66 @@ def test_a_default_inside_the_repository_is_recorded_relative_and_outside_refuse
     verb.add_argument("--elsewhere", type=Path, default=tmp_path)
     with pytest.raises(ValueError, match="outside the repository"):
         walk(parser)
+
+
+@pytest.mark.spec_exempt("structural: a shape names keys and types and no value")
+def test_a_shape_names_keys_and_types_and_no_value() -> None:
+    body = {
+        "name": "ada",
+        "count": 3,
+        "ratio": 0.5,
+        "ready": True,
+        "gone": None,
+        "none": [],
+        "rows": [{"id": "a", "seeds": ["1"]}, {"id": "b", "seeds": []}],
+        "inner": {"saved": 1.5},
+    }
+
+    assert shape(body) == {
+        "name": "str",
+        "count": "int",
+        "ratio": "float",
+        "ready": "bool",
+        "gone": "null",
+        "none": [],
+        "rows": [{"id": "str", "seeds": ["str"]}],
+        "inner": {"saved": "float"},
+    }
+    assert "ada" not in str(shape(body))
+    assert shape({}) == {}
+
+
+@pytest.mark.spec_exempt(
+    "structural: every route of the app is recorded or left to a child"
+)
+def test_every_route_of_the_app_is_recorded_or_left_to_a_child(done: Done) -> None:
+    with served(done) as client:
+        app = client.app
+        assert isinstance(app, FastAPI)
+        assert uncovered(app) == []
+    assert not CHILD_ROUTES & {call.key for call in CALLS}
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_route_of_the_app_is_recorded_or_left_to_a_child"
+)
+def test_the_route_check_catches_a_route_no_call_covers() -> None:
+    small = FastAPI()
+    small.add_api_route("/api/library", lambda: {}, methods=["GET"])
+    small.add_api_route("/events", lambda: {}, methods=["GET"])
+    assert uncovered(small) == []
+
+    small.add_api_route("/api/new", lambda: {}, methods=["GET"])
+    small.add_api_route("/api/library", lambda: {}, methods=["DELETE"])
+    assert uncovered(small) == ["DELETE /api/library", "GET /api/new"]
+
+
+@pytest.mark.spec_exempt(
+    "structural: no route answers a valid call with a server error"
+)
+def test_no_route_answers_a_valid_call_with_a_server_error(
+    derived: dict[str, str],
+) -> None:
+    held = cast("dict[str, dict[str, Any]]", json.loads(derived["routes"]))
+    assert held["GET /api/library"]["status"] == 200
+    assert [route for route, said in held.items() if said["status"] >= 500] == []
