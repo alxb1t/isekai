@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.80.0] - 2026-11-12
+
+Gate: local 0m40s · CI not read under mf-ship · 0.79.0: local 0m37s · CI not read under mf-ship
+
 - The app's server counts, quotes and serves a bake, the tattoo edit's queued request: the quote and the offer count
   bakes with images, a session of bakes alone starts, and `POST /api/render` carries `bakes` and is refused when the
   quote taken again has another number (0120 D1–D4).

@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: v0.80
 after: [0119-the-tattoo-edit]
 debt: [0108·R3, 0118·R3]
 ---
