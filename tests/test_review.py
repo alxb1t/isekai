@@ -57,7 +57,7 @@ from isekai.pipeline.review import (
 )
 from isekai.shared.field_map import Group
 from isekai.shared.vocabulary import Vocabulary
-from tests.conftest import snapshot
+from tests.conftest import snapshot, tree
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, caption, runs_flag, sheet
 from tests.stages import rendered_image as _image
@@ -2086,9 +2086,13 @@ def test_a_flow_left_with_no_approval_keeps_only_its_assignment(
     approve(run, FLOW, schema, vocabulary)
     prompt_artifact(run, load_flow(FLOW), schema)
     photo = snapshot(run.directory(PHOTO))
+    before = tree(run.path)
 
-    withdraw(run, FLOW, 1)
+    went = withdraw(run, FLOW, 1)
 
+    after = tree(run.path)
+    gone = sorted(str(p.relative_to(run.path.absolute())) for p in went)
+    assert gone == sorted(set(before) - set(after))
     assert list(run.directory(FLOW).iterdir()) == []
     assert snapshot(run.directory(PHOTO)) == photo
 
@@ -2097,9 +2101,13 @@ def test_a_flow_left_with_no_approval_keeps_only_its_assignment(
     review(run, FLOW)
     approve(run, FLOW, schema, vocabulary)
     _image(run, 5, 11)
+    before = tree(run.path)
 
-    withdraw(run, FLOW, 1)
+    went = withdraw(run, FLOW, 1)
 
+    after = tree(run.path)
+    gone = sorted(str(p.relative_to(run.path.absolute())) for p in went)
+    assert gone == sorted(set(before) - set(after))
     assert [path.name for path in run.directory(FLOW).iterdir()] == ["outputs"]
     assert run.directory(FLOW, "outputs", "005").is_dir()
 
@@ -2121,9 +2129,13 @@ def test_a_flows_own_description_goes_where_photo_holds_it(
     tags.parent.mkdir()
     tags.write_text("{}")
     photo = snapshot(run.directory(PHOTO))
+    before = tree(run.path)
 
-    withdraw(run, FLOW, 1)
+    went = withdraw(run, FLOW, 1)
 
+    after = tree(run.path)
+    gone = sorted(str(p.relative_to(run.path.absolute())) for p in went)
+    assert gone == sorted(set(before) - set(after))
     assert [path.name for path in run.directory(FLOW).iterdir()] == ["tags"]
     assert tags.is_file()
     assert snapshot(run.directory(PHOTO)) == photo

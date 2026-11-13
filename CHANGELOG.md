@@ -21,6 +21,8 @@ its new digest.
   outside the repository, and a runs root read with its folders, so a stray empty one fails a second pass (0133 D2).
 - A session's record is read back at every end: a raised flow, a SIGTERM, the limit's note, a failed flow, a done bake,
   a lost create and a failed teardown, so a refactor of `Record` cannot change an outcome unseen (0133 D3).
+- Each delete's returned list is held to what left the tree, in the order `delete_edits` fixes, and the app's delete
+  leaves the tree the CLI's `discard` leaves, so a refactor cannot drop a path unseen (0133 D4).
 
 ## [0.86.5] - 2026-11-13
 
