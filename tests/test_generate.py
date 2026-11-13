@@ -47,7 +47,6 @@ from isekai.foundation.run import (
     PROMPTS,
     Kind,
     Run,
-    across,
     artifact_name,
     attempts,
     open_run,
@@ -257,26 +256,46 @@ def test_a_malformed_approved_sheet_is_caught_before_anything_is_rented(
 
 
 @pytest.mark.spec("image-generation:assembly:bad-sheet-fails-before-the-session")
-def test_one_bad_sheet_does_not_stop_the_other_photographs(
-    tmp_path: Path, flow: Flow, schema: Schema, vocabulary: Vocabulary
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.spec("image-generation:working-resolution:a-refusal-is-per-photograph")
+def test_one_batch_survives_a_bad_sheet_an_unreadable_header_and_a_photograph_past_the_bound(  # noqa: E501 -- the name is the one principles.md cites
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    from isekai.foundation.run import across
+    from isekai.interface.cli import build_parser, dispatch
 
+    # Different name lengths, because `_run` derives the photograph's bytes from
+    # the name's length and identical bytes are the same run by design.
     good = _run(tmp_path, schema, vocabulary, "good")
-    bad = _run(tmp_path, schema, vocabulary, "bad")
-    approved = bad.path / FLOW / "review" / "001.approved.json"
+    damaged = _run(tmp_path, schema, vocabulary, "sheet")
+    approved = damaged.path / FLOW / "review" / "001.approved.json"
     approved.write_text(json.dumps({"schema": {"name": "review", "version": 1}}))
+    header = _run(tmp_path, schema, vocabulary, "header")
+    # A run admits a photograph on its 8-byte magic alone, so a truncated PNG
+    # opens a run cleanly and only the header read ever finds it.
+    header.photo.write_bytes(b"\x89PNG\r\n\x1a\n")
+    wide = _run(tmp_path, schema, vocabulary, "wide", body=jpeg_bytes(5000, 1000))
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, FakeComfyClient(), err)
+    # `nowhere` names no run: the target on which `assemble_one` itself raises.
+    targets = ["nowhere", damaged.id, header.id, wide.id, good.id]
 
-    done: list[Run] = []
+    status = dispatch(
+        build_parser().parse_args(["generate", "--flow", FLOW, *targets]), wired
+    )
 
-    def work(item: Run) -> None:
-        prompt_artifact(item, flow, schema)
-        done.append(item)
-
-    refused = across([good, bad], work)
-
-    assert done == [good]
-    assert len(refused) == 1 and bad.id in refused[0]
+    lines = [line for line in err.getvalue().splitlines() if "refused:" in line]
+    assert status == 1
+    assert len(lines) == 4
+    assert sum("neither a photograph on disk nor a run" in line for line in lines) == 1
+    assert sum(damaged.id in line for line in lines) == 1
+    assert sum("re-export the photograph" in line for line in lines) == 1
+    (past,) = [line for line in lines if "5120" in line]
+    assert "1024" in past and str(MAX_TARGET_LONG_SIDE) in past
+    # The refusal belongs to the photograph past the bound, not to the run beside it.
+    assert wide.id in past
+    assert good.id not in past
+    assert (good.directory(FLOW, PROMPTS) / artifact_name(1)).is_file()
+    assert list(header.directory(FLOW, PROMPTS).glob("001.error.1.permanent.json"))
 
 
 # --- only an approved sheet ---------------------------------------------------
@@ -821,34 +840,6 @@ def test_an_approved_flow_still_needs_no_flag_to_be_selected(
     # "a run renders everything it has been approved for" rule is untouched.
     assembled, refused = prepare(run, {FLOW: flow})
     assert list(assembled) == [FLOW] and refused == []
-
-
-@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
-def test_one_unreadable_header_does_not_cost_the_batch_its_turn(
-    tmp_path: Path, flow: Flow, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    # Different name lengths, because `_run` derives the photograph's bytes from
-    # the name's length and identical bytes are the same run by design.
-    bad = _run(tmp_path, schema, vocabulary, "bella")
-    good = _run(tmp_path, schema, vocabulary, "ada")
-    # A run admits a photograph on its 8-byte magic alone, so a truncated PNG
-    # opens a run cleanly and only the header read ever finds it.
-    bad.photo.write_bytes(b"\x89PNG\r\n\x1a\n")
-
-    # `_generate`'s own composition: `prepare` returns one run's per-flow
-    # refusals rather than raising at the first, so the batch's collection is
-    # `across`'s list plus theirs.
-    broken: list[str] = []
-
-    def assemble_one(one: Run) -> None:
-        broken.extend(prepare(one, {FLOW: flow})[1])
-
-    refused = across([bad, good], assemble_one) + broken
-
-    assert len(refused) == 1
-    assert "re-export the photograph" in refused[0]
-    assert (good.directory(FLOW, PROMPTS) / artifact_name(1)).is_file()
-    assert list(bad.directory(FLOW, PROMPTS).glob("001.error.1.permanent.json"))
 
 
 @pytest.mark.spec("image-generation:assembly:a-bad-sheet-is-per-flow")
@@ -1610,27 +1601,6 @@ def test_a_photograph_at_exactly_the_bound_is_still_rendered(tmp_path: Path) -> 
     photo = _photo(tmp_path, "wide.jpg", 4096, 1024)
 
     assert photo_resolution(photo) == (MAX_TARGET_LONG_SIDE, 1024)
-
-
-@pytest.mark.spec("image-generation:working-resolution:a-refusal-is-per-photograph")
-def test_one_photograph_past_the_bound_does_not_cost_the_batch_its_session(
-    tmp_path: Path,
-) -> None:
-    photos = [
-        _photo(tmp_path, "first.jpg", 1600, 1200),
-        _photo(tmp_path, "middle.jpg", 5000, 1000),
-        _photo(tmp_path, "last.jpg", 1200, 1600),
-    ]
-    resolved: list[tuple[int, int]] = []
-
-    refusals = across(photos, lambda photo: resolved.append(photo_resolution(photo)))
-
-    # The other two are still rendered, and the refusal names the photograph it
-    # belongs to rather than the batch.
-    assert resolved == [(1344, 1024), (1024, 1344)]
-    assert len(refusals) == 1
-    assert "middle.jpg" in refusals[0]
-    assert "first.jpg" not in refusals[0] and "last.jpg" not in refusals[0]
 
 
 @pytest.mark.spec("image-generation:seeds:seeds-are-drawn-at-full-64-bit-width")

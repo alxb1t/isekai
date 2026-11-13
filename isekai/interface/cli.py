@@ -58,14 +58,14 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
-from typing import TextIO, TypeVar, cast
+from typing import NoReturn, TextIO, TypeVar, cast
 
 from isekai.boundary.comfy import TransportFailure, read_runtime
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.edit import load_edit, tracked_edits
-from isekai.foundation.flow import Flow, load_flow, tracked_flows
+from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow, tracked_flows
 from isekai.foundation.migrate import migrate
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -252,13 +252,26 @@ class _Targets(argparse.Action):
             parser.error("name at least one collection's runs/")
 
 
+class _Verb(argparse.ArgumentParser):
+    """A verb's parser, whose refusal of a missing `--flow` lists the tracked flows."""
+
+    def error(self, message: str) -> NoReturn:
+        """Exit 2 with `message`, naming the tracked flows when it names `--flow`."""
+        if "--flow" in message:
+            flows = ", ".join(tracked_flows(FLOWS_DIR)) or "(none)"
+            message += f"; the flows this build tracks are {flows}"
+        super().error(message)
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Return the pipeline's parser, with one subparser per verb."""
     parser = argparse.ArgumentParser(
         prog="python -m isekai",
         description="The staged pipeline: photograph -> tags -> sheet -> render.",
     )
-    verbs = parser.add_subparsers(dest="verb", metavar="verb", required=True)
+    verbs = parser.add_subparsers(
+        dest="verb", metavar="verb", required=True, parser_class=_Verb
+    )
     made = {
         name: verbs.add_parser(name, help=summary, description=summary)
         for name, summary in VERBS

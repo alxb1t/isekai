@@ -147,6 +147,13 @@ receive them, the endpoint would never seem to answer, and the session would bil
 - **WHEN** `isekai render` asks the endpoint for its report with `http_proxy` exported
 - **THEN** the request goes to the loopback address, through no proxy
 
+#### Scenario: a port that already answers is refused before the session
+- **Key:** `pod-image:session:a-busy-port-is-refused-before-the-session`
+- **Layers:** unit
+- **WHEN** something on this machine already answers on the port the tunnel listens on
+- **THEN** `isekai render` is refused before any pod is rented
+- **AND** the refusal names the command that shows what holds the port
+
 ### Requirement: A pod makes its own host key and prints its fingerprint
 
 The image SHALL carry no SSH host key, and SHALL boot through gpunit's boot script, added at a pinned tag with its

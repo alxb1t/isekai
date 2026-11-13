@@ -45,6 +45,37 @@ def _runs(monkeypatch: pytest.MonkeyPatch, script: str, *args: str) -> None:
     monkeypatch.setattr(gpu.subprocess, "Popen", started)
 
 
+class _Answered:
+    """A connection that opened: `create_connection`'s context manager."""
+
+    def __enter__(self) -> "_Answered":
+        return self
+
+    def __exit__(self, *raised: object) -> None:
+        return None
+
+
+@pytest.mark.spec("pod-image:session:a-busy-port-is-refused-before-the-session")
+def test_answers_is_true_on_a_connection_to_loopback_and_false_on_a_refusal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dialled: list[tuple[str, int]] = []
+
+    def connect(address: tuple[str, int], timeout: float) -> _Answered:
+        dialled.append(address)
+        return _Answered()
+
+    monkeypatch.setattr(gpu.socket, "create_connection", connect)
+    assert gpu.answers(4321) is True
+    assert dialled == [("127.0.0.1", 4321)]
+
+    def refuse(address: tuple[str, int], timeout: float) -> _Answered:
+        raise ConnectionRefusedError
+
+    monkeypatch.setattr(gpu.socket, "create_connection", refuse)
+    assert gpu.answers(4321) is False
+
+
 @pytest.mark.spec_exempt("structural: gpunit's lines reach say as they come")
 def test_run_gpunit_says_a_line_before_the_verb_exits(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -145,7 +145,7 @@ in the run after the run's id.
   failure inside the output. A retry that cannot succeed is waste, and on the paid stage it is spend. A
   fix that parses and does nothing sends the operator in a circle.
 - **Held by:** `tests/test_run_directory.py::test_one_photographs_failure_does_not_cost_the_others_their_turn`,
-  `tests/test_generate.py::test_one_photograph_past_the_bound_does_not_cost_the_batch_its_session`,
+  `tests/test_generate.py::test_one_batch_survives_a_bad_sheet_an_unreadable_header_and_a_photograph_past_the_bound`,
   `tests/test_run_directory.py::test_a_permanent_failure_is_refused_without_attempting_the_work`,
   `tests/test_run_directory.py::test_a_stage_at_its_budget_refuses_naming_the_photograph_and_the_record`,
   `tests/test_run_directory.py::test_a_stage_below_its_budget_is_allowed_to_attempt_again`,
