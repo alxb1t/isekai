@@ -4,6 +4,7 @@ import pytest
 from playwright.sync_api import Page, Route, expect
 
 from tests.e2e.conftest import CHOSEN, CONJURE, Served
+from tests.e2e.guard import Refused
 
 
 def _approve(page: Page) -> None:
@@ -36,7 +37,7 @@ def test_approve_stays_on_the_sheet(page: Page, served: Served) -> None:
 
 @pytest.mark.spec("ui:review:a-failure-after-approval-is-shown")
 def test_a_failure_reading_the_next_state_shows_in_the_approve_bar(
-    page: Page, served: Served
+    page: Page, served: Served, refusals: list[Refused]
 ) -> None:
     (only,) = served.queues["queue-fails"]
     page.goto(served.review(only, "queue-fails"))
@@ -45,6 +46,7 @@ def test_a_failure_reading_the_next_state_shows_in_the_approve_bar(
     def refuse(route: Route) -> None:
         route.fulfill(status=409, json={"refusal": "the hub could not be read"})
 
+    refusals.append(Refused(409, "/api/c/queue-fails/hub"))
     page.route("**/api/c/queue-fails/hub", refuse)
     _approve(page)
     expect(page.locator(".approve-bar__refusal")).to_contain_text(

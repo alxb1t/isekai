@@ -33,6 +33,9 @@ its new digest.
   approved sheet once the read lands, and `readsAgain` answers `now`, `later` or `no` (0140 D5).
 - `tests/mutants.json` gains the mutants of the sheet's saves, the key dispatch, the chooser, the cancel and
   `ui/src/api.ts`, each a vitest entry, and `make mutants` replays them with no survivor (0140 D6).
+- A browser test fails on a page error, a console error that is no failed load, a 5xx and a 4xx it did not declare, and
+  on a declared refusal nothing answered; the rules are held by `tests/test_e2e_guard.py` without a browser, and the
+  hub's stubbed 409 and the unknown collection's are declared (0141 D1, D2, D3).
 
 ## [0.86.12] - 2026-11-13
 

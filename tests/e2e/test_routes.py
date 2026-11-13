@@ -4,6 +4,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from tests.e2e.conftest import SHOWN, Served
+from tests.e2e.guard import Refused
 
 
 @pytest.mark.spec("ui:routes:a-reload-lands-on-the-same-screen")
@@ -12,7 +13,7 @@ from tests.e2e.conftest import SHOWN, Served
 @pytest.mark.spec("ui:themes:a-chosen-theme-survives-a-reload")
 @pytest.mark.spec("ui:batch-folder:an-edge-row-shows-the-head")
 def test_a_reload_lands_on_the_same_hub_and_the_same_review(
-    page: Page, served: Served
+    page: Page, served: Served, refusals: list[Refused]
 ) -> None:
     page.goto(served.url)
     expect(page.locator(".library__row[data-collection]").first).to_be_focused()
@@ -67,6 +68,7 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     expect(page).to_have_url(empty)
 
     # An unknown collection is refused, naming it, with the way back.
+    refusals.append(Refused(409, "/api/c/no-such-collection/"))
     page.goto(f"{served.url}/c/no-such-collection/hub")
     expect(page.locator(".refusal__reason")).to_contain_text("no-such-collection")
     page.get_by_role("link", name="Back to the library").click()

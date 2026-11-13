@@ -16,8 +16,10 @@ import urllib.request
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytest
+from playwright.sync_api import BrowserContext
 
 from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import load_flow, manifest_digest
@@ -25,6 +27,7 @@ from isekai.foundation.run import Run, open_run
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare
 from isekai.pipeline.review import approve, review, revise, save_draft
+from tests.e2e.guard import Refused, Seen, faults
 from tests.e2e.wiring import VOCABULARY
 from tests.fakes import FakeComfyClient
 from tests.images import photo_jpeg
@@ -286,3 +289,30 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     finally:
         server.terminate()
         server.wait(timeout=10)
+
+
+@pytest.fixture
+def refusals() -> list[Refused]:
+    """Return the 4xx the test expects: it appends a `Refused` for each."""
+    return []
+
+
+@pytest.fixture
+def context(
+    context: BrowserContext, refusals: list[Refused]
+) -> Iterator[BrowserContext]:
+    """Fail the test on what its pages log, as `guard.faults` reads it."""
+    seen = Seen()
+    context.on("weberror", lambda web: seen.errors.append(web.error.message))
+    context.on(
+        "console", lambda message: seen.consoles.append((message.type, message.text))
+    )
+    context.on(
+        "response",
+        lambda response: seen.responses.append(
+            (response.status, urlsplit(response.url).path)
+        ),
+    )
+    yield context
+    found = faults(seen, refusals)
+    assert not found, "the page misbehaved:\n" + "\n".join(found)

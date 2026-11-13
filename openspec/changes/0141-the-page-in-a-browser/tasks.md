@@ -4,31 +4,31 @@ Phases that guard the browser tests against a page that logs an error, press the
 
 ## Progress
 
-- [ ] 1 — The guard · moderate
+- [x] 1 — The guard · moderate
 - [ ] 2 — The keys in a browser · moderate
 - [ ] 3 — Save and approve · moderate
 
 ## 1 — The guard
 
-- [ ] 1.1 **HALT CHECK** A refusal is answered with `REFUSED = 409`, as [D3](design.md#d3) reads it for the declarations; if the line reads otherwise, the plan is wrong.
+- [x] 1.1 **HALT CHECK** A refusal is answered with `REFUSED = 409`, as [D3](design.md#d3) reads it for the declarations; if the line reads otherwise, the plan is wrong.
   Verify: `git grep -c -h -F 'REFUSED = 409' isekai/interface/ui/app.py` prints `1`.
-- [ ] 1.2 Write `tests/e2e/guard.py` as [D2](design.md#d2) gives it, with a one-line module docstring above and the imports `Sequence` from `collections.abc` and `dataclass` and `field` from `dataclasses`.
+- [x] 1.2 Write `tests/e2e/guard.py` as [D2](design.md#d2) gives it, with a one-line module docstring above and the imports `Sequence` from `collections.abc` and `dataclass` and `field` from `dataclasses`.
   Verify: `grep -c -F 'def faults(' tests/e2e/guard.py` prints `1`.
-- [ ] 1.3 In `tests/e2e/conftest.py` import `BrowserContext` from `playwright.sync_api`, `urlsplit` from `urllib.parse`, and `Refused`, `Seen` and `faults` from `tests.e2e.guard`; after `served` add the fixtures `refusals` and `context` exactly as [D1](design.md#d1) gives them.
+- [x] 1.3 In `tests/e2e/conftest.py` import `BrowserContext` from `playwright.sync_api`, `urlsplit` from `urllib.parse`, and `Refused`, `Seen` and `faults` from `tests.e2e.guard`; after `served` add the fixtures `refusals` and `context` exactly as [D1](design.md#d1) gives them.
   Verify: `git grep -c -h -F 'def context(' tests/e2e/conftest.py` prints `1`.
-- [ ] 1.4 In `tests/e2e/test_queue.py` import `Refused` from `tests.e2e.guard`, give `test_a_failure_reading_the_next_state_shows_in_the_approve_bar` the parameter `refusals: list[Refused]`, and before its `page.route(` call append `Refused(409, "/api/c/queue-fails/hub")` to it.
+- [x] 1.4 In `tests/e2e/test_queue.py` import `Refused` from `tests.e2e.guard`, give `test_a_failure_reading_the_next_state_shows_in_the_approve_bar` the parameter `refusals: list[Refused]`, and before its `page.route(` call append `Refused(409, "/api/c/queue-fails/hub")` to it.
   Verify: `git grep -c -h -F 'Refused(409, "/api/c/queue-fails/hub")' tests/e2e/test_queue.py` prints `1`.
-- [ ] 1.5 In `tests/e2e/test_routes.py` import `Refused` from `tests.e2e.guard`, give `test_a_reload_lands_on_the_same_hub_and_the_same_review` the parameter `refusals: list[Refused]`, and before the `page.goto` of `no-such-collection` append `Refused(409, "/api/c/no-such-collection/")` to it.
+- [x] 1.5 In `tests/e2e/test_routes.py` import `Refused` from `tests.e2e.guard`, give `test_a_reload_lands_on_the_same_hub_and_the_same_review` the parameter `refusals: list[Refused]`, and before the `page.goto` of `no-such-collection` append `Refused(409, "/api/c/no-such-collection/")` to it.
   Verify: `git grep -c -h -F 'Refused(409, "/api/c/no-such-collection/")' tests/e2e/test_routes.py` prints `1`.
-- [ ] 1.6 Write `tests/test_e2e_guard.py` with a one-line docstring and `test_the_guard_names_each_fault`, marked `spec_exempt("structural: the browser tests' guard names a page error, a console error, a server error and an undeclared refusal")`. `faults` of `Seen(errors=["boom"], consoles=[("error", "TypeError: x is not a function")], responses=[(500, "/api/library"), (404, "/api/gone")])` and no declaration is `["page error: boom", "console error: TypeError: x is not a function", "server error: 500 /api/library", "undeclared refusal: 404 /api/gone"]`.
+- [x] 1.6 Write `tests/test_e2e_guard.py` with a one-line docstring and `test_the_guard_names_each_fault`, marked `spec_exempt("structural: the browser tests' guard names a page error, a console error, a server error and an undeclared refusal")`. `faults` of `Seen(errors=["boom"], consoles=[("error", "TypeError: x is not a function")], responses=[(500, "/api/library"), (404, "/api/gone")])` and no declaration is `["page error: boom", "console error: TypeError: x is not a function", "server error: 500 /api/library", "undeclared refusal: 404 /api/gone"]`.
   Verify: `uv run pytest tests/test_e2e_guard.py::test_the_guard_names_each_fault` passes.
-- [ ] 1.7 In `tests/test_e2e_guard.py` add `test_the_guard_lets_a_failed_load_a_warning_and_a_declared_refusal_by`, marked `spec_exempt("structural: the browser tests' guard lets by what a page may log")`. `faults` of `Seen` with consoles `("error", "Failed to load resource: the server responded with a status of 409 (Conflict)")`, `("warning", "deprecated")` and `("log", "hello")`, responses `(200, "/api/library")` and `(409, "/api/c/queue-fails/hub")`, and `[Refused(409, "/api/c/queue-fails")]` is `[]`.
+- [x] 1.7 In `tests/test_e2e_guard.py` add `test_the_guard_lets_a_failed_load_a_warning_and_a_declared_refusal_by`, marked `spec_exempt("structural: the browser tests' guard lets by what a page may log")`. `faults` of `Seen` with consoles `("error", "Failed to load resource: the server responded with a status of 409 (Conflict)")`, `("warning", "deprecated")` and `("log", "hello")`, responses `(200, "/api/library")` and `(409, "/api/c/queue-fails/hub")`, and `[Refused(409, "/api/c/queue-fails")]` is `[]`.
   Verify: `uv run pytest tests/test_e2e_guard.py::test_the_guard_lets_a_failed_load_a_warning_and_a_declared_refusal_by` passes.
-- [ ] 1.8 In `tests/test_e2e_guard.py` add `test_a_declaration_nothing_answers_is_a_fault`, marked `spec_exempt("structural: the browser tests' guard refuses a declared refusal that no response met")`. `faults` of `Seen(responses=[(200, "/api/library")])` and `[Refused(409, "/api/c/x/")]` is `["declared refusal never answered: 409 /api/c/x/"]`; of `Seen(responses=[(404, "/api/c/x/hub")])` and the same declaration, `["undeclared refusal: 404 /api/c/x/hub", "declared refusal never answered: 409 /api/c/x/"]`.
+- [x] 1.8 In `tests/test_e2e_guard.py` add `test_a_declaration_nothing_answers_is_a_fault`, marked `spec_exempt("structural: the browser tests' guard refuses a declared refusal that no response met")`. `faults` of `Seen(responses=[(200, "/api/library")])` and `[Refused(409, "/api/c/x/")]` is `["declared refusal never answered: 409 /api/c/x/"]`; of `Seen(responses=[(404, "/api/c/x/hub")])` and the same declaration, `["undeclared refusal: 404 /api/c/x/hub", "declared refusal never answered: 409 /api/c/x/"]`.
   Verify: `uv run pytest tests/test_e2e_guard.py::test_a_declaration_nothing_answers_is_a_fault` passes.
-- [ ] 1.9 The browser tests still collect, with the guard in their fixtures.
+- [x] 1.9 The browser tests still collect, with the guard in their fixtures.
   Verify: `uv run pytest tests/e2e --collect-only -q` exits `0`.
-- [ ] 1.10 Every test carries its key or its exemption.
+- [x] 1.10 Every test carries its key or its exemption.
   Verify: `uv run pytest tests/test_spec_bindings.py tests/test_e2e_guard.py` passes.
 
 ## 2 — The keys in a browser
