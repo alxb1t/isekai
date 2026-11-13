@@ -6,7 +6,7 @@ Phases that guard the browser tests against a page that logs an error, press the
 
 - [x] 1 — The guard · moderate
 - [x] 2 — The keys in a browser · moderate
-- [ ] 3 — Save and approve · moderate
+- [x] 3 — Save and approve · moderate
 
 ## 1 — The guard
 
@@ -50,19 +50,19 @@ Phases that guard the browser tests against a page that logs an error, press the
 
 ## 3 — Save and approve
 
-- [ ] 3.1 **HALT CHECK** The draft's save is sent with `keepalive` by `saveDraft`, as [D7](design.md#d7) reads it; if it is not, the held PUT is no question of the route and the plan is wrong.
+- [x] 3.1 **HALT CHECK** The draft's save is sent with `keepalive` by `saveDraft`, as [D7](design.md#d7) reads it; if it is not, the held PUT is no question of the route and the plan is wrong.
   Verify: `git grep -c -h -F "{ keepalive: true }" ui/src/api.ts` prints `1`.
-- [ ] 3.2 Write `tests/e2e/held.py` as [D7](design.md#d7) gives it, with a one-line docstring above and the imports `Page` and `Route` from `playwright.sync_api`.
+- [x] 3.2 Write `tests/e2e/held.py` as [D7](design.md#d7) gives it, with a one-line docstring above and the imports `Page` and `Route` from `playwright.sync_api`.
   Verify: `grep -c -F 'def sent(' tests/e2e/held.py` prints `1`.
-- [ ] 3.3 In `tests/e2e/test_import.py` import `sent` from `tests.e2e.held`, delete `_sent`, and call `sent(` where `_sent(` was called, in `_release` and in the tests that hold a stream, a removal and a commit.
+- [x] 3.3 In `tests/e2e/test_import.py` import `sent` from `tests.e2e.held`, delete `_sent`, and call `sent(` where `_sent(` was called, in `_release` and in the tests that hold a stream, a removal and a commit.
   Verify: `git grep -c -F '_sent(' -- tests/e2e/test_import.py` exits `1`.
-- [ ] 3.4 In `QUEUES` of `tests/e2e/conftest.py`, after the `keys-hold` entry, add `"save-holds": (("lou", (725, 1000)), ("max", (735, 1000))),`.
+- [x] 3.4 In `QUEUES` of `tests/e2e/conftest.py`, after the `keys-hold` entry, add `"save-holds": (("lou", (725, 1000)), ("max", (735, 1000))),`.
   Verify: `git grep -c -h -F '"save-holds"' tests/e2e/conftest.py` prints `1`.
-- [ ] 3.5 In `tests/e2e/test_queue.py` add the imports [D7](design.md#d7) lists, but `Refused`, which 1.4 imported, and `FLOW`, which joins the existing `from tests.e2e.conftest import` line; after its last test add the constants, `_edit`, `_holds_the_edit` and `test_approve_waits_for_a_save_held_at_the_network` exactly as it gives them.
+- [x] 3.5 In `tests/e2e/test_queue.py` add the imports [D7](design.md#d7) lists, but `Refused`, which 1.4 imported, and `FLOW`, which joins the existing `from tests.e2e.conftest import` line; after its last test add the constants, `_edit`, `_holds_the_edit` and `test_approve_waits_for_a_save_held_at_the_network` exactly as it gives them.
   Verify: `git grep -c -h -F 'def test_approve_waits_for_a_save_held_at_the_network' tests/e2e/test_queue.py` prints `1`.
-- [ ] 3.6 In `tests/e2e/test_queue.py` add `test_a_refused_save_is_sent_again_by_the_next_approval` exactly as [D7](design.md#d7) gives it. The commit body of both tests says why none fits: no test holds a request on Review, and a held save needs an editable sheet no earlier test has approved.
+- [x] 3.6 In `tests/e2e/test_queue.py` add `test_a_refused_save_is_sent_again_by_the_next_approval` exactly as [D7](design.md#d7) gives it. The commit body of both tests says why none fits: no test holds a request on Review, and a held save needs an editable sheet no earlier test has approved.
   Verify: `git grep -c -h -F 'def test_a_refused_save_is_sent_again_by_the_next_approval' tests/e2e/test_queue.py` prints `1`.
-- [ ] 3.7 The browser tests collect.
+- [x] 3.7 The browser tests collect.
   Verify: `uv run pytest tests/e2e --collect-only -q` exits `0`.
-- [ ] 3.8 Each key the tests name is one this change's delta holds, on the layer it binds.
+- [x] 3.8 Each key the tests name is one this change's delta holds, on the layer it binds.
   Verify: `uv run pytest tests/test_spec_bindings.py` passes.

@@ -1,10 +1,13 @@
 """Review in a browser: the chooser, and approving that stays, fails and cancels."""
 
 import pytest
-from playwright.sync_api import Page, Route, expect
+from playwright.sync_api import Page, Request, Route, expect
 
-from tests.e2e.conftest import CHOSEN, CONJURE, Served
+from isekai.foundation.artifacts import APPROVED_FILE, read
+from isekai.foundation.run import APPROVED, REVIEW, Run, latest_artifact
+from tests.e2e.conftest import CHOSEN, CONJURE, FLOW, Served
 from tests.e2e.guard import Refused
+from tests.e2e.held import hold, sent
 
 
 def _approve(page: Page) -> None:
@@ -72,3 +75,70 @@ def test_the_chooser_opens_a_flow(page: Page, served: Served) -> None:
     page.keyboard.press("Escape")
     expect(page).to_have_url(chooser)
     expect(rows.nth(1)).to_be_focused()
+
+
+PUTS = "**/api/c/save-holds/review/**/draft"
+REFUSAL = "the draft is not at that save"
+APPROVED_BAR = "approved as 001.approved.json and read-only"
+
+
+def _edit(page: Page) -> None:
+    """Commit the first suggestion for `eyes` into the sheet's first field."""
+    field = page.locator("input.fragment").first
+    expect(field).to_be_visible()
+    field.click()
+    field.press_sequentially("eyes")
+    field.press("Enter")
+    row = page.locator(".row", has=field)
+    expect(row.locator(".chip", has_text="blue eyes")).to_be_visible()
+
+
+def _holds_the_edit(run: Run) -> None:
+    """Assert `run`'s newest approval holds the tag `_edit` committed."""
+    approval = latest_artifact(run.directory(FLOW, REVIEW), APPROVED)
+    assert approval is not None
+    fields = read(approval, APPROVED_FILE)["fields"]
+    assert any("blue eyes" in tags for tags in fields.values())
+
+
+@pytest.mark.spec("ui:save:an-approval-waits-for-a-save-held-at-the-network")
+def test_approve_waits_for_a_save_held_at_the_network(
+    page: Page, served: Served
+) -> None:
+    first, _ = served.queues["save-holds"]
+    page.goto(served.review(first, "save-holds"))
+    held = hold(page, PUTS)
+    approvals: list[str] = []
+
+    def note(request: Request) -> None:
+        if request.url.endswith("/approve"):
+            approvals.append(request.url)
+
+    page.on("request", note)
+    _edit(page)
+    # The route must see the save first: a keepalive request it missed fails here.
+    save = sent(page, held)
+    page.get_by_role("button", name="Approve sheet").click()
+    page.wait_for_timeout(500)
+    assert approvals == []
+    save.continue_()
+    expect(page.locator(".approve-bar")).to_contain_text(APPROVED_BAR)
+    assert len(approvals) == 1
+    _holds_the_edit(first)
+
+
+@pytest.mark.spec("ui:save:a-refused-save-is-sent-again-by-the-next-approval")
+def test_a_refused_save_is_sent_again_by_the_next_approval(
+    page: Page, served: Served, refusals: list[Refused]
+) -> None:
+    _, second = served.queues["save-holds"]
+    refusals.append(Refused(409, "/api/c/save-holds/review/"))
+    page.goto(served.review(second, "save-holds"))
+    held = hold(page, PUTS)
+    _edit(page)
+    sent(page, held).fulfill(status=409, json={"refusal": REFUSAL})
+    expect(page.locator(".approve-bar")).to_contain_text(REFUSAL)
+    page.get_by_role("button", name="Approve sheet").click()
+    sent(page, held, 1).continue_()
+    expect(page.locator(".approve-bar")).to_contain_text(APPROVED_BAR)
+    _holds_the_edit(second)

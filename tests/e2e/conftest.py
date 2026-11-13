@@ -45,6 +45,7 @@ QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
     "queue-stays": (("cid", (700, 1000)), ("dot", (710, 1000))),
     "queue-fails": (("fay", (730, 1000)),),
     "keys-hold": (("kay", (720, 1000)),),
+    "save-holds": (("lou", (725, 1000)), ("max", (735, 1000))),
 }
 
 # A collection per hub test, so every test owns the cells it ticks and prepares. Its
