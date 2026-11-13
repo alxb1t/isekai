@@ -13,6 +13,9 @@ its new digest.
 - The mutation runner's copy is a git repository of the tracked files and links `models/` alone, and a run under a
   `--timeout` below the baseline reports a survivor, so tests that ask git pass in a copy and none writes through a
   link but `models/` (0135 D1, D2).
+- `python -m tools.mutate --edits <json>` replays text edits in any tracked file, each against the tests its entry
+  names, so the audit's mutants can be held as a file; an entry that cannot be replayed is refused by its finding
+  (0135 D3).
 
 ## [0.86.8] - 2026-11-13
 
