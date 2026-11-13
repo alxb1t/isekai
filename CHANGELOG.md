@@ -31,6 +31,9 @@ its new digest.
 - Tests run the billing poll over its gpunit double, counting its consults, so gpunit is asked on start and while a
   session runs or an alert is open and not otherwise; a stream sends no cell of another collection and keeps alive
   until the surface stops (0137 D1, D5).
+- `ui/src/test/wire.json` holds the body each Place and tattoo builder of `api.ts` sends; a vitest holds the builders to
+  it and a pytest holds the server's `*_KEYS` tuples and routes to it, and a vitest holds the unwrapping of a refusal
+  (0137 D6).
 
 ## [0.86.9] - 2026-11-13
 
