@@ -207,6 +207,7 @@ def test_the_producer_records_the_briefings_path_and_digest(
     one = read(first, CAPTION_FILE)["producer"]["briefing"]
     two = read(second, CAPTION_FILE)["producer"]["briefing"]
     assert one["path"] == "config/caption.briefing.md"
+    assert two["path"] == "other.md"
     assert one["sha256"] != two["sha256"]
     assert instructions_record(BRIEFING_PATH)["sha256"] == one["sha256"]
 

@@ -17,6 +17,8 @@ its new digest.
   line name the floor: *add N more points to close · K of F*, *outline open · K of F points* (0132 D3, D4).
 - The retry rule is held from below for `caption`, `wd14` and `tags`, and a stage reads one version's failure records at
   a time, so a refactor of the budget cannot turn a test green by accident (0133 D1).
+- A run's names are held at their bounds: the slug's alphabet and 32-character cut, the instruction record's file name
+  outside the repository, and a runs root read with its folders, so a stray empty one fails a second pass (0133 D2).
 
 ## [0.86.5] - 2026-11-13
 

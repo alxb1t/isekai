@@ -17,7 +17,7 @@ import isekai.interface.cli as cli
 from isekai.foundation.artifacts import write_json
 from isekai.foundation.run import CAPTIONS, PHOTO, TAGS, WD14, Run, open_run
 from isekai.interface.wiring import Wiring
-from tests.conftest import snapshot
+from tests.conftest import snapshot, tree
 from tests.images import jpeg_bytes
 
 FLOWS = ("control-anime-wai", "summon-anime-wai")
@@ -112,11 +112,11 @@ def test_a_second_run_changes_nothing(library: Library) -> None:
     _described(alpha)
     _described(beta)
     assert library.migrate() == 0
-    first = snapshot(library.root)
+    first = tree(library.root)
 
     assert library.migrate() == 0
 
-    assert snapshot(library.root) == first
+    assert tree(library.root) == first
     assert library.out.getvalue().splitlines() == [
         f"{collection}/runs/{run.id}: already migrated"
         for collection, run in (("alpha", alpha), ("beta", beta))

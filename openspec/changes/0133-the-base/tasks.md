@@ -5,7 +5,7 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 ## Progress
 
 - [x] 1 — The retry rule · moderate
-- [ ] 2 — A run's names · moderate
+- [x] 2 — A run's names · moderate
 - [ ] 3 — The record's every end · moderate
 - [ ] 4 — Every path removed · moderate
 - [ ] 5 — Rendered, where all agree · moderate
@@ -24,15 +24,15 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 
 ## 2 — A run's names
 
-- [ ] 2.1 **HALT CHECK** The instruction record names a file outside the repository by its name alone, as [D2](design.md#d2) says; if it does not, the plan is wrong.
+- [x] 2.1 **HALT CHECK** The instruction record names a file outside the repository by its name alone, as [D2](design.md#d2) says; if it does not, the plan is wrong.
   Verify: `git grep -c -F 'if inside else resolved.name,' isekai/foundation/run.py` prints `1`.
-- [ ] 2.2 In `tests/test_run_directory.py` add to the parameters of `test_the_slug_keeps_nothing_that_could_leave_the_directory` the cases `("a_b", "a-b")`, `("a" * 31 + "-" + "b" * 8, "a" * 31)` and `("a" * 40, "a" * 32)`, each stem and its slug.
+- [x] 2.2 In `tests/test_run_directory.py` add to the parameters of `test_the_slug_keeps_nothing_that_could_leave_the_directory` the cases `("a_b", "a-b")`, `("a" * 31 + "-" + "b" * 8, "a" * 31)` and `("a" * 40, "a" * 32)`, each stem and its slug.
   Verify: `git grep -c -F '("a_b", "a-b")' tests/test_run_directory.py` prints `1`.
-- [ ] 2.3 In `tests/test_caption.py`, in `test_the_producer_records_the_briefings_path_and_digest`, after the assertion on `one["path"]` add `assert two["path"] == "other.md"`.
+- [x] 2.3 In `tests/test_caption.py`, in `test_the_producer_records_the_briefings_path_and_digest`, after the assertion on `one["path"]` add `assert two["path"] == "other.md"`.
   Verify: `git grep -c -F 'assert two["path"] == "other.md"' tests/test_caption.py` prints `1`.
-- [ ] 2.4 In `tests/test_resume.py` import `tree` beside `snapshot` from `tests.conftest`. In `test_a_second_full_pass_changes_nothing_and_calls_nothing` read the runs root with `tree` in place of `snapshot`: `after_first = tree(wired.runs_root)` and `assert tree(wired.runs_root) == after_first`.
+- [x] 2.4 In `tests/test_resume.py` import `tree` beside `snapshot` from `tests.conftest`. In `test_a_second_full_pass_changes_nothing_and_calls_nothing` read the runs root with `tree` in place of `snapshot`: `after_first = tree(wired.runs_root)` and `assert tree(wired.runs_root) == after_first`.
   Verify: `git grep -c -F 'after_first = tree(wired.runs_root)' tests/test_resume.py` prints `1`.
-- [ ] 2.5 In `tests/test_migrate.py` import `tree` beside `snapshot` from `tests.conftest`. In `test_a_second_run_changes_nothing` read the library with `tree` in place of `snapshot`: `first = tree(library.root)` and `assert tree(library.root) == first`.
+- [x] 2.5 In `tests/test_migrate.py` import `tree` beside `snapshot` from `tests.conftest`. In `test_a_second_run_changes_nothing` read the library with `tree` in place of `snapshot`: `first = tree(library.root)` and `assert tree(library.root) == first`.
   Verify: `git grep -c -F 'first = tree(library.root)' tests/test_migrate.py` prints `1`.
 
 ## 3 — The record's every end

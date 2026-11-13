@@ -131,6 +131,9 @@ def test_the_frame_records_the_whole_digest_not_just_the_prefix(
         ("Ünïcödé", "n-c-d"),
         ("!!!", "photo"),
         ("", "photo"),
+        ("a_b", "a-b"),
+        ("a" * 31 + "-" + "b" * 8, "a" * 31),
+        ("a" * 40, "a" * 32),
     ],
 )
 def test_the_slug_keeps_nothing_that_could_leave_the_directory(
