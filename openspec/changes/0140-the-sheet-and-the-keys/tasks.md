@@ -7,7 +7,7 @@ Phases that teach the replay vitest, hold the sheet's saves, the key dispatch an
 - [x] 1 — The replay learns vitest · moderate
 - [x] 2 — The sheet's saves · moderate
 - [x] 3 — Key dispatch and the chooser · moderate
-- [ ] 4 — Cancel approve after a read · hard
+- [x] 4 — Cancel approve after a read · hard
 - [ ] 5 — The mutants die · moderate
 
 ## 1 — The replay learns vitest
@@ -75,23 +75,23 @@ Phases that teach the replay vitest, hold the sheet's saves, the key dispatch an
 
 ## 4 — Cancel approve after a read
 
-- [ ] 4.1 **HALT CHECK** The watch drops a render's move while the sheet is being read, as card `0124·S2` says; if it reads otherwise, the plan is wrong.
+- [x] 4.1 **HALT CHECK** The watch drops a render's move while the sheet is being read, as card `0124·S2` says; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -h -F "if (readsAgain(before, after, props.collection, approved)) void reread(current.value)" ui/src/views/Review.vue` prints `1`.
-- [ ] 4.2 In `ui/src/cancel.ts` write `Reading`, `Again`, `readsAgain`, `Held`, `Sheet` and `rereads` exactly as [D5](design.md#d5) gives them, keeping `holdsCancel` and the comment above `readsAgain` true to what it now answers.
+- [x] 4.2 In `ui/src/cancel.ts` write `Reading`, `Again`, `readsAgain`, `Held`, `Sheet` and `rereads` exactly as [D5](design.md#d5) gives them, keeping `holdsCancel` and the comment above `readsAgain` true to what it now answers.
   Verify: `git grep -c -h -F "export function rereads(" ui/src/cancel.ts` prints `1`.
-- [ ] 4.3 In `ui/src/views/Review.vue` import `rereads` in place of `readsAgain`, and replace the watch on `live.jobs.render`, and the comment above it, with the block of [D5](design.md#d5), `follow` and its watches, character for character.
+- [x] 4.3 In `ui/src/views/Review.vue` import `rereads` in place of `readsAgain`, and replace the watch on `live.jobs.render`, and the comment above it, with the block of [D5](design.md#d5), `follow` and its watches, character for character.
   Verify: `git grep -c -h -F "follow.landed()" ui/src/views/Review.vue` prints `1`.
-- [ ] 4.4 In `ui/src/cancel.test.ts` add the helper `sheet(given: Partial<Reading> = {}): Reading` returning `{ loading: false, readonly: true, detail: {}, ...given }`. Rewrite each `readsAgain(…, true)` of `ui:review:the-cancel-follows-the-render` as `readsAgain(…, sheet())`, `toBe('now')` where it was `true` and `toBe('no')` where it was `false`, and each `…, false)` as `sheet({ readonly: false })`, `toBe('no')`.
+- [x] 4.4 In `ui/src/cancel.test.ts` add the helper `sheet(given: Partial<Reading> = {}): Reading` returning `{ loading: false, readonly: true, detail: {}, ...given }`. Rewrite each `readsAgain(…, true)` of `ui:review:the-cancel-follows-the-render` as `readsAgain(…, sheet())`, `toBe('now')` where it was `true` and `toBe('no')` where it was `false`, and each `…, false)` as `sheet({ readonly: false })`, `toBe('no')`.
   Verify: `git grep -c -h -F "sheet({ readonly: false })" ui/src/cancel.test.ts` prints `2`.
-- [ ] 4.5 In that case add rows: `sheet({ loading: true })` answers `'later'` for `idle` to `running` and `running` to `done` over `'a'` and `'no'` for a move that is not one; `sheet({ detail: null })` answers `'no'` for `idle` to `running`.
+- [x] 4.5 In that case add rows: `sheet({ loading: true })` answers `'later'` for `idle` to `running` and `running` to `done` over `'a'` and `'no'` for a move that is not one; `sheet({ detail: null })` answers `'no'` for `idle` to `running`.
   Verify: `git grep -n -F "'later'" ui/src/cancel.test.ts` prints a line.
-- [ ] 4.6 In `ui/src/cancel.test.ts` add `spec('ui:review:a-render-that-moves-during-the-read-is-read-again', …)` over `rereads(() => 'a', held, reread)`, `held` an object of `loading`, `readonly` and `detail` each `{ value }` the case sets, and `reread = vi.fn()`. Cases: a move into running while loading, then `landed()` of an approved sheet, reads once, and a second `landed()` still once; a move while loading, then `landed()` of a sheet that is not readonly, reads never; `landed()` while still loading, the sheet `readonly` with a `detail`, reads never and keeps the memory, the next `landed()` of the approved sheet reads once; a move of an approved sheet that is not loading reads at once.
+- [x] 4.6 In `ui/src/cancel.test.ts` add `spec('ui:review:a-render-that-moves-during-the-read-is-read-again', …)` over `rereads(() => 'a', held, reread)`, `held` an object of `loading`, `readonly` and `detail` each `{ value }` the case sets, and `reread = vi.fn()`. Cases: a move into running while loading, then `landed()` of an approved sheet, reads once, and a second `landed()` still once; a move while loading, then `landed()` of a sheet that is not readonly, reads never; `landed()` while still loading, the sheet `readonly` with a `detail`, reads never and keeps the memory, the next `landed()` of the approved sheet reads once; a move of an approved sheet that is not loading reads at once.
   Verify: `git grep -c -h -F "a-render-that-moves-during-the-read-is-read-again" ui/src/cancel.test.ts` prints `1`.
-- [ ] 4.7 The phase's files agree with the keys and the types.
+- [x] 4.7 The phase's files agree with the keys and the types.
   Verify: `uv run python -m tools.test_ui` exits `0`.
-- [ ] 4.8 `Review.vue` and `cancel.ts` type-check under the gate's browser typecheck.
+- [x] 4.8 `Review.vue` and `cancel.ts` type-check under the gate's browser typecheck.
   Verify: `uv run python -m tools.typecheck_ui` exits `0`.
-- [ ] 4.9 `ui/src/views/Review.vue` ends no longer than it began, so its listed ceiling in `tests/test_ratchets.py` stands; the ceiling is never raised.
+- [x] 4.9 `ui/src/views/Review.vue` ends no longer than it began, so its listed ceiling in `tests/test_ratchets.py` stands; the ceiling is never raised.
   Verify: `uv run pytest tests/test_ratchets.py` passes.
 
 ## 5 — The mutants die

@@ -29,6 +29,8 @@ its new digest.
   cannot be read are shown, and a burst of edits is one save (0140 D3, D4).
 - The key dispatch and the chooser are held: a screen's command runs before the same key offered everywhere, a textarea
   and an editable element take no command, and `chooses` is asserted where Review opens the chooser (0140 D3, D4).
+- *Cancel approve* follows a render that moves while the sheet is being read: `rereads` remembers the move and reads an
+  approved sheet once the read lands, and `readsAgain` answers `now`, `later` or `no` (0140 D5).
 
 ## [0.86.12] - 2026-11-13
 
