@@ -3,6 +3,8 @@
 Every image is a small array built here, so what each function must carry is known.
 """
 
+import math
+
 import numpy as np
 import pytest
 
@@ -98,8 +100,17 @@ def test_chain_spline_chunks_a_large_grid_without_changing_it(
     whole = spline(grid)
 
     monkeypatch.setattr(chain, "CHUNK", 7)
+    kernel = chain._kernel
+    calls: list[int] = []
+
+    def counted(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        calls.append(len(a))
+        return kernel(a, b)
+
+    monkeypatch.setattr(chain, "_kernel", counted)
 
     np.testing.assert_allclose(spline(grid), whole, rtol=0, atol=1e-9)
+    assert len(calls) == math.ceil(len(grid) / 7)
 
 
 def _ink(width: int, height: int) -> np.ndarray:

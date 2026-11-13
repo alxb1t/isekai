@@ -453,8 +453,18 @@ def test_serve_returns_130_for_keyboard_interrupt(
     dist = tmp_path / "dist"
     dist.mkdir()
     (dist / "index.html").write_text("<!doctype html>")
-    monkeypatch.setattr(ui.library, "root", lambda: root)
-    monkeypatch.setattr(ui, "ensure_built", lambda: dist)
+    asked: list[str] = []
+
+    def library_root() -> Path:
+        asked.append("root")
+        return root
+
+    def ensure_built() -> Path:
+        asked.append("ensure_built")
+        return dist
+
+    monkeypatch.setattr(ui.library, "root", library_root)
+    monkeypatch.setattr(ui, "ensure_built", ensure_built)
     monkeypatch.setattr(Billing, "watch", lambda self: None)
 
     def interrupted(*args: object, **kwargs: object) -> None:
@@ -463,6 +473,7 @@ def test_serve_returns_130_for_keyboard_interrupt(
     monkeypatch.setattr(app_module, "run", interrupted)
     wired = fake(runs=root / "runs")
     assert ui.serve(wired, port=7717) == 130
+    assert asked == ["root", "ensure_built"]
     assert isinstance(wired.err, io.StringIO)
     assert wired.err.getvalue() == ""
 

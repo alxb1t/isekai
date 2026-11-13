@@ -16,7 +16,7 @@ import urllib.error
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, TextIO, cast
 
 import pytest
 
@@ -49,6 +49,7 @@ from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.fakes import FakeComfyClient  # noqa: E402
 from tests.images import jpeg_bytes, photo_jpeg  # noqa: E402
+from tests.record import recorded  # noqa: E402
 from tests.stages import bare_wiring, render, sheet, write_wd14  # noqa: E402
 
 FLOW = "summon-anime-wai"
@@ -292,8 +293,11 @@ def test_each_line_a_job_writes_to_the_collections_log_names_its_job(
 def test_prepare_is_refused_with_the_readers_message_and_starts_nothing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    opened: list[object] = []
+
     class Closed:
         def open(self, *args: object, **kwargs: object) -> None:
+            opened.append(args)
             raise urllib.error.URLError("connection refused")
 
     monkeypatch.setattr(ollama, "OPENER", Closed())
@@ -305,6 +309,7 @@ def test_prepare_is_refused_with_the_readers_message_and_starts_nothing(
         jobs.prepare("b", folder, _steps(run), lambda line: [])
 
     assert str(refused.value) == ollama.NOT_LISTENING
+    assert len(opened) == 1
     assert script.asked == []
     assert jobs.slot("prepare") is None
 
@@ -453,6 +458,35 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
     data = json.loads(frames[-1].split("\n")[1].removeprefix("data: "))
     assert (data["source"], data["flow"], data["state"]) == ("ada.jpg", FLOW, "done")
     assert data["cell"]["stage"] == "tagged"
+
+
+@pytest.mark.spec_exempt(
+    "structural: the cell and the job read the line the CLI prints"
+)
+def test_the_cell_and_the_job_read_the_sheet_line_the_cli_prints(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
+    sheet(run, schema, vocabulary)
+    printed = cast("dict[str, Any]", recorded("wire"))["sheet"]
+    script = (
+        "import json, sys; "
+        f"print(json.dumps({{**{printed!r}, 'run': sys.argv[1]}}), flush=True)"
+    )
+    broadcast = events.Broadcast()
+    found = broadcast.subscribe()
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
+    cell = cell_event(folder, grid, {FLOW: load_flow(FLOW)})
+    jobs = Jobs(broadcast, lambda: None, command=_Script(script))
+
+    jobs.prepare("b", folder, [Step(FLOW, "sheet", (run.id,))], cell)
+    jobs.wait("prepare", WAIT)
+
+    published = _until(found, "cell")[1]
+    assert (published["flow"], published["state"]) == (FLOW, "done")
+    slot = jobs.slot("prepare")
+    assert slot is not None
+    assert slot["progress"]["stages"] == [{"stage": "sheet", "done": 1, "of": 1}]
 
 
 STARTED = "2026-10-22T10:00:00Z"

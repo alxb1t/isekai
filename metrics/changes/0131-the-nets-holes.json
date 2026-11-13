@@ -1,0 +1,58 @@
+{
+  "change": "0131-the-nets-holes",
+  "version": "0.86.5",
+  "base": "130c20b2",
+  "analyzed": "85e61710",
+  "measured_on": "local",
+  "collected_at": "2026-11-13T01:59:18+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2264
+    },
+    "tests-browser": {
+      "value": 18
+    },
+    "gate-seconds": {
+      "value": 71
+    },
+    "open-backlog-cards": {
+      "value": 11
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1578
+    },
+    "diff-files": {
+      "value": 18
+    },
+    "phases": {
+      "value": 2
+    },
+    "shared-reading-set": {
+      "value": 14416
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1034
+    },
+    "decisions": {
+      "value": 57
+    }
+  }
+}

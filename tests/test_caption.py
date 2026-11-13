@@ -720,6 +720,32 @@ def test_a_completed_caption_reads_no_model_record(
     assert caption(run, reader) is None
 
 
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_completed_caption_reads_no_model_record"
+)
+def test_the_model_record_tripwire_fires_for_a_caption_not_yet_made(
+    run: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def unreachable(*args: object, **kwargs: object) -> object:
+        raise AssertionError("a model record was read")
+
+    monkeypatch.setattr(ollama, "_verified_build", unreachable)
+    reader = OllamaReader(model=READER, transport=FakeTransport())
+
+    with pytest.raises(AssertionError, match="a model record was read"):
+        caption(run, reader)
+
+
+@pytest.mark.spec_exempt(
+    "structural: the autouse fixture points the model records at an empty directory"
+)
+def test_the_suites_model_records_point_at_an_empty_directory() -> None:
+    with pytest.raises(Refusal) as refused:
+        ollama.verified_build(READER)
+
+    assert str(ollama.MODEL_RECORDS) in str(refused.value)
+
+
 @pytest.mark.spec_exempt("structural: the check is memoised per model")
 def test_a_models_record_is_read_once_per_root(
     run: Run, tmp_path: Path, model_records: Path

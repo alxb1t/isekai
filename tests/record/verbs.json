@@ -1,0 +1,1297 @@
+{
+  "approve": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": ".data/runs",
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "_AppendAction",
+        "choices": null,
+        "default": null,
+        "dest": "flows",
+        "flags": [
+          "--flow"
+        ],
+        "metavar": "FLOW",
+        "nargs": null,
+        "required": true,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "source",
+        "flags": [
+          "--from"
+        ],
+        "metavar": "FLOW",
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreTrueAction",
+        "choices": null,
+        "default": false,
+        "dest": "cancel",
+        "flags": [
+          "--cancel"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "photos",
+        "flags": [],
+        "metavar": null,
+        "nargs": "*",
+        "required": false,
+        "type": null
+      }
+    ]
+  },
+  "assign": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": ".data/runs",
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "_AppendAction",
+        "choices": null,
+        "default": null,
+        "dest": "flows",
+        "flags": [
+          "--flow"
+        ],
+        "metavar": "FLOW",
+        "nargs": null,
+        "required": true,
+        "type": null
+      },
+      {
+        "action": "_StoreTrueAction",
+        "choices": null,
+        "default": false,
+        "dest": "remove",
+        "flags": [
+          "--remove"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "photos",
+        "flags": [],
+        "metavar": null,
+        "nargs": "*",
+        "required": false,
+        "type": null
+      }
+    ]
+  },
+  "caption": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": ".data/runs",
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "_AppendAction",
+        "choices": null,
+        "default": null,
+        "dest": "flows",
+        "flags": [
+          "--flow"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": [
+          "json"
+        ],
+        "default": null,
+        "dest": "progress",
+        "flags": [
+          "--progress"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreTrueAction",
+        "choices": null,
+        "default": false,
+        "dest": "new_version",
+        "flags": [
+          "--new-version"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "photos",
+        "flags": [],
+        "metavar": null,
+        "nargs": "*",
+        "required": false,
+        "type": null
+      }
+    ]
+  },
+  "compare": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "collection",
+        "flags": [],
+        "metavar": null,
+        "nargs": null,
+        "required": true,
+        "type": "Path"
+      }
+    ]
+  },
+  "discard": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "image",
+        "flags": [],
+        "metavar": null,
+        "nargs": null,
+        "required": true,
+        "type": "Path"
+      }
+    ]
+  },
+  "draft": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "target",
+        "flags": [
+          "--flow"
+        ],
+        "metavar": "FLOW",
+        "nargs": null,
+        "required": true,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "images",
+        "flags": [],
+        "metavar": null,
+        "nargs": "+",
+        "required": true,
+        "type": "Path"
+      }
+    ]
+  },
+  "edit": {
+    "groups": [
+      {
+        "members": [
+          "composite",
+          "pending"
+        ],
+        "required": true
+      }
+    ],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "composite",
+        "flags": [
+          "--composite"
+        ],
+        "metavar": "COMPOSITE.png",
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "pending",
+        "flags": [
+          "--pending"
+        ],
+        "metavar": "<run-id>/<flow>",
+        "nargs": "+",
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": ".data/runs",
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "server",
+        "flags": [
+          "--server"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": [
+          "json"
+        ],
+        "default": null,
+        "dest": "progress",
+        "flags": [
+          "--progress"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "denoise",
+        "flags": [
+          "--denoise"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "float"
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "strength",
+        "flags": [
+          "--strength"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "float"
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "lines",
+        "flags": [
+          "--lines"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "float"
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "seed",
+        "flags": [
+          "--seed"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "_seed"
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "edit",
+        "flags": [],
+        "metavar": null,
+        "nargs": "?",
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "render",
+        "flags": [],
+        "metavar": null,
+        "nargs": "?",
+        "required": false,
+        "type": "Path"
+      }
+    ]
+  },
+  "generate": {
+    "groups": [
+      {
+        "members": [
+          "count",
+          "seeds",
+          "seeds_from"
+        ],
+        "required": false
+      }
+    ],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": ".data/runs",
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "_AppendAction",
+        "choices": null,
+        "default": null,
+        "dest": "flows",
+        "flags": [
+          "--flow"
+        ],
+        "metavar": "FLOW",
+        "nargs": null,
+        "required": true,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": [
+          "json"
+        ],
+        "default": null,
+        "dest": "progress",
+        "flags": [
+          "--progress"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "count",
+        "flags": [
+          "--count"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "parse"
+      },
+      {
+        "action": "_AppendAction",
+        "choices": null,
+        "default": null,
+        "dest": "seeds",
+        "flags": [
+          "--seed"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "_seed"
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "seeds_from",
+        "flags": [
+          "--seeds-from"
+        ],
+        "metavar": "FLOW",
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "server",
+        "flags": [
+          "--server"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "photos",
+        "flags": [],
+        "metavar": null,
+        "nargs": "*",
+        "required": false,
+        "type": null
+      }
+    ]
+  },
+  "import": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "collection",
+        "flags": [
+          "--collection"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": true,
+        "type": "Path"
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "files",
+        "flags": [],
+        "metavar": null,
+        "nargs": "+",
+        "required": true,
+        "type": "Path"
+      }
+    ]
+  },
+  "ink": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "outline",
+        "flags": [
+          "--outline"
+        ],
+        "metavar": "MASK.png",
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "BooleanOptionalAction",
+        "choices": null,
+        "default": null,
+        "dest": "neutral",
+        "flags": [
+          "--neutral",
+          "--no-neutral"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "depth",
+        "flags": [
+          "--depth"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "_depth"
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "image",
+        "flags": [],
+        "metavar": null,
+        "nargs": null,
+        "required": true,
+        "type": "Path"
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "out",
+        "flags": [],
+        "metavar": null,
+        "nargs": null,
+        "required": true,
+        "type": "Path"
+      }
+    ]
+  },
+  "migrate": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      }
+    ],
+    "positionals": []
+  },
+  "prepare": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": ".data/runs",
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "_StoreAction",
+        "choices": [
+          "json"
+        ],
+        "default": null,
+        "dest": "progress",
+        "flags": [
+          "--progress"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "cells",
+        "flags": [],
+        "metavar": "<run-id>/<flow>",
+        "nargs": "+",
+        "required": true,
+        "type": null
+      }
+    ]
+  },
+  "render": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": [
+          "json"
+        ],
+        "default": null,
+        "dest": "progress",
+        "flags": [
+          "--progress"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "limit",
+        "flags": [
+          "--limit"
+        ],
+        "metavar": "SECONDS",
+        "nargs": null,
+        "required": false,
+        "type": "parse"
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "session",
+        "flags": [
+          "--session"
+        ],
+        "metavar": "ID",
+        "nargs": null,
+        "required": false,
+        "type": "_session_id"
+      },
+      {
+        "action": "_AppendAction",
+        "choices": null,
+        "default": null,
+        "dest": "without",
+        "flags": [
+          "--without"
+        ],
+        "metavar": "<runs>/<run-id>/<flow>",
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_Targets",
+        "choices": null,
+        "default": null,
+        "dest": "targets",
+        "flags": [],
+        "metavar": "<runs>\u2026 [<flow>=<count|source> \u2026]",
+        "nargs": "+",
+        "required": true,
+        "type": null
+      }
+    ]
+  },
+  "review": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": ".data/runs",
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "_AppendAction",
+        "choices": null,
+        "default": null,
+        "dest": "flows",
+        "flags": [
+          "--flow"
+        ],
+        "metavar": "FLOW",
+        "nargs": null,
+        "required": true,
+        "type": null
+      },
+      {
+        "action": "_StoreTrueAction",
+        "choices": null,
+        "default": false,
+        "dest": "new_version",
+        "flags": [
+          "--new-version"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreTrueAction",
+        "choices": null,
+        "default": false,
+        "dest": "discard",
+        "flags": [
+          "--discard"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "photos",
+        "flags": [],
+        "metavar": null,
+        "nargs": "*",
+        "required": false,
+        "type": null
+      }
+    ]
+  },
+  "sheet": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": ".data/runs",
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "_AppendAction",
+        "choices": null,
+        "default": null,
+        "dest": "flows",
+        "flags": [
+          "--flow"
+        ],
+        "metavar": "FLOW",
+        "nargs": null,
+        "required": true,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": [
+          "json"
+        ],
+        "default": null,
+        "dest": "progress",
+        "flags": [
+          "--progress"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreTrueAction",
+        "choices": null,
+        "default": false,
+        "dest": "new_version",
+        "flags": [
+          "--new-version"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "photos",
+        "flags": [],
+        "metavar": null,
+        "nargs": "*",
+        "required": false,
+        "type": null
+      }
+    ]
+  },
+  "show": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": ".data/runs",
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "photos",
+        "flags": [],
+        "metavar": null,
+        "nargs": "*",
+        "required": false,
+        "type": null
+      }
+    ]
+  },
+  "tag": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": ".data/runs",
+        "dest": "runs",
+        "flags": [
+          "--runs"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "Path"
+      },
+      {
+        "action": "_AppendAction",
+        "choices": null,
+        "default": null,
+        "dest": "flows",
+        "flags": [
+          "--flow"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": [
+          "json"
+        ],
+        "default": null,
+        "dest": "progress",
+        "flags": [
+          "--progress"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreTrueAction",
+        "choices": null,
+        "default": false,
+        "dest": "new_version",
+        "flags": [
+          "--new-version"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      }
+    ],
+    "positionals": [
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": null,
+        "dest": "photos",
+        "flags": [],
+        "metavar": null,
+        "nargs": "*",
+        "required": false,
+        "type": null
+      }
+    ]
+  },
+  "ui": {
+    "groups": [],
+    "options": [
+      {
+        "action": "_HelpAction",
+        "choices": null,
+        "default": "==SUPPRESS==",
+        "dest": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "metavar": null,
+        "nargs": 0,
+        "required": false,
+        "type": null
+      },
+      {
+        "action": "_StoreAction",
+        "choices": null,
+        "default": 8517,
+        "dest": "port",
+        "flags": [
+          "--port"
+        ],
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": "int"
+      }
+    ],
+    "positionals": []
+  }
+}
