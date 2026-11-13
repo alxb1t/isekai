@@ -27,8 +27,8 @@ from pathlib import Path
 
 import pytest
 
-from isekai.boundary import ollama
-from isekai.boundary.wd14 import LocalTagger
+from isekai.boundary import ollama, provision
+from isekai.boundary.wd14 import REMEDY, LocalTagger
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
@@ -826,6 +826,24 @@ def test_prepare_opens_the_tagger_once(tmp_path: Path) -> None:
     assert status == 0
     assert all((run.path / PHOTO / "wd14" / "001.json").is_file() for run in runs)
     assert opened == ["tagger"]
+
+
+@pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
+def test_prepare_refuses_when_a_pin_does_not_match(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def swapped() -> LocalTagger:
+        raise provision.DigestMismatch("wd14/model.onnx hashes to the wrong digest")
+
+    monkeypatch.setattr(wiring, "open_session", swapped)
+    wired = replace(_wiring(tmp_path), tagger=wiring.tagger_for)
+    [run] = _photographs(tmp_path, wired.runs_root, (1200, 900))
+    assign(run, "summon-anime-wai")
+
+    status = _prepared(wired, f"{run.id}/summon-anime-wai")
+
+    assert status == 1
+    assert any(REMEDY in line for line in _refused(wired))
 
 
 @pytest.mark.spec("cli:prepare:an-unassigned-cell-refuses")

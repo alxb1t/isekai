@@ -242,6 +242,81 @@ spec('ui:save:a-failed-save-leaves-nothing-to-send-again', async () => {
   expect(calls).toHaveLength(0)
 })
 
+spec('ui:save:a-lone-failed-save-is-sent-again', async () => {
+  const sheet = useSheet({ collection: 'b', flow: 'f' })
+  const opened = sheet.open('a')
+  await answer('/api/c/b/review/a/f', detail('a', 10))
+  await opened
+
+  // The only save is refused with nothing behind it: the edit is still owed.
+  sheet.commit('hair', 'brown hair', null)
+  const first = sheet.flush()
+  await refuse('/api/c/b/review/a/f/draft', 'a draft is not at that save')
+  expect(await first).toBe(false)
+
+  const again = sheet.flush()
+  expect(calls).toHaveLength(1)
+  const [put] = calls
+  expect(put.init?.method).toBe('PUT')
+  const sent = JSON.parse(String(put.init?.body))
+  expect(sent.fields.hair).toEqual(['long hair', 'brown hair'])
+  expect(sent.saved).toBe(10)
+  await answer('/api/c/b/review/a/f/draft', receipt(11))
+  expect(await again).toBe(true)
+})
+
+spec('ui:review:a-refused-save-is-shown', async () => {
+  const sheet = useSheet({ collection: 'b', flow: 'f' })
+  const opened = sheet.open('a')
+  await answer('/api/c/b/review/a/f', detail('a', 10))
+  await opened
+
+  sheet.commit('hair', 'brown hair', null)
+  const first = sheet.flush()
+  await refuse('/api/c/b/review/a/f/draft', 'a draft is not at that save')
+  await first
+  expect(sheet.refusal.value).toBe('a draft is not at that save')
+
+  // The next save that lands clears it.
+  sheet.commit('hair', 'short hair', null)
+  const second = sheet.flush()
+  await answer('/api/c/b/review/a/f/draft', receipt(11))
+  await second
+  expect(sheet.refusal.value).toBeNull()
+})
+
+spec('ui:review:a-sheet-that-cannot-be-read-says-so', async () => {
+  const sheet = useSheet({ collection: 'b', flow: 'f' })
+  const opened = sheet.open('a')
+  await refuse('/api/c/b/review/a/f', 'the sheet is damaged')
+  await opened
+  expect(sheet.refusal.value).toBe('the sheet is damaged')
+  expect(sheet.loading.value).toBe(false)
+  expect(sheet.detail.value).toBeNull()
+})
+
+spec('ui:save:a-burst-of-edits-is-one-save', async () => {
+  const sheet = useSheet({ collection: 'b', flow: 'f' })
+  const opened = sheet.open('a')
+  await answer('/api/c/b/review/a/f', detail('a', 10))
+  await opened
+
+  // Each edit lands inside the debounce of the one before: nothing is sent until it runs out.
+  sheet.commit('hair', 'brown hair', null)
+  await vi.advanceTimersByTimeAsync(100)
+  sheet.commit('hair', 'short hair', null)
+  await vi.advanceTimersByTimeAsync(100)
+  sheet.commit('hair', 'curly hair', null)
+  await vi.advanceTimersByTimeAsync(399)
+  expect(calls).toHaveLength(0)
+
+  await vi.advanceTimersByTimeAsync(1)
+  expect(calls).toHaveLength(1)
+  const [put] = calls
+  expect(put.url).toBe('/api/c/b/review/a/f/draft')
+  expect(JSON.parse(String(put.init?.body)).fields.hair).toEqual(['long hair', 'brown hair', 'short hair', 'curly hair'])
+})
+
 spec('ui:save:the-newest-read-of-a-sheet-is-the-one-that-lands', async () => {
   const sheet = useSheet({ collection: 'b', flow: 'f' })
   const opened = sheet.open('a')

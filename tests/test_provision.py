@@ -1,11 +1,16 @@
 import hashlib
 import http.client
 import io
+import urllib.error
+import urllib.request
 from collections.abc import Callable
+from http.client import HTTPMessage
 from pathlib import Path
+from types import TracebackType
 
 import pytest
 
+from isekai.boundary import provision
 from isekai.boundary.provision import (
     ATTEMPTS,
     WAITS,
@@ -416,6 +421,111 @@ def test_an_http_layer_failure_on_the_head_request_still_lands_the_file(
     entry = _entry()
     assert fetch(_manifest([entry]), tmp_path, HuggingFaceFetcher()) == 0
     assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
+
+
+def _etag(value: str | None) -> HTTPMessage:
+    headers = HTTPMessage()
+    if value is not None:
+        headers["x-linked-etag"] = value
+    return headers
+
+
+class _Answered:
+    """A response carrying headers, as a context manager like urllib's."""
+
+    def __init__(self, headers: HTTPMessage) -> None:
+        self.headers = headers
+
+    def __enter__(self) -> "_Answered":
+        return self
+
+    def __exit__(
+        self,
+        kind: type[BaseException] | None,
+        raised: BaseException | None,
+        trace: TracebackType | None,
+    ) -> None:
+        return None
+
+
+class _HeadOpener:
+    """An opener whose HEAD request raises the outcome, or returns it."""
+
+    def __init__(self, outcome: BaseException | _Answered) -> None:
+        self.outcome = outcome
+
+    def open(self, request: object, timeout: float) -> _Answered:
+        if isinstance(self.outcome, BaseException):
+            raise self.outcome
+        return self.outcome
+
+
+def _redirect(headers: HTTPMessage) -> urllib.error.HTTPError:
+    return urllib.error.HTTPError(PRIMARY, 302, "Found", headers, io.BytesIO(b""))
+
+
+def _head_answers(
+    monkeypatch: pytest.MonkeyPatch, outcome: BaseException | _Answered
+) -> list[object]:
+    """Patch `build_opener` to give `outcome`; return the handlers it was handed."""
+    handed: list[object] = []
+
+    def build_opener(*handlers: object) -> _HeadOpener:
+        handed.extend(handlers)
+        return _HeadOpener(outcome)
+
+    monkeypatch.setattr("urllib.request.build_opener", build_opener)
+    return handed
+
+
+@pytest.mark.spec(
+    "model-provisioning:preflight:the-published-digest-is-read-from-the-sources-answer"
+)
+def test_a_redirect_that_carries_the_digest_is_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    handed = _head_answers(monkeypatch, _redirect(_etag(f'"{DIGEST}"')))
+
+    assert HuggingFaceFetcher().published_digest(PRIMARY) == DIGEST
+    assert handed == [provision._KeepRedirect]
+
+
+@pytest.mark.spec(
+    "model-provisioning:preflight:the-published-digest-is-read-from-the-sources-answer"
+)
+def test_a_response_that_carries_the_digest_is_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _head_answers(monkeypatch, _Answered(_etag(f'"{DIGEST}"')))
+
+    assert HuggingFaceFetcher().published_digest(PRIMARY) == DIGEST
+
+
+@pytest.mark.spec(
+    "model-provisioning:preflight:the-published-digest-is-read-from-the-sources-answer"
+)
+@pytest.mark.parametrize(
+    "headers", [_etag("a" * 40), _etag(None)], ids=["a-40-hex-value", "no-header"]
+)
+def test_a_value_that_is_no_digest_is_none(
+    monkeypatch: pytest.MonkeyPatch, headers: HTTPMessage
+) -> None:
+    _head_answers(monkeypatch, _redirect(headers))
+
+    assert HuggingFaceFetcher().published_digest(PRIMARY) is None
+
+
+@pytest.mark.spec(
+    "model-provisioning:preflight:the-published-digest-is-read-from-the-sources-answer"
+)
+def test_the_redirect_is_kept() -> None:
+    request = urllib.request.Request(PRIMARY, method="HEAD")
+
+    kept = provision._KeepRedirect().redirect_request(
+        request, io.BytesIO(b""), 302, "Found", _etag(None), "https://example.invalid/"
+    )
+
+    assert kept is None
 
 
 @pytest.mark.spec(

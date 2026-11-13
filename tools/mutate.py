@@ -7,7 +7,8 @@ Run it from the repository root:
     uv run python -m tools.mutate --edits <json> [--timeout <seconds>]
 
 A mutant is one edit on one line of a function body. With `--edits` it is a text
-edit in any tracked file, replayed against the tests its entry names. The run
+edit in any tracked file, replayed against the tests its entry names, by pytest or,
+with `"runner": "vitest"`, by vitest over files of `ui/src/`. The run
 works in a copy of the tracked files, never the checkout, and exits 0 with no
 survivor, 1 with one and 2 when it refuses. It imports the standard library alone.
 """
@@ -24,6 +25,7 @@ import sys
 import tempfile
 import time
 from collections.abc import Iterator, Sequence
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, NoReturn, cast
@@ -33,6 +35,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 OPERATORS = ("cmp", "bool", "not", "const", "raise", "ret", "call", "arith")
 
 LINKED = ("models",)
+
+RUNNERS = ("pytest", "vitest")
 
 VERDICTS = ("killed", "survived", "invalid", "timeout")
 
@@ -67,6 +71,7 @@ class Edit:
     find: str
     replace: str
     tests: tuple[str, ...]
+    runner: str
     line: int
     equivalent: str | None
 
@@ -289,8 +294,8 @@ def tracked_files(root: Path) -> list[str]:
 
 
 EDIT_KEYS = ("finding", "path", "find", "replace", "tests")
-EDIT_OPTIONAL = ("why", "equivalent")
-EDIT_TEXTS = ("finding", "path", "find", "replace", "why", "equivalent")
+EDIT_OPTIONAL = ("why", "equivalent", "runner")
+EDIT_TEXTS = ("finding", "path", "find", "replace", "why", "equivalent", "runner")
 
 
 def load_edit(root: Path, tracked: set[str], number: int, item: object) -> Edit:
@@ -314,6 +319,9 @@ def load_edit(root: Path, tracked: set[str], number: int, item: object) -> Edit:
         raise Refused(f"{label}: tests is not a non-empty list")
     if not all(isinstance(test, str) for test in tests):
         raise Refused(f"{label}: tests holds a name that is not text")
+    runner = entry.get("runner", "pytest")
+    if runner not in RUNNERS:
+        raise Refused(f"{label}: runner is not pytest or vitest")
     path, find = entry["path"], entry["find"]
     if path not in tracked:
         raise Refused(f"{label}: {path} is not tracked")
@@ -330,6 +338,7 @@ def load_edit(root: Path, tracked: set[str], number: int, item: object) -> Edit:
         find=find,
         replace=entry["replace"],
         tests=tuple(tests),
+        runner=runner,
         line=text.count("\n", 0, text.index(find)) + 1,
         equivalent=entry.get("equivalent"),
     )
@@ -383,6 +392,18 @@ def copy_tree(root: Path, into: Path) -> None:
             (into / name).symlink_to(source)
 
 
+@contextmanager
+def linked_modules(copy: Path, root: Path) -> Iterator[None]:
+    """Link `root`'s `ui/node_modules` into `copy` for the block, then unlink it."""
+    link = copy / "ui" / "node_modules"
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(root / "ui" / "node_modules")
+    try:
+        yield
+    finally:
+        link.unlink()
+
+
 def pytest_args(tests: Sequence[str], everything: bool) -> list[str]:
     """Return the arguments after `python -m pytest` for one run of the tests.
 
@@ -392,30 +413,45 @@ def pytest_args(tests: Sequence[str], everything: bool) -> list[str]:
     return ["-x", "-q", "-p", "no:cacheprovider", *chosen]
 
 
-def run_tests(
-    copy: Path, args: Sequence[str], timeout: float
-) -> tuple[int | None, str]:
-    """Return pytest's `(exit code, output)` in `copy`, the code None on a timeout.
+def runner_args(runner: str, tests: Sequence[str]) -> list[str]:
+    """Return the arguments after the runner's command for one run of `tests`.
 
-    Pytest runs in its own session, and a timeout kills the whole group, so a process
-    a test started does not outlive the verdict.
+    Vitest matches a filter against the path from `ui/`, so `ui/` is removed.
+    e.g. `runner_args("vitest", ["ui/src/a.test.ts"])` -> ["src/a.test.ts"]
     """
+    if runner == "pytest":
+        return pytest_args(tests, False)
+    return [test.removeprefix("ui/") for test in tests]
+
+
+def run_tests(
+    copy: Path, args: Sequence[str], timeout: float, runner: str = "pytest"
+) -> tuple[int | None, str]:
+    """Return the runner's `(exit code, output)` in `copy`, the code None on a timeout.
+
+    The runner runs in its own session, and a timeout kills the whole group, so a
+    process a test started does not outlive the verdict.
+    """
+    if runner == "vitest":
+        command, where = ["npm", "run", "test", "--", *args], copy / "ui"
+    else:
+        command, where = [sys.executable, "-m", "pytest", *args], copy
     with subprocess.Popen(
-        [sys.executable, "-m", "pytest", *args],
-        cwd=copy,
+        command,
+        cwd=where,
         env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         start_new_session=True,
-    ) as pytest:
+    ) as process:
         try:
-            output, _ = pytest.communicate(timeout=timeout)
+            output, _ = process.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
-            os.killpg(pytest.pid, signal.SIGKILL)
-            pytest.communicate()
+            os.killpg(process.pid, signal.SIGKILL)
+            process.communicate()
             return None, ""
-    return pytest.returncode, output
+    return process.returncode, output
 
 
 def mutant_timeout(timeout: float, baseline: float) -> float:
@@ -439,7 +475,12 @@ def verdict(code: int | None) -> str:
 
 
 def try_bytes(
-    copy: Path, name: str, mutated: bytes, args: Sequence[str], timeout: float
+    copy: Path,
+    name: str,
+    mutated: bytes,
+    args: Sequence[str],
+    timeout: float,
+    runner: str = "pytest",
 ) -> str:
     """Return the verdict of `name` holding `mutated` in `copy`, then restore it.
 
@@ -454,7 +495,7 @@ def try_bytes(
             return "invalid"
     target.write_bytes(mutated)
     try:
-        code, _ = run_tests(copy, args, timeout)
+        code, _ = run_tests(copy, args, timeout, runner)
     finally:
         target.write_bytes(original)
     return verdict(code)
@@ -471,7 +512,7 @@ def try_edit(copy: Path, edit: Edit, args: Sequence[str], timeout: float) -> str
     """Return the verdict of `edit` in `copy`, the file restored after the run."""
     original = (copy / edit.path).read_bytes()
     mutated = original.replace(edit.find.encode(), edit.replace.encode(), 1)
-    return try_bytes(copy, edit.path, mutated, args, timeout)
+    return try_bytes(copy, edit.path, mutated, args, timeout, edit.runner)
 
 
 def verdict_line(mutant: Mutant, result: str) -> str:
@@ -533,13 +574,15 @@ def collect(root: Path, targets: Sequence[str]) -> list[Mutant]:
     return mutants
 
 
-def baseline_limit(copy: Path, args: Sequence[str], timeout: float) -> float:
+def baseline_limit(
+    copy: Path, args: Sequence[str], timeout: float, runner: str = "pytest"
+) -> float:
     """Return the seconds a mutant of `args` may run, or raise `Refused` if red.
 
     The tests run unmutated in `copy`; the limit is `mutant_timeout` of that run.
     """
     started = time.monotonic()
-    code, output = run_tests(copy, args, BASELINE_SECONDS)
+    code, output = run_tests(copy, args, BASELINE_SECONDS, runner)
     timeout = mutant_timeout(timeout, time.monotonic() - started)
     if code != 0:
         tail = "\n".join(output.splitlines()[-TAIL_LINES:])
@@ -583,15 +626,29 @@ def run_edits(
 
     The tests of each distinct list run unmutated first, and a baseline that is not
     green is a `Refused` before any line prints. An edit with `equivalent` is
-    printed with its reason and is not run.
+    printed with its reason and is not run. A vitest entry is refused, before the copy
+    is made, when `ui/node_modules` or `npm` is missing; its tests run with the modules
+    linked into the copy.
     """
+    if any(e.runner == "vitest" for e in edits):
+        if not (root / "ui" / "node_modules").is_dir():
+            raise Refused(
+                "a vitest entry needs ui/node_modules: run npm ci --prefix ui"
+            )
+        if shutil.which("npm") is None:
+            raise Refused("a vitest entry needs npm on PATH")
     with tempfile.TemporaryDirectory() as scratch:
         copy = Path(scratch) / "repo"
         copy_tree(root, copy)
-        limits = {
-            tests: baseline_limit(copy, pytest_args(tests, False), timeout)
-            for tests in dict.fromkeys(e.tests for e in edits if e.equivalent is None)
-        }
+        limits: dict[tuple[str, tuple[str, ...]], float] = {}
+        lists = dict.fromkeys(
+            (e.runner, e.tests) for e in edits if e.equivalent is None
+        )
+        for runner, tests in lists:
+            with linked_modules(copy, root) if runner == "vitest" else nullcontext():
+                limits[runner, tests] = baseline_limit(
+                    copy, runner_args(runner, tests), timeout, runner
+                )
         results: list[tuple[Mutant, str]] = []
         for edit in edits:
             if edit.equivalent is not None:
@@ -608,8 +665,11 @@ def run_edits(
                 first_line(edit.find),
                 first_line(edit.replace),
             )
-            args = pytest_args(edit.tests, False)
-            result = try_edit(copy, edit, args, limits[edit.tests])
+            args = runner_args(edit.runner, edit.tests)
+            with (
+                linked_modules(copy, root) if edit.runner == "vitest" else nullcontext()
+            ):
+                result = try_edit(copy, edit, args, limits[edit.runner, edit.tests])
             print(verdict_line(mutant, result), flush=True)
             results.append((mutant, result))
     return results

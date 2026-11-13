@@ -9,7 +9,7 @@ import {
   photoUrl as photoAt,
   sourceCopyUrl,
 } from '../api'
-import { readsAgain } from '../cancel'
+import { rereads } from '../cancel'
 import ApproveBar from '../components/ApproveBar.vue'
 import CollectionRail from '../components/CollectionRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
@@ -554,15 +554,11 @@ onMounted(async () => {
 
 onUnmounted(() => window.removeEventListener('beforeunload', onLeave))
 
-/* The server's reason for Cancel approve follows the render slot, so an approved
-   sheet is read again when a render for its collection starts or ends. */
-watch(
-  () => live.jobs.render,
-  (after, before) => {
-    const approved = sheet.readonly.value && sheet.detail.value !== null
-    if (readsAgain(before, after, props.collection, approved)) void reread(current.value)
-  },
-)
+/* The server's reason for Cancel approve follows the render slot, so an approved sheet is
+   read again when a render for its collection starts or ends, or once the read in flight lands. */
+const follow = rereads(() => props.collection, sheet, () => void reread(current.value))
+watch(() => live.jobs.render, (after, before) => follow.moved(before, after))
+watch(() => sheet.loading.value, () => follow.landed())
 
 watch(current, (id) => {
   if (!id) return

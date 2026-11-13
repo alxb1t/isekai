@@ -157,8 +157,17 @@ def tagger_for() -> LocalTagger:
     until a verb asks -- and `cli.py` calls it once per invocation rather than
     once per photograph, which is the difference between 0.89 s and 0.89 s times
     the batch.
+
+    A file whose bytes disagree with its pin is a refusal naming the file and the
+    fetch, so the verb reports it and the hosted tagger still runs.
     """
-    return open_session()
+    try:
+        return open_session()
+    except DigestMismatch as swapped:
+        raise Refusal(
+            f"{swapped}; delete that file, run `{VOCABULARY_REMEDY}`, then this "
+            "command again"
+        ) from swapped
 
 
 _proposer: Proposer | None = None

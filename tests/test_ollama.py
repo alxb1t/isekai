@@ -7,12 +7,16 @@ operator's one-command fix and must not spend an attempt at all.
 """
 
 import http.client
+import io
 import json
 import urllib.error
 import urllib.request
+from email.message import Message
+from types import TracebackType
 
 import pytest
 
+from isekai.boundary import ollama
 from isekai.boundary.ollama import (
     GENERATE,
     HOST,
@@ -131,6 +135,83 @@ def test_an_absent_model_refuses_naming_the_callers_own_remedy() -> None:
     message = str(refused.value)
     assert "a-model" in message
     assert REMEDY in message
+
+
+# --- the real transport, over an opener that answers --------------------------
+
+
+class _Response:
+    status = 200
+
+    def read(self) -> bytes:
+        return b"{}"
+
+    def __enter__(self) -> "_Response":
+        return self
+
+    def __exit__(
+        self,
+        kind: type[BaseException] | None,
+        raised: BaseException | None,
+        trace: TracebackType | None,
+    ) -> None:
+        return None
+
+
+class _Opener:
+    """Stand in for `ollama.OPENER`: raise the outcome, or return it."""
+
+    def __init__(self, outcome: BaseException | _Response) -> None:
+        self.outcome = outcome
+
+    def open(self, request: object, timeout: float) -> _Response:
+        if isinstance(self.outcome, BaseException):
+            raise self.outcome
+        return self.outcome
+
+
+def _not_found() -> urllib.error.HTTPError:
+    return urllib.error.HTTPError(
+        f"{HOST}{GENERATE}",
+        404,
+        "Not Found",
+        Message(),
+        io.BytesIO(b'{"error": "model not found"}'),
+    )
+
+
+@pytest.mark.spec("caption:reachability:absent-model-names-how-to-create-it")
+def test_post_returns_an_answered_status_with_its_body(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(ollama, "OPENER", _Opener(_not_found()))
+
+    assert post(GENERATE, b"{}") == (404, b'{"error": "model not found"}')
+
+
+@pytest.mark.spec("caption:reachability:absent-model-names-how-to-create-it")
+def test_ask_over_the_real_transport_refuses_a_404_naming_the_remedy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(ollama, "OPENER", _Opener(_not_found()))
+
+    with pytest.raises(Refusal) as refused:
+        ask(BODY, remedy=REMEDY)
+
+    assert REMEDY in str(refused.value)
+    assert ollama.NOT_LISTENING not in str(refused.value)
+
+
+@pytest.mark.spec("caption:reachability:a-host-that-answers-with-a-status-is-reachable")
+@pytest.mark.parametrize(
+    "outcome", [_not_found(), _Response()], ids=["a-status", "a-response"]
+)
+def test_probe_takes_any_answer_as_up(
+    monkeypatch: pytest.MonkeyPatch, outcome: BaseException | _Response
+) -> None:
+    monkeypatch.setattr(ollama, "OPENER", _Opener(outcome))
+
+    assert ollama.probe() is None
 
 
 # --- transient: worth another attempt -----------------------------------------

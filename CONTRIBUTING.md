@@ -88,7 +88,8 @@ it, on the tests that cover them. A survivor is killed by a test, or the change 
 a run takes minutes. The run works in a copy that is a git repository of the tracked files and
 links `models/` alone, so a test that writes under `models/` writes through to the checkout: isolate it.
 A mutant of a finding a version closed lives in `tests/mutants.json`, and `make mutants` replays them outside the
-gate; a refactor version's pre-flight adds its own entries.
+gate; a refactor version's pre-flight adds its own entries. A vitest mutant names `"runner": "vitest"` and the files
+of `ui/src` that kill it; the copy links `ui/node_modules` for it alone.
 
 Every command green, or the phase is not done. **Never weaken the gate to pass** — see `AGENTS.md`'s guardrails.
 

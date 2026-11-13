@@ -1,0 +1,155 @@
+[
+  {
+    "finding": "VT-14",
+    "runner": "vitest",
+    "path": "ui/src/composables/useSheet.ts",
+    "find": "      if (current === id && !superseded(id, mine)) dirty = true\n",
+    "replace": "",
+    "tests": ["ui/src/composables/useSheet.test.ts"],
+    "why": "a lone failed save is never sent again, so a later Approve's flush sends nothing and approves the draft without the last edit"
+  },
+  {
+    "finding": "VT-15a",
+    "runner": "vitest",
+    "path": "ui/src/composables/useSheet.ts",
+    "find": "      if (current === id && draft?.asked === generation) refusal.value = (reason as Error).message\n",
+    "replace": "",
+    "tests": ["ui/src/composables/useSheet.test.ts"],
+    "why": "a refused save shows nothing in the approve bar"
+  },
+  {
+    "finding": "VT-15b",
+    "runner": "vitest",
+    "path": "ui/src/composables/useSheet.ts",
+    "find": "      refusal.value = (reason as Error).message\n      loading.value = false\n      return\n",
+    "replace": "      loading.value = false\n      return\n",
+    "tests": ["ui/src/composables/useSheet.test.ts"],
+    "why": "a failed read stops loading and says nothing, the one outcome the surface may not have"
+  },
+  {
+    "finding": "VT-16",
+    "runner": "vitest",
+    "path": "ui/src/composables/useSheet.ts",
+    "find": "const DEBOUNCE = 400",
+    "replace": "const DEBOUNCE = 0",
+    "tests": ["ui/src/composables/useSheet.test.ts"],
+    "why": "a burst of typing is one write per keystroke; the tests held the debounce from above alone"
+  },
+  {
+    "finding": "VT-17a",
+    "runner": "vitest",
+    "path": "ui/src/stores/keys.ts",
+    "find": "      ...newest.filter((layer) => layer.scope === 'screen'),\n      ...newest.filter((layer) => layer.scope === 'everywhere'),",
+    "replace": "      ...newest.filter((layer) => layer.scope === 'everywhere'),\n      ...newest.filter((layer) => layer.scope === 'screen'),",
+    "tests": ["ui/src/stores/keys.test.ts"],
+    "why": "an everywhere command beats the screen's on a shared key"
+  },
+  {
+    "finding": "VT-17b",
+    "runner": "vitest",
+    "path": "ui/src/stores/keys.ts",
+    "find": "  if (element.tagName === 'TEXTAREA') return true\n",
+    "replace": "",
+    "tests": ["ui/src/stores/keys.test.ts"],
+    "why": "letters typed in a textarea fire commands"
+  },
+  {
+    "finding": "VT-17c",
+    "runner": "vitest",
+    "path": "ui/src/stores/keys.ts",
+    "find": "  if (element.isContentEditable) return true\n",
+    "replace": "",
+    "tests": ["ui/src/stores/keys.test.ts"],
+    "why": "letters typed in an editable element fire commands"
+  },
+  {
+    "finding": "VT-19",
+    "runner": "vitest",
+    "path": "ui/src/composables/useQueue.ts",
+    "find": "export const chooses = (info: HubInfo): boolean => flowsWaiting(info).length > 1",
+    "replace": "export const chooses = (info: HubInfo): boolean => flowsWaiting(info).length > 0",
+    "tests": ["ui/src/composables/useQueue.test.ts"],
+    "why": "one flow waiting opens the chooser"
+  },
+  {
+    "finding": "VT-8a",
+    "runner": "vitest",
+    "path": "ui/src/cancel.ts",
+    "find": "  if (sheet.loading) return 'later'\n",
+    "replace": "",
+    "tests": ["ui/src/cancel.test.ts"],
+    "why": "a render that moves during the read is dropped, as card 0124·S2 says"
+  },
+  {
+    "finding": "VT-8b",
+    "runner": "vitest",
+    "path": "ui/src/cancel.ts",
+    "find": "  return sheet.readonly && sheet.detail !== null ? 'now' : 'no'\n",
+    "replace": "  return 'now'\n",
+    "tests": ["ui/src/cancel.test.ts"],
+    "why": "Review reads a sheet that is not approved again, the AND of the scenario"
+  },
+  {
+    "finding": "VT-8c",
+    "runner": "vitest",
+    "path": "ui/src/cancel.ts",
+    "find": "      if (again === 'later') missed = true\n",
+    "replace": "",
+    "tests": ["ui/src/cancel.test.ts"],
+    "why": "a render that moves during the read is forgotten"
+  },
+  {
+    "finding": "VT-8d",
+    "runner": "vitest",
+    "path": "ui/src/cancel.ts",
+    "find": "      missed = false\n",
+    "replace": "",
+    "tests": ["ui/src/cancel.test.ts"],
+    "why": "a landed read owes its re-read once, not at every later landing"
+  },
+  {
+    "finding": "VT-8e",
+    "runner": "vitest",
+    "path": "ui/src/cancel.ts",
+    "find": "      const owed = missed && now.readonly && now.detail !== null\n",
+    "replace": "      const owed = missed\n",
+    "tests": ["ui/src/cancel.test.ts"],
+    "why": "a sheet that lands editable is read again"
+  },
+  {
+    "finding": "VT-8f",
+    "runner": "vitest",
+    "path": "ui/src/cancel.ts",
+    "find": "      if (now.loading) return\n",
+    "replace": "",
+    "tests": ["ui/src/cancel.test.ts"],
+    "why": "a landing seen while the sheet still loads spends the memory"
+  },
+  {
+    "finding": "VT-18a",
+    "runner": "vitest",
+    "path": "ui/src/api.ts",
+    "find": "    const body = (await response.json().catch(() => ({}))) as { refusal?: string }\n    // A refusal",
+    "replace": "    const body = (await response.json()) as { refusal?: string }\n    // A refusal",
+    "tests": ["ui/src/api.test.ts"],
+    "why": "a non-JSON error body throws a SyntaxError instead of `<url> answered 502`"
+  },
+  {
+    "finding": "VT-18b",
+    "runner": "vitest",
+    "path": "ui/src/api.ts",
+    "find": "    if (answers?.(body)) return body as T\n",
+    "replace": "",
+    "tests": ["ui/src/api.test.ts"],
+    "why": "a draft's per-image refusal is thrown instead of returned"
+  },
+  {
+    "finding": "VT-18c",
+    "runner": "vitest",
+    "path": "ui/src/api.ts",
+    "find": "  if ([x, y, width, height, white].some((one) => one === undefined || Number.isNaN(one)))",
+    "replace": "  if (false)",
+    "tests": ["ui/src/api.test.ts"],
+    "why": "a preview answer without its box header draws at NaN"
+  }
+]
