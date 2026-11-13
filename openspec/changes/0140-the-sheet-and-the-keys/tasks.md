@@ -6,7 +6,7 @@ Phases that teach the replay vitest, hold the sheet's saves, the key dispatch an
 
 - [x] 1 — The replay learns vitest · moderate
 - [x] 2 — The sheet's saves · moderate
-- [ ] 3 — Key dispatch and the chooser · moderate
+- [x] 3 — Key dispatch and the chooser · moderate
 - [ ] 4 — Cancel approve after a read · hard
 - [ ] 5 — The mutants die · moderate
 
@@ -60,17 +60,17 @@ Phases that teach the replay vitest, hold the sheet's saves, the key dispatch an
 
 ## 3 — Key dispatch and the chooser
 
-- [ ] 3.1 **HALT CHECK** `isField` reads a textarea by its tag, so the case below is one the store already answers; if it reads otherwise, the plan is wrong.
+- [x] 3.1 **HALT CHECK** `isField` reads a textarea by its tag, so the case below is one the store already answers; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -h -F "if (element.tagName === 'TEXTAREA') return true" ui/src/stores/keys.ts` prints `1`.
-- [ ] 3.2 In `ui/src/stores/keys.test.ts` add `spec('ui:keys:a-screen-takes-the-keys-before-everywhere', …)` after the overlay's: `screen = command('revise', 'KeyE')` declared in `'screen'`, `everywhere = command('library', 'KeyE')` declared in `'everywhere'`; `keys.press(press('KeyE'))`; assert `screen.run` was called once and `everywhere.run` not.
+- [x] 3.2 In `ui/src/stores/keys.test.ts` add `spec('ui:keys:a-screen-takes-the-keys-before-everywhere', …)` after the overlay's: `screen = command('revise', 'KeyE')` declared in `'screen'`, `everywhere = command('library', 'KeyE')` declared in `'everywhere'`; `keys.press(press('KeyE'))`; assert `screen.run` was called once and `everywhere.run` not.
   Verify: `git grep -c -h -F "a-screen-takes-the-keys-before-everywhere" ui/src/stores/keys.test.ts` prints `1`.
-- [ ] 3.3 In `ui/src/stores/keys.test.ts` give `field` the parameter `kind: Record<string, unknown> = {}`, spread into the double after `type: 'text'`, so a caller sets its `tagName` and its `isContentEditable`.
+- [x] 3.3 In `ui/src/stores/keys.test.ts` give `field` the parameter `kind: Record<string, unknown> = {}`, spread into the double after `type: 'text'`, so a caller sets its `tagName` and its `isContentEditable`.
   Verify: `git grep -c -h -F "kind: Record<string, unknown> = {}" ui/src/stores/keys.test.ts` prints `1`.
-- [ ] 3.4 In `ui/src/stores/keys.test.ts` extend `ui:keys:no-command-fires-in-a-text-field` in place: after its last assert, add `const textarea = field({ tagName: 'TEXTAREA' })` and `const editable = field({ tagName: 'DIV', isContentEditable: true })`. For each assert `keys.press(press('KeyE', { target }))` is `false`, `letter.run` is still not called, and `keys.press(press('Escape', { target }))` leaves `target.left` `true`.
+- [x] 3.4 In `ui/src/stores/keys.test.ts` extend `ui:keys:no-command-fires-in-a-text-field` in place: after its last assert, add `const textarea = field({ tagName: 'TEXTAREA' })` and `const editable = field({ tagName: 'DIV', isContentEditable: true })`. For each assert `keys.press(press('KeyE', { target }))` is `false`, `letter.run` is still not called, and `keys.press(press('Escape', { target }))` leaves `target.left` `true`.
   Verify: `git grep -c -h -F "const editable = field(" ui/src/stores/keys.test.ts` prints `1`.
-- [ ] 3.5 In `ui/src/composables/useQueue.test.ts` import `chooses` from `./useQueue`. In `ui:review:two-flows-waiting-open-the-chooser` assert `chooses(info)` is `true` after its `flowsWaiting` assert; in `ui:review:a-batch-opens-its-head` assert `chooses(collection('draft'))` is `false` after its `flowsWaiting` assert.
+- [x] 3.5 In `ui/src/composables/useQueue.test.ts` import `chooses` from `./useQueue`. In `ui:review:two-flows-waiting-open-the-chooser` assert `chooses(info)` is `true` after its `flowsWaiting` assert; in `ui:review:a-batch-opens-its-head` assert `chooses(collection('draft'))` is `false` after its `flowsWaiting` assert.
   Verify: `git grep -c -h -F "chooses(" ui/src/composables/useQueue.test.ts` prints `2`.
-- [ ] 3.6 The phase's files agree with the keys.
+- [x] 3.6 The phase's files agree with the keys.
   Verify: `uv run python -m tools.test_ui` exits `0`.
 
 ## 4 — Cancel approve after a read
