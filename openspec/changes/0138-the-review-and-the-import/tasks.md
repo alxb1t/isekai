@@ -8,7 +8,7 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 - [x] 2 — An approval is never replaced · moderate
 - [x] 3 — What the reader is sent · moderate
 - [x] 4 — The seal and the commit · hard
-- [ ] 5 — The kinds · moderate
+- [x] 5 — The kinds · moderate
 - [ ] 6 — The mutants die · moderate
 
 ## 1 — The budget and the warning
@@ -87,17 +87,17 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 
 ## 5 — The kinds
 
-- [ ] 5.1 **HALT CHECK** The decode exempts an MPO from the many-image refusal, the line the mutant `PA-17a` names; if it reads otherwise, the plan is wrong.
+- [x] 5.1 **HALT CHECK** The decode exempts an MPO from the many-image refusal, the line the mutant `PA-17a` names; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'if image.format != "MPO" and getattr(image, "n_frames", 1) > 1:' isekai/pipeline/importing.py` prints `1`.
-- [ ] 5.2 In `tests/images.py` add `cr2_bytes`, `dng_bytes`, `arw_bytes` and `cut_tiff_bytes` after `nef_bytes`, each returning the bytes of its row of [D8](design.md#d8)'s table.
+- [x] 5.2 In `tests/images.py` add `cr2_bytes`, `dng_bytes`, `arw_bytes` and `cut_tiff_bytes` after `nef_bytes`, each returning the bytes of its row of [D8](design.md#d8)'s table.
   Verify: `git grep -c -E '^def (cr2|dng|arw|cut_tiff)_bytes' tests/images.py` prints `4`.
-- [ ] 5.3 In `tests/test_importing.py` add `test_a_phone_jpeg_with_a_gain_map_is_stripped_not_refused`, carrying `import:clean:a-phone-jpeg-with-a-gain-map-is-stripped`. It saves a 32 by 32 RGB image as `"MPO"` with `save_all=True` and an 8 by 8 image appended, writes it as `PXL_0001.jpg`, and `read`s it into a staging folder: the `Staged` state is `ready`, `verify` of the staged file is `[]`, and the file opens as a JPEG of one frame.
+- [x] 5.3 In `tests/test_importing.py` add `test_a_phone_jpeg_with_a_gain_map_is_stripped_not_refused`, carrying `import:clean:a-phone-jpeg-with-a-gain-map-is-stripped`. It saves a 32 by 32 RGB image as `"MPO"` with `save_all=True` and an 8 by 8 image appended, writes it as `PXL_0001.jpg`, and `read`s it into a staging folder: the `Staged` state is `ready`, `verify` of the staged file is `[]`, and the file opens as a JPEG of one frame.
   Verify: `uv run pytest tests/test_importing.py::test_a_phone_jpeg_with_a_gain_map_is_stripped_not_refused` passes.
-- [ ] 5.4 In `tests/test_importing.py` add `test_a_raw_photograph_of_each_kind_is_refused_by_its_header`, carrying `import:refuse:a-raw-photograph-is-refused`, parametrized over `cr2_bytes()` as `CR2`, `dng_bytes()` as `DNG` and `arw_bytes()` as `ARW`. Each is written as `shot.bin`; `read` raises `Refusal` matching `shot.bin: a <KIND> RAW photograph` and `export it as JPEG`, and the staging folder is empty.
+- [x] 5.4 In `tests/test_importing.py` add `test_a_raw_photograph_of_each_kind_is_refused_by_its_header`, carrying `import:refuse:a-raw-photograph-is-refused`, parametrized over `cr2_bytes()` as `CR2`, `dng_bytes()` as `DNG` and `arw_bytes()` as `ARW`. Each is written as `shot.bin`; `read` raises `Refusal` matching `shot.bin: a <KIND> RAW photograph` and `export it as JPEG`, and the staging folder is empty.
   Verify: `uv run pytest tests/test_importing.py::test_a_raw_photograph_of_each_kind_is_refused_by_its_header` passes.
-- [ ] 5.5 In `tests/test_importing.py` add `test_a_tiff_with_a_cut_header_is_refused_as_not_decoding`, carrying `import:refuse:a-file-that-does-not-decode-is-refused`: `cut_tiff_bytes()` written as `cut.tiff`, `read` raises `Refusal` matching `cut.tiff: does not decode as an image` and not holding `RAW`.
+- [x] 5.5 In `tests/test_importing.py` add `test_a_tiff_with_a_cut_header_is_refused_as_not_decoding`, carrying `import:refuse:a-file-that-does-not-decode-is-refused`: `cut_tiff_bytes()` written as `cut.tiff`, `read` raises `Refusal` matching `cut.tiff: does not decode as an image` and not holding `RAW`.
   Verify: `uv run pytest tests/test_importing.py::test_a_tiff_with_a_cut_header_is_refused_as_not_decoding` passes.
-- [ ] 5.6 The phase's file agrees with the keys.
+- [x] 5.6 The phase's file agrees with the keys.
   Verify: `uv run pytest tests/test_importing.py` passes.
 
 ## 6 — The mutants die

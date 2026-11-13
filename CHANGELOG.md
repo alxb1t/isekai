@@ -45,6 +45,8 @@ its new digest.
 - A commit whose move fails puts the photographs back in the staging folder, and a name taken as the move lands is
   refused as a taken name; tests hold the seal while a file is unread, the unseal after a refusal and the empty
   name's message (0138 D6, D7).
+- Tests hold a phone JPEG's gain map stripped, not refused, each of the CR2, DNG and ARW headers refused as a RAW
+  photograph, and a TIFF with a cut header refused as not decoding (0138 D8).
 
 ## [0.86.9] - 2026-11-13
 

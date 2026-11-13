@@ -23,7 +23,15 @@ from isekai.interface.cli import build_parser, dispatch
 from isekai.pipeline import importing
 from isekai.pipeline.importing import cancel, commit, read, stage, sweep, verify
 from isekai.shared.image import metadata_in
-from tests.images import jpeg_segment, nef_bytes, photo_jpeg
+from tests.images import (
+    arw_bytes,
+    cr2_bytes,
+    cut_tiff_bytes,
+    dng_bytes,
+    jpeg_segment,
+    nef_bytes,
+    photo_jpeg,
+)
 from tests.stages import bare_wiring
 
 REPO = Path(__file__).resolve().parent.parent
@@ -149,6 +157,28 @@ def test_a_jpegs_exif_is_stripped_and_its_pixels_kept(tmp_path: Path) -> None:
         assert dict(image.getexif()) == {ORIENTATION: 6}
     assert metadata_in(source.read_bytes()) == []
     assert _pixels(source) == _pixels(original)
+
+
+@pytest.mark.spec("import:clean:a-phone-jpeg-with-a-gain-map-is-stripped")
+def test_a_phone_jpeg_with_a_gain_map_is_stripped_not_refused(tmp_path: Path) -> None:
+    out = io.BytesIO()
+    Image.new("RGB", (32, 32), (200, 80, 60)).save(
+        out,
+        "MPO",
+        save_all=True,
+        append_images=[Image.new("RGB", (8, 8), (10, 10, 10))],
+    )
+    photo = _write(tmp_path, "PXL_0001.jpg", out.getvalue())
+    staging = stage(tmp_path / "library")
+
+    staged = read(photo, staging, LIMIT)
+
+    source = staging / staged.name
+    assert (staged.name, staged.state) == ("PXL_0001.jpg", "ready")
+    assert verify(source) == []
+    with Image.open(source) as image:
+        assert image.format == "JPEG"
+        assert getattr(image, "n_frames", 1) == 1
 
 
 @pytest.mark.spec("import:clean:another-profile-is-converted-to-srgb")
@@ -352,6 +382,37 @@ def test_a_raw_photograph_is_refused_and_the_others_import(tmp_path: Path) -> No
     assert [path.name for path in (collection / "sources").iterdir()] == [
         "portrait.jpg"
     ]
+
+
+@pytest.mark.spec("import:refuse:a-raw-photograph-is-refused")
+@pytest.mark.parametrize(
+    ("body", "kind"),
+    [(cr2_bytes(), "CR2"), (dng_bytes(), "DNG"), (arw_bytes(), "ARW")],
+    ids=["CR2", "DNG", "ARW"],
+)
+def test_a_raw_photograph_of_each_kind_is_refused_by_its_header(
+    tmp_path: Path, body: bytes, kind: str
+) -> None:
+    shot = _write(tmp_path, "shot.bin", body)
+    staging = stage(tmp_path / "library")
+
+    with pytest.raises(Refusal, match=f"shot.bin: a {kind} RAW photograph") as refused:
+        read(shot, staging, LIMIT)
+
+    assert "export it as JPEG" in str(refused.value)
+    assert list(staging.iterdir()) == []
+
+
+@pytest.mark.spec("import:refuse:a-file-that-does-not-decode-is-refused")
+def test_a_tiff_with_a_cut_header_is_refused_as_not_decoding(tmp_path: Path) -> None:
+    cut = _write(tmp_path, "cut.tiff", cut_tiff_bytes())
+
+    with pytest.raises(
+        Refusal, match="cut.tiff: does not decode as an image"
+    ) as refused:
+        read(cut, stage(tmp_path / "library"), LIMIT)
+
+    assert "RAW" not in str(refused.value)
 
 
 @pytest.mark.spec("import:refuse:an-unconvertible-file-is-refused")
