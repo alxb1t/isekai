@@ -5,7 +5,7 @@ Phases that guard the browser tests against a page that logs an error, press the
 ## Progress
 
 - [x] 1 — The guard · moderate
-- [ ] 2 — The keys in a browser · moderate
+- [x] 2 — The keys in a browser · moderate
 - [ ] 3 — Save and approve · moderate
 
 ## 1 — The guard
@@ -33,19 +33,19 @@ Phases that guard the browser tests against a page that logs an error, press the
 
 ## 2 — The keys in a browser
 
-- [ ] 2.1 **HALT CHECK** The key list holds no control `Tab` reaches, so [D6](design.md#d6) holds its focus by the page behind it and not by a wrap; if a control is there, the plan is wrong.
+- [x] 2.1 **HALT CHECK** The key list holds no control `Tab` reaches, so [D6](design.md#d6) holds its focus by the page behind it and not by a wrap; if a control is there, the plan is wrong.
   Verify: `git grep -c -E '<(button|input|select|textarea|a)[ >]' -- ui/src/components/KeyList.vue` exits `1`.
-- [ ] 2.2 **HALT CHECK** The key list is the dialog the journey finds by `data-key-list`.
+- [x] 2.2 **HALT CHECK** The key list is the dialog the journey finds by `data-key-list`.
   Verify: `git grep -c -h -F 'data-key-list' ui/src/components/KeyList.vue` prints `1`.
-- [ ] 2.3 **HALT CHECK** The app bar's button carries the title `the key list` the journey finds it by.
+- [x] 2.3 **HALT CHECK** The app bar's button carries the title `the key list` the journey finds it by.
   Verify: `git grep -c -h -F 'the key list ' ui/src/App.vue` prints `1`.
-- [ ] 2.4 In `QUEUES` of `tests/e2e/conftest.py`, after its `queue-fails` entry, add `"keys-hold": (("kay", (720, 1000)),),`.
+- [x] 2.4 In `QUEUES` of `tests/e2e/conftest.py`, after its `queue-fails` entry, add `"keys-hold": (("kay", (720, 1000)),),`.
   Verify: `git grep -c -h -F '"keys-hold"' tests/e2e/conftest.py` prints `1`.
-- [ ] 2.5 Write `tests/e2e/test_keys.py` exactly as [D4](design.md#d4) gives it. Its commit body says why no existing test fits: `test_the_photograph_opens_in_the_viewer` ends on a changed viewport, an open list and a saved edit, and no other test reaches an editable Review with nothing open.
+- [x] 2.5 Write `tests/e2e/test_keys.py` exactly as [D4](design.md#d4) gives it. Its commit body says why no existing test fits: `test_the_photograph_opens_in_the_viewer` ends on a changed viewport, an open list and a saved edit, and no other test reaches an editable Review with nothing open.
   Verify: `grep -c -F 'def test_the_keys_hold_in_a_browser' tests/e2e/test_keys.py` prints `1`.
-- [ ] 2.6 The journey collects.
+- [x] 2.6 The journey collects.
   Verify: `uv run pytest tests/e2e/test_keys.py --collect-only -q` exits `0`.
-- [ ] 2.7 Each key the journey names is one this change's delta holds, on the layer it binds.
+- [x] 2.7 Each key the journey names is one this change's delta holds, on the layer it binds.
   Verify: `uv run pytest tests/test_spec_bindings.py` passes.
 
 ## 3 — Save and approve
