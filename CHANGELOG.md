@@ -23,6 +23,8 @@ its new digest.
   (0139 D6, D7, D8).
 - `tests/mutants.json` gains the boundary's mutants, each naming the test file that must kill it, and `make mutants`
   replays them with no survivor (0139 D10).
+- The mutant replay runs a vitest entry: it names `"runner": "vitest"` and the files of `ui/src` that kill it, and the
+  copy links `ui/node_modules` for it alone, so a pytest entry never reaches the checkout's modules (0140 D1, D2).
 
 ## [0.86.12] - 2026-11-13
 

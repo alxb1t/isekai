@@ -7,6 +7,7 @@ several lines limit where; a small repository of its own shows the run.
 import contextlib
 import json
 import os
+import shutil
 import signal
 import subprocess
 import time
@@ -22,6 +23,7 @@ from tools.mutate import (
     mutant_timeout,
     pytest_args,
     run_tests,
+    runner_args,
     sites,
     verdict,
 )
@@ -397,6 +399,46 @@ def build_notes_repo(path: Path) -> Path:
     return path
 
 
+UNLINKED_TESTS = """\
+from pathlib import Path
+
+
+def test_modules_are_not_linked():
+    root = Path(__file__).parent.parent
+    assert not (root / "ui" / "node_modules").exists()
+"""
+
+
+def fake_npm(bin_dir: Path) -> None:
+    """Write an `npm` to `bin_dir` that passes while `ui/limit.txt` says `limit = 10`.
+
+    It exits 3 for a file named from the repository's root, and fails without
+    `node_modules` beside it.
+    """
+    npm = bin_dir / "npm"
+    npm.write_text(
+        "#!/bin/sh\n"
+        'case "$*" in *" ui/"*) exit 3;; esac\n'
+        'test -d node_modules && grep -q "limit = 10" limit.txt\n'
+    )
+    npm.chmod(0o755)
+
+
+def build_vitest_repo(path: Path) -> Path:
+    """Return `build_notes_repo(path)` plus a tracked `ui/limit.txt` and its modules."""
+    build_notes_repo(path)
+    (path / "ui").mkdir()
+    (path / "ui" / "limit.txt").write_text("limit = 10\nremark: none\n")
+    (path / "tests" / "test_unlinked.py").write_text(UNLINKED_TESTS)
+    subprocess.run(
+        ["git", "-C", str(path), "add", "--", "ui/limit.txt", "tests/test_unlinked.py"],
+        check=True,
+    )
+    (path / "ui" / "node_modules").mkdir()
+    (path / "ui" / "node_modules" / "m.js").write_text("m")
+    return path
+
+
 def entry(**given: object) -> dict[str, object]:
     """Return a valid edit of `calc.py`, each key of `given` set, None dropping it."""
     base: dict[str, object] = {
@@ -466,6 +508,7 @@ def test_an_edit_replays_in_any_file_and_a_survivor_exits_one(
         ({"extra": "x"}, (), "ED-X"),
         ({"tests": []}, (), "ED-X"),
         ({}, ("calc.py:2",), "--edits takes no target, --tests or --all"),
+        ({"runner": "jest"}, (), "ED-X"),
     ],
     ids=[
         "find twice",
@@ -475,6 +518,7 @@ def test_an_edit_replays_in_any_file_and_a_survivor_exits_one(
         "unknown key",
         "empty tests",
         "edits beside a target",
+        "unknown runner",
     ],
 )
 def test_an_entry_out_of_shape_or_whose_find_is_not_once_is_refused(
@@ -557,3 +601,104 @@ def test_a_red_baseline_of_one_entrys_tests_refuses_the_run(
 
     assert (status, printed) == (2, [])
     assert "do not pass unmutated" in refusal
+
+
+@pytest.mark.spec_exempt(
+    "structural: a vitest entry is replayed with ui/node_modules linked for it alone"
+)
+def test_a_vitest_entry_replays_with_the_modules_linked_for_it_alone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = build_vitest_repo(tmp_path / "repo")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_npm(bin_dir)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    vitest = {"runner": "vitest", "tests": ["ui/src/limit.test.ts"]}
+    edits = edits_file(
+        tmp_path,
+        entry(
+            finding="ED-1",
+            path="ui/limit.txt",
+            find="limit = 10",
+            replace="limit = 11",
+            **vitest,
+        ),
+        entry(
+            finding="ED-2",
+            path="ui/limit.txt",
+            find="remark: none",
+            replace="remark: some",
+            **vitest,
+        ),
+        entry(
+            finding="ED-3",
+            path="notes.txt",
+            find="limit = 10",
+            replace="limit = 11",
+            tests=["tests/test_unlinked.py"],
+        ),
+    )
+
+    status, printed, _ = run(capsys, repo, "--edits", edits)
+
+    assert status == 1
+    assert printed == [
+        "killed ui/limit.txt:1 ED-1: limit = 10 -> limit = 11",
+        "survived ui/limit.txt:2 ED-2: remark: none -> remark: some",
+        "survived notes.txt:1 ED-3: limit = 10 -> limit = 11",
+        "mutate: 1 killed, 2 survived, 0 invalid, 0 timeout",
+        "survivor ui/limit.txt:2 ED-2",
+        "survivor notes.txt:1 ED-3",
+    ]
+    assert (repo / "ui" / "limit.txt").read_text() == "limit = 10\nremark: none\n"
+    assert (repo / "notes.txt").read_text() == "limit = 10\nremark: none\n"
+    assert not (repo / "ui" / "node_modules").is_symlink()
+
+
+@pytest.mark.spec_exempt(
+    "structural: a vitest entry that cannot run is refused before any line prints"
+)
+@pytest.mark.parametrize("missing", ["modules", "npm"])
+def test_a_vitest_entry_with_no_modules_or_no_npm_is_refused(
+    missing: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = build_vitest_repo(tmp_path / "repo")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    if missing == "modules":
+        shutil.rmtree(repo / "ui" / "node_modules")
+        fake_npm(bin_dir)
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    else:
+        git = shutil.which("git")
+        assert git is not None
+        (bin_dir / "git").symlink_to(git)
+        monkeypatch.setenv("PATH", str(bin_dir))
+    edits = edits_file(
+        tmp_path,
+        entry(
+            finding="ED-1",
+            path="ui/limit.txt",
+            find="limit = 10",
+            replace="limit = 11",
+            runner="vitest",
+            tests=["ui/src/limit.test.ts"],
+        ),
+    )
+
+    status, printed, refusal = run(capsys, repo, "--edits", edits)
+
+    assert (status, printed) == (2, [])
+    assert ("ui/node_modules" if missing == "modules" else "npm on PATH") in refusal
+
+
+@pytest.mark.spec_exempt("structural: vitest takes its files from the root of ui/")
+def test_a_vitest_file_is_named_from_the_ui_root() -> None:
+    assert runner_args("vitest", ["ui/src/a.test.ts"]) == ["src/a.test.ts"]
+    assert runner_args("pytest", ["tests/test_a.py"]) == pytest_args(
+        ["tests/test_a.py"], False
+    )

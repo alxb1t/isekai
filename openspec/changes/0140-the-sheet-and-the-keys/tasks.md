@@ -4,7 +4,7 @@ Phases that teach the replay vitest, hold the sheet's saves, the key dispatch an
 
 ## Progress
 
-- [ ] 1 — The replay learns vitest · moderate
+- [x] 1 — The replay learns vitest · moderate
 - [ ] 2 — The sheet's saves · moderate
 - [ ] 3 — Key dispatch and the chooser · moderate
 - [ ] 4 — Cancel approve after a read · hard
@@ -12,33 +12,33 @@ Phases that teach the replay vitest, hold the sheet's saves, the key dispatch an
 
 ## 1 — The replay learns vitest
 
-- [ ] 1.1 **HALT CHECK** `0135-the-paydown` is merged: the replay mode this phase extends exists; if it does not, the plan is wrong.
+- [x] 1.1 **HALT CHECK** `0135-the-paydown` is merged: the replay mode this phase extends exists; if it does not, the plan is wrong.
   Verify: `git grep -c -h -F 'def run_edits' tools/mutate.py` prints `1`.
-- [ ] 1.2 In `tools/mutate.py` add `RUNNERS = ("pytest", "vitest")` after `LINKED`, `"runner"` to `EDIT_OPTIONAL` and `EDIT_TEXTS`, and `runner: str` to `Edit` after `tests`. In `load_edit` read `runner = entry.get("runner", "pytest")`, refuse `f"{label}: runner is not pytest or vitest"` when it is not in `RUNNERS`, and pass it to `Edit` ([D1](design.md#d1)).
+- [x] 1.2 In `tools/mutate.py` add `RUNNERS = ("pytest", "vitest")` after `LINKED`, `"runner"` to `EDIT_OPTIONAL` and `EDIT_TEXTS`, and `runner: str` to `Edit` after `tests`. In `load_edit` read `runner = entry.get("runner", "pytest")`, refuse `f"{label}: runner is not pytest or vitest"` when it is not in `RUNNERS`, and pass it to `Edit` ([D1](design.md#d1)).
   Verify: `git grep -c -h -F 'RUNNERS = ("pytest", "vitest")' tools/mutate.py` prints `1`.
-- [ ] 1.3 In `tools/mutate.py` add `def runner_args(runner: str, tests: Sequence[str]) -> list[str]`, `pytest_args(tests, False)` for `pytest` and, for `vitest`, each test with its leading `ui/` removed, as vitest matches a filter against the path from its root. Give `run_tests` the keyword `runner: str = "pytest"`: for `vitest` it runs `["npm", "run", "test", "--", *args]` with `cwd=copy / "ui"`, else as now ([D2](design.md#d2)).
+- [x] 1.3 In `tools/mutate.py` add `def runner_args(runner: str, tests: Sequence[str]) -> list[str]`, `pytest_args(tests, False)` for `pytest` and, for `vitest`, each test with its leading `ui/` removed, as vitest matches a filter against the path from its root. Give `run_tests` the keyword `runner: str = "pytest"`: for `vitest` it runs `["npm", "run", "test", "--", *args]` with `cwd=copy / "ui"`, else as now ([D2](design.md#d2)).
   Verify: `git grep -c -h -F 'def runner_args' tools/mutate.py` prints `1`.
-- [ ] 1.4 In `tools/mutate.py` give `try_bytes` and `baseline_limit` the keyword `runner: str = "pytest"` and pass it to `run_tests`; `try_edit` passes `edit.runner`. Update the module docstring's usage lines with `"runner": "vitest"`.
+- [x] 1.4 In `tools/mutate.py` give `try_bytes` and `baseline_limit` the keyword `runner: str = "pytest"` and pass it to `run_tests`; `try_edit` passes `edit.runner`. Update the module docstring's usage lines with `"runner": "vitest"`.
   Verify: `git grep -n -F 'edit.runner' tools/mutate.py` prints a line.
-- [ ] 1.5 In `tools/mutate.py` add `@contextmanager def linked_modules(copy: Path, root: Path) -> Iterator[None]`, importing `contextmanager` from `contextlib`: it makes `copy / "ui" / "node_modules"` a link to `root / "ui" / "node_modules"`, yields, and removes the link in `finally`.
+- [x] 1.5 In `tools/mutate.py` add `@contextmanager def linked_modules(copy: Path, root: Path) -> Iterator[None]`, importing `contextmanager` from `contextlib`: it makes `copy / "ui" / "node_modules"` a link to `root / "ui" / "node_modules"`, yields, and removes the link in `finally`.
   Verify: `git grep -c -h -F 'def linked_modules' tools/mutate.py` prints `1`.
-- [ ] 1.6 In `run_edits`, before the copy is made and when an entry's runner is `vitest`, raise `Refused("a vitest entry needs ui/node_modules: run npm ci --prefix ui")` when `root / "ui" / "node_modules"` is no directory, and `Refused("a vitest entry needs npm on PATH")` when `shutil.which("npm")` is `None`.
+- [x] 1.6 In `run_edits`, before the copy is made and when an entry's runner is `vitest`, raise `Refused("a vitest entry needs ui/node_modules: run npm ci --prefix ui")` when `root / "ui" / "node_modules"` is no directory, and `Refused("a vitest entry needs npm on PATH")` when `shutil.which("npm")` is `None`.
   Verify: `git grep -c -h -F 'a vitest entry needs ui/node_modules' tools/mutate.py` prints `1`.
-- [ ] 1.7 In `run_edits` key `limits` by `(e.runner, e.tests)` and compute each with `runner_args(e.runner, e.tests)`; replace `args = pytest_args(edit.tests, False)` and `limits[edit.tests]` in its loop with `args = runner_args(edit.runner, edit.tests)` and `limits[(edit.runner, edit.tests)]`; hold `with linked_modules(copy, root):` around the baseline of each vitest list and around each vitest edit's `try_edit`, never around a pytest one.
+- [x] 1.7 In `run_edits` key `limits` by `(e.runner, e.tests)` and compute each with `runner_args(e.runner, e.tests)`; replace `args = pytest_args(edit.tests, False)` and `limits[edit.tests]` in its loop with `args = runner_args(edit.runner, edit.tests)` and `limits[(edit.runner, edit.tests)]`; hold `with linked_modules(copy, root):` around the baseline of each vitest list and around each vitest edit's `try_edit`, never around a pytest one.
   Verify: `git grep -n -F 'with linked_modules(' tools/mutate.py` prints a line.
-- [ ] 1.8 In `tests/test_mutate.py` add `def fake_npm(bin_dir: Path) -> None`, writing an executable `npm` of `#!/bin/sh`, `case "$*" in *" ui/"*) exit 3;; esac` and `test -d node_modules && grep -q "limit = 10" limit.txt`, so an argument still named from the repository's root fails it; and `def build_vitest_repo(path: Path) -> Path`, `build_notes_repo(path)` plus a tracked `ui/limit.txt` of `limit = 10` and `remark: none`, an untracked `ui/node_modules/`, and `tests/test_unlinked.py`, a test asserting `ui/node_modules` is absent from its repository root.
+- [x] 1.8 In `tests/test_mutate.py` add `def fake_npm(bin_dir: Path) -> None`, writing an executable `npm` of `#!/bin/sh`, `case "$*" in *" ui/"*) exit 3;; esac` and `test -d node_modules && grep -q "limit = 10" limit.txt`, so an argument still named from the repository's root fails it; and `def build_vitest_repo(path: Path) -> Path`, `build_notes_repo(path)` plus a tracked `ui/limit.txt` of `limit = 10` and `remark: none`, an untracked `ui/node_modules/`, and `tests/test_unlinked.py`, a test asserting `ui/node_modules` is absent from its repository root.
   Verify: `git grep -c -h -F 'def build_vitest_repo' tests/test_mutate.py` prints `1`.
-- [ ] 1.9 In `tests/test_mutate.py` add `test_a_vitest_entry_replays_with_the_modules_linked_for_it_alone`, marked `spec_exempt("structural: a vitest entry is replayed with ui/node_modules linked for it alone")`, with `PATH` set to `fake_npm`'s directory before the rest. Entries: `ED-1` vitest over `ui/limit.txt`, `limit = 10` to `limit = 11`, its tests `ui/src/limit.test.ts`; `ED-2` vitest, `remark: none` to `remark: some`, the same tests; `ED-3` pytest over `notes.txt`, `limit = 10` to `limit = 11`, its tests `tests/test_unlinked.py`. Assert status `1`, `ED-1` killed, `ED-2` and `ED-3` survived, and the repository's files unchanged.
+- [x] 1.9 In `tests/test_mutate.py` add `test_a_vitest_entry_replays_with_the_modules_linked_for_it_alone`, marked `spec_exempt("structural: a vitest entry is replayed with ui/node_modules linked for it alone")`, with `PATH` set to `fake_npm`'s directory before the rest. Entries: `ED-1` vitest over `ui/limit.txt`, `limit = 10` to `limit = 11`, its tests `ui/src/limit.test.ts`; `ED-2` vitest, `remark: none` to `remark: some`, the same tests; `ED-3` pytest over `notes.txt`, `limit = 10` to `limit = 11`, its tests `tests/test_unlinked.py`. Assert status `1`, `ED-1` killed, `ED-2` and `ED-3` survived, and the repository's files unchanged.
   Verify: `uv run pytest tests/test_mutate.py::test_a_vitest_entry_replays_with_the_modules_linked_for_it_alone` passes.
-- [ ] 1.10 In `tests/test_mutate.py` add `test_a_vitest_entry_with_no_modules_or_no_npm_is_refused`, marked `spec_exempt("structural: a vitest entry that cannot run is refused before any line prints")`, parametrized over `modules` (a repository with no `ui/node_modules`, `fake_npm` on `PATH`) and `npm` (`PATH` a directory holding a link to `git` alone). Assert status `2`, no printed line, and `ui/node_modules` or `npm` in the refusal.
+- [x] 1.10 In `tests/test_mutate.py` add `test_a_vitest_entry_with_no_modules_or_no_npm_is_refused`, marked `spec_exempt("structural: a vitest entry that cannot run is refused before any line prints")`, parametrized over `modules` (a repository with no `ui/node_modules`, `fake_npm` on `PATH`) and `npm` (`PATH` a directory holding a link to `git` alone). Assert status `2`, no printed line, and `ui/node_modules` or `npm` in the refusal.
   Verify: `uv run pytest tests/test_mutate.py::test_a_vitest_entry_with_no_modules_or_no_npm_is_refused` passes.
-- [ ] 1.11 In `tests/test_mutate.py` add the row `({"runner": "jest"}, (), "ED-X")`, id `unknown runner`, to the parameters of `test_an_entry_out_of_shape_or_whose_find_is_not_once_is_refused`.
+- [x] 1.11 In `tests/test_mutate.py` add the row `({"runner": "jest"}, (), "ED-X")`, id `unknown runner`, to the parameters of `test_an_entry_out_of_shape_or_whose_find_is_not_once_is_refused`.
   Verify: `git grep -c -h -F 'unknown runner' tests/test_mutate.py` prints `1`.
-- [ ] 1.12 In `tests/test_mutate.py` import `runner_args` and add `test_a_vitest_file_is_named_from_the_ui_root`, marked `spec_exempt("structural: vitest takes its files from the root of ui/")`: `runner_args("vitest", ["ui/src/a.test.ts"])` is `["src/a.test.ts"]`, and `runner_args("pytest", ["tests/test_a.py"])` is `pytest_args(["tests/test_a.py"], False)`.
+- [x] 1.12 In `tests/test_mutate.py` import `runner_args` and add `test_a_vitest_file_is_named_from_the_ui_root`, marked `spec_exempt("structural: vitest takes its files from the root of ui/")`: `runner_args("vitest", ["ui/src/a.test.ts"])` is `["src/a.test.ts"]`, and `runner_args("pytest", ["tests/test_a.py"])` is `pytest_args(["tests/test_a.py"], False)`.
   Verify: `uv run pytest tests/test_mutate.py::test_a_vitest_file_is_named_from_the_ui_root` passes.
-- [ ] 1.13 In `CONTRIBUTING.md`, after the sentence that says a mutant of a finding a version closed lives in `tests/mutants.json`, add: `A vitest mutant names "runner": "vitest" and the files of ui/src that kill it; the copy links ui/node_modules for it alone.`
+- [x] 1.13 In `CONTRIBUTING.md`, after the sentence that says a mutant of a finding a version closed lives in `tests/mutants.json`, add: `A vitest mutant names "runner": "vitest" and the files of ui/src that kill it; the copy links ui/node_modules for it alone.`
   Verify: `git grep -c -h -F '"runner": "vitest"' CONTRIBUTING.md` prints `1`.
-- [ ] 1.14 The phase's file agrees with the runner.
+- [x] 1.14 The phase's file agrees with the runner.
   Verify: `uv run pytest tests/test_mutate.py` passes.
 
 ## 2 — The sheet's saves
