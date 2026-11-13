@@ -31,6 +31,7 @@ import {
   greyOf,
   inkSize,
   scaleOf,
+  whiteNote,
   whiteState,
 } from '../tattoos'
 import { type Mode, type Step, circled, forwardOf, stepsOf } from '../stages'
@@ -76,7 +77,7 @@ const src = computed(() =>
   isCut.value ? photoUrl(props.place) : designAt(props.place.digest, props.name),
 )
 const wait = computed(() => controlsWait(draft.value))
-const line = computed(() => closeLine(draft.value))
+const line = computed(() => closeLine(draft.value, props.limits.outline_min))
 const complete = computed(() => ready(draft.value, rules.value))
 const standard = computed(() =>
   tattoo.value ? defaultTone(tattoo.value.kind, props.limits) : null,
@@ -84,7 +85,11 @@ const standard = computed(() =>
 const resettable = computed(() => standard.value !== null && differs(tone.value, standard.value))
 const onward = computed(() => {
   if (props.mode === null) return null
-  const to = forwardOf(props.mode, { closed: draft.value.closed, points: draft.value.points.length })
+  const to = forwardOf(
+    props.mode,
+    { closed: draft.value.closed, points: draft.value.points.length },
+    props.limits.outline_min,
+  )
   const held = stepsOf(props.mode).find((one) => one.step === to.step)
   return { ...to, label: held ? `${circled(held.number)} ${held.label}` : '' }
 })
@@ -230,6 +235,7 @@ const grey = computed(() =>
 )
 const reading = computed(() => (wait.value === null && automatic.value === null ? 'reading the ink' : null))
 const whiteWait = computed(() => wait.value ?? reading.value)
+const whiteHint = computed(() => whiteNote(automatic.value))
 
 function setGrey(event: Event): void {
   const value = Number((event.target as HTMLInputElement).value)
@@ -390,6 +396,7 @@ onUnmounted(() => {
           Auto
         </button>
         <span v-if="reading" class="outline__wait mono">{{ reading }}</span>
+        <span v-else-if="whiteHint" class="outline__wait mono" data-white-note>{{ whiteHint }}</span>
       </div>
       <p class="section-label">tone</p>
       <div class="outline__row">

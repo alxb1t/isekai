@@ -14,6 +14,7 @@ import {
   scaleOf,
   tattoosPath,
   uploadName,
+  whiteNote,
   whiteState,
 } from './tattoos'
 import type { Pair, Stage1, Tattoo } from './types'
@@ -142,6 +143,10 @@ spec('ui:outline-step:a-scale-of-one-is-automatic', () => {
   expect(whiteState(1)).toBe('auto')
   expect(whiteState(0.9)).toBe('set by hand')
   expect(whiteState(scaleOf(200, 200))).toBe('auto')
+  // An automatic grey of 0 cannot be lifted by a scale; the field says so instead of snapping back.
+  expect(whiteNote(0)).toBe('automatic grey is 0 · widen the outline to set one')
+  expect(whiteNote(1)).toBeNull()
+  expect(whiteNote(null)).toBeNull()
 })
 
 spec('ui:outline-step:reset-appears-when-the-tone-differs', () => {
@@ -164,9 +169,19 @@ spec('ui:outline-step:one-line-says-how-to-close', () => {
     closed: false,
     points: Array.from({ length: count }, (_, at): [number, number] => [at, at]),
   })
-  expect(closeLine(open(1))).toBe('close the outline on its first point · 1 point')
-  expect(closeLine(open(5))).toBe('close the outline on its first point · 5 points')
-  expect(closeLine({ ...open(5), closed: true })).toBeNull()
+  expect(closeLine(open(3), 3)).toBe('close the outline on its first point · 3 points')
+  expect(closeLine(open(5), 3)).toBe('close the outline on its first point · 5 points')
+  expect(closeLine({ ...open(5), closed: true }, 3)).toBeNull()
+})
+
+spec('ui:outline-step:the-line-names-the-floor-while-the-outline-is-short', () => {
+  const open = (count: number) => ({
+    closed: false,
+    points: Array.from({ length: count }, (_, at): [number, number] => [at, at]),
+  })
+  expect(closeLine(open(0), 3)).toBe('add 3 more points to close · 0 of 3')
+  expect(closeLine(open(1), 3)).toBe('add 2 more points to close · 1 of 3')
+  expect(closeLine(open(2), 3)).toBe('add 1 more point to close · 2 of 3')
 })
 
 spec('ui:outline-step:the-size-of-the-cuts-ink-is-the-outlines-box', () => {

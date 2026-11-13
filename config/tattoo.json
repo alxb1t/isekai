@@ -1,6 +1,6 @@
 {
   "long_side": 4096,
-  "outline_min": 20,
+  "outline_min": 3,
   "outline_max": 120,
   "view_quality": 90,
   "floor_stage1": 6,

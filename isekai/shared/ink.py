@@ -47,17 +47,6 @@ _LUMA = (0.299, 0.587, 0.114)
 # Envelope brightness below which a pixel is clothing or shadow, not skin or wall.
 _BRIGHT_ENVELOPE = 0.45
 
-# The least the mean of the white point's channels may read, as a share of the skin
-# around it. Below it the sample is ink, the outline holds no bare skin, and dividing
-# by it erases ink. It is the whole check where no lit ring lies outside the outline.
-_MIN_SKIN = 0.7
-
-# How far any one channel of the white point may read below the same channel of the
-# skin just outside the outline, as a share of that skin. Past it the sample is ink,
-# not skin: a fill short in one channel alone still fills a tight outline and would be
-# erased, though the mean of its channels sits close to the skin's.
-_SKIN_GAP = 0.05
-
 
 @dataclass(frozen=True)
 class InkConfig:
@@ -151,43 +140,13 @@ def _skin_envelope(rgb: "Image", reach: int) -> "NDArray[np.float32]":
     return np.asarray(envelope, dtype=np.float32) / 255.0
 
 
-def _skin_beside(
-    alpha: "Image",
-    envelope: "NDArray[np.float32]",
-    transmittance: "NDArray[np.float32]",
-    config: InkConfig,
-) -> "NDArray[np.float32] | None":
-    """Return the white point's channels in a ring of lit pixels just outside `alpha`.
-
-    The ring is the bare skin the outline stands in; None when the outline has none
-    beside it (it covers the image, or the ring is dark), so nothing is compared.
-    """
-    import numpy as np
-    from PIL import Image, ImageFilter
-
-    factor = max(1, config.reach // 16)
-    inside = alpha.point(lambda value: 255 if value > 127 else 0)
-    small = inside.resize(
-        (max(1, inside.width // factor), max(1, inside.height // factor)),
-        Image.Resampling.BOX,
-    )
-    grown = small.filter(ImageFilter.MaxFilter(max(3, (config.reach // factor) | 1)))
-    reached = np.asarray(grown.resize(inside.size, Image.Resampling.NEAREST)) > 0
-    ring = (
-        reached & ~(np.asarray(inside) > 0) & (envelope.mean(axis=2) > _BRIGHT_ENVELOPE)
-    )
-    if not ring.any():
-        return None
-    return np.percentile(transmittance[ring], config.white, axis=0)
-
-
 def _automatic_point(
     image: "Image", outline: "Image | None", config: InkConfig
 ) -> "tuple[NDArray[np.float32], Image, NDArray[np.float32]]":
     """Return the transmittance, the outline's alpha and the automatic white point.
 
     The point is the skin's transmittance per channel, read at the config's percentile
-    inside the outline; a point that reads ink, not skin, is refused.
+    inside the outline; an outline with no lit pixel is refused.
     """
     import numpy as np
     from PIL import Image
@@ -209,15 +168,6 @@ def _automatic_point(
             "is dark; widen the outline over the skin, or light the photograph"
         )
     skin = np.percentile(transmittance[kept], config.white, axis=0)
-    beside = _skin_beside(alpha, envelope, transmittance, config)
-    if skin.mean() < _MIN_SKIN or (
-        beside is not None and (skin < beside - _SKIN_GAP).any()
-    ):
-        raise Refusal(
-            "no bare skin inside the outline to read the ink against: its pixels "
-            "are all darker than the skin around them, so the ink would be taken "
-            "for skin and washed out; widen the outline over the skin"
-        )
     return transmittance, alpha, skin
 
 

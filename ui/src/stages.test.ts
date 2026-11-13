@@ -44,18 +44,21 @@ spec('ui:stages:the-stepper-lists-the-steps-of-the-mode', () => {
 spec('ui:stages:forward-goes-to-the-stage-of-the-mode', () => {
   const closed = { closed: true, points: 24 }
 
-  expect(forwardOf('two-stage', closed)).toEqual({ step: 'photo', wait: null })
-  expect(forwardOf('direct', closed)).toEqual({ step: 'render', wait: null })
-  expect(forwardOf('cut', closed)).toEqual({ step: 'render', wait: null })
+  expect(forwardOf('two-stage', closed, 3)).toEqual({ step: 'photo', wait: null })
+  expect(forwardOf('direct', closed, 3)).toEqual({ step: 'render', wait: null })
+  expect(forwardOf('cut', closed, 3)).toEqual({ step: 'render', wait: null })
 })
 
 spec('ui:stages:forward-waits-for-a-closed-outline', () => {
-  expect(forwardOf('two-stage', { closed: false, points: 27 })).toEqual({
+  expect(forwardOf('two-stage', { closed: false, points: 27 }, 3)).toEqual({
     step: null,
     wait: 'outline open · 27 points',
   })
-  expect(forwardOf('cut', { closed: false, points: 1 }).wait).toBe('outline open · 1 point')
-  expect(forwardOf('cut', { closed: false, points: 0 }).wait).toBe('outline open · 0 points')
+})
+
+spec('ui:stages:forward-names-the-floor-while-the-outline-is-short', () => {
+  expect(forwardOf('cut', { closed: false, points: 1 }, 3).wait).toBe('outline open · 1 of 3 points')
+  expect(forwardOf('cut', { closed: false, points: 0 }, 3).wait).toBe('outline open · 0 of 3 points')
 })
 
 spec('ui:direct:the-flag-skips-stage-1', () => {

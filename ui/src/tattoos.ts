@@ -98,10 +98,17 @@ export function controlsWait(outline: Pick<Outline, 'closed'>): string | null {
 }
 
 /** Return the one line that says how to close an open outline, or null once it is closed.
-    e.g. an open outline of one vertex -> "close the outline on its first point · 1 point" */
-export function closeLine(outline: { closed: boolean; points: readonly Point[] }): string | null {
+    e.g. an open outline of one vertex against a floor of 3 -> "add 2 more points to close · 1 of 3" */
+export function closeLine(
+  outline: { closed: boolean; points: readonly Point[] },
+  floor: number,
+): string | null {
   if (outline.closed) return null
   const count = outline.points.length
+  if (count < floor) {
+    const more = floor - count
+    return `add ${more} more ${more === 1 ? 'point' : 'points'} to close · ${count} of ${floor}`
+  }
   return `close the outline on its first point · ${count} ${count === 1 ? 'point' : 'points'}`
 }
 
@@ -116,6 +123,13 @@ export function greyOf(automatic: number, scale: number): number {
 export function scaleOf(grey: number, automatic: number): number {
   if (automatic <= 0) return 1
   return Math.max(1, Math.min(255, grey)) / automatic
+}
+
+/** Return the line that says why a grey set by hand does nothing, or null when it can take.
+    The scale multiplies the automatic grey, so an automatic grey of 0 stays 0 at any scale.
+    e.g. an automatic 0 -> "automatic grey is 0 · widen the outline to set one" */
+export function whiteNote(automatic: number | null): string | null {
+  return automatic === 0 ? 'automatic grey is 0 · widen the outline to set one' : null
 }
 
 /** Return `auto` for a scale of one and `set by hand` for any other. */
