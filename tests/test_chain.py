@@ -150,6 +150,21 @@ def test_chain_lookup_samples_between_pixels_bilinearly() -> None:
     assert layer[1, 1, 0] == pytest.approx(1.0)
 
 
+@pytest.mark.spec("tattoo:chain:a-point-a-hair-past-the-edge-is-on-it")
+def test_chain_lookup_takes_a_point_a_hair_past_the_edge_as_on_it() -> None:
+    ink = np.zeros((4, 4, 4))
+    ink[:, 2:, :3] = 1.0
+    ink[..., 3] = 1.0
+
+    for dx, dy in [(-1e-12, 1), (1, -1e-12), (3 + 1e-12, 1), (1, 3 + 1e-12)]:
+        layer = lookup(ink, [_shift(dx, dy)], (1, 1))
+        assert layer[0, 0, 3] == pytest.approx(1.0)
+
+    for dx, dy in [(-1e-6, 1), (1, -1e-6), (3 + 1e-6, 1), (1, 3 + 1e-6)]:
+        layer = lookup(ink, [_shift(dx, dy)], (1, 1))
+        assert layer[0, 0].tolist() == pytest.approx([1, 1, 1, 0])
+
+
 def _filled(width: int, height: int) -> np.ndarray:
     """Return fully opaque white ink, RGBA in 0..1."""
     ink = np.ones((height, width, 4))

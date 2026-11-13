@@ -27,6 +27,9 @@ MIN_PAIRS = 3
 # Points a spline maps at once, so a large grid never holds its whole kernel.
 CHUNK = 16384
 
+# The pixels past an edge that still count as on it; a solver's rounding is far less.
+EDGE = 1e-9
+
 Points = Sequence[tuple[float, float]]
 
 
@@ -109,13 +112,16 @@ def _sample(
 ) -> "NDArray[np.float64]":
     """Return the bilinear samples of `image` at float (x, y).
 
-    Outside the image a sample is transparent white.
+    Outside the image a sample is transparent white; a point within `EDGE` of an edge
+    is on it.
     """
     import numpy as np
 
     height, width = image.shape[:2]
     x, y = xy[:, 0], xy[:, 1]
-    inside = (x >= 0) & (y >= 0) & (x <= width - 1) & (y <= height - 1)
+    inside = (
+        (x >= -EDGE) & (y >= -EDGE) & (x <= width - 1 + EDGE) & (y <= height - 1 + EDGE)
+    )
     x0 = np.clip(np.floor(x).astype(int), 0, max(width - 2, 0))
     y0 = np.clip(np.floor(y).astype(int), 0, max(height - 2, 0))
     x1 = np.minimum(x0 + 1, width - 1)

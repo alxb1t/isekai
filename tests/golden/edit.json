@@ -6,8 +6,8 @@
   "edit": "tattoo-wai",
   "edit_digest": "fcf0c974352632061e46e97e534ee83b0ca6cb21a25e7ff01857c7682b719348",
   "source": "42.png",
-  "source_sha256": "854c985a20e7b68bd637b4fc680f4e27462f3ab42713c40546798ab2756befc0",
-  "composite_sha256": "831b33c0b80a4addcb99fd741b6dc47472bb0716a5fba5925b80d90a6bfb3af7",
+  "source_sha256": "<sha256 of 42.png>",
+  "composite_sha256": "<sha256 of 42.edit-1.composite.png>",
   "seed": 5,
   "dials": {
     "denoise": 0.2,

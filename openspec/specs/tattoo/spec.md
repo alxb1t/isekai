@@ -130,6 +130,8 @@ The module SHALL import numpy and Pillow only, inside its functions.
 
 A thin-plate spline is an exact interpolator, so no per-pair error is shown.
 The module is shared so the server and, later, a verb run one implementation.
+A point within 1e-9 px of the tattoo's edge is on it: a solver's rounding puts a mapped point a hair past the edge on
+one machine and on it on another, and no pixel row may flip between them.
 
 #### Scenario: a spline is exact at its pairs
 - **Key:** `tattoo:chain:a-spline-is-exact-at-its-pairs`
@@ -160,6 +162,12 @@ The module is shared so the server and, later, a verb run one implementation.
 - **Layers:** unit
 - **WHEN** a small ink is looked up over a larger target grid through two stages
 - **THEN** every pixel of the grid holds a value, the ink inside the tattoo and transparent white outside
+
+#### Scenario: a point a hair past the edge is on it
+- **Key:** `tattoo:chain:a-point-a-hair-past-the-edge-is-on-it`
+- **Layers:** unit
+- **WHEN** a lookup maps a target pixel 1e-12 px past the ink's edge, and another 1e-6 px past it
+- **THEN** the first shows the ink's edge pixel and the second is transparent white
 
 #### Scenario: the outline clips and an exclusion removes
 - **Key:** `tattoo:chain:the-outline-clips-and-an-exclusion-removes`
