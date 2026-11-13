@@ -9,7 +9,7 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 - [x] 3 — Prepare and Stop · hard
 - [x] 4 — The poll and the stream · moderate
 - [x] 5 — The page's bodies · moderate
-- [ ] 6 — The mutants die · moderate
+- [x] 6 — The mutants die · moderate
 
 ## 1 — A job's slot
 
@@ -108,15 +108,15 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 
 ## 6 — The mutants die
 
-- [ ] 6.1 **HALT CHECK** `0135-the-paydown` is merged: the replay mode and the target exist; if they do not, this phase has nothing to run.
+- [x] 6.1 **HALT CHECK** `0135-the-paydown` is merged: the replay mode and the target exist; if they do not, this phase has nothing to run.
   Verify: `git grep -c -F 'tools.mutate --edits tests/mutants.json' Makefile` prints `1`.
-- [ ] 6.2 **HALT CHECK** `0136-the-cli-and-the-session` is merged: `tests/mutants.json` holds its entry `PB-16`, so this change appends to the file after it.
+- [x] 6.2 **HALT CHECK** `0136-the-cli-and-the-session` is merged: `tests/mutants.json` holds its entry `PB-16`, so this change appends to the file after it.
   Verify: `grep -c -F 'PB-16' tests/mutants.json` prints `1`.
-- [ ] 6.3 **HALT CHECK** Phases 1 to 5 edited no product file, so each line the mutants name stands: the refusal of 1.1 holds.
+- [x] 6.3 **HALT CHECK** Phases 1 to 5 edited no product file, so each line the mutants name stands: the refusal of 1.1 holds.
   Verify: `git grep -c -F 'if job is not None and self._slots[kind].running:' isekai/interface/ui/jobs.py` prints `1`.
-- [ ] 6.4 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each opens with `"finding":`.
+- [x] 6.4 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each opens with `"finding":`.
   Verify: `grep -c -F '"finding":' tests/mutants.json` prints `41`.
-- [ ] 6.5 Run the replay. A line that names a survivor goes to 6.6.
+- [x] 6.5 Run the replay. A line that names a survivor goes to 6.6.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.
-- [ ] 6.6 For each `survivor` line 6.5 printed, add in the file its entry names a test red with the mutant in place and green without it; only where no input tells the mutant from the line, give the entry `equivalent` with the reason, proven by reading the line. Never delete an entry. Where 6.5 printed none, this task holds.
+- [x] 6.6 For each `survivor` line 6.5 printed, add in the file its entry names a test red with the mutant in place and green without it; only where no input tells the mutant from the line, give the entry `equivalent` with the reason, proven by reading the line. Never delete an entry. Where 6.5 printed none, this task holds.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.

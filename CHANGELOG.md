@@ -34,6 +34,8 @@ its new digest.
 - `ui/src/test/wire.json` holds the body each Place and tattoo builder of `api.ts` sends; a vitest holds the builders to
   it and a pytest holds the server's `*_KEYS` tuples and routes to it, and a vitest holds the unwrapping of a refusal
   (0137 D6).
+- The change's mutants of the guard, the stream's filter, the volume alert and the job slot join `tests/mutants.json`,
+  and each dies on replay (0137 D8).
 
 ## [0.86.9] - 2026-11-13
 
