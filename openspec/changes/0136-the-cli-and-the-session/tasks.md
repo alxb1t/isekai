@@ -8,7 +8,7 @@ Phases of tests and the product fixes they found: the verbs' refusals, the remed
 - [x] 2 — Every remedy works · moderate
 - [x] 3 — Nothing rents before the checks · moderate
 - [x] 4 — A batch survives its refusals · moderate
-- [ ] 5 — The mutants die · moderate
+- [x] 5 — The mutants die · moderate
 
 ## 1 — A verb's refusals
 
@@ -106,13 +106,13 @@ Phases of tests and the product fixes they found: the verbs' refusals, the remed
 
 ## 5 — The mutants die
 
-- [ ] 5.1 **HALT CHECK** `0135-the-paydown` is merged: the replay mode and the target exist; if they do not, this phase has nothing to run.
+- [x] 5.1 **HALT CHECK** `0135-the-paydown` is merged: the replay mode and the target exist; if they do not, this phase has nothing to run.
   Verify: `git grep -c -h -F 'tools.mutate --edits tests/mutants.json' Makefile` prints `1`.
-- [ ] 5.2 **HALT CHECK** Phases 1 to 4 left the lines the mutants name as [D10](design.md#d10) says: the parser's line of 1.3 holds.
+- [x] 5.2 **HALT CHECK** Phases 1 to 4 left the lines the mutants name as [D10](design.md#d10) says: the parser's line of 1.3 holds.
   Verify: `git grep -c -h -F 'metavar="verb", required=True, parser_class=_Verb' isekai/interface/cli.py` prints `1`.
-- [ ] 5.3 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each opens with `"finding":`.
+- [x] 5.3 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each opens with `"finding":`.
   Verify: `grep -c -F '"finding":' tests/mutants.json` prints `35`.
-- [ ] 5.4 Run the replay. A line that names a survivor goes to 5.5.
+- [x] 5.4 Run the replay. A line that names a survivor goes to 5.5.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.
-- [ ] 5.5 For each `survivor` line 5.4 printed, add in the file its entry names a test red with the mutant in place and green without it; only where no input tells the mutant from the line, give the entry `equivalent` with the reason, proven by reading the line. Never delete an entry. Where 5.4 printed none, this task holds.
+- [x] 5.5 For each `survivor` line 5.4 printed, add in the file its entry names a test red with the mutant in place and green without it; only where no input tells the mutant from the line, give the entry `equivalent` with the reason, proven by reading the line. Never delete an entry. Where 5.4 printed none, this task holds.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.

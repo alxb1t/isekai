@@ -18,6 +18,8 @@ its new digest.
   probe runs on a real socket in `tests/e2e/test_gpu.py` (0136 D5, D6).
 - One CLI batch test, through `dispatch`, replaces the three that rebuilt the batch by hand; a failed sampling beside a
   good edit, a chain of pending edits and a replaced draft's content are read (0136 D7, D8).
+- The change's mutants join `tests/mutants.json` and each dies on replay; the busy-port probe also has a unit test
+  that binds no loopback (0136 D10).
 
 ## [0.86.9] - 2026-11-13
 
