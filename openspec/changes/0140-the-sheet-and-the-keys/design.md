@@ -66,6 +66,8 @@ The entry's keys are `finding`, `path`, `find`, `replace` and `tests`, with `why
 
 A file that is not Python is not parsed, so an edit that breaks a `.ts` file is killed by vitest's own error. Each `find` of this change keeps its file valid.
 
+Fix note (2026-11-13, R1): a vitest exit 1 reads killed only when its `Tests` summary line counts a failed test; with none, the file failed to transform or collect, ran no test, and reads invalid.
+
 ### D3
 
 The tests extend the files that hold each subject, and use `useSheet.test.ts`'s hand-released `fetch`: `answer` and `refuse` release the oldest call to a URL, under fake timers. No test is deleted. [Tests](#tests) holds no table of removals.
