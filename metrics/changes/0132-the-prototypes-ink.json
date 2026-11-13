@@ -1,0 +1,58 @@
+{
+  "change": "0132-the-prototypes-ink",
+  "version": "0.86.6",
+  "base": "4100cd33",
+  "analyzed": "f617c2a5",
+  "measured_on": "local",
+  "collected_at": "2026-11-13T02:25:55+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2264
+    },
+    "tests-browser": {
+      "value": 18
+    },
+    "gate-seconds": {
+      "value": 72
+    },
+    "open-backlog-cards": {
+      "value": 11
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 593
+    },
+    "diff-files": {
+      "value": 20
+    },
+    "phases": {
+      "value": 2
+    },
+    "shared-reading-set": {
+      "value": 14514
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1037
+    },
+    "decisions": {
+      "value": 58
+    }
+  }
+}

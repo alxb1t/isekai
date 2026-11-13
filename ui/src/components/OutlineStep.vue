@@ -31,6 +31,7 @@ import {
   greyOf,
   inkSize,
   scaleOf,
+  whiteNote,
   whiteState,
 } from '../tattoos'
 import { type Mode, type Step, circled, forwardOf, stepsOf } from '../stages'
@@ -234,6 +235,7 @@ const grey = computed(() =>
 )
 const reading = computed(() => (wait.value === null && automatic.value === null ? 'reading the ink' : null))
 const whiteWait = computed(() => wait.value ?? reading.value)
+const whiteHint = computed(() => whiteNote(automatic.value))
 
 function setGrey(event: Event): void {
   const value = Number((event.target as HTMLInputElement).value)
@@ -394,6 +396,7 @@ onUnmounted(() => {
           Auto
         </button>
         <span v-if="reading" class="outline__wait mono">{{ reading }}</span>
+        <span v-else-if="whiteHint" class="outline__wait mono" data-white-note>{{ whiteHint }}</span>
       </div>
       <p class="section-label">tone</p>
       <div class="outline__row">

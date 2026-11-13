@@ -10,11 +10,6 @@ its new digest.
 
 ## [Unreleased]
 
-- The ink's white point is the prototype's percentile, compared with nothing: `_MIN_SKIN`, `_SKIN_GAP` and
-  `_skin_beside` go, so a blackwork sleeve is cut, not refused; an outline with no lit pixel is still refused
-  (0132 D1, D57).
-- An outline closes from 3 points, `outline_min` in `config/tattoo.json`, and below it the close line and the forward
-  line name the floor: *add N more points to close · K of F*, *outline open · K of F points* (0132 D3, D4).
 - The retry rule is held from below for `caption`, `wd14` and `tags`, and a stage reads one version's failure records at
   a time, so a refactor of the budget cannot turn a test green by accident (0133 D1).
 - A run's names are held at their bounds: the slug's alphabet and 32-character cut, the instruction record's file name
@@ -28,6 +23,16 @@ its new digest.
   group cannot move that line unseen (0133 D5).
 - A refused `discard` leaves the whole tree as it was: the CLI's discard of a render and of an edit, under a running
   render session, is read with the tree before and after, so a refusal that deletes a file late fails (0133 D6).
+
+## [0.86.6] - 2026-11-13
+
+Gate: local 1m12s · CI not read under mf-ship · 0.86.5: local 1m11s · CI not read under mf-ship
+
+- The ink's white point is the prototype's percentile, compared with nothing: `_MIN_SKIN`, `_SKIN_GAP` and
+  `_skin_beside` go, so a blackwork sleeve is cut, not refused; an outline with no lit pixel is still refused
+  (0132 D1, D57).
+- An outline closes from 3 points, `outline_min` in `config/tattoo.json`, and below it the close line and the forward
+  line name the floor: *add N more points to close · K of F*, *outline open · K of F points* (0132 D3, D4).
 
 ## [0.86.5] - 2026-11-13
 

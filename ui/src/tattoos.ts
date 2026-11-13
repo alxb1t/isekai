@@ -125,6 +125,13 @@ export function scaleOf(grey: number, automatic: number): number {
   return Math.max(1, Math.min(255, grey)) / automatic
 }
 
+/** Return the line that says why a grey set by hand does nothing, or null when it can take.
+    The scale multiplies the automatic grey, so an automatic grey of 0 stays 0 at any scale.
+    e.g. an automatic 0 -> "automatic grey is 0 · widen the outline to set one" */
+export function whiteNote(automatic: number | null): string | null {
+  return automatic === 0 ? 'automatic grey is 0 · widen the outline to set one' : null
+}
+
 /** Return `auto` for a scale of one and `set by hand` for any other. */
 export function whiteState(scale: number): 'auto' | 'set by hand' {
   return scale === 1 ? 'auto' : 'set by hand'

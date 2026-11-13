@@ -14,6 +14,7 @@ import {
   scaleOf,
   tattoosPath,
   uploadName,
+  whiteNote,
   whiteState,
 } from './tattoos'
 import type { Pair, Stage1, Tattoo } from './types'
@@ -142,6 +143,10 @@ spec('ui:outline-step:a-scale-of-one-is-automatic', () => {
   expect(whiteState(1)).toBe('auto')
   expect(whiteState(0.9)).toBe('set by hand')
   expect(whiteState(scaleOf(200, 200))).toBe('auto')
+  // An automatic grey of 0 cannot be lifted by a scale; the field says so instead of snapping back.
+  expect(whiteNote(0)).toBe('automatic grey is 0 · widen the outline to set one')
+  expect(whiteNote(1)).toBeNull()
+  expect(whiteNote(null)).toBeNull()
 })
 
 spec('ui:outline-step:reset-appears-when-the-tone-differs', () => {
