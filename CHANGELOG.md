@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.15] - 2026-11-13
+
+Gate: local 1m17s · CI not read under mf-ship · 0.86.14: local 1m17s · CI not read under mf-ship
+
 - A browser test fails on a page error, a console error that is no failed load, a 5xx, an undeclared 4xx and a declared
   refusal nothing answered; `tests/test_e2e_guard.py` holds the rules without a browser (0141 D1, D2, D3).
 - A browser journey presses the key list, a letter typed in a tag field, `Esc` and the pane keys on a collection of its
