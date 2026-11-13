@@ -60,7 +60,8 @@ are logic the stage's own double does not reach.
 - **Key:** `tagging:seam:the-photograph-is-prepared-by-the-graphs-rule`
 - **Layers:** unit
 - **WHEN** a photograph that is not square and holds a transparent pixel is prepared for the graph's edge
-- **THEN** the transparent pixel is white, the photograph sits centred on a white square, and each pixel's channels run blue, green, red
+- **THEN** the transparent pixel is white and the photograph sits centred on a white square
+- **AND** each pixel's channels run blue, green, red
 - **AND** the array is a batch of one, edge by edge by channels, in 32-bit floats
 
 ### Requirement: Each tagger's failure is its own, and the local tagger runs first
