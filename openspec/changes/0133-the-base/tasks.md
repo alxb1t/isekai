@@ -9,7 +9,7 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 - [x] 3 — The record's every end · moderate
 - [x] 4 — Every path removed · moderate
 - [x] 5 — Rendered, where all agree · moderate
-- [ ] 6 — Refused, whole · moderate
+- [x] 6 — Refused, whole · moderate
 
 ## 1 — The retry rule
 
@@ -78,9 +78,9 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 
 ## 6 — Refused, whole
 
-- [ ] 6.1 **HALT CHECK** The CLI's `discard` refuses on a running session before it deletes anything, as [D6](design.md#d6) says; if it does not, the plan is wrong.
+- [x] 6.1 **HALT CHECK** The CLI's `discard` refuses on a running session before it deletes anything, as [D6](design.md#d6) says; if it does not, the plan is wrong.
   Verify: `git grep -c -F 'if render_running(run):' isekai/interface/cli.py` prints `1`.
-- [ ] 6.2 In `tests/test_pipeline_cli.py` import `tree` from `tests.conftest`. In `test_discard_deletes_the_render_and_its_thumbnail` take `before = tree(lib)` inside the held lock, before the refused `dispatch`, and assert `assert tree(lib) == before` after it.
+- [x] 6.2 In `tests/test_pipeline_cli.py` import `tree` from `tests.conftest`. In `test_discard_deletes_the_render_and_its_thumbnail` take `before = tree(lib)` inside the held lock, before the refused `dispatch`, and assert `assert tree(lib) == before` after it.
   Verify: `git grep -c -F 'assert tree(lib) == before' tests/test_pipeline_cli.py` prints `1`.
-- [ ] 6.3 In `tests/test_edit_session.py`, in `test_edit_discard_a_running_session_refuses_an_edits_path`, take `before = tree(tmp_path)` inside the held lock, before `_discard`, and assert `assert tree(tmp_path) == before` after it.
+- [x] 6.3 In `tests/test_edit_session.py`, in `test_edit_discard_a_running_session_refuses_an_edits_path`, take `before = tree(tmp_path)` inside the held lock, before `_discard`, and assert `assert tree(tmp_path) == before` after it.
   Verify: `git grep -c -F 'assert tree(tmp_path) == before' tests/test_edit_session.py` prints `1`.

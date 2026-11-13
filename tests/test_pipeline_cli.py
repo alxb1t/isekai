@@ -49,7 +49,7 @@ from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import approve, review, save_draft
 from isekai.pipeline.tagging import FakeTagger, OllamaTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
-from tests.conftest import CSV, snapshot
+from tests.conftest import CSV, snapshot, tree
 from tests.fakes import READER, FakeComfyClient, stub_comfy
 from tests.images import jpeg_bytes
 from tests.stages import (
@@ -1139,7 +1139,9 @@ def test_discard_deletes_the_render_and_its_thumbnail(
     record.with_suffix(".json").write_text("{}")
     with record.with_suffix(".lock").open("w") as held:
         fcntl.flock(held, fcntl.LOCK_EX)
+        before = tree(lib)
         assert dispatch(build_parser().parse_args(argv), wired) == 1
+        assert tree(lib) == before
     assert image.is_file() and (cached / own).is_file()
     assert (image.parent / "7.render.json").is_file()
     assert isinstance(wired.err, io.StringIO)

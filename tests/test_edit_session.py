@@ -538,7 +538,9 @@ def test_edit_discard_a_running_session_refuses_an_edits_path(
 
     with record.with_suffix(".lock").open("w") as held:
         fcntl.flock(held, fcntl.LOCK_EX)
+        before = tree(tmp_path)
         code, out, err = _discard(tmp_path, group / "1.edit-1.png")
+        assert tree(tmp_path) == before
 
     assert (code, out) == (1, "")
     assert "A render session is running" in err

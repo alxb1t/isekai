@@ -26,6 +26,8 @@ its new digest.
 - A group reads as rendered where every site agrees: a revision, an unchanged-draft check, a copy and a hub cell take
   an image with its sidecar as a render and a failure record alone, or no group, as none, so a refactor of the render
   group cannot move that line unseen (0133 D5).
+- A refused `discard` leaves the whole tree as it was: the CLI's discard of a render and of an edit, under a running
+  render session, is read with the tree before and after, so a refusal that deletes a file late fails (0133 D6).
 
 ## [0.86.5] - 2026-11-13
 
