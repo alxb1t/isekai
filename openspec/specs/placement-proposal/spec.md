@@ -152,6 +152,13 @@ The estimator sees the person and little else, so a crowded image gives one pers
 - **WHEN** the estimator's two answers peak at known positions for a keypoint
 - **THEN** the keypoint is at those positions in the image's pixels, and its score is the lower peak
 
+#### Scenario: the estimator reads the crop's pixels, normalised
+- **Key:** `placement-proposal:pose:the-estimator-reads-the-crops-pixels-normalised`
+- **Layers:** unit
+- **WHEN** an image is cropped for the estimator
+- **THEN** its input holds the crop's own pixels, black where the crop leaves the image
+- **AND** each channel is the pixel less the declared mean, over the declared deviation
+
 ### Requirement: A silhouette is segmented once an image and prompted once a bone
 
 The system SHALL embed each image once, scaled to the segmenter's square input and normalised, and SHALL prompt the
