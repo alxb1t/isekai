@@ -52,6 +52,7 @@ from isekai.foundation.artifacts import (
     ReviewApproved,
     ReviewDraft,
     Sheet,
+    create,
     read,
     renders_of,
     require,
@@ -883,9 +884,8 @@ def token_budget(
     of seventy-seven, so a sheet reported comfortably inside the budget is past it
     and silently chunked.
 
-    `estimate_tokens` is deliberately left alone. It is `approve()`'s, it is
-    passed a `Schema` and never a `Flow`, and changing its signature would move
-    every one of its call sites for a warning on a path deprecated as guidance.
+    `approve()` warns on `total` when it is given the flow, and on
+    `estimate_tokens`, the tags alone, when it is not.
 
     A field absent from a mid-edit draft contributes nothing rather than raising,
     because the surface recomputes this on every keystroke.
@@ -910,11 +910,15 @@ def approve(
     source: str | None = None,
     *,
     excluded: frozenset[str] = frozenset(),
+    definition: Flow | None = None,
 ) -> tuple[Path | None, list[str]]:
     """Validate `flow`'s current draft and approve it, returning it and any warnings.
 
     With `source`, no draft is read: `source`'s latest approval is copied under
     `flow` instead.
+
+    With `definition`, the over-window warning counts the assembled prompt; without
+    it, the tags alone.
 
     Validation is the last place an invented tag can be caught: one that merely
     looks canonical passes every later check on its way into the prompt. The
@@ -953,7 +957,11 @@ def approve(
     validate(fields, schema, vocabulary, excluded=excluded)
 
     warnings: list[str] = []
-    estimate = estimate_tokens(fields, schema)
+    estimate = (
+        estimate_tokens(fields, schema)
+        if definition is None
+        else token_budget(fields, schema, definition).total
+    )
     if estimate > ENCODER_WINDOW:
         warnings.append(
             f"{run.id}/{flow}: the assembled prompt is about {estimate} tokens "
@@ -998,15 +1006,22 @@ def approve(
         approved_body["renders"] = renders
 
     path = directory / artifact_name(version, APPROVED)
-    if path.exists():
+    _publish(run, flow, path, approved_body)
+    draft.unlink()
+    return path, warnings
+
+
+def _publish(run: Run, flow: str, path: Path, approved: ReviewApproved) -> None:
+    """Write `approved` at `path`, refusing a number another writer has taken first."""
+    body: ReviewApproved = approved
+    try:
+        create(path, APPROVED_FILE, body)
+    except FileExistsError:
         raise Refusal(
             f"{path.name} already exists in {flow}/{REVIEW}/ and an approved "
             f"artifact is never replaced; run {_again(run, flow)} to correct it "
             "under the next number"
-        )
-    write(path, APPROVED_FILE, approved_body)
-    draft.unlink()
-    return path, warnings
+        ) from None
 
 
 # What a copy does not take from its source's producer: where the source came from.
@@ -1109,7 +1124,7 @@ def _copy_approval(
         "renders": renders,
     }
     written = directory / artifact_name(next_version(directory), APPROVED)
-    write(written, APPROVED_FILE, copied)
+    _publish(run, flow, written, copied)
     return written
 
 

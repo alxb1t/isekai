@@ -1,0 +1,58 @@
+{
+  "change": "0138-the-review-and-the-import",
+  "version": "0.86.12",
+  "base": "5a2e1cde",
+  "analyzed": "fe6ae6e6",
+  "measured_on": "local",
+  "collected_at": "2026-11-13T14:20:19+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2357
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 75
+    },
+    "open-backlog-cards": {
+      "value": 4
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 2
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1500
+    },
+    "diff-files": {
+      "value": 19
+    },
+    "phases": {
+      "value": 6
+    },
+    "shared-reading-set": {
+      "value": 14574
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1058
+    },
+    "decisions": {
+      "value": 58
+    }
+  }
+}

@@ -10,6 +10,24 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.12] - 2026-11-13
+
+Gate: local 1m15s · CI not read under mf-ship · 0.86.11: local 1m24s · CI not read under mf-ship
+
+- Approving a sheet warns when the assembled prompt, not the tags alone, is past the encoder's window; the CLI and
+  the server pass the flow, and the budget's total and shares are held by literals (0138 D2, D3).
+- An approval is published by `create`, by the approve verb and by the copy alike, so a number another writer takes
+  inside the publish is refused and its bytes stay (0138 D4).
+- Tests hold the open reader's prompt, the briefing stripped with one newline, on the adapter's body and on the
+  request the stage sends (0138 D5).
+- A commit whose move fails puts the photographs back in the staging folder, and a name taken as the move lands is
+  refused as a taken name; tests hold the seal while a file is unread, the unseal after a refusal and the empty
+  name's message (0138 D6, D7).
+- Tests hold a phone JPEG's gain map stripped, not refused, each of the CR2, DNG and ARW headers refused as a RAW
+  photograph, and a TIFF with a cut header refused as not decoding (0138 D8).
+- The change's mutants of the budget, the approval, the reader's prompt, the seal, the commit and the kinds join
+  `tests/mutants.json`, and each dies on replay (0138 D10).
+
 ## [0.86.11] - 2026-11-13
 
 Gate: local 1m24s · CI not read under mf-ship · 0.86.10: local 1m13s · CI not read under mf-ship

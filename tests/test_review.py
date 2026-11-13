@@ -11,12 +11,15 @@ from pathlib import Path
 
 import pytest
 
+import isekai.pipeline.review as review_module
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     SHEET_FILE,
+    Artifact,
     DanbooruTag,
     Renders,
+    ReviewApproved,
     read,
     renders_of,
 )
@@ -247,6 +250,41 @@ def test_an_approved_artifact_is_never_overwritten(
 
     assert corrected.name == "002.approved.json"
     assert approved.read_bytes() == frozen
+
+
+def _rival_inside_the_publish(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make another writer take the number inside `create`, after the draft is read."""
+    real = review_module.create
+
+    def rival_first(
+        path: Path, kind: Artifact[ReviewApproved], body: ReviewApproved
+    ) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"rival\n")
+        real(path, kind, body)
+
+    monkeypatch.setattr(review_module, "create", rival_first)
+
+
+@pytest.mark.spec("review:approval:approved-is-not-overwritten")
+def test_an_approval_dropped_inside_the_publish_is_refused_and_its_bytes_stay(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    review(run, FLOW)
+    _rival_inside_the_publish(monkeypatch)
+
+    with pytest.raises(Refusal, match="001.approved.json already exists"):
+        approve(run, FLOW, schema, vocabulary)
+
+    directory = run.path / FLOW / "review"
+    assert (directory / "001.approved.json").read_bytes() == b"rival\n"
+    assert sorted(p.name for p in directory.iterdir()) == [
+        "001.approved.json",
+        "001.draft.json",
+    ]
 
 
 @pytest.mark.spec("review:approval:approved-is-not-overwritten")
@@ -690,6 +728,28 @@ def test_the_estimate_counts_words_separators_and_the_encoders_own_two(
     assert estimate_tokens(fields, schema) == 9
 
 
+@pytest.mark.spec("review:budget:a-sheet-past-the-window-only-assembled-warns")
+def test_a_sheet_inside_the_window_by_its_tags_and_past_it_assembled_warns(
+    run: Run, schema: Schema, vocabulary: Vocabulary, flow: Flow
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    every = list(vocabulary.counts)
+    _edit(draft, clothes=every, accessories=every[:3])
+    fields = read(draft, DRAFT_FILE)["fields"]
+    assert (
+        estimate_tokens(fields, schema)
+        <= ENCODER_WINDOW
+        < token_budget(fields, schema, flow).total
+    )
+
+    approved, warnings = approve(run, FLOW, schema, vocabulary, definition=flow)
+
+    assert approved is not None and approved.exists()
+    assert len(warnings) == 1
+    assert "the assembled prompt is about" in warnings[0]
+
+
 # --- provenance ---------------------------------------------------------------
 
 
@@ -906,6 +966,29 @@ def test_the_budget_shares_and_overhead_sum_to_the_total(
     assert all(budget.per_field[name] == 0 for name in empty)
 
 
+@pytest.mark.spec("review:budget:count-covers-the-assembled-prompt")
+@pytest.mark.spec("review:budget:shares-and-overhead-sum-to-the-total")
+def test_the_budget_of_a_known_sheet_is_its_literals(
+    schema: Schema, flow: Flow
+) -> None:
+    fields: dict[str, list[str]] = {name: [] for name in schema.names}
+    assert token_budget(fields, schema, flow).total == 20
+
+    fields["hair_colour"] = ["brown hair"]
+    fields["clothes"] = ["collared shirt", "jeans"]
+    budget = token_budget(fields, schema, flow)
+
+    assert budget.total == 28
+    assert budget.per_field["hair_colour"] == 3
+    assert budget.per_field["clothes"] == 5
+    assert all(
+        share == 0
+        for name, share in budget.per_field.items()
+        if name not in ("hair_colour", "clothes")
+    )
+    assert budget.overhead == 20
+
+
 @pytest.mark.spec("review:budget:an-absent-field-is-counted-as-empty")
 def test_the_budget_counts_an_absent_field_as_empty(
     run: Run, schema: Schema, flow: Flow
@@ -1104,6 +1187,24 @@ def test_an_approved_target_is_not_copied_over(
 
     assert (again, warnings) == (None, [])
     assert snapshot(run.path / CONTROL) == before
+
+
+@pytest.mark.spec("review:approval:approved-is-not-overwritten")
+def test_a_copied_approval_dropped_inside_the_publish_is_refused_and_its_bytes_stay(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    _rival_inside_the_publish(monkeypatch)
+
+    with pytest.raises(Refusal, match="001.approved.json already exists"):
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    directory = run.path / CONTROL / "review"
+    assert (directory / "001.approved.json").read_bytes() == b"rival\n"
+    assert [p.name for p in directory.iterdir()] == ["001.approved.json"]
 
 
 @pytest.mark.spec("review:copy-from:a-copy-is-in-step-once-both-have-rendered")

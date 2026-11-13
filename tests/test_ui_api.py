@@ -1204,6 +1204,7 @@ def _update_during_approval(
         vocabulary: Vocabulary,
         *,
         excluded: frozenset[str] = frozenset(),
+        definition: Flow | None = None,
     ) -> tuple[Path | None, list[str]]:
         update.start()
         assert reached.wait(WAIT), "the update reached neither lock nor check"
@@ -1213,7 +1214,14 @@ def _update_during_approval(
             else "the update found a lock the approval should not hold"
         )
         try:
-            return approving(run, flow, schema, vocabulary, excluded=excluded)
+            return approving(
+                run,
+                flow,
+                schema,
+                vocabulary,
+                excluded=excluded,
+                definition=definition,
+            )
         finally:
             approved.set()
 
@@ -1587,6 +1595,26 @@ def test_approve_refuses_an_excluded_tag_the_draft_saved(
     assert saved.status_code == 200
     assert approved.status_code == 409
     assert "glasses" in approved.json()["refusal"]
+
+
+@pytest.mark.spec("review:budget:a-sheet-past-the-window-only-assembled-warns")
+def test_approve_answers_the_assembled_warning(
+    client: TestClient, made: Run, vocabulary: Vocabulary
+) -> None:
+    every = list(vocabulary.counts)
+    fields = {
+        **client.get(_at(made)).json()["fields"],
+        "clothes": every,
+        "accessories": every[:3],
+    }
+
+    saved = client.put(_at(made, "/draft"), json={"fields": fields})
+    approved = client.post(_at(made, "/approve"))
+
+    assert saved.json()["budget"]["total"] > ENCODER_WINDOW
+    assert approved.status_code == 200
+    assert len(approved.json()["warnings"]) == 1
+    assert "the assembled prompt is about" in approved.json()["warnings"][0]
 
 
 # --- damage is refused by name ------------------------------------------------
@@ -3140,6 +3168,31 @@ def test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn(
     _until_read(feed, staged, {body["upload"] for _, body in answers})
     assert reading == ["first.jpg", "second.jpg"]
     assert inside[1] == 1
+
+
+@pytest.mark.spec("import:stage:a-failed-move-puts-the-files-back")
+def test_a_commit_whose_name_is_taken_as_it_lands_is_refused_and_the_files_stay_staged(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    feed = _broadcast(client).subscribe()
+    staged = client.post("/api/staging").json()["id"]
+    _, photo = _upload(client, staged, "a.jpg", photo_jpeg((200, 0, 0), (40, 30)))
+    (read,) = _until_read(feed, staged, {photo["upload"]})[-1:]
+    real = os.rename
+
+    def taken_first(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> None:
+        if Path(src).name == ".collection":
+            (tmp_path / "lib" / "trip").mkdir()
+            (tmp_path / "lib" / "trip" / "x").write_bytes(b"rival")
+        real(src, dst)
+
+    monkeypatch.setattr(importing_module.os, "rename", taken_first)
+
+    refused = client.post(f"/api/staging/{staged}/commit", json={"collection": "trip"})
+
+    assert refused.status_code == 409
+    assert "a folder of that name is in the library" in refused.json()["refusal"]
+    assert client.get(f"/api/staging/{staged}/files/{read['name']}").status_code == 200
 
 
 @pytest.mark.spec("ui:sheet:the-stream-reports-each-files-reading")

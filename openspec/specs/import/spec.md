@@ -62,6 +62,13 @@ A photograph render would refuse fails here, before anything is rented. One bad 
 - **WHEN** a photograph's aspect ratio passes render's limit
 - **THEN** it is refused with render's reason
 
+#### Scenario: a file that does not decode is refused, whatever its header
+- **Key:** `import:refuse:a-file-that-does-not-decode-is-refused`
+- **Layers:** unit
+- **WHEN** a TIFF whose header is cut short is imported
+- **THEN** it is refused as not decoding, naming the file and the fix of exporting it as JPEG
+- **AND** it is not refused as a RAW photograph
+
 ### Requirement: Every source is verified before it is committed, and one that cannot be cleaned is left out unless chosen
 
 The system SHALL verify each file after it is cleaned — a JPEG or PNG by its bytes, it decodes, it carries no block
@@ -157,6 +164,28 @@ Bytes, not names, decide sameness. A collection holds copies of photographs, so 
 - **THEN** the collection holds every other staged file and not that one
 - **AND** a removal asked once the commit has sealed the folder is refused, and no file changes
 
+#### Scenario: a commit asked while a file is unread is refused
+- **Key:** `import:stage:a-commit-waits-for-every-file-to-be-read`
+- **Layers:** unit
+- **WHEN** a commit is asked while a chosen file is still waiting or being read
+- **THEN** it is refused, naming how many files are read
+- **AND** the import is not sealed
+- **AND** the commit lands once the file is read
+
+#### Scenario: a refused commit leaves the import open
+- **Key:** `import:stage:a-refused-commit-leaves-the-import-open`
+- **Layers:** unit
+- **WHEN** a commit is refused, and then another file is chosen
+- **THEN** the file is taken
+- **AND** a commit under a free name holds both files
+
+#### Scenario: a move that fails puts the files back
+- **Key:** `import:stage:a-failed-move-puts-the-files-back`
+- **Layers:** unit
+- **WHEN** the move of the staged files into the new collection fails
+- **THEN** every staged file is in the staging folder again and no partial collection stays
+- **AND** a name taken as the move lands is refused as a taken name
+
 ### Requirement: A source is cleaned before it enters a collection
 
 The system SHALL write into a collection's `sources/` only a JPEG or PNG carrying its pixels, its orientation and
@@ -208,4 +237,11 @@ HEIC WebP AVIF TIFF BMP GIF ─▶ decode ─▶ JPEG / PNG ┘
 - **Layers:** unit
 - **WHEN** a 16-bit greyscale TIFF is imported, in either byte order
 - **THEN** the source is a JPEG whose pixels are the original's scaled to 8 bits
+
+#### Scenario: a phone JPEG with a gain map is stripped, not refused
+- **Key:** `import:clean:a-phone-jpeg-with-a-gain-map-is-stripped`
+- **Layers:** unit
+- **WHEN** a JPEG in sRGB that carries a second image as a gain map is imported
+- **THEN** the source is a JPEG holding one image, stripped without re-encoding
+- **AND** it passes verification
 
