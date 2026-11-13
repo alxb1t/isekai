@@ -6,7 +6,7 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 
 - [x] 1 — The budget and the warning · moderate
 - [x] 2 — An approval is never replaced · moderate
-- [ ] 3 — What the reader is sent · moderate
+- [x] 3 — What the reader is sent · moderate
 - [ ] 4 — The seal and the commit · hard
 - [ ] 5 — The kinds · moderate
 - [ ] 6 — The mutants die · moderate
@@ -53,13 +53,13 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 
 ## 3 — What the reader is sent
 
-- [ ] 3.1 **HALT CHECK** The open reader's prompt is the briefing, stripped, and one newline, the line the mutant `PA-6` names; if it reads otherwise, the plan is wrong.
+- [x] 3.1 **HALT CHECK** The open reader's prompt is the briefing, stripped, and one newline, the line the mutant `PA-6` names; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'return f"{briefing.rstrip()}\n"' isekai/pipeline/caption.py` prints `1`.
-- [ ] 3.2 In `tests/test_caption.py` extend `test_the_open_readers_body_carries_the_photograph_and_the_pinned_sampling` in place: after its `stream` assert add `assert body["prompt"] == "Describe the person.\n"`.
+- [x] 3.2 In `tests/test_caption.py` extend `test_the_open_readers_body_carries_the_photograph_and_the_pinned_sampling` in place: after its `stream` assert add `assert body["prompt"] == "Describe the person.\n"`.
   Verify: `git grep -c -F 'assert body["prompt"] == "Describe the person.\n"' tests/test_caption.py` prints `1`.
-- [ ] 3.3 In `tests/test_caption.py` extend `test_the_caption_records_the_options_the_reader_sent` in place: stack `@pytest.mark.spec("caption:inputs:only-the-photograph-is-passed")` above its marker and, after its last assert, add `assert sent["prompt"] == BRIEFING_PATH.read_text().rstrip() + "\n"`.
+- [x] 3.3 In `tests/test_caption.py` extend `test_the_caption_records_the_options_the_reader_sent` in place: stack `@pytest.mark.spec("caption:inputs:only-the-photograph-is-passed")` above its marker and, after its last assert, add `assert sent["prompt"] == BRIEFING_PATH.read_text().rstrip() + "\n"`.
   Verify: `git grep -c -F 'assert sent["prompt"] == BRIEFING_PATH.read_text().rstrip() + "\n"' tests/test_caption.py` prints `1`.
-- [ ] 3.4 The phase's file agrees with the keys.
+- [x] 3.4 The phase's file agrees with the keys.
   Verify: `uv run pytest tests/test_caption.py` passes.
 
 ## 4 — The seal and the commit

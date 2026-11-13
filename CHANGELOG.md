@@ -40,6 +40,8 @@ its new digest.
   the server pass the flow, and the budget's total and shares are held by literals (0138 D2, D3).
 - An approval is published by `create`, by the approve verb and by the copy alike, so a number another writer takes
   inside the publish is refused and its bytes stay (0138 D4).
+- Tests hold the open reader's prompt, the briefing stripped with one newline, on the adapter's body and on the
+  request the stage sends (0138 D5).
 
 ## [0.86.9] - 2026-11-13
 
