@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.5
 after: [0130-the-record]
 ---
 

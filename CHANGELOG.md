@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.5] - 2026-11-13
+
+Gate: local 1m11s · CI not read under mf-ship · 0.86.4: local 1m2s · CI not read under mf-ship
+
 - A patch whose stand-in no test shows was reached gains its proof: a sentinel for the model records, twins that fire
   the tripwires, and records of calls the tests read; a ratchet holds each patch to a name its module reads, with a
   twin (0131 D1, D2, D3, D4).
