@@ -8,7 +8,7 @@ Phases that teach the replay vitest, hold the sheet's saves, the key dispatch an
 - [x] 2 — The sheet's saves · moderate
 - [x] 3 — Key dispatch and the chooser · moderate
 - [x] 4 — Cancel approve after a read · hard
-- [ ] 5 — The mutants die · moderate
+- [x] 5 — The mutants die · moderate
 
 ## 1 — The replay learns vitest
 
@@ -96,13 +96,13 @@ Phases that teach the replay vitest, hold the sheet's saves, the key dispatch an
 
 ## 5 — The mutants die
 
-- [ ] 5.1 **HALT CHECK** `0135-the-paydown` is merged: the replay file exists and holds its entries; if it does not, this phase has nothing to run.
+- [x] 5.1 **HALT CHECK** `0135-the-paydown` is merged: the replay file exists and holds its entries; if it does not, this phase has nothing to run.
   Verify: `git grep -c -h -F '"finding": "PB-14"' tests/mutants.json` prints `1`.
-- [ ] 5.2 **HALT CHECK** `0137-the-server` is merged: `ui/src/api.test.ts` exists for the mutants of `ui/src/api.ts`; if it does not, the plan is wrong.
+- [x] 5.2 **HALT CHECK** `0137-the-server` is merged: `ui/src/api.test.ts` exists for the mutants of `ui/src/api.ts`; if it does not, the plan is wrong.
   Verify: `git grep -c -h -F "from './test/wire.json'" -- ui/src` prints `1`.
-- [ ] 5.3 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each `find` of `ui/src/cancel.ts` is character for character the line phase 4 wrote. The last entry opens with `"finding": "VT-18c"`.
+- [x] 5.3 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each `find` of `ui/src/cancel.ts` is character for character the line phase 4 wrote. The last entry opens with `"finding": "VT-18c"`.
   Verify: `git grep -c -h -F '"finding": "VT-18c"' tests/mutants.json` prints `1`.
-- [ ] 5.4 Run the replay. A line that names a survivor goes to 5.5.
+- [x] 5.4 Run the replay. A line that names a survivor goes to 5.5.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.
-- [ ] 5.5 For each `survivor` line 5.4 printed, add in the file its entry names a test red with the mutant in place and green without it; only where no input tells the mutant from the line, give the entry `equivalent` with the reason, proven by reading the line. Never delete an entry. Where 5.4 printed none, this task holds.
+- [x] 5.5 For each `survivor` line 5.4 printed, add in the file its entry names a test red with the mutant in place and green without it; only where no input tells the mutant from the line, give the entry `equivalent` with the reason, proven by reading the line. Never delete an entry. Where 5.4 printed none, this task holds.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.

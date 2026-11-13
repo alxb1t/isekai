@@ -31,6 +31,8 @@ its new digest.
   and an editable element take no command, and `chooses` is asserted where Review opens the chooser (0140 D3, D4).
 - *Cancel approve* follows a render that moves while the sheet is being read: `rereads` remembers the move and reads an
   approved sheet once the read lands, and `readsAgain` answers `now`, `later` or `no` (0140 D5).
+- `tests/mutants.json` gains the mutants of the sheet's saves, the key dispatch, the chooser, the cancel and
+  `ui/src/api.ts`, each a vitest entry, and `make mutants` replays them with no survivor (0140 D6).
 
 ## [0.86.12] - 2026-11-13
 
