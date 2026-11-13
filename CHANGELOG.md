@@ -10,6 +10,33 @@ its new digest.
 
 ## [Unreleased]
 
+- A stage verb with no `--flow` is refused listing the flows this build tracks, and the missing verb, a count, a seed
+  and a limit out of range are each read in process by the parser's message, not by an exit code (0136 D1, D2).
+- The refusal of an empty runs root names `assign --flow`, which the build performs, not `tag --flow`, which it
+  refuses; the remedy sweep drops its bare verbs, reads an unquoted command and reaches the session's refusals (0136 D3, D4).
+- Tests hold that nothing rents before a free check passes, the limit's floor and a given limit, and the busy-port
+  probe runs on a real socket in `tests/e2e/test_gpu.py` (0136 D5, D6).
+- One CLI batch test, through `dispatch`, replaces the three that rebuilt the batch by hand; a failed sampling beside a
+  good edit, a chain of pending edits and a replaced draft's content are read (0136 D7, D8).
+- The change's mutants join `tests/mutants.json` and each dies on replay; the busy-port probe also has a unit test
+  that binds no loopback (0136 D10).
+- Tests hold the alert a failed window close raises, a job of a kind starting once the one before it has ended, and the
+  render slot's steps and images read from the verb's lines (0137 D1).
+- Tests hold that a foreign `Host` or `Origin` on a draft update leaves the run unchanged, that each loopback spelling
+  is answered by the middleware, each malformed body is refused naming what it lacks, and an upload past its declared
+  length is refused before its body is read (0137 D2, D3).
+- Tests post Prepare and Stop over HTTP against the real `prepare` verb, its reader held on a file: Prepare is refused
+  while it runs, Stop interrupts it, an idle Stop and an unknown kind are refused, and `unprepared` takes the cells
+  with no sheet and no other (0137 D4).
+- Tests run the billing poll over its gpunit double, counting its consults, so gpunit is asked on start and while a
+  session runs or an alert is open and not otherwise; a stream sends no cell of another collection and keeps alive
+  until the surface stops (0137 D1, D5).
+- `ui/src/test/wire.json` holds the body each Place and tattoo builder of `api.ts` sends; a vitest holds the builders to
+  it and a pytest holds the server's `*_KEYS` tuples and routes to it, and a vitest holds the unwrapping of a refusal
+  (0137 D6).
+- The change's mutants of the guard, the stream's filter, the volume alert and the job slot join `tests/mutants.json`,
+  and each dies on replay (0137 D8).
+
 ## [0.86.9] - 2026-11-13
 
 Gate: local 1m7s · CI not read under mf-ship · 0.86.8: local 1m8s · CI not read under mf-ship

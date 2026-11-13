@@ -1418,6 +1418,7 @@ def test_an_unedited_waiting_draft_is_replaced_at_its_number(
     assert draft == waiting == run.path / CONJURE / "review" / "001.draft.json"
     assert versions(run.path / CONJURE / "review") == [1]
     assert "drafted_from" not in read(draft, DRAFT_FILE)["producer"]
+    assert read(draft, DRAFT_FILE)["fields"]["hair_silhouette"] == ["very long hair"]
 
 
 @pytest.mark.spec("review:draft-from:an-edited-waiting-draft-is-refused")
