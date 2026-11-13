@@ -1710,6 +1710,7 @@ def test_deleting_a_render_deletes_its_files_and_thumbnail(
     assert deleted.status_code == 200
     assert deleted.json() == {"deleted": True}
     assert set(tree(made.path)) == set(tree(twin_run))
+    assert tree(made.path) == tree(twin_run)
     assert not (outputs / "001" / "11.png").exists()
     assert not (outputs / "001" / "11.render.json").exists()
     assert list(cache.glob("001/11.*.jpg")) == []

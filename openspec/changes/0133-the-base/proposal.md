@@ -21,7 +21,7 @@ retry rule ─▶ names ─▶ record's ends ─▶ delete's paths ─▶ "rende
 
 ## What Changes
 
-- **Phase 1** — the budget's boundary is held from below for `caption` and `tags`, and `attempts` reads one version's records at a time ([D1](design.md#d1)).
+- **Phase 1** — the budget's boundary is held from below for `caption`, `wd14` and `tags`, and `attempts` reads one version's records at a time ([D1](design.md#d1)).
 - **Phase 2** — the slug's bound and alphabet, the instruction record's path outside the repository, and a stray directory a second pass leaves ([D2](design.md#d2)).
 - **Phase 3** — the session's record is read back after a stop, a raised flow, a failed flow, a done bake, a lost create and a failed teardown ([D3](design.md#d3)).
 - **Phase 4** — each delete returns every path it removes, and the app's delete leaves the tree the CLI's leaves ([D4](design.md#d4)).
