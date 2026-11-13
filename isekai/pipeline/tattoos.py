@@ -82,7 +82,9 @@ _NAME_BYTES = 255
 _TIME = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 # The most a white scale may be: the page's top grey, 255, over the least automatic
-# grey, 1; a larger scale overflows the float32 skin it multiplies and draws solid ink.
+# grey the page can scale, 1; a larger scale overflows the float32 skin it multiplies
+# and draws solid ink. An automatic grey of 0 (a black fill under a tight outline) is
+# not scaled at all: the page says so, and the scale stays 1.
 _WHITE_SCALE_MAX = 255.0
 
 _DIGEST = re.compile(f"[0-9a-f]{{{ID_DIGEST_CHARS}}}")
