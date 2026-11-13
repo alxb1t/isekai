@@ -18,6 +18,9 @@ its new digest.
   (0139 D4).
 - The tagger's runtime is held by value in `tests/test_wd14_runtime.py`: the preparation on small photographs, the
   opener over a stub runtime, and one hand-built graph through the real runtime (0139 D5).
+- The provisioner's published digest is read offline from a redirect and from a response, Ollama's `post`, `ask` and
+  `probe` are held over an answered status, and the pose crop is held by value inside and past the image
+  (0139 D6, D7, D8).
 
 ## [0.86.12] - 2026-11-13
 

@@ -7,7 +7,7 @@ Phases of tests and two small product fixes: the pins that refuse, a photograph 
 - [x] 1 — The pins refuse · moderate
 - [x] 2 — A photograph that will not decode · moderate
 - [x] 3 — The tagger runs · hard
-- [ ] 4 — The pre-flight and the hosts · moderate
+- [x] 4 — The pre-flight and the hosts · moderate
 - [ ] 5 — The mutants die · moderate
 
 ## 1 — The pins refuse
@@ -63,19 +63,19 @@ Phases of tests and two small product fixes: the pins that refuse, a photograph 
 
 ## 4 — The pre-flight and the hosts
 
-- [ ] 4.1 **HALT CHECK** `published_digest` reads the header off the redirect's `HTTPError`, the line the mutant `BD-2b` names; if it reads otherwise, the plan is wrong.
+- [x] 4.1 **HALT CHECK** `published_digest` reads the header off the redirect's `HTTPError`, the line the mutant `BD-2b` names; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'redirected.headers.get("x-linked-etag")' isekai/boundary/provision.py` prints `1`.
-- [ ] 4.2 **HALT CHECK** `post` and `probe` each open through the module's `OPENER`, the seam [D7](design.md#d7) patches; if they read otherwise, the plan is wrong.
+- [x] 4.2 **HALT CHECK** `post` and `probe` each open through the module's `OPENER`, the seam [D7](design.md#d7) patches; if they read otherwise, the plan is wrong.
   Verify: `git grep -c -F 'OPENER.open(' isekai/boundary/ollama.py` prints `2`.
-- [ ] 4.3 **HALT CHECK** `crop_input` is the affine transform [D8](design.md#d8) reads by value; if it reads otherwise, the plan is wrong.
+- [x] 4.3 **HALT CHECK** `crop_input` is the affine transform [D8](design.md#d8) reads by value; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'Pillow.Transform.AFFINE' isekai/boundary/pose.py` prints `1`.
-- [ ] 4.4 In `tests/test_provision.py` add the tests of [D6](design.md#d6), named for their rows, with the imports they need.
+- [x] 4.4 In `tests/test_provision.py` add the tests of [D6](design.md#d6), named for their rows, with the imports they need.
   Verify: `git grep -c -E '^def test_(a_redirect_that_carries_the_digest|a_response_that_carries_the_digest|a_value_that_is_no_digest|the_redirect_is_kept)' tests/test_provision.py` prints `4`.
-- [ ] 4.5 In `tests/test_ollama.py` add `test_post_returns_an_answered_status_with_its_body`, `test_ask_over_the_real_transport_refuses_a_404_naming_the_remedy` and `test_probe_takes_any_answer_as_up` as [D7](design.md#d7) says.
+- [x] 4.5 In `tests/test_ollama.py` add `test_post_returns_an_answered_status_with_its_body`, `test_ask_over_the_real_transport_refuses_a_404_naming_the_remedy` and `test_probe_takes_any_answer_as_up` as [D7](design.md#d7) says.
   Verify: `git grep -c -E '^def test_(post_returns_an_answered|ask_over_the_real_transport|probe_takes_any_answer)' tests/test_ollama.py` prints `3`.
-- [ ] 4.6 In `tests/test_pose.py` add `test_pose_crop_is_cut_from_the_image_where_the_box_is` and `test_pose_crop_is_black_where_it_leaves_the_image` as [D8](design.md#d8) says, importing `crop_input`.
+- [x] 4.6 In `tests/test_pose.py` add `test_pose_crop_is_cut_from_the_image_where_the_box_is` and `test_pose_crop_is_black_where_it_leaves_the_image` as [D8](design.md#d8) says, importing `crop_input`.
   Verify: `git grep -c -E '^def test_pose_crop_(is_cut_from|is_black_where)' tests/test_pose.py` prints `2`.
-- [ ] 4.7 The phase's files agree with the keys.
+- [x] 4.7 The phase's files agree with the keys.
   Verify: `uv run pytest tests/test_provision.py tests/test_ollama.py tests/test_pose.py` passes.
 
 ## 5 — The mutants die
