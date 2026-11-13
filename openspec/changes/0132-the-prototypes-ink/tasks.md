@@ -20,7 +20,7 @@ The extractor reads the white point as the prototype does, then the outline step
 
 ## 2 — The floor
 
-- [ ] 2.1 In `config/tattoo.json` change `"outline_min": 20` to `"outline_min": 3` ([D3](design.md#d3)). In `tests/test_tattoo_library.py` change the pin `(4096, 20, 120)` to `(4096, 3, 120)`. In `tests/test_ui_tattoo.py` change `"outline_min": 20` to `"outline_min": 3`.
+- [ ] 2.1 In `config/tattoo.json` change `"outline_min": 20` to `"outline_min": 3` ([D3](design.md#d3)). In `tests/test_tattoo_library.py` change the pin `(4096, 20, 120)` to `(4096, 3, 120)`. In `tests/test_ui_tattoo.py` change `"outline_min": 20` to `"outline_min": 3`. In `tests/test_tattoo_library.py`, in `test_ink_view_refuses_points_too_few_to_close_saying_so`, change `points[:3]` to `points[:2]`: three points now close, so two stay below the floor and the test keeps its marker `tattoo:ink-view:an-open-outline-is-refused`.
   Verify: `uv run pytest tests/test_tattoo_library.py tests/test_ui_tattoo.py` passes.
 - [ ] 2.2 In `ui/src/stages.ts` give `forwardOf` a third argument, `floor: number`. Below it the wait reads `outline open · ${points} of ${floor} points`; from it on, as now ([D4](design.md#d4)).
   Verify: `git grep -n -F "floor} points" -- ui/src/stages.ts` prints the wait's line.

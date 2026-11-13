@@ -116,7 +116,7 @@ Added and removed, by layer:
 
 `test_ink_extract_a_tight_outline_over_a_solid_fill_is_cut_by_the_percentile` carries the one `spec` marker of the new edit scenario. The fills of the merged tests are its parameters, and it asserts the pixel at (80, 80) is white under `_tight()`. It is red before the extractor change and green after it.
 
-Pins of the floor change from 20 to 3 in `tests/test_tattoo_library.py` and `tests/test_ui_tattoo.py`. No test is deleted for that.
+Pins of the floor change from 20 to 3 in `tests/test_tattoo_library.py` and `tests/test_ui_tattoo.py`. No test is deleted for that. One test reads a count that the new floor closes: `test_ink_view_refuses_points_too_few_to_close_saying_so` passes `points[:3]` and now takes `points[:2]`, below the floor under the same marker.
 
 ## Dependencies
 
