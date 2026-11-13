@@ -291,7 +291,7 @@ def sent(page: Page, held: list[Route], nth: int = 0) -> Route:
     raise AssertionError("the held request was never sent")
 ```
 
-`sent` is `test_import.py`'s `_sent`, moved, with `nth` for a later request; a PUT the route never saw fails there.
+`sent` replaces `test_import.py`'s `_sent`, moved, with `nth` for a later request; a PUT the route never saw fails there.
 
 The first case holds the PUT, presses Approve, asserts no `/approve` request goes in half a second, releases the PUT, and reads the approval from disk. The second answers the PUT `409` itself, waits for the refusal in the approve bar, presses Approve, releases the next PUT, and reads the approval. In `tests/e2e/test_queue.py`, after the tests it holds:
 

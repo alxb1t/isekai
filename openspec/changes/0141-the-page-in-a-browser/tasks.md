@@ -55,7 +55,7 @@ Phases that guard the browser tests against a page that logs an error, press the
 - [x] 3.2 Write `tests/e2e/held.py` as [D7](design.md#d7) gives it, with a one-line docstring above and the imports `Page` and `Route` from `playwright.sync_api`.
   Verify: `grep -c -F 'def sent(' tests/e2e/held.py` prints `1`.
 - [x] 3.3 In `tests/e2e/test_import.py` import `sent` from `tests.e2e.held`, delete `_sent`, and call `sent(` where `_sent(` was called, in `_release` and in the tests that hold a stream, a removal and a commit.
-  Verify: `git grep -c -F '_sent(' -- tests/e2e/test_import.py` exits `1`.
+  Verify: `git grep -c -F '_sent(' -- tests/e2e/test_import.py` prints nothing.
 - [x] 3.4 In `QUEUES` of `tests/e2e/conftest.py`, after the `keys-hold` entry, add `"save-holds": (("lou", (725, 1000)), ("max", (735, 1000))),`.
   Verify: `git grep -c -h -F '"save-holds"' tests/e2e/conftest.py` prints `1`.
 - [x] 3.5 In `tests/e2e/test_queue.py` add the imports [D7](design.md#d7) lists, but `Refused`, which 1.4 imported, and `FLOW`, which joins the existing `from tests.e2e.conftest import` line; after its last test add the constants, `_edit`, `_holds_the_edit` and `test_approve_waits_for_a_save_held_at_the_network` exactly as it gives them.
