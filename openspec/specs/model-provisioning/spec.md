@@ -152,6 +152,13 @@ A multi-gigabyte download that ends in a mismatch costs the same as one that end
 - **THEN** provisioning rejects the source without transferring the file
 - **AND** the next declared source for that entry is tried
 
+#### Scenario: the published digest is read from the source's answer
+- **Key:** `model-provisioning:preflight:the-published-digest-is-read-from-the-sources-answer`
+- **Layers:** unit
+- **WHEN** a source answers the check with a redirect that carries the digest of the file it would serve
+- **THEN** that digest is the one compared with the manifest's
+- **AND** a source that publishes none, or one that is not a digest, is verified after the transfer instead
+
 ### Requirement: A transfer that fails advances to the next declared source
 
 Provisioning SHALL try an entry's sources in the manifest's order and abort only when every one of them has

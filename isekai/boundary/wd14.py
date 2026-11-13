@@ -38,9 +38,11 @@ digests are verified before the first inference (D7).
 **Preparation sits behind the seam rather than in front of it**, so `Session`
 takes a photograph and not a prepared array. That is what makes the stage itself
 runnable in the suite without a wheel: `prepare` needs `numpy` and `Pillow`, the
-suite keeps the stage's tests off both deliberately, and a seam beginning after
-preparation would leave `tagging:seam:offline-double-satisfies-the-interface`
-provable only by reaching for them.
+stage's tests keep off both deliberately -- bar the one that a photograph which
+will not decode is a local failure, which runs the real `prepare` -- and a seam
+beginning after preparation would leave
+`tagging:seam:offline-double-satisfies-the-interface` provable only by reaching
+for them.
 
 **The one silent failure mode is the ordering**, which is exactly what the suite
 asserts against a fake session: a vector whose only high value sits at index 1
@@ -158,11 +160,14 @@ class Session(Protocol):
 
     **The seam takes the photograph rather than a prepared array**, and the
     difference is what the double is worth. `prepare` needs `numpy` and
-    `Pillow`, which the environment the gate runs in deliberately does not
-    install -- so a seam that began *after* preparation would leave the stage
-    itself untestable and `tagging:seam:offline-double-satisfies-the-interface`
-    unprovable. Preparing an image is this boundary's business in exactly the way
-    encoding a request body is `ollama.post`'s: it belongs behind the seam.
+    `Pillow`, declared dependencies the gate's environment installs, and no
+    fake-session stage test reaches them (the decode-failure test alone runs the
+    real `prepare`) -- the double sits ahead of preparation, so a seam
+    that began *after* it would put both inside every stage test and
+    `tagging:seam:offline-double-satisfies-the-interface` would stop proving
+    that the stage runs on a double alone. Preparing an image is this boundary's
+    business in exactly the way encoding a request body is `ollama.post`'s: it
+    belongs behind the seam.
     """
 
     def run(self, photo: Path) -> Sequence[float]:
@@ -295,14 +300,26 @@ def prepare(photo: Path, dimension: int) -> object:
     and it would say more than any caller is allowed to use; naming the value opaque
     says exactly what the seam permits, without waiving a rule.
 
+    A photograph that does not decode is a `Refusal` naming it, which the tag
+    stage records as that photograph's permanent failure.
+
     The third-party imports are function-local, which is what keeps them off
     `python -m isekai`'s import graph at module scope.
     """
     numpy = _require("numpy")
     Image = _require("PIL.Image")
 
-    opened = Image.open(photo)
-    opened.load()
+    try:
+        opened = Image.open(photo)
+        opened.load()
+    except (
+        OSError,
+        ValueError,
+        EOFError,
+        SyntaxError,
+        Image.DecompressionBombError,
+    ) as undecodable:
+        raise Refusal(f"{photo} does not decode as an image") from undecodable
     if opened.mode == "RGBA" or "transparency" in opened.info:
         canvas = Image.new("RGBA", opened.size, (*BACKGROUND, 255))
         canvas.alpha_composite(opened.convert("RGBA"))

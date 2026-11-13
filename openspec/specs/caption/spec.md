@@ -132,6 +132,12 @@ call lets a machine that never captions leave the reader untouched.
 - **WHEN** the runtime holds no readable record of the declared model
 - **THEN** the command refuses naming the command that fetches the pinned files, then the one that builds the model
 
+#### Scenario: a host that answers with a status is reachable
+- **Key:** `caption:reachability:a-host-that-answers-with-a-status-is-reachable`
+- **Layers:** unit
+- **WHEN** the host answers the reachability check with an HTTP status, whatever it is
+- **THEN** the check passes and nothing is refused
+
 ### Requirement: A caption records the files its model was built from and the options it was sampled at
 
 The system SHALL record in each caption's producer the digests of the model and projector files the model

@@ -23,6 +23,7 @@ from isekai.boundary.pose import (
     OnnxPoseFinder,
     Pose,
     crop_for,
+    crop_input,
     fit,
     open_pose,
     person_box,
@@ -265,6 +266,48 @@ def test_pose_keypoints_a_wide_box_grows_in_height_to_the_aspect() -> None:
     assert (right - left) == pytest.approx(500.0)
     assert (left + right) / 2 == pytest.approx(200.0)
     assert (top + bottom) / 2 == pytest.approx(50.0)
+
+
+def _normalised(colour: tuple[int, int, int]) -> list[float]:
+    return [
+        (value - mean) / deviation
+        for value, mean, deviation in zip(
+            colour, pose.MEAN, pose.DEVIATION, strict=True
+        )
+    ]
+
+
+@pytest.mark.spec(
+    "placement-proposal:pose:the-estimator-reads-the-crops-pixels-normalised"
+)
+def test_pose_crop_is_cut_from_the_image_where_the_box_is() -> None:
+    image = Image.new("RGB", (6, 4), (10, 20, 30))
+    image.paste((200, 100, 50), (0, 0, 3, 4))
+
+    array = crop_input(image, (2.0, 0.0, 6.0, 4.0), (4, 4))
+
+    assert array.shape == (1, 3, 4, 4)
+    assert array.dtype == np.float32
+    assert array[0, :, 2, 0] == pytest.approx(_normalised((200, 100, 50)), abs=1e-5)
+    for column in (1, 2, 3):
+        assert array[0, :, 2, column] == pytest.approx(
+            _normalised((10, 20, 30)), abs=1e-5
+        )
+
+
+@pytest.mark.spec(
+    "placement-proposal:pose:the-estimator-reads-the-crops-pixels-normalised"
+)
+def test_pose_crop_is_black_where_it_leaves_the_image() -> None:
+    image = Image.new("RGB", (6, 4), (200, 100, 50))
+
+    array = crop_input(image, (-2.0, -1.0, 2.0, 3.0), (4, 4))
+
+    black = _normalised((0, 0, 0))
+    assert array[0, :, 0, 3] == pytest.approx(black, abs=1e-5)
+    assert array[0, :, 2, 0] == pytest.approx(black, abs=1e-5)
+    assert array[0, :, 2, 1] == pytest.approx(black, abs=1e-5)
+    assert array[0, :, 1, 2] == pytest.approx(_normalised((200, 100, 50)), abs=1e-5)
 
 
 @pytest.mark.spec(

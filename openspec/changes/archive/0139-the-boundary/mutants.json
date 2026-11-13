@@ -1,0 +1,90 @@
+[
+  {
+    "finding": "BD-1",
+    "path": "isekai/boundary/wd14.py",
+    "find": "            resolved.append(resolve(dest, models_dir, manifest))",
+    "replace": "            resolved.append(\n                resolve(dest, models_dir, manifest)\n                if dest == MODEL_DEST\n                else (entry_for(manifest, dest) and (models_dir / dest).open(\"rb\").close() or models_dir / dest)\n            )",
+    "tests": ["tests/test_wd14.py"],
+    "why": "the label index is only checked for presence, so a label index with other bytes is used with the model it does not belong to"
+  },
+  {
+    "finding": "BD-1b",
+    "path": "isekai/interface/wiring.py",
+    "find": "    except DigestMismatch as swapped:\n",
+    "replace": "    except FileNotFoundError as swapped:\n",
+    "tests": ["tests/test_tagging.py"],
+    "why": "a digest mismatch must reach the verb as a refusal, or `tag` ends in a traceback and the hosted tagger never runs"
+  },
+  {
+    "finding": "BD-2a",
+    "path": "isekai/boundary/provision.py",
+    "find": "    candidate = header.strip().strip('\"')",
+    "replace": "    candidate = header.strip()",
+    "tests": ["tests/test_provision.py"],
+    "why": "the source publishes the digest quoted; unquoted it never matches, and every entry silently degrades to download-then-verify"
+  },
+  {
+    "finding": "BD-2b",
+    "path": "isekai/boundary/provision.py",
+    "find": "        except urllib.error.HTTPError as redirected:\n            header = redirected.headers.get(\"x-linked-etag\") or \"\"",
+    "replace": "        except urllib.error.HTTPError as redirected:\n            header = \"\"",
+    "tests": ["tests/test_provision.py"],
+    "why": "the redirect that carries the published digest arrives as an HTTPError; reading nothing off it disables the pre-flight for every pinned source"
+  },
+  {
+    "finding": "BD-3a",
+    "path": "isekai/boundary/pose.py",
+    "find": "    pixels = (np.asarray(moved, dtype=np.float32) - MEAN) / DEVIATION",
+    "replace": "    pixels = np.asarray(moved, dtype=np.float32) / DEVIATION",
+    "tests": ["tests/test_pose.py"],
+    "why": "the estimator's input is normalised by the declared mean, and a test of the crop's values sees it dropped"
+  },
+  {
+    "finding": "BD-3b",
+    "path": "isekai/boundary/pose.py",
+    "find": "        ((right - left) / width, 0.0, left, 0.0, (bottom - top) / height, top),",
+    "replace": "        ((right - left) / width, 0.0, 0.0, 0.0, (bottom - top) / height, 0.0),",
+    "tests": ["tests/test_pose.py"],
+    "why": "the crop's offset is its place in the image; dropped, the estimator reads the top-left corner for every person"
+  },
+  {
+    "finding": "BD-6",
+    "path": "isekai/boundary/ollama.py",
+    "find": "    except urllib.error.HTTPError as answered:\n        return answered.code, answered.read()",
+    "replace": "    except urllib.error.HTTPError as answered:\n        raise answered",
+    "tests": ["tests/test_ollama.py"],
+    "why": "an answered 404 must come back as a status; raised, it refuses as nothing listening and names the wrong fix"
+  },
+  {
+    "finding": "BD-6b",
+    "path": "isekai/boundary/ollama.py",
+    "find": "    except urllib.error.HTTPError:\n        return\n",
+    "replace": "    except urllib.error.HTTPError:\n        raise\n",
+    "tests": ["tests/test_ollama.py"],
+    "why": "a host that answers any status is up; raised, the probe fails on a host that is running"
+  },
+  {
+    "finding": "BD-10a",
+    "path": "isekai/boundary/wd14.py",
+    "find": "    return numpy.expand_dims(pixels[:, :, ::-1], axis=0)",
+    "replace": "    return numpy.expand_dims(pixels, axis=0)",
+    "tests": ["tests/test_wd14_runtime.py"],
+    "why": "the graph takes blue first; without the flip the tagger scores a channel-swapped photograph"
+  },
+  {
+    "finding": "BD-10b",
+    "path": "isekai/boundary/wd14.py",
+    "find": "    labels_path, model_path, pins = verified_paths(models_dir)\n    return LocalTagger(\n        session=OnnxSession(model_path),",
+    "replace": "    session = OnnxSession(DEFAULT_MODELS_DIR / MODEL_DEST)\n    labels_path, model_path, pins = verified_paths(models_dir)\n    return LocalTagger(\n        session=session,",
+    "tests": ["tests/test_wd14_runtime.py"],
+    "why": "the graph is opened only after both digests verify, and the opened graph is the verified one"
+  },
+  {
+    "finding": "P6",
+    "path": "isekai/boundary/wd14.py",
+    "find": "        raise Refusal(f\"{photo} does not decode as an image\") from undecodable",
+    "replace": "        raise undecodable",
+    "tests": ["tests/test_tagging.py"],
+    "why": "a photograph too large to decode must be a refusal the stage records, or the tag stage crashes and the hosted tagger never runs"
+  }
+]

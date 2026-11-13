@@ -10,6 +10,24 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.13] - 2026-11-13
+
+Gate: local 1m19s · CI not read under mf-ship · 0.86.12: local 1m15s · CI not read under mf-ship
+
+- A tagger file whose bytes disagree with its pin is a refusal naming the file and the fetch, so `tag` and `prepare`
+  report it and the hosted tagger still runs; tests plant each half of the pin wrong and hold the vector-length
+  refusal under a scenario of its own (0139 D2, D3).
+- A photograph that will not decode is a refusal naming it, raised by `prepare`, so the tag stage records the local
+  tagger's failure and the hosted list is still written; the stale note on what the gate installs is corrected
+  (0139 D4).
+- The tagger's runtime is held by value in `tests/test_wd14_runtime.py`: the preparation on small photographs, the
+  opener over a stub runtime, and one hand-built graph through the real runtime (0139 D5).
+- The provisioner's published digest is read offline from a redirect and from a response, Ollama's `post`, `ask` and
+  `probe` are held over an answered status, and the pose crop is held by value inside and past the image
+  (0139 D6, D7, D8).
+- `tests/mutants.json` gains the boundary's mutants, each naming the test file that must kill it, and `make mutants`
+  replays them with no survivor (0139 D10).
+
 ## [0.86.12] - 2026-11-13
 
 Gate: local 1m15s · CI not read under mf-ship · 0.86.11: local 1m24s · CI not read under mf-ship
