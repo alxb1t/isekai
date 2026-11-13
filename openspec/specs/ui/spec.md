@@ -448,6 +448,14 @@ saved as its letters corrupts a draft without a word.
 - **THEN** the update is refused naming the field
 - **AND** the draft on disk is unchanged
 
+#### Scenario: a body of the wrong shape is refused naming what it lacks
+- **Key:** `ui:damage:a-body-of-the-wrong-shape-is-refused-naming-what-it-lacks`
+- **Layers:** unit
+- **WHEN** a request to a route that reads a body sends one of the wrong shape, as a name that is no list or a
+  count that is no object
+- **THEN** it is refused naming what the body lacks, and not answered with a server error
+- **AND** nothing is written or started for it
+
 ### Requirement: The surface serves one library, from a verb that takes no arguments
 
 The system SHALL serve the browser surface from a subcommand that takes no flow, no input and no runs root, over one
@@ -913,6 +921,12 @@ whole fix.
 - **WHEN** a job is asked for while another of its kind runs
 - **THEN** it is refused naming the running job
 
+#### Scenario: a job of a kind is accepted once the one before it has ended
+- **Key:** `ui:prepare:a-job-follows-an-ended-one`
+- **Layers:** unit
+- **WHEN** a job is asked for after the job before it of its kind has ended
+- **THEN** it starts and runs
+
 #### Scenario: another batch's Prepare is disabled while one runs
 - **Key:** `ui:prepare:another-batchs-prepare-is-disabled`
 - **Layers:** unit
@@ -985,6 +999,13 @@ whole fix.
 - **WHEN** Prepare is planned over two photographs, the second assigned a flow the first is not
 - **THEN** its one invocation names every cell of the first photograph before any cell of the second
 
+#### Scenario: Prepare takes the cells with no sheet and no other
+- **Key:** `ui:prepare:prepare-takes-the-cells-with-no-sheet`
+- **Layers:** unit
+- **WHEN** Prepare is planned over a hub whose cells are assigned, tagged, sheeted and unreadable
+- **THEN** it names the assigned and the tagged cells
+- **AND** it names no sheeted cell and no unreadable one
+
 ### Requirement: The page is told of a job as it runs
 
 The system SHALL serve an event stream that, on every connection, sends a snapshot of both job slots, the Prepare and
@@ -1012,6 +1033,13 @@ One connection a page leaves the browser's others free.
 - **Layers:** unit
 - **WHEN** a running stage reports an item done
 - **THEN** the stream sends that cell's new stage
+
+#### Scenario: a stream sends only its collection's cells
+- **Key:** `ui:events:a-stream-sends-only-its-collections-cells`
+- **Layers:** unit
+- **WHEN** a stream is open for a collection and a cell of another collection changes
+- **THEN** the stream does not send that cell
+- **AND** it sends the job and the cells of its own collection that follow
 
 #### Scenario: a reconnect keeps Prepare progress
 - **Key:** `ui:events:a-reconnect-keeps-prepare-progress`
@@ -1297,6 +1325,20 @@ configuration to edit, and the log holds each card gpunit skipped.
 - **THEN** the rendering verb does not run
 - **AND** the volume alert is raised
 
+#### Scenario: a failed close raises the volume alert
+- **Key:** `ui:render-job:a-failed-close-raises-the-volume-alert`
+- **Layers:** unit
+- **WHEN** a render ends and closing the window fails
+- **THEN** the volume alert is raised
+- **AND** the job's volume down step reads failed
+
+#### Scenario: the verb's lines are the session's steps and images
+- **Key:** `ui:render-job:the-verbs-lines-are-the-sessions-steps`
+- **Layers:** unit
+- **WHEN** the rendering verb prints a step line and an image line, then exits in failure
+- **THEN** the session holds that step's state and that image's digest, flow, version and seed
+- **AND** the job ends failed, its message naming the verb's exit and the collection's log
+
 #### Scenario: a surface stopped mid-render still closes the window
 - **Key:** `ui:render-job:a-stopped-surface-closes-the-window`
 - **Layers:** unit
@@ -1368,6 +1410,13 @@ reaches nothing.
 - **Layers:** unit
 - **WHEN** Check again is asked for and gpunit still reports the pod
 - **THEN** the alert stays
+
+#### Scenario: gpunit is asked while a session runs or an alert is open
+- **Key:** `ui:billing:gpunit-is-asked-while-a-session-or-an-alert-is-open`
+- **Layers:** unit
+- **WHEN** the surface starts, and then a session runs, and then an alert is open, and then neither
+- **THEN** gpunit is asked once on start, and again at each interval while a session runs or an alert is open
+- **AND** it is asked no more once neither holds, or once the surface stops
 
 #### Scenario: a volume past its window takes the band
 - **Key:** `ui:billing:a-volume-past-its-window-takes-the-band`

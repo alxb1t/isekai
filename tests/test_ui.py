@@ -439,6 +439,33 @@ def test_closed_broadcast_ends_existing_and_late_streams() -> None:
         worker.join(1)
 
 
+@pytest.mark.spec("ui:events:a-stream-sends-only-its-collections-cells")
+def test_a_stream_for_a_collection_sends_no_cell_of_another() -> None:
+    broadcast = events.Broadcast()
+    stream = events.stream(broadcast, lambda: {}, collection="a", heartbeat=WAIT)
+    next(stream)
+
+    broadcast.publish("cell", {"collection": "b"})
+    broadcast.publish("job", {"state": "x"})
+    broadcast.publish("cell", {"collection": "a"})
+
+    assert next(stream) == events.frame("job", {"state": "x"})
+    assert next(stream) == events.frame("cell", {"collection": "a"})
+    broadcast.close()
+    assert next(stream, None) is None
+
+
+@pytest.mark.spec("ui:events:stopping-ends-open-streams-quietly")
+def test_a_quiet_stream_keeps_alive_and_ends_when_the_surface_stops() -> None:
+    broadcast = events.Broadcast()
+    stream = events.stream(broadcast, lambda: {}, heartbeat=0.01)
+
+    assert next(stream).startswith("event: snapshot")
+    assert next(stream) == ": keep-alive\n\n"
+    broadcast.close()
+    assert next(stream, None) is None
+
+
 @pytest.mark.spec("ui:events:stopping-ends-open-streams-quietly")
 def test_serve_returns_130_for_keyboard_interrupt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
