@@ -1,0 +1,48 @@
+{
+  "bodies": [
+    {
+      "builder": "saveStageOne",
+      "method": "PUT",
+      "path": "/api/tattoos/{name}/stage1/{digest}",
+      "keys": ["pairs", "not_on_photo"],
+      "server": "STAGE1_KEYS"
+    },
+    {
+      "builder": "saveOutline",
+      "method": "PUT",
+      "path": "/api/tattoos/{name}/outline",
+      "keys": ["points", "closed", "white", "neutral", "depth"],
+      "server": "OUTLINE_KEYS"
+    },
+    {
+      "builder": "inkView",
+      "method": "POST",
+      "path": "/api/c/{collection}/tattoos/{name}/ink",
+      "keys": ["points", "white", "neutral", "depth", "digest", "flow"],
+      "server": "INK_KEYS"
+    },
+    {
+      "builder": "placementPreview",
+      "method": "POST",
+      "path": "/api/c/{collection}/tattoos/{name}/preview",
+      "keys": ["target", "digest", "flow", "version", "seed", "edit", "pairs", "limb", "exclusions"],
+      "server": "PREVIEW_KEYS",
+      "optional": ["edit"]
+    },
+    {
+      "builder": "proposePairs",
+      "method": "POST",
+      "path": "/api/c/{collection}/place/propose",
+      "keys": ["digest", "flow", "version", "seed", "points"],
+      "server": "PROPOSE_KEYS"
+    },
+    {
+      "builder": "bakeTattoo",
+      "method": "POST",
+      "path": "/api/c/{collection}/tattoos/{name}/bake",
+      "keys": ["digest", "flow", "version", "seed", "edit", "pairs", "limb", "exclusions"],
+      "server": "BAKE_KEYS",
+      "optional": ["edit"]
+    }
+  ]
+}

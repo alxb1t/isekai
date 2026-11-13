@@ -242,14 +242,24 @@ def test_a_request_addressed_to_the_bound_address_is_answered(
 
 @pytest.mark.spec("ui:address:another-host-is-refused")
 def test_a_request_carrying_someone_elses_host_is_refused(
-    client: TestClient,
+    client: TestClient, made: Run
 ) -> None:
     # DNS rebinding: the attacker's domain resolves to 127.0.0.1, so the socket
-    # is right and only the name is wrong.
-    answered = client.get("/api/library", headers={"host": f"evil.example:{PORT}"})
+    # is right and only the name is wrong. The write is one a handler would
+    # accept, so a guard that answered after the handler leaves the run changed.
+    fields = client.get(_at(made)).json()["fields"]
+    fields["hair_colour"] = ["blonde"]
+    before = snapshot(made.path)
+
+    answered = client.put(
+        _at(made, "/draft"),
+        json={"fields": fields},
+        headers={"host": f"evil.example:{PORT}"},
+    )
 
     assert answered.status_code == 403
     assert answered.json() == {"refusal": "not addressed here"}
+    assert snapshot(made.path) == before
 
 
 @pytest.mark.spec("ui:address:another-origin-is-refused")
@@ -259,14 +269,19 @@ def test_a_write_carrying_another_pages_origin_is_refused(
     # The cross-site write: the browser sends this server's `Host` because that
     # is where it is connecting, and the attacking page's `Origin` because that
     # is where the script came from.
+    fields = client.get(_at(made)).json()["fields"]
+    fields["hair_colour"] = ["blonde"]
+    before = snapshot(made.path)
+
     answered = client.put(
         _at(made, "/draft"),
-        json={"fields": {}},
+        json={"fields": fields},
         headers={"origin": "http://evil.example"},
     )
 
     assert answered.status_code == 403
     assert answered.json() == {"refusal": "not from this page"}
+    assert snapshot(made.path) == before
 
 
 @pytest.mark.spec("ui:address:a-cross-site-request-without-origin-is-refused")
@@ -320,7 +335,9 @@ def test_a_request_without_origin_from_this_page_or_no_browser_is_answered(
 
 
 @pytest.mark.spec("ui:address:every-loopback-spelling-is-answered")
-def test_every_loopback_alias_of_the_bound_port_is_answered() -> None:
+def test_every_loopback_alias_of_the_bound_port_is_answered(
+    client: TestClient, made: Run
+) -> None:
     # `localhost` is what an operator types and `127.0.0.1` is what the startup
     # line prints, so refusing either would be a defect rather than a defence --
     # and neither name can be made to point anywhere else.
@@ -328,6 +345,18 @@ def test_every_loopback_alias_of_the_bound_port_is_answered() -> None:
     assert f"localhost:{PORT}" in authorities("127.0.0.1", PORT)
     # A non-loopback bind answers to its own name only.
     assert authorities("example.test", PORT) == {f"example.test:{PORT}"}
+    # The middleware answers each spelling, not only the helper that lists them.
+    for host in (f"localhost:{PORT}", f"[::1]:{PORT}"):
+        assert client.get("/api/library", headers={"host": host}).status_code == 200
+    fields = client.get(_at(made)).json()["fields"]
+    fields["hair_colour"] = ["blonde"]
+    written = client.put(
+        _at(made, "/draft"),
+        json={"fields": fields},
+        headers={"host": f"localhost:{PORT}", "origin": f"http://localhost:{PORT}"},
+    )
+    assert written.status_code == 200
+    assert client.get(_at(made)).json()["fields"]["hair_colour"] == ["blonde"]
 
 
 # --- the collection, and the payload the page is drawn from ------------------------
@@ -573,6 +602,120 @@ def test_a_draft_update_against_an_approved_input_is_refused_and_writes_nothing(
     assert response.status_code == 409
     assert "is approved" in response.json()["refusal"]
     assert snapshot(made.path) == before
+
+
+_WRONG = (
+    "assign-flow",
+    "assign-sources",
+    "commit",
+    "quote-collections",
+    "quote-without",
+    "draft-flow",
+    "draft-images",
+    "renders-object",
+    "renders-seeds",
+)
+
+
+def _wrong(
+    made: Run, staged: str, fields: dict[str, Any]
+) -> dict[str, tuple[str, str, dict[str, Any], str]]:
+    """Return each body of the wrong shape as `(method, path, json, refusal text)`."""
+    hub = f"/api/c/{COLLECTION}"
+    return {
+        "assign-flow": (
+            "POST",
+            f"{hub}/assign",
+            {"flow": "nope", "sources": []},
+            "not a flow this surface offers",
+        ),
+        "assign-sources": (
+            "POST",
+            f"{hub}/assign",
+            {"flow": FLOW, "sources": "ada.jpg"},
+            "`sources` is not a list of source names",
+        ),
+        "commit": (
+            "POST",
+            f"/api/staging/{staged}/commit",
+            {"as_is": "x"},
+            "`as_is` is not a list of file names",
+        ),
+        "quote-collections": (
+            "POST",
+            "/api/render/quote",
+            {"collections": "b"},
+            "the quote names no list of collections",
+        ),
+        "quote-without": (
+            "POST",
+            "/api/render/quote",
+            {"collections": [COLLECTION], "without": "x"},
+            "the quote names no list of photographs taken out",
+        ),
+        "draft-flow": (
+            "POST",
+            f"{hub}/draft",
+            {"flow": "nope"},
+            "not a flow this surface drafts",
+        ),
+        "draft-images": (
+            "POST",
+            f"{hub}/draft",
+            {"flow": FLOW, "images": []},
+            "the draft names no images",
+        ),
+        "renders-object": (
+            "PUT",
+            _at(made, "/draft"),
+            {"fields": fields, "renders": "x"},
+            "the update's `renders` is not a count and its seeds",
+        ),
+        "renders-seeds": (
+            "PUT",
+            _at(made, "/draft"),
+            {"fields": fields, "renders": {"seeds": ["x"]}},
+            "the update's renders seeds are not decimal numbers",
+        ),
+    }
+
+
+@pytest.mark.spec("ui:damage:a-body-of-the-wrong-shape-is-refused-naming-what-it-lacks")
+@pytest.mark.parametrize("row", _WRONG)
+def test_a_body_of_the_wrong_shape_is_refused_naming_what_it_lacks(
+    client: TestClient, made: Run, row: str
+) -> None:
+    staged = client.post("/api/staging").json()["id"]
+    fields = client.get(_at(made)).json()["fields"]
+    before = snapshot(made.path)
+    method, path, body, text = _wrong(made, staged, fields)[row]
+
+    answered = client.request(method, path, json=body)
+
+    assert answered.status_code == 409
+    assert text in answered.json()["refusal"]
+    assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("import:refuse:a-file-over-the-limit-is-refused")
+def test_an_upload_past_its_declared_length_is_refused_before_its_body_is_read(
+    wired: Wiring, made: Run, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def handed(*_args: object, **_keywords: object) -> dict[str, Any]:
+        raise AssertionError("the body was handed to the reader")
+
+    monkeypatch.setattr(importing_module, "upload_limit", lambda *a, **k: 1024 * 1024)
+    monkeypatch.setattr(importing_module.Reader, "put", handed)
+    client = _client(wired, made, tmp_path)
+    staged = client.post("/api/staging").json()["id"]
+
+    answered = client.put(
+        f"/api/staging/{staged}/files/big.jpg", content=b"x" * (1024 * 1024 + 1)
+    )
+
+    assert answered.status_code == 409
+    assert "big.jpg" in answered.json()["refusal"]
+    assert "past the 1 MB limit" in answered.json()["refusal"]
 
 
 @pytest.mark.spec("ui:approval:a-re-opened-input-is-editable")

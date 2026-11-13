@@ -278,5 +278,53 @@
     "replace": "    found.sort(key=lambda path: path.stat().st_mtime)\n    taken: list[float] = []\n    for path in found:\n        if (seconds := duration_of(path)) is not None:",
     "tests": ["tests/test_render.py"],
     "why": "the durations a limit is drawn from are the newest records, not the oldest"
+  },
+  {
+    "finding": "UA-1a",
+    "path": "isekai/interface/ui/app.py",
+    "find": "        if request.headers.get(\"Host\", \"\") not in allowed:\n            return JSONResponse({\"refusal\": \"not addressed here\"}, FORBIDDEN)\n",
+    "replace": "        if request.headers.get(\"Host\", \"\") not in allowed:\n            await call_next(request)\n            return JSONResponse({\"refusal\": \"not addressed here\"}, FORBIDDEN)\n",
+    "tests": ["tests/test_ui_api.py"],
+    "why": "a request carrying another host must be refused before its handler runs, so a write lands nothing"
+  },
+  {
+    "finding": "UA-1b",
+    "path": "isekai/interface/ui/app.py",
+    "find": "        if origin is not None and origin not in origins:\n            return JSONResponse({\"refusal\": \"not from this page\"}, FORBIDDEN)\n",
+    "replace": "        if origin is not None and origin not in origins:\n            await call_next(request)\n            return JSONResponse({\"refusal\": \"not from this page\"}, FORBIDDEN)\n",
+    "tests": ["tests/test_ui_api.py"],
+    "why": "a write carrying another page's origin must be refused before its handler runs, so the cross-site write lands nothing"
+  },
+  {
+    "finding": "UA-2",
+    "path": "isekai/interface/ui/app.py",
+    "find": "    allowed = authorities(host, port)\n",
+    "replace": "    allowed = frozenset({f\"{host}:{port}\"})\n",
+    "tests": ["tests/test_ui_api.py"],
+    "why": "a request addressed as localhost or [::1] must be answered by the middleware, not only by the helper"
+  },
+  {
+    "finding": "UA-9",
+    "path": "isekai/interface/ui/events.py",
+    "find": "            if kind == \"cell\" and data.get(\"collection\") != collection:\n                continue\n",
+    "replace": "            if kind == \"cell\" and data.get(\"collection\") != collection:\n                pass\n",
+    "tests": ["tests/test_ui.py"],
+    "why": "a stream for one collection must not send another collection's cell"
+  },
+  {
+    "finding": "UB-1",
+    "path": "isekai/interface/ui/jobs.py",
+    "find": "                self._mark(job, \"volume down\", \"done\" if code == 0 else \"failed\")\n                if code != 0:\n                    self._raise_volume()",
+    "replace": "                self._mark(job, \"volume down\", \"done\" if code == 0 else \"failed\")\n                if code != 0:\n                    pass",
+    "tests": ["tests/test_ui_jobs.py"],
+    "why": "a failed window close must raise the volume alert: a window left open bills"
+  },
+  {
+    "finding": "UB-4",
+    "path": "isekai/interface/ui/jobs.py",
+    "find": "        if job is not None and self._slots[kind].running:",
+    "replace": "        if job is not None:",
+    "tests": ["tests/test_ui_jobs.py"],
+    "why": "a job that has ended must not refuse the next job of its kind"
   }
 ]
