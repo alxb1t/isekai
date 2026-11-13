@@ -38,6 +38,8 @@ its new digest.
   and each dies on replay (0137 D8).
 - Approving a sheet warns when the assembled prompt, not the tags alone, is past the encoder's window; the CLI and
   the server pass the flow, and the budget's total and shares are held by literals (0138 D2, D3).
+- An approval is published by `create`, by the approve verb and by the copy alike, so a number another writer takes
+  inside the publish is refused and its bytes stay (0138 D4).
 
 ## [0.86.9] - 2026-11-13
 

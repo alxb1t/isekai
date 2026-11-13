@@ -52,6 +52,7 @@ from isekai.foundation.artifacts import (
     ReviewApproved,
     ReviewDraft,
     Sheet,
+    create,
     read,
     renders_of,
     require,
@@ -1005,15 +1006,22 @@ def approve(
         approved_body["renders"] = renders
 
     path = directory / artifact_name(version, APPROVED)
-    if path.exists():
+    _publish(run, flow, path, approved_body)
+    draft.unlink()
+    return path, warnings
+
+
+def _publish(run: Run, flow: str, path: Path, approved: ReviewApproved) -> None:
+    """Write `approved` at `path`, refusing a number another writer has taken first."""
+    body: ReviewApproved = approved
+    try:
+        create(path, APPROVED_FILE, body)
+    except FileExistsError:
         raise Refusal(
             f"{path.name} already exists in {flow}/{REVIEW}/ and an approved "
             f"artifact is never replaced; run {_again(run, flow)} to correct it "
             "under the next number"
-        )
-    write(path, APPROVED_FILE, approved_body)
-    draft.unlink()
-    return path, warnings
+        ) from None
 
 
 # What a copy does not take from its source's producer: where the source came from.
@@ -1116,7 +1124,7 @@ def _copy_approval(
         "renders": renders,
     }
     written = directory / artifact_name(next_version(directory), APPROVED)
-    write(written, APPROVED_FILE, copied)
+    _publish(run, flow, written, copied)
     return written
 
 

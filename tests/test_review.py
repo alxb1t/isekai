@@ -11,12 +11,15 @@ from pathlib import Path
 
 import pytest
 
+import isekai.pipeline.review as review_module
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     SHEET_FILE,
+    Artifact,
     DanbooruTag,
     Renders,
+    ReviewApproved,
     read,
     renders_of,
 )
@@ -247,6 +250,41 @@ def test_an_approved_artifact_is_never_overwritten(
 
     assert corrected.name == "002.approved.json"
     assert approved.read_bytes() == frozen
+
+
+def _rival_inside_the_publish(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make another writer take the number inside `create`, after the draft is read."""
+    real = review_module.create
+
+    def rival_first(
+        path: Path, kind: Artifact[ReviewApproved], body: ReviewApproved
+    ) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"rival\n")
+        real(path, kind, body)
+
+    monkeypatch.setattr(review_module, "create", rival_first)
+
+
+@pytest.mark.spec("review:approval:approved-is-not-overwritten")
+def test_an_approval_dropped_inside_the_publish_is_refused_and_its_bytes_stay(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    review(run, FLOW)
+    _rival_inside_the_publish(monkeypatch)
+
+    with pytest.raises(Refusal, match="001.approved.json already exists"):
+        approve(run, FLOW, schema, vocabulary)
+
+    directory = run.path / FLOW / "review"
+    assert (directory / "001.approved.json").read_bytes() == b"rival\n"
+    assert sorted(p.name for p in directory.iterdir()) == [
+        "001.approved.json",
+        "001.draft.json",
+    ]
 
 
 @pytest.mark.spec("review:approval:approved-is-not-overwritten")
@@ -1149,6 +1187,24 @@ def test_an_approved_target_is_not_copied_over(
 
     assert (again, warnings) == (None, [])
     assert snapshot(run.path / CONTROL) == before
+
+
+@pytest.mark.spec("review:approval:approved-is-not-overwritten")
+def test_a_copied_approval_dropped_inside_the_publish_is_refused_and_its_bytes_stay(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    _rival_inside_the_publish(monkeypatch)
+
+    with pytest.raises(Refusal, match="001.approved.json already exists"):
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    directory = run.path / CONTROL / "review"
+    assert (directory / "001.approved.json").read_bytes() == b"rival\n"
+    assert [p.name for p in directory.iterdir()] == ["001.approved.json"]
 
 
 @pytest.mark.spec("review:copy-from:a-copy-is-in-step-once-both-have-rendered")

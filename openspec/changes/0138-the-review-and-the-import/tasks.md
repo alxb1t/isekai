@@ -5,7 +5,7 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 ## Progress
 
 - [x] 1 — The budget and the warning · moderate
-- [ ] 2 — An approval is never replaced · moderate
+- [x] 2 — An approval is never replaced · moderate
 - [ ] 3 — What the reader is sent · moderate
 - [ ] 4 — The seal and the commit · hard
 - [ ] 5 — The kinds · moderate
