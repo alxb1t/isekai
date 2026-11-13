@@ -5,7 +5,7 @@ The extractor reads the white point as the prototype does, then the outline step
 ## Progress
 
 - [x] 1 — The prototype's ink · moderate
-- [ ] 2 — The floor · moderate
+- [x] 2 — The floor · moderate
 
 ## 1 — The prototype's ink
 
@@ -20,17 +20,17 @@ The extractor reads the white point as the prototype does, then the outline step
 
 ## 2 — The floor
 
-- [ ] 2.1 In `config/tattoo.json` change `"outline_min": 20` to `"outline_min": 3` ([D3](design.md#d3)). In `tests/test_tattoo_library.py` change the pin `(4096, 20, 120)` to `(4096, 3, 120)`. In `tests/test_ui_tattoo.py` change `"outline_min": 20` to `"outline_min": 3`. In `tests/test_tattoo_library.py`, in `test_ink_view_refuses_points_too_few_to_close_saying_so`, change `points[:3]` to `points[:2]`: three points now close, so two stay below the floor and the test keeps its marker `tattoo:ink-view:an-open-outline-is-refused`.
+- [x] 2.1 In `config/tattoo.json` change `"outline_min": 20` to `"outline_min": 3` ([D3](design.md#d3)). In `tests/test_tattoo_library.py` change the pin `(4096, 20, 120)` to `(4096, 3, 120)`. In `tests/test_ui_tattoo.py` change `"outline_min": 20` to `"outline_min": 3`. In `tests/test_tattoo_library.py`, in `test_ink_view_refuses_points_too_few_to_close_saying_so`, change `points[:3]` to `points[:2]`: three points now close, so two stay below the floor and the test keeps its marker `tattoo:ink-view:an-open-outline-is-refused`.
   Verify: `uv run pytest tests/test_tattoo_library.py tests/test_ui_tattoo.py` passes.
-- [ ] 2.2 In `ui/src/stages.ts` give `forwardOf` a third argument, `floor: number`. Below it the wait reads `outline open · ${points} of ${floor} points`; from it on, as now ([D4](design.md#d4)).
+- [x] 2.2 In `ui/src/stages.ts` give `forwardOf` a third argument, `floor: number`. Below it the wait reads `outline open · ${points} of ${floor} points`; from it on, as now ([D4](design.md#d4)).
   Verify: `git grep -n -F "floor} points" -- ui/src/stages.ts` prints the wait's line.
-- [ ] 2.3 In `ui/src/stages.test.ts` pass `3` in each `forwardOf` call and keep the 27-point case. Move the below-floor assertions of `ui:stages:forward-waits-for-a-closed-outline` into `spec('ui:stages:forward-names-the-floor-while-the-outline-is-short', …)`, asserting `outline open · 1 of 3 points` and `outline open · 0 of 3 points`.
+- [x] 2.3 In `ui/src/stages.test.ts` pass `3` in each `forwardOf` call and keep the 27-point case. Move the below-floor assertions of `ui:stages:forward-waits-for-a-closed-outline` into `spec('ui:stages:forward-names-the-floor-while-the-outline-is-short', …)`, asserting `outline open · 1 of 3 points` and `outline open · 0 of 3 points`.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 2.4 In `ui/src/tattoos.ts` give `closeLine` a second argument, `floor: number`. Below it the line reads `add ${more} more ${more === 1 ? 'point' : 'points'} to close · ${count} of ${floor}`, `more` being `floor - count`; from it on, as now ([D4](design.md#d4)).
+- [x] 2.4 In `ui/src/tattoos.ts` give `closeLine` a second argument, `floor: number`. Below it the line reads `add ${more} more ${more === 1 ? 'point' : 'points'} to close · ${count} of ${floor}`, `more` being `floor - count`; from it on, as now ([D4](design.md#d4)).
   Verify: `git grep -n -F "to close · " -- ui/src/tattoos.ts` prints the line's source.
-- [ ] 2.5 In `ui/src/tattoos.test.ts` rewrite `ui:outline-step:one-line-says-how-to-close` at a floor of 3, for open outlines of 3 and 5 points and a closed one. Add `spec('ui:outline-step:the-line-names-the-floor-while-the-outline-is-short', …)` for open outlines of 0, 1 and 2 points, reading the lines of [D4](design.md#d4).
+- [x] 2.5 In `ui/src/tattoos.test.ts` rewrite `ui:outline-step:one-line-says-how-to-close` at a floor of 3, for open outlines of 3 and 5 points and a closed one. Add `spec('ui:outline-step:the-line-names-the-floor-while-the-outline-is-short', …)` for open outlines of 0, 1 and 2 points, reading the lines of [D4](design.md#d4).
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 2.6 In `ui/src/components/OutlineStep.vue` pass `props.limits.outline_min` as the floor in the `closeLine` call and the `forwardOf` call ([D7](design.md#d7)).
+- [x] 2.6 In `ui/src/components/OutlineStep.vue` pass `props.limits.outline_min` as the floor in the `closeLine` call and the `forwardOf` call ([D7](design.md#d7)).
   Verify: `git grep -c "outline_min" -- ui/src/components/OutlineStep.vue` prints `ui/src/components/OutlineStep.vue:3`, the rules' read and the two calls.
-- [ ] 2.7 In `ui/design/spec.md` change the J9·3 row's line from `close the outline on its first point · 0 points` to `add 3 more points to close · 0 of 3`.
+- [x] 2.7 In `ui/design/spec.md` change the J9·3 row's line from `close the outline on its first point · 0 points` to `add 3 more points to close · 0 of 3`.
   Verify: `git grep -n "close the outline on its first point" -- ui/design/spec.md` prints nothing and exits 1.

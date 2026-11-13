@@ -244,7 +244,7 @@ def test_tattoo_config_reads_the_keys_of_both_configs() -> None:
         "pair_radius": config.pair_radius,
         "region_min": config.region_min,
     }
-    assert (config.long_side, config.outline_min, config.outline_max) == (4096, 20, 120)
+    assert (config.long_side, config.outline_min, config.outline_max) == (4096, 3, 120)
     assert config.view_quality == 90
     assert (config.floor_stage1, config.floor_stage2, config.floor_direct) == (6, 8, 6)
     assert (config.preview_floor, config.preview_margin) == (3, 96)
@@ -747,7 +747,7 @@ def test_ink_view_refuses_points_too_few_to_close_saying_so(tmp_path: Path) -> N
     points = _outlined_cut(tmp_path, photograph)
 
     with pytest.raises(Refusal, match="outline is open"):
-        _view(tmp_path, photograph, points[:3])
+        _view(tmp_path, photograph, points[:2])
 
 
 @pytest.mark.spec("tattoo:ink-view:an-unknown-tattoo-is-refused")

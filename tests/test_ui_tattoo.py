@@ -208,7 +208,7 @@ def test_tattoo_route_read_lists_each_in_the_order_kept_with_the_limits(
     assert (arm["kind"], arm["size"], arm["outlined"]) == ("cut", list(ARM), False)
     assert listed["limits"] == {
         "long_side": 4096,
-        "outline_min": 20,
+        "outline_min": 3,
         "outline_max": 120,
         "depth_min": 1.0,
         "depth_max": 2.0,

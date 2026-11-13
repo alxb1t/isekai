@@ -56,9 +56,15 @@ export interface Forward {
 
 /** Return where the outline step goes forward, once its outline is closed: stage 1 for an
     upload, the direct stage or stage 2 for a cut; while it is open it waits.
-    e.g. open with 27 points -> waits "outline open · 27 points" */
-export function forwardOf(mode: Mode, outline: { closed: boolean; points: number }): Forward {
+    e.g. open with 27 points -> waits "outline open · 27 points"; with 1 point of a floor of 3
+    -> waits "outline open · 1 of 3 points" */
+export function forwardOf(
+  mode: Mode,
+  outline: { closed: boolean; points: number },
+  floor: number,
+): Forward {
   if (!outline.closed) {
+    if (outline.points < floor) return { step: null, wait: `outline open · ${outline.points} of ${floor} points` }
     const points = outline.points === 1 ? '1 point' : `${outline.points} points`
     return { step: null, wait: `outline open · ${points}` }
   }
