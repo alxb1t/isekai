@@ -16,6 +16,8 @@ its new digest.
   refuses; the remedy sweep drops its bare verbs, reads an unquoted command and reaches the session's refusals (0136 D3, D4).
 - Tests hold that nothing rents before a free check passes, the limit's floor and a given limit, and the busy-port
   probe runs on a real socket in `tests/e2e/test_gpu.py` (0136 D5, D6).
+- One CLI batch test, through `dispatch`, replaces the three that rebuilt the batch by hand; a failed sampling beside a
+  good edit, a chain of pending edits and a replaced draft's content are read (0136 D7, D8).
 
 ## [0.86.9] - 2026-11-13
 
