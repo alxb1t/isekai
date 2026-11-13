@@ -3,7 +3,7 @@
 ## Purpose
 
 Stage ③: the operator corrects a filled sheet — an editable copy in a directory of its own, validated against the
-vocabulary and approved by a rename — so the machine's sheet is never altered.
+vocabulary and approved by an exclusive publish — so the machine's sheet is never altered.
 
 ## Requirements
 
