@@ -10,6 +10,17 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.15] - 2026-11-13
+
+Gate: local 1m17s · CI not read under mf-ship · 0.86.14: local 1m17s · CI not read under mf-ship
+
+- A browser test fails on a page error, a console error that is no failed load, a 5xx, an undeclared 4xx and a declared
+  refusal nothing answered; `tests/test_e2e_guard.py` holds the rules without a browser (0141 D1, D2, D3).
+- A browser journey presses the key list, a letter typed in a tag field, `Esc` and the pane keys on a collection of its
+  own, `keys-hold` (0141 D4, D5, D6).
+- Browser tests hold Approve over a save held at the network and send a refused save again on the next approval, on
+  `save-holds`; `tests/e2e/held.py` holds `hold` and `sent`, moved from `test_import.py` (0141 D7).
+
 ## [0.86.14] - 2026-11-13
 
 Gate: local 1m17s · CI not read under mf-ship · 0.86.13: local 1m19s · CI not read under mf-ship

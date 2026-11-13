@@ -15,6 +15,7 @@ from playwright.sync_api import FileChooser, Page, Route, expect
 
 from isekai.pipeline.importing import UI_CONFIG
 from tests.e2e.conftest import Served
+from tests.e2e.held import sent
 from tests.images import nef_bytes, photo_jpeg
 
 HEIC = Path(__file__).resolve().parents[1] / "fixtures" / "sources" / "plain.heic"
@@ -65,18 +66,9 @@ def _hold_stream(page: Page) -> list[Route]:
     return held
 
 
-def _sent(page: Page, held: list[Route]) -> Route:
-    """Return the held request, once the page has sent it."""
-    for _ in range(100):
-        if held:
-            return held[0]
-        page.wait_for_timeout(50)
-    raise AssertionError("the held request was never sent")
-
-
 def _release(page: Page, held: list[Route]) -> None:
     """Let the held upload go, once the page has sent it."""
-    _sent(page, held).continue_()
+    sent(page, held).continue_()
 
 
 # A stream that reports the HEIC converting, then ends; `retry` reconnects it at once.
@@ -125,7 +117,7 @@ def test_each_chosen_file_shows_its_upload_then_its_result(
     heic = _tile(page, "plain.heic")
     expect(_tile(page, "held.jpg")).to_have_attribute("data-phase", "uploading")
     expect(heic).to_have_attribute("data-phase", "waiting")
-    _sent(page, stream).fulfill(
+    sent(page, stream).fulfill(
         status=200, content_type="text/event-stream", body=CONVERTING
     )
     expect(heic).to_have_attribute("data-phase", "converting")
@@ -192,7 +184,7 @@ def test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned(
     expect(page.locator(".import__count")).to_contain_text("3 sources")
     # Import waits while a removal is in flight.
     page.get_by_role("button", name="Remove third.jpg").click()
-    removal = _sent(page, removing)
+    removal = sent(page, removing)
     expect(importing).to_be_disabled()
     expect(page.locator(".import__disabled")).to_have_text("Removing 1 file")
     removal.continue_()
@@ -204,7 +196,7 @@ def test_importing_a_new_collection_opens_its_hub_with_every_source_unassigned(
 
     # While the commit is in flight a file added would be refused unseen, a file
     # removed would leave the folder it is moving, and a cancel would delete it.
-    commit = _sent(page, committing)
+    commit = sent(page, committing)
     expect(page.get_by_role("button", name="Add files…")).to_be_disabled()
     expect(importing).to_be_disabled()
     expect(page.get_by_role("button", name="Cancel")).to_be_disabled()

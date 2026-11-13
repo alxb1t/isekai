@@ -562,6 +562,20 @@ flight, only the newest SHALL land, so an older read answering late never replac
 - **THEN** the sheet stays loading until the newest read answers
 - **AND** an edit made after that is saved with the edit in it
 
+#### Scenario: an approval waits for a save held at the network
+- **Key:** `ui:save:an-approval-waits-for-a-save-held-at-the-network`
+- **Layers:** e2e
+- **WHEN** Approve is pressed while the draft's save is held at the network
+- **THEN** no approval is sent until the save answers
+- **AND** the approval then holds the edit that save wrote
+
+#### Scenario: a refused save is sent again by the next approval
+- **Key:** `ui:save:a-refused-save-is-sent-again-by-the-next-approval`
+- **Layers:** e2e
+- **WHEN** the draft's only save is refused and Approve is pressed
+- **THEN** the edit is sent again
+- **AND** the approval then holds it
+
 ### Requirement: The hub shows each source's stage in each offered flow, and a tick assigns it
 
 The system SHALL show a collection's hub as a grid of its sources by the flows the surface offers, each cell carrying
@@ -2316,6 +2330,13 @@ after; only `Mod+↵` spends money, so `↵` on a tile or the checkbox never ren
 - **THEN** it is a modal dialog holding the focus, the everywhere keys in one column and the screen's in another
 - **AND** `⌃/`, `Esc` and a click on the backdrop each close it
 
+#### Scenario: the key list holds the focus in a browser
+- **Key:** `ui:dialogs:the-key-list-holds-the-focus-in-a-browser`
+- **Layers:** e2e
+- **WHEN** the key list opens on Review, then `Tab` and `⇧Tab` are pressed
+- **THEN** the focus never reaches the page behind it
+- **AND** `⌃/`, `Esc` and a click on the backdrop each close it, the focus returning to where it was
+
 ### Requirement: An image's large view shows its sheet and walks the photograph's row, and its thumbnail is made once
 
 The system SHALL open an image's large view, with the sheet it was rendered from, from the hub's cell modal. `h` `l` and
@@ -2522,6 +2543,20 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 - **WHEN** Review's commands are declared on macOS and then on Linux
 - **THEN** on macOS `⌃J` and `⌃K` move to the next and the previous field from a text field
 - **AND** on Linux neither is declared
+
+#### Scenario: a letter typed in a tag field is text
+- **Key:** `ui:keys:a-letter-typed-in-a-tag-field-is-text`
+- **Layers:** e2e
+- **WHEN** `h`, `j`, `k` and `l` are typed into a tag field on Review
+- **THEN** the field holds them and no pane moves
+- **AND** `Esc` closes a suggestion list first, then leaves the field
+
+#### Scenario: the pane keys move the focus in a browser
+- **Key:** `ui:keys:the-pane-keys-move-the-focus-in-a-browser`
+- **Layers:** e2e
+- **WHEN** the pane key — `⌃L` on macOS, `l` outside a field elsewhere — is pressed from the rail three times
+- **THEN** the focus moves to the source pane, the sheet and ④
+- **AND** the key for the other way returns it to the sheet
 
 ### Requirement: A render's large view shows its photograph and its bakes, and each bake has its own address
 
