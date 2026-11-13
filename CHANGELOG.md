@@ -14,6 +14,8 @@ its new digest.
   flips a pixel row between a Mac and Linux (0134 D1).
 - The edit golden and the run's record check each PNG digest against its file, then compare a placeholder, so two
   deflate encoders no longer turn the gate red (0134 D2, D3).
+- `.python-version` pins `3.12.14`, and the verbs' record names an action by its kind, so a later argparse patch or a
+  renamed private class does not move it (0134 D4, D5).
 
 ## [0.86.7] - 2026-11-13
 

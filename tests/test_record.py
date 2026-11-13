@@ -7,6 +7,8 @@ files again, and the diff shows what moved.
 import argparse
 import hashlib
 import json
+import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -191,12 +193,12 @@ def _argument(
     dest: str,
     flags: list[str],
     *,
-    nargs: str | None = None,
+    nargs: str | int | None = None,
     required: bool = False,
     default: object = None,
     choices: list[str] | None = None,
     type_: str | None = None,
-    action: str = "_StoreAction",
+    action: str = "store",
 ) -> dict[str, object]:
     return {
         "dest": dest,
@@ -211,6 +213,19 @@ def _argument(
     }
 
 
+class _Own(argparse.Action):
+    """A class of the caller's own, recorded by its name."""
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
+        setattr(namespace, self.dest, values)
+
+
 @pytest.mark.spec_exempt("structural: the walk reads each flag of a parser")
 def test_the_walk_reads_each_flag_of_a_parser() -> None:
     parser = argparse.ArgumentParser()
@@ -219,6 +234,8 @@ def test_the_walk_reads_each_flag_of_a_parser() -> None:
     verb.add_argument("--look", choices=["flat", "vivid"], default="flat")
     verb.add_argument("--tag", action="append", dest="tags", required=True)
     verb.add_argument("--depth", type=float, default=1.5)
+    verb.add_argument("--loud", action="store_true")
+    verb.add_argument("--own", action=_Own)
     either = verb.add_mutually_exclusive_group(required=True)
     either.add_argument("--left")
     either.add_argument("--right")
@@ -228,18 +245,48 @@ def test_the_walk_reads_each_flag_of_a_parser() -> None:
     assert list(walked) == ["go"]
     assert walked["go"]["positionals"] == [_argument("name", [], nargs="*")]
     options = {each["dest"]: each for each in walked["go"]["options"]}
-    assert set(options) == {"help", "look", "tags", "depth", "left", "right"}
+    assert set(options) == {
+        "help",
+        "look",
+        "tags",
+        "depth",
+        "loud",
+        "own",
+        "left",
+        "right",
+    }
+    assert options["help"] == _argument(
+        "help", ["-h", "--help"], nargs=0, default=argparse.SUPPRESS, action="help"
+    )
     assert options["look"] == _argument(
         "look", ["--look"], default="flat", choices=["flat", "vivid"]
     )
     assert options["tags"] == _argument(
-        "tags", ["--tag"], required=True, action="_AppendAction"
+        "tags", ["--tag"], required=True, action="append"
     )
+    assert options["loud"] == _argument(
+        "loud", ["--loud"], nargs=0, default=False, action="store_true"
+    )
+    assert options["own"] == _argument("own", ["--own"], action="_Own")
     assert options["depth"] == _argument(
         "depth", ["--depth"], default=1.5, type_="float"
     )
     assert walked["go"]["groups"] == [{"required": True, "members": ["left", "right"]}]
     assert "never recorded" not in str(walked)
+
+    counted = argparse.ArgumentParser()
+    counted.add_subparsers(dest="verb").add_parser("go").add_argument(
+        "--more", action="count"
+    )
+    with pytest.raises(ValueError, match="_CountAction"):
+        walk(counted)
+
+
+@pytest.mark.spec_exempt("structural: the interpreter is pinned to a patch")
+def test_the_interpreter_is_pinned_to_a_patch() -> None:
+    pinned = (REPO_ROOT / ".python-version").read_text().strip()
+    hit = re.fullmatch(r"3\.12\.(\d+)", pinned)
+    assert hit and int(hit[1]) >= 7, pinned
 
 
 @pytest.mark.spec_exempt(

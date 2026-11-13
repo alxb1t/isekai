@@ -6,7 +6,7 @@ The phases, each green on its own: the sampler's edge, the PNG digests, the pinn
 
 - [x] 1 — The edge · moderate
 - [x] 2 — The digests · moderate
-- [ ] 3 — The interpreter · moderate
+- [x] 3 — The interpreter · moderate
 
 ## 1 — The edge
 
@@ -32,15 +32,15 @@ The phases, each green on its own: the sampler's edge, the PNG digests, the pinn
 
 ## 3 — The interpreter
 
-- [ ] 3.1 **HALT CHECK** The record is written again on the Python the pin names, so the build runs on it.
+- [x] 3.1 **HALT CHECK** The record is written again on the Python the pin names, so the build runs on it.
   Verify: `uv run python --version` prints `Python 3.12.14`.
-- [ ] 3.2 Write `3.12.14` and a newline alone into `.python-version`, per [D4](design.md#d4).
+- [x] 3.2 Write `3.12.14` and a newline alone into `.python-version`, per [D4](design.md#d4).
   Verify: `grep -x -F "3.12.14" .python-version` prints `3.12.14`.
-- [ ] 3.3 In `tests/record.py`, make `_argument`'s `"action"` the action's kind, per [D5](design.md#d5): the table of argparse's classes, `type(action).__name__` for a class whose `__module__` is not `argparse`, and a `ValueError` naming an argparse class the table lacks.
+- [x] 3.3 In `tests/record.py`, make `_argument`'s `"action"` the action's kind, per [D5](design.md#d5): the table of argparse's classes, `type(action).__name__` for a class whose `__module__` is not `argparse`, and a `ValueError` naming an argparse class the table lacks.
   Verify: `grep -n -F "boolean_optional" tests/record.py` prints the line.
-- [ ] 3.4 In `tests/test_record.py`, make `_argument` default `action="store"` and the append case `"append"`. Have `test_the_walk_reads_each_flag_of_a_parser` walk a `store_true` flag and a class of its own, add them and `help` as `"help"` to its expected options, and expect `action="count"` to raise `ValueError` naming `_CountAction`.
+- [x] 3.4 In `tests/test_record.py`, make `_argument` default `action="store"` and the append case `"append"`. Have `test_the_walk_reads_each_flag_of_a_parser` walk a `store_true` flag and a class of its own, add them and `help` as `"help"` to its expected options, and expect `action="count"` to raise `ValueError` naming `_CountAction`.
   Verify: `uv run pytest tests/test_record.py -k walk` exits 0.
-- [ ] 3.5 In `tests/test_record.py`, add `test_the_interpreter_is_pinned_to_a_patch`, marked `spec_exempt("structural: the interpreter is pinned to a patch")`: `REPO_ROOT / ".python-version"` holds `3.12.N` with N from 7 on.
+- [x] 3.5 In `tests/test_record.py`, add `test_the_interpreter_is_pinned_to_a_patch`, marked `spec_exempt("structural: the interpreter is pinned to a patch")`: `REPO_ROOT / ".python-version"` holds `3.12.N` with N from 7 on.
   Verify: `uv run pytest tests/test_record.py -k pinned` exits 0.
-- [ ] 3.6 Run `uv run python -m tests.record` to write the record again. Only `tests/record/verbs.json` moves, at its action names.
+- [x] 3.6 Run `uv run python -m tests.record` to write the record again. Only `tests/record/verbs.json` moves, at its action names.
   Verify: `git diff --name-only -- tests/record` prints `tests/record/verbs.json` alone.

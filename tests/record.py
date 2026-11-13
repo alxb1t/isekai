@@ -339,6 +339,30 @@ def relative(default: object) -> object:
         raise ValueError(f"{default} is outside the repository") from None
 
 
+ACTION_KINDS: dict[type[argparse.Action], str] = {
+    argparse._StoreAction: "store",
+    argparse._StoreTrueAction: "store_true",
+    argparse._AppendAction: "append",
+    argparse._HelpAction: "help",
+    argparse.BooleanOptionalAction: "boolean_optional",
+}
+
+
+def _kind(action: argparse.Action) -> str:
+    """Return the kind of `action`, argparse's private class name never recorded.
+
+    A class outside argparse is recorded by its own name; an argparse class the
+    table lacks is refused, so a new kind is a decision.
+    e.g. _StoreTrueAction -> "store_true", isekai's _Targets -> "_Targets"
+    """
+    kind = type(action)
+    if kind.__module__ != argparse.__name__:
+        return kind.__name__
+    if kind not in ACTION_KINDS:
+        raise ValueError(f"{kind.__name__} has no kind in ACTION_KINDS")
+    return ACTION_KINDS[kind]
+
+
 def _argument(action: argparse.Action) -> dict[str, object]:
     """Return one argument as the record holds it, with no help text."""
     return {
@@ -350,7 +374,7 @@ def _argument(action: argparse.Action) -> dict[str, object]:
         "choices": None if action.choices is None else list(action.choices),
         "type": None if action.type is None else cast("type", action.type).__name__,
         "metavar": action.metavar,
-        "action": type(action).__name__,
+        "action": _kind(action),
     }
 
 
