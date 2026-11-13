@@ -6,7 +6,9 @@ into one contract is proven to move no byte. The tripwire is an AST scan like
 """
 
 import ast
+import hashlib
 import io
+import json
 import random
 from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
@@ -181,9 +183,9 @@ RENDER_SEED = 42
 SESSION_ID = "20261024T091200Z"
 
 
-def _png(pixels: "np.ndarray") -> bytes:
+def _png(pixels: "np.ndarray", level: int = -1) -> bytes:
     body = io.BytesIO()
-    Image.fromarray(pixels).save(body, "PNG")
+    Image.fromarray(pixels).save(body, "PNG", compress_level=level)
     return body.getvalue()
 
 
@@ -214,11 +216,11 @@ def _values() -> PlacementValues:
     }
 
 
-def _placed(run: Run) -> Requested:
+def _placed(run: Run, level: int = -1) -> Requested:
     group = run.directory(FLOW.id, OUTPUTS, "001")
     group.mkdir(parents=True)
     source = group / f"{RENDER_SEED}.png"
-    source.write_bytes(_png(_flat_render()))
+    source.write_bytes(_png(_flat_render(), level))
     return request_placed(
         load_edit("tattoo-wai"),
         source,
@@ -270,9 +272,32 @@ KINDS: dict[str, Callable[[Run, Schema, Vocabulary], Path]] = {
 }
 
 
+def held(record: Path) -> bytes:
+    """Return an edit record's bytes with each PNG digest held as a placeholder.
+
+    A digest is checked against its file's bytes first, so a wrong one still fails.
+    e.g. "source_sha256": "854c..." -> "source_sha256": "<sha256 of 42.png>"
+    """
+    text = record.read_text()
+    body = json.loads(text)
+    files = {
+        "source_sha256": record.with_name(body["source"]),
+        "composite_sha256": record.with_suffix(".composite.png"),
+    }
+    for key, file in files.items():
+        digest = hashlib.sha256(file.read_bytes()).hexdigest()
+        assert body[key] == digest, key
+        text = text.replace(digest, f"<sha256 of {file.name}>")
+    return text.encode()
+
+
 def written(kind: str, tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> bytes:
-    """Return the bytes today's writer produces for `kind`."""
-    return KINDS[kind](_run(tmp_path), schema, vocabulary).read_bytes()
+    """Return the bytes today's writer produces for `kind`.
+
+    An edit record is returned as `held` reads it: its PNG digests differ by encoder.
+    """
+    path = KINDS[kind](_run(tmp_path), schema, vocabulary)
+    return held(path) if kind == "edit" else path.read_bytes()
 
 
 @pytest.mark.spec_exempt(
@@ -285,6 +310,23 @@ def test_each_kind_is_written_byte_for_byte(
 ) -> None:
     golden = (GOLDEN / f"{kind}.json").read_bytes()
     assert written(kind, tmp_path, schema, vocabulary) == golden
+
+
+@pytest.mark.spec_exempt("structural: twin of test_each_kind_is_written_byte_for_byte")
+def test_an_edit_record_holds_whatever_level_its_png_was_deflated_at(
+    tmp_path: Path,
+) -> None:
+    golden = (GOLDEN / "edit.json").read_bytes()
+    records = []
+    for level in (1, 9):
+        home = tmp_path / f"level-{level}"
+        home.mkdir()
+        records.append(_placed(_run(home), level).record)
+    shallow, deep = records
+
+    assert shallow.read_bytes() != deep.read_bytes()
+    assert held(shallow) == golden
+    assert held(deep) == golden
 
 
 # --- the tripwire -------------------------------------------------------------

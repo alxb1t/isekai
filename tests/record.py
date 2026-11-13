@@ -65,6 +65,7 @@ CROP_SIDE = 1216
 INKED = slice(80, 120)
 WIRING = "tests.record:wiring"
 REGENERATE = "run uv run python -m tests.record and read the diff"
+PNG_DIGEST = "<sha256 of a PNG>"
 
 # The factory is called with the runs root alone, so the client is module state.
 CLIENT: ComfyTransport | None = None
@@ -266,16 +267,29 @@ def normalised(value: object, root: Path) -> object:
 
     The resolved spelling of `root` is rewritten before the given one, so a
     temporary directory under `/var` and one under `/private/var` read the same.
+    A string equal to the sha256 of a PNG under `root` is written `<sha256 of a PNG>`,
+    for an encoder's bytes differ by machine and its pixels do not.
     e.g. {"duration": 1.5} -> {"duration": 0.0}, "<given>/a.jpg" -> "<root>/a.jpg"
     """
+    digests = {
+        hashlib.sha256(path.read_bytes()).hexdigest() for path in root.rglob("*.png")
+    }
+    return _normalised(value, root, digests)
+
+
+def _normalised(value: object, root: Path, digests: set[str]) -> object:
     if isinstance(value, dict):
         return {
-            key: _zeroed(item) if key == "duration" else normalised(item, root)
+            key: _zeroed(item)
+            if key == "duration"
+            else _normalised(item, root, digests)
             for key, item in value.items()
         }
     if isinstance(value, list):
-        return [normalised(item, root) for item in value]
+        return [_normalised(item, root, digests) for item in value]
     if isinstance(value, str):
+        if value in digests:
+            return PNG_DIGEST
         return value.replace(str(root.resolve()), "<root>").replace(str(root), "<root>")
     return value
 

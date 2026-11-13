@@ -5,6 +5,7 @@ files again, and the diff shows what moved.
 """
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, cast
@@ -23,6 +24,7 @@ from tests.record import (
     FILES,
     FIRST_FLOW,
     FLOWS,
+    PNG_DIGEST,
     RECORD,
     REGENERATE,
     REPO_ROOT,
@@ -149,6 +151,27 @@ def test_a_png_is_recorded_by_its_pixels_and_any_other_file_by_its_bytes(
     assert set(entry(tmp_path / "a.jpg", tmp_path)) == {"bytes"}
     (tmp_path / "c.json").write_text('{"duration": 3}')
     assert entry(tmp_path / "c.json", tmp_path) == {"json": {"duration": 0.0}}
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_each_record_file_is_what_the_writer_derives"
+)
+def test_a_png_digest_in_a_json_file_is_a_placeholder(tmp_path: Path) -> None:
+    pixels = np.full((8, 8, 3), (10, 20, 30), dtype=np.uint8)
+    other = hashlib.sha256(b"no png").hexdigest()
+    held = []
+    for level in (0, 9):
+        root = tmp_path / f"level-{level}"
+        root.mkdir()
+        digest = hashlib.sha256(
+            _encoded(pixels, root / "a.png", level).read_bytes()
+        ).hexdigest()
+        held.append(digest)
+        assert normalised({"sha": digest, "other": [other]}, root) == {
+            "sha": PNG_DIGEST,
+            "other": [other],
+        }
+    assert held[0] != held[1]
 
 
 @pytest.mark.spec_exempt(

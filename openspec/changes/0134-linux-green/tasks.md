@@ -5,7 +5,7 @@ The phases, each green on its own: the sampler's edge, the PNG digests, the pinn
 ## Progress
 
 - [x] 1 — The edge · moderate
-- [ ] 2 — The digests · moderate
+- [x] 2 — The digests · moderate
 - [ ] 3 — The interpreter · moderate
 
 ## 1 — The edge
@@ -17,17 +17,17 @@ The phases, each green on its own: the sampler's edge, the PNG digests, the pinn
 
 ## 2 — The digests
 
-- [ ] 2.1 In `tests/test_artifact_bytes.py`, add `def held(record)`: it checks `source_sha256` against the sha256 of the file `source` names and `composite_sha256` against the record's sibling `.composite.png`, and returns the record's bytes with each digest replaced by `<sha256 of NAME>`, per [D2](design.md#d2) and [D3](design.md#d3). `written` returns `held(path)` for the `edit` kind and the file's bytes for each other kind.
+- [x] 2.1 In `tests/test_artifact_bytes.py`, add `def held(record)`: it checks `source_sha256` against the sha256 of the file `source` names and `composite_sha256` against the record's sibling `.composite.png`, and returns the record's bytes with each digest replaced by `<sha256 of NAME>`, per [D2](design.md#d2) and [D3](design.md#d3). `written` returns `held(path)` for the `edit` kind and the file's bytes for each other kind.
   Verify: `grep -n -F "def held" tests/test_artifact_bytes.py` prints the line.
-- [ ] 2.2 In `tests/golden/edit.json`, hold `<sha256 of 42.png>` for `source_sha256` and `<sha256 of 42.edit-1.composite.png>` for `composite_sha256`, the names `held` writes.
+- [x] 2.2 In `tests/golden/edit.json`, hold `<sha256 of 42.png>` for `source_sha256` and `<sha256 of 42.edit-1.composite.png>` for `composite_sha256`, the names `held` writes.
   Verify: `grep -c -F "<sha256 of" tests/golden/edit.json` prints `2`.
-- [ ] 2.3 In `tests/test_artifact_bytes.py`, give `_png` and `_placed` an optional `level`, the `compress_level` of the source PNG, and add `test_an_edit_record_holds_whatever_level_its_png_was_deflated_at`, marked `spec_exempt("structural: twin of test_each_kind_is_written_byte_for_byte")`: each in a run directory of its own, the source saved at level 1 and at level 9 gives records that differ as written and equal the golden as held.
+- [x] 2.3 In `tests/test_artifact_bytes.py`, give `_png` and `_placed` an optional `level`, the `compress_level` of the source PNG, and add `test_an_edit_record_holds_whatever_level_its_png_was_deflated_at`, marked `spec_exempt("structural: twin of test_each_kind_is_written_byte_for_byte")`: each in a run directory of its own, the source saved at level 1 and at level 9 gives records that differ as written and equal the golden as held.
   Verify: `uv run pytest tests/test_artifact_bytes.py -k deflated` exits 0.
-- [ ] 2.4 In `tests/record.py`, make `normalised` replace each string equal to the sha256 of a PNG under `root` by `<sha256 of a PNG>`, per [D2](design.md#d2) and [D3](design.md#d3). Its signature stays; a helper under it recurses with the digests, which `entry`'s call reads once.
+- [x] 2.4 In `tests/record.py`, make `normalised` replace each string equal to the sha256 of a PNG under `root` by `<sha256 of a PNG>`, per [D2](design.md#d2) and [D3](design.md#d3). Its signature stays; a helper under it recurses with the digests, which `entry`'s call reads once.
   Verify: `grep -n -F "<sha256 of a PNG>" tests/record.py` prints the line.
-- [ ] 2.5 In `tests/test_record.py`, add `test_a_png_digest_in_a_json_file_is_a_placeholder`, marked `spec_exempt("structural: twin of test_each_record_file_is_what_the_writer_derives")`: the digest of a PNG saved at level 0 and at level 9 normalises to one placeholder, and a digest of no PNG stays.
+- [x] 2.5 In `tests/test_record.py`, add `test_a_png_digest_in_a_json_file_is_a_placeholder`, marked `spec_exempt("structural: twin of test_each_record_file_is_what_the_writer_derives")`: the digest of a PNG saved at level 0 and at level 9 normalises to one placeholder, and a digest of no PNG stays.
   Verify: `uv run pytest tests/test_record.py -k placeholder` exits 0.
-- [ ] 2.6 Run `uv run python -m tests.record` to write the record again. Only `tests/record/run.json` moves, its PNG digests becoming `<sha256 of a PNG>`.
+- [x] 2.6 Run `uv run python -m tests.record` to write the record again. Only `tests/record/run.json` moves, its PNG digests becoming `<sha256 of a PNG>`.
   Verify: `grep -c -F "<sha256 of a PNG>" tests/record/run.json` prints `2`.
 
 ## 3 — The interpreter
