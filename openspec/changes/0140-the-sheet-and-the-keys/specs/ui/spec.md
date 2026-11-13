@@ -207,7 +207,7 @@ none                      ─▶ "No sheet waits for review"
 #### Scenario: a render that moves during the read is read again once it lands
 - **Key:** `ui:review:a-render-that-moves-during-the-read-is-read-again`
 - **Layers:** unit
-- **WHEN** a render running for the collection starts or ends while the sheet is being read, and the sheet that lands is approved
+- **WHEN** a render running for the collection starts or ends while the sheet is read, and the sheet lands approved
 - **THEN** Review reads the sheet once more when the read lands, so *Cancel approve* follows the render
 - **AND** a sheet that lands editable is not read again
 
