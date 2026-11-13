@@ -1,0 +1,58 @@
+{
+  "change": "0135-the-paydown",
+  "version": "0.86.9",
+  "base": "d6e88dc3",
+  "analyzed": "e5f21167",
+  "measured_on": "local",
+  "collected_at": "2026-11-13T11:45:50+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2296
+    },
+    "tests-browser": {
+      "value": 18
+    },
+    "gate-seconds": {
+      "value": 67
+    },
+    "open-backlog-cards": {
+      "value": 12
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1425
+    },
+    "diff-files": {
+      "value": 17
+    },
+    "phases": {
+      "value": 6
+    },
+    "shared-reading-set": {
+      "value": 14574
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1038
+    },
+    "decisions": {
+      "value": 58
+    }
+  }
+}
