@@ -7,7 +7,7 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 - [x] 1 — The runner holds · moderate
 - [x] 2 — The replay · hard
 - [x] 3 — The audit's mutants · moderate
-- [ ] 4 — The two left · moderate
+- [x] 4 — The two left · moderate
 - [ ] 5 — The scanner · hard
 - [ ] 6 — The prose · moderate
 
@@ -70,15 +70,15 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 
 ## 4 — The two left
 
-- [ ] 4.1 **HALT CHECK** `discard` deletes the draft's own source copy by its number, as [D6](design.md#d6) says; if it does not, the plan is wrong.
+- [x] 4.1 **HALT CHECK** `discard` deletes the draft's own source copy by its number, as [D6](design.md#d6) says; if it does not, the plan is wrong.
   Verify: `git grep -c -F 'copy = source_copy(run, flow, int(draft.name[:3]))' isekai/pipeline/review.py` prints `1`.
-- [ ] 4.2 In `tests/test_review.py` add `test_a_discard_leaves_the_source_copy_of_another_draft` beside `test_a_drafted_draft_goes_alone_and_the_flow_stays`, arranged as it is. Before `discard`, write `other = source_copy(run, CONJURE, 2)` with the bytes of the draft's own copy. Afterwards assert the draft's copy is gone, `other.is_file()` and its bytes are unchanged. It carries `review:discard:a-drafted-draft-goes-alone`.
+- [x] 4.2 In `tests/test_review.py` add `test_a_discard_leaves_the_source_copy_of_another_draft` beside `test_a_drafted_draft_goes_alone_and_the_flow_stays`, arranged as it is. Before `discard`, write `other = source_copy(run, CONJURE, 2)` with the bytes of the draft's own copy. Afterwards assert the draft's copy is gone, `other.is_file()` and its bytes are unchanged. It carries `review:discard:a-drafted-draft-goes-alone`.
   Verify: `uv run pytest tests/test_review.py::test_a_discard_leaves_the_source_copy_of_another_draft` passes.
-- [ ] 4.3 In `tests/test_ui_library.py` extend `test_an_unreadable_run_file_marks_its_cell_alone`, keeping its name and key. Add sources `cy.jpg`, `dee.jpg` and `eve.jpg` to its collection: `cy` holds a sheet made with `sheet`, `dee` a tag list written with `write_wd14` and its flow directory made with `directory(SUMMON).mkdir()`, as the tagged-cell test does, since `stage` reads no file where that directory is absent, `eve` an approval made as `_approved` makes one. Set each file's `schema.version` to 99 as `ada`'s draft is set, and assert each cell is `unreadable`, its refusal names its file and `version 99`, and `bea`'s cell is as before.
+- [x] 4.3 In `tests/test_ui_library.py` extend `test_an_unreadable_run_file_marks_its_cell_alone`, keeping its name and key. Add sources `cy.jpg`, `dee.jpg` and `eve.jpg` to its collection: `cy` holds a sheet made with `sheet`, `dee` a tag list written with `write_wd14` and its flow directory made with `directory(SUMMON).mkdir()`, as the tagged-cell test does, since `stage` reads no file where that directory is absent, `eve` an approval made as `_approved` makes one. Set each file's `schema.version` to 99 as `ada`'s draft is set, and assert each cell is `unreadable`, its refusal names its file and `version 99`, and `bea`'s cell is as before.
   Verify: `uv run pytest tests/test_ui_library.py::test_an_unreadable_run_file_marks_its_cell_alone` passes.
-- [ ] 4.4 Append the `PB-14` and `UB-14` entries of [mutants.json](mutants.json) to `tests/mutants.json`, keys unchanged; each entry opens with `"finding":`.
+- [x] 4.4 Append the `PB-14` and `UB-14` entries of [mutants.json](mutants.json) to `tests/mutants.json`, keys unchanged; each entry opens with `"finding":`.
   Verify: `grep -c -F '"finding":' tests/mutants.json` prints `22`.
-- [ ] 4.5 Run the replay: every entry dies, and `PB-14` and `UB-14` die by the tests of 4.2 and 4.3.
+- [x] 4.5 Run the replay: every entry dies, and `PB-14` and `UB-14` die by the tests of 4.2 and 4.3.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.
 
 ## 5 — The scanner

@@ -18,6 +18,8 @@ its new digest.
   (0135 D3).
 - `tests/mutants.json` holds the audit's mutants of the findings the series closed, and `make mutants` replays them
   outside the gate, so each fix stays proven by the test that kills its mutant (0135 D4, D5).
+- A discard beside another draft's source copy and a damaged sheet, tag list or approval read by the hub each have a
+  test, and their mutants, `PB-14` and `UB-14`, join `tests/mutants.json` (0135 D6).
 
 ## [0.86.8] - 2026-11-13
 

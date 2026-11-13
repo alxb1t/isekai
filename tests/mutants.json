@@ -158,5 +158,21 @@
     "replace": "        record.end(\"done\", str(failure))",
     "tests": ["tests/test_render.py"],
     "why": "a flow raising inside an open session ends the record done"
+  },
+  {
+    "finding": "PB-14",
+    "path": "isekai/pipeline/review.py",
+    "find": "        if copy.is_file():\n            copy.unlink()\n            if not any(copy.parent.iterdir()):\n                copy.parent.rmdir()\n        return draft",
+    "replace": "        if copy.is_file():\n            for held in list(copy.parent.iterdir()):\n                held.unlink()\n            if not any(copy.parent.iterdir()):\n                copy.parent.rmdir()\n        return draft",
+    "tests": ["tests/test_review.py"],
+    "why": "a discard deletes every source copy of the flow"
+  },
+  {
+    "finding": "UB-14",
+    "path": "isekai/interface/ui/library.py",
+    "find": "            _check(sheet, SHEET_FILE)\n            return Cell(\"sheet\", status=status)",
+    "replace": "            return Cell(\"sheet\", status=status)",
+    "tests": ["tests/test_ui_library.py"],
+    "why": "a sheet this build cannot read shows as sheet"
   }
 ]

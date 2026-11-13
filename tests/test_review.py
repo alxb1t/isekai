@@ -1785,6 +1785,35 @@ def test_a_drafted_draft_goes_alone_and_the_flow_stays(
     assert run.directory(CONJURE).is_dir()
 
 
+@pytest.mark.spec("review:discard:a-drafted-draft-goes-alone")
+def test_a_discard_leaves_the_source_copy_of_another_draft(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    _image(run, 1, SEED)
+    conjure = load_flow(CONJURE)
+    sheet_stage.sheet(
+        run,
+        CONJURE,
+        conjure.schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=conjure.tagger,
+        flow_digest=conjure.digest,
+        drafted_from=FLOW,
+    )
+    drafted = draft_from(run, CONJURE, FLOW, 1, conjure.schema, seed=SEED)
+    copy = source_copy(run, CONJURE, 1)
+    held = copy.read_bytes()
+    other = source_copy(run, CONJURE, 2)
+    other.write_bytes(held)
+
+    assert discard(run, CONJURE) == drafted
+    assert not copy.exists()
+    assert other.is_file()
+    assert other.read_bytes() == held
+
+
 def _revise_verb(vocabulary: Vocabulary, *images: Path) -> tuple[int, str]:
     """Run `isekai draft` on `images` into their own flow; return status and stderr."""
     err = io.StringIO()
