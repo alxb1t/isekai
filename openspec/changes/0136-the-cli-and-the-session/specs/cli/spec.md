@@ -42,7 +42,8 @@ happens then.
 #### Scenario: a count or a seed out of range is refused at parse time
 - **Key:** `cli:generate-signature:a-count-or-seed-out-of-range-is-refused`
 - **Layers:** unit
-- **WHEN** a count below one, a seed outside the sampler's unsigned 64-bit range, or a count or seed that is no integer is given
+- **WHEN** a count below one, a seed outside the sampler's unsigned 64-bit range,
+  or a count or seed that is no integer is given
 - **THEN** the invocation is refused at parse time
 - **AND** the message says what is out of range
 

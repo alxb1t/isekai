@@ -24,6 +24,8 @@ its new digest.
   alias another test reuses hides no patched module from the ratchet (0135 D7).
 - The comment on the bake-digit limit says a longer spelling is refused unread, and the design spec's bake view lists
   *Place a tattoo* among the writes it offers none of (0135 D8).
+- A stage verb with no `--flow` is refused listing the flows this build tracks, and the missing verb, a count, a seed
+  and a limit out of range are each read in process by the parser's message, not by an exit code (0136 D1, D2).
 
 ## [0.86.8] - 2026-11-13
 

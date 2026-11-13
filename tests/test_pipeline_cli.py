@@ -37,7 +37,14 @@ from isekai.foundation.artifacts import (
     read,
 )
 from isekai.foundation.caption_config import load_caption_config
-from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Schema, load_flow
+from isekai.foundation.flow import (
+    FLOWS_DIR,
+    MANIFEST_NAME,
+    SIBLINGS,
+    Schema,
+    load_flow,
+    tracked_flows,
+)
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import PHOTO, Run, StageFailure, assign, open_run
 from isekai.interface import wiring
@@ -228,8 +235,12 @@ def test_the_refusal_lists_the_verbs_that_are_available() -> None:
 
 
 @pytest.mark.spec("cli:pipeline-surface:unknown-verb-is-refused")
-def test_no_verb_at_all_is_refused_too() -> None:
-    assert _module().returncode != 0
+def test_no_verb_at_all_is_refused_too(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exited:
+        build_parser().parse_args([])
+
+    assert exited.value.code == 2
+    assert "the following arguments are required: verb" in capsys.readouterr().err
 
 
 @pytest.mark.spec("cli:pipeline-surface:entry-point-is-stdlib-only")
@@ -280,12 +291,18 @@ STAGE_VERBS = ("sheet", "review", "approve", "generate")
 
 
 @pytest.mark.spec("cli:flow-selection:a-stage-verb-requires-a-flow")
-@pytest.mark.parametrize("verb", STAGE_VERBS)
-def test_a_stage_verb_without_a_flow_is_refused(verb: str) -> None:
-    result = _module(verb, "ada.jpg")
+@pytest.mark.parametrize("verb", ("assign", *STAGE_VERBS))
+def test_a_stage_verb_without_a_flow_is_refused(
+    verb: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as exited:
+        build_parser().parse_args([verb, "ada.jpg"])
 
-    assert result.returncode != 0
-    assert "--flow" in result.stderr
+    err = capsys.readouterr().err
+    assert exited.value.code == 2
+    assert "the following arguments are required: --flow" in err
+    for name in tracked_flows(FLOWS_DIR):
+        assert name in err
 
 
 @pytest.mark.spec("cli:flow-selection:a-stage-verb-requires-a-flow")
@@ -305,6 +322,53 @@ def test_naming_two_flows_in_one_invocation_keeps_both() -> None:
     )
 
     assert parsed.flows == ["summon-anime-wai", "summon-anime-wai-2"]
+
+
+@pytest.mark.spec("cli:generate-signature:a-count-or-seed-out-of-range-is-refused")
+@pytest.mark.parametrize(
+    ("flag", "value", "message"),
+    [
+        ("--count", "0", "a render count below 1 renders nothing"),
+        ("--count", "-1", "a render count below 1 renders nothing"),
+        ("--count", "x", "is not an integer"),
+        ("--seed", "x", "is not an integer"),
+        ("--seed", "-1", "is outside the sampler's unsigned 64-bit range"),
+        (
+            "--seed",
+            "18446744073709551616",
+            "is outside the sampler's unsigned 64-bit range",
+        ),
+    ],
+)
+def test_a_count_or_a_seed_out_of_range_is_refused_at_parse_time(
+    flag: str, value: str, message: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as exited:
+        build_parser().parse_args(
+            ["generate", "--flow", "summon-anime-wai", flag, value]
+        )
+
+    assert exited.value.code == 2
+    assert message in capsys.readouterr().err
+
+
+@pytest.mark.spec("cli:render-limit:below-one-second-is-refused-at-parse-time")
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        ("0", "a session limit below 1s ends at once"),
+        ("-1", "a session limit below 1s ends at once"),
+        ("x", "is not an integer"),
+    ],
+)
+def test_a_limit_below_one_second_is_refused_at_parse_time(
+    value: str, message: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as exited:
+        build_parser().parse_args(["render", "--limit", value, str(tmp_path)])
+
+    assert exited.value.code == 2
+    assert message in capsys.readouterr().err
 
 
 @pytest.mark.spec("ui:library:the-verb-takes-no-arguments")

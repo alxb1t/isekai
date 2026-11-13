@@ -4,7 +4,7 @@ Phases of tests and the product fixes they found: the verbs' refusals, the remed
 
 ## Progress
 
-- [ ] 1 — A verb's refusals · hard
+- [x] 1 — A verb's refusals · hard
 - [ ] 2 — Every remedy works · moderate
 - [ ] 3 — Nothing rents before the checks · moderate
 - [ ] 4 — A batch survives its refusals · moderate
@@ -28,7 +28,7 @@ Phases of tests and the product fixes they found: the verbs' refusals, the remed
   Verify: `uv run pytest tests/test_pipeline_cli.py::test_a_limit_below_one_second_is_refused_at_parse_time` passes.
 - [x] 1.8 The record walks the parser's actions and groups, not its class, so it does not move.
   Verify: `uv run pytest tests/test_record.py` passes.
-- [ ] 1.9 In `openspec/changes/0136-the-cli-and-the-session/specs/cli/spec.md` the **WHEN** line of the scenario `cli:generate-signature:a-count-or-seed-out-of-range-is-refused` passes 120 characters: break it after `64-bit range,` onto a second line indented by two spaces, `  or a count or seed that is no integer is given`, its words unchanged, and edit nothing else in that file.
+- [x] 1.9 In `openspec/changes/0136-the-cli-and-the-session/specs/cli/spec.md` the **WHEN** line of the scenario `cli:generate-signature:a-count-or-seed-out-of-range-is-refused` passes 120 characters: break it after `64-bit range,` onto a second line indented by two spaces, `  or a count or seed that is no integer is given`, its words unchanged, and edit nothing else in that file.
   Verify: `uv run pytest tests/test_spec_prose.py` passes.
 
 ## 2 — Every remedy works
