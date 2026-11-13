@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary import ollama, provision
-from isekai.boundary.wd14 import FLOOR, MODEL_DEST, REMEDY, LocalTagger
+from isekai.boundary.wd14 import FLOOR, MODEL_DEST, REMEDY, LocalTagger, prepare
 from isekai.foundation.artifacts import TAGS_FILE, WD14_FILE, read
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import (
@@ -60,7 +60,7 @@ from isekai.pipeline.tagging import (
 )
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import READER, READER_ARTIFACTS, ollama_records
-from tests.images import jpeg_bytes
+from tests.images import jpeg_bytes, oversized_png
 from tests.stages import (
     FAKE_PINS,
     FIELD_MAP,
@@ -626,6 +626,36 @@ def test_a_pin_that_does_not_match_is_a_refusal_and_the_hosted_list_is_written(
     assert isinstance(wired.err, io.StringIO)
     assert MODEL_DEST in wired.err.getvalue()
     assert REMEDY in wired.err.getvalue()
+
+
+class _Preparing:
+    """A session that prepares the photograph as the real one does."""
+
+    def run(self, photo: Path) -> list[float]:
+        prepare(photo, 8)
+        return [0.0, 0.0, 0.0]
+
+
+@pytest.mark.spec("tagging:order:a-photograph-that-will-not-decode-is-a-local-failure")
+def test_a_photograph_that_will_not_decode_is_a_local_failure(tmp_path: Path) -> None:
+    photo = tmp_path / "big.png"
+    photo.write_bytes(oversized_png())
+    hosted = FakeTagger()
+    wired = _wired(
+        tmp_path,
+        tagger=Always(dataclasses.replace(fake_tagger(), session=_Preparing())),
+        hosted=hosted,
+    )
+
+    status = _dispatch(wired, "tag", str(photo))
+
+    assert status == 1
+    run = open_run(photo, wired.runs_root)
+    assert (run.directory(PHOTO, TAGS) / "001.json").is_file()
+    assert (run.directory(PHOTO, WD14) / "001.error.1.permanent.json").is_file()
+    assert not (run.directory(PHOTO, WD14) / "001.json").is_file()
+    assert isinstance(wired.err, io.StringIO)
+    assert "does not decode as an image" in wired.err.getvalue()
 
 
 @pytest.mark.spec("tagging:order:captioning-writes-no-tag-list")

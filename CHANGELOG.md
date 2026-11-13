@@ -13,6 +13,9 @@ its new digest.
 - A tagger file whose bytes disagree with its pin is a refusal naming the file and the fetch, so `tag` and `prepare`
   report it and the hosted tagger still runs; tests plant each half of the pin wrong and hold the vector-length
   refusal under a scenario of its own (0139 D2, D3).
+- A photograph that will not decode is a refusal naming it, raised by `prepare`, so the tag stage records the local
+  tagger's failure and the hosted list is still written; the stale note on what the gate installs is corrected
+  (0139 D4).
 
 ## [0.86.12] - 2026-11-13
 

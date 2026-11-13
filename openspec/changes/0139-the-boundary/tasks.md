@@ -5,7 +5,7 @@ Phases of tests and two small product fixes: the pins that refuse, a photograph 
 ## Progress
 
 - [x] 1 — The pins refuse · moderate
-- [ ] 2 — A photograph that will not decode · moderate
+- [x] 2 — A photograph that will not decode · moderate
 - [ ] 3 — The tagger runs · hard
 - [ ] 4 — The pre-flight and the hosts · moderate
 - [ ] 5 — The mutants die · moderate
@@ -31,17 +31,17 @@ Phases of tests and two small product fixes: the pins that refuse, a photograph 
 
 ## 2 — A photograph that will not decode
 
-- [ ] 2.1 **HALT CHECK** `prepare` opens the photograph with no catch, the line [D4](design.md#d4) wraps; if it reads otherwise, the plan is wrong.
+- [x] 2.1 **HALT CHECK** `prepare` opens the photograph with no catch, the line [D4](design.md#d4) wraps; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'opened = Image.open(photo)' isekai/boundary/wd14.py` prints `1`.
-- [ ] 2.2 **HALT CHECK** The tag stage catches a refusal and an `OSError` alone, the reason [D4](design.md#d4) converts in `prepare`; if it reads otherwise, the plan is wrong.
+- [x] 2.2 **HALT CHECK** The tag stage catches a refusal and an `OSError` alone, the reason [D4](design.md#d4) converts in `prepare`; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'except (Refusal, OSError) as failed:' isekai/pipeline/tagging.py` prints `1`.
-- [ ] 2.3 In `isekai/boundary/wd14.py` write [D4](design.md#d4)'s `try` around the open and the load in `prepare`.
+- [x] 2.3 In `isekai/boundary/wd14.py` write [D4](design.md#d4)'s `try` around the open and the load in `prepare`.
   Verify: `git grep -c -F 'does not decode as an image' isekai/boundary/wd14.py` prints `1`.
-- [ ] 2.4 In `isekai/boundary/wd14.py` add `prepare`'s paragraph and correct `Session`'s docstring as [D4](design.md#d4) says.
+- [x] 2.4 In `isekai/boundary/wd14.py` add `prepare`'s paragraph and correct `Session`'s docstring as [D4](design.md#d4) says.
   Verify: `git grep -c -F 'declared dependencies the gate' isekai/boundary/wd14.py` prints `1`.
-- [ ] 2.5 In `tests/test_tagging.py` add `_Preparing` and `test_a_photograph_that_will_not_decode_is_a_local_failure` as [D4](design.md#d4) says, importing `prepare` and `oversized_png`.
+- [x] 2.5 In `tests/test_tagging.py` add `_Preparing` and `test_a_photograph_that_will_not_decode_is_a_local_failure` as [D4](design.md#d4) says, importing `prepare` and `oversized_png`.
   Verify: `uv run pytest tests/test_tagging.py::test_a_photograph_that_will_not_decode_is_a_local_failure` passes.
-- [ ] 2.6 The phase's files agree with the keys, and the evaluator's reader still refuses the same words.
+- [x] 2.6 The phase's files agree with the keys, and the evaluator's reader still refuses the same words.
   Verify: `uv run pytest tests/test_tagging.py tests/test_wd14.py tests/test_recall.py` passes.
 
 ## 3 — The tagger runs
