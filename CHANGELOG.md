@@ -21,6 +21,8 @@ its new digest.
 - The provisioner's published digest is read offline from a redirect and from a response, Ollama's `post`, `ask` and
   `probe` are held over an answered status, and the pose crop is held by value inside and past the image
   (0139 D6, D7, D8).
+- `tests/mutants.json` gains the boundary's mutants, each naming the test file that must kill it, and `make mutants`
+  replays them with no survivor (0139 D10).
 
 ## [0.86.12] - 2026-11-13
 

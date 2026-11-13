@@ -8,7 +8,7 @@ Phases of tests and two small product fixes: the pins that refuse, a photograph 
 - [x] 2 — A photograph that will not decode · moderate
 - [x] 3 — The tagger runs · hard
 - [x] 4 — The pre-flight and the hosts · moderate
-- [ ] 5 — The mutants die · moderate
+- [x] 5 — The mutants die · moderate
 
 ## 1 — The pins refuse
 
@@ -80,15 +80,15 @@ Phases of tests and two small product fixes: the pins that refuse, a photograph 
 
 ## 5 — The mutants die
 
-- [ ] 5.1 **HALT CHECK** `0138-the-review-and-the-import` is merged: `tests/mutants.json` holds its entry `PA-19`, so this change appends after it.
+- [x] 5.1 **HALT CHECK** `0138-the-review-and-the-import` is merged: `tests/mutants.json` holds its entry `PA-19`, so this change appends after it.
   Verify: `grep -c -F '"finding": "PA-19"' tests/mutants.json` prints `1`.
-- [ ] 5.2 **HALT CHECK** The wiring's line is written as [D2](design.md#d2) quotes it, so the find of `BD-1b` stands.
+- [x] 5.2 **HALT CHECK** The wiring's line is written as [D2](design.md#d2) quotes it, so the find of `BD-1b` stands.
   Verify: `grep -c -F 'except DigestMismatch as swapped:' isekai/interface/wiring.py` prints `1`.
-- [ ] 5.3 **HALT CHECK** The tagger's lines are written as [D4](design.md#d4) quotes them and as the audit found them, so the finds of `P6` and `BD-1` stand.
+- [x] 5.3 **HALT CHECK** The tagger's lines are written as [D4](design.md#d4) quotes them and as the audit found them, so the finds of `P6` and `BD-1` stand.
   Verify: `grep -c -F -e 'raise Refusal(f"{photo} does not decode as an image") from undecodable' -e 'resolved.append(resolve(dest, models_dir, manifest))' isekai/boundary/wd14.py` prints `2`.
-- [ ] 5.4 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each opens with `"finding":`.
+- [x] 5.4 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each opens with `"finding":`.
   Verify: `grep -c -E '"finding": "(BD-1|BD-1b|BD-2a|BD-2b|BD-3a|BD-3b|BD-6|BD-6b|BD-10a|BD-10b|P6)"' tests/mutants.json` prints `11`.
-- [ ] 5.5 Run the replay. A line that names a survivor goes to 5.6.
+- [x] 5.5 Run the replay. A line that names a survivor goes to 5.6.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.
-- [ ] 5.6 For each `survivor` line 5.5 printed, add in the file its entry names a test red with the mutant in place and green without it; only where no input tells the mutant from the line, give the entry `equivalent` with the reason, proven by reading the line. Never delete an entry. Where 5.5 printed none, this task holds.
+- [x] 5.6 For each `survivor` line 5.5 printed, add in the file its entry names a test red with the mutant in place and green without it; only where no input tells the mutant from the line, give the entry `equivalent` with the reason, proven by reading the line. Never delete an entry. Where 5.5 printed none, this task holds.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.
