@@ -89,7 +89,7 @@ Each test goes to the lowest layer that fails: the session's own `run_session` t
 
 ### D6
 
-`answers(port)` is true while a socket listens on `port` on loopback and false once it is closed. The test binds port `0`, so no fixed port is held. It binds loopback, so it lives in `tests/e2e/test_gpu.py`, run by `make e2e` and CI and not by the gate, which binds no loopback since `7064ae62`; the scenario's unit layer is held by its session twin. Its session twin, `test_a_port_that_already_answers_is_refused_before_the_session`, carries the scenario's key in place of its exemption, and its row leaves `BEHAVIOUR_EXEMPT`; `BEHAVIOUR_CEILING` falls by one, as the table may only shrink.
+`answers(port)` is true while a socket listens on `port` on loopback and false once it is closed. The test binds port `0`, so no fixed port is held. Its session twin, `test_a_port_that_already_answers_is_refused_before_the_session`, carries the scenario's key in place of its exemption, and its row leaves `BEHAVIOUR_EXEMPT`; `BEHAVIOUR_CEILING` falls by one, as the table may only shrink.
 
 ### D7
 
