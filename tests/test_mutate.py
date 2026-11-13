@@ -413,13 +413,18 @@ def fake_npm(bin_dir: Path) -> None:
     """Write an `npm` to `bin_dir` that passes while `ui/limit.txt` says `limit = 10`.
 
     It exits 3 for a file named from the repository's root, and fails without
-    `node_modules` beside it.
+    `node_modules` beside it. Like vitest, it prints `Tests  1 failed` for a test
+    that failed, and exits 1 with `Tests  no tests` when `limit.txt` does not parse
+    (it holds `((`).
     """
     npm = bin_dir / "npm"
     npm.write_text(
         "#!/bin/sh\n"
         'case "$*" in *" ui/"*) exit 3;; esac\n'
-        'test -d node_modules && grep -q "limit = 10" limit.txt\n'
+        'if grep -q "((" limit.txt; then echo "Tests  no tests"; exit 1; fi\n'
+        'test -d node_modules && grep -q "limit = 10" limit.txt && exit 0\n'
+        'echo "Tests  1 failed | 1 passed (2)"\n'
+        "exit 1\n"
     )
     npm.chmod(0o755)
 
@@ -638,6 +643,13 @@ def test_a_vitest_entry_replays_with_the_modules_linked_for_it_alone(
             replace="limit = 11",
             tests=["tests/test_unlinked.py"],
         ),
+        entry(
+            finding="ED-4",
+            path="ui/limit.txt",
+            find="limit = 10",
+            replace="limit = ((",
+            **vitest,
+        ),
     )
 
     status, printed, _ = run(capsys, repo, "--edits", edits)
@@ -647,7 +659,8 @@ def test_a_vitest_entry_replays_with_the_modules_linked_for_it_alone(
         "killed ui/limit.txt:1 ED-1: limit = 10 -> limit = 11",
         "survived ui/limit.txt:2 ED-2: remark: none -> remark: some",
         "survived notes.txt:1 ED-3: limit = 10 -> limit = 11",
-        "mutate: 1 killed, 2 survived, 0 invalid, 0 timeout",
+        "invalid ui/limit.txt:1 ED-4: limit = 10 -> limit = ((",
+        "mutate: 1 killed, 2 survived, 1 invalid, 0 timeout",
         "survivor ui/limit.txt:2 ED-2",
         "survivor notes.txt:1 ED-3",
     ]
