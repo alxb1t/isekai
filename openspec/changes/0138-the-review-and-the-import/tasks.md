@@ -9,7 +9,7 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 - [x] 3 — What the reader is sent · moderate
 - [x] 4 — The seal and the commit · hard
 - [x] 5 — The kinds · moderate
-- [ ] 6 — The mutants die · moderate
+- [x] 6 — The mutants die · moderate
 
 ## 1 — The budget and the warning
 
@@ -102,17 +102,17 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 
 ## 6 — The mutants die
 
-- [ ] 6.1 **HALT CHECK** `0135-the-paydown` is merged: the replay mode and the target exist; if they do not, this phase has nothing to run.
+- [x] 6.1 **HALT CHECK** `0135-the-paydown` is merged: the replay mode and the target exist; if they do not, this phase has nothing to run.
   Verify: `git grep -c -F 'tools.mutate --edits tests/mutants.json' Makefile` prints `1`.
-- [ ] 6.2 **HALT CHECK** `0137-the-server` is merged: `tests/mutants.json` holds its entry `UB-4`, so this change appends after it.
+- [x] 6.2 **HALT CHECK** `0137-the-server` is merged: `tests/mutants.json` holds its entry `UB-4`, so this change appends after it.
   Verify: `grep -c -F '"finding": "UB-4"' tests/mutants.json` prints `1`.
-- [ ] 6.3 **HALT CHECK** The review's lines are written as [D3](design.md#d3) and [D4](design.md#d4) quote them, so the finds of [mutants.json](mutants.json) stand.
+- [x] 6.3 **HALT CHECK** The review's lines are written as [D3](design.md#d3) and [D4](design.md#d4) quote them, so the finds of [mutants.json](mutants.json) stand.
   Verify: `grep -c -F -e 'else token_budget(fields, schema, definition).total' -e 'create(path, APPROVED_FILE, body)' isekai/pipeline/review.py` prints `2`.
-- [ ] 6.4 **HALT CHECK** The import's lines are written as [D7](design.md#d7) quotes them, so the finds stand.
+- [x] 6.4 **HALT CHECK** The import's lines are written as [D7](design.md#d7) quotes them, so the finds stand.
   Verify: `grep -c -F -e '_put_back(build, staging)' -e '            if collection.exists():' isekai/pipeline/importing.py` prints `2`.
-- [ ] 6.5 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each opens with `"finding":`.
+- [x] 6.5 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each opens with `"finding":`.
   Verify: `grep -c -E '"finding": "(PB-1a|PB-1b|PB-2|PB-2b|PB-2c|PB-3a|PB-3b|PA-6|PA-14|PA-15|PA-16a|PA-16b|PA-17a|PA-17b|PA-18a|PA-18b|PA-18c|PA-18d|PA-19)"' tests/mutants.json` prints `19`.
-- [ ] 6.6 Run the replay. A line that names a survivor goes to 6.7.
+- [x] 6.6 Run the replay. A line that names a survivor goes to 6.7.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.
-- [ ] 6.7 For each `survivor` line 6.6 printed, add in the file its entry names a test red with the mutant in place and green without it; only where no input tells the mutant from the line, give the entry `equivalent` with the reason, proven by reading the line. Never delete an entry. Where 6.6 printed none, this task holds.
+- [x] 6.7 For each `survivor` line 6.6 printed, add in the file its entry names a test red with the mutant in place and green without it; only where no input tells the mutant from the line, give the entry `equivalent` with the reason, proven by reading the line. Never delete an entry. Where 6.6 printed none, this task holds.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.

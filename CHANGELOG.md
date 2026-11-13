@@ -47,6 +47,8 @@ its new digest.
   name's message (0138 D6, D7).
 - Tests hold a phone JPEG's gain map stripped, not refused, each of the CR2, DNG and ARW headers refused as a RAW
   photograph, and a TIFF with a cut header refused as not decoding (0138 D8).
+- The change's mutants of the budget, the approval, the reader's prompt, the seal, the commit and the kinds join
+  `tests/mutants.json`, and each dies on replay (0138 D10).
 
 ## [0.86.9] - 2026-11-13
 
