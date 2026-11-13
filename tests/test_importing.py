@@ -23,7 +23,15 @@ from isekai.interface.cli import build_parser, dispatch
 from isekai.pipeline import importing
 from isekai.pipeline.importing import cancel, commit, read, stage, sweep, verify
 from isekai.shared.image import metadata_in
-from tests.images import jpeg_segment, nef_bytes, photo_jpeg
+from tests.images import (
+    arw_bytes,
+    cr2_bytes,
+    cut_tiff_bytes,
+    dng_bytes,
+    jpeg_segment,
+    nef_bytes,
+    photo_jpeg,
+)
 from tests.stages import bare_wiring
 
 REPO = Path(__file__).resolve().parent.parent
@@ -149,6 +157,28 @@ def test_a_jpegs_exif_is_stripped_and_its_pixels_kept(tmp_path: Path) -> None:
         assert dict(image.getexif()) == {ORIENTATION: 6}
     assert metadata_in(source.read_bytes()) == []
     assert _pixels(source) == _pixels(original)
+
+
+@pytest.mark.spec("import:clean:a-phone-jpeg-with-a-gain-map-is-stripped")
+def test_a_phone_jpeg_with_a_gain_map_is_stripped_not_refused(tmp_path: Path) -> None:
+    out = io.BytesIO()
+    Image.new("RGB", (32, 32), (200, 80, 60)).save(
+        out,
+        "MPO",
+        save_all=True,
+        append_images=[Image.new("RGB", (8, 8), (10, 10, 10))],
+    )
+    photo = _write(tmp_path, "PXL_0001.jpg", out.getvalue())
+    staging = stage(tmp_path / "library")
+
+    staged = read(photo, staging, LIMIT)
+
+    source = staging / staged.name
+    assert (staged.name, staged.state) == ("PXL_0001.jpg", "ready")
+    assert verify(source) == []
+    with Image.open(source) as image:
+        assert image.format == "JPEG"
+        assert getattr(image, "n_frames", 1) == 1
 
 
 @pytest.mark.spec("import:clean:another-profile-is-converted-to-srgb")
@@ -352,6 +382,37 @@ def test_a_raw_photograph_is_refused_and_the_others_import(tmp_path: Path) -> No
     assert [path.name for path in (collection / "sources").iterdir()] == [
         "portrait.jpg"
     ]
+
+
+@pytest.mark.spec("import:refuse:a-raw-photograph-is-refused")
+@pytest.mark.parametrize(
+    ("body", "kind"),
+    [(cr2_bytes(), "CR2"), (dng_bytes(), "DNG"), (arw_bytes(), "ARW")],
+    ids=["CR2", "DNG", "ARW"],
+)
+def test_a_raw_photograph_of_each_kind_is_refused_by_its_header(
+    tmp_path: Path, body: bytes, kind: str
+) -> None:
+    shot = _write(tmp_path, "shot.bin", body)
+    staging = stage(tmp_path / "library")
+
+    with pytest.raises(Refusal, match=f"shot.bin: a {kind} RAW photograph") as refused:
+        read(shot, staging, LIMIT)
+
+    assert "export it as JPEG" in str(refused.value)
+    assert list(staging.iterdir()) == []
+
+
+@pytest.mark.spec("import:refuse:a-file-that-does-not-decode-is-refused")
+def test_a_tiff_with_a_cut_header_is_refused_as_not_decoding(tmp_path: Path) -> None:
+    cut = _write(tmp_path, "cut.tiff", cut_tiff_bytes())
+
+    with pytest.raises(
+        Refusal, match="cut.tiff: does not decode as an image"
+    ) as refused:
+        read(cut, stage(tmp_path / "library"), LIMIT)
+
+    assert "RAW" not in str(refused.value)
 
 
 @pytest.mark.spec("import:refuse:an-unconvertible-file-is-refused")
@@ -669,19 +730,85 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
 
 
 @pytest.mark.spec("import:stage:an-unusable-name-is-refused")
-@pytest.mark.parametrize("name", ["taken", "", "a/b", ".hidden"])
+@pytest.mark.parametrize(
+    ("name", "message"),
+    [
+        ("taken", "a folder of that name"),
+        ("", "not a collection name"),
+        ("a/b", "not a collection name"),
+        (".hidden", "not a collection name"),
+    ],
+)
 def test_an_unusable_collection_name_is_refused_and_staging_kept(
-    tmp_path: Path, name: str
+    tmp_path: Path, name: str, message: str
 ) -> None:
     library = tmp_path / "library"
     (library / "taken").mkdir(parents=True)
     staging = stage(library)
     read(_write(tmp_path, "a.jpg", photo_jpeg()), staging, LIMIT)
 
-    with pytest.raises(Refusal):
+    with pytest.raises(Refusal, match=message):
         commit(staging, library, name)
 
     assert (staging / "a.jpg").is_file()
+
+
+def _two_staged(tmp_path: Path) -> tuple[Path, Path]:
+    """Return a library and its staging folder holding `a.jpg` and `b.jpg`."""
+    library = tmp_path / "library"
+    staging = stage(library)
+    for name, colour in (("a.jpg", (1, 1, 1)), ("b.jpg", (2, 2, 2))):
+        read(_write(tmp_path, name, photo_jpeg(colour)), staging, LIMIT)
+    return library, staging
+
+
+@pytest.mark.spec("import:stage:a-failed-move-puts-the-files-back")
+@pytest.mark.parametrize("failing", [".collection", "b.jpg"])
+def test_a_move_that_fails_puts_the_files_back(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failing: str
+) -> None:
+    library, staging = _two_staged(tmp_path)
+    real = os.rename
+
+    def denied(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> None:
+        if Path(src).name == failing:
+            raise PermissionError(13, "denied")
+        real(src, dst)
+
+    monkeypatch.setattr(importing.os, "rename", denied)
+    with pytest.raises(PermissionError):
+        commit(staging, library, "trip")
+
+    assert sorted(path.name for path in staging.iterdir()) == ["a.jpg", "b.jpg"]
+    assert not (library / "trip").exists()
+    monkeypatch.setattr(importing.os, "rename", real)
+    assert commit(staging, library, "trip").written == ("a.jpg", "b.jpg")
+
+
+@pytest.mark.spec("import:stage:a-failed-move-puts-the-files-back")
+@pytest.mark.spec("import:stage:an-unusable-name-is-refused")
+def test_a_name_taken_as_the_move_lands_is_refused_and_the_files_stay(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    library, staging = _two_staged(tmp_path)
+    real = os.rename
+
+    def taken_first(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> None:
+        if Path(src).name == ".collection":
+            (library / "trip").mkdir()
+            (library / "trip" / "x").write_bytes(b"rival")
+        real(src, dst)
+
+    monkeypatch.setattr(importing.os, "rename", taken_first)
+    with pytest.raises(
+        Refusal, match="trip: a folder of that name is in the library; pick another"
+    ):
+        commit(staging, library, "trip")
+
+    assert sorted(path.name for path in staging.iterdir()) == ["a.jpg", "b.jpg"]
+    assert (library / "trip" / "x").read_bytes() == b"rival"
+    monkeypatch.setattr(importing.os, "rename", real)
+    assert commit(staging, library, "trip2").written == ("a.jpg", "b.jpg")
 
 
 @pytest.mark.spec("import:stage:a-batch-git-can-reach-is-refused")
@@ -942,3 +1069,62 @@ def test_an_upload_once_import_commits_is_refused_and_the_collection_is_unchange
     assert "later.jpg: " in refused[1]
     assert all("Add sources" in one for one in refused)
     assert sorted(p.name for p in (library / "trip" / "sources").iterdir()) == ["a.jpg"]
+
+
+@pytest.mark.spec("import:stage:a-commit-waits-for-every-file-to-be-read")
+def test_a_commit_asked_while_a_file_is_unread_is_refused_and_lands_once_it_is_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    library = tmp_path / "library"
+    release = threading.Event()
+    read_once = threading.Event()
+    clean = importing._clean
+
+    def held(file: Path) -> tuple[bytes, bool]:
+        release.wait(10.0)
+        return clean(file)
+
+    def publish(staged: str, event: dict[str, object]) -> None:
+        if event["state"] not in {"waiting", "converting"}:
+            read_once.set()
+
+    monkeypatch.setattr(importing, "_clean", held)
+    imports = importing.Imports(library, LIMIT, publish)
+    staged = imports.open()
+    imports.reader(staged).put("a.jpg", photo_jpeg((200, 0, 0)))
+
+    try:
+        with pytest.raises(Refusal, match="0 of 1 files are read"):
+            imports.commit(staged, "trip")
+    finally:
+        release.set()
+    assert read_once.wait(10.0)
+
+    assert imports.commit(staged, "trip").written == ("a.jpg",)
+    assert [p.name for p in (library / "trip" / "sources").iterdir()] == ["a.jpg"]
+
+
+@pytest.mark.spec("import:stage:a-refused-commit-leaves-the-import-open")
+def test_a_refused_commit_leaves_the_import_open_for_another_file(
+    tmp_path: Path,
+) -> None:
+    library = tmp_path / "library"
+    reads = {name: threading.Event() for name in ("a.jpg", "b.jpg")}
+
+    def publish(staged: str, event: dict[str, object]) -> None:
+        if event["state"] not in {"waiting", "converting"}:
+            reads[str(event["file"])].set()
+
+    imports = importing.Imports(library, LIMIT, publish)
+    staged = imports.open()
+    reader = imports.reader(staged)
+    reader.put("a.jpg", photo_jpeg((200, 0, 0)))
+    assert reads["a.jpg"].wait(10.0)
+    (library / "taken").mkdir()
+
+    with pytest.raises(Refusal, match="a folder of that name"):
+        imports.commit(staged, "taken")
+
+    assert reader.put("b.jpg", photo_jpeg((0, 200, 0)))["state"] == "waiting"
+    assert reads["b.jpg"].wait(10.0)
+    assert imports.commit(staged, "free").written == ("a.jpg", "b.jpg")

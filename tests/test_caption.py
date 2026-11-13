@@ -374,6 +374,7 @@ def test_the_open_readers_body_carries_the_photograph_and_the_pinned_sampling(
     assert body["model"] == "a-reader"
     assert body["images"] == [base64.b64encode(photo.read_bytes()).decode()]
     assert body["stream"] is False
+    assert body["prompt"] == "Describe the person.\n"
     assert body["options"] == {
         "temperature": 0,
         "seed": 1,
@@ -772,6 +773,7 @@ def test_no_test_reads_the_operators_own_model_records() -> None:
     assert not records.is_relative_to(home / ".ollama")
 
 
+@pytest.mark.spec("caption:inputs:only-the-photograph-is-passed")
 @pytest.mark.spec("caption:provenance:the-options-are-recorded")
 @pytest.mark.usefixtures("model_records")
 def test_the_caption_records_the_options_the_reader_sent(run: Run) -> None:
@@ -784,3 +786,4 @@ def test_the_caption_records_the_options_the_reader_sent(run: Run) -> None:
     (sent,) = transport.bodies()
     assert read(path, CAPTION_FILE)["producer"].get("options") == sent["options"]
     assert sent["options"] == dict(READER_OPTIONS)
+    assert sent["prompt"] == BRIEFING_PATH.read_text().rstrip() + "\n"
