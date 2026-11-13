@@ -503,6 +503,24 @@ def test_composing_a_wiring_contacts_no_host_and_looks_up_no_binary(
 
 
 @pytest.mark.spec_exempt(
+    "structural: twin of "
+    "test_composing_a_wiring_contacts_no_host_and_looks_up_no_binary"
+)
+def test_the_wirings_reader_reaches_the_model_record_when_it_reads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def unreachable(*args: object, **kwargs: object) -> object:
+        raise AssertionError("the model record was read")
+
+    monkeypatch.setattr(ollama, "_verified_build", unreachable)
+    wired = wiring_from(runs=tmp_path / "runs")
+    assert wired.reader is not None
+
+    with pytest.raises(AssertionError, match="the model record was read"):
+        wired.reader().read(tmp_path / "ada.jpg", "briefing", tmp_path)
+
+
+@pytest.mark.spec_exempt(
     "structural: ISEKAI_WIRING names the factory wiring_from calls"
 )
 def test_a_named_factory_builds_the_wiring_after_the_guard(
