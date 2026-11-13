@@ -5,6 +5,7 @@ several lines limit where; a small repository of its own shows the run.
 """
 
 import contextlib
+import json
 import os
 import signal
 import subprocess
@@ -152,13 +153,18 @@ def small_repo(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 @pytest.mark.spec_exempt(
-    "structural: a copy holds the tracked files that exist and links the ignored ones"
+    "structural: a copy is a repository of the tracked files that exist "
+    "and links models alone"
 )
 def test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones(
     tmp_path: Path,
 ) -> None:
     repo = build_repo(tmp_path / "repo")
     (repo / "calc.py").unlink()
+    (repo / "ui" / "dist").mkdir(parents=True)
+    (repo / "ui" / "dist" / "app.js").write_text("a")
+    (repo / "ui" / "node_modules").mkdir()
+    (repo / "ui" / "node_modules" / "m.js").write_text("m")
     copy = tmp_path / "copy"
 
     copy_tree(repo, copy)
@@ -169,6 +175,14 @@ def test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones(
     assert (copy / "models").is_symlink()
     assert (copy / "models" / "weights.bin").read_bytes() == b"w"
     assert not (copy / "ui").exists()
+    listed = subprocess.run(
+        ["git", "-C", str(copy), "ls-files"],
+        capture_output=True,
+        check=True,
+        text=True,
+    ).stdout.split()
+    assert "tests/test_calc.py" in listed
+    assert not any(path.startswith("models") for path in listed)
 
 
 @pytest.mark.spec_exempt("structural: --all runs the suite without the browser tests")
@@ -295,6 +309,27 @@ def test_a_mutant_gets_a_multiple_of_the_baseline_time() -> None:
 
 
 @pytest.mark.spec_exempt(
+    "structural: a survivor that outlasts --timeout is reported as one"
+)
+def test_a_survivor_that_outlasts_the_timeout_is_a_survivor(
+    small_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    status, printed, _ = run(
+        capsys,
+        small_repo,
+        f"calc.py:{LABEL_LINE}",
+        "--tests",
+        "tests/test_calc.py",
+        "--timeout",
+        "0.1",
+    )
+
+    assert status == 1
+    assert any(line.startswith("survived calc.py:6 const: ") for line in printed)
+    assert not any(line.startswith("timeout") for line in printed)
+
+
+@pytest.mark.spec_exempt(
     "structural: a timeout kills the processes the tests started, not pytest alone"
 )
 def test_a_timeout_kills_a_process_the_tests_started(tmp_path: Path) -> None:
@@ -340,3 +375,185 @@ def test_one_of_tests_and_all_is_required(
     assert neither[:2] == both[:2] == (2, [])
     assert "give one of --tests and --all" in neither[2]
     assert "give one of --tests and --all" in both[2]
+
+
+NOTES_TESTS = """\
+from pathlib import Path
+
+
+def test_limit():
+    text = (Path(__file__).parent.parent / "notes.txt").read_text()
+    assert "limit = 10" in text
+"""
+
+
+def build_notes_repo(path: Path) -> Path:
+    """Return `path`, a repository of `notes.txt` and a test that reads its limit."""
+    (path / "tests").mkdir(parents=True)
+    (path / "notes.txt").write_text("limit = 10\nremark: none\n")
+    (path / "tests" / "test_notes.py").write_text(NOTES_TESTS)
+    subprocess.run(["git", "-C", str(path), "init", "-q"], check=True)
+    subprocess.run(["git", "-C", str(path), "add", "--", "."], check=True)
+    return path
+
+
+def entry(**given: object) -> dict[str, object]:
+    """Return a valid edit of `calc.py`, each key of `given` set, None dropping it."""
+    base: dict[str, object] = {
+        "finding": "ED-X",
+        "path": "calc.py",
+        "find": "n >= 100",
+        "replace": "n >= 101",
+        "tests": ["tests/test_calc.py"],
+    }
+    return {key: value for key, value in {**base, **given}.items() if value is not None}
+
+
+def edits_file(tmp_path: Path, *entries: dict[str, object]) -> str:
+    """Write `entries` as a JSON array under `tmp_path` and return its path."""
+    path = tmp_path / "edits.json"
+    path.write_text(json.dumps(list(entries)))
+    return str(path)
+
+
+@pytest.mark.spec_exempt(
+    "structural: an edit is replayed in any tracked file, with its own tests"
+)
+def test_an_edit_replays_in_any_file_and_a_survivor_exits_one(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = build_notes_repo(tmp_path / "repo")
+    edits = edits_file(
+        tmp_path,
+        entry(
+            finding="ED-1",
+            path="notes.txt",
+            find="limit = 10",
+            replace="limit = 11",
+            tests=["tests/test_notes.py"],
+        ),
+        entry(
+            finding="ED-2",
+            path="notes.txt",
+            find="remark: none",
+            replace="remark: some",
+            tests=["tests/test_notes.py"],
+        ),
+    )
+
+    status, printed, _ = run(capsys, repo, "--edits", edits)
+
+    assert status == 1
+    assert printed == [
+        "killed notes.txt:1 ED-1: limit = 10 -> limit = 11",
+        "survived notes.txt:2 ED-2: remark: none -> remark: some",
+        "mutate: 1 killed, 1 survived, 0 invalid, 0 timeout",
+        "survivor notes.txt:2 ED-2",
+    ]
+    assert (repo / "notes.txt").read_text() == "limit = 10\nremark: none\n"
+
+
+@pytest.mark.spec_exempt(
+    "structural: an entry that cannot be replayed is refused before any mutant runs"
+)
+@pytest.mark.parametrize(
+    ("given", "before", "expected"),
+    [
+        ({"find": "return"}, (), "ED-X"),
+        ({"find": "no such text"}, (), "ED-X"),
+        ({"path": "models/weights.bin"}, (), "ED-X"),
+        ({"replace": None}, (), "ED-X"),
+        ({"extra": "x"}, (), "ED-X"),
+        ({"tests": []}, (), "ED-X"),
+        ({}, ("calc.py:2",), "--edits takes no target, --tests or --all"),
+    ],
+    ids=[
+        "find twice",
+        "find nowhere",
+        "untracked path",
+        "missing key",
+        "unknown key",
+        "empty tests",
+        "edits beside a target",
+    ],
+)
+def test_an_entry_out_of_shape_or_whose_find_is_not_once_is_refused(
+    given: dict[str, object],
+    before: tuple[str, ...],
+    expected: str,
+    small_repo: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    edits = edits_file(tmp_path, entry(**given))
+
+    status, printed, refusal = run(capsys, small_repo, *before, "--edits", edits)
+
+    assert (status, printed) == (2, [])
+    assert expected in refusal
+
+
+@pytest.mark.spec_exempt("structural: an entry in no shape is named by its position")
+def test_an_entry_without_a_finding_is_named_by_its_position(
+    small_repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    edits = edits_file(tmp_path, entry(), entry(finding=None, find="no such text"))
+
+    status, printed, refusal = run(capsys, small_repo, "--edits", edits)
+
+    assert (status, printed) == (2, [])
+    assert "entry 2" in refusal
+
+
+@pytest.mark.spec_exempt(
+    "structural: an entry with equivalent is printed with its reason and not run"
+)
+def test_an_equivalent_entry_is_printed_and_not_run(
+    small_repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    edits = edits_file(
+        tmp_path, entry(finding="ED-E", equivalent="no input tells 100 from 101")
+    )
+
+    status, printed, _ = run(capsys, small_repo, "--edits", edits)
+
+    assert status == 0
+    assert printed[0] == "equivalent calc.py:6 ED-E: no input tells 100 from 101"
+    assert printed[-1] == "mutate: 0 killed, 0 survived, 0 invalid, 0 timeout"
+    assert not any(line.startswith("survivor") for line in printed)
+
+
+@pytest.mark.spec_exempt("structural: an edit that breaks a .py file is invalid")
+def test_an_edit_that_breaks_python_is_invalid(
+    small_repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    edits = edits_file(
+        tmp_path, entry(finding="ED-I", find="return a + b", replace="return a +")
+    )
+
+    status, printed, _ = run(capsys, small_repo, "--edits", edits)
+
+    assert status == 0
+    assert printed == [
+        "invalid calc.py:2 ED-I: return a + b -> return a +",
+        "mutate: 0 killed, 0 survived, 1 invalid, 0 timeout",
+    ]
+
+
+@pytest.mark.spec_exempt(
+    "structural: a red baseline of any entry's tests refuses the run"
+)
+def test_a_red_baseline_of_one_entrys_tests_refuses_the_run(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    red = build_repo(tmp_path / "red", failing=True)
+    edits = edits_file(
+        tmp_path,
+        entry(tests=["tests/test_calc.py::test_add"]),
+        entry(finding="ED-Y", tests=["tests/test_calc.py::test_failing"]),
+    )
+
+    status, printed, refusal = run(capsys, red, "--edits", edits)
+
+    assert (status, printed) == (2, [])
+    assert "do not pass unmutated" in refusal

@@ -10,6 +10,25 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.9] - 2026-11-13
+
+Gate: local 1m7s · CI not read under mf-ship · 0.86.8: local 1m8s · CI not read under mf-ship
+
+- The mutation runner's copy is a git repository of the tracked files and links `models/` alone, and a run under a
+  `--timeout` below the baseline reports a survivor, so tests that ask git pass in a copy and none writes through a
+  link but `models/` (0135 D1, D2).
+- `python -m tools.mutate --edits <json>` replays text edits in any tracked file, each against the tests its entry
+  names, so the audit's mutants can be held as a file; an entry that cannot be replayed is refused by its finding
+  (0135 D3).
+- `tests/mutants.json` holds the audit's mutants of the findings the series closed, and `make mutants` replays them
+  outside the gate, so each fix stays proven by the test that kills its mutant (0135 D4, D5).
+- A discard beside another draft's source copy and a damaged sheet, tag list or approval read by the hub each have a
+  test, and their mutants, `PB-14` and `UB-14`, join `tests/mutants.json` (0135 D6).
+- The patch scanner of `tests/test_ratchets.py` binds each patched name by the imports of its own function, so a local
+  alias another test reuses hides no patched module from the ratchet (0135 D7).
+- The comment on the bake-digit limit says a longer spelling is refused unread, and the design spec's bake view lists
+  *Place a tattoo* among the writes it offers none of (0135 D8).
+
 ## [0.86.8] - 2026-11-13
 
 Gate: local 1m8s · CI not read under mf-ship · 0.86.7: local 1m9s · CI not read under mf-ship

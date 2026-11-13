@@ -1,0 +1,178 @@
+[
+  {
+    "finding": "MT-1a",
+    "path": "openspec/specs/pod-image/spec.md",
+    "find": "- **Key:** `pod-image:stop:a-sessions-ceiling-is-its-limit`\n- **Layers:** unit",
+    "replace": "- **Key:** `pod-image:stop:a-sessions-ceiling-is-its-limit`\n- **Layers:** e2e",
+    "tests": ["tests/test_spec_bindings.py"],
+    "why": "the scenario declares e2e but its only test is outside tests/e2e/"
+  },
+  {
+    "finding": "MT-1b",
+    "path": "openspec/specs/pod-image/spec.md",
+    "find": "A host the render cannot use still boots, pulls and bills before anything fails.\n",
+    "replace": "A host the render cannot use still boots, pulls and bills before anything fails.\n\n#### Scenario: the create asks for a disk\n- **Layers:** unit\n- **WHEN** `gpunit.toml` is read\n- **THEN** it names a disk\n",
+    "tests": ["tests/test_spec_bindings.py"],
+    "why": "a scenario written without a Key line is demanded by nothing"
+  },
+  {
+    "finding": "MT-2",
+    "path": "tests/test_docs.py",
+    "find": "@pytest.mark.spec_exempt(\"structural: the pins guide's path check\")",
+    "replace": "@pytest.mark.spec_exempt(\"\")",
+    "tests": ["tests/test_spec_bindings.py"],
+    "why": "an empty exemption reason reads as a string literal"
+  },
+  {
+    "finding": "MT-4a",
+    "path": "tools/npm_ui.py",
+    "find": "ROOT = Path(__file__).resolve().parent.parent\n",
+    "replace": "ROOT = Path(__file__).resolve().parent.parent  # since 0124-the-paydown\n",
+    "tests": ["tests/test_spec_prose.py"],
+    "why": "a comment citing a change id is history to the guard"
+  },
+  {
+    "finding": "MT-4b",
+    "path": "openspec/specs/pod-image/spec.md",
+    "find": "A host the render cannot use still boots, pulls and bills before anything fails.\n",
+    "replace": "A host the render cannot use still boots, pulls and bills before anything fails, see 0124-the-paydown.\n",
+    "tests": ["tests/test_spec_prose.py"],
+    "why": "a spec citing a change id is history to the guard"
+  },
+  {
+    "finding": "MT-6",
+    "path": "docs/principles.md",
+    "find": "### A person approves every sheet\n\n**A person approves every sheet before it is rendered.** Approving is its own act and writes its own\nfile; saving a draft never approves it, so a sheet can be left half-edited. Nothing renders from a sheet\nno person approved.\n\n- **Why:** the review step is where output quality is decided. A render from an unapproved sheet is a\n  different product, not a shortcut.\n- **Held by:** `tests/test_review.py::test_a_draft_is_not_treated_as_complete`",
+    "replace": "#### A person approves every sheet\n\n**A person approves every sheet before it is rendered.** Approving is its own act and writes its own\nfile; saving a draft never approves it, so a sheet can be left half-edited. Nothing renders from a sheet\nno person approved.\n\n- **Why:** the review step is where output quality is decided. A render from an unapproved sheet is a\n  different product, not a shortcut.\n- **Held by:** `tests/test_review.py::test_a_test_that_does_not_exist`",
+    "tests": ["tests/test_principles.py"],
+    "why": "a principle under any heading but ### is read by neither check"
+  },
+  {
+    "finding": "MT-7",
+    "path": "isekai/foundation/run.py",
+    "find": "DATA_ROOT = Path(__file__).resolve().parent.parent.parent / \".data\"",
+    "replace": "DATA_ROOT = Path(__file__).resolve().parent.parent.parent / \"data\"",
+    "tests": ["tests/test_package_paths.py"],
+    "why": "DATA_ROOT leaving the ignored .data/ for a tracked data/"
+  },
+  {
+    "finding": "UA-7",
+    "path": "isekai/interface/ui/app.py",
+    "find": "    renders_of,\n    require,\n)\n",
+    "replace": "    renders_of,\n    require,\n    write_json,\n)\n",
+    "tests": ["tests/test_ui.py"],
+    "why": "a surface module importing the JSON-writing primitive by name"
+  },
+  {
+    "finding": "FN-1",
+    "path": "isekai/foundation/run.py",
+    "find": "    \"wd14\": 1,\n    \"tags\": 3,",
+    "replace": "    \"tags\": 3,",
+    "tests": ["tests/test_run_directory.py"],
+    "why": "the wd14 stage has no budget entry"
+  },
+  {
+    "finding": "FN-2",
+    "path": "isekai/foundation/run.py",
+    "find": "    return \"budget\" if len(recorded) >= BUDGETS[stage] else None",
+    "replace": "    return \"budget\" if len(recorded) >= BUDGETS[stage] - 1 else None",
+    "tests": ["tests/test_run_directory.py"],
+    "why": "a stage refuses one attempt early"
+  },
+  {
+    "finding": "FN-4a",
+    "path": "isekai/foundation/run.py",
+    "find": "    cleaned = _UNSAFE.sub(\"-\", stem.lower()).strip(\"-\")[:ID_SLUG_CHARS].strip(\"-\")",
+    "replace": "    cleaned = _UNSAFE.sub(\"-\", stem.lower()).strip(\"-\")",
+    "tests": ["tests/test_run_directory.py"],
+    "why": "the slug is no longer bounded"
+  },
+  {
+    "finding": "FN-4b",
+    "path": "isekai/foundation/run.py",
+    "find": "_UNSAFE = re.compile(r\"[^a-z0-9]+\")",
+    "replace": "_UNSAFE = re.compile(r\"[^a-z0-9_]+\")",
+    "tests": ["tests/test_run_directory.py"],
+    "why": "an underscore survives into the slug"
+  },
+  {
+    "finding": "FN-5",
+    "path": "isekai/foundation/run.py",
+    "find": "if inside else resolved.name,",
+    "replace": "if inside else str(resolved),",
+    "tests": ["tests/test_caption.py"],
+    "why": "an instruction file outside the repository records its absolute path"
+  },
+  {
+    "finding": "FN-6",
+    "path": "isekai/foundation/run.py",
+    "find": "        if named is not None and named[0] == version:",
+    "replace": "        if named is not None:",
+    "tests": ["tests/test_run_directory.py"],
+    "why": "failures of another version count against this one"
+  },
+  {
+    "finding": "FN-9",
+    "path": "isekai/pipeline/generate.py",
+    "find": "    return path.suffix == suffix and is_seed(path.stem)",
+    "replace": "    return path.suffix in (suffix, \".png\") and is_seed(path.stem)",
+    "tests": ["tests/test_resume.py"],
+    "why": "the completed-output check is tied to one format"
+  },
+  {
+    "finding": "CL-2a",
+    "path": "isekai/interface/render.py",
+    "find": "        steps.step(\"teardown\", \"failed\")",
+    "replace": "        steps.step(\"teardown\", \"done\")",
+    "tests": ["tests/test_render.py"],
+    "why": "a failed teardown does not reach the record"
+  },
+  {
+    "finding": "CL-2b",
+    "path": "isekai/interface/render.py",
+    "find": "        record.end(\"stopped\", record.note)",
+    "replace": "        record.end(\"done\", record.note)",
+    "tests": ["tests/test_render.py"],
+    "why": "a stopped session records done"
+  },
+  {
+    "finding": "CL-2c",
+    "path": "isekai/interface/render.py",
+    "find": "        record.note = ended\n",
+    "replace": "        pass\n",
+    "tests": ["tests/test_render.py"],
+    "why": "the watchdog's reason does not reach the record"
+  },
+  {
+    "finding": "CL-2d",
+    "path": "isekai/interface/render.py",
+    "find": "        steps.step(\"pod\", \"lost\")",
+    "replace": "        steps.step(\"pod\", \"ready\")",
+    "tests": ["tests/test_render.py"],
+    "why": "a lost create does not record the pod step as lost"
+  },
+  {
+    "finding": "CL-2e",
+    "path": "isekai/interface/render.py",
+    "find": "        record.end(\"failed\", str(failure))",
+    "replace": "        record.end(\"done\", str(failure))",
+    "tests": ["tests/test_render.py"],
+    "why": "a flow raising inside an open session ends the record done"
+  },
+  {
+    "finding": "PB-14",
+    "path": "isekai/pipeline/review.py",
+    "find": "        if copy.is_file():\n            copy.unlink()\n            if not any(copy.parent.iterdir()):\n                copy.parent.rmdir()\n        return draft",
+    "replace": "        if copy.is_file():\n            for held in list(copy.parent.iterdir()):\n                held.unlink()\n            if not any(copy.parent.iterdir()):\n                copy.parent.rmdir()\n        return draft",
+    "tests": ["tests/test_review.py"],
+    "why": "a discard deletes every source copy of the flow"
+  },
+  {
+    "finding": "UB-14",
+    "path": "isekai/interface/ui/library.py",
+    "find": "            _check(sheet, SHEET_FILE)\n            return Cell(\"sheet\", status=status)",
+    "replace": "            return Cell(\"sheet\", status=status)",
+    "tests": ["tests/test_ui_library.py"],
+    "why": "a sheet this build cannot read shows as sheet"
+  }
+]

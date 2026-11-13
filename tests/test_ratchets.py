@@ -168,28 +168,40 @@ def _top_names(path: Path) -> set[str]:
     return names
 
 
+def _bind(
+    root: Path, node: ast.AST, packages: Collection[str], bound: dict[str, str]
+) -> None:
+    """Add to `bound` the module each name of one import statement stands for.
+
+    Only a module of `packages` is bound, and a node that is no import binds nothing.
+    e.g. `from isekai import x` -> `{"x": "isekai.x"}`
+    e.g. `import isekai.x.y` -> `{"isekai": "isekai"}`
+    """
+    if isinstance(node, ast.Import):
+        for alias in node.names:
+            top = alias.name.split(".")[0]
+            if top in packages:
+                bound[alias.asname or top] = alias.name if alias.asname else top
+    elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+        if node.module.split(".")[0] in packages:
+            for alias in node.names:
+                full = f"{node.module}.{alias.name}"
+                if _module_file(root, full):
+                    bound[alias.asname or alias.name] = full
+
+
 def _bound_modules(
     root: Path, tree: ast.AST, packages: Collection[str]
 ) -> dict[str, str]:
     """Return the module each imported name stands for, anywhere in a file.
 
-    Only a module of `packages` is bound.
+    A name imported twice stands for the last module in tree order; `_patches` scopes
+    its names instead.
     e.g. `from isekai import x` -> `{"x": "isekai.x"}`
-    e.g. `import isekai.x.y` -> `{"isekai": "isekai"}`
     """
     bound: dict[str, str] = {}
     for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                top = alias.name.split(".")[0]
-                if top in packages:
-                    bound[alias.asname or top] = alias.name if alias.asname else top
-        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-            if node.module.split(".")[0] in packages:
-                for alias in node.names:
-                    full = f"{node.module}.{alias.name}"
-                    if _module_file(root, full):
-                        bound[alias.asname or alias.name] = full
+        _bind(root, node, packages, bound)
     return bound
 
 
@@ -213,26 +225,61 @@ def _text(node: ast.expr) -> str | None:
     return None
 
 
-def _patches(tree: ast.AST, bound: dict[str, str]) -> Iterator[tuple[int, str, str]]:
-    """Yield the (line, dotted module path, name) of each `x.setattr(...)` call.
+def _setattr_target(
+    node: ast.AST, bound: dict[str, str]
+) -> tuple[int, str, str] | None:
+    """Return the (line, dotted module path, name) an `x.setattr(...)` call patches.
 
+    A node that is no such call, or whose target resolves to nothing, gives None.
     e.g. `setattr(ui.library, "run", f)` -> `(7, "isekai.interface.ui.library", "run")`
     """
-    for node in ast.walk(tree):
-        if not (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "setattr"
-            and node.args
-        ):
+    if not (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "setattr"
+        and node.args
+    ):
+        return None
+    first, rest = node.args[0], node.args[1:]
+    if (dotted := _text(first)) is not None:
+        module, _, name = dotted.rpartition(".")
+        return node.lineno, module, name
+    if (chain := _chain(first)) and chain[0] in bound and rest:
+        if (name := _text(rest[0])) is not None:
+            return node.lineno, ".".join([bound[chain[0]], *chain[1:]]), name
+    return None
+
+
+def _patches(
+    root: Path,
+    scope: ast.AST,
+    packages: Collection[str],
+    outer: dict[str, str] | None = None,
+) -> Iterator[tuple[int, str, str]]:
+    """Yield each `x.setattr(...)` patch of a scope, each bound by that scope's imports.
+
+    A function's imports extend those of the scope around it. They reach no sibling
+    function and not the module.
+    e.g. a function that imports `ink as subject` patches `isekai.shared.ink`, whatever
+    `subject` stands for in the function beside it
+    """
+    bound = dict(outer or {})
+    nodes: list[ast.AST] = []
+    functions: list[ast.AST] = []
+    pending = list(ast.iter_child_nodes(scope))
+    while pending:
+        node = pending.pop()
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            functions.append(node)
             continue
-        first, rest = node.args[0], node.args[1:]
-        if (dotted := _text(first)) is not None:
-            module, _, name = dotted.rpartition(".")
-            yield node.lineno, module, name
-        elif (chain := _chain(first)) and chain[0] in bound and rest:
-            if (name := _text(rest[0])) is not None:
-                yield node.lineno, ".".join([bound[chain[0]], *chain[1:]]), name
+        _bind(root, node, packages, bound)
+        nodes.append(node)
+        pending.extend(ast.iter_child_nodes(node))
+    for node in nodes:
+        if (patch := _setattr_target(node, bound)) is not None:
+            yield patch
+    for function in functions:
+        yield from _patches(root, function, packages, bound)
 
 
 def resolved_patches(
@@ -247,8 +294,7 @@ def resolved_patches(
     for path in sorted((root / "tests").rglob("*.py")):
         key = _key(root, path)
         tree = ast.parse(path.read_text(), filename=key)
-        bound = _bound_modules(root, tree, packages)
-        for line, module, name in _patches(tree, bound):
+        for line, module, name in sorted(_patches(root, tree, packages)):
             if module.split(".")[0] in packages and _module_file(root, module):
                 found.append((key, line, module, name))
     return found
@@ -645,6 +691,36 @@ def test_the_check_catches_a_patched_module(tmp_path: Path) -> None:
         "isekai.b.h": 1,
         "isekai.d": 1,
         "isekai.g": 1,
+    }
+
+
+@pytest.mark.spec_exempt("structural: twin of test_no_patched_module_is_unlisted")
+def test_a_reused_local_alias_hides_no_patched_module(tmp_path: Path) -> None:
+    for name, text in {
+        "isekai/shared/fields.py": "def validate():\n    pass\n",
+        "isekai/shared/ink.py": "def extract_ink():\n    pass\n",
+        "tests/test_patch.py": (
+            "from isekai.shared import fields\n"
+            "def test_one(monkeypatch):\n"
+            "    from isekai.shared import fields as subject\n"
+            "    monkeypatch.setattr(subject, 'validate', 1)\n"
+            "def test_two(monkeypatch):\n"
+            "    from isekai.shared import ink as subject\n"
+            "    monkeypatch.setattr(subject, 'extract_ink', 1)\n"
+            "def test_three(monkeypatch):\n"
+            "    monkeypatch.setattr(fields, 'validate', 1)\n"
+            "def test_four(monkeypatch):\n"
+            "    from isekai.shared import ink as fields\n"
+            "    monkeypatch.setattr(fields, 'extract_ink', 1)\n"
+        ),
+    }.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    assert patched_modules(tmp_path) == {
+        "isekai.shared.fields": 2,
+        "isekai.shared.ink": 2,
     }
 
 

@@ -1637,7 +1637,7 @@ class _Shared:
 # A number a request spells: ASCII digits alone, since `str.isdigit` also passes
 # a superscript `int` cannot read.
 _DECIMAL = re.compile(r"[0-9]+")
-# The most digits a bake number is read from: `int` refuses a longer spelling.
+# The most digits a bake number is read from: a longer spelling is refused unread.
 _BAKE_DIGITS = 18
 
 

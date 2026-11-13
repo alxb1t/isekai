@@ -85,7 +85,10 @@ A measure that cannot be read is recorded unavailable; nothing halts.
 **A move is pre-flighted.** A change that moves or rewrites lines of `isekai/` or `evaluation/` runs
 `uv run python -m tools.mutate <path:lines> --tests <files>` over those lines, before the move and over the same lines after
 it, on the tests that cover them. A survivor is killed by a test, or the change says why it is equivalent. It is not in the gate:
-a run takes minutes.
+a run takes minutes. The run works in a copy that is a git repository of the tracked files and
+links `models/` alone, so a test that writes under `models/` writes through to the checkout: isolate it.
+A mutant of a finding a version closed lives in `tests/mutants.json`, and `make mutants` replays them outside the
+gate; a refactor version's pre-flight adds its own entries.
 
 Every command green, or the phase is not done. **Never weaken the gate to pass** — see `AGENTS.md`'s guardrails.
 
