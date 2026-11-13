@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.11] - 2026-11-13
+
+Gate: local 1m24s · CI not read under mf-ship · 0.86.10: local 1m13s · CI not read under mf-ship
+
 - Tests hold the alert a failed window close raises, a job of a kind starting once the one before it has ended, and the
   render slot's steps and images read from the verb's lines (0137 D1).
 - Tests hold that a foreign `Host` or `Origin` on a draft update leaves the run unchanged, that each loopback spelling
