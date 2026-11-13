@@ -12,9 +12,10 @@ its new digest.
 
 - A stage verb with no `--flow` is refused listing the flows this build tracks, and the missing verb, a count, a seed
   and a limit out of range are each read in process by the parser's message, not by an exit code (0136 D1, D2).
-- The refusal of an empty runs root names `assign --flow`, which the build performs, where it named `tag --flow`, which
-  it refuses; the remedy sweep drops its bare verbs, reads an unquoted printed command, refuses a photograph verb that
-  names a flow, and reaches the refusals `dispatch` and the render session print (0136 D3, D4).
+- The refusal of an empty runs root names `assign --flow`, which the build performs, not `tag --flow`, which it
+  refuses; the remedy sweep drops its bare verbs, reads an unquoted command and reaches the session's refusals (0136 D3, D4).
+- Tests hold that nothing rents before a free check passes, the limit's floor and a given limit, and the busy-port
+  probe runs on a real socket in `tests/e2e/test_gpu.py` (0136 D5, D6).
 
 ## [0.86.9] - 2026-11-13
 

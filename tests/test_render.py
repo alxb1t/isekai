@@ -10,6 +10,7 @@ import dataclasses
 import http.client
 import io
 import json
+import os
 import socket
 import threading
 import tomllib
@@ -158,6 +159,7 @@ def session(
     wiring: Wiring | None = None,
     given: str | None = None,
     without: Sequence[Path] = (),
+    limit: int | None = None,
     **seams: Any,  # noqa: ANN401 -- `render.Seams`'s fields, by name
 ) -> int:
     defaults = render.Seams(
@@ -173,6 +175,7 @@ def session(
             requests=list(requests),
             session=given,
             without=list(without),
+            limit=limit,
         ),
         wiring or wired(runs),
         generate if generate is not None else Calls(),
@@ -249,6 +252,89 @@ def test_a_request_over_a_runs_root_with_no_run_is_refused_naming_assign(
     assert "holds no run" in message
     assert f"isekai assign --flow {FLOW} --runs {runs}" in message
     assert "isekai tag" not in message
+
+
+@pytest.mark.spec("pod-image:session:every-exit-tears-down")
+def test_with_no_request_a_failing_free_check_rents_nothing(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    counted(tmp_path, schema, vocabulary, "ada", 1)
+    root = tmp_path / "b" / "runs"
+    opener = FakeOpen()
+
+    status = session(
+        root,
+        generate=Calls(lambda argv, wired: 1 if "--server" not in argv else 0),
+        opener=opener,
+        wiring=real(root, vocabulary),
+    )
+
+    assert status == 1
+    assert opener.opened == 0
+    assert not (root.parent / SESSIONS).exists()
+
+
+@pytest.mark.spec("cli:render-limit:below-the-floor-is-refused")
+def test_a_limit_below_the_floor_is_refused_before_renting(tmp_path: Path) -> None:
+    runs = collection(tmp_path)
+    opener = FakeOpen()
+
+    status = session(runs, f"{FLOW}=1", limit=render.FLOOR_S - 1, opener=opener)
+
+    assert status == 1
+    assert opener.opened == 0
+    assert f"give at least --limit {render.FLOOR_S}" in log(runs)
+
+
+@pytest.mark.spec("cli:render-limit:a-given-limit-is-the-sessions")
+def test_a_given_limit_is_the_sessions_limit(tmp_path: Path) -> None:
+    runs = collection(tmp_path)
+    opener = FakeOpen()
+
+    status = session(runs, f"{FLOW}=1", limit=render.FLOOR_S + 60, opener=opener)
+
+    assert status == 0
+    assert opener.limits == [render.FLOOR_S + 60]
+    assert f"session limit {render.FLOOR_S + 60}s" in log(runs)
+
+
+@pytest.mark.spec("cli:render-session:the-record-plans-each-photograph")
+def test_a_lone_source_request_is_checked_free_and_planned(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = counted(tmp_path, schema, vocabulary, "ada", 2)
+    root = tmp_path / "b" / "runs"
+    calls = Calls()
+
+    assert session(root, "control-anime-wai=summon-anime-wai", generate=calls) == 0
+
+    (free,) = [
+        line
+        for line in calls.lines
+        if "--seeds-from" in line and "--server" not in line
+    ]
+    assert "summon-anime-wai" in free
+    (record,) = records(root)
+    assert record["planned"] == [
+        {"digest": run.digest, "flow": "control-anime-wai", "images": images(run)}
+    ]
+
+
+@pytest.mark.spec("image-generation:seeds-from:no-source-render-is-refused-first")
+def test_a_lone_source_request_whose_free_check_fails_rents_nothing(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    counted(tmp_path, schema, vocabulary, "ada", 2)
+    root = tmp_path / "b" / "runs"
+    opener = FakeOpen()
+    calls = Calls(lambda argv, wired: 1 if "--seeds-from" in argv else 0)
+
+    status = session(
+        root, "control-anime-wai=summon-anime-wai", generate=calls, opener=opener
+    )
+
+    assert status == 1
+    assert opener.opened == 0
 
 
 @pytest.mark.spec("pod-image:session:the-endpoint-is-awaited")
@@ -879,7 +965,7 @@ def test_a_request_of_another_shape_is_refused_into_the_log(tmp_path: Path) -> N
     ) in log(runs)
 
 
-@pytest.mark.spec_exempt("structural: a busy port is refused before the session")
+@pytest.mark.spec("pod-image:session:a-busy-port-is-refused-before-the-session")
 def test_a_port_that_already_answers_is_refused_before_the_session(
     tmp_path: Path,
 ) -> None:
@@ -1235,6 +1321,41 @@ def test_the_given_id_names_the_record_and_another_shape_is_refused(
         build_parser().parse_args(["render", str(runs), "--session", "../x"])
 
 
+@pytest.mark.spec("cli:render-session:a-session-writes-its-record")
+def test_render_through_the_parser_writes_the_sessions_record(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    counted(tmp_path, schema, vocabulary, "ada", 1)
+    root = tmp_path / "b" / "runs"
+    seams = render.Seams(
+        open_session=FakeOpen(),
+        environ={},
+        connect=lambda server: FakeComfyClient(),
+        busy=lambda port: False,
+        kill=lambda: None,
+    )
+
+    status = _dispatch_argv(
+        ["render", str(root)],
+        dataclasses.replace(real(root, vocabulary), session=seams),
+    )
+
+    assert status == 0
+    (record,) = records(root)
+    assert record["outcome"] == "done"
+
+
+@pytest.mark.spec("cli:render-session:a-refusal-before-renting-writes-none")
+def test_a_request_with_no_collection_is_refused_at_parse_time(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as stopped:
+        build_parser().parse_args(["render", f"{FLOW}=1"])
+
+    assert stopped.value.code == 2
+    assert "name at least one collection's runs/" in capsys.readouterr().err
+
+
 @pytest.mark.spec("cli:render-session:a-refusal-before-renting-writes-none")
 def test_a_session_refused_before_renting_writes_no_record(tmp_path: Path) -> None:
     runs = collection(tmp_path)
@@ -1397,6 +1518,21 @@ def test_edit_limit_the_recorded_durations_are_the_newest_records_in_the_collect
 
     # The median of 90, 90 and 300 is 90, and each of three pending edits takes it.
     assert got.seconds == 600 + 3 * 90 + 120
+
+
+@pytest.mark.spec("edit:edit-limit:a-median-above-the-figure-is-used")
+def test_edit_limit_takes_the_newest_records_when_there_are_more_than_the_window(
+    tmp_path: Path,
+) -> None:
+    root = collection(tmp_path, "r1")
+    group = root / "r1" / FLOW / "outputs" / "001"
+    _edit_records(group, [1], duration=9999.0)
+    _edit_records(group, range(2, render.RECENT + 2), duration=1.0)
+    for seed in range(1, render.RECENT + 2):
+        path = group / f"{seed}.edit-1.json"
+        os.utime(path, (seed, seed))
+
+    assert render.recent_edits(root, ["r1"]) == [1.0] * render.RECENT
 
 
 @pytest.mark.spec("edit:edit-limit:the-quote-and-the-session-agree")
