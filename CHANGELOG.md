@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.8] - 2026-11-13
+
+Gate: local 1m8s · CI not read under mf-ship · 0.86.7: local 1m9s · CI not read under mf-ship
+
 - A tattoo's ink takes a point within a billionth of a pixel of its edge as on it, so a solver's rounding no longer
   flips a pixel row between a Mac and Linux (0134 D1).
 - The edit golden and the run's record check each PNG digest against its file, then compare a placeholder, so two
