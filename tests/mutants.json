@@ -174,5 +174,109 @@
     "replace": "            return Cell(\"sheet\", status=status)",
     "tests": ["tests/test_ui_library.py"],
     "why": "a sheet this build cannot read shows as sheet"
+  },
+  {
+    "finding": "CL-1",
+    "path": "isekai/interface/render.py",
+    "find": "            if generate([*verb, *line.head, *line.where], free) != 0:\n                return 1",
+    "replace": "            if generate([*verb, *line.head, *line.where], free) != 0:\n                pass",
+    "tests": ["tests/test_render.py"],
+    "why": "with no request, a failing free check must stop the session before a pod is rented"
+  },
+  {
+    "finding": "CL-3a",
+    "path": "isekai/interface/render.py",
+    "find": "    if asked < FLOOR_S:\n",
+    "replace": "    if asked < 0:\n",
+    "tests": ["tests/test_render.py"],
+    "why": "a limit below the diagnosis hold must be refused before renting"
+  },
+  {
+    "finding": "CL-3b",
+    "path": "isekai/interface/render.py",
+    "find": "    limit = asked or estimated(work, timing, ceiling_s, pending_count).limit_s",
+    "replace": "    limit = estimated(work, timing, ceiling_s, pending_count).limit_s",
+    "tests": ["tests/test_render.py"],
+    "why": "a given limit must be the session's limit, not the estimate"
+  },
+  {
+    "finding": "CL-4a",
+    "path": "isekai/interface/render.py",
+    "find": "    if not ids:\n        photos = shlex.quote",
+    "replace": "    if not ids and False:\n        photos = shlex.quote",
+    "tests": ["tests/test_render.py"],
+    "why": "a request over a runs root with no run must be refused before renting"
+  },
+  {
+    "finding": "CL-4b",
+    "path": "isekai/interface/render.py",
+    "find": "        if request.by_count or late:\n            continue",
+    "replace": "        if True:\n            continue",
+    "tests": ["tests/test_render.py"],
+    "why": "a source request whose source is not rendered in the same line has its seeds checked free"
+  },
+  {
+    "finding": "CL-5",
+    "path": "isekai/boundary/gpu.py",
+    "find": "            return True\n    except OSError:\n        return False",
+    "replace": "            return False\n    except OSError:\n        return False",
+    "tests": ["tests/test_gpu.py"],
+    "why": "a busy-port check that always says free ships green"
+  },
+  {
+    "finding": "CL-7",
+    "path": "isekai/interface/cli.py",
+    "find": "metavar=\"verb\", required=True, parser_class=_Verb",
+    "replace": "metavar=\"verb\", required=False, parser_class=_Verb",
+    "tests": ["tests/test_pipeline_cli.py"],
+    "why": "with no verb required, the entry point crashes instead of refusing"
+  },
+  {
+    "finding": "CL-10",
+    "path": "isekai/interface/cli.py",
+    "find": "        if whole < 1:\n            raise argparse.ArgumentTypeError(below_one)",
+    "replace": "        if whole < 0:\n            raise argparse.ArgumentTypeError(below_one)",
+    "tests": ["tests/test_pipeline_cli.py"],
+    "why": "a count or a limit of zero must be refused at parse time"
+  },
+  {
+    "finding": "PA-4",
+    "path": "isekai/interface/cli.py",
+    "find": "    refused = across(list(targets), assemble_one) + broken",
+    "replace": "    refused = [assemble_one(one) for one in targets] and broken",
+    "tests": ["tests/test_generate.py"],
+    "why": "the command raising at the first refused photograph costs the batch its turn"
+  },
+  {
+    "finding": "PB-5",
+    "path": "isekai/pipeline/review.py",
+    "find": "    number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))\n    if seed is not None:",
+    "replace": "    number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))\n    if _waiting_number(run, flow) is not None and seed is None:\n        return run.directory(flow, REVIEW) / f\"{number:03d}.draft.json\"\n    if seed is not None:",
+    "tests": ["tests/test_review.py"],
+    "why": "an unedited waiting draft is replaced by the source's fields, and a test reads them"
+  },
+  {
+    "finding": "PB-6",
+    "path": "isekai/interface/cli.py",
+    "find": "    for message in (failed := across(found, sample_one)):\n        print(f\"refused: {message}\", file=wired.err)\n    return 1 if failed else 0",
+    "replace": "    failed: list[str] = []\n    for one in found:\n        try:\n            sample_one(one)\n        except Refusal as refusal:\n            failed.append(str(refusal))\n            break\n    for message in failed:\n        print(f\"refused: {message}\", file=wired.err)\n    return 1 if failed else 0",
+    "tests": ["tests/test_edit.py"],
+    "why": "stopping at the first failed sampling costs the next edit its turn"
+  },
+  {
+    "finding": "PB-16",
+    "path": "isekai/interface/cli.py",
+    "find": "    waiting = {image_of(record) for _, _, record in found}",
+    "replace": "    waiting: set[Path] = set()",
+    "tests": ["tests/test_edit.py"],
+    "why": "a chain of pending edits is refused before any pod, for a source that does not exist yet"
+  },
+  {
+    "finding": "RE-1",
+    "path": "isekai/interface/render.py",
+    "find": "    found.sort(key=lambda path: path.stat().st_mtime, reverse=True)\n    taken: list[float] = []\n    for path in found:\n        if (seconds := duration_of(path)) is not None:",
+    "replace": "    found.sort(key=lambda path: path.stat().st_mtime)\n    taken: list[float] = []\n    for path in found:\n        if (seconds := duration_of(path)) is not None:",
+    "tests": ["tests/test_render.py"],
+    "why": "the durations a limit is drawn from are the newest records, not the oldest"
   }
 ]

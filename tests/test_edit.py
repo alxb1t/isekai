@@ -19,7 +19,7 @@ import isekai.pipeline.edit as edit_module
 from isekai.boundary.comfy import TransportFailure, read_runtime
 from isekai.foundation.artifacts import EDIT_FILE, VERSIONS, read, write
 from isekai.foundation.edit import load_edit
-from isekai.foundation.flow import graph_digest
+from isekai.foundation.flow import Workflow, graph_digest
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     FRAME_NAME,
@@ -1238,7 +1238,7 @@ def test_edit_pending_with_a_client_samples_each_pending_edit_in_chain_order(
 
 
 @pytest.mark.spec("edit:session:a-failed-sampling-leaves-the-request-pending")
-def test_edit_pending_a_failed_sampling_does_not_cost_the_next_its_turn(
+def test_edit_pending_a_failed_sampling_leaves_its_request_pending(
     tmp_path: Path,
 ) -> None:
     group, image, composite = _scene(tmp_path)
@@ -1250,6 +1250,61 @@ def test_edit_pending_a_failed_sampling_does_not_cost_the_next_its_turn(
     assert (code, out) == (1, "")
     assert "refused: 42.edit-1.json: the sampling failed (permanent) -- rejected" in err
     assert [path.name for path in pending(group)] == ["42.edit-1.json"]
+
+
+class _RejectsTheFirst(RecordingComfyClient):
+    """A client that rejects the first graph it is sent and answers the rest."""
+
+    def submit(self, workflow: Workflow) -> str:
+        failure, self.rejects = self.rejects, None
+        if failure is not None:
+            raise failure
+        return super().submit(workflow)
+
+
+@pytest.mark.spec("edit:session:a-failed-sampling-costs-the-next-edit-nothing")
+def test_edit_pending_a_failed_sampling_costs_the_next_edit_nothing(
+    tmp_path: Path,
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    _ask(image, composite, seed=5)
+    _ask(image, composite, seed=6)
+    pod = _RejectsTheFirst(
+        rejects=TransportFailure("permanent", "rejected"),
+        view_bytes=_pod().view_bytes,
+    )
+
+    code, out, err = _pending(tmp_path, client=pod)
+
+    assert code == 1
+    assert (group / "42.edit-2.png").is_file()
+    assert not (group / "42.edit-1.png").exists()
+    assert [path.name for path in pending(group)] == ["42.edit-1.json"]
+    assert "refused: 42.edit-1.json: the sampling failed (permanent) -- rejected" in err
+
+
+@pytest.mark.spec("edit:session:a-chain-of-pending-edits-runs-in-order")
+def test_edit_pending_a_chain_is_checked_before_the_pod_without_its_first_image(
+    tmp_path: Path,
+) -> None:
+    group, image, composite = _scene(tmp_path)
+    _ask(image, composite)
+    first = group / "42.edit-1.png"
+    first.write_bytes(_png(_multiplied(_render(REQUEST_SIDE), 0.9)))
+    again = tmp_path / "again.png"
+    again.write_bytes(_png(_multiplied(_multiplied(_render(REQUEST_SIDE), 0.9), 0.5)))
+    _ask(first, again)
+    first.unlink()
+
+    code, out, err = _pending(tmp_path, client=_pod())
+
+    assert code == 1
+    assert first.is_file()
+    assert (
+        "refused: 42.edit-2.json: its source 42.edit-1.png has changed"
+        " since the request" in err
+    )
+    assert "cannot be read" not in err
 
 
 @pytest.mark.spec_exempt("structural: --progress json prints one line per sampled edit")

@@ -1138,7 +1138,7 @@ def _asked(
         photos = shlex.quote(str(runs.parent / COLLECTION_PHOTOS))
         raise Refusal(
             f"{runs} holds no run; open them from the collection's photographs with: "
-            f"uv run python -m isekai tag {' '.join(flows)} --runs "
+            f"uv run python -m isekai assign {' '.join(flows)} --runs "
             f"{shlex.quote(str(runs))} {photos}/*"
         )
     where = ("--runs", str(runs), *ids)

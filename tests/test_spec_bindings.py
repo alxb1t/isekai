@@ -465,8 +465,6 @@ BEHAVIOUR_EXEMPT = {
     "tests/test_render.py::"
     "test_a_request_of_another_shape_is_refused_into_the_log": _NONE_FITS,
     "tests/test_render.py::"
-    "test_a_port_that_already_answers_is_refused_before_the_session": _NONE_FITS,
-    "tests/test_render.py::"
     "test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down": (
         _RENDER_RECORD
     ),
@@ -477,7 +475,7 @@ BEHAVIOUR_EXEMPT = {
         "edit · An edit's time is estimated from its work"
     ),
 }
-BEHAVIOUR_CEILING = 22
+BEHAVIOUR_CEILING = 21
 
 
 def behaviour_faults(
