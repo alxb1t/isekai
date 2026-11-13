@@ -6,7 +6,7 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 
 - [x] 1 — The retry rule · moderate
 - [x] 2 — A run's names · moderate
-- [ ] 3 — The record's every end · moderate
+- [x] 3 — The record's every end · moderate
 - [ ] 4 — Every path removed · moderate
 - [ ] 5 — Rendered, where all agree · moderate
 - [ ] 6 — Refused, whole · moderate
@@ -37,15 +37,15 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 
 ## 3 — The record's every end
 
-- [ ] 3.1 **HALT CHECK** A lost create and a failed teardown end the record through `refuse`, as [D3](design.md#d3) says; if `refuse` does not end it, the plan is wrong.
+- [x] 3.1 **HALT CHECK** A lost create and a failed teardown end the record through `refuse`, as [D3](design.md#d3) says; if `refuse` does not end it, the plan is wrong.
   Verify: `git grep -c -F 'record.end("failed", message)' isekai/interface/render.py` prints `1`.
-- [ ] 3.2 In `tests/test_render.py` read the record back in `test_a_flow_that_raises_closes_the_session` and `test_a_sigterm_inside_the_session_closes_it_and_exits_143` with `(record,) = records(runs)`. Assert the rows of [D3](design.md#d3): `(record["outcome"], record["message"]) == ("failed", "a flow raised")` in the first and `== ("stopped", None)` in the second, and teardown `done` in both.
+- [x] 3.2 In `tests/test_render.py` read the record back in `test_a_flow_that_raises_closes_the_session` and `test_a_sigterm_inside_the_session_closes_it_and_exits_143` with `(record,) = records(runs)`. Assert the rows of [D3](design.md#d3): `(record["outcome"], record["message"]) == ("failed", "a flow raised")` in the first and `== ("stopped", None)` in the second, and teardown `done` in both.
   Verify: `git grep -c -F '== ("failed", "a flow raised")' tests/test_render.py` prints `1`.
-- [ ] 3.3 In `tests/test_render.py` read the record back in `test_the_ceiling_writes_its_refusal_and_ends_the_session_with_143` and `test_the_limits_retry_keeps_each_without`. Assert `record["outcome"] == "stopped"`, that `record["message"]` opens with `the session reached its` and that `record["message"].endswith("renders only the rest")`.
+- [x] 3.3 In `tests/test_render.py` read the record back in `test_the_ceiling_writes_its_refusal_and_ends_the_session_with_143` and `test_the_limits_retry_keeps_each_without`. Assert `record["outcome"] == "stopped"`, that `record["message"]` opens with `the session reached its` and that `record["message"].endswith("renders only the rest")`.
   Verify: `git grep -c -F 'endswith("renders only the rest")' tests/test_render.py` prints `2`.
-- [ ] 3.4 In `tests/test_render.py` read the records back in `test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down` with `lost, torn = records(runs)` and in `test_a_failed_body_is_named_beside_a_failed_teardown`. Assert `(lost["steps"]["pod"], lost["outcome"]) == ("lost", "failed")` with a message opening `the provider's answer was lost`, and for `torn` teardown `failed`, outcome `failed` and a message opening `the session's teardown failed`; each record has `ended` set. Keep both exemptions and add no key.
+- [x] 3.4 In `tests/test_render.py` read the records back in `test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down` with `lost, torn = records(runs)` and in `test_a_failed_body_is_named_beside_a_failed_teardown`. Assert `(lost["steps"]["pod"], lost["outcome"]) == ("lost", "failed")` with a message opening `the provider's answer was lost`, and for `torn` teardown `failed`, outcome `failed` and a message opening `the session's teardown failed`; each record has `ended` set. Keep both exemptions and add no key.
   Verify: `git grep -c -F '== ("lost", "failed")' tests/test_render.py` prints `1`.
-- [ ] 3.5 In `tests/test_edit_session.py` read `ended = json.loads(opened.read_text())` in `test_edit_render_a_session_may_hold_edits_alone` and assert `(ended["outcome"], ended["message"]) == ("done", None)`. In `test_edit_render_a_rejected_graph_fails_the_session_and_leaves_the_edit_pending` read `(held,) = (root.parent / SESSIONS).glob("*.json")` as `json.loads(held.read_text())` and assert `("failed", "a flow failed; the collection's log names it")`.
+- [x] 3.5 In `tests/test_edit_session.py` read `ended = json.loads(opened.read_text())` in `test_edit_render_a_session_may_hold_edits_alone` and assert `(ended["outcome"], ended["message"]) == ("done", None)`. In `test_edit_render_a_rejected_graph_fails_the_session_and_leaves_the_edit_pending` read `(held,) = (root.parent / SESSIONS).glob("*.json")` as `json.loads(held.read_text())` and assert `("failed", "a flow failed; the collection's log names it")`.
   Verify: `git grep -c -F "a flow failed; the collection's log names it" tests/test_edit_session.py` prints `1`.
 
 ## 4 — Every path removed

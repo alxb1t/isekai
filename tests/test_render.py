@@ -199,6 +199,9 @@ def test_a_flow_that_raises_closes_the_session(tmp_path: Path) -> None:
 
     assert (opener.opened, opener.closed) == (1, 1)
     assert isinstance(opener.ended, RuntimeError)
+    (record,) = records(runs)
+    assert (record["outcome"], record["message"]) == ("failed", "a flow raised")
+    assert record["steps"]["teardown"] == "done"
 
 
 @pytest.mark.spec("pod-image:session:every-exit-tears-down")
@@ -213,6 +216,9 @@ def test_a_sigterm_inside_the_session_closes_it_and_exits_143(tmp_path: Path) ->
 
     assert session(runs, f"{FLOW}=1", generate=Calls(signalled), opener=opener) == 143
     assert (opener.opened, opener.closed) == (1, 1)
+    (record,) = records(runs)
+    assert (record["outcome"], record["message"]) == ("stopped", None)
+    assert record["steps"]["teardown"] == "done"
 
 
 @pytest.mark.spec("pod-image:session:every-exit-tears-down")
@@ -449,6 +455,10 @@ def test_the_ceiling_writes_its_refusal_and_ends_the_session_with_143(
     assert (opener.opened, opener.closed) == (1, 1)
     assert f"refused: the session reached its {render.FLOOR_S}s limit" in log(runs)
     assert f"isekai render {runs} {FLOW}=1` renders only the rest" in log(runs)
+    (record,) = records(runs)
+    assert record["outcome"] == "stopped"
+    assert record["message"].startswith("the session reached its")
+    assert record["message"].endswith("renders only the rest")
 
 
 @pytest.mark.spec("pod-image:session:the-watchdog-ends-the-session")
@@ -795,6 +805,10 @@ def test_the_limits_retry_keeps_each_without(
 
     assert status == 143
     assert f"isekai render {root} --without {out}` renders only the rest" in log(root)
+    (record,) = records(root)
+    assert record["outcome"] == "stopped"
+    assert record["message"].startswith("the session reached its")
+    assert record["message"].endswith("renders only the rest")
 
 
 @pytest.mark.spec_exempt("structural: a session's line names its source after it")
@@ -890,6 +904,13 @@ def test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down(
         == 1
     )
     assert "run `uv run --env-file .env gpunit down`" in log(runs)
+    lost, torn = records(runs)
+    assert (lost["steps"]["pod"], lost["outcome"]) == ("lost", "failed")
+    assert lost["message"].startswith("the provider's answer was lost")
+    assert (torn["steps"]["teardown"], torn["outcome"]) == ("failed", "failed")
+    assert torn["message"].startswith("the session's teardown failed")
+    assert lost["ended"] is not None
+    assert torn["ended"] is not None
 
 
 @pytest.mark.spec_exempt("structural: gpunit's outcomes become the verb's exit")
@@ -908,6 +929,10 @@ def test_a_failed_body_is_named_beside_a_failed_teardown(tmp_path: Path) -> None
     written = log(runs)
     body = written.index("refused: the endpoint never answered")
     assert body < written.index("refused: the session's teardown failed")
+    (torn,) = records(runs)
+    assert (torn["steps"]["teardown"], torn["outcome"]) == ("failed", "failed")
+    assert torn["message"].startswith("the session's teardown failed")
+    assert torn["ended"] is not None
 
 
 @pytest.mark.spec("cli:refusals:refusal-names-the-remedy")

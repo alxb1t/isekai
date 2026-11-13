@@ -197,7 +197,9 @@ def test_edit_render_a_session_may_hold_edits_alone(
     assert "duration" in read(record, EDIT_FILE)
     # The session's own record is a render's: it plans no image for the edit.
     (opened,) = (root.parent / SESSIONS).glob("*.json")
-    assert json.loads(opened.read_text())["planned"] == []
+    ended = json.loads(opened.read_text())
+    assert ended["planned"] == []
+    assert (ended["outcome"], ended["message"]) == ("done", None)
 
 
 @pytest.mark.spec("edit:session:a-flow-taken-out-takes-its-edits-out")
@@ -284,6 +286,12 @@ def test_edit_render_a_rejected_graph_fails_the_session_and_leaves_the_edit_pend
     assert f"python -m isekai discard {_group(run) / '1.edit-1.png'}" in told
     assert not (_group(run) / "1.edit-1.png").exists()
     assert pending(_group(run)) == [record]
+    (held,) = (root.parent / SESSIONS).glob("*.json")
+    ended = json.loads(held.read_text())
+    assert (ended["outcome"], ended["message"]) == (
+        "failed",
+        "a flow failed; the collection's log names it",
+    )
 
 
 # --- the listings --------------------------------------------------------------

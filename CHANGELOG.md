@@ -19,6 +19,8 @@ its new digest.
   a time, so a refactor of the budget cannot turn a test green by accident (0133 D1).
 - A run's names are held at their bounds: the slug's alphabet and 32-character cut, the instruction record's file name
   outside the repository, and a runs root read with its folders, so a stray empty one fails a second pass (0133 D2).
+- A session's record is read back at every end: a raised flow, a SIGTERM, the limit's note, a failed flow, a done bake,
+  a lost create and a failed teardown, so a refactor of `Record` cannot change an outcome unseen (0133 D3).
 
 ## [0.86.5] - 2026-11-13
 
