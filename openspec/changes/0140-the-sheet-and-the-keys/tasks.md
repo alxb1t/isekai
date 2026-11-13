@@ -5,7 +5,7 @@ Phases that teach the replay vitest, hold the sheet's saves, the key dispatch an
 ## Progress
 
 - [x] 1 — The replay learns vitest · moderate
-- [ ] 2 — The sheet's saves · moderate
+- [x] 2 — The sheet's saves · moderate
 - [ ] 3 — Key dispatch and the chooser · moderate
 - [ ] 4 — Cancel approve after a read · hard
 - [ ] 5 — The mutants die · moderate
@@ -43,19 +43,19 @@ Phases that teach the replay vitest, hold the sheet's saves, the key dispatch an
 
 ## 2 — The sheet's saves
 
-- [ ] 2.1 **HALT CHECK** The save that fails restores its edit as [D3](design.md#d3) reads it; if the line reads otherwise, the plan is wrong.
+- [x] 2.1 **HALT CHECK** The save that fails restores its edit as [D3](design.md#d3) reads it; if the line reads otherwise, the plan is wrong.
   Verify: `git grep -c -h -F 'if (current === id && !superseded(id, mine)) dirty = true' ui/src/composables/useSheet.ts` prints `1`.
-- [ ] 2.2 In `ui/src/composables/useSheet.test.ts` add `spec('ui:save:a-lone-failed-save-is-sent-again', …)`: open `a` at `saved` 10, `commit('hair', 'brown hair', null)`, `const first = sheet.flush()`, `await refuse('/api/c/b/review/a/f/draft', 'a draft is not at that save')`, and assert `await first` is `false`. Then `const again = sheet.flush()`: one call, a PUT whose body has `fields.hair` `['long hair', 'brown hair']` and `saved` `10`; answer it with `receipt(11)` and assert `await again` is `true`.
+- [x] 2.2 In `ui/src/composables/useSheet.test.ts` add `spec('ui:save:a-lone-failed-save-is-sent-again', …)`: open `a` at `saved` 10, `commit('hair', 'brown hair', null)`, `const first = sheet.flush()`, `await refuse('/api/c/b/review/a/f/draft', 'a draft is not at that save')`, and assert `await first` is `false`. Then `const again = sheet.flush()`: one call, a PUT whose body has `fields.hair` `['long hair', 'brown hair']` and `saved` `10`; answer it with `receipt(11)` and assert `await again` is `true`.
   Verify: `git grep -c -h -F "a-lone-failed-save-is-sent-again" ui/src/composables/useSheet.test.ts` prints `1`.
-- [ ] 2.3 In `ui/src/composables/useSheet.test.ts` add `spec('ui:review:a-refused-save-is-shown', …)`: open `a`, commit, flush and refuse as 2.2 does, and assert `sheet.refusal.value` is `'a draft is not at that save'`. Commit `'short hair'`, flush, answer `receipt(11)`, and assert `sheet.refusal.value` is `null`.
+- [x] 2.3 In `ui/src/composables/useSheet.test.ts` add `spec('ui:review:a-refused-save-is-shown', …)`: open `a`, commit, flush and refuse as 2.2 does, and assert `sheet.refusal.value` is `'a draft is not at that save'`. Commit `'short hair'`, flush, answer `receipt(11)`, and assert `sheet.refusal.value` is `null`.
   Verify: `git grep -c -h -F "a-refused-save-is-shown" ui/src/composables/useSheet.test.ts` prints `1`.
-- [ ] 2.4 In `ui/src/composables/useSheet.test.ts` add `spec('ui:review:a-sheet-that-cannot-be-read-says-so', …)`: `const opened = sheet.open('a')`, `await refuse('/api/c/b/review/a/f', 'the sheet is damaged')`, `await opened`; assert `sheet.refusal.value` is `'the sheet is damaged'`, `sheet.loading.value` is `false` and `sheet.detail.value` is `null`.
+- [x] 2.4 In `ui/src/composables/useSheet.test.ts` add `spec('ui:review:a-sheet-that-cannot-be-read-says-so', …)`: `const opened = sheet.open('a')`, `await refuse('/api/c/b/review/a/f', 'the sheet is damaged')`, `await opened`; assert `sheet.refusal.value` is `'the sheet is damaged'`, `sheet.loading.value` is `false` and `sheet.detail.value` is `null`.
   Verify: `git grep -c -h -F "a-sheet-that-cannot-be-read-says-so" ui/src/composables/useSheet.test.ts` prints `1`.
-- [ ] 2.5 In `ui/src/composables/useSheet.test.ts` add `spec('ui:save:a-burst-of-edits-is-one-save', …)`: open `a`; `commit('hair', 'brown hair', null)`, `advanceTimersByTimeAsync(100)`, `commit('hair', 'short hair', null)`, `advanceTimersByTimeAsync(100)`, `commit('hair', 'curly hair', null)`, `advanceTimersByTimeAsync(399)`; assert `calls` is empty. Advance `1`: one PUT whose `fields.hair` is `['long hair', 'brown hair', 'short hair', 'curly hair']`.
+- [x] 2.5 In `ui/src/composables/useSheet.test.ts` add `spec('ui:save:a-burst-of-edits-is-one-save', …)`: open `a`; `commit('hair', 'brown hair', null)`, `advanceTimersByTimeAsync(100)`, `commit('hair', 'short hair', null)`, `advanceTimersByTimeAsync(100)`, `commit('hair', 'curly hair', null)`, `advanceTimersByTimeAsync(399)`; assert `calls` is empty. Advance `1`: one PUT whose `fields.hair` is `['long hair', 'brown hair', 'short hair', 'curly hair']`.
   Verify: `git grep -c -h -F "a-burst-of-edits-is-one-save" ui/src/composables/useSheet.test.ts` prints `1`.
-- [ ] 2.6 The phase's file agrees with the keys.
+- [x] 2.6 The phase's file agrees with the keys.
   Verify: `uv run python -m tools.test_ui` exits `0`.
-- [ ] 2.7 Each key a test names is one the living spec or this change's delta holds.
+- [x] 2.7 Each key a test names is one the living spec or this change's delta holds.
   Verify: `uv run pytest tests/test_spec_bindings.py` passes.
 
 ## 3 — Key dispatch and the chooser
