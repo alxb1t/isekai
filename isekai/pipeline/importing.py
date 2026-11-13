@@ -504,12 +504,27 @@ def commit(
             )
         build = staging / _BUILD / SOURCES
         build.mkdir(parents=True)
-        for path in taking:
-            path.rename(build / path.name)
-        os.rename(build.parent, collection)
+        try:
+            for path in taking:
+                path.rename(build / path.name)
+            os.rename(build.parent, collection)
+        except BaseException:
+            _put_back(build, staging)
+            if collection.exists():
+                raise Refusal(
+                    f"{name}: a folder of that name is in the library; pick another"
+                ) from None
+            raise
         written, skipped = tuple(path.name for path in taking), ()
     cancel(staging)
     return Committed(collection, written, skipped, left_out)
+
+
+def _put_back(build: Path, staging: Path) -> None:
+    """Move each file in `build` back into `staging`, and delete `build`'s folder."""
+    for path in build.iterdir():
+        path.rename(staging / path.name)
+    shutil.rmtree(build.parent)
 
 
 def cancel(staging: Path) -> None:

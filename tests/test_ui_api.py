@@ -3170,6 +3170,31 @@ def test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn(
     assert inside[1] == 1
 
 
+@pytest.mark.spec("import:stage:a-failed-move-puts-the-files-back")
+def test_a_commit_whose_name_is_taken_as_it_lands_is_refused_and_the_files_stay_staged(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    feed = _broadcast(client).subscribe()
+    staged = client.post("/api/staging").json()["id"]
+    _, photo = _upload(client, staged, "a.jpg", photo_jpeg((200, 0, 0), (40, 30)))
+    (read,) = _until_read(feed, staged, {photo["upload"]})[-1:]
+    real = os.rename
+
+    def taken_first(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> None:
+        if Path(src).name == ".collection":
+            (tmp_path / "lib" / "trip").mkdir()
+            (tmp_path / "lib" / "trip" / "x").write_bytes(b"rival")
+        real(src, dst)
+
+    monkeypatch.setattr(importing_module.os, "rename", taken_first)
+
+    refused = client.post(f"/api/staging/{staged}/commit", json={"collection": "trip"})
+
+    assert refused.status_code == 409
+    assert "a folder of that name is in the library" in refused.json()["refusal"]
+    assert client.get(f"/api/staging/{staged}/files/{read['name']}").status_code == 200
+
+
 @pytest.mark.spec("ui:sheet:the-stream-reports-each-files-reading")
 def test_the_imports_stream_reports_a_file_waiting_converting_then_converted(
     client: TestClient, monkeypatch: pytest.MonkeyPatch

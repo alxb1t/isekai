@@ -7,7 +7,7 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 - [x] 1 — The budget and the warning · moderate
 - [x] 2 — An approval is never replaced · moderate
 - [x] 3 — What the reader is sent · moderate
-- [ ] 4 — The seal and the commit · hard
+- [x] 4 — The seal and the commit · hard
 - [ ] 5 — The kinds · moderate
 - [ ] 6 — The mutants die · moderate
 
@@ -64,25 +64,25 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 
 ## 4 — The seal and the commit
 
-- [ ] 4.1 **HALT CHECK** The seal refuses on a file that is unread at the line the mutant `PA-14` names; if it reads otherwise, the plan is wrong.
+- [x] 4.1 **HALT CHECK** The seal refuses on a file that is unread at the line the mutant `PA-14` names; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'if unread:' isekai/pipeline/importing.py` prints `1`.
-- [ ] 4.2 **HALT CHECK** The final move is one `os.rename` of the dot folder, the line [D7](design.md#d7) wraps; if it reads otherwise, the plan is wrong.
+- [x] 4.2 **HALT CHECK** The final move is one `os.rename` of the dot folder, the line [D7](design.md#d7) wraps; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'os.rename(build.parent, collection)' isekai/pipeline/importing.py` prints `1`.
-- [ ] 4.3 In `tests/test_importing.py` add `test_a_commit_asked_while_a_file_is_unread_is_refused_and_lands_once_it_is_read`, carrying `import:stage:a-commit-waits-for-every-file-to-be-read`. It builds `importing.Imports(library, LIMIT, publish)` as `test_a_staged_file_is_removed_alone_and_never_once_sealed` does, patches `importing._clean` with a function that waits on an `Event` up to ten seconds and then calls the real one, and puts `a.jpg`. `imports.commit(staged, "trip")` raises `Refusal` matching `0 of 1 files are read`; the event is set in a `finally`, the read is waited for, and the same commit lands `a.jpg` in `trip/sources`.
+- [x] 4.3 In `tests/test_importing.py` add `test_a_commit_asked_while_a_file_is_unread_is_refused_and_lands_once_it_is_read`, carrying `import:stage:a-commit-waits-for-every-file-to-be-read`. It builds `importing.Imports(library, LIMIT, publish)` as `test_a_staged_file_is_removed_alone_and_never_once_sealed` does, patches `importing._clean` with a function that waits on an `Event` up to ten seconds and then calls the real one, and puts `a.jpg`. `imports.commit(staged, "trip")` raises `Refusal` matching `0 of 1 files are read`; the event is set in a `finally`, the read is waited for, and the same commit lands `a.jpg` in `trip/sources`.
   Verify: `uv run pytest tests/test_importing.py::test_a_commit_asked_while_a_file_is_unread_is_refused_and_lands_once_it_is_read` passes.
-- [ ] 4.4 In `tests/test_importing.py` add `test_a_refused_commit_leaves_the_import_open_for_another_file`, carrying `import:stage:a-refused-commit-leaves-the-import-open`. After `a.jpg` is read, `(library / "taken").mkdir()` and `imports.commit(staged, "taken")` refuses; `reader.put("b.jpg", ...)` is accepted and read; `imports.commit(staged, "free").written` is `("a.jpg", "b.jpg")`.
+- [x] 4.4 In `tests/test_importing.py` add `test_a_refused_commit_leaves_the_import_open_for_another_file`, carrying `import:stage:a-refused-commit-leaves-the-import-open`. After `a.jpg` is read, `(library / "taken").mkdir()` and `imports.commit(staged, "taken")` refuses; `reader.put("b.jpg", ...)` is accepted and read; `imports.commit(staged, "free").written` is `("a.jpg", "b.jpg")`.
   Verify: `uv run pytest tests/test_importing.py::test_a_refused_commit_leaves_the_import_open_for_another_file` passes.
-- [ ] 4.5 In `tests/test_importing.py` extend `test_an_unusable_collection_name_is_refused_and_staging_kept` in place: its parameters become `(name, message)` pairs, `("taken", "a folder of that name")` and, for `""`, `"a/b"` and `".hidden"`, `"not a collection name"`, and its `pytest.raises(Refusal)` takes `match=message`.
+- [x] 4.5 In `tests/test_importing.py` extend `test_an_unusable_collection_name_is_refused_and_staging_kept` in place: its parameters become `(name, message)` pairs, `("taken", "a folder of that name")` and, for `""`, `"a/b"` and `".hidden"`, `"not a collection name"`, and its `pytest.raises(Refusal)` takes `match=message`.
   Verify: `git grep -c -F 'match=message' tests/test_importing.py` prints `1`.
-- [ ] 4.6 In `isekai/pipeline/importing.py` write [D7](design.md#d7): the `try` around the file moves and the final rename in `commit`, and `_put_back` beside `cancel`.
+- [x] 4.6 In `isekai/pipeline/importing.py` write [D7](design.md#d7): the `try` around the file moves and the final rename in `commit`, and `_put_back` beside `cancel`.
   Verify: `git grep -c -F '_put_back(build, staging)' isekai/pipeline/importing.py` prints `1`.
-- [ ] 4.7 In `tests/test_importing.py` add `test_a_move_that_fails_puts_the_files_back`, carrying `import:stage:a-failed-move-puts-the-files-back`, parametrized over the names `.collection` and `b.jpg`. It stages `a.jpg` and `b.jpg` with `stage` and `read`, captures `real = os.rename`, and patches `importing.os.rename` with a function that raises `PermissionError(13, "denied")` when `Path(src).name` is the parameter and otherwise calls `real`. `commit(staging, library, "trip")` raises `PermissionError`; the staging folder lists `a.jpg` and `b.jpg` alone and `library / "trip"` is absent. The test restores `real`, and the same commit then writes `("a.jpg", "b.jpg")`.
+- [x] 4.7 In `tests/test_importing.py` add `test_a_move_that_fails_puts_the_files_back`, carrying `import:stage:a-failed-move-puts-the-files-back`, parametrized over the names `.collection` and `b.jpg`. It stages `a.jpg` and `b.jpg` with `stage` and `read`, captures `real = os.rename`, and patches `importing.os.rename` with a function that raises `PermissionError(13, "denied")` when `Path(src).name` is the parameter and otherwise calls `real`. `commit(staging, library, "trip")` raises `PermissionError`; the staging folder lists `a.jpg` and `b.jpg` alone and `library / "trip"` is absent. The test restores `real`, and the same commit then writes `("a.jpg", "b.jpg")`.
   Verify: `uv run pytest tests/test_importing.py::test_a_move_that_fails_puts_the_files_back` passes.
-- [ ] 4.8 In `tests/test_importing.py` add `test_a_name_taken_as_the_move_lands_is_refused_and_the_files_stay`, carrying the key of 4.7 and `import:stage:an-unusable-name-is-refused`. The patched `os.rename` makes `trip` with a file `x` holding `b"rival"` and then calls `real`, when `Path(src).name` is `.collection`. `commit` raises `Refusal` matching `trip: a folder of that name is in the library; pick another`; the staging folder lists `a.jpg` and `b.jpg` alone, `x` still holds `b"rival"`, and with `real` restored a commit under `trip2` writes both files.
+- [x] 4.8 In `tests/test_importing.py` add `test_a_name_taken_as_the_move_lands_is_refused_and_the_files_stay`, carrying the key of 4.7 and `import:stage:an-unusable-name-is-refused`. The patched `os.rename` makes `trip` with a file `x` holding `b"rival"` and then calls `real`, when `Path(src).name` is `.collection`. `commit` raises `Refusal` matching `trip: a folder of that name is in the library; pick another`; the staging folder lists `a.jpg` and `b.jpg` alone, `x` still holds `b"rival"`, and with `real` restored a commit under `trip2` writes both files.
   Verify: `uv run pytest tests/test_importing.py::test_a_name_taken_as_the_move_lands_is_refused_and_the_files_stay` passes.
-- [ ] 4.9 In `tests/test_ui_api.py` add `test_a_commit_whose_name_is_taken_as_it_lands_is_refused_and_the_files_stay_staged`, carrying the key of 4.7. It opens a staging, uploads one photograph and waits until it is read, as `test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn` does, and then patches `importing_module.os.rename` as 4.8 does. The commit post `{"collection": "trip"}` answers `409` holding `a folder of that name is in the library`, and `GET /api/staging/{staged}/files/{name}` still answers `200`.
+- [x] 4.9 In `tests/test_ui_api.py` add `test_a_commit_whose_name_is_taken_as_it_lands_is_refused_and_the_files_stay_staged`, carrying the key of 4.7. It opens a staging, uploads one photograph and waits until it is read, as `test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn` does, and then patches `importing_module.os.rename` as 4.8 does. The commit post `{"collection": "trip"}` answers `409` holding `a folder of that name is in the library`, and `GET /api/staging/{staged}/files/{name}` still answers `200`.
   Verify: `uv run pytest tests/test_ui_api.py::test_a_commit_whose_name_is_taken_as_it_lands_is_refused_and_the_files_stay_staged` passes.
-- [ ] 4.10 The phase's files agree with the keys.
+- [x] 4.10 The phase's files agree with the keys.
   Verify: `uv run pytest tests/test_importing.py tests/test_ui_api.py` passes.
 
 ## 5 — The kinds

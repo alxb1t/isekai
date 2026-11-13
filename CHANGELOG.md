@@ -42,6 +42,9 @@ its new digest.
   inside the publish is refused and its bytes stay (0138 D4).
 - Tests hold the open reader's prompt, the briefing stripped with one newline, on the adapter's body and on the
   request the stage sends (0138 D5).
+- A commit whose move fails puts the photographs back in the staging folder, and a name taken as the move lands is
+  refused as a taken name; tests hold the seal while a file is unread, the unseal after a refusal and the empty
+  name's message (0138 D6, D7).
 
 ## [0.86.9] - 2026-11-13
 
