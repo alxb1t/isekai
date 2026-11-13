@@ -20,6 +20,8 @@ its new digest.
   outside the gate, so each fix stays proven by the test that kills its mutant (0135 D4, D5).
 - A discard beside another draft's source copy and a damaged sheet, tag list or approval read by the hub each have a
   test, and their mutants, `PB-14` and `UB-14`, join `tests/mutants.json` (0135 D6).
+- The patch scanner of `tests/test_ratchets.py` binds each patched name by the imports of its own function, so a local
+  alias another test reuses hides no patched module from the ratchet (0135 D7).
 
 ## [0.86.8] - 2026-11-13
 

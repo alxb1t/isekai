@@ -8,7 +8,7 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 - [x] 2 — The replay · hard
 - [x] 3 — The audit's mutants · moderate
 - [x] 4 — The two left · moderate
-- [ ] 5 — The scanner · hard
+- [x] 5 — The scanner · hard
 - [ ] 6 — The prose · moderate
 
 ## 1 — The runner holds
@@ -83,13 +83,13 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 
 ## 5 — The scanner
 
-- [ ] 5.1 **HALT CHECK** `resolved_patches` builds one alias map for a whole test file, as [D7](design.md#d7) says; if it does not, the plan is wrong.
+- [x] 5.1 **HALT CHECK** `resolved_patches` builds one alias map for a whole test file, as [D7](design.md#d7) says; if it does not, the plan is wrong.
   Verify: `git grep -c -F 'bound = _bound_modules(root, tree, packages)' tests/test_ratchets.py` prints `1`.
-- [ ] 5.2 In `tests/test_ratchets.py` make `resolved_patches` and `_patches` bind each `setattr` target by its lexical scope as [D7](design.md#d7) says: the imports a function makes extend those of its enclosing scope, and reach no sibling function and not the module. `_bound_modules` stays, for `names_read`.
+- [x] 5.2 In `tests/test_ratchets.py` make `resolved_patches` and `_patches` bind each `setattr` target by its lexical scope as [D7](design.md#d7) says: the imports a function makes extend those of its enclosing scope, and reach no sibling function and not the module. `_bound_modules` stays, for `names_read`.
   Verify: `uv run pytest tests/test_ratchets.py` passes.
-- [ ] 5.3 In `tests/test_ratchets.py` add `test_a_reused_local_alias_hides_no_patched_module`, its twin: the modules `isekai.shared.fields`, binding `validate`, and `isekai.shared.ink`, binding `extract_ink`, are written under `tmp_path`. One test file imports `fields` at module level, and has a function that imports `fields as subject` and patches `subject.validate`, one that imports `ink as subject` and patches `subject.extract_ink`, one that patches `fields.validate` through the module-level import, and one that imports `ink as fields` and patches `fields.extract_ink`. Assert `patched_modules(tmp_path) == {"isekai.shared.fields": 2, "isekai.shared.ink": 2}`; the file-wide map reports `isekai.shared.ink` alone. It carries `@pytest.mark.spec_exempt("structural: twin of test_no_patched_module_is_unlisted")`.
+- [x] 5.3 In `tests/test_ratchets.py` add `test_a_reused_local_alias_hides_no_patched_module`, its twin: the modules `isekai.shared.fields`, binding `validate`, and `isekai.shared.ink`, binding `extract_ink`, are written under `tmp_path`. One test file imports `fields` at module level, and has a function that imports `fields as subject` and patches `subject.validate`, one that imports `ink as subject` and patches `subject.extract_ink`, one that patches `fields.validate` through the module-level import, and one that imports `ink as fields` and patches `fields.extract_ink`. Assert `patched_modules(tmp_path) == {"isekai.shared.fields": 2, "isekai.shared.ink": 2}`; the file-wide map reports `isekai.shared.ink` alone. It carries `@pytest.mark.spec_exempt("structural: twin of test_no_patched_module_is_unlisted")`.
   Verify: `uv run pytest tests/test_ratchets.py::test_a_reused_local_alias_hides_no_patched_module` passes.
-- [ ] 5.4 **HALT CHECK** The scope reads no patch the file-wide map hid in the repository's own tests: `PATCHED_MODULES` gains no row. If this test names an unlisted module, the plan is wrong.
+- [x] 5.4 **HALT CHECK** The scope reads no patch the file-wide map hid in the repository's own tests: `PATCHED_MODULES` gains no row. If this test names an unlisted module, the plan is wrong.
   Verify: `uv run pytest tests/test_ratchets.py::test_no_patched_module_is_unlisted` passes.
 
 ## 6 — The prose
