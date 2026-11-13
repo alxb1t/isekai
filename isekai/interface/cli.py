@@ -1369,6 +1369,7 @@ def _per_item(
                         flows[name].schema,
                         vocabulary(),
                         excluded=field_map().excluded,
+                        definition=flows[name],
                     )
                     if args.source is None
                     else approve_across(

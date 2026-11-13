@@ -326,5 +326,157 @@
     "replace": "        if job is not None:",
     "tests": ["tests/test_ui_jobs.py"],
     "why": "a job that has ended must not refuse the next job of its kind"
+  },
+  {
+    "finding": "PB-1a",
+    "path": "isekai/pipeline/review.py",
+    "find": "    total = len(positive.split()) + positive.count(separator) + 2\n",
+    "replace": "    total = len(positive.split()) + positive.count(separator) + 3\n",
+    "tests": ["tests/test_review.py"],
+    "why": "the budget's total is a literal, so one token over the encoder's own two is seen"
+  },
+  {
+    "finding": "PB-1b",
+    "path": "isekai/pipeline/review.py",
+    "find": "        per_field[name] = sum(len(tag.split()) for tag in tags) + len(tags)\n",
+    "replace": "        per_field[name] = sum(len(tag.split()) for tag in tags) + 2 * len(tags)\n",
+    "tests": ["tests/test_review.py"],
+    "why": "a field's share is a literal, and the overhead no longer absorbs its error"
+  },
+  {
+    "finding": "PB-2",
+    "path": "isekai/pipeline/review.py",
+    "find": "        else token_budget(fields, schema, definition).total\n",
+    "replace": "        else estimate_tokens(fields, schema)\n",
+    "tests": ["tests/test_review.py"],
+    "why": "a sheet inside the window by its tags and past it assembled must warn"
+  },
+  {
+    "finding": "PB-2b",
+    "path": "isekai/interface/cli.py",
+    "find": "                        definition=flows[name],\n",
+    "replace": "                        definition=None,\n",
+    "tests": ["tests/test_pipeline_cli.py"],
+    "why": "the approve verb must hand the flow on, or its warning counts the tags alone"
+  },
+  {
+    "finding": "PB-2c",
+    "path": "isekai/interface/ui/app.py",
+    "find": "                definition=one.flow,\n",
+    "replace": "                definition=None,\n",
+    "tests": ["tests/test_ui_api.py"],
+    "why": "the approve route must hand the flow on, or its warning counts the tags alone"
+  },
+  {
+    "finding": "PB-3a",
+    "path": "isekai/pipeline/review.py",
+    "find": "        create(path, APPROVED_FILE, body)\n",
+    "replace": "        write(path, APPROVED_FILE, body)\n",
+    "tests": ["tests/test_review.py"],
+    "why": "an approval published by a replace overwrites one that landed first"
+  },
+  {
+    "finding": "PB-3b",
+    "path": "isekai/pipeline/review.py",
+    "find": "    except FileExistsError:\n",
+    "replace": "    except FileNotFoundError:\n",
+    "tests": ["tests/test_review.py"],
+    "why": "a taken number must be refused with the approval's sentence, not raised as the bare error"
+  },
+  {
+    "finding": "PA-6",
+    "path": "isekai/pipeline/caption.py",
+    "find": "        return f\"{briefing.rstrip()}\\n\"",
+    "replace": "        return f\"{briefing.rstrip()}\\nFill every schema field: hair_colour, eye_colour, marks.\\n\"",
+    "tests": ["tests/test_caption.py"],
+    "why": "the open reader is sent the briefing alone: a field list sent to it makes it invent"
+  },
+  {
+    "finding": "PA-14",
+    "path": "isekai/pipeline/importing.py",
+    "find": "            if unread:\n",
+    "replace": "            if False:\n",
+    "tests": ["tests/test_importing.py"],
+    "why": "a commit asked while a file is unread must be refused, or it walks a folder mid-write"
+  },
+  {
+    "finding": "PA-15",
+    "path": "isekai/pipeline/importing.py",
+    "find": "        except BaseException:\n            reader.unseal()\n            raise",
+    "replace": "        except BaseException:\n            raise",
+    "tests": ["tests/test_importing.py"],
+    "why": "a refused commit must leave the import open, or the sheet is stuck sealed"
+  },
+  {
+    "finding": "PA-16a",
+    "path": "isekai/pipeline/importing.py",
+    "find": "            _put_back(build, staging)\n",
+    "replace": "            pass\n",
+    "tests": ["tests/test_importing.py"],
+    "why": "a failed final move must put the photographs back, or a retry skips them in the dot folder"
+  },
+  {
+    "finding": "PA-16b",
+    "path": "isekai/pipeline/importing.py",
+    "find": "            if collection.exists():\n",
+    "replace": "            if False:\n",
+    "tests": ["tests/test_importing.py"],
+    "why": "a name taken as the move lands must be refused as a taken name, not raised as the bare error"
+  },
+  {
+    "finding": "PA-17a",
+    "path": "isekai/pipeline/importing.py",
+    "find": "        if image.format != \"MPO\" and getattr(image, \"n_frames\", 1) > 1:",
+    "replace": "        if getattr(image, \"n_frames\", 1) > 1:",
+    "tests": ["tests/test_importing.py"],
+    "why": "a phone JPEG with a gain map holds one photograph, and must not be refused as many"
+  },
+  {
+    "finding": "PA-17b",
+    "path": "isekai/pipeline/importing.py",
+    "find": "    if image.format in (\"JPEG\", \"MPO\", \"PNG\") and _is_srgb(image, file.name):",
+    "replace": "    if image.format in (\"JPEG\", \"PNG\") and _is_srgb(image, file.name):",
+    "tests": ["tests/test_importing.py"],
+    "why": "an MPO in sRGB is stripped without re-encoding, like the JPEG it is"
+  },
+  {
+    "finding": "PA-18a",
+    "path": "isekai/pipeline/importing.py",
+    "find": "    if head[8:10] == b\"CR\":\n",
+    "replace": "    if head[8:10] == b\"cr\":\n",
+    "tests": ["tests/test_importing.py"],
+    "why": "a Canon CR2 is refused as RAW by its header"
+  },
+  {
+    "finding": "PA-18b",
+    "path": "isekai/pipeline/importing.py",
+    "find": "            if tag == _DNG_VERSION_TAG:\n",
+    "replace": "            if tag == _MAKE_TAG:\n",
+    "tests": ["tests/test_importing.py"],
+    "why": "a DNG is refused as RAW by its version tag"
+  },
+  {
+    "finding": "PA-18c",
+    "path": "isekai/pipeline/importing.py",
+    "find": "_RAW_MAKES = ((b\"NIKON\", \"NEF\"), (b\"SONY\", \"ARW\"))\n",
+    "replace": "_RAW_MAKES = ((b\"NIKON\", \"NEF\"),)\n",
+    "tests": ["tests/test_importing.py"],
+    "why": "a Sony ARW is refused as RAW by its make"
+  },
+  {
+    "finding": "PA-18d",
+    "path": "isekai/pipeline/importing.py",
+    "find": "    except struct.error:\n        return None\n",
+    "replace": "    except struct.error:\n        return \"NEF\"\n",
+    "tests": ["tests/test_importing.py"],
+    "why": "a TIFF whose header is cut is no RAW photograph; it is refused as not decoding"
+  },
+  {
+    "finding": "PA-19",
+    "path": "isekai/pipeline/importing.py",
+    "find": "    if not name or \"/\" in name or name.startswith(\".\"):",
+    "replace": "    if \"/\" in name or name.startswith(\".\"):",
+    "tests": ["tests/test_importing.py"],
+    "why": "an empty collection name is refused by its own rule, which names it, not as a taken folder"
   }
 ]
