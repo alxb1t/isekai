@@ -160,13 +160,14 @@ Every case is a unit test: no browser, no end-to-end test is added, and none run
 | `PB-16` | `isekai/interface/cli.py:943` | `tests/test_edit.py` |
 | `RE-1` | `isekai/interface/render.py:679` | `tests/test_render.py` |
 
-The tests deleted, each mapped to the test that carries its assertions and its scenario key:
+The tests deleted or renamed, each mapped to the test that carries its assertions and its scenario key; a rename keeps the body and the key, and changes the name alone:
 
 | deleted test | carried by | key it carries |
 |---|---|---|
 | `tests/test_generate.py::test_one_bad_sheet_does_not_stop_the_other_photographs` | `tests/test_generate.py::test_one_batch_survives_a_bad_sheet_an_unreadable_header_and_a_photograph_past_the_bound` | `image-generation:assembly:bad-sheet-fails-before-the-session` |
 | `tests/test_generate.py::test_one_unreadable_header_does_not_cost_the_batch_its_turn` | the same | `run-directory:budget:one-failure-does-not-halt-the-batch` |
 | `tests/test_generate.py::test_one_photograph_past_the_bound_does_not_cost_the_batch_its_session` | the same | `image-generation:working-resolution:a-refusal-is-per-photograph` |
+| `tests/test_edit.py::test_edit_pending_a_failed_sampling_does_not_cost_the_next_its_turn` (renamed) | `tests/test_edit.py::test_edit_pending_a_failed_sampling_leaves_its_request_pending` | `edit:session:a-failed-sampling-leaves-the-request-pending` |
 
 ## Dependencies
 
