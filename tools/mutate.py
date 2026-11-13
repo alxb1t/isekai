@@ -29,7 +29,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 OPERATORS = ("cmp", "bool", "not", "const", "raise", "ret", "call", "arith")
 
-LINKED = ("models", "ui/node_modules", "ui/dist")
+LINKED = ("models",)
 
 VERDICTS = ("killed", "survived", "invalid", "timeout")
 
@@ -273,15 +273,28 @@ def tracked_files(root: Path) -> list[str]:
 
 
 def copy_tree(root: Path, into: Path) -> None:
-    """Copy each tracked file of `root` that exists into `into`, and link `LINKED`.
+    """Copy each tracked file of `root` that exists into `into` as a git repository.
 
     A file is copied by content, so a mutant never writes through a link into `root`.
+    The copy is then made a git repository and `models` is linked, so a test that
+    writes under `models/` writes through the link and is a test to isolate.
     """
     for name in tracked_files(root):
         source = root / name
         if source.is_file():
             (into / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, into / name)
+    try:
+        subprocess.run(
+            ["git", "-C", str(into), "init", "-q"], capture_output=True, check=True
+        )
+        subprocess.run(
+            ["git", "-C", str(into), "add", "-A", "-f"],
+            capture_output=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as failure:
+        raise Refused(f"{into} cannot be made a git repository") from failure
     for name in LINKED:
         source = root / name
         if source.is_dir() and not (into / name).exists():

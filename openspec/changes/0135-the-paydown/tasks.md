@@ -4,7 +4,7 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 
 ## Progress
 
-- [ ] 1 — The runner holds · moderate
+- [x] 1 — The runner holds · moderate
 - [ ] 2 — The replay · hard
 - [ ] 3 — The audit's mutants · moderate
 - [ ] 4 — The two left · moderate
@@ -13,17 +13,17 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 
 ## 1 — The runner holds
 
-- [ ] 1.1 **HALT CHECK** The runner links `models`, `ui/node_modules` and `ui/dist` today, as [D1](design.md#d1) says; if `LINKED` already differs, the plan is wrong.
+- [x] 1.1 **HALT CHECK** The runner links `models`, `ui/node_modules` and `ui/dist` today, as [D1](design.md#d1) says; if `LINKED` already differs, the plan is wrong.
   Verify: `git grep -c -F 'LINKED = ("models", "ui/node_modules", "ui/dist")' tools/mutate.py` prints `1`.
-- [ ] 1.2 In `tools/mutate.py` set `LINKED = ("models",)`, and rewrite the `copy_tree` docstring to say it copies each tracked file that exists, makes the copy a git repository, then links `models`, so a test that writes under `models/` writes through the link and is a test to isolate.
+- [x] 1.2 In `tools/mutate.py` set `LINKED = ("models",)`, and rewrite the `copy_tree` docstring to say it copies each tracked file that exists, makes the copy a git repository, then links `models`, so a test that writes under `models/` writes through the link and is a test to isolate.
   Verify: `git grep -c -F 'LINKED = ("models",)' tools/mutate.py` prints `1`.
-- [ ] 1.3 In `copy_tree`, after the copy loop and before the links, run `["git", "-C", str(into), "init", "-q"]` and `["git", "-C", str(into), "add", "-A", "-f"]` each with `subprocess.run(..., capture_output=True, check=True)`. A `CalledProcessError` raises `Refused` naming the copy, as [D1](design.md#d1) says.
+- [x] 1.3 In `copy_tree`, after the copy loop and before the links, run `["git", "-C", str(into), "init", "-q"]` and `["git", "-C", str(into), "add", "-A", "-f"]` each with `subprocess.run(..., capture_output=True, check=True)`. A `CalledProcessError` raises `Refused` naming the copy, as [D1](design.md#d1) says.
   Verify: `git grep -c -F -e '"init"' tools/mutate.py` prints `1`.
-- [ ] 1.4 In `tests/test_mutate.py` extend `test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones`, keeping its name. Write untracked `ui/dist/app.js` and `ui/node_modules/m.js` into the repository first. After `copy_tree` assert `not (copy / "ui").exists()` and that `git -C <copy> ls-files` lists the repository's test file and no `models` path. Change its exemption reason to `structural: a copy is a repository of the tracked files that exist and links models alone`.
+- [x] 1.4 In `tests/test_mutate.py` extend `test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones`, keeping its name. Write untracked `ui/dist/app.js` and `ui/node_modules/m.js` into the repository first. After `copy_tree` assert `not (copy / "ui").exists()` and that `git -C <copy> ls-files` lists the repository's test file and no `models` path. Change its exemption reason to `structural: a copy is a repository of the tracked files that exist and links models alone`.
   Verify: `uv run pytest tests/test_mutate.py::test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones` passes.
-- [ ] 1.5 In `tests/test_mutate.py` add `test_a_survivor_that_outlasts_the_timeout_is_a_survivor`: `main` over `small_repo` with `calc.py:{LABEL_LINE}`, `--tests tests/test_calc.py` and `--timeout 0.1`, which pytest's own start outlasts. Assert exit 1, `survived calc.py:6 const: ...` among the printed lines, and no printed line beginning `timeout`. It carries `@pytest.mark.spec_exempt("structural: a survivor that outlasts --timeout is reported as one")`; it fails with the `timeout = mutant_timeout(...)` line of `run_mutants` removed, as [D2](design.md#d2) says.
+- [x] 1.5 In `tests/test_mutate.py` add `test_a_survivor_that_outlasts_the_timeout_is_a_survivor`: `main` over `small_repo` with `calc.py:{LABEL_LINE}`, `--tests tests/test_calc.py` and `--timeout 0.1`, which pytest's own start outlasts. Assert exit 1, `survived calc.py:6 const: ...` among the printed lines, and no printed line beginning `timeout`. It carries `@pytest.mark.spec_exempt("structural: a survivor that outlasts --timeout is reported as one")`; it fails with the `timeout = mutant_timeout(...)` line of `run_mutants` removed, as [D2](design.md#d2) says.
   Verify: `uv run pytest tests/test_mutate.py::test_a_survivor_that_outlasts_the_timeout_is_a_survivor` passes.
-- [ ] 1.6 In `CONTRIBUTING.md`, in the paragraph on the pre-flight, add the sentence: "The run works in a copy that is a git repository of the tracked files and links `models/` alone, so a test that writes under `models/` writes through to the checkout: isolate it." Wrap the paragraph at its width and keep the words `links `models/` alone` on one line.
+- [x] 1.6 In `CONTRIBUTING.md`, in the paragraph on the pre-flight, add the sentence: "The run works in a copy that is a git repository of the tracked files and links `models/` alone, so a test that writes under `models/` writes through to the checkout: isolate it." Wrap the paragraph at its width and keep the words `links `models/` alone` on one line.
   Verify: `git grep -c -E 'models/. alone' CONTRIBUTING.md` prints `1`.
 
 ## 2 — The replay

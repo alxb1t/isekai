@@ -152,13 +152,18 @@ def small_repo(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 @pytest.mark.spec_exempt(
-    "structural: a copy holds the tracked files that exist and links the ignored ones"
+    "structural: a copy is a repository of the tracked files that exist "
+    "and links models alone"
 )
 def test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones(
     tmp_path: Path,
 ) -> None:
     repo = build_repo(tmp_path / "repo")
     (repo / "calc.py").unlink()
+    (repo / "ui" / "dist").mkdir(parents=True)
+    (repo / "ui" / "dist" / "app.js").write_text("a")
+    (repo / "ui" / "node_modules").mkdir()
+    (repo / "ui" / "node_modules" / "m.js").write_text("m")
     copy = tmp_path / "copy"
 
     copy_tree(repo, copy)
@@ -169,6 +174,14 @@ def test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones(
     assert (copy / "models").is_symlink()
     assert (copy / "models" / "weights.bin").read_bytes() == b"w"
     assert not (copy / "ui").exists()
+    listed = subprocess.run(
+        ["git", "-C", str(copy), "ls-files"],
+        capture_output=True,
+        check=True,
+        text=True,
+    ).stdout.split()
+    assert "tests/test_calc.py" in listed
+    assert not any(path.startswith("models") for path in listed)
 
 
 @pytest.mark.spec_exempt("structural: --all runs the suite without the browser tests")
@@ -292,6 +305,27 @@ def test_a_mutant_that_hangs_is_timed_out(
 def test_a_mutant_gets_a_multiple_of_the_baseline_time() -> None:
     assert mutant_timeout(0.1, 40.0) == 40.0 * TIMEOUT_FACTOR
     assert mutant_timeout(300, 1.0) == 300
+
+
+@pytest.mark.spec_exempt(
+    "structural: a survivor that outlasts --timeout is reported as one"
+)
+def test_a_survivor_that_outlasts_the_timeout_is_a_survivor(
+    small_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    status, printed, _ = run(
+        capsys,
+        small_repo,
+        f"calc.py:{LABEL_LINE}",
+        "--tests",
+        "tests/test_calc.py",
+        "--timeout",
+        "0.1",
+    )
+
+    assert status == 1
+    assert any(line.startswith("survived calc.py:6 const: ") for line in printed)
+    assert not any(line.startswith("timeout") for line in printed)
 
 
 @pytest.mark.spec_exempt(
