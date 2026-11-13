@@ -7,7 +7,7 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 - [x] 1 — The retry rule · moderate
 - [x] 2 — A run's names · moderate
 - [x] 3 — The record's every end · moderate
-- [ ] 4 — Every path removed · moderate
+- [x] 4 — Every path removed · moderate
 - [ ] 5 — Rendered, where all agree · moderate
 - [ ] 6 — Refused, whole · moderate
 
