@@ -15,6 +15,8 @@ its new digest.
   (0132 D1, D57).
 - An outline closes from 3 points, `outline_min` in `config/tattoo.json`, and below it the close line and the forward
   line name the floor: *add N more points to close · K of F*, *outline open · K of F points* (0132 D3, D4).
+- The retry rule is held from below for `caption`, `wd14` and `tags`, and a stage reads one version's failure records at
+  a time, so a refactor of the budget cannot turn a test green by accident (0133 D1).
 
 ## [0.86.5] - 2026-11-13
 

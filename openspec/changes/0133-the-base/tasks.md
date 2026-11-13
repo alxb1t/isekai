@@ -4,7 +4,7 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 
 ## Progress
 
-- [ ] 1 — The retry rule · moderate
+- [x] 1 — The retry rule · moderate
 - [ ] 2 — A run's names · moderate
 - [ ] 3 — The record's every end · moderate
 - [ ] 4 — Every path removed · moderate
@@ -13,13 +13,13 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 
 ## 1 — The retry rule
 
-- [ ] 1.1 **HALT CHECK** The retry rule reads the budget by the stage's name, as [D1](design.md#d1) says; if it does not, the plan is wrong.
+- [x] 1.1 **HALT CHECK** The retry rule reads the budget by the stage's name, as [D1](design.md#d1) says; if it does not, the plan is wrong.
   Verify: `git grep -c -F 'return "budget" if len(recorded) >= BUDGETS[stage] else None' isekai/foundation/run.py` prints `1`.
-- [ ] 1.2 In `tests/test_run_directory.py` add `test_a_stage_attempts_until_its_budget_and_refuses_at_it`, parametrized over `("caption", 3)`, `("wd14", 1)` and `("tags", 3)` as [D1](design.md#d1) says. It carries `run-directory:budget:at-budget-the-stage-refuses` and `tagging:budget:each-tagger-has-its-own-budget`.
+- [x] 1.2 In `tests/test_run_directory.py` add `test_a_stage_attempts_until_its_budget_and_refuses_at_it`, parametrized over `("caption", 3)`, `("wd14", 1)` and `("tags", 3)` as [D1](design.md#d1) says. It carries `run-directory:budget:at-budget-the-stage-refuses` and `tagging:budget:each-tagger-has-its-own-budget`.
   Verify: `git grep -c -F test_a_stage_attempts_until_its_budget_and_refuses_at_it tests/test_run_directory.py` prints `1`.
-- [ ] 1.3 In `tests/test_run_directory.py` delete `test_a_tagger_below_its_budget_attempts_again_rather_than_raising_keyerror`, mapped in the [Tests](design.md#tests) table to the test of 1.2.
+- [x] 1.3 In `tests/test_run_directory.py` delete `test_a_tagger_below_its_budget_attempts_again_rather_than_raising_keyerror`, mapped in the [Tests](design.md#tests) table to the test of 1.2.
   Verify: `git grep -c -F rather_than_raising_keyerror tests/test_run_directory.py` exits 1.
-- [ ] 1.4 In `tests/test_run_directory.py` add `test_a_stages_records_are_read_one_version_at_a_time`: a budget of transient `caption` records against version 1, then `attempts(directory, 2) == []` and `check_budget("caption", directory, 2, Run("aunt-ada", tmp_path))` returns. It carries `run-directory:budget:at-budget-the-stage-refuses`.
+- [x] 1.4 In `tests/test_run_directory.py` add `test_a_stages_records_are_read_one_version_at_a_time`: a budget of transient `caption` records against version 1, then `attempts(directory, 2) == []` and `check_budget("caption", directory, 2, Run("aunt-ada", tmp_path))` returns. It carries `run-directory:budget:at-budget-the-stage-refuses`.
   Verify: `git grep -c -F test_a_stages_records_are_read_one_version_at_a_time tests/test_run_directory.py` prints `1`.
 
 ## 2 — A run's names
