@@ -20,6 +20,8 @@ its new digest.
   good edit, a chain of pending edits and a replaced draft's content are read (0136 D7, D8).
 - The change's mutants join `tests/mutants.json` and each dies on replay; the busy-port probe also has a unit test
   that binds no loopback (0136 D10).
+- Tests hold the alert a failed window close raises, a job of a kind starting once the one before it has ended, and the
+  render slot's steps and images read from the verb's lines (0137 D1).
 
 ## [0.86.9] - 2026-11-13
 

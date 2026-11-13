@@ -174,6 +174,39 @@ def test_a_second_job_of_a_kind_is_refused_naming_the_one_that_runs(
         jobs.shutdown()
 
 
+@pytest.mark.spec("ui:prepare:a-job-follows-an-ended-one")
+def test_a_job_of_a_kind_starts_once_the_one_before_it_has_ended(
+    tmp_path: Path,
+) -> None:
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+    volume, command = _order(record)
+    script = _Script("pass")
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        command=script,
+        volume=volume,
+        render=command,
+        now=lambda: "ended",
+    )
+
+    for _ in range(2):
+        jobs.prepare("b", folder, _steps(run), lambda line: [])
+        jobs.wait("prepare", WAIT)
+    sessions = []
+    for _ in range(2):
+        jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
+        jobs.wait("render", WAIT)
+        sessions.append(((jobs.slot("render") or {})["session"])["id"])
+
+    assert script.asked == [[f"{run.id}/{FLOW}"], [f"{run.id}/{FLOW}"]]
+    acts = record.read_text().splitlines()
+    assert [act for act in acts if act.startswith("render")] == [
+        f"render 1500 {session}" for session in sessions
+    ]
+
+
 @pytest.mark.spec("ui:prepare:a-render-runs-beside-a-prepare")
 def test_a_render_runs_beside_a_prepare_and_its_stop_leaves_the_prepare(
     tmp_path: Path,
@@ -702,6 +735,102 @@ def _order(
     return Volume(run=run, records=record.parent / ".gpunit"), command
 
 
+def _failing_close(record: Path) -> Volume:
+    """Return a gpunit double that opens the window and fails to close it."""
+
+    def run(argv: Sequence[str], say: Say) -> GpunitExit:
+        with record.open("a") as acts:
+            print(" ".join(argv), file=acts)
+        return GpunitExit(1 if "down" in argv else 0)
+
+    return Volume(run=run, records=record.parent / ".gpunit")
+
+
+# A render child that reports a step and an image, then fails.
+STEPS = (
+    "import json\n"
+    "print(json.dumps({'step': 'pod', 'state': 'done'}), flush=True)\n"
+    "print(json.dumps({'step': 'image', 'digest': 'd1', "
+    "'flow': 'summon-anime-wai', 'version': 1, 'seed': '7'}), flush=True)\n"
+    "raise SystemExit(1)\n"
+)
+
+
+@pytest.mark.spec("ui:render-job:a-failed-close-raises-the-volume-alert")
+def test_a_failed_close_after_a_render_raises_the_volume_alert(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _collection(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+    command = _order(record)[1]
+    raised: list[bool] = []
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=_failing_close(record),
+        render=command,
+        raise_volume=lambda: raised.append(True),
+        now=lambda: "ended",
+    )
+
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
+    jobs.wait("render", WAIT)
+
+    slot = jobs.slot("render") or {}
+    assert raised == [True]
+    assert slot["session"]["steps"]["volume down"] == "failed"
+    assert record.read_text().splitlines() == [
+        "volume up --yes",
+        f"render 1500 {slot['session']['id']}",
+        "volume down",
+    ]
+
+
+@pytest.mark.spec("ui:render-job:the-verbs-lines-are-the-sessions-steps")
+def test_the_verbs_step_and_image_lines_are_the_sessions_steps_and_images(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _collection(tmp_path, "ada.jpg")
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=_order(tmp_path / "acts")[0],
+        render=lambda limit, roots, session: [sys.executable, "-c", STEPS],
+        now=lambda: "ended",
+    )
+
+    jobs.render({"b": folder}, limit=1500, total=1, keep_open=False)
+    jobs.wait("render", WAIT)
+
+    slot = jobs.slot("render") or {}
+    assert slot["state"] == "failed"
+    assert slot["session"]["steps"]["pod"] == "done"
+    assert slot["session"]["images"] == [
+        {"digest": "d1", "flow": FLOW, "version": 1, "seed": "7"}
+    ]
+    assert slot["message"].startswith("render ended with exit 1;")
+    assert "b/log.txt" in slot["message"]
+    assert "before reporting" not in slot["message"]
+
+    silent = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=_order(tmp_path / "silent-acts")[0],
+        render=lambda limit, roots, session: [
+            sys.executable,
+            "-c",
+            "raise SystemExit(1)",
+        ],
+        now=lambda: "ended",
+    )
+    silent.render({"b": folder}, limit=1500, total=1, keep_open=False)
+    silent.wait("render", WAIT)
+
+    assert (silent.slot("render") or {})[
+        "message"
+    ] == "render ended with exit 1 before reporting; read b/log.txt"
+
+
 @pytest.mark.spec("ui:render-job:opens-renders-and-closes")
 def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
     tmp_path: Path,
@@ -709,11 +838,13 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
     folder, _ = _collection(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
     volume, command = _order(record)
+    raised: list[bool] = []
     jobs = Jobs(
         events.Broadcast(),
         lambda: None,
         volume=volume,
         render=command,
+        raise_volume=lambda: raised.append(True),
         now=lambda: "ended",
     )
 
@@ -734,6 +865,7 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
     line = render_command(1500, roots, slot["session"]["id"])
     parsed = build_parser().parse_args(line[3:])
     assert (parsed.runs, parsed.requests, parsed.limit) == (roots, [], 1500)
+    assert raised == []
 
 
 @pytest.mark.spec("ui:render-job:opens-renders-and-closes")

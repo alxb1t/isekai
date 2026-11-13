@@ -4,7 +4,7 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 
 ## Progress
 
-- [ ] 1 — A job's slot · moderate
+- [x] 1 — A job's slot · moderate
 - [ ] 2 — A route answers before its handler · moderate
 - [ ] 3 — Prepare and Stop · hard
 - [ ] 4 — The poll and the stream · moderate
@@ -13,21 +13,21 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 
 ## 1 — A job's slot
 
-- [ ] 1.1 **HALT CHECK** The refusal of a second job reads as [D8](design.md#d8)'s mutant `UB-4` expects; if it reads otherwise, the plan is wrong.
+- [x] 1.1 **HALT CHECK** The refusal of a second job reads as [D8](design.md#d8)'s mutant `UB-4` expects; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'if job is not None and self._slots[kind].running:' isekai/interface/ui/jobs.py` prints `1`.
-- [ ] 1.2 In `tests/test_ui_jobs.py` add `def _failing_close(record: Path) -> Volume:`; its `run(argv, say)` appends `" ".join(argv)` to `record` and returns `GpunitExit(1 if "down" in argv else 0)`, and it returns `Volume(run=run, records=record.parent / ".gpunit")`.
+- [x] 1.2 In `tests/test_ui_jobs.py` add `def _failing_close(record: Path) -> Volume:`; its `run(argv, say)` appends `" ".join(argv)` to `record` and returns `GpunitExit(1 if "down" in argv else 0)`, and it returns `Volume(run=run, records=record.parent / ".gpunit")`.
   Verify: `git grep -c -F 'def _failing_close' tests/test_ui_jobs.py` prints `1`.
-- [ ] 1.3 In `tests/test_ui_jobs.py` add `test_a_failed_close_after_a_render_raises_the_volume_alert`, carrying `ui:render-job:a-failed-close-raises-the-volume-alert`. `record = tmp_path / "acts"`, `command = _order(record)[1]`, `Jobs(events.Broadcast(), lambda: None, volume=_failing_close(record), render=command, raise_volume=lambda: raised.append(True), now=lambda: "ended")`, then `render({"b": folder}, limit=1500, total=1, keep_open=False)` and `wait("render", WAIT)`. Assert `raised == [True]`, the slot's `session["steps"]["volume down"] == "failed"` and `record.read_text().splitlines()` is `volume up --yes`, `render 1500 <session id>`, `volume down`.
+- [x] 1.3 In `tests/test_ui_jobs.py` add `test_a_failed_close_after_a_render_raises_the_volume_alert`, carrying `ui:render-job:a-failed-close-raises-the-volume-alert`. `record = tmp_path / "acts"`, `command = _order(record)[1]`, `Jobs(events.Broadcast(), lambda: None, volume=_failing_close(record), render=command, raise_volume=lambda: raised.append(True), now=lambda: "ended")`, then `render({"b": folder}, limit=1500, total=1, keep_open=False)` and `wait("render", WAIT)`. Assert `raised == [True]`, the slot's `session["steps"]["volume down"] == "failed"` and `record.read_text().splitlines()` is `volume up --yes`, `render 1500 <session id>`, `volume down`.
   Verify: `uv run pytest tests/test_ui_jobs.py::test_a_failed_close_after_a_render_raises_the_volume_alert` passes.
-- [ ] 1.4 In `tests/test_ui_jobs.py` extend `test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it` in place: `raised: list[bool] = []`, `raise_volume=lambda: raised.append(True)` in its `Jobs`, and after its last assert `assert raised == []`, the twin of 1.3.
+- [x] 1.4 In `tests/test_ui_jobs.py` extend `test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it` in place: `raised: list[bool] = []`, `raise_volume=lambda: raised.append(True)` in its `Jobs`, and after its last assert `assert raised == []`, the twin of 1.3.
   Verify: `uv run pytest tests/test_ui_jobs.py::test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it` passes.
-- [ ] 1.5 In `tests/test_ui_jobs.py` add `test_a_job_of_a_kind_starts_once_the_one_before_it_has_ended`, carrying `ui:prepare:a-job-follows-an-ended-one`. `volume, command = _order(tmp_path / "acts")`, `script = _Script("pass")`, `Jobs(events.Broadcast(), lambda: None, command=script, volume=volume, render=command, now=lambda: "ended")`; ask `prepare("b", folder, _steps(run), lambda line: [])` and `wait("prepare", WAIT)`, then again; ask `render({"b": folder}, limit=1500, total=1, keep_open=False)` and `wait("render", WAIT)`, then again. Assert `script.asked == [[f"{run.id}/{FLOW}"], [f"{run.id}/{FLOW}"]]` and that the record holds a `render` line for each session.
+- [x] 1.5 In `tests/test_ui_jobs.py` add `test_a_job_of_a_kind_starts_once_the_one_before_it_has_ended`, carrying `ui:prepare:a-job-follows-an-ended-one`. `volume, command = _order(tmp_path / "acts")`, `script = _Script("pass")`, `Jobs(events.Broadcast(), lambda: None, command=script, volume=volume, render=command, now=lambda: "ended")`; ask `prepare("b", folder, _steps(run), lambda line: [])` and `wait("prepare", WAIT)`, then again; ask `render({"b": folder}, limit=1500, total=1, keep_open=False)` and `wait("render", WAIT)`, then again. Assert `script.asked == [[f"{run.id}/{FLOW}"], [f"{run.id}/{FLOW}"]]` and that the record holds a `render` line for each session.
   Verify: `uv run pytest tests/test_ui_jobs.py::test_a_job_of_a_kind_starts_once_the_one_before_it_has_ended` passes.
-- [ ] 1.6 In `tests/test_ui_jobs.py` add the constant `STEPS = (` and its closing `)`, a script printing, each with `flush=True`, `json.dumps({"step": "pod", "state": "done"})` and `json.dumps({"step": "image", "digest": "d1", "flow": "summon-anime-wai", "version": 1, "seed": "7"})`, then `raise SystemExit(1)`.
+- [x] 1.6 In `tests/test_ui_jobs.py` add the constant `STEPS = (` and its closing `)`, a script printing, each with `flush=True`, `json.dumps({"step": "pod", "state": "done"})` and `json.dumps({"step": "image", "digest": "d1", "flow": "summon-anime-wai", "version": 1, "seed": "7"})`, then `raise SystemExit(1)`.
   Verify: `git grep -c -F 'STEPS = (' tests/test_ui_jobs.py` prints `1`.
-- [ ] 1.7 In `tests/test_ui_jobs.py` add `test_the_verbs_step_and_image_lines_are_the_sessions_steps_and_images`, carrying `ui:render-job:the-verbs-lines-are-the-sessions-steps`. `Jobs(..., volume=_order(tmp_path / "acts")[0], render=lambda limit, roots, session: [sys.executable, "-c", STEPS])` renders and ends. Assert the slot is `failed`, `session["steps"]["pod"] == "done"`, `session["images"] == [{"digest": "d1", "flow": FLOW, "version": 1, "seed": "7"}]`, and a message that starts `render ended with exit 1;` and holds `b/log.txt` and not `before reporting`. A second `Jobs` whose child is `[sys.executable, "-c", "raise SystemExit(1)"]` ends with `render ended with exit 1 before reporting; read b/log.txt`.
+- [x] 1.7 In `tests/test_ui_jobs.py` add `test_the_verbs_step_and_image_lines_are_the_sessions_steps_and_images`, carrying `ui:render-job:the-verbs-lines-are-the-sessions-steps`. `Jobs(..., volume=_order(tmp_path / "acts")[0], render=lambda limit, roots, session: [sys.executable, "-c", STEPS])` renders and ends. Assert the slot is `failed`, `session["steps"]["pod"] == "done"`, `session["images"] == [{"digest": "d1", "flow": FLOW, "version": 1, "seed": "7"}]`, and a message that starts `render ended with exit 1;` and holds `b/log.txt` and not `before reporting`. A second `Jobs` whose child is `[sys.executable, "-c", "raise SystemExit(1)"]` ends with `render ended with exit 1 before reporting; read b/log.txt`.
   Verify: `uv run pytest tests/test_ui_jobs.py::test_the_verbs_step_and_image_lines_are_the_sessions_steps_and_images` passes.
-- [ ] 1.8 The phase's file agrees with the keys.
+- [x] 1.8 The phase's file agrees with the keys.
   Verify: `uv run pytest tests/test_ui_jobs.py` passes.
 
 ## 2 — A route answers before its handler
