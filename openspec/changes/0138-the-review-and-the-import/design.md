@@ -116,8 +116,9 @@ The page shows no approval warning, so it changes nothing. Its budget bar alread
 `isekai/pipeline/review.py` after the change, `create` imported from `isekai.foundation.artifacts` in the list's order:
 
 ```python
-def _publish(run: Run, flow: str, path: Path, body: ReviewApproved) -> None:
-    """Write `body` at `path`, refusing a number another writer has taken first."""
+def _publish(run: Run, flow: str, path: Path, approved: ReviewApproved) -> None:
+    """Write `approved` at `path`, refusing a number another writer has taken first."""
+    body: ReviewApproved = approved
     try:
         create(path, APPROVED_FILE, body)
     except FileExistsError:
@@ -129,6 +130,8 @@ def _publish(run: Run, flow: str, path: Path, body: ReviewApproved) -> None:
 ```
 
 `approve` ends `path = directory / artifact_name(version, APPROVED)`, `_publish(run, flow, path, approved_body)`, `draft.unlink()`, `return path, warnings`, and its `path.exists()` check and sentence go. `_copy_approval` ends `written = directory / artifact_name(next_version(directory), APPROVED)`, `_publish(run, flow, written, copied)`, `return written`. `create` writes the bytes `write` wrote, so no file changes.
+
+`tests/test_artifact_bytes.py::test_every_write_gets_an_annotated_artifact` accepts a typed-writer call only when its artifact is a name bound by an annotated assignment in the same function; a parameter is not one. So `_publish` takes the body as `approved` and binds `body: ReviewApproved = approved` before the `try`, and the call keeps the line `create(path, APPROVED_FILE, body)` that PB-3a and the phase 6 checks quote. That test is the one D4 turns red, and the annotation is what turns it green.
 
 The race is a file dropped inside the publish, after the draft is read. The test wraps `create` so it writes the rival's bytes at the path and then calls the real `create`; the refusal shows, and the rival's bytes and the draft stay. The audit's seam, a patched `read` of the draft, drops the file before the check that stands today, so it would pass at `main`.
 

@@ -38,17 +38,17 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 
 ## 2 — An approval is never replaced
 
-- [ ] 2.1 **HALT CHECK** Both approval writers publish by `write` today, the lines [D4](design.md#d4) replaces; if they read otherwise, the plan is wrong.
+- [x] 2.1 **HALT CHECK** Both approval writers publish by `write` today, the lines [D4](design.md#d4) replaces; if they read otherwise, the plan is wrong.
   Verify: `git grep -c -E 'write\((path|written), APPROVED_FILE, (approved_body|copied)\)' isekai/pipeline/review.py` prints `2`.
-- [ ] 2.2 **HALT CHECK** `create` refuses an occupied path, the one fact the fix leans on; if it reads otherwise, the plan is wrong.
+- [x] 2.2 **HALT CHECK** `create` refuses an occupied path, the one fact the fix leans on; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'write_atomically(path, (json.dumps(body, indent=2) + "\n").encode(), exclusive=True)' isekai/foundation/artifacts.py` prints `1`.
-- [ ] 2.3 In `isekai/pipeline/review.py` write [D4](design.md#d4): import `create`, add `_publish`, and end `approve` and `_copy_approval` on it as the design says, the `path.exists()` check and its sentence gone from `approve`.
+- [x] 2.3 In `isekai/pipeline/review.py` write [D4](design.md#d4): import `create`, add `_publish`, and end `approve` and `_copy_approval` on it as the design says, the `path.exists()` check and its sentence gone from `approve`. `_publish` takes its body as the parameter `approved` and binds `body: ReviewApproved = approved` before the `try`, as D4 shows, so `tests/test_artifact_bytes.py::test_every_write_gets_an_annotated_artifact` stays green.
   Verify: `git grep -c -F 'create(path, APPROVED_FILE, body)' isekai/pipeline/review.py` prints `1`.
-- [ ] 2.4 In `tests/test_review.py` add `test_an_approval_dropped_inside_the_publish_is_refused_and_its_bytes_stay`, carrying `review:approval:approved-is-not-overwritten`, with `import isekai.pipeline.review as review_module`. It wraps `review_module.create` as [D4](design.md#d4) says, dropping `b"rival\n"` at the path before the real call; approves a draft under `pytest.raises(Refusal, match=...)` holding `001.approved.json already exists`; and asserts the rival's bytes stay and the directory lists `001.approved.json` and `001.draft.json` alone.
+- [x] 2.4 In `tests/test_review.py` add `test_an_approval_dropped_inside_the_publish_is_refused_and_its_bytes_stay`, carrying `review:approval:approved-is-not-overwritten`, with `import isekai.pipeline.review as review_module`. It wraps `review_module.create` as [D4](design.md#d4) says, dropping `b"rival\n"` at the path before the real call; approves a draft under `pytest.raises(Refusal, match=...)` holding `001.approved.json already exists`; and asserts the rival's bytes stay and the directory lists `001.approved.json` and `001.draft.json` alone.
   Verify: `uv run pytest tests/test_review.py::test_an_approval_dropped_inside_the_publish_is_refused_and_its_bytes_stay` passes.
-- [ ] 2.5 In `tests/test_review.py` add `test_a_copied_approval_dropped_inside_the_publish_is_refused_and_its_bytes_stay`, carrying the same key, over `_approved_source` and the same wrapper, which makes the path's folder first. `approve(run, CONTROL, schema, vocabulary, source=FLOW)` refuses the same way, the rival's bytes stay and `CONTROL`'s review directory lists `001.approved.json` alone.
+- [x] 2.5 In `tests/test_review.py` add `test_a_copied_approval_dropped_inside_the_publish_is_refused_and_its_bytes_stay`, carrying the same key, over `_approved_source` and the same wrapper, which makes the path's folder first. `approve(run, CONTROL, schema, vocabulary, source=FLOW)` refuses the same way, the rival's bytes stay and `CONTROL`'s review directory lists `001.approved.json` alone.
   Verify: `uv run pytest tests/test_review.py::test_a_copied_approval_dropped_inside_the_publish_is_refused_and_its_bytes_stay` passes.
-- [ ] 2.6 The phase's file agrees with the keys.
+- [x] 2.6 The phase's file agrees with the keys.
   Verify: `uv run pytest tests/test_review.py` passes.
 
 ## 3 — What the reader is sent
