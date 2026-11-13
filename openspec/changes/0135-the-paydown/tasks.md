@@ -16,26 +16,26 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 - [x] 1.1 **HALT CHECK** The runner links `models`, `ui/node_modules` and `ui/dist` today, as [D1](design.md#d1) says; if `LINKED` already differs, the plan is wrong.
   Verify: `git grep -c -F 'LINKED = ("models", "ui/node_modules", "ui/dist")' tools/mutate.py` prints `1`.
 - [x] 1.2 In `tools/mutate.py` set `LINKED = ("models",)`, and rewrite the `copy_tree` docstring to say it copies each tracked file that exists, makes the copy a git repository, then links `models`, so a test that writes under `models/` writes through the link and is a test to isolate.
-  Verify: `git grep -c -F 'LINKED = ("models",)' tools/mutate.py` prints `1`.
+  Verify: `git grep -c -F 'LINKED = ("models",)' tools/mutate.py` prints `tools/mutate.py:1`.
 - [x] 1.3 In `copy_tree`, after the copy loop and before the links, run `["git", "-C", str(into), "init", "-q"]` and `["git", "-C", str(into), "add", "-A", "-f"]` each with `subprocess.run(..., capture_output=True, check=True)`. A `CalledProcessError` raises `Refused` naming the copy, as [D1](design.md#d1) says.
-  Verify: `git grep -c -F -e '"init"' tools/mutate.py` prints `1`.
+  Verify: `git grep -c -F -e '"init"' tools/mutate.py` prints `tools/mutate.py:1`.
 - [x] 1.4 In `tests/test_mutate.py` extend `test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones`, keeping its name. Write untracked `ui/dist/app.js` and `ui/node_modules/m.js` into the repository first. After `copy_tree` assert `not (copy / "ui").exists()` and that `git -C <copy> ls-files` lists the repository's test file and no `models` path. Change its exemption reason to `structural: a copy is a repository of the tracked files that exist and links models alone`.
   Verify: `uv run pytest tests/test_mutate.py::test_the_copy_holds_the_tracked_files_and_links_the_ignored_ones` passes.
 - [x] 1.5 In `tests/test_mutate.py` add `test_a_survivor_that_outlasts_the_timeout_is_a_survivor`: `main` over `small_repo` with `calc.py:{LABEL_LINE}`, `--tests tests/test_calc.py` and `--timeout 0.1`, which pytest's own start outlasts. Assert exit 1, `survived calc.py:6 const: ...` among the printed lines, and no printed line beginning `timeout`. It carries `@pytest.mark.spec_exempt("structural: a survivor that outlasts --timeout is reported as one")`; it fails with the `timeout = mutant_timeout(...)` line of `run_mutants` removed, as [D2](design.md#d2) says.
   Verify: `uv run pytest tests/test_mutate.py::test_a_survivor_that_outlasts_the_timeout_is_a_survivor` passes.
 - [x] 1.6 In `CONTRIBUTING.md`, in the paragraph on the pre-flight, add the sentence: "The run works in a copy that is a git repository of the tracked files and links `models/` alone, so a test that writes under `models/` writes through to the checkout: isolate it." Wrap the paragraph at its width and keep the words `links `models/` alone` on one line.
-  Verify: `git grep -c -E 'models/. alone' CONTRIBUTING.md` prints `1`.
+  Verify: `git grep -c -E 'models/. alone' CONTRIBUTING.md` prints `CONTRIBUTING.md:1`.
 
 ## 2 — The replay
 
 - [x] 2.1 **HALT CHECK** `main` refuses a run with both or neither of `--tests` and `--all`, as [D3](design.md#d3) says; if the check lives elsewhere, the plan is wrong.
   Verify: `git grep -c -F 'give one of --tests and --all' tools/mutate.py` prints `1`.
 - [x] 2.2 In `tools/mutate.py` make `targets` `nargs="*"` and add `--edits <path>` to `parse_args`; rewrite the module docstring's usage to show both forms. `main` takes the `--edits` branch before the existing check of `--tests` and `--all`: it refuses `--edits takes no target, --tests or --all` when `--edits` comes with any of them, and `give a target or --edits` when it has neither a target nor `--edits`. A run with a target keeps its checks and sentences as they are.
-  Verify: `git grep -c -F 'give a target or --edits' tools/mutate.py` prints `1`.
+  Verify: `git grep -c -F 'give a target or --edits' tools/mutate.py` prints `tools/mutate.py:1`.
 - [x] 2.3 In `tools/mutate.py` add a frozen dataclass `Edit` (`finding`, `path`, `find`, `replace`, `tests`, `line`, `equivalent`) and `def load_edits(root, path)`, which reads the JSON array and applies every refusal of the `D3` table: a missing key, an unknown key, empty `tests`, an untracked `path`, a `find` that occurs none or more than once. Each `Refused` names the finding. `line` is the 1-based line where `find` starts. `path` is read as given, relative to the working directory; `root` is the repository whose tracked files an entry names. A refusal names an entry by its `finding`, and by `entry <n>`, `<n>` its 1-based position, when `finding` is missing.
-  Verify: `git grep -c -F 'def load_edits' tools/mutate.py` prints `1`.
+  Verify: `git grep -c -F 'def load_edits' tools/mutate.py` prints `tools/mutate.py:1`.
 - [x] 2.4 In `tools/mutate.py` add `def run_edits(root, edits, timeout)`: one copy, a baseline for each distinct `tests` list (red is `Refused`, as in `run_mutants`), each mutant's limit `mutant_timeout` of its list's own baseline, the file written edited and restored after each run, a `.py` file parsed after the edit (`invalid` when it does not). Every baseline runs before any line prints. An edit goes through `verdict_line` and `report` as a `Mutant` whose `operator` is the `finding` and whose `old` and `new` are the first lines of `find` and `replace`, so a verdict line and a `survivor <path>:<line> <finding>` line have the form of a run on lines. An entry with `equivalent` is not run and prints `equivalent <path>:<line> <finding>: <reason>`. `main` calls it for `--edits` and ends with `report` and the exit codes it has.
-  Verify: `git grep -c -F 'def run_edits' tools/mutate.py` prints `1`.
+  Verify: `git grep -c -F 'def run_edits' tools/mutate.py` prints `tools/mutate.py:1`.
 - [x] 2.5 In `tests/test_mutate.py` add `test_an_edit_replays_in_any_file_and_a_survivor_exits_one`: a repository whose tracked `notes.txt` holds `limit = 10` and whose test file reads it, and an edits file with an entry the test notices and one it does not. Assert the verdict lines in the `D3` form, the summary `mutate: 1 killed, 1 survived, 0 invalid, 0 timeout`, the survivor line and exit 1. It carries `@pytest.mark.spec_exempt("structural: an edit is replayed in any tracked file, with its own tests")`.
   Verify: `uv run pytest tests/test_mutate.py::test_an_edit_replays_in_any_file_and_a_survivor_exits_one` passes.
 - [x] 2.6 In `tests/test_mutate.py` add `test_an_entry_out_of_shape_or_whose_find_is_not_once_is_refused`, parametrized over a `find` that occurs twice, a `find` that occurs nowhere, an untracked `path`, a missing key, an unknown key, empty `tests`, and `--edits` beside a target. Each asserts exit 2, nothing printed to stdout, and the finding named in the refusal, save the last, which runs `calc.py:2 --edits <file>`, the target first, and asserts `--edits takes no target, --tests or --all`. It carries `@pytest.mark.spec_exempt("structural: an entry that cannot be replayed is refused before any mutant runs")`.
@@ -62,7 +62,7 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
   ```
   Verify: `make -n mutants` prints `uv run python -m tools.mutate --edits tests/mutants.json`.
 - [x] 3.4 In `CONTRIBUTING.md`, after the sentence of 1.6, add: "A mutant of a finding a version closed lives in `tests/mutants.json`, and `make mutants` replays them outside the gate; a refactor version's pre-flight adds its own entries." Keep `make mutants` on one line.
-  Verify: `git grep -c -F 'make mutants' CONTRIBUTING.md` prints `1`.
+  Verify: `git grep -c -F 'make mutants' CONTRIBUTING.md` prints `CONTRIBUTING.md:1`.
 - [x] 3.5 Run the replay over `tests/mutants.json`. It takes minutes. A line that names a survivor goes to 3.6.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.
 - [x] 3.6 Apply the rule of [D5](design.md#d5) to each `survivor` line 3.5 printed. Where 3.5 printed none, this task holds.
@@ -105,6 +105,6 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 - [x] 6.5 **HALT CHECK** `0133·R1` sits in an archived design, which is a record; if the row is no longer there, the plan is wrong.
   Verify: `git grep -c -E 'pinned as .running' openspec/changes/archive/0133-the-base/design.md` prints `1`.
 - [x] 6.6 In `isekai/interface/ui/app.py` replace the comment above `_BAKE_DIGITS`: before `# The most digits a bake number is read from: `int` refuses a longer spelling.`, after `# The most digits a bake number is read from: a longer spelling is refused unread.`
-  Verify: `git grep -c -F 'a longer spelling is refused unread.' isekai/interface/ui/app.py` prints `1`.
+  Verify: `git grep -c -F 'a longer spelling is refused unread.' isekai/interface/ui/app.py` prints `isekai/interface/ui/app.py:1`.
 - [x] 6.7 In `ui/design/spec.md` change the bullet **A bake's view**: its first sentence after `*baked*.` reads `It offers no write — no *Draft from this*, *Compare with…*, *Place a tattoo* (⇧P) or *Delete*, and none of their keys — since a delete there would take the render and every bake;`. Re-wrap the bullet's lines, none past 120 characters, and keep that clause `*Compare with…*, *Place a tattoo* (⇧P) or *Delete*` on one line.
-  Verify: `git grep -c -F '*Compare with…*, *Place a tattoo* (⇧P) or *Delete*' ui/design/spec.md` prints `1`.
+  Verify: `git grep -c -F '*Compare with…*, *Place a tattoo* (⇧P) or *Delete*' ui/design/spec.md` prints `ui/design/spec.md:1`.
