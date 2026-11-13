@@ -1200,6 +1200,7 @@ def create_app(
                 one.flow.schema,
                 shared.vocabulary(),
                 excluded=shared.field_map().excluded,
+                definition=one.flow,
             )
         return {
             "approved": written.name if written else None,

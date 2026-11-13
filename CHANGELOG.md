@@ -10,6 +10,45 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.12] - 2026-11-13
+
+Gate: local 1m15s · CI not read under mf-ship · 0.86.11: local 1m24s · CI not read under mf-ship
+
+- Approving a sheet warns when the assembled prompt, not the tags alone, is past the encoder's window; the CLI and
+  the server pass the flow, and the budget's total and shares are held by literals (0138 D2, D3).
+- An approval is published by `create`, by the approve verb and by the copy alike, so a number another writer takes
+  inside the publish is refused and its bytes stay (0138 D4).
+- Tests hold the open reader's prompt, the briefing stripped with one newline, on the adapter's body and on the
+  request the stage sends (0138 D5).
+- A commit whose move fails puts the photographs back in the staging folder, and a name taken as the move lands is
+  refused as a taken name; tests hold the seal while a file is unread, the unseal after a refusal and the empty
+  name's message (0138 D6, D7).
+- Tests hold a phone JPEG's gain map stripped, not refused, each of the CR2, DNG and ARW headers refused as a RAW
+  photograph, and a TIFF with a cut header refused as not decoding (0138 D8).
+- The change's mutants of the budget, the approval, the reader's prompt, the seal, the commit and the kinds join
+  `tests/mutants.json`, and each dies on replay (0138 D10).
+
+## [0.86.11] - 2026-11-13
+
+Gate: local 1m24s · CI not read under mf-ship · 0.86.10: local 1m13s · CI not read under mf-ship
+
+- Tests hold the alert a failed window close raises, a job of a kind starting once the one before it has ended, and the
+  render slot's steps and images read from the verb's lines (0137 D1).
+- Tests hold that a foreign `Host` or `Origin` on a draft update leaves the run unchanged, that each loopback spelling
+  is answered by the middleware, each malformed body is refused naming what it lacks, and an upload past its declared
+  length is refused before its body is read (0137 D2, D3).
+- Tests post Prepare and Stop over HTTP against the real `prepare` verb, its reader held on a file: Prepare is refused
+  while it runs, Stop interrupts it, an idle Stop and an unknown kind are refused, and `unprepared` takes the cells
+  with no sheet and no other (0137 D4).
+- Tests run the billing poll over its gpunit double, counting its consults, so gpunit is asked on start and while a
+  session runs or an alert is open and not otherwise; a stream sends no cell of another collection and keeps alive
+  until the surface stops (0137 D1, D5).
+- `ui/src/test/wire.json` holds the body each Place and tattoo builder of `api.ts` sends; a vitest holds the builders to
+  it and a pytest holds the server's `*_KEYS` tuples and routes to it, and a vitest holds the unwrapping of a refusal
+  (0137 D6).
+- The change's mutants of the guard, the stream's filter, the volume alert and the job slot join `tests/mutants.json`,
+  and each dies on replay (0137 D8).
+
 ## [0.86.10] - 2026-11-13
 
 Gate: local 1m13s · CI not read under mf-ship · 0.86.9: local 1m7s · CI not read under mf-ship

@@ -53,7 +53,14 @@ from isekai.interface.ui import library
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
 from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.generate import prompt_artifact
-from isekai.pipeline.review import approve, review, save_draft
+from isekai.pipeline.review import (
+    ENCODER_WINDOW,
+    approve,
+    estimate_tokens,
+    review,
+    save_draft,
+    token_budget,
+)
 from isekai.pipeline.tagging import FakeTagger, OllamaTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot, tree
@@ -1056,6 +1063,43 @@ def test_approve_refuses_a_tag_the_wired_field_map_excludes(
     assert "'glasses' in accessories" in err.getvalue()
     review_of = run.directory("summon-anime-wai", "review")
     assert sorted(path.name for path in review_of.iterdir()) == ["001.draft.json"]
+
+
+@pytest.mark.spec("review:budget:a-sheet-past-the-window-only-assembled-warns")
+def test_approve_warns_on_the_assembled_prompt_and_still_approves(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    run = open_run(photo, tmp_path / "runs")
+    sheet(run, schema, vocabulary)
+    draft = review(run, "summon-anime-wai")
+    assert draft is not None
+    every = list(vocabulary.counts)
+    fields = {
+        **read(draft, DRAFT_FILE)["fields"],
+        "clothes": every,
+        "accessories": every[:3],
+    }
+    save_draft(run, "summon-anime-wai", fields)
+    assert (
+        estimate_tokens(fields, schema)
+        <= ENCODER_WINDOW
+        < token_budget(fields, schema, load_flow("summon-anime-wai")).total
+    )
+    wired = _wiring(tmp_path)
+    err = io.StringIO()
+    wired.err = err
+    parsed = build_parser().parse_args(
+        ["approve", "--flow", "summon-anime-wai", run.id]
+    )
+
+    assert dispatch(parsed, wired) == 0
+
+    assert "warning: " in err.getvalue()
+    assert "the assembled prompt is about" in err.getvalue()
+    review_of = run.directory("summon-anime-wai", "review")
+    assert sorted(path.name for path in review_of.iterdir()) == ["001.approved.json"]
 
 
 @pytest.mark.spec("cli:approve-cancel:not-beside-from")

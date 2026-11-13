@@ -183,3 +183,26 @@ def nef_bytes() -> bytes:
     make = b"NIKON CORPORATION\x00"
     entry = struct.pack(">HHII", 0x010F, 2, len(make), 26)
     return b"MM\x00*" + struct.pack(">IH", 8, 1) + entry + b"\x00" * 4 + make
+
+
+def cr2_bytes() -> bytes:
+    """Return the first bytes of a CR2: a little-endian TIFF with `CR` at byte 8."""
+    return b"II*\x00" + struct.pack("<I", 16) + b"CR\x02\x00" + b"\x00" * 8
+
+
+def dng_bytes() -> bytes:
+    """Return the first bytes of a DNG: a little-endian TIFF with a DNGVersion tag."""
+    entry = struct.pack("<HHI", 0xC612, 1, 4) + bytes([1, 4, 0, 0])
+    return b"II*\x00" + struct.pack("<IH", 8, 1) + entry + b"\x00" * 4
+
+
+def arw_bytes() -> bytes:
+    """Return the first bytes of an ARW: a little-endian TIFF whose Make is Sony's."""
+    make = b"SONY\x00"
+    entry = struct.pack("<HHII", 0x010F, 2, len(make), 26)
+    return b"II*\x00" + struct.pack("<IH", 8, 1) + entry + b"\x00" * 4 + make
+
+
+def cut_tiff_bytes() -> bytes:
+    """Return a TIFF header whose first directory lies past the end of the file."""
+    return b"II*\x00" + struct.pack("<I", 1000)
