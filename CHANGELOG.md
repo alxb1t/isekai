@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- The ink's white point is the prototype's percentile, compared with nothing: `_MIN_SKIN`, `_SKIN_GAP` and
+  `_skin_beside` go, so a blackwork sleeve is cut, not refused; an outline with no lit pixel is still refused
+  (0132 D1, D57).
+
 ## [0.86.5] - 2026-11-13
 
 Gate: local 1m11s · CI not read under mf-ship · 0.86.4: local 1m2s · CI not read under mf-ship

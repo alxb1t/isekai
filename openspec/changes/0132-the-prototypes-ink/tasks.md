@@ -4,18 +4,18 @@ The extractor reads the white point as the prototype does, then the outline step
 
 ## Progress
 
-- [ ] 1 — The prototype's ink · moderate
+- [x] 1 — The prototype's ink · moderate
 - [ ] 2 — The floor · moderate
 
 ## 1 — The prototype's ink
 
-- [ ] 1.1 In `isekai/shared/ink.py` delete `_MIN_SKIN`, `_SKIN_GAP` and `_skin_beside`, and the comments above them ([D1](design.md#d1)). In `_automatic_point` delete the `beside` read and the refusal after the percentile, keep the empty refusal, and return after the percentile. Change the docstring's clause "a point that reads ink, not skin, is refused" to "an outline with no lit pixel is refused".
+- [x] 1.1 In `isekai/shared/ink.py` delete `_MIN_SKIN`, `_SKIN_GAP` and `_skin_beside`, and the comments above them ([D1](design.md#d1)). In `_automatic_point` delete the `beside` read and the refusal after the percentile, keep the empty refusal, and return after the percentile. Change the docstring's clause "a point that reads ink, not skin, is refused" to "an outline with no lit pixel is refused".
   Verify: `git grep -n -e _SKIN_GAP -e _MIN_SKIN -e _skin_beside -- isekai` prints nothing and exits 1.
-- [ ] 1.2 In `tests/test_ink.py` replace the tests that match `no bare skin inside the outline` with `test_ink_extract_a_tight_outline_over_a_solid_fill_is_cut_by_the_percentile`, bound by `@pytest.mark.spec("edit:ink:a-tight-outline-over-a-solid-fill-is-cut-by-the-percentile")`. Parametrize it over the fills `BLACK_INK`, `(160, 120, 96)` and `(172, 150, 120)`, and assert `_at(extract_ink(_arm(fill), _tight(), None, None), 80, 80)[:3] == (255, 255, 255)`.
+- [x] 1.2 In `tests/test_ink.py` replace the tests that match `no bare skin inside the outline` with `test_ink_extract_a_tight_outline_over_a_solid_fill_is_cut_by_the_percentile`, bound by `@pytest.mark.spec("edit:ink:a-tight-outline-over-a-solid-fill-is-cut-by-the-percentile")`. Parametrize it over the fills `BLACK_INK`, `(160, 120, 96)` and `(172, 150, 120)`, and assert `_at(extract_ink(_arm(fill), _tight(), None, None), 80, 80)[:3] == (255, 255, 255)`.
   Verify: `uv run pytest tests/test_ink.py -k tight_outline_over_a_solid_fill` passes.
-- [ ] 1.3 In `tests/test_ink.py` move the marker of `test_ink_extract_a_one_channel_fill_keeps_its_ink_under_a_wider_outline` to the new key. In `test_ink_extract_refuses_an_image_with_no_skin` pass `Image.new("L", (64, 64), 255)` as the outline and replace its `spec_exempt` with `@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")`. In `test_ink_grey_an_outline_with_no_bare_skin_is_refused` call `white_grey(Image.new("RGB", (160, 160), (5, 5, 5)), _tight())`.
+- [x] 1.3 In `tests/test_ink.py` move the marker of `test_ink_extract_a_one_channel_fill_keeps_its_ink_under_a_wider_outline` to the new key. In `test_ink_extract_refuses_an_image_with_no_skin` pass `Image.new("L", (64, 64), 255)` as the outline and replace its `spec_exempt` with `@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")`. In `test_ink_grey_an_outline_with_no_bare_skin_is_refused` call `white_grey(Image.new("RGB", (160, 160), (5, 5, 5)), _tight())`.
   Verify: `uv run pytest tests/test_ink.py tests/test_spec_bindings.py` passes.
-- [ ] 1.4 In `docs/decisions.md` add `### D57 · The white point is the prototype's percentile` after D54, in the form of its neighbours: the bold decision, a Why bullet, and a Made-by bullet naming `0132`. The decision reads: the automatic white point is the `white` percentile, per channel, of the lit pixels inside the outline, compared with nothing; an outline with no lit pixel is refused, naming the fix. The Why says the prototype proved it on a blackwork sleeve, and that a fill read as its own white point shows in the ink view ([D5](design.md#d5)).
+- [x] 1.4 In `docs/decisions.md` add `### D57 · The white point is the prototype's percentile` after D54, in the form of its neighbours: the bold decision, a Why bullet, and a Made-by bullet naming `0132`. The decision reads: the automatic white point is the `white` percentile, per channel, of the lit pixels inside the outline, compared with nothing; an outline with no lit pixel is refused, naming the fix. The Why says the prototype proved it on a blackwork sleeve, and that a fill read as its own white point shows in the ink view ([D5](design.md#d5)).
   Verify: `git grep -c "### D57" -- docs/decisions.md` prints `docs/decisions.md:1`.
 
 ## 2 — The floor

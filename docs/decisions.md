@@ -362,6 +362,16 @@ placement records only the pairs the operator holds ([D53](#d53--a-placement-is-
   ([D20](#d20--the-entry-point-loads-no-third-party-package)). The pod image takes no part.
 - **Made by:** `0123`.
 
+### D57 · The white point is the prototype's percentile
+
+**The automatic white point is the `white` percentile, per channel, of the lit pixels inside the outline, compared with
+nothing; an outline with no lit pixel is refused, naming the fix.**
+
+- **Why:** the prototype proved it on a blackwork sleeve, and a check that compared the point with the skin beside
+  the outline refused that sleeve. A fill read as its own white point shows in the ink view, which is where the
+  operator judges it and widens the outline over the skin.
+- **Made by:** `0132`.
+
 ### D44 · A flat flow is summon with the face chain ending early
 
 **`summon-flat-anime-wai` is `summon-anime-wai`'s directory with InstantID ending at 0.65 of the steps, a lower

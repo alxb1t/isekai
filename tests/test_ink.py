@@ -77,31 +77,17 @@ def _tight() -> Image.Image:
     return mask
 
 
-@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")
-def test_ink_extract_an_outline_that_holds_no_bare_skin_is_refused_naming_the_fix() -> (
-    None
-):
-    with pytest.raises(Refusal, match="no bare skin inside the outline.*widen"):
-        extract_ink(_arm(), _tight(), None, None)
+@pytest.mark.spec("edit:ink:a-tight-outline-over-a-solid-fill-is-cut-by-the-percentile")
+@pytest.mark.parametrize("fill", [BLACK_INK, (160, 120, 96), (172, 150, 120)])
+def test_ink_extract_a_tight_outline_over_a_solid_fill_is_cut_by_the_percentile(
+    fill: tuple[int, int, int],
+) -> None:
+    layer = extract_ink(_arm(fill), _tight(), None, None)
+
+    assert _at(layer, 80, 80)[:3] == (255, 255, 255)
 
 
-@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")
-def test_ink_extract_a_tight_outline_over_a_light_fill_is_refused_naming_the_fix() -> (
-    None
-):
-    with pytest.raises(Refusal, match="no bare skin inside the outline.*widen"):
-        extract_ink(_arm((160, 120, 96)), _tight(), None, None)
-
-
-@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")
-def test_ink_extract_a_tight_outline_over_a_fill_short_in_one_channel_is_refused() -> (
-    None
-):
-    with pytest.raises(Refusal, match="no bare skin inside the outline.*widen"):
-        extract_ink(_arm((172, 150, 120)), _tight(), None, None)
-
-
-@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")
+@pytest.mark.spec("edit:ink:a-tight-outline-over-a-solid-fill-is-cut-by-the-percentile")
 def test_ink_extract_a_one_channel_fill_keeps_its_ink_under_a_wider_outline() -> None:
     layer = extract_ink(_arm((172, 150, 120)), _outline(), None, None)
 
@@ -133,12 +119,12 @@ def test_ink_extract_a_transparent_pixel_is_bare_skin_whatever_colour_it_stores(
     assert _at(layer, 80, 80)[2] > _at(layer, 80, 80)[0]
 
 
-@pytest.mark.spec_exempt("structural: an image with nothing lit has no skin to read")
+@pytest.mark.spec("edit:ink:an-outline-with-no-bare-skin-is-refused")
 def test_ink_extract_refuses_an_image_with_no_skin() -> None:
     dark = Image.new("RGB", (64, 64), (5, 5, 5))
 
     with pytest.raises(Refusal, match="no bare skin"):
-        extract_ink(dark, None, None, None)
+        extract_ink(dark, Image.new("L", (64, 64), 255), None, None)
 
 
 @pytest.mark.spec_exempt("structural: the dark image's refusal")
@@ -352,7 +338,7 @@ def test_ink_grey_with_the_layer_is_what_each_asked_alone_gives() -> None:
 )
 def test_ink_grey_an_outline_with_no_bare_skin_is_refused() -> None:
     with pytest.raises(Refusal, match="no bare skin"):
-        white_grey(_arm(), _tight())
+        white_grey(Image.new("RGB", (160, 160), (5, 5, 5)), _tight())
 
 
 def _saved(tmp_path: Path) -> tuple[Path, Path]:
