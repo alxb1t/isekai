@@ -88,6 +88,8 @@ def _edit(page: Page) -> None:
     expect(field).to_be_visible()
     field.click()
     field.press_sequentially("eyes")
+    # Enter commits only once the dropdown is open: wait for the suggestion first.
+    expect(page.locator(".drop__row").first).to_contain_text("blue eyes")
     field.press("Enter")
     row = page.locator(".row", has=field)
     expect(row.locator(".chip", has_text="blue eyes")).to_be_visible()
