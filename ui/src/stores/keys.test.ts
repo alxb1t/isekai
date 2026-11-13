@@ -34,8 +34,14 @@ function press(code: string, given: Partial<Press> = {}): Press {
 }
 
 /* A focused text input, which records whether it was left. */
-function field(): EventTarget & { left: boolean } {
-  const input = { tagName: 'INPUT', type: 'text', left: false, blur: () => (input.left = true) }
+function field(kind: Record<string, unknown> = {}): EventTarget & { left: boolean } {
+  const input = {
+    tagName: 'INPUT',
+    type: 'text',
+    ...kind,
+    left: false,
+    blur: () => (input.left = true),
+  }
   return input as unknown as EventTarget & { left: boolean }
 }
 
@@ -94,6 +100,15 @@ spec('ui:keys:no-command-fires-in-a-text-field', () => {
   expect(undo.run).toHaveBeenCalledOnce()
   expect(sheet.run).toHaveBeenCalledOnce()
   expect(target.left).toBe(true)
+
+  const textarea = field({ tagName: 'TEXTAREA' })
+  const editable = field({ tagName: 'DIV', isContentEditable: true })
+  for (const other of [textarea, editable]) {
+    expect(keys.press(press('KeyE', { target: other }))).toBe(false)
+    expect(letter.run).not.toHaveBeenCalled()
+    keys.press(press('Escape', { target: other }))
+    expect((other as EventTarget & { left: boolean }).left).toBe(true)
+  }
 })
 
 spec('ui:keys:an-overlay-takes-the-keys-first', () => {
@@ -114,6 +129,19 @@ spec('ui:keys:an-overlay-takes-the-keys-first', () => {
   keys.drop(overlay)
   keys.press(press('KeyE'))
   expect(below.run).toHaveBeenCalledOnce()
+})
+
+spec('ui:keys:a-screen-takes-the-keys-before-everywhere', () => {
+  const keys = useKeyStore()
+  const screen = command('revise', 'KeyE')
+  const everywhere = command('library', 'KeyE')
+  keys.declare('screen', [screen])
+  keys.declare('everywhere', [everywhere])
+
+  keys.press(press('KeyE'))
+
+  expect(screen.run).toHaveBeenCalledOnce()
+  expect(everywhere.run).not.toHaveBeenCalled()
 })
 
 spec('ui:keys:esc-closes-the-nearest-thing-first', () => {

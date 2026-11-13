@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { EMPTY_CELL } from '../cells'
 import { spec } from '../test/spec'
 import type { HubInfo, InputStatus } from '../types'
-import { flowsWaiting, head, rail, useQueue, waiting } from './useQueue'
+import { chooses, flowsWaiting, head, rail, useQueue, waiting } from './useQueue'
 
 /* `fetch` answers the hub with a collection built here, so the run directories the
    count must agree with are the ones this file declares. The rail reads it
@@ -83,6 +83,7 @@ spec('ui:review:a-batch-opens-its-head', () => {
 
   // One flow waits, so Review opens its head rather than the chooser.
   expect(flowsWaiting(collection('draft')).map((one) => one.flow)).toEqual(['f'])
+  expect(chooses(collection('draft'))).toBe(false)
   expect(head(collection('draft'))).toEqual({ digest: 'b', flow: 'f' })
   expect(head(collection('approved'))).toEqual({ digest: 'a', flow: 'f' })
   const done = collection('approved')
@@ -119,6 +120,7 @@ spec('ui:review:two-flows-waiting-open-the-chooser', () => {
       ],
     },
   ])
+  expect(chooses(info)).toBe(true)
   // A row's ↵ opens that flow's head.
   expect(head(info, ['g'])).toEqual({ digest: 'a', flow: 'g' })
 })
