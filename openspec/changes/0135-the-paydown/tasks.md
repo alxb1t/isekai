@@ -9,7 +9,7 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 - [x] 3 — The audit's mutants · moderate
 - [x] 4 — The two left · moderate
 - [x] 5 — The scanner · hard
-- [ ] 6 — The prose · moderate
+- [x] 6 — The prose · moderate
 
 ## 1 — The runner holds
 
@@ -94,17 +94,17 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 
 ## 6 — The prose
 
-- [ ] 6.1 **HALT CHECK** `0119·R4` is fixed already: the quote's comment names a queued bake, as [D8](design.md#d8) says; if it does not, the plan is wrong.
+- [x] 6.1 **HALT CHECK** `0119·R4` is fixed already: the quote's comment names a queued bake, as [D8](design.md#d8) says; if it does not, the plan is wrong.
   Verify: `git grep -c -F 'holds a queued bake' isekai/interface/render.py` prints `1`.
-- [ ] 6.2 **HALT CHECK** `0119·S4` is fixed already: the quote keeps a collection that holds a queued bake; if its filter reads otherwise, the plan is wrong.
+- [x] 6.2 **HALT CHECK** `0119·S4` is fixed already: the quote keeps a collection that holds a queued bake; if its filter reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'one.lines or one.refused or held[runs].count' isekai/interface/render.py` prints `1`.
-- [ ] 6.3 **HALT CHECK** `0121·S3` is fixed already: `ink_view` reads the skin point once, through `extract_ink_grey`; if it calls `extract_ink` and `white_grey` again, the plan is wrong.
+- [x] 6.3 **HALT CHECK** `0121·S3` is fixed already: `ink_view` reads the skin point once, through `extract_ink_grey`; if it calls `extract_ink` and `white_grey` again, the plan is wrong.
   Verify: `git grep -c -F 'extract_ink_grey(' isekai/pipeline/tattoos.py` prints `1`.
-- [ ] 6.4 **HALT CHECK** `0126·R4` sits in an archived design, which is a record; if the note is no longer there, the plan is wrong.
+- [x] 6.4 **HALT CHECK** `0126·R4` sits in an archived design, which is a record; if the note is no longer there, the plan is wrong.
   Verify: `git grep -c -F 'the later rename fails' openspec/changes/archive/0126-cuts-per-photograph/design.md` prints `1`.
-- [ ] 6.5 **HALT CHECK** `0133·R1` sits in an archived design, which is a record; if the row is no longer there, the plan is wrong.
+- [x] 6.5 **HALT CHECK** `0133·R1` sits in an archived design, which is a record; if the row is no longer there, the plan is wrong.
   Verify: `git grep -c -E 'pinned as .running' openspec/changes/archive/0133-the-base/design.md` prints `1`.
-- [ ] 6.6 In `isekai/interface/ui/app.py` replace the comment above `_BAKE_DIGITS`: before `# The most digits a bake number is read from: `int` refuses a longer spelling.`, after `# The most digits a bake number is read from: a longer spelling is refused unread.`
+- [x] 6.6 In `isekai/interface/ui/app.py` replace the comment above `_BAKE_DIGITS`: before `# The most digits a bake number is read from: `int` refuses a longer spelling.`, after `# The most digits a bake number is read from: a longer spelling is refused unread.`
   Verify: `git grep -c -F 'a longer spelling is refused unread.' isekai/interface/ui/app.py` prints `1`.
-- [ ] 6.7 In `ui/design/spec.md` change the bullet **A bake's view**: its first sentence after `*baked*.` reads `It offers no write — no *Draft from this*, *Compare with…*, *Place a tattoo* (⇧P) or *Delete*, and none of their keys — since a delete there would take the render and every bake;`. Re-wrap the bullet's lines, none past 120 characters, and keep that clause `*Compare with…*, *Place a tattoo* (⇧P) or *Delete*` on one line.
+- [x] 6.7 In `ui/design/spec.md` change the bullet **A bake's view**: its first sentence after `*baked*.` reads `It offers no write — no *Draft from this*, *Compare with…*, *Place a tattoo* (⇧P) or *Delete*, and none of their keys — since a delete there would take the render and every bake;`. Re-wrap the bullet's lines, none past 120 characters, and keep that clause `*Compare with…*, *Place a tattoo* (⇧P) or *Delete*` on one line.
   Verify: `git grep -c -F '*Compare with…*, *Place a tattoo* (⇧P) or *Delete*' ui/design/spec.md` prints `1`.
