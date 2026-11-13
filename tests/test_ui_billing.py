@@ -5,7 +5,9 @@ temporary `.gpunit/`, as gpunit would, and reach nothing.
 """
 
 import json
-from collections.abc import Sequence
+import threading
+import time
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import pytest
@@ -39,6 +41,15 @@ def _window(records: Path, ends: str) -> None:
     records.mkdir(parents=True, exist_ok=True)
     body = {"id": "v1", "datacenter": "EU-RO-1", "size_gb": 50, "ends": ends}
     (records / "volume").write_text(json.dumps(body))
+
+
+def _until(done: Callable[[], bool]) -> None:
+    """Return once `done()` holds; raise when it does not within the deadline."""
+    deadline = time.monotonic() + 20
+    while not done():
+        if time.monotonic() > deadline:
+            raise AssertionError("the condition never held")
+        threading.Event().wait(0.005)
 
 
 @pytest.mark.spec("ui:billing:a-pod-record-is-an-alert")
@@ -119,3 +130,82 @@ def test_a_volume_past_its_recorded_end_takes_the_band(tmp_path: Path) -> None:
     (records / "volume.pending").touch()
     pending = read(records, running=False, raised=False, now=NOW)
     assert pending["volume"] == {"state": "band", "ends": None}
+
+
+@pytest.mark.spec("ui:billing:gpunit-is-asked-while-a-session-or-an-alert-is-open")
+def test_gpunit_is_asked_on_start_and_while_a_session_runs_or_an_alert_is_open(
+    tmp_path: Path,
+) -> None:
+    records = tmp_path / ".gpunit"
+    records.mkdir()
+    asked: list[str] = []
+    running = {"on": False}
+    consulted: list[None] = []
+
+    def session() -> bool:
+        consulted.append(None)
+        return running["on"]
+
+    billing = Billing(
+        _volume(records, asked),
+        tmp_path / "log",
+        events.Broadcast(),
+        session,
+        now=lambda: NOW,
+    )
+
+    def woken() -> None:
+        target = len(consulted) + 6
+        _until(lambda: len(consulted) >= target)
+
+    thread = billing.watch(interval=0.01)
+    try:
+        _until(lambda: len(asked) == 1)
+        woken()
+        assert len(asked) == 1
+
+        before = len(asked)
+        running["on"] = True
+        _until(lambda: len(asked) > before)
+
+        running["on"] = False
+        woken()
+        settled = len(asked)
+        (records / "pod").write_text("{}")
+        _until(lambda: len(asked) > settled)
+
+        (records / "pod").unlink()
+        _until(lambda: not billing.alerting())
+        woken()
+        settled = len(asked)
+        woken()
+        assert len(asked) == settled
+    finally:
+        billing.close()
+        thread.join(20)
+    assert not thread.is_alive()
+
+
+@pytest.mark.spec("ui:billing:gpunit-is-asked-while-a-session-or-an-alert-is-open")
+def test_an_alert_is_a_pod_or_a_volume_past_its_window(tmp_path: Path) -> None:
+    records = tmp_path / ".gpunit"
+    billing = Billing(
+        _volume(records, []),
+        tmp_path / "log",
+        events.Broadcast(),
+        lambda: False,
+        now=lambda: NOW,
+    )
+    assert billing.alerting() is False
+
+    records.mkdir()
+    (records / "pod").write_text("{}")
+    assert billing.alerting() is True
+
+    (records / "pod").unlink()
+    _window(records, "2026-10-21T13:00:00Z")
+    assert billing.alerting() is False
+
+    (records / "volume").unlink()
+    _window(records, "2026-10-21T11:00:00Z")
+    assert billing.alerting() is True

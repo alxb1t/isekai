@@ -28,6 +28,9 @@ its new digest.
 - Tests post Prepare and Stop over HTTP against the real `prepare` verb, its reader held on a file: Prepare is refused
   while it runs, Stop interrupts it, an idle Stop and an unknown kind are refused, and `unprepared` takes the cells
   with no sheet and no other (0137 D4).
+- Tests run the billing poll over its gpunit double, counting its consults, so gpunit is asked on start and while a
+  session runs or an alert is open and not otherwise; a stream sends no cell of another collection and keeps alive
+  until the surface stops (0137 D1, D5).
 
 ## [0.86.9] - 2026-11-13
 

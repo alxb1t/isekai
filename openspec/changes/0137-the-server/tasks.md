@@ -7,7 +7,7 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 - [x] 1 — A job's slot · moderate
 - [x] 2 — A route answers before its handler · moderate
 - [x] 3 — Prepare and Stop · hard
-- [ ] 4 — The poll and the stream · moderate
+- [x] 4 — The poll and the stream · moderate
 - [ ] 5 — The page's bodies · moderate
 - [ ] 6 — The mutants die · moderate
 
@@ -72,19 +72,19 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 
 ## 4 — The poll and the stream
 
-- [ ] 4.1 In `tests/test_ui_billing.py` add `def _until(done: Callable[[], bool]) -> None`, which polls `done()` every `0.005` s for `20` s and then raises `AssertionError`, with `Callable` imported from `collections.abc` and `threading` and `time` from the standard library.
+- [x] 4.1 In `tests/test_ui_billing.py` add `def _until(done: Callable[[], bool]) -> None`, which polls `done()` every `0.005` s for `20` s and then raises `AssertionError`, with `Callable` imported from `collections.abc` and `threading` and `time` from the standard library.
   Verify: `git grep -c -F 'def _until' tests/test_ui_billing.py` prints `1`.
-- [ ] 4.2 In `tests/test_ui_billing.py` add `def test_gpunit_is_asked_on_start_and_while_a_session_runs_or_an_alert_is_open`, carrying `ui:billing:gpunit-is-asked-while-a-session-or-an-alert-is-open`. `running = {"on": False}` and `consulted: list[None]`, whose `session()` appends and returns `running["on"]`; `Billing(_volume(records, asked), tmp_path / "log", events.Broadcast(), session, now=lambda: NOW)`; `thread = billing.watch(interval=0.01)`. `_until` `len(asked) == 1`; then `_until` `len(consulted)` has grown by six and assert `len(asked) == 1`.
+- [x] 4.2 In `tests/test_ui_billing.py` add `def test_gpunit_is_asked_on_start_and_while_a_session_runs_or_an_alert_is_open`, carrying `ui:billing:gpunit-is-asked-while-a-session-or-an-alert-is-open`. `running = {"on": False}` and `consulted: list[None]`, whose `session()` appends and returns `running["on"]`; `Billing(_volume(records, asked), tmp_path / "log", events.Broadcast(), session, now=lambda: NOW)`; `thread = billing.watch(interval=0.01)`. `_until` `len(asked) == 1`; then `_until` `len(consulted)` has grown by six and assert `len(asked) == 1`.
   Verify: `git grep -c -F 'def test_gpunit_is_asked_on_start' tests/test_ui_billing.py` prints `1`.
-- [ ] 4.3 In that test set `running["on"] = True` and `_until` `len(asked)` passes its last value; set it `False`, `_until` `len(consulted)` has grown by six, take `settled = len(asked)`, then write `records / "pod"` and `_until` `len(asked) > settled`, so the alert alone asks. Delete the `pod` record, `_until` `not billing.alerting()`, `_until` `len(consulted)` has grown by six, take `settled = len(asked)`, `_until` it has grown by six again and assert `len(asked) == settled`. Then `billing.close()`, `thread.join(20)` and `assert not thread.is_alive()`.
+- [x] 4.3 In that test set `running["on"] = True` and `_until` `len(asked)` passes its last value; set it `False`, `_until` `len(consulted)` has grown by six, take `settled = len(asked)`, then write `records / "pod"` and `_until` `len(asked) > settled`, so the alert alone asks. Delete the `pod` record, `_until` `not billing.alerting()`, `_until` `len(consulted)` has grown by six, take `settled = len(asked)`, `_until` it has grown by six again and assert `len(asked) == settled`. Then `billing.close()`, `thread.join(20)` and `assert not thread.is_alive()`.
   Verify: `uv run pytest tests/test_ui_billing.py::test_gpunit_is_asked_on_start_and_while_a_session_runs_or_an_alert_is_open` passes.
-- [ ] 4.4 In `tests/test_ui_billing.py` add `test_an_alert_is_a_pod_or_a_volume_past_its_window`, carrying the key of 4.2: with a `Billing` as 4.2 builds it, `alerting()` is `False` with no record, `True` with a `pod` record, `False` with a window ending after `NOW` (`_window(records, "2026-10-21T13:00:00Z")`) and `True` with one ending before it (`"2026-10-21T11:00:00Z"`), each after the earlier record is removed.
+- [x] 4.4 In `tests/test_ui_billing.py` add `test_an_alert_is_a_pod_or_a_volume_past_its_window`, carrying the key of 4.2: with a `Billing` as 4.2 builds it, `alerting()` is `False` with no record, `True` with a `pod` record, `False` with a window ending after `NOW` (`_window(records, "2026-10-21T13:00:00Z")`) and `True` with one ending before it (`"2026-10-21T11:00:00Z"`), each after the earlier record is removed.
   Verify: `uv run pytest tests/test_ui_billing.py::test_an_alert_is_a_pod_or_a_volume_past_its_window` passes.
-- [ ] 4.5 In `tests/test_ui.py` add `test_a_stream_for_a_collection_sends_no_cell_of_another`, carrying `ui:events:a-stream-sends-only-its-collections-cells`. `events.stream(broadcast, lambda: {}, collection="a", heartbeat=WAIT)`; `next(stream)`; publish `("cell", {"collection": "b"})`, `("job", {"state": "x"})` and `("cell", {"collection": "a"})`. Assert the frames that follow equal `events.frame("job", {"state": "x"})` and `events.frame("cell", {"collection": "a"})`, then `broadcast.close()` and `next(stream, None) is None`.
+- [x] 4.5 In `tests/test_ui.py` add `test_a_stream_for_a_collection_sends_no_cell_of_another`, carrying `ui:events:a-stream-sends-only-its-collections-cells`. `events.stream(broadcast, lambda: {}, collection="a", heartbeat=WAIT)`; `next(stream)`; publish `("cell", {"collection": "b"})`, `("job", {"state": "x"})` and `("cell", {"collection": "a"})`. Assert the frames that follow equal `events.frame("job", {"state": "x"})` and `events.frame("cell", {"collection": "a"})`, then `broadcast.close()` and `next(stream, None) is None`.
   Verify: `uv run pytest tests/test_ui.py::test_a_stream_for_a_collection_sends_no_cell_of_another` passes.
-- [ ] 4.6 In `tests/test_ui.py` add `test_a_quiet_stream_keeps_alive_and_ends_when_the_surface_stops`, carrying `ui:events:stopping-ends-open-streams-quietly`: `events.stream(broadcast, lambda: {}, heartbeat=0.01)`, its first frame starts `event: snapshot`, its next is `": keep-alive\n\n"`, and after `broadcast.close()` `next(stream, None) is None`.
+- [x] 4.6 In `tests/test_ui.py` add `test_a_quiet_stream_keeps_alive_and_ends_when_the_surface_stops`, carrying `ui:events:stopping-ends-open-streams-quietly`: `events.stream(broadcast, lambda: {}, heartbeat=0.01)`, its first frame starts `event: snapshot`, its next is `": keep-alive\n\n"`, and after `broadcast.close()` `next(stream, None) is None`.
   Verify: `uv run pytest tests/test_ui.py::test_a_quiet_stream_keeps_alive_and_ends_when_the_surface_stops` passes.
-- [ ] 4.7 The phase's files agree with the keys.
+- [x] 4.7 The phase's files agree with the keys.
   Verify: `uv run pytest tests/test_ui_billing.py tests/test_ui.py` passes.
 
 ## 5 — The page's bodies
