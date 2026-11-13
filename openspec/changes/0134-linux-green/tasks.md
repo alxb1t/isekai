@@ -4,15 +4,15 @@ The phases, each green on its own: the sampler's edge, the PNG digests, the pinn
 
 ## Progress
 
-- [ ] 1 — The edge · moderate
+- [x] 1 — The edge · moderate
 - [ ] 2 — The digests · moderate
 - [ ] 3 — The interpreter · moderate
 
 ## 1 — The edge
 
-- [ ] 1.1 In `isekai/shared/chain.py`, add `EDGE = 1e-9` after `CHUNK`, its comment saying it is the pixels past an edge that still count as on it. Read it in `_sample`'s `inside`, and say so in the docstring, per [D1](design.md#d1).
+- [x] 1.1 In `isekai/shared/chain.py`, add `EDGE = 1e-9` after `CHUNK`, its comment saying it is the pixels past an edge that still count as on it. Read it in `_sample`'s `inside`, and say so in the docstring, per [D1](design.md#d1).
   Verify: `grep -n -F "x >= -EDGE" isekai/shared/chain.py` prints the line.
-- [ ] 1.2 In `tests/test_chain.py`, add `test_chain_lookup_takes_a_point_a_hair_past_the_edge_as_on_it`, marked `spec("tattoo:chain:a-point-a-hair-past-the-edge-is-on-it")`, on the bilinear test's ink: `lookup(ink, [_shift(dx, dy)], (1, 1))` for `(dx, dy)` of `(-e, 1)`, `(1, -e)`, `(3 + e, 1)` and `(1, 3 + e)` has `layer[0, 0, 3]` approx 1.0 for `e = 1e-12`, and `layer[0, 0].tolist()` approx `[1, 1, 1, 0]` for `e = 1e-6`.
+- [x] 1.2 In `tests/test_chain.py`, add `test_chain_lookup_takes_a_point_a_hair_past_the_edge_as_on_it`, marked `spec("tattoo:chain:a-point-a-hair-past-the-edge-is-on-it")`, on the bilinear test's ink: `lookup(ink, [_shift(dx, dy)], (1, 1))` for `(dx, dy)` of `(-e, 1)`, `(1, -e)`, `(3 + e, 1)` and `(1, 3 + e)` has `layer[0, 0, 3]` approx 1.0 for `e = 1e-12`, and `layer[0, 0].tolist()` approx `[1, 1, 1, 0]` for `e = 1e-6`.
   Verify: `uv run pytest tests/test_chain.py -k hair` exits 0.
 
 ## 2 — The digests
