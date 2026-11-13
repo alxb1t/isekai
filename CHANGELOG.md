@@ -36,6 +36,8 @@ its new digest.
   (0137 D6).
 - The change's mutants of the guard, the stream's filter, the volume alert and the job slot join `tests/mutants.json`,
   and each dies on replay (0137 D8).
+- Approving a sheet warns when the assembled prompt, not the tags alone, is past the encoder's window; the CLI and
+  the server pass the flow, and the budget's total and shares are held by literals (0138 D2, D3).
 
 ## [0.86.9] - 2026-11-13
 

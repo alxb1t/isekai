@@ -4,7 +4,7 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 
 ## Progress
 
-- [ ] 1 — The budget and the warning · moderate
+- [x] 1 — The budget and the warning · moderate
 - [ ] 2 — An approval is never replaced · moderate
 - [ ] 3 — What the reader is sent · moderate
 - [ ] 4 — The seal and the commit · hard
@@ -13,27 +13,27 @@ Phases of tests and three small product fixes: the budget and the warning, an ap
 
 ## 1 — The budget and the warning
 
-- [ ] 1.1 **HALT CHECK** The warning counts the tags alone at the line [D3](design.md#d3) replaces; if it reads otherwise, the plan is wrong.
+- [x] 1.1 **HALT CHECK** The warning counts the tags alone at the line [D3](design.md#d3) replaces; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'estimate = estimate_tokens(fields, schema)' isekai/pipeline/review.py` prints `1`.
-- [ ] 1.2 **HALT CHECK** The CLI's `approve` call passes the schema and no flow, the shape [D3](design.md#d3) extends; if it reads otherwise, the plan is wrong.
+- [x] 1.2 **HALT CHECK** The CLI's `approve` call passes the schema and no flow, the shape [D3](design.md#d3) extends; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'flows[name].schema,' isekai/interface/cli.py` prints `1`.
-- [ ] 1.3 In `isekai/pipeline/review.py` write [D3](design.md#d3): the keyword `definition: Flow | None = None` on `approve`, the `estimate` expression, a line in `approve`'s docstring, and `token_budget`'s paragraph on `estimate_tokens` replaced as the design says.
+- [x] 1.3 In `isekai/pipeline/review.py` write [D3](design.md#d3): the keyword `definition: Flow | None = None` on `approve`, the `estimate` expression, a line in `approve`'s docstring, and `token_budget`'s paragraph on `estimate_tokens` replaced as the design says.
   Verify: `git grep -c -F 'else token_budget(fields, schema, definition).total' isekai/pipeline/review.py` prints `1`.
-- [ ] 1.4 In `isekai/interface/cli.py` add `definition=flows[name],` after `excluded=field_map().excluded,` in `approve_flow`'s `approve(` call.
+- [x] 1.4 In `isekai/interface/cli.py` add `definition=flows[name],` after `excluded=field_map().excluded,` in `approve_flow`'s `approve(` call.
   Verify: `git grep -c -F 'definition=flows[name],' isekai/interface/cli.py` prints `1`.
-- [ ] 1.5 In `isekai/interface/ui/app.py` add `definition=one.flow,` after `excluded=shared.field_map().excluded,` in `post_approve`'s `approve(` call.
+- [x] 1.5 In `isekai/interface/ui/app.py` add `definition=one.flow,` after `excluded=shared.field_map().excluded,` in `post_approve`'s `approve(` call.
   Verify: `git grep -c -F 'definition=one.flow,' isekai/interface/ui/app.py` prints `1`.
-- [ ] 1.6 In `tests/test_ui_api.py` give the stand-in `approve_` of `_update_during_approval` the keyword-only parameter `definition: Flow | None = None` and pass `definition=definition` to `approving(...)`, importing `Flow` where the file lacks it.
+- [x] 1.6 In `tests/test_ui_api.py` give the stand-in `approve_` of `_update_during_approval` the keyword-only parameter `definition: Flow | None = None` and pass `definition=definition` to `approving(...)`, importing `Flow` where the file lacks it.
   Verify: `uv run pytest tests/test_ui_api.py::test_an_update_overlapping_an_approval_is_refused tests/test_ui_api.py::test_without_the_lock_an_update_writes_after_the_approval` passes.
-- [ ] 1.7 In `tests/test_review.py` add `test_the_budget_of_a_known_sheet_is_its_literals`, taking `schema` and `flow`, carrying `review:budget:count-covers-the-assembled-prompt` and `review:budget:shares-and-overhead-sum-to-the-total`. It builds the sheet of [D2](design.md#d2) and asserts each literal of its table, and that an empty sheet's `total` is `20`.
+- [x] 1.7 In `tests/test_review.py` add `test_the_budget_of_a_known_sheet_is_its_literals`, taking `schema` and `flow`, carrying `review:budget:count-covers-the-assembled-prompt` and `review:budget:shares-and-overhead-sum-to-the-total`. It builds the sheet of [D2](design.md#d2) and asserts each literal of its table, and that an empty sheet's `total` is `20`.
   Verify: `uv run pytest tests/test_review.py::test_the_budget_of_a_known_sheet_is_its_literals` passes.
-- [ ] 1.8 In `tests/test_review.py` add `test_a_sheet_inside_the_window_by_its_tags_and_past_it_assembled_warns`, carrying `review:budget:a-sheet-past-the-window-only-assembled-warns`, taking `run`, `schema`, `vocabulary` and `flow`. After `review(run, FLOW)` it edits `clothes` to `every` and `accessories` to `every[:3]`, `every` being `list(vocabulary.counts)`; asserts `estimate_tokens(fields, schema) <= ENCODER_WINDOW < token_budget(fields, schema, flow).total` over the draft's fields; calls `approve(run, FLOW, schema, vocabulary, definition=flow)`, and asserts one warning holding `the assembled prompt is about` and an approved file.
+- [x] 1.8 In `tests/test_review.py` add `test_a_sheet_inside_the_window_by_its_tags_and_past_it_assembled_warns`, carrying `review:budget:a-sheet-past-the-window-only-assembled-warns`, taking `run`, `schema`, `vocabulary` and `flow`. After `review(run, FLOW)` it edits `clothes` to `every` and `accessories` to `every[:3]`, `every` being `list(vocabulary.counts)`; asserts `estimate_tokens(fields, schema) <= ENCODER_WINDOW < token_budget(fields, schema, flow).total` over the draft's fields; calls `approve(run, FLOW, schema, vocabulary, definition=flow)`, and asserts one warning holding `the assembled prompt is about` and an approved file.
   Verify: `uv run pytest tests/test_review.py::test_a_sheet_inside_the_window_by_its_tags_and_past_it_assembled_warns` passes.
-- [ ] 1.9 In `tests/test_pipeline_cli.py` add `test_approve_warns_on_the_assembled_prompt_and_still_approves`, carrying the key of 1.8, built as `test_approve_refuses_a_tag_the_wired_field_map_excludes` is, over the sheet of 1.8 saved with `save_draft`. It asserts the same precondition, exit `0`, `warning: ` and `the assembled prompt is about` in the error stream, and the approved file.
+- [x] 1.9 In `tests/test_pipeline_cli.py` add `test_approve_warns_on_the_assembled_prompt_and_still_approves`, carrying the key of 1.8, built as `test_approve_refuses_a_tag_the_wired_field_map_excludes` is, over the sheet of 1.8 saved with `save_draft`. It asserts the same precondition, exit `0`, `warning: ` and `the assembled prompt is about` in the error stream, and the approved file.
   Verify: `uv run pytest tests/test_pipeline_cli.py::test_approve_warns_on_the_assembled_prompt_and_still_approves` passes.
-- [ ] 1.10 In `tests/test_ui_api.py` add `test_approve_answers_the_assembled_warning`, carrying the key of 1.8, over `client`, `made` and `vocabulary`: the draft update of the sheet of 1.8 answers a `budget` whose `total` is past `ENCODER_WINDOW`, and the approve route answers `200` with one `warnings` entry holding `the assembled prompt is about`.
+- [x] 1.10 In `tests/test_ui_api.py` add `test_approve_answers_the_assembled_warning`, carrying the key of 1.8, over `client`, `made` and `vocabulary`: the draft update of the sheet of 1.8 answers a `budget` whose `total` is past `ENCODER_WINDOW`, and the approve route answers `200` with one `warnings` entry holding `the assembled prompt is about`.
   Verify: `uv run pytest tests/test_ui_api.py::test_approve_answers_the_assembled_warning` passes.
-- [ ] 1.11 The phase's files and the record agree.
+- [x] 1.11 The phase's files and the record agree.
   Verify: `uv run pytest tests/test_review.py tests/test_pipeline_cli.py tests/test_ui_api.py tests/test_record.py` passes.
 
 ## 2 — An approval is never replaced

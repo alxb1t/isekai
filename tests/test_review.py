@@ -690,6 +690,28 @@ def test_the_estimate_counts_words_separators_and_the_encoders_own_two(
     assert estimate_tokens(fields, schema) == 9
 
 
+@pytest.mark.spec("review:budget:a-sheet-past-the-window-only-assembled-warns")
+def test_a_sheet_inside_the_window_by_its_tags_and_past_it_assembled_warns(
+    run: Run, schema: Schema, vocabulary: Vocabulary, flow: Flow
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    every = list(vocabulary.counts)
+    _edit(draft, clothes=every, accessories=every[:3])
+    fields = read(draft, DRAFT_FILE)["fields"]
+    assert (
+        estimate_tokens(fields, schema)
+        <= ENCODER_WINDOW
+        < token_budget(fields, schema, flow).total
+    )
+
+    approved, warnings = approve(run, FLOW, schema, vocabulary, definition=flow)
+
+    assert approved is not None and approved.exists()
+    assert len(warnings) == 1
+    assert "the assembled prompt is about" in warnings[0]
+
+
 # --- provenance ---------------------------------------------------------------
 
 
@@ -904,6 +926,29 @@ def test_the_budget_shares_and_overhead_sum_to_the_total(
     empty = [name for name in schema.names if not fields.get(name)]
     assert empty, "the fixture's sorter answers two fields, so the rest are empty"
     assert all(budget.per_field[name] == 0 for name in empty)
+
+
+@pytest.mark.spec("review:budget:count-covers-the-assembled-prompt")
+@pytest.mark.spec("review:budget:shares-and-overhead-sum-to-the-total")
+def test_the_budget_of_a_known_sheet_is_its_literals(
+    schema: Schema, flow: Flow
+) -> None:
+    fields: dict[str, list[str]] = {name: [] for name in schema.names}
+    assert token_budget(fields, schema, flow).total == 20
+
+    fields["hair_colour"] = ["brown hair"]
+    fields["clothes"] = ["collared shirt", "jeans"]
+    budget = token_budget(fields, schema, flow)
+
+    assert budget.total == 28
+    assert budget.per_field["hair_colour"] == 3
+    assert budget.per_field["clothes"] == 5
+    assert all(
+        share == 0
+        for name, share in budget.per_field.items()
+        if name not in ("hair_colour", "clothes")
+    )
+    assert budget.overhead == 20
 
 
 @pytest.mark.spec("review:budget:an-absent-field-is-counted-as-empty")

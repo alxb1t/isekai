@@ -1204,6 +1204,7 @@ def _update_during_approval(
         vocabulary: Vocabulary,
         *,
         excluded: frozenset[str] = frozenset(),
+        definition: Flow | None = None,
     ) -> tuple[Path | None, list[str]]:
         update.start()
         assert reached.wait(WAIT), "the update reached neither lock nor check"
@@ -1213,7 +1214,14 @@ def _update_during_approval(
             else "the update found a lock the approval should not hold"
         )
         try:
-            return approving(run, flow, schema, vocabulary, excluded=excluded)
+            return approving(
+                run,
+                flow,
+                schema,
+                vocabulary,
+                excluded=excluded,
+                definition=definition,
+            )
         finally:
             approved.set()
 
@@ -1587,6 +1595,26 @@ def test_approve_refuses_an_excluded_tag_the_draft_saved(
     assert saved.status_code == 200
     assert approved.status_code == 409
     assert "glasses" in approved.json()["refusal"]
+
+
+@pytest.mark.spec("review:budget:a-sheet-past-the-window-only-assembled-warns")
+def test_approve_answers_the_assembled_warning(
+    client: TestClient, made: Run, vocabulary: Vocabulary
+) -> None:
+    every = list(vocabulary.counts)
+    fields = {
+        **client.get(_at(made)).json()["fields"],
+        "clothes": every,
+        "accessories": every[:3],
+    }
+
+    saved = client.put(_at(made, "/draft"), json={"fields": fields})
+    approved = client.post(_at(made, "/approve"))
+
+    assert saved.json()["budget"]["total"] > ENCODER_WINDOW
+    assert approved.status_code == 200
+    assert len(approved.json()["warnings"]) == 1
+    assert "the assembled prompt is about" in approved.json()["warnings"][0]
 
 
 # --- damage is refused by name ------------------------------------------------
