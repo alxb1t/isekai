@@ -1,17 +1,20 @@
-"""Say which mutants of some lines the named tests kill.
+"""Say which mutants of some lines, or of some text edits, the named tests kill.
 
 Run it from the repository root:
 
     uv run python -m tools.mutate <path>:<lo>[-<hi>] ...
         (--tests <file-or-node-id> ... | --all) [--timeout <seconds>]
+    uv run python -m tools.mutate --edits <json> [--timeout <seconds>]
 
-A mutant is one edit on one line of a function body. The run works in a copy of
-the tracked files, never the checkout, and exits 0 with no survivor, 1 with one
-and 2 when it refuses. It imports the standard library alone.
+A mutant is one edit on one line of a function body. With `--edits` it is a text
+edit in any tracked file, replayed against the tests its entry names. The run
+works in a copy of the tracked files, never the checkout, and exits 0 with no
+survivor, 1 with one and 2 when it refuses. It imports the standard library alone.
 """
 
 import argparse
 import ast
+import json
 import os
 import re
 import shutil
@@ -23,13 +26,13 @@ import time
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, NoReturn, cast
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 OPERATORS = ("cmp", "bool", "not", "const", "raise", "ret", "call", "arith")
 
-LINKED = ("models", "ui/node_modules", "ui/dist")
+LINKED = ("models",)
 
 VERDICTS = ("killed", "survived", "invalid", "timeout")
 
@@ -53,6 +56,19 @@ class Mutant:
     operator: str
     old: str
     new: str
+
+
+@dataclass(frozen=True)
+class Edit:
+    """One text edit of a replay: `find` becomes `replace` once in `path`."""
+
+    finding: str
+    path: str
+    find: str
+    replace: str
+    tests: tuple[str, ...]
+    line: int
+    equivalent: str | None
 
 
 class Refused(Exception):
@@ -272,16 +288,94 @@ def tracked_files(root: Path) -> list[str]:
     return [os.fsdecode(path) for path in listed.stdout.split(b"\0") if path]
 
 
+EDIT_KEYS = ("finding", "path", "find", "replace", "tests")
+EDIT_OPTIONAL = ("why", "equivalent")
+EDIT_TEXTS = ("finding", "path", "find", "replace", "why", "equivalent")
+
+
+def load_edit(root: Path, tracked: set[str], number: int, item: object) -> Edit:
+    """Return the `Edit` of the `number`th entry, or raise `Refused` naming it."""
+    if not isinstance(item, dict):
+        raise Refused(f"entry {number} is not an object")
+    entry = cast("dict[str, Any]", item)
+    name = entry.get("finding")
+    label = name if isinstance(name, str) else f"entry {number}"
+    missing = [key for key in EDIT_KEYS if key not in entry]
+    if missing:
+        raise Refused(f"{label}: missing {', '.join(missing)}")
+    unknown = sorted(set(entry) - {*EDIT_KEYS, *EDIT_OPTIONAL})
+    if unknown:
+        raise Refused(f"{label}: unknown {', '.join(unknown)}")
+    for key in EDIT_TEXTS:
+        if key in entry and not isinstance(entry[key], str):
+            raise Refused(f"{label}: {key} is not text")
+    tests = entry["tests"]
+    if not isinstance(tests, list) or not tests:
+        raise Refused(f"{label}: tests is not a non-empty list")
+    if not all(isinstance(test, str) for test in tests):
+        raise Refused(f"{label}: tests holds a name that is not text")
+    path, find = entry["path"], entry["find"]
+    if path not in tracked:
+        raise Refused(f"{label}: {path} is not tracked")
+    try:
+        text = (root / path).read_bytes().decode()
+    except (OSError, ValueError) as failure:
+        raise Refused(f"{label}: {path} cannot be read as text: {failure}") from failure
+    found = text.count(find)
+    if found != 1:
+        raise Refused(f"{label}: find occurs {found} times in {path}, not once")
+    return Edit(
+        finding=entry["finding"],
+        path=path,
+        find=find,
+        replace=entry["replace"],
+        tests=tuple(tests),
+        line=text.count("\n", 0, text.index(find)) + 1,
+        equivalent=entry.get("equivalent"),
+    )
+
+
+def load_edits(root: Path, path: str) -> list[Edit]:
+    """Return the edits of the JSON array at `path`, or raise `Refused`.
+
+    `path` is read as given; the entries name tracked files of `root`.
+    """
+    try:
+        entries = json.loads(Path(path).read_text())
+    except (OSError, ValueError) as failure:
+        raise Refused(f"{path} cannot be read as JSON: {failure}") from failure
+    if not isinstance(entries, list):
+        raise Refused(f"{path} is not a JSON array")
+    tracked = set(tracked_files(root))
+    return [
+        load_edit(root, tracked, number, entry)
+        for number, entry in enumerate(entries, 1)
+    ]
+
+
 def copy_tree(root: Path, into: Path) -> None:
-    """Copy each tracked file of `root` that exists into `into`, and link `LINKED`.
+    """Copy each tracked file of `root` that exists into `into` as a git repository.
 
     A file is copied by content, so a mutant never writes through a link into `root`.
+    The copy is then made a git repository and `models` is linked, so a test that
+    writes under `models/` writes through the link and is a test to isolate.
     """
     for name in tracked_files(root):
         source = root / name
         if source.is_file():
             (into / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, into / name)
+    try:
+        subprocess.run(
+            ["git", "-C", str(into), "init", "-q"], capture_output=True, check=True
+        )
+        subprocess.run(
+            ["git", "-C", str(into), "add", "-A", "-f"],
+            capture_output=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as failure:
+        raise Refused(f"{into} cannot be made a git repository") from failure
     for name in LINKED:
         source = root / name
         if source.is_dir() and not (into / name).exists():
@@ -344,23 +438,40 @@ def verdict(code: int | None) -> str:
     return {0: "survived", 1: "killed"}.get(code, "invalid")
 
 
-def try_mutant(copy: Path, mutant: Mutant, args: Sequence[str], timeout: float) -> str:
-    """Return the verdict of `mutant` in `copy`, the file restored after the run."""
-    target = copy / mutant.path
+def try_bytes(
+    copy: Path, name: str, mutated: bytes, args: Sequence[str], timeout: float
+) -> str:
+    """Return the verdict of `name` holding `mutated` in `copy`, then restore it.
+
+    A `.py` file that does not parse is `invalid`, and no test runs.
+    """
+    target = copy / name
     original = target.read_bytes()
-    lines = original.split(b"\n")
-    lines[mutant.line - 1] = mutant.new.encode()
-    mutated = b"\n".join(lines)
-    try:
-        ast.parse(mutated)
-    except (SyntaxError, ValueError):
-        return "invalid"
+    if target.suffix == ".py":
+        try:
+            ast.parse(mutated)
+        except (SyntaxError, ValueError):
+            return "invalid"
     target.write_bytes(mutated)
     try:
         code, _ = run_tests(copy, args, timeout)
     finally:
         target.write_bytes(original)
     return verdict(code)
+
+
+def try_mutant(copy: Path, mutant: Mutant, args: Sequence[str], timeout: float) -> str:
+    """Return the verdict of `mutant` in `copy`, the file restored after the run."""
+    lines = (copy / mutant.path).read_bytes().split(b"\n")
+    lines[mutant.line - 1] = mutant.new.encode()
+    return try_bytes(copy, mutant.path, b"\n".join(lines), args, timeout)
+
+
+def try_edit(copy: Path, edit: Edit, args: Sequence[str], timeout: float) -> str:
+    """Return the verdict of `edit` in `copy`, the file restored after the run."""
+    original = (copy / edit.path).read_bytes()
+    mutated = original.replace(edit.find.encode(), edit.replace.encode(), 1)
+    return try_bytes(copy, edit.path, mutated, args, timeout)
 
 
 def verdict_line(mutant: Mutant, result: str) -> str:
@@ -394,11 +505,12 @@ class Parser(argparse.ArgumentParser):
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
-    """Return the command line's targets, tests, `everything` flag and timeout."""
+    """Return the command line's targets, tests, `everything` flag, edits, timeout."""
     parser = Parser(prog="python -m tools.mutate", allow_abbrev=False)
-    parser.add_argument("targets", nargs="+", metavar="path:lo[-hi]")
+    parser.add_argument("targets", nargs="*", metavar="path:lo[-hi]")
     parser.add_argument("--tests", nargs="+", default=[], metavar="TEST")
     parser.add_argument("--all", action="store_true", dest="everything")
+    parser.add_argument("--edits", metavar="JSON")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
     return parser.parse_args(argv)
 
@@ -421,6 +533,24 @@ def collect(root: Path, targets: Sequence[str]) -> list[Mutant]:
     return mutants
 
 
+def baseline_limit(copy: Path, args: Sequence[str], timeout: float) -> float:
+    """Return the seconds a mutant of `args` may run, or raise `Refused` if red.
+
+    The tests run unmutated in `copy`; the limit is `mutant_timeout` of that run.
+    """
+    started = time.monotonic()
+    code, output = run_tests(copy, args, BASELINE_SECONDS)
+    timeout = mutant_timeout(timeout, time.monotonic() - started)
+    if code != 0:
+        tail = "\n".join(output.splitlines()[-TAIL_LINES:])
+        raise Refused(
+            f"the tests do not pass unmutated in a copy (exit {code}), "
+            "so no mutant is tried; a test that reads the git history or an "
+            f"untracked file fails in a copy\n{tail}"
+        )
+    return timeout
+
+
 def run_mutants(
     root: Path, mutants: Sequence[Mutant], args: Sequence[str], timeout: float
 ) -> list[tuple[Mutant, str]]:
@@ -432,16 +562,7 @@ def run_mutants(
     with tempfile.TemporaryDirectory() as scratch:
         copy = Path(scratch) / "repo"
         copy_tree(root, copy)
-        started = time.monotonic()
-        code, output = run_tests(copy, args, BASELINE_SECONDS)
-        timeout = mutant_timeout(timeout, time.monotonic() - started)
-        if code != 0:
-            tail = "\n".join(output.splitlines()[-TAIL_LINES:])
-            raise Refused(
-                f"the tests do not pass unmutated in a copy (exit {code}), "
-                "so no mutant is tried; a test that reads the git history or an "
-                f"untracked file fails in a copy\n{tail}"
-            )
+        timeout = baseline_limit(copy, args, timeout)
         results: list[tuple[Mutant, str]] = []
         for mutant in mutants:
             result = try_mutant(copy, mutant, args, timeout)
@@ -450,15 +571,66 @@ def run_mutants(
     return results
 
 
+def first_line(text: str) -> str:
+    """Return the first line of `text`, empty for empty text."""
+    return text.split("\n", 1)[0]
+
+
+def run_edits(
+    root: Path, edits: Sequence[Edit], timeout: float
+) -> list[tuple[Mutant, str]]:
+    """Return each edit that is run with its verdict, tried alone in one copy.
+
+    The tests of each distinct list run unmutated first, and a baseline that is not
+    green is a `Refused` before any line prints. An edit with `equivalent` is
+    printed with its reason and is not run.
+    """
+    with tempfile.TemporaryDirectory() as scratch:
+        copy = Path(scratch) / "repo"
+        copy_tree(root, copy)
+        limits = {
+            tests: baseline_limit(copy, pytest_args(tests, False), timeout)
+            for tests in dict.fromkeys(e.tests for e in edits if e.equivalent is None)
+        }
+        results: list[tuple[Mutant, str]] = []
+        for edit in edits:
+            if edit.equivalent is not None:
+                print(
+                    f"equivalent {edit.path}:{edit.line} {edit.finding}: "
+                    f"{edit.equivalent}",
+                    flush=True,
+                )
+                continue
+            mutant = Mutant(
+                edit.path,
+                edit.line,
+                edit.finding,
+                first_line(edit.find),
+                first_line(edit.replace),
+            )
+            args = pytest_args(edit.tests, False)
+            result = try_edit(copy, edit, args, limits[edit.tests])
+            print(verdict_line(mutant, result), flush=True)
+            results.append((mutant, result))
+    return results
+
+
 def main(argv: Sequence[str] | None = None, *, root: Path = REPO_ROOT) -> int:
-    """Run the mutants of the lines named; return the exit status, 0, 1 or 2."""
+    """Run the mutants named; return the exit status, 0, 1 or 2."""
     try:
         args = parse_args(sys.argv[1:] if argv is None else argv)
-        if bool(args.tests) == args.everything:
-            raise Refused("give one of --tests and --all")
-        mutants = collect(root, args.targets)
-        chosen = pytest_args(args.tests, args.everything)
-        results = run_mutants(root, mutants, chosen, args.timeout)
+        if args.edits is not None:
+            if args.targets or args.tests or args.everything:
+                raise Refused("--edits takes no target, --tests or --all")
+            results = run_edits(root, load_edits(root, args.edits), args.timeout)
+        else:
+            if not args.targets:
+                raise Refused("give a target or --edits")
+            if bool(args.tests) == args.everything:
+                raise Refused("give one of --tests and --all")
+            mutants = collect(root, args.targets)
+            chosen = pytest_args(args.tests, args.everything)
+            results = run_mutants(root, mutants, chosen, args.timeout)
     except Refused as refusal:
         print(f"mutate: refused: {refusal}", file=sys.stderr)
         return 2

@@ -417,8 +417,9 @@ J5·9  SUMMON-ANIME-WAI · V1 · SEED 1840266731     SUMMON-ANIME-WAI · V2 · S
 - **A bake's view** (`…/<seed>/edit/:k`) is the large view with the bake's image, or for a queued bake the image it
   was placed on, under the line `queued · the image it was placed on, until the next session bakes it`. The sheet
   keeps its head and fields, and adds the bake's record rows: *placed on* (`the render` or `edit 1`), *edit* and
-  *baked*. It offers no write — no *Draft from this*, *Compare with…* or *Delete*, and none of their keys — since a
-  delete there would take the render and every bake; the way back is *Back to Hub* and the chain's rows.
+  *baked*. It offers no write — no *Draft from this*, *Compare with…*, *Place a tattoo* (⇧P) or *Delete*, and none
+  of their keys — since a delete there would take the render and every bake; the way back is *Back to Hub* and the
+  chain's rows.
 - **Compare** sets the image picked on the left and the image compare started from on the right, at one height,
   each headed by its flow, version and seed and nothing else: the pair centred, as tall as the window less the app
   bar and the heads, on the app's 12 px padding.

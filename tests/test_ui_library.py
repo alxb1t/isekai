@@ -476,23 +476,40 @@ def test_a_source_with_no_run_is_sized_from_its_own_file(tmp_path: Path) -> None
 def test_an_unreadable_run_file_marks_its_cell_alone(
     tmp_path: Path, vocabulary: Vocabulary
 ) -> None:
-    folder = _collection(tmp_path, "b", "ada.jpg", "bea.jpg")
+    folder = _collection(
+        tmp_path, "b", "ada.jpg", "bea.jpg", "cy.jpg", "dee.jpg", "eve.jpg"
+    )
+    schema = load_flow(SUMMON).schema
     ada = _run(folder, "ada.jpg")
-    sheet(ada, load_flow(SUMMON).schema, vocabulary)
+    sheet(ada, schema, vocabulary)
     review(ada, SUMMON)
-    draft = ada.directory(SUMMON, REVIEW) / "001.draft.json"
-    body = json.loads(draft.read_text())
-    body["schema"]["version"] = 99
-    draft.write_text(json.dumps(body))
     bea = _run(folder, "bea.jpg")
     _approved(bea, vocabulary)
+    cy = _run(folder, "cy.jpg")
+    dee = _run(folder, "dee.jpg")
+    dee.directory(SUMMON).mkdir()
+    eve = _run(folder, "eve.jpg")
+    _approved(eve, vocabulary)
+    damaged = {
+        "ada.jpg": ada.directory(SUMMON, REVIEW) / "001.draft.json",
+        "cy.jpg": sheet(cy, schema, vocabulary),
+        "dee.jpg": write_wd14(dee),
+        "eve.jpg": approval_of(eve, SUMMON, 1),
+    }
+    for path in damaged.values():
+        assert path is not None
+        body = json.loads(path.read_text())
+        body["schema"]["version"] = 99
+        path.write_text(json.dumps(body))
 
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
 
     cells = {one.name: one.cells[SUMMON] for one in grid.sources}
-    assert cells["ada.jpg"].stage == "unreadable"
-    assert "001.draft.json" in str(cells["ada.jpg"].refusal)
-    assert "version 99" in str(cells["ada.jpg"].refusal)
+    for name, path in damaged.items():
+        assert path is not None
+        assert cells[name].stage == "unreadable"
+        assert path.name in str(cells[name].refusal)
+        assert "version 99" in str(cells[name].refusal)
     assert cells["bea.jpg"] == Cell("approved", status="approved", short=1)
 
 

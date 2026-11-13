@@ -1,7 +1,7 @@
 # The gate: this recipe is its one declaration. CI and the MinionsFactory skills
 # run `make gate`; `make -n gate` prints what it runs.
 
-.PHONY: gate e2e setup browsers drift derive
+.PHONY: gate e2e setup browsers drift derive mutants
 
 gate:
 # environment, from the tracked lock; not a quality axis, hence first
@@ -59,3 +59,8 @@ derive:
 	uv run python -m tools.derive_field_map
 	uv run python -m tools.derive_imported_by
 	$(MAKE) drift
+
+# Replay the audit's mutants, each against the tests it names, and fail on a
+# survivor. Not part of the gate, because a replay takes minutes.
+mutants:
+	uv run python -m tools.mutate --edits tests/mutants.json
