@@ -415,7 +415,7 @@
   },
   "ed706d21a2c3_ada/summon-anime-wai/outputs/001/42.edit-1.json": {
     "json": {
-      "composite_sha256": "831b33c0b80a4addcb99fd741b6dc47472bb0716a5fba5925b80d90a6bfb3af7",
+      "composite_sha256": "<sha256 of a PNG>",
       "crop": {
         "box": [
           0,
@@ -469,7 +469,7 @@
       },
       "seed": 5,
       "source": "42.png",
-      "source_sha256": "854c985a20e7b68bd637b4fc680f4e27462f3ab42713c40546798ab2756befc0"
+      "source_sha256": "<sha256 of a PNG>"
     }
   },
   "ed706d21a2c3_ada/summon-anime-wai/outputs/001/42.edit-1.png": {

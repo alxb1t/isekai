@@ -3,7 +3,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -17,7 +17,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": ".data/runs",
         "dest": "runs",
@@ -30,7 +30,7 @@
         "type": "Path"
       },
       {
-        "action": "_AppendAction",
+        "action": "append",
         "choices": null,
         "default": null,
         "dest": "flows",
@@ -43,7 +43,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "source",
@@ -56,7 +56,7 @@
         "type": null
       },
       {
-        "action": "_StoreTrueAction",
+        "action": "store_true",
         "choices": null,
         "default": false,
         "dest": "cancel",
@@ -71,7 +71,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "photos",
@@ -87,7 +87,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -101,7 +101,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": ".data/runs",
         "dest": "runs",
@@ -114,7 +114,7 @@
         "type": "Path"
       },
       {
-        "action": "_AppendAction",
+        "action": "append",
         "choices": null,
         "default": null,
         "dest": "flows",
@@ -127,7 +127,7 @@
         "type": null
       },
       {
-        "action": "_StoreTrueAction",
+        "action": "store_true",
         "choices": null,
         "default": false,
         "dest": "remove",
@@ -142,7 +142,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "photos",
@@ -158,7 +158,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -172,7 +172,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": ".data/runs",
         "dest": "runs",
@@ -185,7 +185,7 @@
         "type": "Path"
       },
       {
-        "action": "_AppendAction",
+        "action": "append",
         "choices": null,
         "default": null,
         "dest": "flows",
@@ -198,7 +198,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": [
           "json"
         ],
@@ -213,7 +213,7 @@
         "type": null
       },
       {
-        "action": "_StoreTrueAction",
+        "action": "store_true",
         "choices": null,
         "default": false,
         "dest": "new_version",
@@ -228,7 +228,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "photos",
@@ -244,7 +244,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -260,7 +260,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "collection",
@@ -276,7 +276,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -292,7 +292,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "image",
@@ -308,7 +308,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -322,7 +322,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "target",
@@ -337,7 +337,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "images",
@@ -361,7 +361,7 @@
     ],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -375,7 +375,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "composite",
@@ -388,7 +388,7 @@
         "type": "Path"
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "pending",
@@ -401,7 +401,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": ".data/runs",
         "dest": "runs",
@@ -414,7 +414,7 @@
         "type": "Path"
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "server",
@@ -427,7 +427,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": [
           "json"
         ],
@@ -442,7 +442,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "denoise",
@@ -455,7 +455,7 @@
         "type": "float"
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "strength",
@@ -468,7 +468,7 @@
         "type": "float"
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "lines",
@@ -481,7 +481,7 @@
         "type": "float"
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "seed",
@@ -496,7 +496,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "edit",
@@ -507,7 +507,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "render",
@@ -532,7 +532,7 @@
     ],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -546,7 +546,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": ".data/runs",
         "dest": "runs",
@@ -559,7 +559,7 @@
         "type": "Path"
       },
       {
-        "action": "_AppendAction",
+        "action": "append",
         "choices": null,
         "default": null,
         "dest": "flows",
@@ -572,7 +572,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": [
           "json"
         ],
@@ -587,7 +587,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "count",
@@ -600,7 +600,7 @@
         "type": "parse"
       },
       {
-        "action": "_AppendAction",
+        "action": "append",
         "choices": null,
         "default": null,
         "dest": "seeds",
@@ -613,7 +613,7 @@
         "type": "_seed"
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "seeds_from",
@@ -626,7 +626,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "server",
@@ -641,7 +641,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "photos",
@@ -657,7 +657,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -671,7 +671,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "collection",
@@ -686,7 +686,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "files",
@@ -702,7 +702,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -716,7 +716,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "outline",
@@ -729,7 +729,7 @@
         "type": "Path"
       },
       {
-        "action": "BooleanOptionalAction",
+        "action": "boolean_optional",
         "choices": null,
         "default": null,
         "dest": "neutral",
@@ -743,7 +743,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "depth",
@@ -758,7 +758,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "image",
@@ -769,7 +769,7 @@
         "type": "Path"
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "out",
@@ -785,7 +785,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -799,7 +799,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "runs",
@@ -818,7 +818,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -832,7 +832,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": ".data/runs",
         "dest": "runs",
@@ -845,7 +845,7 @@
         "type": "Path"
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": [
           "json"
         ],
@@ -862,7 +862,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "cells",
@@ -878,7 +878,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -892,7 +892,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": [
           "json"
         ],
@@ -907,7 +907,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "limit",
@@ -920,7 +920,7 @@
         "type": "parse"
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "session",
@@ -933,7 +933,7 @@
         "type": "_session_id"
       },
       {
-        "action": "_AppendAction",
+        "action": "append",
         "choices": null,
         "default": null,
         "dest": "without",
@@ -964,7 +964,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -978,7 +978,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": ".data/runs",
         "dest": "runs",
@@ -991,7 +991,7 @@
         "type": "Path"
       },
       {
-        "action": "_AppendAction",
+        "action": "append",
         "choices": null,
         "default": null,
         "dest": "flows",
@@ -1004,7 +1004,7 @@
         "type": null
       },
       {
-        "action": "_StoreTrueAction",
+        "action": "store_true",
         "choices": null,
         "default": false,
         "dest": "new_version",
@@ -1017,7 +1017,7 @@
         "type": null
       },
       {
-        "action": "_StoreTrueAction",
+        "action": "store_true",
         "choices": null,
         "default": false,
         "dest": "discard",
@@ -1032,7 +1032,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "photos",
@@ -1048,7 +1048,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -1062,7 +1062,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": ".data/runs",
         "dest": "runs",
@@ -1075,7 +1075,7 @@
         "type": "Path"
       },
       {
-        "action": "_AppendAction",
+        "action": "append",
         "choices": null,
         "default": null,
         "dest": "flows",
@@ -1088,7 +1088,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": [
           "json"
         ],
@@ -1103,7 +1103,7 @@
         "type": null
       },
       {
-        "action": "_StoreTrueAction",
+        "action": "store_true",
         "choices": null,
         "default": false,
         "dest": "new_version",
@@ -1118,7 +1118,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "photos",
@@ -1134,7 +1134,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -1148,7 +1148,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": ".data/runs",
         "dest": "runs",
@@ -1163,7 +1163,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "photos",
@@ -1179,7 +1179,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -1193,7 +1193,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": ".data/runs",
         "dest": "runs",
@@ -1206,7 +1206,7 @@
         "type": "Path"
       },
       {
-        "action": "_AppendAction",
+        "action": "append",
         "choices": null,
         "default": null,
         "dest": "flows",
@@ -1219,7 +1219,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": [
           "json"
         ],
@@ -1234,7 +1234,7 @@
         "type": null
       },
       {
-        "action": "_StoreTrueAction",
+        "action": "store_true",
         "choices": null,
         "default": false,
         "dest": "new_version",
@@ -1249,7 +1249,7 @@
     ],
     "positionals": [
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": null,
         "dest": "photos",
@@ -1265,7 +1265,7 @@
     "groups": [],
     "options": [
       {
-        "action": "_HelpAction",
+        "action": "help",
         "choices": null,
         "default": "==SUPPRESS==",
         "dest": "help",
@@ -1279,7 +1279,7 @@
         "type": null
       },
       {
-        "action": "_StoreAction",
+        "action": "store",
         "choices": null,
         "default": 8517,
         "dest": "port",

@@ -1,0 +1,58 @@
+{
+  "change": "0134-linux-green",
+  "version": "0.86.8",
+  "base": "8cf78cc9",
+  "analyzed": "58f82f88",
+  "measured_on": "local",
+  "collected_at": "2026-11-13T10:48:44+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2281
+    },
+    "tests-browser": {
+      "value": 18
+    },
+    "gate-seconds": {
+      "value": 68
+    },
+    "open-backlog-cards": {
+      "value": 11
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 670
+    },
+    "diff-files": {
+      "value": 15
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 14514
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1038
+    },
+    "decisions": {
+      "value": 58
+    }
+  }
+}
