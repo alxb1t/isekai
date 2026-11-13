@@ -291,6 +291,9 @@ def test_one_batch_survives_a_bad_sheet_an_unreadable_header_and_a_photograph_pa
     assert sum("re-export the photograph" in line for line in lines) == 1
     (past,) = [line for line in lines if "5120" in line]
     assert "1024" in past and str(MAX_TARGET_LONG_SIDE) in past
+    # The refusal belongs to the photograph past the bound, not to the run beside it.
+    assert wide.id in past
+    assert good.id not in past
     assert (good.directory(FLOW, PROMPTS) / artifact_name(1)).is_file()
     assert list(header.directory(FLOW, PROMPTS).glob("001.error.1.permanent.json"))
 
