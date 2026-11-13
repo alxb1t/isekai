@@ -474,6 +474,21 @@ def verdict(code: int | None) -> str:
     return {0: "survived", 1: "killed"}.get(code, "invalid")
 
 
+def vitest_verdict(code: int | None, output: str) -> str:
+    """Return the verdict of a vitest run: a kill needs a test that ran and failed.
+
+    Vitest exits 1 for a file it cannot transform or collect, which ran no test, so
+    that run is `invalid` unless its `Tests` summary line counts a failed test.
+    e.g. (1, "Tests  1 failed | 2 passed (3)") -> "killed", (1, "Tests  no tests")
+    -> "invalid"
+    """
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", output)
+    ran = re.search(r"^\s*Tests\s.*\b[1-9]\d* failed", plain, re.MULTILINE)
+    if code == 1 and ran is None:
+        return "invalid"
+    return verdict(code)
+
+
 def try_bytes(
     copy: Path,
     name: str,
@@ -484,7 +499,8 @@ def try_bytes(
 ) -> str:
     """Return the verdict of `name` holding `mutated` in `copy`, then restore it.
 
-    A `.py` file that does not parse is `invalid`, and no test runs.
+    A `.py` file that does not parse is `invalid`, and no test runs. A vitest run
+    that fails with no failed test, a file it could not transform, is `invalid` too.
     """
     target = copy / name
     original = target.read_bytes()
@@ -495,10 +511,10 @@ def try_bytes(
             return "invalid"
     target.write_bytes(mutated)
     try:
-        code, _ = run_tests(copy, args, timeout, runner)
+        code, output = run_tests(copy, args, timeout, runner)
     finally:
         target.write_bytes(original)
-    return verdict(code)
+    return vitest_verdict(code, output) if runner == "vitest" else verdict(code)
 
 
 def try_mutant(copy: Path, mutant: Mutant, args: Sequence[str], timeout: float) -> str:

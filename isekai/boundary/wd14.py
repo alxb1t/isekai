@@ -38,9 +38,11 @@ digests are verified before the first inference (D7).
 **Preparation sits behind the seam rather than in front of it**, so `Session`
 takes a photograph and not a prepared array. That is what makes the stage itself
 runnable in the suite without a wheel: `prepare` needs `numpy` and `Pillow`, the
-suite keeps the stage's tests off both deliberately, and a seam beginning after
-preparation would leave `tagging:seam:offline-double-satisfies-the-interface`
-provable only by reaching for them.
+stage's tests keep off both deliberately -- bar the one that a photograph which
+will not decode is a local failure, which runs the real `prepare` -- and a seam
+beginning after preparation would leave
+`tagging:seam:offline-double-satisfies-the-interface` provable only by reaching
+for them.
 
 **The one silent failure mode is the ordering**, which is exactly what the suite
 asserts against a fake session: a vector whose only high value sits at index 1
@@ -159,7 +161,8 @@ class Session(Protocol):
     **The seam takes the photograph rather than a prepared array**, and the
     difference is what the double is worth. `prepare` needs `numpy` and
     `Pillow`, declared dependencies the gate's environment installs, and no
-    stage test reaches them -- the double sits ahead of preparation, so a seam
+    fake-session stage test reaches them (the decode-failure test alone runs the
+    real `prepare`) -- the double sits ahead of preparation, so a seam
     that began *after* it would put both inside every stage test and
     `tagging:seam:offline-double-satisfies-the-interface` would stop proving
     that the stage runs on a double alone. Preparing an image is this boundary's

@@ -3,7 +3,8 @@
 Offline throughout. The hosted tagger is driven through `FakeTransport` and
 `FakeTagger`, and the local one through `tests/test_wd14.py`'s fake session over
 a three-row label index -- no network, no 467 MB file, and nothing here imports
-`numpy`, `Pillow` or `onnxruntime`.
+`onnxruntime`. Only the decode-failure test runs the real `prepare`, so only it
+reaches `numpy` and `Pillow`.
 
 **What is deliberately not asserted anywhere in this file is narrowing.** Neither
 stage canonicalises, filters against the vocabulary, deduplicates or re-orders on
