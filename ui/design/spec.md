@@ -500,7 +500,7 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 |---|---|---|
 | J9·1 the picker, nothing kept: `none kept yet`, the upload form with `the tattoo's design on its own — a flat image, not a photo of skin`, the cut form with `the tattoo as it shows on this render's photograph` | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
 | J9·2 a file chosen: its name `IMG_5521`, `reading…`, then `converted`; Keep waits `reading the file` | Upload a tattoo…, choose `IMG_5521.heic` | same |
-| J9·3 the outline step on it, the outline open: the ink view, the white point and the tone disabled, the line `close the outline on its first point · 0 points` above them | Keep | `…/place/outline/IMG_5521` |
+| J9·3 the outline step on it, the outline open: the ink view, the white point and the tone disabled, the line `add 3 more points to close · 0 of 3` above them | Keep | `…/place/outline/IMG_5521` |
 | J9·4 the outline closed: the ink view, the white point `auto` with its grey, the tone, `saved` | shift-click the first point again | same |
 | J9·5 the picker: the card `IMG_5521`, `outlined` | ① tattoo | `…/place/tattoo` |
 | J9·6 a cut: the photograph dimmed outside the outline, the source line `from photograph 0d4b7e6fb2a8 · ink 412×301 on the photograph`, neutral on, depth 1.6 | name `bow`, Cut from this photo, close its outline | `…/place/outline/bow` |

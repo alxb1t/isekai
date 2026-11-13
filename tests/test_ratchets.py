@@ -10,7 +10,7 @@ built under `tmp_path`.
 """
 
 import ast
-from collections.abc import Collection, Iterator
+from collections.abc import Collection, Iterable, Iterator
 from pathlib import Path
 
 import pytest
@@ -24,6 +24,9 @@ UI_FILE_LINES = 600
 
 # The top-level packages whose modules a patch can name.
 PACKAGES = ("isekai", "evaluation")
+
+# Those a patch is held to a name its module reads.
+PATCH_PACKAGES = (*PACKAGES, "tools")
 
 
 def ratchet_faults(
@@ -165,9 +168,12 @@ def _top_names(path: Path) -> set[str]:
     return names
 
 
-def _bound_modules(root: Path, tree: ast.AST) -> dict[str, str]:
+def _bound_modules(
+    root: Path, tree: ast.AST, packages: Collection[str]
+) -> dict[str, str]:
     """Return the module each imported name stands for, anywhere in a file.
 
+    Only a module of `packages` is bound.
     e.g. `from isekai import x` -> `{"x": "isekai.x"}`
     e.g. `import isekai.x.y` -> `{"isekai": "isekai"}`
     """
@@ -176,10 +182,10 @@ def _bound_modules(root: Path, tree: ast.AST) -> dict[str, str]:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 top = alias.name.split(".")[0]
-                if top in PACKAGES:
+                if top in packages:
                     bound[alias.asname or top] = alias.name if alias.asname else top
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-            if node.module.split(".")[0] in PACKAGES:
+            if node.module.split(".")[0] in packages:
                 for alias in node.names:
                     full = f"{node.module}.{alias.name}"
                     if _module_file(root, full):
@@ -207,10 +213,10 @@ def _text(node: ast.expr) -> str | None:
     return None
 
 
-def _patches(tree: ast.AST, bound: dict[str, str]) -> Iterator[tuple[str, str]]:
-    """Yield the (dotted module path, name) of each `x.setattr(...)` call in a tree.
+def _patches(tree: ast.AST, bound: dict[str, str]) -> Iterator[tuple[int, str, str]]:
+    """Yield the (line, dotted module path, name) of each `x.setattr(...)` call.
 
-    e.g. `setattr(ui.library, "run", f)` -> `("isekai.interface.ui.library", "run")`
+    e.g. `setattr(ui.library, "run", f)` -> `(7, "isekai.interface.ui.library", "run")`
     """
     for node in ast.walk(tree):
         if not (
@@ -223,10 +229,29 @@ def _patches(tree: ast.AST, bound: dict[str, str]) -> Iterator[tuple[str, str]]:
         first, rest = node.args[0], node.args[1:]
         if (dotted := _text(first)) is not None:
             module, _, name = dotted.rpartition(".")
-            yield module, name
+            yield node.lineno, module, name
         elif (chain := _chain(first)) and chain[0] in bound and rest:
             if (name := _text(rest[0])) is not None:
-                yield ".".join([bound[chain[0]], *chain[1:]]), name
+                yield node.lineno, ".".join([bound[chain[0]], *chain[1:]]), name
+
+
+def resolved_patches(
+    root: Path, packages: Collection[str]
+) -> list[tuple[str, int, str, str]]:
+    """Return each patch of a module of `packages`, as (test path, line, module, name).
+
+    A target that resolves to no module of the packages is left out.
+    e.g. `("tests/test_x.py", 12, "isekai.boundary.ollama", "MODEL_RECORDS")`
+    """
+    found: list[tuple[str, int, str, str]] = []
+    for path in sorted((root / "tests").rglob("*.py")):
+        key = _key(root, path)
+        tree = ast.parse(path.read_text(), filename=key)
+        bound = _bound_modules(root, tree, packages)
+        for line, module, name in _patches(tree, bound):
+            if module.split(".")[0] in packages and _module_file(root, module):
+                found.append((key, line, module, name))
+    return found
 
 
 def patched_modules(root: Path) -> dict[str, int]:
@@ -237,19 +262,137 @@ def patched_modules(root: Path) -> dict[str, int]:
     """
     counts: dict[str, int] = {}
     names: dict[Path, set[str]] = {}
-    for path in sorted((root / "tests").rglob("*.py")):
-        tree = ast.parse(path.read_text(), filename=_key(root, path))
-        for module, name in _patches(tree, _bound_modules(root, tree)):
-            file = (
-                _module_file(root, module) if module.split(".")[0] in PACKAGES else None
-            )
-            if file is None:
-                continue
-            if file not in names:
-                names[file] = _top_names(file)
-            if name in names[file]:
-                counts[module] = counts.get(module, 0) + 1
+    for _, _, module, name in resolved_patches(root, PACKAGES):
+        file = _module_file(root, module)
+        if file is None:
+            continue
+        if file not in names:
+            names[file] = _top_names(file)
+        if name in names[file]:
+            counts[module] = counts.get(module, 0) + 1
     return dict(sorted(counts.items()))
+
+
+def _dotted(root: Path, path: Path) -> str:
+    parts = path.relative_to(root).with_suffix("").parts
+    return ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
+
+
+_FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
+
+
+def _locals(function: ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda) -> set[str]:
+    """Return the names a function binds for itself, its parameters and its stores.
+
+    A nested function's own names are not counted, and a `global` name is not local.
+    e.g. `def f(root): return root` -> `{"root"}`
+    """
+    arguments = function.args
+    names = {
+        argument.arg
+        for argument in [
+            *arguments.posonlyargs,
+            *arguments.args,
+            *arguments.kwonlyargs,
+            *filter(None, [arguments.vararg, arguments.kwarg]),
+        ]
+    }
+    declared: set[str] = set()
+    pending: list[ast.AST] = (
+        [function.body] if isinstance(function, ast.Lambda) else list(function.body)
+    )
+    while pending:
+        node = pending.pop()
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            names.add(node.id)
+        elif isinstance(node, ast.Global):
+            declared.update(node.names)
+        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            names.add(node.name)
+            continue
+        elif isinstance(node, ast.Import | ast.ImportFrom):
+            names.update(
+                (alias.asname or alias.name).split(".")[0] for alias in node.names
+            )
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            names.add(node.name)
+        pending.extend(ast.iter_child_nodes(node))
+    return names - declared
+
+
+def _bare_loads(nodes: Iterable[ast.AST], shadowed: frozenset[str]) -> set[str]:
+    """Return the names loaded under `nodes` that no enclosing function binds itself.
+
+    e.g. `def f(root): return root` loads nothing, `def f(): return root` loads `root`
+    """
+    loads: set[str] = set()
+    for node in nodes:
+        if isinstance(node, ast.Name):
+            if isinstance(node.ctx, ast.Load) and node.id not in shadowed:
+                loads.add(node.id)
+        elif isinstance(node, _FUNCTIONS):
+            outside = [
+                *getattr(node, "decorator_list", []),
+                *node.args.defaults,
+                *filter(None, node.args.kw_defaults),
+            ]
+            body = [node.body] if isinstance(node.body, ast.expr) else node.body
+            loads |= _bare_loads(outside, shadowed)
+            loads |= _bare_loads(body, shadowed | _locals(node))
+        else:
+            loads |= _bare_loads(ast.iter_child_nodes(node), shadowed)
+    return loads
+
+
+def names_read(root: Path) -> dict[str, set[str]]:
+    """Return, for each module under the patch packages, the names the product reads.
+
+    A read is a load of a bare name no enclosing function binds for itself, in the
+    module's own source; an attribute load through the module in any file; or an
+    import of the name from the module inside a function. A store is not a read, a
+    test is not product, and an import at module level is not a read: it copies the
+    name when the importer loads, so a later patch of the source does not reach it.
+    e.g. `{"isekai.boundary.ollama": {"MODEL_RECORDS", "OPENER"}}`
+    """
+    read: dict[str, set[str]] = {}
+    for package in PATCH_PACKAGES:
+        for path in sorted((root / package).rglob("*.py")):
+            tree = ast.parse(path.read_text(), filename=_key(root, path))
+            module = _dotted(root, path)
+            bound = _bound_modules(root, tree, PATCH_PACKAGES)
+            read.setdefault(module, set()).update(_bare_loads([tree], frozenset()))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load):
+                    chain = _chain(node)
+                    if chain and chain[0] in bound:
+                        target = ".".join([bound[chain[0]], *chain[1:-1]])
+                        read.setdefault(target, set()).add(chain[-1])
+                elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                    for inner in ast.walk(node):
+                        if (
+                            isinstance(inner, ast.ImportFrom)
+                            and inner.level == 0
+                            and inner.module
+                        ):
+                            read.setdefault(inner.module, set()).update(
+                                alias.name for alias in inner.names
+                            )
+    return read
+
+
+def unread_patches(root: Path) -> list[str]:
+    """Return a line for each patch of a name its module's product never reads.
+
+    A name read only in code that no longer runs the patched path still counts as
+    read: this scan cannot see that.
+    e.g. `["tests/test_x.py:9 patches isekai.m.gone, which nothing reads"]`
+    """
+    read = names_read(root)
+    return [
+        f"{path}:{line} patches {module}.{name}, which nothing reads"
+        for path, line, module, name in resolved_patches(root, PATCH_PACKAGES)
+        if name not in read.get(module, set())
+    ]
 
 
 # --- the tables: each row is `key: the measure when it was listed` -----------
@@ -369,6 +512,12 @@ def test_no_big_ui_file_is_unlisted() -> None:
 def test_no_patched_module_is_unlisted() -> None:
     faults = ratchet_faults(patched_modules(REPO_ROOT), PATCHED_MODULES, PATCHED_ROWS)
     assert faults == []
+
+
+@pytest.mark.spec_exempt("structural: every patch names a name its module reads")
+def test_every_patch_names_a_name_its_module_reads() -> None:
+    assert resolved_patches(REPO_ROOT, PATCH_PACKAGES) != []
+    assert unread_patches(REPO_ROOT) == []
 
 
 # --- the twins: each rule, broken on purpose ----------------------------------
@@ -497,3 +646,79 @@ def test_the_check_catches_a_patched_module(tmp_path: Path) -> None:
         "isekai.d": 1,
         "isekai.g": 1,
     }
+
+
+def _patched_tree(root: Path) -> None:
+    """Write a tree whose test patches four names of `isekai/m.py`, one only stored."""
+    for name, text in {
+        "isekai/m.py": (
+            "loaded = 1\n"
+            "attribute = 1\n"
+            "imported = 1\n"
+            "stored = 1\n"
+            "shadowed = 1\n"
+            "copied = 1\n"
+            "def use():\n"
+            "    return loaded\n"
+            "def local(shadowed):\n"
+            "    return shadowed\n"
+        ),
+        "isekai/n.py": (
+            "from isekai import m\n"
+            "from isekai.m import copied\n"
+            "def read():\n"
+            "    return m.attribute\n"
+            "def pull():\n"
+            "    from isekai.m import imported\n"
+            "    return imported\n"
+        ),
+        "tests/test_patch.py": (
+            "import isekai.m as m\n"
+            "def test_it(monkeypatch):\n"
+            "    monkeypatch.setattr(m, 'loaded', 1)\n"
+            "    monkeypatch.setattr(m, 'attribute', 1)\n"
+            "    monkeypatch.setattr(m, 'imported', 1)\n"
+            "    monkeypatch.setattr(m, 'stored', 1)\n"
+            "    monkeypatch.setattr(m, 'shadowed', 1)\n"
+            "    monkeypatch.setattr(m, 'copied', 1)\n"
+        ),
+    }.items():
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_patch_names_a_name_its_module_reads"
+)
+def test_the_check_catches_a_patch_of_a_name_nothing_reads(tmp_path: Path) -> None:
+    for name, text in {
+        "isekai/m.py": "stored = 1\n",
+        "tests/test_patch.py": (
+            "import isekai.m as m\n"
+            "def test_it(monkeypatch):\n"
+            "    monkeypatch.setattr(m, 'stored', 1)\n"
+        ),
+    }.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    assert unread_patches(tmp_path) == [
+        "tests/test_patch.py:3 patches isekai.m.stored, which nothing reads"
+    ]
+
+
+@pytest.mark.spec_exempt(
+    "structural: a name is read by a load, an attribute or an import in a function, "
+    "and by nothing else"
+)
+def test_a_name_is_read_by_a_load_an_attribute_or_an_import(tmp_path: Path) -> None:
+    _patched_tree(tmp_path)
+
+    assert names_read(tmp_path)["isekai.m"] == {"loaded", "attribute", "imported"}
+    assert unread_patches(tmp_path) == [
+        "tests/test_patch.py:6 patches isekai.m.stored, which nothing reads",
+        "tests/test_patch.py:7 patches isekai.m.shadowed, which nothing reads",
+        "tests/test_patch.py:8 patches isekai.m.copied, which nothing reads",
+    ]

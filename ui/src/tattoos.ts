@@ -98,10 +98,17 @@ export function controlsWait(outline: Pick<Outline, 'closed'>): string | null {
 }
 
 /** Return the one line that says how to close an open outline, or null once it is closed.
-    e.g. an open outline of one vertex -> "close the outline on its first point · 1 point" */
-export function closeLine(outline: { closed: boolean; points: readonly Point[] }): string | null {
+    e.g. an open outline of one vertex against a floor of 3 -> "add 2 more points to close · 1 of 3" */
+export function closeLine(
+  outline: { closed: boolean; points: readonly Point[] },
+  floor: number,
+): string | null {
   if (outline.closed) return null
   const count = outline.points.length
+  if (count < floor) {
+    const more = floor - count
+    return `add ${more} more ${more === 1 ? 'point' : 'points'} to close · ${count} of ${floor}`
+  }
   return `close the outline on its first point · ${count} ${count === 1 ? 'point' : 'points'}`
 }
 

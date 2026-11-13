@@ -1,0 +1,784 @@
+{
+  "DELETE /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}": {
+    "shape": {
+      "deleted": "bool"
+    },
+    "status": 200
+  },
+  "DELETE /api/staging/{staged}": {
+    "shape": {},
+    "status": 200
+  },
+  "DELETE /api/staging/{staged}/files/{name}": {
+    "shape": {},
+    "status": 200
+  },
+  "DELETE /api/tattoos/{name}": {
+    "shape": {},
+    "status": 200
+  },
+  "GET /api/c/{collection}/hub": {
+    "shape": {
+      "collection": "str",
+      "flows": [
+        "str"
+      ],
+      "sources": [
+        {
+          "carries": [],
+          "cells": {
+            "conjure-anime-wai": {
+              "images": [
+                {
+                  "seed": "str",
+                  "version": "int"
+                }
+              ],
+              "newest": {
+                "seed": "str",
+                "version": "int"
+              },
+              "refusal": "null",
+              "renders": "int",
+              "short": "int",
+              "stage": "str",
+              "status": "str"
+            },
+            "control-anime-wai": {
+              "images": [
+                {
+                  "seed": "str",
+                  "version": "int"
+                }
+              ],
+              "newest": {
+                "seed": "str",
+                "version": "int"
+              },
+              "refusal": "null",
+              "renders": "int",
+              "short": "int",
+              "stage": "str",
+              "status": "str"
+            },
+            "summon-anime-wai": {
+              "images": [
+                {
+                  "seed": "str",
+                  "version": "int"
+                }
+              ],
+              "newest": {
+                "seed": "str",
+                "version": "int"
+              },
+              "refusal": "null",
+              "renders": "int",
+              "short": "int",
+              "stage": "str",
+              "status": "str"
+            },
+            "summon-flat-anime-wai": {
+              "images": [
+                {
+                  "seed": "str",
+                  "version": "int"
+                }
+              ],
+              "newest": {
+                "seed": "str",
+                "version": "int"
+              },
+              "refusal": "null",
+              "renders": "int",
+              "short": "int",
+              "stage": "str",
+              "status": "str"
+            },
+            "summon-semireal-anime-wai": {
+              "images": [
+                {
+                  "seed": "str",
+                  "version": "int"
+                }
+              ],
+              "newest": {
+                "seed": "str",
+                "version": "int"
+              },
+              "refusal": "null",
+              "renders": "int",
+              "short": "int",
+              "stage": "str",
+              "status": "str"
+            },
+            "summon-vivid-anime-wai": {
+              "images": [
+                {
+                  "seed": "str",
+                  "version": "int"
+                }
+              ],
+              "newest": {
+                "seed": "str",
+                "version": "int"
+              },
+              "refusal": "null",
+              "renders": "int",
+              "short": "int",
+              "stage": "str",
+              "status": "str"
+            }
+          },
+          "digest": "str",
+          "height": "int",
+          "name": "str",
+          "width": "int"
+        }
+      ]
+    },
+    "status": 200
+  },
+  "GET /api/c/{collection}/render": {
+    "shape": {
+      "bakes": "int",
+      "disabled": "str",
+      "images": "int",
+      "other_bakes": "int",
+      "others": "int",
+      "refused": "null"
+    },
+    "status": 200
+  },
+  "GET /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}": {
+    "shape": {
+      "approved_at": "float",
+      "bakes": [
+        {
+          "baked_at": "float",
+          "edit": "str",
+          "k": "int",
+          "placed_on": "null",
+          "reason": "null",
+          "state": "str"
+        }
+      ],
+      "came_from": "null",
+      "compare": "null",
+      "count": "int",
+      "damaged": "null",
+      "fields": {},
+      "flow": "str",
+      "kind": "null",
+      "seed": "str",
+      "seeds": [],
+      "source": [
+        {
+          "flow": "str",
+          "images": [
+            {
+              "seed": "str",
+              "version": "int"
+            }
+          ]
+        }
+      ],
+      "targets": [
+        "str"
+      ],
+      "version": "int"
+    },
+    "status": 200
+  },
+  "GET /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare/photo": {
+    "shape": {
+      "left": "null",
+      "right": {
+        "approved_at": "float",
+        "flow": "str",
+        "renders": {
+          "count": "int",
+          "seeds": []
+        },
+        "seed": "str",
+        "tokens": "int",
+        "version": "int"
+      }
+    },
+    "status": 200
+  },
+  "GET /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare/{other_flow}/{other_version}/{other_seed}": {
+    "shape": {
+      "left": {
+        "approved_at": "float",
+        "flow": "str",
+        "renders": {
+          "count": "int",
+          "seeds": []
+        },
+        "seed": "str",
+        "tokens": "int",
+        "version": "int"
+      },
+      "right": {
+        "approved_at": "float",
+        "flow": "str",
+        "renders": {
+          "count": "int",
+          "seeds": []
+        },
+        "seed": "str",
+        "tokens": "int",
+        "version": "int"
+      }
+    },
+    "status": 200
+  },
+  "GET /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}": {
+    "shape": {
+      "baked_at": "float",
+      "edit": "str",
+      "k": "int",
+      "placed_on": "null",
+      "reason": "null",
+      "state": "str"
+    },
+    "status": 200
+  },
+  "GET /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/image": {
+    "media_type": "image/png",
+    "status": 200
+  },
+  "GET /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/thumb": {
+    "media_type": "image/jpeg",
+    "status": 200
+  },
+  "GET /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/image": {
+    "media_type": "image/png",
+    "status": 200
+  },
+  "GET /api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/thumb": {
+    "media_type": "image/jpeg",
+    "status": 200
+  },
+  "GET /api/c/{collection}/review/{digest}/{flow}": {
+    "shape": {
+      "approved": "str",
+      "approved_at": "float",
+      "budget": {
+        "overhead": "int",
+        "per_field": {
+          "accessories": "int",
+          "age_band": "int",
+          "background": "int",
+          "body_shape": "int",
+          "clothes": "int",
+          "count": "int",
+          "expression": "int",
+          "eye_colour": "int",
+          "eyebrows": "int",
+          "framing": "int",
+          "gaze": "int",
+          "hair_colour": "int",
+          "hair_silhouette": "int",
+          "marks": "int",
+          "pose": "int",
+          "skin_ancestry": "int"
+        },
+        "total": "int",
+        "window": "int"
+      },
+      "cancel": "str",
+      "caption": "str",
+      "caption_command": "null",
+      "draft": "null",
+      "drafted": "null",
+      "fields": {
+        "accessories": [],
+        "age_band": [],
+        "background": [],
+        "body_shape": [],
+        "clothes": [],
+        "count": [],
+        "expression": [],
+        "eye_colour": [],
+        "eyebrows": [],
+        "framing": [],
+        "gaze": [],
+        "hair_colour": [],
+        "hair_silhouette": [],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": []
+      },
+      "flow": "str",
+      "height": "int",
+      "id": "str",
+      "readonly": "bool",
+      "renders": {
+        "count": "int",
+        "seeds": []
+      },
+      "revision": "null",
+      "run": "str",
+      "saved": "null",
+      "schema": [
+        "str"
+      ],
+      "tags": [
+        {
+          "posts": "int",
+          "tag": "str"
+        }
+      ],
+      "vocabulary": "int",
+      "wd14": [
+        {
+          "confidence": "float",
+          "tag": "str"
+        }
+      ],
+      "width": "int"
+    },
+    "status": 200
+  },
+  "GET /api/c/{collection}/review/{digest}/{flow}/photo": {
+    "media_type": "image/jpeg",
+    "status": 200
+  },
+  "GET /api/c/{collection}/review/{digest}/{flow}/source/{version}": {
+    "media_type": "image/png",
+    "status": 200
+  },
+  "GET /api/c/{collection}/sources/{name}": {
+    "media_type": "image/jpeg",
+    "status": 200
+  },
+  "GET /api/c/{collection}/sources/{name}/thumb": {
+    "media_type": "image/jpeg",
+    "status": 200
+  },
+  "GET /api/fields": {
+    "shape": {
+      "fields": {
+        "accessories": [
+          {
+            "posts": "int",
+            "tag": "str"
+          }
+        ],
+        "age_band": [],
+        "background": [
+          {
+            "posts": "int",
+            "tag": "str"
+          }
+        ],
+        "body_shape": [],
+        "clothes": [
+          {
+            "posts": "int",
+            "tag": "str"
+          }
+        ],
+        "count": [],
+        "expression": [
+          {
+            "posts": "int",
+            "tag": "str"
+          }
+        ],
+        "eye_colour": [
+          {
+            "posts": "int",
+            "tag": "str"
+          }
+        ],
+        "eyebrows": [
+          {
+            "posts": "int",
+            "tag": "str"
+          }
+        ],
+        "framing": [],
+        "gaze": [
+          {
+            "posts": "int",
+            "tag": "str"
+          }
+        ],
+        "hair_colour": [
+          {
+            "posts": "int",
+            "tag": "str"
+          }
+        ],
+        "hair_silhouette": [
+          {
+            "posts": "int",
+            "tag": "str"
+          }
+        ],
+        "marks": [],
+        "pose": [],
+        "skin_ancestry": [
+          {
+            "posts": "int",
+            "tag": "str"
+          }
+        ]
+      }
+    },
+    "status": 200
+  },
+  "GET /api/library": {
+    "shape": {
+      "rows": [
+        {
+          "collection": "bool",
+          "flows": [
+            {
+              "approved": "int",
+              "flow": "str",
+              "of": "int",
+              "rendered": "int"
+            }
+          ],
+          "kind": "str",
+          "name": "str",
+          "newest": "float",
+          "sources": "int",
+          "thumbs": [
+            "str"
+          ],
+          "without_flow": "int"
+        }
+      ]
+    },
+    "status": 200
+  },
+  "GET /api/staging/{staged}/files/{name}": {
+    "media_type": "image/jpeg",
+    "status": 200
+  },
+  "GET /api/staging/{staged}/files/{name}/thumb": {
+    "media_type": "image/jpeg",
+    "status": 200
+  },
+  "GET /api/tags": {
+    "shape": {
+      "matches": [
+        {
+          "posts": "int",
+          "rare": "bool",
+          "tag": "str"
+        }
+      ],
+      "total": "int"
+    },
+    "status": 200
+  },
+  "GET /api/tattoos": {
+    "shape": {
+      "limits": {
+        "depth_max": "float",
+        "depth_min": "float",
+        "floor_direct": "int",
+        "floor_stage1": "int",
+        "floor_stage2": "int",
+        "image_depth": "float",
+        "long_side": "int",
+        "outline_max": "int",
+        "outline_min": "int",
+        "pair_radius": "int",
+        "photo_depth": "float",
+        "preview_floor": "int",
+        "preview_margin": "int",
+        "preview_wait_ms": "int",
+        "region_min": "int"
+      },
+      "stage1": {},
+      "tattoos": [
+        {
+          "cut_from": "null",
+          "downscaled_from": "null",
+          "kept": "str",
+          "kind": "str",
+          "name": "str",
+          "outlined": "bool",
+          "size": [
+            "int"
+          ]
+        }
+      ]
+    },
+    "status": 200
+  },
+  "GET /api/tattoos/{name}": {
+    "shape": {
+      "cut_from": "null",
+      "downscaled_from": "null",
+      "kept": "str",
+      "kind": "str",
+      "name": "str",
+      "outline": {
+        "closed": "bool",
+        "depth": "float",
+        "neutral": "bool",
+        "points": [],
+        "white": "float"
+      },
+      "outlined": "bool",
+      "size": [
+        "int"
+      ]
+    },
+    "status": 200
+  },
+  "GET /api/tattoos/{name}/design": {
+    "media_type": "image/png",
+    "status": 200
+  },
+  "GET /api/tattoos/{name}/stage1/{digest}": {
+    "shape": {
+      "not_on_photo": "bool",
+      "pairs": []
+    },
+    "status": 200
+  },
+  "GET /api/{rest:path}": {
+    "shape": {
+      "refusal": "str"
+    },
+    "status": 404
+  },
+  "GET /{rest:path}": {
+    "media_type": "text/html",
+    "status": 200
+  },
+  "POST /api/billing/check": {
+    "shape": {
+      "billing": {
+        "pod": "bool",
+        "volume": "null"
+      }
+    },
+    "status": 200
+  },
+  "POST /api/c/{collection}/assign": {
+    "shape": {
+      "cells": {
+        "ada.jpg": {
+          "images": [
+            {
+              "seed": "str",
+              "version": "int"
+            }
+          ],
+          "newest": {
+            "seed": "str",
+            "version": "int"
+          },
+          "refusal": "null",
+          "renders": "int",
+          "short": "int",
+          "stage": "str",
+          "status": "str"
+        }
+      },
+      "refused": {}
+    },
+    "status": 200
+  },
+  "POST /api/c/{collection}/draft": {
+    "shape": {
+      "drafts": [
+        {
+          "digest": "str",
+          "draft": "str",
+          "flow": "str",
+          "seed": "str",
+          "version": "int",
+          "waiting": "null"
+        }
+      ]
+    },
+    "status": 200
+  },
+  "POST /api/c/{collection}/place/propose": {
+    "shape": {
+      "refusal": "str"
+    },
+    "status": 409
+  },
+  "POST /api/c/{collection}/review/{digest}/{flow}/approve": {
+    "shape": {
+      "approved": "str",
+      "at": "float",
+      "warnings": []
+    },
+    "status": 200
+  },
+  "POST /api/c/{collection}/review/{digest}/{flow}/cancel": {
+    "shape": {
+      "back": "str",
+      "cancelled": "bool"
+    },
+    "status": 200
+  },
+  "POST /api/c/{collection}/review/{digest}/{flow}/discard": {
+    "shape": {
+      "discarded": "str"
+    },
+    "status": 200
+  },
+  "POST /api/c/{collection}/tattoos": {
+    "shape": {
+      "cut_from": "str",
+      "downscaled_from": "null",
+      "kept": "str",
+      "kind": "str",
+      "name": "str",
+      "outlined": "bool",
+      "size": [
+        "int"
+      ]
+    },
+    "status": 200
+  },
+  "POST /api/c/{collection}/tattoos/{name}/bake": {
+    "shape": {
+      "edit": "int"
+    },
+    "status": 200
+  },
+  "POST /api/c/{collection}/tattoos/{name}/ink": {
+    "media_type": "image/jpeg",
+    "status": 200
+  },
+  "POST /api/c/{collection}/tattoos/{name}/preview": {
+    "media_type": "image/jpeg",
+    "status": 200
+  },
+  "POST /api/jobs/{kind}/stop": {
+    "shape": {
+      "refusal": "str"
+    },
+    "status": 409
+  },
+  "POST /api/render/quote": {
+    "shape": {
+      "ceiling_s": "int",
+      "collections": [],
+      "disabled": "str",
+      "estimate": {
+        "boot_s": "float",
+        "limit_s": "int",
+        "seconds": "float",
+        "teardown_s": "float"
+      },
+      "price": {
+        "about": "float",
+        "at_most": "float",
+        "keep_open": "float"
+      }
+    },
+    "status": 200
+  },
+  "POST /api/staging": {
+    "shape": {
+      "id": "str"
+    },
+    "status": 200
+  },
+  "POST /api/staging/{staged}/commit": {
+    "shape": {
+      "collection": "str",
+      "left_out": [],
+      "skipped": [],
+      "written": [
+        "str"
+      ]
+    },
+    "status": 200
+  },
+  "POST /api/tattoos": {
+    "shape": {
+      "cut_from": "null",
+      "downscaled_from": "null",
+      "kept": "str",
+      "kind": "str",
+      "name": "str",
+      "outlined": "bool",
+      "size": [
+        "int"
+      ]
+    },
+    "status": 200
+  },
+  "PUT /api/c/{collection}/review/{digest}/{flow}/draft": {
+    "shape": {
+      "budget": {
+        "overhead": "int",
+        "per_field": {
+          "accessories": "int",
+          "age_band": "int",
+          "background": "int",
+          "body_shape": "int",
+          "clothes": "int",
+          "count": "int",
+          "expression": "int",
+          "eye_colour": "int",
+          "eyebrows": "int",
+          "framing": "int",
+          "gaze": "int",
+          "hair_colour": "int",
+          "hair_silhouette": "int",
+          "marks": "int",
+          "pose": "int",
+          "skin_ancestry": "int"
+        },
+        "total": "int",
+        "window": "int"
+      },
+      "draft": "str",
+      "saved": "float"
+    },
+    "status": 200
+  },
+  "PUT /api/staging/{staged}/files/{name}": {
+    "shape": {
+      "file": "str",
+      "state": "str",
+      "upload": "str"
+    },
+    "status": 202
+  },
+  "PUT /api/tattoos/{name}/outline": {
+    "shape": {
+      "closed": "bool",
+      "depth": "float",
+      "neutral": "bool",
+      "points": [
+        [
+          "float"
+        ]
+      ],
+      "white": "float"
+    },
+    "status": 200
+  },
+  "PUT /api/tattoos/{name}/stage1/{digest}": {
+    "shape": {
+      "not_on_photo": "bool",
+      "pairs": [
+        [
+          [
+            "float"
+          ]
+        ]
+      ]
+    },
+    "status": 200
+  }
+}

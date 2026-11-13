@@ -10,6 +10,41 @@ its new digest.
 
 ## [Unreleased]
 
+- The ink's white point is the prototype's percentile, compared with nothing: `_MIN_SKIN`, `_SKIN_GAP` and
+  `_skin_beside` go, so a blackwork sleeve is cut, not refused; an outline with no lit pixel is still refused
+  (0132 D1, D57).
+- An outline closes from 3 points, `outline_min` in `config/tattoo.json`, and below it the close line and the forward
+  line name the floor: *add N more points to close · K of F*, *outline open · K of F points* (0132 D3, D4).
+
+## [0.86.5] - 2026-11-13
+
+Gate: local 1m11s · CI not read under mf-ship · 0.86.4: local 1m2s · CI not read under mf-ship
+
+- A patch whose stand-in no test shows was reached gains its proof: a sentinel for the model records, twins that fire
+  the tripwires, and records of calls the tests read; a ratchet holds each patch to a name its module reads, with a
+  twin (0131 D1, D2, D3, D4).
+- `tools/mutate.py` says which one-line mutants of a function body the named tests kill, in a copy of the tracked files;
+  `CONTRIBUTING.md` asks for a run over the lines a move touches, and a test runs it over a small repository (0131 D5,
+  D6, D7, D8, D9).
+
+## [0.86.4] - 2026-11-13
+
+Gate: local 1m2s · CI not read under mf-ship · 0.86.3: local 1m2s · CI not read under mf-ship
+
+- `tests/record.py` runs one offline pass over every flow and writes `tests/record/graphs.json`, each flow's graph and the
+  edit's whole; a test re-derives it, and `uv run python -m tests.record` writes it again (0130 D1, D2, D3, D9).
+- `tests/record/run.json` holds every path of the pass under the runs root: a JSON file with its duration `0.0` and the
+  pass's directory `<root>`, a PNG by its pixels, any other file by its bytes; a second pass over the same runs moves
+  nothing (0130 D4).
+- `tests/record/verbs.json` holds each verb's positionals, options and exclusive groups, walked from the parser with no
+  help text; a default inside the repository is written relative, and one outside it is refused (0130 D5).
+- `tests/record/routes.json` holds each route of the app that needs no running child: the status of one ordered call over
+  a copy of the pass's library, and the shape of its answer, keys and types with no value; a test fails on a route
+  no call covers and on a status of 500 or more (0130 D6, D7).
+- `tests/record/wire.json` holds the sheet's and the render's done lines the CLI prints under `--progress json`; the
+  session's `progress_line` and `_Images`, and the cell and the job, are fed those lines instead of a copy typed beside
+  each reader (0130 D8).
+
 ## [0.86.3] - 2026-11-13
 
 Gate: local 1m2s · CI not read under mf-ship · 0.86.2: local 0m59s · CI not read under mf-ship
