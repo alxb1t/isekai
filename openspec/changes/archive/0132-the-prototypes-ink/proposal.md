@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.6
 after: [0131-the-nets-holes]
 debt: [0119·R5]
 ---

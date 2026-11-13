@@ -56,12 +56,14 @@ The system SHALL offer `isekai ink <image> <out>` with `--outline <mask.png>`, `
 skin white, the ink its colour where there is ink. With an outline it SHALL keep the ink inside the outline only,
 as the layer's alpha, neutral on and depth 1.6; with none it SHALL keep the whole image, neutral off and depth 1.0;
 a flag SHALL override its default. **Neutral** SHALL set the three channels to the layer's luminance, and
-**depth** SHALL raise the layer's Multiply factor to the power. An outline whose inside reads darker than the bare
-skin beside it, in any one channel, by more than the skin's own variation SHALL be refused, and the refusal SHALL
-name its fix. Such ink would otherwise be read as skin and wiped out.
+**depth** SHALL raise the layer's Multiply factor to the power. It SHALL read the white point as the `white`
+percentile, per channel, of the lit pixels inside the outline, and compare it with nothing outside the outline. An
+outline with no lit pixel inside it SHALL be refused, and the refusal SHALL name its fix.
 
 The tattoo photograph is read here and nowhere else, and the layer carries pixels only, so the photograph never
-reaches a run or a pod.
+reaches a run or a pod. An outline fitted to a solid fill reads the fill as its own white point, and the ink view
+shows the result: the operator widens the outline over the skin
+([D57](../../../docs/decisions.md#d57--the-white-point-is-the-prototypes-percentile)).
 
 #### Scenario: a photograph with an outline
 - **Key:** `edit:ink:a-photograph-with-an-outline`
@@ -93,9 +95,14 @@ reaches a run or a pod.
 #### Scenario: an outline with no bare skin inside it is refused
 - **Key:** `edit:ink:an-outline-with-no-bare-skin-is-refused`
 - **Layers:** unit
-- **WHEN** an outline fitted to a solid fill is extracted, and the fill is darker than the skin around it in one
-  channel alone
-- **THEN** the extraction is refused, naming the fix: widen the outline over the skin
+- **WHEN** an image with no lit pixel inside the outline is extracted
+- **THEN** the extraction is refused, naming the fix: widen the outline over the skin, or light the photograph
+
+#### Scenario: a tight outline over a solid fill is cut by the percentile
+- **Key:** `edit:ink:a-tight-outline-over-a-solid-fill-is-cut-by-the-percentile`
+- **Layers:** unit
+- **WHEN** an outline fitted to a solid fill is extracted
+- **THEN** the extraction returns a layer, and the fill, read as its own white point, is white in it
 - **AND** the same fill, under an outline that also covers bare skin, keeps visible ink
 
 #### Scenario: a depth out of range is refused at parse time

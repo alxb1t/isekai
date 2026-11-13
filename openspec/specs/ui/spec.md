@@ -2803,8 +2803,9 @@ It SHALL offer *neutral* and *depth* from 1.0 to 2.0, and *Reset* to the kind's 
 On a cut it SHALL show the photograph with the ink at full strength inside the outline
 and the photograph dimmed around it, and the size of the ink on the photograph,
 and offer *Upload a tattoo instead*, which keeps a new tattoo under its own name and leaves the cut kept.
-While the outline is open the controls SHALL be disabled, and one line above them SHALL say
-*close the outline on its first point · N points*; once it is closed the line SHALL go.
+While the outline is open the controls SHALL be disabled, and one line above them SHALL say how to close it:
+*add N more points to close · K of F* while the outline holds K points, fewer than the floor F of `outline_min`, and
+*close the outline on its first point · K points* from the floor on; once it is closed the line SHALL go.
 The step SHALL carry no line that explains its gestures.
 
 The ink view is the judge: nothing on the screen grades the cut.
@@ -2836,9 +2837,16 @@ The ink view is the judge: nothing on the screen grades the cut.
 #### Scenario: one line says how to close
 - **Key:** `ui:outline-step:one-line-says-how-to-close`
 - **Layers:** unit
-- **WHEN** an outline of one vertex and of five vertices is open, and then closed
-- **THEN** the line reads *close the outline on its first point · 1 point* and then *· 5 points*, and a closed outline
+- **WHEN** an outline of three vertices and of five vertices is open under a floor of 3, and then closed
+- **THEN** the line reads *close the outline on its first point · 3 points* and then *· 5 points*, and a closed outline
   has none
+
+#### Scenario: the line names the floor while the outline is short of it
+- **Key:** `ui:outline-step:the-line-names-the-floor-while-the-outline-is-short`
+- **Layers:** unit
+- **WHEN** an outline of no vertex, one vertex and two vertices is open under a floor of 3
+- **THEN** the line reads *add 3 more points to close · 0 of 3*, then *add 2 more points to close · 1 of 3*, then
+  *add 1 more point to close · 2 of 3*
 
 #### Scenario: the size of the cut's ink is the outline's box
 - **Key:** `ui:outline-step:the-size-of-the-cuts-ink-is-the-outlines-box`
@@ -2995,7 +3003,8 @@ new one.
 The outline step SHALL go forward, once its outline is closed, to the stage the tattoo takes on this photograph: stage
 1 for an uploaded tattoo, the direct stage for a tattoo that is not on this photo, and stage 2 for a cut. The stepper
 SHALL list the steps of that mode, each keeping its number, so a number names one screen in every mode. While the
-outline is open, forward SHALL wait and say so with the points placed.
+outline is open, forward SHALL wait and say so with the points placed, and with the floor of `outline_min` while the
+points are fewer than it.
 
 ```
 two stages   ① tattoo · ② outline · ③ tattoo ↔ photograph · ④ photograph ↔ render · ⑤ review
@@ -3021,8 +3030,14 @@ one photograph.
 #### Scenario: forward waits for a closed outline
 - **Key:** `ui:stages:forward-waits-for-a-closed-outline`
 - **Layers:** unit
-- **WHEN** the outline is open with 27 points
+- **WHEN** the outline is open with 27 points under a floor of 3
 - **THEN** forward waits, saying *outline open · 27 points*
+
+#### Scenario: forward names the floor while the outline is short of it
+- **Key:** `ui:stages:forward-names-the-floor-while-the-outline-is-short`
+- **Layers:** unit
+- **WHEN** the outline is open with one point under a floor of 3
+- **THEN** forward waits, saying *outline open · 1 of 3 points*
 
 ### Requirement: A tattoo not on this photo is paired with the render directly
 
