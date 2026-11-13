@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary import ollama, provision
-from isekai.boundary.wd14 import FLOOR, MODEL_DEST, LocalTagger
+from isekai.boundary.wd14 import FLOOR, MODEL_DEST, REMEDY, LocalTagger
 from isekai.foundation.artifacts import TAGS_FILE, WD14_FILE, read
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import (
@@ -599,6 +599,33 @@ def test_an_unopenable_tagger_is_tried_once_per_invocation(tmp_path: Path) -> No
     assert status == 1
     assert len(attempts) == 1
     assert len(hosted.calls) == 2
+
+
+@pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
+@pytest.mark.spec("tagging:order:a-local-failure-leaves-the-hosted-list-written")
+def test_a_pin_that_does_not_match_is_a_refusal_and_the_hosted_list_is_written(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def swapped() -> LocalTagger:
+        raise provision.DigestMismatch(
+            f"{MODEL_DEST} hashes to {'1' * 64}, not {'2' * 64}"
+        )
+
+    monkeypatch.setattr(wiring, "open_session", swapped)
+    photo = _photo(tmp_path)
+    hosted = FakeTagger()
+    wired = _wired(tmp_path, tagger=wiring.tagger_for, hosted=hosted)
+
+    status = _dispatch(wired, "tag", str(photo))
+
+    assert status == 1
+    run = open_run(photo, wired.runs_root)
+    assert (run.directory(PHOTO, TAGS) / "001.json").is_file()
+    assert hosted.calls == [run.photo]
+    assert not list(run.directory(PHOTO, WD14).glob("*.json"))
+    assert isinstance(wired.err, io.StringIO)
+    assert MODEL_DEST in wired.err.getvalue()
+    assert REMEDY in wired.err.getvalue()
 
 
 @pytest.mark.spec("tagging:order:captioning-writes-no-tag-list")

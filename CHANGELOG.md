@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- A tagger file whose bytes disagree with its pin is a refusal naming the file and the fetch, so `tag` and `prepare`
+  report it and the hosted tagger still runs; tests plant each half of the pin wrong and hold the vector-length
+  refusal under a scenario of its own (0139 D2, D3).
+
 ## [0.86.12] - 2026-11-13
 
 Gate: local 1m15s · CI not read under mf-ship · 0.86.11: local 1m24s · CI not read under mf-ship

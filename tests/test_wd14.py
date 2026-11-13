@@ -128,7 +128,7 @@ def test_the_floor_is_the_measured_one_and_not_a_rounder_number() -> None:
     assert FLOOR == 0.15
 
 
-@pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
+@pytest.mark.spec("tagging:pin:a-vector-that-disagrees-with-the-index-is-refused")
 def test_a_vector_longer_than_the_index_refuses_rather_than_truncating() -> None:
     labels = read_labels(INDEX)
 
@@ -141,12 +141,17 @@ def test_a_vector_longer_than_the_index_refuses_rather_than_truncating() -> None
     assert REMEDY in message
 
 
-@pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
+@pytest.mark.spec("tagging:pin:a-vector-that-disagrees-with-the-index-is-refused")
 def test_a_vector_shorter_than_the_index_refuses_too() -> None:
     labels = read_labels(INDEX)
 
-    with pytest.raises(Refusal):
+    with pytest.raises(Refusal) as refused:
         select([0.9, 0.9], labels)
+
+    message = str(refused.value)
+    assert "2 probabilities" in message
+    assert "3 neurons" in message
+    assert REMEDY in message
 
 
 # --- the two digests ----------------------------------------------------------
@@ -210,19 +215,25 @@ def test_the_model_is_verified_and_not_only_the_label_index(
 
 
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
+@pytest.mark.parametrize(
+    "dest", [LABELS_DEST, MODEL_DEST], ids=["the-label-index", "the-model"]
+)
 def test_a_half_whose_bytes_do_not_match_its_digest_stops_the_stage(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    dest: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Both present, and the graph's bytes swapped after the manifest was built.
-    # `DigestMismatch` is the right failure and is deliberately not caught into a
-    # `Refusal`: its message names the file, the digest expected and the digest
-    # computed, which is what a human deciding "stale pin or swapped file" reads.
+    # Both present, and one half's bytes swapped after the manifest was built.
+    # `verified_paths` leaves the mismatch a `DigestMismatch`, whose message names
+    # the file, the digest expected and the digest computed, which is what a human
+    # deciding "stale pin or swapped file" reads; the verb's wiring turns it into
+    # a refusal.
     manifest = _planted(tmp_path, {LABELS_DEST: INDEX.encode(), MODEL_DEST: b"graph"})
-    (tmp_path / MODEL_DEST).write_bytes(b"not the graph")
+    (tmp_path / dest).write_bytes(b"other bytes")
     monkeypatch.setattr(provision, "load_manifest", lambda _path=None: manifest)
 
-    with pytest.raises(provision.DigestMismatch):
+    with pytest.raises(provision.DigestMismatch) as refused:
         verified_paths(tmp_path)
+
+    assert dest in str(refused.value)
 
 
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")

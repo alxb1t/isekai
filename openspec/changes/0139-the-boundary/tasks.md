@@ -4,7 +4,7 @@ Phases of tests and two small product fixes: the pins that refuse, a photograph 
 
 ## Progress
 
-- [ ] 1 — The pins refuse · moderate
+- [x] 1 — The pins refuse · moderate
 - [ ] 2 — A photograph that will not decode · moderate
 - [ ] 3 — The tagger runs · hard
 - [ ] 4 — The pre-flight and the hosts · moderate
@@ -12,21 +12,21 @@ Phases of tests and two small product fixes: the pins that refuse, a photograph 
 
 ## 1 — The pins refuse
 
-- [ ] 1.1 **HALT CHECK** `tagger_for` returns `open_session()` bare, the line [D2](design.md#d2) wraps; if it reads otherwise, the plan is wrong.
+- [x] 1.1 **HALT CHECK** `tagger_for` returns `open_session()` bare, the line [D2](design.md#d2) wraps; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'return open_session()' isekai/interface/wiring.py` prints `1`.
-- [ ] 1.2 **HALT CHECK** `verified_paths` resolves both files in one loop, the line the mutant `BD-1` names; if it reads otherwise, the plan is wrong.
+- [x] 1.2 **HALT CHECK** `verified_paths` resolves both files in one loop, the line the mutant `BD-1` names; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'resolved.append(resolve(dest, models_dir, manifest))' isekai/boundary/wd14.py` prints `1`.
-- [ ] 1.3 In `isekai/interface/wiring.py` write [D2](design.md#d2): `tagger_for` turns `DigestMismatch` into a `Refusal`, and its docstring says so.
+- [x] 1.3 In `isekai/interface/wiring.py` write [D2](design.md#d2): `tagger_for` turns `DigestMismatch` into a `Refusal`, and its docstring says so.
   Verify: `git grep -c -F 'except DigestMismatch as swapped:' isekai/interface/wiring.py` prints `1`.
-- [ ] 1.4 In `tests/test_wd14.py` extend `test_a_half_whose_bytes_do_not_match_its_digest_stops_the_stage` in place as [D3](design.md#d3) says, and bring its comment to the design's wording.
+- [x] 1.4 In `tests/test_wd14.py` extend `test_a_half_whose_bytes_do_not_match_its_digest_stops_the_stage` in place as [D3](design.md#d3) says, and bring its comment to the design's wording.
   Verify: `git grep -c -F 'ids=["the-label-index", "the-model"]' tests/test_wd14.py` prints `1`.
-- [ ] 1.5 In `tests/test_wd14.py` carry the key of [D3](design.md#d3) on the longer-vector and shorter-vector tests in place of the pin key, and make the shorter-vector test assert the counts and `REMEDY`.
+- [x] 1.5 In `tests/test_wd14.py` carry the key of [D3](design.md#d3) on the longer-vector and shorter-vector tests in place of the pin key, and make the shorter-vector test assert the counts and `REMEDY`.
   Verify: `git grep -c -F 'tagging:pin:a-vector-that-disagrees-with-the-index-is-refused' tests/test_wd14.py` prints `2`.
-- [ ] 1.6 In `tests/test_tagging.py` add `test_a_pin_that_does_not_match_is_a_refusal_and_the_hosted_list_is_written` as [D2](design.md#d2) says, adding `REMEDY` to the file's `wd14` import.
+- [x] 1.6 In `tests/test_tagging.py` add `test_a_pin_that_does_not_match_is_a_refusal_and_the_hosted_list_is_written` as [D2](design.md#d2) says, adding `REMEDY` to the file's `wd14` import.
   Verify: `uv run pytest tests/test_tagging.py::test_a_pin_that_does_not_match_is_a_refusal_and_the_hosted_list_is_written` passes.
-- [ ] 1.7 In `tests/test_pipeline_cli.py` add `test_prepare_refuses_when_a_pin_does_not_match` as [D2](design.md#d2) says, adding `REMEDY` and `provision` to the file's imports.
+- [x] 1.7 In `tests/test_pipeline_cli.py` add `test_prepare_refuses_when_a_pin_does_not_match` as [D2](design.md#d2) says, adding `REMEDY` and `provision` to the file's imports.
   Verify: `uv run pytest tests/test_pipeline_cli.py::test_prepare_refuses_when_a_pin_does_not_match` passes.
-- [ ] 1.8 The phase's files agree with the keys.
+- [x] 1.8 The phase's files agree with the keys.
   Verify: `uv run pytest tests/test_tagging.py tests/test_wd14.py tests/test_pipeline_cli.py` passes.
 
 ## 2 — A photograph that will not decode
