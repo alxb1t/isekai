@@ -16,6 +16,8 @@ its new digest.
 - A photograph that will not decode is a refusal naming it, raised by `prepare`, so the tag stage records the local
   tagger's failure and the hosted list is still written; the stale note on what the gate installs is corrected
   (0139 D4).
+- The tagger's runtime is held by value in `tests/test_wd14_runtime.py`: the preparation on small photographs, the
+  opener over a stub runtime, and one hand-built graph through the real runtime (0139 D5).
 
 ## [0.86.12] - 2026-11-13
 

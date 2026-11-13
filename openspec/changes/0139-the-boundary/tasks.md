@@ -6,7 +6,7 @@ Phases of tests and two small product fixes: the pins that refuse, a photograph 
 
 - [x] 1 — The pins refuse · moderate
 - [x] 2 — A photograph that will not decode · moderate
-- [ ] 3 — The tagger runs · hard
+- [x] 3 — The tagger runs · hard
 - [ ] 4 — The pre-flight and the hosts · moderate
 - [ ] 5 — The mutants die · moderate
 
@@ -46,19 +46,19 @@ Phases of tests and two small product fixes: the pins that refuse, a photograph 
 
 ## 3 — The tagger runs
 
-- [ ] 3.1 **HALT CHECK** `OnnxSession.run` hands the runtime `prepare(photo, self.dimension)`, the line the real-runtime test reads through; if it reads otherwise, the plan is wrong.
+- [x] 3.1 **HALT CHECK** `OnnxSession.run` hands the runtime `prepare(photo, self.dimension)`, the line the real-runtime test reads through; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'prepare(photo, self.dimension)' isekai/boundary/wd14.py` prints `1`.
-- [ ] 3.2 **HALT CHECK** The runtime is a declared dependency, so the real-runtime test needs no package; if it is not, the plan is wrong.
+- [x] 3.2 **HALT CHECK** The runtime is a declared dependency, so the real-runtime test needs no package; if it is not, the plan is wrong.
   Verify: `git grep -c -F 'onnxruntime==1.29.0' pyproject.toml` prints `1`.
-- [ ] 3.3 **HALT CHECK** `_planted` is `tests/test_wd14.py`'s helper that [D5](design.md#d5) takes.
+- [x] 3.3 **HALT CHECK** `_planted` is `tests/test_wd14.py`'s helper that [D5](design.md#d5) takes.
   Verify: `git grep -c -F 'def _planted(' tests/test_wd14.py` prints `1`.
-- [ ] 3.4 Create `tests/test_wd14_runtime.py` as [D5](design.md#d5) says, its docstring giving the file's reason, with the tests of `prepare` by value.
+- [x] 3.4 Create `tests/test_wd14_runtime.py` as [D5](design.md#d5) says, its docstring giving the file's reason, with the tests of `prepare` by value.
   Verify: `uv run pytest tests/test_wd14_runtime.py::test_a_photograph_with_a_transparent_pixel_is_composited_padded_and_handed_over_blue_first tests/test_wd14_runtime.py::test_an_opaque_photograph_is_centred_on_white_in_blue_green_red` passes.
-- [ ] 3.5 In `tests/test_wd14_runtime.py` add the tests of `open_session` over the stub runtime, with the telemetry switch undone as [D5](design.md#d5) says.
+- [x] 3.5 In `tests/test_wd14_runtime.py` add the tests of `open_session` over the stub runtime, with the telemetry switch undone as [D5](design.md#d5) says.
   Verify: `uv run pytest tests/test_wd14_runtime.py::test_a_graph_whose_bytes_differ_from_its_pin_is_never_opened tests/test_wd14_runtime.py::test_the_session_opens_the_verified_path_on_the_cpu` passes.
-- [ ] 3.6 In `tests/test_wd14_runtime.py` add the builder of [D5](design.md#d5) as written and `test_a_tiny_graph_run_through_the_real_runtime_returns_what_prepare_handed_it`.
+- [x] 3.6 In `tests/test_wd14_runtime.py` add the builder of [D5](design.md#d5) as written and `test_a_tiny_graph_run_through_the_real_runtime_returns_what_prepare_handed_it`.
   Verify: `uv run pytest tests/test_wd14_runtime.py::test_a_tiny_graph_run_through_the_real_runtime_returns_what_prepare_handed_it` passes.
-- [ ] 3.7 The phase's files agree with the keys.
+- [x] 3.7 The phase's files agree with the keys.
   Verify: `uv run pytest tests/test_wd14_runtime.py tests/test_wd14.py` passes.
 
 ## 4 — The pre-flight and the hosts
