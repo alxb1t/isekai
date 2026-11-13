@@ -22,6 +22,9 @@ its new digest.
   that binds no loopback (0136 D10).
 - Tests hold the alert a failed window close raises, a job of a kind starting once the one before it has ended, and the
   render slot's steps and images read from the verb's lines (0137 D1).
+- Tests hold that a foreign `Host` or `Origin` on a draft update leaves the run unchanged, that each loopback spelling
+  is answered by the middleware, each malformed body is refused naming what it lacks, and an upload past its declared
+  length is refused before its body is read (0137 D2, D3).
 
 ## [0.86.9] - 2026-11-13
 

@@ -1329,6 +1329,29 @@ def test_a_confirmation_shorter_than_the_quote_now_gives_is_refused(
     assert "2 images, not 1" in grown.json()["refusal"]
 
 
+@pytest.mark.spec("ui:damage:a-body-of-the-wrong-shape-is-refused-naming-what-it-lacks")
+def test_a_confirmation_that_names_no_collections_limit_images_or_bakes_is_refused(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
+    _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    asked = {"collections": ["b"]}
+    shown = client.post("/api/render/quote", json=asked).json()["estimate"]["limit_s"]
+    bodies = (
+        ({"keep_open": False}, "names no collections"),
+        (asked, "names no quoted limit"),
+        ({**asked, "limit_s": shown}, "names no quoted images"),
+        ({**asked, "limit_s": shown, "images": 1}, "names no quoted bakes"),
+    )
+
+    for body, text in bodies:
+        started = client.post("/api/render", json=body)
+
+        assert started.status_code == 409, text
+        assert text in started.json()["refusal"]
+    assert client.post("/api/render/quote", json=asked).json()["disabled"] is None
+
+
 @pytest.mark.spec("ui:render:a-photograph-taken-out-leaves-the-quote")
 def test_the_render_job_carries_each_photograph_taken_out(tmp_path: Path) -> None:
     folder, (ada,) = _collection(tmp_path, "ada.jpg")
