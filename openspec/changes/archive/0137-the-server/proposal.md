@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.11
 after: [0136-the-cli-and-the-session]
 ---
 

@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.10
 after: [0135-the-paydown]
 ---
 

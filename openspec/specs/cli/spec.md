@@ -77,6 +77,14 @@ happens then.
 - **THEN** the invocation is refused at parse time
 - **AND** the message states that the two are alternatives
 
+#### Scenario: a count or a seed out of range is refused at parse time
+- **Key:** `cli:generate-signature:a-count-or-seed-out-of-range-is-refused`
+- **Layers:** unit
+- **WHEN** a count below one, a seed outside the sampler's unsigned 64-bit range,
+  or a count or seed that is no integer is given
+- **THEN** the invocation is refused at parse time
+- **AND** the message says what is out of range
+
 ### Requirement: A new artifact version is requested explicitly
 
 The system SHALL do nothing when a stage's artifact already exists, and SHALL require an explicit flag
@@ -483,6 +491,27 @@ first's source instead, which renders the same seeds.
 - **WHEN** a limit above `gpunit.toml`'s ceiling is given
 - **THEN** the invocation is refused naming the ceiling
 - **AND** no session is opened
+
+#### Scenario: a limit below the floor is refused
+- **Key:** `cli:render-limit:below-the-floor-is-refused`
+- **Layers:** unit
+- **WHEN** a limit of one second or more, but below the hold plus five minutes, is given
+- **THEN** the invocation is refused naming the floor
+- **AND** no session is opened
+
+#### Scenario: a limit below one second is refused at parse time
+- **Key:** `cli:render-limit:below-one-second-is-refused-at-parse-time`
+- **Layers:** unit
+- **WHEN** a limit below one second, or one that is no integer, is given
+- **THEN** the invocation is refused at parse time
+- **AND** no session is opened
+
+#### Scenario: a given limit is the session's limit
+- **Key:** `cli:render-limit:a-given-limit-is-the-sessions`
+- **Layers:** unit
+- **WHEN** a limit from the floor to the ceiling is given
+- **THEN** the session opens with that limit, and not with the estimate
+- **AND** the session states that limit
 
 #### Scenario: one boot for many collections
 - **Key:** `cli:render-limit:one-boot-for-many-collections`

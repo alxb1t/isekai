@@ -14,7 +14,7 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 ## 1 — A job's slot
 
 - [x] 1.1 **HALT CHECK** The refusal of a second job reads as [D8](design.md#d8)'s mutant `UB-4` expects; if it reads otherwise, the plan is wrong.
-  Verify: `git grep -c -F 'if job is not None and self._slots[kind].running:' isekai/interface/ui/jobs.py` prints `1`.
+  Verify: `git grep -c -F 'if job is not None and self._slots[kind].running:' isekai/interface/ui/jobs.py` prints `isekai/interface/ui/jobs.py:1`.
 - [x] 1.2 In `tests/test_ui_jobs.py` add `def _failing_close(record: Path) -> Volume:`; its `run(argv, say)` appends `" ".join(argv)` to `record` and returns `GpunitExit(1 if "down" in argv else 0)`, and it returns `Volume(run=run, records=record.parent / ".gpunit")`.
   Verify: `git grep -c -F 'def _failing_close' tests/test_ui_jobs.py` prints `tests/test_ui_jobs.py:1`.
 - [x] 1.3 In `tests/test_ui_jobs.py` add `test_a_failed_close_after_a_render_raises_the_volume_alert`, carrying `ui:render-job:a-failed-close-raises-the-volume-alert`. `record = tmp_path / "acts"`, `command = _order(record)[1]`, `Jobs(events.Broadcast(), lambda: None, volume=_failing_close(record), render=command, raise_volume=lambda: raised.append(True), now=lambda: "ended")`, then `render({"b": folder}, limit=1500, total=1, keep_open=False)` and `wait("render", WAIT)`. Assert `raised == [True]`, the slot's `session["steps"]["volume down"] == "failed"` and `record.read_text().splitlines()` is `volume up --yes`, `render 1500 <session id>`, `volume down`.
@@ -33,7 +33,7 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 ## 2 — A route answers before its handler
 
 - [x] 2.1 **HALT CHECK** The guard's refusal of a foreign host reads as `UA-1a` expects; if it reads otherwise, the plan is wrong.
-  Verify: `git grep -c -F 'return JSONResponse({"refusal": "not addressed here"}, FORBIDDEN)' isekai/interface/ui/app.py` prints `1`.
+  Verify: `git grep -c -F 'return JSONResponse({"refusal": "not addressed here"}, FORBIDDEN)' isekai/interface/ui/app.py` prints `isekai/interface/ui/app.py:1`.
 - [x] 2.2 In `tests/test_ui_api.py` rewrite `test_a_request_carrying_someone_elses_host_is_refused` in place, keeping its name and key and its read: add `fields = client.get(_at(made)).json()["fields"]`, `fields["hair_colour"] = ["blonde"]`, `before = snapshot(made.path)`, and a `client.put(_at(made, "/draft"), json={"fields": fields}, headers={"host": f"evil.example:{PORT}"})`. Assert status `403`, `{"refusal": "not addressed here"}` and `snapshot(made.path) == before`.
   Verify: `uv run pytest tests/test_ui_api.py::test_a_request_carrying_someone_elses_host_is_refused` passes.
 - [x] 2.3 In `tests/test_ui_api.py` rewrite `test_a_write_carrying_another_pages_origin_is_refused` in place the same way: the body of 2.2's `fields` in place of `{"fields": {}}`, `before = snapshot(made.path)` ahead of the request, and `snapshot(made.path) == before` after its `403` and `{"refusal": "not from this page"}`.
@@ -54,7 +54,7 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 ## 3 — Prepare and Stop
 
 - [x] 3.1 **HALT CHECK** The browser tests' wiring holds the Prepare reader on a collection named `hub-prepare`; if it reads otherwise, the plan is wrong.
-  Verify: `git grep -c -F 'runs.parent.name == "hub-prepare"' tests/e2e/wiring.py` prints `1`.
+  Verify: `git grep -c -F 'runs.parent.name == "hub-prepare"' tests/e2e/wiring.py` prints `tests/e2e/wiring.py:1`.
 - [x] 3.2 In `tests/test_ui_jobs.py` give `_collection` the keyword `collection: str = "b"` after `*names`, naming the folder `tmp_path / "lib" / collection`; each caller stays as it is.
   Verify: `git grep -c -F 'collection: str = "b"' tests/test_ui_jobs.py` prints `tests/test_ui_jobs.py:1`.
 - [x] 3.3 In `tests/test_ui_jobs.py` add `def _held_client(tmp_path, monkeypatch, vocabulary)`, returning `(app, client, folder, run)`: `monkeypatch.setenv("ISEKAI_WIRING", "tests.e2e.wiring:fake")`, `_collection(tmp_path, "ada.jpg", collection="hub-prepare")`, and the wiring, `dist` stub and `create_app(...)` of `test_a_stream_opened_for_a_collection_starts_with_both_slots_and_its_hub`. Add `_slot(app, client, kind)`, which reads `/events` as that test's `first_frame` does: a daemon thread waits up to `WAIT` for `app.state.broadcast._queues` to be non-empty and then publishes `events.CLOSE`, which ends only that call's stream; it returns `json.loads(first data)["jobs"][kind]`.
@@ -90,7 +90,7 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 ## 5 — The page's bodies
 
 - [x] 5.1 **HALT CHECK** The server holds the key tuples [D6](design.md#d6) names, each on a line of its own; if it holds others or fewer, the plan is wrong.
-  Verify: `git grep -c -E '^(OUTLINE|INK|STAGE1|PREVIEW|PROPOSE|BAKE)_KEYS = ' isekai/interface/ui/app.py` prints `6`.
+  Verify: `git grep -c -E '^(OUTLINE|INK|STAGE1|PREVIEW|PROPOSE|BAKE)_KEYS = ' isekai/interface/ui/app.py` prints `isekai/interface/ui/app.py:6`.
 - [x] 5.2 Write `ui/src/test/wire.json` as [D6](design.md#d6) says: an object whose `bodies` holds an entry for each builder of its table, each with `builder`, `method`, `path`, `keys` and `server`, and `optional` where the table has one.
   Verify: `grep -c -F '"builder":' ui/src/test/wire.json` prints `6`.
 - [x] 5.3 In `ui/tsconfig.json` add `"resolveJsonModule": true` to `compilerOptions`, after its `"strict": true` line, so a test may import the fixture.
@@ -109,11 +109,11 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 ## 6 — The mutants die
 
 - [x] 6.1 **HALT CHECK** `0135-the-paydown` is merged: the replay mode and the target exist; if they do not, this phase has nothing to run.
-  Verify: `git grep -c -F 'tools.mutate --edits tests/mutants.json' Makefile` prints `1`.
+  Verify: `git grep -c -F 'tools.mutate --edits tests/mutants.json' Makefile` prints `Makefile:1`.
 - [x] 6.2 **HALT CHECK** `0136-the-cli-and-the-session` is merged: `tests/mutants.json` holds its entry `PB-16`, so this change appends to the file after it.
   Verify: `grep -c -F 'PB-16' tests/mutants.json` prints `1`.
 - [x] 6.3 **HALT CHECK** Phases 1 to 5 edited no product file, so each line the mutants name stands: the refusal of 1.1 holds.
-  Verify: `git grep -c -F 'if job is not None and self._slots[kind].running:' isekai/interface/ui/jobs.py` prints `1`.
+  Verify: `git grep -c -F 'if job is not None and self._slots[kind].running:' isekai/interface/ui/jobs.py` prints `isekai/interface/ui/jobs.py:1`.
 - [x] 6.4 Append each entry of [mutants.json](mutants.json) to `tests/mutants.json`, keys and order unchanged, indented as the file is; each opens with `"finding":`.
   Verify: `grep -c -F '"finding":' tests/mutants.json` prints `41`.
 - [x] 6.5 Run the replay. A line that names a survivor goes to 6.6.
