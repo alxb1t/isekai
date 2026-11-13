@@ -283,6 +283,20 @@ run by it.
 - **THEN** no edit image is written and the request is still pending
 - **AND** the refusal names the discard that removes it
 
+#### Scenario: a failed sampling costs the next edit nothing
+- **Key:** `edit:session:a-failed-sampling-costs-the-next-edit-nothing`
+- **Layers:** unit
+- **WHEN** the endpoint rejects one pending edit's graph and another pending edit follows it
+- **THEN** the next edit is sampled and its image is written
+- **AND** the rejected request is still pending and the session exits with a failure
+
+#### Scenario: a chain of pending edits runs in order
+- **Key:** `edit:session:a-chain-of-pending-edits-runs-in-order`
+- **Layers:** unit
+- **WHEN** a pending edit's source is the image another pending edit will write
+- **THEN** the pending edits are checked before anything is rented, without that image
+- **AND** the first is sampled, and then the second from the first's image
+
 #### Scenario: the pod receives only crops
 - **Key:** `edit:session:the-pod-receives-only-crops`
 - **Layers:** unit

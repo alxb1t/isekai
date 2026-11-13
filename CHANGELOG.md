@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.10] - 2026-11-13
+
+Gate: local 1m13s · CI not read under mf-ship · 0.86.9: local 1m7s · CI not read under mf-ship
+
 - A stage verb with no `--flow` is refused listing the flows this build tracks, and the missing verb, a count, a seed
   and a limit out of range are each read in process by the parser's message, not by an exit code (0136 D1, D2).
 - The refusal of an empty runs root names `assign --flow`, which the build performs, not `tag --flow`, which it
