@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.12] - 2026-11-13
+
+Gate: local 1m15s · CI not read under mf-ship · 0.86.11: local 1m24s · CI not read under mf-ship
+
 - Approving a sheet warns when the assembled prompt, not the tags alone, is past the encoder's window; the CLI and
   the server pass the flow, and the budget's total and shares are held by literals (0138 D2, D3).
 - An approval is published by `create`, by the approve verb and by the copy alike, so a number another writer takes

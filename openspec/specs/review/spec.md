@@ -119,6 +119,13 @@ whether a criterion survived.
 - **THEN** a warning states the estimate and the window
 - **AND** approval still succeeds
 
+#### Scenario: a sheet inside the window by its tags and past it assembled warns
+- **Key:** `review:budget:a-sheet-past-the-window-only-assembled-warns`
+- **Layers:** unit
+- **WHEN** a sheet's tags alone fit the encoder's window and the flow's prefix and trailer carry the prompt past it
+- **THEN** a warning states the assembled count and the window
+- **AND** approval still succeeds
+
 ### Requirement: The approved artifact records whether a human changed anything
 
 The system SHALL record on the approved artifact whether its content differs from the sheet it was

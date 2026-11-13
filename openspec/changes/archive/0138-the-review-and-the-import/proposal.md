@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.12
 after: [0137-the-server]
 ---
 
