@@ -6,7 +6,7 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 
 - [x] 1 — A job's slot · moderate
 - [x] 2 — A route answers before its handler · moderate
-- [ ] 3 — Prepare and Stop · hard
+- [x] 3 — Prepare and Stop · hard
 - [ ] 4 — The poll and the stream · moderate
 - [ ] 5 — The page's bodies · moderate
 - [ ] 6 — The mutants die · moderate
@@ -53,21 +53,21 @@ Phases of tests alone: the jobs' slots, the guard that answers before a handler 
 
 ## 3 — Prepare and Stop
 
-- [ ] 3.1 **HALT CHECK** The browser tests' wiring holds the Prepare reader on a collection named `hub-prepare`; if it reads otherwise, the plan is wrong.
+- [x] 3.1 **HALT CHECK** The browser tests' wiring holds the Prepare reader on a collection named `hub-prepare`; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F 'runs.parent.name == "hub-prepare"' tests/e2e/wiring.py` prints `1`.
-- [ ] 3.2 In `tests/test_ui_jobs.py` give `_collection` the keyword `collection: str = "b"` after `*names`, naming the folder `tmp_path / "lib" / collection`; each caller stays as it is.
+- [x] 3.2 In `tests/test_ui_jobs.py` give `_collection` the keyword `collection: str = "b"` after `*names`, naming the folder `tmp_path / "lib" / collection`; each caller stays as it is.
   Verify: `git grep -c -F 'collection: str = "b"' tests/test_ui_jobs.py` prints `1`.
-- [ ] 3.3 In `tests/test_ui_jobs.py` add `def _held_client(tmp_path, monkeypatch, vocabulary)`, returning `(app, client, folder, run)`: `monkeypatch.setenv("ISEKAI_WIRING", "tests.e2e.wiring:fake")`, `_collection(tmp_path, "ada.jpg", collection="hub-prepare")`, and the wiring, `dist` stub and `create_app(...)` of `test_a_stream_opened_for_a_collection_starts_with_both_slots_and_its_hub`. Add `_slot(app, client, kind)`, which reads `/events` as that test's `first_frame` does: a daemon thread waits up to `WAIT` for `app.state.broadcast._queues` to be non-empty and then publishes `events.CLOSE`, which ends only that call's stream; it returns `json.loads(first data)["jobs"][kind]`.
+- [x] 3.3 In `tests/test_ui_jobs.py` add `def _held_client(tmp_path, monkeypatch, vocabulary)`, returning `(app, client, folder, run)`: `monkeypatch.setenv("ISEKAI_WIRING", "tests.e2e.wiring:fake")`, `_collection(tmp_path, "ada.jpg", collection="hub-prepare")`, and the wiring, `dist` stub and `create_app(...)` of `test_a_stream_opened_for_a_collection_starts_with_both_slots_and_its_hub`. Add `_slot(app, client, kind)`, which reads `/events` as that test's `first_frame` does: a daemon thread waits up to `WAIT` for `app.state.broadcast._queues` to be non-empty and then publishes `events.CLOSE`, which ends only that call's stream; it returns `json.loads(first data)["jobs"][kind]`.
   Verify: `git grep -c -F 'def _held_client' tests/test_ui_jobs.py` prints `1`.
-- [ ] 3.4 In `tests/test_ui_jobs.py` add `def test_prepare_over_http_is_refused_while_it_runs_and_stop_interrupts_it`, carrying `ui:prepare:one-job-at-a-time` and `ui:prepare:stop-interrupts-the-job` as stacked markers, run inside `with client:` so its exit stops the surface and a child left running. Post `/api/c/hub-prepare/prepare`: status `200`, the answer's `job` `kind` `prepare` and `state` `running`; a second post is `409` holding `a job is running: Prepare on hub-prepare`; poll `/api/c/hub-prepare/hub` until the cell of `FLOW` reads `tagged`, so the child is held on `.prepare-release`.
+- [x] 3.4 In `tests/test_ui_jobs.py` add `def test_prepare_over_http_is_refused_while_it_runs_and_stop_interrupts_it`, carrying `ui:prepare:one-job-at-a-time` and `ui:prepare:stop-interrupts-the-job` as stacked markers, run inside `with client:` so its exit stops the surface and a child left running. Post `/api/c/hub-prepare/prepare`: status `200`, the answer's `job` `kind` `prepare` and `state` `running`; a second post is `409` holding `a job is running: Prepare on hub-prepare`; poll `/api/c/hub-prepare/hub` until the cell of `FLOW` reads `tagged`, so the child is held on `.prepare-release`.
   Verify: `git grep -c -F 'def test_prepare_over_http_is_refused_while_it_runs_and_stop_interrupts_it' tests/test_ui_jobs.py` prints `1`.
-- [ ] 3.5 In that test of `tests/test_ui_jobs.py` post `/api/jobs/prepare/stop`: status `200` and its `job` `kind` `prepare`; poll `_slot(app, client, "prepare")` until its `state` reads `stopped`, each poll under a deadline; assert the hub's cell of `FLOW` still reads `tagged`. The reader is held, so this proves the route and the interrupt; that no later stage starts is held by `test_stop_interrupts_the_stage_and_starts_no_later_one`.
+- [x] 3.5 In that test of `tests/test_ui_jobs.py` post `/api/jobs/prepare/stop`: status `200` and its `job` `kind` `prepare`; poll `_slot(app, client, "prepare")` until its `state` reads `stopped`, each poll under a deadline; assert the hub's cell of `FLOW` still reads `tagged`. The reader is held, so this proves the route and the interrupt; that no later stage starts is held by `test_stop_interrupts_the_stage_and_starts_no_later_one`.
   Verify: `uv run pytest tests/test_ui_jobs.py::test_prepare_over_http_is_refused_while_it_runs_and_stop_interrupts_it` passes.
-- [ ] 3.6 In `tests/test_ui_jobs.py` add `test_stop_with_nothing_running_or_of_an_unknown_kind_is_refused`, carrying `ui:prepare:stop-interrupts-the-job`, over `_held_client`: `POST /api/jobs/prepare/stop` is `409` holding `no Prepare is running, so there is nothing to stop`, and `POST /api/jobs/nope/stop` is `409` holding `there is no nope job`.
+- [x] 3.6 In `tests/test_ui_jobs.py` add `test_stop_with_nothing_running_or_of_an_unknown_kind_is_refused`, carrying `ui:prepare:stop-interrupts-the-job`, over `_held_client`: `POST /api/jobs/prepare/stop` is `409` holding `no Prepare is running, so there is nothing to stop`, and `POST /api/jobs/nope/stop` is `409` holding `there is no nope job`.
   Verify: `uv run pytest tests/test_ui_jobs.py::test_stop_with_nothing_running_or_of_an_unknown_kind_is_refused` passes.
-- [ ] 3.7 In `tests/test_ui_jobs.py` add `test_prepare_takes_the_cells_with_no_sheet_and_no_other`, carrying `ui:prepare:prepare-takes-the-cells-with-no-sheet`. `_collection(tmp_path, "assigned.jpg", "tagged.jpg", "sheeted.jpg", "damaged.jpg")`; `write_wd14` on the second run; `sheet(run, load_flow(FLOW).schema, vocabulary)` on the third and fourth; the fourth's newest file under `run.directory(FLOW, SHEETS)`, found by `latest_artifact` as `library.py` does, rewritten to `{}`. Assert `set(library.unprepared(library.hub(folder, OFFERED, FLOWS_DIR))[FLOW])` is the ids of the first and second runs.
+- [x] 3.7 In `tests/test_ui_jobs.py` add `test_prepare_takes_the_cells_with_no_sheet_and_no_other`, carrying `ui:prepare:prepare-takes-the-cells-with-no-sheet`. `_collection(tmp_path, "assigned.jpg", "tagged.jpg", "sheeted.jpg", "damaged.jpg")`; `write_wd14` on the second run; `sheet(run, load_flow(FLOW).schema, vocabulary)` on the third and fourth; the fourth's newest file under `run.directory(FLOW, SHEETS)`, found by `latest_artifact` as `library.py` does, rewritten to `{}`. Assert `set(library.unprepared(library.hub(folder, OFFERED, FLOWS_DIR))[FLOW])` is the ids of the first and second runs.
   Verify: `uv run pytest tests/test_ui_jobs.py::test_prepare_takes_the_cells_with_no_sheet_and_no_other` passes.
-- [ ] 3.8 A new test that ran over five seconds in 3.4 carries `@pytest.mark.slow`; where none did, this task holds.
+- [x] 3.8 A new test that ran over five seconds in 3.4 carries `@pytest.mark.slow`; where none did, this task holds.
   Verify: `uv run pytest tests/test_ui_jobs.py` passes.
 
 ## 4 — The poll and the stream

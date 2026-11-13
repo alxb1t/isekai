@@ -22,13 +22,20 @@ import pytest
 
 pytest.importorskip("fastapi")
 
+from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from isekai.boundary import gpu, ollama  # noqa: E402
 from isekai.boundary.gpu import GpunitExit, Say, Seams, Volume  # noqa: E402
 from isekai.foundation.flow import FLOWS_DIR, Schema, load_flow  # noqa: E402
 from isekai.foundation.refusal import Refusal  # noqa: E402
-from isekai.foundation.run import Run, approval_of, open_run  # noqa: E402
+from isekai.foundation.run import (  # noqa: E402
+    SHEETS,
+    Run,
+    approval_of,
+    latest_artifact,
+    open_run,
+)
 from isekai.interface.cli import build_parser  # noqa: E402
 from isekai.interface.render import LOST_EXIT, without_flags  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
@@ -59,9 +66,11 @@ PORT = 8766
 WAIT = 20.0
 
 
-def _collection(tmp_path: Path, *names: str) -> tuple[Path, list[Run]]:
+def _collection(
+    tmp_path: Path, *names: str, collection: str = "b"
+) -> tuple[Path, list[Run]]:
     """Write a collection whose every source has a run assigned to `FLOW`."""
-    folder = tmp_path / "lib" / "b"
+    folder = tmp_path / "lib" / collection
     (folder / "sources").mkdir(parents=True)
     made = []
     for index, name in enumerate(names):
@@ -458,6 +467,125 @@ def test_a_stream_opened_for_a_collection_starts_with_both_slots_and_its_hub(
     assert (missing["jobs"]["prepare"], "hub" in missing) == (None, False)
     closed = first_frame("/events?collection=b&staging=0123")
     assert (closed["hub"]["collection"], "files" in closed) == ("b", False)
+
+
+def _held_client(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, vocabulary: Vocabulary
+) -> tuple[FastAPI, TestClient, Path, Run]:
+    """Return an app over `hub-prepare`, whose Prepare reader waits on a file."""
+    monkeypatch.setenv("ISEKAI_WIRING", "tests.e2e.wiring:fake")
+    folder, (run,) = _collection(tmp_path, "ada.jpg", collection="hub-prepare")
+    wired = bare_wiring(
+        vocabulary=lambda: vocabulary,
+        runs_root=folder / "runs",
+        rng=random.Random(0),
+        probe=lambda: None,
+    )
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html>")
+    app = create_app(
+        folder.parent,
+        wired,
+        flows=OFFERED,
+        bundle=dist,
+        wire=lambda runs: replace(wired, runs_root=runs),
+        host=HOST,
+        port=PORT,
+    )
+    return app, TestClient(app, base_url=f"http://{HOST}:{PORT}"), folder, run
+
+
+def _slot(app: FastAPI, client: TestClient, kind: str) -> dict[str, Any]:
+    """Return `kind`'s slot as the stream's first frame holds it."""
+    broadcast: events.Broadcast = app.state.broadcast
+
+    def close_once_open() -> None:
+        deadline = time.monotonic() + WAIT
+        while not broadcast._queues and time.monotonic() < deadline:
+            time.sleep(0.01)
+        broadcast.publish(events.CLOSE, {})
+
+    threading.Thread(target=close_once_open, daemon=True).start()
+    body = client.get("/events?collection=hub-prepare")
+    assert body.status_code == 200
+    data = body.text.split("\n")[1]
+    return json.loads(data.removeprefix("data: "))["jobs"][kind]
+
+
+def _stage_of(client: TestClient) -> str:
+    """Return the stage of `hub-prepare`'s one cell of `FLOW`."""
+    hub = client.get("/api/c/hub-prepare/hub").json()
+    return hub["sources"][0]["cells"][FLOW]["stage"]
+
+
+@pytest.mark.spec("ui:prepare:one-job-at-a-time")
+@pytest.mark.spec("ui:prepare:stop-interrupts-the-job")
+def test_prepare_over_http_is_refused_while_it_runs_and_stop_interrupts_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, vocabulary: Vocabulary
+) -> None:
+    app, client, _, _ = _held_client(tmp_path, monkeypatch, vocabulary)
+    with client:
+        started = client.post("/api/c/hub-prepare/prepare")
+        assert started.status_code == 200
+        job = started.json()["job"]
+        assert (job["kind"], job["state"]) == ("prepare", "running")
+
+        again = client.post("/api/c/hub-prepare/prepare")
+        assert again.status_code == 409
+        assert "a job is running: Prepare on hub-prepare" in again.json()["refusal"]
+
+        # The cell is tagged once the child has run its first stage; its reader is held.
+        deadline = time.monotonic() + 3 * WAIT
+        while _stage_of(client) != "tagged":
+            assert time.monotonic() < deadline, "the cell never reached `tagged`"
+            time.sleep(0.05)
+
+        stopped = client.post("/api/jobs/prepare/stop")
+        assert stopped.status_code == 200
+        assert stopped.json()["job"]["kind"] == "prepare"
+        deadline = time.monotonic() + WAIT
+        while _slot(app, client, "prepare")["state"] != "stopped":
+            assert time.monotonic() < deadline, "the Prepare never reported stopped"
+            time.sleep(0.05)
+        assert _stage_of(client) == "tagged"
+
+
+@pytest.mark.spec("ui:prepare:stop-interrupts-the-job")
+def test_stop_with_nothing_running_or_of_an_unknown_kind_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, vocabulary: Vocabulary
+) -> None:
+    _, client, _, _ = _held_client(tmp_path, monkeypatch, vocabulary)
+
+    idle = client.post("/api/jobs/prepare/stop")
+    unknown = client.post("/api/jobs/nope/stop")
+
+    assert idle.status_code == 409
+    assert (
+        "no Prepare is running, so there is nothing to stop" in idle.json()["refusal"]
+    )
+    assert unknown.status_code == 409
+    assert "there is no nope job" in unknown.json()["refusal"]
+
+
+@pytest.mark.spec("ui:prepare:prepare-takes-the-cells-with-no-sheet")
+def test_prepare_takes_the_cells_with_no_sheet_and_no_other(
+    tmp_path: Path, vocabulary: Vocabulary
+) -> None:
+    folder, (assigned, tagged, sheeted, damaged) = _collection(
+        tmp_path, "assigned.jpg", "tagged.jpg", "sheeted.jpg", "damaged.jpg"
+    )
+    schema = load_flow(FLOW).schema
+    write_wd14(tagged)
+    sheet(sheeted, schema, vocabulary)
+    sheet(damaged, schema, vocabulary)
+    written = latest_artifact(damaged.directory(FLOW, SHEETS))
+    assert written is not None
+    written.write_text("{}")
+
+    taken = library.unprepared(library.hub(folder, OFFERED, FLOWS_DIR))
+
+    assert set(taken[FLOW]) == {assigned.id, tagged.id}
 
 
 @pytest.mark.spec("ui:events:a-stages-report-reaches-the-stream")

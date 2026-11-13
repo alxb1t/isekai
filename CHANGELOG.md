@@ -25,6 +25,9 @@ its new digest.
 - Tests hold that a foreign `Host` or `Origin` on a draft update leaves the run unchanged, that each loopback spelling
   is answered by the middleware, each malformed body is refused naming what it lacks, and an upload past its declared
   length is refused before its body is read (0137 D2, D3).
+- Tests post Prepare and Stop over HTTP against the real `prepare` verb, its reader held on a file: Prepare is refused
+  while it runs, Stop interrupts it, an idle Stop and an unknown kind are refused, and `unprepared` takes the cells
+  with no sheet and no other (0137 D4).
 
 ## [0.86.9] - 2026-11-13
 
