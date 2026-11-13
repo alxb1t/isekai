@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.7] - 2026-11-13
+
+Gate: local 1m9s · CI not read under mf-ship · 0.86.6: local 1m12s · CI not read under mf-ship
+
 - The retry rule is held from below for `caption`, `wd14` and `tags`, and a stage reads one version's failure records at
   a time, so a refactor of the budget cannot turn a test green by accident (0133 D1).
 - A run's names are held at their bounds: the slug's alphabet and its cut, the instruction record's file name

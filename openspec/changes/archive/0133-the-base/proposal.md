@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.7
 after: [0132-the-prototypes-ink]
 ---
 
