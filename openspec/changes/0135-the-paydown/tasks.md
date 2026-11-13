@@ -6,7 +6,7 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 
 - [x] 1 — The runner holds · moderate
 - [x] 2 — The replay · hard
-- [ ] 3 — The audit's mutants · moderate
+- [x] 3 — The audit's mutants · moderate
 - [ ] 4 — The two left · moderate
 - [ ] 5 — The scanner · hard
 - [ ] 6 — The prose · moderate
@@ -47,11 +47,11 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
 
 ## 3 — The audit's mutants
 
-- [ ] 3.1 **HALT CHECK** The guards reworded MT-2's decorator, so its `find` is the form of [D4](design.md#d4); if the decorator reads otherwise, the plan is wrong.
+- [x] 3.1 **HALT CHECK** The guards reworded MT-2's decorator, so its `find` is the form of [D4](design.md#d4); if the decorator reads otherwise, the plan is wrong.
   Verify: `git grep -c -E "structural: the pins guide's path check" tests/test_docs.py` prints `1`.
-- [ ] 3.2 Write `tests/mutants.json`: each entry of [mutants.json](mutants.json) but `PB-14` and `UB-14`, keys and order unchanged, indented as the source is. Those two enter in phase 4 ([D4](design.md#d4)).
+- [x] 3.2 Write `tests/mutants.json`: each entry of [mutants.json](mutants.json) but `PB-14` and `UB-14`, keys and order unchanged, indented as the source is. Those two enter in phase 4 ([D4](design.md#d4)).
   Verify: `uv run python -m json.tool tests/mutants.json` exits `0`.
-- [ ] 3.3 In `Makefile` add the `mutants` target after `derive`, and list it in `.PHONY`; `gate` is unchanged and does not run it. Add each of these lines, the recipe indented with a tab:
+- [x] 3.3 In `Makefile` add the `mutants` target after `derive`, and list it in `.PHONY`; `gate` is unchanged and does not run it. Add each of these lines, the recipe indented with a tab:
   ```diff
   - .PHONY: gate e2e setup browsers drift derive
   + .PHONY: gate e2e setup browsers drift derive mutants
@@ -61,11 +61,11 @@ Phases of tools, tests and prose: the runner's copy, its replay mode, the audit'
   + uv run python -m tools.mutate --edits tests/mutants.json
   ```
   Verify: `make -n mutants` prints `uv run python -m tools.mutate --edits tests/mutants.json`.
-- [ ] 3.4 In `CONTRIBUTING.md`, after the sentence of 1.6, add: "A mutant of a finding a version closed lives in `tests/mutants.json`, and `make mutants` replays them outside the gate; a refactor version's pre-flight adds its own entries." Keep `make mutants` on one line.
+- [x] 3.4 In `CONTRIBUTING.md`, after the sentence of 1.6, add: "A mutant of a finding a version closed lives in `tests/mutants.json`, and `make mutants` replays them outside the gate; a refactor version's pre-flight adds its own entries." Keep `make mutants` on one line.
   Verify: `git grep -c -F 'make mutants' CONTRIBUTING.md` prints `1`.
-- [ ] 3.5 Run the replay over `tests/mutants.json`. It takes minutes. A line that names a survivor goes to 3.6.
+- [x] 3.5 Run the replay over `tests/mutants.json`. It takes minutes. A line that names a survivor goes to 3.6.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.
-- [ ] 3.6 Apply the rule of [D5](design.md#d5) to each `survivor` line 3.5 printed. Where 3.5 printed none, this task holds.
+- [x] 3.6 Apply the rule of [D5](design.md#d5) to each `survivor` line 3.5 printed. Where 3.5 printed none, this task holds.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits `0`.
 
 ## 4 — The two left

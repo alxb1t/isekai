@@ -16,6 +16,8 @@ its new digest.
 - `python -m tools.mutate --edits <json>` replays text edits in any tracked file, each against the tests its entry
   names, so the audit's mutants can be held as a file; an entry that cannot be replayed is refused by its finding
   (0135 D3).
+- `tests/mutants.json` holds the audit's mutants of the findings the series closed, and `make mutants` replays them
+  outside the gate, so each fix stays proven by the test that kills its mutant (0135 D4, D5).
 
 ## [0.86.8] - 2026-11-13
 
