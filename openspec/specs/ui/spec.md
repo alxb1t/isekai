@@ -541,6 +541,20 @@ flight, only the newest SHALL land, so an older read answering late never replac
 - **THEN** the later save holds every edit
 - **AND** nothing is sent again once it answers
 
+#### Scenario: a lone failed save is sent again
+- **Key:** `ui:save:a-lone-failed-save-is-sent-again`
+- **Layers:** unit
+- **WHEN** a save fails and no later save of the sheet waits behind it
+- **THEN** the edit is pending again
+- **AND** the next flush sends it, holding that edit
+
+#### Scenario: a burst of edits is one save
+- **Key:** `ui:save:a-burst-of-edits-is-one-save`
+- **Layers:** unit
+- **WHEN** edits are typed less than the debounce apart
+- **THEN** nothing is sent until the debounce has passed since the last
+- **AND** one save then holds every edit
+
 #### Scenario: the newest read of a sheet is the one that lands
 - **Key:** `ui:save:the-newest-read-of-a-sheet-is-the-one-that-lands`
 - **Layers:** unit
@@ -1765,6 +1779,20 @@ none                      ─▶ "No sheet waits for review"
 - **WHEN** an approval succeeds and reading the collection again fails
 - **THEN** the approve bar shows the refusal
 
+#### Scenario: a refused save is shown in the approve bar
+- **Key:** `ui:review:a-refused-save-is-shown`
+- **Layers:** unit
+- **WHEN** a save of the open sheet is refused
+- **THEN** the sheet holds the refusal's words, which the approve bar shows
+- **AND** the next save that lands clears them
+
+#### Scenario: a sheet that cannot be read says so
+- **Key:** `ui:review:a-sheet-that-cannot-be-read-says-so`
+- **Layers:** unit
+- **WHEN** Review reads a sheet and the read fails
+- **THEN** the sheet holds the refusal's words and stops loading
+- **AND** no sheet is shown in its place
+
 #### Scenario: each image has a slot
 - **Key:** `ui:review:each-image-has-a-slot`
 - **Layers:** unit
@@ -1797,6 +1825,13 @@ none                      ─▶ "No sheet waits for review"
 - **WHEN** a render running for the collection starts or ends while an approved sheet is open
 - **THEN** Review reads the sheet again, so *Cancel approve* follows the render
 - **AND** a render that starts or ends beside a sheet that is not approved leaves it unread
+
+#### Scenario: a render that moves during the read is read again once it lands
+- **Key:** `ui:review:a-render-that-moves-during-the-read-is-read-again`
+- **Layers:** unit
+- **WHEN** a render running for the collection starts or ends while the sheet is read, and the sheet lands approved
+- **THEN** Review reads the sheet once more when the read lands, so *Cancel approve* follows the render
+- **AND** a sheet that lands editable is not read again
 
 #### Scenario: the rail names the other flows' waiting sheets
 - **Key:** `ui:review:the-rail-names-the-other-flows-waiting`
@@ -2430,6 +2465,12 @@ keydown ─▶ in a text field? ─ yes ─▶ Esc · Mod+↵ · Mod+Z · ⇧Mod
 - **Layers:** unit
 - **WHEN** an overlay and the screen beneath it both declare a key
 - **THEN** only the overlay's command runs
+
+#### Scenario: a screen takes the keys before everywhere
+- **Key:** `ui:keys:a-screen-takes-the-keys-before-everywhere`
+- **Layers:** unit
+- **WHEN** a screen and the keys offered everywhere both declare a key
+- **THEN** only the screen's command runs
 
 #### Scenario: Esc closes the nearest thing first
 - **Key:** `ui:keys:esc-closes-the-nearest-thing-first`

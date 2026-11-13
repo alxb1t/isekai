@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.14] - 2026-11-13
+
+Gate: local 1m17s · CI not read under mf-ship · 0.86.13: local 1m19s · CI not read under mf-ship
+
 - The mutant replay runs a vitest entry: it names `"runner": "vitest"` and the files of `ui/src` that kill it, and the
   copy links `ui/node_modules` for it alone, so a pytest entry never reaches the checkout's modules (0140 D1, D2).
 - The sheet's saves are held by `useSheet.test.ts`: a lone failed save is sent again, a refused save and a sheet that

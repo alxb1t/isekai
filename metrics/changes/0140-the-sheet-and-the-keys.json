@@ -1,0 +1,58 @@
+{
+  "change": "0140-the-sheet-and-the-keys",
+  "version": "0.86.14",
+  "base": "45a99acd",
+  "analyzed": "04a8836b",
+  "measured_on": "local",
+  "collected_at": "2026-11-13T16:45:26+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2382
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 77
+    },
+    "open-backlog-cards": {
+      "value": 4
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1642
+    },
+    "diff-files": {
+      "value": 17
+    },
+    "phases": {
+      "value": 5
+    },
+    "shared-reading-set": {
+      "value": 14595
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1071
+    },
+    "decisions": {
+      "value": 58
+    }
+  }
+}
