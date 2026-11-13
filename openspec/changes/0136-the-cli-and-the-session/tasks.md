@@ -5,7 +5,7 @@ Phases of tests and the product fixes they found: the verbs' refusals, the remed
 ## Progress
 
 - [x] 1 — A verb's refusals · hard
-- [ ] 2 — Every remedy works · moderate
+- [x] 2 — Every remedy works · moderate
 - [ ] 3 — Nothing rents before the checks · moderate
 - [ ] 4 — A batch survives its refusals · moderate
 - [ ] 5 — The mutants die · moderate
@@ -33,23 +33,23 @@ Phases of tests and the product fixes they found: the verbs' refusals, the remed
 
 ## 2 — Every remedy works
 
-- [ ] 2.1 **HALT CHECK** The empty runs root's remedy names `tag`, as [D3](design.md#d3) says; if it reads otherwise, the plan is wrong.
+- [x] 2.1 **HALT CHECK** The empty runs root's remedy names `tag`, as [D3](design.md#d3) says; if it reads otherwise, the plan is wrong.
   Verify: `git grep -c -F "uv run python -m isekai tag {' '.join(flows)} --runs " isekai/interface/render.py` prints `1`.
-- [ ] 2.2 In `isekai/interface/render.py` `_asked` change `uv run python -m isekai tag {' '.join(flows)} --runs ` to `uv run python -m isekai assign {' '.join(flows)} --runs ` in the empty-root refusal, and nothing else.
+- [x] 2.2 In `isekai/interface/render.py` `_asked` change `uv run python -m isekai tag {' '.join(flows)} --runs ` to `uv run python -m isekai assign {' '.join(flows)} --runs ` in the empty-root refusal, and nothing else.
   Verify: `git grep -c -F "uv run python -m isekai assign {' '.join(flows)} --runs " isekai/interface/render.py` prints `1`.
-- [ ] 2.3 In `tests/test_render.py` add `test_a_request_over_a_runs_root_with_no_run_is_refused_naming_assign`, carrying `cli:refusals:refusal-names-the-remedy`: `runs = tmp_path / "b" / "runs"` made with `runs.mkdir(parents=True)`, not through `collection()`, which always creates a run; then `session(runs, f"{FLOW}=1", opener=opener)`. Assert status `1`, `opener.opened == 0`, no `sessions/` folder beside `runs`, and in `log(runs)` the sentence `holds no run` and `isekai assign --flow {FLOW} --runs {runs}` and no `isekai tag`.
+- [x] 2.3 In `tests/test_render.py` add `test_a_request_over_a_runs_root_with_no_run_is_refused_naming_assign`, carrying `cli:refusals:refusal-names-the-remedy`: `runs = tmp_path / "b" / "runs"` made with `runs.mkdir(parents=True)`, not through `collection()`, which always creates a run; then `session(runs, f"{FLOW}=1", opener=opener)`. Assert status `1`, `opener.opened == 0`, no `sessions/` folder beside `runs`, and in `log(runs)` the sentence `holds no run` and `isekai assign --flow {FLOW} --runs {runs}` and no `isekai tag`.
   Verify: `uv run pytest tests/test_render.py::test_a_request_over_a_runs_root_with_no_run_is_refused_naming_assign` passes.
-- [ ] 2.4 In `tests/test_resume.py` `_printed` also return the command a message prints after `uv run python -m isekai ` to its end (`re.findall(r"uv run python -m isekai (\S.*)$", message)`), and `_names_its_run` return `not parsed.flows and bool(parsed.photos)` for a verb in `PHOTOGRAPH_VERBS`, which the file already imports.
+- [x] 2.4 In `tests/test_resume.py` `_printed` also return the command a message prints after `uv run python -m isekai ` to its end (`re.findall(r"uv run python -m isekai (\S.*)$", message)`), and `_names_its_run` return `not parsed.flows and bool(parsed.photos)` for a verb in `PHOTOGRAPH_VERBS`, which the file already imports.
   Verify: `git grep -c -F 'not parsed.flows and bool(parsed.photos)' tests/test_resume.py` prints `1`.
-- [ ] 2.5 In `tests/test_resume.py` widen `test_the_command_guard_catches_a_command_that_names_no_run` in place: add `tag --flow summon-anime-wai --runs /nowhere/runs photo.jpg` printed in backticks, and the same command printed after `uv run python -m isekai ` without them, each asserted to be returned by `_unrunnable`.
+- [x] 2.5 In `tests/test_resume.py` widen `test_the_command_guard_catches_a_command_that_names_no_run` in place: add `tag --flow summon-anime-wai --runs /nowhere/runs photo.jpg` printed in backticks, and the same command printed after `uv run python -m isekai ` without them, each asserted to be returned by `_unrunnable`.
   Verify: `uv run pytest tests/test_resume.py::test_the_command_guard_catches_a_command_that_names_no_run` passes.
-- [ ] 2.6 In `tests/test_resume.py` add `_front_end_refusals(wired, tmp_path, photo, messages)` and call it at the end of `_every_refusal`. It appends, with its `refused: ` prefix removed, what `dispatch(build_parser().parse_args(["tag", "--flow", FLOW, "--runs", str(tmp_path / "elsewhere"), str(photo)]), aside)` prints to `aside.err`, and what `run_session(argparse.Namespace(runs=[empty], requests=[f"{FLOW}=1"]), aside, lambda argv, wired: 0, Seams())` prints over an empty `tmp_path / "empty" / "runs"`; `aside` is `dataclasses.replace(wired, err=io.StringIO())`.
+- [x] 2.6 In `tests/test_resume.py` add `_front_end_refusals(wired, tmp_path, photo, messages)` and call it at the end of `_every_refusal`. It appends, with its `refused: ` prefix removed, what `dispatch(build_parser().parse_args(["tag", "--flow", FLOW, "--runs", str(tmp_path / "elsewhere"), str(photo)]), aside)` prints to `aside.err`, and what `run_session(argparse.Namespace(runs=[empty], requests=[f"{FLOW}=1"]), aside, lambda argv, wired: 0, Seams())` prints over an empty `tmp_path / "empty" / "runs"`; `aside` is `dataclasses.replace(wired, err=io.StringIO())`.
   Verify: `git grep -c -F '_front_end_refusals' tests/test_resume.py` prints `2`.
-- [ ] 2.7 In `tests/test_resume.py` remove from `AVAILABLE` the lines `    "delete",` and `    "rename",`, those matching `^    "(delete|rename)",$`, as [D4](design.md#d4) says.
+- [x] 2.7 In `tests/test_resume.py` remove from `AVAILABLE` the lines `    "delete",` and `    "rename",`, those matching `^    "(delete|rename)",$`, as [D4](design.md#d4) says.
   Verify: `git grep -L -E -e '^    "(delete|rename)",$' tests/test_resume.py` prints `tests/test_resume.py`.
-- [ ] 2.8 A message the sweep then names as unhelpful gives the phrase of that message from its `delete` or `rename` to the next `;`, `,` or `.`, as printed, and that phrase is added to `AVAILABLE`. Where the sweep names none, this task holds.
+- [x] 2.8 A message the sweep then names as unhelpful gives the phrase of that message from its `delete` or `rename` to the next `;`, `,` or `.`, as printed, and that phrase is added to `AVAILABLE`. Where the sweep names none, this task holds.
   Verify: `uv run pytest tests/test_resume.py` passes.
-- [ ] 2.9 The phase's files agree with each other and the keys.
+- [x] 2.9 The phase's files agree with each other and the keys.
   Verify: `uv run pytest tests/test_render.py tests/test_review.py tests/test_resume.py` passes.
 
 ## 3 — Nothing rents before the checks

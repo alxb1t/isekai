@@ -26,6 +26,9 @@ its new digest.
   *Place a tattoo* among the writes it offers none of (0135 D8).
 - A stage verb with no `--flow` is refused listing the flows this build tracks, and the missing verb, a count, a seed
   and a limit out of range are each read in process by the parser's message, not by an exit code (0136 D1, D2).
+- The refusal of an empty runs root names `assign --flow`, which the build performs, where it named `tag --flow`, which
+  it refuses; the remedy sweep drops its bare verbs, reads an unquoted printed command, refuses a photograph verb that
+  names a flow, and reaches the refusals `dispatch` and the render session print (0136 D3, D4).
 
 ## [0.86.8] - 2026-11-13
 

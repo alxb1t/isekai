@@ -234,6 +234,23 @@ def test_nothing_is_rented_before_every_prompt_is_assembled(tmp_path: Path) -> N
     ]
 
 
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_a_request_over_a_runs_root_with_no_run_is_refused_naming_assign(
+    tmp_path: Path,
+) -> None:
+    runs = tmp_path / "b" / "runs"
+    runs.mkdir(parents=True)
+    opener = FakeOpen()
+
+    assert session(runs, f"{FLOW}=1", opener=opener) == 1
+    assert opener.opened == 0
+    assert not (runs.parent / "sessions").exists()
+    message = log(runs)
+    assert "holds no run" in message
+    assert f"isekai assign --flow {FLOW} --runs {runs}" in message
+    assert "isekai tag" not in message
+
+
 @pytest.mark.spec("pod-image:session:the-endpoint-is-awaited")
 def test_the_report_is_asked_through_the_forwarded_port_before_any_render(
     tmp_path: Path,
