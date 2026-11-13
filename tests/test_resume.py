@@ -12,6 +12,7 @@ submission, so "not one external call was made" is a number rather than a hope.
 """
 
 import argparse
+import dataclasses
 import io
 import json
 import random
@@ -34,6 +35,7 @@ from isekai.foundation.run import (
     versions,
 )
 from isekai.interface.cli import build_parser, dispatch
+from isekai.interface.render import Seams, run_session
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.tagging import FakeTagger
@@ -398,7 +400,25 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     )
     _draft_and_cancel_refusals(wired, tmp_path, collect)
     _migrate_refusals(wired, tmp_path, collect)
+    _front_end_refusals(wired, tmp_path, photo, messages)
     return messages
+
+
+def _front_end_refusals(
+    wired: Wiring, tmp_path: Path, photo: Path, messages: list[str]
+) -> None:
+    """Append the refusals `dispatch` and the render session print, not raise."""
+    aside = dataclasses.replace(wired, err=io.StringIO())
+    elsewhere = str(tmp_path / "elsewhere")
+    parsed = ["tag", "--flow", FLOW, "--runs", elsewhere, str(photo)]
+    dispatch(build_parser().parse_args(parsed), aside)
+    empty = tmp_path / "empty" / "runs"
+    empty.mkdir(parents=True)
+    asked = argparse.Namespace(runs=[empty], requests=[f"{FLOW}=1"])
+    run_session(asked, aside, lambda argv, wired: 0, Seams())
+    assert isinstance(aside.err, io.StringIO)
+    printed = aside.err.getvalue().splitlines()
+    messages.extend(line.removeprefix("refused: ") for line in printed if line)
 
 
 def _migrate_refusals(
@@ -556,8 +576,6 @@ AVAILABLE: Sequence[str] = (
     "convert the photograph",
     "re-export the photograph",
     "check the path",
-    "delete",
-    "rename",
     "add the field",
     "correct the field",
     "replace it with a tag",
@@ -623,15 +641,24 @@ def _names_its_run(command: str) -> bool:
         return all(image.is_file() for image in parsed.images)
     if parsed.verb == "migrate":
         return parsed.runs is not None and parsed.runs.is_dir()
+    if parsed.verb in PHOTOGRAPH_VERBS:
+        return not parsed.flows and bool(parsed.photos)
     return bool(parsed.photos)
 
 
 def _printed(messages: Sequence[str]) -> list[str]:
-    """Return every `python -m isekai` command `messages` print, after the module."""
+    """Return every `python -m isekai` command `messages` print, after the module.
+
+    A command is found in backticks, or unquoted after `uv run python -m isekai `
+    to the end of its message.
+    """
     return [
         command
         for message in messages
-        for command in re.findall(r"`python -m isekai ([^`]+)`", message)
+        for command in [
+            *re.findall(r"`python -m isekai ([^`]+)`", message),
+            *re.findall(r"uv run python -m isekai (\S.*)$", message),
+        ]
     ]
 
 
@@ -670,6 +697,9 @@ def test_the_command_guard_catches_a_command_that_names_no_run() -> None:
     assert _unrunnable([f"x; run `python -m isekai {absent}`"]) == [absent]
     for walked in ("migrate", "migrate --runs /nowhere/runs"):
         assert _unrunnable([f"x; run `python -m isekai {walked}`"]) == [walked]
+    named = "tag --flow summon-anime-wai --runs /nowhere/runs photo.jpg"
+    assert _unrunnable([f"x; run `python -m isekai {named}`"]) == [named]
+    assert _unrunnable([f"x; run: uv run python -m isekai {named}"]) == [named]
 
 
 @pytest.mark.spec("cli:refusals:refusal-exits-non-zero")

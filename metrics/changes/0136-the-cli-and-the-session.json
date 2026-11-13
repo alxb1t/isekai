@@ -1,0 +1,58 @@
+{
+  "change": "0136-the-cli-and-the-session",
+  "version": "0.86.10",
+  "base": "d3f72349",
+  "analyzed": "ebc6be3e",
+  "measured_on": "local",
+  "collected_at": "2026-11-13T13:13:07+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2317
+    },
+    "tests-browser": {
+      "value": 19
+    },
+    "gate-seconds": {
+      "value": 73
+    },
+    "open-backlog-cards": {
+      "value": 2
+    },
+    "commits-without-trailer": {
+      "value": 1
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 3
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1349
+    },
+    "diff-files": {
+      "value": 22
+    },
+    "phases": {
+      "value": 5
+    },
+    "shared-reading-set": {
+      "value": 14574
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1045
+    },
+    "decisions": {
+      "value": 58
+    }
+  }
+}
