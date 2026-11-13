@@ -131,6 +131,9 @@ def test_the_frame_records_the_whole_digest_not_just_the_prefix(
         ("Ünïcödé", "n-c-d"),
         ("!!!", "photo"),
         ("", "photo"),
+        ("a_b", "a-b"),
+        ("a" * 31 + "-" + "b" * 8, "a" * 31),
+        ("a" * 40, "a" * 32),
     ],
 )
 def test_the_slug_keeps_nothing_that_could_leave_the_directory(
@@ -789,15 +792,37 @@ def test_each_tagger_refuses_by_name_at_its_own_budget(
     assert f"001.error.{spend}.transient.json" in message
 
 
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
 @pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")
-@pytest.mark.parametrize("stage", ["wd14", "tags"])
-def test_a_tagger_below_its_budget_attempts_again_rather_than_raising_keyerror(
-    tmp_path: Path, stage: str
+@pytest.mark.parametrize(
+    ("stage", "budget"), [("caption", 3), ("wd14", 1), ("tags", 3)]
+)
+def test_a_stage_attempts_until_its_budget_and_refuses_at_it(
+    tmp_path: Path, stage: str, budget: int
 ) -> None:
+    assert BUDGETS[stage] == budget
     directory = tmp_path / stage
     directory.mkdir()
+    run = Run("aunt-ada", tmp_path)
 
-    check_budget(stage, directory, 1, Run("aunt-ada", tmp_path))
+    for _ in range(budget):
+        check_budget(stage, directory, 1, run)
+        record_failure(directory, 1, "transient", _FAILURE)
+
+    with pytest.raises(Refusal) as refused:
+        check_budget(stage, directory, 1, run)
+    assert f"001.error.{budget}.transient.json" in str(refused.value)
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+def test_a_stages_records_are_read_one_version_at_a_time(tmp_path: Path) -> None:
+    directory = tmp_path / "captions"
+    directory.mkdir()
+    for _ in range(BUDGETS["caption"]):
+        record_failure(directory, 1, "transient", _FAILURE)
+
+    assert attempts(directory, 2) == []
+    check_budget("caption", directory, 2, Run("aunt-ada", tmp_path))
 
 
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")

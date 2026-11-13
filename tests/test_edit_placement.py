@@ -292,14 +292,14 @@ def test_placement_discard_an_edit_takes_its_placement_and_the_chain_made_from_i
 
     deleted = discard_edit(group / "42.edit-1.png")
 
-    assert sorted(path.name for path in deleted) == [
-        "42.edit-1.composite.png",
-        "42.edit-1.json",
-        "42.edit-1.placement.json",
-        "42.edit-1.png",
-        "42.edit-2.composite.png",
-        "42.edit-2.json",
-        "42.edit-2.placement.json",
+    assert deleted == [
+        group / "42.edit-1.png",
+        group / "42.edit-1.json",
+        group / "42.edit-1.placement.json",
+        group / "42.edit-1.composite.png",
+        group / "42.edit-2.json",
+        group / "42.edit-2.placement.json",
+        group / "42.edit-2.composite.png",
     ]
     assert _listing(group) == [
         "42.edit-3.composite.png",

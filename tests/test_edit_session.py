@@ -33,6 +33,7 @@ from isekai.pipeline.generate import (
     rendered_seeds,
 )
 from isekai.shared.vocabulary import Vocabulary
+from tests.conftest import tree
 from tests.fakes import RecordingComfyClient
 from tests.stages import bare_wiring
 from tests.test_render import (
@@ -197,7 +198,9 @@ def test_edit_render_a_session_may_hold_edits_alone(
     assert "duration" in read(record, EDIT_FILE)
     # The session's own record is a render's: it plans no image for the edit.
     (opened,) = (root.parent / SESSIONS).glob("*.json")
-    assert json.loads(opened.read_text())["planned"] == []
+    ended = json.loads(opened.read_text())
+    assert ended["planned"] == []
+    assert (ended["outcome"], ended["message"]) == ("done", None)
 
 
 @pytest.mark.spec("edit:session:a-flow-taken-out-takes-its-edits-out")
@@ -284,6 +287,12 @@ def test_edit_render_a_rejected_graph_fails_the_session_and_leaves_the_edit_pend
     assert f"python -m isekai discard {_group(run) / '1.edit-1.png'}" in told
     assert not (_group(run) / "1.edit-1.png").exists()
     assert pending(_group(run)) == [record]
+    (held,) = (root.parent / SESSIONS).glob("*.json")
+    ended = json.loads(held.read_text())
+    assert (ended["outcome"], ended["message"]) == (
+        "failed",
+        "a flow failed; the collection's log names it",
+    )
 
 
 # --- the listings --------------------------------------------------------------
@@ -408,13 +417,13 @@ def test_edit_discard_an_edit_takes_the_edits_made_from_it_and_the_render_stays(
 
     deleted = discard_edit(group / "42.edit-1.png")
 
-    assert sorted(path.name for path in deleted) == [
-        "42.edit-1.composite.png",
-        "42.edit-1.json",
-        "42.edit-1.png",
-        "42.edit-2.composite.png",
-        "42.edit-2.json",
-        "42.edit-2.png",
+    assert deleted == [
+        group / "42.edit-1.png",
+        group / "42.edit-1.json",
+        group / "42.edit-1.composite.png",
+        group / "42.edit-2.png",
+        group / "42.edit-2.json",
+        group / "42.edit-2.composite.png",
     ]
     assert sorted(path.name for path in group.iterdir()) == [
         "42.edit-3.composite.png",
@@ -434,9 +443,9 @@ def test_edit_discard_a_pending_edit_is_named_by_the_path_its_image_will_have(
 
     deleted = discard_edit(group / "42.edit-3.png")
 
-    assert sorted(path.name for path in deleted) == [
-        "42.edit-3.composite.png",
-        "42.edit-3.json",
+    assert deleted == [
+        group / "42.edit-3.json",
+        group / "42.edit-3.composite.png",
     ]
     assert (group / "42.edit-1.png").is_file()
 
@@ -497,11 +506,16 @@ def test_edit_discard_the_last_render_with_an_edit_takes_the_group_and_the_appro
     run = counted(tmp_path, schema, vocabulary, "ada", 1)
     group = _group(run)
     _with_an_edit(group, 1)
+    before = tree(run.path.parent)
 
     code, out, err = _discard(tmp_path, group / "1.png")
 
+    after = tree(run.path.parent)
     where = f"{run.id}/{FLOW}/outputs/002"
     assert (code, err) == (0, "")
+    assert sorted(out.splitlines()) == sorted(
+        f"discard deleted {name}" for name in set(before) - set(after)
+    )
     printed = out.splitlines()
     for name in ("1.edit-1.png", "1.edit-1.json", "1.edit-1.composite.png"):
         assert f"discard deleted {where}/{name}" in printed
@@ -524,7 +538,9 @@ def test_edit_discard_a_running_session_refuses_an_edits_path(
 
     with record.with_suffix(".lock").open("w") as held:
         fcntl.flock(held, fcntl.LOCK_EX)
+        before = tree(tmp_path)
         code, out, err = _discard(tmp_path, group / "1.edit-1.png")
+        assert tree(tmp_path) == before
 
     assert (code, out) == (1, "")
     assert "A render session is running" in err

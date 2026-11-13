@@ -20,6 +20,7 @@ from isekai.foundation.run import (
     approval_of,
     edit_files,
     open_run,
+    record_failure,
 )
 from isekai.interface.ui import library
 from isekai.interface.ui.library import Cell, FlowCount, Rendered
@@ -29,7 +30,7 @@ from isekai.pipeline.tattoos import cut, keep
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import tree
 from tests.images import jpeg_bytes, jpeg_with_header, photo_jpeg
-from tests.stages import sheet, write_wd14
+from tests.stages import rendered_image, sheet, write_wd14
 
 REPO = Path(__file__).resolve().parent.parent
 SUMMON = "summon-anime-wai"
@@ -237,6 +238,26 @@ def test_a_cells_stage_is_the_furthest_its_run_directory_holds(
     (source,) = grid.sources
     assert source.cells[SUMMON] == done
     assert source.digest == run.digest
+
+
+@pytest.mark.spec("ui:hub:a-cells-stage-comes-from-its-run")
+@pytest.mark.parametrize("newest", [True, False])
+def test_a_cells_stage_reads_rendered_only_where_a_render_is_written(
+    tmp_path: Path, vocabulary: Vocabulary, newest: bool
+) -> None:
+    folder = _collection(tmp_path, "b", "ada.jpg")
+    run = _run(folder, "ada.jpg")
+    loaded = load_flow(SUMMON)
+    _approved(run, vocabulary)
+    assert library.stage(run, loaded, newest=newest).stage == "approved"
+
+    group = run.directory(SUMMON, OUTPUTS, "001")
+    group.mkdir(parents=True)
+    record_failure(group, 1, "permanent", {"stage": "render", "seed": 7, "detail": "x"})
+    assert library.stage(run, loaded, newest=newest).stage == "approved"
+
+    rendered_image(run, 1, 7)
+    assert library.stage(run, loaded, newest=newest).stage == "rendered"
 
 
 @pytest.mark.spec("ui:hub:a-tagged-photograph-is-tagged-in-every-flow")

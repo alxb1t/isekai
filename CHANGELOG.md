@@ -10,6 +10,24 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.7] - 2026-11-13
+
+Gate: local 1m9s · CI not read under mf-ship · 0.86.6: local 1m12s · CI not read under mf-ship
+
+- The retry rule is held from below for `caption`, `wd14` and `tags`, and a stage reads one version's failure records at
+  a time, so a refactor of the budget cannot turn a test green by accident (0133 D1).
+- A run's names are held at their bounds: the slug's alphabet and its cut, the instruction record's file name
+  outside the repository, and a runs root read with its folders, so a stray empty one fails a second pass (0133 D2).
+- A session's record is read back at every end: a raised flow, a SIGTERM, the limit's note, a failed flow, a done bake,
+  a lost create and a failed teardown, so a refactor of `Record` cannot change an outcome unseen (0133 D3).
+- Each delete's returned list is held to what left the tree, in the order `delete_edits` fixes, and the app's delete
+  leaves the tree the CLI's `discard` leaves, so a refactor cannot drop a path unseen (0133 D4).
+- A group reads as rendered where every site agrees: a revision, an unchanged-draft check, a copy and a hub cell take
+  an image with its sidecar as a render and a failure record alone, or no group, as none, so a refactor of the render
+  group cannot move that line unseen (0133 D5).
+- A refused `discard` leaves the whole tree as it was: the CLI's discard of a render and of an edit, under a running
+  render session, is read with the tree before and after, so a refusal that deletes a file late fails (0133 D6).
+
 ## [0.86.6] - 2026-11-13
 
 Gate: local 1m12s · CI not read under mf-ship · 0.86.5: local 1m11s · CI not read under mf-ship

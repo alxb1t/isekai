@@ -83,7 +83,7 @@ from isekai.foundation.run import (  # noqa: E402
     open_run,
     versions,
 )
-from isekai.interface.cli import build_parser  # noqa: E402
+from isekai.interface.cli import build_parser, dispatch  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
 from isekai.interface.ui.app import (  # noqa: E402
     RARE_BELOW,
@@ -111,12 +111,13 @@ from isekai.pipeline.tagging import (  # noqa: E402
 from isekai.shared.field_map import Group  # noqa: E402
 from isekai.shared.image import THUMB_SIDE  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
-from tests.conftest import snapshot  # noqa: E402
+from tests.conftest import snapshot, tree  # noqa: E402
 from tests.fakes import FakeComfyClient  # noqa: E402
 from tests.images import jpeg_bytes, photo_jpeg, png_bytes  # noqa: E402
 from tests.stages import (  # noqa: E402
     FIELD_MAP,
     NO_GPUNIT,
+    bare_wiring,
     caption,
     fake_tagger,
     render,
@@ -1693,11 +1694,23 @@ def test_deleting_a_render_deletes_its_files_and_thumbnail(
         assert client.get(f"{at}/{place}/thumb").status_code == 200
     cache = tmp_path / "lib" / ".cache" / made.digest / FLOW / "outputs"
     outputs = made.directory(FLOW, "outputs")
+    shutil.copytree(made.path.parents[1], tmp_path / "twin")
+    twin_run = tmp_path / "twin" / "runs" / made.path.name
+    twin = bare_wiring(runs_root=tmp_path)
+    twinned = dispatch(
+        build_parser().parse_args(
+            ["discard", str(twin_run / FLOW / "outputs" / "001" / "11.png")]
+        ),
+        twin,
+    )
 
     deleted = client.delete(f"{at}/v1/11")
 
+    assert twinned == 0
     assert deleted.status_code == 200
     assert deleted.json() == {"deleted": True}
+    assert set(tree(made.path)) == set(tree(twin_run))
+    assert tree(made.path) == tree(twin_run)
     assert not (outputs / "001" / "11.png").exists()
     assert not (outputs / "001" / "11.render.json").exists()
     assert list(cache.glob("001/11.*.jpg")) == []

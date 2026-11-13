@@ -38,7 +38,7 @@ from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
-from tests.conftest import CSV, snapshot
+from tests.conftest import CSV, snapshot, tree
 from tests.fakes import READER, FakeComfyClient, stub_comfy, url_of
 from tests.images import jpeg_bytes
 from tests.record import drive, offline, paths
@@ -158,12 +158,12 @@ def test_a_second_full_pass_changes_nothing_and_calls_nothing(
     photo: Path, wired: Wiring
 ) -> None:
     assert _pass(wired, str(photo)) == 0
-    after_first = snapshot(wired.runs_root)
+    after_first = tree(wired.runs_root)
     calls = _calls(wired)
 
     assert _pass(wired, str(photo)) == 0
 
-    assert snapshot(wired.runs_root) == after_first
+    assert tree(wired.runs_root) == after_first
     assert _calls(wired) == calls
 
 

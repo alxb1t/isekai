@@ -1515,7 +1515,11 @@ def test_discarding_a_groups_last_render_removes_the_group(
 
     deleted = discard_render(group / f"42{flow.output_suffix}")
 
-    assert deleted[-1] == group
+    assert deleted == [
+        group.absolute() / f"42{flow.output_suffix}",
+        group.absolute() / "42.render.json",
+        group.absolute(),
+    ]
     assert not group.exists()
     assert approval.is_file() and prompt.is_file()
     assert snapshot(run.path) == _kept(before, run, deleted[:-1])
