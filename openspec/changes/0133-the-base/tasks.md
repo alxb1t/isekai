@@ -8,7 +8,7 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 - [x] 2 — A run's names · moderate
 - [x] 3 — The record's every end · moderate
 - [x] 4 — Every path removed · moderate
-- [ ] 5 — Rendered, where all agree · moderate
+- [x] 5 — Rendered, where all agree · moderate
 - [ ] 6 — Refused, whole · moderate
 
 ## 1 — The retry rule
@@ -65,15 +65,15 @@ Phases of tests: the retry rule, a run's names, the session record's ends, every
 
 ## 5 — Rendered, where all agree
 
-- [ ] 5.1 **HALT CHECK** `refuse_revision` reads a render as the sidecar of the seed, as [D5](design.md#d5) says; if it does not, the plan is wrong.
+- [x] 5.1 **HALT CHECK** `refuse_revision` reads a render as the sidecar of the seed, as [D5](design.md#d5) says; if it does not, the plan is wrong.
   Verify: `git grep -c -F 'if not (group_of(run, flow, version) / f"{seed}{SIDECAR}").is_file():' isekai/pipeline/review.py` prints `1`.
-- [ ] 5.2 In `tests/test_review.py` add `test_a_revision_of_a_seed_no_render_wrote_is_refused`, parametrized on `failure`: true writes `record_failure(group, 1, "permanent", {"stage": "render", "seed": SEED, "detail": "x"})` into the group `run.directory(FLOW, "outputs", "001")`, false leaves it absent, after `_approved(run, schema, vocabulary)` wrote approval 1. `revise(run, FLOW, 1, SEED)` raises `Refusal` matching `rendered no seed`, and the snapshot of `run.path` is unchanged. It carries `@pytest.mark.spec_exempt("structural: a revision refuses a seed no render wrote")`.
+- [x] 5.2 In `tests/test_review.py` add `test_a_revision_of_a_seed_no_render_wrote_is_refused`, parametrized on `failure`: true writes `record_failure(group, 1, "permanent", {"stage": "render", "seed": SEED, "detail": "x"})` into the group `run.directory(FLOW, "outputs", "001")`, false leaves it absent, after `_approved(run, schema, vocabulary)` wrote approval 1. `revise(run, FLOW, 1, SEED)` raises `Refusal` matching `rendered no seed`, and the snapshot of `run.path` is unchanged. It carries `@pytest.mark.spec_exempt("structural: a revision refuses a seed no render wrote")`.
   Verify: `uv run pytest tests/test_review.py::test_a_revision_of_a_seed_no_render_wrote_is_refused` passes.
-- [ ] 5.3 In `tests/test_review.py` add `test_a_revision_whose_seed_no_render_wrote_is_approved`, parametrized on `failure`: `revise` over a rendered `SEED`, the image and its sidecar unlinked, then the group holds the failure record of 5.2 when `failure` is true and is removed when false, and `approve` returns an approval. It carries `review:revise:new-seeds-alone-are-a-change`.
+- [x] 5.3 In `tests/test_review.py` add `test_a_revision_whose_seed_no_render_wrote_is_approved`, parametrized on `failure`: `revise` over a rendered `SEED`, the image and its sidecar unlinked, then the group holds the failure record of 5.2 when `failure` is true and is removed when false, and `approve` returns an approval. It carries `review:revise:new-seeds-alone-are-a-change`.
   Verify: `uv run pytest tests/test_review.py::test_a_revision_whose_seed_no_render_wrote_is_approved` passes.
-- [ ] 5.4 In `tests/test_review.py` add `test_a_copy_of_a_group_holding_no_render_keeps_the_approvals_own_renders`, parametrized on `failure` as in 5.2: `approve(run, CONTROL, schema, vocabulary, source=FLOW)` over `_approved_source` writes `renders` equal to `{"count": 1, "seeds": []}`, the default of an approval that lists none. It carries `review:copy-from:the-copy-carries-the-seeds`.
+- [x] 5.4 In `tests/test_review.py` add `test_a_copy_of_a_group_holding_no_render_keeps_the_approvals_own_renders`, parametrized on `failure` as in 5.2: `approve(run, CONTROL, schema, vocabulary, source=FLOW)` over `_approved_source` writes `renders` equal to `{"count": 1, "seeds": []}`, the default of an approval that lists none. It carries `review:copy-from:the-copy-carries-the-seeds`.
   Verify: `uv run pytest tests/test_review.py::test_a_copy_of_a_group_holding_no_render_keeps_the_approvals_own_renders` passes.
-- [ ] 5.5 In `tests/test_ui_library.py` add `test_a_cells_stage_reads_rendered_only_where_a_render_is_written`: an approved cell over a group holding an image and its sidecar is `rendered`, and over a group holding a failure record alone, and over no group, is `approved`, each read with `newest` true and with `newest` false. It carries `ui:hub:a-cells-stage-comes-from-its-run`.
+- [x] 5.5 In `tests/test_ui_library.py` add `test_a_cells_stage_reads_rendered_only_where_a_render_is_written`: an approved cell over a group holding an image and its sidecar is `rendered`, and over a group holding a failure record alone, and over no group, is `approved`, each read with `newest` true and with `newest` false. It carries `ui:hub:a-cells-stage-comes-from-its-run`.
   Verify: `uv run pytest tests/test_ui_library.py::test_a_cells_stage_reads_rendered_only_where_a_render_is_written` passes.
 
 ## 6 — Refused, whole

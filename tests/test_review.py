@@ -1016,6 +1016,21 @@ def test_a_copy_carries_the_sources_seeds_and_names_no_source(
     assert body["sheet"] == read(source, APPROVED_FILE)["sheet"]
 
 
+@pytest.mark.spec("review:copy-from:the-copy-carries-the-seeds")
+@pytest.mark.parametrize("failure", [True, False])
+def test_a_copy_of_a_group_holding_no_render_keeps_the_approvals_own_renders(
+    run: Run, schema: Schema, vocabulary: Vocabulary, failure: bool
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    if failure:
+        _failure_alone(run)
+
+    copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    assert copied is not None
+    assert read(copied, APPROVED_FILE)["renders"] == {"count": 1, "seeds": []}
+
+
 @pytest.mark.spec("field-map:excluded:approval-refuses-an-excluded-tag")
 def test_an_excluded_tag_refuses_a_copied_approval(
     run: Run, schema: Schema, vocabulary: Vocabulary
@@ -1665,6 +1680,52 @@ def test_a_revision_whose_only_change_is_its_seeds_is_approved(
 
     assert approved is not None
     assert read(approved, APPROVED_FILE)["renders"] == {"count": 1, "seeds": [7]}
+
+
+def _failure_alone(run: Run) -> Path:
+    """Write a failed render's record into approval 1's group, and return the group."""
+    group = run.directory(FLOW, "outputs", "001")
+    group.mkdir(parents=True, exist_ok=True)
+    record_failure(
+        group, 1, "permanent", {"stage": "render", "seed": SEED, "detail": "x"}
+    )
+    return group
+
+
+@pytest.mark.spec_exempt("structural: a revision refuses a seed no render wrote")
+@pytest.mark.parametrize("failure", [True, False])
+def test_a_revision_of_a_seed_no_render_wrote_is_refused(
+    run: Run, schema: Schema, vocabulary: Vocabulary, failure: bool
+) -> None:
+    _approved(run, schema, vocabulary)
+    if failure:
+        _failure_alone(run)
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal, match="rendered no seed"):
+        revise(run, FLOW, 1, SEED)
+
+    assert snapshot(run.path) == before
+
+
+@pytest.mark.spec("review:revise:new-seeds-alone-are-a-change")
+@pytest.mark.parametrize("failure", [True, False])
+def test_a_revision_whose_seed_no_render_wrote_is_approved(
+    run: Run, schema: Schema, vocabulary: Vocabulary, failure: bool
+) -> None:
+    _approved(run, schema, vocabulary)
+    image = _image(run, 1, SEED)
+    revise(run, FLOW, 1, SEED)
+    image.unlink()
+    image.with_name(f"{SEED}.render.json").unlink()
+    if failure:
+        _failure_alone(run)
+    else:
+        image.parent.rmdir()
+
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+
+    assert approved is not None
 
 
 @pytest.mark.spec("review:discard:a-draft-is-discarded")

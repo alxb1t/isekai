@@ -23,6 +23,9 @@ its new digest.
   a lost create and a failed teardown, so a refactor of `Record` cannot change an outcome unseen (0133 D3).
 - Each delete's returned list is held to what left the tree, in the order `delete_edits` fixes, and the app's delete
   leaves the tree the CLI's `discard` leaves, so a refactor cannot drop a path unseen (0133 D4).
+- A group reads as rendered where every site agrees: a revision, an unchanged-draft check, a copy and a hub cell take
+  an image with its sidecar as a render and a failure record alone, or no group, as none, so a refactor of the render
+  group cannot move that line unseen (0133 D5).
 
 ## [0.86.5] - 2026-11-13
 
