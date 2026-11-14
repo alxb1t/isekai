@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.86.17
 ---
 
 # One vitest file

@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.86.17] - 2026-11-14
+
+Gate: local 1m13s · CI not read under mf-ship · 0.86.16: local 1m16s · CI not read under mf-ship
+
 - `python -m tools.test_ui` takes arguments: `ui/src/<name>.test.ts` runs one browser test file in `ui/`, where vitest
   finds its config, and a leading `ui/` on an argument is dropped (0144 D1, D2).
 - A root `vitest.config.mjs` refuses a vitest start at the repository root, naming `tools.test_ui`, so it writes no root
