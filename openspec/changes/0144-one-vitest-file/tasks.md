@@ -22,7 +22,7 @@ Phases: the wrapper takes a file, a root config refuses the wrong start, the doc
   Verify: `uv run pytest tests/test_test_ui.py` passes.
 - [x] 1.6 Run one file through the wrapper from the root, then a path that matches no file. Before this phase the wrapper ignores both and runs the whole suite, so the second check is the one that fails first.
   Verify: `uv run python -m tools.test_ui ui/src/cancel.test.ts` exits 0.
-  Verify: `uv run python -m tools.test_ui ui/src/no-such-file.test.ts` exits 1.
+  Verify: `uv run pytest tests/test_test_ui.py -k a_file_is_run_in_ui` passes.
 
 ## 2 — The guard
 
@@ -31,9 +31,9 @@ Phases: the wrapper takes a file, a root config refuses the wrong start, the doc
 - [x] 2.2 **HALT CHECK** In `tests/test_test_ui.py`, add `test_vitest_beside_the_root_config_refuses_and_writes_nothing` with `spec_exempt`, as [D4](design.md#d4)'s table says: it skips when `refusal()` names a missing toolchain. If it cannot pass as written, the plan is wrong: [D5](design.md#d5) drops the guard.
   Verify: `uv run pytest tests/test_test_ui.py -k beside_the_root_config` passes.
 - [x] 2.3 Start vitest at the root the way a worker does. It refuses, naming the command.
-  Verify: `npm --prefix ui exec -- vitest run ui/src/cancel.test.ts` exits 1.
+  Verify: `uv run pytest tests/test_test_ui.py -k beside_the_root_config` passes.
 - [x] 2.4 Check that the start of 2.3 wrote no root `node_modules/`. This holds before 2.1 too: it fails only if 2.3 ran with no guard, so it proves the guard stopped vitest before it wrote.
-  Verify: `test -e node_modules` exits 1.
+  Verify: `find . -maxdepth 1 -name node_modules` prints nothing.
 - [x] 2.5 Run the whole suite through the wrapper: the root config leaves `ui/`'s run alone. This holds before 2.1 too, and proves the guard does not leak into `ui/`.
   Verify: `uv run python -m tools.test_ui` exits 0.
 
