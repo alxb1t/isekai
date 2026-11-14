@@ -57,4 +57,8 @@ def render_arguments(parser: argparse.ArgumentParser) -> None:
     parser.set_defaults(photos=[])
 
 
-RENDER_ROW = Verb("render", render_arguments)
+RENDER_ROW = Verb(
+    "render",
+    "run a whole render session on a rented GPU, then tear it down",
+    render_arguments,
+)

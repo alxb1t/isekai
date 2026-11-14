@@ -7,7 +7,7 @@ The phases take the verbs out of `isekai/interface/cli.py` into `isekai/interfac
 - [x] 1 — The package and the shared module · moderate
 - [x] 2 — The leaf families · moderate
 - [x] 3 — Prepare and generate · moderate
-- [ ] 4 — The front door · moderate
+- [x] 4 — The front door · moderate
 
 ## 1 — The package and the shared module
 
@@ -86,35 +86,35 @@ The phases take the verbs out of `isekai/interface/cli.py` into `isekai/interfac
 
 ## 4 — The front door
 
-- [ ] 4.1 Give `Verb` a `summary` field after `name` in `isekai/interface/verbs/common.py` ([D2](design.md#d2)), and fill it in each existing row with the text `VERBS` holds for that verb in `isekai/interface/cli.py`.
+- [x] 4.1 Give `Verb` a `summary` field after `name` in `isekai/interface/verbs/common.py` ([D2](design.md#d2)), and fill it in each existing row with the text `VERBS` holds for that verb in `isekai/interface/cli.py`.
   Verify: `grep -c -E '^    summary: str' isekai/interface/verbs/common.py` prints `1`.
-- [ ] 4.2 Add `isekai/interface/verbs/stages.py` holding `assign_arguments`, `caption_arguments`, `tag_arguments`, `sheet_arguments`, `review_arguments`, `approve_arguments`, `show_arguments` and the rows `ASSIGN_ROW`, `CAPTION_ROW`, `TAG_ROW`, `SHEET_ROW`, `REVIEW_ROW`, `APPROVE_ROW` and `SHOW_ROW`, each with its summary and no run; take their arguments from the loops of `build_parser` in the order [D2](design.md#d2) fixes, with `hidden_flow` and `new_version_flag` added to `isekai/interface/verbs/common.py`.
+- [x] 4.2 Add `isekai/interface/verbs/stages.py` holding `assign_arguments`, `caption_arguments`, `tag_arguments`, `sheet_arguments`, `review_arguments`, `approve_arguments`, `show_arguments` and the rows `ASSIGN_ROW`, `CAPTION_ROW`, `TAG_ROW`, `SHEET_ROW`, `REVIEW_ROW`, `APPROVE_ROW` and `SHOW_ROW`, each with its summary and no run; take their arguments from the loops of `build_parser` in the order [D2](design.md#d2) fixes, with `hidden_flow` and `new_version_flag` added to `isekai/interface/verbs/common.py`.
   Verify: `grep -c -E '^(ASSIGN_ROW|CAPTION_ROW|TAG_ROW|SHEET_ROW|REVIEW_ROW|APPROVE_ROW|SHOW_ROW) = ' isekai/interface/verbs/stages.py` prints `7`.
-- [ ] 4.3 Replace `_MOVED` in `isekai/interface/cli.py` with `ROWS`, every verb's row in the order `VERBS` holds, with `render` and `prepare` bound as in [D3](design.md#d3) and `migrate` declared there with its own arguments function; derive `VERBS` from `ROWS` as a tuple of `(row.name, row.summary)`, and make `build_parser` add each row's arguments to its subparser, deleting its loops. Keep the line `dest="verb", metavar="verb", required=True, parser_class=_Verb` as it stands.
+- [x] 4.3 Replace `_MOVED` in `isekai/interface/cli.py` with `ROWS`, every verb's row in the order `VERBS` holds, with `render` and `prepare` bound as in [D3](design.md#d3) and `migrate` declared there with its own arguments function; derive `VERBS` from `ROWS` as a tuple of `(row.name, row.summary)`, and make `build_parser` add each row's arguments to its subparser, deleting its loops. Keep the line `dest="verb", metavar="verb", required=True, parser_class=_Verb` as it stands.
   Verify: `grep -c -E '^ROWS' isekai/interface/cli.py` prints `1`.
-- [ ] 4.4 Make `dispatch` in `isekai/interface/cli.py` look the verb's row up in the new `ROWS` and `return row.run(args, wired)` when the row has a run, inside its `try` ([D2](design.md#d2)); drop its remaining branches for such verbs, `migrate` included, and leave the tail for the flow-stage verbs and `generate` as it is.
+- [x] 4.4 Make `dispatch` in `isekai/interface/cli.py` look the verb's row up in the new `ROWS` and `return row.run(args, wired)` when the row has a run, inside its `try` ([D2](design.md#d2)); drop its remaining branches for such verbs, `migrate` included, and leave the tail for the flow-stage verbs and `generate` as it is.
   Verify: `grep -c 'return row.run(args, wired)' isekai/interface/cli.py` prints `1`.
-- [ ] 4.5 Remove from `tests/test_ratchets.py` the rows of `isekai/interface/cli.py` and of its `build_parser` that still stand, and lower `FILE_ROWS` and `FUNCTION_ROWS` for each, per [D7](design.md#d7); the rows of `_per_item` and its `work` stay.
+- [x] 4.5 Remove from `tests/test_ratchets.py` the rows of `isekai/interface/cli.py` and of its `build_parser` that still stand, and lower `FILE_ROWS` and `FUNCTION_ROWS` for each, per [D7](design.md#d7); the rows of `_per_item` and its `work` stay.
   Verify: `uv run pytest tests/test_ratchets.py -q` exits 0.
-- [ ] 4.6 Give the entries `CL-10`, `PA-4`, `PB-6` and `PB-16` of `tests/mutants.json` their new `path` as [D6](design.md#d6) lists, with `find`, `replace` and every other key unchanged.
+- [x] 4.6 Give the entries `CL-10`, `PA-4`, `PB-6` and `PB-16` of `tests/mutants.json` their new `path` as [D6](design.md#d6) lists, with `find`, `replace` and every other key unchanged.
   Verify: `grep -c -E '"path": "isekai/interface/verbs/(common|generate|edits).py"' tests/mutants.json` prints `4`.
-- [ ] 4.7 Add `D58 · A verb is declared once, in its family's module` to `docs/decisions.md` after D56, in the form of the decisions around it, with `Made by: 0145` ([D8](design.md#d8)).
+- [x] 4.7 Add `D58 · A verb is declared once, in its family's module` to `docs/decisions.md` after D56, in the form of the decisions around it, with `Made by: 0145` ([D8](design.md#d8)).
   Verify: `grep -c '^### D58' docs/decisions.md` prints `1`.
-- [ ] 4.8 Amend the module docstring of `isekai/interface/cli.py`: it names `isekai/interface/verbs/`, says a verb is a row there, "declared once", and says what stays in the file; amend each docstring and comment of the file and of `isekai/interface/verbs/` that names a moved definition by its old name ([D8](design.md#d8)).
+- [x] 4.8 Amend the module docstring of `isekai/interface/cli.py`: it names `isekai/interface/verbs/`, says a verb is a row there, "declared once", and says what stays in the file; amend each docstring and comment of the file and of `isekai/interface/verbs/` that names a moved definition by its old name ([D8](design.md#d8)).
   Verify: `grep -q 'declared once' isekai/interface/cli.py` exits 0.
-- [ ] 4.9 Amend `isekai/interface/README.md` ([D8](design.md#d8)): a files-table row for `verbs/` and each of its modules, the `cli.py` row, the lines that name the handlers of `ui`, `migrate` and `discard`, and the sibling note.
+- [x] 4.9 Amend `isekai/interface/README.md` ([D8](design.md#d8)): a files-table row for `verbs/` and each of its modules, the `cli.py` row, the lines that name the handlers of `ui`, `migrate` and `discard`, and the sibling note.
   Verify: `grep -q 'verbs/common.py' isekai/interface/README.md` exits 0.
-- [ ] 4.10 Amend the `interface` bullet of `ARCHITECTURE.md` to say the CLI's verbs live in `interface/verbs/`, one row each ([D8](design.md#d8)).
+- [x] 4.10 Amend the `interface` bullet of `ARCHITECTURE.md` to say the CLI's verbs live in `interface/verbs/`, one row each ([D8](design.md#d8)).
   Verify: `grep -q 'interface/verbs' ARCHITECTURE.md` exits 0.
-- [ ] 4.11 Amend `isekai/README.md` ([D8](design.md#d8)): the interface row names `verbs/` and its modules, and the line on sub-packages' front doors names `interface/verbs/__init__.py`.
+- [x] 4.11 Amend `isekai/README.md` ([D8](design.md#d8)): the interface row names `verbs/` and its modules, and the line on sub-packages' front doors names `interface/verbs/__init__.py`.
   Verify: `grep -q 'verbs/' isekai/README.md` exits 0.
-- [ ] 4.12 Amend `docs/modules.md` ([D8](design.md#d8)): the lazy edge names `run_ui` and `run_discard` of the package and `_migrate` of `cli.py`, and the notes that name `cli.py`'s `_ui`, reporter, `ink` verb and `edit` verb name the package's modules; the graph shows `interface/verbs/`.
+- [x] 4.12 Amend `docs/modules.md` ([D8](design.md#d8)): the lazy edge names `run_ui` and `run_discard` of the package and `_migrate` of `cli.py`, and the notes that name `cli.py`'s `_ui`, reporter, `ink` verb and `edit` verb name the package's modules; the graph shows `interface/verbs/`.
   Verify: `grep -q 'interface/verbs/' docs/modules.md` exits 0.
-- [ ] 4.13 Amend the known breaks of `docs/principles.md` that name `interface/cli.py`'s `_once` and `_discard` to name `once` of `interface/verbs/common.py` and `run_discard` of `interface/verbs/drafts.py` ([D8](design.md#d8)).
+- [x] 4.13 Amend the known breaks of `docs/principles.md` that name `interface/cli.py`'s `_once` and `_discard` to name `once` of `interface/verbs/common.py` and `run_discard` of `interface/verbs/drafts.py` ([D8](design.md#d8)).
   Verify: `grep -q 'interface/verbs/common.py' docs/principles.md` exits 0.
-- [ ] 4.14 Re-derive every layer README's `## Imported by` table with `uv run python -m tools.derive_imported_by`, which rewrites `isekai/interface/README.md`, `isekai/foundation/README.md`, `isekai/shared/README.md`, `isekai/boundary/README.md` and `isekai/pipeline/README.md`.
+- [x] 4.14 Re-derive every layer README's `## Imported by` table with `uv run python -m tools.derive_imported_by`, which rewrites `isekai/interface/README.md`, `isekai/foundation/README.md`, `isekai/shared/README.md`, `isekai/boundary/README.md` and `isekai/pipeline/README.md`.
   Verify: `uv run pytest tests/test_docs.py -q` exits 0.
-- [ ] 4.15 Bring the record, the ratchets, the layer guards, the docs tests, the migrate tests and the entry point's `-S` guard green for the version's end state, changing no assertion.
+- [x] 4.15 Bring the record, the ratchets, the layer guards, the docs tests, the migrate tests and the entry point's `-S` guard green for the version's end state, changing no assertion.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_migrate.py tests/test_pipeline_cli.py -q` exits 0.
-- [ ] 4.16 Replay the audit's mutants over the moved entries and the rest, per [D6](design.md#d6), staging each new module first with `git add`.
+- [x] 4.16 Replay the audit's mutants over the moved entries and the rest, per [D6](design.md#d6), staging each new module first with `git add`.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.

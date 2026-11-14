@@ -135,6 +135,18 @@ def compare_arguments(parser: argparse.ArgumentParser) -> None:
     parser.set_defaults(photos=[], runs=RUNS_ROOT)
 
 
-IMPORT_ROW = Verb("import", import_arguments, run_import)
-COMPARE_ROW = Verb("compare", compare_arguments, run_compare)
-UI_ROW = Verb("ui", ui_arguments, run_ui)
+IMPORT_ROW = Verb(
+    "import",
+    "clean photographs and add them to a collection's sources/",
+    import_arguments,
+    run_import,
+)
+COMPARE_ROW = Verb(
+    "compare",
+    "write a page of each run's photograph beside its renders",
+    compare_arguments,
+    run_compare,
+)
+UI_ROW = Verb(
+    "ui", "serve the app over the library of collections", ui_arguments, run_ui
+)

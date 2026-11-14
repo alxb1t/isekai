@@ -26,9 +26,9 @@ import time:
                               DigestMismatch, which it imports at module scope;
                               provision.py is on the entry point's graph through
                               ollama.py and wiring.py
-  interface ──▶ interface/ui  cli.py, inside the `ui`, `migrate` and `discard`
-                              handlers — within the group, and listed because collapsing
-                              it away is what hid it before
+  interface ──▶ interface/ui  `run_ui` and `run_discard` of interface/verbs/ and
+                              `_migrate` of cli.py — within the group, and listed
+                              because collapsing it away is what hid it before
   interface ──▶ a named module  wiring.py, inside _named_wiring(), only when
                               ISEKAI_WIRING names it — the browser tests'
                               doubles (D41)
@@ -45,7 +45,7 @@ verb and the hub's route both call it. `migrate` is `foundation/migrate.py`'s,
 which imports `artifacts.py`, `run.py` and `refusal.py`: it moves the run's layout,
 and `cli.py`'s verb walks each runs root, reaching the library's collections
 through `interface/ui/`'s `collection_runs` inside the handler. `--progress json`
-is a reporter inside `cli.py`. **Prepare and Render reach the CLI by process, never
+is `Reporter` of `interface/verbs/common.py`. **Prepare and Render reach the CLI by process, never
 by import**: `interface/ui/jobs.py` runs `python -m isekai prepare`
 over the cells, each photograph tagged, captioned and sheeted in turn, and
 `python -m isekai render` between `python -m gpunit volume up` and `volume down`,
@@ -60,9 +60,9 @@ sequence the CLI's `draft` runs (D4) — and, for a deleted render, the library'
 the CLI's `discard` calls them too, but drops the render's thumbnails and not each
 edit image's.
 
-**The edit's pieces.** `ink` is `shared/ink.py`'s, which `cli.py`'s verb calls; the maths of an edit is
+**The edit's pieces.** `ink` is `shared/ink.py`'s, which `run_ink` of `interface/verbs/edits.py` calls; the maths of an edit is
 `shared/tattoo.py`'s, over arrays, and Pillow and numpy are imported inside both modules' functions. The edit stage is
-`pipeline/edit.py`, which `cli.py`'s `edit` verb and `interface/render.py`'s session both call, and which imports no
+`pipeline/edit.py`, which `run_edit` of `interface/verbs/edits.py` and `interface/render.py`'s session both call, and which imports no
 stage: the transport helpers it shares with `pipeline/generate.py` — `submit_and_wait` and `read_runtime` — moved to
 `boundary/comfy/prompt.py`, behind the package's front door, for that reason
 ([D51](decisions.md#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)). A session runs a pending edit as
@@ -144,8 +144,8 @@ Rules the graph is holding rather than describing:
   failed outright; installed by default, it resolves silently.
 - **A group never becomes a place two modules reach each other through.** A
   group's `__init__.py` holds a docstring and no code, so a module is imported by
-  its own path. `interface/ui/` and `boundary/comfy/` are not groups: each is a
-  sub-package with a front door, its `__init__.py`, and nothing outside it imports
+  its own path. `interface/ui/`, `interface/verbs/` and `boundary/comfy/` are not
+  groups: each is a sub-package with a front door, its `__init__.py`, and nothing outside it imports
   past that door. `tests/test_layers.py` holds both rules.
 
 ## How the components interact
@@ -154,10 +154,12 @@ The graph above says what may import what; this says who builds, who calls, and
 what carries data at run time.
 
 ```
-  python -m isekai <verb>
+  python -m isekai <verb>       interface/verbs/
+          │                           │ its rows
+          ▼                           │
+  interface/cli.py ◀──────────────────┘
           │
-          ▼
-  interface/cli.py ──builds──▶ interface/wiring.py ──▶ a Wiring
+          ├──builds──▶ interface/wiring.py ──▶ a Wiring
           │                                              │
           │ the `ui` verb: serve(wired, …)               │
           │               ▼                              │
@@ -171,7 +173,7 @@ what carries data at run time.
 ```
 
 - **The CLI builds the components** through `interface/wiring.py` and hands them
-  to the UI its `ui` verb starts (`cli.py`'s `_ui`). The UI builds one collection's
+  to the UI its `ui` verb starts (`run_ui` of `interface/verbs/library.py`). The UI builds one collection's
   wiring per request through `wiring_from`, so the runs-root guard holds for each
   collection, and no module under `interface/ui/` imports `cli.py`. Review holds both.
 - **Each front end calls the stage functions directly.**

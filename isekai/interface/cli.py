@@ -40,10 +40,16 @@ client of the first -- it calls `wiring` and the stage functions directly,
 exactly as this module does, so neither surface is privileged and neither goes
 through the other.
 
+**A verb is a row of `isekai/interface/verbs/`, declared once**: its name, summary,
+arguments and run sit in the module of its family (D58). This file holds `ROWS`,
+builds the parser from their arguments and dispatches to their runs. It keeps the
+flow-stage verbs' per-item work, `assign`, `migrate`, and the runs of `render`
+and `prepare`, which need what only this file holds.
+
 **`isekai/__main__.py` is a shim over this file.** `runpy` pins where the entry
 point's *path* is; it does not pin where the parser lives, and a package's largest
 interface surface has no business being the one module outside the filing
-scheme. Everything the verb line does is here.
+scheme.
 
 Stdlib only, and held to that by a subprocess guard that imports the entry point
 with site-packages off the path.
@@ -78,6 +84,9 @@ from isekai.interface.drafting import (
 from isekai.interface.render import run_session
 from isekai.interface.run_view import report
 from isekai.interface.verbs import (
+    APPROVE_ROW,
+    ASSIGN_ROW,
+    CAPTION_ROW,
     COMPARE_ROW,
     DISCARD_ROW,
     DRAFT_ROW,
@@ -87,6 +96,10 @@ from isekai.interface.verbs import (
     INK_ROW,
     PREPARE_ROW,
     RENDER_ROW,
+    REVIEW_ROW,
+    SHEET_ROW,
+    SHOW_ROW,
+    TAG_ROW,
     UI_ROW,
     Reporter,
     Verb,
@@ -111,33 +124,7 @@ from isekai.pipeline.tagging import tag_hosted, tag_wd14
 from isekai.shared.field_map import FieldMap
 from isekai.shared.vocabulary import Vocabulary
 
-# One line of prose per verb, used for both the subcommand list and its own help,
-# so the two cannot disagree about what a stage does.
 T = TypeVar("T")
-
-VERBS: tuple[tuple[str, str], ...] = (
-    ("import", "clean photographs and add them to a collection's sources/"),
-    ("assign", "give each source a flow's empty directory, or remove an empty one"),
-    ("caption", "read a photograph into prose"),
-    ("tag", "score a photograph with WD14, then list the JoyCaption tags"),
-    ("sheet", "fill a sheet of canonical tags from the WD14 tag list"),
-    (
-        "prepare",
-        "tag, caption, then sheet each photograph in turn, for the cells named",
-    ),
-    ("review", "copy a sheet somewhere a human may edit it"),
-    ("approve", "validate an edited sheet and mark it approved"),
-    ("draft", "copy the approval a rendered image came from into a flow's draft"),
-    ("discard", "delete a render: its image, its record and its thumbnails"),
-    ("generate", "assemble the prompts for a run, then render them"),
-    ("render", "run a whole render session on a rented GPU, then tear it down"),
-    ("show", "print a run's artifacts, versions, producers and failures"),
-    ("ui", "serve the app over the library of collections"),
-    ("compare", "write a page of each run's photograph beside its renders"),
-    ("migrate", "copy each run's per-flow description into photo/"),
-    ("ink", "cut a tattoo photograph or image into a layer to multiply over a render"),
-    ("edit", "request an edit of a render from a composite of it, free and local"),
-)
 
 # What each of the photograph's verbs writes, for its refusal of `--flow`.
 _WRITES: Mapping[str, str] = {"caption": "prose", "tag": "tags"}
@@ -168,113 +155,14 @@ def build_parser() -> argparse.ArgumentParser:
         for name, summary in VERBS
     }
 
-    # `compare` takes a collection directory instead: its runs root is the collection's
-    # `runs/`, so a second way to name it could only disagree. `render` takes
-    # each collection's runs root, and every run under each. `ui` serves the
-    # library, `draft` takes images, whose paths name their runs, `migrate`
-    # walks every runs root unless one is named, and `prepare` takes cells.
-    for name in (
-        name
-        for name in made
-        if name
-        not in (
-            "compare",
-            "discard",
-            "draft",
-            "edit",
-            "generate",
-            "import",
-            "ink",
-            "migrate",
-            "prepare",
-            "render",
-            "ui",
-        )
-    ):
-        made[name].add_argument(
-            "photos",
-            nargs="*",
-            help="photographs, or run identifiers for a run that already exists",
-        )
-        # The root every run lives under. It defaults to `.data/runs`, and it is a
-        # flag because a version's acceptance run wants its own directory rather
-        # than one pile every version adds to. A run holds a copy of the
-        # photograph, so a run root is a directory of personal photographs by
-        # construction -- which is why `wiring` refuses one that resolves INSIDE
-        # this repository and outside `.data/`, where nothing ignores it and a
-        # `git add` would publish it. A path outside the repository needs no
-        # check at all: version control cannot reach it, whatever it is, and that
-        # is what keeps a run on another disk expressible (D18).
-        made[name].add_argument(
-            "--runs",
-            type=Path,
-            default=RUNS_ROOT,
-            help=f"the directory runs live under (default {RUNS_ROOT.name}/)",
-        )
-    # Required, and repeatable, on every stage verb on a flow. Such a stage cannot
-    # act without knowing which flow asked, because the flow is what supplies what
-    # it reads: its schema, its graph and its dials. "Every tracked flow" is not a
-    # selection, it is the absence of one -- and at the last verb it spends money.
-    # `tag` and `caption` describe the photograph, which every flow reads, so they
-    # take no flow; the flag stays hidden so `dispatch` refuses it naming the
-    # command without it (D17).
-    for name in ("assign", "sheet", "review", "approve"):
-        made[name].add_argument(
-            "--flow",
-            action="append",
-            dest="flows",
-            required=True,
-            metavar="FLOW",
-            help="a flow to act on; repeatable, and required",
-        )
-    for name in PHOTOGRAPH_VERBS:
-        made[name].add_argument(
-            "--flow",
-            action="append",
-            dest="flows",
-            default=None,
-            help=argparse.SUPPRESS,
-        )
-    made["assign"].add_argument(
-        "--remove",
-        action="store_true",
-        help="delete each flow's directory instead, refusing one that holds work",
-    )
-    # A verb that reads another flow reads only the one the operator names.
-    made["approve"].add_argument(
-        "--from",
-        dest="source",
-        default=None,
-        metavar="FLOW",
-        help="copy this flow's latest approval under each --flow instead of a draft",
-    )
-    made["approve"].add_argument(
-        "--cancel",
-        action="store_true",
-        help="turn each flow's newest approval back into its draft instead, "
-        "deleting a copy and refusing one anything was made from",
-    )
-    # The job runner's channel: a line per item it can parse, the prose kept apart.
-    for name in ("caption", "tag", "sheet"):
-        made[name].add_argument(
-            "--progress",
-            choices=["json"],
-            default=None,
-            help="print a JSON line per item's start and end; prose goes to stderr",
-        )
-    for name in ("caption", "tag", "sheet", "review"):
-        made[name].add_argument(
-            "--new-version",
-            action="store_true",
-            help="write the next numbered artifact instead of doing nothing",
-        )
-    made["review"].add_argument(
-        "--discard",
-        action="store_true",
-        help="delete each flow's waiting draft instead, refusing an approval",
-    )
+    for row in ROWS:
+        row.arguments(made[row.name])
+    return parser
 
-    made["migrate"].add_argument(
+
+def _migrate_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add `migrate`'s arguments to `parser`: it takes no photograph."""
+    parser.add_argument(
         "--runs",
         type=Path,
         default=None,
@@ -283,17 +171,14 @@ def build_parser() -> argparse.ArgumentParser:
             "collection's runs/ in the library"
         ),
     )
-    made["migrate"].set_defaults(photos=[])
-    for moved in _MOVED:
-        moved.arguments(made[moved.name])
-    return parser
+    parser.set_defaults(photos=[])
 
 
 def _migrate(args: argparse.Namespace, wired: Wiring) -> int:
     """Copy each run's per-flow description into `photo/`, printing a line per run.
 
     `--runs` walks that root alone; without it, `RUNS_ROOT` when it is a directory,
-    then each collection's `runs/` (D40). The library is imported here for `_ui`'s
+    then each collection's `runs/` (D40). The library is imported here for `run_ui`'s
     reason: it is off `python -m isekai`'s import graph.
     """
     if args.runs is not None:
@@ -353,11 +238,9 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     # a broken manifest refuses without opening a run -- and on `generate`,
     # without renting anything. The serving verb takes no flow at all.
     try:
-        for moved in _MOVED:
-            if moved.name == verb and moved.run is not None:
-                return moved.run(args, wired)
-        if verb == "migrate":
-            return _migrate(args, wired)
+        row = next((row for row in ROWS if row.name == verb), None)
+        if row is not None and row.run is not None:
+            return row.run(args, wired)
         if verb in PHOTOGRAPH_VERBS and args.flows:
             raise Refusal(_named_a_flow(args, targets))
         flows = _flows_for(args, wired)
@@ -405,18 +288,35 @@ def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
     return run_prepare(args, wired, _per_item)
 
 
-_MOVED: tuple[Verb, ...] = (
+ROWS: tuple[Verb, ...] = (
     IMPORT_ROW,
-    COMPARE_ROW,
-    UI_ROW,
+    ASSIGN_ROW,
+    CAPTION_ROW,
+    TAG_ROW,
+    SHEET_ROW,
+    dataclasses.replace(PREPARE_ROW, run=_prepare),
+    REVIEW_ROW,
+    APPROVE_ROW,
     DRAFT_ROW,
     DISCARD_ROW,
+    GENERATE_ROW,
+    dataclasses.replace(RENDER_ROW, run=_render),
+    SHOW_ROW,
+    UI_ROW,
+    COMPARE_ROW,
+    Verb(
+        "migrate",
+        "copy each run's per-flow description into photo/",
+        _migrate_arguments,
+        _migrate,
+    ),
     INK_ROW,
     EDIT_ROW,
-    dataclasses.replace(RENDER_ROW, run=_render),
-    dataclasses.replace(PREPARE_ROW, run=_prepare),
-    GENERATE_ROW,
 )
+
+# One line of prose per verb, used for both the subcommand list and its own help,
+# so the two cannot disagree about what a stage does.
+VERBS: tuple[tuple[str, str], ...] = tuple((row.name, row.summary) for row in ROWS)
 
 
 def _refuse_bad_source(

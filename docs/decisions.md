@@ -588,6 +588,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Accepts:** a listed offender grows unchecked until its row goes. Reopen when a refactor version leaves a row standing past its work.
 - **Made by:** `0129`.
 
+### D58 · A verb is declared once, in its family's module
+
+**A verb is one `Verb` row, with its name, summary, arguments and run, in the module of its family under `isekai/interface/verbs/`. `cli.py` holds the tuple `ROWS` of every row, builds the parser from their arguments and dispatches to their runs.**
+
+- **Why:** a verb's name, arguments and run sat in separate places of one file, and that file and `build_parser` were rows of the ratchet ([D56](#d56--size-and-patches-are-held-by-ratchets)). One row a verb makes the next versions small, and `tests/record/verbs.json` proves each verb's arguments in order.
+- **Accepts:** the runs of `render`, `prepare` and `migrate` are bound in `cli.py`, because they need `_dispatch_argv`, `_per_item` and the `RUNS_ROOT` and `wiring` the tests patch there. Reopen when `_per_item` leaves `cli.py`.
+- **Made by:** `0145`.
+
 ## Infrastructure
 
 ### D26 · Renders run on a rented GPU

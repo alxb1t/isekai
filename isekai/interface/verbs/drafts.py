@@ -123,5 +123,15 @@ def discard_arguments(parser: argparse.ArgumentParser) -> None:
     parser.set_defaults(photos=[], runs=RUNS_ROOT)
 
 
-DRAFT_ROW = Verb("draft", draft_arguments, run_draft)
-DISCARD_ROW = Verb("discard", discard_arguments, run_discard)
+DRAFT_ROW = Verb(
+    "draft",
+    "copy the approval a rendered image came from into a flow's draft",
+    draft_arguments,
+    run_draft,
+)
+DISCARD_ROW = Verb(
+    "discard",
+    "delete a render: its image, its record and its thumbnails",
+    discard_arguments,
+    run_discard,
+)

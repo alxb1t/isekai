@@ -101,4 +101,8 @@ def prepare_arguments(parser: argparse.ArgumentParser) -> None:
     progress_flag(parser)
 
 
-PREPARE_ROW = Verb("prepare", prepare_arguments)
+PREPARE_ROW = Verb(
+    "prepare",
+    "tag, caption, then sheet each photograph in turn, for the cells named",
+    prepare_arguments,
+)

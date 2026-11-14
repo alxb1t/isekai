@@ -213,5 +213,15 @@ def edit_arguments(parser: argparse.ArgumentParser) -> None:
     parser.set_defaults(photos=[])
 
 
-INK_ROW = Verb("ink", ink_arguments, run_ink)
-EDIT_ROW = Verb("edit", edit_arguments, run_edit)
+INK_ROW = Verb(
+    "ink",
+    "cut a tattoo photograph or image into a layer to multiply over a render",
+    ink_arguments,
+    run_ink,
+)
+EDIT_ROW = Verb(
+    "edit",
+    "request an edit of a render from a composite of it, free and local",
+    edit_arguments,
+    run_edit,
+)

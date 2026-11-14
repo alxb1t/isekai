@@ -109,12 +109,13 @@ class _Targets(argparse.Action):
 
 @dataclass(frozen=True)
 class Verb:
-    """A verb as one row: its name, the arguments it adds and the run that serves it.
+    """A verb as one row: its name, summary, the arguments it adds and its run.
 
     `run` is `None` for a verb `dispatch`'s tail runs.
     """
 
     name: str
+    summary: str
     arguments: Callable[[argparse.ArgumentParser], None]
     run: Callable[[argparse.Namespace, Wiring], int] | None = None
 
@@ -156,6 +157,29 @@ def required_flow(parser: argparse.ArgumentParser) -> None:
         required=True,
         metavar="FLOW",
         help="a flow to act on; repeatable, and required",
+    )
+
+
+def hidden_flow(parser: argparse.ArgumentParser) -> None:
+    """Add `--flow` to `parser`, hidden from help so `dispatch` refuses it by name."""
+    # `tag` and `caption` describe the photograph, which every flow reads, so they
+    # take no flow; the flag stays hidden so `dispatch` refuses it naming the
+    # command without it (D17).
+    parser.add_argument(
+        "--flow",
+        action="append",
+        dest="flows",
+        default=None,
+        help=argparse.SUPPRESS,
+    )
+
+
+def new_version_flag(parser: argparse.ArgumentParser) -> None:
+    """Add `--new-version` to `parser`: write the next numbered artifact."""
+    parser.add_argument(
+        "--new-version",
+        action="store_true",
+        help="write the next numbered artifact instead of doing nothing",
     )
 
 

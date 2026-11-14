@@ -19,8 +19,20 @@ from isekai.interface.verbs.generate import GENERATE_ROW, generate_batch
 from isekai.interface.verbs.library import COMPARE_ROW, IMPORT_ROW, UI_ROW
 from isekai.interface.verbs.prepare import PREPARE_ROW, run_prepare
 from isekai.interface.verbs.session import RENDER_ROW
+from isekai.interface.verbs.stages import (
+    APPROVE_ROW,
+    ASSIGN_ROW,
+    CAPTION_ROW,
+    REVIEW_ROW,
+    SHEET_ROW,
+    SHOW_ROW,
+    TAG_ROW,
+)
 
 __all__ = [
+    "APPROVE_ROW",
+    "ASSIGN_ROW",
+    "CAPTION_ROW",
     "COMPARE_ROW",
     "DISCARD_ROW",
     "DRAFT_ROW",
@@ -30,6 +42,10 @@ __all__ = [
     "INK_ROW",
     "PREPARE_ROW",
     "RENDER_ROW",
+    "REVIEW_ROW",
+    "SHEET_ROW",
+    "SHOW_ROW",
+    "TAG_ROW",
     "UI_ROW",
     "Reporter",
     "Verb",

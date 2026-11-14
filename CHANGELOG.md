@@ -17,6 +17,9 @@ its new digest.
   changes (0145 D2, D3, D4).
 - The verbs `prepare` and `generate` become `Verb` rows of `isekai/interface/verbs/`, and `cli.py` leaves the
   file-size ratchet; no verb, flag or line changes (0145 D2, D3, D4, D7).
+- Every verb is a `Verb` row with its summary, `cli.py` builds the parser and dispatches from `ROWS`, and the
+  `build_parser` ratchet row goes; D58 says a verb is declared once, and the documents it made false are amended
+  (0145 D2, D6, D7, D8).
 
 ## [0.87.0] - 2026-11-14
 

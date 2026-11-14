@@ -156,4 +156,6 @@ def generate_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-GENERATE_ROW = Verb("generate", generate_arguments)
+GENERATE_ROW = Verb(
+    "generate", "assemble the prompts for a run, then render them", generate_arguments
+)

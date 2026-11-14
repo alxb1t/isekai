@@ -233,7 +233,7 @@
   },
   {
     "finding": "CL-10",
-    "path": "isekai/interface/cli.py",
+    "path": "isekai/interface/verbs/common.py",
     "find": "        if whole < 1:\n            raise argparse.ArgumentTypeError(below_one)",
     "replace": "        if whole < 0:\n            raise argparse.ArgumentTypeError(below_one)",
     "tests": ["tests/test_pipeline_cli.py"],
@@ -241,7 +241,7 @@
   },
   {
     "finding": "PA-4",
-    "path": "isekai/interface/cli.py",
+    "path": "isekai/interface/verbs/generate.py",
     "find": "    refused = across(list(targets), assemble_one) + broken",
     "replace": "    refused = [assemble_one(one) for one in targets] and broken",
     "tests": ["tests/test_generate.py"],
@@ -257,7 +257,7 @@
   },
   {
     "finding": "PB-6",
-    "path": "isekai/interface/cli.py",
+    "path": "isekai/interface/verbs/edits.py",
     "find": "    for message in (failed := across(found, sample_one)):\n        print(f\"refused: {message}\", file=wired.err)\n    return 1 if failed else 0",
     "replace": "    failed: list[str] = []\n    for one in found:\n        try:\n            sample_one(one)\n        except Refusal as refusal:\n            failed.append(str(refusal))\n            break\n    for message in failed:\n        print(f\"refused: {message}\", file=wired.err)\n    return 1 if failed else 0",
     "tests": ["tests/test_edit.py"],
@@ -265,7 +265,7 @@
   },
   {
     "finding": "PB-16",
-    "path": "isekai/interface/cli.py",
+    "path": "isekai/interface/verbs/edits.py",
     "find": "    waiting = {image_of(record) for _, _, record in found}",
     "replace": "    waiting: set[Path] = set()",
     "tests": ["tests/test_edit.py"],

@@ -71,7 +71,7 @@ classified or what state a sheet is in, belongs to the component that owns that 
   or undeclared vocabulary into a refusal — which is the provisioning component's work.
   `interface/ui/app.py` decides what makes a draft, an approved sheet, a caption or a tag list damaged,
   and which remedy each names — work that belongs to the review, caption and tagging stages that own
-  those files. `interface/cli.py`'s `_once` decides that a transient transport failure is not kept for
+  those files. `once` of `interface/verbs/common.py` decides that a transient transport failure is not kept for
   the session — the render stage's rule. `interface/ui/library.py`'s `stage` ranks a run's stages and
   decides which damaged file marks a cell — the run directory's and the stages' work.
   `interface/render.py`'s `short` decides what each approval lacks of its count, and its `quote`
@@ -86,7 +86,7 @@ classified or what state a sheet is in, belongs to the component that owns that 
   cell's newest — the render stage's work. `interface/cli.py`'s `_refuse_bad_source` decides that a flow
   is not its own source, the review stage's rule. `interface/wiring.py`'s `proposer_of` turns a placement
   model's digest mismatch into a refusal, as `load_vocabulary` does for the vocabulary. The discard of a
-  render is spelled twice, `interface/cli.py`'s `_discard` and `interface/ui/app.py`'s `delete_render`,
+  render is spelled twice, `run_discard` of `interface/verbs/drafts.py` and `interface/ui/app.py`'s `delete_render`,
   and the two differ: the app drops each edit image's thumbnails, the CLI the render's alone.
 
 ### The code is layered
