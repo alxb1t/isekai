@@ -858,7 +858,8 @@ def test_prepare_opens_the_tagger_once(tmp_path: Path) -> None:
     assert all((run.path / PHOTO / "wd14" / "001.json").is_file() for run in runs)
     assert opened == ["tagger"]
     # A tagger the build refuses is kept for the batch; one that failed in transit
-    # is asked again by the next photograph.
+    # is asked again by the next photograph. This holds `once`'s rule in
+    # `docs/principles.md`, which no scenario of its own binds.
     for kind, openings, tagged in (
         ("permanent", 1, [False, False]),
         ("transient", 2, [False, True]),

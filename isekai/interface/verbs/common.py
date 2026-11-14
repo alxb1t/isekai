@@ -48,8 +48,8 @@ def _positive(below_one: str) -> Callable[[str], int]:
 
 
 # A render count: every one of them costs money.
-_count = _positive("a render count below 1 renders nothing")
-_seconds = _positive("a session limit below 1s ends at once")
+render_count = _positive("a render count below 1 renders nothing")
+session_limit = _positive("a session limit below 1s ends at once")
 
 
 def _session_id(value: str) -> str:

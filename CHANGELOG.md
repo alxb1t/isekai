@@ -13,7 +13,7 @@ its new digest.
 - The verbs' argument types, reporter and run helpers move out of `isekai/interface/cli.py` into the new package
   `isekai/interface/verbs/`; no verb, flag or line changes (0145 D1, D4).
 - The verbs `import`, `compare`, `ui`, `draft`, `discard`, `ink`, `edit` and `render` each become a `Verb` row of
-  their family's module in `isekai/interface/verbs/`, which `cli.py` reads through `_MOVED`; no verb, flag or line
+  their family's module in `isekai/interface/verbs/`, which `cli.py` reads; no verb, flag or line
   changes (0145 D2, D3, D4).
 - The verbs `prepare` and `generate` become `Verb` rows of `isekai/interface/verbs/`, and `cli.py` leaves the
   file-size ratchet; no verb, flag or line changes (0145 D2, D3, D4, D7).

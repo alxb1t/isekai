@@ -9,11 +9,11 @@ from isekai.foundation.run import Run, across
 from isekai.interface.verbs.common import (
     Reporter,
     Verb,
-    _count,
     _seed,
     once,
     photographs,
     progress_flag,
+    render_count,
     required_flow,
     run_for,
 )
@@ -120,7 +120,7 @@ def generate_arguments(parser: argparse.ArgumentParser) -> None:
     exclusive = parser.add_mutually_exclusive_group()
     exclusive.add_argument(
         "--count",
-        type=_count,
+        type=render_count,
         default=None,
         help=(
             "how many renders per photograph per flow, seeds drawn (default: the "

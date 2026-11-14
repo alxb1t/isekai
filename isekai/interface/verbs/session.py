@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from isekai.interface.verbs.common import Verb, _seconds, _session_id, _Targets
+from isekai.interface.verbs.common import Verb, _session_id, _Targets, session_limit
 
 
 def render_arguments(parser: argparse.ArgumentParser) -> None:
@@ -28,7 +28,7 @@ def render_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--limit",
-        type=_seconds,
+        type=session_limit,
         default=None,
         metavar="SECONDS",
         help=(
