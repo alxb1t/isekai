@@ -16,6 +16,8 @@ its new digest.
 - Step ②'s head reads *outlined* from the outline save's answer, the screen reads the tattoo once, step ④'s panels take
   the page's height, and the ask for pairs waits for the saved outline, sends no empty outline and shows a refusal as one
   plain line (0142 D5, D6, D7).
+- The review drops the render above it and shows *before* and *after* side by side, fitted to their columns, with the
+  summary to the right and *Back* and *Bake* in one row (0142 D8).
 
 ## [0.86.15] - 2026-11-13
 

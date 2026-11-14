@@ -6,7 +6,7 @@ The phases: the picker, the steps, the review and the soft edge. Each ends on a 
 
 - [x] 1 — The picker · moderate
 - [x] 2 — The steps · hard
-- [ ] 3 — The review · moderate
+- [x] 3 — The review · moderate
 - [ ] 4 — The soft edge · hard
 
 ## 1 — The picker
@@ -67,15 +67,15 @@ The phases: the picker, the steps, the review and the soft edge. Each ends on a 
 
 ## 3 — The review
 
-- [ ] 3.1 Add `fitted(box, size)` to `ui/src/review.ts` per [D8](design.md#d8), and a test `ui:review:the-crops-are-fitted-to-their-columns` in `ui/src/review.test.ts` on the box 100 by 50 at 250, 275 over 1100 by 600, and on a box as wide as the render, which places at `0%`.
+- [x] 3.1 Add `fitted(box, size)` to `ui/src/review.ts` per [D8](design.md#d8), and a test `ui:review:the-crops-are-fitted-to-their-columns` in `ui/src/review.test.ts` on the box 100 by 50 at 250, 275 over 1100 by 600, and on a box as wide as the render, which places at `0%`.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 3.2 In `ui/src/components/ReviewBake.vue` delete `ZOOM` and `over`, build the crop's style from `fitted` and the render's `backgroundImage`, and fix the head comment to say the crops are fitted.
+- [x] 3.2 In `ui/src/components/ReviewBake.vue` delete `ZOOM` and `over`, build the crop's style from `fitted` and the render's `backgroundImage`, and fix the head comment to say the crops are fitted.
   Verify: `git grep -n -w ZOOM -- ui/src/components/ReviewBake.vue` prints nothing.
-- [ ] 3.3 In the template of `ui/src/components/ReviewBake.vue` delete the whole render and its ink, give the step's root `class="stage"` alone, and replace the `stage__forward` block by `<div class="review__actions">`: the bake's state line, then one `outline__row` of the back buttons and *Bake*.
+- [x] 3.3 In the template of `ui/src/components/ReviewBake.vue` delete the whole render and its ink, give the step's root `class="stage"` alone, and replace the `stage__forward` block by `<div class="review__actions">`: the bake's state line, then one `outline__row` of the back buttons and *Bake*.
   Verify: `git grep -n -E "review__image|review__render|stage review" -- ui/src/components/ReviewBake.vue` prints nothing.
-- [ ] 3.4 In `ui/src/app.css` delete `.review__image` and `.review__render`, make `.review__crops` a grid of equal columns and `.review__pixels` `width: 100%`, and add `.review__actions`: a flex column with a gap of 8px and `margin-top: auto`.
+- [x] 3.4 In `ui/src/app.css` delete `.review__image` and `.review__render`, make `.review__crops` a grid of equal columns and `.review__pixels` `width: 100%`, and add `.review__actions`: a flex column with a gap of 8px and `margin-top: auto`.
   Verify: `git grep -n -E "^\.review__(image|render)" -- ui/src/app.css` prints nothing.
-- [ ] 3.5 In `ui/design/spec.md` edit frame J9·12: the crops `before` and `after` side by side, the summary beside them, `Back to …` and *Bake* in one row.
+- [x] 3.5 In `ui/design/spec.md` edit frame J9·12: the crops `before` and `after` side by side, the summary beside them, `Back to …` and *Bake* in one row.
   Verify: `git grep -n "in one row" -- ui/design/spec.md` prints one line.
 
 ## 4 — The soft edge

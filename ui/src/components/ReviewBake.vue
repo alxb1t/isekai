@@ -5,14 +5,13 @@ import { PLACING } from '../composables/usePlacing'
 import { useNatural } from '../composables/useNatural'
 import { regions } from '../outlines'
 import { complete } from '../pairs'
-import { bakeState, summary } from '../review'
+import { bakeState, fitted, summary } from '../review'
 import { type Step, circled, stepsOf } from '../stages'
 import type { Preview, TattooLimits } from '../types'
 
-/* The placement screen's review: the image the tattoo is placed on with the tattoo over it, its
-   crop before and after at twice the size, the summary of what was placed, a button back to
-   each earlier stage and *Bake*. A bake only queues an edit request; the render session
-   samples it. */
+/* The placement screen's review: the render's crop before and after, fitted to two columns, the
+   summary of what was placed, a button back to each earlier stage and *Bake*. A bake only
+   queues an edit request; the render session samples it. */
 const props = defineProps<{
   place: Place
   version: string
@@ -23,9 +22,6 @@ const emit = defineEmits<{ back: [step: Step] }>()
 
 const placing = inject(PLACING)
 if (!placing) throw new Error('the placement screen provides what its stages hold')
-
-/* The crop is shown at this many times its pixels. */
-const ZOOM = 2
 
 const tattoo = computed(() => placing.tattoo.value)
 const mode = computed(() => placing.mode.value)
@@ -100,30 +96,12 @@ const summed = computed(() => {
   })
 })
 
-/* The preview laid over the whole image, as percentages of it. */
-const over = computed(() => {
-  const size = natural.value
-  const own = shown.value
-  if (!size || !own) return null
-  return {
-    left: `${(own.box.x / size.width) * 100}%`,
-    top: `${(own.box.y / size.height) * 100}%`,
-    width: `${(own.box.width / size.width) * 100}%`,
-  }
-})
-
-/* The crop of the render the preview covers, at `ZOOM` times its pixels. */
+/* The crop of the render the preview covers, fitted to its column. */
 const crop = computed(() => {
   const size = natural.value
   const own = shown.value
   if (!size || !own) return null
-  return {
-    width: `${own.box.width * ZOOM}px`,
-    height: `${own.box.height * ZOOM}px`,
-    backgroundImage: `url(${renderUrl.value})`,
-    backgroundSize: `${size.width * ZOOM}px ${size.height * ZOOM}px`,
-    backgroundPosition: `${-own.box.x * ZOOM}px ${-own.box.y * ZOOM}px`,
-  }
+  return { ...fitted(own.box, size), backgroundImage: `url(${renderUrl.value})` }
 })
 
 const stages = computed(() =>
@@ -146,12 +124,8 @@ const bake = async (): Promise<void> => {
 </script>
 
 <template>
-  <section v-if="tattoo && summed && state" class="stage review" data-stage="review">
+  <section v-if="tattoo && summed && state" class="stage" data-stage="review">
     <div class="review__main">
-      <div class="review__image" data-review-image>
-        <img class="review__render" :src="renderUrl" :alt="`seed ${seed}`" />
-        <img v-if="shown && over" class="review__ink" :src="shown.url" alt="the tattoo placed" :style="over" />
-      </div>
       <p v-if="previewRefusal" class="picker__refusal" data-preview-refusal>
         <span class="refusal__mark" />{{ previewRefusal }}
       </p>
@@ -176,14 +150,14 @@ const bake = async (): Promise<void> => {
         <li v-for="line in summed.stages" :key="line">{{ line }}</li>
         <li v-for="line in summed.outlines" :key="line">{{ line }}</li>
       </ul>
-      <div class="outline__row">
-        <button v-for="one in stages" :key="one.step" class="btn btn-secondary" type="button" @click="emit('back', one.step)">
-          Back to {{ circled(one.number) }} {{ one.label }}
-        </button>
-      </div>
-      <div class="stage__forward">
+      <div class="review__actions">
         <span v-if="state.text" class="stage__note mono" data-bake-state>{{ state.text }}</span>
-        <button class="btn btn-primary" type="button" :disabled="!state.enabled" @click="bake">Bake</button>
+        <div class="outline__row">
+          <button v-for="one in stages" :key="one.step" class="btn btn-secondary" type="button" @click="emit('back', one.step)">
+            Back to {{ circled(one.number) }} {{ one.label }}
+          </button>
+          <button class="btn btn-primary" type="button" :disabled="!state.enabled" @click="bake">Bake</button>
+        </div>
       </div>
     </aside>
   </section>

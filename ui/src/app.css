@@ -2814,8 +2814,7 @@ dialog::backdrop {
   margin-top: auto;
 }
 
-/* The review: the image with the tattoo multiplied over it, the crop before and after, and the
-   summary beside them. */
+/* The review: the crop before and after in two equal columns, and the summary beside them. */
 .review__main {
   display: flex;
   flex: 1;
@@ -2823,18 +2822,6 @@ dialog::backdrop {
   gap: 16px;
   min-width: 0;
   overflow: auto;
-}
-
-.review__image {
-  position: relative;
-  align-self: flex-start;
-  max-width: 100%;
-}
-
-.review__render {
-  display: block;
-  max-width: 100%;
-  max-height: 60vh;
 }
 
 .review__ink {
@@ -2850,8 +2837,8 @@ dialog::backdrop {
 }
 
 .review__crops {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
@@ -2866,8 +2853,15 @@ dialog::backdrop {
 
 .review__pixels {
   position: relative;
-  max-width: 100%;
+  width: 100%;
   background-repeat: no-repeat;
+}
+
+.review__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
 }
 
 .reviewlist {
