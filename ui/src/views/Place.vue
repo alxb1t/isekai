@@ -121,13 +121,12 @@ watch(
   { immediate: true },
 )
 
-/* The tattoo a step names is read once, and again for the outline the step before it saved. */
+/* The tattoo a step names is read once; the outline step hands the screen each outline it saves. */
 watch(
   () => [props.step, props.name] as const,
-  ([now, name], before) => {
+  ([now, name]) => {
     if (name === undefined || now === 'tattoo') return
     void placing.load(name)
-    if (before?.[0] === 'outline' && now !== 'outline') void placing.reload()
   },
   { immediate: true },
 )

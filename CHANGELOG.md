@@ -13,6 +13,9 @@ its new digest.
 - *Remove* opens the shared confirmation dialog the render's deletion uses and the two-press arm goes; the picker shows
   the render and its photograph at its top and a cut's card shows its own crop; the head loses its thumbnail (0142 D1,
   D2, D3, D4).
+- Step ②'s head reads *outlined* from the outline save's answer, the screen reads the tattoo once, step ④'s panels take
+  the page's height, and the ask for pairs waits for the saved outline, sends no empty outline and shows a refusal as one
+  plain line (0142 D5, D6, D7).
 
 ## [0.86.15] - 2026-11-13
 

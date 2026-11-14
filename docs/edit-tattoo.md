@@ -128,7 +128,7 @@ render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─
   all* or a drag makes them its own, and forward waits for each. Nothing is kept: a proposal is one answer, run on this
   machine's CPU, and the bake records only the pairs held ([D54](decisions.md#d54--automatic-pairs-run-on-the-operators-machine-and-are-kept-nowhere)).
   The files are in `config/placement.json`: `make setup` fetches them, or
-  `uv run python -m isekai.boundary.unpack fetch config/placement.json`, which the refusal names when they are absent.
+  `uv run python -m isekai.boundary.unpack fetch config/placement.json`, which the server's refusal names when they are absent; the page shows a plain line.
 - **The preview** is the ink on white as a JPEG over a crop of the target, which the page multiplies over it a second
   after the last change. It is made on the server and kept nowhere.
 - **The limb and the exclusions** are drawn on the render: the ink stays inside the limb and goes under each

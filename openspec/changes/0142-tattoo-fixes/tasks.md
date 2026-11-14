@@ -5,7 +5,7 @@ The phases: the picker, the steps, the review and the soft edge. Each ends on a 
 ## Progress
 
 - [x] 1 — The picker · moderate
-- [ ] 2 — The steps · hard
+- [x] 2 — The steps · hard
 - [ ] 3 — The review · moderate
 - [ ] 4 — The soft edge · hard
 
@@ -44,25 +44,25 @@ The phases: the picker, the steps, the review and the soft edge. Each ends on a 
 
 ## 2 — The steps
 
-- [ ] 2.1 **HALT CHECK** Leaving step ② reloads the tattoo without waiting, a read that [D7](design.md#d7) replaces by the save's own answer.
+- [x] 2.1 **HALT CHECK** Leaving step ② reloads the tattoo without waiting, a read that [D7](design.md#d7) replaces by the save's own answer.
   Verify: `git grep -n "void placing.reload()" -- ui/src/views/Place.vue` prints one line.
-- [ ] 2.2 Add `withOutline(tattoo, outline)` to `ui/src/tattoos.ts` per [D5](design.md#d5), and a test `ui:outline-step:the-head-reads-the-saves-answer` in `ui/src/tattoos.test.ts` on a closed save and then an open one.
+- [x] 2.2 Add `withOutline(tattoo, outline)` to `ui/src/tattoos.ts` per [D5](design.md#d5), and a test `ui:outline-step:the-head-reads-the-saves-answer` in `ui/src/tattoos.test.ts` on a closed save and then an open one.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 2.3 In `ui/src/composables/usePlacing.ts` add `track(work)`, which counts the work in flight and counts it down in a `finally`; add `adopt(name, outline)`, which sets the held tattoo's `outline` and `outlined` only when it is `name`; return `reading`, true while tracked work runs; run `load` through `track` and delete `reload`. Extend `ui/src/composables/usePlacing.test.ts` with a test bound to `ui:proposal:an-ask-waits-for-the-saved-outline` on a pending tracked save, an adopted outline and an adopt of another name.
+- [x] 2.3 In `ui/src/composables/usePlacing.ts` add `track(work)`, which counts the work in flight and counts it down in a `finally`; add `adopt(name, outline)`, which sets the held tattoo's `outline` and `outlined` only when it is `name`; return `reading`, true while tracked work runs; run `load` through `track` and delete `reload`. Extend `ui/src/composables/usePlacing.test.ts` with a test bound to `ui:proposal:an-ask-waits-for-the-saved-outline` on a pending tracked save, an adopted outline and an adopt of another name.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 2.4 In `ui/src/components/OutlineStep.vue` add an `inject(PLACING)`; in `flush` call `placing.track` at once on the promise it queues, and in that step, on `saveOutline`'s answer, set the head's tattoo with `withOutline` and call `placing.adopt(props.name, saved)` per [D7](design.md#d7).
+- [x] 2.4 In `ui/src/components/OutlineStep.vue` add an `inject(PLACING)`; in `flush` call `placing.track` at once on the promise it queues, and in that step, on `saveOutline`'s answer, set the head's tattoo with `withOutline` and call `placing.adopt(props.name, saved)` per [D7](design.md#d7).
   Verify: `git grep -n "withOutline" -- ui/src/components/OutlineStep.vue` prints the import and the call.
-- [ ] 2.5 In `ui/src/views/Place.vue` delete the `placing.reload()` line and the `before` argument of the watcher that held it, `before?.[0]`, and fix that watcher's comment to say the tattoo is read once.
+- [x] 2.5 In `ui/src/views/Place.vue` delete the `placing.reload()` line and the `before` argument of the watcher that held it, `before?.[0]`, and fix that watcher's comment to say the tattoo is read once.
   Verify: `git grep -n -F "before?" -- ui/src/views/Place.vue` prints nothing.
-- [ ] 2.6 In `ui/src/app.css` add `.pair > .panel { flex: 1; }` after the `.pair` rule, per [D6](design.md#d6).
+- [x] 2.6 In `ui/src/app.css` add `.pair > .panel { flex: 1; }` after the `.pair` rule, per [D6](design.md#d6).
   Verify: `git grep -n "^\.pair > \.panel" -- ui/src/app.css` prints one line.
-- [ ] 2.7 In `ui/src/propose.ts` make `due(mode, pairs, asks, key, points, reading)` false while `reading` or with no `points`, a count of the points to send; make the `refused` variant of `Ask` carry no words, `refused(asks, key)` take none and `view` return `Could not propose pairs — place them by clicking`. Update every `due` and `refused` call of `ui/src/propose.test.ts` and `ui/src/composables/usePlacing.test.ts`, re-key the refusal test to `ui:proposal:a-refusal-says-so-in-a-plain-line-and-the-clicks-still-work`, and add to `ui/src/propose.test.ts` a test bound to `ui:proposal:an-ask-waits-for-the-saved-outline` on `reading` and no points.
+- [x] 2.7 In `ui/src/propose.ts` make `due(mode, pairs, asks, key, points, reading)` false while `reading` or with no `points`, a count of the points to send; make the `refused` variant of `Ask` carry no words, `refused(asks, key)` take none and `view` return `Could not propose pairs — place them by clicking`. Update every `due` and `refused` call of `ui/src/propose.test.ts` and `ui/src/composables/usePlacing.test.ts`, re-key the refusal test to `ui:proposal:a-refusal-says-so-in-a-plain-line-and-the-clicks-still-work`, and add to `ui/src/propose.test.ts` a test bound to `ui:proposal:an-ask-waits-for-the-saved-outline` on `reading` and no points.
   Verify: `uv run python -m tools.test_ui` exits 0, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.8 In `ui/src/components/StageRender.vue` pass `due` the count of `pointsOf`'s points, 0 while `tattoo` is null, and `placing.reading.value`, and call `refused` without the error's message.
+- [x] 2.8 In `ui/src/components/StageRender.vue` pass `due` the count of `pointsOf`'s points, 0 while `tattoo` is null, and `placing.reading.value`, and call `refused` without the error's message.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.9 In `ui/design/spec.md` edit frame J9·14 and the proposed-pairs bullet: the ask waits for the saved outline, and a refusal reads `Could not propose pairs — place them by clicking`.
+- [x] 2.9 In `ui/design/spec.md` edit frame J9·14 and the proposed-pairs bullet: the ask waits for the saved outline, and a refusal reads `Could not propose pairs — place them by clicking`.
   Verify: `git grep -n "Could not propose pairs" -- ui/design/spec.md` prints one line.
-- [ ] 2.10 In `docs/edit-tattoo.md` end the proposed-pairs bullet's last sentence `which the refusal names when they are absent` with `which the server's refusal names when they are absent; the page shows a plain line`.
+- [x] 2.10 In `docs/edit-tattoo.md` end the proposed-pairs bullet's last sentence `which the refusal names when they are absent` with `which the server's refusal names when they are absent; the page shows a plain line`.
   Verify: `git grep -n "the page shows a plain line" -- docs/edit-tattoo.md` prints one line.
 
 ## 3 — The review

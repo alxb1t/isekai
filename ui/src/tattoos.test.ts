@@ -16,6 +16,7 @@ import {
   uploadName,
   whiteNote,
   whiteState,
+  withOutline,
 } from './tattoos'
 import type { Pair, Point, Stage1, Tattoo } from './types'
 
@@ -200,6 +201,17 @@ spec('ui:outline-step:the-line-names-the-floor-while-the-outline-is-short', () =
 spec('ui:outline-step:the-size-of-the-cuts-ink-is-the-outlines-box', () => {
   expect(inkSize({ width: 412.4, height: 300.6 })).toBe('412×301')
   expect(inkSize(null)).toBeNull()
+})
+
+spec('ui:outline-step:the-head-reads-the-saves-answer', () => {
+  const fresh = tattoo({ outlined: false })
+  const state = (held: Tattoo) => card(held, DIGEST, undefined, FLOOR).state
+
+  const saved = withOutline(fresh, { closed: true })
+  expect(state(saved)).toBe('outlined')
+  expect(state(withOutline(saved, { closed: false }))).toBe('not outlined')
+  // The tattoo read stands as it was: the head holds a new one.
+  expect(fresh.outlined).toBe(false)
 })
 
 spec('ui:outline-step:uploading-instead-keeps-the-cut', () => {

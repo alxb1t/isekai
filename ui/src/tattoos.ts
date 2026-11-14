@@ -97,6 +97,12 @@ export function thumbCrop(
   }
 }
 
+/** Return `tattoo` as the save of `outline` leaves it: outlined once the outline is closed.
+    e.g. a tattoo not outlined, saved with a closed outline -> outlined */
+export function withOutline<T extends Tattoo>(tattoo: T, outline: Pick<Outline, 'closed'>): T {
+  return { ...tattoo, outlined: outline.closed }
+}
+
 /** Return the line under a picker form's heading: what the form takes. */
 export function formLine(form: 'upload' | 'cut'): string {
   return form === 'upload'

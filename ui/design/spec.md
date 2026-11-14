@@ -512,7 +512,7 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 | J9·11 ③ tattoo ↔ render, for a tattoo `not on this photo`: its ink view and the render; no ③ photograph and no stage-1 pairs asked | the card's *not on this photo*, then Next | `…/place/render` |
 | J9·12 ⑤ review: the render with the tattoo over it, its crop `before` and `after`, the summary, `Back to ③ …` and `Back to ④ …`, *Bake*; waiting with `stage 2 · 8 pairs needed · 5 placed`, then `queued · edit 3 · next render session` | Next: review, then Bake | `…/place/review` |
 | J9·13 Leave this stage?: `Point 8 has no match on the photograph`, `7 pairs stand · saved 14:05`, *Stay* and *Leave* | ① tattoo, or a step, or Back to the render, with a lone point | the step asked for |
-| J9·14 ④ photograph ↔ render opened with no pair held: `Proposing pairs…` under the list while the clicks work; then the proposed pairs numbered after the held ones, each point ringed dashed and its row marked, *Accept* and *Accept all*, forward waiting `4 proposed · accept or delete them`; after a refusal its words with their fix, after an empty answer `Nothing proposed — place the pairs by clicking` | Next: ④ photograph ↔ render, on a two-stage tattoo or a cut, then Accept all | `…/place/render` |
+| J9·14 ④ photograph ↔ render opened with no pair held, the ask waiting for the saved outline: `Proposing pairs…` under the list while the clicks work; then the proposed pairs numbered after the held ones, each point ringed dashed and its row marked, *Accept* and *Accept all*, forward waiting `4 proposed · accept or delete them`; after a refusal `Could not propose pairs — place them by clicking`, after an empty answer `Nothing proposed — place the pairs by clicking` | Next: ④ photograph ↔ render, on a two-stage tattoo or a cut, then Accept all | `…/place/render` |
 
 ```
 J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tattoo   ② outline   [ Back to the render ]
@@ -547,9 +547,11 @@ J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tatt
   has no ③, and a tattoo `not on this photo` pairs the tattoo with the render at ③ `render`.
 - **The preview** is asked the declared time after the last change once the preview's floor of complete pairs stand;
   only the newest answer is drawn. A refusal clears the answer and shows its fix under the pairs.
-- **The proposed pairs** are asked once, when ④ opens with no pair for a two-stage tattoo or a cut; the direct stage
-  asks nothing. The line under the list reads `Proposing pairs…`, then the refusal's words, or `Nothing proposed —
-  place the pairs by clicking` after an empty answer, and the clicks keep working. A proposed pair is dashed on both
+- **The proposed pairs** are asked once, when ④ opens with no pair for a two-stage tattoo or a cut, and once the saved
+  outline is read, with a point to send; the direct stage asks nothing. The line under the list reads `Proposing
+  pairs…`, then after a refusal `Could not propose
+  pairs — place them by clicking`, or after an empty answer `Nothing proposed —
+  place the pairs by clicking`, and the clicks keep working. A proposed pair is dashed on both
   images and in its row; *Accept* makes the selected one ordinary, *Accept all* makes every one, and a drag of either
   point accepts that pair. Forward waits `4 proposed · accept or delete them` before any other reason, and *Undo*
   leaves the proposal in place.
