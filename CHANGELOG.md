@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.0] - 2026-11-14
+
+Gate: local 3m57s · CI not read under mf-ship · 0.86.17: local 1m13s · CI not read under mf-ship
+
 - *Remove* opens the shared confirmation dialog the render's deletion uses and the two-press arm goes; the picker shows
   the render and its photograph at its top and a cut's card shows its own crop; the head loses its thumbnail (0142 D1,
   D2, D3, D4).

@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.87
 ---
 
 # Tattoo fixes
