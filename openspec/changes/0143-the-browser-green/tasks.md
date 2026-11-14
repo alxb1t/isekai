@@ -4,18 +4,18 @@ The browser tests' fake and refusals first, then the Hub after a delete. A build
 
 ## Progress
 
-- [ ] 1 — The fake and the refusals · moderate
+- [x] 1 — The fake and the refusals · moderate
 - [ ] 2 — The Hub after a delete · moderate
 
 ## 1 — The fake and the refusals
 
-- [ ] 1.1 In `tests/e2e/test_import.py`, replace the `data:` line of `CONVERTING` with the snapshot of [D2](design.md#d2): one `data:` line holding `jobs`, `billing`, then `files`, built from adjacent string literals. Add to the comment above it that the snapshot carries both slots, as every server snapshot does.
+- [x] 1.1 In `tests/e2e/test_import.py`, replace the `data:` line of `CONVERTING` with the snapshot of [D2](design.md#d2): one `data:` line holding `jobs`, `billing`, then `files`, built from adjacent string literals. Add to the comment above it that the snapshot carries both slots, as every server snapshot does.
   Verify: `git grep -n -F '"billing": {"pod": false, "volume": null}' -- tests/e2e/test_import.py` prints the line.
 
-- [ ] 1.2 In `tests/e2e/test_render.py`, import `Refused` from `tests.e2e.guard` and give `test_the_render_dialog_opens_on_its_first_photograph` a `refusals: list[Refused]` parameter. Its first statement appends `Refused(409, f"/api/c/{RENDER}/sessions/")`, as [D3](design.md#d3) says.
+- [x] 1.2 In `tests/e2e/test_render.py`, import `Refused` from `tests.e2e.guard` and give `test_the_render_dialog_opens_on_its_first_photograph` a `refusals: list[Refused]` parameter. Its first statement appends `Refused(409, f"/api/c/{RENDER}/sessions/")`, as [D3](design.md#d3) says.
   Verify: `git grep -n -F 'Refused(409, f"/api/c/{RENDER}/sessions/")' -- tests/e2e/test_render.py` prints the line.
 
-- [ ] 1.3 In `tests/e2e/test_render.py`, give `test_the_drawer_holds_the_render` the same `refusals` parameter. Its first statements append `Refused(409, f"/api/c/{DRAWN}/sessions/")` and `Refused(409, f"/api/c/{WIDE}/sessions/")`.
+- [x] 1.3 In `tests/e2e/test_render.py`, give `test_the_drawer_holds_the_render` the same `refusals` parameter. Its first statements append `Refused(409, f"/api/c/{DRAWN}/sessions/")` and `Refused(409, f"/api/c/{WIDE}/sessions/")`.
   Verify: `git grep -n -F 'Refused(409, f"/api/c/{WIDE}/sessions/")' -- tests/e2e/test_render.py` prints the line.
 
 ## 2 — The Hub after a delete

@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- The import test's faked snapshot carries `jobs` and `billing` beside `files`, and the render dialog test and the drawer
+  test declare the session record's 409, so the browser guard sees no page error and no undeclared refusal (0143 D2, D3).
+
 ## [0.86.15] - 2026-11-13
 
 Gate: local 1m17s · CI not read under mf-ship · 0.86.14: local 1m17s · CI not read under mf-ship
