@@ -12,6 +12,8 @@ its new digest.
 
 - The import test's faked snapshot carries `jobs` and `billing` beside `files`, and the render dialog test and the drawer
   test declare the session record's 409, so the browser guard sees no page error and no undeclared refusal (0143 D2, D3).
+- After *Yes* on a render's large view, the hub is read again before the Hub opens, so the Hub draws without the deleted
+  render and asks for no thumbnail of it; a reload that fails opens the Hub all the same (0143 D4).
 
 ## [0.86.15] - 2026-11-13
 

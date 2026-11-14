@@ -11,6 +11,7 @@ import DraftDialog from '../components/DraftDialog.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
+import { useCollectionStore } from '../stores/collection'
 import { plain, shifted } from '../stores/keys'
 import type { Bake, RenderDetail } from '../types'
 import { offerTo } from '../viewkey'
@@ -31,6 +32,7 @@ const props = defineProps<{
   k?: string
 }>()
 const router = useRouter()
+const store = useCollectionStore()
 const detail = ref<RenderDetail | null>(null)
 const bake = ref<Bake | null>(null)
 const refusal = ref<string | null>(null)
@@ -117,8 +119,10 @@ const hubCell = computed(() => ({
   state: { cell: { digest: props.digest, flow: props.flow } },
 }))
 
-/* The Hub, focused on the deleted render's cell. */
-function deleted(): void {
+/* The hub is read again first, so the Hub draws without the deleted render; a refusal opens it all the same.
+   The Hub, focused on the deleted render's cell. */
+async function deleted(): Promise<void> {
+  await store.reloadHub().catch(() => undefined)
   void router.push(hubCell.value)
 }
 

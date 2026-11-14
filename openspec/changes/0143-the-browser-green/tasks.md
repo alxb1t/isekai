@@ -5,7 +5,7 @@ The browser tests' fake and refusals first, then the Hub after a delete. A build
 ## Progress
 
 - [x] 1 — The fake and the refusals · moderate
-- [ ] 2 — The Hub after a delete · moderate
+- [x] 2 — The Hub after a delete · moderate
 
 ## 1 — The fake and the refusals
 
@@ -20,14 +20,14 @@ The browser tests' fake and refusals first, then the Hub after a delete. A build
 
 ## 2 — The Hub after a delete
 
-- [ ] 2.1 **HALT CHECK** `ui/src/App.vue` opens the collection store on the route's collection, so the store `RenderLarge.vue` takes in task 2.2 holds the collection the view shows. A miss means the plan is wrong.
+- [x] 2.1 **HALT CHECK** `ui/src/App.vue` opens the collection store on the route's collection, so the store `RenderLarge.vue` takes in task 2.2 holds the collection the view shows. A miss means the plan is wrong.
   Verify: `git grep -n -F 'collectionStore.open(shown)' -- ui/src/App.vue` prints the line.
 
-- [ ] 2.2 In `ui/src/views/RenderLarge.vue`, import `useCollectionStore` from `../stores/collection`, hold it in `store` after `router`, and make `deleted` the async function of [D4](design.md#d4): it awaits `store.reloadHub()` with a refusal ignored, then pushes `hubCell`. Update the comment above it to say the hub is read again first.
+- [x] 2.2 In `ui/src/views/RenderLarge.vue`, import `useCollectionStore` from `../stores/collection`, hold it in `store` after `router`, and make `deleted` the async function of [D4](design.md#d4): it awaits `store.reloadHub()` with a refusal ignored, then pushes `hubCell`. Update the comment above it to say the hub is read again first.
   Verify: `git grep -n -F 'store.reloadHub()' -- ui/src/views/RenderLarge.vue` prints the line.
 
-- [ ] 2.3 In `tests/e2e/test_render.py`, bind `ui:delete-render:the-hub-opens-without-the-deleted-render` on `test_conjure_from_this_opens_review`, after its `yes-opens-the-hub-on-the-cell` marker.
+- [x] 2.3 In `tests/e2e/test_render.py`, bind `ui:delete-render:the-hub-opens-without-the-deleted-render` on `test_conjure_from_this_opens_review`, after its `yes-opens-the-hub-on-the-cell` marker.
   Verify: `git grep -n -F 'the-hub-opens-without-the-deleted-render' -- tests/e2e/test_render.py` prints the marker.
 
-- [ ] 2.4 In the same test, before the second `Shift+Backspace`, start `asked: list[str] = []` with `page.on("request", lambda request: asked.append(request.url))`. After the `expect(cell).to_be_focused()` expectation, which the Hub meets once it has drawn, assert that no URL in `asked` ends with `f"/api/c/{CONJURED}/renders/{digest}/{FLOW}/v1/7/thumb"`.
+- [x] 2.4 In the same test, before the second `Shift+Backspace`, start `asked: list[str] = []` with `page.on("request", lambda request: asked.append(request.url))`. After the `expect(cell).to_be_focused()` expectation, which the Hub meets once it has drawn, assert that no URL in `asked` ends with `f"/api/c/{CONJURED}/renders/{digest}/{FLOW}/v1/7/thumb"`.
   Verify: `git grep -n -F 'page.on("request"' -- tests/e2e/test_render.py` prints the line.
