@@ -2286,6 +2286,12 @@ large view ──⇧⌫──▶ Delete this render?  [No] [Yes]
 - **THEN** the Hub opens focused on that cell, reading *tagged*
 - **AND** the image, its approval's prompt and the flow's sheet are gone from the run
 
+#### Scenario: the Hub opens without the deleted render
+- **Key:** `ui:delete-render:the-hub-opens-without-the-deleted-render`
+- **Layers:** e2e
+- **WHEN** `⇧⌫`, `l` and `↵` are pressed on the large view of a cell's only image
+- **THEN** the Hub is read again before it opens, and no thumbnail of the deleted render is asked for
+
 #### Scenario: the route deletes the render and its thumbnail
 - **Key:** `ui:delete-render:the-route-deletes-the-render-and-its-thumbnail`
 - **Layers:** unit
