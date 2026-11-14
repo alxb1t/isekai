@@ -73,9 +73,12 @@ def _release(page: Page, held: list[Route]) -> None:
 
 # A stream that reports the HEIC converting, then ends; `retry` reconnects it at once.
 # The HEIC is the first upload to reach the server: the JPEG before it is held.
+# The snapshot carries both slots, as every server snapshot does.
 CONVERTING = (
     "retry: 50\nevent: snapshot\n"
-    'data: {"files": {"u1": {"file": "plain.heic", "state": "converting"}}}\n\n'
+    'data: {"jobs": {"prepare": null, "render": null}, '
+    '"billing": {"pod": false, "volume": null}, '
+    '"files": {"u1": {"file": "plain.heic", "state": "converting"}}}\n\n'
 )
 
 

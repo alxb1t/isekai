@@ -21,6 +21,26 @@ its new digest.
 - A polygon's mask is filled at four times its size and box-reduced, so the ink's edge is antialiased in the preview and
   the bake, and an exclusion removes a partly covered pixel in part (0142 D9).
 
+## [0.86.17] - 2026-11-14
+
+Gate: local 1m13s · CI not read under mf-ship · 0.86.16: local 1m16s · CI not read under mf-ship
+
+- `python -m tools.test_ui` takes arguments: `ui/src/<name>.test.ts` runs one browser test file in `ui/`, where vitest
+  finds its config, and a leading `ui/` on an argument is dropped (0144 D1, D2).
+- A root `vitest.config.mjs` refuses a vitest start at the repository root, naming `tools.test_ui`, so it writes no root
+  `node_modules/`; a test starts vitest beside a copy of it and reads the refusal (0144 D4).
+- `CONTRIBUTING.md` and `AGENTS.md` name the one-file command and say never to start vitest at the root, so a worker
+  needs no invented command (0144 D6).
+
+## [0.86.16] - 2026-11-14
+
+Gate: local 1m16s · CI not read under mf-ship · 0.86.15: local 1m17s · CI not read under mf-ship
+
+- The import test's faked snapshot carries `jobs` and `billing` beside `files`, and the render dialog test and the drawer
+  test declare the session record's 409, so the browser guard sees no page error and no undeclared refusal (0143 D2, D3).
+- After *Yes* on a render's large view, the hub is read again before the Hub opens, so the Hub draws without the deleted
+  render and asks for no thumbnail of it; a reload that fails opens the Hub all the same (0143 D4).
+
 ## [0.86.15] - 2026-11-13
 
 Gate: local 1m17s · CI not read under mf-ship · 0.86.14: local 1m17s · CI not read under mf-ship

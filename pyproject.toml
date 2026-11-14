@@ -1,6 +1,6 @@
 [project]
 name = "isekai"
-version = "0.86.15"
+version = "0.86.17"
 requires-python = ">=3.12"
 # **What running a flow needs, declared rather than optional.** This list was
 # empty once, held by the `-S` guard in `tests/test_pipeline_cli.py`,
