@@ -445,7 +445,6 @@ def unread_patches(root: Path) -> list[str]:
 
 LONG_FILES = {
     "isekai/foundation/run.py": 1045,
-    "isekai/interface/cli.py": 1579,
     "isekai/interface/render.py": 1315,
     "isekai/interface/ui/app.py": 2351,
     "isekai/interface/ui/library.py": 881,
@@ -453,7 +452,7 @@ LONG_FILES = {
     "isekai/pipeline/review.py": 1278,
     "isekai/pipeline/tattoos.py": 1320,
 }
-FILE_ROWS = 8
+FILE_ROWS = 7
 
 LONG_FUNCTIONS = {
     "isekai/boundary/ollama.py::ask": 105,

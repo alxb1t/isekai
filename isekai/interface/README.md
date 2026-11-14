@@ -36,7 +36,7 @@ neither is privileged. The CLI imports `isekai.interface.ui` inside the handlers
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `cli.py` | `__main__.py` | — |
-| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `verbs/common.py`, `verbs/drafts.py`, `verbs/edits.py`, `verbs/library.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
+| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `verbs/common.py`, `verbs/drafts.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/library.py`, `verbs/prepare.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
 | `drafting.py` | `cli.py`, `ui/app.py`, `verbs/drafts.py` | — |
 | `render.py` | `cli.py`, `ui/app.py`, `ui/jobs.py`, `ui/library.py`, `verbs/edits.py` | — |
 | `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py` |

@@ -58,7 +58,6 @@ from functools import cache
 from pathlib import Path
 from typing import NoReturn, TypeVar
 
-from isekai.boundary.comfy import read_runtime
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow, tracked_flows
@@ -83,30 +82,24 @@ from isekai.interface.verbs import (
     DISCARD_ROW,
     DRAFT_ROW,
     EDIT_ROW,
+    GENERATE_ROW,
     IMPORT_ROW,
     INK_ROW,
+    PREPARE_ROW,
     RENDER_ROW,
     UI_ROW,
     Reporter,
     Verb,
-    _count,
-    _seed,
+    generate_batch,
     once,
-    parse_cells,
     require_tracked,
     run_for,
     run_or_photo,
+    run_prepare,
     say,
 )
 from isekai.interface.wiring import Wiring, wiring
 from isekai.pipeline.caption import caption
-from isekai.pipeline.generate import (
-    STAGE_RENDER,
-    Render,
-    prepare,
-    render,
-    source_seeds,
-)
 from isekai.pipeline.review import (
     approve,
     discard,
@@ -189,6 +182,7 @@ def build_parser() -> argparse.ArgumentParser:
             "discard",
             "draft",
             "edit",
+            "generate",
             "import",
             "ink",
             "migrate",
@@ -224,7 +218,7 @@ def build_parser() -> argparse.ArgumentParser:
     # `tag` and `caption` describe the photograph, which every flow reads, so they
     # take no flow; the flag stays hidden so `dispatch` refuses it naming the
     # command without it (D17).
-    for name in ("assign", "sheet", "review", "approve", "generate"):
+    for name in ("assign", "sheet", "review", "approve"):
         made[name].add_argument(
             "--flow",
             action="append",
@@ -260,22 +254,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="turn each flow's newest approval back into its draft instead, "
         "deleting a copy and refusing one anything was made from",
     )
-    # A cell names its flow, so `prepare` takes no `--flow` and no photograph.
-    made["prepare"].add_argument(
-        "cells",
-        nargs="+",
-        metavar="<run-id>/<flow>",
-        help="cells to prepare, each photograph in the order its first cell is named",
-    )
-    made["prepare"].add_argument(
-        "--runs",
-        type=Path,
-        default=RUNS_ROOT,
-        help=f"the directory runs live under (default {RUNS_ROOT.name}/)",
-    )
-    made["prepare"].set_defaults(photos=[])
     # The job runner's channel: a line per item it can parse, the prose kept apart.
-    for name in ("caption", "tag", "sheet", "prepare", "generate"):
+    for name in ("caption", "tag", "sheet"):
         made[name].add_argument(
             "--progress",
             choices=["json"],
@@ -304,47 +284,6 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     made["migrate"].set_defaults(photos=[])
-
-    # Mutually exclusive at parse time, so asking for both is refused before any
-    # work begins rather than discovered on a rented machine. One verb explores
-    # and the other reproduces, and combining them has no meaning (D13).
-    render = made["generate"].add_mutually_exclusive_group()
-    render.add_argument(
-        "--count",
-        type=_count,
-        default=None,
-        help=(
-            "how many renders per photograph per flow, seeds drawn (default: the "
-            "approval's count, else 1)"
-        ),
-    )
-    render.add_argument(
-        "--seed",
-        type=_seed,
-        action="append",
-        dest="seeds",
-        default=None,
-        help="render exactly this seed; repeatable, and not combinable with --count",
-    )
-    render.add_argument(
-        "--seeds-from",
-        dest="seeds_from",
-        default=None,
-        metavar="FLOW",
-        help="render this flow's latest seeds for each run; not with the others",
-    )
-    # No default, deliberately. Assembly is free and rendering is not, so the
-    # invocation that costs money is the one that names where to spend it --
-    # `generate` without `--server` assembles every prompt and stops, which is
-    # also how a malformed sheet is found before anything is rented.
-    made["generate"].add_argument(
-        "--server",
-        default=None,
-        help=(
-            "the ComfyUI endpoint, reached through the tunnel; omit it to "
-            "assemble every prompt and stop without rendering"
-        ),
-    )
     for moved in _MOVED:
         moved.arguments(made[moved.name])
     return parser
@@ -374,64 +313,6 @@ def _migrate(args: argparse.Namespace, wired: Wiring) -> int:
                 refused = True
                 print(f"{where}: refused: {unmigrated}", file=wired.err)
     return 1 if refused else 0
-
-
-def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
-    """Take each photograph through `tag`, `caption`, then its cells' sheets, in turn.
-
-    Each step is the work `_per_item` gives its verb, so its lines and refusals are
-    that verb's; the one `tag` work opens the tagger once. A refusal costs only its
-    own step (D1), and an unassigned cell's sheet refuses rather than making its
-    directory again.
-    e.g. r1/f r2/f r2/g -> r1: tag, caption, f; then r2: tag, caption, f, g
-    """
-    cells = parse_cells(args.cells, wired)
-    vocabulary = once(wired.vocabulary)
-    mapped = once(lambda: wired.field_map(vocabulary()))
-    shared = dataclasses.replace(
-        wired, vocabulary=vocabulary, field_map=lambda _: mapped()
-    )
-    flows = {
-        name: load_flow(name, wired.flows_dir)
-        for name in dict.fromkeys(flow for _, flow in cells)
-    }
-    collected: list[str] = []
-    tag = _per_item("tag", args, shared, {}, collected)
-    describe = _per_item("caption", args, shared, {}, collected)
-    sheets = {
-        name: _per_item("sheet", args, shared, {name: flow}, collected)
-        for name, flow in flows.items()
-    }
-    reporter = Reporter(wired.out, wired.err, args.progress == "json")
-    runs = shlex.quote(str(wired.runs_root))
-
-    def sheet_of(flow: str) -> Callable[[str], None]:
-        def sheet_cell(run_id: str) -> None:
-            if not (wired.runs_root / run_id / flow).is_dir():
-                unassigned = (
-                    f"{run_id}/{flow} is not assigned, so prepare makes no sheet for "
-                    f"it; run `python -m isekai assign --flow {flow} --runs {runs} "
-                    f"{run_id}` first"
-                )
-                reporter.item(run_id, flow, "sheet", "refused", unassigned)
-                raise Refusal(unassigned)
-            sheets[flow](run_id)
-
-        return sheet_cell
-
-    by_run: dict[str, list[str]] = {}
-    for run_id, flow in cells:
-        by_run.setdefault(run_id, []).append(flow)
-    for run_id, named in by_run.items():
-        steps = [
-            *([tag] if any(flows[flow].tagger for flow in named) else []),
-            describe,
-            *(sheet_of(flow) for flow in named),
-        ]
-        collected.extend(across(steps, lambda step: step(run_id)))
-    for message in collected:
-        print(f"refused: {message}", file=wired.err)
-    return 1 if collected else 0
 
 
 def _existing_run(identifier: str, wired: Wiring) -> Run | None:
@@ -477,8 +358,6 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
                 return moved.run(args, wired)
         if verb == "migrate":
             return _migrate(args, wired)
-        if verb == "prepare":
-            return _prepare(args, wired)
         if verb in PHOTOGRAPH_VERBS and args.flows:
             raise Refusal(_named_a_flow(args, targets))
         flows = _flows_for(args, wired)
@@ -495,10 +374,10 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
         print(f"refused: {unselectable}", file=wired.err)
         return 1
     if verb == "generate":
-        refused = _generate(args, wired, targets, flows)
+        refused = generate_batch(args, wired, targets, flows)
     else:
         # Refusals a verb collects without abandoning the photograph, reported
-        # after `across`'s the way `_generate` reports `broken`.
+        # after `across`'s the way `generate_batch` reports `broken`.
         collected: list[str] = []
         work = _per_item(verb, args, wired, flows, collected)
         refused = across(targets, work) + collected
@@ -521,6 +400,11 @@ def _render(args: argparse.Namespace, wired: Wiring) -> int:
     return run_session(args, wired, _dispatch_argv)
 
 
+def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
+    """Run `prepare`, handing it `_per_item` for the work of each of its steps."""
+    return run_prepare(args, wired, _per_item)
+
+
 _MOVED: tuple[Verb, ...] = (
     IMPORT_ROW,
     COMPARE_ROW,
@@ -530,6 +414,8 @@ _MOVED: tuple[Verb, ...] = (
     INK_ROW,
     EDIT_ROW,
     dataclasses.replace(RENDER_ROW, run=_render),
+    dataclasses.replace(PREPARE_ROW, run=_prepare),
+    GENERATE_ROW,
 )
 
 
@@ -826,88 +712,6 @@ def _assign_one(run: Run, flow: str, remove: bool, wired: Wiring) -> None:
     else:
         done = f"assigned {flow}" if changed else f"{flow} is already assigned"
     print(f"{run.id}: {done}", file=wired.out)
-
-
-def _generate(
-    args: argparse.Namespace,
-    wired: Wiring,
-    targets: Sequence[str],
-    flows: Mapping[str, Flow],
-) -> list[str]:
-    """Assemble every prompt in the batch, and only then reach for the endpoint.
-
-    **The whole batch, before anything is acquired.** Assembly is free and
-    rendering is not, so a malformed sheet should cost nothing rather than a boot
-    and several minutes of waiting -- and doing the batch first is what turns that
-    from a per-item saving into a guarantee. Interleaving them would rent a
-    machine and then discover the third sheet was broken.
-    """
-    ready: list[tuple[Run, str]] = []
-    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == "json")
-    # The seeds each run takes from the source flow, when one is named.
-    borrowed: dict[str, list[int]] = {}
-    source_suffix = (
-        load_flow(args.seeds_from, wired.flows_dir).output_suffix
-        if args.seeds_from is not None
-        else ""
-    )
-    # Collected alongside `across`'s, not raised: `prepare` already tried every
-    # flow, so one run's broken sheet is a refusal to report at the end rather
-    # than a reason its sibling flows go unrendered.
-    broken: list[str] = []
-
-    def assemble_one(identifier: str) -> None:
-        run = run_for(identifier, wired)
-        assembled, refusals = prepare(run, flows)
-        broken.extend(refusals)
-        if args.seeds_from is not None:
-            borrowed[run.id] = source_seeds(
-                run, args.seeds_from, source_suffix, list(flows)
-            )[1]
-        for flow, path in assembled.items():
-            reporter.say(f"{run.id}: assembled {flow}/{path.name}")
-            ready.append((run, flow))
-
-    refused = across(list(targets), assemble_one) + broken
-    client = wired.client
-    if client is None:
-        return refused
-    # One report per session, read only when a render will run.
-    ran_on = once(lambda: read_runtime(client))
-
-    def render_one(pair: tuple[Run, str]) -> None:
-        run, flow = pair
-
-        def landed(made: Render) -> None:
-            reporter.say(f"{run.id}: rendered {flow}/{made.image.name}")
-            # The seed as a string: a 64-bit seed is past what a page's number holds.
-            version = int(made.image.parent.name)
-            reporter.item(
-                run.id,
-                flow,
-                STAGE_RENDER,
-                "done",
-                digest=run.digest,
-                version=version,
-                seed=str(made.seed),
-            )
-
-        produced = render(
-            run,
-            flows[flow],
-            client,
-            image=wired.image,
-            runtime=ran_on,
-            count=args.count,
-            seeds=borrowed.get(run.id, args.seeds),
-            seeds_from=args.seeds_from,
-            rng=wired.rng,
-            on_image=landed,
-        )
-        if not produced:
-            reporter.say(f"{run.id}: {flow} is already rendered")
-
-    return refused + across(ready, render_one)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

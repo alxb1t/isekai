@@ -12,7 +12,7 @@ from isekai.boundary.comfy import TransportFailure
 from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.flow import tracked_flows
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import FRAME_NAME, Run, open_run
+from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, open_run
 from isekai.interface.wiring import Wiring
 from isekai.shared.ink import load_ink_config
 
@@ -117,6 +117,56 @@ class Verb:
     name: str
     arguments: Callable[[argparse.ArgumentParser], None]
     run: Callable[[argparse.Namespace, Wiring], int] | None = None
+
+
+def photographs(parser: argparse.ArgumentParser) -> None:
+    """Add `photos` and `--runs` to `parser`."""
+    parser.add_argument(
+        "photos",
+        nargs="*",
+        help="photographs, or run identifiers for a run that already exists",
+    )
+    # The root every run lives under. It defaults to `.data/runs`, and it is a
+    # flag because a version's acceptance run wants its own directory rather
+    # than one pile every version adds to. A run holds a copy of the
+    # photograph, so a run root is a directory of personal photographs by
+    # construction -- which is why `wiring` refuses one that resolves INSIDE
+    # this repository and outside `.data/`, where nothing ignores it and a
+    # `git add` would publish it. A path outside the repository needs no
+    # check at all: version control cannot reach it, whatever it is, and that
+    # is what keeps a run on another disk expressible (D18).
+    parser.add_argument(
+        "--runs",
+        type=Path,
+        default=RUNS_ROOT,
+        help=f"the directory runs live under (default {RUNS_ROOT.name}/)",
+    )
+
+
+def required_flow(parser: argparse.ArgumentParser) -> None:
+    """Add `--flow` to `parser`, required and repeatable."""
+    # Required, and repeatable, on every stage verb on a flow. Such a stage cannot
+    # act without knowing which flow asked, because the flow is what supplies what
+    # it reads: its schema, its graph and its dials. "Every tracked flow" is not a
+    # selection, it is the absence of one -- and at the last verb it spends money.
+    parser.add_argument(
+        "--flow",
+        action="append",
+        dest="flows",
+        required=True,
+        metavar="FLOW",
+        help="a flow to act on; repeatable, and required",
+    )
+
+
+def progress_flag(parser: argparse.ArgumentParser) -> None:
+    """Add `--progress` to `parser`: a JSON line per item, the prose kept apart."""
+    parser.add_argument(
+        "--progress",
+        choices=["json"],
+        default=None,
+        help="print a JSON line per item's start and end; prose goes to stderr",
+    )
 
 
 @dataclass(frozen=True)

@@ -758,6 +758,7 @@ def _approved_run(wired: Wiring, tmp_path: Path, name: str) -> str:
 
 
 @pytest.mark.spec("image-generation:assembly:bad-sheet-fails-before-the-session")
+@pytest.mark.spec("image-generation:idempotence:existing-seed-is-not-rerendered")
 def test_every_prompt_is_assembled_before_the_first_render_is_submitted(
     wired: Wiring, tmp_path: Path
 ) -> None:
@@ -785,6 +786,14 @@ def test_every_prompt_is_assembled_before_the_first_render_is_submitted(
     rendered = [i for i, line in enumerate(lines) if "rendered" in line]
     assert len(assembled) == 3
     assert max(assembled) < min(rendered)
+    assert len(seen) == 3
+
+    # The same line again finds every render in place: each flow says so, and no
+    # photograph is uploaded.
+    assert "already rendered" not in wired.out.getvalue()
+    wired.out.truncate(0), wired.out.seek(0)
+    assert dispatch(_args("generate", *ids), wired) == 0
+    assert wired.out.getvalue().count("already rendered") == len(ids)
     assert len(seen) == 3
 
 

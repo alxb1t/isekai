@@ -50,7 +50,7 @@ independent, and neither reads the other's output
 | `edit.py` | `interface/render.py`, `interface/ui/app.py`, `interface/verbs/drafts.py`, `interface/verbs/edits.py` | — |
 | `proposing.py` | `interface/wiring.py` | — |
 | `tattoos.py` | `interface/ui/app.py` | — |
-| `generate.py` | `interface/cli.py`, `interface/compare_view.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/verbs/drafts.py` | — |
+| `generate.py` | `interface/compare_view.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/verbs/drafts.py`, `interface/verbs/generate.py` | — |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are

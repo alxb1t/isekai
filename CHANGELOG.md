@@ -15,6 +15,8 @@ its new digest.
 - The verbs `import`, `compare`, `ui`, `draft`, `discard`, `ink`, `edit` and `render` each become a `Verb` row of
   their family's module in `isekai/interface/verbs/`, which `cli.py` reads through `_MOVED`; no verb, flag or line
   changes (0145 D2, D3, D4).
+- The verbs `prepare` and `generate` become `Verb` rows of `isekai/interface/verbs/`, and `cli.py` leaves the
+  file-size ratchet; no verb, flag or line changes (0145 D2, D3, D4, D7).
 
 ## [0.87.0] - 2026-11-14
 
