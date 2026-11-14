@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { type Place, inkView, photoUrl, tattooNamed } from '../api'
-import { thumbCrop } from '../tattoos'
+import { inkUrl, thumbCrop } from '../tattoos'
 import type { Outline, Tattoo } from '../types'
 
 /* A cut's card image: the photograph cropped to the outline's box, and once the outline is
@@ -25,19 +25,25 @@ const style = computed(() =>
     : null,
 )
 
+/* Leaving the picker ends the ink request, and an answer that still lands makes no URL. */
+const asking = new AbortController()
+let gone = false
+
 onMounted(async () => {
   try {
     const held = await tattooNamed(props.place.digest, props.tattoo.name)
     outline.value = held.outline
     if (!held.outline.closed) return
-    const made = await inkView(props.place.collection, props.tattoo.name, held.outline, props.place)
-    ink.value = URL.createObjectURL(made.image)
+    const made = await inkView(props.place.collection, props.tattoo.name, held.outline, props.place, asking.signal)
+    ink.value = inkUrl(made.image, () => gone)
   } catch {
     // The card keeps what it shows: the crop, or the whole photograph.
   }
 })
 
 onUnmounted(() => {
+  gone = true
+  asking.abort()
   if (ink.value) URL.revokeObjectURL(ink.value)
 })
 </script>

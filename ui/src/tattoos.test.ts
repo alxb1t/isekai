@@ -1,4 +1,4 @@
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
 import { spec } from './test/spec'
 import {
   card,
@@ -9,6 +9,7 @@ import {
   formLine,
   greyOf,
   inkSize,
+  inkUrl,
   refusalField,
   scaleOf,
   tattoosPath,
@@ -129,6 +130,12 @@ spec('ui:picker:a-cuts-card-shows-its-own-crop', () => {
   expect(thumbCrop([], [1100, 600])).toBeNull()
   expect(thumbCrop([[5, 5]], [1100, 600])).toBeNull()
   expect(thumbCrop([[5, 5], [9, 5]], [1100, 600])).toBeNull()
+  // A cut's ink that arrives after its card is gone makes no object URL, which nothing would release.
+  const made = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:ink')
+  expect(inkUrl(new Blob(['ink']), () => true)).toBeNull()
+  expect(made).not.toHaveBeenCalled()
+  expect(inkUrl(new Blob(['ink']), () => false)).toBe('blob:ink')
+  made.mockRestore()
 })
 
 spec('ui:picker:each-form-says-what-it-takes', () => {

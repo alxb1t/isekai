@@ -133,7 +133,7 @@ function flush(): void {
   void placing.track(saving)
 }
 
-/* Go forward once the outline as it stands is saved: the next stage reads it from the server. */
+/* Go forward once the outline as it stands is saved: the placement screen holds the save's answer. */
 async function goForward(step: Step): Promise<void> {
   if (saveTimer !== undefined) flush()
   await saving

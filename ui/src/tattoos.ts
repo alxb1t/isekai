@@ -97,6 +97,12 @@ export function thumbCrop(
   }
 }
 
+/** Return an object URL for `image`, or null once `gone()` says the card that wanted it is gone:
+    nothing would release a URL made then. */
+export function inkUrl(image: Blob, gone: () => boolean): string | null {
+  return gone() ? null : URL.createObjectURL(image)
+}
+
 /** Return `tattoo` as the save of `outline` leaves it: outlined once the outline is closed.
     e.g. a tattoo not outlined, saved with a closed outline -> outlined */
 export function withOutline<T extends Tattoo>(tattoo: T, outline: Pick<Outline, 'closed'>): T {
