@@ -10,6 +10,21 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.1] - 2026-11-14
+
+Gate: local 1m8s · CI not read under mf-ship · 0.87.0: local 3m57s · CI not read under mf-ship
+
+- The verbs' argument types, reporter and run helpers move out of `isekai/interface/cli.py` into the new package
+  `isekai/interface/verbs/`; no verb, flag or line changes (0145 D1, D4).
+- The verbs `import`, `compare`, `ui`, `draft`, `discard`, `ink`, `edit` and `render` each become a `Verb` row of
+  their family's module in `isekai/interface/verbs/`, which `cli.py` reads; no verb, flag or line
+  changes (0145 D2, D3, D4).
+- The verbs `prepare` and `generate` become `Verb` rows of `isekai/interface/verbs/`, and `cli.py` leaves the
+  file-size ratchet; no verb, flag or line changes (0145 D2, D3, D4, D7).
+- Every verb is a `Verb` row with its summary, `cli.py` builds the parser and dispatches from `ROWS`, and the
+  `build_parser` ratchet row goes; D58 says a verb is declared once, and the documents it made false are amended
+  (0145 D2, D6, D7, D8).
+
 ## [0.87.0] - 2026-11-14
 
 Gate: local 3m57s · CI not read under mf-ship · 0.86.17: local 1m13s · CI not read under mf-ship

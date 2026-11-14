@@ -40,10 +40,16 @@ client of the first -- it calls `wiring` and the stage functions directly,
 exactly as this module does, so neither surface is privileged and neither goes
 through the other.
 
+**A verb is a row of `isekai/interface/verbs/`, declared once**: its name, summary,
+arguments and run sit in the module of its family (D58). This file holds `ROWS`,
+builds the parser from their arguments and dispatches to their runs. It keeps the
+flow-stage verbs' per-item work, `assign`, `migrate`, and the runs of `render`
+and `prepare`, which need what only this file holds.
+
 **`isekai/__main__.py` is a shim over this file.** `runpy` pins where the entry
 point's *path* is; it does not pin where the parser lives, and a package's largest
 interface surface has no business being the one module outside the filing
-scheme. Everything the verb line does is here.
+scheme.
 
 Stdlib only, and held to that by a subprocess guard that imports the entry point
 with site-packages off the path.
@@ -51,205 +57,77 @@ with site-packages off the path.
 
 import argparse
 import dataclasses
-import json
 import shlex
 import sys
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
-from typing import NoReturn, TextIO, TypeVar, cast
+from typing import NoReturn, TypeVar
 
-from isekai.boundary.comfy import TransportFailure, read_runtime
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.caption_config import load_caption_config
-from isekai.foundation.edit import load_edit, tracked_edits
 from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow, tracked_flows
 from isekai.foundation.migrate import migrate
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
-    EDIT_STEM,
     FRAME_NAME,
     PHOTOGRAPH_VERBS,
     RUNS_ROOT,
     Run,
     across,
     assign,
-    edit_at,
     find_run,
-    open_run,
-    rendered_at,
 )
-from isekai.interface.compare_view import write_page
 from isekai.interface.drafting import (
     approve_across,
-    draft_from_image,
-    refuse_image_drafts,
 )
-from isekai.interface.render import pending_edits, run_session
+from isekai.interface.render import run_session
 from isekai.interface.run_view import report
-from isekai.interface.wiring import Wiring, trackable, wiring
+from isekai.interface.verbs import (
+    APPROVE_ROW,
+    ASSIGN_ROW,
+    CAPTION_ROW,
+    COMPARE_ROW,
+    DISCARD_ROW,
+    DRAFT_ROW,
+    EDIT_ROW,
+    GENERATE_ROW,
+    IMPORT_ROW,
+    INK_ROW,
+    PREPARE_ROW,
+    RENDER_ROW,
+    REVIEW_ROW,
+    SHEET_ROW,
+    SHOW_ROW,
+    TAG_ROW,
+    UI_ROW,
+    Reporter,
+    Verb,
+    generate_batch,
+    once,
+    require_tracked,
+    run_for,
+    run_or_photo,
+    run_prepare,
+    say,
+)
+from isekai.interface.wiring import Wiring, wiring
 from isekai.pipeline.caption import caption
-from isekai.pipeline.edit import OVERRIDES, discard_edit, image_of
-from isekai.pipeline.edit import check as check_edit
-from isekai.pipeline.edit import request as request_edit
-from isekai.pipeline.edit import sample as sample_edit
-from isekai.pipeline.generate import (
-    STAGE_RENDER,
-    Render,
-    discard_render,
-    prepare,
-    render,
-    source_seeds,
-)
-from isekai.pipeline.importing import (
-    SOURCES,
-    Staged,
-    cancel,
-    commit,
-    read,
-    stage,
-    upload_limit,
-)
 from isekai.pipeline.review import (
-    Revision,
     approve,
     discard,
     review,
-    withdraw,
 )
 from isekai.pipeline.review import cancel as cancel_approval
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
 from isekai.shared.field_map import FieldMap
-from isekai.shared.ink import cut_ink, load_ink_config
 from isekai.shared.vocabulary import Vocabulary
 
-# One line of prose per verb, used for both the subcommand list and its own help,
-# so the two cannot disagree about what a stage does.
 T = TypeVar("T")
-
-VERBS: tuple[tuple[str, str], ...] = (
-    ("import", "clean photographs and add them to a collection's sources/"),
-    ("assign", "give each source a flow's empty directory, or remove an empty one"),
-    ("caption", "read a photograph into prose"),
-    ("tag", "score a photograph with WD14, then list the JoyCaption tags"),
-    ("sheet", "fill a sheet of canonical tags from the WD14 tag list"),
-    (
-        "prepare",
-        "tag, caption, then sheet each photograph in turn, for the cells named",
-    ),
-    ("review", "copy a sheet somewhere a human may edit it"),
-    ("approve", "validate an edited sheet and mark it approved"),
-    ("draft", "copy the approval a rendered image came from into a flow's draft"),
-    ("discard", "delete a render: its image, its record and its thumbnails"),
-    ("generate", "assemble the prompts for a run, then render them"),
-    ("render", "run a whole render session on a rented GPU, then tear it down"),
-    ("show", "print a run's artifacts, versions, producers and failures"),
-    ("ui", "serve the app over the library of collections"),
-    ("compare", "write a page of each run's photograph beside its renders"),
-    ("migrate", "copy each run's per-flow description into photo/"),
-    ("ink", "cut a tattoo photograph or image into a layer to multiply over a render"),
-    ("edit", "request an edit of a render from a composite of it, free and local"),
-)
 
 # What each of the photograph's verbs writes, for its refusal of `--flow`.
 _WRITES: Mapping[str, str] = {"caption": "prose", "tag": "tags"}
-
-# The review surface's loopback port. Declared here rather than in the package it
-# starts, because the parser is the one authority for what a flag defaults to --
-# and importing the surface at module scope is exactly what the `-S` guard
-# forbids this file from doing.
-DEFAULT_PORT = 8517
-
-
-def _seed(value: str) -> int:
-    """Parse a seed: an unsigned 64-bit integer, refused at parse time if it is not."""
-    try:
-        seed = int(value)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
-    if seed not in SEED_RANGE:
-        raise argparse.ArgumentTypeError(
-            f"{seed} is outside the sampler's unsigned 64-bit range"
-        )
-    return seed
-
-
-def _positive(below_one: str) -> Callable[[str], int]:
-    """Return a parser of a positive integer, refusing one below 1 with `below_one`."""
-
-    def parse(value: str) -> int:
-        try:
-            whole = int(value)
-        except ValueError:
-            raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
-        if whole < 1:
-            raise argparse.ArgumentTypeError(below_one)
-        return whole
-
-    return parse
-
-
-# A render count: every one of them costs money.
-_count = _positive("a render count below 1 renders nothing")
-_seconds = _positive("a session limit below 1s ends at once")
-
-
-def _session_id(value: str) -> str:
-    """Return `value` as a session's id, refusing one that is not a start in UTC.
-
-    The id names a file, so nothing but the one shape reaches a path.
-    e.g. "20261024T091200Z" -> "20261024T091200Z"
-    """
-    if SESSION_ID.fullmatch(value) is None:
-        raise argparse.ArgumentTypeError(
-            f"{value!r} is not a start in UTC, e.g. 20261024T091200Z"
-        )
-    return value
-
-
-def _depth(value: str) -> float:
-    """Parse a depth: a number in the ink config's range, refused at parse time.
-
-    e.g. "1.6" -> 1.6
-    """
-    config = load_ink_config()
-    try:
-        depth = float(value)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"{value!r} is not a number") from None
-    if not config.depth_min <= depth <= config.depth_max:
-        raise argparse.ArgumentTypeError(
-            f"{value} is outside {config.depth_min} to {config.depth_max}; "
-            "give a depth in that range"
-        )
-    return depth
-
-
-class _Targets(argparse.Action):
-    """Split `render`'s positionals into its runs roots and its requests.
-
-    A directory is a runs root; any other word holding `=` is a request, and the
-    rest are runs roots the session refuses by name.
-    e.g. [".data/b1/runs", "summon-anime-wai=1"] -> runs [b1/runs], requests [...]
-    """
-
-    def __call__(
-        self,
-        parser: argparse.ArgumentParser,
-        namespace: argparse.Namespace,
-        values: object,
-        option_string: str | None = None,
-    ) -> None:
-        """Set `runs` and `requests` on `namespace` from `values`, in order."""
-        words = [str(value) for value in cast("list[object]", values)]
-        asked = [w for w in words if "=" in w and not Path(w).is_dir()]
-        namespace.runs = [Path(w) for w in words if w not in asked]
-        namespace.requests = asked
-        if not namespace.runs:
-            parser.error("name at least one collection's runs/")
 
 
 class _Verb(argparse.ArgumentParser):
@@ -277,181 +155,14 @@ def build_parser() -> argparse.ArgumentParser:
         for name, summary in VERBS
     }
 
-    # `compare` takes a collection directory instead: its runs root is the collection's
-    # `runs/`, so a second way to name it could only disagree. `render` takes
-    # each collection's runs root, and every run under each. `ui` serves the
-    # library, `draft` takes images, whose paths name their runs, `migrate`
-    # walks every runs root unless one is named, and `prepare` takes cells.
-    for name in (
-        name
-        for name in made
-        if name
-        not in (
-            "compare",
-            "discard",
-            "draft",
-            "edit",
-            "import",
-            "ink",
-            "migrate",
-            "prepare",
-            "render",
-            "ui",
-        )
-    ):
-        made[name].add_argument(
-            "photos",
-            nargs="*",
-            help="photographs, or run identifiers for a run that already exists",
-        )
-        # The root every run lives under. It defaults to `.data/runs`, and it is a
-        # flag because a version's acceptance run wants its own directory rather
-        # than one pile every version adds to. A run holds a copy of the
-        # photograph, so a run root is a directory of personal photographs by
-        # construction -- which is why `wiring` refuses one that resolves INSIDE
-        # this repository and outside `.data/`, where nothing ignores it and a
-        # `git add` would publish it. A path outside the repository needs no
-        # check at all: version control cannot reach it, whatever it is, and that
-        # is what keeps a run on another disk expressible (D18).
-        made[name].add_argument(
-            "--runs",
-            type=Path,
-            default=RUNS_ROOT,
-            help=f"the directory runs live under (default {RUNS_ROOT.name}/)",
-        )
-    # Required, and repeatable, on every stage verb on a flow. Such a stage cannot
-    # act without knowing which flow asked, because the flow is what supplies what
-    # it reads: its schema, its graph and its dials. "Every tracked flow" is not a
-    # selection, it is the absence of one -- and at the last verb it spends money.
-    # `tag` and `caption` describe the photograph, which every flow reads, so they
-    # take no flow; the flag stays hidden so `dispatch` refuses it naming the
-    # command without it (D17).
-    for name in ("assign", "sheet", "review", "approve", "generate"):
-        made[name].add_argument(
-            "--flow",
-            action="append",
-            dest="flows",
-            required=True,
-            metavar="FLOW",
-            help="a flow to act on; repeatable, and required",
-        )
-    for name in PHOTOGRAPH_VERBS:
-        made[name].add_argument(
-            "--flow",
-            action="append",
-            dest="flows",
-            default=None,
-            help=argparse.SUPPRESS,
-        )
-    made["assign"].add_argument(
-        "--remove",
-        action="store_true",
-        help="delete each flow's directory instead, refusing one that holds work",
-    )
-    # A verb that reads another flow reads only the one the operator names.
-    made["approve"].add_argument(
-        "--from",
-        dest="source",
-        default=None,
-        metavar="FLOW",
-        help="copy this flow's latest approval under each --flow instead of a draft",
-    )
-    made["approve"].add_argument(
-        "--cancel",
-        action="store_true",
-        help="turn each flow's newest approval back into its draft instead, "
-        "deleting a copy and refusing one anything was made from",
-    )
-    # A cell names its flow, so `prepare` takes no `--flow` and no photograph.
-    made["prepare"].add_argument(
-        "cells",
-        nargs="+",
-        metavar="<run-id>/<flow>",
-        help="cells to prepare, each photograph in the order its first cell is named",
-    )
-    made["prepare"].add_argument(
-        "--runs",
-        type=Path,
-        default=RUNS_ROOT,
-        help=f"the directory runs live under (default {RUNS_ROOT.name}/)",
-    )
-    made["prepare"].set_defaults(photos=[])
-    # The job runner's channel: a line per item it can parse, the prose kept apart.
-    for name in ("caption", "tag", "sheet", "prepare", "generate"):
-        made[name].add_argument(
-            "--progress",
-            choices=["json"],
-            default=None,
-            help="print a JSON line per item's start and end; prose goes to stderr",
-        )
-    made["render"].add_argument(
-        "--progress",
-        choices=["json"],
-        default=None,
-        help="print a JSON line per step of the session; prose goes to stderr",
-    )
-    for name in ("caption", "tag", "sheet", "review"):
-        made[name].add_argument(
-            "--new-version",
-            action="store_true",
-            help="write the next numbered artifact instead of doing nothing",
-        )
-    made["review"].add_argument(
-        "--discard",
-        action="store_true",
-        help="delete each flow's waiting draft instead, refusing an approval",
-    )
+    for row in ROWS:
+        row.arguments(made[row.name])
+    return parser
 
-    # One target: an image's path names everything a draft needs but that.
-    made["draft"].add_argument(
-        "--flow",
-        dest="target",
-        required=True,
-        metavar="FLOW",
-        help="the flow to draft; an image's own flow is a revision",
-    )
-    made["draft"].add_argument(
-        "images",
-        nargs="+",
-        type=Path,
-        help="rendered images, each <run>/<flow>/outputs/<NNN>/<seed>.png",
-    )
-    made["draft"].set_defaults(photos=[], runs=RUNS_ROOT)
-    made["discard"].add_argument(
-        "image", type=Path, help="the render, <run>/<flow>/outputs/<NNN>/<seed>.png"
-    )
-    made["discard"].set_defaults(photos=[], runs=RUNS_ROOT)
 
-    # No flow, input or runs root: the app serves every collection of the library
-    # `ISEKAI_LIBRARY` names, and its page selects one (D1).
-    made["ui"].add_argument(
-        "--port",
-        type=int,
-        default=DEFAULT_PORT,
-        help=f"the loopback port to serve on (default {DEFAULT_PORT})",
-    )
-    made["ui"].set_defaults(photos=[], runs=RUNS_ROOT)
-
-    made["import"].add_argument(
-        "--collection",
-        type=Path,
-        required=True,
-        help="the collection directory; made when absent, else files join its sources/",
-    )
-    made["import"].add_argument(
-        "files", nargs="+", type=Path, help="the photographs to clean and add"
-    )
-    made["import"].set_defaults(photos=[], runs=RUNS_ROOT)
-
-    made["compare"].add_argument(
-        "collection",
-        type=Path,
-        help="the collection directory, holding runs/; the page is written there",
-    )
-    # Every namespace keeps one shape; `compare` reads its runs from the collection.
-    made["compare"].set_defaults(photos=[], runs=RUNS_ROOT)
-
-    made["migrate"].add_argument(
+def _migrate_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add `migrate`'s arguments to `parser`: it takes no photograph."""
+    parser.add_argument(
         "--runs",
         type=Path,
         default=None,
@@ -460,201 +171,14 @@ def build_parser() -> argparse.ArgumentParser:
             "collection's runs/ in the library"
         ),
     )
-    made["migrate"].set_defaults(photos=[])
-
-    made["render"].add_argument(
-        "targets",
-        nargs="+",
-        action=_Targets,
-        metavar="<runs>… [<flow>=<count|source> …]",
-        help=(
-            "each collection's runs/, rendered in one session in the order named; "
-            "then, beside one runs/ alone, a flow and how many seeds it draws, or "
-            "the flow whose seeds it takes. With no request, every approval short "
-            "of its count renders what it lacks"
-        ),
-    )
-    made["render"].add_argument(
-        "--limit",
-        type=_seconds,
-        default=None,
-        metavar="SECONDS",
-        help=(
-            "end the session after this many seconds, at most gpunit.toml's "
-            "ceiling; without it, the limit is estimated from the work"
-        ),
-    )
-    made["render"].add_argument(
-        "--session",
-        type=_session_id,
-        default=None,
-        metavar="ID",
-        help=(
-            "name the session's record <collection>/sessions/<ID>.json; without it, "
-            "the session's start in UTC names it"
-        ),
-    )
-    made["render"].add_argument(
-        "--without",
-        action="append",
-        type=Path,
-        default=None,
-        metavar="<runs>/<run-id>/<flow>",
-        help="take that run's flow out of what renders; repeatable, beside no request",
-    )
-    made["render"].set_defaults(photos=[])
-
-    made["ink"].add_argument(
-        "image", type=Path, help="the tattoo's photograph or image"
-    )
-    made["ink"].add_argument("out", type=Path, help="the PNG layer to write")
-    made["ink"].add_argument(
-        "--outline",
-        type=Path,
-        default=None,
-        metavar="MASK.png",
-        help="white keeps the ink; the layer's alpha, for a photograph",
-    )
-    made["ink"].add_argument(
-        "--neutral",
-        action=argparse.BooleanOptionalAction,
-        default=None,
-        help="the ink as grey (default with an outline), or in colour",
-    )
-    made["ink"].add_argument(
-        "--depth",
-        type=_depth,
-        default=None,
-        help="the power the layer's Multiply factor is raised to; a fill darkens "
-        "(default 1.6 with an outline, 1.0 without)",
-    )
-    made["ink"].set_defaults(photos=[], runs=RUNS_ROOT)
-
-    # An edit's image is written beside its source, so a request's render path names
-    # the run; `--pending` names cells, and the runs root they live under.
-    made["edit"].add_argument(
-        "edit", nargs="?", help="the edit to request, e.g. tattoo-wai"
-    )
-    made["edit"].add_argument(
-        "render",
-        nargs="?",
-        type=Path,
-        help="the render, <run>/<flow>/outputs/<NNN>/<seed>.png, or an edit's "
-        "image <seed>.edit-<k>.png to chain from",
-    )
-    form = made["edit"].add_mutually_exclusive_group(required=True)
-    form.add_argument(
-        "--composite",
-        type=Path,
-        metavar="COMPOSITE.png",
-        help="the render with the tattoo multiplied on, at the render's size",
-    )
-    form.add_argument(
-        "--pending",
-        nargs="+",
-        metavar="<run-id>/<flow>",
-        help="sample every pending edit of these cells; with no --server, only "
-        "derive and check them",
-    )
-    made["edit"].add_argument(
-        "--runs",
-        type=Path,
-        default=RUNS_ROOT,
-        help=f"the directory --pending's runs live under (default {RUNS_ROOT.name}/)",
-    )
-    made["edit"].add_argument(
-        "--server",
-        default=None,
-        help="the ComfyUI endpoint --pending samples on, reached through the tunnel",
-    )
-    made["edit"].add_argument(
-        "--progress",
-        choices=["json"],
-        default=None,
-        help="print a JSON line per sampled edit; prose goes to stderr",
-    )
-    for dial, meaning in (
-        ("denoise", "how far the pass repaints under the mask"),
-        ("strength", "how firmly the control holds the ink's lines"),
-        ("lines", "how much of the ink is multiplied back after the pass"),
-    ):
-        made["edit"].add_argument(
-            f"--{dial}",
-            type=float,
-            default=None,
-            help=f"{meaning}; for this edit only (default: the edit's own)",
-        )
-    made["edit"].add_argument(
-        "--seed",
-        type=_seed,
-        default=None,
-        help="repeat this sampling seed (default: drawn)",
-    )
-    made["edit"].set_defaults(photos=[])
-
-    # Mutually exclusive at parse time, so asking for both is refused before any
-    # work begins rather than discovered on a rented machine. One verb explores
-    # and the other reproduces, and combining them has no meaning (D13).
-    render = made["generate"].add_mutually_exclusive_group()
-    render.add_argument(
-        "--count",
-        type=_count,
-        default=None,
-        help=(
-            "how many renders per photograph per flow, seeds drawn (default: the "
-            "approval's count, else 1)"
-        ),
-    )
-    render.add_argument(
-        "--seed",
-        type=_seed,
-        action="append",
-        dest="seeds",
-        default=None,
-        help="render exactly this seed; repeatable, and not combinable with --count",
-    )
-    render.add_argument(
-        "--seeds-from",
-        dest="seeds_from",
-        default=None,
-        metavar="FLOW",
-        help="render this flow's latest seeds for each run; not with the others",
-    )
-    # No default, deliberately. Assembly is free and rendering is not, so the
-    # invocation that costs money is the one that names where to spend it --
-    # `generate` without `--server` assembles every prompt and stops, which is
-    # also how a malformed sheet is found before anything is rented.
-    made["generate"].add_argument(
-        "--server",
-        default=None,
-        help=(
-            "the ComfyUI endpoint, reached through the tunnel; omit it to "
-            "assemble every prompt and stop without rendering"
-        ),
-    )
-    return parser
-
-
-def _ui(args: argparse.Namespace, wired: Wiring) -> int:
-    """Serve the app over the library, blocking until the operator stops it.
-
-    **The import is inside this function, and it is load-bearing.**
-    `tests/test_pipeline_cli.py` imports the entry point with `-S`, site-packages
-    off the path, and walks this module's module-level imports: nothing there may
-    need a wheel, and `isekai.interface.ui` reaches FastAPI. A top-level import
-    here would put a web framework on `python -m isekai`'s import graph and turn
-    that guard red for every verb, including each one that never serves anything.
-    """
-    from isekai.interface.ui import serve
-
-    return serve(wired, port=int(args.port))
+    parser.set_defaults(photos=[])
 
 
 def _migrate(args: argparse.Namespace, wired: Wiring) -> int:
     """Copy each run's per-flow description into `photo/`, printing a line per run.
 
     `--runs` walks that root alone; without it, `RUNS_ROOT` when it is a directory,
-    then each collection's `runs/` (D40). The library is imported here for `_ui`'s
+    then each collection's `runs/` (D40). The library is imported here for `run_ui`'s
     reason: it is off `python -m isekai`'s import graph.
     """
     if args.runs is not None:
@@ -676,356 +200,10 @@ def _migrate(args: argparse.Namespace, wired: Wiring) -> int:
     return 1 if refused else 0
 
 
-def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
-    """Take each photograph through `tag`, `caption`, then its cells' sheets, in turn.
-
-    Each step is the work `_per_item` gives its verb, so its lines and refusals are
-    that verb's; the one `tag` work opens the tagger once. A refusal costs only its
-    own step (D1), and an unassigned cell's sheet refuses rather than making its
-    directory again.
-    e.g. r1/f r2/f r2/g -> r1: tag, caption, f; then r2: tag, caption, f, g
-    """
-    cells = _cells(args.cells, wired)
-    vocabulary = _once(wired.vocabulary)
-    mapped = _once(lambda: wired.field_map(vocabulary()))
-    shared = dataclasses.replace(
-        wired, vocabulary=vocabulary, field_map=lambda _: mapped()
-    )
-    flows = {
-        name: load_flow(name, wired.flows_dir)
-        for name in dict.fromkeys(flow for _, flow in cells)
-    }
-    collected: list[str] = []
-    tag = _per_item("tag", args, shared, {}, collected)
-    describe = _per_item("caption", args, shared, {}, collected)
-    sheets = {
-        name: _per_item("sheet", args, shared, {name: flow}, collected)
-        for name, flow in flows.items()
-    }
-    reporter = _Reporter(wired.out, wired.err, args.progress == "json")
-    runs = shlex.quote(str(wired.runs_root))
-
-    def sheet_of(flow: str) -> Callable[[str], None]:
-        def sheet_cell(run_id: str) -> None:
-            if not (wired.runs_root / run_id / flow).is_dir():
-                unassigned = (
-                    f"{run_id}/{flow} is not assigned, so prepare makes no sheet for "
-                    f"it; run `python -m isekai assign --flow {flow} --runs {runs} "
-                    f"{run_id}` first"
-                )
-                reporter.item(run_id, flow, "sheet", "refused", unassigned)
-                raise Refusal(unassigned)
-            sheets[flow](run_id)
-
-        return sheet_cell
-
-    by_run: dict[str, list[str]] = {}
-    for run_id, flow in cells:
-        by_run.setdefault(run_id, []).append(flow)
-    for run_id, named in by_run.items():
-        steps = [
-            *([tag] if any(flows[flow].tagger for flow in named) else []),
-            describe,
-            *(sheet_of(flow) for flow in named),
-        ]
-        collected.extend(across(steps, lambda step: step(run_id)))
-    for message in collected:
-        print(f"refused: {message}", file=wired.err)
-    return 1 if collected else 0
-
-
-def _cells(named: Sequence[str], wired: Wiring) -> list[tuple[str, str]]:
-    """Return each cell's run id and flow, refusing a bad cell before any run opens.
-
-    A cell is split at its last `/`, and naming one twice names it once.
-    e.g. ["r1/summon-anime-wai"] -> [("r1", "summon-anime-wai")]
-    """
-    cells: dict[str, tuple[str, str]] = {}
-    for cell in named:
-        run_id, _, flow = cell.rpartition("/")
-        if not run_id or not flow:
-            raise Refusal(f"{cell}: not a cell; name one as <run-id>/<flow>")
-        cells[cell] = (run_id, flow)
-    _require_tracked(list(dict.fromkeys(flow for _, flow in cells.values())), wired)
-    runs = shlex.quote(str(wired.runs_root))
-    for cell, (run_id, flow) in cells.items():
-        if not (wired.runs_root / run_id / FRAME_NAME).is_file():
-            raise Refusal(
-                f"{cell}: no run {run_id} under {wired.runs_root}; run "
-                f"`python -m isekai assign --flow {flow} --runs {runs} <photo>` first"
-            )
-    return list(cells.values())
-
-
-def _import(args: argparse.Namespace, wired: Wiring) -> int:
-    """Read each file into the collection's staging, commit what is clean, and report.
-
-    No file that is not cleaned is imported: that choice is the page's, one file
-    at a time.
-    """
-    collection = Path(args.collection).resolve()
-    if trackable(collection.parent):
-        raise Refusal(
-            f"--collection {collection} is inside this repository and outside its "
-            "ignored .data/ root; a collection holds copies of photographs, so it "
-            "would be one `git add` from being published -- point --collection "
-            "under .data/ or at a directory outside the repository"
-        )
-    staging = stage(collection.parent)
-    limit = upload_limit()
-    staged: list[Staged] = []
-    try:
-        refused = across(
-            list(args.files), lambda file: staged.append(read(file, staging, limit))
-        )
-        for item in staged:
-            print(_staged_line(item), file=wired.out)
-        if any(item.state in ("ready", "converted") for item in staged):
-            add = (collection / SOURCES).is_dir()
-            done = commit(staging, collection.parent, collection.name, add=add)
-            for name in done.skipped:
-                print(f"{name}: skipped, a source holds its bytes", file=wired.out)
-            if done.written:
-                print(
-                    f"{collection.name}: imported {', '.join(done.written)}",
-                    file=wired.out,
-                )
-    except Refusal as uncommitted:
-        refused.append(str(uncommitted))
-    finally:
-        cancel(staging)
-    for message in refused:
-        print(f"refused: {message}", file=wired.err)
-    return 1 if refused else 0
-
-
-def _staged_line(item: Staged) -> str:
-    """Return one file's result. e.g. "a.jpg: not cleaned, carries XMP; left out"."""
-    if item.state == "not cleaned":
-        return f"{item.name}: not cleaned, carries {', '.join(item.carries)}; left out"
-    if item.state == "skipped":
-        return f"{item.name}: skipped, its bytes are already read"
-    return f"{item.name}: {item.state}"
-
-
-def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
-    """Write `target`'s draft from every image, or, when any is refused, none."""
-    _require_tracked([target], wired)
-    flow = load_flow(target, wired.flows_dir)
-    vocabulary = cache(wired.vocabulary)
-    field_map = cache(lambda: wired.field_map(vocabulary()))
-    refused: list[str] = []
-    located: list[tuple[Path, Revision]] = []
-    for image in images:
-        try:
-            located.append((image, rendered_at(image)))
-        except Refusal as unrendered:
-            refused.append(f"{image}: {unrendered}")
-    answers = refuse_image_drafts(flow, located, vocabulary, field_map)
-    refused += [
-        f"{image}: {answer}"
-        for (image, _), answer in zip(located, answers, strict=True)
-        if answer is not None
-    ]
-    if not refused:
-        for _, one in located:
-            draft = draft_from_image(flow, one, vocabulary, field_map)
-            print(f"draft wrote {draft.relative_to(draft.parents[3])}", file=wired.out)
-    for message in refused:
-        print(f"refused: {message}", file=wired.err)
-    return 1 if refused else 0
-
-
-def _discard(image: Path, wired: Wiring) -> int:
-    """Delete one render or edit, printing each path deleted.
-
-    A path that is an edit's image deletes that edit and every edit made from it,
-    and nothing else. Any other path is a render's: it goes with its edits and its
-    thumbnails. Refused, deleting nothing, while a render session holds the
-    collection, as the app's delete is. The thumbnails go while the image still
-    names them. A render that was its approval's last takes that approval with
-    it, through `withdraw`; the run's files print before the thumbnails. The
-    library is imported here for `_ui`'s reason: it is off `python -m isekai`'s
-    import graph.
-    """
-    edited = EDIT_STEM.match(image.stem) is not None
-    try:
-        run, flow, version = (edit_at if edited else rendered_at)(image)[:3]
-    except Refusal as unnamed:
-        print(
-            f"refused: {image}: {unnamed}; a render's path is "
-            "<run>/<flow>/outputs/<NNN>/<seed>.png and an edit's is "
-            "<run>/<flow>/outputs/<NNN>/<seed>.edit-<k>.png",
-            file=wired.err,
-        )
-        return 1
-    from isekai.interface.ui import drop_thumbnails, render_running
-
-    if render_running(run):
-        print(
-            f"refused: {image}: A render session is running. Wait for it to end, "
-            "then discard the render again.",
-            file=wired.err,
-        )
-        return 1
-    if edited:
-        deleted = discard_edit(image)
-        for path in deleted:
-            print(
-                f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out
-            )
-        return 0
-    thumbnails = drop_thumbnails(run, image)
-    deleted = [*discard_render(image), *withdraw(run, flow, version)]
-    for path in deleted:
-        print(f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out)
-    for path in thumbnails:
-        print(
-            f"discard deleted {path.relative_to(run.path.parents[2])}", file=wired.out
-        )
-    return 0
-
-
-def _ink(args: argparse.Namespace, wired: Wiring) -> int:
-    """Write the ink layer of an image, printing its path."""
-    cut_ink(args.image, args.out, args.outline, args.neutral, args.depth)
-    print(f"ink wrote {args.out}", file=wired.out)
-    return 0
-
-
-def _edit(args: argparse.Namespace, wired: Wiring) -> int:
-    """Request an edit of a render, printing the files written and how to run it.
-
-    Free and local: no endpoint is used and no session opens. An edit this build
-    does not track is refused, naming the ones it does. With `--pending` it runs
-    the pending edits of cells instead, `_pending`'s form.
-    """
-    if args.pending is not None:
-        if args.edit is not None or args.render is not None:
-            raise Refusal(
-                "--pending takes cells alone; drop the edit and the render from the "
-                "command, or drop --pending to request an edit"
-            )
-        return _pending(args, wired)
-    if args.edit is None or args.render is None:
-        raise Refusal(
-            "a request names its edit and its render: "
-            "`python -m isekai edit <edit> <render> --composite <png>`"
-        )
-    tracked = tracked_edits()
-    if args.edit not in tracked:
-        raise Refusal(
-            f"{args.edit}: not an edit this build tracks; the edits it carries are "
-            f"{', '.join(tracked) or '(none)'}"
-        )
-    asked = request_edit(
-        load_edit(args.edit),
-        args.render,
-        args.composite,
-        overrides={name: getattr(args, name) for name in OVERRIDES},
-        seed=args.seed,
-        rng=wired.rng,
-    )
-    runs = asked.record.parents[4]
-    for path in (asked.composite, asked.record):
-        print(f"edit wrote {path.relative_to(runs)}", file=wired.out)
-    print(
-        f"edit pending: run `python -m isekai render {shlex.quote(str(runs))}` "
-        "to sample it on a rented GPU",
-        file=wired.out,
-    )
-    return 0
-
-
-def _pending(args: argparse.Namespace, wired: Wiring) -> int:
-    """Check every pending edit of the cells, then sample them when there is a client.
-
-    Without a client each edit is derived and checked from its files and nothing is
-    rented, so a stale request refuses before a pod is. With one the edits run in
-    chain order, one refusal not costing the next its turn, and each prints a line.
-    e.g. r1/f holding 42.edit-1.json with no image -> "r1: edited f/42.edit-1.png"
-    """
-    cells = _cells(args.pending, wired)
-    reporter = _Reporter(
-        wired.out, wired.err, getattr(args, "progress", None) == "json"
-    )
-    found: list[tuple[Run, str, Path]] = []
-    for run_id, flow in cells:
-        run = Run(run_id, wired.runs_root / run_id)
-        found += [(run, flow, record) for record in pending_edits(run, flow)]
-    waiting = {image_of(record) for _, _, record in found}
-    refused = across(
-        found, lambda one: check_edit(one[2], waiting=waiting - {image_of(one[2])})
-    )
-    client = wired.client
-    if client is None or refused:
-        for message in refused:
-            print(f"refused: {message}", file=wired.err)
-        if not refused:
-            for run, flow, record in found:
-                reporter.say(f"{run.id}: {flow}/{record.name} is ready to sample")
-        return 1 if refused else 0
-    ran_on = _once(lambda: read_runtime(client))
-
-    def sample_one(one: tuple[Run, str, Path]) -> None:
-        run, flow, record = one
-        image = sample_edit(client, record, runtime=ran_on)
-        reporter.say(f"{run.id}: edited {flow}/{image.name}")
-        reporter.item(
-            run.id,
-            flow,
-            "edit",
-            "done",
-            digest=run.digest,
-            version=int(image.parent.name),
-            file=image.name,
-        )
-
-    for message in (failed := across(found, sample_one)):
-        print(f"refused: {message}", file=wired.err)
-    return 1 if failed else 0
-
-
-def _run_for(identifier: str, wired: Wiring) -> Run:
-    """Return the run an argument names: a photograph to open, or a run to resume."""
-    named = _named(identifier, wired)
-    return named if isinstance(named, Run) else open_run(named, wired.runs_root)
-
-
 def _existing_run(identifier: str, wired: Wiring) -> Run | None:
-    """Return the run an argument names, as `_run_for` does, but never open one."""
-    named = _named(identifier, wired)
+    """Return the run an argument names, as `run_for` does, but never open one."""
+    named = run_or_photo(identifier, wired)
     return named if isinstance(named, Run) else find_run(named, wired.runs_root)
-
-
-def _named(identifier: str, wired: Wiring) -> Run | Path:
-    """Return the run an argument names by its id, or the photograph it names.
-
-    A photograph is offered by path and an existing run by its id, and which one
-    was meant is decided by what is on disk rather than by a flag.
-    """
-    directory = wired.runs_root / identifier
-    if (directory / FRAME_NAME).is_file():
-        return Run(identifier, directory)
-    photo = Path(identifier)
-    if not photo.is_file():
-        raise Refusal(
-            f"{identifier!r} is neither a photograph on disk nor a run under "
-            f"{wired.runs_root}; give the path to a JPEG or PNG, or the name of "
-            f"a run directory under {wired.runs_root}"
-        )
-    return photo
-
-
-def _require_tracked(names: Sequence[str], wired: Wiring) -> None:
-    """Refuse the names that are no tracked flow, naming the flows there are."""
-    tracked = tracked_flows(wired.flows_dir)
-    unknown = [name for name in names if name not in tracked]
-    if unknown:
-        raise Refusal(
-            f"{', '.join(unknown)}: not a flow this build tracks; the flows it "
-            f"carries are {', '.join(tracked) or '(none)'}"
-        )
 
 
 def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
@@ -1039,7 +217,7 @@ def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
     missing flag.
     """
     named: list[str] = list(getattr(args, "flows", None) or [])
-    _require_tracked(named, wired)
+    require_tracked(named, wired)
     # Deduplicated, order kept: naming a flow twice is a typo, not a request for
     # two renders of it.
     return {name: load_flow(name, wired.flows_dir) for name in dict.fromkeys(named)}
@@ -1060,27 +238,9 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     # a broken manifest refuses without opening a run -- and on `generate`,
     # without renting anything. The serving verb takes no flow at all.
     try:
-        if verb == "ui":
-            return _ui(args, wired)
-        if verb == "import":
-            return _import(args, wired)
-        if verb == "compare":
-            print(write_page(args.collection, wired.flows_dir), file=wired.out)
-            return 0
-        if verb == "render":
-            return run_session(args, wired, _dispatch_argv)
-        if verb == "migrate":
-            return _migrate(args, wired)
-        if verb == "prepare":
-            return _prepare(args, wired)
-        if verb == "draft":
-            return _draft(args.target, args.images, wired)
-        if verb == "discard":
-            return _discard(args.image, wired)
-        if verb == "ink":
-            return _ink(args, wired)
-        if verb == "edit":
-            return _edit(args, wired)
+        row = next((row for row in ROWS if row.name == verb), None)
+        if row is not None and row.run is not None:
+            return row.run(args, wired)
         if verb in PHOTOGRAPH_VERBS and args.flows:
             raise Refusal(_named_a_flow(args, targets))
         flows = _flows_for(args, wired)
@@ -1097,10 +257,10 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
         print(f"refused: {unselectable}", file=wired.err)
         return 1
     if verb == "generate":
-        refused = _generate(args, wired, targets, flows)
+        refused = generate_batch(args, wired, targets, flows)
     else:
         # Refusals a verb collects without abandoning the photograph, reported
-        # after `across`'s the way `_generate` reports `broken`.
+        # after `across`'s the way `generate_batch` reports `broken`.
         collected: list[str] = []
         work = _per_item(verb, args, wired, flows, collected)
         refused = across(targets, work) + collected
@@ -1118,6 +278,47 @@ def _dispatch_argv(argv: list[str], wired: Wiring) -> int:
     return dispatch(args, dataclasses.replace(wired, runs_root=args.runs))
 
 
+def _render(args: argparse.Namespace, wired: Wiring) -> int:
+    """Run `render`'s session, handing it `_dispatch_argv` to run each flow's line."""
+    return run_session(args, wired, _dispatch_argv)
+
+
+def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
+    """Run `prepare`, handing it `_per_item` for the work of each of its steps."""
+    return run_prepare(args, wired, _per_item)
+
+
+ROWS: tuple[Verb, ...] = (
+    IMPORT_ROW,
+    ASSIGN_ROW,
+    CAPTION_ROW,
+    TAG_ROW,
+    SHEET_ROW,
+    dataclasses.replace(PREPARE_ROW, run=_prepare),
+    REVIEW_ROW,
+    APPROVE_ROW,
+    DRAFT_ROW,
+    DISCARD_ROW,
+    GENERATE_ROW,
+    dataclasses.replace(RENDER_ROW, run=_render),
+    SHOW_ROW,
+    UI_ROW,
+    COMPARE_ROW,
+    Verb(
+        "migrate",
+        "copy each run's per-flow description into photo/",
+        _migrate_arguments,
+        _migrate,
+    ),
+    INK_ROW,
+    EDIT_ROW,
+)
+
+# One line of prose per verb, used for both the subcommand list and its own help,
+# so the two cannot disagree about what a stage does.
+VERBS: tuple[tuple[str, str], ...] = tuple((row.name, row.summary) for row in ROWS)
+
+
 def _refuse_bad_source(
     source: str | None, flag: str, flows: Mapping[str, Flow], wired: Wiring
 ) -> None:
@@ -1127,7 +328,7 @@ def _refuse_bad_source(
     """
     if source is None:
         return
-    _require_tracked([source], wired)
+    require_tracked([source], wired)
     if source in flows:
         raise Refusal(
             f"{source}: a flow is not its own source; drop `--{flag} {source}` or "
@@ -1169,35 +370,6 @@ def _seam(value: T | None, name: str, does: str) -> T:
     return value
 
 
-def _once(read: Callable[[], T]) -> Callable[[], T]:
-    """Return `read`, answered at most once: its answer or its refusal is kept.
-
-    A refusal is the build's or the endpoint's, not a photograph's, so meeting
-    it again would redo the work to learn nothing. A transient
-    transport failure is the exception: it is raised and not kept, since the
-    endpoint may answer the next ask, and keeping it would refuse every later
-    photograph in the session and spend each one's render budget.
-    """
-    outcome: list[T | Refusal] = []
-
-    def reading() -> T:
-        if not outcome:
-            try:
-                outcome.append(read())
-            except TransportFailure as failed:
-                if failed.kind == "transient":
-                    raise
-                outcome.append(failed)
-            except Refusal as refused:
-                outcome.append(refused)
-        kept = outcome[0]
-        if isinstance(kept, Refusal):
-            raise kept
-        return kept
-
-    return reading
-
-
 def _per_item(
     verb: str,
     args: argparse.Namespace,
@@ -1221,9 +393,7 @@ def _per_item(
     """
     new_version = bool(getattr(args, "new_version", False))
     opening: list[Callable[[], LocalTagger]] = []
-    reporter = _Reporter(
-        wired.out, wired.err, getattr(args, "progress", None) == "json"
-    )
+    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == "json")
 
     @cache
     def vocabulary() -> Vocabulary:
@@ -1253,7 +423,7 @@ def _per_item(
         resolve = _seam(wired.tagger, "tagger", "scores the photograph")
         if not opening:
             # A refusal is kept too, so the 467 MB hash is not re-run to meet it.
-            opening.append(_once(resolve))
+            opening.append(once(resolve))
         return opening[0]
 
     def work(identifier: str) -> None:
@@ -1261,7 +431,7 @@ def _per_item(
             _assign(identifier, bool(args.remove), wired, list(flows), collected)
             return
         try:
-            run = _run_for(identifier, wired)
+            run = run_for(identifier, wired)
         except Refusal as unopened:
             names: list[str | None] = (
                 [None] if verb in PHOTOGRAPH_VERBS else list(flows)
@@ -1279,7 +449,7 @@ def _per_item(
 
             def caption_photo() -> None:
                 reader = _seam(wired.reader, "reader", "reads the photograph")()
-                _say(
+                say(
                     reporter,
                     run,
                     "caption",
@@ -1300,13 +470,13 @@ def _per_item(
                         wired.hosted_tagger, "hosted tagger", "tags the photograph"
                     )
                     written = tag_hosted(run, tagger_for(), new_version=new_version)
-                    _say(reporter, run, "tags", written)
+                    say(reporter, run, "tags", written)
 
                 # Each tagger's refusal is collected on its own, so neither costs
                 # the other its list. WD14 first: it is the sheet's input and
                 # reaches no network (D1).
                 steps: tuple[Callable[[], None], ...] = (
-                    lambda: _say(
+                    lambda: say(
                         reporter,
                         run,
                         "wd14",
@@ -1333,7 +503,7 @@ def _per_item(
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
-                _say(reporter, run, "sheet", written)
+                say(reporter, run, "sheet", written)
 
             step = sheet_flow
         elif verb == "review":
@@ -1343,9 +513,7 @@ def _per_item(
                     gone = discard(run, name)
                     reporter.say(f"{run.id}: review discarded {name}/{gone.name}")
                     return
-                _say(
-                    reporter, run, "review", review(run, name, new_version=new_version)
-                )
+                say(reporter, run, "review", review(run, name, new_version=new_version))
 
             step = review_flow
         elif verb == "approve":
@@ -1378,7 +546,7 @@ def _per_item(
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
-                _say(reporter, run, "approve", written)
+                say(reporter, run, "approve", written)
 
             step = approve_flow
         else:
@@ -1426,7 +594,7 @@ def _assign(
 
     Removing opens no run: a source with none has no flow to remove.
     """
-    run = _existing_run(identifier, wired) if remove else _run_for(identifier, wired)
+    run = _existing_run(identifier, wired) if remove else run_for(identifier, wired)
     if run is None:
         for name in flows:
             print(f"{identifier}: {name} is not assigned", file=wired.out)
@@ -1444,143 +612,6 @@ def _assign_one(run: Run, flow: str, remove: bool, wired: Wiring) -> None:
     else:
         done = f"assigned {flow}" if changed else f"{flow} is already assigned"
     print(f"{run.id}: {done}", file=wired.out)
-
-
-def _generate(
-    args: argparse.Namespace,
-    wired: Wiring,
-    targets: Sequence[str],
-    flows: Mapping[str, Flow],
-) -> list[str]:
-    """Assemble every prompt in the batch, and only then reach for the endpoint.
-
-    **The whole batch, before anything is acquired.** Assembly is free and
-    rendering is not, so a malformed sheet should cost nothing rather than a boot
-    and several minutes of waiting -- and doing the batch first is what turns that
-    from a per-item saving into a guarantee. Interleaving them would rent a
-    machine and then discover the third sheet was broken.
-    """
-    ready: list[tuple[Run, str]] = []
-    reporter = _Reporter(
-        wired.out, wired.err, getattr(args, "progress", None) == "json"
-    )
-    # The seeds each run takes from the source flow, when one is named.
-    borrowed: dict[str, list[int]] = {}
-    source_suffix = (
-        load_flow(args.seeds_from, wired.flows_dir).output_suffix
-        if args.seeds_from is not None
-        else ""
-    )
-    # Collected alongside `across`'s, not raised: `prepare` already tried every
-    # flow, so one run's broken sheet is a refusal to report at the end rather
-    # than a reason its sibling flows go unrendered.
-    broken: list[str] = []
-
-    def assemble_one(identifier: str) -> None:
-        run = _run_for(identifier, wired)
-        assembled, refusals = prepare(run, flows)
-        broken.extend(refusals)
-        if args.seeds_from is not None:
-            borrowed[run.id] = source_seeds(
-                run, args.seeds_from, source_suffix, list(flows)
-            )[1]
-        for flow, path in assembled.items():
-            reporter.say(f"{run.id}: assembled {flow}/{path.name}")
-            ready.append((run, flow))
-
-    refused = across(list(targets), assemble_one) + broken
-    client = wired.client
-    if client is None:
-        return refused
-    # One report per session, read only when a render will run.
-    ran_on = _once(lambda: read_runtime(client))
-
-    def render_one(pair: tuple[Run, str]) -> None:
-        run, flow = pair
-
-        def landed(made: Render) -> None:
-            reporter.say(f"{run.id}: rendered {flow}/{made.image.name}")
-            # The seed as a string: a 64-bit seed is past what a page's number holds.
-            version = int(made.image.parent.name)
-            reporter.item(
-                run.id,
-                flow,
-                STAGE_RENDER,
-                "done",
-                digest=run.digest,
-                version=version,
-                seed=str(made.seed),
-            )
-
-        produced = render(
-            run,
-            flows[flow],
-            client,
-            image=wired.image,
-            runtime=ran_on,
-            count=args.count,
-            seeds=borrowed.get(run.id, args.seeds),
-            seeds_from=args.seeds_from,
-            rng=wired.rng,
-            on_image=landed,
-        )
-        if not produced:
-            reporter.say(f"{run.id}: {flow} is already rendered")
-
-    return refused + across(ready, render_one)
-
-
-@dataclass(frozen=True)
-class _Reporter:
-    """Where a verb's lines go: prose to `out`, or with `progress` JSON to `out`.
-
-    e.g. {"run": "0d4b…_ada", "flow": "summon-anime-wai", "stage": "sheet",
-    "state": "done"}
-    """
-
-    out: TextIO
-    err: TextIO
-    progress: bool
-
-    def say(self, line: str) -> None:
-        """Print a line meant for a person: on stderr while JSON holds stdout."""
-        print(line, file=self.err if self.progress else self.out)
-
-    def item(
-        self,
-        run: str,
-        flow: str | None,
-        stage: str,
-        state: str,
-        message: str | None = None,
-        **more: str | int,
-    ) -> None:
-        """Print one item's `start`, `done` or `refused` line, when asked for JSON.
-
-        `more` adds what the item names beyond its run and flow, as a render its seed.
-        A photograph's stage names no flow, and its line carries none.
-        """
-        if not self.progress:
-            return
-        line: dict[str, str | int] = {
-            "run": run,
-            **({} if flow is None else {"flow": flow}),
-            "stage": stage,
-            "state": state,
-            **more,
-        }
-        if message is not None:
-            line["message"] = message
-        # Flushed: a job reads this from a pipe, line by line, as it happens.
-        print(json.dumps(line), file=self.out, flush=True)
-
-
-def _say(reporter: _Reporter, run: Run, verb: str, written: Path | None) -> None:
-    """Report what a stage did, including that it was already complete."""
-    if written is None:
-        reporter.say(f"{run.id}: {verb} is already complete")
-    else:
-        reporter.say(f"{run.id}: {verb} wrote {written.name}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

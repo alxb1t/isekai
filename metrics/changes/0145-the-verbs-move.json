@@ -1,0 +1,58 @@
+{
+  "change": "0145-the-verbs-move",
+  "version": "0.87.1",
+  "base": "b8dbb613",
+  "analyzed": "6dbb66cd",
+  "measured_on": "local",
+  "collected_at": "2026-11-14T20:25:56+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2390
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 68
+    },
+    "open-backlog-cards": {
+      "value": 8
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 2
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 3216
+    },
+    "diff-files": {
+      "value": 35
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 14816
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1083
+    },
+    "decisions": {
+      "value": 59
+    }
+  }
+}

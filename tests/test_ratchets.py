@@ -445,7 +445,6 @@ def unread_patches(root: Path) -> list[str]:
 
 LONG_FILES = {
     "isekai/foundation/run.py": 1045,
-    "isekai/interface/cli.py": 1579,
     "isekai/interface/render.py": 1315,
     "isekai/interface/ui/app.py": 2351,
     "isekai/interface/ui/library.py": 881,
@@ -453,12 +452,11 @@ LONG_FILES = {
     "isekai/pipeline/review.py": 1278,
     "isekai/pipeline/tattoos.py": 1320,
 }
-FILE_ROWS = 8
+FILE_ROWS = 7
 
 LONG_FUNCTIONS = {
     "isekai/boundary/ollama.py::ask": 105,
     "isekai/foundation/flow.py::load_flow": 150,
-    "isekai/interface/cli.py::build_parser": 368,
     "isekai/interface/cli.py::_per_item": 214,
     "isekai/interface/cli.py::_per_item.work": 154,
     "isekai/interface/render.py::_session": 119,
@@ -467,7 +465,7 @@ LONG_FUNCTIONS = {
     "isekai/pipeline/generate.py::render": 122,
     "isekai/pipeline/review.py::approve": 105,
 }
-FUNCTION_ROWS = 10
+FUNCTION_ROWS = 9
 
 WIDE_FUNCTIONS = {
     "isekai/foundation/run.py::refusal_for": 9,

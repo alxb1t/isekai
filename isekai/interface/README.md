@@ -6,16 +6,29 @@ surface for stage ③.
 `isekai/__main__.py` stays at the package root because `runpy` pins that path; it
 is a shim over `cli.py` and holds nothing else.
 
-**`ui/` is a sibling of `cli.py`, not a client of it.** Both reach the pipeline
-the same way — `wiring_from()` and the stage functions, called directly — so
-neither is privileged. The CLI imports `isekai.interface.ui` inside the handlers of
-`ui`, `migrate` and `discard`, never at module scope, and the UI imports no CLI module.
+**`ui/` is a sibling of `cli.py` and `verbs/`, not a client of them.** Both reach
+the pipeline the same way — `wiring_from()` and the stage functions, called
+directly — so neither is privileged. The verb line imports `isekai.interface.ui`
+inside `run_ui` and `run_discard` of `verbs/` and `_migrate` of `cli.py`, never at
+module scope, and the UI imports no CLI module.
+
+**A verb is a row of `verbs/`, declared once** ([D58](../../docs/decisions.md#d58--a-verb-is-declared-once-in-its-familys-module)).
+`cli.py` imports names from `verbs/__init__.py` alone; a module of `verbs/` imports its siblings by their own name.
 
 ## Files
 
 | file | does |
 |---|---|
-| `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow — `tag` and `caption` once per photograph, naming none — and `prepare` over cells, each photograph through both and its sheets in turn — and reports every refusal together, or with `--progress json` a JSON line per item; `import` and `assign` compose `pipeline/importing.py` and the run's own `assign`; `discard` deletes a render and its thumbnails |
+| `cli.py` | holds `ROWS`, builds the parser from each row's arguments, resolves the flows a verb was given against `flows/`, dispatches a row's run or per flow — `tag` and `caption` once per photograph, naming none — and reports every refusal together, or with `--progress json` a JSON line per item; it keeps the per-item work of the flow-stage verbs, `assign`, `migrate`, and `render`'s and `prepare`'s runs, bound to `_dispatch_argv` and `_per_item` |
+| `verbs/__init__.py` | the package's front door: the rows and the shared names `cli.py` reads |
+| `verbs/common.py` | `Verb`, the argument types and shared arguments, the reporter, and the run helpers every family reads |
+| `verbs/library.py` | `import`, `compare` and `ui`: `import` composes `pipeline/importing.py`, `compare` writes the page, `ui` serves the library |
+| `verbs/drafts.py` | `draft` and `discard`: `discard` deletes a render and its thumbnails |
+| `verbs/edits.py` | `ink` and `edit`, with `--pending`'s run |
+| `verbs/session.py` | `render`'s arguments and its row; the run is `render.py`'s, bound in `cli.py` |
+| `verbs/prepare.py` | `prepare` over cells, each photograph through `tag`, `caption` and its sheets in turn |
+| `verbs/generate.py` | `generate`: assembles every prompt locally, then renders |
+| `verbs/stages.py` | the arguments and rows of `assign`, `caption`, `tag`, `sheet`, `review`, `approve` and `show` |
 | `wiring.py` | composes the modules — resolves the reader and the two taggers, with no flow, verifies the vocabulary before it is read, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
 | `drafting.py` | drafts a flow from an image for `draft` and the page — its own flow a revision, another from the image's approval, assigning a flow with no sheet and filling it from the source's tags first; and copies an approval across for `approve --from`, its sheet filled first |
 | `render.py` | the `render` verb: finds what each approval lacks, less each `--without`, or takes the requests, assembles every prompt, estimates the session's limit and its quote, opens a GPU session through `boundary/gpu.py` stopping at that limit, waits for the endpoint, runs `generate` per flow, reports each step with `--progress json`, and writes the prose to the collection's log |
@@ -36,17 +49,19 @@ neither is privileged. The CLI imports `isekai.interface.ui` inside the handlers
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `cli.py` | `__main__.py` | — |
-| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
-| `drafting.py` | `cli.py`, `ui/app.py` | — |
-| `render.py` | `cli.py`, `ui/app.py`, `ui/jobs.py`, `ui/library.py` | — |
+| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `verbs/common.py`, `verbs/drafts.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/library.py`, `verbs/prepare.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
+| `drafting.py` | `cli.py`, `ui/app.py`, `verbs/drafts.py` | — |
+| `render.py` | `cli.py`, `ui/app.py`, `ui/jobs.py`, `ui/library.py`, `verbs/edits.py` | — |
 | `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py` |
-| `compare_view.py` | `cli.py`, `render.py` | — |
-| `ui/` | `cli.py` | — |
+| `compare_view.py` | `render.py`, `verbs/library.py` | — |
+| `ui/` | `cli.py`, `verbs/drafts.py`, `verbs/library.py` | — |
+| `verbs/` | `cli.py` | — |
 
 > The file is `run_view.py`; the **verb is still `show`**, and the entry-point
 > tests pin it.
 
-> `cli.py` imports `isekai.interface.ui` **inside its handler**, not at module
+> `verbs/library.py` and `verbs/drafts.py` import `isekai.interface.ui` **inside
+> `run_ui` and `run_discard`**, and `cli.py` inside `_migrate`, not at module
 > scope. `tests/test_pipeline_cli.py` imports the entry point under `-S`, with
 > site-packages off the path: a top-level import here would put FastAPI on
 > `python -m isekai`'s import graph and turn that guard red for every verb.

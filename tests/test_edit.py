@@ -1397,6 +1397,14 @@ def test_edit_pending_takes_cells_alone_and_a_request_takes_its_names(
     assert dispatch(bare, wired) == 1
     assert "a request names its edit and its render" in wired.err.getvalue()
 
+    unrendered = build_parser().parse_args(
+        ["edit", "tattoo-wai", "--composite", "c.png"]
+    )
+    wired = bare_wiring(runs_root=tmp_path / "runs")
+    assert isinstance(wired.err, io.StringIO)
+    assert dispatch(unrendered, wired) == 1
+    assert "a request names its edit and its render" in wired.err.getvalue()
+
     with pytest.raises(SystemExit):
         build_parser().parse_args(
             ["edit", "tattoo-wai", "a.png", "--composite", "c.png", "--pending", CELL]
