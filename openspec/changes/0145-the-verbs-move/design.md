@@ -119,7 +119,11 @@ A moving phase opens with `uv run python -m tools.mutate <path:lo-hi> … --test
 
 The opening runs of phases 2 and 3 are checked by the tests' baseline alone, because no range holds once phase 1 has shifted the file; the closing run covers the same mutants on the new module, so a survivor the opening misses fails there.
 
-A survivor is killed by a new step in an existing test that reaches `dispatch` or `main` and binds the scenario that already requires the behaviour. A survivor no test can kill is equivalent only when this decision names it, and one it does not name halts the build as a plan problem. No survivor is named equivalent at the cut.
+A survivor is killed by a new step in an existing test that reaches `dispatch` or `main` and binds the scenario that already requires the behaviour. A survivor no test can kill is equivalent only when this decision names it, and one it does not name halts the build as a plan problem. A closing run leaves out the line of a named survivor, and no other line.
+
+| module | line | mutant | equivalent because |
+|---|---|---|---|
+| `isekai/interface/verbs/drafts.py` | 36 | `zip(located, answers, strict=True)` → `strict=False` | `refuse_image_drafts` returns `refuse_drafts`' list, which holds one answer per selected image on every path, so `located` and `answers` never differ in length; only a patch of `refuse_image_drafts` could make them, and the patch ratchet refuses one |
 
 | family | tests that reach it |
 |---|---|
