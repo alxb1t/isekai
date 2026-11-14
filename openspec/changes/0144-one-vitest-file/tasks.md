@@ -6,7 +6,7 @@ Phases: the wrapper takes a file, a root config refuses the wrong start, the doc
 
 - [x] 1 — The arguments · moderate
 - [x] 2 — The guard · hard
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The arguments
 
@@ -39,7 +39,7 @@ Phases: the wrapper takes a file, a root config refuses the wrong start, the doc
 
 ## 3 — The documents
 
-- [ ] 3.1 In `CONTRIBUTING.md`, add the paragraph of [D6](design.md#d6) after the gate's paragraph in *The evidence a change carries*.
+- [x] 3.1 In `CONTRIBUTING.md`, add the paragraph of [D6](design.md#d6) after the gate's paragraph in *The evidence a change carries*.
   Verify: `grep -n -F 'tools.test_ui ui/src' CONTRIBUTING.md` prints the paragraph's line.
-- [ ] 3.2 In `AGENTS.md`, change the gate line to the *after* of [D6](design.md#d6).
+- [x] 3.2 In `AGENTS.md`, change the gate line to the *after* of [D6](design.md#d6).
   Verify: `grep -n -F 'tools.test_ui ui/src' AGENTS.md` prints the gate line.
