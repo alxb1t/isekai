@@ -429,6 +429,7 @@ def test_a_tiff_with_a_cut_header_is_refused_as_not_decoding(tmp_path: Path) -> 
 
 
 @pytest.mark.spec("import:refuse:an-unconvertible-file-is-refused")
+@pytest.mark.spec("import:stage:same-bytes-skip-and-a-taken-name-is-renamed")
 def test_a_file_that_cannot_be_converted_is_refused_and_the_others_import(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
