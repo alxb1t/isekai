@@ -1,0 +1,58 @@
+{
+  "change": "0143-the-browser-green",
+  "version": "0.86.16",
+  "base": "6c21ede1",
+  "analyzed": "f302b4b8",
+  "measured_on": "local",
+  "collected_at": "2026-11-14T16:10:17+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2385
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 76
+    },
+    "open-backlog-cards": {
+      "value": 5
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 323
+    },
+    "diff-files": {
+      "value": 10
+    },
+    "phases": {
+      "value": 2
+    },
+    "shared-reading-set": {
+      "value": 14595
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1077
+    },
+    "decisions": {
+      "value": 58
+    }
+  }
+}
