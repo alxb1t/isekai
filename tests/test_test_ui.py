@@ -69,12 +69,22 @@ def test_a_file_is_run_in_ui_after_the_double_dash(
     monkeypatch.setattr(subprocess, "run", run)
     assert test_ui.main(root, ["ui/src/cancel.test.ts", "-t", "a name"]) == 0
     assert test_ui.main(root, ["src/cancel.test.ts"]) == 0
+    assert test_ui.main(root, ["ui/src/a.test.ts", "-t", "ui/cancel"]) == 0
+    assert test_ui.main(root, ["--testNamePattern", "ui/x", "ui/src/b.test.ts"]) == 0
     assert ran == [
         (
             ["npm", "run", "test", "--", "src/cancel.test.ts", "-t", "a name"],
             root / "ui",
         ),
         (["npm", "run", "test", "--", "src/cancel.test.ts"], root / "ui"),
+        (
+            ["npm", "run", "test", "--", "src/a.test.ts", "-t", "ui/cancel"],
+            root / "ui",
+        ),
+        (
+            ["npm", "run", "test", "--", "--testNamePattern", "ui/x", "src/b.test.ts"],
+            root / "ui",
+        ),
     ]
 
 

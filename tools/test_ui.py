@@ -30,12 +30,20 @@ def refusal(
     return npm_ui.refusal(NO_NPM, NO_MODULES, root, which)
 
 
-def in_ui(args: Sequence[str]) -> list[str]:
-    """Return the arguments with a leading `ui/` removed from each.
+NAME_FILTERS = ("-t", "--testNamePattern")
 
-    e.g. ["ui/src/a.test.ts", "-t", "x"] -> ["src/a.test.ts", "-t", "x"]
+
+def in_ui(args: Sequence[str]) -> list[str]:
+    """Return the arguments with a leading `ui/` removed from each file filter.
+
+    A name filter's value is a regex, not a path, and is left as given.
+
+    e.g. ["ui/src/a.test.ts", "-t", "ui/x"] -> ["src/a.test.ts", "-t", "ui/x"]
     """
-    return [arg.removeprefix("ui/") for arg in args]
+    return [
+        arg if index and args[index - 1] in NAME_FILTERS else arg.removeprefix("ui/")
+        for index, arg in enumerate(args)
+    ]
 
 
 def main(root: Path = ROOT, args: Sequence[str] = ()) -> int:
