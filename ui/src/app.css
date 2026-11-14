@@ -2538,13 +2538,6 @@ dialog::backdrop {
   gap: 16px;
 }
 
-.place__render {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 3px;
-}
-
 .place__steps {
   display: flex;
   gap: 12px;
@@ -2570,6 +2563,24 @@ dialog::backdrop {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.picker__images {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.picker__shown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.picker__shown img {
+  width: 100%;
+  height: auto;
 }
 
 .picker__make {
@@ -2641,6 +2652,12 @@ dialog::backdrop {
   height: 120px;
   object-fit: contain;
   background: var(--ground-media);
+}
+
+.picker__crop {
+  align-self: center;
+  background-color: var(--ground-media);
+  background-repeat: no-repeat;
 }
 
 .picker__title {
@@ -3020,12 +3037,6 @@ dialog::backdrop {
 
 .picker__remove {
   align-self: flex-start;
-}
-
-.picker__remove[data-armed='true'] {
-  color: var(--accent-ink);
-  border-color: var(--accent);
-  background: var(--accent-dim);
 }
 
 /* The Leave dialog: the lone point, the pairs that stand, then Stay and Leave. */

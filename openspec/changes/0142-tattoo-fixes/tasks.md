@@ -4,42 +4,42 @@ The phases: the picker, the steps, the review and the soft edge. Each ends on a 
 
 ## Progress
 
-- [ ] 1 — The picker · moderate
+- [x] 1 — The picker · moderate
 - [ ] 2 — The steps · hard
 - [ ] 3 — The review · moderate
 - [ ] 4 — The soft edge · hard
 
 ## 1 — The picker
 
-- [ ] 1.1 **HALT CHECK** The render's `Delete` is the one user of `DeleteDialog.vue`, so one edit of `ui/src/views/RenderLarge.vue` swaps it for the shared dialog.
+- [x] 1.1 **HALT CHECK** The render's `Delete` is the one user of `DeleteDialog.vue`, so one edit of `ui/src/views/RenderLarge.vue` swaps it for the shared dialog.
   Verify: `git grep -l -w DeleteDialog -- ui/src` prints `ui/src/views/RenderLarge.vue`.
-- [ ] 1.2 Add `ui/src/confirm.ts` exporting `deletion` and `removal(name)`, each a `{ title, name }` object per [D1](design.md#d1), and `ui/src/confirm.test.ts` with one `spec('ui:picker:remove-asks-in-a-dialog', …)` on both.
+- [x] 1.2 Add `ui/src/confirm.ts` exporting `deletion` and `removal(name)`, each a `{ title, name }` object per [D1](design.md#d1), and `ui/src/confirm.test.ts` with one `spec('ui:picker:remove-asks-in-a-dialog', …)` on both.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 1.3 Write `ui/src/components/ConfirmDialog.vue` from the body of `DeleteDialog.vue` per [D1](design.md#d1): props `title`, `name`, `marker`, `run`; emits `close` and `done`; the `data-<marker>-…` attributes.
+- [x] 1.3 Write `ui/src/components/ConfirmDialog.vue` from the body of `DeleteDialog.vue` per [D1](design.md#d1): props `title`, `name`, `marker`, `run`; emits `close` and `done`; the `data-<marker>-…` attributes.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 1.4 In `ui/src/views/RenderLarge.vue` use `ConfirmDialog` with `marker="delete"`, `deletion` and `run` calling `deleteRender(place)`; delete `ui/src/components/DeleteDialog.vue`.
+- [x] 1.4 In `ui/src/views/RenderLarge.vue` use `ConfirmDialog` with `marker="delete"`, `deletion` and `run` calling `deleteRender(place)`; delete `ui/src/components/DeleteDialog.vue`.
   Verify: `git grep -n "ConfirmDialog" -- ui/src/views/RenderLarge.vue` prints the import and the tag.
-- [ ] 1.5 In `ui/src/components/TattooPicker.vue` delete the arm, its blur handler and the card's refusal line; *Remove* sets the tattoo to ask about and a `ConfirmDialog` with `marker="remove"` and `removal` runs `removeTattoo`, then emits `removed`.
+- [x] 1.5 In `ui/src/components/TattooPicker.vue` delete the arm, its blur handler and the card's refusal line; *Remove* sets the tattoo to ask about and a `ConfirmDialog` with `marker="remove"` and `removal` runs `removeTattoo`, then emits `removed`.
   Verify: `git grep -n -E "disarm|data-remove-refusal" -- ui/src/components/TattooPicker.vue` prints nothing.
-- [ ] 1.6 Delete `armRemoval` from `ui/src/tattoos.ts`, its test `ui:picker:remove-takes-a-second-click` from `ui/src/tattoos.test.ts` and the rule `.picker__remove[data-armed='true']` from `ui/src/app.css`.
+- [x] 1.6 Delete `armRemoval` from `ui/src/tattoos.ts`, its test `ui:picker:remove-takes-a-second-click` from `ui/src/tattoos.test.ts` and the rule `.picker__remove[data-armed='true']` from `ui/src/app.css`.
   Verify: `git grep -n -E "armRemoval|armed='true'" -- ui/src` prints nothing.
-- [ ] 1.7 In `ui/src/nokeys.test.ts` import `ConfirmDialog.vue?raw` and assert it holds one `useKeys('overlay'` and no `keydown`, beside the screen's own read.
+- [x] 1.7 In `ui/src/nokeys.test.ts` import `ConfirmDialog.vue?raw` and assert it holds one `useKeys('overlay'` and no `keydown`, beside the screen's own read.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 1.8 In `ui/src/views/Place.vue` delete the head's `<img class="place__render">` and the `thumbAt` import, and `.place__render` from `ui/src/app.css` per [D4](design.md#d4).
+- [x] 1.8 In `ui/src/views/Place.vue` delete the head's `<img class="place__render">` and the `thumbAt` import, and `.place__render` from `ui/src/app.css` per [D4](design.md#d4).
   Verify: `git grep -n "place__render" -- ui/src` prints nothing.
-- [ ] 1.9 In `ui/src/views/Place.vue` pass `:version` and `:seed` to `TattooPicker`; in the picker add the props and, above `.picker__make`, a `data-picker-images` row of two `<figure class="picker__shown">`: the render (`imageAt`, left) and the photograph (`photoUrl`, right), each with a `<figcaption>`, per [D2](design.md#d2).
+- [x] 1.9 In `ui/src/views/Place.vue` pass `:version` and `:seed` to `TattooPicker`; in the picker add the props and, above `.picker__make`, a `data-picker-images` row of two `<figure class="picker__shown">`: the render (`imageAt`, left) and the photograph (`photoUrl`, right), each with a `<figcaption>`, per [D2](design.md#d2).
   Verify: `git grep -n "data-picker-images" -- ui/src/components/TattooPicker.vue` prints one line.
-- [ ] 1.10 In `ui/src/app.css` add `.picker__images`, a grid of equal columns with a gap of 16px, and `.picker__shown img` at `width: 100%` and `height: auto`, after the `.picker` rule.
+- [x] 1.10 In `ui/src/app.css` add `.picker__images`, a grid of equal columns with a gap of 16px, and `.picker__shown img` at `width: 100%` and `height: auto`, after the `.picker` rule.
   Verify: `git grep -n "^\.picker__images" -- ui/src/app.css` prints one line.
-- [ ] 1.11 Add `FRAME` and `thumbCrop(points, size, frame)` to `ui/src/tattoos.ts` per [D3](design.md#d3), and a test `ui:picker:a-cuts-card-shows-its-own-crop` in `ui/src/tattoos.test.ts` on the example of [D3](design.md#d3), on no point and on a lone point, the last two giving `null`.
+- [x] 1.11 Add `FRAME` and `thumbCrop(points, size, frame)` to `ui/src/tattoos.ts` per [D3](design.md#d3), and a test `ui:picker:a-cuts-card-shows-its-own-crop` in `ui/src/tattoos.test.ts` on the example of [D3](design.md#d3), on no point and on a lone point, the last two giving `null`.
   Verify: `uv run python -m tools.test_ui` exits 0.
-- [ ] 1.12 Add `ui/src/components/CutImage.vue` per [D3](design.md#d3): props `place` and `tattoo`; it reads the outline with `tattooNamed`, draws `thumbCrop` over `photoUrl`, and once closed shows `inkView`'s image, revoking its URL on unmount.
+- [x] 1.12 Add `ui/src/components/CutImage.vue` per [D3](design.md#d3): props `place` and `tattoo`; it reads the outline with `tattooNamed`, draws `thumbCrop` over `photoUrl`, and once closed shows `inkView`'s image, revoking its URL on unmount.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 1.13 In `ui/src/components/TattooPicker.vue` show `CutImage` for a cut's card in place of its `<img>`, and make `src` the upload's design alone.
+- [x] 1.13 In `ui/src/components/TattooPicker.vue` show `CutImage` for a cut's card in place of its `<img>`, and make `src` the upload's design alone.
   Verify: `git grep -n "CutImage" -- ui/src/components/TattooPicker.vue` prints the import and the tag.
-- [ ] 1.14 In `ui/design/spec.md` edit frame J9·1 to say the render and its photograph stand above the forms, the card bullet to say a cut shows its own crop, and the *Remove* bullet to the dialog of [D1](design.md#d1).
+- [x] 1.14 In `ui/design/spec.md` edit frame J9·1 to say the render and its photograph stand above the forms, the card bullet to say a cut shows its own crop, and the *Remove* bullet to the dialog of [D1](design.md#d1).
   Verify: `git grep -n "above the forms" -- ui/design/spec.md` prints one line.
-- [ ] 1.15 In `docs/edit-tattoo.md` change `*Remove* asks a second click` to `*Remove* asks in a dialog`.
+- [x] 1.15 In `docs/edit-tattoo.md` change `*Remove* asks a second click` to `*Remove* asks in a dialog`.
   Verify: `git grep -n "asks a second click" -- docs/edit-tattoo.md` prints nothing.
 
 ## 2 — The steps

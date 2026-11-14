@@ -103,7 +103,7 @@ render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─
   `.tattoos/<name>/` with `design.png`, `tattoo.json` and `outline.json`, and serves every render in every
   collection. A cut is `.tattoos/.cuts/<digest>/<name>/` with `tattoo.json` and `outline.json`, `<digest>` the
   photograph's run digest. A picker lists the uploads and the cuts of its render's photograph, and a name is one
-  tattoo on it. *Remove* asks a second click, then deletes the tattoo's folder and frees its name. A baked edit keeps
+  tattoo on it. *Remove* asks in a dialog, then deletes the tattoo's folder and frees its name. A baked edit keeps
   its own copy, so a removal changes no edit. The app renames nothing.
 - **An upload** goes through the import's staging, is cleaned as a source is, and is kept upright, scaled down to the
   `long_side` of `config/tattoo.json`, under a name kept once.

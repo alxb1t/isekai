@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- *Remove* opens the shared confirmation dialog the render's deletion uses and the two-press arm goes; the picker shows
+  the render and its photograph at its top and a cut's card shows its own crop; the head loses its thumbnail (0142 D1,
+  D2, D3, D4).
+
 ## [0.86.15] - 2026-11-13
 
 Gate: local 1m17s · CI not read under mf-ship · 0.86.14: local 1m17s · CI not read under mf-ship

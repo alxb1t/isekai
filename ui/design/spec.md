@@ -499,7 +499,7 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 
 | frame | trigger | URL |
 |---|---|---|
-| J9·1 the picker, nothing kept: `none kept yet`, the upload form with `the tattoo's design on its own — a flat image, not a photo of skin`, the cut form with `the tattoo as it shows on this render's photograph` | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
+| J9·1 the picker, nothing kept: the render and its photograph above the forms, side by side, `none kept yet`, the upload form with `the tattoo's design on its own — a flat image, not a photo of skin`, the cut form with `the tattoo as it shows on this render's photograph` | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
 | J9·2 a file chosen: its name `IMG_5521`, `reading…`, then `converted`; Keep waits `reading the file` | Upload a tattoo…, choose `IMG_5521.heic` | same |
 | J9·3 the outline step on it, the outline open: the ink view, the white point and the tone disabled, the line `add 3 more points to close · 0 of 3` above them | Keep | `…/place/outline/IMG_5521` |
 | J9·4 the outline closed: the ink view, the white point `auto` with its grey, the tone, `saved` | shift-click the first point again | same |
@@ -531,15 +531,16 @@ J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tatt
   the automatic grey. *Reset* shows only while the tone differs from its kind's default: neutral off and depth 1.0
   for an upload, neutral on and depth 1.6 for a cut.
 - **A card** shows the image, the name, `outlined` or `not outlined`, and `kept 2026-11-12`, with
-  `· downscaled from 6000×4000` when it was scaled, or `from photograph 0d4b7e6fb2a8` for a cut.
+  `· downscaled from 6000×4000` when it was scaled, or `from photograph 0d4b7e6fb2a8` for a cut. A cut shows its own
+  crop: the photograph cropped to the outline's box, the ink view once the outline is closed.
 - **Keep and Cut wait with their reason**: `reading the file`, `the file is refused`, `name the tattoo`, `name the cut`,
   `keeping`.
 - **Refusals**, each with its fix: a taken name, `bow is kept; choose another name`, beside the name; a file that is
   not an image or still carries metadata, on the file; an outline the server refuses, as the ink view's refusal under
   the ink view; an unknown render or tattoo, a full-page refusal with `Back to the library ⇧L`.
-- **Remove** is a button on each card. The first press arms it in the accent and removes nothing, a second press on the
-  same card removes the tattoo and lists the rest again, and a press elsewhere, or losing focus, disarms it. A refusal
-  shows under the card.
+- **Remove** is a button on each card. It opens the dialog of a render's deletion, *Remove this tattoo?*, with the
+  tattoo's name under the title: *No* first and focused, `h` `l` move, `↵` presses, `Esc` is *No*. *Yes* removes the
+  tattoo and lists the rest again; a refusal shows in the dialog.
 - **The stages** pair the images by clicks, either image first; the image that waits for a match takes the accent, a
   click near a point selects its pair, a drag moves a point, and the list has *Undo*, *Delete* and *Clear*. Forward
   waits with `6 pairs needed · 2 placed` or `point 7 has no match`. The steps of a mode keep their numbers (§4): a cut

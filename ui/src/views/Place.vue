@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
-import { renderDetail, tattoos, thumbAt, versionOf } from '../api'
+import { renderDetail, tattoos, versionOf } from '../api'
 import { PLACING, usePlacing } from '../composables/usePlacing'
 import LeaveDialog from '../components/LeaveDialog.vue'
 import OutlineStep from '../components/OutlineStep.vue'
@@ -222,11 +222,6 @@ onUnmounted(() => void placing.settled())
   <RefusalPage v-else-if="placing.refusal.value" :refusal="placing.refusal.value" />
   <section v-else-if="detail && list" class="place">
     <header class="place__head">
-      <img
-        class="place__render"
-        :src="thumbAt({ ...render, version: versionOf(version) })"
-        :alt="`seed ${detail.seed}`"
-      />
       <span class="section-label">
         place a tattoo · {{ detail.flow }} · v{{ detail.version }} · seed {{ detail.seed }}
       </span>
@@ -262,6 +257,8 @@ onUnmounted(() => void placing.settled())
     <TattooPicker
       v-if="step === 'tattoo'"
       :place="place"
+      :version="version"
+      :seed="seed"
       :list="list"
       :instead="instead"
       @choose="choose"

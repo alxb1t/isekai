@@ -5,24 +5,35 @@ import {
   cancelStaging,
   cutTattoo,
   designAt,
+  imageAt,
   keepTattoo,
   openStaging,
   photoUrl,
   removeTattoo,
   saveStageOne,
   stageFile,
+  versionOf,
 } from '../api'
+import { removal } from '../confirm'
 import type { Step } from '../stages'
 import { useLiveStore } from '../stores/live'
-import { armRemoval, card, formLine, refusalField, uploadName } from '../tattoos'
+import { card, formLine, refusalField, uploadName } from '../tattoos'
 import type { Stage1, TattooList } from '../types'
+import ConfirmDialog from './ConfirmDialog.vue'
+import CutImage from './CutImage.vue'
 
-/* The placement screen's first step: every kept tattoo as a card, an upload through the
-   import's staging under a name, and a cut of this render's photograph under a name.
-   It shows state and the way forward; a card opens the step its state asks, an upload's
-   card offers *not on this photo*, which keeps the tattoo's stage-1 pairs, and every card
-   offers *Remove*, which asks a second click. */
-const props = defineProps<{ place: Place; list: TattooList; instead: string | null }>()
+/* The placement screen's first step: the render and its photograph, every kept tattoo as a
+   card, an upload through the import's staging under a name, and a cut of this render's
+   photograph under a name. It shows state and the way forward; a card opens the step its
+   state asks, an upload's card offers *not on this photo*, which keeps the tattoo's stage-1
+   pairs, and every card offers *Remove*, which asks in a dialog. */
+const props = defineProps<{
+  place: Place
+  version: string
+  seed: string
+  list: TattooList
+  instead: string | null
+}>()
 const emit = defineEmits<{
   choose: [name: string, step: Step]
   kept: [name: string]
@@ -38,6 +49,9 @@ interface Chosen {
   keeping: boolean
 }
 
+const renderUrl = computed(() =>
+  imageAt({ ...props.place, version: versionOf(props.version), seed: props.seed }),
+)
 const live = useLiveStore()
 const picker = ref<HTMLInputElement | null>(null)
 const chosen = ref<Chosen | null>(null)
@@ -164,31 +178,24 @@ const cards = computed(() =>
       tattoo,
       held,
       ...card(tattoo, props.place.digest, held, props.list.limits.floor_stage1),
-      src: tattoo.kind === 'image' ? designAt(props.place.digest, tattoo.name) : photoUrl(props.place),
+      src: designAt(props.place.digest, tattoo.name),
     }
   }),
 )
 
-const armed = ref<string | null>(null)
-const removeRefusal = ref<{ name: string; reason: string } | null>(null)
+/* The tattoo *Remove* was pressed on, while the dialog asks about it. */
+const asking = ref<string | null>(null)
+const question = computed(() => {
+  const name = asking.value
+  return name === null
+    ? null
+    : { ...removal(name), run: () => removeTattoo(props.place.digest, name) }
+})
 
-/* The first press on *Remove* arms the card, the second on it removes the tattoo. */
-async function remove(name: string): Promise<void> {
-  const pressed = armRemoval(armed.value, name)
-  armed.value = pressed.armed
-  removeRefusal.value = null
-  if (!pressed.remove) return
-  try {
-    await removeTattoo(props.place.digest, name)
-    emit('removed', name)
-  } catch (reason) {
-    removeRefusal.value = { name, reason: (reason as Error).message }
-  }
-}
-
-/* A card that loses focus is no longer armed. */
-function disarm(name: string): void {
-  if (armed.value === name) armed.value = null
+function removed(): void {
+  const name = asking.value
+  asking.value = null
+  if (name !== null) emit('removed', name)
 }
 
 const flagRefusal = ref<{ name: string; reason: string } | null>(null)
@@ -217,6 +224,16 @@ onUnmounted(() => {
 
 <template>
   <section class="picker">
+    <div class="picker__images" data-picker-images>
+      <figure class="picker__shown">
+        <img :src="renderUrl" :alt="`seed ${seed}`" />
+        <figcaption class="picker__note mono">the render</figcaption>
+      </figure>
+      <figure class="picker__shown">
+        <img :src="photoUrl(place)" alt="the photograph" />
+        <figcaption class="picker__note mono">the photograph</figcaption>
+      </figure>
+    </div>
     <div class="picker__make">
       <div class="picker__form" data-upload>
         <p class="section-label">upload a tattoo</p>
@@ -299,7 +316,8 @@ onUnmounted(() => {
           :data-tattoo="one.tattoo.name"
           @click="emit('choose', one.tattoo.name, one.opens)"
         >
-          <img class="picker__image" :src="one.src" :alt="one.tattoo.name" loading="lazy" />
+          <CutImage v-if="one.tattoo.kind === 'cut'" :place="place" :tattoo="one.tattoo" />
+          <img v-else class="picker__image" :src="one.src" :alt="one.tattoo.name" loading="lazy" />
           <span class="picker__title mono">{{ one.tattoo.name }}</span>
           <span class="picker__state mono" :data-state="one.state">{{ one.state }}</span>
           <span class="picker__source mono">{{ one.source }}</span>
@@ -318,21 +336,21 @@ onUnmounted(() => {
         <button
           class="btn btn-secondary picker__remove"
           type="button"
-          :data-armed="armed === one.tattoo.name"
           :data-remove="one.tattoo.name"
-          @click="remove(one.tattoo.name)"
-          @blur="disarm(one.tattoo.name)"
+          @click="asking = one.tattoo.name"
         >
           Remove
         </button>
-        <p
-          v-if="removeRefusal && removeRefusal.name === one.tattoo.name"
-          class="picker__refusal"
-          data-remove-refusal
-        >
-          <span class="refusal__mark" />{{ removeRefusal.reason }}
-        </p>
       </div>
     </div>
+    <ConfirmDialog
+      v-if="question"
+      marker="remove"
+      :title="question.title"
+      :name="question.name"
+      :run="question.run"
+      @close="asking = null"
+      @done="removed"
+    />
   </section>
 </template>
