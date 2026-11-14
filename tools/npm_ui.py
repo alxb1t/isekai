@@ -8,7 +8,7 @@ this repository restores `ui/node_modules/` silently.
 
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,11 +40,16 @@ def refusal(
     return None
 
 
-def run(script: str, refused: str | None, root: Path) -> int:
-    """Run `npm run <script>` in `ui/` and return its code, or 1 after a refusal."""
+def run(script: str, refused: str | None, root: Path, args: Sequence[str] = ()) -> int:
+    """Run `npm run <script>` in `ui/` and return its code, or 1 after a refusal.
+
+    A script's arguments follow `--`, e.g. ("test", None, root, ["src/a.test.ts"])
+    runs `npm run test -- src/a.test.ts`.
+    """
     if refused is not None:
         print(refused, file=sys.stderr)
         return 1
-    return subprocess.run(
-        ["npm", "run", script], cwd=root / "ui", check=False
-    ).returncode
+    command = ["npm", "run", script]
+    if args:
+        command += ["--", *args]
+    return subprocess.run(command, cwd=root / "ui", check=False).returncode

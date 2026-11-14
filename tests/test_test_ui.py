@@ -53,6 +53,30 @@ def test_the_tests_run_in_ui_and_return_their_code(
     assert ran == [(["npm", "run", "test"], root / "ui")]
 
 
+@pytest.mark.spec_exempt("structural: a file is run in ui/ after the double dash")
+def test_a_file_is_run_in_ui_after_the_double_dash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _ui(tmp_path, modules=True)
+    ran: list[tuple[list[str], Path]] = []
+
+    def run(command: list[str], cwd: Path, check: bool) -> SimpleNamespace:
+        ran.append((command, cwd))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(test_ui.shutil, "which", lambda name: f"/bin/{name}")
+    monkeypatch.setattr(subprocess, "run", run)
+    assert test_ui.main(root, ["ui/src/cancel.test.ts", "-t", "a name"]) == 0
+    assert test_ui.main(root, ["src/cancel.test.ts"]) == 0
+    assert ran == [
+        (
+            ["npm", "run", "test", "--", "src/cancel.test.ts", "-t", "a name"],
+            root / "ui",
+        ),
+        (["npm", "run", "test", "--", "src/cancel.test.ts"], root / "ui"),
+    ]
+
+
 @pytest.mark.spec_exempt("structural: a refusal runs nothing and exits 1")
 def test_a_refusal_runs_nothing_and_exits_one(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]

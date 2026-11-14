@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- `python -m tools.test_ui` takes arguments: `ui/src/<name>.test.ts` runs one browser test file in `ui/`, where vitest
+  finds its config, and a leading `ui/` on an argument is dropped (0144 D1, D2).
+
 ## [0.86.15] - 2026-11-13
 
 Gate: local 1m17s · CI not read under mf-ship · 0.86.14: local 1m17s · CI not read under mf-ship

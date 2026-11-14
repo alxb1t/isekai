@@ -4,23 +4,23 @@ Phases: the wrapper takes a file, a root config refuses the wrong start, the doc
 
 ## Progress
 
-- [ ] 1 — The arguments · moderate
+- [x] 1 — The arguments · moderate
 - [ ] 2 — The guard · hard
 - [ ] 3 — The documents · moderate
 
 ## 1 — The arguments
 
-- [ ] 1.1 In `tools/npm_ui.py`, give `run` a last parameter `args: Sequence[str] = ()`. Empty runs `["npm", "run", script]`; else `["npm", "run", script, "--", *args]`. Reword its docstring to say a script's arguments follow `--` ([D1](design.md#d1)).
+- [x] 1.1 In `tools/npm_ui.py`, give `run` a last parameter `args: Sequence[str] = ()`. Empty runs `["npm", "run", script]`; else `["npm", "run", script, "--", *args]`. Reword its docstring to say a script's arguments follow `--` ([D1](design.md#d1)).
   Verify: `grep -n -F 'args' tools/npm_ui.py` prints the parameter and the command's line.
-- [ ] 1.2 In `tools/test_ui.py`, add `in_ui(args: Sequence[str]) -> list[str]`, which removes a leading `ui/` from each argument, with its docstring example ([D2](design.md#d2)).
+- [x] 1.2 In `tools/test_ui.py`, add `in_ui(args: Sequence[str]) -> list[str]`, which removes a leading `ui/` from each argument, with its docstring example ([D2](design.md#d2)).
   Verify: `grep -n -F 'in_ui(' tools/test_ui.py` prints its definition.
-- [ ] 1.3 In `tools/test_ui.py`, give `main` a second parameter `args: Sequence[str] = ()` that passes `in_ui(args)` to `npm_ui.run`, and make the `__main__` block call `main(args=sys.argv[1:])`.
+- [x] 1.3 In `tools/test_ui.py`, give `main` a second parameter `args: Sequence[str] = ()` that passes `in_ui(args)` to `npm_ui.run`, and make the `__main__` block call `main(args=sys.argv[1:])`.
   Verify: `grep -n -F 'sys.argv[1:]' tools/test_ui.py` prints the block's line.
-- [ ] 1.4 In the module docstring of `tools/test_ui.py`, add the one-file command `uv run python -m tools.test_ui ui/src/<name>.test.ts` under the whole-suite one.
+- [x] 1.4 In the module docstring of `tools/test_ui.py`, add the one-file command `uv run python -m tools.test_ui ui/src/<name>.test.ts` under the whole-suite one.
   Verify: `grep -n -F 'tools.test_ui ui/src' tools/test_ui.py` prints the docstring's line.
-- [ ] 1.5 In `tests/test_test_ui.py`, add `test_a_file_is_run_in_ui_after_the_double_dash` with `spec_exempt`, in the style of its neighbour: `main(root, ["ui/src/cancel.test.ts", "-t", "a name"])` and `main(root, ["src/cancel.test.ts"])` run `["npm", "run", "test", "--", "src/cancel.test.ts", "-t", "a name"]` and `["npm", "run", "test", "--", "src/cancel.test.ts"]` in `root / "ui"`. Leave `test_the_tests_run_in_ui_and_return_their_code` as it is: it holds that no argument runs as today.
+- [x] 1.5 In `tests/test_test_ui.py`, add `test_a_file_is_run_in_ui_after_the_double_dash` with `spec_exempt`, in the style of its neighbour: `main(root, ["ui/src/cancel.test.ts", "-t", "a name"])` and `main(root, ["src/cancel.test.ts"])` run `["npm", "run", "test", "--", "src/cancel.test.ts", "-t", "a name"]` and `["npm", "run", "test", "--", "src/cancel.test.ts"]` in `root / "ui"`. Leave `test_the_tests_run_in_ui_and_return_their_code` as it is: it holds that no argument runs as today.
   Verify: `uv run pytest tests/test_test_ui.py` passes.
-- [ ] 1.6 Run one file through the wrapper from the root, then a path that matches no file. Before this phase the wrapper ignores both and runs the whole suite, so the second check is the one that fails first.
+- [x] 1.6 Run one file through the wrapper from the root, then a path that matches no file. Before this phase the wrapper ignores both and runs the whole suite, so the second check is the one that fails first.
   Verify: `uv run python -m tools.test_ui ui/src/cancel.test.ts` exits 0.
   Verify: `uv run python -m tools.test_ui ui/src/no-such-file.test.ts` exits 1.
 
