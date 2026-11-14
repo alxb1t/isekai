@@ -18,6 +18,8 @@ its new digest.
   plain line (0142 D5, D6, D7).
 - The review drops the render above it and shows *before* and *after* side by side, fitted to their columns, with the
   summary to the right and *Back* and *Bake* in one row (0142 D8).
+- A polygon's mask is filled at four times its size and box-reduced, so the ink's edge is antialiased in the preview and
+  the bake, and an exclusion removes a partly covered pixel in part (0142 D9).
 
 ## [0.86.15] - 2026-11-13
 

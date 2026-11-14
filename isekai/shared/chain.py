@@ -30,6 +30,9 @@ CHUNK = 16384
 # The pixels past an edge that still count as on it; a solver's rounding is far less.
 EDGE = 1e-9
 
+# How many times larger than its mask a polygon is filled before it is box-reduced.
+SUPERSAMPLE = 4
+
 Points = Sequence[tuple[float, float]]
 
 
@@ -155,19 +158,30 @@ def lookup(
 
 
 def polygon_mask(points: Points, size: tuple[int, int]) -> "NDArray[np.uint8]":
-    """Return the polygon of `points` filled into a (height, width) mask, 255 inside."""
+    """Return the polygon of `points` as an antialiased (height, width) mask.
+
+    The polygon is filled at `SUPERSAMPLE` times the size and box-reduced, so a pixel
+    its edge crosses holds the share it covers.
+    e.g. a polygon covering half a pixel -> that pixel holds about 128
+    """
     import numpy as np
     from PIL import Image, ImageDraw
 
-    mask = Image.new("L", size, 0)
-    ImageDraw.Draw(mask).polygon([tuple(point) for point in points], fill=255)
-    return np.asarray(mask)
+    width, height = size
+    big = Image.new("L", (width * SUPERSAMPLE, height * SUPERSAMPLE), 0)
+    ImageDraw.Draw(big).polygon(
+        [(SUPERSAMPLE * x + 1.5, SUPERSAMPLE * y + 1.5) for x, y in points], fill=255
+    )
+    return np.asarray(big.reduce(SUPERSAMPLE))
 
 
 def clip(
     ink: "NDArray[np.float64]", polygon: Points, exclusions: Sequence[Points] = ()
 ) -> "NDArray[np.float64]":
-    """Return `ink` kept inside `polygon`, softened by a pixel, gone in `exclusions`."""
+    """Return `ink` kept inside `polygon`, softened by a pixel, gone in `exclusions`.
+
+    An exclusion's antialiased edge removes the share of opacity it covers.
+    """
     import numpy as np
     from PIL import Image, ImageFilter
 
@@ -177,7 +191,8 @@ def clip(
     clipped = ink.copy()
     clipped[..., 3] *= softened / 255.0
     for exclusion in exclusions:
-        clipped[polygon_mask(exclusion, (width, height)) > 0, 3] = 0.0
+        mask = polygon_mask(exclusion, (width, height))
+        clipped[..., 3] *= 1.0 - mask / 255.0
     return clipped
 
 

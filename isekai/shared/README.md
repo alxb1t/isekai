@@ -14,7 +14,7 @@ does is reach a boundary or decide a stage's order.
 
 | file | does |
 |---|---|
-| `chain.py` | the maths of a placement, each a function over arrays: a thin-plate `Spline` exact at its pairs, the `lookup` of ink through a chain of them, the polygon mask, the `clip` to an outline, the `multiply` over a render, the `place` of an ink layer through the stages' splines, its `flatten` on white and the `crop_box` every caller crops to; Pillow and numpy are imported inside its functions |
+| `chain.py` | the maths of a placement, each a function over arrays: a thin-plate `Spline` exact at its pairs, the `lookup` of ink through a chain of them, the antialiased polygon mask, the `clip` to an outline, the `multiply` over a render, the `place` of an ink layer through the stages' splines, its `flatten` on white and the `crop_box` every caller crops to; Pillow and numpy are imported inside its functions |
 | `field_map.py` | answers *which identity criterion does this tag belong to* — one authored table, read `tag → field` to route and `field → tags` to browse |
 | `fields.py` | answers *is this filled sheet exactly the schema's fields of canonical tags* |
 | `image.py` | reads a JPEG or PNG header and derives the render target the image's own dimensions imply, refusing what render cannot take; strips a photograph's metadata for upload, names what a file carries beyond its pixels, and makes a thumbnail |

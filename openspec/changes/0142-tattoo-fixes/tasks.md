@@ -7,7 +7,7 @@ The phases: the picker, the steps, the review and the soft edge. Each ends on a 
 - [x] 1 — The picker · moderate
 - [x] 2 — The steps · hard
 - [x] 3 — The review · moderate
-- [ ] 4 — The soft edge · hard
+- [x] 4 — The soft edge · hard
 
 ## 1 — The picker
 
@@ -80,17 +80,17 @@ The phases: the picker, the steps, the review and the soft edge. Each ends on a 
 
 ## 4 — The soft edge
 
-- [ ] 4.1 In `isekai/shared/chain.py` add `SUPERSAMPLE = 4` and make `polygon_mask` fill at that factor, each point at `4x + 1.5`, and reduce with a box filter, per [D9](design.md#d9); fix its docstring.
+- [x] 4.1 In `isekai/shared/chain.py` add `SUPERSAMPLE = 4` and make `polygon_mask` fill at that factor, each point at `4x + 1.5`, and reduce with a box filter, per [D9](design.md#d9); fix its docstring.
   Verify: `git grep -n -w SUPERSAMPLE -- isekai/shared/chain.py` prints the constant and its uses.
-- [ ] 4.2 In `isekai/shared/chain.py` make `clip` multiply the opacity by `1.0 - mask / 255.0` for each exclusion, keep the limb's blur, and fix its docstring.
+- [x] 4.2 In `isekai/shared/chain.py` make `clip` multiply the opacity by `1.0 - mask / 255.0` for each exclusion, keep the limb's blur, and fix its docstring.
   Verify: `git grep -n -F "1.0 - mask" -- isekai/shared/chain.py` prints one line.
-- [ ] 4.3 In `tests/test_chain.py` add `test_chain_composite_a_polygon_mask_is_antialiased_at_its_edge` and `test_chain_composite_an_exclusions_edge_is_partly_removed`, each bound to its key of the `tattoo` delta.
+- [x] 4.3 In `tests/test_chain.py` add `test_chain_composite_a_polygon_mask_is_antialiased_at_its_edge` and `test_chain_composite_an_exclusions_edge_is_partly_removed`, each bound to its key of the `tattoo` delta.
   Verify: `uv run pytest tests/test_chain.py -k "antialiased or partly_removed"` exits 0.
-- [ ] 4.4 In `tests/test_tattoo_placement.py` add `test_placement_preview_ink_layer_has_a_soft_edge`: the alpha channel of `ink_layer` over `_around(34, 24)` holds values between none and full, bound to `tattoo:chain:a-polygon-mask-is-antialiased`.
+- [x] 4.4 In `tests/test_tattoo_placement.py` add `test_placement_preview_ink_layer_has_a_soft_edge`: the alpha channel of `ink_layer` over `_around(34, 24)` holds values between none and full, bound to `tattoo:chain:a-polygon-mask-is-antialiased`.
   Verify: `uv run pytest tests/test_tattoo_placement.py -k soft_edge` exits 0.
-- [ ] 4.5 The far edge of a polygon moves half a pixel in ([D9](design.md#d9)): in `tests/test_chain.py` move the probe `layer[18, 18, 3]` of `test_chain_place_clips_to_the_limb_and_removes_each_exclusion` to `layer[16, 16, 3]`, and in `tests/test_tattoo_placement.py` the probe `_at(shown, kept, 240, 170)` of `test_placement_preview_the_limb_keeps_the_ink_and_an_exclusion_removes_it` to `243, 170`.
+- [x] 4.5 The far edge of a polygon moves half a pixel in ([D9](design.md#d9)): in `tests/test_chain.py` move the probe `layer[18, 18, 3]` of `test_chain_place_clips_to_the_limb_and_removes_each_exclusion` to `layer[16, 16, 3]`, and in `tests/test_tattoo_placement.py` the probe `_at(shown, kept, 240, 170)` of `test_placement_preview_the_limb_keeps_the_ink_and_an_exclusion_removes_it` to `243, 170`.
   Verify: `git grep -n -F "layer[16, 16, 3]" -- tests/test_chain.py` prints one line.
-- [ ] 4.6 **HALT CHECK** The soft edge turns no other existing test red: the interior pixels the tests read are unchanged.
+- [x] 4.6 **HALT CHECK** The soft edge turns no other existing test red: the interior pixels the tests read are unchanged.
   Verify: `uv run pytest tests/test_chain.py tests/test_ink.py tests/test_tattoo_placement.py tests/test_tattoo_library.py` exits 0.
-- [ ] 4.7 In `isekai/shared/README.md` change the `chain.py` row's `the polygon mask` to `the antialiased polygon mask`.
+- [x] 4.7 In `isekai/shared/README.md` change the `chain.py` row's `the polygon mask` to `the antialiased polygon mask`.
   Verify: `git grep -n "the antialiased polygon mask" -- isekai/shared/README.md` prints one line.
