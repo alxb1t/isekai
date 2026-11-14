@@ -1,21 +1,28 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { type RenderPlace, deleteRender } from '../api'
 import { useKeys } from '../composables/useKeys'
 import { useHeldFocus } from '../composables/useHeldFocus'
 import { plain } from '../stores/keys'
 import KeyHint from './KeyHint.vue'
 
-/* *Delete this render?* asks before a large view's render is deleted. *No* comes
-   first and holds the focus, so a stray `↵` deletes nothing; `h` `l` move, `↵`
-   presses, `Esc` is *No*. A refusal is shown here and the focus goes back to *No*. */
-const props = defineProps<{ place: RenderPlace }>()
-const emit = defineEmits<{ close: []; deleted: [] }>()
+/* A question asked before something is deleted or removed. *No* comes first and holds the
+   focus, so a stray `↵` does nothing; `h` `l` move, `↵` presses, `Esc` is *No*. A refusal
+   is shown here and the focus goes back to *No*. `marker` names the `data-<marker>-…`
+   attributes the tests read. */
+const props = defineProps<{
+  title: string
+  name: string | null
+  marker: string
+  run: () => Promise<unknown>
+}>()
+const emit = defineEmits<{ close: []; done: [] }>()
 const dialog = ref<HTMLDialogElement | null>(null)
 const no = ref<HTMLButtonElement | null>(null)
 const yes = ref<HTMLButtonElement | null>(null)
 const refusal = ref<string | null>(null)
-const deleting = ref(false)
+const running = ref(false)
+
+const marked = (part: string): Record<string, string> => ({ [`data-${props.marker}-${part}`]: '' })
 
 useHeldFocus(dialog, () => emit('close'))
 onMounted(() => {
@@ -27,17 +34,17 @@ const focused = () =>
   [no.value, yes.value].find((one) => one !== null && one === document.activeElement) ?? null
 
 async function confirm(): Promise<void> {
-  if (deleting.value) return
-  deleting.value = true
+  if (running.value) return
+  running.value = true
   refusal.value = null
   try {
-    await deleteRender(props.place)
-    emit('deleted')
+    await props.run()
+    emit('done')
   } catch (reason) {
     refusal.value = (reason as Error).message
     no.value?.focus()
   } finally {
-    deleting.value = false
+    running.value = false
   }
 }
 
@@ -69,14 +76,15 @@ useKeys('overlay', [
   <dialog
     ref="dialog"
     class="render-dialog"
-    aria-label="Delete this render?"
-    data-delete-dialog
+    :aria-label="title"
+    v-bind="marked('dialog')"
     @cancel.prevent
   >
     <header class="render-dialog__head">
-      <h2 class="render-dialog__title">Delete this render?</h2>
+      <h2 class="render-dialog__title">{{ title }}</h2>
+      <p v-if="name" class="render-dialog__name mono" v-bind="marked('name')">{{ name }}</p>
     </header>
-    <p v-if="refusal" class="large__refusal" data-delete-refusal>
+    <p v-if="refusal" class="large__refusal" v-bind="marked('refusal')">
       <span class="refusal__mark" />{{ refusal }}
     </p>
     <footer class="render-dialog__actions">
@@ -84,8 +92,7 @@ useKeys('overlay', [
         ref="no"
         class="btn btn-secondary"
         type="button"
-        data-delete-choice
-        data-delete-no
+        v-bind="{ ...marked('choice'), ...marked('no') }"
         @click="emit('close')"
       >
         No<KeyHint command="cancel" />
@@ -94,8 +101,7 @@ useKeys('overlay', [
         ref="yes"
         class="btn btn-secondary"
         type="button"
-        data-delete-choice
-        data-delete-yes
+        v-bind="{ ...marked('choice'), ...marked('yes') }"
         @click="confirm"
       >
         Yes

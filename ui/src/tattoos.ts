@@ -62,14 +62,51 @@ export function card(
   }
 }
 
-/** Return what a press of *Remove* on the card `name` does when `armed` is the card armed
-    before it: the first press arms the card, the second on it removes. e.g. (null, "bow") ->
-    { armed: "bow", remove: false }; ("bow", "bow") -> { armed: null, remove: true } */
-export function armRemoval(
-  armed: string | null,
-  name: string,
-): { armed: string | null; remove: boolean } {
-  return armed === name ? { armed: null, remove: true } : { armed: name, remove: false }
+/* The frame a cut's crop is fitted into on its card, in pixels. */
+export const FRAME = { width: 160, height: 120 }
+
+export interface Crop {
+  width: number
+  height: number
+  backgroundSize: string
+  backgroundPosition: string
+}
+
+/** Return the frame that shows the box of `points` on a photograph of `size`, fitted into
+    `frame`, as the size and position of the photograph behind it; null for no area.
+    e.g. the box 100 by 50 at 250, 275 on 1100 by 600 -> 160 by 80, "1760px 960px", "-400px -440px" */
+export function thumbCrop(
+  points: readonly Point[],
+  size: readonly [number, number],
+  frame: { width: number; height: number } = FRAME,
+): Crop | null {
+  if (points.length === 0) return null
+  const xs = points.map(([x]) => x)
+  const ys = points.map(([, y]) => y)
+  const left = Math.min(...xs)
+  const top = Math.min(...ys)
+  const width = Math.max(...xs) - left
+  const height = Math.max(...ys) - top
+  if (width <= 0 || height <= 0) return null
+  const scale = Math.min(frame.width / width, frame.height / height)
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+    backgroundSize: `${Math.round(size[0] * scale)}px ${Math.round(size[1] * scale)}px`,
+    backgroundPosition: `${-Math.round(left * scale)}px ${-Math.round(top * scale)}px`,
+  }
+}
+
+/** Return an object URL for `image`, or null once `gone()` says the card that wanted it is gone:
+    nothing would release a URL made then. */
+export function inkUrl(image: Blob, gone: () => boolean): string | null {
+  return gone() ? null : URL.createObjectURL(image)
+}
+
+/** Return `tattoo` as the save of `outline` leaves it: outlined once the outline is closed.
+    e.g. a tattoo not outlined, saved with a closed outline -> outlined */
+export function withOutline<T extends Tattoo>(tattoo: T, outline: Pick<Outline, 'closed'>): T {
+  return { ...tattoo, outlined: outline.closed }
 }
 
 /** Return the line under a picker form's heading: what the form takes. */

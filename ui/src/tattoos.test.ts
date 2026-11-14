@@ -1,7 +1,6 @@
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
 import { spec } from './test/spec'
 import {
-  armRemoval,
   card,
   closeLine,
   controlsWait,
@@ -10,14 +9,17 @@ import {
   formLine,
   greyOf,
   inkSize,
+  inkUrl,
   refusalField,
   scaleOf,
   tattoosPath,
+  thumbCrop,
   uploadName,
   whiteNote,
   whiteState,
+  withOutline,
 } from './tattoos'
-import type { Pair, Stage1, Tattoo } from './types'
+import type { Pair, Point, Stage1, Tattoo } from './types'
 
 const DIGEST = 'a1b2c3d4e5f6'
 
@@ -109,12 +111,31 @@ spec('ui:picker:a-cut-of-another-photograph-cannot-be-chosen', () => {
   expect(card(tattoo({}), 'ffffffffffff', undefined, FLOOR)).toEqual(card(tattoo({}), DIGEST, undefined, FLOOR))
 })
 
-spec('ui:picker:remove-takes-a-second-click', () => {
-  const first = armRemoval(null, 'bow')
-  expect(first).toEqual({ armed: 'bow', remove: false })
-  expect(armRemoval(first.armed, 'bow')).toEqual({ armed: null, remove: true })
-  // A press on another card arms that card and removes nothing.
-  expect(armRemoval('bow', 'arm')).toEqual({ armed: 'arm', remove: false })
+spec('ui:picker:a-cuts-card-shows-its-own-crop', () => {
+  const box = (x: number, y: number, width: number, height: number): Point[] => [
+    [x, y],
+    [x + width, y + height],
+  ]
+  expect(thumbCrop(box(250, 275, 100, 50), [1100, 600])).toEqual({
+    width: 160,
+    height: 80,
+    backgroundSize: '1760px 960px',
+    backgroundPosition: '-400px -440px',
+  })
+  // A tall box is fitted by its height, and two boxes of one photograph crop differently.
+  const tall = thumbCrop(box(0, 0, 30, 240), [1100, 600])
+  expect(tall).toEqual({ width: 15, height: 120, backgroundSize: '550px 300px', backgroundPosition: '0px 0px' })
+  expect(tall).not.toEqual(thumbCrop(box(250, 275, 100, 50), [1100, 600]))
+  // A cut with no point, one point or points on a line has no box, so no crop.
+  expect(thumbCrop([], [1100, 600])).toBeNull()
+  expect(thumbCrop([[5, 5]], [1100, 600])).toBeNull()
+  expect(thumbCrop([[5, 5], [9, 5]], [1100, 600])).toBeNull()
+  // A cut's ink that arrives after its card is gone makes no object URL, which nothing would release.
+  const made = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:ink')
+  expect(inkUrl(new Blob(['ink']), () => true)).toBeNull()
+  expect(made).not.toHaveBeenCalled()
+  expect(inkUrl(new Blob(['ink']), () => false)).toBe('blob:ink')
+  made.mockRestore()
 })
 
 spec('ui:picker:each-form-says-what-it-takes', () => {
@@ -187,6 +208,17 @@ spec('ui:outline-step:the-line-names-the-floor-while-the-outline-is-short', () =
 spec('ui:outline-step:the-size-of-the-cuts-ink-is-the-outlines-box', () => {
   expect(inkSize({ width: 412.4, height: 300.6 })).toBe('412×301')
   expect(inkSize(null)).toBeNull()
+})
+
+spec('ui:outline-step:the-head-reads-the-saves-answer', () => {
+  const fresh = tattoo({ outlined: false })
+  const state = (held: Tattoo) => card(held, DIGEST, undefined, FLOOR).state
+
+  const saved = withOutline(fresh, { closed: true })
+  expect(state(saved)).toBe('outlined')
+  expect(state(withOutline(saved, { closed: false }))).toBe('not outlined')
+  // The tattoo read stands as it was: the head holds a new one.
+  expect(fresh.outlined).toBe(false)
 })
 
 spec('ui:outline-step:uploading-instead-keeps-the-cut', () => {

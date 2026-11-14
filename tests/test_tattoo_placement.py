@@ -371,7 +371,7 @@ def test_placement_preview_the_limb_keeps_the_ink_and_an_exclusion_removes_it(
     shown, whole = _shown(kept), _shown(free)
     assert _at(whole, free, 225, 165) < 128
     assert _at(shown, kept, 225, 165) > 250
-    assert _at(shown, kept, 240, 170) < 128
+    assert _at(shown, kept, 243, 170) < 128
     assert _at(whole, free, 258, 180) < 128
     assert _at(shown, kept, 258, 180) > 250
 
@@ -550,6 +550,20 @@ def test_placement_preview_ink_view_is_the_layer_flattened_on_white(
     assert layer.image.mode == "RGBA"
     assert (*layer.origin, *layer.image.size) == view.box
     assert layer.white == view.white
+
+
+@pytest.mark.spec("tattoo:chain:a-polygon-mask-is-antialiased")
+def test_placement_preview_ink_layer_has_a_soft_edge(tmp_path: Path) -> None:
+    _library(tmp_path)
+    outline = tattoos.read_outline(tmp_path, "bow", DIGEST)
+
+    layer = tattoos.ink_layer(
+        tmp_path, "bow", None, DIGEST, outline.points, 1.0, True, 1.6
+    )
+
+    alpha = np.asarray(layer.image)[..., 3]
+    assert (alpha == 255).any()
+    assert ((alpha > 0) & (alpha < 255)).any()
 
 
 @pytest.mark.spec_exempt(

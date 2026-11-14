@@ -45,7 +45,7 @@ guardrails; a link here names the decision in force.
   out unless the operator imports it as it is. The upload to the pod carries what decodes the image and its orientation.
 - **A tattoo's removal.** `DELETE /api/tattoos/{name}` deletes one folder of the library's `.tattoos/`, found from a
   checked name and a checked digest and never from a path in the request, behind the guard every route has, and the
-  page asks a second click first
+  page asks in a dialog first
   ([D52](docs/decisions.md#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed)).
 - **A pod.** It boots the pinned digest with telemetry off and keeps the photograph and render in memory. It stops
   itself at the session's limit, so a lost laptop does not bill past it.

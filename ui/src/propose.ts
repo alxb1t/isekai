@@ -9,7 +9,7 @@ import type { Outline, Pair, Point } from './types'
 export type Ask =
   | { state: 'asking' }
   | { state: 'answered'; count: number }
-  | { state: 'refused'; words: string }
+  | { state: 'refused' }
 
 export type Asks = Readonly<Record<string, Ask>>
 
@@ -21,9 +21,18 @@ export const keyOf = (tattoo: string, version: string, seed: string): string =>
   JSON.stringify([tattoo, version, seed])
 
 /** Return whether stage 2 asks now: a two-stage tattoo or a cut, no pair held, and no ask
-    recorded under `key`. The direct stage has no photograph to read a pose from. */
-export function due(mode: Mode | null, pairs: Pairs, asks: Asks, key: string): boolean {
+    recorded under `key`, with `points` to send and no read of the tattoo in flight (`reading`).
+    The direct stage has no photograph to read a pose from. */
+export function due(
+  mode: Mode | null,
+  pairs: Pairs,
+  asks: Asks,
+  key: string,
+  points: number,
+  reading: boolean,
+): boolean {
   if (mode !== 'two-stage' && mode !== 'cut') return false
+  if (reading || points === 0) return false
   return pairs.slots.length === 0 && !(key in asks)
 }
 
@@ -42,10 +51,10 @@ export const answered = (asks: Asks, key: string, count: number): Asks => ({
   [key]: { state: 'answered', count },
 })
 
-/** Return `asks` with `key` refused, in the refusal's own `words`. */
-export const refused = (asks: Asks, key: string, words: string): Asks => ({
+/** Return `asks` with `key` refused. */
+export const refused = (asks: Asks, key: string): Asks => ({
   ...asks,
-  [key]: { state: 'refused', words },
+  [key]: { state: 'refused' },
 })
 
 /** Return the line stage 2 shows for `key`, or null when there is nothing to say.
@@ -54,7 +63,7 @@ export function view(asks: Asks, key: string): string | null {
   const ask = asks[key]
   if (ask === undefined) return null
   if (ask.state === 'asking') return 'Proposing pairs…'
-  if (ask.state === 'refused') return ask.words
+  if (ask.state === 'refused') return 'Could not propose pairs — place them by clicking'
   return ask.count === 0 ? 'Nothing proposed — place the pairs by clicking' : null
 }
 

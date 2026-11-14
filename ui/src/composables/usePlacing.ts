@@ -4,6 +4,7 @@ import { type Outlines, none as noOutlines } from '../outlines'
 import { type Pairs, complete, held, none } from '../pairs'
 import { type Asks, noAsks } from '../propose'
 import { modeOf } from '../stages'
+import { withOutline } from '../tattoos'
 import type { Outline, Pair, Stage1, Tattoo } from '../types'
 
 /* What the placement screen holds across its steps: the tattoo, the stage-1 pairs read for
@@ -52,38 +53,50 @@ export function usePlacing(place: Place, ports: Ports = serverPorts(place)) {
   let loading: Promise<void> = Promise.resolve()
   let saving: Promise<void> = Promise.resolve()
 
+  const inFlight = ref(0)
+  /** True while a read or an outline save runs: what the tattoo holds may be older than the file. */
+  const reading = computed(() => inFlight.value > 0)
+
+  /** Count `work` as in flight until it settles, and return it. */
+  async function track<T>(work: Promise<T>): Promise<T> {
+    inFlight.value += 1
+    try {
+      return await work
+    } finally {
+      inFlight.value -= 1
+    }
+  }
+
   /** Read `name` and its pairs on this photograph, unless it is the tattoo already held:
       what a step change finds is what the last step left. */
   function load(name: string): Promise<void> {
     if (tattoo.value?.name === name) return loading
-    loading = (async () => {
-      try {
-        const [named, stage] = await Promise.all([ports.read(name), ports.stageOne(place.digest, name)])
-        tattoo.value = named
-        read.value = stage
-        first.value = held(stage.pairs)
-        notOnPhoto.value = stage.not_on_photo
-        second.value = none
-        proposalAsked.value = noAsks
-        outlines.value = noOutlines
-        savedAt.value = null
-        refusal.value = null
-      } catch (reason) {
-        refusal.value = (reason as Error).message
-      }
-    })()
+    loading = track(
+      (async () => {
+        try {
+          const [named, stage] = await Promise.all([ports.read(name), ports.stageOne(place.digest, name)])
+          tattoo.value = named
+          read.value = stage
+          first.value = held(stage.pairs)
+          notOnPhoto.value = stage.not_on_photo
+          second.value = none
+          proposalAsked.value = noAsks
+          outlines.value = noOutlines
+          savedAt.value = null
+          refusal.value = null
+        } catch (reason) {
+          refusal.value = (reason as Error).message
+        }
+      })(),
+    )
     return loading
   }
 
-  /** Read the held tattoo again, for the outline the step before saved. */
-  async function reload(): Promise<void> {
-    const name = tattoo.value?.name
-    if (name === undefined) return
-    try {
-      tattoo.value = await ports.read(name)
-    } catch (reason) {
-      refusal.value = (reason as Error).message
-    }
+  /** Hold `outline`, a save's answer, as the outline of the tattoo held, when it is `name`. */
+  function adopt(name: string, outline: Outline): void {
+    const held = tattoo.value
+    if (held?.name !== name) return
+    tattoo.value = { ...withOutline(held, outline), outline }
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -170,8 +183,10 @@ export function usePlacing(place: Place, ports: Ports = serverPorts(place)) {
     status,
     savedAt,
     refusal,
+    reading,
     load,
-    reload,
+    track,
+    adopt,
     editFirst,
     editSecond,
     editOutlines,

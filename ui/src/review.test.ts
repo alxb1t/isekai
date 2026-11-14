@@ -1,6 +1,6 @@
 import { expect } from 'vitest'
 import { held, none } from './pairs'
-import { type Placement, bakeState, summary } from './review'
+import { type Placement, bakeState, fitted, summary } from './review'
 import { spec } from './test/spec'
 import type { Outline, Pair, TattooLimits } from './types'
 
@@ -96,6 +96,23 @@ spec('ui:review:the-summary-lists-the-pairs-of-the-mode', () => {
   expect(summary(cut()).outlines).toEqual(['no limb or exclusion'])
   expect(summary(cut()).image).toBe('seed 42')
   expect(summary(cut({ edit: 3 })).image).toBe('edit 3 · seed 42')
+})
+
+spec('ui:review:the-crops-are-fitted-to-their-columns', () => {
+  const render = { width: 1100, height: 600 }
+
+  expect(fitted({ x: 250, y: 275, width: 100, height: 50 }, render)).toEqual({
+    aspectRatio: '100 / 50',
+    backgroundSize: '1100%',
+    backgroundPosition: '25% 50%',
+  })
+
+  // An axis the box fills has nothing left to offset by, and places at 0%.
+  expect(fitted({ x: 0, y: 100, width: 1100, height: 200 }, render)).toEqual({
+    aspectRatio: '1100 / 200',
+    backgroundSize: '100%',
+    backgroundPosition: '0% 25%',
+  })
 })
 
 spec('ui:review:bake-waits-for-a-stage-and-then-queues', () => {

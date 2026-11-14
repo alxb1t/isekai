@@ -18,15 +18,25 @@ export function latest(): { begin: () => () => boolean; drop: () => void } {
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { bakeAt, bakeDetail, imageAt, photoUrl, renderDetail, thumbAt, versionOf } from '../api'
+import {
+  bakeAt,
+  bakeDetail,
+  deleteRender,
+  imageAt,
+  photoUrl,
+  renderDetail,
+  thumbAt,
+  versionOf,
+} from '../api'
 import { offered } from '../bakes'
 import { type PickTile, placeOf, rowOrder, sourceGrid, stepped } from '../cells'
 import BakeChain from '../components/BakeChain.vue'
 import ComparePick from '../components/ComparePick.vue'
-import DeleteDialog from '../components/DeleteDialog.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 import DraftDialog from '../components/DraftDialog.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import { deletion } from '../confirm'
 import { useKeys } from '../composables/useKeys'
 import { useCollectionStore } from '../stores/collection'
 import { plain, shifted } from '../stores/keys'
@@ -301,11 +311,14 @@ onMounted(async () => {
       :targets="detail.targets"
       @close="drafting = false"
     />
-    <DeleteDialog
+    <ConfirmDialog
       v-if="deleting"
-      :place="place"
+      marker="delete"
+      :title="deletion.title"
+      :name="deletion.name"
+      :run="() => deleteRender(place)"
       @close="deleting = false"
-      @deleted="deleted"
+      @done="deleted"
     />
   </section>
 </template>

@@ -499,7 +499,7 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 
 | frame | trigger | URL |
 |---|---|---|
-| J9·1 the picker, nothing kept: `none kept yet`, the upload form with `the tattoo's design on its own — a flat image, not a photo of skin`, the cut form with `the tattoo as it shows on this render's photograph` | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
+| J9·1 the picker, nothing kept: the render and its photograph above the forms, side by side, `none kept yet`, the upload form with `the tattoo's design on its own — a flat image, not a photo of skin`, the cut form with `the tattoo as it shows on this render's photograph` | ⇧P Place a tattoo, on J5·2's large view | `…/renders/0d4b7e6fb2a8/summon-anime-wai/v1/1840266731/place/tattoo` |
 | J9·2 a file chosen: its name `IMG_5521`, `reading…`, then `converted`; Keep waits `reading the file` | Upload a tattoo…, choose `IMG_5521.heic` | same |
 | J9·3 the outline step on it, the outline open: the ink view, the white point and the tone disabled, the line `add 3 more points to close · 0 of 3` above them | Keep | `…/place/outline/IMG_5521` |
 | J9·4 the outline closed: the ink view, the white point `auto` with its grey, the tone, `saved` | shift-click the first point again | same |
@@ -510,9 +510,9 @@ J7·1  LIBRARY · 4 collections · newest activity first                     [ N
 | J9·9 the preview: the ink multiplied over the photograph, `Hide the preview` and its opacity; the last answer at half opacity while the next is asked | the third complete pair, then a second without a change | same |
 | J9·10 ④ photograph ↔ render: the photograph and the render, the preview over the render, the rows `limb · 9 points · keeps` and `exclusion 1 · 8 points · removes` with *Edit*; the pairs wait while one is drawn, `drawing · 3 points` | Next: ④ photograph ↔ render, then Draw limb, Draw exclusion | `…/place/render` |
 | J9·11 ③ tattoo ↔ render, for a tattoo `not on this photo`: its ink view and the render; no ③ photograph and no stage-1 pairs asked | the card's *not on this photo*, then Next | `…/place/render` |
-| J9·12 ⑤ review: the render with the tattoo over it, its crop `before` and `after`, the summary, `Back to ③ …` and `Back to ④ …`, *Bake*; waiting with `stage 2 · 8 pairs needed · 5 placed`, then `queued · edit 3 · next render session` | Next: review, then Bake | `…/place/review` |
+| J9·12 ⑤ review: the crops `before` and `after` side by side, the summary beside them, `Back to ③ …`, `Back to ④ …` and *Bake* in one row; waiting with `stage 2 · 8 pairs needed · 5 placed`, then `queued · edit 3 · next render session` | Next: review, then Bake | `…/place/review` |
 | J9·13 Leave this stage?: `Point 8 has no match on the photograph`, `7 pairs stand · saved 14:05`, *Stay* and *Leave* | ① tattoo, or a step, or Back to the render, with a lone point | the step asked for |
-| J9·14 ④ photograph ↔ render opened with no pair held: `Proposing pairs…` under the list while the clicks work; then the proposed pairs numbered after the held ones, each point ringed dashed and its row marked, *Accept* and *Accept all*, forward waiting `4 proposed · accept or delete them`; after a refusal its words with their fix, after an empty answer `Nothing proposed — place the pairs by clicking` | Next: ④ photograph ↔ render, on a two-stage tattoo or a cut, then Accept all | `…/place/render` |
+| J9·14 ④ photograph ↔ render opened with no pair held, the ask waiting for the saved outline: `Proposing pairs…` under the list while the clicks work; then the proposed pairs numbered after the held ones, each point ringed dashed and its row marked, *Accept* and *Accept all*, forward waiting `4 proposed · accept or delete them`; after a refusal `Could not propose pairs — place them by clicking`, after an empty answer `Nothing proposed — place the pairs by clicking` | Next: ④ photograph ↔ render, on a two-stage tattoo or a cut, then Accept all | `…/place/render` |
 
 ```
 J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tattoo   ② outline   [ Back to the render ]
@@ -531,24 +531,27 @@ J9·4  place a tattoo · summon-anime-wai · v1 · seed 1840266731      ① tatt
   the automatic grey. *Reset* shows only while the tone differs from its kind's default: neutral off and depth 1.0
   for an upload, neutral on and depth 1.6 for a cut.
 - **A card** shows the image, the name, `outlined` or `not outlined`, and `kept 2026-11-12`, with
-  `· downscaled from 6000×4000` when it was scaled, or `from photograph 0d4b7e6fb2a8` for a cut.
+  `· downscaled from 6000×4000` when it was scaled, or `from photograph 0d4b7e6fb2a8` for a cut. A cut shows its own
+  crop: the photograph cropped to the outline's box, the ink view once the outline is closed.
 - **Keep and Cut wait with their reason**: `reading the file`, `the file is refused`, `name the tattoo`, `name the cut`,
   `keeping`.
 - **Refusals**, each with its fix: a taken name, `bow is kept; choose another name`, beside the name; a file that is
   not an image or still carries metadata, on the file; an outline the server refuses, as the ink view's refusal under
   the ink view; an unknown render or tattoo, a full-page refusal with `Back to the library ⇧L`.
-- **Remove** is a button on each card. The first press arms it in the accent and removes nothing, a second press on the
-  same card removes the tattoo and lists the rest again, and a press elsewhere, or losing focus, disarms it. A refusal
-  shows under the card.
+- **Remove** is a button on each card. It opens the dialog of a render's deletion, *Remove this tattoo?*, with the
+  tattoo's name under the title: *No* first and focused, `h` `l` move, `↵` presses, `Esc` is *No*. *Yes* removes the
+  tattoo and lists the rest again; a refusal shows in the dialog.
 - **The stages** pair the images by clicks, either image first; the image that waits for a match takes the accent, a
   click near a point selects its pair, a drag moves a point, and the list has *Undo*, *Delete* and *Clear*. Forward
   waits with `6 pairs needed · 2 placed` or `point 7 has no match`. The steps of a mode keep their numbers (§4): a cut
   has no ③, and a tattoo `not on this photo` pairs the tattoo with the render at ③ `render`.
 - **The preview** is asked the declared time after the last change once the preview's floor of complete pairs stand;
   only the newest answer is drawn. A refusal clears the answer and shows its fix under the pairs.
-- **The proposed pairs** are asked once, when ④ opens with no pair for a two-stage tattoo or a cut; the direct stage
-  asks nothing. The line under the list reads `Proposing pairs…`, then the refusal's words, or `Nothing proposed —
-  place the pairs by clicking` after an empty answer, and the clicks keep working. A proposed pair is dashed on both
+- **The proposed pairs** are asked once, when ④ opens with no pair for a two-stage tattoo or a cut, and once the saved
+  outline is read, with a point to send; the direct stage asks nothing. The line under the list reads `Proposing
+  pairs…`, then after a refusal `Could not propose
+  pairs — place them by clicking`, or after an empty answer `Nothing proposed —
+  place the pairs by clicking`, and the clicks keep working. A proposed pair is dashed on both
   images and in its row; *Accept* makes the selected one ordinary, *Accept all* makes every one, and a drag of either
   point accepts that pair. Forward waits `4 proposed · accept or delete them` before any other reason, and *Undo*
   leaves the proposal in place.
