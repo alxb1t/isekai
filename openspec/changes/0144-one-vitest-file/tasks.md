@@ -5,7 +5,7 @@ Phases: the wrapper takes a file, a root config refuses the wrong start, the doc
 ## Progress
 
 - [x] 1 — The arguments · moderate
-- [ ] 2 — The guard · hard
+- [x] 2 — The guard · hard
 - [ ] 3 — The documents · moderate
 
 ## 1 — The arguments
@@ -26,15 +26,15 @@ Phases: the wrapper takes a file, a root config refuses the wrong start, the doc
 
 ## 2 — The guard
 
-- [ ] 2.1 Add `vitest.config.mjs` at the repository root, with the text of [D4](design.md#d4) word for word.
+- [x] 2.1 Add `vitest.config.mjs` at the repository root, with the text of [D4](design.md#d4) word for word.
   Verify: `grep -n -F 'tools.test_ui' vitest.config.mjs` prints the refusal's line.
-- [ ] 2.2 **HALT CHECK** In `tests/test_test_ui.py`, add `test_vitest_beside_the_root_config_refuses_and_writes_nothing` with `spec_exempt`, as [D4](design.md#d4)'s table says: it skips when `refusal()` names a missing toolchain. If it cannot pass as written, the plan is wrong: [D5](design.md#d5) drops the guard.
+- [x] 2.2 **HALT CHECK** In `tests/test_test_ui.py`, add `test_vitest_beside_the_root_config_refuses_and_writes_nothing` with `spec_exempt`, as [D4](design.md#d4)'s table says: it skips when `refusal()` names a missing toolchain. If it cannot pass as written, the plan is wrong: [D5](design.md#d5) drops the guard.
   Verify: `uv run pytest tests/test_test_ui.py -k beside_the_root_config` passes.
-- [ ] 2.3 Start vitest at the root the way a worker does. It refuses, naming the command.
+- [x] 2.3 Start vitest at the root the way a worker does. It refuses, naming the command.
   Verify: `npm --prefix ui exec -- vitest run ui/src/cancel.test.ts` exits 1.
-- [ ] 2.4 Check that the start of 2.3 wrote no root `node_modules/`. This holds before 2.1 too: it fails only if 2.3 ran with no guard, so it proves the guard stopped vitest before it wrote.
+- [x] 2.4 Check that the start of 2.3 wrote no root `node_modules/`. This holds before 2.1 too: it fails only if 2.3 ran with no guard, so it proves the guard stopped vitest before it wrote.
   Verify: `test -e node_modules` exits 1.
-- [ ] 2.5 Run the whole suite through the wrapper: the root config leaves `ui/`'s run alone. This holds before 2.1 too, and proves the guard does not leak into `ui/`.
+- [x] 2.5 Run the whole suite through the wrapper: the root config leaves `ui/`'s run alone. This holds before 2.1 too, and proves the guard does not leak into `ui/`.
   Verify: `uv run python -m tools.test_ui` exits 0.
 
 ## 3 — The documents

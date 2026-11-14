@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -75,6 +76,26 @@ def test_a_file_is_run_in_ui_after_the_double_dash(
         ),
         (["npm", "run", "test", "--", "src/cancel.test.ts"], root / "ui"),
     ]
+
+
+@pytest.mark.spec_exempt(
+    "structural: vitest started at the repository root is refused and writes nothing"
+)
+def test_vitest_beside_the_root_config_refuses_and_writes_nothing(
+    tmp_path: Path,
+) -> None:
+    if refusal() is not None:
+        pytest.skip("no ui toolchain: the gate's own vitest run refuses first")
+    start = tmp_path / "start"
+    start.mkdir()
+    shutil.copy(test_ui.ROOT / "vitest.config.mjs", start)
+    vitest = test_ui.ROOT / "ui" / "node_modules" / ".bin" / "vitest"
+    done = subprocess.run(
+        [str(vitest), "run"], cwd=start, capture_output=True, text=True, check=False
+    )
+    assert done.returncode != 0
+    assert "python -m tools.test_ui" in done.stdout + done.stderr
+    assert [entry.name for entry in start.iterdir()] == ["vitest.config.mjs"]
 
 
 @pytest.mark.spec_exempt("structural: a refusal runs nothing and exits 1")

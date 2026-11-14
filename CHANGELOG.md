@@ -12,6 +12,8 @@ its new digest.
 
 - `python -m tools.test_ui` takes arguments: `ui/src/<name>.test.ts` runs one browser test file in `ui/`, where vitest
   finds its config, and a leading `ui/` on an argument is dropped (0144 D1, D2).
+- A root `vitest.config.mjs` refuses a vitest start at the repository root, naming `tools.test_ui`, so it writes no root
+  `node_modules/`; a test starts vitest beside a copy of it and reads the refusal (0144 D4).
 
 ## [0.86.15] - 2026-11-13
 
