@@ -32,7 +32,7 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `comfy/` | `gpu.py`, `interface/cli.py`, `interface/render.py`, `interface/verbs/common.py`, `interface/wiring.py`, `pipeline/edit.py`, `pipeline/generate.py` | — |
+| `comfy/` | `gpu.py`, `interface/cli.py`, `interface/render.py`, `interface/verbs/common.py`, `interface/verbs/edits.py`, `interface/wiring.py`, `pipeline/edit.py`, `pipeline/generate.py` | — |
 | `comfy/multipart.py` | `comfy/client.py` | — |
 | `comfy/prompt.py` | `comfy/__init__.py` | — |
 | `gpu.py` | `interface/render.py`, `interface/ui/app.py`, `interface/ui/billing.py`, `interface/ui/jobs.py`, `interface/wiring.py` | — |

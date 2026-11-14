@@ -108,6 +108,18 @@ class _Targets(argparse.Action):
 
 
 @dataclass(frozen=True)
+class Verb:
+    """A verb as one row: its name, the arguments it adds and the run that serves it.
+
+    `run` is `None` for a verb `dispatch`'s tail runs.
+    """
+
+    name: str
+    arguments: Callable[[argparse.ArgumentParser], None]
+    run: Callable[[argparse.Namespace, Wiring], int] | None = None
+
+
+@dataclass(frozen=True)
 class Reporter:
     """Where a verb's lines go: prose to `out`, or with `progress` JSON to `out`.
 

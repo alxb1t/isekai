@@ -369,7 +369,8 @@ def test_a_raw_photograph_is_refused_and_the_others_import(tmp_path: Path) -> No
     jpeg = _write(tmp_path, "portrait.jpg", photo_jpeg())
     collection = tmp_path / "library" / "trip"
     err = io.StringIO()
-    wired = bare_wiring(err=err)
+    out = io.StringIO()
+    wired = bare_wiring(out=out, err=err)
     args = build_parser().parse_args(
         ["import", "--collection", str(collection), str(nef), str(jpeg)]
     )
@@ -382,6 +383,18 @@ def test_a_raw_photograph_is_refused_and_the_others_import(tmp_path: Path) -> No
     assert [path.name for path in (collection / "sources").iterdir()] == [
         "portrait.jpg"
     ]
+    assert out.getvalue() == "portrait.jpg: ready\ntrip: imported portrait.jpg\n"
+    assert not (tmp_path / "library" / ".staging").exists()
+
+    # A commit the library refuses is reported alone, and its staging goes too.
+    err = io.StringIO()
+    args = build_parser().parse_args(
+        ["import", "--collection", str(tmp_path / "library" / ".hidden"), str(jpeg)]
+    )
+
+    assert dispatch(args, bare_wiring(err=err)) == 1
+    assert "refused: '.hidden': not a collection name" in err.getvalue()
+    assert not (tmp_path / "library" / ".staging").exists()
 
 
 @pytest.mark.spec("import:refuse:a-raw-photograph-is-refused")
@@ -436,6 +449,20 @@ def test_a_file_that_cannot_be_converted_is_refused_and_the_others_import(
         "mac-scan.jpg",
         "portrait.jpg",
     ]
+
+    # Bytes already read are skipped, and bytes a source already holds are too.
+    out = io.StringIO()
+    twins = [_write(tmp_path, name, photo_jpeg()) for name in ("one.jpg", "two.jpg")]
+    args = build_parser().parse_args(
+        ["import", "--collection", str(collection), *map(str, twins)]
+    )
+
+    assert dispatch(args, bare_wiring(out=out)) == 0
+    assert out.getvalue() == (
+        "one.jpg: ready\n"
+        "two.jpg: skipped, its bytes are already read\n"
+        "one.jpg: skipped, a source holds its bytes\n"
+    )
 
     # The same pair, with the scan's conversion failing as Pillow fails on a mode
     # it has no operation for.
@@ -599,6 +626,20 @@ def test_a_file_that_cannot_be_cleaned_is_named_and_left_out(
     assert [path.name for path in (library / "trip" / "sources").iterdir()] == [
         "clean.jpg"
     ]
+
+    # The verb names the file it left out, and imports nothing.
+    out = io.StringIO()
+    args = build_parser().parse_args(
+        [
+            "import",
+            "--collection",
+            str(tmp_path / "again" / "trip"),
+            str(tmp_path / "dirty.jpg"),
+        ]
+    )
+
+    assert dispatch(args, bare_wiring(out=out)) == 0
+    assert out.getvalue() == "dirty.jpg: not cleaned, carries XMP; left out\n"
 
 
 @pytest.mark.spec("import:verify:an-uncleanable-file-chosen-imports")

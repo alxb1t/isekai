@@ -33,7 +33,7 @@ does is reach a boundary or decide a stage's order.
 | `field_map.py` | `interface/cli.py`, `interface/drafting.py`, `interface/ui/app.py`, `interface/wiring.py`, `pipeline/sheet.py` | `tools/derive_field_map.py` |
 | `fields.py` | `pipeline/review.py`, `pipeline/sheet.py` | — |
 | `image.py` | `interface/ui/app.py`, `interface/ui/library.py`, `pipeline/generate.py`, `pipeline/importing.py`, `pipeline/tattoos.py` | — |
-| `ink.py` | `interface/cli.py`, `interface/ui/app.py`, `interface/verbs/common.py`, `pipeline/tattoos.py` | — |
+| `ink.py` | `interface/ui/app.py`, `interface/verbs/common.py`, `interface/verbs/edits.py`, `pipeline/tattoos.py` | — |
 | `proposal.py` | `pipeline/proposing.py` | — |
 | `tattoo.py` | `pipeline/edit.py`, `pipeline/tattoos.py`, `ink.py` | — |
 | `vocabulary.py` | `boundary/wd14.py`, `interface/cli.py`, `interface/drafting.py`, `interface/ui/app.py`, `interface/wiring.py`, `pipeline/review.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `evaluation/__main__.py`, `evaluation/face.py`, `evaluation/recall.py`, `tools/derive_field_map.py` |

@@ -42,15 +42,15 @@ independent, and neither reads the other's output
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `importing.py` | `interface/cli.py`, `interface/ui/__init__.py`, `interface/ui/app.py`, `interface/ui/library.py` | — |
+| `importing.py` | `interface/ui/__init__.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/verbs/library.py` | — |
 | `caption.py` | `interface/cli.py`, `interface/wiring.py` | — |
 | `tagging.py` | `interface/cli.py`, `interface/wiring.py` | — |
 | `sheet.py` | `interface/cli.py`, `interface/drafting.py` | — |
-| `review.py` | `interface/cli.py`, `interface/drafting.py`, `interface/render.py`, `interface/ui/app.py`, `interface/ui/library.py` | — |
-| `edit.py` | `interface/cli.py`, `interface/render.py`, `interface/ui/app.py` | — |
+| `review.py` | `interface/cli.py`, `interface/drafting.py`, `interface/render.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/verbs/drafts.py` | — |
+| `edit.py` | `interface/render.py`, `interface/ui/app.py`, `interface/verbs/drafts.py`, `interface/verbs/edits.py` | — |
 | `proposing.py` | `interface/wiring.py` | — |
 | `tattoos.py` | `interface/ui/app.py` | — |
-| `generate.py` | `interface/cli.py`, `interface/compare_view.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/library.py` | — |
+| `generate.py` | `interface/cli.py`, `interface/compare_view.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/verbs/drafts.py` | — |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are

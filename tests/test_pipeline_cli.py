@@ -48,8 +48,16 @@ from isekai.foundation.flow import (
     tracked_flows,
 )
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import PHOTO, Kind, Run, StageFailure, assign, open_run
-from isekai.interface import wiring
+from isekai.foundation.run import (
+    PHOTO,
+    RUNS_ROOT,
+    Kind,
+    Run,
+    StageFailure,
+    assign,
+    open_run,
+)
+from isekai.interface import ui, wiring
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.ui import library
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
@@ -393,14 +401,29 @@ def test_a_limit_below_one_second_is_refused_at_parse_time(
     ids=["a-flow", "an-input", "a-runs-root"],
 )
 def test_the_serving_verb_refuses_a_flow_an_input_or_a_runs_root(
-    extra: list[str], capsys: pytest.CaptureFixture[str]
+    extra: list[str],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     with pytest.raises(SystemExit) as exited:
         build_parser().parse_args(["ui", *extra])
 
     assert exited.value.code == 2
     assert "unrecognized arguments" in capsys.readouterr().err
-    assert build_parser().parse_args(["ui", "--port", "9000"]).port == 9000
+    args = build_parser().parse_args(["ui", "--port", "9000"])
+    assert (args.port, args.photos, args.runs) == (9000, [], RUNS_ROOT)
+
+    # The verb serves on that port and answers with the surface's exit status.
+    ports: list[int] = []
+
+    def serving(wired: Wiring, port: int) -> int:
+        ports.append(port)
+        return 7
+
+    monkeypatch.setattr(ui, "serve", serving)
+    assert dispatch(args, _wiring(tmp_path)) == 7
+    assert ports == [9000]
 
 
 @pytest.mark.spec("cli:flow-selection:the-flag-is-repeatable")
@@ -1263,9 +1286,14 @@ def test_draft_writes_another_flow_from_the_images_approval_and_seed(
     run = _two_approvals(tmp_path, "ada", schema, vocabulary)
     image = rendered_image(run, 1, 7)
     argv = ["draft", "--flow", CONJURE, str(image)]
+    out = io.StringIO()
 
-    assert dispatch(build_parser().parse_args(argv), _wiring(tmp_path)) == 0
+    assert (
+        dispatch(build_parser().parse_args(argv), replace(_wiring(tmp_path), out=out))
+        == 0
+    )
 
+    assert out.getvalue() == f"draft wrote {run.id}/{CONJURE}/review/001.draft.json\n"
     draft = read(run.directory(CONJURE, "review") / "001.draft.json", DRAFT_FILE)
     first = read(
         run.directory("summon-anime-wai", "review") / "001.approved.json",
@@ -1277,6 +1305,14 @@ def test_draft_writes_another_flow_from_the_images_approval_and_seed(
     copy = run.directory(CONJURE, "sources") / "001.png"
     assert copy.read_bytes() == image.read_bytes()
     assert draft["renders"] == {"count": 1, "seeds": [7]}
+
+    # A flow this build does not track is refused by name before an image is read.
+    err = io.StringIO()
+    unknown = ["draft", "--flow", "no-such-flow", str(image)]
+    wired = replace(_wiring(tmp_path), err=err)
+
+    assert dispatch(build_parser().parse_args(unknown), wired) == 1
+    assert "no-such-flow: not a flow this build tracks" in err.getvalue()
 
 
 @pytest.mark.spec("cli:discard:the-render-and-its-thumbnail-are-deleted")

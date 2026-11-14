@@ -5,7 +5,7 @@ The phases take the verbs out of `isekai/interface/cli.py` into `isekai/interfac
 ## Progress
 
 - [x] 1 — The package and the shared module · moderate
-- [ ] 2 — The leaf families · moderate
+- [x] 2 — The leaf families · moderate
 - [ ] 3 — Prepare and generate · moderate
 - [ ] 4 — The front door · moderate
 
@@ -30,37 +30,37 @@ The phases take the verbs out of `isekai/interface/cli.py` into `isekai/interfac
 
 ## 2 — The leaf families
 
-- [ ] 2.1 Add `Verb` ([D2](design.md#d2)) with `name`, `arguments` and `run` to `isekai/interface/verbs/common.py`, export it from the front door, and give `isekai/interface/cli.py` an empty tuple `_MOVED` that `build_parser` and `dispatch` read, as [D2](design.md#d2) says.
+- [x] 2.1 Add `Verb` ([D2](design.md#d2)) with `name`, `arguments` and `run` to `isekai/interface/verbs/common.py`, export it from the front door, and give `isekai/interface/cli.py` an empty tuple `_MOVED` that `build_parser` and `dispatch` read, as [D2](design.md#d2) says.
   Verify: `grep -c '^class Verb' isekai/interface/verbs/common.py` prints `1`.
-- [ ] 2.2 Pre-flight the library family in `isekai/interface/cli.py` per [D5](design.md#d5): `_ui`, `_import`, `_staged_line`, the `compare` branch of `dispatch` and the arguments of `import`, `compare` and `ui` in `build_parser`. Run `tools.mutate` over those ranges and kill each survivor.
+- [x] 2.2 Pre-flight the library family in `isekai/interface/cli.py` per [D5](design.md#d5): `_ui`, `_import`, `_staged_line`, the `compare` branch of `dispatch` and the arguments of `import`, `compare` and `ui` in `build_parser`. Run `tools.mutate` over those ranges and kill each survivor.
   Verify: `uv run pytest tests/test_importing.py tests/test_compare.py tests/test_pipeline_cli.py tests/test_record.py -q` exits 0.
-- [ ] 2.3 Add `isekai/interface/verbs/library.py` holding `run_import`, `staged_line`, `run_compare`, `run_ui`, `DEFAULT_PORT`, `import_arguments`, `compare_arguments`, `ui_arguments` and the rows `IMPORT_ROW`, `COMPARE_ROW` and `UI_ROW`, moved verbatim ([D4](design.md#d4)); delete them from `isekai/interface/cli.py`, export the rows, put them in `_MOVED` and drop the imports `cli.py` no longer reads.
+- [x] 2.3 Add `isekai/interface/verbs/library.py` holding `run_import`, `staged_line`, `run_compare`, `run_ui`, `DEFAULT_PORT`, `import_arguments`, `compare_arguments`, `ui_arguments` and the rows `IMPORT_ROW`, `COMPARE_ROW` and `UI_ROW`, moved verbatim ([D4](design.md#d4)); delete them from `isekai/interface/cli.py`, export the rows, put them in `_MOVED` and drop the imports `cli.py` no longer reads.
   Verify: `grep -c -E '^(def run_import|def staged_line|def run_compare|def run_ui|def import_arguments|def compare_arguments|def ui_arguments|IMPORT_ROW = |COMPARE_ROW = |UI_ROW = )' isekai/interface/verbs/library.py` prints `10`.
-- [ ] 2.4 Stage `isekai/interface/verbs/library.py` with `git add`, then run the lines of 2.2 on their new home, per [D5](design.md#d5).
+- [x] 2.4 Stage `isekai/interface/verbs/library.py` with `git add`, then run the lines of 2.2 on their new home, per [D5](design.md#d5).
   Verify: `uv run python -m tools.mutate isekai/interface/verbs/library.py:1-600 --tests tests/test_importing.py tests/test_compare.py tests/test_pipeline_cli.py tests/test_record.py` exits 0.
-- [ ] 2.5 Pre-flight the drafts family in `isekai/interface/cli.py` per [D5](design.md#d5): `_draft`, `_discard` and the arguments of `draft` and `discard` in `build_parser`. Run `tools.mutate` over those ranges and kill each survivor.
+- [x] 2.5 Pre-flight the drafts family in `isekai/interface/cli.py` per [D5](design.md#d5): `_draft`, `_discard` and the arguments of `draft` and `discard` in `build_parser`. Run `tools.mutate` over those ranges and kill each survivor.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_review.py tests/test_edit_session.py tests/test_record.py -q` exits 0.
-- [ ] 2.6 Add `isekai/interface/verbs/drafts.py` holding `run_draft`, `run_discard`, `draft_arguments`, `discard_arguments` and the rows `DRAFT_ROW` and `DISCARD_ROW`, moved as [D4](design.md#d4) says; the lazy `isekai.interface.ui` import stays inside `run_discard`. Delete them from `isekai/interface/cli.py`, export the rows, put them in `_MOVED` and drop the imports `cli.py` no longer reads.
+- [x] 2.6 Add `isekai/interface/verbs/drafts.py` holding `run_draft`, `run_discard`, `draft_arguments`, `discard_arguments` and the rows `DRAFT_ROW` and `DISCARD_ROW`, moved as [D4](design.md#d4) says; the lazy `isekai.interface.ui` import stays inside `run_discard`. Delete them from `isekai/interface/cli.py`, export the rows, put them in `_MOVED` and drop the imports `cli.py` no longer reads.
   Verify: `grep -c -E '^(def run_draft|def run_discard|def draft_arguments|def discard_arguments|DRAFT_ROW = |DISCARD_ROW = )' isekai/interface/verbs/drafts.py` prints `6`.
 - [x] 2.7 Stage `isekai/interface/verbs/drafts.py` with `git add`, then run the lines of 2.5 on their new home, per [D5](design.md#d5), leaving out line 36, the survivor D5 names equivalent.
   Verify: `uv run python -m tools.mutate isekai/interface/verbs/drafts.py:1-35 isekai/interface/verbs/drafts.py:37-600 --tests tests/test_pipeline_cli.py tests/test_review.py tests/test_edit_session.py tests/test_record.py` exits 0.
-- [ ] 2.8 Pre-flight the edits family in `isekai/interface/cli.py` per [D5](design.md#d5): `_ink`, `_edit`, `_pending` and the arguments of `ink` and `edit` in `build_parser`. Run `tools.mutate` over those ranges and kill each survivor.
+- [x] 2.8 Pre-flight the edits family in `isekai/interface/cli.py` per [D5](design.md#d5): `_ink`, `_edit`, `_pending` and the arguments of `ink` and `edit` in `build_parser`. Run `tools.mutate` over those ranges and kill each survivor.
   Verify: `uv run pytest tests/test_ink.py tests/test_edit.py tests/test_edit_session.py tests/test_record.py -q` exits 0.
-- [ ] 2.9 Add `isekai/interface/verbs/edits.py` holding `run_ink`, `run_edit`, `run_pending`, `ink_arguments`, `edit_arguments` and the rows `INK_ROW` and `EDIT_ROW`, moved verbatim ([D4](design.md#d4)); delete them from `isekai/interface/cli.py`, export the rows, put them in `_MOVED` and drop the imports `cli.py` no longer reads.
+- [x] 2.9 Add `isekai/interface/verbs/edits.py` holding `run_ink`, `run_edit`, `run_pending`, `ink_arguments`, `edit_arguments` and the rows `INK_ROW` and `EDIT_ROW`, moved verbatim ([D4](design.md#d4)); delete them from `isekai/interface/cli.py`, export the rows, put them in `_MOVED` and drop the imports `cli.py` no longer reads.
   Verify: `grep -c -E '^(def run_ink|def run_edit|def run_pending|def ink_arguments|def edit_arguments|INK_ROW = |EDIT_ROW = )' isekai/interface/verbs/edits.py` prints `7`.
-- [ ] 2.10 Stage `isekai/interface/verbs/edits.py` with `git add`, then run the lines of 2.8 on their new home, per [D5](design.md#d5).
+- [x] 2.10 Stage `isekai/interface/verbs/edits.py` with `git add`, then run the lines of 2.8 on their new home, per [D5](design.md#d5).
   Verify: `uv run python -m tools.mutate isekai/interface/verbs/edits.py:1-600 --tests tests/test_ink.py tests/test_edit.py tests/test_edit_session.py tests/test_record.py` exits 0.
-- [ ] 2.11 Pre-flight render's arguments in `isekai/interface/cli.py` per [D5](design.md#d5): the blocks of `build_parser` that name `render`. Run `tools.mutate` over those ranges and kill each survivor.
+- [x] 2.11 Pre-flight render's arguments in `isekai/interface/cli.py` per [D5](design.md#d5): the blocks of `build_parser` that name `render`. Run `tools.mutate` over those ranges and kill each survivor.
   Verify: `uv run pytest tests/test_render.py tests/test_pipeline_cli.py tests/test_record.py -q` exits 0.
-- [ ] 2.12 Add `isekai/interface/verbs/session.py` holding `render_arguments` and the row `RENDER_ROW` with no run ([D3](design.md#d3)); in `isekai/interface/cli.py` put `RENDER_ROW` in `_MOVED` with its run bound to `run_session(args, wired, _dispatch_argv)`, delete the `render` branch of `dispatch` and the arguments moved, and drop the imports `cli.py` no longer reads.
+- [x] 2.12 Add `isekai/interface/verbs/session.py` holding `render_arguments` and the row `RENDER_ROW` with no run ([D3](design.md#d3)); in `isekai/interface/cli.py` put `RENDER_ROW` in `_MOVED` with its run bound to `run_session(args, wired, _dispatch_argv)`, delete the `render` branch of `dispatch` and the arguments moved, and drop the imports `cli.py` no longer reads.
   Verify: `grep -c -E '^(def render_arguments|RENDER_ROW = )' isekai/interface/verbs/session.py` prints `2`.
-- [ ] 2.13 Stage `isekai/interface/verbs/session.py` with `git add`, then run the lines of 2.11 on their new home, per [D5](design.md#d5).
+- [x] 2.13 Stage `isekai/interface/verbs/session.py` with `git add`, then run the lines of 2.11 on their new home, per [D5](design.md#d5).
   Verify: `uv run python -m tools.mutate isekai/interface/verbs/session.py:1-600 --tests tests/test_render.py tests/test_pipeline_cli.py tests/test_record.py` exits 0.
-- [ ] 2.14 Re-derive every layer README's `## Imported by` table with `uv run python -m tools.derive_imported_by`, which rewrites `isekai/interface/README.md`, `isekai/foundation/README.md`, `isekai/shared/README.md`, `isekai/boundary/README.md` and `isekai/pipeline/README.md`.
+- [x] 2.14 Re-derive every layer README's `## Imported by` table with `uv run python -m tools.derive_imported_by`, which rewrites `isekai/interface/README.md`, `isekai/foundation/README.md`, `isekai/shared/README.md`, `isekai/boundary/README.md` and `isekai/pipeline/README.md`.
   Verify: `uv run pytest tests/test_docs.py -q` exits 0.
-- [ ] 2.15 Remove from `tests/test_ratchets.py` each row of `isekai/interface/cli.py` the ratchets now report as `no longer offends`, and lower its `*_ROWS` count, per [D7](design.md#d7); remove no other row.
+- [x] 2.15 Remove from `tests/test_ratchets.py` each row of `isekai/interface/cli.py` the ratchets now report as `no longer offends`, and lower its `*_ROWS` count, per [D7](design.md#d7); remove no other row.
   Verify: `uv run pytest tests/test_ratchets.py -q` exits 0.
-- [ ] 2.16 Bring the record, the ratchets, the layer guards, the docs tests and the entry point's `-S` guard green for the phase's end state, changing no assertion.
+- [x] 2.16 Bring the record, the ratchets, the layer guards, the docs tests and the entry point's `-S` guard green for the phase's end state, changing no assertion.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py -q` exits 0.
 
 ## 3 — Prepare and generate
