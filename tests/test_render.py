@@ -1316,6 +1316,10 @@ def test_the_given_id_names_the_record_and_another_shape_is_refused(
     assert json.loads(named.read_text())["id"] == given
     # The id the start writes is one the flag reads.
     assert SESSION_ID.fullmatch(session_id(datetime.now(UTC)))
+    assert (
+        build_parser().parse_args(["render", str(runs), "--session", given]).session
+        == given
+    )
     # The id names a file, so no other shape reaches a path.
     with pytest.raises(SystemExit):
         build_parser().parse_args(["render", str(runs), "--session", "../x"])

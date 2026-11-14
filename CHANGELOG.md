@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- The verbs' argument types, reporter and run helpers move out of `isekai/interface/cli.py` into the new package
+  `isekai/interface/verbs/`; no verb, flag or line changes (0145 D1, D4).
+
 ## [0.87.0] - 2026-11-14
 
 Gate: local 3m57s · CI not read under mf-ship · 0.86.17: local 1m13s · CI not read under mf-ship

@@ -36,12 +36,13 @@ neither is privileged. The CLI imports `isekai.interface.ui` inside the handlers
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `cli.py` | `__main__.py` | — |
-| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
+| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `verbs/common.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
 | `drafting.py` | `cli.py`, `ui/app.py` | — |
 | `render.py` | `cli.py`, `ui/app.py`, `ui/jobs.py`, `ui/library.py` | — |
 | `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py` |
 | `compare_view.py` | `cli.py`, `render.py` | — |
 | `ui/` | `cli.py` | — |
+| `verbs/` | `cli.py` | — |
 
 > The file is `run_view.py`; the **verb is still `show`**, and the entry-point
 > tests pin it.

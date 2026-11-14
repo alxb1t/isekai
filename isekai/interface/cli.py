@@ -51,18 +51,15 @@ with site-packages off the path.
 
 import argparse
 import dataclasses
-import json
 import shlex
 import sys
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
-from typing import NoReturn, TextIO, TypeVar, cast
+from typing import NoReturn, TypeVar
 
-from isekai.boundary.comfy import TransportFailure, read_runtime
+from isekai.boundary.comfy import read_runtime
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.edit import load_edit, tracked_edits
 from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow, tracked_flows
@@ -78,7 +75,6 @@ from isekai.foundation.run import (
     assign,
     edit_at,
     find_run,
-    open_run,
     rendered_at,
 )
 from isekai.interface.compare_view import write_page
@@ -89,6 +85,21 @@ from isekai.interface.drafting import (
 )
 from isekai.interface.render import pending_edits, run_session
 from isekai.interface.run_view import report
+from isekai.interface.verbs import (
+    Reporter,
+    _count,
+    _depth,
+    _seconds,
+    _seed,
+    _session_id,
+    _Targets,
+    once,
+    parse_cells,
+    require_tracked,
+    run_for,
+    run_or_photo,
+    say,
+)
 from isekai.interface.wiring import Wiring, trackable, wiring
 from isekai.pipeline.caption import caption
 from isekai.pipeline.edit import OVERRIDES, discard_edit, image_of
@@ -123,7 +134,7 @@ from isekai.pipeline.review import cancel as cancel_approval
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
 from isekai.shared.field_map import FieldMap
-from isekai.shared.ink import cut_ink, load_ink_config
+from isekai.shared.ink import cut_ink
 from isekai.shared.vocabulary import Vocabulary
 
 # One line of prose per verb, used for both the subcommand list and its own help,
@@ -162,94 +173,6 @@ _WRITES: Mapping[str, str] = {"caption": "prose", "tag": "tags"}
 # and importing the surface at module scope is exactly what the `-S` guard
 # forbids this file from doing.
 DEFAULT_PORT = 8517
-
-
-def _seed(value: str) -> int:
-    """Parse a seed: an unsigned 64-bit integer, refused at parse time if it is not."""
-    try:
-        seed = int(value)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
-    if seed not in SEED_RANGE:
-        raise argparse.ArgumentTypeError(
-            f"{seed} is outside the sampler's unsigned 64-bit range"
-        )
-    return seed
-
-
-def _positive(below_one: str) -> Callable[[str], int]:
-    """Return a parser of a positive integer, refusing one below 1 with `below_one`."""
-
-    def parse(value: str) -> int:
-        try:
-            whole = int(value)
-        except ValueError:
-            raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
-        if whole < 1:
-            raise argparse.ArgumentTypeError(below_one)
-        return whole
-
-    return parse
-
-
-# A render count: every one of them costs money.
-_count = _positive("a render count below 1 renders nothing")
-_seconds = _positive("a session limit below 1s ends at once")
-
-
-def _session_id(value: str) -> str:
-    """Return `value` as a session's id, refusing one that is not a start in UTC.
-
-    The id names a file, so nothing but the one shape reaches a path.
-    e.g. "20261024T091200Z" -> "20261024T091200Z"
-    """
-    if SESSION_ID.fullmatch(value) is None:
-        raise argparse.ArgumentTypeError(
-            f"{value!r} is not a start in UTC, e.g. 20261024T091200Z"
-        )
-    return value
-
-
-def _depth(value: str) -> float:
-    """Parse a depth: a number in the ink config's range, refused at parse time.
-
-    e.g. "1.6" -> 1.6
-    """
-    config = load_ink_config()
-    try:
-        depth = float(value)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"{value!r} is not a number") from None
-    if not config.depth_min <= depth <= config.depth_max:
-        raise argparse.ArgumentTypeError(
-            f"{value} is outside {config.depth_min} to {config.depth_max}; "
-            "give a depth in that range"
-        )
-    return depth
-
-
-class _Targets(argparse.Action):
-    """Split `render`'s positionals into its runs roots and its requests.
-
-    A directory is a runs root; any other word holding `=` is a request, and the
-    rest are runs roots the session refuses by name.
-    e.g. [".data/b1/runs", "summon-anime-wai=1"] -> runs [b1/runs], requests [...]
-    """
-
-    def __call__(
-        self,
-        parser: argparse.ArgumentParser,
-        namespace: argparse.Namespace,
-        values: object,
-        option_string: str | None = None,
-    ) -> None:
-        """Set `runs` and `requests` on `namespace` from `values`, in order."""
-        words = [str(value) for value in cast("list[object]", values)]
-        asked = [w for w in words if "=" in w and not Path(w).is_dir()]
-        namespace.runs = [Path(w) for w in words if w not in asked]
-        namespace.requests = asked
-        if not namespace.runs:
-            parser.error("name at least one collection's runs/")
 
 
 class _Verb(argparse.ArgumentParser):
@@ -685,9 +608,9 @@ def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
     directory again.
     e.g. r1/f r2/f r2/g -> r1: tag, caption, f; then r2: tag, caption, f, g
     """
-    cells = _cells(args.cells, wired)
-    vocabulary = _once(wired.vocabulary)
-    mapped = _once(lambda: wired.field_map(vocabulary()))
+    cells = parse_cells(args.cells, wired)
+    vocabulary = once(wired.vocabulary)
+    mapped = once(lambda: wired.field_map(vocabulary()))
     shared = dataclasses.replace(
         wired, vocabulary=vocabulary, field_map=lambda _: mapped()
     )
@@ -702,7 +625,7 @@ def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
         name: _per_item("sheet", args, shared, {name: flow}, collected)
         for name, flow in flows.items()
     }
-    reporter = _Reporter(wired.out, wired.err, args.progress == "json")
+    reporter = Reporter(wired.out, wired.err, args.progress == "json")
     runs = shlex.quote(str(wired.runs_root))
 
     def sheet_of(flow: str) -> Callable[[str], None]:
@@ -732,29 +655,6 @@ def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
     for message in collected:
         print(f"refused: {message}", file=wired.err)
     return 1 if collected else 0
-
-
-def _cells(named: Sequence[str], wired: Wiring) -> list[tuple[str, str]]:
-    """Return each cell's run id and flow, refusing a bad cell before any run opens.
-
-    A cell is split at its last `/`, and naming one twice names it once.
-    e.g. ["r1/summon-anime-wai"] -> [("r1", "summon-anime-wai")]
-    """
-    cells: dict[str, tuple[str, str]] = {}
-    for cell in named:
-        run_id, _, flow = cell.rpartition("/")
-        if not run_id or not flow:
-            raise Refusal(f"{cell}: not a cell; name one as <run-id>/<flow>")
-        cells[cell] = (run_id, flow)
-    _require_tracked(list(dict.fromkeys(flow for _, flow in cells.values())), wired)
-    runs = shlex.quote(str(wired.runs_root))
-    for cell, (run_id, flow) in cells.items():
-        if not (wired.runs_root / run_id / FRAME_NAME).is_file():
-            raise Refusal(
-                f"{cell}: no run {run_id} under {wired.runs_root}; run "
-                f"`python -m isekai assign --flow {flow} --runs {runs} <photo>` first"
-            )
-    return list(cells.values())
 
 
 def _import(args: argparse.Namespace, wired: Wiring) -> int:
@@ -810,7 +710,7 @@ def _staged_line(item: Staged) -> str:
 
 def _draft(target: str, images: Sequence[Path], wired: Wiring) -> int:
     """Write `target`'s draft from every image, or, when any is refused, none."""
-    _require_tracked([target], wired)
+    require_tracked([target], wired)
     flow = load_flow(target, wired.flows_dir)
     vocabulary = cache(wired.vocabulary)
     field_map = cache(lambda: wired.field_map(vocabulary()))
@@ -945,10 +845,8 @@ def _pending(args: argparse.Namespace, wired: Wiring) -> int:
     chain order, one refusal not costing the next its turn, and each prints a line.
     e.g. r1/f holding 42.edit-1.json with no image -> "r1: edited f/42.edit-1.png"
     """
-    cells = _cells(args.pending, wired)
-    reporter = _Reporter(
-        wired.out, wired.err, getattr(args, "progress", None) == "json"
-    )
+    cells = parse_cells(args.pending, wired)
+    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == "json")
     found: list[tuple[Run, str, Path]] = []
     for run_id, flow in cells:
         run = Run(run_id, wired.runs_root / run_id)
@@ -965,7 +863,7 @@ def _pending(args: argparse.Namespace, wired: Wiring) -> int:
             for run, flow, record in found:
                 reporter.say(f"{run.id}: {flow}/{record.name} is ready to sample")
         return 1 if refused else 0
-    ran_on = _once(lambda: read_runtime(client))
+    ran_on = once(lambda: read_runtime(client))
 
     def sample_one(one: tuple[Run, str, Path]) -> None:
         run, flow, record = one
@@ -986,46 +884,10 @@ def _pending(args: argparse.Namespace, wired: Wiring) -> int:
     return 1 if failed else 0
 
 
-def _run_for(identifier: str, wired: Wiring) -> Run:
-    """Return the run an argument names: a photograph to open, or a run to resume."""
-    named = _named(identifier, wired)
-    return named if isinstance(named, Run) else open_run(named, wired.runs_root)
-
-
 def _existing_run(identifier: str, wired: Wiring) -> Run | None:
-    """Return the run an argument names, as `_run_for` does, but never open one."""
-    named = _named(identifier, wired)
+    """Return the run an argument names, as `run_for` does, but never open one."""
+    named = run_or_photo(identifier, wired)
     return named if isinstance(named, Run) else find_run(named, wired.runs_root)
-
-
-def _named(identifier: str, wired: Wiring) -> Run | Path:
-    """Return the run an argument names by its id, or the photograph it names.
-
-    A photograph is offered by path and an existing run by its id, and which one
-    was meant is decided by what is on disk rather than by a flag.
-    """
-    directory = wired.runs_root / identifier
-    if (directory / FRAME_NAME).is_file():
-        return Run(identifier, directory)
-    photo = Path(identifier)
-    if not photo.is_file():
-        raise Refusal(
-            f"{identifier!r} is neither a photograph on disk nor a run under "
-            f"{wired.runs_root}; give the path to a JPEG or PNG, or the name of "
-            f"a run directory under {wired.runs_root}"
-        )
-    return photo
-
-
-def _require_tracked(names: Sequence[str], wired: Wiring) -> None:
-    """Refuse the names that are no tracked flow, naming the flows there are."""
-    tracked = tracked_flows(wired.flows_dir)
-    unknown = [name for name in names if name not in tracked]
-    if unknown:
-        raise Refusal(
-            f"{', '.join(unknown)}: not a flow this build tracks; the flows it "
-            f"carries are {', '.join(tracked) or '(none)'}"
-        )
 
 
 def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
@@ -1039,7 +901,7 @@ def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
     missing flag.
     """
     named: list[str] = list(getattr(args, "flows", None) or [])
-    _require_tracked(named, wired)
+    require_tracked(named, wired)
     # Deduplicated, order kept: naming a flow twice is a typo, not a request for
     # two renders of it.
     return {name: load_flow(name, wired.flows_dir) for name in dict.fromkeys(named)}
@@ -1127,7 +989,7 @@ def _refuse_bad_source(
     """
     if source is None:
         return
-    _require_tracked([source], wired)
+    require_tracked([source], wired)
     if source in flows:
         raise Refusal(
             f"{source}: a flow is not its own source; drop `--{flag} {source}` or "
@@ -1169,35 +1031,6 @@ def _seam(value: T | None, name: str, does: str) -> T:
     return value
 
 
-def _once(read: Callable[[], T]) -> Callable[[], T]:
-    """Return `read`, answered at most once: its answer or its refusal is kept.
-
-    A refusal is the build's or the endpoint's, not a photograph's, so meeting
-    it again would redo the work to learn nothing. A transient
-    transport failure is the exception: it is raised and not kept, since the
-    endpoint may answer the next ask, and keeping it would refuse every later
-    photograph in the session and spend each one's render budget.
-    """
-    outcome: list[T | Refusal] = []
-
-    def reading() -> T:
-        if not outcome:
-            try:
-                outcome.append(read())
-            except TransportFailure as failed:
-                if failed.kind == "transient":
-                    raise
-                outcome.append(failed)
-            except Refusal as refused:
-                outcome.append(refused)
-        kept = outcome[0]
-        if isinstance(kept, Refusal):
-            raise kept
-        return kept
-
-    return reading
-
-
 def _per_item(
     verb: str,
     args: argparse.Namespace,
@@ -1221,9 +1054,7 @@ def _per_item(
     """
     new_version = bool(getattr(args, "new_version", False))
     opening: list[Callable[[], LocalTagger]] = []
-    reporter = _Reporter(
-        wired.out, wired.err, getattr(args, "progress", None) == "json"
-    )
+    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == "json")
 
     @cache
     def vocabulary() -> Vocabulary:
@@ -1253,7 +1084,7 @@ def _per_item(
         resolve = _seam(wired.tagger, "tagger", "scores the photograph")
         if not opening:
             # A refusal is kept too, so the 467 MB hash is not re-run to meet it.
-            opening.append(_once(resolve))
+            opening.append(once(resolve))
         return opening[0]
 
     def work(identifier: str) -> None:
@@ -1261,7 +1092,7 @@ def _per_item(
             _assign(identifier, bool(args.remove), wired, list(flows), collected)
             return
         try:
-            run = _run_for(identifier, wired)
+            run = run_for(identifier, wired)
         except Refusal as unopened:
             names: list[str | None] = (
                 [None] if verb in PHOTOGRAPH_VERBS else list(flows)
@@ -1279,7 +1110,7 @@ def _per_item(
 
             def caption_photo() -> None:
                 reader = _seam(wired.reader, "reader", "reads the photograph")()
-                _say(
+                say(
                     reporter,
                     run,
                     "caption",
@@ -1300,13 +1131,13 @@ def _per_item(
                         wired.hosted_tagger, "hosted tagger", "tags the photograph"
                     )
                     written = tag_hosted(run, tagger_for(), new_version=new_version)
-                    _say(reporter, run, "tags", written)
+                    say(reporter, run, "tags", written)
 
                 # Each tagger's refusal is collected on its own, so neither costs
                 # the other its list. WD14 first: it is the sheet's input and
                 # reaches no network (D1).
                 steps: tuple[Callable[[], None], ...] = (
-                    lambda: _say(
+                    lambda: say(
                         reporter,
                         run,
                         "wd14",
@@ -1333,7 +1164,7 @@ def _per_item(
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
-                _say(reporter, run, "sheet", written)
+                say(reporter, run, "sheet", written)
 
             step = sheet_flow
         elif verb == "review":
@@ -1343,9 +1174,7 @@ def _per_item(
                     gone = discard(run, name)
                     reporter.say(f"{run.id}: review discarded {name}/{gone.name}")
                     return
-                _say(
-                    reporter, run, "review", review(run, name, new_version=new_version)
-                )
+                say(reporter, run, "review", review(run, name, new_version=new_version))
 
             step = review_flow
         elif verb == "approve":
@@ -1378,7 +1207,7 @@ def _per_item(
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
-                _say(reporter, run, "approve", written)
+                say(reporter, run, "approve", written)
 
             step = approve_flow
         else:
@@ -1426,7 +1255,7 @@ def _assign(
 
     Removing opens no run: a source with none has no flow to remove.
     """
-    run = _existing_run(identifier, wired) if remove else _run_for(identifier, wired)
+    run = _existing_run(identifier, wired) if remove else run_for(identifier, wired)
     if run is None:
         for name in flows:
             print(f"{identifier}: {name} is not assigned", file=wired.out)
@@ -1461,9 +1290,7 @@ def _generate(
     machine and then discover the third sheet was broken.
     """
     ready: list[tuple[Run, str]] = []
-    reporter = _Reporter(
-        wired.out, wired.err, getattr(args, "progress", None) == "json"
-    )
+    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == "json")
     # The seeds each run takes from the source flow, when one is named.
     borrowed: dict[str, list[int]] = {}
     source_suffix = (
@@ -1477,7 +1304,7 @@ def _generate(
     broken: list[str] = []
 
     def assemble_one(identifier: str) -> None:
-        run = _run_for(identifier, wired)
+        run = run_for(identifier, wired)
         assembled, refusals = prepare(run, flows)
         broken.extend(refusals)
         if args.seeds_from is not None:
@@ -1493,7 +1320,7 @@ def _generate(
     if client is None:
         return refused
     # One report per session, read only when a render will run.
-    ran_on = _once(lambda: read_runtime(client))
+    ran_on = once(lambda: read_runtime(client))
 
     def render_one(pair: tuple[Run, str]) -> None:
         run, flow = pair
@@ -1528,59 +1355,6 @@ def _generate(
             reporter.say(f"{run.id}: {flow} is already rendered")
 
     return refused + across(ready, render_one)
-
-
-@dataclass(frozen=True)
-class _Reporter:
-    """Where a verb's lines go: prose to `out`, or with `progress` JSON to `out`.
-
-    e.g. {"run": "0d4b…_ada", "flow": "summon-anime-wai", "stage": "sheet",
-    "state": "done"}
-    """
-
-    out: TextIO
-    err: TextIO
-    progress: bool
-
-    def say(self, line: str) -> None:
-        """Print a line meant for a person: on stderr while JSON holds stdout."""
-        print(line, file=self.err if self.progress else self.out)
-
-    def item(
-        self,
-        run: str,
-        flow: str | None,
-        stage: str,
-        state: str,
-        message: str | None = None,
-        **more: str | int,
-    ) -> None:
-        """Print one item's `start`, `done` or `refused` line, when asked for JSON.
-
-        `more` adds what the item names beyond its run and flow, as a render its seed.
-        A photograph's stage names no flow, and its line carries none.
-        """
-        if not self.progress:
-            return
-        line: dict[str, str | int] = {
-            "run": run,
-            **({} if flow is None else {"flow": flow}),
-            "stage": stage,
-            "state": state,
-            **more,
-        }
-        if message is not None:
-            line["message"] = message
-        # Flushed: a job reads this from a pipe, line by line, as it happens.
-        print(json.dumps(line), file=self.out, flush=True)
-
-
-def _say(reporter: _Reporter, run: Run, verb: str, written: Path | None) -> None:
-    """Report what a stage did, including that it was already complete."""
-    if written is None:
-        reporter.say(f"{run.id}: {verb} is already complete")
-    else:
-        reporter.say(f"{run.id}: {verb} wrote {written.name}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -4,28 +4,28 @@ The phases take the verbs out of `isekai/interface/cli.py` into `isekai/interfac
 
 ## Progress
 
-- [ ] 1 — The package and the shared module · moderate
+- [x] 1 — The package and the shared module · moderate
 - [ ] 2 — The leaf families · moderate
 - [ ] 3 — Prepare and generate · moderate
 - [ ] 4 — The front door · moderate
 
 ## 1 — The package and the shared module
 
-- [ ] 1.1 **HALT CHECK** The premises of [D3](design.md#d3) and [D7](design.md#d7) stand: `_per_item`, `_migrate` and `main` are in `isekai/interface/cli.py`, and its ratchet keys are listed in `tests/test_ratchets.py`.
+- [x] 1.1 **HALT CHECK** The premises of [D3](design.md#d3) and [D7](design.md#d7) stand: `_per_item`, `_migrate` and `main` are in `isekai/interface/cli.py`, and its ratchet keys are listed in `tests/test_ratchets.py`.
   Verify: `grep -c "isekai/interface/cli.py" tests/test_ratchets.py` prints `4`.
-- [ ] 1.2 Pre-flight the lines phase 1 moves in `isekai/interface/cli.py` as it stands, per [D5](design.md#d5): the argument types, `_cells`, the run helpers, `_once` and the reporter. Kill each survivor.
+- [x] 1.2 Pre-flight the lines phase 1 moves in `isekai/interface/cli.py` as it stands, per [D5](design.md#d5): the argument types, `_cells`, the run helpers, `_once` and the reporter. Kill each survivor.
   Verify: `uv run python -m tools.mutate isekai/interface/cli.py:167-252 isekai/interface/cli.py:737-757 isekai/interface/cli.py:989-992 isekai/interface/cli.py:1001-1028 isekai/interface/cli.py:1172-1198 isekai/interface/cli.py:1533-1583 --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_assign.py tests/test_render.py tests/test_ink.py` exits 0.
-- [ ] 1.3 Add `isekai/interface/verbs/__init__.py`, the front door of [D1](design.md#d1), and `isekai/interface/verbs/common.py` holding `_seed`, `_positive`, `_count`, `_seconds`, `_session_id`, `_depth` and `_Targets`, moved verbatim with their spelling kept ([D4](design.md#d4)).
+- [x] 1.3 Add `isekai/interface/verbs/__init__.py`, the front door of [D1](design.md#d1), and `isekai/interface/verbs/common.py` holding `_seed`, `_positive`, `_count`, `_seconds`, `_session_id`, `_depth` and `_Targets`, moved verbatim with their spelling kept ([D4](design.md#d4)).
   Verify: `grep -c -E '^(def _seed|def _positive|def _session_id|def _depth|class _Targets)' isekai/interface/verbs/common.py` prints `5`.
-- [ ] 1.4 Move `_Reporter`, `_say`, `_once`, `_run_for`, `_named`, `_require_tracked` and `_cells` into `isekai/interface/verbs/common.py` as `Reporter`, `say`, `once`, `run_for`, `run_or_photo`, `require_tracked` and `parse_cells` ([D4](design.md#d4)); `_existing_run` stays in `isekai/interface/cli.py` and calls `run_or_photo`.
+- [x] 1.4 Move `_Reporter`, `_say`, `_once`, `_run_for`, `_named`, `_require_tracked` and `_cells` into `isekai/interface/verbs/common.py` as `Reporter`, `say`, `once`, `run_for`, `run_or_photo`, `require_tracked` and `parse_cells` ([D4](design.md#d4)); `_existing_run` stays in `isekai/interface/cli.py` and calls `run_or_photo`.
   Verify: `grep -c -E '^(class Reporter|def say|def once|def run_for|def run_or_photo|def require_tracked|def parse_cells)' isekai/interface/verbs/common.py` prints `7`.
-- [ ] 1.5 Export every name `isekai/interface/cli.py` still reads from the front door in `__all__`: the argument types its own `build_parser` blocks name, `Reporter`, `say`, `once`, `run_for`, `run_or_photo`, `require_tracked` and `parse_cells`. Import them there, delete each moved definition, and drop the imports it no longer reads ([D1](design.md#d1)).
+- [x] 1.5 Export every name `isekai/interface/cli.py` still reads from the front door in `__all__`: the argument types its own `build_parser` blocks name, `Reporter`, `say`, `once`, `run_for`, `run_or_photo`, `require_tracked` and `parse_cells`. Import them there, delete each moved definition, and drop the imports it no longer reads ([D1](design.md#d1)).
   Verify: `grep -c -E '^from isekai.interface.verbs import' isekai/interface/cli.py` prints `1`.
-- [ ] 1.6 Add a `verbs/` row to the `## Imported by` table of `isekai/interface/README.md`, then re-derive every layer README's table with `uv run python -m tools.derive_imported_by`, which also rewrites `isekai/foundation/README.md`, `isekai/shared/README.md`, `isekai/boundary/README.md` and `isekai/pipeline/README.md`.
+- [x] 1.6 Add a `verbs/` row to the `## Imported by` table of `isekai/interface/README.md`, then re-derive every layer README's table with `uv run python -m tools.derive_imported_by`, which also rewrites `isekai/foundation/README.md`, `isekai/shared/README.md`, `isekai/boundary/README.md` and `isekai/pipeline/README.md`.
   Verify: `uv run pytest tests/test_docs.py -q` exits 0.
-- [ ] 1.7 Stage the new files with `git add isekai/interface/verbs/__init__.py isekai/interface/verbs/common.py`, then run the lines of 1.2 on their new home, per [D5](design.md#d5).
+- [x] 1.7 Stage the new files with `git add isekai/interface/verbs/__init__.py isekai/interface/verbs/common.py`, then run the lines of 1.2 on their new home, per [D5](design.md#d5).
   Verify: `uv run python -m tools.mutate isekai/interface/verbs/common.py:1-600 --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_assign.py tests/test_render.py tests/test_ink.py` exits 0.
-- [ ] 1.8 Bring the record, the ratchets, the layer guards, the docs tests and the entry point's `-S` guard green for the phase's end state, changing no assertion and leaving `tests/record/verbs.json` byte-identical.
+- [x] 1.8 Bring the record, the ratchets, the layer guards, the docs tests and the entry point's `-S` guard green for the phase's end state, changing no assertion and leaving `tests/record/verbs.json` byte-identical.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py -q` exits 0.
 
 ## 2 — The leaf families

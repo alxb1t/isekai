@@ -52,6 +52,31 @@ def test_each_item_reports_its_start_and_its_end_as_json(
         {"run": run.id, "flow": FLOW, "stage": "sheet", "state": "done"},
     ]
     assert f"{run.id}: sheet wrote 001.json" in err
+    # A job reads the lines from a pipe as they happen, so each is flushed.
+    piped = _Flushes()
+    other = _run(tmp_path, "bea.jpg", 801)
+    write_wd14(other)
+    wired = bare_wiring(
+        vocabulary=lambda: vocabulary, runs_root=tmp_path / "runs", out=piped
+    )
+    args = build_parser().parse_args(
+        ["sheet", "--flow", FLOW, "--runs", str(tmp_path / "runs")]
+        + ["--progress", "json", other.id]
+    )
+
+    assert dispatch(args, wired) == 0
+    assert piped.flushed == len(piped.getvalue().splitlines())
+
+
+class _Flushes(io.StringIO):
+    """A stdout that counts its flushes."""
+
+    flushed = 0
+
+    def flush(self) -> None:
+        """Count the flush, then flush."""
+        self.flushed += 1
+        super().flush()
 
 
 class _Landed:

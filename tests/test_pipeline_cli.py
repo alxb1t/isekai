@@ -22,12 +22,14 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from isekai.boundary import ollama, provision
+from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import REMEDY, LocalTagger
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
@@ -46,7 +48,7 @@ from isekai.foundation.flow import (
     tracked_flows,
 )
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import PHOTO, Run, StageFailure, assign, open_run
+from isekai.foundation.run import PHOTO, Kind, Run, StageFailure, assign, open_run
 from isekai.interface import wiring
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.ui import library
@@ -357,6 +359,10 @@ def test_a_count_or_a_seed_out_of_range_is_refused_at_parse_time(
 
     assert exited.value.code == 2
     assert message in capsys.readouterr().err
+    accepted = build_parser().parse_args(
+        ["generate", "--flow", "summon-anime-wai", flag, "7"]
+    )
+    assert (accepted.count, accepted.seeds) in [(7, None), (None, [7])]
 
 
 @pytest.mark.spec("cli:render-limit:below-one-second-is-refused-at-parse-time")
@@ -376,6 +382,8 @@ def test_a_limit_below_one_second_is_refused_at_parse_time(
 
     assert exited.value.code == 2
     assert message in capsys.readouterr().err
+    accepted = build_parser().parse_args(["render", "--limit", "90", str(tmp_path)])
+    assert accepted.limit == 90
 
 
 @pytest.mark.spec("ui:library:the-verb-takes-no-arguments")
@@ -826,6 +834,38 @@ def test_prepare_opens_the_tagger_once(tmp_path: Path) -> None:
     assert status == 0
     assert all((run.path / PHOTO / "wd14" / "001.json").is_file() for run in runs)
     assert opened == ["tagger"]
+    # A tagger the build refuses is kept for the batch; one that failed in transit
+    # is asked again by the next photograph.
+    for kind, openings, tagged in (
+        ("permanent", 1, [False, False]),
+        ("transient", 2, [False, True]),
+    ):
+        asked: list[str] = []
+        place = tmp_path / kind
+        place.mkdir()
+        away = replace(_wiring(place), tagger=_failing_tagger(kind, asked))
+        runs = _photographs(place, away.runs_root, (1200, 900), (900, 1200))
+        for run in runs:
+            assign(run, "summon-anime-wai")
+
+        assert _prepared(away, *(f"{run.id}/summon-anime-wai" for run in runs)) == 1
+        assert len(asked) == openings
+        assert [
+            (run.path / PHOTO / "wd14" / "001.json").is_file() for run in runs
+        ] == tagged
+
+
+def _failing_tagger(kind: Kind, asked: list[str]) -> Callable[[], LocalTagger]:
+    """Return a tagger opener that fails with `kind` when first asked, then opens."""
+    resolve = fake_wd14()
+
+    def opening() -> LocalTagger:
+        asked.append(kind)
+        if len(asked) == 1:
+            raise TransportFailure(kind, "the tagger's host is away")
+        return resolve()
+
+    return opening
 
 
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")

@@ -396,6 +396,9 @@ def test_ink_verb_refuses_a_depth_out_of_range_before_it_reads_an_image(
     assert refused.value.code == 2
     assert "outside 1.0 to 2.0" in capsys.readouterr().err
     assert not out.exists()
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["ink", str(out), str(out), "--depth", "deep"])
+    assert "'deep' is not a number" in capsys.readouterr().err
 
 
 @pytest.mark.spec("edit:ink:a-depth-out-of-range-is-refused")
