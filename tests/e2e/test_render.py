@@ -29,6 +29,7 @@ from tests.e2e.conftest import (
     WIDE_SOURCES,
     Served,
 )
+from tests.e2e.guard import Refused
 
 
 def _alone(page: Page, collection: str, images: int = 1) -> None:
@@ -51,8 +52,9 @@ def _alone(page: Page, collection: str, images: int = 1) -> None:
 @pytest.mark.spec("ui:render:the-dialog-shows-thumbnails-by-flow")
 @pytest.mark.spec("ui:render:a-tile-is-taken-out-by-its-key")
 def test_the_render_dialog_opens_on_its_first_photograph(
-    page: Page, served: Served
+    page: Page, served: Served, refusals: list[Refused]
 ) -> None:
+    refusals.append(Refused(409, f"/api/c/{RENDER}/sessions/"))
     page.goto(served.hub_of(RENDER))
     cell = page.locator('.hub__source[data-row="0"]')
     expect(cell).to_be_focused()
@@ -123,7 +125,11 @@ def test_the_render_dialog_opens_on_its_first_photograph(
 @pytest.mark.spec("ui:sessions:the-drawer-holds-the-render")
 @pytest.mark.spec("ui:sessions:the-drawer-fits-its-widest-grid")
 @pytest.mark.spec("ui:sessions:an-edge-row-shows-the-head")
-def test_the_drawer_holds_the_render(page: Page, served: Served) -> None:
+def test_the_drawer_holds_the_render(
+    page: Page, served: Served, refusals: list[Refused]
+) -> None:
+    refusals.append(Refused(409, f"/api/c/{DRAWN}/sessions/"))
+    refusals.append(Refused(409, f"/api/c/{WIDE}/sessions/"))
     page.goto(served.hub_of(DRAWN))
     page.locator("[data-render]").click()
     _alone(page, DRAWN)
@@ -345,6 +351,7 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
 @pytest.mark.spec("ui:conjure-from:conjure-from-this-opens-review")
 @pytest.mark.spec("ui:delete-render:the-dialog-opens-on-no")
 @pytest.mark.spec("ui:delete-render:yes-opens-the-hub-on-the-cell")
+@pytest.mark.spec("ui:delete-render:the-hub-opens-without-the-deleted-render")
 def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     digest = served.conjured.digest
     large = f"{served.url}/c/{CONJURED}/renders/{digest}/{FLOW}/v1/7"
@@ -387,6 +394,8 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     expect(dialog).to_have_count(0)
     expect(page.locator(".large__media img")).to_be_visible()
 
+    asked: list[str] = []
+    page.on("request", lambda request: asked.append(request.url))
     page.keyboard.press("Shift+Backspace")
     expect(no).to_be_focused()
     page.keyboard.press("l")
@@ -397,6 +406,8 @@ def test_conjure_from_this_opens_review(page: Page, served: Served) -> None:
     cell = page.locator(f'.hub__cell[data-row="0"][data-flow="{FLOW}"]')
     expect(cell).to_have_attribute("data-stage", "tagged")
     expect(cell).to_be_focused()
+    thumb = f"/api/c/{CONJURED}/renders/{digest}/{FLOW}/v1/7/thumb"
+    assert not [url for url in asked if url.endswith(thumb)]
     assert not group_of(served.conjured, FLOW, 1).exists() and not prompt.exists()
     page.goto(f"{served.url}/c/{CONJURED}/review/{digest}/{CONJURE}")
     expect(page.locator(".form")).to_be_visible()
