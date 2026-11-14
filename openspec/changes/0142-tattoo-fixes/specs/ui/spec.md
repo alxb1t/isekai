@@ -83,7 +83,8 @@ kept tattoos      │ each card: its image, name, state, source, Remove
 - **Key:** `ui:picker:remove-asks-in-a-dialog`
 - **Layers:** unit
 - **WHEN** *Remove* is pressed on the card `bow`, and *Delete* on a render's large view
-- **THEN** the first dialog is titled *Remove this tattoo?* and names `bow`, and the second is titled *Delete this render?*
+- **THEN** the first dialog is titled *Remove this tattoo?* and names `bow`
+- **AND** the second is titled *Delete this render?*
 - **AND** the second names nothing under its title
 
 #### Scenario: a cut's card shows its own crop
@@ -336,8 +337,8 @@ used and shows which are useful. A dialog is an overlay of the app and holds its
 
 ### Requirement: The picker lists the kept tattoos and takes an upload or a cut
 
-**Reason:** The picker now shows the render and its photograph, a cut's own crop and a *Remove* that asks in a dialog; its
-scenario *remove takes a second click* no longer holds.
+**Reason:** The picker now shows the render and its photograph, a cut's own crop and a *Remove* that asks in a dialog;
+its scenario *remove takes a second click* no longer holds.
 **Migration:** The picker shows the render and lists the kept tattoos, and takes an upload or a cut, carries every
 other scenario under its key.
 
