@@ -103,7 +103,7 @@ render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─
   `.tattoos/<name>/` with `design.png`, `tattoo.json` and `outline.json`, and serves every render in every
   collection. A cut is `.tattoos/.cuts/<digest>/<name>/` with `tattoo.json` and `outline.json`, `<digest>` the
   photograph's run digest. A picker lists the uploads and the cuts of its render's photograph, and a name is one
-  tattoo on it. *Remove* asks a second click, then deletes the tattoo's folder and frees its name. A baked edit keeps
+  tattoo on it. *Remove* asks in a dialog, then deletes the tattoo's folder and frees its name. A baked edit keeps
   its own copy, so a removal changes no edit. The app renames nothing.
 - **An upload** goes through the import's staging, is cleaned as a source is, and is kept upright, scaled down to the
   `long_side` of `config/tattoo.json`, under a name kept once.
@@ -128,7 +128,7 @@ render's large view ─ ⇧P ─▶ ① tattoo ─▶ ② outline + ink view ─
   all* or a drag makes them its own, and forward waits for each. Nothing is kept: a proposal is one answer, run on this
   machine's CPU, and the bake records only the pairs held ([D54](decisions.md#d54--automatic-pairs-run-on-the-operators-machine-and-are-kept-nowhere)).
   The files are in `config/placement.json`: `make setup` fetches them, or
-  `uv run python -m isekai.boundary.unpack fetch config/placement.json`, which the refusal names when they are absent.
+  `uv run python -m isekai.boundary.unpack fetch config/placement.json`, which the server's refusal names when they are absent; the page shows a plain line.
 - **The preview** is the ink on white as a JPEG over a crop of the target, which the page multiplies over it a second
   after the last change. It is made on the server and kept nowhere.
 - **The limb and the exclusions** are drawn on the render: the ink stays inside the limb and goes under each

@@ -206,6 +206,35 @@ def test_chain_composite_a_polygon_mask_is_filled_inside_and_empty_outside() -> 
     assert mask[5, 10] == 0
 
 
+SLANT = [(2, 2), (30, 2), (2, 30)]
+
+
+@pytest.mark.spec("tattoo:chain:a-polygon-mask-is-antialiased")
+def test_chain_composite_a_polygon_mask_is_antialiased_at_its_edge() -> None:
+    mask = polygon_mask(SLANT, (34, 34))
+    edge = [mask[32 - x, x] for x in range(4, 26)]
+
+    assert mask[5, 5] == 255
+    assert mask[28, 28] == 0
+    assert all(0 < value < 255 for value in edge)
+
+    alpha = clip(_filled(34, 34), SLANT)[..., 3]
+
+    assert alpha[5, 5] == pytest.approx(1.0, abs=0.01)
+    assert all(0.0 < alpha[32 - x, x] < 1.0 for x in range(4, 26))
+
+
+@pytest.mark.spec("tattoo:chain:an-exclusions-edge-is-partly-removed")
+def test_chain_composite_an_exclusions_edge_is_partly_removed() -> None:
+    limb = [(-2, -2), (42, -2), (42, 42), (-2, 42)]
+
+    alpha = clip(_filled(34, 34), limb, [SLANT])[..., 3]
+
+    assert alpha[5, 5] == 0.0
+    assert alpha[28, 28] == pytest.approx(1.0, abs=0.01)
+    assert alpha[32 - 17, 17] == pytest.approx(1.0 - 96 / 255, abs=0.01)
+
+
 CORNERS = [(0.0, 0.0), (60.0, 0.0), (0.0, 60.0), (60.0, 60.0)]
 
 
@@ -265,7 +294,7 @@ def test_chain_place_clips_to_the_limb_and_removes_each_exclusion() -> None:
     )
 
     assert layer[2, 2, 3] == 0.0
-    assert layer[18, 18, 3] == pytest.approx(1.0, abs=0.01)
+    assert layer[16, 16, 3] == pytest.approx(1.0, abs=0.01)
     assert layer[12, 12, 3] == 0.0
     assert layer[25, 25, 3] == 0.0
 

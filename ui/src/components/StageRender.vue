@@ -165,29 +165,42 @@ const key = computed(() => keyOf(tattoo.value?.name ?? '', props.version, props.
 const line = computed(() => view(placing.proposalAsked.value, key.value))
 const waitingProposals = computed(() => proposals(pairs.value).length)
 
+/* The tattoo's points on the photograph, none until it is held. */
+const points = computed<Point[]>(() => {
+  const held = tattoo.value
+  return held && mode.value ? pointsOf(mode.value, complete(placing.first.value), held.outline) : []
+})
+
 /* Ask once for the tattoo's proposed pairs on this render. The answer is kept whether or not
    this stage is still on screen, but only by the ask that made it: a later ask under the same
    key is another; a refusal is shown and the clicks still work. */
 const propose = async (): Promise<void> => {
-  const held = tattoo.value
   const at = key.value
-  if (!held || !mode.value) return
-  const points = pointsOf(mode.value, complete(placing.first.value), held.outline)
+  if (!tattoo.value || !mode.value) return
+  const sending = points.value
   placing.proposalAsked.value = asked(placing.proposalAsked.value, at)
   const mine = placing.proposalAsked.value[at]
   const stillAsking = (): boolean => stands(placing.proposalAsked.value, at, mine)
   try {
-    const answer = await proposePairs(props.place, props.version, props.seed, points)
+    const answer = await proposePairs(props.place, props.version, props.seed, sending)
     if (!stillAsking()) return
     if (key.value === at) placing.editSecond(arrived(placing.second.value, answer.pairs))
     placing.proposalAsked.value = answered(placing.proposalAsked.value, at, answer.pairs.length)
-  } catch (reason) {
-    if (stillAsking()) placing.proposalAsked.value = refused(placing.proposalAsked.value, at, (reason as Error).message)
+  } catch {
+    if (stillAsking()) placing.proposalAsked.value = refused(placing.proposalAsked.value, at)
   }
 }
 
 watch(
-  () => due(mode.value, pairs.value, placing.proposalAsked.value, key.value),
+  () =>
+    due(
+      mode.value,
+      pairs.value,
+      placing.proposalAsked.value,
+      key.value,
+      points.value.length,
+      placing.reading.value,
+    ),
   (now) => {
     if (now) void propose()
   },

@@ -22,7 +22,8 @@ living spec is test-backed, and a release folds one into the other.
 [`CONTRIBUTING.md`](CONTRIBUTING.md) is the in-tree statement of that contract; everything else here is a
 rule this repository holds in particular.
 
-**The gate is `make gate`**, run from the repository root.
+**The gate is `make gate`**, run from the repository root. **One browser test file is
+`uv run python -m tools.test_ui ui/src/<name>.test.ts`**, from the same place; never start vitest at the root.
 
 **Before work, read [the coding standards](CODING_STANDARDS.md) and [how a change lands](CONTRIBUTING.md): mandatory
 shared context.** **Before designing, building or reviewing, also read [the decisions in force](docs/decisions.md),

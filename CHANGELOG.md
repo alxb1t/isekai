@@ -10,6 +10,32 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.0] - 2026-11-14
+
+Gate: local 3m57s · CI not read under mf-ship · 0.86.17: local 1m13s · CI not read under mf-ship
+
+- *Remove* opens the shared confirmation dialog the render's deletion uses and the two-press arm goes; the picker shows
+  the render and its photograph at its top and a cut's card shows its own crop; the head loses its thumbnail (0142 D1,
+  D2, D3, D4).
+- Step ②'s head reads *outlined* from the outline save's answer, the screen reads the tattoo once, step ④'s panels take
+  the page's height, and the ask for pairs waits for the saved outline, sends no empty outline and shows a refusal as one
+  plain line (0142 D5, D6, D7).
+- The review drops the render above it and shows *before* and *after* side by side, fitted to their columns, with the
+  summary to the right and *Back* and *Bake* in one row (0142 D8).
+- A polygon's mask is filled at four times its size and box-reduced, so the ink's edge is antialiased in the preview and
+  the bake, and an exclusion removes a partly covered pixel in part (0142 D9).
+
+## [0.86.17] - 2026-11-14
+
+Gate: local 1m13s · CI not read under mf-ship · 0.86.16: local 1m16s · CI not read under mf-ship
+
+- `python -m tools.test_ui` takes arguments: `ui/src/<name>.test.ts` runs one browser test file in `ui/`, where vitest
+  finds its config, and a leading `ui/` on an argument is dropped (0144 D1, D2).
+- A root `vitest.config.mjs` refuses a vitest start at the repository root, naming `tools.test_ui`, so it writes no root
+  `node_modules/`; a test starts vitest beside a copy of it and reads the refusal (0144 D4).
+- `CONTRIBUTING.md` and `AGENTS.md` name the one-file command and say never to start vitest at the root, so a worker
+  needs no invented command (0144 D6).
+
 ## [0.86.16] - 2026-11-14
 
 Gate: local 1m16s · CI not read under mf-ship · 0.86.15: local 1m17s · CI not read under mf-ship

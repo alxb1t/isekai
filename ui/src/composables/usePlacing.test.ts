@@ -5,9 +5,10 @@ import { clicked, complete, held, none } from '../pairs'
 import { drafted } from '../polygon'
 import { answered, asked, due, keyOf, noAsks, stands } from '../propose'
 import { spec } from '../test/spec'
-import type { Pair, Point, Stage1 } from '../types'
+import type { Outline, Pair, Point, Stage1 } from '../types'
 
 const PLACE = { collection: 'wedding', digest: 'a1b2c3d4e5f6', flow: 'summon-anime-wai' }
+const POINTS = 3
 
 const named = (over: Partial<Named>): Named => ({
   name: 'bow',
@@ -160,21 +161,21 @@ spec('ui:proposal:a-stage-with-no-pairs-asks-once', async () => {
   const key = keyOf('bow', 'v1', '7')
 
   // The first opening of stage 2 is due and records its ask.
-  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)).toBe(true)
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key, POINTS, false)).toBe(true)
   placing.proposalAsked.value = answered(asked(placing.proposalAsked.value, key), key, 0)
 
   // A step change holds the same tattoo, which is not read again: its ask stays.
   await placing.load('bow')
-  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)).toBe(false)
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key, POINTS, false)).toBe(false)
   // Another tattoo has its own key, and is due.
   const other = keyOf('arm', 'v1', '7')
   await placing.load('arm')
-  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other)).toBe(true)
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other, POINTS, false)).toBe(true)
   // Its own ask is recorded once and not made again while the tattoo is held.
   placing.proposalAsked.value = answered(asked(placing.proposalAsked.value, other), other, 2)
-  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other)).toBe(false)
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other, POINTS, false)).toBe(false)
   await placing.load('arm')
-  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other)).toBe(false)
+  expect(due(placing.mode.value, placing.second.value, placing.proposalAsked.value, other, POINTS, false)).toBe(false)
   // A fresh placing, as after a reload of the page, holds no ask.
   expect(usePlacing(PLACE, ports).proposalAsked.value).toBe(noAsks)
 })
@@ -184,7 +185,7 @@ spec('ui:proposal:returning-to-a-tattoo-asks-again', async () => {
   const placing = usePlacing(PLACE, ports)
   await placing.load('bow')
   const key = keyOf('bow', 'v1', '7')
-  const dueNow = () => due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key)
+  const dueNow = () => due(placing.mode.value, placing.second.value, placing.proposalAsked.value, key, POINTS, false)
 
   // Answered, then another tattoo, then back: the pairs were cleared, so the ask goes too.
   placing.proposalAsked.value = answered(asked(placing.proposalAsked.value, key), key, 3)
@@ -202,6 +203,36 @@ spec('ui:proposal:returning-to-a-tattoo-asks-again', async () => {
   expect(stands(placing.proposalAsked.value, key, coming)).toBe(false)
   await placing.load('bow')
   expect(dueNow()).toBe(true)
+})
+
+spec('ui:proposal:an-ask-waits-for-the-saved-outline', async () => {
+  const open: Outline = { points: [[10, 10], [200, 10]], closed: false, white: 1, neutral: true, depth: 1.6 }
+  const shut: Outline = { ...open, points: [[10, 10], [200, 10], [200, 200]], closed: true }
+  const { ports } = server(undefined, named({ kind: 'cut', cut_from: PLACE.digest, outlined: false, outline: open }))
+  const placing = usePlacing(PLACE, ports)
+  await placing.load('bow')
+  expect(placing.reading.value).toBe(false)
+
+  // A save on its way is work in flight, and the tattoo still holds the outline read.
+  let answer: (outline: Outline) => void = () => undefined
+  const saving = placing.track(new Promise<Outline>((resolve) => (answer = resolve)))
+  expect(placing.reading.value).toBe(true)
+  expect(placing.tattoo.value?.outline).toEqual(open)
+
+  // Its answer is adopted once the work is counted down.
+  answer(shut)
+  placing.adopt('bow', await saving)
+  expect(placing.reading.value).toBe(false)
+  expect(placing.tattoo.value?.outline).toEqual(shut)
+  expect(placing.tattoo.value?.outlined).toBe(true)
+
+  // An answer for another tattoo changes nothing held.
+  placing.adopt('arm', open)
+  expect(placing.tattoo.value?.outline).toEqual(shut)
+
+  // Work that fails is counted down too.
+  await expect(placing.track(Promise.reject(new Error('refused')))).rejects.toThrow('refused')
+  expect(placing.reading.value).toBe(false)
 })
 
 spec('ui:direct:a-cut-does-not-offer-the-flag', async () => {

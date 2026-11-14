@@ -2538,13 +2538,6 @@ dialog::backdrop {
   gap: 16px;
 }
 
-.place__render {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 3px;
-}
-
 .place__steps {
   display: flex;
   gap: 12px;
@@ -2570,6 +2563,24 @@ dialog::backdrop {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.picker__images {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.picker__shown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.picker__shown img {
+  width: 100%;
+  height: auto;
 }
 
 .picker__make {
@@ -2641,6 +2652,12 @@ dialog::backdrop {
   height: 120px;
   object-fit: contain;
   background: var(--ground-media);
+}
+
+.picker__crop {
+  align-self: center;
+  background-color: var(--ground-media);
+  background-repeat: no-repeat;
 }
 
 .picker__title {
@@ -2797,8 +2814,7 @@ dialog::backdrop {
   margin-top: auto;
 }
 
-/* The review: the image with the tattoo multiplied over it, the crop before and after, and the
-   summary beside them. */
+/* The review: the crop before and after in two equal columns, and the summary beside them. */
 .review__main {
   display: flex;
   flex: 1;
@@ -2806,18 +2822,6 @@ dialog::backdrop {
   gap: 16px;
   min-width: 0;
   overflow: auto;
-}
-
-.review__image {
-  position: relative;
-  align-self: flex-start;
-  max-width: 100%;
-}
-
-.review__render {
-  display: block;
-  max-width: 100%;
-  max-height: 60vh;
 }
 
 .review__ink {
@@ -2833,8 +2837,8 @@ dialog::backdrop {
 }
 
 .review__crops {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
@@ -2849,8 +2853,15 @@ dialog::backdrop {
 
 .review__pixels {
   position: relative;
-  max-width: 100%;
+  width: 100%;
   background-repeat: no-repeat;
+}
+
+.review__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
 }
 
 .reviewlist {
@@ -2871,6 +2882,10 @@ dialog::backdrop {
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+}
+
+.pair > .panel {
+  flex: 1;
 }
 
 .pair--waiting .panel__viewport {
@@ -3020,12 +3035,6 @@ dialog::backdrop {
 
 .picker__remove {
   align-self: flex-start;
-}
-
-.picker__remove[data-armed='true'] {
-  color: var(--accent-ink);
-  border-color: var(--accent);
-  background: var(--accent-dim);
 }
 
 /* The Leave dialog: the lone point, the pairs that stand, then Stay and Leave. */

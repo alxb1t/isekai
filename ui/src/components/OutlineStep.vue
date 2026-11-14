@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
+import { computed, inject, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { type Place, designAt, inkView, photoUrl, saveOutline, tattooNamed } from '../api'
+import { PLACING } from '../composables/usePlacing'
 import {
   type Draft,
   type Rules,
@@ -33,6 +34,7 @@ import {
   scaleOf,
   whiteNote,
   whiteState,
+  withOutline,
 } from '../tattoos'
 import { type Mode, type Step, circled, forwardOf, stepsOf } from '../stages'
 import type { InkView, Outline, Point, Tattoo, TattooLimits } from '../types'
@@ -52,6 +54,10 @@ const props = defineProps<{
   mode: Mode | null
 }>()
 const emit = defineEmits<{ instead: [cut: string]; forward: [step: Step] }>()
+
+const provided = inject(PLACING)
+if (!provided) throw new Error('the placement screen provides what its stages hold')
+const placing = provided
 
 const SAVE_DELAY = 400
 const INK_DELAY = 250
@@ -108,22 +114,26 @@ function current(): Outline {
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 let saving: Promise<void> = Promise.resolve()
 
-/* Send the outline as it stands, after the saves already on their way. */
+/* Send the outline as it stands, after the saves already on their way. The screen counts the
+   save as work in flight at once, and holds its answer as the tattoo's outline. */
 function flush(): void {
   clearTimeout(saveTimer)
   saveTimer = undefined
   const outline = current()
   saving = saving.then(async () => {
     try {
-      await saveOutline(props.place.digest, props.name, outline)
+      const saved = await saveOutline(props.place.digest, props.name, outline)
+      if (tattoo.value) tattoo.value = withOutline(tattoo.value, saved)
+      placing.adopt(props.name, saved)
       if (saveTimer === undefined) status.value = 'saved'
     } catch (reason) {
       status.value = (reason as Error).message
     }
   })
+  void placing.track(saving)
 }
 
-/* Go forward once the outline as it stands is saved: the next stage reads it from the server. */
+/* Go forward once the outline as it stands is saved: the placement screen holds the save's answer. */
 async function goForward(step: Step): Promise<void> {
   if (saveTimer !== undefined) flush()
   await saving

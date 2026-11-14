@@ -1,0 +1,58 @@
+{
+  "change": "0142-tattoo-fixes",
+  "version": "0.87",
+  "base": "42b79503",
+  "analyzed": "abed8348",
+  "measured_on": "local",
+  "collected_at": "2026-11-14T16:45:56+02:00",
+  "mf_version": "v0.100.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2390
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 237
+    },
+    "open-backlog-cards": {
+      "value": 8
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1711
+    },
+    "diff-files": {
+      "value": 34
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 14674
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1083
+    },
+    "decisions": {
+      "value": 58
+    }
+  }
+}

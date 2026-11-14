@@ -77,6 +77,8 @@ block.
 (`.github/workflows/ci.yml`) runs `make gate` too. The browser tests are `make e2e`, out of the gate while an
 unattended run's sandbox cannot run them; CI runs them after the gate, on every push.
 
+**One browser test file** is `uv run python -m tools.test_ui ui/src/<name>.test.ts`, from the repository root. The wrapper runs vitest in `ui/`, where its config is, and drops a leading `ui/`. Never start vitest at the root: `npm --prefix ui exec -- vitest run <file>` does, writes a root `node_modules/` and skips `ui/`'s config. The root `vitest.config.mjs` refuses it.
+
 **A change is measured as well as gated.** `metrics/catalogue.toml` names the measures, each a script under
 `scripts/metrics/` or a value the station passes. The build drafts a change's values and the release commits them to
 `metrics/changes/<change-id>.json` ([D47](docs/decisions.md#d47--a-change-is-measured-from-isekais-own-catalogue)).

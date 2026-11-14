@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
-import { renderDetail, tattoos, thumbAt, versionOf } from '../api'
+import { renderDetail, tattoos, versionOf } from '../api'
 import { PLACING, usePlacing } from '../composables/usePlacing'
 import LeaveDialog from '../components/LeaveDialog.vue'
 import OutlineStep from '../components/OutlineStep.vue'
@@ -121,13 +121,12 @@ watch(
   { immediate: true },
 )
 
-/* The tattoo a step names is read once, and again for the outline the step before it saved. */
+/* The tattoo a step names is read once; the outline step hands the screen each outline it saves. */
 watch(
   () => [props.step, props.name] as const,
-  ([now, name], before) => {
+  ([now, name]) => {
     if (name === undefined || now === 'tattoo') return
     void placing.load(name)
-    if (before?.[0] === 'outline' && now !== 'outline') void placing.reload()
   },
   { immediate: true },
 )
@@ -222,11 +221,6 @@ onUnmounted(() => void placing.settled())
   <RefusalPage v-else-if="placing.refusal.value" :refusal="placing.refusal.value" />
   <section v-else-if="detail && list" class="place">
     <header class="place__head">
-      <img
-        class="place__render"
-        :src="thumbAt({ ...render, version: versionOf(version) })"
-        :alt="`seed ${detail.seed}`"
-      />
       <span class="section-label">
         place a tattoo · {{ detail.flow }} · v{{ detail.version }} · seed {{ detail.seed }}
       </span>
@@ -262,6 +256,8 @@ onUnmounted(() => void placing.settled())
     <TattooPicker
       v-if="step === 'tattoo'"
       :place="place"
+      :version="version"
+      :seed="seed"
       :list="list"
       :instead="instead"
       @choose="choose"

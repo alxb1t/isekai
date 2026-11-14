@@ -1,4 +1,5 @@
 import { expect } from 'vitest'
+import confirmation from './components/ConfirmDialog.vue?raw'
 import panel from './components/ImagePanel.vue?raw'
 import leave from './components/LeaveDialog.vue?raw'
 import outline from './components/OutlineStep.vue?raw'
@@ -41,6 +42,9 @@ spec('ui:place-keys:the-screen-declares-only-undo-redo-and-close', () => {
       expect(source, file).not.toMatch(/useKeys/)
     }
   }
+  // The confirmation dialog the picker opens declares its own overlay keys, and reads no keyboard.
+  expect(confirmation.match(/useKeys\('overlay'/g)).toHaveLength(1)
+  expect(confirmation).not.toMatch(/keydown|keyup|keypress/)
   // The read sees a declaration where there is one, and a listener.
   expect(large).toContain('useKeys(')
   expect(panel).toContain('keydown')

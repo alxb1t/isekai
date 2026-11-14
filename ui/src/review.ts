@@ -1,7 +1,7 @@
 import { type Pairs, forward } from './pairs'
 import type { Mode } from './stages'
 import { defaultTone, differs, greyOf } from './tattoos'
-import type { Outline, Pair, Point, Tattoo, TattooLimits } from './types'
+import type { Outline, Pair, Point, Preview, Tattoo, TattooLimits } from './types'
 
 /* The review step as plain functions: the lines that summarise a placement, and the state of
    *Bake* from the stages' pairs and the server's answer. */
@@ -73,6 +73,29 @@ export function summary(placement: Placement): Summary {
     tattoo: parts.join(' · '),
     stages,
     outlines: outlines.length > 0 ? outlines : ['no limb or exclusion'],
+  }
+}
+
+export interface Fit {
+  aspectRatio: string
+  backgroundSize: string
+  backgroundPosition: string
+}
+
+/* The percentage that puts `offset` of `whole` at the start of a frame `part` wide; 0 where
+   the box fills the axis. */
+const placed = (offset: number, whole: number, part: number): number =>
+  whole > part ? (offset / (whole - part)) * 100 : 0
+
+/** Return the style that shows the render's `box` filling a frame of the box's aspect ratio:
+    the render is sized at its width over the box's, and placed by the box's offset over
+    what is left of the render.
+    e.g. the box 100 by 50 at 250, 275 on 1100 by 600 -> "100 / 50", "1100%", "25% 50%" */
+export function fitted(box: Preview['box'], size: { width: number; height: number }): Fit {
+  return {
+    aspectRatio: `${box.width} / ${box.height}`,
+    backgroundSize: `${(size.width / box.width) * 100}%`,
+    backgroundPosition: `${placed(box.x, size.width, box.width)}% ${placed(box.y, size.height, box.height)}%`,
   }
 }
 
