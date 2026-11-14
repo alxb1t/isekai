@@ -1,5 +1,22 @@
+<script lang="ts">
+/** Return a guard for work that must not finish once the view is left: `begin()` hands back a check
+    that holds until the next `begin()` or `drop()`. e.g. `const ok = g.begin(); g.drop(); ok()` -> false */
+export function latest(): { begin: () => () => boolean; drop: () => void } {
+  let current = 0
+  return {
+    begin: () => {
+      const mine = ++current
+      return () => mine === current
+    },
+    drop: () => {
+      current += 1
+    },
+  }
+}
+</script>
+
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { bakeAt, bakeDetail, imageAt, photoUrl, renderDetail, thumbAt, versionOf } from '../api'
 import { offered } from '../bakes'
@@ -120,10 +137,13 @@ const hubCell = computed(() => ({
 }))
 
 /* The hub is read again first, so the Hub draws without the deleted render; a refusal opens it all the same.
-   The Hub, focused on the deleted render's cell. */
+   The Hub, focused on the deleted render's cell, unless the operator has left this view meanwhile. */
+const leaving = latest()
+onUnmounted(leaving.drop)
 async function deleted(): Promise<void> {
+  const still = leaving.begin()
   await store.reloadHub().catch(() => undefined)
-  void router.push(hubCell.value)
+  if (still()) void router.push(hubCell.value)
 }
 
 useKeys('screen', [
