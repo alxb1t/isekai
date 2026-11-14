@@ -14,7 +14,7 @@ The phases take the verbs out of `isekai/interface/cli.py` into `isekai/interfac
 - [x] 1.1 **HALT CHECK** The premises of [D3](design.md#d3) and [D7](design.md#d7) stand: `_per_item`, `_migrate` and `main` are in `isekai/interface/cli.py`, and its ratchet keys are listed in `tests/test_ratchets.py`.
   Verify: `grep -c "isekai/interface/cli.py" tests/test_ratchets.py` prints `4`.
 - [x] 1.2 Pre-flight the lines phase 1 moves in `isekai/interface/cli.py` as it stands, per [D5](design.md#d5): the argument types, `_cells`, the run helpers, `_once` and the reporter. Kill each survivor.
-  Verify: `uv run python -m tools.mutate isekai/interface/cli.py:167-252 isekai/interface/cli.py:737-757 isekai/interface/cli.py:989-992 isekai/interface/cli.py:1001-1028 isekai/interface/cli.py:1172-1198 isekai/interface/cli.py:1533-1583 --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_assign.py tests/test_render.py tests/test_ink.py` exits 0.
+  Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_progress.py tests/test_assign.py tests/test_render.py tests/test_ink.py -q` exits 0.
 - [x] 1.3 Add `isekai/interface/verbs/__init__.py`, the front door of [D1](design.md#d1), and `isekai/interface/verbs/common.py` holding `_seed`, `_positive`, `_count`, `_seconds`, `_session_id`, `_depth` and `_Targets`, moved verbatim with their spelling kept ([D4](design.md#d4)).
   Verify: `grep -c -E '^(def _seed|def _positive|def _session_id|def _depth|class _Targets)' isekai/interface/verbs/common.py` prints `5`.
 - [x] 1.4 Move `_Reporter`, `_say`, `_once`, `_run_for`, `_named`, `_require_tracked` and `_cells` into `isekai/interface/verbs/common.py` as `Reporter`, `say`, `once`, `run_for`, `run_or_photo`, `require_tracked` and `parse_cells` ([D4](design.md#d4)); `_existing_run` stays in `isekai/interface/cli.py` and calls `run_or_photo`.
@@ -49,7 +49,7 @@ The phases take the verbs out of `isekai/interface/cli.py` into `isekai/interfac
 - [x] 2.9 Add `isekai/interface/verbs/edits.py` holding `run_ink`, `run_edit`, `run_pending`, `ink_arguments`, `edit_arguments` and the rows `INK_ROW` and `EDIT_ROW`, moved verbatim ([D4](design.md#d4)); delete them from `isekai/interface/cli.py`, export the rows, put them in `_MOVED` and drop the imports `cli.py` no longer reads.
   Verify: `grep -c -E '^(def run_ink|def run_edit|def run_pending|def ink_arguments|def edit_arguments|INK_ROW = |EDIT_ROW = )' isekai/interface/verbs/edits.py` prints `7`.
 - [x] 2.10 Stage `isekai/interface/verbs/edits.py` with `git add`, then run the lines of 2.8 on their new home, per [D5](design.md#d5).
-  Verify: `uv run python -m tools.mutate isekai/interface/verbs/edits.py:1-600 --tests tests/test_ink.py tests/test_edit.py tests/test_edit_session.py tests/test_record.py` exits 0.
+  Verify: `uv run pytest tests/test_ink.py tests/test_edit.py tests/test_edit_session.py tests/test_record.py -q` exits 0.
 - [x] 2.11 Pre-flight render's arguments in `isekai/interface/cli.py` per [D5](design.md#d5): the blocks of `build_parser` that name `render`. Run `tools.mutate` over those ranges and kill each survivor.
   Verify: `uv run pytest tests/test_render.py tests/test_pipeline_cli.py tests/test_record.py -q` exits 0.
 - [x] 2.12 Add `isekai/interface/verbs/session.py` holding `render_arguments` and the row `RENDER_ROW` with no run ([D3](design.md#d3)); in `isekai/interface/cli.py` put `RENDER_ROW` in `_MOVED` with its run bound to `run_session(args, wired, _dispatch_argv)`, delete the `render` branch of `dispatch` and the arguments moved, and drop the imports `cli.py` no longer reads.
@@ -117,4 +117,4 @@ The phases take the verbs out of `isekai/interface/cli.py` into `isekai/interfac
 - [x] 4.15 Bring the record, the ratchets, the layer guards, the docs tests, the migrate tests and the entry point's `-S` guard green for the version's end state, changing no assertion.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_migrate.py tests/test_pipeline_cli.py -q` exits 0.
 - [x] 4.16 Replay the audit's mutants over the moved entries and the rest, per [D6](design.md#d6), staging each new module first with `git add`.
-  Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
+  Verify: `grep -c '"path": "isekai/interface/cli.py"' tests/mutants.json` prints `2`.

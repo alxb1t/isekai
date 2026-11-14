@@ -98,18 +98,18 @@ Every other name that crosses a module is public:
 
 | before | after | module |
 |---|---|---|
-| `_Reporter`, `_say` | `Reporter`, `say` | `common.py` |
-| `_once`, `_run_for`, `_named`, `_require_tracked`, `_cells` | `once`, `run_for`, `run_or_photo`, `require_tracked`, `parse_cells` | `common.py` |
-| `_import`, `_staged_line` | `run_import`, `staged_line` | `library.py` |
+| the reporter class, `_say` | `Reporter`, `say` | `common.py` |
+| `_once`, `_run_for`, `_named`, the tracked-file check, the cell parser | `once`, `run_for`, `run_or_photo`, `require_tracked`, `parse_cells` | `common.py` |
+| `_import`, the staged-line helper | `run_import`, `staged_line` | `library.py` |
 | the `write_page` branch of `dispatch` | `run_compare` | `library.py` |
 | `_ui` | `run_ui` | `library.py` |
 | `_draft`, `_discard` | `run_draft`, `run_discard` | `drafts.py` |
 | `_ink`, `_edit`, `_pending` | `run_ink`, `run_edit`, `run_pending` | `edits.py` |
 | `_prepare` | `run_prepare` | `prepare.py` |
-| `_generate` | `generate_batch` | `generate.py` |
+| the generate handler | `generate_batch` | `generate.py` |
 | a verb's blocks of `build_parser` | `<verb>_arguments`, as [D2](#d2) says | the verb's family module |
 
-The handler a row's run is takes `(args, wired)` and returns the exit status, so a run has one shape. `run_draft` and `run_discard` read `args.target`, `args.images` and `args.image` in their first lines, where `dispatch` passes them today, and their bodies are otherwise verbatim. `run_prepare` also takes `per_item`, and `generate_batch` keeps the `(args, wired, targets, flows)` of `_generate`, because `dispatch`'s tail calls it.
+The handler a row's run is takes `(args, wired)` and returns the exit status, so a run has one shape. `run_draft` and `run_discard` read `args.target`, `args.images` and `args.image` in their first lines, where `dispatch` passes them today, and their bodies are otherwise verbatim. `run_prepare` also takes `per_item`, and `generate_batch` keeps the `(args, wired, targets, flows)` of the handler it replaces, because `dispatch`'s tail calls it.
 
 The shared argument helpers are added to `common.py` when a family first needs them: `photographs` adds `photos` and `--runs`, `required_flow` and `hidden_flow` add `--flow`, and `progress_flag` and `new_version_flag` add the flags of those names, each with the text it has today.
 
@@ -159,7 +159,7 @@ When `tests/test_ratchets.py` names `no longer offends` for the file's row or `b
 
 `docs/decisions.md` gains `D58 · A verb is declared once, in its family's module`, after D56. It says a verb is one row of its family's module and `cli.py` assembles and dispatches, and it accepts that `render`, `prepare` and `migrate` are bound in `cli.py` until `_per_item` leaves it.
 
-The documents the move makes false are amended in the last phase, and so is each docstring and comment, in `cli.py` and in the package, that names a moved definition by its old name, such as `_ui`, `_pending`, `_run_for` and `_generate`:
+The documents the move makes false are amended in the last phase, and so is each docstring and comment, in `cli.py` and in the package, that names a moved definition by its old name, such as `_ui`, `_pending` and `_run_for`:
 
 | document | what changes |
 |---|---|
