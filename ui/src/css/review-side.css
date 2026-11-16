@@ -1,0 +1,291 @@
+/* — ④ renders — */
+
+.form__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.form__body .rows {
+  min-width: 0;
+}
+
+/* ④, a panel right of the sheet rows. */
+.renders-block {
+  flex: none;
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--space-3) 18px;
+  border-left: 1px solid var(--color-neutral-900);
+  overflow-y: auto;
+}
+
+.renders-block__label {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.renders-block__count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.renders-block__step {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
+
+.renders-block__value {
+  min-width: 2ch;
+  text-align: center;
+}
+
+.renders-block__slots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.renders-block__slot {
+  display: grid;
+  grid-template-columns: 3ch 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.renders-block__seed {
+  width: 100%;
+  height: 26px;
+  font-size: 12px;
+}
+
+.renders-block__refusal {
+  grid-column: 2;
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.renders-block__draws {
+  margin: 0;
+}
+
+/* — footer — */
+
+.approve-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: var(--space-4) 18px;
+  border-top: 1px solid var(--color-neutral-900);
+}
+
+.approve-bar {
+  flex-wrap: wrap;
+}
+
+.approve-bar__refusal {
+  display: flex;
+  gap: 8px;
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.approve-bar__refusal .refusal__mark {
+  margin-top: 4px;
+}
+
+.approve-bar__note {
+  font-size: 11px;
+  color: var(--color-neutral-500);
+}
+
+.approve-bar__fact {
+  flex: none;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-accent-200);
+}
+
+.approve-bar__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* — autocomplete — */
+
+.drop {
+  /* Absolutely positioned so it overlays the rows below and never displaces
+     them. If they move, the operator loses their place while typing. */
+  position: absolute;
+  top: 30px;
+  left: 0;
+  z-index: 20;
+  width: 430px;
+  padding-bottom: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.drop__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  padding: 6px 11px;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.drop__row--selected {
+  background: var(--color-accent-900);
+}
+
+.drop__posts {
+  font-size: 12px;
+  color: var(--color-neutral-500);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* One word, not a colour: it says what the number means -- the render will
+   exaggerate what a tag this thinly attested names. */
+.drop__rare {
+  color: var(--color-accent-300);
+}
+
+.drop__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 5px 11px;
+  font-size: 10.5px;
+  color: var(--color-neutral-500);
+  border-top: 1px solid var(--color-neutral-800);
+}
+
+/* Near the sheet's foot the list opens above its input, mirrored: row 1 nearest it, the footer on top. */
+.drop--above {
+  top: auto;
+  bottom: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.drop--above .drop__foot {
+  border-top: 0;
+  border-bottom: 1px solid var(--color-neutral-800);
+}
+
+/* The fragment: bare mono text with one accent caret. The caret is the
+   browser's own, recoloured -- an accent border drawn beside it was a second
+   caret, which is exactly the "committed and in-flight never look alike" rule
+   read backwards: two marks for one insertion point. */
+.fragment {
+  min-width: 60px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  caret-color: var(--color-accent);
+  outline: none;
+}
+
+/* — overlays: the cheatsheet — */
+
+.overlay {
+  /* Below the app bar, which stays, so the operator never loses their place.
+     It is not dimmed with an opacity wrapper, which leaves the bar illegible. */
+  position: fixed;
+  top: 41px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-8) var(--space-8);
+  /* The cheatsheet's ground, a token each theme sets. */
+  background: var(--overlay);
+  overflow: auto;
+}
+
+.overlay__side {
+  flex: 1;
+  min-width: 0;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+}
+
+.overlay__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+}
+
+.overlay__exit {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-neutral-500);
+}
+
+.overlay__foot {
+  margin-top: auto;
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-neutral-800);
+  font-size: 11px;
+  color: var(--color-neutral-500);
+}
+
+/* The cheatsheet's side, without the 620px reading measure: `clothes` is a four-figure list of chips and a column that narrow
+   would wrap it into a ribbon. Nothing else about the ground changes. */
+.overlay__side--wide {
+  max-width: none;
+}
+
+.cheatsheet__group {
+  margin-bottom: var(--space-6);
+}
+
+.cheatsheet__empty {
+  font-size: 11px;
+  color: var(--color-neutral-500);
+}
+
+/* — loading — */
+
+.skeleton__line {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--color-neutral-500);
+}

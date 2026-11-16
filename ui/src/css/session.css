@@ -1,0 +1,227 @@
+/* — the render session (J4·2, J4·3, J8b) — */
+
+.session {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px 48px;
+}
+
+.session__timer {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 500;
+}
+
+.session__limit {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.session__bar {
+  height: 6px;
+  overflow: hidden;
+  background: var(--line-disabled);
+  border-radius: 3px;
+}
+
+.session__fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--accent-dim);
+  border-radius: 3px;
+}
+
+/* A running session with no plan: the fill slides, sized by nothing. */
+.session__fill--sliding {
+  width: 30%;
+  animation: import-running 1.6s ease-in-out infinite;
+}
+
+.session__steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.session__steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.session__state {
+  margin-left: auto;
+  color: var(--ink-3);
+}
+
+.session__mark {
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--ink-3);
+  border-radius: 50%;
+}
+
+.session__mark--done,
+.session__mark--ready,
+.session__mark--kept {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.session__mark--running,
+.session__mark--starting {
+  border-color: var(--accent);
+}
+
+.session__mark--failed,
+.session__mark--lost {
+  border-color: var(--accent);
+  border-radius: 0;
+  background: var(--accent);
+}
+
+.session__tile {
+  width: var(--tile-width);
+  height: var(--tile-height);
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: var(--placeholder);
+}
+
+button.session__tile {
+  cursor: zoom-in;
+}
+
+/* The session's grid: a flow per row over the photographs' row, a photograph per
+   column; a cell's images stack, so a column stays one tile wide. */
+.session__grid {
+  display: grid;
+  gap: 8px 12px;
+  align-items: start;
+}
+
+.session__stack + .session__stack {
+  margin-top: 16px;
+}
+
+.session__collection {
+  display: block;
+  margin: 0 0 8px;
+}
+
+.session__flow {
+  align-self: center;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.session__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 3px;
+  border-radius: 4px;
+  outline: none;
+}
+
+.session__cell--focused {
+  box-shadow: inset 0 0 0 1px var(--focus);
+}
+
+/* A photograph of the collection, at a render tile's size. */
+.session__tile--photo {
+  border: 1px solid var(--line);
+  background: var(--raised-2);
+}
+
+.session__tile--done {
+  background: var(--raised-2);
+  border: 1px solid var(--accent-dim);
+}
+
+.session__tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.tile--selected {
+  outline: 2px solid var(--accent);
+}
+
+.session__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.session__quiet {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.session__refusal,
+.session__alert p {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.session__alert {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* — the render drawer: the session as wide as its widest grid, at the right — */
+
+.drawer {
+  width: max-content;
+  min-width: max(50vw, 480px);
+  max-width: calc(100vw - 100px);
+  height: 100vh;
+  max-height: 100vh;
+  margin: 0 0 0 auto;
+  padding: 0;
+  background: var(--raised);
+  border: none;
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-sheet);
+}
+
+.drawer::backdrop {
+  background: var(--scrim-drawer);
+}
+
+.drawer .session {
+  padding: 32px;
+}
+
+/* A wider grid scrolls inside the drawer; its long text never widens it. */
+.drawer .session__stack {
+  overflow-x: auto;
+}
+
+.drawer .section-label,
+.drawer .session__steps,
+.drawer .session__refusal,
+.drawer .session__alert {
+  contain: inline-size;
+}
+
+.drawer__empty {
+  margin: 0;
+  padding: 32px;
+  font-size: 12px;
+  color: var(--ink-2);
+}

@@ -486,11 +486,10 @@ WIDE_FUNCTIONS = {
 WIDE_ROWS = 14
 
 BIG_UI_FILES = {
-    "ui/src/app.css": 3044,
     "ui/src/views/Hub.vue": 671,
     "ui/src/views/Review.vue": 696,
 }
-UI_ROWS = 3
+UI_ROWS = 2
 
 PATCHED_MODULES = {
     "evaluation.__main__": 5,

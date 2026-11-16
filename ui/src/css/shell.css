@@ -1,0 +1,153 @@
+/* — the shell — */
+
+/* The app's frame: the AppBar, the BillingBanner's slot, the route's screen and
+   the JobStrip, top to bottom (design spec §3). */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+.app__screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.appbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 40px;
+  flex: none;
+  padding: 0 16px;
+  background: var(--ground-deep);
+  border-bottom: 1px solid var(--line);
+}
+
+.appbar__mark {
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.appbar__place {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.appbar__tab {
+  font-size: 13px;
+  color: var(--ink-2);
+  text-decoration: none;
+  padding: 10px 0;
+  border-bottom: 2px solid transparent;
+}
+
+.appbar__tab--active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+/* The running render, at the bar's far end, on every screen. */
+.appbar__render {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--accent-ink);
+  text-decoration: none;
+}
+
+button.appbar__render {
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* The key list's button, at the bar's far end, after the running render. */
+.appbar__keys {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.appbar__render ~ .appbar__keys {
+  margin-left: 0;
+}
+
+.appbar__key {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-left: 6px;
+}
+
+.jobstrip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  flex: none;
+  padding: 0 16px;
+  background: var(--ground-deep);
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.jobstrip__dot {
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--ink-3);
+  border-radius: 50%;
+}
+
+.jobstrip__dot--running {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+/* Unresolved: the accent square (design spec §3). */
+.jobstrip__dot--alert {
+  border-color: var(--accent);
+  background: var(--accent);
+  border-radius: 0;
+}
+
+.jobstrip__totals {
+  color: var(--ink-2);
+}
+
+.jobstrip__volume {
+  margin-left: auto;
+  color: var(--ink-2);
+}
+
+/* — the BillingBanner: filled accent, never dismissed (§3) — */
+
+.band {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: none;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: var(--band);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.band__resolve {
+  margin-left: auto;
+  color: var(--band);
+}

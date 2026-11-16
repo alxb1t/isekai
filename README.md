@@ -453,7 +453,7 @@ isekai/
 ├── flows/summon-vivid-anime-wai/ # flat's files with summon's trailer and a negative against muted colour
 ├── edits/tattoo-wai/          # one edit: flat, `edit.json` and `graph.json`, pinned by its digest
 ├── ui/                        # the app: Vue 3 + Vite + vue-router; design/spec.md; dist/ and node_modules/ ignored
-│   ├── src/                   # the app; styles.css is the vendored stylesheet, Inter beside it
+│   ├── src/                   # the app; styles.css is the vendored stylesheet, Inter beside it; css/ holds the page's rules, a file a screen
 │   └── design/                # spec.md, the design the app is built to
 ├── gpunit.toml                # the render session's GPU: the pinned image, cards, floors, ceiling, volume
 ├── config/                    # the files the pipeline reads

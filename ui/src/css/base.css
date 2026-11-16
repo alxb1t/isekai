@@ -1,0 +1,36 @@
+/* This application's own layout, kept apart from the token sheet in
+   `styles.css`. Every colour, space, radius and shadow below comes from that
+   sheet's variables -- nothing here invents a hex. */
+
+:root {
+  /* Numbers, field keys, file paths, keystrokes and post counts. Load-bearing
+     for the autocomplete: the post count is read by digit count, which only
+     works if the digits align. */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* One image's tile on the hub: a source's thumbnail and a
+     render's are drawn the same size, so a row reads across at one scale. */
+  --tile-width: 96px;
+  --tile-height: 128px;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.kicker {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-neutral-500);
+}
