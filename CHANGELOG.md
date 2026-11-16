@@ -20,6 +20,9 @@ its new digest.
 - `create_app` takes `file_response`, defaulting to `FileResponse`, and the `Surface` holds it; the photograph and image
   routes answer through it, and the two tests that patched `FileResponse` pass it, so `serve` is unchanged
   (0150 D1, D2, D3, D5).
+- `create_app` takes `save_draft`, `approve`, `precondition` and `draft_lock`, and the `Surface` holds them; the draft's
+  routes read them there, each app builds its own lock, and the tests that patched them pass them, so `serve` is
+  unchanged. A new test holds that an app given no lock holds one (0150 D1, D2, D4, D5, D6).
 
 ## [0.87.4] - 2026-11-16
 

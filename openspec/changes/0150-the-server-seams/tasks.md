@@ -6,7 +6,7 @@ The phases: the jobs, the file response, the draft's four, the documents. Nothin
 
 - [x] 1 — The jobs · moderate
 - [x] 2 — The file response · moderate
-- [ ] 3 — The draft's four · moderate
+- [x] 3 — The draft's four · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The jobs
@@ -39,29 +39,29 @@ The phases: the jobs, the file response, the draft's four, the documents. Nothin
 
 ## 3 — The draft's four
 
-- [ ] 3.1 **HALT CHECK** The module's lock is the one `threading.Lock()` of `app.py`, the lock the routes of [D1](design.md#d1) take.
+- [x] 3.1 **HALT CHECK** The module's lock is the one `threading.Lock()` of `app.py`, the lock the routes of [D1](design.md#d1) take.
   Verify: `git grep -c -F 'threading.Lock()' -- isekai/interface/ui/app.py` prints `isekai/interface/ui/app.py:1`.
-- [ ] 3.2 In `surface.py` give `Surface.__init__` the keyword-only parameters `save_draft`, `approve`, `precondition` and `draft_lock`, typed as [D2](design.md#d2) says with `AbstractContextManager` from `contextlib`, and store each under its own name.
+- [x] 3.2 In `surface.py` give `Surface.__init__` the keyword-only parameters `save_draft`, `approve`, `precondition` and `draft_lock`, typed as [D2](design.md#d2) says with `AbstractContextManager` from `contextlib`, and store each under its own name.
   Verify: `git grep -n -E '^        self\.(save_draft|approve|precondition|draft_lock) = ' -- isekai/interface/ui/surface.py` prints a line for each of `save_draft`, `approve`, `precondition` and `draft_lock`.
-- [ ] 3.3 In `app.py` move `def _precondition(`, its signature, docstring and body unchanged, from below `create_app` to sit between `authorities` and `create_app` ([D4](design.md#d4)).
+- [x] 3.3 In `app.py` move `def _precondition(`, its signature, docstring and body unchanged, from below `create_app` to sit between `authorities` and `create_app` ([D4](design.md#d4)).
   Verify: `git grep -n -E '^def (authorities|_precondition|create_app)\(' -- isekai/interface/ui/app.py` prints `authorities`, `_precondition` and `create_app`, in that order.
-- [ ] 3.4 In `app.py` import `AbstractContextManager` from `contextlib`, give `create_app` the keyword-only parameters `save_draft`, `approve`, `precondition` and `draft_lock` after `file_response`, as [D1](design.md#d1) shows, pass each to `Surface(`, the lock as `draft_lock=draft_lock if draft_lock is not None else threading.Lock()`, and add a docstring line for each ([D4](design.md#d4)).
+- [x] 3.4 In `app.py` import `AbstractContextManager` from `contextlib`, give `create_app` the keyword-only parameters `save_draft`, `approve`, `precondition` and `draft_lock` after `file_response`, as [D1](design.md#d1) shows, pass each to `Surface(`, the lock as `draft_lock=draft_lock if draft_lock is not None else threading.Lock()`, and add a docstring line for each ([D4](design.md#d4)).
   Verify: `git grep -n -F 'draft_lock=' -- isekai/interface/ui/app.py` prints a line.
-- [ ] 3.5 In `app.py` make `put_draft`, `post_approve`, `post_cancel`, `post_discard`, `post_draft` and `delete_render` write `with surface.draft_lock:`; `put_draft`, `post_approve` and `post_discard` call `surface.precondition(`; `put_draft` calls `surface.save_draft(`; `post_approve` calls `surface.approve(` ([D4](design.md#d4)).
+- [x] 3.5 In `app.py` make `put_draft`, `post_approve`, `post_cancel`, `post_discard`, `post_draft` and `delete_render` write `with surface.draft_lock:`; `put_draft`, `post_approve` and `post_discard` call `surface.precondition(`; `put_draft` calls `surface.save_draft(`; `post_approve` calls `surface.approve(` ([D4](design.md#d4)).
   Verify: `git grep -c -F 'with surface.draft_lock:' -- isekai/interface/ui/app.py` prints `isekai/interface/ui/app.py:6`.
-- [ ] 3.6 In `app.py` delete `_DRAFT_UPDATE = threading.Lock()` and the comment above it.
+- [x] 3.6 In `app.py` delete `_DRAFT_UPDATE = threading.Lock()` and the comment above it.
   Verify: `git grep -n -F '_DRAFT_UPDATE' -- isekai` prints nothing.
-- [ ] 3.7 In `tests/test_ui_api.py` re-arrange `_overlap`, `_update_during_approval` and the tests that call them as [D5](design.md#d5) says: each builds its wrappers, then its client with them as seams, then reads `body`, and none patches `_DRAFT_UPDATE`. The patch of `review_module.write` stays.
+- [x] 3.7 In `tests/test_ui_api.py` re-arrange `_overlap`, `_update_during_approval` and the tests that call them as [D5](design.md#d5) says: each builds its wrappers, then its client with them as seams, then reads `body`, and none patches `_DRAFT_UPDATE`. The patch of `review_module.write` stays.
   Verify: `git grep -n -F '_DRAFT_UPDATE' -- tests` prints nothing.
-- [ ] 3.8 Add `test_an_app_given_no_lock_holds_one_of_its_own` to `tests/test_ui_api.py` after the draft's twins, as [D6](design.md#d6) says, marked `@pytest.mark.spec("ui:draft-update:overlapping-updates-cannot-both-commit")`, with a case each for no lock argument and `contextlib.nullcontext()`.
+- [x] 3.8 Add `test_an_app_given_no_lock_holds_one_of_its_own` to `tests/test_ui_api.py` after the draft's twins, as [D6](design.md#d6) says, marked `@pytest.mark.spec("ui:draft-update:overlapping-updates-cannot-both-commit")`, with a case each for no lock argument and `contextlib.nullcontext()`.
   Verify: `uv run pytest tests/test_ui_api.py -k test_an_app_given_no_lock_holds_one_of_its_own` passes.
-- [ ] 3.9 In `tests/test_ratchets.py` change the row `"isekai.interface.ui.app": 12,` of `PATCHED_MODULES` to `"isekai.interface.ui.app": 1,`; the row stays for the patch of `run`, and `PATCHED_ROWS` is unchanged ([D1](design.md#d1)).
+- [x] 3.9 In `tests/test_ratchets.py` change the row `"isekai.interface.ui.app": 12,` of `PATCHED_MODULES` to `"isekai.interface.ui.app": 1,`; the row stays for the patch of `run`, and `PATCHED_ROWS` is unchanged ([D1](design.md#d1)).
   Verify: `git grep -n -F '"isekai.interface.ui.app": 1,' -- tests/test_ratchets.py` prints the row.
-- [ ] 3.10 Check that the measure is the row's number.
+- [x] 3.10 Check that the measure is the row's number.
   Verify: `uv run python -c "from tests.test_ratchets import patched_modules, REPO_ROOT; print(patched_modules(REPO_ROOT)['isekai.interface.ui.app'])"` prints `1`.
-- [ ] 3.11 Check that the one patch of `app.py` left is the patch of `run` ([D5](design.md#d5)).
+- [x] 3.11 Check that the one patch of `app.py` left is the patch of `run` ([D5](design.md#d5)).
   Verify: `git grep -n -F 'setattr(app_module' -- tests` prints one line, `tests/test_ui.py`'s patch of `run`.
-- [ ] 3.12 Run the server's tests, the ratchets, the record, the layer guards and the entry point's import guard.
+- [x] 3.12 Run the server's tests, the ratchets, the record, the layer guards and the entry point's import guard.
   Verify: `uv run pytest tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui.py tests/test_ui_billing.py tests/test_ui_propose.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ratchets.py tests/test_record.py tests/test_layers.py tests/test_pipeline_cli.py tests/test_ui_wire.py` passes.
 
 ## 4 — The documents

@@ -78,7 +78,7 @@ GET  anything else                                 the bundle's index.html
 import asyncio
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
-from contextlib import asynccontextmanager
+from contextlib import AbstractContextManager, asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 from types import FrameType
@@ -177,11 +177,6 @@ from isekai.pipeline.review import (
 from isekai.pipeline.review import state as review_state
 from isekai.shared.vocabulary import Vocabulary
 
-# Held across a draft update's precondition and its write, so two updates that
-# state one precondition cannot both pass it; and across an approval, so no
-# update writes after it.
-_DRAFT_UPDATE = threading.Lock()
-
 # A `Refusal` is the pipeline declining a well-formed request because of what is
 # on disk -- an approved input, a changed field set, a tag outside the vocabulary
 # -- which is a conflict with state rather than a malformed request. One code for
@@ -223,6 +218,32 @@ def authorities(host: str, port: int) -> frozenset[str]:
     return frozenset(f"{name}:{port}" for name in names)
 
 
+def _precondition(
+    one: Held, payload: Mapping[str, Any], again: str = "make the correction again"
+) -> None:
+    """Refuse an update, an approval or a discard against a draft that has moved.
+
+    `again` is what the page does once it has read the draft on disk.
+
+    **`st_mtime` is the precondition because nothing else exists.** The draft
+    carries no timestamp, no revision counter and no digest, and adding one
+    changes the draft's shape. `put_draft`'s lock orders the check and the
+    write; this is what orders the sends.
+
+    **A payload carrying no `saved` states no precondition**, and is allowed.
+    """
+    offered = payload.get("saved")
+    if offered is None:
+        return
+    draft = one.draft()
+    if draft is not None and _saved(draft) != offered:
+        raise Refusal(
+            f"{draft.name} changed since this page last read it; another tab or "
+            "another save got there first -- reload the input to see what is on "
+            f"disk, then {again}"
+        )
+
+
 def create_app(
     root: Path,
     wired: Wiring,
@@ -234,6 +255,10 @@ def create_app(
     port: int,
     make_jobs: Callable[..., Jobs] = Jobs,
     file_response: Callable[..., Response] = FileResponse,
+    save_draft: Callable[..., Path] = save_draft,
+    approve: Callable[..., tuple[Path | None, list[str]]] = approve,
+    precondition: Callable[..., None] = _precondition,
+    draft_lock: AbstractContextManager[Any] | None = None,
 ) -> FastAPI:
     """Return the app's application, serving every collection of the library at `root`.
 
@@ -244,6 +269,11 @@ def create_app(
     `host` and `port` are the address every request is checked against.
     `make_jobs` builds the jobs the app holds; a test passes its own.
     `file_response` answers the photographs and images; a test passes its own.
+    `save_draft` writes a draft update; a test passes its own.
+    `approve` writes an approval; a test passes its own.
+    `precondition` refuses a draft that has moved; a test passes its own.
+    `draft_lock` is held across each draft write; the app builds its own when
+    none is passed.
     """
     broadcast = events.Broadcast()
     jobs = make_jobs(
@@ -288,6 +318,10 @@ def create_app(
         broadcast=broadcast,
         limit=limit,
         file_response=file_response,
+        save_draft=save_draft,
+        approve=approve,
+        precondition=precondition,
+        draft_lock=draft_lock if draft_lock is not None else threading.Lock(),
     )
     shared = surface.shared
     folder, held, offered = surface.folder, surface.held, surface.offered
@@ -566,7 +600,7 @@ def create_app(
         # Before the lock: a malformed body refuses without waiting on a write.
         fields = _update(payload)
         renders = _renders_in(payload)
-        with _DRAFT_UPDATE:
+        with surface.draft_lock:
             if review_state(one.directory(REVIEW)) == "approved":
                 raise Refusal(
                     f"{one.run.id} is approved, and an approved sheet is never "
@@ -576,8 +610,8 @@ def create_app(
                     "reload: the input comes back re-opened and editable, with "
                     "its approved artifact still named"
                 )
-            _precondition(one, payload)
-            written = save_draft(one.run, one.flow.id, fields, renders)
+            surface.precondition(one, payload)
+            written = surface.save_draft(one.run, one.flow.id, fields, renders)
         budget = token_budget(fields, one.flow.schema, one.flow)
         return {
             "draft": written.name,
@@ -597,9 +631,9 @@ def create_app(
         the draft it last read, never one another writer has since moved.
         """
         one = held(collection, digest, flow)
-        with _DRAFT_UPDATE:
-            _precondition(one, payload or {})
-            written, warnings = approve(
+        with surface.draft_lock:
+            surface.precondition(one, payload or {})
+            written, warnings = surface.approve(
                 one.run,
                 one.flow.id,
                 one.flow.schema,
@@ -622,7 +656,7 @@ def create_app(
         false for a flow at its draft, which a cancel leaves unchanged.
         """
         one = held(collection, digest, flow)
-        with _DRAFT_UPDATE:
+        with surface.draft_lock:
             rendering = _rendering(collection)
             if rendering is not None:
                 raise Refusal(
@@ -641,8 +675,8 @@ def create_app(
         draft it last read, never one another tab has since edited.
         """
         one = held(collection, digest, flow)
-        with _DRAFT_UPDATE:
-            _precondition(one, payload or {}, "discard again")
+        with surface.draft_lock:
+            surface.precondition(one, payload or {}, "discard again")
             gone = discard(one.run, one.flow.id)
         return {"discarded": gone.name}
 
@@ -671,7 +705,7 @@ def create_app(
         drafts = [{**_image_out(*one), "draft": None, "waiting": None} for one in named]
         # Each image to write, by its place in `named`.
         located: list[tuple[int, Path, Revision]] = []
-        with _DRAFT_UPDATE:
+        with surface.draft_lock:
             for at, (digest, flow, version, seed) in enumerate(named):
                 try:
                     # A flow this build does not track names no directory of a run.
@@ -875,7 +909,7 @@ def create_app(
         the newest's waiting draft, and, with no approval left, the flow's sheets.
         """
         run, image, _ = rendered(collection, digest, flow, version, seed)
-        with _DRAFT_UPDATE:
+        with surface.draft_lock:
             rendering = _rendering(collection)
             if rendering is not None:
                 raise Refusal(
@@ -1234,32 +1268,6 @@ def _renders_out(renders: Renders) -> dict[str, Any]:
         "count": renders["count"],
         "seeds": _decimal(renders["seeds"]),
     }
-
-
-def _precondition(
-    one: Held, payload: Mapping[str, Any], again: str = "make the correction again"
-) -> None:
-    """Refuse an update, an approval or a discard against a draft that has moved.
-
-    `again` is what the page does once it has read the draft on disk.
-
-    **`st_mtime` is the precondition because nothing else exists.** The draft
-    carries no timestamp, no revision counter and no digest, and adding one
-    changes the draft's shape. `put_draft`'s lock orders the check and the
-    write; this is what orders the sends.
-
-    **A payload carrying no `saved` states no precondition**, and is allowed.
-    """
-    offered = payload.get("saved")
-    if offered is None:
-        return
-    draft = one.draft()
-    if draft is not None and _saved(draft) != offered:
-        raise Refusal(
-            f"{draft.name} changed since this page last read it; another tab or "
-            "another save got there first -- reload the input to see what is on "
-            f"disk, then {again}"
-        )
 
 
 def _budget(budget: TokenBudget) -> dict[str, Any]:
