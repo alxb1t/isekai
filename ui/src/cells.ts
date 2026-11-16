@@ -1,5 +1,5 @@
 import { type Focus, type Move, moved } from './grid'
-import type { HubCell, ImageRef, RenderDetail } from './types'
+import type { HubCell, HubSource, ImageRef, RenderDetail } from './types'
 import { noun } from './words'
 
 /** Return an image as a selection holds it. e.g. "0d4b…|summon-anime-wai|1|42" */
@@ -73,9 +73,37 @@ export function cellOrder<T extends { version: number; seed: string }>(images: r
   return [...images].sort((a, b) => a.version - b.version || bySeed(a.seed, b.seed))
 }
 
+/** Return whether `source` has a run (a digest) and `cell` a status, so Review can open. */
+export function reviewable(source: HubSource, cell: HubCell): boolean {
+  return source.digest !== null && cell.status !== null
+}
+
+/** Return the focused cell's hint, or null where its review or sheet is not reviewable here. */
+export function hintOf(source: HubSource, cell: HubCell): string | null {
+  const found = action(cell)
+  if (found.action === 'review' || found.action === 'sheet')
+    return reviewable(source, cell) ? found.hint : null
+  return found.hint
+}
+
 /** Return whether `cell` is waiting for Prepare: assigned, or tagged with no sheet yet. */
 export function pending(cell: HubCell): boolean {
   return cell.stage === 'assigned' || cell.stage === 'tagged'
+}
+
+/** Return the source's cell for `flow`, the empty cell when it has none. */
+export function cellOf(source: HubSource, flow: string): HubCell {
+  return source.cells[flow] ?? EMPTY_CELL
+}
+
+/** Return what Prepare would run: every pending cell, source by source, flow by flow. */
+export function changesOf(
+  sources: readonly HubSource[],
+  flows: readonly string[],
+): { source: HubSource; flow: string }[] {
+  return sources.flatMap((source) =>
+    flows.filter((flow) => pending(cellOf(source, flow))).map((flow) => ({ source, flow })),
+  )
 }
 
 /** Return whether `cell`'s tick stays: a stage past pending holds work. */

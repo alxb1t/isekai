@@ -5,7 +5,7 @@ The phases move `Hub.vue`'s pure rules into `bars.ts` and `cells.ts`, a test fir
 ## Progress
 
 - [x] 1 — The Prepare bar's words · moderate
-- [ ] 2 — The cell rules a scenario covers · moderate
+- [x] 2 — The cell rules a scenario covers · moderate
 - [ ] 3 — The rules no scenario covers · moderate
 
 ## 1 — The Prepare bar's words
@@ -25,15 +25,15 @@ The phases move `Hub.vue`'s pure rules into `bars.ts` and `cells.ts`, a test fir
 
 `cellOf`, `changesOf`, `reviewable` and `hintOf` go to `cells.ts`, each test first, bound as [D3](design.md#d3) says.
 
-- [ ] 2.1 In `ui/src/cells.test.ts` add `spec('ui:prepare:prepare-takes-the-cells-with-no-sheet', …)` over `changesOf(sources, flows)`: sources `ada.jpg` and `bea.jpg`, flows `a`, `b` and `c`, cells assigned, tagged, sheet and unreadable, one flow absent from a source's `cells`. It expects `{ source, flow }` for the assigned and the tagged cells alone, source by source, flow by flow.
+- [x] 2.1 In `ui/src/cells.test.ts` add `spec('ui:prepare:prepare-takes-the-cells-with-no-sheet', …)` over `changesOf(sources, flows)`: sources `ada.jpg` and `bea.jpg`, flows `a`, `b` and `c`, cells assigned, tagged, sheet and unreadable, one flow absent from a source's `cells`. It expects `{ source, flow }` for the assigned and the tagged cells alone, source by source, flow by flow.
   Verify: `git grep -n -F "prepare-takes-the-cells-with-no-sheet" -- ui/src/cells.test.ts` prints a line.
-- [ ] 2.2 In `ui/src/cells.ts` import `HubSource` and add `cellOf(source, flow)` and `changesOf(sources, flows)` as [D2](design.md#d2) lists them, `changesOf` reading `pending` of `cellOf`.
+- [x] 2.2 In `ui/src/cells.ts` import `HubSource` and add `cellOf(source, flow)` and `changesOf(sources, flows)` as [D2](design.md#d2) lists them, `changesOf` reading `pending` of `cellOf`.
   Verify: `uv run python -m tools.test_ui ui/src/cells.test.ts` exits 0.
-- [ ] 2.3 In the test of `ui:hub:a-click-follows-the-cells-stage` in `ui/src/cells.test.ts` add steps for `hintOf(source, cell)`: a sheet cell on a source with a digest and a cell with a status gives `'↵ review'`; the same cell on a source with no digest gives `null`, and so does a sheet cell with no status; an approved cell with a newest image gives `'↵ view'`; a tagged cell gives `null`. The existing steps stay as they are.
+- [x] 2.3 In the test of `ui:hub:a-click-follows-the-cells-stage` in `ui/src/cells.test.ts` add steps for `hintOf(source, cell)`: a sheet cell on a source with a digest and a cell with a status gives `'↵ review'`; the same cell on a source with no digest gives `null`, and so does a sheet cell with no status; an approved cell with a newest image gives `'↵ view'`; a tagged cell gives `null`. The existing steps stay as they are.
   Verify: `git grep -n -F "hintOf(" -- ui/src/cells.test.ts` prints a line.
-- [ ] 2.4 In `ui/src/cells.ts` add `reviewable(source, cell)` and `hintOf(source, cell)` as [D2](design.md#d2) lists them, `hintOf` held to `reviewable` for the review and sheet actions, as `hint` in `ui/src/views/Hub.vue` is now.
+- [x] 2.4 In `ui/src/cells.ts` add `reviewable(source, cell)` and `hintOf(source, cell)` as [D2](design.md#d2) lists them, `hintOf` held to `reviewable` for the review and sheet actions, as `hint` in `ui/src/views/Hub.vue` is now.
   Verify: `uv run python -m tools.test_ui ui/src/cells.test.ts` exits 0.
-- [ ] 2.5 In `ui/src/views/Hub.vue` import `cellOf as cell`, `changesOf`, `hintOf` and `reviewable` from `../cells`; delete the local `cell` and `reviewable`; make `changes` a `computed` over `changesOf`, `hint` a wrapper over `hintOf`, and call `reviewable(source, cell(source, flow))` in `review`, as [D4](design.md#d4) draws it.
+- [x] 2.5 In `ui/src/views/Hub.vue` import `cellOf as cell`, `changesOf`, `hintOf` and `reviewable` from `../cells`; delete the local `cell` and `reviewable`; make `changes` a `computed` over `changesOf`, `hint` a wrapper over `hintOf`, and call `reviewable(source, cell(source, flow))` in `review`, as [D4](design.md#d4) draws it.
   Verify: `git grep -n -E "function (cell|reviewable)\(" -- ui/src/views/Hub.vue` prints nothing.
 
 ## 3 — The rules no scenario covers

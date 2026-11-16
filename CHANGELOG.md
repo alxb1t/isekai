@@ -12,6 +12,8 @@ its new digest.
 
 - The Prepare bar's line and button words, `toPrepare` and `prepareButton`, move from `Hub.vue`'s plain script block to
   `bars.ts`, with their test; the hub shows the same words and the plain block is gone (0151 D1).
+- The hub's cell rules, `cellOf`, `changesOf`, `reviewable` and `hintOf`, move from `Hub.vue` to `cells.ts`; `changesOf` and
+  `hintOf` have a test written first, and the view calls them with the page unchanged (0151 D2, D3).
 
 ## [0.87.6] - 2026-11-16
 

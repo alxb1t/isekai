@@ -18,11 +18,15 @@ import {
   type PickTile,
   action,
   cellGrid,
+  cellOf as cell,
   cellOrder,
+  changesOf,
   clicks,
+  hintOf,
   locked,
   pending,
   ready,
+  reviewable,
   targets,
 } from '../cells'
 import { assign, prepare, sourceAt, sourceThumbAt, thumbAt } from '../api'
@@ -110,13 +114,7 @@ const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
 
 /* What Prepare would run: every pending cell. */
-const changes = computed(() =>
-  sources.value.flatMap((source) =>
-    flows.value
-      .filter((flow) => pending(cell(source, flow)))
-      .map((flow) => ({ source, flow })),
-  ),
-)
+const changes = computed(() => changesOf(sources.value, flows.value))
 /* The one bar the hub shows: Prepare first, then Render, then none. */
 const shown = computed(() =>
   barOf({
@@ -140,10 +138,6 @@ function key(source: HubSource, flow: string): string {
   return at(source.name, flow)
 }
 
-function cell(source: HubSource, flow: string): HubCell {
-  return source.cells[flow] ?? EMPTY_CELL
-}
-
 /* Whether the focus is on `row` at grid column `column`: 0 the source, the flows from 1. */
 function focused(row: number, column: number): boolean {
   return focus.value.row === row && focus.value.column === column
@@ -164,20 +158,13 @@ function segment(source: HubSource, flow: string, index: number): string {
   return found && index < DONE[found] ? 'hub__segment--done' : ''
 }
 
-function reviewable(source: HubSource, flow: string): boolean {
-  return source.digest !== null && cell(source, flow).status !== null
-}
-
 /* The focused cell's action hint, or null where it offers none here. */
 function hint(source: HubSource, flow: string): string | null {
-  const found = action(cell(source, flow))
-  if (found.action === 'review' || found.action === 'sheet')
-    return reviewable(source, flow) ? found.hint : null
-  return found.hint
+  return hintOf(source, cell(source, flow))
 }
 
 function review(source: HubSource, flow: string): void {
-  if (reviewable(source, flow))
+  if (reviewable(source, cell(source, flow)))
     void router.push({
       name: 'review',
       params: { collection: props.collection, digest: source.digest, flow },
