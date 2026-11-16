@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.11] - 2026-11-17
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.10: local 1m10s · CI not read under mf-ship
+
 - `lens.ts` holds the viewer's rule, `viewedOf`, and `⌃P`'s step, `photographStep`, with a vitest test bound to the
   photograph, pair and conjure-from scenarios; `Review.vue` switches to it and keeps its one `useKeys` call (0155 D1, D3, D5).
 - `kicker.ts` holds the status line's rule, `kickerOf`, and the time formats `clock` and `minute`, with a vitest test bound
