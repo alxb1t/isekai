@@ -65,7 +65,7 @@
   },
   {
     "finding": "FN-1",
-    "path": "isekai/foundation/run.py",
+    "path": "isekai/foundation/failures.py",
     "find": "    \"wd14\": 1,\n    \"tags\": 3,",
     "replace": "    \"tags\": 3,",
     "tests": ["tests/test_run_directory.py"],
@@ -73,7 +73,7 @@
   },
   {
     "finding": "FN-2",
-    "path": "isekai/foundation/run.py",
+    "path": "isekai/foundation/failures.py",
     "find": "    return \"budget\" if len(recorded) >= BUDGETS[stage] else None",
     "replace": "    return \"budget\" if len(recorded) >= BUDGETS[stage] - 1 else None",
     "tests": ["tests/test_run_directory.py"],
@@ -105,7 +105,7 @@
   },
   {
     "finding": "FN-6",
-    "path": "isekai/foundation/run.py",
+    "path": "isekai/foundation/failures.py",
     "find": "        if named is not None and named[0] == version:",
     "replace": "        if named is not None:",
     "tests": ["tests/test_run_directory.py"],

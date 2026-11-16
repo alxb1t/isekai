@@ -6,7 +6,7 @@ The phases: names and rundir, layout, failures, the documents. Each moves text a
 
 - [x] 1 — Names and rundir · moderate
 - [x] 2 — Layout · moderate
-- [ ] 3 — Failures · moderate
+- [x] 3 — Failures · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — Names and rundir
@@ -57,21 +57,21 @@ The phases: names and rundir, layout, failures, the documents. Each moves text a
 
 ## 3 — Failures
 
-- [ ] 3.1 Open with the tests' baseline: phase 2 has shifted `run.py` again ([D10](design.md#d10)).
+- [x] 3.1 Open with the tests' baseline: phase 2 has shifted `run.py` again ([D10](design.md#d10)).
   Verify: `uv run pytest tests/test_run_directory.py tests/test_caption.py tests/test_tagging.py tests/test_sheet_stage.py tests/test_resume.py tests/test_edit_session.py` passes.
-- [ ] 3.2 Write `isekai/foundation/failures.py` with its docstring and the `failures.py` row of [D2](design.md#d2), each block moved from `run.py` unchanged in the order the cut's base has them ([D4](design.md#d4)), importing `ERROR` from `names.py`, `Run` from `rundir.py`, `ERROR_FILE`, `ErrorRecord`, `Failure` and `write` from `artifacts.py`, and `Refusal`.
+- [x] 3.2 Write `isekai/foundation/failures.py` with its docstring and the `failures.py` row of [D2](design.md#d2), each block moved from `run.py` unchanged in the order the cut's base has them ([D4](design.md#d4)), importing `ERROR` from `names.py`, `Run` from `rundir.py`, `ERROR_FILE`, `ErrorRecord`, `Failure` and `write` from `artifacts.py`, and `Refusal`.
   Verify: `grep -n -E '^(Kind = |T = |BUDGETS|class (Attempt|StageFailure)|def (attempts|failure_named|failures_alone|record_failure|_spent|exhausted|check_budget|across)\()' isekai/foundation/failures.py` prints a line for each of the names.
-- [ ] 3.3 In `run.py` delete the moved blocks. Import each name of `failures.py` from it, `Kind` and `exhausted` for `refusal_for`; drop each import the move leaves unused, as `ruff check` names them.
+- [x] 3.3 In `run.py` delete the moved blocks. Import each name of `failures.py` from it, `Kind` and `exhausted` for `refusal_for`; drop each import the move leaves unused, as `ruff check` names them.
   Verify: `git grep -n -E '^(BUDGETS|class (Attempt|StageFailure)|def (attempts|record_failure|check_budget|across)\()' -- isekai/foundation/run.py` prints nothing.
-- [ ] 3.4 Check `__all__` against the cut's base, as 1.6 does.
+- [x] 3.4 Check `__all__` against the cut's base, as 1.6 does.
   Verify: `uv run python -c "import ast,subprocess,isekai.foundation.run as r; t=ast.parse(subprocess.run(['git','show','ce753c64:isekai/foundation/run.py'],capture_output=True,check=True).stdout); n={x.name for x in t.body if isinstance(x,(ast.FunctionDef,ast.ClassDef)) and not x.name.startswith('_')}|{y.id for x in t.body if isinstance(x,(ast.Assign,ast.AnnAssign)) for z in (getattr(x,'targets',None) or [x.target]) for y in ast.walk(z) if isinstance(y,ast.Name) and not y.id.startswith('_') and len(y.id)>1}; print(sorted(n-set(r.__all__)), [m for m in r.__all__ if not hasattr(r,m)])"` prints `[] []`.
-- [ ] 3.5 In `tests/mutants.json` the entries FN-1, FN-2 and FN-6 take the path `isekai/foundation/failures.py`, their `find` and `replace` unchanged ([D10](design.md#d10)).
+- [x] 3.5 In `tests/mutants.json` the entries FN-1, FN-2 and FN-6 take the path `isekai/foundation/failures.py`, their `find` and `replace` unchanged ([D10](design.md#d10)).
   Verify: `grep -c -F 'isekai/foundation/failures.py' tests/mutants.json` prints `3`.
-- [ ] 3.6 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
+- [x] 3.6 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` passes.
-- [ ] 3.7 Run the record, the ratchets, the layer guards, the documents, the run directory, the package paths and the CLI's tests: no assertion changes.
+- [x] 3.7 Run the record, the ratchets, the layer guards, the documents, the run directory, the package paths and the CLI's tests: no assertion changes.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_run_directory.py tests/test_package_paths.py tests/test_pipeline_cli.py` passes.
-- [ ] 3.8 Close with `tools.mutate` on the new module, after `git add -N isekai/foundation/failures.py`. A survivor, those the design lists among [Survivors at the cut](design.md#survivors-at-the-cut) included, is killed by a test or named in [Equivalent mutants](design.md#equivalent-mutants).
+- [x] 3.8 Close with `tools.mutate` on the new module, after `git add -N isekai/foundation/failures.py`. A survivor, those the design lists among [Survivors at the cut](design.md#survivors-at-the-cut) included, is killed by a test or named in [Equivalent mutants](design.md#equivalent-mutants).
   Verify: `uv run python -m tools.mutate isekai/foundation/failures.py:1-400 --tests tests/test_run_directory.py tests/test_caption.py tests/test_tagging.py tests/test_sheet_stage.py tests/test_resume.py tests/test_edit_session.py` exits 0, each survivor it prints named in the design.
 
 ## 4 — The documents

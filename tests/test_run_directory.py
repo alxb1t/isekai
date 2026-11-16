@@ -40,6 +40,7 @@ from isekai.foundation.run import (
     WD14,
     Kind,
     Run,
+    StageFailure,
     across,
     approved_versions,
     artifact_name,
@@ -820,6 +821,33 @@ def test_a_stage_attempts_until_its_budget_and_refuses_at_it(
     with pytest.raises(Refusal) as refused:
         check_budget(stage, directory, 1, run)
     assert f"001.error.{budget}.transient.json" in str(refused.value)
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+@pytest.mark.parametrize(
+    ("stage", "spent"), [("wd14", "1 attempt --"), ("caption", "3 attempts --")]
+)
+def test_a_refusal_at_the_budget_counts_its_attempts_in_the_singular_or_plural(
+    tmp_path: Path, stage: str, spent: str
+) -> None:
+    directory = tmp_path / stage
+    directory.mkdir()
+    for _ in range(BUDGETS[stage]):
+        record_failure(directory, 1, "transient", _FAILURE)
+
+    with pytest.raises(Refusal) as refused:
+        check_budget(stage, directory, 1, Run("aunt-ada", tmp_path))
+
+    assert f"{stage} has used its {spent} see " in str(refused.value)
+
+
+@pytest.mark.spec("run-directory:failure:kind-and-attempt-are-in-the-filename")
+def test_a_stage_failure_says_its_detail_and_its_kind_for_the_record() -> None:
+    failure = StageFailure("permanent", "the host answered with prose")
+
+    assert str(failure) == "the host answered with prose"
+    assert failure.detail == "the host answered with prose"
+    assert failure.kind == "permanent"
 
 
 @pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
