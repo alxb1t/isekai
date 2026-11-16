@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.7] - 2026-11-16
+
+Gate: local 3m14s · CI not read under mf-ship · 0.87.6: local 1m19s · CI not read under mf-ship
+
 - The Prepare bar's line and button words, `toPrepare` and `prepareButton`, move from `Hub.vue`'s plain script block to
   `bars.ts`, with their test; the hub shows the same words and the plain block is gone (0151 D1).
 - The hub's cell rules, `cellOf`, `changesOf`, `reviewable` and `hintOf`, move from `Hub.vue` to `cells.ts`; `changesOf` and

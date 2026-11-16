@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.7
 after: [0150-the-server-seams]
 ---
 

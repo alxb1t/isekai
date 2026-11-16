@@ -1,0 +1,58 @@
+{
+  "change": "0151-the-hub-rules",
+  "version": "0.87.7",
+  "base": "681c87b0",
+  "analyzed": "a19ab841",
+  "measured_on": "local",
+  "collected_at": "2026-11-16T22:30:14+02:00",
+  "mf_version": "v0.101.1",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2401
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 194
+    },
+    "open-backlog-cards": {
+      "value": 10
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 478
+    },
+    "diff-files": {
+      "value": 13
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 15257
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1084
+    },
+    "decisions": {
+      "value": 62
+    }
+  }
+}
