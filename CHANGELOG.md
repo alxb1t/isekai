@@ -15,6 +15,8 @@ its new digest.
 - A test holds that `main.ts` imports each file of `ui/src/css/` once, and its twin fails on a removed, repeated or
   missing import (0149 D4).
 - D60 says where the page's CSS lives, and the README's tree names `css/` (0149 D6).
+- `create_app` takes `make_jobs`, keyword-only and defaulting to `Jobs`; the two tests that patched `Jobs` pass it, so
+  no test patches that name and `serve` is unchanged (0150 D1, D5).
 
 ## [0.87.4] - 2026-11-16
 

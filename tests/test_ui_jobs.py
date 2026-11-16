@@ -39,7 +39,6 @@ from isekai.foundation.run import (  # noqa: E402
 from isekai.interface.cli import build_parser  # noqa: E402
 from isekai.interface.render import LOST_EXIT, without_flags  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
-from isekai.interface.ui import app as app_module  # noqa: E402
 from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
 from isekai.interface.ui.jobs import (  # noqa: E402
     Jobs,
@@ -781,7 +780,6 @@ def test_reconnect_keeps_prepare_progress(
         made.append(job)
         return job
 
-    monkeypatch.setattr(app_module, "Jobs", make_jobs)
     app = create_app(
         folder.parent,
         wired,
@@ -790,6 +788,7 @@ def test_reconnect_keeps_prepare_progress(
         wire=lambda runs: replace(wired, runs_root=runs),
         host=HOST,
         port=PORT,
+        make_jobs=make_jobs,
     )
     jobs = made[0]
     broadcast: events.Broadcast = app.state.broadcast

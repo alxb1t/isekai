@@ -232,6 +232,7 @@ def create_app(
     wire: Callable[[Path], Wiring],
     host: str,
     port: int,
+    make_jobs: Callable[..., Jobs] = Jobs,
 ) -> FastAPI:
     """Return the app's application, serving every collection of the library at `root`.
 
@@ -240,9 +241,10 @@ def create_app(
     supplies what every collection shares: the flows, the vocabulary and the table.
     `flows` are the hub's columns, the flows the surface offers.
     `host` and `port` are the address every request is checked against.
+    `make_jobs` builds the jobs the app holds; a test passes its own.
     """
     broadcast = events.Broadcast()
-    jobs = Jobs(
+    jobs = make_jobs(
         broadcast,
         wired.probe,
         volume=wired.volume,

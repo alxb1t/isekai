@@ -4,20 +4,20 @@ The phases: the jobs, the file response, the draft's four, the documents. Nothin
 
 ## Progress
 
-- [ ] 1 — The jobs · moderate
+- [x] 1 — The jobs · moderate
 - [ ] 2 — The file response · moderate
 - [ ] 3 — The draft's four · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The jobs
 
-- [ ] 1.1 **HALT CHECK** `create_app` builds the jobs itself, with `jobs = Jobs(`, the one place [D1](design.md#d1) changes.
+- [x] 1.1 **HALT CHECK** `create_app` builds the jobs itself, with `jobs = Jobs(`, the one place [D1](design.md#d1) changes.
   Verify: `git grep -n -F 'jobs = Jobs(' -- isekai/interface/ui/app.py` prints a line.
-- [ ] 1.2 In `isekai/interface/ui/app.py` give `create_app` the keyword-only parameter `make_jobs: Callable[..., Jobs] = Jobs` after `port`, build `jobs = make_jobs(` with the arguments it passes today, and add a line to the docstring ([D1](design.md#d1), [D2](design.md#d2)).
+- [x] 1.2 In `isekai/interface/ui/app.py` give `create_app` the keyword-only parameter `make_jobs: Callable[..., Jobs] = Jobs` after `port`, build `jobs = make_jobs(` with the arguments it passes today, and add a line to the docstring ([D1](design.md#d1), [D2](design.md#d2)).
   Verify: `git grep -n -F 'jobs = make_jobs(' -- isekai/interface/ui/app.py` prints a line.
-- [ ] 1.3 In `tests/test_ui.py`, in `test_sigint_ends_streams_without_cancellation_output`, and in `tests/test_ui_jobs.py`, in `test_reconnect_keeps_prepare_progress`, pass the test's own `make_jobs` to `create_app` and delete the line that patched `Jobs`; drop `tests/test_ui_jobs.py`'s import of `app_module`, which that patch alone read ([D5](design.md#d5)).
+- [x] 1.3 In `tests/test_ui.py`, in `test_sigint_ends_streams_without_cancellation_output`, and in `tests/test_ui_jobs.py`, in `test_reconnect_keeps_prepare_progress`, pass the test's own `make_jobs` to `create_app` and delete the line that patched `Jobs`; drop `tests/test_ui_jobs.py`'s import of `app_module`, which that patch alone read ([D5](design.md#d5)).
   Verify: `git grep -n -F '"Jobs", make_jobs)' -- tests` prints nothing.
-- [ ] 1.4 Run the server's tests, the ratchets and the record: no assertion changes.
+- [x] 1.4 Run the server's tests, the ratchets and the record: no assertion changes.
   Verify: `uv run pytest tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui.py tests/test_ui_billing.py tests/test_ui_propose.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ratchets.py tests/test_record.py` passes.
 
 ## 2 — The file response
