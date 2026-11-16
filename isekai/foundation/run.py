@@ -3,7 +3,7 @@
 A photograph becomes a run, and from then on every stage is handed a path inside
 that run and hands back a numbered artifact. No stage reads another's output
 directly, no stage holds state between invocations, and nothing outside this
-module decides what a file is called.
+module and its siblings decides what a file is called.
 
 **Four properties carry the whole state model, and each is here rather than in a
 convention:**
@@ -25,6 +25,11 @@ convention:**
   two stages take their number from an upstream artifact and have no next number
   to advance to. The kind and the attempt ordinal are in the name, so the retry
   decision stays a listing.
+
+The siblings `names.py`, `rundir.py`, `layout.py` and `failures.py` hold the
+identity and the names, the run and its frame, the numbering and the edit files,
+and the failure budgets. This module imports them and re-exports every name, so a
+module outside the foundation imports a run's names from here (D62).
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """

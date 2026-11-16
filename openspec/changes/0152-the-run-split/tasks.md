@@ -7,7 +7,7 @@ The phases: names and rundir, layout, failures, the documents. Each moves text a
 - [x] 1 — Names and rundir · moderate
 - [x] 2 — Layout · moderate
 - [x] 3 — Failures · moderate
-- [ ] 4 — The documents · moderate
+- [x] 4 — The documents · moderate
 
 ## 1 — Names and rundir
 
@@ -76,29 +76,29 @@ The phases: names and rundir, layout, failures, the documents. Each moves text a
 
 ## 4 — The documents
 
-- [ ] 4.1 In `docs/decisions.md`, add D62 after D60, as [D9](design.md#d9) writes it, with *Made by* `0152`.
+- [x] 4.1 In `docs/decisions.md`, add D62 after D60, as [D9](design.md#d9) writes it, with *Made by* `0152`.
   Verify: `git grep -n -F '### D62 · The run directory is run.py, its siblings imported through it' -- docs/decisions.md` prints a line.
-- [ ] 4.2 In D21, the sentence "The numbers are `run.py`'s `BUDGETS`." reads "The numbers are `BUDGETS` of `failures.py`, read through `run.py`." and stays on one line.
+- [x] 4.2 In D21, the sentence "The numbers are `run.py`'s `BUDGETS`." reads "The numbers are `BUDGETS` of `failures.py`, read through `run.py`." and stays on one line.
   Verify: `grep -n -E 'BUDGETS. of .failures.py.' docs/decisions.md` prints a line.
-- [ ] 4.3 In `docs/modules.md`, "`assign` is `foundation/run.py`'s, because a tick is the run's layout" reads "`assign` is `foundation/rundir.py`'s, read through `run.py`, because a tick is the run's layout"; the path stays on one line.
+- [x] 4.3 In `docs/modules.md`, "`assign` is `foundation/run.py`'s, because a tick is the run's layout" reads "`assign` is `foundation/rundir.py`'s, read through `run.py`, because a tick is the run's layout"; the path stays on one line.
   Verify: `grep -n -F 'foundation/rundir.py' docs/modules.md` prints a line.
-- [ ] 4.4 In `docs/modules.md`, the bullet on `StageFailure` reads "`StageFailure` lives in `foundation/failures.py`, read through `run.py`, not `refusal.py`." and ends "… the class needs `Kind`, and `failures.py` already imports `refusal.py`, so the move would be a cycle."; the path stays on one line.
+- [x] 4.4 In `docs/modules.md`, the bullet on `StageFailure` reads "`StageFailure` lives in `foundation/failures.py`, read through `run.py`, not `refusal.py`." and ends "… the class needs `Kind`, and `failures.py` already imports `refusal.py`, so the move would be a cycle."; the path stays on one line.
   Verify: `grep -n -F 'foundation/failures.py' docs/modules.md` prints a line.
-- [ ] 4.5 In `docs/data-flow.md`, "The names above are `run.py`'s, not each stage's: the run owns the layout." reads "The names above are read from `run.py`, which re-exports `names.py`'s, not each stage's: the run owns the layout."; the word `re-exports` stays on one line.
+- [x] 4.5 In `docs/data-flow.md`, "The names above are `run.py`'s, not each stage's: the run owns the layout." reads "The names above are read from `run.py`, which re-exports `names.py`'s, not each stage's: the run owns the layout."; the word `re-exports` stays on one line.
   Verify: `grep -n -F 're-exports' docs/data-flow.md` prints a line.
-- [ ] 4.6 In `isekai/foundation/README.md`, the `run.py` row of *Files* describes the front: it re-exports its siblings' names and holds the roots, `open_run` and `find_run`, `rendered_at`, the command text with `photo_of`, the migration state, `refusal_for`, `instructions_record` and `constant_record`. A row follows it for each sibling: `names.py` (a run's id and the names of its layout), `rundir.py` (`Run`, one photograph's directory and its frame, and `assign`), `layout.py` (numbering and completion, the seeds and the edit files) and `failures.py` (the failure shape the stages share: `Kind`, the budgets, the attempts a directory records, `across` and `StageFailure`, here and not in `refusal.py` because `refusal.py` imports nothing by design and the class needs `Kind`).
+- [x] 4.6 In `isekai/foundation/README.md`, the `run.py` row of *Files* describes the front: it re-exports its siblings' names and holds the roots, `open_run` and `find_run`, `rendered_at`, the command text with `photo_of`, the migration state, `refusal_for`, `instructions_record` and `constant_record`. A row follows it for each sibling: `names.py` (a run's id and the names of its layout), `rundir.py` (`Run`, one photograph's directory and its frame, and `assign`), `layout.py` (numbering and completion, the seeds and the edit files) and `failures.py` (the failure shape the stages share: `Kind`, the budgets, the attempts a directory records, `across` and `StageFailure`, here and not in `refusal.py` because `refusal.py` imports nothing by design and the class needs `Kind`).
   Verify: `grep -n -E '^\| .(names|rundir|layout|failures)\.py. \|' isekai/foundation/README.md` prints a line for each of the siblings.
-- [ ] 4.7 In the *Imported by* table of `isekai/foundation/README.md`, add a row for each of `names.py`, `rundir.py`, `layout.py` and `failures.py` after the `run.py` row, each as `` | `<file>` | — | — | ``, then re-derive with `uv run python -m tools.derive_imported_by`.
+- [x] 4.7 In the *Imported by* table of `isekai/foundation/README.md`, add a row for each of `names.py`, `rundir.py`, `layout.py` and `failures.py` after the `run.py` row, each as `` | `<file>` | — | — | ``, then re-derive with `uv run python -m tools.derive_imported_by`.
   Verify: `grep -c -E '^\| .(names|rundir|layout|failures)\.py. \|' isekai/foundation/README.md` prints `8`.
-- [ ] 4.8 In the docstring of `isekai/foundation/run.py`, "nothing outside this module decides what a file is called" reads "nothing outside this module and its siblings decides what a file is called", and a paragraph before "Stdlib only" reads: "The siblings `names.py`, `rundir.py`, `layout.py` and `failures.py` hold the identity and the names, the run and its frame, the numbering and the edit files, and the failure budgets. This module imports them and re-exports every name, so a module outside the foundation imports a run's names from here (D62)."
+- [x] 4.8 In the docstring of `isekai/foundation/run.py`, "nothing outside this module decides what a file is called" reads "nothing outside this module and its siblings decides what a file is called", and a paragraph before "Stdlib only" reads: "The siblings `names.py`, `rundir.py`, `layout.py` and `failures.py` hold the identity and the names, the run and its frame, the numbering and the edit files, and the failure budgets. This module imports them and re-exports every name, so a module outside the foundation imports a run's names from here (D62)."
   Verify: `git grep -n -F '(D62)' -- isekai/foundation/run.py` prints a line.
-- [ ] 4.9 **HALT CHECK** MT-7's and FN-5's anchors stay in `run.py`: no phase moves the roots or `instructions_record`.
+- [x] 4.9 **HALT CHECK** MT-7's and FN-5's anchors stay in `run.py`: no phase moves the roots or `instructions_record`.
   Verify: `grep -c -E 'DATA_ROOT = Path|if inside else resolved.name,' isekai/foundation/run.py` prints `2`.
-- [ ] 4.10 Replay the recorded mutants.
+- [x] 4.10 Replay the recorded mutants.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
-- [ ] 4.11 Hold the series' conditions: nothing under `tests/record/` differs from the cut's base, and no image-frozen file does.
+- [x] 4.11 Hold the series' conditions: nothing under `tests/record/` differs from the cut's base, and no image-frozen file does.
   Verify: `git diff --exit-code ce753c64 -- tests/record Dockerfile image config/models.json isekai/boundary/provision.py isekai/boundary/pod_start.py` exits 0.
-- [ ] 4.12 Hold that no test file is deleted or renamed; a test a survivor needs is added in `tests/test_run_directory.py` or its caller's file ([Survivors at the cut](design.md#survivors-at-the-cut)).
+- [x] 4.12 Hold that no test file is deleted or renamed; a test a survivor needs is added in `tests/test_run_directory.py` or its caller's file ([Survivors at the cut](design.md#survivors-at-the-cut)).
   Verify: `git diff --name-only --diff-filter=DR ce753c64 -- tests` prints nothing.
-- [ ] 4.13 Run the documents' and the guards' tests.
+- [x] 4.13 Run the documents' and the guards' tests.
   Verify: `uv run pytest tests/test_docs.py tests/test_ratchets.py tests/test_layers.py tests/test_record.py tests/test_run_directory.py tests/test_package_paths.py tests/test_pipeline_cli.py tests/test_ui.py` passes.

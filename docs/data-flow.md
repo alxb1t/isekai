@@ -202,7 +202,7 @@ tag lists into `photo/`, byte for byte: a list keeps its number, the newest capt
 wins, lists that differ between flows refuse that run, and the old files stay, which
 `show` names as not read, until a delete leaves the flow no approval (D50).
 
-The names above are `run.py`'s, not each stage's: the run owns the layout. Inside
+The names above are read from `run.py`, which re-exports `names.py`'s, not each stage's: the run owns the layout. Inside
 a directory an artifact is `NNN.json`, with `NNN.draft.json` and
 `NNN.approved.json` where a stage has that concept — `approved` is a filename
 label, not a directory of its own.

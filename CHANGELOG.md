@@ -26,6 +26,7 @@ its new digest.
 - The failure shape the stages share, `Kind`, `BUDGETS`, the attempts a directory records, `across` and `StageFailure`,
   moves from `run.py` to `failures.py`, which `run.py` re-exports; the mutants FN-1, FN-2 and FN-6 point at it. Tests kill
   the two survivors of the move (0152 D2, D4, D10).
+- D62 says `run.py`'s siblings are imported through it; D21, the module docs, the foundation README and `run.py`'s docstring say where the moved names live (0152 D9).
 
 ## [0.87.6] - 2026-11-16
 
