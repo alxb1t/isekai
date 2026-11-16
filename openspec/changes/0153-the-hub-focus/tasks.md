@@ -4,22 +4,22 @@ The focus's module with its tests, then the view's switch with the ratchet row. 
 
 ## Progress
 
-- [ ] 1 — The focus's module and its tests · moderate
+- [x] 1 — The focus's module and its tests · moderate
 - [ ] 2 — The view switches to it · moderate
 
 ## 1 — The focus's module and its tests
 
-- [ ] 1.1 Write `ui/src/composables/useHubFocus.test.ts`, first, with a test `spec('ui:hub:the-hub-keeps-its-focus', …)` of `restoredSpot`: with a held name it returns that spot, with a held name no longer there the first, with no source nothing. Import `restoredSpot` from `./useHubFocus`; pass sources as `{ name, digest }` and flows as names ([D2](design.md#d2)).
+- [x] 1.1 Write `ui/src/composables/useHubFocus.test.ts`, first, with a test `spec('ui:hub:the-hub-keeps-its-focus', …)` of `restoredSpot`: with a held name it returns that spot, with a held name no longer there the first, with no source nothing. Import `restoredSpot` from `./useHubFocus`; pass sources as `{ name, digest }` and flows as names ([D2](design.md#d2)).
   Verify: `grep -n -F "ui:hub:the-hub-keeps-its-focus" ui/src/composables/useHubFocus.test.ts` prints its line.
-- [ ] 1.2 Add a test `spec('ui:hub:a-rendered-cell-opens-its-newest-image', …)`: a `sent` cell `{ digest, flow }` gives the spot of that source's row and that flow's column, over a held name; a `sent` cell no source holds gives the held name's spot.
+- [x] 1.2 Add a test `spec('ui:hub:a-rendered-cell-opens-its-newest-image', …)`: a `sent` cell `{ digest, flow }` gives the spot of that source's row and that flow's column, over a held name; a `sent` cell no source holds gives the held name's spot.
   Verify: `grep -n -F "ui:hub:a-rendered-cell-opens-its-newest-image" ui/src/composables/useHubFocus.test.ts` prints its line.
-- [ ] 1.3 Add a test `spec('ui:hub:an-edge-row-shows-the-head', …)` of `useHubFocus`, with refs for the sources and the flows, a `grid` ref holding `{ querySelector: vi.fn(() => cell) }`, `reveal` and `remember` as `vi.fn()`, and `await nextTick()` after each move. Cast each stub with `as unknown as`, as `useEdges.test.ts` does. `place(5, 9, 'key')` clamps to the last row and column, calls `remember` with `spotName` of that spot, focuses the cell with `{ preventScroll: true }` and calls `reveal(cell, row, rows)`; `place(0, 0)` scrolls the cell `{ block: 'nearest' }`; `moveBy(1, 0)()` moves one row down; `place` over no sources changes nothing and does not call `remember`.
+- [x] 1.3 Add a test `spec('ui:hub:an-edge-row-shows-the-head', …)` of `useHubFocus`, with refs for the sources and the flows, a `grid` ref holding `{ querySelector: vi.fn(() => cell) }`, `reveal` and `remember` as `vi.fn()`, and `await nextTick()` after each move. Cast each stub with `as unknown as`, as `useEdges.test.ts` does. `place(5, 9, 'key')` clamps to the last row and column, calls `remember` with `spotName` of that spot, focuses the cell with `{ preventScroll: true }` and calls `reveal(cell, row, rows)`; `place(0, 0)` scrolls the cell `{ block: 'nearest' }`; `moveBy(1, 0)()` moves one row down; `place` over no sources changes nothing and does not call `remember`.
   Verify: `grep -n -F "ui:hub:an-edge-row-shows-the-head" ui/src/composables/useHubFocus.test.ts` prints its line.
-- [ ] 1.4 Create `ui/src/composables/useHubFocus.ts` as [D1](design.md#d1) and [D2](design.md#d2) say: `spotName`, `restoredSpot` and `useHubFocus`, each body the view's today (`Hub.vue` lines 273-316 and 392-406), `useHubFocus` returning `focus`, `selected`, `place`, `select` and `moveBy`. Import `clamp`, `kept` and `Focus` from `../grid`, and `at` from `../stores/collection`. It declares no keys ([D3](design.md#d3)).
+- [x] 1.4 Create `ui/src/composables/useHubFocus.ts` as [D1](design.md#d1) and [D2](design.md#d2) say: `spotName`, `restoredSpot` and `useHubFocus`, each body the view's today (`Hub.vue` lines 273-316 and 392-406), `useHubFocus` returning `focus`, `selected`, `place`, `select` and `moveBy`. Import `clamp`, `kept` and `Focus` from `../grid`, and `at` from `../stores/collection`. It declares no keys ([D3](design.md#d3)).
   Verify: `uv run python -m tools.test_ui ui/src/composables/useHubFocus.test.ts` exits 0.
-- [ ] 1.5 Keep `useHubFocus.ts` free of any `useKeys` call ([D3](design.md#d3)).
+- [x] 1.5 Keep `useHubFocus.ts` free of any `useKeys` call ([D3](design.md#d3)).
   Verify: `grep -L "useKeys" ui/src/composables/useHubFocus.ts` prints `ui/src/composables/useHubFocus.ts`.
-- [ ] 1.6 Check the types and the spec bindings with the module in place and no reader yet.
+- [x] 1.6 Check the types and the spec bindings with the module in place and no reader yet.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
   Verify: `uv run pytest tests/test_spec_bindings.py` exits 0.
 
