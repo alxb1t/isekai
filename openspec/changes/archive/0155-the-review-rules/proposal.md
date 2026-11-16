@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.11
 after: [0154-the-review-routes]
 ---
 

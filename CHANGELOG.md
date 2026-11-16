@@ -10,18 +10,28 @@ its new digest.
 
 ## [Unreleased]
 
+- `next_version` refuses a directory that holds version 999, naming the directory and the way out, so a write no longer
+  lands on `1000.json` and overwrites it; unit tests at 998 and 999 bind the new scenario (0156 D1, D2, D3).
+
+## [0.87.11] - 2026-11-17
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.10: local 1m10s · CI not read under mf-ship
+
+- `lens.ts` holds the viewer's rule, `viewedOf`, and `⌃P`'s step, `photographStep`, with a vitest test bound to the
+  photograph, pair and conjure-from scenarios; `Review.vue` switches to it and keeps its one `useKeys` call (0155 D1, D3, D5).
+- `kicker.ts` holds the status line's rule, `kickerOf`, and the time formats `clock` and `minute`, with a vitest test bound
+  to the conjure-from scenario; `Review.vue` switches to it and its ratchet row falls to the view's new length (0155 D2, D3, D6).
+
+## [0.87.10] - 2026-11-17
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.9: local 1m13s · CI not read under mf-ship
+
 - `ReviewRoutes` holds the review's reads in `routes/reviewing.py` with the helpers only they read. `routes/common.py`
   takes the helpers the images', staging's and sources' routes share, and `app.py` mounts the class (0154 D1, D3, D6).
 - `ReviewRoutes` takes the review's writes, `put_draft`, `post_approve`, `post_cancel`, `post_discard` and
   `post_draft`, and `app.py` falls under the ceiling, so its row leaves the ratchet (0154 D3, D5, D9).
 - The docs, the `app.py` docstring and the recorded mutants follow the move: D59 no longer lists the review among the
   routes left in `create_app`, `PB-2c` points at `routes/reviewing.py` and `UA-7` anchors on the pruned import (0154 D8).
-- `lens.ts` holds the viewer's rule, `viewedOf`, and `⌃P`'s step, `photographStep`, with a vitest test bound to the
-  photograph, pair and conjure-from scenarios; `Review.vue` switches to it and keeps its one `useKeys` call (0155 D1, D3, D5).
-- `kicker.ts` holds the status line's rule, `kickerOf`, and the time formats `clock` and `minute`, with a vitest test bound
-  to the conjure-from scenario; `Review.vue` switches to it and its ratchet row falls to the view's new length (0155 D2, D3, D6).
-- `next_version` refuses a directory that holds version 999, naming the directory and the way out, so a write no longer
-  lands on `1000.json` and overwrites it; unit tests at 998 and 999 bind the new scenario (0156 D1, D2, D3).
 
 ## [0.87.9] - 2026-11-16
 

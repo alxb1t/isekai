@@ -2416,6 +2416,7 @@ cell; the hub is the one screen of images, so a pasted address goes back there t
 - **THEN** it is served as `image/png`, and the browser is told not to guess another type
 - **AND** a run's photograph is served the same way
 - **AND** a source in another format is served as an upright JPEG of it
+- **AND** a run's photograph in a format that is neither JPEG nor PNG is refused, not served
 
 #### Scenario: an image it cannot read is refused
 - **Key:** `ui:renders:an-unreadable-image-is-refused`
