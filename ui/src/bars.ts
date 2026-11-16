@@ -1,4 +1,5 @@
 import type { JobSlot } from './types'
+import { noun } from './words'
 
 /* Which bar the hub shows: one forward action at a time (design spec
    J2). Changes waiting for Prepare take it first, then a session running with its
@@ -88,6 +89,19 @@ export function held(slot: JobSlot | null, collection: string): string | null {
   return slot?.kind === 'prepare' && slot.state === 'running' && slot.collection !== collection
     ? `Prepare is running on ${slot.collection}`
     : null
+}
+
+/** Return the Prepare bar's line: the photographs its changes prepare, each once.
+
+    e.g. ["ada.jpg", "ada.jpg", "bea.jpg"], "b" -> "2 photographs to prepare in b" */
+export function toPrepare(sources: string[], collection: string): string {
+  const count = new Set(sources).size
+  return `${count} ${noun(count, 'photograph')} to prepare in ${collection}`
+}
+
+/** Return the Prepare button's words: the changes it runs. e.g. 4 -> "4 changes · Prepare" */
+export function prepareButton(changes: number): string {
+  return `${changes} ${noun(changes, 'change')} · Prepare`
 }
 
 /* The failed Prepares Discard dismissed in this page, by collection, start and message.

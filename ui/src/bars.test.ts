@@ -1,5 +1,17 @@
 import { expect } from 'vitest'
-import { bar, dismiss, failed, held, planOf, prepared, progress, reasons, waiting } from './bars'
+import {
+  bar,
+  dismiss,
+  failed,
+  held,
+  planOf,
+  prepareButton,
+  prepared,
+  progress,
+  reasons,
+  toPrepare,
+  waiting,
+} from './bars'
 import { spec } from './test/spec'
 import type { JobSlot } from './types'
 
@@ -121,4 +133,13 @@ spec('ui:prepare:another-batchs-prepare-is-disabled', () => {
   expect(held(running, 'b')).toBeNull()
   expect(held(slot({}), 'other')).toBeNull()
   expect(held(null, 'other')).toBeNull()
+})
+
+spec('ui:prepare:the-bar-names-its-photographs', () => {
+  // Two photographs, each assigned to two flows.
+  const changes = ['ada.jpg', 'ada.jpg', 'bea.jpg', 'bea.jpg']
+  expect(toPrepare(changes, 'b')).toBe('2 photographs to prepare in b')
+  expect(prepareButton(changes.length)).toBe('4 changes · Prepare')
+  expect(toPrepare(['ada.jpg'], 'b')).toBe('1 photograph to prepare in b')
+  expect(prepareButton(1)).toBe('1 change · Prepare')
 })

@@ -1,37 +1,36 @@
-<script lang="ts">
-import { noun } from '../words'
-
-/** Return the Prepare bar's line: the photographs its changes prepare, each once.
-
-    e.g. ["ada.jpg", "ada.jpg", "bea.jpg"], "b" -> "2 photographs to prepare in b" */
-export function toPrepare(sources: string[], collection: string): string {
-  const count = new Set(sources).size
-  return `${count} ${noun(count, 'photograph')} to prepare in ${collection}`
-}
-
-/** Return the Prepare button's words: the changes it runs. e.g. 4 -> "4 changes · Prepare" */
-export function prepareButton(changes: number): string {
-  return `${changes} ${noun(changes, 'change')} · Prepare`
-}
-</script>
-
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { bar as barOf, dismiss, failed, held, prepared, progress } from '../bars'
+import {
+  bar as barOf,
+  dismiss,
+  failed,
+  held,
+  prepareButton,
+  prepared,
+  progress,
+  toPrepare,
+} from '../bars'
 import {
   type CellGrid,
-  EMPTY_CELL,
   type PickTile,
+  SEGMENTS,
   action,
   cellGrid,
+  cellOf as cell,
   cellOrder,
+  changesOf,
   clicks,
+  hintOf,
   locked,
   pending,
   ready,
+  reviewable,
+  segmentClass,
+  stem,
   targets,
+  wordOf,
 } from '../cells'
 import { assign, prepare, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import CellModal from '../components/CellModal.vue'
@@ -47,7 +46,8 @@ import { clamp, kept } from '../grid'
 import { at, useCollectionStore } from '../stores/collection'
 import { isControl, modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
-import type { HubCell, HubSource, Stage } from '../types'
+import type { HubSource } from '../types'
+import { noun } from '../words'
 
 /* A collection's hub: its sources by the offered flows, each cell's stage read from
    the run's directory (design spec J2). A tick assigns a flow through the
@@ -94,36 +94,11 @@ async function added(): Promise<void> {
   await store.reloadHub()
 }
 
-/* The six segments of a stage track, and how many each stage has done. A draft
-   shares the sheet's segment. */
-const SEGMENTS = ['assigned', 'tag', 'caption', 'sheet', 'approved', 'rendered'] as const
-const DONE: Record<Stage, number> = {
-  assigned: 1,
-  tagged: 2,
-  sheet: 4,
-  draft: 4,
-  approved: 5,
-  rendered: 6,
-  unreadable: 0,
-}
-/* A running stage's segment, and the word its cell shows. */
-const RUNNING: Record<string, { segment: number; word: string }> = {
-  tag: { segment: 1, word: 'tagging…' },
-  caption: { segment: 2, word: 'captioning…' },
-  sheet: { segment: 3, word: 'filling the sheet…' },
-}
-
 const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
 
 /* What Prepare would run: every pending cell. */
-const changes = computed(() =>
-  sources.value.flatMap((source) =>
-    flows.value
-      .filter((flow) => pending(cell(source, flow)))
-      .map((flow) => ({ source, flow })),
-  ),
-)
+const changes = computed(() => changesOf(sources.value, flows.value))
 /* The one bar the hub shows: Prepare first, then Render, then none. */
 const shown = computed(() =>
   barOf({
@@ -137,18 +112,8 @@ const shown = computed(() =>
   }),
 )
 
-/* A source's display name: its file's name without the extension. */
-function stem(name: string): string {
-  const dot = name.lastIndexOf('.')
-  return dot > 0 ? name.slice(0, dot) : name
-}
-
 function key(source: HubSource, flow: string): string {
   return at(source.name, flow)
-}
-
-function cell(source: HubSource, flow: string): HubCell {
-  return source.cells[flow] ?? EMPTY_CELL
 }
 
 /* Whether the focus is on `row` at grid column `column`: 0 the source, the flows from 1. */
@@ -157,34 +122,20 @@ function focused(row: number, column: number): boolean {
 }
 
 function word(source: HubSource, flow: string): string {
-  const stage = running.value[key(source, flow)]
-  if (stage) return RUNNING[stage]?.word ?? `${stage}…`
-  const found = cell(source, flow)
-  if (found.stage === 'rendered') return `rendered ×${found.renders}`
-  return found.stage ?? ''
+  return wordOf(cell(source, flow), running.value[key(source, flow)])
 }
 
 function segment(source: HubSource, flow: string, index: number): string {
-  const stage = running.value[key(source, flow)]
-  if (stage && RUNNING[stage]?.segment === index) return 'hub__segment--running'
-  const found = cell(source, flow).stage
-  return found && index < DONE[found] ? 'hub__segment--done' : ''
-}
-
-function reviewable(source: HubSource, flow: string): boolean {
-  return source.digest !== null && cell(source, flow).status !== null
+  return segmentClass(cell(source, flow), running.value[key(source, flow)], index)
 }
 
 /* The focused cell's action hint, or null where it offers none here. */
 function hint(source: HubSource, flow: string): string | null {
-  const found = action(cell(source, flow))
-  if (found.action === 'review' || found.action === 'sheet')
-    return reviewable(source, flow) ? found.hint : null
-  return found.hint
+  return hintOf(source, cell(source, flow))
 }
 
 function review(source: HubSource, flow: string): void {
-  if (reviewable(source, flow))
+  if (reviewable(source, cell(source, flow)))
     void router.push({
       name: 'review',
       params: { collection: props.collection, digest: source.digest, flow },

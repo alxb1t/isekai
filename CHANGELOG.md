@@ -10,6 +10,18 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.7] - 2026-11-16
+
+Gate: local 3m14s · CI not read under mf-ship · 0.87.6: local 1m19s · CI not read under mf-ship
+
+- The Prepare bar's line and button words, `toPrepare` and `prepareButton`, move from `Hub.vue`'s plain script block to
+  `bars.ts`, with their test; the hub shows the same words and the plain block is gone (0151 D1).
+- The hub's cell rules, `cellOf`, `changesOf`, `reviewable` and `hintOf`, move from `Hub.vue` to `cells.ts`; `changesOf` and
+  `hintOf` have a test written first, and the view calls them with the page unchanged (0151 D2, D3).
+- The stage track's `SEGMENTS`, `DONE` and `RUNNING`, `wordOf`, `segmentClass` and `stem` move from `Hub.vue` to `cells.ts`
+  with no test, no scenario covering them; `word` and `segment` wrap them, and the `Hub.vue` ratchet row is lowered to
+  the file's lines (0151 D3, D4, D5).
+
 ## [0.87.6] - 2026-11-16
 
 Gate: local 1m19s · CI not read under mf-ship · 0.87.5: local 1m13s · CI not read under mf-ship

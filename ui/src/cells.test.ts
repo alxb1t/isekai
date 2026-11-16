@@ -4,8 +4,10 @@ import {
   action,
   cellGrid,
   cellOrder,
+  changesOf,
   clicks,
   gridColumns,
+  hintOf,
   locked,
   moveCell,
   movePick,
@@ -20,11 +22,31 @@ import {
   tileCaption,
 } from './cells'
 import { spec } from './test/spec'
-import type { HubCell, RenderDetail } from './types'
+import type { HubCell, HubSource, RenderDetail } from './types'
 
 function cell(stage: HubCell['stage'], newest: HubCell['newest'] = null): HubCell {
   return { ...EMPTY_CELL, stage, newest }
 }
+
+function sourceOf(name: string, cells: Record<string, HubCell>): HubSource {
+  return { name, digest: null, width: null, height: null, cells, carries: [] }
+}
+
+spec('ui:prepare:prepare-takes-the-cells-with-no-sheet', () => {
+  const ada = sourceOf('ada.jpg', {
+    a: cell('assigned'),
+    b: cell('tagged'),
+    c: cell('sheet'),
+  })
+  const bea = sourceOf('bea.jpg', { a: cell('unreadable'), b: cell('assigned') })
+  // Source by source, flow by flow: the assigned and the tagged cells, never a sheeted
+  // or an unreadable one, and a flow the source holds no cell for is none.
+  expect(changesOf([ada, bea], ['a', 'b', 'c'])).toEqual([
+    { source: ada, flow: 'a' },
+    { source: ada, flow: 'b' },
+    { source: bea, flow: 'b' },
+  ])
+})
 
 spec('ui:hub:a-click-follows-the-cells-stage', () => {
   const image = { version: 1, seed: '7' }
@@ -42,6 +64,15 @@ spec('ui:hub:a-click-follows-the-cells-stage', () => {
   for (const [one, kind, hint] of cases) {
     expect(action(one)).toEqual({ action: kind, hint })
   }
+  // A review or a sheet offers its hint only where the source has a run and the cell a status.
+  const run = { ...sourceOf('ada.jpg', {}), digest: '0d4b' }
+  const bare = sourceOf('bea.jpg', {})
+  const sheeted = { ...cell('sheet'), status: 'draft' as const }
+  expect(hintOf(run, sheeted)).toBe('↵ review')
+  expect(hintOf(bare, sheeted)).toBeNull()
+  expect(hintOf(run, cell('sheet'))).toBeNull()
+  expect(hintOf(run, cell('approved', image))).toBe('↵ view')
+  expect(hintOf(run, cell('tagged'))).toBeNull()
   // A click ticks the cell it lands on, whatever rows ⇧↑↓ selected; space ticks
   // the selection.
   expect(targets(new Set([1, 2, 3]), 6, true)).toEqual([6])

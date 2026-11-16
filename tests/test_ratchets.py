@@ -486,7 +486,7 @@ WIDE_FUNCTIONS = {
 WIDE_ROWS = 14
 
 BIG_UI_FILES = {
-    "ui/src/views/Hub.vue": 671,
+    "ui/src/views/Hub.vue": 622,
     "ui/src/views/Review.vue": 696,
 }
 UI_ROWS = 2
