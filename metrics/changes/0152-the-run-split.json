@@ -1,0 +1,58 @@
+{
+  "change": "0152-the-run-split",
+  "version": "0.87.8",
+  "base": "46bca410",
+  "analyzed": "ea4a0ce1",
+  "measured_on": "local",
+  "collected_at": "2026-11-16T23:22:05+02:00",
+  "mf_version": "v0.101.1",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2412
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 70
+    },
+    "open-backlog-cards": {
+      "value": 10
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 2129
+    },
+    "diff-files": {
+      "value": 21
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 15410
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1084
+    },
+    "decisions": {
+      "value": 63
+    }
+  }
+}

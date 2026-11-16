@@ -3,7 +3,7 @@
 A photograph becomes a run, and from then on every stage is handed a path inside
 that run and hands back a numbered artifact. No stage reads another's output
 directly, no stage holds state between invocations, and nothing outside this
-module decides what a file is called.
+module and its siblings decides what a file is called.
 
 **Four properties carry the whole state model, and each is here rather than in a
 convention:**
@@ -26,34 +26,171 @@ convention:**
   to advance to. The kind and the attempt ordinal are in the name, so the retry
   decision stays a listing.
 
+The siblings `names.py`, `rundir.py`, `layout.py` and `failures.py` hold the
+identity and the names, the run and its frame, the numbering and the edit files,
+and the failure budgets. This module imports them and re-exports every name, so a
+module outside the foundation imports a run's names from here (D62).
+
 Stdlib only, and on `python -m isekai`'s import graph.
 """
 
-import hashlib
 import os
-import re
 import shlex
-from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Literal, TypeVar
 
 from isekai.foundation.artifacts import (
-    ERROR_FILE,
     RUN_FILE,
-    SEED_RANGE,
     DigestRecord,
-    ErrorRecord,
-    Failure,
     Frame,
     InstructionsRecord,
-    PhotoRecord,
-    read,
-    require,
     write,
 )
 from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.failures import (
+    BUDGETS,
+    Attempt,
+    Kind,
+    StageFailure,
+    across,
+    attempts,
+    check_budget,
+    exhausted,
+    failure_named,
+    failures_alone,
+    record_failure,
+)
+from isekai.foundation.layout import (
+    EDIT_COMPOSITE,
+    EDIT_PLACEMENT,
+    EDIT_RECORD,
+    EDIT_STEM,
+    _laid_out,
+    approval_of,
+    approved_versions,
+    artifact_name,
+    delete_edits,
+    edit_at,
+    edit_files,
+    edit_numbers,
+    edit_stem,
+    group_of,
+    is_approved,
+    is_edit_file,
+    is_seed,
+    is_version,
+    latest,
+    latest_artifact,
+    next_edit,
+    next_version,
+    placement_file,
+    sheet_of,
+    versions,
+)
+from isekai.foundation.names import (
+    APPROVED,
+    ARTIFACT,
+    CAPTIONS,
+    DESCRIPTION,
+    ERROR,
+    FRAME_NAME,
+    ID_DIGEST_CHARS,
+    ID_SEPARATOR,
+    ID_SLUG_CHARS,
+    OUTPUTS,
+    PHOTO,
+    PHOTOGRAPH_VERBS,
+    PROMPTS,
+    REVIEW,
+    SHEETS,
+    SIGNATURE_BYTES,
+    SOURCES,
+    TAGS,
+    WD14,
+    digest_of,
+    media_type,
+    run_id,
+    slug,
+)
 from isekai.foundation.refusal import Refusal
+from isekai.foundation.rundir import Run, assign
+
+__all__ = [
+    "APPROVED",
+    "ARTIFACT",
+    "BUDGETS",
+    "CAPTIONS",
+    "DATA_ROOT",
+    "DESCRIPTION",
+    "EDIT_COMPOSITE",
+    "EDIT_PLACEMENT",
+    "EDIT_RECORD",
+    "EDIT_STEM",
+    "ERROR",
+    "FRAME_NAME",
+    "ID_DIGEST_CHARS",
+    "ID_SEPARATOR",
+    "ID_SLUG_CHARS",
+    "NEW_VERSION",
+    "OUTPUTS",
+    "PHOTO",
+    "PHOTOGRAPH_VERBS",
+    "PROMPTS",
+    "REPOSITORY",
+    "REVIEW",
+    "RUNS_ROOT",
+    "SHEETS",
+    "SIGNATURE_BYTES",
+    "SOURCES",
+    "TAGS",
+    "WD14",
+    "Attempt",
+    "Kind",
+    "Run",
+    "StageFailure",
+    "across",
+    "approval_of",
+    "approved_versions",
+    "artifact_name",
+    "assign",
+    "attempts",
+    "check_budget",
+    "constant_record",
+    "delete_edits",
+    "digest_of",
+    "edit_at",
+    "edit_files",
+    "edit_numbers",
+    "edit_stem",
+    "exhausted",
+    "failure_named",
+    "failures_alone",
+    "find_run",
+    "group_of",
+    "instructions_record",
+    "is_approved",
+    "is_edit_file",
+    "is_seed",
+    "is_version",
+    "latest",
+    "latest_artifact",
+    "media_type",
+    "migrate_command",
+    "next_edit",
+    "next_version",
+    "open_run",
+    "photo_of",
+    "placement_file",
+    "record_failure",
+    "refusal_for",
+    "rendered_at",
+    "run_id",
+    "sheet_of",
+    "slug",
+    "stage_command",
+    "unmigrated",
+    "versions",
+]
 
 # Everything a run produces or consumes lives under one gitignored root. The run
 # directory holds a *copy of the photograph*, which is what makes a run
@@ -71,268 +208,6 @@ RUNS_ROOT = DATA_ROOT / "runs"
 # because this module owns `DATA_ROOT` and `instructions_record` needs it, and a
 # second derivation is a second thing to keep true.
 REPOSITORY = DATA_ROOT.parent
-
-# Enough of the digest to separate two photographs and few enough characters to
-# leave the slug legible in a listing. The whole digest is in the frame.
-ID_DIGEST_CHARS = 12
-
-# What separates the digest from the slug. An underscore, because `slug` maps
-# every unsafe character to a hyphen and a hyphenated slug would leave a reader no
-# way to see where the digest ended. A slug can never contain an underscore, so the
-# boundary is unambiguous. Nothing splits the id on it -- `startswith` on the
-# prefix is its only use -- so this is readability alone.
-ID_SEPARATOR = "_"
-
-# How much of a filename stem survives into the id. A stem is a human's label,
-# not an identifier, so it is truncated rather than refused.
-ID_SLUG_CHARS = 32
-
-# Anything outside this is replaced in a slug. Deliberately narrow: the id becomes
-# a directory name and is interpolated into messages, so a stem carrying a path
-# separator, a shell metacharacter or a control byte must not survive it.
-_UNSAFE = re.compile(r"[^a-z0-9]+")
-
-# The magic bytes the header parser on the render path reads, and the extension
-# and media type each one *is*. The extension is derived from the bytes rather
-# than copied from the source name: the rule is that a filename must not lie
-# about its contents, and copying a `.jpg` that holds a PNG would enshrine the
-# lie inside the run.
-_SIGNATURES: tuple[tuple[bytes, str, str], ...] = (
-    (b"\x89PNG\r\n\x1a\n", "image/png", ".png"),
-    (b"\xff\xd8\xff", "image/jpeg", ".jpg"),
-)
-
-# The most leading bytes `media_type` reads, so a caller may hand it a file's head.
-SIGNATURE_BYTES = max(len(signature) for signature, _, _ in _SIGNATURES)
-
-# The frame: what the run is, written once when the run is created.
-FRAME_NAME = "run.json"
-
-# The fields of the frame's photograph record, each with the shape it holds.
-_PHOTO_FIELDS: tuple[tuple[str, type], ...] = (
-    ("name", str),
-    ("sha256", str),
-    ("bytes", int),
-    ("media_type", str),
-)
-
-# The stage directories, and the label an approved artifact carries. The run owns
-# the layout, so a stage that needs another stage's directory asks the run rather
-# than importing the stage. `approved` is here for the same reason: `review` writes it
-# and both `generate` and the inspection command read it.
-#
-# **The photograph's description sits in `photo/`, every other stage under a
-# flow**: `runs/<input-id>/photo/<stage>/` and `runs/<input-id>/<flow-id>/<stage>/`.
-# Above the flow split is what every flow shares: the input, and the caption and
-# tag lists every flow reads alike (D17). Adding a flow adds one subtree, and
-# retiring one flow's work is removing one directory.
-CAPTIONS = "captions"
-WD14 = "wd14"
-TAGS = "tags"
-PHOTO = "photo"
-DESCRIPTION = (CAPTIONS, WD14, TAGS)
-# The verbs that write the description, and so name no flow.
-PHOTOGRAPH_VERBS = ("caption", "tag")
-SHEETS = "sheets"
-REVIEW = "review"
-PROMPTS = "prompts"
-OUTPUTS = "outputs"
-SOURCES = "sources"
-APPROVED = "approved"
-
-# `001`, and `001.draft` / `001.approved` where a stage has that concept. No
-# other label is a version, so a render's `123.render.json` is never one.
-ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>draft|approved))?\.json$")
-
-# `001.error.1.transient` -- the version it stands in for, the attempt ordinal,
-# and the kind, all decidable without opening anything.
-ERROR = re.compile(
-    r"^(?P<version>\d{3})\.error\.(?P<attempt>\d+)\.(?P<kind>transient|permanent)\.json$"
-)
-
-Kind = Literal["transient", "permanent"]
-
-# What each stage may spend before it costs a person's attention instead. Reading
-# and sorting are cheap and flaky, so they get three; assembling and rendering get
-# one, because a render that has failed once should be looked at rather than paid
-# for again.
-#
-# The two taggers are split on the same axis rather than sharing a number.
-# `tags` is a hosted model over HTTP, so it is flaky in exactly the way `caption`
-# is and gets its three. `wd14` is a local pass over a
-# digest-verified graph, and what can still fail there is **this photograph's own
-# bytes** -- a header no decoder can read. That is permanent by construction, so
-# one attempt is the whole budget, exactly as `assemble` and `render` are one.
-#
-# The two file conditions that would fail identically for every input -- an
-# absent model, bytes that disagree with the pin -- are deliberately **not**
-# counted here. They are conditions about this build rather than about a
-# photograph, so the tagger is opened before the stage's `try` and refuses the
-# batch once instead of writing one error record per input for a single fix.
-#
-# **`sheet` is one for `wd14`'s reason.** It reached a hosted model once and had
-# three; it is now a dictionary lookup over an artifact already on disk, so there
-# is no transient failure left for a second attempt to catch -- which is exactly
-# what `"wd14": 1` above already records for the other local producer. The stage
-# records every failure as permanent, so a second attempt waits on a deletion.
-#
-# A missing entry here is not a missing feature, it is a crash: `BUDGETS[stage]`
-# below is a bare lookup, and `across()` and `main()` both catch only `Refusal`
-# -- so an unlisted stage name escapes as a raw traceback in a package where
-# every failure is a named refusal.
-BUDGETS: Mapping[str, int] = {
-    "caption": 3,
-    "wd14": 1,
-    "tags": 3,
-    "sheet": 1,
-    "assemble": 1,
-    "render": 1,
-}
-
-T = TypeVar("T")
-
-
-# --- identity -----------------------------------------------------------------
-
-
-def slug(stem: str) -> str:
-    """Return the readable half of a run id: lowercase, hyphenated, bounded.
-
-    A stem that survives nothing -- all punctuation, or empty -- yields `photo`,
-    so the id is always `<digest>_<something>` and never ends in a bare underscore.
-    Every unsafe character becomes a hyphen, which is why the id's own separator
-    is an underscore: a slug can never contain one, so the boundary between the
-    digest and the readable half is unambiguous.
-    """
-    cleaned = _UNSAFE.sub("-", stem.lower()).strip("-")[:ID_SLUG_CHARS].strip("-")
-    return cleaned or "photo"
-
-
-def digest_of(body: bytes) -> str:
-    """Return the SHA-256 of `body`, lowercase and in full."""
-    return hashlib.sha256(body).hexdigest()
-
-
-def run_id(digest: str, stem: str) -> str:
-    """Return the run id for a photograph: a digest prefix, then a readable slug."""
-    return f"{digest[:ID_DIGEST_CHARS]}{ID_SEPARATOR}{slug(stem)}"
-
-
-def media_type(body: bytes) -> tuple[str, str]:
-    """Return the media type and canonical extension the photograph's bytes are.
-
-    Read from the bytes, never from the name. A header this build cannot identify
-    stops the run rather than defaulting -- the render path reads JPEG and PNG
-    headers and nothing else, so a third format would fail later and further from
-    the cause.
-    """
-    for signature, kind, suffix in _SIGNATURES:
-        if body.startswith(signature):
-            return kind, suffix
-    raise Refusal(
-        "this build reads JPEG and PNG photographs, and these bytes are neither; "
-        "convert the photograph to JPEG or PNG and offer it again"
-    )
-
-
-# --- the run and its frame ----------------------------------------------------
-
-
-@dataclass(frozen=True)
-class Run:
-    """One photograph's directory, and the frame that says what it is."""
-
-    id: str
-    path: Path
-
-    @property
-    def digest(self) -> str:
-        """Return the digest prefix the identifier begins with, the run's short name."""
-        return self.id[:ID_DIGEST_CHARS]
-
-    @property
-    def frame_path(self) -> Path:
-        """Return the path of the run's frame."""
-        return self.path / FRAME_NAME
-
-    @property
-    def _remedy(self) -> str:
-        """Return the fix for a damaged frame."""
-        # A stage verb given the run id cannot reach a run with no frame, while
-        # `open_run` passes over one, so the path is what re-creates it.
-        return f"delete {self.frame_path}, then offer the photograph again by its path"
-
-    @property
-    def frame(self) -> Frame:
-        """Return the run's frame, refusing a version this build does not read."""
-        return read(self.frame_path, RUN_FILE, remedy=self._remedy)
-
-    @property
-    def photo_record(self) -> PhotoRecord:
-        """Return the frame's record of its photograph, refusing one missing a field.
-
-        Each field is checked by name, so a hand-edited record is a refusal to
-        whoever reads it rather than a `KeyError` three frames later.
-        """
-        frame = self.frame
-        require(self.frame_path, frame, "photo", dict, self._remedy)
-        record: Mapping[str, object] = {**frame["photo"]}
-        for key, shape in _PHOTO_FIELDS:
-            require(self.frame_path, record, key, shape, self._remedy)
-        return frame["photo"]
-
-    def _photo_record(self, key: str) -> str:
-        """Return the frame's `photo[key]`, refusing by name a value not a string."""
-        record: Mapping[str, object] = {**self.photo_record}
-        require(self.frame_path, record, key, str, self._remedy)
-        return str(record[key])
-
-    @property
-    def photo(self) -> Path:
-        """Return the path of the photograph's copy inside the run.
-
-        The name is a file's word, not a path: one that could leave the run is
-        refused, or the run would serve and upload any image on the machine.
-        """
-        name = self._photo_record("name")
-        if name in ("", ".", "..") or "/" in name or "\\" in name:
-            raise Refusal(
-                f"{FRAME_NAME}: names its photograph {name!r}, which is not one "
-                f"plain filename; {self._remedy}"
-            )
-        path = self.path / name
-        if path.is_symlink():
-            raise Refusal(
-                f"{FRAME_NAME}: its photograph {name!r} is a link, which could point "
-                f"outside the run; {self._remedy}"
-            )
-        return path
-
-    @property
-    def flows(self) -> list[str]:
-        """Return the flows this run holds work for, by identifier.
-
-        The run owns the layout, so the fact that a flow's work is one directory
-        directly under the run is stated here and asked for elsewhere rather than
-        re-derived by each caller. `photo/` is the photograph's description, not a
-        flow, and is left out.
-        """
-        if not self.path.is_dir():
-            return []
-        return sorted(
-            path.name
-            for path in self.path.iterdir()
-            if path.is_dir() and path.name != PHOTO
-        )
-
-    def directory(self, *parts: str) -> Path:
-        """Return a stage's directory inside this run, whether or not it exists.
-
-        Deliberately does not create it: a command that refuses must leave the run
-        exactly as it found it, and an empty directory nobody asked for is a
-        change. Every writer here creates its parent on the way past.
-        """
-        return self.path.joinpath(*parts)
 
 
 def _run_for(digest: str, runs_root: Path) -> Run | None:
@@ -416,126 +291,6 @@ def _photo_bytes(photo: Path) -> bytes:
         ) from unreadable
 
 
-def assign(run: Run, flow: str, *, remove: bool = False) -> bool:
-    """Create `flow`'s empty directory in `run`; with `remove`, delete it while empty.
-
-    Return whether the run changed. A run holding a flow's directory is assigned
-    to it, so a tick is the layout's own fact; an untick never deletes work.
-    """
-    if flow == PHOTO:
-        raise Refusal(
-            f"{PHOTO}: a name a run keeps for its photograph's description, "
-            "never a flow"
-        )
-    directory = run.directory(flow)
-    if not remove:
-        if directory.is_dir():
-            return False
-        directory.mkdir()
-        return True
-    if not directory.is_dir():
-        return False
-    if any(directory.iterdir()):
-        raise Refusal(
-            f"{run.id}: {flow} holds work, so it stays assigned; to unassign it, "
-            f"delete {run.id}/{flow}/ by hand"
-        )
-    directory.rmdir()
-    return True
-
-
-# --- numbering and completion -------------------------------------------------
-
-
-def versions(directory: Path) -> list[int]:
-    """Return the artifact version numbers present in `directory`, ascending.
-
-    A listing, not a read: error records are excluded by their own pattern, and a
-    partial write is excluded because it is not named like an artifact at all.
-    """
-    if not directory.is_dir():
-        return []
-    found = {
-        int(match.group("version"))
-        for name in os.listdir(directory)
-        if (match := ARTIFACT.match(name))
-    }
-    return sorted(found)
-
-
-def latest(directory: Path) -> int | None:
-    """Return the highest version present in `directory`, or None if it is empty."""
-    numbered = versions(directory)
-    return numbered[-1] if numbered else None
-
-
-def next_version(directory: Path) -> int:
-    """Return the number the next artifact written into `directory` takes."""
-    return (latest(directory) or 0) + 1
-
-
-def artifact_name(version: int, label: str | None = None) -> str:
-    """Return the filename an artifact takes, with its optional approval label."""
-    return f"{version:03d}.json" if label is None else f"{version:03d}.{label}.json"
-
-
-def is_version(number: int) -> bool:
-    """Return whether `number` is one an artifact's name can spell.
-
-    e.g. 2 -> True, 0 -> False, 1000 -> False
-    """
-    return number > 0 and ARTIFACT.fullmatch(artifact_name(number)) is not None
-
-
-def approval_of(run: Run, flow: str, version: int) -> Path:
-    """Return the path of `flow`'s approval numbered `version` in `run`."""
-    return run.directory(flow, REVIEW) / artifact_name(version, APPROVED)
-
-
-def sheet_of(run: Run, flow: str, version: int) -> Path:
-    """Return the path of `flow`'s sheet numbered `version` in `run`."""
-    return run.directory(flow, SHEETS) / artifact_name(version)
-
-
-def group_of(run: Run, flow: str, version: int) -> Path:
-    """Return the outputs group the approval numbered `version` renders into."""
-    return run.directory(flow, OUTPUTS, f"{version:03d}")
-
-
-# A version as a filename spells it: ASCII digits alone, since `str.isdigit`
-# also passes a superscript `int` cannot read.
-_DIGITS = re.compile(r"[0-9]+")
-
-# The most digits a seed is spelled in, so a longer one is refused unread.
-_SEED_DIGITS = len(str(SEED_RANGE[-1]))
-
-
-def is_seed(text: str) -> bool:
-    """Return whether `text` spells a seed as a render's file is named for it.
-
-    The canonical ASCII decimal of a seed the sampler takes, alone: a padded, a
-    superscript or an out-of-range spelling names no render.
-    e.g. "42" -> True; "0042", "²", "", "9" * 300 -> False
-    """
-    return (
-        len(text) <= _SEED_DIGITS
-        and _DIGITS.fullmatch(text) is not None
-        and str(int(text)) == text
-        and int(text) in SEED_RANGE
-    )
-
-
-def _laid_out(path: Path) -> bool:
-    """Return whether `path` names a place in an outputs group of a run with a frame."""
-    group = path.absolute().parent
-    return (
-        len(group.name) == 3
-        and _DIGITS.fullmatch(group.name) is not None
-        and group.parent.name == OUTPUTS
-        and (group.parent.parent.parent / FRAME_NAME).is_file()
-    )
-
-
 def rendered_at(image: Path) -> tuple[Run, str, int, int]:
     """Return the run, flow, approval and seed a rendered image's path names.
 
@@ -559,330 +314,6 @@ def rendered_at(image: Path) -> tuple[Run, str, int, int]:
             f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.png"
         )
     return run, flow_directory.name, int(group.name), int(image.stem)
-
-
-# An edit's image is `<seed>.edit-<k>.png`: the seed of the render it descends
-# from, then its number in that seed's chain. Its stem is no seed, so no render
-# listing reads it as one.
-EDIT_STEM = re.compile(r"^(?P<seed>[0-9]+)\.edit-(?P<k>[1-9][0-9]*)$")
-
-# An edit's files beside its image, after the stem: the composite it was made from,
-# its record and, for a placed tattoo, the placement it was made from.
-EDIT_COMPOSITE = ".composite.png"
-EDIT_RECORD = ".json"
-EDIT_PLACEMENT = ".placement.json"
-
-
-def is_edit_file(name: str) -> bool:
-    """Return whether `name` is a file an edit writes beside its source.
-
-    The image, record, composite and placement of an edit of a render's seed.
-    e.g. "42.edit-1.placement.json" -> True; "42.edit-0.png", "x.edit-1.json" -> False
-    """
-    for suffix in (EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD, ".png"):
-        named = EDIT_STEM.fullmatch(name.removesuffix(suffix))
-        if name.endswith(suffix) and named and is_seed(named["seed"]):
-            return True
-    return False
-
-
-def edit_stem(seed: int, k: int) -> str:
-    """Return the stem every file of edit `k` of `seed` starts with.
-
-    e.g. (42, 2) -> "42.edit-2"
-    """
-    return f"{seed}.edit-{k}"
-
-
-def edit_files(group: Path, seed: int, k: int) -> tuple[Path, Path, Path]:
-    """Return the image, record and composite of edit `k` of `seed`, in `group`.
-
-    e.g. (group, 42, 1) -> (42.edit-1.png, 42.edit-1.json, 42.edit-1.composite.png)
-    """
-    stem = group / edit_stem(seed, k)
-    return (
-        stem.with_name(f"{stem.name}.png"),
-        stem.with_name(f"{stem.name}{EDIT_RECORD}"),
-        stem.with_name(f"{stem.name}{EDIT_COMPOSITE}"),
-    )
-
-
-def placement_file(group: Path, seed: int, k: int) -> Path:
-    """Return the placement record of edit `k` of `seed`, in `group`.
-
-    e.g. (group, 42, 1) -> 42.edit-1.placement.json
-    """
-    return group / f"{edit_stem(seed, k)}{EDIT_PLACEMENT}"
-
-
-def edit_numbers(group: Path, seed: int) -> list[int]:
-    """Return the numbers of `seed`'s edits that hold any file in `group`, ascending.
-
-    A listing: an image, a record, a composite or a placement each holds its number.
-    e.g. a group holding 42.edit-1.json and 42.edit-3.png -> [1, 3]
-    """
-    if not group.is_dir():
-        return []
-    found: set[int] = set()
-    for name in os.listdir(group):
-        for suffix in (".png", EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD):
-            match = EDIT_STEM.fullmatch(name.removesuffix(suffix))
-            if name.endswith(suffix) and match and int(match["seed"]) == seed:
-                found.add(int(match["k"]))
-                break
-    return sorted(found)
-
-
-def next_edit(group: Path, seed: int) -> int:
-    """Return the number the next edit of `seed` takes in `group`."""
-    numbered = edit_numbers(group, seed)
-    return numbered[-1] + 1 if numbered else 1
-
-
-def delete_edits(group: Path, seed: int, numbers: Iterable[int]) -> list[Path]:
-    """Delete each file of the edits `numbers` of `seed` in `group`; return those gone.
-
-    Each edit's image goes first, then its record, its placement and its composite, so
-    a delete cut short leaves a request that reads as pending rather than an image no
-    record explains.
-    e.g. (group, 42, [1]) -> [42.edit-1.png, 42.edit-1.json, 42.edit-1.composite.png]
-    """
-    deleted: list[Path] = []
-    for number in numbers:
-        image, record, composite = edit_files(group, seed, number)
-        for path in (image, record, placement_file(group, seed, number), composite):
-            if path.is_file():
-                path.unlink()
-                deleted.append(path)
-    return deleted
-
-
-def edit_at(image: Path) -> tuple[Run, str, int, int, int]:
-    """Return the run, flow, approval, seed and number an edit image's path names.
-
-    The image is on disk, or its record is: a pending edit has no image yet.
-    e.g. runs/0d4b…_ada/summon-anime-wai/outputs/001/42.edit-2.png
-         -> (that run, "summon-anime-wai", 1, 42, 2)
-    """
-    group = image.absolute().parent
-    run_directory = group.parent.parent.parent
-    named = EDIT_STEM.match(image.stem) if image.suffix == ".png" else None
-    present = image.is_file() or image.with_suffix(EDIT_RECORD).is_file()
-    if (
-        named is None
-        or not is_seed(named.group("seed"))
-        or not (present and _laid_out(image))
-    ):
-        raise Refusal(
-            "is not an edit's image; give the path of one, "
-            f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.edit-<k>.png"
-        )
-    return (
-        Run(run_directory.name, run_directory),
-        group.parent.parent.name,
-        int(group.name),
-        int(named.group("seed")),
-        int(named.group("k")),
-    )
-
-
-def latest_artifact(directory: Path, label: str | None = None) -> Path | None:
-    """Return the highest artifact in `directory` carrying `label`, or None.
-
-    The run owns the layout, so *which file is the current one* is answered here
-    rather than by each reader globbing for it. A glob would also be wrong: an
-    error record is `NNN.error.<attempt>.<kind>.json`, which `*.json` matches and
-    `ARTIFACT` does not, so a failed second attempt beside a good first artifact
-    would sort last and be read as one.
-    """
-    numbered = [
-        version
-        for version in versions(directory)
-        if (directory / artifact_name(version, label)).is_file()
-    ]
-    return directory / artifact_name(numbered[-1], label) if numbered else None
-
-
-def is_approved(name: str) -> bool:
-    """Say whether a filename is an approved artifact, without opening anything."""
-    match = ARTIFACT.match(name)
-    return match is not None and match.group("label") == "approved"
-
-
-def approved_versions(directory: Path) -> list[int]:
-    """Return the versions in `directory` whose filenames say they are approved."""
-    if not directory.is_dir():
-        return []
-    return sorted(
-        int(match.group("version"))
-        for name in os.listdir(directory)
-        if is_approved(name) and (match := ARTIFACT.match(name))
-    )
-
-
-# --- failures and budgets -----------------------------------------------------
-
-
-@dataclass(frozen=True)
-class Attempt:
-    """One recorded failure against a known artifact: how it failed, and where.
-
-    It carries no version: `attempts` is always asked about one, so storing it
-    here would be the caller's own argument handed back.
-    """
-
-    attempt: int
-    kind: Kind
-    path: Path
-
-
-def attempts(directory: Path, version: int) -> list[Attempt]:
-    """Return the failures recorded against `version`, in attempt order.
-
-    A listing. Counting attempts, and deciding whether the last one was permanent,
-    are both retry decisions, which is why the kind and the ordinal are in the
-    name rather than inside the file.
-    """
-    if not directory.is_dir():
-        return []
-    found: list[Attempt] = []
-    for name in os.listdir(directory):
-        named = failure_named(name)
-        if named is not None and named[0] == version:
-            found.append(Attempt(named[1], named[2], directory / name))
-    return sorted(found, key=lambda recorded: recorded.attempt)
-
-
-def failure_named(name: str) -> tuple[int, int, Kind] | None:
-    """Return the version, attempt and kind a failure record's name carries.
-
-    None when `name` is not a failure record.
-    e.g. `"002.error.1.transient.json"` → `(2, 1, "transient")`
-    """
-    match = ERROR.match(name)
-    if match is None:
-        return None
-    kind: Kind = "permanent" if match.group("kind") == "permanent" else "transient"
-    return int(match.group("version")), int(match.group("attempt")), kind
-
-
-def failures_alone(directory: Path) -> list[Path] | None:
-    """Return the failure records `directory` holds when they are all it holds, sorted.
-
-    None when it is no directory or holds anything else; an empty one gives [].
-    e.g. outputs/002/ holding 002.error.1.permanent.json alone -> [that record]
-    """
-    if not directory.is_dir():
-        return None
-    held = sorted(directory.iterdir())
-    if any(not path.is_file() or failure_named(path.name) is None for path in held):
-        return None
-    return held
-
-
-def record_failure(
-    directory: Path,
-    version: int,
-    kind: Kind,
-    failure: Failure,
-) -> Path:
-    """Write an error record beside where `version`'s artifact would have gone.
-
-    The failure does not consume the version number: a later successful attempt
-    writes `version` itself, and the error records stay beside it. The attempt is
-    the highest recorded plus one, so deleting an earlier record never makes the
-    next one overwrite a later one.
-    """
-    recorded = attempts(directory, version)
-    ordinal = recorded[-1].attempt + 1 if recorded else 1
-    path = directory / f"{version:03d}.error.{ordinal}.{kind}.json"
-    # By name, never the failure spread whole: its keys must not land among
-    # ours. The seed sits between stage and detail, as `tests/golden/error.json`.
-    record: ErrorRecord = {
-        "schema": ERROR_FILE.schema,
-        "version": version,
-        "attempt": ordinal,
-        "kind": kind,
-        "stage": failure["stage"],
-        **({"seed": failure["seed"]} if "seed" in failure else {}),
-        "detail": failure["detail"],
-    }
-    write(path, ERROR_FILE, record)
-    return path
-
-
-def _spent(
-    stage: str, recorded: Sequence[Attempt]
-) -> Literal["permanent", "budget"] | None:
-    """Return why `recorded` bars `stage` another attempt, or None if it does not.
-
-    The one statement of the retry rule: a permanent record short-circuits the
-    count, and otherwise the stage may try until it is at its budget.
-    """
-    if not recorded:
-        return None
-    if recorded[-1].kind == "permanent":
-        return "permanent"
-    return "budget" if len(recorded) >= BUDGETS[stage] else None
-
-
-def exhausted(stage: str, directory: Path, version: int) -> bool:
-    """Say whether `stage` may not attempt `version` again: permanent, or at budget."""
-    return _spent(stage, attempts(directory, version)) is not None
-
-
-def check_budget(stage: str, directory: Path, version: int, run: Run) -> None:
-    """Refuse if `stage` may not attempt `version` again, naming why and where.
-
-    A permanent failure short-circuits the count: it will fail the same way every
-    time, so retrying it spends for nothing. A stage at its transient budget
-    refuses too, because without one every resume retries every failure forever
-    and at the rendering stage that costs money on every pass.
-    e.g. `see photo/wd14/001.error.1.permanent.json`
-    """
-    recorded = attempts(directory, version)
-    why = _spent(stage, recorded)
-    if why is None:
-        return
-    where = recorded[-1].path.relative_to(run.path)
-    if why == "permanent":
-        raise Refusal(
-            f"{run.id}: {stage} failed permanently -- see {where}; read the "
-            "record, fix what it names, then delete it to let this stage attempt "
-            "again"
-        )
-    budget = BUDGETS[stage]
-    raise Refusal(
-        f"{run.id}: {stage} has used its {budget} attempt"
-        f"{'' if budget == 1 else 's'} -- see {where}; read the records, fix what "
-        "they name, then delete them to let this stage attempt again"
-    )
-
-
-def across(items: Sequence[T], work: Callable[[T], None]) -> list[str]:
-    """Run `work` over every item, collecting refusals instead of stopping at one.
-
-    One photograph's failure must not cost the other nine their turn, and a
-    failure reported when it happens scrolls off before the batch ends -- so every
-    refusal is collected and returned for the caller to report together.
-    """
-    refused: list[str] = []
-    for item in items:
-        try:
-            work(item)
-        except Refusal as refusal:
-            refused.append(str(refusal))
-    return refused
-
-
-class StageFailure(Exception):
-    """A model call did not return what a stage can use, and the kind says what next."""
-
-    def __init__(self, kind: Kind, detail: str) -> None:
-        """Carry the kind and the detail an error record is written from."""
-        super().__init__(detail)
-        self.kind = kind
-        self.detail = detail
 
 
 # The option that asks a stage verb for the next version of its file.

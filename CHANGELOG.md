@@ -10,6 +10,21 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.8] - 2026-11-16
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.7: local 3m14s · CI not read under mf-ship
+
+- A run's id and the names of its layout move from `run.py` to `names.py`, and `Run` with `assign` to `rundir.py`;
+  `run.py` re-exports every name under `__all__`, so no importer changes. Tests kill the survivors of the move
+  (0152 D1, D2, D4, D6, D10).
+- A run's numbering and completion, its seeds and its edit files move from `run.py` to `layout.py`; the UI's artifact
+  tripwire lists `artifact_name` under the layout too, with a twin, and `run.py` leaves the file ratchet. A test kills
+  the survivor of the move (0152 D2, D5, D7, D8, D10).
+- The failure shape the stages share, `Kind`, `BUDGETS`, the attempts a directory records, `across` and `StageFailure`,
+  moves from `run.py` to `failures.py`, which `run.py` re-exports; the mutants FN-1, FN-2 and FN-6 point at it. Tests kill
+  the two survivors of the move (0152 D2, D4, D10).
+- D62 says `run.py`'s siblings are imported through it; D21, the module docs, the foundation README and `run.py`'s docstring say where the moved names live (0152 D9).
+
 ## [0.87.7] - 2026-11-16
 
 Gate: local 3m14s · CI not read under mf-ship · 0.87.6: local 1m19s · CI not read under mf-ship

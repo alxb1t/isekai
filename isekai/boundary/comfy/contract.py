@@ -19,7 +19,8 @@ class TransportFailure(Refusal):
     `check_budget` short-circuits a `permanent` record for good.
 
     A subclass carrying a `Kind`, because `Kind` cannot be attached to `Refusal`
-    itself: `refusal.py` imports nothing by design, and `Kind` lives in `run.py`.
+    itself: `refusal.py` imports nothing by design, and `Kind` lives in
+    `failures.py`, read through `run.py`.
     """
 
     def __init__(self, kind: Kind, message: str) -> None:
