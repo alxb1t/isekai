@@ -18,7 +18,7 @@ The focus's module with its tests, then the view's switch with the ratchet row. 
 - [x] 1.4 Create `ui/src/composables/useHubFocus.ts` as [D1](design.md#d1) and [D2](design.md#d2) say: `spotName`, `restoredSpot` and `useHubFocus`, each body the view's today (`Hub.vue` lines 273-316 and 392-406), `useHubFocus` returning `focus`, `selected`, `place`, `select` and `moveBy`. Import `clamp`, `kept` and `Focus` from `../grid`, and `at` from `../stores/collection`. It declares no keys ([D3](design.md#d3)).
   Verify: `uv run python -m tools.test_ui ui/src/composables/useHubFocus.test.ts` exits 0.
 - [x] 1.5 Keep `useHubFocus.ts` free of any `useKeys` call ([D3](design.md#d3)).
-  Verify: `grep -L "useKeys" ui/src/composables/useHubFocus.ts` prints `ui/src/composables/useHubFocus.ts`.
+  Verify: `git grep -n "useKeys" -- ui/src/composables/useHubFocus.ts` prints nothing.
 - [x] 1.6 Check the types and the spec bindings with the module in place and no reader yet.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
   Verify: `uv run pytest tests/test_spec_bindings.py` exits 0.
