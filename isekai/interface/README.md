@@ -40,7 +40,9 @@ module scope, and the UI imports no CLI module.
 | `ui/jobs.py` | Prepare and Render as jobs, a slot per kind, side by side: one `prepare` child, each photograph through `tag` → `caption` → its sheets, after a probe of the model server; `gpunit volume up` → `render` → `volume down` unless kept; Stop and server stop sending SIGINT |
 | `ui/billing.py` | what may be billing, read from gpunit's records in `.gpunit/`: the pod alert, the window's quiet item and the band; gpunit asked at start, every half minute while needed, and on Check again |
 | `ui/events.py` | the event stream: a snapshot on connect, then each `job`, `cell` and `billing` change, to every open page |
-| `ui/app.py` | the endpoints, which `create_app` declares, and the bundle's `index.html` for every other path; the only module in the package that imports FastAPI or uvicorn |
+| `ui/surface.py` | what the routes share, as `Surface`: the folders, the wiring, the flows, the jobs, billing, imports, the broadcast, the shared vocabulary and the upload limit, and the lookups every route makes over them. **Imports no web framework** |
+| `ui/routes/` | the vocabulary, tattoo library and place routes, each a class over one `Surface` with a `ROUTES` table of `Route` rows and a `mount(app, surface)` ([D59](../../docs/decisions.md#d59--a-resource-is-a-class-registered-from-a-table-over-one-surface)); `table.py` registers a table on the app, `keys.py` and `common.py` hold what the resources share. They import FastAPI and are reached through `ui/app.py` alone |
+| `ui/app.py` | the endpoints `create_app` still declares, the catch-alls and the bundle's `index.html` for every other path; it builds the `Surface`, mounts each resource of `ui/routes/` and imports uvicorn |
 
 ## Imported by
 

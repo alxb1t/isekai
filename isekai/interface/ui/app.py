@@ -1,8 +1,8 @@
-"""The HTTP surface, and the only module in this package that imports a web framework.
+"""The HTTP surface, and the entry to the modules that import a web framework.
 
-Kept to one file deliberately. `library.py` reads the library and every stage and
-imports no web framework, so that reading is exercised by the main suite whether
-or not a server is installed; only what genuinely needs one lives here, and
+`library.py` and `surface.py` import no web framework, so what they hold is
+exercised by the main suite whether or not a server is installed. The modules of
+`routes/` import FastAPI and are reached through this module alone, so
 `tests/test_ui_api.py` opens with an `importorskip` for it.
 
 **What this module owns, and what it does not.** It owns HTTP routing and status

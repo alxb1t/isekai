@@ -7,7 +7,7 @@ Each phase is a move with behaviour unchanged: the surface, vocabulary and the t
 - [x] 1 — The surface · hard
 - [x] 2 — Vocabulary and the tattoo library · hard
 - [x] 3 — Place · moderate
-- [ ] 4 — The documents and the replay · moderate
+- [x] 4 — The documents and the replay · moderate
 
 ## 1 — The surface
 
@@ -68,19 +68,19 @@ Each phase is a move with behaviour unchanged: the surface, vocabulary and the t
 
 ## 4 — The documents and the replay
 
-- [ ] 4.1 Add `### D59 · A resource is a class, registered from a table, over one surface` to `docs/decisions.md` after D58, as [D8](design.md#d8) says: with its `Why`, its `Accepts` and `Made by` naming this change.
+- [x] 4.1 Add `### D59 · A resource is a class, registered from a table, over one surface` to `docs/decisions.md` after D58, as [D8](design.md#d8) says: with its `Why`, its `Accepts` and `Made by` naming this change.
   Verify: `grep -n '^### D59' docs/decisions.md` prints the heading.
-- [ ] 4.2 Amend the docstring of `isekai/interface/ui/app.py`: delete "Kept to one file deliberately" and the claim that this is the only module of the package importing a web framework; say that `surface.py` imports none, and that the modules of `routes/` import FastAPI and are reached through this module alone.
+- [x] 4.2 Amend the docstring of `isekai/interface/ui/app.py`: delete "Kept to one file deliberately" and the claim that this is the only module of the package importing a web framework; say that `surface.py` imports none, and that the modules of `routes/` import FastAPI and are reached through this module alone.
   Verify: `grep -L 'Kept to one file' isekai/interface/ui/app.py` prints the path.
-- [ ] 4.3 Amend `isekai/interface/README.md`: the `ui/app.py` row no longer says it is the only importer of FastAPI; add rows for `ui/surface.py` and `ui/routes/`.
+- [x] 4.3 Amend `isekai/interface/README.md`: the `ui/app.py` row no longer says it is the only importer of FastAPI; add rows for `ui/surface.py` and `ui/routes/`.
   Verify: `grep -n 'ui/surface.py' isekai/interface/README.md` prints a row.
-- [ ] 4.4 Amend `docs/modules.md`: the tattoo routes and the proposer's call are in `interface/ui/routes/tattoos.py` and `interface/ui/routes/place.py`, not in `app.py`; the wheel-reaching paragraph says the modules of `routes/` import `fastapi` too, reached through `app.py` alone.
+- [x] 4.4 Amend `docs/modules.md`: the tattoo routes and the proposer's call are in `interface/ui/routes/tattoos.py` and `interface/ui/routes/place.py`, not in `app.py`; the wheel-reaching paragraph says the modules of `routes/` import `fastapi` too, reached through `app.py` alone.
   Verify: `grep -n 'routes/place.py' docs/modules.md` prints a line.
-- [ ] 4.5 Amend `ARCHITECTURE.md`'s `interface` line: the UI's routes live in `interface/ui/routes/`, a class a resource over one `Surface`.
+- [x] 4.5 Amend `ARCHITECTURE.md`'s `interface` line: the UI's routes live in `interface/ui/routes/`, a class a resource over one `Surface`.
   Verify: `grep -n 'ui/routes' ARCHITECTURE.md` prints the line.
-- [ ] 4.6 **HALT CHECK** Replay the mutants of `tests/mutants.json`, none re-anchored: an entry of `app.py` that no longer finds its text once is a plan fault, so stop and say so.
+- [x] 4.6 **HALT CHECK** Replay the mutants of `tests/mutants.json`, none re-anchored: an entry of `app.py` that no longer finds its text once is a plan fault, so stop and say so.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
-- [ ] 4.7 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
+- [x] 4.7 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py` passes.
-- [ ] 4.8 Hold the series' conditions: nothing under `tests/record/`, no mutant entry, no ratchet table and no image-frozen file changed.
+- [x] 4.8 Hold the series' conditions: nothing under `tests/record/`, no mutant entry, no ratchet table and no image-frozen file changed.
   Verify: `git diff --stat ab010b18 -- tests/record tests/mutants.json tests/test_ratchets.py Dockerfile config/models.json isekai/boundary/provision.py isekai/boundary/pod_start.py` prints nothing.

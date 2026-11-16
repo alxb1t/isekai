@@ -72,7 +72,7 @@ stage: the transport helpers it shares with `pipeline/generate.py` — `submit_a
 **The placement's pieces.** `chain` is `shared/chain.py`'s, over arrays, importing only `foundation/refusal.py`; its
 `place` carries an ink layer through the stages' splines and `flatten` puts it on white. The ink view, the stage-1
 file, `preview` and `composite` are `pipeline/tattoos.py`'s, with the tattoo library: it imports `shared/chain.py`,
-`shared/ink.py` and `shared/tattoo.py` and no stage, and the tattoo routes of `interface/ui/app.py` call it, writing no
+`shared/ink.py` and `shared/tattoo.py` and no stage, and the tattoo routes of `interface/ui/routes/tattoos.py` call it, writing no
 file of their own ([D52](decisions.md#d52--the-tattoo-library-is-kept-whole-until-a-tattoo-is-removed)). A bake's
 route calls `composite` and then `request_placed` of `pipeline/edit.py`, which writes the composite, the placement
 record and the edit's record ([D53](decisions.md#d53--a-placement-is-recorded-beside-its-edit)). Pillow, and numpy in
@@ -84,7 +84,7 @@ importing `provision`, `unpack`, `wd14`'s `silence_onnxruntime` and `foundation/
 and Pillow imported inside their functions. `proposal` is `shared/proposal.py`'s, the geometry over arrays, importing no
 other module of the package. `proposing` is `pipeline/proposing.py`'s: it imports `pose`, `sam2` and `proposal` and no
 stage. `interface/wiring.py` opens `pose` and `sam2` once into a `Proposer`, and the propose route of
-`interface/ui/app.py` calls it in the server's process and writes no file
+`interface/ui/routes/place.py` calls it in the server's process and writes no file
 ([D54](decisions.md#d54--automatic-pairs-run-on-the-operators-machine-and-are-kept-nowhere)).
 
 **`tests/test_layers.py` holds where the lazy edges point; review holds that they
@@ -127,16 +127,16 @@ Rules the graph is holding rather than describing:
   is why `isekai show` works on a checkout that has provisioned nothing.
 
   Each wheel-needing tree is reached from inside a function or behind a lazy
-  import: `fastapi`/`uvicorn` from `interface/ui/app.py`; the tagger's stack
+  import: `fastapi`/`uvicorn` from `interface/ui/app.py` and `fastapi` from the modules of `interface/ui/routes/`, which `app.py` reaches; the tagger's stack
   from `boundary/wd14.py`; Pillow and `pi_heif` from inside the functions of
   `pipeline/importing.py`; `gpunit` from inside `boundary/gpu.py`'s `open_session`
   and `bounds`, and `interface/render.py`'s session block. The mechanisms differ, and the difference matters to
   anyone reading this as a rule to apply. `wd14.py` reaches its stack by an
   `import_module` call **inside a function**, so the module imports cleanly
   without the wheel. `app.py` does not: it imports
-  `uvicorn` and `fastapi` at module scope, and the laziness sits one level up —
+  `uvicorn` and `fastapi` at module scope, as do the modules of `routes/`, and the laziness sits one level up —
   `interface/ui/__init__.py`'s `serve()` imports `app.py` inside the function,
-  and nothing else imports `app.py` outside the suite.
+  and `app.py` imports the modules of `routes/` at its own module scope.
 
   **The `-S` guard in `tests/test_pipeline_cli.py` holds this, and
   `tests/test_wd14.py`'s source scan holds it for `boundary/wd14.py`.** While the
