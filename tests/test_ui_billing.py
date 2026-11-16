@@ -192,6 +192,7 @@ def test_an_ask_that_raises_does_not_stop_the_watch(tmp_path: Path) -> None:
     records.mkdir()
     asked: list[str] = []
     raising = {1, 3}
+    consulted: list[int] = []
 
     def run(argv: Sequence[str], say: Say) -> GpunitExit:
         asked.append(" ".join(argv))
@@ -199,11 +200,19 @@ def test_an_ask_that_raises_does_not_stop_the_watch(tmp_path: Path) -> None:
             raise OSError("gpunit did not run")
         return GpunitExit(0)
 
+    def session() -> bool:
+        # The first ask raises before the page reads the session, so the first
+        # consult is the loop's own condition at the first interval.
+        consulted.append(1)
+        if len(consulted) == 1:
+            raise OSError("the records could not be read")
+        return True
+
     billing = Billing(
         Volume(run=run, records=records),
         tmp_path / "log",
         events.Broadcast(),
-        lambda: True,
+        session,
         now=lambda: NOW,
     )
 

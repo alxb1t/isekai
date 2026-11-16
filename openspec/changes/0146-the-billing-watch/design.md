@@ -49,6 +49,8 @@ def loop() -> None:
 
 `_ask` is a method beside `check`, with a docstring saying a raise costs this ask alone.
 
+Fix note (2026-11-16, S1): the loop's interval test, `self._running() or self.alerting()`, moved inside `_ask` under `_ask(due=True)`, so a raise in reading the records is swallowed too.
+
 ### D2
 
 `except Exception` is the one breadth that keeps the thread alive for every ask. It never catches `BaseException`, so a

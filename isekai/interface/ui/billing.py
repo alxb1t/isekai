@@ -116,10 +116,15 @@ class Billing:
                 self._raised = False
         return self.publish()
 
-    def _ask(self) -> None:
-        """Ask through `check`; a raise costs this ask alone."""
+    def _ask(self, *, due: bool = False) -> None:
+        """Ask through `check`; a raise costs this ask alone.
+
+        `due` asks only while a session runs or an alert is open, the test inside
+        the guard, so a raise in reading the records costs this interval alone.
+        """
         with contextlib.suppress(Exception):
-            self.check()
+            if not due or self._running() or self.alerting():
+                self.check()
 
     def publish(self) -> dict[str, Any]:
         """Tell every page the billing state, and return it."""
@@ -133,8 +138,7 @@ class Billing:
         def loop() -> None:
             self._ask()
             while not self._stop.wait(interval):
-                if self._running() or self.alerting():
-                    self._ask()
+                self._ask(due=True)
 
         thread = threading.Thread(target=loop, daemon=True)
         thread.start()
