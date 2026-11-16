@@ -2,9 +2,10 @@
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 from fastapi import FastAPI, Response
+from fastapi.responses import JSONResponse
 
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
@@ -29,12 +30,17 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     approval_of,
+    is_seed,
+    is_version,
     latest_artifact,
     photo_of,
     sheet_of,
     stage_command,
 )
+from isekai.interface.drafting import draft_from_image, refuse_image_drafts
+from isekai.interface.ui import library
 from isekai.interface.ui.routes.common import (
+    REFUSED,
     _approved,
     _dimensions,
     _fields,
@@ -42,19 +48,25 @@ from isekai.interface.ui.routes.common import (
     _renders_out,
     _saved,
     _strings,
+    _untagged,
+    _whole,
 )
 from isekai.interface.ui.routes.table import Route, register
-from isekai.interface.ui.surface import Held, Surface
+from isekai.interface.ui.surface import _DECIMAL, Held, Surface
 from isekai.pipeline.generate import image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
+    Revision,
     TokenBudget,
     came_from,
+    cancel,
     cancellable,
+    discard,
     draft_image,
     review,
     source_copy,
     token_budget,
+    waiting_edit,
 )
 from isekai.pipeline.review import state as review_state
 from isekai.shared.vocabulary import Vocabulary
@@ -165,6 +177,178 @@ class ReviewRoutes:
                 f"{version} was drafted from; go back to Review to reload the page"
             )
         return _photograph(self.surface.file_response, copy)
+
+    def put_draft(
+        self, collection: str, digest: str, flow: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Replace the draft's values in place, through the one function that owns it.
+
+        The whole draft, every time: a debounced `PUT` of everything is what
+        makes the receipt the page shows true.
+
+        **Two preconditions, and both answer `409`.** An input that is approved
+        and holds no later draft refuses an update at all: approval is the end
+        of a review. And an update whose `saved` does not match the draft on
+        disk refuses, because two overlapping `PUT`s would otherwise commit in
+        the order the server finishes them. The check and the write hold one
+        lock, so of two updates stating one precondition, the later fails it.
+        """
+        one = self.surface.held(collection, digest, flow)
+        # Before the lock: a malformed body refuses without waiting on a write.
+        fields = _update(payload)
+        renders = _renders_in(payload)
+        with self.surface.draft_lock:
+            if review_state(one.directory(REVIEW)) == "approved":
+                raise Refusal(
+                    f"{one.run.id} is approved, and an approved sheet is never "
+                    "edited in place; approval is the end of a review -- correct "
+                    f"it with `{_command(one, 'review', '--new-version')}`, which "
+                    "writes a fresh draft beside the approved artifact, and "
+                    "reload: the input comes back re-opened and editable, with "
+                    "its approved artifact still named"
+                )
+            self.surface.precondition(one, payload)
+            written = self.surface.save_draft(one.run, one.flow.id, fields, renders)
+        budget = token_budget(fields, one.flow.schema, one.flow)
+        return {
+            "draft": written.name,
+            "saved": _saved(written),
+            "budget": _budget(budget),
+        }
+
+    def post_approve(
+        self,
+        collection: str,
+        digest: str,
+        flow: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Validate and approve the draft, through the only writer of an approval.
+
+        Under the draft lock, so an update in flight either lands before the
+        approval reads the draft or finds the input approved and is refused.
+        **It states the draft update's precondition**, so a page approves only
+        the draft it last read, never one another writer has since moved.
+        """
+        one = self.surface.held(collection, digest, flow)
+        with self.surface.draft_lock:
+            self.surface.precondition(one, payload or {})
+            written, warnings = self.surface.approve(
+                one.run,
+                one.flow.id,
+                one.flow.schema,
+                self.surface.shared.vocabulary(),
+                excluded=self.surface.shared.field_map().excluded,
+                definition=one.flow,
+            )
+        return {
+            "approved": written.name if written else None,
+            "warnings": warnings,
+            "at": _saved(written),
+        }
+
+    def post_cancel(self, collection: str, digest: str, flow: str) -> dict[str, Any]:
+        """Turn the approval back into its draft, refused while a render runs.
+
+        `back` names what the flow is left on: the draft, or for a deleted copy
+        the draft or approval beneath it, null where nothing is. `cancelled` is
+        false for a flow at its draft, which a cancel leaves unchanged.
+        """
+        one = self.surface.held(collection, digest, flow)
+        with self.surface.draft_lock:
+            rendering = self.surface.rendering(collection)
+            if rendering is not None:
+                raise Refusal(
+                    f"{rendering} Wait for it to end, then cancel the approval again."
+                )
+            left, changed = cancel(one.run, one.flow.id)
+        return {"back": None if left is None else left.name, "cancelled": changed}
+
+    def post_discard(
+        self,
+        collection: str,
+        digest: str,
+        flow: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Delete the waiting draft, as `review --discard` does; an approval refuses.
+
+        **It states the draft update's precondition**, so a page deletes only the
+        draft it last read, never one another tab has since edited.
+        """
+        one = self.surface.held(collection, digest, flow)
+        with self.surface.draft_lock:
+            self.surface.precondition(one, payload or {}, "discard again")
+            gone = discard(one.run, one.flow.id)
+        return {"discarded": gone.name}
+
+    def post_draft(self, collection: str, payload: dict[str, Any]) -> object:
+        """Draft `flow` from every image named, or, when any is refused, none.
+
+        As `draft --flow` does: an image's own flow a revision, another drafted
+        from its approval. A target's waiting draft with edits of its own is
+        answered as `waiting`, and nothing is written for it. A refusal answers
+        each image with its own refusal, or null, so the page can deselect the rest.
+        """
+        found = self.surface.folder(collection)
+        name = payload.get("flow")
+        if not isinstance(name, str) or name not in self.surface.flows:
+            raise Refusal(
+                f"{name!r}: not a flow this surface drafts; the flows it drafts are "
+                f"{', '.join(self.surface.flows) or 'none'} -- reload the image's "
+                "large view to choose one; nothing was written"
+            )
+        target = self.surface.offered(name)
+        named = _images(payload)
+        answers: list[str | None] = [None] * len(named)
+        drafts = [{**_image_out(*one), "draft": None, "waiting": None} for one in named]
+        # Each image to write, by its place in `named`.
+        located: list[tuple[int, Path, Revision]] = []
+        with self.surface.draft_lock:
+            for at, (digest, flow, version, seed) in enumerate(named):
+                try:
+                    # A flow this build does not track names no directory of a run.
+                    one = self.surface.offered(flow)
+                    run = library.run_named(found, digest)
+                    image = image_of(run, one, version, seed)
+                    # The draft in hand is opened rather than refused; the
+                    # review stage, and the CLI through it, still refuses it.
+                    waiting = waiting_edit(run, name)
+                except Refusal as refused:
+                    answers[at] = str(refused)
+                    continue
+                if waiting is not None:
+                    drafts[at]["waiting"] = waiting.name
+                else:
+                    located.append((at, image, (run, flow, version, seed)))
+            # Each other image the collection holds is answered by the review stage.
+            checked = refuse_image_drafts(
+                target,
+                [(image, held) for _, image, held in located],
+                self.surface.shared.vocabulary,
+                self.surface.shared.field_map,
+            )
+            for (at, _, _), answer in zip(located, checked, strict=True):
+                answers[at] = answer
+            if any(answer is not None for answer in answers):
+                return JSONResponse(
+                    {
+                        "refusal": "; ".join(a for a in answers if a is not None),
+                        "images": [
+                            {**_image_out(*one), "refusal": answer}
+                            for one, answer in zip(named, answers, strict=True)
+                        ],
+                    },
+                    REFUSED,
+                )
+            for at, _, held in located:
+                drafts[at]["draft"] = draft_from_image(
+                    target,
+                    held,
+                    self.surface.shared.vocabulary,
+                    self.surface.shared.field_map,
+                ).name
+        return {"drafts": drafts}
 
 
 def _revision(
@@ -320,6 +504,77 @@ def _budget(budget: TokenBudget) -> dict[str, Any]:
     }
 
 
+def _update(payload: Mapping[str, Any]) -> dict[str, list[str]]:
+    """Return an update's fields, refusing one that is not an object of tag lists."""
+    fields = payload.get("fields", {})
+    fix = "send each field as a list of strings -- nothing was saved"
+    if not isinstance(fields, dict):
+        raise Refusal(f"the update's `fields` is not an object of tag lists; {fix}")
+    if (name := _untagged(fields)) is not None:
+        raise Refusal(f"the update's {name} is not a list of tags; {fix}")
+    return fields
+
+
+def _renders_in(payload: Mapping[str, Any]) -> Renders | None:
+    """Return an update's `renders`, its seeds parsed from decimal strings, or None.
+
+    e.g. `{"count": 2, "seeds": ["18402"]}` -> `{"count": 2, "seeds": [18402]}`
+    """
+    held = payload.get("renders")
+    if held is None:
+        return None
+    fix = "send a count and a list of decimal seeds -- nothing was saved"
+    if not isinstance(held, dict) or not isinstance(held.get("seeds", []), list):
+        raise Refusal(f"the update's `renders` is not a count and its seeds; {fix}")
+    seeds = held.get("seeds", [])
+    if not all(isinstance(seed, str) and _DECIMAL.fullmatch(seed) for seed in seeds):
+        raise Refusal(f"the update's renders seeds are not decimal numbers; {fix}")
+    return {"count": held.get("count"), "seeds": [int(seed) for seed in seeds]}
+
+
+def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
+    """Return a draft's images, refusing a list that is not of rendered images.
+
+    e.g. `{"images": [{"digest": "0d4b…", "flow": "f", "version": 1, "seed": "7"}]}`
+         -> `[("0d4b…", "f", 1, 7)]`
+    """
+    images = payload.get("images")
+    fix = (
+        "send each image's digest, flow, version and decimal seed -- nothing was "
+        "written"
+    )
+    if not isinstance(images, list) or not images:
+        raise Refusal(f"the draft names no images; {fix}")
+    named = []
+    for image in images:
+        if not (
+            isinstance(image, dict)
+            and isinstance(image.get("digest"), str)
+            and isinstance(image.get("flow"), str)
+            and _numbered(image.get("version"))
+            and isinstance(image.get("seed"), str)
+            and is_seed(image["seed"])
+        ):
+            raise Refusal(f"the draft's image {image!r} is not one; {fix}")
+        named.append(
+            (image["digest"], image["flow"], image["version"], int(image["seed"]))
+        )
+    return named
+
+
+def _image_out(digest: str, flow: str, version: int, seed: int) -> dict[str, Any]:
+    """Describe an image a draft is written from, its seed a decimal string."""
+    return {"digest": digest, "flow": flow, "version": version, "seed": str(seed)}
+
+
+def _numbered(value: object) -> TypeGuard[int]:
+    """Return whether a request's value is a version a run's file names can spell.
+
+    e.g. 2 -> True, 1000 -> False
+    """
+    return _whole(value) and is_version(value)
+
+
 ROUTES = (
     Route("GET", "/api/c/{collection}/review/{digest}/{flow}", "read_input"),
     Route("GET", "/api/c/{collection}/review/{digest}/{flow}/photo", "read_photo"),
@@ -328,6 +583,11 @@ ROUTES = (
         "/api/c/{collection}/review/{digest}/{flow}/source/{version}",
         "read_source_copy",
     ),
+    Route("PUT", "/api/c/{collection}/review/{digest}/{flow}/draft", "put_draft"),
+    Route("POST", "/api/c/{collection}/review/{digest}/{flow}/approve", "post_approve"),
+    Route("POST", "/api/c/{collection}/review/{digest}/{flow}/cancel", "post_cancel"),
+    Route("POST", "/api/c/{collection}/review/{digest}/{flow}/discard", "post_discard"),
+    Route("POST", "/api/c/{collection}/draft", "post_draft"),
 )
 
 

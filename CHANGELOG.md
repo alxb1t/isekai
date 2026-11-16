@@ -10,10 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
-- `ReviewRoutes` holds the review's reads, `read_input`, `read_photo` and `read_source_copy`, in `routes/reviewing.py`
-  with the helpers only they read. `routes/common.py` takes the helpers the images', staging's and sources' routes
-  share, and `app.py` mounts the class and imports them back. The pre-flight's survivors are killed by steps added to
-  existing tests (0154 D1, D2, D3, D4, D6, D7).
+- `ReviewRoutes` holds the review's reads in `routes/reviewing.py` with the helpers only they read. `routes/common.py`
+  takes the helpers the images', staging's and sources' routes share, and `app.py` mounts the class (0154 D1, D3, D6).
+- `ReviewRoutes` takes the review's writes, `put_draft`, `post_approve`, `post_cancel`, `post_discard` and
+  `post_draft`, and `app.py` falls under the ceiling, so its row leaves the ratchet (0154 D3, D5, D9).
 
 ## [0.87.9] - 2026-11-16
 

@@ -22,6 +22,13 @@ from isekai.foundation.run import SIGNATURE_BYTES, Run, media_type
 from isekai.interface.ui import library
 from isekai.shared.image import dimensions_or_refuse
 
+# A `Refusal` is the pipeline declining a well-formed request because of what is
+# on disk -- an approved input, a changed field set, a tag outside the vocabulary
+# -- which is a conflict with state rather than a malformed request. One code for
+# all of them, because the page shows the string verbatim and never branches on
+# the number.
+REFUSED = 409
+
 
 def _needs(payload: Mapping[str, Any], keys: Sequence[str]) -> None:
     """Refuse a body that lacks any of `keys`, naming each."""
