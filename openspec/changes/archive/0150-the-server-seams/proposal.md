@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.6
 after: [0149-the-css-files]
 ---
 

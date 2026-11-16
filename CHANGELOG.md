@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.6] - 2026-11-16
+
+Gate: local 1m19s · CI not read under mf-ship · 0.87.5: local 1m13s · CI not read under mf-ship
+
 - `create_app` takes `make_jobs`, keyword-only and defaulting to `Jobs`; the two tests that patched `Jobs` pass it, so
   no test patches that name and `serve` is unchanged (0150 D1, D5).
 - `create_app` takes `file_response`, defaulting to `FileResponse`, and the `Surface` holds it; the photograph and image
