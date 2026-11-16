@@ -55,5 +55,7 @@ approval left keeps only its assignment, so neither the Hub nor Review offers wh
 - **Key:** `run-directory:numbering:a-full-directory-refuses-a-new-version`
 - **Layers:** unit
 - **WHEN** a stage asks for the next number of a directory that holds version 999, the last a three-digit name can spell
-- **THEN** it refuses, naming the directory and that the way out is to move it out of the run
+- **THEN** it refuses, naming the directory and that the way out is to move the whole run that holds it out of
+  its runs root and start that photograph again as a new run, so a flow's approvals, prompts and renders stay
+  together
 - **AND** no file in the directory changes

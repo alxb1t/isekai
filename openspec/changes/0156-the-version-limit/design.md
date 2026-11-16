@@ -33,7 +33,7 @@ Non-goals:
 | id | decision | because | rejected |
 |---|---|---|---|
 | [D1](#d1) | `next_version` raises `Refusal` when `is_version` says the number is no version | `next_version` numbers every caller, and `is_version` is the rule that exists | a check in each caller: each stage repeats it, and a new stage forgets it |
-| [D2](#d2) | The message names the directory by its parent and its own name, says it holds the last version a name can spell, and says to move it out of the run | `layout.py` knows a directory, not a run; the parent separates `<flow>/review` from `<other flow>/review`; the way out is the one `migrate.py` already gives for files that must leave | the full path: it holds the operator's home, which the repository never transcribes |
+| [D2](#d2) | The message names the directory by its parent and its own name, says it holds the last version a name can spell, and says to move the whole run that holds it out of its runs root and start that photograph again as a new run | `layout.py` knows a directory, not a run; the parent separates `<flow>/review` from `<other flow>/review`; a flow's prompts and renders are numbered by its approvals, so only the whole run leaves with every number's files together | the full path: it holds the operator's home, which the repository never transcribes; moving the directory alone out of the run (adversarial S1, round 1): a new approval 001 inherits the old `prompts/001.json` and counts the old `outputs/001/` |
 | [D3](#d3) | The number tested is the one returned: `latest + 1`, so version 999 is taken and 1000 is refused | the last spellable name is `999.json` | refusing at 999: loses a number a name can spell |
 | [D4](#d4) | `layout.py`'s docstring is amended; no decision is added in `docs/decisions.md` | the rule is held by the requirement, and no decision sets a new one | a decision for the limit: it would restate the requirement |
 
@@ -56,10 +56,10 @@ def next_version(directory: Path) -> int:
 ```
 before:  (no message: 1000.json is written)
 after:   photo/captions holds version 999, the last a three-digit name can spell;
-         move photo/captions out of the run, then run the command again
+         move the whole run that holds it out of its runs root, then start that photograph again as a new run
 ```
 
-`<parent>/<name>` is `directory.parent.name` and `directory.name`. Moving the directory out starts its numbering at 1, and keeps the old artifacts where the operator put them.
+`<parent>/<name>` is `directory.parent.name` and `directory.name`. Moving the directory alone would restart its numbering beside files numbered from it: a flow's `prompts/` and `outputs/` are keyed by its approval's number, so a new approval 001 would take the old `prompts/001.json` and count the old `outputs/001/` as its render. The whole run leaves instead, every number with its files, and the photograph starts again as a new run at 1.
 
 ### D3
 
@@ -71,12 +71,13 @@ Decision D62 in [the decisions in force](../../../docs/decisions.md) says the fo
 
 ## Tests
 
-The change adds tests to `tests/test_run_directory.py`, at the unit layer, and no end-to-end run. Counts, from `git grep -c "run-directory:numbering:a-full-directory-refuses-a-new-version" -- tests` after the build: one file, two tests.
+The change adds tests to `tests/test_run_directory.py`, at the unit layer, and no end-to-end run. Counts, from `git grep -c "run-directory:numbering:a-full-directory-refuses-a-new-version" -- tests` after the build: one file, three tests.
 
 | test | layer | proves | why this layer |
 |---|---|---|---|
 | `test_a_directory_holding_version_999_refuses_the_next_number` | unit | `next_version` refuses at 999, names the directory, and the directory is as it was | [T1](../../../CONTRIBUTING.md): the rule is one function over a directory listing |
 | `test_the_number_after_998_is_still_taken` | unit | 999 is returned, so the refusal is not off by one | the boundary the first test cannot show |
+| `test_a_full_review_directory_sends_the_whole_run_out` | unit | at a flow's `review/` holding 999 beside its `prompts/` and `outputs/`, the way out names the whole run, not the directory, and no file of the flow changes | the case the directory-only way out broke (S1); one function over a directory tree |
 
 Each binds `run-directory:numbering:a-full-directory-refuses-a-new-version`. The first fails with the refusal removed: `next_version` returns 1000 and `pytest.raises(Refusal)` does not see it. No existing test is deleted, merged or changed, so the removed-test table is empty.
 
@@ -89,8 +90,8 @@ None.
 ## Risks / Trade-offs
 
 - A directory at 999 was already broken: its next write overwrote `1000.json`. The refusal turns a silent loss into a named stop.
-- The way out loses nothing but position: moving the directory leaves the artifacts where the operator put them, and the stage writes `001.json` again, as for a new run.
+- The way out loses nothing but position: moving the whole run leaves every artifact where the operator put it, beside the files numbered from it, and the photograph starts again as a new run at `001.json`.
 
 ## Verdict
 
-Ready to build in one phase: the refusal and its tests. No caller changes, and nothing moves, renames or deletes.
+Ready to build in two phases: the refusal and its tests, then the way out that keeps a run whole, per adversarial S1 of round 1. No caller changes, and nothing moves, renames or deletes.
