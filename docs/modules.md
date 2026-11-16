@@ -40,7 +40,7 @@ Every lazy edge points down, as every module-level one does.
 no other stage imports; the CLI's `import` verb and the surface's staging routes
 both compose it, and `ui/library.py` reads `shared/image.py`'s `metadata_in` for the
 not-cleaned mark.
-`assign` is `foundation/run.py`'s, because a tick is the run's layout, and the CLI
+`assign` is `foundation/rundir.py`'s, read through `run.py`, because a tick is the run's layout, and the CLI
 verb and the hub's route both call it. `migrate` is `foundation/migrate.py`'s,
 which imports `artifacts.py`, `run.py` and `refusal.py`: it moves the run's layout,
 and `cli.py`'s verb walks each runs root, reaching the library's collections
@@ -188,6 +188,6 @@ what carries data at run time.
   files byte for byte into a partial directory it renames whole.
 - **A stage reaches a model, the GPU or the network through `boundary/`.**
 - **`foundation`'s run, artifacts, flow and refusal are what every layer uses.**
-- **`StageFailure` lives in `foundation/run.py`, not `refusal.py`.** `refusal.py`
-  imports nothing, the class needs `Kind`, and `run.py` already imports
+- **`StageFailure` lives in `foundation/failures.py`, read through `run.py`, not `refusal.py`.** `refusal.py`
+  imports nothing, the class needs `Kind`, and `failures.py` already imports
   `refusal.py`, so the move would be a cycle.

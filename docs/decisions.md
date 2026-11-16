@@ -485,7 +485,7 @@ that needs it.**
 ### D21 · Retries follow what can fail
 
 **A stage that calls a local model may retry a dropped call. A deterministic stage gets one attempt, and
-so does the paid render.** The numbers are `run.py`'s `BUDGETS`.
+so does the paid render.** The numbers are `BUDGETS` of `failures.py`, read through `run.py`.
 
 - **Why:** a deterministic stage fails the same way twice, while a call to the local model server can
   drop and succeed on the next attempt. The paid stage is never retried on its own.
@@ -619,6 +619,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Why:** a patch of a module's own name is global state that a route moving to another module leaves stranded ([D56](#d56--size-and-patches-are-held-by-ratchets)), and one lock for the process was shared by every app in it.
 - **Accepts:** `run` stays a name a test patches in `app.py`, because `serve` reads it and no route does. Reopen when `serve`'s collaborators are parameters.
 - **Made by:** `0150`.
+
+### D62 · The run directory is run.py, its siblings imported through it
+
+**The run directory is `isekai/foundation/run.py`. It re-exports every name of `names.py`, `rundir.py`, `layout.py` and `failures.py` under `__all__`, and a module outside the foundation imports a run's names from `isekai.foundation.run`, never from a sibling. A sibling imports no `run.py` and stays on the standard library and the foundation.**
+
+- **Why:** the run directory was one file of clusters and a listed row of the ratchet ([D56](#d56--size-and-patches-are-held-by-ratchets)). A front that re-exports changes no importer, keeps `RUNS_ROOT` and `DATA_ROOT` in one module and leaves the layer guard's cycle rule nothing to find.
+- **Accepts:** the roots, `open_run`, `rendered_at`, the command text and the provenance records stay in `run.py`, because `rendered_at` reads `stage_command`, which reads the patched `RUNS_ROOT`. Review holds that an importer reads the front; no test does. Reopen when `RUNS_ROOT` is no longer patched.
+- **Made by:** `0152`.
 
 ## Infrastructure
 

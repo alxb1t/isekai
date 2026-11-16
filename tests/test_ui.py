@@ -40,6 +40,7 @@ _ARTIFACT_WRITERS = {
         {"write_json", "write", "create", "replace"}
     ),
     "isekai.foundation.run": frozenset({"artifact_name"}),
+    "isekai.foundation.layout": frozenset({"artifact_name"}),
 }
 SURFACE = Path(__file__).resolve().parent.parent / "isekai" / "interface" / "ui"
 
@@ -107,6 +108,20 @@ def test_the_check_catches_a_module_importing_an_artifact_writer(
         ["aliased.py: write_json", "named.py: artifact_name", "plain.py: write_json"],
         4,
     )
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of "
+    "test_the_invariant_holds_no_module_of_the_surface_names_an_artifact"
+)
+def test_the_check_catches_artifact_name_imported_from_the_layout(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "laid.py").write_text(
+        "from isekai.foundation.layout import artifact_name\n"
+    )
+
+    assert artifact_imports(tmp_path) == (["laid.py: artifact_name"], 1)
 
 
 def _spelling(surface: Path, needle: str) -> set[str]:
