@@ -10,11 +10,6 @@ its new digest.
 
 ## [Unreleased]
 
-- The page's one stylesheet, `ui/src/app.css`, becomes the files of `ui/src/css/`, cut at blank lines and imported by
-  `main.ts` in the old order; their join equals the old sheet, so no rule changes (0149 D1, D2, D3, D5).
-- A test holds that `main.ts` imports each file of `ui/src/css/` once, and its twin fails on a removed, repeated or
-  missing import (0149 D4).
-- D60 says where the page's CSS lives, and the README's tree names `css/` (0149 D6).
 - `create_app` takes `make_jobs`, keyword-only and defaulting to `Jobs`; the two tests that patched `Jobs` pass it, so
   no test patches that name and `serve` is unchanged (0150 D1, D5).
 - `create_app` takes `file_response`, defaulting to `FileResponse`, and the `Surface` holds it; the photograph and image
@@ -24,6 +19,16 @@ its new digest.
   its own lock, the tests that patched them pass them, and a new test holds the default lock (0150 D1, D2, D4, D5, D6).
 - D61 says what a test replaces in the server is a parameter of `create_app`; D59's *Accepts*, the docstrings of `app.py`
   and `surface.py` and the interface's README name the seams (0150 D7).
+
+## [0.87.5] - 2026-11-16
+
+Gate: local 1m13s · CI not read under mf-ship · 0.87.4: local 1m51s · CI not read under mf-ship
+
+- The page's one stylesheet, `ui/src/app.css`, becomes the files of `ui/src/css/`, cut at blank lines and imported by
+  `main.ts` in the old order; their join equals the old sheet, so no rule changes (0149 D1, D2, D3, D5).
+- A test holds that `main.ts` imports each file of `ui/src/css/` once, and its twin fails on a removed, repeated or
+  missing import (0149 D4).
+- D60 says where the page's CSS lives, and the README's tree names `css/` (0149 D6).
 
 ## [0.87.4] - 2026-11-16
 

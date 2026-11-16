@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.5
 after: [0148-the-render-routes]
 ---
 
