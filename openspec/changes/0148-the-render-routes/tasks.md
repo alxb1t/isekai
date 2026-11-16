@@ -5,7 +5,7 @@ The phases: the render and jobs routes, the events stream, the documents. Each m
 ## Progress
 
 - [x] 1 — The render and jobs routes · moderate
-- [ ] 2 — The events stream · moderate
+- [x] 2 — The events stream · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The render and jobs routes
@@ -33,17 +33,17 @@ The phases: the render and jobs routes, the events stream, the documents. Each m
 
 ## 2 — The events stream
 
-- [ ] 2.1 Open with the tests' baseline: phase 1 has shifted `app.py`, so no range of it holds, and the closing run covers the same mutants ([D7](design.md#d7)).
+- [x] 2.1 Open with the tests' baseline: phase 1 has shifted `app.py`, so no range of it holds, and the closing run covers the same mutants ([D7](design.md#d7)).
   Verify: `uv run pytest tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_billing.py tests/test_ui_wire.py tests/test_record.py` passes.
-- [ ] 2.2 Write the new `isekai/interface/ui/routes/stream.py`: `class StreamRoutes` with `read_events`, moved from `create_app` with its docstring, comments and body unchanged but for [D3](design.md#d3)'s prefix, and the imports its body reads; a `ROUTES` table of its one `GET /events` row; `mount(app, surface)`.
+- [x] 2.2 Write the new `isekai/interface/ui/routes/stream.py`: `class StreamRoutes` with `read_events`, moved from `create_app` with its docstring, comments and body unchanged but for [D3](design.md#d3)'s prefix, and the imports its body reads; a `ROUTES` table of its one `GET /events` row; `mount(app, surface)`.
   Verify: `grep -n -E '^(class StreamRoutes|ROUTES = |def mount\()|    def read_events\(' isekai/interface/ui/routes/stream.py` prints a line for each of the four names.
-- [ ] 2.3 In `app.py` delete `def read_events(` and its body; bind `mount as stream_mount` from `routes.stream`; call `stream_mount(app, surface)` after `render_mount(app, surface)`; drop each import the move leaves unused, as `ruff check` names them.
+- [x] 2.3 In `app.py` delete `def read_events(` and its body; bind `mount as stream_mount` from `routes.stream`; call `stream_mount(app, surface)` after `render_mount(app, surface)`; drop each import the move leaves unused, as `ruff check` names them.
   Verify: `git grep -n -F 'def read_events(' -- isekai/interface/ui/app.py` prints nothing.
-- [ ] 2.4 Run the server's tests, the record, the ratchets and the layer guards.
+- [x] 2.4 Run the server's tests, the record, the ratchets and the layer guards.
   Verify: `uv run pytest tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_billing.py tests/test_ui_wire.py tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_pipeline_cli.py` passes.
-- [ ] 2.5 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
+- [x] 2.5 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` passes.
-- [ ] 2.6 Close with `tools.mutate` on the new module, after `git add -N isekai/interface/ui/routes/stream.py`.
+- [x] 2.6 Close with `tools.mutate` on the new module, after `git add -N isekai/interface/ui/routes/stream.py`.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/stream.py:1-2000 --tests tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_billing.py tests/test_ui_wire.py tests/test_ui_library.py tests/test_record.py` exits 0, each survivor it prints named in the design.
 
 ## 3 — The documents

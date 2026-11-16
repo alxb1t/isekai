@@ -85,7 +85,7 @@ from typing import Any, TypeGuard
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from isekai.foundation.artifacts import (
@@ -130,7 +130,7 @@ from isekai.foundation.run import (
 from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
-from isekai.interface.ui.jobs import KINDS, Jobs
+from isekai.interface.ui.jobs import Jobs
 from isekai.interface.ui.routes.common import (
     _cell_out,
     _dimensions,
@@ -147,6 +147,7 @@ from isekai.interface.ui.routes.keys import STAGE1_KEYS as STAGE1_KEYS
 from isekai.interface.ui.routes.place import mount as place_mount
 from isekai.interface.ui.routes.rendering import cell_event as cell_event
 from isekai.interface.ui.routes.rendering import mount as render_mount
+from isekai.interface.ui.routes.stream import mount as stream_mount
 from isekai.interface.ui.routes.tattoos import mount as tattoo_mount
 from isekai.interface.ui.routes.vocabulary import RARE_BELOW as RARE_BELOW
 from isekai.interface.ui.routes.vocabulary import mount as vocabulary_mount
@@ -435,46 +436,6 @@ def create_app(
             "skipped": list(done.skipped),
             "left_out": list(done.left_out),
         }
-
-    @app.get("/events")
-    def read_events(
-        collection: str | None = None, staging: str | None = None
-    ) -> StreamingResponse:
-        """Stream the job slots, `collection`'s hub, `staging`'s files, then changes.
-
-        A reload or a second tab gets the whole truth at once. A collection or an
-        import it cannot read is left out of the snapshot, never refused.
-        """
-        # An import it no longer holds is left out rather than refused: the page's
-        # one stream would never open again after a refused connect.
-        try:
-            held = imports.reader(staging) if staging is not None else None
-        except Refusal:
-            held = None
-
-        def snapshot() -> dict[str, Any]:
-            found = {
-                "jobs": {kind: jobs.slot(kind) for kind in KINDS},
-                "billing": billing.state(),
-            }
-            if collection is not None:
-                # A collection it cannot read is left out: the screen's own read of it
-                # shows the refusal, and the page keeps its stream.
-                try:
-                    grid = library.hub(folder(collection), flows, wired.flows_dir)
-                except Refusal:
-                    pass
-                else:
-                    found["hub"] = _hub(grid)
-            if held is not None:
-                found["files"] = held.files()
-            return found
-
-        return StreamingResponse(
-            events.stream(broadcast, snapshot, collection=collection, staging=staging),
-            media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache"},
-        )
 
     @app.get("/api/c/{collection}/review/{digest}/{flow}")
     def read_input(collection: str, digest: str, flow: str) -> dict[str, Any]:
@@ -935,6 +896,7 @@ def create_app(
     tattoo_mount(app, surface)
     place_mount(app, surface)
     render_mount(app, surface)
+    stream_mount(app, surface)
 
     @app.get("/api/{rest:path}")
     def no_route(rest: str) -> JSONResponse:
