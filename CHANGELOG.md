@@ -10,9 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
-- The page's one stylesheet, `ui/src/app.css`, becomes the files of `ui/src/css/`, each a span of it cut at a blank
-  line and imported by `main.ts` in the old order; the files joined equal the old sheet, so no rule changes and the
-  ratchet's `ui/src` table loses its row for the sheet (0149 D1, D2, D3, D5).
+- The page's one stylesheet, `ui/src/app.css`, becomes the files of `ui/src/css/`, cut at blank lines and imported by
+  `main.ts` in the old order; their join equals the old sheet, so no rule changes (0149 D1, D2, D3, D5).
+- A test holds that `main.ts` imports each file of `ui/src/css/` once, and its twin fails on a removed, repeated or
+  missing import (0149 D4).
 
 ## [0.87.4] - 2026-11-16
 

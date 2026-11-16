@@ -5,7 +5,7 @@ Move `ui/src/app.css` into the files of `ui/src/css/`, guard that each is import
 ## Progress
 
 - [x] 1 — The move · moderate
-- [ ] 2 — The guard · moderate
+- [x] 2 — The guard · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The move
@@ -25,7 +25,7 @@ Move `ui/src/app.css` into the files of `ui/src/css/`, guard that each is import
 
 ## 2 — The guard
 
-- [ ] 2.1 Add `tests/test_css_files.py` per [D4](design.md#d4): `css_faults(root)`, the guard `test_every_css_file_is_imported_by_main_once` marked `spec_exempt("structural: every file of ui/src/css/ is imported by main.ts once")`, and its twin `test_the_check_catches_an_unimported_css_file` marked `spec_exempt("structural: twin of test_every_css_file_is_imported_by_main_once")`. The twin finds no fault in a clean tree under `tmp_path`, and one fault each for an import line removed, an import repeated and an import naming a missing file.
+- [x] 2.1 Add `tests/test_css_files.py` per [D4](design.md#d4): `css_faults(root)`, the guard `test_every_css_file_is_imported_by_main_once` marked `spec_exempt("structural: every file of ui/src/css/ is imported by main.ts once")`, and its twin `test_the_check_catches_an_unimported_css_file` marked `spec_exempt("structural: twin of test_every_css_file_is_imported_by_main_once")`. The twin finds no fault in a clean tree under `tmp_path`, and one fault each for an import line removed, an import repeated and an import naming a missing file.
   Verify: `uv run pytest tests/test_css_files.py` exits 0.
 
 ## 3 — The documents
