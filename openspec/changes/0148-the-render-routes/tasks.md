@@ -6,7 +6,7 @@ The phases: the render and jobs routes, the events stream, the documents. Each m
 
 - [x] 1 — The render and jobs routes · moderate
 - [x] 2 — The events stream · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The render and jobs routes
 
@@ -48,19 +48,19 @@ The phases: the render and jobs routes, the events stream, the documents. Each m
 
 ## 3 — The documents
 
-- [ ] 3.1 In `docs/decisions.md`, D59's *Accepts* line drops "the render, jobs and events routes and" and reads: "the routes that read a name a test patches stay closures of `create_app`, with `Jobs(` and `run` kept there, and so do the library, staging, review and images routes, until their versions. Reopen when the last of them moves." Its *Made by* line reads `0147`, `0148`.
+- [x] 3.1 In `docs/decisions.md`, D59's *Accepts* line drops "the render, jobs and events routes and" and reads: "the routes that read a name a test patches stay closures of `create_app`, with `Jobs(` and `run` kept there, and so do the library, staging, review and images routes, until their versions. Reopen when the last of them moves." Its *Made by* line reads `0147`, `0148`.
   Verify: `git grep -n -F 'the render, jobs and events routes' -- docs/decisions.md` prints nothing.
-- [ ] 3.2 In the docstring of `isekai/interface/ui/app.py`, after the sentence saying the modules of `routes/` are reached through this module alone, add: "They hold the vocabulary, tattoo library and place routes, `RenderRoutes` and `StreamRoutes`; `create_app` declares the routes that read a name a test patches, and the rest."
+- [x] 3.2 In the docstring of `isekai/interface/ui/app.py`, after the sentence saying the modules of `routes/` are reached through this module alone, add: "They hold the vocabulary, tattoo library and place routes, `RenderRoutes` and `StreamRoutes`; `create_app` declares the routes that read a name a test patches, and the rest."
   Verify: `git grep -n -F 'StreamRoutes' -- isekai/interface/ui/app.py` prints a line.
-- [ ] 3.3 In `isekai/interface/README.md`, the `ui/routes/` row reads "the vocabulary, tattoo library, place, render and jobs, and events routes" where it read "the vocabulary, tattoo library and place routes".
+- [x] 3.3 In `isekai/interface/README.md`, the `ui/routes/` row reads "the vocabulary, tattoo library, place, render and jobs, and events routes" where it read "the vocabulary, tattoo library and place routes".
   Verify: `git grep -n -F 'render and jobs, and events routes' -- isekai/interface/README.md` prints a line.
-- [ ] 3.4 In `docs/modules.md`, the sentence ending "`interface/ui/events.py` streams what they report to the page as `/events`" ends instead "… as `/events`; `RenderRoutes` of `interface/ui/routes/rendering.py` starts the jobs and `StreamRoutes` of `interface/ui/routes/stream.py` serves the stream."
+- [x] 3.4 In `docs/modules.md`, the sentence ending "`interface/ui/events.py` streams what they report to the page as `/events`" ends instead "… as `/events`; `RenderRoutes` of `interface/ui/routes/rendering.py` starts the jobs and `StreamRoutes` of `interface/ui/routes/stream.py` serves the stream."
   Verify: `git grep -n -F 'StreamRoutes' -- docs/modules.md` prints a line.
-- [ ] 3.5 **HALT CHECK** UA-7's anchor stays in `app.py`: no phase edits the artifacts import block it names.
+- [x] 3.5 **HALT CHECK** UA-7's anchor stays in `app.py`: no phase edits the artifacts import block it names.
   Verify: `git grep -n -F '    renders_of,' -- isekai/interface/ui/app.py` prints a line.
-- [ ] 3.6 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`, then replay the recorded mutants.
+- [x] 3.6 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`, then replay the recorded mutants.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
-- [ ] 3.7 Hold the series' conditions: nothing under `tests/record/`, no ratchet row and no entry of `tests/mutants.json` differs from the cut's base.
+- [x] 3.7 Hold the series' conditions: nothing under `tests/record/`, no ratchet row and no entry of `tests/mutants.json` differs from the cut's base.
   Verify: `git diff --exit-code 7cf59b7d -- tests/record tests/test_ratchets.py tests/mutants.json` exits 0.
-- [ ] 3.8 Run the documents' and the guards' tests.
+- [x] 3.8 Run the documents' and the guards' tests.
   Verify: `uv run pytest tests/test_docs.py tests/test_ratchets.py tests/test_layers.py tests/test_record.py` passes.

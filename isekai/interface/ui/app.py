@@ -3,7 +3,9 @@
 `library.py` and `surface.py` import no web framework, so what they hold is
 exercised by the main suite whether or not a server is installed. The modules of
 `routes/` import FastAPI and are reached through this module alone, so
-`tests/test_ui_api.py` opens with an `importorskip` for it.
+`tests/test_ui_api.py` opens with an `importorskip` for it. They hold the
+vocabulary, tattoo library and place routes, `RenderRoutes` and `StreamRoutes`;
+`create_app` declares the routes that read a name a test patches, and the rest.
 
 **What this module owns, and what it does not.** It owns HTTP routing and status
 codes, the join of caption, sheet, draft, approved and budget into one payload,

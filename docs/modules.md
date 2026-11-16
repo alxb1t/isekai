@@ -50,7 +50,9 @@ by import**: `interface/ui/jobs.py` runs `python -m isekai prepare`
 over the cells, each photograph tagged, captioned and sheeted in turn, and
 `python -m isekai render` between `python -m gpunit volume up` and `volume down`,
 as children, so the CLI stays the one path a stage runs through, and
-`interface/ui/events.py` streams what they report to the page as `/events`.
+`interface/ui/events.py` streams what they report to the page as `/events`;
+`RenderRoutes` of `interface/ui/routes/rendering.py` starts the jobs and
+`StreamRoutes` of `interface/ui/routes/stream.py` serves the stream.
 Every other write the server makes runs in its own process, through the function
 that owns it: stage ③'s review functions, import's reader, `sheet()` for a
 target's first sheet when a draft is made from another flow, filled from the
