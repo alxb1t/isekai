@@ -107,7 +107,10 @@ The change adds no test and removes none: `git diff --name-only main -- tests` l
 
 ### Equivalent mutants
 
-Pre-flight at the base: not run.
+Pre-flight at the base: run.
+
+- `post_draft`, `for (at, _, _), answer in zip(located, checked, strict=True)` → `strict=False`: `refuse_image_drafts` answers each image it is given, so `checked` and `located` share a length whatever a request holds, and `strict` only asserts it.
+- `post_draft`, `for one, answer in zip(named, answers, strict=True)` → `strict=False`: `answers` is built as `[None] * len(named)`, so the lists share a length by construction.
 
 Closing runs: not run.
 

@@ -4,33 +4,33 @@ The phases are the reads, the writes and the documents. Each moves lines and no 
 
 ## Progress
 
-- [ ] 1 — The reads · moderate
+- [x] 1 — The reads · moderate
 - [ ] 2 — The writes · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The reads
 
-- [ ] 1.1 **HALT CHECK** No test patches a name of `isekai/interface/ui/app.py` that the review's routes or helpers read: the one patch the module keeps is `run`'s, which `serve` reads.
+- [x] 1.1 **HALT CHECK** No test patches a name of `isekai/interface/ui/app.py` that the review's routes or helpers read: the one patch the module keeps is `run`'s, which `serve` reads.
   Verify: `git grep -n "setattr(app_module" -- tests` prints one line.
-- [ ] 1.2 Before any line moves, run each pre-flight run [D7](design.md#d7) lists over the lines of `isekai/interface/ui/app.py` that the reads and the writes move, one command at a time. Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code, then set that section's first line to `Pre-flight at the base: run.`
+- [x] 1.2 Before any line moves, run each pre-flight run [D7](design.md#d7) lists over the lines of `isekai/interface/ui/app.py` that the reads and the writes move, one command at a time. Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code, then set that section's first line to `Pre-flight at the base: run.`
   Verify: `grep -n "Pre-flight at the base: run" openspec/changes/0154-the-review-routes/design.md` prints a line.
-- [ ] 1.3 Write `isekai/interface/ui/routes/reviewing.py`: `class ReviewRoutes` with `read_input`, `read_photo` and `read_source_copy` as [D1](design.md#d1) and [D4](design.md#d4) say, `_revision`, `_drafted`, `_prose`, `_wd14`, `_tags`, `_command`, `_remedy`, `_flow_of` and `_budget` as module functions, a `ROUTES` table in `app.py`'s order and `mount(app, surface)`.
+- [x] 1.3 Write `isekai/interface/ui/routes/reviewing.py`: `class ReviewRoutes` with `read_input`, `read_photo` and `read_source_copy` as [D1](design.md#d1) and [D4](design.md#d4) say, `_revision`, `_drafted`, `_prose`, `_wd14`, `_tags`, `_command`, `_remedy`, `_flow_of` and `_budget` as module functions, a `ROUTES` table in `app.py`'s order and `mount(app, surface)`.
   Verify: `grep -nE "^(class ReviewRoutes|ROUTES|def mount)" isekai/interface/ui/routes/reviewing.py` prints a line for each of those names.
-- [ ] 1.4 Move `_approved`, `_fields`, `_untagged`, `_decimal`, `_renders_out`, `_saved` and `_photograph` from `isekai/interface/ui/app.py` into `isekai/interface/ui/routes/common.py`, each with its docstring and text unchanged ([D3](design.md#d3)).
+- [x] 1.4 Move `_approved`, `_fields`, `_untagged`, `_decimal`, `_renders_out`, `_saved` and `_photograph` from `isekai/interface/ui/app.py` into `isekai/interface/ui/routes/common.py`, each with its docstring and text unchanged ([D3](design.md#d3)).
   Verify: `git grep -nE "^def _(approved|fields|untagged|decimal|renders_out|saved|photograph)\(" -- isekai/interface/ui/routes/common.py` prints a line for each of those names.
-- [ ] 1.5 Delete the closures `read_input`, `read_photo` and `read_source_copy` from `create_app` in `isekai/interface/ui/app.py`, call `review_mount(app, surface)` after `stream_mount(app, surface)`, and import back `_approved`, `_decimal`, `_photograph`, `_renders_out`, `_saved` and `_untagged` from `routes/common.py` and `_budget` and `_command` from `routes/reviewing.py`. Prune the imports `app.py` no longer reads, and keep each name a test reads from `app.py` ([D3](design.md#d3), [D6](design.md#d6)).
+- [x] 1.5 Delete the closures `read_input`, `read_photo` and `read_source_copy` from `create_app` in `isekai/interface/ui/app.py`, call `review_mount(app, surface)` after `stream_mount(app, surface)`, and import back `_approved`, `_decimal`, `_photograph`, `_renders_out`, `_saved` and `_untagged` from `routes/common.py` and `_budget` and `_command` from `routes/reviewing.py`. Prune the imports `app.py` no longer reads, and keep each name a test reads from `app.py` ([D3](design.md#d3), [D6](design.md#d6)).
   Verify: `git grep -nE "def (read_input|read_photo|read_source_copy)\(" -- isekai/interface/ui/app.py` prints nothing.
-- [ ] 1.6 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`: the new module and the pruned imports change them.
+- [x] 1.6 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`: the new module and the pruned imports change them.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 1.7 Prove the move against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
+- [x] 1.7 Prove the move against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py tests/test_ui_api.py tests/test_ui.py` exits 0.
-- [ ] 1.8 Run `git add -N isekai/interface/ui/routes/reviewing.py`, since `tools.mutate` copies tracked files only, then close with `tools.mutate` on the module's first range ([D7](design.md#d7)). Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code.
+- [x] 1.8 Run `git add -N isekai/interface/ui/routes/reviewing.py`, since `tools.mutate` copies tracked files only, then close with `tools.mutate` on the module's first range ([D7](design.md#d7)). Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:1-100 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 1.9 Close with the next range of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 1.8 says.
+- [x] 1.9 Close with the next range of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 1.8 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:101-200 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 1.10 Close with the rest of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 1.8 says.
+- [x] 1.10 Close with the rest of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 1.8 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:201-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 1.11 Close with `tools.mutate` on the helpers `isekai/interface/ui/routes/common.py` holds now, each survivor handled as 1.8 says.
+- [x] 1.11 Close with `tools.mutate` on the helpers `isekai/interface/ui/routes/common.py` holds now, each survivor handled as 1.8 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/common.py:1-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 
 ## 2 — The writes
