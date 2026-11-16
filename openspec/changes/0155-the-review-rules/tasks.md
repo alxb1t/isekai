@@ -4,14 +4,14 @@ The phases `lens` and `kicker`, each a module with its test written first and th
 
 ## Progress
 
-- [ ] 1 — The viewer's rules in `lens.ts` · moderate
+- [x] 1 — The viewer's rules in `lens.ts` · moderate
 - [ ] 2 — The status line's rules in `kicker.ts` · moderate
 
 ## 1 — The viewer's rules in `lens.ts`
 
-- [ ] 1.1 Write `ui/src/lens.test.ts` first: one `spec(` per row of [D3](design.md#d3)'s `lens.ts` table, its key a string literal, its assertions the text of that scenario's WHEN and THEN, over `viewedOf` and `photographStep` from `./lens`. Then add `ui/src/lens.ts` per [D1](design.md#d1), with the body of `viewed` and the branch order of `photograph` from `ui/src/views/Review.vue`, comments moved with the code.
+- [x] 1.1 Write `ui/src/lens.test.ts` first: one `spec(` per row of [D3](design.md#d3)'s `lens.ts` table, its key a string literal, its assertions the text of that scenario's WHEN and THEN, over `viewedOf` and `photographStep` from `./lens`. Then add `ui/src/lens.ts` per [D1](design.md#d1), with the body of `viewed` and the branch order of `photograph` from `ui/src/views/Review.vue`, comments moved with the code.
   Verify: `uv run python -m tools.test_ui ui/src/lens.test.ts` exits 0.
-- [ ] 1.2 In `ui/src/views/Review.vue` import `Lens`, `viewedOf` and `photographStep` from `../lens`, delete the local `type Lens`, make `viewed` one `computed` calling `viewedOf`, and write `photograph()` as [D1](design.md#d1) shows. Leave `openLens`, `closeLens`, `photographKey` and the one `useKeys` call as they are ([D5](design.md#d5)).
+- [x] 1.2 In `ui/src/views/Review.vue` import `Lens`, `viewedOf` and `photographStep` from `../lens`, delete the local `type Lens`, make `viewed` one `computed` calling `viewedOf`, and write `photograph()` as [D1](design.md#d1) shows. Leave `openLens`, `closeLens`, `photographKey` and the one `useKeys` call as they are ([D5](design.md#d5)).
   Verify: `git grep -n "^type Lens" -- ui/src/views/Review.vue` prints nothing.
 
 ## 2 — The status line's rules in `kicker.ts`

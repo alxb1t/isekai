@@ -25,6 +25,7 @@ import { useKeys } from '../composables/useKeys'
 import { chooses, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import type { Move } from '../grid'
+import { type Lens, photographStep, viewedOf } from '../lens'
 import { nextPane, type Pane, paneKeys } from '../panes'
 import { nearest, stepFour } from '../slots'
 import { type Command, modded, plain, shifted, useKeyStore } from '../stores/keys'
@@ -100,8 +101,6 @@ const source = ref<HTMLElement | null>(null)
 
    `candidates` is fetched once per sitting and then held: the table does not
    move while a surface is up. */
-type Lens = 'photo' | 'render' | 'pair' | 'cheatsheet'
-
 const lens = ref<Lens | null>(null)
 /* Where the focus was when a lens opened, a field included: closing gives it back. */
 let returnTo: HTMLElement | null = null
@@ -129,16 +128,7 @@ const opened = computed(() =>
     0,
   ),
 )
-const viewed = computed(() => {
-  if (lens.value === 'photo') return { images: photos.value, start: opened.value }
-  if (!revised.value) return null
-  const { src, seed } = revised.value
-  const render = { src, name: seed === null ? 'the image it was drafted from' : `render · seed ${seed}` }
-  if (lens.value === 'render') return { images: [render], start: 0 }
-  const photo = photos.value[opened.value]
-  if (lens.value === 'pair' && photo) return { images: [photo, render], start: 0 }
-  return null
-})
+const viewed = computed(() => viewedOf(lens.value, photos.value, opened.value, revised.value))
 
 const clock = (at: number | null) =>
   at === null ? null : new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
@@ -383,13 +373,11 @@ function toggleLens(which: Lens): void {
   else void openLens(which)
 }
 
-/* `⌃P`: the photograph, on a revision or a draft from an image the pair; in the
-   pair, the photograph alone and back. */
 function photograph(): void {
-  if (lens.value === 'pair') lens.value = 'photo'
-  else if (lens.value === 'photo' && revised.value) lens.value = 'pair'
-  else if (lens.value === 'photo') closeLens()
-  else void openLens(revised.value ? 'pair' : 'photo')
+  const to = photographStep(lens.value, revised.value !== null)
+  if (to === 'close') closeLens()
+  else if (lens.value === 'pair' || lens.value === 'photo') lens.value = to
+  else void openLens(to)
 }
 
 const photographKey: Command = {

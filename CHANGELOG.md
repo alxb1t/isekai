@@ -16,6 +16,8 @@ its new digest.
   `post_draft`, and `app.py` falls under the ceiling, so its row leaves the ratchet (0154 D3, D5, D9).
 - The docs, the `app.py` docstring and the recorded mutants follow the move: D59 no longer lists the review among the
   routes left in `create_app`, `PB-2c` points at `routes/reviewing.py` and `UA-7` anchors on the pruned import (0154 D8).
+- `lens.ts` holds the viewer's rule, `viewedOf`, and `⌃P`'s step, `photographStep`, with a vitest test bound to the
+  photograph, pair and conjure-from scenarios; `Review.vue` switches to it and keeps its one `useKeys` call (0155 D1, D3, D5).
 
 ## [0.87.9] - 2026-11-16
 
