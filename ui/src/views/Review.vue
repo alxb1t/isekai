@@ -25,6 +25,8 @@ import { useKeys } from '../composables/useKeys'
 import { chooses, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import type { Move } from '../grid'
+import { clock, kickerOf, minute } from '../kicker'
+import { type Lens, photographStep, viewedOf } from '../lens'
 import { nextPane, type Pane, paneKeys } from '../panes'
 import { nearest, stepFour } from '../slots'
 import { type Command, modded, plain, shifted, useKeyStore } from '../stores/keys'
@@ -100,8 +102,6 @@ const source = ref<HTMLElement | null>(null)
 
    `candidates` is fetched once per sitting and then held: the table does not
    move while a surface is up. */
-type Lens = 'photo' | 'render' | 'pair' | 'cheatsheet'
-
 const lens = ref<Lens | null>(null)
 /* Where the focus was when a lens opened, a field included: closing gives it back. */
 let returnTo: HTMLElement | null = null
@@ -129,31 +129,7 @@ const opened = computed(() =>
     0,
   ),
 )
-const viewed = computed(() => {
-  if (lens.value === 'photo') return { images: photos.value, start: opened.value }
-  if (!revised.value) return null
-  const { src, seed } = revised.value
-  const render = { src, name: seed === null ? 'the image it was drafted from' : `render · seed ${seed}` }
-  if (lens.value === 'render') return { images: [render], start: 0 }
-  const photo = photos.value[opened.value]
-  if (lens.value === 'pair' && photo) return { images: [photo, render], start: 0 }
-  return null
-})
-
-const clock = (at: number | null) =>
-  at === null ? null : new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
-
-/* The draft's time to the minute. It is rewritten every few seconds while the
-   operator types, and a seconds field that ticks under the eye is noise; the
-   approved time keeps its seconds, because it is written once. */
-const minute = (at: number | null) =>
-  at === null
-    ? null
-    : new Date(at * 1000).toLocaleTimeString('en-GB', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+const viewed = computed(() => viewedOf(lens.value, photos.value, opened.value, revised.value))
 
 /* When the sheet was approved: in this sitting, else as the server read it. */
 const approvedAt = computed(() => clock(approval.at.value ?? sheet.detail.value?.approved_at ?? null))
@@ -164,22 +140,15 @@ const refusal = computed(
     approval.refusal.value ?? sheet.refusal.value ?? refused.value,
 )
 
-/* `③ sheet — approved` once it is, which is also when the fields go read-only.
-   The reading is taken from disk rather than from anything held here. It is NOT
-   "has no draft": `review --new-version` writes a draft beside the approved
-   artifact, and that input is re-opened -- editable, and carrying a correction
-   the tagger did not write. */
-const kicker = computed(() => {
-  if (drafted.value && !sheet.detail.value?.approved) return 'draft'
-  // No approved artifact is the tagger's draft, whether or not the payload has
-  // arrived -- `readonly` defaults to true while `detail` is null, so testing
-  // it first would call an unloaded sheet approved.
-  if (!sheet.detail.value?.approved) return 'draft from the tagger'
-  if (sheet.readonly.value) return approvedAt.value ? `approved ${approvedAt.value}` : 'approved'
-  const held = revision.value
-  if (held?.seed) return `revision of render ${held.seed}`
-  return held ? `revision of v${held.version}` : 're-opened'
-})
+const kicker = computed(() =>
+  kickerOf({
+    drafted: drafted.value !== null,
+    approved: Boolean(sheet.detail.value?.approved),
+    readonly: sheet.readonly.value,
+    approvedAt: approvedAt.value,
+    revision: revision.value,
+  }),
+)
 
 /* Read the collection and the open sheet again, staying on it; a refusal shows in
    the approve bar. */
@@ -383,13 +352,11 @@ function toggleLens(which: Lens): void {
   else void openLens(which)
 }
 
-/* `⌃P`: the photograph, on a revision or a draft from an image the pair; in the
-   pair, the photograph alone and back. */
 function photograph(): void {
-  if (lens.value === 'pair') lens.value = 'photo'
-  else if (lens.value === 'photo' && revised.value) lens.value = 'pair'
-  else if (lens.value === 'photo') closeLens()
-  else void openLens(revised.value ? 'pair' : 'photo')
+  const to = photographStep(lens.value, revised.value !== null)
+  if (to === 'close') closeLens()
+  else if (lens.value === 'pair' || lens.value === 'photo') lens.value = to
+  else void openLens(to)
 }
 
 const photographKey: Command = {
