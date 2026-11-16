@@ -20,6 +20,8 @@ its new digest.
   photograph, pair and conjure-from scenarios; `Review.vue` switches to it and keeps its one `useKeys` call (0155 D1, D3, D5).
 - `kicker.ts` holds the status line's rule, `kickerOf`, and the time formats `clock` and `minute`, with a vitest test bound
   to the conjure-from scenario; `Review.vue` switches to it and its ratchet row falls to the view's new length (0155 D2, D3, D6).
+- `next_version` refuses a directory that holds version 999, naming the directory and the way out, so a write no longer
+  lands on `1000.json` and overwrites it; unit tests at 998 and 999 bind the new scenario (0156 D1, D2, D3).
 
 ## [0.87.9] - 2026-11-16
 

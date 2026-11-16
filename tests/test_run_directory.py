@@ -335,6 +335,29 @@ def test_each_stage_numbers_within_its_own_directory(
     assert versions(sheets) == [1]
 
 
+@pytest.mark.spec("run-directory:numbering:a-full-directory-refuses-a-new-version")
+def test_a_directory_holding_version_999_refuses_the_next_number(
+    tmp_path: Path,
+) -> None:
+    directory = tmp_path / "captions"
+    write_json(directory / artifact_name(999), {})
+
+    with pytest.raises(Refusal) as refused:
+        next_version(directory)
+
+    assert f"{tmp_path.name}/captions" in str(refused.value)
+    assert "move" in str(refused.value)
+    assert sorted(os.listdir(directory)) == ["999.json"]
+
+
+@pytest.mark.spec("run-directory:numbering:a-full-directory-refuses-a-new-version")
+def test_the_number_after_998_is_still_taken(tmp_path: Path) -> None:
+    directory = tmp_path / "captions"
+    write_json(directory / artifact_name(998), {})
+
+    assert next_version(directory) == 999
+
+
 def _sheet_from_wd14(
     run: Run, version: int, schema: Schema, vocabulary: Vocabulary
 ) -> Sheet:
