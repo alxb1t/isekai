@@ -2887,6 +2887,7 @@ def _quoting_two(
 
 
 @pytest.mark.spec("ui:render:the-dialog-quotes-every-collection")
+@pytest.mark.spec("ui:render:a-running-session-shows-its-totals")
 def test_one_quote_covers_every_ticked_collection(
     wired: Wiring,
     made: Run,
