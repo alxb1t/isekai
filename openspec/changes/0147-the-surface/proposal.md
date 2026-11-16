@@ -5,7 +5,7 @@ after: [0146-the-billing-watch]
 
 # The surface
 
-`create_app` hands what its routes share to a `Surface`, and the vocabulary, tattoo library and place routes to routers, with behaviour unchanged.
+`create_app` hands what its routes share to a `Surface`, and the vocabulary, tattoo library and place routes to resource classes in `routes/`, with behaviour unchanged.
 
 Reading map: [design](design.md) holds the shape, where each name goes and the test cost, [tasks](tasks.md) holds the phases: the surface, vocabulary and the tattoo library, place, the documents.
 
@@ -19,7 +19,7 @@ This version proves the shape on the routes no test patches and no lock guards: 
 
 - `isekai/interface/ui/surface.py` is new. It imports no web framework and holds `Surface`: the folders, the wiring, the flows, the jobs, billing, imports, the broadcast, the shared vocabulary and the upload limit, and the shared closures of `create_app` as methods. `Held`, `_Shared`, `_version`, `_flow` and their constants move into it.
 - `isekai/interface/ui/routes/` is new: a class for the vocabulary routes, the tattoo library routes and the place routes, each registered from a table of method, path and handler. The `*_KEYS` tuples move to `routes/keys.py`; `_dimensions` and `_needs` to `routes/common.py`.
-- `create_app` builds a `Surface`, binds its methods under today's names and includes the routers before the catch-alls. No other route's line changes.
+- `create_app` builds a `Surface`, binds its methods under today's names and registers the resources' routes on the app itself before the catch-alls. No other route's line changes.
 - `docs/decisions.md` gains a decision for the shape. `app.py`'s docstring, the interface's README, `docs/modules.md` and `ARCHITECTURE.md` are amended.
 
 ## Capabilities

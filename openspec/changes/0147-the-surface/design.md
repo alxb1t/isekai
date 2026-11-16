@@ -29,10 +29,10 @@ Between the grilling's read and this cut no line of `app.py`, of the server's te
 |---|---|---|---|
 | [D1](#d1) | `Surface` is a class in `surface.py` with no web framework; `create_app` builds it and binds its methods under today's names | no route's line changes, and `Jobs(`, `Billing(` and `Imports(` stay built in `create_app`, where a test patches `Jobs` | a dataclass of fields: the closures are methods; building the jobs inside `Surface`: it moves a patched name |
 | [D2](#d2) | `offered` is cached per surface by `functools.cache` over a private method, bound in `__init__` | a flow is pinned while served, as today; the cache dies with the surface, as it does with the app | `cache` on the method: it keeps `self` alive in a module-level table |
-| [D3](#d3) | a resource is a class: `__init__(self, surface)`, today's handlers as methods, a `ROUTES` table of `Route(method, path, handler)` and `router(surface)` | the ratchets list no new row, a method is no wider than its handler, and a body keeps its text but for the surface's prefix | a function holding the handlers as closures: over the function ceiling at once |
-| [D4](#d4) | the routers live in `routes/`, entered by `app.py` alone; none imports `app.py` or a name of `isekai.interface.ui` that is no module | a cycle inside the layer is red, lazy imports included; the entry point imports with site-packages off, so FastAPI is reached through `app.py` alone | a router of `app.py`'s own: it is the cycle |
+| [D3](#d3) | a resource is a class: `__init__(self, surface)`, today's handlers as methods, a `ROUTES` table of `Route(method, path, handler)` and `mount(app, surface)`, which registers each row on the app itself | the ratchets list no new row, a method is no wider than its handler, a body keeps its text but for the surface's prefix, and each route stays one `APIRoute` of `app.routes`, where the server's tests and `tests/record.py` read its `path` and `methods` | a function holding the handlers as closures: over the function ceiling at once; an `APIRouter` the app includes: FastAPI 0.141.1 leaves one `_IncludedRouter` in `app.routes`, with no `path` or `methods` there |
+| [D4](#d4) | the resource modules live in `routes/`, entered by `app.py` alone; none imports `app.py` or a name of `isekai.interface.ui` that is no module | a cycle inside the layer is red, lazy imports included; the entry point imports with site-packages off, so FastAPI is reached through `app.py` alone | a resource module of `app.py`'s own: it is the cycle |
 | [D5](#d5) | a moved name keeps its spelling; `app.py` keeps binding `Held`, `RARE_BELOW` and the `*_KEYS` tuples | `tests/test_ui_api.py` imports `RARE_BELOW` and `Held`, and `tests/test_ui_wire.py` reads the tuples from `vars(app_module)` | repointing the tests: a later version's work |
-| [D6](#d6) | the shared helpers go to the lowest module that holds all their readers | `_version`, `_DECIMAL` and `_flow` are read by the surface and by `app.py`; `_dimensions` and `_needs` by the routers and `app.py` | one helper module for all: it is a grab bag |
+| [D6](#d6) | the shared helpers go to the lowest module that holds all their readers | `_version`, `_DECIMAL` and `_flow` are read by the surface and by `app.py`; `_dimensions` and `_needs` by the resource modules and `app.py` | one helper module for all: it is a grab bag |
 | [D7](#d7) | phase 1 opens with `tools.mutate` over its ranges in `app.py`; phases 2 and 3 open with the tests' baseline; each closes with `tools.mutate` on its new modules | phase 1 shifts every later line of `app.py`, so no range of it holds for phase 2; the closing run covers the same mutants | a range-based opening for every phase: stale after phase 1 |
 | [D8](#d8) | a new decision, `D59`, states the shape; `app.py`'s docstring, the interface's README, `docs/modules.md` and `ARCHITECTURE.md` are amended | the documents this move makes false are amended in its diff, and a rule gets a decision | amending later: a stale claim ships |
 
@@ -86,10 +86,10 @@ A handler's body is its text today with `self.surface.` in front of each name th
 ```
 @app.get("/api/tags")  def read_tags(...)   ──▶   Route("GET", "/api/tags", "read_tags")
                                                   ROUTES = (Route(...), ...)
-router(surface) = register(APIRouter(), VocabularyRoutes(surface), ROUTES)
+mount(app, surface) = register(app, VocabularyRoutes(surface), ROUTES)
 ```
 
-`routes/table.py` holds `Route` and `register`; `register` calls `router.add_api_route(path, getattr(resource, handler), methods=[method])`. A row that names no method fails when the app is built, in every test of the server.
+`routes/table.py` holds `Route` and `register`; `register(app, resource, table)` calls `app.add_api_route(path, getattr(resource, handler), methods=[method])` on the app itself, and no module builds an `APIRouter`: an included router is one `_IncludedRouter` in `app.routes`, and a route registered on the app is one `APIRoute` there, as `@app.get` left it. A row that names no method fails when the app is built, in every test of the server.
 
 ### D4
 
@@ -99,7 +99,7 @@ app.py ──▶ routes/{vocabulary,tattoos,place}.py ──▶ routes/{keys,com
    └──────────────▶ surface.py ◀┘      surface.py ──▶ library, jobs, billing, events
 ```
 
-`routes/__init__.py` holds a docstring. `app.py` imports each `router` by name, as `router as <group>_router`, never a router module whose name another import of `app.py` already binds. The routers are included right before `no_route`, so the catch-alls and the assets' mount stay last. Their imports of siblings are `from isekai.interface.ui import library`, a module, never a name `ui/__init__.py` defines.
+`routes/__init__.py` holds a docstring. `app.py` imports each `mount` by name, as `mount as <group>_mount`, never a module of `routes/` whose name another import of `app.py` already binds. It calls each with the app and the surface right before `no_route`, so the catch-alls and the assets' mount stay last. Their imports of siblings are `from isekai.interface.ui import library`, a module, never a name `ui/__init__.py` defines.
 
 ### D5
 
@@ -109,9 +109,9 @@ app.py ──▶ routes/{vocabulary,tattoos,place}.py ──▶ routes/{keys,com
 
 | name | goes to | read by |
 |---|---|---|
-| `Held`, `_Shared`, `_version`, `_flow`, `_DECIMAL`, `_BAKE_DIGITS` | `surface.py` | the surface; `app.py` binds `Held`, `_version`, `_DECIMAL`; the vocabulary router reads `_flow` |
+| `Held`, `_Shared`, `_version`, `_flow`, `_DECIMAL`, `_BAKE_DIGITS` | `surface.py` | the surface; `app.py` binds `Held`, `_version`, `_DECIMAL`; `routes/vocabulary.py` reads `_flow` |
 | `_dimensions`, `_needs` | `routes/common.py` | the tattoo library, place and the review's `read_input` |
-| `OUTLINE_KEYS`, `STAGE1_KEYS` (phase 2), `INK_KEYS`, `PREVIEW_KEYS`, `PROPOSE_KEYS`, `BAKE_KEYS` (phase 3) | `routes/keys.py` | their routers; `app.py` binds each |
+| `OUTLINE_KEYS`, `STAGE1_KEYS` (phase 2), `INK_KEYS`, `PREVIEW_KEYS`, `PROPOSE_KEYS`, `BAKE_KEYS` (phase 3) | `routes/keys.py` | their resource modules; `app.py` binds each |
 | `RARE_BELOW`, `DEFAULT_LIMIT` | `routes/vocabulary.py` | `read_tags`; `app.py` binds `RARE_BELOW` |
 | `_digest_asked`, `_tattoo_limits` | `routes/tattoos.py` | the tattoo library alone |
 | `BAKE_EDIT`, `_is_point`, `_points_of`, `_upright_of` | `routes/place.py` | place alone |
