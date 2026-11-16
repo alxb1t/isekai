@@ -20,9 +20,10 @@ its new digest.
 - `create_app` takes `file_response`, defaulting to `FileResponse`, and the `Surface` holds it; the photograph and image
   routes answer through it, and the two tests that patched `FileResponse` pass it, so `serve` is unchanged
   (0150 D1, D2, D3, D5).
-- `create_app` takes `save_draft`, `approve`, `precondition` and `draft_lock`, and the `Surface` holds them; the draft's
-  routes read them there, each app builds its own lock, and the tests that patched them pass them, so `serve` is
-  unchanged. A new test holds that an app given no lock holds one (0150 D1, D2, D4, D5, D6).
+- `create_app` takes `save_draft`, `approve`, `precondition` and `draft_lock`, held by the `Surface`; each app builds
+  its own lock, the tests that patched them pass them, and a new test holds the default lock (0150 D1, D2, D4, D5, D6).
+- D61 says what a test replaces in the server is a parameter of `create_app`; D59's *Accepts*, the docstrings of `app.py`
+  and `surface.py` and the interface's README name the seams (0150 D7).
 
 ## [0.87.4] - 2026-11-16
 

@@ -7,7 +7,7 @@ The phases: the jobs, the file response, the draft's four, the documents. Nothin
 - [x] 1 — The jobs · moderate
 - [x] 2 — The file response · moderate
 - [x] 3 — The draft's four · moderate
-- [ ] 4 — The documents · moderate
+- [x] 4 — The documents · moderate
 
 ## 1 — The jobs
 
@@ -66,23 +66,23 @@ The phases: the jobs, the file response, the draft's four, the documents. Nothin
 
 ## 4 — The documents
 
-- [ ] 4.1 **HALT CHECK** `0149`'s decision is on the page, so D61 is the next free number ([D7](design.md#d7)).
+- [x] 4.1 **HALT CHECK** `0149`'s decision is on the page, so D61 is the next free number ([D7](design.md#d7)).
   Verify: `git grep -n -F '### D60 · ' -- docs/decisions.md` prints a line.
-- [ ] 4.2 In `docs/decisions.md` add the decision of [D7](design.md#d7), `### D61 · What a test replaces in the server is a parameter of create_app`, after D60's block and before `## Infrastructure`.
+- [x] 4.2 In `docs/decisions.md` add the decision of [D7](design.md#d7), `### D61 · What a test replaces in the server is a parameter of create_app`, after D60's block and before `## Infrastructure`.
   Verify: `git grep -n -F '### D61 · What a test replaces in the server is a parameter of create_app' -- docs/decisions.md` prints its line.
-- [ ] 4.3 In `docs/decisions.md`, D59's *Accepts* line reads in full "the routes that read a seam of `create_app` stay closures of `create_app`, with `make_jobs` and `run` kept there, and so do the library, staging, review and images routes, until their versions. Reopen when the last of them moves.", where it read "the routes that read a name a test patches stay closures of `create_app`, with `Jobs(` and `run` kept there, and so do …". Its *Made by* line reads `0147`, `0148`, `0150`.
+- [x] 4.3 In `docs/decisions.md`, D59's *Accepts* line reads in full "the routes that read a seam of `create_app` stay closures of `create_app`, with `make_jobs` and `run` kept there, and so do the library, staging, review and images routes, until their versions. Reopen when the last of them moves.", where it read "the routes that read a name a test patches stay closures of `create_app`, with `Jobs(` and `run` kept there, and so do …". Its *Made by* line reads `0147`, `0148`, `0150`.
   Verify: `git grep -n -F 'the routes that read a name a test patches stay closures' -- docs/decisions.md` prints nothing.
-- [ ] 4.4 In the docstring of `isekai/interface/ui/app.py` the sentence "`create_app` declares the routes that read a name a test patches, and the rest." reads "`create_app` takes what a test replaces and declares the routes that read it, and the rest."
+- [x] 4.4 In the docstring of `isekai/interface/ui/app.py` the sentence "`create_app` declares the routes that read a name a test patches, and the rest." reads "`create_app` takes what a test replaces and declares the routes that read it, and the rest."
   Verify: `git grep -n -F 'takes what a test replaces' -- isekai/interface/ui/app.py` prints a line.
-- [ ] 4.5 In the docstring of `isekai/interface/ui/surface.py` say that the surface also holds the seams a test replaces: the file response, `save_draft`, `approve`, the precondition check and the draft lock.
+- [x] 4.5 In the docstring of `isekai/interface/ui/surface.py` say that the surface also holds the seams a test replaces: the file response, `save_draft`, `approve`, the precondition check and the draft lock.
   Verify: `git grep -n -F 'a test replaces' -- isekai/interface/ui/surface.py` prints a line.
-- [ ] 4.6 In `isekai/interface/README.md` the `ui/surface.py` row reads "… the shared vocabulary, the upload limit and the seams a test replaces (the file response, `save_draft`, `approve`, the precondition check and the draft lock), and the lookups every route makes over them. …"; the `ui/app.py` row reads "… it takes the seams a test replaces and the jobs' factory, builds the `Surface`, mounts each resource of `ui/routes/` and imports uvicorn".
+- [x] 4.6 In `isekai/interface/README.md` the `ui/surface.py` row reads "… the shared vocabulary, the upload limit and the seams a test replaces (the file response, `save_draft`, `approve`, the precondition check and the draft lock), and the lookups every route makes over them. …"; the `ui/app.py` row reads "… it takes the seams a test replaces and the jobs' factory, builds the `Surface`, mounts each resource of `ui/routes/` and imports uvicorn".
   Verify: `git grep -n -F 'the precondition check and the draft lock' -- isekai/interface/README.md` prints a line.
-- [ ] 4.7 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
+- [x] 4.7 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` passes.
-- [ ] 4.8 Replay the recorded mutants: no entry of `tests/mutants.json` is anchored in a line this change rewrites ([D8](design.md#d8)).
+- [x] 4.8 Replay the recorded mutants: no entry of `tests/mutants.json` is anchored in a line this change rewrites ([D8](design.md#d8)).
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
-- [ ] 4.9 Hold the series' conditions: nothing under `tests/record/` and no entry of `tests/mutants.json` differs from the cut's base.
+- [x] 4.9 Hold the series' conditions: nothing under `tests/record/` and no entry of `tests/mutants.json` differs from the cut's base.
   Verify: `git diff --exit-code bc16b803 -- tests/record tests/mutants.json` exits 0.
-- [ ] 4.10 Run the documents' and the guards' tests.
+- [x] 4.10 Run the documents' and the guards' tests.
   Verify: `uv run pytest tests/test_docs.py tests/test_ratchets.py tests/test_layers.py tests/test_record.py` passes.
