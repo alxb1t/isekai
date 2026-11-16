@@ -2714,6 +2714,7 @@ def test_a_draft_from_onto_an_edited_waiting_draft_answers_it_and_writes_nothing
 
 
 @pytest.mark.spec("ui:conjure-from:review-reads-the-draft-against-the-sheet")
+@pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
 def test_review_reads_a_drafted_draft_against_its_sheet_and_its_image(
     wired: Wiring,
     made: Run,
