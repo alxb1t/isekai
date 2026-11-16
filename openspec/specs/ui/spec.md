@@ -1446,6 +1446,13 @@ reaches nothing.
 - **THEN** gpunit is asked once on start, and again at each interval while a session runs or an alert is open
 - **AND** it is asked no more once neither holds, or once the surface stops
 
+#### Scenario: an ask that raises does not stop the asking
+- **Key:** `ui:billing:an-ask-that-raises-does-not-stop-the-asking`
+- **Layers:** unit
+- **WHEN** an ask of gpunit raises, on start or at an interval while a session runs or an alert is open
+- **THEN** gpunit is asked again at the next interval while a session runs or an alert is open
+- **AND** Check again, asked for, still raises to its caller
+
 #### Scenario: a volume past its window takes the band
 - **Key:** `ui:billing:a-volume-past-its-window-takes-the-band`
 - **Layers:** unit
