@@ -28,8 +28,8 @@ The phases are the reads, the writes and the documents. Each moves lines and no 
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:1-100 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 - [x] 1.9 Close with the next range of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 1.8 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:101-200 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [x] 1.10 Close with the rest of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 1.8 says.
-  Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:201-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
+- [x] 1.10 Close with the rest of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 1.8 says. Phase 2 adds `post_draft` to the file, and lines 331 and 339 hold the two `strict=True` mutants that [Equivalent mutants](design.md#equivalent-mutants) names, and `tools.mutate` reads `equivalent` in an `--edits` entry alone, so the run leaves those two lines out.
+  Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:201-330 isekai/interface/ui/routes/reviewing.py:332-338 isekai/interface/ui/routes/reviewing.py:340-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 - [x] 1.11 Close with `tools.mutate` on the helpers `isekai/interface/ui/routes/common.py` holds now, each survivor handled as 1.8 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/common.py:1-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 
