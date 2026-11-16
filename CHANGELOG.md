@@ -16,6 +16,9 @@ its new digest.
 - The vocabulary and tattoo library routes move out of `create_app` into `VocabularyRoutes` and `TattooRoutes` in
   `isekai/interface/ui/routes/`, registered from tables on the app itself, so each stays one route of `app.routes`;
   no route, wire or answer changes (0147 D3, D4, D5, D6).
+- The place routes (ink, preview, bake, propose) move out of `create_app` into `PlaceRoutes` in
+  `isekai/interface/ui/routes/place.py`, and their `*_KEYS` tuples into `routes/keys.py`, still bound in `app.py`;
+  no route, wire or answer changes. Two tests close what the move's mutation run left open (0147 D3, D5, D6, D7).
 
 ## [0.87.2] - 2026-11-16
 

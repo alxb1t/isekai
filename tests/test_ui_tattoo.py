@@ -578,6 +578,16 @@ def test_ink_preview_route_refuses_an_unknown_tattoo_naming_it(
     assert "ghost" in answered.json()["refusal"]
 
 
+@pytest.mark.spec_exempt("structural: the collection is checked before the body")
+def test_ink_preview_route_refuses_an_unknown_collection_before_the_body(
+    client: TestClient,
+) -> None:
+    answered = client.post("/api/c/nowhere/tattoos/arm/ink", json={})
+
+    assert answered.status_code == 409
+    assert "'nowhere'" in answered.json()["refusal"]
+
+
 @pytest.mark.spec("tattoo:cut:a-cut-serves-only-its-own-photograph")
 def test_ink_preview_route_refuses_a_cut_asked_on_another_photograph(
     library: Path, client: TestClient, photographed: Callable[..., Run]

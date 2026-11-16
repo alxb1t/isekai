@@ -6,7 +6,7 @@ Each phase is a move with behaviour unchanged: the surface, vocabulary and the t
 
 - [x] 1 — The surface · hard
 - [x] 2 — Vocabulary and the tattoo library · hard
-- [ ] 3 — Place · moderate
+- [x] 3 — Place · moderate
 - [ ] 4 — The documents and the replay · moderate
 
 ## 1 — The surface
@@ -51,19 +51,19 @@ Each phase is a move with behaviour unchanged: the surface, vocabulary and the t
 
 ## 3 — Place
 
-- [ ] 3.1 Pre-flight: the tests' baseline on the tree phase 2 left, the test files [D7](design.md#d7) lists green before a line moves.
+- [x] 3.1 Pre-flight: the tests' baseline on the tree phase 2 left, the test files [D7](design.md#d7) lists green before a line moves.
   Verify: `uv run pytest tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_library.py tests/test_ui_wire.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ui_propose.py tests/test_ui_billing.py` passes.
-- [ ] 3.2 Add `INK_KEYS`, `PREVIEW_KEYS`, `PROPOSE_KEYS` and `BAKE_KEYS` to `routes/keys.py`, moved from `app.py` with their comments unchanged.
+- [x] 3.2 Add `INK_KEYS`, `PREVIEW_KEYS`, `PROPOSE_KEYS` and `BAKE_KEYS` to `routes/keys.py`, moved from `app.py` with their comments unchanged.
   Verify: `grep -nE '^(INK_KEYS|PREVIEW_KEYS|PROPOSE_KEYS|BAKE_KEYS)' isekai/interface/ui/routes/keys.py` prints a line for each of the four names.
-- [ ] 3.3 Write the new `isekai/interface/ui/routes/place.py` holding `BAKE_EDIT`; `class PlaceRoutes` with `post_ink`, `placed_on`, `post_preview`, `post_bake` and `post_propose`, where `post_preview`, `post_bake` and `post_propose` each call `self.placed_on`; `_is_point`, `_points_of` and `_upright_of` as module functions; a `ROUTES` table and `mount(app, surface)`, as [D3](design.md#d3) draws it.
+- [x] 3.3 Write the new `isekai/interface/ui/routes/place.py` holding `BAKE_EDIT`; `class PlaceRoutes` with `post_ink`, `placed_on`, `post_preview`, `post_bake` and `post_propose`, where `post_preview`, `post_bake` and `post_propose` each call `self.placed_on`; `_is_point`, `_points_of` and `_upright_of` as module functions; a `ROUTES` table and `mount(app, surface)`, as [D3](design.md#d3) draws it.
   Verify: `grep -nE '^(BAKE_EDIT|class PlaceRoutes|def _is_point|def _points_of|def _upright_of|ROUTES|def mount)' isekai/interface/ui/routes/place.py` prints a line for each of the seven names.
-- [ ] 3.4 Edit `app.py`: delete the moved handlers, `placed_on`, constants and helpers; bind the tuples by `NAME as NAME`; import `mount as place_mount` by name from `routes/place.py` and call `place_mount(app, surface)` right before `no_route`, after the other two; delete `post_propose` with the rest; drop the `_needs` import if `app.py` no longer reads it. Prune the imports no longer read, and keep each name a test patches.
+- [x] 3.4 Edit `app.py`: delete the moved handlers, `placed_on`, constants and helpers; bind the tuples by `NAME as NAME`; import `mount as place_mount` by name from `routes/place.py` and call `place_mount(app, surface)` right before `no_route`, after the other two; delete `post_propose` with the rest; drop the `_needs` import if `app.py` no longer reads it. Prune the imports no longer read, and keep each name a test patches.
   Verify: `grep -L 'post_propose' isekai/interface/ui/app.py` prints the path.
-- [ ] 3.5 Run `uv run ruff format isekai/interface/ui`, then the server's tests.
+- [x] 3.5 Run `uv run ruff format isekai/interface/ui`, then the server's tests.
   Verify: `uv run pytest tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_library.py tests/test_ui_wire.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ui_propose.py tests/test_ui_billing.py` passes.
-- [ ] 3.6 Run `git add -N isekai/interface/ui/routes`, since `tools.mutate` copies tracked files only. Close with `tools.mutate` over `routes/place.py`, lines 1-2000, on the same test files; `routes/keys.py` holds only tuples and no mutant.
+- [x] 3.6 Run `git add -N isekai/interface/ui/routes`, since `tools.mutate` copies tracked files only. Close with `tools.mutate` over `routes/place.py`, lines 1-2000, on the same test files; `routes/keys.py` holds only tuples and no mutant.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/place.py:1-2000 --tests tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_library.py tests/test_ui_wire.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ui_propose.py tests/test_ui_billing.py` exits 0.
-- [ ] 3.7 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
+- [x] 3.7 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py` passes.
 
 ## 4 — The documents and the replay
