@@ -1,0 +1,58 @@
+{
+  "change": "0146-the-billing-watch",
+  "version": "0.87.2",
+  "base": "ab010b18",
+  "analyzed": "967fdc4d",
+  "measured_on": "local",
+  "collected_at": "2026-11-16T13:03:40+02:00",
+  "mf_version": "v0.101.1",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2391
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 201
+    },
+    "open-backlog-cards": {
+      "value": 8
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 287
+    },
+    "diff-files": {
+      "value": 8
+    },
+    "phases": {
+      "value": 1
+    },
+    "shared-reading-set": {
+      "value": 14816
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1084
+    },
+    "decisions": {
+      "value": 59
+    }
+  }
+}

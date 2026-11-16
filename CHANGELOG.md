@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.2] - 2026-11-16
+
+Gate: local 3m21s · CI not read under mf-ship · 0.87.1: local 1m8s · CI not read under mf-ship
+
 - A gpunit ask that raises no longer ends the billing watch: the watch asks again at the next interval, and Check again
   still raises to its route (0146 D1, D2, D4).
 
