@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.3
 after: [0146-the-billing-watch]
 ---
 
