@@ -1,10 +1,10 @@
 """What the UI's routes share: the folders, the wiring, the flows and the jobs.
 
 `create_app` builds one `Surface` and the routes read it. It also holds the seams
-a test replaces: the file response every route that serves a file answers
-through, `save_draft`, `approve`, the precondition check and the draft lock. This
-module imports no web framework, so the layer's entry point and its tests read it
-whether or not a server is installed.
+a test replaces: the file response the library's files answer through (the
+built bundle's page keeps its own), `save_draft`, `approve`, the precondition
+check and the draft lock. This module imports no web framework, so the layer's
+entry point and its tests read it whether or not a server is installed.
 """
 
 import re
