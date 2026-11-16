@@ -504,7 +504,7 @@ PATCHED_MODULES = {
     "isekai.interface.cli": 2,
     "isekai.interface.render": 2,
     "isekai.interface.ui": 1,
-    "isekai.interface.ui.app": 12,
+    "isekai.interface.ui.app": 1,
     "isekai.interface.ui.bundle": 3,
     "isekai.interface.ui.events": 1,
     "isekai.interface.ui.library": 4,

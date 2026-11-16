@@ -601,8 +601,8 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 **A resource of the UI server is a class in `isekai/interface/ui/routes/`, built over one `Surface` from `surface.py`, with a handler a method and a `ROUTES` table of `Route(method, path, handler)`. Its `mount(app, surface)` registers each row on the app itself, and `app.py` calls each `mount` before the catch-alls. `surface.py` imports no web framework, the modules of `routes/` are reached through `app.py` alone, and no module builds an `APIRouter`.**
 
 - **Why:** `create_app` was one closure holding every route, and its file and function were rows of the ratchet ([D56](#d56--size-and-patches-are-held-by-ratchets)). A route registered on the app stays one `APIRoute` of `app.routes`, where the server's tests and `tests/record.py` read its path and methods; an included router leaves one `_IncludedRouter` there.
-- **Accepts:** the routes that read a name a test patches stay closures of `create_app`, with `Jobs(` and `run` kept there, and so do the library, staging, review and images routes, until their versions. Reopen when the last of them moves.
-- **Made by:** `0147`, `0148`.
+- **Accepts:** the routes that read a seam of `create_app` stay closures of `create_app`, with `make_jobs` and `run` kept there, and so do the library, staging, review and images routes, until their versions. Reopen when the last of them moves.
+- **Made by:** `0147`, `0148`, `0150`.
 
 ### D60 · The page's CSS is the files of ui/src/css/
 
@@ -611,6 +611,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Why:** one sheet held every screen's rules and was the largest row of the ratchet's `ui/src` table ([D56](#d56--size-and-patches-are-held-by-ratchets)). A file a screen puts a rule where a reader looks, and the order of the imports is the cascade's.
 - **Accepts:** a file holds some rules another screen's element wears, and some files depend on their order. Reopen when the rules are regrouped by screen.
 - **Made by:** `0149`.
+
+### D61 · What a test replaces in the server is a parameter of create_app
+
+**`create_app` takes, as keyword-only parameters each defaulting to the object the product uses, what a test replaces: the jobs' factory, the file response, `save_draft`, `approve`, the precondition check and the draft lock. The `Surface` holds each but the factory, a route reads it there, and the draft lock is the app's own.**
+
+- **Why:** a patch of a module's own name is global state that a route moving to another module leaves stranded ([D56](#d56--size-and-patches-are-held-by-ratchets)), and one lock for the process was shared by every app in it.
+- **Accepts:** `run` stays a name a test patches in `app.py`, because `serve` reads it and no route does. Reopen when `serve`'s collaborators are parameters.
+- **Made by:** `0150`.
 
 ## Infrastructure
 
