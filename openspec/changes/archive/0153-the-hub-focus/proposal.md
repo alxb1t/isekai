@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: v0.87.9
 after: [0152-the-run-split]
 ---
 
