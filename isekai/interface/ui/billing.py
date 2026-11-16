@@ -12,6 +12,7 @@ the job's open or close went unanswered ─▶ the band, until gpunit holds no v
 ```
 """
 
+import contextlib
 import json
 import threading
 from collections.abc import Callable
@@ -115,6 +116,11 @@ class Billing:
                 self._raised = False
         return self.publish()
 
+    def _ask(self) -> None:
+        """Ask through `check`; a raise costs this ask alone."""
+        with contextlib.suppress(Exception):
+            self.check()
+
     def publish(self) -> dict[str, Any]:
         """Tell every page the billing state, and return it."""
         found = self.state()
@@ -125,10 +131,10 @@ class Billing:
         """Ask gpunit once now, then every `interval` while a session or alert is."""
 
         def loop() -> None:
-            self.check()
+            self._ask()
             while not self._stop.wait(interval):
                 if self._running() or self.alerting():
-                    self.check()
+                    self._ask()
 
         thread = threading.Thread(target=loop, daemon=True)
         thread.start()

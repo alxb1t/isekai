@@ -186,6 +186,41 @@ def test_gpunit_is_asked_on_start_and_while_a_session_runs_or_an_alert_is_open(
     assert not thread.is_alive()
 
 
+@pytest.mark.spec("ui:billing:an-ask-that-raises-does-not-stop-the-asking")
+def test_an_ask_that_raises_does_not_stop_the_watch(tmp_path: Path) -> None:
+    records = tmp_path / ".gpunit"
+    records.mkdir()
+    asked: list[str] = []
+    raising = {1, 3}
+
+    def run(argv: Sequence[str], say: Say) -> GpunitExit:
+        asked.append(" ".join(argv))
+        if len(asked) in raising:
+            raise OSError("gpunit did not run")
+        return GpunitExit(0)
+
+    billing = Billing(
+        Volume(run=run, records=records),
+        tmp_path / "log",
+        events.Broadcast(),
+        lambda: True,
+        now=lambda: NOW,
+    )
+
+    thread = billing.watch(interval=0.01)
+    try:
+        _until(lambda: len(asked) >= 5)
+        assert thread.is_alive()
+    finally:
+        billing.close()
+        thread.join(20)
+    assert not thread.is_alive()
+
+    raising.add(len(asked) + 1)
+    with pytest.raises(OSError):
+        billing.check()
+
+
 @pytest.mark.spec("ui:billing:gpunit-is-asked-while-a-session-or-an-alert-is-open")
 def test_an_alert_is_a_pod_or_a_volume_past_its_window(tmp_path: Path) -> None:
     records = tmp_path / ".gpunit"
