@@ -6,7 +6,7 @@ The phases are the reads, the writes and the documents. Each moves lines and no 
 
 - [x] 1 — The reads · moderate
 - [x] 2 — The writes · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The reads
 
@@ -78,9 +78,9 @@ The phases are the reads, the writes and the documents. Each moves lines and no 
   Verify: `git grep -nE "ui/app\.py. decides what makes a draft" -- docs/principles.md` prints nothing.
 - [x] 3.8 In `tests/mutants.json`, change `PB-2c`'s `path` to `isekai/interface/ui/routes/reviewing.py`, its `find` and `replace` unchanged ([D8](design.md#d8)).
   Verify: `git grep -n "routes/reviewing.py" -- tests/mutants.json` prints a line.
-- [ ] 3.9 In `tests/mutants.json`, re-anchor `UA-7` on the artifacts import of `isekai/interface/ui/app.py` as it now ends: the import ends on three lines, `from isekai.foundation.artifacts import (`, `    renders_of,` and `)`, and `tools.mutate` takes `find` as exact text that must occur once, so its `find` is the tail ``    renders_of,\n)\n`` and its `replace` that tail with `    write_json,` added before the `)` ([D8](design.md#d8)). Leave `isekai/interface/ui/app.py` as it is.
+- [x] 3.9 In `tests/mutants.json`, re-anchor `UA-7` on the artifacts import of `isekai/interface/ui/app.py` as it now ends: the import ends on three lines, `from isekai.foundation.artifacts import (`, `    renders_of,` and `)`, and `tools.mutate` takes `find` as exact text that must occur once, so its `find` is the tail ``    renders_of,\n)\n`` and its `replace` that tail with `    write_json,` added before the `)` ([D8](design.md#d8)). Leave `isekai/interface/ui/app.py` as it is.
   Verify: `git grep -nF '    renders_of,\n)\n' -- tests/mutants.json` prints a line.
-- [ ] 3.10 Replay the recorded mutants: every entry's `find` must occur once in its file and each must die.
+- [x] 3.10 Replay the recorded mutants: every entry's `find` must occur once in its file and each must die.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
-- [ ] 3.11 Prove the documents against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
+- [x] 3.11 Prove the documents against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py tests/test_ui_api.py tests/test_ui.py` exits 0.

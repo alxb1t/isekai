@@ -4,16 +4,17 @@
 exercised by the main suite whether or not a server is installed. The modules of
 `routes/` import FastAPI and are reached through this module alone, so
 `tests/test_ui_api.py` opens with an `importorskip` for it. They hold the
-vocabulary, tattoo library and place routes, `RenderRoutes` and `StreamRoutes`;
-`create_app` takes what a test replaces and declares the routes that read it,
-and the rest.
+vocabulary, tattoo library and place routes, `RenderRoutes`, `StreamRoutes` and
+`ReviewRoutes`; `create_app` takes what a test replaces and declares the routes
+that read it, and the rest.
 
 **What this module owns, and what it does not.** It owns HTTP routing and status
-codes, the join of caption, sheet, draft, approved and budget into one payload,
-serving photograph bytes and the built bundle, the `rare` threshold -- which
-exists nowhere else in this repository -- and turning a `Refusal` into a
-response. The pipeline owns what a valid sheet is, each run file's shape and its
-filename, when approval is legal, and what a token costs.
+codes, serving photograph bytes and the built bundle, the `rare` threshold --
+which exists nowhere else in this repository -- and turning a `Refusal` into a
+response. The join of caption, sheet, draft, approved and budget into one
+payload is the review routes' own, in `routes/reviewing.py`. The pipeline owns
+what a valid sheet is, each run file's shape and its filename, when approval is
+legal, and what a token costs.
 
 **A run directory is written only through the functions that own it**: stage
 ③'s `review()` when a sheet is opened, `save_draft()` on autosave,

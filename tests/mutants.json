@@ -58,8 +58,8 @@
   {
     "finding": "UA-7",
     "path": "isekai/interface/ui/app.py",
-    "find": "    renders_of,\n    require,\n)\n",
-    "replace": "    renders_of,\n    require,\n    write_json,\n)\n",
+    "find": "    renders_of,\n)\n",
+    "replace": "    renders_of,\n    write_json,\n)\n",
     "tests": ["tests/test_ui.py"],
     "why": "a surface module importing the JSON-writing primitive by name"
   },
@@ -361,7 +361,7 @@
   },
   {
     "finding": "PB-2c",
-    "path": "isekai/interface/ui/app.py",
+    "path": "isekai/interface/ui/routes/reviewing.py",
     "find": "                definition=one.flow,\n",
     "replace": "                definition=None,\n",
     "tests": ["tests/test_ui_api.py"],

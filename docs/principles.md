@@ -69,8 +69,8 @@ classified or what state a sheet is in, belongs to the component that owns that 
 - **Held by:** review.
 - **Known breaks:** `interface/wiring.py`'s `load_vocabulary` classifies a failure — it turns a missing
   or undeclared vocabulary into a refusal — which is the provisioning component's work.
-  `interface/ui/app.py` decides what makes a draft, an approved sheet, a caption or a tag list damaged,
-  and which remedy each names — work that belongs to the review, caption and tagging stages that own
+  `interface/ui/routes/reviewing.py` and `interface/ui/routes/common.py` decide what makes a draft, an
+  approved sheet, a caption or a tag list damaged, and which remedy each names — work that belongs to the review, caption and tagging stages that own
   those files. `once` of `interface/verbs/common.py` decides that a transient transport failure is not kept for
   the session — the render stage's rule. `interface/ui/library.py`'s `stage` ranks a run's stages and
   decides which damaged file marks a cell — the run directory's and the stages' work.
@@ -79,7 +79,7 @@ classified or what state a sheet is in, belongs to the component that owns that 
   the render stage's work, shared between front ends. `interface/ui/library.py`'s `_origin` decides
   whether a version is a revision or a re-roll by its own comparison of fields rather than the review
   stage's `same_fields`. Its `paired` decides which older version a seed compares with, and
-  `interface/ui/app.py`'s `_revision` decides which image a draft revises — the review stage's work,
+  `interface/ui/routes/reviewing.py`'s `_revision` decides which image a draft revises — the review stage's work,
   needing the rendered seeds the render stage lists, which the review stage may not import.
   `interface/ui/library.py`'s `stage` decides that an unapproved or damaged flow lacks no image, and
   `interface/ui/library.py`'s `_images` decides by the time each was written which image is a
