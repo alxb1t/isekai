@@ -10,13 +10,6 @@ its new digest.
 
 ## [Unreleased]
 
-- The Prepare bar's line and button words, `toPrepare` and `prepareButton`, move from `Hub.vue`'s plain script block to
-  `bars.ts`, with their test; the hub shows the same words and the plain block is gone (0151 D1).
-- The hub's cell rules, `cellOf`, `changesOf`, `reviewable` and `hintOf`, move from `Hub.vue` to `cells.ts`; `changesOf` and
-  `hintOf` have a test written first, and the view calls them with the page unchanged (0151 D2, D3).
-- The stage track's `SEGMENTS`, `DONE` and `RUNNING`, `wordOf`, `segmentClass` and `stem` move from `Hub.vue` to `cells.ts`
-  with no test, no scenario covering them; `word` and `segment` wrap them, and the `Hub.vue` ratchet row is lowered to
-  the file's lines (0151 D3, D4, D5).
 - A run's id and the names of its layout move from `run.py` to `names.py`, and `Run` with `assign` to `rundir.py`;
   `run.py` re-exports every name under `__all__`, so no importer changes. Tests kill the survivors of the move
   (0152 D1, D2, D4, D6, D10).
@@ -27,6 +20,18 @@ its new digest.
   moves from `run.py` to `failures.py`, which `run.py` re-exports; the mutants FN-1, FN-2 and FN-6 point at it. Tests kill
   the two survivors of the move (0152 D2, D4, D10).
 - D62 says `run.py`'s siblings are imported through it; D21, the module docs, the foundation README and `run.py`'s docstring say where the moved names live (0152 D9).
+
+## [0.87.7] - 2026-11-16
+
+Gate: local 3m14s · CI not read under mf-ship · 0.87.6: local 1m19s · CI not read under mf-ship
+
+- The Prepare bar's line and button words, `toPrepare` and `prepareButton`, move from `Hub.vue`'s plain script block to
+  `bars.ts`, with their test; the hub shows the same words and the plain block is gone (0151 D1).
+- The hub's cell rules, `cellOf`, `changesOf`, `reviewable` and `hintOf`, move from `Hub.vue` to `cells.ts`; `changesOf` and
+  `hintOf` have a test written first, and the view calls them with the page unchanged (0151 D2, D3).
+- The stage track's `SEGMENTS`, `DONE` and `RUNNING`, `wordOf`, `segmentClass` and `stem` move from `Hub.vue` to `cells.ts`
+  with no test, no scenario covering them; `word` and `segment` wrap them, and the `Hub.vue` ratchet row is lowered to
+  the file's lines (0151 D3, D4, D5).
 
 ## [0.87.6] - 2026-11-16
 
