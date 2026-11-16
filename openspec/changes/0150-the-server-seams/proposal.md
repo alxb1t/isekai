@@ -21,7 +21,7 @@ The change moves no route and edits no assertion. Each seam defaults to the obje
 
 - `create_app` takes `make_jobs`, `file_response`, `save_draft`, `approve`, `precondition` and `draft_lock`, each keyword-only with the product's own object as its default ([D1](design.md#d1)).
 - The `Surface` holds `file_response`, `save_draft`, `approve`, `precondition` and `draft_lock`; the routes that read them read them there ([D2](design.md#d2), [D3](design.md#d3)).
-- The module's lock `_DRAFT_UPDATE` goes: each app builds its own `threading.Lock` when none is passed ([D4](design.md#d4)).
+- The module's lock `_DRAFT_UPDATE` is deleted: each app builds its own `threading.Lock` when none is passed ([D4](design.md#d4)).
 - `_photograph` takes the file response as its first parameter, and the image routes and the source thumbnail answer through it ([D3](design.md#d3)).
 - The tests pass an argument where they patched; the shared client's builder passes them on ([D5](design.md#d5)).
 - One test holds that an app given no lock holds a lock of its own across a write ([D6](design.md#d6)).

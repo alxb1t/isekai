@@ -31,7 +31,7 @@ The phases: the jobs, the file response, the draft's four, the documents. Nothin
 - [x] 2.4 In `app.py` give `_photograph` the first parameter `file_response: Callable[..., Response]`, so its last line reads `return file_response(path, media_type=kind, headers=headers)`, and have `read_staged`, `read_photo`, `read_source_copy` and `read_source` pass `surface.file_response` first ([D3](design.md#d3)).
   Verify: `git grep -n -F 'return file_response(path, media_type=kind, headers=headers)' -- isekai/interface/ui/app.py` prints a line.
 - [x] 2.5 In `app.py` make `read_render_image`, `read_render_thumb`, `read_bake_image`, `read_bake_thumb` and `read_source_thumb` answer `surface.file_response(` with the arguments they pass to `FileResponse(` today, and change each return annotation `-> FileResponse` to `-> Response`. `page` keeps `FileResponse` ([D3](design.md#d3)).
-  Verify: `git grep -n -F 'FileResponse(' -- isekai/interface/ui/app.py` prints one line, `page`'s.
+  Verify: `git grep -n -F 'FileResponse(' -- isekai/interface/ui/app.py` prints one line, the line of page.
 - [x] 2.6 In `tests/test_ui_api.py` give `_client` the keyword-only parameter `seams: Mapping[str, Any] | None = None` and call `create_app(..., **(seams or {}))`. Have `test_a_cross_site_request_without_origin_is_refused` and `test_a_request_from_this_page_reads_the_photograph` take `wired`, `made` and `tmp_path` for `client`, build `_client(wired, made, tmp_path, seams=...)` with the recorder each patched in, and delete both patches ([D5](design.md#d5)).
   Verify: `git grep -n -F '"FileResponse"' -- tests` prints nothing.
 - [x] 2.7 Run the server's tests, the ratchets, the record, the layer guards and the entry point's import guard.
@@ -42,9 +42,9 @@ The phases: the jobs, the file response, the draft's four, the documents. Nothin
 - [x] 3.1 **HALT CHECK** The module's lock is the one `threading.Lock()` of `app.py`, the lock the routes of [D1](design.md#d1) take.
   Verify: `git grep -c -F 'threading.Lock()' -- isekai/interface/ui/app.py` prints `isekai/interface/ui/app.py:1`.
 - [x] 3.2 In `surface.py` give `Surface.__init__` the keyword-only parameters `save_draft`, `approve`, `precondition` and `draft_lock`, typed as [D2](design.md#d2) says with `AbstractContextManager` from `contextlib`, and store each under its own name.
-  Verify: `git grep -n -E '^        self\.(save_draft|approve|precondition|draft_lock) = ' -- isekai/interface/ui/surface.py` prints a line for each of `save_draft`, `approve`, `precondition` and `draft_lock`.
+  Verify: `git grep -n -E '^        self\.(save_draft|approve|precondition|draft_lock) = ' -- isekai/interface/ui/surface.py` prints a line for each of save_draft, approve, precondition and draft_lock.
 - [x] 3.3 In `app.py` move `def _precondition(`, its signature, docstring and body unchanged, from below `create_app` to sit between `authorities` and `create_app` ([D4](design.md#d4)).
-  Verify: `git grep -n -E '^def (authorities|_precondition|create_app)\(' -- isekai/interface/ui/app.py` prints `authorities`, `_precondition` and `create_app`, in that order.
+  Verify: `git grep -n -E '^def (authorities|_precondition|create_app)\(' -- isekai/interface/ui/app.py` prints three lines, those of authorities, _precondition and create_app, in that order.
 - [x] 3.4 In `app.py` import `AbstractContextManager` from `contextlib`, give `create_app` the keyword-only parameters `save_draft`, `approve`, `precondition` and `draft_lock` after `file_response`, as [D1](design.md#d1) shows, pass each to `Surface(`, the lock as `draft_lock=draft_lock if draft_lock is not None else threading.Lock()`, and add a docstring line for each ([D4](design.md#d4)).
   Verify: `git grep -n -F 'draft_lock=' -- isekai/interface/ui/app.py` prints a line.
 - [x] 3.5 In `app.py` make `put_draft`, `post_approve`, `post_cancel`, `post_discard`, `post_draft` and `delete_render` write `with surface.draft_lock:`; `put_draft`, `post_approve` and `post_discard` call `surface.precondition(`; `put_draft` calls `surface.save_draft(`; `post_approve` calls `surface.approve(` ([D4](design.md#d4)).
@@ -58,9 +58,9 @@ The phases: the jobs, the file response, the draft's four, the documents. Nothin
 - [x] 3.9 In `tests/test_ratchets.py` change the row `"isekai.interface.ui.app": 12,` of `PATCHED_MODULES` to `"isekai.interface.ui.app": 1,`; the row stays for the patch of `run`, and `PATCHED_ROWS` is unchanged ([D1](design.md#d1)).
   Verify: `git grep -n -F '"isekai.interface.ui.app": 1,' -- tests/test_ratchets.py` prints the row.
 - [x] 3.10 Check that the measure is the row's number.
-  Verify: `uv run python -c "from tests.test_ratchets import patched_modules, REPO_ROOT; print(patched_modules(REPO_ROOT)['isekai.interface.ui.app'])"` prints `1`.
+  Verify: `.venv/bin/python -c "from tests.test_ratchets import patched_modules, REPO_ROOT; print(patched_modules(REPO_ROOT)['isekai.interface.ui.app'])"` prints `1`.
 - [x] 3.11 Check that the one patch of `app.py` left is the patch of `run` ([D5](design.md#d5)).
-  Verify: `git grep -n -F 'setattr(app_module' -- tests` prints one line, `tests/test_ui.py`'s patch of `run`.
+  Verify: `git grep -n -F 'setattr(app_module' -- tests` prints one line, the patch of run in tests/test_ui.py.
 - [x] 3.12 Run the server's tests, the ratchets, the record, the layer guards and the entry point's import guard.
   Verify: `uv run pytest tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui.py tests/test_ui_billing.py tests/test_ui_propose.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ratchets.py tests/test_record.py tests/test_layers.py tests/test_pipeline_cli.py tests/test_ui_wire.py` passes.
 

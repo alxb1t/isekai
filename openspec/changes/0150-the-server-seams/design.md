@@ -12,12 +12,12 @@ Evidence, at the cut's base `bc16b803`:
 |---|---|---|
 | the patches of `app.py`, per test file | `git grep -c -F "setattr(app_module" -- tests` | `tests/test_ui.py:2`, `tests/test_ui_api.py:10`, `tests/test_ui_jobs.py:1` |
 | the measure the ratchet takes of them | `uv run python -c "from tests.test_ratchets import patched_modules, REPO_ROOT; print(patched_modules(REPO_ROOT)['isekai.interface.ui.app'])"` | `13`, where the row lists `12` |
-| the routes that take the draft lock | `git grep -c -F "with _DRAFT_UPDATE:" -- isekai/interface/ui/app.py` | `isekai/interface/ui/app.py:6` |
+| the routes that take the draft lock, which the change deletes | `git grep -c -F "with _DRAFT_UPDATE:" -- isekai/interface/ui/app.py` | `isekai/interface/ui/app.py:6` |
 | the places that build a file response | `git grep -c -F "FileResponse(" -- isekai/interface/ui/app.py` | `isekai/interface/ui/app.py:7` |
 | the only place `Surface` is built | `git grep -n -F "Surface(" -- isekai` | `isekai/interface/ui/app.py:276` |
 | `run` is read by `serve` alone | `git grep -n -F "run(app, " -- isekai` | `isekai/interface/ui/__init__.py:93` |
 
-The patches are `Jobs` in `tests/test_ui.py` and `tests/test_ui_jobs.py`; `FileResponse` twice and the draft's four — `_precondition`, `save_draft`, `approve` and `_DRAFT_UPDATE` — in `tests/test_ui_api.py`; and `run` in `tests/test_ui.py`. The ratchet's `ratchet_faults` compares the keys of a table and its row count, never a row's number, so lowering a number is a convention that [D56](../../../docs/decisions.md#d56--size-and-patches-are-held-by-ratchets) states and no test holds.
+The patches are `Jobs` in `tests/test_ui.py` and `tests/test_ui_jobs.py`; `FileResponse` twice and the draft's four — `_precondition`, `save_draft`, `approve` and `_DRAFT_UPDATE`, the lock the change deletes — in `tests/test_ui_api.py`; and `run` in `tests/test_ui.py`. The ratchet's `ratchet_faults` compares the keys of a table and its row count, never a row's number, so lowering a number is a convention that [D56](../../../docs/decisions.md#d56--size-and-patches-are-held-by-ratchets) states and no test holds.
 
 ## Goals / Non-Goals
 
@@ -92,7 +92,7 @@ The image routes and the source thumbnail answer `surface.file_response(...)` wi
 
 ### D4
 
-After the change the module holds neither the lock nor its comment. In `create_app`, `draft_lock if draft_lock is not None else threading.Lock()` is passed to the surface, and each route [D1](design.md#d1) lists writes `with surface.draft_lock:` where it wrote `with _DRAFT_UPDATE:`. Each call of `_precondition` becomes `surface.precondition(...)`, `save_draft(` in `put_draft` becomes `surface.save_draft(`, and `approve(` in `post_approve` becomes `surface.approve(`.
+After the change the module holds neither the lock nor its comment. In `create_app`, `draft_lock if draft_lock is not None else threading.Lock()` is passed to the surface, and each route [D1](design.md#d1) lists writes `with surface.draft_lock:` where it wrote the deleted `with _DRAFT_UPDATE:`. Each call of `_precondition` becomes `surface.precondition(...)`, `save_draft(` in `put_draft` becomes `surface.save_draft(`, and `approve(` in `post_approve` becomes `surface.approve(`.
 
 `_precondition`, with its docstring unchanged, moves to sit between `authorities` and `create_app`. Moving it shifts no mutant: the entries of `tests/mutants.json` are addressed by path and exact text.
 
