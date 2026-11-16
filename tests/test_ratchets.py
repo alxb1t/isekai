@@ -445,13 +445,12 @@ def unread_patches(root: Path) -> list[str]:
 
 LONG_FILES = {
     "isekai/interface/render.py": 1315,
-    "isekai/interface/ui/app.py": 2351,
     "isekai/interface/ui/library.py": 881,
     "isekai/pipeline/importing.py": 841,
     "isekai/pipeline/review.py": 1278,
     "isekai/pipeline/tattoos.py": 1320,
 }
-FILE_ROWS = 6
+FILE_ROWS = 5
 
 LONG_FUNCTIONS = {
     "isekai/boundary/ollama.py::ask": 105,
@@ -485,7 +484,7 @@ WIDE_FUNCTIONS = {
 WIDE_ROWS = 14
 
 BIG_UI_FILES = {
-    "ui/src/views/Review.vue": 696,
+    "ui/src/views/Review.vue": 659,
 }
 UI_ROWS = 1
 
