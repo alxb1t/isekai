@@ -14,6 +14,9 @@ its new digest.
   `bars.ts`, with their test; the hub shows the same words and the plain block is gone (0151 D1).
 - The hub's cell rules, `cellOf`, `changesOf`, `reviewable` and `hintOf`, move from `Hub.vue` to `cells.ts`; `changesOf` and
   `hintOf` have a test written first, and the view calls them with the page unchanged (0151 D2, D3).
+- The stage track's `SEGMENTS`, `DONE` and `RUNNING`, `wordOf`, `segmentClass` and `stem` move from `Hub.vue` to `cells.ts`
+  with no test, no scenario covering them; `word` and `segment` wrap them, and the `Hub.vue` ratchet row is lowered to
+  the file's lines (0151 D3, D4, D5).
 
 ## [0.87.6] - 2026-11-16
 

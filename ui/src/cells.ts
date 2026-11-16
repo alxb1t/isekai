@@ -1,5 +1,5 @@
 import { type Focus, type Move, moved } from './grid'
-import type { HubCell, HubSource, ImageRef, RenderDetail } from './types'
+import type { HubCell, HubSource, ImageRef, RenderDetail, Stage } from './types'
 import { noun } from './words'
 
 /** Return an image as a selection holds it. e.g. "0d4b…|summon-anime-wai|1|42" */
@@ -104,6 +104,46 @@ export function changesOf(
   return sources.flatMap((source) =>
     flows.filter((flow) => pending(cellOf(source, flow))).map((flow) => ({ source, flow })),
   )
+}
+
+/* The six segments of a stage track, and how many each stage has done. A draft
+   shares the sheet's segment. */
+export const SEGMENTS = ['assigned', 'tag', 'caption', 'sheet', 'approved', 'rendered'] as const
+export const DONE: Record<Stage, number> = {
+  assigned: 1,
+  tagged: 2,
+  sheet: 4,
+  draft: 4,
+  approved: 5,
+  rendered: 6,
+  unreadable: 0,
+}
+/* A running stage's segment, and the word its cell shows. */
+export const RUNNING: Record<string, { segment: number; word: string }> = {
+  tag: { segment: 1, word: 'tagging…' },
+  caption: { segment: 2, word: 'captioning…' },
+  sheet: { segment: 3, word: 'filling the sheet…' },
+}
+
+/** Return the word `cell` shows: the `running` stage's, `rendered ×n`, or its stage.
+
+    e.g. running 'tag' -> "tagging…", a cell rendered twice -> "rendered ×2" */
+export function wordOf(cell: HubCell, running: string | undefined): string {
+  if (running) return RUNNING[running]?.word ?? `${running}…`
+  if (cell.stage === 'rendered') return `rendered ×${cell.renders}`
+  return cell.stage ?? ''
+}
+
+/** Return the class of segment `index` of `cell`'s track: running, done, or the empty string. */
+export function segmentClass(cell: HubCell, running: string | undefined, index: number): string {
+  if (running && RUNNING[running]?.segment === index) return 'hub__segment--running'
+  return cell.stage && index < DONE[cell.stage] ? 'hub__segment--done' : ''
+}
+
+/** Return a source's display name: its file's name without the extension. */
+export function stem(name: string): string {
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(0, dot) : name
 }
 
 /** Return whether `cell`'s tick stays: a stage past pending holds work. */

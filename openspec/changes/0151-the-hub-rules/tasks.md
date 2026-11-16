@@ -6,7 +6,7 @@ The phases move `Hub.vue`'s pure rules into `bars.ts` and `cells.ts`, a test fir
 
 - [x] 1 — The Prepare bar's words · moderate
 - [x] 2 — The cell rules a scenario covers · moderate
-- [ ] 3 — The rules no scenario covers · moderate
+- [x] 3 — The rules no scenario covers · moderate
 
 ## 1 — The Prepare bar's words
 
@@ -40,11 +40,11 @@ The phases move `Hub.vue`'s pure rules into `bars.ts` and `cells.ts`, a test fir
 
 The stage track and the source's name go to `cells.ts` with no test, [D3](design.md#d3) naming them.
 
-- [ ] 3.1 In `ui/src/cells.ts` import `Stage` and add the exports `SEGMENTS`, `DONE`, `RUNNING`, `wordOf(cell, running)`, `segmentClass(cell, running, index)` and `stem(name)`, each body as `ui/src/views/Hub.vue` holds it, `running` the stage name the cell runs, `undefined` when none runs.
+- [x] 3.1 In `ui/src/cells.ts` import `Stage` and add the exports `SEGMENTS`, `DONE`, `RUNNING`, `wordOf(cell, running)`, `segmentClass(cell, running, index)` and `stem(name)`, each body as `ui/src/views/Hub.vue` holds it, `running` the stage name the cell runs, `undefined` when none runs.
   Verify: `git grep -c -E "^export (const (SEGMENTS|DONE|RUNNING)|function (wordOf|segmentClass|stem))" -- ui/src/cells.ts` prints `ui/src/cells.ts:6`.
-- [ ] 3.2 In `ui/src/views/Hub.vue` delete `SEGMENTS`, `DONE`, `RUNNING` and `stem`, make `word` and `segment` wrappers over `wordOf` and `segmentClass` reading `running.value[key(source, flow)]`, import the new names, and drop the imports now unused (`EMPTY_CELL`, `HubCell`, `Stage`).
+- [x] 3.2 In `ui/src/views/Hub.vue` delete `SEGMENTS`, `DONE`, `RUNNING` and `stem`, make `word` and `segment` wrappers over `wordOf` and `segmentClass` reading `running.value[key(source, flow)]`, import the new names, and drop the imports now unused (`EMPTY_CELL`, `HubCell`, `Stage`).
   Verify: `git grep -n -E "(const|function) (SEGMENTS|DONE|RUNNING|stem)" -- ui/src/views/Hub.vue` prints nothing.
-- [ ] 3.3 In `BIG_UI_FILES` of `tests/test_ratchets.py` change the row `"ui/src/views/Hub.vue": 671` to the lines `git grep -c "" -- ui/src/views/Hub.vue` prints, as [D5](design.md#d5) says.
+- [x] 3.3 In `BIG_UI_FILES` of `tests/test_ratchets.py` change the row `"ui/src/views/Hub.vue": 671` to the lines `git grep -c "" -- ui/src/views/Hub.vue` prints, as [D5](design.md#d5) says.
   Verify: `git grep -n -F '"ui/src/views/Hub.vue": 671' -- tests/test_ratchets.py` prints nothing.
-- [ ] 3.4 **HALT CHECK** `ui/src/views/Hub.vue` is still past its ceiling, so its row stands: a file that falls to its ceiling makes its row stale and this red.
+- [x] 3.4 **HALT CHECK** `ui/src/views/Hub.vue` is still past its ceiling, so its row stands: a file that falls to its ceiling makes its row stale and this red.
   Verify: `uv run pytest tests/test_ratchets.py` exits 0.

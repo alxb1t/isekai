@@ -14,8 +14,8 @@ import {
 } from '../bars'
 import {
   type CellGrid,
-  EMPTY_CELL,
   type PickTile,
+  SEGMENTS,
   action,
   cellGrid,
   cellOf as cell,
@@ -27,7 +27,10 @@ import {
   pending,
   ready,
   reviewable,
+  segmentClass,
+  stem,
   targets,
+  wordOf,
 } from '../cells'
 import { assign, prepare, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import CellModal from '../components/CellModal.vue'
@@ -43,7 +46,7 @@ import { clamp, kept } from '../grid'
 import { at, useCollectionStore } from '../stores/collection'
 import { isControl, modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
-import type { HubCell, HubSource, Stage } from '../types'
+import type { HubSource } from '../types'
 import { noun } from '../words'
 
 /* A collection's hub: its sources by the offered flows, each cell's stage read from
@@ -91,25 +94,6 @@ async function added(): Promise<void> {
   await store.reloadHub()
 }
 
-/* The six segments of a stage track, and how many each stage has done. A draft
-   shares the sheet's segment. */
-const SEGMENTS = ['assigned', 'tag', 'caption', 'sheet', 'approved', 'rendered'] as const
-const DONE: Record<Stage, number> = {
-  assigned: 1,
-  tagged: 2,
-  sheet: 4,
-  draft: 4,
-  approved: 5,
-  rendered: 6,
-  unreadable: 0,
-}
-/* A running stage's segment, and the word its cell shows. */
-const RUNNING: Record<string, { segment: number; word: string }> = {
-  tag: { segment: 1, word: 'tagging…' },
-  caption: { segment: 2, word: 'captioning…' },
-  sheet: { segment: 3, word: 'filling the sheet…' },
-}
-
 const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
 
@@ -128,12 +112,6 @@ const shown = computed(() =>
   }),
 )
 
-/* A source's display name: its file's name without the extension. */
-function stem(name: string): string {
-  const dot = name.lastIndexOf('.')
-  return dot > 0 ? name.slice(0, dot) : name
-}
-
 function key(source: HubSource, flow: string): string {
   return at(source.name, flow)
 }
@@ -144,18 +122,11 @@ function focused(row: number, column: number): boolean {
 }
 
 function word(source: HubSource, flow: string): string {
-  const stage = running.value[key(source, flow)]
-  if (stage) return RUNNING[stage]?.word ?? `${stage}…`
-  const found = cell(source, flow)
-  if (found.stage === 'rendered') return `rendered ×${found.renders}`
-  return found.stage ?? ''
+  return wordOf(cell(source, flow), running.value[key(source, flow)])
 }
 
 function segment(source: HubSource, flow: string, index: number): string {
-  const stage = running.value[key(source, flow)]
-  if (stage && RUNNING[stage]?.segment === index) return 'hub__segment--running'
-  const found = cell(source, flow).stage
-  return found && index < DONE[found] ? 'hub__segment--done' : ''
+  return segmentClass(cell(source, flow), running.value[key(source, flow)], index)
 }
 
 /* The focused cell's action hint, or null where it offers none here. */
