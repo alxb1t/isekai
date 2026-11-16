@@ -4,7 +4,7 @@ The phases move `Hub.vue`'s pure rules into `bars.ts` and `cells.ts`, a test fir
 
 ## Progress
 
-- [ ] 1 — The Prepare bar's words · moderate
+- [x] 1 — The Prepare bar's words · moderate
 - [ ] 2 — The cell rules a scenario covers · moderate
 - [ ] 3 — The rules no scenario covers · moderate
 
@@ -12,13 +12,13 @@ The phases move `Hub.vue`'s pure rules into `bars.ts` and `cells.ts`, a test fir
 
 `toPrepare` and `prepareButton` go to `bars.ts` with the case that tests them, per [D1](design.md#d1).
 
-- [ ] 1.1 In `ui/src/bars.test.ts` import `prepareButton` and `toPrepare` from `./bars` and add the case of `ui/src/views/Hub.test.ts` as `spec('ui:prepare:the-bar-names-its-photographs', …)`, after the last test, its assertions unchanged.
+- [x] 1.1 In `ui/src/bars.test.ts` import `prepareButton` and `toPrepare` from `./bars` and add the case of `ui/src/views/Hub.test.ts` as `spec('ui:prepare:the-bar-names-its-photographs', …)`, after the last test, its assertions unchanged.
   Verify: `git grep -n -F "the-bar-names-its-photographs" -- ui/src/bars.test.ts` prints a line.
-- [ ] 1.2 In `ui/src/bars.ts` import `noun` from `./words` and add `toPrepare` and `prepareButton`, their bodies and comments as `ui/src/views/Hub.vue` holds them.
+- [x] 1.2 In `ui/src/bars.ts` import `noun` from `./words` and add `toPrepare` and `prepareButton`, their bodies and comments as `ui/src/views/Hub.vue` holds them.
   Verify: `uv run python -m tools.test_ui ui/src/bars.test.ts` exits 0.
-- [ ] 1.3 Delete `ui/src/views/Hub.test.ts`, the test that imports from `./Hub.vue`, its case carried by 1.1 as the `## Tests` table of [the design](design.md#tests) maps it.
+- [x] 1.3 Delete `ui/src/views/Hub.test.ts`, the test that imports from `./Hub.vue`, its case carried by 1.1 as the `## Tests` table of [the design](design.md#tests) maps it.
   Verify: `git grep -n -F "./Hub.vue" -- ui/src` prints nothing.
-- [ ] 1.4 In `ui/src/views/Hub.vue` delete the plain `<script lang="ts">` block, and in `<script setup>` import `noun` from `../words` and `prepareButton` and `toPrepare` from `../bars`.
+- [x] 1.4 In `ui/src/views/Hub.vue` delete the plain `<script lang="ts">` block, and in `<script setup>` import `noun` from `../words` and `prepareButton` and `toPrepare` from `../bars`.
   Verify: `git grep -n -F "<script lang=" -- ui/src/views/Hub.vue` prints nothing.
 
 ## 2 — The cell rules a scenario covers

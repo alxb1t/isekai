@@ -1,25 +1,17 @@
-<script lang="ts">
-import { noun } from '../words'
-
-/** Return the Prepare bar's line: the photographs its changes prepare, each once.
-
-    e.g. ["ada.jpg", "ada.jpg", "bea.jpg"], "b" -> "2 photographs to prepare in b" */
-export function toPrepare(sources: string[], collection: string): string {
-  const count = new Set(sources).size
-  return `${count} ${noun(count, 'photograph')} to prepare in ${collection}`
-}
-
-/** Return the Prepare button's words: the changes it runs. e.g. 4 -> "4 changes · Prepare" */
-export function prepareButton(changes: number): string {
-  return `${changes} ${noun(changes, 'change')} · Prepare`
-}
-</script>
-
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { bar as barOf, dismiss, failed, held, prepared, progress } from '../bars'
+import {
+  bar as barOf,
+  dismiss,
+  failed,
+  held,
+  prepareButton,
+  prepared,
+  progress,
+  toPrepare,
+} from '../bars'
 import {
   type CellGrid,
   EMPTY_CELL,
@@ -48,6 +40,7 @@ import { at, useCollectionStore } from '../stores/collection'
 import { isControl, modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
 import type { HubCell, HubSource, Stage } from '../types'
+import { noun } from '../words'
 
 /* A collection's hub: its sources by the offered flows, each cell's stage read from
    the run's directory (design spec J2). A tick assigns a flow through the
