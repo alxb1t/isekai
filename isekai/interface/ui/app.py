@@ -1,8 +1,8 @@
-"""The HTTP surface, and the only module in this package that imports a web framework.
+"""The HTTP surface, and the entry to the modules that import a web framework.
 
-Kept to one file deliberately. `library.py` reads the library and every stage and
-imports no web framework, so that reading is exercised by the main suite whether
-or not a server is installed; only what genuinely needs one lives here, and
+`library.py` and `surface.py` import no web framework, so what they hold is
+exercised by the main suite whether or not a server is installed. The modules of
+`routes/` import FastAPI and are reached through this module alone, so
 `tests/test_ui_api.py` opens with an `importorskip` for it.
 
 **What this module owns, and what it does not.** It owns HTTP routing and status
@@ -74,16 +74,13 @@ GET  anything else                                 the bundle's index.html
 """
 
 import asyncio
-import math
-import re
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
-from dataclasses import asdict, dataclass
-from functools import cache
+from dataclasses import asdict
 from pathlib import Path
 from types import FrameType
-from typing import TYPE_CHECKING, Any, TypeGuard
+from typing import Any, TypeGuard
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
@@ -98,7 +95,6 @@ from isekai.foundation.artifacts import (
     DRAFT_FILE,
     ONE_RENDER,
     SHEET_FILE,
-    SIDECAR,
     TAGS_FILE,
     WD14_FILE,
     Renders,
@@ -107,11 +103,9 @@ from isekai.foundation.artifacts import (
     renders_of,
     require,
 )
-from isekai.foundation.edit import load_edit
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
-    APPROVED,
     CAPTIONS,
     NEW_VERSION,
     PHOTOGRAPH_VERBS,
@@ -142,10 +136,21 @@ from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
-from isekai.interface.wiring import Wiring, proposer_of
-from isekai.pipeline import importing, tattoos
+from isekai.interface.ui.routes.common import _dimensions
+from isekai.interface.ui.routes.keys import BAKE_KEYS as BAKE_KEYS
+from isekai.interface.ui.routes.keys import INK_KEYS as INK_KEYS
+from isekai.interface.ui.routes.keys import OUTLINE_KEYS as OUTLINE_KEYS
+from isekai.interface.ui.routes.keys import PREVIEW_KEYS as PREVIEW_KEYS
+from isekai.interface.ui.routes.keys import PROPOSE_KEYS as PROPOSE_KEYS
+from isekai.interface.ui.routes.keys import STAGE1_KEYS as STAGE1_KEYS
+from isekai.interface.ui.routes.place import mount as place_mount
+from isekai.interface.ui.routes.tattoos import mount as tattoo_mount
+from isekai.interface.ui.routes.vocabulary import RARE_BELOW as RARE_BELOW
+from isekai.interface.ui.routes.vocabulary import mount as vocabulary_mount
+from isekai.interface.ui.surface import _DECIMAL, Held, Surface, _version
+from isekai.interface.wiring import Wiring
+from isekai.pipeline import importing
 from isekai.pipeline.edit import image_of as edit_image_of
-from isekai.pipeline.edit import request_placed
 from isekai.pipeline.generate import discard_render, image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
@@ -155,7 +160,6 @@ from isekai.pipeline.review import (
     came_from,
     cancel,
     cancellable,
-    current_draft,
     discard,
     draft_image,
     review,
@@ -166,29 +170,12 @@ from isekai.pipeline.review import (
     withdraw,
 )
 from isekai.pipeline.review import state as review_state
-from isekai.shared.field_map import FieldMap
-from isekai.shared.image import dimensions_or_refuse, upright_image
-from isekai.shared.ink import load_ink_config
 from isekai.shared.vocabulary import Vocabulary
-
-if TYPE_CHECKING:
-    from PIL.Image import Image
-
-# The dropdown's `· rare` marker. This number exists nowhere else in the
-# repository: the vocabulary ranks by post count and never calls anything rare,
-# so the threshold is the surface's own judgement about what an operator should
-# hesitate over, and it is stated here rather than duplicated in TypeScript.
-RARE_BELOW = 2000
 
 # Held across a draft update's precondition and its write, so two updates that
 # state one precondition cannot both pass it; and across an approval, so no
 # update writes after it.
 _DRAFT_UPDATE = threading.Lock()
-
-# Enough rows to choose from without the dropdown becoming a list to read. The
-# footer states the true match count, so narrowing the fragment stays the way to
-# see fewer rather than scrolling.
-DEFAULT_LIMIT = 10
 
 # A `Refusal` is the pipeline declining a well-formed request because of what is
 # on disk -- an approved input, a changed field set, a tag outside the vocabulary
@@ -202,30 +189,6 @@ REFUSED = 409
 # conflict, the request is simply not one this surface answers, so it carries no
 # string for the page and never reaches a handler.
 FORBIDDEN = 403
-
-# What a body names to save an outline, and to ask the ink view of one.
-OUTLINE_KEYS = ("points", "closed", "white", "neutral", "depth")
-INK_KEYS = ("points", "white", "neutral", "depth", "digest", "flow")
-
-# What a body names to save a tattoo's pairs on a photograph, and to ask a preview.
-STAGE1_KEYS = ("pairs", "not_on_photo")
-PREVIEW_KEYS = (
-    "target",
-    "digest",
-    "flow",
-    "version",
-    "seed",
-    "pairs",
-    "limb",
-    "exclusions",
-)
-
-# What a body names to ask proposed pairs: the render, and the tattoo's points.
-PROPOSE_KEYS = ("digest", "flow", "version", "seed", "points")
-
-# What a body names to bake a tattoo, and the tracked edit a bake requests.
-BAKE_KEYS = ("digest", "flow", "version", "seed", "pairs", "limb", "exclusions")
-BAKE_EDIT = "tattoo-wai"
 
 # Where gpunit's status answers are appended, in the library: a dot-file is listed
 # as no collection.
@@ -253,26 +216,6 @@ def authorities(host: str, port: int) -> frozenset[str]:
     """
     names = LOOPBACK if host in LOOPBACK else frozenset({host})
     return frozenset(f"{name}:{port}" for name in names)
-
-
-@dataclass(frozen=True)
-class Held:
-    """One run in one flow, as a review URL names it."""
-
-    run: Run
-    flow: Flow
-
-    def directory(self, stage: str) -> Path:
-        """Return one of this flow's stage directories inside the run."""
-        return self.run.directory(self.flow.id, stage)
-
-    def draft(self) -> Path | None:
-        """Return the current draft, or None; `current_draft` decides."""
-        return current_draft(self.directory(REVIEW))
-
-    def approved(self) -> Path | None:
-        """Return the approved artifact, or None while it is still a draft."""
-        return latest_artifact(self.directory(REVIEW), APPROVED)
 
 
 def create_app(
@@ -320,12 +263,26 @@ def create_app(
     limit = importing.upload_limit()
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
-    shared = _Shared(wired)
     imports = importing.Imports(
         root,
         limit,
         lambda staged, state: broadcast.publish("file", {"staging": staged, **state}),
     )
+    surface = Surface(
+        root,
+        wired,
+        flows=flows,
+        wire=wire,
+        jobs=jobs,
+        billing=billing,
+        imports=imports,
+        broadcast=broadcast,
+        limit=limit,
+    )
+    shared = surface.shared
+    folder, held, offered = surface.folder, surface.held, surface.offered
+    _rendering = surface.rendering
+    rendered, baked, bake_image = surface.rendered, surface.baked, surface.bake_image
 
     @app.middleware("http")
     async def _addressed_here(
@@ -359,17 +316,6 @@ def create_app(
     async def _refused(request: Request, refusal: Exception) -> JSONResponse:
         """Turn a `Refusal` into a response carrying its string, verbatim."""
         return JSONResponse({"refusal": str(refusal)}, status_code=REFUSED)
-
-    def folder(collection: str) -> Path:
-        """Return a collection's folder, its runs root passed through the guard."""
-        found = library.collection(root, collection)
-        wire(found / library.RUNS)
-        return found
-
-    def held(collection: str, digest: str, flow: str) -> Held:
-        """Return the run and flow a review URL names, refusing either unknown."""
-        found = folder(collection)
-        return Held(library.run_named(found, digest), _flow(wired, flow))
 
     @app.get("/api/library")
     def read_library() -> dict[str, Any]:
@@ -488,270 +434,6 @@ def create_app(
             "left_out": list(done.left_out),
         }
 
-    @app.get("/api/tattoos")
-    def read_tattoos(digest: str | None = None) -> dict[str, Any]:
-        """List the tattoos a render lists, with the limits the page reads.
-
-        The uploads and the cuts of the photograph `digest`, each with its stage-1
-        state on it.
-        """
-        asked = _digest_asked(digest)
-        return {
-            "tattoos": [asdict(one) for one in tattoos.listed(root, asked)],
-            "limits": _tattoo_limits(),
-            "stage1": {
-                name: asdict(state)
-                for name, state in tattoos.stage1_states(root, asked).items()
-            },
-        }
-
-    @app.get("/api/tattoos/{name}")
-    def read_tattoo(name: str, digest: str | None = None) -> dict[str, Any]:
-        """Return one tattoo with its outline, refusing an unknown name."""
-        asked = _digest_asked(digest)
-        return {
-            **asdict(tattoos.named(root, name, asked)),
-            "outline": asdict(tattoos.read_outline(root, name, asked)),
-        }
-
-    @app.delete("/api/tattoos/{name}")
-    def delete_tattoo(name: str, digest: str | None = None) -> dict[str, Any]:
-        """Remove one tattoo of the library, found from the checked name and digest."""
-        tattoos.remove(root, name, _digest_asked(digest))
-        return {}
-
-    @app.get("/api/tattoos/{name}/design")
-    def read_tattoo_design(name: str, digest: str | None = None) -> Response:
-        """Serve an uploaded tattoo's image whole, refusing a cut, which has none."""
-        return Response(
-            tattoos.design_bytes(root, name, _digest_asked(digest)),
-            media_type="image/png",
-            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
-        )
-
-    @app.post("/api/tattoos")
-    def post_tattoo(payload: dict[str, Any]) -> dict[str, Any]:
-        """Keep a staged file as a tattoo, then cancel the import it came in.
-
-        A file that still carries metadata is refused, and a refusal leaves the
-        import open so the name can be changed.
-        """
-        staged, file, name = (payload.get(key) for key in ("staging", "file", "name"))
-        if not (isinstance(staged, str) and isinstance(file, str)):
-            raise Refusal(
-                "the request's `staging` and `file` are the import's id and the staged "
-                "file's name; send both"
-            )
-        if not isinstance(name, str):
-            raise Refusal("the request's `name` is the tattoo's name; send one")
-        path = importing.staged_file(imports.folder(staged), file)
-        carried = importing.verify(path)
-        if carried:
-            raise Refusal(
-                f"{file} still carries {', '.join(carried)}; clean it as an import "
-                "does, then keep it"
-            )
-        kept = tattoos.keep(root, name, path.read_bytes())
-        imports.cancel(staged)
-        return asdict(kept)
-
-    @app.post("/api/c/{collection}/tattoos")
-    def post_cut(collection: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Keep a cut: a tattoo with no image, from the photograph of a run."""
-        one = held(collection, str(payload.get("digest")), str(payload.get("flow")))
-        name = payload.get("name")
-        if not isinstance(name, str):
-            raise Refusal("the request's `name` is the tattoo's name; send one")
-        return asdict(tattoos.cut(root, name, one.run.digest, _dimensions(one.run)))
-
-    @app.put("/api/tattoos/{name}/outline")
-    def put_outline(
-        name: str, payload: dict[str, Any], digest: str | None = None
-    ) -> dict[str, Any]:
-        """Replace a tattoo's outline and tone with what the page sent, whole."""
-        _needs(payload, OUTLINE_KEYS)
-        return asdict(
-            tattoos.save_outline(
-                root,
-                name,
-                _digest_asked(digest),
-                payload["points"],
-                payload["closed"],
-                payload["white"],
-                payload["neutral"],
-                payload["depth"],
-            )
-        )
-
-    @app.get("/api/tattoos/{name}/stage1/{digest}")
-    def get_stage1(name: str, digest: str) -> dict[str, Any]:
-        """Return a tattoo's pairs and flag on a photograph; none if never placed."""
-        return asdict(tattoos.read_stage1(root, name, digest))
-
-    @app.put("/api/tattoos/{name}/stage1/{digest}")
-    def put_stage1(name: str, digest: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Replace a tattoo's pairs and flag on a photograph with what the page sent."""
-        _needs(payload, STAGE1_KEYS)
-        return asdict(
-            tattoos.save_stage1(
-                root, name, digest, payload["pairs"], payload["not_on_photo"]
-            )
-        )
-
-    @app.post("/api/c/{collection}/tattoos/{name}/ink")
-    def post_ink(collection: str, name: str, payload: dict[str, Any]) -> Response:
-        """Return a tattoo's ink on its outline's crop, a JPEG made now, kept nowhere.
-
-        The tattoo is found on the render named by `digest` and `flow`, whose
-        photograph a cut reads.
-        """
-        folder(collection)
-        _needs(payload, INK_KEYS)
-        one = held(collection, str(payload["digest"]), str(payload["flow"]))
-        view = tattoos.ink_view(
-            root,
-            name,
-            one.run.photo,
-            one.run.digest,
-            payload["points"],
-            payload["white"],
-            payload["neutral"],
-            payload["depth"],
-        )
-        return Response(
-            view.jpeg,
-            media_type="image/jpeg",
-            headers={
-                "Cache-Control": "no-store",
-                "X-Ink-Box": ",".join(str(side) for side in view.box),
-                "X-Ink-White": str(view.white),
-            },
-        )
-
-    def placed_on(collection: str, payload: Mapping[str, Any]) -> tuple[Held, Path]:
-        """Return the run a placement body names and the image it is placed on.
-
-        The image is the render's, or the baked edit `edit` of it when the body
-        names one; an edit with no image yet is refused.
-        """
-        one = held(collection, str(payload["digest"]), str(payload["flow"]))
-        seed = str(payload["seed"])
-        if not is_seed(seed):
-            raise Refusal(
-                f"{seed!r} is no seed; send the render's seed as its address shows it"
-            )
-        _, image, _ = rendered(
-            collection,
-            one.run.digest,
-            str(payload["flow"]),
-            str(payload["version"]),
-            int(seed),
-        )
-        edit = payload.get("edit")
-        if edit is None:
-            return one, image
-        if isinstance(edit, bool) or not isinstance(edit, int) or edit < 1:
-            raise Refusal(
-                f"edit {edit!r} is no edit's number; send the number of a baked "
-                "edit, or none for the render"
-            )
-        own = edit_files(image.parent, int(seed), edit)[0]
-        if not own.is_file():
-            raise Refusal(
-                f"edit {edit} of {seed} has no image yet; it waits for its render "
-                "session, or is gone"
-            )
-        return one, own
-
-    @app.post("/api/c/{collection}/tattoos/{name}/preview")
-    def post_preview(collection: str, name: str, payload: dict[str, Any]) -> Response:
-        """Return a tattoo's warped ink for a stage's pairs, a JPEG made now.
-
-        `target` is `photo` for stage 1 and `render` for every other stage; the
-        image is the crop of that target the pairs and the limb name. Nothing is
-        kept.
-        """
-        _needs(payload, PREVIEW_KEYS)
-        one, image = placed_on(collection, payload)
-        made = tattoos.preview(
-            root,
-            name,
-            one.run.photo,
-            one.run.digest,
-            image,
-            str(payload["target"]),
-            payload["pairs"],
-            payload["limb"],
-            payload["exclusions"],
-        )
-        return Response(
-            made.jpeg,
-            media_type="image/jpeg",
-            headers={
-                "Cache-Control": "no-store",
-                "X-Preview-Box": ",".join(str(side) for side in made.box),
-                "X-Ink-White": str(made.white),
-            },
-        )
-
-    @app.post("/api/c/{collection}/tattoos/{name}/bake")
-    def post_bake(
-        collection: str, name: str, payload: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Queue the edit request of a tattoo placed by pairs; answer its number.
-
-        The composite and the placement are made now and handed to the edit stage,
-        which writes the request's files and never its image: the render session
-        samples it.
-        """
-        _needs(payload, BAKE_KEYS)
-        one, image = placed_on(collection, payload)
-        made = tattoos.composite(
-            root,
-            name,
-            one.run.photo,
-            one.run.digest,
-            image,
-            payload["pairs"],
-            payload["limb"],
-            payload["exclusions"],
-        )
-        asked = request_placed(
-            load_edit(BAKE_EDIT),
-            image,
-            made.png,
-            made.values,
-            overrides={},
-            seed=None,
-            rng=wired.rng,
-        )
-        return {"edit": asked.number}
-
-    @app.post("/api/c/{collection}/place/propose")
-    def post_propose(collection: str, payload: dict[str, Any]) -> JSONResponse:
-        """Return the pairs proposed for a render, `{arm, pairs}`, made now.
-
-        `points` are the tattoo's on the photograph, in its upright pixels. A pair is
-        the photograph's point then the render's. Nothing is kept, and an answer with
-        no pair is no refusal.
-        """
-        _needs(payload, PROPOSE_KEYS)
-        points = _points_of(payload["points"])
-        one, image = placed_on(collection, {key: payload[key] for key in PROPOSE_KEYS})
-        proposer = proposer_of(wired)
-        answer = proposer.propose(
-            _upright_of(one.run.photo, "the photograph"),
-            _upright_of(image, "the render"),
-            points,
-        )
-        return JSONResponse(
-            {
-                "arm": answer.arm,
-                "pairs": [[[*seen], [*drawn]] for seen, drawn in answer.pairs],
-            },
-            headers={"Cache-Control": "no-store"},
-        )
-
     @app.post("/api/c/{collection}/prepare")
     def post_prepare(collection: str) -> dict[str, Any]:
         """Start Prepare over every assigned cell with no sheet, as one job.
@@ -774,11 +456,6 @@ def create_app(
         if kind not in KINDS:
             raise Refusal(f"there is no {kind} job: stop `prepare` or `render`")
         return {"job": jobs.stop(kind)}
-
-    @cache
-    def offered(flow: str) -> Flow:
-        """Return a tracked flow by name, loaded once: a flow is pinned while served."""
-        return _flow(wired, flow)
 
     def quoted(
         names: Sequence[str] | None, without: object = None
@@ -937,13 +614,6 @@ def create_app(
         )
         return {"job": job}
 
-    def rendering_slot() -> dict[str, Any] | None:
-        """Return the render slot while it runs, or None."""
-        slot = jobs.slot("render")
-        if slot and slot["state"] == "running":
-            return slot
-        return None
-
     @app.get("/api/sessions/running")
     def running_sessions() -> dict[str, Any]:
         """Read live disk records across collections, including terminal renders."""
@@ -1004,44 +674,6 @@ def create_app(
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache"},
         )
-
-    @app.get("/api/tags")
-    def read_tags(q: str = "", limit: int = DEFAULT_LIMIT) -> dict[str, Any]:
-        """Answer a tag fragment from the vocabulary the pipeline itself searches.
-
-        The server ranks and the client does not. Shipping all 8,106 tags would
-        put a second copy of the ranking rule in TypeScript, and `total` is the
-        true match count so the dropdown can say how narrow the fragment got.
-        """
-        vocabulary = shared.vocabulary()
-        fragment = q.strip()
-        found = (
-            vocabulary.search(fragment, skip=shared.field_map().excluded)
-            if fragment
-            else []
-        )
-        return {
-            "matches": [
-                {
-                    "tag": tag,
-                    "posts": (posts := vocabulary.count(tag)),
-                    "rare": posts < RARE_BELOW,
-                }
-                for tag in found[: max(limit, 0)]
-            ],
-            "total": len(found),
-        }
-
-    @app.get("/api/fields")
-    def read_fields(flow: str) -> dict[str, Any]:
-        """Answer every candidate tag for every criterion `flow` declares.
-
-        **The whole table in one response, once per flow.** ~40 KB, so the
-        overlay filters with no round trip per keystroke, ordered by post count
-        through `Vocabulary.rank` and cut at nothing. A declared field the table
-        holds nothing for is present and empty; the excluded list is not served.
-        """
-        return shared.candidates(_flow(wired, flow))
 
     @app.get("/api/c/{collection}/review/{digest}/{flow}")
     def read_input(collection: str, digest: str, flow: str) -> dict[str, Any]:
@@ -1226,19 +858,6 @@ def create_app(
             left, changed = cancel(one.run, one.flow.id)
         return {"back": None if left is None else left.name, "cancelled": changed}
 
-    def _rendering(collection: str) -> str | None:
-        """Return what a render running for `collection` says, or None.
-
-        A session over several collections renders each, not only the first its
-        slot names.
-        """
-        slot = rendering_slot()
-        return (
-            "A render session is running."
-            if slot and collection in slot.get("collections", [slot["collection"]])
-            else None
-        )
-
     @app.post("/api/c/{collection}/review/{digest}/{flow}/discard")
     def post_discard(
         collection: str, digest: str, flow: str, payload: dict[str, Any] | None = None
@@ -1321,32 +940,6 @@ def create_app(
                     target, held, shared.vocabulary, shared.field_map
                 ).name
         return {"drafts": drafts}
-
-    def rendered(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> tuple[Run, Path, Path]:
-        """Return a render's run, its image and the approval it was rendered from.
-
-        A missing image is refused: with its record gone too, as a deleted render's
-        is, nothing is there to render again.
-        """
-        found = folder(collection)
-        run = library.run_named(found, digest)
-        one = offered(flow)
-        number = _version(version)
-        approval = approval_of(run, flow, number)
-        image = image_of(run, one, number, seed)
-        if not image.is_file():
-            if not (image.parent / f"{seed}{SIDECAR}").is_file():
-                raise Refusal(
-                    f"{image.name}: no render is here, "
-                    "its record and its image are gone"
-                )
-            raise Refusal(
-                f"{image.name}: its record is there, its image is gone; render it "
-                f"again with `python -m isekai render {found / library.RUNS}`"
-            )
-        return run, image, approval
 
     @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}")
     def read_render(
@@ -1466,41 +1059,6 @@ def create_app(
             library.thumbnail(root, run, image), media_type="image/jpeg"
         )
 
-    def baked(
-        collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> tuple[Run, library.Bake, Path]:
-        """Return a render's bake `k`: its run, its listing and where its image is.
-
-        `k` is text, so no number a request spells is a 422: one the seed has no
-        edit for is refused, as is a bake whose record cannot be read.
-        """
-        run, image, _ = rendered(collection, digest, flow, version, seed)
-        held = {one.k: one for one in library.bakes(image.parent, seed)}
-        # A held number is small: a spelling too long to convert holds none.
-        number = int(k) if _DECIMAL.fullmatch(k) and len(k) <= _BAKE_DIGITS else None
-        if number is None or number not in held:
-            raise Refusal(
-                f"{flow} {version} · {seed} holds no bake {k!r}; go back to its "
-                "large view to choose one"
-            )
-        bake = held[number]
-        if bake.state == "damaged":
-            raise Refusal(str(bake.reason))
-        return run, bake, edit_files(image.parent, seed, number)[0]
-
-    def bake_image(
-        collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> tuple[Run, Path]:
-        """Return a baked bake's run and image, refusing one still queued."""
-        run, bake, image = baked(collection, digest, flow, version, seed, k)
-        if bake.state == "queued":
-            raise Refusal(
-                f"bake {k} of {seed} is queued and has no image yet; the next "
-                f"render session bakes it, `python -m isekai render "
-                f"{folder(collection) / library.RUNS}`"
-            )
-        return run, image
-
     @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}")
     def read_bake(
         collection: str, digest: str, flow: str, version: str, seed: int, k: str
@@ -1572,6 +1130,10 @@ def create_app(
             library.source_thumbnail(root, source), media_type="image/jpeg"
         )
 
+    vocabulary_mount(app, surface)
+    tattoo_mount(app, surface)
+    place_mount(app, surface)
+
     @app.get("/api/{rest:path}")
     def no_route(rest: str) -> JSONResponse:
         """Answer an unknown API path as not found, never with the page."""
@@ -1591,55 +1153,6 @@ def create_app(
         return FileResponse(bundle / "index.html")
 
     return app
-
-
-class _Shared:
-    """What every collection shares, read once when first asked for.
-
-    Read on first use rather than at start, so a missing vocabulary is a
-    refusal on the page that needs it rather than a server that never starts.
-    """
-
-    def __init__(self, wired: Wiring) -> None:
-        """Hold the wiring the vocabulary and the table are read through."""
-        self._wired = wired
-        self._vocabulary: Vocabulary | None = None
-        self._field_map: FieldMap | None = None
-        self._candidates: dict[str, dict[str, Any]] = {}
-
-    def vocabulary(self) -> Vocabulary:
-        """Return the vocabulary, read once."""
-        if self._vocabulary is None:
-            self._vocabulary = self._wired.vocabulary()
-        return self._vocabulary
-
-    def field_map(self) -> FieldMap:
-        """Return the field map held against the vocabulary, read once."""
-        if self._field_map is None:
-            self._field_map = self._wired.field_map(self.vocabulary())
-        return self._field_map
-
-    def candidates(self, flow: Flow) -> dict[str, Any]:
-        """Return every candidate tag for every criterion `flow` declares, ranked."""
-        if flow.id not in self._candidates:
-            vocabulary, table = self.vocabulary(), self.field_map()
-            self._candidates[flow.id] = {
-                "fields": {
-                    name: [
-                        {"tag": tag, "posts": vocabulary.count(tag)}
-                        for tag in vocabulary.rank(table.group(name))
-                    ]
-                    for name in flow.schema.names
-                }
-            }
-        return self._candidates[flow.id]
-
-
-# A number a request spells: ASCII digits alone, since `str.isdigit` also passes
-# a superscript `int` cannot read.
-_DECIMAL = re.compile(r"[0-9]+")
-# The most digits a bake number is read from: a longer spelling is refused unread.
-_BAKE_DIGITS = 18
 
 
 def cell_event(
@@ -1824,20 +1337,6 @@ def _whole(value: object) -> TypeGuard[int]:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def _version(text: str) -> int:
-    """Return the approval number a URL's version names.
-
-    e.g. "v2" -> 2
-    """
-    digits = text.removeprefix("v")
-    if not _DECIMAL.fullmatch(digits):
-        raise Refusal(
-            f"{text!r} names no version; a version is v and the approval's number, "
-            "e.g. v1 -- go back to the collection's hub to choose one"
-        )
-    return int(digits)
-
-
 def _quote(
     found: Mapping[str, Path],
     made: render.Quote,
@@ -1994,94 +1493,6 @@ def _photograph(
     return FileResponse(path, media_type=kind, headers=headers)
 
 
-def _needs(payload: Mapping[str, Any], keys: Sequence[str]) -> None:
-    """Refuse a body that lacks any of `keys`, naming each."""
-    missing = [key for key in keys if key not in payload]
-    if missing:
-        raise Refusal(f"the request lacks {', '.join(missing)}; send {', '.join(keys)}")
-
-
-def _digest_asked(digest: str | None) -> str:
-    """Return the `digest` a tattoo request names, refusing a request with none."""
-    if digest is None:
-        raise Refusal(
-            "the request's `digest` is the render's photograph digest, as its address "
-            "shows; send it as `?digest=`"
-        )
-    return digest
-
-
-def _is_point(value: object) -> TypeGuard[list[float]]:
-    """Return whether `value` is `[x, y]`, two finite numbers from 0 up."""
-    return (
-        isinstance(value, list)
-        and len(value) == 2
-        and all(
-            isinstance(each, int | float)
-            and not isinstance(each, bool)
-            and math.isfinite(each)
-            and each >= 0
-            for each in value
-        )
-    )
-
-
-def _points_of(value: object) -> list[tuple[float, float]]:
-    """Return the tattoo's points a body names, each a finite, non-negative `[x, y]`.
-
-    e.g. [[10, 20.5]] -> [(10.0, 20.5)]; a negative, a non-number or none is refused.
-    """
-    if not isinstance(value, list) or not value:
-        raise Refusal(
-            "points is the tattoo's points on the photograph, `[[x, y], ...]`; "
-            "send at least one"
-        )
-    found: list[tuple[float, float]] = []
-    for number, point in enumerate(value, 1):
-        if not _is_point(point):
-            raise Refusal(
-                f"point {number} is {point!r}; send each as `[x, y]`, two finite "
-                "numbers from 0 up, in the photograph's pixels"
-            )
-        found.append((float(point[0]), float(point[1])))
-    return found
-
-
-def _upright_of(path: Path, what: str) -> "Image":
-    """Return the image at `path` upright, as RGB, or refuse in words naming `what`."""
-    from PIL.Image import DecompressionBombError
-
-    try:
-        return upright_image(path)
-    except (OSError, DecompressionBombError) as unreadable:
-        raise Refusal(
-            f"{what} cannot be read ({unreadable}); reload the page"
-        ) from unreadable
-
-
-def _tattoo_limits() -> dict[str, Any]:
-    """Return the bounds the page and the server both read: one source, two configs."""
-    config = tattoos.load_tattoo_config()
-    ink = load_ink_config(tattoos.INK_CONFIG)
-    return {
-        "long_side": config.long_side,
-        "outline_min": config.outline_min,
-        "outline_max": config.outline_max,
-        "depth_min": ink.depth_min,
-        "depth_max": ink.depth_max,
-        "photo_depth": ink.photo_depth,
-        "image_depth": ink.image_depth,
-        "floor_stage1": config.floor_stage1,
-        "floor_stage2": config.floor_stage2,
-        "floor_direct": config.floor_direct,
-        "preview_floor": config.preview_floor,
-        "preview_margin": config.preview_margin,
-        "preview_wait_ms": config.preview_wait_ms,
-        "pair_radius": config.pair_radius,
-        "region_min": config.region_min,
-    }
-
-
 def _hub(grid: library.Hub) -> dict[str, Any]:
     """Describe a collection's grid as the page draws it."""
     return {
@@ -2112,26 +1523,6 @@ def _cell_out(cell: library.Cell) -> dict[str, Any]:
         "newest": None if cell.newest is None else image(cell.newest),
         "images": [image(one) for one in cell.images],
     }
-
-
-def _flow(wired: Wiring, flow: str) -> Flow:
-    """Return the tracked flow a URL names, refusing one this build does not track."""
-    tracked = tracked_flows(wired.flows_dir)
-    if flow not in tracked:
-        raise Refusal(
-            f"{flow}: not a flow this build tracks; the flows it tracks are "
-            f"{', '.join(tracked)} -- go back to the collection's hub to choose one"
-        )
-    return load_flow(flow, wired.flows_dir)
-
-
-def _dimensions(run: Run) -> tuple[int, int]:
-    """Return the photograph's size, as a `Refusal` rather than an exit."""
-    return dimensions_or_refuse(
-        run.photo,
-        "the page reads the photograph's own header to size itself and there is "
-        "nothing to fall back to -- re-export it as a JPEG or PNG",
-    )
 
 
 def _wd14(one: Held) -> list[dict[str, Any]] | None:

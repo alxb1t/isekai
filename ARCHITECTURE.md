@@ -8,7 +8,7 @@ staged verb at a time. [`docs/README.md`](docs/README.md) draws it.
 
 Imports point down; `tests/test_layers.py` holds that. [`docs/modules.md`](docs/modules.md) has the graph.
 
-- **`interface`** — the CLI and the review UI; they compose. The CLI's verbs live in `interface/verbs/`, one row each.
+- **`interface`** — the CLI and the review UI; they compose. The CLI's verbs live in `interface/verbs/`, one row each; the UI's routes live in `interface/ui/routes/`, a class a resource over one `Surface`.
 - **`pipeline`** — the stages.
 - **`boundary`** — every way to a model, the GPU or the network.
 - **`shared`** — what the stages share: the vocabulary, the field map, image headers, and the placement's maths:

@@ -49,11 +49,12 @@ PROPOSE = f"/api/c/{COLLECTION}/place/propose"
 Point = tuple[float, float]
 
 LEFT = {5: (50.0, 100.0), 7: (150.0, 100.0), 9: (250.0, 100.0)}
+RIGHT = {6: (370.0, 50.0), 8: (370.0, 100.0), 10: (370.0, 150.0)}
 
 
-def _pose() -> Pose:
-    """Return a pose of one left arm along y=100, every score 0.9."""
-    points = tuple(LEFT.get(index, (10.0, 10.0)) for index in range(17))
+def _pose(arms: dict[int, Point] = LEFT) -> Pose:
+    """Return a pose of the `arms` given, every score 0.9."""
+    points = tuple(arms.get(index, (10.0, 10.0)) for index in range(17))
     return Pose((0.0, 0.0, 400.0, 300.0), points, (0.9,) * 17)
 
 
@@ -71,15 +72,18 @@ def _band(
 class _Models:
     """The fake models a wiring hands out, and what they were asked."""
 
-    def __init__(self, *, found: bool = True) -> None:
+    def __init__(self, *, found: bool = True, arms: dict[int, Point] = LEFT) -> None:
         self.opened = 0
         self.poses: list[FakePoseFinder] = []
         self._found = found
+        self._arms = arms
 
     def __call__(self) -> Proposer:
         """Open a proposer over fresh fakes: a pose for each image."""
         self.opened += 1
-        pose = FakePoseFinder(_pose(), _pose() if self._found else None)
+        pose = FakePoseFinder(
+            _pose(self._arms), _pose(self._arms) if self._found else None
+        )
         self.poses.append(pose)
         return Proposer(pose, FakeSegmenter(_band))
 
@@ -216,6 +220,18 @@ def test_propose_route_reads_the_photograph_upright(
     assert seen.size == SIZE
     assert drawn.size == SIZE
     assert seen.mode == drawn.mode == "RGB"
+
+
+@pytest.mark.spec("placement-proposal:pairs:the-arm-nearest-the-tattoo-is-proposed")
+def test_propose_route_reads_a_point_as_x_then_y_and_takes_a_zero_coordinate(
+    wired: Wiring, library: Path, tmp_path: Path, photographed: Run
+) -> None:
+    client = _app(wired, library, tmp_path, _Models(arms=LEFT | RIGHT))
+
+    answered = _ask(client, _body(photographed, points=[[380, 100], [380, 0]]))
+
+    assert answered.status_code == 200, answered.text
+    assert answered.json()["arm"] == "right"
 
 
 @pytest.mark.spec(

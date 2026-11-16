@@ -1,0 +1,58 @@
+{
+  "change": "0147-the-surface",
+  "version": "0.87.3",
+  "base": "988c5694",
+  "analyzed": "2d11fa4e",
+  "measured_on": "local",
+  "collected_at": "2026-11-16T15:56:07+02:00",
+  "mf_version": "v0.101.1",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2397
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 149
+    },
+    "open-backlog-cards": {
+      "value": 8
+    },
+    "commits-without-trailer": {
+      "value": 1
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 4
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 2008
+    },
+    "diff-files": {
+      "value": 25
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 15001
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1084
+    },
+    "decisions": {
+      "value": 60
+    }
+  }
+}

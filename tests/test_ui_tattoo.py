@@ -341,6 +341,24 @@ def test_tattoo_route_keep_names_what_it_is_missing(
     assert answered.json()["refusal"]
 
 
+@pytest.mark.spec_exempt("structural: a keep names the field it is missing")
+@pytest.mark.parametrize(
+    ("body", "match"),
+    [
+        ({"staging": "gone", "file": 3, "name": "bow"}, "send both"),
+        ({"staging": 3, "file": "bow.png", "name": "bow"}, "send both"),
+        ({"staging": "gone", "file": "bow.png"}, "the request's `name`"),
+    ],
+)
+def test_tattoo_route_keep_refuses_a_body_before_it_reads_the_import(
+    client: TestClient, body: dict[str, Any], match: str
+) -> None:
+    answered = client.post("/api/tattoos", json=body)
+
+    assert answered.status_code == 409
+    assert match in answered.json()["refusal"]
+
+
 @pytest.mark.spec("tattoo:cut:a-cut-holds-no-image")
 def test_tattoo_route_keep_cuts_a_tattoo_from_a_runs_photograph(
     library: Path, client: TestClient, photographed: Callable[..., Run]
@@ -363,7 +381,7 @@ def test_tattoo_route_keep_cuts_a_tattoo_from_a_runs_photograph(
     [
         ({"name": "arm", "digest": "0123456789ab", "flow": FLOW}, "no run named"),
         ({"name": "arm", "digest": "RUN", "flow": "nowhere"}, "nowhere"),
-        ({"digest": "RUN", "flow": FLOW}, "name"),
+        ({"digest": "RUN", "flow": FLOW}, "the request's `name`"),
         ({"name": ".hid", "digest": "RUN", "flow": FLOW}, "choose another name"),
     ],
 )
@@ -558,6 +576,16 @@ def test_ink_preview_route_refuses_an_unknown_tattoo_naming_it(
 
     assert answered.status_code == 409
     assert "ghost" in answered.json()["refusal"]
+
+
+@pytest.mark.spec_exempt("structural: the collection is checked before the body")
+def test_ink_preview_route_refuses_an_unknown_collection_before_the_body(
+    client: TestClient,
+) -> None:
+    answered = client.post("/api/c/nowhere/tattoos/arm/ink", json={})
+
+    assert answered.status_code == 409
+    assert "'nowhere'" in answered.json()["refusal"]
 
 
 @pytest.mark.spec("tattoo:cut:a-cut-serves-only-its-own-photograph")

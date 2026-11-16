@@ -68,6 +68,7 @@ from isekai.foundation.flow import (  # noqa: E402
     load_flow,
     manifest_digest,
 )
+from isekai.foundation.refusal import Refusal  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
     APPROVED,
     CAPTIONS,
@@ -544,6 +545,10 @@ def test_the_limit_narrows_the_rows_without_changing_the_true_count(
     # The footer says how narrow the fragment got, so narrowing it is the way to
     # see fewer rows rather than scrolling.
     assert body["total"] == len(vocabulary.search("hair"))
+    for none in (0, -1):
+        empty = client.get("/api/tags", params={"q": "hair", "limit": none}).json()
+        assert empty["matches"] == []
+        assert empty["total"] == body["total"]
 
 
 @pytest.mark.spec("ui:vocabulary:an-unmatched-fragment-commits-nothing")
@@ -1767,6 +1772,35 @@ def test_a_damage_remedy_under_a_root_holding_a_space_pastes_as_one_argument(
     command = refusal.split("`python -m isekai ")[1].split("`")[0]
     parsed = build_parser().parse_args(shlex.split(command))
     assert (parsed.verb, parsed.runs, parsed.photos) == ("caption", root, [moved.id])
+
+
+@pytest.mark.spec("run-directory:containment:in-tree-run-root-is-refused")
+def test_a_collection_route_asks_the_guard_for_its_runs_root_and_answers_its_refusal(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    asked: list[Path] = []
+
+    def guard(runs: Path) -> Wiring:
+        asked.append(runs)
+        raise Refusal(f"{runs}: inside the working tree")
+
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    app = create_app(
+        wired.runs_root.parent.parent,
+        wired,
+        flows=OFFERED,
+        bundle=dist,
+        wire=guard,
+        host=HOST,
+        port=PORT,
+    )
+
+    refused = TestClient(app, base_url=ADDRESS).get(f"/api/c/{COLLECTION}/hub")
+
+    assert refused.status_code == 409
+    assert asked == [wired.runs_root]
+    assert refused.json() == {"refusal": f"{wired.runs_root}: inside the working tree"}
 
 
 @pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")
