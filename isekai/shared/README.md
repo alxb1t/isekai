@@ -36,7 +36,7 @@ does is reach a boundary or decide a stage's order.
 | `ink.py` | `interface/ui/routes/tattoos.py`, `interface/verbs/common.py`, `interface/verbs/edits.py`, `pipeline/tattoos.py` | — |
 | `proposal.py` | `pipeline/proposing.py` | — |
 | `tattoo.py` | `pipeline/edit.py`, `pipeline/tattoos.py`, `ink.py` | — |
-| `vocabulary.py` | `boundary/wd14.py`, `interface/cli.py`, `interface/drafting.py`, `interface/ui/app.py`, `interface/ui/surface.py`, `interface/wiring.py`, `pipeline/review.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `evaluation/__main__.py`, `evaluation/face.py`, `evaluation/recall.py`, `tools/derive_field_map.py` |
+| `vocabulary.py` | `boundary/wd14.py`, `interface/cli.py`, `interface/drafting.py`, `interface/ui/routes/reviewing.py`, `interface/ui/surface.py`, `interface/wiring.py`, `pipeline/review.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `evaluation/__main__.py`, `evaluation/face.py`, `evaluation/recall.py`, `tools/derive_field_map.py` |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are
