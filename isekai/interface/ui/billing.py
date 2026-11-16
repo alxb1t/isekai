@@ -12,6 +12,7 @@ the job's open or close went unanswered ─▶ the band, until gpunit holds no v
 ```
 """
 
+import contextlib
 import json
 import threading
 from collections.abc import Callable
@@ -117,10 +118,8 @@ class Billing:
 
     def _ask(self) -> None:
         """Ask through `check`; a raise costs this ask alone."""
-        try:
+        with contextlib.suppress(Exception):
             self.check()
-        except Exception:
-            pass
 
     def publish(self) -> dict[str, Any]:
         """Tell every page the billing state, and return it."""
