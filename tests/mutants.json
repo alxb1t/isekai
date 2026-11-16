@@ -81,7 +81,7 @@
   },
   {
     "finding": "FN-4a",
-    "path": "isekai/foundation/run.py",
+    "path": "isekai/foundation/names.py",
     "find": "    cleaned = _UNSAFE.sub(\"-\", stem.lower()).strip(\"-\")[:ID_SLUG_CHARS].strip(\"-\")",
     "replace": "    cleaned = _UNSAFE.sub(\"-\", stem.lower()).strip(\"-\")",
     "tests": ["tests/test_run_directory.py"],
@@ -89,7 +89,7 @@
   },
   {
     "finding": "FN-4b",
-    "path": "isekai/foundation/run.py",
+    "path": "isekai/foundation/names.py",
     "find": "_UNSAFE = re.compile(r\"[^a-z0-9]+\")",
     "replace": "_UNSAFE = re.compile(r\"[^a-z0-9_]+\")",
     "tests": ["tests/test_run_directory.py"],

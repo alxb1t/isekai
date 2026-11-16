@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.foundation.run import FRAME_NAME
+from isekai.foundation.run import FRAME_NAME, assign, open_run
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
 from tests.conftest import tree
@@ -69,6 +69,19 @@ def test_removing_an_empty_assignment_deletes_its_directory(
     (run,) = runs.iterdir()
     assert code == 0
     assert not (run / FLOW).exists()
+
+
+@pytest.mark.spec("cli:assign:assigning-creates-the-run-and-the-flow")
+@pytest.mark.spec("cli:assign:assigning-again-writes-nothing")
+@pytest.mark.spec("cli:assign:removing-an-empty-flow-deletes-it")
+def test_assign_says_whether_the_run_changed(tmp_path: Path, photo: Path) -> None:
+    run = open_run(photo, tmp_path / "runs")
+
+    assert assign(run, FLOW, remove=True) is False
+    assert assign(run, FLOW) is True
+    assert assign(run, FLOW) is False
+    assert assign(run, FLOW, remove=True) is True
+    assert not (run.path / FLOW).exists()
 
 
 @pytest.mark.spec("cli:assign:removing-a-prepared-flow-is-refused")

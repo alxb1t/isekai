@@ -29,7 +29,6 @@ convention:**
 Stdlib only, and on `python -m isekai`'s import graph.
 """
 
-import hashlib
 import os
 import re
 import shlex
@@ -47,13 +46,113 @@ from isekai.foundation.artifacts import (
     Failure,
     Frame,
     InstructionsRecord,
-    PhotoRecord,
-    read,
-    require,
     write,
 )
 from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.names import (
+    APPROVED,
+    ARTIFACT,
+    CAPTIONS,
+    DESCRIPTION,
+    ERROR,
+    FRAME_NAME,
+    ID_DIGEST_CHARS,
+    ID_SEPARATOR,
+    ID_SLUG_CHARS,
+    OUTPUTS,
+    PHOTO,
+    PHOTOGRAPH_VERBS,
+    PROMPTS,
+    REVIEW,
+    SHEETS,
+    SIGNATURE_BYTES,
+    SOURCES,
+    TAGS,
+    WD14,
+    digest_of,
+    media_type,
+    run_id,
+    slug,
+)
 from isekai.foundation.refusal import Refusal
+from isekai.foundation.rundir import Run, assign
+
+__all__ = [
+    "APPROVED",
+    "ARTIFACT",
+    "BUDGETS",
+    "CAPTIONS",
+    "DATA_ROOT",
+    "DESCRIPTION",
+    "EDIT_COMPOSITE",
+    "EDIT_PLACEMENT",
+    "EDIT_RECORD",
+    "EDIT_STEM",
+    "ERROR",
+    "FRAME_NAME",
+    "ID_DIGEST_CHARS",
+    "ID_SEPARATOR",
+    "ID_SLUG_CHARS",
+    "NEW_VERSION",
+    "OUTPUTS",
+    "PHOTO",
+    "PHOTOGRAPH_VERBS",
+    "PROMPTS",
+    "REPOSITORY",
+    "REVIEW",
+    "RUNS_ROOT",
+    "SHEETS",
+    "SIGNATURE_BYTES",
+    "SOURCES",
+    "TAGS",
+    "WD14",
+    "Attempt",
+    "Kind",
+    "Run",
+    "StageFailure",
+    "across",
+    "approval_of",
+    "approved_versions",
+    "artifact_name",
+    "assign",
+    "attempts",
+    "check_budget",
+    "constant_record",
+    "delete_edits",
+    "digest_of",
+    "edit_at",
+    "edit_files",
+    "edit_numbers",
+    "edit_stem",
+    "exhausted",
+    "failure_named",
+    "failures_alone",
+    "find_run",
+    "group_of",
+    "instructions_record",
+    "is_approved",
+    "is_edit_file",
+    "is_seed",
+    "is_version",
+    "latest",
+    "latest_artifact",
+    "media_type",
+    "migrate_command",
+    "next_edit",
+    "next_version",
+    "open_run",
+    "photo_of",
+    "placement_file",
+    "record_failure",
+    "refusal_for",
+    "rendered_at",
+    "run_id",
+    "sheet_of",
+    "slug",
+    "stage_command",
+    "unmigrated",
+    "versions",
+]
 
 # Everything a run produces or consumes lives under one gitignored root. The run
 # directory holds a *copy of the photograph*, which is what makes a run
@@ -71,84 +170,6 @@ RUNS_ROOT = DATA_ROOT / "runs"
 # because this module owns `DATA_ROOT` and `instructions_record` needs it, and a
 # second derivation is a second thing to keep true.
 REPOSITORY = DATA_ROOT.parent
-
-# Enough of the digest to separate two photographs and few enough characters to
-# leave the slug legible in a listing. The whole digest is in the frame.
-ID_DIGEST_CHARS = 12
-
-# What separates the digest from the slug. An underscore, because `slug` maps
-# every unsafe character to a hyphen and a hyphenated slug would leave a reader no
-# way to see where the digest ended. A slug can never contain an underscore, so the
-# boundary is unambiguous. Nothing splits the id on it -- `startswith` on the
-# prefix is its only use -- so this is readability alone.
-ID_SEPARATOR = "_"
-
-# How much of a filename stem survives into the id. A stem is a human's label,
-# not an identifier, so it is truncated rather than refused.
-ID_SLUG_CHARS = 32
-
-# Anything outside this is replaced in a slug. Deliberately narrow: the id becomes
-# a directory name and is interpolated into messages, so a stem carrying a path
-# separator, a shell metacharacter or a control byte must not survive it.
-_UNSAFE = re.compile(r"[^a-z0-9]+")
-
-# The magic bytes the header parser on the render path reads, and the extension
-# and media type each one *is*. The extension is derived from the bytes rather
-# than copied from the source name: the rule is that a filename must not lie
-# about its contents, and copying a `.jpg` that holds a PNG would enshrine the
-# lie inside the run.
-_SIGNATURES: tuple[tuple[bytes, str, str], ...] = (
-    (b"\x89PNG\r\n\x1a\n", "image/png", ".png"),
-    (b"\xff\xd8\xff", "image/jpeg", ".jpg"),
-)
-
-# The most leading bytes `media_type` reads, so a caller may hand it a file's head.
-SIGNATURE_BYTES = max(len(signature) for signature, _, _ in _SIGNATURES)
-
-# The frame: what the run is, written once when the run is created.
-FRAME_NAME = "run.json"
-
-# The fields of the frame's photograph record, each with the shape it holds.
-_PHOTO_FIELDS: tuple[tuple[str, type], ...] = (
-    ("name", str),
-    ("sha256", str),
-    ("bytes", int),
-    ("media_type", str),
-)
-
-# The stage directories, and the label an approved artifact carries. The run owns
-# the layout, so a stage that needs another stage's directory asks the run rather
-# than importing the stage. `approved` is here for the same reason: `review` writes it
-# and both `generate` and the inspection command read it.
-#
-# **The photograph's description sits in `photo/`, every other stage under a
-# flow**: `runs/<input-id>/photo/<stage>/` and `runs/<input-id>/<flow-id>/<stage>/`.
-# Above the flow split is what every flow shares: the input, and the caption and
-# tag lists every flow reads alike (D17). Adding a flow adds one subtree, and
-# retiring one flow's work is removing one directory.
-CAPTIONS = "captions"
-WD14 = "wd14"
-TAGS = "tags"
-PHOTO = "photo"
-DESCRIPTION = (CAPTIONS, WD14, TAGS)
-# The verbs that write the description, and so name no flow.
-PHOTOGRAPH_VERBS = ("caption", "tag")
-SHEETS = "sheets"
-REVIEW = "review"
-PROMPTS = "prompts"
-OUTPUTS = "outputs"
-SOURCES = "sources"
-APPROVED = "approved"
-
-# `001`, and `001.draft` / `001.approved` where a stage has that concept. No
-# other label is a version, so a render's `123.render.json` is never one.
-ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>draft|approved))?\.json$")
-
-# `001.error.1.transient` -- the version it stands in for, the attempt ordinal,
-# and the kind, all decidable without opening anything.
-ERROR = re.compile(
-    r"^(?P<version>\d{3})\.error\.(?P<attempt>\d+)\.(?P<kind>transient|permanent)\.json$"
-)
 
 Kind = Literal["transient", "permanent"]
 
@@ -190,149 +211,6 @@ BUDGETS: Mapping[str, int] = {
 }
 
 T = TypeVar("T")
-
-
-# --- identity -----------------------------------------------------------------
-
-
-def slug(stem: str) -> str:
-    """Return the readable half of a run id: lowercase, hyphenated, bounded.
-
-    A stem that survives nothing -- all punctuation, or empty -- yields `photo`,
-    so the id is always `<digest>_<something>` and never ends in a bare underscore.
-    Every unsafe character becomes a hyphen, which is why the id's own separator
-    is an underscore: a slug can never contain one, so the boundary between the
-    digest and the readable half is unambiguous.
-    """
-    cleaned = _UNSAFE.sub("-", stem.lower()).strip("-")[:ID_SLUG_CHARS].strip("-")
-    return cleaned or "photo"
-
-
-def digest_of(body: bytes) -> str:
-    """Return the SHA-256 of `body`, lowercase and in full."""
-    return hashlib.sha256(body).hexdigest()
-
-
-def run_id(digest: str, stem: str) -> str:
-    """Return the run id for a photograph: a digest prefix, then a readable slug."""
-    return f"{digest[:ID_DIGEST_CHARS]}{ID_SEPARATOR}{slug(stem)}"
-
-
-def media_type(body: bytes) -> tuple[str, str]:
-    """Return the media type and canonical extension the photograph's bytes are.
-
-    Read from the bytes, never from the name. A header this build cannot identify
-    stops the run rather than defaulting -- the render path reads JPEG and PNG
-    headers and nothing else, so a third format would fail later and further from
-    the cause.
-    """
-    for signature, kind, suffix in _SIGNATURES:
-        if body.startswith(signature):
-            return kind, suffix
-    raise Refusal(
-        "this build reads JPEG and PNG photographs, and these bytes are neither; "
-        "convert the photograph to JPEG or PNG and offer it again"
-    )
-
-
-# --- the run and its frame ----------------------------------------------------
-
-
-@dataclass(frozen=True)
-class Run:
-    """One photograph's directory, and the frame that says what it is."""
-
-    id: str
-    path: Path
-
-    @property
-    def digest(self) -> str:
-        """Return the digest prefix the identifier begins with, the run's short name."""
-        return self.id[:ID_DIGEST_CHARS]
-
-    @property
-    def frame_path(self) -> Path:
-        """Return the path of the run's frame."""
-        return self.path / FRAME_NAME
-
-    @property
-    def _remedy(self) -> str:
-        """Return the fix for a damaged frame."""
-        # A stage verb given the run id cannot reach a run with no frame, while
-        # `open_run` passes over one, so the path is what re-creates it.
-        return f"delete {self.frame_path}, then offer the photograph again by its path"
-
-    @property
-    def frame(self) -> Frame:
-        """Return the run's frame, refusing a version this build does not read."""
-        return read(self.frame_path, RUN_FILE, remedy=self._remedy)
-
-    @property
-    def photo_record(self) -> PhotoRecord:
-        """Return the frame's record of its photograph, refusing one missing a field.
-
-        Each field is checked by name, so a hand-edited record is a refusal to
-        whoever reads it rather than a `KeyError` three frames later.
-        """
-        frame = self.frame
-        require(self.frame_path, frame, "photo", dict, self._remedy)
-        record: Mapping[str, object] = {**frame["photo"]}
-        for key, shape in _PHOTO_FIELDS:
-            require(self.frame_path, record, key, shape, self._remedy)
-        return frame["photo"]
-
-    def _photo_record(self, key: str) -> str:
-        """Return the frame's `photo[key]`, refusing by name a value not a string."""
-        record: Mapping[str, object] = {**self.photo_record}
-        require(self.frame_path, record, key, str, self._remedy)
-        return str(record[key])
-
-    @property
-    def photo(self) -> Path:
-        """Return the path of the photograph's copy inside the run.
-
-        The name is a file's word, not a path: one that could leave the run is
-        refused, or the run would serve and upload any image on the machine.
-        """
-        name = self._photo_record("name")
-        if name in ("", ".", "..") or "/" in name or "\\" in name:
-            raise Refusal(
-                f"{FRAME_NAME}: names its photograph {name!r}, which is not one "
-                f"plain filename; {self._remedy}"
-            )
-        path = self.path / name
-        if path.is_symlink():
-            raise Refusal(
-                f"{FRAME_NAME}: its photograph {name!r} is a link, which could point "
-                f"outside the run; {self._remedy}"
-            )
-        return path
-
-    @property
-    def flows(self) -> list[str]:
-        """Return the flows this run holds work for, by identifier.
-
-        The run owns the layout, so the fact that a flow's work is one directory
-        directly under the run is stated here and asked for elsewhere rather than
-        re-derived by each caller. `photo/` is the photograph's description, not a
-        flow, and is left out.
-        """
-        if not self.path.is_dir():
-            return []
-        return sorted(
-            path.name
-            for path in self.path.iterdir()
-            if path.is_dir() and path.name != PHOTO
-        )
-
-    def directory(self, *parts: str) -> Path:
-        """Return a stage's directory inside this run, whether or not it exists.
-
-        Deliberately does not create it: a command that refuses must leave the run
-        exactly as it found it, and an empty directory nobody asked for is a
-        change. Every writer here creates its parent on the way past.
-        """
-        return self.path.joinpath(*parts)
 
 
 def _run_for(digest: str, runs_root: Path) -> Run | None:
@@ -414,34 +292,6 @@ def _photo_bytes(photo: Path) -> bytes:
             f"{photo.name}: cannot be read ({unreadable.strerror}); "
             "check the path and the file's permissions, then offer it again"
         ) from unreadable
-
-
-def assign(run: Run, flow: str, *, remove: bool = False) -> bool:
-    """Create `flow`'s empty directory in `run`; with `remove`, delete it while empty.
-
-    Return whether the run changed. A run holding a flow's directory is assigned
-    to it, so a tick is the layout's own fact; an untick never deletes work.
-    """
-    if flow == PHOTO:
-        raise Refusal(
-            f"{PHOTO}: a name a run keeps for its photograph's description, "
-            "never a flow"
-        )
-    directory = run.directory(flow)
-    if not remove:
-        if directory.is_dir():
-            return False
-        directory.mkdir()
-        return True
-    if not directory.is_dir():
-        return False
-    if any(directory.iterdir()):
-        raise Refusal(
-            f"{run.id}: {flow} holds work, so it stays assigned; to unassign it, "
-            f"delete {run.id}/{flow}/ by hand"
-        )
-    directory.rmdir()
-    return True
 
 
 # --- numbering and completion -------------------------------------------------

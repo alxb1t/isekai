@@ -17,6 +17,9 @@ its new digest.
 - The stage track's `SEGMENTS`, `DONE` and `RUNNING`, `wordOf`, `segmentClass` and `stem` move from `Hub.vue` to `cells.ts`
   with no test, no scenario covering them; `word` and `segment` wrap them, and the `Hub.vue` ratchet row is lowered to
   the file's lines (0151 D3, D4, D5).
+- A run's id and the names of its layout move from `run.py` to `names.py`, and `Run` with `assign` to `rundir.py`;
+  `run.py` re-exports every name under `__all__`, so no importer changes. Tests kill the survivors of the move
+  (0152 D1, D2, D4, D6, D10).
 
 ## [0.87.6] - 2026-11-16
 

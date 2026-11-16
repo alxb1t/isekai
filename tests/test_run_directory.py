@@ -926,8 +926,18 @@ def test_a_photograph_that_is_a_link_is_refused(tmp_path: Path, runs: Path) -> N
         (lambda frame: frame["photo"].pop("name"), "name"),
         (lambda frame: frame["photo"].pop("sha256"), "sha256"),
         (lambda frame: frame["photo"].__setitem__("sha256", 3), "sha256"),
+        (lambda frame: frame["photo"].pop("bytes"), "bytes"),
+        (lambda frame: frame["photo"].pop("media_type"), "media_type"),
     ],
-    ids=["no-photo", "photo-not-an-object", "no-name", "no-digest", "digest-a-number"],
+    ids=[
+        "no-photo",
+        "photo-not-an-object",
+        "no-name",
+        "no-digest",
+        "digest-a-number",
+        "no-size",
+        "no-media-type",
+    ],
 )
 def test_a_frame_without_its_photograph_is_refused(
     tmp_path: Path, runs: Path, change: Callable[[dict[str, Any]], object], key: str
@@ -949,6 +959,18 @@ def test_a_frame_without_its_photograph_is_refused(
     [message] = refused
     assert FRAME_NAME in message and f"`{key}`" in message
     assert f"delete {run.frame_path}" in message
+
+
+@pytest.mark.spec("run-directory:frame:a-frame-without-its-photograph-is-refused")
+def test_a_photograph_field_that_is_not_a_string_is_refused_by_name(
+    tmp_path: Path, runs: Path
+) -> None:
+    run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
+
+    with pytest.raises(Refusal) as refused:
+        run._photo_record("bytes")
+
+    assert FRAME_NAME in str(refused.value) and "`bytes`" in str(refused.value)
 
 
 @pytest.mark.spec_exempt("structural: the id helper, exercised directly")
@@ -1308,6 +1330,21 @@ def test_photo_is_no_flow(tmp_path: Path) -> None:
     assert run.flows == [FLOW]
     with pytest.raises(Refusal, match="a name a run keeps for its photograph's"):
         assign(run, PHOTO)
+
+
+@pytest.mark.spec("run-directory:layout:photo-is-no-flow")
+def test_a_run_with_no_directory_holds_no_flow(tmp_path: Path) -> None:
+    assert Run("0" * 12 + "_ada", tmp_path / "absent").flows == []
+
+
+@pytest.mark.spec("run-directory:identity:id-is-hash-and-slug")
+def test_a_run_names_itself_by_its_digest_prefix(tmp_path: Path) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+
+    assert run.digest == run.frame["photo"]["sha256"][:12]
+    assert run.digest == run.id.split("_")[0]
 
 
 def _description(directory: Path, kind: str) -> None:

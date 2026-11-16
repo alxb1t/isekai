@@ -4,32 +4,32 @@ The phases: names and rundir, layout, failures, the documents. Each moves text a
 
 ## Progress
 
-- [ ] 1 — Names and rundir · moderate
+- [x] 1 — Names and rundir · moderate
 - [ ] 2 — Layout · moderate
 - [ ] 3 — Failures · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — Names and rundir
 
-- [ ] 1.1 **HALT CHECK** No test patches a name the moved code reads: `RUNS_ROOT` is the one patch of `isekai/foundation/run.py`, and it stays there ([D3](design.md#d3)).
+- [x] 1.1 **HALT CHECK** No test patches a name the moved code reads: `RUNS_ROOT` is the one patch of `isekai/foundation/run.py`, and it stays there ([D3](design.md#d3)).
   Verify: `git grep -n -E 'setattr\(run_module, ' -- tests` prints one line, the patch of `RUNS_ROOT`.
-- [ ] 1.2 Open with the pre-flight over the functions this phase moves, in `run.py`: the identity functions, `Run` and `assign` ([D10](design.md#d10)). A survivor, the ones the design lists in [Survivors at the cut](design.md#survivors-at-the-cut) among them, is killed by a test or named in [Equivalent mutants](design.md#equivalent-mutants). The ranges are the lines of the cut's base, run once with `uv run python -m tools.mutate isekai/foundation/run.py:198-235 isekai/foundation/run.py:241-335 isekai/foundation/run.py:419-444 --tests tests/test_run_directory.py tests/test_assign.py tests/test_package_paths.py tests/test_resume.py tests/test_artifact_bytes.py tests/test_migrate.py` before the move; once the move has shifted `run.py` they hold other lines, and 1.10 runs the same mutants on their new homes.
+- [x] 1.2 Open with the pre-flight over the functions this phase moves, in `run.py`: the identity functions, `Run` and `assign` ([D10](design.md#d10)). A survivor, the ones the design lists in [Survivors at the cut](design.md#survivors-at-the-cut) among them, is killed by a test or named in [Equivalent mutants](design.md#equivalent-mutants). The ranges are the lines of the cut's base, run once with `uv run python -m tools.mutate isekai/foundation/run.py:198-235 isekai/foundation/run.py:241-335 isekai/foundation/run.py:419-444 --tests tests/test_run_directory.py tests/test_assign.py tests/test_package_paths.py tests/test_resume.py tests/test_artifact_bytes.py tests/test_migrate.py` before the move; once the move has shifted `run.py` they hold other lines, and 1.10 runs the same mutants on their new homes.
   Verify: `grep -n -F 'Equivalent mutants' openspec/changes/0152-the-run-split/design.md` prints a line.
-- [ ] 1.3 Write `isekai/foundation/names.py` with its docstring and the `names.py` row of [D2](design.md#d2), each block moved from `run.py` with its comments and docstring unchanged ([D4](design.md#d4)), in the order the cut's base has them, importing `hashlib`, `re` and `Refusal`.
+- [x] 1.3 Write `isekai/foundation/names.py` with its docstring and the `names.py` row of [D2](design.md#d2), each block moved from `run.py` with its comments and docstring unchanged ([D4](design.md#d4)), in the order the cut's base has them, importing `hashlib`, `re` and `Refusal`.
   Verify: `grep -n -E '^(def (slug|digest_of|run_id|media_type)\(|FRAME_NAME = |ARTIFACT = |ERROR = )' isekai/foundation/names.py` prints a line for each of the names.
-- [ ] 1.4 Write `isekai/foundation/rundir.py` with its docstring: `_PHOTO_FIELDS`, `Run` and `assign` moved whole, importing `FRAME_NAME`, `ID_DIGEST_CHARS` and `PHOTO` from `names.py`, `RUN_FILE`, `Frame`, `PhotoRecord`, `read` and `require` from `artifacts.py`, and `Refusal`.
+- [x] 1.4 Write `isekai/foundation/rundir.py` with its docstring: `_PHOTO_FIELDS`, `Run` and `assign` moved whole, importing `FRAME_NAME`, `ID_DIGEST_CHARS` and `PHOTO` from `names.py`, `RUN_FILE`, `Frame`, `PhotoRecord`, `read` and `require` from `artifacts.py`, and `Refusal`.
   Verify: `grep -n -E '^(class Run|def assign\(|_PHOTO_FIELDS)' isekai/foundation/rundir.py` prints a line for each of the names.
-- [ ] 1.5 In `run.py` delete the moved blocks. Import each name of `names.py` and `rundir.py` from them, and list every public name of the cut's base but `T` in `__all__`, sorted as `interface/verbs/__init__.py` sorts its own ([D1](design.md#d1), [D6](design.md#d6)). Keep the imports of `os` and `write_atomically`; drop each other import the move leaves unused, as `ruff check` names them.
+- [x] 1.5 In `run.py` delete the moved blocks. Import each name of `names.py` and `rundir.py` from them, and list every public name of the cut's base but `T` in `__all__`, sorted as `interface/verbs/__init__.py` sorts its own ([D1](design.md#d1), [D6](design.md#d6)). Keep the imports of `os` and `write_atomically`; drop each other import the move leaves unused, as `ruff check` names them.
   Verify: `git grep -n -E '^(def (slug|digest_of|run_id|media_type|assign)\(|class Run[:(])' -- isekai/foundation/run.py` prints nothing.
-- [ ] 1.6 Check `__all__` against the cut's base: no public name of the base is missing from it, and each name it lists resolves.
+- [x] 1.6 Check `__all__` against the cut's base: no public name of the base is missing from it, and each name it lists resolves.
   Verify: `uv run python -c "import ast,subprocess,isekai.foundation.run as r; t=ast.parse(subprocess.run(['git','show','ce753c64:isekai/foundation/run.py'],capture_output=True,check=True).stdout); n={x.name for x in t.body if isinstance(x,(ast.FunctionDef,ast.ClassDef)) and not x.name.startswith('_')}|{y.id for x in t.body if isinstance(x,(ast.Assign,ast.AnnAssign)) for z in (getattr(x,'targets',None) or [x.target]) for y in ast.walk(z) if isinstance(y,ast.Name) and not y.id.startswith('_') and len(y.id)>1}; print(sorted(n-set(r.__all__)), [m for m in r.__all__ if not hasattr(r,m)])"` prints `[] []`.
-- [ ] 1.7 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
+- [x] 1.7 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` passes.
-- [ ] 1.8 Run the record, the ratchets, the layer guards, the documents, the run directory, the package paths and the CLI's tests: no assertion changes.
+- [x] 1.8 Run the record, the ratchets, the layer guards, the documents, the run directory, the package paths and the CLI's tests: no assertion changes.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_run_directory.py tests/test_package_paths.py tests/test_pipeline_cli.py` passes.
-- [ ] 1.9 In `tests/mutants.json` the entries FN-4a and FN-4b take the path `isekai/foundation/names.py`, their `find` and `replace` unchanged ([D10](design.md#d10)).
+- [x] 1.9 In `tests/mutants.json` the entries FN-4a and FN-4b take the path `isekai/foundation/names.py`, their `find` and `replace` unchanged ([D10](design.md#d10)).
   Verify: `grep -c -F 'isekai/foundation/names.py' tests/mutants.json` prints `2`.
-- [ ] 1.10 Close with the same run on the new homes. `tools.mutate` copies tracked files only, so run `git add -N isekai/foundation/names.py isekai/foundation/rundir.py` first. A survivor is killed by a test or named in [Equivalent mutants](design.md#equivalent-mutants).
+- [x] 1.10 Close with the same run on the new homes. `tools.mutate` copies tracked files only, so run `git add -N isekai/foundation/names.py isekai/foundation/rundir.py` first. A survivor is killed by a test or named in [Equivalent mutants](design.md#equivalent-mutants).
   Verify: `uv run python -m tools.mutate isekai/foundation/names.py:1-400 --tests tests/test_run_directory.py tests/test_assign.py tests/test_package_paths.py tests/test_resume.py tests/test_artifact_bytes.py tests/test_migrate.py` and `uv run python -m tools.mutate isekai/foundation/rundir.py:1-400 --tests tests/test_run_directory.py tests/test_assign.py tests/test_package_paths.py tests/test_resume.py tests/test_artifact_bytes.py tests/test_migrate.py` each exit 0, each survivor they print named in the design.
 
 ## 2 — Layout
