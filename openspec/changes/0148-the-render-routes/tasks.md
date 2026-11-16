@@ -4,31 +4,31 @@ The phases: the render and jobs routes, the events stream, the documents. Each m
 
 ## Progress
 
-- [ ] 1 — The render and jobs routes · moderate
+- [x] 1 — The render and jobs routes · moderate
 - [ ] 2 — The events stream · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The render and jobs routes
 
-- [ ] 1.1 **HALT CHECK** No test patches a name the moved code reads: the plan holds `Jobs` and `run` in `app.py` alone ([D5](design.md#d5)).
+- [x] 1.1 **HALT CHECK** No test patches a name the moved code reads: the plan holds `Jobs` and `run` in `app.py` alone ([D5](design.md#d5)).
   Verify: `git grep -n -E 'setattr\((app_module|app), "(plan|keyed|KINDS|render|library|load_flow|tracked_flows|edit_at|approved_versions|edit_image_of|events|cell_event|_quote|_quoted_row|_taken_out|_hub|_cell_out|_strings|_whole)"' -- tests` prints nothing.
-- [ ] 1.2 Open with the pre-flight over the lines this phase moves, in `app.py`: the routes and closures from `post_prepare` to `post_check`, `cell_event`, `_whole`, `_quote` to `_taken_out`, `_hub`, `_cell_out` and `_strings` ([D7](design.md#d7)). A survivor is killed by a test or named in [Equivalent mutants](design.md#equivalent-mutants).
+- [x] 1.2 Open with the pre-flight over the lines this phase moves, in `app.py`: the routes and closures from `post_prepare` to `post_check`, `cell_event`, `_whole`, `_quote` to `_taken_out`, `_hub`, `_cell_out` and `_strings` ([D7](design.md#d7)). A survivor is killed by a test or named in [Equivalent mutants](design.md#equivalent-mutants).
   Verify: `uv run python -m tools.mutate isekai/interface/ui/app.py:437-636 isekai/interface/ui/app.py:1158-1192 isekai/interface/ui/app.py:1335-1337 isekai/interface/ui/app.py:1340-1471 isekai/interface/ui/app.py:1496-1525 isekai/interface/ui/app.py:1609-1611 --tests tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_billing.py tests/test_ui_wire.py tests/test_ui_library.py tests/test_record.py` exits 0, each survivor it prints named in the design.
-- [ ] 1.3 Move `_strings`, `_whole`, `_hub` and `_cell_out` from `app.py` into `routes/common.py`, text and docstrings unchanged, with the imports they need. `app.py` imports the four back from `isekai.interface.ui.routes.common` beside `_dimensions` ([D4](design.md#d4)).
+- [x] 1.3 Move `_strings`, `_whole`, `_hub` and `_cell_out` from `app.py` into `routes/common.py`, text and docstrings unchanged, with the imports they need. `app.py` imports the four back from `isekai.interface.ui.routes.common` beside `_dimensions` ([D4](design.md#d4)).
   Verify: `git grep -n -E '^def (_strings|_whole|_hub|_cell_out)\(' -- isekai/interface/ui/routes/common.py` prints a line for each of the four names.
-- [ ] 1.4 Write `isekai/interface/ui/routes/rendering.py` with its docstring and `class RenderRoutes`: `__init__(surface)` and the handlers and helpers of [D1](design.md#d1), each moved from `create_app` with its docstring, its signature and its body unchanged but for [D3](design.md#d3)'s prefix, and the imports its bodies read.
+- [x] 1.4 Write `isekai/interface/ui/routes/rendering.py` with its docstring and `class RenderRoutes`: `__init__(surface)` and the handlers and helpers of [D1](design.md#d1), each moved from `create_app` with its docstring, its signature and its body unchanged but for [D3](design.md#d3)'s prefix, and the imports its bodies read.
   Verify: `grep -n -E '^    def (post_prepare|post_stop|quoted|_held|short_of|bakes_in|read_render_offer|post_quote|post_render|running_sessions|read_session|post_check)\(' isekai/interface/ui/routes/rendering.py` prints a line for each name of [D1](design.md#d1).
-- [ ] 1.5 Move `cell_event`, `_quote`, `_quoted_row` and `_taken_out` from `app.py` into `routes/rendering.py`, text and docstrings unchanged, and import into it from `routes/common.py` the helpers they read.
+- [x] 1.5 Move `cell_event`, `_quote`, `_quoted_row` and `_taken_out` from `app.py` into `routes/rendering.py`, text and docstrings unchanged, and import into it from `routes/common.py` the helpers they read.
   Verify: `grep -n -E '^def (cell_event|_quote|_quoted_row|_taken_out)\(' isekai/interface/ui/routes/rendering.py` prints a line for each of the four names.
-- [ ] 1.6 End `routes/rendering.py` with `ROUTES`, a table of `Route` rows in the order [D1](design.md#d1) draws, and `mount(app, surface)`, as `routes/vocabulary.py` ends.
+- [x] 1.6 End `routes/rendering.py` with `ROUTES`, a table of `Route` rows in the order [D1](design.md#d1) draws, and `mount(app, surface)`, as `routes/vocabulary.py` ends.
   Verify: `grep -n -E '^(ROUTES = |def mount\()' isekai/interface/ui/routes/rendering.py` prints a line for each of the two names.
-- [ ] 1.7 In `app.py` delete the moved routes, closures and module functions; bind `cell_event` and `mount as render_mount` from `routes.rendering`; call `render_mount(app, surface)` after `place_mount(app, surface)`, before `no_route`; drop each import the move leaves unused, as `ruff check` names them.
+- [x] 1.7 In `app.py` delete the moved routes, closures and module functions; bind `cell_event` and `mount as render_mount` from `routes.rendering`; call `render_mount(app, surface)` after `place_mount(app, surface)`, before `no_route`; drop each import the move leaves unused, as `ruff check` names them.
   Verify: `git grep -n -E '^    def (post_prepare|post_stop|quoted|_held|short_of|bakes_in|read_render_offer|post_quote|post_render|running_sessions|read_session|post_check)\(' -- isekai/interface/ui/app.py` prints nothing.
-- [ ] 1.8 Run the server's tests, the record, the ratchets and the layer guards: no assertion changes, and `Jobs(` still sits in `create_app`.
+- [x] 1.8 Run the server's tests, the record, the ratchets and the layer guards: no assertion changes, and `Jobs(` still sits in `create_app`.
   Verify: `uv run pytest tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_billing.py tests/test_ui_wire.py tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_pipeline_cli.py` passes.
-- [ ] 1.9 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
+- [x] 1.9 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` passes.
-- [ ] 1.10 Close with the same run on the new homes. `tools.mutate` copies tracked files only, so run `git add -N isekai/interface/ui/routes/rendering.py` first.
+- [x] 1.10 Close with the same run on the new homes. `tools.mutate` copies tracked files only, so run `git add -N isekai/interface/ui/routes/rendering.py` first.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/rendering.py:1-2000 isekai/interface/ui/routes/common.py:1-2000 --tests tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_billing.py tests/test_ui_wire.py tests/test_ui_library.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ui_propose.py tests/test_record.py` exits 0, each survivor it prints named in the design.
 
 ## 2 — The events stream

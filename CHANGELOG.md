@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- The render and jobs routes (prepare, stop, the offer, quote and `POST`, the session reads, the billing check) move
+  out of `create_app` into `RenderRoutes` in `isekai/interface/ui/routes/rendering.py`, registered from a table;
+  no route, wire or answer changes (0148 D1, D3, D4, D6).
+
 ## [0.87.3] - 2026-11-16
 
 Gate: local 2m29s · CI not read under mf-ship · 0.87.2: local 3m21s · CI not read under mf-ship
