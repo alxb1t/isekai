@@ -601,8 +601,8 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 **A resource of the UI server is a class in `isekai/interface/ui/routes/`, built over one `Surface` from `surface.py`, with a handler a method and a `ROUTES` table of `Route(method, path, handler)`. Its `mount(app, surface)` registers each row on the app itself, and `app.py` calls each `mount` before the catch-alls. `surface.py` imports no web framework, the modules of `routes/` are reached through `app.py` alone, and no module builds an `APIRouter`.**
 
 - **Why:** `create_app` was one closure holding every route, and its file and function were rows of the ratchet ([D56](#d56--size-and-patches-are-held-by-ratchets)). A route registered on the app stays one `APIRoute` of `app.routes`, where the server's tests and `tests/record.py` read its path and methods; an included router leaves one `_IncludedRouter` there.
-- **Accepts:** the render, jobs and events routes and the routes that read a name a test patches stay closures of `create_app`, with `Jobs(` built there, until their versions. Reopen when the last of them moves.
-- **Made by:** `0147`.
+- **Accepts:** the routes that read a name a test patches stay closures of `create_app`, with `Jobs(` and `run` kept there, and so do the library, staging, review and images routes, until their versions. Reopen when the last of them moves.
+- **Made by:** `0147`, `0148`.
 
 ## Infrastructure
 

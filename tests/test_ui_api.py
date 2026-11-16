@@ -375,6 +375,8 @@ def test_the_hub_and_the_input_name_the_flow_the_schema_and_the_vocabulary(
     assert FLOW in hub["flows"]
     assert [one["digest"] for one in hub["sources"]] == [made.digest]
     assert hub["sources"][0]["cells"][FLOW]["stage"] == "draft"
+    assert hub["sources"][0]["width"] == 1200
+    assert hub["sources"][0]["height"] == body["height"] != body["width"]
     assert body["flow"] == FLOW
     assert body["id"] == made.digest
     assert body["schema"] == list(schema.names)
@@ -2885,8 +2887,14 @@ def _quoting_two(
 
 
 @pytest.mark.spec("ui:render:the-dialog-quotes-every-collection")
+@pytest.mark.spec("ui:render:a-running-session-shows-its-totals")
 def test_one_quote_covers_every_ticked_collection(
-    wired: Wiring, made: Run, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     client = _quoting_two(wired, made, tmp_path, schema, vocabulary)
     timing = render_module.load_timing()
@@ -2913,6 +2921,11 @@ def test_one_quote_covers_every_ticked_collection(
     )
     assert refused.status_code == 409
     assert "names no collections" in refused.json()["refusal"]
+    # A running render holds the quote and the offer, whatever is short.
+    monkeypatch.setattr(Jobs, "running", lambda self, kind: kind == "render")
+    held = "A render session is running."
+    assert client.post("/api/render/quote", json={}).json()["disabled"] == held
+    assert client.get(f"/api/c/{COLLECTION}/render").json()["disabled"] == held
 
 
 @pytest.mark.spec("ui:render:past-the-ceiling-disables-render")

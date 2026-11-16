@@ -619,6 +619,11 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
     data = json.loads(frames[-1].split("\n")[1].removeprefix("data: "))
     assert (data["source"], data["flow"], data["state"]) == ("ada.jpg", FLOW, "done")
     assert data["cell"]["stage"] == "tagged"
+    # A line naming a run or a flow the job did not start gives no event.
+    assert cell({"run": "not-a-run", "flow": FLOW}) == []
+    assert cell({"run": run.id, "flow": "not-a-flow"}) == []
+    # A line naming no flow gives one event for each flow the run holds.
+    assert [one["flow"] for one in cell({"run": run.id})] == [FLOW]
 
 
 @pytest.mark.spec_exempt(
@@ -1426,6 +1431,8 @@ def test_an_offer_whose_only_short_approval_is_damaged_carries_its_refusal(
     assert offer["images"] == 0
     assert approval.name in offer["refused"]
     assert offer["disabled"] == offer["refused"]
+    quote = client.post("/api/render/quote", json={"collections": ["b"]}).json()
+    assert quote["collections"][0]["refused"] == offer["refused"]
 
 
 @pytest.mark.spec("ui:render:a-grown-quote-is-refused")
