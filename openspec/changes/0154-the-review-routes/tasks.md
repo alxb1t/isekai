@@ -62,24 +62,24 @@ The phases are the reads, the writes and the documents. Each moves lines and no 
 
 ## 3 — The documents
 
-- [ ] 3.1 In `docs/decisions.md`, change ``the library, staging, review and images routes, until their versions`` in D59's *Accepts* line to ``the library, staging and images routes, until their versions``, and add `0154` to its *Made by* line ([D59](../../../docs/decisions.md#d59--a-resource-is-a-class-registered-from-a-table-over-one-surface)).
+- [x] 3.1 In `docs/decisions.md`, change ``the library, staging, review and images routes, until their versions`` in D59's *Accepts* line to ``the library, staging and images routes, until their versions``, and add `0154` to its *Made by* line ([D59](../../../docs/decisions.md#d59--a-resource-is-a-class-registered-from-a-table-over-one-surface)).
   Verify: `git grep -n "staging and images routes, until their versions" -- docs/decisions.md` prints a line.
-- [ ] 3.2 In the docstring of `isekai/interface/ui/app.py`, add `ReviewRoutes` to the resource classes `routes/` holds.
+- [x] 3.2 In the docstring of `isekai/interface/ui/app.py`, add `ReviewRoutes` to the resource classes `routes/` holds.
   Verify: `git grep -n "ReviewRoutes" -- isekai/interface/ui/app.py` prints a line.
-- [ ] 3.3 In the same docstring, delete `the join of caption, sheet, draft, approved and budget into one payload,` from what `app.py` owns, and say that join is the review routes' own in `routes/reviewing.py`.
+- [x] 3.3 In the same docstring, delete `the join of caption, sheet, draft, approved and budget into one payload,` from what `app.py` owns, and say that join is the review routes' own in `routes/reviewing.py`.
   Verify: `git grep -n "the join of caption, sheet" -- isekai/interface/ui/app.py` prints nothing.
-- [ ] 3.4 In `isekai/interface/README.md`, change the `ui/routes/` row's `render and jobs, and events routes` to `render and jobs, review, and events routes`.
+- [x] 3.4 In `isekai/interface/README.md`, change the `ui/routes/` row's `render and jobs, and events routes` to `render and jobs, review, and events routes`.
   Verify: `git grep -n "render and jobs, review, and events routes" -- isekai/interface/README.md` prints a line.
-- [ ] 3.5 In the same README, change the `ui/app.py` row to say `create_app` still declares ``the library, staging, images and sources endpoints``.
+- [x] 3.5 In the same README, change the `ui/app.py` row to say `create_app` still declares ``the library, staging, images and sources endpoints``.
   Verify: `git grep -n "the library, staging, images and sources endpoints" -- isekai/interface/README.md` prints a line.
-- [ ] 3.6 In `docs/modules.md`, after the words ``stage ③'s review functions,`` add the words ``which `ReviewRoutes` of `interface/ui/routes/reviewing.py` calls,``.
+- [x] 3.6 In `docs/modules.md`, after the words ``stage ③'s review functions,`` add the words ``which `ReviewRoutes` of `interface/ui/routes/reviewing.py` calls,``.
   Verify: `git grep -n "ReviewRoutes" -- docs/modules.md` prints a line.
-- [ ] 3.7 In `docs/principles.md`, name `interface/ui/routes/reviewing.py` and `interface/ui/routes/common.py` where its *Known breaks* name `interface/ui/app.py` as deciding what makes a draft, an approval, a caption or a tag list damaged, and name `interface/ui/routes/reviewing.py` where they name `interface/ui/app.py`'s `_revision`.
+- [x] 3.7 In `docs/principles.md`, name `interface/ui/routes/reviewing.py` and `interface/ui/routes/common.py` where its *Known breaks* name `interface/ui/app.py` as deciding what makes a draft, an approval, a caption or a tag list damaged, and name `interface/ui/routes/reviewing.py` where they name `interface/ui/app.py`'s `_revision`.
   Verify: `git grep -nE "ui/app\.py. decides what makes a draft" -- docs/principles.md` prints nothing.
-- [ ] 3.8 In `tests/mutants.json`, change `PB-2c`'s `path` to `isekai/interface/ui/routes/reviewing.py`, its `find` and `replace` unchanged ([D8](design.md#d8)).
+- [x] 3.8 In `tests/mutants.json`, change `PB-2c`'s `path` to `isekai/interface/ui/routes/reviewing.py`, its `find` and `replace` unchanged ([D8](design.md#d8)).
   Verify: `git grep -n "routes/reviewing.py" -- tests/mutants.json` prints a line.
-- [ ] 3.9 In `tests/mutants.json`, re-anchor `UA-7` on the artifacts import of `isekai/interface/ui/app.py` as it now ends: its `find` is ``from isekai.foundation.artifacts import renders_of`` and its `replace` the same import with `write_json` added ([D8](design.md#d8)).
-  Verify: `git grep -n "artifacts import renders_of" -- tests/mutants.json` prints a line.
+- [ ] 3.9 In `tests/mutants.json`, re-anchor `UA-7` on the artifacts import of `isekai/interface/ui/app.py` as it now ends: the import ends on three lines, `from isekai.foundation.artifacts import (`, `    renders_of,` and `)`, and `tools.mutate` takes `find` as exact text that must occur once, so its `find` is the tail ``    renders_of,\n)\n`` and its `replace` that tail with `    write_json,` added before the `)` ([D8](design.md#d8)). Leave `isekai/interface/ui/app.py` as it is.
+  Verify: `git grep -nF '    renders_of,\n)\n' -- tests/mutants.json` prints a line.
 - [ ] 3.10 Replay the recorded mutants: every entry's `find` must occur once in its file and each must die.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
 - [ ] 3.11 Prove the documents against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
