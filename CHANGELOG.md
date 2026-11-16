@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- The page's one stylesheet, `ui/src/app.css`, becomes the files of `ui/src/css/`, each a span of it cut at a blank
+  line and imported by `main.ts` in the old order; the files joined equal the old sheet, so no rule changes and the
+  ratchet's `ui/src` table loses its row for the sheet (0149 D1, D2, D3, D5).
+
 ## [0.87.4] - 2026-11-16
 
 Gate: local 1m51s · CI not read under mf-ship · 0.87.3: local 2m29s · CI not read under mf-ship

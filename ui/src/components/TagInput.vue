@@ -51,7 +51,7 @@ const open = computed(() => props.focused && matches.value.length > 0)
 const above = ref(false)
 const drop = ref<InstanceType<typeof TagAutocomplete> | null>(null)
 
-/* `.drop`'s `top` in `app.css`: below opens this far under `.row__tags`' top. */
+/* `.drop`'s `top` in `css/review-side.css`: below opens this far under `.row__tags`' top. */
 const DROP_TOP = 30
 
 /* Measured once the list is drawn and before it is painted: the room to `.rows`'

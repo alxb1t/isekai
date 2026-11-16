@@ -1,0 +1,77 @@
+/* — Compare: two images at equal size, top-aligned, centred (J5·9) — */
+.compare {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+  padding: 12px;
+}
+
+/* Widths in proportion to each image's aspect ratio, so both stand at one
+   height, top-aligned. */
+.compare__sides {
+  display: flex;
+  align-self: center;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.compare__side {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 0;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+}
+
+.compare__side img {
+  width: 100%;
+  background: var(--ground-media);
+}
+
+.review {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* A refusal: the accent square, the reason in ink, the fix in ink-2 (§1). */
+.refusal {
+  display: flex;
+  gap: 10px;
+  padding: 48px;
+}
+
+.refusal__mark {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  background: var(--accent);
+}
+
+.refusal__reason {
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.refusal__fix {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.refusal__fix a {
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

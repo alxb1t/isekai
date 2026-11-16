@@ -1,0 +1,141 @@
+/* — the image viewer — */
+
+.viewer {
+  max-width: 100vw;
+  max-height: 100vh;
+  padding: 16px 24px 24px;
+  color: var(--ink);
+  background: var(--ground-media);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sheet);
+}
+
+/* Every dialog is modal, over the page beneath (design spec §1 rule 11). */
+dialog {
+  color: var(--ink);
+}
+
+dialog::backdrop {
+  background: var(--scrim);
+}
+
+/* Compare with…'s tiles, at a thumbnail's size, each named under it. */
+/* A row per flow, its tiles in one line: `j k` keep the column. The longest row
+   sets the width; the head, cut at its lines' ends, never does. Past the window's
+   height the rows scroll inside. */
+.pick {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 480px;
+  max-width: calc(100vw - 96px);
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+
+.pick__head {
+  contain: inline-size;
+}
+
+.pick__line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pick__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pick__flow {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.pick__tiles {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding: 3px;
+}
+
+.pick__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+/* The cell modal's tiles fit the window: twice a thumbnail's size, scaled down so up
+   to three rows show whole; 96px is the dialog's chrome, 44px a row's caption and gap.
+   A caption longer than its tile is cut by an ellipsis rather than widening it. */
+.pick--cell .tile {
+  width: auto;
+  aspect-ratio: 3 / 4;
+  height: min(calc(var(--tile-height) * 2), calc((100vh - 96px) / var(--rows) - 44px));
+}
+
+.pick--cell figcaption {
+  contain: inline-size;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The column scrolls, not each row: a row keeps its height. */
+.pick--cell .pick__tiles {
+  flex-shrink: 0;
+}
+
+/* No name widens the dialog: the title is one line, cut by an ellipsis. */
+.viewer__title {
+  contain: inline-size;
+  margin: 0 0 12px;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--ink-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The frame keeps its size while an image loads; the image centres in it. */
+.viewer__frame {
+  display: flex;
+  width: calc(100vw - 64px);
+  height: calc(100vh - 96px);
+  overflow: auto;
+}
+
+.viewer__image {
+  display: block;
+  margin: auto;
+  max-width: calc(100vw - 64px);
+  max-height: calc(100vh - 96px);
+  cursor: zoom-in;
+}
+
+.viewer--actual .viewer__image {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+
+/* Side by side: widths in proportion to each image's aspect ratio, so both
+   stand at one height, top-aligned. */
+.viewer__pair {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.viewer__side {
+  flex-basis: 0;
+  min-width: 0;
+  width: 100%;
+}
