@@ -84,7 +84,7 @@ create_app
 
 ### D7
 
-Phase 1 opens with the run over its ranges in `app.py`. Phase 2 opens with the tests' baseline, since no range of `app.py` holds once phase 1 has shifted it; both phases close with the run on the new module, which covers the same mutants. `tools.mutate` copies tracked files only, so `git add -N` names each new module before its closing run. The opening run's ranges are the cut's base's, so its sub-task is checked at `HEAD` by the section below; a closing run over a whole module outlasts the plan check's 600 seconds, so phase 1's is split by line range, and no range holds both of `cell_event`'s timeout mutants, each of which waits out the 300-second default.
+Phase 1 opens with the run over its ranges in `app.py`. Phase 2 opens with the tests' baseline, since no range of `app.py` holds once phase 1 has shifted it; both phases close with the run on the new module, which covers the same mutants. `tools.mutate` copies tracked files only, so `git add -N` names each new module before its closing run. The opening run's ranges are the cut's base's, so its sub-task is checked at `HEAD` by the section below; a closing run over a whole module outlasts the plan check's 600 seconds, so phase 1's is split by line range, and no range holds both of `cell_event`'s timeout mutants, each of which waits out the 300-second default. Phase 1's closing runs leave out `test_without_the_lock_an_update_writes_after_the_approval` with pytest's `-k`: it races two threads on `app.py`'s draft lock, the draft and quote tests kill every mutant of these ranges without it, and under the load of the nine runs side by side it failed the unmutated baseline, so no mutant was tried. The gate still runs it.
 
 ### D8
 
