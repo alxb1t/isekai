@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.8
 after: [0151-the-hub-rules]
 ---
 

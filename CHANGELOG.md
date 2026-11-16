@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.8] - 2026-11-16
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.7: local 3m14s · CI not read under mf-ship
+
 - A run's id and the names of its layout move from `run.py` to `names.py`, and `Run` with `assign` to `rundir.py`;
   `run.py` re-exports every name under `__all__`, so no importer changes. Tests kill the survivors of the move
   (0152 D1, D2, D4, D6, D10).
