@@ -4,7 +4,7 @@ Where each of `Hub.vue`'s pure rules lands, and which test holds it. Verdict: re
 
 ## Context
 
-`ui/src/views/Hub.vue` declares its rules in its plain script block and its setup block. The plain block holds `toPrepare` and `prepareButton`, which `ui/src/views/Hub.test.ts` imports from the view.
+`ui/src/views/Hub.vue` declares its rules in its plain script block and its setup block. The plain block holds `toPrepare` and `prepareButton`, which the test this change deletes, `ui/src/views/Hub.test.ts`, imports from the view.
 
 The setup block holds the stage track's tables `SEGMENTS`, `DONE` and `RUNNING`, the cell's `word`, `segment` and `hint`, `reviewable`, `stem`, `cell` and the `changes` rule. Each reads a cell, a source or the store's running map, and no more.
 
@@ -37,7 +37,7 @@ Hub.vue (setup block)    cell, changes, reviewable, hint ──▶ cells.ts   a 
 
 ### D1
 
-`bars.ts` imports `noun` from `./words` and declares `toPrepare(sources, collection)` and `prepareButton(changes)` with the bodies and comments `Hub.vue` holds now. `Hub.vue` imports them from `../bars` and imports `noun` for its template, which the plain block imported. The case of `Hub.test.ts` becomes a `spec('ui:prepare:the-bar-names-its-photographs', …)` of `bars.test.ts`, its assertions as they are.
+`bars.ts` imports `noun` from `./words` and declares `toPrepare(sources, collection)` and `prepareButton(changes)` with the bodies and comments `Hub.vue` holds now. `Hub.vue` imports them from `../bars` and imports `noun` for its template, which the plain block imported. The case of `Hub.test.ts`, a file this change deletes, becomes a `spec('ui:prepare:the-bar-names-its-photographs', …)` of `bars.test.ts`, its assertions as they are.
 
 ### D2
 
