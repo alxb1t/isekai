@@ -542,7 +542,6 @@ def test_sigint_ends_streams_without_cancellation_output(
         made.append(Jobs(*args, **kwargs))
         return made[-1]
 
-    monkeypatch.setattr(app_module, "Jobs", make_jobs)
     app = app_module.create_app(
         folder.parent,
         wired,
@@ -551,6 +550,7 @@ def test_sigint_ends_streams_without_cancellation_output(
         wire=lambda runs: replace(wired, runs_root=runs),
         host=HOST,
         port=7717,
+        make_jobs=make_jobs,
     )
     (jobs,) = made
     sleep = [sys.executable, "-c", "import time\nwhile True: time.sleep(0.05)"]

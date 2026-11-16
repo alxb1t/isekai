@@ -76,8 +76,8 @@ The phases: names and rundir, layout, failures, the documents. Each moves text a
 
 ## 4 — The documents
 
-- [ ] 4.1 In `docs/decisions.md`, add D61 after D60, as [D9](design.md#d9) writes it, with *Made by* `0152`.
-  Verify: `git grep -n -F '### D61 · The run directory is run.py, its siblings imported through it' -- docs/decisions.md` prints a line.
+- [ ] 4.1 In `docs/decisions.md`, add D62 after D60, as [D9](design.md#d9) writes it, with *Made by* `0152`.
+  Verify: `git grep -n -F '### D62 · The run directory is run.py, its siblings imported through it' -- docs/decisions.md` prints a line.
 - [ ] 4.2 In D21, the sentence "The numbers are `run.py`'s `BUDGETS`." reads "The numbers are `BUDGETS` of `failures.py`, read through `run.py`." and stays on one line.
   Verify: `grep -n -E 'BUDGETS. of .failures.py.' docs/decisions.md` prints a line.
 - [ ] 4.3 In `docs/modules.md`, "`assign` is `foundation/run.py`'s, because a tick is the run's layout" reads "`assign` is `foundation/rundir.py`'s, read through `run.py`, because a tick is the run's layout"; the path stays on one line.
@@ -90,8 +90,8 @@ The phases: names and rundir, layout, failures, the documents. Each moves text a
   Verify: `grep -n -E '^\| .(names|rundir|layout|failures)\.py. \|' isekai/foundation/README.md` prints a line for each of the siblings.
 - [ ] 4.7 In the *Imported by* table of `isekai/foundation/README.md`, add a row for each of `names.py`, `rundir.py`, `layout.py` and `failures.py` after the `run.py` row, each as `` | `<file>` | — | — | ``, then re-derive with `uv run python -m tools.derive_imported_by`.
   Verify: `grep -c -E '^\| .(names|rundir|layout|failures)\.py. \|' isekai/foundation/README.md` prints `8`.
-- [ ] 4.8 In the docstring of `isekai/foundation/run.py`, "nothing outside this module decides what a file is called" reads "nothing outside this module and its siblings decides what a file is called", and a paragraph before "Stdlib only" reads: "The siblings `names.py`, `rundir.py`, `layout.py` and `failures.py` hold the identity and the names, the run and its frame, the numbering and the edit files, and the failure budgets. This module imports them and re-exports every name, so a module outside the foundation imports a run's names from here (D61)."
-  Verify: `git grep -n -F '(D61)' -- isekai/foundation/run.py` prints a line.
+- [ ] 4.8 In the docstring of `isekai/foundation/run.py`, "nothing outside this module decides what a file is called" reads "nothing outside this module and its siblings decides what a file is called", and a paragraph before "Stdlib only" reads: "The siblings `names.py`, `rundir.py`, `layout.py` and `failures.py` hold the identity and the names, the run and its frame, the numbering and the edit files, and the failure budgets. This module imports them and re-exports every name, so a module outside the foundation imports a run's names from here (D62)."
+  Verify: `git grep -n -F '(D62)' -- isekai/foundation/run.py` prints a line.
 - [ ] 4.9 **HALT CHECK** MT-7's and FN-5's anchors stay in `run.py`: no phase moves the roots or `instructions_record`.
   Verify: `grep -c -E 'DATA_ROOT = Path|if inside else resolved.name,' isekai/foundation/run.py` prints `2`.
 - [ ] 4.10 Replay the recorded mutants.

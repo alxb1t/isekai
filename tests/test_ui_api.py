@@ -198,12 +198,14 @@ def _client(
     *,
     drafted: bool = True,
     offered: Sequence[str] = OFFERED,
+    seams: Mapping[str, Any] | None = None,
 ) -> TestClient:
     """Return a client over the app, with a stand-in for the built bundle.
 
     `drafted` takes the draft opening the sheet would, so a test may write
-    before it reads; `offered` is the surface's flows. The library is the folder
-    holding the wiring's collection.
+    before it reads; `offered` is the surface's flows; `seams` are the arguments
+    of `create_app` a test replaces. The library is the folder holding the
+    wiring's collection.
     """
     dist = tmp_path / "dist"
     dist.mkdir(exist_ok=True)
@@ -218,6 +220,7 @@ def _client(
         wire=lambda runs: replace(wired, runs_root=runs),
         host=HOST,
         port=PORT,
+        **(seams or {}),
     )
     return TestClient(app, base_url=ADDRESS)
 
@@ -287,12 +290,17 @@ def test_a_write_carrying_another_pages_origin_is_refused(
 
 @pytest.mark.spec("ui:address:a-cross-site-request-without-origin-is-refused")
 def test_a_cross_site_request_without_origin_is_refused(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+    wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
     # An image tag on another page probing for the photograph: no `Origin`, and
     # the browser marks it `cross-site` all the same.
     read: list[object] = []
-    monkeypatch.setattr(app_module, "FileResponse", lambda path: read.append(path))
+    client = _client(
+        wired,
+        made,
+        tmp_path,
+        seams={"file_response": lambda path: read.append(path)},
+    )
     answered = client.get(_at(made, "/photo"), headers={"sec-fetch-site": "cross-site"})
 
     assert answered.status_code == 403
@@ -304,7 +312,7 @@ def test_a_cross_site_request_without_origin_is_refused(
     "structural: twin of test_a_cross_site_request_without_origin_is_refused"
 )
 def test_a_request_from_this_page_reads_the_photograph(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+    wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
     read: list[object] = []
 
@@ -312,7 +320,7 @@ def test_a_request_from_this_page_reads_the_photograph(
         read.append(path)
         return Response()
 
-    monkeypatch.setattr(app_module, "FileResponse", record)
+    client = _client(wired, made, tmp_path, seams={"file_response": record})
     answered = client.get(
         _at(made, "/photo"), headers={"sec-fetch-site": "same-origin"}
     )
@@ -1050,9 +1058,9 @@ def test_a_stale_lower_draft_does_not_reopen_an_approved_input(
 
 
 def _overlap(
-    client: TestClient,
+    wired: Wiring,
     made: Run,
-    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
     *,
     unlocked: bool = False,
 ) -> dict[str, tuple[int, dict[str, Any]]]:
@@ -1062,13 +1070,11 @@ def _overlap(
     first writes once the second waits at the lock, or, `unlocked`, once the
     second has passed its check.
     """
-    body = client.get(_at(made)).json()
-    saved = body["saved"]
     reached = threading.Event()
     answers: dict[str, tuple[int, dict[str, Any]]] = {}
     threads: list[threading.Thread] = []
-    precondition, save = app_module._precondition, app_module.save_draft
-    lock = app_module._DRAFT_UPDATE
+    precondition, save = app_module._precondition, save_draft
+    lock = threading.Lock()
 
     class Waited:
         """The draft lock, saying when an update finds it held."""
@@ -1109,10 +1115,18 @@ def _overlap(
             )
         return save(run, flow, fields, renders)
 
-    monkeypatch.setattr(app_module, "_precondition", check)
-    monkeypatch.setattr(app_module, "save_draft", write)
-    if not unlocked:
-        monkeypatch.setattr(app_module, "_DRAFT_UPDATE", Waited())
+    client = _client(
+        wired,
+        made,
+        tmp_path,
+        seams={
+            "precondition": check,
+            "save_draft": write,
+            "draft_lock": contextlib.nullcontext() if unlocked else Waited(),
+        },
+    )
+    body = client.get(_at(made)).json()
+    saved = body["saved"]
     put("first", "blonde")
     for thread in threads:
         thread.join()
@@ -1121,9 +1135,9 @@ def _overlap(
 
 @pytest.mark.spec("ui:draft-update:overlapping-updates-cannot-both-commit")
 def test_overlapping_draft_updates_cannot_both_commit(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+    wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
-    answers = _overlap(client, made, monkeypatch)
+    answers = _overlap(wired, made, tmp_path)
 
     assert (answers["first"][0], answers["second"][0]) == (200, 409)
     assert "changed since this page last read it" in answers["second"][1]["refusal"]
@@ -1135,18 +1149,17 @@ def test_overlapping_draft_updates_cannot_both_commit(
     "structural: twin of test_overlapping_draft_updates_cannot_both_commit"
 )
 def test_without_the_lock_overlapping_updates_both_commit(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+    wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr(app_module, "_DRAFT_UPDATE", contextlib.nullcontext())
-
-    answers = _overlap(client, made, monkeypatch, unlocked=True)
+    answers = _overlap(wired, made, tmp_path, unlocked=True)
 
     assert (answers["first"][0], answers["second"][0]) == (200, 200)
 
 
 def _update_during_approval(
-    client: TestClient,
+    wired: Wiring,
     made: Run,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     *,
     unlocked: bool = False,
@@ -1159,14 +1172,13 @@ def _update_during_approval(
     approval has written. Both waits are bounded, so a regression fails rather
     than hangs.
     """
-    body = client.get(_at(made)).json()
     reached, approved = threading.Event(), threading.Event()
     # Where the update was stopped: at the lock, or past its check.
     stopped: list[str] = []
     answers: list[int] = []
-    precondition, approving = app_module._precondition, app_module.approve
+    precondition, approving = app_module._precondition, approve
     write = review_module.write
-    lock = app_module._DRAFT_UPDATE
+    lock = threading.Lock()
 
     class Waited:
         """The draft lock, saying when an update finds it held."""
@@ -1233,11 +1245,18 @@ def _update_during_approval(
             approved.set()
 
     update = threading.Thread(target=put)
-    monkeypatch.setattr(app_module, "_precondition", check)
-    monkeypatch.setattr(app_module, "approve", approve_)
+    client = _client(
+        wired,
+        made,
+        tmp_path,
+        seams={
+            "precondition": check,
+            "approve": approve_,
+            "draft_lock": contextlib.nullcontext() if unlocked else Waited(),
+        },
+    )
     monkeypatch.setattr(review_module, "write", late)
-    if not unlocked:
-        monkeypatch.setattr(app_module, "_DRAFT_UPDATE", Waited())
+    body = client.get(_at(made)).json()
     assert client.post(_at(made, "/approve")).status_code == 200
     update.join()
     return answers[0]
@@ -1245,12 +1264,13 @@ def _update_during_approval(
 
 @pytest.mark.spec("ui:approval:an-update-overlapping-an-approval-is-refused")
 def test_an_update_overlapping_an_approval_is_refused(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+    wired: Wiring, made: Run, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     directory = made.directory(FLOW, REVIEW)
+    review(made, FLOW)
     fields = read(directory / "001.draft.json", DRAFT_FILE)["fields"]
 
-    assert _update_during_approval(client, made, monkeypatch) == 409
+    assert _update_during_approval(wired, made, tmp_path, monkeypatch) == 409
     assert sorted(path.name for path in directory.iterdir()) == ["001.approved.json"]
     assert read(directory / "001.approved.json", APPROVED_FILE)["fields"] == fields
 
@@ -1259,12 +1279,56 @@ def test_an_update_overlapping_an_approval_is_refused(
     "structural: twin of test_an_update_overlapping_an_approval_is_refused"
 )
 def test_without_the_lock_an_update_writes_after_the_approval(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+    wired: Wiring, made: Run, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(app_module, "_DRAFT_UPDATE", contextlib.nullcontext())
-
-    assert _update_during_approval(client, made, monkeypatch, unlocked=True) == 200
+    assert (
+        _update_during_approval(wired, made, tmp_path, monkeypatch, unlocked=True)
+        == 200
+    )
     assert (made.directory(FLOW, REVIEW) / "001.draft.json").exists()
+
+
+@pytest.mark.spec("ui:draft-update:overlapping-updates-cannot-both-commit")
+@pytest.mark.parametrize("given_none", [True, False], ids=["no lock", "a null lock"])
+def test_an_app_given_no_lock_holds_one_of_its_own(
+    wired: Wiring, made: Run, tmp_path: Path, given_none: bool
+) -> None:
+    # The wait is short for the app's own lock, which holds the second update
+    # for all of it, and long for the twin's, which lets it finish.
+    wait = 0.25 if given_none else WAIT
+    seams: dict[str, Any] = (
+        {} if given_none else {"draft_lock": contextlib.nullcontext()}
+    )
+    threads: list[threading.Thread] = []
+    waiting: list[bool] = []
+    answers: list[int] = []
+
+    def put(hair: str) -> None:
+        fields = {**body["fields"], "hair_colour": [hair]}
+        reply = client.put(_at(made, "/draft"), json={"fields": fields})
+        answers.append(reply.status_code)
+
+    def write(
+        run: Run,
+        flow: str,
+        fields: Mapping[str, Sequence[str]],
+        renders: Renders | None = None,
+    ) -> Path:
+        if not threads:
+            second = threading.Thread(target=put, args=("black hair",))
+            threads.append(second)
+            second.start()
+            second.join(wait)
+            waiting.append(second.is_alive())
+        return save_draft(run, flow, fields, renders)
+
+    client = _client(wired, made, tmp_path, seams={"save_draft": write, **seams})
+    body = client.get(_at(made)).json()
+    put("blonde")
+    threads[0].join()
+
+    assert answers == [200, 200]
+    assert waiting == [given_none]
 
 
 @pytest.mark.spec("ui:approval:approved-input-opens-read-only")

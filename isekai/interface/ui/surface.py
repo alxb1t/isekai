@@ -1,12 +1,15 @@
 """What the UI's routes share: the folders, the wiring, the flows and the jobs.
 
-`create_app` builds one `Surface` and the routes read it. This module imports no
-web framework, so the layer's entry point and its tests read it whether or not a
-server is installed.
+`create_app` builds one `Surface` and the routes read it. It also holds the seams
+a test replaces: the file response the library's files answer through (the
+built bundle's page keeps its own), `save_draft`, `approve`, the precondition
+check and the draft lock. This module imports no web framework, so the layer's
+entry point and its tests read it whether or not a server is installed.
 """
 
 import re
 from collections.abc import Callable, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -143,6 +146,11 @@ class Surface:
         imports: importing.Imports,
         broadcast: events.Broadcast,
         limit: int,
+        file_response: Callable[..., Any],
+        save_draft: Callable[..., Path],
+        approve: Callable[..., tuple[Path | None, list[str]]],
+        precondition: Callable[..., None],
+        draft_lock: AbstractContextManager[Any],
     ) -> None:
         """Hold the library at `root`, its wiring and the parts the server builds."""
         self.root = root
@@ -154,6 +162,11 @@ class Surface:
         self.imports = imports
         self.broadcast = broadcast
         self.limit = limit
+        self.file_response = file_response
+        self.save_draft = save_draft
+        self.approve = approve
+        self.precondition = precondition
+        self.draft_lock = draft_lock
         self.shared = _Shared(wired)
         self.offered = cache(self._load)
 

@@ -26,7 +26,7 @@ Non-Goals: an importer, a name, the `RUNS_ROOT` patch, `refusal_for`'s parameter
 | [D6](#d6) | `run.py` keeps its imports of `os` and `write_atomically`, and `__all__` lists every public name of today's file but `T` | a test reads `os` as an attribute of the module; `T` is a typing helper no importer reads | dropping `os`: it strands the `fsync` patch of `tests/test_generate.py` |
 | [D7](#d7) | the UI's artifact tripwire lists `artifact_name` under `isekai.foundation.layout` too, its assertion unchanged, and a new twin holds the row | the guard would narrow without the row; nothing fails when the row is removed without the twin | an edit of the existing twin's expected list: an assertion changes |
 | [D8](#d8) | the file's ratchet row goes in phase 2, where `run.py` falls to 800 lines or fewer; `refusal_for`'s row and the patch row stay | the ratchet reads a row whose offender no longer offends as red, so phase 2 ends green only without it | removing it in phase 4: phase 2 ends red |
-| [D9](#d9) | a new decision, D61, says the run directory is `run.py` and its siblings are imported through it; D21 names `failures.py` | the documents a version makes false are amended in its diff, and a rule gets a decision | a rule left in a README |
+| [D9](#d9) | a new decision, D62, says the run directory is `run.py` and its siblings are imported through it; D21 names `failures.py` | the documents a version makes false are amended in its diff, and a rule gets a decision | a rule left in a README |
 | [D10](#d10) | each moving phase is proved by `tools.mutate` over the lines it moves, before and on their new home; a survivor is killed by a test or named in [Equivalent mutants](#equivalent-mutants); the moved entries of `tests/mutants.json` take their new path, their text unchanged | `CONTRIBUTING.md`'s rule, and an entry is an address, not an assertion | a proof by the suite alone: it does not hold every line |
 
 ### D1
@@ -80,10 +80,10 @@ After phase 1 `run.py` is still past 800 lines, so its row stands. After phase 2
 
 ### D9
 
-D61 is added after D60 in `docs/decisions.md`:
+D62 is added after D60 in `docs/decisions.md`:
 
 ```
-### D61 · The run directory is run.py, its siblings imported through it
+### D62 · The run directory is run.py, its siblings imported through it
 
 **The run directory is `isekai/foundation/run.py`. It re-exports every name of `names.py`, `rundir.py`, `layout.py` and `failures.py` under `__all__`, and a module outside the foundation imports a run's names from `isekai.foundation.run`, never from a sibling. A sibling imports no `run.py` and stays on the standard library and the foundation.**
 
@@ -149,7 +149,7 @@ None.
 - A name left out of `__all__` fails at its first importer; the suite imports each, and the phase-1 check compares the lists.
 - A sibling that reads a name of the front, such as `RUNS_ROOT`, closes a cycle the layer guard turns red.
 - The derived *Imported by* rows list each new module under every foundation file it imports; versions cut from one `main` that each add such a module edit one line.
-- An importer that reads a sibling directly passes every test; the decision D61 and review hold it.
+- An importer that reads a sibling directly passes every test; the decision D62 and review hold it.
 - A mutation run over a moved span takes minutes; it is out of the gate.
 
 ## Verdict
