@@ -13,7 +13,7 @@ Move `ui/src/app.css` into the files of `ui/src/css/`, guard that each is import
 - [x] 1.1 **HALT CHECK** The sheet is the one the cut read: no commit since `7cf59b7d` touched `ui/src/app.css`, so the spans of [D1](design.md#d1) hold.
   Verify: `git diff --name-only 7cf59b7d -- ui/src/app.css` prints nothing.
 - [x] 1.2 `mkdir -p ui/src/css`, then for each row of [D1](design.md#d1) run `sed -n '<first>,<last>p' ui/src/app.css > ui/src/css/<file>`.
-  Verify: `git ls-files --others --exclude-standard ui/src/css` prints `base.css`, `compare.css`, `dialogs.css`, `home.css`, `hub.css`, `import.css`, `keys.css`, `large.css`, `panel.css`, `place.css`, `prepare.css`, `review-side.css`, `review.css`, `session.css`, `shell.css` and `viewer.css`, each under `ui/src/css/`.
+  Verify: `ls ui/src/css` prints sixteen names, base.css, compare.css, dialogs.css, home.css, hub.css, import.css, keys.css, large.css, panel.css, place.css, prepare.css, review-side.css, review.css, session.css, shell.css and viewer.css.
 - [x] 1.3 In `ui/src/main.ts` replace the line `import './app.css'` with one line `import './css/<name>.css'` per file, in the order of [D1](design.md#d1), as [D2](design.md#d2) shows.
   Verify: `uv run python -c "import pathlib,re,subprocess; old=subprocess.run(['git','show','7cf59b7d:ui/src/app.css'],capture_output=True,check=True).stdout; names=re.findall(r\"import '\./(css/[\w-]+\.css)'\", pathlib.Path('ui/src/main.ts').read_text()); print(len(names), b'\n'.join(pathlib.Path('ui/src', n).read_bytes() for n in names) == old)"` prints `16 True`.
 - [x] 1.4 Delete the sheet: `git rm ui/src/app.css`.
