@@ -10,6 +10,17 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.10] - 2026-11-17
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.9: local 1m13s · CI not read under mf-ship
+
+- `ReviewRoutes` holds the review's reads in `routes/reviewing.py` with the helpers only they read. `routes/common.py`
+  takes the helpers the images', staging's and sources' routes share, and `app.py` mounts the class (0154 D1, D3, D6).
+- `ReviewRoutes` takes the review's writes, `put_draft`, `post_approve`, `post_cancel`, `post_discard` and
+  `post_draft`, and `app.py` falls under the ceiling, so its row leaves the ratchet (0154 D3, D5, D9).
+- The docs, the `app.py` docstring and the recorded mutants follow the move: D59 no longer lists the review among the
+  routes left in `create_app`, `PB-2c` points at `routes/reviewing.py` and `UA-7` anchors on the pruned import (0154 D8).
+
 ## [0.87.9] - 2026-11-16
 
 Gate: local 1m13s · CI not read under mf-ship · 0.87.8: local 1m10s · CI not read under mf-ship

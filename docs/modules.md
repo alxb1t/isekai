@@ -54,7 +54,8 @@ as children, so the CLI stays the one path a stage runs through, and
 `RenderRoutes` of `interface/ui/routes/rendering.py` starts the jobs and
 `StreamRoutes` of `interface/ui/routes/stream.py` serves the stream.
 Every other write the server makes runs in its own process, through the function
-that owns it: stage ③'s review functions, import's reader, `sheet()` for a
+that owns it: stage ③'s review functions, which `ReviewRoutes` of
+`interface/ui/routes/reviewing.py` calls, import's reader, `sheet()` for a
 target's first sheet when a draft is made from another flow, filled from the
 photograph's tags — `interface/drafting.py`'s `draft_across` runs it, the same
 sequence the CLI's `draft` runs (D4) — and, for a deleted render, the library's

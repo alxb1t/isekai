@@ -46,11 +46,11 @@ independent, and neither reads the other's output
 | `caption.py` | `interface/cli.py`, `interface/wiring.py` | — |
 | `tagging.py` | `interface/cli.py`, `interface/wiring.py` | — |
 | `sheet.py` | `interface/cli.py`, `interface/drafting.py` | — |
-| `review.py` | `interface/cli.py`, `interface/drafting.py`, `interface/render.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/ui/surface.py`, `interface/verbs/drafts.py` | — |
+| `review.py` | `interface/cli.py`, `interface/drafting.py`, `interface/render.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/ui/routes/reviewing.py`, `interface/ui/surface.py`, `interface/verbs/drafts.py` | — |
 | `edit.py` | `interface/render.py`, `interface/ui/routes/place.py`, `interface/ui/routes/rendering.py`, `interface/verbs/drafts.py`, `interface/verbs/edits.py` | — |
 | `proposing.py` | `interface/wiring.py` | — |
 | `tattoos.py` | `interface/ui/routes/place.py`, `interface/ui/routes/tattoos.py` | — |
-| `generate.py` | `interface/compare_view.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/ui/surface.py`, `interface/verbs/drafts.py`, `interface/verbs/generate.py` | — |
+| `generate.py` | `interface/compare_view.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/ui/routes/reviewing.py`, `interface/ui/surface.py`, `interface/verbs/drafts.py`, `interface/verbs/generate.py` | — |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are

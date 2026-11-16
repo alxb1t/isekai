@@ -629,6 +629,7 @@ _WRONG = (
     "draft-images",
     "renders-object",
     "renders-seeds",
+    "outline-keys",
 )
 
 
@@ -691,6 +692,12 @@ def _wrong(
             _at(made, "/draft"),
             {"fields": fields, "renders": {"seeds": ["x"]}},
             "the update's renders seeds are not decimal numbers",
+        ),
+        "outline-keys": (
+            "PUT",
+            "/api/tattoos/ink/outline",
+            {},
+            "the request lacks points, closed, white, neutral, depth",
         ),
     }
 
@@ -1759,6 +1766,7 @@ def _drop(key: str) -> Callable[[dict[str, Any]], None]:
             "tag entry 0",
             "tag",
         ),
+        (_latest(WD14), _drop("tags"), "`tags`", "tag"),
         (_hosted, _set("tags", "brown hair"), "`tags`", "tag"),
         (_hosted, _set("tags", ["brown hair", 3]), "`tags`", "tag"),
     ],
@@ -1769,6 +1777,7 @@ def _drop(key: str) -> Callable[[dict[str, Any]], None]:
         "approved-kind",
         "caption",
         "wd14",
+        "wd14-no-tags",
         "hosted-string",
         "hosted-entry",
     ],
@@ -2336,6 +2345,13 @@ def test_a_source_named_as_a_page_is_served_as_the_image_it_is(
     with Image.open(io.BytesIO(other.content)) as shown:
         assert (shown.format, shown.size) == ("JPEG", (30, 40))
 
+    # The run's own photograph names no converter: bytes of a third format are
+    # refused, not served.
+    made.photo.write_bytes(held.getvalue())
+    refused = client.get(_at(made, "/photo"))
+    assert refused.status_code == 409
+    assert "neither" in refused.json()["refusal"]
+
 
 @pytest.mark.spec("ui:renders:a-damaged-approval-marks-its-version")
 def test_a_damaged_approval_heads_its_large_view_damaged(
@@ -2628,6 +2644,7 @@ def test_a_large_view_offers_every_offered_flow_its_own_first(
 
     assert narrowed["targets"] == [FLOW]
     assert pressed.status_code == 409
+    assert f"the flows it drafts are {FLOW} --" in pressed.json()["refusal"]
     assert snapshot(made.path) == before
 
 
@@ -2697,6 +2714,7 @@ def test_a_draft_from_onto_an_edited_waiting_draft_answers_it_and_writes_nothing
 
 
 @pytest.mark.spec("ui:conjure-from:review-reads-the-draft-against-the-sheet")
+@pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
 def test_review_reads_a_drafted_draft_against_its_sheet_and_its_image(
     wired: Wiring,
     made: Run,
@@ -2734,6 +2752,15 @@ def test_review_reads_a_drafted_draft_against_its_sheet_and_its_image(
     # `review --new-version` copies the same damaged sheet, so a hand restores it.
     assert refused.status_code == 409
     assert f"restore {target} by hand" in refused.json()["refusal"]
+
+    # A draft that records no sheet number is refused by name, the draft's file.
+    _damage(target, _set("fields", own))
+    draft = made.directory(CONJURE, "review") / "001.draft.json"
+    _damage(draft, _drop("sheet"))
+    unsheeted = client.get(route)
+
+    assert unsheeted.status_code == 409
+    assert "001.draft.json: records no `sheet`" in unsheeted.json()["refusal"]
 
 
 @pytest.mark.spec("ui:conjure-from:an-approved-draft-keeps-its-marks")
