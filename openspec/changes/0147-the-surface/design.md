@@ -54,8 +54,17 @@ Surface(root, wired, *, flows, wire, jobs, billing, imports, broadcast, limit)
 `create_app` builds the surface after `imports` and binds, so the routes still written in it read what they read today:
 
 ```python
-surface = Surface(root, wired, flows=flows, wire=wire, jobs=jobs, billing=billing,
-                  imports=imports, broadcast=broadcast, limit=limit)
+surface = Surface(
+    root,
+    wired,
+    flows=flows,
+    wire=wire,
+    jobs=jobs,
+    billing=billing,
+    imports=imports,
+    broadcast=broadcast,
+    limit=limit,
+)
 shared = surface.shared
 folder, held, offered = surface.folder, surface.held, surface.offered
 rendering_slot, _rendering = surface.rendering_slot, surface.rendering
@@ -67,7 +76,7 @@ Only `root` and `wired` are positional, so no constructor is wider than the posi
 ### D2
 
 ```python
-self.offered = cache(self._load)   # _load(flow) -> _flow(self.wired, flow)
+self.offered = cache(self._load)  # _load(flow) -> _flow(self.wired, flow)
 ```
 
 ### D3
