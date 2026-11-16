@@ -1,6 +1,7 @@
 """What the UI's routes share: the folders, the wiring, the flows and the jobs.
 
-`create_app` builds one `Surface` and the routes read it. This module imports no
+`create_app` builds one `Surface` and the routes read it. It holds `file_response`,
+the call every route that serves a file answers through. This module imports no
 web framework, so the layer's entry point and its tests read it whether or not a
 server is installed.
 """
@@ -143,6 +144,7 @@ class Surface:
         imports: importing.Imports,
         broadcast: events.Broadcast,
         limit: int,
+        file_response: Callable[..., Any],
     ) -> None:
         """Hold the library at `root`, its wiring and the parts the server builds."""
         self.root = root
@@ -154,6 +156,7 @@ class Surface:
         self.imports = imports
         self.broadcast = broadcast
         self.limit = limit
+        self.file_response = file_response
         self.shared = _Shared(wired)
         self.offered = cache(self._load)
 

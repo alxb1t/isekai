@@ -17,6 +17,9 @@ its new digest.
 - D60 says where the page's CSS lives, and the README's tree names `css/` (0149 D6).
 - `create_app` takes `make_jobs`, keyword-only and defaulting to `Jobs`; the two tests that patched `Jobs` pass it, so
   no test patches that name and `serve` is unchanged (0150 D1, D5).
+- `create_app` takes `file_response`, defaulting to `FileResponse`, and the `Surface` holds it; the photograph and image
+  routes answer through it, and the two tests that patched `FileResponse` pass it, so `serve` is unchanged
+  (0150 D1, D2, D3, D5).
 
 ## [0.87.4] - 2026-11-16
 

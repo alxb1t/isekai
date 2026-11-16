@@ -5,7 +5,7 @@ The phases: the jobs, the file response, the draft's four, the documents. Nothin
 ## Progress
 
 - [x] 1 — The jobs · moderate
-- [ ] 2 — The file response · moderate
+- [x] 2 — The file response · moderate
 - [ ] 3 — The draft's four · moderate
 - [ ] 4 — The documents · moderate
 
@@ -22,19 +22,19 @@ The phases: the jobs, the file response, the draft's four, the documents. Nothin
 
 ## 2 — The file response
 
-- [ ] 2.1 **HALT CHECK** `_photograph` is read by `read_staged`, `read_photo`, `read_source_copy` and `read_source` alone: its definition and those callers are the lines that name it ([D3](design.md#d3)).
+- [x] 2.1 **HALT CHECK** `_photograph` is read by `read_staged`, `read_photo`, `read_source_copy` and `read_source` alone: its definition and those callers are the lines that name it ([D3](design.md#d3)).
   Verify: `git grep -c -F '_photograph(' -- isekai/interface/ui/app.py` prints `isekai/interface/ui/app.py:5`.
-- [ ] 2.2 In `isekai/interface/ui/surface.py` give `Surface.__init__` the keyword-only parameter `file_response: Callable[..., Any]`, store it as `self.file_response = file_response`, and name it in the module's docstring ([D2](design.md#d2)).
+- [x] 2.2 In `isekai/interface/ui/surface.py` give `Surface.__init__` the keyword-only parameter `file_response: Callable[..., Any]`, store it as `self.file_response = file_response`, and name it in the module's docstring ([D2](design.md#d2)).
   Verify: `git grep -n -F 'self.file_response = file_response' -- isekai/interface/ui/surface.py` prints a line.
-- [ ] 2.3 In `app.py` give `create_app` the keyword-only parameter `file_response: Callable[..., Response] = FileResponse` after `make_jobs`, pass `file_response=file_response` to `Surface(`, and add a line to the docstring ([D1](design.md#d1)).
+- [x] 2.3 In `app.py` give `create_app` the keyword-only parameter `file_response: Callable[..., Response] = FileResponse` after `make_jobs`, pass `file_response=file_response` to `Surface(`, and add a line to the docstring ([D1](design.md#d1)).
   Verify: `git grep -n -F 'file_response=file_response' -- isekai/interface/ui/app.py` prints a line.
-- [ ] 2.4 In `app.py` give `_photograph` the first parameter `file_response: Callable[..., Response]`, so its last line reads `return file_response(path, media_type=kind, headers=headers)`, and have `read_staged`, `read_photo`, `read_source_copy` and `read_source` pass `surface.file_response` first ([D3](design.md#d3)).
+- [x] 2.4 In `app.py` give `_photograph` the first parameter `file_response: Callable[..., Response]`, so its last line reads `return file_response(path, media_type=kind, headers=headers)`, and have `read_staged`, `read_photo`, `read_source_copy` and `read_source` pass `surface.file_response` first ([D3](design.md#d3)).
   Verify: `git grep -n -F 'return file_response(path, media_type=kind, headers=headers)' -- isekai/interface/ui/app.py` prints a line.
-- [ ] 2.5 In `app.py` make `read_render_image`, `read_render_thumb`, `read_bake_image`, `read_bake_thumb` and `read_source_thumb` answer `surface.file_response(` with the arguments they pass to `FileResponse(` today, and change each return annotation `-> FileResponse` to `-> Response`. `page` keeps `FileResponse` ([D3](design.md#d3)).
+- [x] 2.5 In `app.py` make `read_render_image`, `read_render_thumb`, `read_bake_image`, `read_bake_thumb` and `read_source_thumb` answer `surface.file_response(` with the arguments they pass to `FileResponse(` today, and change each return annotation `-> FileResponse` to `-> Response`. `page` keeps `FileResponse` ([D3](design.md#d3)).
   Verify: `git grep -n -F 'FileResponse(' -- isekai/interface/ui/app.py` prints one line, `page`'s.
-- [ ] 2.6 In `tests/test_ui_api.py` give `_client` the keyword-only parameter `seams: Mapping[str, Any] | None = None` and call `create_app(..., **(seams or {}))`. Have `test_a_cross_site_request_without_origin_is_refused` and `test_a_request_from_this_page_reads_the_photograph` take `wired`, `made` and `tmp_path` for `client`, build `_client(wired, made, tmp_path, seams=...)` with the recorder each patched in, and delete both patches ([D5](design.md#d5)).
+- [x] 2.6 In `tests/test_ui_api.py` give `_client` the keyword-only parameter `seams: Mapping[str, Any] | None = None` and call `create_app(..., **(seams or {}))`. Have `test_a_cross_site_request_without_origin_is_refused` and `test_a_request_from_this_page_reads_the_photograph` take `wired`, `made` and `tmp_path` for `client`, build `_client(wired, made, tmp_path, seams=...)` with the recorder each patched in, and delete both patches ([D5](design.md#d5)).
   Verify: `git grep -n -F '"FileResponse"' -- tests` prints nothing.
-- [ ] 2.7 Run the server's tests, the ratchets, the record, the layer guards and the entry point's import guard.
+- [x] 2.7 Run the server's tests, the ratchets, the record, the layer guards and the entry point's import guard.
   Verify: `uv run pytest tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui.py tests/test_ui_billing.py tests/test_ui_propose.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ratchets.py tests/test_record.py tests/test_layers.py tests/test_pipeline_cli.py tests/test_ui_wire.py` passes.
 
 ## 3 — The draft's four

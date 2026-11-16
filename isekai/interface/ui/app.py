@@ -233,6 +233,7 @@ def create_app(
     host: str,
     port: int,
     make_jobs: Callable[..., Jobs] = Jobs,
+    file_response: Callable[..., Response] = FileResponse,
 ) -> FastAPI:
     """Return the app's application, serving every collection of the library at `root`.
 
@@ -242,6 +243,7 @@ def create_app(
     `flows` are the hub's columns, the flows the surface offers.
     `host` and `port` are the address every request is checked against.
     `make_jobs` builds the jobs the app holds; a test passes its own.
+    `file_response` answers the photographs and images; a test passes its own.
     """
     broadcast = events.Broadcast()
     jobs = make_jobs(
@@ -285,6 +287,7 @@ def create_app(
         imports=imports,
         broadcast=broadcast,
         limit=limit,
+        file_response=file_response,
     )
     shared = surface.shared
     folder, held, offered = surface.folder, surface.held, surface.offered
@@ -397,7 +400,9 @@ def create_app(
     @app.get("/api/staging/{staged}/files/{name}")
     def read_staged(staged: str, name: str) -> Response:
         """Serve a staged file full size, as it was cleaned."""
-        served = _photograph(importing.staged_file(imports.folder(staged), name))
+        served = _photograph(
+            surface.file_response, importing.staged_file(imports.folder(staged), name)
+        )
         served.headers["Cache-Control"] = "no-store"
         return served
 
@@ -523,7 +528,9 @@ def create_app(
     @app.get("/api/c/{collection}/review/{digest}/{flow}/photo")
     def read_photo(collection: str, digest: str, flow: str) -> Response:
         """Serve the photograph's bytes, whole. `image.py` reads headers, not pixels."""
-        return _photograph(held(collection, digest, flow).run.photo)
+        return _photograph(
+            surface.file_response, held(collection, digest, flow).run.photo
+        )
 
     @app.get("/api/c/{collection}/review/{digest}/{flow}/source/{version}")
     def read_source_copy(
@@ -537,7 +544,7 @@ def create_app(
                 f"{one.run.id}: flow {one.flow.id} holds no image a draft numbered "
                 f"{version} was drafted from; go back to Review to reload the page"
             )
-        return _photograph(copy)
+        return _photograph(surface.file_response, copy)
 
     @app.put("/api/c/{collection}/review/{digest}/{flow}/draft")
     def put_draft(
@@ -811,17 +818,19 @@ def create_app(
     @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/image")
     def read_render_image(
         collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> FileResponse:
+    ) -> Response:
         """Serve the render's bytes, whole."""
-        return FileResponse(rendered(collection, digest, flow, version, seed)[1])
+        return surface.file_response(
+            rendered(collection, digest, flow, version, seed)[1]
+        )
 
     @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/thumb")
     def read_render_thumb(
         collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> FileResponse:
+    ) -> Response:
         """Serve the render's thumbnail, made in the library's cache the first time."""
         run, image, _ = rendered(collection, digest, flow, version, seed)
-        return FileResponse(
+        return surface.file_response(
             library.thumbnail(root, run, image), media_type="image/jpeg"
         )
 
@@ -837,19 +846,21 @@ def create_app(
     )
     def read_bake_image(
         collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> FileResponse:
+    ) -> Response:
         """Serve a bake's image bytes, whole."""
-        return FileResponse(bake_image(collection, digest, flow, version, seed, k)[1])
+        return surface.file_response(
+            bake_image(collection, digest, flow, version, seed, k)[1]
+        )
 
     @app.get(
         "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/thumb"
     )
     def read_bake_thumb(
         collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> FileResponse:
+    ) -> Response:
         """Serve a bake's thumbnail, made in the library's cache the first time."""
         run, image = bake_image(collection, digest, flow, version, seed, k)
-        return FileResponse(
+        return surface.file_response(
             library.thumbnail(root, run, image), media_type="image/jpeg"
         )
 
@@ -886,13 +897,13 @@ def create_app(
         upright JPEG of it, so the viewer shows what its thumbnail does.
         """
         source = library.source_files(folder(collection))(name)
-        return _photograph(source, other=library.source_jpeg)
+        return _photograph(surface.file_response, source, other=library.source_jpeg)
 
     @app.get("/api/c/{collection}/sources/{name}/thumb")
-    def read_source_thumb(collection: str, name: str) -> FileResponse:
+    def read_source_thumb(collection: str, name: str) -> Response:
         """Serve a source's thumbnail, upright, made in the library's cache once."""
         source = library.source_files(folder(collection))(name)
-        return FileResponse(
+        return surface.file_response(
             library.source_thumbnail(root, source), media_type="image/jpeg"
         )
 
@@ -1064,7 +1075,10 @@ def _numbered(value: object) -> TypeGuard[int]:
 
 
 def _photograph(
-    path: Path, *, other: Callable[[Path], bytes] | None = None
+    file_response: Callable[..., Response],
+    path: Path,
+    *,
+    other: Callable[[Path], bytes] | None = None,
 ) -> Response:
     """Serve the photograph at `path` as the image its bytes are, never its name's.
 
@@ -1082,7 +1096,7 @@ def _photograph(
         if other is None:
             raise
         return Response(other(path), media_type="image/jpeg", headers=headers)
-    return FileResponse(path, media_type=kind, headers=headers)
+    return file_response(path, media_type=kind, headers=headers)
 
 
 def _wd14(one: Held) -> list[dict[str, Any]] | None:

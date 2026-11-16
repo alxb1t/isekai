@@ -198,12 +198,14 @@ def _client(
     *,
     drafted: bool = True,
     offered: Sequence[str] = OFFERED,
+    seams: Mapping[str, Any] | None = None,
 ) -> TestClient:
     """Return a client over the app, with a stand-in for the built bundle.
 
     `drafted` takes the draft opening the sheet would, so a test may write
-    before it reads; `offered` is the surface's flows. The library is the folder
-    holding the wiring's collection.
+    before it reads; `offered` is the surface's flows; `seams` are the arguments
+    of `create_app` a test replaces. The library is the folder holding the
+    wiring's collection.
     """
     dist = tmp_path / "dist"
     dist.mkdir(exist_ok=True)
@@ -218,6 +220,7 @@ def _client(
         wire=lambda runs: replace(wired, runs_root=runs),
         host=HOST,
         port=PORT,
+        **(seams or {}),
     )
     return TestClient(app, base_url=ADDRESS)
 
@@ -287,12 +290,17 @@ def test_a_write_carrying_another_pages_origin_is_refused(
 
 @pytest.mark.spec("ui:address:a-cross-site-request-without-origin-is-refused")
 def test_a_cross_site_request_without_origin_is_refused(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+    wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
     # An image tag on another page probing for the photograph: no `Origin`, and
     # the browser marks it `cross-site` all the same.
     read: list[object] = []
-    monkeypatch.setattr(app_module, "FileResponse", lambda path: read.append(path))
+    client = _client(
+        wired,
+        made,
+        tmp_path,
+        seams={"file_response": lambda path: read.append(path)},
+    )
     answered = client.get(_at(made, "/photo"), headers={"sec-fetch-site": "cross-site"})
 
     assert answered.status_code == 403
@@ -304,7 +312,7 @@ def test_a_cross_site_request_without_origin_is_refused(
     "structural: twin of test_a_cross_site_request_without_origin_is_refused"
 )
 def test_a_request_from_this_page_reads_the_photograph(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+    wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
     read: list[object] = []
 
@@ -312,7 +320,7 @@ def test_a_request_from_this_page_reads_the_photograph(
         read.append(path)
         return Response()
 
-    monkeypatch.setattr(app_module, "FileResponse", record)
+    client = _client(wired, made, tmp_path, seams={"file_response": record})
     answered = client.get(
         _at(made, "/photo"), headers={"sec-fetch-site": "same-origin"}
     )
