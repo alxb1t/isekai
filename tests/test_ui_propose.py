@@ -222,9 +222,7 @@ def test_propose_route_reads_the_photograph_upright(
     assert seen.mode == drawn.mode == "RGB"
 
 
-@pytest.mark.spec_exempt(
-    "structural: a point is x then y, and a coordinate of 0 is one"
-)
+@pytest.mark.spec("placement-proposal:pairs:the-arm-nearest-the-tattoo-is-proposed")
 def test_propose_route_reads_a_point_as_x_then_y_and_takes_a_zero_coordinate(
     wired: Wiring, library: Path, tmp_path: Path, photographed: Run
 ) -> None:
