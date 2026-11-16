@@ -545,6 +545,10 @@ def test_the_limit_narrows_the_rows_without_changing_the_true_count(
     # The footer says how narrow the fragment got, so narrowing it is the way to
     # see fewer rows rather than scrolling.
     assert body["total"] == len(vocabulary.search("hair"))
+    for none in (0, -1):
+        empty = client.get("/api/tags", params={"q": "hair", "limit": none}).json()
+        assert empty["matches"] == []
+        assert empty["total"] == body["total"]
 
 
 @pytest.mark.spec("ui:vocabulary:an-unmatched-fragment-commits-nothing")

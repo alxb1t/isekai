@@ -13,6 +13,9 @@ its new digest.
 - What the UI's routes share moves out of `create_app` into `Surface` in the new `isekai/interface/ui/surface.py`,
   which imports no web framework; `app.py` binds its methods under today's names, and no route, wire or answer
   changes (0147 D1, D2, D5, D6).
+- The vocabulary and tattoo library routes move out of `create_app` into `VocabularyRoutes` and `TattooRoutes` in
+  `isekai/interface/ui/routes/`, registered from tables on the app itself, so each stays one route of `app.routes`;
+  no route, wire or answer changes (0147 D3, D4, D5, D6).
 
 ## [0.87.2] - 2026-11-16
 

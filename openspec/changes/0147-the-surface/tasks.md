@@ -5,7 +5,7 @@ Each phase is a move with behaviour unchanged: the surface, vocabulary and the t
 ## Progress
 
 - [x] 1 — The surface · hard
-- [ ] 2 — Vocabulary and the tattoo library · hard
+- [x] 2 — Vocabulary and the tattoo library · hard
 - [ ] 3 — Place · moderate
 - [ ] 4 — The documents and the replay · moderate
 
@@ -44,9 +44,9 @@ Each phase is a move with behaviour unchanged: the surface, vocabulary and the t
   Verify: `grep -L 'read_tattoos' isekai/interface/ui/app.py` prints the path, and `grep -rnE 'APIRouter|include_router' isekai/interface/ui` prints nothing.
 - [x] 2.7 Run `uv run ruff format isekai/interface/ui`, then the server's tests.
   Verify: `uv run pytest tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_library.py tests/test_ui_wire.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ui_propose.py tests/test_ui_billing.py` passes.
-- [ ] 2.8 Run `git add -N isekai/interface/ui/routes`, since `tools.mutate` copies tracked files only. Close with `tools.mutate` over the new modules on the same test files: `routes/vocabulary.py`, `routes/tattoos.py` and `routes/common.py`, lines 1-2000 each; `routes/table.py` holds no mutant, since its one multi-line call in a loop is no site, and `routes/keys.py` holds only tuples. Handle a survivor as [D7](design.md#d7) says.
+- [x] 2.8 Run `git add -N isekai/interface/ui/routes`, since `tools.mutate` copies tracked files only. Close with `tools.mutate` over the new modules on the same test files: `routes/vocabulary.py`, `routes/tattoos.py` and `routes/common.py`, lines 1-2000 each; `routes/table.py` holds no mutant, since its one multi-line call in a loop is no site, and `routes/keys.py` holds only tuples. Handle a survivor as [D7](design.md#d7) says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/vocabulary.py:1-2000 isekai/interface/ui/routes/tattoos.py:1-2000 isekai/interface/ui/routes/common.py:1-2000 --tests tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_library.py tests/test_ui_wire.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ui_propose.py tests/test_ui_billing.py` exits 0.
-- [ ] 2.9 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
+- [x] 2.9 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py` passes.
 
 ## 3 — Place

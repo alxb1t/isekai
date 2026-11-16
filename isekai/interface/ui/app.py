@@ -138,7 +138,13 @@ from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
-from isekai.interface.ui.surface import _DECIMAL, Held, Surface, _flow, _version
+from isekai.interface.ui.routes.common import _dimensions, _needs
+from isekai.interface.ui.routes.keys import OUTLINE_KEYS as OUTLINE_KEYS
+from isekai.interface.ui.routes.keys import STAGE1_KEYS as STAGE1_KEYS
+from isekai.interface.ui.routes.tattoos import mount as tattoo_mount
+from isekai.interface.ui.routes.vocabulary import RARE_BELOW as RARE_BELOW
+from isekai.interface.ui.routes.vocabulary import mount as vocabulary_mount
+from isekai.interface.ui.surface import _DECIMAL, Held, Surface, _version
 from isekai.interface.wiring import Wiring, proposer_of
 from isekai.pipeline import importing, tattoos
 from isekai.pipeline.edit import image_of as edit_image_of
@@ -162,28 +168,16 @@ from isekai.pipeline.review import (
     withdraw,
 )
 from isekai.pipeline.review import state as review_state
-from isekai.shared.image import dimensions_or_refuse, upright_image
-from isekai.shared.ink import load_ink_config
+from isekai.shared.image import upright_image
 from isekai.shared.vocabulary import Vocabulary
 
 if TYPE_CHECKING:
     from PIL.Image import Image
 
-# The dropdown's `· rare` marker. This number exists nowhere else in the
-# repository: the vocabulary ranks by post count and never calls anything rare,
-# so the threshold is the surface's own judgement about what an operator should
-# hesitate over, and it is stated here rather than duplicated in TypeScript.
-RARE_BELOW = 2000
-
 # Held across a draft update's precondition and its write, so two updates that
 # state one precondition cannot both pass it; and across an approval, so no
 # update writes after it.
 _DRAFT_UPDATE = threading.Lock()
-
-# Enough rows to choose from without the dropdown becoming a list to read. The
-# footer states the true match count, so narrowing the fragment stays the way to
-# see fewer rather than scrolling.
-DEFAULT_LIMIT = 10
 
 # A `Refusal` is the pipeline declining a well-formed request because of what is
 # on disk -- an approved input, a changed field set, a tag outside the vocabulary
@@ -198,12 +192,10 @@ REFUSED = 409
 # string for the page and never reaches a handler.
 FORBIDDEN = 403
 
-# What a body names to save an outline, and to ask the ink view of one.
-OUTLINE_KEYS = ("points", "closed", "white", "neutral", "depth")
+# What a body names to ask the ink view of an outline.
 INK_KEYS = ("points", "white", "neutral", "depth", "digest", "flow")
 
-# What a body names to save a tattoo's pairs on a photograph, and to ask a preview.
-STAGE1_KEYS = ("pairs", "not_on_photo")
+# What a body names to ask a preview.
 PREVIEW_KEYS = (
     "target",
     "digest",
@@ -465,116 +457,6 @@ def create_app(
             "skipped": list(done.skipped),
             "left_out": list(done.left_out),
         }
-
-    @app.get("/api/tattoos")
-    def read_tattoos(digest: str | None = None) -> dict[str, Any]:
-        """List the tattoos a render lists, with the limits the page reads.
-
-        The uploads and the cuts of the photograph `digest`, each with its stage-1
-        state on it.
-        """
-        asked = _digest_asked(digest)
-        return {
-            "tattoos": [asdict(one) for one in tattoos.listed(root, asked)],
-            "limits": _tattoo_limits(),
-            "stage1": {
-                name: asdict(state)
-                for name, state in tattoos.stage1_states(root, asked).items()
-            },
-        }
-
-    @app.get("/api/tattoos/{name}")
-    def read_tattoo(name: str, digest: str | None = None) -> dict[str, Any]:
-        """Return one tattoo with its outline, refusing an unknown name."""
-        asked = _digest_asked(digest)
-        return {
-            **asdict(tattoos.named(root, name, asked)),
-            "outline": asdict(tattoos.read_outline(root, name, asked)),
-        }
-
-    @app.delete("/api/tattoos/{name}")
-    def delete_tattoo(name: str, digest: str | None = None) -> dict[str, Any]:
-        """Remove one tattoo of the library, found from the checked name and digest."""
-        tattoos.remove(root, name, _digest_asked(digest))
-        return {}
-
-    @app.get("/api/tattoos/{name}/design")
-    def read_tattoo_design(name: str, digest: str | None = None) -> Response:
-        """Serve an uploaded tattoo's image whole, refusing a cut, which has none."""
-        return Response(
-            tattoos.design_bytes(root, name, _digest_asked(digest)),
-            media_type="image/png",
-            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
-        )
-
-    @app.post("/api/tattoos")
-    def post_tattoo(payload: dict[str, Any]) -> dict[str, Any]:
-        """Keep a staged file as a tattoo, then cancel the import it came in.
-
-        A file that still carries metadata is refused, and a refusal leaves the
-        import open so the name can be changed.
-        """
-        staged, file, name = (payload.get(key) for key in ("staging", "file", "name"))
-        if not (isinstance(staged, str) and isinstance(file, str)):
-            raise Refusal(
-                "the request's `staging` and `file` are the import's id and the staged "
-                "file's name; send both"
-            )
-        if not isinstance(name, str):
-            raise Refusal("the request's `name` is the tattoo's name; send one")
-        path = importing.staged_file(imports.folder(staged), file)
-        carried = importing.verify(path)
-        if carried:
-            raise Refusal(
-                f"{file} still carries {', '.join(carried)}; clean it as an import "
-                "does, then keep it"
-            )
-        kept = tattoos.keep(root, name, path.read_bytes())
-        imports.cancel(staged)
-        return asdict(kept)
-
-    @app.post("/api/c/{collection}/tattoos")
-    def post_cut(collection: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Keep a cut: a tattoo with no image, from the photograph of a run."""
-        one = held(collection, str(payload.get("digest")), str(payload.get("flow")))
-        name = payload.get("name")
-        if not isinstance(name, str):
-            raise Refusal("the request's `name` is the tattoo's name; send one")
-        return asdict(tattoos.cut(root, name, one.run.digest, _dimensions(one.run)))
-
-    @app.put("/api/tattoos/{name}/outline")
-    def put_outline(
-        name: str, payload: dict[str, Any], digest: str | None = None
-    ) -> dict[str, Any]:
-        """Replace a tattoo's outline and tone with what the page sent, whole."""
-        _needs(payload, OUTLINE_KEYS)
-        return asdict(
-            tattoos.save_outline(
-                root,
-                name,
-                _digest_asked(digest),
-                payload["points"],
-                payload["closed"],
-                payload["white"],
-                payload["neutral"],
-                payload["depth"],
-            )
-        )
-
-    @app.get("/api/tattoos/{name}/stage1/{digest}")
-    def get_stage1(name: str, digest: str) -> dict[str, Any]:
-        """Return a tattoo's pairs and flag on a photograph; none if never placed."""
-        return asdict(tattoos.read_stage1(root, name, digest))
-
-    @app.put("/api/tattoos/{name}/stage1/{digest}")
-    def put_stage1(name: str, digest: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Replace a tattoo's pairs and flag on a photograph with what the page sent."""
-        _needs(payload, STAGE1_KEYS)
-        return asdict(
-            tattoos.save_stage1(
-                root, name, digest, payload["pairs"], payload["not_on_photo"]
-            )
-        )
 
     @app.post("/api/c/{collection}/tattoos/{name}/ink")
     def post_ink(collection: str, name: str, payload: dict[str, Any]) -> Response:
@@ -970,44 +852,6 @@ def create_app(
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache"},
         )
-
-    @app.get("/api/tags")
-    def read_tags(q: str = "", limit: int = DEFAULT_LIMIT) -> dict[str, Any]:
-        """Answer a tag fragment from the vocabulary the pipeline itself searches.
-
-        The server ranks and the client does not. Shipping all 8,106 tags would
-        put a second copy of the ranking rule in TypeScript, and `total` is the
-        true match count so the dropdown can say how narrow the fragment got.
-        """
-        vocabulary = shared.vocabulary()
-        fragment = q.strip()
-        found = (
-            vocabulary.search(fragment, skip=shared.field_map().excluded)
-            if fragment
-            else []
-        )
-        return {
-            "matches": [
-                {
-                    "tag": tag,
-                    "posts": (posts := vocabulary.count(tag)),
-                    "rare": posts < RARE_BELOW,
-                }
-                for tag in found[: max(limit, 0)]
-            ],
-            "total": len(found),
-        }
-
-    @app.get("/api/fields")
-    def read_fields(flow: str) -> dict[str, Any]:
-        """Answer every candidate tag for every criterion `flow` declares.
-
-        **The whole table in one response, once per flow.** ~40 KB, so the
-        overlay filters with no round trip per keystroke, ordered by post count
-        through `Vocabulary.rank` and cut at nothing. A declared field the table
-        holds nothing for is present and empty; the excluded list is not served.
-        """
-        return shared.candidates(_flow(wired, flow))
 
     @app.get("/api/c/{collection}/review/{digest}/{flow}")
     def read_input(collection: str, digest: str, flow: str) -> dict[str, Any]:
@@ -1464,6 +1308,9 @@ def create_app(
             library.source_thumbnail(root, source), media_type="image/jpeg"
         )
 
+    vocabulary_mount(app, surface)
+    tattoo_mount(app, surface)
+
     @app.get("/api/{rest:path}")
     def no_route(rest: str) -> JSONResponse:
         """Answer an unknown API path as not found, never with the page."""
@@ -1823,23 +1670,6 @@ def _photograph(
     return FileResponse(path, media_type=kind, headers=headers)
 
 
-def _needs(payload: Mapping[str, Any], keys: Sequence[str]) -> None:
-    """Refuse a body that lacks any of `keys`, naming each."""
-    missing = [key for key in keys if key not in payload]
-    if missing:
-        raise Refusal(f"the request lacks {', '.join(missing)}; send {', '.join(keys)}")
-
-
-def _digest_asked(digest: str | None) -> str:
-    """Return the `digest` a tattoo request names, refusing a request with none."""
-    if digest is None:
-        raise Refusal(
-            "the request's `digest` is the render's photograph digest, as its address "
-            "shows; send it as `?digest=`"
-        )
-    return digest
-
-
 def _is_point(value: object) -> TypeGuard[list[float]]:
     """Return whether `value` is `[x, y]`, two finite numbers from 0 up."""
     return (
@@ -1888,29 +1718,6 @@ def _upright_of(path: Path, what: str) -> "Image":
         ) from unreadable
 
 
-def _tattoo_limits() -> dict[str, Any]:
-    """Return the bounds the page and the server both read: one source, two configs."""
-    config = tattoos.load_tattoo_config()
-    ink = load_ink_config(tattoos.INK_CONFIG)
-    return {
-        "long_side": config.long_side,
-        "outline_min": config.outline_min,
-        "outline_max": config.outline_max,
-        "depth_min": ink.depth_min,
-        "depth_max": ink.depth_max,
-        "photo_depth": ink.photo_depth,
-        "image_depth": ink.image_depth,
-        "floor_stage1": config.floor_stage1,
-        "floor_stage2": config.floor_stage2,
-        "floor_direct": config.floor_direct,
-        "preview_floor": config.preview_floor,
-        "preview_margin": config.preview_margin,
-        "preview_wait_ms": config.preview_wait_ms,
-        "pair_radius": config.pair_radius,
-        "region_min": config.region_min,
-    }
-
-
 def _hub(grid: library.Hub) -> dict[str, Any]:
     """Describe a collection's grid as the page draws it."""
     return {
@@ -1941,15 +1748,6 @@ def _cell_out(cell: library.Cell) -> dict[str, Any]:
         "newest": None if cell.newest is None else image(cell.newest),
         "images": [image(one) for one in cell.images],
     }
-
-
-def _dimensions(run: Run) -> tuple[int, int]:
-    """Return the photograph's size, as a `Refusal` rather than an exit."""
-    return dimensions_or_refuse(
-        run.photo,
-        "the page reads the photograph's own header to size itself and there is "
-        "nothing to fall back to -- re-export it as a JPEG or PNG",
-    )
 
 
 def _wd14(one: Held) -> list[dict[str, Any]] | None:
