@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.10] - 2026-11-17
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.9: local 1m13s · CI not read under mf-ship
+
 - `ReviewRoutes` holds the review's reads in `routes/reviewing.py` with the helpers only they read. `routes/common.py`
   takes the helpers the images', staging's and sources' routes share, and `app.py` mounts the class (0154 D1, D3, D6).
 - `ReviewRoutes` takes the review's writes, `put_draft`, `post_approve`, `post_cancel`, `post_discard` and
