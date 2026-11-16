@@ -5,7 +5,8 @@ exercised by the main suite whether or not a server is installed. The modules of
 `routes/` import FastAPI and are reached through this module alone, so
 `tests/test_ui_api.py` opens with an `importorskip` for it. They hold the
 vocabulary, tattoo library and place routes, `RenderRoutes` and `StreamRoutes`;
-`create_app` declares the routes that read a name a test patches, and the rest.
+`create_app` takes what a test replaces and declares the routes that read it,
+and the rest.
 
 **What this module owns, and what it does not.** It owns HTTP routing and status
 codes, the join of caption, sheet, draft, approved and budget into one payload,
@@ -78,7 +79,7 @@ GET  anything else                                 the bundle's index.html
 import asyncio
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
-from contextlib import asynccontextmanager
+from contextlib import AbstractContextManager, asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 from types import FrameType
@@ -177,11 +178,6 @@ from isekai.pipeline.review import (
 from isekai.pipeline.review import state as review_state
 from isekai.shared.vocabulary import Vocabulary
 
-# Held across a draft update's precondition and its write, so two updates that
-# state one precondition cannot both pass it; and across an approval, so no
-# update writes after it.
-_DRAFT_UPDATE = threading.Lock()
-
 # A `Refusal` is the pipeline declining a well-formed request because of what is
 # on disk -- an approved input, a changed field set, a tag outside the vocabulary
 # -- which is a conflict with state rather than a malformed request. One code for
@@ -223,6 +219,32 @@ def authorities(host: str, port: int) -> frozenset[str]:
     return frozenset(f"{name}:{port}" for name in names)
 
 
+def _precondition(
+    one: Held, payload: Mapping[str, Any], again: str = "make the correction again"
+) -> None:
+    """Refuse an update, an approval or a discard against a draft that has moved.
+
+    `again` is what the page does once it has read the draft on disk.
+
+    **`st_mtime` is the precondition because nothing else exists.** The draft
+    carries no timestamp, no revision counter and no digest, and adding one
+    changes the draft's shape. `put_draft`'s lock orders the check and the
+    write; this is what orders the sends.
+
+    **A payload carrying no `saved` states no precondition**, and is allowed.
+    """
+    offered = payload.get("saved")
+    if offered is None:
+        return
+    draft = one.draft()
+    if draft is not None and _saved(draft) != offered:
+        raise Refusal(
+            f"{draft.name} changed since this page last read it; another tab or "
+            "another save got there first -- reload the input to see what is on "
+            f"disk, then {again}"
+        )
+
+
 def create_app(
     root: Path,
     wired: Wiring,
@@ -232,6 +254,12 @@ def create_app(
     wire: Callable[[Path], Wiring],
     host: str,
     port: int,
+    make_jobs: Callable[..., Jobs] = Jobs,
+    file_response: Callable[..., Response] = FileResponse,
+    save_draft: Callable[..., Path] = save_draft,
+    approve: Callable[..., tuple[Path | None, list[str]]] = approve,
+    precondition: Callable[..., None] = _precondition,
+    draft_lock: AbstractContextManager[Any] | None = None,
 ) -> FastAPI:
     """Return the app's application, serving every collection of the library at `root`.
 
@@ -240,9 +268,16 @@ def create_app(
     supplies what every collection shares: the flows, the vocabulary and the table.
     `flows` are the hub's columns, the flows the surface offers.
     `host` and `port` are the address every request is checked against.
+    `make_jobs` builds the jobs the app holds; a test passes its own.
+    `file_response` answers the photographs and images; a test passes its own.
+    `save_draft` writes a draft update; a test passes its own.
+    `approve` writes an approval; a test passes its own.
+    `precondition` refuses a draft that has moved; a test passes its own.
+    `draft_lock` is held across each draft write; the app builds its own when
+    none is passed.
     """
     broadcast = events.Broadcast()
-    jobs = Jobs(
+    jobs = make_jobs(
         broadcast,
         wired.probe,
         volume=wired.volume,
@@ -283,6 +318,11 @@ def create_app(
         imports=imports,
         broadcast=broadcast,
         limit=limit,
+        file_response=file_response,
+        save_draft=save_draft,
+        approve=approve,
+        precondition=precondition,
+        draft_lock=draft_lock if draft_lock is not None else threading.Lock(),
     )
     shared = surface.shared
     folder, held, offered = surface.folder, surface.held, surface.offered
@@ -395,7 +435,9 @@ def create_app(
     @app.get("/api/staging/{staged}/files/{name}")
     def read_staged(staged: str, name: str) -> Response:
         """Serve a staged file full size, as it was cleaned."""
-        served = _photograph(importing.staged_file(imports.folder(staged), name))
+        served = _photograph(
+            surface.file_response, importing.staged_file(imports.folder(staged), name)
+        )
         served.headers["Cache-Control"] = "no-store"
         return served
 
@@ -521,7 +563,9 @@ def create_app(
     @app.get("/api/c/{collection}/review/{digest}/{flow}/photo")
     def read_photo(collection: str, digest: str, flow: str) -> Response:
         """Serve the photograph's bytes, whole. `image.py` reads headers, not pixels."""
-        return _photograph(held(collection, digest, flow).run.photo)
+        return _photograph(
+            surface.file_response, held(collection, digest, flow).run.photo
+        )
 
     @app.get("/api/c/{collection}/review/{digest}/{flow}/source/{version}")
     def read_source_copy(
@@ -535,7 +579,7 @@ def create_app(
                 f"{one.run.id}: flow {one.flow.id} holds no image a draft numbered "
                 f"{version} was drafted from; go back to Review to reload the page"
             )
-        return _photograph(copy)
+        return _photograph(surface.file_response, copy)
 
     @app.put("/api/c/{collection}/review/{digest}/{flow}/draft")
     def put_draft(
@@ -557,7 +601,7 @@ def create_app(
         # Before the lock: a malformed body refuses without waiting on a write.
         fields = _update(payload)
         renders = _renders_in(payload)
-        with _DRAFT_UPDATE:
+        with surface.draft_lock:
             if review_state(one.directory(REVIEW)) == "approved":
                 raise Refusal(
                     f"{one.run.id} is approved, and an approved sheet is never "
@@ -567,8 +611,8 @@ def create_app(
                     "reload: the input comes back re-opened and editable, with "
                     "its approved artifact still named"
                 )
-            _precondition(one, payload)
-            written = save_draft(one.run, one.flow.id, fields, renders)
+            surface.precondition(one, payload)
+            written = surface.save_draft(one.run, one.flow.id, fields, renders)
         budget = token_budget(fields, one.flow.schema, one.flow)
         return {
             "draft": written.name,
@@ -588,9 +632,9 @@ def create_app(
         the draft it last read, never one another writer has since moved.
         """
         one = held(collection, digest, flow)
-        with _DRAFT_UPDATE:
-            _precondition(one, payload or {})
-            written, warnings = approve(
+        with surface.draft_lock:
+            surface.precondition(one, payload or {})
+            written, warnings = surface.approve(
                 one.run,
                 one.flow.id,
                 one.flow.schema,
@@ -613,7 +657,7 @@ def create_app(
         false for a flow at its draft, which a cancel leaves unchanged.
         """
         one = held(collection, digest, flow)
-        with _DRAFT_UPDATE:
+        with surface.draft_lock:
             rendering = _rendering(collection)
             if rendering is not None:
                 raise Refusal(
@@ -632,8 +676,8 @@ def create_app(
         draft it last read, never one another tab has since edited.
         """
         one = held(collection, digest, flow)
-        with _DRAFT_UPDATE:
-            _precondition(one, payload or {}, "discard again")
+        with surface.draft_lock:
+            surface.precondition(one, payload or {}, "discard again")
             gone = discard(one.run, one.flow.id)
         return {"discarded": gone.name}
 
@@ -662,7 +706,7 @@ def create_app(
         drafts = [{**_image_out(*one), "draft": None, "waiting": None} for one in named]
         # Each image to write, by its place in `named`.
         located: list[tuple[int, Path, Revision]] = []
-        with _DRAFT_UPDATE:
+        with surface.draft_lock:
             for at, (digest, flow, version, seed) in enumerate(named):
                 try:
                     # A flow this build does not track names no directory of a run.
@@ -809,17 +853,19 @@ def create_app(
     @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/image")
     def read_render_image(
         collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> FileResponse:
+    ) -> Response:
         """Serve the render's bytes, whole."""
-        return FileResponse(rendered(collection, digest, flow, version, seed)[1])
+        return surface.file_response(
+            rendered(collection, digest, flow, version, seed)[1]
+        )
 
     @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/thumb")
     def read_render_thumb(
         collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> FileResponse:
+    ) -> Response:
         """Serve the render's thumbnail, made in the library's cache the first time."""
         run, image, _ = rendered(collection, digest, flow, version, seed)
-        return FileResponse(
+        return surface.file_response(
             library.thumbnail(root, run, image), media_type="image/jpeg"
         )
 
@@ -835,19 +881,21 @@ def create_app(
     )
     def read_bake_image(
         collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> FileResponse:
+    ) -> Response:
         """Serve a bake's image bytes, whole."""
-        return FileResponse(bake_image(collection, digest, flow, version, seed, k)[1])
+        return surface.file_response(
+            bake_image(collection, digest, flow, version, seed, k)[1]
+        )
 
     @app.get(
         "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/thumb"
     )
     def read_bake_thumb(
         collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> FileResponse:
+    ) -> Response:
         """Serve a bake's thumbnail, made in the library's cache the first time."""
         run, image = bake_image(collection, digest, flow, version, seed, k)
-        return FileResponse(
+        return surface.file_response(
             library.thumbnail(root, run, image), media_type="image/jpeg"
         )
 
@@ -862,7 +910,7 @@ def create_app(
         the newest's waiting draft, and, with no approval left, the flow's sheets.
         """
         run, image, _ = rendered(collection, digest, flow, version, seed)
-        with _DRAFT_UPDATE:
+        with surface.draft_lock:
             rendering = _rendering(collection)
             if rendering is not None:
                 raise Refusal(
@@ -884,13 +932,13 @@ def create_app(
         upright JPEG of it, so the viewer shows what its thumbnail does.
         """
         source = library.source_files(folder(collection))(name)
-        return _photograph(source, other=library.source_jpeg)
+        return _photograph(surface.file_response, source, other=library.source_jpeg)
 
     @app.get("/api/c/{collection}/sources/{name}/thumb")
-    def read_source_thumb(collection: str, name: str) -> FileResponse:
+    def read_source_thumb(collection: str, name: str) -> Response:
         """Serve a source's thumbnail, upright, made in the library's cache once."""
         source = library.source_files(folder(collection))(name)
-        return FileResponse(
+        return surface.file_response(
             library.source_thumbnail(root, source), media_type="image/jpeg"
         )
 
@@ -1062,7 +1110,10 @@ def _numbered(value: object) -> TypeGuard[int]:
 
 
 def _photograph(
-    path: Path, *, other: Callable[[Path], bytes] | None = None
+    file_response: Callable[..., Response],
+    path: Path,
+    *,
+    other: Callable[[Path], bytes] | None = None,
 ) -> Response:
     """Serve the photograph at `path` as the image its bytes are, never its name's.
 
@@ -1080,7 +1131,7 @@ def _photograph(
         if other is None:
             raise
         return Response(other(path), media_type="image/jpeg", headers=headers)
-    return FileResponse(path, media_type=kind, headers=headers)
+    return file_response(path, media_type=kind, headers=headers)
 
 
 def _wd14(one: Held) -> list[dict[str, Any]] | None:
@@ -1218,32 +1269,6 @@ def _renders_out(renders: Renders) -> dict[str, Any]:
         "count": renders["count"],
         "seeds": _decimal(renders["seeds"]),
     }
-
-
-def _precondition(
-    one: Held, payload: Mapping[str, Any], again: str = "make the correction again"
-) -> None:
-    """Refuse an update, an approval or a discard against a draft that has moved.
-
-    `again` is what the page does once it has read the draft on disk.
-
-    **`st_mtime` is the precondition because nothing else exists.** The draft
-    carries no timestamp, no revision counter and no digest, and adding one
-    changes the draft's shape. `put_draft`'s lock orders the check and the
-    write; this is what orders the sends.
-
-    **A payload carrying no `saved` states no precondition**, and is allowed.
-    """
-    offered = payload.get("saved")
-    if offered is None:
-        return
-    draft = one.draft()
-    if draft is not None and _saved(draft) != offered:
-        raise Refusal(
-            f"{draft.name} changed since this page last read it; another tab or "
-            "another save got there first -- reload the input to see what is on "
-            f"disk, then {again}"
-        )
 
 
 def _budget(budget: TokenBudget) -> dict[str, Any]:

@@ -1,0 +1,58 @@
+{
+  "change": "0150-the-server-seams",
+  "version": "0.87.6",
+  "base": "ce753c64",
+  "analyzed": "cfc00da8",
+  "measured_on": "local",
+  "collected_at": "2026-11-16T22:02:06+02:00",
+  "mf_version": "v0.101.1",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2401
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 79
+    },
+    "open-backlog-cards": {
+      "value": 10
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 674
+    },
+    "diff-files": {
+      "value": 14
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 15257
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1084
+    },
+    "decisions": {
+      "value": 62
+    }
+  }
+}
