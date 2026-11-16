@@ -20,6 +20,9 @@ its new digest.
 - A run's id and the names of its layout move from `run.py` to `names.py`, and `Run` with `assign` to `rundir.py`;
   `run.py` re-exports every name under `__all__`, so no importer changes. Tests kill the survivors of the move
   (0152 D1, D2, D4, D6, D10).
+- A run's numbering and completion, its seeds and its edit files move from `run.py` to `layout.py`; the UI's artifact
+  tripwire lists `artifact_name` under `isekai.foundation.layout` too, with a twin, and `run.py` leaves the file
+  ratchet. A test kills the survivor of the move (0152 D2, D5, D7, D8, D10).
 
 ## [0.87.6] - 2026-11-16
 

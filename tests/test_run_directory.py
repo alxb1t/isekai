@@ -48,6 +48,7 @@ from isekai.foundation.run import (
     check_budget,
     instructions_record,
     is_approved,
+    is_edit_file,
     latest,
     next_version,
     open_run,
@@ -597,6 +598,13 @@ def test_a_filename_carries_its_version_and_its_approval_and_nothing_else() -> N
     assert artifact_name(7) == "007.json"
     assert artifact_name(7, "approved") == "007.approved.json"
     assert artifact_name(7, "draft") == "007.draft.json"
+
+
+@pytest.mark.spec("run-directory:readdir:filename-carries-only-decidable-facts")
+def test_an_edit_file_is_named_by_its_seed_and_its_number_alone() -> None:
+    assert is_edit_file("42.edit-1.png") is True
+    assert is_edit_file("42.edit-0.png") is False
+    assert is_edit_file("x.edit-1.json") is False
 
 
 @pytest.mark.spec("run-directory:readdir:filename-carries-only-decidable-facts")

@@ -5,7 +5,7 @@ The phases: names and rundir, layout, failures, the documents. Each moves text a
 ## Progress
 
 - [x] 1 — Names and rundir · moderate
-- [ ] 2 — Layout · moderate
+- [x] 2 — Layout · moderate
 - [ ] 3 — Failures · moderate
 - [ ] 4 — The documents · moderate
 
@@ -34,25 +34,25 @@ The phases: names and rundir, layout, failures, the documents. Each moves text a
 
 ## 2 — Layout
 
-- [ ] 2.1 Open with the tests' baseline: phase 1 has shifted `run.py`, so no range of it holds, and the closing run covers the same mutants ([D10](design.md#d10)).
+- [x] 2.1 Open with the tests' baseline: phase 1 has shifted `run.py`, so no range of it holds, and the closing run covers the same mutants ([D10](design.md#d10)).
   Verify: `uv run pytest tests/test_run_directory.py tests/test_edit.py tests/test_edit_placement.py tests/test_edit_session.py tests/test_review.py tests/test_ui_api.py` passes.
-- [ ] 2.2 Write `isekai/foundation/layout.py` with its docstring and the `layout.py` row of [D2](design.md#d2), each block moved from `run.py` unchanged in the order the cut's base has them ([D4](design.md#d4)), importing `ARTIFACT`, `APPROVED`, `FRAME_NAME`, `OUTPUTS`, `REVIEW` and `SHEETS` from `names.py`, `Run` from `rundir.py`, `SEED_RANGE` from `artifacts.py`, and `Refusal`.
+- [x] 2.2 Write `isekai/foundation/layout.py` with its docstring and the `layout.py` row of [D2](design.md#d2), each block moved from `run.py` unchanged in the order the cut's base has them ([D4](design.md#d4)), importing `ARTIFACT`, `APPROVED`, `FRAME_NAME`, `OUTPUTS`, `REVIEW` and `SHEETS` from `names.py`, `Run` from `rundir.py`, `SEED_RANGE` from `artifacts.py`, and `Refusal`.
   Verify: `grep -n -E '^def (versions|latest|next_version|artifact_name|is_version|approval_of|sheet_of|group_of|is_seed|_laid_out|is_edit_file|edit_stem|edit_files|placement_file|edit_numbers|next_edit|delete_edits|edit_at|latest_artifact|is_approved|approved_versions)\(' isekai/foundation/layout.py` prints a line for each of the names.
-- [ ] 2.3 In `run.py` delete the moved blocks. Import each name of `layout.py` from it, `_laid_out` by its own name for `rendered_at` ([D5](design.md#d5)); drop each import the move leaves unused, as `ruff check` names them. `rendered_at` stays.
+- [x] 2.3 In `run.py` delete the moved blocks. Import each name of `layout.py` from it, `_laid_out` by its own name for `rendered_at` ([D5](design.md#d5)); drop each import the move leaves unused, as `ruff check` names them. `rendered_at` stays.
   Verify: `git grep -n -E '^def (versions|latest|next_version|artifact_name|is_seed|edit_at|edit_files)\(' -- isekai/foundation/run.py` prints nothing.
-- [ ] 2.4 Check `__all__` against the cut's base, as 1.6 does.
+- [x] 2.4 Check `__all__` against the cut's base, as 1.6 does.
   Verify: `uv run python -c "import ast,subprocess,isekai.foundation.run as r; t=ast.parse(subprocess.run(['git','show','ce753c64:isekai/foundation/run.py'],capture_output=True,check=True).stdout); n={x.name for x in t.body if isinstance(x,(ast.FunctionDef,ast.ClassDef)) and not x.name.startswith('_')}|{y.id for x in t.body if isinstance(x,(ast.Assign,ast.AnnAssign)) for z in (getattr(x,'targets',None) or [x.target]) for y in ast.walk(z) if isinstance(y,ast.Name) and not y.id.startswith('_') and len(y.id)>1}; print(sorted(n-set(r.__all__)), [m for m in r.__all__ if not hasattr(r,m)])"` prints `[] []`.
-- [ ] 2.5 In `tests/test_ui.py` add `"isekai.foundation.layout": frozenset({"artifact_name"})` to `_ARTIFACT_WRITERS`, and a twin `test_the_check_catches_artifact_name_imported_from_the_layout` after the existing one, as [D7](design.md#d7) says: `laid.py` importing `artifact_name` from `isekai.foundation.layout`, expecting `(["laid.py: artifact_name"], 1)`, marked `spec_exempt` with `structural: twin of test_the_invariant_holds_no_module_of_the_surface_names_an_artifact`. The existing assertion stays.
+- [x] 2.5 In `tests/test_ui.py` add `"isekai.foundation.layout": frozenset({"artifact_name"})` to `_ARTIFACT_WRITERS`, and a twin `test_the_check_catches_artifact_name_imported_from_the_layout` after the existing one, as [D7](design.md#d7) says: `laid.py` importing `artifact_name` from `isekai.foundation.layout`, expecting `(["laid.py: artifact_name"], 1)`, marked `spec_exempt` with `structural: twin of test_the_invariant_holds_no_module_of_the_surface_names_an_artifact`. The existing assertion stays.
   Verify: `grep -c -F 'isekai.foundation.layout' tests/test_ui.py` prints `2`.
-- [ ] 2.6 Run the tripwire and its twins.
+- [x] 2.6 Run the tripwire and its twins.
   Verify: `uv run pytest tests/test_ui.py -k test_the_check_catches_artifact_name_imported_from_the_layout` passes, and `uv run pytest tests/test_ui.py -k artifact` passes.
-- [ ] 2.7 Remove the row `"isekai/foundation/run.py": 1045` from `LONG_FILES` in `tests/test_ratchets.py` and set `FILE_ROWS` to 6 ([D8](design.md#d8)); `refusal_for`'s row and the patch row stay.
+- [x] 2.7 Remove the row `"isekai/foundation/run.py": 1045` from `LONG_FILES` in `tests/test_ratchets.py` and set `FILE_ROWS` to 6 ([D8](design.md#d8)); `refusal_for`'s row and the patch row stay.
   Verify: `git grep -n -F '"isekai/foundation/run.py": 1045' -- tests/test_ratchets.py` prints nothing, and `uv run pytest tests/test_ratchets.py` passes.
-- [ ] 2.8 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
+- [x] 2.8 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` passes.
-- [ ] 2.9 Run the record, the ratchets, the layer guards, the documents, the run directory, the package paths, the CLI's and the UI's tests: no existing assertion changes.
+- [x] 2.9 Run the record, the ratchets, the layer guards, the documents, the run directory, the package paths, the CLI's and the UI's tests: no existing assertion changes.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_run_directory.py tests/test_package_paths.py tests/test_pipeline_cli.py tests/test_ui.py` passes.
-- [ ] 2.10 Close with `tools.mutate` on the new module, after `git add -N isekai/foundation/layout.py`. The run is split by range, so none outlasts the plan check's 600 seconds. A survivor, one the design lists in [Survivors at the cut](design.md#survivors-at-the-cut) too, is killed by a test or named in [Equivalent mutants](design.md#equivalent-mutants).
+- [x] 2.10 Close with `tools.mutate` on the new module, after `git add -N isekai/foundation/layout.py`. The run is split by range, so none outlasts the plan check's 600 seconds. A survivor, one the design lists in [Survivors at the cut](design.md#survivors-at-the-cut) too, is killed by a test or named in [Equivalent mutants](design.md#equivalent-mutants).
   Verify: `uv run python -m tools.mutate isekai/foundation/layout.py:1-150 --tests tests/test_run_directory.py tests/test_edit.py tests/test_edit_placement.py tests/test_edit_session.py tests/test_review.py tests/test_ui_api.py` and `uv run python -m tools.mutate isekai/foundation/layout.py:151-400 --tests tests/test_run_directory.py tests/test_edit.py tests/test_edit_placement.py tests/test_edit_session.py tests/test_review.py tests/test_ui_api.py` each exit 0, each survivor they print named in the design.
 
 ## 3 — Failures
