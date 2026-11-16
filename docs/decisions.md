@@ -604,6 +604,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Accepts:** the routes that read a name a test patches stay closures of `create_app`, with `Jobs(` and `run` kept there, and so do the library, staging, review and images routes, until their versions. Reopen when the last of them moves.
 - **Made by:** `0147`, `0148`.
 
+### D60 · The page's CSS is the files of ui/src/css/
+
+**The page's own rules are the files of `ui/src/css/`, imported by `main.ts` each on its own line after `themes.css`, in the order the cascade needs. A new rule goes in its screen's file, and each file is imported once.**
+
+- **Why:** one sheet held every screen's rules and was the largest row of the ratchet's `ui/src` table ([D56](#d56--size-and-patches-are-held-by-ratchets)). A file a screen puts a rule where a reader looks, and the order of the imports is the cascade's.
+- **Accepts:** a file holds some rules another screen's element wears, and some files depend on their order. Reopen when the rules are regrouped by screen.
+- **Made by:** `0149`.
+
 ## Infrastructure
 
 ### D26 · Renders run on a rented GPU

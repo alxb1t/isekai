@@ -6,7 +6,7 @@ Move `ui/src/app.css` into the files of `ui/src/css/`, guard that each is import
 
 - [x] 1 — The move · moderate
 - [x] 2 — The guard · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The move
 
@@ -30,7 +30,7 @@ Move `ui/src/app.css` into the files of `ui/src/css/`, guard that each is import
 
 ## 3 — The documents
 
-- [ ] 3.1 In `docs/decisions.md` add the decision of [D6](design.md#d6), `### D60 · The page's CSS is the files of ui/src/css/`, after D59's block and before `## Infrastructure`.
+- [x] 3.1 In `docs/decisions.md` add the decision of [D6](design.md#d6), `### D60 · The page's CSS is the files of ui/src/css/`, after D59's block and before `## Infrastructure`.
   Verify: `git grep -n "^### D60 · The page's CSS is the files" -- docs/decisions.md` prints its line.
-- [ ] 3.2 In `README.md` extend the tree row for `ui/src/`: before, `# the app; styles.css is the vendored stylesheet, Inter beside it`; after, the same followed by `; css/ holds the page's rules, a file a screen`.
+- [x] 3.2 In `README.md` extend the tree row for `ui/src/`: before, `# the app; styles.css is the vendored stylesheet, Inter beside it`; after, the same followed by `; css/ holds the page's rules, a file a screen`.
   Verify: `git grep -n "css/ holds the page's rules" -- README.md` prints the row.
