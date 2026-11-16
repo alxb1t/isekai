@@ -112,6 +112,8 @@ Pre-flight at the base: run.
 - `post_draft`, `for (at, _, _), answer in zip(located, checked, strict=True)` → `strict=False`: `refuse_image_drafts` answers each image it is given, so `checked` and `located` share a length whatever a request holds, and `strict` only asserts it.
 - `post_draft`, `for one, answer in zip(named, answers, strict=True)` → `strict=False`: `answers` is built as `[None] * len(named)`, so the lists share a length by construction.
 
+A range run of `tools.mutate` reads no `equivalent` note, which only an `--edits` entry carries, so the closing run over `post_draft`'s lines leaves out the two lines these mutants sit on, 331 and 339 of `routes/reviewing.py` as the writes leave it.
+
 Closing runs: not run.
 
 ## Dependencies

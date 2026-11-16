@@ -35,28 +35,28 @@ The phases are the reads, the writes and the documents. Each moves lines and no 
 
 ## 2 — The writes
 
-- [ ] 2.1 Add to `ReviewRoutes` in `isekai/interface/ui/routes/reviewing.py` the handlers `put_draft`, `post_approve`, `post_cancel`, `post_discard` and `post_draft`, their text unchanged but as [D4](design.md#d4) says and `post_draft` annotated ``-> object`` as [D5](design.md#d5) says, with their rows in `ROUTES` in `app.py`'s order. Add `_update`, `_renders_in`, `_images`, `_image_out` and `_numbered` as module functions ([D3](design.md#d3)).
+- [x] 2.1 Add to `ReviewRoutes` in `isekai/interface/ui/routes/reviewing.py` the handlers `put_draft`, `post_approve`, `post_cancel`, `post_discard` and `post_draft`, their text unchanged but as [D4](design.md#d4) says and `post_draft` annotated ``-> object`` as [D5](design.md#d5) says, with their rows in `ROUTES` in `app.py`'s order. Add `_update`, `_renders_in`, `_images`, `_image_out` and `_numbered` as module functions ([D3](design.md#d3)).
   Verify: `grep -nE "def (put_draft|post_approve|post_cancel|post_discard|post_draft)\(" isekai/interface/ui/routes/reviewing.py` prints a line for each of those names.
-- [ ] 2.2 Move `REFUSED`, with its comment, from `isekai/interface/ui/app.py` into `isekai/interface/ui/routes/common.py`, and import it back into `app.py`, where `_refused` reads it ([D3](design.md#d3)).
+- [x] 2.2 Move `REFUSED`, with its comment, from `isekai/interface/ui/app.py` into `isekai/interface/ui/routes/common.py`, and import it back into `app.py`, where `_refused` reads it ([D3](design.md#d3)).
   Verify: `git grep -n "^REFUSED = 409" -- isekai/interface/ui/routes/common.py` prints a line.
-- [ ] 2.3 Delete the closures `put_draft`, `post_approve`, `post_cancel`, `post_discard` and `post_draft` from `create_app` in `isekai/interface/ui/app.py`, with the helpers only they read, drop its imports of `_untagged`, `_budget` and `_command`, and prune the imports it no longer reads. Keep each name a test reads from `app.py`.
+- [x] 2.3 Delete the closures `put_draft`, `post_approve`, `post_cancel`, `post_discard` and `post_draft` from `create_app` in `isekai/interface/ui/app.py`, with the helpers only they read, drop its imports of `_untagged`, `_budget` and `_command`, and prune the imports it no longer reads. Keep each name a test reads from `app.py`.
   Verify: `git grep -nE "def (put_draft|post_approve|post_cancel|post_discard|post_draft)\(" -- isekai/interface/ui/app.py` prints nothing.
-- [ ] 2.4 In `tests/test_ratchets.py`, remove the row ``"isekai/interface/ui/app.py": 2351`` from `LONG_FILES`, since `app.py` now holds fewer lines than the ceiling ([D9](design.md#d9)).
+- [x] 2.4 In `tests/test_ratchets.py`, remove the row ``"isekai/interface/ui/app.py": 2351`` from `LONG_FILES`, since `app.py` now holds fewer lines than the ceiling ([D9](design.md#d9)).
   Verify: `git grep -nF '"isekai/interface/ui/app.py": 2351' -- tests/test_ratchets.py` prints nothing.
-- [ ] 2.5 In `tests/test_ratchets.py`, lower `FILE_ROWS` to ``FILE_ROWS = 5``, the count of the rows `LONG_FILES` now holds.
+- [x] 2.5 In `tests/test_ratchets.py`, lower `FILE_ROWS` to ``FILE_ROWS = 5``, the count of the rows `LONG_FILES` now holds.
   Verify: `git grep -n "^FILE_ROWS = 5" -- tests/test_ratchets.py` prints a line.
-- [ ] 2.6 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`: the module's new imports change them.
+- [x] 2.6 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`: the module's new imports change them.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 2.7 Prove the move against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
+- [x] 2.7 Prove the move against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py tests/test_ui_api.py tests/test_ui.py` exits 0.
-- [ ] 2.8 Close with `tools.mutate` on the first range of `isekai/interface/ui/routes/reviewing.py` as it now stands ([D7](design.md#d7)). Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code.
+- [x] 2.8 Close with `tools.mutate` on the first range of `isekai/interface/ui/routes/reviewing.py` as it now stands ([D7](design.md#d7)). Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:1-110 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.9 Close with the next range of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 2.8 says.
+- [x] 2.9 Close with the next range of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 2.8 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:111-220 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.10 Close with the next range of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 2.8 says.
+- [x] 2.10 Close with the next range of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 2.8 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:221-330 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.11 Close with the next range of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 2.8 says.
-  Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:331-420 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
+- [ ] 2.11 Close with the next range of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 2.8 says. Lines 331 and 339 hold the two `strict=True` mutants of `post_draft` that [Equivalent mutants](design.md#equivalent-mutants) names, and `tools.mutate` reads `equivalent` in an `--edits` entry alone, so the run leaves those two lines out.
+  Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:332-338 isekai/interface/ui/routes/reviewing.py:340-420 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 - [ ] 2.12 Close with the rest of `isekai/interface/ui/routes/reviewing.py`, each survivor handled as 2.8 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:421-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 
