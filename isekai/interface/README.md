@@ -41,7 +41,7 @@ module scope, and the UI imports no CLI module.
 | `ui/billing.py` | what may be billing, read from gpunit's records in `.gpunit/`: the pod alert, the window's quiet item and the band; gpunit asked at start, every half minute while needed, and on Check again |
 | `ui/events.py` | the event stream: a snapshot on connect, then each `job`, `cell` and `billing` change, to every open page |
 | `ui/surface.py` | what the routes share, as `Surface`: the folders, the wiring, the flows, the jobs, billing, imports, the broadcast, the shared vocabulary and the upload limit, and the lookups every route makes over them. **Imports no web framework** |
-| `ui/routes/` | the vocabulary, tattoo library and place routes, each a class over one `Surface` with a `ROUTES` table of `Route` rows and a `mount(app, surface)` ([D59](../../docs/decisions.md#d59--a-resource-is-a-class-registered-from-a-table-over-one-surface)); `table.py` registers a table on the app, `keys.py` and `common.py` hold what the resources share. They import FastAPI and are reached through `ui/app.py` alone |
+| `ui/routes/` | the vocabulary, tattoo library, place, render and jobs, and events routes, each a class over one `Surface` with a `ROUTES` table of `Route` rows and a `mount(app, surface)` ([D59](../../docs/decisions.md#d59--a-resource-is-a-class-registered-from-a-table-over-one-surface)); `table.py` registers a table on the app, `keys.py` and `common.py` hold what the resources share. They import FastAPI and are reached through `ui/app.py` alone |
 | `ui/app.py` | the endpoints `create_app` still declares, the catch-alls and the bundle's `index.html` for every other path; it builds the `Surface`, mounts each resource of `ui/routes/` and imports uvicorn |
 
 ## Imported by
@@ -53,7 +53,7 @@ module scope, and the UI imports no CLI module.
 | `cli.py` | `__main__.py` | — |
 | `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `ui/routes/place.py`, `ui/surface.py`, `verbs/common.py`, `verbs/drafts.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/library.py`, `verbs/prepare.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
 | `drafting.py` | `cli.py`, `ui/app.py`, `verbs/drafts.py` | — |
-| `render.py` | `cli.py`, `ui/app.py`, `ui/jobs.py`, `ui/library.py`, `verbs/edits.py` | — |
+| `render.py` | `cli.py`, `ui/jobs.py`, `ui/library.py`, `ui/routes/rendering.py`, `verbs/edits.py` | — |
 | `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py` |
 | `compare_view.py` | `render.py`, `verbs/library.py` | — |
 | `ui/` | `cli.py`, `verbs/drafts.py`, `verbs/library.py` | — |

@@ -10,6 +10,18 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.4] - 2026-11-16
+
+Gate: local 1m51s · CI not read under mf-ship · 0.87.3: local 2m29s · CI not read under mf-ship
+
+- The render and jobs routes (prepare, stop, the offer, quote and `POST`, the session reads, the billing check) move
+  out of `create_app` into `RenderRoutes` in `isekai/interface/ui/routes/rendering.py`, registered from a table;
+  no route, wire or answer changes (0148 D1, D3, D4, D6).
+- The events stream moves out of `create_app` into `StreamRoutes` in `isekai/interface/ui/routes/stream.py`,
+  mounted after the render routes; `/events` keeps its path, snapshot and headers (0148 D2, D3, D6).
+- D59's *Accepts* line, the `app.py` docstring, the interface README and `docs/modules.md` name `RenderRoutes` and
+  `StreamRoutes`, so the docs match where the routes now live; the ratchet rows and recorded mutants are unchanged.
+
 ## [0.87.3] - 2026-11-16
 
 Gate: local 2m29s · CI not read under mf-ship · 0.87.2: local 3m21s · CI not read under mf-ship
