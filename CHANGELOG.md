@@ -18,6 +18,8 @@ its new digest.
   routes left in `create_app`, `PB-2c` points at `routes/reviewing.py` and `UA-7` anchors on the pruned import (0154 D8).
 - `lens.ts` holds the viewer's rule, `viewedOf`, and `⌃P`'s step, `photographStep`, with a vitest test bound to the
   photograph, pair and conjure-from scenarios; `Review.vue` switches to it and keeps its one `useKeys` call (0155 D1, D3, D5).
+- `kicker.ts` holds the status line's rule, `kickerOf`, and the time formats `clock` and `minute`, with a vitest test bound
+  to the conjure-from scenario; `Review.vue` switches to it and its ratchet row falls to the view's new length (0155 D2, D3, D6).
 
 ## [0.87.9] - 2026-11-16
 

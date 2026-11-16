@@ -25,6 +25,7 @@ import { useKeys } from '../composables/useKeys'
 import { chooses, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import type { Move } from '../grid'
+import { clock, kickerOf, minute } from '../kicker'
 import { type Lens, photographStep, viewedOf } from '../lens'
 import { nextPane, type Pane, paneKeys } from '../panes'
 import { nearest, stepFour } from '../slots'
@@ -130,21 +131,6 @@ const opened = computed(() =>
 )
 const viewed = computed(() => viewedOf(lens.value, photos.value, opened.value, revised.value))
 
-const clock = (at: number | null) =>
-  at === null ? null : new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
-
-/* The draft's time to the minute. It is rewritten every few seconds while the
-   operator types, and a seconds field that ticks under the eye is noise; the
-   approved time keeps its seconds, because it is written once. */
-const minute = (at: number | null) =>
-  at === null
-    ? null
-    : new Date(at * 1000).toLocaleTimeString('en-GB', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-
 /* When the sheet was approved: in this sitting, else as the server read it. */
 const approvedAt = computed(() => clock(approval.at.value ?? sheet.detail.value?.approved_at ?? null))
 
@@ -154,22 +140,15 @@ const refusal = computed(
     approval.refusal.value ?? sheet.refusal.value ?? refused.value,
 )
 
-/* `③ sheet — approved` once it is, which is also when the fields go read-only.
-   The reading is taken from disk rather than from anything held here. It is NOT
-   "has no draft": `review --new-version` writes a draft beside the approved
-   artifact, and that input is re-opened -- editable, and carrying a correction
-   the tagger did not write. */
-const kicker = computed(() => {
-  if (drafted.value && !sheet.detail.value?.approved) return 'draft'
-  // No approved artifact is the tagger's draft, whether or not the payload has
-  // arrived -- `readonly` defaults to true while `detail` is null, so testing
-  // it first would call an unloaded sheet approved.
-  if (!sheet.detail.value?.approved) return 'draft from the tagger'
-  if (sheet.readonly.value) return approvedAt.value ? `approved ${approvedAt.value}` : 'approved'
-  const held = revision.value
-  if (held?.seed) return `revision of render ${held.seed}`
-  return held ? `revision of v${held.version}` : 're-opened'
-})
+const kicker = computed(() =>
+  kickerOf({
+    drafted: drafted.value !== null,
+    approved: Boolean(sheet.detail.value?.approved),
+    readonly: sheet.readonly.value,
+    approvedAt: approvedAt.value,
+    revision: revision.value,
+  }),
+)
 
 /* Read the collection and the open sheet again, staying on it; a refusal shows in
    the approve bar. */
