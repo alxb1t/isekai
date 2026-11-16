@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.5] - 2026-11-16
+
+Gate: local 1m13s · CI not read under mf-ship · 0.87.4: local 1m51s · CI not read under mf-ship
+
 - The page's one stylesheet, `ui/src/app.css`, becomes the files of `ui/src/css/`, cut at blank lines and imported by
   `main.ts` in the old order; their join equals the old sheet, so no rule changes (0149 D1, D2, D3, D5).
 - A test holds that `main.ts` imports each file of `ui/src/css/` once, and its twin fails on a removed, repeated or
