@@ -61,7 +61,8 @@ def next_version(directory: Path) -> int:
         where = f"{directory.parent.name}/{directory.name}"
         raise Refusal(
             f"{where} holds version {number - 1}, the last a three-digit name "
-            f"can spell; move {where} out of the run, then run the command again"
+            "can spell; move the whole run that holds it "
+            "out of its runs root, then start that photograph again as a new run"
         )
     return number
 

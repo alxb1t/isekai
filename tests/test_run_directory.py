@@ -31,11 +31,15 @@ from isekai.foundation.artifacts import (
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
+    APPROVED,
     BUDGETS,
     DATA_ROOT,
     DESCRIPTION,
     FRAME_NAME,
+    OUTPUTS,
     PHOTO,
+    PROMPTS,
+    REVIEW,
     RUNS_ROOT,
     WD14,
     Kind,
@@ -356,6 +360,25 @@ def test_the_number_after_998_is_still_taken(tmp_path: Path) -> None:
     write_json(directory / artifact_name(998), {})
 
     assert next_version(directory) == 999
+
+
+@pytest.mark.spec("run-directory:numbering:a-full-directory-refuses-a-new-version")
+def test_a_full_review_directory_sends_the_whole_run_out(tmp_path: Path) -> None:
+    flow = tmp_path / "conjure-anime-wai"
+    write_json(flow / REVIEW / artifact_name(999, APPROVED), {})
+    write_json(flow / PROMPTS / artifact_name(1), {})
+    image = flow / OUTPUTS / "001" / "1.png"
+    image.parent.mkdir(parents=True)
+    image.write_bytes(b"any bytes")
+    listing = sorted(str(p.relative_to(flow)) for p in flow.rglob("*"))
+
+    with pytest.raises(Refusal) as refused:
+        next_version(flow / REVIEW)
+
+    assert "conjure-anime-wai/review" in str(refused.value)
+    assert "the whole run" in str(refused.value)
+    assert "move conjure-anime-wai/review" not in str(refused.value)
+    assert sorted(str(p.relative_to(flow)) for p in flow.rglob("*")) == listing
 
 
 def _sheet_from_wd14(

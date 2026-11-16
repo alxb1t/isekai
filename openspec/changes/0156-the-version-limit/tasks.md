@@ -5,7 +5,7 @@ Two phases: `next_version` refuses the number no artifact's name can spell, and 
 ## Progress
 
 - [x] 1 — Refuse the number no name can spell · moderate
-- [ ] 2 — Send the whole run out, not the directory · moderate
+- [x] 2 — Send the whole run out, not the directory · moderate
 
 ## 1 — Refuse the number no name can spell
 
@@ -22,9 +22,9 @@ Two phases: `next_version` refuses the number no artifact's name can spell, and 
 
 Adversarial S1 of round 1: moving a flow's `review/` alone restarts approval numbering beside the `prompts/` and `outputs/` numbered from it, so a new approval 001 takes the old prompt and counts the old render. The way out of [D2](design.md#d2) sends the whole run out instead.
 
-- [ ] 2.1 In `next_version` of `isekai/foundation/layout.py`, make the `Refusal`'s text `f"{where} holds version {number - 1}, the last a three-digit name can spell; move the whole run that holds it out of its runs root, then start that photograph again as a new run"`, `where` as in 1.2. Nothing else in the function changes.
+- [x] 2.1 In `next_version` of `isekai/foundation/layout.py`, make the `Refusal`'s text `f"{where} holds version {number - 1}, the last a three-digit name can spell; move the whole run that holds it out of its runs root, then start that photograph again as a new run"`, `where` as in 1.2. Nothing else in the function changes.
   Verify: `git grep -n -F "out of its runs root, then start that photograph again" -- isekai/foundation/layout.py` prints one line.
-- [ ] 2.2 In `tests/test_run_directory.py`, after `test_the_number_after_998_is_still_taken`, add `test_a_full_review_directory_sends_the_whole_run_out`, marked `@pytest.mark.spec("run-directory:numbering:a-full-directory-refuses-a-new-version")`. Under `flow = tmp_path / "conjure-anime-wai"` it writes `artifact_name(999, APPROVED)` into `flow / REVIEW`, `artifact_name(1)` into `flow / PROMPTS` with `write_json`, and an image file `flow / OUTPUTS / "001" / "1.png"` holding any bytes; it records `sorted(str(p.relative_to(flow)) for p in flow.rglob("*"))`, expects `Refusal` from `next_version(flow / REVIEW)`, asserts its text holds `"conjure-anime-wai/review"` and `"the whole run"` and does not hold `"move conjure-anime-wai/review"`, and asserts the flow's listing is unchanged. Import the names it needs from `isekai.foundation.run`, as the file already does.
+- [x] 2.2 In `tests/test_run_directory.py`, after `test_the_number_after_998_is_still_taken`, add `test_a_full_review_directory_sends_the_whole_run_out`, marked `@pytest.mark.spec("run-directory:numbering:a-full-directory-refuses-a-new-version")`. Under `flow = tmp_path / "conjure-anime-wai"` it writes `artifact_name(999, APPROVED)` into `flow / REVIEW`, `artifact_name(1)` into `flow / PROMPTS` with `write_json`, and an image file `flow / OUTPUTS / "001" / "1.png"` holding any bytes; it records `sorted(str(p.relative_to(flow)) for p in flow.rglob("*"))`, expects `Refusal` from `next_version(flow / REVIEW)`, asserts its text holds `"conjure-anime-wai/review"` and `"the whole run"` and does not hold `"move conjure-anime-wai/review"`, and asserts the flow's listing is unchanged. Import the names it needs from `isekai.foundation.run`, as the file already does.
   Verify: `uv run pytest tests/test_run_directory.py -k "version_999 or after_998 or full_review"` exits 0.
-- [ ] 2.3 Hold the neighbours the refusal reaches, as 1.4.
+- [x] 2.3 Hold the neighbours the refusal reaches, as 1.4.
   Verify: `uv run pytest tests/test_run_directory.py tests/test_resume.py tests/test_caption.py tests/test_tagging.py` exits 0.

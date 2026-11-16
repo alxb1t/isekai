@@ -12,6 +12,8 @@ its new digest.
 
 - `next_version` refuses a directory that holds version 999, naming the directory and the way out, so a write no longer
   lands on `1000.json` and overwrites it; unit tests at 998 and 999 bind the new scenario (0156 D1, D2, D3).
+- The refusal's way out sends the whole run out of its runs root, not the directory alone, so a new approval 001 never
+  takes an old prompt or counts an old render; a unit test at a full `review/` binds the scenario (0156 D2).
 
 ## [0.87.11] - 2026-11-17
 
