@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
@@ -41,8 +41,8 @@ import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useEdges } from '../composables/useEdges'
+import { restoredSpot, useHubFocus } from '../composables/useHubFocus'
 import { useKeys } from '../composables/useKeys'
-import { clamp, kept } from '../grid'
 import { at, useCollectionStore } from '../stores/collection'
 import { isControl, modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
@@ -59,7 +59,6 @@ const refusal = ref<string | null>(null)
 const grid = ref<HTMLElement | null>(null)
 const page = ref<HTMLElement | null>(null)
 const reveal = useEdges(() => page.value)
-const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
 /* The photographs the viewer shows, and from where; or null. */
 const viewing = ref<{ images: Shown[]; start: number } | null>(null)
@@ -75,8 +74,6 @@ const { hub: info, running, refusals, offer, dialog, rendering, plan, preparing:
 function openRender(): void {
   if (shown.value === 'render') store.openDialog()
 }
-/* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
-const selected = ref<Set<number>>(new Set())
 /* Prepare has its own slot: a render running beside it holds nothing back. */
 const live = useLiveStore()
 const { jobs } = storeToRefs(live)
@@ -96,6 +93,14 @@ async function added(): Promise<void> {
 
 const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
+/* The focused cell and the rows selected with ⇧↑↓; a column is ticked for all of them at once. */
+const { focus, selected, place, select, moveBy } = useHubFocus({
+  sources,
+  flows,
+  grid,
+  reveal,
+  remember: (name) => (store.focus.hub = name),
+})
 
 /* What Prepare would run: every pending cell. */
 const changes = computed(() => changesOf(sources.value, flows.value))
@@ -268,53 +273,6 @@ function discard(): void {
   }
 }
 
-/* A cell's name in the store's focus: its source's and its flow's, the source
-   column's flow empty. */
-function named(spot: { row: number; column: number }): string {
-  return at(sources.value[spot.row]?.name ?? '', flows.value[spot.column - 1] ?? '')
-}
-
-/* Focus a cell and scroll it into view: a click `nearest`, a key's move by the
-   edges' rule, a restored focus to the window's centre, where the eye finds it. */
-function place(
-  row: number,
-  column: number,
-  how: ScrollIntoViewOptions | 'key' = { block: 'nearest' },
-): void {
-  const rows = sources.value.length
-  if (rows === 0) return
-  focus.value = {
-    row: clamp(row, rows - 1),
-    column: clamp(column, flows.value.length),
-  }
-  store.focus.hub = named(focus.value)
-  void nextTick(() => {
-    const cell = focusedCell()
-    if (!cell) return
-    cell.focus({ preventScroll: true })
-    if (how === 'key') reveal(cell, focus.value.row, rows)
-    else cell.scrollIntoView(how)
-  })
-}
-
-/* The focused cell's element, once drawn. */
-function focusedCell(): HTMLElement | null | undefined {
-  return grid.value?.querySelector<HTMLElement>(
-    `[data-row="${focus.value.row}"][data-column="${focus.value.column}"]`,
-  )
-}
-
-/* ⇧↑↓ extends the selection from the focused row, which joins it. */
-function select(step: number): void {
-  const { row, column } = focus.value
-  const target = Math.min(Math.max(row + step, 0), sources.value.length - 1)
-  selected.value = new Set([...selected.value, row, target])
-  place(target, column, 'key')
-}
-
-const moveBy = (rows: number, columns: number) => () =>
-  place(focus.value.row + rows, focus.value.column + columns, 'key')
-
 /* ↵ and Space are the grid's unless a button or a link holds the focus, which
    answers them itself. */
 const onGrid = () => !isControl(document.activeElement)
@@ -389,20 +347,11 @@ onMounted(async () => {
     refusal.value = (reason as Error).message
     return
   }
-  const spots = sources.value.flatMap((_, row) =>
-    Array.from({ length: flows.value.length + 1 }, (_, column) => ({ row, column })),
-  )
   // A large view's Esc, Back to Hub and Delete send the cell of the image it closed, by digest
   // and flow, read once, so a later visit to this entry keeps where the focus last was.
   const sent = window.history.state?.cell as { digest: string; flow: string } | undefined
   if (sent) window.history.replaceState({ ...window.history.state, cell: undefined }, '')
-  const deletedFrom = sent
-    ? spots.find(
-        ({ row, column }) =>
-          sources.value[row]?.digest === sent.digest && flows.value[column - 1] === sent.flow,
-      )
-    : undefined
-  const spot = deletedFrom ?? kept(spots, named, store.focus.hub)
+  const spot = restoredSpot(sources.value, flows.value, sent, store.focus.hub)
   if (spot) place(spot.row, spot.column, { block: 'center' })
 })
 

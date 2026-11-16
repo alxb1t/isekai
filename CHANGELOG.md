@@ -10,6 +10,16 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.9] - 2026-11-16
+
+Gate: local 1m13s · CI not read under mf-ship · 0.87.8: local 1m10s · CI not read under mf-ship
+
+- `useHubFocus` holds the hub's focus, its row selection and its restored spot, with `spotName` and `restoredSpot`
+  as pure exports. Tests bind the hub's focus, sent-cell and edge-row scenarios; `Hub.vue` switches to it next
+  (0153 D1, D2, D3, D4).
+- `Hub.vue` takes its focus, selection and restored spot from `useHubFocus`, keeps its one `useKeys` call, and falls
+  under the ceiling, so its row leaves the page's ratchet (0153 D1, D3, D5).
+
 ## [0.87.8] - 2026-11-16
 
 Gate: local 1m10s · CI not read under mf-ship · 0.87.7: local 3m14s · CI not read under mf-ship
