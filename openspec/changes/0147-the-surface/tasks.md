@@ -4,28 +4,28 @@ Each phase is a move with behaviour unchanged: the surface, vocabulary and the t
 
 ## Progress
 
-- [ ] 1 — The surface · hard
+- [x] 1 — The surface · hard
 - [ ] 2 — Vocabulary and the tattoo library · hard
 - [ ] 3 — Place · moderate
 - [ ] 4 — The documents and the replay · moderate
 
 ## 1 — The surface
 
-- [ ] 1.1 Pre-flight: run `tools.mutate` over the lines this phase moves, at `ab010b18`: `Held` 258-275, the closures 363-372, 778-781, 940-945, 1229-1240, 1325-1349 and 1469-1502, `_Shared` 1596-1635, `_version` 1827-1838 and `_flow` 2117-2125, all in `isekai/interface/ui/app.py`, on the test files [D7](design.md#d7) lists. Kill a survivor as [D7](design.md#d7) says.
+- [x] 1.1 Pre-flight: run `tools.mutate` over the lines this phase moves, at `ab010b18`: `Held` 258-275, the closures 363-372, 778-781, 940-945, 1229-1240, 1325-1349 and 1469-1502, `_Shared` 1596-1635, `_version` 1827-1838 and `_flow` 2117-2125, all in `isekai/interface/ui/app.py`, on the test files [D7](design.md#d7) lists. Kill a survivor as [D7](design.md#d7) says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/app.py:258-275 isekai/interface/ui/app.py:363-372 isekai/interface/ui/app.py:778-781 isekai/interface/ui/app.py:940-945 isekai/interface/ui/app.py:1229-1240 isekai/interface/ui/app.py:1325-1349 isekai/interface/ui/app.py:1469-1502 isekai/interface/ui/app.py:1596-1635 isekai/interface/ui/app.py:1827-1838 isekai/interface/ui/app.py:2117-2125 --tests tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_library.py tests/test_ui_wire.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ui_propose.py tests/test_ui_billing.py` exits 0.
-- [ ] 1.2 Write `isekai/interface/ui/surface.py`: a docstring, then `Held`, `_Shared`, `_DECIMAL`, `_BAKE_DIGITS`, `_version` and `_flow` moved from `app.py` with their text and comments unchanged. It imports no `fastapi`, `starlette` or `uvicorn`.
+- [x] 1.2 Write `isekai/interface/ui/surface.py`: a docstring, then `Held`, `_Shared`, `_DECIMAL`, `_BAKE_DIGITS`, `_version` and `_flow` moved from `app.py` with their text and comments unchanged. It imports no `fastapi`, `starlette` or `uvicorn`.
   Verify: `grep -nE '^(class Held|class _Shared|def _version|def _flow|_DECIMAL =|_BAKE_DIGITS =)' isekai/interface/ui/surface.py` prints a line for each of the six names.
-- [ ] 1.3 Add `class Surface` to `surface.py` as [D1](design.md#d1) and [D2](design.md#d2) draw it: `__init__(self, root, wired, *, flows, wire, jobs, billing, imports, broadcast, limit)`, `self.shared = _Shared(wired)`, and the methods `folder`, `held`, `rendering_slot`, `rendering`, `rendered`, `baked` and `bake_image`, each the closure's body of `app.py` with each shared name read as `self.<name>`.
+- [x] 1.3 Add `class Surface` to `surface.py` as [D1](design.md#d1) and [D2](design.md#d2) draw it: `__init__(self, root, wired, *, flows, wire, jobs, billing, imports, broadcast, limit)`, `self.shared = _Shared(wired)`, and the methods `folder`, `held`, `rendering_slot`, `rendering`, `rendered`, `baked` and `bake_image`, each the closure's body of `app.py` with each shared name read as `self.<name>`.
   Verify: `grep -nE '    def (folder|held|rendering_slot|rendering|rendered|baked|bake_image)\(' isekai/interface/ui/surface.py` prints a line for each of the seven names.
-- [ ] 1.4 In `Surface.__init__` bind `self.offered = cache(self._load)`, with `_load(self, flow)` returning `_flow(self.wired, flow)`, and import `cache` from `functools`.
+- [x] 1.4 In `Surface.__init__` bind `self.offered = cache(self._load)`, with `_load(self, flow)` returning `_flow(self.wired, flow)`, and import `cache` from `functools`.
   Verify: `grep -n 'self.offered = cache(self._load)' isekai/interface/ui/surface.py` prints the line.
-- [ ] 1.5 Edit `app.py`: delete the moved definitions; build the surface and bind the names after `imports = importing.Imports(...)` as [D1](design.md#d1) shows, deleting `shared = _Shared(wired)` and the `offered` closure; import `Held`, `Surface` and each other moved name `app.py` still reads from `isekai.interface.ui.surface`. Delete `class Held`, prune the imports `app.py` no longer reads, and leave the block ending `renders_of,` `require,` `)` as it is.
+- [x] 1.5 Edit `app.py`: delete the moved definitions; build the surface and bind the names after `imports = importing.Imports(...)` as [D1](design.md#d1) shows, deleting `shared = _Shared(wired)` and the `offered` closure; import `Held`, `Surface` and each other moved name `app.py` still reads from `isekai.interface.ui.surface`. Delete `class Held`, prune the imports `app.py` no longer reads, and leave the block ending `renders_of,` `require,` `)` as it is.
   Verify: `grep -L 'class Held' isekai/interface/ui/app.py` prints the path.
-- [ ] 1.6 Run `uv run ruff format isekai/interface/ui/app.py isekai/interface/ui/surface.py`, then run the server's tests, which assert nothing new.
+- [x] 1.6 Run `uv run ruff format isekai/interface/ui/app.py isekai/interface/ui/surface.py`, then run the server's tests, which assert nothing new.
   Verify: `uv run pytest tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_library.py tests/test_ui_wire.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ui_propose.py tests/test_ui_billing.py` passes.
-- [ ] 1.7 Run `git add -N isekai/interface/ui/surface.py`, since `tools.mutate` copies tracked files only. Close with the same run on the new home: `tools.mutate` over `isekai/interface/ui/surface.py:1-2000` on the same test files. Handle a survivor as [D7](design.md#d7) says.
+- [x] 1.7 Run `git add -N isekai/interface/ui/surface.py`, since `tools.mutate` copies tracked files only. Close with the same run on the new home: `tools.mutate` over `isekai/interface/ui/surface.py:1-2000` on the same test files. Handle a survivor as [D7](design.md#d7) says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/surface.py:1-2000 --tests tests/test_ui.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_ui_library.py tests/test_ui_wire.py tests/test_ui_tattoo.py tests/test_ui_placement.py tests/test_ui_propose.py tests/test_ui_billing.py` exits 0.
-- [ ] 1.8 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`, and hold the guards: the routes of `tests/record/routes.json` answer as before.
+- [x] 1.8 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`, and hold the guards: the routes of `tests/record/routes.json` answer as before.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py` passes.
 
 ## 2 — Vocabulary and the tattoo library

@@ -75,12 +75,10 @@ GET  anything else                                 the bundle's index.html
 
 import asyncio
 import math
-import re
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
-from dataclasses import asdict, dataclass
-from functools import cache
+from dataclasses import asdict
 from pathlib import Path
 from types import FrameType
 from typing import TYPE_CHECKING, Any, TypeGuard
@@ -98,7 +96,6 @@ from isekai.foundation.artifacts import (
     DRAFT_FILE,
     ONE_RENDER,
     SHEET_FILE,
-    SIDECAR,
     TAGS_FILE,
     WD14_FILE,
     Renders,
@@ -111,7 +108,6 @@ from isekai.foundation.edit import load_edit
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
-    APPROVED,
     CAPTIONS,
     NEW_VERSION,
     PHOTOGRAPH_VERBS,
@@ -142,6 +138,7 @@ from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import KINDS, Jobs, plan
+from isekai.interface.ui.surface import _DECIMAL, Held, Surface, _flow, _version
 from isekai.interface.wiring import Wiring, proposer_of
 from isekai.pipeline import importing, tattoos
 from isekai.pipeline.edit import image_of as edit_image_of
@@ -155,7 +152,6 @@ from isekai.pipeline.review import (
     came_from,
     cancel,
     cancellable,
-    current_draft,
     discard,
     draft_image,
     review,
@@ -166,7 +162,6 @@ from isekai.pipeline.review import (
     withdraw,
 )
 from isekai.pipeline.review import state as review_state
-from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse, upright_image
 from isekai.shared.ink import load_ink_config
 from isekai.shared.vocabulary import Vocabulary
@@ -255,26 +250,6 @@ def authorities(host: str, port: int) -> frozenset[str]:
     return frozenset(f"{name}:{port}" for name in names)
 
 
-@dataclass(frozen=True)
-class Held:
-    """One run in one flow, as a review URL names it."""
-
-    run: Run
-    flow: Flow
-
-    def directory(self, stage: str) -> Path:
-        """Return one of this flow's stage directories inside the run."""
-        return self.run.directory(self.flow.id, stage)
-
-    def draft(self) -> Path | None:
-        """Return the current draft, or None; `current_draft` decides."""
-        return current_draft(self.directory(REVIEW))
-
-    def approved(self) -> Path | None:
-        """Return the approved artifact, or None while it is still a draft."""
-        return latest_artifact(self.directory(REVIEW), APPROVED)
-
-
 def create_app(
     root: Path,
     wired: Wiring,
@@ -320,12 +295,26 @@ def create_app(
     limit = importing.upload_limit()
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
-    shared = _Shared(wired)
     imports = importing.Imports(
         root,
         limit,
         lambda staged, state: broadcast.publish("file", {"staging": staged, **state}),
     )
+    surface = Surface(
+        root,
+        wired,
+        flows=flows,
+        wire=wire,
+        jobs=jobs,
+        billing=billing,
+        imports=imports,
+        broadcast=broadcast,
+        limit=limit,
+    )
+    shared = surface.shared
+    folder, held, offered = surface.folder, surface.held, surface.offered
+    _rendering = surface.rendering
+    rendered, baked, bake_image = surface.rendered, surface.baked, surface.bake_image
 
     @app.middleware("http")
     async def _addressed_here(
@@ -359,17 +348,6 @@ def create_app(
     async def _refused(request: Request, refusal: Exception) -> JSONResponse:
         """Turn a `Refusal` into a response carrying its string, verbatim."""
         return JSONResponse({"refusal": str(refusal)}, status_code=REFUSED)
-
-    def folder(collection: str) -> Path:
-        """Return a collection's folder, its runs root passed through the guard."""
-        found = library.collection(root, collection)
-        wire(found / library.RUNS)
-        return found
-
-    def held(collection: str, digest: str, flow: str) -> Held:
-        """Return the run and flow a review URL names, refusing either unknown."""
-        found = folder(collection)
-        return Held(library.run_named(found, digest), _flow(wired, flow))
 
     @app.get("/api/library")
     def read_library() -> dict[str, Any]:
@@ -775,11 +753,6 @@ def create_app(
             raise Refusal(f"there is no {kind} job: stop `prepare` or `render`")
         return {"job": jobs.stop(kind)}
 
-    @cache
-    def offered(flow: str) -> Flow:
-        """Return a tracked flow by name, loaded once: a flow is pinned while served."""
-        return _flow(wired, flow)
-
     def quoted(
         names: Sequence[str] | None, without: object = None
     ) -> tuple[dict[str, Path], render.Quote, dict[str, Any], list[Path]]:
@@ -936,13 +909,6 @@ def create_app(
             without=taken,
         )
         return {"job": job}
-
-    def rendering_slot() -> dict[str, Any] | None:
-        """Return the render slot while it runs, or None."""
-        slot = jobs.slot("render")
-        if slot and slot["state"] == "running":
-            return slot
-        return None
 
     @app.get("/api/sessions/running")
     def running_sessions() -> dict[str, Any]:
@@ -1226,19 +1192,6 @@ def create_app(
             left, changed = cancel(one.run, one.flow.id)
         return {"back": None if left is None else left.name, "cancelled": changed}
 
-    def _rendering(collection: str) -> str | None:
-        """Return what a render running for `collection` says, or None.
-
-        A session over several collections renders each, not only the first its
-        slot names.
-        """
-        slot = rendering_slot()
-        return (
-            "A render session is running."
-            if slot and collection in slot.get("collections", [slot["collection"]])
-            else None
-        )
-
     @app.post("/api/c/{collection}/review/{digest}/{flow}/discard")
     def post_discard(
         collection: str, digest: str, flow: str, payload: dict[str, Any] | None = None
@@ -1321,32 +1274,6 @@ def create_app(
                     target, held, shared.vocabulary, shared.field_map
                 ).name
         return {"drafts": drafts}
-
-    def rendered(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> tuple[Run, Path, Path]:
-        """Return a render's run, its image and the approval it was rendered from.
-
-        A missing image is refused: with its record gone too, as a deleted render's
-        is, nothing is there to render again.
-        """
-        found = folder(collection)
-        run = library.run_named(found, digest)
-        one = offered(flow)
-        number = _version(version)
-        approval = approval_of(run, flow, number)
-        image = image_of(run, one, number, seed)
-        if not image.is_file():
-            if not (image.parent / f"{seed}{SIDECAR}").is_file():
-                raise Refusal(
-                    f"{image.name}: no render is here, "
-                    "its record and its image are gone"
-                )
-            raise Refusal(
-                f"{image.name}: its record is there, its image is gone; render it "
-                f"again with `python -m isekai render {found / library.RUNS}`"
-            )
-        return run, image, approval
 
     @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}")
     def read_render(
@@ -1466,41 +1393,6 @@ def create_app(
             library.thumbnail(root, run, image), media_type="image/jpeg"
         )
 
-    def baked(
-        collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> tuple[Run, library.Bake, Path]:
-        """Return a render's bake `k`: its run, its listing and where its image is.
-
-        `k` is text, so no number a request spells is a 422: one the seed has no
-        edit for is refused, as is a bake whose record cannot be read.
-        """
-        run, image, _ = rendered(collection, digest, flow, version, seed)
-        held = {one.k: one for one in library.bakes(image.parent, seed)}
-        # A held number is small: a spelling too long to convert holds none.
-        number = int(k) if _DECIMAL.fullmatch(k) and len(k) <= _BAKE_DIGITS else None
-        if number is None or number not in held:
-            raise Refusal(
-                f"{flow} {version} · {seed} holds no bake {k!r}; go back to its "
-                "large view to choose one"
-            )
-        bake = held[number]
-        if bake.state == "damaged":
-            raise Refusal(str(bake.reason))
-        return run, bake, edit_files(image.parent, seed, number)[0]
-
-    def bake_image(
-        collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> tuple[Run, Path]:
-        """Return a baked bake's run and image, refusing one still queued."""
-        run, bake, image = baked(collection, digest, flow, version, seed, k)
-        if bake.state == "queued":
-            raise Refusal(
-                f"bake {k} of {seed} is queued and has no image yet; the next "
-                f"render session bakes it, `python -m isekai render "
-                f"{folder(collection) / library.RUNS}`"
-            )
-        return run, image
-
     @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}")
     def read_bake(
         collection: str, digest: str, flow: str, version: str, seed: int, k: str
@@ -1591,55 +1483,6 @@ def create_app(
         return FileResponse(bundle / "index.html")
 
     return app
-
-
-class _Shared:
-    """What every collection shares, read once when first asked for.
-
-    Read on first use rather than at start, so a missing vocabulary is a
-    refusal on the page that needs it rather than a server that never starts.
-    """
-
-    def __init__(self, wired: Wiring) -> None:
-        """Hold the wiring the vocabulary and the table are read through."""
-        self._wired = wired
-        self._vocabulary: Vocabulary | None = None
-        self._field_map: FieldMap | None = None
-        self._candidates: dict[str, dict[str, Any]] = {}
-
-    def vocabulary(self) -> Vocabulary:
-        """Return the vocabulary, read once."""
-        if self._vocabulary is None:
-            self._vocabulary = self._wired.vocabulary()
-        return self._vocabulary
-
-    def field_map(self) -> FieldMap:
-        """Return the field map held against the vocabulary, read once."""
-        if self._field_map is None:
-            self._field_map = self._wired.field_map(self.vocabulary())
-        return self._field_map
-
-    def candidates(self, flow: Flow) -> dict[str, Any]:
-        """Return every candidate tag for every criterion `flow` declares, ranked."""
-        if flow.id not in self._candidates:
-            vocabulary, table = self.vocabulary(), self.field_map()
-            self._candidates[flow.id] = {
-                "fields": {
-                    name: [
-                        {"tag": tag, "posts": vocabulary.count(tag)}
-                        for tag in vocabulary.rank(table.group(name))
-                    ]
-                    for name in flow.schema.names
-                }
-            }
-        return self._candidates[flow.id]
-
-
-# A number a request spells: ASCII digits alone, since `str.isdigit` also passes
-# a superscript `int` cannot read.
-_DECIMAL = re.compile(r"[0-9]+")
-# The most digits a bake number is read from: a longer spelling is refused unread.
-_BAKE_DIGITS = 18
 
 
 def cell_event(
@@ -1822,20 +1665,6 @@ def _numbered(value: object) -> TypeGuard[int]:
 def _whole(value: object) -> TypeGuard[int]:
     """Return whether a request's value is a whole number, a JSON `true` not one."""
     return isinstance(value, int) and not isinstance(value, bool)
-
-
-def _version(text: str) -> int:
-    """Return the approval number a URL's version names.
-
-    e.g. "v2" -> 2
-    """
-    digits = text.removeprefix("v")
-    if not _DECIMAL.fullmatch(digits):
-        raise Refusal(
-            f"{text!r} names no version; a version is v and the approval's number, "
-            "e.g. v1 -- go back to the collection's hub to choose one"
-        )
-    return int(digits)
 
 
 def _quote(
@@ -2112,17 +1941,6 @@ def _cell_out(cell: library.Cell) -> dict[str, Any]:
         "newest": None if cell.newest is None else image(cell.newest),
         "images": [image(one) for one in cell.images],
     }
-
-
-def _flow(wired: Wiring, flow: str) -> Flow:
-    """Return the tracked flow a URL names, refusing one this build does not track."""
-    tracked = tracked_flows(wired.flows_dir)
-    if flow not in tracked:
-        raise Refusal(
-            f"{flow}: not a flow this build tracks; the flows it tracks are "
-            f"{', '.join(tracked)} -- go back to the collection's hub to choose one"
-        )
-    return load_flow(flow, wired.flows_dir)
 
 
 def _dimensions(run: Run) -> tuple[int, int]:
