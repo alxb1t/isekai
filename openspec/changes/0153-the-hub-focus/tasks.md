@@ -5,7 +5,7 @@ The focus's module with its tests, then the view's switch with the ratchet row. 
 ## Progress
 
 - [x] 1 — The focus's module and its tests · moderate
-- [ ] 2 — The view switches to it · moderate
+- [x] 2 — The view switches to it · moderate
 
 ## 1 — The focus's module and its tests
 
@@ -25,14 +25,14 @@ The focus's module with its tests, then the view's switch with the ratchet row. 
 
 ## 2 — The view switches to it
 
-- [ ] 2.1 In `ui/src/views/Hub.vue`, delete the refs `focus` and `selected`, and the functions `named`, `place`, `focusedCell`, `select` and `moveBy`. Call `useHubFocus({ sources, flows, grid, reveal, remember: (name) => (store.focus.hub = name) })` once, right after the `sources` computed, and take `focus`, `selected`, `place`, `select` and `moveBy` from it. The view keeps `grid`, `page`, `reveal` and its one `useKeys` call, its commands in today's order.
+- [x] 2.1 In `ui/src/views/Hub.vue`, delete the refs `focus` and `selected`, and the functions `named`, `place`, `focusedCell`, `select` and `moveBy`. Call `useHubFocus({ sources, flows, grid, reveal, remember: (name) => (store.focus.hub = name) })` once, right after the `sources` computed, and take `focus`, `selected`, `place`, `select` and `moveBy` from it. The view keeps `grid`, `page`, `reveal` and its one `useKeys` call, its commands in today's order.
   Verify: `git grep -n "useHubFocus(" -- ui/src/views/Hub.vue` prints its line.
-- [ ] 2.2 In `Hub.vue`'s `onMounted`, replace the `spots`, `deletedFrom` and `kept` lines with `restoredSpot(sources.value, flows.value, sent, store.focus.hub)`. Keep the read of `window.history.state?.cell` and its `replaceState` as they are. Drop the imports `nextTick`, `clamp` and `kept` that nothing reads, and import `useHubFocus` and `restoredSpot`.
+- [x] 2.2 In `Hub.vue`'s `onMounted`, replace the `spots`, `deletedFrom` and `kept` lines with `restoredSpot(sources.value, flows.value, sent, store.focus.hub)`. Keep the read of `window.history.state?.cell` and its `replaceState` as they are. Drop the imports `nextTick`, `clamp` and `kept` that nothing reads, and import `useHubFocus` and `restoredSpot`.
   Verify: `git grep -n -E "kept\(|clamp\(|nextTick" -- ui/src/views/Hub.vue` prints nothing.
-- [ ] 2.3 **HALT CHECK** In `tests/test_ratchets.py`, remove the row `"ui/src/views/Hub.vue": 622,` from `BIG_UI_FILES` and set `UI_ROWS = 1`. A failure means `Hub.vue` is still past the ceiling and [D5](design.md#d5) is wrong: halt, do not keep the row.
+- [x] 2.3 **HALT CHECK** In `tests/test_ratchets.py`, remove the row `"ui/src/views/Hub.vue": 622,` from `BIG_UI_FILES` and set `UI_ROWS = 1`. A failure means `Hub.vue` is still past the ceiling and [D5](design.md#d5) is wrong: halt, do not keep the row.
   Verify: `uv run pytest tests/test_ratchets.py` exits 0.
-- [ ] 2.4 Run the page's tests and types with the view switched. No existing test's assertion changed.
+- [x] 2.4 Run the page's tests and types with the view switched. No existing test's assertion changed.
   Verify: `uv run python -m tools.test_ui` exits 0.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.5 Check the scenario bindings with the view switched.
+- [x] 2.5 Check the scenario bindings with the view switched.
   Verify: `uv run pytest tests/test_spec_bindings.py` exits 0.
