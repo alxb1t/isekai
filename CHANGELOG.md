@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+- `useReviewActions.ts` holds Review's read-again, approve, cancel-approve and discard, with the refusal they share and the
+  render watchers, beside the view and unused; a vitest test binds the approval, refused-save and render-follow scenarios (0157 D1, D6).
+- `Review.vue` calls `useReviewActions` and loses the moved code; the view falls under the page's ceiling and its row leaves `tests/test_ratchets.py` (0157 D2, D4, D5).
+
 ## [0.87.12] - 2026-11-17
 
 Gate: local 1m7s · CI not read under mf-ship · 0.87.11: local 1m10s · CI not read under mf-ship
