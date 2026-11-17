@@ -1,0 +1,58 @@
+{
+  "change": "0158-the-front-door",
+  "version": "v0.87.14",
+  "base": "78256e2a",
+  "analyzed": "c8349b23",
+  "measured_on": "local",
+  "collected_at": "2026-11-17T03:56:05+02:00",
+  "mf_version": "v0.101.1",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2417
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 67
+    },
+    "open-backlog-cards": {
+      "value": 13
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 4
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 1478
+    },
+    "diff-files": {
+      "value": 22
+    },
+    "phases": {
+      "value": 5
+    },
+    "shared-reading-set": {
+      "value": 15434
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1085
+    },
+    "decisions": {
+      "value": 63
+    }
+  }
+}

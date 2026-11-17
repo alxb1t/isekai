@@ -37,11 +37,11 @@ import time:
 Every lazy edge points down, as every module-level one does.
 
 **Where this version's pieces sit.** `import` is `pipeline/importing.py`, a stage
-no other stage imports; the CLI's `import` verb and the surface's staging routes
+no other stage imports; the CLI's `import` verb and `StagingRoutes` of `interface/ui/routes/staging.py`
 both compose it, and `ui/library.py` reads `shared/image.py`'s `metadata_in` for the
 not-cleaned mark.
 `assign` is `foundation/rundir.py`'s, read through `run.py`, because a tick is the run's layout, and the CLI
-verb and the hub's route both call it. `migrate` is `foundation/migrate.py`'s,
+verb and `HubRoutes` of `interface/ui/routes/hub.py` both call it. `migrate` is `foundation/migrate.py`'s,
 which imports `artifacts.py`, `run.py` and `refusal.py`: it moves the run's layout,
 and `cli.py`'s verb walks each runs root, reaching the library's collections
 through `interface/ui/`'s `collection_runs` inside the handler. `--progress json`
@@ -59,7 +59,7 @@ that owns it: stage ③'s review functions, which `ReviewRoutes` of
 target's first sheet when a draft is made from another flow, filled from the
 photograph's tags — `interface/drafting.py`'s `draft_across` runs it, the same
 sequence the CLI's `draft` runs (D4) — and, for a deleted render, the library's
-`drop_thumbnails`, the render stage's `discard_render` and review's `withdraw`;
+`drop_thumbnails`, the render stage's `discard_render` and review's `withdraw`, which `ImageRoutes` of `interface/ui/routes/images.py` calls;
 the CLI's `discard` calls them too, but drops the render's thumbnails and not each
 edit image's.
 

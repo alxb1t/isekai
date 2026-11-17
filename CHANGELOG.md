@@ -10,6 +10,20 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.14] - 2026-11-17
+
+Gate: local 1m7s · CI not read under mf-ship · 0.87.13: local 1m11s · CI not read under mf-ship
+
+- `ImageRoutes` of `routes/images.py` serves a render's and a bake's routes, and `create_app` loses their closures;
+  `read_compare` takes keyword-only path parameters, so its row leaves `tests/test_ratchets.py`; URLs, statuses and bodies stay (0158 D1, D3, D5).
+- `HubRoutes`, `StagingRoutes` and `SourceRoutes` of `routes/` serve the library's, staging's and sources' routes, and `create_app` loses their closures;
+  a `Route` row may name a `status`, which the upload's `202` rides on, and `FD-1` records it; URLs, statuses and bodies stay (0158 D1, D6).
+- `create_app` mounts each resource from the `MOUNTS` tuple, takes the guard from `_addressed_here` and the catch-alls from `_bundle`,
+  and falls under the function ceiling, so its row leaves `tests/test_ratchets.py`; one step of an upload test holds the lifespan's shutdown (0158 D7, D9).
+- D59's *Accepts* line and statement, the `app.py` docstring, the interface README, `docs/modules.md`, `docs/principles.md` and `ARCHITECTURE.md`
+  say where the routes live and what `app.py` keeps; the replay of `tests/mutants.json` kills every entry (0158).
+- The test of a read staged file carries the key of the staging cancel's scenario, since a mutant case added the folder's cancel to it (0158).
+
 ## [0.87.13] - 2026-11-17
 
 Gate: local 1m11s · CI not read under mf-ship · 0.87.12: local 1m7s · CI not read under mf-ship

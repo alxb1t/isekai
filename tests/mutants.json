@@ -57,7 +57,7 @@
   },
   {
     "finding": "UA-7",
-    "path": "isekai/interface/ui/app.py",
+    "path": "isekai/interface/ui/routes/images.py",
     "find": "    renders_of,\n)\n",
     "replace": "    renders_of,\n    write_json,\n)\n",
     "tests": ["tests/test_ui.py"],
@@ -302,6 +302,14 @@
     "replace": "    allowed = frozenset({f\"{host}:{port}\"})\n",
     "tests": ["tests/test_ui_api.py"],
     "why": "a request addressed as localhost or [::1] must be answered by the middleware, not only by the helper"
+  },
+  {
+    "finding": "FD-1",
+    "path": "isekai/interface/ui/routes/table.py",
+    "find": "status_code=route.status,",
+    "replace": "status_code=None,",
+    "tests": ["tests/test_ui_api.py", "tests/test_record.py"],
+    "why": "the upload's 202 rides on the row's status"
   },
   {
     "finding": "UA-9",

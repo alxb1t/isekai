@@ -598,11 +598,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D59 · A resource is a class, registered from a table, over one surface
 
-**A resource of the UI server is a class in `isekai/interface/ui/routes/`, built over one `Surface` from `surface.py`, with a handler a method and a `ROUTES` table of `Route(method, path, handler)`. Its `mount(app, surface)` registers each row on the app itself, and `app.py` calls each `mount` before the catch-alls. `surface.py` imports no web framework, the modules of `routes/` are reached through `app.py` alone, and no module builds an `APIRouter`.**
+**A resource of the UI server is a class in `isekai/interface/ui/routes/`, built over one `Surface` from `surface.py`, with a handler a method and a `ROUTES` table of `Route(method, path, handler)` rows, each with a `status` where the route answers other than `200`. Its `mount(app, surface)` registers each row on the app itself, and `app.py` calls each `mount` before the catch-alls. `surface.py` imports no web framework, the modules of `routes/` are reached through `app.py` alone, and no module builds an `APIRouter`.**
 
 - **Why:** `create_app` was one closure holding every route, and its file and function were rows of the ratchet ([D56](#d56--size-and-patches-are-held-by-ratchets)). A route registered on the app stays one `APIRoute` of `app.routes`, where the server's tests and `tests/record.py` read its path and methods; an included router leaves one `_IncludedRouter` there.
-- **Accepts:** the routes that read a seam of `create_app` stay closures of `create_app`, with `make_jobs` and `run` kept there, and so do the library, staging and images routes, until their versions. Reopen when the last of them moves.
-- **Made by:** `0147`, `0148`, `0150`, `0154`.
+- **Accepts:** the middleware, the refusal handler and the catch-alls stay in `app.py`, which also keeps `make_jobs` and `run`; none is a resource. Reopen when a route of a resource is declared in `create_app` again.
+- **Made by:** `0147`, `0148`, `0150`, `0154`, `0158`.
 
 ### D60 · The page's CSS is the files of ui/src/css/
 

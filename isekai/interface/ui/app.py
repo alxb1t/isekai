@@ -4,17 +4,19 @@
 exercised by the main suite whether or not a server is installed. The modules of
 `routes/` import FastAPI and are reached through this module alone, so
 `tests/test_ui_api.py` opens with an `importorskip` for it. They hold the
-vocabulary, tattoo library and place routes, `RenderRoutes`, `StreamRoutes` and
-`ReviewRoutes`; `create_app` takes what a test replaces and declares the routes
-that read it, and the rest.
+vocabulary, tattoo library and place routes, `HubRoutes`, `StagingRoutes`,
+`ImageRoutes`, `SourceRoutes`, `RenderRoutes`, `StreamRoutes` and
+`ReviewRoutes`; `create_app` takes what a test replaces, builds the surface and
+mounts each, while the guard, the refusal handler and the catch-alls are this
+module's own.
 
-**What this module owns, and what it does not.** It owns HTTP routing and status
-codes, serving photograph bytes and the built bundle, the `rare` threshold --
-which exists nowhere else in this repository -- and turning a `Refusal` into a
-response. The join of caption, sheet, draft, approved and budget into one
-payload is the review routes' own, in `routes/reviewing.py`. The pipeline owns
-what a valid sheet is, each run file's shape and its filename, when approval is
-legal, and what a token costs.
+**What this module owns, and what it does not.** It owns the guard on every
+request, the mounting of each resource and the built bundle, the `rare`
+threshold -- which exists nowhere else in this repository -- and turning a
+`Refusal` into a response. The join of caption, sheet, draft, approved and
+budget into one payload is the review routes' own, in `routes/reviewing.py`. The
+pipeline owns what a valid sheet is, each run file's shape and its filename,
+when approval is legal, and what a token costs.
 
 **A run directory is written only through the functions that own it**: stage
 ③'s `review()` when a sheet is opened, `save_draft()` on autosave,
@@ -81,43 +83,22 @@ import asyncio
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import AbstractContextManager, asynccontextmanager
-from dataclasses import asdict
 from pathlib import Path
 from types import FrameType
 from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
-from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from isekai.foundation.artifacts import (
-    renders_of,
-)
-from isekai.foundation.flow import Flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import (
-    assign,
-    edit_files,
-    edit_numbers,
-    find_run,
-    open_run,
-)
-from isekai.interface.ui import events, library
+from isekai.interface.ui import events
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs
-from isekai.interface.ui.routes.common import (
-    REFUSED,
-    _approved,
-    _cell_out,
-    _decimal,
-    _hub,
-    _photograph,
-    _renders_out,
-    _saved,
-    _strings,
-)
+from isekai.interface.ui.routes.common import REFUSED, _saved
+from isekai.interface.ui.routes.hub import mount as hub_mount
+from isekai.interface.ui.routes.images import mount as images_mount
 from isekai.interface.ui.routes.keys import BAKE_KEYS as BAKE_KEYS
 from isekai.interface.ui.routes.keys import INK_KEYS as INK_KEYS
 from isekai.interface.ui.routes.keys import OUTLINE_KEYS as OUTLINE_KEYS
@@ -128,19 +109,18 @@ from isekai.interface.ui.routes.place import mount as place_mount
 from isekai.interface.ui.routes.rendering import cell_event as cell_event
 from isekai.interface.ui.routes.rendering import mount as render_mount
 from isekai.interface.ui.routes.reviewing import mount as review_mount
+from isekai.interface.ui.routes.sources import mount as sources_mount
+from isekai.interface.ui.routes.staging import mount as staging_mount
 from isekai.interface.ui.routes.stream import mount as stream_mount
 from isekai.interface.ui.routes.tattoos import mount as tattoo_mount
 from isekai.interface.ui.routes.vocabulary import RARE_BELOW as RARE_BELOW
 from isekai.interface.ui.routes.vocabulary import mount as vocabulary_mount
-from isekai.interface.ui.surface import Held, Surface, _version
+from isekai.interface.ui.surface import Held, Surface
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
-from isekai.pipeline.generate import discard_render
 from isekai.pipeline.review import (
     approve,
     save_draft,
-    token_budget,
-    withdraw,
 )
 
 # A request that did not come from this machine's own browser, addressed to this
@@ -201,6 +181,77 @@ def _precondition(
             "another save got there first -- reload the input to see what is on "
             f"disk, then {again}"
         )
+
+
+MOUNTS: tuple[Callable[[FastAPI, Surface], None], ...] = (
+    hub_mount,
+    staging_mount,
+    images_mount,
+    sources_mount,
+    vocabulary_mount,
+    tattoo_mount,
+    place_mount,
+    render_mount,
+    stream_mount,
+    review_mount,
+)
+
+
+def _addressed_here(
+    allowed: frozenset[str], origins: frozenset[str]
+) -> Callable[[Request, Callable[[Request], Awaitable[Response]]], Awaitable[Response]]:
+    """Return the middleware answering only requests addressed to `allowed`."""
+
+    async def guard(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """Answer only a request addressed to this server, from this server's page.
+
+        **A middleware rather than a dependency**, so it guards every route and
+        the bundle alike, and a route added later cannot forget it.
+
+        This API is unauthenticated by design, so the browser's own origin rules
+        are the whole of its protection. `Host` defeats DNS rebinding, where a
+        page on an attacker's domain resolves that domain to 127.0.0.1 and talks
+        to this port with the browser's full cooperation. `Origin`, when the
+        browser sends one, defeats the cross-site write. Without `Origin`,
+        `Sec-Fetch-Site` decides: an image tag on another site sends no `Origin`
+        and is still marked `cross-site` (D24). A client that is not a browser
+        sends neither.
+        """
+        if request.headers.get("Host", "") not in allowed:
+            return JSONResponse({"refusal": "not addressed here"}, FORBIDDEN)
+        origin = request.headers.get("Origin")
+        site = request.headers.get("Sec-Fetch-Site")
+        if origin is not None and origin not in origins:
+            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
+        if origin is None and site not in SAME_SITE:
+            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
+        return await call_next(request)
+
+    return guard
+
+
+def _bundle(app: FastAPI, bundle: Path) -> None:
+    """Register the catch-alls and the assets' mount, after every resource."""
+
+    @app.get("/api/{rest:path}")
+    def no_route(rest: str) -> JSONResponse:
+        """Answer an unknown API path as not found, never with the page."""
+        return JSONResponse({"refusal": f"no route /api/{rest}"}, 404)
+
+    # Every other path is a screen of the app, so a reload or a deep link loads
+    # the shell and its router draws the screen (D3).
+    app.mount(
+        "/assets",
+        StaticFiles(directory=bundle / "assets", check_dir=False),
+        name="assets",
+    )
+
+    @app.get("/{rest:path}")
+    def page(rest: str) -> FileResponse:
+        """Return the bundle's `index.html`, whatever screen the path names."""
+        return FileResponse(bundle / "index.html")
 
 
 def create_app(
@@ -282,411 +333,19 @@ def create_app(
         precondition=precondition,
         draft_lock=draft_lock if draft_lock is not None else threading.Lock(),
     )
-    folder, offered = surface.folder, surface.offered
-    _rendering = surface.rendering
-    rendered, baked, bake_image = surface.rendered, surface.baked, surface.bake_image
 
-    @app.middleware("http")
-    async def _addressed_here(
-        request: Request, call_next: Callable[[Request], Awaitable[Response]]
-    ) -> Response:
-        """Answer only a request addressed to this server, from this server's page.
-
-        **A middleware rather than a dependency**, so it guards every route and
-        the bundle alike, and a route added later cannot forget it.
-
-        This API is unauthenticated by design, so the browser's own origin rules
-        are the whole of its protection. `Host` defeats DNS rebinding, where a
-        page on an attacker's domain resolves that domain to 127.0.0.1 and talks
-        to this port with the browser's full cooperation. `Origin`, when the
-        browser sends one, defeats the cross-site write. Without `Origin`,
-        `Sec-Fetch-Site` decides: an image tag on another site sends no `Origin`
-        and is still marked `cross-site` (D24). A client that is not a browser
-        sends neither.
-        """
-        if request.headers.get("Host", "") not in allowed:
-            return JSONResponse({"refusal": "not addressed here"}, FORBIDDEN)
-        origin = request.headers.get("Origin")
-        site = request.headers.get("Sec-Fetch-Site")
-        if origin is not None and origin not in origins:
-            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
-        if origin is None and site not in SAME_SITE:
-            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
-        return await call_next(request)
+    app.middleware("http")(_addressed_here(allowed, origins))
 
     @app.exception_handler(Refusal)
     async def _refused(request: Request, refusal: Exception) -> JSONResponse:
         """Turn a `Refusal` into a response carrying its string, verbatim."""
         return JSONResponse({"refusal": str(refusal)}, status_code=REFUSED)
 
-    @app.get("/api/library")
-    def read_library() -> dict[str, Any]:
-        """List the library's folders, collections by their newest file first."""
-        rows = library.rows(root, flows, wired.flows_dir)
-        return {"rows": [asdict(row) for row in rows]}
+    for mount in MOUNTS:
+        mount(app, surface)
 
-    @app.get("/api/c/{collection}/hub")
-    def read_hub(collection: str) -> dict[str, Any]:
-        """Return a collection's grid: its sources by offered flow, each cell's stage.
-
-        Read from the run directories on every request, so it follows a verb run
-        in the terminal while the page is open.
-        """
-        return _hub(library.hub(folder(collection), flows, wired.flows_dir))
-
-    @app.post("/api/c/{collection}/assign")
-    def post_assign(collection: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Tick a flow for sources, or untick it, through the run's own `assign`.
-
-        Each source is answered on its own: one refused untick leaves the others
-        done, and its refusal comes back beside their cells.
-        """
-        found = folder(collection)
-        flow = str(payload.get("flow"))
-        if flow not in flows:
-            raise Refusal(
-                f"{flow!r}: not a flow this surface offers; the flows it offers "
-                f"are {', '.join(flows)} -- reload the hub"
-            )
-        names = payload.get("sources")
-        if not _strings(names):
-            raise Refusal("the request's `sources` is not a list of source names")
-        remove = payload.get("remove") is True
-        loaded = offered(flow)
-        runs = found / library.RUNS
-        named = library.source_files(found)
-        cells: dict[str, Any] = {}
-        refused: dict[str, str] = {}
-        for name in names:
-            try:
-                source = named(name)
-                run = find_run(source, runs) if remove else open_run(source, runs)
-                if run is not None:
-                    assign(run, flow, remove=remove)
-                cell = library.stage(run, loaded) if run else library.Cell(None)
-                cells[name] = _cell_out(cell)
-            except Refusal as one:
-                refused[name] = str(one)
-        return {"cells": cells, "refused": refused}
-
-    @app.post("/api/staging")
-    def post_staging() -> dict[str, Any]:
-        """Open an import: a staging folder under the library's `.staging/`."""
-        return {"id": imports.open()}
-
-    @app.put("/api/staging/{staged}/files/{name}", status_code=202)
-    async def put_file(staged: str, name: str, request: Request) -> dict[str, Any]:
-        """Hold an upload for its import's reader; answer its id and `waiting`.
-
-        The body is the file. One past the limit is refused by its declared
-        length before its body is read. Its reading is reported on the stream,
-        under its upload id.
-        """
-        held = imports.reader(staged)
-        declared = request.headers.get("content-length")
-        if declared is not None and declared.isdigit() and int(declared) > limit:
-            raise importing.past_limit(name, int(declared), limit)
-        body = await request.body()
-        return await run_in_threadpool(held.put, name, body)
-
-    @app.get("/api/staging/{staged}/files/{name}")
-    def read_staged(staged: str, name: str) -> Response:
-        """Serve a staged file full size, as it was cleaned."""
-        served = _photograph(
-            surface.file_response, importing.staged_file(imports.folder(staged), name)
-        )
-        served.headers["Cache-Control"] = "no-store"
-        return served
-
-    @app.delete("/api/staging/{staged}/files/{name}")
-    def delete_staged(staged: str, name: str) -> dict[str, Any]:
-        """Remove a read file from its import before the commit; refused once sealed."""
-        imports.reader(staged).remove(name)
-        return {}
-
-    @app.get("/api/staging/{staged}/files/{name}/thumb")
-    def read_staged_thumb(staged: str, name: str) -> Response:
-        """Serve a staged file's preview, made now and kept nowhere."""
-        return Response(
-            importing.preview(imports.folder(staged), name),
-            media_type="image/jpeg",
-            headers={"Cache-Control": "no-store"},
-        )
-
-    @app.delete("/api/staging/{staged}")
-    def delete_staging(staged: str) -> dict[str, Any]:
-        """Cancel an import: its staging folder is deleted, the library unchanged."""
-        imports.cancel(staged)
-        return {}
-
-    @app.post("/api/staging/{staged}/commit")
-    def post_commit(staged: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Commit an import into a new collection, or with `add` into an open one."""
-        as_is = payload.get("as_is", [])
-        if not _strings(as_is):
-            raise Refusal("the request's `as_is` is not a list of file names")
-        done = imports.commit(
-            staged,
-            str(payload.get("collection", "")),
-            as_is,
-            add=payload.get("add") is True,
-        )
-        return {
-            "collection": done.collection.name,
-            "written": list(done.written),
-            "skipped": list(done.skipped),
-            "left_out": list(done.left_out),
-        }
-
-    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}")
-    def read_render(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> dict[str, Any]:
-        """Return one render's large view: the approval's filled fields beside it.
-
-        It is headed by what the version was: the one it came from, a revision or
-        a re-roll, and its count and seeds; or, where its `renders` no render
-        takes, damaged, naming the file, with no count.
-        """
-        run, image, approval = rendered(collection, digest, flow, version, seed)
-        _, fields = _approved(approval)
-        number = _version(version)
-        suffix = offered(flow).output_suffix
-        listed = library.versions(run, flow)
-        held = next((one for one in listed if one.version == number), None)
-        if held is None:
-            raise Refusal(
-                f"{approval.name}: it was gone when its version was listed; reload "
-                "the page"
-            )
-        return {
-            "flow": flow,
-            "version": number,
-            "seed": str(seed),
-            "fields": _filled(fields),
-            "approved_at": _saved(approval),
-            "came_from": held.came_from,
-            "kind": held.kind,
-            "count": held.count,
-            "seeds": _decimal(held.seeds),
-            "damaged": held.damaged,
-            # The seed's edits by number, the chain the large view draws.
-            "bakes": [asdict(one) for one in library.bakes(image.parent, seed)],
-            # The newest older version that rendered this seed, or null.
-            "compare": library.paired(run, flow, number, seed, suffix),
-            # Every offered flow, this one first, assigned or not: a draft assigns.
-            "targets": sorted(flows, key=lambda name: name != flow),
-            # The source's images, a row per offered flow holding any, each oldest
-            # version first, then by seed: the large view's walk and the pick.
-            "source": [
-                {"flow": name, "images": _images_out(images)}
-                for name in flows
-                if (
-                    images := library.rendered_images(
-                        run, name, offered(name).output_suffix
-                    )
-                )
-            ],
-        }
-
-    @app.get(
-        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare/{other_flow}/{other_version}/{other_seed}"
-    )
-    def read_compare(
-        collection: str,
-        digest: str,
-        flow: str,
-        version: str,
-        seed: int,
-        other_flow: str,
-        other_version: str,
-        other_seed: int,
-    ) -> dict[str, Any]:
-        """Return the image picked beside the one compare started from, of one source.
-
-        The picked is the left, this the right: the pair alone.
-        e.g. `…/summon/v4/7/compare/flat/v1/5` -> flat's v1 · 5 left, summon's
-        v4 · 7 right
-        """
-        number, other_number = _version(version), _version(other_version)
-        if (other_flow, other_number, other_seed) == (flow, number, seed):
-            raise Refusal(
-                f"{flow} {version} · {seed}: an image compared with itself shows no "
-                "change; go back to its large view and pick another"
-            )
-        _, _, origin = rendered(collection, digest, flow, version, seed)
-        _, _, picked = rendered(
-            collection, digest, other_flow, other_version, other_seed
-        )
-        right = _side(offered(flow), number, origin)
-        left = _side(offered(other_flow), other_number, picked)
-        return {
-            "left": {"flow": other_flow, **left, "seed": str(other_seed)},
-            "right": {"flow": flow, **right, "seed": str(seed)},
-        }
-
-    @app.get(
-        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare/photo"
-    )
-    def read_compare_photo(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> dict[str, Any]:
-        """Return the image beside its source's photograph: the pair, no fields.
-
-        The photograph is the left; the page reads its bytes at the run's `/photo`.
-        """
-        _, _, origin = rendered(collection, digest, flow, version, seed)
-        right = _side(offered(flow), _version(version), origin)
-        return {"left": None, "right": {"flow": flow, **right, "seed": str(seed)}}
-
-    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/image")
-    def read_render_image(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> Response:
-        """Serve the render's bytes, whole."""
-        return surface.file_response(
-            rendered(collection, digest, flow, version, seed)[1]
-        )
-
-    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/thumb")
-    def read_render_thumb(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> Response:
-        """Serve the render's thumbnail, made in the library's cache the first time."""
-        run, image, _ = rendered(collection, digest, flow, version, seed)
-        return surface.file_response(
-            library.thumbnail(root, run, image), media_type="image/jpeg"
-        )
-
-    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}")
-    def read_bake(
-        collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> dict[str, Any]:
-        """Return one bake's record: its state, what it was placed on and its time."""
-        return asdict(baked(collection, digest, flow, version, seed, k)[1])
-
-    @app.get(
-        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/image"
-    )
-    def read_bake_image(
-        collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> Response:
-        """Serve a bake's image bytes, whole."""
-        return surface.file_response(
-            bake_image(collection, digest, flow, version, seed, k)[1]
-        )
-
-    @app.get(
-        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/thumb"
-    )
-    def read_bake_thumb(
-        collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> Response:
-        """Serve a bake's thumbnail, made in the library's cache the first time."""
-        run, image = bake_image(collection, digest, flow, version, seed, k)
-        return surface.file_response(
-            library.thumbnail(root, run, image), media_type="image/jpeg"
-        )
-
-    @app.delete("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}")
-    def delete_render(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> dict[str, Any]:
-        """Delete the render and its thumbnails, as `discard` does, while none runs.
-
-        The thumbnails go while the image still names them; then `withdraw`
-        deletes the approval its last render leaves, older ones with no render and
-        the newest's waiting draft, and, with no approval left, the flow's sheets.
-        """
-        run, image, _ = rendered(collection, digest, flow, version, seed)
-        with surface.draft_lock:
-            rendering = _rendering(collection)
-            if rendering is not None:
-                raise Refusal(
-                    f"{rendering} Wait for it to end, then delete the render again."
-                )
-            library.drop_thumbnails(run, image)
-            for number in edit_numbers(image.parent, seed):
-                if (own := edit_files(image.parent, seed, number)[0]).is_file():
-                    library.drop_thumbnails(run, own)
-            discard_render(image)
-            withdraw(run, flow, _version(version))
-        return {"deleted": True}
-
-    @app.get("/api/c/{collection}/sources/{name}")
-    def read_source(collection: str, name: str) -> Response:
-        """Serve a source's bytes, whole, with or without a run.
-
-        One in a format the render does not read, placed by hand, is served as an
-        upright JPEG of it, so the viewer shows what its thumbnail does.
-        """
-        source = library.source_files(folder(collection))(name)
-        return _photograph(surface.file_response, source, other=library.source_jpeg)
-
-    @app.get("/api/c/{collection}/sources/{name}/thumb")
-    def read_source_thumb(collection: str, name: str) -> Response:
-        """Serve a source's thumbnail, upright, made in the library's cache once."""
-        source = library.source_files(folder(collection))(name)
-        return surface.file_response(
-            library.source_thumbnail(root, source), media_type="image/jpeg"
-        )
-
-    vocabulary_mount(app, surface)
-    tattoo_mount(app, surface)
-    place_mount(app, surface)
-    render_mount(app, surface)
-    stream_mount(app, surface)
-    review_mount(app, surface)
-
-    @app.get("/api/{rest:path}")
-    def no_route(rest: str) -> JSONResponse:
-        """Answer an unknown API path as not found, never with the page."""
-        return JSONResponse({"refusal": f"no route /api/{rest}"}, 404)
-
-    # Every other path is a screen of the app, so a reload or a deep link loads
-    # the shell and its router draws the screen (D3).
-    app.mount(
-        "/assets",
-        StaticFiles(directory=bundle / "assets", check_dir=False),
-        name="assets",
-    )
-
-    @app.get("/{rest:path}")
-    def page(rest: str) -> FileResponse:
-        """Return the bundle's `index.html`, whatever screen the path names."""
-        return FileResponse(bundle / "index.html")
-
+    _bundle(app, bundle)
     return app
-
-
-def _side(flow: Flow, version: int, approval: Path) -> dict[str, Any]:
-    """Return one side of a comparison as the page shows it."""
-    body, fields = _approved(approval)
-    remedy = f"restore it in {approval} by hand, then reload the page"
-    for name in flow.schema.names:
-        fields.setdefault(name, [])
-    return {
-        "version": version,
-        "approved_at": _saved(approval),
-        "renders": _renders_out(renders_of(approval, body, remedy)),
-        "tokens": token_budget(fields, flow.schema, flow).total,
-    }
-
-
-def _filled(fields: Mapping[str, list[str]]) -> dict[str, list[str]]:
-    """Return the fields that hold a tag.
-
-    e.g. `{"a": ["x"], "b": []}` -> `{"a": ["x"]}`
-    """
-    return {name: tags for name, tags in fields.items() if tags}
-
-
-def _images_out(images: Sequence[tuple[int, int]]) -> list[dict[str, Any]]:
-    """Describe rendered images by version and decimal seed, as the page names them.
-
-    e.g. [(1, 7)] -> [{"version": 1, "seed": "7"}]
-    """
-    return [{"version": version, "seed": str(seed)} for version, seed in images]
 
 
 class Server(uvicorn.Server):
