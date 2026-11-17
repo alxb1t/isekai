@@ -3441,6 +3441,7 @@ def test_a_staged_files_preview_is_a_downscaled_jpeg_kept_nowhere(
 
 
 @pytest.mark.spec("ui:sheet:the-tiles-take-the-keys")
+@pytest.mark.spec("import:stage:a-cancel-deletes-staging")
 def test_staging_serves_a_read_file_full_size_until_it_is_removed(
     client: TestClient, tmp_path: Path
 ) -> None:

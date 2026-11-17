@@ -8,7 +8,7 @@ The phases are the images, the library, staging and sources, the front door and 
 - [x] 2 — The library, staging and sources · moderate
 - [x] 3 — The front door · moderate
 - [x] 4 — The documents · moderate
-- [ ] 5 — The cancel's binding · moderate
+- [x] 5 — The cancel's binding · moderate
 
 ## 1 — The images
 
@@ -120,7 +120,7 @@ The phases are the images, the library, staging and sources, the front door and 
 
 ## 5 — The cancel's binding
 
-- [ ] 5.1 In `tests/test_ui_api.py`, add ``@pytest.mark.spec("import:stage:a-cancel-deletes-staging")`` on its own line directly below ``@pytest.mark.spec("ui:sheet:the-tiles-take-the-keys")`` above `test_staging_serves_a_read_file_full_size_until_it_is_removed`, keeping that binding and every assertion: phase 1's mutant case added the staging folder's cancel to the test, and a step that adds a behaviour carries its scenario's key ([Tests](design.md#tests)).
+- [x] 5.1 In `tests/test_ui_api.py`, add ``@pytest.mark.spec("import:stage:a-cancel-deletes-staging")`` on its own line directly below ``@pytest.mark.spec("ui:sheet:the-tiles-take-the-keys")`` above `test_staging_serves_a_read_file_full_size_until_it_is_removed`, keeping that binding and every assertion: phase 1's mutant case added the staging folder's cancel to the test, and a step that adds a behaviour carries its scenario's key ([Tests](design.md#tests)).
   Verify: `git grep -c "import:stage:a-cancel-deletes-staging" -- tests/test_ui_api.py` prints `tests/test_ui_api.py:1`.
-- [ ] 5.2 Prove the binding against the binding guard and the server's own tests.
+- [x] 5.2 Prove the binding against the binding guard and the server's own tests.
   Verify: `uv run pytest tests/test_spec_bindings.py tests/test_ui_api.py` exits 0.

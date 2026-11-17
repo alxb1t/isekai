@@ -18,6 +18,7 @@ its new digest.
   and falls under the function ceiling, so its row leaves `tests/test_ratchets.py`; one step of an upload test holds the lifespan's shutdown (0158 D7, D9).
 - D59's *Accepts* line and statement, the `app.py` docstring, the interface README, `docs/modules.md`, `docs/principles.md` and `ARCHITECTURE.md`
   say where the routes live and what `app.py` keeps; the replay of `tests/mutants.json` kills every entry (0158).
+- The test of a read staged file carries the key of the staging cancel's scenario, since a mutant case added the folder's cancel to it (0158).
 
 ## [0.87.13] - 2026-11-17
 
