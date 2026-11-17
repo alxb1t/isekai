@@ -92,6 +92,7 @@ from isekai.interface.ui.app import (  # noqa: E402
     authorities,
     create_app,
 )
+from isekai.interface.ui.billing import Billing  # noqa: E402
 from isekai.interface.ui.jobs import Jobs  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
@@ -3273,6 +3274,7 @@ def _until_read(
 
 
 @pytest.mark.spec("ui:sheet:an-upload-is-answered-before-reading")
+@pytest.mark.spec("ui:prepare:stopping-the-surface-interrupts-both")
 def test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -3306,6 +3308,26 @@ def test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn(
     _until_read(feed, staged, {body["upload"] for _, body in answers})
     assert reading == ["first.jpg", "second.jpg"]
     assert inside[1] == 1
+
+    # Leaving the app's lifespan stops what it holds, in this order.
+    stopped: list[str] = []
+
+    def noting(owner: type, name: str) -> None:
+        real = getattr(owner, name)
+
+        def noted(self: Any, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+            stopped.append(owner.__name__)
+            return real(self, *args, **kwargs)
+
+        monkeypatch.setattr(owner, name, noted)
+
+    noting(Billing, "close")
+    noting(Jobs, "shutdown")
+    noting(importing_module.Imports, "close")
+    noting(events.Broadcast, "close")
+    with client:
+        pass
+    assert stopped == ["Billing", "Jobs", "Imports", "Broadcast"]
 
 
 @pytest.mark.spec("import:stage:a-failed-move-puts-the-files-back")

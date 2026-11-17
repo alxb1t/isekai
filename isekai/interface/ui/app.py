@@ -181,6 +181,77 @@ def _precondition(
         )
 
 
+MOUNTS: tuple[Callable[[FastAPI, Surface], None], ...] = (
+    hub_mount,
+    staging_mount,
+    images_mount,
+    sources_mount,
+    vocabulary_mount,
+    tattoo_mount,
+    place_mount,
+    render_mount,
+    stream_mount,
+    review_mount,
+)
+
+
+def _addressed_here(
+    allowed: frozenset[str], origins: frozenset[str]
+) -> Callable[[Request, Callable[[Request], Awaitable[Response]]], Awaitable[Response]]:
+    """Return the middleware answering only requests addressed to `allowed`."""
+
+    async def guard(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """Answer only a request addressed to this server, from this server's page.
+
+        **A middleware rather than a dependency**, so it guards every route and
+        the bundle alike, and a route added later cannot forget it.
+
+        This API is unauthenticated by design, so the browser's own origin rules
+        are the whole of its protection. `Host` defeats DNS rebinding, where a
+        page on an attacker's domain resolves that domain to 127.0.0.1 and talks
+        to this port with the browser's full cooperation. `Origin`, when the
+        browser sends one, defeats the cross-site write. Without `Origin`,
+        `Sec-Fetch-Site` decides: an image tag on another site sends no `Origin`
+        and is still marked `cross-site` (D24). A client that is not a browser
+        sends neither.
+        """
+        if request.headers.get("Host", "") not in allowed:
+            return JSONResponse({"refusal": "not addressed here"}, FORBIDDEN)
+        origin = request.headers.get("Origin")
+        site = request.headers.get("Sec-Fetch-Site")
+        if origin is not None and origin not in origins:
+            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
+        if origin is None and site not in SAME_SITE:
+            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
+        return await call_next(request)
+
+    return guard
+
+
+def _bundle(app: FastAPI, bundle: Path) -> None:
+    """Register the catch-alls and the assets' mount, after every resource."""
+
+    @app.get("/api/{rest:path}")
+    def no_route(rest: str) -> JSONResponse:
+        """Answer an unknown API path as not found, never with the page."""
+        return JSONResponse({"refusal": f"no route /api/{rest}"}, 404)
+
+    # Every other path is a screen of the app, so a reload or a deep link loads
+    # the shell and its router draws the screen (D3).
+    app.mount(
+        "/assets",
+        StaticFiles(directory=bundle / "assets", check_dir=False),
+        name="assets",
+    )
+
+    @app.get("/{rest:path}")
+    def page(rest: str) -> FileResponse:
+        """Return the bundle's `index.html`, whatever screen the path names."""
+        return FileResponse(bundle / "index.html")
+
+
 def create_app(
     root: Path,
     wired: Wiring,
@@ -261,68 +332,17 @@ def create_app(
         draft_lock=draft_lock if draft_lock is not None else threading.Lock(),
     )
 
-    @app.middleware("http")
-    async def _addressed_here(
-        request: Request, call_next: Callable[[Request], Awaitable[Response]]
-    ) -> Response:
-        """Answer only a request addressed to this server, from this server's page.
-
-        **A middleware rather than a dependency**, so it guards every route and
-        the bundle alike, and a route added later cannot forget it.
-
-        This API is unauthenticated by design, so the browser's own origin rules
-        are the whole of its protection. `Host` defeats DNS rebinding, where a
-        page on an attacker's domain resolves that domain to 127.0.0.1 and talks
-        to this port with the browser's full cooperation. `Origin`, when the
-        browser sends one, defeats the cross-site write. Without `Origin`,
-        `Sec-Fetch-Site` decides: an image tag on another site sends no `Origin`
-        and is still marked `cross-site` (D24). A client that is not a browser
-        sends neither.
-        """
-        if request.headers.get("Host", "") not in allowed:
-            return JSONResponse({"refusal": "not addressed here"}, FORBIDDEN)
-        origin = request.headers.get("Origin")
-        site = request.headers.get("Sec-Fetch-Site")
-        if origin is not None and origin not in origins:
-            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
-        if origin is None and site not in SAME_SITE:
-            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
-        return await call_next(request)
+    app.middleware("http")(_addressed_here(allowed, origins))
 
     @app.exception_handler(Refusal)
     async def _refused(request: Request, refusal: Exception) -> JSONResponse:
         """Turn a `Refusal` into a response carrying its string, verbatim."""
         return JSONResponse({"refusal": str(refusal)}, status_code=REFUSED)
 
-    hub_mount(app, surface)
-    staging_mount(app, surface)
-    images_mount(app, surface)
-    sources_mount(app, surface)
-    vocabulary_mount(app, surface)
-    tattoo_mount(app, surface)
-    place_mount(app, surface)
-    render_mount(app, surface)
-    stream_mount(app, surface)
-    review_mount(app, surface)
+    for mount in MOUNTS:
+        mount(app, surface)
 
-    @app.get("/api/{rest:path}")
-    def no_route(rest: str) -> JSONResponse:
-        """Answer an unknown API path as not found, never with the page."""
-        return JSONResponse({"refusal": f"no route /api/{rest}"}, 404)
-
-    # Every other path is a screen of the app, so a reload or a deep link loads
-    # the shell and its router draws the screen (D3).
-    app.mount(
-        "/assets",
-        StaticFiles(directory=bundle / "assets", check_dir=False),
-        name="assets",
-    )
-
-    @app.get("/{rest:path}")
-    def page(rest: str) -> FileResponse:
-        """Return the bundle's `index.html`, whatever screen the path names."""
-        return FileResponse(bundle / "index.html")
-
+    _bundle(app, bundle)
     return app
 
 

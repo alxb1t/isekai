@@ -17,6 +17,8 @@ its new digest.
   `read_compare` takes keyword-only path parameters, so its row leaves `tests/test_ratchets.py`; URLs, statuses and bodies stay (0158 D1, D3, D5).
 - `HubRoutes`, `StagingRoutes` and `SourceRoutes` of `routes/` serve the library's, staging's and sources' routes, and `create_app` loses their closures;
   a `Route` row may name a `status`, which the upload's `202` rides on, and `FD-1` records it; URLs, statuses and bodies stay (0158 D1, D6).
+- `create_app` mounts each resource from the `MOUNTS` tuple, takes the guard from `_addressed_here` and the catch-alls from `_bundle`,
+  and falls under the function ceiling, so its row leaves `tests/test_ratchets.py`; one step of an upload test holds the lifespan's shutdown (0158 D7, D9).
 
 ## [0.87.12] - 2026-11-17
 

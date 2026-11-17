@@ -6,7 +6,7 @@ The phases are the images, the library, staging and sources, the front door and 
 
 - [x] 1 — The images · moderate
 - [x] 2 — The library, staging and sources · moderate
-- [ ] 3 — The front door · moderate
+- [x] 3 — The front door · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The images
@@ -69,23 +69,23 @@ The phases are the images, the library, staging and sources, the front door and 
 
 ## 3 — The front door
 
-- [ ] 3.1 In `isekai/interface/ui/app.py`, replace the closure `_addressed_here` with the module-level factory ``def _addressed_here(allowed: frozenset[str], origins: frozenset[str])`` above `create_app` and below `_precondition`. It returns an inner `async def` holding the docstring and the body unchanged at their indent, and `create_app` registers it with ``app.middleware("http")(_addressed_here(allowed, origins))`` ([D7](design.md#d7)).
+- [x] 3.1 In `isekai/interface/ui/app.py`, replace the closure `_addressed_here` with the module-level factory ``def _addressed_here(allowed: frozenset[str], origins: frozenset[str])`` above `create_app` and below `_precondition`. It returns an inner `async def` holding the docstring and the body unchanged at their indent, and `create_app` registers it with ``app.middleware("http")(_addressed_here(allowed, origins))`` ([D7](design.md#d7)).
   Verify: `git grep -nE "^def _addressed_here" -- isekai/interface/ui/app.py` prints a line.
-- [ ] 3.2 In `isekai/interface/ui/app.py`, move the catch-all `no_route`, the assets' mount and the catch-all `page` out of `create_app` into ``def _bundle(app: FastAPI, bundle: Path) -> None`` below `_addressed_here`, their text unchanged, and call ``_bundle(app, bundle)`` as the last statement before `return app` ([D7](design.md#d7)).
+- [x] 3.2 In `isekai/interface/ui/app.py`, move the catch-all `no_route`, the assets' mount and the catch-all `page` out of `create_app` into ``def _bundle(app: FastAPI, bundle: Path) -> None`` below `_addressed_here`, their text unchanged, and call ``_bundle(app, bundle)`` as the last statement before `return app` ([D7](design.md#d7)).
   Verify: `git grep -nE "^def _bundle" -- isekai/interface/ui/app.py` prints a line.
-- [ ] 3.3 In `isekai/interface/ui/app.py`, add the module-level tuple `MOUNTS` of `hub_mount`, `staging_mount`, `images_mount`, `sources_mount`, `vocabulary_mount`, `tattoo_mount`, `place_mount`, `render_mount`, `stream_mount` and `review_mount`, in that order and annotated ``tuple[Callable[[FastAPI, Surface], None], ...]``, above `_addressed_here`, and replace the calls of `create_app` with ``for mount in MOUNTS:`` and ``mount(app, surface)`` ([D7](design.md#d7)).
+- [x] 3.3 In `isekai/interface/ui/app.py`, add the module-level tuple `MOUNTS` of `hub_mount`, `staging_mount`, `images_mount`, `sources_mount`, `vocabulary_mount`, `tattoo_mount`, `place_mount`, `render_mount`, `stream_mount` and `review_mount`, in that order and annotated ``tuple[Callable[[FastAPI, Surface], None], ...]``, above `_addressed_here`, and replace the calls of `create_app` with ``for mount in MOUNTS:`` and ``mount(app, surface)`` ([D7](design.md#d7)).
   Verify: `git grep -n "^MOUNTS" -- isekai/interface/ui/app.py` prints a line.
-- [ ] 3.4 In `tests/test_ratchets.py`, remove the row ``"isekai/interface/ui/app.py::create_app": 1315`` from `LONG_FUNCTIONS`, since `create_app` now holds fewer lines than the ceiling ([D9](design.md#d9)).
+- [x] 3.4 In `tests/test_ratchets.py`, remove the row ``"isekai/interface/ui/app.py::create_app": 1315`` from `LONG_FUNCTIONS`, since `create_app` now holds fewer lines than the ceiling ([D9](design.md#d9)).
   Verify: `git grep -nE "^    \"isekai/interface/ui/app.py" -- tests/test_ratchets.py` prints nothing.
-- [ ] 3.5 In `tests/test_ratchets.py`, lower `FUNCTION_ROWS` to ``FUNCTION_ROWS = 8``, the count of the rows `LONG_FUNCTIONS` now holds.
+- [x] 3.5 In `tests/test_ratchets.py`, lower `FUNCTION_ROWS` to ``FUNCTION_ROWS = 8``, the count of the rows `LONG_FUNCTIONS` now holds.
   Verify: `git grep -n "^FUNCTION_ROWS = 8" -- tests/test_ratchets.py` prints a line.
-- [ ] 3.6 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`: the pruned imports of `app.py` change them.
+- [x] 3.6 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`: the pruned imports of `app.py` change them.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 3.7 Prove the move against the ratchets, which read `create_app` as no offender, and against the record, the layers, the entry point's imports, the wire and the server's own tests.
+- [x] 3.7 Prove the move against the ratchets, which read `create_app` as no offender, and against the record, the layers, the entry point's imports, the wire and the server's own tests.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py tests/test_ui_api.py tests/test_ui.py` exits 0.
-- [ ] 3.8 Close with `tools.mutate` on the first range of `isekai/interface/ui/app.py` as it now stands, which holds the mounts' tuple, the factory and the start of `_bundle` ([D8](design.md#d8)). Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code.
+- [x] 3.8 Close with `tools.mutate` on the first range of `isekai/interface/ui/app.py` as it now stands, which holds the mounts' tuple, the factory and the start of `_bundle` ([D8](design.md#d8)). Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/app.py:150-250 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 3.9 Close with the next range of `isekai/interface/ui/app.py`, which holds the rest of `_bundle` and `create_app`, each survivor handled as 3.8 says.
+- [x] 3.9 Close with the next range of `isekai/interface/ui/app.py`, which holds the rest of `_bundle` and `create_app`, each survivor handled as 3.8 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/app.py:251-350 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 
 ## 4 — The documents
