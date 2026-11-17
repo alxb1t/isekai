@@ -10,9 +10,6 @@ its new digest.
 
 ## [Unreleased]
 
-- `useReviewActions.ts` holds Review's read-again, approve, cancel-approve and discard, with the refusal they share and the
-  render watchers, beside the view and unused; a vitest test binds the approval, refused-save and render-follow scenarios (0157 D1, D6).
-- `Review.vue` calls `useReviewActions` and loses the moved code; the view falls under the page's ceiling and its row leaves `tests/test_ratchets.py` (0157 D2, D4, D5).
 - `ImageRoutes` of `routes/images.py` serves a render's and a bake's routes, and `create_app` loses their closures;
   `read_compare` takes keyword-only path parameters, so its row leaves `tests/test_ratchets.py`; URLs, statuses and bodies stay (0158 D1, D3, D5).
 - `HubRoutes`, `StagingRoutes` and `SourceRoutes` of `routes/` serve the library's, staging's and sources' routes, and `create_app` loses their closures;
@@ -21,6 +18,14 @@ its new digest.
   and falls under the function ceiling, so its row leaves `tests/test_ratchets.py`; one step of an upload test holds the lifespan's shutdown (0158 D7, D9).
 - D59's *Accepts* line and statement, the `app.py` docstring, the interface README, `docs/modules.md`, `docs/principles.md` and `ARCHITECTURE.md`
   say where the routes live and what `app.py` keeps; the replay of `tests/mutants.json` kills every entry (0158).
+
+## [0.87.13] - 2026-11-17
+
+Gate: local 1m11s · CI not read under mf-ship · 0.87.12: local 1m7s · CI not read under mf-ship
+
+- `useReviewActions.ts` holds Review's read-again, approve, cancel-approve and discard, with the refusal they share and the
+  render watchers, beside the view and unused; a vitest test binds the approval, refused-save and render-follow scenarios (0157 D1, D6).
+- `Review.vue` calls `useReviewActions` and loses the moved code; the view falls under the page's ceiling and its row leaves `tests/test_ratchets.py` (0157 D2, D4, D5).
 
 ## [0.87.12] - 2026-11-17
 
