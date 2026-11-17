@@ -51,8 +51,20 @@ def latest(directory: Path) -> int | None:
 
 
 def next_version(directory: Path) -> int:
-    """Return the number the next artifact written into `directory` takes."""
-    return (latest(directory) or 0) + 1
+    """Return the number the next artifact written into `directory` takes.
+
+    Refuse when no artifact's name can spell it.
+    e.g. a directory holding 999.json -> Refusal
+    """
+    number = (latest(directory) or 0) + 1
+    if not is_version(number):
+        where = f"{directory.parent.name}/{directory.name}"
+        raise Refusal(
+            f"{where} holds version {number - 1}, the last a three-digit name "
+            "can spell; move the whole run that holds it "
+            "out of its runs root, then start that photograph again as a new run"
+        )
+    return number
 
 
 def artifact_name(version: int, label: str | None = None) -> str:
