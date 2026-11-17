@@ -4,7 +4,7 @@ The phases are the images, the library, staging and sources, the front door and 
 
 ## Progress
 
-- [ ] 1 — The images · moderate
+- [x] 1 — The images · moderate
 - [ ] 2 — The library, staging and sources · moderate
 - [ ] 3 — The front door · moderate
 - [ ] 4 — The documents · moderate

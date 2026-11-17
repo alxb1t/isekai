@@ -3445,6 +3445,11 @@ def test_staging_serves_a_read_file_full_size_until_it_is_removed(
     assert client.get(file).status_code == 409
     assert client.delete(file).status_code == 409
 
+    folder = tmp_path / "lib" / importing_module.STAGING / staged
+    assert folder.is_dir()
+    assert client.delete(f"/api/staging/{staged}").status_code == 200
+    assert not folder.exists()
+
 
 @pytest.mark.spec("ui:sessions:a-terminal-render-stays-live")
 def test_a_terminal_session_is_live_without_a_job_slot(

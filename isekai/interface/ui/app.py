@@ -92,15 +92,9 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from isekai.foundation.artifacts import (
-    renders_of,
-)
-from isekai.foundation.flow import Flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     assign,
-    edit_files,
-    edit_numbers,
     find_run,
     open_run,
 )
@@ -109,15 +103,13 @@ from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs
 from isekai.interface.ui.routes.common import (
     REFUSED,
-    _approved,
     _cell_out,
-    _decimal,
     _hub,
     _photograph,
-    _renders_out,
     _saved,
     _strings,
 )
+from isekai.interface.ui.routes.images import mount as images_mount
 from isekai.interface.ui.routes.keys import BAKE_KEYS as BAKE_KEYS
 from isekai.interface.ui.routes.keys import INK_KEYS as INK_KEYS
 from isekai.interface.ui.routes.keys import OUTLINE_KEYS as OUTLINE_KEYS
@@ -132,15 +124,12 @@ from isekai.interface.ui.routes.stream import mount as stream_mount
 from isekai.interface.ui.routes.tattoos import mount as tattoo_mount
 from isekai.interface.ui.routes.vocabulary import RARE_BELOW as RARE_BELOW
 from isekai.interface.ui.routes.vocabulary import mount as vocabulary_mount
-from isekai.interface.ui.surface import Held, Surface, _version
+from isekai.interface.ui.surface import Held, Surface
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
-from isekai.pipeline.generate import discard_render
 from isekai.pipeline.review import (
     approve,
     save_draft,
-    token_budget,
-    withdraw,
 )
 
 # A request that did not come from this machine's own browser, addressed to this
@@ -283,8 +272,6 @@ def create_app(
         draft_lock=draft_lock if draft_lock is not None else threading.Lock(),
     )
     folder, offered = surface.folder, surface.offered
-    _rendering = surface.rendering
-    rendered, baked, bake_image = surface.rendered, surface.baked, surface.bake_image
 
     @app.middleware("http")
     async def _addressed_here(
@@ -438,180 +425,7 @@ def create_app(
             "left_out": list(done.left_out),
         }
 
-    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}")
-    def read_render(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> dict[str, Any]:
-        """Return one render's large view: the approval's filled fields beside it.
-
-        It is headed by what the version was: the one it came from, a revision or
-        a re-roll, and its count and seeds; or, where its `renders` no render
-        takes, damaged, naming the file, with no count.
-        """
-        run, image, approval = rendered(collection, digest, flow, version, seed)
-        _, fields = _approved(approval)
-        number = _version(version)
-        suffix = offered(flow).output_suffix
-        listed = library.versions(run, flow)
-        held = next((one for one in listed if one.version == number), None)
-        if held is None:
-            raise Refusal(
-                f"{approval.name}: it was gone when its version was listed; reload "
-                "the page"
-            )
-        return {
-            "flow": flow,
-            "version": number,
-            "seed": str(seed),
-            "fields": _filled(fields),
-            "approved_at": _saved(approval),
-            "came_from": held.came_from,
-            "kind": held.kind,
-            "count": held.count,
-            "seeds": _decimal(held.seeds),
-            "damaged": held.damaged,
-            # The seed's edits by number, the chain the large view draws.
-            "bakes": [asdict(one) for one in library.bakes(image.parent, seed)],
-            # The newest older version that rendered this seed, or null.
-            "compare": library.paired(run, flow, number, seed, suffix),
-            # Every offered flow, this one first, assigned or not: a draft assigns.
-            "targets": sorted(flows, key=lambda name: name != flow),
-            # The source's images, a row per offered flow holding any, each oldest
-            # version first, then by seed: the large view's walk and the pick.
-            "source": [
-                {"flow": name, "images": _images_out(images)}
-                for name in flows
-                if (
-                    images := library.rendered_images(
-                        run, name, offered(name).output_suffix
-                    )
-                )
-            ],
-        }
-
-    @app.get(
-        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare/{other_flow}/{other_version}/{other_seed}"
-    )
-    def read_compare(
-        collection: str,
-        digest: str,
-        flow: str,
-        version: str,
-        seed: int,
-        other_flow: str,
-        other_version: str,
-        other_seed: int,
-    ) -> dict[str, Any]:
-        """Return the image picked beside the one compare started from, of one source.
-
-        The picked is the left, this the right: the pair alone.
-        e.g. `…/summon/v4/7/compare/flat/v1/5` -> flat's v1 · 5 left, summon's
-        v4 · 7 right
-        """
-        number, other_number = _version(version), _version(other_version)
-        if (other_flow, other_number, other_seed) == (flow, number, seed):
-            raise Refusal(
-                f"{flow} {version} · {seed}: an image compared with itself shows no "
-                "change; go back to its large view and pick another"
-            )
-        _, _, origin = rendered(collection, digest, flow, version, seed)
-        _, _, picked = rendered(
-            collection, digest, other_flow, other_version, other_seed
-        )
-        right = _side(offered(flow), number, origin)
-        left = _side(offered(other_flow), other_number, picked)
-        return {
-            "left": {"flow": other_flow, **left, "seed": str(other_seed)},
-            "right": {"flow": flow, **right, "seed": str(seed)},
-        }
-
-    @app.get(
-        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/compare/photo"
-    )
-    def read_compare_photo(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> dict[str, Any]:
-        """Return the image beside its source's photograph: the pair, no fields.
-
-        The photograph is the left; the page reads its bytes at the run's `/photo`.
-        """
-        _, _, origin = rendered(collection, digest, flow, version, seed)
-        right = _side(offered(flow), _version(version), origin)
-        return {"left": None, "right": {"flow": flow, **right, "seed": str(seed)}}
-
-    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/image")
-    def read_render_image(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> Response:
-        """Serve the render's bytes, whole."""
-        return surface.file_response(
-            rendered(collection, digest, flow, version, seed)[1]
-        )
-
-    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/thumb")
-    def read_render_thumb(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> Response:
-        """Serve the render's thumbnail, made in the library's cache the first time."""
-        run, image, _ = rendered(collection, digest, flow, version, seed)
-        return surface.file_response(
-            library.thumbnail(root, run, image), media_type="image/jpeg"
-        )
-
-    @app.get("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}")
-    def read_bake(
-        collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> dict[str, Any]:
-        """Return one bake's record: its state, what it was placed on and its time."""
-        return asdict(baked(collection, digest, flow, version, seed, k)[1])
-
-    @app.get(
-        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/image"
-    )
-    def read_bake_image(
-        collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> Response:
-        """Serve a bake's image bytes, whole."""
-        return surface.file_response(
-            bake_image(collection, digest, flow, version, seed, k)[1]
-        )
-
-    @app.get(
-        "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}/edit/{k}/thumb"
-    )
-    def read_bake_thumb(
-        collection: str, digest: str, flow: str, version: str, seed: int, k: str
-    ) -> Response:
-        """Serve a bake's thumbnail, made in the library's cache the first time."""
-        run, image = bake_image(collection, digest, flow, version, seed, k)
-        return surface.file_response(
-            library.thumbnail(root, run, image), media_type="image/jpeg"
-        )
-
-    @app.delete("/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}")
-    def delete_render(
-        collection: str, digest: str, flow: str, version: str, seed: int
-    ) -> dict[str, Any]:
-        """Delete the render and its thumbnails, as `discard` does, while none runs.
-
-        The thumbnails go while the image still names them; then `withdraw`
-        deletes the approval its last render leaves, older ones with no render and
-        the newest's waiting draft, and, with no approval left, the flow's sheets.
-        """
-        run, image, _ = rendered(collection, digest, flow, version, seed)
-        with surface.draft_lock:
-            rendering = _rendering(collection)
-            if rendering is not None:
-                raise Refusal(
-                    f"{rendering} Wait for it to end, then delete the render again."
-                )
-            library.drop_thumbnails(run, image)
-            for number in edit_numbers(image.parent, seed):
-                if (own := edit_files(image.parent, seed, number)[0]).is_file():
-                    library.drop_thumbnails(run, own)
-            discard_render(image)
-            withdraw(run, flow, _version(version))
-        return {"deleted": True}
+    images_mount(app, surface)
 
     @app.get("/api/c/{collection}/sources/{name}")
     def read_source(collection: str, name: str) -> Response:
@@ -657,36 +471,6 @@ def create_app(
         return FileResponse(bundle / "index.html")
 
     return app
-
-
-def _side(flow: Flow, version: int, approval: Path) -> dict[str, Any]:
-    """Return one side of a comparison as the page shows it."""
-    body, fields = _approved(approval)
-    remedy = f"restore it in {approval} by hand, then reload the page"
-    for name in flow.schema.names:
-        fields.setdefault(name, [])
-    return {
-        "version": version,
-        "approved_at": _saved(approval),
-        "renders": _renders_out(renders_of(approval, body, remedy)),
-        "tokens": token_budget(fields, flow.schema, flow).total,
-    }
-
-
-def _filled(fields: Mapping[str, list[str]]) -> dict[str, list[str]]:
-    """Return the fields that hold a tag.
-
-    e.g. `{"a": ["x"], "b": []}` -> `{"a": ["x"]}`
-    """
-    return {name: tags for name, tags in fields.items() if tags}
-
-
-def _images_out(images: Sequence[tuple[int, int]]) -> list[dict[str, Any]]:
-    """Describe rendered images by version and decimal seed, as the page names them.
-
-    e.g. [(1, 7)] -> [{"version": 1, "seed": "7"}]
-    """
-    return [{"version": version, "seed": str(seed)} for version, seed in images]
 
 
 class Server(uvicorn.Server):

@@ -57,7 +57,7 @@
   },
   {
     "finding": "UA-7",
-    "path": "isekai/interface/ui/app.py",
+    "path": "isekai/interface/ui/routes/images.py",
     "find": "    renders_of,\n)\n",
     "replace": "    renders_of,\n    write_json,\n)\n",
     "tests": ["tests/test_ui.py"],

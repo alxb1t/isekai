@@ -472,7 +472,6 @@ WIDE_FUNCTIONS = {
     "isekai/interface/render.py::_session": 9,
     "isekai/interface/render.py::_asked": 7,
     "isekai/interface/render.py::_rendered": 8,
-    "isekai/interface/ui/app.py::create_app.read_compare": 8,
     "isekai/pipeline/review.py::_write_draft": 9,
     "isekai/pipeline/sheet.py::_from_tag_list": 8,
     "isekai/pipeline/tattoos.py::save_outline": 8,
@@ -481,7 +480,7 @@ WIDE_FUNCTIONS = {
     "isekai/pipeline/tattoos.py::preview": 9,
     "isekai/pipeline/tattoos.py::composite": 8,
 }
-WIDE_ROWS = 14
+WIDE_ROWS = 13
 
 BIG_UI_FILES: dict[str, int] = {}
 UI_ROWS = 0
