@@ -11,33 +11,33 @@ The phases are the images, the library, staging and sources, the front door and 
 
 ## 1 — The images
 
-- [ ] 1.1 **HALT CHECK** No test patches a name of `isekai/interface/ui/app.py` that the moving routes or their helpers read: the one patch the module keeps is `run`'s, which `serve` reads.
+- [x] 1.1 **HALT CHECK** No test patches a name of `isekai/interface/ui/app.py` that the moving routes or their helpers read: the one patch the module keeps is `run`'s, which `serve` reads.
   Verify: `git grep -n "setattr(app_module" -- tests` prints one line.
-- [ ] 1.2 Before any line moves, run each pre-flight run [D8](design.md#d8) lists over the lines of `isekai/interface/ui/app.py` that the moving resources and the middleware hold, one command at a time. Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code, then set that section's first line to `Pre-flight at the base: run.`
+- [x] 1.2 Before any line moves, run each pre-flight run [D8](design.md#d8) lists over the lines of `isekai/interface/ui/app.py` that the moving resources and the middleware hold, one command at a time. Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code, then set that section's first line to `Pre-flight at the base: run.`
   Verify: `grep -n "Pre-flight at the base: run" openspec/changes/0158-the-front-door/design.md` prints a line.
-- [ ] 1.3 Write the new `isekai/interface/ui/routes/images.py`: `class ImageRoutes` with `read_render`, `read_compare`, `read_compare_photo`, `read_render_image`, `read_render_thumb`, `read_bake`, `read_bake_image`, `read_bake_thumb` and `delete_render` as [D1](design.md#d1) and [D4](design.md#d4) say, `_side`, `_filled` and `_images_out` as module functions ([D3](design.md#d3)), a `ROUTES` table in that order and `mount(app, surface)`. Import `renders_of` from `isekai.foundation.artifacts` over several lines, ending `    renders_of,` and `)`.
+- [x] 1.3 Write the new `isekai/interface/ui/routes/images.py`: `class ImageRoutes` with `read_render`, `read_compare`, `read_compare_photo`, `read_render_image`, `read_render_thumb`, `read_bake`, `read_bake_image`, `read_bake_thumb` and `delete_render` as [D1](design.md#d1) and [D4](design.md#d4) say, `_side`, `_filled` and `_images_out` as module functions ([D3](design.md#d3)), a `ROUTES` table in that order and `mount(app, surface)`. Import `renders_of` from `isekai.foundation.artifacts` over several lines, ending `    renders_of,` and `)`.
   Verify: `grep -nE "^(class ImageRoutes|ROUTES|def mount|def _side|def _filled|def _images_out)" isekai/interface/ui/routes/images.py` prints a line for each of those names.
-- [ ] 1.4 In `ImageRoutes.read_compare`, write `self` then a lone `*` before the path parameters, which keep their names, order and annotations ([D5](design.md#d5)).
+- [x] 1.4 In `ImageRoutes.read_compare`, write `self` then a lone `*` before the path parameters, which keep their names, order and annotations ([D5](design.md#d5)).
   Verify: `grep -c "^        \*,$" isekai/interface/ui/routes/images.py` prints `1`.
-- [ ] 1.5 In `isekai/interface/ui/app.py`, delete the closures `read_render`, `read_compare`, `read_compare_photo`, `read_render_image`, `read_render_thumb`, `read_bake`, `read_bake_image`, `read_bake_thumb` and `delete_render` from `create_app`, and the functions `_side`, `_filled` and `_images_out`. Call `images_mount(app, surface)` where the closures stood, so the registration order is today's, and delete the bindings `_rendering` and `rendered, baked, bake_image` that only they read.
+- [x] 1.5 In `isekai/interface/ui/app.py`, delete the closures `read_render`, `read_compare`, `read_compare_photo`, `read_render_image`, `read_render_thumb`, `read_bake`, `read_bake_image`, `read_bake_thumb` and `delete_render` from `create_app`, and the functions `_side`, `_filled` and `_images_out`. Call `images_mount(app, surface)` where the closures stood, so the registration order is today's, and delete the bindings `_rendering` and `rendered, baked, bake_image` that only they read.
   Verify: `git grep -nE "def (read_render|read_compare|read_compare_photo|read_render_image|read_render_thumb|read_bake|read_bake_image|read_bake_thumb|delete_render)\(" -- isekai/interface/ui/app.py` prints nothing.
-- [ ] 1.6 In `isekai/interface/ui/app.py`, prune the imports nothing reads now and keep each name a test reads ([D3](design.md#d3)): `renders_of`, `Flow`, `asdict`, `edit_files`, `edit_numbers`, `discard_render`, `token_budget`, `withdraw`, `_approved`, `_decimal`, `_renders_out` and `_version` go, unless a remaining line reads one.
+- [x] 1.6 In `isekai/interface/ui/app.py`, prune the imports nothing reads now and keep each name a test reads ([D3](design.md#d3)): `renders_of`, `Flow`, `asdict`, `edit_files`, `edit_numbers`, `discard_render`, `token_budget`, `withdraw`, `_approved`, `_decimal`, `_renders_out` and `_version` go, unless a remaining line reads one.
   Verify: `git grep -n "renders_of" -- isekai/interface/ui/app.py` prints nothing.
-- [ ] 1.7 In `tests/test_ratchets.py`, remove the row ``"isekai/interface/ui/app.py::create_app.read_compare": 8`` from `WIDE_FUNCTIONS`, since the method takes no positional parameter ([D9](design.md#d9)).
+- [x] 1.7 In `tests/test_ratchets.py`, remove the row ``"isekai/interface/ui/app.py::create_app.read_compare": 8`` from `WIDE_FUNCTIONS`, since the method takes no positional parameter ([D9](design.md#d9)).
   Verify: `git grep -nF "create_app.read_compare" -- tests/test_ratchets.py` prints nothing.
-- [ ] 1.8 In `tests/test_ratchets.py`, lower `WIDE_ROWS` to ``WIDE_ROWS = 13``, the count of the rows `WIDE_FUNCTIONS` now holds.
+- [x] 1.8 In `tests/test_ratchets.py`, lower `WIDE_ROWS` to ``WIDE_ROWS = 13``, the count of the rows `WIDE_FUNCTIONS` now holds.
   Verify: `git grep -n "^WIDE_ROWS = 13" -- tests/test_ratchets.py` prints a line.
-- [ ] 1.9 In `tests/mutants.json`, change `UA-7`'s `path` to `isekai/interface/ui/routes/images.py`, its `find` and `replace` unchanged ([D9](design.md#d9)).
+- [x] 1.9 In `tests/mutants.json`, change `UA-7`'s `path` to `isekai/interface/ui/routes/images.py`, its `find` and `replace` unchanged ([D9](design.md#d9)).
   Verify: `git grep -n "routes/images.py" -- tests/mutants.json` prints a line.
-- [ ] 1.10 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`: the new module and the pruned imports change them.
+- [x] 1.10 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`: the new module and the pruned imports change them.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 1.11 Prove the move against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
+- [x] 1.11 Prove the move against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py tests/test_ui_api.py tests/test_ui.py` exits 0.
-- [ ] 1.12 Run `git add -N isekai/interface/ui/routes/images.py`, since `tools.mutate` copies tracked files only, then close with `tools.mutate` on the module's first range ([D8](design.md#d8)). Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code.
-  Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/images.py:1-100 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 1.13 Close with the next range of `isekai/interface/ui/routes/images.py`, each survivor handled as 1.12 says.
+- [ ] 1.12 Run `git add -N isekai/interface/ui/routes/images.py`, since `tools.mutate` copies tracked files only, then close with `tools.mutate` on the module's first range ([D8](design.md#d8)). Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code. A range run cannot accept a named equivalent, so the Verify below steps over its line with two ranges: `_side`'s `fields.setdefault(name, [])` is line 34, the one named there.
+  Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/images.py:1-33 isekai/interface/ui/routes/images.py:35-100 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
+- [x] 1.13 Close with the next range of `isekai/interface/ui/routes/images.py`, each survivor handled as 1.12 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/images.py:101-200 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 1.14 Close with the rest of `isekai/interface/ui/routes/images.py`, each survivor handled as 1.12 says.
+- [x] 1.14 Close with the rest of `isekai/interface/ui/routes/images.py`, each survivor handled as 1.12 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/images.py:201-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 
 ## 2 — The library, staging and sources
