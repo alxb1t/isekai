@@ -259,7 +259,8 @@ def _patches(
     """Yield each `x.setattr(...)` patch of a scope, each bound by that scope's imports.
 
     A function's imports extend those of the scope around it. They reach no sibling
-    function and not the module.
+    function and not the module. Within a scope a call is bound by the imports above
+    it, so a name imported twice stands for each module where it is called.
     e.g. a function that imports `ink as subject` patches `isekai.shared.ink`, whatever
     `subject` stands for in the function beside it
     """
@@ -272,10 +273,16 @@ def _patches(
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             functions.append(node)
             continue
-        _bind(root, node, packages, bound)
         nodes.append(node)
         pending.extend(ast.iter_child_nodes(node))
-    for node in nodes:
+    positioned = [
+        (getattr(node, "lineno"), getattr(node, "col_offset"), index)
+        for index, node in enumerate(nodes)
+        if hasattr(node, "lineno")
+    ]
+    for _, _, index in sorted(positioned):
+        node = nodes[index]
+        _bind(root, node, packages, bound)
         if (patch := _setattr_target(node, bound)) is not None:
             yield patch
     for function in functions:
@@ -483,10 +490,8 @@ WIDE_FUNCTIONS = {
 }
 WIDE_ROWS = 14
 
-BIG_UI_FILES = {
-    "ui/src/views/Review.vue": 659,
-}
-UI_ROWS = 1
+BIG_UI_FILES: dict[str, int] = {}
+UI_ROWS = 0
 
 PATCHED_MODULES = {
     "evaluation.__main__": 5,
@@ -706,6 +711,11 @@ def test_a_reused_local_alias_hides_no_patched_module(tmp_path: Path) -> None:
             "def test_four(monkeypatch):\n"
             "    from isekai.shared import ink as fields\n"
             "    monkeypatch.setattr(fields, 'extract_ink', 1)\n"
+            "def test_five(monkeypatch):\n"
+            "    from isekai.shared import ink as subject\n"
+            "    monkeypatch.setattr(subject, 'extract_ink', 1)\n"
+            "    from isekai.shared import fields as subject\n"
+            "    monkeypatch.setattr(subject, 'validate', 1)\n"
         ),
     }.items():
         path = tmp_path / name
@@ -713,8 +723,8 @@ def test_a_reused_local_alias_hides_no_patched_module(tmp_path: Path) -> None:
         path.write_text(text)
 
     assert patched_modules(tmp_path) == {
-        "isekai.shared.fields": 2,
-        "isekai.shared.ink": 2,
+        "isekai.shared.fields": 3,
+        "isekai.shared.ink": 3,
     }
 
 
