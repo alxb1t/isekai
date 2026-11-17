@@ -483,10 +483,8 @@ WIDE_FUNCTIONS = {
 }
 WIDE_ROWS = 14
 
-BIG_UI_FILES = {
-    "ui/src/views/Review.vue": 659,
-}
-UI_ROWS = 1
+BIG_UI_FILES: dict[str, int] = {}
+UI_ROWS = 0
 
 PATCHED_MODULES = {
     "evaluation.__main__": 5,

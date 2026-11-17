@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
-import {
-  cancelApproval,
-  discardDraft,
-  fieldCandidates,
-  imageAt,
-  photoUrl as photoAt,
-  sourceCopyUrl,
-} from '../api'
-import { rereads } from '../cancel'
+import { fieldCandidates, imageAt, photoUrl as photoAt, sourceCopyUrl } from '../api'
 import ApproveBar from '../components/ApproveBar.vue'
 import CollectionRail from '../components/CollectionRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
@@ -23,6 +15,7 @@ import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
 import { useKeys } from '../composables/useKeys'
 import { chooses, useQueue } from '../composables/useQueue'
+import { useReviewActions } from '../composables/useReviewActions'
 import { useSheet } from '../composables/useSheet'
 import type { Move } from '../grid'
 import { clock, kickerOf, minute } from '../kicker'
@@ -30,7 +23,6 @@ import { type Lens, photographStep, viewedOf } from '../lens'
 import { nextPane, type Pane, paneKeys } from '../panes'
 import { nearest, stepFour } from '../slots'
 import { type Command, modded, plain, shifted, useKeyStore } from '../stores/keys'
-import { useLiveStore } from '../stores/live'
 import type { FieldCandidates } from '../types'
 
 /* Review: one collection in one flow, the run in the URL. It shows the loading state
@@ -46,13 +38,8 @@ const router = useRouter()
 const mac = useKeyStore().mac
 const queue = useQueue(props.collection, props.flow, () => props.digest)
 const failure = ref<string | null>(null)
-/* A refusal reading the sheet again after an approval, a cancel or a discard,
-   or of the cancel or the discard itself: the bar says what could not be done. */
-const refused = ref<string | null>(null)
-const cancelling = ref(false)
 const sheet = useSheet({ collection: props.collection, flow: props.flow })
 const approval = useApproval()
-const live = useLiveStore()
 const current = computed(() => props.digest)
 const photoUrl = (digest: string) => photoAt({ collection: props.collection, digest, flow: props.flow })
 const schema = computed(() => sheet.detail.value?.schema ?? [])
@@ -134,12 +121,6 @@ const viewed = computed(() => viewedOf(lens.value, photos.value, opened.value, r
 /* When the sheet was approved: in this sitting, else as the server read it. */
 const approvedAt = computed(() => clock(approval.at.value ?? sheet.detail.value?.approved_at ?? null))
 
-/* Every refusal the page meets, in the approve bar. */
-const refusal = computed(
-  () =>
-    approval.refusal.value ?? sheet.refusal.value ?? refused.value,
-)
-
 const kicker = computed(() =>
   kickerOf({
     drafted: drafted.value !== null,
@@ -149,74 +130,6 @@ const kicker = computed(() =>
     revision: revision.value,
   }),
 )
-
-/* Read the collection and the open sheet again, staying on it; a refusal shows in
-   the approve bar. */
-async function reread(id: string): Promise<void> {
-  refused.value = null
-  const [read] = await Promise.allSettled([queue.load(), sheet.open(id)])
-  focused.value = null
-  selectedChip.value = null
-  if (read.status === 'rejected') refused.value = (read.reason as Error).message
-}
-
-/* Delete this draft, as `review --discard` does, and stay on the sheet. A save
-   still in flight lands first, so the discard states the draft it moved to
-   rather than racing it. */
-async function discard(): Promise<void> {
-  refused.value = null
-  if (!(await sheet.flush())) return
-  try {
-    await discardDraft(
-      { collection: props.collection, digest: current.value, flow: props.flow },
-      sheet.saved.value,
-    )
-  } catch (reason) {
-    refused.value = (reason as Error).message
-    return
-  }
-  await reread(current.value)
-}
-
-async function approve(): Promise<void> {
-  const id = current.value
-  if (!id || sheet.readonly.value) return
-  // Awaited, not merely started: the debounced write has to be ON DISK before
-  // the approve `POST` goes out, or the artifact is built from the previous
-  // draft and the last correction is unlinked along with it.
-  //
-  // **And read, not merely awaited.** A refused `PUT` used to mean a network
-  // error and nothing else; it now means 409 too -- an approved input, or a
-  // `saved` the disk has moved past -- so waiting for an answer nobody looks at
-  // would approve the draft as of the last write that *did* land and discard
-  // everything typed after it, behind a banner the operator has no reason to
-  // read as "your approval is about to be wrong". `flush()` leaves the refusal
-  // in the approve bar; stopping here is what makes it true.
-  if (!(await sheet.flush())) return
-  const place = { collection: props.collection, digest: id, flow: props.flow }
-  if (!(await approval.approve(place, sheet.saved.value))) return
-  // Approving is an act, not a navigation: the sheet stays, read-only.
-  await reread(id)
-}
-
-/* Take the approval back, as `approve --cancel` does, and stay on the sheet:
-   editable again, or, for a copy, on the draft open above what lies beneath,
-   else the approval beneath, read-only. */
-async function cancelApprove(): Promise<void> {
-  const id = current.value
-  if (!id) return
-  cancelling.value = true
-  try {
-    await cancelApproval({ collection: props.collection, digest: id, flow: props.flow })
-  } catch (reason) {
-    refused.value = (reason as Error).message
-    return
-  } finally {
-    cancelling.value = false
-  }
-  approval.forget()
-  await reread(id)
-}
 
 /* The rail already knows every input's dimensions, so the source column draws
    its frame at the right aspect ratio while the payload is still in flight --
@@ -521,11 +434,18 @@ onMounted(async () => {
 
 onUnmounted(() => window.removeEventListener('beforeunload', onLeave))
 
-/* The server's reason for Cancel approve follows the render slot, so an approved sheet is
-   read again when a render for its collection starts or ends, or once the read in flight lands. */
-const follow = rereads(() => props.collection, sheet, () => void reread(current.value))
-watch(() => live.jobs.render, (after, before) => follow.moved(before, after))
-watch(() => sheet.loading.value, () => follow.landed())
+const { approve, cancelApprove, cancelling, discard, forget, refusal } = useReviewActions({
+  collection: () => props.collection,
+  flow: () => props.flow,
+  digest: () => current.value,
+  sheet,
+  queue,
+  approval,
+  settled: () => {
+    focused.value = null
+    selectedChip.value = null
+  },
+})
 
 watch(current, (id) => {
   if (!id) return
@@ -535,8 +455,7 @@ watch(current, (id) => {
   void sheet.flush()
   focused.value = null
   selectedChip.value = null
-  approval.forget()
-  refused.value = null
+  forget()
   lastField.value = null
   void sheet.open(id).then(() => enter(paneNow()))
 })

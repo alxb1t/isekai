@@ -5,7 +5,7 @@ Phase 1 writes the composable and its test beside the view, unused; phase 2 swit
 ## Progress
 
 - [x] 1 — The composable and its test · moderate
-- [ ] 2 — The view switches and its row goes · moderate
+- [x] 2 — The view switches and its row goes · moderate
 
 ## 1 — The composable and its test
 
@@ -29,21 +29,21 @@ Phase 1 writes the composable and its test beside the view, unused; phase 2 swit
 
 ## 2 — The view switches and its row goes
 
-- [ ] 2.1 In `ui/src/views/Review.vue` delete the `refused` and `cancelling` refs with the comment above `refused`, the `live` constant, the `refusal` computed with its comment, and the functions `reread`, `discard`, `approve` and `cancelApprove` with their comments.
+- [x] 2.1 In `ui/src/views/Review.vue` delete the `refused` and `cancelling` refs with the comment above `refused`, the `live` constant, the `refusal` computed with its comment, and the functions `reread`, `discard`, `approve` and `cancelApprove` with their comments.
   Verify: `git grep -c -h -E "^async function (reread|discard|approve|cancelApprove)\(" -- ui/src/views/Review.vue` prints nothing and exits 1.
-- [ ] 2.2 In the same file replace the `const follow = rereads(...)` line and the `watch` calls under it with the call [D2](design.md#d2) gives, at the same place.
+- [x] 2.2 In the same file replace the `const follow = rereads(...)` line and the `watch` calls under it with the call [D2](design.md#d2) gives, at the same place.
   Verify: `git grep -c -h -F "= useReviewActions({" -- ui/src/views/Review.vue` prints `1`.
-- [ ] 2.3 In the imports of the same file drop `cancelApproval` and `discardDraft` from `'../api'`, the line `import { rereads } from '../cancel'` and the `useLiveStore` import, and add `import { useReviewActions } from '../composables/useReviewActions'` between the `useQueue` and `useSheet` imports.
+- [x] 2.3 In the imports of the same file drop `cancelApproval` and `discardDraft` from `'../api'`, the line `import { rereads } from '../cancel'` and the `useLiveStore` import, and add `import { useReviewActions } from '../composables/useReviewActions'` between the `useQueue` and `useSheet` imports.
   Verify: `git grep -n -F "from '../cancel'" -- ui/src/views/Review.vue` prints nothing and exits 1.
-- [ ] 2.4 In `watch(current, …)` of the same file replace the lines `approval.forget()` and `refused.value = null` with one `forget()` at the place of the first.
+- [x] 2.4 In `watch(current, …)` of the same file replace the lines `approval.forget()` and `refused.value = null` with one `forget()` at the place of the first.
   Verify: `git grep -n -F "refused.value" -- ui/src/views/Review.vue` prints nothing and exits 1.
-- [ ] 2.5 In `tests/test_ratchets.py` set `BIG_UI_FILES: dict[str, int] = {}` and `UI_ROWS = 0` ([D56](../../../docs/decisions.md#d56--size-and-patches-are-held-by-ratchets)).
+- [x] 2.5 In `tests/test_ratchets.py` set `BIG_UI_FILES: dict[str, int] = {}` and `UI_ROWS = 0` ([D56](../../../docs/decisions.md#d56--size-and-patches-are-held-by-ratchets)).
   Verify: `git grep -c -h -F "UI_ROWS = 0" -- tests/test_ratchets.py` prints `1`.
-- [ ] 2.6 **HALT CHECK** The view is at or under the ceiling with its row gone, and the new bindings are counted.
+- [x] 2.6 **HALT CHECK** The view is at or under the ceiling with its row gone, and the new bindings are counted.
   Verify: `uv run pytest tests/test_ratchets.py tests/test_spec_bindings.py` exits 0.
-- [ ] 2.7 The composable declares no key ([D5](design.md#d5)) and the test binds each scenario [D6](design.md#d6) names.
+- [x] 2.7 The composable declares no key ([D5](design.md#d5)) and the test binds each scenario [D6](design.md#d6) names.
   Verify: `git grep -n -F "useKeys" -- ui/src/composables/useReviewActions.ts` prints nothing and exits 1.
   Verify: `git grep -c -h -E "^spec\('ui:(save|review):" -- ui/src/composables/useReviewActions.test.ts` prints `4`.
-- [ ] 2.8 The page's tests and types hold with the view switched.
+- [x] 2.8 The page's tests and types hold with the view switched.
   Verify: `uv run python -m tools.test_ui` exits 0.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
