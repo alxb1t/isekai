@@ -133,7 +133,7 @@ The change adds no test and removes none: `git diff --name-only main -- tests` l
 
 Pre-flight at the base: run.
 
-- `_side`'s `fields.setdefault(name, [])` → `pass`: `token_budget` and `assemble` read each field with `.get(name, ())`, and `_side` returns nothing of `fields` but that total, so no case can tell it from the code. `tools.mutate` has no way to accept a named equivalent, so the closing run over `images.py` steps over its line: its ranges are `1-33` and `35-100`.
+- `_side`'s `fields.setdefault(name, [])` → `pass`: `token_budget` and `assemble` read each field with `.get(name, ())`, and `_side` returns nothing of `fields` but that total, so no case can tell it from the code. `tools.mutate` has no way to accept a named equivalent, so the closing run over `images.py` steps over its line: its first range is `35-100`, since lines 1-33 hold no mutant and the tool refuses a range that holds none.
 
 Closing runs: not run.
 
