@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.12] - 2026-11-17
+
+Gate: local 1m7s · CI not read under mf-ship · 0.87.11: local 1m10s · CI not read under mf-ship
+
 - `next_version` refuses a directory that holds version 999, naming the directory and the way out, so a write no longer
   lands on `1000.json` and overwrites it; unit tests at 998 and 999 bind the new scenario (0156 D1, D2, D3).
 - The refusal's way out sends the whole run out of its runs root, not the directory alone, so a new approval 001 never

@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.12
 after: [0155-the-review-rules]
 ---
 
