@@ -304,6 +304,14 @@
     "why": "a request addressed as localhost or [::1] must be answered by the middleware, not only by the helper"
   },
   {
+    "finding": "FD-1",
+    "path": "isekai/interface/ui/routes/table.py",
+    "find": "status_code=route.status,",
+    "replace": "status_code=None,",
+    "tests": ["tests/test_ui_api.py", "tests/test_record.py"],
+    "why": "the upload's 202 rides on the row's status"
+  },
+  {
     "finding": "UA-9",
     "path": "isekai/interface/ui/events.py",
     "find": "            if kind == \"cell\" and data.get(\"collection\") != collection:\n                continue\n",

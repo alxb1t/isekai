@@ -81,34 +81,21 @@ import asyncio
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import AbstractContextManager, asynccontextmanager
-from dataclasses import asdict
 from pathlib import Path
 from types import FrameType
 from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
-from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import (
-    assign,
-    find_run,
-    open_run,
-)
-from isekai.interface.ui import events, library
+from isekai.interface.ui import events
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs
-from isekai.interface.ui.routes.common import (
-    REFUSED,
-    _cell_out,
-    _hub,
-    _photograph,
-    _saved,
-    _strings,
-)
+from isekai.interface.ui.routes.common import REFUSED, _saved
+from isekai.interface.ui.routes.hub import mount as hub_mount
 from isekai.interface.ui.routes.images import mount as images_mount
 from isekai.interface.ui.routes.keys import BAKE_KEYS as BAKE_KEYS
 from isekai.interface.ui.routes.keys import INK_KEYS as INK_KEYS
@@ -120,6 +107,8 @@ from isekai.interface.ui.routes.place import mount as place_mount
 from isekai.interface.ui.routes.rendering import cell_event as cell_event
 from isekai.interface.ui.routes.rendering import mount as render_mount
 from isekai.interface.ui.routes.reviewing import mount as review_mount
+from isekai.interface.ui.routes.sources import mount as sources_mount
+from isekai.interface.ui.routes.staging import mount as staging_mount
 from isekai.interface.ui.routes.stream import mount as stream_mount
 from isekai.interface.ui.routes.tattoos import mount as tattoo_mount
 from isekai.interface.ui.routes.vocabulary import RARE_BELOW as RARE_BELOW
@@ -271,7 +260,6 @@ def create_app(
         precondition=precondition,
         draft_lock=draft_lock if draft_lock is not None else threading.Lock(),
     )
-    folder, offered = surface.folder, surface.offered
 
     @app.middleware("http")
     async def _addressed_here(
@@ -306,145 +294,10 @@ def create_app(
         """Turn a `Refusal` into a response carrying its string, verbatim."""
         return JSONResponse({"refusal": str(refusal)}, status_code=REFUSED)
 
-    @app.get("/api/library")
-    def read_library() -> dict[str, Any]:
-        """List the library's folders, collections by their newest file first."""
-        rows = library.rows(root, flows, wired.flows_dir)
-        return {"rows": [asdict(row) for row in rows]}
-
-    @app.get("/api/c/{collection}/hub")
-    def read_hub(collection: str) -> dict[str, Any]:
-        """Return a collection's grid: its sources by offered flow, each cell's stage.
-
-        Read from the run directories on every request, so it follows a verb run
-        in the terminal while the page is open.
-        """
-        return _hub(library.hub(folder(collection), flows, wired.flows_dir))
-
-    @app.post("/api/c/{collection}/assign")
-    def post_assign(collection: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Tick a flow for sources, or untick it, through the run's own `assign`.
-
-        Each source is answered on its own: one refused untick leaves the others
-        done, and its refusal comes back beside their cells.
-        """
-        found = folder(collection)
-        flow = str(payload.get("flow"))
-        if flow not in flows:
-            raise Refusal(
-                f"{flow!r}: not a flow this surface offers; the flows it offers "
-                f"are {', '.join(flows)} -- reload the hub"
-            )
-        names = payload.get("sources")
-        if not _strings(names):
-            raise Refusal("the request's `sources` is not a list of source names")
-        remove = payload.get("remove") is True
-        loaded = offered(flow)
-        runs = found / library.RUNS
-        named = library.source_files(found)
-        cells: dict[str, Any] = {}
-        refused: dict[str, str] = {}
-        for name in names:
-            try:
-                source = named(name)
-                run = find_run(source, runs) if remove else open_run(source, runs)
-                if run is not None:
-                    assign(run, flow, remove=remove)
-                cell = library.stage(run, loaded) if run else library.Cell(None)
-                cells[name] = _cell_out(cell)
-            except Refusal as one:
-                refused[name] = str(one)
-        return {"cells": cells, "refused": refused}
-
-    @app.post("/api/staging")
-    def post_staging() -> dict[str, Any]:
-        """Open an import: a staging folder under the library's `.staging/`."""
-        return {"id": imports.open()}
-
-    @app.put("/api/staging/{staged}/files/{name}", status_code=202)
-    async def put_file(staged: str, name: str, request: Request) -> dict[str, Any]:
-        """Hold an upload for its import's reader; answer its id and `waiting`.
-
-        The body is the file. One past the limit is refused by its declared
-        length before its body is read. Its reading is reported on the stream,
-        under its upload id.
-        """
-        held = imports.reader(staged)
-        declared = request.headers.get("content-length")
-        if declared is not None and declared.isdigit() and int(declared) > limit:
-            raise importing.past_limit(name, int(declared), limit)
-        body = await request.body()
-        return await run_in_threadpool(held.put, name, body)
-
-    @app.get("/api/staging/{staged}/files/{name}")
-    def read_staged(staged: str, name: str) -> Response:
-        """Serve a staged file full size, as it was cleaned."""
-        served = _photograph(
-            surface.file_response, importing.staged_file(imports.folder(staged), name)
-        )
-        served.headers["Cache-Control"] = "no-store"
-        return served
-
-    @app.delete("/api/staging/{staged}/files/{name}")
-    def delete_staged(staged: str, name: str) -> dict[str, Any]:
-        """Remove a read file from its import before the commit; refused once sealed."""
-        imports.reader(staged).remove(name)
-        return {}
-
-    @app.get("/api/staging/{staged}/files/{name}/thumb")
-    def read_staged_thumb(staged: str, name: str) -> Response:
-        """Serve a staged file's preview, made now and kept nowhere."""
-        return Response(
-            importing.preview(imports.folder(staged), name),
-            media_type="image/jpeg",
-            headers={"Cache-Control": "no-store"},
-        )
-
-    @app.delete("/api/staging/{staged}")
-    def delete_staging(staged: str) -> dict[str, Any]:
-        """Cancel an import: its staging folder is deleted, the library unchanged."""
-        imports.cancel(staged)
-        return {}
-
-    @app.post("/api/staging/{staged}/commit")
-    def post_commit(staged: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Commit an import into a new collection, or with `add` into an open one."""
-        as_is = payload.get("as_is", [])
-        if not _strings(as_is):
-            raise Refusal("the request's `as_is` is not a list of file names")
-        done = imports.commit(
-            staged,
-            str(payload.get("collection", "")),
-            as_is,
-            add=payload.get("add") is True,
-        )
-        return {
-            "collection": done.collection.name,
-            "written": list(done.written),
-            "skipped": list(done.skipped),
-            "left_out": list(done.left_out),
-        }
-
+    hub_mount(app, surface)
+    staging_mount(app, surface)
     images_mount(app, surface)
-
-    @app.get("/api/c/{collection}/sources/{name}")
-    def read_source(collection: str, name: str) -> Response:
-        """Serve a source's bytes, whole, with or without a run.
-
-        One in a format the render does not read, placed by hand, is served as an
-        upright JPEG of it, so the viewer shows what its thumbnail does.
-        """
-        source = library.source_files(folder(collection))(name)
-        return _photograph(surface.file_response, source, other=library.source_jpeg)
-
-    @app.get("/api/c/{collection}/sources/{name}/thumb")
-    def read_source_thumb(collection: str, name: str) -> Response:
-        """Serve a source's thumbnail, upright, made in the library's cache once."""
-        source = library.source_files(folder(collection))(name)
-        return surface.file_response(
-            library.source_thumbnail(root, source), media_type="image/jpeg"
-        )
-
+    sources_mount(app, surface)
     vocabulary_mount(app, surface)
     tattoo_mount(app, surface)
     place_mount(app, surface)

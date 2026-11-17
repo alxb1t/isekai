@@ -11,11 +11,12 @@ from fastapi import FastAPI
 
 
 class Route(NamedTuple):
-    """One route of a resource: its HTTP method, its path and its handler's name."""
+    """One route of a resource: its method, path, handler's name and status."""
 
     method: str
     path: str
     handler: str
+    status: int | None = None
 
 
 def register(app: FastAPI, resource: object, table: Sequence[Route]) -> None:
@@ -25,5 +26,8 @@ def register(app: FastAPI, resource: object, table: Sequence[Route]) -> None:
     """
     for route in table:
         app.add_api_route(
-            route.path, getattr(resource, route.handler), methods=[route.method]
+            route.path,
+            getattr(resource, route.handler),
+            methods=[route.method],
+            status_code=route.status,
         )

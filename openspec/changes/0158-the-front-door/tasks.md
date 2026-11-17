@@ -5,7 +5,7 @@ The phases are the images, the library, staging and sources, the front door and 
 ## Progress
 
 - [x] 1 — The images · moderate
-- [ ] 2 — The library, staging and sources · moderate
+- [x] 2 — The library, staging and sources · moderate
 - [ ] 3 — The front door · moderate
 - [ ] 4 — The documents · moderate
 
@@ -64,7 +64,7 @@ The phases are the images, the library, staging and sources, the front door and 
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/staging.py:1-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 - [x] 2.11 Close with `tools.mutate` on `sources.py`, each survivor handled as 2.9 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/sources.py:1-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.12 Close `table.py` by a recorded edit, since `tools.mutate` mutates only a statement that starts and ends on one line and `register`'s one call spans several, so no range of the module holds a mutant and the tool refuses it ([D8](design.md#d8)). Add one entry to `tests/mutants.json` with finding `FD-1`, path `isekai/interface/ui/routes/table.py`, find `status_code=route.status,`, replace `status_code=None,` and tests `tests/test_ui_api.py` and `tests/test_record.py`, its `why` saying the upload's `202` rides on the row's `status`; `status_code=route.status,` occurs once in the module. Step 4.12's replay runs it with the rest.
+- [x] 2.12 Close `table.py` by a recorded edit, since `tools.mutate` mutates only a statement that starts and ends on one line and `register`'s one call spans several, so no range of the module holds a mutant and the tool refuses it ([D8](design.md#d8)). Add one entry to `tests/mutants.json` with finding `FD-1`, path `isekai/interface/ui/routes/table.py`, find `status_code=route.status,`, replace `status_code=None,` and tests `tests/test_ui_api.py` and `tests/test_record.py`, its `why` saying the upload's `202` rides on the row's `status`; `status_code=route.status,` occurs once in the module. Step 4.12's replay runs it with the rest.
   Verify: `git grep -n "status_code=None" -- tests/mutants.json` prints a line.
 
 ## 3 — The front door
