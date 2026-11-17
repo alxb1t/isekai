@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.14] - 2026-11-17
+
+Gate: local 1m7s · CI not read under mf-ship · 0.87.13: local 1m11s · CI not read under mf-ship
+
 - `ImageRoutes` of `routes/images.py` serves a render's and a bake's routes, and `create_app` loses their closures;
   `read_compare` takes keyword-only path parameters, so its row leaves `tests/test_ratchets.py`; URLs, statuses and bodies stay (0158 D1, D3, D5).
 - `HubRoutes`, `StagingRoutes` and `SourceRoutes` of `routes/` serve the library's, staging's and sources' routes, and `create_app` loses their closures;
