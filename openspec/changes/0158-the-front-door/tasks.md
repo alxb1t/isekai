@@ -42,30 +42,30 @@ The phases are the images, the library, staging and sources, the front door and 
 
 ## 2 — The library, staging and sources
 
-- [ ] 2.1 In `isekai/interface/ui/routes/table.py`, give `Route` a fourth field ``status: int | None = None`` and have `register` pass ``status_code=route.status`` to `app.add_api_route` ([D6](design.md#d6)).
+- [x] 2.1 In `isekai/interface/ui/routes/table.py`, give `Route` a fourth field ``status: int | None = None`` and have `register` pass ``status_code=route.status`` to `app.add_api_route` ([D6](design.md#d6)).
   Verify: `git grep -n "status_code=route.status" -- isekai/interface/ui/routes/table.py` prints a line.
-- [ ] 2.2 Write the new `isekai/interface/ui/routes/hub.py`: `class HubRoutes` with `read_library`, `read_hub` and `post_assign` as [D1](design.md#d1) and [D4](design.md#d4) say, a `ROUTES` table in that order and `mount(app, surface)`.
+- [x] 2.2 Write the new `isekai/interface/ui/routes/hub.py`: `class HubRoutes` with `read_library`, `read_hub` and `post_assign` as [D1](design.md#d1) and [D4](design.md#d4) say, a `ROUTES` table in that order and `mount(app, surface)`.
   Verify: `grep -nE "^(class HubRoutes|ROUTES|def mount)" isekai/interface/ui/routes/hub.py` prints a line for each of those names.
-- [ ] 2.3 Write the new `isekai/interface/ui/routes/staging.py`: `class StagingRoutes` with `post_staging`, `put_file`, `read_staged`, `delete_staged`, `read_staged_thumb`, `delete_staging` and `post_commit`, a `ROUTES` table in that order, the upload's row ending ``, 202)``, and `mount(app, surface)`. `put_file` stays `async` and keeps its `request: Request` parameter.
+- [x] 2.3 Write the new `isekai/interface/ui/routes/staging.py`: `class StagingRoutes` with `post_staging`, `put_file`, `read_staged`, `delete_staged`, `read_staged_thumb`, `delete_staging` and `post_commit`, a `ROUTES` table in that order, the upload's row ending ``, 202)``, and `mount(app, surface)`. `put_file` stays `async` and keeps its `request: Request` parameter.
   Verify: `grep -nE "^(class StagingRoutes|ROUTES|def mount)|, 202\)" isekai/interface/ui/routes/staging.py` prints a line for each of those names and one for the status.
-- [ ] 2.4 Write the new `isekai/interface/ui/routes/sources.py`: `class SourceRoutes` with `read_source` and `read_source_thumb`, a `ROUTES` table in that order and `mount(app, surface)`.
+- [x] 2.4 Write the new `isekai/interface/ui/routes/sources.py`: `class SourceRoutes` with `read_source` and `read_source_thumb`, a `ROUTES` table in that order and `mount(app, surface)`.
   Verify: `grep -nE "^(class SourceRoutes|ROUTES|def mount)" isekai/interface/ui/routes/sources.py` prints a line for each of those names.
-- [ ] 2.5 In `isekai/interface/ui/app.py`, delete the closures `read_library`, `read_hub`, `post_assign`, `post_staging`, `put_file`, `read_staged`, `delete_staged`, `read_staged_thumb`, `delete_staging`, `post_commit`, `read_source` and `read_source_thumb` from `create_app`, and the binding `folder, offered = surface.folder, surface.offered`. Replace phase 1's lone `images_mount(app, surface)` call with the calls of `hub_mount`, `staging_mount`, `images_mount` and `sources_mount`, in that order, before `vocabulary_mount`, so the registration order is today's and no resource is mounted twice.
+- [x] 2.5 In `isekai/interface/ui/app.py`, delete the closures `read_library`, `read_hub`, `post_assign`, `post_staging`, `put_file`, `read_staged`, `delete_staged`, `read_staged_thumb`, `delete_staging`, `post_commit`, `read_source` and `read_source_thumb` from `create_app`, and the binding `folder, offered = surface.folder, surface.offered`. Replace phase 1's lone `images_mount(app, surface)` call with the calls of `hub_mount`, `staging_mount`, `images_mount` and `sources_mount`, in that order, before `vocabulary_mount`, so the registration order is today's and no resource is mounted twice.
   Verify: `git grep -c -E "^    @app\.(get|put|post|delete)\(" -- isekai/interface/ui/app.py` prints `isekai/interface/ui/app.py:2`.
-- [ ] 2.6 In `isekai/interface/ui/app.py`, prune the imports nothing reads now and keep each name a test reads ([D3](design.md#d3)): `run_in_threadpool`, `asdict`, `assign`, `find_run`, `open_run`, `library`, `_cell_out`, `_hub`, `_photograph` and `_strings` go, unless a remaining line reads one.
+- [x] 2.6 In `isekai/interface/ui/app.py`, prune the imports nothing reads now and keep each name a test reads ([D3](design.md#d3)): `run_in_threadpool`, `asdict`, `assign`, `find_run`, `open_run`, `library`, `_cell_out`, `_hub`, `_photograph` and `_strings` go, unless a remaining line reads one.
   Verify: `git grep -n "run_in_threadpool" -- isekai/interface/ui/app.py` prints nothing.
-- [ ] 2.7 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`: the new modules and the pruned imports change them.
+- [x] 2.7 Re-derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`: the new modules and the pruned imports change them.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 2.8 Prove the move against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
+- [x] 2.8 Prove the move against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py tests/test_ui_api.py tests/test_ui.py` exits 0.
-- [ ] 2.9 Run `git add -N isekai/interface/ui/routes/hub.py isekai/interface/ui/routes/staging.py isekai/interface/ui/routes/sources.py`, then close with `tools.mutate` on `hub.py` ([D8](design.md#d8)). Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code.
+- [x] 2.9 Run `git add -N isekai/interface/ui/routes/hub.py isekai/interface/ui/routes/staging.py isekai/interface/ui/routes/sources.py`, then close with `tools.mutate` on `hub.py` ([D8](design.md#d8)). Kill each survivor with a case added to an existing test; name it in [Equivalent mutants](design.md#equivalent-mutants) only when no case can tell it from the code.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/hub.py:1-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.10 Close with `tools.mutate` on `staging.py`, each survivor handled as 2.9 says.
+- [x] 2.10 Close with `tools.mutate` on `staging.py`, each survivor handled as 2.9 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/staging.py:1-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.11 Close with `tools.mutate` on `sources.py`, each survivor handled as 2.9 says.
+- [x] 2.11 Close with `tools.mutate` on `sources.py`, each survivor handled as 2.9 says.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/sources.py:1-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.12 Close with `tools.mutate` on `table.py`, each survivor handled as 2.9 says.
-  Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/table.py:1-2000 --tests tests/test_ui_api.py tests/test_record.py tests/test_ui_wire.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
+- [ ] 2.12 Close `table.py` by a recorded edit, since `tools.mutate` mutates only a statement that starts and ends on one line and `register`'s one call spans several, so no range of the module holds a mutant and the tool refuses it ([D8](design.md#d8)). Add one entry to `tests/mutants.json` with finding `FD-1`, path `isekai/interface/ui/routes/table.py`, find `status_code=route.status,`, replace `status_code=None,` and tests `tests/test_ui_api.py` and `tests/test_record.py`, its `why` saying the upload's `202` rides on the row's `status`; `status_code=route.status,` occurs once in the module. Step 4.12's replay runs it with the rest.
+  Verify: `git grep -n "status_code=None" -- tests/mutants.json` prints a line.
 
 ## 3 — The front door
 
