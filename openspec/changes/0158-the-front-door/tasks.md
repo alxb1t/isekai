@@ -7,7 +7,7 @@ The phases are the images, the library, staging and sources, the front door and 
 - [x] 1 — The images · moderate
 - [x] 2 — The library, staging and sources · moderate
 - [x] 3 — The front door · moderate
-- [ ] 4 — The documents · moderate
+- [x] 4 — The documents · moderate
 
 ## 1 — The images
 
@@ -90,29 +90,29 @@ The phases are the images, the library, staging and sources, the front door and 
 
 ## 4 — The documents
 
-- [ ] 4.1 In `docs/decisions.md`, change D59's *Accepts* line to ``the middleware, the refusal handler and the catch-alls stay in `app.py`, which also keeps `make_jobs` and `run`; none is a resource. Reopen when a route of a resource is declared in `create_app` again.`` ([D59](../../../docs/decisions.md#d59--a-resource-is-a-class-registered-from-a-table-over-one-surface)).
+- [x] 4.1 In `docs/decisions.md`, change D59's *Accepts* line to ``the middleware, the refusal handler and the catch-alls stay in `app.py`, which also keeps `make_jobs` and `run`; none is a resource. Reopen when a route of a resource is declared in `create_app` again.`` ([D59](../../../docs/decisions.md#d59--a-resource-is-a-class-registered-from-a-table-over-one-surface)).
   Verify: `git grep -n "none is a resource" -- docs/decisions.md` prints a line.
-- [ ] 4.2 In D59's statement, change ``a `ROUTES` table of `Route(method, path, handler)`.`` to say each row may add a `status`: ``a `ROUTES` table of `Route(method, path, handler)` rows, each with a `status` where the route answers other than `200`.``
+- [x] 4.2 In D59's statement, change ``a `ROUTES` table of `Route(method, path, handler)`.`` to say each row may add a `status`: ``a `ROUTES` table of `Route(method, path, handler)` rows, each with a `status` where the route answers other than `200`.``
   Verify: `git grep -n "where the route answers other than" -- docs/decisions.md` prints a line.
-- [ ] 4.3 In D59's *Made by* line, add `0158` after `0154`.
+- [x] 4.3 In D59's *Made by* line, add `0158` after `0154`.
   Verify: `git grep -nE "0154.{4}0158" -- docs/decisions.md` prints a line.
-- [ ] 4.4 In the docstring of `isekai/interface/ui/app.py`, change ``They hold the vocabulary, tattoo library and place routes, `RenderRoutes`, `StreamRoutes` and `ReviewRoutes`; `create_app` takes what a test replaces and declares the routes that read it, and the rest.`` to name `HubRoutes`, `StagingRoutes`, `ImageRoutes` and `SourceRoutes` beside them, and to say `create_app` takes what a test replaces, builds the surface and mounts each, while the guard, the refusal handler and the catch-alls are this module's own.
+- [x] 4.4 In the docstring of `isekai/interface/ui/app.py`, change ``They hold the vocabulary, tattoo library and place routes, `RenderRoutes`, `StreamRoutes` and `ReviewRoutes`; `create_app` takes what a test replaces and declares the routes that read it, and the rest.`` to name `HubRoutes`, `StagingRoutes`, `ImageRoutes` and `SourceRoutes` beside them, and to say `create_app` takes what a test replaces, builds the surface and mounts each, while the guard, the refusal handler and the catch-alls are this module's own.
   Verify: `git grep -n "StagingRoutes" -- isekai/interface/ui/app.py` prints a line.
-- [ ] 4.5 In the same docstring, change ``It owns HTTP routing and status codes, serving photograph bytes and the built bundle,`` to ``It owns the guard on every request, the mounting of each resource and the built bundle,``.
+- [x] 4.5 In the same docstring, change ``It owns HTTP routing and status codes, serving photograph bytes and the built bundle,`` to ``It owns the guard on every request, the mounting of each resource and the built bundle,``.
   Verify: `git grep -n "serving photograph bytes" -- isekai/interface/ui/app.py` prints nothing.
-- [ ] 4.6 In `isekai/interface/README.md`, change the `ui/routes/` row's ``the vocabulary, tattoo library, place, render and jobs, review, and events routes`` to ``the hub, staging, images, sources, vocabulary, tattoo library, place, render and jobs, review, and events routes``.
+- [x] 4.6 In `isekai/interface/README.md`, change the `ui/routes/` row's ``the vocabulary, tattoo library, place, render and jobs, review, and events routes`` to ``the hub, staging, images, sources, vocabulary, tattoo library, place, render and jobs, review, and events routes``.
   Verify: `git grep -n "the hub, staging, images, sources, vocabulary" -- isekai/interface/README.md` prints a line.
-- [ ] 4.7 In the same README, change the `ui/app.py` row's ``the library, staging, images and sources endpoints `create_app` still declares, the catch-alls`` to ``the guard on every request, the refusal handler, the catch-alls``.
+- [x] 4.7 In the same README, change the `ui/app.py` row's ``the library, staging, images and sources endpoints `create_app` still declares, the catch-alls`` to ``the guard on every request, the refusal handler, the catch-alls``.
   Verify: `git grep -n "the library, staging, images and sources endpoints" -- isekai/interface/README.md` prints nothing.
-- [ ] 4.8 In `docs/modules.md`, replace the words "the surface's staging routes" with "`StagingRoutes` of `interface/ui/routes/staging.py`", and "the hub's route both call it" with "`HubRoutes` of `interface/ui/routes/hub.py` both call it".
+- [x] 4.8 In `docs/modules.md`, replace the words "the surface's staging routes" with "`StagingRoutes` of `interface/ui/routes/staging.py`", and "the hub's route both call it" with "`HubRoutes` of `interface/ui/routes/hub.py` both call it".
   Verify: `git grep -n "HubRoutes" -- docs/modules.md` prints a line.
-- [ ] 4.9 In `docs/modules.md`, after the words "review's `withdraw`" add ", which `ImageRoutes` of `interface/ui/routes/images.py` calls", keeping the semicolon that follows.
+- [x] 4.9 In `docs/modules.md`, after the words "review's `withdraw`" add ", which `ImageRoutes` of `interface/ui/routes/images.py` calls", keeping the semicolon that follows.
   Verify: `git grep -n "ImageRoutes" -- docs/modules.md` prints a line.
-- [ ] 4.10 In `docs/principles.md`, replace "`interface/ui/app.py`'s `delete_render`" with "`interface/ui/routes/images.py`'s `delete_render`".
+- [x] 4.10 In `docs/principles.md`, replace "`interface/ui/app.py`'s `delete_render`" with "`interface/ui/routes/images.py`'s `delete_render`".
   Verify: `git grep -n "routes/images.py" -- docs/principles.md` prints a line.
-- [ ] 4.11 In `ARCHITECTURE.md`, after "a class a resource over one `Surface`" add "; `ui/app.py` keeps the guard on every request, the refusal handler and the catch-alls".
+- [x] 4.11 In `ARCHITECTURE.md`, after "a class a resource over one `Surface`" add "; `ui/app.py` keeps the guard on every request, the refusal handler and the catch-alls".
   Verify: `git grep -n "keeps the guard on every request" -- ARCHITECTURE.md` prints a line.
-- [ ] 4.12 Replay the recorded mutants: every entry's `find` must occur once in its file and each must die.
+- [x] 4.12 Replay the recorded mutants: every entry's `find` must occur once in its file and each must die.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
-- [ ] 4.13 Prove the documents against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
+- [x] 4.13 Prove the documents against the record, the ratchets, the layers, the entry point's imports, the wire and the server's own tests.
   Verify: `uv run pytest tests/test_record.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_pipeline_cli.py tests/test_ui_wire.py tests/test_ui_api.py tests/test_ui.py` exits 0.

@@ -19,6 +19,8 @@ its new digest.
   a `Route` row may name a `status`, which the upload's `202` rides on, and `FD-1` records it; URLs, statuses and bodies stay (0158 D1, D6).
 - `create_app` mounts each resource from the `MOUNTS` tuple, takes the guard from `_addressed_here` and the catch-alls from `_bundle`,
   and falls under the function ceiling, so its row leaves `tests/test_ratchets.py`; one step of an upload test holds the lifespan's shutdown (0158 D7, D9).
+- D59's *Accepts* line and statement, the `app.py` docstring, the interface README, `docs/modules.md`, `docs/principles.md` and `ARCHITECTURE.md`
+  say where the routes live and what `app.py` keeps; the replay of `tests/mutants.json` kills every entry (0158).
 
 ## [0.87.12] - 2026-11-17
 

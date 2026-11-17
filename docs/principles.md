@@ -86,7 +86,7 @@ classified or what state a sheet is in, belongs to the component that owns that 
   cell's newest — the render stage's work. `interface/cli.py`'s `_refuse_bad_source` decides that a flow
   is not its own source, the review stage's rule. `interface/wiring.py`'s `proposer_of` turns a placement
   model's digest mismatch into a refusal, as `load_vocabulary` does for the vocabulary. The discard of a
-  render is spelled twice, `run_discard` of `interface/verbs/drafts.py` and `interface/ui/app.py`'s `delete_render`,
+  render is spelled twice, `run_discard` of `interface/verbs/drafts.py` and `interface/ui/routes/images.py`'s `delete_render`,
   and the two differ: the app drops each edit image's thumbnails, the CLI the render's alone.
 
 ### The code is layered
