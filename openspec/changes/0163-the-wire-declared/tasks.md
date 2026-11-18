@@ -21,7 +21,7 @@ The phases: a walker proven on its own declarations, the declarations of the hub
 - [x] 2.1 Create `isekai/interface/ui/shapes.py`: a module docstring that says it declares the server's answers and imports no web framework, `from isekai.pipeline.review import Status`, the path constants `COLLECTION`, `STAGED` and `STAGED_FILE`, and each class of the [declarations](design.md#declarations) from `FlowCount` to `FieldCandidates`, a one-line docstring each.
   Verify: `uv run python -c "from isekai.interface.ui.shapes import HubCell"` exits 0.
 - [x] 2.2 In `shapes.py` add `ANSWERS: dict[str, Any]` with the rows of the hub, staging and vocabulary tables of the [keys table](design.md#declarations), each key `f"<METHOD> {PATH}"`, the way the record keys its entries.
-  Verify: `uv run python -c "from isekai.interface.ui.shapes import ANSWERS; print(len(ANSWERS))"` prints `10`.
+  Verify: `uv run python -c "from isekai.interface.ui.shapes import ANSWERS; assert {'GET /api/library', 'GET /api/c/{collection}/hub', 'POST /api/c/{collection}/assign', 'POST /api/staging', 'PUT /api/staging/{staged}/files/{name}', 'DELETE /api/staging/{staged}/files/{name}', 'DELETE /api/staging/{staged}', 'POST /api/staging/{staged}/commit', 'GET /api/tags', 'GET /api/fields'} <= set(ANSWERS)"` exits 0.
 - [x] 2.3 In `tests/test_ui_shapes.py` add `TABLES`, a tuple of the `ROUTES` tuples of `isekai.interface.ui.routes.hub`, `.staging` and `.vocabulary`, imported at the top of the file, and `test_every_answer_fits_the_record` and `test_every_recorded_shape_of_the_tables_has_a_row` as [D5](design.md#d5) says, each with a `spec_exempt("structural: …")` naming its rule.
   Verify: `uv run pytest tests/test_ui_shapes.py -k record` exits 0.
 - [x] 2.4 Derive the *Imported by* tables, which `shapes.py`'s import of `pipeline/review.py` makes stale: `uv run python -m tools.derive_imported_by` adds `interface/ui/shapes.py` to the `review.py` row of `isekai/pipeline/README.md` ([D7](design.md#d7)).
@@ -32,9 +32,9 @@ The phases: a walker proven on its own declarations, the declarations of the hub
 - [x] 3.1 In `shapes.py` add the path constants `RENDER`, `REVIEW` and `COMPARE`, and each class of the [declarations](design.md#declarations) from `Renders` to `Drafts`, a one-line docstring each.
   Verify: `uv run python -c "from isekai.interface.ui.shapes import InputDetail"` exits 0.
 - [x] 3.2 In `shapes.py` add the rows of the images and reviewing tables of the [keys table](design.md#declarations) to `ANSWERS`.
-  Verify: `uv run python -c "from isekai.interface.ui.shapes import ANSWERS; print(len(ANSWERS))"` prints `21`.
+  Verify: `uv run python -c "from isekai.interface.ui.shapes import ANSWERS; assert len(ANSWERS) == 21"` exits 0.
 - [x] 3.3 In `tests/test_ui_shapes.py` add the `ROUTES` tuples of `isekai.interface.ui.routes.images` and `.reviewing` to `TABLES` as further items, imported as `from isekai.interface.ui.routes.reviewing import ROUTES as REVIEWING` and its twin for images.
-  Verify: `uv run python -c "from tests.test_ui_shapes import TABLES; print(len(TABLES))"` prints `5`.
+  Verify: `uv run python -c "from tests.test_ui_shapes import TABLES; assert len(TABLES) == 5"` exits 0.
 
 ## 4 — The documents
 
