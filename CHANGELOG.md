@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.17] - 2026-11-18
+
+Gate: local 1m11s · CI not read under mf-ship · 0.87.16: local 1m10s · CI not read under mf-ship
+
 - A case on `useSheet` holds the sheet's undo and redo, written first on the code as it stands, so the history can move into its own module with a pin under it; the key is `ui:save:an-edit-is-undone-and-redone` (0161 D5).
 - The sheet's history becomes `held`, `reloaded`, `committed`, `removed`, `undone` and `redone` over one immutable state in `ui/src/edits.ts`, with a block in `ui/src/edits.test.ts` for each function and each edge; `useSheet` still holds its own stacks until the switch (0161 D1, D2, D3, D6).
 - `useSheet` holds one `edits` state and calls the module through `take`, which marks the draft and schedules a save only when the state changed; `open` clears the history with `held` and lands the read with `reloaded`, and no assertion moves (0161 D4, D7).
