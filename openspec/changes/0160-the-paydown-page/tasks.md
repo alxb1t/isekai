@@ -43,7 +43,8 @@ Each late completion of the page becomes a unit its component calls, held by a c
   Verify: `git grep -n -E "onUnmounted|AbortController|inkUrl" -- ui/src/components/CutImage.vue` prints nothing.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
 - [x] 3.5 Hold each new key's binding and the page's ratchet.
-  Verify: `grep -c -E "^spec\('ui:picker:a-(dismissed-removal|crop)" ui/src/composables/useRemoval.test.ts ui/src/composables/useCutInk.test.ts` prints `1` for each file.
+  Verify: `grep -c -E "^spec\('ui:picker:a-dismissed-removal" ui/src/composables/useRemoval.test.ts` prints `1`.
+  Verify: `grep -c -E "^spec\('ui:picker:a-crop" ui/src/composables/useCutInk.test.ts` prints `1`.
   Verify: `uv run pytest tests/test_spec_bindings.py tests/test_ratchets.py` exits 0.
 
 ## 4 — The red runs
