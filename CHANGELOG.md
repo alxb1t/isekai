@@ -10,15 +10,25 @@ its new digest.
 
 ## [Unreleased]
 
+- `ui/src/panes.ts` holds `SELECTORS`, what each Review pane holds and where the focus enters it, and `paneOf`, which reads it; steps in the panes' test hold both before the view switches (0162 D1, D2, D4).
+- `Review.vue` imports `paneOf` and `SELECTORS` from `ui/src/panes.ts`, loses its own `paneOf`, and `entry` reads the table; every class and key stays as it was (0162 D3).
+
+## [0.87.17] - 2026-11-18
+
+Gate: local 1m11s · CI not read under mf-ship · 0.87.16: local 1m10s · CI not read under mf-ship
+
+- A case on `useSheet` holds the sheet's undo and redo, written first on the code as it stands, so the history can move into its own module with a pin under it; the key is `ui:save:an-edit-is-undone-and-redone` (0161 D5).
+- The sheet's history becomes `held`, `reloaded`, `committed`, `removed`, `undone` and `redone` over one immutable state in `ui/src/edits.ts`, with a block in `ui/src/edits.test.ts` for each function and each edge; `useSheet` still holds its own stacks until the switch (0161 D1, D2, D3, D6).
+- `useSheet` holds one `edits` state and calls the module through `take`, which marks the draft and schedules a save only when the state changed; `open` clears the history with `held` and lands the read with `reloaded`, and no assertion moves (0161 D4, D7).
+
+## [0.87.16] - 2026-11-18
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.15: local 1m13s · CI not read under mf-ship
+
 - The large view's guard against a late Hub read moves into `useDeletion`, which the view calls; a case holds it with a read answered or refused after the view is left (0160 D1, D5, D7).
 - A render's deletion opens the Hub from its own request, so a dismissed dialog no longer loses the report; a case answers or refuses the request with no dialog (0160 D2, D5).
 - The picker's question about a removal moves into `useRemoval` and a cut card's ink loader into `useCutInk`, which `TattooPicker.vue` and `CutImage.vue` call; a case answers each after the dialog or the card is left (0160 D3, D4, D5).
 - `tests/mutants.json` keeps a red run for each of the four guards, as `PG-1` to `PG-4`; each dies on its own case, and the replay leaves no survivor (0160 D6).
-- A case on `useSheet` holds the sheet's undo and redo, written first on the code as it stands, so the history can move into its own module with a pin under it; the key is `ui:save:an-edit-is-undone-and-redone` (0161 D5).
-- The sheet's history becomes `held`, `reloaded`, `committed`, `removed`, `undone` and `redone` over one immutable state in `ui/src/edits.ts`, with a block in `ui/src/edits.test.ts` for each function and each edge; `useSheet` still holds its own stacks until the switch (0161 D1, D2, D3, D6).
-- `useSheet` holds one `edits` state and calls the module through `take`, which marks the draft and schedules a save only when the state changed; `open` clears the history with `held` and lands the read with `reloaded`, and no assertion moves (0161 D4, D7).
-- `ui/src/panes.ts` holds `SELECTORS`, what each Review pane holds and where the focus enters it, and `paneOf`, which reads it; steps in the panes' test hold both before the view switches (0162 D1, D2, D4).
-- `Review.vue` imports `paneOf` and `SELECTORS` from `ui/src/panes.ts`, loses its own `paneOf`, and `entry` reads the table; every class and key stays as it was (0162 D3).
 
 ## [0.87.15] - 2026-11-18
 

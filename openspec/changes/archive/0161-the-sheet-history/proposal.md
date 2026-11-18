@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.17
 after: [0160-the-paydown-page]
 ---
 

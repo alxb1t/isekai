@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.16
 debt: [0143·S1, 0142·S1, 0142·S2]
 ---
 

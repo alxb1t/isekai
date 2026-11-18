@@ -576,6 +576,14 @@ flight, only the newest SHALL land, so an older read answering late never replac
 - **THEN** the edit is sent again
 - **AND** the approval then holds it
 
+#### Scenario: an edit is undone and redone
+- **Key:** `ui:save:an-edit-is-undone-and-redone`
+- **Layers:** unit
+- **WHEN** a tag is added in one field, a tag is removed in another, and the operator undoes twice and redoes once
+- **THEN** each undo and each redo is saved as an edit
+- **AND** the draft holds the removal taken back, then the addition taken back, then the addition again
+- **AND** an undo or a redo with nothing to take back, as after the sheet is opened again, changes and sends nothing
+
 ### Requirement: The hub shows each source's stage in each offered flow, and a tick assigns it
 
 The system SHALL show a collection's hub as a grid of its sources by the flows the surface offers, each cell carrying
@@ -2314,6 +2322,20 @@ large view ──⇧⌫──▶ Delete this render?  [No] [Yes]
 - **THEN** the delete is refused, saying a render session is running
 - **AND** no file is deleted
 
+#### Scenario: a reload that lands after leaving moves nothing
+- **Key:** `ui:delete-render:a-reload-that-lands-after-leaving-moves-nothing`
+- **Layers:** unit
+- **WHEN** a render is deleted, the operator leaves the large view, and the Hub's read that followed the deletion ends
+- **THEN** the Hub is not opened, whether that read was answered or refused
+- **AND** a read that ends while the view stays opens the Hub on the render's cell
+
+#### Scenario: a dismissed dialog still opens the Hub
+- **Key:** `ui:delete-render:a-dismissed-dialog-still-opens-the-hub`
+- **Layers:** unit
+- **WHEN** *Yes* is pressed, the dialog is dismissed before the deletion answers, and the deletion succeeds
+- **THEN** the Hub is read again and opens on the render's cell
+- **AND** a deletion that is refused opens nothing
+
 ### Requirement: A dialog holds the focus from its first control while it is open
 
 The system SHALL open every confirming dialog — Render, Revise, Delete, and New collection or Add sources — and the key
@@ -3459,6 +3481,20 @@ kept tattoos      │ each card: its image, name, state, source, Remove
 - **WHEN** the lines under the upload form's and the cut form's headings are read
 - **THEN** the upload's says the tattoo's design on its own, a flat image and not a photo of skin
 - **AND** the cut's says the tattoo as it shows on this render's photograph
+
+#### Scenario: a dismissed removal still lists the rest
+- **Key:** `ui:picker:a-dismissed-removal-still-lists-the-rest`
+- **Layers:** unit
+- **WHEN** *Yes* is pressed on a tattoo, the dialog is dismissed before the removal answers, and the removal succeeds
+- **THEN** the picker is told the tattoo is removed, so the list is read again without it
+- **AND** a removal that is refused tells it nothing
+
+#### Scenario: a crop that lands after leaving is dropped
+- **Key:** `ui:picker:a-crop-that-lands-after-leaving-is-dropped`
+- **Layers:** unit
+- **WHEN** a cut's card is left before its ink view answers, and the answer then lands
+- **THEN** no object URL is made for it
+- **AND** an answer that lands while the card stays is shown
 
 ### Requirement: Stage 2 proposes its pairs when it opens with none, once the saved outline is read
 
