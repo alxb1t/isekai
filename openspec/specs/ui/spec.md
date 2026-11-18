@@ -2416,7 +2416,13 @@ cell; the hub is the one screen of images, so a pasted address goes back there t
 - **THEN** it is served as `image/png`, and the browser is told not to guess another type
 - **AND** a run's photograph is served the same way
 - **AND** a source in another format is served as an upright JPEG of it
-- **AND** a run's photograph in a format that is neither JPEG nor PNG is refused, not served
+
+#### Scenario: a photograph in a third format is refused
+- **Key:** `ui:renders:a-photograph-in-a-third-format-is-refused`
+- **Layers:** unit
+- **WHEN** a run's photograph holds bytes that are neither JPEG nor PNG and is asked for
+- **THEN** the request is refused, not served
+- **AND** the refusal says the bytes are neither
 
 #### Scenario: an image it cannot read is refused
 - **Key:** `ui:renders:an-unreadable-image-is-refused`
