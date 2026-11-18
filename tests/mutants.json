@@ -576,6 +576,54 @@
     "why": "a photograph too large to decode must be a refusal the stage records, or the tag stage crashes and the hosted tagger never runs"
   },
   {
+    "finding": "PD-1",
+    "path": "isekai/interface/ui/app.py",
+    "find": "        if request.headers.get(\"Host\", \"\") not in allowed:\n",
+    "replace": "        if request.method != \"GET\" and request.headers.get(\"Host\", \"\") not in allowed:\n",
+    "tests": ["tests/test_ui_api.py::test_a_request_carrying_someone_elses_host_is_refused"],
+    "why": "the foreign Host is refused on writes alone, so a read of any artifact is answered; the test sent a write only"
+  },
+  {
+    "finding": "PD-2",
+    "path": "isekai/interface/ui/routes/staging.py",
+    "find": "        declared = request.headers.get(\"content-length\")\n",
+    "replace": "        await request.body()\n        declared = request.headers.get(\"content-length\")\n",
+    "tests": ["tests/test_ui_api.py::test_an_upload_past_its_declared_length_is_refused_before_its_body_is_read"],
+    "why": "an upload's body is buffered before its declared length is checked, so the memory bound is gone; the reader's patch ran after the buffering"
+  },
+  {
+    "finding": "PD-3",
+    "path": "isekai/interface/ui/routes/rendering.py",
+    "find": "        if self.surface.jobs.running(\"render\"):\n            return \"A render session is running.\"\n",
+    "replace": "",
+    "tests": ["tests/test_ui_api.py::test_one_quote_covers_every_ticked_collection"],
+    "why": "a running session no longer holds the quote and the offer back, so a second render can be offered over the first"
+  },
+  {
+    "finding": "PD-4",
+    "path": "isekai/foundation/names.py",
+    "find": "    raise Refusal(\n        \"this build reads JPEG and PNG photographs, and these bytes are neither; \"\n        \"convert the photograph to JPEG or PNG and offer it again\"\n    )\n",
+    "replace": "    return _SIGNATURES[0][1], _SIGNATURES[0][2]\n",
+    "tests": ["tests/test_ui_api.py::test_a_source_named_as_a_page_is_served_as_the_image_it_is"],
+    "why": "bytes of a third format are named a supported image, so a run's photograph is served instead of refused"
+  },
+  {
+    "finding": "PD-5",
+    "path": "isekai/foundation/artifacts.py",
+    "find": "    if not isinstance(body.get(key), shape):\n        noun = _NOUNS.get(shape, \"value\")\n        raise Refusal(f\"{path.name}: records no `{key}` {noun}; {remedy}\")\n",
+    "replace": "    return\n",
+    "tests": ["tests/test_ui_api.py::test_review_reads_a_drafted_draft_against_its_sheet_and_its_image"],
+    "why": "a draft with no sheet number is read as if it had one, and the refusal naming its file is gone"
+  },
+  {
+    "finding": "PD-6",
+    "path": "isekai/interface/ui/routes/staging.py",
+    "find": "        self.surface.imports.cancel(staged)\n",
+    "replace": "        pass\n",
+    "tests": ["tests/test_ui_api.py::test_staging_serves_a_read_file_full_size_until_it_is_removed"],
+    "why": "a cancelled import answers 200 and deletes nothing, so a person's photographs stay in the staging folder"
+  },
+  {
     "finding": "VT-14",
     "runner": "vitest",
     "path": "ui/src/composables/useSheet.ts",

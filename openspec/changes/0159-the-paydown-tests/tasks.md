@@ -6,7 +6,7 @@ The phases close the cards of `debt:` with tests, a scenario split, red runs kep
 
 - [x] 1 — The foreign Host, the upload and the CSS guard · moderate
 - [x] 2 — The third format's own scenario · moderate
-- [ ] 3 — The red runs, kept as mutants · moderate
+- [x] 3 — The red runs, kept as mutants · moderate
 - [ ] 4 — The cards that close on a check · moderate
 
 ## 1 — The foreign Host, the upload and the CSS guard
@@ -33,9 +33,9 @@ The phases close the cards of `debt:` with tests, a scenario split, red runs kep
 
 ## 3 — The red runs, kept as mutants
 
-- [ ] 3.1 In `tests/mutants.json`, insert the objects of [the edits](design.md#the-edits) in their order after the object whose `finding` is `P6` and before the one whose `finding` is `VT-14` ([D5](design.md#d5)). Copy each `find` as written.
+- [x] 3.1 In `tests/mutants.json`, insert the objects of [the edits](design.md#the-edits) in their order after the object whose `finding` is `P6` and before the one whose `finding` is `VT-14` ([D5](design.md#d5)). Copy each `find` as written.
   Verify: `git grep -n -E '"finding": "(P6|PD-1|PD-6|VT-14)"' -- tests/mutants.json` prints four lines, in that order.
-- [ ] 3.2 Replay every recorded mutant: each `find` must occur once in its file and each must die. A survivor is killed by an assertion in its named test ([D5](design.md#d5)).
+- [x] 3.2 Replay every recorded mutant: each `find` must occur once in its file and each must die. A survivor is killed by an assertion in its named test ([D5](design.md#d5)).
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
 
 ## 4 — The cards that close on a check
