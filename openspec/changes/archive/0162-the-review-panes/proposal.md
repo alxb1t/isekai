@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.18
 after: [0161-the-sheet-history]
 ---
 

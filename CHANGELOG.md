@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.18] - 2026-11-18
+
+Gate: local 1m9s · CI not read under mf-ship · 0.87.17: local 1m11s · CI not read under mf-ship
+
 - `ui/src/panes.ts` holds `SELECTORS`, what each Review pane holds and where the focus enters it, and `paneOf`, which reads it; steps in the panes' test hold both before the view switches (0162 D1, D2, D4).
 - `Review.vue` imports `paneOf` and `SELECTORS` from `ui/src/panes.ts`, loses its own `paneOf`, and `entry` reads the table; every class and key stays as it was (0162 D3).
 
