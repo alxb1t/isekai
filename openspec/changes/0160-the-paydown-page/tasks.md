@@ -6,7 +6,7 @@ Each late completion of the page becomes a unit its component calls, held by a c
 
 - [x] 1 — The leaving · moderate
 - [x] 2 — The deletion · moderate
-- [ ] 3 — The picker · moderate
+- [x] 3 — The picker · moderate
 - [ ] 4 — The red runs · moderate
 
 ## 1 — The leaving
@@ -33,16 +33,16 @@ Each late completion of the page becomes a unit its component calls, held by a c
 
 ## 3 — The picker
 
-- [ ] 3.1 Create `ui/src/composables/useRemoval.ts` as [D3](design.md#d3) gives it, and `ui/src/composables/useRemoval.test.ts` with `spec('ui:picker:a-dismissed-removal-still-lists-the-rest', …)` as [D5](design.md#d5) says.
+- [x] 3.1 Create `ui/src/composables/useRemoval.ts` as [D3](design.md#d3) gives it, and `ui/src/composables/useRemoval.test.ts` with `spec('ui:picker:a-dismissed-removal-still-lists-the-rest', …)` as [D5](design.md#d5) says.
   Verify: `uv run python -m tools.test_ui ui/src/composables/useRemoval.test.ts` exits 0.
-- [ ] 3.2 In `ui/src/components/TattooPicker.vue` replace `asking`, `question` and `removed` with the `useRemoval` call of [D3](design.md#d3), import `useRemoval`, and drop the `'../confirm'` import line.
+- [x] 3.2 In `ui/src/components/TattooPicker.vue` replace `asking`, `question` and `removed` with the `useRemoval` call of [D3](design.md#d3), import `useRemoval`, and drop the `'../confirm'` import line.
   Verify: `git grep -n -E "reporting|removal\(" -- ui/src/components/TattooPicker.vue` prints nothing.
-- [ ] 3.3 Create `ui/src/composables/useCutInk.ts` as [D4](design.md#d4) gives it, and `ui/src/composables/useCutInk.test.ts` with `spec('ui:picker:a-crop-that-lands-after-leaving-is-dropped', …)` as [D5](design.md#d5) says.
+- [x] 3.3 Create `ui/src/composables/useCutInk.ts` as [D4](design.md#d4) gives it, and `ui/src/composables/useCutInk.test.ts` with `spec('ui:picker:a-crop-that-lands-after-leaving-is-dropped', …)` as [D5](design.md#d5) says.
   Verify: `uv run python -m tools.test_ui ui/src/composables/useCutInk.test.ts` exits 0.
-- [ ] 3.4 In `ui/src/components/CutImage.vue` replace the refs, the `asking` controller, the `gone` flag, `onMounted`'s body and `onUnmounted` with the `useCutInk` call and `onMounted(load)` of [D4](design.md#d4), and drop the imports nothing then reads.
+- [x] 3.4 In `ui/src/components/CutImage.vue` replace the refs, the `asking` controller, the `gone` flag, `onMounted`'s body and `onUnmounted` with the `useCutInk` call and `onMounted(load)` of [D4](design.md#d4), and drop the imports nothing then reads.
   Verify: `git grep -n -E "onUnmounted|AbortController|inkUrl" -- ui/src/components/CutImage.vue` prints nothing.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.5 Hold each new key's binding and the page's ratchet.
+- [x] 3.5 Hold each new key's binding and the page's ratchet.
   Verify: `grep -c -E "^spec\('ui:picker:a-(dismissed-removal|crop)" ui/src/composables/useRemoval.test.ts ui/src/composables/useCutInk.test.ts` prints `1` for each file.
   Verify: `uv run pytest tests/test_spec_bindings.py tests/test_ratchets.py` exits 0.
 
