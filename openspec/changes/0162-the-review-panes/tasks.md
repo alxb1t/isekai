@@ -23,7 +23,7 @@
 - [x] 2.1 In `ui/src/views/Review.vue`, import `paneOf` and `SELECTORS` from `../panes` beside `nextPane`, delete `function paneOf` with its comment, and rewrite `entry` as written in [D3](design.md#d3).
   Verify: `git grep -n "function paneOf" -- ui/src/views/Review.vue` prints nothing.
 - [x] 2.2 Leave `paneNow`, `remember`, `enter`, `movePane` and the view's one `useKeys` call as they are; `paneNow` and `remember` now call the imported `paneOf(`.
-  Verify: `git grep -n -F "paneOf(" -- ui/src/views/Review.vue` prints one line in `paneNow` and one in `remember`.
+  Verify: `git grep -n -F "paneOf(" -- ui/src/views/Review.vue` prints one line in paneNow and one in remember.
 - [x] 2.3 Leave no pane selector that the table holds in `entry`: `rail__card--current` is the table's alone.
   Verify: `git grep -n -F "rail__card--current" -- ui/src/views/Review.vue` prints nothing.
 - [x] 2.4 The view types against the table's exports.
