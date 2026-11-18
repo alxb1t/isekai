@@ -628,6 +628,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Accepts:** the roots, `open_run`, `rendered_at`, the command text and the provenance records stay in `run.py`, because `rendered_at` reads `stage_command`, which reads the patched `RUNS_ROOT`. Review holds that an importer reads the front; no test does. Reopen when `RUNS_ROOT` is no longer patched.
 - **Made by:** `0152`.
 
+### D63 · The wire is declared in shapes.py and held by tests
+
+**Each JSON answer of the UI server is a `TypedDict` in `isekai/interface/ui/shapes.py`; `ANSWERS` maps `"<METHOD> <path template>"`, as `tests/record/routes.json` keys it, to the answer's declaration; `tests/test_ui_shapes.py` holds each against its recorded shape; a handler keeps its annotation and no route passes `response_model`.**
+
+- **Why:** the page's types were written by hand beside the server and drifted; one declaration in Python is a fact a test can hold the server to. FastAPI would validate and serialise an answer by a declared type, so a declaration stays apart from the handlers.
+- **Accepts:** the tattoos', place and rendering tables are declared by the next version, and the page's types are derived from the declarations after it. Reopen when a handler is annotated with a declared type.
+- **Made by:** `0163`.
+
 ## Infrastructure
 
 ### D26 · Renders run on a rented GPU
