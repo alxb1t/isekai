@@ -5,7 +5,7 @@ The sheet's history is pinned by a case on today's `useSheet`, moved into `ui/sr
 ## Progress
 
 - [x] 1 — The pin · moderate
-- [ ] 2 — The module · moderate
+- [x] 2 — The module · moderate
 - [ ] 3 — The switch · moderate
 
 ## 1 — The pin
@@ -19,11 +19,11 @@ The sheet's history is pinned by a case on today's `useSheet`, moved into `ui/sr
 
 ## 2 — The module
 
-- [ ] 2.1 Create `ui/src/edits.ts` as [D1](design.md#d1) gives it, opened by the comment moved from `useSheet.ts`'s docstring.
+- [x] 2.1 Create `ui/src/edits.ts` as [D1](design.md#d1) gives it, opened by the comment moved from `useSheet.ts`'s docstring.
   Verify: `grep -c -E "^export function (held|reloaded|committed|removed|undone|redone)\(" ui/src/edits.ts` prints `6`.
-- [ ] 2.2 Create `ui/src/edits.test.ts` with the case of [D6](design.md#d6): a block for each function and each edge of [D3](design.md#d3).
+- [x] 2.2 Create `ui/src/edits.test.ts` with the case of [D6](design.md#d6): a block for each function and each edge of [D3](design.md#d3).
   Verify: `uv run python -m tools.test_ui ui/src/edits.test.ts` exits 0.
-- [ ] 2.3 Hold the types and the binding of [D6](design.md#d6).
+- [x] 2.3 Hold the types and the binding of [D6](design.md#d6).
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
   Verify: `grep -c -F "ui:save:an-edit-is-undone-and-redone" ui/src/edits.test.ts` prints `1`.
 

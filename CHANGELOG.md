@@ -15,6 +15,7 @@ its new digest.
 - The picker's question about a removal moves into `useRemoval` and a cut card's ink loader into `useCutInk`, which `TattooPicker.vue` and `CutImage.vue` call; a case answers each after the dialog or the card is left (0160 D3, D4, D5).
 - `tests/mutants.json` keeps a red run for each of the four guards, as `PG-1` to `PG-4`; each dies on its own case, and the replay leaves no survivor (0160 D6).
 - A case on `useSheet` holds the sheet's undo and redo, written first on the code as it stands, so the history can move into its own module with a pin under it; the key is `ui:save:an-edit-is-undone-and-redone` (0161 D5).
+- The sheet's history becomes `held`, `reloaded`, `committed`, `removed`, `undone` and `redone` over one immutable state in `ui/src/edits.ts`, with a block in `ui/src/edits.test.ts` for each function and each edge; `useSheet` still holds its own stacks until the switch (0161 D1, D2, D3, D6).
 
 ## [0.87.15] - 2026-11-18
 
