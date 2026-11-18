@@ -6,7 +6,7 @@ The sheet's history is pinned by a case on today's `useSheet`, moved into `ui/sr
 
 - [x] 1 — The pin · moderate
 - [x] 2 — The module · moderate
-- [ ] 3 — The switch · moderate
+- [x] 3 — The switch · moderate
 
 ## 1 — The pin
 
@@ -39,7 +39,7 @@ The sheet's history is pinned by a case on today's `useSheet`, moved into `ui/sr
 - [x] 3.4 Run every browser unit case: each passes with no assertion changed.
   Verify: `uv run python -m tools.test_ui` exits 0.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.5 Hold the bindings, the ratchets, the view and the mutants' file.
+- [x] 3.5 Hold the bindings, the ratchets, the view and the mutants' file.
   Verify: `uv run pytest tests/test_spec_bindings.py tests/test_ratchets.py` exits 0.
   Verify: `git log --format=%h b8c8f39c..HEAD -- ui/src/views/Review.vue tests/mutants.json` prints nothing.
 - [x] 3.6 Replay the mutants: those that name `useSheet.ts` stay red and no edit survives.
