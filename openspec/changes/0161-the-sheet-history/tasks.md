@@ -4,17 +4,17 @@ The sheet's history is pinned by a case on today's `useSheet`, moved into `ui/sr
 
 ## Progress
 
-- [ ] 1 — The pin · moderate
+- [x] 1 — The pin · moderate
 - [ ] 2 — The module · moderate
 - [ ] 3 — The switch · moderate
 
 ## 1 — The pin
 
-- [ ] 1.1 In `ui/src/composables/useSheet.test.ts` add, at the file's end, `spec('ui:save:an-edit-is-undone-and-redone', …)` as [D5](design.md#d5) gives it: a read of `hair` and `eyes`, the steps of its table each saved and read from `calls`, then the sheet opened again.
+- [x] 1.1 In `ui/src/composables/useSheet.test.ts` add, at the file's end, `spec('ui:save:an-edit-is-undone-and-redone', …)` as [D5](design.md#d5) gives it: a read of `hair` and `eyes`, the steps of its table each saved and read from `calls`, then the sheet opened again.
   Verify: `git grep -c -h -F "ui:save:an-edit-is-undone-and-redone" -- ui/src/composables/useSheet.test.ts` prints `1`.
-- [ ] 1.2 **HALT CHECK** Run the case on the code as it stands: it passes with `ui/src/composables/useSheet.ts` unedited. A failure means the history of [D1](design.md#d1) is not today's.
+- [x] 1.2 **HALT CHECK** Run the case on the code as it stands: it passes with `ui/src/composables/useSheet.ts` unedited. A failure means the history of [D1](design.md#d1) is not today's.
   Verify: `uv run python -m tools.test_ui ui/src/composables/useSheet.test.ts` exits 0.
-- [ ] 1.3 Hold the key's binding against the delta.
+- [x] 1.3 Hold the key's binding against the delta.
   Verify: `uv run pytest tests/test_spec_bindings.py` exits 0.
 
 ## 2 — The module
