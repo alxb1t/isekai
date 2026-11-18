@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, expect, vi } from 'vitest'
-import { nextPane, type Pane, paneKeys } from './panes'
+import { nextPane, type Pane, paneKeys, paneOf, SELECTORS } from './panes'
 import { type Press, plain, useKeyStore } from './stores/keys'
 import { spec } from './test/spec'
 
@@ -25,6 +25,11 @@ function press(code: string, ctrl = false): Press {
   return event
 }
 
+/* An element that sits inside each selector in `held`, as `closest` answers for it. */
+function inside(...held: string[]) {
+  return { closest: (selector: string) => (held.includes(selector) ? {} : null) }
+}
+
 spec('ui:keys:review-moves-between-its-panes', () => {
   vi.stubGlobal('navigator', { platform: 'MacIntel' })
   setActivePinia(createPinia())
@@ -47,4 +52,23 @@ spec('ui:keys:review-moves-between-its-panes', () => {
   expect(at).toBe('renders')
   expect(nextPane('renders', 1)).toBe('renders')
   expect(nextPane('rail', -1)).toBe('rail')
+
+  expect(paneOf(inside('.rail'))).toBe('rail')
+  expect(paneOf(inside('.source'))).toBe('source')
+  expect(paneOf(inside('.form'))).toBe('sheet')
+  expect(paneOf(inside('.renders-block', '.form'))).toBe('renders')
+  expect(paneOf(inside('.form'))).toBe('sheet')
+  expect(paneOf(inside())).toBeNull()
+  expect(paneOf(null)).toBeNull()
+
+  expect(SELECTORS).toEqual({
+    rail: { holds: '.rail', entry: '.rail__card--current' },
+    source: { holds: '.source', entry: '.source' },
+    sheet: { holds: '.form', entry: 'input.fragment' },
+    renders: {
+      holds: '.renders-block',
+      entry: '.renders-block',
+      within: 'button:not(:disabled), input',
+    },
+  })
 })

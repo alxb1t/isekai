@@ -4,18 +4,18 @@
 
 ## Progress
 
-- [ ] 1 — The rules · moderate
+- [x] 1 — The rules · moderate
 - [ ] 2 — The switch · moderate
 
 ## 1 — The rules
 
-- [ ] 1.1 In `ui/src/panes.ts`, add `PaneSelectors` and `SELECTORS` below `PANES`, as written in [D1](design.md#d1).
+- [x] 1.1 In `ui/src/panes.ts`, add `PaneSelectors` and `SELECTORS` below `PANES`, as written in [D1](design.md#d1).
   Verify: `git grep -n -F "export const SELECTORS" -- ui/src/panes.ts` prints one line.
-- [ ] 1.2 In `ui/src/panes.ts`, add `NESTED` and `paneOf` below `nextPane`, as written in [D2](design.md#d2).
+- [x] 1.2 In `ui/src/panes.ts`, add `NESTED` and `paneOf` below `nextPane`, as written in [D2](design.md#d2).
   Verify: `git grep -n -F "export function paneOf" -- ui/src/panes.ts` prints one line.
-- [ ] 1.3 In `ui/src/panes.test.ts`, import `paneOf` and `SELECTORS`, add `inside` above the test, and end the one test with the steps of [D4](design.md#d4): one `expect(paneOf(…)).toBe(…)` per row of its table, and the one `expect(SELECTORS).toEqual(…)` step under the table. Keep the test's key and its existing assertions as they are.
+- [x] 1.3 In `ui/src/panes.test.ts`, import `paneOf` and `SELECTORS`, add `inside` above the test, and end the one test with the steps of [D4](design.md#d4): one `expect(paneOf(…)).toBe(…)` per row of its table, and the one `expect(SELECTORS).toEqual(…)` step under the table. Keep the test's key and its existing assertions as they are.
   Verify: `git grep -n -F "paneOf(" -- ui/src/panes.test.ts` prints the steps' lines.
-- [ ] 1.4 The steps pass against the rules of 1.1 and 1.2.
+- [x] 1.4 The steps pass against the rules of 1.1 and 1.2.
   Verify: `uv run python -m tools.test_ui ui/src/panes.test.ts` exits 0.
 
 ## 2 — The switch
