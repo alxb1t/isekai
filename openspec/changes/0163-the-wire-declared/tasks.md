@@ -4,16 +4,16 @@ The phases: a walker proven on its own declarations, the declarations of the hub
 
 ## Progress
 
-- [ ] 1 — The walker · hard
+- [x] 1 — The walker · hard
 - [ ] 2 — Hub, staging and vocabulary · moderate
 - [ ] 3 — Images and reviewing · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The walker
 
-- [ ] 1.1 Create `tests/test_ui_shapes.py`: a module docstring, `faults(declared, sampled, at)` written to the table of [D4](design.md#d4), and `test_the_walker_accepts_what_a_declaration_allows`, which walks a `TypedDict` of the file's own holding every form of the table against a sampled shape that fits it, with `spec_exempt("structural: the walker takes each form a declaration is written in")`.
+- [x] 1.1 Create `tests/test_ui_shapes.py`: a module docstring, `faults(declared, sampled, at)` written to the table of [D4](design.md#d4), and `test_the_walker_accepts_what_a_declaration_allows`, which walks a `TypedDict` of the file's own holding every form of the table against a sampled shape that fits it, with `spec_exempt("structural: the walker takes each form a declaration is written in")`.
   Verify: `uv run pytest tests/test_ui_shapes.py -k accepts` exits 0.
-- [ ] 1.2 In the same file add `test_the_walker_refuses_an_undeclared_key`, `test_the_walker_refuses_a_missing_required_key` and `test_the_walker_refuses_a_wrong_leaf`, each over the file's own declaration, each asserting `faults(...)` is the one line naming the path, each with a `spec_exempt` reason that opens `structural: twin of` and names the accepting case.
+- [x] 1.2 In the same file add `test_the_walker_refuses_an_undeclared_key`, `test_the_walker_refuses_a_missing_required_key` and `test_the_walker_refuses_a_wrong_leaf`, each over the file's own declaration, each asserting `faults(...)` is the one line naming the path, each with a `spec_exempt` reason that opens `structural: twin of` and names the accepting case.
   Verify: `uv run pytest tests/test_ui_shapes.py -k refuses` exits 0.
 
 ## 2 — Hub, staging and vocabulary

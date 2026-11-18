@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `tests/test_ui_shapes.py` holds `faults`, the walker that reads a recorded shape against a declared `TypedDict`, and cases that show it accepts a fit and refuses an undeclared key, a missing required key and a wrong leaf (0163 D4).
+
 ## [0.87.18] - 2026-11-18
 
 Gate: local 1m9s · CI not read under mf-ship · 0.87.17: local 1m11s · CI not read under mf-ship
