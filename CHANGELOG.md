@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - The large view's guard against a late Hub read moves into `useDeletion`, which the view calls; a case holds it with a read answered or refused after the view is left (0160 D1, D5, D7).
+- A render's deletion opens the Hub from its own request, so a dismissed dialog no longer loses the report; a case answers or refuses the request with no dialog (0160 D2, D5).
 
 ## [0.87.15] - 2026-11-18
 

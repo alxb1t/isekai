@@ -5,7 +5,7 @@ Each late completion of the page becomes a unit its component calls, held by a c
 ## Progress
 
 - [x] 1 — The leaving · moderate
-- [ ] 2 — The deletion · moderate
+- [x] 2 — The deletion · moderate
 - [ ] 3 — The picker · moderate
 - [ ] 4 — The red runs · moderate
 
@@ -23,11 +23,11 @@ Each late completion of the page becomes a unit its component calls, held by a c
 
 ## 2 — The deletion
 
-- [ ] 2.1 In `ui/src/composables/useDeletion.ts` add `through` as [D2](design.md#d2) gives it, import `reporting` from `'../confirm'`, and return `{ deleted, through }`.
+- [x] 2.1 In `ui/src/composables/useDeletion.ts` add `through` as [D2](design.md#d2) gives it, import `reporting` from `'../confirm'`, and return `{ deleted, through }`.
   Verify: `grep -c -F "const through" ui/src/composables/useDeletion.ts` prints `1`.
-- [ ] 2.2 In `ui/src/composables/useDeletion.test.ts` add `spec('ui:delete-render:a-dismissed-dialog-still-opens-the-hub', …)` as [D5](design.md#d5) says: `through(remove)()` begun with no dialog, answered, then refused.
+- [x] 2.2 In `ui/src/composables/useDeletion.test.ts` add `spec('ui:delete-render:a-dismissed-dialog-still-opens-the-hub', …)` as [D5](design.md#d5) says: `through(remove)()` begun with no dialog, answered, then refused.
   Verify: `uv run python -m tools.test_ui ui/src/composables/useDeletion.test.ts` exits 0.
-- [ ] 2.3 In `ui/src/views/RenderLarge.vue` take `through` from `useDeletion` in place of `deleted`, pass `:run="through(() => deleteRender(place))"` to the delete `ConfirmDialog` and remove its `@done="deleted"` line ([D2](design.md#d2)).
+- [x] 2.3 In `ui/src/views/RenderLarge.vue` take `through` from `useDeletion` in place of `deleted`, pass `:run="through(() => deleteRender(place))"` to the delete `ConfirmDialog` and remove its `@done="deleted"` line ([D2](design.md#d2)).
   Verify: `git grep -n -F "@done" -- ui/src/views/RenderLarge.vue` prints nothing.
   Verify: `git grep -c -h -F "through(() => deleteRender(place))" -- ui/src/views/RenderLarge.vue` prints `1`.
 

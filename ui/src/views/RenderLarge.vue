@@ -131,7 +131,7 @@ const hubCell = computed(() => ({
 }))
 
 /* The Hub, focused on the deleted render's cell, unless the operator has left this view meanwhile. */
-const { deleted } = useDeletion({
+const { through } = useDeletion({
   reload: () => store.reloadHub(),
   open: () => void router.push(hubCell.value),
 })
@@ -296,9 +296,8 @@ onMounted(async () => {
       marker="delete"
       :title="deletion.title"
       :name="deletion.name"
-      :run="() => deleteRender(place)"
+      :run="through(() => deleteRender(place))"
       @close="deleting = false"
-      @done="deleted"
     />
   </section>
 </template>

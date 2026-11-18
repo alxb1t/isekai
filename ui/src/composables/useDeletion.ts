@@ -1,4 +1,5 @@
 import { onScopeDispose } from 'vue'
+import { reporting } from '../confirm'
 
 /** Return a guard for work that must not finish once the view is left: `begin()` hands back a check
     that holds until the next `begin()` or `drop()`. e.g. `const ok = g.begin(); g.drop(); ok()` -> false */
@@ -25,5 +26,7 @@ export function useDeletion(after: { reload: () => Promise<unknown>; open: () =>
     await after.reload().catch(() => undefined)
     if (still()) after.open()
   }
-  return { deleted }
+  const through = <T>(remove: () => Promise<T>): (() => Promise<T>) =>
+    reporting(remove, () => void deleted())
+  return { deleted, through }
 }
