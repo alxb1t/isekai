@@ -1,18 +1,13 @@
 import { computed, ref } from 'vue'
 import { inputDetail, saveDraft } from '../api'
 import type { Place } from '../api'
+import { committed, held, redone, reloaded, removed, undone } from '../edits'
+import type { Edits } from '../edits'
 import type { Budget, InputDetail, Renders } from '../types'
 
 /* Long enough that a burst of typing is one write rather than ten, short enough
    that the receipt is true by the time the operator looks up from the row. */
 const DEBOUNCE = 400
-
-/** One edit, recorded so it can be taken back. */
-interface Edit {
-  field: string
-  before: string[]
-  after: string[]
-}
 
 /** The whole draft one save sends, and the generation that asked for it. */
 interface Draft {
@@ -27,7 +22,7 @@ interface Queued {
 }
 
 /**
- * The draft under correction: its fields, its autosave, its undo stack.
+ * The draft under correction: its fields, its autosave, its undo history.
  *
  * **The server is the source of truth and there is no Save control anywhere.**
  * Every edit mutates local state and schedules a debounced `PUT` of the whole
@@ -35,11 +30,7 @@ interface Queued {
  * the client clock, because the receipt has to be true. If a Save button ever
  * appears, the design has been broken.
  *
- * **Undo is a stack of edit operations, not sheet snapshots.** It crosses every
- * field and behaves like a text editor's: one commit, one removal or one
- * replacement is one step. It is cleared when the operator changes input,
- * because an undo that reached back into a different photograph would be a
- * surprise rather than a convenience.
+ * The history lives in `ui/src/edits.ts`.
  *
  * One instance serves one collection and one flow; `open` takes the run's digest.
  */
@@ -56,8 +47,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
   const refusal = ref<string | null>(null)
   const loading = ref(true)
 
-  const done: Edit[] = []
-  const undone: Edit[] = []
+  let edits: Edits = held({})
   /* One token per save, never reset: a second save can start before the first
      has answered, and an input switch can land between them. `saving` is true
      exactly while a token is held, whichever order the answers come in. Each
@@ -105,8 +95,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     const mine = (reads += 1)
     dirty = false
     loading.value = true
-    done.length = 0
-    undone.length = 0
+    edits = held(edits.fields)
     let body: InputDetail
     try {
       body = await inputDetail({ ...scope, digest: id })
@@ -123,7 +112,8 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     if (mine !== reads) return
     generation += 1
     detail.value = body
-    fields.value = { ...body.fields }
+    edits = reloaded(edits, body.fields)
+    fields.value = edits.fields
     renders.value = { count: body.renders.count, seeds: [...body.renders.seeds] }
     budget.value = body.budget
     saved.value = body.saved
@@ -251,34 +241,21 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     timer = setTimeout(() => void flush(), DEBOUNCE)
   }
 
-  function apply(edit: Edit): void {
-    fields.value = { ...fields.value, [edit.field]: edit.after }
+  /* Take `next` as the sheet's state: an edit that changed nothing marks nothing and sends nothing. */
+  function take(next: Edits): void {
+    if (next === edits) return
+    edits = next
+    fields.value = next.fields
     dirty = true
     schedule()
   }
 
-  function record(field: string, after: string[]): void {
-    const before = [...(fields.value[field] ?? [])]
-    done.push({ field, before, after })
-    undone.length = 0
-    apply({ field, before, after })
-  }
-
   function commit(field: string, tag: string, replacing: number | null): void {
-    const tags = [...(fields.value[field] ?? [])]
-    // Replacing a selected chip by typing is the single commonest edit in the
-    // job -- three keystrokes, not delete-then-add.
-    if (replacing !== null && replacing >= 0 && replacing < tags.length) tags[replacing] = tag
-    else if (!tags.includes(tag)) tags.push(tag)
-    else return
-    record(field, tags)
+    take(committed(edits, field, tag, replacing))
   }
 
   function remove(field: string, index: number): void {
-    const tags = [...(fields.value[field] ?? [])]
-    if (index < 0 || index >= tags.length) return
-    tags.splice(index, 1)
-    record(field, tags)
+    take(removed(edits, field, index))
   }
 
   /* Replace ④'s count and seeds, saved like any edit. */
@@ -289,17 +266,11 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
   }
 
   function undo(): void {
-    const edit = done.pop()
-    if (!edit) return
-    undone.push(edit)
-    apply({ ...edit, after: edit.before })
+    take(undone(edits))
   }
 
   function redo(): void {
-    const edit = undone.pop()
-    if (!edit) return
-    done.push(edit)
-    apply(edit)
+    take(redone(edits))
   }
 
   return {
