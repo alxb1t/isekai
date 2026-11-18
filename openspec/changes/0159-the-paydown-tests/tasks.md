@@ -7,7 +7,7 @@ The phases close the cards of `debt:` with tests, a scenario split, red runs kep
 - [x] 1 — The foreign Host, the upload and the CSS guard · moderate
 - [x] 2 — The third format's own scenario · moderate
 - [x] 3 — The red runs, kept as mutants · moderate
-- [ ] 4 — The cards that close on a check · moderate
+- [x] 4 — The cards that close on a check · moderate
 
 ## 1 — The foreign Host, the upload and the CSS guard
 
@@ -40,13 +40,13 @@ The phases close the cards of `debt:` with tests, a scenario split, red runs kep
 
 ## 4 — The cards that close on a check
 
-- [ ] 4.1 **HALT CHECK** `0135·S1`: `_patches` in `tests/test_ratchets.py` binds each node in source order before it reads that node's patch, and the twin holds a rebinding ([D6](design.md#d6)). Edit nothing; the card closes at release.
+- [x] 4.1 **HALT CHECK** `0135·S1`: `_patches` in `tests/test_ratchets.py` binds each node in source order before it reads that node's patch, and the twin holds a rebinding ([D6](design.md#d6)). Edit nothing; the card closes at release.
   Verify: `git grep -c -F "for _, _, index in sorted(positioned)" -- tests/test_ratchets.py` prints `tests/test_ratchets.py:1`.
-- [ ] 4.2 `0143·R1`: the archived design of `0143-the-browser-green` is frozen and still says "adds no test and removes none". Edit nothing ([D6](design.md#d6)).
+- [x] 4.2 `0143·R1`: the archived design of `0143-the-browser-green` is frozen and still says "adds no test and removes none". Edit nothing ([D6](design.md#d6)).
   Verify: `git grep -c -F "adds no test and removes none" -- openspec/changes/archive/0143-the-browser-green/design.md` prints `openspec/changes/archive/0143-the-browser-green/design.md:1`.
-- [ ] 4.3 `0144·R1`: the archived design of `0144-one-vitest-file` is frozen and still says "returns each argument with a leading". Edit nothing ([D6](design.md#d6)).
+- [x] 4.3 `0144·R1`: the archived design of `0144-one-vitest-file` is frozen and still says "returns each argument with a leading". Edit nothing ([D6](design.md#d6)).
   Verify: `git grep -c -F "returns each argument with a leading" -- openspec/changes/archive/0144-one-vitest-file/design.md` prints `openspec/changes/archive/0144-one-vitest-file/design.md:1`.
-- [ ] 4.4 `0156·R1`: the archived proposal of `0156-the-version-limit` is frozen and still says "holds the one phase". Edit nothing ([D6](design.md#d6)).
+- [x] 4.4 `0156·R1`: the archived proposal of `0156-the-version-limit` is frozen and still says "holds the one phase". Edit nothing ([D6](design.md#d6)).
   Verify: `git grep -c -F "holds the one phase" -- openspec/changes/archive/0156-the-version-limit/proposal.md` prints `openspec/changes/archive/0156-the-version-limit/proposal.md:1`.
-- [ ] 4.5 No archived file and no product line changed in this change.
+- [x] 4.5 No archived file and no product line changed in this change.
   Verify: `git diff --name-only main...HEAD -- openspec/changes/archive isekai ui/src` prints nothing.
