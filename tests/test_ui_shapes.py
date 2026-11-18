@@ -19,13 +19,15 @@ from typing import (
 import pytest
 
 from isekai.interface.ui.routes.hub import ROUTES as HUB
+from isekai.interface.ui.routes.images import ROUTES as IMAGES
+from isekai.interface.ui.routes.reviewing import ROUTES as REVIEWING
 from isekai.interface.ui.routes.staging import ROUTES as STAGING
 from isekai.interface.ui.routes.vocabulary import ROUTES as VOCABULARY
 from isekai.interface.ui.shapes import ANSWERS
 from tests.record import recorded
 
 LEAVES = (str, int, float, bool)
-TABLES = (HUB, STAGING, VOCABULARY)
+TABLES = (HUB, STAGING, VOCABULARY, IMAGES, REVIEWING)
 
 
 def _dot(at: str, key: str) -> str:

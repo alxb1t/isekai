@@ -6,7 +6,7 @@ The phases: a walker proven on its own declarations, the declarations of the hub
 
 - [x] 1 — The walker · hard
 - [x] 2 — Hub, staging and vocabulary · moderate
-- [ ] 3 — Images and reviewing · moderate
+- [x] 3 — Images and reviewing · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The walker
@@ -29,11 +29,11 @@ The phases: a walker proven on its own declarations, the declarations of the hub
 
 ## 3 — Images and reviewing
 
-- [ ] 3.1 In `shapes.py` add the path constants `RENDER`, `REVIEW` and `COMPARE`, and each class of the [declarations](design.md#declarations) from `Renders` to `Drafts`, a one-line docstring each.
+- [x] 3.1 In `shapes.py` add the path constants `RENDER`, `REVIEW` and `COMPARE`, and each class of the [declarations](design.md#declarations) from `Renders` to `Drafts`, a one-line docstring each.
   Verify: `uv run python -c "from isekai.interface.ui.shapes import InputDetail"` exits 0.
-- [ ] 3.2 In `shapes.py` add the rows of the images and reviewing tables of the [keys table](design.md#declarations) to `ANSWERS`.
+- [x] 3.2 In `shapes.py` add the rows of the images and reviewing tables of the [keys table](design.md#declarations) to `ANSWERS`.
   Verify: `uv run python -c "from isekai.interface.ui.shapes import ANSWERS; print(len(ANSWERS))"` prints `21`.
-- [ ] 3.3 In `tests/test_ui_shapes.py` add the `ROUTES` tuples of `isekai.interface.ui.routes.images` and `.reviewing` to `TABLES` as further items, imported as `from isekai.interface.ui.routes.reviewing import ROUTES as REVIEWING` and its twin for images.
+- [x] 3.3 In `tests/test_ui_shapes.py` add the `ROUTES` tuples of `isekai.interface.ui.routes.images` and `.reviewing` to `TABLES` as further items, imported as `from isekai.interface.ui.routes.reviewing import ROUTES as REVIEWING` and its twin for images.
   Verify: `uv run python -c "from tests.test_ui_shapes import TABLES; print(len(TABLES))"` prints `5`.
 
 ## 4 — The documents
