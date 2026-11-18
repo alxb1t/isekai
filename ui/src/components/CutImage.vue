@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import { type Place, inkView, photoUrl, tattooNamed } from '../api'
-import { inkUrl, thumbCrop } from '../tattoos'
-import type { Outline, Tattoo } from '../types'
+import { useCutInk } from '../composables/useCutInk'
+import { thumbCrop } from '../tattoos'
+import type { Tattoo } from '../types'
 
 /* A cut's card image: the photograph cropped to the outline's box, and once the outline is
    closed the ink view the server draws for it. With no box, or a read that fails, the whole
    photograph stands as before. */
 const props = defineProps<{ place: Place; tattoo: Tattoo }>()
 
-const outline = ref<Outline | null>(null)
-const ink = ref<string | null>(null)
+const { outline, ink, load } = useCutInk({
+  outline: async () => (await tattooNamed(props.place.digest, props.tattoo.name)).outline,
+  ink: (held, signal) => inkView(props.place.collection, props.tattoo.name, held, props.place, signal),
+})
 
 const crop = computed(() => (outline.value ? thumbCrop(outline.value.points, props.tattoo.size) : null))
 const style = computed(() =>
@@ -25,27 +28,7 @@ const style = computed(() =>
     : null,
 )
 
-/* Leaving the picker ends the ink request, and an answer that still lands makes no URL. */
-const asking = new AbortController()
-let gone = false
-
-onMounted(async () => {
-  try {
-    const held = await tattooNamed(props.place.digest, props.tattoo.name)
-    outline.value = held.outline
-    if (!held.outline.closed) return
-    const made = await inkView(props.place.collection, props.tattoo.name, held.outline, props.place, asking.signal)
-    ink.value = inkUrl(made.image, () => gone)
-  } catch {
-    // The card keeps what it shows: the crop, or the whole photograph.
-  }
-})
-
-onUnmounted(() => {
-  gone = true
-  asking.abort()
-  if (ink.value) URL.revokeObjectURL(ink.value)
-})
+onMounted(load)
 </script>
 
 <template>
