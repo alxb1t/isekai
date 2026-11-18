@@ -87,4 +87,13 @@ spec('ui:delete-render:a-dismissed-dialog-still-opens-the-hub', async () => {
   await afterTheRead()
   expect(refused.opened).toEqual([])
   refused.scope.stop()
+
+  // The view is left while the request runs: the request that answers afterwards opens nothing.
+  const left = deleting()
+  const third = left.run()
+  left.scope.stop()
+  left.answer()
+  expect(await third).toBe('gone')
+  await afterTheRead()
+  expect(left.opened).toEqual([])
 })

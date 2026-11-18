@@ -1,3 +1,4 @@
+import { effectScope } from 'vue'
 import { expect } from 'vitest'
 import { spec } from '../test/spec'
 import { useRemoval } from './useRemoval'
@@ -12,8 +13,11 @@ function removing() {
       refuse = () => reject(new Error('refused'))
     })
   const told: string[] = []
-  const { asking, question } = useRemoval({ remove, removed: (name) => void told.push(name) })
-  return { asking, question, told, answer: () => answer(), refuse: () => refuse() }
+  const scope = effectScope()
+  const { asking, question } = scope.run(() =>
+    useRemoval({ remove, removed: (name) => void told.push(name) }),
+  )!
+  return { scope, asking, question, told, answer: () => answer(), refuse: () => refuse() }
 }
 
 spec('ui:picker:a-dismissed-removal-still-lists-the-rest', async () => {
@@ -26,6 +30,7 @@ spec('ui:picker:a-dismissed-removal-still-lists-the-rest', async () => {
   expect(await first).toBe('gone')
   expect(answered.told).toEqual(['bow'])
   expect(answered.asking.value).toBeNull()
+  answered.scope.stop()
 
   // A refusal tells nothing and is thrown on, for the dialog to show while it stays.
   const refused = removing()
@@ -35,6 +40,7 @@ spec('ui:picker:a-dismissed-removal-still-lists-the-rest', async () => {
   refused.refuse()
   await expect(second).rejects.toThrow('refused')
   expect(refused.told).toEqual([])
+  refused.scope.stop()
 
   // The dialog stays: the answer tells the picker once and closes the question.
   const kept = removing()
@@ -44,4 +50,5 @@ spec('ui:picker:a-dismissed-removal-still-lists-the-rest', async () => {
   await third
   expect(kept.told).toEqual(['bow'])
   expect(kept.asking.value).toBeNull()
+  kept.scope.stop()
 })
