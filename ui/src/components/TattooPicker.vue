@@ -14,7 +14,7 @@ import {
   stageFile,
   versionOf,
 } from '../api'
-import { removal, reporting } from '../confirm'
+import { useRemoval } from '../composables/useRemoval'
 import type { Step } from '../stages'
 import { useLiveStore } from '../stores/live'
 import { card, formLine, refusalField, uploadName } from '../tattoos'
@@ -183,24 +183,10 @@ const cards = computed(() =>
   }),
 )
 
-/* The tattoo *Remove* was pressed on, while the dialog asks about it. */
-const asking = ref<string | null>(null)
-const question = computed(() => {
-  const name = asking.value
-  return name === null
-    ? null
-    : {
-        ...removal(name),
-        run: reporting(() => removeTattoo(props.place.digest, name), () => removed(name)),
-      }
+const { asking, question } = useRemoval({
+  remove: (name) => removeTattoo(props.place.digest, name),
+  removed: (name) => emit('removed', name),
 })
-
-/* The picker is told of a removal by its own request, not through the dialog: a dialog dismissed
-   while the request ran is gone when it settles, and the tattoo is still removed. */
-function removed(name: string): void {
-  if (asking.value === name) asking.value = null
-  emit('removed', name)
-}
 
 const flagRefusal = ref<{ name: string; reason: string } | null>(null)
 

@@ -775,5 +775,41 @@
     "replace": "  if (false)",
     "tests": ["ui/src/api.test.ts"],
     "why": "a preview answer without its box header draws at NaN"
+  },
+  {
+    "finding": "PG-1",
+    "runner": "vitest",
+    "path": "ui/src/composables/useDeletion.ts",
+    "find": "  onScopeDispose(leaving.drop)\n",
+    "replace": "",
+    "tests": ["ui/src/composables/useDeletion.test.ts"],
+    "why": "a reload that lands after the view is left opens the Hub"
+  },
+  {
+    "finding": "PG-2",
+    "runner": "vitest",
+    "path": "ui/src/composables/useDeletion.ts",
+    "find": "    reporting(remove, () => void deleted())\n",
+    "replace": "    remove\n",
+    "tests": ["ui/src/composables/useDeletion.test.ts"],
+    "why": "a deletion whose dialog is dismissed never opens the Hub"
+  },
+  {
+    "finding": "PG-3",
+    "runner": "vitest",
+    "path": "ui/src/composables/useRemoval.ts",
+    "find": "run: reporting(() => page.remove(name), () => removed(name)),",
+    "replace": "run: () => page.remove(name),",
+    "tests": ["ui/src/composables/useRemoval.test.ts"],
+    "why": "a removal whose dialog is dismissed leaves the tattoo on the picker"
+  },
+  {
+    "finding": "PG-4",
+    "runner": "vitest",
+    "path": "ui/src/composables/useCutInk.ts",
+    "find": "ink.value = inkUrl(made.image, () => gone)",
+    "replace": "ink.value = inkUrl(made.image, () => false)",
+    "tests": ["ui/src/composables/useCutInk.test.ts"],
+    "why": "an ink view that lands after the card is left leaks its object URL"
   }
 ]

@@ -10,6 +10,15 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.16] - 2026-11-18
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.15: local 1m13s · CI not read under mf-ship
+
+- The large view's guard against a late Hub read moves into `useDeletion`, which the view calls; a case holds it with a read answered or refused after the view is left (0160 D1, D5, D7).
+- A render's deletion opens the Hub from its own request, so a dismissed dialog no longer loses the report; a case answers or refuses the request with no dialog (0160 D2, D5).
+- The picker's question about a removal moves into `useRemoval` and a cut card's ink loader into `useCutInk`, which `TattooPicker.vue` and `CutImage.vue` call; a case answers each after the dialog or the card is left (0160 D3, D4, D5).
+- `tests/mutants.json` keeps a red run for each of the four guards, as `PG-1` to `PG-4`; each dies on its own case, and the replay leaves no survivor (0160 D6).
+
 ## [0.87.15] - 2026-11-18
 
 Gate: local 1m13s · CI not read under mf-ship · 0.87.14: local 1m7s · CI not read under mf-ship
