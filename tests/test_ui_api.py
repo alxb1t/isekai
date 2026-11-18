@@ -42,6 +42,7 @@ pytest.importorskip("fastapi")
 
 from fastapi import FastAPI, Response  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from starlette.requests import Request  # noqa: E402
 
 import isekai.foundation.run as run_module  # noqa: E402
 import isekai.interface.render as render_module  # noqa: E402
@@ -265,6 +266,12 @@ def test_a_request_carrying_someone_elses_host_is_refused(
     assert answered.status_code == 403
     assert answered.json() == {"refusal": "not addressed here"}
     assert snapshot(made.path) == before
+
+    # The guard holds on every method: a read of an artifact is refused too.
+    looked = client.get(_at(made), headers={"host": f"evil.example:{PORT}"})
+
+    assert looked.status_code == 403
+    assert looked.json() == {"refusal": "not addressed here"}
 
 
 @pytest.mark.spec("ui:address:another-origin-is-refused")
@@ -727,8 +734,12 @@ def test_an_upload_past_its_declared_length_is_refused_before_its_body_is_read(
     def handed(*_args: object, **_keywords: object) -> dict[str, Any]:
         raise AssertionError("the body was handed to the reader")
 
+    def unread(*_args: object, **_keywords: object) -> bytes:
+        raise AssertionError("the request's body was read")
+
     monkeypatch.setattr(importing_module, "upload_limit", lambda *a, **k: 1024 * 1024)
     monkeypatch.setattr(importing_module.Reader, "put", handed)
+    monkeypatch.setattr(Request, "body", unread)
     client = _client(wired, made, tmp_path)
     staged = client.post("/api/staging").json()["id"]
 

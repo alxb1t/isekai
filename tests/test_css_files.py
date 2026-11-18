@@ -13,18 +13,21 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 IMPORT = re.compile(r"^import '\./css/([\w-]+\.css)'$", re.MULTILINE)
+COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
 
 
 def css_faults(root: Path) -> list[str]:
     """Return the faults of the css imports, sorted.
 
     A fault is a file of `ui/src/css/` imported other than once, or an import
-    naming a file that is missing.
+    naming a file that is missing. A comment is no import.
 
     e.g. `["place.css imported 0 times"]`
     """
     source = root / "ui" / "src"
-    imported = Counter(IMPORT.findall((source / "main.ts").read_text()))
+    imported = Counter(
+        IMPORT.findall(COMMENT.sub("", (source / "main.ts").read_text()))
+    )
     present = {path.name for path in (source / "css").glob("*.css")}
     faults = [
         f"{name} imported {imported[name]} times"
@@ -75,3 +78,18 @@ def test_the_check_catches_an_unimported_css_file(tmp_path: Path) -> None:
     missing = tmp_path / "missing"
     _tree(missing, CLEAN + "import './css/gone.css'\n")
     assert css_faults(missing) == ["gone.css imported but missing"]
+
+    commented = tmp_path / "commented"
+    _tree(
+        commented,
+        "import './css/a.css'\n/*\nimport './css/b.css'\n*/\nimport './css/c.css'\n",
+    )
+    assert css_faults(commented) == ["b.css imported 0 times"]
+
+    after_a_line = tmp_path / "after_a_line"
+    _tree(
+        after_a_line,
+        "import './css/a.css'\n// the old /* header\n"
+        "import './css/b.css'\nimport './css/c.css'\n",
+    )
+    assert css_faults(after_a_line) == []

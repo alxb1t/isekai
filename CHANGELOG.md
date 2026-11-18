@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- The foreign-Host test reads an artifact as well as writes one, the upload test makes `Request.body` raise, and the CSS guard of `tests/test_css_files.py` drops comments before it counts imports, with a twin case for each comment form (0159 D1, D2, D3).
+
 ## [0.87.14] - 2026-11-17
 
 Gate: local 1m7s · CI not read under mf-ship · 0.87.13: local 1m11s · CI not read under mf-ship

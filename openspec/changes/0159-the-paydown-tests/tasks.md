@@ -4,24 +4,24 @@ The phases close the cards of `debt:` with tests, a scenario split, red runs kep
 
 ## Progress
 
-- [ ] 1 — The foreign Host, the upload and the CSS guard · moderate
+- [x] 1 — The foreign Host, the upload and the CSS guard · moderate
 - [ ] 2 — The third format's own scenario · moderate
 - [ ] 3 — The red runs, kept as mutants · moderate
 - [ ] 4 — The cards that close on a check · moderate
 
 ## 1 — The foreign Host, the upload and the CSS guard
 
-- [ ] 1.1 In `tests/test_ui_api.py`, at the end of `test_a_request_carrying_someone_elses_host_is_refused`, add `looked = client.get(_at(made), headers={"host": f"evil.example:{PORT}"})`, then `assert looked.status_code == 403` and `assert looked.json() == {"refusal": "not addressed here"}` ([D1](design.md#d1)). Its name, key and lines stay.
+- [x] 1.1 In `tests/test_ui_api.py`, at the end of `test_a_request_carrying_someone_elses_host_is_refused`, add `looked = client.get(_at(made), headers={"host": f"evil.example:{PORT}"})`, then `assert looked.status_code == 403` and `assert looked.json() == {"refusal": "not addressed here"}` ([D1](design.md#d1)). Its name, key and lines stay.
   Verify: `git grep -n -F "looked = client.get(_at(made), headers=" -- tests/test_ui_api.py` prints one line.
-- [ ] 1.2 In `tests/test_ui_api.py`, add `from starlette.requests import Request  # noqa: E402` after the `TestClient` import ([D2](design.md#d2)). In `test_an_upload_past_its_declared_length_is_refused_before_its_body_is_read`, define `unread(*_args: object, **_keywords: object) -> bytes`, which raises `AssertionError("the request's body was read")`, and add `monkeypatch.setattr(Request, "body", unread)` after the patch of `Reader.put`. Its other patches and assertions stay.
+- [x] 1.2 In `tests/test_ui_api.py`, add `from starlette.requests import Request  # noqa: E402` after the `TestClient` import ([D2](design.md#d2)). In `test_an_upload_past_its_declared_length_is_refused_before_its_body_is_read`, define `unread(*_args: object, **_keywords: object) -> bytes`, which raises `AssertionError("the request's body was read")`, and add `monkeypatch.setattr(Request, "body", unread)` after the patch of `Reader.put`. Its other patches and assertions stay.
   Verify: `git grep -n -F 'monkeypatch.setattr(Request, "body", unread)' -- tests/test_ui_api.py` prints one line.
-- [ ] 1.3 In `tests/test_css_files.py`, after the `missing` block of `test_the_check_catches_an_unimported_css_file`, add the trees `commented` and `after_a_line`, each built by `_tree`: `commented`, whose `main.ts` is `"import './css/a.css'\n/*\nimport './css/b.css'\n*/\nimport './css/c.css'\n"`, asserted `css_faults(commented) == ["b.css imported 0 times"]`; and `after_a_line`, whose `main.ts` is `"import './css/a.css'\n// the old /* header\nimport './css/b.css'\nimport './css/c.css'\n"`, asserted `css_faults(after_a_line) == []` ([D3](design.md#d3)).
+- [x] 1.3 In `tests/test_css_files.py`, after the `missing` block of `test_the_check_catches_an_unimported_css_file`, add the trees `commented` and `after_a_line`, each built by `_tree`: `commented`, whose `main.ts` is `"import './css/a.css'\n/*\nimport './css/b.css'\n*/\nimport './css/c.css'\n"`, asserted `css_faults(commented) == ["b.css imported 0 times"]`; and `after_a_line`, whose `main.ts` is `"import './css/a.css'\n// the old /* header\nimport './css/b.css'\nimport './css/c.css'\n"`, asserted `css_faults(after_a_line) == []` ([D3](design.md#d3)).
   Verify: `git grep -n -F "css_faults(commented)" -- tests/test_css_files.py` prints one line.
-- [ ] 1.4 **HALT CHECK** Run the twin against today's guard: `uv run pytest tests/test_css_files.py` must fail in `test_the_check_catches_an_unimported_css_file` on the `commented` case, `[]` found where `["b.css imported 0 times"]` is expected. A pass means the case misses its card: halt. Keep the failing assertion line for the commit body.
+- [x] 1.4 **HALT CHECK** Run the twin against today's guard: `uv run pytest tests/test_css_files.py` must fail in `test_the_check_catches_an_unimported_css_file` on the `commented` case, `[]` found where `["b.css imported 0 times"]` is expected. A pass means the case misses its card: halt. Keep the failing assertion line for the commit body.
   Verify: `git grep -n -F "assert css_faults(commented)" -- tests/test_css_files.py` prints one line.
-- [ ] 1.5 In `tests/test_css_files.py`, add `COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)` after `IMPORT`, and make `css_faults` count `IMPORT.findall(COMMENT.sub("", (source / "main.ts").read_text()))`. Add "A comment is no import." to its docstring ([D3](design.md#d3)).
+- [x] 1.5 In `tests/test_css_files.py`, add `COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)` after `IMPORT`, and make `css_faults` count `IMPORT.findall(COMMENT.sub("", (source / "main.ts").read_text()))`. Add "A comment is no import." to its docstring ([D3](design.md#d3)).
   Verify: `uv run pytest tests/test_css_files.py` exits 0.
-- [ ] 1.6 Prove the edited tests, the scanner and the bindings.
+- [x] 1.6 Prove the edited tests, the scanner and the bindings.
   Verify: `uv run pytest tests/test_ui_api.py tests/test_css_files.py tests/test_ratchets.py tests/test_spec_bindings.py` exits 0.
 
 ## 2 — The third format's own scenario
