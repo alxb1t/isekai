@@ -345,3 +345,47 @@ spec('ui:save:the-newest-read-of-a-sheet-is-the-one-that-lands', async () => {
   expect(save.url).toBe('/api/c/b/review/b/f/draft')
   expect(JSON.parse(String(save.init?.body)).fields.hair).toEqual(['long hair', 'brown hair'])
 })
+
+spec('ui:save:an-edit-is-undone-and-redone', async () => {
+  const read = { ...detail('a', 10), fields: { hair: ['long hair'], eyes: ['blue eyes'] } }
+  const sheet = useSheet({ collection: 'b', flow: 'f' })
+  const opened = sheet.open('a')
+  await answer('/api/c/b/review/a/f', read)
+  await opened
+
+  async function saved(receiptAt: number): Promise<Record<string, string[]>> {
+    void sheet.flush()
+    expect(calls).toHaveLength(1)
+    const [put] = calls
+    expect(put.init?.method).toBe('PUT')
+    const sent = JSON.parse(String(put.init?.body)).fields
+    await answer('/api/c/b/review/a/f/draft', receipt(receiptAt))
+    expect(sheet.saved.value).toBe(receiptAt)
+    return sent
+  }
+
+  sheet.commit('hair', 'brown hair', null)
+  expect(await saved(11)).toEqual({ hair: ['long hair', 'brown hair'], eyes: ['blue eyes'] })
+
+  sheet.remove('eyes', 0)
+  expect(await saved(12)).toEqual({ hair: ['long hair', 'brown hair'], eyes: [] })
+
+  sheet.undo()
+  expect(await saved(13)).toEqual({ hair: ['long hair', 'brown hair'], eyes: ['blue eyes'] })
+
+  sheet.undo()
+  expect(await saved(14)).toEqual({ hair: ['long hair'], eyes: ['blue eyes'] })
+
+  sheet.redo()
+  expect(await saved(15)).toEqual({ hair: ['long hair', 'brown hair'], eyes: ['blue eyes'] })
+
+  // Opened again, the history is clear: an undo and a redo change nothing and send nothing.
+  const again = sheet.open('a')
+  await answer('/api/c/b/review/a/f', read)
+  await again
+  sheet.undo()
+  sheet.redo()
+  await vi.runAllTimersAsync()
+  expect(calls).toHaveLength(0)
+  expect(sheet.fields.value).toEqual(read.fields)
+})
