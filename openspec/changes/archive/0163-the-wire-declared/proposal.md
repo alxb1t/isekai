@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.19
 ---
 
 # The wire declared
