@@ -4,20 +4,20 @@ Each late completion of the page becomes a unit its component calls, held by a c
 
 ## Progress
 
-- [ ] 1 — The leaving · moderate
+- [x] 1 — The leaving · moderate
 - [ ] 2 — The deletion · moderate
 - [ ] 3 — The picker · moderate
 - [ ] 4 — The red runs · moderate
 
 ## 1 — The leaving
 
-- [ ] 1.1 Create `ui/src/composables/useDeletion.ts` as [D1](design.md#d1) gives it: `latest` moved whole from `ui/src/views/RenderLarge.vue`, and `useDeletion`, which returns `{ deleted }`.
+- [x] 1.1 Create `ui/src/composables/useDeletion.ts` as [D1](design.md#d1) gives it: `latest` moved whole from `ui/src/views/RenderLarge.vue`, and `useDeletion`, which returns `{ deleted }`.
   Verify: `grep -c -F "export function useDeletion" ui/src/composables/useDeletion.ts` prints `1`.
-- [ ] 1.2 Create `ui/src/composables/useDeletion.test.ts` with `spec('ui:delete-render:a-reload-that-lands-after-leaving-moves-nothing', …)` as [D5](design.md#d5) says: scope stopped before the read answers, answered and refused, then the scope kept.
+- [x] 1.2 Create `ui/src/composables/useDeletion.test.ts` with `spec('ui:delete-render:a-reload-that-lands-after-leaving-moves-nothing', …)` as [D5](design.md#d5) says: scope stopped before the read answers, answered and refused, then the scope kept.
   Verify: `uv run python -m tools.test_ui ui/src/composables/useDeletion.test.ts` exits 0.
-- [ ] 1.3 In `ui/src/views/RenderLarge.vue` delete the plain `<script lang="ts">` block, and replace `leaving`, `onUnmounted(leaving.drop)` and `deleted` with the `useDeletion` call of [D1](design.md#d1). Import `useDeletion` from `'../composables/useDeletion'` and drop `onUnmounted` from the `'vue'` import.
+- [x] 1.3 In `ui/src/views/RenderLarge.vue` delete the plain `<script lang="ts">` block, and replace `leaving`, `onUnmounted(leaving.drop)` and `deleted` with the `useDeletion` call of [D1](design.md#d1). Import `useDeletion` from `'../composables/useDeletion'` and drop `onUnmounted` from the `'vue'` import.
   Verify: `git grep -n -F "onUnmounted" -- ui/src/views/RenderLarge.vue` prints nothing.
-- [ ] 1.4 In `ui/src/views/RenderLarge.test.ts` change the import line to `import { latest } from '../composables/useDeletion'` and nothing else ([D7](design.md#d7)).
+- [x] 1.4 In `ui/src/views/RenderLarge.test.ts` change the import line to `import { latest } from '../composables/useDeletion'` and nothing else ([D7](design.md#d7)).
   Verify: `uv run python -m tools.test_ui ui/src/views/RenderLarge.test.ts` exits 0.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
 

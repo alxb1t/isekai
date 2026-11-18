@@ -1,22 +1,5 @@
-<script lang="ts">
-/** Return a guard for work that must not finish once the view is left: `begin()` hands back a check
-    that holds until the next `begin()` or `drop()`. e.g. `const ok = g.begin(); g.drop(); ok()` -> false */
-export function latest(): { begin: () => () => boolean; drop: () => void } {
-  let current = 0
-  return {
-    begin: () => {
-      const mine = ++current
-      return () => mine === current
-    },
-    drop: () => {
-      current += 1
-    },
-  }
-}
-</script>
-
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   bakeAt,
@@ -37,6 +20,7 @@ import DraftDialog from '../components/DraftDialog.vue'
 import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { deletion } from '../confirm'
+import { useDeletion } from '../composables/useDeletion'
 import { useKeys } from '../composables/useKeys'
 import { useCollectionStore } from '../stores/collection'
 import { plain, shifted } from '../stores/keys'
@@ -146,15 +130,11 @@ const hubCell = computed(() => ({
   state: { cell: { digest: props.digest, flow: props.flow } },
 }))
 
-/* The hub is read again first, so the Hub draws without the deleted render; a refusal opens it all the same.
-   The Hub, focused on the deleted render's cell, unless the operator has left this view meanwhile. */
-const leaving = latest()
-onUnmounted(leaving.drop)
-async function deleted(): Promise<void> {
-  const still = leaving.begin()
-  await store.reloadHub().catch(() => undefined)
-  if (still()) void router.push(hubCell.value)
-}
+/* The Hub, focused on the deleted render's cell, unless the operator has left this view meanwhile. */
+const { deleted } = useDeletion({
+  reload: () => store.reloadHub(),
+  open: () => void router.push(hubCell.value),
+})
 
 useKeys('screen', [
   { id: 'previous', keys: plain('KeyH', 'ArrowLeft'), label: 'previous image', run: () => step(-1) },

@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- The large view's guard against a late Hub read moves into `useDeletion`, which the view calls; a case holds it with a read answered or refused after the view is left (0160 D1, D5, D7).
+
 ## [0.87.15] - 2026-11-18
 
 Gate: local 1m13s · CI not read under mf-ship · 0.87.14: local 1m7s · CI not read under mf-ship

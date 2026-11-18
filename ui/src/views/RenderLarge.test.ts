@@ -1,6 +1,6 @@
 import { expect } from 'vitest'
 import { spec } from '../test/spec'
-import { latest } from './RenderLarge.vue'
+import { latest } from '../composables/useDeletion'
 
 spec('ui:delete-render:the-hub-opens-without-the-deleted-render', async () => {
   // The post-deletion Hub read is pending, the operator leaves, then the read ends: no push.
