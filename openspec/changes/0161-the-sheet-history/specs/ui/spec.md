@@ -88,5 +88,6 @@ flight, only the newest SHALL land, so an older read answering late never replac
 - **Key:** `ui:save:an-edit-is-undone-and-redone`
 - **Layers:** unit
 - **WHEN** a tag is added in one field, a tag is removed in another, and the operator undoes twice and redoes once
-- **THEN** each undo and each redo is saved as an edit, the draft holding the removal taken back, then the addition taken back, then the addition again
+- **THEN** each undo and each redo is saved as an edit
+- **AND** the draft holds the removal taken back, then the addition taken back, then the addition again
 - **AND** an undo or a redo with nothing to take back, as after the sheet is opened again, changes and sends nothing
