@@ -5,7 +5,7 @@
 ## Progress
 
 - [x] 1 — The rules · moderate
-- [ ] 2 — The switch · moderate
+- [x] 2 — The switch · moderate
 
 ## 1 — The rules
 
@@ -20,13 +20,13 @@
 
 ## 2 — The switch
 
-- [ ] 2.1 In `ui/src/views/Review.vue`, import `paneOf` and `SELECTORS` from `../panes` beside `nextPane`, delete `function paneOf` with its comment, and rewrite `entry` as written in [D3](design.md#d3).
+- [x] 2.1 In `ui/src/views/Review.vue`, import `paneOf` and `SELECTORS` from `../panes` beside `nextPane`, delete `function paneOf` with its comment, and rewrite `entry` as written in [D3](design.md#d3).
   Verify: `git grep -n "function paneOf" -- ui/src/views/Review.vue` prints nothing.
-- [ ] 2.2 Leave `paneNow`, `remember`, `enter`, `movePane` and the view's one `useKeys` call as they are; `paneNow` and `remember` now call the imported `paneOf(`.
+- [x] 2.2 Leave `paneNow`, `remember`, `enter`, `movePane` and the view's one `useKeys` call as they are; `paneNow` and `remember` now call the imported `paneOf(`.
   Verify: `git grep -n -F "paneOf(" -- ui/src/views/Review.vue` prints one line in `paneNow` and one in `remember`.
-- [ ] 2.3 Leave no pane selector that the table holds in `entry`: `rail__card--current` is the table's alone.
+- [x] 2.3 Leave no pane selector that the table holds in `entry`: `rail__card--current` is the table's alone.
   Verify: `git grep -n -F "rail__card--current" -- ui/src/views/Review.vue` prints nothing.
-- [ ] 2.4 The view types against the table's exports.
+- [x] 2.4 The view types against the table's exports.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.5 Run `tests/test_spec_bindings.py` and `tests/test_ratchets.py` unchanged: the scenario's binding stands, and the page's table stays empty with `Review.vue` shorter.
+- [x] 2.5 Run `tests/test_spec_bindings.py` and `tests/test_ratchets.py` unchanged: the scenario's binding stands, and the page's table stays empty with `Review.vue` shorter.
   Verify: `uv run pytest tests/test_spec_bindings.py tests/test_ratchets.py` exits 0.

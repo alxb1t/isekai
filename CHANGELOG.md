@@ -18,6 +18,7 @@ its new digest.
 - The sheet's history becomes `held`, `reloaded`, `committed`, `removed`, `undone` and `redone` over one immutable state in `ui/src/edits.ts`, with a block in `ui/src/edits.test.ts` for each function and each edge; `useSheet` still holds its own stacks until the switch (0161 D1, D2, D3, D6).
 - `useSheet` holds one `edits` state and calls the module through `take`, which marks the draft and schedules a save only when the state changed; `open` clears the history with `held` and lands the read with `reloaded`, and no assertion moves (0161 D4, D7).
 - `ui/src/panes.ts` holds `SELECTORS`, what each Review pane holds and where the focus enters it, and `paneOf`, which reads it; steps in the panes' test hold both before the view switches (0162 D1, D2, D4).
+- `Review.vue` imports `paneOf` and `SELECTORS` from `ui/src/panes.ts`, loses its own `paneOf`, and `entry` reads the table; every class and key stays as it was (0162 D3).
 
 ## [0.87.15] - 2026-11-18
 
