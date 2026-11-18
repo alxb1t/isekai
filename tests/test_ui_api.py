@@ -2328,6 +2328,7 @@ def test_a_source_thumbnail_is_turned_upright_and_read_from_the_cache_again(
 
 
 @pytest.mark.spec("ui:renders:a-photograph-is-served-as-its-bytes")
+@pytest.mark.spec("ui:renders:a-photograph-in-a-third-format-is-refused")
 def test_a_source_named_as_a_page_is_served_as_the_image_it_is(
     client: TestClient, made: Run, tmp_path: Path
 ) -> None:

@@ -5,7 +5,7 @@ The phases close the cards of `debt:` with tests, a scenario split, red runs kep
 ## Progress
 
 - [x] 1 — The foreign Host, the upload and the CSS guard · moderate
-- [ ] 2 — The third format's own scenario · moderate
+- [x] 2 — The third format's own scenario · moderate
 - [ ] 3 — The red runs, kept as mutants · moderate
 - [ ] 4 — The cards that close on a check · moderate
 
@@ -26,9 +26,9 @@ The phases close the cards of `debt:` with tests, a scenario split, red runs kep
 
 ## 2 — The third format's own scenario
 
-- [ ] 2.1 In `tests/test_ui_api.py`, above `test_a_source_named_as_a_page_is_served_as_the_image_it_is`, below its existing marker, add `@pytest.mark.spec("ui:renders:a-photograph-in-a-third-format-is-refused")`. No assertion changes ([D4](design.md#d4)).
+- [x] 2.1 In `tests/test_ui_api.py`, above `test_a_source_named_as_a_page_is_served_as_the_image_it_is`, below its existing marker, add `@pytest.mark.spec("ui:renders:a-photograph-in-a-third-format-is-refused")`. No assertion changes ([D4](design.md#d4)).
   Verify: `git grep -c -F "ui:renders:a-photograph-in-a-third-format-is-refused" -- tests/test_ui_api.py` prints `tests/test_ui_api.py:1`.
-- [ ] 2.2 Prove the new key against this change's delta `specs/ui/spec.md`, the scenario prose and the bindings.
+- [x] 2.2 Prove the new key against this change's delta `specs/ui/spec.md`, the scenario prose and the bindings.
   Verify: `uv run pytest tests/test_spec_bindings.py tests/test_spec_prose.py tests/test_ui_api.py` exits 0.
 
 ## 3 — The red runs, kept as mutants

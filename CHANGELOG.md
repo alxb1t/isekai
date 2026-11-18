@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - The foreign-Host test reads an artifact as well as writes one, the upload test makes `Request.body` raise, and the CSS guard of `tests/test_css_files.py` drops comments before it counts imports, with a twin case for each comment form (0159 D1, D2, D3).
+- The refused third format is a scenario of its own in the ui spec, taken from the AND of the scenario that serves a photograph as its bytes, and its test carries the key (0159 D4).
 
 ## [0.87.14] - 2026-11-17
 
