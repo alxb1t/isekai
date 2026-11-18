@@ -174,7 +174,7 @@ kept tattoos      │ each card: its image, name, state, source, Remove
 #### Scenario: a dismissed removal still lists the rest
 - **Key:** `ui:picker:a-dismissed-removal-still-lists-the-rest`
 - **Layers:** unit
-- **WHEN** *Yes* is pressed on a tattoo's removal, the dialog is dismissed before the request answers, and the removal succeeds
+- **WHEN** *Yes* is pressed on a tattoo, the dialog is dismissed before the removal answers, and the removal succeeds
 - **THEN** the picker is told the tattoo is removed, so the list is read again without it
 - **AND** a removal that is refused tells it nothing
 
