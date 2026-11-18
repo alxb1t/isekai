@@ -7,7 +7,7 @@ The phases: a walker proven on its own declarations, the declarations of the hub
 - [x] 1 — The walker · hard
 - [x] 2 — Hub, staging and vocabulary · moderate
 - [x] 3 — Images and reviewing · moderate
-- [ ] 4 — The documents · moderate
+- [x] 4 — The documents · moderate
 
 ## 1 — The walker
 
@@ -38,7 +38,7 @@ The phases: a walker proven on its own declarations, the declarations of the hub
 
 ## 4 — The documents
 
-- [ ] 4.1 In `isekai/interface/README.md` add a row to the *Files* table after the `ui/surface.py` row: ``| `ui/shapes.py` | each JSON answer of the hub, staging, images, vocabulary and review routes as a `TypedDict`, and `ANSWERS`, keyed as `tests/record/routes.json` is; a test holds each against its record and no route reads it. **Imports no web framework** |``.
+- [x] 4.1 In `isekai/interface/README.md` add a row to the *Files* table after the `ui/surface.py` row: ``| `ui/shapes.py` | each JSON answer of the hub, staging, images, vocabulary and review routes as a `TypedDict`, and `ANSWERS`, keyed as `tests/record/routes.json` is; a test holds each against its record and no route reads it. **Imports no web framework** |``.
   Verify: `git grep -c -F 'ui/shapes.py' -- isekai/interface/README.md` prints `isekai/interface/README.md:1`.
-- [ ] 4.2 In `docs/decisions.md` add D63 after D62 and before `## Infrastructure`, headed `### D63 · The wire is declared in shapes.py and held by tests`, written as D62 is: the rule in bold, then the bullets **Why**, **Accepts** and **Made by**, each as [D8](design.md#d8) gives it.
+- [x] 4.2 In `docs/decisions.md` add D63 after D62 and before `## Infrastructure`, headed `### D63 · The wire is declared in shapes.py and held by tests`, written as D62 is: the rule in bold, then the bullets **Why**, **Accepts** and **Made by**, each as [D8](design.md#d8) gives it.
   Verify: `git grep -c -F '### D63 · The wire is declared in shapes.py and held by tests' -- docs/decisions.md` prints `docs/decisions.md:1`.
