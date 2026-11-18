@@ -224,7 +224,7 @@ The change adds vitest cases and removes none; it adds no end-to-end run and no 
 |---|---|---|---|
 | vitest, unit | the case of `ui/src/composables/useSheet.test.ts` and the case of `ui/src/edits.test.ts` | none | `git grep -c -h -F "ui:save:an-edit-is-undone-and-redone" -- ui/src/composables/useSheet.test.ts ui/src/edits.test.ts` prints `1` twice |
 | end-to-end | none | none | `git grep -c -h -F "useSheet" -- tests/e2e` prints nothing |
-| pytest | none | none | `git log --format=%h main..HEAD -- tests` prints nothing |
+| pytest | none | none | `git log --format=%h b8c8f39c..HEAD -- tests` prints nothing |
 
 Both cases are unit cases at the lowest layer a node run reaches ([T1](#tests)); the new scenario is `unit`. No existing case is deleted, merged or has an assertion changed, so there is no mapping table.
 
