@@ -20,7 +20,7 @@ import { useSheet } from '../composables/useSheet'
 import type { Move } from '../grid'
 import { clock, kickerOf, minute } from '../kicker'
 import { type Lens, photographStep, viewedOf } from '../lens'
-import { nextPane, type Pane, paneKeys } from '../panes'
+import { nextPane, type Pane, paneKeys, paneOf, SELECTORS } from '../panes'
 import { nearest, stepFour } from '../slots'
 import { type Command, modded, plain, shifted, useKeyStore } from '../stores/keys'
 import type { FieldCandidates } from '../types'
@@ -157,16 +157,6 @@ function step(direction: -1 | 1): void {
   else selectedChip.value = (at + direction + count) % count
 }
 
-/* The pane an element sits in, or null. ④ sits inside the sheet's form. */
-function paneOf(element: Element | null): Pane | null {
-  if (!element) return null
-  if (element.closest('.rail')) return 'rail'
-  if (element.closest('.source')) return 'source'
-  if (element.closest('.renders-block')) return 'renders'
-  if (element.closest('.form')) return 'sheet'
-  return null
-}
-
 /* Which pane holds the focus, read from the document rather than remembered:
    the operator can click into any of them, and a remembered answer would send
    the next `l` from somewhere they are not. Out of every pane, such as after
@@ -181,16 +171,16 @@ function remember(event: FocusEvent): void {
 
 /* The element a pane gives the focus to, or null when it holds none. */
 function entry(next: Pane): HTMLElement | null {
-  if (next === 'rail') return document.querySelector<HTMLElement>('.rail__card--current')
-  if (next === 'source') return document.querySelector<HTMLElement>('.source')
-  if (next === 'renders') {
-    const block = document.querySelector<HTMLElement>('.renders-block')
-    return block?.querySelector<HTMLElement>('button:not(:disabled), input') ?? block
+  const { entry: selector, within } = SELECTORS[next]
+  if (next === 'sheet') {
+    const field = lastField.value ?? schema.value[0]
+    return field
+      ? document.querySelector<HTMLInputElement>(`${selector}[data-field="${field}"]`)
+      : null
   }
-  const field = lastField.value ?? schema.value[0]
-  return field
-    ? document.querySelector<HTMLInputElement>(`input.fragment[data-field="${field}"]`)
-    : null
+  const found = document.querySelector<HTMLElement>(selector)
+  if (!within) return found
+  return found?.querySelector<HTMLElement>(within) ?? found
 }
 
 /* A pane with nothing to focus still takes the next key: the focus leaves the

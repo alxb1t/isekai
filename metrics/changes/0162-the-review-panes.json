@@ -1,0 +1,58 @@
+{
+  "change": "0162-the-review-panes",
+  "version": "0.87.18",
+  "base": "9b2417ce",
+  "analyzed": "cd7d14ff",
+  "measured_on": "local",
+  "collected_at": "2026-11-18T16:11:41+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2417
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 69
+    },
+    "open-backlog-cards": {
+      "value": 2
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 302
+    },
+    "diff-files": {
+      "value": 9
+    },
+    "phases": {
+      "value": 2
+    },
+    "shared-reading-set": {
+      "value": 15434
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1091
+    },
+    "decisions": {
+      "value": 63
+    }
+  }
+}
