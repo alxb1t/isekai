@@ -7,7 +7,7 @@ Each late completion of the page becomes a unit its component calls, held by a c
 - [x] 1 — The leaving · moderate
 - [x] 2 — The deletion · moderate
 - [x] 3 — The picker · moderate
-- [ ] 4 — The red runs · moderate
+- [x] 4 — The red runs · moderate
 
 ## 1 — The leaving
 
@@ -48,7 +48,7 @@ Each late completion of the page becomes a unit its component calls, held by a c
 
 ## 4 — The red runs
 
-- [ ] 4.1 Append the entries of [D6](design.md#d6) to `tests/mutants.json`, after `VT-18c`'s object and before the closing `]`, each in the file's two-space layout.
+- [x] 4.1 Append the entries of [D6](design.md#d6) to `tests/mutants.json`, after `VT-18c`'s object and before the closing `]`, each in the file's two-space layout.
   Verify: `git grep -c -h -E "\"finding\": \"PG-" -- tests/mutants.json` prints `4`.
-- [ ] 4.2 Replay the file: each new edit is red by its case, and no edit survives.
+- [x] 4.2 Replay the file: each new edit is red by its case, and no edit survives.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
