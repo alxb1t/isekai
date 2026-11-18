@@ -18,7 +18,14 @@ from typing import (
 
 import pytest
 
+from isekai.interface.ui.routes.hub import ROUTES as HUB
+from isekai.interface.ui.routes.staging import ROUTES as STAGING
+from isekai.interface.ui.routes.vocabulary import ROUTES as VOCABULARY
+from isekai.interface.ui.shapes import ANSWERS
+from tests.record import recorded
+
 LEAVES = (str, int, float, bool)
+TABLES = (HUB, STAGING, VOCABULARY)
 
 
 def _dot(at: str, key: str) -> str:
@@ -198,3 +205,28 @@ def test_the_walker_refuses_a_missing_required_key() -> None:
 def test_the_walker_refuses_a_wrong_leaf() -> None:
     sampled = {**HELD, "leaves": [{**LEAF, "ratio": "int"}]}
     assert faults(Holding, sampled, "") == ['leaves[0].ratio: "int" is not a float']
+
+
+def _routes() -> dict[str, dict[str, object]]:
+    return cast("dict[str, dict[str, object]]", recorded("routes"))
+
+
+@pytest.mark.spec_exempt(
+    "structural: each answer of ANSWERS fits the shape the record holds for its key"
+)
+def test_every_answer_fits_the_record() -> None:
+    entries = _routes()
+    for key, declared in ANSWERS.items():
+        assert key in entries, key
+        assert "shape" in entries[key], key
+        assert faults(declared, entries[key]["shape"], "") == [], key
+
+
+@pytest.mark.spec_exempt(
+    "structural: each route of the tables with a recorded shape has a row in ANSWERS"
+)
+def test_every_recorded_shape_of_the_tables_has_a_row() -> None:
+    entries = _routes()
+    keys = [f"{route.method} {route.path}" for table in TABLES for route in table]
+    shaped = [key for key in keys if "shape" in entries.get(key, {})]
+    assert [key for key in shaped if key not in ANSWERS] == []

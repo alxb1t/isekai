@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - `tests/test_ui_shapes.py` holds `faults`, the walker that reads a recorded shape against a declared `TypedDict`, and cases that show it accepts a fit and refuses an undeclared key, a missing required key and a wrong leaf (0163 D4).
+- `isekai/interface/ui/shapes.py` declares the hub, staging and vocabulary answers as `TypedDict`s and `ANSWERS`, keyed as `tests/record/routes.json` is; two cases hold each against its recorded shape and no handler reads one (0163 D1, D2, D5).
 
 ## [0.87.18] - 2026-11-18
 

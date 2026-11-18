@@ -5,7 +5,7 @@ The phases: a walker proven on its own declarations, the declarations of the hub
 ## Progress
 
 - [x] 1 — The walker · hard
-- [ ] 2 — Hub, staging and vocabulary · moderate
+- [x] 2 — Hub, staging and vocabulary · moderate
 - [ ] 3 — Images and reviewing · moderate
 - [ ] 4 — The documents · moderate
 
@@ -18,13 +18,13 @@ The phases: a walker proven on its own declarations, the declarations of the hub
 
 ## 2 — Hub, staging and vocabulary
 
-- [ ] 2.1 Create `isekai/interface/ui/shapes.py`: a module docstring that says it declares the server's answers and imports no web framework, `from isekai.pipeline.review import Status`, the path constants `COLLECTION`, `STAGED` and `STAGED_FILE`, and each class of the [declarations](design.md#declarations) from `FlowCount` to `FieldCandidates`, a one-line docstring each.
+- [x] 2.1 Create `isekai/interface/ui/shapes.py`: a module docstring that says it declares the server's answers and imports no web framework, `from isekai.pipeline.review import Status`, the path constants `COLLECTION`, `STAGED` and `STAGED_FILE`, and each class of the [declarations](design.md#declarations) from `FlowCount` to `FieldCandidates`, a one-line docstring each.
   Verify: `uv run python -c "from isekai.interface.ui.shapes import HubCell"` exits 0.
-- [ ] 2.2 In `shapes.py` add `ANSWERS: dict[str, Any]` with the rows of the hub, staging and vocabulary tables of the [keys table](design.md#declarations), each key `f"<METHOD> {PATH}"`, the way the record keys its entries.
+- [x] 2.2 In `shapes.py` add `ANSWERS: dict[str, Any]` with the rows of the hub, staging and vocabulary tables of the [keys table](design.md#declarations), each key `f"<METHOD> {PATH}"`, the way the record keys its entries.
   Verify: `uv run python -c "from isekai.interface.ui.shapes import ANSWERS; print(len(ANSWERS))"` prints `10`.
-- [ ] 2.3 In `tests/test_ui_shapes.py` add `TABLES`, a tuple of the `ROUTES` tuples of `isekai.interface.ui.routes.hub`, `.staging` and `.vocabulary`, imported at the top of the file, and `test_every_answer_fits_the_record` and `test_every_recorded_shape_of_the_tables_has_a_row` as [D5](design.md#d5) says, each with a `spec_exempt("structural: …")` naming its rule.
+- [x] 2.3 In `tests/test_ui_shapes.py` add `TABLES`, a tuple of the `ROUTES` tuples of `isekai.interface.ui.routes.hub`, `.staging` and `.vocabulary`, imported at the top of the file, and `test_every_answer_fits_the_record` and `test_every_recorded_shape_of_the_tables_has_a_row` as [D5](design.md#d5) says, each with a `spec_exempt("structural: …")` naming its rule.
   Verify: `uv run pytest tests/test_ui_shapes.py -k record` exits 0.
-- [ ] 2.4 Derive the *Imported by* tables, which `shapes.py`'s import of `pipeline/review.py` makes stale: `uv run python -m tools.derive_imported_by` adds `interface/ui/shapes.py` to the `review.py` row of `isekai/pipeline/README.md` ([D7](design.md#d7)).
+- [x] 2.4 Derive the *Imported by* tables, which `shapes.py`'s import of `pipeline/review.py` makes stale: `uv run python -m tools.derive_imported_by` adds `interface/ui/shapes.py` to the `review.py` row of `isekai/pipeline/README.md` ([D7](design.md#d7)).
   Verify: `uv run pytest tests/test_docs.py` exits 0.
 
 ## 3 — Images and reviewing
