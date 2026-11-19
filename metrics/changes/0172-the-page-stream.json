@@ -1,0 +1,58 @@
+{
+  "change": "0172-the-page-stream",
+  "version": "0.87.28",
+  "base": "a993d8a6",
+  "analyzed": "31d0cdf5",
+  "measured_on": "local",
+  "collected_at": "2026-11-19T22:07:49+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2496
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 81
+    },
+    "open-backlog-cards": {
+      "value": 2
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 250
+    },
+    "diff-files": {
+      "value": 10
+    },
+    "phases": {
+      "value": 2
+    },
+    "shared-reading-set": {
+      "value": 16336
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1092
+    },
+    "decisions": {
+      "value": 68
+    }
+  }
+}
