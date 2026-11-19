@@ -1,0 +1,58 @@
+{
+  "change": "0170-the-config-loader",
+  "version": "0.87.26",
+  "base": "f6d8ad98",
+  "analyzed": "e2fef32b",
+  "measured_on": "local",
+  "collected_at": "2026-11-19T18:17:31+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2496
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 81
+    },
+    "open-backlog-cards": {
+      "value": 2
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 423
+    },
+    "diff-files": {
+      "value": 16
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 16335
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1092
+    },
+    "decisions": {
+      "value": 68
+    }
+  }
+}

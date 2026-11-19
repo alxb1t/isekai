@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.26
 ---
 
 # The config loader
