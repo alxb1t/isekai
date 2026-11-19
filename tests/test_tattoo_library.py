@@ -286,6 +286,43 @@ def test_tattoo_config_refuses_a_wrong_key_naming_it(
         load_tattoo_config(path)
 
 
+@pytest.mark.spec_exempt("structural: a config's whole refusal")
+def test_tattoo_config_with_unknown_keys_is_refused_in_full(tmp_path: Path) -> None:
+    path = tmp_path / "tattoo.json"
+    path.write_text(json.dumps(_declared(zeta=1, alpha=1)))
+
+    with pytest.raises(Refusal) as excinfo:
+        load_tattoo_config(path)
+
+    assert str(excinfo.value) == (
+        "tattoo.json declares alpha, zeta, which this build does not read; the "
+        "keys it reads are long_side, outline_min, outline_max, view_quality, "
+        "floor_stage1, floor_stage2, floor_direct, preview_floor, preview_margin, "
+        "preview_wait_ms, pair_radius, region_min -- correct the spelling"
+    )
+
+
+@pytest.mark.spec_exempt("structural: a config's whole refusal")
+def test_tattoo_config_with_missing_keys_is_refused_in_full(tmp_path: Path) -> None:
+    path = tmp_path / "tattoo.json"
+    path.write_text(
+        json.dumps(
+            {
+                key: value
+                for key, value in _declared().items()
+                if key not in ("outline_min", "floor_stage1")
+            }
+        )
+    )
+
+    with pytest.raises(Refusal) as excinfo:
+        load_tattoo_config(path)
+
+    assert str(excinfo.value) == (
+        "tattoo.json declares no outline_min, floor_stage1; add the key to tattoo.json"
+    )
+
+
 @pytest.mark.spec("tattoo:outline:an-outline-is-saved-as-it-is-sent")
 def test_tattoo_outline_is_saved_as_it_is_sent_and_outlined_once_closed(
     tmp_path: Path,

@@ -4,23 +4,23 @@ Hold each loader's whole refusal messages, add `read_keyed`, then switch the loa
 
 ## Progress
 
-- [ ] 1 — The pins · moderate
+- [x] 1 — The pins · moderate
 - [ ] 2 — The helper · moderate
 - [ ] 3 — The switch · moderate
 
 ## 1 — The pins
 
-- [ ] 1.1 **HALT CHECK** In `tests/test_caption.py`, after `test_a_config_carrying_an_unknown_key_is_refused`, add `test_a_config_with_unknown_keys_is_refused_in_full` and `test_a_config_with_missing_keys_is_refused_in_full`, per [D3](design.md#d3). The first writes `briefing`, `model`, `zeta` and `alpha` through `_config`; the second writes `{}`. Each compares `str(excinfo.value)` to the whole message of `caption.json` that [D3](design.md#d3) gives. The first binds `caption:selection:an-unknown-key-is-refused` alone; the second binds `caption:selection:an-absent-or-empty-model-is-refused` alone.
+- [x] 1.1 **HALT CHECK** In `tests/test_caption.py`, after `test_a_config_carrying_an_unknown_key_is_refused`, add `test_a_config_with_unknown_keys_is_refused_in_full` and `test_a_config_with_missing_keys_is_refused_in_full`, per [D3](design.md#d3). The first writes `briefing`, `model`, `zeta` and `alpha` through `_config`; the second writes `{}`. Each compares `str(excinfo.value)` to the whole message of `caption.json` that [D3](design.md#d3) gives. The first binds `caption:selection:an-unknown-key-is-refused` alone; the second binds `caption:selection:an-absent-or-empty-model-is-refused` alone.
   Verify: `uv run pytest tests/test_caption.py::test_a_config_with_unknown_keys_is_refused_in_full tests/test_caption.py::test_a_config_with_missing_keys_is_refused_in_full` exits 0.
-- [ ] 1.2 **HALT CHECK** In `tests/test_ink.py`, after `test_ink_extract_refuses_a_key_the_config_lacks`, add `test_ink_config_with_unknown_keys_is_refused_in_full` and `test_ink_config_with_missing_keys_is_refused_in_full`, per [D3](design.md#d3). The first calls `_config(tmp_path, zeta=1, alpha=1)`; the second calls `_config(tmp_path, floor=None, reach=None)`. Each compares `str(excinfo.value)` to the whole message of `ink.json` that [D3](design.md#d3) gives, and carries `spec_exempt("structural: a config's whole refusal")`.
+- [x] 1.2 **HALT CHECK** In `tests/test_ink.py`, after `test_ink_extract_refuses_a_key_the_config_lacks`, add `test_ink_config_with_unknown_keys_is_refused_in_full` and `test_ink_config_with_missing_keys_is_refused_in_full`, per [D3](design.md#d3). The first calls `_config(tmp_path, zeta=1, alpha=1)`; the second calls `_config(tmp_path, floor=None, reach=None)`. Each compares `str(excinfo.value)` to the whole message of `ink.json` that [D3](design.md#d3) gives, and carries `spec_exempt("structural: a config's whole refusal")`.
   Verify: `uv run pytest tests/test_ink.py::test_ink_config_with_unknown_keys_is_refused_in_full tests/test_ink.py::test_ink_config_with_missing_keys_is_refused_in_full` exits 0.
-- [ ] 1.3 **HALT CHECK** In `tests/test_tattoo_library.py`, after `test_tattoo_config_refuses_a_wrong_key_naming_it`, add `test_tattoo_config_with_unknown_keys_is_refused_in_full` and `test_tattoo_config_with_missing_keys_is_refused_in_full`, per [D3](design.md#d3). The first writes `_declared(zeta=1, alpha=1)` to `tmp_path / "tattoo.json"`; the second writes a dict comprehension over `_declared()` that leaves out `outline_min` and `floor_stage1`. Each compares `str(excinfo.value)` to the whole message of `tattoo.json` that [D3](design.md#d3) gives, and carries `spec_exempt("structural: a config's whole refusal")`.
+- [x] 1.3 **HALT CHECK** In `tests/test_tattoo_library.py`, after `test_tattoo_config_refuses_a_wrong_key_naming_it`, add `test_tattoo_config_with_unknown_keys_is_refused_in_full` and `test_tattoo_config_with_missing_keys_is_refused_in_full`, per [D3](design.md#d3). The first writes `_declared(zeta=1, alpha=1)` to `tmp_path / "tattoo.json"`; the second writes a dict comprehension over `_declared()` that leaves out `outline_min` and `floor_stage1`. Each compares `str(excinfo.value)` to the whole message of `tattoo.json` that [D3](design.md#d3) gives, and carries `spec_exempt("structural: a config's whole refusal")`.
   Verify: `uv run pytest tests/test_tattoo_library.py::test_tattoo_config_with_unknown_keys_is_refused_in_full tests/test_tattoo_library.py::test_tattoo_config_with_missing_keys_is_refused_in_full` exits 0.
-- [ ] 1.4 Run `tools.mutate` over the block of `load_caption_config`, `isekai/foundation/caption_config.py` lines 34-45, with `tests/test_caption.py`. A survivor gets one more case in that file, and the run is repeated.
+- [x] 1.4 Run `tools.mutate` over the block of `load_caption_config`, `isekai/foundation/caption_config.py` lines 34-45, with `tests/test_caption.py`. A survivor gets one more case in that file, and the run is repeated.
   Verify: `uv run python -m tools.mutate isekai/foundation/caption_config.py:34-45 --tests tests/test_caption.py` exits 0.
-- [ ] 1.5 Run `tools.mutate` over the block of `load_ink_config`, `isekai/shared/ink.py` lines 76-87, with `tests/test_ink.py`. A survivor gets one more case in that file, and the run is repeated.
+- [x] 1.5 Run `tools.mutate` over the block of `load_ink_config`, `isekai/shared/ink.py` lines 76-87, with `tests/test_ink.py`. A survivor gets one more case in that file, and the run is repeated.
   Verify: `uv run python -m tools.mutate isekai/shared/ink.py:76-87 --tests tests/test_ink.py` exits 0.
-- [ ] 1.6 Run `tools.mutate` over the block of `load_tattoo_config`, `isekai/pipeline/tattoos.py` lines 168-179, with `tests/test_tattoo_library.py`. A survivor gets one more case in that file, and the run is repeated.
+- [x] 1.6 Run `tools.mutate` over the block of `load_tattoo_config`, `isekai/pipeline/tattoos.py` lines 168-179, with `tests/test_tattoo_library.py`. A survivor gets one more case in that file, and the run is repeated.
   Verify: `uv run python -m tools.mutate isekai/pipeline/tattoos.py:168-179 --tests tests/test_tattoo_library.py` exits 0.
 
 ## 2 — The helper

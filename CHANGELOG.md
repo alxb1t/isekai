@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- The caption, ink and tattoo config tests each hold the whole unknown-key and missing-key refusal, so the config loaders' messages cannot drift unseen when their shared block moves (0170 D3).
+
 ## [0.87.25] - 2026-11-19
 
 Gate: local 1m25s · CI not read under mf-ship · 0.87.24: local 1m21s · CI not read under mf-ship
