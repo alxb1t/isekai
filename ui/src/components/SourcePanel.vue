@@ -61,6 +61,7 @@ function measured(event: Event): void {
   if (image.naturalHeight) loaded.value = image.naturalWidth / image.naturalHeight
 }
 
+/* A null `wd14` is never a failure: the panel is not drawn. */
 /* WD14 first, JoyCaption second: the order the pipeline produces them in, and
    it puts the stronger list nearer the prose. The local tagger's tags are in
    the vocabulary by construction -- the CSV it is scored against IS the

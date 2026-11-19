@@ -67,7 +67,19 @@ spec('ui:events:a-job-event-fills-its-kinds-slot', () => {
 })
 
 spec('ui:sessions:a-terminal-render-stays-live', async () => {
-  const terminal = { collection: 'b', id: '20261024T091200Z', started: '2026-10-24T09:12:00Z' }
+  const terminal = {
+    schema: { name: 'session', version: 1 },
+    collection: 'b',
+    id: '20261024T091200Z',
+    started: '2026-10-24T09:12:00Z',
+    ended: null,
+    limit: 1200,
+    asked: {},
+    steps: {},
+    images: [],
+    outcome: 'running',
+    message: null,
+  }
   let records: RunningSession[] = [terminal]
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ sessions: records }) })))
   const live = useLiveStore()

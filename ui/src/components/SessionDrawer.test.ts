@@ -18,6 +18,7 @@ spec('ui:sessions:the-viewer-closes-for-a-replacement-session', async () => {
     drawer.shown = { id: 'finished', collections: ['b'] }
     drawer.records = {
       b: {
+      schema: { name: 'session', version: 1 },
       id: 'finished',
       started: '',
       ended: '',
@@ -52,7 +53,21 @@ spec('ui:sessions:the-viewer-closes-for-a-replacement-session', async () => {
     drawer.records = { b: finished }
     expect(viewer.viewed.value).toHaveLength(1)
 
-    live.activeSessions = [{ collection: 'b', id: 'terminal', started: '' }]
+    live.activeSessions = [
+      {
+        schema: { name: 'session', version: 1 },
+        collection: 'b',
+        id: 'terminal',
+        started: '',
+        ended: null,
+        limit: 1200,
+        asked: {},
+        steps: {},
+        images: [],
+        outcome: 'running',
+        message: null,
+      },
+    ]
     await nextTick()
     expect(drawer.shown).toEqual({ id: 'terminal', collections: ['b'] })
     expect(drawer.record).toBeNull()
