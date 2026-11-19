@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.29
 ---
 
 # The library's names
