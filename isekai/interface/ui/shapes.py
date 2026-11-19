@@ -7,8 +7,10 @@ that asks the server. No web framework is imported, so the layer's entry point a
 tests read it whether or not a server is installed.
 """
 
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
+from isekai.foundation import artifacts
+from isekai.interface.ui import jobs
 from isekai.pipeline import tattoos
 from isekai.pipeline.review import Status
 from isekai.shared import proposal
@@ -399,6 +401,181 @@ class Proposed(TypedDict):
     pairs: list[list[list[float]]]
 
 
+class RenderOffer(TypedDict):
+    """How many images and bakes a collection holds, and why Render is off."""
+
+    disabled: str | None
+    images: int
+    others: int
+    bakes: int
+    other_bakes: int
+    refused: str | None
+
+
+class QuotedSource(TypedDict):
+    """One source a quoted flow renders."""
+
+    name: str
+    digest: str
+    run: str
+    version: int | None
+    images: int
+
+
+class QuotedFlow(TypedDict):
+    """One flow's images in a quoted collection and the sources they come from."""
+
+    flow: str
+    images: int
+    sources: list[QuotedSource]
+
+
+class QuotedBake(TypedDict):
+    """One bake a quote holds, by its source, its approval, its seed and its number."""
+
+    flow: str
+    name: str
+    digest: str
+    run: str
+    version: int
+    seed: str
+    k: int
+
+
+class QuotedRow(TypedDict):
+    """One collection's part of a quote."""
+
+    collection: str
+    images: int
+    flows: list[QuotedFlow]
+    bakes: list[QuotedBake]
+    refused: str | None
+
+
+class QuoteEstimate(TypedDict):
+    """A quote's seconds, its session limit and the pod's boot and teardown."""
+
+    seconds: float
+    limit_s: int
+    boot_s: float
+    teardown_s: float
+
+
+class QuotePrice(TypedDict):
+    """A quote's price, about, at most, and with the window kept open."""
+
+    about: float
+    at_most: float
+    keep_open: float
+
+
+class Quote(TypedDict):
+    """One render as the Render dialog quotes it."""
+
+    collections: list[QuotedRow]
+    estimate: QuoteEstimate
+    price: QuotePrice
+    ceiling_s: int
+    disabled: str | None
+
+
+class BillingVolume(TypedDict):
+    """The models volume's state and when its window ends."""
+
+    state: str
+    ends: str | None
+
+
+class Billing(TypedDict):
+    """Whether a pod may still bill and the volume's window."""
+
+    pod: bool
+    volume: BillingVolume | None
+
+
+class BillingChecked(TypedDict):
+    """The billing state gpunit was asked for again."""
+
+    billing: Billing
+
+
+class JobStage(TypedDict):
+    """One Prepare stage's cells done of the cells it was asked for."""
+
+    stage: str
+    done: int
+    of: int
+
+
+class JobProgress(TypedDict):
+    """When a Prepare started and each stage's count."""
+
+    started: str
+    stages: list[JobStage]
+
+
+class JobSession(TypedDict):
+    """A render's session as the page draws it: its steps, its images, its limit."""
+
+    id: str
+    started: str
+    limit: int
+    of: int
+    ended: str | None
+    steps: dict[str, str]
+    images: list[artifacts.SessionImage]
+
+
+class Job(TypedDict):
+    """One job of a slot; a render's `collections` and `session` a Prepare lacks."""
+
+    kind: jobs.Kind
+    collection: str
+    state: str
+    flow: str | None
+    stage: str | None
+    message: str | None
+    progress: NotRequired[JobProgress]
+    collections: NotRequired[list[str]]
+    session: NotRequired[JobSession]
+
+
+class JobStarted(TypedDict):
+    """The job a Prepare, a render or a stop answers with."""
+
+    job: Job
+
+
+class ServedSession(TypedDict):
+    """A render session's record, its outcome `None` when no process holds it."""
+
+    schema: artifacts.SchemaBlock
+    id: str
+    started: str
+    ended: str | None
+    limit: int
+    asked: dict[str, int]
+    planned: NotRequired[list[artifacts.SessionPlan]]
+    collections: NotRequired[list[str]]
+    collection_order: NotRequired[list[str]]
+    steps: dict[str, str]
+    images: list[artifacts.SessionImage]
+    outcome: str | None
+    message: str | None
+
+
+class RunningSession(artifacts.SessionRecord):
+    """A running session's record and the collection that holds it."""
+
+    collection: str
+
+
+class RunningSessions(TypedDict):
+    """The render sessions that are running, across collections."""
+
+    sessions: list[RunningSession]
+
+
 ANSWERS: dict[str, Any] = {
     "GET /api/library": LibraryInfo,
     f"GET {COLLECTION}/hub": HubInfo,
@@ -430,8 +607,16 @@ ANSWERS: dict[str, Any] = {
     f"GET {STAGE1}": Stage1,
     f"PUT {STAGE1}": Stage1,
     f"POST {COLLECTION}/tattoos/{{name}}/bake": BakeQueued,
+    f"GET {COLLECTION}/render": RenderOffer,
+    "POST /api/render/quote": Quote,
+    "POST /api/billing/check": BillingChecked,
 }
 
 UNRECORDED: dict[str, Any] = {
     f"POST {COLLECTION}/place/propose": Proposed,
+    f"POST {COLLECTION}/prepare": JobStarted,
+    "POST /api/jobs/{kind}/stop": JobStarted,
+    "POST /api/render": JobStarted,
+    "GET /api/sessions/running": RunningSessions,
+    f"GET {COLLECTION}/sessions/{{name}}": ServedSession,
 }

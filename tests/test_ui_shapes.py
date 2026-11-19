@@ -18,12 +18,13 @@ from typing import (
 
 import pytest
 
+from isekai.foundation.artifacts import SessionRecord
 from isekai.interface.ui.routes.hub import ROUTES as HUB
 from isekai.interface.ui.routes.images import ROUTES as IMAGES
 from isekai.interface.ui.routes.reviewing import ROUTES as REVIEWING
 from isekai.interface.ui.routes.staging import ROUTES as STAGING
 from isekai.interface.ui.routes.vocabulary import ROUTES as VOCABULARY
-from isekai.interface.ui.shapes import ANSWERS
+from isekai.interface.ui.shapes import ANSWERS, ServedSession
 from tests.record import recorded
 
 LEAVES = (str, int, float, bool)
@@ -232,3 +233,16 @@ def test_every_recorded_shape_of_the_tables_has_a_row() -> None:
     keys = [f"{route.method} {route.path}" for table in TABLES for route in table]
     shaped = [key for key in keys if "shape" in entries.get(key, {})]
     assert [key for key in shaped if key not in ANSWERS] == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: the served session is the session record with a nullable outcome"
+)
+def test_the_served_session_is_the_record_with_a_nullable_outcome() -> None:
+    served, record = get_type_hints(ServedSession), get_type_hints(SessionRecord)
+    assert served.pop("outcome") == str | None
+    assert record.pop("outcome") is str
+    assert served == record
+    assert list(served) == list(record)
+    assert ServedSession.__required_keys__ == SessionRecord.__required_keys__
+    assert ServedSession.__optional_keys__ == SessionRecord.__optional_keys__

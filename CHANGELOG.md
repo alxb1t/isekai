@@ -12,6 +12,8 @@ its new digest.
 
 - `isekai/interface/ui/shapes.py` declares the tattoos' answers as `TypedDict`s with rows in `ANSWERS`, and `UNRECORDED`, a second table for answers the record lacks, holding propose's; a case asks the server and holds propose's answer to it (0164 D1, D3).
 - The *Imported by* tables of `tattoos.py` and `proposal.py` list `interface/ui/shapes.py` (0164 D8).
+- `isekai/interface/ui/shapes.py` declares the offer, quote, billing check, jobs, running sessions and a served session as `TypedDict`s; the record's rows join `ANSWERS` and prepare, stop, render and the sessions join `UNRECORDED`, each held by a case that asks the server (0164 D1, D3, D4, D5).
+- The *Imported by* table of `artifacts.py` lists `interface/ui/shapes.py` (0164 D8).
 
 ## [0.87.19] - 2026-11-18
 

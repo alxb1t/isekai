@@ -5,7 +5,7 @@ The phases: the tattoos and place, the rendering, then the rows that hold every 
 ## Progress
 
 - [x] 1 — The tattoos and place · moderate
-- [ ] 2 — The rendering · hard
+- [x] 2 — The rendering · hard
 - [ ] 3 — The rows and the documents · moderate
 
 ## 1 — The tattoos and place
@@ -23,19 +23,19 @@ The phases: the tattoos and place, the rendering, then the rows that hold every 
 
 ## 2 — The rendering
 
-- [ ] 2.1 **HALT CHECK** The modules `shapes.py` is about to import, `jobs.py`, `billing.py`, `events.py`, `library.py` and `render.py`, import no web framework, no Pillow, no numpy and no onnx at module level; if one does, the plan is wrong.
+- [x] 2.1 **HALT CHECK** The modules `shapes.py` is about to import, `jobs.py`, `billing.py`, `events.py`, `library.py` and `render.py`, import no web framework, no Pillow, no numpy and no onnx at module level; if one does, the plan is wrong.
   Verify: `git grep -n -E "^(from|import) (fastapi|starlette|uvicorn|PIL|numpy|onnxruntime)" -- isekai/interface/ui/jobs.py isekai/interface/ui/billing.py isekai/interface/ui/events.py isekai/interface/ui/library.py isekai/interface/render.py` prints nothing.
-- [ ] 2.2 In `isekai/interface/ui/shapes.py` add the classes of the offer, the quote and the check from [the declarations](design.md#the-declarations) — `RenderOffer`, `QuotedSource`, `QuotedFlow`, `QuotedBake`, `QuotedRow`, `QuoteEstimate`, `QuotePrice`, `Quote`, `BillingVolume`, `Billing`, `BillingChecked` — and the rows of `ANSWERS` for the offer, the quote and the check.
+- [x] 2.2 In `isekai/interface/ui/shapes.py` add the classes of the offer, the quote and the check from [the declarations](design.md#the-declarations) — `RenderOffer`, `QuotedSource`, `QuotedFlow`, `QuotedBake`, `QuotedRow`, `QuoteEstimate`, `QuotePrice`, `Quote`, `BillingVolume`, `Billing`, `BillingChecked` — and the rows of `ANSWERS` for the offer, the quote and the check.
   Verify: `grep -c -E ': (RenderOffer|Quote|BillingChecked),$' isekai/interface/ui/shapes.py` prints `3`, and `uv run pytest tests/test_ui_shapes.py` passes.
-- [ ] 2.3 In the same file add the classes `JobStage`, `JobProgress`, `JobSession`, `Job`, `JobStarted`, `ServedSession`, `RunningSession` and `RunningSessions`, `NotRequired` in the `typing` import, the imports `from isekai.foundation import artifacts` and `from isekai.interface.ui import jobs`, and the rows of `UNRECORDED` for prepare, stop, render, the running sessions and a session that [the declarations](design.md#the-declarations) lists, `Job.state` and `BillingVolume.state` as `str` ([D5](design.md#d5)).
+- [x] 2.3 In the same file add the classes `JobStage`, `JobProgress`, `JobSession`, `Job`, `JobStarted`, `ServedSession`, `RunningSession` and `RunningSessions`, `NotRequired` in the `typing` import, the imports `from isekai.foundation import artifacts` and `from isekai.interface.ui import jobs`, and the rows of `UNRECORDED` for prepare, stop, render, the running sessions and a session that [the declarations](design.md#the-declarations) lists, `Job.state` and `BillingVolume.state` as `str` ([D5](design.md#d5)).
   Verify: `grep -c -E ': (Proposed|JobStarted|RunningSessions|ServedSession),$' isekai/interface/ui/shapes.py` prints `6`, and `uv run pytest tests/test_ui_shapes.py` passes.
-- [ ] 2.4 In `tests/test_ui_shapes.py` add `test_the_served_session_is_the_record_with_a_nullable_outcome` with `spec_exempt("structural: the served session is the session record with a nullable outcome")`: `get_type_hints`, `__required_keys__` and `__optional_keys__` of `ServedSession` equal `SessionRecord`'s, `outcome` apart, which is `str | None` ([D4](design.md#d4)).
+- [x] 2.4 In `tests/test_ui_shapes.py` add `test_the_served_session_is_the_record_with_a_nullable_outcome` with `spec_exempt("structural: the served session is the session record with a nullable outcome")`: `get_type_hints`, `__required_keys__` and `__optional_keys__` of `ServedSession` equal `SessionRecord`'s, `outcome` apart, which is `str | None` ([D4](design.md#d4)).
   Verify: `uv run pytest tests/test_ui_shapes.py::test_the_served_session_is_the_record_with_a_nullable_outcome` passes.
-- [ ] 2.5 In `tests/test_ui_jobs.py` add `_Idle(Jobs)` overriding `_occupy`, a `make_jobs` keyword defaulting to `Jobs` on `_held_client` and `_quoting`, and `test_the_prepare_answer_fits_its_declaration`, `test_the_stop_answer_fits_its_declaration` and `test_the_render_answer_fits_its_declaration`, each exempt as `structural: the <verb> answer fits the declaration UNRECORDED holds` ([D3](design.md#d3)).
+- [x] 2.5 In `tests/test_ui_jobs.py` add `_Idle(Jobs)` overriding `_occupy`, a `make_jobs` keyword defaulting to `Jobs` on `_held_client` and `_quoting`, and `test_the_prepare_answer_fits_its_declaration`, `test_the_stop_answer_fits_its_declaration` and `test_the_render_answer_fits_its_declaration`, each exempt as `structural: the <verb> answer fits the declaration UNRECORDED holds` ([D3](design.md#d3)).
   Verify: `uv run pytest tests/test_ui_jobs.py::test_the_prepare_answer_fits_its_declaration tests/test_ui_jobs.py::test_the_stop_answer_fits_its_declaration tests/test_ui_jobs.py::test_the_render_answer_fits_its_declaration` passes.
-- [ ] 2.6 In `tests/test_ui_api.py` add `test_the_running_sessions_answer_fits_its_declaration` and `test_a_served_session_fits_its_declaration_running_and_stale`, each exempt as `structural: the <answer> fits the declaration UNRECORDED holds`; they hold a `Record` open for `outcome` `running`, then closed for `null`, as `test_a_terminal_session_is_live_without_a_job_slot` does.
+- [x] 2.6 In `tests/test_ui_api.py` add `test_the_running_sessions_answer_fits_its_declaration` and `test_a_served_session_fits_its_declaration_running_and_stale`, each exempt as `structural: the <answer> fits the declaration UNRECORDED holds`; they hold a `Record` open for `outcome` `running`, then closed for `null`, as `test_a_terminal_session_is_live_without_a_job_slot` does.
   Verify: `uv run pytest tests/test_ui_api.py::test_the_running_sessions_answer_fits_its_declaration tests/test_ui_api.py::test_a_served_session_fits_its_declaration_running_and_stale` passes.
-- [ ] 2.7 Run `uv run python -m tools.derive_imported_by`: the row of `artifacts.py` in `isekai/foundation/README.md` gains `interface/ui/shapes.py` ([D8](design.md#d8)).
+- [x] 2.7 Run `uv run python -m tools.derive_imported_by`: the row of `artifacts.py` in `isekai/foundation/README.md` gains `interface/ui/shapes.py` ([D8](design.md#d8)).
   Verify: `uv run pytest tests/test_docs.py` passes.
 
 ## 3 — The rows and the documents
