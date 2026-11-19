@@ -12,6 +12,7 @@ import type {
   RunningSession,
 } from '../types'
 
+/* `band` is the window volume past its end or unanswered; the wire types its state `str`. */
 /* Whether a pod may be billing or the window is past its end. */
 export function alerting(found: Billing | null): boolean {
   return Boolean(found && (found.pod || found.volume?.state === 'band'))

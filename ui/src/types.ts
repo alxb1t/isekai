@@ -1,5 +1,5 @@
-/* The shapes the endpoints return. One file, because a type that disagreed
-   with `app.py` would be wrong in every component at once. */
+/* The page's names for the wire: the re-exports of `wire.ts`, the overlays that
+   narrow a pair, and the types only the page holds. */
 
 import type {
   ImportingState as StagedState,

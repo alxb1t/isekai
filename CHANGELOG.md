@@ -13,7 +13,8 @@ its new digest.
 - `ui/src/types.ts` re-exports the library, hub, review and staging types from the derived `ui/src/wire.ts` under the page's names, so those types are the server's declaration and no longer a hand-written copy; behaviour is as before (0171 D1, D2).
 - `ui/src/types.ts` re-exports the jobs, quotes, renders, tattoo limits and compare types from `ui/src/wire.ts` too, and `JobSlots` is an alias of the wire's `Job` and `JobsKind`; behaviour is as before (0171 D1, D2).
 - `Tattoo`, `Outline`, `Stage1`, `Proposal` and `TattooList` in `ui/src/types.ts` are overlays of the wire's types that narrow a pair to the page's `Point` and `Pair`, and `TattooList`'s `stage1` is required; behaviour is as before (0171 D6).
-- `Billing`, `CellEvent`, `SessionRecord` and `RunningSession` in `ui/src/types.ts` are the wire's, `QuoteSource` is the wire's `QuotedSource` without `images`, the cell listener of the collection store keeps a stage only when it is set, and the session fixtures gain the fields the wire requires; behaviour is as before (0171 D3, D4, D5, D7).
+- `Billing`, `CellEvent`, `SessionRecord` and `RunningSession` in `ui/src/types.ts` are the wire's, `QuoteSource` is `QuotedSource` without `images`, and the cell listener keeps a stage only when set; behaviour is as before (0171 D3, D4, D5, D7).
+- `ui/src/types.ts` opens with a header for the page's names, two comments that state a rule of the page moved to `SourcePanel.vue` and `live.ts`, and D67 says the page reads `wire.ts` through `types.ts` (0171 D8, D10).
 
 ## [0.87.26] - 2026-11-19
 

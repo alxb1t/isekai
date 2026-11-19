@@ -8,7 +8,7 @@ The phases move `ui/src/types.ts` onto `ui/src/wire.ts`, one group of types at a
 - [x] 2 — The second half: jobs, quotes, renders, tattoos and compare · moderate
 - [x] 3 — The overlays · moderate
 - [x] 4 — The six that differ · moderate
-- [ ] 5 — The documents · moderate
+- [x] 5 — The documents · moderate
 
 ## 1 — The first half: library, hub, review and staging
 
@@ -72,14 +72,14 @@ Each overlay is an `extends Omit<…>` of the wire's type that narrows a pair to
 
 ## 5 — The documents
 
-- [ ] 5.1 In `ui/src/types.ts`, replace the header comment, which names `app.py`, with one that says the file holds the page's names for the wire: the re-exports, the overlays and the types only the page holds.
+- [x] 5.1 In `ui/src/types.ts`, replace the header comment, which names `app.py`, with one that says the file holds the page's names for the wire: the re-exports, the overlays and the types only the page holds.
   Verify: `git grep -n -F "app.py" -- ui/src/types.ts` prints nothing.
-- [ ] 5.2 In `ui/src/components/SourcePanel.vue`, add the line `/* A null \`wd14\` is never a failure: the panel is not drawn. */` directly above the comment of `const scored` ([D8](design.md#d8)).
+- [x] 5.2 In `ui/src/components/SourcePanel.vue`, add the line `/* A null \`wd14\` is never a failure: the panel is not drawn. */` directly above the comment of `const scored` ([D8](design.md#d8)).
   Verify: `git grep -c -F "is never a failure: the panel is not drawn" -- ui/src/components/SourcePanel.vue` prints `ui/src/components/SourcePanel.vue:1`.
-- [ ] 5.3 In `ui/src/stores/live.ts`, add the line `/* \`band\` is the window volume past its end or unanswered; the wire types its state \`str\`. */` directly above the comment of `alerting` ([D8](design.md#d8)).
+- [x] 5.3 In `ui/src/stores/live.ts`, add the line `/* \`band\` is the window volume past its end or unanswered; the wire types its state \`str\`. */` directly above the comment of `alerting` ([D8](design.md#d8)).
   Verify: `git grep -c -F "is the window volume past its end or unanswered" -- ui/src/stores/live.ts` prints `ui/src/stores/live.ts:1`.
-- [ ] 5.4 In `docs/decisions.md`, edit D67 where it lives ([D10](design.md#d10)). Replace its *Accepts* line's last sentence, which says the page reads the file from `the-page-wire`, with: `` `ui/src/types.ts` is the one page file that imports `wire.ts`, and narrows a pair in the overlays `Tattoo`, `Outline`, `Stage1`, `Proposal` and `TattooList`. ``
+- [x] 5.4 In `docs/decisions.md`, edit D67 where it lives ([D10](design.md#d10)). Replace its *Accepts* line's last sentence, which says the page reads the file from `the-page-wire`, with: `` `ui/src/types.ts` is the one page file that imports `wire.ts`, and narrows a pair in the overlays `Tattoo`, `Outline`, `Stage1`, `Proposal` and `TattooList`. ``
   Its *Made by* line becomes `` `0168`, `0171`. ``
   Verify: `git grep -n -F "until then no page file imports" -- docs/decisions.md` prints nothing.
-- [ ] 5.5 `ui/src/types.ts` holds only the re-exports, the overlays and the page's own types, in at most 250 lines.
+- [x] 5.5 `ui/src/types.ts` holds only the re-exports, the overlays and the page's own types, in at most 250 lines.
   Verify: `wc -l ui/src/types.ts` prints a number no greater than 250.
