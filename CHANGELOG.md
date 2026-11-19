@@ -12,6 +12,7 @@ its new digest.
 
 - `isekai/foundation/library.py` holds the library's folder names and a collection's `root`, `is_collection`, `listed` and `collection`, re-bound in `ui/library.py`, `pipeline/importing.py` and `interface/compare_view.py`; behaviour is as before (0173 D1, D2, D3).
 - `UNSUPPORTED`, `record_running`, `running`, `render_running` and `session` move to `isekai/foundation/library.py`, re-bound in `render.py` and `ui/library.py`, which imports no render verb; behaviour is as before (0173 D1, D2, D4).
+- D68 records that the library's names and the session's read side are `foundation/library.py`'s, and the interface README and the foundation's role line in `ARCHITECTURE.md` and `docs/principles.md` say so (0173 D8).
 
 ## [0.87.28] - 2026-11-19
 

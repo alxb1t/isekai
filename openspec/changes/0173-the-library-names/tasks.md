@@ -6,7 +6,7 @@ Each phase moves names into `isekai/foundation/library.py` and ends green; the c
 
 - [x] 1 — The collection · moderate
 - [x] 2 — The session · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The collection
 
@@ -36,11 +36,11 @@ Each phase moves names into `isekai/foundation/library.py` and ends green; the c
 
 ## 3 — The documents
 
-- [ ] 3.1 In `docs/decisions.md`, add D68 after D67's `Made by` line and before `## Infrastructure`, as [D8](design.md#d8) gives it.
+- [x] 3.1 In `docs/decisions.md`, add D68 after D67's `Made by` line and before `## Infrastructure`, as [D8](design.md#d8) gives it.
   Verify: `git grep -n -F "### D68" -- docs/decisions.md` prints `1`.
-- [ ] 3.2 In `isekai/interface/README.md`, in the `ui/library.py` row, replace ``each approval's rendered seeds, each collection's session records, and the thumbnails in the library's `.cache/`.`` with ``each approval's rendered seeds and the thumbnails in the library's `.cache/`; the collection's names and its session records' read side are `foundation/library.py`'s, re-bound here (D68).``
+- [x] 3.2 In `isekai/interface/README.md`, in the `ui/library.py` row, replace ``each approval's rendered seeds, each collection's session records, and the thumbnails in the library's `.cache/`.`` with ``each approval's rendered seeds and the thumbnails in the library's `.cache/`; the collection's names and its session records' read side are `foundation/library.py`'s, re-bound here (D68).``
   Verify: `git grep -n -F "foundation/library.py" -- isekai/interface/README.md` prints `1`.
-- [ ] 3.3 In `ARCHITECTURE.md` and `docs/principles.md`, change the foundation line's `the migration and the command text a refusal prints.` to `the migration, the command text a refusal prints, and the library's collection names and its session records' read side.`
+- [x] 3.3 In `ARCHITECTURE.md` and `docs/principles.md`, change the foundation line's `the migration and the command text a refusal prints.` to `the migration, the command text a refusal prints, and the library's collection names and its session records' read side.`
   Verify: `git grep -n -F "the library's collection names" -- ARCHITECTURE.md docs/principles.md` prints `2`.
-- [ ] 3.4 Replay the standing mutants once over the moved code ([D7](design.md#d7)).
+- [x] 3.4 Replay the standing mutants once over the moved code ([D7](design.md#d7)).
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
