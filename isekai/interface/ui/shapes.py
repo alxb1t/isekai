@@ -11,7 +11,7 @@ entry point and its tests read it whether or not a server is installed.
 from typing import Any, Literal, NotRequired, TypedDict
 
 from isekai.foundation import artifacts
-from isekai.interface.ui import jobs
+from isekai.interface.ui import jobs, library
 from isekai.pipeline import tattoos
 from isekai.pipeline.review import Status
 from isekai.shared import proposal
@@ -64,7 +64,7 @@ class CellImage(TypedDict):
 class HubCell(TypedDict):
     """One source's cell in one flow's column."""
 
-    stage: str | None
+    stage: library.Stage | None
     renders: int
     refusal: str | None
     status: Status | None
@@ -532,7 +532,7 @@ class Job(TypedDict):
 
     kind: jobs.Kind
     collection: str
-    state: str
+    state: jobs.State
     flow: str | None
     stage: str | None
     message: str | None
@@ -620,7 +620,7 @@ class FileEvent(FileState):
 class Snapshot(TypedDict):
     """The whole truth the stream opens with."""
 
-    jobs: dict[str, Job | None]
+    jobs: dict[jobs.Kind, Job | None]
     billing: Billing
     hub: NotRequired[HubInfo]
     files: NotRequired[dict[str, FileState]]

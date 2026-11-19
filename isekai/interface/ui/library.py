@@ -169,6 +169,13 @@ class Rendered:
     seed: int
 
 
+# The stages a cell holds, from `assigned` to `rendered`; `unreadable` marks a cell
+# whose deciding file cannot be read.
+Stage = Literal[
+    "assigned", "tagged", "sheet", "draft", "approved", "rendered", "unreadable"
+]
+
+
 @dataclass(frozen=True)
 class Cell:
     """One source in one flow: its stage, read from the run's directory.
@@ -183,7 +190,7 @@ class Cell:
     order written.
     """
 
-    stage: str | None
+    stage: Stage | None
     renders: int = 0
     refusal: str | None = None
     status: Status | None = None

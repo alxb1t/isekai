@@ -4,23 +4,23 @@ Each task names its file and its check. The decisions are in [design](design.md)
 
 ## Progress
 
-- [ ] 1 — The cell's stage and the job's state · moderate
+- [x] 1 — The cell's stage and the job's state · moderate
 - [ ] 2 — The file's state · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The cell's stage and the job's state
 
-- [ ] 1.1 **HALT CHECK** The base is typed clean, so a red `ty` after an edit is this change's.
+- [x] 1.1 **HALT CHECK** The base is typed clean, so a red `ty` after an edit is this change's.
   Verify: `uv run ty check` exits 0.
-- [ ] 1.2 In `isekai/interface/ui/library.py` add `Stage` above `Cell` as [D2](design.md#d2) gives it, under the comment `# The stages a cell holds, from `assigned` to `rendered`; `unreadable` marks a cell` and `# whose deciding file cannot be read.`. Change `stage: str | None` in `Cell` to `stage: Stage | None`, and leave every `Cell(` as it is.
+- [x] 1.2 In `isekai/interface/ui/library.py` add `Stage` above `Cell` as [D2](design.md#d2) gives it, under the comment `# The stages a cell holds, from `assigned` to `rendered`; `unreadable` marks a cell` and `# whose deciding file cannot be read.`. Change `stage: str | None` in `Cell` to `stage: Stage | None`, and leave every `Cell(` as it is.
   Verify: `git grep -n -F "stage: str | None" -- isekai/interface/ui/library.py` prints nothing.
-- [ ] 1.3 In `isekai/interface/ui/jobs.py` add `State` below `KINDS` as [D2](design.md#d2) gives it, under the comment `# The states of a job: `running` until it ends, then `failed`, `stopped` or `done`.`. Change `state: str = "running"` in `_Job` to `state: State = "running"`.
+- [x] 1.3 In `isekai/interface/ui/jobs.py` add `State` below `KINDS` as [D2](design.md#d2) gives it, under the comment `# The states of a job: `running` until it ends, then `failed`, `stopped` or `done`.`. Change `state: str = "running"` in `_Job` to `state: State = "running"`.
   Verify: `git grep -n -F "state: str = " -- isekai/interface/ui/jobs.py` prints nothing.
-- [ ] 1.4 In `isekai/interface/ui/shapes.py` change `from isekai.interface.ui import jobs` to `from isekai.interface.ui import jobs, library`, `HubCell.stage` to `library.Stage | None`, `Job.state` to `jobs.State` and `Snapshot.jobs` from `dict[str, Job | None]` to `dict[jobs.Kind, Job | None]` ([D1](design.md#d1), [D5](design.md#d5)). Leave `CellEvent`, `JobStage`, `Job.stage` and `BillingVolume` as they are ([D4](design.md#d4)).
+- [x] 1.4 In `isekai/interface/ui/shapes.py` change `from isekai.interface.ui import jobs` to `from isekai.interface.ui import jobs, library`, `HubCell.stage` to `library.Stage | None`, `Job.state` to `jobs.State` and `Snapshot.jobs` from `dict[str, Job | None]` to `dict[jobs.Kind, Job | None]` ([D1](design.md#d1), [D5](design.md#d5)). Leave `CellEvent`, `JobStage`, `Job.stage` and `BillingVolume` as they are ([D4](design.md#d4)).
   Verify: `git grep -n -F "dict[str, Job | None]" -- isekai/interface/ui/shapes.py` prints nothing.
-- [ ] 1.5 **HALT CHECK** Hold the phase on `ty`: it refuses a word outside a set, so a test that builds a `Cell` or a `_Job` with a `str` shows red here. That is a plan problem: halt, and change no assertion.
+- [x] 1.5 **HALT CHECK** Hold the phase on `ty`: it refuses a word outside a set, so a test that builds a `Cell` or a `_Job` with a `str` shows red here. That is a plan problem: halt, and change no assertion.
   Verify: `uv run ty check` exits 0.
-- [ ] 1.6 Run the tests that read these modules and the layer and document guards.
+- [x] 1.6 Run the tests that read these modules and the layer and document guards.
   Verify: `uv run pytest tests/test_ui_shapes.py tests/test_ui_library.py tests/test_ui_jobs.py tests/test_layers.py tests/test_docs.py` exits 0.
 
 ## 2 — The file's state

@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `isekai/interface/ui/library.py` names a cell's stage `Stage` and `isekai/interface/ui/jobs.py` a job's state `State`; `shapes.py` reads both, and keys `Snapshot.jobs` by `jobs.Kind`, so `ty` holds each word written (0167 D1, D2, D5).
+
 ## [0.87.22] - 2026-11-19
 
 Gate: local 1m12s · CI not read under mf-ship · 0.87.21: local 1m10s · CI not read under mf-ship

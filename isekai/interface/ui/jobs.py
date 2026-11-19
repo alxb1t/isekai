@@ -65,6 +65,9 @@ REACHED = {
 Kind = Literal["prepare", "render"]
 KINDS: tuple[Kind, ...] = get_args(Kind)
 
+# The states of a job: `running` until it ends, then `failed`, `stopped` or `done`.
+State = Literal["running", "failed", "stopped", "done"]
+
 # What a refusal calls each kind of job.
 LABELS: dict[Kind, str] = {"prepare": "Prepare", "render": "Render"}
 
@@ -190,7 +193,7 @@ class _Job:
     collection: str
     steps: tuple[Step, ...]
     kind: Kind = "prepare"
-    state: str = "running"
+    state: State = "running"
     flow: str | None = None
     stage: str | None = None
     message: str | None = None
