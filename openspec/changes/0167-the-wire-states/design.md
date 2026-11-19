@@ -74,6 +74,7 @@ State = Literal["running", "failed", "stopped", "done"]
 State = Literal["ready", "converted", "not cleaned", "skipped"]
 Upload = Literal[State, "waiting", "converting", "refused"]
 
+
 def _record(name: str, state: Upload, fields: Mapping[str, object]) -> dict[str, Any]:
     return {"file": name, "state": state, **fields}
 ```
