@@ -2,7 +2,6 @@
    with `app.py` would be wrong in every component at once. */
 
 import type {
-  HubCell,
   ImportingState as StagedState,
   Job,
   JobsKind,
@@ -10,7 +9,7 @@ import type {
   ReviewStatus as InputStatus,
   Outline as WireOutline,
   Proposed,
-  SessionImage,
+  QuotedSource,
   Stage1 as WireStage1,
   Tattoo as WireTattoo,
   Tattoos,
@@ -82,31 +81,8 @@ export interface StagedFile {
   copyOf: string | null
 }
 
-/* A render session's record, `<collection>/sessions/<id>.json`, as the server reads
-   it: `outcome` is null for a record still reading running whose render process no longer holds its lifetime lock. */
-export interface SessionRecord {
-  id: string
-  started: string
-  ended: string | null
-  limit: number
-  /* The images each flow was asked to render. */
-  asked: Record<string, number>
-  /* The images planned for each run, by its digest, and flow; absent from an older record. */
-  planned?: { digest: string; flow: string; images: number }[]
-  /* `pod` and `teardown`, each by its state. */
-  steps: Record<string, string>
-  images: SessionImage[]
-  outcome: 'running' | 'done' | 'stopped' | 'failed' | null
-  message: string | null
-}
-
-/* A running render discovered from disk, wherever it was started. */
-export interface RunningSession {
-  collection: string
-  collection_order?: string[]
-  id: string
-  started: string
-}
+export type { ServedSession as SessionRecord } from './wire'
+export type { RunningSession } from './wire'
 
 /* A running render: its id, its start, and every collection holding its record. */
 export interface RunningRender {
@@ -118,19 +94,9 @@ export interface RunningRender {
 /* Each kind's slot: its job, running or ended, or null. */
 export type JobSlots = Record<JobsKind, Job | null>
 
-/* What gpunit's records say may be billing: a pod with no session running, and
-   the window volume — `open` until its end, `band` past it or unanswered. */
-export interface Billing {
-  pod: boolean
-  volume: { state: 'open' | 'band'; ends: string | null } | null
-}
+export type { Billing } from './wire'
 
-export interface QuoteSource {
-  name: string
-  digest: string
-  run: string
-  version: number | null
-}
+export type QuoteSource = Omit<QuotedSource, 'images'>
 
 /* A photograph the Render dialog takes out of its quote: its run's flow. */
 export interface TakenOut {
@@ -139,16 +105,7 @@ export interface TakenOut {
   flow: string
 }
 
-/* A stage's report about one cell, its stage read again from disk. */
-export interface CellEvent {
-  collection: string
-  source: string
-  flow: string
-  stage: string
-  state: 'start' | 'done' | 'refused'
-  message: string | null
-  cell: HubCell
-}
+export type { CellEvent } from './wire'
 
 /* One image a draft is written from, its seed a decimal string. */
 export interface ImageRef {

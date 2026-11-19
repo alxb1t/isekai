@@ -10,6 +10,7 @@ const CONJURE = 'conjure-anime-wai'
 /* A record of `images` landed, planning `planned` where given. */
 function record(given: Partial<SessionRecord>): SessionRecord {
   return {
+    schema: { name: 'session', version: 1 },
     id: '20261024T091200Z',
     started: '2026-10-24T09:12:00Z',
     ended: null,

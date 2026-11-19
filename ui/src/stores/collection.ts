@@ -116,7 +116,7 @@ export const useCollectionStore = defineStore('collection', () => {
     const event = data as CellEvent
     const here = at(event.source, event.flow)
     apply(event.source, event.flow, event.cell)
-    if (event.state === 'start') running.value[here] = event.stage
+    if (event.state === 'start' && event.stage) running.value[here] = event.stage
     else delete running.value[here]
     if (event.state === 'refused' && event.message) refusals.value[here] = event.message
     else if (event.state === 'done') delete refusals.value[here]

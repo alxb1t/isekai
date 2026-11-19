@@ -7,7 +7,7 @@ The phases move `ui/src/types.ts` onto `ui/src/wire.ts`, one group of types at a
 - [x] 1 — The first half: library, hub, review and staging · moderate
 - [x] 2 — The second half: jobs, quotes, renders, tattoos and compare · moderate
 - [x] 3 — The overlays · moderate
-- [ ] 4 — The six that differ · moderate
+- [x] 4 — The six that differ · moderate
 - [ ] 5 — The documents · moderate
 
 ## 1 — The first half: library, hub, review and staging
@@ -55,19 +55,19 @@ Each overlay is an `extends Omit<…>` of the wire's type that narrows a pair to
 
 `SessionRecord`, `RunningSession`, `Billing`, `QuoteSource`, `CellEvent` and `TattooList` are the types that differ ([design](design.md#context)); `TattooList` was phase 3. The page takes the wire's wider type where it was narrower ([D3](design.md#d3)).
 
-- [ ] 4.1 In `ui/src/types.ts`, replace `Billing`, whose volume state is `'open' | 'band'`, with `export type { Billing } from './wire'`. No site changes: each only compares the volume's state.
+- [x] 4.1 In `ui/src/types.ts`, replace `Billing`, whose volume state is `'open' | 'band'`, with `export type { Billing } from './wire'`. No site changes: each only compares the volume's state.
   Verify: `git grep -n -F "'open' | 'band'" -- ui/src/types.ts` prints nothing.
-- [ ] 4.2 In `ui/src/types.ts`, replace `CellEvent`, whose state is `'start' | 'done' | 'refused'`, with `export type { CellEvent } from './wire'`.
+- [x] 4.2 In `ui/src/types.ts`, replace `CellEvent`, whose state is `'start' | 'done' | 'refused'`, with `export type { CellEvent } from './wire'`.
   Verify: `git grep -n -F "'start' | 'done' | 'refused'" -- ui/src/types.ts` prints nothing.
-- [ ] 4.3 In `ui/src/stores/collection.ts`, make the cell listener keep the stage only when it is set, as [D7](design.md#d7) shows. The `data as CellEvent` cast stays.
+- [x] 4.3 In `ui/src/stores/collection.ts`, make the cell listener keep the stage only when it is set, as [D7](design.md#d7) shows. The `data as CellEvent` cast stays.
   Verify: `git grep -c -F "if (event.state === 'start' && event.stage) running.value[here] = event.stage" -- ui/src/stores/collection.ts` prints `ui/src/stores/collection.ts:1`.
-- [ ] 4.4 In `ui/src/types.ts`, rewrite `QuoteSource` as `export type QuoteSource = Omit<QuotedSource, 'images'>`, importing `QuotedSource` from `./wire` ([D5](design.md#d5)).
+- [x] 4.4 In `ui/src/types.ts`, rewrite `QuoteSource` as `export type QuoteSource = Omit<QuotedSource, 'images'>`, importing `QuotedSource` from `./wire` ([D5](design.md#d5)).
   Verify: `git grep -n -F "export type QuoteSource = Omit<QuotedSource, 'images'>" -- ui/src/types.ts` prints one line.
-- [ ] 4.5 In `ui/src/types.ts`, replace `SessionRecord` with `export type { ServedSession as SessionRecord } from './wire'` and `RunningSession` with `export type { RunningSession } from './wire'` ([D4](design.md#d4)).
+- [x] 4.5 In `ui/src/types.ts`, replace `SessionRecord` with `export type { ServedSession as SessionRecord } from './wire'` and `RunningSession` with `export type { RunningSession } from './wire'` ([D4](design.md#d4)).
   Verify: `git grep -n -E "^export interface (SessionRecord|RunningSession) \{" -- ui/src/types.ts` prints nothing.
-- [ ] 4.6 Give the `SessionRecord` fixtures `schema: { name: 'session', version: 1 }`: `record()` in `ui/src/sessions.test.ts` and the `b` record of the `drawer.records` literal in `ui/src/components/SessionDrawer.test.ts`. No assertion changes.
+- [x] 4.6 Give the `SessionRecord` fixtures `schema: { name: 'session', version: 1 }`: `record()` in `ui/src/sessions.test.ts` and the `b` record of the `drawer.records` literal in `ui/src/components/SessionDrawer.test.ts`. No assertion changes.
   Verify: `git grep -c -F "schema: { name: 'session', version: 1 }" -- ui/src/sessions.test.ts` prints `ui/src/sessions.test.ts:1`.
-- [ ] 4.7 Give the `RunningSession` fixtures `schema: { name: 'session', version: 1 }`, `ended: null`, `limit: 1200`, `asked: {}`, `steps: {}`, `images: []`, `outcome: 'running'` and `message: null`: `terminal` in `ui/src/stores/live.test.ts` and the entry of `live.activeSessions` in `ui/src/components/SessionDrawer.test.ts`. No assertion changes.
+- [x] 4.7 Give the `RunningSession` fixtures `schema: { name: 'session', version: 1 }`, `ended: null`, `limit: 1200`, `asked: {}`, `steps: {}`, `images: []`, `outcome: 'running'` and `message: null`: `terminal` in `ui/src/stores/live.test.ts` and the entry of `live.activeSessions` in `ui/src/components/SessionDrawer.test.ts`. No assertion changes.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
 
 ## 5 — The documents
