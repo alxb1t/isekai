@@ -5,7 +5,7 @@ The rule and its cases, then each site switched between mutation runs, then the 
 ## Progress
 
 - [x] 1 — The rule · moderate
-- [ ] 2 — The sites · moderate
+- [x] 2 — The sites · moderate
 - [ ] 3 — The decision · moderate
 
 ## 1 — The rule
@@ -55,9 +55,9 @@ The rule and its cases, then each site switched between mutation runs, then the 
   Verify: `uv run python -m tools.mutate isekai/interface/ui/library.py:797-806 --tests tests/test_ui_library.py` exits 0.
 - [x] 2.18 Switch `_runs` to its row of [D3](design.md#d3), keeping the separator filter and the digest key. In the import, `runs_in` replaces `FRAME_NAME`, after `photo_of`.
   Verify: `git grep -n -F "for run in runs_in(runs)" -- isekai/interface/ui/library.py` prints `1`.
-- [ ] 2.19 The new lines of `_runs`, 797-803, are a bare dict comprehension: `tools.mutate` holds no mutant in them and refuses the range, so no run is made. The tests that killed every mutant of 2.17 stand as the check, and pass over the switched lines.
+- [x] 2.19 The new lines of `_runs`, 797-803, are a bare dict comprehension: `tools.mutate` holds no mutant in them and refuses the range, so no run is made. The tests that killed every mutant of 2.17 stand as the check, and pass over the switched lines.
   Verify: `uv run pytest tests/test_ui_library.py` exits 0.
-- [ ] 2.20 Run the tests of the sites, of the evaluators and of the guards; no existing assertion changed.
+- [x] 2.20 Run the tests of the sites, of the evaluators and of the guards; no existing assertion changed.
   Verify: `uv run pytest tests/test_run_directory.py tests/test_compare.py tests/test_migrate.py tests/test_pipeline_cli.py tests/test_render.py tests/test_ui_library.py tests/test_evaluation_cli.py tests/test_recall_cli.py tests/test_spec_bindings.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py` exits 0.
 
 ## 3 — The decision

@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - `isekai/foundation/rundir.py` gains `runs_in` and `run_at`, the one rule that a run is a folder holding its frame file, re-exported by `run.py`; cases in `tests/test_run_directory.py` hold it (0165 D1, D2).
+- The render's `run_ids`, the compare page's `_runs`, the CLI's `_migrate`, the verbs' `run_or_photo` and `parse_cells`, and the library's `_runs` call `runs_in` or `run_at` instead of each testing the frame file; what each lists or refuses is unchanged, and a case holds `run_ids` of an absent root (0165 D3, D6).
 
 ## [0.87.20] - 2026-11-19
 

@@ -44,7 +44,6 @@ from isekai.foundation.flow import Flow, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
-    FRAME_NAME,
     ID_DIGEST_CHARS,
     ID_SEPARATOR,
     OUTPUTS,
@@ -62,6 +61,7 @@ from isekai.foundation.run import (
     group_of,
     latest_artifact,
     photo_of,
+    runs_in,
 )
 from isekai.interface.render import record_running
 from isekai.interface.wiring import trackable
@@ -796,13 +796,10 @@ def _size(path: Path) -> tuple[int, int] | None:
 
 def _runs(runs: Path) -> dict[str, Run]:
     """Return the runs under `runs` that hold a frame, by their identifier's digest."""
-    if not runs.is_dir():
-        return {}
     return {
-        item.name[:ID_DIGEST_CHARS]: Run(item.name, item)
-        for item in sorted(runs.iterdir())
-        if item.name[ID_DIGEST_CHARS:].startswith(ID_SEPARATOR)
-        and (item / FRAME_NAME).is_file()
+        run.id[:ID_DIGEST_CHARS]: run
+        for run in runs_in(runs)
+        if run.id[ID_DIGEST_CHARS:].startswith(ID_SEPARATOR)
     }
 
 

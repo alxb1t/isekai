@@ -70,13 +70,13 @@ from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow, tracked_flows
 from isekai.foundation.migrate import migrate
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
-    FRAME_NAME,
     PHOTOGRAPH_VERBS,
     RUNS_ROOT,
     Run,
     across,
     assign,
     find_run,
+    runs_in,
 )
 from isekai.interface.drafting import (
     approve_across,
@@ -189,11 +189,10 @@ def _migrate(args: argparse.Namespace, wired: Wiring) -> int:
         roots = [*([RUNS_ROOT] if RUNS_ROOT.is_dir() else []), *collection_runs()]
     refused = False
     for root in roots:
-        named = sorted(path.name for path in root.iterdir()) if root.is_dir() else []
-        for name in (name for name in named if (root / name / FRAME_NAME).is_file()):
-            where = f"{root.parent.name}/{root.name}/{name}"
+        for run in runs_in(root):
+            where = f"{root.parent.name}/{root.name}/{run.id}"
             try:
-                print(f"{where}: {migrate(Run(name, root / name))}", file=wired.out)
+                print(f"{where}: {migrate(run)}", file=wired.out)
             except Refusal as unmigrated:
                 refused = True
                 print(f"{where}: refused: {unmigrated}", file=wired.err)

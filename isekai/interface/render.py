@@ -54,13 +54,13 @@ from isekai.foundation.artifacts import (
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
-    FRAME_NAME,
     REPOSITORY,
     REVIEW,
     SHEETS,
     Run,
     approved_versions,
     latest_artifact,
+    runs_in,
 )
 from isekai.interface.compare_view import COLLECTION_PHOTOS
 from isekai.interface.wiring import Wiring
@@ -202,11 +202,7 @@ def _taken(roots: Sequence[Path], without: Sequence[Path]) -> list[Path]:
 
 def run_ids(runs: Path) -> list[str]:
     """Return every run under `runs`, by id; a collection not yet assigned has none."""
-    if not runs.is_dir():
-        return []
-    return sorted(
-        child.name for child in runs.iterdir() if (child / FRAME_NAME).is_file()
-    )
+    return [run.id for run in runs_in(runs)]
 
 
 class _Tee(io.TextIOBase):

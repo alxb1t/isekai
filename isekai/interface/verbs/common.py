@@ -12,7 +12,7 @@ from isekai.boundary.comfy import TransportFailure
 from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.flow import tracked_flows
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, open_run
+from isekai.foundation.run import RUNS_ROOT, Run, open_run, run_at
 from isekai.interface.wiring import Wiring
 from isekai.shared.ink import load_ink_config
 
@@ -287,9 +287,9 @@ def run_or_photo(identifier: str, wired: Wiring) -> Run | Path:
     A photograph is offered by path and an existing run by its id, and which one
     was meant is decided by what is on disk rather than by a flag.
     """
-    directory = wired.runs_root / identifier
-    if (directory / FRAME_NAME).is_file():
-        return Run(identifier, directory)
+    found = run_at(wired.runs_root, identifier)
+    if found is not None:
+        return found
     photo = Path(identifier)
     if not photo.is_file():
         raise Refusal(
@@ -326,7 +326,7 @@ def parse_cells(named: Sequence[str], wired: Wiring) -> list[tuple[str, str]]:
     require_tracked(list(dict.fromkeys(flow for _, flow in cells.values())), wired)
     runs = shlex.quote(str(wired.runs_root))
     for cell, (run_id, flow) in cells.items():
-        if not (wired.runs_root / run_id / FRAME_NAME).is_file():
+        if run_at(wired.runs_root, run_id) is None:
             raise Refusal(
                 f"{cell}: no run {run_id} under {wired.runs_root}; run "
                 f"`python -m isekai assign --flow {flow} --runs {runs} <photo>` first"
