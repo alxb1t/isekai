@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `isekai/foundation/rundir.py` gains `runs_in` and `run_at`, the one rule that a run is a folder holding its frame file, re-exported by `run.py`; cases in `tests/test_run_directory.py` hold it (0165 D1, D2).
+
 ## [0.87.20] - 2026-11-19
 
 Gate: local 1m8s · CI not read under mf-ship · 0.87.19: local 1m12s · CI not read under mf-ship

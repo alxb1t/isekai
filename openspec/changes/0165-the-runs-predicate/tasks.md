@@ -4,17 +4,17 @@ The rule and its cases, then each site switched between mutation runs, then the 
 
 ## Progress
 
-- [ ] 1 — The rule · moderate
+- [x] 1 — The rule · moderate
 - [ ] 2 — The sites · moderate
 - [ ] 3 — The decision · moderate
 
 ## 1 — The rule
 
-- [ ] 1.1 Write the cases of [design Tests](design.md#tests) at the end of `tests/test_run_directory.py`, before the code. Import `run_at` and `runs_in` from `isekai.foundation.run`; each test carries `@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")`.
+- [x] 1.1 Write the cases of [design Tests](design.md#tests) at the end of `tests/test_run_directory.py`, before the code. Import `run_at` and `runs_in` from `isekai.foundation.run`; each test carries `@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")`.
   Verify: `git grep -l -E "^def test_(runs_in|run_at)_" -- tests/test_run_directory.py` prints `tests/test_run_directory.py`.
-- [ ] 1.2 Add `runs_in` and `run_at` of [D2](design.md#d2) after `assign` in `isekai/foundation/rundir.py`. Its docstring's first line becomes "`Run`, one photograph's directory and its frame, `assign`, and which folders are runs", and its body gains the sentence "`runs_in` and `run_at` decide which folder is a run."
+- [x] 1.2 Add `runs_in` and `run_at` of [D2](design.md#d2) after `assign` in `isekai/foundation/rundir.py`. Its docstring's first line becomes "`Run`, one photograph's directory and its frame, `assign`, and which folders are runs", and its body gains the sentence "`runs_in` and `run_at` decide which folder is a run."
   Verify: `git grep -n -E "^def (runs_in|run_at)" -- isekai/foundation/rundir.py` prints `2`.
-- [ ] 1.3 In `isekai/foundation/run.py`, import `run_at` and `runs_in` from `isekai.foundation.rundir` beside `Run, assign`, and add each to `__all__` in sorted place.
+- [x] 1.3 In `isekai/foundation/run.py`, import `run_at` and `runs_in` from `isekai.foundation.rundir` beside `Run, assign`, and add each to `__all__` in sorted place.
   Verify: `uv run pytest tests/test_run_directory.py -k "runs_in or run_at"` exits 0.
 
 ## 2 — The sites

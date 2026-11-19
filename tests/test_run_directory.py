@@ -60,7 +60,9 @@ from isekai.foundation.run import (
     photo_of,
     record_failure,
     refusal_for,
+    run_at,
     run_id,
+    runs_in,
     slug,
     versions,
     write_atomically,
@@ -1498,3 +1500,77 @@ def test_files_written_before_a_record_key_existed_still_read_and_proceed(
     made = render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
     assert [one.seed for one in made] == [42]
+
+
+@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
+def test_runs_in_lists_a_folder_that_holds_a_frame_file(tmp_path: Path) -> None:
+    (tmp_path / "abc123-ada").mkdir()
+    (tmp_path / "abc123-ada" / FRAME_NAME).write_text("{}")
+
+    assert runs_in(tmp_path) == [Run("abc123-ada", tmp_path / "abc123-ada")]
+
+
+@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
+def test_runs_in_leaves_out_a_folder_whose_frame_is_a_directory(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "abc123-ada" / FRAME_NAME).mkdir(parents=True)
+
+    assert runs_in(tmp_path) == []
+
+
+@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
+def test_runs_in_leaves_out_a_folder_with_no_frame(tmp_path: Path) -> None:
+    (tmp_path / "abc123-ada").mkdir()
+
+    assert runs_in(tmp_path) == []
+
+
+@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
+def test_runs_in_leaves_out_a_file_beside_the_folders(tmp_path: Path) -> None:
+    (tmp_path / "abc123-ada").mkdir()
+    (tmp_path / "abc123-ada" / FRAME_NAME).write_text("{}")
+    (tmp_path / "notes.txt").write_text("not a run")
+
+    assert [run.id for run in runs_in(tmp_path)] == ["abc123-ada"]
+
+
+@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
+def test_runs_in_lists_the_runs_by_id(tmp_path: Path) -> None:
+    for name in ("ccc333-cy", "aaa111-al", "bbb222-bo"):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / FRAME_NAME).write_text("{}")
+
+    assert [run.id for run in runs_in(tmp_path)] == [
+        "aaa111-al",
+        "bbb222-bo",
+        "ccc333-cy",
+    ]
+
+
+@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
+def test_runs_in_holds_none_of_a_root_that_is_no_directory(tmp_path: Path) -> None:
+    a_file = tmp_path / "root"
+    a_file.write_text("not a directory")
+
+    assert runs_in(tmp_path / "absent") == []
+    assert runs_in(a_file) == []
+
+
+@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
+def test_run_at_finds_the_run_a_folder_with_a_frame_names(tmp_path: Path) -> None:
+    (tmp_path / "abc123-ada").mkdir()
+    (tmp_path / "abc123-ada" / FRAME_NAME).write_text("{}")
+
+    assert run_at(tmp_path, "abc123-ada") == Run("abc123-ada", tmp_path / "abc123-ada")
+
+
+@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
+def test_run_at_finds_no_run_where_the_frame_is_no_file(tmp_path: Path) -> None:
+    (tmp_path / "framed-by-a-directory" / FRAME_NAME).mkdir(parents=True)
+    (tmp_path / "no-frame").mkdir()
+
+    assert run_at(tmp_path, "framed-by-a-directory") is None
+    assert run_at(tmp_path, "no-frame") is None
+    assert run_at(tmp_path, "no-folder") is None
+    assert run_at(tmp_path / "absent", "abc123-ada") is None
