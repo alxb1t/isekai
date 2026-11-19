@@ -88,7 +88,7 @@ The rule's cases stand on no scenario, so each carries `@pytest.mark.spec_exempt
 
 ### D6
 
-A mutation run is `uv run python -m tools.mutate <path:lo-hi> --tests <file>` over one range. A survivor that is no equivalent mutant gets its case, in the site's test file, before the site is switched. No run names `tests/test_ui_api.py`, so no draft-lock test is left out.
+A mutation run is `uv run python -m tools.mutate <path:lo-hi> --tests <file>` over one range. A survivor that is no equivalent mutant gets its case, in the site's test file, before the site is switched. A switched site the mutator refuses as holding no mutant (`ui/library._runs`, a bare comprehension) has no run after its switch; the pre-switch run and the site's tests passing stand for it. No run names `tests/test_ui_api.py`, so no draft-lock test is left out.
 
 ### D7
 
