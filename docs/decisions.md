@@ -466,9 +466,9 @@ hub marks it. A tattoo is cleaned as a source is, and bounded to its long side
 
 **A run is a folder of a runs root that holds its frame, `run.json`, as a file. `runs_in(root)` lists the runs of a root by id and `run_at(root, id)` returns the run a folder names; both are in `isekai/foundation/rundir.py`, and a front end reads them through `isekai.foundation.run`. A site that lists or finds a run calls them and tests no frame of its own.**
 
-- **Why:** the front end's sites each asked of a folder whether it was a run, in their own words, so a change to the rule was an edit in each. The library keeps its separator filter and its key over `runs_in`, so the hub is unchanged.
+- **Why:** the front end's sites each asked of a folder whether it was a run, in their own words, so a change to the rule was an edit in each. The library passes its separator filter to `runs_in` as `named`, so a folder with another name is never probed, and keeps its key; the hub is unchanged.
 - **Accepts:** resume and evaluation differ by design. Resume's `_run_for` finds a run by its photograph's digest and passes over a folder with no frame, so `open_run` writes one in place. Evaluation's `runs_in` lists every folder holding anything named `run.json`, so a frame that is no file is a run that does not read and its renders are unreadable rows. `_laid_out` and the remedy `rendered_at` picks ask about one path. Reopen when a front-end site tests a frame itself, or the evaluators list by the rule.
-- **Made by:** `0165`.
+- **Made by:** `0165`, `0169`.
 
 ## Code and environment
 

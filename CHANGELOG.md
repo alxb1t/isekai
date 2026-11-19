@@ -10,6 +10,14 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.25] - 2026-11-19
+
+Gate: local 1m25s · CI not read under mf-ship · 0.87.24: local 1m21s · CI not read under mf-ship
+
+- `runs_in` in `isekai/foundation/rundir.py` takes a keyword-only name predicate, `named`, and leaves out a child it rejects before probing its frame, so a folder that is no run is never read; with `named` absent it lists as before (0169 D1, D5, D7).
+- `isekai/interface/ui/library.py` passes the library's separator test to `runs_in` as `named`, so an unreadable folder that is no run no longer fails Home, the hub or the run lookup (0169 D2, D4, D5).
+- `docs/decisions.md` amends D65's *Why* to say the library passes its separator filter to `runs_in` as `named`, and its *Made by* gains `0169` (0169 D6).
+
 ## [0.87.24] - 2026-11-19
 
 Gate: local 1m21s · CI not read under mf-ship · 0.87.23: local 1m14s · CI not read under mf-ship

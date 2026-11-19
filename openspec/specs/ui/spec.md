@@ -644,6 +644,13 @@ pending count is the render stage's own.
 - **THEN** that cell is unreadable, with the pipeline's refusal
 - **AND** every other cell shows its stage
 
+#### Scenario: a folder that is no run is ignored
+- **Key:** `ui:hub:a-folder-that-is-no-run-is-ignored`
+- **Layers:** unit
+- **WHEN** a collection's runs folder holds a folder whose name is no run's and which cannot be read
+- **THEN** the hub shows its grid with no cell and no refusal for it
+- **AND** a run beside it shows its stage
+
 #### Scenario: the hub writes nothing
 - **Key:** `ui:hub:the-hub-writes-nothing`
 - **Layers:** unit

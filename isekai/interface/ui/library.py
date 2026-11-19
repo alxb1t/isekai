@@ -805,8 +805,9 @@ def _runs(runs: Path) -> dict[str, Run]:
     """Return the runs under `runs` that hold a frame, by their identifier's digest."""
     return {
         run.id[:ID_DIGEST_CHARS]: run
-        for run in runs_in(runs)
-        if run.id[ID_DIGEST_CHARS:].startswith(ID_SEPARATOR)
+        for run in runs_in(
+            runs, named=lambda name: name[ID_DIGEST_CHARS:].startswith(ID_SEPARATOR)
+        )
     }
 
 

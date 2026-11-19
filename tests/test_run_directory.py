@@ -1558,6 +1558,36 @@ def test_runs_in_holds_none_of_a_root_that_is_no_directory(tmp_path: Path) -> No
 
 
 @pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
+def test_runs_in_leaves_out_a_framed_folder_its_name_predicate_rejects(
+    tmp_path: Path,
+) -> None:
+    for name in ("abc123-ada", "private"):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / FRAME_NAME).write_text("{}")
+
+    found = runs_in(tmp_path, named=lambda name: "-" in name)
+
+    assert [run.id for run in found] == ["abc123-ada"]
+
+
+@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
+def test_runs_in_does_not_probe_a_child_its_name_predicate_rejects(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "abc123-ada").mkdir()
+    (tmp_path / "abc123-ada" / FRAME_NAME).write_text("{}")
+    private = tmp_path / "private"
+    private.mkdir()
+    private.chmod(0o000)
+    try:
+        found = runs_in(tmp_path, named=lambda name: "-" in name)
+    finally:
+        private.chmod(0o700)
+
+    assert [run.id for run in found] == ["abc123-ada"]
+
+
+@pytest.mark.spec_exempt("structural: the one rule for which folder is a run")
 def test_run_at_finds_the_run_a_folder_with_a_frame_names(tmp_path: Path) -> None:
     (tmp_path / "abc123-ada").mkdir()
     (tmp_path / "abc123-ada" / FRAME_NAME).write_text("{}")
