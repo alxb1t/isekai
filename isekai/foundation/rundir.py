@@ -9,7 +9,7 @@ from there.
 Stdlib only, and on `python -m isekai`'s import graph.
 """
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -151,14 +151,17 @@ def assign(run: Run, flow: str, *, remove: bool = False) -> bool:
     return True
 
 
-def runs_in(root: Path) -> list[Run]:
-    """Return the runs under `root`, by id; a root that is no directory holds none."""
+def runs_in(root: Path, *, named: Callable[[str], bool] | None = None) -> list[Run]:
+    """Return the runs under `root`, by id; a root that is no directory holds none.
+
+    With `named`, a child whose name it rejects is left out before its frame is probed.
+    """
     if not root.is_dir():
         return []
     return [
         Run(path.name, path)
         for path in sorted(root.iterdir())
-        if (path / FRAME_NAME).is_file()
+        if (named is None or named(path.name)) and (path / FRAME_NAME).is_file()
     ]
 
 

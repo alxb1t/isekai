@@ -4,17 +4,17 @@ The phases: the helper's predicate with its cases, the library's call with the h
 
 ## Progress
 
-- [ ] 1 — The helper · moderate
+- [x] 1 — The helper · moderate
 - [ ] 2 — The library · moderate
 - [ ] 3 — The decision · moderate
 
 ## 1 — The helper
 
-- [ ] 1.1 Add the helper's cases of [D5](design.md#d5) to `tests/test_run_directory.py`, after `test_runs_in_holds_none_of_a_root_that_is_no_directory`. Run them: each fails with `TypeError`, since `named` is unknown.
+- [x] 1.1 Add the helper's cases of [D5](design.md#d5) to `tests/test_run_directory.py`, after `test_runs_in_holds_none_of_a_root_that_is_no_directory`. Run them: each fails with `TypeError`, since `named` is unknown.
   Verify: `git grep -n -e "def test_runs_in_leaves_out_a_framed_folder_its_name_predicate_rejects" -e "def test_runs_in_does_not_probe_a_child_its_name_predicate_rejects" -- tests/test_run_directory.py` prints two lines.
-- [ ] 1.2 Write `runs_in` in `isekai/foundation/rundir.py` exactly as [D1](design.md#d1) gives it, and add `Callable` to the `collections.abc` import. No other line of the file changes.
+- [x] 1.2 Write `runs_in` in `isekai/foundation/rundir.py` exactly as [D1](design.md#d1) gives it, and add `Callable` to the `collections.abc` import. No other line of the file changes.
   Verify: `uv run pytest tests/test_run_directory.py` exits 0.
-- [ ] 1.3 Run the mutator over `runs_in`'s lines as 1.2 leaves them, as [D7](design.md#d7) says. A survivor gets a case in `tests/test_run_directory.py` that kills it.
+- [x] 1.3 Run the mutator over `runs_in`'s lines as 1.2 leaves them, as [D7](design.md#d7) says. A survivor gets a case in `tests/test_run_directory.py` that kills it.
   Verify: `uv run python -m tools.mutate isekai/foundation/rundir.py:154-165 --tests tests/test_run_directory.py` exits 0.
 
 ## 2 — The library
