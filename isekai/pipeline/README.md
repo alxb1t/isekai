@@ -42,7 +42,7 @@ independent, and neither reads the other's output
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `importing.py` | `interface/ui/__init__.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/ui/routes/staging.py`, `interface/ui/routes/tattoos.py`, `interface/ui/surface.py`, `interface/verbs/library.py` | — |
+| `importing.py` | `interface/ui/__init__.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/ui/routes/staging.py`, `interface/ui/routes/tattoos.py`, `interface/ui/shapes.py`, `interface/ui/surface.py`, `interface/verbs/library.py` | — |
 | `caption.py` | `interface/cli.py`, `interface/wiring.py` | — |
 | `tagging.py` | `interface/cli.py`, `interface/wiring.py` | — |
 | `sheet.py` | `interface/cli.py`, `interface/drafting.py` | — |
