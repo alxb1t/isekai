@@ -3,8 +3,9 @@
 `ANSWERS` keys each declaration as `tests/record/routes.json` keys its route,
 `"<METHOD> <path template>"`. A test holds each against its recorded shape; no handler
 reads a declaration. `UNRECORDED` keys the answers the record lacks, each held by a case
-that asks the server. No web framework is imported, so the layer's entry point and its
-tests read it whether or not a server is installed.
+that asks the server. `EVENTS` keys the stream's events by name, each held by a case
+that reads what the server publishes. No web framework is imported, so the layer's
+entry point and its tests read it whether or not a server is installed.
 """
 
 from typing import Any, Literal, NotRequired, TypedDict
@@ -598,6 +599,45 @@ class DraftRefused(Refused):
     images: list[RefusedImage]
 
 
+class FileState(TypedDict):
+    """One upload's state in an import, as the reader holds it."""
+
+    file: str
+    state: str
+    name: NotRequired[str]
+    carries: NotRequired[list[str]]
+    copy_of: NotRequired[str | None]
+    refusal: NotRequired[str]
+
+
+class FileEvent(FileState):
+    """A file's new state, with the import and the upload it belongs to."""
+
+    staging: str
+    upload: str
+
+
+class Snapshot(TypedDict):
+    """The whole truth the stream opens with."""
+
+    jobs: dict[str, Job | None]
+    billing: Billing
+    hub: NotRequired[HubInfo]
+    files: NotRequired[dict[str, FileState]]
+
+
+class CellEvent(TypedDict):
+    """One hub cell after a stage reported progress on it."""
+
+    collection: str
+    source: str
+    flow: str
+    stage: str | None
+    state: str | None
+    message: str | None
+    cell: HubCell
+
+
 ANSWERS: dict[str, Any] = {
     "GET /api/library": LibraryInfo,
     "GET /api/{rest:path}": Refused,
@@ -642,4 +682,12 @@ UNRECORDED: dict[str, Any] = {
     "POST /api/render": JobStarted,
     "GET /api/sessions/running": RunningSessions,
     f"GET {COLLECTION}/sessions/{{name}}": ServedSession,
+}
+
+EVENTS: dict[str, Any] = {
+    "snapshot": Snapshot,
+    "job": Job,
+    "billing": Billing,
+    "cell": CellEvent,
+    "file": FileEvent,
 }

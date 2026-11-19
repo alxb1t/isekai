@@ -10,7 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
-- `isekai/interface/ui/shapes.py` declares `Refused`, `DraftRefused` and `RefusedImage`, and the catch-all's 404 is the row of `ANSWERS` that holds `Refused`; cases hold the guard's 403s, a 409 and the draft's 409 to them, and one case holds every recorded entry of status 400 and above to `Refused`, with a twin (0166 D1, D2).
+- `isekai/interface/ui/shapes.py` declares `Refused`, `DraftRefused` and `RefusedImage`, with the catch-all's 404 as the `ANSWERS` row that holds `Refused`; cases hold each 403, each 409 and every recorded refusal to them (0166 D1, D2).
+- `isekai/interface/ui/shapes.py` declares the stream's events, `FileState`, `FileEvent`, `Snapshot` and `CellEvent`, and `EVENTS`, keyed by event name; a case for each event holds it to what the server publishes (0166 D3, D4, D5).
 
 ## [0.87.20] - 2026-11-19
 

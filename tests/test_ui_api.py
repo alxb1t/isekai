@@ -31,6 +31,7 @@ import random
 import shlex
 import shutil
 import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -96,6 +97,7 @@ from isekai.interface.ui.app import (  # noqa: E402
 from isekai.interface.ui.billing import Billing  # noqa: E402
 from isekai.interface.ui.jobs import Jobs  # noqa: E402
 from isekai.interface.ui.shapes import (  # noqa: E402
+    EVENTS,
     UNRECORDED,
     DraftRefused,
     Refused,
@@ -3632,3 +3634,47 @@ def test_a_served_session_fits_its_declaration_running_and_stale(
     stale = client.get(f"/api/c/{COLLECTION}/sessions/{name}").json()
     assert stale["outcome"] is None
     assert faults(declared, shape(stale), "") == []
+
+
+@pytest.mark.spec_exempt("structural: the file event fits the declaration EVENTS holds")
+def test_the_file_event_fits_its_declaration(client: TestClient) -> None:
+    feed = _broadcast(client).subscribe()
+    staged = client.post("/api/staging").json()["id"]
+    _, photo = _upload(client, staged, "a.jpg", photo_jpeg((200, 0, 0), (40, 30)))
+    _, bad = _upload(client, staged, "bad.jpg", b"not a photograph")
+
+    sent = _until_read(feed, staged, {photo["upload"], bad["upload"]})
+
+    assert {"waiting", "converting", "refused"} <= {one["state"] for one in sent}
+    assert [faults(EVENTS["file"], shape(one), "") for one in sent] == [[]] * len(sent)
+
+
+def _first_frame(client: TestClient, url: str) -> dict[str, Any]:
+    """Return the stream's first frame; a thread closes the stream once it is open."""
+    broadcast = _broadcast(client)
+    open_before = len(broadcast._queues)
+
+    def close_once_open() -> None:
+        deadline = time.monotonic() + WAIT
+        while len(broadcast._queues) == open_before and time.monotonic() < deadline:
+            time.sleep(0.01)
+        broadcast.publish(events.CLOSE, {})
+
+    threading.Thread(target=close_once_open, daemon=True).start()
+    answered = client.get(url)
+    assert answered.status_code == 200
+    return json.loads(answered.text.split("\n")[1].removeprefix("data: "))
+
+
+@pytest.mark.spec_exempt("structural: the snapshot fits the declaration EVENTS holds")
+def test_the_snapshot_fits_its_declaration(client: TestClient, made: Run) -> None:
+    _source(made)
+    feed = _broadcast(client).subscribe()
+    staged = client.post("/api/staging").json()["id"]
+    _, photo = _upload(client, staged, "a.jpg", photo_jpeg((200, 0, 0), (40, 30)))
+    _until_read(feed, staged, {photo["upload"]})
+
+    first = _first_frame(client, f"/events?collection={COLLECTION}&staging={staged}")
+
+    assert {"hub", "files"} <= first.keys()
+    assert faults(EVENTS["snapshot"], shape(first), "") == []

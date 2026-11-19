@@ -5,7 +5,7 @@ The phases declare the refusals, declare the stream's events, hold every route, 
 ## Progress
 
 - [x] 1 — The refusals · moderate
-- [ ] 2 — The stream's events · moderate
+- [x] 2 — The stream's events · moderate
 - [ ] 3 — Every route · moderate
 - [ ] 4 — The imports and the documents · moderate
 
@@ -28,25 +28,25 @@ The phases declare the refusals, declare the stream's events, hold every route, 
 
 ## 2 — The stream's events
 
-- [ ] 2.1 In `shapes.py` add `FileState`, `FileEvent`, `Snapshot` and `CellEvent` per [D3](design.md#d3), each with a one-line docstring,
+- [x] 2.1 In `shapes.py` add `FileState`, `FileEvent`, `Snapshot` and `CellEvent` per [D3](design.md#d3), each with a one-line docstring,
   the fields and types of the table and of `FileState`'s paragraph in [D3](design.md#d3). Place them after `Refused`'s classes.
   Verify: `git grep -n -E "^class (FileState|FileEvent|Snapshot|CellEvent)" -- isekai/interface/ui/shapes.py` prints four lines.
-- [ ] 2.2 In `shapes.py` add `EVENTS: dict[str, Any]` after `UNRECORDED`, with the rows `snapshot`, `job`, `billing`, `cell` and `file`,
+- [x] 2.2 In `shapes.py` add `EVENTS: dict[str, Any]` after `UNRECORDED`, with the rows `snapshot`, `job`, `billing`, `cell` and `file`,
   and add the table to the docstring of `shapes.py` as the line that says `UNRECORDED` keys the answers the record lacks does.
   Verify: `git grep -n -E "^(ANSWERS|UNRECORDED|EVENTS): dict" -- isekai/interface/ui/shapes.py` prints three lines.
-- [ ] 2.3 In `tests/test_ui_jobs.py` add `test_the_job_event_fits_its_declaration` ([D4](design.md#d4)): build the app with `_held_client(..., make_jobs=_Idle)`,
+- [x] 2.3 In `tests/test_ui_jobs.py` add `test_the_job_event_fits_its_declaration` ([D4](design.md#d4)): build the app with `_held_client(..., make_jobs=_Idle)`,
   subscribe to `app.state.broadcast`, post the prepare, take the `job` event with `_until` and walk `shape` of its data against `EVENTS["job"]`. Import `EVENTS` beside `UNRECORDED`.
   Verify: `uv run pytest tests/test_ui_jobs.py -k the_job_event_fits` exits 0.
-- [ ] 2.4 In `tests/test_ui_jobs.py` add `test_the_billing_event_fits_its_declaration`: a local `Volume` double over a `.gpunit` folder holding a window record, the app built by `create_app` and
+- [x] 2.4 In `tests/test_ui_jobs.py` add `test_the_billing_event_fits_its_declaration`: a local `Volume` double over a `.gpunit` folder holding a window record, the app built by `create_app` and
   `bare_wiring(volume=…)` as `tests/test_ui_billing.py` does; subscribe, post `/api/billing/check`, walk the `billing` event against `EVENTS["billing"]`.
   Verify: `uv run pytest tests/test_ui_jobs.py -k the_billing_event_fits` exits 0.
-- [ ] 2.5 In `tests/test_ui_jobs.py` add `test_the_cell_event_fits_its_declaration`: call `cell_event(folder, grid, {FLOW: load_flow(FLOW)})` as
+- [x] 2.5 In `tests/test_ui_jobs.py` add `test_the_cell_event_fits_its_declaration`: call `cell_event(folder, grid, {FLOW: load_flow(FLOW)})` as
   `test_a_stage_reporting_an_item_done_sends_that_cells_new_stage` does, on a `done` line naming a run and `FLOW`, and walk the event against `EVENTS["cell"]`.
   Verify: `uv run pytest tests/test_ui_jobs.py -k the_cell_event_fits` exits 0.
-- [ ] 2.6 In `tests/test_ui_api.py` add `test_the_file_event_fits_its_declaration`: subscribe with `_broadcast`, open a staging, `_upload` a photograph and a file the reader refuses,
+- [x] 2.6 In `tests/test_ui_api.py` add `test_the_file_event_fits_its_declaration`: subscribe with `_broadcast`, open a staging, `_upload` a photograph and a file the reader refuses,
   collect each with `_until_each_read`, and walk every `file` event against `EVENTS["file"]`. Import `EVENTS` beside `UNRECORDED`.
   Verify: `uv run pytest tests/test_ui_api.py -k the_file_event_fits` exits 0.
-- [ ] 2.7 In `tests/test_ui_api.py` add `_first_frame(client, url)`, which reads the stream's first frame and closes the stream from a thread once it is open,
+- [x] 2.7 In `tests/test_ui_api.py` add `_first_frame(client, url)`, which reads the stream's first frame and closes the stream from a thread once it is open,
   and `test_the_snapshot_fits_its_declaration`: `_source(made)`, an upload read through `_until_read`, then `/events?collection=…&staging=…` walked against `EVENTS["snapshot"]`.
   Verify: `uv run pytest tests/test_ui_api.py -k the_snapshot_fits` exits 0.
 

@@ -50,7 +50,7 @@ from isekai.interface.ui.jobs import (  # noqa: E402
     render_command,
     settle_s,
 )
-from isekai.interface.ui.shapes import UNRECORDED  # noqa: E402
+from isekai.interface.ui.shapes import EVENTS, UNRECORDED  # noqa: E402
 from isekai.pipeline.generate import prepare  # noqa: E402
 from isekai.pipeline.review import approve, review  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
@@ -1646,3 +1646,75 @@ def test_the_render_answer_fits_its_declaration(
     assert answered.status_code == 200
     declared = UNRECORDED["POST /api/render"]
     assert faults(declared, shape(answered.json()), "") == []
+
+
+@pytest.mark.spec_exempt("structural: the job event fits the declaration EVENTS holds")
+def test_the_job_event_fits_its_declaration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, vocabulary: Vocabulary
+) -> None:
+    app, client, _, _ = _held_client(tmp_path, monkeypatch, vocabulary, make_jobs=_Idle)
+    found = app.state.broadcast.subscribe()
+
+    assert client.post("/api/c/hub-prepare/prepare").status_code == 200
+
+    _, data = _until(found, "job")
+    assert faults(EVENTS["job"], shape(data), "") == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: the billing event fits the declaration EVENTS holds"
+)
+def test_the_billing_event_fits_its_declaration(tmp_path: Path) -> None:
+    records = tmp_path / ".gpunit"
+    records.mkdir()
+    window = {
+        "id": "v1",
+        "datacenter": "EU-RO-1",
+        "size_gb": 50,
+        "ends": "2026-10-21T13:00:00Z",
+    }
+    (records / "volume").write_text(json.dumps(window))
+
+    def run(argv: Sequence[str], say: Say) -> GpunitExit:
+        return GpunitExit(0)
+
+    (tmp_path / "lib" / "b" / "sources").mkdir(parents=True)
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html>")
+    wired = bare_wiring(
+        runs_root=tmp_path / "lib" / "b" / "runs",
+        volume=Volume(run=run, records=records),
+    )
+    app = create_app(
+        tmp_path / "lib",
+        wired,
+        flows=OFFERED,
+        bundle=dist,
+        wire=lambda runs: wired,
+        host=HOST,
+        port=PORT,
+    )
+    found = app.state.broadcast.subscribe()
+
+    answered = TestClient(app, base_url=f"http://{HOST}:{PORT}").post(
+        "/api/billing/check"
+    )
+
+    assert answered.status_code == 200
+    _, data = _until(found, "billing")
+    assert data["volume"] is not None
+    assert faults(EVENTS["billing"], shape(data), "") == []
+
+
+@pytest.mark.spec_exempt("structural: the cell event fits the declaration EVENTS holds")
+def test_the_cell_event_fits_its_declaration(tmp_path: Path) -> None:
+    folder, (run,) = _collection(tmp_path, "ada.jpg")
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
+    cell = cell_event(folder, grid, {FLOW: load_flow(FLOW)})
+
+    (sent,) = cell(
+        {"run": run.id, "flow": FLOW, "stage": "tag", "state": "done", "message": "ok"}
+    )
+
+    assert faults(EVENTS["cell"], shape(sent), "") == []
