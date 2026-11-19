@@ -5,7 +5,7 @@ Hold each loader's whole refusal messages, add `read_keyed`, then switch the loa
 ## Progress
 
 - [x] 1 — The pins · moderate
-- [ ] 2 — The helper · moderate
+- [x] 2 — The helper · moderate
 - [ ] 3 — The switch · moderate
 
 ## 1 — The pins
@@ -25,13 +25,13 @@ Hold each loader's whole refusal messages, add `read_keyed`, then switch the loa
 
 ## 2 — The helper
 
-- [ ] 2.1 Write `tests/test_config.py` with a module docstring, and `test_read_keyed_returns_the_document_it_read` carrying `spec_exempt("structural: the block the config loaders share")`. It writes `{"b": 2, "a": 1}` to `tmp_path / "x.json"`, calls `read_keyed(path, ("a", "b"))` and asserts the result equals `{"a": 1, "b": 2}`. It patches nothing ([D4](design.md#d4)).
+- [x] 2.1 Write `tests/test_config.py` with a module docstring, and `test_read_keyed_returns_the_document_it_read` carrying `spec_exempt("structural: the block the config loaders share")`. It writes `{"b": 2, "a": 1}` to `tmp_path / "x.json"`, calls `read_keyed(path, ("a", "b"))` and asserts the result equals `{"a": 1, "b": 2}`. It patches nothing ([D4](design.md#d4)).
   Verify: `grep -c '^def test_' tests/test_config.py` prints `1`.
-- [ ] 2.2 Write `isekai/foundation/config.py` per [D1](design.md#d1): a module docstring, `read_keyed(path: Path, keys: Sequence[str]) -> Any`, the block of `load_caption_config` reading its key tuple from the `keys` parameter, and `return document`. It imports `json`, `Sequence`, `Path`, `Any` and `Refusal` only.
+- [x] 2.2 Write `isekai/foundation/config.py` per [D1](design.md#d1): a module docstring, `read_keyed(path: Path, keys: Sequence[str]) -> Any`, the block of `load_caption_config` reading its key tuple from the `keys` parameter, and `return document`. It imports `json`, `Sequence`, `Path`, `Any` and `Refusal` only.
   Verify: `uv run pytest tests/test_config.py` exits 0.
-- [ ] 2.3 In `isekai/foundation/README.md`, add a `config.py` row after the `caption_config.py` row of `## Files`: reads a JSON config by the keys a build reads, refusing a key it does not read and a key it lacks. Add `` | `config.py` | — | — | `` after the `caption_config.py` row of `## Imported by` ([D5](design.md#d5)).
+- [x] 2.3 In `isekai/foundation/README.md`, add a `config.py` row after the `caption_config.py` row of `## Files`: reads a JSON config by the keys a build reads, refusing a key it does not read and a key it lacks. Add `` | `config.py` | — | — | `` after the `caption_config.py` row of `## Imported by` ([D5](design.md#d5)).
   Verify: `grep -c '^| .config.py. |' isekai/foundation/README.md` prints `2`.
-- [ ] 2.4 Run `uv run python -m tools.derive_imported_by`, which re-derives the `refusal.py` row to name `config.py`.
+- [x] 2.4 Run `uv run python -m tools.derive_imported_by`, which re-derives the `refusal.py` row to name `config.py`.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
 
 ## 3 — The switch
