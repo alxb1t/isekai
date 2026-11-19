@@ -4,7 +4,7 @@ The phases: the tool and its grammar, the file it writes, the documents. No file
 
 ## Progress
 
-- [ ] 1 — The grammar · hard
+- [x] 1 — The grammar · hard
 - [ ] 2 — The file · moderate
 - [ ] 3 — The documents · moderate
 
@@ -12,17 +12,17 @@ The phases: the tool and its grammar, the file it writes, the documents. No file
 
 The cases come first, over trees of their own; then the tool that makes them pass ([D1](design.md#d1)–[D5](design.md#d5)).
 
-- [ ] 1.1 Create `tests/test_derive_wire.py` with a helper `_tree(root, files)` that writes each text of `files`, a map from a path relative to `root` to its text, and returns `root`, and the case for the leaves and `None`. Each case carries `@pytest.mark.spec_exempt("structural: …")` and calls `derive(root)` of `tools.derive_wire`.
+- [x] 1.1 Create `tests/test_derive_wire.py` with a helper `_tree(root, files)` that writes each text of `files`, a map from a path relative to `root` to its text, and returns `root`, and the case for the leaves and `None`. Each case carries `@pytest.mark.spec_exempt("structural: …")` and calls `derive(root)` of `tools.derive_wire`.
   Verify: `grep -c -E "^def test_" tests/test_derive_wire.py` prints `1`.
-- [ ] 1.2 Add the cases for a list, a map by `str`, a map by an alias, `NotRequired` and an inline `Literal` with `None`, each asserting the text of [D2](design.md#d2)'s row.
+- [x] 1.2 Add the cases for a list, a map by `str`, a map by an alias, `NotRequired` and an inline `Literal` with `None`, each asserting the text of [D2](design.md#d2)'s row.
   Verify: `grep -c -E "^def test_" tests/test_derive_wire.py` prints `6`.
-- [ ] 1.3 Add the cases for an alias imported through its module, an alias imported by its own name, an alias that nests another, a base in the module, a base in another module whose field names a third class of that module, and an empty class, each asserting the names of [D3](design.md#d3).
+- [x] 1.3 Add the cases for an alias imported through its module, an alias imported by its own name, an alias that nests another, a base in the module, a base in another module whose field names a third class of that module, and an empty class, each asserting the names of [D3](design.md#d3).
   Verify: `grep -c -E "^def test_" tests/test_derive_wire.py` prints `12`.
-- [ ] 1.4 Add the case for the `Events` map, written in `EVENTS`' order, and the refusal case, parametrised over a union of arms that are not `None`, a tuple and a name that is no class or alias; each refusal matches `<Class>.<field>: … is no form of the wire`.
+- [x] 1.4 Add the case for the `Events` map, written in `EVENTS`' order, and the refusal case, parametrised over a union of arms that are not `None`, a tuple and a name that is no class or alias; each refusal matches `<Class>.<field>: … is no form of the wire`.
   Verify: `grep -c -E "^def test_" tests/test_derive_wire.py` prints `14`.
-- [ ] 1.5 Create `tools/derive_wire.py`: standard library and `ast` alone, `derive(root: Path) -> str` and `main() -> int`, written to [D1](design.md#d1)–[D4](design.md#d4); `main` writes `ui/src/wire.ts` and returns 0, and `python -m tools.derive_wire` runs it.
+- [x] 1.5 Create `tools/derive_wire.py`: standard library and `ast` alone, `derive(root: Path) -> str` and `main() -> int`, written to [D1](design.md#d1)–[D4](design.md#d4); `main` writes `ui/src/wire.ts` and returns 0, and `python -m tools.derive_wire` runs it.
   Verify: `uv run pytest tests/test_derive_wire.py` passes.
-- [ ] 1.6 Hold the tool to the standard library: it imports no module of `isekai`.
+- [x] 1.6 Hold the tool to the standard library: it imports no module of `isekai`.
   Verify: `grep -n -E "^(from|import) isekai" tools/derive_wire.py` prints nothing.
 
 ## 2 — The file

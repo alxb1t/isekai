@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `tools/derive_wire.py` reads `shapes.py` and the modules it imports by `ast`, imports no `isekai` module, and refuses a form outside its grammar naming the class and the field; `tests/test_derive_wire.py` holds each form over trees of its own (0168 D1–D5).
+
 ## [0.87.23] - 2026-11-19
 
 Gate: local 1m14s · CI not read under mf-ship · 0.87.22: local 1m12s · CI not read under mf-ship
