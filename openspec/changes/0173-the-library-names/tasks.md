@@ -5,7 +5,7 @@ Each phase moves names into `isekai/foundation/library.py` and ends green; the c
 ## Progress
 
 - [x] 1 — The collection · moderate
-- [ ] 2 — The session · moderate
+- [x] 2 — The session · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The collection
@@ -23,15 +23,15 @@ Each phase moves names into `isekai/foundation/library.py` and ends green; the c
 
 ## 2 — The session
 
-- [ ] 2.1 In `isekai/foundation/library.py`, after `collection`, add `UNSUPPORTED` with its comment (`isekai/interface/render.py:248-251`), `record_running` (`:254-274`), then `running`, `render_running`, `session` and `_session` (`isekai/interface/ui/library.py:306-351`), verbatim, in that order ([D1](design.md#d1)). Import `contextlib`, `errno`, `fcntl`, `Any`, `Run` from `isekai.foundation.run`, and `SESSION_FILE`, `SESSION_ID`, `SESSIONS`, `SessionRecord`, `read` from `isekai.foundation.artifacts`. Keep `fcntl.flock(held, fcntl.LOCK_SH | fcntl.LOCK_NB)` ([D4](design.md#d4)).
+- [x] 2.1 In `isekai/foundation/library.py`, after `collection`, add `UNSUPPORTED` with its comment (`isekai/interface/render.py:248-251`), `record_running` (`:254-274`), then `running`, `render_running`, `session` and `_session` (`isekai/interface/ui/library.py:306-351`), verbatim, in that order ([D1](design.md#d1)). Import `contextlib`, `errno`, `fcntl`, `Any`, `Run` from `isekai.foundation.run`, and `SESSION_FILE`, `SESSION_ID`, `SESSIONS`, `SessionRecord`, `read` from `isekai.foundation.artifacts`. Keep `fcntl.flock(held, fcntl.LOCK_SH | fcntl.LOCK_NB)` ([D4](design.md#d4)).
   Verify: `git grep -n -e "^def record_running" -e "^def running" -e "^def render_running" -e "^def session" -e "^def _session" -- isekai/foundation/library.py` prints `5`, `git grep -n -F "from fcntl import" -- isekai/foundation/library.py` prints nothing, and `git grep -n -F "fcntl.flock(" -- isekai/foundation/library.py` prints `1`.
-- [ ] 2.2 In `isekai/interface/render.py`, delete the `UNSUPPORTED` block and `record_running`, and `import errno` (line 24); keep `import fcntl`. Import `UNSUPPORTED` plain and `record_running as record_running` from `isekai.foundation.library` ([D2](design.md#d2), [D4](design.md#d4)); `uv run ruff check --fix isekai/interface/render.py` orders them.
+- [x] 2.2 In `isekai/interface/render.py`, delete the `UNSUPPORTED` block and `record_running`, and `import errno` (line 24); keep `import fcntl`. Import `UNSUPPORTED` plain and `record_running as record_running` from `isekai.foundation.library` ([D2](design.md#d2), [D4](design.md#d4)); `uv run ruff check --fix isekai/interface/render.py` orders them.
   Verify: `git grep -n -F "import errno" -- isekai/interface/render.py` prints nothing, `git grep -n -e "^def record_running" -e "^UNSUPPORTED" -- isekai/interface/render.py` prints nothing, and `uv run pytest tests/test_render.py` exits 0.
-- [ ] 2.3 In `isekai/interface/ui/library.py`, delete `running`, `render_running`, `session`, `_session` and the import `from isekai.interface.render import record_running`; import `running`, `render_running` and `session` from `isekai.foundation.library` as `X as X`, and drop the artifacts imports `SESSION_FILE`, `SESSION_ID`, `SESSIONS` and `SessionRecord` that nothing reads. Run `uv run ruff check --fix isekai/interface/ui/library.py` for the order and any other unread import.
+- [x] 2.3 In `isekai/interface/ui/library.py`, delete `running`, `render_running`, `session`, `_session` and the import `from isekai.interface.render import record_running`; import `running`, `render_running` and `session` from `isekai.foundation.library` as `X as X`, and drop the artifacts imports `SESSION_FILE`, `SESSION_ID`, `SESSIONS` and `SessionRecord` that nothing reads. Run `uv run ruff check --fix isekai/interface/ui/library.py` for the order and any other unread import.
   Verify: `git grep -n -e "^def running" -e "^def render_running" -e "^def session" -e "^def _session" -e "isekai.interface.render" -- isekai/interface/ui/library.py` prints nothing, and `uv run pytest tests/test_ui_library.py tests/test_ui.py tests/test_ui_api.py` exits 0.
-- [ ] 2.4 **HALT CHECK** — `isekai/interface/ui/library.py` still measures more than 800 lines, so its row in the long files' ratchet, which this change leaves as it stands, holds ([D5](design.md#d5)). Move nothing more to pass under: a red ratchet here means the plan is wrong.
+- [x] 2.4 **HALT CHECK** — `isekai/interface/ui/library.py` still measures more than 800 lines, so its row in the long files' ratchet, which this change leaves as it stands, holds ([D5](design.md#d5)). Move nothing more to pass under: a red ratchet here means the plan is wrong.
   Verify: `uv run pytest tests/test_ratchets.py -k test_no_long_file_is_unlisted` exits 0.
-- [ ] 2.5 In `isekai/foundation/README.md`, extend the `library.py` row of *Files* with ``, and the read side of a collection's session records: `UNSUPPORTED`, `record_running`, `running`, `render_running` and `session` ``; run `uv run python -m tools.derive_imported_by`. The `render.py` row of `isekai/interface/README.md` loses `ui/library.py`.
+- [x] 2.5 In `isekai/foundation/README.md`, extend the `library.py` row of *Files* with ``, and the read side of a collection's session records: `UNSUPPORTED`, `record_running`, `running`, `render_running` and `session` ``; run `uv run python -m tools.derive_imported_by`. The `render.py` row of `isekai/interface/README.md` loses `ui/library.py`.
   Verify: `git grep -n -E "^. .render\.py. .*ui/library\.py" -- isekai/interface/README.md` prints nothing, and `uv run pytest tests/test_docs.py tests/test_layers.py tests/test_pipeline_cli.py tests/test_spec_bindings.py` exits 0.
 
 ## 3 — The documents

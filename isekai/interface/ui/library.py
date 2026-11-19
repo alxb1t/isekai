@@ -27,15 +27,11 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     EDIT_FILE,
-    SESSION_FILE,
-    SESSION_ID,
-    SESSIONS,
     SHEET_FILE,
     WD14_FILE,
     Artifact,
     Renders,
     ReviewApproved,
-    SessionRecord,
     read,
     renders_of,
 )
@@ -52,7 +48,10 @@ from isekai.foundation.library import (
 from isekai.foundation.library import DEFAULT as DEFAULT
 from isekai.foundation.library import LOG as LOG
 from isekai.foundation.library import collection as collection
+from isekai.foundation.library import render_running as render_running
 from isekai.foundation.library import root as root
+from isekai.foundation.library import running as running
+from isekai.foundation.library import session as session
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
@@ -75,7 +74,6 @@ from isekai.foundation.run import (
     photo_of,
     runs_in,
 )
-from isekai.interface.render import record_running
 from isekai.interface.wiring import trackable
 from isekai.pipeline.generate import is_render, lacks, rendered_seeds
 from isekai.pipeline.importing import UI_CONFIG
@@ -269,54 +267,6 @@ def run_named(folder: Path, digest: str) -> Run:
             "hub to choose one"
         )
     return found
-
-
-def running(folder: Path) -> list[dict[str, Any]]:
-    """Return collection `folder`'s records a render process holds, newest first.
-
-    Liveness is read from each lock before any record is parsed, so a damaged
-    record that no render holds is never read. A held record that does not read
-    is left out; a read of that session names its remedy.
-    """
-    found = []
-    for path in (folder / SESSIONS).glob("*.json"):
-        if record_running(path):
-            with contextlib.suppress(Refusal):
-                found.append(_session(path))
-    found.sort(key=lambda one: one["started"], reverse=True)
-    return [one for one in found if one["outcome"] == "running"]
-
-
-def render_running(run: Run) -> bool:
-    """Return whether a render process holds the collection `run` sits in.
-
-    Liveness alone is read, from each session's lock, so a record that does not
-    read still counts; a run outside a collection is held by none.
-    e.g. `<lib>/b/runs/<id>` with `<lib>/b/sessions/<t>.lock` locked -> True
-    """
-    runs = run.path.absolute().parent
-    if not (runs.name == RUNS and is_collection(runs.parent)):
-        return False
-    return any(record_running(path) for path in (runs.parent / SESSIONS).glob("*.json"))
-
-
-def session(folder: Path, name: str) -> dict[str, Any]:
-    """Return the session record `name` names, refusing an id no record holds."""
-    path = folder / SESSIONS / f"{name}.json"
-    if SESSION_ID.fullmatch(name) is None or not path.is_file():
-        raise Refusal(f"{folder.name} holds no session {name!r}")
-    return _session(path)
-
-
-def _session(path: Path) -> dict[str, Any]:
-    """Return one record as served, a stale `running` read as no outcome."""
-    record: SessionRecord = read(
-        path, SESSION_FILE, remedy=f"delete {path}: no stage writes it again"
-    )
-    served: dict[str, Any] = dict(record)
-    if record["outcome"] == "running" and not record_running(path):
-        served["outcome"] = None
-    return served
 
 
 def hub(folder: Path, flows: Sequence[str], flows_dir: Path) -> Hub:

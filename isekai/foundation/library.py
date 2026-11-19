@@ -1,15 +1,27 @@
-"""The library's folder names and a collection's, read from the folders alone.
+"""The library's folder names and a collection's, and its session records' read side.
 
 `RUNS` is a collection's runs root and `SOURCES` its photographs' folder; `names.py`'s
 `SOURCES` is a flow's. A folder in the library is a collection when it holds
 `sources/` (D40), and a dot-folder is never listed.
 """
 
+import contextlib
+import errno
+import fcntl
 import os
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
+from isekai.foundation.artifacts import (
+    SESSION_FILE,
+    SESSION_ID,
+    SESSIONS,
+    SessionRecord,
+    read,
+)
 from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import Run
 
 VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
@@ -18,6 +30,10 @@ SOURCES = "sources"
 LOG = "log.txt"
 # The library's thumbnails, a dot-folder so it is listed as no collection.
 CACHE = ".cache"
+# What a filesystem without hard links or advisory locks answers `link` or `flock`.
+UNSUPPORTED = frozenset(
+    {errno.ENOTSUP, errno.EOPNOTSUPP, errno.EPERM, errno.ENOLCK, errno.ENOSYS}
+)
 
 
 def root(environ: Mapping[str, str] = os.environ) -> Path:
@@ -55,3 +71,74 @@ def collection(library: Path, name: str) -> Path:
             "to choose one"
         )
     return folder
+
+
+def record_running(path: Path) -> bool:
+    """Return whether a render process holds this record's lifetime lock.
+
+    The lock file stays in place across releases, so opening it always tests the
+    same inode; the kernel releases its lock even when the render is killed. A
+    filesystem without locks holds no running render, since `Record.open`
+    refuses to start one there.
+    """
+    try:
+        held = path.with_suffix(".lock").open("r")
+    except FileNotFoundError:
+        return False
+    with held:
+        try:
+            fcntl.flock(held, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        except OSError as failure:
+            if failure.errno not in UNSUPPORTED:
+                raise
+    return False
+
+
+def running(folder: Path) -> list[dict[str, Any]]:
+    """Return collection `folder`'s records a render process holds, newest first.
+
+    Liveness is read from each lock before any record is parsed, so a damaged
+    record that no render holds is never read. A held record that does not read
+    is left out; a read of that session names its remedy.
+    """
+    found = []
+    for path in (folder / SESSIONS).glob("*.json"):
+        if record_running(path):
+            with contextlib.suppress(Refusal):
+                found.append(_session(path))
+    found.sort(key=lambda one: one["started"], reverse=True)
+    return [one for one in found if one["outcome"] == "running"]
+
+
+def render_running(run: Run) -> bool:
+    """Return whether a render process holds the collection `run` sits in.
+
+    Liveness alone is read, from each session's lock, so a record that does not
+    read still counts; a run outside a collection is held by none.
+    e.g. `<lib>/b/runs/<id>` with `<lib>/b/sessions/<t>.lock` locked -> True
+    """
+    runs = run.path.absolute().parent
+    if not (runs.name == RUNS and is_collection(runs.parent)):
+        return False
+    return any(record_running(path) for path in (runs.parent / SESSIONS).glob("*.json"))
+
+
+def session(folder: Path, name: str) -> dict[str, Any]:
+    """Return the session record `name` names, refusing an id no record holds."""
+    path = folder / SESSIONS / f"{name}.json"
+    if SESSION_ID.fullmatch(name) is None or not path.is_file():
+        raise Refusal(f"{folder.name} holds no session {name!r}")
+    return _session(path)
+
+
+def _session(path: Path) -> dict[str, Any]:
+    """Return one record as served, a stale `running` read as no outcome."""
+    record: SessionRecord = read(
+        path, SESSION_FILE, remedy=f"delete {path}: no stage writes it again"
+    )
+    served: dict[str, Any] = dict(record)
+    if record["outcome"] == "running" and not record_running(path):
+        served["outcome"] = None
+    return served
