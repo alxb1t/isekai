@@ -11,7 +11,7 @@ endpoint or a score; everything here is imported by something that does.
 | `artifacts.py` | the run directory's contract: every run file kind's shape and version, one typed `read` and `write`, `require` for a key a hand-edited file may lack, and the JSON form every artifact is written in |
 | `run.py` | the front of the run directory: it re-exports its siblings' names and holds the roots, `open_run` and `find_run`, `rendered_at`, the command text with `photo_of`, the migration state, `refusal_for`, `instructions_record` and `constant_record` |
 | `names.py` | a run's id and the names of its layout |
-| `rundir.py` | `Run`, one photograph's directory and its frame, and `assign` |
+| `rundir.py` | `Run`, one photograph's directory and its frame, `assign`, and `runs_in` and `run_at`, which folders are runs |
 | `layout.py` | numbering and completion, the seeds and the edit files |
 | `failures.py` | the failure shape the stages share: `Kind`, the budgets, the attempts a directory records, `across` and `StageFailure`, here and not in `refusal.py` because `refusal.py` imports nothing by design and the class needs `Kind` |
 | `migrate.py` | `migrate(run)`: copies a run's per-flow caption and tag lists into `photo/`, each kind whole or not at all, never deleting a source |

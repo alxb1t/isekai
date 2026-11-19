@@ -10,6 +10,14 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.21] - 2026-11-19
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.20: local 1m8s · CI not read under mf-ship
+
+- `isekai/foundation/rundir.py` gains `runs_in` and `run_at`, the one rule that a run is a folder holding its frame file, re-exported by `run.py`; cases in `tests/test_run_directory.py` hold it (0165 D1, D2).
+- The front-end sites that tested a frame file call `runs_in` or `run_at`: `run_ids`, `_runs` of compare and of the library, `_migrate`, `run_or_photo` and `parse_cells`; what each lists or refuses is unchanged (0165 D3, D6).
+- `docs/decisions.md` records D65, a run is a folder holding its frame file, with the sites that differ by design; the `rundir.py` row of `isekai/foundation/README.md` names `runs_in` and `run_at` (0165 D4, D7).
+
 ## [0.87.20] - 2026-11-19
 
 Gate: local 1m8s · CI not read under mf-ship · 0.87.19: local 1m12s · CI not read under mf-ship
