@@ -41,6 +41,18 @@ from isekai.foundation.artifacts import (
 )
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.flow import Flow, load_flow
+from isekai.foundation.library import (
+    CACHE,
+    RUNS,
+    SOURCES,
+    VARIABLE,
+    is_collection,
+    listed,
+)
+from isekai.foundation.library import DEFAULT as DEFAULT
+from isekai.foundation.library import LOG as LOG
+from isekai.foundation.library import collection as collection
+from isekai.foundation.library import root as root
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
@@ -66,7 +78,7 @@ from isekai.foundation.run import (
 from isekai.interface.render import record_running
 from isekai.interface.wiring import trackable
 from isekai.pipeline.generate import is_render, lacks, rendered_seeds
-from isekai.pipeline.importing import SOURCES, UI_CONFIG
+from isekai.pipeline.importing import UI_CONFIG
 from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
 from isekai.shared.image import (
@@ -76,13 +88,6 @@ from isekai.shared.image import (
     upright_jpeg,
     upright_thumbnail,
 )
-
-VARIABLE = "ISEKAI_LIBRARY"
-DEFAULT = Path("~/isekai")
-RUNS = "runs"
-LOG = "log.txt"
-# The library's thumbnails, a dot-folder so it is listed as no collection.
-CACHE = ".cache"
 
 # What a run directory's stage folder says was written last, for Home's row.
 _KINDS: Mapping[str, str] = {
@@ -103,11 +108,6 @@ ROW_THUMBS = 15
 _DIGESTS: dict[tuple[str, int, int, int], str] = {}
 _CARRIES: dict[tuple[str, int, int, int], tuple[str, ...]] = {}
 _SIZES: dict[tuple[str, int, int, int], tuple[int, int] | None] = {}
-
-
-def root(environ: Mapping[str, str] = os.environ) -> Path:
-    """Return the library directory `ISEKAI_LIBRARY` names, `~/isekai` when unset."""
-    return Path(environ.get(VARIABLE) or DEFAULT).expanduser()
 
 
 def open_library(library: Path) -> Path:
@@ -229,22 +229,6 @@ class Hub:
     sources: tuple[Source, ...]
 
 
-def is_collection(folder: Path) -> bool:
-    """Return whether `folder` is a collection: a folder holding `sources/`."""
-    return (folder / SOURCES).is_dir()
-
-
-def listed(library: Path) -> list[Path]:
-    """Return every folder of the library, dot-folders left out, by name."""
-    if not library.is_dir():
-        return []
-    return sorted(
-        item
-        for item in library.iterdir()
-        if item.is_dir() and not item.name.startswith(".")
-    )
-
-
 def offered(flows_dir: Path, config: Path = UI_CONFIG) -> tuple[str, ...]:
     """Return the flows `config` offers, refusing one this build does not track."""
     names = tuple(json.loads(config.read_text())["flows"])
@@ -271,22 +255,6 @@ def rows(library: Path, flows: Sequence[str], flows_dir: Path) -> list[Row]:
     return collections + [
         Row(one.name, False) for one in folders if not is_collection(one)
     ]
-
-
-def collection(library: Path, name: str) -> Path:
-    """Return the collection folder `name` names, refusing one the library lacks."""
-    folder = library / name
-    if (
-        name in ("", ".", "..")
-        or "/" in name
-        or name.startswith(".")
-        or not (folder.is_dir() and is_collection(folder))
-    ):
-        raise Refusal(
-            f"the library holds no collection named {name!r}; go back to the library "
-            "to choose one"
-        )
-    return folder
 
 
 def run_named(folder: Path, digest: str) -> Run:

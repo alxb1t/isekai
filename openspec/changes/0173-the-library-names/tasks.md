@@ -4,21 +4,21 @@ Each phase moves names into `isekai/foundation/library.py` and ends green; the c
 
 ## Progress
 
-- [ ] 1 — The collection · moderate
+- [x] 1 — The collection · moderate
 - [ ] 2 — The session · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The collection
 
-- [ ] 1.1 Create `isekai/foundation/library.py` per [D1](design.md#d1) and [D3](design.md#d3): the constants `VARIABLE`, `DEFAULT`, `RUNS`, `LOG`, `CACHE` of `isekai/interface/ui/library.py:80-85` with the cache comment, `SOURCES` of `isekai/pipeline/importing.py:44`, and `root`, `is_collection`, `listed`, `collection` verbatim. Import `os`, `Mapping`, `Path` and `Refusal` for them. The docstring says `RUNS` is a collection's runs root, `SOURCES` its photographs' folder, and `names.py`'s `SOURCES` a flow's.
+- [x] 1.1 Create `isekai/foundation/library.py` per [D1](design.md#d1) and [D3](design.md#d3): the constants `VARIABLE`, `DEFAULT`, `RUNS`, `LOG`, `CACHE` of `isekai/interface/ui/library.py:80-85` with the cache comment, `SOURCES` of `isekai/pipeline/importing.py:44`, and `root`, `is_collection`, `listed`, `collection` verbatim. Import `os`, `Mapping`, `Path` and `Refusal` for them. The docstring says `RUNS` is a collection's runs root, `SOURCES` its photographs' folder, and `names.py`'s `SOURCES` a flow's.
   Verify: `uv run python -c "from isekai.foundation.library import CACHE, DEFAULT, LOG, RUNS, SOURCES, VARIABLE, collection, is_collection, listed, root"` exits 0.
-- [ ] 1.2 In `isekai/interface/ui/library.py`, delete those constants and `root`, `is_collection`, `listed` and `collection`, and import them from `isekai.foundation.library` per [D2](design.md#d2): `CACHE`, `RUNS`, `SOURCES`, `VARIABLE`, `is_collection`, `listed` plain; `DEFAULT`, `LOG`, `root`, `collection` as `X as X`. Narrow `from isekai.pipeline.importing import SOURCES, UI_CONFIG` to `UI_CONFIG`. Order the imports with `uv run ruff check --fix isekai/interface/ui/library.py`; `import os` stays, read by `os.walk`.
+- [x] 1.2 In `isekai/interface/ui/library.py`, delete those constants and `root`, `is_collection`, `listed` and `collection`, and import them from `isekai.foundation.library` per [D2](design.md#d2): `CACHE`, `RUNS`, `SOURCES`, `VARIABLE`, `is_collection`, `listed` plain; `DEFAULT`, `LOG`, `root`, `collection` as `X as X`. Narrow `from isekai.pipeline.importing import SOURCES, UI_CONFIG` to `UI_CONFIG`. Order the imports with `uv run ruff check --fix isekai/interface/ui/library.py`; `import os` stays, read by `os.walk`.
   Verify: `git grep -n -e "^def root" -e "^def is_collection" -e "^def listed" -e "^def collection" -- isekai/interface/ui/library.py` prints nothing, and `uv run pytest tests/test_ui_library.py tests/test_ui.py` exits 0.
-- [ ] 1.3 In `isekai/pipeline/importing.py`, delete `SOURCES = "sources"` (line 44) and import `SOURCES` plain from `isekai.foundation.library`, in the foundation block between `atomic_write` and `refusal`; `uv run ruff check --fix isekai/pipeline/importing.py` orders it.
+- [x] 1.3 In `isekai/pipeline/importing.py`, delete `SOURCES = "sources"` (line 44) and import `SOURCES` plain from `isekai.foundation.library`, in the foundation block between `atomic_write` and `refusal`; `uv run ruff check --fix isekai/pipeline/importing.py` orders it.
   Verify: `git grep -n -F 'SOURCES = "sources"' -- isekai/pipeline/importing.py` prints nothing, and `uv run pytest tests/test_importing.py` exits 0.
-- [ ] 1.4 In `isekai/interface/compare_view.py`, delete `COLLECTION_RUNS = "runs"`, the comment citing D40 and `COLLECTION_PHOTOS = "sources"` (lines 38-41); import `RUNS as COLLECTION_RUNS` and `SOURCES as COLLECTION_PHOTOS` from `isekai.foundation.library` ([D3](design.md#d3)); `uv run ruff check --fix isekai/interface/compare_view.py` orders them.
+- [x] 1.4 In `isekai/interface/compare_view.py`, delete `COLLECTION_RUNS = "runs"`, the comment citing D40 and `COLLECTION_PHOTOS = "sources"` (lines 38-41); import `RUNS as COLLECTION_RUNS` and `SOURCES as COLLECTION_PHOTOS` from `isekai.foundation.library` ([D3](design.md#d3)); `uv run ruff check --fix isekai/interface/compare_view.py` orders them.
   Verify: `git grep -n -F 'COLLECTION_PHOTOS = "sources"' -- isekai/interface/compare_view.py` prints nothing, and `uv run pytest tests/test_compare.py tests/test_render.py` exits 0.
-- [ ] 1.5 In `isekai/foundation/README.md`, add after the `atomic_write.py` row of *Files* the row ``| `library.py` | the library's folder names and a collection's, `root`, `is_collection`, `listed` and `collection` |``, and after the last row of *Imported by* the row ``| `library.py` | — | — |``. Then run `uv run python -m tools.derive_imported_by`, which fills it and every other layer README's derived rows.
+- [x] 1.5 In `isekai/foundation/README.md`, add after the `atomic_write.py` row of *Files* the row ``| `library.py` | the library's folder names and a collection's, `root`, `is_collection`, `listed` and `collection` |``, and after the last row of *Imported by* the row ``| `library.py` | — | — |``. Then run `uv run python -m tools.derive_imported_by`, which fills it and every other layer README's derived rows.
   Verify: `git grep -n -E "^. .library\.py. " -- isekai/foundation/README.md` prints `2`, and `uv run pytest tests/test_docs.py tests/test_layers.py tests/test_ratchets.py tests/test_pipeline_cli.py` exits 0.
 
 ## 2 — The session

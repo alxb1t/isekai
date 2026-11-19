@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `isekai/foundation/library.py` holds the library's folder names and a collection's `root`, `is_collection`, `listed` and `collection`, re-bound in `ui/library.py`, `pipeline/importing.py` and `interface/compare_view.py`; behaviour is as before (0173 D1, D2, D3).
+
 ## [0.87.28] - 2026-11-19
 
 Gate: local 1m21s · CI not read under mf-ship · 0.87.27: local 1m36s · CI not read under mf-ship
