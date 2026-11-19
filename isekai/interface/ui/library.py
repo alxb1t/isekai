@@ -27,20 +27,31 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     EDIT_FILE,
-    SESSION_FILE,
-    SESSION_ID,
-    SESSIONS,
     SHEET_FILE,
     WD14_FILE,
     Artifact,
     Renders,
     ReviewApproved,
-    SessionRecord,
     read,
     renders_of,
 )
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.flow import Flow, load_flow
+from isekai.foundation.library import (
+    CACHE,
+    RUNS,
+    SOURCES,
+    VARIABLE,
+    is_collection,
+    listed,
+)
+from isekai.foundation.library import DEFAULT as DEFAULT
+from isekai.foundation.library import LOG as LOG
+from isekai.foundation.library import collection as collection
+from isekai.foundation.library import render_running as render_running
+from isekai.foundation.library import root as root
+from isekai.foundation.library import running as running
+from isekai.foundation.library import session as session
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
@@ -63,10 +74,9 @@ from isekai.foundation.run import (
     photo_of,
     runs_in,
 )
-from isekai.interface.render import record_running
 from isekai.interface.wiring import trackable
 from isekai.pipeline.generate import is_render, lacks, rendered_seeds
-from isekai.pipeline.importing import SOURCES, UI_CONFIG
+from isekai.pipeline.importing import UI_CONFIG
 from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
 from isekai.shared.image import (
@@ -76,13 +86,6 @@ from isekai.shared.image import (
     upright_jpeg,
     upright_thumbnail,
 )
-
-VARIABLE = "ISEKAI_LIBRARY"
-DEFAULT = Path("~/isekai")
-RUNS = "runs"
-LOG = "log.txt"
-# The library's thumbnails, a dot-folder so it is listed as no collection.
-CACHE = ".cache"
 
 # What a run directory's stage folder says was written last, for Home's row.
 _KINDS: Mapping[str, str] = {
@@ -103,11 +106,6 @@ ROW_THUMBS = 15
 _DIGESTS: dict[tuple[str, int, int, int], str] = {}
 _CARRIES: dict[tuple[str, int, int, int], tuple[str, ...]] = {}
 _SIZES: dict[tuple[str, int, int, int], tuple[int, int] | None] = {}
-
-
-def root(environ: Mapping[str, str] = os.environ) -> Path:
-    """Return the library directory `ISEKAI_LIBRARY` names, `~/isekai` when unset."""
-    return Path(environ.get(VARIABLE) or DEFAULT).expanduser()
 
 
 def open_library(library: Path) -> Path:
@@ -229,22 +227,6 @@ class Hub:
     sources: tuple[Source, ...]
 
 
-def is_collection(folder: Path) -> bool:
-    """Return whether `folder` is a collection: a folder holding `sources/`."""
-    return (folder / SOURCES).is_dir()
-
-
-def listed(library: Path) -> list[Path]:
-    """Return every folder of the library, dot-folders left out, by name."""
-    if not library.is_dir():
-        return []
-    return sorted(
-        item
-        for item in library.iterdir()
-        if item.is_dir() and not item.name.startswith(".")
-    )
-
-
 def offered(flows_dir: Path, config: Path = UI_CONFIG) -> tuple[str, ...]:
     """Return the flows `config` offers, refusing one this build does not track."""
     names = tuple(json.loads(config.read_text())["flows"])
@@ -273,22 +255,6 @@ def rows(library: Path, flows: Sequence[str], flows_dir: Path) -> list[Row]:
     ]
 
 
-def collection(library: Path, name: str) -> Path:
-    """Return the collection folder `name` names, refusing one the library lacks."""
-    folder = library / name
-    if (
-        name in ("", ".", "..")
-        or "/" in name
-        or name.startswith(".")
-        or not (folder.is_dir() and is_collection(folder))
-    ):
-        raise Refusal(
-            f"the library holds no collection named {name!r}; go back to the library "
-            "to choose one"
-        )
-    return folder
-
-
 def run_named(folder: Path, digest: str) -> Run:
     """Return the run in collection `folder` whose identifier begins with `digest`.
 
@@ -301,54 +267,6 @@ def run_named(folder: Path, digest: str) -> Run:
             "hub to choose one"
         )
     return found
-
-
-def running(folder: Path) -> list[dict[str, Any]]:
-    """Return collection `folder`'s records a render process holds, newest first.
-
-    Liveness is read from each lock before any record is parsed, so a damaged
-    record that no render holds is never read. A held record that does not read
-    is left out; a read of that session names its remedy.
-    """
-    found = []
-    for path in (folder / SESSIONS).glob("*.json"):
-        if record_running(path):
-            with contextlib.suppress(Refusal):
-                found.append(_session(path))
-    found.sort(key=lambda one: one["started"], reverse=True)
-    return [one for one in found if one["outcome"] == "running"]
-
-
-def render_running(run: Run) -> bool:
-    """Return whether a render process holds the collection `run` sits in.
-
-    Liveness alone is read, from each session's lock, so a record that does not
-    read still counts; a run outside a collection is held by none.
-    e.g. `<lib>/b/runs/<id>` with `<lib>/b/sessions/<t>.lock` locked -> True
-    """
-    runs = run.path.absolute().parent
-    if not (runs.name == RUNS and is_collection(runs.parent)):
-        return False
-    return any(record_running(path) for path in (runs.parent / SESSIONS).glob("*.json"))
-
-
-def session(folder: Path, name: str) -> dict[str, Any]:
-    """Return the session record `name` names, refusing an id no record holds."""
-    path = folder / SESSIONS / f"{name}.json"
-    if SESSION_ID.fullmatch(name) is None or not path.is_file():
-        raise Refusal(f"{folder.name} holds no session {name!r}")
-    return _session(path)
-
-
-def _session(path: Path) -> dict[str, Any]:
-    """Return one record as served, a stale `running` read as no outcome."""
-    record: SessionRecord = read(
-        path, SESSION_FILE, remedy=f"delete {path}: no stage writes it again"
-    )
-    served: dict[str, Any] = dict(record)
-    if record["outcome"] == "running" and not record_running(path):
-        served["outcome"] = None
-    return served
 
 
 def hub(folder: Path, flows: Sequence[str], flows_dir: Path) -> Hub:

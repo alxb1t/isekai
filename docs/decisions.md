@@ -668,6 +668,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Accepts:** a form `shapes.py` gains that the grammar lacks fails the committed-file case, and the author adds the form and its case. A pair stays a list. `ui/src/types.ts` is the one page file that imports `wire.ts`, and narrows a pair in the overlays `Tattoo`, `Outline`, `Stage1`, `Proposal` and `TattooList`.
 - **Made by:** `0168`, `0171`.
 
+### D68 · The collection's names and the session's read side are foundation/library.py, re-bound at their old homes
+
+**`isekai/foundation/library.py` holds the library's folder names and a collection's, `root`, `is_collection`, `listed` and `collection`, and the read side of a collection's session records: `UNSUPPORTED`, `record_running`, `running`, `render_running` and `session`. Each name is re-bound at its old home, so no importer changes; a name the old home no longer reads is bound as `import X as X`. The module imports the standard library and the foundation, `Run` through `run.py`.**
+
+- **Why:** the code read these names from above, `SOURCES` from the importer and `record_running` from the render verb, so nothing below the interface could meet a collection, and `ui/library.py` was a listed long file ([D56](#d56--size-and-patches-are-held-by-ratchets)). A move that re-binds changes no importer and no test.
+- **Accepts:** `ui/library.py` stays a listed long file, at its row. `pipeline/importing.py` and `interface/verbs/library.py` keep their hand copy of `is_collection`'s test. `isekai/README.md`'s file list names no `foundation/library.py`, and no test holds that list. The CLI's imports of the UI package stay. Reopen when the base's seams lift them.
+- **Made by:** `0173`.
+
 ## Infrastructure
 
 ### D26 · Renders run on a rented GPU

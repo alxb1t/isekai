@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.library import SOURCES
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
 from isekai.shared.image import (
@@ -41,7 +42,6 @@ if TYPE_CHECKING:
 
 UI_CONFIG = REPOSITORY / "config" / "ui.json"
 STAGING = ".staging"
-SOURCES = "sources"
 
 # The quality a re-encoded JPEG is written at.
 JPEG_QUALITY = 95

@@ -35,7 +35,7 @@ module scope, and the UI imports no CLI module.
 | `run_view.py` | the `show` verb: a run's artifacts, active versions, producers and failure records, and the names below a flow it does not read. Decides nothing |
 | `compare_view.py` | the `compare` verb: one page of every run's photograph beside each flow's renders, written into the collection directory. Reads, decides nothing |
 | `ui/__init__.py` | the `ui` verb: opens the library `ISEKAI_LIBRARY` names, sweeps import's staging, reads the offered flows, prints the address, serves until stopped, and `drop_thumbnails` and `render_running` for the `discard` verb |
-| `ui/library.py` | the library, its collections and each source × offered flow's stage, all read from folders, each source's not-cleaned mark, each approval's rendered seeds, each collection's session records, and the thumbnails in the library's `.cache/`. **Imports no web framework**, which keeps it testable in the main suite |
+| `ui/library.py` | the library, its collections and each source × offered flow's stage, all read from folders, each source's not-cleaned mark, each approval's rendered seeds and the thumbnails in the library's `.cache/`; the collection's names and its session records' read side are `foundation/library.py`'s, re-bound here (D68). **Imports no web framework**, which keeps it testable in the main suite |
 | `ui/bundle.py` | builds the browser bundle when it is absent; refuses naming `npm install` rather than fetching |
 | `ui/jobs.py` | Prepare and Render as jobs, a slot per kind, side by side: one `prepare` child, each photograph through `tag` → `caption` → its sheets, after a probe of the model server; `gpunit volume up` → `render` → `volume down` unless kept; Stop and server stop sending SIGINT |
 | `ui/billing.py` | what may be billing, read from gpunit's records in `.gpunit/`: the pod alert, the window's quiet item and the band; gpunit asked at start, every half minute while needed, and on Check again |
@@ -54,7 +54,7 @@ module scope, and the UI imports no CLI module.
 | `cli.py` | `__main__.py` | — |
 | `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `ui/routes/place.py`, `ui/surface.py`, `verbs/common.py`, `verbs/drafts.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/library.py`, `verbs/prepare.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
 | `drafting.py` | `cli.py`, `ui/routes/reviewing.py`, `verbs/drafts.py` | — |
-| `render.py` | `cli.py`, `ui/jobs.py`, `ui/library.py`, `ui/routes/rendering.py`, `verbs/edits.py` | — |
+| `render.py` | `cli.py`, `ui/jobs.py`, `ui/routes/rendering.py`, `verbs/edits.py` | — |
 | `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py` |
 | `compare_view.py` | `render.py`, `verbs/library.py` | — |
 | `ui/` | `cli.py`, `verbs/drafts.py`, `verbs/library.py` | — |

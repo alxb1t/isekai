@@ -19,6 +19,8 @@ from urllib.parse import quote
 from isekai.foundation.artifacts import CAPTION_FILE, PROMPT_FILE, read
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow, tracked_flows
+from isekai.foundation.library import RUNS as COLLECTION_RUNS
+from isekai.foundation.library import SOURCES as COLLECTION_PHOTOS
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
@@ -35,10 +37,6 @@ from isekai.foundation.run import (
 from isekai.pipeline.generate import rendered_seeds
 
 PAGE_NAME = "compare.html"
-COLLECTION_RUNS = "runs"
-# The folder of a collection's photographs, as the refusal below names it: a
-# collection holds them in `sources/` (D40).
-COLLECTION_PHOTOS = "sources"
 
 _STYLE = """
 :root { color-scheme: dark; }

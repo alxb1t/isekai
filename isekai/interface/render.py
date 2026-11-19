@@ -21,7 +21,6 @@ is asked for, each collection keeps the session's record at
 import argparse
 import contextlib
 import dataclasses
-import errno
 import fcntl
 import io
 import json
@@ -52,6 +51,8 @@ from isekai.foundation.artifacts import (
     session_id,
 )
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
+from isekai.foundation.library import UNSUPPORTED
+from isekai.foundation.library import record_running as record_running
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     REPOSITORY,
@@ -243,35 +244,6 @@ def await_endpoint(
 def _utc(moment: datetime) -> str:
     """Return `moment` as the record spells a time, e.g. 2026-10-24T09:12:00Z."""
     return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-# What a filesystem without hard links or advisory locks answers `link` or `flock`.
-UNSUPPORTED = frozenset(
-    {errno.ENOTSUP, errno.EOPNOTSUPP, errno.EPERM, errno.ENOLCK, errno.ENOSYS}
-)
-
-
-def record_running(path: Path) -> bool:
-    """Return whether a render process holds this record's lifetime lock.
-
-    The lock file stays in place across releases, so opening it always tests the
-    same inode; the kernel releases its lock even when the render is killed. A
-    filesystem without locks holds no running render, since `Record.open`
-    refuses to start one there.
-    """
-    try:
-        held = path.with_suffix(".lock").open("r")
-    except FileNotFoundError:
-        return False
-    with held:
-        try:
-            fcntl.flock(held, fcntl.LOCK_SH | fcntl.LOCK_NB)
-        except BlockingIOError:
-            return True
-        except OSError as failure:
-            if failure.errno not in UNSUPPORTED:
-                raise
-    return False
 
 
 class Record:

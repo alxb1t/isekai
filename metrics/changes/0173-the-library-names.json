@@ -1,0 +1,58 @@
+{
+  "change": "0173-the-library-names",
+  "version": "0.87.29",
+  "base": "1f97238b",
+  "analyzed": "767e462a",
+  "measured_on": "local",
+  "collected_at": "2026-11-19T23:40:15+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2496
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 81
+    },
+    "open-backlog-cards": {
+      "value": 2
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 552
+    },
+    "diff-files": {
+      "value": 16
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 16540
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1092
+    },
+    "decisions": {
+      "value": 69
+    }
+  }
+}

@@ -105,7 +105,7 @@ Each layer has one role:
 - **shared** — what the stages share: the vocabulary, the field map, image headers, and
   the placement's maths: the ink, the tattoo, the chain and the proposal's geometry.
 - **foundation** — the run directory, the flow and the refusal, and what rides with them: the artifacts'
-  contract, the edit registry, the caption config, the migration and the command text a refusal prints.
+  contract, the edit registry, the caption config, the migration, the command text a refusal prints, and the library's collection names and its session records' read side.
 
 A layer's `__init__.py` holds only a docstring: a layer is a folder, not a front door. Evaluation is a
 separate sub-system beside the code it measures: it may import isekai, and isekai never imports it.
