@@ -18,10 +18,10 @@ Hold each loader's whole refusal messages, add `read_keyed`, then switch the loa
   Verify: `uv run pytest tests/test_tattoo_library.py::test_tattoo_config_with_unknown_keys_is_refused_in_full tests/test_tattoo_library.py::test_tattoo_config_with_missing_keys_is_refused_in_full` exits 0.
 - [x] 1.4 Run `tools.mutate` over the block of `load_caption_config`, `isekai/foundation/caption_config.py` lines 34-45, with `tests/test_caption.py`. A survivor gets one more case in that file, and the run is repeated.
   Verify: `uv run python -m tools.mutate isekai/foundation/caption_config.py:34-45 --tests tests/test_caption.py` exits 0.
-- [x] 1.5 Run `tools.mutate` over the block of `load_ink_config`, `isekai/shared/ink.py` lines 76-87, with `tests/test_ink.py`. A survivor gets one more case in that file, and the run is repeated.
-  Verify: `uv run python -m tools.mutate isekai/shared/ink.py:76-87 --tests tests/test_ink.py` exits 0.
-- [x] 1.6 Run `tools.mutate` over the block of `load_tattoo_config`, `isekai/pipeline/tattoos.py` lines 168-179, with `tests/test_tattoo_library.py`. A survivor gets one more case in that file, and the run is repeated.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/tattoos.py:168-179 --tests tests/test_tattoo_library.py` exits 0.
+- [x] 1.5 Run `tools.mutate` over the block of `load_ink_config`, `isekai/shared/ink.py` lines 76-87, with `tests/test_ink.py`. A survivor gets one more case in that file, and the run is repeated. The switch of phase 3 moves the block to `read_keyed`, so the `Verify:` reads it there, with the same tests.
+  Verify: `uv run python -m tools.mutate isekai/foundation/config.py:1-80 --tests tests/test_ink.py` exits 0.
+- [x] 1.6 Run `tools.mutate` over the block of `load_tattoo_config`, `isekai/pipeline/tattoos.py` lines 168-179, with `tests/test_tattoo_library.py`. A survivor gets one more case in that file, and the run is repeated. The switch of phase 3 moves the block to `read_keyed`, so the `Verify:` reads it there, with the same tests.
+  Verify: `uv run python -m tools.mutate isekai/foundation/config.py:1-80 --tests tests/test_tattoo_library.py` exits 0.
 
 ## 2 — The helper
 

@@ -120,6 +120,7 @@ None.
 - `tools.mutate` mutates a node on one line and never a string, so its runs reach the comparisons of each block and the helper's `return`, and the whole-message cases, not the runs, hold the text. A survivor gets a case in that loader's file until the run exits 0 with no survivor.
 - A loader's message drifts in the switch: the whole-message cases written first are green before it and must stay green after.
 - `tools.mutate` finds only tracked files, so the helper's mutation run follows the phase that commits `config.py`.
+- A loader's block is gone from its file once the switch lands, and the lines it held then hold the loader's value checks, which this change does not pin. The `Verify:` of tasks 1.5 and 1.6 therefore mutates `read_keyed` in `config.py` with that loader's tests; task 1.4 keeps its range, where `tests/stages.py` makes every mutant of `caption_config.py` invalid.
 - The derived *Imported by* table moves at the refusal's row and the helper's own; both are derived, never typed.
 
 ## Verdict
