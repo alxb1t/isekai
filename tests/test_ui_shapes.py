@@ -27,7 +27,7 @@ from isekai.interface.ui.routes.reviewing import ROUTES as REVIEWING
 from isekai.interface.ui.routes.staging import ROUTES as STAGING
 from isekai.interface.ui.routes.tattoos import ROUTES as TATTOOS
 from isekai.interface.ui.routes.vocabulary import ROUTES as VOCABULARY
-from isekai.interface.ui.shapes import ANSWERS, UNRECORDED, ServedSession
+from isekai.interface.ui.shapes import ANSWERS, UNRECORDED, Refused, ServedSession
 from tests.record import recorded
 
 LEAVES = (str, int, float, bool)
@@ -227,6 +227,45 @@ def test_every_answer_fits_the_record() -> None:
         assert key in entries, key
         assert "shape" in entries[key], key
         assert faults(declared, entries[key]["shape"], "") == [], key
+
+
+def _refusals(entries: dict[str, dict[str, object]]) -> list[str]:
+    return [
+        key
+        for key, entry in entries.items()
+        if isinstance(entry["status"], int) and entry["status"] >= 400
+    ]
+
+
+def refusal_faults(entries: dict[str, dict[str, object]]) -> list[str]:
+    """Return a line for each recorded refusal `Refused` does not fit, `[]` when all do.
+
+    e.g. {"GET /x": {"status": 404, "shape": {"refusal": "str", "extra": "str"}}}
+    -> ["GET /x: extra: is not declared"]
+    """
+    return [
+        f"{key}: {line}"
+        for key in _refusals(entries)
+        for line in faults(Refused, entries[key].get("shape"), "")
+    ]
+
+
+@pytest.mark.spec_exempt(
+    "structural: each recorded entry of status 400 and above fits Refused"
+)
+def test_every_recorded_refusal_fits_refused() -> None:
+    entries = _routes()
+    assert _refusals(entries)
+    assert refusal_faults(entries) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_every_recorded_refusal_fits_refused")
+def test_a_recorded_refusal_that_drifts_is_caught() -> None:
+    drifted: dict[str, dict[str, object]] = {
+        "GET /x": {"status": 404, "shape": {"refusal": "str", "extra": "str"}},
+        "GET /y": {"status": 200, "shape": {"other": "str"}},
+    }
+    assert refusal_faults(drifted) == ["GET /x: extra: is not declared"]
 
 
 @pytest.mark.spec_exempt(

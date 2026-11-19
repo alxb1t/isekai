@@ -4,25 +4,25 @@ The phases declare the refusals, declare the stream's events, hold every route, 
 
 ## Progress
 
-- [ ] 1 — The refusals · moderate
+- [x] 1 — The refusals · moderate
 - [ ] 2 — The stream's events · moderate
 - [ ] 3 — Every route · moderate
 - [ ] 4 — The imports and the documents · moderate
 
 ## 1 — The refusals
 
-- [ ] 1.1 In `isekai/interface/ui/shapes.py` add `RefusedImage`, `Refused` and `DraftRefused` per [D1](design.md#d1),
+- [x] 1.1 In `isekai/interface/ui/shapes.py` add `RefusedImage`, `Refused` and `DraftRefused` per [D1](design.md#d1),
   each with a one-line docstring. Place them after `RunningSessions`.
   Verify: `git grep -n -E "^class (RefusedImage|Refused|DraftRefused)" -- isekai/interface/ui/shapes.py` prints three lines.
-- [ ] 1.2 In `ANSWERS` of `shapes.py` add the row `"GET /api/{rest:path}": Refused`, after the row of `GET /api/library`.
+- [x] 1.2 In `ANSWERS` of `shapes.py` add the row `"GET /api/{rest:path}": Refused`, after the row of `GET /api/library`.
   Verify: `git grep -n -F '"GET /api/{rest:path}": Refused' -- isekai/interface/ui/shapes.py` prints one line, and `uv run pytest tests/test_ui_shapes.py -k test_every_answer_fits_the_record` exits 0.
-- [ ] 1.3 In `tests/test_ui_shapes.py` add `refusal_faults(entries)`, a line per recorded entry of status 400 and above that `Refused` does not fit, its case and its twin ([D2](design.md#d2));
+- [x] 1.3 In `tests/test_ui_shapes.py` add `refusal_faults(entries)`, a line per recorded entry of status 400 and above that `Refused` does not fit, its case and its twin ([D2](design.md#d2));
   the twin feeds a shape with an undeclared key `extra`.
   Verify: `uv run pytest tests/test_ui_shapes.py -k recorded_refusal` exits 0.
-- [ ] 1.4 In `tests/test_ui_api.py` import `Refused` and `DraftRefused` beside `UNRECORDED`, and add `test_the_host_refusal_fits_refused` and `test_the_origin_refusal_fits_refused`.
+- [x] 1.4 In `tests/test_ui_api.py` import `Refused` and `DraftRefused` beside `UNRECORDED`, and add `test_the_host_refusal_fits_refused` and `test_the_origin_refusal_fits_refused`.
   Each sends `GET /api/library`, the first with a foreign `host`, the second with a foreign `origin`, asserts the 403 and walks `faults(Refused, shape(answered.json()), "")` to `[]`.
   Verify: `uv run pytest tests/test_ui_api.py -k "host_refusal or origin_refusal"` exits 0.
-- [ ] 1.5 In `tests/test_ui_api.py` add `test_a_refusal_answered_as_a_conflict_fits_refused`, which posts `DRAFT_ROUTE` with no images, and `test_the_drafts_refusal_fits_draft_refused`,
+- [x] 1.5 In `tests/test_ui_api.py` add `test_a_refusal_answered_as_a_conflict_fits_refused`, which posts `DRAFT_ROUTE` with no images, and `test_the_drafts_refusal_fits_draft_refused`,
   set up as `test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written` is, the `nope` image first; each asserts the 409, the first walks `Refused`, the second `DraftRefused`.
   Verify: `uv run pytest tests/test_ui_api.py -k "answered_as_a_conflict or drafts_refusal"` exits 0.
 

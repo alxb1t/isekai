@@ -576,8 +576,31 @@ class RunningSessions(TypedDict):
     sessions: list[RunningSession]
 
 
+class RefusedImage(TypedDict):
+    """One image a draft was asked for, and its own refusal."""
+
+    digest: str
+    flow: str
+    version: int
+    seed: str
+    refusal: str | None
+
+
+class Refused(TypedDict):
+    """A refusal, as any route answers one."""
+
+    refusal: str
+
+
+class DraftRefused(Refused):
+    """The draft's refusal, with each image's own."""
+
+    images: list[RefusedImage]
+
+
 ANSWERS: dict[str, Any] = {
     "GET /api/library": LibraryInfo,
+    "GET /api/{rest:path}": Refused,
     f"GET {COLLECTION}/hub": HubInfo,
     f"POST {COLLECTION}/assign": Assigned,
     "POST /api/staging": Opened,

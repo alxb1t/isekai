@@ -95,7 +95,11 @@ from isekai.interface.ui.app import (  # noqa: E402
 )
 from isekai.interface.ui.billing import Billing  # noqa: E402
 from isekai.interface.ui.jobs import Jobs  # noqa: E402
-from isekai.interface.ui.shapes import UNRECORDED  # noqa: E402
+from isekai.interface.ui.shapes import (  # noqa: E402
+    UNRECORDED,
+    DraftRefused,
+    Refused,
+)
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.generate import image_of, prepare, prompt_artifact  # noqa: E402
@@ -297,6 +301,22 @@ def test_a_write_carrying_another_pages_origin_is_refused(
     assert answered.status_code == 403
     assert answered.json() == {"refusal": "not from this page"}
     assert snapshot(made.path) == before
+
+
+@pytest.mark.spec_exempt("structural: the guard's host refusal fits Refused")
+def test_the_host_refusal_fits_refused(client: TestClient) -> None:
+    answered = client.get("/api/library", headers={"host": f"evil.example:{PORT}"})
+
+    assert answered.status_code == 403
+    assert faults(Refused, shape(answered.json()), "") == []
+
+
+@pytest.mark.spec_exempt("structural: the guard's origin refusal fits Refused")
+def test_the_origin_refusal_fits_refused(client: TestClient) -> None:
+    answered = client.get("/api/library", headers={"origin": "http://evil.example"})
+
+    assert answered.status_code == 403
+    assert faults(Refused, shape(answered.json()), "") == []
 
 
 @pytest.mark.spec("ui:address:a-cross-site-request-without-origin-is-refused")
@@ -923,6 +943,34 @@ def test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written(
     assert tracked["refusal"] is None
     assert untracked["refusal"].startswith("nope: not a flow this build tracks")
     assert snapshot(made.path) == before
+
+
+@pytest.mark.spec_exempt("structural: a refusal answered as a conflict fits Refused")
+def test_a_refusal_answered_as_a_conflict_fits_refused(client: TestClient) -> None:
+    answered = client.post(DRAFT_ROUTE, json={"flow": FLOW, "images": []})
+
+    assert answered.status_code == 409
+    assert faults(Refused, shape(answered.json()), "") == []
+
+
+@pytest.mark.spec_exempt("structural: the draft's refusal fits DraftRefused")
+def test_the_drafts_refusal_fits_draft_refused(client: TestClient, made: Run) -> None:
+    _approved(client, made)
+    group = made.directory(FLOW, "outputs", "001")
+    group.mkdir(parents=True)
+    (group / "7.render.json").write_text("{}\n")
+    image = {"digest": made.digest, "version": 1, "seed": "7"}
+
+    answered = client.post(
+        DRAFT_ROUTE,
+        json={
+            "flow": FLOW,
+            "images": [{**image, "flow": "nope"}, {**image, "flow": FLOW}],
+        },
+    )
+
+    assert answered.status_code == 409
+    assert faults(DraftRefused, shape(answered.json()), "") == []
 
 
 @pytest.mark.spec("ui:revise:an-image-no-run-can-hold-is-refused")

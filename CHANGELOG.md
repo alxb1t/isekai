@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `isekai/interface/ui/shapes.py` declares `Refused`, `DraftRefused` and `RefusedImage`, and the catch-all's 404 is the row of `ANSWERS` that holds `Refused`; cases hold the guard's 403s, a 409 and the draft's 409 to them, and one case holds every recorded entry of status 400 and above to `Refused`, with a twin (0166 D1, D2).
+
 ## [0.87.20] - 2026-11-19
 
 Gate: local 1m8s · CI not read under mf-ship · 0.87.19: local 1m12s · CI not read under mf-ship
