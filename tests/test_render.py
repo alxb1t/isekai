@@ -914,6 +914,12 @@ def test_the_limits_retry_keeps_each_without(
     assert record["message"].endswith("renders only the rest")
 
 
+@pytest.mark.spec_exempt("structural: the ids a collection's runs/ lists")
+def test_run_ids_of_a_root_that_is_no_directory_is_empty(tmp_path: Path) -> None:
+    assert render.run_ids(tmp_path / "absent") == []
+    assert render.run_ids(collection(tmp_path, "b", "a")) == ["a", "b"]
+
+
 @pytest.mark.spec_exempt("structural: a session's line names its source after it")
 def test_a_dependent_before_its_source_is_refused_naming_both(tmp_path: Path) -> None:
     runs = collection(tmp_path)

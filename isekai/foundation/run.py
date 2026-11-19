@@ -113,7 +113,7 @@ from isekai.foundation.names import (
     slug,
 )
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.rundir import Run, assign
+from isekai.foundation.rundir import Run, assign, run_at, runs_in
 
 __all__ = [
     "APPROVED",
@@ -184,7 +184,9 @@ __all__ = [
     "record_failure",
     "refusal_for",
     "rendered_at",
+    "run_at",
     "run_id",
+    "runs_in",
     "sheet_of",
     "slug",
     "stage_command",

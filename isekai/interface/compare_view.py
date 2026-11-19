@@ -22,7 +22,6 @@ from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
-    FRAME_NAME,
     OUTPUTS,
     PROMPTS,
     REVIEW,
@@ -31,6 +30,7 @@ from isekai.foundation.run import (
     artifact_name,
     latest_artifact,
     photo_of,
+    runs_in,
 )
 from isekai.pipeline.generate import rendered_seeds
 
@@ -114,11 +114,7 @@ def _runs(collection: Path) -> list[Run]:
             f"`python -m isekai tag --runs {shlex.quote(str(root))} "
             f"{shlex.quote(str(collection / COLLECTION_PHOTOS))}/*`"
         )
-    return [
-        Run(path.name, path)
-        for path in sorted(root.iterdir())
-        if (path / FRAME_NAME).is_file()
-    ]
+    return runs_in(root)
 
 
 def _prompt(run: Run, flow: str, version: int) -> str:

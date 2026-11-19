@@ -45,7 +45,7 @@ Non-Goals:
 | [D5](#d5) | A file's state, a job's state and the billing volume's state are `str` | the walker checks type names, so an inline `Literal` is a claim no test holds | a `Literal` for each |
 | [D6](#d6) | A case holds that every route of `create_app` has a row, a recorded media type, or is the stream, with a twin | a route added later must be declared or named | reading the tattoo, place and render tables alone, as the shipped case does |
 | [D7](#d7) | The tests read the key tuples, `RARE_BELOW` and `cell_event` from their homes, and their re-bindings leave `app.py`; `Held` stays imported there | `Held` types `_precondition`; the rest are read by no code of `app.py` | keeping the re-bindings |
-| [D8](#d8) | A decision, D65, records the events' table and the refusals' rule, and D63's *Accepts* line shrinks to what remains | a decision in force is edited where it lives, in `docs/decisions.md` | a note in `design.md` alone |
+| [D8](#d8) | A decision, D66, records the events' table and the refusals' rule, and D63's *Accepts* line shrinks to what remains | a decision in force is edited where it lives, in `docs/decisions.md` | a note in `design.md` alone |
 
 ### D1
 
@@ -125,7 +125,7 @@ The tests change where they read from, and no assertion:
 
 ### D8
 
-`docs/decisions.md` gains D65, *The refusals are classes, and the stream's events have a table of their own*, with the rule of [D1](#d1) and [D3](#d3). D63's *Accepts* line drops the refusals, the events and the imports, and its *Made by* gains this change.
+`docs/decisions.md` gains D66, *The refusals are classes, and the stream's events have a table of their own*, with the rule of [D1](#d1) and [D3](#d3). D63's *Accepts* line drops the refusals, the events and the imports, and its *Made by* gains this change.
 
 ## Tests
 

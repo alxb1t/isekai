@@ -1,0 +1,58 @@
+{
+  "change": "0165-the-runs-predicate",
+  "version": "0.87.21",
+  "base": "6ee91e94",
+  "analyzed": "7f2bda04",
+  "measured_on": "local",
+  "collected_at": "2026-11-19T12:57:44+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2440
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 70
+    },
+    "open-backlog-cards": {
+      "value": 3
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 2
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 426
+    },
+    "diff-files": {
+      "value": 17
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 15958
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1091
+    },
+    "decisions": {
+      "value": 66
+    }
+  }
+}

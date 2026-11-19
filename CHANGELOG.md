@@ -13,7 +13,15 @@ its new digest.
 - `isekai/interface/ui/shapes.py` declares `Refused`, `DraftRefused` and `RefusedImage`, with the catch-all's 404 as the `ANSWERS` row that holds `Refused`; cases hold each 403, each 409 and every recorded refusal to them (0166 D1, D2).
 - `isekai/interface/ui/shapes.py` declares the stream's events, `FileState`, `FileEvent`, `Snapshot` and `CellEvent`, and `EVENTS`, keyed by event name; a case for each event holds it to what the server publishes (0166 D3, D4, D5).
 - `tests/test_ui_shapes.py` holds that every route of `create_app` has a row in `ANSWERS` or `UNRECORDED`, a recorded media type, or is `GET /events`, with a twin (0166 D6).
-- The tests read the key tuples, `RARE_BELOW`, `cell_event` and `Held` from their homes, and `ui/app.py` drops the re-bindings it never used; D65 records the refusals' classes and the events' table, and the interface README names them (0166 D7, D8).
+- The tests read the key tuples, `RARE_BELOW`, `cell_event` and `Held` from their homes, and `ui/app.py` drops the re-bindings it never used; D66 records the refusals' classes and the events' table, and the interface README names them (0166 D7, D8).
+
+## [0.87.21] - 2026-11-19
+
+Gate: local 1m10s · CI not read under mf-ship · 0.87.20: local 1m8s · CI not read under mf-ship
+
+- `isekai/foundation/rundir.py` gains `runs_in` and `run_at`, the one rule that a run is a folder holding its frame file, re-exported by `run.py`; cases in `tests/test_run_directory.py` hold it (0165 D1, D2).
+- The front-end sites that tested a frame file call `runs_in` or `run_at`: `run_ids`, `_runs` of compare and of the library, `_migrate`, `run_or_photo` and `parse_cells`; what each lists or refuses is unchanged (0165 D3, D6).
+- `docs/decisions.md` records D65, a run is a folder holding its frame file, with the sites that differ by design; the `rundir.py` row of `isekai/foundation/README.md` names `runs_in` and `run_at` (0165 D4, D7).
 
 ## [0.87.20] - 2026-11-19
 

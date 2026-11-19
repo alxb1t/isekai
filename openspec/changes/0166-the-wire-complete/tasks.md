@@ -80,8 +80,8 @@ The phases declare the refusals, declare the stream's events, hold every route, 
   Verify: `git grep -n -e "are reached through" -e "exists nowhere else" -- isekai/interface/ui/app.py isekai/interface/README.md` prints nothing.
 - [x] 4.6 In `isekai/interface/README.md` name the refusals and `EVENTS` in the `ui/shapes.py` row, and add the `file` event and the snapshot to the `ui/events.py` row.
   Verify: `git grep -n -F "EVENTS" -- isekai/interface/README.md` prints a line.
-- [x] 4.7 In `docs/decisions.md` add D65, *The refusals are classes, and the stream's events have a table of their own* ([D8](design.md#d8)), after D64 in D63's shape.
+- [x] 4.7 In `docs/decisions.md` add D66, *The refusals are classes, and the stream's events have a table of their own* ([D8](design.md#d8)), after D64 in D63's shape.
   In D63's *Accepts*, before: "the refusals, the stream's events and the tests' imports from `app.py` are declared by the next version, and"; after: nothing. Add `0166` to its *Made by*.
-  Verify: `git grep -n -E "^### D65" -- docs/decisions.md` prints a line, and `git grep -n -F "the refusals, the stream's events and the tests' imports" -- docs/decisions.md` prints nothing.
+  Verify: `git grep -n -E "^### D66" -- docs/decisions.md` prints a line, and `git grep -n -F "the refusals, the stream's events and the tests' imports" -- docs/decisions.md` prints nothing.
 - [x] 4.8 Run `uv run python -m tools.derive_imported_by` and keep what it writes: removing the imports of `app.py` may change a derived *Imported by* row.
   Verify: `uv run pytest tests/test_docs.py` exits 0.

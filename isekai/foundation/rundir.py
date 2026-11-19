@@ -1,9 +1,10 @@
-"""`Run`, one photograph's directory and its frame, and `assign`.
+"""`Run`, a photograph's directory and its frame, `assign`, and which folders are runs.
 
 A run is the directory a photograph becomes. `Run` reads its frame and the
 photograph's copy, refusing a damaged one by name; `assign` creates or removes a
-flow's directory in it. `run.py` re-exports each name; a module outside the
-foundation imports them from there.
+flow's directory in it. `runs_in` and `run_at` decide which folder is a run.
+`run.py` re-exports each name; a module outside the foundation imports them
+from there.
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
@@ -148,3 +149,20 @@ def assign(run: Run, flow: str, *, remove: bool = False) -> bool:
         )
     directory.rmdir()
     return True
+
+
+def runs_in(root: Path) -> list[Run]:
+    """Return the runs under `root`, by id; a root that is no directory holds none."""
+    if not root.is_dir():
+        return []
+    return [
+        Run(path.name, path)
+        for path in sorted(root.iterdir())
+        if (path / FRAME_NAME).is_file()
+    ]
+
+
+def run_at(root: Path, identifier: str) -> Run | None:
+    """Return the run `identifier` names under `root`, or None where it names none."""
+    path = root / identifier
+    return Run(identifier, path) if (path / FRAME_NAME).is_file() else None
