@@ -166,6 +166,28 @@ def test_ink_extract_refuses_a_key_the_config_lacks(tmp_path: Path) -> None:
         load_ink_config(_config(tmp_path, floor=None))
 
 
+@pytest.mark.spec_exempt("structural: a config's whole refusal")
+def test_ink_config_with_unknown_keys_is_refused_in_full(tmp_path: Path) -> None:
+    with pytest.raises(Refusal) as excinfo:
+        load_ink_config(_config(tmp_path, zeta=1, alpha=1))
+
+    assert str(excinfo.value) == (
+        "ink.json declares alpha, zeta, which this build does not read; the keys "
+        "it reads are reach, white, floor, photo_depth, image_depth, depth_min, "
+        "depth_max -- correct the spelling"
+    )
+
+
+@pytest.mark.spec_exempt("structural: a config's whole refusal")
+def test_ink_config_with_missing_keys_is_refused_in_full(tmp_path: Path) -> None:
+    with pytest.raises(Refusal) as excinfo:
+        load_ink_config(_config(tmp_path, floor=None, reach=None))
+
+    assert str(excinfo.value) == (
+        "ink.json declares no reach, floor; add the key to ink.json"
+    )
+
+
 @pytest.mark.spec_exempt("structural: a default depth outside its own range")
 def test_ink_extract_refuses_a_default_depth_outside_the_range(tmp_path: Path) -> None:
     with pytest.raises(Refusal, match="photo_depth"):

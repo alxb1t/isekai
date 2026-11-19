@@ -265,6 +265,39 @@ def test_a_config_carrying_an_unknown_key_is_refused(tmp_path: Path) -> None:
         load_caption_config(path)
 
 
+@pytest.mark.spec("caption:selection:an-unknown-key-is-refused")
+def test_a_config_with_unknown_keys_is_refused_in_full(tmp_path: Path) -> None:
+    path = _config(
+        tmp_path,
+        {
+            "briefing": "caption.briefing.md",
+            "model": "a-reader",
+            "zeta": 1,
+            "alpha": 1,
+        },
+    )
+
+    with pytest.raises(Refusal) as excinfo:
+        load_caption_config(path)
+
+    assert str(excinfo.value) == (
+        "caption.json declares alpha, zeta, which this build does not read; "
+        "the keys it reads are briefing, model -- correct the spelling"
+    )
+
+
+@pytest.mark.spec("caption:selection:an-absent-or-empty-model-is-refused")
+def test_a_config_with_missing_keys_is_refused_in_full(tmp_path: Path) -> None:
+    path = _config(tmp_path, {})
+
+    with pytest.raises(Refusal) as excinfo:
+        load_caption_config(path)
+
+    assert str(excinfo.value) == (
+        "caption.json declares no briefing, model; add the key to caption.json"
+    )
+
+
 @pytest.mark.spec("caption:selection:an-absent-briefing-is-refused")
 @pytest.mark.parametrize("briefing", ["absent.md", "sub/caption.briefing.md", 3])
 def test_a_config_naming_no_briefing_beside_it_is_refused(

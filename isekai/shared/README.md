@@ -5,7 +5,7 @@ inputs and returns an answer, and none of them reads a score.
 
 **Each reads `foundation`.** `chain.py` imports `refusal`; `field_map.py` imports `artifacts`, `flow`,
 `refusal` and `run`; `fields.py` imports `flow` and `refusal`; `image.py`
-imports `refusal`; `ink.py` imports `atomic_write` and `refusal`; `tattoo.py` imports `refusal`;
+imports `refusal`; `ink.py` imports `atomic_write`, `config` and `refusal`; `tattoo.py` imports `refusal`;
 `vocabulary.py` imports `artifacts`, `refusal` and `run`; `proposal.py` imports no module of the package. A schema is a flow's, so
 validating a sheet against one means knowing what a flow is. What none of them
 does is reach a boundary or decide a stage's order.
