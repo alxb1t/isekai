@@ -2,8 +2,8 @@ import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch, type Ref } from 'vue'
 import { planOf } from '../bars'
 import { hub as readHub, renderOffer } from '../api'
-import type { CellEvent, HubCell, HubInfo, JobSlot, RenderOffer } from '../types'
-import { type Snapshot, useLiveStore } from './live'
+import type { HubCell, HubInfo, JobSlot, RenderOffer } from '../types'
+import { useLiveStore } from './live'
 
 const NO_OFFER: RenderOffer = {
   disabled: null,
@@ -109,11 +109,10 @@ export const useCollectionStore = defineStore('collection', () => {
   }
 
   live.listen('snapshot', (data) => {
-    const found = (data as Snapshot).hub
+    const found = data.hub
     if (found && found.collection === name.value) hub.value = found
   })
-  live.listen('cell', (data) => {
-    const event = data as CellEvent
+  live.listen('cell', (event) => {
     const here = at(event.source, event.flow)
     apply(event.source, event.flow, event.cell)
     if (event.state === 'start' && event.stage) running.value[here] = event.stage

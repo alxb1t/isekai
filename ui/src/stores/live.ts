@@ -3,8 +3,8 @@ import { computed, ref } from 'vue'
 import { checkBilling as askBilling, runningSessions, stopJob } from '../api'
 import type {
   Billing,
+  Events,
   FileState,
-  HubInfo,
   JobKind,
   JobSlot,
   JobSlots,
@@ -55,17 +55,10 @@ interface Target {
 }
 
 /* The kinds of event the stream sends. */
-const KINDS = ['snapshot', 'job', 'billing', 'cell', 'file'] as const
+const KINDS = ['snapshot', 'job', 'billing', 'cell', 'file'] as const satisfies readonly (keyof Events)[]
 type Kind = (typeof KINDS)[number]
-type Handler = (data: unknown) => void
-
-/* What every connect sends first: both slots, billing, and the hub and files it names. */
-export interface Snapshot {
-  jobs: JobSlots
-  billing: Billing
-  hub?: HubInfo
-  files?: Record<string, FileState>
-}
+const listed: [Exclude<keyof Events, Kind>] extends [never] ? true : never = true
+type Handler<K extends Kind> = (data: Events[K]) => void
 
 /* Both job slots, billing and the open import's files, live, for every screen,
    from the page's one stream. Every connect brings a snapshot, so opening it
@@ -98,7 +91,13 @@ export const useLiveStore = defineStore('live', () => {
   /* Whether what `renderRunning` says is current: the slot's, or a read that answered. */
   const renderConfirmed = computed(() => slotRender.value !== null || sessionsRefusal.value === null)
   const target: Target = { collection: null, staging: null }
-  const handlers = new Map<Kind, Set<Handler>>()
+  const handlers: { [K in Kind]: Set<Handler<K>> } = {
+    snapshot: new Set(),
+    job: new Set(),
+    billing: new Set(),
+    cell: new Set(),
+    file: new Set(),
+  }
   let stream: EventSource | null = null
   setInterval(() => (now.value = Date.now()), 1000)
   let readingSessions = false
@@ -121,15 +120,14 @@ export const useLiveStore = defineStore('live', () => {
   }, 2000)
 
   /* Each event of `kind`, on every stream this page opens; returns the way to stop. */
-  function listen(kind: Kind, handler: Handler): () => void {
-    const found = handlers.get(kind) ?? new Set<Handler>()
-    handlers.set(kind, found)
+  function listen<K extends Kind>(kind: K, handler: Handler<K>): () => void {
+    const found = handlers[kind]
     found.add(handler)
     return () => found.delete(handler)
   }
 
-  function emit(kind: Kind, data: unknown): void {
-    for (const handler of handlers.get(kind) ?? []) handler(data)
+  function emit<K extends Kind>(kind: K, data: Events[K]): void {
+    for (const handler of handlers[kind]) handler(data)
   }
 
   /* Name a collection, an import, or both; the stream opens again only when either changes. */
@@ -159,17 +157,16 @@ export const useLiveStore = defineStore('live', () => {
   }
 
   /* This store's own handlers, registered first, so every other one reads what they keep. */
-  listen('snapshot', (data) => {
-    const found = data as Snapshot
+  listen('snapshot', (found) => {
     jobs.value = found.jobs
     billing.value = found.billing
     files.value = found.files ?? {}
     loaded.value = true
   })
-  listen('job', (data) => hold(data as JobSlot))
-  listen('billing', (data) => (billing.value = data as Billing))
+  listen('job', (data) => hold(data))
+  listen('billing', (data) => (billing.value = data))
   listen('file', (data) => {
-    const { upload, ...state } = data as FileState & { upload: string }
+    const { upload, ...state } = data
     files.value = { ...files.value, [upload]: state }
   })
 

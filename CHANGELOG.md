@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `listen` and `emit` of `ui/src/stores/live.ts` are typed by the wire's `Events`, re-exported from `ui/src/types.ts`, so each handler's payload is its kind's type and the stream's casts and the store's own `Snapshot` go; the typecheck holds `KINDS` to `Events`' keys both ways; behaviour is as before (0172 D1, D2, D3).
+
 ## [0.87.27] - 2026-11-19
 
 Gate: local 1m36s · CI not read under mf-ship · 0.87.26: local 1m21s · CI not read under mf-ship

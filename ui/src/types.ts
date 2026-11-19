@@ -105,6 +105,7 @@ export interface TakenOut {
 }
 
 export type { CellEvent } from './wire'
+export type { Events } from './wire'
 
 /* One image a draft is written from, its seed a decimal string. */
 export interface ImageRef {
