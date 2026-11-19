@@ -6,7 +6,7 @@ Each task names its file and its check. The decisions are in [design](design.md)
 
 - [x] 1 — The cell's stage and the job's state · moderate
 - [x] 2 — The file's state · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The cell's stage and the job's state
 
@@ -46,11 +46,11 @@ Each task names its file and its check. The decisions are in [design](design.md)
 
 ## 3 — The documents
 
-- [ ] 3.1 In `docs/decisions.md` edit [D66](design.md#d7) in place: append to its bold statement `A cell's stage, a job's state and kind and a file's state are the `Literal` of the module that writes them, and `shapes.py` reads it.`. In its *Accepts* line change `a file's state, a job's state and the billing volume's state are `str`` to `the billing volume's state, a session's outcome and a cell event's stage and state are `str``. Change its *Made by* line from `` `0166`. `` to `` `0166`, `0167`. ``.
+- [x] 3.1 In `docs/decisions.md` edit [D66](design.md#d7) in place: append to its bold statement `A cell's stage, a job's state and kind and a file's state are the `Literal` of the module that writes them, and `shapes.py` reads it.`. In its *Accepts* line change `a file's state, a job's state and the billing volume's state are `str`` to `the billing volume's state, a session's outcome and a cell event's stage and state are `str``. Change its *Made by* line from `` `0166`. `` to `` `0166`, `0167`. ``.
   Verify: `git grep -n -F "the billing volume's state, a session's outcome" -- docs/decisions.md` prints the *Accepts* line.
-- [ ] 3.2 In `isekai/interface/README.md` change the `ui/shapes.py` row from `a test holds each and no route reads it.` to `a test holds each and no route reads it. A cell's stage, a job's state and kind and a file's state are the `Literal` of the module that writes them, and `ty` holds each write.`.
+- [x] 3.2 In `isekai/interface/README.md` change the `ui/shapes.py` row from `a test holds each and no route reads it.` to `a test holds each and no route reads it. A cell's stage, a job's state and kind and a file's state are the `Literal` of the module that writes them, and `ty` holds each write.`.
   Verify: `git grep -n -F "a job's state and kind and a file's state" -- isekai/interface/README.md` prints the row.
-- [ ] 3.3 Hold that the derived tables and the documents agree with the code.
+- [x] 3.3 Hold that the derived tables and the documents agree with the code.
   Verify: `uv run pytest tests/test_docs.py tests/test_spec_prose.py` exits 0.
-- [ ] 3.4 Hold that the change touched no record and no page file.
+- [x] 3.4 Hold that the change touched no record and no page file.
   Verify: `git diff --stat main...HEAD -- tests ui/src` prints nothing.

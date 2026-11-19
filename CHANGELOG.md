@@ -12,6 +12,7 @@ its new digest.
 
 - `isekai/interface/ui/library.py` names a cell's stage `Stage` and `isekai/interface/ui/jobs.py` a job's state `State`; `shapes.py` reads both, and keys `Snapshot.jobs` by `jobs.Kind`, so `ty` holds each word written (0167 D1, D2, D5).
 - `isekai/pipeline/importing.py` names every state a file is published in `Upload` and builds each record with `_record`; `Reader._set` takes the state apart from its fields, and `FileState.state` reads `Upload`, so `ty` holds each word written (0167 D1, D3).
+- `docs/decisions.md` narrows D66's *Accepts* line to the billing volume's state, a session's outcome and a cell event's stage and state, and `isekai/interface/README.md` says each name is the `Literal` of the module that writes it (0167 D7).
 
 ## [0.87.22] - 2026-11-19
 
