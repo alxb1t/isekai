@@ -5,7 +5,7 @@ The phases: the helper's predicate with its cases, the library's call with the h
 ## Progress
 
 - [x] 1 — The helper · moderate
-- [ ] 2 — The library · moderate
+- [x] 2 — The library · moderate
 - [ ] 3 — The decision · moderate
 
 ## 1 — The helper
@@ -19,11 +19,11 @@ The phases: the helper's predicate with its cases, the library's call with the h
 
 ## 2 — The library
 
-- [ ] 2.1 Add the hub's case of [D5](design.md#d5) to `tests/test_ui_library.py`, after `test_an_unreadable_run_file_marks_its_cell_alone`, bound to `ui:hub:a-folder-that-is-no-run-is-ignored`. Run it: it fails with `PermissionError`.
+- [x] 2.1 Add the hub's case of [D5](design.md#d5) to `tests/test_ui_library.py`, after `test_an_unreadable_run_file_marks_its_cell_alone`, bound to `ui:hub:a-folder-that-is-no-run-is-ignored`. Run it: it fails with `PermissionError`.
   Verify: `git grep -n "ui:hub:a-folder-that-is-no-run-is-ignored" -- tests/test_ui_library.py` prints one line.
-- [ ] 2.2 Write `_runs` in `isekai/interface/ui/library.py` exactly as [D2](design.md#d2) gives it: the separator test goes to `runs_in` as `named`, and the `if` of the comprehension goes.
+- [x] 2.2 Write `_runs` in `isekai/interface/ui/library.py` exactly as [D2](design.md#d2) gives it: the separator test goes to `runs_in` as `named`, and the `if` of the comprehension goes.
   Verify: `git grep -n "named=" -- isekai/interface/ui/library.py` prints one line.
-- [ ] 2.3 Run the tests that hold the helper, the library and the bindings.
+- [x] 2.3 Run the tests that hold the helper, the library and the bindings.
   Verify: `uv run pytest tests/test_run_directory.py tests/test_ui_library.py tests/test_spec_bindings.py tests/test_spec_prose.py tests/test_ratchets.py tests/test_layers.py` exits 0.
 
 ## 3 — The decision

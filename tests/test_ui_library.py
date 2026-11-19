@@ -513,6 +513,24 @@ def test_an_unreadable_run_file_marks_its_cell_alone(
     assert cells["bea.jpg"] == Cell("approved", status="approved", short=1)
 
 
+@pytest.mark.spec("ui:hub:a-folder-that-is-no-run-is-ignored")
+def test_a_folder_that_is_no_run_and_cannot_be_read_is_ignored(
+    tmp_path: Path, vocabulary: Vocabulary
+) -> None:
+    folder = _collection(tmp_path, "b", "ada.jpg")
+    _approved(_run(folder, "ada.jpg"), vocabulary)
+    private = folder / "runs" / "private"
+    private.mkdir()
+    private.chmod(0o000)
+    try:
+        grid = library.hub(folder, OFFERED, FLOWS_DIR)
+    finally:
+        private.chmod(0o700)
+
+    assert [one.name for one in grid.sources] == ["ada.jpg"]
+    assert grid.sources[0].cells[SUMMON].stage == "approved"
+
+
 @pytest.mark.spec("ui:hub:the-hub-writes-nothing")
 def test_reading_the_hub_writes_nothing(tmp_path: Path, vocabulary: Vocabulary) -> None:
     folder = _collection(tmp_path, "b", "ada.jpg", "bea.jpg")

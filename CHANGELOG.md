@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - `runs_in` in `isekai/foundation/rundir.py` takes a keyword-only name predicate, `named`, and leaves out a child it rejects before probing its frame, so a folder that is no run is never read; with `named` absent it lists as before (0169 D1, D5, D7).
+- `isekai/interface/ui/library.py` passes the library's separator test to `runs_in` as `named`, so an unreadable folder that is no run no longer fails Home, the hub or the run lookup (0169 D2, D4, D5).
 
 ## [0.87.23] - 2026-11-19
 
