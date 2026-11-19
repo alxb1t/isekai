@@ -5,7 +5,6 @@ import type {
   ImportingState as StagedState,
   Job,
   JobsKind,
-  Renders,
   ReviewStatus as InputStatus,
   Outline as WireOutline,
   Proposed,
