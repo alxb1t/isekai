@@ -12,7 +12,7 @@ from typing import Any, Literal, NotRequired, TypedDict
 
 from isekai.foundation import artifacts
 from isekai.interface.ui import jobs, library
-from isekai.pipeline import tattoos
+from isekai.pipeline import importing, tattoos
 from isekai.pipeline.review import Status
 from isekai.shared import proposal
 
@@ -603,7 +603,7 @@ class FileState(TypedDict):
     """One upload's state in an import, as the reader holds it."""
 
     file: str
-    state: str
+    state: importing.Upload
     name: NotRequired[str]
     carries: NotRequired[list[str]]
     copy_of: NotRequired[str | None]

@@ -5,7 +5,7 @@ Each task names its file and its check. The decisions are in [design](design.md)
 ## Progress
 
 - [x] 1 — The cell's stage and the job's state · moderate
-- [ ] 2 — The file's state · moderate
+- [x] 2 — The file's state · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The cell's stage and the job's state
@@ -25,23 +25,23 @@ Each task names its file and its check. The decisions are in [design](design.md)
 
 ## 2 — The file's state
 
-- [ ] 2.1 **HALT CHECK** Before an edit, run `uv run python -m tools.mutate isekai/pipeline/importing.py:218 isekai/pipeline/importing.py:302 isekai/pipeline/importing.py:319 isekai/pipeline/importing.py:325 --tests tests/test_importing.py tests/test_ui_api.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` on the module as it stands ([D6](design.md#d6)). It starts from green tests and kills each mutant, as the design's *Equivalent mutants* records; a survivor is a plan problem: halt.
+- [x] 2.1 **HALT CHECK** Before an edit, run `uv run python -m tools.mutate isekai/pipeline/importing.py:218 isekai/pipeline/importing.py:302 isekai/pipeline/importing.py:319 isekai/pipeline/importing.py:325 --tests tests/test_importing.py tests/test_ui_api.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` on the module as it stands ([D6](design.md#d6)). It starts from green tests and kills each mutant, as the design's *Equivalent mutants* records; a survivor is a plan problem: halt.
   Verify: `uv run pytest tests/test_importing.py` exits 0.
-- [ ] 2.2 In `isekai/pipeline/importing.py` add `Mapping` to the `collections.abc` import, `Upload` under `State` with the comment `# Every state a file is published in: one `Staged` holds, or one the reader holds` and `# before it has staged the file.`, and `_record` above `class Reader`, all as [D3](design.md#d3) gives them.
+- [x] 2.2 In `isekai/pipeline/importing.py` add `Mapping` to the `collections.abc` import, `Upload` under `State` with the comment `# Every state a file is published in: one `Staged` holds, or one the reader holds` and `# before it has staged the file.`, and `_record` above `class Reader`, all as [D3](design.md#d3) gives them.
   Verify: `git grep -n -F "Upload = Literal[State," -- isekai/pipeline/importing.py` prints the alias line.
-- [ ] 2.3 In the same file rewrite `put`'s `record = {"file": name, "state": "waiting"}`, the `refused` call of `put`, `_run` from its `converting` call to its last call of `_set`, and `_set`, to the text [D3](design.md#d3) gives. Leave `shutil.rmtree(held.parent, ignore_errors=True)` and every comment as they are.
+- [x] 2.3 In the same file rewrite `put`'s `record = {"file": name, "state": "waiting"}`, the `refused` call of `put`, `_run` from its `converting` call to its last call of `_set`, and `_set`, to the text [D3](design.md#d3) gives. Leave `shutil.rmtree(held.parent, ignore_errors=True)` and every comment as they are.
   Verify: `git grep -n -F "self._set(upload, name, state, fields)" -- isekai/pipeline/importing.py` prints one line.
-- [ ] 2.4 In `isekai/interface/ui/shapes.py` change `from isekai.pipeline import tattoos` to `from isekai.pipeline import importing, tattoos` and `FileState.state` to `importing.Upload` ([D1](design.md#d1)).
+- [x] 2.4 In `isekai/interface/ui/shapes.py` change `from isekai.pipeline import tattoos` to `from isekai.pipeline import importing, tattoos` and `FileState.state` to `importing.Upload` ([D1](design.md#d1)).
   Verify: `git grep -n -E "^    (stage|state): str" -- isekai/interface/ui/shapes.py` prints five lines.
-- [ ] 2.5 Run `uv run python -m tools.derive_imported_by`, which adds `interface/ui/shapes.py` to the `importing.py` row of `isekai/pipeline/README.md`.
+- [x] 2.5 Run `uv run python -m tools.derive_imported_by`, which adds `interface/ui/shapes.py` to the `importing.py` row of `isekai/pipeline/README.md`.
   Verify: `git grep -n -F "interface/ui/shapes.py" -- isekai/pipeline/README.md` prints three lines.
-- [ ] 2.6 **HALT CHECK** Hold the phase on `ty`. A test callback `ty` refuses is a plan problem: halt, and change no assertion.
+- [x] 2.6 **HALT CHECK** Hold the phase on `ty`. A test callback `ty` refuses is a plan problem: halt, and change no assertion.
   Verify: `uv run ty check` exits 0.
-- [ ] 2.7 Run the tests that read the importer, the declarations and the guards.
+- [x] 2.7 Run the tests that read the importer, the declarations and the guards.
   Verify: `uv run pytest tests/test_importing.py tests/test_ui_shapes.py tests/test_layers.py tests/test_docs.py` exits 0.
-- [ ] 2.8 Close with `tools.mutate` on the rewritten lines, against the layout 2.3 gives: the return of `_record`, the `refused` call of `put`, `_run`'s last call and `_set`'s publish ([D6](design.md#d6)). A survivor halts the build, and a range that lies off by one is re-fitted to the layout 2.3 gave.
+- [x] 2.8 Close with `tools.mutate` on the rewritten lines, against the layout 2.3 gives: the return of `_record`, the `refused` call of `put`, `_run`'s last call and `_set`'s publish ([D6](design.md#d6)). A survivor halts the build, and a range that lies off by one is re-fitted to the layout 2.3 gave.
   Verify: `uv run python -m tools.mutate isekai/pipeline/importing.py:171 isekai/pipeline/importing.py:227 isekai/pipeline/importing.py:328 isekai/pipeline/importing.py:337 --tests tests/test_importing.py` exits 0.
-- [ ] 2.9 Close with `tools.mutate` on `_run`'s `converting` call, which `tests/test_importing.py` leaves alive and the stream's case in `tests/test_ui_api.py` kills.
+- [x] 2.9 Close with `tools.mutate` on `_run`'s `converting` call, which `tests/test_importing.py` leaves alive and the stream's case in `tests/test_ui_api.py` kills.
   Verify: `uv run python -m tools.mutate isekai/pipeline/importing.py:311 --tests tests/test_importing.py tests/test_ui_api.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 
 ## 3 — The documents

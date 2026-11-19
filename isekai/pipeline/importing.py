@@ -21,7 +21,7 @@ import struct
 import tempfile
 import threading
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -75,6 +75,10 @@ MAX_PIXELS = 50_000_000
 _SRGB_TOLERANCE = 2
 
 State = Literal["ready", "converted", "not cleaned", "skipped"]
+
+# Every state a file is published in: one `Staged` holds, or one the reader holds
+# before it has staged the file.
+Upload = Literal[State, "waiting", "converting", "refused"]
 
 
 @dataclass(frozen=True)
@@ -162,6 +166,10 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
     return Staged(target.name, "converted" if converted else "ready")
 
 
+def _record(name: str, state: Upload, fields: Mapping[str, object]) -> dict[str, Any]:
+    return {"file": name, "state": state, **fields}
+
+
 class Reader:
     """Read a staging folder's uploads one at a time, in the order they landed.
 
@@ -190,7 +198,7 @@ class Reader:
     def put(self, name: str, body: bytes) -> dict[str, Any]:
         """Hold an upload for reading; return its id, its name and `waiting`."""
         _refuse_name(name)
-        record = {"file": name, "state": "waiting"}
+        record = _record(name, "waiting", {})
         # Checked and named under the lock `seal` takes, before the disk is
         # touched: no upload lands once a commit has sealed the reader, and one
         # named before holds `seal` off as `waiting` until it is read.
@@ -215,7 +223,7 @@ class Reader:
         except Exception as failed:
             # A folder a cancel deleted, or a full disk, refuses this upload alone.
             refusal = str(_closed(name)) if self._stopped else _failed(name, failed)
-            self._set(upload, name, {"state": "refused", "refusal": refusal})
+            self._set(upload, name, "refused", {"refusal": refusal})
             raise Refusal(refusal) from failed
         state = {"upload": upload, **record}
         self._publish(state)
@@ -299,30 +307,33 @@ class Reader:
         """Read each held upload in turn until stopped."""
         while (item := self._queue.get()) is not None and not self._stopped:
             upload, name, held = item
-            self._set(upload, name, {"state": "converting"})
+            self._set(upload, name, "converting", {})
             try:
                 staged = read(held, self._staging, self._limit)
-                result = {
-                    "state": staged.state,
+                state: Upload = staged.state
+                fields: Mapping[str, object] = {
                     "name": staged.name,
                     "carries": list(staged.carries),
                     "copy_of": staged.copy_of,
                 }
             except Refusal as refused:
-                result = {"state": "refused", "refusal": str(refused)}
+                state, fields = "refused", {"refusal": str(refused)}
             except Exception as failed:
                 # Anything else, a full disk or a decoder's own error, refuses this
                 # file alone: the thread lives on to read the next.
-                result = {"state": "refused", "refusal": _failed(name, failed)}
+                state, fields = "refused", {"refusal": _failed(name, failed)}
             finally:
                 shutil.rmtree(held.parent, ignore_errors=True)
-            self._set(upload, name, result)
+            self._set(upload, name, state, fields)
 
-    def _set(self, upload: str, name: str, state: dict[str, Any]) -> None:
-        """Record and publish `state` for `upload`, uploaded as `name`."""
+    def _set(
+        self, upload: str, name: str, state: Upload, fields: Mapping[str, object]
+    ) -> None:
+        """Record and publish `upload`'s `state`, uploaded as `name`."""
+        record = _record(name, state, fields)
         with self._lock:
-            self._files[upload] = {"file": name, **state}
-        self._publish({"upload": upload, "file": name, **state})
+            self._files[upload] = record
+        self._publish({"upload": upload, **record})
 
 
 # The states of a file the reader has not finished with.
