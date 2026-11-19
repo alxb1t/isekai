@@ -6,7 +6,7 @@ The phases: the tattoos and place, the rendering, then the rows that hold every 
 
 - [x] 1 — The tattoos and place · moderate
 - [x] 2 — The rendering · hard
-- [ ] 3 — The rows and the documents · moderate
+- [x] 3 — The rows and the documents · moderate
 
 ## 1 — The tattoos and place
 
@@ -40,9 +40,9 @@ The phases: the tattoos and place, the rendering, then the rows that hold every 
 
 ## 3 — The rows and the documents
 
-- [ ] 3.1 In `tests/test_ui_shapes.py` add `test_every_json_route_of_the_three_tables_has_a_row_in_one_table` with `spec_exempt("structural: each JSON route of the tattoo, place and render tables has a row in one table")`, as [D9](design.md#d9) states; the shipped case's `TABLES` stay as they are.
+- [x] 3.1 In `tests/test_ui_shapes.py` add `test_every_json_route_of_the_three_tables_has_a_row_in_one_table` with `spec_exempt("structural: each JSON route of the tattoo, place and render tables has a row in one table")`, as [D9](design.md#d9) states; the shipped case's `TABLES` stay as they are.
   Verify: `uv run pytest tests/test_ui_shapes.py::test_every_json_route_of_the_three_tables_has_a_row_in_one_table` passes.
-- [ ] 3.2 In `isekai/interface/README.md` replace the `ui/shapes.py` row's text with: "each JSON answer of the hub, staging, images, vocabulary, review, tattoo, place and render routes as a `TypedDict`, `ANSWERS` keyed as the record is for the answers it records, and `UNRECORDED` for those it lacks; a test holds each and no route reads it. **Imports no web framework**".
+- [x] 3.2 In `isekai/interface/README.md` replace the `ui/shapes.py` row's text with: "each JSON answer of the hub, staging, images, vocabulary, review, tattoo, place and render routes as a `TypedDict`, `ANSWERS` keyed as the record is for the answers it records, and `UNRECORDED` for those it lacks; a test holds each and no route reads it. **Imports no web framework**".
   Verify: `git grep -c "UNRECORDED" -- isekai/interface/README.md` prints `isekai/interface/README.md:1`.
-- [ ] 3.3 In `docs/decisions.md` add `### D64 · The answers the record lacks are a second table, held by cases that ask the server` after D63, in D63's form, and change D63's *Accepts* line and *Made by* line as [D10](design.md#d10) says.
+- [x] 3.3 In `docs/decisions.md` add `### D64 · The answers the record lacks are a second table, held by cases that ask the server` after D63, in D63's form, and change D63's *Accepts* line and *Made by* line as [D10](design.md#d10) says.
   Verify: `git grep -n "^### D64" -- docs/decisions.md` prints one line, and `uv run pytest tests/test_docs.py tests/test_spec_prose.py tests/test_ratchets.py` passes.

@@ -14,6 +14,7 @@ its new digest.
 - The *Imported by* tables of `tattoos.py` and `proposal.py` list `interface/ui/shapes.py` (0164 D8).
 - `isekai/interface/ui/shapes.py` declares the offer, quote, billing check, jobs, running sessions and a served session as `TypedDict`s; the record's rows join `ANSWERS` and prepare, stop, render and the sessions join `UNRECORDED`, each held by a case that asks the server (0164 D1, D3, D4, D5).
 - The *Imported by* table of `artifacts.py` lists `interface/ui/shapes.py` (0164 D8).
+- A case holds that every JSON route of the tattoo, place and render tables has a row in exactly one of `ANSWERS` and `UNRECORDED`; D64 records the second table, D63's *Accepts* names what remains, and the `shapes.py` row of `isekai/interface/README.md` names the new tables (0164 D9, D10).
 
 ## [0.87.19] - 2026-11-18
 

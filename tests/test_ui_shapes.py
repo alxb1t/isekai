@@ -21,14 +21,18 @@ import pytest
 from isekai.foundation.artifacts import SessionRecord
 from isekai.interface.ui.routes.hub import ROUTES as HUB
 from isekai.interface.ui.routes.images import ROUTES as IMAGES
+from isekai.interface.ui.routes.place import ROUTES as PLACE
+from isekai.interface.ui.routes.rendering import ROUTES as RENDERING
 from isekai.interface.ui.routes.reviewing import ROUTES as REVIEWING
 from isekai.interface.ui.routes.staging import ROUTES as STAGING
+from isekai.interface.ui.routes.tattoos import ROUTES as TATTOOS
 from isekai.interface.ui.routes.vocabulary import ROUTES as VOCABULARY
-from isekai.interface.ui.shapes import ANSWERS, ServedSession
+from isekai.interface.ui.shapes import ANSWERS, UNRECORDED, ServedSession
 from tests.record import recorded
 
 LEAVES = (str, int, float, bool)
 TABLES = (HUB, STAGING, VOCABULARY, IMAGES, REVIEWING)
+TATTOO_PLACE_RENDER = (TATTOOS, PLACE, RENDERING)
 
 
 def _dot(at: str, key: str) -> str:
@@ -246,3 +250,21 @@ def test_the_served_session_is_the_record_with_a_nullable_outcome() -> None:
     assert list(served) == list(record)
     assert ServedSession.__required_keys__ == SessionRecord.__required_keys__
     assert ServedSession.__optional_keys__ == SessionRecord.__optional_keys__
+
+
+@pytest.mark.spec_exempt(
+    "structural: each JSON route of the tattoo, place and render tables "
+    "has a row in one table"
+)
+def test_every_json_route_of_the_three_tables_has_a_row_in_one_table() -> None:
+    entries = _routes()
+    keys = [
+        f"{route.method} {route.path}"
+        for table in TATTOO_PLACE_RENDER
+        for route in table
+    ]
+    json_keys = [key for key in keys if "media_type" not in entries.get(key, {})]
+    assert ANSWERS.keys().isdisjoint(UNRECORDED)
+    assert json_keys
+    for key in json_keys:
+        assert (key in ANSWERS) + (key in UNRECORDED) == 1, key
