@@ -31,6 +31,7 @@ import random
 import shlex
 import shutil
 import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -87,15 +88,17 @@ from isekai.foundation.run import (  # noqa: E402
 )
 from isekai.interface.cli import build_parser, dispatch  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
-from isekai.interface.ui.app import (  # noqa: E402
-    RARE_BELOW,
-    Held,
-    authorities,
-    create_app,
-)
+from isekai.interface.ui.app import authorities, create_app  # noqa: E402
 from isekai.interface.ui.billing import Billing  # noqa: E402
 from isekai.interface.ui.jobs import Jobs  # noqa: E402
-from isekai.interface.ui.shapes import UNRECORDED  # noqa: E402
+from isekai.interface.ui.routes.vocabulary import RARE_BELOW  # noqa: E402
+from isekai.interface.ui.shapes import (  # noqa: E402
+    EVENTS,
+    UNRECORDED,
+    DraftRefused,
+    Refused,
+)
+from isekai.interface.ui.surface import Held  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.generate import image_of, prepare, prompt_artifact  # noqa: E402
@@ -297,6 +300,22 @@ def test_a_write_carrying_another_pages_origin_is_refused(
     assert answered.status_code == 403
     assert answered.json() == {"refusal": "not from this page"}
     assert snapshot(made.path) == before
+
+
+@pytest.mark.spec_exempt("structural: the guard's host refusal fits Refused")
+def test_the_host_refusal_fits_refused(client: TestClient) -> None:
+    answered = client.get("/api/library", headers={"host": f"evil.example:{PORT}"})
+
+    assert answered.status_code == 403
+    assert faults(Refused, shape(answered.json()), "") == []
+
+
+@pytest.mark.spec_exempt("structural: the guard's origin refusal fits Refused")
+def test_the_origin_refusal_fits_refused(client: TestClient) -> None:
+    answered = client.get("/api/library", headers={"origin": "http://evil.example"})
+
+    assert answered.status_code == 403
+    assert faults(Refused, shape(answered.json()), "") == []
 
 
 @pytest.mark.spec("ui:address:a-cross-site-request-without-origin-is-refused")
@@ -923,6 +942,34 @@ def test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written(
     assert tracked["refusal"] is None
     assert untracked["refusal"].startswith("nope: not a flow this build tracks")
     assert snapshot(made.path) == before
+
+
+@pytest.mark.spec_exempt("structural: a refusal answered as a conflict fits Refused")
+def test_a_refusal_answered_as_a_conflict_fits_refused(client: TestClient) -> None:
+    answered = client.post(DRAFT_ROUTE, json={"flow": FLOW, "images": []})
+
+    assert answered.status_code == 409
+    assert faults(Refused, shape(answered.json()), "") == []
+
+
+@pytest.mark.spec_exempt("structural: the draft's refusal fits DraftRefused")
+def test_the_drafts_refusal_fits_draft_refused(client: TestClient, made: Run) -> None:
+    _approved(client, made)
+    group = made.directory(FLOW, "outputs", "001")
+    group.mkdir(parents=True)
+    (group / "7.render.json").write_text("{}\n")
+    image = {"digest": made.digest, "version": 1, "seed": "7"}
+
+    answered = client.post(
+        DRAFT_ROUTE,
+        json={
+            "flow": FLOW,
+            "images": [{**image, "flow": "nope"}, {**image, "flow": FLOW}],
+        },
+    )
+
+    assert answered.status_code == 409
+    assert faults(DraftRefused, shape(answered.json()), "") == []
 
 
 @pytest.mark.spec("ui:revise:an-image-no-run-can-hold-is-refused")
@@ -3584,3 +3631,47 @@ def test_a_served_session_fits_its_declaration_running_and_stale(
     stale = client.get(f"/api/c/{COLLECTION}/sessions/{name}").json()
     assert stale["outcome"] is None
     assert faults(declared, shape(stale), "") == []
+
+
+@pytest.mark.spec_exempt("structural: the file event fits the declaration EVENTS holds")
+def test_the_file_event_fits_its_declaration(client: TestClient) -> None:
+    feed = _broadcast(client).subscribe()
+    staged = client.post("/api/staging").json()["id"]
+    _, photo = _upload(client, staged, "a.jpg", photo_jpeg((200, 0, 0), (40, 30)))
+    _, bad = _upload(client, staged, "bad.jpg", b"not a photograph")
+
+    sent = _until_read(feed, staged, {photo["upload"], bad["upload"]})
+
+    assert {"waiting", "converting", "refused"} <= {one["state"] for one in sent}
+    assert [faults(EVENTS["file"], shape(one), "") for one in sent] == [[]] * len(sent)
+
+
+def _first_frame(client: TestClient, url: str) -> dict[str, Any]:
+    """Return the stream's first frame; a thread closes the stream once it is open."""
+    broadcast = _broadcast(client)
+    open_before = len(broadcast._queues)
+
+    def close_once_open() -> None:
+        deadline = time.monotonic() + WAIT
+        while len(broadcast._queues) == open_before and time.monotonic() < deadline:
+            time.sleep(0.01)
+        broadcast.publish(events.CLOSE, {})
+
+    threading.Thread(target=close_once_open, daemon=True).start()
+    answered = client.get(url)
+    assert answered.status_code == 200
+    return json.loads(answered.text.split("\n")[1].removeprefix("data: "))
+
+
+@pytest.mark.spec_exempt("structural: the snapshot fits the declaration EVENTS holds")
+def test_the_snapshot_fits_its_declaration(client: TestClient, made: Run) -> None:
+    _source(made)
+    feed = _broadcast(client).subscribe()
+    staged = client.post("/api/staging").json()["id"]
+    _, photo = _upload(client, staged, "a.jpg", photo_jpeg((200, 0, 0), (40, 30)))
+    _until_read(feed, staged, {photo["upload"]})
+
+    first = _first_frame(client, f"/events?collection={COLLECTION}&staging={staged}")
+
+    assert {"hub", "files"} <= first.keys()
+    assert faults(EVENTS["snapshot"], shape(first), "") == []

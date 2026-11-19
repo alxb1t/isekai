@@ -17,8 +17,8 @@ from fastapi.routing import APIRoute  # noqa: E402
 
 from isekai.boundary.gpu import Seams  # noqa: E402
 from isekai.interface.ui import HOST  # noqa: E402
-from isekai.interface.ui import app as app_module  # noqa: E402
 from isekai.interface.ui.app import create_app  # noqa: E402
+from isekai.interface.ui.routes import keys as keys_module  # noqa: E402
 from tests.stages import bare_wiring  # noqa: E402
 
 PORT = 8768
@@ -92,7 +92,7 @@ def test_the_page_bodies_agree_with_the_server_key_tuples(tmp_path: Path) -> Non
     bodies = json.loads(WIRE.read_text())["bodies"]
     tuples = {
         name: value
-        for name, value in vars(app_module).items()
+        for name, value in vars(keys_module).items()
         if name.endswith("_KEYS")
     }
 

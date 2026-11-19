@@ -2,7 +2,7 @@
 
 `library.py` and `surface.py` import no web framework, so what they hold is
 exercised by the main suite whether or not a server is installed. The modules of
-`routes/` import FastAPI and are reached through this module alone, so
+`routes/` import FastAPI and this module mounts them, so
 `tests/test_ui_api.py` opens with an `importorskip` for it. They hold the
 vocabulary, tattoo library and place routes, `HubRoutes`, `StagingRoutes`,
 `ImageRoutes`, `SourceRoutes`, `RenderRoutes`, `StreamRoutes` and
@@ -11,8 +11,7 @@ mounts each, while the guard, the refusal handler and the catch-alls are this
 module's own.
 
 **What this module owns, and what it does not.** It owns the guard on every
-request, the mounting of each resource and the built bundle, the `rare`
-threshold -- which exists nowhere else in this repository -- and turning a
+request, the mounting of each resource and the built bundle, and turning a
 `Refusal` into a response. The join of caption, sheet, draft, approved and
 budget into one payload is the review routes' own, in `routes/reviewing.py`. The
 pipeline owns what a valid sheet is, each run file's shape and its filename,
@@ -99,21 +98,13 @@ from isekai.interface.ui.jobs import Jobs
 from isekai.interface.ui.routes.common import REFUSED, _saved
 from isekai.interface.ui.routes.hub import mount as hub_mount
 from isekai.interface.ui.routes.images import mount as images_mount
-from isekai.interface.ui.routes.keys import BAKE_KEYS as BAKE_KEYS
-from isekai.interface.ui.routes.keys import INK_KEYS as INK_KEYS
-from isekai.interface.ui.routes.keys import OUTLINE_KEYS as OUTLINE_KEYS
-from isekai.interface.ui.routes.keys import PREVIEW_KEYS as PREVIEW_KEYS
-from isekai.interface.ui.routes.keys import PROPOSE_KEYS as PROPOSE_KEYS
-from isekai.interface.ui.routes.keys import STAGE1_KEYS as STAGE1_KEYS
 from isekai.interface.ui.routes.place import mount as place_mount
-from isekai.interface.ui.routes.rendering import cell_event as cell_event
 from isekai.interface.ui.routes.rendering import mount as render_mount
 from isekai.interface.ui.routes.reviewing import mount as review_mount
 from isekai.interface.ui.routes.sources import mount as sources_mount
 from isekai.interface.ui.routes.staging import mount as staging_mount
 from isekai.interface.ui.routes.stream import mount as stream_mount
 from isekai.interface.ui.routes.tattoos import mount as tattoo_mount
-from isekai.interface.ui.routes.vocabulary import RARE_BELOW as RARE_BELOW
 from isekai.interface.ui.routes.vocabulary import mount as vocabulary_mount
 from isekai.interface.ui.surface import Held, Surface
 from isekai.interface.wiring import Wiring
