@@ -1,0 +1,58 @@
+{
+  "change": "0169-the-runs-filter",
+  "version": "0.87.25",
+  "base": "df9467ad",
+  "analyzed": "1221eda6",
+  "measured_on": "local",
+  "collected_at": "2026-11-19T17:39:43+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2489
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 85
+    },
+    "open-backlog-cards": {
+      "value": 3
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 543
+    },
+    "diff-files": {
+      "value": 11
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 16335
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1092
+    },
+    "decisions": {
+      "value": 68
+    }
+  }
+}
