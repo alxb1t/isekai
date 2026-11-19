@@ -5,6 +5,7 @@ type names, never a value. The cases below prove it on declarations of this file
 """
 
 import types
+from pathlib import Path
 from typing import (
     Literal,
     TypedDict,
@@ -18,7 +19,10 @@ from typing import (
 
 import pytest
 
+from isekai.boundary.gpu import Seams
 from isekai.foundation.artifacts import SessionRecord
+from isekai.interface.ui import HOST
+from isekai.interface.ui.app import create_app
 from isekai.interface.ui.routes.hub import ROUTES as HUB
 from isekai.interface.ui.routes.images import ROUTES as IMAGES
 from isekai.interface.ui.routes.place import ROUTES as PLACE
@@ -28,8 +32,10 @@ from isekai.interface.ui.routes.staging import ROUTES as STAGING
 from isekai.interface.ui.routes.tattoos import ROUTES as TATTOOS
 from isekai.interface.ui.routes.vocabulary import ROUTES as VOCABULARY
 from isekai.interface.ui.shapes import ANSWERS, UNRECORDED, Refused, ServedSession
-from tests.record import recorded
+from tests.record import recorded, routed
+from tests.stages import bare_wiring
 
+PORT = 8768
 LEAVES = (str, int, float, bool)
 TABLES = (HUB, STAGING, VOCABULARY, IMAGES, REVIEWING)
 TATTOO_PLACE_RENDER = (TATTOOS, PLACE, RENDERING)
@@ -307,3 +313,55 @@ def test_every_json_route_of_the_three_tables_has_a_row_in_one_table() -> None:
     assert json_keys
     for key in json_keys:
         assert (key in ANSWERS) + (key in UNRECORDED) == 1, key
+
+
+def rowless(routes: list[str], entries: dict[str, dict[str, object]]) -> list[str]:
+    """Return the routes in no table, with no recorded media type, that are no stream.
+
+    e.g. ["GET /a", "GET /events"] with no row for either -> ["GET /a"]
+    """
+    return [
+        route
+        for route in routes
+        if route not in ANSWERS
+        and route not in UNRECORDED
+        and "media_type" not in entries.get(route, {})
+        and route != "GET /events"
+    ]
+
+
+@pytest.mark.spec_exempt(
+    "structural: each route of the app has a row, a media type, or is the stream"
+)
+def test_every_route_of_the_app_has_a_row_or_a_name(tmp_path: Path) -> None:
+    (tmp_path / "lib" / "b" / "sources").mkdir(parents=True)
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html>")
+    wired = bare_wiring(
+        runs_root=tmp_path / "lib" / "b" / "runs",
+        session=Seams(environ={}),
+    )
+    app = create_app(
+        tmp_path / "lib",
+        wired,
+        flows=("summon-anime-wai",),
+        bundle=dist,
+        wire=lambda runs: wired,
+        host=HOST,
+        port=PORT,
+    )
+    routes = routed(app)
+    assert routes
+    assert rowless(routes, _routes()) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_route_of_the_app_has_a_row_or_a_name"
+)
+def test_a_route_with_no_row_is_caught() -> None:
+    entries: dict[str, dict[str, object]] = {
+        "GET /img": {"media_type": "image/png"},
+    }
+    routes = ["GET /api/library", "GET /api/nowhere", "GET /img", "GET /events"]
+    assert rowless(routes, entries) == ["GET /api/nowhere"]

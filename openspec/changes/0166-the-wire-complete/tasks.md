@@ -6,7 +6,7 @@ The phases declare the refusals, declare the stream's events, hold every route, 
 
 - [x] 1 — The refusals · moderate
 - [x] 2 — The stream's events · moderate
-- [ ] 3 — Every route · moderate
+- [x] 3 — Every route · moderate
 - [ ] 4 — The imports and the documents · moderate
 
 ## 1 — The refusals
@@ -52,12 +52,12 @@ The phases declare the refusals, declare the stream's events, hold every route, 
 
 ## 3 — Every route
 
-- [ ] 3.1 **HALT CHECK** The record holds a `media_type` for each route that answers a file, which `rowless` of 3.2 reads in place of a row.
+- [x] 3.1 **HALT CHECK** The record holds a `media_type` for each route that answers a file, which `rowless` of 3.2 reads in place of a row.
   Verify: `git grep -c -F '"media_type"' -- tests/record/routes.json` prints `14`.
-- [ ] 3.2 In `tests/test_ui_shapes.py` add `rowless(routes, entries)`, which returns the routes that are in neither `ANSWERS` nor `UNRECORDED`,
+- [x] 3.2 In `tests/test_ui_shapes.py` add `rowless(routes, entries)`, which returns the routes that are in neither `ANSWERS` nor `UNRECORDED`,
   hold no `media_type` in `entries`, and are not `GET /events`, and the twin `test_a_route_with_no_row_is_caught`, which gives it a route no table holds.
   Verify: `uv run pytest tests/test_ui_shapes.py -k a_route_with_no_row` exits 0.
-- [ ] 3.3 In `tests/test_ui_shapes.py` add `test_every_route_of_the_app_has_a_row_or_a_name` ([D6](design.md#d6)): build the app as `_routes` of `tests/test_ui_wire.py` does
+- [x] 3.3 In `tests/test_ui_shapes.py` add `test_every_route_of_the_app_has_a_row_or_a_name` ([D6](design.md#d6)): build the app as `_routes` of `tests/test_ui_wire.py` does
   with `bare_wiring` and `Seams(environ={})`, list its routes with `tests.record.routed`, and assert `rowless(routed(app), _routes())` is `[]`.
   Verify: `uv run pytest tests/test_ui_shapes.py -k every_route_of_the_app` exits 0.
 
