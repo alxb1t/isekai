@@ -40,9 +40,9 @@ Each task names its file and its check. The decisions are in [design](design.md)
 - [x] 2.7 Run the tests that read the importer, the declarations and the guards.
   Verify: `uv run pytest tests/test_importing.py tests/test_ui_shapes.py tests/test_layers.py tests/test_docs.py` exits 0.
 - [x] 2.8 Close with `tools.mutate` on the rewritten lines, against the layout 2.3 gives: the return of `_record`, the `refused` call of `put`, `_run`'s last call and `_set`'s publish ([D6](design.md#d6)). A survivor halts the build, and a range that lies off by one is re-fitted to the layout 2.3 gave.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/importing.py:171 isekai/pipeline/importing.py:227 isekai/pipeline/importing.py:328 isekai/pipeline/importing.py:337 --tests tests/test_importing.py` exits 0.
+  Verify: `uv run python -m tools.mutate isekai/pipeline/importing.py:170 isekai/pipeline/importing.py:226 isekai/pipeline/importing.py:327 isekai/pipeline/importing.py:336 --tests tests/test_importing.py` exits 0.
 - [x] 2.9 Close with `tools.mutate` on `_run`'s `converting` call, which `tests/test_importing.py` leaves alive and the stream's case in `tests/test_ui_api.py` kills.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/importing.py:311 --tests tests/test_importing.py tests/test_ui_api.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
+  Verify: `uv run python -m tools.mutate isekai/pipeline/importing.py:310 --tests tests/test_importing.py tests/test_ui_api.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 
 ## 3 — The documents
 
