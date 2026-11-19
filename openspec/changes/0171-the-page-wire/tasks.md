@@ -5,7 +5,7 @@ The phases move `ui/src/types.ts` onto `ui/src/wire.ts`, one group of types at a
 ## Progress
 
 - [x] 1 — The first half: library, hub, review and staging · moderate
-- [ ] 2 — The second half: jobs, quotes, renders, tattoos and compare · moderate
+- [x] 2 — The second half: jobs, quotes, renders, tattoos and compare · moderate
 - [ ] 3 — The overlays · moderate
 - [ ] 4 — The six that differ · moderate
 - [ ] 5 — The documents · moderate
@@ -29,15 +29,15 @@ Each type below is the wire's field for field, so its declaration and doc commen
 
 The same move for the rest of the types the wire holds field for field. The overlays and the types that differ are the later phases.
 
-- [ ] 2.1 In `ui/src/types.ts`, replace `SessionImage` and the jobs' types: `RenderSession` with `export type { JobSession as RenderSession } from './wire'`, `JobKind` with `export type { JobsKind as JobKind } from './wire'`, `JobSlot` with `export type { Job as JobSlot } from './wire'` and `StageCount` with `export type { JobStage as StageCount } from './wire'`. `SessionRecord` still names `SessionImage`: add it to the import line.
+- [x] 2.1 In `ui/src/types.ts`, replace `SessionImage` and the jobs' types: `RenderSession` with `export type { JobSession as RenderSession } from './wire'`, `JobKind` with `export type { JobsKind as JobKind } from './wire'`, `JobSlot` with `export type { Job as JobSlot } from './wire'` and `StageCount` with `export type { JobStage as StageCount } from './wire'`. `SessionRecord` still names `SessionImage`: add it to the import line.
   Verify: `git grep -n -E "^export (interface|type) (SessionImage|RenderSession|JobKind|JobSlot|StageCount)( |$)" -- ui/src/types.ts` prints nothing.
-- [ ] 2.2 In `ui/src/types.ts`, rewrite `JobSlots` as the one-line alias `export type JobSlots = Record<JobsKind, Job | null>`, importing `Job` and `JobsKind` from `./wire` ([D2](design.md#d2)).
+- [x] 2.2 In `ui/src/types.ts`, rewrite `JobSlots` as the one-line alias `export type JobSlots = Record<JobsKind, Job | null>`, importing `Job` and `JobsKind` from `./wire` ([D2](design.md#d2)).
   Verify: `git grep -n -F "export type JobSlots = Record<JobsKind, Job | null>" -- ui/src/types.ts` prints one line.
-- [ ] 2.3 In `ui/src/types.ts`, replace the quotes' types: `QuoteBake` with `export type { QuotedBake as QuoteBake } from './wire'`, `QuotedCollection` with `export type { QuotedRow as QuotedCollection } from './wire'`, and `Quote` and `RenderOffer` plain. `QuoteSource` and `TakenOut` stay.
+- [x] 2.3 In `ui/src/types.ts`, replace the quotes' types: `QuoteBake` with `export type { QuotedBake as QuoteBake } from './wire'`, `QuotedCollection` with `export type { QuotedRow as QuotedCollection } from './wire'`, and `Quote` and `RenderOffer` plain. `QuoteSource` and `TakenOut` stay.
   Verify: `git grep -n -E "^export (interface|type) (QuoteBake|QuotedCollection|Quote|RenderOffer)( |$)" -- ui/src/types.ts` prints nothing.
-- [ ] 2.4 In `ui/src/types.ts`, replace `RenderDetail` and `Bake` plain, and `Baked` with `export type { BakeQueued as Baked } from './wire'`.
+- [x] 2.4 In `ui/src/types.ts`, replace `RenderDetail` and `Bake` plain, and `Baked` with `export type { BakeQueued as Baked } from './wire'`.
   Verify: `git grep -n -E "^export (interface|type) (RenderDetail|Bake|Baked)( |$)" -- ui/src/types.ts` prints nothing.
-- [ ] 2.5 In `ui/src/types.ts`, replace `TattooLimits`, `CompareSide` and `Comparison` plain. `Preview` and `InkView` stay. `TattooList` still names `TattooLimits`: add it to the import line.
+- [x] 2.5 In `ui/src/types.ts`, replace `TattooLimits`, `CompareSide` and `Comparison` plain. `Preview` and `InkView` stay. `TattooList` still names `TattooLimits`: add it to the import line.
   Verify: `git grep -n -E "^export (interface|type) (TattooLimits|CompareSide|Comparison)( |$)" -- ui/src/types.ts` prints nothing.
 
 ## 3 — The overlays

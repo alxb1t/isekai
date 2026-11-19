@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - `ui/src/types.ts` re-exports the library, hub, review and staging types from the derived `ui/src/wire.ts` under the page's names, so those types are the server's declaration and no longer a hand-written copy; behaviour is as before (0171 D1, D2).
+- `ui/src/types.ts` re-exports the jobs, quotes, renders, tattoo limits and compare types from `ui/src/wire.ts` too, and `JobSlots` is an alias of the wire's `Job` and `JobsKind`; behaviour is as before (0171 D1, D2).
 
 ## [0.87.26] - 2026-11-19
 
