@@ -5,7 +5,7 @@ The phases: the tool and its grammar, the file it writes, the documents. No file
 ## Progress
 
 - [x] 1 — The grammar · hard
-- [ ] 2 — The file · moderate
+- [x] 2 — The file · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The grammar
@@ -29,15 +29,15 @@ The cases come first, over trees of their own; then the tool that makes them pas
 
 The file is what the tool writes from today's `shapes.py`, then the cases that hold it ([D5](design.md#d5)).
 
-- [ ] 2.1 Add to `tests/test_derive_wire.py` the case that `derive(REPO_ROOT)` equals `ui/src/wire.ts`, and the case that the keys of its `Events` block equal `EVENTS`' keys, imported from `isekai.interface.ui.shapes` (the file `isekai/interface/ui/shapes.py`, which this change leaves as it is). Each carries `@pytest.mark.spec_exempt("structural: …")`; the red run, before the file exists, is the proof.
+- [x] 2.1 Add to `tests/test_derive_wire.py` the case that `derive(REPO_ROOT)` equals `ui/src/wire.ts`, and the case that the keys of its `Events` block equal `EVENTS`' keys, imported from `isekai.interface.ui.shapes` (the file `isekai/interface/ui/shapes.py`, which this change leaves as it is). Each carries `@pytest.mark.spec_exempt("structural: …")`; the red run, before the file exists, is the proof.
   Verify: `grep -c -E "^def test_" tests/test_derive_wire.py` prints `16`.
-- [ ] 2.2 Run `uv run python -m tools.derive_wire` from the repository root, which writes `ui/src/wire.ts`. Edit nothing by hand.
+- [x] 2.2 Run `uv run python -m tools.derive_wire` from the repository root, which writes `ui/src/wire.ts`. Edit nothing by hand.
   Verify: `uv run pytest tests/test_derive_wire.py` passes.
-- [ ] 2.3 **HALT CHECK** `ui/src/wire.ts` stands within the page's 600-line ratchet. If it does not, stop: the plan splits the file by table, and no row is added.
+- [x] 2.3 **HALT CHECK** `ui/src/wire.ts` stands within the page's 600-line ratchet. If it does not, stop: the plan splits the file by table, and no row is added.
   Verify: `uv run pytest tests/test_ratchets.py` passes.
-- [ ] 2.4 Typecheck the file: the page's tsconfig includes every `.ts` file under `src`, so `vue-tsc` reads it.
+- [x] 2.4 Typecheck the file: the page's tsconfig includes every `.ts` file under `src`, so `vue-tsc` reads it.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.5 Leave the page unread of it: no import in `ui/src` ends in `/wire'`.
+- [x] 2.5 Leave the page unread of it: no import in `ui/src` ends in `/wire'`.
   Verify: `git grep -n "/wire'" -- ui/src` prints nothing.
 
 ## 3 — The documents

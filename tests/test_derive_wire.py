@@ -5,8 +5,11 @@ from pathlib import Path
 import pytest
 from _pytest.mark import ParameterSet
 
+from isekai.interface.ui.shapes import EVENTS
 from tools.derive_wire import derive
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+WIRE = REPO_ROOT / "ui/src/wire.ts"
 SHAPES = "isekai/interface/ui/shapes.py"
 PRELUDE = "from typing import Any, Literal, NotRequired, TypedDict\n\n"
 HEADER = "/* Written by `tools/derive_wire.py` from `isekai/interface/ui/shapes.py`. */"
@@ -340,3 +343,15 @@ def test_a_form_outside_the_grammar_is_refused_naming_the_class_and_the_field(
     with pytest.raises(ValueError) as refused:
         derive(root)
     assert str(refused.value) == message
+
+
+@pytest.mark.spec_exempt("structural: the committed wire is what the tool writes")
+def test_the_committed_wire_is_the_one_the_tool_writes() -> None:
+    assert derive(REPO_ROOT) == WIRE.read_text()
+
+
+@pytest.mark.spec_exempt("structural: the file's events are the server's events")
+def test_the_events_keys_are_events_keys() -> None:
+    block = WIRE.read_text().split("export interface Events {\n")[1].split("}")[0]
+    keys = [line.split(":")[0].strip() for line in block.splitlines()]
+    assert keys == list(EVENTS)
