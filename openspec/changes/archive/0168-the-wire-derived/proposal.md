@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.24
 ---
 
 # The wire derived

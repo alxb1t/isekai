@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.24] - 2026-11-19
+
+Gate: local 1m21s · CI not read under mf-ship · 0.87.23: local 1m14s · CI not read under mf-ship
+
 - `tools/derive_wire.py` reads `shapes.py` and the modules it imports by `ast`, imports no `isekai` module, and refuses a form outside its grammar naming the class and the field; `tests/test_derive_wire.py` holds each form over trees of its own (0168 D1–D5).
 - `ui/src/wire.ts` is the file the tool writes from `shapes.py`, and `tests/test_derive_wire.py` holds it byte for byte and holds its `Events` keys equal to `EVENTS`'; no page file reads it yet (0168 D4, D5).
 - `make derive` runs the tool, and decision D67 records that the page's wire is derived from `shapes.py` and re-derived by a test (0168 D6).
