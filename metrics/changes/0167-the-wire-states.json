@@ -1,0 +1,58 @@
+{
+  "change": "0167-the-wire-states",
+  "version": "0.87.23",
+  "base": "ca6ced44",
+  "analyzed": "f62c5e27",
+  "measured_on": "local",
+  "collected_at": "2026-11-19T16:30:45+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2453
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 74
+    },
+    "open-backlog-cards": {
+      "value": 3
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 2
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 374
+    },
+    "diff-files": {
+      "value": 13
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 16155
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1091
+    },
+    "decisions": {
+      "value": 67
+    }
+  }
+}
