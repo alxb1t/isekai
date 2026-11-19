@@ -10,7 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
-- `listen` and `emit` of `ui/src/stores/live.ts` are typed by the wire's `Events`, re-exported from `ui/src/types.ts`, so each handler's payload is its kind's type and the stream's casts and the store's own `Snapshot` go; the typecheck holds `KINDS` to `Events`' keys both ways; behaviour is as before (0172 D1, D2, D3).
+- `listen` and `emit` of `ui/src/stores/live.ts` are typed by the wire's `Events`, so each handler's payload is its kind's type and the stream's casts go; the typecheck holds `KINDS` to `Events`' keys both ways; behaviour is as before (0172 D1, D2, D3).
+- D66's *Accepts* says the typecheck holds the page's kinds to `Events`' keys, which a test holds to `EVENTS`', and its *Reopen* clause goes; no decision is added (0172 D6).
 
 ## [0.87.27] - 2026-11-19
 

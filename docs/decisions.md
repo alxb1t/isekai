@@ -657,8 +657,8 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 **A refusal is `Refused`, or `DraftRefused` where the draft's 409 adds its images, in `isekai/interface/ui/shapes.py`, and the catch-all's 404 is the row of `ANSWERS` that holds `Refused`. The stream's events are `EVENTS`, keyed by the event's name. A case that asks the server holds each refusal, a case that reads what the server publishes holds each event, and a case holds that every route of `create_app` has a row, a recorded media type, or is the stream. A cell's stage, a job's state and kind and a file's state are the `Literal` of the module that writes them, and `shapes.py` reads it.**
 
 - **Why:** any route answers a 403 or a 409, so no route owns one and a row per route would repeat it. An event is named by its kind, so `ANSWERS`' key does not fit it. A route added later must be declared or named.
-- **Accepts:** the billing volume's state, a session's outcome and a cell event's stage and state are `str`, and no test holds `EVENTS`' keys equal to the page's kinds. FastAPI's own 422 and 405 are not declared. Reopen when the page's types are derived.
-- **Made by:** `0166`, `0167`.
+- **Accepts:** the billing volume's state, a session's outcome and a cell event's stage and state are `str`; the typecheck holds the page's kinds to `Events`' keys, which a test holds to `EVENTS`'; FastAPI's own 422 and 405 are not declared.
+- **Made by:** `0166`, `0167`, `0172`.
 
 ### D67 · The page's wire is derived from shapes.py, and a test re-derives it
 

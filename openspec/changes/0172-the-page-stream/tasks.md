@@ -5,7 +5,7 @@ Type the live store's `listen` by the wire's `Events`, drop the casts on the str
 ## Progress
 
 - [x] 1 — The typed stream · moderate
-- [ ] 2 — The decision · moderate
+- [x] 2 — The decision · moderate
 
 ## 1 — The typed stream
 
@@ -29,5 +29,5 @@ Type the live store's `listen` by the wire's `Events`, drop the casts on the str
 
 ## 2 — The decision
 
-- [ ] 2.1 In `docs/decisions.md`, amend D66 as [D6](design.md#d6) says: its *Accepts* line says the typecheck holds the page's kinds to `Events`' keys, which a test holds to `EVENTS`', and drops the clause `no test holds` and the sentence beginning `Reopen`; its *Made by* line reads `` `0166`, `0167`, `0172` ``. Add no decision.
+- [x] 2.1 In `docs/decisions.md`, amend D66 as [D6](design.md#d6) says: its *Accepts* line says the typecheck holds the page's kinds to `Events`' keys, which a test holds to `EVENTS`', and drops the clause `no test holds` and the sentence beginning `Reopen`; its *Made by* line reads `` `0166`, `0167`, `0172` ``. Add no decision.
   Verify: `git grep -n -F "no test holds" -- docs/decisions.md` prints nothing.
