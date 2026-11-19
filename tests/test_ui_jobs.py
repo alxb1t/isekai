@@ -39,7 +39,7 @@ from isekai.foundation.run import (  # noqa: E402
 from isekai.interface.cli import build_parser  # noqa: E402
 from isekai.interface.render import LOST_EXIT, without_flags  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
-from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
+from isekai.interface.ui.app import create_app  # noqa: E402
 from isekai.interface.ui.jobs import (  # noqa: E402
     Jobs,
     Step,
@@ -50,6 +50,7 @@ from isekai.interface.ui.jobs import (  # noqa: E402
     render_command,
     settle_s,
 )
+from isekai.interface.ui.routes.rendering import cell_event  # noqa: E402
 from isekai.interface.ui.shapes import EVENTS, UNRECORDED  # noqa: E402
 from isekai.pipeline.generate import prepare  # noqa: E402
 from isekai.pipeline.review import approve, review  # noqa: E402

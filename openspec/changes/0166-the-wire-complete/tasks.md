@@ -7,7 +7,7 @@ The phases declare the refusals, declare the stream's events, hold every route, 
 - [x] 1 — The refusals · moderate
 - [x] 2 — The stream's events · moderate
 - [x] 3 — Every route · moderate
-- [ ] 4 — The imports and the documents · moderate
+- [x] 4 — The imports and the documents · moderate
 
 ## 1 — The refusals
 
@@ -63,25 +63,25 @@ The phases declare the refusals, declare the stream's events, hold every route, 
 
 ## 4 — The imports and the documents
 
-- [ ] 4.1 In `tests/test_ui_api.py` read `RARE_BELOW` from `isekai.interface.ui.routes.vocabulary` and `Held` from `isekai.interface.ui.surface` ([D7](design.md#d7));
+- [x] 4.1 In `tests/test_ui_api.py` read `RARE_BELOW` from `isekai.interface.ui.routes.vocabulary` and `Held` from `isekai.interface.ui.surface` ([D7](design.md#d7));
   the import of `app` keeps `authorities` and `create_app`.
   Verify: `git grep -n -E "^    (RARE_BELOW|Held),$" -- tests/test_ui_api.py` prints nothing.
-- [ ] 4.2 In `tests/test_ui_jobs.py`, before: `from isekai.interface.ui.app import cell_event, create_app`; after: `create_app` from `app` and `cell_event` from
+- [x] 4.2 In `tests/test_ui_jobs.py`, before: `from isekai.interface.ui.app import cell_event, create_app`; after: `create_app` from `app` and `cell_event` from
   `isekai.interface.ui.routes.rendering`.
   Verify: `git grep -n -F "from isekai.interface.ui.app import cell_event" -- tests/test_ui_jobs.py` prints nothing.
-- [ ] 4.3 In `tests/test_ui_wire.py` import `isekai.interface.ui.routes.keys` as `keys_module`, a name `wire_faults`' `keys` local does not shadow, and read the tuples with
+- [x] 4.3 In `tests/test_ui_wire.py` import `isekai.interface.ui.routes.keys` as `keys_module`, a name `wire_faults`' `keys` local does not shadow, and read the tuples with
   `vars(keys_module)`, where `vars(app_module)` read them; drop the `app_module` import.
   Verify: `git grep -n "app_module" -- tests/test_ui_wire.py` prints nothing, and `uv run pytest tests/test_ui_wire.py` exits 0.
-- [ ] 4.4 In `isekai/interface/ui/app.py` delete each `X_KEYS as X_KEYS` import, the `cell_event as cell_event` import and the `RARE_BELOW as RARE_BELOW` import;
+- [x] 4.4 In `isekai/interface/ui/app.py` delete each `X_KEYS as X_KEYS` import, the `cell_event as cell_event` import and the `RARE_BELOW as RARE_BELOW` import;
   `Held` stays imported.
   Verify: `git grep -n -E "_KEYS as [A-Z0-9_]+_KEYS" -- isekai/interface/ui/app.py` prints nothing, and `git grep -n -E "import (cell_event|RARE_BELOW) as" -- isekai/interface/ui/app.py` prints nothing.
-- [ ] 4.5 In `app.py`'s docstring, before: "import FastAPI and are reached through this module alone", after: "import FastAPI and this module mounts them"; delete "the `rare` threshold -- which
+- [x] 4.5 In `app.py`'s docstring, before: "import FastAPI and are reached through this module alone", after: "import FastAPI and this module mounts them"; delete "the `rare` threshold -- which
   exists nowhere else in this repository --". In the `ui/routes/` row of `isekai/interface/README.md`, before: "are reached through `ui/app.py` alone", after: "are mounted by `ui/app.py`".
   Verify: `git grep -n -e "are reached through" -e "exists nowhere else" -- isekai/interface/ui/app.py isekai/interface/README.md` prints nothing.
-- [ ] 4.6 In `isekai/interface/README.md` name the refusals and `EVENTS` in the `ui/shapes.py` row, and add the `file` event and the snapshot to the `ui/events.py` row.
+- [x] 4.6 In `isekai/interface/README.md` name the refusals and `EVENTS` in the `ui/shapes.py` row, and add the `file` event and the snapshot to the `ui/events.py` row.
   Verify: `git grep -n -F "EVENTS" -- isekai/interface/README.md` prints a line.
-- [ ] 4.7 In `docs/decisions.md` add D65, *The refusals are classes, and the stream's events have a table of their own* ([D8](design.md#d8)), after D64 in D63's shape.
+- [x] 4.7 In `docs/decisions.md` add D65, *The refusals are classes, and the stream's events have a table of their own* ([D8](design.md#d8)), after D64 in D63's shape.
   In D63's *Accepts*, before: "the refusals, the stream's events and the tests' imports from `app.py` are declared by the next version, and"; after: nothing. Add `0166` to its *Made by*.
   Verify: `git grep -n -E "^### D65" -- docs/decisions.md` prints a line, and `git grep -n -F "the refusals, the stream's events and the tests' imports" -- docs/decisions.md` prints nothing.
-- [ ] 4.8 Run `uv run python -m tools.derive_imported_by` and keep what it writes: removing the imports of `app.py` may change a derived *Imported by* row.
+- [x] 4.8 Run `uv run python -m tools.derive_imported_by` and keep what it writes: removing the imports of `app.py` may change a derived *Imported by* row.
   Verify: `uv run pytest tests/test_docs.py` exits 0.

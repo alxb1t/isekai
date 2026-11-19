@@ -88,20 +88,17 @@ from isekai.foundation.run import (  # noqa: E402
 )
 from isekai.interface.cli import build_parser, dispatch  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
-from isekai.interface.ui.app import (  # noqa: E402
-    RARE_BELOW,
-    Held,
-    authorities,
-    create_app,
-)
+from isekai.interface.ui.app import authorities, create_app  # noqa: E402
 from isekai.interface.ui.billing import Billing  # noqa: E402
 from isekai.interface.ui.jobs import Jobs  # noqa: E402
+from isekai.interface.ui.routes.vocabulary import RARE_BELOW  # noqa: E402
 from isekai.interface.ui.shapes import (  # noqa: E402
     EVENTS,
     UNRECORDED,
     DraftRefused,
     Refused,
 )
+from isekai.interface.ui.surface import Held  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.generate import image_of, prepare, prompt_artifact  # noqa: E402

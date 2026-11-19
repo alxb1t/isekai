@@ -633,8 +633,8 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 **Each JSON answer of the UI server is a `TypedDict` in `isekai/interface/ui/shapes.py`; `ANSWERS` maps `"<METHOD> <path template>"`, as `tests/record/routes.json` keys it, to the answer's declaration; `tests/test_ui_shapes.py` holds each against its recorded shape; a handler keeps its annotation and no route passes `response_model`.**
 
 - **Why:** the page's types were written by hand beside the server and drifted; one declaration in Python is a fact a test can hold the server to. FastAPI would validate and serialise an answer by a declared type, so a declaration stays apart from the handlers.
-- **Accepts:** the refusals, the stream's events and the tests' imports from `app.py` are declared by the next version, and the page's types are derived from the declarations after it. Reopen when a handler is annotated with a declared type.
-- **Made by:** `0163`, `0164`.
+- **Accepts:** the page's types are derived from the declarations after it. Reopen when a handler is annotated with a declared type.
+- **Made by:** `0163`, `0164`, `0166`.
 
 ### D64 · The answers the record lacks are a second table, held by cases that ask the server
 
@@ -643,6 +643,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Why:** `test_every_answer_fits_the_record` asserts each key of `ANSWERS` is a recorded entry the declaration fits, so a row with no recorded success fails it. A new record entry or a changed assertion would move [D63](#d63--the-wire-is-declared-in-shapespy-and-held-by-tests)'s shipped case; a second table leaves it as it is.
 - **Accepts:** what the record samples empty, a list with no element and a map with no key, is declared from the builder's code and held by no test. Reopen when the record holds a success for an `UNRECORDED` route, or a sample is wrong.
 - **Made by:** `0164`.
+
+### D65 · The refusals are classes, and the stream's events have a table of their own
+
+**A refusal is `Refused`, or `DraftRefused` where the draft's 409 adds its images, in `isekai/interface/ui/shapes.py`, and the catch-all's 404 is the row of `ANSWERS` that holds `Refused`. The stream's events are `EVENTS`, keyed by the event's name. A case that asks the server holds each refusal, a case that reads what the server publishes holds each event, and a case holds that every route of `create_app` has a row, a recorded media type, or is the stream.**
+
+- **Why:** any route answers a 403 or a 409, so no route owns one and a row per route would repeat it. An event is named by its kind, so `ANSWERS`' key does not fit it. A route added later must be declared or named.
+- **Accepts:** a file's state, a job's state and the billing volume's state are `str`, and no test holds `EVENTS`' keys equal to the page's kinds. FastAPI's own 422 and 405 are not declared. Reopen when the page's types are derived.
+- **Made by:** `0166`.
 
 ## Infrastructure
 
