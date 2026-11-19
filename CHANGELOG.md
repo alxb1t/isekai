@@ -10,6 +10,9 @@ its new digest.
 
 ## [Unreleased]
 
+- `isekai/interface/ui/shapes.py` declares the tattoos' answers as `TypedDict`s with rows in `ANSWERS`, and `UNRECORDED`, a second table for answers the record lacks, holding propose's; a case asks the server and holds propose's answer to it (0164 D1, D3).
+- The *Imported by* tables of `tattoos.py` and `proposal.py` list `interface/ui/shapes.py` (0164 D8).
+
 ## [0.87.19] - 2026-11-18
 
 Gate: local 1m12s · CI not read under mf-ship · 0.87.18: local 1m9s · CI not read under mf-ship

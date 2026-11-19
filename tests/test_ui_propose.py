@@ -30,12 +30,15 @@ from isekai.boundary.unpack import PLACEMENT_REMEDY  # noqa: E402
 from isekai.foundation.run import Run, open_run  # noqa: E402
 from isekai.interface.ui import HOST  # noqa: E402
 from isekai.interface.ui.app import create_app  # noqa: E402
+from isekai.interface.ui.shapes import UNRECORDED  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.proposing import Proposer  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.fakes import FakePoseFinder, FakeSegmenter  # noqa: E402
+from tests.record import shape  # noqa: E402
 from tests.stages import FIELD_MAP, NO_GPUNIT, rendered_image  # noqa: E402
+from tests.test_ui_shapes import faults  # noqa: E402
 
 COLLECTION = "2026-10-19"
 FLOW = "summon-anime-wai"
@@ -201,6 +204,19 @@ def test_propose_route_answers_the_arm_and_its_pairs_and_keeps_nothing(
         assert len(pair) == 2 and all(len(point) == 2 for point in pair)
     assert body["pairs"][-3:] == [[[x, y], [x, y]] for x, y in LEFT.values()]
     assert models.opened == 1
+
+
+@pytest.mark.spec_exempt(
+    "structural: the propose answer fits the declaration UNRECORDED holds"
+)
+def test_the_propose_answer_fits_its_declaration(
+    client: TestClient, photographed: Run
+) -> None:
+    answered = _ask(client, _body(photographed))
+
+    assert answered.status_code == 200, answered.text
+    declared = UNRECORDED["POST /api/c/{collection}/place/propose"]
+    assert faults(declared, shape(answered.json()), "") == []
 
 
 @pytest.mark.spec_exempt("structural: the photograph is read upright, the render as is")

@@ -2,15 +2,20 @@
 
 `ANSWERS` keys each declaration as `tests/record/routes.json` keys its route,
 `"<METHOD> <path template>"`. A test holds each against its recorded shape; no handler
-reads a declaration. No web framework is imported, so the layer's entry point and its
+reads a declaration. `UNRECORDED` keys the answers the record lacks, each held by a case
+that asks the server. No web framework is imported, so the layer's entry point and its
 tests read it whether or not a server is installed.
 """
 
 from typing import Any, Literal, TypedDict
 
+from isekai.pipeline import tattoos
 from isekai.pipeline.review import Status
+from isekai.shared import proposal
 
 COLLECTION = "/api/c/{collection}"
+TATTOO = "/api/tattoos/{name}"
+STAGE1 = "/api/tattoos/{name}/stage1/{digest}"
 STAGED = "/api/staging/{staged}"
 STAGED_FILE = "/api/staging/{staged}/files/{name}"
 RENDER = "/api/c/{collection}/renders/{digest}/{flow}/{version}/{seed}"
@@ -318,6 +323,82 @@ class Drafts(TypedDict):
     drafts: list[DraftedImage]
 
 
+class Tattoo(TypedDict):
+    """One tattoo of the library."""
+
+    name: str
+    kind: tattoos.Kind
+    size: list[int]
+    kept: str
+    outlined: bool
+    downscaled_from: list[int] | None
+    cut_from: str | None
+
+
+class Outline(TypedDict):
+    """A tattoo's outline and the depth it carries."""
+
+    points: list[list[float]]
+    closed: bool
+    white: float
+    neutral: bool
+    depth: float
+
+
+class OutlinedTattoo(Tattoo):
+    """One tattoo with its outline."""
+
+    outline: Outline
+
+
+class TattooLimits(TypedDict):
+    """The bounds the tattoo editor works within."""
+
+    long_side: int
+    outline_min: int
+    outline_max: int
+    floor_stage1: int
+    floor_stage2: int
+    floor_direct: int
+    preview_floor: int
+    preview_margin: int
+    preview_wait_ms: int
+    pair_radius: int
+    region_min: int
+    depth_min: float
+    depth_max: float
+    photo_depth: float
+    image_depth: float
+
+
+class Stage1(TypedDict):
+    """A tattoo's first-stage pairs for one photograph."""
+
+    pairs: list[list[list[float]]]
+    not_on_photo: bool
+
+
+class Tattoos(TypedDict):
+    """The tattoos, their limits and their first-stage pairs."""
+
+    tattoos: list[Tattoo]
+    limits: TattooLimits
+    stage1: dict[str, Stage1]
+
+
+class BakeQueued(TypedDict):
+    """The edit a bake was queued for."""
+
+    edit: int
+
+
+class Proposed(TypedDict):
+    """The pairs a proposal found and the arm it chose."""
+
+    arm: proposal.Side | None
+    pairs: list[list[list[float]]]
+
+
 ANSWERS: dict[str, Any] = {
     "GET /api/library": LibraryInfo,
     f"GET {COLLECTION}/hub": HubInfo,
@@ -340,4 +421,17 @@ ANSWERS: dict[str, Any] = {
     f"POST {REVIEW}/cancel": Cancellation,
     f"POST {REVIEW}/discard": Discarded,
     f"POST {COLLECTION}/draft": Drafts,
+    "GET /api/tattoos": Tattoos,
+    f"GET {TATTOO}": OutlinedTattoo,
+    f"DELETE {TATTOO}": Empty,
+    "POST /api/tattoos": Tattoo,
+    f"POST {COLLECTION}/tattoos": Tattoo,
+    f"PUT {TATTOO}/outline": Outline,
+    f"GET {STAGE1}": Stage1,
+    f"PUT {STAGE1}": Stage1,
+    f"POST {COLLECTION}/tattoos/{{name}}/bake": BakeQueued,
+}
+
+UNRECORDED: dict[str, Any] = {
+    f"POST {COLLECTION}/place/propose": Proposed,
 }

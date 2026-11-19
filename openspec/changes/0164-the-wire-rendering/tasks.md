@@ -4,21 +4,21 @@ The phases: the tattoos and place, the rendering, then the rows that hold every 
 
 ## Progress
 
-- [ ] 1 — The tattoos and place · moderate
+- [x] 1 — The tattoos and place · moderate
 - [ ] 2 — The rendering · hard
 - [ ] 3 — The rows and the documents · moderate
 
 ## 1 — The tattoos and place
 
-- [ ] 1.1 In `isekai/interface/ui/shapes.py` add the constants `TATTOO` and `STAGE1` and the classes `Tattoo`, `OutlinedTattoo`, `TattooLimits`, `Stage1`, `Tattoos`, `Outline` and `BakeQueued`, written as in [the declarations](design.md#the-declarations), with `from isekai.pipeline import tattoos` for `tattoos.Kind`.
+- [x] 1.1 In `isekai/interface/ui/shapes.py` add the constants `TATTOO` and `STAGE1` and the classes `Tattoo`, `OutlinedTattoo`, `TattooLimits`, `Stage1`, `Tattoos`, `Outline` and `BakeQueued`, written as in [the declarations](design.md#the-declarations), with `from isekai.pipeline import tattoos` for `tattoos.Kind`.
   Verify: `grep -c -E '^class (Tattoo|OutlinedTattoo|TattooLimits|Stage1|Tattoos|Outline|BakeQueued)\(' isekai/interface/ui/shapes.py` prints `7`.
-- [ ] 1.2 In the same file add the rows of `ANSWERS` for the tattoos' routes and the bake, as [the declarations](design.md#the-declarations) lists them, after the reviewing rows. The `DELETE` row answers `Empty`, already declared, and is held by task 3.1.
+- [x] 1.2 In the same file add the rows of `ANSWERS` for the tattoos' routes and the bake, as [the declarations](design.md#the-declarations) lists them, after the reviewing rows. The `DELETE` row answers `Empty`, already declared, and is held by task 3.1.
   Verify: `grep -c -E ': (Tattoos|OutlinedTattoo|Tattoo|Outline|Stage1|BakeQueued),$' isekai/interface/ui/shapes.py` prints `8`, and `uv run pytest tests/test_ui_shapes.py` passes.
-- [ ] 1.3 In the same file add the class `Proposed`, `from isekai.shared import proposal` for `proposal.Side`, and `UNRECORDED: dict[str, Any]` holding the propose row of [D1](design.md#d1); say in the module docstring that `UNRECORDED` keys the answers the record lacks.
+- [x] 1.3 In the same file add the class `Proposed`, `from isekai.shared import proposal` for `proposal.Side`, and `UNRECORDED: dict[str, Any]` holding the propose row of [D1](design.md#d1); say in the module docstring that `UNRECORDED` keys the answers the record lacks.
   Verify: `grep -c '^UNRECORDED: dict' isekai/interface/ui/shapes.py` prints `1`.
-- [ ] 1.4 In `tests/test_ui_propose.py` add `test_the_propose_answer_fits_its_declaration` with `spec_exempt("structural: the propose answer fits the declaration UNRECORDED holds")`: it asks the route as the file's first test does and asserts `faults(UNRECORDED["POST /api/c/{collection}/place/propose"], shape(answered.json()), "") == []`; the file's own `COLLECTION` and `PROPOSE` stay as they are ([D3](design.md#d3)).
+- [x] 1.4 In `tests/test_ui_propose.py` add `test_the_propose_answer_fits_its_declaration` with `spec_exempt("structural: the propose answer fits the declaration UNRECORDED holds")`: it asks the route as the file's first test does and asserts `faults(UNRECORDED["POST /api/c/{collection}/place/propose"], shape(answered.json()), "") == []`; the file's own `COLLECTION` and `PROPOSE` stay as they are ([D3](design.md#d3)).
   Verify: `uv run pytest tests/test_ui_propose.py::test_the_propose_answer_fits_its_declaration` passes.
-- [ ] 1.5 Run `uv run python -m tools.derive_imported_by`: the rows of `tattoos.py` in `isekai/pipeline/README.md` and of `proposal.py` in `isekai/shared/README.md` gain `interface/ui/shapes.py` ([D8](design.md#d8)).
+- [x] 1.5 Run `uv run python -m tools.derive_imported_by`: the rows of `tattoos.py` in `isekai/pipeline/README.md` and of `proposal.py` in `isekai/shared/README.md` gain `interface/ui/shapes.py` ([D8](design.md#d8)).
   Verify: `uv run pytest tests/test_docs.py` passes.
 
 ## 2 — The rendering
