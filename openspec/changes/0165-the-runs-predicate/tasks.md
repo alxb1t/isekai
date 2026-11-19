@@ -6,7 +6,7 @@ The rule and its cases, then each site switched between mutation runs, then the 
 
 - [x] 1 — The rule · moderate
 - [x] 2 — The sites · moderate
-- [ ] 3 — The decision · moderate
+- [x] 3 — The decision · moderate
 
 ## 1 — The rule
 
@@ -62,11 +62,11 @@ The rule and its cases, then each site switched between mutation runs, then the 
 
 ## 3 — The decision
 
-- [ ] 3.1 Add the D65 block of [D7](design.md#d7) to `docs/decisions.md`, at the end of `## Runs`, after D43.
+- [x] 3.1 Add the D65 block of [D7](design.md#d7) to `docs/decisions.md`, at the end of `## Runs`, after D43.
   Verify: `git grep -n -F "### D65 · A run is a folder holding its frame file" -- docs/decisions.md` prints `1`.
-- [ ] 3.2 In `isekai/foundation/README.md`, change the `rundir.py` row of `## Files` to: `` `Run`, one photograph's directory and its frame, `assign`, and `runs_in` and `run_at`, which folders are runs ``.
+- [x] 3.2 In `isekai/foundation/README.md`, change the `rundir.py` row of `## Files` to: `` `Run`, one photograph's directory and its frame, `assign`, and `runs_in` and `run_at`, which folders are runs ``.
   Verify: `git grep -n -F "runs_in" -- isekai/foundation/README.md` prints `1`.
-- [ ] 3.3 Replay the kept mutants: none of them names a line this change rewrote.
+- [x] 3.3 Replay the kept mutants: none of them names a line this change rewrote.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 3.4 Resume's `_run_for` and the evaluators are as they were ([D4](design.md#d4)): no file under `evaluation/` differs from the default branch.
+- [x] 3.4 Resume's `_run_for` and the evaluators are as they were ([D4](design.md#d4)): no file under `evaluation/` differs from the default branch.
   Verify: `git diff --name-only main -- evaluation` prints nothing.
