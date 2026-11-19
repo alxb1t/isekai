@@ -8,8 +8,12 @@ import type {
   JobsKind,
   Renders,
   ReviewStatus as InputStatus,
+  Outline as WireOutline,
+  Proposed,
   SessionImage,
-  TattooLimits,
+  Stage1 as WireStage1,
+  Tattoo as WireTattoo,
+  Tattoos,
 } from './wire'
 
 export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half' | 'ring'
@@ -157,50 +161,29 @@ export interface ImageRef {
 /* A point in an image's own pixels, `[x, y]`; a cut's image is its photograph. */
 export type Point = [number, number]
 
-/* A kept tattoo. `kind` is `image` for an upload and `cut` for a tattoo with no image of
-   its own; `cut_from` is a cut's run digest, `downscaled_from` an upload's first size. */
-export interface Tattoo {
-  name: string
-  kind: 'image' | 'cut'
+export interface Tattoo extends Omit<WireTattoo, 'size' | 'downscaled_from'> {
   size: [number, number]
-  /* When it was kept: an ISO time in UTC. */
-  kept: string
-  outlined: boolean
   downscaled_from: [number, number] | null
-  cut_from: string | null
 }
 
-/* A tattoo's outline and ink tone as the server keeps them; `white` is a scale on the
-   automatic white point, 1 being automatic. */
-export interface Outline {
+export interface Outline extends Omit<WireOutline, 'points'> {
   points: Point[]
-  closed: boolean
-  white: number
-  neutral: boolean
-  depth: number
 }
 
 /* A tattoo point and the point it matches on the other image: `[a, b]`, `a` first. */
 export type Pair = [Point, Point]
 
-/* A tattoo's pairs with one photograph, and whether it is *not on this photo*. */
-export interface Stage1 {
-  pairs: Pair[]
-  not_on_photo: boolean
-}
-
-/* The pairs the server proposes for a render, and the arm they lie on, `null` with no pair:
-   each a point on the photograph and the point it matches on the render. */
-export interface Proposal {
-  arm: 'left' | 'right' | null
+export interface Stage1 extends Omit<WireStage1, 'pairs'> {
   pairs: Pair[]
 }
 
-export interface TattooList {
+export interface Proposal extends Omit<Proposed, 'pairs'> {
+  pairs: Pair[]
+}
+
+export interface TattooList extends Omit<Tattoos, 'tattoos' | 'stage1'> {
   tattoos: Tattoo[]
-  limits: TattooLimits
-  /* With a photograph's digest asked: the state of each tattoo placed on it, by name. */
-  stage1?: Record<string, Stage1>
+  stage1: Record<string, Stage1>
 }
 
 /* The placement preview: the ink on white as a JPEG, its crop in the target's pixels,

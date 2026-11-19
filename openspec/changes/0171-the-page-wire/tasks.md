@@ -6,7 +6,7 @@ The phases move `ui/src/types.ts` onto `ui/src/wire.ts`, one group of types at a
 
 - [x] 1 — The first half: library, hub, review and staging · moderate
 - [x] 2 — The second half: jobs, quotes, renders, tattoos and compare · moderate
-- [ ] 3 — The overlays · moderate
+- [x] 3 — The overlays · moderate
 - [ ] 4 — The six that differ · moderate
 - [ ] 5 — The documents · moderate
 
@@ -44,11 +44,11 @@ The same move for the rest of the types the wire holds field for field. The over
 
 Each overlay is an `extends Omit<…>` of the wire's type that narrows a pair to the page's `Point` and `Pair`, which stay in `types.ts` ([D6](design.md#d6)). Import the wire's type under a `Wire` prefix, e.g. `Tattoo as WireTattoo`, so the overlay can keep the page's name.
 
-- [ ] 3.1 In `ui/src/types.ts`, rewrite `Tattoo` as `extends Omit<WireTattoo, 'size' | 'downscaled_from'>` with `size: [number, number]` and `downscaled_from: [number, number] | null`, and `Outline` as `extends Omit<WireOutline, 'points'>` with `points: Point[]`.
+- [x] 3.1 In `ui/src/types.ts`, rewrite `Tattoo` as `extends Omit<WireTattoo, 'size' | 'downscaled_from'>` with `size: [number, number]` and `downscaled_from: [number, number] | null`, and `Outline` as `extends Omit<WireOutline, 'points'>` with `points: Point[]`.
   Verify: `git grep -n -E "^export interface (Tattoo|Outline) \{" -- ui/src/types.ts` prints nothing.
-- [ ] 3.2 In `ui/src/types.ts`, rewrite `Stage1` as `extends Omit<WireStage1, 'pairs'>` with `pairs: Pair[]`, and `Proposal` as `extends Omit<Proposed, 'pairs'>` with `pairs: Pair[]`.
+- [x] 3.2 In `ui/src/types.ts`, rewrite `Stage1` as `extends Omit<WireStage1, 'pairs'>` with `pairs: Pair[]`, and `Proposal` as `extends Omit<Proposed, 'pairs'>` with `pairs: Pair[]`.
   Verify: `git grep -n -E "^export interface (Stage1|Proposal) \{" -- ui/src/types.ts` prints nothing.
-- [ ] 3.3 In `ui/src/types.ts`, rewrite `TattooList` as `extends Omit<Tattoos, 'tattoos' | 'stage1'>` with `tattoos: Tattoo[]` and `stage1: Record<string, Stage1>`, both the page's overlays, and no `stage1?:` left ([D6](design.md#d6)).
+- [x] 3.3 In `ui/src/types.ts`, rewrite `TattooList` as `extends Omit<Tattoos, 'tattoos' | 'stage1'>` with `tattoos: Tattoo[]` and `stage1: Record<string, Stage1>`, both the page's overlays, and no `stage1?:` left ([D6](design.md#d6)).
   Verify: `git grep -n -F "stage1?:" -- ui/src/types.ts` prints nothing.
 
 ## 4 — The six that differ
