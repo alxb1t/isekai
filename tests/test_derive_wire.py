@@ -284,6 +284,23 @@ ARTIFACTS_BLOCK = {
             'Bad.a: Literal["it\'s"] is no form of the wire',
         ),
         _refusal(
+            "a literal word holding a line break",
+            'class Bad(TypedDict):\n    a: Literal["line\\nbreak"]\n',
+            "Bad.a: Literal['line\\nbreak'] is no form of the wire",
+        ),
+        _refusal(
+            "a literal word holding a carriage return",
+            'class Bad(TypedDict):\n    a: Literal["line\\rbreak"]\n',
+            "Bad.a: Literal['line\\rbreak'] is no form of the wire",
+        ),
+        _refusal(
+            "an alias word holding a line break",
+            "from isekai.pipeline import tattoos\n\n"
+            "class Bad(TypedDict):\n    a: tattoos.Kind\n",
+            "Kind: 'line\\nbreak' is no form of the wire",
+            {"isekai/pipeline/tattoos.py": 'Kind = Literal["line\\nbreak"]\n'},
+        ),
+        _refusal(
             "a map by a key that is no str or alias",
             "class Bad(TypedDict):\n    a: dict[int, str]\n",
             "Bad.a: dict[int, str] is no form of the wire",
@@ -308,6 +325,12 @@ ARTIFACTS_BLOCK = {
             "class Base(TypedDict):\n    a: int\n\n\n"
             "class Bad(Base):\n    '''No field.'''\n",
             "Bad: class Bad(Base) is no form of the wire",
+        ),
+        _refusal(
+            "a class that extends an empty base",
+            "class Empty(TypedDict):\n    '''No field.'''\n\n\n"
+            "class Bad(Empty):\n    a: int\n",
+            "Bad: class Bad(Empty) is no form of the wire",
         ),
         _refusal(
             "a class that is no TypedDict",

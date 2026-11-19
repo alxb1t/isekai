@@ -42,17 +42,23 @@ def _is_none(node: ast.expr) -> bool:
 
 
 def _word(node: ast.expr) -> str:
-    """Return a `Literal` word as TypeScript writes it, refusing a quote or a backslash.
+    """Return a `Literal` word as TypeScript writes it.
+
+    A quote, a backslash or a line break is refused.
 
     e.g. `"re-roll"` -> `'re-roll'`
     """
     if (
         isinstance(node, ast.Constant)
         and isinstance(node.value, str)
-        and not any(mark in node.value for mark in "'\"\\")
+        and not any(mark in node.value for mark in "'\"\\\r\n")
     ):
         return f"'{node.value}'"
     raise _NoForm
+
+
+def _has_fields(node: ast.ClassDef) -> bool:
+    return any(isinstance(stmt, ast.AnnAssign) for stmt in node.body)
 
 
 def _refused(owner: str, source: str) -> ValueError:
@@ -237,7 +243,7 @@ class _Wire:
         """Return the declaration of one `TypedDict` class."""
         extends = self._extends(module, node)
         fields = [stmt for stmt in node.body if isinstance(stmt, ast.AnnAssign)]
-        if not fields:
+        if not _has_fields(node):
             if extends:
                 raise _refused(node.name, _header(node))
             return f"export type {node.name} = Record<string, never>"
@@ -257,7 +263,7 @@ class _Wire:
             ref = self.resolve(module, bases[0])
         except _NoForm:
             raise _refused(node.name, _header(node)) from None
-        if ref.is_alias:
+        if ref.is_alias or not _has_fields(ref.module.classes[ref.name]):
             raise _refused(node.name, _header(node))
         return self.ref(ref)
 
