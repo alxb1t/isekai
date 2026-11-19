@@ -10,6 +10,16 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.20] - 2026-11-19
+
+Gate: local 1m8s · CI not read under mf-ship · 0.87.19: local 1m12s · CI not read under mf-ship
+
+- `isekai/interface/ui/shapes.py` declares the tattoos' answers as `TypedDict`s with rows in `ANSWERS`, and `UNRECORDED`, a second table for answers the record lacks, holding propose's; a case asks the server and holds propose's answer to it (0164 D1, D3).
+- The *Imported by* tables of `tattoos.py` and `proposal.py` list `interface/ui/shapes.py` (0164 D8).
+- `isekai/interface/ui/shapes.py` declares the offer, quote, billing check, jobs, running sessions and a served session as `TypedDict`s; the record's rows join `ANSWERS` and prepare, stop, render and the sessions join `UNRECORDED`, each held by a case that asks the server (0164 D1, D3, D4, D5).
+- The *Imported by* table of `artifacts.py` lists `interface/ui/shapes.py` (0164 D8).
+- A case holds that every JSON route of the tattoo, place and render tables has a row in exactly one of `ANSWERS` and `UNRECORDED`; D64 records the second table, D63's *Accepts* names what remains, and the `shapes.py` row of `isekai/interface/README.md` names the new tables (0164 D9, D10).
+
 ## [0.87.19] - 2026-11-18
 
 Gate: local 1m12s · CI not read under mf-ship · 0.87.18: local 1m9s · CI not read under mf-ship

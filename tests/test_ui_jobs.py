@@ -43,20 +43,23 @@ from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
 from isekai.interface.ui.jobs import (  # noqa: E402
     Jobs,
     Step,
+    _Job,
     cells_of,
     plan,
     prepare_command,
     render_command,
     settle_s,
 )
+from isekai.interface.ui.shapes import UNRECORDED  # noqa: E402
 from isekai.pipeline.generate import prepare  # noqa: E402
 from isekai.pipeline.review import approve, review  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.fakes import FakeComfyClient  # noqa: E402
 from tests.images import jpeg_bytes, photo_jpeg  # noqa: E402
-from tests.record import recorded  # noqa: E402
+from tests.record import recorded, shape  # noqa: E402
 from tests.stages import bare_wiring, render, sheet, write_wd14  # noqa: E402
+from tests.test_ui_shapes import faults  # noqa: E402
 
 FLOW = "summon-anime-wai"
 CONTROL = "control-anime-wai"
@@ -468,8 +471,20 @@ def test_a_stream_opened_for_a_collection_starts_with_both_slots_and_its_hub(
     assert (closed["hub"]["collection"], "files" in closed) == ("b", False)
 
 
+class _Idle(Jobs):
+    """Jobs that put a job in its slot and start no thread."""
+
+    def _occupy(self, job: _Job, target: Callable[..., None], args: tuple) -> None:
+        slot = self._slots[job.kind]
+        slot.job, slot.stopping = job, False
+
+
 def _held_client(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, vocabulary: Vocabulary
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    vocabulary: Vocabulary,
+    *,
+    make_jobs: Callable[..., Jobs] = Jobs,
 ) -> tuple[FastAPI, TestClient, Path, Run]:
     """Return an app over `hub-prepare`, whose Prepare reader waits on a file."""
     monkeypatch.setenv("ISEKAI_WIRING", "tests.e2e.wiring:fake")
@@ -491,6 +506,7 @@ def _held_client(
         wire=lambda runs: replace(wired, runs_root=runs),
         host=HOST,
         port=PORT,
+        make_jobs=make_jobs,
     )
     return app, TestClient(app, base_url=f"http://{HOST}:{PORT}"), folder, run
 
@@ -1330,7 +1346,11 @@ def _approved(
 
 
 def _quoting(
-    tmp_path: Path, vocabulary: Vocabulary, environ: dict[str, str]
+    tmp_path: Path,
+    vocabulary: Vocabulary,
+    environ: dict[str, str],
+    *,
+    make_jobs: Callable[..., Jobs] = Jobs,
 ) -> tuple[Path, TestClient]:
     """Return a collection folder and a client whose session is handed `environ`."""
     folder = tmp_path / "lib" / "b"
@@ -1351,6 +1371,7 @@ def _quoting(
         wire=lambda runs: replace(wired, runs_root=runs),
         host=HOST,
         port=PORT,
+        make_jobs=make_jobs,
     )
     return folder, TestClient(app, base_url=f"http://{HOST}:{PORT}")
 
@@ -1571,3 +1592,57 @@ def test_a_photograph_no_quoted_run_holds_is_refused(
     for answered in (quote, started):
         assert answered.status_code == 409
         assert "close Render and open it again" in answered.json()["refusal"]
+
+
+@pytest.mark.spec_exempt(
+    "structural: the prepare answer fits the declaration UNRECORDED holds"
+)
+def test_the_prepare_answer_fits_its_declaration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, vocabulary: Vocabulary
+) -> None:
+    _, client, _, _ = _held_client(tmp_path, monkeypatch, vocabulary, make_jobs=_Idle)
+
+    answered = client.post("/api/c/hub-prepare/prepare")
+
+    assert answered.status_code == 200
+    declared = UNRECORDED["POST /api/c/{collection}/prepare"]
+    assert faults(declared, shape(answered.json()), "") == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: the stop answer fits the declaration UNRECORDED holds"
+)
+def test_the_stop_answer_fits_its_declaration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, vocabulary: Vocabulary
+) -> None:
+    _, client, _, _ = _held_client(tmp_path, monkeypatch, vocabulary, make_jobs=_Idle)
+    assert client.post("/api/c/hub-prepare/prepare").status_code == 200
+
+    answered = client.post("/api/jobs/prepare/stop")
+
+    assert answered.status_code == 200
+    declared = UNRECORDED["POST /api/jobs/{kind}/stop"]
+    assert faults(declared, shape(answered.json()), "") == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: the render answer fits the declaration UNRECORDED holds"
+)
+def test_the_render_answer_fits_its_declaration(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, client = _quoting(
+        tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"}, make_jobs=_Idle
+    )
+    _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    asked = {"collections": ["b"]}
+    limit = client.post("/api/render/quote", json=asked).json()["estimate"]["limit_s"]
+
+    answered = client.post(
+        "/api/render",
+        json={**asked, "keep_open": False, "limit_s": limit, "images": 1, "bakes": 0},
+    )
+
+    assert answered.status_code == 200
+    declared = UNRECORDED["POST /api/render"]
+    assert faults(declared, shape(answered.json()), "") == []

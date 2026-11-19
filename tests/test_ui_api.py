@@ -95,6 +95,7 @@ from isekai.interface.ui.app import (  # noqa: E402
 )
 from isekai.interface.ui.billing import Billing  # noqa: E402
 from isekai.interface.ui.jobs import Jobs  # noqa: E402
+from isekai.interface.ui.shapes import UNRECORDED  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.generate import image_of, prepare, prompt_artifact  # noqa: E402
@@ -117,6 +118,7 @@ from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot, tree  # noqa: E402
 from tests.fakes import FakeComfyClient  # noqa: E402
 from tests.images import jpeg_bytes, photo_jpeg, png_bytes  # noqa: E402
+from tests.record import shape  # noqa: E402
 from tests.stages import (  # noqa: E402
     FIELD_MAP,
     NO_GPUNIT,
@@ -127,6 +129,7 @@ from tests.stages import (  # noqa: E402
     rendered_image,
     sheet,
 )
+from tests.test_ui_shapes import faults  # noqa: E402
 
 FLOW = "summon-anime-wai"
 COLLECTION = "2026-10-19"
@@ -3535,3 +3538,49 @@ def test_a_terminal_session_is_live_without_a_job_slot(
     finally:
         for one in held:
             one.close()
+
+
+@pytest.mark.spec_exempt(
+    "structural: the running sessions answer fits the declaration UNRECORDED holds"
+)
+def test_the_running_sessions_answer_fits_its_declaration(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from isekai.interface.render import Record
+
+    monkeypatch.setattr(Jobs, "slot", lambda self, kind: None)
+    record = Record(
+        made.path.parent.parent / "sessions", "20261024T091200Z", 1200, {FLOW: 1}
+    )
+    record.open()
+    try:
+        answered = client.get("/api/sessions/running")
+        assert answered.json()["sessions"] != []
+        declared = UNRECORDED["GET /api/sessions/running"]
+        assert faults(declared, shape(answered.json()), "") == []
+    finally:
+        record.close()
+
+
+@pytest.mark.spec_exempt(
+    "structural: the served session answer fits the declaration UNRECORDED holds"
+)
+def test_a_served_session_fits_its_declaration_running_and_stale(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from isekai.interface.render import Record
+
+    monkeypatch.setattr(Jobs, "slot", lambda self, kind: None)
+    name = "20261024T091200Z"
+    record = Record(made.path.parent.parent / "sessions", name, 1200, {FLOW: 1})
+    declared = UNRECORDED["GET /api/c/{collection}/sessions/{name}"]
+    record.open()
+    try:
+        running = client.get(f"/api/c/{COLLECTION}/sessions/{name}").json()
+        assert running["outcome"] == "running"
+        assert faults(declared, shape(running), "") == []
+    finally:
+        record.close()
+    stale = client.get(f"/api/c/{COLLECTION}/sessions/{name}").json()
+    assert stale["outcome"] is None
+    assert faults(declared, shape(stale), "") == []

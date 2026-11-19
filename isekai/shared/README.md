@@ -34,7 +34,7 @@ does is reach a boundary or decide a stage's order.
 | `fields.py` | `pipeline/review.py`, `pipeline/sheet.py` | — |
 | `image.py` | `interface/ui/library.py`, `interface/ui/routes/common.py`, `interface/ui/routes/place.py`, `pipeline/generate.py`, `pipeline/importing.py`, `pipeline/tattoos.py` | — |
 | `ink.py` | `interface/ui/routes/tattoos.py`, `interface/verbs/common.py`, `interface/verbs/edits.py`, `pipeline/tattoos.py` | — |
-| `proposal.py` | `pipeline/proposing.py` | — |
+| `proposal.py` | `interface/ui/shapes.py`, `pipeline/proposing.py` | — |
 | `tattoo.py` | `pipeline/edit.py`, `pipeline/tattoos.py`, `ink.py` | — |
 | `vocabulary.py` | `boundary/wd14.py`, `interface/cli.py`, `interface/drafting.py`, `interface/ui/routes/reviewing.py`, `interface/ui/surface.py`, `interface/wiring.py`, `pipeline/review.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `evaluation/__main__.py`, `evaluation/face.py`, `evaluation/recall.py`, `tools/derive_field_map.py` |
 
