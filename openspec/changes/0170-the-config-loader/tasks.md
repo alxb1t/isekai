@@ -6,7 +6,7 @@ Hold each loader's whole refusal messages, add `read_keyed`, then switch the loa
 
 - [x] 1 — The pins · moderate
 - [x] 2 — The helper · moderate
-- [ ] 3 — The switch · moderate
+- [x] 3 — The switch · moderate
 
 ## 1 — The pins
 
@@ -36,15 +36,15 @@ Hold each loader's whole refusal messages, add `read_keyed`, then switch the loa
 
 ## 3 — The switch
 
-- [ ] 3.1 In `isekai/foundation/caption_config.py`, replace the block of `load_caption_config` with `document = read_keyed(path, KEYS)`, add `from isekai.foundation.config import read_keyed` before the `refusal` import, and delete `import json` and `from typing import Any` ([D2](design.md#d2)).
+- [x] 3.1 In `isekai/foundation/caption_config.py`, replace the block of `load_caption_config` with `document = read_keyed(path, KEYS)`, add `from isekai.foundation.config import read_keyed` before the `refusal` import, and delete `import json` and `from typing import Any` ([D2](design.md#d2)).
   Verify: `git grep -n -E "^import json|json\.loads|import Any" -- isekai/foundation/caption_config.py` prints nothing.
-- [ ] 3.2 In `isekai/shared/ink.py`, replace the block of `load_ink_config` with `document = read_keyed(path, KEYS)`, add `from isekai.foundation.config import read_keyed` between the `atomic_write` and `refusal` imports, and delete `import json`; `Any` goes from the `typing` import and `TYPE_CHECKING` stays.
+- [x] 3.2 In `isekai/shared/ink.py`, replace the block of `load_ink_config` with `document = read_keyed(path, KEYS)`, add `from isekai.foundation.config import read_keyed` between the `atomic_write` and `refusal` imports, and delete `import json`; `Any` goes from the `typing` import and `TYPE_CHECKING` stays.
   Verify: `git grep -n -E "^import json|json\.loads|, Any" -- isekai/shared/ink.py` prints nothing.
-- [ ] 3.3 In `isekai/pipeline/tattoos.py`, replace the block of `load_tattoo_config` with `document = read_keyed(path, KEYS)` and add `from isekai.foundation.config import read_keyed` between its `atomic_write` and `refusal` imports. `json` and `Any` stay: other functions read them.
+- [x] 3.3 In `isekai/pipeline/tattoos.py`, replace the block of `load_tattoo_config` with `document = read_keyed(path, KEYS)` and add `from isekai.foundation.config import read_keyed` between its `atomic_write` and `refusal` imports. `json` and `Any` stay: other functions read them.
   Verify: `grep -c 'read_keyed' isekai/pipeline/tattoos.py` prints `2`.
-- [ ] 3.4 In `isekai/shared/README.md`, the sentence naming what `ink.py` imports reads `ink.py` imports `atomic_write`, `config` and `refusal` ([D5](design.md#d5)).
+- [x] 3.4 In `isekai/shared/README.md`, the sentence naming what `ink.py` imports reads `ink.py` imports `atomic_write`, `config` and `refusal` ([D5](design.md#d5)).
   Verify: `grep -c 'ink.py. imports .atomic_write., .config. and .refusal.' isekai/shared/README.md` prints `1`.
-- [ ] 3.5 Run `uv run python -m tools.derive_imported_by`, which fills the `config.py` row with its importers: `caption_config.py`, `pipeline/tattoos.py` and `shared/ink.py`.
+- [x] 3.5 Run `uv run python -m tools.derive_imported_by`, which fills the `config.py` row with its importers: `caption_config.py`, `pipeline/tattoos.py` and `shared/ink.py`.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 3.6 Run `tools.mutate` over the lines of `read_keyed`, which the range `1-80` of `isekai/foundation/config.py` holds whole, with the helper's and the loaders' test files. A survivor gets one more case in the loader's test file that reaches it, and the run is repeated.
+- [x] 3.6 Run `tools.mutate` over the lines of `read_keyed`, which the range `1-80` of `isekai/foundation/config.py` holds whole, with the helper's and the loaders' test files. A survivor gets one more case in the loader's test file that reaches it, and the run is repeated.
   Verify: `uv run python -m tools.mutate isekai/foundation/config.py:1-80 --tests tests/test_config.py tests/test_caption.py tests/test_ink.py tests/test_tattoo_library.py` exits 0.

@@ -7,11 +7,10 @@ so a flow's manifest declares neither (D14).
 Stdlib only.
 """
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
+from isekai.foundation.config import read_keyed
 from isekai.foundation.refusal import Refusal
 
 CAPTION_CONFIG_PATH = (
@@ -31,18 +30,7 @@ class CaptionConfig:
 
 def load_caption_config(path: Path = CAPTION_CONFIG_PATH) -> CaptionConfig:
     """Return the caption config, refusing naming the key or the file that is wrong."""
-    document: Any = json.loads(path.read_text())
-    unknown = sorted(key for key in document if key not in KEYS)
-    if unknown:
-        raise Refusal(
-            f"{path.name} declares {', '.join(unknown)}, which this build does not "
-            f"read; the keys it reads are {', '.join(KEYS)} -- correct the spelling"
-        )
-    missing = [key for key in KEYS if key not in document]
-    if missing:
-        raise Refusal(
-            f"{path.name} declares no {', '.join(missing)}; add the key to {path.name}"
-        )
+    document = read_keyed(path, KEYS)
     # The value's repr, never `str()`: `{"model": null}` would name an alias
     # called "None" and refuse at first call instead of here.
     model = document["model"]

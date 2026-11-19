@@ -12,6 +12,7 @@ its new digest.
 
 - The caption, ink and tattoo config tests each hold the whole unknown-key and missing-key refusal, so the config loaders' messages cannot drift unseen when their shared block moves (0170 D3).
 - `read_keyed(path, keys)` in the new `isekai/foundation/config.py` holds the block the config loaders share: read the JSON, refuse a key not read and a key lacking, return the document; no loader calls it yet (0170 D1, D4, D5).
+- `load_caption_config`, `load_ink_config` and `load_tattoo_config` call `read_keyed` in place of their own copy of the block, with every message as before; `shared/README.md` names `config` among `ink.py`'s imports (0170 D2, D5).
 
 ## [0.87.25] - 2026-11-19
 

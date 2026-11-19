@@ -14,13 +14,13 @@ not travel into the render.
 numpy are imported inside the functions, so `python -m isekai` loads no wheel.
 """
 
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.config import read_keyed
 from isekai.foundation.refusal import Refusal
 from isekai.shared.tattoo import png_of
 
@@ -73,18 +73,7 @@ def _number(path: Path, document: Mapping[str, object], key: str) -> float:
 
 def load_ink_config(path: Path = INK_CONFIG_PATH) -> InkConfig:
     """Return the ink config, refusing naming the key or the file that is wrong."""
-    document: Any = json.loads(path.read_text())
-    unknown = sorted(key for key in document if key not in KEYS)
-    if unknown:
-        raise Refusal(
-            f"{path.name} declares {', '.join(unknown)}, which this build does not "
-            f"read; the keys it reads are {', '.join(KEYS)} -- correct the spelling"
-        )
-    missing = [key for key in KEYS if key not in document]
-    if missing:
-        raise Refusal(
-            f"{path.name} declares no {', '.join(missing)}; add the key to {path.name}"
-        )
+    document = read_keyed(path, KEYS)
     numbers = {key: _number(path, document, key) for key in KEYS}
     if numbers["reach"] < 1 or numbers["reach"] != int(numbers["reach"]):
         raise Refusal(f"{path.name}: `reach` is a whole number of pixels, at least 1")

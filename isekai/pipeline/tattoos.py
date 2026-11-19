@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from isekai.foundation.artifacts import PlacementValues
 from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.config import read_keyed
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import ID_DIGEST_CHARS, REPOSITORY
 from isekai.shared.chain import crop_box, flatten, multiply, place, polygon_mask
@@ -165,18 +166,7 @@ def _whole(path: Path, document: Mapping[str, object], key: str) -> int:
 
 def load_tattoo_config(path: Path = TATTOO_CONFIG) -> TattooConfig:
     """Return the tattoo config, refusing naming the key or the file that is wrong."""
-    document: Any = json.loads(path.read_text())
-    unknown = sorted(key for key in document if key not in KEYS)
-    if unknown:
-        raise Refusal(
-            f"{path.name} declares {', '.join(unknown)}, which this build does not "
-            f"read; the keys it reads are {', '.join(KEYS)} -- correct the spelling"
-        )
-    missing = [key for key in KEYS if key not in document]
-    if missing:
-        raise Refusal(
-            f"{path.name} declares no {', '.join(missing)}; add the key to {path.name}"
-        )
+    document = read_keyed(path, KEYS)
     numbers = {key: _whole(path, document, key) for key in KEYS}
     if numbers["outline_min"] > numbers["outline_max"]:
         raise Refusal(
