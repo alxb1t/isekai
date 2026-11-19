@@ -1,12 +1,9 @@
 /* The shapes the endpoints return. One file, because a type that disagreed
    with `app.py` would be wrong in every component at once. */
 
-export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half' | 'ring'
+import type { HubCell, ImportingState as StagedState, Renders, ReviewStatus as InputStatus } from './wire'
 
-/* `re-opened` is approved *and* carrying a later draft -- the state
-   `review --flow F --new-version` writes, and the only one in which an
-   approved input is editable again. */
-export type InputStatus = 'approved' | 're-opened' | 'draft'
+export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half' | 'ring'
 
 export interface CollectionInput {
   /* The run's digest. */
@@ -17,205 +14,40 @@ export interface CollectionInput {
   status: InputStatus
 }
 
-/* One flow's figures in a collection, out of the sources whose runs hold it. */
-export interface FlowCount {
-  flow: string
-  approved: number
-  rendered: number
-  of: number
-}
+export type { FlowCount } from './wire'
+export type { LibraryRow } from './wire'
+export type { LibraryInfo } from './wire'
+export type { LibraryStage as Stage } from './wire'
 
-/* One folder of the library. A folder that is not a collection carries only its
-   name: it is listed and never opened. `newest` is the server's clock. */
-export interface LibraryRow {
-  name: string
-  collection: boolean
-  sources: number
-  /* The first sources' names, in the hub's order: the row's thumbnails. */
-  thumbs: string[]
-  flows: FlowCount[]
-  without_flow: number
-  newest: number | null
-  kind: string | null
-}
+export type { HubCell } from './wire'
+export type { HubSource } from './wire'
+export type { HubInfo } from './wire'
+export type { Assigned } from './wire'
 
-export interface LibraryInfo {
-  rows: LibraryRow[]
-}
+export type { Budget } from './wire'
+export type { ScoredTag } from './wire'
+export type { OfferedTag } from './wire'
+export type { FieldCandidates } from './wire'
+export type { Renders } from './wire'
+export type { InputDetail } from './wire'
+export type { Revision } from './wire'
+export type { Drafted } from './wire'
+export type { TagMatch as VocabEntry } from './wire'
+export type { TagMatches } from './wire'
+export type { ReviewStatus as InputStatus } from './wire'
+export type { DraftedImage } from './wire'
+export type { RefusedImage } from './wire'
+export type { DraftRefused } from './wire'
 
-/* A cell's stage, read from the run's directory; null is no flow. */
-export type Stage =
-  | 'assigned'
-  | 'tagged'
-  | 'sheet'
-  | 'draft'
-  | 'approved'
-  | 'rendered'
-  | 'unreadable'
-
-export interface HubCell {
-  stage: Stage | null
-  renders: number
-  refusal: string | null
-  /* Where stage ③ stands, where the cell has a sheet; null otherwise. */
-  status: InputStatus | null
-  /* The last-written image of the newest version holding any; its seed a decimal string. */
-  newest: { version: number; seed: string } | null
-  /* How many images the newest approval lacks, as the render stage counts; null while unapproved. */
-  short: number | null
-  /* Every approved version's images, oldest to newest; each seed a decimal string. */
-  images: { version: number; seed: string }[]
-}
-
-export interface HubSource {
-  name: string
-  digest: string | null
-  width: number | null
-  height: number | null
-  cells: Record<string, HubCell>
-  /* What the file carries beyond its pixels and orientation: empty once cleaned. */
-  carries: string[]
-}
-
-export interface HubInfo {
-  collection: string
-  flows: string[]
-  sources: HubSource[]
-}
-
-/* `window` is how many tokens SDXL's text encoders read at a time. It is declared
-   in `isekai/pipeline/review.py` and sent here, so the browser decides nothing. */
-export interface Budget {
-  total: number
-  per_field: Record<string, number>
-  overhead: number
-  window: number
-}
-
-/* One scored tag from the local tagger. The confidence is shown on the chip
-   because a wrong tag sorted below a right one refutes itself -- `black hair
-   0.31` under `brown hair 0.91` needs no explanation. */
-export interface ScoredTag {
-  tag: string
-  confidence: number
-}
-
-/* One tag from the hosted tagger that the vocabulary actually carries. The
-   server sends only these: on v0.20's acceptance collection roughly nine in ten of
-   this model's tags were committable to no field, and reading nine to find the
-   tenth is attention spent on the busiest pane in the surface.
-
-   So `posts` is never null here, and there is no membership flag — every tag
-   that reaches the page is in the vocabulary by construction. The artifact on
-   disk still holds the ones that were dropped. */
-export interface OfferedTag {
-  tag: string
-  posts: number
-}
-
-/* Every candidate tag for every criterion the acting flow declares — the same
-   table the router fills a sheet from, read the other way. A declared criterion
-   the table holds nothing for is present with an empty array rather than absent,
-   because a missing row is indistinguishable from one nobody has authored yet.
-   The excluded list is never here: it is an assertion about the table, not
-   material to browse. */
-export interface FieldCandidates {
-  fields: Record<string, OfferedTag[]>
-}
-
-/* How many images an approval renders, and the seeds it renders first. Seeds
-   are decimal strings: a 64-bit seed is past what a number holds exactly. */
-export interface Renders {
-  count: number
-  seeds: string[]
-}
-
-export interface InputDetail {
-  /* The run's digest, which the URL names it by. */
-  id: string
-  run: string
-  flow: string
-  schema: string[]
-  vocabulary: number
-  width: number
-  height: number
-  caption: string | null
-  /* The command that writes a missing caption, built by the server; null
-     beside a caption. The browser never spells a command. */
-  caption_command: string | null
-  /* Null where the artifact is absent, which is never a failure: a run
-     captioned before v0.20, a flow that declares no tagger, or a tagger that
-     failed. The panel simply is not drawn. */
-  wd14: ScoredTag[] | null
-  tags: OfferedTag[] | null
-  fields: Record<string, string[]>
-  renders: Renders
-  /* The approval a draft was copied from, its fields, and the seed of the image
-     being revised; null for a draft of a sheet. */
-  revision: Revision | null
-  /* For a draft or approval written from another flow's image: its own sheet's
-     fields, and the number of its source copy; null for any other. */
-  drafted: Drafted | null
-  readonly: boolean
-  draft: string | null
-  approved: string | null
-  saved: number | null
-  approved_at: number | null
-  /* Why *Cancel approve* is disabled, or null while it can run. */
-  cancel: string | null
-  budget: Budget
-}
-
-export interface Revision {
-  version: number
-  seed: string | null
-  fields: Record<string, string[]>
-}
-
-export interface Drafted {
-  fields: Record<string, string[]>
-  /* The number its source copy is held under: the image it was drafted from. */
-  version: number
-}
-
-export interface VocabEntry {
-  tag: string
-  posts: number
-  rare: boolean
-}
-
-export interface TagMatches {
-  matches: VocabEntry[]
-  total: number
-}
-
-/* What reading one uploaded file left in staging. `name` is what it is staged
-   as: the file's own name, converted, or `<stem>-2`. A skipped file names in
-   `copyOf` the staged file that holds its bytes. */
-export type StagedState = 'ready' | 'converted' | 'not cleaned' | 'skipped'
+export type { ImportingState as StagedState } from './wire'
+export type { FileState } from './wire'
+export type { Committed } from './wire'
 
 export interface StagedFile {
   name: string
   state: StagedState
   carries: string[]
   copyOf: string | null
-}
-
-/* One upload's name and state, as the page's stream reports it. */
-export interface FileState {
-  file: string
-  state: 'waiting' | 'converting' | 'refused' | StagedState
-  name?: string
-  carries?: string[]
-  copy_of?: string | null
-  refusal?: string
-}
-
-export interface Committed {
-  collection: string
-  written: string[]
-  skipped: string[]
-  left_out: string[]
 }
 
 /* One image a render session landed. The seed is a string: a 64-bit seed is past
@@ -361,12 +193,6 @@ export interface CellEvent {
   cell: HubCell
 }
 
-export interface Assigned {
-  cells: Record<string, HubCell>
-  /* Each refused source's refusal, by its name. */
-  refused: Record<string, string>
-}
-
 /* A collection's Render offer: the images and the queued bakes it holds and every other
    collection holds, why Render is disabled, and why an approval's count is refused, each
    null when there is none. */
@@ -424,24 +250,6 @@ export interface ImageRef {
   flow: string
   version: number
   seed: string
-}
-
-/* An image a draft answered: the draft it wrote, or the edited draft already
-   waiting in the target, by name; the other is null. */
-export interface DraftedImage extends ImageRef {
-  draft: string | null
-  waiting: string | null
-}
-
-/* An image of a refused draft: its refusal, or null where it could be drafted. */
-export interface RefusedImage extends ImageRef {
-  refusal: string | null
-}
-
-/* A draft the server refused, answering each image. Nothing was written. */
-export interface DraftRefused {
-  refusal: string
-  images: RefusedImage[]
 }
 
 /* A point in an image's own pixels, `[x, y]`; a cut's image is its photograph. */

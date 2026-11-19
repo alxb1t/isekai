@@ -4,7 +4,7 @@ The phases move `ui/src/types.ts` onto `ui/src/wire.ts`, one group of types at a
 
 ## Progress
 
-- [ ] 1 — The first half: library, hub, review and staging · moderate
+- [x] 1 — The first half: library, hub, review and staging · moderate
 - [ ] 2 — The second half: jobs, quotes, renders, tattoos and compare · moderate
 - [ ] 3 — The overlays · moderate
 - [ ] 4 — The six that differ · moderate
@@ -14,15 +14,15 @@ The phases move `ui/src/types.ts` onto `ui/src/wire.ts`, one group of types at a
 
 Each type below is the wire's field for field, so its declaration and doc comment in `ui/src/types.ts` become one re-export line ([D1](design.md#d1)). A type still local to `types.ts` that names a re-exported type imports it from `./wire` in an `import type { … } from './wire'` line at the top of the file ([D2](design.md#d2)).
 
-- [ ] 1.1 **HALT CHECK** No page file reads the wire yet: `./wire` is imported by no file of `ui/src`. The plan assumes `types.ts` is the first.
+- [x] 1.1 **HALT CHECK** No page file reads the wire yet: `./wire` is imported by no file of `ui/src`. The plan assumes `types.ts` is the first.
   Verify: `git grep -l -F "'./wire'" -- ui/src` prints nothing.
-- [ ] 1.2 In `ui/src/types.ts`, replace `FlowCount`, `LibraryRow` and `LibraryInfo` each with its re-export, e.g. `export type { FlowCount } from './wire'`, and `Stage` with `export type { LibraryStage as Stage } from './wire'`, one a line.
+- [x] 1.2 In `ui/src/types.ts`, replace `FlowCount`, `LibraryRow` and `LibraryInfo` each with its re-export, e.g. `export type { FlowCount } from './wire'`, and `Stage` with `export type { LibraryStage as Stage } from './wire'`, one a line.
   Verify: `git grep -n -E "^export (interface|type) (FlowCount|LibraryRow|LibraryInfo|Stage)( |$)" -- ui/src/types.ts` prints nothing.
-- [ ] 1.3 In `ui/src/types.ts`, replace `HubCell`, `HubSource`, `HubInfo` and `Assigned` the same way. `CellEvent` still names `HubCell`: add `HubCell` to the import line.
+- [x] 1.3 In `ui/src/types.ts`, replace `HubCell`, `HubSource`, `HubInfo` and `Assigned` the same way. `CellEvent` still names `HubCell`: add `HubCell` to the import line.
   Verify: `git grep -n -E "^export (interface|type) (HubCell|HubSource|HubInfo|Assigned)( |$)" -- ui/src/types.ts` prints nothing.
-- [ ] 1.4 In `ui/src/types.ts`, replace the review's types — `Budget`, `ScoredTag`, `OfferedTag`, `FieldCandidates`, `Renders`, `InputDetail`, `Revision`, `Drafted`, `TagMatches`, `DraftedImage`, `RefusedImage` and `DraftRefused` — the same way, and `VocabEntry` with `export type { TagMatch as VocabEntry } from './wire'` and `InputStatus` with `export type { ReviewStatus as InputStatus } from './wire'`. `CollectionInput` names `InputStatus`: add `ReviewStatus as InputStatus` to the import line.
+- [x] 1.4 In `ui/src/types.ts`, replace the review's types — `Budget`, `ScoredTag`, `OfferedTag`, `FieldCandidates`, `Renders`, `InputDetail`, `Revision`, `Drafted`, `TagMatches`, `DraftedImage`, `RefusedImage` and `DraftRefused` — the same way, and `VocabEntry` with `export type { TagMatch as VocabEntry } from './wire'` and `InputStatus` with `export type { ReviewStatus as InputStatus } from './wire'`. `CollectionInput` names `InputStatus`: add `ReviewStatus as InputStatus` to the import line.
   Verify: `git grep -n -E "^export (interface|type) (Budget|ScoredTag|OfferedTag|FieldCandidates|Renders|InputDetail|Revision|Drafted|VocabEntry|TagMatches|InputStatus|DraftedImage|RefusedImage|DraftRefused)( |$)" -- ui/src/types.ts` prints nothing.
-- [ ] 1.5 In `ui/src/types.ts`, replace `FileState` and `Committed` the same way, and `StagedState` with `export type { ImportingState as StagedState } from './wire'`. `StagedFile` stays and names `StagedState`: add `ImportingState as StagedState` to the import line.
+- [x] 1.5 In `ui/src/types.ts`, replace `FileState` and `Committed` the same way, and `StagedState` with `export type { ImportingState as StagedState } from './wire'`. `StagedFile` stays and names `StagedState`: add `ImportingState as StagedState` to the import line.
   Verify: `git grep -n -E "^export (interface|type) (FileState|Committed|StagedState)( |$)" -- ui/src/types.ts` prints nothing.
 
 ## 2 — The second half: jobs, quotes, renders, tattoos and compare

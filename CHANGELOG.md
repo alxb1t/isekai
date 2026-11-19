@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `ui/src/types.ts` re-exports the library, hub, review and staging types from the derived `ui/src/wire.ts` under the page's names, so those types are the server's declaration and no longer a hand-written copy; behaviour is as before (0171 D1, D2).
+
 ## [0.87.26] - 2026-11-19
 
 Gate: local 1m21s · CI not read under mf-ship · 0.87.25: local 1m25s · CI not read under mf-ship
