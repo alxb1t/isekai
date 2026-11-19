@@ -6,7 +6,7 @@ The phases: the helper's predicate with its cases, the library's call with the h
 
 - [x] 1 — The helper · moderate
 - [x] 2 — The library · moderate
-- [ ] 3 — The decision · moderate
+- [x] 3 — The decision · moderate
 
 ## 1 — The helper
 
@@ -28,9 +28,9 @@ The phases: the helper's predicate with its cases, the library's call with the h
 
 ## 3 — The decision
 
-- [ ] 3.1 In `docs/decisions.md`, D65's *Why* ends with the sentence of [D6](design.md#d6) in place of its last, and its *Made by* reads `0165`, `0169`. No decision is added and no other line of the page changes.
+- [x] 3.1 In `docs/decisions.md`, D65's *Why* ends with the sentence of [D6](design.md#d6) in place of its last, and its *Made by* reads `0165`, `0169`. No decision is added and no other line of the page changes.
   Verify: `git grep -n -E "passes its separator filter to|Made by:.{4}0165.{4}0169" -- docs/decisions.md` prints two lines.
-- [ ] 3.2 Leave the other sites, `run_at` and `_run_for` as they are.
+- [x] 3.2 Leave the other sites, `run_at` and `_run_for` as they are.
   Verify: `git grep -n "runs_in(" -- isekai/interface/render.py isekai/interface/compare_view.py isekai/interface/cli.py` prints three lines.
-- [ ] 3.3 Run the gate's documents and layer tests.
+- [x] 3.3 Run the gate's documents and layer tests.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py tests/test_ratchets.py` exits 0.
