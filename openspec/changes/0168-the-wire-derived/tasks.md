@@ -6,7 +6,7 @@ The phases: the tool and its grammar, the file it writes, the documents. No file
 
 - [x] 1 — The grammar · hard
 - [x] 2 — The file · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The grammar
 
@@ -44,16 +44,16 @@ The file is what the tool writes from today's `shapes.py`, then the cases that h
 
 The tool joins `make derive`, and the rule is written where the rules live ([D6](design.md#d6)).
 
-- [ ] 3.1 In `Makefile`, add the tool to the `derive` target after the importer tables, and say so in its comment; the `gate` recipe and `make -n gate` do not change. The new recipe line starts with a tab, as every recipe line does:
+- [x] 3.1 In `Makefile`, add the tool to the `derive` target after the importer tables, and say so in its comment; the `gate` recipe and `make -n gate` do not change. The new recipe line starts with a tab, as every recipe line does:
   ```diff
   - # vocabulary, the READMEs' importer tables, then the fetched ones.
   + # vocabulary, the READMEs' importer tables, the page's wire, then the fetched ones.
   + uv run python -m tools.derive_wire
   ```
   Verify: `git grep -n "tools.derive_wire" -- Makefile` prints one line.
-- [ ] 3.2 In `docs/principles.md`, add `tests/test_derive_wire.py::test_the_committed_wire_is_the_one_the_tool_writes` to the *Held by* bullet of *Configuration is declared, never computed, and declared once*, after the importer tables' test.
+- [x] 3.2 In `docs/principles.md`, add `tests/test_derive_wire.py::test_the_committed_wire_is_the_one_the_tool_writes` to the *Held by* bullet of *Configuration is declared, never computed, and declared once*, after the importer tables' test.
   Verify: `git grep -n "test_the_committed_wire_is_the_one_the_tool_writes" -- docs/principles.md` prints one line.
-- [ ] 3.3 In `README.md`, change the comment of the `derive_*.py` line of the `tools/` tree from `re-derive the manifests, the field map and image/` to `re-derive the manifests, the field map, image/ and the page's wire`.
+- [x] 3.3 In `README.md`, change the comment of the `derive_*.py` line of the `tools/` tree from `re-derive the manifests, the field map and image/` to `re-derive the manifests, the field map, image/ and the page's wire`.
   Verify: `git grep -n "the page's wire" -- README.md` prints one line.
-- [ ] 3.4 In `docs/decisions.md`, add D67 after D66, titled *The page's wire is derived from shapes.py, and a test re-derives it*: the rule of [D1](design.md#d1)–[D4](design.md#d4), a *Why* (a hand-written copy drifts; a derived one is held by a test; the tool names no `isekai` module), an *Accepts* (a form outside the grammar is refused, a pair stays a list, the page reads the file from `the-page-wire`) and *Made by:* `0168`.
+- [x] 3.4 In `docs/decisions.md`, add D67 after D66, titled *The page's wire is derived from shapes.py, and a test re-derives it*: the rule of [D1](design.md#d1)–[D4](design.md#d4), a *Why* (a hand-written copy drifts; a derived one is held by a test; the tool names no `isekai` module), an *Accepts* (a form outside the grammar is refused, a pair stays a list, the page reads the file from `the-page-wire`) and *Made by:* `0168`.
   Verify: `git grep -n "^### D67" -- docs/decisions.md` prints one line.

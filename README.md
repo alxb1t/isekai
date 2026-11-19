@@ -466,7 +466,7 @@ isekai/
 │   ├── caption.briefing.md    # the standing instructions every photograph is read under
 │   └── joycaption.Modelfile   # the local reader's recipe, for `ollama create`
 ├── tools/                     # operator tooling, run from the root: `python -m tools.<name>`
-│   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
+│   ├── derive_*.py            # re-derive the manifests, the field map, image/ and the page's wire: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
 │   ├── image_record.py        # the build record: each copied file's SHA-256, for config/image.json
 │   ├── npm_ui.py              # the gate's browser half: run a ui/ script, or refuse

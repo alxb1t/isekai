@@ -660,6 +660,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Accepts:** the billing volume's state, a session's outcome and a cell event's stage and state are `str`, and no test holds `EVENTS`' keys equal to the page's kinds. FastAPI's own 422 and 405 are not declared. Reopen when the page's types are derived.
 - **Made by:** `0166`, `0167`.
 
+### D67 · The page's wire is derived from shapes.py, and a test re-derives it
+
+**`tools/derive_wire.py` writes `ui/src/wire.ts` from `isekai/interface/ui/shapes.py` and the modules it imports, by `ast` alone, and `tests/test_derive_wire.py` holds the committed file equal to what the tool writes. A class keeps Python's name, an imported alias is its module's name then its own, and a form outside the tool's grammar is refused naming the class and the field.**
+
+- **Why:** a hand-written copy of the server's answers drifts; a derived one is held by a test that expects the same bytes. The tool names no `isekai` module, because `tools/` may not import the UI package and an import moves an *Imported by* table.
+- **Accepts:** a form `shapes.py` gains that the grammar lacks fails the committed-file case, and the author adds the form and its case. A pair stays a list. The page reads the file from `the-page-wire`, so until then no page file imports `wire.ts` and `vue-tsc` reads it alone.
+- **Made by:** `0168`.
+
 ## Infrastructure
 
 ### D26 · Renders run on a rented GPU

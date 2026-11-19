@@ -54,10 +54,11 @@ drift:
 	git diff --exit-code --stat -- config/ evaluation/eval_models.json image/
 
 # Re-derive every derived file: the field map, which needs the provisioned
-# vocabulary, the READMEs' importer tables, then the fetched ones.
+# vocabulary, the READMEs' importer tables, the page's wire, then the fetched ones.
 derive:
 	uv run python -m tools.derive_field_map
 	uv run python -m tools.derive_imported_by
+	uv run python -m tools.derive_wire
 	$(MAKE) drift
 
 # Replay the audit's mutants, each against the tests it names, and fail on a
