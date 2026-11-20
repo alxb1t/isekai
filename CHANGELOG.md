@@ -10,6 +10,15 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.31] - 2026-11-20
+
+Gate: local 1m33s · CI not read under mf-ship · 0.87.30: local 1m19s · CI not read under mf-ship
+
+- `render_image` and `render_record` in `isekai/foundation/layout.py` name a render's image and record, re-exported by `run.py`; cases in `tests/test_generate.py` hold each and their agreement with the listing; behaviour is as before (0175 D1, D4).
+- The paid stage names a render's image and record by `render_image` and `render_record` in `image_of`, `discard_render` and `render`'s loop; `SIDECAR` leaves its imports; behaviour is as before (0175 D2).
+- `draft_from` in `review.py`, `_renders` in `compare_view.py`, `evaluation/recall.py` and `evaluation/__main__.py` name a render's image by `render_image`, and the sites outside `review.py` build its group by `group_of`; `OUTPUTS` leaves their imports; behaviour is as before (0175 D2, D3).
+- D69 names `render_image` and `render_record`, says the sites that test for a render still name its files by hand, and adds `0175` to *Made by*; the foundation README's row and `layout.py`'s docstring name the builders (0175 D5).
+
 ## [0.87.30] - 2026-11-20
 
 Gate: local 1m19s · CI not read under mf-ship · 0.87.29: local 1m21s · CI not read under mf-ship

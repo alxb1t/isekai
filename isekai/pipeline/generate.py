@@ -38,7 +38,6 @@ from isekai.foundation.artifacts import (
     PROMPT_FILE,
     RENDER_FILE,
     SEED_BITS,
-    SIDECAR,
     Failure,
     Prompt,
     Renders,
@@ -74,6 +73,8 @@ from isekai.foundation.run import (
     group_of,
     record_failure,
     render_groups,
+    render_image,
+    render_record,
     rendered_at,
     rendered_seeds,
     stage_command,
@@ -187,7 +188,7 @@ def _repair(approval: Path) -> str:
 
 def image_of(run: Run, flow: Flow, version: int, seed: int) -> Path:
     """Return where the image of `seed` under approval `version` is written."""
-    return group_of(run, flow.id, version) / f"{seed}{flow.output_suffix}"
+    return render_image(group_of(run, flow.id, version), seed, flow.output_suffix)
 
 
 def approved_flows(run: Run) -> list[str]:
@@ -349,7 +350,7 @@ def discard_render(image: Path) -> list[Path]:
     *_, seed = rendered_at(image)
     image = image.absolute()
     group = image.parent
-    record = group / f"{image.stem}{SIDECAR}"
+    record = render_record(group, seed)
     image.unlink()
     deleted = [image]
     if record.is_file():
@@ -568,7 +569,7 @@ def render(
         )["sheet"]
     produced: list[Render] = []
     for seed in wanted:
-        output = directory / f"{seed}{flow.output_suffix}"
+        output = render_image(directory, seed, flow.output_suffix)
         # `build_graph` is inside the guard and not before it: it refuses on an
         # unreadable photograph header, and a refusal this stage does not record
         # leaves resume nothing on disk to reason about.
@@ -582,7 +583,7 @@ def render(
         # The sidecar first, so an image always has its provenance: a crash
         # between the writes leaves a sidecar with no image, and that seed
         # renders again.
-        provenance = directory / f"{seed}{SIDECAR}"
+        provenance = render_record(directory, seed)
         sidecar: RenderSidecar = {
             "schema": RENDER_FILE.schema,
             "producer": {

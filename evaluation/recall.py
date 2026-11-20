@@ -35,10 +35,11 @@ from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
-    OUTPUTS,
     REVIEW,
     Run,
     artifact_name,
+    group_of,
+    render_image,
     rendered,
 )
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, normalise
@@ -337,9 +338,7 @@ def _group_rows(
     rows: list[Row] = []
     for seed in seeds:
         try:
-            seen = read_tags(
-                run.directory(flow, OUTPUTS, f"{group:03d}", f"{seed}{suffix}")
-            )
+            seen = read_tags(render_image(group_of(run, flow, group), seed, suffix))
         except Refusal as undecodable:
             notes.append(
                 f"unreadable: {undecodable}; render it again or delete it, then "

@@ -82,6 +82,7 @@ from isekai.foundation.run import (
     latest,
     latest_artifact,
     next_version,
+    render_image,
     sheet_of,
     stage_command,
     versions,
@@ -272,7 +273,7 @@ def draft_from(
     fields = {name: list(merged[name]) for name in schema.names if name in merged}
     number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))
     if seed is not None:
-        image = group_of(run, source, approval) / f"{seed}{OUTPUT_SUFFIX}"
+        image = render_image(group_of(run, source, approval), seed, OUTPUT_SUFFIX)
         write_atomically(source_copy(run, flow, number), image.read_bytes())
     return _write_draft(
         run,

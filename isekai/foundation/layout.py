@@ -1,9 +1,10 @@
 """A run's numbering and completion, its seeds, its render groups and its edit files.
 
 The version numbers a directory holds and the one it takes next, the paths of a flow's
-sheets and approvals, the seeds a render's file is named for, the listing of a flow's
-render groups and their seeds, and the files an edit writes beside its source. `run.py`
-re-exports each name; a module outside the foundation imports them from there (D69).
+sheets and approvals, the seeds a render's file is named for,
+the names of a render's image and record, the listing of a flow's render groups and
+their seeds, and the files an edit writes beside its source. `run.py` re-exports each
+name; a module outside the foundation imports them from there (D69).
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
@@ -138,6 +139,16 @@ def is_render(path: Path, suffix: str) -> bool:
 def is_sidecar(path: Path) -> bool:
     """Return whether `path` is a render's sidecar."""
     return path.name.endswith(SIDECAR) and is_seed(path.name.removesuffix(SIDECAR))
+
+
+def render_image(group: Path, seed: int, suffix: str) -> Path:
+    """Return the path of `seed`'s image in `group`, for a flow producing `suffix`."""
+    return group / f"{seed}{suffix}"
+
+
+def render_record(group: Path, seed: int) -> Path:
+    """Return the path of `seed`'s record in `group`."""
+    return group / f"{seed}{SIDECAR}"
 
 
 def rendered_seeds(directory: Path, suffix: str) -> list[int]:

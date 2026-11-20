@@ -24,14 +24,15 @@ from isekai.foundation.library import SOURCES as COLLECTION_PHOTOS
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
-    OUTPUTS,
     PROMPTS,
     REVIEW,
     Run,
     approved_versions,
     artifact_name,
+    group_of,
     latest_artifact,
     photo_of,
+    render_image,
     rendered_seeds,
     runs_in,
 )
@@ -137,13 +138,14 @@ def _renders(run: Run, name: str, flow: Flow | None, collection: Path) -> list[s
         ]
     approved = approved_versions(run.directory(name, REVIEW))
     if approved:
-        directory = run.directory(name, OUTPUTS, f"{approved[-1]:03d}")
-        if seeds := rendered_seeds(directory, flow.output_suffix):
+        directory = group_of(run, name, approved[-1])
+        suffix = flow.output_suffix
+        if seeds := rendered_seeds(directory, suffix):
             prompt = _prompt(run, name, approved[-1])
             return [
                 f"<figure><figcaption>{html.escape(name)} &middot; seed {seed}"
                 f"</figcaption><img loading=lazy "
-                f'src="{_link(directory / f"{seed}{flow.output_suffix}", collection)}" '
+                f'src="{_link(render_image(directory, seed, suffix), collection)}" '
                 f'alt="">{prompt}</figure>'
                 for seed in seeds
             ]
