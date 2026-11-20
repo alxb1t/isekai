@@ -681,8 +681,16 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 **`isekai/foundation/layout.py` lists a render group: `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups`, and `rendered`, which lists each flow's seeds by approval. A module outside the foundation reads them from `isekai.foundation.run`, never from the paid stage. The stage keeps what reads an approval or deletes: `lacks`, `shortfall`, `duration`, `source_seeds` and `discard_render`. A render's image and record are named there by `render_image(group, seed, suffix)` and `render_record(group, seed)`.**
 
 - **Why:** `run_view.py`, `compare_view.py`, `render.py` and `ui/library.py` imported the paid stage to list a folder, and `review` may not import it. The names read foundation names alone. A move that re-binds changes no test.
-- **Accepts:** The sites that test for a render by a name still name its files by hand: `drafting_approval`, `refuse_revision` and `_refuse_unchanged` in `review.py`, and `Surface.rendered` in `surface.py`. The other definitions of "rendered", in `review.py`, `surface.py` and `rendered_at`, stand. `render_groups` lists a folder by `str.isdigit`, where the layout's own test is three ASCII digits. The evaluator still imports `trackable` from the wiring. Reopen when one rule says a seed is rendered.
+- **Accepts:** The other definitions of "rendered", `_holds_render` and `rendered_at`, stand. `render_groups` lists a folder by `str.isdigit`, where the layout's own test is three ASCII digits. The evaluator still imports `trackable` from the wiring.
 - **Made by:** `0174`, `0175`.
+
+### D70 · A seed is rendered when its image is a file in its group
+
+**`is_rendered(group, seed, suffix)` in `isekai/foundation/layout.py`, re-exported by `isekai/foundation/run.py`, is true when `render_image(group, seed, suffix)` is a file. Review's sites, `refuse_revision`, `_refuse_unchanged` and `drafting_approval`, and the app's, `Surface.rendered` and `_revision`, ask it; `copied_renders` and `_first_image` list a group by `rendered_seeds`. A record with no image is no render.**
+
+- **Why:** the paid stage's resume check asks the image alone and spends the money, and the spec reads a record with no image as unrendered. The product writes a record beside its image and a delete removes both, so no folder it writes answers differently.
+- **Accepts:** review reads `OUTPUT_SUFFIX` as a constant, because it has a flow's name and no flow. `_holds_render`, `rendered_at`, `render_groups`' `str.isdigit` and `is_render` stand. A hand-made folder with a record and no image is refused a revision, and one with an image and no record is revised.
+- **Made by:** `0177`.
 
 ## Infrastructure
 
