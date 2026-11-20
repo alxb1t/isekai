@@ -37,7 +37,7 @@ from isekai.boundary.provision import entry_for
 from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import OUTPUTS, Run, rendered
+from isekai.foundation.run import Run, group_of, render_image, rendered
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR
 
 # A face's embedding, or None when no face is found; a file that does not decode
@@ -122,9 +122,7 @@ def _rows(
         _, group, (seed, *_) = groups[-1]
         rest = [s for _, g, found in groups for s in found if (g, s) != (group, seed)]
         try:
-            vector = embed(
-                run.directory(flow, OUTPUTS, f"{group:03d}", f"{seed}{suffix}")
-            )
+            vector = embed(render_image(group_of(run, flow, group), seed, suffix))
         except Refusal as undecodable:
             notes.append(
                 f"unreadable: {undecodable}; render it again or delete it, then this "

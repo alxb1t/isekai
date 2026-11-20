@@ -6,7 +6,7 @@
 
 - [x] 1 — The builders · moderate
 - [x] 2 — The stage · moderate
-- [ ] 3 — The other sites · moderate
+- [x] 3 — The other sites · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The builders
@@ -47,21 +47,21 @@
 
 ## 3 — The other sites
 
-- [ ] 3.1 Before editing `isekai/interface/compare_view.py`, pre-flight `_renders`' group line, the one site of the phase where `tools.mutate` finds a mutant ([D4](design.md#d4)).
+- [x] 3.1 Before editing `isekai/interface/compare_view.py`, pre-flight `_renders`' group line, the one site of the phase where `tools.mutate` finds a mutant ([D4](design.md#d4)).
   Verify: `uv run python -m tools.mutate isekai/interface/compare_view.py:140 --tests tests/test_compare.py` exits 0.
-- [ ] 3.2 In `isekai/pipeline/review.py`, add `render_image` to the import from `isekai.foundation.run` and set `draft_from`'s `image` to `render_image(group_of(run, source, approval), seed, OUTPUT_SUFFIX)`. `OUTPUT_SUFFIX` stays imported: `source_copy` reads it ([D2](design.md#d2)).
+- [x] 3.2 In `isekai/pipeline/review.py`, add `render_image` to the import from `isekai.foundation.run` and set `draft_from`'s `image` to `render_image(group_of(run, source, approval), seed, OUTPUT_SUFFIX)`. `OUTPUT_SUFFIX` stays imported: `source_copy` reads it ([D2](design.md#d2)).
   Verify: `git grep -n -F "{seed}{OUTPUT_SUFFIX}" -- isekai/pipeline/review.py` prints nothing.
-- [ ] 3.3 In `isekai/interface/compare_view.py`, import `group_of` and `render_image` from `isekai.foundation.run` and drop `OUTPUTS`. In `_renders`, set `directory = group_of(run, name, approved[-1])`, then `suffix = flow.output_suffix`; read `suffix` in the `rendered_seeds` call and link `render_image(directory, seed, suffix)`, which keeps the line under the length limit ([D2](design.md#d2)).
+- [x] 3.3 In `isekai/interface/compare_view.py`, import `group_of` and `render_image` from `isekai.foundation.run` and drop `OUTPUTS`. In `_renders`, set `directory = group_of(run, name, approved[-1])`, then `suffix = flow.output_suffix`; read `suffix` in the `rendered_seeds` call and link `render_image(directory, seed, suffix)`, which keeps the line under the length limit ([D2](design.md#d2)).
   Verify: `git grep -n -F -e "output_suffix}" -e ":03d}" -- isekai/interface/compare_view.py` prints nothing.
-- [ ] 3.4 In `evaluation/recall.py`, import `group_of` and `render_image` from `isekai.foundation.run`, drop `OUTPUTS`, and read the render as `render_image(group_of(run, flow, group), seed, suffix)` ([D2](design.md#d2)).
+- [x] 3.4 In `evaluation/recall.py`, import `group_of` and `render_image` from `isekai.foundation.run`, drop `OUTPUTS`, and read the render as `render_image(group_of(run, flow, group), seed, suffix)` ([D2](design.md#d2)).
   Verify: `git grep -n -F -e "{seed}{suffix}" -e ":03d}" -- evaluation/recall.py` prints nothing.
-- [ ] 3.5 In `evaluation/__main__.py`, make the same import and the same call, as [D2](design.md#d2) lists; `OUTPUTS` goes from its import.
+- [x] 3.5 In `evaluation/__main__.py`, make the same import and the same call, as [D2](design.md#d2) lists; `OUTPUTS` goes from its import.
   Verify: `git grep -n -F -e "{seed}{suffix}" -e ":03d}" -- evaluation/__main__.py` prints nothing.
-- [ ] 3.6 Run the pre-flight again over `_renders`' group and suffix lines, which the import edit moved down.
+- [x] 3.6 Run the pre-flight again over `_renders`' group and suffix lines, which the import edit moved down.
   Verify: `uv run python -m tools.mutate isekai/interface/compare_view.py:141-142 --tests tests/test_compare.py` exits 0.
-- [ ] 3.7 The tests of the sites stay green, the evaluator's own among them.
+- [x] 3.7 The tests of the sites stay green, the evaluator's own among them.
   Verify: `uv run pytest tests/test_evaluation_cli.py tests/test_recall_cli.py tests/test_compare.py tests/test_review.py tests/test_ui_api.py` exits 0.
-- [ ] 3.8 The standing mutants stay killed.
+- [x] 3.8 The standing mutants stay killed.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 
 ## 4 — The documents
