@@ -74,13 +74,15 @@ the approval neither lists nor rendered is a change, and so is a count above the
 #### Scenario: a seed with a record and no image is a change
 - **Key:** `review:revise:a-seed-with-a-record-and-no-image-is-a-change`
 - **Layers:** unit
-- **WHEN** approval is asked for a revision whose only difference is a seed its approval does not list and holds a record of, with no image
+- **WHEN** approval is asked for a revision whose only difference is a seed its approval does not list and holds a
+  record of, with no image
 - **THEN** it is approved
 
 #### Scenario: a seed with an image and no record is reproduced
 - **Key:** `review:revise:a-seed-with-an-image-and-no-record-is-reproduced`
 - **Layers:** unit
-- **WHEN** approval is asked for a revision whose only difference is a seed its approval does not list and holds an image of, with no record
+- **WHEN** approval is asked for a revision whose only difference is a seed its approval does not list and holds an
+  image of, with no record
 - **THEN** it is refused naming the images it would reproduce
 
 ### Requirement: A draft is written once from another flow's approval, holding its own fields, seeds and image
@@ -196,6 +198,7 @@ and image, so the source approval and its renders can go and leave it whole
 #### Scenario: an image with no record is drafted from
 - **Key:** `review:draft-from:an-image-without-its-record-is-drafted-from`
 - **Layers:** unit
-- **WHEN** a target is drafted from a source approval naming a seed whose image is in the approval's group and whose record is not
+- **WHEN** a target is drafted from a source approval naming a seed whose image is in the approval's group and whose
+  record is not
 - **THEN** the target's sources hold that image's bytes under the draft's number
 - **AND** its count is one and its seeds are the image's seed
