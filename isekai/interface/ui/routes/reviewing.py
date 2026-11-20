@@ -29,6 +29,7 @@ from isekai.foundation.run import (
     SHEETS,
     TAGS,
     WD14,
+    RenderRef,
     approval_of,
     group_of,
     is_rendered,
@@ -38,6 +39,7 @@ from isekai.foundation.run import (
     photo_of,
     sheet_of,
     stage_command,
+    version_of,
 )
 from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.ui import library
@@ -322,7 +324,7 @@ class ReviewRoutes:
                 if waiting is not None:
                     drafts[at]["waiting"] = waiting.name
                 else:
-                    located.append((at, image, (run, flow, version, seed)))
+                    located.append((at, image, RenderRef(run, flow, version, seed)))
             # Each other image the collection holds is answered by the review stage.
             checked = refuse_image_drafts(
                 target,
@@ -402,7 +404,7 @@ def _drafted(
     records: `review` copies the same damage.
     e.g. review/001.draft.json, sources/001.png there -> {"fields": …, "version": 1}
     """
-    version = int(path.name[:3])
+    version = version_of(path)
     if not source_copy(one.run, one.flow.id, version).is_file():
         return None
     require(path, body, "sheet", int, remedy)

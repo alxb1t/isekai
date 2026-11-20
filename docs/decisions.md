@@ -684,7 +684,15 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Accepts:** The other definitions of "rendered", `_holds_render` and `rendered_at`, stand. `render_groups` lists a folder by `str.isdigit`, where the layout's own test is three ASCII digits. The evaluator still imports `trackable` from the wiring.
 - **Made by:** `0174`, `0175`.
 
-### D70 · A seed is rendered when its image is a file in its group
+### D70 · A render is addressed by a named type, and a version is read off a name by one function
+
+**`isekai/foundation/layout.py` holds `RenderRef(run, flow, version, seed)` and `EditRef(run, flow, version, seed, k)`, `NamedTuple`s that `rendered_at` and `edit_at` return, and `version_of(path)`, which reads the version an artifact's name spells. A caller reads a ref by field name, and `run.py` re-exports the three. Review's `Revision` is `RenderRef`.**
+
+- **Why:** callers read the tuples by index, by slice and by star-unpack, and sliced a name's first characters to read a version. A `NamedTuple` is flat and ordered as the tuple was, so each caller that unpacks holds; a dataclass would break them. One function leaves the width of a name in one place.
+- **Accepts:** no signature takes a ref, and a ref has no method. A site that unpacks a ref whole stays. The folder climbs by `parents[n]`, the reads of `int(group.name)` and the server's check of a seed, a version or a bake's number in a path stay. `failures.py` still parses an error record's name whole. Reopen when a function's signature would take the run, flow, version and seed together.
+- **Made by:** `0176`.
+
+### D71 · A seed is rendered when its image is a file in its group
 
 **`is_rendered(group, seed, suffix)` in `isekai/foundation/layout.py`, re-exported by `isekai/foundation/run.py`, is true when `render_image(group, seed, suffix)` is a file. Review's sites, `refuse_revision`, `_refuse_unchanged` and `drafting_approval`, and the app's, `Surface.rendered` and `_revision`, ask it; `copied_renders` and `_first_image` list a group by `rendered_seeds`. A record with no image is no render.**
 

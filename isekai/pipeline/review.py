@@ -70,6 +70,7 @@ from isekai.foundation.run import (
     REVIEW,
     SHEETS,
     SOURCES,
+    RenderRef,
     Run,
     approval_of,
     approved_versions,
@@ -85,6 +86,7 @@ from isekai.foundation.run import (
     rendered_seeds,
     sheet_of,
     stage_command,
+    version_of,
     versions,
 )
 from isekai.shared.fields import validate
@@ -127,7 +129,7 @@ def current_draft(directory: Path) -> Path | None:
     """
     draft = latest_artifact(directory, DRAFT)
     approved = approved_versions(directory)
-    if draft is None or (approved and int(draft.name[:3]) <= approved[-1]):
+    if draft is None or (approved and version_of(draft) <= approved[-1]):
         return None
     return draft
 
@@ -408,7 +410,7 @@ def _waiting_number(run: Run, flow: str) -> int | None:
     e.g. review/002.draft.json -> 2; no draft waiting -> None
     """
     waiting = current_draft(run.directory(flow, REVIEW))
-    return None if waiting is None else int(waiting.name[:3])
+    return None if waiting is None else version_of(waiting)
 
 
 def _discarding(run: Run, flow: str) -> str:
@@ -432,7 +434,7 @@ def _edited(run: Run, flow: str, draft: Path, remedy: str) -> bool:
 
 
 # An image to revise: its run, its flow, its approval's number and its seed.
-Revision = tuple[Run, str, int, int]
+Revision = RenderRef
 
 
 def refuse_drafts(
@@ -519,7 +521,7 @@ def discard(run: Run, flow: str) -> Path:
     draft = current_draft(directory)
     if draft is not None:
         draft.unlink()
-        copy = source_copy(run, flow, int(draft.name[:3]))
+        copy = source_copy(run, flow, version_of(draft))
         if copy.is_file():
             copy.unlink()
             if not any(copy.parent.iterdir()):
@@ -628,7 +630,7 @@ def withdraw(run: Run, flow: str, version: int) -> list[Path]:
             approval_of(run, flow, one),
         ]
     if version == approved[-1] and (draft := current_draft(directory)) is not None:
-        made += [draft, source_copy(run, flow, int(draft.name[:3]))]
+        made += [draft, source_copy(run, flow, version_of(draft))]
     gone = [path.absolute() for path in made if path.exists()]
     for path in gone:
         if path.is_dir():
@@ -947,7 +949,7 @@ def approve(
             "edit it, then approve it"
         )
 
-    version = int(draft.name[:3])
+    version = version_of(draft)
     body = read(draft, DRAFT_FILE)
     # A hand-edited draft without a `fields` object holds no fields, so
     # validation refuses it naming every one it lacks.

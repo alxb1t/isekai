@@ -41,7 +41,7 @@ Non-goals are [the proposal's](proposal.md#not-in-this-change).
 | [D4](#d4) | `copied_renders` and `_first_image` list by `rendered_seeds` and `OUTPUT_SUFFIX`; `Surface.rendered` and `_revision` ask the rule | one listing and one rule, with no answer changed on a folder the product writes | leaving the hand-built tests in the app: they are the third spelling of the rule |
 | [D5](#d5) | `_holds_render`, `rendered_at`, `render_groups`' `str.isdigit`, review's `OUTPUT_SUFFIX` and `is_render` stand | a patch fixes behaviour only under an existing requirement, and none says what a stray folder answers | an `is_file` check in `is_render`: it makes a listing call the disk per name |
 | [D6](#d6) | the delta adds scenarios under the review requirements [D6](#d6) names and changes no requirement's text | the patch rule lets a scenario be added under an existing requirement | a new requirement: a patch never adds one |
-| [D7](#d7) | the next free decision, D70, records the rule and amends D69's *Accepts* | a home and a rule a later version reads | editing D69's body: it states the home, and D70 states the rule |
+| [D7](#d7) | the next free decision, D71, records the rule and amends D69's *Accepts* | a home and a rule a later version reads | editing D69's body: it states the home, and D71 states the rule |
 
 ### D1
 
@@ -90,7 +90,7 @@ A MODIFIED block replaces its requirement whole, so each requirement below carri
 
 ### D7
 
-D70 is the next free id at this base. It states that a seed is rendered when its image is a file in its group, in `layout.py`, asked by review and the app. D69's *Accepts* drops the sites this change switches and keeps `_holds_render`, `rendered_at` and `render_groups`' `str.isdigit`.
+D71 is the next free id once `the-render-ref` took D70. It states that a seed is rendered when its image is a file in its group, in `layout.py`, asked by review and the app. D69's *Accepts* drops the sites this change switches and keeps `_holds_render`, `rendered_at` and `render_groups`' `str.isdigit`.
 
 ## Tests
 
@@ -111,7 +111,7 @@ None.
 
 ## Risks / Trade-offs
 
-- `the-render-ref` is open beside this change and edits `layout.py`, `run.py` and `review.py`. A textual conflict is `mf-integrate`'s, and so is the decision id: both take D70 at this base.
+- `the-render-ref` is open beside this change and edits `layout.py`, `run.py` and `review.py`. A textual conflict is `mf-integrate`'s, and so is the decision id: both took D70 at this base, and `the-render-ref` keeps it, so this change's is D71.
 - A hand-made folder with a record and no image was revisable and is refused now, and one with an image and no record was refused and is revisable. Its operator is told as before: the refusal names the seed and the command that lists the rendered seeds.
 - `copied_renders` and `_first_image` listed any file whose stem is a seed, and list the flow's images alone now. The product writes no such file beside a render, so only a stray file in a hand-made folder is dropped.
 - `_first_image` keeps its answer on purpose: the least path, not the least seed. A change to the least seed is a change to a remedy's text and is not asked for.

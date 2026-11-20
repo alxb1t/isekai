@@ -14,7 +14,16 @@ its new digest.
 - `refuse_revision` and `_refuse_unchanged` in `isekai/pipeline/review.py` ask `is_rendered` in place of the record's path: a record with no image is refused, an image with no record is revised; cases in `tests/test_review.py` hold each (0177 D2).
 - `drafting_approval` in `isekai/pipeline/review.py` asks `is_rendered`: a draft is written from an image with no record, and a record with no image stays refused; a case in `tests/test_review.py` holds it (0177 D3).
 - `copied_renders` and `_first_image` list a group by `rendered_seeds`; `Surface.rendered` and `_revision` ask `is_rendered`; their answers and texts are as before (0177 D4).
-- D70 in `docs/decisions.md` records the rule, D69's *Accepts* drops the sites it switched, and `isekai/foundation/README.md` and `layout.py` name it (0177 D7).
+- D71 in `docs/decisions.md` records the rule, D69's *Accepts* drops the sites it switched, and `isekai/foundation/README.md` and `layout.py` name it (0177 D7).
+
+## [0.87.32] - 2026-11-21
+
+Gate: local 1m16s · CI not read under mf-ship · 0.87.31: local 1m33s · CI not read under mf-ship
+
+- `rendered_at` returns a `RenderRef` and `edit_at` an `EditRef`, `NamedTuple`s in `isekai/foundation/layout.py` that read by field name and unpack as the tuples did, re-exported by `run.py`; behaviour is as before (0176 D1).
+- The sites that indexed, sliced or star-unpacked a ref read `seed`, `k`, `run`, `flow` and `version` by field name; review's `Revision` is `RenderRef`, and the drafts route builds one; behaviour is as before (0176 D2).
+- `version_of` in `isekai/foundation/layout.py` reads the version an artifact's name spells, and the sites in `review.py`, `reviewing.py` and `refusal_for` that sliced a name call it; every answer is as before (0176 D3).
+- D70 in `docs/decisions.md` records the refs and `version_of`; the `foundation` docstring and README name them (0176 D6).
 
 ## [0.87.31] - 2026-11-20
 

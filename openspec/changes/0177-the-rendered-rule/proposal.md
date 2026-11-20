@@ -27,7 +27,7 @@ No folder the product writes differs between the record's answer and the image's
 - Requirement *A revision is a draft from the approval that made the image, its seed prefilled*: a scenario for each of a record with no image and an image with no record.
 - Requirement *Approval refuses a revision that would reproduce its images*: a scenario for each of a record with no image and an image with no record.
 - Requirement *A draft is written once from another flow's approval, holding its own fields, seeds and image*: a scenario for an image with no record.
-- D70 records the rule, and D69's *Accepts* drops the sites this change switches.
+- D71 records the rule, and D69's *Accepts* drops the sites this change switches.
 
 ## Capabilities
 

@@ -62,8 +62,8 @@ One rule says a seed is rendered when its image is a file in its group; each pha
 
 ## 5 — The documents
 
-- [x] 5.1 In `docs/decisions.md`, after D69, add `### D70 · A seed is rendered when its image is a file in its group` in D69's form, with *Made by* `0177`: the rule is `is_rendered` in `layout.py`, asked by review and the app ([D7](design.md#d7)).
-  Verify: `git grep -n -F "### D70" -- docs/decisions.md` prints one line.
+- [x] 5.1 In `docs/decisions.md`, after D69, add `### D71 · A seed is rendered when its image is a file in its group` in D69's form, with *Made by* `0177`: the rule is `is_rendered` in `layout.py`, asked by review and the app ([D7](design.md#d7)).
+  Verify: `git grep -n -F "### D71" -- docs/decisions.md` prints one line.
 - [x] 5.2 In D69's *Accepts*, drop its first sentence, the one that says the sites that test for a render still name its files by hand, and its last, `Reopen when one rule says a seed is rendered`. Rewrite its second to `The other definitions of "rendered", `_holds_render` and `rendered_at`, stand.`; keep the sentences on `render_groups` and `trackable`.
   Verify: `git grep -n -F "still name its files by hand" -- docs/decisions.md` prints nothing.
 - [x] 5.3 Add "the rule that a seed is rendered" to the `layout.py` row of `isekai/foundation/README.md` and to `layout.py`'s module docstring, after the names of a render's image and record, each on one line.
