@@ -10,10 +10,11 @@ Stdlib only, and on `python -m isekai`'s import graph.
 
 import os
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 from isekai.foundation.artifacts import SEED_RANGE, SIDECAR
+from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.names import (
     APPROVED,
     ARTIFACT,
@@ -171,6 +172,31 @@ def render_groups(run: Run, flow: str) -> list[Path]:
         group
         for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
         if group.is_dir() and group.name.isdigit()
+    ]
+
+
+def rendered(
+    run: Run, flows_dir: Path = FLOWS_DIR, flows: Sequence[str] | None = None
+) -> list[tuple[str, int, list[int]]]:
+    """Return each flow's rendered seeds, by approval, from filenames alone.
+
+    The outputs directory is the approval's number, not the sheet's. The flow
+    is loaded once, not once per approval, and it is loaded at all
+    because what counts as a produced output is the flow's answer rather than an
+    extension written in here.
+
+    **`flows_dir` is a parameter because `Wiring` has one**: reading the module
+    default instead would send `show` against an injected flows root to `flows/`
+    regardless of what was passed, and refuse naming a flow the caller never
+    asked about. `flows` narrows the listing to those of the run's flows, so a
+    caller can read one flow without loading the others; it is every flow the run
+    holds by default.
+    """
+    return [
+        (flow, int(group.name), rendered_seeds(group, suffix))
+        for flow in (run.flows if flows is None else flows)
+        for suffix in (load_flow(flow, flows_dir).output_suffix,)
+        for group in render_groups(run, flow)
     ]
 
 

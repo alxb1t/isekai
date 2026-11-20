@@ -80,7 +80,6 @@ from isekai.foundation.run import (
 )
 from isekai.foundation.run import is_render as is_render
 from isekai.foundation.run import is_sidecar as is_sidecar
-from isekai.foundation.run import sidecars as sidecars
 from isekai.shared.image import photo_resolution, strip_metadata
 
 STAGE_ASSEMBLE = "assemble"

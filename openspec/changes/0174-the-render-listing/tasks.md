@@ -5,7 +5,7 @@ Move the render group's listing, then `rendered`, into `isekai/foundation/layout
 ## Progress
 
 - [x] 1 — The listing · moderate
-- [ ] 2 — The importers · moderate
+- [x] 2 — The importers · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The listing
@@ -27,25 +27,25 @@ Move the render group's listing, then `rendered`, into `isekai/foundation/layout
 
 ## 2 — The importers
 
-- [ ] 2.1 In `isekai/foundation/layout.py`, add `Sequence` to the `collections.abc` import and `from isekai.foundation.flow import FLOWS_DIR, load_flow`. Cut the `def rendered(` block from `isekai/interface/run_view.py` and paste it after `render_groups`, unchanged, its default `FLOWS_DIR` included ([D1](design.md#d1)).
+- [x] 2.1 In `isekai/foundation/layout.py`, add `Sequence` to the `collections.abc` import and `from isekai.foundation.flow import FLOWS_DIR, load_flow`. Cut the `def rendered(` block from `isekai/interface/run_view.py` and paste it after `render_groups`, unchanged, its default `FLOWS_DIR` included ([D1](design.md#d1)).
   Verify: `git grep -n -F "def rendered(" -- isekai/foundation/layout.py` prints one line.
-- [ ] 2.2 In `isekai/foundation/run.py`, add `rendered` to the import from `isekai.foundation.layout` and `"rendered"` to `__all__`.
+- [x] 2.2 In `isekai/foundation/run.py`, add `rendered` to the import from `isekai.foundation.layout` and `"rendered"` to `__all__`.
   Verify: `git grep -n -F "\"rendered\"" -- isekai/foundation/run.py` prints one line.
-- [ ] 2.3 In `isekai/interface/run_view.py`, add `is_render`, `is_sidecar`, `render_groups` and `rendered` to the import from `isekai.foundation.run`. Delete the import from `isekai.pipeline.generate`, and `Sequence` from the `collections.abc` import, which nothing there reads now ([D4](design.md#d4), [D5](design.md#d5)).
+- [x] 2.3 In `isekai/interface/run_view.py`, add `is_render`, `is_sidecar`, `render_groups` and `rendered` to the import from `isekai.foundation.run`. Delete the import from `isekai.pipeline.generate`, and `Sequence` from the `collections.abc` import, which nothing there reads now ([D4](design.md#d4), [D5](design.md#d5)).
   Verify: `git grep -n -F "isekai.pipeline.generate" -- isekai/interface/run_view.py` prints nothing.
-- [ ] 2.4 In `isekai/interface/compare_view.py`, add `rendered_seeds` to the import from `isekai.foundation.run` and delete the import from `isekai.pipeline.generate` ([D5](design.md#d5)).
+- [x] 2.4 In `isekai/interface/compare_view.py`, add `rendered_seeds` to the import from `isekai.foundation.run` and delete the import from `isekai.pipeline.generate` ([D5](design.md#d5)).
   Verify: `git grep -n -F "isekai.pipeline.generate" -- isekai/interface/compare_view.py` prints nothing.
-- [ ] 2.5 In `isekai/interface/render.py`, add `render_groups`, `rendered_seeds` and `sidecars` to the import from `isekai.foundation.run`. Write the import from the stage as `from isekai.pipeline.generate import duration, shortfall` on one line, with no trailing comma ([D5](design.md#d5)).
+- [x] 2.5 In `isekai/interface/render.py`, add `render_groups`, `rendered_seeds` and `sidecars` to the import from `isekai.foundation.run`. Write the import from the stage as `from isekai.pipeline.generate import duration, shortfall` on one line, with no trailing comma ([D5](design.md#d5)).
   Verify: `git grep -n -F "from isekai.pipeline.generate import duration, shortfall" -- isekai/interface/render.py` prints one line.
-- [ ] 2.6 In `isekai/interface/ui/library.py`, add `is_render` and `rendered_seeds` to the import from `isekai.foundation.run`. Write the import from the stage as `from isekai.pipeline.generate import lacks` ([D5](design.md#d5)).
+- [x] 2.6 In `isekai/interface/ui/library.py`, add `is_render` and `rendered_seeds` to the import from `isekai.foundation.run`. Write the import from the stage as `from isekai.pipeline.generate import lacks` ([D5](design.md#d5)).
   Verify: `git grep -n -F "from isekai.pipeline.generate import lacks" -- isekai/interface/ui/library.py` prints one line.
-- [ ] 2.7 In `isekai/pipeline/generate.py`, delete the line `from isekai.foundation.run import sidecars as sidecars`, which `render.py` no longer reads from the stage ([D4](design.md#d4)).
+- [x] 2.7 In `isekai/pipeline/generate.py`, delete the line `from isekai.foundation.run import sidecars as sidecars`, which `render.py` no longer reads from the stage ([D4](design.md#d4)).
   Verify: `git grep -n -F "sidecars as sidecars" -- isekai/pipeline/generate.py` prints nothing.
-- [ ] 2.8 In `evaluation/__main__.py`, write the import from `isekai.foundation.run` as `OUTPUTS, Run, rendered` and delete `from isekai.interface.run_view import rendered`. In `evaluation/recall.py`, add `rendered` to the import from `isekai.foundation.run` and delete the same line ([D5](design.md#d5), [D6](design.md#d6)).
+- [x] 2.8 In `evaluation/__main__.py`, write the import from `isekai.foundation.run` as `OUTPUTS, Run, rendered` and delete `from isekai.interface.run_view import rendered`. In `evaluation/recall.py`, add `rendered` to the import from `isekai.foundation.run` and delete the same line ([D5](design.md#d5), [D6](design.md#d6)).
   Verify: `git grep -n -F "isekai.interface.run_view" -- evaluation` prints nothing.
-- [ ] 2.9 Run `uv run python -m tools.derive_imported_by` again, which rewrites the *Imported by* tables of the three READMEs.
+- [x] 2.9 Run `uv run python -m tools.derive_imported_by` again, which rewrites the *Imported by* tables of the three READMEs.
   Verify: `uv run pytest tests/test_docs.py` passes.
-- [ ] 2.10 **HALT CHECK** The suites that read the listing pass with no test edited; a red one names a patch or an import the move strands, and the plan is wrong ([D4](design.md#d4)).
+- [x] 2.10 **HALT CHECK** The suites that read the listing pass with no test edited; a red one names a patch or an import the move strands, and the plan is wrong ([D4](design.md#d4)).
   Verify: `uv run pytest tests/test_generate.py tests/test_resume.py tests/test_edit_session.py tests/test_run_view.py tests/test_compare.py tests/test_ui_library.py tests/test_render.py tests/test_evaluation_cli.py tests/test_recall_cli.py tests/test_pipeline_cli.py tests/test_layers.py tests/test_ratchets.py tests/test_docs.py tests/test_spec_bindings.py` passes.
 
 ## 3 — The documents
