@@ -676,6 +676,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Accepts:** `ui/library.py` stays a listed long file, at its row. `pipeline/importing.py` and `interface/verbs/library.py` keep their hand copy of `is_collection`'s test. `isekai/README.md`'s file list names no `foundation/library.py`, and no test holds that list. The CLI's imports of the UI package stay. Reopen when the base's seams lift them.
 - **Made by:** `0173`.
 
+### D69 · A render group's files are listed in foundation/layout.py, and a module above the pipeline reads the listing from the foundation
+
+**`isekai/foundation/layout.py` lists a render group: `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups`, and `rendered`, which lists each flow's seeds by approval. A module outside the foundation reads them from `isekai.foundation.run`, never from the paid stage. The stage keeps what reads an approval or deletes: `lacks`, `shortfall`, `duration`, `source_seeds` and `discard_render`.**
+
+- **Why:** `run_view.py`, `compare_view.py`, `render.py` and `ui/library.py` imported the paid stage to list a folder, and `review` may not import it. The names read foundation names alone. A move that re-binds changes no test.
+- **Accepts:** a render's image and record are still named by hand where they are read. The other definitions of "rendered", in `review.py`, `surface.py` and `rendered_at`, stand. `render_groups` lists a folder by `str.isdigit`, where the layout's own test is three ASCII digits. The evaluator still imports `trackable` from the wiring. Reopen when a module builds a render's file name from the layout.
+- **Made by:** `0174`.
+
 ## Infrastructure
 
 ### D26 · Renders run on a rented GPU

@@ -70,12 +70,14 @@ from isekai.foundation.run import (
     edit_files,
     edit_numbers,
     group_of,
+    is_render,
     latest_artifact,
     photo_of,
+    rendered_seeds,
     runs_in,
 )
 from isekai.interface.wiring import trackable
-from isekai.pipeline.generate import is_render, lacks, rendered_seeds
+from isekai.pipeline.generate import lacks
 from isekai.pipeline.importing import UI_CONFIG
 from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state

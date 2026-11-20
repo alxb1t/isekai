@@ -12,7 +12,7 @@ endpoint or a score; everything here is imported by something that does.
 | `run.py` | the front of the run directory: it re-exports its siblings' names and holds the roots, `open_run` and `find_run`, `rendered_at`, the command text with `photo_of`, the migration state, `refusal_for`, `instructions_record` and `constant_record` |
 | `names.py` | a run's id and the names of its layout |
 | `rundir.py` | `Run`, one photograph's directory and its frame, `assign`, and `runs_in` and `run_at`, which folders are runs |
-| `layout.py` | numbering and completion, the seeds and the edit files |
+| `layout.py` | numbering and completion, the seeds, a render group's listing and the edit files |
 | `failures.py` | the failure shape the stages share: `Kind`, the budgets, the attempts a directory records, `across` and `StageFailure`, here and not in `refusal.py` because `refusal.py` imports nothing by design and the class needs `Kind` |
 | `migrate.py` | `migrate(run)`: copies a run's per-flow caption and tag lists into `photo/`, each kind whole or not at all, never deleting a source |
 | `flow.py` | reads and validates a frozen flow directory — flat, its files named rather than counted — lists what is tracked, and owns the `Workflow` graph type, the `Schema` type, its reader and prompt assembly |
@@ -34,7 +34,7 @@ endpoint or a score; everything here is imported by something that does.
 | `rundir.py` | `failures.py`, `layout.py`, `run.py` | — |
 | `layout.py` | `run.py` | — |
 | `failures.py` | `run.py` | — |
-| `flow.py` | `boundary/comfy/client.py`, `boundary/comfy/contract.py`, `boundary/comfy/prompt.py`, `edit.py`, `interface/cli.py`, `interface/compare_view.py`, `interface/drafting.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/library.py`, `interface/ui/routes/images.py`, `interface/ui/routes/rendering.py`, `interface/ui/surface.py`, `interface/verbs/common.py`, `interface/verbs/drafts.py`, `interface/verbs/generate.py`, `interface/verbs/prepare.py`, `interface/wiring.py`, `pipeline/edit.py`, `pipeline/generate.py`, `pipeline/review.py`, `pipeline/sheet.py`, `shared/field_map.py`, `shared/fields.py` | `evaluation/__main__.py`, `evaluation/recall.py` |
+| `flow.py` | `boundary/comfy/client.py`, `boundary/comfy/contract.py`, `boundary/comfy/prompt.py`, `edit.py`, `layout.py`, `interface/cli.py`, `interface/compare_view.py`, `interface/drafting.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/library.py`, `interface/ui/routes/images.py`, `interface/ui/routes/rendering.py`, `interface/ui/surface.py`, `interface/verbs/common.py`, `interface/verbs/drafts.py`, `interface/verbs/generate.py`, `interface/verbs/prepare.py`, `interface/wiring.py`, `pipeline/edit.py`, `pipeline/generate.py`, `pipeline/review.py`, `pipeline/sheet.py`, `shared/field_map.py`, `shared/fields.py` | `evaluation/__main__.py`, `evaluation/recall.py` |
 | `migrate.py` | `interface/cli.py` | — |
 | `caption_config.py` | `interface/cli.py`, `interface/wiring.py` | — |
 | `config.py` | `caption_config.py`, `pipeline/tattoos.py`, `shared/ink.py` | — |

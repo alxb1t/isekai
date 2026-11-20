@@ -61,18 +61,15 @@ from isekai.foundation.run import (
     Run,
     approved_versions,
     latest_artifact,
+    render_groups,
+    rendered_seeds,
     runs_in,
+    sidecars,
 )
 from isekai.interface.compare_view import COLLECTION_PHOTOS
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.edit import duration_of, pending, records
-from isekai.pipeline.generate import (
-    duration,
-    render_groups,
-    rendered_seeds,
-    shortfall,
-    sidecars,
-)
+from isekai.pipeline.generate import duration, shortfall
 from isekai.pipeline.review import current_draft
 
 # The port `gpunit.toml` forwards, on both sides; a test holds the two equal.

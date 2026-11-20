@@ -1,19 +1,20 @@
-"""A run's numbering and completion, its seeds and its edit files.
+"""A run's numbering and completion, its seeds, its render groups and its edit files.
 
-The version numbers a directory holds and the one it takes next, the paths of a
-flow's sheets and approvals, the seeds a render's file is named for, and the files
-an edit writes beside its source. `run.py` re-exports each name; a module outside
-the foundation imports them from there.
+The version numbers a directory holds and the one it takes next, the paths of a flow's
+sheets and approvals, the seeds a render's file is named for, the listing of a flow's
+render groups and their seeds, and the files an edit writes beside its source. `run.py`
+re-exports each name; a module outside the foundation imports them from there (D69).
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
 
 import os
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 
-from isekai.foundation.artifacts import SEED_RANGE
+from isekai.foundation.artifacts import SEED_RANGE, SIDECAR
+from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.names import (
     APPROVED,
     ARTIFACT,
@@ -127,6 +128,76 @@ def _laid_out(path: Path) -> bool:
         and group.parent.name == OUTPUTS
         and (group.parent.parent.parent / FRAME_NAME).is_file()
     )
+
+
+def is_render(path: Path, suffix: str) -> bool:
+    """Return whether `path` is a render a flow producing `suffix` wrote."""
+    return path.suffix == suffix and is_seed(path.stem)
+
+
+def is_sidecar(path: Path) -> bool:
+    """Return whether `path` is a render's sidecar."""
+    return path.name.endswith(SIDECAR) and is_seed(path.name.removesuffix(SIDECAR))
+
+
+def rendered_seeds(directory: Path, suffix: str) -> list[int]:
+    """Return the seeds already produced into `directory`, from filenames alone.
+
+    `suffix` is what the flow says it produces, so the predicate names no format
+    of its own. Every "is this done?" check here is a directory listing, and an
+    extension written into this one would report the finished work of a flow whose
+    output is not a still image as missing and render it again, on the one stage
+    that costs money on every pass.
+    """
+    if not directory.is_dir():
+        return []
+    return sorted(
+        int(path.stem) for path in directory.iterdir() if is_render(path, suffix)
+    )
+
+
+def sidecars(run: Run, flow: str) -> list[Path]:
+    """Return every render sidecar of `flow` in `run`, from listings alone."""
+    return [
+        path
+        for group in render_groups(run, flow)
+        for path in sorted(group.iterdir())
+        if is_sidecar(path)
+    ]
+
+
+def render_groups(run: Run, flow: str) -> list[Path]:
+    """Return a flow's render groups: the outputs directories named by digits."""
+    return [
+        group
+        for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
+        if group.is_dir() and group.name.isdigit()
+    ]
+
+
+def rendered(
+    run: Run, flows_dir: Path = FLOWS_DIR, flows: Sequence[str] | None = None
+) -> list[tuple[str, int, list[int]]]:
+    """Return each flow's rendered seeds, by approval, from filenames alone.
+
+    The outputs directory is the approval's number, not the sheet's. The flow
+    is loaded once, not once per approval, and it is loaded at all
+    because what counts as a produced output is the flow's answer rather than an
+    extension written in here.
+
+    **`flows_dir` is a parameter because `Wiring` has one**: reading the module
+    default instead would send `show` against an injected flows root to `flows/`
+    regardless of what was passed, and refuse naming a flow the caller never
+    asked about. `flows` narrows the listing to those of the run's flows, so a
+    caller can read one flow without loading the others; it is every flow the run
+    holds by default.
+    """
+    return [
+        (flow, int(group.name), rendered_seeds(group, suffix))
+        for flow in (run.flows if flows is None else flows)
+        for suffix in (load_flow(flow, flows_dir).output_suffix,)
+        for group in render_groups(run, flow)
+    ]
 
 
 # An edit's image is `<seed>.edit-<k>.png`: the seed of the render it descends

@@ -39,8 +39,8 @@ from isekai.foundation.run import (
     REVIEW,
     Run,
     artifact_name,
+    rendered,
 )
-from isekai.interface.run_view import rendered
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, normalise
 
 Read = Callable[[Path], set[str]]

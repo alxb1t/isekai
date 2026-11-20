@@ -32,9 +32,9 @@ from isekai.foundation.run import (
     artifact_name,
     latest_artifact,
     photo_of,
+    rendered_seeds,
     runs_in,
 )
-from isekai.pipeline.generate import rendered_seeds
 
 PAGE_NAME = "compare.html"
 

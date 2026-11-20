@@ -37,8 +37,7 @@ from isekai.boundary.provision import entry_for
 from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import OUTPUTS, Run
-from isekai.interface.run_view import rendered
+from isekai.foundation.run import OUTPUTS, Run, rendered
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR
 
 # A face's embedding, or None when no face is found; a file that does not decode
