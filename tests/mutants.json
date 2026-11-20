@@ -113,7 +113,7 @@
   },
   {
     "finding": "FN-9",
-    "path": "isekai/pipeline/generate.py",
+    "path": "isekai/foundation/layout.py",
     "find": "    return path.suffix == suffix and is_seed(path.stem)",
     "replace": "    return path.suffix in (suffix, \".png\") and is_seed(path.stem)",
     "tests": ["tests/test_resume.py"],

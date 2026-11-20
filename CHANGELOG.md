@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups` move from the paid stage to `isekai/foundation/layout.py`, re-exported by `run.py` and still bound in `generate.py`; behaviour is as before (0174 D1, D3, D4).
+
 ## [0.87.29] - 2026-11-19
 
 Gate: local 1m21s · CI not read under mf-ship · 0.87.28: local 1m21s · CI not read under mf-ship

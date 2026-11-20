@@ -4,25 +4,25 @@ Move the render group's listing, then `rendered`, into `isekai/foundation/layout
 
 ## Progress
 
-- [ ] 1 — The listing · moderate
+- [x] 1 — The listing · moderate
 - [ ] 2 — The importers · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The listing
 
-- [ ] 1.1 **HALT CHECK** The flows' module imports the refusal alone of the foundation, so `layout.py` may import it without a cycle ([D1](design.md#d1)).
+- [x] 1.1 **HALT CHECK** The flows' module imports the refusal alone of the foundation, so `layout.py` may import it without a cycle ([D1](design.md#d1)).
   Verify: `git grep -n -E "^from isekai" -- isekai/foundation/flow.py` prints one line, the import of `Refusal`.
-- [ ] 1.2 In `isekai/foundation/layout.py`, add `SIDECAR` to the import from `isekai.foundation.artifacts`. Cut `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups` from the paid stage and paste them after `_laid_out`, each body, signature and docstring unchanged ([D1](design.md#d1), [D3](design.md#d3)).
+- [x] 1.2 In `isekai/foundation/layout.py`, add `SIDECAR` to the import from `isekai.foundation.artifacts`. Cut `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups` from the paid stage and paste them after `_laid_out`, each body, signature and docstring unchanged ([D1](design.md#d1), [D3](design.md#d3)).
   Verify: `git grep -n -e "^def is_render" -e "^def is_sidecar" -e "^def rendered_seeds" -e "^def sidecars" -e "^def render_groups" -- isekai/foundation/layout.py` prints five lines.
-- [ ] 1.3 In `isekai/foundation/run.py`, add `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups` to the import from `isekai.foundation.layout`, and `"is_render"`, `"is_sidecar"`, `"rendered_seeds"`, `"sidecars"` and `"render_groups"` to `__all__`, each in the order the file keeps ([D1](design.md#d1)).
+- [x] 1.3 In `isekai/foundation/run.py`, add `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups` to the import from `isekai.foundation.layout`, and `"is_render"`, `"is_sidecar"`, `"rendered_seeds"`, `"sidecars"` and `"render_groups"` to `__all__`, each in the order the file keeps ([D1](design.md#d1)).
   Verify: `git grep -n -F "\"render_groups\"" -- isekai/foundation/run.py` prints one line.
-- [ ] 1.4 In `isekai/pipeline/generate.py`, add `render_groups` and `rendered_seeds` to the import from `isekai.foundation.run`. Bind `is_render`, `is_sidecar` and `sidecars` as `from isekai.foundation.run import is_render as is_render`, one line each. Remove `OUTPUTS` and `is_seed` from that import, which nothing there reads now ([D4](design.md#d4)).
+- [x] 1.4 In `isekai/pipeline/generate.py`, add `render_groups` and `rendered_seeds` to the import from `isekai.foundation.run`. Bind `is_render`, `is_sidecar` and `sidecars` as `from isekai.foundation.run import is_render as is_render`, one line each. Remove `OUTPUTS` and `is_seed` from that import, which nothing there reads now ([D4](design.md#d4)).
   Verify: `git grep -n -e "^def is_render" -e "^def is_sidecar" -e "^def rendered_seeds" -e "^def sidecars" -e "^def render_groups" -- isekai/pipeline/generate.py` prints nothing.
-- [ ] 1.5 In `tests/mutants.json`, set the `path` of `FN-9` to `isekai/foundation/layout.py`; leave its `find` and `replace` as they are ([D7](design.md#d7)).
+- [x] 1.5 In `tests/mutants.json`, set the `path` of `FN-9` to `isekai/foundation/layout.py`; leave its `find` and `replace` as they are ([D7](design.md#d7)).
   Verify: `git grep -n -F "isekai/foundation/layout.py" -- tests/mutants.json` prints one line.
-- [ ] 1.6 Run `uv run python -m tools.derive_imported_by`, which rewrites the *Imported by* tables of `isekai/foundation/README.md`, `isekai/interface/README.md` and `isekai/pipeline/README.md`.
+- [x] 1.6 Run `uv run python -m tools.derive_imported_by`, which rewrites the *Imported by* tables of `isekai/foundation/README.md`, `isekai/interface/README.md` and `isekai/pipeline/README.md`.
   Verify: `uv run pytest tests/test_docs.py` passes.
-- [ ] 1.7 Hold the move with the standing mutants, run once and over no line range ([D7](design.md#d7)).
+- [x] 1.7 Hold the move with the standing mutants, run once and over no line range ([D7](design.md#d7)).
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
 
 ## 2 — The importers

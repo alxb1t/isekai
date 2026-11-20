@@ -13,7 +13,7 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
-from isekai.foundation.artifacts import SEED_RANGE
+from isekai.foundation.artifacts import SEED_RANGE, SIDECAR
 from isekai.foundation.names import (
     APPROVED,
     ARTIFACT,
@@ -127,6 +127,51 @@ def _laid_out(path: Path) -> bool:
         and group.parent.name == OUTPUTS
         and (group.parent.parent.parent / FRAME_NAME).is_file()
     )
+
+
+def is_render(path: Path, suffix: str) -> bool:
+    """Return whether `path` is a render a flow producing `suffix` wrote."""
+    return path.suffix == suffix and is_seed(path.stem)
+
+
+def is_sidecar(path: Path) -> bool:
+    """Return whether `path` is a render's sidecar."""
+    return path.name.endswith(SIDECAR) and is_seed(path.name.removesuffix(SIDECAR))
+
+
+def rendered_seeds(directory: Path, suffix: str) -> list[int]:
+    """Return the seeds already produced into `directory`, from filenames alone.
+
+    `suffix` is what the flow says it produces, so the predicate names no format
+    of its own. Every "is this done?" check here is a directory listing, and an
+    extension written into this one would report the finished work of a flow whose
+    output is not a still image as missing and render it again, on the one stage
+    that costs money on every pass.
+    """
+    if not directory.is_dir():
+        return []
+    return sorted(
+        int(path.stem) for path in directory.iterdir() if is_render(path, suffix)
+    )
+
+
+def sidecars(run: Run, flow: str) -> list[Path]:
+    """Return every render sidecar of `flow` in `run`, from listings alone."""
+    return [
+        path
+        for group in render_groups(run, flow)
+        for path in sorted(group.iterdir())
+        if is_sidecar(path)
+    ]
+
+
+def render_groups(run: Run, flow: str) -> list[Path]:
+    """Return a flow's render groups: the outputs directories named by digits."""
+    return [
+        group
+        for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
+        if group.is_dir() and group.name.isdigit()
+    ]
 
 
 # An edit's image is `<seed>.edit-<k>.png`: the seed of the render it descends

@@ -60,7 +60,6 @@ from isekai.foundation.flow import (
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
-    OUTPUTS,
     PROMPTS,
     REVIEW,
     Run,
@@ -73,11 +72,15 @@ from isekai.foundation.run import (
     edit_numbers,
     failures_alone,
     group_of,
-    is_seed,
     record_failure,
+    render_groups,
     rendered_at,
+    rendered_seeds,
     stage_command,
 )
+from isekai.foundation.run import is_render as is_render
+from isekai.foundation.run import is_sidecar as is_sidecar
+from isekai.foundation.run import sidecars as sidecars
 from isekai.shared.image import photo_resolution, strip_metadata
 
 STAGE_ASSEMBLE = "assemble"
@@ -301,32 +304,6 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
     return assembled, refused + across(ready, assemble_one)
 
 
-def is_render(path: Path, suffix: str) -> bool:
-    """Return whether `path` is a render a flow producing `suffix` wrote."""
-    return path.suffix == suffix and is_seed(path.stem)
-
-
-def is_sidecar(path: Path) -> bool:
-    """Return whether `path` is a render's sidecar."""
-    return path.name.endswith(SIDECAR) and is_seed(path.name.removesuffix(SIDECAR))
-
-
-def rendered_seeds(directory: Path, suffix: str) -> list[int]:
-    """Return the seeds already produced into `directory`, from filenames alone.
-
-    `suffix` is what the flow says it produces, so the predicate names no format
-    of its own. Every "is this done?" check here is a directory listing, and an
-    extension written into this one would report the finished work of a flow whose
-    output is not a still image as missing and render it again, on the one stage
-    that costs money on every pass.
-    """
-    if not directory.is_dir():
-        return []
-    return sorted(
-        int(path.stem) for path in directory.iterdir() if is_render(path, suffix)
-    )
-
-
 def shortfall(run: Run, flow: Flow) -> int:
     """Return how many images `flow`'s newest approval still lacks of its count.
 
@@ -349,31 +326,12 @@ def lacks(approval: Path, body: Mapping[str, object], rendered: int) -> int:
     return max(renders_of(approval, body, _repair(approval))["count"] - rendered, 0)
 
 
-def sidecars(run: Run, flow: str) -> list[Path]:
-    """Return every render sidecar of `flow` in `run`, from listings alone."""
-    return [
-        path
-        for group in render_groups(run, flow)
-        for path in sorted(group.iterdir())
-        if is_sidecar(path)
-    ]
-
-
 def duration(sidecar: Path) -> float | None:
     """Return the seconds a render records, or None for one written before durations."""
     seconds = read(sidecar, RENDER_FILE).get("duration")
     if isinstance(seconds, int | float) and not isinstance(seconds, bool):
         return float(seconds)
     return None
-
-
-def render_groups(run: Run, flow: str) -> list[Path]:
-    """Return a flow's render groups: the outputs directories named by digits."""
-    return [
-        group
-        for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
-        if group.is_dir() and group.name.isdigit()
-    ]
 
 
 def discard_render(image: Path) -> list[Path]:
