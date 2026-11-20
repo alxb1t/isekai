@@ -313,6 +313,19 @@ seeds, so an edited seed never loses it.
 - **WHEN** an image is revised while its flow's waiting draft equals its sheet
 - **THEN** the revision is written at that draft's number
 
+#### Scenario: a seed with a record and no image is refused
+- **Key:** `review:revise:a-record-without-its-image-is-refused`
+- **Layers:** unit
+- **WHEN** a seed is revised whose record is in its approval's group and whose image is not
+- **THEN** the revision is refused naming that seed
+- **AND** no file is written
+
+#### Scenario: a seed with an image and no record is revised
+- **Key:** `review:revise:an-image-without-its-record-is-revised`
+- **Layers:** unit
+- **WHEN** a seed is revised whose image is in its approval's group and whose record is not
+- **THEN** the revision is written with a count of one and that seed listed
+
 ### Requirement: Approval refuses a revision that would reproduce its images
 
 The system SHALL refuse approval of a draft copied from an approval when its fields are that approval's and every
@@ -332,6 +345,20 @@ the approval neither lists nor rendered is a change, and so is a count above the
 - **Layers:** unit
 - **WHEN** approval is asked for a revision whose only difference is a seed its approval neither lists nor rendered
 - **THEN** it is approved
+
+#### Scenario: a seed with a record and no image is a change
+- **Key:** `review:revise:a-seed-with-a-record-and-no-image-is-a-change`
+- **Layers:** unit
+- **WHEN** approval is asked for a revision whose only difference is a seed its approval does not list and holds a
+  record of, with no image
+- **THEN** it is approved
+
+#### Scenario: a seed with an image and no record is reproduced
+- **Key:** `review:revise:a-seed-with-an-image-and-no-record-is-reproduced`
+- **Layers:** unit
+- **WHEN** approval is asked for a revision whose only difference is a seed its approval does not list and holds an
+  image of, with no record
+- **THEN** it is refused naming the images it would reproduce
 
 ### Requirement: An approval is copied once from another flow's approval, its seeds with it
 
@@ -641,3 +668,11 @@ and image, so the source approval and its renders can go and leave it whole
 - **Layers:** unit
 - **WHEN** a target is drafted from a source approval naming one of its images
 - **THEN** its count is one and its seeds are the image's seed
+
+#### Scenario: an image with no record is drafted from
+- **Key:** `review:draft-from:an-image-without-its-record-is-drafted-from`
+- **Layers:** unit
+- **WHEN** a target is drafted from a source approval naming a seed whose image is in the approval's group and whose
+  record is not
+- **THEN** the target's sources hold that image's bytes under the draft's number
+- **AND** its count is one and its seeds are the image's seed
