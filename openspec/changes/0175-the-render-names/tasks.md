@@ -18,7 +18,7 @@
 - [x] 1.3 In `tests/test_generate.py`, after those two, add `test_a_built_name_is_what_the_listing_reads`, marked the same way: `is_render(render_image(tmp_path, 42, ".png"), ".png")` and `is_sidecar(render_record(tmp_path, 42))` both hold.
   Verify: `git grep -q -F "test_a_built_name_is_what_the_listing_reads" -- tests/test_generate.py` exits 0.
 - [x] 1.4 The cases fail before the builders exist.
-  Verify: `uv run pytest tests/test_generate.py -k "test_render_image or test_render_record or test_a_built_name"` exits 2, an `ImportError` at collection.
+  Verify: `uv run pytest tests/test_generate.py -k "test_render_image or test_render_record or test_a_built_name"` exits 2, an ImportError at collection, before 1.5 and 1.6 build the names.
 - [x] 1.5 In `isekai/foundation/layout.py`, after `is_sidecar`, add `render_image` and `render_record` as [D1](design.md#d1) writes them, each with its docstring.
   Verify: `git grep -n -e "^def render_image" -e "^def render_record" -- isekai/foundation/layout.py` prints two lines.
 - [x] 1.6 In `isekai/foundation/run.py`, import `render_image` and `render_record` from `isekai.foundation.layout` and add both to `__all__`, after `render_groups` and before `rendered`.
@@ -29,7 +29,7 @@
 ## 2 — The stage
 
 - [x] 2.1 Before editing `isekai/pipeline/generate.py`, pre-flight `image_of`'s return, the one site of the stage where `tools.mutate` finds a mutant; a survivor is handled as [D4](design.md#d4) says.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/generate.py:190 --tests tests/test_generate.py tests/test_ui_api.py` exits 0.
+  Verify: `uv run python -m tools.mutate isekai/pipeline/generate.py:190-191 --tests tests/test_generate.py tests/test_ui_api.py` exits 0.
 - [x] 2.2 In `isekai/pipeline/generate.py`, add `render_image` and `render_record` to the import from `isekai.foundation.run`.
   Verify: `git grep -n -e "^    render_image,$" -e "^    render_record,$" -- isekai/pipeline/generate.py` prints two lines.
 - [x] 2.3 In `image_of`, return `render_image(group_of(run, flow.id, version), seed, flow.output_suffix)`. In `discard_render`, set `record = render_record(group, seed)`; `seed` is read above by `*_, seed = rendered_at(image)` ([D2](design.md#d2)).
@@ -48,7 +48,7 @@
 ## 3 — The other sites
 
 - [x] 3.1 Before editing `isekai/interface/compare_view.py`, pre-flight `_renders`' group line, the one site of the phase where `tools.mutate` finds a mutant ([D4](design.md#d4)).
-  Verify: `uv run python -m tools.mutate isekai/interface/compare_view.py:140 --tests tests/test_compare.py` exits 0.
+  Verify: `uv run python -m tools.mutate isekai/interface/compare_view.py:140-141 --tests tests/test_compare.py` exits 0.
 - [x] 3.2 In `isekai/pipeline/review.py`, add `render_image` to the import from `isekai.foundation.run` and set `draft_from`'s `image` to `render_image(group_of(run, source, approval), seed, OUTPUT_SUFFIX)`. `OUTPUT_SUFFIX` stays imported: `source_copy` reads it ([D2](design.md#d2)).
   Verify: `git grep -n -F "{seed}{OUTPUT_SUFFIX}" -- isekai/pipeline/review.py` prints nothing.
 - [x] 3.3 In `isekai/interface/compare_view.py`, import `group_of` and `render_image` from `isekai.foundation.run` and drop `OUTPUTS`. In `_renders`, set `directory = group_of(run, name, approved[-1])`, then `suffix = flow.output_suffix`; read `suffix` in the `rendered_seeds` call and link `render_image(directory, seed, suffix)`, which keeps the line under the length limit ([D2](design.md#d2)).
