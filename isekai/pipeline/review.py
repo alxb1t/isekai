@@ -45,7 +45,6 @@ from isekai.foundation.artifacts import (
     DRAFT_FILE,
     ONE_RENDER,
     SHEET_FILE,
-    SIDECAR,
     ApprovedProducer,
     DraftImage,
     Renders,
@@ -79,11 +78,12 @@ from isekai.foundation.run import (
     attempts,
     failures_alone,
     group_of,
-    is_seed,
+    is_rendered,
     latest,
     latest_artifact,
     next_version,
     render_image,
+    rendered_seeds,
     sheet_of,
     stage_command,
     version_of,
@@ -328,9 +328,7 @@ def drafting_approval(
         )
     _approval(run, source, approval, f"draft {flow} again")
     group = group_of(run, source, approval)
-    if seed is not None and not all(
-        (group / f"{seed}{suffix}").is_file() for suffix in (SIDECAR, OUTPUT_SUFFIX)
-    ):
+    if seed is not None and not is_rendered(group, seed, OUTPUT_SUFFIX):
         raise Refusal(
             f"{run.id}: flow {source} rendered no seed {seed} under "
             f"{artifact_name(approval, APPROVED)}; run `{stage_command(run, 'show')}` "
@@ -365,9 +363,13 @@ def _held_way(run: Run, flow: str, source: str, held: Sequence[int]) -> str:
 
 def _first_image(group: Path) -> Path | None:
     """Return the first image in a render group, or None."""
-    if not group.is_dir():
-        return None
-    return min((path for path in group.iterdir() if is_seed(path.stem)), default=None)
+    return min(
+        (
+            render_image(group, seed, OUTPUT_SUFFIX)
+            for seed in rendered_seeds(group, OUTPUT_SUFFIX)
+        ),
+        default=None,
+    )
 
 
 def source_copy(run: Run, flow: str, version: int) -> Path:
@@ -499,7 +501,7 @@ def refuse_revision(
             f"{run.id}: flow {flow} has no {copied.name} to revise from; restore "
             f"{copied}, then {again}"
         )
-    if not (group_of(run, flow, version) / f"{seed}{SIDECAR}").is_file():
+    if not is_rendered(group_of(run, flow, version), seed, OUTPUT_SUFFIX):
         raise Refusal(
             f"{run.id}: flow {flow} rendered no seed {seed} under {copied.name}; "
             f"run `{stage_command(run, 'show')}` to list the seeds its renders "
@@ -1157,7 +1159,7 @@ def _refuse_unchanged(
     seeds = renders["seeds"]
     group = group_of(run, flow, version)
     made = set(renders_of(origin, body, remedy)["seeds"]) | {
-        seed for seed in seeds if (group / f"{seed}{SIDECAR}").is_file()
+        seed for seed in seeds if is_rendered(group, seed, OUTPUT_SUFFIX)
     }
     held = body.get("fields")
     same = isinstance(held, Mapping) and same_fields(held, fields)
@@ -1287,10 +1289,6 @@ def copied_renders(run: Run, flow: str, version: int, body: ReviewApproved) -> R
     path = approval_of(run, flow, version)
     listed = renders_of(path, body, f"restore it in {path} by hand")
     group = group_of(run, flow, version)
-    rendered = (
-        sorted(int(p.stem) for p in group.iterdir() if is_seed(p.stem))
-        if group.is_dir()
-        else []
-    )
+    rendered = rendered_seeds(group, OUTPUT_SUFFIX)
     seeds = listed["seeds"] + [s for s in rendered if s not in listed["seeds"]]
     return {"count": max(listed["count"], len(seeds)), "seeds": seeds}

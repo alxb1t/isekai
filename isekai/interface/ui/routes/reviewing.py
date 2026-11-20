@@ -31,6 +31,8 @@ from isekai.foundation.run import (
     WD14,
     RenderRef,
     approval_of,
+    group_of,
+    is_rendered,
     is_seed,
     is_version,
     latest_artifact,
@@ -376,7 +378,11 @@ def _revision(
             (
                 seed
                 for seed in renders["seeds"]
-                if image_of(one.run, one.flow, version, seed).is_file()
+                if is_rendered(
+                    group_of(one.run, one.flow.id, version),
+                    seed,
+                    one.flow.output_suffix,
+                )
             ),
             None,
         )

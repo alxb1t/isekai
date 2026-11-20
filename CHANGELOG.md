@@ -10,6 +10,16 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.33] - 2026-11-21
+
+Gate: local 1m13s · CI not read under mf-ship · 0.87.32: local 1m16s · CI not read under mf-ship
+
+- `is_rendered` in `isekai/foundation/layout.py` says a seed is rendered when its image is a file in its group, re-exported by `run.py`; a case in `tests/test_generate.py` holds it on each folder (0177 D1).
+- `refuse_revision` and `_refuse_unchanged` in `isekai/pipeline/review.py` ask `is_rendered` in place of the record's path: a record with no image is refused, an image with no record is revised; cases in `tests/test_review.py` hold each (0177 D2).
+- `drafting_approval` in `isekai/pipeline/review.py` asks `is_rendered`: a draft is written from an image with no record, and a record with no image stays refused; a case in `tests/test_review.py` holds it (0177 D3).
+- `copied_renders` and `_first_image` list a group by `rendered_seeds`; `Surface.rendered` and `_revision` ask `is_rendered`; their answers and texts are as before (0177 D4).
+- D71 in `docs/decisions.md` records the rule, D69's *Accepts* drops the sites it switched, and `isekai/foundation/README.md` and `layout.py` name it (0177 D7).
+
 ## [0.87.32] - 2026-11-21
 
 Gate: local 1m16s · CI not read under mf-ship · 0.87.31: local 1m33s · CI not read under mf-ship

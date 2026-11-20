@@ -50,6 +50,7 @@ from isekai.foundation.run import (
     artifact_name,
     attempts,
     is_render,
+    is_rendered,
     is_sidecar,
     open_run,
     record_failure,
@@ -801,6 +802,25 @@ def test_render_record_names_a_seeds_sidecar_in_its_group(tmp_path: Path) -> Non
 def test_a_built_name_is_what_the_listing_reads(tmp_path: Path) -> None:
     assert is_render(render_image(tmp_path, 42, ".png"), ".png")
     assert is_sidecar(render_record(tmp_path, 42))
+
+
+@pytest.mark.spec_exempt("structural: a seed is rendered when its image is a file")
+@pytest.mark.parametrize(
+    ("held", "rendered"),
+    [
+        pytest.param(["42.png", "42.render.json"], True, id="image and record"),
+        pytest.param(["42.png"], True, id="image alone"),
+        pytest.param(["42.render.json"], False, id="record alone"),
+        pytest.param(["001.error.1.permanent.json"], False, id="failure records alone"),
+    ],
+)
+def test_a_seed_is_rendered_when_its_image_is_a_file(
+    tmp_path: Path, held: list[str], rendered: bool
+) -> None:
+    for name in held:
+        (tmp_path / name).write_text("{}")
+
+    assert is_rendered(tmp_path, 42, ".png") is rendered
 
 
 # --- the unapproved run, the unreadable header, the interrupted write ----------

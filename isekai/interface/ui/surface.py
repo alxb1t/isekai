@@ -15,7 +15,6 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
-from isekai.foundation.artifacts import SIDECAR
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -24,7 +23,9 @@ from isekai.foundation.run import (
     Run,
     approval_of,
     edit_files,
+    is_rendered,
     latest_artifact,
+    render_record,
 )
 from isekai.interface.ui import events, library
 from isekai.interface.ui.billing import Billing
@@ -219,8 +220,8 @@ class Surface:
         number = _version(version)
         approval = approval_of(run, flow, number)
         image = image_of(run, one, number, seed)
-        if not image.is_file():
-            if not (image.parent / f"{seed}{SIDECAR}").is_file():
+        if not is_rendered(image.parent, seed, one.output_suffix):
+            if not render_record(image.parent, seed).is_file():
                 raise Refusal(
                     f"{image.name}: no render is here, "
                     "its record and its image are gone"

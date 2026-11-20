@@ -923,9 +923,7 @@ def test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written(
     client: TestClient, made: Run
 ) -> None:
     _approved(client, made)
-    group = made.directory(FLOW, "outputs", "001")
-    group.mkdir(parents=True)
-    (group / "7.render.json").write_text("{}\n")
+    rendered_image(made, 1, 7)
     image = {"digest": made.digest, "version": 1, "seed": "7"}
     before = snapshot(made.path)
 

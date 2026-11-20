@@ -1430,6 +1430,21 @@ def test_a_draft_naming_a_seed_its_approval_never_rendered_is_refused(
     assert snapshot(run.path) == before
 
 
+@pytest.mark.spec("review:draft-from:an-image-without-its-record-is-drafted-from")
+def test_a_draft_from_a_lone_image_is_written(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    image = _image(run, 1, SEED)
+    image.with_name(f"{SEED}.render.json").unlink()
+
+    draft = draft_from(run, CONJURE, FLOW, 1, conjure, seed=SEED)
+
+    assert read(draft, DRAFT_FILE)["renders"] == {"count": 1, "seeds": [SEED]}
+    assert source_copy(run, CONJURE, 1).read_bytes() == image.read_bytes()
+
+
 @pytest.mark.spec("review:draft-from:its-approval-is-an-ordinary-approval")
 def test_a_drafted_draft_approves_as_an_edited_approval_and_no_copy(
     run: Run, schema: Schema, vocabulary: Vocabulary
@@ -1766,6 +1781,62 @@ def test_an_unchanged_revision_is_refused_naming_the_images_it_would_reproduce(
     assert f"seeds {SEED}," in str(refused.value)
     assert f"{run.id}/{FLOW}/outputs/001/" in str(refused.value)
     assert draft.exists()
+    assert approved_versions(run.directory(FLOW, "review")) == [1]
+
+
+@pytest.mark.spec("review:revise:a-record-without-its-image-is-refused")
+def test_a_revision_of_a_lone_record_is_refused(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary)
+    _image(run, 1, SEED).unlink()
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal, match=f"rendered no seed {SEED}"):
+        revise(run, FLOW, 1, SEED)
+
+    assert snapshot(run.path) == before
+
+
+@pytest.mark.spec("review:revise:an-image-without-its-record-is-revised")
+def test_a_revision_of_a_lone_image_is_written(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary)
+    _image(run, 1, SEED).with_name(f"{SEED}.render.json").unlink()
+
+    draft = revise(run, FLOW, 1, SEED)
+
+    assert read(draft, DRAFT_FILE)["renders"] == {"count": 1, "seeds": [SEED]}
+
+
+@pytest.mark.spec("review:revise:a-seed-with-a-record-and-no-image-is-a-change")
+def test_an_unchanged_revision_over_a_lone_record_is_approved(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary)
+    image = _image(run, 1, SEED)
+    revise(run, FLOW, 1, SEED)
+    image.unlink()
+
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+
+    assert approved is not None
+
+
+@pytest.mark.spec("review:revise:a-seed-with-an-image-and-no-record-is-reproduced")
+def test_an_unchanged_revision_over_a_lone_image_is_refused(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary)
+    image = _image(run, 1, SEED)
+    revise(run, FLOW, 1, SEED)
+    image.with_name(f"{SEED}.render.json").unlink()
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert f"seeds {SEED}," in str(refused.value)
     assert approved_versions(run.directory(FLOW, "review")) == [1]
 
 
