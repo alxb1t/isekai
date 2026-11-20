@@ -1430,6 +1430,21 @@ def test_a_draft_naming_a_seed_its_approval_never_rendered_is_refused(
     assert snapshot(run.path) == before
 
 
+@pytest.mark.spec("review:draft-from:an-image-without-its-record-is-drafted-from")
+def test_a_draft_from_a_lone_image_is_written(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _summon_approved(run, schema, vocabulary)
+    conjure = _conjure(run, vocabulary)
+    image = _image(run, 1, SEED)
+    image.with_name(f"{SEED}.render.json").unlink()
+
+    draft = draft_from(run, CONJURE, FLOW, 1, conjure, seed=SEED)
+
+    assert read(draft, DRAFT_FILE)["renders"] == {"count": 1, "seeds": [SEED]}
+    assert source_copy(run, CONJURE, 1).read_bytes() == image.read_bytes()
+
+
 @pytest.mark.spec("review:draft-from:its-approval-is-an-ordinary-approval")
 def test_a_drafted_draft_approves_as_an_edited_approval_and_no_copy(
     run: Run, schema: Schema, vocabulary: Vocabulary

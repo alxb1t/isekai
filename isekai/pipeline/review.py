@@ -45,7 +45,6 @@ from isekai.foundation.artifacts import (
     DRAFT_FILE,
     ONE_RENDER,
     SHEET_FILE,
-    SIDECAR,
     ApprovedProducer,
     DraftImage,
     Renders,
@@ -327,9 +326,7 @@ def drafting_approval(
         )
     _approval(run, source, approval, f"draft {flow} again")
     group = group_of(run, source, approval)
-    if seed is not None and not all(
-        (group / f"{seed}{suffix}").is_file() for suffix in (SIDECAR, OUTPUT_SUFFIX)
-    ):
+    if seed is not None and not is_rendered(group, seed, OUTPUT_SUFFIX):
         raise Refusal(
             f"{run.id}: flow {source} rendered no seed {seed} under "
             f"{artifact_name(approval, APPROVED)}; run `{stage_command(run, 'show')}` "

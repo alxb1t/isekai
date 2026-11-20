@@ -6,7 +6,7 @@ One rule says a seed is rendered when its image is a file in its group; each pha
 
 - [x] 1 — The rule · moderate
 - [x] 2 — The revision · moderate
-- [ ] 3 — The draft · moderate
+- [x] 3 — The draft · moderate
 - [ ] 4 — The listings and the app's sites · moderate
 - [ ] 5 — The documents · moderate
 
@@ -38,13 +38,13 @@ One rule says a seed is rendered when its image is a file in its group; each pha
 
 ## 3 — The draft
 
-- [ ] 3.1 In `tests/test_review.py`, after `test_a_draft_naming_a_seed_its_approval_never_rendered_is_refused`, write `test_a_draft_from_a_lone_image_is_written`, bound to `review:draft-from:an-image-without-its-record-is-drafted-from`. It deletes the record of a seed `_image` wrote, drafts from that seed, and asserts the draft's seeds and the source copy's bytes as the test bound to `review:draft-from:a-draft-from-an-image-copies-it` does.
+- [x] 3.1 In `tests/test_review.py`, after `test_a_draft_naming_a_seed_its_approval_never_rendered_is_refused`, write `test_a_draft_from_a_lone_image_is_written`, bound to `review:draft-from:an-image-without-its-record-is-drafted-from`. It deletes the record of a seed `_image` wrote, drafts from that seed, and asserts the draft's seeds and the source copy's bytes as the test bound to `review:draft-from:a-draft-from-an-image-copies-it` does.
   Verify: `git grep -c -F "test_a_draft_from_a_lone_image_is_written" -- tests/test_review.py` prints `tests/test_review.py:1`.
-- [ ] 3.2 **HALT CHECK** The case fails on the code as it stands, which refuses an image whose record is gone; the existing case of a record kept and an image gone stands as the lone record's.
+- [x] 3.2 **HALT CHECK** The case fails on the code as it stands, which refuses an image whose record is gone; the existing case of a record kept and an image gone stands as the lone record's.
   Verify: `uv run pytest tests/test_review.py -k "a_draft_from_a_lone_image" -q` exits 1.
-- [ ] 3.3 In `drafting_approval`, replace the test of the record and the image with `not is_rendered(group, seed, OUTPUT_SUFFIX)` ([D3](design.md#d3)), the refusal's text as it is. Then remove `SIDECAR` from the imports from `isekai.foundation.artifacts`, which no line of `isekai/pipeline/review.py` reads.
+- [x] 3.3 In `drafting_approval`, replace the test of the record and the image with `not is_rendered(group, seed, OUTPUT_SUFFIX)` ([D3](design.md#d3)), the refusal's text as it is. Then remove `SIDECAR` from the imports from `isekai.foundation.artifacts`, which no line of `isekai/pipeline/review.py` reads.
   Verify: `git grep -n -F "SIDECAR" -- isekai/pipeline/review.py` prints nothing.
-- [ ] 3.4 Run the file, then `uv run python -m tools.mutate` over `drafting_approval`'s changed lines, read by `git grep -n -F "is_rendered(" -- isekai/pipeline/review.py`, with `--tests tests/test_review.py`. A range the tool refuses with exit 2 holds no mutant.
+- [x] 3.4 Run the file, then `uv run python -m tools.mutate` over `drafting_approval`'s changed lines, read by `git grep -n -F "is_rendered(" -- isekai/pipeline/review.py`, with `--tests tests/test_review.py`. A range the tool refuses with exit 2 holds no mutant.
   Verify: `uv run pytest tests/test_review.py -q` exits 0.
 
 ## 4 — The listings and the app's sites
