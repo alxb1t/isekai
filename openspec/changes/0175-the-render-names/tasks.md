@@ -5,7 +5,7 @@
 ## Progress
 
 - [x] 1 — The builders · moderate
-- [ ] 2 — The stage · moderate
+- [x] 2 — The stage · moderate
 - [ ] 3 — The other sites · moderate
 - [ ] 4 — The documents · moderate
 
@@ -28,21 +28,21 @@
 
 ## 2 — The stage
 
-- [ ] 2.1 Before editing `isekai/pipeline/generate.py`, pre-flight `image_of`'s return, the one site of the stage where `tools.mutate` finds a mutant; a survivor is handled as [D4](design.md#d4) says.
+- [x] 2.1 Before editing `isekai/pipeline/generate.py`, pre-flight `image_of`'s return, the one site of the stage where `tools.mutate` finds a mutant; a survivor is handled as [D4](design.md#d4) says.
   Verify: `uv run python -m tools.mutate isekai/pipeline/generate.py:190 --tests tests/test_generate.py tests/test_ui_api.py` exits 0.
-- [ ] 2.2 In `isekai/pipeline/generate.py`, add `render_image` and `render_record` to the import from `isekai.foundation.run`.
+- [x] 2.2 In `isekai/pipeline/generate.py`, add `render_image` and `render_record` to the import from `isekai.foundation.run`.
   Verify: `git grep -n -e "^    render_image,$" -e "^    render_record,$" -- isekai/pipeline/generate.py` prints two lines.
-- [ ] 2.3 In `image_of`, return `render_image(group_of(run, flow.id, version), seed, flow.output_suffix)`. In `discard_render`, set `record = render_record(group, seed)`; `seed` is read above by `*_, seed = rendered_at(image)` ([D2](design.md#d2)).
+- [x] 2.3 In `image_of`, return `render_image(group_of(run, flow.id, version), seed, flow.output_suffix)`. In `discard_render`, set `record = render_record(group, seed)`; `seed` is read above by `*_, seed = rendered_at(image)` ([D2](design.md#d2)).
   Verify: `git grep -n -F "record = render_record(group, seed)" -- isekai/pipeline/generate.py` prints one line.
-- [ ] 2.4 In `render`'s loop, set `output = render_image(directory, seed, flow.output_suffix)` and `provenance = render_record(directory, seed)`.
+- [x] 2.4 In `render`'s loop, set `output = render_image(directory, seed, flow.output_suffix)` and `provenance = render_record(directory, seed)`.
   Verify: `git grep -n -F "provenance = render_record(directory, seed)" -- isekai/pipeline/generate.py` prints one line.
-- [ ] 2.5 Remove `SIDECAR` from the import from `isekai.foundation.artifacts`, which nothing in the file reads now.
+- [x] 2.5 Remove `SIDECAR` from the import from `isekai.foundation.artifacts`, which nothing in the file reads now.
   Verify: `git grep -n -e "^    SIDECAR,$" -- isekai/pipeline/generate.py` prints nothing.
-- [ ] 2.6 Run the pre-flight again over `image_of`'s return, which the import edits moved down.
+- [x] 2.6 Run the pre-flight again over `image_of`'s return, which the import edits moved down.
   Verify: `uv run python -m tools.mutate isekai/pipeline/generate.py:191 --tests tests/test_generate.py tests/test_ui_api.py` exits 0.
-- [ ] 2.7 The stage's file leaves no hand-built image name, the sites of [D2](design.md#d2).
+- [x] 2.7 The stage's file leaves no hand-built image name, the sites of [D2](design.md#d2).
   Verify: `git grep -n -F "output_suffix}" -- isekai/pipeline/generate.py` prints nothing.
-- [ ] 2.8 The stage's tests stay green.
+- [x] 2.8 The stage's tests stay green.
   Verify: `uv run pytest tests/test_generate.py tests/test_resume.py tests/test_ui_api.py` exits 0.
 
 ## 3 — The other sites

@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - `render_image` and `render_record` in `isekai/foundation/layout.py` name a render's image and record, re-exported by `run.py`; cases in `tests/test_generate.py` hold each and their agreement with the listing; behaviour is as before (0175 D1, D4).
+- The paid stage names a render's image and record by `render_image` and `render_record` in `image_of`, `discard_render` and `render`'s loop; `SIDECAR` leaves its imports; behaviour is as before (0175 D2).
 
 ## [0.87.30] - 2026-11-20
 
