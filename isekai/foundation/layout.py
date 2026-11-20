@@ -140,6 +140,16 @@ def is_sidecar(path: Path) -> bool:
     return path.name.endswith(SIDECAR) and is_seed(path.name.removesuffix(SIDECAR))
 
 
+def render_image(group: Path, seed: int, suffix: str) -> Path:
+    """Return the path of `seed`'s image in `group`, for a flow producing `suffix`."""
+    return group / f"{seed}{suffix}"
+
+
+def render_record(group: Path, seed: int) -> Path:
+    """Return the path of `seed`'s record in `group`."""
+    return group / f"{seed}{SIDECAR}"
+
+
 def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     """Return the seeds already produced into `directory`, from filenames alone.
 

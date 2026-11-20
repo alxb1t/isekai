@@ -49,8 +49,12 @@ from isekai.foundation.run import (
     Run,
     artifact_name,
     attempts,
+    is_render,
+    is_sidecar,
     open_run,
     record_failure,
+    render_image,
+    render_record,
     versions,
 )
 from isekai.interface.wiring import Wiring
@@ -780,6 +784,23 @@ def test_each_render_is_named_by_the_seed_that_produced_it(
     for made in produced:
         assert made.image.stem == str(made.seed)
         assert read(made.provenance, RENDER_FILE)["seed"] == made.seed
+
+
+@pytest.mark.spec_exempt("structural: a render's file is named by one builder")
+def test_render_image_names_a_seeds_file_in_its_group(tmp_path: Path) -> None:
+    assert render_image(tmp_path, 42, ".png") == tmp_path / "42.png"
+    assert render_image(tmp_path, 42, ".webp") == tmp_path / "42.webp"
+
+
+@pytest.mark.spec_exempt("structural: a render's file is named by one builder")
+def test_render_record_names_a_seeds_sidecar_in_its_group(tmp_path: Path) -> None:
+    assert render_record(tmp_path, 42) == tmp_path / "42.render.json"
+
+
+@pytest.mark.spec_exempt("structural: a render's file is named by one builder")
+def test_a_built_name_is_what_the_listing_reads(tmp_path: Path) -> None:
+    assert is_render(render_image(tmp_path, 42, ".png"), ".png")
+    assert is_sidecar(render_record(tmp_path, 42))
 
 
 # --- the unapproved run, the unreadable header, the interrupted write ----------

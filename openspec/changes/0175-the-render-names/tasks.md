@@ -4,26 +4,26 @@
 
 ## Progress
 
-- [ ] 1 — The builders · moderate
+- [x] 1 — The builders · moderate
 - [ ] 2 — The stage · moderate
 - [ ] 3 — The other sites · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The builders
 
-- [ ] 1.1 **HALT CHECK** The stage still spells the record by hand where [D2](design.md#d2) says; if it does not, the plan is stale.
+- [x] 1.1 **HALT CHECK** The stage still spells the record by hand where [D2](design.md#d2) says; if it does not, the plan is stale.
   Verify: `git grep -c -F "{SIDECAR}" -- isekai/pipeline/generate.py` prints `2`.
-- [ ] 1.2 In `tests/test_generate.py`, add `is_render`, `is_sidecar`, `render_image` and `render_record` to the import from `isekai.foundation.run`. After `test_each_render_is_named_by_the_seed_that_produced_it`, add `test_render_image_names_a_seeds_file_in_its_group`: `render_image(tmp_path, 42, ".png") == tmp_path / "42.png"` and the same for `".webp"`. Then `test_render_record_names_a_seeds_sidecar_in_its_group`: `render_record(tmp_path, 42) == tmp_path / "42.render.json"`. Mark each `@pytest.mark.spec_exempt("structural: a render's file is named by one builder")` ([D4](design.md#d4)).
+- [x] 1.2 In `tests/test_generate.py`, add `is_render`, `is_sidecar`, `render_image` and `render_record` to the import from `isekai.foundation.run`. After `test_each_render_is_named_by_the_seed_that_produced_it`, add `test_render_image_names_a_seeds_file_in_its_group`: `render_image(tmp_path, 42, ".png") == tmp_path / "42.png"` and the same for `".webp"`. Then `test_render_record_names_a_seeds_sidecar_in_its_group`: `render_record(tmp_path, 42) == tmp_path / "42.render.json"`. Mark each `@pytest.mark.spec_exempt("structural: a render's file is named by one builder")` ([D4](design.md#d4)).
   Verify: `git grep -q -F "test_render_record_names_a_seeds_sidecar_in_its_group" -- tests/test_generate.py` exits 0.
-- [ ] 1.3 In `tests/test_generate.py`, after those two, add `test_a_built_name_is_what_the_listing_reads`, marked the same way: `is_render(render_image(tmp_path, 42, ".png"), ".png")` and `is_sidecar(render_record(tmp_path, 42))` both hold.
+- [x] 1.3 In `tests/test_generate.py`, after those two, add `test_a_built_name_is_what_the_listing_reads`, marked the same way: `is_render(render_image(tmp_path, 42, ".png"), ".png")` and `is_sidecar(render_record(tmp_path, 42))` both hold.
   Verify: `git grep -q -F "test_a_built_name_is_what_the_listing_reads" -- tests/test_generate.py` exits 0.
-- [ ] 1.4 The cases fail before the builders exist.
+- [x] 1.4 The cases fail before the builders exist.
   Verify: `uv run pytest tests/test_generate.py -k "test_render_image or test_render_record or test_a_built_name"` exits 2, an `ImportError` at collection.
-- [ ] 1.5 In `isekai/foundation/layout.py`, after `is_sidecar`, add `render_image` and `render_record` as [D1](design.md#d1) writes them, each with its docstring.
+- [x] 1.5 In `isekai/foundation/layout.py`, after `is_sidecar`, add `render_image` and `render_record` as [D1](design.md#d1) writes them, each with its docstring.
   Verify: `git grep -n -e "^def render_image" -e "^def render_record" -- isekai/foundation/layout.py` prints two lines.
-- [ ] 1.6 In `isekai/foundation/run.py`, import `render_image` and `render_record` from `isekai.foundation.layout` and add both to `__all__`, after `render_groups` and before `rendered`.
+- [x] 1.6 In `isekai/foundation/run.py`, import `render_image` and `render_record` from `isekai.foundation.layout` and add both to `__all__`, after `render_groups` and before `rendered`.
   Verify: `git grep -n -F "render_record" -- isekai/foundation/run.py` prints two lines.
-- [ ] 1.7 The cases pass.
+- [x] 1.7 The cases pass.
   Verify: `uv run pytest tests/test_generate.py -k "test_render_image or test_render_record or test_a_built_name"` exits 0.
 
 ## 2 — The stage

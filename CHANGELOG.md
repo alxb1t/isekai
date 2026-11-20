@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `render_image` and `render_record` in `isekai/foundation/layout.py` name a render's image and record, re-exported by `run.py`; cases in `tests/test_generate.py` hold each and their agreement with the listing; behaviour is as before (0175 D1, D4).
+
 ## [0.87.30] - 2026-11-20
 
 Gate: local 1m19s · CI not read under mf-ship · 0.87.29: local 1m21s · CI not read under mf-ship
