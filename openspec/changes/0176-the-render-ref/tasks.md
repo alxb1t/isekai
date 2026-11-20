@@ -5,7 +5,7 @@
 ## Progress
 
 - [x] 1 — The types · moderate
-- [ ] 2 — The readers · moderate
+- [x] 2 — The readers · moderate
 - [ ] 3 — The versions · moderate
 - [ ] 4 — The documents · moderate
 
@@ -32,29 +32,29 @@
 
 ## 2 — The readers
 
-- [ ] 2.1 Before editing `isekai/pipeline/review.py`, pre-flight the slice in `current_draft`; a survivor is handled as [D5](design.md#d5) says.
+- [x] 2.1 Before editing `isekai/pipeline/review.py`, pre-flight the slice in `current_draft`; a survivor is handled as [D5](design.md#d5) says.
   Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:129 --tests tests/test_review.py` exits 0.
-- [ ] 2.2 Pre-flight the slice in `_waiting_number`.
+- [x] 2.2 Pre-flight the slice in `_waiting_number`.
   Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:408 --tests tests/test_review.py` exits 0.
-- [ ] 2.3 Pre-flight the slice in `discard`.
+- [x] 2.3 Pre-flight the slice in `discard`.
   Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:519 --tests tests/test_review.py` exits 0.
-- [ ] 2.4 Pre-flight the slice in `withdraw`.
+- [x] 2.4 Pre-flight the slice in `withdraw`.
   Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:628 --tests tests/test_review.py` exits 0.
-- [ ] 2.5 Pre-flight the slice in `approve`.
+- [x] 2.5 Pre-flight the slice in `approve`.
   Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:947 --tests tests/test_review.py` exits 0.
-- [ ] 2.6 Pre-flight the slice in `_drafted`, in `isekai/interface/ui/routes/reviewing.py`, before editing that file.
+- [x] 2.6 Pre-flight the slice in `_drafted`, in `isekai/interface/ui/routes/reviewing.py`, before editing that file.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:399 --tests tests/test_ui_api.py` exits 0.
-- [ ] 2.7 In `isekai/pipeline/edit.py`, read the sites of [D2](design.md#d2) by name: `_located` returns `edit_at(source).seed` and `rendered_at(source).seed`, and `request_placed` sets `places_on = edit_at(source).k`. `discard_edit`'s unpack stays.
+- [x] 2.7 In `isekai/pipeline/edit.py`, read the sites of [D2](design.md#d2) by name: `_located` returns `edit_at(source).seed` and `rendered_at(source).seed`, and `request_placed` sets `places_on = edit_at(source).k`. `discard_edit`'s unpack stays.
   Verify: `git grep -n -F "at(source)[" -- isekai/pipeline/edit.py` prints nothing.
-- [ ] 2.8 In `discard_render`, in `isekai/pipeline/generate.py`, replace `*_, seed = rendered_at(image)` with `seed = rendered_at(image).seed`.
+- [x] 2.8 In `discard_render`, in `isekai/pipeline/generate.py`, replace `*_, seed = rendered_at(image)` with `seed = rendered_at(image).seed`.
   Verify: `git grep -n -F "*_, seed = rendered_at" -- isekai/pipeline/generate.py` prints nothing.
-- [ ] 2.9 In `run_discard`, in `isekai/interface/verbs/drafts.py`, replace the line ending `(image)[:3]` with `ref = (edit_at if edited else rendered_at)(image)` and then `run, flow, version = ref.run, ref.flow, ref.version`. `run_draft`'s pass of `rendered_at(image)` on stays.
+- [x] 2.9 In `run_discard`, in `isekai/interface/verbs/drafts.py`, replace the line ending `(image)[:3]` with `ref = (edit_at if edited else rendered_at)(image)` and then `run, flow, version = ref.run, ref.flow, ref.version`. `run_draft`'s pass of `rendered_at(image)` on stays.
   Verify: `git grep -n -F "(image)[:3]" -- isekai/interface/verbs/drafts.py` prints nothing.
-- [ ] 2.10 In `isekai/pipeline/review.py`, import `RenderRef` from `isekai.foundation.run`, before `Run`, and set `Revision = RenderRef` under its comment, which stays ([D2](design.md#d2)).
+- [x] 2.10 In `isekai/pipeline/review.py`, import `RenderRef` from `isekai.foundation.run`, before `Run`, and set `Revision = RenderRef` under its comment, which stays ([D2](design.md#d2)).
   Verify: `git grep -n -F "Revision = RenderRef" -- isekai/pipeline/review.py` prints one line.
-- [ ] 2.11 In `isekai/interface/ui/routes/reviewing.py`, import `RenderRef` from `isekai.foundation.run`, after `WD14`, and in `post_draft` append `RenderRef(run, flow, version, seed)` where it appended the bare tuple.
+- [x] 2.11 In `isekai/interface/ui/routes/reviewing.py`, import `RenderRef` from `isekai.foundation.run`, after `WD14`, and in `post_draft` append `RenderRef(run, flow, version, seed)` where it appended the bare tuple.
   Verify: `git grep -n -F "RenderRef(run, flow, version, seed)" -- isekai/interface/ui/routes/reviewing.py` prints one line.
-- [ ] 2.12 The suites that reach the readers stay green.
+- [x] 2.12 The suites that reach the readers stay green.
   Verify: `uv run pytest tests/test_edit.py tests/test_edit_session.py tests/test_generate.py tests/test_review.py tests/test_pipeline_cli.py tests/test_ui_api.py` exits 0.
 
 ## 3 — The versions

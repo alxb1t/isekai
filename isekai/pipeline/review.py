@@ -71,6 +71,7 @@ from isekai.foundation.run import (
     REVIEW,
     SHEETS,
     SOURCES,
+    RenderRef,
     Run,
     approval_of,
     approved_versions,
@@ -429,7 +430,7 @@ def _edited(run: Run, flow: str, draft: Path, remedy: str) -> bool:
 
 
 # An image to revise: its run, its flow, its approval's number and its seed.
-Revision = tuple[Run, str, int, int]
+Revision = RenderRef
 
 
 def refuse_drafts(

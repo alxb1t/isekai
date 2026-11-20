@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - `rendered_at` returns a `RenderRef` and `edit_at` an `EditRef`, `NamedTuple`s in `isekai/foundation/layout.py` that read by field name and unpack as the tuples did, re-exported by `run.py`; behaviour is as before (0176 D1).
+- The sites that indexed, sliced or star-unpacked a ref read `seed`, `k`, `run`, `flow` and `version` by field name; review's `Revision` is `RenderRef`, and the drafts route builds one; behaviour is as before (0176 D2).
 
 ## [0.87.30] - 2026-11-20
 

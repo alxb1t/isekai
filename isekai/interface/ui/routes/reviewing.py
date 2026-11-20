@@ -29,6 +29,7 @@ from isekai.foundation.run import (
     SHEETS,
     TAGS,
     WD14,
+    RenderRef,
     approval_of,
     is_seed,
     is_version,
@@ -320,7 +321,7 @@ class ReviewRoutes:
                 if waiting is not None:
                     drafts[at]["waiting"] = waiting.name
                 else:
-                    located.append((at, image, (run, flow, version, seed)))
+                    located.append((at, image, RenderRef(run, flow, version, seed)))
             # Each other image the collection holds is answered by the review stage.
             checked = refuse_image_drafts(
                 target,
