@@ -678,11 +678,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D69 · A render group's files are listed in foundation/layout.py, and a module above the pipeline reads the listing from the foundation
 
-**`isekai/foundation/layout.py` lists a render group: `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups`, and `rendered`, which lists each flow's seeds by approval. A module outside the foundation reads them from `isekai.foundation.run`, never from the paid stage. The stage keeps what reads an approval or deletes: `lacks`, `shortfall`, `duration`, `source_seeds` and `discard_render`.**
+**`isekai/foundation/layout.py` lists a render group: `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups`, and `rendered`, which lists each flow's seeds by approval. A module outside the foundation reads them from `isekai.foundation.run`, never from the paid stage. The stage keeps what reads an approval or deletes: `lacks`, `shortfall`, `duration`, `source_seeds` and `discard_render`. A render's image and record are named there by `render_image(group, seed, suffix)` and `render_record(group, seed)`.**
 
 - **Why:** `run_view.py`, `compare_view.py`, `render.py` and `ui/library.py` imported the paid stage to list a folder, and `review` may not import it. The names read foundation names alone. A move that re-binds changes no test.
-- **Accepts:** a render's image and record are still named by hand where they are read. The other definitions of "rendered", in `review.py`, `surface.py` and `rendered_at`, stand. `render_groups` lists a folder by `str.isdigit`, where the layout's own test is three ASCII digits. The evaluator still imports `trackable` from the wiring. Reopen when a module builds a render's file name from the layout.
-- **Made by:** `0174`.
+- **Accepts:** The sites that test for a render by a name still name its files by hand: `drafting_approval`, `refuse_revision` and `_refuse_unchanged` in `review.py`, and `Surface.rendered` in `surface.py`. The other definitions of "rendered", in `review.py`, `surface.py` and `rendered_at`, stand. `render_groups` lists a folder by `str.isdigit`, where the layout's own test is three ASCII digits. The evaluator still imports `trackable` from the wiring. Reopen when one rule says a seed is rendered.
+- **Made by:** `0174`, `0175`.
 
 ## Infrastructure
 

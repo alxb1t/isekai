@@ -7,7 +7,7 @@
 - [x] 1 — The builders · moderate
 - [x] 2 — The stage · moderate
 - [x] 3 — The other sites · moderate
-- [ ] 4 — The documents · moderate
+- [x] 4 — The documents · moderate
 
 ## 1 — The builders
 
@@ -66,15 +66,15 @@
 
 ## 4 — The documents
 
-- [ ] 4.1 In `docs/decisions.md`, add to D69's bold line, after the stage's kept names: `A render's image and record are named there by `render_image(group, seed, suffix)` and `render_record(group, seed)`.`
+- [x] 4.1 In `docs/decisions.md`, add to D69's bold line, after the stage's kept names: `A render's image and record are named there by `render_image(group, seed, suffix)` and `render_record(group, seed)`.`
   Verify: `git grep -q -F "render_record(group, seed)" -- docs/decisions.md` exits 0.
-- [ ] 4.2 In D69's *Accepts*, replace its first sentence with: `The sites that test for a render by a name still name its files by hand: `drafting_approval`, `refuse_revision` and `_refuse_unchanged` in `review.py`, and `Surface.rendered` in `surface.py`.` Replace its last sentence with `Reopen when one rule says a seed is rendered.` Make *Made by* read `0174`, `0175`.
+- [x] 4.2 In D69's *Accepts*, replace its first sentence with: `The sites that test for a render by a name still name its files by hand: `drafting_approval`, `refuse_revision` and `_refuse_unchanged` in `review.py`, and `Surface.rendered` in `surface.py`.` Replace its last sentence with `Reopen when one rule says a seed is rendered.` Make *Made by* read `0174`, `0175`.
   Verify: `git grep -q -F "Reopen when one rule says a seed is rendered." -- docs/decisions.md` exits 0.
-- [ ] 4.3 In the docstring of `isekai/foundation/layout.py`, add `the names of a render's image and record,` after `the seeds a render's file is named for,`.
+- [x] 4.3 In the docstring of `isekai/foundation/layout.py`, add `the names of a render's image and record,` after `the seeds a render's file is named for,`.
   Verify: `git grep -q -F "the names of a render's image and record" -- isekai/foundation/layout.py` exits 0.
-- [ ] 4.4 In `isekai/foundation/README.md`, the `layout.py` row of *Files* reads `numbering and completion, the seeds, the names of a render's image and record, a render group's listing and the edit files`.
+- [x] 4.4 In `isekai/foundation/README.md`, the `layout.py` row of *Files* reads `numbering and completion, the seeds, the names of a render's image and record, a render group's listing and the edit files`.
   Verify: `git grep -q -F "the names of a render's image and record" -- isekai/foundation/README.md` exits 0.
-- [ ] 4.5 Derive the *Imported by* tables.
+- [x] 4.5 Derive the *Imported by* tables.
   Verify: `uv run python -m tools.derive_imported_by` exits 0.
-- [ ] 4.6 The documents and the guards hold.
+- [x] 4.6 The documents and the guards hold.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py tests/test_ratchets.py tests/test_spec_bindings.py` exits 0.
