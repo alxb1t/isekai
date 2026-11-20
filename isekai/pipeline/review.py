@@ -78,11 +78,11 @@ from isekai.foundation.run import (
     failures_alone,
     group_of,
     is_rendered,
-    is_seed,
     latest,
     latest_artifact,
     next_version,
     render_image,
+    rendered_seeds,
     sheet_of,
     stage_command,
     versions,
@@ -361,9 +361,13 @@ def _held_way(run: Run, flow: str, source: str, held: Sequence[int]) -> str:
 
 def _first_image(group: Path) -> Path | None:
     """Return the first image in a render group, or None."""
-    if not group.is_dir():
-        return None
-    return min((path for path in group.iterdir() if is_seed(path.stem)), default=None)
+    return min(
+        (
+            render_image(group, seed, OUTPUT_SUFFIX)
+            for seed in rendered_seeds(group, OUTPUT_SUFFIX)
+        ),
+        default=None,
+    )
 
 
 def source_copy(run: Run, flow: str, version: int) -> Path:
@@ -1283,10 +1287,6 @@ def copied_renders(run: Run, flow: str, version: int, body: ReviewApproved) -> R
     path = approval_of(run, flow, version)
     listed = renders_of(path, body, f"restore it in {path} by hand")
     group = group_of(run, flow, version)
-    rendered = (
-        sorted(int(p.stem) for p in group.iterdir() if is_seed(p.stem))
-        if group.is_dir()
-        else []
-    )
+    rendered = rendered_seeds(group, OUTPUT_SUFFIX)
     seeds = listed["seeds"] + [s for s in rendered if s not in listed["seeds"]]
     return {"count": max(listed["count"], len(seeds)), "seeds": seeds}
