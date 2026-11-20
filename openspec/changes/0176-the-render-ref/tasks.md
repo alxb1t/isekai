@@ -4,30 +4,30 @@
 
 ## Progress
 
-- [ ] 1 — The types · moderate
+- [x] 1 — The types · moderate
 - [ ] 2 — The readers · moderate
 - [ ] 3 — The versions · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The types
 
-- [ ] 1.1 **HALT CHECK** The signatures still return the tuples [D1](design.md#d1) replaces; if one does not, the plan is stale.
+- [x] 1.1 **HALT CHECK** The signatures still return the tuples [D1](design.md#d1) replaces; if one does not, the plan is stale.
   Verify: `git grep -n -F "tuple[Run, str, int, int" -- isekai` prints a line in `isekai/foundation/layout.py`, `isekai/foundation/run.py` and `isekai/pipeline/review.py`.
-- [ ] 1.2 Before editing `isekai/foundation/run.py`, pre-flight the slice in `refusal_for`, the line [D3](design.md#d3) lists; a survivor is handled as [D5](design.md#d5) says.
+- [x] 1.2 Before editing `isekai/foundation/run.py`, pre-flight the slice in `refusal_for`, the line [D3](design.md#d3) lists; a survivor is handled as [D5](design.md#d5) says.
   Verify: `uv run python -m tools.mutate isekai/foundation/run.py:443 --tests tests/test_run_directory.py` exits 0.
-- [ ] 1.3 In `tests/test_edit.py`, after `test_edit_names_an_image_path_names_its_run_flow_approval_seed_and_number`, add `test_edit_names_an_edit_ref_reads_by_field_name`, marked `@pytest.mark.spec_exempt("structural: an edit image's path names a ref whose fields are named")`. For `group / "42.edit-2.png"` it reads `ref = edit_at(image)` and asserts `(ref.run.id, ref.flow, ref.version, ref.seed, ref.k) == ("0123456789ab_a", "summon-anime-wai", 1, 42, 2)`, `ref._fields == ("run", "flow", "version", "seed", "k")` and `ref == (ref.run, ref.flow, ref.version, ref.seed, ref.k)`. Run it and see it fail on the tuple.
+- [x] 1.3 In `tests/test_edit.py`, after `test_edit_names_an_image_path_names_its_run_flow_approval_seed_and_number`, add `test_edit_names_an_edit_ref_reads_by_field_name`, marked `@pytest.mark.spec_exempt("structural: an edit image's path names a ref whose fields are named")`. For `group / "42.edit-2.png"` it reads `ref = edit_at(image)` and asserts `(ref.run.id, ref.flow, ref.version, ref.seed, ref.k) == ("0123456789ab_a", "summon-anime-wai", 1, 42, 2)`, `ref._fields == ("run", "flow", "version", "seed", "k")` and `ref == (ref.run, ref.flow, ref.version, ref.seed, ref.k)`. Run it and see it fail on the tuple.
   Verify: `git grep -n -F "test_edit_names_an_edit_ref_reads_by_field_name" -- tests/test_edit.py` prints one line.
-- [ ] 1.4 In `tests/test_run_directory.py`, add `rendered_at` to the import from `isekai.foundation.run`, between `refusal_for` and `run_at`. After `test_the_layout_survives_one_flows_directory_being_removed`, add `test_the_layout_names_a_render_ref_reads_by_field_name`, marked `@pytest.mark.spec_exempt("structural: a render image's path names a ref whose fields are named")`. It builds `run = tmp_path / "runs" / "0123456789ab_a"` with `group = run / FLOW / OUTPUTS / "001"`, makes the group, writes `{}` to `run / FRAME_NAME` and bytes to `group / "42.png"`, reads `ref = rendered_at(image)`, and asserts `(ref.run.id, ref.flow, ref.version, ref.seed) == ("0123456789ab_a", FLOW, 1, 42)`, `ref._fields == ("run", "flow", "version", "seed")` and `ref == (ref.run, FLOW, 1, 42)`. Run it and see it fail on the tuple.
+- [x] 1.4 In `tests/test_run_directory.py`, add `rendered_at` to the import from `isekai.foundation.run`, between `refusal_for` and `run_at`. After `test_the_layout_survives_one_flows_directory_being_removed`, add `test_the_layout_names_a_render_ref_reads_by_field_name`, marked `@pytest.mark.spec_exempt("structural: a render image's path names a ref whose fields are named")`. It builds `run = tmp_path / "runs" / "0123456789ab_a"` with `group = run / FLOW / OUTPUTS / "001"`, makes the group, writes `{}` to `run / FRAME_NAME` and bytes to `group / "42.png"`, reads `ref = rendered_at(image)`, and asserts `(ref.run.id, ref.flow, ref.version, ref.seed) == ("0123456789ab_a", FLOW, 1, 42)`, `ref._fields == ("run", "flow", "version", "seed")` and `ref == (ref.run, FLOW, 1, 42)`. Run it and see it fail on the tuple.
   Verify: `git grep -n -F "test_the_layout_names_a_render_ref_reads_by_field_name" -- tests/test_run_directory.py` prints one line.
-- [ ] 1.5 In `isekai/foundation/layout.py`, import `NamedTuple` from `typing`. Above `edit_at`, add `RenderRef` and `EditRef` as [D1](design.md#d1) writes them.
+- [x] 1.5 In `isekai/foundation/layout.py`, import `NamedTuple` from `typing`. Above `edit_at`, add `RenderRef` and `EditRef` as [D1](design.md#d1) writes them.
   Verify: `git grep -n -E "^class (RenderRef|EditRef)\(NamedTuple\):" -- isekai/foundation/layout.py` prints two lines.
-- [ ] 1.6 Make the signature of `edit_at` `def edit_at(image: Path) -> EditRef:` and return `EditRef(...)` over the same values in the same order. Its docstring example keeps its tuple, read as the ref's fields.
+- [x] 1.6 Make the signature of `edit_at` `def edit_at(image: Path) -> EditRef:` and return `EditRef(...)` over the same values in the same order. Its docstring example keeps its tuple, read as the ref's fields.
   Verify: `git grep -n -F "def edit_at(image: Path) -> EditRef:" -- isekai/foundation/layout.py` prints one line.
-- [ ] 1.7 In `isekai/foundation/run.py`, import `EditRef` and `RenderRef` from `isekai.foundation.layout`, after `EDIT_STEM`, and add both to `__all__`: `EditRef` after `Attempt`, `RenderRef` after `Kind`.
+- [x] 1.7 In `isekai/foundation/run.py`, import `EditRef` and `RenderRef` from `isekai.foundation.layout`, after `EDIT_STEM`, and add both to `__all__`: `EditRef` after `Attempt`, `RenderRef` after `Kind`.
   Verify: `git grep -n -F "RenderRef" -- isekai/foundation/run.py` prints two lines.
-- [ ] 1.8 Make the signature of `rendered_at` `def rendered_at(image: Path) -> RenderRef:` and return `RenderRef(run, flow_directory.name, int(group.name), int(image.stem))`.
+- [x] 1.8 Make the signature of `rendered_at` `def rendered_at(image: Path) -> RenderRef:` and return `RenderRef(run, flow_directory.name, int(group.name), int(image.stem))`.
   Verify: `git grep -n -F "def rendered_at(image: Path) -> RenderRef:" -- isekai/foundation/run.py` prints one line.
-- [ ] 1.9 The cases of the refs pass.
+- [x] 1.9 The cases of the refs pass.
   Verify: `uv run pytest tests/test_edit.py tests/test_run_directory.py -k reads_by_field_name` exits 0.
 
 ## 2 — The readers

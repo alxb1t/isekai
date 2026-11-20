@@ -12,6 +12,7 @@ import os
 import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
+from typing import NamedTuple
 
 from isekai.foundation.artifacts import SEED_RANGE, SIDECAR
 from isekai.foundation.flow import FLOWS_DIR, load_flow
@@ -296,7 +297,26 @@ def delete_edits(group: Path, seed: int, numbers: Iterable[int]) -> list[Path]:
     return deleted
 
 
-def edit_at(image: Path) -> tuple[Run, str, int, int, int]:
+class RenderRef(NamedTuple):
+    """The run, flow, approval and seed a render's image path names."""
+
+    run: Run
+    flow: str
+    version: int
+    seed: int
+
+
+class EditRef(NamedTuple):
+    """The run, flow, approval, seed and number an edit image's path names."""
+
+    run: Run
+    flow: str
+    version: int
+    seed: int
+    k: int
+
+
+def edit_at(image: Path) -> EditRef:
     """Return the run, flow, approval, seed and number an edit image's path names.
 
     The image is on disk, or its record is: a pending edit has no image yet.
@@ -316,7 +336,7 @@ def edit_at(image: Path) -> tuple[Run, str, int, int, int]:
             "is not an edit's image; give the path of one, "
             f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.edit-<k>.png"
         )
-    return (
+    return EditRef(
         Run(run_directory.name, run_directory),
         group.parent.parent.name,
         int(group.name),

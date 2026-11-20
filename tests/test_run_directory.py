@@ -60,6 +60,7 @@ from isekai.foundation.run import (
     photo_of,
     record_failure,
     refusal_for,
+    rendered_at,
     run_at,
     run_id,
     runs_in,
@@ -1401,6 +1402,29 @@ def test_the_layout_survives_one_flows_directory_being_removed(
     assert snapshot(run.path / PHOTO) == described
     assert run.photo.is_file()
     assert (run.path / FRAME_NAME).is_file()
+
+
+@pytest.mark.spec_exempt(
+    "structural: a render image's path names a ref whose fields are named"
+)
+def test_the_layout_names_a_render_ref_reads_by_field_name(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "0123456789ab_a"
+    group = run / FLOW / OUTPUTS / "001"
+    group.mkdir(parents=True)
+    (run / FRAME_NAME).write_text("{}\n")
+    image = group / "42.png"
+    image.write_bytes(b"png")
+
+    ref = rendered_at(image)
+
+    assert (ref.run.id, ref.flow, ref.version, ref.seed) == (
+        "0123456789ab_a",
+        FLOW,
+        1,
+        42,
+    )
+    assert ref._fields == ("run", "flow", "version", "seed")
+    assert ref == (ref.run, FLOW, 1, 42)
 
 
 @pytest.mark.spec("run-directory:layout:photo-is-no-flow")

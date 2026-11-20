@@ -65,6 +65,8 @@ from isekai.foundation.layout import (
     EDIT_PLACEMENT,
     EDIT_RECORD,
     EDIT_STEM,
+    EditRef,
+    RenderRef,
     _laid_out,
     approval_of,
     approved_versions,
@@ -151,7 +153,9 @@ __all__ = [
     "TAGS",
     "WD14",
     "Attempt",
+    "EditRef",
     "Kind",
+    "RenderRef",
     "Run",
     "StageFailure",
     "across",
@@ -305,7 +309,7 @@ def _photo_bytes(photo: Path) -> bytes:
         ) from unreadable
 
 
-def rendered_at(image: Path) -> tuple[Run, str, int, int]:
+def rendered_at(image: Path) -> RenderRef:
     """Return the run, flow, approval and seed a rendered image's path names.
 
     e.g. runs/0d4b…_ada/summon-anime-wai/outputs/001/1840266731.png
@@ -327,7 +331,7 @@ def rendered_at(image: Path) -> tuple[Run, str, int, int]:
             f"is not an image a render wrote; {listed}, "
             f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.png"
         )
-    return run, flow_directory.name, int(group.name), int(image.stem)
+    return RenderRef(run, flow_directory.name, int(group.name), int(image.stem))
 
 
 # The option that asks a stage verb for the next version of its file.

@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `rendered_at` returns a `RenderRef` and `edit_at` an `EditRef`, `NamedTuple`s in `isekai/foundation/layout.py` that read by field name and unpack as the tuples did, re-exported by `run.py`; behaviour is as before (0176 D1).
+
 ## [0.87.30] - 2026-11-20
 
 Gate: local 1m19s · CI not read under mf-ship · 0.87.29: local 1m21s · CI not read under mf-ship
