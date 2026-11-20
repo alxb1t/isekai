@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - `is_rendered` in `isekai/foundation/layout.py` says a seed is rendered when its image is a file in its group, re-exported by `run.py`; a case in `tests/test_generate.py` holds it on each folder; no site asks it yet (0177 D1).
+- `refuse_revision` and `_refuse_unchanged` in `isekai/pipeline/review.py` ask `is_rendered` in place of the record's path: a seed with a record and no image is refused, one with an image and no record is revised; cases in `tests/test_review.py` hold each; `tests/test_ui_api.py` seeds the tracked flow's seed with both files (0177 D2).
 
 ## [0.87.31] - 2026-11-20
 

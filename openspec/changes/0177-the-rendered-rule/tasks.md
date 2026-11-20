@@ -5,7 +5,7 @@ One rule says a seed is rendered when its image is a file in its group; each pha
 ## Progress
 
 - [x] 1 — The rule · moderate
-- [ ] 2 — The revision · moderate
+- [x] 2 — The revision · moderate
 - [ ] 3 — The draft · moderate
 - [ ] 4 — The listings and the app's sites · moderate
 - [ ] 5 — The documents · moderate
@@ -23,17 +23,17 @@ One rule says a seed is rendered when its image is a file in its group; each pha
 
 ## 2 — The revision
 
-- [ ] 2.1 In `tests/test_review.py`, after `test_an_unchanged_revision_is_refused_naming_the_images_it_would_reproduce`, write these tests, each bound by `pytest.mark.spec` to its key in [the delta](specs/review/spec.md): `test_a_revision_of_a_lone_record_is_refused`, `test_a_revision_of_a_lone_image_is_written`, `test_an_unchanged_revision_over_a_lone_record_is_approved`, `test_an_unchanged_revision_over_a_lone_image_is_refused`. Each arranges its folder with `_image`. The revision tests delete the image or the record before `revise`; the unchanged-revision tests delete it after `revise`, then call `approve`, as `test_a_revision_whose_seed_no_render_wrote_is_approved` does.
+- [x] 2.1 In `tests/test_review.py`, after `test_an_unchanged_revision_is_refused_naming_the_images_it_would_reproduce`, write these tests, each bound by `pytest.mark.spec` to its key in [the delta](specs/review/spec.md): `test_a_revision_of_a_lone_record_is_refused`, `test_a_revision_of_a_lone_image_is_written`, `test_an_unchanged_revision_over_a_lone_record_is_approved`, `test_an_unchanged_revision_over_a_lone_image_is_refused`. Each arranges its folder with `_image`. The revision tests delete the image or the record before `revise`; the unchanged-revision tests delete it after `revise`, then call `approve`, as `test_a_revision_whose_seed_no_render_wrote_is_approved` does.
   Verify: `git grep -c -E "^def test_(a_revision|an_unchanged_revision)_.*_lone_" -- tests/test_review.py` prints `tests/test_review.py:4`.
-- [ ] 2.2 **HALT CHECK** The cases fail on the code as it stands; one that passes means the site already answers by the image and the plan is wrong.
+- [x] 2.2 **HALT CHECK** The cases fail on the code as it stands; one that passes means the site already answers by the image and the plan is wrong.
   Verify: `uv run pytest tests/test_review.py -k "_lone_ and revision" -q` exits 1.
-- [ ] 2.3 In `isekai/pipeline/review.py`, import `is_rendered` from `isekai.foundation.run`; in `refuse_revision` replace the test of the record's path with `not is_rendered(group_of(run, flow, version), seed, OUTPUT_SUFFIX)` ([D2](design.md#d2)), the refusal's text as it is.
+- [x] 2.3 In `isekai/pipeline/review.py`, import `is_rendered` from `isekai.foundation.run`; in `refuse_revision` replace the test of the record's path with `not is_rendered(group_of(run, flow, version), seed, OUTPUT_SUFFIX)` ([D2](design.md#d2)), the refusal's text as it is.
   Verify: `git grep -n -F "is_rendered(group_of(run, flow, version), seed, OUTPUT_SUFFIX)" -- isekai/pipeline/review.py` prints one line.
-- [ ] 2.4 In `_refuse_unchanged`, make the condition of the `made` comprehension `if is_rendered(group, seed, OUTPUT_SUFFIX)`, where it tested the record's file.
+- [x] 2.4 In `_refuse_unchanged`, make the condition of the `made` comprehension `if is_rendered(group, seed, OUTPUT_SUFFIX)`, where it tested the record's file.
   Verify: `git grep -n -F "if is_rendered(group, seed, OUTPUT_SUFFIX)" -- isekai/pipeline/review.py` prints one line.
-- [ ] 2.5 In `tests/test_ui_api.py`, in `test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written`, replace the lines that make the group `made.directory(FLOW, "outputs", "001")` and write its `7.render.json` with `rendered_image(made, 1, 7)`, which writes the image and the record as a render does and is already imported there; the test's `image` dict, requests and assertions stand. The tracked flow's seed 7 had a record and no image, which `refuse_revision` refuses once it asks the image, and the test wants it revisable. `test_the_drafts_refusal_fits_draft_refused` keeps its lone record, which only checks a refusal's shape.
+- [x] 2.5 In `tests/test_ui_api.py`, in `test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written`, replace the lines that make the group `made.directory(FLOW, "outputs", "001")` and write its `7.render.json` with `rendered_image(made, 1, 7)`, which writes the image and the record as a render does and is already imported there; the test's `image` dict, requests and assertions stand. The tracked flow's seed 7 had a record and no image, which `refuse_revision` refuses once it asks the image, and the test wants it revisable. `test_the_drafts_refusal_fits_draft_refused` keeps its lone record, which only checks a refusal's shape.
   Verify: `git grep -c -F "rendered_image(made, 1, 7)" -- tests/test_ui_api.py` prints `tests/test_ui_api.py:1`.
-- [ ] 2.6 Run the cases and the file, then `uv run python -m tools.mutate` over each site's lines in `isekai/pipeline/review.py`, read by `git grep -n -F "is_rendered(" -- isekai/pipeline/review.py`, one run a range, with `--tests tests/test_review.py`. A range the tool refuses with exit 2 holds no mutant.
+- [x] 2.6 Run the cases and the file, then `uv run python -m tools.mutate` over each site's lines in `isekai/pipeline/review.py`, read by `git grep -n -F "is_rendered(" -- isekai/pipeline/review.py`, one run a range, with `--tests tests/test_review.py`. A range the tool refuses with exit 2 holds no mutant.
   Verify: `uv run pytest tests/test_review.py -q` exits 0.
 
 ## 3 — The draft

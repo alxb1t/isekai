@@ -1769,6 +1769,62 @@ def test_an_unchanged_revision_is_refused_naming_the_images_it_would_reproduce(
     assert approved_versions(run.directory(FLOW, "review")) == [1]
 
 
+@pytest.mark.spec("review:revise:a-record-without-its-image-is-refused")
+def test_a_revision_of_a_lone_record_is_refused(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary)
+    _image(run, 1, SEED).unlink()
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal, match=f"rendered no seed {SEED}"):
+        revise(run, FLOW, 1, SEED)
+
+    assert snapshot(run.path) == before
+
+
+@pytest.mark.spec("review:revise:an-image-without-its-record-is-revised")
+def test_a_revision_of_a_lone_image_is_written(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary)
+    _image(run, 1, SEED).with_name(f"{SEED}.render.json").unlink()
+
+    draft = revise(run, FLOW, 1, SEED)
+
+    assert read(draft, DRAFT_FILE)["renders"] == {"count": 1, "seeds": [SEED]}
+
+
+@pytest.mark.spec("review:revise:a-seed-with-a-record-and-no-image-is-a-change")
+def test_an_unchanged_revision_over_a_lone_record_is_approved(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary)
+    image = _image(run, 1, SEED)
+    revise(run, FLOW, 1, SEED)
+    image.unlink()
+
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+
+    assert approved is not None
+
+
+@pytest.mark.spec("review:revise:a-seed-with-an-image-and-no-record-is-reproduced")
+def test_an_unchanged_revision_over_a_lone_image_is_refused(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary)
+    image = _image(run, 1, SEED)
+    revise(run, FLOW, 1, SEED)
+    image.with_name(f"{SEED}.render.json").unlink()
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert f"seeds {SEED}," in str(refused.value)
+    assert approved_versions(run.directory(FLOW, "review")) == [1]
+
+
 @pytest.mark.spec("review:revise:new-seeds-alone-are-a-change")
 def test_a_revision_whose_only_change_is_its_seeds_is_approved(
     run: Run, schema: Schema, vocabulary: Vocabulary

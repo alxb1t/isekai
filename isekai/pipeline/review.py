@@ -78,6 +78,7 @@ from isekai.foundation.run import (
     attempts,
     failures_alone,
     group_of,
+    is_rendered,
     is_seed,
     latest,
     latest_artifact,
@@ -497,7 +498,7 @@ def refuse_revision(
             f"{run.id}: flow {flow} has no {copied.name} to revise from; restore "
             f"{copied}, then {again}"
         )
-    if not (group_of(run, flow, version) / f"{seed}{SIDECAR}").is_file():
+    if not is_rendered(group_of(run, flow, version), seed, OUTPUT_SUFFIX):
         raise Refusal(
             f"{run.id}: flow {flow} rendered no seed {seed} under {copied.name}; "
             f"run `{stage_command(run, 'show')}` to list the seeds its renders "
@@ -1155,7 +1156,7 @@ def _refuse_unchanged(
     seeds = renders["seeds"]
     group = group_of(run, flow, version)
     made = set(renders_of(origin, body, remedy)["seeds"]) | {
-        seed for seed in seeds if (group / f"{seed}{SIDECAR}").is_file()
+        seed for seed in seeds if is_rendered(group, seed, OUTPUT_SUFFIX)
     }
     held = body.get("fields")
     same = isinstance(held, Mapping) and same_fields(held, fields)
