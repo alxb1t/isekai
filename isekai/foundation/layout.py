@@ -2,10 +2,10 @@
 
 The version numbers a directory holds and the one it takes next, the paths of a flow's
 sheets and approvals, the seeds a render's file is named for, the names of a render's
-image and record, the listing of a flow's render groups and their seeds, the refs an
-image's path names, the version an artifact's name spells, and the files an edit writes
-beside its source. `run.py` re-exports each name; a module outside the foundation
-imports them from there (D69, D70).
+image and record, the listing of a flow's render groups and their seeds,
+the refs an image's path names, the version an artifact's name spells, and the files
+an edit writes beside its source. `run.py` re-exports each name; a module outside the
+foundation imports them from there (D69, D70).
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
