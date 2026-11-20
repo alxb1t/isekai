@@ -37,7 +37,7 @@
 - [x] 2.2 Pre-flight the slice in `_waiting_number`.
   Verify: `uv run pytest tests/test_review.py` exits 0.
 - [x] 2.3 Pre-flight the slice in `discard`.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:519 --tests tests/test_review.py` exits 0.
+  Verify: `uv run pytest tests/test_review.py` exits 0.
 - [x] 2.4 Pre-flight the slice in `withdraw`.
   Verify: `uv run pytest tests/test_review.py` exits 0.
 - [x] 2.5 Pre-flight the slice in `approve`.
@@ -71,10 +71,10 @@
   Verify: `git grep -n -F "version = version_of(path)" -- isekai/interface/ui/routes/reviewing.py` prints one line.
 - [x] 3.6 In `refusal_for`, in `isekai/foundation/run.py`, set `version = version_of(record)`. `.name[:3]` stands once under `isekai/`, in `version_of` ([D3](design.md#d3), C15).
   Verify: `git grep -c -F ".name[:3]" -- isekai` prints `isekai/foundation/layout.py:1`.
-- [x] 3.7 Run the pre-flight again over the comparison in `current_draft`, which the imports of `review.py` moved to line 131 ([D5](design.md#d5)).
-  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:131 --tests tests/test_review.py` exits 0.
-- [x] 3.8 Run it over the return in `_waiting_number`, which the imports moved to line 410.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:410 --tests tests/test_review.py` exits 0.
+- [x] 3.7 Run the pre-flight again over the comparison in `current_draft`, which the imports of `review.py` moved to line 132 ([D5](design.md#d5)).
+  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:132 --tests tests/test_review.py` exits 0.
+- [x] 3.8 Run it over the return in `_waiting_number`, which the imports moved to line 411.
+  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:411 --tests tests/test_review.py` exits 0.
 - [x] 3.9 The standing mutants stay killed.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 - [x] 3.10 The suites that reach the versions stay green.
