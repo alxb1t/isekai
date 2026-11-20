@@ -103,7 +103,7 @@ The change adds unit tests and no end-to-end test: every site is a function over
 
 The rule's cases are a seed with both files, with an image alone, with a record alone and in a group of failure records alone. Each new scenario's test arranges its folder by deleting the record or the image `tests.stages.rendered_image` wrote, and is bound to its key by `pytest.mark.spec`.
 
-Each new test fails on the code as it stands. The app's sites change no answer, so the suite as it stands holds them, in `tests/test_ui_api.py`. A mutation run over each switched site's new lines is the proof that a case reaches them. `tools.mutate` refuses a range that holds no mutant, with exit 2, and a range that only assigns a path is held by the cases and the suite.
+Each new test fails on the code as it stands. The app's own sites change no answer, so the suite as it stands holds them, in `tests/test_ui_api.py`, with one arrangement moved: `test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written` seeded a record with no image and wanted the tracked flow's seed revisable, which `refuse_revision` now refuses, so it seeds both files as a render writes them (task 2.5). A mutation run over each switched site's new lines is the proof that a case reaches them. `tools.mutate` refuses a range that holds no mutant, with exit 2, and a range that only assigns a path is held by the cases and the suite.
 
 ## Dependencies
 

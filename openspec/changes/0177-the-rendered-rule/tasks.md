@@ -31,7 +31,9 @@ One rule says a seed is rendered when its image is a file in its group; each pha
   Verify: `git grep -n -F "is_rendered(group_of(run, flow, version), seed, OUTPUT_SUFFIX)" -- isekai/pipeline/review.py` prints one line.
 - [ ] 2.4 In `_refuse_unchanged`, make the condition of the `made` comprehension `if is_rendered(group, seed, OUTPUT_SUFFIX)`, where it tested the record's file.
   Verify: `git grep -n -F "if is_rendered(group, seed, OUTPUT_SUFFIX)" -- isekai/pipeline/review.py` prints one line.
-- [ ] 2.5 Run the cases and the file, then `uv run python -m tools.mutate` over each site's lines in `isekai/pipeline/review.py`, read by `git grep -n -F "is_rendered(" -- isekai/pipeline/review.py`, one run a range, with `--tests tests/test_review.py`. A range the tool refuses with exit 2 holds no mutant.
+- [ ] 2.5 In `tests/test_ui_api.py`, in `test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written`, replace the lines that make the group `made.directory(FLOW, "outputs", "001")` and write its `7.render.json` with `rendered_image(made, 1, 7)`, which writes the image and the record as a render does and is already imported there; the test's `image` dict, requests and assertions stand. The tracked flow's seed 7 had a record and no image, which `refuse_revision` refuses once it asks the image, and the test wants it revisable. `test_the_drafts_refusal_fits_draft_refused` keeps its lone record, which only checks a refusal's shape.
+  Verify: `git grep -c -F "rendered_image(made, 1, 7)" -- tests/test_ui_api.py` prints `tests/test_ui_api.py:1`.
+- [ ] 2.6 Run the cases and the file, then `uv run python -m tools.mutate` over each site's lines in `isekai/pipeline/review.py`, read by `git grep -n -F "is_rendered(" -- isekai/pipeline/review.py`, one run a range, with `--tests tests/test_review.py`. A range the tool refuses with exit 2 holds no mutant.
   Verify: `uv run pytest tests/test_review.py -q` exits 0.
 
 ## 3 — The draft
