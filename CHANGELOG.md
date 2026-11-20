@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `is_rendered` in `isekai/foundation/layout.py` says a seed is rendered when its image is a file in its group, re-exported by `run.py`; a case in `tests/test_generate.py` holds it on each folder; no site asks it yet (0177 D1).
+
 ## [0.87.31] - 2026-11-20
 
 Gate: local 1m33s · CI not read under mf-ship · 0.87.30: local 1m19s · CI not read under mf-ship

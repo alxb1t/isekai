@@ -151,6 +151,11 @@ def render_record(group: Path, seed: int) -> Path:
     return group / f"{seed}{SIDECAR}"
 
 
+def is_rendered(group: Path, seed: int, suffix: str) -> bool:
+    """Return whether `seed` is rendered in `group`: its image is a file there."""
+    return render_image(group, seed, suffix).is_file()
+
+
 def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     """Return the seeds already produced into `directory`, from filenames alone.
 

@@ -4,7 +4,7 @@ One rule says a seed is rendered when its image is a file in its group; each pha
 
 ## Progress
 
-- [ ] 1 — The rule · moderate
+- [x] 1 — The rule · moderate
 - [ ] 2 — The revision · moderate
 - [ ] 3 — The draft · moderate
 - [ ] 4 — The listings and the app's sites · moderate
@@ -12,13 +12,13 @@ One rule says a seed is rendered when its image is a file in its group; each pha
 
 ## 1 — The rule
 
-- [ ] 1.1 In `tests/test_generate.py`, after `test_a_built_name_is_what_the_listing_reads`, write `test_a_seed_is_rendered_when_its_image_is_a_file`, `spec_exempt("structural: a seed is rendered when its image is a file")`, importing `is_rendered` from `isekai.foundation.run`. It is parametrized over a group with both files, an image alone, a record alone, and a group of failure records alone ([D1](design.md#d1)).
+- [x] 1.1 In `tests/test_generate.py`, after `test_a_built_name_is_what_the_listing_reads`, write `test_a_seed_is_rendered_when_its_image_is_a_file`, `spec_exempt("structural: a seed is rendered when its image is a file")`, importing `is_rendered` from `isekai.foundation.run`. It is parametrized over a group with both files, an image alone, a record alone, and a group of failure records alone ([D1](design.md#d1)).
   Verify: `git grep -c -F "test_a_seed_is_rendered_when_its_image_is_a_file" -- tests/test_generate.py` prints `tests/test_generate.py:1`.
-- [ ] 1.2 In `isekai/foundation/layout.py`, after `render_record`, add `is_rendered(group: Path, seed: int, suffix: str) -> bool` as [D1](design.md#d1) gives it: a one-line docstring, then `return render_image(group, seed, suffix).is_file()`.
+- [x] 1.2 In `isekai/foundation/layout.py`, after `render_record`, add `is_rendered(group: Path, seed: int, suffix: str) -> bool` as [D1](design.md#d1) gives it: a one-line docstring, then `return render_image(group, seed, suffix).is_file()`.
   Verify: `git grep -n -e "^def is_rendered" -- isekai/foundation/layout.py` prints one line.
-- [ ] 1.3 In `isekai/foundation/run.py`, import `is_rendered` from `isekai.foundation.layout` and add `"is_rendered"` to `__all__`, in the order the neighbours keep.
+- [x] 1.3 In `isekai/foundation/run.py`, import `is_rendered` from `isekai.foundation.layout` and add `"is_rendered"` to `__all__`, in the order the neighbours keep.
   Verify: `git grep -c -F "is_rendered" -- isekai/foundation/run.py` prints `isekai/foundation/run.py:2`.
-- [ ] 1.4 Run the rule's test, then run `uv run python -m tools.mutate` over the line of `is_rendered`'s `return`, read by `git grep -n -F "is_file()" -- isekai/foundation/layout.py`, with `--tests tests/test_generate.py`. A range the tool refuses with exit 2 holds no mutant.
+- [x] 1.4 Run the rule's test, then run `uv run python -m tools.mutate` over the line of `is_rendered`'s `return`, read by `git grep -n -F "is_file()" -- isekai/foundation/layout.py`, with `--tests tests/test_generate.py`. A range the tool refuses with exit 2 holds no mutant.
   Verify: `uv run pytest tests/test_generate.py -k test_a_seed_is_rendered_when_its_image_is_a_file -q` exits 0.
 
 ## 2 — The revision
