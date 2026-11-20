@@ -6,7 +6,7 @@
 
 - [x] 1 — The types · moderate
 - [x] 2 — The readers · moderate
-- [ ] 3 — The versions · moderate
+- [x] 3 — The versions · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The types
@@ -59,25 +59,25 @@
 
 ## 3 — The versions
 
-- [ ] 3.1 In `tests/test_run_directory.py`, add `version_of` to the import from `isekai.foundation.run`, between `slug` and `versions`. After the render ref's case, add `test_the_layout_reads_a_version_off_an_artifacts_name`, marked `@pytest.mark.spec_exempt("structural: a version is read off an artifact's name by one function")`. It asserts `version_of(Path("review/002.draft.json")) == 2`, `version_of(Path("review/001.error.1.transient.json")) == 1` and `version_of(Path("sources/010.png")) == 10`. It fails at import until 3.2 and 3.3.
+- [x] 3.1 In `tests/test_run_directory.py`, add `version_of` to the import from `isekai.foundation.run`, between `slug` and `versions`. After the render ref's case, add `test_the_layout_reads_a_version_off_an_artifacts_name`, marked `@pytest.mark.spec_exempt("structural: a version is read off an artifact's name by one function")`. It asserts `version_of(Path("review/002.draft.json")) == 2`, `version_of(Path("review/001.error.1.transient.json")) == 1` and `version_of(Path("sources/010.png")) == 10`. It fails at import until 3.2 and 3.3.
   Verify: `git grep -n -F "test_the_layout_reads_a_version_off_an_artifacts_name" -- tests/test_run_directory.py` prints one line.
-- [ ] 3.2 In `isekai/foundation/layout.py`, add `version_of` after `artifact_name`, as [D3](design.md#d3) writes it.
+- [x] 3.2 In `isekai/foundation/layout.py`, add `version_of` after `artifact_name`, as [D3](design.md#d3) writes it.
   Verify: `git grep -n -F "def version_of(path: Path) -> int:" -- isekai/foundation/layout.py` prints one line.
-- [ ] 3.3 In `isekai/foundation/run.py`, import `version_of` from `isekai.foundation.layout`, after `sidecars`, and add it to `__all__`, after `unmigrated` and before `versions`.
+- [x] 3.3 In `isekai/foundation/run.py`, import `version_of` from `isekai.foundation.layout`, after `sidecars`, and add it to `__all__`, after `unmigrated` and before `versions`.
   Verify: `uv run pytest tests/test_run_directory.py -k reads_a_version_off` exits 0.
-- [ ] 3.4 In `isekai/pipeline/review.py`, import `version_of` from `isekai.foundation.run`, before `versions`, and call it at each site [D3](design.md#d3) lists for the file: `current_draft`, `_waiting_number`, `discard`, `withdraw` and `approve`.
+- [x] 3.4 In `isekai/pipeline/review.py`, import `version_of` from `isekai.foundation.run`, before `versions`, and call it at each site [D3](design.md#d3) lists for the file: `current_draft`, `_waiting_number`, `discard`, `withdraw` and `approve`.
   Verify: `git grep -c -F "version_of(" -- isekai/pipeline/review.py` prints `isekai/pipeline/review.py:5`.
-- [ ] 3.5 In `isekai/interface/ui/routes/reviewing.py`, import `version_of` from `isekai.foundation.run`, after `stage_command`, and set `version = version_of(path)` in `_drafted` ([D3](design.md#d3)).
+- [x] 3.5 In `isekai/interface/ui/routes/reviewing.py`, import `version_of` from `isekai.foundation.run`, after `stage_command`, and set `version = version_of(path)` in `_drafted` ([D3](design.md#d3)).
   Verify: `git grep -n -F "version = version_of(path)" -- isekai/interface/ui/routes/reviewing.py` prints one line.
-- [ ] 3.6 In `refusal_for`, in `isekai/foundation/run.py`, set `version = version_of(record)`. `.name[:3]` stands once under `isekai/`, in `version_of` ([D3](design.md#d3), C15).
+- [x] 3.6 In `refusal_for`, in `isekai/foundation/run.py`, set `version = version_of(record)`. `.name[:3]` stands once under `isekai/`, in `version_of` ([D3](design.md#d3), C15).
   Verify: `git grep -c -F ".name[:3]" -- isekai` prints `isekai/foundation/layout.py:1`.
-- [ ] 3.7 Run the pre-flight again over the comparison in `current_draft`, which the imports of `review.py` moved to line 131 ([D5](design.md#d5)).
+- [x] 3.7 Run the pre-flight again over the comparison in `current_draft`, which the imports of `review.py` moved to line 131 ([D5](design.md#d5)).
   Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:131 --tests tests/test_review.py` exits 0.
-- [ ] 3.8 Run it over the return in `_waiting_number`, which the imports moved to line 410.
+- [x] 3.8 Run it over the return in `_waiting_number`, which the imports moved to line 410.
   Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:410 --tests tests/test_review.py` exits 0.
-- [ ] 3.9 The standing mutants stay killed.
+- [x] 3.9 The standing mutants stay killed.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 3.10 The suites that reach the versions stay green.
+- [x] 3.10 The suites that reach the versions stay green.
   Verify: `uv run pytest tests/test_review.py tests/test_run_directory.py tests/test_resume.py tests/test_ui_api.py` exits 0.
 
 ## 4 — The documents

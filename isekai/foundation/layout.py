@@ -74,6 +74,14 @@ def artifact_name(version: int, label: str | None = None) -> str:
     return f"{version:03d}.json" if label is None else f"{version:03d}.{label}.json"
 
 
+def version_of(path: Path) -> int:
+    """Return the version an artifact's name spells: its first three digits.
+
+    e.g. review/002.draft.json -> 2; 001.error.1.transient.json -> 1
+    """
+    return int(path.name[:3])
+
+
 def is_version(number: int) -> bool:
     """Return whether `number` is one an artifact's name can spell.
 

@@ -93,6 +93,7 @@ from isekai.foundation.layout import (
     rendered_seeds,
     sheet_of,
     sidecars,
+    version_of,
     versions,
 )
 from isekai.foundation.names import (
@@ -207,6 +208,7 @@ __all__ = [
     "slug",
     "stage_command",
     "unmigrated",
+    "version_of",
     "versions",
 ]
 
@@ -444,7 +446,7 @@ def refusal_for(
     list that did not fail.
     """
     # `record_failure` names every record `NNN.error.…`.
-    version = int(record.name[:3])
+    version = version_of(record)
     asked = NEW_VERSION if version > 1 else ()
     flows = () if flow is None else (flow,)
     command = f"`{stage_command(run, verb, *flows, options=asked)}`"

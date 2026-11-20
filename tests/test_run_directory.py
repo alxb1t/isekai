@@ -65,6 +65,7 @@ from isekai.foundation.run import (
     run_id,
     runs_in,
     slug,
+    version_of,
     versions,
     write_atomically,
 )
@@ -1425,6 +1426,15 @@ def test_the_layout_names_a_render_ref_reads_by_field_name(tmp_path: Path) -> No
     )
     assert ref._fields == ("run", "flow", "version", "seed")
     assert ref == (ref.run, FLOW, 1, 42)
+
+
+@pytest.mark.spec_exempt(
+    "structural: a version is read off an artifact's name by one function"
+)
+def test_the_layout_reads_a_version_off_an_artifacts_name() -> None:
+    assert version_of(Path("review/002.draft.json")) == 2
+    assert version_of(Path("review/001.error.1.transient.json")) == 1
+    assert version_of(Path("sources/010.png")) == 10
 
 
 @pytest.mark.spec("run-directory:layout:photo-is-no-flow")
