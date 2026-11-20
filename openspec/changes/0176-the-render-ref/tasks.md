@@ -7,7 +7,7 @@
 - [x] 1 — The types · moderate
 - [x] 2 — The readers · moderate
 - [x] 3 — The versions · moderate
-- [ ] 4 — The documents · moderate
+- [x] 4 — The documents · moderate
 
 ## 1 — The types
 
@@ -82,13 +82,13 @@
 
 ## 4 — The documents
 
-- [ ] 4.1 In `docs/decisions.md`, add D70 after D69's *Made by* line, as [D6](design.md#d6) writes it.
+- [x] 4.1 In `docs/decisions.md`, add D70 after D69's *Made by* line, as [D6](design.md#d6) writes it.
   Verify: `git grep -n -F "### D70 · A render is addressed by a named type" -- docs/decisions.md` prints one line.
-- [ ] 4.2 In the docstring of `isekai/foundation/layout.py`, add `the refs an image's path names, the version an artifact's name spells,` after `render groups and their seeds,`, wrapped within the line limit, and `, D70` after `D69`.
+- [x] 4.2 In the docstring of `isekai/foundation/layout.py`, add `the refs an image's path names, the version an artifact's name spells,` after `render groups and their seeds,`, wrapped within the line limit, and `, D70` after `D69`.
   Verify: `git grep -n -F "refs an image's path names" -- isekai/foundation/layout.py` prints one line.
-- [ ] 4.3 In `isekai/foundation/README.md`, the `layout.py` row of *Files* reads `numbering and completion, the seeds, a render group's listing, the refs an image's path names and the edit files`.
+- [x] 4.3 In `isekai/foundation/README.md`, the `layout.py` row of *Files* reads `numbering and completion, the seeds, a render group's listing, the refs an image's path names and the edit files`.
   Verify: `git grep -n -F "the refs an image's path names" -- isekai/foundation/README.md` prints one line.
-- [ ] 4.4 Derive the *Imported by* tables; no importer is new, so none moves.
+- [x] 4.4 Derive the *Imported by* tables; no importer is new, so none moves.
   Verify: `uv run python -m tools.derive_imported_by` exits 0.
-- [ ] 4.5 The documents and the guards hold.
+- [x] 4.5 The documents and the guards hold.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py tests/test_ratchets.py tests/test_spec_bindings.py` exits 0.

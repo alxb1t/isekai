@@ -13,6 +13,7 @@ its new digest.
 - `rendered_at` returns a `RenderRef` and `edit_at` an `EditRef`, `NamedTuple`s in `isekai/foundation/layout.py` that read by field name and unpack as the tuples did, re-exported by `run.py`; behaviour is as before (0176 D1).
 - The sites that indexed, sliced or star-unpacked a ref read `seed`, `k`, `run`, `flow` and `version` by field name; review's `Revision` is `RenderRef`, and the drafts route builds one; behaviour is as before (0176 D2).
 - `version_of` in `isekai/foundation/layout.py` reads the version an artifact's name spells, and the sites in `review.py`, `reviewing.py` and `refusal_for` that sliced a name call it; every answer is as before (0176 D3).
+- D70 in `docs/decisions.md` records the refs and `version_of`; the `foundation` docstring and README name them (0176 D6).
 
 ## [0.87.30] - 2026-11-20
 
