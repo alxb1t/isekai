@@ -1,10 +1,11 @@
 """A run's numbering and completion, its seeds, its render groups and its edit files.
 
 The version numbers a directory holds and the one it takes next, the paths of a flow's
-sheets and approvals, the seeds a render's file is named for,
-the names of a render's image and record, the listing of a flow's render groups and
-their seeds, and the files an edit writes beside its source. `run.py` re-exports each
-name; a module outside the foundation imports them from there (D69).
+sheets and approvals, the seeds a render's file is named for, the names of a render's
+image and record, the listing of a flow's render groups and their seeds,
+the refs an image's path names, the version an artifact's name spells, and the files
+an edit writes beside its source. `run.py` re-exports each name; a module outside the
+foundation imports them from there (D69, D70).
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
@@ -13,6 +14,7 @@ import os
 import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
+from typing import NamedTuple
 
 from isekai.foundation.artifacts import SEED_RANGE, SIDECAR
 from isekai.foundation.flow import FLOWS_DIR, load_flow
@@ -72,6 +74,14 @@ def next_version(directory: Path) -> int:
 def artifact_name(version: int, label: str | None = None) -> str:
     """Return the filename an artifact takes, with its optional approval label."""
     return f"{version:03d}.json" if label is None else f"{version:03d}.{label}.json"
+
+
+def version_of(path: Path) -> int:
+    """Return the version an artifact's name spells: its first three digits.
+
+    e.g. review/002.draft.json -> 2; 001.error.1.transient.json -> 1
+    """
+    return int(path.name[:3])
 
 
 def is_version(number: int) -> bool:
@@ -307,7 +317,26 @@ def delete_edits(group: Path, seed: int, numbers: Iterable[int]) -> list[Path]:
     return deleted
 
 
-def edit_at(image: Path) -> tuple[Run, str, int, int, int]:
+class RenderRef(NamedTuple):
+    """The run, flow, approval and seed a render's image path names."""
+
+    run: Run
+    flow: str
+    version: int
+    seed: int
+
+
+class EditRef(NamedTuple):
+    """The run, flow, approval, seed and number an edit image's path names."""
+
+    run: Run
+    flow: str
+    version: int
+    seed: int
+    k: int
+
+
+def edit_at(image: Path) -> EditRef:
     """Return the run, flow, approval, seed and number an edit image's path names.
 
     The image is on disk, or its record is: a pending edit has no image yet.
@@ -327,7 +356,7 @@ def edit_at(image: Path) -> tuple[Run, str, int, int, int]:
             "is not an edit's image; give the path of one, "
             f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.edit-<k>.png"
         )
-    return (
+    return EditRef(
         Run(run_directory.name, run_directory),
         group.parent.parent.name,
         int(group.name),

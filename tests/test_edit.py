@@ -124,6 +124,27 @@ def test_edit_names_an_image_path_names_its_run_flow_approval_seed_and_number(
     assert run.path == tmp_path / "runs" / "0123456789ab_a"
 
 
+@pytest.mark.spec_exempt(
+    "structural: an edit image's path names a ref whose fields are named"
+)
+def test_edit_names_an_edit_ref_reads_by_field_name(tmp_path: Path) -> None:
+    group = _group(tmp_path)
+    image = group / "42.edit-2.png"
+    image.write_bytes(b"png")
+
+    ref = edit_at(image)
+
+    assert (ref.run.id, ref.flow, ref.version, ref.seed, ref.k) == (
+        "0123456789ab_a",
+        "summon-anime-wai",
+        1,
+        42,
+        2,
+    )
+    assert ref._fields == ("run", "flow", "version", "seed", "k")
+    assert ref == (ref.run, ref.flow, ref.version, ref.seed, ref.k)
+
+
 @pytest.mark.spec_exempt("structural: a path that is no edit image is refused by name")
 @pytest.mark.parametrize(
     "name",

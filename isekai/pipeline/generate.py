@@ -347,7 +347,7 @@ def discard_render(image: Path) -> list[Path]:
     e.g. outputs/001/7.png, the last beside 001.error.1.transient.json
     -> [.../7.png, .../7.render.json, .../001.error.1.transient.json, .../001]
     """
-    *_, seed = rendered_at(image)
+    seed = rendered_at(image).seed
     image = image.absolute()
     group = image.parent
     record = render_record(group, seed)

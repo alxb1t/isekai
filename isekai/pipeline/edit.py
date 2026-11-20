@@ -102,8 +102,8 @@ def _located(source: Path) -> tuple[Path, int]:
     e.g. outputs/001/42.edit-1.png -> (that path, 42)
     """
     if EDIT_STEM.match(source.stem):
-        return source.absolute(), edit_at(source)[3]
-    return source.absolute(), rendered_at(source)[3]
+        return source.absolute(), edit_at(source).seed
+    return source.absolute(), rendered_at(source).seed
 
 
 def _read(path: Path, what: str) -> bytes:
@@ -222,7 +222,7 @@ def request_placed(
     """
     places_on: int | None = None
     if EDIT_STEM.match(source.stem):
-        places_on = edit_at(source)[4]
+        places_on = edit_at(source).k
         if not source.is_file():
             raise Refusal(
                 f"edit {places_on} has no image yet, so nothing can be placed on it; "

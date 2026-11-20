@@ -60,7 +60,8 @@ def run_discard(args: argparse.Namespace, wired: Wiring) -> int:
     image = args.image
     edited = EDIT_STEM.match(image.stem) is not None
     try:
-        run, flow, version = (edit_at if edited else rendered_at)(image)[:3]
+        ref = (edit_at if edited else rendered_at)(image)
+        run, flow, version = ref.run, ref.flow, ref.version
     except Refusal as unnamed:
         print(
             f"refused: {image}: {unnamed}; a render's path is "
