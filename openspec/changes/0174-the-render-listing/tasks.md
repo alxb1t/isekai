@@ -6,7 +6,7 @@ Move the render group's listing, then `rendered`, into `isekai/foundation/layout
 
 - [x] 1 — The listing · moderate
 - [x] 2 — The importers · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The listing
 
@@ -50,12 +50,12 @@ Move the render group's listing, then `rendered`, into `isekai/foundation/layout
 
 ## 3 — The documents
 
-- [ ] 3.1 In `docs/decisions.md`, insert the text of D69 from [design](design.md#d8) after D68's *Made by* line, before `## Infrastructure` ([D8](design.md#d8)).
+- [x] 3.1 In `docs/decisions.md`, insert the text of D69 from [design](design.md#d8) after D68's *Made by* line, before `## Infrastructure` ([D8](design.md#d8)).
   Verify: `git grep -n -F "### D69" -- docs/decisions.md` prints one line.
-- [ ] 3.2 In `isekai/foundation/README.md`, change the `layout.py` row of *Files* from `numbering and completion, the seeds and the edit files` to `numbering and completion, the seeds, a render group's listing and the edit files`.
+- [x] 3.2 In `isekai/foundation/README.md`, change the `layout.py` row of *Files* from `numbering and completion, the seeds and the edit files` to `numbering and completion, the seeds, a render group's listing and the edit files`.
   Verify: `git grep -n -F "a render group's listing" -- isekai/foundation/README.md` prints one line.
-- [ ] 3.3 In the docstring of `isekai/foundation/layout.py`, change `its seeds and its edit files.` to `its seeds, its render groups and its edit files.`, and `is named for, and the files` to `is named for, the listing of a flow's render groups and their seeds, and the files`.
+- [x] 3.3 In the docstring of `isekai/foundation/layout.py`, change `its seeds and its edit files.` to `its seeds, its render groups and its edit files.`, and `is named for, and the files` to `is named for, the listing of a flow's render groups and their seeds, and the files`.
   Then end its second paragraph `imports them from there (D69).` in place of `imports them from there.`, and rewrap that paragraph to lines of at most 88 characters.
   Verify: `git grep -n -F "(D69)" -- isekai/foundation/layout.py` prints one line.
-- [ ] 3.4 Leave every file under `tests/` but `tests/mutants.json`, and every file under `ui/` and `tools/`, as it stands.
+- [x] 3.4 Leave every file under `tests/` but `tests/mutants.json`, and every file under `ui/` and `tools/`, as it stands.
   Verify: `git diff --name-only 0f170216 -- tests ui tools` prints `tests/mutants.json` and no other path.

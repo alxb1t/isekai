@@ -12,6 +12,7 @@ its new digest.
 
 - `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups` move from the paid stage to `isekai/foundation/layout.py`, re-exported by `run.py` and still bound in `generate.py`; behaviour is as before (0174 D1, D3, D4).
 - `rendered` moves from `interface/run_view.py` to `isekai/foundation/layout.py`; `run_view.py`, `compare_view.py`, `render.py`, `ui/library.py` and the evaluator read the listing from `isekai.foundation.run`, and `generate.py` drops its bind of `sidecars`; behaviour is as before (0174 D1, D4, D5).
+- D69 records that a render group's files are listed in `foundation/layout.py` and read from `isekai.foundation.run`, and the foundation README's row and `layout.py`'s docstring say so (0174 D8).
 
 ## [0.87.29] - 2026-11-19
 

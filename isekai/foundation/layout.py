@@ -1,9 +1,9 @@
-"""A run's numbering and completion, its seeds and its edit files.
+"""A run's numbering and completion, its seeds, its render groups and its edit files.
 
-The version numbers a directory holds and the one it takes next, the paths of a
-flow's sheets and approvals, the seeds a render's file is named for, and the files
-an edit writes beside its source. `run.py` re-exports each name; a module outside
-the foundation imports them from there.
+The version numbers a directory holds and the one it takes next, the paths of a flow's
+sheets and approvals, the seeds a render's file is named for, the listing of a flow's
+render groups and their seeds, and the files an edit writes beside its source. `run.py`
+re-exports each name; a module outside the foundation imports them from there (D69).
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
