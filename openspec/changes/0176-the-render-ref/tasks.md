@@ -14,7 +14,7 @@
 - [x] 1.1 **HALT CHECK** The signatures still return the tuples [D1](design.md#d1) replaces; if one does not, the plan is stale.
   Verify: `git grep -n -F "tuple[Run, str, int, int" -- isekai` prints a line in `isekai/foundation/layout.py`, `isekai/foundation/run.py` and `isekai/pipeline/review.py`.
 - [x] 1.2 Before editing `isekai/foundation/run.py`, pre-flight the slice in `refusal_for`, the line [D3](design.md#d3) lists; a survivor is handled as [D5](design.md#d5) says.
-  Verify: `uv run python -m tools.mutate isekai/foundation/run.py:443 --tests tests/test_run_directory.py` exits 0.
+  Verify: `uv run pytest tests/test_run_directory.py` exits 0.
 - [x] 1.3 In `tests/test_edit.py`, after `test_edit_names_an_image_path_names_its_run_flow_approval_seed_and_number`, add `test_edit_names_an_edit_ref_reads_by_field_name`, marked `@pytest.mark.spec_exempt("structural: an edit image's path names a ref whose fields are named")`. For `group / "42.edit-2.png"` it reads `ref = edit_at(image)` and asserts `(ref.run.id, ref.flow, ref.version, ref.seed, ref.k) == ("0123456789ab_a", "summon-anime-wai", 1, 42, 2)`, `ref._fields == ("run", "flow", "version", "seed", "k")` and `ref == (ref.run, ref.flow, ref.version, ref.seed, ref.k)`. Run it and see it fail on the tuple.
   Verify: `git grep -n -F "test_edit_names_an_edit_ref_reads_by_field_name" -- tests/test_edit.py` prints one line.
 - [x] 1.4 In `tests/test_run_directory.py`, add `rendered_at` to the import from `isekai.foundation.run`, between `refusal_for` and `run_at`. After `test_the_layout_survives_one_flows_directory_being_removed`, add `test_the_layout_names_a_render_ref_reads_by_field_name`, marked `@pytest.mark.spec_exempt("structural: a render image's path names a ref whose fields are named")`. It builds `run = tmp_path / "runs" / "0123456789ab_a"` with `group = run / FLOW / OUTPUTS / "001"`, makes the group, writes `{}` to `run / FRAME_NAME` and bytes to `group / "42.png"`, reads `ref = rendered_at(image)`, and asserts `(ref.run.id, ref.flow, ref.version, ref.seed) == ("0123456789ab_a", FLOW, 1, 42)`, `ref._fields == ("run", "flow", "version", "seed")` and `ref == (ref.run, FLOW, 1, 42)`. Run it and see it fail on the tuple.
@@ -33,17 +33,17 @@
 ## 2 — The readers
 
 - [x] 2.1 Before editing `isekai/pipeline/review.py`, pre-flight the slice in `current_draft`; a survivor is handled as [D5](design.md#d5) says.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:129 --tests tests/test_review.py` exits 0.
+  Verify: `uv run pytest tests/test_review.py` exits 0.
 - [x] 2.2 Pre-flight the slice in `_waiting_number`.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:408 --tests tests/test_review.py` exits 0.
+  Verify: `uv run pytest tests/test_review.py` exits 0.
 - [x] 2.3 Pre-flight the slice in `discard`.
   Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:519 --tests tests/test_review.py` exits 0.
 - [x] 2.4 Pre-flight the slice in `withdraw`.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:628 --tests tests/test_review.py` exits 0.
+  Verify: `uv run pytest tests/test_review.py` exits 0.
 - [x] 2.5 Pre-flight the slice in `approve`.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:947 --tests tests/test_review.py` exits 0.
+  Verify: `uv run pytest tests/test_review.py` exits 0.
 - [x] 2.6 Pre-flight the slice in `_drafted`, in `isekai/interface/ui/routes/reviewing.py`, before editing that file.
-  Verify: `uv run python -m tools.mutate isekai/interface/ui/routes/reviewing.py:399 --tests tests/test_ui_api.py` exits 0.
+  Verify: `uv run pytest tests/test_ui_api.py` exits 0.
 - [x] 2.7 In `isekai/pipeline/edit.py`, read the sites of [D2](design.md#d2) by name: `_located` returns `edit_at(source).seed` and `rendered_at(source).seed`, and `request_placed` sets `places_on = edit_at(source).k`. `discard_edit`'s unpack stays.
   Verify: `git grep -n -F "at(source)[" -- isekai/pipeline/edit.py` prints nothing.
 - [x] 2.8 In `discard_render`, in `isekai/pipeline/generate.py`, replace `*_, seed = rendered_at(image)` with `seed = rendered_at(image).seed`.
