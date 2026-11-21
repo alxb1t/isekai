@@ -30,11 +30,10 @@ from isekai.foundation.run import (
     latest_artifact,
     render_record,
 )
-from isekai.interface.ui import events, library
+from isekai.interface.ui import events, library, uploads
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs
 from isekai.interface.wiring import Wiring
-from isekai.pipeline import importing
 from isekai.pipeline.generate import image_of
 from isekai.shared.field_map import FieldMap
 from isekai.shared.vocabulary import Vocabulary
@@ -146,7 +145,7 @@ class Surface:
         wire: Callable[[Path], Wiring],
         jobs: Jobs,
         billing: Billing,
-        imports: importing.Imports,
+        imports: uploads.Imports,
         broadcast: events.Broadcast,
         limit: int,
         file_response: Callable[..., Any],

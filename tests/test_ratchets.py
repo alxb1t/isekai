@@ -452,10 +452,9 @@ def unread_patches(root: Path) -> list[str]:
 
 LONG_FILES = {
     "isekai/interface/render.py": 1315,
-    "isekai/pipeline/importing.py": 841,
     "isekai/pipeline/tattoos.py": 1320,
 }
-FILE_ROWS = 3
+FILE_ROWS = 2
 
 LONG_FUNCTIONS = {
     "isekai/boundary/ollama.py::ask": 105,
