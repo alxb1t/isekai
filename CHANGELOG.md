@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `tests/test_run_directory.py` holds the keys of `_KINDS`, `STAGES`, `_WRITES`, `PREPARE`, `REACHED` and `_BUILDERS` to the stage record by one guard, and its twin names a table with a key the record lacks (0201 D1).
+
 ## [0.88.10] - 2026-11-21
 
 Gate: local 1m18s · CI not read under mf-ship · 0.88.9: local 1m17s · CI not read under mf-ship

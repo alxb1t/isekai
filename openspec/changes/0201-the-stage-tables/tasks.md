@@ -4,24 +4,24 @@ Hold the tables above the foundation to the stage record by one guard, read `_KI
 
 ## Progress
 
-- [ ] 1 — The guard · moderate
+- [x] 1 — The guard · moderate
 - [ ] 2 — The kinds · moderate
 - [ ] 3 — Prepare · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The guard
 
-- [ ] 1.1 **HALT CHECK** The tables stand where [the design](design.md#context) reads them.
+- [x] 1.1 **HALT CHECK** The tables stand where [the design](design.md#context) reads them.
   Verify: `git grep -c -e "^_KINDS: " -e "^STAGES: " -e "^_WRITES: " -e "^REACHED = " -e "^_BUILDERS: " -- isekai/interface` prints `isekai/interface/cli.py:1`, `isekai/interface/run_view.py:1`, `isekai/interface/ui/jobs.py:1`, `isekai/interface/ui/library.py:1` and `isekai/interface/verbs/runner.py:1`.
-- [ ] 1.2 **HALT CHECK** The chain has moved `PREPARE` to `isekai/interface/progress.py` and `jobs.py` reads it from there ([D5](design.md#d5)).
+- [x] 1.2 **HALT CHECK** The chain has moved `PREPARE` to `isekai/interface/progress.py` and `jobs.py` reads it from there ([D5](design.md#d5)).
   Verify: `git grep -c -e "^PREPARE[: =]" -- isekai/interface` prints `isekai/interface/progress.py:1`, and no other file.
-- [ ] 1.3 In `tests/test_run_directory.py` add the imports of [D1](design.md#d1), and after `test_the_stage_tables_are_read_from_the_record` add `_off_the_record`, `_tables` and the guard and its twin, as that block gives them. The guard passes on today's code.
+- [x] 1.3 In `tests/test_run_directory.py` add the imports of [D1](design.md#d1), and after `test_the_stage_tables_are_read_from_the_record` add `_off_the_record`, `_tables` and the guard and its twin, as that block gives them. The guard passes on today's code.
   Verify: `uv run pytest tests/test_run_directory.py -k "each_stage_tables_keys or table_with_a_key"` exits 0.
-- [ ] 1.4 Run `uv run ruff check --fix tests/test_run_directory.py`, which sorts the imports, then `uv run ruff format tests/test_run_directory.py`.
+- [x] 1.4 Run `uv run ruff check --fix tests/test_run_directory.py`, which sorts the imports, then `uv run ruff format tests/test_run_directory.py`.
   Verify: `uv run ruff format --check tests/test_run_directory.py` exits 0.
-- [ ] 1.5 Confirm the guard beside the suite, the layers and the types.
+- [x] 1.5 Confirm the guard beside the suite, the layers and the types.
   Verify: `uv run pytest tests/test_run_directory.py tests/test_layers.py tests/test_ratchets.py` exits 0.
-- [ ] 1.6 Check the types of the guard's tables.
+- [x] 1.6 Check the types of the guard's tables.
   Verify: `uv run ty check` exits 0.
 
 ## 2 — The kinds
