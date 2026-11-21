@@ -223,6 +223,43 @@ def test_a_sessions_step_and_image_lines_are_these_bytes() -> None:
     assert quiet.flag == ()
 
 
+@pytest.mark.spec_exempt("structural: what an emitter prints, the reader reads back")
+def test_each_line_kind_is_read_back_as_what_built_it() -> None:
+    lines = [line for _, _, line in ITEM_CASES + WORK_CASES]
+    lines += [line for _, _, line in STEP_CASES] + IMAGE_LINES
+
+    for line in lines:
+        assert progress_line(line) == json.loads(line)
+        assert json.dumps(progress_line(line)) == line
+
+    for other in ("refused: no tags", "[1, 2]", ""):
+        assert progress_line(other) is None
+
+
+@pytest.mark.spec_exempt("structural: a render line is the session's image step")
+def test_a_render_line_becomes_the_sessions_image_line() -> None:
+    out = io.StringIO()
+    images = _Images(Steps(out, True), 2, None)
+    render = WORK_CASES[0][2]
+    edit = WORK_CASES[1][2]
+    refused_render = json.dumps({**json.loads(render), "state": "refused"})
+    half = len(render) // 2
+
+    images.write(render[:half])
+    assert out.getvalue() == ""
+
+    images.write(f"{render[half:]}\n")
+    assert out.getvalue() == f"{IMAGE_LINES[0]}\n"
+
+    held = out.getvalue()
+    for line in [item for _, _, item in ITEM_CASES] + [edit, refused_render]:
+        images.write(f"{line}\n")
+    assert out.getvalue() == held
+
+    images.write(f"{render}\n")
+    assert out.getvalue() == f"{IMAGE_LINES[0]}\n{IMAGE_LINES[1]}\n"
+
+
 class _Landed:
     """Stand in for `Steps`: keep each image item it is handed."""
 

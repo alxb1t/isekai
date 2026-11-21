@@ -5,7 +5,7 @@ Add tests to `tests/test_progress.py` that hold the bytes of each child line and
 ## Progress
 
 - [x] 1 — The samples · moderate
-- [ ] 2 — The read-back · moderate
+- [x] 2 — The read-back · moderate
 
 ## 1 — The samples
 
@@ -20,9 +20,9 @@ Add tests to `tests/test_progress.py` that hold the bytes of each child line and
 
 ## 2 — The read-back
 
-- [ ] 2.1 Add `test_each_line_kind_is_read_back_as_what_built_it` with `@pytest.mark.spec_exempt("structural: what an emitter prints, the reader reads back")`. For the line of each case in `ITEM_CASES`, `WORK_CASES` and `STEP_CASES` and each of `IMAGE_LINES` it asserts `progress_line(line) == json.loads(line)` and `json.dumps(progress_line(line)) == line`. It asserts `progress_line` is `None` for `"refused: no tags"`, `"[1, 2]"` and `""`.
+- [x] 2.1 Add `test_each_line_kind_is_read_back_as_what_built_it` with `@pytest.mark.spec_exempt("structural: what an emitter prints, the reader reads back")`. For the line of each case in `ITEM_CASES`, `WORK_CASES` and `STEP_CASES` and each of `IMAGE_LINES` it asserts `progress_line(line) == json.loads(line)` and `json.dumps(progress_line(line)) == line`. It asserts `progress_line` is `None` for `"refused: no tags"`, `"[1, 2]"` and `""`.
   Verify: `uv run pytest tests/test_progress.py -k test_each_line_kind_is_read_back_as_what_built_it` exits 0.
-- [ ] 2.2 Add `test_a_render_line_becomes_the_sessions_image_line` with `@pytest.mark.spec_exempt("structural: a render line is the session's image step")`. It feeds `_Images(Steps(out, True), 2, None)` the render line of `WORK_CASES` and a newline in halves, and asserts `out` is empty after the first half and the first of `IMAGE_LINES` after the second. It then writes every line of `ITEM_CASES`, the edit line and the render line rebuilt by `json.dumps` with its `state` set to `refused`, and asserts `out` is unchanged. It writes the render line again and asserts `out` ends with the second of `IMAGE_LINES`.
+- [x] 2.2 Add `test_a_render_line_becomes_the_sessions_image_line` with `@pytest.mark.spec_exempt("structural: a render line is the session's image step")`. It feeds `_Images(Steps(out, True), 2, None)` the render line of `WORK_CASES` and a newline in halves, and asserts `out` is empty after the first half and the first of `IMAGE_LINES` after the second. It then writes every line of `ITEM_CASES`, the edit line and the render line rebuilt by `json.dumps` with its `state` set to `refused`, and asserts `out` is unchanged. It writes the render line again and asserts `out` ends with the second of `IMAGE_LINES`.
   Verify: `uv run pytest tests/test_progress.py -k test_a_render_line_becomes_the_sessions_image_line` exits 0.
-- [ ] 2.3 Leave every test the file held untouched, and add no test but those of 1.1 to 2.2, so `tests/test_progress.py` holds what it held and those.
+- [x] 2.3 Leave every test the file held untouched, and add no test but those of 1.1 to 2.2, so `tests/test_progress.py` holds what it held and those.
   Verify: `git grep -c -e "^def test_" -- tests/test_progress.py` prints `tests/test_progress.py:10`.
