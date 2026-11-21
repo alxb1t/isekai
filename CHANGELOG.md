@@ -18,6 +18,7 @@ its new digest.
 - The refusals and messages that spelt the entry by hand call `command`, each keeping its quoting and any `uv run` prefix; every printed byte is equal (0193 D3).
 - A guard in `tests/test_run_directory.py` fails on a string of `isekai/` outside `command.py` that spells the entry, and a twin on a small tree shows it can; docstrings, comments and `python -m isekai.boundary.…` pass (0193 D5).
 - D75 names `command.py` as the one home of the entry, D62's siblings list gains it, and the standing mutants replay with no survivor (0193 D6, D7).
+- `isekai/boundary/onnx.py` holds `silence_onnxruntime()` and `cpu_session(runtime, model, options=None)`; cases hold the call, the options before the providers, the return and the switch, and the evaluator's `log_severity_level`, which a mutation run found unread (0194 D1, D2, D5).
 
 ## [0.88.1] - 2026-11-21
 

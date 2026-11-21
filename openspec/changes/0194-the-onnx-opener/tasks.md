@@ -4,31 +4,31 @@ Run a mutation over each site that makes a session, add the opener with its case
 
 ## Progress
 
-- [ ] 1 — Add the opener with its cases · moderate
+- [x] 1 — Add the opener with its cases · moderate
 - [ ] 2 — Call the opener from its callers · moderate
 - [ ] 3 — Amend the documents and replay the standing mutants · moderate
 
 ## 1 — Add the opener with its cases
 
-- [ ] 1.1 **HALT CHECK** The premise of [D1](design.md#d1) stands: `isekai/boundary/onnx.py` does not exist and no name `cpu_session` is defined.
+- [x] 1.1 **HALT CHECK** The premise of [D1](design.md#d1) stands: `isekai/boundary/onnx.py` does not exist and no name `cpu_session` is defined.
   Verify: `git grep -n -e 'def cpu_session' -e 'boundary.onnx' -- isekai evaluation tests` prints nothing.
 
-- [ ] 1.2 **HALT CHECK** The sites of [D3](design.md#d3) stand: `wd14.py`, `pose.py`, `sam2.py` and `face.py` open their sessions by a call named `runtime.InferenceSession(`, `wd14.py` and `face.py` through a variable named `onnxruntime`.
+- [x] 1.2 **HALT CHECK** The sites of [D3](design.md#d3) stand: `wd14.py`, `pose.py`, `sam2.py` and `face.py` open their sessions by a call named `runtime.InferenceSession(`, `wd14.py` and `face.py` through a variable named `onnxruntime`.
   Verify: `git grep -c -F 'runtime.InferenceSession(' -- isekai/boundary/wd14.py isekai/boundary/pose.py isekai/boundary/sam2.py evaluation/face.py` prints `evaluation/face.py:1`, `isekai/boundary/pose.py:2`, `isekai/boundary/sam2.py:2` and `isekai/boundary/wd14.py:1`.
 
-- [ ] 1.3 Find the lines of each site's body: `OnnxSession.__init__` of `isekai/boundary/wd14.py` runs from its `def __init__` to one line before `@property`; `OnnxPoseFinder.__init__` of `isekai/boundary/pose.py` to one line before `def find`; `OnnxSegmenter.__init__` of `isekai/boundary/sam2.py` to one line before `def embed`; `_session` of `evaluation/face.py` from its `def` to one line before `class Detector`.
+- [x] 1.3 Find the lines of each site's body: `OnnxSession.__init__` of `isekai/boundary/wd14.py` runs from its `def __init__` to one line before `@property`; `OnnxPoseFinder.__init__` of `isekai/boundary/pose.py` to one line before `def find`; `OnnxSegmenter.__init__` of `isekai/boundary/sam2.py` to one line before `def embed`; `_session` of `evaluation/face.py` from its `def` to one line before `class Detector`.
   Verify: `git grep -n -e '^def _session' -e '^class Detector' -- evaluation/face.py` prints a line for each.
 
-- [ ] 1.4 Run the mutation over each range of 1.3 before a line moves, per [D5](design.md#d5), one run a range: `uv run python -m tools.mutate <path>:<first>-<last> --tests <files>`, the files `tests/test_wd14.py tests/test_wd14_runtime.py` for `wd14.py`, `tests/test_pose.py tests/test_propose.py` for `pose.py`, `tests/test_sam2.py tests/test_propose.py` for `sam2.py` and `tests/test_wd14.py tests/test_face.py tests/test_evaluation_cli.py` for `face.py`. Kill each survivor with a case in the file of its site, `tests/test_wd14.py` for `face.py`, each with `spec_exempt("structural: …")`; one no case can kill is named equivalent, with its reason, in the commit body.
+- [x] 1.4 Run the mutation over each range of 1.3 before a line moves, per [D5](design.md#d5), one run a range: `uv run python -m tools.mutate <path>:<first>-<last> --tests <files>`, the files `tests/test_wd14.py tests/test_wd14_runtime.py` for `wd14.py`, `tests/test_pose.py tests/test_propose.py` for `pose.py`, `tests/test_sam2.py tests/test_propose.py` for `sam2.py` and `tests/test_wd14.py tests/test_face.py tests/test_evaluation_cli.py` for `face.py`. Kill each survivor with a case in the file of its site, `tests/test_wd14.py` for `face.py`, each with `spec_exempt("structural: …")`; one no case can kill is named equivalent, with its reason, in the commit body.
   Verify: `uv run pytest tests/test_wd14.py tests/test_wd14_runtime.py tests/test_pose.py tests/test_sam2.py tests/test_propose.py tests/test_face.py tests/test_evaluation_cli.py` exits 0.
 
-- [ ] 1.5 In `tests/test_wd14.py` add the cases of [D5](design.md#d5), among them `def test_the_opener_switches_telemetry_off`, after `test_the_telemetry_check_catches_an_import_with_it_on`, on a recording runtime that keeps the arguments and keywords of each `InferenceSession` call, each with `@pytest.mark.spec_exempt("structural: …")`; import `cpu_session` and `silence_onnxruntime` from `isekai.boundary.onnx`, which keeps the file red until 1.6. The cases of the switch clear it with `monkeypatch.setenv` then `monkeypatch.delenv`, as `test_every_onnx_session_switches_telemetry_off_before_the_import` does.
+- [x] 1.5 In `tests/test_wd14.py` add the cases of [D5](design.md#d5), among them `def test_the_opener_switches_telemetry_off`, after `test_the_telemetry_check_catches_an_import_with_it_on`, on a recording runtime that keeps the arguments and keywords of each `InferenceSession` call, each with `@pytest.mark.spec_exempt("structural: …")`; import `cpu_session` and `silence_onnxruntime` from `isekai.boundary.onnx`, which keeps the file red until 1.6. The cases of the switch clear it with `monkeypatch.setenv` then `monkeypatch.delenv`, as `test_every_onnx_session_switches_telemetry_off_before_the_import` does.
   Verify: `git grep -n -F 'def test_the_opener_switches_telemetry_off' -- tests/test_wd14.py` prints one line.
 
-- [ ] 1.6 Create `isekai/boundary/onnx.py` as [D1](design.md#d1) writes it: the docstring, `silence_onnxruntime()` with `wd14.py`'s docstring, and `cpu_session(runtime, model, options=None)` calling `silence_onnxruntime()` first, then `InferenceSession` with `providers` by keyword. It imports `os`, `Path` and `Any` and nothing of `isekai`; each bare `Any` in its signature carries `# noqa: ANN401 -- <reason>`, as the repository's other bare `Any`s do, so `ruff` stays green.
+- [x] 1.6 Create `isekai/boundary/onnx.py` as [D1](design.md#d1) writes it: the docstring, `silence_onnxruntime()` with `wd14.py`'s docstring, and `cpu_session(runtime, model, options=None)` calling `silence_onnxruntime()` first, then `InferenceSession` with `providers` by keyword. It imports `os`, `Path` and `Any` and nothing of `isekai`; each bare `Any` in its signature carries `# noqa: ANN401 -- <reason>`, as the repository's other bare `Any`s do, so `ruff` stays green.
   Verify: `uv run pytest tests/test_wd14.py` exits 0.
 
-- [ ] 1.7 In `isekai/boundary/README.md` add a *Files* row for `onnx.py` after `ollama.py` — `silence_onnxruntime`, the telemetry switch set before the runtime loads, and `cpu_session`, the one maker of a session on the CPU provider alone; it imports the standard library alone — reaching `nothing`, and a row `| `onnx.py` | — | — |` to the end of *Imported by*, then run `uv run python -m tools.derive_imported_by`.
+- [x] 1.7 In `isekai/boundary/README.md` add a *Files* row for `onnx.py` after `ollama.py` — `silence_onnxruntime`, the telemetry switch set before the runtime loads, and `cpu_session`, the one maker of a session on the CPU provider alone; it imports the standard library alone — reaching `nothing`, and a row `| `onnx.py` | — | — |` to the end of *Imported by*, then run `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
 
 ## 2 — Call the opener from its callers

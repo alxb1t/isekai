@@ -24,10 +24,12 @@ import os
 import sys
 from collections.abc import Callable
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from isekai.boundary import provision, wd14
+from isekai.boundary.onnx import cpu_session, silence_onnxruntime
 from isekai.boundary.provision import Manifest
 from isekai.boundary.wd14 import (
     FLOOR,
@@ -443,6 +445,75 @@ def test_the_telemetry_check_catches_an_import_with_it_on() -> None:
     assert telemetry_left_on([])
 
 
+class _CallRecordingOrt:
+    """A stand-in `onnxruntime` keeping the arguments of each session call."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+        self.session = object()
+        self.options = SimpleNamespace()
+
+    def SessionOptions(self) -> SimpleNamespace:  # noqa: N802
+        return self.options
+
+    def InferenceSession(self, *args: object, **kwargs: object) -> object:  # noqa: N802
+        self.calls.append((args, kwargs))
+        return self.session
+
+
+@pytest.mark.spec_exempt(
+    "structural: the one maker of a session names the CPU provider alone"
+)
+def test_the_opener_opens_the_model_on_the_cpu_provider_alone() -> None:
+    ort = _CallRecordingOrt()
+
+    cpu_session(ort, Path("a/m.onnx"))
+
+    assert ort.calls == [(("a/m.onnx",), {"providers": ["CPUExecutionProvider"]})]
+
+
+@pytest.mark.spec_exempt(
+    "structural: the options of a session come before its providers"
+)
+def test_the_opener_hands_the_options_before_the_providers() -> None:
+    ort = _CallRecordingOrt()
+    options = object()
+
+    cpu_session(ort, Path("a/m.onnx"), options)
+
+    assert ort.calls == [
+        (("a/m.onnx", options), {"providers": ["CPUExecutionProvider"]})
+    ]
+
+
+@pytest.mark.spec_exempt("structural: the opener returns the session the runtime made")
+def test_the_opener_returns_the_session_the_runtime_made() -> None:
+    ort = _CallRecordingOrt()
+
+    assert cpu_session(ort, Path("a/m.onnx")) is ort.session
+
+
+@pytest.mark.spec_exempt("structural: no requirement names the runtime's telemetry")
+def test_the_opener_switches_telemetry_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Set first, so the undo is recorded even when the switch starts unset.
+    monkeypatch.setenv(TELEMETRY_SWITCH, "0")
+    monkeypatch.delenv(TELEMETRY_SWITCH)
+
+    cpu_session(_CallRecordingOrt(), Path("a/m.onnx"))
+
+    assert os.environ[TELEMETRY_SWITCH] == "1"
+
+
+@pytest.mark.spec_exempt("structural: no requirement names the runtime's telemetry")
+def test_the_opener_silence_sets_the_switch(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(TELEMETRY_SWITCH, "0")
+    monkeypatch.delenv(TELEMETRY_SWITCH)
+
+    silence_onnxruntime()
+
+    assert os.environ[TELEMETRY_SWITCH] == "1"
+
+
 def session_openers(root: Path) -> dict[str, bool]:
     """Return each module that opens an ONNX session, and whether it silences telemetry.
 
@@ -504,3 +575,21 @@ def test_the_check_catches_a_module_that_opens_a_session_unsilenced(
         "isekai/loud.py": False,
         "isekai/quiet.py": True,
     }
+
+
+@pytest.mark.spec_exempt(
+    "structural: the evaluator opens its session with load-time warnings silenced"
+)
+def test_the_evaluators_session_is_opened_with_log_severity_three(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from evaluation import face
+
+    ort = _CallRecordingOrt()
+    monkeypatch.setenv(TELEMETRY_SWITCH, "0")
+    monkeypatch.delenv(TELEMETRY_SWITCH)
+    monkeypatch.setattr(face, "_import", lambda _module: ort)
+
+    face._session(Path("m.onnx"))
+
+    assert ort.options.log_severity_level == 3

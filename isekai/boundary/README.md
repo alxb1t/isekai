@@ -19,6 +19,7 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 | `comfy/prompt.py` | the helpers a stage submits a graph with: `submit_and_wait` queues one graph, waits for its history and returns the image's bytes, `read_runtime` returns the versions the server reports and its first device; the render and the edit share them, so neither stage imports the other | the rented GPU, over the transport it is handed |
 | `gpu.py` | `read_env`, the `.env` file read into the session's environment; `bounds`, what `gpunit.toml` bounds; `open_session`, gpunit's session stopping at the session's limit; `Seams`, what a session reaches through; and `Volume`, the window volume and `.gpunit/` through gpunit's verbs; `run_gpunit`, a gpunit verb whose lines reach `say` as they come, and its `GpunitExit`, the exit with the last `refused:` line `refused_line` reads; gpunit is imported inside each | the rented GPU, through gpunit |
 | `ollama.py` | one POST to a local runtime, the classification of what comes back, the check that a model is built from the files `config/reader.json` pins, and the probe a job asks before it starts | the hosted model, over HTTP to localhost; Ollama's model records on disk |
+| `onnx.py` | `silence_onnxruntime`, the telemetry switch set before the runtime loads, and `cpu_session`, the one maker of a session on the CPU provider alone; it imports the standard library alone | nothing |
 | `pod_start.py` | the pod's start, run as the image's command: the volume, the models link, `provision.py fetch`, the memory checks, then `exec` into ComfyUI; stdlib only | the pod's volume and memory, and `provision.py` as a process |
 | `pose.py` | the placement's pose: `Pose`, the `PoseFinder` seam, `verified_paths` for the detector's and the estimator's digest-verified files, and `OnnxPoseFinder`, which reads one person's box and the body's keypoints with their scores on the CPU; `open_pose` makes it; `onnxruntime`, numpy and Pillow are imported inside its functions | two files on disk, and nothing else |
 | `provision.py` | decide → transfer → verify → land: the manifest reader, the byte check, the skip/abort/fetch policy, `fetch`, which walks each entry's sources, and `resolve`, which returns a pinned artifact's path only once its bytes are verified | a download, on the laptop and on the pod |
@@ -43,6 +44,7 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 | `sam2.py` | `interface/wiring.py`, `pipeline/proposing.py` | — |
 | `unpack.py` | `pose.py`, `sam2.py`, `interface/wiring.py` | `tools/derive_placement.py`, `tools/manifest.py` |
 | `wd14.py` | `pose.py`, `sam2.py`, `interface/verbs/runner.py`, `interface/wiring.py`, `pipeline/tagging.py` | `evaluation/face.py`, `evaluation/recall.py` |
+| `onnx.py` | — | — |
 
 > `interface/render.py` imports `pod_start.py` for the hold its limit's floor is
 > above; the image runs it as a file.
