@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.4] - 2026-11-21
+
+Gate: local 1m18s · CI not read under mf-ship · 0.88.3: local 1m20s · CI not read under mf-ship
+
 - `isekai/boundary/onnx.py` holds `silence_onnxruntime()` and `cpu_session(runtime, model, options=None)`; cases hold the call, the options before the providers, the return and the switch, and the evaluator's `log_severity_level`, which a mutation run found unread (0194 D1, D2, D5).
 - `OnnxSession`, `OnnxPoseFinder`, `OnnxSegmenter` and the evaluator's `_session` open their sessions with `cpu_session`, and `silence_onnxruntime` is imported from `onnx.py`; every printed byte and recorded call is equal, and the mutation run over `onnx.py` finds no survivor (0194 D3, D4, D5).
 - The boundary README's note on the telemetry switch names `onnx.py` and says "for every session", `docs/modules.md` names `onnx` where it named `wd14`'s switch, and the standing mutants replay with no survivor (0194 D6).

@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.4
 after: [0193-the-command-builder]
 ---
 
