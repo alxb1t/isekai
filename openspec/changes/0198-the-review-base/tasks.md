@@ -7,7 +7,7 @@ Make `review` a package: move `isekai/pipeline/review.py` to `isekai/pipeline/re
 - [x] 1 — The package · moderate
 - [x] 2 — The token budget · moderate
 - [x] 3 — The records · moderate
-- [ ] 4 — The decision and the documents · moderate
+- [x] 4 — The decision and the documents · moderate
 
 ## 1 — The package
 
@@ -76,17 +76,17 @@ Make `review` a package: move `isekai/pipeline/review.py` to `isekai/pipeline/re
 
 ## 4 — The decision and the documents
 
-- [ ] 4.1 In `docs/decisions.md` add D77 directly after D74 and before `## Infrastructure`, with the title, rule, *Why*, *Accepts* and *Made by* that [D9](design.md#d9) gives.
+- [x] 4.1 In `docs/decisions.md` add D77 directly after D74 and before `## Infrastructure`, with the title, rule, *Why*, *Accepts* and *Made by* that [D9](design.md#d9) gives.
   Verify: `git grep -n -F "### D77" -- docs/decisions.md` prints one line.
-- [ ] 4.2 In `isekai/pipeline/README.md` change "One file per stage, in the order a photograph passes through them." to "One file per stage, or one package, in the order a photograph passes through them.", and put in the Files row of `review/` what its modules hold: the front door `__init__.py` — `review`, `approve`, the revisions, the drafts and the cancel; `records.py` — the draft's reads and writes and the helpers the stage shares; `budget.py` — the token budget.
+- [x] 4.2 In `isekai/pipeline/README.md` change "One file per stage, in the order a photograph passes through them." to "One file per stage, or one package, in the order a photograph passes through them.", and put in the Files row of `review/` what its modules hold: the front door `__init__.py` — `review`, `approve`, the revisions, the drafts and the cancel; `records.py` — the draft's reads and writes and the helpers the stage shares; `budget.py` — the token budget.
   Verify: `git grep -n -F "records.py" -- isekai/pipeline/README.md` prints one line.
-- [ ] 4.3 Run `uv run python -m tools.derive_imported_by`, which writes the derived tables again.
+- [x] 4.3 Run `uv run python -m tools.derive_imported_by`, which writes the derived tables again.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 4.4 Confirm `records.py` holds `_write_draft`, `save_draft` and `_publish`.
+- [x] 4.4 Confirm `records.py` holds `_write_draft`, `save_draft` and `_publish`.
   Verify: `git grep -n -e "^def _write_draft" -e "^def save_draft" -e "^def _publish" -- isekai/pipeline/review/records.py` prints three lines.
-- [ ] 4.5 Confirm the front door defines `Status`, so the page's `ReviewStatus` keeps its module; `ui/src/wire.ts` is held by the deriver's test.
+- [x] 4.5 Confirm the front door defines `Status`, so the page's `ReviewStatus` keeps its module; `ui/src/wire.ts` is held by the deriver's test.
   Verify: `git grep -n -e "^Status = " -- isekai/pipeline/review/__init__.py` prints one line.
-- [ ] 4.6 Run the mutants the repository keeps.
+- [x] 4.6 Run the mutants the repository keeps.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 4.7 Confirm the suite, the layer rules and the docs hold at the end.
+- [x] 4.7 Confirm the suite, the layer rules and the docs hold at the end.
   Verify: `uv run pytest tests/test_review.py tests/test_ui_api.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_artifact_bytes.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py tests/test_spec_bindings.py tests/test_derive_wire.py` exits 0.

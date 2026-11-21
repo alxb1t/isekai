@@ -1,6 +1,6 @@
 # `pipeline/` — the staged verbs
 
-One file per stage, in the order a photograph passes through them. No stage reads
+One file per stage, or one package, in the order a photograph passes through them. No stage reads
 another's output directly: each is handed a path inside a run and hands back a
 numbered artifact, and **no stage imports another** — the last such edge closed
 when `validate` moved to `shared/fields.py`. `caption` and `tag` write the
@@ -30,7 +30,7 @@ independent, and neither reads the other's output
 | `caption.py` | ① `caption`: turns a photograph into descriptive prose | a model call |
 | `tagging.py` | ① `tag`: a scored tag list from a local ONNX session, then a raw one from a hosted model. **Neither is narrowed** — filtering is ②'s job | free, then a model call |
 | `sheet.py` | ② routes the photograph's local tag list into the flow's schema's fields, through the authored table | free |
-| `review/` | ③ copies a sheet somewhere a human may correct it, then approves it | a human — the largest measured gain in the pipeline |
+| `review/` | ③ copies a sheet somewhere a human may correct it, then approves it. The front door `__init__.py` holds `review`, `approve`, the revisions, the drafts and the cancel; `records.py` the draft's reads and writes and the helpers the stage shares; `budget.py` the token budget | a human — the largest measured gain in the pipeline |
 | `generate.py` | ④ assembles every prompt locally, then renders each against an endpoint, and discards one render | free, then **money** |
 | `edit.py` | `edit`: requests an edit from a render and its composite, or with `request_placed` from a bake's composite and its placement record, and lists the pending ones, then samples a pending one over the transport and stitches it; discards an edit. It takes its transport helpers from `boundary/comfy/prompt.py` and its maths from `shared/tattoo.py`, and imports no stage | free to request and check, then **money** to sample |
 | `proposing.py` | `propose`: the pairs stage 2 proposes from a photograph, a render and the tattoo's points on the photograph, as `Proposal(arm, pairs)`, none for no person and none for no usable bone; a `Proposer` holds the pose finder and the segmenter it is given. It reads no file, takes the pose from `boundary/pose.py`, the segmenter from `boundary/sam2.py` and its geometry from `shared/proposal.py`, and imports no stage | free |
