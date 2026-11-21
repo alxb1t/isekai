@@ -2339,6 +2339,24 @@ def test_an_older_approval_whose_group_holds_failure_records_alone_goes(
     assert image.is_file()
 
 
+@pytest.mark.spec("image-generation:discard:a-group-of-failure-records-is-no-render")
+def test_a_withdrawn_failure_only_group_is_gone_from_disk(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    _image(run, 1, 11)
+    _approved(run, schema, vocabulary, hair_silhouette=["very long hair"])
+    group = run.directory(FLOW, "outputs", "002")
+    group.mkdir()
+    failure = record_failure(group, 2, "permanent", {"stage": "render", "detail": "x"})
+    _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+
+    withdraw(run, FLOW, 3)
+
+    assert not failure.exists()
+    assert not group.exists()
+
+
 @pytest.mark.spec(
     "image-generation:discard:a-flow-with-no-approval-keeps-its-assignment"
 )
@@ -2373,6 +2391,23 @@ def test_a_flow_left_with_no_approval_keeps_only_its_assignment(
     assert gone == sorted(set(before) - set(after))
     assert [path.name for path in run.directory(FLOW).iterdir()] == ["outputs"]
     assert run.directory(FLOW, "outputs", "005").is_dir()
+
+
+@pytest.mark.spec(
+    "image-generation:discard:a-flow-with-no-approval-keeps-its-assignment"
+)
+def test_a_nested_folder_under_a_flows_own_folder_goes_with_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
+    nested = run.directory(FLOW, "sources", "nested", "deeper")
+    nested.mkdir(parents=True)
+    (nested / "held.png").write_bytes(b"png")
+
+    withdraw(run, FLOW, 1)
+
+    assert list(run.directory(FLOW).iterdir()) == []
 
 
 @pytest.mark.spec("image-generation:discard:a-flows-own-description-goes")

@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `tools.mutate` ran over `discard_render`, `discard_edit`, `_holds_render` and `withdraw` before they move; two cases in `tests/test_review.py` kill the survivors of `withdraw`, a failure-only group gone from disk and a nested folder under a flow's own folder (0181 D5).
+
 ## [0.87.36] - 2026-11-21
 
 Gate: local 1m15s · CI not read under mf-ship · 0.87.35: local 1m13s · CI not read under mf-ship

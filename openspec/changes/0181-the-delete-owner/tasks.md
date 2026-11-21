@@ -4,7 +4,7 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 
 ## Progress
 
-- [ ] 1 — The pre-flight · moderate
+- [x] 1 — The pre-flight · moderate
 - [ ] 2 — The move · moderate
 - [ ] 3 — The owner · hard
 - [ ] 4 — The verb · moderate
