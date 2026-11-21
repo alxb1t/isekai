@@ -6,7 +6,7 @@ The proposer's cache, the evaluator's roots and the tagging openers become keywo
 
 - [x] 1 — The cache · moderate
 - [x] 2 — The roots · moderate
-- [ ] 3 — The openers and the ratchet row · moderate
+- [x] 3 — The openers and the ratchet row · moderate
 
 ## 1 — The cache
 
@@ -46,23 +46,23 @@ The proposer's cache, the evaluator's roots and the tagging openers become keywo
 
 ## 3 — The openers and the ratchet row
 
-- [ ] 3.1 **HALT CHECK** only the tagger's opener and the caption config's loader are still patched.
+- [x] 3.1 **HALT CHECK** only the tagger's opener and the caption config's loader are still patched.
   Verify: `git grep -n -F "setattr(wiring," -- tests` prints a line in each of `tests/test_tagging.py` and `tests/test_pipeline_cli.py`, and none elsewhere.
-- [ ] 3.2 In `tests/test_tagging.py`, call `wiring.tagger_for(open_session=lambda *_a, **_k: opened)` in `test_the_local_tagger_resolves_with_no_flow`, and pass `tagger=lambda: wiring.tagger_for(open_session=swapped)` in `test_a_pin_that_does_not_match_is_a_refusal_and_the_hosted_list_is_written`. Delete both patches of `"open_session"` and each `monkeypatch` parameter nothing else reads. No assertion changes.
+- [x] 3.2 In `tests/test_tagging.py`, call `wiring.tagger_for(open_session=lambda *_a, **_k: opened)` in `test_the_local_tagger_resolves_with_no_flow`, and pass `tagger=lambda: wiring.tagger_for(open_session=swapped)` in `test_a_pin_that_does_not_match_is_a_refusal_and_the_hosted_list_is_written`. Delete both patches of `"open_session"` and each `monkeypatch` parameter nothing else reads. No assertion changes.
   Verify: `uv run pytest tests/test_tagging.py -k "resolves_with_no_flow or pin_that_does_not_match"` exits 1, on the unexpected keyword.
-- [ ] 3.3 In `tests/test_pipeline_cli.py`, in `test_prepare_refuses_when_a_pin_does_not_match` pass `tagger=lambda: wiring.tagger_for(open_session=swapped)`, and in `test_a_flow_resolves_to_a_reader_running_the_configured_model` call `wiring.reader_for(config=lambda: configured)` and `wiring.hosted_tagger_for(config=lambda: configured)`. Delete the patches of `"open_session"` and `"load_caption_config"` and each `monkeypatch` parameter nothing else reads. No assertion changes.
+- [x] 3.3 In `tests/test_pipeline_cli.py`, in `test_prepare_refuses_when_a_pin_does_not_match` pass `tagger=lambda: wiring.tagger_for(open_session=swapped)`, and in `test_a_flow_resolves_to_a_reader_running_the_configured_model` call `wiring.reader_for(config=lambda: configured)` and `wiring.hosted_tagger_for(config=lambda: configured)`. Delete the patches of `"open_session"` and `"load_caption_config"` and each `monkeypatch` parameter nothing else reads. No assertion changes.
   Verify: `uv run pytest tests/test_pipeline_cli.py -k "refuses_when_a_pin or reader_running_the_configured"` exits 1, on the unexpected keyword.
-- [ ] 3.4 In `isekai/interface/wiring.py`, import `CaptionConfig` beside `load_caption_config`, and give `reader_for` and `hosted_tagger_for` the keyword `config`, called in place of `load_caption_config()`, as [D3](design.md#d3) gives them, wrapped where `ruff format` wraps. Their docstrings keep what they say.
+- [x] 3.4 In `isekai/interface/wiring.py`, import `CaptionConfig` beside `load_caption_config`, and give `reader_for` and `hosted_tagger_for` the keyword `config`, called in place of `load_caption_config()`, as [D3](design.md#d3) gives them, wrapped where `ruff format` wraps. Their docstrings keep what they say.
   Verify: `git grep -n -F "config: Callable[[], CaptionConfig] = load_caption_config" -- isekai/interface/wiring.py` prints a line for each function.
-- [ ] 3.5 In `isekai/interface/wiring.py`, give `tagger_for` the keyword `open_session`, called in place of `open_session()`, as [D3](design.md#d3) gives it. The `except DigestMismatch as swapped:` line is not touched.
+- [x] 3.5 In `isekai/interface/wiring.py`, give `tagger_for` the keyword `open_session`, called in place of `open_session()`, as [D3](design.md#d3) gives it. The `except DigestMismatch as swapped:` line is not touched.
   Verify: `git grep -n -F "def tagger_for(open_session: Callable[[], LocalTagger] = open_session) -> LocalTagger:" -- isekai/interface/wiring.py` prints one line.
-- [ ] 3.6 No test calls `monkeypatch.setattr(wiring` any more.
+- [x] 3.6 No test calls `monkeypatch.setattr(wiring` any more.
   Verify: `git grep -n -F "monkeypatch.setattr(wiring" -- tests` prints nothing.
-- [ ] 3.7 In `tests/test_ratchets.py`, delete the row `"isekai.interface.wiring": 13,` from `PATCHED_MODULES`, per [D4](design.md#d4).
+- [x] 3.7 In `tests/test_ratchets.py`, delete the row `"isekai.interface.wiring": 13,` from `PATCHED_MODULES`, per [D4](design.md#d4).
   Verify: `git grep -n -e "^    .isekai\.interface\.wiring.: [0-9]" -- tests/test_ratchets.py` prints nothing.
-- [ ] 3.8 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 18`.
+- [x] 3.8 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 18`.
   Verify: `git grep -n -e "^PATCHED_ROWS = 18" -- tests/test_ratchets.py` prints one line.
-- [ ] 3.9 Run the cases of every file the change touched, and the structure tests.
+- [x] 3.9 Run the cases of every file the change touched, and the structure tests.
   Verify: `uv run pytest tests/test_propose.py tests/test_tagging.py tests/test_pipeline_cli.py tests/test_evaluation_cli.py tests/test_recall_cli.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_spec_bindings.py` exits 0.
-- [ ] 3.10 Replay the standing mutants over the edited files; `BD-1b` finds its line in `tagger_for`.
+- [x] 3.10 Replay the standing mutants over the edited files; `BD-1b` finds its line in `tagger_for`.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.

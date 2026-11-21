@@ -32,7 +32,7 @@ from isekai.boundary.provision import DigestMismatch
 from isekai.boundary.sam2 import Segmenter, open_segmenter
 from isekai.boundary.unpack import PLACEMENT_REMEDY
 from isekai.boundary.wd14 import LocalTagger, open_session
-from isekai.foundation.caption_config import load_caption_config
+from isekai.foundation.caption_config import CaptionConfig, load_caption_config
 from isekai.foundation.flow import FLOWS_DIR
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import DATA_ROOT, REPOSITORY, RUNS_ROOT
@@ -124,15 +124,17 @@ class Wiring:
 # constructed until a verb asks.
 
 
-def reader_for() -> Reader:
+def reader_for(config: Callable[[], CaptionConfig] = load_caption_config) -> Reader:
     """Return the reader running the model `config/caption.json` names.
 
     Every photograph is read by one model, so the seam takes nothing.
     """
-    return OllamaReader(model=load_caption_config().model)
+    return OllamaReader(model=config().model)
 
 
-def hosted_tagger_for() -> Tagger:
+def hosted_tagger_for(
+    config: Callable[[], CaptionConfig] = load_caption_config,
+) -> Tagger:
     """Return the hosted tagger, on the same alias the reader runs.
 
     **One model answers both prompts**, which is exactly why `TAG_PROMPT` is not
@@ -142,10 +144,10 @@ def hosted_tagger_for() -> Tagger:
     It is not optional: what can still go wrong is the alias not being created,
     and that is a refusal at the first call naming the one command that fixes it.
     """
-    return OllamaTagger(model=load_caption_config().model)
+    return OllamaTagger(model=config().model)
 
 
-def tagger_for() -> LocalTagger:
+def tagger_for(open_session: Callable[[], LocalTagger] = open_session) -> LocalTagger:
     """Open the local tagger and read its label index.
 
     The manifest's `tagger` key decides *whether* a flow is tagged; nothing in

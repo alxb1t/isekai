@@ -18,6 +18,7 @@ its new digest.
 - D74 records the terminal's guards; D72 names the second drop and the verbs' guards, D68 names `named_thumbnail`, and the foundation and interface READMEs, `README.md` and `docs/edit-tattoo.md` say a render session holds the runs root (0190 D6).
 - The proposer's cache is `Proposers`, with its two openers as keywords and one default, `PROPOSERS`; `proposer_for` reads it, the module global goes, and each proposer case passes a cache of its own (0191 D1, D5).
 - `trackable`, `destination` and the evaluators' `main`s take `repository` and `data_root` keywords defaulting to the run roots; the two refusal cases pass tmp roots and patch nothing (0191 D2, D5).
+- `tagger_for` takes `open_session`, `reader_for` and `hosted_tagger_for` take `config`; no test patches the wiring, so its row leaves `PATCHED_MODULES` and `PATCHED_ROWS` is 18 (0191 D3, D4).
 
 ## [0.87.44] - 2026-11-21
 

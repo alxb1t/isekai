@@ -499,7 +499,6 @@ PATCHED_MODULES = {
     "isekai.interface.ui": 1,
     "isekai.interface.ui.events": 1,
     "isekai.interface.ui.library": 4,
-    "isekai.interface.wiring": 13,
     "isekai.pipeline.edit": 3,
     "isekai.pipeline.generate": 1,
     "isekai.pipeline.importing": 8,
@@ -508,7 +507,7 @@ PATCHED_MODULES = {
     "isekai.shared.chain": 1,
     "isekai.shared.ink": 1,
 }
-PATCHED_ROWS = 19
+PATCHED_ROWS = 18
 
 
 # --- the rules, on this repository -------------------------------------------
