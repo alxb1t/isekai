@@ -50,8 +50,8 @@ FRAME_NAME = "run.json"
 
 # The stage directories, and the label an approved artifact carries. The run owns
 # the layout, so a stage that needs another stage's directory asks the run rather
-# than importing the stage. `approved` is here for the same reason: `review` writes it
-# and both `generate` and the inspection command read it.
+# than importing the stage. `approved` and `draft` are here for the same reason:
+# `review` writes them and other parts of the run read them.
 #
 # **The photograph's description sits in `photo/`, every other stage under a
 # flow**: `runs/<input-id>/photo/<stage>/` and `runs/<input-id>/<flow-id>/<stage>/`.
@@ -71,6 +71,7 @@ PROMPTS = "prompts"
 OUTPUTS = "outputs"
 SOURCES = "sources"
 APPROVED = "approved"
+DRAFT = "draft"
 
 # `001`, and `001.draft` / `001.approved` where a stage has that concept. No
 # other label is a version, so a render's `123.render.json` is never one.
