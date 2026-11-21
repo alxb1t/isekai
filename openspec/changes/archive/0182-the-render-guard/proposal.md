@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.38
 debt: [0181·R1, 0181·S3]
 ---
 

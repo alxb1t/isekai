@@ -10,13 +10,18 @@ its new digest.
 
 ## [Unreleased]
 
-- `collection_held` joins `isekai/foundation/library.py`: a collection is held while any of its session records' locks is held, a record that does not read included. `render_running` calls it, and a case holds the rule (0182 D1, D4).
-- The page's delete, its cancel and the review payload's `cancel` now refuse while a session of any process holds the collection, not only this server's render slot: `Surface.rendering` asks `collection_held` too. Cases hold the delete, the sheet's reason and the cancel (0182 D2, D3, D4).
-- D72's *Accepts* line, the foundation README's `library.py` row and the UI README's delete bullet say the app's guard asks the slot or the held collection; the stale *Known breaks* clause leaves the `0.87.37` notes (0182 D5).
 - `tests/test_run_directory.py` holds the stage tables by their literal values and order before they move, and `tools.mutate` ran over `_spent`, `exhausted` and `check_budget` with no survivor (0183 D4, D5).
 - `isekai/foundation/producers.py` declares each stage as a frozen `Producer` in `PRODUCERS`, and `run.py` re-exports both. Two cases hold the rows and the tables read from them; no table reads the record yet (0183 D1, D2, D4, D7).
 - `BUDGETS`, `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words are read from `PRODUCERS`, equal in value and order; `FN-1` is anchored on the wd14 row, and `tools.mutate` leaves no survivor (0183 D3, D5, D6).
 - D73 records the stage record; D21 and D62 name it, and the foundation README, `docs/principles.md` and `ARCHITECTURE.md` say the foundation holds it (0183 D8).
+
+## [0.87.38] - 2026-11-21
+
+Gate: local 1m20s · CI not read under mf-ship · 0.87.37: local 1m28s · CI not read under mf-ship
+
+- `collection_held` joins `isekai/foundation/library.py`: a collection is held while any of its session records' locks is held, a record that does not read included. `render_running` calls it, and a case holds the rule (0182 D1, D4).
+- The page's delete, its cancel and the review payload's `cancel` now refuse while a session of any process holds the collection, not only this server's render slot: `Surface.rendering` asks `collection_held` too. Cases hold the delete, the sheet's reason and the cancel (0182 D2, D3, D4).
+- D72's *Accepts* line, the foundation README's `library.py` row and the UI README's delete bullet say the app's guard asks the slot or the held collection; the stale *Known breaks* clause leaves the `0.87.37` notes (0182 D5).
 
 ## [0.87.37] - 2026-11-21
 
