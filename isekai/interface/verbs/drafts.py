@@ -4,16 +4,14 @@ import argparse
 from functools import cache
 from pathlib import Path
 
+from isekai.foundation.discard import delete_edit, delete_render
 from isekai.foundation.flow import load_flow
-from isekai.foundation.library import drop_thumbnails
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import EDIT_STEM, RUNS_ROOT, edit_at, rendered_at
 from isekai.interface.drafting import draft_from_image, refuse_image_drafts
 from isekai.interface.verbs.common import Verb, require_tracked
 from isekai.interface.wiring import Wiring
-from isekai.pipeline.edit import discard_edit
-from isekai.pipeline.generate import discard_render
-from isekai.pipeline.review import Revision, withdraw
+from isekai.pipeline.review import Revision
 
 
 def run_draft(args: argparse.Namespace, wired: Wiring) -> int:
@@ -50,19 +48,17 @@ def run_discard(args: argparse.Namespace, wired: Wiring) -> int:
     """Delete one render or edit, printing each path deleted.
 
     A path that is an edit's image deletes that edit and every edit made from it,
-    and nothing else. Any other path is a render's: it goes with its edits and its
-    thumbnails. Refused, deleting nothing, while a render session holds the
-    collection, as the app's delete is. The thumbnails go while the image still
-    names them. A render that was its approval's last takes that approval with
-    it, through `withdraw`; the run's files print before the thumbnails. The
-    library is imported here for `run_ui`'s reason: it is off `python -m isekai`'s
-    import graph.
+    and nothing else. Any other path is a render's: it goes with its edits. The
+    owner deletes each image's thumbnail, the files and, for a render that was its
+    approval's last, that approval; the run's files print before the thumbnails.
+    Refused, deleting nothing, while a render session holds the collection, as the
+    app's delete is. The library is imported here for `run_ui`'s reason: it is off
+    `python -m isekai`'s import graph.
     """
     image = args.image
     edited = EDIT_STEM.match(image.stem) is not None
     try:
-        ref = (edit_at if edited else rendered_at)(image)
-        run, flow, version = ref.run, ref.flow, ref.version
+        run = (edit_at if edited else rendered_at)(image).run
     except Refusal as unnamed:
         print(
             f"refused: {image}: {unnamed}; a render's path is "
@@ -80,18 +76,10 @@ def run_discard(args: argparse.Namespace, wired: Wiring) -> int:
             file=wired.err,
         )
         return 1
-    if edited:
-        deleted = discard_edit(image)
-        for path in deleted:
-            print(
-                f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out
-            )
-        return 0
-    thumbnails = drop_thumbnails(run, image)
-    deleted = [*discard_render(image), *withdraw(run, flow, version)]
-    for path in deleted:
+    deleted = (delete_edit if edited else delete_render)(image)
+    for path in deleted.files:
         print(f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out)
-    for path in thumbnails:
+    for path in deleted.thumbnails:
         print(
             f"discard deleted {path.relative_to(run.path.parents[2])}", file=wired.out
         )

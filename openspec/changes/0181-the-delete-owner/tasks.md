@@ -7,7 +7,7 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 - [x] 1 — The pre-flight · moderate
 - [x] 2 — The move · moderate
 - [x] 3 — The owner · hard
-- [ ] 4 — The verb · moderate
+- [x] 4 — The verb · moderate
 - [ ] 5 — The route · moderate
 - [ ] 6 — The documents · moderate
 
@@ -54,13 +54,13 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 
 ## 4 — The verb
 
-- [ ] 4.1 In `tests/test_edit_session.py`, after `test_edit_discard_the_last_render_with_an_edit_takes_the_group_and_the_approval`, add the verb's cases of [D6](design.md#d6)'s table, each bound to the scenario it names, in the collection `tmp_path / "b"` with its `sources/` made, a thumbnail written for each image they name.
+- [x] 4.1 In `tests/test_edit_session.py`, after `test_edit_discard_the_last_render_with_an_edit_takes_the_group_and_the_approval`, add the verb's cases of [D6](design.md#d6)'s table, each bound to the scenario it names, in the collection `tmp_path / "b"` with its `sources/` made, a thumbnail written for each image they name.
   Verify: `uv run pytest tests/test_edit_session.py -k "the_verb_takes" -q` exits 1.
-- [ ] 4.2 In `isekai/interface/verbs/drafts.py`, make `run_discard` read the run from the ref, call `(delete_edit if edited else delete_render)(image)` and print the files, then the thumbnails, as [D4](design.md#d4) gives it. Import both from `isekai.foundation.discard`, drop the imports it no longer reads, and reword its docstring to say the owner deletes.
+- [x] 4.2 In `isekai/interface/verbs/drafts.py`, make `run_discard` read the run from the ref, call `(delete_edit if edited else delete_render)(image)` and print the files, then the thumbnails, as [D4](design.md#d4) gives it. Import both from `isekai.foundation.discard`, drop the imports it no longer reads, and reword its docstring to say the owner deletes.
   Verify: `git grep -n -e "discard_render(" -e "withdraw(" -e "discard_edit(" -e "drop_thumbnails(" -- isekai/interface/verbs/drafts.py` prints nothing.
-- [ ] 4.3 Run the verb's cases and the delete's readers.
+- [x] 4.3 Run the verb's cases and the delete's readers.
   Verify: `uv run pytest tests/test_edit_session.py tests/test_pipeline_cli.py -q` exits 0.
-- [ ] 4.4 Run `uv run python -m tools.derive_imported_by`; it moves `verbs/drafts.py` between the importers of the stages and of `discard.py`.
+- [x] 4.4 Run `uv run python -m tools.derive_imported_by`; it moves `verbs/drafts.py` between the importers of the stages and of `discard.py`.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py -q` exits 0.
 
 ## 5 — The route

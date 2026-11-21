@@ -12,7 +12,8 @@ its new digest.
 
 - `tools.mutate` ran over `discard_render`, `discard_edit`, `_holds_render` and `withdraw` before they move; two cases in `tests/test_review.py` kill the survivors of `withdraw`, a failure-only group gone from disk and a nested folder under a flow's own folder (0181 D5).
 - `discard_render`, `withdraw`, `_holds_render` and `discard_edit` move unchanged into `isekai/foundation/discard.py`, each bound back at the stage that held it, so no importer and no test changes (0181 D1).
-- `delete_render` and `delete_edit` of `isekai/foundation/discard.py` drop the thumbnail of every image that goes, then delete the files, then, for a render, the approval, and return `Deleted`; `discard_edit` takes its chain from `_chain`. Cases hold the order and the refusal of an unreadable chain (0181 D2, D3, D6).
+- `delete_render` and `delete_edit` of `isekai/foundation/discard.py` drop each image's thumbnail, delete the files, then, for a render, the approval, and return `Deleted`; `_chain` serves `discard_edit`. Cases hold the order and the refusal (0181 D2, D3, D6).
+- `isekai discard` calls the owner: a render's discard drops its edits' thumbnails, and an edit's drops its own and its chain's (0181 D4, D6).
 
 ## [0.87.36] - 2026-11-21
 

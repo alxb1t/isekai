@@ -630,6 +630,65 @@ def test_edit_discard_the_last_render_with_an_edit_takes_the_group_and_the_appro
     assert not approval_of(run, FLOW, 2).exists()
 
 
+def _cached_edits(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> tuple[Path, list[Path]]:
+    """Return the group of render 1 with edits 1 and 2, and each image's thumbnail.
+
+    Edit 2 is made from edit 1. The collection holds `sources/`, as the library's
+    cache needs one to drop anything.
+    """
+    run = counted(tmp_path, schema, vocabulary, "ada", 1)
+    (tmp_path / "b" / "sources").mkdir()
+    group = _group(run)
+    _with_an_edit(group, 1)
+    _marker(group, ["1.edit-2.json"], source="1.edit-1.png")
+    for suffix in (".png", ".composite.png"):
+        (group / f"1.edit-2{suffix}").write_bytes(b"y")
+    return group, [
+        _thumbnail(tmp_path, group / name)
+        for name in ("1.png", "1.edit-1.png", "1.edit-2.png")
+    ]
+
+
+@pytest.mark.spec("cli:discard:a-render-takes-its-edits-thumbnails-with-it")
+def test_edit_discard_the_verb_takes_a_renders_edits_thumbnails_with_it(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    group, thumbnails = _cached_edits(tmp_path, schema, vocabulary)
+    other = thumbnails[0].with_name("1.other.jpg")
+    other.write_bytes(b"jpg")
+
+    code, out, err = _discard(tmp_path, group / "1.png")
+
+    printed = out.splitlines()
+    named = [f"discard deleted {path.relative_to(tmp_path)}" for path in thumbnails]
+    assert (code, err) == (0, "")
+    assert printed[-len(named) :] == named
+    assert not group.exists()
+    assert not any(path.exists() for path in thumbnails)
+    assert other.is_file()
+
+
+@pytest.mark.spec("cli:discard:an-edit-takes-its-own-thumbnail-and-its-chains")
+def test_edit_discard_the_verb_takes_an_edits_thumbnail_and_its_chains(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    group, (render, first, second) = _cached_edits(tmp_path, schema, vocabulary)
+
+    code, out, err = _discard(tmp_path, group / "1.edit-1.png")
+
+    printed = out.splitlines()
+    named = [
+        f"discard deleted {path.relative_to(tmp_path)}" for path in (first, second)
+    ]
+    assert (code, err) == (0, "")
+    assert printed[-len(named) :] == named
+    assert not first.exists() and not second.exists()
+    assert render.is_file()
+    assert (group / "1.png").is_file()
+
+
 @pytest.mark.spec("edit:discard:a-running-session-refuses-it")
 def test_edit_discard_a_running_session_refuses_an_edits_path(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
