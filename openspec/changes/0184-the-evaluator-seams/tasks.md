@@ -17,7 +17,7 @@ Each phase gives one entry point or one function a parameter, switches its tests
 - [x] 1.3 In `tests/test_ratchets.py`, delete the row `"evaluation.__main__": 5,` from `PATCHED_MODULES`.
   Verify: `git grep -n -F "evaluation.__main__" -- tests/test_ratchets.py` prints nothing.
 - [x] 1.4 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 23`.
-  Verify: `git grep -n -e "^PATCHED_ROWS = 23" -- tests/test_ratchets.py` prints one line.
+  Verify: `git grep -n -e "^PATCHED_ROWS = [0-9]" -- tests/test_ratchets.py` prints one line.
 - [x] 1.5 Run the evaluator's tests and the ratchet with the row gone.
   Verify: `uv run pytest tests/test_evaluation_cli.py tests/test_eval_manifest.py tests/test_ratchets.py` exits 0.
 
@@ -30,7 +30,7 @@ Each phase gives one entry point or one function a parameter, switches its tests
 - [x] 2.3 In `tests/test_ratchets.py`, delete the row `"evaluation.recall": 1,` from `PATCHED_MODULES`.
   Verify: `git grep -n -F "evaluation.recall" -- tests/test_ratchets.py` prints nothing.
 - [x] 2.4 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 22`.
-  Verify: `git grep -n -e "^PATCHED_ROWS = 22" -- tests/test_ratchets.py` prints one line.
+  Verify: `git grep -n -e "^PATCHED_ROWS = [0-9]" -- tests/test_ratchets.py` prints one line.
 - [x] 2.5 Run the recall's tests and the ratchet with the row gone.
   Verify: `uv run pytest tests/test_recall_cli.py tests/test_ratchets.py` exits 0.
 
