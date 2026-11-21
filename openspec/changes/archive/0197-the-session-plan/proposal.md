@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.7
 after: [0196-the-child-lines-declared]
 ---
 
