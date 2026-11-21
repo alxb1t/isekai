@@ -6,7 +6,7 @@ Pin the moving lines by mutation, move the runner from [`isekai/interface/cli.py
 
 - [x] 1 — Pin the moving lines by mutation · moderate
 - [x] 2 — Move the runner to `verbs/runner.py` · moderate
-- [ ] 3 — Bind `prepare`'s run in its own module · moderate
+- [x] 3 — Bind `prepare`'s run in its own module · moderate
 - [ ] 4 — Replay the mutation and amend the documents · moderate
 
 ## 1 — Pin the moving lines by mutation
@@ -48,22 +48,22 @@ Pin the moving lines by mutation, move the runner from [`isekai/interface/cli.py
 
 ## 3 — Bind `prepare`'s run in its own module
 
-- [ ] 3.1 In `isekai/interface/verbs/prepare.py` delete `PerItem` and the `per_item` parameter of `run_prepare`, and call `_per_item`, imported from `isekai.interface.verbs.runner`, where `run_prepare` called `per_item`, per [D3](design.md#d3); drop the imports nothing left in the file reads, and name `_per_item` in the docstring where it names `per_item`.
+- [x] 3.1 In `isekai/interface/verbs/prepare.py` delete `PerItem` and the `per_item` parameter of `run_prepare`, and call `_per_item`, imported from `isekai.interface.verbs.runner`, where `run_prepare` called `per_item`, per [D3](design.md#d3); drop the imports nothing left in the file reads, and name `_per_item` in the docstring where it names `per_item`.
   Verify: `git grep -n -F 'PerItem' -- isekai/interface/verbs/prepare.py` prints nothing.
 
-- [ ] 3.2 In `isekai/interface/verbs/prepare.py` pass `run_prepare` as the `run` of the `Verb` in `PREPARE_ROW`, on a line of its own, and change the module docstring's "with no run bound" to say the row carries its run.
+- [x] 3.2 In `isekai/interface/verbs/prepare.py` pass `run_prepare` as the `run` of the `Verb` in `PREPARE_ROW`, on a line of its own, and change the module docstring's "with no run bound" to say the row carries its run.
   Verify: `grep -n -e '^    run_prepare,' isekai/interface/verbs/prepare.py` prints one line.
 
-- [ ] 3.3 In `isekai/interface/verbs/__init__.py` stop importing and listing `run_prepare`.
+- [x] 3.3 In `isekai/interface/verbs/__init__.py` stop importing and listing `run_prepare`.
   Verify: `git grep -n -F 'run_prepare' -- isekai/interface/verbs/__init__.py` prints nothing.
 
-- [ ] 3.4 In `isekai/interface/cli.py` delete `_prepare`, put `PREPARE_ROW` in `ROWS` as it is, with no `dataclasses.replace`, and drop the import of `run_prepare` and each import nothing left in the file reads.
+- [x] 3.4 In `isekai/interface/cli.py` delete `_prepare`, put `PREPARE_ROW` in `ROWS` as it is, with no `dataclasses.replace`, and drop the import of `run_prepare` and each import nothing left in the file reads.
   Verify: `git grep -n -e '^def _prepare' -e 'run_prepare' -- isekai/interface/cli.py` prints nothing.
 
-- [ ] 3.5 Derive the *Imported by* tables again, as in 2.6, now that `prepare.py` and `isekai/interface/cli.py` have changed their imports: `uv run python -m tools.derive_imported_by`.
+- [x] 3.5 Derive the *Imported by* tables again, as in 2.6, now that `prepare.py` and `isekai/interface/cli.py` have changed their imports: `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
 
-- [ ] 3.6 Check the package's lint, formatting and imports.
+- [x] 3.6 Check the package's lint, formatting and imports.
   Verify: `uv run ruff check isekai/interface` exits 0.
 
 ## 4 — Replay the mutation and amend the documents

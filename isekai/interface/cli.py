@@ -95,7 +95,6 @@ from isekai.interface.verbs import (
     _per_item,
     generate_batch,
     require_tracked,
-    run_prepare,
 )
 from isekai.interface.wiring import Wiring, wiring
 
@@ -249,18 +248,13 @@ def _render(args: argparse.Namespace, wired: Wiring) -> int:
     return run_session(args, wired, _dispatch_argv)
 
 
-def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
-    """Run `prepare`, handing it `_per_item` for the work of each of its steps."""
-    return run_prepare(args, wired, _per_item)
-
-
 ROWS: tuple[Verb, ...] = (
     IMPORT_ROW,
     ASSIGN_ROW,
     CAPTION_ROW,
     TAG_ROW,
     SHEET_ROW,
-    dataclasses.replace(PREPARE_ROW, run=_prepare),
+    PREPARE_ROW,
     REVIEW_ROW,
     APPROVE_ROW,
     DRAFT_ROW,
