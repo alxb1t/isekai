@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.42] - 2026-11-21
+
+Gate: local 1m27s · CI not read under mf-ship · 0.87.41: local 1m40s · CI not read under mf-ship
+
 - `_per_item` is pinned before it is cut: cases reach the table's miss and its place in the order, and each survivor of the mutation run over its lines is killed by a case that asserts the exact lines it prints (0186 D3, D8).
 - `_per_item` is cut in `cli.py` into `_Item`, a builder for each stage verb, the table `_BUILDERS` and the runner `_run_item`; its two ratchet rows go, `FUNCTION_ROWS` is 6, and `PB-2b` finds `definition=flow,` (0186 D1–D8).
 - The mutation run over the new code, from `_Item` to the line before `_assign`, leaves no survivor, and the replay of `tests/mutants.json` holds (0186 D8).
