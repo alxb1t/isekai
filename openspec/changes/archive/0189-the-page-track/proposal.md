@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.45
 after: [0188-the-stage-attempt]
 ---
 

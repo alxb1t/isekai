@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.45] - 2026-11-21
+
+Gate: local 1m19s · CI not read under mf-ship · 0.87.44: local 1m20s · CI not read under mf-ship
+
 - The hub cell's track is held by vitest cases before it moves: `SEGMENTS`, `DONE`, `RUNNING`, `wordOf` and `segmentClass` give the words and classes they gave, a stage the table lacks and `toString` among them (0189 D3).
 - `RUNNING` of `ui/src/cells.ts` is keyed by `PrepareVerb`, the union of `tag`, `caption` and `sheet`, and `wordOf` and `segmentClass` narrow the store's `string` by one guard, `isPrepareVerb`; the cases pass untouched and `Hub.vue` is unchanged (0189 D1, D2).
 
