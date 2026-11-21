@@ -32,7 +32,8 @@ module scope, and the UI imports no CLI module.
 | `verbs/stages.py` | the arguments and rows of `assign`, `caption`, `tag`, `sheet`, `review`, `approve` and `show` |
 | `wiring.py` | composes the modules — resolves the reader and the two taggers, with no flow, verifies the vocabulary before it is read, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
 | `drafting.py` | drafts a flow from an image for `draft` and the page — its own flow a revision, another from the image's approval, assigning a flow with no sheet and filling it from the source's tags first; and copies an approval across for `approve --from`, its sheet filled first |
-| `render.py` | the `render` verb: finds what each approval lacks, less each `--without`, or takes the requests, assembles every prompt, estimates the session's limit and its quote, opens a GPU session through `boundary/gpu.py` stopping at that limit, waits for the endpoint, runs `generate` per flow, reports each step with `--progress json`, and writes the prose to the collection's log |
+| `render.py` | the `render` verb: takes the requests or what `plan.py` finds each approval lacks, less each `--without`, assembles every prompt, quotes the session and sets its limit, opens a GPU session through `boundary/gpu.py` stopping at that limit, waits for the endpoint, runs `generate` per flow, reports each step with `--progress json`, and writes the prose to the collection's log |
+| `plan.py` | the plan of a render session: its timing, its estimate, what each approval lacks, the edit queue's reading and the quote's data; read by `render.py`, and importing nothing of it |
 | `progress.py` | declares the lines a child prints and `--progress json`: the item, step and image lines, their stage, state and step names and the flag; holds `emit`, `progress_line`, `Steps` and `_Images`. **Imports the standard library alone** |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions, producers and failure records, and the names below a flow it does not read. Decides nothing |
 | `compare_view.py` | the `compare` verb: one page of every run's photograph beside each flow's renders, written into the collection directory. Reads, decides nothing |
@@ -57,6 +58,7 @@ module scope, and the UI imports no CLI module.
 | `wiring.py` | `cli.py`, `plan.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `ui/routes/place.py`, `ui/surface.py`, `verbs/common.py`, `verbs/drafts.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/library.py`, `verbs/prepare.py`, `verbs/runner.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
 | `drafting.py` | `ui/routes/reviewing.py`, `verbs/drafts.py`, `verbs/runner.py` | — |
 | `render.py` | `cli.py`, `ui/jobs.py`, `ui/routes/rendering.py`, `verbs/edits.py` | — |
+| `plan.py` | `render.py` | — |
 | `progress.py` | `render.py`, `ui/jobs.py`, `verbs/common.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/prepare.py`, `verbs/runner.py`, `verbs/session.py` | — |
 | `run_view.py` | `verbs/runner.py` | — |
 | `compare_view.py` | `render.py`, `verbs/library.py` | — |

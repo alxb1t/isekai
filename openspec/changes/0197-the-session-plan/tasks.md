@@ -6,7 +6,7 @@ Move the plan of a render session from `isekai/interface/render.py` to `isekai/i
 
 - [x] 1 — The estimate and the edit queue · moderate
 - [x] 2 — The plan and the quote's parts · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The estimate and the edit queue
 
@@ -48,15 +48,15 @@ Move the plan of a render session from `isekai/interface/render.py` to `isekai/i
 
 ## 3 — The documents
 
-- [ ] 3.1 In `isekai/interface/README.md` add a `plan.py` row directly after `render.py`, before any `progress.py` row, in `## Files`: the plan of a render session — its timing, its estimate, what each approval lacks, the edit queue's reading and the quote's data — read by `render.py`, and importing nothing of it. In the `render.py` row change "finds what each approval lacks, less each `--without`, or takes the requests, assembles every prompt, estimates the session's limit and its quote," to "takes the requests or what `plan.py` finds each approval lacks, less each `--without`, assembles every prompt, quotes the session and sets its limit,".
+- [x] 3.1 In `isekai/interface/README.md` add a `plan.py` row directly after `render.py`, before any `progress.py` row, in `## Files`: the plan of a render session — its timing, its estimate, what each approval lacks, the edit queue's reading and the quote's data — read by `render.py`, and importing nothing of it. In the `render.py` row change "finds what each approval lacks, less each `--without`, or takes the requests, assembles every prompt, estimates the session's limit and its quote," to "takes the requests or what `plan.py` finds each approval lacks, less each `--without`, assembles every prompt, quotes the session and sets its limit,".
   Verify: `git grep -c -e "^| .plan.py. |" -- isekai/interface/README.md` prints `isekai/interface/README.md:1`.
-- [ ] 3.2 In the same README add a `plan.py` row directly after `render.py`, before any `progress.py` row, in `## Imported by`, `—` in its other cells, then run `uv run python -m tools.derive_imported_by`, which fills it.
+- [x] 3.2 In the same README add a `plan.py` row directly after `render.py`, before any `progress.py` row, in `## Imported by`, `—` in its other cells, then run `uv run python -m tools.derive_imported_by`, which fills it.
   Verify: `git grep -c -e "^| .plan.py. |" -- isekai/interface/README.md` prints `isekai/interface/README.md:2`.
-- [ ] 3.3 In `isekai/README.md` add `plan.py` directly after `render.py`, before any `progress.py`, in the `interface/` row.
+- [x] 3.3 In `isekai/README.md` add `plan.py` directly after `render.py`, before any `progress.py`, in the `interface/` row.
   Verify: `git grep -c -F "plan.py" -- isekai/README.md` prints `isekai/README.md:1`.
-- [ ] 3.4 In `docs/principles.md` change "`interface/render.py`'s `short` decides what each approval lacks of its count, and its `quote` reaches `estimate` to price the session;" to "`interface/plan.py`'s `short` decides what each approval lacks of its count and its `estimate` prices a session, which `interface/render.py`'s `quote` reaches;", keeping the file's wrap.
+- [x] 3.4 In `docs/principles.md` change "`interface/render.py`'s `short` decides what each approval lacks of its count, and its `quote` reaches `estimate` to price the session;" to "`interface/plan.py`'s `short` decides what each approval lacks of its count and its `estimate` prices a session, which `interface/render.py`'s `quote` reaches;", keeping the file's wrap.
   Verify: `git grep -c -F "interface/plan.py" -- docs/principles.md` prints `docs/principles.md:1`.
-- [ ] 3.5 In `isekai/boundary/README.md` change the note's "`interface/render.py` imports `pod_start.py` for the hold its limit's floor is above;" to "`interface/plan.py` imports `pod_start.py` for the hold its limit's floor is above, and `interface/render.py` binds it again;", keeping the wrap.
+- [x] 3.5 In `isekai/boundary/README.md` change the note's "`interface/render.py` imports `pod_start.py` for the hold its limit's floor is above;" to "`interface/plan.py` imports `pod_start.py` for the hold its limit's floor is above, and `interface/render.py` binds it again;", keeping the wrap.
   Verify: `git grep -c -e "^> .interface/plan.py. imports" -- isekai/boundary/README.md` prints `isekai/boundary/README.md:1`.
-- [ ] 3.6 Run the mutants the repository keeps.
+- [x] 3.6 Run the mutants the repository keeps.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.

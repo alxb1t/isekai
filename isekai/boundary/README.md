@@ -46,8 +46,8 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 | `wd14.py` | `interface/verbs/runner.py`, `interface/wiring.py`, `pipeline/tagging.py` | `evaluation/recall.py` |
 | `onnx.py` | `pose.py`, `sam2.py`, `wd14.py` | `evaluation/face.py` |
 
-> `interface/render.py` imports `pod_start.py` for the hold its limit's floor is
-> above; the image runs it as a file.
+> `interface/plan.py` imports `pod_start.py` for the hold its limit's floor is
+> above, and `interface/render.py` binds it again; the image runs it as a file.
 
 > `provision.py` is on `python -m isekai`'s import graph, through `ollama.py`'s
 > check of the reader's manifest. It imports only the standard library, so the
