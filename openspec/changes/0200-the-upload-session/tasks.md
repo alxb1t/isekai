@@ -5,7 +5,7 @@ Move `Reader` and `Imports` from `isekai/pipeline/importing.py` to `isekai/inter
 ## Progress
 
 - [x] 1 — The session in its new module · moderate
-- [ ] 2 — The readers · moderate
+- [x] 2 — The readers · moderate
 - [ ] 3 — The old session leaves the stage · moderate
 - [ ] 4 — The documents · moderate
 
@@ -30,23 +30,23 @@ Move `Reader` and `Imports` from `isekai/pipeline/importing.py` to `isekai/inter
 
 ## 2 — The readers
 
-- [ ] 2.1 In `isekai/interface/ui/app.py` change `from isekai.interface.ui import events` to import `uploads` after `events`, and build `imports = uploads.Imports(` where `importing.Imports(` is. Its arguments and `importing.upload_limit()` stay, so the `importing` import stays.
+- [x] 2.1 In `isekai/interface/ui/app.py` change `from isekai.interface.ui import events` to import `uploads` after `events`, and build `imports = uploads.Imports(` where `importing.Imports(` is. Its arguments and `importing.upload_limit()` stay, so the `importing` import stays.
   Verify: `git grep -n -F "uploads.Imports(" -- isekai/interface/ui/app.py` prints one line.
-- [ ] 2.2 In `isekai/interface/ui/surface.py` import `uploads` after `library` in `from isekai.interface.ui import events, library`, annotate `imports: uploads.Imports`, and delete `from isekai.pipeline import importing`.
+- [x] 2.2 In `isekai/interface/ui/surface.py` import `uploads` after `library` in `from isekai.interface.ui import events, library`, annotate `imports: uploads.Imports`, and delete `from isekai.pipeline import importing`.
   Verify: `git grep -n -w "importing" -- isekai/interface/ui/surface.py` prints nothing.
-- [ ] 2.3 In `tests/test_importing.py` add `from isekai.interface.ui import uploads` after the `isekai.interface.cli` import. Every line that reads `importing.Reader`, `importing.Imports` or `importing.tempfile` reads `uploads` in its place ([D3](design.md#d3)). Every other line stays, `importing.commit`, `importing._clean` and `importing.os` included.
+- [x] 2.3 In `tests/test_importing.py` add `from isekai.interface.ui import uploads` after the `isekai.interface.cli` import. Every line that reads `importing.Reader`, `importing.Imports` or `importing.tempfile` reads `uploads` in its place ([D3](design.md#d3)). Every other line stays, `importing.commit`, `importing._clean` and `importing.os` included.
   Verify: `git grep -n -e "importing.Reader" -e "importing.Imports" -e "importing.tempfile" -- tests/test_importing.py` prints nothing.
-- [ ] 2.4 In `tests/test_ui_api.py` add `import isekai.interface.ui.uploads as uploads_module  # noqa: E402` after the `app_module` import. The line that patches `Reader.put` and the line that notes `Imports.close` read `uploads_module` where they read `importing_module` ([D3](design.md#d3)).
+- [x] 2.4 In `tests/test_ui_api.py` add `import isekai.interface.ui.uploads as uploads_module  # noqa: E402` after the `app_module` import. The line that patches `Reader.put` and the line that notes `Imports.close` read `uploads_module` where they read `importing_module` ([D3](design.md#d3)).
   Verify: `git grep -n -e "importing_module.Reader" -e "importing_module.Imports" -- tests/test_ui_api.py` prints nothing.
-- [ ] 2.5 Run `uv run ruff format` and `uv run ruff check --fix` on `isekai/interface/ui/app.py`, `isekai/interface/ui/surface.py`, `tests/test_importing.py` and `tests/test_ui_api.py`, which sort the new imports.
+- [x] 2.5 Run `uv run ruff format` and `uv run ruff check --fix` on `isekai/interface/ui/app.py`, `isekai/interface/ui/surface.py`, `tests/test_importing.py` and `tests/test_ui_api.py`, which sort the new imports.
   Verify: `uv run ruff check isekai/interface/ui/app.py isekai/interface/ui/surface.py tests/test_importing.py tests/test_ui_api.py` exits 0.
-- [ ] 2.6 In `tests/mutants.json` set `path` in `PA-14` and in `PA-15` so each holds `"path": "isekai/interface/ui/uploads.py"` ([D6](design.md#d6)). Their `find`, `replace`, `tests` and `why` stay.
+- [x] 2.6 In `tests/mutants.json` set `path` in `PA-14` and in `PA-15` so each holds `"path": "isekai/interface/ui/uploads.py"` ([D6](design.md#d6)). Their `find`, `replace`, `tests` and `why` stay.
   Verify: `git grep -n -F '"path": "isekai/interface/ui/uploads.py"' -- tests/mutants.json` prints two lines.
-- [ ] 2.7 Run `uv run python -m tools.derive_imported_by`: the app and the surface import `uploads.py`, and the surface no longer imports `importing.py`.
+- [x] 2.7 Run `uv run python -m tools.derive_imported_by`: the app and the surface import `uploads.py`, and the surface no longer imports `importing.py`.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 2.8 **HALT CHECK** The injected failures still reach the session: the test that replaces `importing.read` and the test that replaces `importing.commit` hold with the app and the tests on the new classes. A failure means a read in `uploads.py` binds a name the plan reads through the module.
+- [x] 2.8 **HALT CHECK** The injected failures still reach the session: the test that replaces `importing.read` and the test that replaces `importing.commit` hold with the app and the tests on the new classes. A failure means a read in `uploads.py` binds a name the plan reads through the module.
   Verify: `uv run pytest tests/test_importing.py tests/test_ui_api.py tests/test_ui.py tests/test_layers.py tests/test_ratchets.py tests/test_docs.py tests/test_derive_wire.py` exits 0.
-- [ ] 2.9 Replay the mutants the repository keeps, `PA-14` and `PA-15` on `uploads.py`.
+- [x] 2.9 Replay the mutants the repository keeps, `PA-14` and `PA-15` on `uploads.py`.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 
 ## 3 — The old session leaves the stage

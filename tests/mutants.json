@@ -401,7 +401,7 @@
   },
   {
     "finding": "PA-14",
-    "path": "isekai/pipeline/importing.py",
+    "path": "isekai/interface/ui/uploads.py",
     "find": "            if unread:\n",
     "replace": "            if False:\n",
     "tests": ["tests/test_importing.py"],
@@ -409,7 +409,7 @@
   },
   {
     "finding": "PA-15",
-    "path": "isekai/pipeline/importing.py",
+    "path": "isekai/interface/ui/uploads.py",
     "find": "        except BaseException:\n            reader.unseal()\n            raise",
     "replace": "        except BaseException:\n            raise",
     "tests": ["tests/test_importing.py"],

@@ -49,6 +49,7 @@ from starlette.requests import Request  # noqa: E402
 import isekai.foundation.run as run_module  # noqa: E402
 import isekai.interface.render as render_module  # noqa: E402
 import isekai.interface.ui.app as app_module  # noqa: E402
+import isekai.interface.ui.uploads as uploads_module  # noqa: E402
 import isekai.pipeline.importing as importing_module  # noqa: E402
 import isekai.pipeline.review.records as review_records  # noqa: E402
 from isekai.boundary.gpu import Seams  # noqa: E402
@@ -773,7 +774,7 @@ def test_an_upload_past_its_declared_length_is_refused_before_its_body_is_read(
         raise AssertionError("the request's body was read")
 
     monkeypatch.setattr(importing_module, "upload_limit", lambda *a, **k: 1024 * 1024)
-    monkeypatch.setattr(importing_module.Reader, "put", handed)
+    monkeypatch.setattr(uploads_module.Reader, "put", handed)
     monkeypatch.setattr(Request, "body", unread)
     client = _client(wired, made, tmp_path)
     staged = client.post("/api/staging").json()["id"]
@@ -3490,7 +3491,7 @@ def test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn(
 
     noting(Billing, "close")
     noting(Jobs, "shutdown")
-    noting(importing_module.Imports, "close")
+    noting(uploads_module.Imports, "close")
     noting(events.Broadcast, "close")
     with client:
         pass
