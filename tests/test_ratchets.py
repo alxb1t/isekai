@@ -469,7 +469,6 @@ LONG_FUNCTIONS = {
 FUNCTION_ROWS = 6
 
 WIDE_FUNCTIONS = {
-    "isekai/foundation/run.py::refusal_for": 9,
     "isekai/interface/drafting.py::draft_across": 7,
     "isekai/interface/render.py::Record.__init__": 7,
     "isekai/interface/render.py::_session": 9,
@@ -483,7 +482,7 @@ WIDE_FUNCTIONS = {
     "isekai/pipeline/tattoos.py::preview": 9,
     "isekai/pipeline/tattoos.py::composite": 8,
 }
-WIDE_ROWS = 13
+WIDE_ROWS = 12
 
 BIG_UI_FILES: dict[str, int] = {}
 UI_ROWS = 0

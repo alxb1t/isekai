@@ -49,13 +49,11 @@ from isekai.foundation.run import (
     Run,
     StageFailure,
     artifact_name,
-    check_budget,
+    attempt,
     instructions_record,
     latest,
     next_version,
     photo_of,
-    record_failure,
-    refusal_for,
 )
 
 # The name this stage's budget is keyed by. Its directory inside a run is the
@@ -251,29 +249,16 @@ def caption(
         return None
 
     version = next_version(directory)
-    check_budget(STAGE, directory, version, run)
-
-    briefing = briefing_path.read_text()
-    try:
-        reading = reader.read(run.photo, briefing, run.path)
-    except StageFailure as failed:
-        record = record_failure(
-            directory,
-            version,
-            failed.kind,
-            {"stage": STAGE, "detail": failed.detail},
-        )
-        raise refusal_for(
-            "reader",
-            run,
-            failed.kind,
-            failed.detail,
-            record,
-            CAPTIONS,
-            STAGE,
-            None,
-            STAGE,
-        ) from failed
+    reading = attempt(
+        STAGE,
+        run,
+        directory,
+        version,
+        lambda briefing: reader.read(run.photo, briefing, run.path),
+        noun="reader",
+        catching=(StageFailure,),
+        opening=briefing_path.read_text,
+    )
 
     path = directory / artifact_name(version)
     producer: CaptionProducer = {
