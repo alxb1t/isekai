@@ -669,11 +669,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D68 · The collection's names and the session's read side are foundation/library.py, re-bound at their old homes
 
-**`isekai/foundation/library.py` holds the library's folder names and a collection's, `root`, `is_collection`, `listed` and `collection`, and the read side of a collection's session records: `UNSUPPORTED`, `record_running`, `running`, `render_running` and `session`, and where a thumbnail sits in the cache and what names it: `stat_key`, `file_digest`, `thumbnail_of` and `drop_thumbnails`. Each name is re-bound at its old home, so no importer changes; a name the old home no longer reads is bound as `import X as X`. The module imports the standard library and the foundation, `Run` through `run.py`.**
+**`isekai/foundation/library.py` holds the library's folder names and a collection's, `root`, `is_collection`, `listed` and `collection`, and the read side of a collection's session records: `UNSUPPORTED`, `record_running`, `running`, `collection_held`, `render_running` and `session`, and where a thumbnail sits in the cache and what names it: `stat_key`, `file_digest`, `thumbnail_of` and `drop_thumbnails`. Each name is re-bound at its old home, so no importer changes; a name the old home no longer reads is bound as `import X as X`. The module imports the standard library and the foundation, `Run` through `run.py`.**
 
 - **Why:** the code read these names from above, `SOURCES` from the importer and `record_running` from the render verb, so nothing below the interface could meet a collection, and `ui/library.py` was a listed long file ([D56](#d56--size-and-patches-are-held-by-ratchets)). A move that re-binds changes no importer and no test.
 - **Accepts:** `thumbnail` and the sources' thumbnails stay in `ui/library.py`, and `render_running` stays wrapped by `ui/__init__.py`. `pipeline/importing.py` and `interface/verbs/library.py` keep their hand copy of `is_collection`'s test. `isekai/README.md`'s file list names no `foundation/library.py`, and no test holds that list. The CLI's imports of the UI package stay. Reopen when the base's seams lift them.
-- **Made by:** `0173`, `0180`.
+- **Made by:** `0173`, `0180`, `0182`.
 
 ### D69 · A render group's files are listed in foundation/layout.py, and a module above the pipeline reads the listing from the foundation
 
