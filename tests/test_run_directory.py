@@ -36,6 +36,7 @@ from isekai.foundation.run import (
     CAPTIONS,
     DATA_ROOT,
     DESCRIPTION,
+    ENTRY,
     FRAME_NAME,
     OUTPUTS,
     PHOTO,
@@ -57,11 +58,13 @@ from isekai.foundation.run import (
     attempt,
     attempts,
     check_budget,
+    command,
     current_draft,
     instructions_record,
     is_approved,
     is_edit_file,
     latest,
+    migrate_command,
     next_version,
     open_run,
     photo_of,
@@ -845,6 +848,42 @@ def test_a_record_that_refuses_the_next_run_names_its_deletion(
         "`python -m isekai caption aunt-ada`"
         + ("" if "delete" in remedy else " again once what it names is fixed")
     )
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_migrate_command_names_no_root_for_the_default_one() -> None:
+    run = Run("aunt-ada", RUNS_ROOT / "aunt-ada")
+
+    assert migrate_command(run) == "python -m isekai migrate"
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_migrate_command_names_a_root_that_is_not_the_default(tmp_path: Path) -> None:
+    run = Run("aunt-ada", tmp_path / "my runs" / "aunt-ada")
+
+    assert migrate_command(run) == (
+        f"python -m isekai migrate --runs '{tmp_path / 'my runs'}'"
+    )
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_command_joins_the_entry_the_verb_and_the_words() -> None:
+    assert command("render", "b/runs", "f=1") == "python -m isekai render b/runs f=1"
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_command_with_no_words_ends_at_the_verb() -> None:
+    assert command("migrate") == "python -m isekai migrate"
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_command_quotes_no_word() -> None:
+    assert command("tag", "my photo.jpg") == "python -m isekai tag my photo.jpg"
+
+
+@pytest.mark.spec_exempt("structural: the parser names the entry the builder holds")
+def test_the_parser_prints_the_entry() -> None:
+    assert build_parser().prog == ENTRY
 
 
 def _attempt_in(tmp_path: Path, scope: str, folder: str) -> tuple[Run, Path]:

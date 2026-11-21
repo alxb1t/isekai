@@ -4,7 +4,7 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 
 ## Progress
 
-- [ ] 1 — Add `command` with its cases · moderate
+- [x] 1 — Add `command` with its cases · moderate
 - [ ] 2 — Build the builders from `command` · moderate
 - [ ] 3 — Call `command` from the sites · moderate
 - [ ] 4 — Guard the entry with a test and its twin · moderate
@@ -12,25 +12,25 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 
 ## 1 — Add `command` with its cases
 
-- [ ] 1.1 **HALT CHECK** The premise of [D1](design.md#d1) stands: no name `command` or `ENTRY` is defined in the foundation yet.
+- [x] 1.1 **HALT CHECK** The premise of [D1](design.md#d1) stands: no name `command` or `ENTRY` is defined in the foundation yet.
   Verify: `git grep -n -e '^def command' -e '^ENTRY' -- isekai/foundation` prints nothing.
 
-- [ ] 1.2 Find the lines of `stage_command` and `migrate_command` in `isekai/foundation/run.py`: `stage_command` runs from its `def` to one line before `def migrate_command`, and `migrate_command` from its `def` to one line before `def unmigrated`.
+- [x] 1.2 Find the lines of `stage_command` and `migrate_command` in `isekai/foundation/run.py`: `stage_command` runs from its `def` to one line before `def migrate_command`, and `migrate_command` from its `def` to one line before `def unmigrated`.
   Verify: `git grep -n -e '^def stage_command' -e '^def migrate_command' -e '^def unmigrated' -- isekai/foundation/run.py` prints a line for each.
 
-- [ ] 1.3 Run the mutation over each builder of 1.2 before a line moves, per [D6](design.md#d6), one run a range: `uv run python -m tools.mutate isekai/foundation/run.py:<first>-<last> --tests tests/test_run_directory.py tests/test_review.py tests/test_resume.py tests/test_pipeline_cli.py`. Kill each survivor with a case in `tests/test_run_directory.py` named `test_stage_command_…` for a survivor in `stage_command` and `test_migrate_command_…` for one in `migrate_command`, bound to `cli:refusals:refusal-names-the-remedy`, holding the text whole; one no case can kill is named equivalent, with its reason, in the commit body.
+- [x] 1.3 Run the mutation over each builder of 1.2 before a line moves, per [D6](design.md#d6), one run a range: `uv run python -m tools.mutate isekai/foundation/run.py:<first>-<last> --tests tests/test_run_directory.py tests/test_review.py tests/test_resume.py tests/test_pipeline_cli.py`. Kill each survivor with a case in `tests/test_run_directory.py` named `test_stage_command_…` for a survivor in `stage_command` and `test_migrate_command_…` for one in `migrate_command`, bound to `cli:refusals:refusal-names-the-remedy`, holding the text whole; one no case can kill is named equivalent, with its reason, in the commit body.
   Verify: `uv run pytest tests/test_run_directory.py tests/test_review.py tests/test_resume.py tests/test_pipeline_cli.py` exits 0.
 
-- [ ] 1.4 In `tests/test_run_directory.py` add `test_command_joins_the_entry_the_verb_and_the_words` (`("render", "b/runs", "f=1")` gives `"python -m isekai render b/runs f=1"`), `test_command_with_no_words_ends_at_the_verb` (`("migrate",)` gives `"python -m isekai migrate"`) and `test_command_quotes_no_word` (`("tag", "my photo.jpg")` gives `"python -m isekai tag my photo.jpg"`), each bound to `cli:refusals:refusal-names-the-remedy`, per [D1](design.md#d1). Add `test_the_parser_prints_the_entry`, `build_parser().prog == ENTRY`, with `spec_exempt("structural: the parser names the entry the builder holds")`. Import `ENTRY` and `command` from `isekai.foundation.run`, which keeps the file red until 1.6.
+- [x] 1.4 In `tests/test_run_directory.py` add `test_command_joins_the_entry_the_verb_and_the_words` (`("render", "b/runs", "f=1")` gives `"python -m isekai render b/runs f=1"`), `test_command_with_no_words_ends_at_the_verb` (`("migrate",)` gives `"python -m isekai migrate"`) and `test_command_quotes_no_word` (`("tag", "my photo.jpg")` gives `"python -m isekai tag my photo.jpg"`), each bound to `cli:refusals:refusal-names-the-remedy`, per [D1](design.md#d1). Add `test_the_parser_prints_the_entry`, `build_parser().prog == ENTRY`, with `spec_exempt("structural: the parser names the entry the builder holds")`. Import `ENTRY` and `command` from `isekai.foundation.run`, which keeps the file red until 1.6.
   Verify: `git grep -n -F 'test_command_quotes_no_word' -- tests/test_run_directory.py` prints one line.
 
-- [ ] 1.5 Create `isekai/foundation/command.py` as [D1](design.md#d1) writes it: the docstring, `ENTRY = "python -m isekai"` with the comment above it, and `command(verb: str, *words: str) -> str` returning `" ".join((ENTRY, verb, *words))`, with a docstring and its examples. The module imports nothing.
+- [x] 1.5 Create `isekai/foundation/command.py` as [D1](design.md#d1) writes it: the docstring, `ENTRY = "python -m isekai"` with the comment above it, and `command(verb: str, *words: str) -> str` returning `" ".join((ENTRY, verb, *words))`, with a docstring and its examples. The module imports nothing.
   Verify: `git grep -n -e '^def command' -- isekai/foundation` prints one line.
 
-- [ ] 1.6 In `isekai/foundation/run.py` import `ENTRY` and `command` from `isekai.foundation.command` after the `atomic_write` import, list `ENTRY` after `EDIT_SUFFIXES` and `command` after `check_budget` in `__all__`, and name `command.py` in the docstring's paragraph on the siblings: it holds the words a command starts with and the join that builds one.
+- [x] 1.6 In `isekai/foundation/run.py` import `ENTRY` and `command` from `isekai.foundation.command` after the `atomic_write` import, list `ENTRY` after `EDIT_SUFFIXES` and `command` after `check_budget` in `__all__`, and name `command.py` in the docstring's paragraph on the siblings: it holds the words a command starts with and the join that builds one.
   Verify: `uv run pytest tests/test_run_directory.py` exits 0.
 
-- [ ] 1.7 In `isekai/foundation/README.md` add a *Files* row for `command.py` after `producers.py` — `ENTRY`, the words every printed command starts with, and `command(verb, *words)`, which builds the command a person is told to run; it imports nothing of `isekai` — and a row `| `command.py` | — | — |` to the end of *Imported by*, then run `uv run python -m tools.derive_imported_by`.
+- [x] 1.7 In `isekai/foundation/README.md` add a *Files* row for `command.py` after `producers.py` — `ENTRY`, the words every printed command starts with, and `command(verb, *words)`, which builds the command a person is told to run; it imports nothing of `isekai` — and a row `| `command.py` | — | — |` to the end of *Imported by*, then run `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
 
 ## 2 — Build the builders from `command`
