@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.10
 after: [0199-the-review-parts]
 ---
 

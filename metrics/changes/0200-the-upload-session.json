@@ -1,0 +1,58 @@
+{
+  "change": "0200-the-upload-session",
+  "version": "0.88.10",
+  "base": "9ad4560b",
+  "analyzed": "3f81e209",
+  "measured_on": "local",
+  "collected_at": "2026-11-21T23:37:31+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2592
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 78
+    },
+    "open-backlog-cards": {
+      "value": 3
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 942
+    },
+    "diff-files": {
+      "value": 19
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 18353
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1105
+    },
+    "decisions": {
+      "value": 78
+    }
+  }
+}

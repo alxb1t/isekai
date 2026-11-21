@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.10] - 2026-11-21
+
+Gate: local 1m18s · CI not read under mf-ship · 0.88.9: local 1m17s · CI not read under mf-ship
+
 - `isekai/interface/ui/uploads.py` holds a copy of `Reader` and `Imports` that reads the stage as `importing.<name>`, and `importing.py` makes `refuse_name` and `CLAIM` public for it; the old classes stay until the delete (0200 D1, D2, D4).
 - `create_app` builds `uploads.Imports`, `Surface` types it, the tests of the import file and the API read `Reader`, `Imports` and `tempfile` through `uploads`, and the standing mutants `PA-14` and `PA-15` replay on `uploads.py` (0200 D3, D4, D6).
 - `importing.py` loses `Reader`, `Imports` and the imports only they read, so the stage holds the stage alone and its row leaves the ratchet's long files (0200 D4, D5).
