@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.44
 after: [0187-the-runner-move]
 ---
 
