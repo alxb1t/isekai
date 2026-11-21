@@ -26,10 +26,11 @@ convention:**
   to advance to. The kind and the attempt ordinal are in the name, so the retry
   decision stays a listing.
 
-The siblings `names.py`, `rundir.py`, `layout.py` and `failures.py` hold the
-identity and the names, the run and its frame, the numbering and the edit files,
-and the failure budgets. This module imports them and re-exports every name, so a
-module outside the foundation imports a run's names from here (D62).
+The siblings `names.py`, `rundir.py`, `layout.py`, `failures.py` and
+`producers.py` hold the identity and the names, the run and its frame, the
+numbering and the edit files, the failure budgets, and the stage record. This
+module imports them and re-exports every name, so a module outside the foundation
+imports a run's names from here (D62).
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
@@ -128,6 +129,7 @@ from isekai.foundation.names import (
     run_id,
     slug,
 )
+from isekai.foundation.producers import PRODUCERS, Producer
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.rundir import Run, assign, run_at, runs_in
 
@@ -153,6 +155,7 @@ __all__ = [
     "OUTPUTS",
     "PHOTO",
     "PHOTOGRAPH_VERBS",
+    "PRODUCERS",
     "PROMPTS",
     "REPOSITORY",
     "REVIEW",
@@ -165,6 +168,7 @@ __all__ = [
     "Attempt",
     "EditRef",
     "Kind",
+    "Producer",
     "RenderRef",
     "Run",
     "StageFailure",

@@ -65,9 +65,9 @@
   },
   {
     "finding": "FN-1",
-    "path": "isekai/foundation/failures.py",
-    "find": "    \"wd14\": 1,\n    \"tags\": 3,",
-    "replace": "    \"tags\": 3,",
+    "path": "isekai/foundation/producers.py",
+    "find": "    Producer(\"wd14\", \"wd14\", \"photo\", \"tag\", 1),",
+    "replace": "    Producer(\"wd14\", \"wd14\", \"photo\", \"tag\", None),",
     "tests": ["tests/test_run_directory.py"],
     "why": "the wd14 stage has no budget entry"
   },
