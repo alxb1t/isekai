@@ -1,0 +1,58 @@
+{
+  "change": "0195-the-child-lines-pinned",
+  "version": "0.88.5",
+  "base": "9827e4dd",
+  "analyzed": "558db584",
+  "measured_on": "local",
+  "collected_at": "2026-11-21T20:56:36+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2586
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 79
+    },
+    "open-backlog-cards": {
+      "value": 3
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 365
+    },
+    "diff-files": {
+      "value": 7
+    },
+    "phases": {
+      "value": 2
+    },
+    "shared-reading-set": {
+      "value": 18031
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1105
+    },
+    "decisions": {
+      "value": 76
+    }
+  }
+}
