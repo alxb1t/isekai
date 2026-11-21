@@ -8,7 +8,7 @@ Hold each stage's refusal whole and pin the sequences by mutation, add `attempt`
 - [x] 2 — Add `attempt` and `producer_for` · moderate
 - [x] 3 — Call `attempt` from the stages · moderate
 - [x] 4 — Narrow `refusal_for` and take its row out · moderate
-- [ ] 5 — Replay the mutation and amend the documents · moderate
+- [x] 5 — Replay the mutation and amend the documents · moderate
 
 ## 1 — Hold each stage's refusal whole and pin the sequences by mutation
 
@@ -95,17 +95,17 @@ Hold each stage's refusal whole and pin the sequences by mutation, add `attempt`
 
 ## 5 — Replay the mutation and amend the documents
 
-- [ ] 5.1 Find the lines of the narrowed function and of the new one in `isekai/foundation/run.py`: `refusal_for` runs from its `def` to one line before `def attempt`, and `attempt` from its `def` to one line before `def instructions_record`.
+- [x] 5.1 Find the lines of the narrowed function and of the new one in `isekai/foundation/run.py`: `refusal_for` runs from its `def` to one line before `def attempt`, and `attempt` from its `def` to one line before `def instructions_record`.
   Verify: `git grep -n -e '^def attempt' -e '^def refusal_for' -e '^def instructions_record' -- isekai/foundation/run.py` prints a line for each.
 
-- [ ] 5.2 Run the mutation over `attempt` and over `refusal_for`, per [D6](design.md#d6), one run a range: `uv run python -m tools.mutate isekai/foundation/run.py:<first>-<last> --tests tests/test_run_directory.py tests/test_caption.py tests/test_tagging.py tests/test_sheet_stage.py tests/test_resume.py`. Kill each survivor with a case in `tests/test_run_directory.py`; one no case can kill is named equivalent, with its reason, in the commit body.
+- [x] 5.2 Run the mutation over `attempt` and over `refusal_for`, per [D6](design.md#d6), one run a range: `uv run python -m tools.mutate isekai/foundation/run.py:<first>-<last> --tests tests/test_run_directory.py tests/test_caption.py tests/test_tagging.py tests/test_sheet_stage.py tests/test_resume.py`. Kill each survivor with a case in `tests/test_run_directory.py`; one no case can kill is named equivalent, with its reason, in the commit body.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 
-- [ ] 5.3 In `docs/decisions.md` amend D73 per [D8](design.md#d8): the statement gains a sentence naming `attempt` in `run.py` as the sequence of `caption`, `wd14`, `tags` and `sheet`, read by `producer_for`; the *Accepts* drops "the sequence inside a stage" and says the paid stages keep their own; the *Made by* gains `0188`. No decision is added.
+- [x] 5.3 In `docs/decisions.md` amend D73 per [D8](design.md#d8): the statement gains a sentence naming `attempt` in `run.py` as the sequence of `caption`, `wd14`, `tags` and `sheet`, read by `producer_for`; the *Accepts* drops "the sequence inside a stage" and says the paid stages keep their own; the *Made by* gains `0188`. No decision is added.
   Verify: `git grep -n -F 'the sequence inside a stage' -- docs/decisions.md` prints nothing.
 
-- [ ] 5.4 In `isekai/foundation/README.md` name `attempt` in the *Files* row of `run.py`, beside `refusal_for`.
+- [x] 5.4 In `isekai/foundation/README.md` name `attempt` in the *Files* row of `run.py`, beside `refusal_for`.
   Verify: `git grep -n -w -e attempt -- isekai/foundation/README.md` prints one line.
 
-- [ ] 5.5 In the same file name `producer_for` in the *Files* row of `producers.py`.
+- [x] 5.5 In the same file name `producer_for` in the *Files* row of `producers.py`.
   Verify: `git grep -n -F 'producer_for' -- isekai/foundation/README.md` prints one line.

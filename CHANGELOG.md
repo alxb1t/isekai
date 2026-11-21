@@ -21,6 +21,7 @@ its new digest.
 - `attempt` in `isekai/foundation/run.py` owns the budget's check, the optional open step, the work, the failure's record and the refusal, and `producer_for` of `producers.py` finds a stage's row by its key; cases hold both, and no stage calls them yet (0188 D1–D3).
 - `caption`, `wd14`, `tags` and `sheet` call `attempt` in place of their own budget check, record and refusal, the open steps of `caption` and `wd14` going through `opening`; `VERB` of `tagging.py` goes, and every refusal stays byte-equal (0188 D1, D2, D7).
 - `refusal_for` takes the stage's `key` and a keyword `noun`, and reads the folder, the verb and the budget from the row `producer_for` finds; its row leaves the wide-function ratchet and `WIDE_ROWS` is 12 (0188 D3, D4).
+- The mutation runs over `attempt` and `refusal_for` leave no survivor and the replay of `tests/mutants.json` holds; D73 names `attempt` and `producer_for`, accepts the paid stages' own sequences, and the foundation README names both (0188 D6, D8).
 
 ## [0.87.41] - 2026-11-21
 
