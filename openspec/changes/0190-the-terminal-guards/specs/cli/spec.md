@@ -24,7 +24,8 @@ stage; a collection is many runs, and one refused run must not cost the rest.
 #### Scenario: a running render refuses the cancel of its runs root
 - **Key:** `cli:approve-cancel:a-running-render-refuses-it`
 - **Layers:** unit
-- **WHEN** `approve --cancel` names a cancellable run under a runs root a render session holds, and one under another root
+- **WHEN** `approve --cancel` names a cancellable run under a runs root a render session holds,
+  and one under another root
 - **THEN** the first is refused, saying a render session is running, and its approval stays
 - **AND** the second is a draft again
 
