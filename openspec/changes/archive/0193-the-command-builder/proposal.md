@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.3
 after: [0192-the-model-manifests]
 ---
 
