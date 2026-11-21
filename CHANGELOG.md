@@ -11,7 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - `tests/test_run_directory.py` holds the stage tables by their literal values and order before they move, and `tools.mutate` ran over `_spent`, `exhausted` and `check_budget` with no survivor (0183 D4, D5).
-- `isekai/foundation/producers.py` declares each stage as a frozen `Producer` in `PRODUCERS`, and `run.py` re-exports both. Two cases hold the rows and the tables read from them; no table reads the record yet (0183 D1, D2, D4, D7).
+- `isekai/foundation/producers.py` declares each stage as a frozen `Producer` in `PRODUCERS`, and `run.py` re-exports both. Two cases hold the rows and the tables read from them (0183 D1, D2, D4, D7).
 - `BUDGETS`, `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words are read from `PRODUCERS`, equal in value and order; `FN-1` is anchored on the wd14 row, and `tools.mutate` leaves no survivor (0183 D3, D5, D6).
 - D73 records the stage record; D21 and D62 name it, and the foundation README, `docs/principles.md` and `ARCHITECTURE.md` say the foundation holds it (0183 D8).
 
