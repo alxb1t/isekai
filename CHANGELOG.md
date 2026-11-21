@@ -10,6 +10,23 @@ its new digest.
 
 ## [Unreleased]
 
+- The hub cell's track is held by vitest cases before it moves: `SEGMENTS`, `DONE`, `RUNNING`, `wordOf` and `segmentClass` give the words and classes they gave, a stage the table lacks and `toString` among them (0189 D3).
+- `RUNNING` of `ui/src/cells.ts` is keyed by `PrepareVerb`, the union of `tag`, `caption` and `sheet`, and `wordOf` and `segmentClass` narrow the store's `string` by one guard, `isPrepareVerb`; the cases pass untouched and `Hub.vue` is unchanged (0189 D1, D2).
+- `render_running` of `isekai/foundation/library.py` asks the folder beside the run's runs root, a collection's or not, so `isekai discard` of a render and of an edit refuses beside any render session; cases of the rule, the render's discard and the edit's hold it (0190 D1, D5).
+- `isekai approve --cancel` refuses a run whose runs root a render session holds, as the app's cancel does, and answers each run on its own; a case of `tests/test_pipeline_cli.py` holds it (0190 D2, D5).
+- `delete_render` and `delete_edit` name each thumbnail with the new `named_thumbnail` before any file goes, drop them, delete the files, then unlink any named thumbnail a request rebuilt in between; a case holds both owners (0190 D3, D5; card 0181·S1).
+- D74 records the terminal's guards; D72 names the second drop and the verbs' guards, D68 names `named_thumbnail`, and the foundation and interface READMEs, `README.md` and `docs/edit-tattoo.md` say a render session holds the runs root (0190 D6).
+
+## [0.87.44] - 2026-11-21
+
+Gate: local 1m20s · CI not read under mf-ship · 0.87.43: local 1m13s · CI not read under mf-ship
+
+- The whole refusal of `caption`, `wd14`, `tags` and `sheet` is held by a case of its stage's test file, and the mutation runs over each stage's sequence and over `refusal_for` leave no survivor, so the shared function that follows can be proved byte-equal (0188 D6).
+- `attempt` in `isekai/foundation/run.py` owns the budget's check, the optional open step, the work, the failure's record and the refusal, and `producer_for` of `producers.py` finds a stage's row by its key; cases hold both, and no stage calls them yet (0188 D1–D3).
+- `caption`, `wd14`, `tags` and `sheet` call `attempt` in place of their own budget check, record and refusal, the open steps of `caption` and `wd14` going through `opening`; `VERB` of `tagging.py` goes, and every refusal stays byte-equal (0188 D1, D2, D7).
+- `refusal_for` takes the stage's `key` and a keyword `noun`, and reads the folder, the verb and the budget from the row `producer_for` finds; its row leaves the wide-function ratchet and `WIDE_ROWS` is 12 (0188 D3, D4).
+- The mutation runs over `attempt` and `refusal_for` leave no survivor and the replay of `tests/mutants.json` holds; D73 names `attempt` and `producer_for`, accepts the paid stages' own sequences, and the foundation README names both (0188 D6, D8).
+
 ## [0.87.43] - 2026-11-21
 
 Gate: local 1m13s · CI not read under mf-ship · 0.87.42: local 1m27s · CI not read under mf-ship

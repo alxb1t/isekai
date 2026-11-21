@@ -255,6 +255,27 @@ def test_a_sheet_failure_is_recorded_as_permanent(
 
 
 @pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_the_refusal_of_a_failed_sheet_is_held_whole(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    narrowed = _drop_the_tag(run, vocabulary)
+
+    with pytest.raises(Refusal) as refused:
+        sheet(run, schema, narrowed, tags=None)
+
+    runs = runs_flag(run)
+    assert str(refused.value) == (
+        f"{run.id}: the sheet failed (permanent) -- 'brown hair' in hair_colour: "
+        "not in wd14/selected_tags.csv's prediction set, so the base model was "
+        f"never trained to draw it; run `python -m isekai tag{runs} --new-version "
+        f"{run.id}`, then `python -m isekai sheet --flow {FLOW}{runs} "
+        f"--new-version {run.id}`; see {FLOW}/sheets/001.error.1.permanent.json, "
+        "fix what it names and delete it, then run "
+        f"`python -m isekai sheet --flow {FLOW}{runs} {run.id}`"
+    )
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
 def test_a_failed_next_sheet_names_the_command_that_writes_it(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:

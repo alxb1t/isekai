@@ -9,6 +9,7 @@ from typing import TypeVar
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import Flow
+from isekai.foundation.library import render_running
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     PHOTOGRAPH_VERBS,
@@ -238,6 +239,11 @@ def _approve_step(run: Run, item: _Item) -> _Step:
 
     def approve_flow(name: str) -> None:
         if item.args.cancel:
+            if render_running(run):
+                raise Refusal(
+                    f"{run.id}: A render session is running. Wait for it to end, "
+                    "then cancel the approval again."
+                )
             left, changed = cancel_approval(run, name)
             if not changed and left is not None:
                 item.reporter.say(

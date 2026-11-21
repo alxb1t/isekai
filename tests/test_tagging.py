@@ -602,6 +602,65 @@ def test_an_unopenable_tagger_is_tried_once_per_invocation(tmp_path: Path) -> No
     assert len(hosted.calls) == 2
 
 
+class Declining:
+    """A hosted tagger that fails with the failure it was built with."""
+
+    def __init__(self, failure: StageFailure) -> None:
+        self.failure = failure
+
+    def tag(self, photo: Path) -> Tagging:
+        raise self.failure
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_the_refusal_of_a_failed_hosted_tag_is_held_whole(run: Run) -> None:
+    command = f"`python -m isekai tag{runs_flag(run)} {run.id}`"
+
+    with pytest.raises(Refusal) as transient:
+        tag_hosted(run, Declining(StageFailure("transient", "rate limited")))
+
+    assert str(transient.value) == (
+        f"{run.id}: the tagger failed (transient) -- rate limited; see "
+        f"photo/tags/001.error.1.transient.json, and run {command} again once "
+        "what it names is fixed"
+    )
+
+    with pytest.raises(Refusal) as permanent:
+        tag_hosted(run, Declining(StageFailure("permanent", "the tagger declined")))
+
+    assert str(permanent.value) == (
+        f"{run.id}: the tagger failed (permanent) -- the tagger declined; see "
+        f"photo/tags/001.error.2.permanent.json, fix what it names and delete it, "
+        f"then run {command}"
+    )
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_the_refusal_of_a_failed_local_tag_is_held_whole(run: Run) -> None:
+    command = f"`python -m isekai tag{runs_flag(run)} {run.id}`"
+
+    with pytest.raises(Refusal) as failed:
+        tag_wd14(run, Always(_unreadable()))
+
+    assert str(failed.value) == (
+        f"{run.id}: the tagger failed (permanent) -- cannot identify image file; "
+        f"see photo/wd14/001.error.1.permanent.json, fix what it names and delete "
+        f"it, then run {command}"
+    )
+
+    def unopened() -> LocalTagger:
+        raise AssertionError("the tagger was opened")
+
+    with pytest.raises(Refusal) as spent:
+        tag_wd14(run, unopened)
+
+    assert str(spent.value) == (
+        f"{run.id}: wd14 failed permanently -- see "
+        "photo/wd14/001.error.1.permanent.json; read the record, fix what it "
+        "names, then delete it to let this stage attempt again"
+    )
+
+
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
 @pytest.mark.spec("tagging:order:a-local-failure-leaves-the-hosted-list-written")
 def test_a_pin_that_does_not_match_is_a_refusal_and_the_hosted_list_is_written(
