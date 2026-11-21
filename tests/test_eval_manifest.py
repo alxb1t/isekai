@@ -7,7 +7,6 @@ from typing import Any, cast
 import pytest
 
 import evaluation.__main__ as entry_point
-from evaluation import eval_models
 from evaluation.eval_models import ENCODER, load_eval_manifest, shared_with_the_graph
 from isekai.boundary.provision import (
     DigestMismatch,
@@ -159,28 +158,26 @@ def test_a_destination_outside_the_models_root_is_refused_rather_than_loaded(
 
 @pytest.mark.spec("evaluation:encoder:shares-no-pin-with-the-generator")
 def test_a_destination_the_generator_also_pins_refuses_the_scoring_naming_it(
-    eval_manifest: Manifest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    eval_manifest: Manifest, tmp_path: Path
 ) -> None:
     graph = load_manifest()
     borrowed = graph["entries"][0]
     eval_manifest["entries"].append(borrowed)
-    monkeypatch.setattr(eval_models, "load_eval_manifest", lambda: eval_manifest)
 
     assert shared_with_the_graph(load_eval_manifest(), graph) == []
     assert shared_with_the_graph(eval_manifest, graph) == [borrowed["dest"]]
     with pytest.raises(Refusal, match=re.escape(borrowed["dest"])):
-        entry_point._embedder(tmp_path)
+        entry_point._embedder(tmp_path, manifest=eval_manifest)
 
 
 @pytest.mark.spec("evaluation:encoder:shares-no-bytes-with-the-generator")
 def test_the_generators_bytes_under_another_destination_refuse_the_scoring(
-    eval_manifest: Manifest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    eval_manifest: Manifest, tmp_path: Path
 ) -> None:
     graph = load_manifest()
     renamed = {**graph["entries"][0], "dest": "opencv_face/renamed.onnx"}
     eval_manifest["entries"].append(cast(Any, renamed))
-    monkeypatch.setattr(eval_models, "load_eval_manifest", lambda: eval_manifest)
 
     assert shared_with_the_graph(eval_manifest, graph) == [renamed["dest"]]
     with pytest.raises(Refusal, match=re.escape(renamed["dest"])):
-        entry_point._embedder(tmp_path)
+        entry_point._embedder(tmp_path, manifest=eval_manifest)

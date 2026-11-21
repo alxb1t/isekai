@@ -23,6 +23,7 @@ Everything that can be asserted without a server is in `tests/test_ui.py` and
 """
 
 import contextlib
+import fcntl
 import io
 import json
 import os
@@ -32,7 +33,7 @@ import shlex
 import shutil
 import threading
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -191,6 +192,18 @@ def made(wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary) 
 def _source(run: Run) -> None:
     """Put the run's photograph in the collection's `sources/`, as an import would."""
     (run.path.parent.parent / "sources" / "ada.jpg").write_bytes(run.photo.read_bytes())
+
+
+@contextlib.contextmanager
+def _session_held(folder: Path) -> Iterator[None]:
+    """Hold a session's lock in collection `folder`, as another process would."""
+    sessions = folder / "sessions"
+    sessions.mkdir(exist_ok=True)
+    record = sessions / "20261024T091200Z"
+    record.with_suffix(".json").write_text("{}")
+    with record.with_suffix(".lock").open("w") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        yield
 
 
 def _clear_wd14(run: Run) -> None:
@@ -1480,6 +1493,33 @@ def test_an_approved_sheet_carries_why_it_cannot_be_cancelled(
     assert not copy.exists()
 
 
+@pytest.mark.spec("ui:review:the-sheet-names-a-session-another-process-holds")
+def test_the_sheet_names_a_session_another_process_holds(
+    client: TestClient, made: Run
+) -> None:
+    _approved(client, made)
+    assert client.get(_at(made)).json()["cancel"] is None
+
+    with _session_held(made.path.parents[1]):
+        named = client.get(_at(made)).json()["cancel"]
+
+    assert named == "A render session is running."
+
+
+@pytest.mark.spec("ui:review:the-cancel-is-refused-while-another-process-renders")
+def test_a_cancel_is_refused_while_another_process_renders(
+    client: TestClient, made: Run
+) -> None:
+    approval = _approved(client, made)
+
+    with _session_held(made.path.parents[1]):
+        refused = client.post(_at(made, "/cancel"))
+
+    assert refused.status_code == 409
+    assert "A render session is running." in refused.json()["refusal"]
+    assert approval.exists()
+
+
 # --- the two tag lists the source pane shows ----------------------------------
 
 
@@ -2098,6 +2138,36 @@ def test_deleting_a_render_is_refused_while_a_render_runs(
         assert refused.status_code == 409
         assert "A render session is running." in refused.json()["refusal"]
         assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("ui:delete-render:refused-while-another-process-renders")
+def test_deleting_a_render_is_refused_while_another_process_renders(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    before = snapshot(made.path)
+    at = f"/api/c/{COLLECTION}/renders/{made.digest}/{FLOW}"
+    other = tmp_path / "lib" / "other"
+    (other / "sources").mkdir(parents=True)
+
+    with _session_held(made.path.parents[1]):
+        refused = client.delete(f"{at}/v1/11")
+
+    assert refused.status_code == 409
+    assert "A render session is running." in refused.json()["refusal"]
+    assert snapshot(made.path) == before
+
+    # A session held in another collection refuses nothing here.
+    with _session_held(other):
+        deleted = client.delete(f"{at}/v2/22")
+
+    assert deleted.status_code == 200
 
 
 def _bake(
