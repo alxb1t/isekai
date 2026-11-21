@@ -1,0 +1,58 @@
+{
+  "change": "0185-the-serve-seams",
+  "version": "0.87.41",
+  "base": "3b9b7f25",
+  "analyzed": "b9d81a0e",
+  "measured_on": "local",
+  "collected_at": "2026-11-21T15:23:40+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2536
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 100
+    },
+    "open-backlog-cards": {
+      "value": 3
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 277
+    },
+    "diff-files": {
+      "value": 11
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 17480
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1102
+    },
+    "decisions": {
+      "value": 74
+    }
+  }
+}
