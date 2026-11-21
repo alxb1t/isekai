@@ -10,7 +10,7 @@ import hashlib
 import io
 import json
 import random
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -19,7 +19,7 @@ import pytest
 from PIL import Image
 
 from isekai.boundary.comfy import read_runtime
-from isekai.foundation.artifacts import DRAFT_FILE, PlacementValues, read
+from isekai.foundation.artifacts import DRAFT_FILE, VERSIONS, PlacementValues, read
 from isekai.foundation.edit import load_edit
 from isekai.foundation.flow import Schema
 from isekai.foundation.run import (
@@ -327,6 +327,32 @@ def test_an_edit_record_holds_whatever_level_its_png_was_deflated_at(
     assert shallow.read_bytes() != deep.read_bytes()
     assert held(shallow) == golden
     assert held(deep) == golden
+
+
+def kinds_without_golden(names: Iterable[str], directory: Path) -> set[str]:
+    """Return the `names` that no golden under `directory` holds as `schema.name`.
+
+    A golden's file name is not its kind: `sheet-empty.json` pins `sheet`.
+    e.g. goldens for `run` and `sheet`, names `run`, `ghost` -> `{"ghost"}`
+    """
+    held_names = {
+        json.loads(path.read_text())["schema"]["name"]
+        for path in directory.glob("*.json")
+    }
+    return set(names) - held_names
+
+
+@pytest.mark.spec_exempt("structural: every kind of the contract has a golden")
+def test_every_artifact_kind_has_a_golden() -> None:
+    assert kinds_without_golden(VERSIONS, GOLDEN) == set()
+
+
+@pytest.mark.spec_exempt("structural: twin of test_every_artifact_kind_has_a_golden")
+def test_the_check_catches_a_kind_with_no_golden(tmp_path: Path) -> None:
+    for name, kind in (("run", "run"), ("sheet-empty", "sheet")):
+        (tmp_path / f"{name}.json").write_text(json.dumps({"schema": {"name": kind}}))
+
+    assert kinds_without_golden(["run", "sheet", "ghost"], tmp_path) == {"ghost"}
 
 
 # --- the tripwire -------------------------------------------------------------
