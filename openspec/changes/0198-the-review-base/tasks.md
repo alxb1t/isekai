@@ -5,7 +5,7 @@ Make `review` a package: move `isekai/pipeline/review.py` to `isekai/pipeline/re
 ## Progress
 
 - [x] 1 — The package · moderate
-- [ ] 2 — The token budget · moderate
+- [x] 2 — The token budget · moderate
 - [ ] 3 — The records · moderate
 - [ ] 4 — The decision and the documents · moderate
 
@@ -32,21 +32,21 @@ Make `review` a package: move `isekai/pipeline/review.py` to `isekai/pipeline/re
 
 ## 2 — The token budget
 
-- [ ] 2.1 Create `isekai/pipeline/review/budget.py`: a docstring saying it holds the token budget of a sheet and imports nothing of the front door; the imports `Mapping` and `Sequence` from `collections.abc`, `dataclass` from `dataclasses`, and `Flow`, `Schema` and `assemble` from `isekai.foundation.flow`; then, copied from `isekai/pipeline/review/__init__.py` in this order, unchanged with their comments and docstrings: `ENCODER_WINDOW`, `estimate_tokens`, `TokenBudget`, `token_budget`. Run `git add isekai/pipeline/review/budget.py`: `tools.mutate` copies tracked files only.
+- [x] 2.1 Create `isekai/pipeline/review/budget.py`: a docstring saying it holds the token budget of a sheet and imports nothing of the front door; the imports `Mapping` and `Sequence` from `collections.abc`, `dataclass` from `dataclasses`, and `Flow`, `Schema` and `assemble` from `isekai.foundation.flow`; then, copied from `isekai/pipeline/review/__init__.py` in this order, unchanged with their comments and docstrings: `ENCODER_WINDOW`, `estimate_tokens`, `TokenBudget`, `token_budget`. Run `git add isekai/pipeline/review/budget.py`: `tools.mutate` copies tracked files only.
   Verify: `uv run python -c "from isekai.pipeline.review.budget import ENCODER_WINDOW, estimate_tokens, TokenBudget, token_budget"` exits 0.
-- [ ] 2.2 In `isekai/pipeline/review/__init__.py` delete the definitions that 2.1 copied into `isekai/pipeline/review/budget.py`, with the comment of the constant. Import the constant, `estimate_tokens` and `token_budget` from `isekai.pipeline.review.budget` plainly, and `TokenBudget` as `TokenBudget as TokenBudget`, as [D7](design.md#d7) says.
+- [x] 2.2 In `isekai/pipeline/review/__init__.py` delete the definitions that 2.1 copied into `isekai/pipeline/review/budget.py`, with the comment of the constant. Import the constant, `estimate_tokens` and `token_budget` from `isekai.pipeline.review.budget` plainly, and `TokenBudget` as `TokenBudget as TokenBudget`, as [D7](design.md#d7) says.
   Verify: `git grep -n -e "^def estimate_tokens" -e "^def token_budget" -e "^class TokenBudget" -e "^ENCODER_WINDOW =" -- isekai/pipeline/review/__init__.py` prints nothing.
-- [ ] 2.3 In `isekai/pipeline/review/__init__.py` delete by hand the imports nothing there reads now: `dataclass` and `assemble`. Then run `uv run ruff check --fix isekai/pipeline/review` and `uv run ruff format isekai/pipeline/review`, which sort the imports of both files; ruff removes no unused import from an `__init__.py`. `budget.py` imports nothing of the front door.
+- [x] 2.3 In `isekai/pipeline/review/__init__.py` delete by hand the imports nothing there reads now: `dataclass` and `assemble`. Then run `uv run ruff check --fix isekai/pipeline/review` and `uv run ruff format isekai/pipeline/review`, which sort the imports of both files; ruff removes no unused import from an `__init__.py`. `budget.py` imports nothing of the front door.
   Verify: `uv run ruff check isekai/pipeline/review` exits 0.
-- [ ] 2.4 In `tests/mutants.json` set `path` to `isekai/pipeline/review/budget.py` in `PB-1a` and `PB-1b`, so each holds `"path": "isekai/pipeline/review/budget.py"`. `PB-2` stays in the front door, where `approve` is.
+- [x] 2.4 In `tests/mutants.json` set `path` to `isekai/pipeline/review/budget.py` in `PB-1a` and `PB-1b`, so each holds `"path": "isekai/pipeline/review/budget.py"`. `PB-2` stays in the front door, where `approve` is.
   Verify: `git grep -n -F '"path": "isekai/pipeline/review/budget.py"' -- tests/mutants.json` prints two lines.
-- [ ] 2.5 Run `uv run python -m tools.derive_imported_by`: `budget.py` now imports the flow, so the derived tables change.
+- [x] 2.5 Run `uv run python -m tools.derive_imported_by`: `budget.py` now imports the flow, so the derived tables change.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 2.6 Confirm each name is still importable from the front door, and is the one `budget.py` defines.
+- [x] 2.6 Confirm each name is still importable from the front door, and is the one `budget.py` defines.
   Verify: `uv run python -c "from isekai.pipeline.review import ENCODER_WINDOW, estimate_tokens, TokenBudget, token_budget; assert token_budget.__module__ == TokenBudget.__module__ == 'isekai.pipeline.review.budget'"` exits 0.
-- [ ] 2.7 Run the mutants the repository keeps, and the suite.
+- [x] 2.7 Run the mutants the repository keeps, and the suite.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 2.8 Confirm the suite still reads each name through the front door.
+- [x] 2.8 Confirm the suite still reads each name through the front door.
   Verify: `uv run pytest tests/test_review.py tests/test_ui_api.py tests/test_pipeline_cli.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py` exits 0.
 
 ## 3 — The records

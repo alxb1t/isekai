@@ -31,6 +31,7 @@ its new digest.
 - `plan.py` also holds `Line`, `Short`, `short` and `Quote`, and the derived tables of the layer READMEs name it; `quote` and `Record` stay in `render.py`, which binds each name back (0197 D1, D2, D3).
 - The interface and boundary READMEs, `isekai/README.md` and `docs/principles.md` name `plan.py` where they named `render.py` for the moved code (0197 D1).
 - `isekai/pipeline/review.py` is `isekai/pipeline/review/__init__.py`, the front door of the stage; the ratchet rows, the byte-writer row, the standing mutants and the READMEs name the package, and no moved line changes (0198 D1, D8).
+- `isekai/pipeline/review/budget.py` holds `ENCODER_WINDOW`, `estimate_tokens`, `TokenBudget` and `token_budget`, which the front door binds back; `PB-1a` and `PB-1b` are found in it (0198 D3, D7, D8).
 
 ## [0.88.1] - 2026-11-21
 

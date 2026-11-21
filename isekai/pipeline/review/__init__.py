@@ -36,7 +36,6 @@ Stdlib only.
 
 import shlex
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, NamedTuple, cast
 
@@ -60,7 +59,7 @@ from isekai.foundation.artifacts import (
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.discard import _holds_render as _holds_render
 from isekai.foundation.discard import withdraw as withdraw
-from isekai.foundation.flow import OUTPUT_SUFFIX, Flow, Schema, assemble
+from isekai.foundation.flow import OUTPUT_SUFFIX, Flow, Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
@@ -90,6 +89,8 @@ from isekai.foundation.run import (
     version_of,
     versions,
 )
+from isekai.pipeline.review.budget import ENCODER_WINDOW, estimate_tokens, token_budget
+from isekai.pipeline.review.budget import TokenBudget as TokenBudget
 from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary
 
@@ -100,11 +101,6 @@ DISCARD = ("--discard",)
 
 # The option that cancels a flow's newest approval.
 CANCEL = ("--cancel",)
-
-# SDXL's text encoders read 77 tokens at a time; past that the prompt is chunked
-# and the chunks are averaged, which is not the same prompt. Sheets already run
-# well past it and nothing said so, so every one was being silently averaged.
-ENCODER_WINDOW = 77
 
 
 class Cancelled(NamedTuple):
@@ -694,21 +690,6 @@ def _write_draft(
     return path
 
 
-def estimate_tokens(fields: Mapping[str, Sequence[str]], schema: Schema) -> int:
-    """Estimate what the text encoder will read from this sheet, in tokens.
-
-    Deliberately crude and deliberately stated: one token per word plus one per
-    tag separator, plus the two the encoder adds itself. It is an estimate for a
-    warning, not a budget anything is enforced against -- the exact count depends
-    on the tokenizer's merges, and a number that pretended otherwise would invite
-    being trusted.
-    """
-    tags = [tag for name in schema.names for tag in fields.get(name, ())]
-    words = sum(len(tag.split()) for tag in tags)
-    separators = max(len(tags) - 1, 0)
-    return words + separators + 2
-
-
 def save_draft(
     run: Run,
     flow: str,
@@ -767,51 +748,6 @@ def save_draft(
         updated["renders"] = renders_of(path, {"renders": renders}, fix)
     write(path, DRAFT_FILE, updated)
     return path
-
-
-@dataclass(frozen=True)
-class TokenBudget:
-    """What the text encoder will read from this sheet, and where it comes from.
-
-    Three numbers from one rule, so they reconcile instead of disagreeing: the
-    shares sum into the total and `overhead` is the remainder. The operator's
-    question while correcting is never *how many tokens* but *which tag goes*,
-    and a total with no breakdown cannot answer it.
-    """
-
-    total: int
-    per_field: Mapping[str, int]
-    overhead: int
-
-
-def token_budget(
-    fields: Mapping[str, Sequence[str]], schema: Schema, flow: Flow
-) -> TokenBudget:
-    """Count the assembled positive prompt, and split it into shares.
-
-    `total` is taken over `assemble()`'s own output, so the flow's prefix, its
-    trailer and the separators that join them fall out of one rule rather than
-    being added back by hand. That is the whole point: counting the tags alone
-    understates what the encoder reads by about nineteen tokens against a window
-    of seventy-seven, so a sheet reported comfortably inside the budget is past it
-    and silently chunked.
-
-    `approve()` warns on `total` when it is given the flow, and on
-    `estimate_tokens`, the tags alone, when it is not.
-
-    A field absent from a mid-edit draft contributes nothing rather than raising,
-    because the surface recomputes this on every keystroke.
-    """
-    separator = flow.prompt["separator"]
-    positive, _ = assemble(fields, schema.names, flow)
-    total = len(positive.split()) + positive.count(separator) + 2
-
-    per_field: dict[str, int] = {}
-    for name in schema.names:
-        tags = list(fields.get(name, ()))
-        per_field[name] = sum(len(tag.split()) for tag in tags) + len(tags)
-
-    return TokenBudget(total, per_field, total - sum(per_field.values()))
 
 
 def approve(
