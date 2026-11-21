@@ -44,7 +44,7 @@ imports:  front door ──▶ parts ──▶ records          approval ──�
 | [D7](#d7) | The front door re-binds each name it re-exports `X as X`, one statement each, and imports plainly what it reads | ruff reads `X as X` as a re-export, so F401 does not name it ([0198 D7](../0198-the-review-base/design.md#d7)) | an `__all__`, which no module of the stage declares |
 | [D8](#d8) | Phases land the approval, the drafts, then the cancel; each phase takes the rows, keys and paths its move turns red | a phase ends green, and the approval leaves the front door well under the file ceiling | one phase of every part, which cannot be checked apart |
 | [D9](#d9) | The standing mutants of the front door follow their text | a mutant is found by its path and its exact text | a new mutant, or a stale entry |
-| [D10](#d10) | D75 is amended where it lives | A7: a decision in force is edited where it lives | leaving the base's *Accepts* standing over a front door that no longer holds the parts |
+| [D10](#d10) | D77 is amended where it lives | A7: a decision in force is edited where it lives | leaving the base's *Accepts* standing over a front door that no longer holds the parts |
 
 ### D1
 
@@ -101,7 +101,7 @@ Each `find` and `replace` is unchanged. `PB-2`'s `find` is a line of `_window_wa
 
 ### D10
 
-D75's rule gains the parts and its *Accepts* changes. Its text after, in place of its rule and *Accepts*:
+D77's rule gains the parts and its *Accepts* changes. Its text after, in place of its rule and *Accepts*:
 
 ```
 **`isekai/pipeline/review/` is the review stage. `__init__.py` is its front door: it defines `Status` and `state` and re-exports every name an importer or a test reads. `records.py` holds the draft's read and write with the helpers the parts share, `budget.py` the token budget, and `drafts.py`, `approval.py` and `cancelling.py` the three parts. A part imports `records.py`, `approval.py` also `budget.py`, and no other part. A test patches a name of the stage on the module that reads it, `isekai.pipeline.review.records` for `create` and `write`.**

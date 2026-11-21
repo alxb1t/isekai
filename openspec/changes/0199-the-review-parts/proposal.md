@@ -24,7 +24,7 @@ Reading map: [design](design.md) holds the decisions and the names that move, [t
 - `draft_across` in `isekai/interface/drafting.py` takes `seed` by keyword, and its one caller says so. Its row among the wide functions goes.
 - The front door's row among the long files goes. `tests/test_ratchets.py` holds no row that names `isekai/pipeline/review`.
 - The key of `BYTE_WRITERS` for a source image's copy names `drafts.py`. Each standing mutant of the front door is found in the module that now holds its text.
-- D75 is amended in `docs/decisions.md`: its *Accepts* no longer lists the parts. The pipeline README and the derived tables name the modules.
+- D77 is amended in `docs/decisions.md`: its *Accepts* no longer lists the parts. The pipeline README and the derived tables name the modules.
 
 No requirement is touched. The code moves as it is; every message, record and byte stays. The extracted warning keeps its lines and its order.
 

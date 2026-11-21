@@ -90,7 +90,7 @@ Move the review stage's approval, drafts and cancel out of `isekai/pipeline/revi
 
 ## 4 — The decision and the documents
 
-- [ ] 4.1 In `docs/decisions.md` amend D75: replace its bold rule with the one [D10](design.md#d10) gives, its *Accepts* with the one there, and its *Made by* with `0198`, `0199`. Its *Why* stays. Find it with `git grep -n -F "### D75" -- docs/decisions.md`.
+- [ ] 4.1 In `docs/decisions.md` amend D77: replace its bold rule with the one [D10](design.md#d10) gives, its *Accepts* with the one there, and its *Made by* with `0198`, `0199`. Its *Why* stays. Find it with `git grep -n -F "### D77" -- docs/decisions.md`.
   Verify: `git grep -c -F "cancelling.py" -- docs/decisions.md` prints `docs/decisions.md:1`.
 - [ ] 4.2 In `isekai/pipeline/README.md` change the Files row of `review/` so it names each module: the front door `__init__.py` holds `Status`, `state` and the re-exports; `drafts.py` the drafts and what refuses them; `approval.py` `approve`; `cancelling.py` the discard and the cancel; `records.py` and `budget.py` as they stand.
   Verify: `git grep -c -F "cancelling.py" -- isekai/pipeline/README.md` prints `isekai/pipeline/README.md:1`.
