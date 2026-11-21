@@ -4,19 +4,19 @@ Pin `_per_item` by mutation, cut it into builders, a table and a runner in [`ise
 
 ## Progress
 
-- [ ] 1 — Pin `_per_item` by mutation · moderate
+- [x] 1 — Pin `_per_item` by mutation · moderate
 - [ ] 2 — Cut `_per_item` into builders, a table and a runner · hard
 - [ ] 3 — Replay the mutation over the new code · moderate
 
 ## 1 — Pin `_per_item` by mutation
 
-- [ ] 1.1 **HALT CHECK** The premise of [D8](design.md#d8) stands: `_per_item` is in `isekai/interface/cli.py`, where the mutation run of 1.3 reads it.
+- [x] 1.1 **HALT CHECK** The premise of [D8](design.md#d8) stands: `_per_item` is in `isekai/interface/cli.py`, where the mutation run of 1.3 reads it.
   Verify: `git grep -n -e '^def _per_item' -- isekai/interface/cli.py` prints one line.
 
-- [ ] 1.2 In `tests/test_pipeline_cli.py`, add `test_per_item_refuses_a_verb_that_is_no_stage` and `test_per_item_opens_the_run_before_it_refuses_a_verb`, as [D3](design.md#d3) says. Both import `_per_item` beside `_flows_for` from `isekai.interface.cli`, call `_per_item("draft", argparse.Namespace(progress="json"), wired, {}, [])` on the file's own wiring and run the work it returns. The first runs it on a photograph the file's fixtures write, asserts a `Refusal` whose text is `'draft' is not a stage this build runs` and asserts `wired.out` holds nothing. The second runs it on an identifier that names no photograph and no run, and asserts the `Refusal` is not the miss. Mark both `spec_exempt("structural: the table's miss is reached by no verb")`.
+- [x] 1.2 In `tests/test_pipeline_cli.py`, add `test_per_item_refuses_a_verb_that_is_no_stage` and `test_per_item_opens_the_run_before_it_refuses_a_verb`, as [D3](design.md#d3) says. Both import `_per_item` beside `_flows_for` from `isekai.interface.cli`, call `_per_item("draft", argparse.Namespace(progress="json"), wired, {}, [])` on the file's own wiring and run the work it returns. The first runs it on a photograph the file's fixtures write, asserts a `Refusal` whose text is `'draft' is not a stage this build runs` and asserts `wired.out` holds nothing. The second runs it on an identifier that names no photograph and no run, and asserts the `Refusal` is not the miss. Mark both `spec_exempt("structural: the table's miss is reached by no verb")`.
   Verify: `uv run pytest tests/test_pipeline_cli.py -k test_per_item_` exits 0.
 
-- [ ] 1.3 Run the mutation over the lines of `_per_item` before any line moves, per [D8](design.md#d8): `uv run python -m tools.mutate isekai/interface/cli.py:372-582 --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_resume.py tests/test_tagging.py tests/test_assign.py tests/test_review.py`. Kill each survivor with a case in `tests/test_pipeline_cli.py`; a survivor no case can kill is named equivalent, with its reason, in the commit body.
+- [x] 1.3 Run the mutation over the lines of `_per_item` before any line moves, per [D8](design.md#d8): `uv run python -m tools.mutate isekai/interface/cli.py:372-582 --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_resume.py tests/test_tagging.py tests/test_assign.py tests/test_review.py`. Kill each survivor with a case in `tests/test_pipeline_cli.py`; a survivor no case can kill is named equivalent, with its reason, in the commit body.
   Verify: `uv run python -m tools.mutate isekai/interface/cli.py:372-582 --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_resume.py tests/test_tagging.py tests/test_assign.py tests/test_review.py` exits 0.
 
 ## 2 — Cut `_per_item` into builders, a table and a runner

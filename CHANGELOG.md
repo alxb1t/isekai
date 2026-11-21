@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `_per_item` is pinned before it is cut: cases reach the table's miss and its place in the order, and each survivor of the mutation run over its lines is killed by a case that asserts the exact lines it prints (0186 D3, D8).
+
 ## [0.87.41] - 2026-11-21
 
 Gate: local 1m40s · CI not read under mf-ship · 0.87.40: local 1m47s · CI not read under mf-ship
