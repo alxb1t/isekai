@@ -21,20 +21,22 @@ The foundation gets the rule for a held collection, the app's guard asks it, and
 
 ## 2 — The guard
 
-- [ ] 2.1 **HALT CHECK** `Surface.rendering` stands where [D2](design.md#d2) replaces it.
+- [x] 2.1 **HALT CHECK** `Surface.rendering` stands where [D2](design.md#d2) replaces it.
   Verify: `git grep -n -F "def rendering(" -- isekai/interface/ui/surface.py` prints `196:    def rendering(self, collection: str) -> str | None:`.
-- [ ] 2.2 In `tests/test_ui_api.py`, add `import fcntl` before `import io` and a context manager `_session_held(folder: Path)` that writes `<folder>/sessions/20261024T091200Z.json` and holds the lock of its `.lock` file through a second open file ([D4](design.md#d4)). Add the delete case of [D3](design.md#d3)'s table, marked with its scenario key, leaving `Jobs.slot` unpatched: it holds the lock on `v1/11`, asserts the refusal's sentence and an unchanged `snapshot(made.path)`, then holds a lock of a second collection `other` (its `sources/` made) and deletes `v2/22` with status `200`.
+- [x] 2.2 In `tests/test_ui_api.py`, add `import fcntl` before `import io` and a context manager `_session_held(folder: Path)` that writes `<folder>/sessions/20261024T091200Z.json` and holds the lock of its `.lock` file through a second open file ([D4](design.md#d4)). Add the delete case of [D3](design.md#d3)'s table, marked with its scenario key, leaving `Jobs.slot` unpatched: it holds the lock on `v1/11`, asserts the refusal's sentence and an unchanged `snapshot(made.path)`, then holds a lock of a second collection `other` (its `sources/` made) and deletes `v2/22` with status `200`.
   Verify: `uv run pytest tests/test_ui_api.py -k deleting_a_render_is_refused_while_another_process` exits 1, on the missing refusal.
-- [ ] 2.3 In `tests/test_ui_api.py`, add the sheet case and the cancel case of [D3](design.md#d3)'s table, each marked with its scenario key, leaving `Jobs.slot` unpatched. Each approves with `_approved` and holds the lock with `_session_held`; the sheet case asserts the payload's `["cancel"]`, the cancel case the `409` and the approval still on disk.
+- [x] 2.3 In `tests/test_ui_api.py`, add the sheet case and the cancel case of [D3](design.md#d3)'s table, each marked with its scenario key, leaving `Jobs.slot` unpatched. Each approves with `_approved` and holds the lock with `_session_held`; the sheet case asserts the payload's `["cancel"]`, the cancel case the `409` and the approval still on disk.
   Verify: `uv run pytest tests/test_ui_api.py -k "sheet_names_a_session_another_process or cancel_is_refused_while_another_process"` exits 1, on the missing refusal.
-- [ ] 2.4 In `isekai/interface/ui/surface.py`, import `collection_held` from `isekai.foundation.library` between the imports of `flow` and `refusal`, and replace `rendering` exactly as [D2](design.md#d2) gives it.
+- [x] 2.4 In `isekai/interface/ui/surface.py`, import `collection_held` from `isekai.foundation.library` between the imports of `flow` and `refusal`, and replace `rendering` exactly as [D2](design.md#d2) gives it.
   Verify: `uv run pytest tests/test_ui_api.py tests/test_ui_library.py tests/test_layers.py` exits 0.
-- [ ] 2.5 Check the guard reads the rule once, as [D2](design.md#d2) writes it.
+- [x] 2.5 Check the guard reads the rule once, as [D2](design.md#d2) writes it.
   Verify: `git grep -n -F "collection_held(" -- isekai/interface/ui/surface.py` prints one line, the `if ours or` line of `rendering`.
-- [ ] 2.6 Run `tools.mutate` over `Surface.rendering`, from its `def` line to its last line, on the cases that reach it; a survivor is killed by a further assertion in the cases of 2.2 and 2.3.
+- [x] 2.6 Run `tools.mutate` over `Surface.rendering`, from its `def` line to its last line, on the cases that reach it; a survivor is killed by a further assertion in the cases of 2.2 and 2.3.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/surface.py:197-208 --tests tests/test_ui_api.py "-k cancel or delet"` exits 0.
-- [ ] 2.7 Replay the standing mutants over the edited files.
+- [x] 2.7 Replay the standing mutants over the edited files.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
+- [ ] 2.8 Derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`, here and not in phase 3: 2.4's import makes `interface/ui/surface.py` a reader of `library.py`, and `tests/test_docs.py` turns the gate red until the `library.py` row of `isekai/foundation/README.md` names it.
+  Verify: `uv run pytest tests/test_docs.py tests/test_layers.py` exits 0.
 
 ## 3 — The documents
 
@@ -42,7 +44,7 @@ The foundation gets the rule for a held collection, the app's guard asks it, and
   Verify: `git grep -n -F "refuses while its render slot runs or a session holds the collection" -- docs/decisions.md` prints the *Accepts* line of D72.
 - [ ] 3.2 In `isekai/foundation/README.md`, in the `library.py` row of *Files*, change `` `record_running`, `running`, `render_running` and `session` `` to `` `record_running`, `running`, `collection_held`, `render_running` and `session` ``.
   Verify: `git grep -n -F "collection_held" -- isekai/foundation/README.md` prints the `library.py` row of *Files*.
-- [ ] 3.3 Derive the *Imported by* tables again with `uv run python -m tools.derive_imported_by`; `interface/ui/surface.py` joins the `library.py` row.
+- [ ] 3.3 Derive the *Imported by* tables again with `uv run python -m tools.derive_imported_by`; task 2.8 already added `interface/ui/surface.py` to the `library.py` row, and 3.2 edits no table, so the rerun moves nothing.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py` exits 0.
 - [ ] 3.4 In `isekai/interface/ui/README.md`, in the **Delete** bullet, change `refused` / `while a render runs for the collection` to `refused` / `while this server's render slot runs or a session of any process holds the collection`.
   Verify: `git grep -n -F "a session of any process holds the collection" -- isekai/interface/ui/README.md` prints the bullet's second line.
