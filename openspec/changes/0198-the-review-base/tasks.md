@@ -4,30 +4,30 @@ Make `review` a package: move `isekai/pipeline/review.py` to `isekai/pipeline/re
 
 ## Progress
 
-- [ ] 1 — The package · moderate
+- [x] 1 — The package · moderate
 - [ ] 2 — The token budget · moderate
 - [ ] 3 — The records · moderate
 - [ ] 4 — The decision and the documents · moderate
 
 ## 1 — The package
 
-- [ ] 1.1 Run `mkdir isekai/pipeline/review`, then `git mv isekai/pipeline/review.py isekai/pipeline/review/__init__.py`. The text does not change ([D1](design.md#d1)).
+- [x] 1.1 Run `mkdir isekai/pipeline/review`, then `git mv isekai/pipeline/review.py isekai/pipeline/review/__init__.py`. The text does not change ([D1](design.md#d1)).
   Verify: `git ls-files isekai/pipeline/review/__init__.py` prints that path.
-- [ ] 1.2 In `tests/test_ratchets.py` change each key that names `isekai/pipeline/review.py` to `isekai/pipeline/review/__init__.py`, each number as it stands: the row of `LONG_FILES`, the `::approve` row of `LONG_FUNCTIONS` and the `::_write_draft` row of `WIDE_FUNCTIONS`.
+- [x] 1.2 In `tests/test_ratchets.py` change each key that names `isekai/pipeline/review.py` to `isekai/pipeline/review/__init__.py`, each number as it stands: the row of `LONG_FILES`, the `::approve` row of `LONG_FUNCTIONS` and the `::_write_draft` row of `WIDE_FUNCTIONS`.
   Verify: `git grep -n -e "^    .isekai/pipeline/review.py" -- tests/test_ratchets.py` prints nothing.
-- [ ] 1.3 In `tests/test_artifact_bytes.py` change the key of `BYTE_WRITERS`, `"isekai/pipeline/review.py"`, to `"isekai/pipeline/review/__init__.py"`, its text as it stands. The front door still calls `write_atomically` for a draft's source copy.
+- [x] 1.3 In `tests/test_artifact_bytes.py` change the key of `BYTE_WRITERS`, `"isekai/pipeline/review.py"`, to `"isekai/pipeline/review/__init__.py"`, its text as it stands. The front door still calls `write_atomically` for a draft's source copy.
   Verify: `git grep -n -F '"isekai/pipeline/review.py"' -- tests/test_artifact_bytes.py` prints nothing.
-- [ ] 1.4 In `tests/mutants.json` set `path` to `isekai/pipeline/review/__init__.py` in each entry holding `"path": "isekai/pipeline/review.py"`: `PB-14`, `PB-5`, `PB-1a`, `PB-1b`, `PB-2`, `PB-3a` and `PB-3b` ([D8](design.md#d8)). No `find` changes.
+- [x] 1.4 In `tests/mutants.json` set `path` to `isekai/pipeline/review/__init__.py` in each entry holding `"path": "isekai/pipeline/review.py"`: `PB-14`, `PB-5`, `PB-1a`, `PB-1b`, `PB-2`, `PB-3a` and `PB-3b` ([D8](design.md#d8)). No `find` changes.
   Verify: `git grep -n -F '"path": "isekai/pipeline/review.py"' -- tests/mutants.json` prints nothing.
-- [ ] 1.5 In `isekai/pipeline/README.md` change `review.py` to `review/` in the first cell of the Files row and of the Imported by row, and in the sentence "`review.py` holds `review`, `approve` …".
+- [x] 1.5 In `isekai/pipeline/README.md` change `review.py` to `review/` in the first cell of the Files row and of the Imported by row, and in the sentence "`review.py` holds `review`, `approve` …".
   Verify: `git grep -n -F "review.py" -- isekai/pipeline/README.md` prints nothing.
-- [ ] 1.6 In `isekai/README.md` change `review.py` to `review/` in the `pipeline/` row.
+- [x] 1.6 In `isekai/README.md` change `review.py` to `review/` in the `pipeline/` row.
   Verify: `git grep -n -F "review.py" -- isekai/README.md` prints nothing.
-- [ ] 1.7 Run `uv run python -m tools.derive_imported_by`: each importer of the stage is now `isekai/pipeline/review/__init__.py`, so the derived tables of the layer READMEs change, and `tests/test_docs.py` holds each to the import graph.
+- [x] 1.7 Run `uv run python -m tools.derive_imported_by`: each importer of the stage is now `isekai/pipeline/review/__init__.py`, so the derived tables of the layer READMEs change, and `tests/test_docs.py` holds each to the import graph.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 1.8 Run the mutants the repository keeps: each re-pointed entry finds its text once in the front door.
+- [x] 1.8 Run the mutants the repository keeps: each re-pointed entry finds its text once in the front door.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 1.9 Confirm the suite reads every name through the front door, `Status` still derives the page's `ReviewStatus`, and `Status` is still defined there.
+- [x] 1.9 Confirm the suite reads every name through the front door, `Status` still derives the page's `ReviewStatus`, and `Status` is still defined there.
   Verify: `uv run pytest tests/test_review.py tests/test_ui_api.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_artifact_bytes.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py tests/test_spec_bindings.py tests/test_derive_wire.py` exits 0.
 
 ## 2 — The token budget
