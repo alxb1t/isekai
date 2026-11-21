@@ -6,7 +6,7 @@ The phases are the path and the digest, the drop and the documents; each moving 
 
 - [x] 1 — The path and the digest · moderate
 - [x] 2 — The drop · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The path and the digest
 
@@ -56,9 +56,9 @@ The phases are the path and the digest, the drop and the documents; each moving 
 
 ## 3 — The documents
 
-- [ ] 3.1 In `docs/decisions.md`, amend D68 as [D7](design.md#d7) says: its bold paragraph names `stat_key`, `file_digest`, `thumbnail_of` and `drop_thumbnails`, its *Accepts* line drops the clause that `ui/library.py` stays a listed long file and says `thumbnail` and the sources' thumbnails stay in it and `render_running` stays wrapped by `ui/__init__.py`, and its *Made by* gains `0180`. The heading stays.
+- [x] 3.1 In `docs/decisions.md`, amend D68 as [D7](design.md#d7) says: its bold paragraph names `stat_key`, `file_digest`, `thumbnail_of` and `drop_thumbnails`, its *Accepts* line drops the clause that `ui/library.py` stays a listed long file and says `thumbnail` and the sources' thumbnails stay in it and `render_running` stays wrapped by `ui/__init__.py`, and its *Made by* gains `0180`. The heading stays.
   Verify: `git grep -c -F "thumbnail_of" -- docs/decisions.md` prints `docs/decisions.md:1`, and `git grep -n -F "stays a listed long file" -- docs/decisions.md` prints nothing.
-- [ ] 3.2 In `isekai/foundation/README.md`, extend the `library.py` row of *Files* with ``, and where a thumbnail sits in the cache and what names it: `stat_key`, `file_digest`, `thumbnail_of` and `drop_thumbnails` ``.
+- [x] 3.2 In `isekai/foundation/README.md`, extend the `library.py` row of *Files* with ``, and where a thumbnail sits in the cache and what names it: `stat_key`, `file_digest`, `thumbnail_of` and `drop_thumbnails` ``.
   Verify: `git grep -c -F "thumbnail_of" -- isekai/foundation/README.md` prints `isekai/foundation/README.md:1`.
-- [ ] 3.3 In `isekai/interface/README.md`, in the `ui/__init__.py` row change ``and `drop_thumbnails` and `render_running` for the `discard` verb`` to ``and `render_running` for the `discard` verb``; in the `ui/library.py` row change ``the collection's names and its session records' read side are `foundation/library.py`'s, re-bound here (D68)`` to ``the collection's names, its session records' read side and a thumbnail's path, drop and digest are `foundation/library.py`'s, re-bound here (D68)``.
+- [x] 3.3 In `isekai/interface/README.md`, in the `ui/__init__.py` row change ``and `drop_thumbnails` and `render_running` for the `discard` verb`` to ``and `render_running` for the `discard` verb``; in the `ui/library.py` row change ``the collection's names and its session records' read side are `foundation/library.py`'s, re-bound here (D68)`` to ``the collection's names, its session records' read side and a thumbnail's path, drop and digest are `foundation/library.py`'s, re-bound here (D68)``.
   Verify: `git grep -c -F "a thumbnail's path, drop and digest" -- isekai/interface/README.md` prints `isekai/interface/README.md:1`, and `git grep -n -F "drop_thumbnails" -- isekai/interface/README.md` prints nothing.
