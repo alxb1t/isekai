@@ -552,11 +552,11 @@ still billing.
 ### Requirement: The approve verb cancels an approval with `--cancel`
 
 The system SHALL take `--cancel` on `isekai approve`, cancelling each named run's approval in each named flow through
-the review stage, SHALL answer each run on its own so one refusal stops no other, and SHALL refuse `--cancel` beside
-`--from`.
+the review stage, SHALL answer each run on its own so one refusal stops no other, SHALL refuse a run whose runs root a
+render session holds, cancelling nothing in it, as the app's cancel does, and SHALL refuse `--cancel` beside `--from`.
 
-A cancel is the review stage's act, so the verb composes it and decides nothing; a collection is many runs, and one
-refused run must not cost the rest.
+A cancel is the review stage's act and decides nothing about a render, so the verb asks for one before it calls the
+stage; a collection is many runs, and one refused run must not cost the rest.
 
 #### Scenario: each run is cancelled on its own
 - **Key:** `cli:approve-cancel:each-run-on-its-own`
@@ -569,6 +569,14 @@ refused run must not cost the rest.
 - **Layers:** unit
 - **WHEN** `approve` is given `--cancel` and `--from`
 - **THEN** it is refused before any run is read
+
+#### Scenario: a running render refuses the cancel of its runs root
+- **Key:** `cli:approve-cancel:a-running-render-refuses-it`
+- **Layers:** unit
+- **WHEN** `approve --cancel` names a cancellable run under a runs root a render session holds,
+  and one under another root
+- **THEN** the first is refused, saying a render session is running, and its approval stays
+- **AND** the second is a draft again
 
 ### Requirement: A render session writes its record into the collection, from its start to its end
 
@@ -861,7 +869,8 @@ is left, the flow's sheets — writing no draft; it prints each path it deleted,
 thumbnail from its library. A render's edits go with it, and a path that is an edit's image SHALL discard that edit and
 every edit made from it, as the edit stage's discard says, and nothing else. A path that names neither a render nor an
 edit SHALL be refused, naming the forms a render's path and an edit's path take, the verb exiting 1 and deleting
-nothing; so SHALL a discard while a render session holds the image's collection, as the app's delete is.
+nothing; so SHALL a discard while a render session holds the image's runs root, a collection's or not, as the app's
+delete is for a collection.
 
 The hand path stays ([D3](../../../docs/decisions.md#d3--the-hand-path-stays)): the page's Delete is this verb's act,
 run in the server's process. An image's path names everything a discard needs, so the verb takes nothing else.
@@ -887,6 +896,14 @@ run in the server's process. An image's path names everything a discard needs, s
 - **WHEN** the verb is given the path of a render in a collection whose render session holds its record's lock
 - **THEN** it exits 1, saying a render session is running
 - **AND** the image, its record and its thumbnail are not deleted
+
+#### Scenario: a running render beside a plain runs root refuses it
+- **Key:** `cli:discard:a-session-beside-a-plain-runs-root-refuses-it`
+- **Layers:** unit
+- **WHEN** the verb is given the path of a render under a runs root no collection holds, a render session holding the
+  lock of its record beside that root
+- **THEN** it exits 1, saying a render session is running
+- **AND** the image and its record are not deleted
 
 #### Scenario: a path naming no render is refused
 - **Key:** `cli:discard:a-path-naming-no-render-is-refused`
