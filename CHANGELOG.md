@@ -10,6 +10,16 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.3] - 2026-11-21
+
+Gate: local 1m20s · CI not read under mf-ship · 0.88.2: local 1m18s · CI not read under mf-ship
+
+- `isekai/foundation/command.py` holds `ENTRY` and `command(verb, *words)`, which `run.py` re-exports; cases hold the join and `migrate_command`'s default-root text, which a mutation run found unread (0193 D1, D6).
+- `stage_command`, `migrate_command`, `_draft_command`, `_named_a_flow` and the parser's `prog` build from `command` and `ENTRY`; every printed byte is equal, and the mutation run over each finds no survivor (0193 D2, D6).
+- The refusals and messages that spelt the entry by hand call `command`, each keeping its quoting and any `uv run` prefix; every printed byte is equal (0193 D3).
+- A guard in `tests/test_run_directory.py` fails on a string of `isekai/` outside `command.py` that spells the entry, and a twin on a small tree shows it can; docstrings, comments and `python -m isekai.boundary.…` pass (0193 D5).
+- D75 names `command.py` as the one home of the entry, D62's siblings list gains it, and the standing mutants replay with no survivor (0193 D6, D7).
+
 ## [0.88.2] - 2026-11-21
 
 Gate: local 1m18s · CI not read under mf-ship · 0.88.1: local 2m42s · CI not read under mf-ship

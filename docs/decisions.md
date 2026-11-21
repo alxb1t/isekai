@@ -629,11 +629,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D62 · The run directory is run.py, its siblings imported through it
 
-**The run directory is `isekai/foundation/run.py`. It re-exports every name of `names.py`, `rundir.py`, `layout.py`, `failures.py` and `producers.py` under `__all__`, and a module outside the foundation imports a run's names from `isekai.foundation.run`, never from a sibling. A sibling imports no `run.py` and stays on the standard library and the foundation.**
+**The run directory is `isekai/foundation/run.py`. It re-exports every name of `names.py`, `rundir.py`, `layout.py`, `failures.py`, `producers.py` and `command.py` under `__all__`, and a module outside the foundation imports a run's names from `isekai.foundation.run`, never from a sibling. A sibling imports no `run.py` and stays on the standard library and the foundation.**
 
 - **Why:** the run directory was one file of clusters and a listed row of the ratchet ([D56](#d56--size-and-patches-are-held-by-ratchets)). A front that re-exports changes no importer, keeps `RUNS_ROOT` and `DATA_ROOT` in one module and leaves the layer guard's cycle rule nothing to find.
 - **Accepts:** the roots, `open_run`, `rendered_at`, the command text and the provenance records stay in `run.py`, because `rendered_at` reads `stage_command`, which reads the patched `RUNS_ROOT`. Review holds that an importer reads the front; no test does. Reopen when `RUNS_ROOT` is no longer patched.
-- **Made by:** `0152`, `0183`.
+- **Made by:** `0152`, `0183`, `0193`.
 
 ### D63 · The wire is declared in shapes.py and held by tests
 
@@ -722,6 +722,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Why:** the verb's guard answered no for a root outside a collection, and `approve --cancel` asked nothing, so a delete or a cancel could run beside a live render.
 - **Accepts:** the gap between a check and a delete, the window before a record opens and a lock an act holds stay as they are, and the review stage's cancel decides nothing about a render. Reopen when a lock both a session and an act take is added.
 - **Made by:** `0190`.
+
+### D75 · A command is built by command, in isekai/foundation/command.py
+
+**`isekai/foundation/command.py` holds `ENTRY`, the words every printed command starts with, and `command(verb, *words)`, which joins the entry, the verb and the words by one space and quotes none. `run.py` re-exports `ENTRY` and `command`. A command a refusal or a message prints is built by `command`, its site keeping its own quoting and any prefix such as `uv run`, and a test holds that no string of `isekai/` outside the module spells the entry.**
+
+- **Why:** a command a person pastes was spelt by hand at sites beside its builders, so a change to the entry would edit each and nothing failed on a missed one. One constant is one edit.
+- **Accepts:** the argv of `again` and of the children, the bare `isekai ui` texts and the `isekai.boundary` provisioning commands stay as they are, and a docstring or a comment that names the entry is not read. A refusal's reason and its fix are still one string. Reopen when the entry changes, or when a refusal's fix rides the wire.
+- **Made by:** `0193`.
 
 ## Infrastructure
 

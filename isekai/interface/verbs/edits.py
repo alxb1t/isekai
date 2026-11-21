@@ -7,7 +7,7 @@ from pathlib import Path
 from isekai.boundary.comfy import read_runtime
 from isekai.foundation.edit import load_edit, tracked_edits
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import RUNS_ROOT, Run, across
+from isekai.foundation.run import RUNS_ROOT, Run, across, command
 from isekai.interface.render import pending_edits
 from isekai.interface.verbs.common import (
     Reporter,
@@ -49,7 +49,7 @@ def run_edit(args: argparse.Namespace, wired: Wiring) -> int:
     if args.edit is None or args.render is None:
         raise Refusal(
             "a request names its edit and its render: "
-            "`python -m isekai edit <edit> <render> --composite <png>`"
+            f"`{command('edit', '<edit>', '<render>', '--composite', '<png>')}`"
         )
     tracked = tracked_edits()
     if args.edit not in tracked:
@@ -69,7 +69,7 @@ def run_edit(args: argparse.Namespace, wired: Wiring) -> int:
     for path in (asked.composite, asked.record):
         print(f"edit wrote {path.relative_to(runs)}", file=wired.out)
     print(
-        f"edit pending: run `python -m isekai render {shlex.quote(str(runs))}` "
+        f"edit pending: run `{command('render', shlex.quote(str(runs)))}` "
         "to sample it on a rented GPU",
         file=wired.out,
     )
