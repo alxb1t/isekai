@@ -5,7 +5,7 @@ Each phase gives one function a parameter, switches its test to pass a fake, and
 ## Progress
 
 - [x] 1 — The binary and the timeout, parameters of the bundle's build · moderate
-- [ ] 2 — The root, the build and the run, parameters of serve · moderate
+- [x] 2 — The root, the build and the run, parameters of serve · moderate
 - [ ] 3 — D61 amended · moderate
 
 ## 1 — The binary and the timeout, parameters of the bundle's build
@@ -29,21 +29,21 @@ Each phase gives one function a parameter, switches its test to pass a fake, and
 
 ## 2 — The root, the build and the run, parameters of serve
 
-- [ ] 2.1 In `isekai/interface/ui/__init__.py`, add the import `from collections.abc import Callable` above `from pathlib import Path`. Give `serve` the keyword-only parameters `root: Callable[[], Path] = library.root`, `ensure_built: Callable[[], Path] = ensure_built` and `run: Callable[..., None] | None = None`, after `port: int` ([D2](design.md#d2)).
+- [x] 2.1 In `isekai/interface/ui/__init__.py`, add the import `from collections.abc import Callable` above `from pathlib import Path`. Give `serve` the keyword-only parameters `root: Callable[[], Path] = library.root`, `ensure_built: Callable[[], Path] = ensure_built` and `run: Callable[..., None] | None = None`, after `port: int` ([D2](design.md#d2)).
   Verify: `git grep -n -F -e "root: Callable[[], Path] = library.root" -e "ensure_built: Callable[[], Path] = ensure_built" -e "run: Callable[..., None] | None = None" -- isekai/interface/ui/__init__.py` prints the lines that hold its defaults.
-- [ ] 2.2 In `serve`, replace its line `root = library.open_library(library.root())` with `opened = library.open_library(root())`, and read `opened` in its later reads of that local: `sweep(root)` and the first argument of `create_app`. `collection_runs` keeps its own `library.root()`.
+- [x] 2.2 In `serve`, replace its line `root = library.open_library(library.root())` with `opened = library.open_library(root())`, and read `opened` in its later reads of that local: `sweep(root)` and the first argument of `create_app`. `collection_runs` keeps its own `library.root()`.
   Verify: `git grep -n -F "library.root()" -- isekai/interface/ui/__init__.py` prints one line, in `collection_runs`.
-- [ ] 2.3 In `serve`, change the import line `from isekai.interface.ui.app import create_app, run` to the lines `from isekai.interface.ui.app import create_app` and `from isekai.interface.ui.app import run as run_app`, under the comment that stays. Change the line `run(app, host=HOST, port=port)` to `(run or run_app)(app, host=HOST, port=port)`.
+- [x] 2.3 In `serve`, change the import line `from isekai.interface.ui.app import create_app, run` to the lines `from isekai.interface.ui.app import create_app` and `from isekai.interface.ui.app import run as run_app`, under the comment that stays. Change the line `run(app, host=HOST, port=port)` to `(run or run_app)(app, host=HOST, port=port)`.
   Verify: `git grep -n -F "(run or run_app)(app, host=HOST, port=port)" -- isekai/interface/ui/__init__.py` prints one line.
-- [ ] 2.4 In the docstring of `serve`, add after its first paragraph: `` `root`, `ensure_built` and `run` are what a test replaces; each defaults to what the product uses. ``
+- [x] 2.4 In the docstring of `serve`, add after its first paragraph: `` `root`, `ensure_built` and `run` are what a test replaces; each defaults to what the product uses. ``
   Verify: `git grep -n -F "are what a test replaces; each defaults" -- isekai/interface/ui/__init__.py` prints one line.
-- [ ] 2.5 In `test_serve_returns_130_for_keyboard_interrupt` of `tests/test_ui.py`, delete the import `from isekai.interface.ui import app as app_module` and the lines `monkeypatch.setattr(ui.library, "root", library_root)`, `monkeypatch.setattr(ui, "ensure_built", ensure_built)` and `monkeypatch.setattr(app_module, "run", interrupted)`. Call `ui.serve(wired, port=7717, root=library_root, ensure_built=ensure_built, run=interrupted)`, wrapped as `ruff format` wraps it. Keep the patch of `Billing.watch` and every assertion.
+- [x] 2.5 In `test_serve_returns_130_for_keyboard_interrupt` of `tests/test_ui.py`, delete the import `from isekai.interface.ui import app as app_module` and the lines `monkeypatch.setattr(ui.library, "root", library_root)`, `monkeypatch.setattr(ui, "ensure_built", ensure_built)` and `monkeypatch.setattr(app_module, "run", interrupted)`. Call `ui.serve(wired, port=7717, root=library_root, ensure_built=ensure_built, run=interrupted)`, wrapped as `ruff format` wraps it. Keep the patch of `Billing.watch` and every assertion.
   Verify: `git grep -n -F -e 'setattr(ui.library, "root"' -e 'setattr(ui, "ensure_built"' -e 'setattr(app_module, "run"' -- tests/test_ui.py` prints nothing.
-- [ ] 2.6 In `tests/test_ratchets.py`, delete the row `"isekai.interface.ui.app": 1,` from `PATCHED_MODULES`.
+- [x] 2.6 In `tests/test_ratchets.py`, delete the row `"isekai.interface.ui.app": 1,` from `PATCHED_MODULES`.
   Verify: `git grep -n -F "isekai.interface.ui.app" -- tests/test_ratchets.py` prints nothing.
-- [ ] 2.7 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 19`.
+- [x] 2.7 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 19`.
   Verify: `git grep -n -e "^PATCHED_ROWS = 19" -- tests/test_ratchets.py` prints one line.
-- [ ] 2.8 Run the serve test, the server's tests, the `-S` guard and the ratchet with the row gone.
+- [x] 2.8 Run the serve test, the server's tests, the `-S` guard and the ratchet with the row gone.
   Verify: `uv run pytest tests/test_ui.py tests/test_ui_api.py tests/test_pipeline_cli.py tests/test_ratchets.py` exits 0.
 
 ## 3 — D61 amended

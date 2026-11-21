@@ -483,7 +483,6 @@ def test_serve_returns_130_for_keyboard_interrupt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from isekai.interface import ui
-    from isekai.interface.ui import app as app_module
     from isekai.interface.ui.billing import Billing
     from tests.e2e.wiring import fake
 
@@ -502,16 +501,22 @@ def test_serve_returns_130_for_keyboard_interrupt(
         asked.append("ensure_built")
         return dist
 
-    monkeypatch.setattr(ui.library, "root", library_root)
-    monkeypatch.setattr(ui, "ensure_built", ensure_built)
     monkeypatch.setattr(Billing, "watch", lambda self: None)
 
     def interrupted(*args: object, **kwargs: object) -> None:
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(app_module, "run", interrupted)
     wired = fake(runs=root / "runs")
-    assert ui.serve(wired, port=7717) == 130
+    assert (
+        ui.serve(
+            wired,
+            port=7717,
+            root=library_root,
+            ensure_built=ensure_built,
+            run=interrupted,
+        )
+        == 130
+    )
     assert asked == ["root", "ensure_built"]
     assert isinstance(wired.err, io.StringIO)
     assert wired.err.getvalue() == ""

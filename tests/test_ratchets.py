@@ -500,7 +500,6 @@ PATCHED_MODULES = {
     "isekai.interface.cli": 2,
     "isekai.interface.render": 2,
     "isekai.interface.ui": 1,
-    "isekai.interface.ui.app": 1,
     "isekai.interface.ui.events": 1,
     "isekai.interface.ui.library": 4,
     "isekai.interface.wiring": 13,
@@ -512,7 +511,7 @@ PATCHED_MODULES = {
     "isekai.shared.chain": 1,
     "isekai.shared.ink": 1,
 }
-PATCHED_ROWS = 20
+PATCHED_ROWS = 19
 
 
 # --- the rules, on this repository -------------------------------------------
