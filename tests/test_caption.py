@@ -34,7 +34,7 @@ from isekai.pipeline.caption import READER_OPTIONS, FakeReader, OllamaReader
 from tests.fakes import READER, READER_ARTIFACTS, ollama_records
 from tests.images import jpeg_bytes
 from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
-from tests.stages import FLOW, caption
+from tests.stages import FLOW, caption, runs_flag
 from tests.transports import FakeTransport
 
 
@@ -389,6 +389,42 @@ def test_no_caption_artifact_is_written_for_an_unusable_response(run: Run) -> No
         caption(run, reader)
 
     assert versions(run.path / PHOTO / CAPTIONS) == []
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_the_refusal_of_a_failed_read_is_held_whole(run: Run, tmp_path: Path) -> None:
+    command = f"`python -m isekai caption{runs_flag(run)} {run.id}`"
+
+    with pytest.raises(Refusal) as transient:
+        caption(run, FakeReader(failure=StageFailure("transient", "rate limited")))
+
+    assert str(transient.value) == (
+        f"{run.id}: the reader failed (transient) -- rate limited; see "
+        f"photo/captions/001.error.1.transient.json, and run {command} again once "
+        "what it names is fixed"
+    )
+
+    with pytest.raises(Refusal) as permanent:
+        caption(
+            run, FakeReader(failure=StageFailure("permanent", "the reader declined"))
+        )
+
+    assert str(permanent.value) == (
+        f"{run.id}: the reader failed (permanent) -- the reader declined; see "
+        f"photo/captions/001.error.2.permanent.json, fix what it names and delete "
+        f"it, then run {command}"
+    )
+
+    reader = FakeReader()
+    with pytest.raises(Refusal) as spent:
+        caption(run, reader, briefing_path=tmp_path / "absent.md")
+
+    assert str(spent.value) == (
+        f"{run.id}: caption failed permanently -- see "
+        "photo/captions/001.error.2.permanent.json; read the record, fix what it "
+        "names, then delete it to let this stage attempt again"
+    )
+    assert reader.calls == []
 
 
 # --- the Ollama adapter -------------------------------------------------------

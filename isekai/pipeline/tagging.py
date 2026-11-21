@@ -55,18 +55,12 @@ from isekai.foundation.run import (
     Run,
     StageFailure,
     artifact_name,
-    check_budget,
+    attempt,
     constant_record,
     latest,
     next_version,
     photo_of,
-    record_failure,
-    refusal_for,
 )
-
-# The verb a refusal tells the operator to run again: `tag` writes both lists, so
-# neither stage name above is a verb (D1).
-VERB = "tag"
 
 # The whole of what the hosted tagger is told. **"Long" is the lever**: it takes
 # the answer from 34-40 tags to 45-51, and in-vocabulary yield from 11-23% to
@@ -265,12 +259,12 @@ def tag_wd14(
     a thunk for the same reason, stated the same way: an eager read made a verb
     impossible on a clone that had not provisioned the file it never used.
 
-    It is called **after** the guard and **outside** the `try` below, which is
-    what keeps the two kinds of failure apart. An absent or corrupt model is a
-    condition about this *build*, identical for every photograph in the batch,
-    so it refuses without accruing one error record per input; what the `try`
-    catches is this *photograph* -- a header no decoder can read -- which is
-    per-input, permanent, and exactly what a budget of one is for.
+    `attempt` calls it **after** the budget's check and **outside** its `try`,
+    which is what keeps the two kinds of failure apart. An absent or corrupt
+    model is a condition about this *build*, identical for every photograph in
+    the batch, so it refuses without accruing one error record per input; what
+    the `try` catches is this *photograph* -- a header no decoder can read --
+    which is per-input, permanent, and exactly what a budget of one is for.
 
     **This producer claims a pin**, and a sheet built from this list carries the
     `true` across (`pipeline/sheet.py`). It carries **both** digests -- the ones
@@ -286,32 +280,22 @@ def tag_wd14(
         return None
 
     version = next_version(directory)
-    check_budget(WD14, directory, version, run)
-
-    tagger = open_tagger()
-    try:
-        found = wd14.scored(run.photo, tagger.session, tagger.labels)
-    except (Refusal, OSError) as failed:
-        # Permanent, always. Nothing here is transient: the session is open and
-        # the index is read, so what is left to fail is this photograph's own
-        # bytes, and a second pass over them decodes exactly as badly.
-        record = record_failure(
-            directory,
-            version,
-            "permanent",
-            {"stage": WD14, "detail": str(failed)},
-        )
-        raise refusal_for(
-            "tagger",
-            run,
-            "permanent",
-            str(failed),
-            record,
-            WD14,
-            VERB,
-            None,
-            WD14,
-        ) from failed
+    # Permanent, always. Nothing here is transient: the session is open and the
+    # index is read, so what is left to fail is this photograph's own bytes, and
+    # a second pass over them decodes exactly as badly.
+    found, pins = attempt(
+        WD14,
+        run,
+        directory,
+        version,
+        lambda tagger: (
+            wd14.scored(run.photo, tagger.session, tagger.labels),
+            tagger.pins,
+        ),
+        noun="tagger",
+        catching=(Refusal, OSError),
+        opening=open_tagger,
+    )
 
     path = directory / artifact_name(version)
     listed: Wd14 = {
@@ -320,7 +304,7 @@ def tag_wd14(
             "implementation": "wd14",
             "models": [wd14.MODEL_DEST],
             "pinned": True,
-            "artifacts": dict(tagger.pins),
+            "artifacts": dict(pins),
             "floor": wd14.FLOOR,
         },
         "tags": [{"tag": one.tag, "confidence": one.confidence} for one in found],
@@ -356,28 +340,15 @@ def tag_hosted(
         return None
 
     version = next_version(directory)
-    check_budget(TAGS, directory, version, run)
-
-    try:
-        tagging = tagger.tag(run.photo)
-    except StageFailure as failed:
-        record = record_failure(
-            directory,
-            version,
-            failed.kind,
-            {"stage": TAGS, "detail": failed.detail},
-        )
-        raise refusal_for(
-            "tagger",
-            run,
-            failed.kind,
-            failed.detail,
-            record,
-            TAGS,
-            VERB,
-            None,
-            TAGS,
-        ) from failed
+    tagging = attempt(
+        TAGS,
+        run,
+        directory,
+        version,
+        lambda: tagger.tag(run.photo),
+        noun="tagger",
+        catching=(StageFailure,),
+    )
 
     path = directory / artifact_name(version)
     producer: TagsProducer = {
