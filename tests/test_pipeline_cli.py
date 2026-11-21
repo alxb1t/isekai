@@ -742,9 +742,7 @@ def test_the_implementation_the_artifacts_record_is_the_one_the_adapter_names() 
 
 @pytest.mark.spec("caption:selection:the-config-names-the-model")
 @pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
-def test_a_flow_resolves_to_a_reader_running_the_configured_model(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_a_flow_resolves_to_a_reader_running_the_configured_model() -> None:
     reader = reader_for()
 
     assert isinstance(reader, OllamaReader)
@@ -752,10 +750,9 @@ def test_a_flow_resolves_to_a_reader_running_the_configured_model(
 
     # A model no constant could fake: both seams read the config, not an alias.
     configured = replace(load_caption_config(), model="a-reader")
-    monkeypatch.setattr(wiring, "load_caption_config", lambda: configured)
 
-    configured_reader = wiring.reader_for()
-    configured_tagger = wiring.hosted_tagger_for()
+    configured_reader = wiring.reader_for(config=lambda: configured)
+    configured_tagger = wiring.hosted_tagger_for(config=lambda: configured)
 
     assert isinstance(configured_reader, OllamaReader)
     assert isinstance(configured_tagger, OllamaTagger)
@@ -1075,14 +1072,13 @@ def _failing_tagger(kind: Kind, asked: list[str]) -> Callable[[], LocalTagger]:
 
 
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
-def test_prepare_refuses_when_a_pin_does_not_match(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_prepare_refuses_when_a_pin_does_not_match(tmp_path: Path) -> None:
     def swapped() -> LocalTagger:
         raise provision.DigestMismatch("wd14/model.onnx hashes to the wrong digest")
 
-    monkeypatch.setattr(wiring, "open_session", swapped)
-    wired = replace(_wiring(tmp_path), tagger=wiring.tagger_for)
+    wired = replace(
+        _wiring(tmp_path), tagger=lambda: wiring.tagger_for(open_session=swapped)
+    )
     [run] = _photographs(tmp_path, wired.runs_root, (1200, 900))
     assign(run, "summon-anime-wai")
 
@@ -1300,6 +1296,47 @@ def test_approve_cancel_answers_each_run_on_its_own(
     )
     assert f"{cancelled.id}: approve has nothing to cancel in summon-anime-wai" in said
     assert sorted(path.name for path in review_of.iterdir()) == ["001.draft.json"]
+
+
+@pytest.mark.spec("cli:approve-cancel:a-running-render-refuses-it")
+def test_approve_cancel_is_refused_under_a_runs_root_a_session_holds(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    runs = []
+    for name, height in (("held", 480), ("free", 481)):
+        photo = tmp_path / f"{name}.jpg"
+        photo.write_bytes(jpeg_bytes(640, height))
+        run = open_run(photo, tmp_path / name / "runs")
+        sheet(run, schema, vocabulary)
+        review(run, "summon-anime-wai")
+        approve(run, "summon-anime-wai", schema, vocabulary)
+        runs.append(run)
+    held, free = runs
+    record = tmp_path / "held" / SESSIONS / "20261024T091200Z"
+    record.parent.mkdir()
+    record.with_suffix(".json").write_text("{}")
+    wired = _wiring(tmp_path)
+    parsed = build_parser().parse_args(
+        [
+            "approve",
+            "--flow",
+            "summon-anime-wai",
+            "--cancel",
+            str(held.path),
+            str(free.path),
+        ]
+    )
+
+    with record.with_suffix(".lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        assert dispatch(parsed, wired) == 1
+
+    held_review = held.directory("summon-anime-wai", "review")
+    assert sorted(path.name for path in held_review.iterdir()) == ["001.approved.json"]
+    free_review = free.directory("summon-anime-wai", "review")
+    assert sorted(path.name for path in free_review.iterdir()) == ["001.draft.json"]
+    assert isinstance(wired.err, io.StringIO)
+    assert f"{held.path}: A render session is running." in wired.err.getvalue()
 
 
 @pytest.mark.spec("field-map:excluded:approval-refuses-an-excluded-tag")
@@ -1548,6 +1585,30 @@ def test_discard_deletes_the_render_and_its_thumbnail(
         f"discard deleted {group}",
         f"discard deleted .cache/{run.digest}/summon-anime-wai/outputs/001/{own}",
     ]
+
+
+@pytest.mark.spec("cli:discard:a-session-beside-a-plain-runs-root-refuses-it")
+def test_discard_is_refused_beside_a_session_under_a_plain_runs_root(
+    tmp_path: Path,
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    run = open_run(photo, tmp_path / "runs")
+    image = rendered_image(run, 1, 7)
+    record = tmp_path / SESSIONS / "20261024T091200Z"
+    record.parent.mkdir()
+    record.with_suffix(".json").write_text("{}")
+    wired = _wiring(tmp_path)
+
+    with record.with_suffix(".lock").open("w") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        before = tree(tmp_path)
+        assert dispatch(build_parser().parse_args(["discard", str(image)]), wired) == 1
+        assert tree(tmp_path) == before
+
+    assert image.is_file()
+    assert isinstance(wired.err, io.StringIO)
+    assert f"refused: {image}: A render session" in wired.err.getvalue()
 
 
 @pytest.mark.spec("cli:discard:the-last-render-takes-its-approval")

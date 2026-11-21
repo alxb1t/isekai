@@ -6,6 +6,7 @@ destinations the manifest declares are written.
 """
 
 import hashlib
+import inspect
 import io
 import json
 import zipfile
@@ -286,22 +287,33 @@ def test_unpack_resolve_refuses_an_unknown_member_and_an_unpinned_archive(
 
 
 @pytest.mark.spec_exempt(
-    "structural: the command line is `fetch` over the real fetcher and a named manifest"
+    "structural: the command line is fetch over the fetcher it is given "
+    "and a named manifest"
 )
 def test_unpack_cli_fetches_the_manifest_it_names_into_the_models_dir(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     archive = _archive()
     manifest = tmp_path / "manifest.json"
     manifest.write_text(json.dumps(_manifest(_entry(archive, _both()))))
-    monkeypatch.setattr(
-        unpack, "HuggingFaceFetcher", lambda: FakeFetcher(served={SOURCE: archive})
-    )
 
-    code = unpack.main(["fetch", "--models-dir", str(tmp_path / "m"), str(manifest)])
+    code = unpack.main(
+        ["fetch", "--models-dir", str(tmp_path / "m"), str(manifest)],
+        fetcher=lambda: FakeFetcher(served={SOURCE: archive}),
+    )
 
     assert code == 0
     assert (tmp_path / "m/sam2/encoder.onnx").read_bytes() == ENCODER
+
+
+@pytest.mark.spec_exempt(
+    "structural: the command line fetches over Hugging Face unless a test gives its own"
+)
+def test_unpack_cli_defaults_to_the_hugging_face_fetcher() -> None:
+    assert (
+        inspect.signature(unpack.main).parameters["fetcher"].default
+        is unpack.HuggingFaceFetcher
+    )
 
 
 @pytest.mark.spec_exempt(

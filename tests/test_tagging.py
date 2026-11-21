@@ -424,17 +424,14 @@ def test_the_separator_is_a_comma() -> None:
 
 
 @pytest.mark.spec("tagging:independence:the-local-tagger-needs-no-model-key")
-def test_the_local_tagger_resolves_with_no_flow(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_the_local_tagger_resolves_with_no_flow() -> None:
     # Proved by calling it, with the 467 MB open replaced: the tagger resolves and
     # **no flow is read** -- no manifest key names the local tagger's model,
     # because it is a file this build pins and there is no flow for which it
     # would be wrong (D7).
     opened = fake_tagger()
-    monkeypatch.setattr(wiring, "open_session", lambda *_a, **_k: opened)
 
-    assert wiring.tagger_for() == opened
+    assert wiring.tagger_for(open_session=lambda *_a, **_k: opened) == opened
 
 
 @pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
@@ -664,17 +661,20 @@ def test_the_refusal_of_a_failed_local_tag_is_held_whole(run: Run) -> None:
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
 @pytest.mark.spec("tagging:order:a-local-failure-leaves-the-hosted-list-written")
 def test_a_pin_that_does_not_match_is_a_refusal_and_the_hosted_list_is_written(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     def swapped() -> LocalTagger:
         raise provision.DigestMismatch(
             f"{MODEL_DEST} hashes to {'1' * 64}, not {'2' * 64}"
         )
 
-    monkeypatch.setattr(wiring, "open_session", swapped)
     photo = _photo(tmp_path)
     hosted = FakeTagger()
-    wired = _wired(tmp_path, tagger=wiring.tagger_for, hosted=hosted)
+    wired = _wired(
+        tmp_path,
+        tagger=lambda: wiring.tagger_for(open_session=swapped),
+        hosted=hosted,
+    )
 
     status = _dispatch(wired, "tag", str(photo))
 

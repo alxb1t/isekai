@@ -37,7 +37,14 @@ from isekai.boundary.provision import Manifest, entry_for
 from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import Run, group_of, render_image, rendered
+from isekai.foundation.run import (
+    DATA_ROOT,
+    REPOSITORY,
+    Run,
+    group_of,
+    render_image,
+    rendered,
+)
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR
 
 # A face's embedding, or None when no face is found; a file that does not decode
@@ -219,11 +226,19 @@ def _embedder(models: Path, *, manifest: Manifest | None = None) -> Embed:
     return lambda path: embed(path, detector, encoder)
 
 
-def main(argv: Sequence[str], *, embedder: Callable[[Path], Embed] = _embedder) -> int:
+def main(
+    argv: Sequence[str],
+    *,
+    embedder: Callable[[Path], Embed] = _embedder,
+    repository: Path = REPOSITORY,
+    data_root: Path = DATA_ROOT,
+) -> int:
     """Score the collection, write its record beside the runs, and print the table."""
     args = parse_args(argv)
     try:
-        destination = record_destination(args.runs, "evaluation.json")
+        destination = record_destination(
+            args.runs, "evaluation.json", repository=repository, data_root=data_root
+        )
         embed = embedder(args.models)
         rec, notes = score(args.runs, args.cohort, embed, args.flows)
     except Refusal as refused:

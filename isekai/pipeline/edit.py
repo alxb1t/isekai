@@ -54,6 +54,7 @@ from isekai.foundation.run import (
     EDIT_COMPOSITE,
     EDIT_RECORD,
     EDIT_STEM,
+    command,
     digest_of,
     edit_at,
     edit_files,
@@ -348,7 +349,7 @@ def _stale(record: Path, why: str) -> Refusal:
     """Return the refusal of a pending edit that cannot run as requested."""
     image = shlex.quote(str(image_of(record)))
     return Refusal(
-        f"{record.name}: {why}; run `python -m isekai discard {image}` to remove "
+        f"{record.name}: {why}; run `{command('discard', image)}` to remove "
         "the request, then request the edit again"
     )
 

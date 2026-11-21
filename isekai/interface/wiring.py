@@ -27,12 +27,12 @@ from typing import TextIO
 
 from isekai.boundary import gpu, ollama
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
-from isekai.boundary.pose import open_pose
+from isekai.boundary.pose import PoseFinder, open_pose
 from isekai.boundary.provision import DigestMismatch
-from isekai.boundary.sam2 import open_segmenter
+from isekai.boundary.sam2 import Segmenter, open_segmenter
 from isekai.boundary.unpack import PLACEMENT_REMEDY
 from isekai.boundary.wd14 import LocalTagger, open_session
-from isekai.foundation.caption_config import load_caption_config
+from isekai.foundation.caption_config import CaptionConfig, load_caption_config
 from isekai.foundation.flow import FLOWS_DIR
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import DATA_ROOT, REPOSITORY, RUNS_ROOT
@@ -124,15 +124,17 @@ class Wiring:
 # constructed until a verb asks.
 
 
-def reader_for() -> Reader:
+def reader_for(config: Callable[[], CaptionConfig] = load_caption_config) -> Reader:
     """Return the reader running the model `config/caption.json` names.
 
     Every photograph is read by one model, so the seam takes nothing.
     """
-    return OllamaReader(model=load_caption_config().model)
+    return OllamaReader(model=config().model)
 
 
-def hosted_tagger_for() -> Tagger:
+def hosted_tagger_for(
+    config: Callable[[], CaptionConfig] = load_caption_config,
+) -> Tagger:
     """Return the hosted tagger, on the same alias the reader runs.
 
     **One model answers both prompts**, which is exactly why `TAG_PROMPT` is not
@@ -142,10 +144,10 @@ def hosted_tagger_for() -> Tagger:
     It is not optional: what can still go wrong is the alias not being created,
     and that is a refusal at the first call naming the one command that fixes it.
     """
-    return OllamaTagger(model=load_caption_config().model)
+    return OllamaTagger(model=config().model)
 
 
-def tagger_for() -> LocalTagger:
+def tagger_for(open_session: Callable[[], LocalTagger] = open_session) -> LocalTagger:
     """Open the local tagger and read its label index.
 
     The manifest's `tagger` key decides *whether* a flow is tagged; nothing in
@@ -170,23 +172,41 @@ def tagger_for() -> LocalTagger:
         ) from swapped
 
 
-_proposer: Proposer | None = None
-_PROPOSER_OPENING = threading.Lock()
-
-
-def proposer_for() -> Proposer:
-    """Open the pose finder and the segmenter once, and keep them for the process.
+class Proposers:
+    """The pose finder and segmenter behind the proposed pairs, opened once and kept.
 
     Each verifies its files against the placement manifest before a session opens, and
     refuses naming the fetch when a file is absent. A refusal is not kept: the next
     ask opens again. The check and the opening share one lock, since the route runs in
     a thread each and two first asks must not open the models twice.
     """
-    global _proposer
-    with _PROPOSER_OPENING:
-        if _proposer is None:
-            _proposer = Proposer(open_pose(), open_segmenter())
-        return _proposer
+
+    def __init__(
+        self,
+        *,
+        open_pose: Callable[[], PoseFinder] = open_pose,
+        open_segmenter: Callable[[], Segmenter] = open_segmenter,
+    ) -> None:
+        """Hold the two openers; nothing opens until the first ask."""
+        self.open_pose = open_pose
+        self.open_segmenter = open_segmenter
+        self._lock = threading.Lock()
+        self._proposer: Proposer | None = None
+
+    def __call__(self) -> Proposer:
+        """Return the proposer, opening the models on the first ask."""
+        with self._lock:
+            if self._proposer is None:
+                self._proposer = Proposer(self.open_pose(), self.open_segmenter())
+            return self._proposer
+
+
+PROPOSERS = Proposers()
+
+
+def proposer_for() -> Proposer:
+    """Open the pose finder and the segmenter once, and keep them for the process."""
+    return PROPOSERS()
 
 
 def proposer_of(wired: Wiring) -> Proposer:
@@ -255,13 +275,15 @@ def _is_within(resolved: Path, ancestor: Path) -> bool:
     )
 
 
-def trackable(directory: Path) -> bool:
-    """Decide whether `directory` is inside the working tree and outside `DATA_ROOT`.
+def trackable(
+    directory: Path, *, repository: Path = REPOSITORY, data_root: Path = DATA_ROOT
+) -> bool:
+    """Decide whether `directory` is inside the working tree and outside the data root.
 
     There, what is written is one `git add` from being published (D18).
     """
     resolved = directory.resolve()
-    return _is_within(resolved, REPOSITORY) and not _is_within(resolved, DATA_ROOT)
+    return _is_within(resolved, repository) and not _is_within(resolved, data_root)
 
 
 def _check_run_root(runs: Path) -> None:
@@ -284,8 +306,12 @@ def _check_run_root(runs: Path) -> None:
         )
 
 
-def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
+def load_vocabulary(
+    models_dir: Path = DEFAULT_MODELS_DIR, *, manifest: Path | None = None
+) -> Vocabulary:
     """Return the provisioned vocabulary, its bytes verified against the manifest.
+
+    `manifest` is the manifest's path; `None` reads the tracked one.
 
     The digest check is the reason the pin is worth anything: the manifest is the
     only evidence the file on disk is the list the sheets were written against.
@@ -301,11 +327,12 @@ def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
         resolve,
     )
 
-    manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
+    source = VOCABULARY_MANIFEST_PATH if manifest is None else manifest
+    declared = load_manifest(source)
     try:
-        path = resolve(VOCABULARY_DEST, models_dir, manifest)
+        path = resolve(VOCABULARY_DEST, models_dir, declared)
     except UnknownArtifact as absent:
-        raise undeclared(VOCABULARY_DEST, VOCABULARY_MANIFEST_PATH) from absent
+        raise undeclared(VOCABULARY_DEST, source) from absent
     except FileNotFoundError as absent:
         # A `FileNotFoundError` is the one failure here that has a remedy this
         # build can perform, and a traceback names a path instead of naming it.
@@ -315,7 +342,7 @@ def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
             "from the repository root to fetch and verify it against its pinned "
             "manifest"
         ) from absent
-    return read_vocabulary(path, entry_for(manifest, VOCABULARY_DEST))
+    return read_vocabulary(path, entry_for(declared, VOCABULARY_DEST))
 
 
 def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:
