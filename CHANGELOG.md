@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.38] - 2026-11-21
+
+Gate: local 1m20s · CI not read under mf-ship · 0.87.37: local 1m28s · CI not read under mf-ship
+
 - `collection_held` joins `isekai/foundation/library.py`: a collection is held while any of its session records' locks is held, a record that does not read included. `render_running` calls it, and a case holds the rule (0182 D1, D4).
 - The page's delete, its cancel and the review payload's `cancel` now refuse while a session of any process holds the collection, not only this server's render slot: `Surface.rendering` asks `collection_held` too. Cases hold the delete, the sheet's reason and the cancel (0182 D2, D3, D4).
 - D72's *Accepts* line, the foundation README's `library.py` row and the UI README's delete bullet say the app's guard asks the slot or the held collection; the stale *Known breaks* clause leaves the `0.87.37` notes (0182 D5).
