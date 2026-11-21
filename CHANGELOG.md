@@ -19,6 +19,7 @@ its new digest.
 - The mutation run over `verbs/runner.py` leaves no survivor and the replay of `tests/mutants.json` holds; D58 accepts the runs of `render` and `migrate` alone, and the READMEs and `cli.py`'s docstring name the runner (0187 D4, D6, D7).
 - The whole refusal of `caption`, `wd14`, `tags` and `sheet` is held by a case of its stage's test file, and the mutation runs over each stage's sequence and over `refusal_for` leave no survivor, so the shared function that follows can be proved byte-equal (0188 D6).
 - `attempt` in `isekai/foundation/run.py` owns the budget's check, the optional open step, the work, the failure's record and the refusal, and `producer_for` of `producers.py` finds a stage's row by its key; cases hold both, and no stage calls them yet (0188 D1–D3).
+- `caption`, `wd14`, `tags` and `sheet` call `attempt` in place of their own budget check, record and refusal, the open steps of `caption` and `wd14` going through `opening`; `VERB` of `tagging.py` goes, and every refusal stays byte-equal (0188 D1, D2, D7).
 
 ## [0.87.41] - 2026-11-21
 

@@ -6,7 +6,7 @@ Hold each stage's refusal whole and pin the sequences by mutation, add `attempt`
 
 - [x] 1 — Hold each stage's refusal whole and pin the sequences by mutation · moderate
 - [x] 2 — Add `attempt` and `producer_for` · moderate
-- [ ] 3 — Call `attempt` from the stages · moderate
+- [x] 3 — Call `attempt` from the stages · moderate
 - [ ] 4 — Narrow `refusal_for` and take its row out · moderate
 - [ ] 5 — Replay the mutation and amend the documents · moderate
 
@@ -55,22 +55,22 @@ Hold each stage's refusal whole and pin the sequences by mutation, add `attempt`
 
 ## 3 — Call `attempt` from the stages
 
-- [ ] 3.1 In `caption` of `isekai/pipeline/caption.py` replace the block from `check_budget(STAGE, …)` to `) from failed` with one call, per [D1](design.md#d1) and [D7](design.md#d7): `attempt(STAGE, run, directory, version, …)` whose work reads `run.photo` with the briefing it is handed, with `noun="reader"`, `catching=(StageFailure,)` and `opening=briefing_path.read_text`. Keep the guard and `next_version` as they are.
+- [x] 3.1 In `caption` of `isekai/pipeline/caption.py` replace the block from `check_budget(STAGE, …)` to `) from failed` with one call, per [D1](design.md#d1) and [D7](design.md#d7): `attempt(STAGE, run, directory, version, …)` whose work reads `run.photo` with the briefing it is handed, with `noun="reader"`, `catching=(StageFailure,)` and `opening=briefing_path.read_text`. Keep the guard and `next_version` as they are.
   Verify: `git grep -n -F 'refusal_for(' -- isekai/pipeline/caption.py` prints nothing.
 
-- [ ] 3.2 In `tag_wd14` of `isekai/pipeline/tagging.py` make the same replacement, from `check_budget(WD14, …)`, with `opening=open_tagger`, `noun="tagger"` and `catching=(Refusal, OSError)`; the work returns the scores with `tagger.pins`, and the artifact's `artifacts` reads those pins. Keep the comment that the kind is always permanent beside the call, and in the docstring say `attempt` calls `open_tagger` after the budget's check and outside its `try`.
+- [x] 3.2 In `tag_wd14` of `isekai/pipeline/tagging.py` make the same replacement, from `check_budget(WD14, …)`, with `opening=open_tagger`, `noun="tagger"` and `catching=(Refusal, OSError)`; the work returns the scores with `tagger.pins`, and the artifact's `artifacts` reads those pins. Keep the comment that the kind is always permanent beside the call, and in the docstring say `attempt` calls `open_tagger` after the budget's check and outside its `try`.
   Verify: `git grep -n -F 'check_budget(WD14' -- isekai/pipeline/tagging.py` prints nothing.
 
-- [ ] 3.3 In `tag_hosted` of the same file make the same replacement, the `record_failure(` call and the refusal going with the block, with `catching=(StageFailure,)`, `noun="tagger"` and no `opening`.
+- [x] 3.3 In `tag_hosted` of the same file make the same replacement, the `record_failure(` call and the refusal going with the block, with `catching=(StageFailure,)`, `noun="tagger"` and no `opening`.
   Verify: `git grep -n -F 'record_failure(' -- isekai/pipeline/tagging.py` prints nothing.
 
-- [ ] 3.4 In `_from_tag_list` of `isekai/pipeline/sheet.py` replace the block from `check_budget(STAGE, …)` to the `return fields, made_by` with one call, its `record_failure(` call and refusal going with the block, per [D7](design.md#d7): `attempt(STAGE, run, directory, version, …)`, `flow=flow`, `noun="sheet"`, `catching=(Refusal,)`, its work the `_route` call and the `validate` call, returning the fields and `made_by`. The `remedy` assignment moves above the call, since the work reads it; its strings and the draft branch stay as they are.
+- [x] 3.4 In `_from_tag_list` of `isekai/pipeline/sheet.py` replace the block from `check_budget(STAGE, …)` to the `return fields, made_by` with one call, its `record_failure(` call and refusal going with the block, per [D7](design.md#d7): `attempt(STAGE, run, directory, version, …)`, `flow=flow`, `noun="sheet"`, `catching=(Refusal,)`, its work the `_route` call and the `validate` call, returning the fields and `made_by`. The `remedy` assignment moves above the call, since the work reads it; its strings and the draft branch stay as they are.
   Verify: `git grep -n -F 'record_failure(' -- isekai/pipeline/sheet.py` prints nothing.
 
-- [ ] 3.5 In `isekai/pipeline/tagging.py` delete `VERB` and the comment above it, which nothing reads now.
+- [x] 3.5 In `isekai/pipeline/tagging.py` delete `VERB` and the comment above it, which nothing reads now.
   Verify: `git grep -n -w -e VERB -- isekai/pipeline/tagging.py` prints nothing.
 
-- [ ] 3.6 Drop from `caption.py`, `tagging.py` and `sheet.py` each import `ruff` names unused, and import `attempt` from `isekai.foundation.run`.
+- [x] 3.6 Drop from `caption.py`, `tagging.py` and `sheet.py` each import `ruff` names unused, and import `attempt` from `isekai.foundation.run`.
   Verify: `uv run ruff check isekai/pipeline` exits 0.
 
 ## 4 — Narrow `refusal_for` and take its row out
