@@ -4,24 +4,24 @@ The phases are the edit kinds, the draft's names, the importers and the document
 
 ## Progress
 
-- [ ] 1 — The edit kinds · moderate
+- [x] 1 — The edit kinds · moderate
 - [ ] 2 — The draft's names · moderate
 - [ ] 3 — The importers · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The edit kinds
 
-- [ ] 1.1 Before any edit, run `tools.mutate` over `is_edit_file`, `edit_numbers` and `delete_edits` in `isekai/foundation/layout.py`, one run a range from the `def` line to the last line, on `tests/test_run_directory.py tests/test_edit.py tests/test_edit_placement.py tests/test_edit_session.py`. Find each range with `git grep -n -e "^def is_edit_file" -e "^def edit_numbers" -e "^def delete_edits" -- isekai/foundation/layout.py`; kill a survivor by a case in `tests/test_run_directory.py` before 1.3, per [D5](design.md#d5).
+- [x] 1.1 Before any edit, run `tools.mutate` over `is_edit_file`, `edit_numbers` and `delete_edits` in `isekai/foundation/layout.py`, one run a range from the `def` line to the last line, on `tests/test_run_directory.py tests/test_edit.py tests/test_edit_placement.py tests/test_edit_session.py`. Find each range with `git grep -n -e "^def is_edit_file" -e "^def edit_numbers" -e "^def delete_edits" -- isekai/foundation/layout.py`; kill a survivor by a case in `tests/test_run_directory.py` before 1.3, per [D5](design.md#d5).
   Verify: `grep -n -F "3 killed, 0 survived" openspec/changes/0179-the-layout-tail/design.md` prints one line.
-- [ ] 1.2 **HALT CHECK** The composite's suffix is spelled by hand once outside the layout, in `_ready`: no other line of `isekai/` builds a name from `}.composite.png` ([D2](design.md#d2)).
+- [x] 1.2 **HALT CHECK** The composite's suffix is spelled by hand once outside the layout, in `_ready`: no other line of `isekai/` builds a name from `}.composite.png` ([D2](design.md#d2)).
   Verify: `git grep -n -F "}.composite.png" -- isekai` prints one line, in `isekai/pipeline/edit.py`.
-- [ ] 1.3 In `isekai/foundation/layout.py`, add `EDIT_SUFFIXES` after `EDIT_PLACEMENT`, one blank line between them, with its comment as [D1](design.md#d1) gives them. `is_edit_file` and `edit_numbers` loop `for suffix in EDIT_SUFFIXES:` and `delete_edits` takes each path from `edit_stem` and the suffix, as the block of [D1](design.md#d1) reads.
+- [x] 1.3 In `isekai/foundation/layout.py`, add `EDIT_SUFFIXES` after `EDIT_PLACEMENT`, one blank line between them, with its comment as [D1](design.md#d1) gives them. `is_edit_file` and `edit_numbers` loop `for suffix in EDIT_SUFFIXES:` and `delete_edits` takes each path from `edit_stem` and the suffix, as the block of [D1](design.md#d1) reads.
   Verify: `git grep -c -F "in EDIT_SUFFIXES:" -- isekai/foundation/layout.py` prints `isekai/foundation/layout.py:3`.
-- [ ] 1.4 In `isekai/foundation/layout.py`, no loop lists the suffixes by hand any more: the tuple `(EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD, ".png")` that `is_edit_file` held is gone.
+- [x] 1.4 In `isekai/foundation/layout.py`, no loop lists the suffixes by hand any more: the tuple `(EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD, ".png")` that `is_edit_file` held is gone.
   Verify: `git grep -n -F "(EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD" -- isekai/foundation/layout.py` prints nothing.
-- [ ] 1.5 In `isekai/foundation/run.py`, import `EDIT_SUFFIXES` from `isekai.foundation.layout` and add `"EDIT_SUFFIXES"` to `__all__` after `"EDIT_STEM"`.
+- [x] 1.5 In `isekai/foundation/run.py`, import `EDIT_SUFFIXES` from `isekai.foundation.layout` and add `"EDIT_SUFFIXES"` to `__all__` after `"EDIT_STEM"`.
   Verify: `git grep -c -F "EDIT_SUFFIXES" -- isekai/foundation/run.py` prints `isekai/foundation/run.py:2`.
-- [ ] 1.6 In `isekai/pipeline/edit.py`, add `EDIT_COMPOSITE` to the import from `isekai.foundation.run` before `EDIT_RECORD`, and make `_ready` name the composite `f"{record.name.removesuffix(EDIT_RECORD)}{EDIT_COMPOSITE}"`, so the string `EDIT_RECORD)}.composite` is gone ([D2](design.md#d2)).
+- [x] 1.6 In `isekai/pipeline/edit.py`, add `EDIT_COMPOSITE` to the import from `isekai.foundation.run` before `EDIT_RECORD`, and make `_ready` name the composite `f"{record.name.removesuffix(EDIT_RECORD)}{EDIT_COMPOSITE}"`, so the string `EDIT_RECORD)}.composite` is gone ([D2](design.md#d2)).
   Verify: `git grep -n -F "EDIT_RECORD)}.composite" -- isekai/pipeline/edit.py` prints nothing.
 
 ## 2 — The draft's names

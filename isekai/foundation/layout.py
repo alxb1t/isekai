@@ -237,6 +237,11 @@ EDIT_COMPOSITE = ".composite.png"
 EDIT_RECORD = ".json"
 EDIT_PLACEMENT = ".placement.json"
 
+# The four suffixes an edit's files take after the stem, in the order a delete takes
+# them: the image, then its record, its placement and its composite, so a delete cut
+# short leaves a request that reads as pending rather than an image no record explains.
+EDIT_SUFFIXES = (".png", EDIT_RECORD, EDIT_PLACEMENT, EDIT_COMPOSITE)
+
 
 def is_edit_file(name: str) -> bool:
     """Return whether `name` is a file an edit writes beside its source.
@@ -244,7 +249,7 @@ def is_edit_file(name: str) -> bool:
     The image, record, composite and placement of an edit of a render's seed.
     e.g. "42.edit-1.placement.json" -> True; "42.edit-0.png", "x.edit-1.json" -> False
     """
-    for suffix in (EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD, ".png"):
+    for suffix in EDIT_SUFFIXES:
         named = EDIT_STEM.fullmatch(name.removesuffix(suffix))
         if name.endswith(suffix) and named and is_seed(named["seed"]):
             return True
@@ -290,7 +295,7 @@ def edit_numbers(group: Path, seed: int) -> list[int]:
         return []
     found: set[int] = set()
     for name in os.listdir(group):
-        for suffix in (".png", EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD):
+        for suffix in EDIT_SUFFIXES:
             match = EDIT_STEM.fullmatch(name.removesuffix(suffix))
             if name.endswith(suffix) and match and int(match["seed"]) == seed:
                 found.add(int(match["k"]))
@@ -314,8 +319,8 @@ def delete_edits(group: Path, seed: int, numbers: Iterable[int]) -> list[Path]:
     """
     deleted: list[Path] = []
     for number in numbers:
-        image, record, composite = edit_files(group, seed, number)
-        for path in (image, record, placement_file(group, seed, number), composite):
+        for suffix in EDIT_SUFFIXES:
+            path = group / f"{edit_stem(seed, number)}{suffix}"
             if path.is_file():
                 path.unlink()
                 deleted.append(path)

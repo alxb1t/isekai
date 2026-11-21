@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- `EDIT_SUFFIXES` in `isekai/foundation/layout.py` lists an edit's suffixes in delete order; `is_edit_file`, `edit_numbers` and `delete_edits` read it, and `_ready` in `isekai/pipeline/edit.py` names the composite by `EDIT_COMPOSITE` (0179 D1, D2).
+
 ## [0.87.34] - 2026-11-21
 
 Gate: local 1m14s · CI not read under mf-ship · 0.87.33: local 1m13s · CI not read under mf-ship
