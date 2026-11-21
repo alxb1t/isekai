@@ -32,7 +32,7 @@ Pin the moving lines by mutation, move the runner from [`isekai/interface/cli.py
   Verify: `grep -n -F 'T = TypeVar("T")' isekai/interface/verbs/runner.py` prints one line.
 
 - [x] 2.3 Copy into `isekai/interface/verbs/runner.py`, in the order of [D1](design.md#d1) and text for text, `_existing_run`, `_seam`, the runner cut's block from `_Item` to `_run_item`, `_per_item`, `_assign` and `_assign_one`.
-  Verify: `grep -n -e '^def _per_item' -e '^def _existing_run' -e '^def _seam' -e '^def _assign' isekai/interface/verbs/runner.py` prints a line for `_per_item`, `_existing_run`, `_seam`, `_assign` and `_assign_one`.
+  Verify: `grep -n -e '^def _per_item' -e '^def _existing_run' -e '^def _seam' -e '^def _assign' isekai/interface/verbs/runner.py` prints a line for each of the five definitions, _per_item, _existing_run, _seam, _assign and _assign_one.
 
 - [x] 2.4 Delete from `isekai/interface/cli.py` everything copied in 2.3, `_Item` with its decorator included.
   Verify: `git grep -n -e '^def _per_item' -e '^def _seam' -e '^def _assign' -e '^def _existing_run' -e '^class _Item' -e '^def _run_item' -- isekai/interface/cli.py` prints nothing.
