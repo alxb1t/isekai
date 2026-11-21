@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.39
 after: [0182-the-render-guard]
 ---
 
