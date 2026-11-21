@@ -33,14 +33,18 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
     BUDGETS,
+    CAPTIONS,
     DATA_ROOT,
     DESCRIPTION,
     FRAME_NAME,
     OUTPUTS,
     PHOTO,
+    PHOTOGRAPH_VERBS,
     PROMPTS,
     REVIEW,
     RUNS_ROOT,
+    SHEETS,
+    TAGS,
     WD14,
     Kind,
     Run,
@@ -863,6 +867,31 @@ def test_the_rendering_stages_budget_is_one() -> None:
         "assemble": 1,
         "render": 1,
     }
+
+
+@pytest.mark.spec_exempt(
+    "structural: the stage tables hold their literal values and order"
+)
+def test_the_stage_tables_hold_their_literal_values_and_order() -> None:
+    assert list(BUDGETS.items()) == [
+        ("caption", 3),
+        ("wd14", 1),
+        ("tags", 3),
+        ("sheet", 1),
+        ("assemble", 1),
+        ("render", 1),
+    ]
+    assert DESCRIPTION == ("captions", "wd14", "tags")
+    assert PHOTOGRAPH_VERBS == ("caption", "tag")
+    assert (CAPTIONS, WD14, TAGS, SHEETS, REVIEW, PROMPTS, OUTPUTS) == (
+        "captions",
+        "wd14",
+        "tags",
+        "sheets",
+        "review",
+        "prompts",
+        "outputs",
+    )
 
 
 @pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")

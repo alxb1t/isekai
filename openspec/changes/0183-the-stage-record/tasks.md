@@ -4,18 +4,18 @@ The cases are written first, the record comes in, the tables are read from it, a
 
 ## Progress
 
-- [ ] 1 — The cases · moderate
+- [x] 1 — The cases · moderate
 - [ ] 2 — The record · moderate
 - [ ] 3 — The derive · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The cases
 
-- [ ] 1.1 **HALT CHECK** The tables stand as [D3](design.md#d3) replaces them.
+- [x] 1.1 **HALT CHECK** The tables stand as [D3](design.md#d3) replaces them.
   Verify: `git grep -c -e "^BUDGETS: " -e "^DESCRIPTION = " -e "^PHOTOGRAPH_VERBS = " -- isekai/foundation/failures.py isekai/foundation/names.py` prints `isekai/foundation/failures.py:1` and `isekai/foundation/names.py:2`.
-- [ ] 1.2 In `tests/test_run_directory.py`, add `CAPTIONS`, `PHOTOGRAPH_VERBS`, `SHEETS` and `TAGS` to the import from `isekai.foundation.run`, and add the literal-value case of [D4](design.md#d4) after `test_the_rendering_stages_budget_is_one`. It passes on today's code.
+- [x] 1.2 In `tests/test_run_directory.py`, add `CAPTIONS`, `PHOTOGRAPH_VERBS`, `SHEETS` and `TAGS` to the import from `isekai.foundation.run`, and add the literal-value case of [D4](design.md#d4) after `test_the_rendering_stages_budget_is_one`. It passes on today's code.
   Verify: `uv run pytest tests/test_run_directory.py -k the_stage_tables_hold_their_literal_values` exits 0.
-- [ ] 1.3 Run `tools.mutate` over the budget's lines, one run a range, on `tests/test_run_directory.py`, with the opening lines of [D5](design.md#d5): `isekai/foundation/failures.py:163-167`, then `:172`, then `:184-200`. A survivor is killed as `## Equivalent mutants` of [the design](design.md) says, or named there.
+- [x] 1.3 Run `tools.mutate` over the budget's lines, one run a range, on `tests/test_run_directory.py`, with the opening lines of [D5](design.md#d5): `isekai/foundation/failures.py:163-167`, then `:172`, then `:184-200`. A survivor is killed as `## Equivalent mutants` of [the design](design.md) says, or named there.
   Verify: `grep -c -F "## Equivalent mutants" openspec/changes/0183-the-stage-record/design.md` prints `1`.
 
 ## 2 — The record
