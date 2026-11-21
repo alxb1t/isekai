@@ -5,7 +5,7 @@ Hold the hub cell's track by vitest cases on the code as it stands, then key `RU
 ## Progress
 
 - [x] 1 — Hold the track by cases, passing before a line moves · moderate
-- [ ] 2 — Type the track by the union of Prepare's verbs · moderate
+- [x] 2 — Type the track by the union of Prepare's verbs · moderate
 
 ## 1 — Hold the track by cases, passing before a line moves
 
@@ -29,11 +29,11 @@ Hold the hub cell's track by vitest cases on the code as it stands, then key `RU
 
 ## 2 — Type the track by the union of Prepare's verbs
 
-- [ ] 2.1 **HALT CHECK** The premise of [D2](design.md#d2) stands: the store holds the running stage as a `string`, which `Hub.vue` passes to both functions.
+- [x] 2.1 **HALT CHECK** The premise of [D2](design.md#d2) stands: the store holds the running stage as a `string`, which `Hub.vue` passes to both functions.
   Verify: `git grep -n -F "const running = ref<Record<string, string>>({})" -- ui/src/stores/collection.ts` prints one line.
 
-- [ ] 2.2 In `ui/src/cells.ts` add `export type PrepareVerb = 'tag' | 'caption' | 'sheet'` above `RUNNING`, with a one-line comment, and type `RUNNING`, now `Record<string, { segment: number; word: string }>`, as `Record<PrepareVerb, { segment: number; word: string }>`, per [D1](design.md#d1); its rows are not edited.
+- [x] 2.2 In `ui/src/cells.ts` add `export type PrepareVerb = 'tag' | 'caption' | 'sheet'` above `RUNNING`, with a one-line comment, and type `RUNNING`, now `Record<string, { segment: number; word: string }>`, as `Record<PrepareVerb, { segment: number; word: string }>`, per [D1](design.md#d1); its rows are not edited.
   Verify: `git grep -n -F "Record<string, { segment" -- ui/src/cells.ts` prints nothing.
 
-- [ ] 2.3 In the same file add, after `RUNNING`, `const isPrepareVerb = (name: string): name is PrepareVerb => Object.hasOwn(RUNNING, name)` with a one-line comment, per [D2](design.md#d2). In `wordOf` read `RUNNING[running].word` when `isPrepareVerb(running)` and `` `${running}…` `` when not; in `segmentClass` test `isPrepareVerb(running)` before `RUNNING[running].segment === index`. Both keep their `string | undefined` parameter, their docstring and their example, so `Hub.vue` compiles against them unchanged.
+- [x] 2.3 In the same file add, after `RUNNING`, `const isPrepareVerb = (name: string): name is PrepareVerb => Object.hasOwn(RUNNING, name)` with a one-line comment, per [D2](design.md#d2). In `wordOf` read `RUNNING[running].word` when `isPrepareVerb(running)` and `` `${running}…` `` when not; in `segmentClass` test `isPrepareVerb(running)` before `RUNNING[running].segment === index`. Both keep their `string | undefined` parameter, their docstring and their example, so `Hub.vue` compiles against them unchanged.
   Verify: `uv run python -m tools.typecheck_ui` exits 0.
