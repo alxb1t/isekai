@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.8
 after: [0197-the-session-plan]
 ---
 
