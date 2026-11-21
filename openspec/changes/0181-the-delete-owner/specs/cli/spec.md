@@ -60,7 +60,7 @@ run in the server's process. An image's path names everything a discard needs, s
 #### Scenario: a render takes its edits' thumbnails with it
 - **Key:** `cli:discard:a-render-takes-its-edits-thumbnails-with-it`
 - **Layers:** unit
-- **WHEN** the verb is given the path of a render that has two edits, the thumbnails of the render and of each edit cached
+- **WHEN** the verb is given the path of a render with two edits, the thumbnails of the render and each edit cached
 - **THEN** each of those thumbnails is deleted and printed after the run's files, the render's first
 - **AND** another collection's thumbnails of the same images stay
 
