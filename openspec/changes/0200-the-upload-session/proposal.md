@@ -16,7 +16,7 @@ Only the app calls `Reader` and `Imports`, yet they sit in the stage's file, whi
 ## What Changes
 
 - `isekai/interface/ui/uploads.py` is new. It holds `Reader`, `Imports` and the names only they read, unchanged, and reads `importing` only as `importing.<name>`. It imports no web framework.
-- `isekai/pipeline/importing.py` loses those names and the imports they alone read. `_refuse_name` and `_CLAIM` become `refuse_name` and `CLAIM`, because the session reads both from another layer.
+- `isekai/pipeline/importing.py` loses those names and the imports they alone read. The stage's name rule and its lock become public, `refuse_name` and `CLAIM`, because the session reads both from another layer.
 - `isekai/interface/ui/app.py` builds `uploads.Imports`, and `isekai/interface/ui/surface.py` names it in its annotation.
 - The lines of `tests/test_importing.py` and `tests/test_ui_api.py` that read `Reader`, `Imports` or `tempfile` through `importing` read them through `uploads`. No assertion changes.
 - The long-file row of `importing.py` goes from `tests/test_ratchets.py`. The standing mutants `PA-14` and `PA-15` take the path of `uploads.py`, their text unchanged.

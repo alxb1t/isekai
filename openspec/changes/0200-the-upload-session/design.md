@@ -46,8 +46,8 @@ surface.py ──▶ importing.Imports           app.py · surface.py ──▶ 
 | in | before | after |
 |---|---|---|
 | `_record`, `_set` | `state: Upload` | `state: importing.Upload` |
-| `Reader.put` | `_refuse_name(name)` | `importing.refuse_name(name)` |
-| `Reader.remove` | `_refuse_name(name)` and `with _CLAIM:` | `importing.refuse_name(name)` and `with importing.CLAIM:` |
+| `Reader.put` | `refuse_name(name)` | `importing.refuse_name(name)` |
+| `Reader.remove` | `refuse_name(name)` and `with CLAIM:` | `importing.refuse_name(name)` and `with importing.CLAIM:` |
 | `Reader._run` | `staged = read(held, self._staging, self._limit)` | `staged = importing.read(held, self._staging, self._limit)` |
 | `Reader._run` | `state: Upload = staged.state` | `state: importing.Upload = staged.state` |
 | `Imports.open` | `folder = stage(self._library)` | `folder = importing.stage(self._library)` |
@@ -61,7 +61,7 @@ surface.py ──▶ importing.Imports           app.py · surface.py ──▶ 
 
 ### D2
 
-`refuse_name` keeps its body and docstring. `CLAIM` keeps its comment: held from picking a staged name until the file under it is written and verified. `read` and `staged_file` read the new names in `importing.py`. No test, document or other module reads `_refuse_name` or `_CLAIM`.
+`refuse_name` keeps its body and docstring. `CLAIM` keeps its comment: held from picking a staged name until the file under it is written and verified. `read` and `staged_file` read the new names in `importing.py`. No test, document or other module reads either name by its old private spelling.
 
 ### D3
 
