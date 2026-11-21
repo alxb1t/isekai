@@ -1550,6 +1550,30 @@ def test_discard_deletes_the_render_and_its_thumbnail(
     ]
 
 
+@pytest.mark.spec("cli:discard:a-session-beside-a-plain-runs-root-refuses-it")
+def test_discard_is_refused_beside_a_session_under_a_plain_runs_root(
+    tmp_path: Path,
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    run = open_run(photo, tmp_path / "runs")
+    image = rendered_image(run, 1, 7)
+    record = tmp_path / SESSIONS / "20261024T091200Z"
+    record.parent.mkdir()
+    record.with_suffix(".json").write_text("{}")
+    wired = _wiring(tmp_path)
+
+    with record.with_suffix(".lock").open("w") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        before = tree(tmp_path)
+        assert dispatch(build_parser().parse_args(["discard", str(image)]), wired) == 1
+        assert tree(tmp_path) == before
+
+    assert image.is_file()
+    assert isinstance(wired.err, io.StringIO)
+    assert f"refused: {image}: A render session" in wired.err.getvalue()
+
+
 @pytest.mark.spec("cli:discard:the-last-render-takes-its-approval")
 def test_discarding_the_last_render_takes_its_approval_with_it(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary

@@ -4,28 +4,28 @@ The rule for a run's runs root changes, the cancel asks it, the owner unlinks a 
 
 ## Progress
 
-- [ ] 1 — The root's guard · moderate
+- [x] 1 — The root's guard · moderate
 - [ ] 2 — The cancel's guard · moderate
 - [ ] 3 — The second drop · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The root's guard
 
-- [ ] 1.1 **HALT CHECK** `render_running` stands in `isekai/foundation/library.py` with the collection test [D1](design.md#d1) removes.
+- [x] 1.1 **HALT CHECK** `render_running` stands in `isekai/foundation/library.py` with the collection test [D1](design.md#d1) removes.
   Verify: `git grep -n -e "^def render_running" -e "runs.name == RUNS" -- isekai/foundation/library.py` prints a `def` line at `126` and the `if not` line at `134`.
-- [ ] 1.2 In `tests/test_pipeline_cli.py`, after `test_discard_deletes_the_render_and_its_thumbnail`, add `test_discard_is_refused_beside_a_session_under_a_plain_runs_root` marked `cli:discard:a-session-beside-a-plain-runs-root-refuses-it`, per [D5](design.md#d5). The run sits under `tmp_path / "runs"`, its session record in `tmp_path / SESSIONS`; it asserts exit `1`, the sentence on standard error, the image still a file and an unchanged `tree(tmp_path)`.
+- [x] 1.2 In `tests/test_pipeline_cli.py`, after `test_discard_deletes_the_render_and_its_thumbnail`, add `test_discard_is_refused_beside_a_session_under_a_plain_runs_root` marked `cli:discard:a-session-beside-a-plain-runs-root-refuses-it`, per [D5](design.md#d5). The run sits under `tmp_path / "runs"`, its session record in `tmp_path / SESSIONS`; it asserts exit `1`, the sentence on standard error, the image still a file and an unchanged `tree(tmp_path)`.
   Verify: `uv run pytest tests/test_pipeline_cli.py -k discard_is_refused_beside` exits 1, on the unrefused discard.
-- [ ] 1.3 In `tests/test_edit_session.py`, after `test_edit_discard_a_running_session_refuses_an_edits_path`, add `test_edit_discard_a_session_under_a_plain_runs_root_refuses_an_edits_path` marked `edit:discard:a-session-beside-a-plain-runs-root-refuses-it`. It is that case without its `(tmp_path / "b" / "sources").mkdir()` line.
+- [x] 1.3 In `tests/test_edit_session.py`, after `test_edit_discard_a_running_session_refuses_an_edits_path`, add `test_edit_discard_a_session_under_a_plain_runs_root_refuses_an_edits_path` marked `edit:discard:a-session-beside-a-plain-runs-root-refuses-it`. It is that case without its `(tmp_path / "b" / "sources").mkdir()` line.
   Verify: `uv run pytest tests/test_edit_session.py -k a_session_under_a_plain` exits 1, on the unrefused discard.
-- [ ] 1.4 In `tests/test_ui_library.py`, import `render_running` from `isekai.foundation.library` and add `test_a_run_is_held_by_a_session_beside_its_runs_root` after `test_a_collection_is_held_by_a_live_session_lock`, marked `@pytest.mark.spec_exempt("structural: a run is held by a live session beside its runs root")`, per [D5](design.md#d5). It holds the plain root, a collection's root, a free lock, another root unheld, and a run named `Path("id")` whose root is the working directory, set by `monkeypatch.chdir`, held by a record in the folder above that root.
+- [x] 1.4 In `tests/test_ui_library.py`, import `render_running` from `isekai.foundation.library` and add `test_a_run_is_held_by_a_session_beside_its_runs_root` after `test_a_collection_is_held_by_a_live_session_lock`, marked `@pytest.mark.spec_exempt("structural: a run is held by a live session beside its runs root")`, per [D5](design.md#d5). It holds the plain root, a collection's root, a free lock, another root unheld, and a run named `Path("id")` whose root is the working directory, set by `monkeypatch.chdir`, held by a record in the folder above that root.
   Verify: `uv run pytest tests/test_ui_library.py -k beside_its_runs_root` exits 1, on the plain root.
-- [ ] 1.5 In `isekai/foundation/library.py`, replace `render_running` exactly as [D1](design.md#d1) gives it, its `is_collection(runs.parent)` test gone.
+- [x] 1.5 In `isekai/foundation/library.py`, replace `render_running` exactly as [D1](design.md#d1) gives it, its `is_collection(runs.parent)` test gone.
   Verify: `git grep -n -F "is_collection(runs.parent)" -- isekai/foundation/library.py` prints nothing.
-- [ ] 1.6 In `isekai/interface/verbs/drafts.py`, in `run_discard`'s docstring change `holds the collection, as the` to `holds the run's runs root, as the`; in `isekai/interface/ui/__init__.py` change the docstring of `render_running` to ``Return whether a render holds `run`'s runs root, for the `discard` verb.``
+- [x] 1.6 In `isekai/interface/verbs/drafts.py`, in `run_discard`'s docstring change `holds the collection, as the` to `holds the run's runs root, as the`; in `isekai/interface/ui/__init__.py` change the docstring of `render_running` to ``Return whether a render holds `run`'s runs root, for the `discard` verb.``
   Verify: `git grep -n -F -e "holds the run's runs root" -e "runs root, for the" -- isekai/interface/verbs/drafts.py isekai/interface/ui/__init__.py` prints a line in each file.
-- [ ] 1.7 Run the cases of the rule and of the verbs over the new function.
+- [x] 1.7 Run the cases of the rule and of the verbs over the new function.
   Verify: `uv run pytest tests/test_ui_library.py tests/test_pipeline_cli.py tests/test_edit_session.py` exits 0.
-- [ ] 1.8 Run `tools.mutate` over the function's one body line; a survivor is killed by a further assertion in the cases of 1.2 to 1.4 ([D7](design.md#d7)).
+- [x] 1.8 Run `tools.mutate` over the function's one body line; a survivor is killed by a further assertion in the cases of 1.2 to 1.4 ([D7](design.md#d7)).
   Verify: `uv run python -m tools.mutate isekai/foundation/library.py:134 --tests tests/test_ui_library.py tests/test_pipeline_cli.py tests/test_edit_session.py` exits 0.
 
 ## 2 — The cancel's guard

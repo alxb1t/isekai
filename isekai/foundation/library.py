@@ -124,16 +124,14 @@ def collection_held(folder: Path) -> bool:
 
 
 def render_running(run: Run) -> bool:
-    """Return whether a render process holds the collection `run` sits in.
+    """Return whether a render process holds the runs root `run` sits in.
 
-    Liveness alone is read, from each session's lock, so a record that does not
-    read still counts; a run outside a collection is held by none.
-    e.g. `<lib>/b/runs/<id>` with `<lib>/b/sessions/<t>.lock` locked -> True
+    A session writes its record beside any runs root, a collection's or not, so
+    the folder the root sits in is asked. Liveness alone is read, from each
+    session's lock, so a record that does not read still counts.
+    e.g. `<dir>/runs/<id>` with `<dir>/sessions/<t>.lock` locked -> True
     """
-    runs = run.path.absolute().parent
-    if not (runs.name == RUNS and is_collection(runs.parent)):
-        return False
-    return collection_held(runs.parent)
+    return collection_held(run.path.absolute().parent.parent)
 
 
 def session(folder: Path, name: str) -> dict[str, Any]:

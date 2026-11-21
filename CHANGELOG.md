@@ -12,6 +12,7 @@ its new digest.
 
 - The hub cell's track is held by vitest cases before it moves: `SEGMENTS`, `DONE`, `RUNNING`, `wordOf` and `segmentClass` give the words and classes they gave, a stage the table lacks and `toString` among them (0189 D3).
 - `RUNNING` of `ui/src/cells.ts` is keyed by `PrepareVerb`, the union of `tag`, `caption` and `sheet`, and `wordOf` and `segmentClass` narrow the store's `string` by one guard, `isPrepareVerb`; the cases pass untouched and `Hub.vue` is unchanged (0189 D1, D2).
+- `render_running` of `isekai/foundation/library.py` asks the folder beside the run's runs root, a collection's or not, so `isekai discard` of a render and of an edit refuses beside any render session; cases of the rule, the render's discard and the edit's hold it (0190 D1, D5).
 
 ## [0.87.44] - 2026-11-21
 

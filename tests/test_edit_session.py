@@ -712,6 +712,28 @@ def test_edit_discard_a_running_session_refuses_an_edits_path(
     assert (group / "1.edit-1.png").is_file()
 
 
+@pytest.mark.spec("edit:discard:a-session-beside-a-plain-runs-root-refuses-it")
+def test_edit_discard_a_session_under_a_plain_runs_root_refuses_an_edits_path(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = counted(tmp_path, schema, vocabulary, "ada", 1)
+    group = _group(run)
+    _with_an_edit(group, 1)
+    record = tmp_path / "b" / SESSIONS / "20261024T091200Z"
+    record.parent.mkdir()
+    record.with_suffix(".json").write_text("{}")
+
+    with record.with_suffix(".lock").open("w") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        before = tree(tmp_path)
+        code, out, err = _discard(tmp_path, group / "1.edit-1.png")
+        assert tree(tmp_path) == before
+
+    assert (code, out) == (1, "")
+    assert "A render session is running" in err
+    assert (group / "1.edit-1.png").is_file()
+
+
 @pytest.mark.spec("cli:discard:a-path-naming-no-render-is-refused")
 @pytest.mark.parametrize("name", ["1.edit-1.json", "1.edit-0.png", "01.edit-1.png"])
 def test_edit_discard_a_path_that_is_no_render_and_no_edit_names_both_forms(
