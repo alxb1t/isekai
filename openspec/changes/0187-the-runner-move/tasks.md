@@ -5,7 +5,7 @@ Pin the moving lines by mutation, move the runner from [`isekai/interface/cli.py
 ## Progress
 
 - [x] 1 — Pin the moving lines by mutation · moderate
-- [ ] 2 — Move the runner to `verbs/runner.py` · moderate
+- [x] 2 — Move the runner to `verbs/runner.py` · moderate
 - [ ] 3 — Bind `prepare`'s run in its own module · moderate
 - [ ] 4 — Replay the mutation and amend the documents · moderate
 
@@ -25,25 +25,25 @@ Pin the moving lines by mutation, move the runner from [`isekai/interface/cli.py
 
 ## 2 — Move the runner to `verbs/runner.py`
 
-- [ ] 2.1 **HALT CHECK** The premise of [D2](design.md#d2) and [D3](design.md#d3) stands: no test, tool or evaluation file reads a name that moves but `_per_item`, which the runner cut's cases import from `isekai.interface.cli`.
+- [x] 2.1 **HALT CHECK** The premise of [D2](design.md#d2) and [D3](design.md#d3) stands: no test, tool or evaluation file reads a name that moves but `_per_item`, which the runner cut's cases import from `isekai.interface.cli`.
   Verify: `git grep -n -w -e _seam -e _existing_run -e _assign_one -e _prepare -e _item_of -e _run_item -- tests tools evaluation` prints nothing.
 
-- [ ] 2.2 Add `isekai/interface/verbs/runner.py` with a module docstring, the imports the moved code reads, taken from the modules `cli.py` takes them from and the verbs' own through `isekai.interface.verbs.common`, and `T = TypeVar("T")`, per [D1](design.md#d1) and [D5](design.md#d5).
+- [x] 2.2 Add `isekai/interface/verbs/runner.py` with a module docstring, the imports the moved code reads, taken from the modules `cli.py` takes them from and the verbs' own through `isekai.interface.verbs.common`, and `T = TypeVar("T")`, per [D1](design.md#d1) and [D5](design.md#d5).
   Verify: `grep -n -F 'T = TypeVar("T")' isekai/interface/verbs/runner.py` prints one line.
 
-- [ ] 2.3 Copy into `isekai/interface/verbs/runner.py`, in the order of [D1](design.md#d1) and text for text, `_existing_run`, `_seam`, the runner cut's block from `_Item` to `_run_item`, `_per_item`, `_assign` and `_assign_one`.
+- [x] 2.3 Copy into `isekai/interface/verbs/runner.py`, in the order of [D1](design.md#d1) and text for text, `_existing_run`, `_seam`, the runner cut's block from `_Item` to `_run_item`, `_per_item`, `_assign` and `_assign_one`.
   Verify: `grep -n -e '^def _per_item' -e '^def _existing_run' -e '^def _seam' -e '^def _assign' isekai/interface/verbs/runner.py` prints a line for `_per_item`, `_existing_run`, `_seam`, `_assign` and `_assign_one`.
 
-- [ ] 2.4 Delete from `isekai/interface/cli.py` everything copied in 2.3, `_Item` with its decorator included.
+- [x] 2.4 Delete from `isekai/interface/cli.py` everything copied in 2.3, `_Item` with its decorator included.
   Verify: `git grep -n -e '^def _per_item' -e '^def _seam' -e '^def _assign' -e '^def _existing_run' -e '^class _Item' -e '^def _run_item' -- isekai/interface/cli.py` prints nothing.
 
-- [ ] 2.5 In `isekai/interface/verbs/__init__.py` import `_per_item` from `isekai.interface.verbs.runner` and list it in `__all__`, per [D2](design.md#d2); in `isekai/interface/cli.py` read it from `isekai.interface.verbs` and drop the imports and `T` that nothing left in the file reads, per [D5](design.md#d5).
+- [x] 2.5 In `isekai/interface/verbs/__init__.py` import `_per_item` from `isekai.interface.verbs.runner` and list it in `__all__`, per [D2](design.md#d2); in `isekai/interface/cli.py` read it from `isekai.interface.verbs` and drop the imports and `T` that nothing left in the file reads, per [D5](design.md#d5).
   Verify: `uv run ruff check isekai/interface` exits 0.
 
-- [ ] 2.6 Derive the *Imported by* tables again per [D7](design.md#d7): `uv run python -m tools.derive_imported_by`.
+- [x] 2.6 Derive the *Imported by* tables again per [D7](design.md#d7): `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
 
-- [ ] 2.7 In `tests/mutants.json` change the `path` of `PB-2b` to `isekai/interface/verbs/runner.py`, per [D6](design.md#d6); its `find`, `replace`, `tests` and `why` stand.
+- [x] 2.7 In `tests/mutants.json` change the `path` of `PB-2b` to `isekai/interface/verbs/runner.py`, per [D6](design.md#d6); its `find`, `replace`, `tests` and `why` stand.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 
 ## 3 — Bind `prepare`'s run in its own module

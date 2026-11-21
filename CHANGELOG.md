@@ -14,6 +14,7 @@ its new digest.
 - `_per_item` is cut in `cli.py` into `_Item`, a builder for each stage verb, the table `_BUILDERS` and the runner `_run_item`; its two ratchet rows go, `FUNCTION_ROWS` is 6, and `PB-2b` finds `definition=flow,` (0186 D1–D8).
 - The mutation run over the new code, from `_Item` to the line before `_assign`, leaves no survivor, and the replay of `tests/mutants.json` holds (0186 D8).
 - The lines the runner move carries are pinned before they move: the mutation run over `_existing_run` and over `_seam` to `_assign_one` leaves one survivor, the "not assigned" line of `_assign`, which a case in `tests/test_pipeline_cli.py` kills (0187 D6).
+- The runner moves, text for text, from `cli.py` to `isekai/interface/verbs/runner.py`; `cli.py` reads `_per_item` through `isekai.interface.verbs`, `PB-2b` is re-pointed to the new file, and the *Imported by* tables are derived again (0187 D1, D2, D5–D7).
 
 ## [0.87.41] - 2026-11-21
 

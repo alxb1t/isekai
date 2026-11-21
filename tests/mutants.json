@@ -361,7 +361,7 @@
   },
   {
     "finding": "PB-2b",
-    "path": "isekai/interface/cli.py",
+    "path": "isekai/interface/verbs/runner.py",
     "find": "definition=flow,\n",
     "replace": "definition=None,\n",
     "tests": ["tests/test_pipeline_cli.py"],
