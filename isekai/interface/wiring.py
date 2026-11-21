@@ -27,9 +27,9 @@ from typing import TextIO
 
 from isekai.boundary import gpu, ollama
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
-from isekai.boundary.pose import open_pose
+from isekai.boundary.pose import PoseFinder, open_pose
 from isekai.boundary.provision import DigestMismatch
-from isekai.boundary.sam2 import open_segmenter
+from isekai.boundary.sam2 import Segmenter, open_segmenter
 from isekai.boundary.unpack import PLACEMENT_REMEDY
 from isekai.boundary.wd14 import LocalTagger, open_session
 from isekai.foundation.caption_config import load_caption_config
@@ -170,23 +170,41 @@ def tagger_for() -> LocalTagger:
         ) from swapped
 
 
-_proposer: Proposer | None = None
-_PROPOSER_OPENING = threading.Lock()
-
-
-def proposer_for() -> Proposer:
-    """Open the pose finder and the segmenter once, and keep them for the process.
+class Proposers:
+    """The pose finder and segmenter behind the proposed pairs, opened once and kept.
 
     Each verifies its files against the placement manifest before a session opens, and
     refuses naming the fetch when a file is absent. A refusal is not kept: the next
     ask opens again. The check and the opening share one lock, since the route runs in
     a thread each and two first asks must not open the models twice.
     """
-    global _proposer
-    with _PROPOSER_OPENING:
-        if _proposer is None:
-            _proposer = Proposer(open_pose(), open_segmenter())
-        return _proposer
+
+    def __init__(
+        self,
+        *,
+        open_pose: Callable[[], PoseFinder] = open_pose,
+        open_segmenter: Callable[[], Segmenter] = open_segmenter,
+    ) -> None:
+        """Hold the two openers; nothing opens until the first ask."""
+        self.open_pose = open_pose
+        self.open_segmenter = open_segmenter
+        self._lock = threading.Lock()
+        self._proposer: Proposer | None = None
+
+    def __call__(self) -> Proposer:
+        """Return the proposer, opening the models on the first ask."""
+        with self._lock:
+            if self._proposer is None:
+                self._proposer = Proposer(self.open_pose(), self.open_segmenter())
+            return self._proposer
+
+
+PROPOSERS = Proposers()
+
+
+def proposer_for() -> Proposer:
+    """Open the pose finder and the segmenter once, and keep them for the process."""
+    return PROPOSERS()
 
 
 def proposer_of(wired: Wiring) -> Proposer:

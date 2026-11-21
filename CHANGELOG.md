@@ -16,6 +16,7 @@ its new digest.
 - `isekai approve --cancel` refuses a run whose runs root a render session holds, as the app's cancel does, and answers each run on its own; a case of `tests/test_pipeline_cli.py` holds it (0190 D2, D5).
 - `delete_render` and `delete_edit` name each thumbnail with the new `named_thumbnail` before any file goes, drop them, delete the files, then unlink any named thumbnail a request rebuilt in between; a case holds both owners (0190 D3, D5; card 0181·S1).
 - D74 records the terminal's guards; D72 names the second drop and the verbs' guards, D68 names `named_thumbnail`, and the foundation and interface READMEs, `README.md` and `docs/edit-tattoo.md` say a render session holds the runs root (0190 D6).
+- The proposer's cache is `Proposers`, with its two openers as keywords and one default, `PROPOSERS`; `proposer_for` reads it, the module global goes, and each proposer case passes a cache of its own (0191 D1, D5).
 
 ## [0.87.44] - 2026-11-21
 

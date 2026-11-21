@@ -4,7 +4,7 @@ The proposer's cache, the evaluator's roots and the tagging openers become keywo
 
 ## Progress
 
-- [ ] 1 — The cache · moderate
+- [x] 1 — The cache · moderate
 - [ ] 2 — The roots · moderate
 - [ ] 3 — The openers and the ratchet row · moderate
 
