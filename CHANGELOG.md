@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.5] - 2026-11-21
+
+Gate: local 1m19s · CI not read under mf-ship · 0.88.4: local 1m18s · CI not read under mf-ship
+
 - `tests/test_progress.py` holds the bytes of each line a child prints, key order and flush included: the sheet's, the item's, the render's and edit's, and the session's step and image lines; no code moves (0195 D1, D2, D3).
 - `tests/test_progress.py` reads each line kind back through `progress_line` to the dict that built it, and a render line through `_Images` into the session's image line; no code moves (0195 D4, D5).
 
