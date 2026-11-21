@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.43
 after: [0186-the-runner-cut]
 ---
 
