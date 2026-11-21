@@ -6,7 +6,7 @@ Each phase gives one function a parameter, switches its test to pass a fake, and
 
 - [x] 1 — The binary and the timeout, parameters of the bundle's build · moderate
 - [x] 2 — The root, the build and the run, parameters of serve · moderate
-- [ ] 3 — D61 amended · moderate
+- [x] 3 — D61 amended · moderate
 
 ## 1 — The binary and the timeout, parameters of the bundle's build
 
@@ -48,13 +48,13 @@ Each phase gives one function a parameter, switches its test to pass a fake, and
 
 ## 3 — D61 amended
 
-- [ ] 3.1 In `docs/decisions.md`, in the bold sentence of D61, add inside the bold, before its closing `**`, this sentence: `` `serve` takes the library's root, `ensure_built` and the server's `run` the same way, and `ensure_built` takes the binary and the timeout. `` ([D4](design.md#d4)).
+- [x] 3.1 In `docs/decisions.md`, in the bold sentence of D61, add inside the bold, before its closing `**`, this sentence: `` `serve` takes the library's root, `ensure_built` and the server's `run` the same way, and `ensure_built` takes the binary and the timeout. `` ([D4](design.md#d4)).
   Verify: `git grep -n -F "the binary and the timeout" -- docs/decisions.md` prints one line.
-- [ ] 3.2 In `docs/decisions.md`, replace the *Accepts* bullet of D61, which ends with the sentence "Reopen when serve's collaborators are parameters.", with `- **Accepts:** nothing.`
+- [x] 3.2 In `docs/decisions.md`, replace the *Accepts* bullet of D61, which ends with the sentence "Reopen when serve's collaborators are parameters.", with `- **Accepts:** nothing.`
   Verify: `git grep -n -F "collaborators are parameters" -- docs/decisions.md` prints nothing.
-- [ ] 3.3 In `docs/decisions.md`, add `0185` to the *Made by* bullet of D61, which then reads `` `0150`, `0185` ``.
+- [x] 3.3 In `docs/decisions.md`, add `0185` to the *Made by* bullet of D61, which then reads `` `0150`, `0185` ``.
   Verify: `git grep -n -e "Made by:.*0150.*0185" -- docs/decisions.md` prints one line.
-- [ ] 3.4 Run the tests the phases touched, with the layer, docs and spec guards.
+- [x] 3.4 Run the tests the phases touched, with the layer, docs and spec guards.
   Verify: `uv run pytest tests/test_ui.py tests/test_ui_api.py tests/test_pipeline_cli.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_spec_bindings.py` exits 0.
-- [ ] 3.5 Run the standing mutants over the edits file.
+- [x] 3.5 Run the standing mutants over the edits file.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.

@@ -21,7 +21,8 @@ its new digest.
 - `evaluation.recall.main` takes the reader as a keyword parameter defaulting to `_reader`; `_run` of the recall tests passes a fake, and the row of `evaluation.recall` leaves `PATCHED_MODULES` (0184 D1, D3).
 - `evaluation.__main__._embedder` takes the manifest as a keyword parameter, read through `load_eval_manifest()` when `None`; the shared-pin tests pass it, and the row of `evaluation.eval_models` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 21 (0184 D2, D3).
 - `ensure_built` takes the binary and the timeout as keyword parameters defaulting to `BINARY` and `BUILD_TIMEOUT`; the build test passes its stand-in `npm` and ceiling, and the row of `isekai.interface.ui.bundle` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 20 (0185 D1, D3).
-- `serve` takes `root`, `ensure_built` and `run` as keyword parameters defaulting to what the product uses, the server's `run` still imported inside `serve`; the serve test passes its three stand-ins, and the row of `isekai.interface.ui.app` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 19 (0185 D2, D3).
+- `serve` takes `root`, `ensure_built` and `run` as keyword parameters defaulting to what the product uses; the serve test passes its stand-ins, and the row of `isekai.interface.ui.app` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 19 (0185 D2, D3).
+- D61 says `serve` and the bundle's build take what a test replaces as parameters, its *Accepts* is closed, and `0185` joins its *Made by* (0185 D4, D3).
 
 ## [0.87.37] - 2026-11-21
 

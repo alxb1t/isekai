@@ -621,11 +621,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D61 · What a test replaces in the server is a parameter of create_app
 
-**`create_app` takes, as keyword-only parameters each defaulting to the object the product uses, what a test replaces: the jobs' factory, the file response, `save_draft`, `approve`, the precondition check and the draft lock. The `Surface` holds each but the factory, a route reads it there, and the draft lock is the app's own.**
+**`create_app` takes, as keyword-only parameters each defaulting to the object the product uses, what a test replaces: the jobs' factory, the file response, `save_draft`, `approve`, the precondition check and the draft lock. The `Surface` holds each but the factory, a route reads it there, and the draft lock is the app's own. `serve` takes the library's root, `ensure_built` and the server's `run` the same way, and `ensure_built` takes the binary and the timeout.**
 
 - **Why:** a patch of a module's own name is global state that a route moving to another module leaves stranded ([D56](#d56--size-and-patches-are-held-by-ratchets)), and one lock for the process was shared by every app in it.
-- **Accepts:** `run` stays a name a test patches in `app.py`, because `serve` reads it and no route does. Reopen when `serve`'s collaborators are parameters.
-- **Made by:** `0150`.
+- **Accepts:** nothing.
+- **Made by:** `0150`, `0185`.
 
 ### D62 · The run directory is run.py, its siblings imported through it
 
