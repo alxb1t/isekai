@@ -54,6 +54,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     assign,
+    attempt,
     attempts,
     check_budget,
     current_draft,
@@ -64,6 +65,7 @@ from isekai.foundation.run import (
     next_version,
     open_run,
     photo_of,
+    producer_for,
     record_failure,
     refusal_for,
     rendered_at,
@@ -845,6 +847,206 @@ def test_a_record_that_refuses_the_next_run_names_its_deletion(
         "`python -m isekai caption aunt-ada`"
         + ("" if "delete" in remedy else " again once what it names is fixed")
     )
+
+
+def _attempt_in(tmp_path: Path, scope: str, folder: str) -> tuple[Run, Path]:
+    """Return a run and the empty `scope`/`folder` directory a stage records in."""
+    directory = tmp_path / scope / folder
+    directory.mkdir(parents=True)
+    return Run("aunt-ada", RUNS_ROOT / "aunt-ada"), directory
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+@pytest.mark.spec("run-directory:failure:kind-and-attempt-are-in-the-filename")
+def test_attempt_checks_the_budget_before_it_opens(tmp_path: Path) -> None:
+    run = Run("aunt-ada", tmp_path)
+    directory = tmp_path / PHOTO / CAPTIONS
+    directory.mkdir(parents=True)
+    record_failure(directory, 1, "permanent", _FAILURE)
+    with pytest.raises(Refusal) as spent:
+        check_budget("caption", directory, 1, run)
+    called: list[str] = []
+
+    def opening() -> str:
+        called.append("opening")
+        return "briefing"
+
+    def work_opened(opened: str) -> str:
+        called.append("work")
+        return opened
+
+    def work() -> str:
+        called.append("work")
+        return "read"
+
+    with pytest.raises(Refusal) as with_opening:
+        attempt(
+            "caption",
+            run,
+            directory,
+            1,
+            work_opened,
+            noun="reader",
+            catching=(StageFailure,),
+            opening=opening,
+        )
+    with pytest.raises(Refusal) as without:
+        attempt(
+            "caption", run, directory, 1, work, noun="reader", catching=(StageFailure,)
+        )
+
+    assert str(with_opening.value) == str(spent.value)
+    assert str(without.value) == str(spent.value)
+    assert called == []
+    assert [a.attempt for a in attempts(directory, 1)] == [1]
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+@pytest.mark.spec("run-directory:failure:kind-and-attempt-are-in-the-filename")
+def test_attempt_opens_outside_the_try(tmp_path: Path) -> None:
+    run, directory = _attempt_in(tmp_path, PHOTO, WD14)
+
+    def opening() -> str:
+        raise Refusal("the graph is absent")
+
+    def work(opened: str) -> str:
+        raise AssertionError("the work ran after a refused open step")
+
+    with pytest.raises(Refusal) as refused:
+        attempt(
+            "wd14",
+            run,
+            directory,
+            1,
+            work,
+            noun="tagger",
+            catching=(Refusal, OSError),
+            opening=opening,
+        )
+
+    assert str(refused.value) == "the graph is absent"
+    assert attempts(directory, 1) == []
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+@pytest.mark.spec("run-directory:failure:kind-and-attempt-are-in-the-filename")
+def test_attempt_hands_what_opening_returned_to_the_work(tmp_path: Path) -> None:
+    run, directory = _attempt_in(tmp_path, PHOTO, CAPTIONS)
+    handed: list[str] = []
+
+    def work_opened(opened: str) -> str:
+        handed.append(opened)
+        return "read"
+
+    opened_result = attempt(
+        "caption",
+        run,
+        directory,
+        1,
+        work_opened,
+        noun="reader",
+        catching=(StageFailure,),
+        opening=lambda: "",
+    )
+    plain_result = attempt(
+        "caption",
+        run,
+        directory,
+        1,
+        lambda: "plain",
+        noun="reader",
+        catching=(StageFailure,),
+    )
+
+    assert opened_result == "read"
+    assert handed == [""]
+    assert plain_result == "plain"
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+@pytest.mark.spec("run-directory:failure:kind-and-attempt-are-in-the-filename")
+def test_attempt_records_a_stage_failures_kind_and_chains_the_refusal(
+    tmp_path: Path,
+) -> None:
+    run, directory = _attempt_in(tmp_path, PHOTO, CAPTIONS)
+    failure = StageFailure("transient", "rate limited")
+
+    def work() -> str:
+        raise failure
+
+    with pytest.raises(Refusal) as refused:
+        attempt(
+            "caption", run, directory, 1, work, noun="reader", catching=(StageFailure,)
+        )
+
+    record = directory / "001.error.1.transient.json"
+    written = json.loads(record.read_text())
+    assert refused.value.__cause__ is failure
+    assert [(a.attempt, a.kind) for a in attempts(directory, 1)] == [(1, "transient")]
+    assert (written["stage"], written["detail"]) == ("caption", "rate limited")
+    assert str(refused.value) == (
+        "aunt-ada: the reader failed (transient) -- rate limited; see "
+        "photo/captions/001.error.1.transient.json, and run "
+        "`python -m isekai caption aunt-ada` again once what it names is fixed"
+    )
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+@pytest.mark.spec("run-directory:failure:kind-and-attempt-are-in-the-filename")
+@pytest.mark.parametrize("raised", [Refusal("no such tag"), OSError("no such tag")])
+def test_attempt_records_any_other_catch_as_permanent(
+    tmp_path: Path, raised: Exception
+) -> None:
+    run, directory = _attempt_in(tmp_path, FLOW, SHEETS)
+
+    def work() -> str:
+        raise raised
+
+    with pytest.raises(Refusal) as refused:
+        attempt(
+            "sheet",
+            run,
+            directory,
+            1,
+            work,
+            noun="sheet",
+            catching=(Refusal, OSError),
+            flow=FLOW,
+        )
+
+    assert refused.value.__cause__ is raised
+    assert [(a.attempt, a.kind) for a in attempts(directory, 1)] == [(1, "permanent")]
+    assert str(refused.value) == (
+        "aunt-ada: the sheet failed (permanent) -- no such tag; see "
+        f"{FLOW}/sheets/001.error.1.permanent.json, fix what it names and delete "
+        f"it, then run `python -m isekai sheet --flow {FLOW} aunt-ada`"
+    )
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+@pytest.mark.spec("run-directory:failure:kind-and-attempt-are-in-the-filename")
+def test_attempt_lets_an_uncaught_exception_through_unrecorded(
+    tmp_path: Path,
+) -> None:
+    run, directory = _attempt_in(tmp_path, PHOTO, CAPTIONS)
+
+    def work() -> str:
+        raise ValueError("not a failure of the stage")
+
+    with pytest.raises(ValueError, match="not a failure of the stage"):
+        attempt(
+            "caption", run, directory, 1, work, noun="reader", catching=(StageFailure,)
+        )
+
+    assert attempts(directory, 1) == []
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+def test_producer_for_returns_the_row_of_a_key() -> None:
+    for row in PRODUCERS:
+        assert producer_for(row.key) is row
+    with pytest.raises(KeyError):
+        producer_for("nowhere")
 
 
 @pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")

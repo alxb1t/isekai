@@ -5,7 +5,7 @@ Hold each stage's refusal whole and pin the sequences by mutation, add `attempt`
 ## Progress
 
 - [x] 1 — Hold each stage's refusal whole and pin the sequences by mutation · moderate
-- [ ] 2 — Add `attempt` and `producer_for` · moderate
+- [x] 2 — Add `attempt` and `producer_for` · moderate
 - [ ] 3 — Call `attempt` from the stages · moderate
 - [ ] 4 — Narrow `refusal_for` and take its row out · moderate
 - [ ] 5 — Replay the mutation and amend the documents · moderate
@@ -38,19 +38,19 @@ Hold each stage's refusal whole and pin the sequences by mutation, add `attempt`
 
 ## 2 — Add `attempt` and `producer_for`
 
-- [ ] 2.1 In `tests/test_run_directory.py` add the cases of `attempt`, imported from `isekai.foundation.run`, bound to `run-directory:budget:at-budget-the-stage-refuses` and `run-directory:failure:kind-and-attempt-are-in-the-filename`: `test_attempt_checks_the_budget_before_it_opens` (a spent stage refuses, neither `opening` nor `work` called), `test_attempt_opens_outside_the_try` (a `Refusal` from `opening` propagates and records nothing) and `test_attempt_hands_what_opening_returned_to_the_work` (the work's result is returned, an `opening` returning an empty string included). The file's import of `attempt` keeps it red until 2.5.
+- [x] 2.1 In `tests/test_run_directory.py` add the cases of `attempt`, imported from `isekai.foundation.run`, bound to `run-directory:budget:at-budget-the-stage-refuses` and `run-directory:failure:kind-and-attempt-are-in-the-filename`: `test_attempt_checks_the_budget_before_it_opens` (a spent stage refuses, neither `opening` nor `work` called), `test_attempt_opens_outside_the_try` (a `Refusal` from `opening` propagates and records nothing) and `test_attempt_hands_what_opening_returned_to_the_work` (the work's result is returned, an `opening` returning an empty string included). The file's import of `attempt` keeps it red until 2.5.
   Verify: `git grep -n -F 'test_attempt_checks_the_budget_before_it_opens' -- tests/test_run_directory.py` prints one line.
 
-- [ ] 2.2 In the same file add `test_attempt_records_a_stage_failures_kind_and_chains_the_refusal` (a `StageFailure("transient", …)` writes `001.error.1.transient.json` and the `Refusal`'s cause is the failure), `test_attempt_records_any_other_catch_as_permanent` and `test_attempt_lets_an_uncaught_exception_through_unrecorded`, per [D1](design.md#d1), with the same keys.
+- [x] 2.2 In the same file add `test_attempt_records_a_stage_failures_kind_and_chains_the_refusal` (a `StageFailure("transient", …)` writes `001.error.1.transient.json` and the `Refusal`'s cause is the failure), `test_attempt_records_any_other_catch_as_permanent` and `test_attempt_lets_an_uncaught_exception_through_unrecorded`, per [D1](design.md#d1), with the same keys.
   Verify: `git grep -n -F 'test_attempt_records_any_other_catch_as_permanent' -- tests/test_run_directory.py` prints one line.
 
-- [ ] 2.3 In the same file add `test_producer_for_returns_the_row_of_a_key`: each row of `PRODUCERS` is `producer_for(row.key)`, and a key no row holds raises `KeyError`. Bind it to `run-directory:budget:at-budget-the-stage-refuses`.
+- [x] 2.3 In the same file add `test_producer_for_returns_the_row_of_a_key`: each row of `PRODUCERS` is `producer_for(row.key)`, and a key no row holds raises `KeyError`. Bind it to `run-directory:budget:at-budget-the-stage-refuses`.
   Verify: `git grep -n -F 'test_producer_for_returns_the_row_of_a_key' -- tests/test_run_directory.py` prints one line.
 
-- [ ] 2.4 In `isekai/foundation/producers.py` add `producer_for(key: str) -> Producer` after `PRODUCERS`, per [D3](design.md#d3), with a docstring and an example; in `isekai/foundation/run.py` import it from `isekai.foundation.producers` and list it in `__all__`.
+- [x] 2.4 In `isekai/foundation/producers.py` add `producer_for(key: str) -> Producer` after `PRODUCERS`, per [D3](design.md#d3), with a docstring and an example; in `isekai/foundation/run.py` import it from `isekai.foundation.producers` and list it in `__all__`.
   Verify: `git grep -n -e '^def producer_for' -- isekai/foundation/producers.py` prints one line.
 
-- [ ] 2.5 In `isekai/foundation/run.py` add `attempt` after `refusal_for`, per [D1](design.md#d1) and [D2](design.md#d2): the positional `key`, `run`, `directory`, `version` and `work`, then the keyword-only `noun`, `catching`, `flow` and `opening`; it calls `refusal_for` in its present form, with the folder, the verb and the key read by `producer_for`. List it in `__all__`, and give it a docstring with an example.
+- [x] 2.5 In `isekai/foundation/run.py` add `attempt` after `refusal_for`, per [D1](design.md#d1) and [D2](design.md#d2): the positional `key`, `run`, `directory`, `version` and `work`, then the keyword-only `noun`, `catching`, `flow` and `opening`; it calls `refusal_for` in its present form, with the folder, the verb and the key read by `producer_for`. List it in `__all__`, and give it a docstring with an example.
   Verify: `uv run pytest tests/test_run_directory.py` exits 0.
 
 ## 3 — Call `attempt` from the stages
