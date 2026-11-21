@@ -1,18 +1,19 @@
 """A delete's one owner: a render's or an edit's files, thumbnails and approval.
 
-`delete_render` and `delete_edit` drop the thumbnail of every image that goes while the
-image is still a file, since its bytes name the thumbnail, then delete the files, then,
-for a render, the approval its last render leaves (D72). The bodies they call are here
-too, bound back at the stages that held them.
+`delete_render` and `delete_edit` name the thumbnail of every image that goes while it
+is a file, drop them, delete the files and, for a render, the approval its last render
+leaves (D72), then unlink any named thumbnail that came back. The bodies they call are
+here too, bound back at the stages that held them.
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
 
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import NamedTuple
 
 from isekai.foundation.artifacts import EDIT_FILE, read
-from isekai.foundation.library import drop_thumbnails
+from isekai.foundation.library import named_thumbnail
 from isekai.foundation.run import (
     DESCRIPTION,
     OUTPUTS,
@@ -180,6 +181,45 @@ class Deleted(NamedTuple):
     thumbnails: list[Path]
 
 
+def _edit_images(group: Path, seed: int, numbers: Iterable[int]) -> list[Path]:
+    """Return the images of edits `numbers` of `seed` that are files, in order."""
+    return [
+        own
+        for number in numbers
+        if (own := edit_files(group, seed, number)[0]).is_file()
+    ]
+
+
+def _named(run: Run, images: Iterable[Path]) -> list[Path]:
+    """Return where each of `images`' thumbnails sits, made or not.
+
+    A run outside a collection has no library, so no thumbnail. The images must still
+    be files: their bytes name the thumbnails.
+    """
+    names = (named_thumbnail(run, image) for image in images)
+    return [name for name in names if name is not None]
+
+
+def _unlinked(names: Iterable[Path]) -> list[Path]:
+    """Delete each of `names` that is a file; return those, in order."""
+    found = [name for name in names if name.is_file()]
+    for name in found:
+        name.unlink()
+    return found
+
+
+def _deleted(names: list[Path], delete: Callable[[], list[Path]]) -> Deleted:
+    """Return what `delete` removed, with the thumbnails of `names` unlinked twice.
+
+    Once before the files go, and once after, for a thumbnail a request rebuilt in
+    between: it names an image that is gone, and nothing else would delete it.
+    """
+    dropped = _unlinked(names)
+    files = delete()
+    late = [name for name in _unlinked(names) if name not in dropped]
+    return Deleted(files, [*dropped, *late])
+
+
 def delete_render(image: Path) -> Deleted:
     """Delete a render, its edits, their thumbnails and the approval its last leaves.
 
@@ -190,12 +230,11 @@ def delete_render(image: Path) -> Deleted:
     """
     ref = rendered_at(image)
     group = image.absolute().parent
-    thumbnails = drop_thumbnails(ref.run, image)
-    for number in edit_numbers(group, ref.seed):
-        if (own := edit_files(group, ref.seed, number)[0]).is_file():
-            thumbnails += drop_thumbnails(ref.run, own)
-    files = [*discard_render(image), *withdraw(ref.run, ref.flow, ref.version)]
-    return Deleted(files, thumbnails)
+    edits = _edit_images(group, ref.seed, edit_numbers(group, ref.seed))
+    return _deleted(
+        _named(ref.run, [image, *edits]),
+        lambda: [*discard_render(image), *withdraw(ref.run, ref.flow, ref.version)],
+    )
 
 
 def delete_edit(image: Path) -> Deleted:
@@ -207,8 +246,7 @@ def delete_edit(image: Path) -> Deleted:
     ref = edit_at(image)
     group = image.absolute().parent
     numbers = _chain(group, ref.seed, ref.k)
-    thumbnails: list[Path] = []
-    for number in numbers:
-        if (own := edit_files(group, ref.seed, number)[0]).is_file():
-            thumbnails += drop_thumbnails(ref.run, own)
-    return Deleted(delete_edits(group, ref.seed, numbers), thumbnails)
+    return _deleted(
+        _named(ref.run, _edit_images(group, ref.seed, numbers)),
+        lambda: delete_edits(group, ref.seed, numbers),
+    )

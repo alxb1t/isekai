@@ -14,7 +14,12 @@ from PIL import Image
 
 from isekai.foundation.artifacts import DRAFT_FILE, EDIT_FILE, read
 from isekai.foundation.flow import FLOWS_DIR, load_flow
-from isekai.foundation.library import collection_held, file_digest, thumbnail_of
+from isekai.foundation.library import (
+    collection_held,
+    file_digest,
+    render_running,
+    thumbnail_of,
+)
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     OUTPUTS,
@@ -758,3 +763,44 @@ def test_a_collection_is_held_by_a_live_session_lock(tmp_path: Path) -> None:
         assert collection_held(held_folder)
         assert not collection_held(other)
     assert not collection_held(held_folder)
+
+
+@pytest.mark.spec_exempt(
+    "structural: a run is held by a live session beside its runs root"
+)
+def test_a_run_is_held_by_a_session_beside_its_runs_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plain = tmp_path / "plain"
+    collection = _collection(tmp_path / "lib", "b", "ada.jpg")
+    unheld = tmp_path / "unheld"
+    in_plain = Run("plain", plain / "runs" / "plain")
+    in_collection = _run(collection, "ada.jpg")
+    in_unheld = Run("unheld", unheld / "runs" / "unheld")
+    here = tmp_path / "here"
+    here.mkdir()
+    relative = Run("id", Path("id"))
+    monkeypatch.chdir(here)
+
+    def lock(folder: Path) -> Path:
+        record = folder / "sessions" / "20261024T091200Z"
+        record.parent.mkdir(parents=True)
+        record.with_suffix(".json").write_text("{}")
+        return record.with_suffix(".lock")
+
+    lock(unheld).write_text("")
+    assert not render_running(in_unheld)
+
+    with (
+        lock(plain).open("w") as held_plain,
+        lock(collection).open("w") as held_collection,
+        lock(tmp_path).open("w") as held_beside,
+    ):
+        for held in (held_plain, held_collection, held_beside):
+            fcntl.flock(held, fcntl.LOCK_EX)
+        assert render_running(in_plain)
+        assert render_running(in_collection)
+        assert render_running(relative)
+        assert not render_running(in_unheld)
+    assert not render_running(in_plain)
+    assert not render_running(relative)

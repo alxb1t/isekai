@@ -12,7 +12,7 @@ from isekai.boundary.comfy import TransportFailure
 from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.flow import tracked_flows
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import RUNS_ROOT, Run, open_run, run_at
+from isekai.foundation.run import RUNS_ROOT, Run, command, open_run, run_at
 from isekai.interface.wiring import Wiring
 from isekai.shared.ink import load_ink_config
 
@@ -327,8 +327,9 @@ def parse_cells(named: Sequence[str], wired: Wiring) -> list[tuple[str, str]]:
     runs = shlex.quote(str(wired.runs_root))
     for cell, (run_id, flow) in cells.items():
         if run_at(wired.runs_root, run_id) is None:
+            assigning = command("assign", "--flow", flow, "--runs", runs, "<photo>")
             raise Refusal(
                 f"{cell}: no run {run_id} under {wired.runs_root}; run "
-                f"`python -m isekai assign --flow {flow} --runs {runs} <photo>` first"
+                f"`{assigning}` first"
             )
     return list(cells.values())

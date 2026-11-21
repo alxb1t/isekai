@@ -232,9 +232,11 @@ def read_labels(body: str) -> list[Label]:
 
 
 def verified_paths(
-    models_dir: Path = DEFAULT_MODELS_DIR,
+    models_dir: Path = DEFAULT_MODELS_DIR, *, manifest: Path | None = None
 ) -> tuple[Path, Path, dict[str, DigestRecord]]:
     """Return both digest-verified paths and the pins they were verified against.
+
+    `manifest` is the manifest's path; `None` reads the tracked one.
 
     **Both, before the first inference, and neither alone is worth anything.**
     Verification goes through `provision.resolve` rather than a second copy of
@@ -256,14 +258,15 @@ def verified_paths(
         resolve,
     )
 
-    manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
+    source = VOCABULARY_MANIFEST_PATH if manifest is None else manifest
+    declared = load_manifest(source)
     resolved: list[Path] = []
     pins: dict[str, DigestRecord] = {}
     for dest in (LABELS_DEST, MODEL_DEST):
         try:
-            resolved.append(resolve(dest, models_dir, manifest))
+            resolved.append(resolve(dest, models_dir, declared))
         except UnknownArtifact as absent:
-            raise undeclared(dest, VOCABULARY_MANIFEST_PATH) from absent
+            raise undeclared(dest, source) from absent
         except FileNotFoundError as absent:
             raise Refusal(
                 f"{dest} is not provisioned under {models_dir}/, and the local "
@@ -275,7 +278,7 @@ def verified_paths(
         # manifest does not declare must raise here, not quietly leave a pin out
         # -- an artifact claiming `pinned: true` with one of the two digests is
         # half a claim, and half of this one is worth nothing.
-        pins[dest] = {"sha256": entry_for(manifest, dest)["sha256"]}
+        pins[dest] = {"sha256": entry_for(declared, dest)["sha256"]}
     return resolved[0], resolved[1], pins
 
 
@@ -434,8 +437,12 @@ class OnnxSession:
         return list(outputs[0][0])
 
 
-def open_session(models_dir: Path = DEFAULT_MODELS_DIR) -> LocalTagger:
+def open_session(
+    models_dir: Path = DEFAULT_MODELS_DIR, *, manifest: Path | None = None
+) -> LocalTagger:
     """Verify both halves, then open the session and read its label index.
+
+    `manifest` is passed to `verified_paths`.
 
     The one function a caller needs, and the order inside it is the point: the
     digests are checked **before** 467 MB is opened, so a stale pin costs a
@@ -448,7 +455,7 @@ def open_session(models_dir: Path = DEFAULT_MODELS_DIR) -> LocalTagger:
     photograph actually needs scoring -- `interface/cli.py` holds it behind a
     thunk for the same reason `Wiring.vocabulary` is one.
     """
-    labels_path, model_path, pins = verified_paths(models_dir)
+    labels_path, model_path, pins = verified_paths(models_dir, manifest=manifest)
     return LocalTagger(
         session=OnnxSession(model_path),
         labels=tuple(read_labels(labels_path.read_text())),

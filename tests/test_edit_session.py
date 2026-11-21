@@ -512,6 +512,30 @@ def test_edit_discard_the_owner_takes_a_render_its_edits_and_their_thumbnails(
     ]
 
 
+@pytest.mark.spec_exempt("structural: the owner unlinks a thumbnail a request rebuilt")
+@pytest.mark.parametrize("name", ["42.png", "42.edit-1.png"])
+def test_edit_discard_the_owner_unlinks_a_thumbnail_rebuilt_in_the_gap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
+) -> None:
+    library, group = _owned(tmp_path)
+    image = group / name
+    own = _thumbnail(library, image)
+    unlink = Path.unlink
+
+    def rebuilding(self: Path, missing_ok: bool = False) -> None:
+        unlink(self, missing_ok=missing_ok)
+        if self == image:
+            own.write_bytes(b"jpg")
+
+    monkeypatch.setattr(Path, "unlink", rebuilding)
+    owner = delete_render if name == "42.png" else delete_edit
+
+    deleted = owner(image)
+
+    assert not own.exists()
+    assert deleted.thumbnails == [own]
+
+
 @pytest.mark.spec_exempt("structural: the verb's cases hold what the owner prints")
 def test_edit_discard_the_owner_takes_the_last_renders_approval_with_it(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
@@ -695,6 +719,28 @@ def test_edit_discard_a_running_session_refuses_an_edits_path(
 ) -> None:
     run = counted(tmp_path, schema, vocabulary, "ada", 1)
     (tmp_path / "b" / "sources").mkdir()
+    group = _group(run)
+    _with_an_edit(group, 1)
+    record = tmp_path / "b" / SESSIONS / "20261024T091200Z"
+    record.parent.mkdir()
+    record.with_suffix(".json").write_text("{}")
+
+    with record.with_suffix(".lock").open("w") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        before = tree(tmp_path)
+        code, out, err = _discard(tmp_path, group / "1.edit-1.png")
+        assert tree(tmp_path) == before
+
+    assert (code, out) == (1, "")
+    assert "A render session is running" in err
+    assert (group / "1.edit-1.png").is_file()
+
+
+@pytest.mark.spec("edit:discard:a-session-beside-a-plain-runs-root-refuses-it")
+def test_edit_discard_a_session_under_a_plain_runs_root_refuses_an_edits_path(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = counted(tmp_path, schema, vocabulary, "ada", 1)
     group = _group(run)
     _with_an_edit(group, 1)
     record = tmp_path / "b" / SESSIONS / "20261024T091200Z"

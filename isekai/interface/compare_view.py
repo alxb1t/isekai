@@ -29,6 +29,7 @@ from isekai.foundation.run import (
     Run,
     approved_versions,
     artifact_name,
+    command,
     group_of,
     latest_artifact,
     photo_of,
@@ -106,12 +107,16 @@ def _runs(collection: Path) -> list[Run]:
     """Return every run under the collection's `runs/`, by id, or refuse naming it."""
     root = collection / COLLECTION_RUNS
     if not root.is_dir():
+        retag = command(
+            "tag",
+            "--runs",
+            shlex.quote(str(root)),
+            f"{shlex.quote(str(collection / COLLECTION_PHOTOS))}/*",
+        )
         raise Refusal(
             f"{collection} holds no {COLLECTION_RUNS}/ directory, so it is not a "
             f"collection; give the path of the collection directory that holds "
-            f"{COLLECTION_RUNS}/, or open its runs with "
-            f"`python -m isekai tag --runs {shlex.quote(str(root))} "
-            f"{shlex.quote(str(collection / COLLECTION_PHOTOS))}/*`"
+            f"{COLLECTION_RUNS}/, or open its runs with `{retag}`"
         )
     return runs_in(root)
 

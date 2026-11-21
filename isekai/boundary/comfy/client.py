@@ -16,6 +16,7 @@ from isekai.boundary.comfy.contract import (
 )
 from isekai.boundary.comfy.multipart import build_multipart
 from isekai.foundation.flow import Workflow
+from isekai.foundation.run import command
 
 # The opener every request goes through. `ProxyHandler({})` reads no environment,
 # so an exported `http_proxy` never receives the photograph (docs D6).
@@ -143,8 +144,8 @@ def _reported() -> Iterator[None]:
             "transient",
             f"the rendering endpoint could not be reached ({unreachable}); "
             "if a session is open, its tunnel has dropped; otherwise render "
-            "inside a session with `python -m isekai render <runs> "
-            "<flow>=<count>`, which opens the tunnel and passes `--server` -- or "
+            f"inside a session with `{command('render', '<runs>', '<flow>=<count>')}`, "
+            "which opens the tunnel and passes `--server` -- or "
             "drop `--server` to assemble the prompts and stop",
         ) from unreachable
     except (ValueError, KeyError, TypeError) as answer:
