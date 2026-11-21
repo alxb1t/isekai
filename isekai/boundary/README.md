@@ -62,8 +62,8 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 > of the two files here that open no connection: a boundary to a *file* rather than
 > to a host. `pod_start.py` reaches the network only through `provision.py fetch`,
 > run as a process. `onnxruntime` itself
-> connects to Microsoft when it loads, so `silence_onnxruntime()` sets its switch
-> first, for both sessions (0035 design D5).
+> connects to Microsoft when it loads, so `silence_onnxruntime()` of `onnx.py` sets
+> its switch first, for every session (0035 design D5).
 >
 > **`ollama.py` is now the only way out of this process to a model.** There was a
 > second, `claude_cli.py`, and the isolation law that kept the two apart was the

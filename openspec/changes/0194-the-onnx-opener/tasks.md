@@ -6,7 +6,7 @@ Run a mutation over each site that makes a session, add the opener with its case
 
 - [x] 1 — Add the opener with its cases · moderate
 - [x] 2 — Call the opener from its callers · moderate
-- [ ] 3 — Amend the documents and replay the standing mutants · moderate
+- [x] 3 — Amend the documents and replay the standing mutants · moderate
 
 ## 1 — Add the opener with its cases
 
@@ -53,11 +53,11 @@ Run a mutation over each site that makes a session, add the opener with its case
 
 ## 3 — Amend the documents and replay the standing mutants
 
-- [ ] 3.1 In `isekai/boundary/README.md` amend the note on the telemetry switch: `silence_onnxruntime()` of `onnx.py` sets the switch first, "for every session" in place of "for both sessions".
+- [x] 3.1 In `isekai/boundary/README.md` amend the note on the telemetry switch: `silence_onnxruntime()` of `onnx.py` sets the switch first, "for every session" in place of "for both sessions".
   Verify: `git grep -n -F 'for both sessions' -- isekai/boundary/README.md` prints nothing.
 
-- [ ] 3.2 In `docs/modules.md` change the sentence on the proposal's pieces to read that `pose` and `sam2` each import `provision`, `unpack`, `onnx` — `boundary/onnx.py`'s — and `foundation/refusal.py`, in place of `wd14`'s `silence_onnxruntime`.
+- [x] 3.2 In `docs/modules.md` change the sentence on the proposal's pieces to read that `pose` and `sam2` each import `provision`, `unpack`, `onnx` — `boundary/onnx.py`'s — and `foundation/refusal.py`, in place of `wd14`'s `silence_onnxruntime`.
   Verify: `git grep -n -F 'silence_onnxruntime' -- docs/modules.md` prints nothing.
 
-- [ ] 3.3 Replay the standing mutants. A find an edit moved stops the replay with an error: re-point that entry's `find` and `replace` of `tests/mutants.json` to the edited text, with the same `why`; none of the entries now names a body this version edits, so the replay is expected to need no re-point.
+- [x] 3.3 Replay the standing mutants. A find an edit moved stops the replay with an error: re-point that entry's `find` and `replace` of `tests/mutants.json` to the edited text, with the same `why`; none of the entries now names a body this version edits, so the replay is expected to need no re-point.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.

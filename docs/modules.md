@@ -81,7 +81,7 @@ record and the edit's record ([D53](decisions.md#d53--a-placement-is-recorded-be
 
 **The proposal's pieces.** `unpack` is `boundary/unpack.py`'s and imports `boundary/provision.py`, which it leaves
 unedited because the pod image copies it; `pose` and `sam2` are `boundary/pose.py`'s and `boundary/sam2.py`'s, each
-importing `provision`, `unpack`, `wd14`'s `silence_onnxruntime` and `foundation/refusal.py`, with `onnxruntime`, numpy
+importing `provision`, `unpack`, `onnx` (`boundary/onnx.py`'s) and `foundation/refusal.py`, with `onnxruntime`, numpy
 and Pillow imported inside their functions. `proposal` is `shared/proposal.py`'s, the geometry over arrays, importing no
 other module of the package. `proposing` is `pipeline/proposing.py`'s: it imports `pose`, `sam2` and `proposal` and no
 stage. `interface/wiring.py` opens `pose` and `sam2` once into a `Proposer`, and the propose route of
