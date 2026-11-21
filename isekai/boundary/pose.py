@@ -15,10 +15,10 @@ from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast
 
-from isekai.boundary import provision, unpack
+from isekai.boundary import provision
+from isekai.boundary.onnx import cpu_session, silence_onnxruntime
 from isekai.boundary.provision import DEFAULT_MODELS_DIR
-from isekai.boundary.unpack import PLACEMENT_REMEDY
-from isekai.boundary.wd14 import silence_onnxruntime
+from isekai.boundary.unpack import PLACEMENT_MANIFEST_PATH, PLACEMENT_REMEDY
 from isekai.foundation.refusal import Refusal
 
 if TYPE_CHECKING:
@@ -107,18 +107,22 @@ class Runtime(Protocol):
         ...
 
 
-def verified_paths(models_dir: Path = DEFAULT_MODELS_DIR) -> tuple[Path, Path]:
+def verified_paths(
+    models_dir: Path = DEFAULT_MODELS_DIR, *, manifest: Path = PLACEMENT_MANIFEST_PATH
+) -> tuple[Path, Path]:
     """Return the detector's and the estimator's digest-verified paths.
+
+    `manifest` is the path of the manifest they are verified against.
 
     Both go through `provision.resolve`, so a stale pin is `DigestMismatch` naming the
     file and both digests, before any session over it opens. An absent file is a
     `Refusal` naming the fetch.
     """
-    manifest = provision.load_manifest(unpack.PLACEMENT_MANIFEST_PATH)
+    declared = provision.load_manifest(manifest)
     resolved: list[Path] = []
     for dest in (DETECTOR_DEST, ESTIMATOR_DEST):
         try:
-            resolved.append(provision.resolve(dest, models_dir, manifest))
+            resolved.append(provision.resolve(dest, models_dir, declared))
         except FileNotFoundError as absent:
             raise Refusal(
                 f"{dest} is not provisioned under {models_dir}/, and the pose "
@@ -260,9 +264,8 @@ class OnnxPoseFinder:
 
     def __init__(self, detector: Path, estimator: Path, runtime: Runtime) -> None:
         """Open both models on the CPU provider alone."""
-        providers = ["CPUExecutionProvider"]
-        self._detector = runtime.InferenceSession(str(detector), providers=providers)
-        self._estimator = runtime.InferenceSession(str(estimator), providers=providers)
+        self._detector = cpu_session(runtime, detector)
+        self._estimator = cpu_session(runtime, estimator)
 
     def find(self, image: "Image") -> Pose | None:
         """Return the one person's pose in `image`, or None when no row is answered."""
@@ -281,14 +284,18 @@ class OnnxPoseFinder:
 
 
 def open_pose(
-    models_dir: Path = DEFAULT_MODELS_DIR, runtime: Runtime | None = None
+    models_dir: Path = DEFAULT_MODELS_DIR,
+    runtime: Runtime | None = None,
+    *,
+    manifest: Path = PLACEMENT_MANIFEST_PATH,
 ) -> OnnxPoseFinder:
     """Verify both files, then open the finder over them on the CPU.
 
     The digests are checked before a session is made, so a stale pin costs a refusal
-    and not a load. `runtime` is `onnxruntime` unless a test gives its own.
+    and not a load. `runtime` is `onnxruntime` unless a test gives its own, and
+    `manifest` is passed to `verified_paths`.
     """
-    detector, estimator = verified_paths(models_dir)
+    detector, estimator = verified_paths(models_dir, manifest=manifest)
     if runtime is None:
         silence_onnxruntime()
         try:

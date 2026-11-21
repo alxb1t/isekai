@@ -50,7 +50,7 @@ import isekai.foundation.run as run_module  # noqa: E402
 import isekai.interface.render as render_module  # noqa: E402
 import isekai.interface.ui.app as app_module  # noqa: E402
 import isekai.pipeline.importing as importing_module  # noqa: E402
-import isekai.pipeline.review as review_module  # noqa: E402
+import isekai.pipeline.review.records as review_records  # noqa: E402
 from isekai.boundary.gpu import Seams  # noqa: E402
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
@@ -1257,7 +1257,7 @@ def _update_during_approval(
     stopped: list[str] = []
     answers: list[int] = []
     precondition, approving = app_module._precondition, approve
-    write = review_module.write
+    write = review_records.write
     lock = threading.Lock()
 
     class Waited:
@@ -1335,7 +1335,7 @@ def _update_during_approval(
             "draft_lock": contextlib.nullcontext() if unlocked else Waited(),
         },
     )
-    monkeypatch.setattr(review_module, "write", late)
+    monkeypatch.setattr(review_records, "write", late)
     body = client.get(_at(made)).json()
     assert client.post(_at(made, "/approve")).status_code == 200
     update.join()

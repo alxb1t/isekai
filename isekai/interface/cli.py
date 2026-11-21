@@ -67,9 +67,11 @@ from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow, tracked_flows
 from isekai.foundation.migrate import migrate
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
+    ENTRY,
     PHOTOGRAPH_VERBS,
     RUNS_ROOT,
     across,
+    command,
     runs_in,
 )
 from isekai.interface.render import run_session
@@ -116,7 +118,7 @@ class _Verb(argparse.ArgumentParser):
 def build_parser() -> argparse.ArgumentParser:
     """Return the pipeline's parser, with one subparser per verb."""
     parser = argparse.ArgumentParser(
-        prog="python -m isekai",
+        prog=ENTRY,
         description="The staged pipeline: photograph -> tags -> sheet -> render.",
     )
     verbs = parser.add_subparsers(
@@ -305,12 +307,12 @@ def _named_a_flow(args: argparse.Namespace, targets: Sequence[str]) -> str:
     `python -m isekai caption a.jpg`"
     """
     verb = str(args.verb)
-    root = "" if args.runs == RUNS_ROOT else f" --runs {shlex.quote(str(args.runs))}"
-    again = " --new-version" if args.new_version else ""
+    root = () if args.runs == RUNS_ROOT else ("--runs", shlex.quote(str(args.runs)))
+    again = ("--new-version",) if args.new_version else ()
     photos = " ".join(shlex.quote(target) for target in targets) or "<photo>"
     return (
         f"`{verb}` takes no --flow: it writes the photograph's {_WRITES[verb]}, "
-        f"which every flow reads; run `python -m isekai {verb}{root}{again} {photos}`"
+        f"which every flow reads; run `{command(verb, *root, *again, photos)}`"
     )
 
 
