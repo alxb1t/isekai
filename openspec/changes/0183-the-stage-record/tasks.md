@@ -5,7 +5,7 @@ The cases are written first, the record comes in, the tables are read from it, a
 ## Progress
 
 - [x] 1 — The cases · moderate
-- [ ] 2 — The record · moderate
+- [x] 2 — The record · moderate
 - [ ] 3 — The derive · moderate
 - [ ] 4 — The documents · moderate
 
@@ -20,15 +20,15 @@ The cases are written first, the record comes in, the tables are read from it, a
 
 ## 2 — The record
 
-- [ ] 2.1 **HALT CHECK** No name of the record is taken in the code, the tests or the tools.
+- [x] 2.1 **HALT CHECK** No name of the record is taken in the code, the tests or the tools.
   Verify: `git grep -n -w -e Producer -e PRODUCERS -- isekai tests tools evaluation` prints nothing.
-- [ ] 2.2 In `tests/test_run_directory.py`, add `PRODUCERS` to the import from `isekai.foundation.run`, and add the rows case and the tables case of [D4](design.md#d4) after the case of 1.2.
+- [x] 2.2 In `tests/test_run_directory.py`, add `PRODUCERS` to the import from `isekai.foundation.run`, and add the rows case and the tables case of [D4](design.md#d4) after the case of 1.2.
   Verify: `uv run pytest tests/test_run_directory.py -k the_record` exits 2, on the import of `PRODUCERS`.
-- [ ] 2.3 Create `isekai/foundation/producers.py` exactly as [D1](design.md#d1) gives it.
+- [x] 2.3 Create `isekai/foundation/producers.py` exactly as [D1](design.md#d1) gives it.
   Verify: `grep -c -e "^class Producer" -e "^PRODUCERS" isekai/foundation/producers.py` prints `2`.
-- [ ] 2.4 In `isekai/foundation/run.py`, import both names of `isekai/foundation/producers.py`, add them to `__all__` and name the sibling in the docstring, as [D2](design.md#d2) says.
+- [x] 2.4 In `isekai/foundation/run.py`, import both names of `isekai/foundation/producers.py`, add them to `__all__` and name the sibling in the docstring, as [D2](design.md#d2) says.
   Verify: `uv run pytest tests/test_run_directory.py tests/test_layers.py` exits 0.
-- [ ] 2.5 In `isekai/foundation/README.md`, add the Files row and the *Imported by* row of `producers.py` after those of `names.py`, as [D7](design.md#d7) gives them, then run `uv run python -m tools.derive_imported_by`.
+- [x] 2.5 In `isekai/foundation/README.md`, add the Files row and the *Imported by* row of `producers.py` after those of `names.py`, as [D7](design.md#d7) gives them, then run `uv run python -m tools.derive_imported_by`.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
 
 ## 3 — The derive

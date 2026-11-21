@@ -14,6 +14,7 @@ its new digest.
 - The page's delete, its cancel and the review payload's `cancel` now refuse while a session of any process holds the collection, not only this server's render slot: `Surface.rendering` asks `collection_held` too. Cases hold the delete, the sheet's reason and the cancel (0182 D2, D3, D4).
 - D72's *Accepts* line, the foundation README's `library.py` row and the UI README's delete bullet say the app's guard asks the slot or the held collection; the stale *Known breaks* clause leaves the `0.87.37` notes (0182 D5).
 - `tests/test_run_directory.py` holds the stage tables by their literal values and order before they move, and `tools.mutate` ran over `_spent`, `exhausted` and `check_budget` with no survivor (0183 D4, D5).
+- `isekai/foundation/producers.py` declares each stage as a frozen `Producer` in `PRODUCERS`, and `run.py` re-exports both. Two cases hold the rows and the tables read from them; no table reads the record yet (0183 D1, D2, D4, D7).
 
 ## [0.87.37] - 2026-11-21
 

@@ -40,6 +40,7 @@ from isekai.foundation.run import (
     OUTPUTS,
     PHOTO,
     PHOTOGRAPH_VERBS,
+    PRODUCERS,
     PROMPTS,
     REVIEW,
     RUNS_ROOT,
@@ -892,6 +893,33 @@ def test_the_stage_tables_hold_their_literal_values_and_order() -> None:
         "prompts",
         "outputs",
     )
+
+
+@pytest.mark.spec_exempt("structural: the record lists the stages in run order")
+def test_the_record_lists_the_stages_in_run_order() -> None:
+    rows = [(p.key, p.folder, p.scope, p.verb, p.budget) for p in PRODUCERS]
+    assert rows == [
+        ("caption", "captions", "photo", "caption", 3),
+        ("wd14", "wd14", "photo", "tag", 1),
+        ("tags", "tags", "photo", "tag", 3),
+        ("sheet", "sheets", "flow", "sheet", 1),
+        ("review", "review", "flow", "review", None),
+        ("assemble", "prompts", "flow", "generate", 1),
+        ("render", "outputs", "flow", "generate", 1),
+    ]
+
+
+@pytest.mark.spec_exempt("structural: the stage tables are read from the record")
+def test_the_stage_tables_are_read_from_the_record() -> None:
+    photo = [p for p in PRODUCERS if p.scope == PHOTO]
+    assert list(BUDGETS.items()) == [
+        (p.key, p.budget) for p in PRODUCERS if p.budget is not None
+    ]
+    assert DESCRIPTION == tuple(p.folder for p in photo)
+    assert PHOTOGRAPH_VERBS == tuple(dict.fromkeys(p.verb for p in photo))
+    assert [CAPTIONS, WD14, TAGS, SHEETS, REVIEW, PROMPTS, OUTPUTS] == [
+        p.folder for p in PRODUCERS
+    ]
 
 
 @pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")
