@@ -1,6 +1,6 @@
 # The child lines declared — design
 
-Declare the lines a child prints, and the flag that asks for them, once in `isekai/interface/progress.py`, and make the emitters and the readers use it. Verdict: feasible, in the phases of [tasks](tasks.md); the version before pins every line, so a moved byte fails a test.
+Declare the lines a child prints, and the flag that asks for them, once in `isekai/interface/progress.py`, and make the emitters and the readers use it. Verdict: feasible, in the phases of [tasks](tasks.md); the version before pins every line's bytes, and task 1.1 first pins the two branches of `Steps` it leaves free, so a moved byte fails a test.
 
 ## Context
 
@@ -113,15 +113,17 @@ Every added test is a unit test in `tests/test_progress.py`, and none removes or
 
 | measure | command | before | after |
 |---|---|---|---|
-| tests in the file | `git grep -c -e "^def test_" -- tests/test_progress.py` | `tests/test_progress.py:10` | `tests/test_progress.py:13` |
+| tests in the file | `git grep -c -e "^def test_" -- tests/test_progress.py` | `tests/test_progress.py:10` | `tests/test_progress.py:15` |
 
 | test | proves |
 |---|---|
+| `test_a_quiet_session_hands_its_child_its_own_stream` | `Steps.child` returns `out` itself when neither printing nor a record is on |
+| `test_a_session_records_an_image_only_with_a_record_and_its_runs` | `Steps.image` hands the record an image only when both the record and `runs` are given |
 | `test_the_progress_module_imports_the_standard_library_alone` | `progress.py` imports no module outside `sys.stdlib_module_names` |
 | `test_the_declared_names_are_the_words_the_lines_print` | each constant's value, `STAGE_RENDER == RENDER`, and `Steps(out, True).flag == ARGUMENT` |
 | `test_each_sample_line_is_the_shape_it_declares` | each sample line's keys are its shape's keys in order, its words are declared |
 
-The proof the move changes no byte is the version before's tests, and `tools.mutate` over the moved lines. Layer: each new test is the lowest that can fail (T1); none adds a step to an existing test, because none of those holds a declaration (T2).
+The proof the move changes no byte is the version before's tests, and `tools.mutate` over the moved lines. Its first run over `Steps` left two survivors, `return self.out` → `return None` in `Steps.child` and `and` → `or` in `Steps.image`; neither is equivalent, so the first two tests above kill them before a line moves, as `CONTRIBUTING.md` asks of a survivor. Layer: each new test is the lowest that can fail (T1); none adds a step to an existing test, because none of those holds a declaration (T2).
 
 ## Dependencies
 

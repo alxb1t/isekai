@@ -11,8 +11,8 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
 
 ## 1 — The module
 
-- [ ] 1.1 **HALT CHECK** Run `tools.mutate` over `Steps` and `Reporter.item` before any line moves. At the cut they are `isekai/interface/render.py:411-455` and `isekai/interface/verbs/common.py:212-238`; if `git grep -n -e "^class Steps" -e "^class _Images" -- isekai/interface/render.py` prints other lines, the range runs from the `Steps` line to the line above the blank lines over `_Images`. A survivor means the pins of the version before miss a line.
-  Verify: `uv run python -m tools.mutate --tests tests/test_progress.py tests/test_render.py tests/test_pipeline_cli.py isekai/interface/render.py:411-455 isekai/interface/verbs/common.py:212-238` exits 0.
+- [ ] 1.1 **HALT CHECK** Pin the two branches of `Steps` the version before leaves free, then run `tools.mutate` over `Steps` and `Reporter.item` before any line moves. The first run, at `15d39a55`, printed "19 killed, 2 survived": `return self.out` → `return None` in `Steps.child`, and `and` → `or` in `Steps.image`'s record test. First add to `tests/test_progress.py`, after `test_a_render_line_becomes_the_sessions_image_line`, `test_a_quiet_session_hands_its_child_its_own_stream` with `@pytest.mark.spec_exempt("structural: a quiet session with no record hands its child its own stream")`, asserting `Steps(out, False).child() is out`; and `test_a_session_records_an_image_only_with_a_record_and_its_runs` with `@pytest.mark.spec_exempt("structural: an image reaches the record only when both are given")`, asserting that `Steps(out, True).image(render, 2, runs)` with no record prints the image line and raises nothing, and that a stand-in record kept on a `Steps` is handed no image when `runs` is `None`. Neither changes a line of `isekai/`. The ranges are `isekai/interface/render.py:412-456` and `isekai/interface/verbs/common.py:212-238` after 0195's merge; if `git grep -n -e "^class Steps" -e "^class _Images" -- isekai/interface/render.py` prints other lines, the range runs from the `Steps` line to the line above the blank lines over `_Images`. A survivor left now is a line the pins still miss: halt.
+  Verify: `uv run python -m tools.mutate isekai/interface/render.py:412-456 isekai/interface/verbs/common.py:212-238 --tests tests/test_progress.py tests/test_render.py tests/test_pipeline_cli.py` exits 0.
 - [ ] 1.2 Create `isekai/interface/progress.py`: a docstring with an example of each line and who writes and reads it, the standard-library imports of [D1](design.md#d1), then in this order the names of [the names table](design.md#names) down to `LANDED`, the `TypedDict`s of [D3](design.md#d3), `Recorder`, and `emit` of [D4](design.md#d4). Each class and function carries a docstring and its annotations, as `ruff` asks of `isekai/`.
   Verify: `uv run python -c "from isekai.interface.progress import ItemLine, StepLine, ImageLine, Recorder, emit"` exits 0.
 - [ ] 1.3 Move `progress_line`, `Steps` and `_Images` from `isekai/interface/render.py` into `progress.py`, after `emit`, in that order: `_Images` annotates `Steps`, so `Steps` comes first. Apply the changes of [D2](design.md#d2); their docstrings and behaviour stay.
@@ -29,8 +29,8 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
   Verify: `uv run pytest tests/test_progress.py -k test_the_declared_names_are_the_words_the_lines_print` exits 0.
 - [ ] 1.9 Add `test_each_sample_line_is_the_shape_it_declares` with `@pytest.mark.spec_exempt("structural: each sample line is its declared shape")`. For each line of `ITEM_CASES` and `WORK_CASES` it asserts the parsed keys are an ordered subsequence of the keys of `ItemLine.__annotations__`, `run`, `stage` and `state` among them, `stage` is in `get_args(Stage)` and `state` in `get_args(ItemState)`. It asserts, for `STEP_CASES`, keys equal to those of `StepLine` and `step` and `state` in `get_args(StepName)` and `get_args(StepState)`, and, for `IMAGE_LINES`, keys equal to those of `ImageLine`.
   Verify: `uv run pytest tests/test_progress.py -k test_each_sample_line_is_the_shape_it_declares` exits 0.
-- [ ] 1.10 Leave every test the file held untouched, and add no test but those of 1.7 to 1.9.
-  Verify: `git grep -c -e "^def test_" -- tests/test_progress.py` prints `tests/test_progress.py:13`.
+- [ ] 1.10 Leave every test the file held untouched, and add no test but the two of 1.1, which pin the survivors of its first run, and those of 1.7 to 1.9.
+  Verify: `git grep -c -e "^def test_" -- tests/test_progress.py` prints `tests/test_progress.py:15`.
 
 ## 2 — The emitters
 
@@ -66,9 +66,9 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
 - [ ] 4.3 In `isekai/README.md` add `progress.py` after `render.py` in the `interface/` row; in `docs/modules.md`, where the sentence "`--progress json` is `Reporter` of `interface/verbs/common.py`" wraps after `--progress json`, make it read "`--progress json` is the lines `interface/progress.py` declares, which `Reporter` of `interface/verbs/common.py` and `Steps` write", keeping the wrap.
   Verify: `git grep -n -F "interface/progress.py" -- docs/modules.md` prints one line.
 - [ ] 4.4 Run `tools.mutate` over the whole of `isekai/interface/progress.py`, the lines `Steps` and `_Images` now hold included, one range a run.
-  Verify: `uv run python -m tools.mutate --tests tests/test_progress.py tests/test_render.py tests/test_pipeline_cli.py isekai/interface/progress.py:1-600` exits 0.
+  Verify: `uv run python -m tools.mutate isekai/interface/progress.py:1-600 --tests tests/test_progress.py tests/test_render.py tests/test_pipeline_cli.py` exits 0.
 - [ ] 4.5 Run `tools.mutate` over `Reporter.item` again. The edit of 2.1 shortens it by a line, so the range stops at line 237 when the imports of 2.1 and 2.2 add one statement and drop one. If `git grep -n -e "    def item" -e "^def say" -- isekai/interface/verbs/common.py` prints other lines, the range runs from the `def item` line to the line above the blank lines over `say`.
-  Verify: `uv run python -m tools.mutate --tests tests/test_progress.py tests/test_render.py tests/test_pipeline_cli.py isekai/interface/verbs/common.py:212-237` exits 0.
+  Verify: `uv run python -m tools.mutate isekai/interface/verbs/common.py:212-237 --tests tests/test_progress.py tests/test_render.py tests/test_pipeline_cli.py` exits 0.
 - [ ] 4.6 Run the mutants the repository keeps.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 - [ ] 4.7 Confirm `isekai/interface/progress.py` names nothing of `isekai.interface.render`, which would close a cycle.
