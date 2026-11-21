@@ -7,7 +7,7 @@ Pin the moving lines by mutation, move the runner from [`isekai/interface/cli.py
 - [x] 1 — Pin the moving lines by mutation · moderate
 - [x] 2 — Move the runner to `verbs/runner.py` · moderate
 - [x] 3 — Bind `prepare`'s run in its own module · moderate
-- [ ] 4 — Replay the mutation and amend the documents · moderate
+- [x] 4 — Replay the mutation and amend the documents · moderate
 
 ## 1 — Pin the moving lines by mutation
 
@@ -68,20 +68,20 @@ Pin the moving lines by mutation, move the runner from [`isekai/interface/cli.py
 
 ## 4 — Replay the mutation and amend the documents
 
-- [ ] 4.1 Find the lines of the moved code in its new home: `_existing_run` is its first definition and `_assign_one` its last.
+- [x] 4.1 Find the lines of the moved code in its new home: `_existing_run` is its first definition and `_assign_one` its last.
   Verify: `grep -n -e '^def _existing_run' -e '^def _assign_one' isekai/interface/verbs/runner.py` prints a line for each.
 
-- [ ] 4.2 Run the mutation over the new home, per [D6](design.md#d6): `uv run python -m tools.mutate isekai/interface/verbs/runner.py:<first>-<last> --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_resume.py tests/test_tagging.py tests/test_assign.py tests/test_review.py`, `<first>` the line of `def _existing_run` and `<last>` the last line of `_assign_one`, both from 4.1. Kill each survivor with a case in `tests/test_pipeline_cli.py`; a survivor no case can kill is named equivalent, with its reason, in the commit body.
+- [x] 4.2 Run the mutation over the new home, per [D6](design.md#d6): `uv run python -m tools.mutate isekai/interface/verbs/runner.py:<first>-<last> --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_resume.py tests/test_tagging.py tests/test_assign.py tests/test_review.py`, `<first>` the line of `def _existing_run` and `<last>` the last line of `_assign_one`, both from 4.1. Kill each survivor with a case in `tests/test_pipeline_cli.py`; a survivor no case can kill is named equivalent, with its reason, in the commit body.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 
-- [ ] 4.3 In `docs/decisions.md` amend D58 per [D4](design.md#d4): its *Accepts* no longer names `_per_item` or `prepare`, names the runs of `render` and `migrate` alone, bound in `cli.py` because they need `_dispatch_argv` and the `RUNS_ROOT` and `wiring` the tests patch there, and reopens when a version moves `_dispatch_argv`; its *Made by* gains `0187`. No decision is added.
+- [x] 4.3 In `docs/decisions.md` amend D58 per [D4](design.md#d4): its *Accepts* no longer names `_per_item` or `prepare`, names the runs of `render` and `migrate` alone, bound in `cli.py` because they need `_dispatch_argv` and the `RUNS_ROOT` and `wiring` the tests patch there, and reopens when a version moves `_dispatch_argv`; its *Made by* gains `0187`. No decision is added.
   Verify: `git grep -n -F '_per_item' -- docs/decisions.md` prints nothing.
 
-- [ ] 4.4 In `isekai/interface/README.md` add the *Files* row of `verbs/runner.py` and rewrite the rows of `cli.py` and `verbs/__init__.py`: `cli.py` no longer keeps the per-item work or `prepare`'s run, and the front door lists the rows, `_per_item` and the shared names.
+- [x] 4.4 In `isekai/interface/README.md` add the *Files* row of `verbs/runner.py` and rewrite the rows of `cli.py` and `verbs/__init__.py`: `cli.py` no longer keeps the per-item work or `prepare`'s run, and the front door lists the rows, `_per_item` and the shared names.
   Verify: `git grep -n -e '^| .verbs/runner.py. |' -- isekai/interface/README.md` prints one line.
 
-- [ ] 4.5 In `isekai/README.md` add `runner.py` to the list of `verbs/` in the `interface/` row.
+- [x] 4.5 In `isekai/README.md` add `runner.py` to the list of `verbs/` in the `interface/` row.
   Verify: `git grep -n -F 'runner.py' -- isekai/README.md` prints one line.
 
-- [ ] 4.6 In the docstring of `isekai/interface/cli.py` replace the sentence that says it keeps the flow stages' per-item work and the runs of `render` and `prepare` with one that says the runner is `verbs/runner.py` and this file keeps `migrate` and the run of `render`.
+- [x] 4.6 In the docstring of `isekai/interface/cli.py` replace the sentence that says it keeps the flow stages' per-item work and the runs of `render` and `prepare` with one that says the runner is `verbs/runner.py` and this file keeps `migrate` and the run of `render`.
   Verify: `git grep -n -F 'per-item work' -- isekai/interface/cli.py` prints nothing.

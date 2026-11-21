@@ -42,9 +42,9 @@ through the other.
 
 **A verb is a row of `isekai/interface/verbs/`, declared once**: its name, summary,
 arguments and run sit in the module of its family (D58). This file holds `ROWS`,
-builds the parser from their arguments and dispatches to their runs. It keeps the
-flow-stage verbs' per-item work, `assign`, `migrate`, and the runs of `render`
-and `prepare`, which need what only this file holds.
+builds the parser from their arguments and dispatches to their runs. The runner
+is `verbs/runner.py`; this file keeps `migrate` and the run of `render`, which
+need what only this file holds.
 
 **`isekai/__main__.py` is a shim over this file.** `runpy` pins where the entry
 point's *path* is; it does not pin where the parser lives, and a package's largest
