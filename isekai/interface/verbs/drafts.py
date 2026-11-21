@@ -51,7 +51,7 @@ def run_discard(args: argparse.Namespace, wired: Wiring) -> int:
     and nothing else. Any other path is a render's: it goes with its edits. The
     owner deletes each image's thumbnail, the files and, for a render that was its
     approval's last, that approval; the run's files print before the thumbnails.
-    Refused, deleting nothing, while a render session holds the collection, as the
+    Refused, deleting nothing, while a render session holds the run's runs root, as the
     app's delete is. The library is imported here for `run_ui`'s reason: it is off
     `python -m isekai`'s import graph.
     """
