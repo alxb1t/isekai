@@ -452,11 +452,9 @@ def unread_patches(root: Path) -> list[str]:
 
 LONG_FILES = {
     "isekai/interface/render.py": 1315,
-    "isekai/pipeline/importing.py": 841,
-    "isekai/pipeline/review.py": 1278,
     "isekai/pipeline/tattoos.py": 1320,
 }
-FILE_ROWS = 4
+FILE_ROWS = 2
 
 LONG_FUNCTIONS = {
     "isekai/boundary/ollama.py::ask": 105,
@@ -464,17 +462,14 @@ LONG_FUNCTIONS = {
     "isekai/interface/render.py::_session": 119,
     "isekai/interface/render.py::_rendered": 118,
     "isekai/pipeline/generate.py::render": 122,
-    "isekai/pipeline/review.py::approve": 105,
 }
-FUNCTION_ROWS = 6
+FUNCTION_ROWS = 5
 
 WIDE_FUNCTIONS = {
-    "isekai/interface/drafting.py::draft_across": 7,
     "isekai/interface/render.py::Record.__init__": 7,
     "isekai/interface/render.py::_session": 9,
     "isekai/interface/render.py::_asked": 7,
     "isekai/interface/render.py::_rendered": 8,
-    "isekai/pipeline/review.py::_write_draft": 9,
     "isekai/pipeline/sheet.py::_from_tag_list": 8,
     "isekai/pipeline/tattoos.py::save_outline": 8,
     "isekai/pipeline/tattoos.py::ink_layer": 8,
@@ -482,7 +477,7 @@ WIDE_FUNCTIONS = {
     "isekai/pipeline/tattoos.py::preview": 9,
     "isekai/pipeline/tattoos.py::composite": 8,
 }
-WIDE_ROWS = 12
+WIDE_ROWS = 10
 
 BIG_UI_FILES: dict[str, int] = {}
 UI_ROWS = 0
@@ -501,7 +496,7 @@ PATCHED_MODULES = {
     "isekai.pipeline.edit": 3,
     "isekai.pipeline.generate": 1,
     "isekai.pipeline.importing": 8,
-    "isekai.pipeline.review": 1,
+    "isekai.pipeline.review.records": 1,
     "isekai.pipeline.tattoos": 1,
     "isekai.shared.chain": 1,
     "isekai.shared.ink": 1,

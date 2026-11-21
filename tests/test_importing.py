@@ -20,6 +20,7 @@ from PIL import Image, ImageCms, ImageFile
 
 from isekai.foundation.refusal import Refusal
 from isekai.interface.cli import build_parser, dispatch
+from isekai.interface.ui import uploads
 from isekai.pipeline import importing
 from isekai.pipeline.importing import cancel, commit, read, stage, sweep, verify
 from isekai.shared.image import metadata_in
@@ -903,7 +904,7 @@ def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
             read_again.set()
 
     staging = stage(tmp_path / "library")
-    reader = importing.Reader(staging, LIMIT, publish)
+    reader = uploads.Reader(staging, LIMIT, publish)
     a = reader.put("a.jpg", photo_jpeg((200, 0, 0)))["upload"]
     b = reader.put("b.jpg", photo_jpeg((0, 200, 0)))["upload"]
 
@@ -923,14 +924,14 @@ def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
     reader.seal()
 
     # An upload that cannot be held on disk is refused alone, never left waiting.
-    held = importing.Reader(stage(tmp_path / "held"), LIMIT, lambda event: None)
-    holding = importing.tempfile.mkdtemp
+    held = uploads.Reader(stage(tmp_path / "held"), LIMIT, lambda event: None)
+    holding = uploads.tempfile.mkdtemp
 
     def full(**kwargs: object) -> str:
-        monkeypatch.setattr(importing.tempfile, "mkdtemp", holding)
+        monkeypatch.setattr(uploads.tempfile, "mkdtemp", holding)
         raise OSError(28, "No space left on device")
 
-    monkeypatch.setattr(importing.tempfile, "mkdtemp", full)
+    monkeypatch.setattr(uploads.tempfile, "mkdtemp", full)
     with pytest.raises(Refusal, match="c.jpg: .*No space left on device"):
         held.put("c.jpg", photo_jpeg((0, 0, 200)))
     assert [one["state"] for one in held.files().values()] == ["refused"]
@@ -938,14 +939,14 @@ def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
     held.stop()
 
     # One whose folder a cancel deleted as it was held names the closed import.
-    gone = importing.Reader(stage(tmp_path / "gone"), LIMIT, lambda event: None)
+    gone = uploads.Reader(stage(tmp_path / "gone"), LIMIT, lambda event: None)
 
     def cancelled(**kwargs: object) -> str:
-        monkeypatch.setattr(importing.tempfile, "mkdtemp", holding)
+        monkeypatch.setattr(uploads.tempfile, "mkdtemp", holding)
         gone.halt()
         raise FileNotFoundError(2, "No such file or directory")
 
-    monkeypatch.setattr(importing.tempfile, "mkdtemp", cancelled)
+    monkeypatch.setattr(uploads.tempfile, "mkdtemp", cancelled)
     with pytest.raises(Refusal, match="d.jpg: its import is closed"):
         gone.put("d.jpg", photo_jpeg((0, 200, 200)))
     assert [one["state"] for one in gone.files().values()] == ["refused"]
@@ -964,18 +965,18 @@ def test_a_name_holding_a_nul_byte_is_refused_alone(
 
     library = tmp_path / "library"
     staging = stage(library)
-    reader = importing.Reader(staging, LIMIT, publish)
+    reader = uploads.Reader(staging, LIMIT, publish)
     with pytest.raises(Refusal, match="not a file name import takes"):
         reader.put("a\x00.jpg", photo_jpeg((200, 0, 0)))
 
     # A hold that raises past `OSError` is refused alone, never left waiting.
-    holding = importing.tempfile.mkdtemp
+    holding = uploads.tempfile.mkdtemp
 
     def raising(**kwargs: object) -> str:
-        monkeypatch.setattr(importing.tempfile, "mkdtemp", holding)
+        monkeypatch.setattr(uploads.tempfile, "mkdtemp", holding)
         raise ValueError("embedded null byte")
 
-    monkeypatch.setattr(importing.tempfile, "mkdtemp", raising)
+    monkeypatch.setattr(uploads.tempfile, "mkdtemp", raising)
     with pytest.raises(Refusal, match="c.jpg: .*embedded null byte"):
         reader.put("c.jpg", photo_jpeg((0, 0, 200)))
 
@@ -996,7 +997,7 @@ def test_two_uploads_of_one_name_keep_their_own_states(tmp_path: Path) -> None:
         if sum(one["state"] not in {"waiting", "converting"} for one in published) == 2:
             both_read.set()
 
-    reader = importing.Reader(stage(tmp_path / "library"), LIMIT, publish)
+    reader = uploads.Reader(stage(tmp_path / "library"), LIMIT, publish)
     first = reader.put("a.jpg", b"not an image")["upload"]
     second = reader.put("a.jpg", photo_jpeg((0, 200, 0)))["upload"]
 
@@ -1022,7 +1023,7 @@ def test_a_staged_file_is_removed_alone_and_never_once_sealed(tmp_path: Path) ->
             if len(done) == 4:
                 read.set()
 
-    imports = importing.Imports(library, LIMIT, publish)
+    imports = uploads.Imports(library, LIMIT, publish)
     staged = imports.open()
     reader = imports.reader(staged)
     for name, colour in (("a.jpg", (200, 0, 0)), ("b.jpg", (0, 200, 0))):
@@ -1074,7 +1075,7 @@ def test_an_upload_once_import_commits_is_refused_and_the_collection_is_unchange
         if event["state"] not in {"waiting", "converting"}:
             read_once.set()
 
-    imports = importing.Imports(library, LIMIT, publish)
+    imports = uploads.Imports(library, LIMIT, publish)
     staged = imports.open()
     reader = imports.reader(staged)
     reader.put("a.jpg", photo_jpeg((200, 0, 0)))
@@ -1131,7 +1132,7 @@ def test_a_commit_asked_while_a_file_is_unread_is_refused_and_lands_once_it_is_r
             read_once.set()
 
     monkeypatch.setattr(importing, "_clean", held)
-    imports = importing.Imports(library, LIMIT, publish)
+    imports = uploads.Imports(library, LIMIT, publish)
     staged = imports.open()
     imports.reader(staged).put("a.jpg", photo_jpeg((200, 0, 0)))
 
@@ -1157,7 +1158,7 @@ def test_a_refused_commit_leaves_the_import_open_for_another_file(
         if event["state"] not in {"waiting", "converting"}:
             reads[str(event["file"])].set()
 
-    imports = importing.Imports(library, LIMIT, publish)
+    imports = uploads.Imports(library, LIMIT, publish)
     staged = imports.open()
     reader = imports.reader(staged)
     reader.put("a.jpg", photo_jpeg((200, 0, 0)))

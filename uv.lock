@@ -215,7 +215,7 @@ wheels = [
 
 [[package]]
 name = "isekai"
-version = "0.88.2"
+version = "0.88.10"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },

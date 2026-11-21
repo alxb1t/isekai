@@ -1156,6 +1156,25 @@ def test_prepare_leaves_out_tag_for_a_photograph_no_flow_tags(tmp_path: Path) ->
     assert opened == ["tagger"]
 
 
+@pytest.mark.spec("cli:prepare:no-tagger-no-tag-step")
+def test_prepare_tags_a_photograph_any_of_whose_flows_tags(tmp_path: Path) -> None:
+    wired = _wiring(tmp_path, flows_dir=_untagged_flows(tmp_path))
+    [run] = _photographs(tmp_path, wired.runs_root, (1200, 900))
+    assign(run, "other-v1")
+    assign(run, "summon-anime-wai")
+
+    status = _prepared(wired, f"{run.id}/other-v1", f"{run.id}/summon-anime-wai")
+
+    assert status == 0
+    done = [line for line in _lines(wired) if line["state"] == "done"]
+    assert [line["stage"] for line in done] == ["tag", "caption", "sheet", "sheet"]
+    assert [line["flow"] for line in done if line["stage"] == "sheet"] == [
+        "other-v1",
+        "summon-anime-wai",
+    ]
+    assert (run.path / PHOTO / "wd14" / "001.json").is_file()
+
+
 @pytest.mark.spec("cli:prepare:a-caption-refusal-leaves-the-sheets")
 def test_prepare_sheets_a_photograph_whose_caption_refuses(tmp_path: Path) -> None:
     refusing = FakeReader(failure=StageFailure("permanent", "the reader declined"))

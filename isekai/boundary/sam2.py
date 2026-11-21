@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast
 
 from isekai.boundary import provision, unpack
+from isekai.boundary.onnx import cpu_session, silence_onnxruntime
 from isekai.boundary.provision import DEFAULT_MODELS_DIR
 from isekai.boundary.unpack import PLACEMENT_MANIFEST_PATH, PLACEMENT_REMEDY
-from isekai.boundary.wd14 import silence_onnxruntime
 from isekai.foundation.refusal import Refusal
 
 if TYPE_CHECKING:
@@ -159,9 +159,8 @@ class OnnxSegmenter:
 
     def __init__(self, encoder: Path, decoder: Path, runtime: Runtime) -> None:
         """Open both models on the CPU provider alone."""
-        providers = ["CPUExecutionProvider"]
-        self._encoder = runtime.InferenceSession(str(encoder), providers=providers)
-        self._decoder = runtime.InferenceSession(str(decoder), providers=providers)
+        self._encoder = cpu_session(runtime, encoder)
+        self._decoder = cpu_session(runtime, decoder)
 
     def embed(self, image: "Image") -> Embedding:
         """Run the encoder once on `image` and keep its features and its size."""

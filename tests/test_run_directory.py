@@ -5,13 +5,15 @@ nothing opens an artifact to decide whether a stage is done -- which is the
 property under test as much as it is the way the tests are written.
 """
 
+import ast
 import json
 import os
+import re
 import shutil
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Collection, Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard, cast
 
 import pytest
 
@@ -36,18 +38,22 @@ from isekai.foundation.run import (
     CAPTIONS,
     DATA_ROOT,
     DESCRIPTION,
+    ENTRY,
     FRAME_NAME,
     OUTPUTS,
     PHOTO,
     PHOTOGRAPH_VERBS,
+    PREPARE,
     PRODUCERS,
     PROMPTS,
+    REPOSITORY,
     REVIEW,
     RUNS_ROOT,
     SHEETS,
     TAGS,
     WD14,
     Kind,
+    Producer,
     Run,
     StageFailure,
     across,
@@ -57,11 +63,13 @@ from isekai.foundation.run import (
     attempt,
     attempts,
     check_budget,
+    command,
     current_draft,
     instructions_record,
     is_approved,
     is_edit_file,
     latest,
+    migrate_command,
     next_version,
     open_run,
     photo_of,
@@ -74,11 +82,16 @@ from isekai.foundation.run import (
     runs_in,
     slug,
     source_copy,
+    tagged_runs,
     version_of,
     versions,
     write_atomically,
 )
-from isekai.interface.cli import build_parser
+from isekai.interface.cli import _WRITES, build_parser
+from isekai.interface.run_view import STAGES
+from isekai.interface.ui import jobs
+from isekai.interface.ui.library import _KINDS
+from isekai.interface.verbs.runner import _BUILDERS
 from isekai.interface.wiring import Wiring, _is_within, wiring, wiring_from
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact
@@ -847,6 +860,135 @@ def test_a_record_that_refuses_the_next_run_names_its_deletion(
     )
 
 
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_migrate_command_names_no_root_for_the_default_one() -> None:
+    run = Run("aunt-ada", RUNS_ROOT / "aunt-ada")
+
+    assert migrate_command(run) == "python -m isekai migrate"
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_migrate_command_names_a_root_that_is_not_the_default(tmp_path: Path) -> None:
+    run = Run("aunt-ada", tmp_path / "my runs" / "aunt-ada")
+
+    assert migrate_command(run) == (
+        f"python -m isekai migrate --runs '{tmp_path / 'my runs'}'"
+    )
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_command_joins_the_entry_the_verb_and_the_words() -> None:
+    assert command("render", "b/runs", "f=1") == "python -m isekai render b/runs f=1"
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_command_with_no_words_ends_at_the_verb() -> None:
+    assert command("migrate") == "python -m isekai migrate"
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_command_quotes_no_word() -> None:
+    assert command("tag", "my photo.jpg") == "python -m isekai tag my photo.jpg"
+
+
+@pytest.mark.spec_exempt("structural: the parser names the entry the builder holds")
+def test_the_parser_prints_the_entry() -> None:
+    assert build_parser().prog == ENTRY
+
+
+SPELT = re.compile(re.escape(ENTRY) + r"(?![\w.])")
+BUILDER = Path("isekai/foundation/command.py")
+_Documented = ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+
+
+def _holds_doc(node: ast.AST) -> TypeGuard[_Documented]:
+    """Return whether `node` is a module, class or function opening on a docstring."""
+    if not isinstance(node, _Documented) or not node.body:
+        return False
+    first = node.body[0]
+    return (
+        isinstance(first, ast.Expr)
+        and isinstance(first.value, ast.Constant)
+        and isinstance(first.value.value, str)
+    )
+
+
+def entry_spellings(root: Path) -> list[str]:
+    """Return `path:line` of each string under `root/isekai` that spells the entry.
+
+    The builder's module and docstrings are not read; a comment is no string.
+    """
+    found: list[str] = []
+    for path in sorted((root / "isekai").rglob("*.py")):
+        if path.relative_to(root) == BUILDER:
+            continue
+        tree = ast.parse(path.read_text())
+        docs = {
+            id(cast(ast.Expr, n.body[0]).value) for n in ast.walk(tree) if _holds_doc(n)
+        }
+        found += [
+            f"{path.relative_to(root)}:{node.lineno}"
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and id(node) not in docs
+            and SPELT.search(node.value)
+        ]
+    return found
+
+
+@pytest.mark.spec_exempt(
+    "structural: a command is built by command and spelt nowhere else"
+)
+def test_no_string_spells_the_entry_outside_the_builder() -> None:
+    assert entry_spellings(REPOSITORY) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_no_string_spells_the_entry_outside_the_builder"
+)
+def test_the_guard_finds_a_string_that_spells_the_entry(tmp_path: Path) -> None:
+    spelt = [
+        "def render(runs):",
+        f'    return f"{ENTRY} render {{runs}}"',
+        "",
+        "",
+        "def ui():",
+        f'    return "uv run {ENTRY} ui"',
+        "",
+        "",
+        "def outer():",
+        "    def inner():",
+        f'        return "{ENTRY} tag"',
+        "",
+        "    return inner",
+    ]
+    clean = [
+        f'"""Run `{ENTRY} render` to render."""',
+        "",
+        "",
+        "def render():",
+        f'    """Print `{ENTRY} render`."""',
+        f"    # {ENTRY} render",
+        f'    return "{ENTRY}.boundary.provision"',
+    ]
+    pipeline = tmp_path / "isekai" / "pipeline"
+    foundation = tmp_path / "isekai" / "foundation"
+    pipeline.mkdir(parents=True)
+    foundation.mkdir(parents=True)
+    (pipeline / "spelt.py").write_text("\n".join(spelt) + "\n")
+    (pipeline / "clean.py").write_text("\n".join(clean) + "\n")
+    (tmp_path / BUILDER).write_text(f'ENTRY = "{ENTRY}"\n')
+
+    assert sorted(entry_spellings(tmp_path)) == sorted(
+        [
+            "isekai/pipeline/spelt.py:2",
+            "isekai/pipeline/spelt.py:6",
+            "isekai/pipeline/spelt.py:11",
+        ]
+    )
+
+
 def _attempt_in(tmp_path: Path, scope: str, folder: str) -> tuple[Run, Path]:
     """Return a run and the empty `scope`/`folder` directory a stage records in."""
     directory = tmp_path / scope / folder
@@ -1120,6 +1262,79 @@ def test_the_stage_tables_are_read_from_the_record() -> None:
     assert [CAPTIONS, WD14, TAGS, SHEETS, REVIEW, PROMPTS, OUTPUTS] == [
         p.folder for p in PRODUCERS
     ]
+
+
+def _off_the_record(
+    record: Sequence[Producer], tables: Mapping[str, Collection[str]]
+) -> list[str]:
+    """Return the names of the tables whose keys the record does not hold."""
+    verbs = {p.verb for p in record}
+    holds = {
+        "_KINDS": set(tables["_KINDS"]) == {p.folder for p in record},
+        "STAGES": tuple(tables["STAGES"])
+        == tuple(p.folder for p in record if p.scope == "flow" and p.folder != OUTPUTS),
+        "_WRITES": set(tables["_WRITES"])
+        == {p.verb for p in record if p.scope == PHOTO},
+        "PREPARE": set(tables["PREPARE"]) <= verbs,
+        "REACHED": set(tables["REACHED"]) <= verbs,
+        "_BUILDERS": set(tables["_BUILDERS"]) == (verbs - {"generate"}) | {"approve"},
+    }
+    return [name for name, held in holds.items() if not held]
+
+
+def _tables() -> dict[str, Collection[str]]:
+    """Return the six tables as the code holds them."""
+    return {
+        "_KINDS": _KINDS,
+        "STAGES": STAGES,
+        "_WRITES": _WRITES,
+        "PREPARE": jobs.PREPARE,
+        "REACHED": jobs.REACHED,
+        "_BUILDERS": _BUILDERS,
+    }
+
+
+@pytest.mark.spec_exempt("structural: each stage table's keys are the record's")
+def test_each_stage_tables_keys_are_the_records() -> None:
+    assert _off_the_record(PRODUCERS, _tables()) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: the guard names a table with a key the record lacks"
+)
+def test_a_table_with_a_key_the_record_lacks_is_named() -> None:
+    for name, keys in _tables().items():
+        grown = {**_tables(), name: [*keys, "mask"]}
+        assert _off_the_record(PRODUCERS, grown) == [name]
+    flow = Producer("mask", "masks", "flow", "mask", 1)
+    photo = Producer("pose", "poses", "photo", "pose", 1)
+    assert _off_the_record((*PRODUCERS, flow), _tables()) == [
+        "_KINDS",
+        "STAGES",
+        "_BUILDERS",
+    ]
+    assert _off_the_record((*PRODUCERS, photo), _tables()) == [
+        "_KINDS",
+        "_WRITES",
+        "_BUILDERS",
+    ]
+
+
+@pytest.mark.spec_exempt("structural: Prepare's order is the record's verbs in it")
+def test_prepares_order_is_tag_caption_sheet_and_the_records_verbs() -> None:
+    assert PREPARE == ("tag", "caption", "sheet")
+    assert set(PREPARE) <= {producer.verb for producer in PRODUCERS}
+
+
+@pytest.mark.spec_exempt("structural: the tag rule names each run once, in order")
+def test_tagged_runs_names_each_run_a_tagged_flow_lists_once_in_its_order() -> None:
+    both = {"a": True, "b": True}
+    only_b = {"a": False, "b": True}
+    assert tagged_runs({"a": ["r1", "r2"], "b": ["r2", "r3"]}, only_b) == ("r2", "r3")
+    assert tagged_runs({"a": ["r1", "r2"], "b": ["r2", "r1"]}, only_b) == ("r2", "r1")
+    assert tagged_runs({"a": ["r1", "r2"], "b": ["r2", "r1"]}, both) == ("r1", "r2")
+    assert tagged_runs({"a": ["r1"], "b": ["r2"]}, {"a": False, "b": False}) == ()
+    assert tagged_runs({"a": ["r1"], "b": []}, only_b) == ()
 
 
 @pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")
