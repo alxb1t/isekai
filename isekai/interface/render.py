@@ -60,6 +60,7 @@ from isekai.foundation.run import (
     SHEETS,
     Run,
     approved_versions,
+    current_draft,
     latest_artifact,
     render_groups,
     rendered_seeds,
@@ -70,7 +71,6 @@ from isekai.interface.compare_view import COLLECTION_PHOTOS
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.edit import duration_of, pending, records
 from isekai.pipeline.generate import duration, shortfall
-from isekai.pipeline.review import current_draft
 
 # The port `gpunit.toml` forwards, on both sides; a test holds the two equal.
 PORT = 8188

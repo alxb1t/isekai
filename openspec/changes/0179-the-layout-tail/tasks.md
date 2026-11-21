@@ -6,7 +6,7 @@ The phases are the edit kinds, the draft's names, the importers and the document
 
 - [x] 1 — The edit kinds · moderate
 - [x] 2 — The draft's names · moderate
-- [ ] 3 — The importers · moderate
+- [x] 3 — The importers · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The edit kinds
@@ -55,15 +55,15 @@ The phases are the edit kinds, the draft's names, the importers and the document
 
 ## 3 — The importers
 
-- [ ] 3.1 In `isekai/interface/render.py`, delete the import of `current_draft` from `isekai.pipeline.review`, the file's only import from the stage, and add `current_draft` to its import from `isekai.foundation.run` ([D4](design.md#d4)).
+- [x] 3.1 In `isekai/interface/render.py`, delete the import of `current_draft` from `isekai.pipeline.review`, the file's only import from the stage, and add `current_draft` to its import from `isekai.foundation.run` ([D4](design.md#d4)).
   Verify: `git grep -n -F "isekai.pipeline.review" -- isekai/interface/render.py` prints nothing.
-- [ ] 3.2 In `isekai/interface/ui/surface.py`, delete the import of `current_draft` from `isekai.pipeline.review`, the file's only import from the stage, and add it to the import from `isekai.foundation.run`.
+- [x] 3.2 In `isekai/interface/ui/surface.py`, delete the import of `current_draft` from `isekai.pipeline.review`, the file's only import from the stage, and add it to the import from `isekai.foundation.run`.
   Verify: `git grep -n -F "isekai.pipeline.review" -- isekai/interface/ui/surface.py` prints nothing.
-- [ ] 3.3 In `isekai/interface/ui/library.py`, drop `current_draft` from the import from `isekai.pipeline.review`, which keeps `Status` and `came_from`, and add it to the import from `isekai.foundation.run`.
+- [x] 3.3 In `isekai/interface/ui/library.py`, drop `current_draft` from the import from `isekai.pipeline.review`, which keeps `Status` and `came_from`, and add it to the import from `isekai.foundation.run`.
   Verify: `git grep -n -e "review import.*current_draft" -- isekai/interface` prints nothing.
-- [ ] 3.4 In `isekai/interface/ui/routes/reviewing.py`, drop `source_copy` from the multi-line import from `isekai.pipeline.review` and add it to the import from `isekai.foundation.run` after `sheet_of`.
+- [x] 3.4 In `isekai/interface/ui/routes/reviewing.py`, drop `source_copy` from the multi-line import from `isekai.pipeline.review` and add it to the import from `isekai.foundation.run` after `sheet_of`.
   Verify: `git grep -n -e "^    source_copy,$" -- isekai/interface/ui/routes/reviewing.py` prints `41:    source_copy,`.
-- [ ] 3.5 Run `uv run python -m tools.derive_imported_by`; it rewrites `isekai/pipeline/README.md`'s derived row for `review.py` without `interface/render.py` and `interface/ui/surface.py`, and no other file.
+- [x] 3.5 Run `uv run python -m tools.derive_imported_by`; it rewrites `isekai/pipeline/README.md`'s derived row for `review.py` without `interface/render.py` and `interface/ui/surface.py`, and no other file.
   Verify: `uv run pytest tests/test_docs.py` passes.
 
 ## 4 — The documents

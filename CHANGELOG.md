@@ -12,6 +12,7 @@ its new digest.
 
 - `EDIT_SUFFIXES` in `isekai/foundation/layout.py` lists an edit's suffixes in delete order; `is_edit_file`, `edit_numbers` and `delete_edits` read it, and `_ready` in `isekai/pipeline/edit.py` names the composite by `EDIT_COMPOSITE` (0179 D1, D2).
 - `DRAFT` moves to `isekai/foundation/names.py`, and `current_draft` and `source_copy` to `isekai/foundation/layout.py`; `isekai/foundation/run.py` re-exports them and `isekai/pipeline/review.py` imports them from it. `tests/test_run_directory.py` holds a case for each (0179 D3, D5).
+- `isekai/interface/render.py`, `isekai/interface/ui/surface.py`, `isekai/interface/ui/library.py` and `isekai/interface/ui/routes/reviewing.py` read `current_draft` and `source_copy` from `isekai.foundation.run`; `render.py` and `ui/surface.py` no longer import the review stage (0179 D4).
 
 ## [0.87.34] - 2026-11-21
 
