@@ -13,10 +13,23 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from isekai.boundary.pod_start import HOLD_SECONDS
+from isekai.foundation.artifacts import SessionPlan
+from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import REPOSITORY, Run, render_groups, sidecars
+from isekai.foundation.run import (
+    REPOSITORY,
+    REVIEW,
+    SHEETS,
+    Run,
+    approved_versions,
+    current_draft,
+    latest_artifact,
+    render_groups,
+    sidecars,
+)
+from isekai.interface.wiring import Wiring
 from isekai.pipeline.edit import duration_of, pending, records
-from isekai.pipeline.generate import duration
+from isekai.pipeline.generate import duration, shortfall
 
 # A session's figures, and the least time an image is quoted at (D26).
 RENDER_CONFIG = REPOSITORY / "config" / "render.json"
@@ -216,3 +229,164 @@ def pending_edits(run: Run, flow: str) -> list[Path]:
     e.g. outputs/001/42.edit-1.json, then outputs/002/7.edit-1.json
     """
     return [record for group in render_groups(run, flow) for record in pending(group)]
+
+
+@dataclass(frozen=True)
+class Line:
+    """One `generate` line of a session over `runs`, and its images per run.
+
+    e.g. `planned` (("0d4b…_ada", 2), ("9f1c…_bea", 1)) renders 3 `images`
+    """
+
+    runs: Path
+    flow: str
+    head: tuple[str, ...]
+    where: tuple[str, ...]
+    planned: tuple[tuple[str, int], ...]
+
+    @property
+    def images(self) -> int:
+        """Return how many images the line renders, across its runs."""
+        return sum(n for _, n in self.planned)
+
+
+# Why Render is off when every approval already has its count of images.
+NOTHING_SHORT = "Every approved source × flow already has its Count of images."
+
+
+@dataclass(frozen=True)
+class Short:
+    """What a collection lacks of its approvals, leaves out, and has damaged."""
+
+    lines: list[Line]
+    # (run, flow, images), e.g. ("0d4b…_ada", "summon-anime-wai", 2)
+    wanted: list[tuple[str, str, int]]
+    # (run, flow, reason), e.g. ("0d4b…_ada", "summon-anime-wai", "a draft")
+    left_out: list[tuple[str, str, str]]
+    refused: list[str]
+
+    @property
+    def images(self) -> dict[str, int]:
+        """Return how many images each flow renders."""
+        return _images(self.lines)
+
+    @property
+    def blocked(self) -> str | None:
+        """Return why nothing would render, or None while something would."""
+        if self.refused:
+            return self.refused[0]
+        if not self.lines:
+            return NOTHING_SHORT
+        return None
+
+
+def _plan(runs: Path, lines: Sequence[Line]) -> list[SessionPlan]:
+    """Return what `lines` plan for each run and flow, by the run's digest."""
+    return [
+        {"digest": Run(run_id, runs / run_id).digest, "flow": line.flow, "images": n}
+        for line in lines
+        for run_id, n in line.planned
+        if n
+    ]
+
+
+def _images(lines: Sequence[Line]) -> dict[str, int]:
+    """Return how many images `lines` render, by flow."""
+    found: dict[str, int] = {}
+    for line in lines:
+        found[line.flow] = found.get(line.flow, 0) + line.images
+    return found
+
+
+def short(
+    runs: Path, ids: Sequence[str], wired: Wiring, without: Collection[Path] = ()
+) -> Short:
+    """Return a line per flow with approvals short of their count, and what is not.
+
+    A run without a flow's directory is skipped; one holding it unapproved is left
+    out. A damaged approval is refused, so the session refuses before renting, even
+    when `without` names it; any other `<runs>/<run-id>/<flow>` there lacks nothing.
+    """
+    tracked = tracked_flows(wired.flows_dir)
+    loaded: dict[str, Flow] = {}
+    wanted: list[tuple[str, str, int]] = []
+    left_out: list[tuple[str, str, str]] = []
+    refused: list[str] = []
+    for run_id in ids:
+        run = Run(run_id, runs / run_id)
+        for flow in (name for name in run.flows if name in tracked):
+            if not approved_versions(run.directory(flow, REVIEW)):
+                left_out.append((run_id, flow, _unready(run, flow)))
+                continue
+            if flow not in loaded:
+                loaded[flow] = load_flow(flow, wired.flows_dir)
+            try:
+                lacking = shortfall(run, loaded[flow])
+            except Refusal as damaged:
+                refused.append(str(damaged))
+                continue
+            if lacking and runs / run_id / flow not in without:
+                wanted.append((run_id, flow, lacking))
+    lines = []
+    for flow in sorted({flow for _, flow, _ in wanted}):
+        held = [(run_id, n) for run_id, named, n in wanted if named == flow]
+        where = ("--runs", str(runs), *(run_id for run_id, _ in held))
+        lines.append(Line(runs, flow, ("--flow", flow), where, tuple(held)))
+    return Short(lines, wanted, left_out, refused)
+
+
+def _unready(run: Run, flow: str) -> str:
+    """Return why `flow` is not approved in `run`, as the dialog names it."""
+    if current_draft(run.directory(flow, REVIEW)) is not None:
+        return "a draft"
+    if latest_artifact(run.directory(flow, SHEETS)) is not None:
+        return "a sheet not yet reviewed"
+    return "not yet prepared"
+
+
+@dataclass(frozen=True)
+class Quote:
+    """What one session over many collections would do, how long, and its price."""
+
+    # The shortfall of each collection quoted that is short, refuses a count or
+    # holds a queued bake, by its runs root, in the order quoted.
+    shorts: dict[Path, Short]
+    # The pending edits, a bake each, of every collection asked, by its runs root.
+    edits: dict[Path, Edits]
+    estimate: Estimate
+    timing: Timing
+    ceiling_s: int
+    # Dollars: the estimate's price, the limit's, and the window kept open after.
+    about: float
+    at_most: float
+    keep_open: float
+
+    @property
+    def images(self) -> int:
+        """Return how many images the session renders, across its collections."""
+        return sum(sum(found.images.values()) for found in self.shorts.values())
+
+    @property
+    def bakes(self) -> int:
+        """Return how many bakes the session runs, across its collections."""
+        return sum(held.count for held in self.edits.values())
+
+    @property
+    def blocked(self) -> str | None:
+        """Return why nothing would render, or None while the session may start.
+
+        A refused count first, then no image short and no bake queued, then an
+        estimate whose limit would pass the ceiling: the session would end before
+        its work.
+        """
+        refused = (found.blocked for found in self.shorts.values() if found.refused)
+        if (first := next(refused, None)) is not None:
+            return first
+        if not self.images and not self.bakes:
+            return NOTHING_SHORT
+        if self.estimate.capped:
+            return (
+                f"The estimate passes gpunit.toml's ceiling of {self.ceiling_s}s; "
+                "untick a collection."
+            )
+        return None

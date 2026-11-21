@@ -54,7 +54,7 @@ module scope, and the UI imports no CLI module.
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `cli.py` | `__main__.py` | — |
-| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `ui/routes/place.py`, `ui/surface.py`, `verbs/common.py`, `verbs/drafts.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/library.py`, `verbs/prepare.py`, `verbs/runner.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
+| `wiring.py` | `cli.py`, `plan.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `ui/routes/place.py`, `ui/surface.py`, `verbs/common.py`, `verbs/drafts.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/library.py`, `verbs/prepare.py`, `verbs/runner.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
 | `drafting.py` | `ui/routes/reviewing.py`, `verbs/drafts.py`, `verbs/runner.py` | — |
 | `render.py` | `cli.py`, `ui/jobs.py`, `ui/routes/rendering.py`, `verbs/edits.py` | — |
 | `progress.py` | `render.py`, `ui/jobs.py`, `verbs/common.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/prepare.py`, `verbs/runner.py`, `verbs/session.py` | — |

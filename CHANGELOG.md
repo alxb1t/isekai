@@ -27,7 +27,8 @@ its new digest.
 - `Reporter.item` writes through `emit`; the verbs, the session's argv and the argument functions name their stages, states and `--progress json` from `progress.py`; every printed byte is equal (0196 D4, D5, D6).
 - `jobs.py` takes `PREPARE` from `progress.py` and reads each line's state, step, image keys and `--progress json` by its declared names in `_Job.complete`, `_render_child` and both commands; every byte is equal (0196 D5, D6).
 - Docs `D76` records the declaration, `isekai/interface/README.md`, `isekai/README.md` and `docs/modules.md` name `progress.py`, and a case holds `_Images.write`'s return (0196 D7).
-- `isekai/interface/plan.py` holds the timing, the estimate and the edit queue's reading, and `render.py` binds each name back; `HOLD_SECONDS` stays importable there, `RE-1` is found in `plan.py`, and the derived tables of the layer READMEs name the new module; no moved line changes (0197 D1, D2, D4, D5).
+- `isekai/interface/plan.py` holds the timing, the estimate and the edit queue's reading; `render.py` binds each name back and keeps `HOLD_SECONDS`, and `RE-1` is found in `plan.py` (0197 D1, D2, D4, D5).
+- `plan.py` also holds `Line`, `Short`, `short` and `Quote`, and the derived tables of the layer READMEs name it; `quote` and `Record` stay in `render.py`, which binds each name back (0197 D1, D2, D3).
 
 ## [0.88.1] - 2026-11-21
 

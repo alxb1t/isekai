@@ -5,7 +5,7 @@ Move the plan of a render session from `isekai/interface/render.py` to `isekai/i
 ## Progress
 
 - [x] 1 — The estimate and the edit queue · moderate
-- [ ] 2 — The plan and the quote's parts · moderate
+- [x] 2 — The plan and the quote's parts · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The estimate and the edit queue
@@ -27,23 +27,23 @@ Move the plan of a render session from `isekai/interface/render.py` to `isekai/i
 
 ## 2 — The plan and the quote's parts
 
-- [ ] 2.1 Append to `plan.py`, in this order and unchanged with their docstrings and comments: `Line`, `NOTHING_SHORT` with its comment, `Short`, `_plan`, `_images`, `short`, `_unready`, `Quote`. Add the imports they read: `SessionPlan` from `isekai.foundation.artifacts`; `Flow`, `load_flow` and `tracked_flows` from `isekai.foundation.flow`; `REVIEW`, `SHEETS`, `approved_versions`, `current_draft` and `latest_artifact` to the `isekai.foundation.run` import; `Wiring` from `isekai.interface.wiring`; `shortfall` to the `isekai.pipeline.generate` import.
+- [x] 2.1 Append to `plan.py`, in this order and unchanged with their docstrings and comments: `Line`, `NOTHING_SHORT` with its comment, `Short`, `_plan`, `_images`, `short`, `_unready`, `Quote`. Add the imports they read: `SessionPlan` from `isekai.foundation.artifacts`; `Flow`, `load_flow` and `tracked_flows` from `isekai.foundation.flow`; `REVIEW`, `SHEETS`, `approved_versions`, `current_draft` and `latest_artifact` to the `isekai.foundation.run` import; `Wiring` from `isekai.interface.wiring`; `shortfall` to the `isekai.pipeline.generate` import.
   Verify: `uv run python -c "from isekai.interface.plan import Line, NOTHING_SHORT, Short, _plan, _images, short, _unready, Quote"` exits 0.
-- [ ] 2.2 In `isekai/interface/render.py` delete those definitions and their comments. `quote` stays, between where `Quote` and `edit_records` were.
+- [x] 2.2 In `isekai/interface/render.py` delete those definitions and their comments. `quote` stays, between where `Quote` and `edit_records` were.
   Verify: `git grep -n -e "^class Line" -e "^NOTHING_SHORT" -e "^class Short" -e "^def _plan(" -e "^def _images(" -e "^def short(" -e "^def _unready(" -e "^class Quote" -- isekai/interface/render.py` prints nothing.
-- [ ] 2.3 Add them to the import from `isekai.interface.plan` in `isekai/interface/render.py`. Plainly: `Line`, `Quote`, `_images`, `_plan`, `short`. As `X as X`, one statement each, under the same comment: `NOTHING_SHORT`, `Short`, `_unready`.
+- [x] 2.3 Add them to the import from `isekai.interface.plan` in `isekai/interface/render.py`. Plainly: `Line`, `Quote`, `_images`, `_plan`, `short`. As `X as X`, one statement each, under the same comment: `NOTHING_SHORT`, `Short`, `_unready`.
   Verify: `uv run python -c "from isekai.interface.render import Line, Quote, Short, NOTHING_SHORT, short, _plan, _images, _unready; assert Quote.__module__ == short.__module__ == 'isekai.interface.plan'"` exits 0.
-- [ ] 2.4 Run `uv run ruff check --fix isekai/interface/render.py isekai/interface/plan.py` and `uv run ruff format isekai/interface/render.py isekai/interface/plan.py`, then `uv run python -m tools.derive_imported_by`, which writes the derived tables again: `render.py` no longer imports the edit and generate stages.
+- [x] 2.4 Run `uv run ruff check --fix isekai/interface/render.py isekai/interface/plan.py` and `uv run ruff format isekai/interface/render.py isekai/interface/plan.py`, then `uv run python -m tools.derive_imported_by`, which writes the derived tables again: `render.py` no longer imports the edit and generate stages.
   Verify: `uv run ruff check isekai/interface/render.py isekai/interface/plan.py` exits 0.
-- [ ] 2.5 `quote` and `Record` stay in `render.py` and take no new parameter, so a patch of `load_timing` or `session_id` on `render` still reaches them ([D3](design.md#d3)).
+- [x] 2.5 `quote` and `Record` stay in `render.py` and take no new parameter, so a patch of `load_timing` or `session_id` on `render` still reaches them ([D3](design.md#d3)).
   Verify: `git grep -n -e "^def quote(" -e "^class Record:" -- isekai/interface/render.py` prints two lines.
-- [ ] 2.6 `quote` and `_session` call `load_timing()` as a name of `render.py`.
+- [x] 2.6 `quote` and `_session` call `load_timing()` as a name of `render.py`.
   Verify: `git grep -c -F "load_timing()" -- isekai/interface/render.py` prints `isekai/interface/render.py:2`.
-- [ ] 2.7 `isekai/interface/plan.py` names nothing of `isekai.interface.render`, which would close a cycle.
+- [x] 2.7 `isekai/interface/plan.py` names nothing of `isekai.interface.render`, which would close a cycle.
   Verify: `git grep -n -F "isekai.interface.render" -- isekai/interface/plan.py` prints nothing.
-- [ ] 2.8 **HALT CHECK** `render.py` is still over the long-file ceiling, so its row of `tests/test_ratchets.py` stands. A failure means the move took more than the plan names.
+- [x] 2.8 **HALT CHECK** `render.py` is still over the long-file ceiling, so its row of `tests/test_ratchets.py` stands. A failure means the move took more than the plan names.
   Verify: `uv run pytest tests/test_ratchets.py tests/test_layers.py tests/test_docs.py` exits 0.
-- [ ] 2.9 Confirm the suite still reads each moved name through `render`.
+- [x] 2.9 Confirm the suite still reads each moved name through `render`.
   Verify: `uv run pytest tests/test_render.py tests/test_edit_session.py tests/test_ui_api.py tests/test_ui_jobs.py tests/test_pipeline_cli.py` exits 0.
 
 ## 3 — The documents
