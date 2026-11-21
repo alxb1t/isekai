@@ -56,11 +56,9 @@ from isekai.foundation.run import (
     WD14,
     Run,
     artifact_name,
-    check_budget,
+    attempt,
     latest,
     photo_of,
-    record_failure,
-    refusal_for,
     stage_command,
 )
 from isekai.shared.field_map import FieldMap, route
@@ -254,23 +252,26 @@ def _from_tag_list(
         validate(fields, schema, vocabulary, excluded=field_map.excluded, remedy=remedy)
         return fields, made_by
 
-    check_budget(STAGE, directory, version, run)
     # No sheet exists yet to edit, so every fix is a new tag list.
     remedy = (
         f"run `{retag}`, then `{stage_command(run, STAGE, flow, options=NEW_VERSION)}`"
     )
-    try:
+
+    def routed() -> tuple[dict[str, list[str]], SheetProducer]:
         fields, made_by = _route(run, source, schema, field_map, remedy)
         validate(fields, schema, vocabulary, excluded=field_map.excluded, remedy=remedy)
-    except Refusal as failed:
-        detail = str(failed)
-        record = record_failure(
-            directory, version, "permanent", {"stage": STAGE, "detail": detail}
-        )
-        raise refusal_for(
-            STAGE, run, "permanent", detail, record, SHEETS, STAGE, flow, STAGE
-        ) from failed
-    return fields, made_by
+        return fields, made_by
+
+    return attempt(
+        STAGE,
+        run,
+        directory,
+        version,
+        routed,
+        flow=flow,
+        noun="sheet",
+        catching=(Refusal,),
+    )
 
 
 def _route(

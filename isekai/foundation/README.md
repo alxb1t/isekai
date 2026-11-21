@@ -9,9 +9,9 @@ endpoint or a score; everything here is imported by something that does.
 |---|---|
 | `refusal.py` | one error that names its own fix, raised anywhere and caught once |
 | `artifacts.py` | the run directory's contract: every run file kind's shape and version, one typed `read` and `write`, `require` for a key a hand-edited file may lack, and the JSON form every artifact is written in |
-| `run.py` | the front of the run directory: it re-exports its siblings' names and holds the roots, `open_run` and `find_run`, `rendered_at`, the command text with `photo_of`, the migration state, `refusal_for`, `instructions_record` and `constant_record` |
+| `run.py` | the front of the run directory: it re-exports its siblings' names and holds the roots, `open_run` and `find_run`, `rendered_at`, the command text with `photo_of`, the migration state, `refusal_for` and `attempt`, `instructions_record` and `constant_record` |
 | `names.py` | a run's id, the names of its layout, read from the stage record, and the draft's label |
-| `producers.py` | the stage record: a frozen `Producer` for each stage a run passes through, in `PRODUCERS`, with its key, folder, scope, verb and budget; it imports nothing of `isekai` |
+| `producers.py` | the stage record: a frozen `Producer` for each stage a run passes through, in `PRODUCERS`, with its key, folder, scope, verb and budget, and `producer_for`, which finds a row by its key; it imports nothing of `isekai` |
 | `rundir.py` | `Run`, one photograph's directory and its frame, `assign`, and `runs_in` and `run_at`, which folders are runs |
 | `layout.py` | numbering and completion, the seeds, the names of a render's image and record, the rule that a seed is rendered, a render group's listing, the refs an image's path names, the edit files, the draft being worked on and its source copy |
 | `failures.py` | the failure shape the stages share: `Kind`, the budgets, read from the stage record, the attempts a directory records, `across` and `StageFailure`, here and not in `refusal.py` because `refusal.py` imports nothing by design and the class needs `Kind` |
