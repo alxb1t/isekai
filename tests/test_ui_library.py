@@ -1,5 +1,6 @@
 """The library and the hub, read from folders with no server involved."""
 
+import fcntl
 import hashlib
 import json
 import os
@@ -13,7 +14,7 @@ from PIL import Image
 
 from isekai.foundation.artifacts import DRAFT_FILE, EDIT_FILE, read
 from isekai.foundation.flow import FLOWS_DIR, load_flow
-from isekai.foundation.library import file_digest, thumbnail_of
+from isekai.foundation.library import collection_held, file_digest, thumbnail_of
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     OUTPUTS,
@@ -735,3 +736,25 @@ def test_bake_library_a_record_that_cannot_be_read_is_listed_damaged(
     assert damaged.reason is not None and broken.name in damaged.reason
     assert found[2].placed_on == 2
     assert all(one.reason is None for one in (found[0], found[2]))
+
+
+@pytest.mark.spec_exempt("structural: a collection is held by a session's live lock")
+def test_a_collection_is_held_by_a_live_session_lock(tmp_path: Path) -> None:
+    lib = tmp_path / "lib"
+    held_folder = _collection(lib, "b", "ada.jpg")
+    other = _collection(lib, "c", "ada.jpg")
+    assert not collection_held(held_folder)
+
+    sessions = held_folder / "sessions"
+    sessions.mkdir()
+    (sessions / "20261024T080000Z.json").write_text("{}")
+    (sessions / "20261024T080000Z.lock").write_text("")
+    assert not collection_held(held_folder)
+
+    record = sessions / "20261024T091200Z"
+    record.with_suffix(".json").write_text("{")
+    with record.with_suffix(".lock").open("w") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        assert collection_held(held_folder)
+        assert not collection_held(other)
+    assert not collection_held(held_folder)

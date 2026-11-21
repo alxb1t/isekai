@@ -113,6 +113,16 @@ def running(folder: Path) -> list[dict[str, Any]]:
     return [one for one in found if one["outcome"] == "running"]
 
 
+def collection_held(folder: Path) -> bool:
+    """Return whether a render process holds collection `folder`.
+
+    Liveness alone is read, from each session's lock, so a record that does not
+    read still counts; a folder with no sessions is held by none.
+    e.g. `<lib>/b` with `<lib>/b/sessions/<t>.lock` locked -> True
+    """
+    return any(record_running(path) for path in (folder / SESSIONS).glob("*.json"))
+
+
 def render_running(run: Run) -> bool:
     """Return whether a render process holds the collection `run` sits in.
 
@@ -123,7 +133,7 @@ def render_running(run: Run) -> bool:
     runs = run.path.absolute().parent
     if not (runs.name == RUNS and is_collection(runs.parent)):
         return False
-    return any(record_running(path) for path in (runs.parent / SESSIONS).glob("*.json"))
+    return collection_held(runs.parent)
 
 
 def session(folder: Path, name: str) -> dict[str, Any]:

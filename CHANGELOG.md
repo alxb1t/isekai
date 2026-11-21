@@ -10,6 +10,14 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.38] - 2026-11-21
+
+Gate: local 1m20s · CI not read under mf-ship · 0.87.37: local 1m28s · CI not read under mf-ship
+
+- `collection_held` joins `isekai/foundation/library.py`: a collection is held while any of its session records' locks is held, a record that does not read included. `render_running` calls it, and a case holds the rule (0182 D1, D4).
+- The page's delete, its cancel and the review payload's `cancel` now refuse while a session of any process holds the collection, not only this server's render slot: `Surface.rendering` asks `collection_held` too. Cases hold the delete, the sheet's reason and the cancel (0182 D2, D3, D4).
+- D72's *Accepts* line, the foundation README's `library.py` row and the UI README's delete bullet say the app's guard asks the slot or the held collection; the stale *Known breaks* clause leaves the `0.87.37` notes (0182 D5).
+
 ## [0.87.37] - 2026-11-21
 
 Gate: local 1m28s · CI not read under mf-ship · 0.87.36: local 1m15s · CI not read under mf-ship
@@ -19,7 +27,7 @@ Gate: local 1m28s · CI not read under mf-ship · 0.87.36: local 1m15s · CI not
 - `delete_render` and `delete_edit` of `isekai/foundation/discard.py` drop each image's thumbnail, delete the files, then, for a render, the approval, and return `Deleted`; `_chain` serves `discard_edit`. Cases hold the order and the refusal (0181 D2, D3, D6).
 - `isekai discard` calls the owner: a render's discard drops its edits' thumbnails, and an edit's drops its own and its chain's (0181 D4, D6).
 - The page's render delete calls `delete_render` under the draft lock and drops its own loop; a case holds that the verb and the route leave one cache (0181 D4, D6).
-- D72 records the delete's owner, D4 and D69 name it, and its *Known breaks* leave `docs/principles.md`; the module, data-flow and README texts and the docstring of `ui/app.py` say so. The standing mutants replay clean (0181 D7).
+- D72 records the delete's owner, D4 and D69 name it; the module, data-flow and README texts and the docstring of `ui/app.py` say so. The standing mutants replay clean (0181 D7).
 - The *Known breaks* bullet of the state principle in `docs/principles.md` is back, naming `isekai/foundation/discard.py`'s `discard_render`, `discard_edit` and `withdraw`: the move did not end the delete's one break of "never changed" (0181 D7).
 
 ## [0.87.36] - 2026-11-21
