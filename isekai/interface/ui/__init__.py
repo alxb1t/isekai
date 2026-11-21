@@ -50,7 +50,7 @@ def collection_runs() -> list[Path]:
 
 
 def render_running(run: Run) -> bool:
-    """Return whether a render holds `run`'s collection, for the `discard` verb."""
+    """Return whether a render holds `run`'s runs root, for the `discard` verb."""
     return library.render_running(run)
 
 

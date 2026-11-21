@@ -15,7 +15,7 @@ import pytest
 from numpy.typing import NDArray
 from PIL import Image
 
-from isekai.boundary import sam2, unpack
+from isekai.boundary import sam2
 from isekai.boundary.provision import DEFAULT_MODELS_DIR, DigestMismatch
 from isekai.boundary.sam2 import (
     DECODER_DEST,
@@ -48,8 +48,8 @@ def _digest(body: bytes) -> str:
     return hashlib.sha256(body).hexdigest()
 
 
-def _provisioned(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Write both members and a manifest declaring them; return the models directory."""
+def _provisioned(tmp_path: Path) -> tuple[Path, Path]:
+    """Write both members and a manifest declaring them; return both paths."""
     models = tmp_path / "models"
     (models / "sam2").mkdir(parents=True)
     (models / ENCODER_DEST).write_bytes(ENCODER_BYTES)
@@ -83,8 +83,7 @@ def _provisioned(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
             }
         )
     )
-    monkeypatch.setattr(unpack, "PLACEMENT_MANIFEST_PATH", manifest)
-    return models
+    return models, manifest
 
 
 @dataclass
@@ -394,12 +393,12 @@ def test_sam_choice_the_logits_are_resized_and_then_taken_above_zero(
 
 @pytest.mark.spec("placement-proposal:models:the-sessions-use-the-cpu-provider-alone")
 def test_sam_open_each_session_is_made_with_the_cpu_provider_alone(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
-    models = _provisioned(tmp_path, monkeypatch)
+    models, manifest = _provisioned(tmp_path)
     runtime = _Runtime()
 
-    open_segmenter(models, runtime)
+    open_segmenter(models, runtime, manifest=manifest)
 
     assert runtime.opened == [
         (str(models / ENCODER_DEST), ["CPUExecutionProvider"]),
@@ -410,14 +409,14 @@ def test_sam_open_each_session_is_made_with_the_cpu_provider_alone(
 @pytest.mark.spec("placement-proposal:models:an-absent-file-refuses-naming-the-fetch")
 @pytest.mark.parametrize("gone", [ENCODER_DEST, DECODER_DEST])
 def test_sam_open_an_absent_file_refuses_naming_the_fetch(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gone: str
+    tmp_path: Path, gone: str
 ) -> None:
-    models = _provisioned(tmp_path, monkeypatch)
+    models, manifest = _provisioned(tmp_path)
     (models / gone).unlink()
     runtime = _Runtime()
 
     with pytest.raises(Refusal) as refused:
-        open_segmenter(models, runtime)
+        open_segmenter(models, runtime, manifest=manifest)
 
     assert gone in str(refused.value)
     assert PLACEMENT_REMEDY in str(refused.value)
@@ -428,14 +427,14 @@ def test_sam_open_an_absent_file_refuses_naming_the_fetch(
     "placement-proposal:models:a-stale-pin-refuses-before-a-session-opens"
 )
 def test_sam_open_a_stale_pin_refuses_naming_both_digests_and_opens_no_session(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
-    models = _provisioned(tmp_path, monkeypatch)
+    models, manifest = _provisioned(tmp_path)
     (models / DECODER_DEST).write_bytes(b"other bytes")
     runtime = _Runtime()
 
     with pytest.raises(DigestMismatch) as refused:
-        open_segmenter(models, runtime)
+        open_segmenter(models, runtime, manifest=manifest)
 
     message = str(refused.value)
     assert str(models / DECODER_DEST) in message

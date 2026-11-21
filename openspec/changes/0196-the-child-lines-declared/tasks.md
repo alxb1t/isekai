@@ -59,8 +59,8 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
 
 ## 4 — The decision and the docs
 
-- [ ] 4.1 In `docs/decisions.md` add `### D74 · The child's lines are declared in isekai/interface/progress.py` after D73, with the bold sentence, the *Why* and *Accepts* bullets and the *Made by* bullet naming `0196`, all as [D7](design.md#d7) gives them.
-  Verify: `git grep -c -F "### D74" -- docs/decisions.md` prints `docs/decisions.md:1`.
+- [ ] 4.1 In `docs/decisions.md` add `### D76 · The child's lines are declared in isekai/interface/progress.py` after D73, with the bold sentence, the *Why* and *Accepts* bullets and the *Made by* bullet naming `0196`, all as [D7](design.md#d7) gives them.
+  Verify: `git grep -c -F "### D76" -- docs/decisions.md` prints `docs/decisions.md:1`.
 - [ ] 4.2 In `isekai/interface/README.md` add a `progress.py` row after `render.py` in `## Files`, saying it declares the lines and the flag, holds `emit`, `progress_line`, `Steps` and `_Images`, and **imports the standard library alone**. Add a `progress.py` row after `render.py` in `## Imported by` with `—` in its other cells, then run `uv run python -m tools.derive_imported_by`, which fills it.
   Verify: `git grep -c -e "^| .progress.py. |" -- isekai/interface/README.md` prints `isekai/interface/README.md:2`.
 - [ ] 4.3 In `isekai/README.md` add `progress.py` after `render.py` in the `interface/` row; in `docs/modules.md`, where the sentence "`--progress json` is `Reporter` of `interface/verbs/common.py`" wraps after `--progress json`, make it read "`--progress json` is the lines `interface/progress.py` declares, which `Reporter` of `interface/verbs/common.py` and `Steps` write", keeping the wrap.

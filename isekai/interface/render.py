@@ -60,6 +60,7 @@ from isekai.foundation.run import (
     SHEETS,
     Run,
     approved_versions,
+    command,
     current_draft,
     latest_artifact,
     render_groups,
@@ -162,8 +163,8 @@ def again(roots: Sequence[Path], without: Sequence[Path] = ()) -> str:
 
     Each of `without` stays out of it, as its `--without`.
     """
-    command = ["uv", "run", "python", "-m", "isekai", "render", *map(str, roots)]
-    return shlex.join([*command, *without_flags(without)])
+    argv = ["uv", "run", "python", "-m", "isekai", "render", *map(str, roots)]
+    return shlex.join([*argv, *without_flags(without)])
 
 
 def without_flags(without: Sequence[Path]) -> list[str]:
@@ -1101,10 +1102,12 @@ def _asked(
     flows = [arg for request in requests for arg in ("--flow", request.flow)]
     if not ids:
         photos = shlex.quote(str(runs.parent / COLLECTION_PHOTOS))
+        asked = command(
+            "assign", " ".join(flows), "--runs", shlex.quote(str(runs)), f"{photos}/*"
+        )
         raise Refusal(
             f"{runs} holds no run; open them from the collection's photographs with: "
-            f"uv run python -m isekai assign {' '.join(flows)} --runs "
-            f"{shlex.quote(str(runs))} {photos}/*"
+            f"uv run {asked}"
         )
     where = ("--runs", str(runs), *ids)
     if generate([*verb, *flows, *where], free) != 0:

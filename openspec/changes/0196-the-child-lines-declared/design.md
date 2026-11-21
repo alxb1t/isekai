@@ -36,7 +36,7 @@ render.py  _rendered, Steps ─────┘   (stdlib only)       └── r
 | [D4](#d4) | One writer, `emit`, and one reader, `progress_line` | the encoding is spelled once, and a test of either holds every line | each class printing for itself |
 | [D5](#d5) | The flag is `FLAG`, `FORMAT` and `ARGUMENT`; each use reads them | the flag is spelled where the child is asked and where it is read | a literal per site |
 | [D6](#d6) | The stage names a verb or a reader spells are constants, and `PREPARE` moves | the readers compare these words against what the verbs print | leaving `PREPARE` in `jobs.py` |
-| [D7](#d7) | One decision in force, docs `D74`, is added to `docs/decisions.md` | the page says what holds; this file says how it came about | none |
+| [D7](#d7) | One decision in force, docs `D76`, is added to `docs/decisions.md` | the page says what holds; this file says how it came about | none |
 
 ### D1
 
@@ -80,7 +80,7 @@ The `steps.step("pod", …)` and `steps.step("teardown", …)` calls in `render.
 
 ### D7
 
-Docs `D74` reads: **`isekai/interface/progress.py` declares a child's lines — the item line, and the session's step and image lines — their stage, state and step names, and `--progress json`; `Reporter.item`, `Steps` and `_Images` write and read them there, and `progress_line` is the one reader.** The bullets under it:
+Docs `D76` reads: **`isekai/interface/progress.py` declares a child's lines — the item line, and the session's step and image lines — their stage, state and step names, and `--progress json`; `Reporter.item`, `Steps` and `_Images` write and read them there, and `progress_line` is the one reader.** The bullets under it:
 
 - **Why:** a line was spelled by its emitter, again in each verb that names its stage and state, and again in each reader, and no test held them to agree. One module says what a line is, and a test holds each sample to it.
 - **Accepts:** the `steps.step` literals in `render.py`, the emitters' `str` parameters, the pipeline's `STAGE_RENDER` and the app's `cell` event stay as they are. Reopen when an emitter is typed by a shape.

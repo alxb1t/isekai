@@ -1,0 +1,58 @@
+{
+  "change": "0190-the-terminal-guards",
+  "version": "0.88",
+  "base": "db5e34a0",
+  "analyzed": "c9fbdb87",
+  "measured_on": "local",
+  "collected_at": "2026-11-21T18:53:32+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2564
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 119
+    },
+    "open-backlog-cards": {
+      "value": 4
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 3
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 847
+    },
+    "diff-files": {
+      "value": 20
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 17683
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1105
+    },
+    "decisions": {
+      "value": 75
+    }
+  }
+}

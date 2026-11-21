@@ -629,11 +629,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D62 · The run directory is run.py, its siblings imported through it
 
-**The run directory is `isekai/foundation/run.py`. It re-exports every name of `names.py`, `rundir.py`, `layout.py`, `failures.py` and `producers.py` under `__all__`, and a module outside the foundation imports a run's names from `isekai.foundation.run`, never from a sibling. A sibling imports no `run.py` and stays on the standard library and the foundation.**
+**The run directory is `isekai/foundation/run.py`. It re-exports every name of `names.py`, `rundir.py`, `layout.py`, `failures.py`, `producers.py` and `command.py` under `__all__`, and a module outside the foundation imports a run's names from `isekai.foundation.run`, never from a sibling. A sibling imports no `run.py` and stays on the standard library and the foundation.**
 
 - **Why:** the run directory was one file of clusters and a listed row of the ratchet ([D56](#d56--size-and-patches-are-held-by-ratchets)). A front that re-exports changes no importer, keeps `RUNS_ROOT` and `DATA_ROOT` in one module and leaves the layer guard's cycle rule nothing to find.
 - **Accepts:** the roots, `open_run`, `rendered_at`, the command text and the provenance records stay in `run.py`, because `rendered_at` reads `stage_command`, which reads the patched `RUNS_ROOT`. Review holds that an importer reads the front; no test does. Reopen when `RUNS_ROOT` is no longer patched.
-- **Made by:** `0152`, `0183`.
+- **Made by:** `0152`, `0183`, `0193`.
 
 ### D63 · The wire is declared in shapes.py and held by tests
 
@@ -669,11 +669,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D68 · The collection's names and the session's read side are foundation/library.py, re-bound at their old homes
 
-**`isekai/foundation/library.py` holds the library's folder names and a collection's, `root`, `is_collection`, `listed` and `collection`, and the read side of a collection's session records: `UNSUPPORTED`, `record_running`, `running`, `collection_held`, `render_running` and `session`, and where a thumbnail sits in the cache and what names it: `stat_key`, `file_digest`, `thumbnail_of` and `drop_thumbnails`. Each name is re-bound at its old home, so no importer changes; a name the old home no longer reads is bound as `import X as X`. The module imports the standard library and the foundation, `Run` through `run.py`.**
+**`isekai/foundation/library.py` holds the library's folder names and a collection's, `root`, `is_collection`, `listed` and `collection`, and the read side of a collection's session records: `UNSUPPORTED`, `record_running`, `running`, `collection_held`, `render_running` and `session`, and where a thumbnail sits in the cache and what names it: `stat_key`, `file_digest`, `thumbnail_of`, `named_thumbnail` and `drop_thumbnails`. Each name is re-bound at its old home, so no importer changes; a name the old home no longer reads is bound as `import X as X`. The module imports the standard library and the foundation, `Run` through `run.py`.**
 
 - **Why:** the code read these names from above, `SOURCES` from the importer and `record_running` from the render verb, so nothing below the interface could meet a collection, and `ui/library.py` was a listed long file ([D56](#d56--size-and-patches-are-held-by-ratchets)). A move that re-binds changes no importer and no test.
 - **Accepts:** `thumbnail` and the sources' thumbnails stay in `ui/library.py`, and `render_running` stays wrapped by `ui/__init__.py`. `pipeline/importing.py` and `interface/verbs/library.py` keep their hand copy of `is_collection`'s test. `isekai/README.md`'s file list names no `foundation/library.py`, and no test holds that list. The CLI's imports of the UI package stay. Reopen when the base's seams lift them.
-- **Made by:** `0173`, `0180`, `0182`.
+- **Made by:** `0173`, `0180`, `0182`, `0190`.
 
 ### D69 · A render group's files are listed in foundation/layout.py, and a module above the pipeline reads the listing from the foundation
 
@@ -701,11 +701,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D72 · A delete has one owner, isekai/foundation/discard.py
 
-**`isekai/foundation/discard.py` holds `delete_render(image)` and `delete_edit(image)`, which drop the thumbnail of every image that goes while it is still a file, then delete the files, then, for a render, the approval its last render leaves, and return `Deleted(files, thumbnails)`. The bodies of `discard_render`, `withdraw`, `_holds_render` and `discard_edit` are there too, bound back at the stages that held them. The `discard` verb and the app's delete call the owner and write no loop.**
+**`isekai/foundation/discard.py` holds `delete_render(image)` and `delete_edit(image)`, which name the thumbnail of every image that goes while it is still a file, drop them, delete the files and, for a render, the approval its last render leaves, then unlink any named thumbnail that came back, and return `Deleted(files, thumbnails)`. The bodies of `discard_render`, `withdraw`, `_holds_render` and `discard_edit` are there too, bound back at the stages that held them. The `discard` verb and the app's delete call the owner and write no loop.**
 
-- **Why:** a delete was chained by hand in each front end, and the chains differed: the app dropped each edit image's thumbnail, the verb the render's alone and, on an edit's path, none. A thumbnail is named by its image's digest, so it can go only before its image does.
-- **Accepts:** the guards stay with the acts: the app's, which refuses while its render slot runs or a session holds the collection (0182), the verb's disk check and `approve --cancel`'s lack of one. `_derived`, `review.discard` and `tattoos.remove` stay where they are. Reopen when a delete's guards move into the owner.
-- **Made by:** `0181`, `0182`.
+- **Why:** a delete was chained by hand in each front end, and the chains differed: the app dropped each edit image's thumbnail, the verb the render's alone and, on an edit's path, none. A thumbnail is named by its image's digest, so it is named before its image goes, and one rebuilt in between is unlinked by that name.
+- **Accepts:** the guards stay with the acts: the app's, which refuses while its render slot runs or a session holds the collection (0182), and the verbs', which refuse while a session holds the run's runs root (D74). `_derived`, `review.discard` and `tattoos.remove` stay where they are. Reopen when a delete's guards move into the owner.
+- **Made by:** `0181`, `0182`, `0190`.
 
 ### D73 · A stage is declared once, in isekai/foundation/producers.py
 
@@ -714,6 +714,22 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Why:** a stage was spelled in several literals that no test held to agree, and a new stage edited each of them. One row says what a stage is, and a table that names it is read from the row. The key is the budget's key and the `stage` of a failure record on disk, so it never changes.
 - **Accepts:** the tables above the foundation, the pipeline's own `STAGE` constants and the hub cell's `Stage` stay as they are, the paid stages, `assemble` and `render`, keep their own sequences, and `review` has a row with no budget. Reopen when the interface's tables are read from the record.
 - **Made by:** `0183`, `0188`.
+
+### D74 · A terminal delete or cancel refuses beside a live render
+
+**`render_running(run)` of `isekai/foundation/library.py` reads the sessions beside the run's runs root, whether or not the root sits in a collection, and `isekai discard` and `isekai approve --cancel` refuse a run while it answers yes. A session writes its record beside any runs root, so the question is one function of the root.**
+
+- **Why:** the verb's guard answered no for a root outside a collection, and `approve --cancel` asked nothing, so a delete or a cancel could run beside a live render.
+- **Accepts:** the gap between a check and a delete, the window before a record opens and a lock an act holds stay as they are, and the review stage's cancel decides nothing about a render. Reopen when a lock both a session and an act take is added.
+- **Made by:** `0190`.
+
+### D75 · A command is built by command, in isekai/foundation/command.py
+
+**`isekai/foundation/command.py` holds `ENTRY`, the words every printed command starts with, and `command(verb, *words)`, which joins the entry, the verb and the words by one space and quotes none. `run.py` re-exports `ENTRY` and `command`. A command a refusal or a message prints is built by `command`, its site keeping its own quoting and any prefix such as `uv run`, and a test holds that no string of `isekai/` outside the module spells the entry.**
+
+- **Why:** a command a person pastes was spelt by hand at sites beside its builders, so a change to the entry would edit each and nothing failed on a missed one. One constant is one edit.
+- **Accepts:** the argv of `again` and of the children, the bare `isekai ui` texts and the `isekai.boundary` provisioning commands stay as they are, and a docstring or a comment that names the entry is not read. A refusal's reason and its fix are still one string. Reopen when the entry changes, or when a refusal's fix rides the wire.
+- **Made by:** `0193`.
 
 ## Infrastructure
 

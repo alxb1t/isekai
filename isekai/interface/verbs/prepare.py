@@ -8,7 +8,7 @@ from pathlib import Path
 
 from isekai.foundation.flow import load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import RUNS_ROOT, across
+from isekai.foundation.run import RUNS_ROOT, across, command
 from isekai.interface.verbs.common import (
     Reporter,
     Verb,
@@ -54,8 +54,9 @@ def run_prepare(args: argparse.Namespace, wired: Wiring) -> int:
             if not (wired.runs_root / run_id / flow).is_dir():
                 unassigned = (
                     f"{run_id}/{flow} is not assigned, so prepare makes no sheet for "
-                    f"it; run `python -m isekai assign --flow {flow} --runs {runs} "
-                    f"{run_id}` first"
+                    f"it; run "
+                    f"`{command('assign', '--flow', flow, '--runs', runs, run_id)}` "
+                    "first"
                 )
                 reporter.item(run_id, flow, "sheet", "refused", unassigned)
                 raise Refusal(unassigned)
