@@ -7,7 +7,7 @@ The phases are the edit kinds, the draft's names, the importers and the document
 - [x] 1 — The edit kinds · moderate
 - [x] 2 — The draft's names · moderate
 - [x] 3 — The importers · moderate
-- [ ] 4 — The documents · moderate
+- [x] 4 — The documents · moderate
 
 ## 1 — The edit kinds
 
@@ -68,7 +68,7 @@ The phases are the edit kinds, the draft's names, the importers and the document
 
 ## 4 — The documents
 
-- [ ] 4.1 In `docs/decisions.md`, amend D69's bold paragraph to say the draft being worked on, `current_draft(directory)`, and the draft's source copy, `source_copy(run, flow, version)`, are in `layout.py`, and `DRAFT` in `names.py`, each read through `run.py`; its heading stays, and its *Made by* gains `0179`.
+- [x] 4.1 In `docs/decisions.md`, amend D69's bold paragraph to say the draft being worked on, `current_draft(directory)`, and the draft's source copy, `source_copy(run, flow, version)`, are in `layout.py`, and `DRAFT` in `names.py`, each read through `run.py`; its heading stays, and its *Made by* gains `0179`.
   Verify: `git grep -c -F "current_draft" -- docs/decisions.md` prints `docs/decisions.md:1`.
-- [ ] 4.2 In `isekai/foundation/README.md`, extend the `layout.py` row of the Files table with the draft being worked on and its source copy, and the `names.py` row with the draft's label.
+- [x] 4.2 In `isekai/foundation/README.md`, extend the `layout.py` row of the Files table with the draft being worked on and its source copy, and the `names.py` row with the draft's label.
   Verify: `git grep -c -F "the draft being worked on" -- isekai/foundation/README.md` prints `isekai/foundation/README.md:1`.
