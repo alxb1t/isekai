@@ -4,21 +4,21 @@ Each phase gives one entry point or one function a parameter, switches its tests
 
 ## Progress
 
-- [ ] 1 — The embedder, a parameter of the evaluator's main · moderate
+- [x] 1 — The embedder, a parameter of the evaluator's main · moderate
 - [ ] 2 — The reader, a parameter of the recall's main · moderate
 - [ ] 3 — The manifest, a parameter of the embedder · moderate
 
 ## 1 — The embedder, a parameter of the evaluator's main
 
-- [ ] 1.1 In `evaluation/__main__.py`, give `main` the keyword-only parameter `embedder: Callable[[Path], Embed] = _embedder` ([D1](design.md#d1)), and change its line `embed = _embedder(args.models)` to `embed = embedder(args.models)`.
+- [x] 1.1 In `evaluation/__main__.py`, give `main` the keyword-only parameter `embedder: Callable[[Path], Embed] = _embedder` ([D1](design.md#d1)), and change its line `embed = _embedder(args.models)` to `embed = embedder(args.models)`.
   Verify: `git grep -n -F "embedder: Callable" -- evaluation/__main__.py` prints one line.
-- [ ] 1.2 In `tests/test_evaluation_cli.py`, delete each `monkeypatch.setattr(entry, "_embedder", …)` line and pass its lambda as `embedder=` to the `entry.main` call below it. Drop the `monkeypatch` parameter from each test that no longer uses it.
+- [x] 1.2 In `tests/test_evaluation_cli.py`, delete each `monkeypatch.setattr(entry, "_embedder", …)` line and pass its lambda as `embedder=` to the `entry.main` call below it. Drop the `monkeypatch` parameter from each test that no longer uses it.
   Verify: `git grep -n -F '"_embedder"' -- tests/test_evaluation_cli.py` prints nothing.
-- [ ] 1.3 In `tests/test_ratchets.py`, delete the row `"evaluation.__main__": 5,` from `PATCHED_MODULES`.
+- [x] 1.3 In `tests/test_ratchets.py`, delete the row `"evaluation.__main__": 5,` from `PATCHED_MODULES`.
   Verify: `git grep -n -F "evaluation.__main__" -- tests/test_ratchets.py` prints nothing.
-- [ ] 1.4 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 23`.
+- [x] 1.4 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 23`.
   Verify: `git grep -n -e "^PATCHED_ROWS = 23" -- tests/test_ratchets.py` prints one line.
-- [ ] 1.5 Run the evaluator's tests and the ratchet with the row gone.
+- [x] 1.5 Run the evaluator's tests and the ratchet with the row gone.
   Verify: `uv run pytest tests/test_evaluation_cli.py tests/test_eval_manifest.py tests/test_ratchets.py` exits 0.
 
 ## 2 — The reader, a parameter of the recall's main

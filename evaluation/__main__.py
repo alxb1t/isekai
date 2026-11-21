@@ -218,12 +218,12 @@ def _embedder(models: Path) -> Embed:
     return lambda path: embed(path, detector, encoder)
 
 
-def main(argv: Sequence[str]) -> int:
+def main(argv: Sequence[str], *, embedder: Callable[[Path], Embed] = _embedder) -> int:
     """Score the collection, write its record beside the runs, and print the table."""
     args = parse_args(argv)
     try:
         destination = record_destination(args.runs, "evaluation.json")
-        embed = _embedder(args.models)
+        embed = embedder(args.models)
         rec, notes = score(args.runs, args.cohort, embed, args.flows)
     except Refusal as refused:
         print(f"refused: {refused}", file=sys.stderr)

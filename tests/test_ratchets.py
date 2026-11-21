@@ -491,7 +491,6 @@ BIG_UI_FILES: dict[str, int] = {}
 UI_ROWS = 0
 
 PATCHED_MODULES = {
-    "evaluation.__main__": 5,
     "evaluation.eval_models": 2,
     "evaluation.face": 1,
     "evaluation.recall": 1,
@@ -516,7 +515,7 @@ PATCHED_MODULES = {
     "isekai.shared.chain": 1,
     "isekai.shared.ink": 1,
 }
-PATCHED_ROWS = 24
+PATCHED_ROWS = 23
 
 
 # --- the rules, on this repository -------------------------------------------
