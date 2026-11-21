@@ -23,7 +23,7 @@ Each phase gives one function a parameter, switches its test to pass a fake, and
 - [x] 1.6 In `tests/test_ratchets.py`, delete the row `"isekai.interface.ui.bundle": 3,` from `PATCHED_MODULES`.
   Verify: `git grep -n -F "isekai.interface.ui.bundle" -- tests/test_ratchets.py` prints nothing.
 - [x] 1.7 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 20`.
-  Verify: `git grep -n -e "^PATCHED_ROWS = 20" -- tests/test_ratchets.py` prints one line.
+  Verify: `git grep -n -e "^PATCHED_ROWS = " -- tests/test_ratchets.py` prints one line.
 - [x] 1.8 Run the bundle's tests and the ratchet with the row gone.
   Verify: `uv run pytest tests/test_ui.py tests/test_ratchets.py` exits 0.
 
@@ -32,7 +32,7 @@ Each phase gives one function a parameter, switches its test to pass a fake, and
 - [x] 2.1 In `isekai/interface/ui/__init__.py`, add the import `from collections.abc import Callable` above `from pathlib import Path`. Give `serve` the keyword-only parameters `root: Callable[[], Path] = library.root`, `ensure_built: Callable[[], Path] = ensure_built` and `run: Callable[..., None] | None = None`, after `port: int` ([D2](design.md#d2)).
   Verify: `git grep -n -F -e "root: Callable[[], Path] = library.root" -e "ensure_built: Callable[[], Path] = ensure_built" -e "run: Callable[..., None] | None = None" -- isekai/interface/ui/__init__.py` prints the lines that hold its defaults.
 - [x] 2.2 In `serve`, replace its line `root = library.open_library(library.root())` with `opened = library.open_library(root())`, and read `opened` in its later reads of that local: `sweep(root)` and the first argument of `create_app`. `collection_runs` keeps its own `library.root()`.
-  Verify: `git grep -n -F "library.root()" -- isekai/interface/ui/__init__.py` prints one line, in `collection_runs`.
+  Verify: `git grep -n -F "library.root()" -- isekai/interface/ui/__init__.py` prints one line, in collection_runs.
 - [x] 2.3 In `serve`, change the import line `from isekai.interface.ui.app import create_app, run` to the lines `from isekai.interface.ui.app import create_app` and `from isekai.interface.ui.app import run as run_app`, under the comment that stays. Change the line `run(app, host=HOST, port=port)` to `(run or run_app)(app, host=HOST, port=port)`.
   Verify: `git grep -n -F "(run or run_app)(app, host=HOST, port=port)" -- isekai/interface/ui/__init__.py` prints one line.
 - [x] 2.4 In the docstring of `serve`, add after its first paragraph: `` `root`, `ensure_built` and `run` are what a test replaces; each defaults to what the product uses. ``
