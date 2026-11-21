@@ -4,8 +4,9 @@ The version numbers a directory holds and the one it takes next, the paths of a 
 sheets and approvals, the seeds a render's file is named for, the names of a render's
 image and record, the rule that a seed is rendered, the listing of a flow's render
 groups and their seeds, the refs an image's path names, the version an artifact's name
-spells, and the files an edit writes beside its source. `run.py` re-exports each name;
-a module outside the foundation imports them from there (D69, D70).
+spells, the files an edit writes beside its source, the draft being worked on and the
+copy of the image a draft was drafted from. `run.py` re-exports each name; a module
+outside the foundation imports them from there (D69, D70).
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
@@ -17,14 +18,16 @@ from pathlib import Path
 from typing import NamedTuple
 
 from isekai.foundation.artifacts import SEED_RANGE, SIDECAR
-from isekai.foundation.flow import FLOWS_DIR, load_flow
+from isekai.foundation.flow import FLOWS_DIR, OUTPUT_SUFFIX, load_flow
 from isekai.foundation.names import (
     APPROVED,
     ARTIFACT,
+    DRAFT,
     FRAME_NAME,
     OUTPUTS,
     REVIEW,
     SHEETS,
+    SOURCES,
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.rundir import Run
@@ -237,6 +240,11 @@ EDIT_COMPOSITE = ".composite.png"
 EDIT_RECORD = ".json"
 EDIT_PLACEMENT = ".placement.json"
 
+# The four suffixes an edit's files take after the stem, in the order a delete takes
+# them: the image, then its record, its placement and its composite, so a delete cut
+# short leaves a request that reads as pending rather than an image no record explains.
+EDIT_SUFFIXES = (".png", EDIT_RECORD, EDIT_PLACEMENT, EDIT_COMPOSITE)
+
 
 def is_edit_file(name: str) -> bool:
     """Return whether `name` is a file an edit writes beside its source.
@@ -244,7 +252,7 @@ def is_edit_file(name: str) -> bool:
     The image, record, composite and placement of an edit of a render's seed.
     e.g. "42.edit-1.placement.json" -> True; "42.edit-0.png", "x.edit-1.json" -> False
     """
-    for suffix in (EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD, ".png"):
+    for suffix in EDIT_SUFFIXES:
         named = EDIT_STEM.fullmatch(name.removesuffix(suffix))
         if name.endswith(suffix) and named and is_seed(named["seed"]):
             return True
@@ -290,7 +298,7 @@ def edit_numbers(group: Path, seed: int) -> list[int]:
         return []
     found: set[int] = set()
     for name in os.listdir(group):
-        for suffix in (".png", EDIT_COMPOSITE, EDIT_PLACEMENT, EDIT_RECORD):
+        for suffix in EDIT_SUFFIXES:
             match = EDIT_STEM.fullmatch(name.removesuffix(suffix))
             if name.endswith(suffix) and match and int(match["seed"]) == seed:
                 found.add(int(match["k"]))
@@ -314,8 +322,8 @@ def delete_edits(group: Path, seed: int, numbers: Iterable[int]) -> list[Path]:
     """
     deleted: list[Path] = []
     for number in numbers:
-        image, record, composite = edit_files(group, seed, number)
-        for path in (image, record, placement_file(group, seed, number), composite):
+        for suffix in EDIT_SUFFIXES:
+            path = group / f"{edit_stem(seed, number)}{suffix}"
             if path.is_file():
                 path.unlink()
                 deleted.append(path)
@@ -402,3 +410,26 @@ def approved_versions(directory: Path) -> list[int]:
         for name in os.listdir(directory)
         if is_approved(name) and (match := ARTIFACT.match(name))
     )
+
+
+def current_draft(directory: Path) -> Path | None:
+    """Return the highest draft numbered above the highest approval, or None.
+
+    **The one definition of the draft being worked on.** A draft at or below an
+    approval is stale -- left by a crash between approving and unlinking, or
+    older than the approval -- so it neither re-opens the input nor is approved.
+    e.g. `001.draft.json 002.approved.json` -> None
+    """
+    draft = latest_artifact(directory, DRAFT)
+    approved = approved_versions(directory)
+    if draft is None or (approved and version_of(draft) <= approved[-1]):
+        return None
+    return draft
+
+
+def source_copy(run: Run, flow: str, version: int) -> Path:
+    """Return where `flow` holds the image its draft `version` was drafted from.
+
+    e.g. (run, conjure, 2) -> conjure/sources/002.png
+    """
+    return run.directory(flow, SOURCES) / f"{version:03d}{OUTPUT_SUFFIX}"

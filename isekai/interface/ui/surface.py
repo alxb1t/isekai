@@ -22,6 +22,7 @@ from isekai.foundation.run import (
     REVIEW,
     Run,
     approval_of,
+    current_draft,
     edit_files,
     is_rendered,
     latest_artifact,
@@ -33,7 +34,6 @@ from isekai.interface.ui.jobs import Jobs
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
 from isekai.pipeline.generate import image_of
-from isekai.pipeline.review import current_draft
 from isekai.shared.field_map import FieldMap
 from isekai.shared.vocabulary import Vocabulary
 

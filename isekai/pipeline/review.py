@@ -63,6 +63,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
     DESCRIPTION,
+    DRAFT,
     NEW_VERSION,
     OUTPUTS,
     PHOTO,
@@ -76,6 +77,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     attempts,
+    current_draft,
     failures_alone,
     group_of,
     is_rendered,
@@ -85,6 +87,7 @@ from isekai.foundation.run import (
     render_image,
     rendered_seeds,
     sheet_of,
+    source_copy,
     stage_command,
     version_of,
     versions,
@@ -93,8 +96,6 @@ from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary
 
 STAGE = "review"
-
-DRAFT = "draft"
 
 # The option that deletes a flow's waiting draft.
 DISCARD = ("--discard",)
@@ -117,21 +118,6 @@ class Cancelled(NamedTuple):
 
 # The three states stage ③ has, and the strings the review UI puts on the wire.
 Status = Literal["draft", "approved", "re-opened"]
-
-
-def current_draft(directory: Path) -> Path | None:
-    """Return the highest draft numbered above the highest approval, or None.
-
-    **The one definition of the draft being worked on.** A draft at or below an
-    approval is stale -- left by a crash between approving and unlinking, or
-    older than the approval -- so it neither re-opens the input nor is approved.
-    e.g. `001.draft.json 002.approved.json` -> None
-    """
-    draft = latest_artifact(directory, DRAFT)
-    approved = approved_versions(directory)
-    if draft is None or (approved and version_of(draft) <= approved[-1]):
-        return None
-    return draft
 
 
 def state(directory: Path) -> Status:
@@ -370,14 +356,6 @@ def _first_image(group: Path) -> Path | None:
         ),
         default=None,
     )
-
-
-def source_copy(run: Run, flow: str, version: int) -> Path:
-    """Return where `flow` holds the image its draft `version` was drafted from.
-
-    e.g. (run, conjure, 2) -> conjure/sources/002.png
-    """
-    return run.directory(flow, SOURCES) / f"{version:03d}{OUTPUT_SUFFIX}"
 
 
 def waiting_edit(run: Run, flow: str) -> Path | None:
