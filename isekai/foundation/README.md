@@ -42,7 +42,7 @@ endpoint or a score; everything here is imported by something that does.
 | `caption_config.py` | `interface/verbs/runner.py`, `interface/wiring.py` | — |
 | `config.py` | `caption_config.py`, `pipeline/tattoos.py`, `shared/ink.py` | — |
 | `atomic_write.py` | `artifacts.py`, `run.py`, `interface/compare_view.py`, `interface/ui/library.py`, `pipeline/edit.py`, `pipeline/generate.py`, `pipeline/importing.py`, `pipeline/review.py`, `pipeline/tattoos.py`, `shared/ink.py` | — |
-| `library.py` | `discard.py`, `interface/compare_view.py`, `interface/render.py`, `interface/ui/library.py`, `interface/ui/surface.py`, `pipeline/importing.py` | — |
+| `library.py` | `discard.py`, `interface/compare_view.py`, `interface/render.py`, `interface/ui/library.py`, `interface/ui/surface.py`, `interface/verbs/runner.py`, `pipeline/importing.py` | — |
 | `discard.py` | `interface/ui/routes/images.py`, `interface/verbs/drafts.py`, `pipeline/edit.py`, `pipeline/generate.py`, `pipeline/review.py` | — |
 
 > Files and importers only. What a component *is* is

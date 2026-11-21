@@ -1302,6 +1302,47 @@ def test_approve_cancel_answers_each_run_on_its_own(
     assert sorted(path.name for path in review_of.iterdir()) == ["001.draft.json"]
 
 
+@pytest.mark.spec("cli:approve-cancel:a-running-render-refuses-it")
+def test_approve_cancel_is_refused_under_a_runs_root_a_session_holds(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    runs = []
+    for name, height in (("held", 480), ("free", 481)):
+        photo = tmp_path / f"{name}.jpg"
+        photo.write_bytes(jpeg_bytes(640, height))
+        run = open_run(photo, tmp_path / name / "runs")
+        sheet(run, schema, vocabulary)
+        review(run, "summon-anime-wai")
+        approve(run, "summon-anime-wai", schema, vocabulary)
+        runs.append(run)
+    held, free = runs
+    record = tmp_path / "held" / SESSIONS / "20261024T091200Z"
+    record.parent.mkdir()
+    record.with_suffix(".json").write_text("{}")
+    wired = _wiring(tmp_path)
+    parsed = build_parser().parse_args(
+        [
+            "approve",
+            "--flow",
+            "summon-anime-wai",
+            "--cancel",
+            str(held.path),
+            str(free.path),
+        ]
+    )
+
+    with record.with_suffix(".lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        assert dispatch(parsed, wired) == 1
+
+    held_review = held.directory("summon-anime-wai", "review")
+    assert sorted(path.name for path in held_review.iterdir()) == ["001.approved.json"]
+    free_review = free.directory("summon-anime-wai", "review")
+    assert sorted(path.name for path in free_review.iterdir()) == ["001.draft.json"]
+    assert isinstance(wired.err, io.StringIO)
+    assert f"{held.path}: A render session is running." in wired.err.getvalue()
+
+
 @pytest.mark.spec("field-map:excluded:approval-refuses-an-excluded-tag")
 def test_approve_refuses_a_tag_the_wired_field_map_excludes(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary

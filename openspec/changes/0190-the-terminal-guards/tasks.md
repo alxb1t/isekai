@@ -5,7 +5,7 @@ The rule for a run's runs root changes, the cancel asks it, the owner unlinks a 
 ## Progress
 
 - [x] 1 — The root's guard · moderate
-- [ ] 2 — The cancel's guard · moderate
+- [x] 2 — The cancel's guard · moderate
 - [ ] 3 — The second drop · moderate
 - [ ] 4 — The documents · moderate
 
@@ -38,7 +38,7 @@ The rule for a run's runs root changes, the cancel asks it, the owner unlinks a 
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_review.py tests/test_ui_api.py` exits 0.
 - [x] 2.4 Derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`, here and not in phase 4: 2.3's import makes `interface/verbs/runner.py` a reader of `library.py`, and the docs check is red until the `library.py` row of `isekai/foundation/README.md` names it.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py` exits 0.
-- [ ] 2.5 Run no `tools.mutate` over the guard's lines: the tool mutates only a node that starts and ends on one line, and the guard, from `if render_running(run):` to the `)` that closes `Refusal(`, is an `if` over a call and a `raise` over four lines, so it holds no site and the tool exits 2. The guard's one mutant, the cancel not refused, is killed by the case of 2.2, which failed on it before 2.3; hold the case green.
+- [x] 2.5 Run no `tools.mutate` over the guard's lines: the tool mutates only a node that starts and ends on one line, and the guard, from `if render_running(run):` to the `)` that closes `Refusal(`, is an `if` over a call and a `raise` over four lines, so it holds no site and the tool exits 2. The guard's one mutant, the cancel not refused, is killed by the case of 2.2, which failed on it before 2.3; hold the case green.
   Verify: `uv run pytest tests/test_pipeline_cli.py -k a_session_holds` exits 0.
 - [x] 2.6 Replay the standing mutants over the edited files.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
