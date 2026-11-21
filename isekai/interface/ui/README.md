@@ -34,7 +34,7 @@ render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─�
   Only `POST /api/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --session <id>
   --progress json <runs>… --without …`, then `volume down` unless the window is kept.
 - **Delete** on a large view, `⇧⌫`, asks first; Yes is `DELETE …/renders/{digest}/{flow}/{version}/{seed}`, refused
-  while a render runs for the collection, then the Hub opens on the cell.
+  while this server's render slot runs or a session of any process holds the collection, then the Hub opens on the cell.
 - **Sessions** are read from the records the render verb writes, `<collection>/sessions/<id>.json`:
   `GET …/sessions/<id>` serves one to the render drawer, and the render slot adds the volume steps and Stop.
   `GET /api/sessions/running` reads process-held liveness locks across the library, each before its record, so a

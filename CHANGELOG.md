@@ -10,6 +10,14 @@ its new digest.
 
 ## [Unreleased]
 
+- `collection_held` joins `isekai/foundation/library.py`: a collection is held while any of its session records' locks is held, a record that does not read included. `render_running` calls it, and a case holds the rule (0182 D1, D4).
+- The page's delete, its cancel and the review payload's `cancel` now refuse while a session of any process holds the collection, not only this server's render slot: `Surface.rendering` asks `collection_held` too. Cases hold the delete, the sheet's reason and the cancel (0182 D2, D3, D4).
+- D72's *Accepts* line, the foundation README's `library.py` row and the UI README's delete bullet say the app's guard asks the slot or the held collection; the stale *Known breaks* clause leaves the `0.87.37` notes (0182 D5).
+- `tests/test_run_directory.py` holds the stage tables by their literal values and order before they move, and `tools.mutate` ran over `_spent`, `exhausted` and `check_budget` with no survivor (0183 D4, D5).
+- `isekai/foundation/producers.py` declares each stage as a frozen `Producer` in `PRODUCERS`, and `run.py` re-exports both. Two cases hold the rows and the tables read from them; no table reads the record yet (0183 D1, D2, D4, D7).
+- `BUDGETS`, `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words are read from `PRODUCERS`, equal in value and order; `FN-1` is anchored on the wd14 row, and `tools.mutate` leaves no survivor (0183 D3, D5, D6).
+- D73 records the stage record; D21 and D62 name it, and the foundation README, `docs/principles.md` and `ARCHITECTURE.md` say the foundation holds it (0183 D8).
+
 ## [0.87.37] - 2026-11-21
 
 Gate: local 1m28s · CI not read under mf-ship · 0.87.36: local 1m15s · CI not read under mf-ship
@@ -19,7 +27,7 @@ Gate: local 1m28s · CI not read under mf-ship · 0.87.36: local 1m15s · CI not
 - `delete_render` and `delete_edit` of `isekai/foundation/discard.py` drop each image's thumbnail, delete the files, then, for a render, the approval, and return `Deleted`; `_chain` serves `discard_edit`. Cases hold the order and the refusal (0181 D2, D3, D6).
 - `isekai discard` calls the owner: a render's discard drops its edits' thumbnails, and an edit's drops its own and its chain's (0181 D4, D6).
 - The page's render delete calls `delete_render` under the draft lock and drops its own loop; a case holds that the verb and the route leave one cache (0181 D4, D6).
-- D72 records the delete's owner, D4 and D69 name it, and its *Known breaks* leave `docs/principles.md`; the module, data-flow and README texts and the docstring of `ui/app.py` say so. The standing mutants replay clean (0181 D7).
+- D72 records the delete's owner, D4 and D69 name it; the module, data-flow and README texts and the docstring of `ui/app.py` say so. The standing mutants replay clean (0181 D7).
 - The *Known breaks* bullet of the state principle in `docs/principles.md` is back, naming `isekai/foundation/discard.py`'s `discard_render`, `discard_edit` and `withdraw`: the move did not end the delete's one break of "never changed" (0181 D7).
 
 ## [0.87.36] - 2026-11-21

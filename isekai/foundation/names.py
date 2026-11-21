@@ -10,6 +10,7 @@ Stdlib only, and on `python -m isekai`'s import graph.
 import hashlib
 import re
 
+from isekai.foundation.producers import PRODUCERS
 from isekai.foundation.refusal import Refusal
 
 # Enough of the digest to separate two photographs and few enough characters to
@@ -52,23 +53,29 @@ FRAME_NAME = "run.json"
 # the layout, so a stage that needs another stage's directory asks the run rather
 # than importing the stage. `approved` and `draft` are here for the same reason:
 # `review` writes them and other parts of the run read them.
+# The folders' words are read from `PRODUCERS`, which declares each stage once.
 #
 # **The photograph's description sits in `photo/`, every other stage under a
 # flow**: `runs/<input-id>/photo/<stage>/` and `runs/<input-id>/<flow-id>/<stage>/`.
 # Above the flow split is what every flow shares: the input, and the caption and
 # tag lists every flow reads alike (D17). Adding a flow adds one subtree, and
 # retiring one flow's work is removing one directory.
-CAPTIONS = "captions"
-WD14 = "wd14"
-TAGS = "tags"
+_FOLDER = {producer.key: producer.folder for producer in PRODUCERS}
+CAPTIONS = _FOLDER["caption"]
+WD14 = _FOLDER["wd14"]
+TAGS = _FOLDER["tags"]
 PHOTO = "photo"
-DESCRIPTION = (CAPTIONS, WD14, TAGS)
+DESCRIPTION = tuple(
+    producer.folder for producer in PRODUCERS if producer.scope == PHOTO
+)
 # The verbs that write the description, and so name no flow.
-PHOTOGRAPH_VERBS = ("caption", "tag")
-SHEETS = "sheets"
-REVIEW = "review"
-PROMPTS = "prompts"
-OUTPUTS = "outputs"
+PHOTOGRAPH_VERBS = tuple(
+    dict.fromkeys(producer.verb for producer in PRODUCERS if producer.scope == PHOTO)
+)
+SHEETS = _FOLDER["sheet"]
+REVIEW = _FOLDER["review"]
+PROMPTS = _FOLDER["assemble"]
+OUTPUTS = _FOLDER["render"]
 SOURCES = "sources"
 APPROVED = "approved"
 DRAFT = "draft"
