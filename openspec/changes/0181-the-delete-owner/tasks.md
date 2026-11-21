@@ -10,7 +10,7 @@ The phases are the pre-flight, the move, the owner, the verb, the route, the doc
 - [x] 4 — The verb · moderate
 - [x] 5 — The route · moderate
 - [x] 6 — The documents · moderate
-- [ ] 7 — The principle's break · moderate
+- [x] 7 — The principle's break · moderate
 
 ## 1 — The pre-flight
 
@@ -92,5 +92,5 @@ The phases are the pre-flight, the move, the owner, the verb, the route, the doc
 
 ## 7 — The principle's break
 
-- [ ] 7.1 In `docs/principles.md`, put back the *Known breaks* bullet of the stage principle, after the last test bullet of that principle and before `### Every artifact records what shaped it`, with its text from `git show 7c24c12:docs/principles.md` and each home it names moved: `isekai/foundation/discard.py`'s `discard_render`, `withdraw` and `discard_edit` (an edit and every edit made from it, with their records) where it named `pipeline/generate.py`'s and `pipeline/review.py`'s. The delete is still the stage principle's one break of "never changed" ([D7](design.md#d7)).
+- [x] 7.1 In `docs/principles.md`, put back the *Known breaks* bullet of the stage principle, after the last test bullet of that principle and before `### Every artifact records what shaped it`, with its text from `git show 7c24c12:docs/principles.md` and each home it names moved: `isekai/foundation/discard.py`'s `discard_render`, `withdraw` and `discard_edit` (an edit and every edit made from it, with their records) where it named `pipeline/generate.py`'s and `pipeline/review.py`'s. The delete is still the stage principle's one break of "never changed" ([D7](design.md#d7)).
   Verify: `git grep -q -F "isekai/foundation/discard.py" -- docs/principles.md` exits 0.

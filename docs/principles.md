@@ -256,6 +256,13 @@ place, and an edit's request record is the one completed in place, by its sampli
   - `tests/test_artifact_bytes.py::test_each_kind_is_written_byte_for_byte`
   - `tests/test_artifact_bytes.py::test_only_the_contract_writes_a_run_file`
   - `tests/test_review.py::test_approving_an_approved_flow_writes_nothing`
+- **Known breaks:** `isekai/foundation/discard.py`'s `discard_render` deletes a render's image, record and every edit of its
+  seed, and the outputs group it leaves empty or holding failure records alone, those with it, when the operator
+  discards that render: a render and its edits are likenesses, so they leave the run rather than being hidden. Its
+  `discard_edit` deletes an edit and every edit made from it, with their records. Its `withdraw` deletes the
+  prompts, failure records and render groups of failure records alone the generate stage wrote, numbered for each
+  approval it deletes, and, once the flow holds no approval, the sheets the sheet stage wrote, the flow's emptied
+  `outputs/`, and the flow's own caption and tag lists from before D17, each kind where `photo/` holds it.
 
 ### Every artifact records what shaped it
 
