@@ -19,6 +19,7 @@ its new digest.
 - D73 records the stage record; D21 and D62 name it, and the foundation README, `docs/principles.md` and `ARCHITECTURE.md` say the foundation holds it (0183 D8).
 - `evaluation.__main__.main` takes the embedder as a keyword parameter defaulting to `_embedder`; the tests that patched it pass a fake, and the row of `evaluation.__main__` leaves `PATCHED_MODULES` (0184 D1, D3).
 - `evaluation.recall.main` takes the reader as a keyword parameter defaulting to `_reader`; `_run` of the recall tests passes a fake, and the row of `evaluation.recall` leaves `PATCHED_MODULES` (0184 D1, D3).
+- `evaluation.__main__._embedder` takes the manifest as a keyword parameter, read through `load_eval_manifest()` when `None`; the shared-pin tests pass it, and the row of `evaluation.eval_models` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 21 (0184 D2, D3).
 
 ## [0.87.37] - 2026-11-21
 

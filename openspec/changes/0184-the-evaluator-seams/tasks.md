@@ -6,7 +6,7 @@ Each phase gives one entry point or one function a parameter, switches its tests
 
 - [x] 1 — The embedder, a parameter of the evaluator's main · moderate
 - [x] 2 — The reader, a parameter of the recall's main · moderate
-- [ ] 3 — The manifest, a parameter of the embedder · moderate
+- [x] 3 — The manifest, a parameter of the embedder · moderate
 
 ## 1 — The embedder, a parameter of the evaluator's main
 
@@ -36,15 +36,15 @@ Each phase gives one entry point or one function a parameter, switches its tests
 
 ## 3 — The manifest, a parameter of the embedder
 
-- [ ] 3.1 In `evaluation/__main__.py`, add `Manifest` to the import `from isekai.boundary.provision import entry_for`. Give `_embedder` the keyword-only parameter `manifest: Manifest | None = None` ([D2](design.md#d2)). In `_embedder` alone, not in `_models`, replace its line `manifest = load_eval_manifest()` with `if manifest is None:` and, under it, `manifest = load_eval_manifest()`. Leave the function's own imports as they are.
+- [x] 3.1 In `evaluation/__main__.py`, add `Manifest` to the import `from isekai.boundary.provision import entry_for`. Give `_embedder` the keyword-only parameter `manifest: Manifest | None = None` ([D2](design.md#d2)). In `_embedder` alone, not in `_models`, replace its line `manifest = load_eval_manifest()` with `if manifest is None:` and, under it, `manifest = load_eval_manifest()`. Leave the function's own imports as they are.
   Verify: `git grep -n -F "manifest: Manifest | None = None" -- evaluation/__main__.py` prints one line.
-- [ ] 3.2 In `tests/test_eval_manifest.py`, delete each `monkeypatch.setattr(eval_models, "load_eval_manifest", …)` line and pass `manifest=eval_manifest` to the `entry_point._embedder` call of each such test. Drop the `monkeypatch` parameter of those tests and the import `from evaluation import eval_models`.
+- [x] 3.2 In `tests/test_eval_manifest.py`, delete each `monkeypatch.setattr(eval_models, "load_eval_manifest", …)` line and pass `manifest=eval_manifest` to the `entry_point._embedder` call of each such test. Drop the `monkeypatch` parameter of those tests and the import `from evaluation import eval_models`.
   Verify: `git grep -n -F -e "eval_models, " -e "import eval_models" -- tests/test_eval_manifest.py` prints nothing.
-- [ ] 3.3 In `tests/test_ratchets.py`, delete the row `"evaluation.eval_models": 2,` from `PATCHED_MODULES`.
+- [x] 3.3 In `tests/test_ratchets.py`, delete the row `"evaluation.eval_models": 2,` from `PATCHED_MODULES`.
   Verify: `git grep -n -F "evaluation.eval_models" -- tests/test_ratchets.py` prints nothing.
-- [ ] 3.4 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 21`.
+- [x] 3.4 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 21`.
   Verify: `git grep -n -e "^PATCHED_ROWS = 21" -- tests/test_ratchets.py` prints one line.
-- [ ] 3.5 Run the tests the phases touched, with the layer, docs and spec guards.
+- [x] 3.5 Run the tests the phases touched, with the layer, docs and spec guards.
   Verify: `uv run pytest tests/test_evaluation_cli.py tests/test_recall_cli.py tests/test_eval_manifest.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_spec_bindings.py` exits 0.
-- [ ] 3.6 Run the standing mutants over the edits file.
+- [x] 3.6 Run the standing mutants over the edits file.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.

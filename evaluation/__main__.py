@@ -33,7 +33,7 @@ from evaluation.cohort import (
 from evaluation.eval_models import DETECTOR, ENCODER, load_eval_manifest
 from evaluation.record import destination as record_destination
 from evaluation.record import run_prefix, runs_in
-from isekai.boundary.provision import entry_for
+from isekai.boundary.provision import Manifest, entry_for
 from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
@@ -184,13 +184,14 @@ def score(
     return rec, notes
 
 
-def _embedder(models: Path) -> Embed:
+def _embedder(models: Path, *, manifest: Manifest | None = None) -> Embed:
     """Return the real embedder: the pinned detector and encoder, verified."""
     from evaluation.eval_models import load_eval_manifest, shared_with_the_graph
     from evaluation.face import Detector, Encoder, embed
     from isekai.boundary.provision import DigestMismatch, load_manifest, resolve
 
-    manifest = load_eval_manifest()
+    if manifest is None:
+        manifest = load_eval_manifest()
     shared = shared_with_the_graph(manifest, load_manifest())
     if shared:
         raise Refusal(
