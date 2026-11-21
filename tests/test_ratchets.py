@@ -453,10 +453,9 @@ def unread_patches(root: Path) -> list[str]:
 LONG_FILES = {
     "isekai/interface/render.py": 1315,
     "isekai/pipeline/importing.py": 841,
-    "isekai/pipeline/review/__init__.py": 1278,
     "isekai/pipeline/tattoos.py": 1320,
 }
-FILE_ROWS = 4
+FILE_ROWS = 3
 
 LONG_FUNCTIONS = {
     "isekai/boundary/ollama.py::ask": 105,
@@ -464,12 +463,10 @@ LONG_FUNCTIONS = {
     "isekai/interface/render.py::_session": 119,
     "isekai/interface/render.py::_rendered": 118,
     "isekai/pipeline/generate.py::render": 122,
-    "isekai/pipeline/review/__init__.py::approve": 105,
 }
-FUNCTION_ROWS = 6
+FUNCTION_ROWS = 5
 
 WIDE_FUNCTIONS = {
-    "isekai/interface/drafting.py::draft_across": 7,
     "isekai/interface/render.py::Record.__init__": 7,
     "isekai/interface/render.py::_session": 9,
     "isekai/interface/render.py::_asked": 7,
@@ -481,7 +478,7 @@ WIDE_FUNCTIONS = {
     "isekai/pipeline/tattoos.py::preview": 9,
     "isekai/pipeline/tattoos.py::composite": 8,
 }
-WIDE_ROWS = 11
+WIDE_ROWS = 10
 
 BIG_UI_FILES: dict[str, int] = {}
 UI_ROWS = 0

@@ -161,7 +161,7 @@
   },
   {
     "finding": "PB-14",
-    "path": "isekai/pipeline/review/__init__.py",
+    "path": "isekai/pipeline/review/cancelling.py",
     "find": "        if copy.is_file():\n            copy.unlink()\n            if not any(copy.parent.iterdir()):\n                copy.parent.rmdir()\n        return draft",
     "replace": "        if copy.is_file():\n            for held in list(copy.parent.iterdir()):\n                held.unlink()\n            if not any(copy.parent.iterdir()):\n                copy.parent.rmdir()\n        return draft",
     "tests": ["tests/test_review.py"],
@@ -249,7 +249,7 @@
   },
   {
     "finding": "PB-5",
-    "path": "isekai/pipeline/review/__init__.py",
+    "path": "isekai/pipeline/review/drafts.py",
     "find": "    number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))\n    if seed is not None:",
     "replace": "    number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))\n    if _waiting_number(run, flow) is not None and seed is None:\n        return run.directory(flow, REVIEW) / f\"{number:03d}.draft.json\"\n    if seed is not None:",
     "tests": ["tests/test_review.py"],
@@ -353,7 +353,7 @@
   },
   {
     "finding": "PB-2",
-    "path": "isekai/pipeline/review/__init__.py",
+    "path": "isekai/pipeline/review/approval.py",
     "find": "        else token_budget(fields, schema, definition).total\n",
     "replace": "        else estimate_tokens(fields, schema)\n",
     "tests": ["tests/test_review.py"],

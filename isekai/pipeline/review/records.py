@@ -43,6 +43,9 @@ from isekai.foundation.run import (
 
 STAGE = "review"
 
+# The option that deletes a flow's waiting draft.
+DISCARD = ("--discard",)
+
 
 def _first_image(group: Path) -> Path | None:
     """Return the first image in a render group, or None."""

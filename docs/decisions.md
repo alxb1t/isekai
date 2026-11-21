@@ -741,11 +741,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D77 · review is a package entered by its front door, and a patch names the module that reads the name
 
-**`isekai/pipeline/review/` is the review stage. `__init__.py` is its front door: it re-exports every name the module held and defines `Status`. `records.py` holds the draft's read and write — `save_draft`, `_write_draft` and `_publish` — with the helpers the stage's parts share, and `budget.py` the token budget. A test patches a name of the stage on the module that reads it, `isekai.pipeline.review.records` for `create` and `write`.**
+**`isekai/pipeline/review/` is the review stage. `__init__.py` is its front door: it defines `Status` and `state` and re-exports every name an importer or a test reads. `records.py` holds the draft's read and write with the helpers the parts share, `budget.py` the token budget, and `drafts.py`, `approval.py` and `cancelling.py` the three parts. A part imports `records.py`, `approval.py` also `budget.py`, and no other part. A test patches a name of the stage on the module that reads it, `isekai.pipeline.review.records` for `create` and `write`.**
 
 - **Why:** a patch of a name in a module that no longer reads it changes nothing, and the wire's deriver names a type by its module, so a moved `Status` renames the page's `ReviewStatus`. The front door keeps every importer and every test import as it was.
-- **Accepts:** the drafts, the approval and the cancel stay in the front door, `approve` stays a listed long function, `draft_across` a listed wide one, and the front door a listed long file. Reopen when the parts leave it.
-- **Made by:** `0198`.
+- **Accepts:** a private name of the stage is not importable from the front door, and a name two parts read lives in `records.py`. Reopen when a part needs a name another defines.
+- **Made by:** `0198`, `0199`.
 
 ## Infrastructure
 

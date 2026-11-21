@@ -10,6 +10,17 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.9] - 2026-11-21
+
+Gate: local 1m17s · CI not read under mf-ship · 0.88.8: local 1m19s · CI not read under mf-ship
+
+- `isekai/pipeline/review/approval.py` holds `approve` and its helpers, with the warning block in `_window_warnings`; `DISCARD` moves to `records.py` and the front door binds `approve` back (0199 D1, D2, D3, D5, D7).
+- The front door's long-file row and `approve`'s long-function row leave the ratchets, and `PB-2` is found in `approval.py` (0199 D8, D9).
+- `isekai/pipeline/review/drafts.py` holds `review`, `revise`, `draft_from` and the refusals they share, which the front door binds back; `PB-5` and the byte-writer key follow it (0199 D1, D2, D3, D7, D9).
+- `draft_across` takes `seed` after a bare `*`, so its row leaves the wide functions of the ratchets (0199 D6).
+- `isekai/pipeline/review/cancelling.py` holds `Cancelled`, `discard`, `cancellable`, `cancel` and their helpers, which the front door binds back; the front door defines `state` and `Status` alone, and `PB-14` is found in the new module (0199 D1, D2, D3, D7, D9).
+- D77 names the front door, the three parts and what a part may import, and the pipeline README names each module of `review/`; every name D7 lists imports from the front door and the standing mutants replay with no survivor (0199 D10).
+
 ## [0.88.8] - 2026-11-21
 
 Gate: local 1m19s · CI not read under mf-ship · 0.88.7: local 1m14s · CI not read under mf-ship
