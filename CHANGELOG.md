@@ -38,6 +38,7 @@ its new digest.
 - The front door's long-file row and `approve`'s long-function row leave the ratchets, and `PB-2` is found in `approval.py` (0199 D8, D9).
 - `isekai/pipeline/review/drafts.py` holds `review`, `revise`, `draft_from` and the refusals they share, which the front door binds back; `PB-5` and the byte-writer key follow it (0199 D1, D2, D3, D7, D9).
 - `draft_across` takes `seed` after a bare `*`, so its row leaves the wide functions of the ratchets (0199 D6).
+- `isekai/pipeline/review/cancelling.py` holds `Cancelled`, `discard`, `cancellable`, `cancel` and their helpers, which the front door binds back; the front door defines `state` and `Status` alone, and `PB-14` is found in the new module (0199 D1, D2, D3, D7, D9).
 
 ## [0.88.1] - 2026-11-21
 

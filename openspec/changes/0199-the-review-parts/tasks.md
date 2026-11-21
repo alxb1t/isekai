@@ -6,7 +6,7 @@ Move the review stage's approval, drafts and cancel out of `isekai/pipeline/revi
 
 - [x] 1 — The approval · moderate
 - [x] 2 — The drafts · moderate
-- [ ] 3 — The cancel · moderate
+- [x] 3 — The cancel · moderate
 - [ ] 4 — The decision and the documents · moderate
 
 ## 1 — The approval
@@ -67,25 +67,25 @@ Move the review stage's approval, drafts and cancel out of `isekai/pipeline/revi
 
 ## 3 — The cancel
 
-- [ ] 3.1 Create `isekai/pipeline/review/cancelling.py`: a docstring saying it holds the discard and the cancel and imports `records.py` and neither the front door nor another part. Its imports: `Path`; `NamedTuple` from `typing`; `ReviewApproved` and `require` from `isekai.foundation.artifacts`; `Refusal`; from `isekai.foundation.run` `APPROVED`, `DRAFT`, `PROMPTS`, `REVIEW`, `Run`, `approval_of`, `approved_versions`, `artifact_name`, `attempts`, `current_draft`, `group_of`, `latest_artifact`, `source_copy`, `stage_command` and `version_of`; from `isekai.pipeline.review.records` `DISCARD`, `STAGE`, `_again`, `_approval`, `_draft_command`, `_first_image`, `_write_draft`, `draft_image` and `is_copy`. Run `git add isekai/pipeline/review/cancelling.py`.
+- [x] 3.1 Create `isekai/pipeline/review/cancelling.py`: a docstring saying it holds the discard and the cancel and imports `records.py` and neither the front door nor another part. Its imports: `Path`; `NamedTuple` from `typing`; `ReviewApproved` and `require` from `isekai.foundation.artifacts`; `Refusal`; from `isekai.foundation.run` `APPROVED`, `DRAFT`, `PROMPTS`, `REVIEW`, `Run`, `approval_of`, `approved_versions`, `artifact_name`, `attempts`, `current_draft`, `group_of`, `latest_artifact`, `source_copy`, `stage_command` and `version_of`; from `isekai.pipeline.review.records` `DISCARD`, `STAGE`, `_again`, `_approval`, `_draft_command`, `_first_image`, `_write_draft`, `draft_image` and `is_copy`. Run `git add isekai/pipeline/review/cancelling.py`.
   Verify: `uv run python -c "import isekai.pipeline.review.cancelling"` exits 0.
-- [ ] 3.2 Move from `isekai/pipeline/review/__init__.py` into `isekai/pipeline/review/cancelling.py`, in the order of their lines, unchanged with their docstrings and comments: `CANCEL` with its comment, `Cancelled`, `discard`, `cancellable`, `cancel`, `_at_draft`, `_cancelling`, `_derived` ([D2](design.md#d2), [D3](design.md#d3)). Delete them from the front door.
+- [x] 3.2 Move from `isekai/pipeline/review/__init__.py` into `isekai/pipeline/review/cancelling.py`, in the order of their lines, unchanged with their docstrings and comments: `CANCEL` with its comment, `Cancelled`, `discard`, `cancellable`, `cancel`, `_at_draft`, `_cancelling`, `_derived` ([D2](design.md#d2), [D3](design.md#d3)). Delete them from the front door.
   Verify: `uv run python -c "from isekai.pipeline.review.cancelling import CANCEL, Cancelled, discard, cancellable, cancel, _at_draft, _cancelling, _derived"` exits 0.
-- [ ] 3.3 In `isekai/pipeline/review/__init__.py` import from `isekai.pipeline.review.cancelling`, as `X as X` one statement each, `Cancelled`, `cancel`, `cancellable` and `discard`. Then run the steps of 1.7. The names that go unread in this phase and that [D7](design.md#d7) keeps for tests and importers are `DRAFT`, `current_draft` and `source_copy` of `isekai.foundation.run` and `draft_image` of `records.py`: re-bind each `X as X`. Drop each private name of `records.py`.
+- [x] 3.3 In `isekai/pipeline/review/__init__.py` import from `isekai.pipeline.review.cancelling`, as `X as X` one statement each, `Cancelled`, `cancel`, `cancellable` and `discard`. Then run the steps of 1.7. The names that go unread in this phase and that [D7](design.md#d7) keeps for tests and importers are `DRAFT`, `current_draft` and `source_copy` of `isekai.foundation.run` and `draft_image` of `records.py`: re-bind each `X as X`. Drop each private name of `records.py`.
   Verify: `uv run ruff check isekai/pipeline/review` exits 0.
-- [ ] 3.4 `cancelling.py` imports no part and not the front door.
+- [x] 3.4 `cancelling.py` imports no part and not the front door.
   Verify: `grep -n -e "review.approval" -e "review.drafts" -e "pipeline.review import" isekai/pipeline/review/cancelling.py` prints nothing.
-- [ ] 3.5 In `tests/mutants.json` set `path` in `PB-14` so it holds `"path": "isekai/pipeline/review/cancelling.py"` ([D9](design.md#d9)). Its `find` and `replace` stay.
+- [x] 3.5 In `tests/mutants.json` set `path` in `PB-14` so it holds `"path": "isekai/pipeline/review/cancelling.py"` ([D9](design.md#d9)). Its `find` and `replace` stay.
   Verify: `git grep -n -F '"path": "isekai/pipeline/review/cancelling.py"' -- tests/mutants.json` prints one line.
-- [ ] 3.6 The front door defines `state` and no other function or class, and `Status`.
+- [x] 3.6 The front door defines `state` and no other function or class, and `Status`.
   Verify: `git grep -c -e "^def " -e "^class " -- isekai/pipeline/review/__init__.py` prints `isekai/pipeline/review/__init__.py:1`.
-- [ ] 3.7 **HALT CHECK** No part closes a cycle and no file or function of the stage is past a ceiling with no row. A failure means a move differs from what the plan names.
+- [x] 3.7 **HALT CHECK** No part closes a cycle and no file or function of the stage is past a ceiling with no row. A failure means a move differs from what the plan names.
   Verify: `uv run pytest tests/test_layers.py tests/test_ratchets.py` exits 0.
-- [ ] 3.8 Run `uv run python -m tools.derive_imported_by`: `cancelling.py` imports the artifacts, the refusal and the run, so the derived tables change.
+- [x] 3.8 Run `uv run python -m tools.derive_imported_by`: `cancelling.py` imports the artifacts, the refusal and the run, so the derived tables change.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 3.9 Run the mutants the repository keeps.
+- [x] 3.9 Run the mutants the repository keeps.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 3.10 Confirm the suite reads each name through the front door.
+- [x] 3.10 Confirm the suite reads each name through the front door.
   Verify: `uv run pytest tests/test_review.py tests/test_ui_api.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_artifact_bytes.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py tests/test_derive_wire.py` exits 0.
 
 ## 4 — The decision and the documents
