@@ -13,7 +13,7 @@ The foundation gets the rule for a held collection, the app's guard asks it, and
 - [x] 1.1 **HALT CHECK** `running` and `render_running` stand in `isekai/foundation/library.py` where [D1](design.md#d1) places the new function: after the first, before the second.
   Verify: `git grep -n -e "^def render_running" -e "^def running" -- isekai/foundation/library.py` prints `100:def running(folder: Path) -> list[dict[str, Any]]:` and `116:def render_running(run: Run) -> bool:`.
 - [x] 1.2 In `tests/test_ui_library.py`, add `import fcntl`, extend the `isekai.foundation.library` import with `collection_held`, and add `test_a_collection_is_held_by_a_live_session_lock` at the file's end, marked `@pytest.mark.spec_exempt("structural: a collection is held by a session's live lock")`, per [D4](design.md#d4). It holds that a folder with no `sessions/` and one whose record's lock is free are not held; that a record's lock held through a second open file with `fcntl.flock(held, fcntl.LOCK_EX)` holds the folder, an unreadable record (`{`) included; and that another folder stays unheld meanwhile.
-  Verify: `uv run pytest tests/test_ui_library.py` exits 2, an `ImportError` of `collection_held`.
+  Verify: `uv run pytest tests/test_ui_library.py` exits 2, an ImportError of collection_held.
 - [x] 1.3 In `isekai/foundation/library.py`, add `collection_held` between `running` and `render_running`, exactly as [D1](design.md#d1) gives it, and end `render_running` on `return collection_held(runs.parent)` in place of its `return any(...)` line.
   Verify: `uv run pytest tests/test_ui_library.py tests/test_pipeline_cli.py` exits 0.
 - [x] 1.4 Run `tools.mutate` over `collection_held`, from its `def` line to its last line; a survivor is killed by a further assertion in the case of 1.2.
@@ -30,7 +30,7 @@ The foundation gets the rule for a held collection, the app's guard asks it, and
 - [x] 2.4 In `isekai/interface/ui/surface.py`, import `collection_held` from `isekai.foundation.library` between the imports of `flow` and `refusal`, and replace `rendering` exactly as [D2](design.md#d2) gives it.
   Verify: `uv run pytest tests/test_ui_api.py tests/test_ui_library.py tests/test_layers.py` exits 0.
 - [x] 2.5 Check the guard reads the rule once, as [D2](design.md#d2) writes it.
-  Verify: `git grep -n -F "collection_held(" -- isekai/interface/ui/surface.py` prints one line, the `if ours or` line of `rendering`.
+  Verify: `git grep -n -F "collection_held(" -- isekai/interface/ui/surface.py` prints one line, the "if ours or" line of the rendering method.
 - [x] 2.6 Run `tools.mutate` over `Surface.rendering`, from its `def` line to its last line, on the cases that reach it; a survivor is killed by a further assertion in the cases of 2.2 and 2.3.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/surface.py:197-208 --tests tests/test_ui_api.py "-k cancel or delet"` exits 0.
 - [x] 2.7 Replay the standing mutants over the edited files.
@@ -43,7 +43,7 @@ The foundation gets the rule for a held collection, the app's guard asks it, and
 - [x] 3.1 In `docs/decisions.md`, amend D72 as [D5](design.md#d5) says: its *Accepts* line takes the app's guard's new words from there, in place of "the app's job slot", and its *Made by* gains `0182`. The heading stays.
   Verify: `git grep -n -F "refuses while its render slot runs or a session holds the collection" -- docs/decisions.md` prints the *Accepts* line of D72.
 - [x] 3.2 In `isekai/foundation/README.md`, in the `library.py` row of *Files*, change `` `record_running`, `running`, `render_running` and `session` `` to `` `record_running`, `running`, `collection_held`, `render_running` and `session` ``.
-  Verify: `git grep -n -F "collection_held" -- isekai/foundation/README.md` prints the `library.py` row of *Files*.
+  Verify: `git grep -n -F "collection_held" -- isekai/foundation/README.md` prints the library.py row of *Files*.
 - [x] 3.3 Derive the *Imported by* tables again with `uv run python -m tools.derive_imported_by`; task 2.8 already added `interface/ui/surface.py` to the `library.py` row, and 3.2 edits no table, so the rerun moves nothing.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py` exits 0.
 - [x] 3.4 In `isekai/interface/ui/README.md`, in the **Delete** bullet, change `refused` / `while a render runs for the collection` to `refused` / `while this server's render slot runs or a session of any process holds the collection`.
