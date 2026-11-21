@@ -74,7 +74,8 @@ outputs/001/7.png ─▶ draft ─▶ review/003.draft.json   {count 1, seeds [7
 holding failure records alone, and its thumbnails in the library's cache. A delete that empties an approval's group
 deletes that approval, older ones with no render and the newest's waiting draft; a flow left with no approval keeps
 only its assignment (D50). One that leaves images renders what it lacks at the next session. It takes every edit of
-the render's seed with it, and given an edit's image it deletes that edit and every edit chained from it.
+the render's seed with it, and given an edit's image it deletes that edit and every edit chained from it. Each image's
+thumbnail goes with it.
 
 **A tattoo is added by an edit, after the flow** ([D51](decisions.md#d51--an-edit-is-one-flat-directory-pinned-by-its-digest)).
 The operator places it by hand on a finished render; the verbs below cut it, request the bake and run it:
@@ -116,8 +117,8 @@ default, where a collection is a folder holding `sources/` with its runs root `r
 beside it ([D40](decisions.md#d40--a-collection-is-a-library-folder-holding-sources)).
 Its page names the collection, the run's digest and the flow in every URL. It writes
 through the functions that own each write — import's for a source, `assign` for
-a tick, review's for a draft, its edits and an approval, the render stage's and
-the library's for a deleted render, and `sheet()` for a target's first sheet when
+a tick, review's for a draft, its edits and an approval, the foundation's
+`delete_render` for a deleted render, and `sheet()` for a target's first sheet when
 a draft is made from another flow, which
 `interface/drafting.py`'s `draft_across` runs in the server's process, the
 sequence `draft --flow` runs too. Every other stage it runs only as the CLI's

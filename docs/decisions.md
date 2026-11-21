@@ -89,10 +89,9 @@ dialog's removal is `render --without`, so a session the page starts is one the 
 another flow fills; the one act in it that spends is Render's confirmation, after its quote of image total, bake total and limit.**
 Prepare is `prepare` run as one child, each photograph through `tag`, `caption` and its sheets in turn,
 and Render is `render` between gpunit's `volume up` and `volume down`. Every other write goes through the function that owns it: a draft, its edits and an
-approval through `review`'s, a tick through the run's `assign`, a source through import, a deleted render's
-thumbnails through the library's `drop_thumbnails`, the render through the render stage's `discard_render`, and
-the approvals, drafts, sheets, source copies and own copies of the photograph's description its last render leaves
-through review's `withdraw`, and a target's first sheet, when it is drafted from another flow, through `sheet()`,
+approval through `review`'s, a tick through the run's `assign`, a source through import, a deleted render, its edits and their
+thumbnails, and the approvals, drafts, sheets, source copies and own copies of the photograph's description its last
+render leaves, through the foundation's `delete_render` and `delete_edit`, and a target's first sheet, when it is drafted from another flow, through `sheet()`,
 which `interface/drafting.py`'s `draft_across` runs in the server's process before the draft, and an edit request through the edit stage's own function.
 
 - **Why:** the CLI is the one path, so a stage the page starts is exactly the stage the terminal runs,
@@ -102,7 +101,7 @@ which `interface/drafting.py`'s `draft_across` runs in the server's process befo
   confirmation carries the quote it showed and the photographs taken out of it, and a quote grown since is
   refused. The quote compares
   image total, bake total and limit, not source or approval identity.
-- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`, `0112`, `0114`, `0116`, `0120`, `0122`.
+- **Made by:** `0018`, `0061`, `0062`, `0063`, `0080`, `0106`, `0108`, `0111`, `0112`, `0114`, `0116`, `0120`, `0122`, `0181`.
 
 ### D42 · A new draft starts from the last approval
 
@@ -678,11 +677,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D69 · A render group's files are listed in foundation/layout.py, and a module above the pipeline reads the listing from the foundation
 
-**`isekai/foundation/layout.py` lists a render group: `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups`, and `rendered`, which lists each flow's seeds by approval. A module outside the foundation reads them from `isekai.foundation.run`, never from the paid stage. The stage keeps what reads an approval or deletes: `lacks`, `shortfall`, `duration`, `source_seeds` and `discard_render`. A render's image and record are named there by `render_image(group, seed, suffix)` and `render_record(group, seed)`. The draft being worked on, `current_draft(directory)`, and the draft's source copy, `source_copy(run, flow, version)`, are in `layout.py` too, and `DRAFT` is in `names.py`, each read through `run.py`.**
+**`isekai/foundation/layout.py` lists a render group: `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups`, and `rendered`, which lists each flow's seeds by approval. A module outside the foundation reads them from `isekai.foundation.run`, never from the paid stage. The stage keeps what reads an approval or deletes: `lacks`, `shortfall`, `duration` and `source_seeds`; `discard_render` is bound there from `isekai/foundation/discard.py`. A render's image and record are named there by `render_image(group, seed, suffix)` and `render_record(group, seed)`. The draft being worked on, `current_draft(directory)`, and the draft's source copy, `source_copy(run, flow, version)`, are in `layout.py` too, and `DRAFT` is in `names.py`, each read through `run.py`.**
 
 - **Why:** `run_view.py`, `compare_view.py`, `render.py` and `ui/library.py` imported the paid stage to list a folder, and `review` may not import it. The names read foundation names alone. A move that re-binds changes no test.
 - **Accepts:** The other definitions of "rendered", `_holds_render` and `rendered_at`, stand. `render_groups` lists a folder by `str.isdigit`, where the layout's own test is three ASCII digits. The evaluator still imports `trackable` from the wiring.
-- **Made by:** `0174`, `0175`, `0179`.
+- **Made by:** `0174`, `0175`, `0179`, `0181`.
 
 ### D70 · A render is addressed by a named type, and a version is read off a name by one function
 
@@ -699,6 +698,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Why:** the paid stage's resume check asks the image alone and spends the money, and the spec reads a record with no image as unrendered. The product writes a record beside its image and a delete removes both, so no folder it writes answers differently.
 - **Accepts:** review reads `OUTPUT_SUFFIX` as a constant, because it has a flow's name and no flow. `_holds_render`, `rendered_at`, `render_groups`' `str.isdigit` and `is_render` stand. A hand-made folder with a record and no image is refused a revision, and one with an image and no record is revised.
 - **Made by:** `0177`.
+
+### D72 · A delete has one owner, isekai/foundation/discard.py
+
+**`isekai/foundation/discard.py` holds `delete_render(image)` and `delete_edit(image)`, which drop the thumbnail of every image that goes while it is still a file, then delete the files, then, for a render, the approval its last render leaves, and return `Deleted(files, thumbnails)`. The bodies of `discard_render`, `withdraw`, `_holds_render` and `discard_edit` are there too, bound back at the stages that held them. The `discard` verb and the app's delete call the owner and write no loop.**
+
+- **Why:** a delete was chained by hand in each front end, and the chains differed: the app dropped each edit image's thumbnail, the verb the render's alone and, on an edit's path, none. A thumbnail is named by its image's digest, so it can go only before its image does.
+- **Accepts:** the guards stay with the acts: the app's job slot, the verb's disk check and `approve --cancel`'s lack of one. `_derived`, `review.discard` and `tattoos.remove` stay where they are. Reopen when a delete's guards move into the owner.
+- **Made by:** `0181`.
 
 ## Infrastructure
 

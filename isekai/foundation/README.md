@@ -20,6 +20,7 @@ endpoint or a score; everything here is imported by something that does.
 | `config.py` | reads a JSON config by the keys a build reads, refusing a key it does not read and a key it lacks |
 | `atomic_write.py` | writes bytes to a path, or writes nothing — temp-then-replace on one filesystem |
 | `library.py` | the library's folder names and a collection's, `root`, `is_collection`, `listed` and `collection`, and the read side of a collection's session records: `UNSUPPORTED`, `record_running`, `running`, `render_running` and `session`, and where a thumbnail sits in the cache and what names it: `stat_key`, `file_digest`, `thumbnail_of` and `drop_thumbnails` |
+| `discard.py` | a delete's one owner: `delete_render` and `delete_edit`, which drop each thumbnail, then the files, then the approval, and the bodies they call |
 
 ## Imported by
 
