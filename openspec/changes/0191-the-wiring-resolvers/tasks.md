@@ -5,7 +5,7 @@ The proposer's cache, the evaluator's roots and the tagging openers become keywo
 ## Progress
 
 - [x] 1 — The cache · moderate
-- [ ] 2 — The roots · moderate
+- [x] 2 — The roots · moderate
 - [ ] 3 — The openers and the ratchet row · moderate
 
 ## 1 — The cache
@@ -27,21 +27,21 @@ The proposer's cache, the evaluator's roots and the tagging openers become keywo
 
 ## 2 — The roots
 
-- [ ] 2.1 **HALT CHECK** `trackable` and `destination` take no keyword yet.
+- [x] 2.1 **HALT CHECK** `trackable` and `destination` take no keyword yet.
   Verify: `git grep -n -e "^def trackable(directory: Path) -> bool:" -e "^def destination(runs: Path, name: str) -> Path:" -- isekai/interface/wiring.py evaluation/record.py` prints a line for each pattern.
-- [ ] 2.2 In `tests/test_evaluation_cli.py`, in `test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refused`, delete the patches of the wiring's roots and the `monkeypatch` parameter, and pass `repository=repository, data_root=repository / ".data"` to `entry.main`. Drop the `wiring` import, which nothing else reads. No assertion changes.
+- [x] 2.2 In `tests/test_evaluation_cli.py`, in `test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refused`, delete the patches of the wiring's roots and the `monkeypatch` parameter, and pass `repository=repository, data_root=repository / ".data"` to `entry.main`. Drop the `wiring` import, which nothing else reads. No assertion changes.
   Verify: `uv run pytest tests/test_evaluation_cli.py -k inside_the_working_tree` exits 1, on the unexpected keyword.
-- [ ] 2.3 In `tests/test_recall_cli.py`, give `_run` a `**roots: Path` it passes to `recall.main`, and in `test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refused` delete the patches of the wiring's roots and the `monkeypatch` parameter, and call `_run(tagger, runs, repository=repository, data_root=repository / ".data")`. Drop the `wiring` import, which nothing else reads. No assertion changes.
+- [x] 2.3 In `tests/test_recall_cli.py`, give `_run` a `**roots: Path` it passes to `recall.main`, and in `test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refused` delete the patches of the wiring's roots and the `monkeypatch` parameter, and call `_run(tagger, runs, repository=repository, data_root=repository / ".data")`. Drop the `wiring` import, which nothing else reads. No assertion changes.
   Verify: `uv run pytest tests/test_recall_cli.py -k inside_the_working_tree` exits 1, on the unexpected keyword.
-- [ ] 2.4 In `isekai/interface/wiring.py`, replace `trackable` exactly as [D2](design.md#d2) gives it. `_check_run_root` still calls `trackable(resolved)`.
+- [x] 2.4 In `isekai/interface/wiring.py`, replace `trackable` exactly as [D2](design.md#d2) gives it. `_check_run_root` still calls `trackable(resolved)`.
   Verify: `git grep -n -F "repository: Path = REPOSITORY, data_root: Path = DATA_ROOT" -- isekai/interface/wiring.py` prints one line.
-- [ ] 2.5 In `evaluation/record.py`, give `destination` the keywords of [D2](design.md#d2) and pass them to `trackable`. It takes the roots from `isekai.foundation.run`, which it already imports from.
+- [x] 2.5 In `evaluation/record.py`, give `destination` the keywords of [D2](design.md#d2) and pass them to `trackable`. It takes the roots from `isekai.foundation.run`, which it already imports from.
   Verify: `git grep -n -F "trackable(target.parent," -- evaluation/record.py` prints one line.
-- [ ] 2.6 In `evaluation/__main__.py` and `evaluation/recall.py`, give each `main` the keywords of [D2](design.md#d2) after its existing ones and pass them to `destination`. Each takes the roots from `isekai.foundation.run`, beside the names it already imports from there.
+- [x] 2.6 In `evaluation/__main__.py` and `evaluation/recall.py`, give each `main` the keywords of [D2](design.md#d2) after its existing ones and pass them to `destination`. Each takes the roots from `isekai.foundation.run`, beside the names it already imports from there.
   Verify: `git grep -l -F "data_root=data_root" -- evaluation/__main__.py evaluation/recall.py` prints both paths.
-- [ ] 2.7 Run the evaluators' cases and the structure tests over the keywords.
+- [x] 2.7 Run the evaluators' cases and the structure tests over the keywords.
   Verify: `uv run pytest tests/test_evaluation_cli.py tests/test_recall_cli.py tests/test_run_directory.py tests/test_layers.py tests/test_docs.py` exits 0.
-- [ ] 2.8 Lint what the phase changed.
+- [x] 2.8 Lint what the phase changed.
   Verify: `uv run ruff check isekai/interface/wiring.py evaluation tests/test_evaluation_cli.py tests/test_recall_cli.py` exits 0.
 
 ## 3 — The openers and the ratchet row

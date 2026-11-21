@@ -273,13 +273,15 @@ def _is_within(resolved: Path, ancestor: Path) -> bool:
     )
 
 
-def trackable(directory: Path) -> bool:
-    """Decide whether `directory` is inside the working tree and outside `DATA_ROOT`.
+def trackable(
+    directory: Path, *, repository: Path = REPOSITORY, data_root: Path = DATA_ROOT
+) -> bool:
+    """Decide whether `directory` is inside the working tree and outside the data root.
 
     There, what is written is one `git add` from being published (D18).
     """
     resolved = directory.resolve()
-    return _is_within(resolved, REPOSITORY) and not _is_within(resolved, DATA_ROOT)
+    return _is_within(resolved, repository) and not _is_within(resolved, data_root)
 
 
 def _check_run_root(runs: Path) -> None:
