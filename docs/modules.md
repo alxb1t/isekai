@@ -58,10 +58,8 @@ that owns it: stage ③'s review functions, which `ReviewRoutes` of
 `interface/ui/routes/reviewing.py` calls, import's reader, `sheet()` for a
 target's first sheet when a draft is made from another flow, filled from the
 photograph's tags — `interface/drafting.py`'s `draft_across` runs it, the same
-sequence the CLI's `draft` runs (D4) — and, for a deleted render, the library's
-`drop_thumbnails`, the render stage's `discard_render` and review's `withdraw`, which `ImageRoutes` of `interface/ui/routes/images.py` calls;
-the CLI's `discard` calls them too, but drops the render's thumbnails and not each
-edit image's.
+sequence the CLI's `draft` runs (D4) — and, for a deleted render, `delete_render` and, for
+an edit, `delete_edit` of `foundation/discard.py`, which `ImageRoutes` of `interface/ui/routes/images.py` and the CLI's `discard` both call.
 
 **The edit's pieces.** `ink` is `shared/ink.py`'s, which `run_ink` of `interface/verbs/edits.py` calls; the maths of an edit is
 `shared/tattoo.py`'s, over arrays, and Pillow and numpy are imported inside both modules' functions. The edit stage is

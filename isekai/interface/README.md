@@ -23,7 +23,7 @@ module scope, and the UI imports no CLI module.
 | `verbs/__init__.py` | the package's front door: the rows and the shared names `cli.py` reads |
 | `verbs/common.py` | `Verb`, the argument types and shared arguments, the reporter, and the run helpers every family reads |
 | `verbs/library.py` | `import`, `compare` and `ui`: `import` composes `pipeline/importing.py`, `compare` writes the page, `ui` serves the library |
-| `verbs/drafts.py` | `draft` and `discard`: `discard` deletes a render and its thumbnails |
+| `verbs/drafts.py` | `draft` and `discard`: `discard` deletes a render or an edit and each image's thumbnail |
 | `verbs/edits.py` | `ink` and `edit`, with `--pending`'s run |
 | `verbs/session.py` | `render`'s arguments and its row; the run is `render.py`'s, bound in `cli.py` |
 | `verbs/prepare.py` | `prepare` over cells, each photograph through `tag`, `caption` and its sheets in turn |

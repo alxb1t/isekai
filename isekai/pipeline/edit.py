@@ -46,6 +46,7 @@ from isekai.foundation.artifacts import (
     write,
 )
 from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.discard import discard_edit as discard_edit
 from isekai.foundation.edit import Edit, load_edit
 from isekai.foundation.flow import Workflow, graph_digest
 from isekai.foundation.refusal import Refusal
@@ -53,11 +54,9 @@ from isekai.foundation.run import (
     EDIT_COMPOSITE,
     EDIT_RECORD,
     EDIT_STEM,
-    delete_edits,
     digest_of,
     edit_at,
     edit_files,
-    edit_numbers,
     next_edit,
     placement_file,
     rendered_at,
@@ -324,30 +323,6 @@ def image_of(record: Path) -> Path:
     e.g. outputs/001/42.edit-1.json -> outputs/001/42.edit-1.png
     """
     return record.with_suffix(".png")
-
-
-def discard_edit(image: Path) -> list[Path]:
-    """Delete an edit, pending or run, and every edit whose source chain reaches it.
-
-    Return every path deleted, absolute. An edit whose record cannot be read is
-    refused before anything is deleted, so a chain is never left half taken.
-    e.g. 42.edit-1.png, with 42.edit-2 made from it -> both edits' three files
-    """
-    _, _, _, seed, number = edit_at(image)
-    group = image.absolute().parent
-    sources: dict[int, str | None] = {}
-    for held in edit_numbers(group, seed):
-        record = edit_files(group, seed, held)[1]
-        sources[held] = read(record, EDIT_FILE)["source"] if record.is_file() else None
-    taken = {number}
-    while grown := {
-        held
-        for held, source in sources.items()
-        if held not in taken
-        and source in {edit_files(group, seed, each)[0].name for each in taken}
-    }:
-        taken |= grown
-    return delete_edits(group, seed, sorted(taken))
 
 
 def duration_of(record: Path) -> float | None:

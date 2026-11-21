@@ -48,6 +48,7 @@ from isekai.foundation.artifacts import (
 )
 from isekai.foundation.artifacts import Render as RenderSidecar
 from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.discard import discard_render as discard_render
 from isekai.foundation.flow import (
     SAMPLER_DIALS,
     SECOND_PASS_DIALS,
@@ -67,15 +68,11 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     check_budget,
-    delete_edits,
-    edit_numbers,
-    failures_alone,
     group_of,
     record_failure,
     render_groups,
     render_image,
     render_record,
-    rendered_at,
     rendered_seeds,
     stage_command,
 )
@@ -332,38 +329,6 @@ def duration(sidecar: Path) -> float | None:
     if isinstance(seconds, int | float) and not isinstance(seconds, bool):
         return float(seconds)
     return None
-
-
-def discard_render(image: Path) -> list[Path]:
-    """Delete a render's image, its record, its edits, and a group left with failures.
-
-    Every edit of the seed goes with it, images, records and composites, before the
-    group is tested: an edit left in the group would keep it, and the approval, alive
-    with no render to show. A group left holding failure records alone goes too, those
-    records with it; return every path deleted, absolute. The image goes first, so a
-    discard cut short leaves a record alone, which reads as unrendered, as a render
-    cut short does. A path naming no render is refused, nothing deleted.
-    e.g. outputs/001/42.png -> [.../001/42.png, .../001/42.render.json]
-    e.g. outputs/001/7.png, the last beside 001.error.1.transient.json
-    -> [.../7.png, .../7.render.json, .../001.error.1.transient.json, .../001]
-    """
-    seed = rendered_at(image).seed
-    image = image.absolute()
-    group = image.parent
-    record = render_record(group, seed)
-    image.unlink()
-    deleted = [image]
-    if record.is_file():
-        record.unlink()
-        deleted.append(record)
-    deleted += delete_edits(group, seed, edit_numbers(group, seed))
-    records = failures_alone(group)
-    if records is not None:
-        for path in records:
-            path.unlink()
-        group.rmdir()
-        deleted += [*records, group]
-    return deleted
 
 
 def source_seeds(
