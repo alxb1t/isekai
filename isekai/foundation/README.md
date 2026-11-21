@@ -20,8 +20,8 @@ endpoint or a score; everything here is imported by something that does.
 | `caption_config.py` | reads `config/caption.json` — the model the reader and the hosted tagger run, and the briefing beside it — the library's, not a flow's |
 | `config.py` | reads a JSON config by the keys a build reads, refusing a key it does not read and a key it lacks |
 | `atomic_write.py` | writes bytes to a path, or writes nothing — temp-then-replace on one filesystem |
-| `library.py` | the library's folder names and a collection's, `root`, `is_collection`, `listed` and `collection`, and the read side of a collection's session records: `UNSUPPORTED`, `record_running`, `running`, `collection_held`, `render_running` and `session`, and where a thumbnail sits in the cache and what names it: `stat_key`, `file_digest`, `thumbnail_of` and `drop_thumbnails` |
-| `discard.py` | a delete's one owner: `delete_render` and `delete_edit`, which drop each thumbnail, then the files, then the approval, and the bodies they call |
+| `library.py` | the library's folder names and a collection's, `root`, `is_collection`, `listed` and `collection`, and the read side of a collection's session records: `UNSUPPORTED`, `record_running`, `running`, `collection_held`, `render_running` and `session`, and where a thumbnail sits in the cache and what names it: `stat_key`, `file_digest`, `thumbnail_of`, `named_thumbnail` and `drop_thumbnails` |
+| `discard.py` | a delete's one owner: `delete_render` and `delete_edit`, which name each thumbnail, drop them, delete the files and the approval, then unlink any that came back, and the bodies they call |
 
 ## Imported by
 
@@ -42,7 +42,7 @@ endpoint or a score; everything here is imported by something that does.
 | `caption_config.py` | `interface/verbs/runner.py`, `interface/wiring.py` | — |
 | `config.py` | `caption_config.py`, `pipeline/tattoos.py`, `shared/ink.py` | — |
 | `atomic_write.py` | `artifacts.py`, `run.py`, `interface/compare_view.py`, `interface/ui/library.py`, `pipeline/edit.py`, `pipeline/generate.py`, `pipeline/importing.py`, `pipeline/review.py`, `pipeline/tattoos.py`, `shared/ink.py` | — |
-| `library.py` | `discard.py`, `interface/compare_view.py`, `interface/render.py`, `interface/ui/library.py`, `interface/ui/surface.py`, `pipeline/importing.py` | — |
+| `library.py` | `discard.py`, `interface/compare_view.py`, `interface/render.py`, `interface/ui/library.py`, `interface/ui/surface.py`, `interface/verbs/runner.py`, `pipeline/importing.py` | — |
 | `discard.py` | `interface/ui/routes/images.py`, `interface/verbs/drafts.py`, `pipeline/edit.py`, `pipeline/generate.py`, `pipeline/review.py` | — |
 
 > Files and importers only. What a component *is* is
