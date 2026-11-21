@@ -10,6 +10,35 @@ its new digest.
 
 ## [Unreleased]
 
+- The tagger, the vocabulary, the pose finder and the segmenter take `manifest=`, defaulting to the tracked path; no test patches a manifest path, and `BD-1` and `BD-10b` are re-pointed (0192 D1, D3, D6).
+- `unpack.main` takes `fetcher=`, defaulting to `HuggingFaceFetcher`, and a case holds the default; no test patches `unpack`, so its row leaves `PATCHED_MODULES` and `PATCHED_ROWS` is 17 (0192 D2, D4, D7).
+- The *Known breaks* of *A component is a contract* names each module `PATCHED_MODULES` still lists, with its reason (0192 D5).
+- `isekai/foundation/command.py` holds `ENTRY` and `command(verb, *words)`, which `run.py` re-exports; cases hold the join and `migrate_command`'s default-root text, which a mutation run found unread (0193 D1, D6).
+- `stage_command`, `migrate_command`, `_draft_command`, `_named_a_flow` and the parser's `prog` build from `command` and `ENTRY`; every printed byte is equal, and the mutation run over each finds no survivor (0193 D2, D6).
+- The refusals and messages that spelt the entry by hand call `command`, each keeping its quoting and any `uv run` prefix; every printed byte is equal (0193 D3).
+- A guard in `tests/test_run_directory.py` fails on a string of `isekai/` outside `command.py` that spells the entry, and a twin on a small tree shows it can; docstrings, comments and `python -m isekai.boundary.…` pass (0193 D5).
+- D77 names `command.py` as the one home of the entry, D62's siblings list gains it, and the standing mutants replay with no survivor (0193 D6, D7).
+- `isekai/boundary/onnx.py` holds `silence_onnxruntime()` and `cpu_session(runtime, model, options=None)`; cases hold the call, the options before the providers, the return and the switch, and the evaluator's `log_severity_level`, which a mutation run found unread (0194 D1, D2, D5).
+- `OnnxSession`, `OnnxPoseFinder`, `OnnxSegmenter` and the evaluator's `_session` open their sessions with `cpu_session`, and `silence_onnxruntime` is imported from `onnx.py`; every printed byte and recorded call is equal, and the mutation run over `onnx.py` finds no survivor (0194 D3, D4, D5).
+- The boundary README's note on the telemetry switch names `onnx.py` and says "for every session", `docs/modules.md` names `onnx` where it named `wd14`'s switch, and the standing mutants replay with no survivor (0194 D6).
+- `tests/test_progress.py` holds the bytes of each line a child prints, key order and flush included: the sheet's, the item's, the render's and edit's, and the session's step and image lines; no code moves (0195 D1, D2, D3).
+- `tests/test_progress.py` reads each line kind back through `progress_line` to the dict that built it, and a render line through `_Images` into the session's image line; no code moves (0195 D4, D5).
+- `isekai/interface/progress.py` declares the item, step and image lines, their names and `--progress json`, and holds `emit`, `progress_line`, `Steps` and `_Images`, bound back in `render.py`; every byte is equal, and cases hold two `Steps` branches a mutation run found unread (0196 D1, D2, D3).
+- `Reporter.item` writes through `emit`; the verbs, the session's argv and the argument functions name their stages, states and `--progress json` from `progress.py`; every printed byte is equal (0196 D4, D5, D6).
+- `jobs.py` takes `PREPARE` from `progress.py` and reads each line's state, step, image keys and `--progress json` by its declared names in `_Job.complete`, `_render_child` and both commands; every byte is equal (0196 D5, D6).
+- Docs `D76` records the declaration, `isekai/interface/README.md`, `isekai/README.md` and `docs/modules.md` name `progress.py`, and a case holds `_Images.write`'s return (0196 D7).
+- `isekai/interface/plan.py` holds the timing, the estimate and the edit queue's reading; `render.py` binds each name back and keeps `HOLD_SECONDS`, and `RE-1` is found in `plan.py` (0197 D1, D2, D4, D5).
+- `plan.py` also holds `Line`, `Short`, `short` and `Quote`, and the derived tables of the layer READMEs name it; `quote` and `Record` stay in `render.py`, which binds each name back (0197 D1, D2, D3).
+- The interface and boundary READMEs, `isekai/README.md` and `docs/principles.md` name `plan.py` where they named `render.py` for the moved code (0197 D1).
+
+## [0.88.1] - 2026-11-21
+
+Gate: local 2m42s · CI not read under mf-ship · 0.88.0: local 1m59s · CI not read under mf-ship
+
+- The proposer's cache is `Proposers`, with its two openers as keywords and one default, `PROPOSERS`; `proposer_for` reads it, the module global goes, and each proposer case passes a cache of its own (0191 D1, D5).
+- `trackable`, `destination` and the evaluators' `main`s take `repository` and `data_root` keywords defaulting to the run roots; the two refusal cases pass tmp roots and patch nothing (0191 D2, D5).
+- `tagger_for` takes `open_session`, `reader_for` and `hosted_tagger_for` take `config`; no test patches the wiring, so its row leaves `PATCHED_MODULES` and `PATCHED_ROWS` is 18 (0191 D3, D4).
+
 ## [0.88.0] - 2026-11-21
 
 Gate: local 1m59s · CI not read under mf-ship · 0.87.45: local 1m19s · CI not read under mf-ship

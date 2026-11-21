@@ -273,7 +273,7 @@
   },
   {
     "finding": "RE-1",
-    "path": "isekai/interface/render.py",
+    "path": "isekai/interface/plan.py",
     "find": "    found.sort(key=lambda path: path.stat().st_mtime, reverse=True)\n    taken: list[float] = []\n    for path in found:\n        if (seconds := duration_of(path)) is not None:",
     "replace": "    found.sort(key=lambda path: path.stat().st_mtime)\n    taken: list[float] = []\n    for path in found:\n        if (seconds := duration_of(path)) is not None:",
     "tests": ["tests/test_render.py"],
@@ -490,8 +490,8 @@
   {
     "finding": "BD-1",
     "path": "isekai/boundary/wd14.py",
-    "find": "            resolved.append(resolve(dest, models_dir, manifest))",
-    "replace": "            resolved.append(\n                resolve(dest, models_dir, manifest)\n                if dest == MODEL_DEST\n                else (entry_for(manifest, dest) and (models_dir / dest).open(\"rb\").close() or models_dir / dest)\n            )",
+    "find": "            resolved.append(resolve(dest, models_dir, declared))",
+    "replace": "            resolved.append(\n                resolve(dest, models_dir, declared)\n                if dest == MODEL_DEST\n                else (entry_for(declared, dest) and (models_dir / dest).open(\"rb\").close() or models_dir / dest)\n            )",
     "tests": ["tests/test_wd14.py"],
     "why": "the label index is only checked for presence, so a label index with other bytes is used with the model it does not belong to"
   },
@@ -562,8 +562,8 @@
   {
     "finding": "BD-10b",
     "path": "isekai/boundary/wd14.py",
-    "find": "    labels_path, model_path, pins = verified_paths(models_dir)\n    return LocalTagger(\n        session=OnnxSession(model_path),",
-    "replace": "    session = OnnxSession(DEFAULT_MODELS_DIR / MODEL_DEST)\n    labels_path, model_path, pins = verified_paths(models_dir)\n    return LocalTagger(\n        session=session,",
+    "find": "    labels_path, model_path, pins = verified_paths(models_dir, manifest=manifest)\n    return LocalTagger(\n        session=OnnxSession(model_path),",
+    "replace": "    session = OnnxSession(DEFAULT_MODELS_DIR / MODEL_DEST)\n    labels_path, model_path, pins = verified_paths(models_dir, manifest=manifest)\n    return LocalTagger(\n        session=session,",
     "tests": ["tests/test_wd14_runtime.py"],
     "why": "the graph is opened only after both digests verify, and the opened graph is the verified one"
   },

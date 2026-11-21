@@ -76,8 +76,8 @@ Make `review` a package: move `isekai/pipeline/review.py` to `isekai/pipeline/re
 
 ## 4 — The decision and the documents
 
-- [ ] 4.1 In `docs/decisions.md` add D75 directly after D74 and before `## Infrastructure`, with the title, rule, *Why*, *Accepts* and *Made by* that [D9](design.md#d9) gives.
-  Verify: `git grep -n -F "### D75" -- docs/decisions.md` prints one line.
+- [ ] 4.1 In `docs/decisions.md` add D77 directly after D74 and before `## Infrastructure`, with the title, rule, *Why*, *Accepts* and *Made by* that [D9](design.md#d9) gives.
+  Verify: `git grep -n -F "### D77" -- docs/decisions.md` prints one line.
 - [ ] 4.2 In `isekai/pipeline/README.md` change "One file per stage, in the order a photograph passes through them." to "One file per stage, or one package, in the order a photograph passes through them.", and put in the Files row of `review/` what its modules hold: the front door `__init__.py` — `review`, `approve`, the revisions, the drafts and the cancel; `records.py` — the draft's reads and writes and the helpers the stage shares; `budget.py` — the token budget.
   Verify: `git grep -n -F "records.py" -- isekai/pipeline/README.md` prints one line.
 - [ ] 4.3 Run `uv run python -m tools.derive_imported_by`, which writes the derived tables again.

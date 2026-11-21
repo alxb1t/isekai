@@ -21,7 +21,7 @@ Reading map: [design](design.md) holds the decisions and the names that move, [t
 - `_write_draft` takes `renders`, `version` and `image` by keyword, and each caller says so. Its row among the wide functions goes.
 - The tests that patch `create` and `write` import `isekai.pipeline.review.records`; the patched row of `tests/test_ratchets.py` is renamed, not added.
 - The long-file and long-function rows are keyed to the front door. Each standing mutant of `review.py` is found in the module that now holds its text.
-- `docs/decisions.md` gains D75. The pipeline README, `isekai/README.md` and the derived tables name the package.
+- `docs/decisions.md` gains D77. The pipeline README, `isekai/README.md` and the derived tables name the package.
 
 No requirement is touched. The code moves as it is; every message, record and byte stays.
 

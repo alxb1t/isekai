@@ -45,7 +45,7 @@ verb and `HubRoutes` of `interface/ui/routes/hub.py` both call it. `migrate` is 
 which imports `artifacts.py`, `run.py` and `refusal.py`: it moves the run's layout,
 and `cli.py`'s verb walks each runs root, reaching the library's collections
 through `interface/ui/`'s `collection_runs` inside the handler. `--progress json`
-is `Reporter` of `interface/verbs/common.py`. **Prepare and Render reach the CLI by process, never
+is the lines `interface/progress.py` declares, which `Reporter` of `interface/verbs/common.py` and `Steps` write. **Prepare and Render reach the CLI by process, never
 by import**: `interface/ui/jobs.py` runs `python -m isekai prepare`
 over the cells, each photograph tagged, captioned and sheeted in turn, and
 `python -m isekai render` between `python -m gpunit volume up` and `volume down`,
@@ -81,7 +81,7 @@ record and the edit's record ([D53](decisions.md#d53--a-placement-is-recorded-be
 
 **The proposal's pieces.** `unpack` is `boundary/unpack.py`'s and imports `boundary/provision.py`, which it leaves
 unedited because the pod image copies it; `pose` and `sam2` are `boundary/pose.py`'s and `boundary/sam2.py`'s, each
-importing `provision`, `unpack`, `wd14`'s `silence_onnxruntime` and `foundation/refusal.py`, with `onnxruntime`, numpy
+importing `provision`, `unpack`, `onnx` (`boundary/onnx.py`'s) and `foundation/refusal.py`, with `onnxruntime`, numpy
 and Pillow imported inside their functions. `proposal` is `shared/proposal.py`'s, the geometry over arrays, importing no
 other module of the package. `proposing` is `pipeline/proposing.py`'s: it imports `pose`, `sam2` and `proposal` and no
 stage. `interface/wiring.py` opens `pose` and `sam2` once into a `Proposer`, and the propose route of

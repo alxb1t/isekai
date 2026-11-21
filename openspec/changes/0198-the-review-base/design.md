@@ -40,7 +40,7 @@ The deriver of `ui/src/wire.ts` reads a package as its `__init__.py` and names a
 | [D6](#d6) | Phases keep the brief's order, but the patches and the ratchet rows land in the records' phase | the move turns both red until they change, and a phase ends green | a phase of its own for each, red at its end |
 | [D7](#d7) | A name the front door no longer reads is re-bound `X as X`; one it reads is imported plain | ruff reads `X as X` as a re-export, so F401 does not name it | an `__all__`, which no module of the stage declares |
 | [D8](#d8) | The standing mutants of `review.py` follow their text | a mutant is found by its path and its exact text | a new mutant, or a stale entry |
-| [D9](#d9) | A decision, D75, says what a stage package's front door holds and where a patch goes | A7: a decision in force is edited where it lives | leaving it in this design, which is frozen at the archive |
+| [D9](#d9) | A decision, D77, says what a stage package's front door holds and where a patch goes | A7: a decision in force is edited where it lives | leaving it in this design, which is frozen at the archive |
 
 ### D1
 
@@ -92,10 +92,10 @@ The package phase sets each to the front door; the budget phase and the records 
 
 ### D9
 
-D75 is the next free id at the cut, and `mf-integrate` renumbers it where another version took it first. The next version amends its *Accepts*. Its text, in the shape of D74:
+D77 is the next free id at the cut, and `mf-integrate` renumbers it where another version took it first. The next version amends its *Accepts*. Its text, in the shape of D74:
 
 ```
-### D75 · review is a package entered by its front door, and a patch names the module that reads the name
+### D77 · review is a package entered by its front door, and a patch names the module that reads the name
 
 **`isekai/pipeline/review/` is the review stage. `__init__.py` is its front door: it re-exports every name the module held and defines `Status`. `records.py` holds the draft's read and write — `save_draft`, `_write_draft` and `_publish` — with the helpers the stage's parts share, and `budget.py` the token budget. A test patches a name of the stage on the module that reads it, `isekai.pipeline.review.records` for `create` and `write`.**
 

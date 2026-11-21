@@ -24,7 +24,7 @@ from isekai.boundary.wd14 import (
     read_labels,
 )
 from tests.stages import INDEX
-from tests.test_wd14 import TELEMETRY_SWITCH, _planted
+from tests.test_wd14 import TELEMETRY_SWITCH, _declared, _planted
 
 WHITE = [255, 255, 255]
 
@@ -108,11 +108,10 @@ def test_a_graph_whose_bytes_differ_from_its_pin_is_never_opened(
 ) -> None:
     manifest = _planted(tmp_path, {LABELS_DEST: INDEX.encode(), MODEL_DEST: b"graph"})
     (tmp_path / MODEL_DEST).write_bytes(b"other bytes")
-    monkeypatch.setattr(provision, "load_manifest", lambda _path=None: manifest)
     runtime = _stubbed(monkeypatch)
 
     with pytest.raises(provision.DigestMismatch) as refused:
-        open_session(tmp_path)
+        open_session(tmp_path, manifest=_declared(tmp_path, manifest))
 
     assert MODEL_DEST in str(refused.value)
     assert runtime.opened == []
@@ -123,10 +122,9 @@ def test_the_session_opens_the_verified_path_on_the_cpu(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     manifest = _planted(tmp_path, {LABELS_DEST: INDEX.encode(), MODEL_DEST: b"graph"})
-    monkeypatch.setattr(provision, "load_manifest", lambda _path=None: manifest)
     runtime = _stubbed(monkeypatch)
 
-    tagger = open_session(tmp_path)
+    tagger = open_session(tmp_path, manifest=_declared(tmp_path, manifest))
 
     assert runtime.opened == [(str(tmp_path / MODEL_DEST), ["CPUExecutionProvider"])]
     assert tagger.labels == tuple(read_labels(INDEX))

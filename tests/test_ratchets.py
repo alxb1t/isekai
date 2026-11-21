@@ -491,7 +491,6 @@ PATCHED_MODULES = {
     "evaluation.face": 1,
     "isekai.boundary.ollama": 9,
     "isekai.boundary.provision": 7,
-    "isekai.boundary.unpack": 3,
     "isekai.boundary.wd14": 4,
     "isekai.foundation.run": 1,
     "isekai.interface.cli": 2,
@@ -499,7 +498,6 @@ PATCHED_MODULES = {
     "isekai.interface.ui": 1,
     "isekai.interface.ui.events": 1,
     "isekai.interface.ui.library": 4,
-    "isekai.interface.wiring": 13,
     "isekai.pipeline.edit": 3,
     "isekai.pipeline.generate": 1,
     "isekai.pipeline.importing": 8,
@@ -508,7 +506,7 @@ PATCHED_MODULES = {
     "isekai.shared.chain": 1,
     "isekai.shared.ink": 1,
 }
-PATCHED_ROWS = 19
+PATCHED_ROWS = 17
 
 
 # --- the rules, on this repository -------------------------------------------
