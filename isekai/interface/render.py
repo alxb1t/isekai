@@ -35,7 +35,7 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, TextIO, cast
+from typing import Any, TextIO
 
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyTransport, read_runtime
@@ -60,6 +60,7 @@ from isekai.foundation.run import (
     SHEETS,
     Run,
     approved_versions,
+    command,
     current_draft,
     latest_artifact,
     render_groups,
@@ -68,6 +69,11 @@ from isekai.foundation.run import (
     sidecars,
 )
 from isekai.interface.compare_view import COLLECTION_PHOTOS
+
+# The tests import `_Images` and `progress_line` from here.
+from isekai.interface.progress import ARGUMENT, FORMAT, Steps
+from isekai.interface.progress import _Images as _Images
+from isekai.interface.progress import progress_line as progress_line
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.edit import duration_of, pending, records
 from isekai.pipeline.generate import duration, shortfall
@@ -162,8 +168,8 @@ def again(roots: Sequence[Path], without: Sequence[Path] = ()) -> str:
 
     Each of `without` stays out of it, as its `--without`.
     """
-    command = ["uv", "run", "python", "-m", "isekai", "render", *map(str, roots)]
-    return shlex.join([*command, *without_flags(without)])
+    argv = ["uv", "run", "python", "-m", "isekai", "render", *map(str, roots)]
+    return shlex.join([*argv, *without_flags(without)])
 
 
 def without_flags(without: Sequence[Path]) -> list[str]:
@@ -408,74 +414,6 @@ class Records:
             record.end(outcome, message)
 
 
-class Steps:
-    """A session's JSON lines on `out`, one per step, when `enabled`.
-
-    Each step and image reaches `record` too, whether or not it is printed.
-    e.g. {"step": "image", "n": 2, "of": 4, "run": "…", "flow": "…", "state": "done"}
-    """
-
-    def __init__(self, out: TextIO, enabled: bool) -> None:
-        """Print to `out`, or nothing unless `enabled`."""
-        self.out = out
-        self.enabled = enabled
-        self.flag: tuple[str, ...] = ("--progress", "json") if enabled else ()
-        self.record: Records | None = None
-        self._n = 0
-
-    def step(self, step: str, state: str) -> None:
-        """Print one step's line, and record it."""
-        if self.record is not None:
-            self.record.step(step, state)
-        self._line(step=step, state=state)
-
-    def _line(self, **line: object) -> None:
-        if self.enabled:
-            # Flushed: a job reads this from a pipe, line by line, as it happens.
-            print(json.dumps(line), file=self.out, flush=True)
-
-    def child(self, total: int = 0, runs: Path | None = None) -> TextIO:
-        """Return where a `generate` line over `runs` writes: its images become steps.
-
-        Once a record is kept, every image reaches its collection's, printed or not.
-        """
-        if not (self.enabled or self.record):
-            return self.out
-        # A text stream as `_Tee` is; `TextIO` is a type no stream class subclasses.
-        return cast("TextIO", _Images(self, total, runs))
-
-    def image(self, item: Mapping[str, Any], total: int, runs: Path | None) -> None:
-        """Print the next image's line, of `total`, naming its run, flow and seed."""
-        if self.record is not None and runs is not None:
-            self.record.image(item, runs)
-        self._n += 1
-        named = {
-            key: item.get(key) for key in ("run", "digest", "flow", "version", "seed")
-        }
-        self._line(step="image", n=self._n, of=total, **named, state="done")
-
-
-class _Images(io.TextIOBase):
-    """Read `generate`'s JSON lines, and print each landed image as a step."""
-
-    def __init__(self, steps: Steps, total: int, runs: Path | None) -> None:
-        """Count images against `total`, each landed under `runs`."""
-        self._steps = steps
-        self._total = total
-        self._runs = runs
-        self._held = ""
-
-    def write(self, text: str) -> int:
-        """Take `text`, and print a step for each whole render line in it."""
-        self._held += text
-        *lines, self._held = self._held.split("\n")
-        for line in lines:
-            item = progress_line(line)
-            if item and item.get("stage") == "render" and item.get("state") == "done":
-                self._steps.image(item, self._total, self._runs)
-        return len(text)
-
-
 def run_session(
     args: argparse.Namespace,
     wired: Wiring,
@@ -511,7 +449,7 @@ def run_session(
             file=wired.err,
         )
         return 1
-    json_lines = getattr(args, "progress", None) == "json"
+    json_lines = getattr(args, "progress", None) == FORMAT
     with contextlib.ExitStack() as held:
         logged = wired
         # Under `--progress json` stdout is the caller's channel and stderr its
@@ -743,15 +681,6 @@ def edits_of(
                 cells.append(f"{run_id}/{flow}")
                 found += held
     return Edits(tuple(cells), len(found), tuple(found))
-
-
-def progress_line(raw: str) -> dict[str, Any] | None:
-    """Return a `--progress json` line as a mapping, or None for any other line."""
-    try:
-        found = json.loads(raw)
-    except json.JSONDecodeError:
-        return None
-    return found if isinstance(found, dict) else None
 
 
 def _limit(asked: int | None, ceiling_s: int) -> None:
@@ -1101,10 +1030,12 @@ def _asked(
     flows = [arg for request in requests for arg in ("--flow", request.flow)]
     if not ids:
         photos = shlex.quote(str(runs.parent / COLLECTION_PHOTOS))
+        asked = command(
+            "assign", " ".join(flows), "--runs", shlex.quote(str(runs)), f"{photos}/*"
+        )
         raise Refusal(
             f"{runs} holds no run; open them from the collection's photographs with: "
-            f"uv run python -m isekai assign {' '.join(flows)} --runs "
-            f"{shlex.quote(str(runs))} {photos}/*"
+            f"uv run {asked}"
         )
     where = ("--runs", str(runs), *ids)
     if generate([*verb, *flows, *where], free) != 0:
@@ -1204,8 +1135,7 @@ def _rendered(
                 # its prose goes to stderr, which the log tees.
                 argv = [
                     "generate",
-                    "--progress",
-                    "json",
+                    *ARGUMENT,
                     *line.head,
                     "--server",
                     server,
@@ -1220,7 +1150,7 @@ def _rendered(
                 live = dataclasses.replace(
                     wired, client=client, image=session.image, out=steps.child(0, runs)
                 )
-                argv = _edit_argv(runs, held, ("--progress", "json"), server)
+                argv = _edit_argv(runs, held, ARGUMENT, server)
                 failed |= generate(argv, live) != 0
         steps.step("teardown", "done")
         if failed:

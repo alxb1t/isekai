@@ -2,7 +2,7 @@
 
 import threading
 import time
-from collections.abc import Iterator, Sequence
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
@@ -13,12 +13,18 @@ from numpy.typing import NDArray
 from PIL import Image, ImageDraw
 
 from isekai.boundary import pose as pose_boundary
-from isekai.boundary.pose import Pose
+from isekai.boundary import sam2 as sam2_boundary
+from isekai.boundary.pose import Pose, PoseFinder
 from isekai.boundary.provision import DigestMismatch
 from isekai.boundary.unpack import PLACEMENT_REMEDY
 from isekai.foundation.refusal import Refusal
-from isekai.interface import wiring
-from isekai.interface.wiring import Wiring, proposer_for, proposer_of, wiring_from
+from isekai.interface.wiring import (
+    Proposers,
+    Wiring,
+    proposer_for,
+    proposer_of,
+    wiring_from,
+)
 from isekai.pipeline.proposing import NOTHING, Proposer, propose
 from isekai.shared.proposal import FRACTIONS, PROMPTS
 from isekai.shared.vocabulary import Vocabulary
@@ -258,15 +264,8 @@ def test_propose_pipeline_a_proposer_answers_as_propose_does() -> None:
 # --- the wiring seam ---------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)
-def _unopened(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Forget the models a test opened, so no test sees another's."""
-    monkeypatch.setattr(wiring, "_proposer", None)
-    yield
-
-
-def _opening(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Replace the two openers with fakes, and return the names opened, in order."""
+def _opening(monkeypatch: pytest.MonkeyPatch) -> tuple[Proposers, list[str]]:
+    """Return a cache of fake openers, and the names they open, in order."""
     opened: list[str] = []
 
     def pose() -> FakePoseFinder:
@@ -277,20 +276,19 @@ def _opening(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         opened.append("segmenter")
         return FakeSegmenter(_band)
 
-    monkeypatch.setattr(wiring, "open_pose", pose)
-    monkeypatch.setattr(wiring, "open_segmenter", segmenter)
     monkeypatch.delenv("ISEKAI_WIRING", raising=False)
-    return opened
+    return Proposers(open_pose=pose, open_segmenter=segmenter), opened
 
 
 @pytest.mark.spec("placement-proposal:models:the-sessions-are-opened-once")
 def test_propose_wiring_the_models_open_once_for_two_proposals(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    opened = _opening(monkeypatch)
-    wired = wiring_from(runs=tmp_path / "runs")
+    cache, opened = _opening(monkeypatch)
+    built = wiring_from(runs=tmp_path / "runs")
+    wired = replace(built, proposer=cache)
 
-    assert wired.proposer is proposer_for
+    assert built.proposer is proposer_for
     assert opened == []
     first = proposer_of(wired)
     second = proposer_of(replace(wired, runs_root=tmp_path / "other"))
@@ -314,10 +312,9 @@ def test_propose_wiring_overlapping_first_proposals_open_the_models_once(
         opened.append("segmenter")
         return FakeSegmenter(_band)
 
-    monkeypatch.setattr(wiring, "open_pose", slow_pose)
-    monkeypatch.setattr(wiring, "open_segmenter", segmenter)
     monkeypatch.delenv("ISEKAI_WIRING", raising=False)
-    wired = wiring_from(runs=tmp_path / "runs")
+    cache = Proposers(open_pose=slow_pose, open_segmenter=segmenter)
+    wired = replace(wiring_from(runs=tmp_path / "runs"), proposer=cache)
     start = threading.Barrier(2)
 
     def first_ask() -> Proposer:
@@ -336,14 +333,15 @@ def test_propose_wiring_overlapping_first_proposals_open_the_models_once(
 def test_propose_wiring_a_damaged_model_refuses_naming_the_file_and_the_fetch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def damaged() -> object:
+    def damaged() -> PoseFinder:
         raise DigestMismatch(
             "SHA-256 mismatch for models/pose.onnx: expected aa, computed bb"
         )
 
-    monkeypatch.setattr(wiring, "open_pose", damaged)
     monkeypatch.delenv("ISEKAI_WIRING", raising=False)
-    wired = wiring_from(runs=tmp_path / "runs")
+    wired = replace(
+        wiring_from(runs=tmp_path / "runs"), proposer=Proposers(open_pose=damaged)
+    )
 
     with pytest.raises(Refusal) as refused:
         proposer_of(wired)
@@ -377,13 +375,14 @@ def test_propose_wiring_a_missing_model_refuses_naming_the_fetch_and_is_not_kept
 ) -> None:
     asked: list[str] = []
 
-    def absent() -> object:
+    def absent() -> PoseFinder:
         asked.append("pose")
         return pose_boundary.open_pose(tmp_path / "models")
 
-    monkeypatch.setattr(wiring, "open_pose", absent)
     monkeypatch.delenv("ISEKAI_WIRING", raising=False)
-    wired = wiring_from(runs=tmp_path / "runs")
+    wired = replace(
+        wiring_from(runs=tmp_path / "runs"), proposer=Proposers(open_pose=absent)
+    )
 
     for _ in range(2):
         with pytest.raises(Refusal) as refused:
@@ -391,3 +390,11 @@ def test_propose_wiring_a_missing_model_refuses_naming_the_fetch_and_is_not_kept
         assert PLACEMENT_REMEDY in str(refused.value)
 
     assert asked == ["pose", "pose"]
+
+
+@pytest.mark.spec_exempt("structural: the default cache opens the boundary's models")
+def test_propose_wiring_the_default_cache_opens_the_boundary_models() -> None:
+    from isekai.interface.wiring import PROPOSERS
+
+    assert PROPOSERS.open_pose is pose_boundary.open_pose
+    assert PROPOSERS.open_segmenter is sam2_boundary.open_segmenter

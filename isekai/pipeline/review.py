@@ -75,6 +75,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     attempts,
+    command,
     current_draft,
     group_of,
     is_rendered,
@@ -338,9 +339,7 @@ def _held_way(run: Run, flow: str, source: str, held: Sequence[int]) -> str:
                 f"{source} holds {names}; run `{_draft_command(image, flow)}` "
                 "to draft it from an image of one"
             )
-    rendering = (
-        f"python -m isekai render {shlex.quote(str(run.path.parent))} {source}=1"
-    )
+    rendering = command("render", shlex.quote(str(run.path.parent)), f"{source}=1")
     return f"{source} holds {names}; run `{rendering}` to render one, {_DRAFT_AGAIN}"
 
 
@@ -456,7 +455,7 @@ def _draft_command(image: Path, flow: str) -> str:
     e.g. (r/f/outputs/001/7.png, f)
          -> "python -m isekai draft --flow f r/f/outputs/001/7.png"
     """
-    return f"python -m isekai draft --flow {flow} {shlex.quote(str(image))}"
+    return command("draft", "--flow", flow, shlex.quote(str(image)))
 
 
 def refuse_revision(

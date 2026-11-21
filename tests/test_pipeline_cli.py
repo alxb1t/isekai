@@ -742,9 +742,7 @@ def test_the_implementation_the_artifacts_record_is_the_one_the_adapter_names() 
 
 @pytest.mark.spec("caption:selection:the-config-names-the-model")
 @pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-readers-model")
-def test_a_flow_resolves_to_a_reader_running_the_configured_model(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_a_flow_resolves_to_a_reader_running_the_configured_model() -> None:
     reader = reader_for()
 
     assert isinstance(reader, OllamaReader)
@@ -752,10 +750,9 @@ def test_a_flow_resolves_to_a_reader_running_the_configured_model(
 
     # A model no constant could fake: both seams read the config, not an alias.
     configured = replace(load_caption_config(), model="a-reader")
-    monkeypatch.setattr(wiring, "load_caption_config", lambda: configured)
 
-    configured_reader = wiring.reader_for()
-    configured_tagger = wiring.hosted_tagger_for()
+    configured_reader = wiring.reader_for(config=lambda: configured)
+    configured_tagger = wiring.hosted_tagger_for(config=lambda: configured)
 
     assert isinstance(configured_reader, OllamaReader)
     assert isinstance(configured_tagger, OllamaTagger)
@@ -1075,14 +1072,13 @@ def _failing_tagger(kind: Kind, asked: list[str]) -> Callable[[], LocalTagger]:
 
 
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
-def test_prepare_refuses_when_a_pin_does_not_match(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_prepare_refuses_when_a_pin_does_not_match(tmp_path: Path) -> None:
     def swapped() -> LocalTagger:
         raise provision.DigestMismatch("wd14/model.onnx hashes to the wrong digest")
 
-    monkeypatch.setattr(wiring, "open_session", swapped)
-    wired = replace(_wiring(tmp_path), tagger=wiring.tagger_for)
+    wired = replace(
+        _wiring(tmp_path), tagger=lambda: wiring.tagger_for(open_session=swapped)
+    )
     [run] = _photographs(tmp_path, wired.runs_root, (1200, 900))
     assign(run, "summon-anime-wai")
 

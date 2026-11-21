@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Protocol
 import numpy as np
 from PIL import Image, ImageOps
 
-from isekai.boundary.wd14 import silence_onnxruntime
+from isekai.boundary.onnx import cpu_session, silence_onnxruntime
 from isekai.foundation.refusal import Refusal
 
 if TYPE_CHECKING:
@@ -80,9 +80,7 @@ def _session(model: Path) -> "InferenceSession":
 
     options = onnxruntime.SessionOptions()
     options.log_severity_level = 3
-    return onnxruntime.InferenceSession(
-        str(model), options, providers=["CPUExecutionProvider"]
-    )
+    return cpu_session(onnxruntime, model, options)
 
 
 class Detector:

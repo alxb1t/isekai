@@ -35,6 +35,8 @@ from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
+    DATA_ROOT,
+    REPOSITORY,
     REVIEW,
     Run,
     artifact_name,
@@ -406,11 +408,15 @@ def main(
     argv: Sequence[str],
     *,
     reader: Callable[[Path], tuple[Read, dict[str, str]]] = _reader,
+    repository: Path = REPOSITORY,
+    data_root: Path = DATA_ROOT,
 ) -> int:
     """Read the collection, write its record beside the runs, and print the table."""
     args = parse_args(argv)
     try:
-        target = destination(args.runs, "recall.json")
+        target = destination(
+            args.runs, "recall.json", repository=repository, data_root=data_root
+        )
         held = _held(args.runs, args.names)
         read_tags, pins = reader(args.models)
         rows, notes = survey(held, read_tags, args.flows)

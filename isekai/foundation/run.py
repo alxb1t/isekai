@@ -26,11 +26,12 @@ convention:**
   to advance to. The kind and the attempt ordinal are in the name, so the retry
   decision stays a listing.
 
-The siblings `names.py`, `rundir.py`, `layout.py`, `failures.py` and
-`producers.py` hold the identity and the names, the run and its frame, the
-numbering and the edit files, the failure budgets, and the stage record. This
-module imports them and re-exports every name, so a module outside the foundation
-imports a run's names from here (D62).
+The siblings `names.py`, `rundir.py`, `layout.py`, `failures.py`, `producers.py`
+and `command.py` hold the identity and the names, the run and its frame, the
+numbering and the edit files, the failure budgets, the stage record, and the
+words a command starts with and the join that builds one. This module imports
+them and re-exports every name, so a module outside the foundation imports a
+run's names from here (D62).
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
@@ -50,6 +51,7 @@ from isekai.foundation.artifacts import (
     write,
 )
 from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.command import ENTRY, command
 from isekai.foundation.failures import (
     BUDGETS,
     Attempt,
@@ -148,6 +150,7 @@ __all__ = [
     "EDIT_RECORD",
     "EDIT_STEM",
     "EDIT_SUFFIXES",
+    "ENTRY",
     "ERROR",
     "FRAME_NAME",
     "ID_DIGEST_CHARS",
@@ -182,6 +185,7 @@ __all__ = [
     "attempt",
     "attempts",
     "check_budget",
+    "command",
     "constant_record",
     "current_draft",
     "delete_edits",
@@ -372,14 +376,13 @@ def stage_command(run: Run, verb: str, *flows: str, options: Sequence[str] = ())
     command would look under `.data/runs` for a run that lives elsewhere.
     """
     root = run.path.parent
-    naming = "".join(f" --flow {flow}" for flow in flows)
+    flagged = [word for flow in flows for word in ("--flow", flow)]
     runs = (
-        ""
+        []
         if root.resolve() == RUNS_ROOT.resolve()
-        else f" --runs {shlex.quote(str(root))}"
+        else ["--runs", shlex.quote(str(root))]
     )
-    words = " ".join((*options, run.id))
-    return f"python -m isekai {verb}{naming}{runs} {words}"
+    return command(verb, *flagged, *runs, *options, run.id)
 
 
 def migrate_command(run: Run) -> str:
@@ -389,8 +392,8 @@ def migrate_command(run: Run) -> str:
     """
     root = run.path.parent
     if root.resolve() == RUNS_ROOT.resolve():
-        return "python -m isekai migrate"
-    return f"python -m isekai migrate --runs {shlex.quote(str(root))}"
+        return command("migrate")
+    return command("migrate", "--runs", shlex.quote(str(root)))
 
 
 def unmigrated(run: Run) -> list[str]:
@@ -474,16 +477,16 @@ def refusal_for(
     version = version_of(record)
     asked = NEW_VERSION if version > 1 else ()
     flows = () if flow is None else (flow,)
-    command = f"`{stage_command(run, producer.verb, *flows, options=asked)}`"
+    pasted = f"`{stage_command(run, producer.verb, *flows, options=asked)}`"
     where = f"{PHOTO if flow is None else flow}/{producer.folder}/{record.name}"
     if exhausted(key, record.parent, version):
         return Refusal(
             f"{run.id}: the {noun} failed ({kind}) -- {detail}; see {where}, fix "
-            f"what it names and delete it, then run {command}"
+            f"what it names and delete it, then run {pasted}"
         )
     return Refusal(
         f"{run.id}: the {noun} failed ({kind}) -- {detail}; see {where}, and run "
-        f"{command} again once what it names is fixed"
+        f"{pasted} again once what it names is fixed"
     )
 
 
