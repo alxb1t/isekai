@@ -7,7 +7,7 @@ Move `Reader` and `Imports` from `isekai/pipeline/importing.py` to `isekai/inter
 - [x] 1 — The session in its new module · moderate
 - [x] 2 — The readers · moderate
 - [x] 3 — The old session leaves the stage · moderate
-- [ ] 4 — The documents · moderate
+- [x] 4 — The documents · moderate
 
 ## 1 — The session in its new module
 
@@ -72,13 +72,13 @@ Move `Reader` and `Imports` from `isekai/pipeline/importing.py` to `isekai/inter
 
 ## 4 — The documents
 
-- [ ] 4.1 In `isekai/pipeline/README.md` replace the *Files* row of `importing.py` with ``| `importing.py` | reads a file into staging, cleans it to its pixels and orientation, verifies it, previews it, and commits the collection's `sources/`; the upload session over it is `interface/ui/uploads.py`'s | free |``.
+- [x] 4.1 In `isekai/pipeline/README.md` replace the *Files* row of `importing.py` with ``| `importing.py` | reads a file into staging, cleans it to its pixels and orientation, verifies it, previews it, and commits the collection's `sources/`; the upload session over it is `interface/ui/uploads.py`'s | free |``.
   Verify: `git grep -n -F "the upload session over it" -- isekai/pipeline/README.md` prints one line.
-- [ ] 4.2 In `isekai/interface/README.md` add this row to the *Files* table after the `ui/surface.py` row: ``| `ui/uploads.py` | the upload session behind the import sheet: `Reader` reads one open import's uploads in turn, and `Imports` holds each open import's staging folder and reader and seals the reader before a commit; both call `pipeline/importing.py` as `importing.<name>`, so a test replaces `read` or `commit` by name. **Imports no web framework** |``.
+- [x] 4.2 In `isekai/interface/README.md` add this row to the *Files* table after the `ui/surface.py` row: ``| `ui/uploads.py` | the upload session behind the import sheet: `Reader` reads one open import's uploads in turn, and `Imports` holds each open import's staging folder and reader and seals the reader before a commit; both call `pipeline/importing.py` as `importing.<name>`, so a test replaces `read` or `commit` by name. **Imports no web framework** |``.
   Verify: `git grep -n -e "^| .ui/uploads.py. |" -- isekai/interface/README.md` prints one line.
-- [ ] 4.3 In `isekai/interface/ui/README.md` change "The import's reader in" and the path after it, `pipeline/importing.py`, to the path `uploads.py`, and in the next line put "through pipeline/importing.py," after "one at a time".
+- [x] 4.3 In `isekai/interface/ui/README.md` change "The import's reader in" and the path after it, `pipeline/importing.py`, to the path `uploads.py`, and in the next line put "through pipeline/importing.py," after "one at a time".
   Verify: `git grep -n -e "reader in .uploads.py." -- isekai/interface/ui/README.md` prints one line.
-- [ ] 4.4 In `docs/modules.md` change the words "both compose it, and" to "both compose it, the upload session over it is interface/ui/uploads.py's, and", and change "import's reader," to "the reader of interface/ui/uploads.py,".
+- [x] 4.4 In `docs/modules.md` change the words "both compose it, and" to "both compose it, the upload session over it is interface/ui/uploads.py's, and", and change "import's reader," to "the reader of interface/ui/uploads.py,".
   Verify: `git grep -n -F "import's reader" -- docs/modules.md` prints nothing.
-- [ ] 4.5 Confirm the suite, the layer rules, the docs, the bindings and the wire hold at the end.
+- [x] 4.5 Confirm the suite, the layer rules, the docs, the bindings and the wire hold at the end.
   Verify: `uv run pytest tests/test_importing.py tests/test_ui_api.py tests/test_ui.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py tests/test_spec_bindings.py tests/test_derive_wire.py` exits 0.

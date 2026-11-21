@@ -38,7 +38,7 @@ Every lazy edge points down, as every module-level one does.
 
 **Where this version's pieces sit.** `import` is `pipeline/importing.py`, a stage
 no other stage imports; the CLI's `import` verb and `StagingRoutes` of `interface/ui/routes/staging.py`
-both compose it, and `ui/library.py` reads `shared/image.py`'s `metadata_in` for the
+both compose it, the upload session over it is `interface/ui/uploads.py`'s, and `ui/library.py` reads `shared/image.py`'s `metadata_in` for the
 not-cleaned mark.
 `assign` is `foundation/rundir.py`'s, read through `run.py`, because a tick is the run's layout, and the CLI
 verb and `HubRoutes` of `interface/ui/routes/hub.py` both call it. `migrate` is `foundation/migrate.py`'s,
@@ -55,7 +55,7 @@ as children, so the CLI stays the one path a stage runs through, and
 `StreamRoutes` of `interface/ui/routes/stream.py` serves the stream.
 Every other write the server makes runs in its own process, through the function
 that owns it: stage ③'s review functions, which `ReviewRoutes` of
-`interface/ui/routes/reviewing.py` calls, import's reader, `sheet()` for a
+`interface/ui/routes/reviewing.py` calls, the reader of `interface/ui/uploads.py`, `sheet()` for a
 target's first sheet when a draft is made from another flow, filled from the
 photograph's tags — `interface/drafting.py`'s `draft_across` runs it, the same
 sequence the CLI's `draft` runs (D4) — and, for a deleted render, `delete_render` and, for
