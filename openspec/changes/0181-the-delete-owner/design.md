@@ -148,14 +148,12 @@ The cases of `tests/test_edit_session.py` that run `discard_edit` hold it, and t
 `run_discard` reads the run from the ref, asks the disk whether a render session holds the collection, calls `(delete_edit if edited else delete_render)(image)` and prints, as before, each file from the runs root and then each thumbnail from the library:
 
 ```python
-    deleted = (delete_edit if edited else delete_render)(image)
-    for path in deleted.files:
-        print(f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out)
-    for path in deleted.thumbnails:
-        print(
-            f"discard deleted {path.relative_to(run.path.parents[2])}", file=wired.out
-        )
-    return 0
+deleted = (delete_edit if edited else delete_render)(image)
+for path in deleted.files:
+    print(f"discard deleted {path.relative_to(run.path.parent)}", file=wired.out)
+for path in deleted.thumbnails:
+    print(f"discard deleted {path.relative_to(run.path.parents[2])}", file=wired.out)
+return 0
 ```
 
 `ImageRoutes.delete_render` keeps `self.surface.rendered(...)`, the draft lock and its job-slot refusal, and calls `delete_render(image)` where it chained the owners. The verb's printed lines are today's on a tree with no edit thumbnail. [The acts](proposal.md#not-in-this-change) own the guards' gaps.
