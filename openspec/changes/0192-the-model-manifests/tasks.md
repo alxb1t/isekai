@@ -6,7 +6,7 @@ The model openers take their manifest's path, `unpack.main` takes its fetcher, a
 
 - [x] 1 — The openers · moderate
 - [x] 2 — The fetcher and the ratchet row · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The openers
 
@@ -66,9 +66,9 @@ The model openers take their manifest's path, `unpack.main` takes its fetcher, a
 
 ## 3 — The documents
 
-- [ ] 3.1 In `docs/principles.md`, replace the *Known breaks* bullet under *A component is a contract*, which holds `so is every name of a module`, with the bullet [D5](design.md#d5) gives, word for word.
+- [x] 3.1 In `docs/principles.md`, replace the *Known breaks* bullet under *A component is a contract*, which holds `so is every name of a module`, with the bullet [D5](design.md#d5) gives, word for word.
   Verify: `git grep -n -F "so is every name of a module" -- docs/principles.md` prints nothing.
-- [ ] 3.2 Each module `PATCHED_MODULES` still lists is named in that bullet, which says each `stays for` one reason, as [D5](design.md#d5) names them.
+- [x] 3.2 Each module `PATCHED_MODULES` still lists is named in that bullet, which says each `stays for` one reason, as [D5](design.md#d5) names them.
   Verify: `git grep -o -F -e "stays for" -e "boundary/ollama.py" -e "boundary/provision.py" -e "boundary/wd14.py" -e "evaluation/face.py" -e "foundation/run.py" -e "interface/cli.py" -e "interface/render.py" -e "interface/ui/__init__.py" -e "interface/ui/events.py" -e "interface/ui/library.py" -e "pipeline/edit.py" -e "pipeline/generate.py" -e "pipeline/importing.py" -e "pipeline/review.py" -e "pipeline/tattoos.py" -e "shared/chain.py" -e "shared/ink.py" -- docs/principles.md` prints each path.
-- [ ] 3.3 Run the documents' tests.
+- [x] 3.3 Run the documents' tests.
   Verify: `uv run pytest tests/test_principles.py tests/test_docs.py tests/test_ratchets.py` exits 0.
