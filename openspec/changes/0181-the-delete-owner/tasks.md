@@ -5,7 +5,7 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 ## Progress
 
 - [x] 1 — The pre-flight · moderate
-- [ ] 2 — The move · moderate
+- [x] 2 — The move · moderate
 - [ ] 3 — The owner · hard
 - [ ] 4 — The verb · moderate
 - [ ] 5 — The route · moderate
@@ -30,13 +30,13 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 
 ## 2 — The move
 
-- [ ] 2.1 Create `isekai/foundation/discard.py` with the docstring of [D1](design.md#d1), and copy into it, character for character with their docstrings, `discard_render` from `isekai/pipeline/generate.py`, `_holds_render` and `withdraw` from `isekai/pipeline/review.py` and `discard_edit` from `isekai/pipeline/edit.py`. Import each name they read from `isekai.foundation.run`, and `EDIT_FILE` and `read` from `isekai.foundation.artifacts`.
+- [x] 2.1 Create `isekai/foundation/discard.py` with the docstring of [D1](design.md#d1), and copy into it, character for character with their docstrings, `discard_render` from `isekai/pipeline/generate.py`, `_holds_render` and `withdraw` from `isekai/pipeline/review.py` and `discard_edit` from `isekai/pipeline/edit.py`. Import each name they read from `isekai.foundation.run`, and `EDIT_FILE` and `read` from `isekai.foundation.artifacts`.
   Verify: `grep -n -E "^def (discard_render|discard_edit|withdraw|_holds_render)" isekai/foundation/discard.py` prints four lines.
-- [ ] 2.2 Delete those bodies from their stages and bind each back as [D1](design.md#d1) says: `discard_render as discard_render` in `generate.py`, `discard_edit as discard_edit` in `edit.py`, `withdraw as withdraw` and `_holds_render as _holds_render` in `review.py`. Run `uv run ruff check --fix isekai/pipeline/generate.py isekai/pipeline/edit.py isekai/pipeline/review.py isekai/foundation/discard.py` for the order and each import the bodies alone read.
+- [x] 2.2 Delete those bodies from their stages and bind each back as [D1](design.md#d1) says: `discard_render as discard_render` in `generate.py`, `discard_edit as discard_edit` in `edit.py`, `withdraw as withdraw` and `_holds_render as _holds_render` in `review.py`. Run `uv run ruff check --fix isekai/pipeline/generate.py isekai/pipeline/edit.py isekai/pipeline/review.py isekai/foundation/discard.py` for the order and each import the bodies alone read.
   Verify: `git grep -n -e "^def discard_render" -e "^def discard_edit" -e "^def withdraw" -e "^def _holds_render" -- isekai/pipeline` prints nothing.
-- [ ] 2.3 Run the suite over the delete's readers: no file under `tests/` changes in this phase.
+- [x] 2.3 Run the suite over the delete's readers: no file under `tests/` changes in this phase.
   Verify: `uv run pytest tests/test_generate.py tests/test_review.py tests/test_edit_session.py tests/test_edit_placement.py tests/test_pipeline_cli.py tests/test_ui_api.py tests/test_layers.py -q` exits 0.
-- [ ] 2.4 In the *Imported by* table of `isekai/foundation/README.md`, add the row ``| `discard.py` | — | — |`` after the `library.py` row, then run `uv run python -m tools.derive_imported_by`; it writes the importers of `discard.py` and the rows of the files it reads.
+- [x] 2.4 In the *Imported by* table of `isekai/foundation/README.md`, add the row ``| `discard.py` | — | — |`` after the `library.py` row, then run `uv run python -m tools.derive_imported_by`; it writes the importers of `discard.py` and the rows of the files it reads.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py -q` exits 0.
 
 ## 3 — The owner

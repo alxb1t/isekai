@@ -58,19 +58,17 @@ from isekai.foundation.artifacts import (
     write,
 )
 from isekai.foundation.atomic_write import write_atomically
+from isekai.foundation.discard import _holds_render as _holds_render
+from isekai.foundation.discard import withdraw as withdraw
 from isekai.foundation.flow import OUTPUT_SUFFIX, Flow, Schema, assemble
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
-    DESCRIPTION,
     DRAFT,
     NEW_VERSION,
-    OUTPUTS,
-    PHOTO,
     PROMPTS,
     REVIEW,
     SHEETS,
-    SOURCES,
     RenderRef,
     Run,
     approval_of,
@@ -78,7 +76,6 @@ from isekai.foundation.run import (
     artifact_name,
     attempts,
     current_draft,
-    failures_alone,
     group_of,
     is_rendered,
     latest,
@@ -566,73 +563,6 @@ def cancel(run: Run, flow: str) -> Cancelled:
         )
     approval.unlink()
     return Cancelled(path, changed=True)
-
-
-def _holds_render(run: Run, flow: str, version: int) -> bool:
-    """Return whether approval `version`'s group holds more than failure records."""
-    group = group_of(run, flow, version)
-    return group.exists() and failures_alone(group) is None
-
-
-def withdraw(run: Run, flow: str, version: int) -> list[Path]:
-    """Delete approval `version` once it holds no render; return what went, absolute.
-
-    With it go each older approval whose group is gone or holds failure records
-    alone, each with its prompt, failure records, group and source copy, and,
-    where it was the newest, the draft waiting above it and that draft's source
-    copy. A flow left with no approval keeps only its directory, its assignment:
-    every path under sheets/, review/, prompts/ and sources/ goes, and under its
-    own captions/, wd14/ and tags/, each where photo/ holds that kind, then those
-    directories, then outputs/ when empty. Nothing is read, so nothing refuses.
-    e.g. (run, f, 2), 001 rendered -> [f/prompts/002.json, f/review/002.approved.json]
-    """
-    directory = run.directory(flow, REVIEW)
-    approved = approved_versions(directory)
-    if version not in approved or _holds_render(run, flow, version):
-        return []
-    going = [
-        one
-        for one in approved
-        if one == version or (one < version and not _holds_render(run, flow, one))
-    ]
-    prompts = run.directory(flow, PROMPTS)
-    made: list[Path] = []
-    for one in going:
-        group = group_of(run, flow, one)
-        made += [
-            prompts / artifact_name(one),
-            *(attempt.path for attempt in attempts(prompts, one)),
-            *(failures_alone(group) or []),
-            group,
-            source_copy(run, flow, one),
-            approval_of(run, flow, one),
-        ]
-    if version == approved[-1] and (draft := current_draft(directory)) is not None:
-        made += [draft, source_copy(run, flow, version_of(draft))]
-    gone = [path.absolute() for path in made if path.exists()]
-    for path in gone:
-        if path.is_dir():
-            path.rmdir()
-        else:
-            path.unlink()
-    if len(going) < len(approved):
-        return gone
-    shared = [kind for kind in DESCRIPTION if versions(run.directory(PHOTO, kind))]
-    for name in (SHEETS, REVIEW, PROMPTS, SOURCES, *shared):
-        held = run.directory(flow, name)
-        if not held.exists():
-            continue
-        for path in [*sorted(held.rglob("*"), reverse=True), held]:
-            if path.is_dir():
-                path.rmdir()
-            else:
-                path.unlink()
-            gone.append(path.absolute())
-    outputs = run.directory(flow, OUTPUTS)
-    if outputs.is_dir() and not any(outputs.iterdir()):
-        outputs.rmdir()
-        gone.append(outputs.absolute())
-    return gone
 
 
 def _at_draft(directory: Path) -> Path | None:

@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - `tools.mutate` ran over `discard_render`, `discard_edit`, `_holds_render` and `withdraw` before they move; two cases in `tests/test_review.py` kill the survivors of `withdraw`, a failure-only group gone from disk and a nested folder under a flow's own folder (0181 D5).
+- `discard_render`, `withdraw`, `_holds_render` and `discard_edit` move unchanged into `isekai/foundation/discard.py`, each bound back at the stage that held it, so no importer and no test changes (0181 D1).
 
 ## [0.87.36] - 2026-11-21
 
