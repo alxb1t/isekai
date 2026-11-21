@@ -57,7 +57,7 @@ _SIGNATURE_BYTES = 64 * 1024
 
 # Held from picking a staged name until the file under it is written and
 # verified, so two files read at once never take one name or both keep one body.
-_CLAIM = threading.Lock()
+CLAIM = threading.Lock()
 
 # A staging folder's name: `_STAGING_BYTES` random bytes, in hex.
 _STAGING_BYTES = 8
@@ -131,7 +131,7 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
     is taken by other bytes becomes `<stem>-2`.
     """
     name = file.name
-    _refuse_name(name)
+    refuse_name(name)
     try:
         size = file.stat().st_size
         if size > limit:
@@ -145,7 +145,7 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
         ) from unreadable
     body, converted = _clean(file)
     suffix = _suffix(body) if converted else Path(name).suffix
-    with _CLAIM:
+    with CLAIM:
         holder = _holding(staging, body)
         if holder is not None:
             return Staged(name, "skipped", copy_of=holder.name)
@@ -197,7 +197,7 @@ class Reader:
 
     def put(self, name: str, body: bytes) -> dict[str, Any]:
         """Hold an upload for reading; return its id, its name and `waiting`."""
-        _refuse_name(name)
+        refuse_name(name)
         record = _record(name, "waiting", {})
         # Checked and named under the lock `seal` takes, before the disk is
         # touched: no upload lands once a commit has sealed the reader, and one
@@ -242,7 +242,7 @@ class Reader:
         and one skipped as a copy of `name` is forgotten with it: the sheet hands
         the file to a copy it still shows rather than remove it.
         """
-        _refuse_name(name)
+        refuse_name(name)
         # Under the lock `seal` takes, so no commit walks the folder mid-removal.
         with self._lock:
             if self._sealed:
@@ -262,7 +262,7 @@ class Reader:
                 for upload, one in self._files.items()
                 if one.get("copy_of") == name
             ]
-            with _CLAIM:
+            with CLAIM:
                 (self._staging / name).unlink(missing_ok=True)
             for upload in uploads:
                 del self._files[upload]
@@ -447,7 +447,7 @@ class Imports:
 
 def staged_file(staging: Path, name: str) -> Path:
     """Return the path of the file staged as `name`, or refuse it by name."""
-    _refuse_name(name)
+    refuse_name(name)
     staged = staging / name
     if not staged.is_file():
         raise Refusal(f"{name}: not staged in this import; choose it again")
@@ -468,7 +468,7 @@ def preview(staging: Path, name: str) -> bytes:
         ) from unread
 
 
-def _refuse_name(name: str) -> None:
+def refuse_name(name: str) -> None:
     """Refuse a name that is empty, starts with a dot, or holds a separator or NUL."""
     if not name or name.startswith(".") or any(c in name for c in "/\\\x00"):
         raise Refusal(f"{name!r}: not a file name import takes; rename it and add it")

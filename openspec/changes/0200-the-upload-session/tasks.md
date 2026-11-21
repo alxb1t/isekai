@@ -4,28 +4,28 @@ Move `Reader` and `Imports` from `isekai/pipeline/importing.py` to `isekai/inter
 
 ## Progress
 
-- [ ] 1 — The session in its new module · moderate
+- [x] 1 — The session in its new module · moderate
 - [ ] 2 — The readers · moderate
 - [ ] 3 — The old session leaves the stage · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The session in its new module
 
-- [ ] 1.1 In `isekai/pipeline/importing.py` rename `_refuse_name` and `_CLAIM` to the new public names `refuse_name` and `CLAIM`, at each definition and each read in the file ([D2](design.md#d2)). Body, docstring and the comment over the lock stay.
+- [x] 1.1 In `isekai/pipeline/importing.py` rename `_refuse_name` and `_CLAIM` to the new public names `refuse_name` and `CLAIM`, at each definition and each read in the file ([D2](design.md#d2)). Body, docstring and the comment over the lock stay.
   Verify: `git grep -n -w -e "_refuse_name" -e "_CLAIM" -- isekai/pipeline/importing.py` prints nothing.
-- [ ] 1.2 Create `isekai/interface/ui/uploads.py` with the docstring and imports of [D1](design.md#d1), the stage imported as `from isekai.pipeline import importing`: the docstring says it holds the upload session, `Reader` for one open import's uploads and `Imports` for each open import of a library, that both call the stage only as `importing.<name>` so a test that replaces `importing.read` or `importing.commit` reaches them, and that it imports no web framework. Run `git add isekai/interface/ui/uploads.py`: `tools.mutate` copies tracked files only.
+- [x] 1.2 Create `isekai/interface/ui/uploads.py` with the docstring and imports of [D1](design.md#d1), the stage imported as `from isekai.pipeline import importing`: the docstring says it holds the upload session, `Reader` for one open import's uploads and `Imports` for each open import of a library, that both call the stage only as `importing.<name>` so a test that replaces `importing.read` or `importing.commit` reaches them, and that it imports no web framework. Run `git add isekai/interface/ui/uploads.py`: `tools.mutate` copies tracked files only.
   Verify: `uv run python -c "import isekai.interface.ui.uploads"` exits 0.
-- [ ] 1.3 Copy from `isekai/pipeline/importing.py` into `uploads.py`, in the order of their lines, unchanged with their docstrings and comments: `_record`, `Reader`, `_UNREAD` and `_STAGED` with their comments, `_closed`, `_failed`, `Imports` ([D1](design.md#d1)). Leave them in `importing.py` until phase 3 ([D4](design.md#d4)).
+- [x] 1.3 Copy from `isekai/pipeline/importing.py` into `uploads.py`, in the order of their lines, unchanged with their docstrings and comments: `_record`, `Reader`, `_UNREAD` and `_STAGED` with their comments, `_closed`, `_failed`, `Imports` ([D1](design.md#d1)). Leave them in `importing.py` until phase 3 ([D4](design.md#d4)).
   Verify: `grep -n -e "^class Reader" -e "^class Imports" isekai/interface/ui/uploads.py` prints two lines.
-- [ ] 1.4 In the new `uploads.py` make each edit of the table in [D1](design.md#d1), and none else: the old private names become `importing.refuse_name(` and `importing.CLAIM`, `Upload` becomes `importing.Upload`, and the calls of `read`, `stage`, `commit` and `cancel`, and the return type `Committed`, take `importing.`.
+- [x] 1.4 In the new `uploads.py` make each edit of the table in [D1](design.md#d1), and none else: the old private names become `importing.refuse_name(` and `importing.CLAIM`, `Upload` becomes `importing.Upload`, and the calls of `read`, `stage`, `commit` and `cancel`, and the return type `Committed`, take `importing.`.
   Verify: `grep -n -e "staged = read(" -e "folder = stage(" -e "done = commit(" -e "^        cancel(" -e "state: Upload" -e "_refuse_name" -e "_CLAIM" isekai/interface/ui/uploads.py` prints nothing.
-- [ ] 1.5 **HALT CHECK** Run `uv run ruff format isekai/interface/ui/uploads.py`, then `uv run ruff check isekai/interface/ui/uploads.py`. It holds no undefined and no unused name: a failure names a name of `importing.py` that [D1](design.md#d1) does not list, or an import it does not need, and the plan is wrong.
+- [x] 1.5 **HALT CHECK** Run `uv run ruff format isekai/interface/ui/uploads.py`, then `uv run ruff check isekai/interface/ui/uploads.py`. It holds no undefined and no unused name: a failure names a name of `importing.py` that [D1](design.md#d1) does not list, or an import it does not need, and the plan is wrong.
   Verify: `uv run ruff check isekai/interface/ui/uploads.py` exits 0.
-- [ ] 1.6 `uploads.py` binds no name of the stage by `from … import`.
+- [x] 1.6 `uploads.py` binds no name of the stage by `from … import`.
   Verify: `grep -n -e "from isekai.pipeline.importing import" -e "^import isekai" isekai/interface/ui/uploads.py` prints nothing.
-- [ ] 1.7 Run `uv run python -m tools.derive_imported_by`: `uploads.py` imports `importing.py` and the refusal, so the derived tables of the layer READMEs change.
+- [x] 1.7 Run `uv run python -m tools.derive_imported_by`: `uploads.py` imports `importing.py` and the refusal, so the derived tables of the layer READMEs change.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 1.8 Confirm the stage still holds, its own classes still in it.
+- [x] 1.8 Confirm the stage still holds, its own classes still in it.
   Verify: `uv run pytest tests/test_importing.py tests/test_ui_api.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py` exits 0.
 
 ## 2 — The readers
