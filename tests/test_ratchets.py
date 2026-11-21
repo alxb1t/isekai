@@ -491,7 +491,6 @@ PATCHED_MODULES = {
     "evaluation.face": 1,
     "isekai.boundary.ollama": 9,
     "isekai.boundary.provision": 7,
-    "isekai.boundary.unpack": 3,
     "isekai.boundary.wd14": 4,
     "isekai.foundation.run": 1,
     "isekai.interface.cli": 2,
@@ -507,7 +506,7 @@ PATCHED_MODULES = {
     "isekai.shared.chain": 1,
     "isekai.shared.ink": 1,
 }
-PATCHED_ROWS = 18
+PATCHED_ROWS = 17
 
 
 # --- the rules, on this repository -------------------------------------------

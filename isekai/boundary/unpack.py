@@ -253,11 +253,16 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str]) -> int:
-    """Run `fetch`: `unpack.py fetch [--models-dir DIR] [manifest]`."""
+def main(
+    argv: list[str], *, fetcher: Callable[[], Fetcher] = HuggingFaceFetcher
+) -> int:
+    """Run `fetch`: `unpack.py fetch [--models-dir DIR] [manifest]`.
+
+    `fetcher` builds the transport; the default is Hugging Face.
+    """
     args = _parser().parse_args(argv)
     source = PLACEMENT_MANIFEST_PATH if args.manifest is None else Path(args.manifest)
-    return fetch(provision.load_manifest(source), args.models_dir, HuggingFaceFetcher())
+    return fetch(provision.load_manifest(source), args.models_dir, fetcher())
 
 
 if __name__ == "__main__":
