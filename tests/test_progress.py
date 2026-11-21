@@ -1,17 +1,46 @@
 """`--progress json`: a stage verb's progress as JSON lines, its prose on stderr."""
 
+import ast
 import io
 import json
+import sys
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, cast, get_args
 
 import pytest
 
 from isekai.foundation.run import Run, open_run
+from isekai.interface import progress
 from isekai.interface.cli import build_parser, dispatch
-from isekai.interface.render import Steps, _Images, progress_line
+from isekai.interface.progress import (
+    ARGUMENT,
+    CAPTION,
+    DONE,
+    EDIT,
+    FLAG,
+    FORMAT,
+    IMAGE,
+    LANDED,
+    POD,
+    PREPARE,
+    REFUSED,
+    RENDER,
+    SHEET,
+    START,
+    TAG,
+    TEARDOWN,
+    ImageLine,
+    ItemLine,
+    ItemState,
+    Stage,
+    StepLine,
+    StepName,
+    StepState,
+)
+from isekai.interface.render import Records, Steps, _Images, progress_line
 from isekai.interface.verbs import Reporter
+from isekai.pipeline.generate import STAGE_RENDER
 from isekai.shared.vocabulary import Vocabulary
 from tests.images import jpeg_bytes
 from tests.record import recorded
@@ -260,6 +289,50 @@ def test_a_render_line_becomes_the_sessions_image_line() -> None:
     assert out.getvalue() == f"{IMAGE_LINES[0]}\n{IMAGE_LINES[1]}\n"
 
 
+@pytest.mark.spec_exempt(
+    "structural: a quiet session with no record hands its child its own stream"
+)
+def test_a_quiet_session_hands_its_child_its_own_stream() -> None:
+    out = io.StringIO()
+
+    assert Steps(out, False).child() is out
+
+
+class _Kept:
+    """Stand in for the session's records: keep each image it is handed."""
+
+    def __init__(self) -> None:
+        self.images: list[Mapping[str, Any]] = []
+
+    def step(self, step: str, state: str) -> None:
+        pass
+
+    def image(self, item: Mapping[str, Any], runs: Path) -> None:
+        self.images.append(item)
+
+
+@pytest.mark.spec_exempt(
+    "structural: an image reaches the record only when both are given"
+)
+def test_a_session_records_an_image_only_with_a_record_and_its_runs() -> None:
+    out = io.StringIO()
+    render = json.loads(WORK_CASES[0][2])
+    runs = Path("runs")
+
+    Steps(out, True).image(render, 2, runs)
+
+    assert out.getvalue() == f"{IMAGE_LINES[0]}\n"
+    kept = _Kept()
+    steps = Steps(io.StringIO(), True)
+    steps.record = cast("Records", kept)
+
+    steps.image(render, 2, None)
+    assert kept.images == []
+
+    steps.image(render, 2, runs)
+    assert kept.images == [render]
+
+
 class _Landed:
     """Stand in for `Steps`: keep each image item it is handed."""
 
@@ -316,3 +389,62 @@ def test_without_the_flag_stdout_holds_the_human_lines(
 
     assert code == 0
     assert out == f"{run.id}: sheet wrote 001.json\n"
+
+
+@pytest.mark.spec_exempt("structural: the lines' module loads under -S")
+def test_the_progress_module_imports_the_standard_library_alone() -> None:
+    tree = ast.parse(Path(progress.__file__).read_text())
+    modules: list[str] = []
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules += [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            assert node.level == 0
+            modules.append(cast("str", node.module))
+
+    assert modules
+    for module in modules:
+        assert module.split(".")[0] in sys.stdlib_module_names
+        assert module.split(".")[0] != "isekai"
+
+
+@pytest.mark.spec_exempt("structural: the declared names are the words printed")
+def test_the_declared_names_are_the_words_the_lines_print() -> None:
+    assert (FLAG, FORMAT, ARGUMENT) == ("--progress", "json", ("--progress", "json"))
+    assert (TAG, CAPTION, SHEET, RENDER, EDIT) == (
+        "tag",
+        "caption",
+        "sheet",
+        "render",
+        "edit",
+    )
+    assert PREPARE == ("tag", "caption", "sheet")
+    assert (START, DONE, REFUSED) == ("start", "done", "refused")
+    assert (POD, TEARDOWN, IMAGE) == ("pod", "teardown", "image")
+    assert LANDED == ("digest", "flow", "version", "seed")
+    assert RENDER == STAGE_RENDER
+    assert Steps(io.StringIO(), True).flag == ARGUMENT
+    assert Steps(io.StringIO(), False).flag == ()
+
+
+@pytest.mark.spec_exempt("structural: each sample line is its declared shape")
+def test_each_sample_line_is_the_shape_it_declares() -> None:
+    declared = list(ItemLine.__annotations__)
+
+    for _, _, line in ITEM_CASES + WORK_CASES:
+        item = json.loads(line)
+        remaining = iter(declared)
+        assert all(key in remaining for key in item)
+        assert {"run", "stage", "state"} <= item.keys()
+        assert item["stage"] in get_args(Stage)
+        assert item["state"] in get_args(ItemState)
+
+    for _, _, line in STEP_CASES:
+        step = json.loads(line)
+        assert list(step) == list(StepLine.__annotations__)
+        assert step["step"] in get_args(StepName)
+        assert step["state"] in get_args(StepState)
+
+    for line in IMAGE_LINES:
+        assert list(json.loads(line)) == list(ImageLine.__annotations__)

@@ -38,11 +38,11 @@ from isekai.boundary.gpu import GpunitExit, Say, Volume, refused_line
 from isekai.foundation.artifacts import session_id
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
+from isekai.interface.progress import progress_line
 from isekai.interface.render import (
     LOST_EXIT,
     REFUSALS,
     load_timing,
-    progress_line,
     without_flags,
 )
 from isekai.interface.ui.billing import utc_now
