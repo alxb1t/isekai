@@ -10,6 +10,15 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.6] - 2026-11-21
+
+Gate: local 1m18s · CI not read under mf-ship · 0.88.5: local 1m19s · CI not read under mf-ship
+
+- `isekai/interface/progress.py` declares the item, step and image lines, their names and `--progress json`, and holds `emit`, `progress_line`, `Steps` and `_Images`, bound back in `render.py`; every byte is equal, and cases hold two `Steps` branches a mutation run found unread (0196 D1, D2, D3).
+- `Reporter.item` writes through `emit`; the verbs, the session's argv and the argument functions name their stages, states and `--progress json` from `progress.py`; every printed byte is equal (0196 D4, D5, D6).
+- `jobs.py` takes `PREPARE` from `progress.py` and reads each line's state, step, image keys and `--progress json` by its declared names in `_Job.complete`, `_render_child` and both commands; every byte is equal (0196 D5, D6).
+- Docs `D76` records the declaration, `isekai/interface/README.md`, `isekai/README.md` and `docs/modules.md` name `progress.py`, and a case holds `_Images.write`'s return (0196 D7).
+
 ## [0.88.5] - 2026-11-21
 
 Gate: local 1m19s · CI not read under mf-ship · 0.88.4: local 1m18s · CI not read under mf-ship

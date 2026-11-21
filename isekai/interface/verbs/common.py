@@ -1,7 +1,6 @@
 """What the verbs share: the argument types, the reporter and the run helpers."""
 
 import argparse
-import json
 import shlex
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -13,6 +12,7 @@ from isekai.foundation.artifacts import SEED_RANGE, SESSION_ID
 from isekai.foundation.flow import tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import RUNS_ROOT, Run, command, open_run, run_at
+from isekai.interface.progress import FLAG, FORMAT, emit
 from isekai.interface.wiring import Wiring
 from isekai.shared.ink import load_ink_config
 
@@ -186,8 +186,8 @@ def new_version_flag(parser: argparse.ArgumentParser) -> None:
 def progress_flag(parser: argparse.ArgumentParser) -> None:
     """Add `--progress` to `parser`: a JSON line per item, the prose kept apart."""
     parser.add_argument(
-        "--progress",
-        choices=["json"],
+        FLAG,
+        choices=[FORMAT],
         default=None,
         help="print a JSON line per item's start and end; prose goes to stderr",
     )
@@ -234,8 +234,7 @@ class Reporter:
         }
         if message is not None:
             line["message"] = message
-        # Flushed: a job reads this from a pipe, line by line, as it happens.
-        print(json.dumps(line), file=self.out, flush=True)
+        emit(self.out, line)
 
 
 def say(reporter: Reporter, run: Run, verb: str, written: Path | None) -> None:

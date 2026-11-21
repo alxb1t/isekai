@@ -731,6 +731,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Accepts:** the argv of `again` and of the children, the bare `isekai ui` texts and the `isekai.boundary` provisioning commands stay as they are, and a docstring or a comment that names the entry is not read. A refusal's reason and its fix are still one string. Reopen when the entry changes, or when a refusal's fix rides the wire.
 - **Made by:** `0193`.
 
+### D76 · The child's lines are declared in isekai/interface/progress.py
+
+**`isekai/interface/progress.py` declares a child's lines — the item line, and the session's step and image lines — their stage, state and step names, and `--progress json`; `Reporter.item`, `Steps` and `_Images` write and read them there, and `progress_line` is the one reader.**
+
+- **Why:** a line was spelled by its emitter, again in each verb that names its stage and state, and again in each reader, and no test held them to agree. One module says what a line is, and a test holds each sample to it.
+- **Accepts:** the `steps.step` literals in `render.py`, the emitters' `str` parameters, the pipeline's `STAGE_RENDER` and the app's `cell` event stay as they are. Reopen when an emitter is typed by a shape.
+- **Made by:** `0196`.
+
 ## Infrastructure
 
 ### D26 · Renders run on a rented GPU

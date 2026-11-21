@@ -9,6 +9,7 @@ from pathlib import Path
 from isekai.foundation.flow import load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import RUNS_ROOT, across, command
+from isekai.interface.progress import FORMAT, REFUSED, SHEET
 from isekai.interface.verbs.common import (
     Reporter,
     Verb,
@@ -46,7 +47,7 @@ def run_prepare(args: argparse.Namespace, wired: Wiring) -> int:
         name: _per_item("sheet", args, shared, {name: flow}, collected)
         for name, flow in flows.items()
     }
-    reporter = Reporter(wired.out, wired.err, args.progress == "json")
+    reporter = Reporter(wired.out, wired.err, args.progress == FORMAT)
     runs = shlex.quote(str(wired.runs_root))
 
     def sheet_of(flow: str) -> Callable[[str], None]:
@@ -58,7 +59,7 @@ def run_prepare(args: argparse.Namespace, wired: Wiring) -> int:
                     f"`{command('assign', '--flow', flow, '--runs', runs, run_id)}` "
                     "first"
                 )
-                reporter.item(run_id, flow, "sheet", "refused", unassigned)
+                reporter.item(run_id, flow, SHEET, REFUSED, unassigned)
                 raise Refusal(unassigned)
             sheets[flow](run_id)
 
