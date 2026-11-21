@@ -6,7 +6,7 @@ The cases are written first, the record comes in, the tables are read from it, a
 
 - [x] 1 — The cases · moderate
 - [x] 2 — The record · moderate
-- [ ] 3 — The derive · moderate
+- [x] 3 — The derive · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The cases
@@ -33,23 +33,23 @@ The cases are written first, the record comes in, the tables are read from it, a
 
 ## 3 — The derive
 
-- [ ] 3.1 In `isekai/foundation/failures.py`, import the record from `isekai/foundation/producers.py` and replace the comment and the `BUDGETS` literal with the block of [D3](design.md#d3), so no `: 3,` stays.
+- [x] 3.1 In `isekai/foundation/failures.py`, import the record from `isekai/foundation/producers.py` and replace the comment and the `BUDGETS` literal with the block of [D3](design.md#d3), so no `: 3,` stays.
   Verify: `git grep -n -F ": 3," -- isekai/foundation/failures.py` prints nothing.
-- [ ] 3.2 In `isekai/foundation/names.py`, import the record from `isekai/foundation/producers.py`, add the comment line and replace the assignments from `CAPTIONS` to `OUTPUTS`, `DESCRIPTION = (CAPTIONS, WD14, TAGS)` among them, with the block of [D3](design.md#d3).
+- [x] 3.2 In `isekai/foundation/names.py`, import the record from `isekai/foundation/producers.py`, add the comment line and replace the assignments from `CAPTIONS` to `OUTPUTS`, `DESCRIPTION = (CAPTIONS, WD14, TAGS)` among them, with the block of [D3](design.md#d3).
   Verify: `git grep -n -F "= (CAPTIONS, WD14, TAGS)" -- isekai/foundation/names.py` prints nothing.
-- [ ] 3.3 In `tests/mutants.json`, replace the entry `FN-1`, which names `isekai/foundation/failures.py`, with the one of [D6](design.md#d6).
+- [x] 3.3 In `tests/mutants.json`, replace the entry `FN-1`, which names `isekai/foundation/failures.py`, with the one of [D6](design.md#d6).
   Verify: `git grep -c -F "isekai/foundation/failures.py" -- tests/mutants.json` prints `tests/mutants.json:2`.
-- [ ] 3.4 Run `uv run python -m tools.derive_imported_by`: the row of `producers.py` now names `failures.py`, `names.py` and `run.py`.
+- [x] 3.4 Run `uv run python -m tools.derive_imported_by`: the row of `producers.py` now names `failures.py`, `names.py` and `run.py`.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 3.5 Run the cases and the guards over the derived tables.
+- [x] 3.5 Run the cases and the guards over the derived tables.
   Verify: `uv run pytest tests/test_run_directory.py tests/test_resume.py tests/test_layers.py tests/test_ratchets.py tests/test_docs.py tests/test_spec_bindings.py` exits 0.
-- [ ] 3.6 Run `tools.mutate` over `_spent` on the closing lines of [D5](design.md#d5).
+- [x] 3.6 Run `tools.mutate` over `_spent` on the closing lines of [D5](design.md#d5).
   Verify: `uv run python -m tools.mutate isekai/foundation/failures.py:137-141 --tests tests/test_run_directory.py` exits 0.
-- [ ] 3.7 Run `tools.mutate` over `exhausted` on its closing line.
+- [x] 3.7 Run `tools.mutate` over `exhausted` on its closing line.
   Verify: `uv run python -m tools.mutate isekai/foundation/failures.py:146 --tests tests/test_run_directory.py` exits 0.
-- [ ] 3.8 Run `tools.mutate` over `check_budget` on its closing lines.
+- [x] 3.8 Run `tools.mutate` over `check_budget` on its closing lines.
   Verify: `uv run python -m tools.mutate isekai/foundation/failures.py:158-174 --tests tests/test_run_directory.py` exits 0.
-- [ ] 3.9 Replay the standing mutants, `FN-1` on the record's row among them.
+- [x] 3.9 Replay the standing mutants, `FN-1` on the record's row among them.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
 
 ## 4 — The documents
