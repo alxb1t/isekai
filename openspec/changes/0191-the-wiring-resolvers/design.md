@@ -97,11 +97,16 @@ def trackable(
 def reader_for(config: Callable[[], CaptionConfig] = load_caption_config) -> Reader:
     return OllamaReader(model=config().model)
 
-def hosted_tagger_for(config: Callable[[], CaptionConfig] = load_caption_config) -> Tagger:
+
+def hosted_tagger_for(
+    config: Callable[[], CaptionConfig] = load_caption_config,
+) -> Tagger:
     return OllamaTagger(model=config().model)
 
-def tagger_for(open_session: Callable[[], LocalTagger] = open_session) -> LocalTagger:
-    ...  # the body as it stands, `open_session()` read from the parameter
+
+def tagger_for(
+    open_session: Callable[[], LocalTagger] = open_session,
+) -> LocalTagger: ...  # the body as it stands, `open_session()` read from the parameter
 ```
 
 `CaptionConfig` is imported from `isekai.foundation.caption_config`. `tagger_for`'s `except DigestMismatch as swapped:` line stays as it is: the standing mutant `BD-1b` finds it by its text. The wiring still hands these to `Wiring` as zero-argument thunks, so the defaults are what a verb calls.
