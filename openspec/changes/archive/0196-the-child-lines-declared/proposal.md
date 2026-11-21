@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.6
 after: [0195-the-child-lines-pinned]
 ---
 
