@@ -6,7 +6,7 @@ Move `Reader` and `Imports` from `isekai/pipeline/importing.py` to `isekai/inter
 
 - [x] 1 — The session in its new module · moderate
 - [x] 2 — The readers · moderate
-- [ ] 3 — The old session leaves the stage · moderate
+- [x] 3 — The old session leaves the stage · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The session in its new module
@@ -51,23 +51,23 @@ Move `Reader` and `Imports` from `isekai/pipeline/importing.py` to `isekai/inter
 
 ## 3 — The old session leaves the stage
 
-- [ ] 3.1 Delete from `isekai/pipeline/importing.py`, with their comments: `_record`, `Reader`, `_UNREAD`, `_STAGED`, `_closed`, `_failed` and `Imports`. Leave every other line.
+- [x] 3.1 Delete from `isekai/pipeline/importing.py`, with their comments: `_record`, `Reader`, `_UNREAD`, `_STAGED`, `_closed`, `_failed` and `Imports`. Leave every other line.
   Verify: `git grep -n -e "^class Reader" -e "^class Imports" -e "^def _record" -- isekai/pipeline/importing.py` prints nothing.
-- [ ] 3.2 Run `uv run ruff check isekai/pipeline/importing.py`: it names each import no code of the file reads. Delete each by hand: `queue`, `tempfile`, `Callable`, `Mapping` and `Any`. Then run `uv run ruff format isekai/pipeline/importing.py`.
+- [x] 3.2 Run `uv run ruff check isekai/pipeline/importing.py`: it names each import no code of the file reads. Delete each by hand: `queue`, `tempfile`, `Callable`, `Mapping` and `Any`. Then run `uv run ruff format isekai/pipeline/importing.py`.
   Verify: `uv run ruff check isekai/pipeline/importing.py` exits 0.
-- [ ] 3.3 In the module docstring of `isekai/pipeline/importing.py` delete the sentence that begins "An upload waits in the folder" and ends "one file at a time."
+- [x] 3.3 In the module docstring of `isekai/pipeline/importing.py` delete the sentence that begins "An upload waits in the folder" and ends "one file at a time."
   Verify: `git grep -n -e "An upload waits in the folder" -- isekai/pipeline/importing.py` prints nothing.
-- [ ] 3.4 In the same docstring, on its own line after the sentence that ends "deletes what was staged.", add the sentence "The upload session over it, the reader and the open imports, is the app's:" with `isekai/interface/ui/uploads.py.` as the start of the next line.
+- [x] 3.4 In the same docstring, on its own line after the sentence that ends "deletes what was staged.", add the sentence "The upload session over it, the reader and the open imports, is the app's:" with `isekai/interface/ui/uploads.py.` as the start of the next line.
   Verify: `git grep -n -F "is the app's" -- isekai/pipeline/importing.py` prints one line.
-- [ ] 3.5 In `tests/test_ratchets.py` delete the `LONG_FILES` row `isekai/pipeline/importing.py` and set `FILE_ROWS` to the rows left ([D5](design.md#d5)). `PATCHED_MODULES` stays.
+- [x] 3.5 In `tests/test_ratchets.py` delete the `LONG_FILES` row `isekai/pipeline/importing.py` and set `FILE_ROWS` to the rows left ([D5](design.md#d5)). `PATCHED_MODULES` stays.
   Verify: `git grep -n -F "isekai/pipeline/importing.py" -- tests/test_ratchets.py` prints nothing.
-- [ ] 3.6 **HALT CHECK** The stage is under the long-file ceiling and no table holds a stale row. A failure means the delete differs from what the plan names.
+- [x] 3.6 **HALT CHECK** The stage is under the long-file ceiling and no table holds a stale row. A failure means the delete differs from what the plan names.
   Verify: `uv run pytest tests/test_ratchets.py tests/test_layers.py` exits 0.
-- [ ] 3.7 Run `uv run python -m tools.derive_imported_by` once more: the delete changes no import of `isekai` in `importing.py`, so the tables stay as the second phase wrote them.
+- [x] 3.7 Run `uv run python -m tools.derive_imported_by` once more: the delete changes no import of `isekai` in `importing.py`, so the tables stay as the second phase wrote them.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 3.8 Replay the mutants the repository keeps.
+- [x] 3.8 Replay the mutants the repository keeps.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 3.9 Confirm the suite on the stage alone.
+- [x] 3.9 Confirm the suite on the stage alone.
   Verify: `uv run pytest tests/test_importing.py tests/test_ui_api.py tests/test_ui.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py tests/test_derive_wire.py` exits 0.
 
 ## 4 — The documents
