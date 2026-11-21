@@ -23,7 +23,7 @@ The cases are written first, the record comes in, the tables are read from it, a
 - [x] 2.1 **HALT CHECK** No name of the record is taken in the code, the tests or the tools.
   Verify: `git grep -n -w -e Producer -e PRODUCERS -- isekai tests tools evaluation` prints nothing.
 - [x] 2.2 In `tests/test_run_directory.py`, add `PRODUCERS` to the import from `isekai.foundation.run`, and add the rows case and the tables case of [D4](design.md#d4) after the case of 1.2.
-  Verify: `uv run pytest tests/test_run_directory.py -k the_record` exits 2, on the import of `PRODUCERS`.
+  Verify: `uv run pytest tests/test_run_directory.py -k the_record` exits 2, on the import of PRODUCERS.
 - [x] 2.3 Create `isekai/foundation/producers.py` exactly as [D1](design.md#d1) gives it.
   Verify: `grep -c -e "^class Producer" -e "^PRODUCERS" isekai/foundation/producers.py` prints `2`.
 - [x] 2.4 In `isekai/foundation/run.py`, import both names of `isekai/foundation/producers.py`, add them to `__all__` and name the sibling in the docstring, as [D2](design.md#d2) says.
