@@ -175,3 +175,22 @@ def thumbnail_of(library: Path, run: Run, image: Path) -> Path:
     within = image.absolute().relative_to(run.path.absolute())
     named = f"{within.stem}.{file_digest(image)}.jpg"
     return library / CACHE / run.digest / within.parent / named
+
+
+def drop_thumbnails(run: Run, image: Path) -> list[Path]:
+    """Delete `image`'s own thumbnail in its library's cache; return it, if there.
+
+    The library is read from the run's own path, so the verb and the route find one
+    cache; a run outside a collection has none. The thumbnail is named by the
+    image's digest, so `image` must still exist: another collection's thumbnail of
+    the same seed stays.
+    e.g. `<lib>/b/runs/<id>/…/001/42.png` -> [`<lib>/.cache/<digest>/…/001/42.<d>.jpg`]
+    """
+    folder = run.path.absolute()
+    if not (folder.parent.name == RUNS and is_collection(folder.parent.parent)):
+        return []
+    own = thumbnail_of(folder.parents[2], run, image)
+    if not own.is_file():
+        return []
+    own.unlink()
+    return [own]

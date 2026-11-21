@@ -49,6 +49,7 @@ from isekai.foundation.library import (
 from isekai.foundation.library import DEFAULT as DEFAULT
 from isekai.foundation.library import LOG as LOG
 from isekai.foundation.library import collection as collection
+from isekai.foundation.library import drop_thumbnails as drop_thumbnails
 from isekai.foundation.library import file_digest as _digest
 from isekai.foundation.library import render_running as render_running
 from isekai.foundation.library import root as root
@@ -456,27 +457,6 @@ def thumbnail(library: Path, run: Run, image: Path) -> Path:
         return cached
     write_atomically(cached, _shrunk(image))
     return cached
-
-
-def drop_thumbnails(run: Run, image: Path) -> list[Path]:
-    """Delete `image`'s own thumbnail in its library's cache; return it, if there.
-
-    The library is read from the run's own path, so the verb and the route find one
-    cache; a run outside a collection has none. The thumbnail is named by the
-    image's digest, so `image` must still exist: another collection's thumbnail of
-    the same seed stays.
-    e.g. `<lib>/b/runs/<id>/…/001/42.png` -> [`<lib>/.cache/<digest>/…/001/42.<d>.jpg`]
-    """
-    folder = run.path.absolute()
-    if not (folder.parent.name == RUNS and is_collection(folder.parent.parent)):
-        return []
-    within = image.absolute().parent.relative_to(folder)
-    cached = folder.parents[2] / CACHE / run.digest / within
-    own = cached / f"{image.stem}.{_digest(image)}.jpg"
-    if not own.is_file():
-        return []
-    own.unlink()
-    return [own]
 
 
 def _shrunk(image: Path) -> bytes:

@@ -5,7 +5,7 @@ The phases are the path and the digest, the drop and the documents; each moving 
 ## Progress
 
 - [x] 1 — The path and the digest · moderate
-- [ ] 2 — The drop · moderate
+- [x] 2 — The drop · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The path and the digest
@@ -31,27 +31,27 @@ The phases are the path and the digest, the drop and the documents; each moving 
 
 ## 2 — The drop
 
-- [ ] 2.1 Before any edit, run `tools.mutate` over `drop_thumbnails` in `isekai/interface/ui/library.py`, one run from its `def` line to its last line, with the command and tests of [D5](design.md#d5). Find the range with `git grep -n -e "^def drop_thumbnails" -- isekai/interface/ui/library.py`; kill a survivor by a case in `tests/test_ui_library.py` before 2.3.
+- [x] 2.1 Before any edit, run `tools.mutate` over `drop_thumbnails` in `isekai/interface/ui/library.py`, one run from its `def` line to its last line, with the command and tests of [D5](design.md#d5). Find the range with `git grep -n -e "^def drop_thumbnails" -- isekai/interface/ui/library.py`; kill a survivor by a case in `tests/test_ui_library.py` before 2.3.
   Verify: `grep -c -F "9 killed, 0 survived" openspec/changes/0180-the-thumbnail-names/design.md` prints `1`.
-- [ ] 2.2 In `isekai/foundation/library.py`, add `drop_thumbnails` after `thumbnail_of`, its docstring unchanged and its path from `thumbnail_of`, as [D3](design.md#d3) gives it.
+- [x] 2.2 In `isekai/foundation/library.py`, add `drop_thumbnails` after `thumbnail_of`, its docstring unchanged and its path from `thumbnail_of`, as [D3](design.md#d3) gives it.
   Verify: `git grep -n -e "^def drop_thumbnails" -- isekai/foundation/library.py` prints one line.
-- [ ] 2.3 In `isekai/interface/ui/library.py`, delete `drop_thumbnails` and import it as `drop_thumbnails as drop_thumbnails` from `isekai.foundation.library`, in the sorted place of the `X as X` lines. Run `uv run ruff check --fix isekai/interface/ui/library.py` for any unread import.
+- [x] 2.3 In `isekai/interface/ui/library.py`, delete `drop_thumbnails` and import it as `drop_thumbnails as drop_thumbnails` from `isekai.foundation.library`, in the sorted place of the `X as X` lines. Run `uv run ruff check --fix isekai/interface/ui/library.py` for any unread import.
   Verify: `git grep -n -e "^def drop_thumbnails" -- isekai/interface/ui/library.py` prints nothing, and `uv run pytest tests/test_ui_library.py tests/test_ui_api.py` exits 0.
-- [ ] 2.4 In `isekai/interface/ui/__init__.py`, delete the wrapper `drop_thumbnails`; `render_running` stays ([D4](design.md#d4)).
+- [x] 2.4 In `isekai/interface/ui/__init__.py`, delete the wrapper `drop_thumbnails`; `render_running` stays ([D4](design.md#d4)).
   Verify: `git grep -n -e "^def drop_thumbnails" -- isekai/interface/ui/__init__.py` prints nothing.
-- [ ] 2.5 In `isekai/interface/verbs/drafts.py`, import `drop_thumbnails` from `isekai.foundation.library` between the imports of `flow` and `refusal`, and change the handler's `from isekai.interface.ui import drop_thumbnails, render_running` to import `render_running` alone ([D4](design.md#d4)).
+- [x] 2.5 In `isekai/interface/verbs/drafts.py`, import `drop_thumbnails` from `isekai.foundation.library` between the imports of `flow` and `refusal`, and change the handler's `from isekai.interface.ui import drop_thumbnails, render_running` to import `render_running` alone ([D4](design.md#d4)).
   Verify: `git grep -n -F "isekai.interface.ui import drop_thumbnails" -- isekai` prints nothing, and `uv run pytest tests/test_pipeline_cli.py` exits 0.
-- [ ] 2.6 Run `uv run python -m tools.derive_imported_by`; it rewrites the derived row of `library.py` in `isekai/foundation/README.md` to name `interface/verbs/drafts.py`, and no other file.
+- [x] 2.6 Run `uv run python -m tools.derive_imported_by`; it rewrites the derived row of `library.py` in `isekai/foundation/README.md` to name `interface/verbs/drafts.py`, and no other file.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py` passes.
-- [ ] 2.7 Run `tools.mutate` over `stat_key` and `file_digest` at their closing range of [D5](design.md#d5).
+- [x] 2.7 Run `tools.mutate` over `stat_key` and `file_digest` at their closing range of [D5](design.md#d5).
   Verify: `uv run python -m tools.mutate isekai/foundation/library.py:153-164 --tests tests/test_ui_library.py tests/test_pipeline_cli.py tests/test_ui_api.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.8 Run `tools.mutate` over `thumbnail_of` at its closing range, on the same tests.
+- [x] 2.8 Run `tools.mutate` over `thumbnail_of` at its closing range, on the same tests.
   Verify: `uv run python -m tools.mutate isekai/foundation/library.py:167-177 --tests tests/test_ui_library.py tests/test_pipeline_cli.py tests/test_ui_api.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.9 Run `tools.mutate` over `drop_thumbnails` at its closing range, on the same tests.
+- [x] 2.9 Run `tools.mutate` over `drop_thumbnails` at its closing range, on the same tests.
   Verify: `uv run python -m tools.mutate isekai/foundation/library.py:180-196 --tests tests/test_ui_library.py tests/test_pipeline_cli.py tests/test_ui_api.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.10 Run `tools.mutate` over `thumbnail` at its closing range, on the same tests.
+- [x] 2.10 Run `tools.mutate` over `thumbnail` at its closing range, on the same tests.
   Verify: `uv run python -m tools.mutate isekai/interface/ui/library.py:447-459 --tests tests/test_ui_library.py tests/test_pipeline_cli.py tests/test_ui_api.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
-- [ ] 2.11 Replay the standing mutants once, after the move.
+- [x] 2.11 Replay the standing mutants once, after the move.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
 
 ## 3 — The documents

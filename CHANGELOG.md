@@ -15,6 +15,7 @@ its new digest.
 - `isekai/interface/render.py`, `isekai/interface/ui/surface.py`, `isekai/interface/ui/library.py` and `isekai/interface/ui/routes/reviewing.py` read `current_draft` and `source_copy` from `isekai.foundation.run`; `render.py` and `ui/surface.py` no longer import the review stage (0179 D4).
 - D69 names `current_draft`, `source_copy` and `DRAFT` and their homes in the foundation, and `isekai/foundation/README.md`'s `layout.py` and `names.py` rows say so (0179 D6).
 - `stat_key`, `file_digest` and `thumbnail_of` join `isekai/foundation/library.py`; `ui/library.py` re-binds the first two and `thumbnail` calls the third. Cases hold the path and the digest, and its long-file row goes (0180 D1, D2, D5, D6).
+- `drop_thumbnails` joins `isekai/foundation/library.py` and takes its path from `thumbnail_of`; `ui/library.py` re-binds it, `ui/__init__.py` loses its wrapper, and the `discard` verb imports it from the foundation (0180 D3, D4).
 
 ## [0.87.34] - 2026-11-21
 
