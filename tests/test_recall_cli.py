@@ -21,7 +21,6 @@ from isekai.foundation.run import (
     artifact_name,
     open_run,
 )
-from isekai.interface import wiring
 from tests.stages import fake_tagger
 
 FIXTURE = Path(__file__).resolve().parent / "recall"
@@ -88,8 +87,10 @@ def _collection(
     return runs, a, b
 
 
-def _run(tagger: _Tagger, runs: Path, *names: str) -> int:
-    return recall.main([str(runs), *names], reader=lambda models: (tagger, PINS))
+def _run(tagger: _Tagger, runs: Path, *names: str, **roots: Path) -> int:
+    return recall.main(
+        [str(runs), *names], reader=lambda models: (tagger, PINS), **roots
+    )
 
 
 def _record(runs: Path) -> Record:
@@ -306,16 +307,15 @@ def test_the_record_names_the_taggers_files_by_digest_and_its_floor(
 @pytest.mark.spec("evaluation:recall:a-record-git-can-reach-is-refused")
 def test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refused(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     repository = tmp_path / "repository"
     runs, _, _ = _collection(repository)
-    monkeypatch.setattr(wiring, "REPOSITORY", repository)
-    monkeypatch.setattr(wiring, "DATA_ROOT", repository / ".data")
     tagger = _Tagger()
 
-    assert _run(tagger, runs) == 1
+    assert (
+        _run(tagger, runs, repository=repository, data_root=repository / ".data") == 1
+    )
 
     refusal = capsys.readouterr().err
     assert str(runs.parent.resolve() / "recall.json") in refusal
