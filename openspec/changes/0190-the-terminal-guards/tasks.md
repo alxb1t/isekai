@@ -6,7 +6,7 @@ The rule for a run's runs root changes, the cancel asks it, the owner unlinks a 
 
 - [x] 1 — The root's guard · moderate
 - [x] 2 — The cancel's guard · moderate
-- [ ] 3 — The second drop · moderate
+- [x] 3 — The second drop · moderate
 - [ ] 4 — The documents · moderate
 
 ## 1 — The root's guard
@@ -45,21 +45,21 @@ The rule for a run's runs root changes, the cancel asks it, the owner unlinks a 
 
 ## 3 — The second drop
 
-- [ ] 3.1 **HALT CHECK** the library's and the owner's functions stand where [D3](design.md#d3) edits them, `library.py` as phase 1 left it.
+- [x] 3.1 **HALT CHECK** the library's and the owner's functions stand where [D3](design.md#d3) edits them, `library.py` as phase 1 left it.
   Verify: `git grep -n -e "^def thumbnail_of" -e "^def drop_" -e "^class Deleted" -e "^def delete_" -- isekai/foundation/library.py isekai/foundation/discard.py` prints, in `discard.py`, `class Deleted` at `176`, `delete_render` at `183` and `delete_edit` at `201`, and, in `library.py`, `thumbnail_of` at `175` and the drop at `188`.
-- [ ] 3.2 In `tests/test_edit_session.py`, after `test_edit_discard_the_owner_takes_a_render_its_edits_and_their_thumbnails`, add `test_edit_discard_the_owner_unlinks_a_thumbnail_rebuilt_in_the_gap`, `@pytest.mark.spec_exempt("structural: the owner unlinks a thumbnail a request rebuilt")`, parametrized by the image `"42.png"` and `"42.edit-1.png"`, per [D5](design.md#d5). It wraps `Path.unlink` so unlinking that image rewrites its thumbnail, calls `delete_render` for the render's image and `delete_edit` for the edit's, and asserts the thumbnail gone and listed once in `deleted.thumbnails`.
+- [x] 3.2 In `tests/test_edit_session.py`, after `test_edit_discard_the_owner_takes_a_render_its_edits_and_their_thumbnails`, add `test_edit_discard_the_owner_unlinks_a_thumbnail_rebuilt_in_the_gap`, `@pytest.mark.spec_exempt("structural: the owner unlinks a thumbnail a request rebuilt")`, parametrized by the image `"42.png"` and `"42.edit-1.png"`, per [D5](design.md#d5). It wraps `Path.unlink` so unlinking that image rewrites its thumbnail, calls `delete_render` for the render's image and `delete_edit` for the edit's, and asserts the thumbnail gone and listed once in `deleted.thumbnails`.
   Verify: `uv run pytest tests/test_edit_session.py -k unlinks_a_thumbnail_rebuilt` exits 1, on the thumbnail left.
-- [ ] 3.3 In `isekai/foundation/library.py`, add `named_thumbnail` after `thumbnail_of` and end `drop_thumbnails` on it, exactly as [D3](design.md#d3) gives them.
+- [x] 3.3 In `isekai/foundation/library.py`, add `named_thumbnail` after `thumbnail_of` and end `drop_thumbnails` on it, exactly as [D3](design.md#d3) gives them.
   Verify: `uv run pytest tests/test_ui_library.py tests/test_pipeline_cli.py` exits 0.
-- [ ] 3.4 In `isekai/foundation/discard.py`, import `Callable` and `Iterable` from `collections.abc` and `named_thumbnail` in place of `drop_thumbnails`, add `_edit_images`, `_named`, `_unlinked` and `_deleted` after `Deleted`, replace `delete_render` and `delete_edit`, and rewrite the module docstring's first paragraph, exactly as [D3](design.md#d3) gives them.
+- [x] 3.4 In `isekai/foundation/discard.py`, import `Callable` and `Iterable` from `collections.abc` and `named_thumbnail` in place of `drop_thumbnails`, add `_edit_images`, `_named`, `_unlinked` and `_deleted` after `Deleted`, replace `delete_render` and `delete_edit`, and rewrite the module docstring's first paragraph, exactly as [D3](design.md#d3) gives them.
   Verify: `git grep -n -F "drop_thumbnails" -- isekai/foundation/discard.py` prints nothing.
-- [ ] 3.5 Run the cases of the owner, the verb, the route and the review stage over the new owner.
+- [x] 3.5 Run the cases of the owner, the verb, the route and the review stage over the new owner.
   Verify: `uv run pytest tests/test_edit_session.py tests/test_pipeline_cli.py tests/test_review.py tests/test_ui_api.py` exits 0.
-- [ ] 3.6 Run `tools.mutate` over `named_thumbnail` and `drop_thumbnails`, from the first `def` line to the last line; a survivor is killed by a further assertion in the cases of `tests/test_ui_library.py`.
+- [x] 3.6 Run `tools.mutate` over `named_thumbnail` and `drop_thumbnails`, from the first `def` line to the last line; a survivor is killed by a further assertion in the cases of `tests/test_ui_library.py`.
   Verify: `uv run python -m tools.mutate isekai/foundation/library.py:188-214 --tests tests/test_ui_library.py tests/test_edit_session.py tests/test_pipeline_cli.py` exits 0.
-- [ ] 3.7 Run `tools.mutate` over the owner's helpers and both owners, from `_edit_images` to the last line of `delete_edit`; a survivor is killed by a further assertion in the case of 3.2 and in the owner's cases of `tests/test_edit_session.py`.
+- [x] 3.7 Run `tools.mutate` over the owner's helpers and both owners, from `_edit_images` to the last line of `delete_edit`; a survivor is killed by a further assertion in the case of 3.2 and in the owner's cases of `tests/test_edit_session.py`.
   Verify: `uv run python -m tools.mutate isekai/foundation/discard.py:184-252 --tests tests/test_edit_session.py tests/test_pipeline_cli.py tests/test_review.py` exits 0.
-- [ ] 3.8 Replay the standing mutants over the edited files.
+- [x] 3.8 Replay the standing mutants over the edited files.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
 
 ## 4 — The documents

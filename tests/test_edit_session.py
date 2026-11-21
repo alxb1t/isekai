@@ -512,6 +512,30 @@ def test_edit_discard_the_owner_takes_a_render_its_edits_and_their_thumbnails(
     ]
 
 
+@pytest.mark.spec_exempt("structural: the owner unlinks a thumbnail a request rebuilt")
+@pytest.mark.parametrize("name", ["42.png", "42.edit-1.png"])
+def test_edit_discard_the_owner_unlinks_a_thumbnail_rebuilt_in_the_gap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
+) -> None:
+    library, group = _owned(tmp_path)
+    image = group / name
+    own = _thumbnail(library, image)
+    unlink = Path.unlink
+
+    def rebuilding(self: Path, missing_ok: bool = False) -> None:
+        unlink(self, missing_ok=missing_ok)
+        if self == image:
+            own.write_bytes(b"jpg")
+
+    monkeypatch.setattr(Path, "unlink", rebuilding)
+    owner = delete_render if name == "42.png" else delete_edit
+
+    deleted = owner(image)
+
+    assert not own.exists()
+    assert deleted.thumbnails == [own]
+
+
 @pytest.mark.spec_exempt("structural: the verb's cases hold what the owner prints")
 def test_edit_discard_the_owner_takes_the_last_renders_approval_with_it(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary

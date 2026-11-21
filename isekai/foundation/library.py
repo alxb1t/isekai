@@ -185,6 +185,19 @@ def thumbnail_of(library: Path, run: Run, image: Path) -> Path:
     return library / CACHE / run.digest / within.parent / named
 
 
+def named_thumbnail(run: Run, image: Path) -> Path | None:
+    """Return where `image`'s thumbnail sits in its library's cache, made or not.
+
+    None for a run outside a collection, which has no library. The image must
+    exist, since its bytes name the file.
+    e.g. `<lib>/b/runs/<id>/…/001/42.png` -> `<lib>/.cache/<digest>/…/001/42.<d>.jpg`
+    """
+    folder = run.path.absolute()
+    if not (folder.parent.name == RUNS and is_collection(folder.parent.parent)):
+        return None
+    return thumbnail_of(folder.parents[2], run, image)
+
+
 def drop_thumbnails(run: Run, image: Path) -> list[Path]:
     """Delete `image`'s own thumbnail in its library's cache; return it, if there.
 
@@ -194,11 +207,8 @@ def drop_thumbnails(run: Run, image: Path) -> list[Path]:
     the same seed stays.
     e.g. `<lib>/b/runs/<id>/…/001/42.png` -> [`<lib>/.cache/<digest>/…/001/42.<d>.jpg`]
     """
-    folder = run.path.absolute()
-    if not (folder.parent.name == RUNS and is_collection(folder.parent.parent)):
-        return []
-    own = thumbnail_of(folder.parents[2], run, image)
-    if not own.is_file():
+    own = named_thumbnail(run, image)
+    if own is None or not own.is_file():
         return []
     own.unlink()
     return [own]
