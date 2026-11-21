@@ -79,7 +79,7 @@ Hold each stage's refusal whole and pin the sequences by mutation, add `attempt`
   Verify: `git grep -n -w -e refusal_for -- tests evaluation` prints the import and the call in `tests/test_run_directory.py` and the row in `tests/test_ratchets.py`.
 
 - [ ] 4.2 In `test_a_record_that_refuses_the_next_run_names_its_deletion` of `tests/test_run_directory.py` call `refusal_for("caption", Run("aunt-ada", RUNS_ROOT / "aunt-ada"), kinds[-1], "timed out", record, None, noun="reader")`, per [D4](design.md#d4); the assertions stand.
-  Verify: `git grep -n -F 'noun="reader"' -- tests/test_run_directory.py` prints one line.
+  Verify: `git grep -n -F -A7 'refusal = refusal_for(' -- tests/test_run_directory.py` prints the call over eight lines, `"caption",` its first argument and `noun="reader",` its last, with no `"captions",` among them.
 
 - [ ] 4.3 In `refusal_for` of `isekai/foundation/run.py` take `(key, run, kind, detail, record, flow, *, noun)`, bind `producer = producer_for(key)` and read `producer.folder`, `producer.verb` and `key` where the body read `area`, `verb` and `budget`, and `noun` where it read `stage`; the strings it builds are not edited. Rewrite the docstring's "both stages" and its paragraphs on `area` and `budget` to name the row.
   Verify: `git grep -n -e '^    area: str' -e '^    budget: str' -- isekai/foundation/run.py` prints nothing.
