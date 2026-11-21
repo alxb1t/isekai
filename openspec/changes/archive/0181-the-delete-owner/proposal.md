@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.37
 after: [0180-the-thumbnail-names]
 ---
 

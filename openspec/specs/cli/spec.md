@@ -908,6 +908,20 @@ run in the server's process. An image's path names everything a discard needs, s
 - **WHEN** the verb is given the path of a render that has an edit
 - **THEN** the edit's image, record and composite are deleted with the render, each printed
 
+#### Scenario: a render takes its edits' thumbnails with it
+- **Key:** `cli:discard:a-render-takes-its-edits-thumbnails-with-it`
+- **Layers:** unit
+- **WHEN** the verb is given the path of a render with two edits, the thumbnails of the render and each edit cached
+- **THEN** each of those thumbnails is deleted and printed after the run's files, the render's first
+- **AND** another collection's thumbnails of the same images stay
+
+#### Scenario: an edit takes its own thumbnail and its chain's
+- **Key:** `cli:discard:an-edit-takes-its-own-thumbnail-and-its-chains`
+- **Layers:** unit
+- **WHEN** the verb is given the path of an edit that another edit was made from, the thumbnails of both cached
+- **THEN** both thumbnails are deleted and printed after the run's files, in the edits' order
+- **AND** the render's thumbnail stays
+
 ### Requirement: The prepare verb takes each photograph through tagging, reading and its cells' sheets in turn
 
 The system SHALL offer a `prepare` verb over cells, each named `<run-id>/<flow>`, that takes each photograph, in the
