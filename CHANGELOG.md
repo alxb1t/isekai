@@ -10,15 +10,25 @@ its new digest.
 
 ## [Unreleased]
 
-- The hub cell's track is held by vitest cases before it moves: `SEGMENTS`, `DONE`, `RUNNING`, `wordOf` and `segmentClass` give the words and classes they gave, a stage the table lacks and `toString` among them (0189 D3).
-- `RUNNING` of `ui/src/cells.ts` is keyed by `PrepareVerb`, the union of `tag`, `caption` and `sheet`, and `wordOf` and `segmentClass` narrow the store's `string` by one guard, `isPrepareVerb`; the cases pass untouched and `Hub.vue` is unchanged (0189 D1, D2).
+- The proposer's cache is `Proposers`, with its two openers as keywords and one default, `PROPOSERS`; `proposer_for` reads it, the module global goes, and each proposer case passes a cache of its own (0191 D1, D5).
+- `trackable`, `destination` and the evaluators' `main`s take `repository` and `data_root` keywords defaulting to the run roots; the two refusal cases pass tmp roots and patch nothing (0191 D2, D5).
+- `tagger_for` takes `open_session`, `reader_for` and `hosted_tagger_for` take `config`; no test patches the wiring, so its row leaves `PATCHED_MODULES` and `PATCHED_ROWS` is 18 (0191 D3, D4).
+
+## [0.88.0] - 2026-11-21
+
+Gate: local 1m59s · CI not read under mf-ship · 0.87.45: local 1m19s · CI not read under mf-ship
+
 - `render_running` of `isekai/foundation/library.py` asks the folder beside the run's runs root, a collection's or not, so `isekai discard` of a render and of an edit refuses beside any render session; cases of the rule, the render's discard and the edit's hold it (0190 D1, D5).
 - `isekai approve --cancel` refuses a run whose runs root a render session holds, as the app's cancel does, and answers each run on its own; a case of `tests/test_pipeline_cli.py` holds it (0190 D2, D5).
 - `delete_render` and `delete_edit` name each thumbnail with the new `named_thumbnail` before any file goes, drop them, delete the files, then unlink any named thumbnail a request rebuilt in between; a case holds both owners (0190 D3, D5; card 0181·S1).
 - D74 records the terminal's guards; D72 names the second drop and the verbs' guards, D68 names `named_thumbnail`, and the foundation and interface READMEs, `README.md` and `docs/edit-tattoo.md` say a render session holds the runs root (0190 D6).
-- The proposer's cache is `Proposers`, with its two openers as keywords and one default, `PROPOSERS`; `proposer_for` reads it, the module global goes, and each proposer case passes a cache of its own (0191 D1, D5).
-- `trackable`, `destination` and the evaluators' `main`s take `repository` and `data_root` keywords defaulting to the run roots; the two refusal cases pass tmp roots and patch nothing (0191 D2, D5).
-- `tagger_for` takes `open_session`, `reader_for` and `hosted_tagger_for` take `config`; no test patches the wiring, so its row leaves `PATCHED_MODULES` and `PATCHED_ROWS` is 18 (0191 D3, D4).
+
+## [0.87.45] - 2026-11-21
+
+Gate: local 1m19s · CI not read under mf-ship · 0.87.44: local 1m20s · CI not read under mf-ship
+
+- The hub cell's track is held by vitest cases before it moves: `SEGMENTS`, `DONE`, `RUNNING`, `wordOf` and `segmentClass` give the words and classes they gave, a stage the table lacks and `toString` among them (0189 D3).
+- `RUNNING` of `ui/src/cells.ts` is keyed by `PrepareVerb`, the union of `tag`, `caption` and `sheet`, and `wordOf` and `segmentClass` narrow the store's `string` by one guard, `isPrepareVerb`; the cases pass untouched and `Hub.vue` is unchanged (0189 D1, D2).
 
 ## [0.87.44] - 2026-11-21
 

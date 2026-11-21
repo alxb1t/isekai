@@ -1,5 +1,6 @@
 ---
 bump: minor
+version: 0.88
 after: [0189-the-page-track]
 debt: [0181·S1]
 ---
