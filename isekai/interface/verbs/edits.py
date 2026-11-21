@@ -8,6 +8,7 @@ from isekai.boundary.comfy import read_runtime
 from isekai.foundation.edit import load_edit, tracked_edits
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import RUNS_ROOT, Run, across, command
+from isekai.interface.progress import DONE, EDIT, FLAG, FORMAT
 from isekai.interface.render import pending_edits
 from isekai.interface.verbs.common import (
     Reporter,
@@ -85,7 +86,7 @@ def run_pending(args: argparse.Namespace, wired: Wiring) -> int:
     e.g. r1/f holding 42.edit-1.json with no image -> "r1: edited f/42.edit-1.png"
     """
     cells = parse_cells(args.pending, wired)
-    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == "json")
+    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == FORMAT)
     found: list[tuple[Run, str, Path]] = []
     for run_id, flow in cells:
         run = Run(run_id, wired.runs_root / run_id)
@@ -111,8 +112,8 @@ def run_pending(args: argparse.Namespace, wired: Wiring) -> int:
         reporter.item(
             run.id,
             flow,
-            "edit",
-            "done",
+            EDIT,
+            DONE,
             digest=run.digest,
             version=int(image.parent.name),
             file=image.name,
@@ -188,8 +189,8 @@ def edit_arguments(parser: argparse.ArgumentParser) -> None:
         help="the ComfyUI endpoint --pending samples on, reached through the tunnel",
     )
     parser.add_argument(
-        "--progress",
-        choices=["json"],
+        FLAG,
+        choices=[FORMAT],
         default=None,
         help="print a JSON line per sampled edit; prose goes to stderr",
     )

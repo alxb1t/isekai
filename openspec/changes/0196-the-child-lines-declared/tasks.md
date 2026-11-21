@@ -5,7 +5,7 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
 ## Progress
 
 - [x] 1 — The module · moderate
-- [ ] 2 — The emitters · moderate
+- [x] 2 — The emitters · moderate
 - [ ] 3 — The readers · moderate
 - [ ] 4 — The decision and the docs · moderate
 
@@ -34,18 +34,18 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
 
 ## 2 — The emitters
 
-- [ ] 2.1 In `isekai/interface/verbs/common.py` make `Reporter.item` end on `emit(self.out, line)`, replacing the `print(json.dumps(line), …)` and its comment, and import `emit` from `isekai.interface.progress`. Drop the `json` import, which nothing else there reads.
+- [x] 2.1 In `isekai/interface/verbs/common.py` make `Reporter.item` end on `emit(self.out, line)`, replacing the `print(json.dumps(line), …)` and its comment, and import `emit` from `isekai.interface.progress`. Drop the `json` import, which nothing else there reads.
   Verify: `git grep -n -F "json.dumps" -- isekai/interface/verbs/common.py` prints nothing.
-- [ ] 2.2 In `progress_flag` of `isekai/interface/verbs/common.py`, in `render_arguments` of `isekai/interface/verbs/session.py` and in the argument of `isekai/interface/verbs/edits.py`, add `FLAG` of `isekai/interface/progress.py` with `choices=[FORMAT]` in place of the literals `"--progress"` and `"json"`. Each help text stays.
+- [x] 2.2 In `progress_flag` of `isekai/interface/verbs/common.py`, in `render_arguments` of `isekai/interface/verbs/session.py` and in the argument of `isekai/interface/verbs/edits.py`, add `FLAG` of `isekai/interface/progress.py` with `choices=[FORMAT]` in place of the literals `"--progress"` and `"json"`. Each help text stays.
   Verify: `git grep -n -F '"--progress"' -- isekai/interface/verbs` prints nothing.
-- [ ] 2.3 In `isekai/interface/verbs/runner.py` replace `"start"`, `"refused"` and `"done"` in `_reported` and in the unopened-run refusal with `START`, `REFUSED` and `DONE`; in `isekai/interface/verbs/prepare.py` replace `"sheet", "refused"` with `SHEET, REFUSED`. Both import them from `isekai/interface/progress.py`.
+- [x] 2.3 In `isekai/interface/verbs/runner.py` replace `"start"`, `"refused"` and `"done"` in `_reported` and in the unopened-run refusal with `START`, `REFUSED` and `DONE`; in `isekai/interface/verbs/prepare.py` replace `"sheet", "refused"` with `SHEET, REFUSED`. Both import them from `isekai/interface/progress.py`.
   Verify: `git grep -n -e '"start"' -e '"refused"' -e '"done"' -- isekai/interface/verbs/runner.py isekai/interface/verbs/prepare.py` prints nothing.
-- [ ] 2.4 In `isekai/interface/verbs/generate.py` replace `STAGE_RENDER` and `"done"` with `RENDER` and `DONE`, and drop the `STAGE_RENDER` import; in `isekai/interface/verbs/edits.py` replace `"edit"` and `"done"` in `sample_one` with `EDIT` and `DONE`. Both import them from `isekai/interface/progress.py`.
+- [x] 2.4 In `isekai/interface/verbs/generate.py` replace `STAGE_RENDER` and `"done"` with `RENDER` and `DONE`, and drop the `STAGE_RENDER` import; in `isekai/interface/verbs/edits.py` replace `"edit"` and `"done"` in `sample_one` with `EDIT` and `DONE`. Both import them from `isekai/interface/progress.py`.
   Verify: `git grep -n -F "STAGE_RENDER" -- isekai/interface/verbs/generate.py` prints nothing.
-- [ ] 2.5 In `isekai/interface/render.py` spread `*ARGUMENT` of `isekai/interface/progress.py` in `_rendered`'s `generate` argv in place of `"--progress", "json"`, and pass `ARGUMENT` to `_edit_argv` in place of `("--progress", "json")`.
+- [x] 2.5 In `isekai/interface/render.py` spread `*ARGUMENT` of `isekai/interface/progress.py` in `_rendered`'s `generate` argv in place of `"--progress", "json"`, and pass `ARGUMENT` to `_edit_argv` in place of `("--progress", "json")`.
   Verify: `git grep -n -F '"--progress"' -- isekai/interface/render.py` prints nothing.
 
-- [ ] 2.6 Replace `== "json"` with `== FORMAT` of `isekai/interface/progress.py` where the parsed argument is tested: in `isekai/interface/verbs/prepare.py`, `isekai/interface/verbs/edits.py`, `isekai/interface/verbs/generate.py`, `isekai/interface/verbs/runner.py` and `json_lines` of `isekai/interface/render.py`. Each file adds `FORMAT` to its import from `isekai/interface/progress.py`, or one such import if it has none.
+- [x] 2.6 Replace `== "json"` with `== FORMAT` of `isekai/interface/progress.py` where the parsed argument is tested: in `isekai/interface/verbs/prepare.py`, `isekai/interface/verbs/edits.py`, `isekai/interface/verbs/generate.py`, `isekai/interface/verbs/runner.py` and `json_lines` of `isekai/interface/render.py`. Each file adds `FORMAT` to its import from `isekai/interface/progress.py`, or one such import if it has none.
   Verify: `git grep -n -F '== "json"' -- isekai/interface` prints nothing.
 
 ## 3 — The readers

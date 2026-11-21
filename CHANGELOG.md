@@ -23,7 +23,8 @@ its new digest.
 - The boundary README's note on the telemetry switch names `onnx.py` and says "for every session", `docs/modules.md` names `onnx` where it named `wd14`'s switch, and the standing mutants replay with no survivor (0194 D6).
 - `tests/test_progress.py` holds the bytes of each line a child prints, key order and flush included: the sheet's, the item's, the render's and edit's, and the session's step and image lines; no code moves (0195 D1, D2, D3).
 - `tests/test_progress.py` reads each line kind back through `progress_line` to the dict that built it, and a render line through `_Images` into the session's image line; no code moves (0195 D4, D5).
-- `isekai/interface/progress.py` declares the item, step and image lines, their stage, state and step names and `--progress json`, and holds `emit`, `progress_line`, `Steps` and `_Images`, which `render.py` binds back; every printed byte is equal, and cases hold the stream and record branches of `Steps` a mutation run found unread (0196 D1, D2, D3).
+- `isekai/interface/progress.py` declares the item, step and image lines, their names and `--progress json`, and holds `emit`, `progress_line`, `Steps` and `_Images`, bound back in `render.py`; every byte is equal, and cases hold two `Steps` branches a mutation run found unread (0196 D1, D2, D3).
+- `Reporter.item` writes through `emit`; the verbs, the session's argv and the argument functions name their stages, states and `--progress json` from `progress.py`; every printed byte is equal (0196 D4, D5, D6).
 
 ## [0.88.1] - 2026-11-21
 

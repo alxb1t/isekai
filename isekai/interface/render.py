@@ -71,7 +71,7 @@ from isekai.foundation.run import (
 from isekai.interface.compare_view import COLLECTION_PHOTOS
 
 # The tests import `_Images` and `progress_line` from here.
-from isekai.interface.progress import Steps
+from isekai.interface.progress import ARGUMENT, FORMAT, Steps
 from isekai.interface.progress import _Images as _Images
 from isekai.interface.progress import progress_line as progress_line
 from isekai.interface.wiring import Wiring
@@ -449,7 +449,7 @@ def run_session(
             file=wired.err,
         )
         return 1
-    json_lines = getattr(args, "progress", None) == "json"
+    json_lines = getattr(args, "progress", None) == FORMAT
     with contextlib.ExitStack() as held:
         logged = wired
         # Under `--progress json` stdout is the caller's channel and stderr its
@@ -1135,8 +1135,7 @@ def _rendered(
                 # its prose goes to stderr, which the log tees.
                 argv = [
                     "generate",
-                    "--progress",
-                    "json",
+                    *ARGUMENT,
                     *line.head,
                     "--server",
                     server,
@@ -1151,7 +1150,7 @@ def _rendered(
                 live = dataclasses.replace(
                     wired, client=client, image=session.image, out=steps.child(0, runs)
                 )
-                argv = _edit_argv(runs, held, ("--progress", "json"), server)
+                argv = _edit_argv(runs, held, ARGUMENT, server)
                 failed |= generate(argv, live) != 0
         steps.step("teardown", "done")
         if failed:
