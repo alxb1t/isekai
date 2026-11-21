@@ -429,21 +429,22 @@ def photo_of(run: Run, stage: str) -> Path:
 
 
 def refusal_for(
-    stage: str,
+    key: str,
     run: Run,
     kind: Kind,
     detail: str,
     record: Path,
-    area: str,
-    verb: str,
     flow: str | None,
-    budget: str,
+    *,
+    noun: str,
 ) -> Refusal:
     """Build the refusal a stage raises after recording a failed attempt.
 
-    One shape for both stages: what failed, how it failed, where the record is,
-    and the command to run once what it names is fixed. Stated here beside
-    `StageFailure` rather than twice, because the two stages differ only in nouns.
+    One shape for every stage `attempt` serves: what failed, how it failed, where
+    the record is, and the command to run once what it names is fixed. `key` is
+    the stage's row in `PRODUCERS`, which gives its folder, verb and budget;
+    `noun` is the word the text calls the stage, since the stages differ only in
+    their row and that word.
 
     **`flow` is threaded in rather than patched at the call sites.** A stage on a
     flow threads its flow in, since its verb names one with `--flow`; the
@@ -452,13 +453,14 @@ def refusal_for(
     argument makes the pasted command right for every caller at once.
 
     **And the flow is passed once, not twice.** The record's location is
-    `<flow>/<area>/`, or `photo/<area>/` for `None`, so taking a ready-made
+    `<flow>/<folder>/`, or `photo/<folder>/` for `None`, so taking a ready-made
     `where` beside `flow` would be the same fact in two forms, with nothing but
     caller discipline holding them in agreement -- a refusal naming one flow's
     record and another flow's remedy is the exact class of defect this argument
-    exists to close. `area` is the stage directory alone; this joins them.
+    exists to close. The row's `folder` is the stage directory alone; this joins
+    them.
 
-    `budget` is the `BUDGETS` key. When the record refuses the next run -- it is
+    `key` is also the `BUDGETS` key. When the record refuses the next run -- it is
     permanent, or fills the budget -- the remedy deletes it first, since running
     again would only be refused.
 
@@ -468,18 +470,19 @@ def refusal_for(
     list that did not fail.
     """
     # `record_failure` names every record `NNN.error.…`.
+    producer = producer_for(key)
     version = version_of(record)
     asked = NEW_VERSION if version > 1 else ()
     flows = () if flow is None else (flow,)
-    command = f"`{stage_command(run, verb, *flows, options=asked)}`"
-    where = f"{PHOTO if flow is None else flow}/{area}/{record.name}"
-    if exhausted(budget, record.parent, version):
+    command = f"`{stage_command(run, producer.verb, *flows, options=asked)}`"
+    where = f"{PHOTO if flow is None else flow}/{producer.folder}/{record.name}"
+    if exhausted(key, record.parent, version):
         return Refusal(
-            f"{run.id}: the {stage} failed ({kind}) -- {detail}; see {where}, fix "
+            f"{run.id}: the {noun} failed ({kind}) -- {detail}; see {where}, fix "
             f"what it names and delete it, then run {command}"
         )
     return Refusal(
-        f"{run.id}: the {stage} failed ({kind}) -- {detail}; see {where}, and run "
+        f"{run.id}: the {noun} failed ({kind}) -- {detail}; see {where}, and run "
         f"{command} again once what it names is fixed"
     )
 
@@ -552,18 +555,7 @@ def attempt(
         record = record_failure(
             directory, version, kind, {"stage": key, "detail": detail}
         )
-        producer = producer_for(key)
-        raise refusal_for(
-            noun,
-            run,
-            kind,
-            detail,
-            record,
-            producer.folder,
-            producer.verb,
-            flow,
-            key,
-        ) from failed
+        raise refusal_for(key, run, kind, detail, record, flow, noun=noun) from failed
 
 
 def instructions_record(path: Path) -> InstructionsRecord:

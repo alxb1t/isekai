@@ -829,15 +829,13 @@ def test_a_record_that_refuses_the_next_run_names_its_deletion(
         record = record_failure(directory, 1, kind, _FAILURE)
 
     refusal = refusal_for(
-        "reader",
+        "caption",
         Run("aunt-ada", RUNS_ROOT / "aunt-ada"),
         kinds[-1],
         "timed out",
         record,
-        "captions",
-        "caption",
         None,
-        "caption",
+        noun="reader",
     )
 
     message = str(refusal)
