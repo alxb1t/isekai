@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.1] - 2026-11-21
+
+Gate: local 2m42s · CI not read under mf-ship · 0.88.0: local 1m59s · CI not read under mf-ship
+
 - The proposer's cache is `Proposers`, with its two openers as keywords and one default, `PROPOSERS`; `proposer_for` reads it, the module global goes, and each proposer case passes a cache of its own (0191 D1, D5).
 - `trackable`, `destination` and the evaluators' `main`s take `repository` and `data_root` keywords defaulting to the run roots; the two refusal cases pass tmp roots and patch nothing (0191 D2, D5).
 - `tagger_for` takes `open_session`, `reader_for` and `hosted_tagger_for` take `config`; no test patches the wiring, so its row leaves `PATCHED_MODULES` and `PATCHED_ROWS` is 18 (0191 D3, D4).

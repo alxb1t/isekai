@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.1
 after: [0190-the-terminal-guards]
 ---
 
