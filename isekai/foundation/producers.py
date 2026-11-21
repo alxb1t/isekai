@@ -2,8 +2,8 @@
 
 A row names a stage's key, the folder its artifacts sit in, whether that folder is
 under `photo/` or under a flow, the verb that runs it and the attempts it may spend.
-`names.py` and `failures.py` read their tables from it, and `run.py` re-exports both
-names (D62).
+`names.py` and `failures.py` read their tables from it, and `run.py` re-exports each
+name (D62).
 
 Imports nothing of `isekai`: stdlib only, and on `python -m isekai`'s import graph.
 """
@@ -61,3 +61,14 @@ PRODUCERS: tuple[Producer, ...] = (
     Producer("assemble", "prompts", "flow", "generate", 1),
     Producer("render", "outputs", "flow", "generate", 1),
 )
+
+
+def producer_for(key: str) -> Producer:
+    """Return the row of the stage `key` names, or raise `KeyError`.
+
+    e.g. "wd14" -> Producer("wd14", "wd14", "photo", "tag", 1)
+    """
+    for producer in PRODUCERS:
+        if producer.key == key:
+            return producer
+    raise KeyError(key)

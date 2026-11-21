@@ -17,7 +17,8 @@ from isekai.interface.verbs.drafts import DISCARD_ROW, DRAFT_ROW
 from isekai.interface.verbs.edits import EDIT_ROW, INK_ROW
 from isekai.interface.verbs.generate import GENERATE_ROW, generate_batch
 from isekai.interface.verbs.library import COMPARE_ROW, IMPORT_ROW, UI_ROW
-from isekai.interface.verbs.prepare import PREPARE_ROW, run_prepare
+from isekai.interface.verbs.prepare import PREPARE_ROW
+from isekai.interface.verbs.runner import _per_item
 from isekai.interface.verbs.session import RENDER_ROW
 from isekai.interface.verbs.stages import (
     APPROVE_ROW,
@@ -49,11 +50,11 @@ __all__ = [
     "UI_ROW",
     "Reporter",
     "Verb",
+    "_per_item",
     "generate_batch",
     "once",
     "require_tracked",
     "run_for",
     "run_or_photo",
-    "run_prepare",
     "say",
 ]

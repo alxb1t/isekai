@@ -600,8 +600,8 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 **A verb is one `Verb` row, with its name, summary, arguments and run, in the module of its family under `isekai/interface/verbs/`. `cli.py` holds the tuple `ROWS` of every row, builds the parser from their arguments and dispatches to their runs.**
 
 - **Why:** a verb's name, arguments and run sat in separate places of one file, and that file and `build_parser` were rows of the ratchet ([D56](#d56--size-and-patches-are-held-by-ratchets)). One row a verb makes the next versions small, and `tests/record/verbs.json` proves each verb's arguments in order.
-- **Accepts:** the runs of `render`, `prepare` and `migrate` are bound in `cli.py`, because they need `_dispatch_argv`, `_per_item` and the `RUNS_ROOT` and `wiring` the tests patch there. Reopen when `_per_item` leaves `cli.py`.
-- **Made by:** `0145`.
+- **Accepts:** the runs of `render` and `migrate` are bound in `cli.py`, because they need `_dispatch_argv` and the `RUNS_ROOT` and `wiring` the tests patch there. Reopen when a version moves `_dispatch_argv`.
+- **Made by:** `0145`, `0187`.
 
 ### D59 · A resource is a class, registered from a table, over one surface
 
@@ -709,11 +709,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D73 · A stage is declared once, in isekai/foundation/producers.py
 
-**`isekai/foundation/producers.py` declares each stage a run passes through as a frozen `Producer(key, folder, scope, verb, budget)`, in `PRODUCERS`, in the order a run passes them: caption, wd14, tags, sheet, review, assemble, render. `BUDGETS` of `failures.py`, and `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words of `names.py`, are read from it, and `run.py` re-exports `Producer` and `PRODUCERS`. The module imports nothing of `isekai`.**
+**`isekai/foundation/producers.py` declares each stage a run passes through as a frozen `Producer(key, folder, scope, verb, budget)`, in `PRODUCERS`, in the order a run passes them: caption, wd14, tags, sheet, review, assemble, render. `BUDGETS` of `failures.py`, and `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words of `names.py`, are read from it, and `run.py` re-exports `Producer` and `PRODUCERS`. The module imports nothing of `isekai`. `producer_for(key)` returns a stage's row, and `attempt` in `run.py` is the sequence of `caption`, `wd14`, `tags` and `sheet`, which reads the row by `producer_for`.**
 
 - **Why:** a stage was spelled in several literals that no test held to agree, and a new stage edited each of them. One row says what a stage is, and a table that names it is read from the row. The key is the budget's key and the `stage` of a failure record on disk, so it never changes.
-- **Accepts:** the tables above the foundation, the sequence inside a stage, the pipeline's own `STAGE` constants and the hub cell's `Stage` stay as they are, and `review` has a row with no budget. Reopen when the interface's tables are read from the record.
-- **Made by:** `0183`.
+- **Accepts:** the tables above the foundation, the pipeline's own `STAGE` constants and the hub cell's `Stage` stay as they are, the paid stages, `assemble` and `render`, keep their own sequences, and `review` has a row with no budget. Reopen when the interface's tables are read from the record.
+- **Made by:** `0183`, `0188`.
 
 ## Infrastructure
 

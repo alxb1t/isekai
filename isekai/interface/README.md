@@ -19,8 +19,9 @@ module scope, and the UI imports no CLI module.
 
 | file | does |
 |---|---|
-| `cli.py` | holds `ROWS`, builds the parser from each row's arguments, resolves the flows a verb was given against `flows/`, dispatches a row's run or per flow — `tag` and `caption` once per photograph, naming none — and reports every refusal together, or with `--progress json` a JSON line per item; it keeps the per-item work of the flow-stage verbs, `assign`, `migrate`, and `render`'s and `prepare`'s runs, bound to `_dispatch_argv` and `_per_item` |
-| `verbs/__init__.py` | the package's front door: the rows and the shared names `cli.py` reads |
+| `cli.py` | holds `ROWS`, builds the parser from each row's arguments, resolves the flows a verb was given against `flows/`, dispatches a row's run or per flow — `tag` and `caption` once per photograph, naming none — and reports every refusal together, or with `--progress json` a JSON line per item; it keeps `migrate` and `render`'s run, bound to `_dispatch_argv` |
+| `verbs/__init__.py` | the package's front door: the rows, `_per_item` and the shared names `cli.py` reads |
+| `verbs/runner.py` | the flow stages' runner: `_per_item` returns the work one identifier gets for a stage, `assign` or `show`, with a builder per stage and `assign`'s own work |
 | `verbs/common.py` | `Verb`, the argument types and shared arguments, the reporter, and the run helpers every family reads |
 | `verbs/library.py` | `import`, `compare` and `ui`: `import` composes `pipeline/importing.py`, `compare` writes the page, `ui` serves the library |
 | `verbs/drafts.py` | `draft` and `discard`: `discard` deletes a render or an edit and each image's thumbnail |
@@ -52,10 +53,10 @@ module scope, and the UI imports no CLI module.
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `cli.py` | `__main__.py` | — |
-| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `ui/routes/place.py`, `ui/surface.py`, `verbs/common.py`, `verbs/drafts.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/library.py`, `verbs/prepare.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
-| `drafting.py` | `cli.py`, `ui/routes/reviewing.py`, `verbs/drafts.py` | — |
+| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py`, `ui/routes/place.py`, `ui/surface.py`, `verbs/common.py`, `verbs/drafts.py`, `verbs/edits.py`, `verbs/generate.py`, `verbs/library.py`, `verbs/prepare.py`, `verbs/runner.py` | `evaluation/record.py`, `tools/derive_field_map.py` |
+| `drafting.py` | `ui/routes/reviewing.py`, `verbs/drafts.py`, `verbs/runner.py` | — |
 | `render.py` | `cli.py`, `ui/jobs.py`, `ui/routes/rendering.py`, `verbs/edits.py` | — |
-| `run_view.py` | `cli.py` | — |
+| `run_view.py` | `verbs/runner.py` | — |
 | `compare_view.py` | `render.py`, `verbs/library.py` | — |
 | `ui/` | `cli.py`, `verbs/drafts.py`, `verbs/library.py` | — |
 | `verbs/` | `cli.py` | — |

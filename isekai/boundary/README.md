@@ -42,7 +42,7 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 | `provision.py` | `ollama.py`, `pose.py`, `sam2.py`, `unpack.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/eval_models.py`, `evaluation/face.py`, `evaluation/recall.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |
 | `sam2.py` | `interface/wiring.py`, `pipeline/proposing.py` | — |
 | `unpack.py` | `pose.py`, `sam2.py`, `interface/wiring.py` | `tools/derive_placement.py`, `tools/manifest.py` |
-| `wd14.py` | `pose.py`, `sam2.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `evaluation/face.py`, `evaluation/recall.py` |
+| `wd14.py` | `pose.py`, `sam2.py`, `interface/verbs/runner.py`, `interface/wiring.py`, `pipeline/tagging.py` | `evaluation/face.py`, `evaluation/recall.py` |
 
 > `interface/render.py` imports `pod_start.py` for the hold its limit's floor is
 > above; the image runs it as a file.
