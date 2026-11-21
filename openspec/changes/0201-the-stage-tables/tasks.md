@@ -5,7 +5,7 @@ Hold the tables above the foundation to the stage record by one guard, read `_KI
 ## Progress
 
 - [x] 1 — The guard · moderate
-- [ ] 2 — The kinds · moderate
+- [x] 2 — The kinds · moderate
 - [ ] 3 — Prepare · moderate
 - [ ] 4 — The documents · moderate
 
@@ -26,15 +26,15 @@ Hold the tables above the foundation to the stage record by one guard, read `_KI
 
 ## 2 — The kinds
 
-- [ ] 2.1 In `tests/test_ui_library.py` add `test_a_rows_kind_is_what_its_newest_stage_folder_says` after `test_collections_are_ordered_by_their_newest_file`, with that test's `spec` marker. It is parametrized by scope, folder and word: `photo`, `captions`, `caption`; `photo`, `wd14`, `tag`; `photo`, `tags`, `tag`; `SUMMON`, `sheets`, `sheet`; `SUMMON`, `review`, `review`; `SUMMON`, `prompts`, `prompt`; `SUMMON`, `outputs`, `render`. Each writes `runs/x/<scope>/<folder>/001.json` holding `b"{}"` in a collection, gives that file a later time than its source's with `os.utime`, and asserts the one row of `library.rows(tmp_path, OFFERED, FLOWS_DIR)` has `kind` equal to the word. It passes on today's code.
+- [x] 2.1 In `tests/test_ui_library.py` add `test_a_rows_kind_is_what_its_newest_stage_folder_says` after `test_collections_are_ordered_by_their_newest_file`, with that test's `spec` marker. It is parametrized by scope, folder and word: `photo`, `captions`, `caption`; `photo`, `wd14`, `tag`; `photo`, `tags`, `tag`; `SUMMON`, `sheets`, `sheet`; `SUMMON`, `review`, `review`; `SUMMON`, `prompts`, `prompt`; `SUMMON`, `outputs`, `render`. Each writes `runs/x/<scope>/<folder>/001.json` holding `b"{}"` in a collection, gives that file a later time than its source's with `os.utime`, and asserts the one row of `library.rows(tmp_path, OFFERED, FLOWS_DIR)` has `kind` equal to the word. It passes on today's code.
   Verify: `uv run pytest tests/test_ui_library.py -k a_rows_kind_is_what_its_newest_stage_folder_says` exits 0.
-- [ ] 2.2 In `isekai/interface/ui/library.py` replace the comment and the literal `_KINDS`, whose first line holds `CAPTIONS: "caption"`, with the block of [D2](design.md#d2), and add `PRODUCERS` to the import from `isekai.foundation.run`.
+- [x] 2.2 In `isekai/interface/ui/library.py` replace the comment and the literal `_KINDS`, whose first line holds `CAPTIONS: "caption"`, with the block of [D2](design.md#d2), and add `PRODUCERS` to the import from `isekai.foundation.run`.
   Verify: `git grep -n -F 'CAPTIONS: "caption"' -- isekai/interface/ui/library.py` prints nothing.
-- [ ] 2.3 Run `uv run ruff check isekai/interface/ui/library.py`: it names `CAPTIONS`, `OUTPUTS`, `PROMPTS` and `TAGS` as unused. Delete each from the import from `isekai.foundation.run`, then run `uv run ruff format isekai/interface/ui/library.py`.
+- [x] 2.3 Run `uv run ruff check isekai/interface/ui/library.py`: it names `CAPTIONS`, `OUTPUTS`, `PROMPTS` and `TAGS` as unused. Delete each from the import from `isekai.foundation.run`, then run `uv run ruff format isekai/interface/ui/library.py`.
   Verify: `uv run ruff check isekai/interface/ui/library.py` exits 0.
-- [ ] 2.4 Confirm the kinds, the guard and the layers.
+- [x] 2.4 Confirm the kinds, the guard and the layers.
   Verify: `uv run pytest tests/test_ui_library.py tests/test_run_directory.py tests/test_ui.py tests/test_layers.py` exits 0.
-- [ ] 2.5 Replay the mutants the repository keeps, `UB-14` on `library.py` among them.
+- [x] 2.5 Replay the mutants the repository keeps, `UB-14` on `library.py` among them.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 
 ## 3 — Prepare
