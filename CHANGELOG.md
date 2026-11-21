@@ -10,6 +10,14 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.36] - 2026-11-21
+
+Gate: local 1m15s · CI not read under mf-ship · 0.87.35: local 1m13s · CI not read under mf-ship
+
+- `stat_key`, `file_digest` and `thumbnail_of` join `isekai/foundation/library.py`; `ui/library.py` re-binds the first two and `thumbnail` calls the third. Cases hold the path and the digest, and its long-file row goes (0180 D1, D2, D5, D6).
+- `drop_thumbnails` joins `isekai/foundation/library.py` and takes its path from `thumbnail_of`; `ui/library.py` re-binds it, `ui/__init__.py` loses its wrapper, and the `discard` verb imports it from the foundation (0180 D3, D4).
+- D68 names `stat_key`, `file_digest`, `thumbnail_of` and `drop_thumbnails`, `isekai/foundation/README.md` and `isekai/interface/README.md` follow (0180 D7).
+
 ## [0.87.35] - 2026-11-21
 
 Gate: local 1m13s · CI not read under mf-ship · 0.87.34: local 1m14s · CI not read under mf-ship

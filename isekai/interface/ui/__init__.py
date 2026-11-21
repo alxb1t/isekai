@@ -48,11 +48,6 @@ def collection_runs() -> list[Path]:
     ]
 
 
-def drop_thumbnails(run: Run, image: Path) -> list[Path]:
-    """Delete `image`'s thumbnails from its library's cache, for the `discard` verb."""
-    return library.drop_thumbnails(run, image)
-
-
 def render_running(run: Run) -> bool:
     """Return whether a render holds `run`'s collection, for the `discard` verb."""
     return library.render_running(run)
