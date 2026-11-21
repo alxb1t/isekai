@@ -30,7 +30,7 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
 - [x] 1.9 Add `test_each_sample_line_is_the_shape_it_declares` with `@pytest.mark.spec_exempt("structural: each sample line is its declared shape")`. For each line of `ITEM_CASES` and `WORK_CASES` it asserts the parsed keys are an ordered subsequence of the keys of `ItemLine.__annotations__`, `run`, `stage` and `state` among them, `stage` is in `get_args(Stage)` and `state` in `get_args(ItemState)`. It asserts, for `STEP_CASES`, keys equal to those of `StepLine` and `step` and `state` in `get_args(StepName)` and `get_args(StepState)`, and, for `IMAGE_LINES`, keys equal to those of `ImageLine`.
   Verify: `uv run pytest tests/test_progress.py -k test_each_sample_line_is_the_shape_it_declares` exits 0.
 - [x] 1.10 Leave every test the file held untouched, and add no test but the two of 1.1, which pin the survivors of its first run, those of 1.7 to 1.9, and the one of 4.4, which pins the survivor of its first run. The file holds 15 tests at the end of phase 1 and 16 at the end of phase 4.
-  Verify: `git grep -c -e "^def test_" -- tests/test_progress.py` prints `tests/test_progress.py:15` at the end of phase 1 and `tests/test_progress.py:16` once 4.4 is done.
+  Verify: `git grep -c -e "^def test_" -- tests/test_progress.py` prints `tests/test_progress.py:16`, the count once 4.4 is done; the count at the end of phase 1 was 15.
 
 ## 2 — The emitters
 
