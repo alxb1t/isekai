@@ -10,7 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
-- `wd14.verified_paths`, `wd14.open_session` and `wiring.load_vocabulary` take `manifest=`, a path read from the tracked one when `None`; `pose.verified_paths`, `pose.open_pose` and `sam2.open_segmenter` take it with the placement manifest as default; no test patches a manifest path, and `BD-1` and `BD-10b` are re-pointed (0192 D1, D3, D6).
+- The tagger, the vocabulary, the pose finder and the segmenter take `manifest=`, defaulting to the tracked path; no test patches a manifest path, and `BD-1` and `BD-10b` are re-pointed (0192 D1, D3, D6).
+- `unpack.main` takes `fetcher=`, defaulting to `HuggingFaceFetcher`, and a case holds the default; no test patches `unpack`, so its row leaves `PATCHED_MODULES` and `PATCHED_ROWS` is 17 (0192 D2, D4, D7).
 
 ## [0.88.1] - 2026-11-21
 

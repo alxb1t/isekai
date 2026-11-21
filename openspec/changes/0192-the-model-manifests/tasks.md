@@ -5,7 +5,7 @@ The model openers take their manifest's path, `unpack.main` takes its fetcher, a
 ## Progress
 
 - [x] 1 — The openers · moderate
-- [ ] 2 — The fetcher and the ratchet row · moderate
+- [x] 2 — The fetcher and the ratchet row · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The openers
@@ -45,23 +45,23 @@ The model openers take their manifest's path, `unpack.main` takes its fetcher, a
 
 ## 2 — The fetcher and the ratchet row
 
-- [ ] 2.1 **HALT CHECK** `unpack.main` takes no fetcher yet, and the ratchet still lists the row.
+- [x] 2.1 **HALT CHECK** `unpack.main` takes no fetcher yet, and the ratchet still lists the row.
   Verify: `git grep -n -e "^def main(argv: list\[str\]) -> int:" -e "^    .isekai\.boundary\.unpack.: [0-9]" -- isekai/boundary/unpack.py tests/test_ratchets.py` prints a line for each pattern.
-- [ ] 2.2 In `tests/test_provision_unpack.py`, in `test_unpack_cli_fetches_the_manifest_it_names_into_the_models_dir`, delete the patch of `"HuggingFaceFetcher"` and the `monkeypatch` parameter, and pass its lambda to `unpack.main` as `fetcher=`. Its `spec_exempt` text reads `structural: the command line is fetch over the fetcher it is given and a named manifest`. No assertion changes.
+- [x] 2.2 In `tests/test_provision_unpack.py`, in `test_unpack_cli_fetches_the_manifest_it_names_into_the_models_dir`, delete the patch of `"HuggingFaceFetcher"` and the `monkeypatch` parameter, and pass its lambda to `unpack.main` as `fetcher=`. Its `spec_exempt` text reads `structural: the command line is fetch over the fetcher it is given and a named manifest`. No assertion changes.
   Verify: `uv run pytest tests/test_provision_unpack.py -k fetches_the_manifest_it_names` exits 1, on the unexpected keyword.
-- [ ] 2.3 In `tests/test_provision_unpack.py`, add `import inspect` and, after that case, add `test_unpack_cli_defaults_to_the_hugging_face_fetcher` marked `@pytest.mark.spec_exempt("structural: the command line fetches over Hugging Face unless a test gives its own")`, per [D7](design.md#d7). It asserts the default of `fetcher` in `inspect.signature(unpack.main).parameters` is `unpack.HuggingFaceFetcher`.
+- [x] 2.3 In `tests/test_provision_unpack.py`, add `import inspect` and, after that case, add `test_unpack_cli_defaults_to_the_hugging_face_fetcher` marked `@pytest.mark.spec_exempt("structural: the command line fetches over Hugging Face unless a test gives its own")`, per [D7](design.md#d7). It asserts the default of `fetcher` in `inspect.signature(unpack.main).parameters` is `unpack.HuggingFaceFetcher`.
   Verify: `uv run pytest tests/test_provision_unpack.py -k defaults_to_the_hugging_face` exits 1, on the missing parameter.
-- [ ] 2.4 In `isekai/boundary/unpack.py`, give `main` the keyword `fetcher: Callable[[], Fetcher] = HuggingFaceFetcher` after `*`, as [D2](design.md#d2) gives it, and call `fetcher()` in place of `HuggingFaceFetcher()`.
+- [x] 2.4 In `isekai/boundary/unpack.py`, give `main` the keyword `fetcher: Callable[[], Fetcher] = HuggingFaceFetcher` after `*`, as [D2](design.md#d2) gives it, and call `fetcher()` in place of `HuggingFaceFetcher()`.
   Verify: `git grep -n -F "fetcher: Callable[[], Fetcher] = HuggingFaceFetcher" -- isekai/boundary/unpack.py` prints one line.
-- [ ] 2.5 No test patches a name of `unpack` any more: no line holds `unpack, "`.
+- [x] 2.5 No test patches a name of `unpack` any more: no line holds `unpack, "`.
   Verify: `git grep -n -F 'unpack, "' -- tests` prints nothing.
-- [ ] 2.6 In `tests/test_ratchets.py`, delete the row `"isekai.boundary.unpack": 3,` from `PATCHED_MODULES`, per [D4](design.md#d4).
+- [x] 2.6 In `tests/test_ratchets.py`, delete the row `"isekai.boundary.unpack": 3,` from `PATCHED_MODULES`, per [D4](design.md#d4).
   Verify: `git grep -n -e "^    .isekai\.boundary\.unpack.: [0-9]" -- tests/test_ratchets.py` prints nothing.
-- [ ] 2.7 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 17`.
+- [x] 2.7 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 17`.
   Verify: `git grep -n -e "^PATCHED_ROWS = 17" -- tests/test_ratchets.py` prints one line.
-- [ ] 2.8 Run the cases of every file the phase touched, and the structure tests.
+- [x] 2.8 Run the cases of every file the phase touched, and the structure tests.
   Verify: `uv run pytest tests/test_provision_unpack.py tests/test_provision.py tests/test_vocabulary_manifest.py tests/test_ratchets.py tests/test_layers.py tests/test_docs.py tests/test_spec_bindings.py` exits 0.
-- [ ] 2.9 Lint what the phase changed.
+- [x] 2.9 Lint what the phase changed.
   Verify: `uv run ruff check isekai/boundary/unpack.py tests/test_provision_unpack.py tests/test_ratchets.py` exits 0.
 
 ## 3 — The documents
