@@ -1,6 +1,9 @@
 import { expect } from 'vitest'
 import {
+  DONE,
   EMPTY_CELL,
+  RUNNING,
+  SEGMENTS,
   action,
   cellGrid,
   cellOrder,
@@ -16,10 +19,12 @@ import {
   placeOf,
   ready,
   rowOrder,
+  segmentClass,
   sourceGrid,
   stepped,
   targets,
   tileCaption,
+  wordOf,
 } from './cells'
 import { spec } from './test/spec'
 import type { HubCell, HubSource, RenderDetail } from './types'
@@ -31,6 +36,9 @@ function cell(stage: HubCell['stage'], newest: HubCell['newest'] = null): HubCel
 function sourceOf(name: string, cells: Record<string, HubCell>): HubSource {
   return { name, digest: null, width: null, height: null, cells, carries: [] }
 }
+
+const track = (running: string | undefined, one: HubCell): string[] =>
+  SEGMENTS.map((_, index) => segmentClass(one, running, index))
 
 spec('ui:prepare:prepare-takes-the-cells-with-no-sheet', () => {
   const ada = sourceOf('ada.jpg', {
@@ -83,6 +91,72 @@ spec('ui:hub:a-click-follows-the-cells-stage', () => {
   expect(clicks(on(false), '')).toBe(true)
   expect(clicks(on(true), '')).toBe(false)
   expect(clicks(on(false), 'python -m isekai')).toBe(false)
+})
+
+spec('ui:hub:a-cells-stage-comes-from-its-run', () => {
+  expect(SEGMENTS).toEqual(['assigned', 'tag', 'caption', 'sheet', 'approved', 'rendered'])
+  expect(DONE).toEqual({
+    assigned: 1,
+    tagged: 2,
+    sheet: 4,
+    draft: 4,
+    approved: 5,
+    rendered: 6,
+    unreadable: 0,
+  })
+  // With nothing running, a stage marks the segments it has done and no other.
+  const counts: [HubCell['stage'], number][] = [
+    [null, 0],
+    ['assigned', 1],
+    ['tagged', 2],
+    ['sheet', 4],
+    ['draft', 4],
+    ['approved', 5],
+    ['rendered', 6],
+    ['unreadable', 0],
+  ]
+  for (const [stage, count] of counts) {
+    const done = SEGMENTS.map((_, index) => (index < count ? 'hub__segment--done' : ''))
+    expect(track(undefined, cell(stage))).toEqual(done)
+  }
+  // A cell shows its stage, `rendered ×n` once rendered, and nothing with no stage.
+  for (const [stage] of counts) {
+    if (stage !== null && stage !== 'rendered') expect(wordOf(cell(stage), undefined)).toBe(stage)
+  }
+  expect(wordOf(cell(null), undefined)).toBe('')
+  expect(wordOf(cell('rendered'), undefined)).toBe('rendered ×0')
+  expect(wordOf({ ...cell('rendered'), renders: 2 }, undefined)).toBe('rendered ×2')
+})
+
+spec('ui:events:a-stages-report-reaches-the-stream', () => {
+  expect(RUNNING).toEqual({
+    tag: { segment: 1, word: 'tagging…' },
+    caption: { segment: 2, word: 'captioning…' },
+    sheet: { segment: 3, word: 'filling the sheet…' },
+  })
+  for (const verb of ['tag', 'caption', 'sheet'] as const) {
+    expect(SEGMENTS[RUNNING[verb].segment]).toBe(verb)
+  }
+  // A running stage shows its word and its segment running, over the done mark of its own.
+  expect(wordOf(cell('tagged'), 'caption')).toBe('captioning…')
+  expect(track('caption', cell('tagged'))).toEqual([
+    'hub__segment--done',
+    'hub__segment--done',
+    'hub__segment--running',
+    '',
+    '',
+    '',
+  ])
+  expect(segmentClass(cell('sheet'), 'sheet', 3)).toBe('hub__segment--running')
+  expect(track('tag', cell(null))).toEqual(['', 'hub__segment--running', '', '', '', ''])
+  // A stage the table lacks shows as `<stage>…` and marks no segment running, `toString` too.
+  expect(wordOf(cell('tagged'), 'review')).toBe('review…')
+  expect(wordOf(cell('tagged'), 'toString')).toBe('toString…')
+  const tagged = ['hub__segment--done', 'hub__segment--done', '', '', '', '']
+  expect(track('toString', cell('tagged'))).toEqual(tagged)
+  // An empty running stage reads as none.
+  expect(wordOf(cell('tagged'), '')).toBe('tagged')
+  expect(track('', cell('tagged'))).toEqual(tagged)
 })
 
 spec('ui:hub:a-tagged-cell-with-no-work-unticks', () => {

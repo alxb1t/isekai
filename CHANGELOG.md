@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- The hub cell's track is held by vitest cases before it moves: `SEGMENTS`, `DONE`, `RUNNING`, `wordOf` and `segmentClass` give the words and classes they gave, a stage the table lacks and `toString` among them (0189 D3).
+
 ## [0.87.44] - 2026-11-21
 
 Gate: local 1m20s · CI not read under mf-ship · 0.87.43: local 1m13s · CI not read under mf-ship
