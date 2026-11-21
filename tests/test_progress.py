@@ -11,12 +11,82 @@ import pytest
 from isekai.foundation.run import Run, open_run
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.render import Steps, _Images, progress_line
+from isekai.interface.verbs import Reporter
 from isekai.shared.vocabulary import Vocabulary
 from tests.images import jpeg_bytes
 from tests.record import recorded
 from tests.stages import bare_wiring, write_wd14
 
 FLOW = "summon-anime-wai"
+RUN = "0d4b7e6fb2a8_portrait"
+DIGEST = "ab12"
+
+ITEM_CASES: list[tuple[tuple[Any, ...], dict[str, str | int], str]] = [
+    (
+        (FLOW, "sheet", "start"),
+        {},
+        '{"run": "0d4b7e6fb2a8_portrait", "flow": "summon-anime-wai", '
+        '"stage": "sheet", "state": "start"}',
+    ),
+    (
+        (FLOW, "sheet", "done"),
+        {},
+        '{"run": "0d4b7e6fb2a8_portrait", "flow": "summon-anime-wai", '
+        '"stage": "sheet", "state": "done"}',
+    ),
+    (
+        (FLOW, "sheet", "refused", "no wd14 tags"),
+        {},
+        '{"run": "0d4b7e6fb2a8_portrait", "flow": "summon-anime-wai", '
+        '"stage": "sheet", "state": "refused", "message": "no wd14 tags"}',
+    ),
+    (
+        (None, "tag", "start"),
+        {},
+        '{"run": "0d4b7e6fb2a8_portrait", "stage": "tag", "state": "start"}',
+    ),
+    (
+        (None, "caption", "refused", "no reader"),
+        {},
+        '{"run": "0d4b7e6fb2a8_portrait", "stage": "caption", '
+        '"state": "refused", "message": "no reader"}',
+    ),
+]
+
+WORK_CASES: list[tuple[tuple[Any, ...], dict[str, str | int], str]] = [
+    (
+        (FLOW, "render", "done"),
+        {"digest": DIGEST, "version": 2, "seed": "42"},
+        '{"run": "0d4b7e6fb2a8_portrait", "flow": "summon-anime-wai", '
+        '"stage": "render", "state": "done", "digest": "ab12", "version": 2, '
+        '"seed": "42"}',
+    ),
+    (
+        (FLOW, "edit", "done"),
+        {"digest": DIGEST, "version": 1, "file": "42.edit-1.png"},
+        '{"run": "0d4b7e6fb2a8_portrait", "flow": "summon-anime-wai", '
+        '"stage": "edit", "state": "done", "digest": "ab12", "version": 1, '
+        '"file": "42.edit-1.png"}',
+    ),
+]
+
+STEP_CASES: list[tuple[str, str, str]] = [
+    ("pod", "starting", '{"step": "pod", "state": "starting"}'),
+    ("pod", "ready", '{"step": "pod", "state": "ready"}'),
+    ("pod", "lost", '{"step": "pod", "state": "lost"}'),
+    ("pod", "refused", '{"step": "pod", "state": "refused"}'),
+    ("teardown", "done", '{"step": "teardown", "state": "done"}'),
+    ("teardown", "failed", '{"step": "teardown", "state": "failed"}'),
+]
+
+IMAGE_LINES = [
+    '{"step": "image", "n": 1, "of": 2, "run": "0d4b7e6fb2a8_portrait", '
+    '"digest": "ab12", "flow": "summon-anime-wai", "version": 2, "seed": "42", '
+    '"state": "done"}',
+    '{"step": "image", "n": 2, "of": 2, "run": "0d4b7e6fb2a8_portrait", '
+    '"digest": "ab12", "flow": "summon-anime-wai", "version": 2, "seed": "42", '
+    '"state": "done"}',
+]
 
 
 def _run(tmp_path: Path, name: str, height: int) -> Run:
@@ -68,6 +138,30 @@ def test_each_item_reports_its_start_and_its_end_as_json(
     assert piped.flushed == len(piped.getvalue().splitlines())
 
 
+@pytest.mark.spec("cli:progress:each-item-reports-start-and-end")
+@pytest.mark.spec("cli:progress:a-refusal-is-a-line")
+def test_a_sheets_lines_are_these_bytes(tmp_path: Path, vocabulary: Vocabulary) -> None:
+    tagged = _run(tmp_path, "ada.jpg", 800)
+    write_wd14(tagged)
+
+    code, out, _ = _sheet(tmp_path, vocabulary, "--progress", "json", tagged.id)
+
+    assert code == 0
+    start, done, refused, *_ = (line for _, _, line in ITEM_CASES)
+    assert out == f"{start.replace(RUN, tagged.id)}\n{done.replace(RUN, tagged.id)}\n"
+
+    untagged = _run(tmp_path, "bea.jpg", 801)
+
+    code, out, _ = _sheet(tmp_path, vocabulary, "--progress", "json", untagged.id)
+
+    first, last = out.splitlines(keepends=True)
+    prefix = refused.replace(RUN, untagged.id).partition('"message": "')[0]
+    assert code == 1
+    assert first == f"{start.replace(RUN, untagged.id)}\n"
+    assert last.startswith(f'{prefix}"message": "')
+    assert last.endswith('"}\n')
+
+
 class _Flushes(io.StringIO):
     """A stdout that counts its flushes."""
 
@@ -77,6 +171,56 @@ class _Flushes(io.StringIO):
         """Count the flush, then flush."""
         self.flushed += 1
         super().flush()
+
+
+@pytest.mark.spec("cli:progress:a-photographs-line-names-no-flow")
+@pytest.mark.spec("cli:progress:a-refusal-is-a-line")
+def test_an_items_lines_are_these_bytes() -> None:
+    out = _Flushes()
+    reporter = Reporter(out, io.StringIO(), True)
+
+    for arguments, more, _ in ITEM_CASES:
+        reporter.item(RUN, *arguments, **more)
+
+    assert out.getvalue() == "".join(f"{line}\n" for _, _, line in ITEM_CASES)
+    assert out.flushed == len(out.getvalue().splitlines())
+
+
+@pytest.mark.spec_exempt(
+    "structural: a generate line and an edit line are these bytes, key order included"
+)
+def test_a_renders_and_an_edits_lines_are_these_bytes() -> None:
+    out = _Flushes()
+    reporter = Reporter(out, io.StringIO(), True)
+
+    for arguments, more, _ in WORK_CASES:
+        reporter.item(RUN, *arguments, **more)
+
+    assert out.getvalue() == "".join(f"{line}\n" for _, _, line in WORK_CASES)
+    assert out.flushed == len(out.getvalue().splitlines())
+
+
+@pytest.mark.spec("cli:render-progress:each-image-of-the-total")
+def test_a_sessions_step_and_image_lines_are_these_bytes() -> None:
+    out = _Flushes()
+    steps = Steps(out, True)
+    render = json.loads(WORK_CASES[0][2])
+
+    for step, state, _ in STEP_CASES:
+        steps.step(step, state)
+    for _ in IMAGE_LINES:
+        steps.image(render, 2, None)
+
+    expected = [line for _, _, line in STEP_CASES] + IMAGE_LINES
+    assert out.getvalue() == "".join(f"{line}\n" for line in expected)
+    assert out.flushed == len(expected)
+    assert steps.flag == ("--progress", "json")
+    unheard = _Flushes()
+    quiet = Steps(unheard, False)
+    quiet.step("pod", "ready")
+    quiet.image(render, 2, None)
+    assert unheard.getvalue() == ""
+    assert quiet.flag == ()
 
 
 class _Landed:
