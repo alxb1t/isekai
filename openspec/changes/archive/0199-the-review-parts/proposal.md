@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.9
 after: [0198-the-review-base]
 ---
 

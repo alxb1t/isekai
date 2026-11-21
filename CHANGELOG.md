@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.9] - 2026-11-21
+
+Gate: local 1m17s · CI not read under mf-ship · 0.88.8: local 1m19s · CI not read under mf-ship
+
 - `isekai/pipeline/review/approval.py` holds `approve` and its helpers, with the warning block in `_window_warnings`; `DISCARD` moves to `records.py` and the front door binds `approve` back (0199 D1, D2, D3, D5, D7).
 - The front door's long-file row and `approve`'s long-function row leave the ratchets, and `PB-2` is found in `approval.py` (0199 D8, D9).
 - `isekai/pipeline/review/drafts.py` holds `review`, `revise`, `draft_from` and the refusals they share, which the front door binds back; `PB-5` and the byte-writer key follow it (0199 D1, D2, D3, D7, D9).
