@@ -5,7 +5,7 @@ Pin `_per_item` by mutation, cut it into builders, a table and a runner in [`ise
 ## Progress
 
 - [x] 1 — Pin `_per_item` by mutation · moderate
-- [ ] 2 — Cut `_per_item` into builders, a table and a runner · hard
+- [x] 2 — Cut `_per_item` into builders, a table and a runner · hard
 - [ ] 3 — Replay the mutation over the new code · moderate
 
 ## 1 — Pin `_per_item` by mutation
@@ -21,25 +21,25 @@ Pin `_per_item` by mutation, cut it into builders, a table and a runner in [`ise
 
 ## 2 — Cut `_per_item` into builders, a table and a runner
 
-- [ ] 2.1 In `isekai/interface/cli.py`, between `_seam` and `_per_item`, add `_Item` and `_item_of(args, wired, flows, collected)` as in [D1](design.md#d1) and [D6](design.md#d6): the reporter, `new_version`, the memoised `vocabulary` and `field_map`, and the `tagger` thunk move out of `_per_item` with their docstrings, and `_item_of` returns the `_Item`.
+- [x] 2.1 In `isekai/interface/cli.py`, between `_seam` and `_per_item`, add `_Item` and `_item_of(args, wired, flows, collected)` as in [D1](design.md#d1) and [D6](design.md#d6): the reporter, `new_version`, the memoised `vocabulary` and `field_map`, and the `tagger` thunk move out of `_per_item` with their docstrings, and `_item_of` returns the `_Item`.
   Verify: `git grep -n -e '^class _Item' -e '^def _item_of' -- isekai/interface/cli.py` prints a line for each.
 
-- [ ] 2.2 After them, add the builders `_caption_step`, `_tag_step`, `_sheet_step`, `_review_step` and `_approve_step`, each `(run: Run, item: _Item)` returning the step its branch of `_per_item` defined, the body unchanged but for reading its context as `item.<name>`, per [D2](design.md#d2). The approve step reads `flow = item.flows[name]` after its `--cancel` branch has returned and passes `definition=flow,` on a line of its own.
+- [x] 2.2 After them, add the builders `_caption_step`, `_tag_step`, `_sheet_step`, `_review_step` and `_approve_step`, each `(run: Run, item: _Item)` returning the step its branch of `_per_item` defined, the body unchanged but for reading its context as `item.<name>`, per [D2](design.md#d2). The approve step reads `flow = item.flows[name]` after its `--cancel` branch has returned and passes `definition=flow,` on a line of its own.
   Verify: `git grep -n -e '^def _caption_step' -e '^def _tag_step' -e '^def _sheet_step' -e '^def _review_step' -e '^def _approve_step' -- isekai/interface/cli.py` prints a line for each.
 
-- [ ] 2.3 After the builders, add `_BUILDERS` as in [D3](design.md#d3), then `_reported(item, run, verb, name, step)` and `_run_item(verb, run, item)` as in [D4](design.md#d4); `_reported` is today's nested `reported`, and `_run_item` ends with the `across` loop, over `[None]` for a photograph's verb and over the flows otherwise.
+- [x] 2.3 After the builders, add `_BUILDERS` as in [D3](design.md#d3), then `_reported(item, run, verb, name, step)` and `_run_item(verb, run, item)` as in [D4](design.md#d4); `_reported` is today's nested `reported`, and `_run_item` ends with the `across` loop, over `[None]` for a photograph's verb and over the flows otherwise.
   Verify: `git grep -n -e '^_BUILDERS' -e '^def _reported' -e '^def _run_item' -- isekai/interface/cli.py` prints a line for each.
 
-- [ ] 2.4 Rewrite `_per_item` to build its `_Item` with `_item_of` and to return a `work` that holds `assign`, the opening of the run with its refusal reported for each name, `show` and a call of `_run_item`, as in [D5](design.md#d5). Delete the chain, each `elif verb ==` branch of it, and every closure it held.
+- [x] 2.4 Rewrite `_per_item` to build its `_Item` with `_item_of` and to return a `work` that holds `assign`, the opening of the run with its refusal reported for each name, `show` and a call of `_run_item`, as in [D5](design.md#d5). Delete the chain, each `elif verb ==` branch of it, and every closure it held.
   Verify: `git grep -n -F "elif verb ==" -- isekai/interface/cli.py` prints nothing.
 
-- [ ] 2.5 In `tests/mutants.json`, re-point `PB-2b` per [D8](design.md#d8): its `find` becomes `definition=flow,\n` and its `replace` stays `definition=None,\n`; its `path`, `tests` and `why` stand.
+- [x] 2.5 In `tests/mutants.json`, re-point `PB-2b` per [D8](design.md#d8): its `find` becomes `definition=flow,\n` and its `replace` stays `definition=None,\n`; its `path`, `tests` and `why` stand.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 
-- [ ] 2.6 In `tests/test_ratchets.py`, delete the rows `"isekai/interface/cli.py::_per_item": 214,` and `"isekai/interface/cli.py::_per_item.work": 154,` from `LONG_FUNCTIONS`, per [D7](design.md#d7).
+- [x] 2.6 In `tests/test_ratchets.py`, delete the rows `"isekai/interface/cli.py::_per_item": 214,` and `"isekai/interface/cli.py::_per_item.work": 154,` from `LONG_FUNCTIONS`, per [D7](design.md#d7).
   Verify: `git grep -n -F "cli.py::_per_item" -- tests/test_ratchets.py` prints nothing.
 
-- [ ] 2.7 In `tests/test_ratchets.py`, set `FUNCTION_ROWS = 8` to `FUNCTION_ROWS = 6`, per [D7](design.md#d7).
+- [x] 2.7 In `tests/test_ratchets.py`, set `FUNCTION_ROWS = 8` to `FUNCTION_ROWS = 6`, per [D7](design.md#d7).
   Verify: `git grep -n -e '^FUNCTION_ROWS = 6' -- tests/test_ratchets.py` prints one line.
 
 ## 3 — Replay the mutation over the new code
