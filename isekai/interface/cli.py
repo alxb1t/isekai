@@ -369,30 +369,34 @@ def _seam(value: T | None, name: str, does: str) -> T:
     return value
 
 
-def _per_item(
-    verb: str,
+@dataclasses.dataclass(frozen=True)
+class _Item:
+    """What one `_per_item` call shares among its builders and its runner."""
+
+    args: argparse.Namespace
+    wired: Wiring
+    flows: Mapping[str, Flow]
+    collected: list[str]
+    reporter: Reporter
+    new_version: bool
+    vocabulary: Callable[[], Vocabulary]
+    field_map: Callable[[], FieldMap]
+    tagger: Callable[[], Callable[[], LocalTagger]]
+
+
+def _item_of(
     args: argparse.Namespace,
     wired: Wiring,
     flows: Mapping[str, Flow],
     collected: list[str],
-) -> Callable[[str], None]:
-    """Return the work one identifier gets, with everything run-independent done.
+) -> _Item:
+    """Return what one `_per_item` call shares, its reads memoised for the call.
 
-    `collected` takes the refusals that must not abandon the rest of a
-    photograph's work: one per flow, and `tag`'s one per tagger.
-
-    The flows a verb acts on are a property of the invocation, not of the
-    photograph, so they are resolved once by the caller rather than re-read from
-    disk per identifier. `tag` and `caption` run once per photograph and name no
-    flow, since every flow reads the one description (D17); every other stage
-    runs per flow, because the flow is what supplies what it reads: its schema
-    and its dials. The vocabulary is resolved at most once for the same reason and
+    The vocabulary is resolved at most once for the same reason as the flows, and
     lazily for the old one: parsing the 308 KB tag list costs ~50 ms, and only
     two verbs need it at all.
     """
-    new_version = bool(getattr(args, "new_version", False))
     opening: list[Callable[[], LocalTagger]] = []
-    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == "json")
 
     @cache
     def vocabulary() -> Vocabulary:
@@ -425,6 +429,213 @@ def _per_item(
             opening.append(once(resolve))
         return opening[0]
 
+    return _Item(
+        args=args,
+        wired=wired,
+        flows=flows,
+        collected=collected,
+        reporter=Reporter(
+            wired.out, wired.err, getattr(args, "progress", None) == "json"
+        ),
+        new_version=bool(getattr(args, "new_version", False)),
+        vocabulary=vocabulary,
+        field_map=field_map,
+        tagger=tagger,
+    )
+
+
+_Step = Callable[[str], None]
+_Builder = Callable[[Run, _Item], _Step]
+
+
+def _caption_step(run: Run, item: _Item) -> _Step:
+    """Return the step that captions the photograph, which names no flow."""
+
+    def caption_photo(name: str) -> None:
+        reader = _seam(item.wired.reader, "reader", "reads the photograph")()
+        say(
+            item.reporter,
+            run,
+            "caption",
+            caption(
+                run,
+                reader,
+                briefing_path=load_caption_config().briefing_path,
+                new_version=item.new_version,
+            ),
+        )
+
+    return caption_photo
+
+
+def _tag_step(run: Run, item: _Item) -> _Step:
+    """Return the step that tags the photograph, which names no flow."""
+
+    def tag_photo(name: str) -> None:
+        def hosted() -> None:
+            tagger_for = _seam(
+                item.wired.hosted_tagger, "hosted tagger", "tags the photograph"
+            )
+            written = tag_hosted(run, tagger_for(), new_version=item.new_version)
+            say(item.reporter, run, "tags", written)
+
+        # Each tagger's refusal is collected on its own, so neither costs
+        # the other its list. WD14 first: it is the sheet's input and
+        # reaches no network (D1).
+        steps: tuple[Callable[[], None], ...] = (
+            lambda: say(
+                item.reporter,
+                run,
+                "wd14",
+                tag_wd14(run, item.tagger(), new_version=item.new_version),
+            ),
+            hosted,
+        )
+        item.collected.extend(across(steps, lambda step: step()))
+
+    return tag_photo
+
+
+def _sheet_step(run: Run, item: _Item) -> _Step:
+    """Return the step that assembles one flow's sheet."""
+
+    def sheet_flow(name: str) -> None:
+        flow = item.flows[name]
+        written, warnings = sheet(
+            run,
+            name,
+            flow.schema,
+            item.vocabulary(),
+            item.field_map(),
+            tagged=flow.tagger,
+            flow_digest=flow.digest,
+            new_version=item.new_version,
+        )
+        for warning in warnings:
+            print(f"warning: {warning}", file=item.wired.err)
+        say(item.reporter, run, "sheet", written)
+
+    return sheet_flow
+
+
+def _review_step(run: Run, item: _Item) -> _Step:
+    """Return the step that opens one flow's draft, or discards it with `--discard`."""
+
+    def review_flow(name: str) -> None:
+        if item.args.discard:
+            gone = discard(run, name)
+            item.reporter.say(f"{run.id}: review discarded {name}/{gone.name}")
+            return
+        say(
+            item.reporter,
+            run,
+            "review",
+            review(run, name, new_version=item.new_version),
+        )
+
+    return review_flow
+
+
+def _approve_step(run: Run, item: _Item) -> _Step:
+    """Return the step that approves one flow's sheet, or cancels it with `--cancel`."""
+
+    def approve_flow(name: str) -> None:
+        if item.args.cancel:
+            left, changed = cancel_approval(run, name)
+            if not changed and left is not None:
+                item.reporter.say(
+                    f"{run.id}: approve has nothing to cancel in {name}; "
+                    f"it is at its draft {left.name}"
+                )
+                return
+            back = "a copy, deleted" if left is None else f"back to {left.name}"
+            item.reporter.say(f"{run.id}: approve cancelled {name}, {back}")
+            return
+        flow = item.flows[name]
+        written, warnings = (
+            approve(
+                run,
+                name,
+                flow.schema,
+                item.vocabulary(),
+                excluded=item.field_map().excluded,
+                definition=flow,
+            )
+            if item.args.source is None
+            else approve_across(
+                run, flow, item.args.source, item.vocabulary, item.field_map
+            )
+        )
+        for warning in warnings:
+            print(f"warning: {warning}", file=item.wired.err)
+        say(item.reporter, run, "approve", written)
+
+    return approve_flow
+
+
+_BUILDERS: Mapping[str, _Builder] = {
+    "caption": _caption_step,
+    "tag": _tag_step,
+    "sheet": _sheet_step,
+    "review": _review_step,
+    "approve": _approve_step,
+}
+
+
+def _reported(item: _Item, run: Run, verb: str, name: str | None, step: _Step) -> None:
+    """Run `step` between its `start` and its end; `None` names no flow."""
+    item.reporter.item(run.id, name, verb, "start")
+    before = len(item.collected)
+    try:
+        step("" if name is None else name)
+    except Refusal as refused:
+        item.reporter.item(run.id, name, verb, "refused", str(refused))
+        raise
+    # `tag` collects each tagger's refusal rather than raising it.
+    if len(item.collected) > before:
+        item.reporter.item(
+            run.id, name, verb, "refused", "; ".join(item.collected[before:])
+        )
+    else:
+        item.reporter.item(run.id, name, verb, "done")
+
+
+def _run_item(verb: str, run: Run, item: _Item) -> None:
+    """Run the step `verb` names: once for a photograph's verb, once per flow else."""
+    build = _BUILDERS.get(verb)
+    if build is None:
+        raise Refusal(f"{verb!r} is not a stage this build runs")
+    step = build(run, item)
+    # The photograph is described once, for every flow (D17). Each flow's
+    # refusal is collected on its own, so one flow's does not cost the input
+    # its other flows.
+    names: list[str | None] = [None] if verb in PHOTOGRAPH_VERBS else list(item.flows)
+    item.collected.extend(
+        across(names, lambda name: _reported(item, run, verb, name, step))
+    )
+
+
+def _per_item(
+    verb: str,
+    args: argparse.Namespace,
+    wired: Wiring,
+    flows: Mapping[str, Flow],
+    collected: list[str],
+) -> Callable[[str], None]:
+    """Return the work one identifier gets, with everything run-independent done.
+
+    `collected` takes the refusals that must not abandon the rest of a
+    photograph's work: one per flow, and `tag`'s one per tagger.
+
+    The flows a verb acts on are a property of the invocation, not of the
+    photograph, so they are resolved once by the caller rather than re-read from
+    disk per identifier. `tag` and `caption` run once per photograph and name no
+    flow, since every flow reads the one description (D17); every other stage
+    runs per flow, because the flow is what supplies what it reads: its schema
+    and its dials.
+    """
+    item = _item_of(args, wired, flows, collected)
+
     def work(identifier: str) -> None:
         if verb == "assign":
             _assign(identifier, bool(args.remove), wired, list(flows), collected)
@@ -436,148 +647,13 @@ def _per_item(
                 [None] if verb in PHOTOGRAPH_VERBS else list(flows)
             )
             for name in names:
-                reporter.item(identifier, name, verb, "refused", str(unopened))
+                item.reporter.item(identifier, name, verb, "refused", str(unopened))
             raise
         if verb == "show":
             for line in report(run, wired.flows_dir):
                 print(line, file=wired.out)
             return
-        step: Callable[[str], None] | None = None
-        describe: Callable[[], None] | None = None
-        if verb == "caption":
-
-            def caption_photo() -> None:
-                reader = _seam(wired.reader, "reader", "reads the photograph")()
-                say(
-                    reporter,
-                    run,
-                    "caption",
-                    caption(
-                        run,
-                        reader,
-                        briefing_path=load_caption_config().briefing_path,
-                        new_version=new_version,
-                    ),
-                )
-
-            describe = caption_photo
-        elif verb == "tag":
-
-            def tag_photo() -> None:
-                def hosted() -> None:
-                    tagger_for = _seam(
-                        wired.hosted_tagger, "hosted tagger", "tags the photograph"
-                    )
-                    written = tag_hosted(run, tagger_for(), new_version=new_version)
-                    say(reporter, run, "tags", written)
-
-                # Each tagger's refusal is collected on its own, so neither costs
-                # the other its list. WD14 first: it is the sheet's input and
-                # reaches no network (D1).
-                steps: tuple[Callable[[], None], ...] = (
-                    lambda: say(
-                        reporter,
-                        run,
-                        "wd14",
-                        tag_wd14(run, tagger(), new_version=new_version),
-                    ),
-                    hosted,
-                )
-                collected.extend(across(steps, lambda step: step()))
-
-            describe = tag_photo
-        elif verb == "sheet":
-
-            def sheet_flow(name: str) -> None:
-                flow = flows[name]
-                written, warnings = sheet(
-                    run,
-                    name,
-                    flow.schema,
-                    vocabulary(),
-                    field_map(),
-                    tagged=flow.tagger,
-                    flow_digest=flow.digest,
-                    new_version=new_version,
-                )
-                for warning in warnings:
-                    print(f"warning: {warning}", file=wired.err)
-                say(reporter, run, "sheet", written)
-
-            step = sheet_flow
-        elif verb == "review":
-
-            def review_flow(name: str) -> None:
-                if args.discard:
-                    gone = discard(run, name)
-                    reporter.say(f"{run.id}: review discarded {name}/{gone.name}")
-                    return
-                say(reporter, run, "review", review(run, name, new_version=new_version))
-
-            step = review_flow
-        elif verb == "approve":
-
-            def approve_flow(name: str) -> None:
-                if args.cancel:
-                    left, changed = cancel_approval(run, name)
-                    if not changed and left is not None:
-                        reporter.say(
-                            f"{run.id}: approve has nothing to cancel in {name}; "
-                            f"it is at its draft {left.name}"
-                        )
-                        return
-                    back = "a copy, deleted" if left is None else f"back to {left.name}"
-                    reporter.say(f"{run.id}: approve cancelled {name}, {back}")
-                    return
-                written, warnings = (
-                    approve(
-                        run,
-                        name,
-                        flows[name].schema,
-                        vocabulary(),
-                        excluded=field_map().excluded,
-                        definition=flows[name],
-                    )
-                    if args.source is None
-                    else approve_across(
-                        run, flows[name], args.source, vocabulary, field_map
-                    )
-                )
-                for warning in warnings:
-                    print(f"warning: {warning}", file=wired.err)
-                say(reporter, run, "approve", written)
-
-            step = approve_flow
-        else:
-            raise Refusal(f"{verb!r} is not a stage this build runs")
-
-        def reported(name: str | None, each: Callable[[], None]) -> None:
-            """Run `each` between its `start` and its end; `None` names no flow."""
-            reporter.item(run.id, name, verb, "start")
-            before = len(collected)
-            try:
-                each()
-            except Refusal as refused:
-                reporter.item(run.id, name, verb, "refused", str(refused))
-                raise
-            # `tag` collects each tagger's refusal rather than raising it.
-            if len(collected) > before:
-                reporter.item(
-                    run.id, name, verb, "refused", "; ".join(collected[before:])
-                )
-            else:
-                reporter.item(run.id, name, verb, "done")
-
-        if describe is not None:
-            # The photograph is described once, for every flow (D17).
-            collected.extend(across([describe], lambda one: reported(None, one)))
-        elif step is not None:
-            # Each flow's refusal is collected on its own, so one flow's does not
-            # cost the input its other flows.
-            per_flow = step
-            collected.extend(
-                across(list(flows), lambda name: reported(name, lambda: per_flow(name)))
-            )
+        _run_item(verb, run, item)
 
     return work
 

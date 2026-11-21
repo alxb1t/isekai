@@ -58,7 +58,15 @@ from isekai.foundation.run import (
     open_run,
 )
 from isekai.interface import ui, wiring
-from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
+from isekai.interface.cli import (
+    VERBS,
+    _flows_for,
+    _per_item,
+    build_parser,
+    dispatch,
+    main,
+)
+from isekai.interface.run_view import report
 from isekai.interface.ui import library
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
 from isekai.pipeline.caption import FakeReader, OllamaReader
@@ -473,6 +481,157 @@ def test_the_photographs_verbs_refuse_a_flow(
     )
     assert not (tmp_path / "runs").exists()
     assert not runs.exists()
+
+
+@pytest.mark.spec_exempt("structural: the table's miss is reached by no verb")
+def test_per_item_refuses_a_verb_that_is_no_stage(tmp_path: Path) -> None:
+    wired = _wiring(tmp_path)
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    work = _per_item("draft", argparse.Namespace(progress="json"), wired, {}, [])
+
+    with pytest.raises(Refusal) as refused:
+        work(str(photo))
+
+    assert str(refused.value) == "'draft' is not a stage this build runs"
+    assert isinstance(wired.out, io.StringIO)
+    assert wired.out.getvalue() == ""
+
+
+@pytest.mark.spec_exempt("structural: the table's miss is reached by no verb")
+def test_per_item_opens_the_run_before_it_refuses_a_verb(tmp_path: Path) -> None:
+    wired = _wiring(tmp_path)
+    work = _per_item("draft", argparse.Namespace(progress="json"), wired, {}, [])
+
+    with pytest.raises(Refusal) as refused:
+        work(str(tmp_path / "nobody.jpg"))
+
+    assert "is not a stage this build runs" not in str(refused.value)
+    assert "is neither a photograph on disk nor a run" in str(refused.value)
+
+
+@pytest.mark.spec_exempt("structural: pins the lines `_per_item` prints itself")
+def test_per_item_defaults_new_version_to_false(tmp_path: Path) -> None:
+    wired = _wiring(tmp_path)
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    work = _per_item("caption", argparse.Namespace(progress=None), wired, {}, [])
+
+    work(str(photo))
+    work(str(photo))
+
+    run = open_run(photo, wired.runs_root)
+    assert isinstance(wired.out, io.StringIO)
+    assert wired.out.getvalue().splitlines()[1:] == [
+        f"{run.id}: caption is already complete"
+    ]
+
+
+@pytest.mark.spec_exempt("structural: pins the lines `_per_item` prints itself")
+@pytest.mark.parametrize(
+    ("verb", "named"),
+    [("caption", [None]), ("sheet", ["summon-anime-wai", "control-anime-wai"])],
+    ids=["a-photographs-verb-names-no-flow", "a-flows-verb-names-each-flow"],
+)
+def test_per_item_reports_an_unopened_run_once_for_each_name(
+    tmp_path: Path, verb: str, named: list[str | None]
+) -> None:
+    wired = _wiring(tmp_path)
+    flows = {
+        name: load_flow(name) for name in ("summon-anime-wai", "control-anime-wai")
+    }
+    work = _per_item(verb, argparse.Namespace(progress="json"), wired, flows, [])
+    nobody = str(tmp_path / "nobody.jpg")
+
+    with pytest.raises(Refusal) as refused:
+        work(nobody)
+
+    assert _lines(wired) == [
+        {
+            "run": nobody,
+            **({} if name is None else {"flow": name}),
+            "stage": verb,
+            "state": "refused",
+            "message": str(refused.value),
+        }
+        for name in named
+    ]
+
+
+@pytest.mark.spec_exempt("structural: pins the lines `_per_item` prints itself")
+def test_per_item_prints_the_run_a_show_reads(tmp_path: Path) -> None:
+    wired = _wiring(tmp_path)
+    (run,) = _photographs(tmp_path, wired.runs_root, (640, 480))
+    work = _per_item("show", argparse.Namespace(progress=None), wired, {}, [])
+
+    work(run.id)
+
+    expected = "".join(f"{line}\n" for line in report(run, wired.flows_dir))
+    assert expected
+    assert isinstance(wired.out, io.StringIO)
+    assert wired.out.getvalue() == expected
+
+
+@pytest.mark.spec_exempt("structural: pins the lines `_per_item` prints itself")
+def test_tag_says_what_each_tagger_wrote(tmp_path: Path) -> None:
+    wired = _wiring(tmp_path)
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+
+    assert dispatch(build_parser().parse_args(["tag", str(photo)]), wired) == 0
+
+    run = open_run(photo, wired.runs_root)
+    assert isinstance(wired.out, io.StringIO)
+    said = wired.out.getvalue().splitlines()
+    assert [line.split(" wrote ")[0] for line in said] == [
+        f"{run.id}: wd14",
+        f"{run.id}: tags",
+    ]
+
+
+@pytest.mark.spec_exempt("structural: pins the lines `_per_item` prints itself")
+def test_review_discard_says_which_draft_it_deleted(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    (run,) = _photographs(tmp_path, tmp_path / "runs", (640, 480))
+    sheet(run, schema, vocabulary)
+    review(run, "summon-anime-wai")
+    wired = _wiring(tmp_path)
+    parsed = build_parser().parse_args(
+        ["review", "--flow", "summon-anime-wai", "--discard", run.id]
+    )
+
+    assert dispatch(parsed, wired) == 0
+
+    assert isinstance(wired.out, io.StringIO)
+    assert wired.out.getvalue() == (
+        f"{run.id}: review discarded summon-anime-wai/001.draft.json\n"
+    )
+
+
+@pytest.mark.spec_exempt("structural: pins the lines `_per_item` prints itself")
+def test_approve_says_what_it_wrote_and_what_a_cancel_left(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    (run,) = _photographs(tmp_path, tmp_path / "runs", (640, 480))
+    sheet(run, schema, vocabulary)
+    review(run, "summon-anime-wai")
+
+    def said(*flags: str) -> str:
+        wired = _wiring(tmp_path)
+        argv = ["approve", "--flow", "summon-anime-wai", *flags, run.id]
+        assert dispatch(build_parser().parse_args(argv), wired) == 0
+        assert isinstance(wired.out, io.StringIO)
+        return wired.out.getvalue()
+
+    assert said("--cancel") == (
+        f"{run.id}: approve has nothing to cancel in summon-anime-wai; "
+        "it is at its draft 001.draft.json\n"
+    )
+    assert said() == f"{run.id}: approve wrote 001.approved.json\n"
+    assert said("--cancel") == (
+        f"{run.id}: approve cancelled summon-anime-wai, back to 001.draft.json\n"
+    )
 
 
 @pytest.mark.spec("cli:flow-selection:every-stage-verb-accepts-it")
