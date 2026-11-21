@@ -42,7 +42,7 @@ after:   site ─ command(verb, *words) ─ ENTRY ─ one string     (spelt once
 | [D4](#d4) | `again` in `render.py`, the children's argv in `ui/jobs.py`, the bare `isekai ui` texts of `ui/library.py` and `ui/bundle.py`, and the `isekai.boundary` provisioning commands stay | each prints another prefix or is no string a person pastes; *the isekai command* makes the bare texts true | forcing them through: a list is not text, and a bare text is not an entry that works today |
 | [D5](#d5) | The guard is `entry_spellings(root)` in `tests/test_run_directory.py`, an `ast` scan of each `.py` file under `isekai/` for a string constant, a docstring excepted, that holds `ENTRY` not followed by a word character or a dot, outside `isekai/foundation/command.py`; a test runs it on the repository and a twin on a small tree | `ast` reads an f-string's pieces and sees a docstring as one, so prose that names the entry passes; the dot lets `python -m isekai.boundary.provision` pass | a `git grep` in a test: it reads docstrings and comments, and the pattern could not tell a module from the entry |
 | [D6](#d6) | Cases for `command` are written first, and a mutation run over `stage_command` and `migrate_command` passes before a line moves and over `command`, `stage_command` and `migrate_command` again after | byte-equal is the version's promise, and today the cases that read `stage_command` and `migrate_command` read a refusal that holds their text, not the text | none: a conversion with no case would hold only where a test already reads the text |
-| [D7](#d7) | D74 is added to [docs/decisions.md](../../../docs/decisions.md), and D62's statement lists `command.py` among the siblings `run.py` re-exports | a decision is added where it sets a rule, and the documents a version makes false are amended in its diff | amending only D62: the rule that nothing spells the entry has no home |
+| [D7](#d7) | D75 is added to [docs/decisions.md](../../../docs/decisions.md), and D62's statement lists `command.py` among the siblings `run.py` re-exports | a decision is added where it sets a rule, and the documents a version makes false are amended in its diff | amending only D62: the rule that nothing spells the entry has no home |
 
 ### D1
 
@@ -166,10 +166,10 @@ A survivor is killed by a case in `tests/test_run_directory.py`, named `test_sta
 
 ### D7
 
-D74 in `docs/decisions.md`, after D73:
+D75 in `docs/decisions.md`, after D73:
 
 ```
-### D74 · A command is built by command, in isekai/foundation/command.py
+### D75 · A command is built by command, in isekai/foundation/command.py
 
 **`isekai/foundation/command.py` holds `ENTRY`, the words every printed command starts with, and `command(verb, *words)`, which joins the entry, the verb and the words by one space and quotes none. `run.py` re-exports `ENTRY` and `command`. A command a refusal or a message prints is built by `command`, its site keeping its own quoting and any prefix such as `uv run`, and a test holds that no string of `isekai/` outside the module spells the entry.**
 

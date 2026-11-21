@@ -101,8 +101,8 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 
 ## 5 — Amend the documents and replay the standing mutants
 
-- [ ] 5.1 In `docs/decisions.md` add D74 after D73, before `## Infrastructure`, as [D7](design.md#d7) writes it: the heading `### D74 · A command is built by command, in isekai/foundation/command.py`, the statement, *Why*, *Accepts* and *Made by*.
-  Verify: `git grep -n -F '### D74' -- docs/decisions.md` prints one line.
+- [ ] 5.1 In `docs/decisions.md` add D75 after D73, before `## Infrastructure`, as [D7](design.md#d7) writes it: the heading `### D75 · A command is built by command, in isekai/foundation/command.py`, the statement, *Why*, *Accepts* and *Made by*.
+  Verify: `git grep -n -F '### D75' -- docs/decisions.md` prints one line.
 
 - [ ] 5.2 In `docs/decisions.md` amend D62's statement to list `command.py` among the siblings `run.py` re-exports, as [D7](design.md#d7) says, and add `0193` to its *Made by*.
   Verify: `git grep -n -e 'and .command.py. under' -- docs/decisions.md` prints one line.

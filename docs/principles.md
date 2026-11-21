@@ -49,9 +49,26 @@ the default; a package earns its place when the contract needs more than one fil
   both scales: a front end composes components, and a front door composes its own modules.
 - **Held by:** review. The suite passes fakes through those parameters — `FakeReader`,
   `FakeComfyClient`.
-- **Known breaks:** `boundary/ollama.py`'s `MODEL_RECORDS` is a module global the suite patches, not a
-  parameter, so two roots in one process means patching global state; so is every name of a module
-  `PATCHED_MODULES` of `tests/test_ratchets.py` lists.
+- **Known breaks:** a module global the suite patches is not a parameter, so two roots in one process
+  means patching global state. Each module `PATCHED_MODULES` of `tests/test_ratchets.py` lists stays for
+  one reason:
+  - **a failure or a race a test injects:** `pipeline/edit.py`, `pipeline/generate.py`,
+    `pipeline/importing.py`, `pipeline/review.py` and `pipeline/tattoos.py` — a write that fails, a rival
+    that takes a name, a read held open;
+  - **a recording spy:** `interface/ui/events.py`, `interface/ui/library.py` and `shared/ink.py` — a
+    wrapper that counts a call or signals when it ran — and `shared/chain.py`'s `_kernel`;
+  - **a constant:** `shared/chain.py`'s `CHUNK`, `interface/render.py`'s session id and timing, and
+    `pipeline/importing.py`'s upload limit;
+  - **the runs root:** `foundation/run.py`'s `RUNS_ROOT`, and `interface/cli.py`'s `RUNS_ROOT` and
+    `wiring`, which a test points at a temporary library;
+  - **the server's start:** `interface/ui/__init__.py`'s `serve`, which a test replaces with a recorder of
+    its port;
+  - **a runtime or an opener a test stands in for:** `evaluation/face.py`'s `_import`, and
+    `boundary/wd14.py`'s `_require`, `import_module` and `open_session`;
+  - **the Ollama safety net:** `boundary/ollama.py`'s `MODEL_RECORDS`, `_verified_build` and `OPENER`,
+    which keep a test from reaching a daemon or a home directory;
+  - **the frozen `boundary/provision.py`:** the image copies it, so its import-time tripwires and its
+    recording spy are patched, not parameters.
 
 ### Only a front end composes
 

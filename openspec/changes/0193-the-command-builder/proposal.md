@@ -22,7 +22,7 @@ The next version, *the isekai command*, changes that entry. It is one edit only 
 - The sites that spelt the entry by hand call `command`: the refusals and messages of `edit.py`, `review.py`, `generate.py`, `comfy/client.py`, `compare_view.py`, `ui/surface.py`, `verbs/prepare.py`, `verbs/common.py`, `verbs/edits.py`, `render.py` and `ui/routes/rendering.py`. A site that printed `uv run` keeps it.
 - A guard in `tests/test_run_directory.py` holds that no string of `isekai/` outside `command.py` spells the entry, with its twin; cases for `command` are written before it.
 - A mutation run over `stage_command` and `migrate_command` passes before a line moves, and over `command` after.
-- D74 is added, and [D62](../../../docs/decisions.md#d62--the-run-directory-is-runpy-its-siblings-imported-through-it)'s list of siblings gains `command.py`.
+- D75 is added, and [D62](../../../docs/decisions.md#d62--the-run-directory-is-runpy-its-siblings-imported-through-it)'s list of siblings gains `command.py`.
 
 ## Capabilities
 

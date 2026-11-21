@@ -12,7 +12,6 @@ from isekai.boundary.provision import digest_of, entry_for
 from isekai.foundation.flow import FLOWS_DIR
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import ID_DIGEST_CHARS, OUTPUTS, open_run
-from isekai.interface import wiring
 from tests.images import oversized_png
 
 FLOW = "summon-anime-wai"
@@ -304,16 +303,17 @@ def test_a_renamed_run_is_named_by_the_digest_its_frame_records(
 
 @pytest.mark.spec("evaluation:table:a-record-git-can-reach-is-refused")
 def test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refused(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     repository = tmp_path / "repository"
     runs, cohort = _collection(repository)
-    monkeypatch.setattr(wiring, "REPOSITORY", repository)
-    monkeypatch.setattr(wiring, "DATA_ROOT", repository / ".data")
     embed = _Embedder(VECTORS)
 
     code = entry.main(
-        [str(runs), "--cohort", str(cohort)], embedder=lambda models: embed
+        [str(runs), "--cohort", str(cohort)],
+        embedder=lambda models: embed,
+        repository=repository,
+        data_root=repository / ".data",
     )
 
     assert code == 1

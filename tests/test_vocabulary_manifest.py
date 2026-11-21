@@ -239,13 +239,12 @@ def test_an_unprovisioned_vocabulary_refuses_naming_the_command(
     )
 
 
-def _declaring_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Point the vocabulary manifest at a copy declaring nothing, and return it."""
+def _declaring_none(tmp_path: Path) -> Path:
+    """Write a copy of the vocabulary manifest declaring nothing; return its path."""
     manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
     manifest["entries"] = []
     path = tmp_path / "vocabulary.json"
     path.write_text(json.dumps(manifest))
-    monkeypatch.setattr(provision, "VOCABULARY_MANIFEST_PATH", path)
     return path
 
 
@@ -254,12 +253,12 @@ def _declaring_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     "load", [load_vocabulary, verified_paths], ids=["vocabulary", "tagger"]
 )
 def test_an_undeclared_artifact_is_refused(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, load: Callable[[Path], object]
+    tmp_path: Path, load: Callable[..., object]
 ) -> None:
-    manifest = _declaring_none(tmp_path, monkeypatch)
+    manifest = _declaring_none(tmp_path)
 
     with pytest.raises(Refusal) as refused:
-        load(tmp_path / "models")
+        load(tmp_path / "models", manifest=manifest)
 
     assert f"{VOCABULARY} is not declared in {manifest}" in str(refused.value)
     assert "tools.derive_vocabulary" in str(refused.value)

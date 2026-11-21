@@ -84,7 +84,7 @@ python -m isekai discard .data/runs/<run>/<flow>/outputs/<NNN>/<seed>.edit-<k>.p
 ```
 
 An edit's path deletes that edit and every edit chained from it; the render stays. Discarding the render takes all
-its edits. Both refuse while a render session holds the collection.
+its edits. Both refuse while a render session holds its runs root.
 
 ## The app
 
