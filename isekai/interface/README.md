@@ -21,10 +21,10 @@ module scope, and the UI imports no CLI module.
 |---|---|
 | `cli.py` | holds `ROWS`, builds the parser from each row's arguments, resolves the flows a verb was given against `flows/`, dispatches a row's run or per flow — `tag` and `caption` once per photograph, naming none — and reports every refusal together, or with `--progress json` a JSON line per item; it keeps `migrate` and `render`'s run, bound to `_dispatch_argv` |
 | `verbs/__init__.py` | the package's front door: the rows, `_per_item` and the shared names `cli.py` reads |
-| `verbs/runner.py` | the flow stages' runner: `_per_item` returns the work one identifier gets for a stage, `assign` or `show`, with a builder per stage and `assign`'s own work |
+| `verbs/runner.py` | the flow stages' runner: `_per_item` returns the work one identifier gets for a stage, `assign` or `show`, with a builder per stage and `assign`'s own work; the approve builder refuses a cancel beside a render session |
 | `verbs/common.py` | `Verb`, the argument types and shared arguments, the reporter, and the run helpers every family reads |
 | `verbs/library.py` | `import`, `compare` and `ui`: `import` composes `pipeline/importing.py`, `compare` writes the page, `ui` serves the library |
-| `verbs/drafts.py` | `draft` and `discard`: `discard` deletes a render or an edit and each image's thumbnail |
+| `verbs/drafts.py` | `draft` and `discard`: `discard` deletes a render or an edit and each image's thumbnail, refusing beside a render session |
 | `verbs/edits.py` | `ink` and `edit`, with `--pending`'s run |
 | `verbs/session.py` | `render`'s arguments and its row; the run is `render.py`'s, bound in `cli.py` |
 | `verbs/prepare.py` | `prepare` over cells, each photograph through `tag`, `caption` and its sheets in turn |
