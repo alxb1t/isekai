@@ -1,0 +1,58 @@
+{
+  "change": "0179-the-layout-tail",
+  "version": "0.87.35",
+  "base": "3dc8274b",
+  "analyzed": "e56b188b",
+  "measured_on": "local",
+  "collected_at": "2026-11-21T11:10:50+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2516
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 73
+    },
+    "open-backlog-cards": {
+      "value": 2
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 431
+    },
+    "diff-files": {
+      "value": 19
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 17083
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1097
+    },
+    "decisions": {
+      "value": 72
+    }
+  }
+}

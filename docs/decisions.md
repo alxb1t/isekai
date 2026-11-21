@@ -678,11 +678,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D69 · A render group's files are listed in foundation/layout.py, and a module above the pipeline reads the listing from the foundation
 
-**`isekai/foundation/layout.py` lists a render group: `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups`, and `rendered`, which lists each flow's seeds by approval. A module outside the foundation reads them from `isekai.foundation.run`, never from the paid stage. The stage keeps what reads an approval or deletes: `lacks`, `shortfall`, `duration`, `source_seeds` and `discard_render`. A render's image and record are named there by `render_image(group, seed, suffix)` and `render_record(group, seed)`.**
+**`isekai/foundation/layout.py` lists a render group: `is_render`, `is_sidecar`, `rendered_seeds`, `sidecars` and `render_groups`, and `rendered`, which lists each flow's seeds by approval. A module outside the foundation reads them from `isekai.foundation.run`, never from the paid stage. The stage keeps what reads an approval or deletes: `lacks`, `shortfall`, `duration`, `source_seeds` and `discard_render`. A render's image and record are named there by `render_image(group, seed, suffix)` and `render_record(group, seed)`. The draft being worked on, `current_draft(directory)`, and the draft's source copy, `source_copy(run, flow, version)`, are in `layout.py` too, and `DRAFT` is in `names.py`, each read through `run.py`.**
 
 - **Why:** `run_view.py`, `compare_view.py`, `render.py` and `ui/library.py` imported the paid stage to list a folder, and `review` may not import it. The names read foundation names alone. A move that re-binds changes no test.
 - **Accepts:** The other definitions of "rendered", `_holds_render` and `rendered_at`, stand. `render_groups` lists a folder by `str.isdigit`, where the layout's own test is three ASCII digits. The evaluator still imports `trackable` from the wiring.
-- **Made by:** `0174`, `0175`.
+- **Made by:** `0174`, `0175`, `0179`.
 
 ### D70 · A render is addressed by a named type, and a version is read off a name by one function
 

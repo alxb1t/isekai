@@ -50,6 +50,7 @@ from isekai.foundation.edit import Edit, load_edit
 from isekai.foundation.flow import Workflow, graph_digest
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
+    EDIT_COMPOSITE,
     EDIT_RECORD,
     EDIT_STEM,
     delete_edits,
@@ -393,7 +394,7 @@ def _ready(record: Path) -> _Ready:
         ("source", body["source"], body["source_sha256"]),
         (
             "composite",
-            f"{record.name.removesuffix(EDIT_RECORD)}.composite.png",
+            f"{record.name.removesuffix(EDIT_RECORD)}{EDIT_COMPOSITE}",
             body["composite_sha256"],
         ),
     ):
