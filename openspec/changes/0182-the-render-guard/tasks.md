@@ -4,19 +4,19 @@ The foundation gets the rule for a held collection, the app's guard asks it, and
 
 ## Progress
 
-- [ ] 1 — The rule · moderate
+- [x] 1 — The rule · moderate
 - [ ] 2 — The guard · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The rule
 
-- [ ] 1.1 **HALT CHECK** `running` and `render_running` stand in `isekai/foundation/library.py` where [D1](design.md#d1) places the new function: after the first, before the second.
+- [x] 1.1 **HALT CHECK** `running` and `render_running` stand in `isekai/foundation/library.py` where [D1](design.md#d1) places the new function: after the first, before the second.
   Verify: `git grep -n -e "^def render_running" -e "^def running" -- isekai/foundation/library.py` prints `100:def running(folder: Path) -> list[dict[str, Any]]:` and `116:def render_running(run: Run) -> bool:`.
-- [ ] 1.2 In `tests/test_ui_library.py`, add `import fcntl`, extend the `isekai.foundation.library` import with `collection_held`, and add `test_a_collection_is_held_by_a_live_session_lock` at the file's end, marked `@pytest.mark.spec_exempt("structural: a collection is held by a session's live lock")`, per [D4](design.md#d4). It holds that a folder with no `sessions/` and one whose record's lock is free are not held; that a record's lock held through a second open file with `fcntl.flock(held, fcntl.LOCK_EX)` holds the folder, an unreadable record (`{`) included; and that another folder stays unheld meanwhile.
+- [x] 1.2 In `tests/test_ui_library.py`, add `import fcntl`, extend the `isekai.foundation.library` import with `collection_held`, and add `test_a_collection_is_held_by_a_live_session_lock` at the file's end, marked `@pytest.mark.spec_exempt("structural: a collection is held by a session's live lock")`, per [D4](design.md#d4). It holds that a folder with no `sessions/` and one whose record's lock is free are not held; that a record's lock held through a second open file with `fcntl.flock(held, fcntl.LOCK_EX)` holds the folder, an unreadable record (`{`) included; and that another folder stays unheld meanwhile.
   Verify: `uv run pytest tests/test_ui_library.py` exits 2, an `ImportError` of `collection_held`.
-- [ ] 1.3 In `isekai/foundation/library.py`, add `collection_held` between `running` and `render_running`, exactly as [D1](design.md#d1) gives it, and end `render_running` on `return collection_held(runs.parent)` in place of its `return any(...)` line.
+- [x] 1.3 In `isekai/foundation/library.py`, add `collection_held` between `running` and `render_running`, exactly as [D1](design.md#d1) gives it, and end `render_running` on `return collection_held(runs.parent)` in place of its `return any(...)` line.
   Verify: `uv run pytest tests/test_ui_library.py tests/test_pipeline_cli.py` exits 0.
-- [ ] 1.4 Run `tools.mutate` over `collection_held`, from its `def` line to its last line; a survivor is killed by a further assertion in the case of 1.2.
+- [x] 1.4 Run `tools.mutate` over `collection_held`, from its `def` line to its last line; a survivor is killed by a further assertion in the case of 1.2.
   Verify: `uv run python -m tools.mutate isekai/foundation/library.py:116-123 --tests tests/test_ui_library.py` exits 0.
 
 ## 2 — The guard
