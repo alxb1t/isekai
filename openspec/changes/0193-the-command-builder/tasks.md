@@ -7,7 +7,7 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 - [x] 1 — Add `command` with its cases · moderate
 - [x] 2 — Build the builders from `command` · moderate
 - [x] 3 — Call `command` from the sites · moderate
-- [ ] 4 — Guard the entry with a test and its twin · moderate
+- [x] 4 — Guard the entry with a test and its twin · moderate
 - [ ] 5 — Amend the documents and replay the standing mutants · moderate
 
 ## 1 — Add `command` with its cases
@@ -93,10 +93,10 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 
 ## 4 — Guard the entry with a test and its twin
 
-- [ ] 4.1 In `tests/test_run_directory.py` import `ast` and `re`, add `ENTRY` and `REPOSITORY` to the import from `isekai.foundation.run`, and add `SPELT`, `BUILDER`, `_holds_doc` and `entry_spellings(root)` as [D5](design.md#d5) writes them, then `test_no_string_spells_the_entry_outside_the_builder`, asserting `entry_spellings(REPOSITORY) == []`, with `spec_exempt("structural: a command is built by command and spelt nowhere else")`.
+- [x] 4.1 In `tests/test_run_directory.py` import `ast` and `re`, add `ENTRY` and `REPOSITORY` to the import from `isekai.foundation.run`, and add `SPELT`, `BUILDER`, `_holds_doc` and `entry_spellings(root)` as [D5](design.md#d5) writes them, then `test_no_string_spells_the_entry_outside_the_builder`, asserting `entry_spellings(REPOSITORY) == []`, with `spec_exempt("structural: a command is built by command and spelt nowhere else")`.
   Verify: `uv run pytest tests/test_run_directory.py -k no_string_spells_the_entry` exits 0.
 
-- [ ] 4.2 In the same file add the twin `test_the_guard_finds_a_string_that_spells_the_entry`, with `spec_exempt("structural: twin of the guard on the repository")`: under `tmp_path`, one module with an f-string that spells the entry, a string behind `uv run` and a string in a nested function, and the result is exactly the `path:line` of those strings; a module with the entry in a docstring, in a comment, as `python -m isekai.boundary.provision`, and `isekai/foundation/command.py` spelling it, adds no line.
+- [x] 4.2 In the same file add the twin `test_the_guard_finds_a_string_that_spells_the_entry`, with `spec_exempt("structural: twin of the guard on the repository")`: under `tmp_path`, one module with an f-string that spells the entry, a string behind `uv run` and a string in a nested function, and the result is exactly the `path:line` of those strings; a module with the entry in a docstring, in a comment, as `python -m isekai.boundary.provision`, and `isekai/foundation/command.py` spelling it, adds no line.
   Verify: `uv run pytest tests/test_run_directory.py -k guard_finds_a_string` exits 0.
 
 ## 5 — Amend the documents and replay the standing mutants

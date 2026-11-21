@@ -5,13 +5,15 @@ nothing opens an artifact to decide whether a stage is done -- which is the
 property under test as much as it is the way the tests are written.
 """
 
+import ast
 import json
 import os
+import re
 import shutil
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard, cast
 
 import pytest
 
@@ -43,6 +45,7 @@ from isekai.foundation.run import (
     PHOTOGRAPH_VERBS,
     PRODUCERS,
     PROMPTS,
+    REPOSITORY,
     REVIEW,
     RUNS_ROOT,
     SHEETS,
@@ -884,6 +887,99 @@ def test_command_quotes_no_word() -> None:
 @pytest.mark.spec_exempt("structural: the parser names the entry the builder holds")
 def test_the_parser_prints_the_entry() -> None:
     assert build_parser().prog == ENTRY
+
+
+SPELT = re.compile(re.escape(ENTRY) + r"(?![\w.])")
+BUILDER = Path("isekai/foundation/command.py")
+_Documented = ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+
+
+def _holds_doc(node: ast.AST) -> TypeGuard[_Documented]:
+    """Return whether `node` is a module, class or function opening on a docstring."""
+    if not isinstance(node, _Documented) or not node.body:
+        return False
+    first = node.body[0]
+    return (
+        isinstance(first, ast.Expr)
+        and isinstance(first.value, ast.Constant)
+        and isinstance(first.value.value, str)
+    )
+
+
+def entry_spellings(root: Path) -> list[str]:
+    """Return `path:line` of each string under `root/isekai` that spells the entry.
+
+    The builder's module and docstrings are not read; a comment is no string.
+    """
+    found: list[str] = []
+    for path in sorted((root / "isekai").rglob("*.py")):
+        if path.relative_to(root) == BUILDER:
+            continue
+        tree = ast.parse(path.read_text())
+        docs = {
+            id(cast(ast.Expr, n.body[0]).value) for n in ast.walk(tree) if _holds_doc(n)
+        }
+        found += [
+            f"{path.relative_to(root)}:{node.lineno}"
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and id(node) not in docs
+            and SPELT.search(node.value)
+        ]
+    return found
+
+
+@pytest.mark.spec_exempt(
+    "structural: a command is built by command and spelt nowhere else"
+)
+def test_no_string_spells_the_entry_outside_the_builder() -> None:
+    assert entry_spellings(REPOSITORY) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_no_string_spells_the_entry_outside_the_builder"
+)
+def test_the_guard_finds_a_string_that_spells_the_entry(tmp_path: Path) -> None:
+    spelt = [
+        "def render(runs):",
+        f'    return f"{ENTRY} render {{runs}}"',
+        "",
+        "",
+        "def ui():",
+        f'    return "uv run {ENTRY} ui"',
+        "",
+        "",
+        "def outer():",
+        "    def inner():",
+        f'        return "{ENTRY} tag"',
+        "",
+        "    return inner",
+    ]
+    clean = [
+        f'"""Run `{ENTRY} render` to render."""',
+        "",
+        "",
+        "def render():",
+        f'    """Print `{ENTRY} render`."""',
+        f"    # {ENTRY} render",
+        f'    return "{ENTRY}.boundary.provision"',
+    ]
+    pipeline = tmp_path / "isekai" / "pipeline"
+    foundation = tmp_path / "isekai" / "foundation"
+    pipeline.mkdir(parents=True)
+    foundation.mkdir(parents=True)
+    (pipeline / "spelt.py").write_text("\n".join(spelt) + "\n")
+    (pipeline / "clean.py").write_text("\n".join(clean) + "\n")
+    (tmp_path / BUILDER).write_text(f'ENTRY = "{ENTRY}"\n')
+
+    assert sorted(entry_spellings(tmp_path)) == sorted(
+        [
+            "isekai/pipeline/spelt.py:2",
+            "isekai/pipeline/spelt.py:6",
+            "isekai/pipeline/spelt.py:11",
+        ]
+    )
 
 
 def _attempt_in(tmp_path: Path, scope: str, folder: str) -> tuple[Run, Path]:
