@@ -273,7 +273,7 @@
   },
   {
     "finding": "RE-1",
-    "path": "isekai/interface/render.py",
+    "path": "isekai/interface/plan.py",
     "find": "    found.sort(key=lambda path: path.stat().st_mtime, reverse=True)\n    taken: list[float] = []\n    for path in found:\n        if (seconds := duration_of(path)) is not None:",
     "replace": "    found.sort(key=lambda path: path.stat().st_mtime)\n    taken: list[float] = []\n    for path in found:\n        if (seconds := duration_of(path)) is not None:",
     "tests": ["tests/test_render.py"],
