@@ -5,7 +5,7 @@ The foundation gets the rule for a held collection, the app's guard asks it, and
 ## Progress
 
 - [x] 1 — The rule · moderate
-- [ ] 2 — The guard · moderate
+- [x] 2 — The guard · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The rule
@@ -35,7 +35,7 @@ The foundation gets the rule for a held collection, the app's guard asks it, and
   Verify: `uv run python -m tools.mutate isekai/interface/ui/surface.py:197-208 --tests tests/test_ui_api.py "-k cancel or delet"` exits 0.
 - [x] 2.7 Replay the standing mutants over the edited files.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
-- [ ] 2.8 Derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`, here and not in phase 3: 2.4's import makes `interface/ui/surface.py` a reader of `library.py`, and `tests/test_docs.py` turns the gate red until the `library.py` row of `isekai/foundation/README.md` names it.
+- [x] 2.8 Derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`, here and not in phase 3: 2.4's import makes `interface/ui/surface.py` a reader of `library.py`, and `tests/test_docs.py` turns the gate red until the `library.py` row of `isekai/foundation/README.md` names it.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py` exits 0.
 
 ## 3 — The documents

@@ -11,6 +11,7 @@ its new digest.
 ## [Unreleased]
 
 - `collection_held` joins `isekai/foundation/library.py`: a collection is held while any of its session records' locks is held, a record that does not read included. `render_running` calls it, and a case holds the rule (0182 D1, D4).
+- The page's delete, its cancel and the review payload's `cancel` now refuse while a session of any process holds the collection, not only this server's render slot: `Surface.rendering` asks `collection_held` too. Cases hold the delete, the sheet's reason and the cancel (0182 D2, D3, D4).
 
 ## [0.87.37] - 2026-11-21
 
