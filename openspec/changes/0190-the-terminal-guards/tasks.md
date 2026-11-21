@@ -71,9 +71,9 @@ The rule for a run's runs root changes, the cancel asks it, the owner unlinks a 
 - [x] 4.3 In `docs/decisions.md`, amend D68 as [D6](design.md#d6) says: its bold paragraph names `named_thumbnail` between `thumbnail_of` and `drop_thumbnails`, and its *Made by* gains `0190`. The heading stays.
   Verify: `git grep -n -F "named_thumbnail" -- docs/decisions.md` prints D68's paragraph, one line.
 - [x] 4.4 In `isekai/foundation/README.md`, in the `library.py` row of *Files* change `` `thumbnail_of` and `drop_thumbnails` `` to `` `thumbnail_of`, `named_thumbnail` and `drop_thumbnails` ``, and in the `discard.py` row change `which drop each thumbnail, then the files, then the approval` to `which name each thumbnail, drop them, delete the files and the approval, then unlink any that came back`.
-  Verify: `git grep -n -F "named_thumbnail" -- isekai/foundation/README.md` prints the `library.py` row of *Files*.
+  Verify: `git grep -n -F "named_thumbnail" -- isekai/foundation/README.md` prints the library.py row of *Files*.
 - [x] 4.5 In `isekai/interface/README.md`, in the `verbs/runner.py` row append `; the approve builder refuses a cancel beside a render session`, and in the `verbs/drafts.py` row change `` `discard` deletes a render or an edit and each image's thumbnail`` to `` `discard` deletes a render or an edit and each image's thumbnail, refusing beside a render session``.
-  Verify: `git grep -n -F "beside a render session" -- isekai/interface/README.md` prints the `verbs/runner.py` and `verbs/drafts.py` rows.
+  Verify: `git grep -n -F "beside a render session" -- isekai/interface/README.md` prints the verbs/runner.py and verbs/drafts.py rows.
 - [x] 4.6 In `README.md`, in the `--cancel` bullet, change `not combinable with `--from`.` to `a run is refused while a render session holds its runs root; not combinable with `--from`.`; in `docs/edit-tattoo.md` change `Both refuse while a render session holds the collection.` to `Both refuse while a render session holds its runs root.`
   Verify: `git grep -n -F "while a render session holds its runs root" -- README.md docs/edit-tattoo.md` prints one line in each file.
 - [x] 4.7 Check the documents' tests hold with the new decision and the rows.
