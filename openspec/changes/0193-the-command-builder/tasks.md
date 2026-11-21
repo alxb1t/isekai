@@ -8,7 +8,7 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 - [x] 2 — Build the builders from `command` · moderate
 - [x] 3 — Call `command` from the sites · moderate
 - [x] 4 — Guard the entry with a test and its twin · moderate
-- [ ] 5 — Amend the documents and replay the standing mutants · moderate
+- [x] 5 — Amend the documents and replay the standing mutants · moderate
 
 ## 1 — Add `command` with its cases
 
@@ -101,11 +101,11 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 
 ## 5 — Amend the documents and replay the standing mutants
 
-- [ ] 5.1 In `docs/decisions.md` add D75 after D73, before `## Infrastructure`, as [D7](design.md#d7) writes it: the heading `### D75 · A command is built by command, in isekai/foundation/command.py`, the statement, *Why*, *Accepts* and *Made by*.
+- [x] 5.1 In `docs/decisions.md` add D75 after D73, before `## Infrastructure`, as [D7](design.md#d7) writes it: the heading `### D75 · A command is built by command, in isekai/foundation/command.py`, the statement, *Why*, *Accepts* and *Made by*.
   Verify: `git grep -n -F '### D75' -- docs/decisions.md` prints one line.
 
-- [ ] 5.2 In `docs/decisions.md` amend D62's statement to list `command.py` among the siblings `run.py` re-exports, as [D7](design.md#d7) says, and add `0193` to its *Made by*.
+- [x] 5.2 In `docs/decisions.md` amend D62's statement to list `command.py` among the siblings `run.py` re-exports, as [D7](design.md#d7) says, and add `0193` to its *Made by*.
   Verify: `git grep -n -e 'and .command.py. under' -- docs/decisions.md` prints one line.
 
-- [ ] 5.3 Replay the standing mutants. A find an edit of the builders or the sites moved stops the replay with an error: re-point that entry of `tests/mutants.json` to the edited line, with the same `why`.
+- [x] 5.3 Replay the standing mutants. A find an edit of the builders or the sites moved stops the replay with an error: re-point that entry of `tests/mutants.json` to the edited line, with the same `why`.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
