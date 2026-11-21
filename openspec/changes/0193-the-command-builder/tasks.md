@@ -5,7 +5,7 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 ## Progress
 
 - [x] 1 — Add `command` with its cases · moderate
-- [ ] 2 — Build the builders from `command` · moderate
+- [x] 2 — Build the builders from `command` · moderate
 - [ ] 3 — Call `command` from the sites · moderate
 - [ ] 4 — Guard the entry with a test and its twin · moderate
 - [ ] 5 — Amend the documents and replay the standing mutants · moderate
@@ -35,22 +35,22 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 
 ## 2 — Build the builders from `command`
 
-- [ ] 2.1 In `isekai/foundation/run.py` rewrite the bodies of `stage_command` and `migrate_command` as [D2](design.md#d2) writes them, the docstrings and the signatures as they are: the flags as `("--flow", flow)` pairs, `["--runs", shlex.quote(str(root))]` off the default root, and `command(verb, *flagged, *runs, *options, run.id)`; `command("migrate")` and `command("migrate", "--runs", shlex.quote(str(root)))`. The lines `return f"python -m isekai {verb}…` and `return "python -m isekai migrate"` go.
+- [x] 2.1 In `isekai/foundation/run.py` rewrite the bodies of `stage_command` and `migrate_command` as [D2](design.md#d2) writes them, the docstrings and the signatures as they are: the flags as `("--flow", flow)` pairs, `["--runs", shlex.quote(str(root))]` off the default root, and `command(verb, *flagged, *runs, *options, run.id)`; `command("migrate")` and `command("migrate", "--runs", shlex.quote(str(root)))`. The lines `return f"python -m isekai {verb}…` and `return "python -m isekai migrate"` go.
   Verify: `git grep -n -e 'return f"python -m isekai' -e 'return "python -m isekai' -- isekai/foundation/run.py` prints nothing.
 
-- [ ] 2.2 In `refusal_for` of `isekai/foundation/run.py` rename the local `command = …` to `pasted = …`, which the import would shadow; the strings that read it keep their text.
+- [x] 2.2 In `refusal_for` of `isekai/foundation/run.py` rename the local `command = …` to `pasted = …`, which the import would shadow; the strings that read it keep their text.
   Verify: `git grep -n -F 'command = ' -- isekai/foundation/run.py` prints nothing.
 
-- [ ] 2.3 In `_draft_command` of `isekai/pipeline/review.py` return `command("draft", "--flow", flow, shlex.quote(str(image)))` in place of `return f"python -m isekai draft …`, and import `command` from `isekai.foundation.run`; the docstring stays.
+- [x] 2.3 In `_draft_command` of `isekai/pipeline/review.py` return `command("draft", "--flow", flow, shlex.quote(str(image)))` in place of `return f"python -m isekai draft …`, and import `command` from `isekai.foundation.run`; the docstring stays.
   Verify: `git grep -n -F 'return f"python -m isekai' -- isekai/pipeline/review.py` prints nothing.
 
-- [ ] 2.4 In `_named_a_flow` of `isekai/interface/cli.py` build `root` and `again` as tuples and return the command through `command(verb, *root, *again, photos)` in place of `python -m isekai {verb}{root}{again} {photos}`, as [D2](design.md#d2) writes it, and import `command` from `isekai.foundation.run`.
+- [x] 2.4 In `_named_a_flow` of `isekai/interface/cli.py` build `root` and `again` as tuples and return the command through `command(verb, *root, *again, photos)` in place of `python -m isekai {verb}{root}{again} {photos}`, as [D2](design.md#d2) writes it, and import `command` from `isekai.foundation.run`.
   Verify: `git grep -n -F 'python -m isekai {verb}' -- isekai/interface/cli.py` prints nothing.
 
-- [ ] 2.5 In `build_parser` of `isekai/interface/cli.py` replace `prog="python -m isekai"` with `prog=ENTRY`, and add `ENTRY` to the import from `isekai.foundation.run`.
+- [x] 2.5 In `build_parser` of `isekai/interface/cli.py` replace `prog="python -m isekai"` with `prog=ENTRY`, and add `ENTRY` to the import from `isekai.foundation.run`.
   Verify: `git grep -n -F 'prog="python -m isekai"' -- isekai/interface/cli.py` prints nothing.
 
-- [ ] 2.6 Find the lines of `command` in `isekai/foundation/command.py` and of `stage_command` and `migrate_command` in `isekai/foundation/run.py` as in 1.2, and run the mutation over each, per [D6](design.md#d6), one run a range, with the tests of 1.3. Kill each survivor as in 1.3.
+- [x] 2.6 Find the lines of `command` in `isekai/foundation/command.py` and of `stage_command` and `migrate_command` in `isekai/foundation/run.py` as in 1.2, and run the mutation over each, per [D6](design.md#d6), one run a range, with the tests of 1.3. Kill each survivor as in 1.3.
   Verify: `uv run pytest tests/test_run_directory.py tests/test_review.py tests/test_resume.py tests/test_pipeline_cli.py` exits 0.
 
 ## 3 — Call `command` from the sites

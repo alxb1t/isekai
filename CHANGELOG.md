@@ -14,6 +14,7 @@ its new digest.
 - `unpack.main` takes `fetcher=`, defaulting to `HuggingFaceFetcher`, and a case holds the default; no test patches `unpack`, so its row leaves `PATCHED_MODULES` and `PATCHED_ROWS` is 17 (0192 D2, D4, D7).
 - The *Known breaks* of *A component is a contract* names each module `PATCHED_MODULES` still lists, with its reason (0192 D5).
 - `isekai/foundation/command.py` holds `ENTRY` and `command(verb, *words)`, which `run.py` re-exports; cases hold the join and `migrate_command`'s default-root text, which a mutation run found unread (0193 D1, D6).
+- `stage_command`, `migrate_command`, `_draft_command`, `_named_a_flow` and the parser's `prog` build from `command` and `ENTRY`; every printed byte is equal, and the mutation run over each finds no survivor (0193 D2, D6).
 
 ## [0.88.1] - 2026-11-21
 

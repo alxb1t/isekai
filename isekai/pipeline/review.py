@@ -75,6 +75,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     attempts,
+    command,
     current_draft,
     group_of,
     is_rendered,
@@ -456,7 +457,7 @@ def _draft_command(image: Path, flow: str) -> str:
     e.g. (r/f/outputs/001/7.png, f)
          -> "python -m isekai draft --flow f r/f/outputs/001/7.png"
     """
-    return f"python -m isekai draft --flow {flow} {shlex.quote(str(image))}"
+    return command("draft", "--flow", flow, shlex.quote(str(image)))
 
 
 def refuse_revision(
