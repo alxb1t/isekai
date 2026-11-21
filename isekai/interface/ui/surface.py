@@ -23,17 +23,17 @@ from isekai.foundation.run import (
     REVIEW,
     Run,
     approval_of,
+    command,
     current_draft,
     edit_files,
     is_rendered,
     latest_artifact,
     render_record,
 )
-from isekai.interface.ui import events, library
+from isekai.interface.ui import events, library, uploads
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs
 from isekai.interface.wiring import Wiring
-from isekai.pipeline import importing
 from isekai.pipeline.generate import image_of
 from isekai.shared.field_map import FieldMap
 from isekai.shared.vocabulary import Vocabulary
@@ -145,7 +145,7 @@ class Surface:
         wire: Callable[[Path], Wiring],
         jobs: Jobs,
         billing: Billing,
-        imports: importing.Imports,
+        imports: uploads.Imports,
         broadcast: events.Broadcast,
         limit: int,
         file_response: Callable[..., Any],
@@ -229,7 +229,7 @@ class Surface:
                 )
             raise Refusal(
                 f"{image.name}: its record is there, its image is gone; render it "
-                f"again with `python -m isekai render {found / library.RUNS}`"
+                f"again with `{command('render', str(found / library.RUNS))}`"
             )
         return run, image, approval
 
@@ -275,7 +275,7 @@ class Surface:
         if bake.state == "queued":
             raise Refusal(
                 f"bake {k} of {seed} is queued and has no image yet; the next "
-                f"render session bakes it, `python -m isekai render "
-                f"{self.folder(collection) / library.RUNS}`"
+                "render session bakes it, "
+                f"`{command('render', str(self.folder(collection) / library.RUNS))}`"
             )
         return run, image

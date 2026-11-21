@@ -13,8 +13,8 @@ render ─▶ <collection>/sessions/<id>.json ─▶ GET …/sessions/<id> ─�
 ```
 
 - **Import.** The sheet sends each chosen file in its own `PUT`, a bar each, answered once its bytes
-  land. The import's reader in `pipeline/importing.py` then reads the files into the library's
-  `.staging/` one at a time, cleaning each to its pixels and orientation and verifying it, and
+  land. The import's reader in `uploads.py` then reads the files into the library's
+  `.staging/` one at a time through `pipeline/importing.py`, cleaning each to its pixels and orientation and verifying it, and
   the page's stream, naming the import, reports each tile's step; a read tile shows its preview. Each upload
   keeps its own state under the upload id its `PUT` answers, so two files of one name are two tiles. Import
   seals the reader, so no upload lands once it commits the collection's `sources/` in one move. A staging

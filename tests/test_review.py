@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-import isekai.pipeline.review as review_module
+import isekai.pipeline.review.records as review_records
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
@@ -254,7 +254,7 @@ def test_an_approved_artifact_is_never_overwritten(
 
 def _rival_inside_the_publish(monkeypatch: pytest.MonkeyPatch) -> None:
     """Make another writer take the number inside `create`, after the draft is read."""
-    real = review_module.create
+    real = review_records.create
 
     def rival_first(
         path: Path, kind: Artifact[ReviewApproved], body: ReviewApproved
@@ -263,7 +263,7 @@ def _rival_inside_the_publish(monkeypatch: pytest.MonkeyPatch) -> None:
         path.write_bytes(b"rival\n")
         real(path, kind, body)
 
-    monkeypatch.setattr(review_module, "create", rival_first)
+    monkeypatch.setattr(review_records, "create", rival_first)
 
 
 @pytest.mark.spec("review:approval:approved-is-not-overwritten")

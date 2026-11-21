@@ -21,6 +21,7 @@ from isekai.foundation.run import (
 from isekai.interface.drafting import (
     approve_across,
 )
+from isekai.interface.progress import DONE, FORMAT, REFUSED, START
 from isekai.interface.run_view import report
 from isekai.interface.verbs.common import (
     Reporter,
@@ -133,7 +134,7 @@ def _item_of(
         flows=flows,
         collected=collected,
         reporter=Reporter(
-            wired.out, wired.err, getattr(args, "progress", None) == "json"
+            wired.out, wired.err, getattr(args, "progress", None) == FORMAT
         ),
         new_version=bool(getattr(args, "new_version", False)),
         vocabulary=vocabulary,
@@ -287,20 +288,20 @@ _BUILDERS: Mapping[str, _Builder] = {
 
 def _reported(item: _Item, run: Run, verb: str, name: str | None, step: _Step) -> None:
     """Run `step` between its `start` and its end; `None` names no flow."""
-    item.reporter.item(run.id, name, verb, "start")
+    item.reporter.item(run.id, name, verb, START)
     before = len(item.collected)
     try:
         step("" if name is None else name)
     except Refusal as refused:
-        item.reporter.item(run.id, name, verb, "refused", str(refused))
+        item.reporter.item(run.id, name, verb, REFUSED, str(refused))
         raise
     # `tag` collects each tagger's refusal rather than raising it.
     if len(item.collected) > before:
         item.reporter.item(
-            run.id, name, verb, "refused", "; ".join(item.collected[before:])
+            run.id, name, verb, REFUSED, "; ".join(item.collected[before:])
         )
     else:
-        item.reporter.item(run.id, name, verb, "done")
+        item.reporter.item(run.id, name, verb, DONE)
 
 
 def _run_item(verb: str, run: Run, item: _Item) -> None:
@@ -350,7 +351,7 @@ def _per_item(
                 [None] if verb in PHOTOGRAPH_VERBS else list(flows)
             )
             for name in names:
-                item.reporter.item(identifier, name, verb, "refused", str(unopened))
+                item.reporter.item(identifier, name, verb, REFUSED, str(unopened))
             raise
         if verb == "show":
             for line in report(run, wired.flows_dir):
