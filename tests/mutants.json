@@ -161,7 +161,7 @@
   },
   {
     "finding": "PB-14",
-    "path": "isekai/pipeline/review.py",
+    "path": "isekai/pipeline/review/__init__.py",
     "find": "        if copy.is_file():\n            copy.unlink()\n            if not any(copy.parent.iterdir()):\n                copy.parent.rmdir()\n        return draft",
     "replace": "        if copy.is_file():\n            for held in list(copy.parent.iterdir()):\n                held.unlink()\n            if not any(copy.parent.iterdir()):\n                copy.parent.rmdir()\n        return draft",
     "tests": ["tests/test_review.py"],
@@ -249,7 +249,7 @@
   },
   {
     "finding": "PB-5",
-    "path": "isekai/pipeline/review.py",
+    "path": "isekai/pipeline/review/__init__.py",
     "find": "    number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))\n    if seed is not None:",
     "replace": "    number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))\n    if _waiting_number(run, flow) is not None and seed is None:\n        return run.directory(flow, REVIEW) / f\"{number:03d}.draft.json\"\n    if seed is not None:",
     "tests": ["tests/test_review.py"],
@@ -337,7 +337,7 @@
   },
   {
     "finding": "PB-1a",
-    "path": "isekai/pipeline/review.py",
+    "path": "isekai/pipeline/review/budget.py",
     "find": "    total = len(positive.split()) + positive.count(separator) + 2\n",
     "replace": "    total = len(positive.split()) + positive.count(separator) + 3\n",
     "tests": ["tests/test_review.py"],
@@ -345,7 +345,7 @@
   },
   {
     "finding": "PB-1b",
-    "path": "isekai/pipeline/review.py",
+    "path": "isekai/pipeline/review/budget.py",
     "find": "        per_field[name] = sum(len(tag.split()) for tag in tags) + len(tags)\n",
     "replace": "        per_field[name] = sum(len(tag.split()) for tag in tags) + 2 * len(tags)\n",
     "tests": ["tests/test_review.py"],
@@ -353,7 +353,7 @@
   },
   {
     "finding": "PB-2",
-    "path": "isekai/pipeline/review.py",
+    "path": "isekai/pipeline/review/__init__.py",
     "find": "        else token_budget(fields, schema, definition).total\n",
     "replace": "        else estimate_tokens(fields, schema)\n",
     "tests": ["tests/test_review.py"],
@@ -377,7 +377,7 @@
   },
   {
     "finding": "PB-3a",
-    "path": "isekai/pipeline/review.py",
+    "path": "isekai/pipeline/review/records.py",
     "find": "        create(path, APPROVED_FILE, body)\n",
     "replace": "        write(path, APPROVED_FILE, body)\n",
     "tests": ["tests/test_review.py"],
@@ -385,7 +385,7 @@
   },
   {
     "finding": "PB-3b",
-    "path": "isekai/pipeline/review.py",
+    "path": "isekai/pipeline/review/records.py",
     "find": "    except FileExistsError:\n",
     "replace": "    except FileNotFoundError:\n",
     "tests": ["tests/test_review.py"],

@@ -8,7 +8,7 @@ what it is, not by what calls it. The evaluator is not here: it is
 | directory | is | files |
 |---|---|---|
 | [`foundation/`](foundation/README.md) | what a run, a flow and a refusal are | `refusal.py` · `artifacts.py` · `run.py` · `flow.py` · `caption_config.py` · `atomic_write.py` |
-| [`pipeline/`](pipeline/README.md) | the staged verbs | `importing.py` · `caption.py` · `tagging.py` · `sheet.py` · `review.py` · `generate.py` |
+| [`pipeline/`](pipeline/README.md) | the staged verbs | `importing.py` · `caption.py` · `tagging.py` · `sheet.py` · `review/` · `generate.py` |
 | [`shared/`](shared/README.md) | primitives with no domain of their own | `field_map.py` · `fields.py` · `image.py` · `vocabulary.py` |
 | [`boundary/`](boundary/README.md) | everything that leaves this process | `comfy/` (`__init__.py` · `contract.py` · `client.py` · `multipart.py`) · `gpu.py` · `ollama.py` · `pod_start.py` · `provision.py` · `wd14.py` |
 | [`interface/`](interface/README.md) | what an operator touches | `cli.py` · `wiring.py` · `drafting.py` · `render.py` · `plan.py` · `progress.py` · `run_view.py` · `compare_view.py` · `verbs/` (`__init__.py` · `common.py` · `library.py` · `drafts.py` · `edits.py` · `session.py` · `prepare.py` · `generate.py` · `stages.py` · `runner.py`) · `ui/` (`__init__.py` · `library.py` · `bundle.py` · `jobs.py` · `billing.py` · `events.py` · `app.py`) |

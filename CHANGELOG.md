@@ -10,6 +10,15 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.8] - 2026-11-21
+
+Gate: local 1m19s · CI not read under mf-ship · 0.88.7: local 1m14s · CI not read under mf-ship
+
+- `isekai/pipeline/review.py` is `isekai/pipeline/review/__init__.py`, the front door of the stage; the ratchet rows, the byte-writer row, the standing mutants and the READMEs name the package, and no moved line changes (0198 D1, D8).
+- `isekai/pipeline/review/budget.py` holds `ENCODER_WINDOW`, `estimate_tokens`, `TokenBudget` and `token_budget`, which the front door binds back; `PB-1a` and `PB-1b` are found in it (0198 D3, D7, D8).
+- `isekai/pipeline/review/records.py` holds the draft's reads and writes, `_publish` and the shared helpers; `_write_draft` takes `renders`, `version` and `image` by keyword, and the tests that patch `create` and `write` patch `records.py` (0198 D2, D4, D5, D7).
+- Docs `D77` records the package, its front door and where a patch goes, and the pipeline README names `review/`'s modules and that a stage may be a package (0198 D9).
+
 ## [0.88.7] - 2026-11-21
 
 Gate: local 1m14s · CI not read under mf-ship · 0.88.6: local 1m18s · CI not read under mf-ship
