@@ -7,7 +7,7 @@ The cases are written first, the record comes in, the tables are read from it, a
 - [x] 1 — The cases · moderate
 - [x] 2 — The record · moderate
 - [x] 3 — The derive · moderate
-- [ ] 4 — The documents · moderate
+- [x] 4 — The documents · moderate
 
 ## 1 — The cases
 
@@ -54,11 +54,11 @@ The cases are written first, the record comes in, the tables are read from it, a
 
 ## 4 — The documents
 
-- [ ] 4.1 In `docs/decisions.md`, add D73 after D72 and amend D21 and D62, as [D8](design.md#d8) gives them.
+- [x] 4.1 In `docs/decisions.md`, add D73 after D72 and amend D21 and D62, as [D8](design.md#d8) gives them.
   Verify: `git grep -n -F "### D73" -- docs/decisions.md` prints one line.
-- [ ] 4.2 In `isekai/foundation/README.md`, replace the opening lines, where `Nothing here knows about a stage`, and the `names.py` and `failures.py` rows, as [D8](design.md#d8) says.
+- [x] 4.2 In `isekai/foundation/README.md`, replace the opening lines, where `Nothing here knows about a stage`, and the `names.py` and `failures.py` rows, as [D8](design.md#d8) says.
   Verify: `git grep -n -F "Nothing here knows about a stage" -- isekai/foundation/README.md` prints nothing.
-- [ ] 4.3 In `docs/principles.md` and `ARCHITECTURE.md`, add the stage record to the foundation's bullet as [D8](design.md#d8) says.
+- [x] 4.3 In `docs/principles.md` and `ARCHITECTURE.md`, add the stage record to the foundation's bullet as [D8](design.md#d8) says.
   Verify: `git grep -c -F "the stage record" -- docs/principles.md ARCHITECTURE.md` prints `ARCHITECTURE.md:1` and `docs/principles.md:1`.
-- [ ] 4.4 Check that the documents and the derived tables agree.
+- [x] 4.4 Check that the documents and the derived tables agree.
   Verify: `uv run pytest tests/test_docs.py tests/test_spec_prose.py` exits 0.
