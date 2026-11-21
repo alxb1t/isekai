@@ -17,6 +17,7 @@ its new digest.
 - The runner moves, text for text, from `cli.py` to `isekai/interface/verbs/runner.py`; `cli.py` reads `_per_item` through `isekai.interface.verbs`, `PB-2b` is re-pointed to the new file, and the *Imported by* tables are derived again (0187 D1, D2, D5–D7).
 - `prepare` binds its own run: `run_prepare` reads `_per_item` from `verbs/runner.py`, drops its `per_item` parameter and `PerItem`, and is the run of `PREPARE_ROW`; `cli.py`'s `_prepare` goes and `run_prepare` leaves the front door (0187 D3).
 - The mutation run over `verbs/runner.py` leaves no survivor and the replay of `tests/mutants.json` holds; D58 accepts the runs of `render` and `migrate` alone, and the READMEs and `cli.py`'s docstring name the runner (0187 D4, D6, D7).
+- The whole refusal of `caption`, `wd14`, `tags` and `sheet` is held by a case of its stage's test file, and the mutation runs over each stage's sequence and over `refusal_for` leave no survivor, so the shared function that follows can be proved byte-equal (0188 D6).
 
 ## [0.87.41] - 2026-11-21
 

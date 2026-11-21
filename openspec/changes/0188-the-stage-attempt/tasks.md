@@ -4,7 +4,7 @@ Hold each stage's refusal whole and pin the sequences by mutation, add `attempt`
 
 ## Progress
 
-- [ ] 1 — Hold each stage's refusal whole and pin the sequences by mutation · moderate
+- [x] 1 — Hold each stage's refusal whole and pin the sequences by mutation · moderate
 - [ ] 2 — Add `attempt` and `producer_for` · moderate
 - [ ] 3 — Call `attempt` from the stages · moderate
 - [ ] 4 — Narrow `refusal_for` and take its row out · moderate
@@ -12,28 +12,28 @@ Hold each stage's refusal whole and pin the sequences by mutation, add `attempt`
 
 ## 1 — Hold each stage's refusal whole and pin the sequences by mutation
 
-- [ ] 1.1 **HALT CHECK** The premise of [D1](design.md#d1) stands: each sequence is at its site, `caption` once, `tag_wd14` and `tag_hosted` in `tagging.py`, and `sheet.py` once.
+- [x] 1.1 **HALT CHECK** The premise of [D1](design.md#d1) stands: each sequence is at its site, `caption` once, `tag_wd14` and `tag_hosted` in `tagging.py`, and `sheet.py` once.
   Verify: `git grep -n -e 'raise refusal_for' -- isekai/pipeline/caption.py isekai/pipeline/tagging.py isekai/pipeline/sheet.py` prints a line for `caption.py`, two for `tagging.py` and one for `sheet.py`.
 
-- [ ] 1.2 In `tests/test_caption.py` add `test_the_refusal_of_a_failed_read_is_held_whole`, bound to `cli:refusals:refusal-names-the-remedy`, per [D6](design.md#d6): a reader failing `StageFailure("transient", "rate limited")` gives the below-budget text, one failing `StageFailure("permanent", "the reader declined")` the exhausted text, each asserted with `==` on `str(refused.value)`, built from `run.id` and `runs_flag(run)`, imported from `tests.stages` beside `caption`. In the same case, an exhausted run called with `briefing_path=tmp_path / "absent.md"` refuses with the budget's text and not with an `OSError`, which holds [D2](design.md#d2).
+- [x] 1.2 In `tests/test_caption.py` add `test_the_refusal_of_a_failed_read_is_held_whole`, bound to `cli:refusals:refusal-names-the-remedy`, per [D6](design.md#d6): a reader failing `StageFailure("transient", "rate limited")` gives the below-budget text, one failing `StageFailure("permanent", "the reader declined")` the exhausted text, each asserted with `==` on `str(refused.value)`, built from `run.id` and `runs_flag(run)`, imported from `tests.stages` beside `caption`. In the same case, an exhausted run called with `briefing_path=tmp_path / "absent.md"` refuses with the budget's text and not with an `OSError`, which holds [D2](design.md#d2).
   Verify: `uv run pytest tests/test_caption.py -k failed_read_is_held_whole` exits 0.
 
-- [ ] 1.3 In `tests/test_tagging.py` add `test_the_refusal_of_a_failed_hosted_tag_is_held_whole`, bound to `cli:refusals:refusal-names-the-remedy`, in the same way for `tag_hosted`: a local `Tagger` stub whose `tag` raises `StageFailure("transient", "rate limited")` and one raising `StageFailure("permanent", "the tagger declined")`, the texts of `tags` in [D6](design.md#d6).
+- [x] 1.3 In `tests/test_tagging.py` add `test_the_refusal_of_a_failed_hosted_tag_is_held_whole`, bound to `cli:refusals:refusal-names-the-remedy`, in the same way for `tag_hosted`: a local `Tagger` stub whose `tag` raises `StageFailure("transient", "rate limited")` and one raising `StageFailure("permanent", "the tagger declined")`, the texts of `tags` in [D6](design.md#d6).
   Verify: `uv run pytest tests/test_tagging.py -k failed_hosted_tag_is_held_whole` exits 0.
 
-- [ ] 1.4 In `tests/test_tagging.py` add `test_the_refusal_of_a_failed_local_tag_is_held_whole`, bound to the same key, for `tag_wd14` over `_unreadable`, whose text is the `wd14` row of [D6](design.md#d6) with the detail `cannot identify image file`. In the same case, an exhausted run whose `open_tagger` raises `AssertionError` refuses with `check_budget`'s text, which holds [D2](design.md#d2).
+- [x] 1.4 In `tests/test_tagging.py` add `test_the_refusal_of_a_failed_local_tag_is_held_whole`, bound to the same key, for `tag_wd14` over `_unreadable`, whose text is the `wd14` row of [D6](design.md#d6) with the detail `cannot identify image file`. In the same case, an exhausted run whose `open_tagger` raises `AssertionError` refuses with `check_budget`'s text, which holds [D2](design.md#d2).
   Verify: `uv run pytest tests/test_tagging.py -k failed_local_tag_is_held_whole` exits 0.
 
-- [ ] 1.5 In `tests/test_sheet_stage.py` add `test_the_refusal_of_a_failed_sheet_is_held_whole`, bound to the same key, for the tag outside the vocabulary of `_drop_the_tag`: the whole text of the `sheet` row of [D6](design.md#d6), written out as a literal from one run of the case against the code as it stands, not read back from the record file.
+- [x] 1.5 In `tests/test_sheet_stage.py` add `test_the_refusal_of_a_failed_sheet_is_held_whole`, bound to the same key, for the tag outside the vocabulary of `_drop_the_tag`: the whole text of the `sheet` row of [D6](design.md#d6), written out as a literal from one run of the case against the code as it stands, not read back from the record file.
   Verify: `uv run pytest tests/test_sheet_stage.py -k failed_sheet_is_held_whole` exits 0.
 
-- [ ] 1.6 Find the lines of each sequence: from its `check_budget(` line to the line of the `) from failed` that ends its call of `refusal_for`, in `caption` of `isekai/pipeline/caption.py`, `tag_wd14` and `tag_hosted` of `isekai/pipeline/tagging.py`, and `_from_tag_list` of `isekai/pipeline/sheet.py`; and `refusal_for` of `isekai/foundation/run.py`, from its `def` to one line before `def instructions_record`.
+- [x] 1.6 Find the lines of each sequence: from its `check_budget(` line to the line of the `) from failed` that ends its call of `refusal_for`, in `caption` of `isekai/pipeline/caption.py`, `tag_wd14` and `tag_hosted` of `isekai/pipeline/tagging.py`, and `_from_tag_list` of `isekai/pipeline/sheet.py`; and `refusal_for` of `isekai/foundation/run.py`, from its `def` to one line before `def instructions_record`.
   Verify: `git grep -n -e 'check_budget(' -e '^        ) from failed$' -e '^def refusal_for' -e '^def instructions_record' -- isekai/pipeline/caption.py isekai/pipeline/tagging.py isekai/pipeline/sheet.py isekai/foundation/run.py` prints a line for each.
 
-- [ ] 1.7 Run the mutation over each sequence of 1.6, per [D6](design.md#d6), one run a range: `uv run python -m tools.mutate isekai/pipeline/caption.py:<first>-<last> --tests tests/test_caption.py tests/test_run_directory.py tests/test_resume.py`, the same over the ranges of `tag_wd14` and `tag_hosted` in `tagging.py` with `tests/test_tagging.py`, and over `_from_tag_list` in `sheet.py` with `tests/test_sheet_stage.py`. Kill each survivor with a case in the file of its stage; one no case can kill is named equivalent, with its reason, in the commit body.
+- [x] 1.7 Run the mutation over each sequence of 1.6, per [D6](design.md#d6), one run a range: `uv run python -m tools.mutate isekai/pipeline/caption.py:<first>-<last> --tests tests/test_caption.py tests/test_run_directory.py tests/test_resume.py`, the same over the ranges of `tag_wd14` and `tag_hosted` in `tagging.py` with `tests/test_tagging.py`, and over `_from_tag_list` in `sheet.py` with `tests/test_sheet_stage.py`. Kill each survivor with a case in the file of its stage; one no case can kill is named equivalent, with its reason, in the commit body.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 
-- [ ] 1.8 Run the mutation over `refusal_for`: `uv run python -m tools.mutate isekai/foundation/run.py:<first>-<last> --tests tests/test_run_directory.py tests/test_caption.py tests/test_tagging.py tests/test_sheet_stage.py tests/test_resume.py`, the survivors handled as in 1.7, the case in `tests/test_run_directory.py`.
+- [x] 1.8 Run the mutation over `refusal_for`: `uv run python -m tools.mutate isekai/foundation/run.py:<first>-<last> --tests tests/test_run_directory.py tests/test_caption.py tests/test_tagging.py tests/test_sheet_stage.py tests/test_resume.py`, the survivors handled as in 1.7, the case in `tests/test_run_directory.py`.
   Verify: `uv run pytest tests/test_run_directory.py tests/test_caption.py tests/test_tagging.py tests/test_sheet_stage.py tests/test_resume.py` exits 0.
 
 ## 2 — Add `attempt` and `producer_for`
