@@ -306,8 +306,12 @@ def _check_run_root(runs: Path) -> None:
         )
 
 
-def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
+def load_vocabulary(
+    models_dir: Path = DEFAULT_MODELS_DIR, *, manifest: Path | None = None
+) -> Vocabulary:
     """Return the provisioned vocabulary, its bytes verified against the manifest.
+
+    `manifest` is the manifest's path; `None` reads the tracked one.
 
     The digest check is the reason the pin is worth anything: the manifest is the
     only evidence the file on disk is the list the sheets were written against.
@@ -323,11 +327,12 @@ def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
         resolve,
     )
 
-    manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
+    source = VOCABULARY_MANIFEST_PATH if manifest is None else manifest
+    declared = load_manifest(source)
     try:
-        path = resolve(VOCABULARY_DEST, models_dir, manifest)
+        path = resolve(VOCABULARY_DEST, models_dir, declared)
     except UnknownArtifact as absent:
-        raise undeclared(VOCABULARY_DEST, VOCABULARY_MANIFEST_PATH) from absent
+        raise undeclared(VOCABULARY_DEST, source) from absent
     except FileNotFoundError as absent:
         # A `FileNotFoundError` is the one failure here that has a remedy this
         # build can perform, and a traceback names a path instead of naming it.
@@ -337,7 +342,7 @@ def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
             "from the repository root to fetch and verify it against its pinned "
             "manifest"
         ) from absent
-    return read_vocabulary(path, entry_for(manifest, VOCABULARY_DEST))
+    return read_vocabulary(path, entry_for(declared, VOCABULARY_DEST))
 
 
 def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:

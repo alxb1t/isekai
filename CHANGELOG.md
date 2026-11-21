@@ -10,6 +10,14 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.2] - 2026-11-21
+
+Gate: local 1m18s · CI not read under mf-ship · 0.88.1: local 2m42s · CI not read under mf-ship
+
+- The tagger, the vocabulary, the pose finder and the segmenter take `manifest=`, defaulting to the tracked path; no test patches a manifest path, and `BD-1` and `BD-10b` are re-pointed (0192 D1, D3, D6).
+- `unpack.main` takes `fetcher=`, defaulting to `HuggingFaceFetcher`, and a case holds the default; no test patches `unpack`, so its row leaves `PATCHED_MODULES` and `PATCHED_ROWS` is 17 (0192 D2, D4, D7).
+- The *Known breaks* of *A component is a contract* names each module `PATCHED_MODULES` still lists, with its reason (0192 D5).
+
 ## [0.88.1] - 2026-11-21
 
 Gate: local 2m42s · CI not read under mf-ship · 0.88.0: local 1m59s · CI not read under mf-ship

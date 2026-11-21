@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Protocol, cast
 
 from isekai.boundary import provision, unpack
 from isekai.boundary.provision import DEFAULT_MODELS_DIR
-from isekai.boundary.unpack import PLACEMENT_REMEDY
+from isekai.boundary.unpack import PLACEMENT_MANIFEST_PATH, PLACEMENT_REMEDY
 from isekai.boundary.wd14 import silence_onnxruntime
 from isekai.foundation.refusal import Refusal
 
@@ -173,19 +173,23 @@ class OnnxSegmenter:
 
 
 def open_segmenter(
-    models_dir: Path = DEFAULT_MODELS_DIR, runtime: Runtime | None = None
+    models_dir: Path = DEFAULT_MODELS_DIR,
+    runtime: Runtime | None = None,
+    *,
+    manifest: Path = PLACEMENT_MANIFEST_PATH,
 ) -> OnnxSegmenter:
     """Verify both unpacked files, then open the segmenter over them on the CPU.
 
     The digests are checked before a session is made, so a stale pin costs a refusal
     and not a load. An absent file is a `Refusal` naming the fetch. `runtime` is
-    `onnxruntime` unless a test gives its own.
+    `onnxruntime` unless a test gives its own, and `manifest` is the path of the
+    manifest the files are verified against.
     """
-    manifest = provision.load_manifest(unpack.PLACEMENT_MANIFEST_PATH)
+    declared = provision.load_manifest(manifest)
     resolved: list[Path] = []
     for dest in (ENCODER_DEST, DECODER_DEST):
         try:
-            resolved.append(unpack.resolve_member(dest, models_dir, manifest))
+            resolved.append(unpack.resolve_member(dest, models_dir, declared))
         except FileNotFoundError as absent:
             raise Refusal(
                 f"{dest} is not provisioned under {models_dir}/, and the segmenter "
