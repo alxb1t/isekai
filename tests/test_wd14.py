@@ -19,6 +19,7 @@ must yield the tag on row 1 and no other.
 import ast
 import hashlib
 import importlib
+import json
 import os
 import sys
 from collections.abc import Callable
@@ -186,6 +187,13 @@ def _planted(models_dir: Path, present: dict[str, bytes]) -> Manifest:
     }
 
 
+def _declared(models_dir: Path, manifest: Manifest) -> Path:
+    """Write `manifest` under `models_dir` and return the path of the file."""
+    path = models_dir / "vocabulary.json"
+    path.write_text(json.dumps(manifest))
+    return path
+
+
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
 def test_an_absent_label_index_refuses_naming_what_to_fetch(tmp_path: Path) -> None:
     with pytest.raises(Refusal) as refused:
@@ -197,17 +205,14 @@ def test_an_absent_label_index_refuses_naming_what_to_fetch(tmp_path: Path) -> N
 
 
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
-def test_the_model_is_verified_and_not_only_the_label_index(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_the_model_is_verified_and_not_only_the_label_index(tmp_path: Path) -> None:
     # The list present and hashing correctly, the graph absent. Nothing but a
     # check on the *second* destination catches this, and without it the build
     # would open an unverified half-gigabyte file on the strength of a 300 KB one.
     manifest = _planted(tmp_path, {LABELS_DEST: INDEX.encode()})
-    monkeypatch.setattr(provision, "load_manifest", lambda _path=None: manifest)
 
     with pytest.raises(Refusal) as refused:
-        verified_paths(tmp_path)
+        verified_paths(tmp_path, manifest=_declared(tmp_path, manifest))
 
     message = str(refused.value)
     assert MODEL_DEST in message
@@ -219,7 +224,7 @@ def test_the_model_is_verified_and_not_only_the_label_index(
     "dest", [LABELS_DEST, MODEL_DEST], ids=["the-label-index", "the-model"]
 )
 def test_a_half_whose_bytes_do_not_match_its_digest_stops_the_stage(
-    dest: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    dest: str, tmp_path: Path
 ) -> None:
     # Both present, and one half's bytes swapped after the manifest was built.
     # `verified_paths` leaves the mismatch a `DigestMismatch`, whose message names
@@ -228,22 +233,22 @@ def test_a_half_whose_bytes_do_not_match_its_digest_stops_the_stage(
     # a refusal.
     manifest = _planted(tmp_path, {LABELS_DEST: INDEX.encode(), MODEL_DEST: b"graph"})
     (tmp_path / dest).write_bytes(b"other bytes")
-    monkeypatch.setattr(provision, "load_manifest", lambda _path=None: manifest)
 
     with pytest.raises(provision.DigestMismatch) as refused:
-        verified_paths(tmp_path)
+        verified_paths(tmp_path, manifest=_declared(tmp_path, manifest))
 
     assert dest in str(refused.value)
 
 
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
 def test_both_halves_present_and_matching_resolve_to_their_two_paths(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     manifest = _planted(tmp_path, {LABELS_DEST: INDEX.encode(), MODEL_DEST: b"graph"})
-    monkeypatch.setattr(provision, "load_manifest", lambda _path=None: manifest)
 
-    labels, model, pins = verified_paths(tmp_path)
+    labels, model, pins = verified_paths(
+        tmp_path, manifest=_declared(tmp_path, manifest)
+    )
 
     assert (labels, model) == (tmp_path / LABELS_DEST, tmp_path / MODEL_DEST)
     # And the digests it checked come back with them, so whatever records a
