@@ -1,5 +1,6 @@
 """The library and the hub, read from folders with no server involved."""
 
+import hashlib
 import json
 import os
 import struct
@@ -12,6 +13,7 @@ from PIL import Image
 
 from isekai.foundation.artifacts import DRAFT_FILE, EDIT_FILE, read
 from isekai.foundation.flow import FLOWS_DIR, load_flow
+from isekai.foundation.library import file_digest, thumbnail_of
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     OUTPUTS,
@@ -578,6 +580,60 @@ def test_one_source_at_one_seed_in_two_collections_has_two_thumbnails(
             pixel = made.convert("RGB").getpixel((10, 10))
         assert isinstance(pixel, tuple)
         assert (pixel[0] > pixel[2]) == (colour[0] > colour[2])
+
+
+@pytest.mark.spec("ui:renders:a-thumbnail-is-its-own-images")
+def test_a_thumbnail_is_named_for_its_runs_digest_its_place_and_its_images_digest(
+    tmp_path: Path,
+) -> None:
+    lib = tmp_path / "lib"
+    named = []
+    for name, colour in {"b1": (200, 30, 30), "b2": (30, 30, 200)}.items():
+        # One photograph, so both collections hold the run of one digest.
+        run = _run(_collection(lib, name, "ada.jpg"), "ada.jpg")
+        image = run.path / SUMMON / OUTPUTS / "001" / "42.png"
+        image.parent.mkdir(parents=True)
+        Image.new("RGB", (640, 800), colour).save(image)
+        expected = (
+            lib
+            / library.CACHE
+            / run.digest
+            / SUMMON
+            / OUTPUTS
+            / "001"
+            / f"42.{file_digest(image)}.jpg"
+        )
+
+        assert thumbnail_of(lib, run, image) == expected
+        assert library.thumbnail(lib, run, image) == expected
+        named.append(expected)
+
+    assert named[0] != named[1]
+
+
+@pytest.mark.spec_exempt("structural: a file is digested by its sha256")
+def test_a_files_digest_is_the_first_twelve_characters_of_its_sha256(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "abc.bin"
+    path.write_bytes(b"abc")
+
+    assert file_digest(path) == "ba7816bf8f01"
+
+
+@pytest.mark.spec_exempt("structural: a file is read once for one stat")
+def test_a_files_digest_is_read_once_for_one_stat(tmp_path: Path) -> None:
+    path = tmp_path / "x.bin"
+    path.write_bytes(b"aaa")
+    before = path.stat()
+    old = file_digest(path)
+
+    path.write_bytes(b"bbb")
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    assert file_digest(path) == old
+
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000))
+    assert file_digest(path) == hashlib.sha256(b"bbb").hexdigest()[:12]
 
 
 @pytest.mark.spec("ui:delete-render:the-route-deletes-the-render-and-its-thumbnail")

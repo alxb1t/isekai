@@ -5,6 +5,7 @@ from functools import cache
 from pathlib import Path
 
 from isekai.foundation.flow import load_flow
+from isekai.foundation.library import drop_thumbnails
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import EDIT_STEM, RUNS_ROOT, edit_at, rendered_at
 from isekai.interface.drafting import draft_from_image, refuse_image_drafts
@@ -70,7 +71,7 @@ def run_discard(args: argparse.Namespace, wired: Wiring) -> int:
             file=wired.err,
         )
         return 1
-    from isekai.interface.ui import drop_thumbnails, render_running
+    from isekai.interface.ui import render_running
 
     if render_running(run):
         print(
