@@ -73,7 +73,7 @@ def _header(node: ast.ClassDef) -> str:
 def _file(root: Path, dotted: str) -> Path | None:
     """Return the file a dotted module name stands for under `root`, if there is one.
 
-    e.g. `isekai.pipeline.review` -> `isekai/pipeline/review.py`
+    e.g. `isekai.pipeline.review` -> `isekai/pipeline/review/__init__.py`
     """
     base = Path(*dotted.split("."))
     for rel in (base.with_suffix(".py"), base / "__init__.py"):
