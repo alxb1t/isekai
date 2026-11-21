@@ -2,7 +2,8 @@
 
 `RUNS` is a collection's runs root and `SOURCES` its photographs' folder; `names.py`'s
 `SOURCES` is a flow's. A folder in the library is a collection when it holds
-`sources/` (D40), and a dot-folder is never listed.
+`sources/` (D40), and a dot-folder is never listed. A thumbnail's path in the cache
+and the digest that names it are here too (D68).
 """
 
 import contextlib
@@ -21,7 +22,7 @@ from isekai.foundation.artifacts import (
     read,
 )
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import Run
+from isekai.foundation.run import ID_DIGEST_CHARS, Run, digest_of
 
 VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
@@ -142,3 +143,35 @@ def _session(path: Path) -> dict[str, Any]:
     if record["outcome"] == "running" and not record_running(path):
         served["outcome"] = None
     return served
+
+
+# A file's digest by what its stat says: reading every photograph on every listing
+# would read the whole library each time.
+_DIGESTS: dict[tuple[str, int, int, int], str] = {}
+
+
+def stat_key(path: Path) -> tuple[str, int, int, int]:
+    """Return what a file's stat says about whether it changed."""
+    info = path.stat()
+    return (str(path), info.st_size, info.st_mtime_ns, info.st_ino)
+
+
+def file_digest(path: Path) -> str:
+    """Return the twelve-character digest a run of this file is named by."""
+    key = stat_key(path)
+    if key not in _DIGESTS:
+        _DIGESTS[key] = digest_of(path.read_bytes())[:ID_DIGEST_CHARS]
+    return _DIGESTS[key]
+
+
+def thumbnail_of(library: Path, run: Run, image: Path) -> Path:
+    """Return where `image`'s thumbnail sits in `library`'s cache, made or not.
+
+    Under `.cache/<run digest>/` at the image's path in the run, named by the image's
+    own digest too: two collections can hold one source rendered at one seed, and only
+    the bytes tell them apart. The image must exist, since its bytes name the file.
+    e.g. `…/outputs/001/42.png` -> `.cache/0d4b…/…/001/42.<image digest>.jpg`
+    """
+    within = image.absolute().relative_to(run.path.absolute())
+    named = f"{within.stem}.{file_digest(image)}.jpg"
+    return library / CACHE / run.digest / within.parent / named

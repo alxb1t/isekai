@@ -44,14 +44,17 @@ from isekai.foundation.library import (
     VARIABLE,
     is_collection,
     listed,
+    thumbnail_of,
 )
 from isekai.foundation.library import DEFAULT as DEFAULT
 from isekai.foundation.library import LOG as LOG
 from isekai.foundation.library import collection as collection
+from isekai.foundation.library import file_digest as _digest
 from isekai.foundation.library import render_running as render_running
 from isekai.foundation.library import root as root
 from isekai.foundation.library import running as running
 from isekai.foundation.library import session as session
+from isekai.foundation.library import stat_key as _key
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
@@ -67,7 +70,6 @@ from isekai.foundation.run import (
     approval_of,
     approved_versions,
     current_draft,
-    digest_of,
     edit_files,
     edit_numbers,
     group_of,
@@ -104,9 +106,8 @@ _KINDS: Mapping[str, str] = {
 # How many of a collection's sources Home's row shows as thumbnails, before `+n`.
 ROW_THUMBS = 15
 
-# A source's digest, what it carries and its size, by what its file's stat says:
-# reading every photograph on every listing would read the whole library each time.
-_DIGESTS: dict[tuple[str, int, int, int], str] = {}
+# What a source carries and its size, by what its file's stat says: reading every
+# photograph on every listing would read the whole library each time.
 _CARRIES: dict[tuple[str, int, int, int], tuple[str, ...]] = {}
 _SIZES: dict[tuple[str, int, int, int], tuple[int, int] | None] = {}
 
@@ -450,9 +451,7 @@ def thumbnail(library: Path, run: Run, image: Path) -> Path:
     hold one source rendered at one seed, and only the bytes tell them apart.
     e.g. `…/outputs/001/42.png` -> `.cache/0d4b…/…/001/42.<image digest>.jpg`
     """
-    within = image.relative_to(run.path)
-    named = f"{within.stem}.{_digest(image)}.jpg"
-    cached = library / CACHE / run.digest / within.parent / named
+    cached = thumbnail_of(library, run, image)
     if cached.is_file():
         return cached
     write_atomically(cached, _shrunk(image))
@@ -679,20 +678,6 @@ def _sources(folder: Path) -> list[Path]:
         for item in (folder / SOURCES).iterdir()
         if item.is_file() and not item.name.startswith(".")
     )
-
-
-def _key(path: Path) -> tuple[str, int, int, int]:
-    """Return what a file's stat says about whether it changed."""
-    info = path.stat()
-    return (str(path), info.st_size, info.st_mtime_ns, info.st_ino)
-
-
-def _digest(path: Path) -> str:
-    """Return the twelve-character digest a run of this file is named by."""
-    key = _key(path)
-    if key not in _DIGESTS:
-        _DIGESTS[key] = digest_of(path.read_bytes())[:ID_DIGEST_CHARS]
-    return _DIGESTS[key]
 
 
 def _carries(path: Path) -> tuple[str, ...]:
