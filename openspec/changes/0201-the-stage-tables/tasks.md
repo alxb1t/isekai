@@ -7,7 +7,7 @@ Hold the tables above the foundation to the stage record by one guard, read `_KI
 - [x] 1 — The guard · moderate
 - [x] 2 — The kinds · moderate
 - [x] 3 — Prepare · moderate
-- [ ] 4 — The documents · moderate
+- [x] 4 — The documents · moderate
 
 ## 1 — The guard
 
@@ -80,21 +80,21 @@ Hold the tables above the foundation to the stage record by one guard, read `_KI
 
 ## 4 — The documents
 
-- [ ] 4.1 In `docs/decisions.md`, in D73's bold sentence, replace "which reads the row by `producer_for`.**" with "which reads the row by `producer_for`. `PREPARE` and `tagged_runs` beside the record hold Prepare's order by verb and its tag rule, which the app's plan and the `prepare` verb read; `_KINDS` of `ui/library.py` reads its keys from the record, and a test holds the keys of `STAGES`, `_WRITES`, `PREPARE`, `REACHED` and the runner's `_BUILDERS` to it.**".
+- [x] 4.1 In `docs/decisions.md`, in D73's bold sentence, replace "which reads the row by `producer_for`.**" with "which reads the row by `producer_for`. `PREPARE` and `tagged_runs` beside the record hold Prepare's order by verb and its tag rule, which the app's plan and the `prepare` verb read; `_KINDS` of `ui/library.py` reads its keys from the record, and a test holds the keys of `STAGES`, `_WRITES`, `PREPARE`, `REACHED` and the runner's `_BUILDERS` to it.**".
   Verify: `git grep -c -F "tagged_runs" -- docs/decisions.md` prints `docs/decisions.md:1`.
-- [ ] 4.2 In D73's *Accepts* bullet put: "`STAGES`, `_WRITES`, `REACHED` and the runner's builders stay written, each held to the record by a test, the pipeline's own `STAGE` constants and the hub cell's `Stage` stay as they are, the paid stages, `assemble` and `render`, keep their own sequences, and `review` has a row with no budget. `Producer` gains no field for a table with one reader. Reopen when a second reader of one of those tables earns it a field."
+- [x] 4.2 In D73's *Accepts* bullet put: "`STAGES`, `_WRITES`, `REACHED` and the runner's builders stay written, each held to the record by a test, the pipeline's own `STAGE` constants and the hub cell's `Stage` stay as they are, the paid stages, `assemble` and `render`, keep their own sequences, and `review` has a row with no budget. `Producer` gains no field for a table with one reader. Reopen when a second reader of one of those tables earns it a field."
   Verify: `git grep -n -F "Reopen when a second reader of one of those tables earns it a field." -- docs/decisions.md` prints one line.
-- [ ] 4.3 In D73's *Made by* bullet add `0201` after `0188`.
+- [x] 4.3 In D73's *Made by* bullet add `0201` after `0188`.
   Verify: `git grep -n -e "Made by.*0188.*0201" -- docs/decisions.md` prints one line.
-- [ ] 4.4 In `isekai/foundation/README.md` replace the `producers.py` row of *Files* with ``| `producers.py` | the stage record: a frozen `Producer` for each stage a run passes through, in `PRODUCERS`, with its key, folder, scope, verb and budget, `producer_for`, which finds a row by its key, and, beside it, `PREPARE`, Prepare's order by verb, and `tagged_runs`, its tag rule; it imports nothing of `isekai` |``.
+- [x] 4.4 In `isekai/foundation/README.md` replace the `producers.py` row of *Files* with ``| `producers.py` | the stage record: a frozen `Producer` for each stage a run passes through, in `PRODUCERS`, with its key, folder, scope, verb and budget, `producer_for`, which finds a row by its key, and, beside it, `PREPARE`, Prepare's order by verb, and `tagged_runs`, its tag rule; it imports nothing of `isekai` |``.
   Verify: `git grep -n -F "tagged_runs" -- isekai/foundation/README.md` prints one line.
-- [ ] 4.5 Run `uv run python -m tools.derive_imported_by`: no importer edge changes, since `producers.py` imports no module of `isekai` and `jobs.py` and `prepare.py` already import `run.py`.
+- [x] 4.5 Run `uv run python -m tools.derive_imported_by`: no importer edge changes, since `producers.py` imports no module of `isekai` and `jobs.py` and `prepare.py` already import `run.py`.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 4.6 Confirm the order is written in the foundation alone and no longer in `jobs.py`.
+- [x] 4.6 Confirm the order is written in the foundation alone and no longer in `jobs.py`.
   Verify: `git grep -n -e "^PREPARE" -- isekai/foundation` prints one line.
-- [ ] 4.7 Confirm `jobs.py` holds no `PREPARE = (` literal.
+- [x] 4.7 Confirm `jobs.py` holds no `PREPARE = (` literal.
   Verify: `git grep -n -F "PREPARE = (" -- isekai/interface/ui/jobs.py` prints nothing.
-- [ ] 4.8 Replay the mutants the repository keeps.
+- [x] 4.8 Replay the mutants the repository keeps.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 4.9 Confirm the suite, the layers, the docs, the bindings and the wire hold at the end.
+- [x] 4.9 Confirm the suite, the layers, the docs, the bindings and the wire hold at the end.
   Verify: `uv run pytest tests/test_run_directory.py tests/test_ui_jobs.py tests/test_ui_library.py tests/test_run_view.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py tests/test_spec_bindings.py tests/test_derive_wire.py` exits 0.
