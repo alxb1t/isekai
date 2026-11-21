@@ -1,11 +1,18 @@
-"""The bodies of a render's and an edit's delete, bound back at their stages (D72).
+"""A delete's one owner: a render's or an edit's files, thumbnails and approval.
+
+`delete_render` and `delete_edit` drop the thumbnail of every image that goes while the
+image is still a file, since its bytes name the thumbnail, then delete the files, then,
+for a render, the approval its last render leaves (D72). The bodies they call are here
+too, bound back at the stages that held them.
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
 
 from pathlib import Path
+from typing import NamedTuple
 
 from isekai.foundation.artifacts import EDIT_FILE, read
+from isekai.foundation.library import drop_thumbnails
 from isekai.foundation.run import (
     DESCRIPTION,
     OUTPUTS,
@@ -133,15 +140,12 @@ def withdraw(run: Run, flow: str, version: int) -> list[Path]:
     return gone
 
 
-def discard_edit(image: Path) -> list[Path]:
-    """Delete an edit, pending or run, and every edit whose source chain reaches it.
+def _chain(group: Path, seed: int, number: int) -> list[int]:
+    """Return edit `number` of `seed` and every edit whose source chain reaches it.
 
-    Return every path deleted, absolute. An edit whose record cannot be read is
-    refused before anything is deleted, so a chain is never left half taken.
-    e.g. 42.edit-1.png, with 42.edit-2 made from it -> both edits' three files
+    An edit whose record cannot be read is refused, so a caller deletes nothing first.
+    e.g. 42.edit-1, with 42.edit-2 made from it -> [1, 2]
     """
-    _, _, _, seed, number = edit_at(image)
-    group = image.absolute().parent
     sources: dict[int, str | None] = {}
     for held in edit_numbers(group, seed):
         record = edit_files(group, seed, held)[1]
@@ -154,4 +158,57 @@ def discard_edit(image: Path) -> list[Path]:
         and source in {edit_files(group, seed, each)[0].name for each in taken}
     }:
         taken |= grown
-    return delete_edits(group, seed, sorted(taken))
+    return sorted(taken)
+
+
+def discard_edit(image: Path) -> list[Path]:
+    """Delete an edit, pending or run, and every edit whose source chain reaches it.
+
+    Return every path deleted, absolute. An edit whose record cannot be read is
+    refused before anything is deleted, so a chain is never left half taken.
+    e.g. 42.edit-1.png, with 42.edit-2 made from it -> both edits' three files
+    """
+    ref = edit_at(image)
+    group = image.absolute().parent
+    return delete_edits(group, ref.seed, _chain(group, ref.seed, ref.k))
+
+
+class Deleted(NamedTuple):
+    """What a delete removed: the run's files, then the library's thumbnails."""
+
+    files: list[Path]
+    thumbnails: list[Path]
+
+
+def delete_render(image: Path) -> Deleted:
+    """Delete a render, its edits, their thumbnails and the approval its last leaves.
+
+    The path is checked first, so one naming no render deletes nothing. The thumbnails
+    go while their images are files: the render's, then each edit's in number order.
+    e.g. outputs/001/42.png, with 42.edit-1.png
+    -> files [..., 42.png, ...], thumbnails [42, 42.edit-1]
+    """
+    ref = rendered_at(image)
+    group = image.absolute().parent
+    thumbnails = drop_thumbnails(ref.run, image)
+    for number in edit_numbers(group, ref.seed):
+        if (own := edit_files(group, ref.seed, number)[0]).is_file():
+            thumbnails += drop_thumbnails(ref.run, own)
+    files = [*discard_render(image), *withdraw(ref.run, ref.flow, ref.version)]
+    return Deleted(files, thumbnails)
+
+
+def delete_edit(image: Path) -> Deleted:
+    """Delete an edit and every edit made from it, with each one's thumbnail.
+
+    An edit whose record cannot be read is refused before anything is deleted.
+    e.g. 42.edit-1.png, with 42.edit-2 made from it -> thumbnails [edit-1, edit-2]
+    """
+    ref = edit_at(image)
+    group = image.absolute().parent
+    numbers = _chain(group, ref.seed, ref.k)
+    thumbnails: list[Path] = []
+    for number in numbers:
+        if (own := edit_files(group, ref.seed, number)[0]).is_file():
+            thumbnails += drop_thumbnails(ref.run, own)
+    return Deleted(delete_edits(group, ref.seed, numbers), thumbnails)

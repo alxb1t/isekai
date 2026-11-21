@@ -6,7 +6,7 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 
 - [x] 1 — The pre-flight · moderate
 - [x] 2 — The move · moderate
-- [ ] 3 — The owner · hard
+- [x] 3 — The owner · hard
 - [ ] 4 — The verb · moderate
 - [ ] 5 — The route · moderate
 - [ ] 6 — The documents · moderate
@@ -41,15 +41,15 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 
 ## 3 — The owner
 
-- [ ] 3.1 In `tests/test_edit_session.py`, after `test_edit_discard_an_unreadable_record_in_the_chain_deletes_nothing`, add the owner's cases of [D6](design.md#d6)'s table, each `spec_exempt("structural: …")`, over a group in a collection built under `tmp_path`, importing `delete_edit` and `delete_render` from `isekai.foundation.discard` and `thumbnail_of` from `isekai.foundation.library`.
+- [x] 3.1 In `tests/test_edit_session.py`, after `test_edit_discard_an_unreadable_record_in_the_chain_deletes_nothing`, add the owner's cases of [D6](design.md#d6)'s table, each `spec_exempt("structural: …")`, over a group in a collection built under `tmp_path`, importing `delete_edit` and `delete_render` from `isekai.foundation.discard` and `thumbnail_of` from `isekai.foundation.library`.
   Verify: `uv run pytest tests/test_edit_session.py -k "the_owner" -q` exits 2.
-- [ ] 3.2 In `isekai/foundation/discard.py`, add `Deleted` and `delete_render` and `delete_edit` as [D2](design.md#d2) gives them, importing `NamedTuple` and `drop_thumbnails`, and set the module's docstring as [D2](design.md#d2) gives it.
+- [x] 3.2 In `isekai/foundation/discard.py`, add `Deleted` and `delete_render` and `delete_edit` as [D2](design.md#d2) gives them, importing `NamedTuple` and `drop_thumbnails`, and set the module's docstring as [D2](design.md#d2) gives it.
   Verify: `git grep -n -e "^class Deleted" -e "^def delete_render" -e "^def delete_edit" -- isekai/foundation/discard.py` prints three lines.
-- [ ] 3.3 In the same file, split `_chain` out of `discard_edit` and have `discard_edit` call it, as [D3](design.md#d3) gives it; its docstring and its answer stand.
+- [x] 3.3 In the same file, split `_chain` out of `discard_edit` and have `discard_edit` call it, as [D3](design.md#d3) gives it; its docstring and its answer stand.
   Verify: `git grep -n -e "^def _chain" -- isekai/foundation/discard.py` prints one line.
-- [ ] 3.4 Run the owner's cases and the suite over the delete's readers.
+- [x] 3.4 Run the owner's cases and the suite over the delete's readers.
   Verify: `uv run pytest tests/test_edit_session.py tests/test_edit_placement.py tests/test_generate.py tests/test_review.py -q` exits 0.
-- [ ] 3.5 Run `uv run python -m tools.derive_imported_by`; it adds `discard.py` to the importers of `library.py`.
+- [x] 3.5 Run `uv run python -m tools.derive_imported_by`; it adds `discard.py` to the importers of `library.py`.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py -q` exits 0.
 
 ## 4 — The verb

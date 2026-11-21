@@ -18,8 +18,10 @@ from PIL import Image
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.foundation.artifacts import EDIT_FILE, SESSIONS, read
+from isekai.foundation.discard import delete_edit, delete_render
 from isekai.foundation.edit import load_edit
 from isekai.foundation.flow import Schema, Workflow, graph_digest, load_flow
+from isekai.foundation.library import thumbnail_of
 from isekai.foundation.run import Run, approval_of, failures_alone, record_failure
 from isekai.interface import render
 from isekai.interface.cli import _dispatch_argv, build_parser, dispatch
@@ -465,6 +467,110 @@ def test_edit_discard_an_unreadable_record_in_the_chain_deletes_nothing(
         discard_edit(group / "42.edit-1.png")
 
     assert sorted(path.name for path in group.iterdir()) == before
+
+
+def _owned(root: Path) -> tuple[Path, Path]:
+    """Return a library under `root` and the group `_chain` fills in its collection."""
+    library = root / "lib"
+    (library / "b" / "sources").mkdir(parents=True)
+    group = library / "b" / "runs" / "0123456789ab_a" / FLOW / "outputs" / "001"
+    group.parents[2].mkdir(parents=True)
+    (group.parents[2] / "run.json").write_text("{}")
+    _chain(group)
+    return library, group
+
+
+def _thumbnail(library: Path, image: Path) -> Path:
+    """Write the thumbnail of `image` in `library`'s cache; return where it sits."""
+    run = Run(image.parents[3].name, image.parents[3])
+    made = thumbnail_of(library, run, image)
+    made.parent.mkdir(parents=True, exist_ok=True)
+    made.write_bytes(b"jpg")
+    return made
+
+
+@pytest.mark.spec_exempt("structural: the verb's cases hold what the owner prints")
+def test_edit_discard_the_owner_takes_a_render_its_edits_and_their_thumbnails(
+    tmp_path: Path,
+) -> None:
+    library, group = _owned(tmp_path / "a")
+    twin = _owned(tmp_path / "twin")[1]
+    thumbnails = [
+        _thumbnail(library, group / name)
+        for name in ("42.png", "42.edit-1.png", "42.edit-2.png")
+    ]
+    other = thumbnails[0].with_name("42.other.jpg")
+    other.write_bytes(b"jpg")
+
+    deleted = delete_render(group / "42.png")
+
+    assert deleted.thumbnails == thumbnails
+    assert not any(path.exists() for path in thumbnails)
+    assert other.is_file()
+    assert [path.relative_to(group) for path in deleted.files] == [
+        path.relative_to(twin) for path in discard_render(twin / "42.png")
+    ]
+
+
+@pytest.mark.spec_exempt("structural: the verb's cases hold what the owner prints")
+def test_edit_discard_the_owner_takes_the_last_renders_approval_with_it(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = counted(tmp_path, schema, vocabulary, "ada", 1)
+    (tmp_path / "b" / "sources").mkdir()
+    group = _group(run)
+    _with_an_edit(group, 1)
+    own = _thumbnail(tmp_path, group / "1.png")
+
+    deleted = delete_render(group / "1.png")
+
+    assert group in deleted.files
+    assert approval_of(run, FLOW, 2) in deleted.files
+    assert not group.exists()
+    assert not approval_of(run, FLOW, 2).exists()
+    assert deleted.thumbnails == [own]
+    assert not own.exists()
+
+
+@pytest.mark.spec_exempt("structural: the verb's cases hold what the owner prints")
+def test_edit_discard_the_owner_takes_an_edit_its_chain_and_their_thumbnails(
+    tmp_path: Path,
+) -> None:
+    library, group = _owned(tmp_path)
+    render, first, second = (
+        _thumbnail(library, group / name)
+        for name in ("42.png", "42.edit-1.png", "42.edit-2.png")
+    )
+
+    deleted = delete_edit(group / "42.edit-1.png")
+
+    assert deleted.thumbnails == [first, second]
+    assert not first.exists() and not second.exists()
+    assert render.is_file()
+    assert [path.name for path in deleted.files] == [
+        "42.edit-1.png",
+        "42.edit-1.json",
+        "42.edit-1.composite.png",
+        "42.edit-2.png",
+        "42.edit-2.json",
+        "42.edit-2.composite.png",
+    ]
+
+
+@pytest.mark.spec_exempt("structural: the refusal is the owner's order, not a verb's")
+def test_edit_discard_the_owner_refuses_an_unreadable_chain_before_dropping_a_thumbnail(
+    tmp_path: Path,
+) -> None:
+    library, group = _owned(tmp_path)
+    for name in ("42.png", "42.edit-1.png", "42.edit-2.png"):
+        _thumbnail(library, group / name)
+    (group / "42.edit-2.json").write_text("{ not json")
+    before = tree(library)
+
+    with pytest.raises(Exception, match="42.edit-2.json"):
+        delete_edit(group / "42.edit-1.png")
+
+    assert tree(library) == before
 
 
 def _discard(wired_path: Path, image: Path) -> tuple[int, str, str]:
