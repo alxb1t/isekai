@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast
 
 from isekai.boundary import provision
+from isekai.boundary.onnx import cpu_session, silence_onnxruntime
 from isekai.boundary.provision import DEFAULT_MODELS_DIR
 from isekai.boundary.unpack import PLACEMENT_MANIFEST_PATH, PLACEMENT_REMEDY
-from isekai.boundary.wd14 import silence_onnxruntime
 from isekai.foundation.refusal import Refusal
 
 if TYPE_CHECKING:
@@ -264,9 +264,8 @@ class OnnxPoseFinder:
 
     def __init__(self, detector: Path, estimator: Path, runtime: Runtime) -> None:
         """Open both models on the CPU provider alone."""
-        providers = ["CPUExecutionProvider"]
-        self._detector = runtime.InferenceSession(str(detector), providers=providers)
-        self._estimator = runtime.InferenceSession(str(estimator), providers=providers)
+        self._detector = cpu_session(runtime, detector)
+        self._estimator = cpu_session(runtime, estimator)
 
     def find(self, image: "Image") -> Pose | None:
         """Return the one person's pose in `image`, or None when no row is answered."""

@@ -5,7 +5,7 @@ Run a mutation over each site that makes a session, add the opener with its case
 ## Progress
 
 - [x] 1 — Add the opener with its cases · moderate
-- [ ] 2 — Call the opener from its callers · moderate
+- [x] 2 — Call the opener from its callers · moderate
 - [ ] 3 — Amend the documents and replay the standing mutants · moderate
 
 ## 1 — Add the opener with its cases
@@ -33,22 +33,22 @@ Run a mutation over each site that makes a session, add the opener with its case
 
 ## 2 — Call the opener from its callers
 
-- [ ] 2.1 In `isekai/boundary/wd14.py` replace `def silence_onnxruntime` and its body with `from isekai.boundary.onnx import cpu_session, silence_onnxruntime` among the `isekai` imports, drop `import os`, and in `OnnxSession.__init__` open the session with `cpu_session(onnxruntime, model)` in place of `onnxruntime.InferenceSession(…)`, per [D3](design.md#d3) and [D4](design.md#d4); the calls of `silence_onnxruntime()` and `_require("onnxruntime")` before it, and `"silence_onnxruntime"` in `__all__`, stay.
+- [x] 2.1 In `isekai/boundary/wd14.py` replace `def silence_onnxruntime` and its body with `from isekai.boundary.onnx import cpu_session, silence_onnxruntime` among the `isekai` imports, drop `import os`, and in `OnnxSession.__init__` open the session with `cpu_session(onnxruntime, model)` in place of `onnxruntime.InferenceSession(…)`, per [D3](design.md#d3) and [D4](design.md#d4); the calls of `silence_onnxruntime()` and `_require("onnxruntime")` before it, and `"silence_onnxruntime"` in `__all__`, stay.
   Verify: `git grep -n -e 'def silence_onnxruntime' -e 'onnxruntime.InferenceSession(' -e '^import os' -- isekai/boundary/wd14.py` prints nothing.
 
-- [ ] 2.2 In `isekai/boundary/pose.py` import `cpu_session` and `silence_onnxruntime` from `isekai.boundary.onnx` in place of the import from `isekai.boundary.wd14`, and in `OnnxPoseFinder.__init__` drop the `providers` local and bind `self._detector` to `cpu_session(runtime, detector)` and `self._estimator` to `cpu_session(runtime, estimator)`.
+- [x] 2.2 In `isekai/boundary/pose.py` import `cpu_session` and `silence_onnxruntime` from `isekai.boundary.onnx` in place of the import from `isekai.boundary.wd14`, and in `OnnxPoseFinder.__init__` drop the `providers` local and bind `self._detector` to `cpu_session(runtime, detector)` and `self._estimator` to `cpu_session(runtime, estimator)`.
   Verify: `git grep -n -e 'runtime.InferenceSession(' -e 'isekai.boundary.wd14' -- isekai/boundary/pose.py` prints nothing.
 
-- [ ] 2.3 In `isekai/boundary/sam2.py` import `cpu_session` and `silence_onnxruntime` from `isekai.boundary.onnx` in place of the import from `isekai.boundary.wd14`, and in `OnnxSegmenter.__init__` drop the `providers` local and bind `self._encoder` to `cpu_session(runtime, encoder)` and `self._decoder` to `cpu_session(runtime, decoder)`.
+- [x] 2.3 In `isekai/boundary/sam2.py` import `cpu_session` and `silence_onnxruntime` from `isekai.boundary.onnx` in place of the import from `isekai.boundary.wd14`, and in `OnnxSegmenter.__init__` drop the `providers` local and bind `self._encoder` to `cpu_session(runtime, encoder)` and `self._decoder` to `cpu_session(runtime, decoder)`.
   Verify: `git grep -n -e 'runtime.InferenceSession(' -e 'isekai.boundary.wd14' -- isekai/boundary/sam2.py` prints nothing.
 
-- [ ] 2.4 In `evaluation/face.py` import `cpu_session` and `silence_onnxruntime` from `isekai.boundary.onnx` in place of the import from `isekai.boundary.wd14`, and end `_session` with `return cpu_session(onnxruntime, model, options)`, the lines that build `options` as they are.
+- [x] 2.4 In `evaluation/face.py` import `cpu_session` and `silence_onnxruntime` from `isekai.boundary.onnx` in place of the import from `isekai.boundary.wd14`, and end `_session` with `return cpu_session(onnxruntime, model, options)`, the lines that build `options` as they are.
   Verify: `git grep -n -e 'onnxruntime.InferenceSession(' -e 'isekai.boundary.wd14' -- evaluation/face.py` prints nothing.
 
-- [ ] 2.5 Run `uv run python -m tools.derive_imported_by`: the *Imported by* row of `wd14.py` loses `pose.py`, `sam2.py` and `evaluation/face.py`, and the row of `onnx.py` gains them and `wd14.py`.
+- [x] 2.5 Run `uv run python -m tools.derive_imported_by`: the *Imported by* row of `wd14.py` loses `pose.py`, `sam2.py` and `evaluation/face.py`, and the row of `onnx.py` gains them and `wd14.py`.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py tests/test_pipeline_cli.py` exits 0.
 
-- [ ] 2.6 Run the mutation over the whole of `isekai/boundary/onnx.py`, per [D5](design.md#d5), as one run over `isekai/boundary/onnx.py:1-80` with `tests/test_wd14.py tests/test_wd14_runtime.py tests/test_pose.py tests/test_sam2.py`; the range ends past the last line, which the tool allows. Kill each survivor with a case in `tests/test_wd14.py`.
+- [x] 2.6 Run the mutation over the whole of `isekai/boundary/onnx.py`, per [D5](design.md#d5), as one run over `isekai/boundary/onnx.py:1-80` with `tests/test_wd14.py tests/test_wd14_runtime.py tests/test_pose.py tests/test_sam2.py`; the range ends past the last line, which the tool allows. Kill each survivor with a case in `tests/test_wd14.py`.
   Verify: `uv run python -m tools.mutate isekai/boundary/onnx.py:1-80 --tests tests/test_wd14.py tests/test_wd14_runtime.py tests/test_pose.py tests/test_sam2.py` exits 0.
 
 ## 3 — Amend the documents and replay the standing mutants
