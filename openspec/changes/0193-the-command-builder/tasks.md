@@ -6,7 +6,7 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 
 - [x] 1 — Add `command` with its cases · moderate
 - [x] 2 — Build the builders from `command` · moderate
-- [ ] 3 — Call `command` from the sites · moderate
+- [x] 3 — Call `command` from the sites · moderate
 - [ ] 4 — Guard the entry with a test and its twin · moderate
 - [ ] 5 — Amend the documents and replay the standing mutants · moderate
 
@@ -55,40 +55,40 @@ Add `command` with its cases and a mutation run, build the builders and the pars
 
 ## 3 — Call `command` from the sites
 
-- [ ] 3.1 In `_stale` of `isekai/pipeline/edit.py` build the discard with `command("discard", image)`, `image` the quoted path as it is, per [D3](design.md#d3), and import `command` from `isekai.foundation.run`.
+- [x] 3.1 In `_stale` of `isekai/pipeline/edit.py` build the discard with `command("discard", image)`, `image` the quoted path as it is, per [D3](design.md#d3), and import `command` from `isekai.foundation.run`.
   Verify: `git grep -n -F 'python -m isekai' -- isekai/pipeline/edit.py` prints nothing.
 
-- [ ] 3.2 In `_held_way` of `isekai/pipeline/review.py` bind `rendering` to `command("render", shlex.quote(str(run.path.parent)), f"{source}=1")` in place of `python -m isekai render …`; the sentence that reads it stays.
+- [x] 3.2 In `_held_way` of `isekai/pipeline/review.py` bind `rendering` to `command("render", shlex.quote(str(run.path.parent)), f"{source}=1")` in place of `python -m isekai render …`; the sentence that reads it stays.
   Verify: `git grep -n -F 'python -m isekai render' -- isekai/pipeline/review.py` prints nothing.
 
-- [ ] 3.3 In `source_seeds` of `isekai/pipeline/generate.py` bind `pasted` to `command("render", _runs_root(run), f"{source}=1{_dependents(flows, source)}")` before the `raise`, and read it in the backticks of the refusal in place of `python -m isekai render …`; import `command` from `isekai.foundation.run`.
+- [x] 3.3 In `source_seeds` of `isekai/pipeline/generate.py` bind `pasted` to `command("render", _runs_root(run), f"{source}=1{_dependents(flows, source)}")` before the `raise`, and read it in the backticks of the refusal in place of `python -m isekai render …`; import `command` from `isekai.foundation.run`.
   Verify: `git grep -n -F 'python -m isekai' -- isekai/pipeline/generate.py` prints nothing.
 
-- [ ] 3.4 In `_reported` of `isekai/boundary/comfy/client.py` build the hint's command with `command("render", "<runs>", "<flow>=<count>")` inside an f-string in place of `python -m isekai render <runs> …`, the words around it as they are, and import `command` from `isekai.foundation.run` after the `flow` import.
+- [x] 3.4 In `_reported` of `isekai/boundary/comfy/client.py` build the hint's command with `command("render", "<runs>", "<flow>=<count>")` inside an f-string in place of `python -m isekai render <runs> …`, the words around it as they are, and import `command` from `isekai.foundation.run` after the `flow` import.
   Verify: `git grep -n -F 'python -m isekai' -- isekai/boundary/comfy/client.py` prints nothing.
 
-- [ ] 3.5 In `_runs` of `isekai/interface/compare_view.py` bind `retag` to `command("tag", "--runs", shlex.quote(str(root)), f"{shlex.quote(str(collection / COLLECTION_PHOTOS))}/*")` before the `raise`, and read it in the backticks of the refusal in place of `python -m isekai tag …`; import `command` from `isekai.foundation.run`.
+- [x] 3.5 In `_runs` of `isekai/interface/compare_view.py` bind `retag` to `command("tag", "--runs", shlex.quote(str(root)), f"{shlex.quote(str(collection / COLLECTION_PHOTOS))}/*")` before the `raise`, and read it in the backticks of the refusal in place of `python -m isekai tag …`; import `command` from `isekai.foundation.run`.
   Verify: `git grep -n -F 'python -m isekai' -- isekai/interface/compare_view.py` prints nothing.
 
-- [ ] 3.6 In `Surface.rendered` and `Surface.bake_image` of `isekai/interface/ui/surface.py` replace each `python -m isekai render <path>` with `command("render", str(<path>))`, the path unquoted as it was, and import `command` from `isekai.foundation.run`.
+- [x] 3.6 In `Surface.rendered` and `Surface.bake_image` of `isekai/interface/ui/surface.py` replace each `python -m isekai render <path>` with `command("render", str(<path>))`, the path unquoted as it was, and import `command` from `isekai.foundation.run`.
   Verify: `git grep -n -F 'python -m isekai' -- isekai/interface/ui/surface.py` prints nothing.
 
-- [ ] 3.7 In `sheet_cell` of `isekai/interface/verbs/prepare.py` build the command with `command("assign", "--flow", flow, "--runs", runs, run_id)`, and in `parse_cells` of `isekai/interface/verbs/common.py` with `command("assign", "--flow", flow, "--runs", runs, "<photo>")`; in place of each `python -m isekai assign …`; each file imports `command` from `isekai.foundation.run`.
+- [x] 3.7 In `sheet_cell` of `isekai/interface/verbs/prepare.py` build the command with `command("assign", "--flow", flow, "--runs", runs, run_id)`, and in `parse_cells` of `isekai/interface/verbs/common.py` with `command("assign", "--flow", flow, "--runs", runs, "<photo>")`; in place of each `python -m isekai assign …`; each file imports `command` from `isekai.foundation.run`.
   Verify: `git grep -n -F 'python -m isekai' -- isekai/interface/verbs/prepare.py isekai/interface/verbs/common.py` prints nothing.
 
-- [ ] 3.8 In `run_edit` of `isekai/interface/verbs/edits.py` build the request's hint with `command("edit", "<edit>", "<render>", "--composite", "<png>")` and the success line's with `command("render", shlex.quote(str(runs)))`, each inside the backticks it had, in place of each `python -m isekai …`, and import `command` from `isekai.foundation.run`.
+- [x] 3.8 In `run_edit` of `isekai/interface/verbs/edits.py` build the request's hint with `command("edit", "<edit>", "<render>", "--composite", "<png>")` and the success line's with `command("render", shlex.quote(str(runs)))`, each inside the backticks it had, in place of each `python -m isekai …`, and import `command` from `isekai.foundation.run`.
   Verify: `git grep -n -F 'python -m isekai' -- isekai/interface/verbs/edits.py` prints nothing.
 
-- [ ] 3.9 In `again` of `isekai/interface/render.py` rename the local `command = [` to `argv = [`, which the import of 3.10 would shadow; the list and `shlex.join` stay.
+- [x] 3.9 In `again` of `isekai/interface/render.py` rename the local `command = [` to `argv = [`, which the import of 3.10 would shadow; the list and `shlex.join` stay.
   Verify: `git grep -n -F 'command = [' -- isekai/interface/render.py` prints nothing.
 
-- [ ] 3.10 In `_asked` of `isekai/interface/render.py` bind `asked` to `command("assign", " ".join(flows), "--runs", shlex.quote(str(runs)), f"{photos}/*")` before the `raise`, and read `uv run {asked}` in the refusal, per [D3](design.md#d3); import `command` from `isekai.foundation.run`.
+- [x] 3.10 In `_asked` of `isekai/interface/render.py` bind `asked` to `command("assign", " ".join(flows), "--runs", shlex.quote(str(runs)), f"{photos}/*")` before the `raise`, and read `uv run {asked}` in the refusal, per [D3](design.md#d3); import `command` from `isekai.foundation.run`.
   Verify: `git grep -n -F 'uv run python -m isekai' -- isekai/interface/render.py` prints nothing.
 
-- [ ] 3.11 In `RenderRoutes._held` of `isekai/interface/ui/routes/rendering.py` write ``f"…then start `uv run --env-file .env {command('ui')}` again."``, the words before it as they are, in place of `python -m isekai ui`, and import `command` from `isekai.foundation.run`.
+- [x] 3.11 In `RenderRoutes._held` of `isekai/interface/ui/routes/rendering.py` write ``f"…then start `uv run --env-file .env {command('ui')}` again."``, the words before it as they are, in place of `python -m isekai ui`, and import `command` from `isekai.foundation.run`.
   Verify: `git grep -n -F 'python -m isekai' -- isekai/interface/ui/routes/rendering.py` prints nothing.
 
-- [ ] 3.12 Run `uv run python -m tools.derive_imported_by`: the *Imported by* row of `run.py` gains `boundary/comfy/client.py`.
+- [x] 3.12 Run `uv run python -m tools.derive_imported_by`: the *Imported by* row of `run.py` gains `boundary/comfy/client.py`.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py` exits 0.
 
 ## 4 — Guard the entry with a test and its twin

@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from isekai.boundary.gpu import keyed
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import REVIEW, Run, approved_versions, edit_at
+from isekai.foundation.run import REVIEW, Run, approved_versions, command, edit_at
 from isekai.interface import render
 from isekai.interface.ui import library
 from isekai.interface.ui.jobs import KINDS, plan
@@ -98,7 +98,7 @@ class RenderRoutes:
         if not keyed(self.surface.wired.session):
             return (
                 "No RunPod key: add RUNPOD_API_KEY to .env, then start "
-                "`uv run --env-file .env python -m isekai ui` again."
+                f"`uv run --env-file .env {command('ui')}` again."
             )
         return None
 

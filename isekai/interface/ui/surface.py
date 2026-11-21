@@ -23,6 +23,7 @@ from isekai.foundation.run import (
     REVIEW,
     Run,
     approval_of,
+    command,
     current_draft,
     edit_files,
     is_rendered,
@@ -229,7 +230,7 @@ class Surface:
                 )
             raise Refusal(
                 f"{image.name}: its record is there, its image is gone; render it "
-                f"again with `python -m isekai render {found / library.RUNS}`"
+                f"again with `{command('render', str(found / library.RUNS))}`"
             )
         return run, image, approval
 
@@ -275,7 +276,7 @@ class Surface:
         if bake.state == "queued":
             raise Refusal(
                 f"bake {k} of {seed} is queued and has no image yet; the next "
-                f"render session bakes it, `python -m isekai render "
-                f"{self.folder(collection) / library.RUNS}`"
+                "render session bakes it, "
+                f"`{command('render', str(self.folder(collection) / library.RUNS))}`"
             )
         return run, image
