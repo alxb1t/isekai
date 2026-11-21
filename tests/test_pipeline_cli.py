@@ -573,6 +573,29 @@ def test_per_item_prints_the_run_a_show_reads(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec_exempt("structural: pins the lines `_per_item` prints itself")
+def test_per_item_says_a_removed_flow_of_an_unopened_run_is_not_assigned(
+    tmp_path: Path,
+) -> None:
+    wired = _wiring(tmp_path)
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    flows = {
+        name: load_flow(name) for name in ("summon-anime-wai", "control-anime-wai")
+    }
+    work = _per_item(
+        "assign", argparse.Namespace(progress=None, remove=True), wired, flows, []
+    )
+
+    work(str(photo))
+
+    assert isinstance(wired.out, io.StringIO)
+    assert wired.out.getvalue().splitlines() == [
+        f"{photo}: {name} is not assigned" for name in flows
+    ]
+    assert list(wired.runs_root.glob("*")) == []
+
+
+@pytest.mark.spec_exempt("structural: pins the lines `_per_item` prints itself")
 def test_tag_says_what_each_tagger_wrote(tmp_path: Path) -> None:
     wired = _wiring(tmp_path)
     photo = tmp_path / "ada.jpg"

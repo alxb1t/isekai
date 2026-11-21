@@ -4,23 +4,23 @@ Pin the moving lines by mutation, move the runner from [`isekai/interface/cli.py
 
 ## Progress
 
-- [ ] 1 — Pin the moving lines by mutation · moderate
+- [x] 1 — Pin the moving lines by mutation · moderate
 - [ ] 2 — Move the runner to `verbs/runner.py` · moderate
 - [ ] 3 — Bind `prepare`'s run in its own module · moderate
 - [ ] 4 — Replay the mutation and amend the documents · moderate
 
 ## 1 — Pin the moving lines by mutation
 
-- [ ] 1.1 **HALT CHECK** The premise of [D1](design.md#d1) stands: the runner cut's code is in `isekai/interface/cli.py`, where the mutation runs of 1.3 and 1.4 read it.
+- [x] 1.1 **HALT CHECK** The premise of [D1](design.md#d1) stands: the runner cut's code is in `isekai/interface/cli.py`, where the mutation runs of 1.3 and 1.4 read it.
   Verify: `git grep -n -e '^class _Item' -e '^def _item_of' -e '^_BUILDERS' -e '^def _run_item' -- isekai/interface/cli.py` prints a line for each.
 
-- [ ] 1.2 Find the lines of the moving code: `_existing_run` ends one line before `_flows_for`, and `_seam` through `_assign_one` end one line before `main`.
+- [x] 1.2 Find the lines of the moving code: `_existing_run` ends one line before `_flows_for`, and `_seam` through `_assign_one` end one line before `main`.
   Verify: `git grep -n -e '^def _existing_run' -e '^def _flows_for' -e '^def _seam(' -e '^def main(' -- isekai/interface/cli.py` prints a line for each, in that order.
 
-- [ ] 1.3 Run the mutation over `_existing_run`, per [D6](design.md#d6): `uv run python -m tools.mutate isekai/interface/cli.py:<first>-<last> --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_resume.py tests/test_tagging.py tests/test_assign.py tests/test_review.py`, `<first>` the line of `def _existing_run` and `<last>` one less than the line of `def _flows_for`, both from 1.2. Kill each survivor with a case in `tests/test_pipeline_cli.py`; a survivor no case can kill is named equivalent, with its reason, in the commit body.
+- [x] 1.3 Run the mutation over `_existing_run`, per [D6](design.md#d6): `uv run python -m tools.mutate isekai/interface/cli.py:<first>-<last> --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_resume.py tests/test_tagging.py tests/test_assign.py tests/test_review.py`, `<first>` the line of `def _existing_run` and `<last>` one less than the line of `def _flows_for`, both from 1.2. Kill each survivor with a case in `tests/test_pipeline_cli.py`; a survivor no case can kill is named equivalent, with its reason, in the commit body.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 
-- [ ] 1.4 Run the same command over `_seam` through `_assign_one`: `<first>` the line of `def _seam(` and `<last>` one less than the line of `def main(`, both from 1.2, the survivors handled as in 1.3.
+- [x] 1.4 Run the same command over `_seam` through `_assign_one`: `<first>` the line of `def _seam(` and `<last>` one less than the line of `def main(`, both from 1.2, the survivors handled as in 1.3.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
 
 ## 2 — Move the runner to `verbs/runner.py`
