@@ -130,13 +130,15 @@ none                      ─▶ "No sheet waits for review"
 #### Scenario: an approved sheet says a session of another process renders
 - **Key:** `ui:review:the-sheet-names-a-session-another-process-holds`
 - **Layers:** unit
-- **WHEN** Review reads an approved sheet while a render session of another process holds the collection, and the app's render slot is empty
+- **WHEN** Review reads an approved sheet while a render session of another process holds the collection, and the
+  app's render slot is empty
 - **THEN** its payload's reason says a render session is running
 
 #### Scenario: a cancel is refused while a session of another process renders
 - **Key:** `ui:review:the-cancel-is-refused-while-another-process-renders`
 - **Layers:** unit
-- **WHEN** *Cancel approve* is posted for an approved sheet while a render session of another process holds the collection, and the app's render slot is empty
+- **WHEN** *Cancel approve* is posted for an approved sheet while a render session of another process holds the
+  collection, and the app's render slot is empty
 - **THEN** the cancel is refused, saying a render session is running
 - **AND** the approval stays
 
@@ -233,7 +235,8 @@ large view ──⇧⌫──▶ Delete this render?  [No] [Yes]
 #### Scenario: the delete is refused while a session of another process renders
 - **Key:** `ui:delete-render:refused-while-another-process-renders`
 - **Layers:** unit
-- **WHEN** a render is deleted while a render session of another process holds its collection, and the app's render slot is empty
+- **WHEN** a render is deleted while a render session of another process holds its collection, and the app's render
+  slot is empty
 - **THEN** the delete is refused, saying a render session is running
 - **AND** no file is deleted, and a session held in another collection refuses nothing
 
