@@ -10,6 +10,10 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.41] - 2026-11-21
+
+Gate: local 1m40s · CI not read under mf-ship · 0.87.40: local 1m47s · CI not read under mf-ship
+
 - `ensure_built` takes the binary and the timeout as keyword parameters defaulting to `BINARY` and `BUILD_TIMEOUT`; the build test passes its stand-in `npm` and ceiling, and the row of `isekai.interface.ui.bundle` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 20 (0185 D1, D3).
 - `serve` takes `root`, `ensure_built` and `run` as keyword parameters defaulting to what the product uses; the serve test passes its stand-ins, and the row of `isekai.interface.ui.app` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 19 (0185 D2, D3).
 - D61 says `serve` and the bundle's build take what a test replaces as parameters, its *Accepts* is closed, and `0185` joins its *Made by* (0185 D4, D3).

@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.41
 after: [0184-the-evaluator-seams]
 ---
 
