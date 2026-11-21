@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.42
 after: [0185-the-serve-seams]
 ---
 

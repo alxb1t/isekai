@@ -10,13 +10,18 @@ its new digest.
 
 ## [Unreleased]
 
-- `_per_item` is pinned before it is cut: cases reach the table's miss and its place in the order, and each survivor of the mutation run over its lines is killed by a case that asserts the exact lines it prints (0186 D3, D8).
-- `_per_item` is cut in `cli.py` into `_Item`, a builder for each stage verb, the table `_BUILDERS` and the runner `_run_item`; its two ratchet rows go, `FUNCTION_ROWS` is 6, and `PB-2b` finds `definition=flow,` (0186 D1–D8).
-- The mutation run over the new code, from `_Item` to the line before `_assign`, leaves no survivor, and the replay of `tests/mutants.json` holds (0186 D8).
 - The lines the runner move carries are pinned before they move: the mutation run over `_existing_run` and over `_seam` to `_assign_one` leaves one survivor, the "not assigned" line of `_assign`, which a case in `tests/test_pipeline_cli.py` kills (0187 D6).
 - The runner moves, text for text, from `cli.py` to `isekai/interface/verbs/runner.py`; `cli.py` reads `_per_item` through `isekai.interface.verbs`, `PB-2b` is re-pointed to the new file, and the *Imported by* tables are derived again (0187 D1, D2, D5–D7).
 - `prepare` binds its own run: `run_prepare` reads `_per_item` from `verbs/runner.py`, drops its `per_item` parameter and `PerItem`, and is the run of `PREPARE_ROW`; `cli.py`'s `_prepare` goes and `run_prepare` leaves the front door (0187 D3).
 - The mutation run over `verbs/runner.py` leaves no survivor and the replay of `tests/mutants.json` holds; D58 accepts the runs of `render` and `migrate` alone, and the READMEs and `cli.py`'s docstring name the runner (0187 D4, D6, D7).
+
+## [0.87.42] - 2026-11-21
+
+Gate: local 1m27s · CI not read under mf-ship · 0.87.41: local 1m40s · CI not read under mf-ship
+
+- `_per_item` is pinned before it is cut: cases reach the table's miss and its place in the order, and each survivor of the mutation run over its lines is killed by a case that asserts the exact lines it prints (0186 D3, D8).
+- `_per_item` is cut in `cli.py` into `_Item`, a builder for each stage verb, the table `_BUILDERS` and the runner `_run_item`; its two ratchet rows go, `FUNCTION_ROWS` is 6, and `PB-2b` finds `definition=flow,` (0186 D1–D8).
+- The mutation run over the new code, from `_Item` to the line before `_assign`, leaves no survivor, and the replay of `tests/mutants.json` holds (0186 D8).
 
 ## [0.87.41] - 2026-11-21
 
