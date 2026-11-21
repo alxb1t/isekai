@@ -12,6 +12,7 @@ its new digest.
 
 - `tests/test_run_directory.py` holds the keys of `_KINDS`, `STAGES`, `_WRITES`, `PREPARE`, `REACHED` and `_BUILDERS` to the stage record by one guard, and its twin names a table with a key the record lacks (0201 D1).
 - `_KINDS` of `isekai/interface/ui/library.py` reads its folders from the stage record through `_WORDS`, which keeps the written words, and a case holds each stage folder's word for Home's row (0201 D2, D6).
+- `producers.py` holds `PREPARE`, Prepare's order, and `tagged_runs`, its tag rule; `plan` and `run_prepare` read both, held by cases written first, and no printed line moves (0201 D3, D4, D5, D6).
 
 ## [0.88.10] - 2026-11-21
 

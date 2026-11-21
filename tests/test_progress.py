@@ -10,7 +10,7 @@ from typing import Any, cast, get_args
 
 import pytest
 
-from isekai.foundation.run import Run, open_run
+from isekai.foundation.run import PREPARE, Run, open_run
 from isekai.interface import progress
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.progress import (
@@ -23,7 +23,6 @@ from isekai.interface.progress import (
     IMAGE,
     LANDED,
     POD,
-    PREPARE,
     REFUSED,
     RENDER,
     SHEET,

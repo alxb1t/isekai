@@ -3,11 +3,13 @@
 A row names a stage's key, the folder its artifacts sit in, whether that folder is
 under `photo/` or under a flow, the verb that runs it and the attempts it may spend.
 `names.py` and `failures.py` read their tables from it, and `run.py` re-exports each
-name (D62).
+name (D62). `PREPARE` and `tagged_runs` beside it hold Prepare's order by verb and
+its tag rule, which the app's plan and the `prepare` verb read.
 
 Imports nothing of `isekai`: stdlib only, and on `python -m isekai`'s import graph.
 """
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal
 
@@ -72,3 +74,23 @@ def producer_for(key: str) -> Producer:
         if producer.key == key:
             return producer
     raise KeyError(key)
+
+
+# Prepare's order, by verb. Every flow reads one description (D17), so a photograph
+# is tagged and captioned once and then sheeted for each of its cells. It is not the
+# order a run passes the stages in above, which captions first.
+PREPARE: tuple[str, ...] = ("tag", "caption", "sheet")
+
+
+def tagged_runs(
+    todo: Mapping[str, Sequence[str]], taggers: Mapping[str, bool]
+) -> tuple[str, ...]:
+    """Return the runs `tag` takes: those a flow that declares a tagger names.
+
+    `todo` holds each flow's runs and `taggers` whether each flow declares one. A run
+    comes once, in the order the first such flow lists it.
+    e.g. {"a": ["r1", "r2"], "b": ["r2"]} with only b tagged -> ("r2",)
+    """
+    return tuple(
+        dict.fromkeys(run for flow, ids in todo.items() if taggers[flow] for run in ids)
+    )

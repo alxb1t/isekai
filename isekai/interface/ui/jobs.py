@@ -37,13 +37,12 @@ from typing import Any, Literal, TextIO, get_args
 from isekai.boundary.gpu import GpunitExit, Say, Volume, refused_line
 from isekai.foundation.artifacts import session_id
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import REPOSITORY
+from isekai.foundation.run import PHOTOGRAPH_VERBS, PREPARE, REPOSITORY, tagged_runs
 from isekai.interface.progress import (
     ARGUMENT,
     DONE,
     IMAGE,
     LANDED,
-    PREPARE,
     SHEET,
     TAG,
     progress_line,
@@ -157,24 +156,21 @@ class Step:
 
 
 def plan(todo: Mapping[str, Sequence[str]], tagged: Mapping[str, bool]) -> list[Step]:
-    """Return the steps that prepare `todo`'s runs: the photographs once, then by flow.
+    """Return the steps that prepare `todo`'s runs, in `PREPARE`'s order.
 
-    `tag` takes only the runs of a flow `tagged` names, and is left out when that
-    leaves none.
+    The photographs' steps name no flow and the sheets go by flow. `tag` takes the
+    runs `tagged_runs` names, and is left out when that leaves none.
     e.g. {"summon": ["r1"]} -> tag, caption over r1, then sheet over r1 in summon
     """
     photographs = tuple(dict.fromkeys(run for ids in todo.values() for run in ids))
-    tag = tuple(
-        dict.fromkeys(run for flow, ids in todo.items() if tagged[flow] for run in ids)
-    )
-    described = [
-        Step(None, verb, runs)
-        for verb, runs in (("tag", tag), ("caption", photographs))
-        if runs
-    ]
-    return described + [
-        Step(flow, "sheet", tuple(ids)) for flow, ids in todo.items() if ids
-    ]
+    described = {"tag": tagged_runs(todo, tagged), "caption": photographs}
+    steps: list[Step] = []
+    for verb in PREPARE:
+        if verb not in PHOTOGRAPH_VERBS:
+            steps += [Step(flow, verb, tuple(ids)) for flow, ids in todo.items() if ids]
+        elif described[verb]:
+            steps.append(Step(None, verb, described[verb]))
+    return steps
 
 
 def cells_of(steps: Sequence[Step]) -> list[str]:

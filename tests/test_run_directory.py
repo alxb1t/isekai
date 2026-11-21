@@ -43,6 +43,7 @@ from isekai.foundation.run import (
     OUTPUTS,
     PHOTO,
     PHOTOGRAPH_VERBS,
+    PREPARE,
     PRODUCERS,
     PROMPTS,
     REPOSITORY,
@@ -81,6 +82,7 @@ from isekai.foundation.run import (
     runs_in,
     slug,
     source_copy,
+    tagged_runs,
     version_of,
     versions,
     write_atomically,
@@ -1316,6 +1318,23 @@ def test_a_table_with_a_key_the_record_lacks_is_named() -> None:
         "_WRITES",
         "_BUILDERS",
     ]
+
+
+@pytest.mark.spec_exempt("structural: Prepare's order is the record's verbs in it")
+def test_prepares_order_is_tag_caption_sheet_and_the_records_verbs() -> None:
+    assert PREPARE == ("tag", "caption", "sheet")
+    assert set(PREPARE) <= {producer.verb for producer in PRODUCERS}
+
+
+@pytest.mark.spec_exempt("structural: the tag rule names each run once, in order")
+def test_tagged_runs_names_each_run_a_tagged_flow_lists_once_in_its_order() -> None:
+    both = {"a": True, "b": True}
+    only_b = {"a": False, "b": True}
+    assert tagged_runs({"a": ["r1", "r2"], "b": ["r2", "r3"]}, only_b) == ("r2", "r3")
+    assert tagged_runs({"a": ["r1", "r2"], "b": ["r2", "r1"]}, only_b) == ("r2", "r1")
+    assert tagged_runs({"a": ["r1", "r2"], "b": ["r2", "r1"]}, both) == ("r1", "r2")
+    assert tagged_runs({"a": ["r1"], "b": ["r2"]}, {"a": False, "b": False}) == ()
+    assert tagged_runs({"a": ["r1"], "b": []}, only_b) == ()
 
 
 @pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")

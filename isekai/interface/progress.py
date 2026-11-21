@@ -31,11 +31,6 @@ RENDER = "render"
 EDIT = "edit"
 Stage = Literal["tag", "caption", "sheet", "render", "edit", "review", "approve"]
 
-# The stages Prepare counts, in order. Its one child takes each photograph through
-# them in turn: tag and caption once, naming no flow, since every flow reads the
-# one description (D17); then sheet for each of its cells.
-PREPARE = (TAG, CAPTION, SHEET)
-
 START = "start"
 DONE = "done"
 REFUSED = "refused"

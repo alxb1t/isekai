@@ -769,6 +769,41 @@ def test_a_photograph_is_described_once(tmp_path: Path) -> None:
     ]
 
 
+@pytest.mark.spec("ui:prepare:a-photograph-is-described-once")
+@pytest.mark.spec("ui:prepare:each-photograph-in-turn")
+def test_prepare_plans_tag_for_the_runs_a_tagged_flow_names() -> None:
+    other = OFFERED[1]
+    both = {FLOW: ["r1", "r2"], other: ["r2", "r1"]}
+
+    assert plan(both, {FLOW: False, other: False}) == [
+        Step(None, "caption", ("r1", "r2")),
+        Step(FLOW, "sheet", ("r1", "r2")),
+        Step(other, "sheet", ("r2", "r1")),
+    ]
+    assert plan(both, {FLOW: False, other: True}) == [
+        Step(None, "tag", ("r2", "r1")),
+        Step(None, "caption", ("r1", "r2")),
+        Step(FLOW, "sheet", ("r1", "r2")),
+        Step(other, "sheet", ("r2", "r1")),
+    ]
+    assert plan(both, {FLOW: True, other: True}) == [
+        Step(None, "tag", ("r1", "r2")),
+        Step(None, "caption", ("r1", "r2")),
+        Step(FLOW, "sheet", ("r1", "r2")),
+        Step(other, "sheet", ("r2", "r1")),
+    ]
+    assert plan({FLOW: ["r1"], other: []}, {FLOW: True, other: True}) == [
+        Step(None, "tag", ("r1",)),
+        Step(None, "caption", ("r1",)),
+        Step(FLOW, "sheet", ("r1",)),
+    ]
+    assert plan({FLOW: ["r1"], other: []}, {FLOW: False, other: True}) == [
+        Step(None, "caption", ("r1",)),
+        Step(FLOW, "sheet", ("r1",)),
+    ]
+    assert plan({}, {}) == []
+
+
 @pytest.mark.spec("ui:events:a-reconnect-keeps-prepare-progress")
 def test_reconnect_keeps_prepare_progress(
     tmp_path: Path, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
