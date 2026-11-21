@@ -92,12 +92,20 @@ def _is_fresh(dist: Path, source: Path) -> bool:
     )
 
 
-def ensure_built(source: Path = SOURCE) -> Path:
+def ensure_built(
+    source: Path = SOURCE,
+    *,
+    binary: str = BINARY,
+    timeout: float = BUILD_TIMEOUT,
+) -> Path:
     """Return the built bundle's directory, building it first if it is absent.
 
     Called at startup, before a port is bound, so a missing toolchain is a
     message in the terminal the operator is already standing in rather than a
     blank page they have to diagnose.
+
+    `binary` is the command and `timeout` the ceiling in seconds;
+    each defaults to the constant above, and a test passes its own.
 
     **Rebuilt when the source has moved under it**, not only when it is absent:
     see `_is_fresh`. A bundle that is present but older than the code it was
@@ -107,9 +115,9 @@ def ensure_built(source: Path = SOURCE) -> Path:
     if _is_fresh(dist, source):
         return dist
 
-    if shutil.which(BINARY) is None:
+    if shutil.which(binary) is None:
         raise Refusal(
-            f"{BINARY!r} is not on PATH, and `isekai ui` is the only verb that "
+            f"{binary!r} is not on PATH, and `isekai ui` is the only verb that "
             "needs it; install Node.js (https://nodejs.org), then run this "
             "command again -- every other verb in this pipeline is unaffected"
         )
@@ -125,7 +133,7 @@ def ensure_built(source: Path = SOURCE) -> Path:
     # same session keeps the terminal's SIGINT from it, so a Ctrl-C stops the
     # group here too.
     build = subprocess.Popen(
-        [BINARY, "run", "build"],
+        [binary, "run", "build"],
         cwd=source,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -133,11 +141,11 @@ def ensure_built(source: Path = SOURCE) -> Path:
         start_new_session=True,
     )
     try:
-        stdout, stderr = build.communicate(timeout=BUILD_TIMEOUT)
+        stdout, stderr = build.communicate(timeout=timeout)
     except subprocess.TimeoutExpired as slow:
         _stop(build)
         raise Refusal(
-            f"{BINARY} run build did not finish within {BUILD_TIMEOUT} seconds "
+            f"{binary} run build did not finish within {timeout} seconds "
             f"and was stopped; run it in {source.name}/ by hand to see where it "
             "stops -- a build that reaches the network for a missing dependency "
             "is the usual cause"
@@ -147,12 +155,12 @@ def ensure_built(source: Path = SOURCE) -> Path:
         raise
     if build.returncode != 0:
         raise Refusal(
-            f"building the browser bundle failed ({BINARY} run build exited "
+            f"building the browser bundle failed ({binary} run build exited "
             f"{build.returncode}); {stderr.strip() or stdout.strip()}"
         )
     if not dist.is_dir():
         raise Refusal(
-            f"{BINARY} run build reported success and wrote no {dist.name}/; "
+            f"{binary} run build reported success and wrote no {dist.name}/; "
             f"check {source.name}/vite.config.ts for where it puts its output"
         )
     return dist

@@ -4,27 +4,27 @@ Each phase gives one function a parameter, switches its test to pass a fake, and
 
 ## Progress
 
-- [ ] 1 — The binary and the timeout, parameters of the bundle's build · moderate
+- [x] 1 — The binary and the timeout, parameters of the bundle's build · moderate
 - [ ] 2 — The root, the build and the run, parameters of serve · moderate
 - [ ] 3 — D61 amended · moderate
 
 ## 1 — The binary and the timeout, parameters of the bundle's build
 
-- [ ] 1.1 **HALT CHECK** The base holds the evaluator's seams, so the ratchet's row ceiling is 21 before this phase.
+- [x] 1.1 **HALT CHECK** The base holds the evaluator's seams, so the ratchet's row ceiling is 21 before this phase.
   Verify: `git grep -n -e "^PATCHED_ROWS = 21" -- tests/test_ratchets.py` prints one line.
-- [ ] 1.2 In `isekai/interface/ui/bundle.py`, give `ensure_built` the keyword-only parameters `binary: str = BINARY` and `timeout: float = BUILD_TIMEOUT`, after `source: Path = SOURCE` ([D1](design.md#d1)).
+- [x] 1.2 In `isekai/interface/ui/bundle.py`, give `ensure_built` the keyword-only parameters `binary: str = BINARY` and `timeout: float = BUILD_TIMEOUT`, after `source: Path = SOURCE` ([D1](design.md#d1)).
   Verify: `git grep -n -F -e "binary: str = BINARY" -e "timeout: float = BUILD_TIMEOUT" -- isekai/interface/ui/bundle.py` prints the lines that hold its defaults.
-- [ ] 1.3 In `ensure_built` alone, change `which(BINARY)` to `which(binary)`, `[BINARY,` to `[binary,` and `timeout=BUILD_TIMEOUT` to `timeout=timeout`. In each refusal message, change `{BINARY!r}` to `{binary!r}`, `{BINARY}` to `{binary}` and `{BUILD_TIMEOUT}` to `{timeout}`. Leave `BINARY` and `BUILD_TIMEOUT` defined above it.
+- [x] 1.3 In `ensure_built` alone, change `which(BINARY)` to `which(binary)`, `[BINARY,` to `[binary,` and `timeout=BUILD_TIMEOUT` to `timeout=timeout`. In each refusal message, change `{BINARY!r}` to `{binary!r}`, `{BINARY}` to `{binary}` and `{BUILD_TIMEOUT}` to `{timeout}`. Leave `BINARY` and `BUILD_TIMEOUT` defined above it.
   Verify: `git grep -n -F -e "BINARY!r" -e "{BINARY}" -e "which(BINARY)" -e "[BINARY," -e "timeout=BUILD_TIMEOUT" -e "{BUILD_TIMEOUT}" -- isekai/interface/ui/bundle.py` prints nothing.
-- [ ] 1.4 In the docstring of `ensure_built`, add after its first paragraph: `` `binary` is the command and `timeout` the ceiling in seconds; each defaults to the constant above, and a test passes its own. ``
+- [x] 1.4 In the docstring of `ensure_built`, add after its first paragraph: `` `binary` is the command and `timeout` the ceiling in seconds; each defaults to the constant above, and a test passes its own. ``
   Verify: `git grep -n -F "each defaults to the constant above" -- isekai/interface/ui/bundle.py` prints one line.
-- [ ] 1.5 In `test_a_build_that_does_not_finish_is_stopped_and_named` of `tests/test_ui.py`, delete the line `monkeypatch.setattr(bundle, "BINARY", str(npm))` and each `monkeypatch.setattr(bundle, "BUILD_TIMEOUT", …)` line. Pass `binary=str(npm), timeout=3` to the `bundle.ensure_built(source)` call under the first `pytest.raises(Refusal)`, and `binary=str(npm), timeout=60` to the one under `pytest.raises(KeyboardInterrupt)`. Keep the `monkeypatch` parameter: the test still uses `monkeypatch.context()`.
+- [x] 1.5 In `test_a_build_that_does_not_finish_is_stopped_and_named` of `tests/test_ui.py`, delete the line `monkeypatch.setattr(bundle, "BINARY", str(npm))` and each `monkeypatch.setattr(bundle, "BUILD_TIMEOUT", …)` line. Pass `binary=str(npm), timeout=3` to the `bundle.ensure_built(source)` call under the first `pytest.raises(Refusal)`, and `binary=str(npm), timeout=60` to the one under `pytest.raises(KeyboardInterrupt)`. Keep the `monkeypatch` parameter: the test still uses `monkeypatch.context()`.
   Verify: `git grep -n -F -e '"BINARY"' -e '"BUILD_TIMEOUT"' -- tests/test_ui.py` prints nothing.
-- [ ] 1.6 In `tests/test_ratchets.py`, delete the row `"isekai.interface.ui.bundle": 3,` from `PATCHED_MODULES`.
+- [x] 1.6 In `tests/test_ratchets.py`, delete the row `"isekai.interface.ui.bundle": 3,` from `PATCHED_MODULES`.
   Verify: `git grep -n -F "isekai.interface.ui.bundle" -- tests/test_ratchets.py` prints nothing.
-- [ ] 1.7 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 20`.
+- [x] 1.7 In `tests/test_ratchets.py`, set `PATCHED_ROWS = 20`.
   Verify: `git grep -n -e "^PATCHED_ROWS = 20" -- tests/test_ratchets.py` prints one line.
-- [ ] 1.8 Run the bundle's tests and the ratchet with the row gone.
+- [x] 1.8 Run the bundle's tests and the ratchet with the row gone.
   Verify: `uv run pytest tests/test_ui.py tests/test_ratchets.py` exits 0.
 
 ## 2 — The root, the build and the run, parameters of serve

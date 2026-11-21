@@ -352,8 +352,6 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
     )
     npm.write_text(f"#!/bin/sh\n{script}")
     npm.chmod(0o755)
-    monkeypatch.setattr(bundle, "BINARY", str(npm))
-    monkeypatch.setattr(bundle, "BUILD_TIMEOUT", 3)
     communicate = subprocess.Popen.communicate
 
     def started(
@@ -372,7 +370,7 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
     reader = os.open(held, os.O_RDONLY | os.O_NONBLOCK)
     with monkeypatch.context() as patched, pytest.raises(Refusal) as refused:
         patched.setattr(subprocess.Popen, "communicate", started)
-        bundle.ensure_built(source)
+        bundle.ensure_built(source, binary=str(npm), timeout=3)
 
     assert "3 seconds" in str(refused.value)
     assert "by hand" in str(refused.value)
@@ -382,7 +380,6 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
     # build never receives the terminal's SIGINT.
     child.unlink()
     reader = os.open(held, os.O_RDONLY | os.O_NONBLOCK)
-    monkeypatch.setattr(bundle, "BUILD_TIMEOUT", 60)
 
     def interrupt(signum: int, frame: object) -> None:
         if not child.is_file() or not child.read_text().strip():
@@ -394,7 +391,7 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
     try:
         signal.setitimer(signal.ITIMER_REAL, 0.05)
         with pytest.raises(KeyboardInterrupt):
-            bundle.ensure_built(source)
+            bundle.ensure_built(source, binary=str(npm), timeout=60)
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, previous)
