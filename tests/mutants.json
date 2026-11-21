@@ -361,9 +361,9 @@
   },
   {
     "finding": "PB-2b",
-    "path": "isekai/interface/cli.py",
-    "find": "                        definition=flows[name],\n",
-    "replace": "                        definition=None,\n",
+    "path": "isekai/interface/verbs/runner.py",
+    "find": "definition=flow,\n",
+    "replace": "definition=None,\n",
     "tests": ["tests/test_pipeline_cli.py"],
     "why": "the approve verb must hand the flow on, or its warning counts the tags alone"
   },

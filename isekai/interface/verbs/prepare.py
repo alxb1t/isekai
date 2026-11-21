@@ -1,12 +1,12 @@
-"""The `prepare` verb: its run, its arguments and its row, with no run bound."""
+"""The `prepare` verb: its run, its arguments and its row, which carries the run."""
 
 import argparse
 import dataclasses
 import shlex
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from pathlib import Path
 
-from isekai.foundation.flow import Flow, load_flow
+from isekai.foundation.flow import load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import RUNS_ROOT, across
 from isekai.interface.verbs.common import (
@@ -16,18 +16,14 @@ from isekai.interface.verbs.common import (
     parse_cells,
     progress_flag,
 )
+from isekai.interface.verbs.runner import _per_item
 from isekai.interface.wiring import Wiring
 
-PerItem = Callable[
-    [str, argparse.Namespace, Wiring, Mapping[str, Flow], list[str]],
-    Callable[[str], None],
-]
 
-
-def run_prepare(args: argparse.Namespace, wired: Wiring, per_item: PerItem) -> int:
+def run_prepare(args: argparse.Namespace, wired: Wiring) -> int:
     """Take each photograph through `tag`, `caption`, then its cells' sheets, in turn.
 
-    Each step is the work `per_item` gives its verb, so its lines and refusals are
+    Each step is the work `_per_item` gives its verb, so its lines and refusals are
     that verb's; the one `tag` work opens the tagger once. A refusal costs only its
     own step (D1), and an unassigned cell's sheet refuses rather than making its
     directory again.
@@ -44,10 +40,10 @@ def run_prepare(args: argparse.Namespace, wired: Wiring, per_item: PerItem) -> i
         for name in dict.fromkeys(flow for _, flow in cells)
     }
     collected: list[str] = []
-    tag = per_item("tag", args, shared, {}, collected)
-    describe = per_item("caption", args, shared, {}, collected)
+    tag = _per_item("tag", args, shared, {}, collected)
+    describe = _per_item("caption", args, shared, {}, collected)
     sheets = {
-        name: per_item("sheet", args, shared, {name: flow}, collected)
+        name: _per_item("sheet", args, shared, {name: flow}, collected)
         for name, flow in flows.items()
     }
     reporter = Reporter(wired.out, wired.err, args.progress == "json")
@@ -105,4 +101,5 @@ PREPARE_ROW = Verb(
     "prepare",
     "tag, caption, then sheet each photograph in turn, for the cells named",
     prepare_arguments,
+    run_prepare,
 )

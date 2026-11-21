@@ -42,9 +42,9 @@ through the other.
 
 **A verb is a row of `isekai/interface/verbs/`, declared once**: its name, summary,
 arguments and run sit in the module of its family (D58). This file holds `ROWS`,
-builds the parser from their arguments and dispatches to their runs. It keeps the
-flow-stage verbs' per-item work, `assign`, `migrate`, and the runs of `render`
-and `prepare`, which need what only this file holds.
+builds the parser from their arguments and dispatches to their runs. The runner
+is `verbs/runner.py`; this file keeps `migrate` and the run of `render`, which
+need what only this file holds.
 
 **`isekai/__main__.py` is a shim over this file.** `runpy` pins where the entry
 point's *path* is; it does not pin where the parser lives, and a package's largest
@@ -59,30 +59,20 @@ import argparse
 import dataclasses
 import shlex
 import sys
-from collections.abc import Callable, Mapping, Sequence
-from functools import cache
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import NoReturn, TypeVar
+from typing import NoReturn
 
-from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.caption_config import load_caption_config
 from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow, tracked_flows
 from isekai.foundation.migrate import migrate
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     PHOTOGRAPH_VERBS,
     RUNS_ROOT,
-    Run,
     across,
-    assign,
-    find_run,
     runs_in,
 )
-from isekai.interface.drafting import (
-    approve_across,
-)
 from isekai.interface.render import run_session
-from isekai.interface.run_view import report
 from isekai.interface.verbs import (
     APPROVE_ROW,
     ASSIGN_ROW,
@@ -101,30 +91,12 @@ from isekai.interface.verbs import (
     SHOW_ROW,
     TAG_ROW,
     UI_ROW,
-    Reporter,
     Verb,
+    _per_item,
     generate_batch,
-    once,
     require_tracked,
-    run_for,
-    run_or_photo,
-    run_prepare,
-    say,
 )
 from isekai.interface.wiring import Wiring, wiring
-from isekai.pipeline.caption import caption
-from isekai.pipeline.review import (
-    approve,
-    discard,
-    review,
-)
-from isekai.pipeline.review import cancel as cancel_approval
-from isekai.pipeline.sheet import sheet
-from isekai.pipeline.tagging import tag_hosted, tag_wd14
-from isekai.shared.field_map import FieldMap
-from isekai.shared.vocabulary import Vocabulary
-
-T = TypeVar("T")
 
 # What each of the photograph's verbs writes, for its refusal of `--flow`.
 _WRITES: Mapping[str, str] = {"caption": "prose", "tag": "tags"}
@@ -197,12 +169,6 @@ def _migrate(args: argparse.Namespace, wired: Wiring) -> int:
                 refused = True
                 print(f"{where}: refused: {unmigrated}", file=wired.err)
     return 1 if refused else 0
-
-
-def _existing_run(identifier: str, wired: Wiring) -> Run | None:
-    """Return the run an argument names, as `run_for` does, but never open one."""
-    named = run_or_photo(identifier, wired)
-    return named if isinstance(named, Run) else find_run(named, wired.runs_root)
 
 
 def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
@@ -282,18 +248,13 @@ def _render(args: argparse.Namespace, wired: Wiring) -> int:
     return run_session(args, wired, _dispatch_argv)
 
 
-def _prepare(args: argparse.Namespace, wired: Wiring) -> int:
-    """Run `prepare`, handing it `_per_item` for the work of each of its steps."""
-    return run_prepare(args, wired, _per_item)
-
-
 ROWS: tuple[Verb, ...] = (
     IMPORT_ROW,
     ASSIGN_ROW,
     CAPTION_ROW,
     TAG_ROW,
     SHEET_ROW,
-    dataclasses.replace(PREPARE_ROW, run=_prepare),
+    PREPARE_ROW,
     REVIEW_ROW,
     APPROVE_ROW,
     DRAFT_ROW,
@@ -351,266 +312,6 @@ def _named_a_flow(args: argparse.Namespace, targets: Sequence[str]) -> str:
         f"`{verb}` takes no --flow: it writes the photograph's {_WRITES[verb]}, "
         f"which every flow reads; run `python -m isekai {verb}{root}{again} {photos}`"
     )
-
-
-def _seam(value: T | None, name: str, does: str) -> T:
-    """Return a wiring seam the verb in hand cannot run without, or refuse.
-
-    `reader` is optional on `Wiring` because a front end that serves stage (3)
-    alone reaches no hosted model and would otherwise fabricate a double it never
-    calls. The verbs that *do* call one say so here, in one
-    place, rather than each inlining the same guard.
-    """
-    if value is None:
-        raise Refusal(
-            f"this wiring was composed without a {name}, and the verb {does} "
-            f"through one"
-        )
-    return value
-
-
-def _per_item(
-    verb: str,
-    args: argparse.Namespace,
-    wired: Wiring,
-    flows: Mapping[str, Flow],
-    collected: list[str],
-) -> Callable[[str], None]:
-    """Return the work one identifier gets, with everything run-independent done.
-
-    `collected` takes the refusals that must not abandon the rest of a
-    photograph's work: one per flow, and `tag`'s one per tagger.
-
-    The flows a verb acts on are a property of the invocation, not of the
-    photograph, so they are resolved once by the caller rather than re-read from
-    disk per identifier. `tag` and `caption` run once per photograph and name no
-    flow, since every flow reads the one description (D17); every other stage
-    runs per flow, because the flow is what supplies what it reads: its schema
-    and its dials. The vocabulary is resolved at most once for the same reason and
-    lazily for the old one: parsing the 308 KB tag list costs ~50 ms, and only
-    two verbs need it at all.
-    """
-    new_version = bool(getattr(args, "new_version", False))
-    opening: list[Callable[[], LocalTagger]] = []
-    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == "json")
-
-    @cache
-    def vocabulary() -> Vocabulary:
-        """Return this invocation's vocabulary, reading it at most once."""
-        return wired.vocabulary()
-
-    @cache
-    def field_map() -> FieldMap:
-        """Return this invocation's field map, reading it at most once.
-
-        Memoised beside the vocabulary and for its reason: the table is held
-        against the vocabulary at load, so reading it per photograph would
-        re-run four whole-table checks for every input of an invocation. It is handed
-        the memoised vocabulary rather than finding its own.
-        """
-        return wired.field_map(vocabulary())
-
-    def tagger() -> Callable[[], LocalTagger]:
-        """Return a thunk that opens this invocation's local tagger, once.
-
-        Lazy, because opening it hashes 467 MB and loads a graph: an invocation whose
-        lists are all already written must not pay for that to write nothing,
-        and a completed run must still resume on a machine that has since
-        emptied `models/`. `vocabulary()` above is a thunk for exactly this
-        reason and says so.
-        """
-        resolve = _seam(wired.tagger, "tagger", "scores the photograph")
-        if not opening:
-            # A refusal is kept too, so the 467 MB hash is not re-run to meet it.
-            opening.append(once(resolve))
-        return opening[0]
-
-    def work(identifier: str) -> None:
-        if verb == "assign":
-            _assign(identifier, bool(args.remove), wired, list(flows), collected)
-            return
-        try:
-            run = run_for(identifier, wired)
-        except Refusal as unopened:
-            names: list[str | None] = (
-                [None] if verb in PHOTOGRAPH_VERBS else list(flows)
-            )
-            for name in names:
-                reporter.item(identifier, name, verb, "refused", str(unopened))
-            raise
-        if verb == "show":
-            for line in report(run, wired.flows_dir):
-                print(line, file=wired.out)
-            return
-        step: Callable[[str], None] | None = None
-        describe: Callable[[], None] | None = None
-        if verb == "caption":
-
-            def caption_photo() -> None:
-                reader = _seam(wired.reader, "reader", "reads the photograph")()
-                say(
-                    reporter,
-                    run,
-                    "caption",
-                    caption(
-                        run,
-                        reader,
-                        briefing_path=load_caption_config().briefing_path,
-                        new_version=new_version,
-                    ),
-                )
-
-            describe = caption_photo
-        elif verb == "tag":
-
-            def tag_photo() -> None:
-                def hosted() -> None:
-                    tagger_for = _seam(
-                        wired.hosted_tagger, "hosted tagger", "tags the photograph"
-                    )
-                    written = tag_hosted(run, tagger_for(), new_version=new_version)
-                    say(reporter, run, "tags", written)
-
-                # Each tagger's refusal is collected on its own, so neither costs
-                # the other its list. WD14 first: it is the sheet's input and
-                # reaches no network (D1).
-                steps: tuple[Callable[[], None], ...] = (
-                    lambda: say(
-                        reporter,
-                        run,
-                        "wd14",
-                        tag_wd14(run, tagger(), new_version=new_version),
-                    ),
-                    hosted,
-                )
-                collected.extend(across(steps, lambda step: step()))
-
-            describe = tag_photo
-        elif verb == "sheet":
-
-            def sheet_flow(name: str) -> None:
-                flow = flows[name]
-                written, warnings = sheet(
-                    run,
-                    name,
-                    flow.schema,
-                    vocabulary(),
-                    field_map(),
-                    tagged=flow.tagger,
-                    flow_digest=flow.digest,
-                    new_version=new_version,
-                )
-                for warning in warnings:
-                    print(f"warning: {warning}", file=wired.err)
-                say(reporter, run, "sheet", written)
-
-            step = sheet_flow
-        elif verb == "review":
-
-            def review_flow(name: str) -> None:
-                if args.discard:
-                    gone = discard(run, name)
-                    reporter.say(f"{run.id}: review discarded {name}/{gone.name}")
-                    return
-                say(reporter, run, "review", review(run, name, new_version=new_version))
-
-            step = review_flow
-        elif verb == "approve":
-
-            def approve_flow(name: str) -> None:
-                if args.cancel:
-                    left, changed = cancel_approval(run, name)
-                    if not changed and left is not None:
-                        reporter.say(
-                            f"{run.id}: approve has nothing to cancel in {name}; "
-                            f"it is at its draft {left.name}"
-                        )
-                        return
-                    back = "a copy, deleted" if left is None else f"back to {left.name}"
-                    reporter.say(f"{run.id}: approve cancelled {name}, {back}")
-                    return
-                written, warnings = (
-                    approve(
-                        run,
-                        name,
-                        flows[name].schema,
-                        vocabulary(),
-                        excluded=field_map().excluded,
-                        definition=flows[name],
-                    )
-                    if args.source is None
-                    else approve_across(
-                        run, flows[name], args.source, vocabulary, field_map
-                    )
-                )
-                for warning in warnings:
-                    print(f"warning: {warning}", file=wired.err)
-                say(reporter, run, "approve", written)
-
-            step = approve_flow
-        else:
-            raise Refusal(f"{verb!r} is not a stage this build runs")
-
-        def reported(name: str | None, each: Callable[[], None]) -> None:
-            """Run `each` between its `start` and its end; `None` names no flow."""
-            reporter.item(run.id, name, verb, "start")
-            before = len(collected)
-            try:
-                each()
-            except Refusal as refused:
-                reporter.item(run.id, name, verb, "refused", str(refused))
-                raise
-            # `tag` collects each tagger's refusal rather than raising it.
-            if len(collected) > before:
-                reporter.item(
-                    run.id, name, verb, "refused", "; ".join(collected[before:])
-                )
-            else:
-                reporter.item(run.id, name, verb, "done")
-
-        if describe is not None:
-            # The photograph is described once, for every flow (D17).
-            collected.extend(across([describe], lambda one: reported(None, one)))
-        elif step is not None:
-            # Each flow's refusal is collected on its own, so one flow's does not
-            # cost the input its other flows.
-            per_flow = step
-            collected.extend(
-                across(list(flows), lambda name: reported(name, lambda: per_flow(name)))
-            )
-
-    return work
-
-
-def _assign(
-    identifier: str,
-    remove: bool,
-    wired: Wiring,
-    flows: Sequence[str],
-    collected: list[str],
-) -> None:
-    """Assign each flow to the run `identifier` names, or remove each empty one.
-
-    Removing opens no run: a source with none has no flow to remove.
-    """
-    run = _existing_run(identifier, wired) if remove else run_for(identifier, wired)
-    if run is None:
-        for name in flows:
-            print(f"{identifier}: {name} is not assigned", file=wired.out)
-        return
-    collected.extend(
-        across(list(flows), lambda name: _assign_one(run, name, remove, wired))
-    )
-
-
-def _assign_one(run: Run, flow: str, remove: bool, wired: Wiring) -> None:
-    """Assign or remove one flow for `run`, and say which happened."""
-    changed = assign(run, flow, remove=remove)
-    if remove:
-        done = f"removed {flow}" if changed else f"{flow} is not assigned"
-    else:
-        done = f"assigned {flow}" if changed else f"{flow} is already assigned"
-    print(f"{run.id}: {done}", file=wired.out)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

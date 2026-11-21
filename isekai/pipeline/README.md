@@ -43,10 +43,10 @@ independent, and neither reads the other's output
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `importing.py` | `interface/ui/__init__.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/ui/routes/staging.py`, `interface/ui/routes/tattoos.py`, `interface/ui/shapes.py`, `interface/ui/surface.py`, `interface/verbs/library.py` | — |
-| `caption.py` | `interface/cli.py`, `interface/wiring.py` | — |
-| `tagging.py` | `interface/cli.py`, `interface/wiring.py` | — |
-| `sheet.py` | `interface/cli.py`, `interface/drafting.py` | — |
-| `review.py` | `interface/cli.py`, `interface/drafting.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/ui/routes/images.py`, `interface/ui/routes/reviewing.py`, `interface/ui/shapes.py`, `interface/verbs/drafts.py` | — |
+| `caption.py` | `interface/verbs/runner.py`, `interface/wiring.py` | — |
+| `tagging.py` | `interface/verbs/runner.py`, `interface/wiring.py` | — |
+| `sheet.py` | `interface/drafting.py`, `interface/verbs/runner.py` | — |
+| `review.py` | `interface/drafting.py`, `interface/ui/app.py`, `interface/ui/library.py`, `interface/ui/routes/images.py`, `interface/ui/routes/reviewing.py`, `interface/ui/shapes.py`, `interface/verbs/drafts.py`, `interface/verbs/runner.py` | — |
 | `edit.py` | `interface/render.py`, `interface/ui/routes/place.py`, `interface/ui/routes/rendering.py`, `interface/verbs/edits.py` | — |
 | `proposing.py` | `interface/wiring.py` | — |
 | `tattoos.py` | `interface/ui/routes/place.py`, `interface/ui/routes/tattoos.py`, `interface/ui/shapes.py` | — |
