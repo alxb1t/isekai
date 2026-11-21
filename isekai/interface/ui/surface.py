@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
+from isekai.foundation.library import collection_held
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
@@ -196,15 +197,15 @@ class Surface:
     def rendering(self, collection: str) -> str | None:
         """Return what a render running for `collection` says, or None.
 
-        A session over several collections renders each, not only the first its
-        slot names.
+        The render slot answers for this server's job: a session over several
+        collections renders each, not only the first its slot names. A session any
+        process holds in the collection answers by its lock, as the verb does.
         """
         slot = self.rendering_slot()
-        return (
-            "A render session is running."
-            if slot and collection in slot.get("collections", [slot["collection"]])
-            else None
-        )
+        ours = slot and collection in slot.get("collections", [slot["collection"]])
+        if ours or collection_held(library.collection(self.root, collection)):
+            return "A render session is running."
+        return None
 
     def rendered(
         self, collection: str, digest: str, flow: str, version: str, seed: int

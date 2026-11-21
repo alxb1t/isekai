@@ -704,8 +704,8 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 **`isekai/foundation/discard.py` holds `delete_render(image)` and `delete_edit(image)`, which drop the thumbnail of every image that goes while it is still a file, then delete the files, then, for a render, the approval its last render leaves, and return `Deleted(files, thumbnails)`. The bodies of `discard_render`, `withdraw`, `_holds_render` and `discard_edit` are there too, bound back at the stages that held them. The `discard` verb and the app's delete call the owner and write no loop.**
 
 - **Why:** a delete was chained by hand in each front end, and the chains differed: the app dropped each edit image's thumbnail, the verb the render's alone and, on an edit's path, none. A thumbnail is named by its image's digest, so it can go only before its image does.
-- **Accepts:** the guards stay with the acts: the app's job slot, the verb's disk check and `approve --cancel`'s lack of one. `_derived`, `review.discard` and `tattoos.remove` stay where they are. Reopen when a delete's guards move into the owner.
-- **Made by:** `0181`.
+- **Accepts:** the guards stay with the acts: the app's, which refuses while its render slot runs or a session holds the collection (0182), the verb's disk check and `approve --cancel`'s lack of one. `_derived`, `review.discard` and `tattoos.remove` stay where they are. Reopen when a delete's guards move into the owner.
+- **Made by:** `0181`, `0182`.
 
 ## Infrastructure
 
