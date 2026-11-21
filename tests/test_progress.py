@@ -289,6 +289,15 @@ def test_a_render_line_becomes_the_sessions_image_line() -> None:
     assert out.getvalue() == f"{IMAGE_LINES[0]}\n{IMAGE_LINES[1]}\n"
 
 
+@pytest.mark.spec_exempt("structural: a stream's write returns the characters it took")
+def test_an_images_stream_returns_the_characters_it_took() -> None:
+    images = _Images(Steps(io.StringIO(), True), 2, None)
+    render = WORK_CASES[0][2]
+
+    assert images.write(f"{render}\n") == len(render) + 1
+    assert images.write(render[:5]) == 5
+
+
 @pytest.mark.spec_exempt(
     "structural: a quiet session with no record hands its child its own stream"
 )

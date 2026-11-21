@@ -7,7 +7,7 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
 - [x] 1 — The module · moderate
 - [x] 2 — The emitters · moderate
 - [x] 3 — The readers · moderate
-- [ ] 4 — The decision and the docs · moderate
+- [x] 4 — The decision and the docs · moderate
 
 ## 1 — The module
 
@@ -59,17 +59,17 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
 
 ## 4 — The decision and the docs
 
-- [ ] 4.1 In `docs/decisions.md` add `### D76 · The child's lines are declared in isekai/interface/progress.py` after D73, with the bold sentence, the *Why* and *Accepts* bullets and the *Made by* bullet naming `0196`, all as [D7](design.md#d7) gives them.
+- [x] 4.1 In `docs/decisions.md` add `### D76 · The child's lines are declared in isekai/interface/progress.py` after D73, with the bold sentence, the *Why* and *Accepts* bullets and the *Made by* bullet naming `0196`, all as [D7](design.md#d7) gives them.
   Verify: `git grep -c -F "### D76" -- docs/decisions.md` prints `docs/decisions.md:1`.
-- [ ] 4.2 In `isekai/interface/README.md` add a `progress.py` row after `render.py` in `## Files`, saying it declares the lines and the flag, holds `emit`, `progress_line`, `Steps` and `_Images`, and **imports the standard library alone**. Add a `progress.py` row after `render.py` in `## Imported by` with `—` in its other cells, then run `uv run python -m tools.derive_imported_by`, which fills it.
+- [x] 4.2 In `isekai/interface/README.md` add a `progress.py` row after `render.py` in `## Files`, saying it declares the lines and the flag, holds `emit`, `progress_line`, `Steps` and `_Images`, and **imports the standard library alone**. Add a `progress.py` row after `render.py` in `## Imported by` with `—` in its other cells, then run `uv run python -m tools.derive_imported_by`, which fills it.
   Verify: `git grep -c -e "^| .progress.py. |" -- isekai/interface/README.md` prints `isekai/interface/README.md:2`.
-- [ ] 4.3 In `isekai/README.md` add `progress.py` after `render.py` in the `interface/` row; in `docs/modules.md`, where the sentence "`--progress json` is `Reporter` of `interface/verbs/common.py`" wraps after `--progress json`, make it read "`--progress json` is the lines `interface/progress.py` declares, which `Reporter` of `interface/verbs/common.py` and `Steps` write", keeping the wrap.
+- [x] 4.3 In `isekai/README.md` add `progress.py` after `render.py` in the `interface/` row; in `docs/modules.md`, where the sentence "`--progress json` is `Reporter` of `interface/verbs/common.py`" wraps after `--progress json`, make it read "`--progress json` is the lines `interface/progress.py` declares, which `Reporter` of `interface/verbs/common.py` and `Steps` write", keeping the wrap.
   Verify: `git grep -n -F "interface/progress.py" -- docs/modules.md` prints one line.
-- [ ] 4.4 Pin `_Images.write`'s return, then run `tools.mutate` over the whole of `isekai/interface/progress.py`, the lines `Steps` and `_Images` now hold included, one range a run. The first run, at `8647358f`, printed "21 killed, 1 survived": `return len(text)` → `return None` in `_Images.write` (`isekai/interface/progress.py:176`). It is not equivalent: `write` of a text stream returns the count of characters it took, and `print` merely ignores it. First add to `tests/test_progress.py`, after `test_a_render_line_becomes_the_sessions_image_line`, `test_an_images_stream_returns_the_characters_it_took` with `@pytest.mark.spec_exempt("structural: a stream's write returns the characters it took")`, asserting that `_Images(Steps(out, True), 2, None)` returns `len(text)` from `write` for a whole line and for a partial line with no newline. It changes no line of `isekai/`. A survivor left after it is a line the pins still miss: halt.
+- [x] 4.4 Pin `_Images.write`'s return, then run `tools.mutate` over the whole of `isekai/interface/progress.py`, the lines `Steps` and `_Images` now hold included, one range a run. The first run, at `8647358f`, printed "21 killed, 1 survived": `return len(text)` → `return None` in `_Images.write` (`isekai/interface/progress.py:176`). It is not equivalent: `write` of a text stream returns the count of characters it took, and `print` merely ignores it. First add to `tests/test_progress.py`, after `test_a_render_line_becomes_the_sessions_image_line`, `test_an_images_stream_returns_the_characters_it_took` with `@pytest.mark.spec_exempt("structural: a stream's write returns the characters it took")`, asserting that `_Images(Steps(out, True), 2, None)` returns `len(text)` from `write` for a whole line and for a partial line with no newline. It changes no line of `isekai/`. A survivor left after it is a line the pins still miss: halt.
   Verify: `uv run python -m tools.mutate isekai/interface/progress.py:1-600 --tests tests/test_progress.py tests/test_render.py tests/test_pipeline_cli.py` exits 0.
-- [ ] 4.5 Run `tools.mutate` over `Reporter.item` again. The edit of 2.1 shortens it by a line, so the range stops at line 237 when the imports of 2.1 and 2.2 add one statement and drop one. If `git grep -n -e "    def item" -e "^def say" -- isekai/interface/verbs/common.py` prints other lines, the range runs from the `def item` line to the line above the blank lines over `say`.
+- [x] 4.5 Run `tools.mutate` over `Reporter.item` again. The edit of 2.1 shortens it by a line, so the range stops at line 237 when the imports of 2.1 and 2.2 add one statement and drop one. If `git grep -n -e "    def item" -e "^def say" -- isekai/interface/verbs/common.py` prints other lines, the range runs from the `def item` line to the line above the blank lines over `say`.
   Verify: `uv run python -m tools.mutate isekai/interface/verbs/common.py:212-237 --tests tests/test_progress.py tests/test_render.py tests/test_pipeline_cli.py` exits 0.
-- [ ] 4.6 Run the mutants the repository keeps.
+- [x] 4.6 Run the mutants the repository keeps.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 4.7 Confirm `isekai/interface/progress.py` names nothing of `isekai.interface.render`, which would close a cycle.
+- [x] 4.7 Confirm `isekai/interface/progress.py` names nothing of `isekai.interface.render`, which would close a cycle.
   Verify: `git grep -n -F "isekai.interface.render" -- isekai/interface/progress.py` prints nothing.
