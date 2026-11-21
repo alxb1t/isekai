@@ -30,17 +30,17 @@ The rule for a run's runs root changes, the cancel asks it, the owner unlinks a 
 
 ## 2 — The cancel's guard
 
-- [ ] 2.1 **HALT CHECK** the approve builder's cancel branch stands in `isekai/interface/verbs/runner.py` where [D2](design.md#d2) edits it.
+- [x] 2.1 **HALT CHECK** the approve builder's cancel branch stands in `isekai/interface/verbs/runner.py` where [D2](design.md#d2) edits it.
   Verify: `git grep -n -F "if item.args.cancel:" -- isekai/interface/verbs/runner.py` prints `240:        if item.args.cancel:`.
-- [ ] 2.2 In `tests/test_pipeline_cli.py`, after `test_approve_cancel_answers_each_run_on_its_own`, add `test_approve_cancel_is_refused_under_a_runs_root_a_session_holds` marked `cli:approve-cancel:a-running-render-refuses-it`, per [D5](design.md#d5). An approved run under `tmp_path / "held" / "runs"`, its record's lock held, and one under `tmp_path / "free" / "runs"`, each named by its absolute path; it asserts exit `1`, the held run's `001.approved.json` on disk, the free run's `001.draft.json`, and the sentence naming the held run.
+- [x] 2.2 In `tests/test_pipeline_cli.py`, after `test_approve_cancel_answers_each_run_on_its_own`, add `test_approve_cancel_is_refused_under_a_runs_root_a_session_holds` marked `cli:approve-cancel:a-running-render-refuses-it`, per [D5](design.md#d5). An approved run under `tmp_path / "held" / "runs"`, its record's lock held, and one under `tmp_path / "free" / "runs"`, each named by its absolute path; it asserts exit `1`, the held run's `001.approved.json` on disk, the free run's `001.draft.json`, and the sentence naming the held run.
   Verify: `uv run pytest tests/test_pipeline_cli.py -k a_session_holds` exits 1, on the cancel that was not refused.
-- [ ] 2.3 In `isekai/interface/verbs/runner.py`, import `render_running` from `isekai.foundation.library` between the imports of `flow` and `refusal`, and put the guard in the cancel branch exactly as [D2](design.md#d2) gives it.
+- [x] 2.3 In `isekai/interface/verbs/runner.py`, import `render_running` from `isekai.foundation.library` between the imports of `flow` and `refusal`, and put the guard in the cancel branch exactly as [D2](design.md#d2) gives it.
   Verify: `uv run pytest tests/test_pipeline_cli.py tests/test_review.py tests/test_ui_api.py` exits 0.
-- [ ] 2.4 Derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`, here and not in phase 4: 2.3's import makes `interface/verbs/runner.py` a reader of `library.py`, and the docs check is red until the `library.py` row of `isekai/foundation/README.md` names it.
+- [x] 2.4 Derive the *Imported by* tables with `uv run python -m tools.derive_imported_by`, here and not in phase 4: 2.3's import makes `interface/verbs/runner.py` a reader of `library.py`, and the docs check is red until the `library.py` row of `isekai/foundation/README.md` names it.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py` exits 0.
-- [ ] 2.5 Run `tools.mutate` over the guard's lines, from `if render_running(run):` to the `)` that closes `Refusal(`; a survivor is killed by a further assertion in the case of 2.2.
-  Verify: `uv run python -m tools.mutate isekai/interface/verbs/runner.py:242-246 --tests tests/test_pipeline_cli.py` exits 0.
-- [ ] 2.6 Replay the standing mutants over the edited files.
+- [ ] 2.5 Run no `tools.mutate` over the guard's lines: the tool mutates only a node that starts and ends on one line, and the guard, from `if render_running(run):` to the `)` that closes `Refusal(`, is an `if` over a call and a `raise` over four lines, so it holds no site and the tool exits 2. The guard's one mutant, the cancel not refused, is killed by the case of 2.2, which failed on it before 2.3; hold the case green.
+  Verify: `uv run pytest tests/test_pipeline_cli.py -k a_session_holds` exits 0.
+- [x] 2.6 Replay the standing mutants over the edited files.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
 
 ## 3 — The second drop

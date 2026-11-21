@@ -213,7 +213,7 @@ The `library.py` and `discard.py` rows of `isekai/foundation/README.md` say `nam
 
 ### D7
 
-Each phase's moved lines get one `tools.mutate` run a range, on the tests that reach them: the rule's line, the cancel's branch, and the new and changed lines of the library and the owner. A survivor is killed by a further assertion in that phase's cases.
+Each phase's moved lines get one `tools.mutate` run a range, on the tests that reach them: the rule's line, the cancel's branch, and the new and changed lines of the library and the owner. A survivor is killed by a further assertion in that phase's cases. `tools.mutate` mutates only a node that starts and ends on one line, so the cancel's guard, an `if` over a call and a `raise` over four lines, holds no site: its run is not made, and its one mutant, the cancel not refused, is the case of D5 that fails before the guard stands.
 
 ## Tests
 
