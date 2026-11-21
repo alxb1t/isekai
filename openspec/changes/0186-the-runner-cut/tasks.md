@@ -6,7 +6,7 @@ Pin `_per_item` by mutation, cut it into builders, a table and a runner in [`ise
 
 - [x] 1 — Pin `_per_item` by mutation · moderate
 - [x] 2 — Cut `_per_item` into builders, a table and a runner · hard
-- [ ] 3 — Replay the mutation over the new code · moderate
+- [x] 3 — Replay the mutation over the new code · moderate
 
 ## 1 — Pin `_per_item` by mutation
 
@@ -44,8 +44,8 @@ Pin `_per_item` by mutation, cut it into builders, a table and a runner in [`ise
 
 ## 3 — Replay the mutation over the new code
 
-- [ ] 3.1 Find the lines of the new code, from `_Item` to the line before `_assign`.
+- [x] 3.1 Find the lines of the new code, from `_Item` to the line before `_assign`.
   Verify: `git grep -n -e '^@dataclasses.dataclass' -e '^def _assign(' -- isekai/interface/cli.py` prints the line of `_Item`'s decorator, then the line of `def _assign(`.
 
-- [ ] 3.2 Run `uv run python -m tools.mutate isekai/interface/cli.py:<first>-<last> --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_resume.py tests/test_tagging.py tests/test_assign.py tests/test_review.py`, with `<first>` the line of `_Item`'s decorator and `<last>` one less than the line of `def _assign(`, both from 3.1. Kill each survivor with a case in `tests/test_pipeline_cli.py`; a survivor no case can kill is named equivalent, with its reason, in the commit body.
+- [x] 3.2 Run `uv run python -m tools.mutate isekai/interface/cli.py:<first>-<last> --tests tests/test_pipeline_cli.py tests/test_progress.py tests/test_resume.py tests/test_tagging.py tests/test_assign.py tests/test_review.py`, with `<first>` the line of `_Item`'s decorator and `<last>` one less than the line of `def _assign(`, both from 3.1. Kill each survivor with a case in `tests/test_pipeline_cli.py`; a survivor no case can kill is named equivalent, with its reason, in the commit body.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
