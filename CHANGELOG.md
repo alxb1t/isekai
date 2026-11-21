@@ -10,19 +10,34 @@ its new digest.
 
 ## [Unreleased]
 
-- `collection_held` joins `isekai/foundation/library.py`: a collection is held while any of its session records' locks is held, a record that does not read included. `render_running` calls it, and a case holds the rule (0182 D1, D4).
-- The page's delete, its cancel and the review payload's `cancel` now refuse while a session of any process holds the collection, not only this server's render slot: `Surface.rendering` asks `collection_held` too. Cases hold the delete, the sheet's reason and the cancel (0182 D2, D3, D4).
-- D72's *Accepts* line, the foundation README's `library.py` row and the UI README's delete bullet say the app's guard asks the slot or the held collection; the stale *Known breaks* clause leaves the `0.87.37` notes (0182 D5).
-- `tests/test_run_directory.py` holds the stage tables by their literal values and order before they move, and `tools.mutate` ran over `_spent`, `exhausted` and `check_budget` with no survivor (0183 D4, D5).
-- `isekai/foundation/producers.py` declares each stage as a frozen `Producer` in `PRODUCERS`, and `run.py` re-exports both. Two cases hold the rows and the tables read from them; no table reads the record yet (0183 D1, D2, D4, D7).
-- `BUDGETS`, `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words are read from `PRODUCERS`, equal in value and order; `FN-1` is anchored on the wd14 row, and `tools.mutate` leaves no survivor (0183 D3, D5, D6).
-- D73 records the stage record; D21 and D62 name it, and the foundation README, `docs/principles.md` and `ARCHITECTURE.md` say the foundation holds it (0183 D8).
-- `evaluation.__main__.main` takes the embedder as a keyword parameter defaulting to `_embedder`; the tests that patched it pass a fake, and the row of `evaluation.__main__` leaves `PATCHED_MODULES` (0184 D1, D3).
-- `evaluation.recall.main` takes the reader as a keyword parameter defaulting to `_reader`; `_run` of the recall tests passes a fake, and the row of `evaluation.recall` leaves `PATCHED_MODULES` (0184 D1, D3).
-- `evaluation.__main__._embedder` takes the manifest as a keyword parameter, read through `load_eval_manifest()` when `None`; the shared-pin tests pass it, and the row of `evaluation.eval_models` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 21 (0184 D2, D3).
 - `ensure_built` takes the binary and the timeout as keyword parameters defaulting to `BINARY` and `BUILD_TIMEOUT`; the build test passes its stand-in `npm` and ceiling, and the row of `isekai.interface.ui.bundle` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 20 (0185 D1, D3).
 - `serve` takes `root`, `ensure_built` and `run` as keyword parameters defaulting to what the product uses; the serve test passes its stand-ins, and the row of `isekai.interface.ui.app` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 19 (0185 D2, D3).
 - D61 says `serve` and the bundle's build take what a test replaces as parameters, its *Accepts* is closed, and `0185` joins its *Made by* (0185 D4, D3).
+
+## [0.87.40] - 2026-11-21
+
+Gate: local 1m47s · CI not read under mf-ship · 0.87.39: local 1m21s · CI not read under mf-ship
+
+- `evaluation.__main__.main` takes the embedder as a keyword parameter defaulting to `_embedder`; the tests that patched it pass a fake, and the row of `evaluation.__main__` leaves `PATCHED_MODULES` (0184 D1, D3).
+- `evaluation.recall.main` takes the reader as a keyword parameter defaulting to `_reader`; `_run` of the recall tests passes a fake, and the row of `evaluation.recall` leaves `PATCHED_MODULES` (0184 D1, D3).
+- `evaluation.__main__._embedder` takes the manifest as a keyword parameter, read through `load_eval_manifest()` when `None`; the shared-pin tests pass it, and the row of `evaluation.eval_models` leaves `PATCHED_MODULES` (0184 D2, D3).
+
+## [0.87.39] - 2026-11-21
+
+Gate: local 1m21s · CI not read under mf-ship · 0.87.38: local 1m20s · CI not read under mf-ship
+
+- `tests/test_run_directory.py` holds the stage tables by their literal values and order before they move, and `tools.mutate` ran over `_spent`, `exhausted` and `check_budget` with no survivor (0183 D4, D5).
+- `isekai/foundation/producers.py` declares each stage as a frozen `Producer` in `PRODUCERS`, and `run.py` re-exports both. Two cases hold the rows and the tables read from them (0183 D1, D2, D4, D7).
+- `BUDGETS`, `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words are read from `PRODUCERS`, equal in value and order; `FN-1` is anchored on the wd14 row, and `tools.mutate` leaves no survivor (0183 D3, D5, D6).
+- D73 records the stage record; D21 and D62 name it, and the foundation README, `docs/principles.md` and `ARCHITECTURE.md` say the foundation holds it (0183 D8).
+
+## [0.87.38] - 2026-11-21
+
+Gate: local 1m20s · CI not read under mf-ship · 0.87.37: local 1m28s · CI not read under mf-ship
+
+- `collection_held` joins `isekai/foundation/library.py`: a collection is held while any of its session records' locks is held, a record that does not read included. `render_running` calls it, and a case holds the rule (0182 D1, D4).
+- The page's delete, its cancel and the review payload's `cancel` now refuse while a session of any process holds the collection, not only this server's render slot: `Surface.rendering` asks `collection_held` too. Cases hold the delete, the sheet's reason and the cancel (0182 D2, D3, D4).
+- D72's *Accepts* line, the foundation README's `library.py` row and the UI README's delete bullet say the app's guard asks the slot or the held collection; the stale *Known breaks* clause leaves the `0.87.37` notes (0182 D5).
 
 ## [0.87.37] - 2026-11-21
 

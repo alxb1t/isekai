@@ -7,7 +7,12 @@ from typing import Any, cast
 import pytest
 
 import evaluation.__main__ as entry_point
-from evaluation.eval_models import ENCODER, load_eval_manifest, shared_with_the_graph
+from evaluation.eval_models import (
+    DETECTOR,
+    ENCODER,
+    load_eval_manifest,
+    shared_with_the_graph,
+)
 from isekai.boundary.provision import (
     DigestMismatch,
     EscapingDestination,
@@ -168,6 +173,19 @@ def test_a_destination_the_generator_also_pins_refuses_the_scoring_naming_it(
     assert shared_with_the_graph(eval_manifest, graph) == [borrowed["dest"]]
     with pytest.raises(Refusal, match=re.escape(borrowed["dest"])):
         entry_point._embedder(tmp_path, manifest=eval_manifest)
+
+
+@pytest.mark.spec("evaluation:pinned-artifacts:digest-mismatch-is-refused")
+def test_the_embedder_reads_the_tracked_eval_manifest_when_given_none(
+    tmp_path: Path,
+) -> None:
+    # The default `python -m evaluation` runs: no `manifest=`, so the tracked
+    # eval manifest is the one whose detector the refusal names.
+    with pytest.raises(Refusal, match="is not provisioned") as refused:
+        entry_point._embedder(tmp_path)
+
+    landed = tmp_path / str(entry_for(load_eval_manifest(), DETECTOR)["dest"])
+    assert str(landed) in str(refused.value)
 
 
 @pytest.mark.spec("evaluation:encoder:shares-no-bytes-with-the-generator")
