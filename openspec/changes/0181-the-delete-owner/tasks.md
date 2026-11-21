@@ -1,6 +1,6 @@
 # The delete owner — tasks
 
-The phases are the pre-flight, the move, the owner, the verb, the route and the documents. Each phase ends with the suite green and no existing test's assertion changed.
+The phases are the pre-flight, the move, the owner, the verb, the route, the documents and the principle's break. Each phase ends with the suite green and no existing test's assertion changed.
 
 ## Progress
 
@@ -10,6 +10,7 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 - [x] 4 — The verb · moderate
 - [x] 5 — The route · moderate
 - [x] 6 — The documents · moderate
+- [ ] 7 — The principle's break · moderate
 
 ## 1 — The pre-flight
 
@@ -78,8 +79,8 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 
 - [x] 6.1 In `docs/decisions.md`, add D72 after D71 and amend the page's [D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children) and D69 as [D7](design.md#d7) says; their *Made by* gain `0181`.
   Verify: `git grep -c -F "0181" -- docs/decisions.md` prints `docs/decisions.md:3`.
-- [x] 6.2 In `docs/principles.md`, delete the sentence from "The discard of a render is spelled twice" to the end of its paragraph, and the *Known breaks* bullet that names `discard_render` and `withdraw`, which ends before `### Every artifact records what shaped it`.
-  Verify: `git grep -n -e "is spelled twice" -e "discard_render" -e "withdraw" -- docs/principles.md` prints nothing.
+- [x] 6.2 In `docs/principles.md`, delete the sentence from "The discard of a render is spelled twice" to the end of its paragraph. The *Known breaks* bullet that names `discard_render` and `withdraw` stays, and 7.1 re-names it.
+  Verify: `git grep -n -e "is spelled twice" -- docs/principles.md` prints nothing.
 - [x] 6.3 In `docs/modules.md`, replace the sentence that names `drop_thumbnails`, `discard_render` and `withdraw` and ends "but drops the render's thumbnails and not each edit image's" with one that names `delete_render` and `delete_edit` of `foundation/discard.py`, which `ImageRoutes` and the CLI's `discard` both call. In `docs/data-flow.md`, change "the render stage's and the library's for a deleted render" to "the foundation's `delete_render` for a deleted render", and add to the `isekai discard` paragraph that each image's thumbnail goes with it.
   Verify: `git grep -n -e "drops the render's thumbnails and not each" -e "the render stage's and" -- docs/modules.md docs/data-flow.md` prints nothing.
 - [x] 6.4 In the docstring of `isekai/interface/ui/app.py`, replace the whole span from "a render's thumbnails leave through" to "through `withdraw()`." with one sentence that names `delete_render()` of the foundation's `discard.py` as what deletes a render, its edits, their thumbnails and the approvals its last render leaves.
@@ -88,3 +89,8 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
   Verify: `git grep -c -F "delete_render" -- isekai/foundation/README.md` prints `isekai/foundation/README.md:1`.
 - [x] 6.6 Replay the standing mutants once, after the move.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0 with no survivor.
+
+## 7 — The principle's break
+
+- [ ] 7.1 In `docs/principles.md`, put back the *Known breaks* bullet of the stage principle, after the last test bullet of that principle and before `### Every artifact records what shaped it`, with its text from `git show 7c24c12:docs/principles.md` and each home it names moved: `isekai/foundation/discard.py`'s `discard_render`, `withdraw` and `discard_edit` (an edit and every edit made from it, with their records) where it named `pipeline/generate.py`'s and `pipeline/review.py`'s. The delete is still the stage principle's one break of "never changed" ([D7](design.md#d7)).
+  Verify: `git grep -q -F "isekai/foundation/discard.py" -- docs/principles.md` exits 0.

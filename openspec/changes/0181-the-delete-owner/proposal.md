@@ -25,7 +25,7 @@ A thumbnail is named by its image's digest, so it can go only while the image is
 - `delete_render` of `isekai/interface/ui/routes/images.py` calls the owner under the draft lock, and writes no loop.
 - Requirement *The discard verb deletes a render named by its image path* gains the scenarios for a render's edits' thumbnails and for an edit's and its chain's; its text stays.
 - `tests/test_review.py` gains cases that kill the survivors of `withdraw`'s pre-flight; `tests/test_edit_session.py` holds the owner's cases and the scenarios'; `tests/test_ui_api.py` holds a case that the verb and the route leave one cache.
-- D72 records the owner, [D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children) and [D69](../../../docs/decisions.md#d69--a-render-groups-files-are-listed-in-foundationlayoutpy-and-a-module-above-the-pipeline-reads-the-listing-from-the-foundation) name it, and the *Known breaks* of the stage principle leave `docs/principles.md`.
+- D72 records the owner, [D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children) and [D69](../../../docs/decisions.md#d69--a-render-groups-files-are-listed-in-foundationlayoutpy-and-a-module-above-the-pipeline-reads-the-listing-from-the-foundation) name it, and the *Known breaks* of the stage principle stay in `docs/principles.md`, naming the owner's bodies in `isekai/foundation/discard.py`.
 
 ## Capabilities
 

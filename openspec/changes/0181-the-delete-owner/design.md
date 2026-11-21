@@ -22,7 +22,7 @@ A thumbnail is named by its image's digest, so it goes before its image does. Th
 
 ## Goals / Non-Goals
 
-- Goals: a delete is one call; the verb drops the thumbnails of a render's edits and, on an edit's path, the edit's and its chain's; no loop is left in a front end; the two *Known breaks* of the principles leave.
+- Goals: a delete is one call; the verb drops the thumbnails of a render's edits and, on an edit's path, the edit's and its chain's; no loop is left in a front end; the principles' note that the discard is spelled twice leaves, and their *Known breaks* bullet stays, naming the owner's bodies.
 - Non-Goals: see [proposal](proposal.md#not-in-this-change). In short, the guards, `_derived`, a route that deletes an edit and the making of a thumbnail are not here.
 
 ## Decisions
@@ -35,7 +35,7 @@ A thumbnail is named by its image's digest, so it goes before its image does. Th
 | [D4](#d4) | the verb and the route call the owner and write no loop; the guards stay where they are | one owner is the point, and the guards are the acts' | the owner taking the job slot or the session's lock |
 | [D5](#d5) | the bodies are pre-flighted before they move; the survivors of `withdraw` are killed by cases first | a move is pre-flighted, and a survivor is killed by a test or named equivalent | naming the survivors equivalent: neither is, the product's layout only never reaches one |
 | [D6](#d6) | the owner's cases are written before it, each of the verb's scenarios gets a case that fails before the switch, and a case holds that the verb and the route leave one cache | red first proves the owner and the switch; the twin guards the route's | one end-to-end test: the cache is a folder of files |
-| [D7](#d7) | D72 is added; the page's D4 and D69 name the owner; the *Known breaks* of the stage principle leave `docs/principles.md` | the choice in force is edited where it lives | a new decision for each |
+| [D7](#d7) | D72 is added; the page's D4 and D69 name the owner; the *Known breaks* of the stage principle stay in `docs/principles.md`, naming `isekai/foundation/discard.py`'s `discard_render`, `withdraw` and `discard_edit` | the choice in force is edited where it lives, and the delete is still the one break of "never changed" | a new decision for each |
 
 ### D1
 
@@ -201,7 +201,7 @@ The owner's cases carry `spec_exempt("structural: ...")`, and the twin too: the 
 - D72 is added after D71 of `docs/decisions.md`: the owner's name and what it does in the bold paragraph, *Why* the owners were chained by hand and the digest's order, *Accepts* the guards, `_derived`, `review.discard` and `tattoos.remove` staying, and *Made by* `0181`.
 - [D4 of the page](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children), in its sentence on writes through the function that owns them, names `delete_render` and `delete_edit` for a deleted render, its edits and thumbnails and the approvals its last render leaves, where it named `drop_thumbnails`, `discard_render` and `withdraw`; its *Made by* gains `0181`.
 - D69's bold paragraph no longer lists `discard_render` among what the stage keeps, and says it is bound there from the foundation; its *Made by* gains `0181`.
-- `docs/principles.md` loses the sentence that the discard of a render is spelled twice and the *Known breaks* bullet of the stage principle, whose breaks are this owner's.
+- `docs/principles.md` loses the sentence that the discard of a render is spelled twice and keeps the *Known breaks* bullet of the stage principle, which names `isekai/foundation/discard.py`'s `discard_render`, `withdraw` and `discard_edit` where it named the stages' bodies: the move did not end the delete's one break of "never changed", and the owner is its home.
 - `docs/modules.md`, `docs/data-flow.md`, the READMEs of `isekai/foundation/` and `isekai/interface/` and the docstring of `isekai/interface/ui/app.py` name the owner; `tools.derive_imported_by` writes the derived rows.
 
 ## Tests
