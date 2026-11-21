@@ -18,6 +18,7 @@ its new digest.
 - `BUDGETS`, `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words are read from `PRODUCERS`, equal in value and order; `FN-1` is anchored on the wd14 row, and `tools.mutate` leaves no survivor (0183 D3, D5, D6).
 - D73 records the stage record; D21 and D62 name it, and the foundation README, `docs/principles.md` and `ARCHITECTURE.md` say the foundation holds it (0183 D8).
 - `evaluation.__main__.main` takes the embedder as a keyword parameter defaulting to `_embedder`; the tests that patched it pass a fake, and the row of `evaluation.__main__` leaves `PATCHED_MODULES` (0184 D1, D3).
+- `evaluation.recall.main` takes the reader as a keyword parameter defaulting to `_reader`; `_run` of the recall tests passes a fake, and the row of `evaluation.recall` leaves `PATCHED_MODULES` (0184 D1, D3).
 
 ## [0.87.37] - 2026-11-21
 

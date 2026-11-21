@@ -88,11 +88,8 @@ def _collection(
     return runs, a, b
 
 
-def _run(
-    monkeypatch: pytest.MonkeyPatch, tagger: _Tagger, runs: Path, *names: str
-) -> int:
-    monkeypatch.setattr(recall, "_reader", lambda models: (tagger, PINS))
-    return recall.main([str(runs), *names])
+def _run(tagger: _Tagger, runs: Path, *names: str) -> int:
+    return recall.main([str(runs), *names], reader=lambda models: (tagger, PINS))
 
 
 def _record(runs: Path) -> Record:
@@ -101,11 +98,11 @@ def _record(runs: Path) -> Record:
 
 @pytest.mark.spec("evaluation:recall:every-render-is-a-row")
 def test_every_render_is_a_row_counted_against_its_groups_approval(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     runs, _, _ = _collection(tmp_path)
 
-    assert _run(monkeypatch, _Tagger(), runs) == 0
+    assert _run(_Tagger(), runs) == 0
 
     rec = _record(runs)
     by_seed = {row["seed"]: row for row in rec["rows"]}
@@ -129,13 +126,12 @@ def test_every_render_is_a_row_counted_against_its_groups_approval(
 @pytest.mark.spec("evaluation:recall:an-unreadable-render-is-a-row")
 def test_a_render_that_does_not_decode_is_its_own_row(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     runs, _, _ = _collection(tmp_path)
     tagger = _Tagger(undecodable=frozenset({"22.png"}))
 
-    assert _run(monkeypatch, tagger, runs) == 0
+    assert _run(tagger, runs) == 0
 
     outcomes = {row["seed"]: row["outcome"] for row in _record(runs)["rows"]}
     assert outcomes == {11: "read", 22: "unreadable", 33: "read", 44: "read"}
@@ -145,13 +141,12 @@ def test_a_render_that_does_not_decode_is_its_own_row(
 @pytest.mark.spec("evaluation:recall:a-render-without-its-approval-is-a-row")
 def test_a_render_whose_approval_is_absent_is_its_own_row(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     runs, _, _ = _collection(tmp_path, approve_second_group=False)
     tagger = _Tagger()
 
-    assert _run(monkeypatch, tagger, runs) == 0
+    assert _run(tagger, runs) == 0
 
     outcomes = {row["seed"]: row["outcome"] for row in _record(runs)["rows"]}
     assert outcomes == {11: "read", 22: "read", 33: "no approval", 44: "read"}
@@ -162,7 +157,6 @@ def test_a_render_whose_approval_is_absent_is_its_own_row(
 @pytest.mark.spec("evaluation:recall:a-render-without-its-approval-is-a-row")
 def test_a_render_whose_approval_holds_a_field_that_is_not_tags_is_its_own_row(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     runs, a, _ = _collection(tmp_path)
@@ -174,7 +168,7 @@ def test_a_render_whose_approval_holds_a_field_that_is_not_tags_is_its_own_row(
     )
     tagger = _Tagger()
 
-    assert _run(monkeypatch, tagger, runs) == 0
+    assert _run(tagger, runs) == 0
 
     rows = {row["seed"]: row for row in _record(runs)["rows"]}
     assert rows[33]["outcome"] == "no approval"
@@ -186,19 +180,18 @@ def test_a_render_whose_approval_holds_a_field_that_is_not_tags_is_its_own_row(
 @pytest.mark.spec("evaluation:recall:named-runs-narrow-the-reading")
 def test_named_runs_narrow_the_reading_and_an_unknown_name_refuses_first(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     runs, a, b = _collection(tmp_path)
     tagger = _Tagger()
 
-    assert _run(monkeypatch, tagger, runs, b.id) == 0
+    assert _run(tagger, runs, b.id) == 0
     assert {row["run"] for row in _record(runs)["rows"]} == {run_prefix(b)}
     assert {path.name for path in tagger.seen} == {"44.png"}
 
     (runs.parent / "recall.json").unlink()
     again = _Tagger()
-    assert _run(monkeypatch, again, runs, a.id, "nobody") == 1
+    assert _run(again, runs, a.id, "nobody") == 1
     assert "nobody" in capsys.readouterr().err
     assert again.seen == []
     assert not (runs.parent / "recall.json").exists()
@@ -207,7 +200,6 @@ def test_named_runs_narrow_the_reading_and_an_unknown_name_refuses_first(
 @pytest.mark.spec("evaluation:recall:a-run-is-named-by-its-digest-prefix")
 def test_a_row_names_its_run_by_its_digest_prefix_and_never_its_filename(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     named = tmp_path / "photos" / "ada-lovelace.png"
@@ -218,7 +210,7 @@ def test_a_row_names_its_run_by_its_digest_prefix_and_never_its_filename(
     _approve(run, SUMMON, 1, {"hair_colour": ["brown hair"]})
     _render(run, SUMMON, 1, 11)
 
-    assert _run(monkeypatch, _Tagger(), runs) == 0
+    assert _run(_Tagger(), runs) == 0
 
     written = (runs.parent / "recall.json").read_text()
     out = capsys.readouterr().out
@@ -232,14 +224,13 @@ def test_a_row_names_its_run_by_its_digest_prefix_and_never_its_filename(
 @pytest.mark.spec("evaluation:recall:a-run-is-named-by-its-digest-prefix")
 def test_a_renamed_run_is_named_by_its_frames_digest_and_never_its_new_name(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     runs, a, b = _collection(tmp_path)
     prefix = a.photo_record["sha256"][:ID_DIGEST_CHARS]
     a.path.rename(runs / "ada-lovelace-old")
 
-    assert _run(monkeypatch, _Tagger(), runs) == 0
+    assert _run(_Tagger(), runs) == 0
 
     written = (runs.parent / "recall.json").read_text()
     out = capsys.readouterr().out
@@ -253,7 +244,6 @@ def test_a_renamed_run_is_named_by_its_frames_digest_and_never_its_new_name(
 @pytest.mark.spec("evaluation:recall:a-run-whose-frame-does-not-read-is-a-row")
 def test_every_render_of_a_run_whose_frame_does_not_read_is_an_unreadable_row(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     runs, a, b = _collection(tmp_path)
@@ -261,7 +251,7 @@ def test_every_render_of_a_run_whose_frame_does_not_read_is_an_unreadable_row(
     b.path.rename(runs / "ada-lovelace-old")
     tagger = _Tagger()
 
-    assert _run(monkeypatch, tagger, runs) == 0
+    assert _run(tagger, runs) == 0
 
     written = (runs.parent / "recall.json").read_text()
     out, err = capsys.readouterr()
@@ -281,7 +271,6 @@ def test_every_render_of_a_run_whose_frame_does_not_read_is_an_unreadable_row(
 @pytest.mark.parametrize("damage", ["directory", "invalid-utf8"])
 def test_an_unreadable_file_is_refused_by_name(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     damage: str,
 ) -> None:
@@ -292,7 +281,7 @@ def test_an_unreadable_file_is_refused_by_name(
     else:
         b.frame_path.write_bytes(b"\xff")
 
-    assert _run(monkeypatch, _Tagger(), runs) == 0
+    assert _run(_Tagger(), runs) == 0
 
     rows = {row["seed"]: row for row in _record(runs)["rows"]}
     assert {rows[seed]["outcome"] for seed in (11, 22, 33)} == {"read"}
@@ -303,11 +292,11 @@ def test_an_unreadable_file_is_refused_by_name(
 
 @pytest.mark.spec("evaluation:recall:the-record-names-the-tagger-and-its-floor")
 def test_the_record_names_the_taggers_files_by_digest_and_its_floor(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     runs, _, _ = _collection(tmp_path)
 
-    assert _run(monkeypatch, _Tagger(), runs) == 0
+    assert _run(_Tagger(), runs) == 0
 
     rec = _record(runs)
     assert rec["tagger"] == PINS
@@ -326,7 +315,7 @@ def test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refuse
     monkeypatch.setattr(wiring, "DATA_ROOT", repository / ".data")
     tagger = _Tagger()
 
-    assert _run(monkeypatch, tagger, runs) == 1
+    assert _run(tagger, runs) == 1
 
     refusal = capsys.readouterr().err
     assert str(runs.parent.resolve() / "recall.json") in refusal

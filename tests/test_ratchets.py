@@ -493,7 +493,6 @@ UI_ROWS = 0
 PATCHED_MODULES = {
     "evaluation.eval_models": 2,
     "evaluation.face": 1,
-    "evaluation.recall": 1,
     "isekai.boundary.ollama": 9,
     "isekai.boundary.provision": 7,
     "isekai.boundary.unpack": 3,
@@ -515,7 +514,7 @@ PATCHED_MODULES = {
     "isekai.shared.chain": 1,
     "isekai.shared.ink": 1,
 }
-PATCHED_ROWS = 23
+PATCHED_ROWS = 22
 
 
 # --- the rules, on this repository -------------------------------------------
