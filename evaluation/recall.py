@@ -402,13 +402,17 @@ def survey(
     return rows, notes
 
 
-def main(argv: Sequence[str]) -> int:
+def main(
+    argv: Sequence[str],
+    *,
+    reader: Callable[[Path], tuple[Read, dict[str, str]]] = _reader,
+) -> int:
     """Read the collection, write its record beside the runs, and print the table."""
     args = parse_args(argv)
     try:
         target = destination(args.runs, "recall.json")
         held = _held(args.runs, args.names)
-        read_tags, pins = _reader(args.models)
+        read_tags, pins = reader(args.models)
         rows, notes = survey(held, read_tags, args.flows)
     except Refusal as refused:
         print(f"refused: {refused}", file=sys.stderr)

@@ -492,11 +492,11 @@ that needs it.**
 ### D21 · Retries follow what can fail
 
 **A stage that calls a local model may retry a dropped call. A deterministic stage gets one attempt, and
-so does the paid render.** The numbers are `BUDGETS` of `failures.py`, read through `run.py`.
+so does the paid render.** The numbers are the `budget` of each row of `PRODUCERS` in `producers.py`, read as `BUDGETS` of `failures.py` through `run.py`.
 
 - **Why:** a deterministic stage fails the same way twice, while a call to the local model server can
   drop and succeed on the next attempt. The paid stage is never retried on its own.
-- **Made by:** `0013`, `0023`.
+- **Made by:** `0013`, `0023`, `0183`.
 
 ### D22 · Dependencies are declared and pinned
 
@@ -621,19 +621,19 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D61 · What a test replaces in the server is a parameter of create_app
 
-**`create_app` takes, as keyword-only parameters each defaulting to the object the product uses, what a test replaces: the jobs' factory, the file response, `save_draft`, `approve`, the precondition check and the draft lock. The `Surface` holds each but the factory, a route reads it there, and the draft lock is the app's own.**
+**`create_app` takes, as keyword-only parameters each defaulting to the object the product uses, what a test replaces: the jobs' factory, the file response, `save_draft`, `approve`, the precondition check and the draft lock. The `Surface` holds each but the factory, a route reads it there, and the draft lock is the app's own. `serve` takes the library's root, `ensure_built` and the server's `run` the same way, and `ensure_built` takes the binary and the timeout.**
 
 - **Why:** a patch of a module's own name is global state that a route moving to another module leaves stranded ([D56](#d56--size-and-patches-are-held-by-ratchets)), and one lock for the process was shared by every app in it.
-- **Accepts:** `run` stays a name a test patches in `app.py`, because `serve` reads it and no route does. Reopen when `serve`'s collaborators are parameters.
-- **Made by:** `0150`.
+- **Accepts:** nothing.
+- **Made by:** `0150`, `0185`.
 
 ### D62 · The run directory is run.py, its siblings imported through it
 
-**The run directory is `isekai/foundation/run.py`. It re-exports every name of `names.py`, `rundir.py`, `layout.py` and `failures.py` under `__all__`, and a module outside the foundation imports a run's names from `isekai.foundation.run`, never from a sibling. A sibling imports no `run.py` and stays on the standard library and the foundation.**
+**The run directory is `isekai/foundation/run.py`. It re-exports every name of `names.py`, `rundir.py`, `layout.py`, `failures.py` and `producers.py` under `__all__`, and a module outside the foundation imports a run's names from `isekai.foundation.run`, never from a sibling. A sibling imports no `run.py` and stays on the standard library and the foundation.**
 
 - **Why:** the run directory was one file of clusters and a listed row of the ratchet ([D56](#d56--size-and-patches-are-held-by-ratchets)). A front that re-exports changes no importer, keeps `RUNS_ROOT` and `DATA_ROOT` in one module and leaves the layer guard's cycle rule nothing to find.
 - **Accepts:** the roots, `open_run`, `rendered_at`, the command text and the provenance records stay in `run.py`, because `rendered_at` reads `stage_command`, which reads the patched `RUNS_ROOT`. Review holds that an importer reads the front; no test does. Reopen when `RUNS_ROOT` is no longer patched.
-- **Made by:** `0152`.
+- **Made by:** `0152`, `0183`.
 
 ### D63 · The wire is declared in shapes.py and held by tests
 
@@ -706,6 +706,14 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Why:** a delete was chained by hand in each front end, and the chains differed: the app dropped each edit image's thumbnail, the verb the render's alone and, on an edit's path, none. A thumbnail is named by its image's digest, so it can go only before its image does.
 - **Accepts:** the guards stay with the acts: the app's, which refuses while its render slot runs or a session holds the collection (0182), the verb's disk check and `approve --cancel`'s lack of one. `_derived`, `review.discard` and `tattoos.remove` stay where they are. Reopen when a delete's guards move into the owner.
 - **Made by:** `0181`, `0182`.
+
+### D73 · A stage is declared once, in isekai/foundation/producers.py
+
+**`isekai/foundation/producers.py` declares each stage a run passes through as a frozen `Producer(key, folder, scope, verb, budget)`, in `PRODUCERS`, in the order a run passes them: caption, wd14, tags, sheet, review, assemble, render. `BUDGETS` of `failures.py`, and `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words of `names.py`, are read from it, and `run.py` re-exports `Producer` and `PRODUCERS`. The module imports nothing of `isekai`.**
+
+- **Why:** a stage was spelled in several literals that no test held to agree, and a new stage edited each of them. One row says what a stage is, and a table that names it is read from the row. The key is the budget's key and the `stage` of a failure record on disk, so it never changes.
+- **Accepts:** the tables above the foundation, the sequence inside a stage, the pipeline's own `STAGE` constants and the hub cell's `Stage` stay as they are, and `review` has a row with no budget. Reopen when the interface's tables are read from the record.
+- **Made by:** `0183`.
 
 ## Infrastructure
 

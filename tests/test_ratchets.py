@@ -461,14 +461,12 @@ FILE_ROWS = 4
 LONG_FUNCTIONS = {
     "isekai/boundary/ollama.py::ask": 105,
     "isekai/foundation/flow.py::load_flow": 150,
-    "isekai/interface/cli.py::_per_item": 214,
-    "isekai/interface/cli.py::_per_item.work": 154,
     "isekai/interface/render.py::_session": 119,
     "isekai/interface/render.py::_rendered": 118,
     "isekai/pipeline/generate.py::render": 122,
     "isekai/pipeline/review.py::approve": 105,
 }
-FUNCTION_ROWS = 8
+FUNCTION_ROWS = 6
 
 WIDE_FUNCTIONS = {
     "isekai/foundation/run.py::refusal_for": 9,
@@ -491,10 +489,7 @@ BIG_UI_FILES: dict[str, int] = {}
 UI_ROWS = 0
 
 PATCHED_MODULES = {
-    "evaluation.__main__": 5,
-    "evaluation.eval_models": 2,
     "evaluation.face": 1,
-    "evaluation.recall": 1,
     "isekai.boundary.ollama": 9,
     "isekai.boundary.provision": 7,
     "isekai.boundary.unpack": 3,
@@ -503,8 +498,6 @@ PATCHED_MODULES = {
     "isekai.interface.cli": 2,
     "isekai.interface.render": 2,
     "isekai.interface.ui": 1,
-    "isekai.interface.ui.app": 1,
-    "isekai.interface.ui.bundle": 3,
     "isekai.interface.ui.events": 1,
     "isekai.interface.ui.library": 4,
     "isekai.interface.wiring": 13,
@@ -516,7 +509,7 @@ PATCHED_MODULES = {
     "isekai.shared.chain": 1,
     "isekai.shared.ink": 1,
 }
-PATCHED_ROWS = 24
+PATCHED_ROWS = 19
 
 
 # --- the rules, on this repository -------------------------------------------

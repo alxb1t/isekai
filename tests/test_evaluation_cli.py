@@ -71,12 +71,13 @@ def test_a_cohort_photograph_with_no_face_refuses_before_any_render_is_opened(
 
 @pytest.mark.spec("evaluation:table:a-failure-is-a-row")
 def test_a_render_with_no_face_and_an_unrendered_photograph_are_rows(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     runs, cohort = _collection(tmp_path)
-    monkeypatch.setattr(entry, "_embedder", lambda models: _Embedder(VECTORS))
 
-    code = entry.main([str(runs), "--cohort", str(cohort)])
+    code = entry.main(
+        [str(runs), "--cohort", str(cohort)], embedder=lambda models: _Embedder(VECTORS)
+    )
 
     rows = json.loads((runs.parent / "evaluation.json").read_text())["flows"][FLOW]
     outcomes = {row["photograph"]: row["outcome"] for row in rows["rows"]}
@@ -221,7 +222,7 @@ def test_a_flow_this_build_does_not_carry_costs_its_run_only_that_flow(
 
 @pytest.mark.spec("evaluation:table:the-record-names-no-unscored-run")
 def test_the_record_counts_an_outside_and_an_unreadable_run_and_names_neither(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     runs, cohort = _collection(tmp_path)
     stranger = tmp_path / "elsewhere" / "stranger.png"
@@ -230,9 +231,10 @@ def test_the_record_counts_an_outside_and_an_unreadable_run_and_names_neither(
     outside = open_run(stranger, runs).id
     (damaged,) = runs.glob("*_p2-1")
     (damaged / "run.json").write_text("{not json")
-    monkeypatch.setattr(entry, "_embedder", lambda models: _Embedder(VECTORS))
 
-    code = entry.main([str(runs), "--cohort", str(cohort)])
+    code = entry.main(
+        [str(runs), "--cohort", str(cohort)], embedder=lambda models: _Embedder(VECTORS)
+    )
 
     written = (runs.parent / "evaluation.json").read_text()
     rec = json.loads(written)
@@ -248,7 +250,7 @@ def test_the_record_counts_an_outside_and_an_unreadable_run_and_names_neither(
 
 @pytest.mark.spec("evaluation:table:a-run-is-named-by-its-digest-prefix")
 def test_a_scored_run_is_named_by_its_digest_prefix_and_never_its_filename(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _, cohort = _collection(tmp_path)
     named = tmp_path / "photos" / "ada-lovelace.png"
@@ -260,9 +262,12 @@ def test_a_scored_run_is_named_by_its_digest_prefix_and_never_its_filename(
     group.mkdir(parents=True)
     Image.new("RGB", (8, 8)).save(group / "11.png")
     vectors = {**VECTORS, "11.png": [0.0, 1.0, 0.0]}
-    monkeypatch.setattr(entry, "_embedder", lambda models: _Embedder(vectors))
 
-    assert entry.main([str(runs), "--cohort", str(cohort)]) == 0
+    code = entry.main(
+        [str(runs), "--cohort", str(cohort)], embedder=lambda models: _Embedder(vectors)
+    )
+
+    assert code == 0
 
     written = (runs.parent / "evaluation.json").read_text()
     out = capsys.readouterr().out
@@ -276,15 +281,18 @@ def test_a_scored_run_is_named_by_its_digest_prefix_and_never_its_filename(
 
 @pytest.mark.spec("evaluation:table:a-run-is-named-by-its-digest-prefix")
 def test_a_renamed_run_is_named_by_the_digest_its_frame_records(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     runs, cohort = _collection(tmp_path)
     (run,) = runs.glob("*_p1-2")
     prefix = run.name[:ID_DIGEST_CHARS]
     run.rename(runs / "ada-lovelace-old")
-    monkeypatch.setattr(entry, "_embedder", lambda models: _Embedder(VECTORS))
 
-    assert entry.main([str(runs), "--cohort", str(cohort)]) == 0
+    code = entry.main(
+        [str(runs), "--cohort", str(cohort)], embedder=lambda models: _Embedder(VECTORS)
+    )
+
+    assert code == 0
 
     written = (runs.parent / "evaluation.json").read_text()
     out = capsys.readouterr().out
@@ -303,9 +311,10 @@ def test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refuse
     monkeypatch.setattr(wiring, "REPOSITORY", repository)
     monkeypatch.setattr(wiring, "DATA_ROOT", repository / ".data")
     embed = _Embedder(VECTORS)
-    monkeypatch.setattr(entry, "_embedder", lambda models: embed)
 
-    code = entry.main([str(runs), "--cohort", str(cohort)])
+    code = entry.main(
+        [str(runs), "--cohort", str(cohort)], embedder=lambda models: embed
+    )
 
     assert code == 1
     assert str(runs.parent.resolve() / "evaluation.json") in capsys.readouterr().err

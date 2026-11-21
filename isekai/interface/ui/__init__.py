@@ -20,6 +20,7 @@ own functions and they own the file's shape and its name -- held by one grep in
 `tests/test_ui.py`.
 """
 
+from collections.abc import Callable
 from pathlib import Path
 
 from isekai.foundation.run import Run
@@ -53,16 +54,26 @@ def render_running(run: Run) -> bool:
     return library.render_running(run)
 
 
-def serve(wired: Wiring, *, port: int) -> int:
+def serve(
+    wired: Wiring,
+    *,
+    port: int,
+    root: Callable[[], Path] = library.root,
+    ensure_built: Callable[[], Path] = ensure_built,
+    run: Callable[..., None] | None = None,
+) -> int:
     """Open the library, print the address, and serve until stopped.
+
+    `root`, `ensure_built` and `run` are what a test replaces; each defaults
+    to what the product uses.
 
     Bound to the loopback address and nothing else. This is a private tool over a
     directory of personal photographs; a surface that listened on every interface
     would be publishing them to the network the operator happens to be on.
     """
-    root = library.open_library(library.root())
+    opened = library.open_library(root())
     # An import that did not end leaves only staging, which nothing reads again.
-    sweep(root)
+    sweep(opened)
     flows = library.offered(wired.flows_dir)
     bundle = ensure_built()
 
@@ -70,11 +81,12 @@ def serve(wired: Wiring, *, port: int) -> int:
     # framework. That keeps FastAPI off `python -m isekai`'s import graph even
     # though it is a declared dependency and so resolvable -- which is the whole
     # of what the `-S` guard in `tests/test_pipeline_cli.py` checks.
-    from isekai.interface.ui.app import create_app, run
+    from isekai.interface.ui.app import create_app
+    from isekai.interface.ui.app import run as run_app
 
     print(f"isekai: the library -- http://{HOST}:{port}", file=wired.out)
     app = create_app(
-        root,
+        opened,
         wired,
         flows=flows,
         bundle=bundle,
@@ -85,7 +97,7 @@ def serve(wired: Wiring, *, port: int) -> int:
     # gpunit is asked once now, then only while a session runs or an alert is open.
     app.state.billing.watch()
     try:
-        run(app, host=HOST, port=port)
+        (run or run_app)(app, host=HOST, port=port)
     except KeyboardInterrupt:
         return 130
     return 0

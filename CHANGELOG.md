@@ -10,6 +10,35 @@ its new digest.
 
 ## [Unreleased]
 
+- `_per_item` is pinned before it is cut: cases reach the table's miss and its place in the order, and each survivor of the mutation run over its lines is killed by a case that asserts the exact lines it prints (0186 D3, D8).
+- `_per_item` is cut in `cli.py` into `_Item`, a builder for each stage verb, the table `_BUILDERS` and the runner `_run_item`; its two ratchet rows go, `FUNCTION_ROWS` is 6, and `PB-2b` finds `definition=flow,` (0186 D1–D8).
+- The mutation run over the new code, from `_Item` to the line before `_assign`, leaves no survivor, and the replay of `tests/mutants.json` holds (0186 D8).
+
+## [0.87.41] - 2026-11-21
+
+Gate: local 1m40s · CI not read under mf-ship · 0.87.40: local 1m47s · CI not read under mf-ship
+
+- `ensure_built` takes the binary and the timeout as keyword parameters defaulting to `BINARY` and `BUILD_TIMEOUT`; the build test passes its stand-in `npm` and ceiling, and the row of `isekai.interface.ui.bundle` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 20 (0185 D1, D3).
+- `serve` takes `root`, `ensure_built` and `run` as keyword parameters defaulting to what the product uses; the serve test passes its stand-ins, and the row of `isekai.interface.ui.app` leaves `PATCHED_MODULES`, so `PATCHED_ROWS` is 19 (0185 D2, D3).
+- D61 says `serve` and the bundle's build take what a test replaces as parameters, its *Accepts* is closed, and `0185` joins its *Made by* (0185 D4, D3).
+
+## [0.87.40] - 2026-11-21
+
+Gate: local 1m47s · CI not read under mf-ship · 0.87.39: local 1m21s · CI not read under mf-ship
+
+- `evaluation.__main__.main` takes the embedder as a keyword parameter defaulting to `_embedder`; the tests that patched it pass a fake, and the row of `evaluation.__main__` leaves `PATCHED_MODULES` (0184 D1, D3).
+- `evaluation.recall.main` takes the reader as a keyword parameter defaulting to `_reader`; `_run` of the recall tests passes a fake, and the row of `evaluation.recall` leaves `PATCHED_MODULES` (0184 D1, D3).
+- `evaluation.__main__._embedder` takes the manifest as a keyword parameter, read through `load_eval_manifest()` when `None`; the shared-pin tests pass it, and the row of `evaluation.eval_models` leaves `PATCHED_MODULES` (0184 D2, D3).
+
+## [0.87.39] - 2026-11-21
+
+Gate: local 1m21s · CI not read under mf-ship · 0.87.38: local 1m20s · CI not read under mf-ship
+
+- `tests/test_run_directory.py` holds the stage tables by their literal values and order before they move, and `tools.mutate` ran over `_spent`, `exhausted` and `check_budget` with no survivor (0183 D4, D5).
+- `isekai/foundation/producers.py` declares each stage as a frozen `Producer` in `PRODUCERS`, and `run.py` re-exports both. Two cases hold the rows and the tables read from them (0183 D1, D2, D4, D7).
+- `BUDGETS`, `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words are read from `PRODUCERS`, equal in value and order; `FN-1` is anchored on the wd14 row, and `tools.mutate` leaves no survivor (0183 D3, D5, D6).
+- D73 records the stage record; D21 and D62 name it, and the foundation README, `docs/principles.md` and `ARCHITECTURE.md` say the foundation holds it (0183 D8).
+
 ## [0.87.38] - 2026-11-21
 
 Gate: local 1m20s · CI not read under mf-ship · 0.87.37: local 1m28s · CI not read under mf-ship
