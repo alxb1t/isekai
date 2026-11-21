@@ -6,7 +6,7 @@ The foundation gets the rule for a held collection, the app's guard asks it, and
 
 - [x] 1 — The rule · moderate
 - [x] 2 — The guard · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The rule
 
@@ -40,13 +40,13 @@ The foundation gets the rule for a held collection, the app's guard asks it, and
 
 ## 3 — The documents
 
-- [ ] 3.1 In `docs/decisions.md`, amend D72 as [D5](design.md#d5) says: its *Accepts* line takes the app's guard's new words from there, in place of "the app's job slot", and its *Made by* gains `0182`. The heading stays.
+- [x] 3.1 In `docs/decisions.md`, amend D72 as [D5](design.md#d5) says: its *Accepts* line takes the app's guard's new words from there, in place of "the app's job slot", and its *Made by* gains `0182`. The heading stays.
   Verify: `git grep -n -F "refuses while its render slot runs or a session holds the collection" -- docs/decisions.md` prints the *Accepts* line of D72.
-- [ ] 3.2 In `isekai/foundation/README.md`, in the `library.py` row of *Files*, change `` `record_running`, `running`, `render_running` and `session` `` to `` `record_running`, `running`, `collection_held`, `render_running` and `session` ``.
+- [x] 3.2 In `isekai/foundation/README.md`, in the `library.py` row of *Files*, change `` `record_running`, `running`, `render_running` and `session` `` to `` `record_running`, `running`, `collection_held`, `render_running` and `session` ``.
   Verify: `git grep -n -F "collection_held" -- isekai/foundation/README.md` prints the `library.py` row of *Files*.
-- [ ] 3.3 Derive the *Imported by* tables again with `uv run python -m tools.derive_imported_by`; task 2.8 already added `interface/ui/surface.py` to the `library.py` row, and 3.2 edits no table, so the rerun moves nothing.
+- [x] 3.3 Derive the *Imported by* tables again with `uv run python -m tools.derive_imported_by`; task 2.8 already added `interface/ui/surface.py` to the `library.py` row, and 3.2 edits no table, so the rerun moves nothing.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py` exits 0.
-- [ ] 3.4 In `isekai/interface/ui/README.md`, in the **Delete** bullet, change `refused` / `while a render runs for the collection` to `refused` / `while this server's render slot runs or a session of any process holds the collection`.
+- [x] 3.4 In `isekai/interface/ui/README.md`, in the **Delete** bullet, change `refused` / `while a render runs for the collection` to `refused` / `while this server's render slot runs or a session of any process holds the collection`.
   Verify: `git grep -n -F "a session of any process holds the collection" -- isekai/interface/ui/README.md` prints the bullet's second line.
-- [ ] 3.5 In `CHANGELOG.md`, in the `0.87.37` notes, drop the clause ", and its *Known breaks* leave" and the path that follows it from the first bullet that names D72, as [D5](design.md#d5) writes it. Cards `0181·R1` and `0181·S3`.
+- [x] 3.5 In `CHANGELOG.md`, in the `0.87.37` notes, drop the clause ", and its *Known breaks* leave" and the path that follows it from the first bullet that names D72, as [D5](design.md#d5) writes it. Cards `0181·R1` and `0181·S3`.
   Verify: `git grep -n -F "Known breaks* leave" -- CHANGELOG.md` prints nothing.
