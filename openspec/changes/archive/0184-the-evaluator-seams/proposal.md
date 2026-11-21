@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.40
 after: [0183-the-stage-record]
 ---
 
