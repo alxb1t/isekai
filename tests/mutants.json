@@ -377,7 +377,7 @@
   },
   {
     "finding": "PB-3a",
-    "path": "isekai/pipeline/review/__init__.py",
+    "path": "isekai/pipeline/review/records.py",
     "find": "        create(path, APPROVED_FILE, body)\n",
     "replace": "        write(path, APPROVED_FILE, body)\n",
     "tests": ["tests/test_review.py"],
@@ -385,7 +385,7 @@
   },
   {
     "finding": "PB-3b",
-    "path": "isekai/pipeline/review/__init__.py",
+    "path": "isekai/pipeline/review/records.py",
     "find": "    except FileExistsError:\n",
     "replace": "    except FileNotFoundError:\n",
     "tests": ["tests/test_review.py"],

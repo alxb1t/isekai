@@ -53,7 +53,7 @@ the default; a package earns its place when the contract needs more than one fil
   means patching global state. Each module `PATCHED_MODULES` of `tests/test_ratchets.py` lists stays for
   one reason:
   - **a failure or a race a test injects:** `pipeline/edit.py`, `pipeline/generate.py`,
-    `pipeline/importing.py`, `pipeline/review/__init__.py` and `pipeline/tattoos.py` — a write that fails, a rival
+    `pipeline/importing.py`, `pipeline/review/records.py` and `pipeline/tattoos.py` — a write that fails, a rival
     that takes a name, a read held open;
   - **a recording spy:** `interface/ui/events.py`, `interface/ui/library.py` and `shared/ink.py` — a
     wrapper that counts a call or signals when it ran — and `shared/chain.py`'s `_kernel`;
