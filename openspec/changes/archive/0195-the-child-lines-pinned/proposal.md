@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.5
 after: [0194-the-onnx-opener]
 ---
 

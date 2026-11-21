@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.2
 after: [0191-the-wiring-resolvers]
 ---
 
