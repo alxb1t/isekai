@@ -4,25 +4,25 @@ Move the plan of a render session from `isekai/interface/render.py` to `isekai/i
 
 ## Progress
 
-- [ ] 1 — The estimate and the edit queue · moderate
+- [x] 1 — The estimate and the edit queue · moderate
 - [ ] 2 — The plan and the quote's parts · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The estimate and the edit queue
 
-- [ ] 1.1 Create `isekai/interface/plan.py`: a docstring saying it holds the plan of a render session and never imports `render.py`; the imports of [D1](design.md#d1) that phase 1's code reads, which are `dataclasses`, `json`, `math`, `statistics`, `Collection`, `Mapping`, `Sequence`, `dataclass`, `Path`, `HOLD_SECONDS`, `Refusal`, `REPOSITORY`, `Run`, `render_groups`, `sidecars`, `duration_of`, `pending`, `records` and `duration`; then `RENDER_CONFIG`, `RECENT` and `FLOOR_S` with their comments, copied from `isekai/interface/render.py`.
+- [x] 1.1 Create `isekai/interface/plan.py`: a docstring saying it holds the plan of a render session and never imports `render.py`; the imports of [D1](design.md#d1) that phase 1's code reads, which are `dataclasses`, `json`, `math`, `statistics`, `Collection`, `Mapping`, `Sequence`, `dataclass`, `Path`, `HOLD_SECONDS`, `Refusal`, `REPOSITORY`, `Run`, `render_groups`, `sidecars`, `duration_of`, `pending`, `records` and `duration`; then `RENDER_CONFIG`, `RECENT` and `FLOOR_S` with their comments, copied from `isekai/interface/render.py`.
   Verify: `uv run python -c "from isekai.interface.plan import RENDER_CONFIG, RECENT, FLOOR_S"` exits 0.
-- [ ] 1.2 Copy these from `isekai/interface/render.py` into `plan.py`, after the constants, in this order and unchanged with their docstrings: `Timing`, `load_timing`, `Estimate`, `recent`, `recent_edits`, `estimate`, `Work` with its comment, `estimated`, `Edits`, `edits_of`, `edit_records`, `pending_edits`.
+- [x] 1.2 Copy these from `isekai/interface/render.py` into `plan.py`, after the constants, in this order and unchanged with their docstrings: `Timing`, `load_timing`, `Estimate`, `recent`, `recent_edits`, `estimate`, `Work` with its comment, `estimated`, `Edits`, `edits_of`, `edit_records`, `pending_edits`.
   Verify: `uv run python -c "from isekai.interface.plan import Timing, Estimate, Edits, Work, load_timing, recent, recent_edits, estimate, estimated, edits_of, edit_records, pending_edits"` exits 0.
-- [ ] 1.3 In `isekai/interface/render.py` delete the constants and the definitions of 1.1 and 1.2, with `Work`'s comment and the constants' comments, and import them from `isekai.interface.plan` as [D2](design.md#d2) says. Plainly: `FLOOR_S`, `Edits`, `edits_of`, `estimated`, `load_timing`. As `X as X`, one statement each, as `record_running` is, under a comment that they moved to `plan.py` and stay importable here: `RECENT`, `RENDER_CONFIG`, `Timing`, `Estimate`, `recent`, `recent_edits`, `estimate`, `Work`, `edit_records`, `pending_edits`. Write the `HOLD_SECONDS` import as `HOLD_SECONDS as HOLD_SECONDS` ([D4](design.md#d4)).
+- [x] 1.3 In `isekai/interface/render.py` delete the constants and the definitions of 1.1 and 1.2, with `Work`'s comment and the constants' comments, and import them from `isekai.interface.plan` as [D2](design.md#d2) says. Plainly: `FLOOR_S`, `Edits`, `edits_of`, `estimated`, `load_timing`. As `X as X`, one statement each, as `record_running` is, under a comment that they moved to `plan.py` and stay importable here: `RECENT`, `RENDER_CONFIG`, `Timing`, `Estimate`, `recent`, `recent_edits`, `estimate`, `Work`, `edit_records`, `pending_edits`. Write the `HOLD_SECONDS` import as `HOLD_SECONDS as HOLD_SECONDS` ([D4](design.md#d4)).
   Verify: `uv run python -c "from isekai.interface.render import FLOOR_S, RECENT, RENDER_CONFIG, HOLD_SECONDS, Timing, Estimate, Edits, Work, load_timing, recent, recent_edits, estimate, estimated, edits_of, edit_records, pending_edits; assert Timing.__module__ == edits_of.__module__ == 'isekai.interface.plan'"` exits 0.
-- [ ] 1.4 Run `uv run ruff check --fix isekai/interface/render.py isekai/interface/plan.py` and `uv run ruff format isekai/interface/render.py isekai/interface/plan.py`: they drop each import `render.py` no longer reads and sort both files' imports. `plan.py` imports nothing of `render.py`.
+- [x] 1.4 Run `uv run ruff check --fix isekai/interface/render.py isekai/interface/plan.py` and `uv run ruff format isekai/interface/render.py isekai/interface/plan.py`: they drop each import `render.py` no longer reads and sort both files' imports. `plan.py` imports nothing of `render.py`.
   Verify: `uv run ruff check isekai/interface/render.py isekai/interface/plan.py` exits 0.
-- [ ] 1.5 In `tests/mutants.json` set `RE-1`'s `path` to `isekai/interface/plan.py`. Its `find` is unchanged and occurs once there.
+- [x] 1.5 In `tests/mutants.json` set `RE-1`'s `path` to `isekai/interface/plan.py`. Its `find` is unchanged and occurs once there.
   Verify: `git grep -n -F "isekai/interface/plan.py" -- tests/mutants.json` prints one line.
-- [ ] 1.6 Run `uv run python -m tools.derive_imported_by`: `plan.py` now imports the pod start, the edit and the generate stage, so the layer READMEs' derived tables change, and `tests/test_docs.py` holds each to the import graph.
+- [x] 1.6 Run `uv run python -m tools.derive_imported_by`: `plan.py` now imports the pod start, the edit and the generate stage, so the layer READMEs' derived tables change, and `tests/test_docs.py` holds each to the import graph.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 1.7 Confirm the suite still reads each moved name through `render`.
+- [x] 1.7 Confirm the suite still reads each moved name through `render`.
   Verify: `uv run pytest tests/test_render.py tests/test_edit_session.py tests/test_ui_api.py tests/test_ratchets.py` exits 0.
 
 ## 2 — The plan and the quote's parts

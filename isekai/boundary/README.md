@@ -38,7 +38,7 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 | `comfy/prompt.py` | `comfy/__init__.py` | — |
 | `gpu.py` | `interface/render.py`, `interface/ui/billing.py`, `interface/ui/jobs.py`, `interface/ui/routes/rendering.py`, `interface/wiring.py` | — |
 | `ollama.py` | `interface/wiring.py`, `pipeline/caption.py`, `pipeline/tagging.py` | — |
-| `pod_start.py` | `interface/render.py` | — |
+| `pod_start.py` | `interface/plan.py`, `interface/render.py` | — |
 | `pose.py` | `interface/wiring.py`, `pipeline/proposing.py` | — |
 | `provision.py` | `ollama.py`, `pose.py`, `sam2.py`, `unpack.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/eval_models.py`, `evaluation/face.py`, `evaluation/recall.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |
 | `sam2.py` | `interface/wiring.py`, `pipeline/proposing.py` | — |
