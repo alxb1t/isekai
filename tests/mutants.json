@@ -353,7 +353,7 @@
   },
   {
     "finding": "PB-2",
-    "path": "isekai/pipeline/review/__init__.py",
+    "path": "isekai/pipeline/review/approval.py",
     "find": "        else token_budget(fields, schema, definition).total\n",
     "replace": "        else estimate_tokens(fields, schema)\n",
     "tests": ["tests/test_review.py"],

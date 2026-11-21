@@ -4,40 +4,40 @@ Move the review stage's approval, drafts and cancel out of `isekai/pipeline/revi
 
 ## Progress
 
-- [ ] 1 — The approval · moderate
+- [x] 1 — The approval · moderate
 - [ ] 2 — The drafts · moderate
 - [ ] 3 — The cancel · moderate
 - [ ] 4 — The decision and the documents · moderate
 
 ## 1 — The approval
 
-- [ ] 1.1 Run `git grep -n -e "^def approve" -e "^    return path, warnings" -- isekai/pipeline/review/__init__.py`: the number of its first line is `<first>` and of its last `<last>`, below.
+- [x] 1.1 Run `git grep -n -e "^def approve" -e "^    return path, warnings" -- isekai/pipeline/review/__init__.py`: the number of its first line is `<first>` and of its last `<last>`, below.
   Verify: the same command prints two lines.
-- [ ] 1.2 Before any line moves, run the pre-flight over `approve` ([D5](design.md#d5)): `uv run python -m tools.mutate isekai/pipeline/review/__init__.py:<first>-<last> --tests tests/test_review.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_artifact_bytes.py`. Kill each survivor with a case in `tests/test_review.py`, carrying the `spec` marker its neighbours carry.
+- [x] 1.2 Before any line moves, run the pre-flight over `approve` ([D5](design.md#d5)): `uv run python -m tools.mutate isekai/pipeline/review/__init__.py:<first>-<last> --tests tests/test_review.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_artifact_bytes.py`. Kill each survivor with a case in `tests/test_review.py`, carrying the `spec` marker its neighbours carry.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 1.3 Move `DISCARD` with its comment from `isekai/pipeline/review/__init__.py` to `isekai/pipeline/review/records.py`, after `STAGE` ([D3](design.md#d3)). Import it plainly in the front door from `isekai.pipeline.review.records`.
+- [x] 1.3 Move `DISCARD` with its comment from `isekai/pipeline/review/__init__.py` to `isekai/pipeline/review/records.py`, after `STAGE` ([D3](design.md#d3)). Import it plainly in the front door from `isekai.pipeline.review.records`.
   Verify: `grep -n -e "^DISCARD = " isekai/pipeline/review/records.py` prints one line.
-- [ ] 1.4 Create `isekai/pipeline/review/approval.py`: a docstring saying it holds `approve` and its helpers and imports `records.py` and `budget.py` and neither the front door nor another part. Its imports: `Mapping` and `Sequence` from `collections.abc`; `Path`; `cast` from `typing`; from `isekai.foundation.artifacts` `APPROVED_FILE`, `DRAFT_FILE`, `SHEET_FILE`, `ApprovedProducer`, `Renders`, `ReviewApproved`, `read`, `renders_of` and `require`; `OUTPUT_SUFFIX`, `Flow` and `Schema` from `isekai.foundation.flow`; `Refusal`; from `isekai.foundation.run` `APPROVED`, `NEW_VERSION`, `REVIEW`, `SHEETS`, `Run`, `approval_of`, `approved_versions`, `artifact_name`, `current_draft`, `group_of`, `is_rendered`, `latest`, `latest_artifact`, `next_version`, `sheet_of`, `stage_command` and `version_of`; `validate` from `isekai.shared.fields`; `Vocabulary` from `isekai.shared.vocabulary`; from `isekai.pipeline.review.records` `DISCARD`, `STAGE`, `_again`, `_differs`, `_publish`, `_recopy`, `came_from`, `copied_renders`, `is_copy` and `same_fields`; from `isekai.pipeline.review.budget` `ENCODER_WINDOW`, `estimate_tokens` and `token_budget`. Run `git add isekai/pipeline/review/approval.py`: `tools.mutate` copies tracked files only.
+- [x] 1.4 Create `isekai/pipeline/review/approval.py`: a docstring saying it holds `approve` and its helpers and imports `records.py` and `budget.py` and neither the front door nor another part. Its imports: `Mapping` and `Sequence` from `collections.abc`; `Path`; `cast` from `typing`; from `isekai.foundation.artifacts` `APPROVED_FILE`, `DRAFT_FILE`, `SHEET_FILE`, `ApprovedProducer`, `Renders`, `ReviewApproved`, `read`, `renders_of` and `require`; `OUTPUT_SUFFIX`, `Flow` and `Schema` from `isekai.foundation.flow`; `Refusal`; from `isekai.foundation.run` `APPROVED`, `NEW_VERSION`, `REVIEW`, `SHEETS`, `Run`, `approval_of`, `approved_versions`, `artifact_name`, `current_draft`, `group_of`, `is_rendered`, `latest`, `latest_artifact`, `next_version`, `sheet_of`, `stage_command` and `version_of`; `validate` from `isekai.shared.fields`; `Vocabulary` from `isekai.shared.vocabulary`; from `isekai.pipeline.review.records` `DISCARD`, `STAGE`, `_again`, `_differs`, `_publish`, `_recopy`, `came_from`, `copied_renders`, `is_copy` and `same_fields`; from `isekai.pipeline.review.budget` `ENCODER_WINDOW`, `estimate_tokens` and `token_budget`. Run `git add isekai/pipeline/review/approval.py`: `tools.mutate` copies tracked files only.
   Verify: `uv run python -c "import isekai.pipeline.review.approval"` exits 0.
-- [ ] 1.5 Move from `isekai/pipeline/review/__init__.py` into `isekai/pipeline/review/approval.py`, in the order of their lines, unchanged with their docstrings and comments: `approve`, `_NOT_COPIED` with its comment, `_copy_approval`, `_refuse_unchanged`, `_resheet` ([D2](design.md#d2)). Delete them from the front door.
+- [x] 1.5 Move from `isekai/pipeline/review/__init__.py` into `isekai/pipeline/review/approval.py`, in the order of their lines, unchanged with their docstrings and comments: `approve`, `_NOT_COPIED` with its comment, `_copy_approval`, `_refuse_unchanged`, `_resheet` ([D2](design.md#d2)). Delete them from the front door.
   Verify: `uv run python -c "from isekai.pipeline.review.approval import approve, _NOT_COPIED, _copy_approval, _refuse_unchanged, _resheet"` exits 0.
-- [ ] 1.6 Add `_window_warnings` to `approval.py` directly above `approve`, as [D5](design.md#d5) gives it, with a one-line docstring and the block's lines unchanged. In `approve` replace the block with `warnings = _window_warnings(run, flow, fields, schema, definition)`.
+- [x] 1.6 Add `_window_warnings` to `approval.py` directly above `approve`, as [D5](design.md#d5) gives it, with a one-line docstring and the block's lines unchanged. In `approve` replace the block with `warnings = _window_warnings(run, flow, fields, schema, definition)`.
   Verify: `grep -n -e "^def _window_warnings" -e "^def approve" isekai/pipeline/review/approval.py` prints two lines.
-- [ ] 1.7 In the front door import `approve` from `isekai.pipeline.review.approval` as `approve as approve` ([D7](design.md#d7)). Run `uv run ruff check isekai/pipeline/review`: it names each import no code reads. In `__init__.py` rewrite as `X as X`, one statement each, a name [D7](design.md#d7) lists, and delete every other by hand. Then run `uv run ruff check --fix isekai/pipeline/review` and `uv run ruff format isekai/pipeline/review`.
+- [x] 1.7 In the front door import `approve` from `isekai.pipeline.review.approval` as `approve as approve` ([D7](design.md#d7)). Run `uv run ruff check isekai/pipeline/review`: it names each import no code reads. In `__init__.py` rewrite as `X as X`, one statement each, a name [D7](design.md#d7) lists, and delete every other by hand. Then run `uv run ruff check --fix isekai/pipeline/review` and `uv run ruff format isekai/pipeline/review`.
   Verify: `uv run ruff check isekai/pipeline/review` exits 0.
-- [ ] 1.8 `approval.py` imports no part and not the front door.
+- [x] 1.8 `approval.py` imports no part and not the front door.
   Verify: `grep -n -e "review.drafts" -e "review.cancelling" -e "pipeline.review import" isekai/pipeline/review/approval.py` prints nothing.
-- [ ] 1.9 In `tests/mutants.json` set `path` in `PB-2` so it holds `"path": "isekai/pipeline/review/approval.py"` ([D9](design.md#d9)). Its `find` and `replace` stay.
+- [x] 1.9 In `tests/mutants.json` set `path` in `PB-2` so it holds `"path": "isekai/pipeline/review/approval.py"` ([D9](design.md#d9)). Its `find` and `replace` stay.
   Verify: `git grep -n -F '"path": "isekai/pipeline/review/approval.py"' -- tests/mutants.json` prints one line.
-- [ ] 1.10 In `tests/test_ratchets.py` delete the `LONG_FILES` row `isekai/pipeline/review/__init__.py` and the `LONG_FUNCTIONS` row `isekai/pipeline/review/__init__.py::approve`, and set `FILE_ROWS` and `FUNCTION_ROWS` to the rows left.
+- [x] 1.10 In `tests/test_ratchets.py` delete the `LONG_FILES` row `isekai/pipeline/review/__init__.py` and the `LONG_FUNCTIONS` row `isekai/pipeline/review/__init__.py::approve`, and set `FILE_ROWS` and `FUNCTION_ROWS` to the rows left.
   Verify: `git grep -n -e "^    .isekai/pipeline/review" -- tests/test_ratchets.py` prints nothing.
-- [ ] 1.11 **HALT CHECK** The front door is under the long-file ceiling and `approve` under the long-function one, so no row stands for either. A failure means the move differs from what the plan names.
+- [x] 1.11 **HALT CHECK** The front door is under the long-file ceiling and `approve` under the long-function one, so no row stands for either. A failure means the move differs from what the plan names.
   Verify: `uv run pytest tests/test_ratchets.py tests/test_layers.py` exits 0.
-- [ ] 1.12 Run `uv run python -m tools.derive_imported_by`: `approval.py` imports the artifacts, the flow, the run and the shared fields, so the derived tables of the layer READMEs change.
+- [x] 1.12 Run `uv run python -m tools.derive_imported_by`: `approval.py` imports the artifacts, the flow, the run and the shared fields, so the derived tables of the layer READMEs change.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 1.13 Run `grep -n -e "^def _window_warnings" -e "^    return path, warnings" isekai/pipeline/review/approval.py`, then the pre-flight over those lines ([D5](design.md#d5)): `uv run python -m tools.mutate isekai/pipeline/review/approval.py:<first>-<last> --tests tests/test_review.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_artifact_bytes.py`, `<first>` and `<last>` the numbers it printed. Kill each survivor with a case in `tests/test_review.py`.
+- [x] 1.13 Run `grep -n -e "^def _window_warnings" -e "^    return path, warnings" isekai/pipeline/review/approval.py`, then the pre-flight over those lines ([D5](design.md#d5)): `uv run python -m tools.mutate isekai/pipeline/review/approval.py:<first>-<last> --tests tests/test_review.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_artifact_bytes.py`, `<first>` and `<last>` the numbers it printed. Kill each survivor with a case in `tests/test_review.py`.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 1.14 Confirm the suite reads each name through the front door.
+- [x] 1.14 Confirm the suite reads each name through the front door.
   Verify: `uv run pytest tests/test_review.py tests/test_ui_api.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_artifact_bytes.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py` exits 0.
 
 ## 2 — The drafts

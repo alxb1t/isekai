@@ -34,6 +34,8 @@ its new digest.
 - `isekai/pipeline/review/budget.py` holds `ENCODER_WINDOW`, `estimate_tokens`, `TokenBudget` and `token_budget`, which the front door binds back; `PB-1a` and `PB-1b` are found in it (0198 D3, D7, D8).
 - `isekai/pipeline/review/records.py` holds the draft's reads and writes, `_publish` and the shared helpers; `_write_draft` takes `renders`, `version` and `image` by keyword, and the tests that patch `create` and `write` patch `records.py` (0198 D2, D4, D5, D7).
 - Docs `D77` records the package, its front door and where a patch goes, and the pipeline README names `review/`'s modules and that a stage may be a package (0198 D9).
+- `isekai/pipeline/review/approval.py` holds `approve` and its helpers, with the warning block in `_window_warnings`; `DISCARD` moves to `records.py` and the front door binds `approve` back (0199 D1, D2, D3, D5, D7).
+- The front door's long-file row and `approve`'s long-function row leave the ratchets, and `PB-2` is found in `approval.py` (0199 D8, D9).
 
 ## [0.88.1] - 2026-11-21
 

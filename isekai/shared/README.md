@@ -31,12 +31,12 @@ does is reach a boundary or decide a stage's order.
 |---|---|---|
 | `chain.py` | `pipeline/tattoos.py` | — |
 | `field_map.py` | `interface/drafting.py`, `interface/ui/surface.py`, `interface/verbs/runner.py`, `interface/wiring.py`, `pipeline/sheet.py` | `tools/derive_field_map.py` |
-| `fields.py` | `pipeline/review/__init__.py`, `pipeline/sheet.py` | — |
+| `fields.py` | `pipeline/review/approval.py`, `pipeline/sheet.py` | — |
 | `image.py` | `interface/ui/library.py`, `interface/ui/routes/common.py`, `interface/ui/routes/place.py`, `pipeline/generate.py`, `pipeline/importing.py`, `pipeline/tattoos.py` | — |
 | `ink.py` | `interface/ui/routes/tattoos.py`, `interface/verbs/common.py`, `interface/verbs/edits.py`, `pipeline/tattoos.py` | — |
 | `proposal.py` | `interface/ui/shapes.py`, `pipeline/proposing.py` | — |
 | `tattoo.py` | `pipeline/edit.py`, `pipeline/tattoos.py`, `ink.py` | — |
-| `vocabulary.py` | `boundary/wd14.py`, `interface/drafting.py`, `interface/ui/routes/reviewing.py`, `interface/ui/surface.py`, `interface/verbs/runner.py`, `interface/wiring.py`, `pipeline/review/__init__.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `evaluation/__main__.py`, `evaluation/face.py`, `evaluation/recall.py`, `tools/derive_field_map.py` |
+| `vocabulary.py` | `boundary/wd14.py`, `interface/drafting.py`, `interface/ui/routes/reviewing.py`, `interface/ui/surface.py`, `interface/verbs/runner.py`, `interface/wiring.py`, `pipeline/review/approval.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `evaluation/__main__.py`, `evaluation/face.py`, `evaluation/recall.py`, `tools/derive_field_map.py` |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are
