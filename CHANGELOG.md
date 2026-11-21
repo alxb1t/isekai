@@ -10,6 +10,12 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.87.34] - 2026-11-21
+
+Gate: local 1m14s · CI not read under mf-ship · 0.87.33: local 1m13s · CI not read under mf-ship
+
+- `kinds_without_golden` in `tests/test_artifact_bytes.py` reads each golden's `schema.name`; `test_every_artifact_kind_has_a_golden` fails when a name of `VERSIONS` has none, and `test_the_check_catches_a_kind_with_no_golden` holds the check (0178 D1, D2).
+
 ## [0.87.33] - 2026-11-21
 
 Gate: local 1m13s · CI not read under mf-ship · 0.87.32: local 1m16s · CI not read under mf-ship
