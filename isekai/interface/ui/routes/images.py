@@ -10,9 +10,9 @@ from fastapi import FastAPI, Response
 from isekai.foundation.artifacts import (
     renders_of,
 )
+from isekai.foundation.discard import delete_render
 from isekai.foundation.flow import Flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import edit_files, edit_numbers
 from isekai.interface.ui import library
 from isekai.interface.ui.routes.common import (
     _approved,
@@ -22,8 +22,7 @@ from isekai.interface.ui.routes.common import (
 )
 from isekai.interface.ui.routes.table import Route, register
 from isekai.interface.ui.surface import Surface, _version
-from isekai.pipeline.generate import discard_render
-from isekai.pipeline.review import token_budget, withdraw
+from isekai.pipeline.review import token_budget
 
 
 def _side(flow: Flow, version: int, approval: Path) -> dict[str, Any]:
@@ -204,25 +203,19 @@ class ImageRoutes:
     def delete_render(
         self, collection: str, digest: str, flow: str, version: str, seed: int
     ) -> dict[str, Any]:
-        """Delete the render and its thumbnails, as `discard` does, while none runs.
+        """Delete the render, as `discard` does, while none runs.
 
-        The thumbnails go while the image still names them; then `withdraw`
-        deletes the approval its last render leaves, older ones with no render and
-        the newest's waiting draft, and, with no approval left, the flow's sheets.
+        The foundation's `delete_render` deletes the render, its edits, their
+        thumbnails and the approvals its last render leaves.
         """
-        run, image, _ = self.surface.rendered(collection, digest, flow, version, seed)
+        _, image, _ = self.surface.rendered(collection, digest, flow, version, seed)
         with self.surface.draft_lock:
             rendering = self.surface.rendering(collection)
             if rendering is not None:
                 raise Refusal(
                     f"{rendering} Wait for it to end, then delete the render again."
                 )
-            library.drop_thumbnails(run, image)
-            for number in edit_numbers(image.parent, seed):
-                if (own := edit_files(image.parent, seed, number)[0]).is_file():
-                    library.drop_thumbnails(run, own)
-            discard_render(image)
-            withdraw(run, flow, _version(version))
+            delete_render(image)
         return {"deleted": True}
 
 

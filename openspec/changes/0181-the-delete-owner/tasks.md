@@ -8,7 +8,7 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 - [x] 2 — The move · moderate
 - [x] 3 — The owner · hard
 - [x] 4 — The verb · moderate
-- [ ] 5 — The route · moderate
+- [x] 5 — The route · moderate
 - [ ] 6 — The documents · moderate
 
 ## 1 — The pre-flight
@@ -65,13 +65,13 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
 
 ## 5 — The route
 
-- [ ] 5.1 In `tests/test_ui_api.py`, after `test_bake_detail_deleting_a_render_deletes_its_bakes_thumbnails`, add `test_the_verb_and_the_route_leave_one_cache_with_edits_seeded` as [D6](design.md#d6) gives it, `spec_exempt("structural: …")`. It is a guard, not a red-first case: it passes before the route is switched, and holds the switch after.
+- [x] 5.1 In `tests/test_ui_api.py`, after `test_bake_detail_deleting_a_render_deletes_its_bakes_thumbnails`, add `test_the_verb_and_the_route_leave_one_cache_with_edits_seeded` as [D6](design.md#d6) gives it, `spec_exempt("structural: …")`. It is a guard, not a red-first case: it passes before the route is switched, and holds the switch after.
   Verify: `uv run pytest tests/test_ui_api.py -k "leave_one_cache" -q` exits 0.
-- [ ] 5.2 In `isekai/interface/ui/routes/images.py`, make `delete_render` call `delete_render(image)` from `isekai.foundation.discard` under the draft lock, after the job-slot refusal, where it chained `drop_thumbnails`, `discard_render` and `withdraw`. Drop the imports it no longer reads and reword its docstring.
+- [x] 5.2 In `isekai/interface/ui/routes/images.py`, make `delete_render` call `delete_render(image)` from `isekai.foundation.discard` under the draft lock, after the job-slot refusal, where it chained `drop_thumbnails`, `discard_render` and `withdraw`. Drop the imports it no longer reads and reword its docstring.
   Verify: `git grep -n -e "discard_render(" -e "withdraw(" -e "discard_edit(" -e "drop_thumbnails(" -e "edit_numbers(" -- isekai/interface/ui/routes/images.py` prints nothing.
-- [ ] 5.3 Run the page's cases over the delete and the library's.
+- [x] 5.3 Run the page's cases over the delete and the library's.
   Verify: `uv run pytest tests/test_ui_api.py tests/test_ui_library.py -q` exits 0.
-- [ ] 5.4 Run `uv run python -m tools.derive_imported_by`; it moves `interface/ui/routes/images.py` between the importers of the stages and of `discard.py`.
+- [x] 5.4 Run `uv run python -m tools.derive_imported_by`; it moves `interface/ui/routes/images.py` between the importers of the stages and of `discard.py`.
   Verify: `uv run pytest tests/test_docs.py tests/test_layers.py -q` exits 0.
 
 ## 6 — The documents

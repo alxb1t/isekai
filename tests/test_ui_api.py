@@ -2335,6 +2335,43 @@ def test_bake_detail_deleting_a_render_deletes_its_bakes_thumbnails(
     assert not run_module.edit_files(group, 11, 1)[0].exists()
 
 
+@pytest.mark.spec_exempt(
+    "structural: the route and the verb share one owner, held by their one cache"
+)
+def test_the_verb_and_the_route_leave_one_cache_with_edits_seeded(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    client, at = _baked(wired, made, tmp_path, schema, vocabulary)
+    _bake(made, 2, "11.edit-1.png", colour=(30, 200, 30))
+    for place in ("", "/edit/1", "/edit/2"):
+        assert client.get(f"{at}{place}/thumb").status_code == 200
+    cache = tmp_path / "lib" / ".cache"
+    cached = cache / made.digest / FLOW / "outputs" / "001"
+    # Another collection's thumbnail of the same render stays.
+    (cached / "11.bbb.jpg").write_bytes(b"jpg")
+    assert len(list(cached.glob("11.*.jpg"))) == 4
+    shutil.copytree(tmp_path / "lib", tmp_path / "twin")
+    twin_run = tmp_path / "twin" / COLLECTION / "runs" / made.path.name
+    twin = bare_wiring(runs_root=tmp_path)
+
+    twinned = dispatch(
+        build_parser().parse_args(
+            ["discard", str(twin_run / FLOW / "outputs" / "001" / "11.png")]
+        ),
+        twin,
+    )
+    deleted = client.delete(at)
+
+    assert twinned == 0
+    assert deleted.status_code == 200
+    assert [path.name for path in cached.glob("11.*.jpg")] == ["11.bbb.jpg"]
+    assert tree(cache) == tree(tmp_path / "twin" / ".cache")
+
+
 @pytest.mark.spec("ui:renders:a-source-thumbnail-is-upright")
 def test_a_source_thumbnail_is_turned_upright_and_read_from_the_cache_again(
     client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
