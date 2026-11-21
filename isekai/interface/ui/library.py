@@ -66,6 +66,7 @@ from isekai.foundation.run import (
     Run,
     approval_of,
     approved_versions,
+    current_draft,
     digest_of,
     edit_files,
     edit_numbers,
@@ -79,7 +80,7 @@ from isekai.foundation.run import (
 from isekai.interface.wiring import trackable
 from isekai.pipeline.generate import lacks
 from isekai.pipeline.importing import UI_CONFIG
-from isekai.pipeline.review import Status, came_from, current_draft
+from isekai.pipeline.review import Status, came_from
 from isekai.pipeline.review import state as review_state
 from isekai.shared.image import (
     dimensions_or_refuse,

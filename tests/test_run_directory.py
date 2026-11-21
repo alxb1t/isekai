@@ -51,6 +51,7 @@ from isekai.foundation.run import (
     assign,
     attempts,
     check_budget,
+    current_draft,
     instructions_record,
     is_approved,
     is_edit_file,
@@ -65,6 +66,7 @@ from isekai.foundation.run import (
     run_id,
     runs_in,
     slug,
+    source_copy,
     version_of,
     versions,
     write_atomically,
@@ -642,6 +644,38 @@ def test_deciding_approval_reads_no_file(tmp_path: Path) -> None:
     unreadable.write_text("{ this is not json at all")
 
     assert approved_versions(directory) == [1]
+
+
+@pytest.mark.spec("review:approval:draft-is-not-done")
+def test_a_draft_above_the_approval_is_the_current_draft(tmp_path: Path) -> None:
+    directory = tmp_path / "review"
+    directory.mkdir()
+    (directory / "001.approved.json").write_text("{}")
+    (directory / "002.draft.json").write_text("{}")
+
+    assert current_draft(directory) == directory / "002.draft.json"
+
+
+@pytest.mark.spec("review:approval:draft-is-not-done")
+def test_a_draft_at_or_below_the_approval_is_no_current_draft(tmp_path: Path) -> None:
+    directory = tmp_path / "review"
+    directory.mkdir()
+    assert current_draft(directory) is None
+
+    (directory / "002.draft.json").write_text("{}")
+    (directory / "002.approved.json").write_text("{}")
+
+    assert current_draft(directory) is None
+
+
+@pytest.mark.spec("review:draft-from:a-draft-from-an-image-copies-it")
+def test_a_draft_copy_is_named_for_its_version_in_the_flows_sources(
+    tmp_path: Path,
+) -> None:
+    run = Run("run", tmp_path)
+
+    assert source_copy(run, FLOW, 2) == tmp_path / FLOW / "sources" / "002.png"
+    assert source_copy(run, FLOW, 12) == tmp_path / FLOW / "sources" / "012.png"
 
 
 @pytest.mark.spec("run-directory:readdir:filename-carries-only-decidable-facts")
