@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.34
 ---
 
 # The contract covered
