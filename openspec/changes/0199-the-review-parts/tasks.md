@@ -7,7 +7,7 @@ Move the review stage's approval, drafts and cancel out of `isekai/pipeline/revi
 - [x] 1 — The approval · moderate
 - [x] 2 — The drafts · moderate
 - [x] 3 — The cancel · moderate
-- [ ] 4 — The decision and the documents · moderate
+- [x] 4 — The decision and the documents · moderate
 
 ## 1 — The approval
 
@@ -90,19 +90,19 @@ Move the review stage's approval, drafts and cancel out of `isekai/pipeline/revi
 
 ## 4 — The decision and the documents
 
-- [ ] 4.1 In `docs/decisions.md` amend D77: replace its bold rule with the one [D10](design.md#d10) gives, its *Accepts* with the one there, and its *Made by* with `0198`, `0199`. Its *Why* stays. Find it with `git grep -n -F "### D77" -- docs/decisions.md`.
+- [x] 4.1 In `docs/decisions.md` amend D77: replace its bold rule with the one [D10](design.md#d10) gives, its *Accepts* with the one there, and its *Made by* with `0198`, `0199`. Its *Why* stays. Find it with `git grep -n -F "### D77" -- docs/decisions.md`.
   Verify: `git grep -c -F "cancelling.py" -- docs/decisions.md` prints `docs/decisions.md:1`.
-- [ ] 4.2 In `isekai/pipeline/README.md` change the Files row of `review/` so it names each module: the front door `__init__.py` holds `Status`, `state` and the re-exports; `drafts.py` the drafts and what refuses them; `approval.py` `approve`; `cancelling.py` the discard and the cancel; `records.py` and `budget.py` as they stand.
+- [x] 4.2 In `isekai/pipeline/README.md` change the Files row of `review/` so it names each module: the front door `__init__.py` holds `Status`, `state` and the re-exports; `drafts.py` the drafts and what refuses them; `approval.py` `approve`; `cancelling.py` the discard and the cancel; `records.py` and `budget.py` as they stand.
   Verify: `git grep -c -F "cancelling.py" -- isekai/pipeline/README.md` prints `isekai/pipeline/README.md:1`.
-- [ ] 4.3 Run `uv run python -m tools.derive_imported_by`, which writes the derived tables again.
+- [x] 4.3 Run `uv run python -m tools.derive_imported_by`, which writes the derived tables again.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 4.4 Confirm `approval.py` holds `approve`.
+- [x] 4.4 Confirm `approval.py` holds `approve`.
   Verify: `git grep -n -e "^def approve" -- isekai/pipeline/review/approval.py` prints one line.
-- [ ] 4.5 Confirm no row of the ratchets names the stage.
+- [x] 4.5 Confirm no row of the ratchets names the stage.
   Verify: `git grep -n -e "^    .isekai/pipeline/review" -- tests/test_ratchets.py` prints nothing.
-- [ ] 4.6 Confirm each name [D7](design.md#d7) lists is importable from the front door, and `Status` is defined there, so the page's `ReviewStatus` keeps its module; `ui/src/wire.ts` is held by the deriver's test.
+- [x] 4.6 Confirm each name [D7](design.md#d7) lists is importable from the front door, and `Status` is defined there, so the page's `ReviewStatus` keeps its module; `ui/src/wire.ts` is held by the deriver's test.
   Verify: `uv run python -c "from isekai.pipeline.review import Status, state, Cancelled, Revision, approve, cancel, cancellable, discard, draft_from, drafting_approval, drafting_sheet, refuse_drafts, refuse_revision, review, revise, waiting_edit, save_draft, came_from, draft_image, ENCODER_WINDOW, estimate_tokens, TokenBudget, token_budget, DRAFT, current_draft, source_copy, withdraw"` exits 0.
-- [ ] 4.7 Run the mutants the repository keeps.
+- [x] 4.7 Run the mutants the repository keeps.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 4.8 Confirm the suite, the layer rules, the docs and the wire hold at the end.
+- [x] 4.8 Confirm the suite, the layer rules, the docs and the wire hold at the end.
   Verify: `uv run pytest tests/test_review.py tests/test_ui_api.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_artifact_bytes.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py tests/test_spec_bindings.py tests/test_derive_wire.py` exits 0.

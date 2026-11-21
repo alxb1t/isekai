@@ -39,6 +39,7 @@ its new digest.
 - `isekai/pipeline/review/drafts.py` holds `review`, `revise`, `draft_from` and the refusals they share, which the front door binds back; `PB-5` and the byte-writer key follow it (0199 D1, D2, D3, D7, D9).
 - `draft_across` takes `seed` after a bare `*`, so its row leaves the wide functions of the ratchets (0199 D6).
 - `isekai/pipeline/review/cancelling.py` holds `Cancelled`, `discard`, `cancellable`, `cancel` and their helpers, which the front door binds back; the front door defines `state` and `Status` alone, and `PB-14` is found in the new module (0199 D1, D2, D3, D7, D9).
+- D77 names the front door, the three parts and what a part may import, and the pipeline README names each module of `review/`; every name D7 lists imports from the front door and the standing mutants replay with no survivor (0199 D10).
 
 ## [0.88.1] - 2026-11-21
 
