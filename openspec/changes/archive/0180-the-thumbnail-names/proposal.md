@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.87.36
 after: [0179-the-layout-tail]
 ---
 
