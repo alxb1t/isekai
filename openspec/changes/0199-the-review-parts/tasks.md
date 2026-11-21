@@ -5,7 +5,7 @@ Move the review stage's approval, drafts and cancel out of `isekai/pipeline/revi
 ## Progress
 
 - [x] 1 — The approval · moderate
-- [ ] 2 — The drafts · moderate
+- [x] 2 — The drafts · moderate
 - [ ] 3 — The cancel · moderate
 - [ ] 4 — The decision and the documents · moderate
 
@@ -42,27 +42,27 @@ Move the review stage's approval, drafts and cancel out of `isekai/pipeline/revi
 
 ## 2 — The drafts
 
-- [ ] 2.1 Create `isekai/pipeline/review/drafts.py`: a docstring saying it holds the drafts and what refuses them and imports `records.py` and neither the front door nor another part. Its imports: `shlex`; `Sequence` from `collections.abc`; `Path`; from `isekai.foundation.artifacts` `DRAFT_FILE`, `ONE_RENDER`, `SHEET_FILE`, `Renders`, `ReviewApproved`, `Sheet`, `read`, `renders_of` and `require`; `write_atomically` from `isekai.foundation.atomic_write`; `OUTPUT_SUFFIX` and `Schema` from `isekai.foundation.flow`; `Refusal`; from `isekai.foundation.run` `APPROVED`, `NEW_VERSION`, `REVIEW`, `SHEETS`, `RenderRef`, `Run`, `approval_of`, `approved_versions`, `artifact_name`, `current_draft`, `group_of`, `is_rendered`, `latest`, `next_version`, `render_image`, `sheet_of`, `source_copy`, `stage_command`, `version_of` and `versions`; from `isekai.pipeline.review.records` `DISCARD`, `STAGE`, `_again`, `_approval`, `_differs`, `_draft_command`, `_first_image`, `_write_draft` and `copied_renders`. Run `git add isekai/pipeline/review/drafts.py`.
+- [x] 2.1 Create `isekai/pipeline/review/drafts.py`: a docstring saying it holds the drafts and what refuses them and imports `records.py` and neither the front door nor another part. Its imports: `shlex`; `Sequence` from `collections.abc`; `Path`; from `isekai.foundation.artifacts` `DRAFT_FILE`, `ONE_RENDER`, `SHEET_FILE`, `Renders`, `ReviewApproved`, `Sheet`, `read`, `renders_of` and `require`; `write_atomically` from `isekai.foundation.atomic_write`; `OUTPUT_SUFFIX` and `Schema` from `isekai.foundation.flow`; `Refusal`; from `isekai.foundation.run` `APPROVED`, `NEW_VERSION`, `REVIEW`, `SHEETS`, `RenderRef`, `Run`, `approval_of`, `approved_versions`, `artifact_name`, `current_draft`, `group_of`, `is_rendered`, `latest`, `next_version`, `render_image`, `sheet_of`, `source_copy`, `stage_command`, `version_of` and `versions`; from `isekai.pipeline.review.records` `DISCARD`, `STAGE`, `_again`, `_approval`, `_differs`, `_draft_command`, `_first_image`, `_write_draft` and `copied_renders`. Run `git add isekai/pipeline/review/drafts.py`.
   Verify: `uv run python -c "import isekai.pipeline.review.drafts"` exits 0.
-- [ ] 2.2 Move from `isekai/pipeline/review/__init__.py` into `isekai/pipeline/review/drafts.py`, in the order of their lines, unchanged with their docstrings and comments: `review`, `revise`, `_DRAFT_AGAIN` with its comment, `draft_from`, `drafting_sheet`, `drafting_approval`, `_held_way`, `waiting_edit`, `_refuse_edited`, `_waiting_number`, `_discarding`, `_edited`, `Revision` with its comment, `refuse_drafts`, `refuse_revision` ([D2](design.md#d2)). Delete them from the front door.
+- [x] 2.2 Move from `isekai/pipeline/review/__init__.py` into `isekai/pipeline/review/drafts.py`, in the order of their lines, unchanged with their docstrings and comments: `review`, `revise`, `_DRAFT_AGAIN` with its comment, `draft_from`, `drafting_sheet`, `drafting_approval`, `_held_way`, `waiting_edit`, `_refuse_edited`, `_waiting_number`, `_discarding`, `_edited`, `Revision` with its comment, `refuse_drafts`, `refuse_revision` ([D2](design.md#d2)). Delete them from the front door.
   Verify: `uv run python -c "from isekai.pipeline.review.drafts import review, revise, _DRAFT_AGAIN, draft_from, drafting_sheet, drafting_approval, _held_way, waiting_edit, _refuse_edited, _waiting_number, _discarding, _edited, Revision, refuse_drafts, refuse_revision"` exits 0.
-- [ ] 2.3 In the front door import from `isekai.pipeline.review.drafts`, as `X as X` one statement each, `Revision`, `draft_from`, `drafting_approval`, `drafting_sheet`, `refuse_drafts`, `refuse_revision`, `review`, `revise` and `waiting_edit`. Then run the steps of 1.7: `ruff check` names each import no code reads, `__init__.py` re-binds a name [D7](design.md#d7) lists and drops every other, `ruff --fix` and `ruff format` sort the rest.
+- [x] 2.3 In the front door import from `isekai.pipeline.review.drafts`, as `X as X` one statement each, `Revision`, `draft_from`, `drafting_approval`, `drafting_sheet`, `refuse_drafts`, `refuse_revision`, `review`, `revise` and `waiting_edit`. Then run the steps of 1.7: `ruff check` names each import no code reads, `__init__.py` re-binds a name [D7](design.md#d7) lists and drops every other, `ruff --fix` and `ruff format` sort the rest.
   Verify: `uv run ruff check isekai/pipeline/review` exits 0.
-- [ ] 2.4 `drafts.py` imports no part and not the front door.
+- [x] 2.4 `drafts.py` imports no part and not the front door.
   Verify: `grep -n -e "review.approval" -e "review.cancelling" -e "pipeline.review import" isekai/pipeline/review/drafts.py` prints nothing.
-- [ ] 2.5 In `isekai/interface/drafting.py` put `*,` on its own line in `draft_across`'s parameters, before `seed: int,`, and pass `seed=seed` in the call of `draft_from_image` ([D6](design.md#d6)).
+- [x] 2.5 In `isekai/interface/drafting.py` put `*,` on its own line in `draft_across`'s parameters, before `seed: int,`, and pass `seed=seed` in the call of `draft_from_image` ([D6](design.md#d6)).
   Verify: `git grep -n -F "seed=seed" -- isekai/interface/drafting.py` prints one line.
-- [ ] 2.6 In `tests/test_ratchets.py` delete the `WIDE_FUNCTIONS` row `isekai/interface/drafting.py::draft_across` and set `WIDE_ROWS` to the rows left.
+- [x] 2.6 In `tests/test_ratchets.py` delete the `WIDE_FUNCTIONS` row `isekai/interface/drafting.py::draft_across` and set `WIDE_ROWS` to the rows left.
   Verify: `git grep -n -F "drafting.py::draft_across" -- tests/test_ratchets.py` prints nothing.
-- [ ] 2.7 In `tests/test_artifact_bytes.py` change the key of `BYTE_WRITERS`, `"isekai/pipeline/review/__init__.py"`, to `"isekai/pipeline/review/drafts.py"`, its text as it stands. `draft_from` calls `write_atomically` for a draft's source copy.
+- [x] 2.7 In `tests/test_artifact_bytes.py` change the key of `BYTE_WRITERS`, `"isekai/pipeline/review/__init__.py"`, to `"isekai/pipeline/review/drafts.py"`, its text as it stands. `draft_from` calls `write_atomically` for a draft's source copy.
   Verify: `git grep -n -F '"isekai/pipeline/review/drafts.py"' -- tests/test_artifact_bytes.py` prints one line.
-- [ ] 2.8 In `tests/mutants.json` set `path` in `PB-5` so it holds `"path": "isekai/pipeline/review/drafts.py"` ([D9](design.md#d9)). Its `find` and `replace` stay.
+- [x] 2.8 In `tests/mutants.json` set `path` in `PB-5` so it holds `"path": "isekai/pipeline/review/drafts.py"` ([D9](design.md#d9)). Its `find` and `replace` stay.
   Verify: `git grep -n -F '"path": "isekai/pipeline/review/drafts.py"' -- tests/mutants.json` prints one line.
-- [ ] 2.9 Run `uv run python -m tools.derive_imported_by`: `drafts.py` imports `write_atomically`, the artifacts, the flow and the run, so the derived tables change.
+- [x] 2.9 Run `uv run python -m tools.derive_imported_by`: `drafts.py` imports `write_atomically`, the artifacts, the flow and the run, so the derived tables change.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
-- [ ] 2.10 Run the mutants the repository keeps.
+- [x] 2.10 Run the mutants the repository keeps.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
-- [ ] 2.11 Confirm the suite reads each name through the front door, and the byte writers' scan finds `drafts.py`.
+- [x] 2.11 Confirm the suite reads each name through the front door, and the byte writers' scan finds `drafts.py`.
   Verify: `uv run pytest tests/test_review.py tests/test_ui_api.py tests/test_pipeline_cli.py tests/test_resume.py tests/test_artifact_bytes.py tests/test_layers.py tests/test_docs.py tests/test_ratchets.py` exits 0.
 
 ## 3 — The cancel

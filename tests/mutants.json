@@ -249,7 +249,7 @@
   },
   {
     "finding": "PB-5",
-    "path": "isekai/pipeline/review/__init__.py",
+    "path": "isekai/pipeline/review/drafts.py",
     "find": "    number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))\n    if seed is not None:",
     "replace": "    number = _waiting_number(run, flow) or next_version(run.directory(flow, REVIEW))\n    if _waiting_number(run, flow) is not None and seed is None:\n        return run.directory(flow, REVIEW) / f\"{number:03d}.draft.json\"\n    if seed is not None:",
     "tests": ["tests/test_review.py"],
