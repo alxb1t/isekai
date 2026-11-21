@@ -118,25 +118,30 @@ export const DONE: Record<Stage, number> = {
   rendered: 6,
   unreadable: 0,
 }
+/* The verbs Prepare runs. */
+export type PrepareVerb = 'tag' | 'caption' | 'sheet'
 /* A running stage's segment, and the word its cell shows. */
-export const RUNNING: Record<string, { segment: number; word: string }> = {
+export const RUNNING: Record<PrepareVerb, { segment: number; word: string }> = {
   tag: { segment: 1, word: 'tagging…' },
   caption: { segment: 2, word: 'captioning…' },
   sheet: { segment: 3, word: 'filling the sheet…' },
 }
+/* An own key only: `in` would read `toString` as a verb. */
+const isPrepareVerb = (name: string): name is PrepareVerb => Object.hasOwn(RUNNING, name)
 
 /** Return the word `cell` shows: the `running` stage's, `rendered ×n`, or its stage.
 
     e.g. running 'tag' -> "tagging…", a cell rendered twice -> "rendered ×2" */
 export function wordOf(cell: HubCell, running: string | undefined): string {
-  if (running) return RUNNING[running]?.word ?? `${running}…`
+  if (running) return isPrepareVerb(running) ? RUNNING[running].word : `${running}…`
   if (cell.stage === 'rendered') return `rendered ×${cell.renders}`
   return cell.stage ?? ''
 }
 
 /** Return the class of segment `index` of `cell`'s track: running, done, or the empty string. */
 export function segmentClass(cell: HubCell, running: string | undefined, index: number): string {
-  if (running && RUNNING[running]?.segment === index) return 'hub__segment--running'
+  if (running && isPrepareVerb(running) && RUNNING[running].segment === index)
+    return 'hub__segment--running'
   return cell.stage && index < DONE[cell.stage] ? 'hub__segment--done' : ''
 }
 
