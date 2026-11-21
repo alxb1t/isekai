@@ -1,0 +1,58 @@
+{
+  "change": "0201-the-stage-tables",
+  "version": "0.88.11",
+  "base": "0e16d8d2",
+  "analyzed": "0f97073b",
+  "measured_on": "local",
+  "collected_at": "2026-11-22T00:20:19+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "Claude Code",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2605
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 76
+    },
+    "open-backlog-cards": {
+      "value": 3
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 1
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 724
+    },
+    "diff-files": {
+      "value": 19
+    },
+    "phases": {
+      "value": 4
+    },
+    "shared-reading-set": {
+      "value": 18430
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1105
+    },
+    "decisions": {
+      "value": 78
+    }
+  }
+}

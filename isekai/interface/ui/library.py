@@ -58,14 +58,11 @@ from isekai.foundation.library import session as session
 from isekai.foundation.library import stat_key as _key
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
-    CAPTIONS,
     ID_DIGEST_CHARS,
     ID_SEPARATOR,
-    OUTPUTS,
-    PROMPTS,
+    PRODUCERS,
     REVIEW,
     SHEETS,
-    TAGS,
     WD14,
     Run,
     approval_of,
@@ -93,15 +90,20 @@ from isekai.shared.image import (
     upright_thumbnail,
 )
 
-# What a run directory's stage folder says was written last, for Home's row.
+# What a stage's folder says was written last, for Home's row, by the stage's key.
+# The folders come from the record, so a stage the record adds has no word until
+# one is written here, and `_KINDS` fails at import for it.
+_WORDS = {
+    "caption": "caption",
+    "wd14": "tag",
+    "tags": "tag",
+    "sheet": "sheet",
+    "review": "review",
+    "assemble": "prompt",
+    "render": "render",
+}
 _KINDS: Mapping[str, str] = {
-    CAPTIONS: "caption",
-    WD14: "tag",
-    TAGS: "tag",
-    SHEETS: "sheet",
-    REVIEW: "review",
-    PROMPTS: "prompt",
-    OUTPUTS: "render",
+    producer.folder: _WORDS[producer.key] for producer in PRODUCERS
 }
 
 # How many of a collection's sources Home's row shows as thumbnails, before `+n`.

@@ -11,7 +11,7 @@ import os
 import re
 import shutil
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Any, TypeGuard, cast
 
@@ -43,6 +43,7 @@ from isekai.foundation.run import (
     OUTPUTS,
     PHOTO,
     PHOTOGRAPH_VERBS,
+    PREPARE,
     PRODUCERS,
     PROMPTS,
     REPOSITORY,
@@ -52,6 +53,7 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     Kind,
+    Producer,
     Run,
     StageFailure,
     across,
@@ -80,11 +82,16 @@ from isekai.foundation.run import (
     runs_in,
     slug,
     source_copy,
+    tagged_runs,
     version_of,
     versions,
     write_atomically,
 )
-from isekai.interface.cli import build_parser
+from isekai.interface.cli import _WRITES, build_parser
+from isekai.interface.run_view import STAGES
+from isekai.interface.ui import jobs
+from isekai.interface.ui.library import _KINDS
+from isekai.interface.verbs.runner import _BUILDERS
 from isekai.interface.wiring import Wiring, _is_within, wiring, wiring_from
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact
@@ -1255,6 +1262,79 @@ def test_the_stage_tables_are_read_from_the_record() -> None:
     assert [CAPTIONS, WD14, TAGS, SHEETS, REVIEW, PROMPTS, OUTPUTS] == [
         p.folder for p in PRODUCERS
     ]
+
+
+def _off_the_record(
+    record: Sequence[Producer], tables: Mapping[str, Collection[str]]
+) -> list[str]:
+    """Return the names of the tables whose keys the record does not hold."""
+    verbs = {p.verb for p in record}
+    holds = {
+        "_KINDS": set(tables["_KINDS"]) == {p.folder for p in record},
+        "STAGES": tuple(tables["STAGES"])
+        == tuple(p.folder for p in record if p.scope == "flow" and p.folder != OUTPUTS),
+        "_WRITES": set(tables["_WRITES"])
+        == {p.verb for p in record if p.scope == PHOTO},
+        "PREPARE": set(tables["PREPARE"]) <= verbs,
+        "REACHED": set(tables["REACHED"]) <= verbs,
+        "_BUILDERS": set(tables["_BUILDERS"]) == (verbs - {"generate"}) | {"approve"},
+    }
+    return [name for name, held in holds.items() if not held]
+
+
+def _tables() -> dict[str, Collection[str]]:
+    """Return the six tables as the code holds them."""
+    return {
+        "_KINDS": _KINDS,
+        "STAGES": STAGES,
+        "_WRITES": _WRITES,
+        "PREPARE": jobs.PREPARE,
+        "REACHED": jobs.REACHED,
+        "_BUILDERS": _BUILDERS,
+    }
+
+
+@pytest.mark.spec_exempt("structural: each stage table's keys are the record's")
+def test_each_stage_tables_keys_are_the_records() -> None:
+    assert _off_the_record(PRODUCERS, _tables()) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: the guard names a table with a key the record lacks"
+)
+def test_a_table_with_a_key_the_record_lacks_is_named() -> None:
+    for name, keys in _tables().items():
+        grown = {**_tables(), name: [*keys, "mask"]}
+        assert _off_the_record(PRODUCERS, grown) == [name]
+    flow = Producer("mask", "masks", "flow", "mask", 1)
+    photo = Producer("pose", "poses", "photo", "pose", 1)
+    assert _off_the_record((*PRODUCERS, flow), _tables()) == [
+        "_KINDS",
+        "STAGES",
+        "_BUILDERS",
+    ]
+    assert _off_the_record((*PRODUCERS, photo), _tables()) == [
+        "_KINDS",
+        "_WRITES",
+        "_BUILDERS",
+    ]
+
+
+@pytest.mark.spec_exempt("structural: Prepare's order is the record's verbs in it")
+def test_prepares_order_is_tag_caption_sheet_and_the_records_verbs() -> None:
+    assert PREPARE == ("tag", "caption", "sheet")
+    assert set(PREPARE) <= {producer.verb for producer in PRODUCERS}
+
+
+@pytest.mark.spec_exempt("structural: the tag rule names each run once, in order")
+def test_tagged_runs_names_each_run_a_tagged_flow_lists_once_in_its_order() -> None:
+    both = {"a": True, "b": True}
+    only_b = {"a": False, "b": True}
+    assert tagged_runs({"a": ["r1", "r2"], "b": ["r2", "r3"]}, only_b) == ("r2", "r3")
+    assert tagged_runs({"a": ["r1", "r2"], "b": ["r2", "r1"]}, only_b) == ("r2", "r1")
+    assert tagged_runs({"a": ["r1", "r2"], "b": ["r2", "r1"]}, both) == ("r1", "r2")
+    assert tagged_runs({"a": ["r1"], "b": ["r2"]}, {"a": False, "b": False}) == ()
+    assert tagged_runs({"a": ["r1"], "b": []}, only_b) == ()
 
 
 @pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")

@@ -709,11 +709,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D73 · A stage is declared once, in isekai/foundation/producers.py
 
-**`isekai/foundation/producers.py` declares each stage a run passes through as a frozen `Producer(key, folder, scope, verb, budget)`, in `PRODUCERS`, in the order a run passes them: caption, wd14, tags, sheet, review, assemble, render. `BUDGETS` of `failures.py`, and `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words of `names.py`, are read from it, and `run.py` re-exports `Producer` and `PRODUCERS`. The module imports nothing of `isekai`. `producer_for(key)` returns a stage's row, and `attempt` in `run.py` is the sequence of `caption`, `wd14`, `tags` and `sheet`, which reads the row by `producer_for`.**
+**`isekai/foundation/producers.py` declares each stage a run passes through as a frozen `Producer(key, folder, scope, verb, budget)`, in `PRODUCERS`, in the order a run passes them: caption, wd14, tags, sheet, review, assemble, render. `BUDGETS` of `failures.py`, and `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words of `names.py`, are read from it, and `run.py` re-exports `Producer` and `PRODUCERS`. The module imports nothing of `isekai`. `producer_for(key)` returns a stage's row, and `attempt` in `run.py` is the sequence of `caption`, `wd14`, `tags` and `sheet`, which reads the row by `producer_for`. `PREPARE` and `tagged_runs` beside the record hold Prepare's order by verb and its tag rule, which the app's plan and the `prepare` verb read; `_KINDS` of `ui/library.py` reads its keys from the record, and a test holds the keys of `STAGES`, `_WRITES`, `PREPARE`, `REACHED` and the runner's `_BUILDERS` to it.**
 
 - **Why:** a stage was spelled in several literals that no test held to agree, and a new stage edited each of them. One row says what a stage is, and a table that names it is read from the row. The key is the budget's key and the `stage` of a failure record on disk, so it never changes.
-- **Accepts:** the tables above the foundation, the pipeline's own `STAGE` constants and the hub cell's `Stage` stay as they are, the paid stages, `assemble` and `render`, keep their own sequences, and `review` has a row with no budget. Reopen when the interface's tables are read from the record.
-- **Made by:** `0183`, `0188`.
+- **Accepts:** `STAGES`, `_WRITES`, `REACHED` and the runner's builders stay written, each held to the record by a test, the pipeline's own `STAGE` constants and the hub cell's `Stage` stay as they are, the paid stages, `assemble` and `render`, keep their own sequences, and `review` has a row with no budget. `Producer` gains no field for a table with one reader. Reopen when a second reader of one of those tables earns it a field.
+- **Made by:** `0183`, `0188`, `0201`.
 
 ### D74 · A terminal delete or cancel refuses beside a live render
 
