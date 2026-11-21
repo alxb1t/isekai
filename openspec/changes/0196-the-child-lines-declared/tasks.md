@@ -6,7 +6,7 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
 
 - [x] 1 — The module · moderate
 - [x] 2 — The emitters · moderate
-- [ ] 3 — The readers · moderate
+- [x] 3 — The readers · moderate
 - [ ] 4 — The decision and the docs · moderate
 
 ## 1 — The module
@@ -50,11 +50,11 @@ Declare a child's lines and `--progress json` once in `isekai/interface/progress
 
 ## 3 — The readers
 
-- [ ] 3.1 In `isekai/interface/ui/jobs.py` delete `PREPARE` and its comment, and import `PREPARE` from `isekai/interface/progress.py`; key `REACHED` by `TAG` and `SHEET` of that module.
+- [x] 3.1 In `isekai/interface/ui/jobs.py` delete `PREPARE` and its comment, and import `PREPARE` from `isekai/interface/progress.py`; key `REACHED` by `TAG` and `SHEET` of that module.
   Verify: `git grep -n -e "^PREPARE" -- isekai/interface/ui/jobs.py` prints nothing.
-- [ ] 3.2 In `isekai/interface/ui/jobs.py`, in `_Job.complete` compare `line.get("state")` with `DONE`; in `Jobs._render_child` replace `== "image"` with `== IMAGE` and take `LANDED` for the image's keys in place of the names it spells. Both come from `isekai/interface/progress.py`.
+- [x] 3.2 In `isekai/interface/ui/jobs.py`, in `_Job.complete` compare `line.get("state")` with `DONE`; in `Jobs._render_child` replace `== "image"` with `== IMAGE` and take `LANDED` for the image's keys in place of the names it spells. Both come from `isekai/interface/progress.py`.
   Verify: `git grep -n -F '== "image"' -- isekai/interface/ui/jobs.py` prints nothing.
-- [ ] 3.3 In `isekai/interface/ui/jobs.py`, in `prepare_command` and `render_command`, spread `*ARGUMENT` of `isekai/interface/progress.py` in place of `"--progress", "json"`. Each command's list is otherwise as it was.
+- [x] 3.3 In `isekai/interface/ui/jobs.py`, in `prepare_command` and `render_command`, spread `*ARGUMENT` of `isekai/interface/progress.py` in place of `"--progress", "json"`. Each command's list is otherwise as it was.
   Verify: `git grep -n -F '"--progress"' -- isekai/interface/ui/jobs.py` prints nothing.
 
 ## 4 — The decision and the docs

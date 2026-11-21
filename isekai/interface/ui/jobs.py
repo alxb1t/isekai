@@ -38,7 +38,16 @@ from isekai.boundary.gpu import GpunitExit, Say, Volume, refused_line
 from isekai.foundation.artifacts import session_id
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
-from isekai.interface.progress import progress_line
+from isekai.interface.progress import (
+    ARGUMENT,
+    DONE,
+    IMAGE,
+    LANDED,
+    PREPARE,
+    SHEET,
+    TAG,
+    progress_line,
+)
 from isekai.interface.render import (
     LOST_EXIT,
     REFUSALS,
@@ -49,16 +58,11 @@ from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
 
-# The stages Prepare counts, in order. Its one child takes each photograph through
-# them in turn: tag and caption once, naming no flow, since every flow reads the
-# one description (D17); then sheet for each of its cells.
-PREPARE = ("tag", "caption", "sheet")
-
 # The cell stages a done line must read for its stage to count it; a stage absent
 # writes no file the hub's stage reads.
 REACHED = {
-    "tag": {"tagged", "sheet", "draft", "approved", "rendered"},
-    "sheet": {"sheet", "draft", "approved", "rendered"},
+    TAG: {"tagged", "sheet", "draft", "approved", "rendered"},
+    SHEET: {"sheet", "draft", "approved", "rendered"},
 }
 
 # The kinds of job, each with its own slot.
@@ -118,8 +122,7 @@ def prepare_command(runs: Path, cells: Sequence[str]) -> list[str]:
         "prepare",
         "--runs",
         str(runs),
-        "--progress",
-        "json",
+        *ARGUMENT,
         *cells,
     ]
 
@@ -139,8 +142,7 @@ def render_command(limit: int, roots: Sequence[Path], session: str) -> list[str]
         str(limit),
         "--session",
         session,
-        "--progress",
-        "json",
+        *ARGUMENT,
         *map(str, roots),
     ]
 
@@ -230,7 +232,7 @@ class _Job:
         reached = {event.get("cell", {}).get("stage") for event in found}
         done = self.completed.setdefault(verb, set())
         counts = (
-            line.get("state") == "done"
+            line.get("state") == DONE
             and (verb not in REACHED or bool(reached & REACHED[verb]))
             and identity in self.asked(verb)
             and identity not in done
@@ -609,13 +611,8 @@ class Jobs:
                 continue
             reported = True
             with self._lock:
-                if line.get("step") == "image":
-                    job.session["images"].append(
-                        {
-                            key: line.get(key)
-                            for key in ("digest", "flow", "version", "seed")
-                        }
-                    )
+                if line.get("step") == IMAGE:
+                    job.session["images"].append({key: line.get(key) for key in LANDED})
                 else:
                     job.session["steps"][str(line.get("step"))] = line.get("state")
             self._publish(job)
