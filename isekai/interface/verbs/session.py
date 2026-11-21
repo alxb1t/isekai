@@ -3,14 +3,15 @@
 import argparse
 from pathlib import Path
 
+from isekai.interface.progress import FLAG, FORMAT
 from isekai.interface.verbs.common import Verb, _session_id, _Targets, session_limit
 
 
 def render_arguments(parser: argparse.ArgumentParser) -> None:
     """Add `render`'s arguments to `parser`."""
     parser.add_argument(
-        "--progress",
-        choices=["json"],
+        FLAG,
+        choices=[FORMAT],
         default=None,
         help="print a JSON line per step of the session; prose goes to stderr",
     )

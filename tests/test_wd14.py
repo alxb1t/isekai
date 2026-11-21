@@ -19,14 +19,17 @@ must yield the tag on row 1 and no other.
 import ast
 import hashlib
 import importlib
+import json
 import os
 import sys
 from collections.abc import Callable
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from isekai.boundary import provision, wd14
+from isekai.boundary.onnx import cpu_session, silence_onnxruntime
 from isekai.boundary.provision import Manifest
 from isekai.boundary.wd14 import (
     FLOOR,
@@ -186,6 +189,13 @@ def _planted(models_dir: Path, present: dict[str, bytes]) -> Manifest:
     }
 
 
+def _declared(models_dir: Path, manifest: Manifest) -> Path:
+    """Write `manifest` under `models_dir` and return the path of the file."""
+    path = models_dir / "vocabulary.json"
+    path.write_text(json.dumps(manifest))
+    return path
+
+
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
 def test_an_absent_label_index_refuses_naming_what_to_fetch(tmp_path: Path) -> None:
     with pytest.raises(Refusal) as refused:
@@ -197,17 +207,14 @@ def test_an_absent_label_index_refuses_naming_what_to_fetch(tmp_path: Path) -> N
 
 
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
-def test_the_model_is_verified_and_not_only_the_label_index(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_the_model_is_verified_and_not_only_the_label_index(tmp_path: Path) -> None:
     # The list present and hashing correctly, the graph absent. Nothing but a
     # check on the *second* destination catches this, and without it the build
     # would open an unverified half-gigabyte file on the strength of a 300 KB one.
     manifest = _planted(tmp_path, {LABELS_DEST: INDEX.encode()})
-    monkeypatch.setattr(provision, "load_manifest", lambda _path=None: manifest)
 
     with pytest.raises(Refusal) as refused:
-        verified_paths(tmp_path)
+        verified_paths(tmp_path, manifest=_declared(tmp_path, manifest))
 
     message = str(refused.value)
     assert MODEL_DEST in message
@@ -219,7 +226,7 @@ def test_the_model_is_verified_and_not_only_the_label_index(
     "dest", [LABELS_DEST, MODEL_DEST], ids=["the-label-index", "the-model"]
 )
 def test_a_half_whose_bytes_do_not_match_its_digest_stops_the_stage(
-    dest: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    dest: str, tmp_path: Path
 ) -> None:
     # Both present, and one half's bytes swapped after the manifest was built.
     # `verified_paths` leaves the mismatch a `DigestMismatch`, whose message names
@@ -228,22 +235,22 @@ def test_a_half_whose_bytes_do_not_match_its_digest_stops_the_stage(
     # a refusal.
     manifest = _planted(tmp_path, {LABELS_DEST: INDEX.encode(), MODEL_DEST: b"graph"})
     (tmp_path / dest).write_bytes(b"other bytes")
-    monkeypatch.setattr(provision, "load_manifest", lambda _path=None: manifest)
 
     with pytest.raises(provision.DigestMismatch) as refused:
-        verified_paths(tmp_path)
+        verified_paths(tmp_path, manifest=_declared(tmp_path, manifest))
 
     assert dest in str(refused.value)
 
 
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
 def test_both_halves_present_and_matching_resolve_to_their_two_paths(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     manifest = _planted(tmp_path, {LABELS_DEST: INDEX.encode(), MODEL_DEST: b"graph"})
-    monkeypatch.setattr(provision, "load_manifest", lambda _path=None: manifest)
 
-    labels, model, pins = verified_paths(tmp_path)
+    labels, model, pins = verified_paths(
+        tmp_path, manifest=_declared(tmp_path, manifest)
+    )
 
     assert (labels, model) == (tmp_path / LABELS_DEST, tmp_path / MODEL_DEST)
     # And the digests it checked come back with them, so whatever records a
@@ -438,6 +445,75 @@ def test_the_telemetry_check_catches_an_import_with_it_on() -> None:
     assert telemetry_left_on([])
 
 
+class _CallRecordingOrt:
+    """A stand-in `onnxruntime` keeping the arguments of each session call."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+        self.session = object()
+        self.options = SimpleNamespace()
+
+    def SessionOptions(self) -> SimpleNamespace:  # noqa: N802
+        return self.options
+
+    def InferenceSession(self, *args: object, **kwargs: object) -> object:  # noqa: N802
+        self.calls.append((args, kwargs))
+        return self.session
+
+
+@pytest.mark.spec_exempt(
+    "structural: the one maker of a session names the CPU provider alone"
+)
+def test_the_opener_opens_the_model_on_the_cpu_provider_alone() -> None:
+    ort = _CallRecordingOrt()
+
+    cpu_session(ort, Path("a/m.onnx"))
+
+    assert ort.calls == [(("a/m.onnx",), {"providers": ["CPUExecutionProvider"]})]
+
+
+@pytest.mark.spec_exempt(
+    "structural: the options of a session come before its providers"
+)
+def test_the_opener_hands_the_options_before_the_providers() -> None:
+    ort = _CallRecordingOrt()
+    options = object()
+
+    cpu_session(ort, Path("a/m.onnx"), options)
+
+    assert ort.calls == [
+        (("a/m.onnx", options), {"providers": ["CPUExecutionProvider"]})
+    ]
+
+
+@pytest.mark.spec_exempt("structural: the opener returns the session the runtime made")
+def test_the_opener_returns_the_session_the_runtime_made() -> None:
+    ort = _CallRecordingOrt()
+
+    assert cpu_session(ort, Path("a/m.onnx")) is ort.session
+
+
+@pytest.mark.spec_exempt("structural: no requirement names the runtime's telemetry")
+def test_the_opener_switches_telemetry_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Set first, so the undo is recorded even when the switch starts unset.
+    monkeypatch.setenv(TELEMETRY_SWITCH, "0")
+    monkeypatch.delenv(TELEMETRY_SWITCH)
+
+    cpu_session(_CallRecordingOrt(), Path("a/m.onnx"))
+
+    assert os.environ[TELEMETRY_SWITCH] == "1"
+
+
+@pytest.mark.spec_exempt("structural: no requirement names the runtime's telemetry")
+def test_the_opener_silence_sets_the_switch(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(TELEMETRY_SWITCH, "0")
+    monkeypatch.delenv(TELEMETRY_SWITCH)
+
+    silence_onnxruntime()
+
+    assert os.environ[TELEMETRY_SWITCH] == "1"
+
+
 def session_openers(root: Path) -> dict[str, bool]:
     """Return each module that opens an ONNX session, and whether it silences telemetry.
 
@@ -499,3 +575,21 @@ def test_the_check_catches_a_module_that_opens_a_session_unsilenced(
         "isekai/loud.py": False,
         "isekai/quiet.py": True,
     }
+
+
+@pytest.mark.spec_exempt(
+    "structural: the evaluator opens its session with load-time warnings silenced"
+)
+def test_the_evaluators_session_is_opened_with_log_severity_three(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from evaluation import face
+
+    ort = _CallRecordingOrt()
+    monkeypatch.setenv(TELEMETRY_SWITCH, "0")
+    monkeypatch.delenv(TELEMETRY_SWITCH)
+    monkeypatch.setattr(face, "_import", lambda _module: ort)
+
+    face._session(Path("m.onnx"))
+
+    assert ort.options.log_severity_level == 3

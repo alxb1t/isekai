@@ -8,7 +8,13 @@ refuse before they read anything, so a refusal costs no embedding and no tagging
 from pathlib import Path
 
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import FRAME_NAME, ID_DIGEST_CHARS, Run
+from isekai.foundation.run import (
+    DATA_ROOT,
+    FRAME_NAME,
+    ID_DIGEST_CHARS,
+    REPOSITORY,
+    Run,
+)
 from isekai.interface.wiring import trackable
 
 
@@ -37,13 +43,19 @@ def run_prefix(run: Run) -> str:
     return run.photo_record["sha256"][:ID_DIGEST_CHARS]
 
 
-def destination(runs: Path, name: str) -> Path:
+def destination(
+    runs: Path,
+    name: str,
+    *,
+    repository: Path = REPOSITORY,
+    data_root: Path = DATA_ROOT,
+) -> Path:
     """Return `<collection>/<name>`, refusing a place git can reach (D18).
 
     e.g. `.data/collection/runs`, `recall.json` -> `.data/collection/recall.json`
     """
     target = runs.parent / name
-    if trackable(target.parent):
+    if trackable(target.parent, repository=repository, data_root=data_root):
         raise Refusal(
             f"{target.resolve()} is inside this repository and outside .data/, "
             "the ignored data root, so the record would be one `git add` from "

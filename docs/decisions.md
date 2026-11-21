@@ -629,11 +629,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D62 · The run directory is run.py, its siblings imported through it
 
-**The run directory is `isekai/foundation/run.py`. It re-exports every name of `names.py`, `rundir.py`, `layout.py`, `failures.py` and `producers.py` under `__all__`, and a module outside the foundation imports a run's names from `isekai.foundation.run`, never from a sibling. A sibling imports no `run.py` and stays on the standard library and the foundation.**
+**The run directory is `isekai/foundation/run.py`. It re-exports every name of `names.py`, `rundir.py`, `layout.py`, `failures.py`, `producers.py` and `command.py` under `__all__`, and a module outside the foundation imports a run's names from `isekai.foundation.run`, never from a sibling. A sibling imports no `run.py` and stays on the standard library and the foundation.**
 
 - **Why:** the run directory was one file of clusters and a listed row of the ratchet ([D56](#d56--size-and-patches-are-held-by-ratchets)). A front that re-exports changes no importer, keeps `RUNS_ROOT` and `DATA_ROOT` in one module and leaves the layer guard's cycle rule nothing to find.
 - **Accepts:** the roots, `open_run`, `rendered_at`, the command text and the provenance records stay in `run.py`, because `rendered_at` reads `stage_command`, which reads the patched `RUNS_ROOT`. Review holds that an importer reads the front; no test does. Reopen when `RUNS_ROOT` is no longer patched.
-- **Made by:** `0152`, `0183`.
+- **Made by:** `0152`, `0183`, `0193`.
 
 ### D63 · The wire is declared in shapes.py and held by tests
 
@@ -722,6 +722,30 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Why:** the verb's guard answered no for a root outside a collection, and `approve --cancel` asked nothing, so a delete or a cancel could run beside a live render.
 - **Accepts:** the gap between a check and a delete, the window before a record opens and a lock an act holds stay as they are, and the review stage's cancel decides nothing about a render. Reopen when a lock both a session and an act take is added.
 - **Made by:** `0190`.
+
+### D75 · A command is built by command, in isekai/foundation/command.py
+
+**`isekai/foundation/command.py` holds `ENTRY`, the words every printed command starts with, and `command(verb, *words)`, which joins the entry, the verb and the words by one space and quotes none. `run.py` re-exports `ENTRY` and `command`. A command a refusal or a message prints is built by `command`, its site keeping its own quoting and any prefix such as `uv run`, and a test holds that no string of `isekai/` outside the module spells the entry.**
+
+- **Why:** a command a person pastes was spelt by hand at sites beside its builders, so a change to the entry would edit each and nothing failed on a missed one. One constant is one edit.
+- **Accepts:** the argv of `again` and of the children, the bare `isekai ui` texts and the `isekai.boundary` provisioning commands stay as they are, and a docstring or a comment that names the entry is not read. A refusal's reason and its fix are still one string. Reopen when the entry changes, or when a refusal's fix rides the wire.
+- **Made by:** `0193`.
+
+### D76 · The child's lines are declared in isekai/interface/progress.py
+
+**`isekai/interface/progress.py` declares a child's lines — the item line, and the session's step and image lines — their stage, state and step names, and `--progress json`; `Reporter.item`, `Steps` and `_Images` write and read them there, and `progress_line` is the one reader.**
+
+- **Why:** a line was spelled by its emitter, again in each verb that names its stage and state, and again in each reader, and no test held them to agree. One module says what a line is, and a test holds each sample to it.
+- **Accepts:** the `steps.step` literals in `render.py`, the emitters' `str` parameters, the pipeline's `STAGE_RENDER` and the app's `cell` event stay as they are. Reopen when an emitter is typed by a shape.
+- **Made by:** `0196`.
+
+### D77 · review is a package entered by its front door, and a patch names the module that reads the name
+
+**`isekai/pipeline/review/` is the review stage. `__init__.py` is its front door: it re-exports every name the module held and defines `Status`. `records.py` holds the draft's read and write — `save_draft`, `_write_draft` and `_publish` — with the helpers the stage's parts share, and `budget.py` the token budget. A test patches a name of the stage on the module that reads it, `isekai.pipeline.review.records` for `create` and `write`.**
+
+- **Why:** a patch of a name in a module that no longer reads it changes nothing, and the wire's deriver names a type by its module, so a moved `Status` renames the page's `ReviewStatus`. The front door keeps every importer and every test import as it was.
+- **Accepts:** the drafts, the approval and the cancel stay in the front door, `approve` stays a listed long function, `draft_across` a listed wide one, and the front door a listed long file. Reopen when the parts leave it.
+- **Made by:** `0198`.
 
 ## Infrastructure
 

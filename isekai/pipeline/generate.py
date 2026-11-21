@@ -68,6 +68,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     check_budget,
+    command,
     group_of,
     record_failure,
     render_groups,
@@ -348,10 +349,12 @@ def source_seeds(
     groups = render_groups(run, source)
     seeds = rendered_seeds(groups[-1], suffix) if groups else []
     if not seeds:
+        pasted = command(
+            "render", _runs_root(run), f"{source}=1{_dependents(flows, source)}"
+        )
         raise Refusal(
             f"{run.id}: no render of {source} to take seeds from; run "
-            f"`python -m isekai render {_runs_root(run)} {source}=1"
-            f"{_dependents(flows, source)}` to render it first"
+            f"`{pasted}` to render it first"
         )
     return int(groups[-1].name), seeds
 
