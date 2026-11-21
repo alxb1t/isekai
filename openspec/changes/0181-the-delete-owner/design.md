@@ -220,7 +220,7 @@ None.
 
 ## Risks / Trade-offs
 
-- **The ranges of D5 rest on `0179`'s tip.** `0179` is built, not released, at this cut; a different base moves them, and a rescue re-fits them.
+- **The ranges of D5 rest on `0179`'s tip.** `0179` is built, not released, at this cut; a different base moves them, and a rescue re-fits them. After phase 2 the bodies sit in `isekai/foundation/discard.py`, and the plan check re-runs each range there: `discard_render` 44-73, `discard_edit` with its `_chain` 143-173, `_holds_render` 76-79, `withdraw` 82-140.
 - **A thumbnail goes before its image.** A delete cut short leaves files with no thumbnail, which the page's view makes again; the other order cannot name the thumbnail.
 - **`delete_render` reads the run from the path.** The route's address named the same run and version, and the twin case holds that the verb and the route leave one cache.
 - **`_holds_render` is bound and read by no one.** It is a private name, bound for the old home as D1 says; a later version may drop the line.

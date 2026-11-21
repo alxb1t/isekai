@@ -17,16 +17,16 @@ The phases are the pre-flight, the move, the owner, the verb, the route and the 
   Verify: `git grep -n -e "^def current_draft" -e "^def source_copy" -- isekai/foundation/layout.py` prints two lines.
 - [x] 1.2 **HALT CHECK** `0180` has landed: the foundation holds the thumbnail's drop the owner calls ([D2](design.md#d2)).
   Verify: `git grep -n -e "^def thumbnail_of" -e "^def drop_thumbnails" -- isekai/foundation/library.py` prints two lines.
-- [x] 1.3 Run `tools.mutate` over `discard_render`, from its `def` line to its last line, as [D5](design.md#d5) gives it. Find the range with `git grep -n -e "^def discard_render" -- isekai/pipeline/generate.py`.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/generate.py:337-366 --tests tests/test_generate.py tests/test_edit_session.py tests/test_edit_placement.py tests/test_pipeline_cli.py` exits 0.
-- [x] 1.4 Run `tools.mutate` over `discard_edit`, on the tests of [D5](design.md#d5). Find the range with `git grep -n -e "^def discard_edit" -- isekai/pipeline/edit.py`.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/edit.py:329-350 --tests tests/test_edit_session.py tests/test_edit_placement.py tests/test_pipeline_cli.py` exits 0.
-- [x] 1.5 Run `tools.mutate` over `_holds_render`, on the tests of [D5](design.md#d5). Find the range with `git grep -n -e "^def _holds_render" -- isekai/pipeline/review.py`.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:571-574 --tests tests/test_review.py tests/test_pipeline_cli.py tests/test_edit_session.py` exits 0.
+- [x] 1.3 Run `tools.mutate` over `discard_render`, from its `def` line to its last line, as [D5](design.md#d5) gives it. Find the range with `git grep -n -e "^def discard_render" -- isekai/pipeline/generate.py`; once phase 2 has moved the body, the same run is `isekai/foundation/discard.py:44-73`.
+  Verify: `uv run python -m tools.mutate isekai/foundation/discard.py:44-73 --tests tests/test_generate.py tests/test_edit_session.py tests/test_edit_placement.py tests/test_pipeline_cli.py` exits 0.
+- [x] 1.4 Run `tools.mutate` over `discard_edit`, on the tests of [D5](design.md#d5). Find the range with `git grep -n -e "^def discard_edit" -- isekai/pipeline/edit.py`; once phase 3 has split `_chain` out of it, the same run is `isekai/foundation/discard.py:143-173`, `_chain` and `discard_edit`.
+  Verify: `uv run python -m tools.mutate isekai/foundation/discard.py:143-173 --tests tests/test_edit_session.py tests/test_edit_placement.py tests/test_pipeline_cli.py` exits 0.
+- [x] 1.5 Run `tools.mutate` over `_holds_render`, on the tests of [D5](design.md#d5). Find the range with `git grep -n -e "^def _holds_render" -- isekai/pipeline/review.py`; once phase 2 has moved the body, the same run is `isekai/foundation/discard.py:76-79`.
+  Verify: `uv run python -m tools.mutate isekai/foundation/discard.py:76-79 --tests tests/test_review.py tests/test_pipeline_cli.py tests/test_edit_session.py` exits 0.
 - [x] 1.6 In `tests/test_review.py`, add the cases of [D5](design.md#d5)'s table that kill the survivors of `withdraw`: the first after `test_an_older_approval_whose_group_holds_failure_records_alone_goes`, the second after `test_a_flow_left_with_no_approval_keeps_only_its_assignment`. Each binds the scenario the table names.
   Verify: `uv run pytest tests/test_review.py -k "a_withdrawn_failure_only_group or a_nested_folder_under" -q` exits 0.
-- [x] 1.7 Run `tools.mutate` over `withdraw`, on the tests of [D5](design.md#d5). Find the range with `git grep -n -e "^def withdraw" -- isekai/pipeline/review.py`; a survivor left is killed by a further case before 2.2.
-  Verify: `uv run python -m tools.mutate isekai/pipeline/review.py:577-635 --tests tests/test_review.py tests/test_pipeline_cli.py tests/test_edit_session.py tests/test_ui_api.py tests/test_generate.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
+- [x] 1.7 Run `tools.mutate` over `withdraw`, on the tests of [D5](design.md#d5). Find the range with `git grep -n -e "^def withdraw" -- isekai/pipeline/review.py`; a survivor left is killed by a further case before 2.2. Once phase 2 has moved the body, the same run is `isekai/foundation/discard.py:82-140`.
+  Verify: `uv run python -m tools.mutate isekai/foundation/discard.py:82-140 --tests tests/test_review.py tests/test_pipeline_cli.py tests/test_edit_session.py tests/test_ui_api.py tests/test_generate.py "-k not test_without_the_lock_an_update_writes_after_the_approval"` exits 0.
 
 ## 2 — The move
 
