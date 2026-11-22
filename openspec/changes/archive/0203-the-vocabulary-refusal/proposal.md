@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.12
 after: []
 ---
 
