@@ -77,7 +77,9 @@ The change adds one unit test and removes none. Its case plants a label index of
 The case, in the style of its neighbour `test_an_unprovisioned_vocabulary_refuses_naming_the_command`:
 
 ```python
-@pytest.mark.spec("tagging:pin:a-damaged-label-index-is-refused-when-the-vocabulary-loads")
+@pytest.mark.spec(
+    "tagging:pin:a-damaged-label-index-is-refused-when-the-vocabulary-loads"
+)
 def test_a_label_index_whose_bytes_differ_is_refused_naming_the_fetch(
     tmp_path: Path,
 ) -> None:
