@@ -6,7 +6,7 @@ Move the group that reads a render's requests and builds its argv from `isekai/i
 
 - [x] 1 — The move · moderate
 - [x] 2 — The keywords · moderate
-- [ ] 3 — The documents · moderate
+- [x] 3 — The documents · moderate
 
 ## 1 — The move
 
@@ -48,13 +48,13 @@ Move the group that reads a render's requests and builds its argv from `isekai/i
 
 ## 3 — The documents
 
-- [ ] 3.1 In `docs/principles.md` add the *Known breaks* bullet of [D4](design.md#d4) at the end of *Free work first*, after its *Held by* bullet, wrapped as the file wraps.
+- [x] 3.1 In `docs/principles.md` add the *Known breaks* bullet of [D4](design.md#d4) at the end of *Free work first*, after its *Held by* bullet, wrapped as the file wraps.
   Verify: `git grep -c -F "are the free pass" -- docs/principles.md` prints `docs/principles.md:1`.
-- [ ] 3.2 In `isekai/interface/README.md` add a `requests.py` row directly after the `render.py` row in `## Files`: it parses `<flow>=<count|source>` requests, refuses a source placed before or chained to another, builds the retry command and the `--without` pairs, lists a collection's runs and builds the `generate` and `edit` argv, importing `plan.py`, `wiring.py`, `compare_view.py` and the foundation and never `render.py`. In the `render.py` row put `(parsed, with their argv, by requests.py)` after `takes the requests`.
+- [x] 3.2 In `isekai/interface/README.md` add a `requests.py` row directly after the `render.py` row in `## Files`: it parses `<flow>=<count|source>` requests, refuses a source placed before or chained to another, builds the retry command and the `--without` pairs, lists a collection's runs and builds the `generate` and `edit` argv, importing `plan.py`, `wiring.py`, `compare_view.py` and the foundation and never `render.py`. In the `render.py` row put `(parsed, with their argv, by requests.py)` after `takes the requests`.
   Verify: `git grep -c -e "^| .requests.py. |" -- isekai/interface/README.md` prints `isekai/interface/README.md:2`.
-- [ ] 3.3 In `isekai/README.md` add `requests.py` directly after `render.py` in the `interface/` row.
+- [x] 3.3 In `isekai/README.md` add `requests.py` directly after `render.py` in the `interface/` row.
   Verify: `git grep -c -F "requests.py" -- isekai/README.md` prints `isekai/README.md:1`.
-- [ ] 3.4 Run the tests that hold the documents.
+- [x] 3.4 Run the tests that hold the documents.
   Verify: `uv run pytest tests/test_docs.py tests/test_principles.py tests/test_layers.py` exits 0.
-- [ ] 3.5 Replay the standing mutants once more over the finished tree.
+- [x] 3.5 Replay the standing mutants once more over the finished tree.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.

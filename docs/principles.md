@@ -183,6 +183,12 @@ costs nothing instead of a boot.
   already been paid for.
 - **Held by:** `tests/test_generate.py::test_a_malformed_approved_sheet_is_caught_before_anything_is_rented`,
   `tests/test_generate.py::test_assembly_contacts_no_endpoint_and_writes_an_artifact`.
+- **Known breaks:** `interface/render.py`'s `_session` and `_rendered` are the free pass
+  and the paid loop, a long and a wide function each. The two differ in their wiring,
+  their flags, where the server sits in the argv and what a failure does: the free pass
+  stops at the first, the paid loop goes on. One helper for both would save a row and
+  put the argv's bytes at risk, and a queue of work appended after each paid line would
+  reshape the loop.
 
 ## Configuration
 
