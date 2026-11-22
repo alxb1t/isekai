@@ -161,6 +161,7 @@ class Record:
         given: str | None,
         limit: int,
         asked: Mapping[str, int],
+        *,
         planned: Sequence[SessionPlan] = (),
         others: Sequence[str] = (),
         order: Sequence[str] = (),
@@ -479,7 +480,9 @@ def _session(
     edits: dict[Path, Edits] = {}
     if requests:
         (runs,) = roots
-        lines = _asked(runs, ids[runs], requests, deferred, free, verb, generate)
+        lines = _asked(
+            runs, ids[runs], requests, deferred, free, verb, generate=generate
+        )
         if lines is None:
             return 1
     else:
@@ -531,8 +534,8 @@ def _session(
                 given,
                 limit,
                 _images(its),
-                _plan(runs, its),
-                [name for name in names if name != runs.parent.name],
+                planned=_plan(runs, its),
+                others=[name for name in names if name != runs.parent.name],
                 order=names,
             )
             for runs, its in held.items()

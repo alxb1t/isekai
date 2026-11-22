@@ -465,10 +465,8 @@ LONG_FUNCTIONS = {
 FUNCTION_ROWS = 5
 
 WIDE_FUNCTIONS = {
-    "isekai/interface/render.py::Record.__init__": 7,
     "isekai/interface/render.py::_session": 9,
     "isekai/interface/render.py::_rendered": 8,
-    "isekai/interface/requests.py::_asked": 7,
     "isekai/pipeline/sheet.py::_from_tag_list": 8,
     "isekai/pipeline/tattoos.py::save_outline": 8,
     "isekai/pipeline/tattoos.py::ink_layer": 8,
@@ -476,7 +474,7 @@ WIDE_FUNCTIONS = {
     "isekai/pipeline/tattoos.py::preview": 9,
     "isekai/pipeline/tattoos.py::composite": 8,
 }
-WIDE_ROWS = 10
+WIDE_ROWS = 8
 
 BIG_UI_FILES: dict[str, int] = {}
 UI_ROWS = 0

@@ -145,6 +145,7 @@ def _asked(
     deferred: Sequence[bool],
     free: Wiring,
     verb: Sequence[str],
+    *,
     generate: Generate,
 ) -> list[Line] | None:
     """Return the requests' lines over `runs` once their free checks pass, else None."""

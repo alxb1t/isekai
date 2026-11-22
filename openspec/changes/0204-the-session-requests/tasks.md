@@ -5,7 +5,7 @@ Move the group that reads a render's requests and builds its argv from `isekai/i
 ## Progress
 
 - [x] 1 — The move · moderate
-- [ ] 2 — The keywords · moderate
+- [x] 2 — The keywords · moderate
 - [ ] 3 — The documents · moderate
 
 ## 1 — The move
@@ -37,13 +37,13 @@ Move the group that reads a render's requests and builds its argv from `isekai/i
 
 ## 2 — The keywords
 
-- [ ] 2.1 In `isekai/interface/requests.py` write `*,` between `verb: Sequence[str],` and `generate: Generate,` in `_asked`, and in `isekai/interface/render.py` make `_session`'s call of `_asked` pass `generate=generate` ([D3](design.md#d3)).
+- [x] 2.1 In `isekai/interface/requests.py` write `*,` between `verb: Sequence[str],` and `generate: Generate,` in `_asked`, and in `isekai/interface/render.py` make `_session`'s call of `_asked` pass `generate=generate` ([D3](design.md#d3)).
   Verify: `uv run python -c "import inspect; from isekai.interface.requests import _asked; assert inspect.signature(_asked).parameters['generate'].kind == inspect.Parameter.KEYWORD_ONLY"` exits 0.
-- [ ] 2.2 In `render.py` write `*,` between `asked: Mapping[str, int],` and `planned` in `Record.__init__`, and make `_session`'s `Record(...)` call pass `planned=` and `others=` by keyword, `order=` as it does.
+- [x] 2.2 In `render.py` write `*,` between `asked: Mapping[str, int],` and `planned` in `Record.__init__`, and make `_session`'s `Record(...)` call pass `planned=` and `others=` by keyword, `order=` as it does.
   Verify: `uv run python -c "import inspect; from isekai.interface.render import Record; p = inspect.signature(Record.__init__).parameters; assert p['planned'].kind == p['others'].kind == p['order'].kind == inspect.Parameter.KEYWORD_ONLY"` exits 0.
-- [ ] 2.3 In `tests/test_ratchets.py` delete the `WIDE_FUNCTIONS` rows `isekai/interface/render.py::Record.__init__` and `isekai/interface/requests.py::_asked`, and set `WIDE_ROWS` to the rows left.
+- [x] 2.3 In `tests/test_ratchets.py` delete the `WIDE_FUNCTIONS` rows `isekai/interface/render.py::Record.__init__` and `isekai/interface/requests.py::_asked`, and set `WIDE_ROWS` to the rows left.
   Verify: `git grep -n -e "::_asked" -e "Record.__init__" -- tests/test_ratchets.py` prints nothing.
-- [ ] 2.4 Confirm no call of either function breaks, and the ratchets hold.
+- [x] 2.4 Confirm no call of either function breaks, and the ratchets hold.
   Verify: `uv run pytest tests/test_render.py tests/test_edit_session.py tests/test_ui_jobs.py tests/test_ui_api.py tests/test_artifact_bytes.py tests/test_ratchets.py` exits 0.
 
 ## 3 — The documents
