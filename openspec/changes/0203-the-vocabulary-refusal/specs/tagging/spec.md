@@ -42,5 +42,5 @@ use lets a machine that never tags leave the model file unopened.
 - **Key:** `tagging:pin:a-damaged-label-index-is-refused-when-the-vocabulary-loads`
 - **Layers:** unit
 - **WHEN** the vocabulary is loaded and the label index's bytes do not match the digest this build commits for it
-- **THEN** the load refuses with a `Refusal` naming the file, the digest expected, the digest computed and the command that would fetch it
+- **THEN** the load refuses with a `Refusal` naming the file, both digests and the command that would fetch it
 - **AND** no vocabulary is returned
