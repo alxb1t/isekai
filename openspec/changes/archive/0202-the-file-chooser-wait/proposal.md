@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.13
 after: [0201-the-stage-tables]
 ---
 
