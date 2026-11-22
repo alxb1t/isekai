@@ -1,6 +1,6 @@
 ---
 bump: patch
-after: [0202-the-file-chooser-wait]
+after: []
 ---
 
 # The vocabulary refusal
