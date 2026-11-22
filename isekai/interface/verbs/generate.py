@@ -6,6 +6,7 @@ from collections.abc import Mapping, Sequence
 from isekai.boundary.comfy import read_runtime
 from isekai.foundation.flow import Flow, load_flow
 from isekai.foundation.run import Run, across
+from isekai.interface.progress import DONE, FORMAT, RENDER
 from isekai.interface.verbs.common import (
     Reporter,
     Verb,
@@ -18,13 +19,7 @@ from isekai.interface.verbs.common import (
     run_for,
 )
 from isekai.interface.wiring import Wiring
-from isekai.pipeline.generate import (
-    STAGE_RENDER,
-    Render,
-    prepare,
-    render,
-    source_seeds,
-)
+from isekai.pipeline.generate import Render, prepare, render, source_seeds
 
 
 def generate_batch(
@@ -42,7 +37,7 @@ def generate_batch(
     machine and then discover the third sheet was broken.
     """
     ready: list[tuple[Run, str]] = []
-    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == "json")
+    reporter = Reporter(wired.out, wired.err, getattr(args, "progress", None) == FORMAT)
     # The seeds each run takes from the source flow, when one is named.
     borrowed: dict[str, list[int]] = {}
     source_suffix = (
@@ -84,8 +79,8 @@ def generate_batch(
             reporter.item(
                 run.id,
                 flow,
-                STAGE_RENDER,
-                "done",
+                RENDER,
+                DONE,
                 digest=run.digest,
                 version=version,
                 seed=str(made.seed),

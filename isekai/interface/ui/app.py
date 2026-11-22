@@ -90,7 +90,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from isekai.foundation.refusal import Refusal
-from isekai.interface.ui import events
+from isekai.interface.ui import events, uploads
 from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs
 from isekai.interface.ui.routes.common import REFUSED, _saved
@@ -301,7 +301,7 @@ def create_app(
     limit = importing.upload_limit()
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
-    imports = importing.Imports(
+    imports = uploads.Imports(
         root,
         limit,
         lambda staged, state: broadcast.publish("file", {"staging": staged, **state}),

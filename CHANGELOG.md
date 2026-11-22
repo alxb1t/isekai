@@ -14,6 +14,61 @@ its new digest.
 - `tests/test_vocabulary_manifest.py` holds it with a case that fails before the fix; the docstring's reason for the lazy import of `provision` is corrected (0203 D3).
 - `docs/principles.md` names an altered vocabulary among `load_vocabulary`'s refusals in *Known breaks* of *Only a front end composes* (0203 D1).
 
+## [0.88.11] - 2026-11-22
+
+Gate: local 1m16s · CI not read under mf-ship · 0.88.10: local 1m18s · CI not read under mf-ship
+
+- `tests/test_run_directory.py` holds the keys of `_KINDS`, `STAGES`, `_WRITES`, `PREPARE`, `REACHED` and `_BUILDERS` to the stage record by one guard, and its twin names a table with a key the record lacks (0201 D1).
+- `_KINDS` of `isekai/interface/ui/library.py` reads its folders from the stage record through `_WORDS`, which keeps the written words, and a case holds each stage folder's word for Home's row (0201 D2, D6).
+- `producers.py` holds `PREPARE`, Prepare's order, and `tagged_runs`, its tag rule; `plan` and `run_prepare` read both, held by cases written first, and no printed line moves (0201 D3, D4, D5, D6).
+- `docs/decisions.md` D73 names `PREPARE`, `tagged_runs` and the guard, accepts the tables that stay written, and adds `0201`; the foundation README's `producers.py` row names both (0201 D8).
+
+## [0.88.10] - 2026-11-21
+
+Gate: local 1m18s · CI not read under mf-ship · 0.88.9: local 1m17s · CI not read under mf-ship
+
+- `isekai/interface/ui/uploads.py` holds a copy of `Reader` and `Imports` that reads the stage as `importing.<name>`, and `importing.py` makes `refuse_name` and `CLAIM` public for it; the old classes stay until the delete (0200 D1, D2, D4).
+- `create_app` builds `uploads.Imports`, `Surface` types it, the tests of the import file and the API read `Reader`, `Imports` and `tempfile` through `uploads`, and the standing mutants `PA-14` and `PA-15` replay on `uploads.py` (0200 D3, D4, D6).
+- `importing.py` loses `Reader`, `Imports` and the imports only they read, so the stage holds the stage alone and its row leaves the ratchet's long files (0200 D4, D5).
+- The pipeline, interface and app READMEs and `docs/modules.md` name `interface/ui/uploads.py` as the upload session's home (0200 D4, D7).
+
+## [0.88.9] - 2026-11-21
+
+Gate: local 1m17s · CI not read under mf-ship · 0.88.8: local 1m19s · CI not read under mf-ship
+
+- `isekai/pipeline/review/approval.py` holds `approve` and its helpers, with the warning block in `_window_warnings`; `DISCARD` moves to `records.py` and the front door binds `approve` back (0199 D1, D2, D3, D5, D7).
+- The front door's long-file row and `approve`'s long-function row leave the ratchets, and `PB-2` is found in `approval.py` (0199 D8, D9).
+- `isekai/pipeline/review/drafts.py` holds `review`, `revise`, `draft_from` and the refusals they share, which the front door binds back; `PB-5` and the byte-writer key follow it (0199 D1, D2, D3, D7, D9).
+- `draft_across` takes `seed` after a bare `*`, so its row leaves the wide functions of the ratchets (0199 D6).
+- `isekai/pipeline/review/cancelling.py` holds `Cancelled`, `discard`, `cancellable`, `cancel` and their helpers, which the front door binds back; the front door defines `state` and `Status` alone, and `PB-14` is found in the new module (0199 D1, D2, D3, D7, D9).
+- D77 names the front door, the three parts and what a part may import, and the pipeline README names each module of `review/`; every name D7 lists imports from the front door and the standing mutants replay with no survivor (0199 D10).
+
+## [0.88.8] - 2026-11-21
+
+Gate: local 1m19s · CI not read under mf-ship · 0.88.7: local 1m14s · CI not read under mf-ship
+
+- `isekai/pipeline/review.py` is `isekai/pipeline/review/__init__.py`, the front door of the stage; the ratchet rows, the byte-writer row, the standing mutants and the READMEs name the package, and no moved line changes (0198 D1, D8).
+- `isekai/pipeline/review/budget.py` holds `ENCODER_WINDOW`, `estimate_tokens`, `TokenBudget` and `token_budget`, which the front door binds back; `PB-1a` and `PB-1b` are found in it (0198 D3, D7, D8).
+- `isekai/pipeline/review/records.py` holds the draft's reads and writes, `_publish` and the shared helpers; `_write_draft` takes `renders`, `version` and `image` by keyword, and the tests that patch `create` and `write` patch `records.py` (0198 D2, D4, D5, D7).
+- Docs `D77` records the package, its front door and where a patch goes, and the pipeline README names `review/`'s modules and that a stage may be a package (0198 D9).
+
+## [0.88.7] - 2026-11-21
+
+Gate: local 1m14s · CI not read under mf-ship · 0.88.6: local 1m18s · CI not read under mf-ship
+
+- `isekai/interface/plan.py` holds the timing, the estimate and the edit queue's reading; `render.py` binds each name back and keeps `HOLD_SECONDS`, and `RE-1` is found in `plan.py` (0197 D1, D2, D4, D5).
+- `plan.py` also holds `Line`, `Short`, `short` and `Quote`, and the derived tables of the layer READMEs name it; `quote` and `Record` stay in `render.py`, which binds each name back (0197 D1, D2, D3).
+- The interface and boundary READMEs, `isekai/README.md` and `docs/principles.md` name `plan.py` where they named `render.py` for the moved code (0197 D1).
+
+## [0.88.6] - 2026-11-21
+
+Gate: local 1m18s · CI not read under mf-ship · 0.88.5: local 1m19s · CI not read under mf-ship
+
+- `isekai/interface/progress.py` declares the item, step and image lines, their names and `--progress json`, and holds `emit`, `progress_line`, `Steps` and `_Images`, bound back in `render.py`; every byte is equal, and cases hold two `Steps` branches a mutation run found unread (0196 D1, D2, D3).
+- `Reporter.item` writes through `emit`; the verbs, the session's argv and the argument functions name their stages, states and `--progress json` from `progress.py`; every printed byte is equal (0196 D4, D5, D6).
+- `jobs.py` takes `PREPARE` from `progress.py` and reads each line's state, step, image keys and `--progress json` by its declared names in `_Job.complete`, `_render_child` and both commands; every byte is equal (0196 D5, D6).
+- Docs `D76` records the declaration, `isekai/interface/README.md`, `isekai/README.md` and `docs/modules.md` name `progress.py`, and a case holds `_Images.write`'s return (0196 D7).
+
 ## [0.88.5] - 2026-11-21
 
 Gate: local 1m19s · CI not read under mf-ship · 0.88.4: local 1m18s · CI not read under mf-ship

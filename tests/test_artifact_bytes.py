@@ -59,7 +59,7 @@ BYTE_WRITERS = {
     "isekai/pipeline/edit.py": "an edit's composite and its stitched image",
     "isekai/pipeline/generate.py": "a render's image",
     "isekai/pipeline/importing.py": "an imported source image",
-    "isekai/pipeline/review.py": "a source image's copy",
+    "isekai/pipeline/review/drafts.py": "a source image's copy",
     "isekai/pipeline/tattoos.py": "a tattoo library's outline, files and stage record",
     "isekai/shared/ink.py": "an ink layer's image",
 }

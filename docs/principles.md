@@ -53,7 +53,7 @@ the default; a package earns its place when the contract needs more than one fil
   means patching global state. Each module `PATCHED_MODULES` of `tests/test_ratchets.py` lists stays for
   one reason:
   - **a failure or a race a test injects:** `pipeline/edit.py`, `pipeline/generate.py`,
-    `pipeline/importing.py`, `pipeline/review.py` and `pipeline/tattoos.py` — a write that fails, a rival
+    `pipeline/importing.py`, `pipeline/review/records.py` and `pipeline/tattoos.py` — a write that fails, a rival
     that takes a name, a read held open;
   - **a recording spy:** `interface/ui/events.py`, `interface/ui/library.py` and `shared/ink.py` — a
     wrapper that counts a call or signals when it ran — and `shared/chain.py`'s `_kernel`;
@@ -91,8 +91,8 @@ classified or what state a sheet is in, belongs to the component that owns that 
   those files. `once` of `interface/verbs/common.py` decides that a transient transport failure is not kept for
   the session — the render stage's rule. `interface/ui/library.py`'s `stage` ranks a run's stages and
   decides which damaged file marks a cell — the run directory's and the stages' work.
-  `interface/render.py`'s `short` decides what each approval lacks of its count, and its `quote`
-  reaches `estimate` to price the session; the review UI imports `short`, `quote` and `run_ids` —
+  `interface/plan.py`'s `short` decides what each approval lacks of its count and its `estimate`
+  prices a session, which `interface/render.py`'s `quote` reaches; the review UI imports `short`, `quote` and `run_ids` —
   the render stage's work, shared between front ends. `interface/ui/library.py`'s `_origin` decides
   whether a version is a revision or a re-roll by its own comparison of fields rather than the review
   stage's `same_fields`. Its `paired` decides which older version a seed compares with, and
