@@ -5,7 +5,7 @@ The case and the refusal land together, then the documents they make true ([D4](
 ## Progress
 
 - [x] 1 — The refusal and its case · moderate
-- [ ] 2 — The documents · moderate
+- [x] 2 — The documents · moderate
 
 ## 1 — The refusal and its case
 
@@ -28,7 +28,7 @@ The case and the refusal land together, then the documents they make true ([D4](
 
 ## 2 — The documents
 
-- [ ] 2.1 In `docs/principles.md`, in the bullet *Known breaks* of *Only a front end composes*, change `a missing or undeclared vocabulary` to `a missing, undeclared or altered vocabulary`, re-wrapping the lines it spans and keeping `undeclared or altered vocabulary` on one line.
+- [x] 2.1 In `docs/principles.md`, in the bullet *Known breaks* of *Only a front end composes*, change `a missing or undeclared vocabulary` to `a missing, undeclared or altered vocabulary`, re-wrapping the lines it spans and keeping `undeclared or altered vocabulary` on one line.
   Verify: `git grep -c -F "undeclared or altered vocabulary" -- docs/principles.md` prints the path and `1`.
-- [ ] 2.2 Replay the standing mutants, which exits 0 with no survivor.
+- [x] 2.2 Replay the standing mutants, which exits 0 with no survivor.
   Verify: `uv run python -m tools.mutate --edits tests/mutants.json` exits 0.
