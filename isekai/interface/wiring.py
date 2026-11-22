@@ -315,9 +315,13 @@ def load_vocabulary(
 
     The digest check is the reason the pin is worth anything: the manifest is the
     only evidence the file on disk is the list the sheets were written against.
-    `provision` is imported here rather than at module scope, so it stays off
-    `python -m isekai`'s import graph. It lives here because `shared` only
-    parses: the boundary verifies, and the front end composes the two.
+    Bytes that differ from the pin are a `Refusal` naming the file and the fetch, as
+    `tagger_for`'s are.
+    `provision` is on `python -m isekai`'s import graph already, through `ollama.py`
+    and this module's own `DigestMismatch`; its names are read here, at the call, as
+    `wd14.verified_paths` reads its own.
+    It lives here because `shared` only parses: the boundary verifies, and the front
+    end composes the two.
     """
     from isekai.boundary.provision import (
         VOCABULARY_MANIFEST_PATH,
@@ -342,6 +346,11 @@ def load_vocabulary(
             "from the repository root to fetch and verify it against its pinned "
             "manifest"
         ) from absent
+    except DigestMismatch as altered:
+        raise Refusal(
+            f"{altered}; delete that file, run `{VOCABULARY_REMEDY}`, then this "
+            "command again"
+        ) from altered
     return read_vocabulary(path, entry_for(declared, VOCABULARY_DEST))
 
 

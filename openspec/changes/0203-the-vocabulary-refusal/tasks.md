@@ -4,7 +4,7 @@ The case and the refusal land together, then the documents they make true ([D4](
 
 ## Progress
 
-- [ ] 1 — The refusal and its case · moderate
+- [x] 1 — The refusal and its case · moderate
 - [ ] 2 — The documents · moderate
 
 ## 1 — The refusal and its case
