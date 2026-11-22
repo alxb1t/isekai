@@ -84,8 +84,8 @@ classified or what state a sheet is in, belongs to the component that owns that 
 - **Why:** logic in the wiring runs only on the path one front end takes, and nothing else can test it
   or reuse it.
 - **Held by:** review.
-- **Known breaks:** `interface/wiring.py`'s `load_vocabulary` classifies a failure — it turns a missing
-  or undeclared vocabulary into a refusal — which is the provisioning component's work.
+- **Known breaks:** `interface/wiring.py`'s `load_vocabulary` classifies a failure — it turns a missing,
+  undeclared or altered vocabulary into a refusal — which is the provisioning component's work.
   `interface/ui/routes/reviewing.py` and `interface/ui/routes/common.py` decide what makes a draft, an
   approved sheet, a caption or a tag list damaged, and which remedy each names — work that belongs to the review, caption and tagging stages that own
   those files. `once` of `interface/verbs/common.py` decides that a transient transport failure is not kept for

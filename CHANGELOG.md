@@ -10,6 +10,14 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.12] - 2026-11-22
+
+Gate: local 1m13s · CI not read under mf-ship · 0.88.11: local 1m16s · CI not read under mf-ship
+
+- `load_vocabulary` refuses a label index whose bytes differ from its pin, naming the file, both digests and the fetch, in `tagger_for`'s words, instead of ending the verb in a `DigestMismatch` traceback (0203 D1).
+- `tests/test_vocabulary_manifest.py` holds it with a case that fails before the fix; the docstring's reason for the lazy import of `provision` is corrected (0203 D3).
+- `docs/principles.md` names an altered vocabulary among `load_vocabulary`'s refusals in *Known breaks* of *Only a front end composes* (0203 D1).
+
 ## [0.88.11] - 2026-11-22
 
 Gate: local 1m16s · CI not read under mf-ship · 0.88.10: local 1m18s · CI not read under mf-ship
