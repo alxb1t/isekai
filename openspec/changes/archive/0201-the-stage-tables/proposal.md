@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.88.11
 after: [0200-the-upload-session]
 ---
 
