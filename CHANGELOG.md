@@ -10,6 +10,15 @@ its new digest.
 
 ## [Unreleased]
 
+## [0.88.14] - 2026-11-22
+
+Gate: local 1m11s · CI not read under mf-ship · 0.88.13: local 1m13s · CI not read under mf-ship
+
+- The group of `interface/render.py` that parses a render's requests and builds its `generate` and `edit` argv moves to `interface/requests.py`, unchanged; `render.py` imports each name it reads and binds `without_flags` back for `ui/jobs.py` (0204 D1, D2).
+- `render.py` leaves the long files, `_asked`'s wide row is re-keyed, the standing mutants `CL-4a` and `CL-4b` name the new path, and the *Imported by* tables list the module (0204 D5, D6).
+- `_asked`'s `generate` and `Record.__init__`'s `planned`, `others` and `order` are keyword-only, so both wide rows leave `tests/test_ratchets.py`; `_session`'s two calls pass them by keyword (0204 D3).
+- `docs/principles.md` names `_session` and `_rendered` under *Free work first* with the reason each keeps its row, and the interface README and `isekai/README.md` list `requests.py` (0204 D4).
+
 ## [0.88.13] - 2026-11-22
 
 Gate: local 1m13s · CI not read under mf-ship · 0.88.12: local 1m13s · CI not read under mf-ship

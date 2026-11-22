@@ -201,7 +201,7 @@
   },
   {
     "finding": "CL-4a",
-    "path": "isekai/interface/render.py",
+    "path": "isekai/interface/requests.py",
     "find": "    if not ids:\n        photos = shlex.quote",
     "replace": "    if not ids and False:\n        photos = shlex.quote",
     "tests": ["tests/test_render.py"],
@@ -209,7 +209,7 @@
   },
   {
     "finding": "CL-4b",
-    "path": "isekai/interface/render.py",
+    "path": "isekai/interface/requests.py",
     "find": "        if request.by_count or late:\n            continue",
     "replace": "        if True:\n            continue",
     "tests": ["tests/test_render.py"],

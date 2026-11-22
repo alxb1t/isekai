@@ -1,0 +1,58 @@
+{
+  "change": "0204-the-session-requests",
+  "version": "0.88.14",
+  "base": "e706fe99",
+  "analyzed": "0ebefa29",
+  "measured_on": "local",
+  "collected_at": "2026-11-22T11:29:19+02:00",
+  "mf_version": "v0.106.0",
+  "executor": "unidentified",
+  "model": "claude-sonnet-5-5",
+  "values": {
+    "tests-unit": {
+      "value": 2606
+    },
+    "tests-browser": {
+      "value": 22
+    },
+    "gate-seconds": {
+      "value": 71
+    },
+    "open-backlog-cards": {
+      "value": 3
+    },
+    "commits-without-trailer": {
+      "value": 0
+    },
+    "minions-files-tracked": {
+      "value": 0
+    },
+    "amends": {
+      "value": 0
+    },
+    "broken-references": {
+      "value": 0
+    },
+    "diff-lines": {
+      "value": 696
+    },
+    "diff-files": {
+      "value": 14
+    },
+    "phases": {
+      "value": 3
+    },
+    "shared-reading-set": {
+      "value": 18514
+    },
+    "pinned-flows": {
+      "value": 6
+    },
+    "living-scenarios": {
+      "value": 1106
+    },
+    "decisions": {
+      "value": 78
+    }
+  }
+}
