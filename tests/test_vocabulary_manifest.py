@@ -239,6 +239,27 @@ def test_an_unprovisioned_vocabulary_refuses_naming_the_command(
     )
 
 
+@pytest.mark.spec(
+    "tagging:pin:a-damaged-label-index-is-refused-when-the-vocabulary-loads"
+)
+def test_a_label_index_whose_bytes_differ_is_refused_naming_the_fetch(
+    tmp_path: Path,
+) -> None:
+    planted = tmp_path / VOCABULARY
+    planted.parent.mkdir(parents=True)
+    planted.write_bytes(b"other bytes")
+
+    with pytest.raises(Refusal) as refused:
+        load_vocabulary(tmp_path)
+
+    message = str(refused.value)
+    assert f"SHA-256 mismatch for {planted}" in message
+    assert (
+        "delete that file, run `uv run python -m isekai.boundary.provision fetch "
+        "config/vocabulary.json`, then this command again"
+    ) in message
+
+
 def _declaring_none(tmp_path: Path) -> Path:
     """Write a copy of the vocabulary manifest declaring nothing; return its path."""
     manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
