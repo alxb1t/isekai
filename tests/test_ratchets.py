@@ -451,10 +451,9 @@ def unread_patches(root: Path) -> list[str]:
 # --- the tables: each row is `key: the measure when it was listed` -----------
 
 LONG_FILES = {
-    "isekai/interface/render.py": 1315,
     "isekai/pipeline/tattoos.py": 1320,
 }
-FILE_ROWS = 2
+FILE_ROWS = 1
 
 LONG_FUNCTIONS = {
     "isekai/boundary/ollama.py::ask": 105,
@@ -468,8 +467,8 @@ FUNCTION_ROWS = 5
 WIDE_FUNCTIONS = {
     "isekai/interface/render.py::Record.__init__": 7,
     "isekai/interface/render.py::_session": 9,
-    "isekai/interface/render.py::_asked": 7,
     "isekai/interface/render.py::_rendered": 8,
+    "isekai/interface/requests.py::_asked": 7,
     "isekai/pipeline/sheet.py::_from_tag_list": 8,
     "isekai/pipeline/tattoos.py::save_outline": 8,
     "isekai/pipeline/tattoos.py::ink_layer": 8,
