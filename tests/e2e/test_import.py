@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 from playwright.sync_api import FileChooser, Page, Route, expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeout
 
 from isekai.pipeline.importing import UI_CONFIG
 from tests.e2e.conftest import Served
@@ -31,18 +32,41 @@ def _nef(path: Path) -> Path:
     return path
 
 
+# The presses of ⇧A that wait a short time for the dialog.
+PRESSES = 4
+# How long one of those presses waits, in milliseconds.
+SHORT_MS = 2_000
+
+
+def _pressed(page: Page) -> FileChooser:
+    """Press `⇧A` until a dialog opens and return it.
+
+    A press the browser answers with no dialog is pressed again.
+    The last wait is the default one.
+    """
+    for _ in range(PRESSES):
+        try:
+            with page.expect_file_chooser(timeout=SHORT_MS) as chooser:
+                page.keyboard.press("Shift+A")
+        except PlaywrightTimeout:
+            continue
+        return chooser.value
+    with page.expect_file_chooser() as last:
+        page.keyboard.press("Shift+A")
+    return last.value
+
+
 def _choose(page: Page, served: Served, files: list[Path]) -> None:
     """Open New collection on Home and choose `files` in the dialog `⇧A` opens.
 
     The dialog the sheet opens as it mounts is answered with nothing first.
+    ⇧A is pressed again when no dialog opens.
     """
     page.goto(served.url)
     with page.expect_file_chooser() as opened:
         page.get_by_role("button", name="New collection").click()
     opened.value.set_files([])
-    with page.expect_file_chooser() as chooser:
-        page.keyboard.press("Shift+A")
-    chooser.value.set_files([str(path) for path in files])
+    _pressed(page).set_files([str(path) for path in files])
 
 
 def _hold(page: Page, name: str) -> list[Route]:
