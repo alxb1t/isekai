@@ -5,18 +5,17 @@ after: [0201-the-stage-tables]
 
 # The file chooser wait
 
-The import's browser test waits for the dialog it has just answered to close before it presses `⇧A`. A test fix: no product line changes.
+The import's browser test presses `⇧A` again when the dialog it waits for does not open. A test fix: no product line changes, and no phase is a person's.
 
-Reading map: [design](design.md) holds the cause of the flake, the probe that shows it and the wait, [tasks](tasks.md) holds the proof, the wait and the runs.
+Reading map: [design](design.md) holds what is known of the flake and the press, [tasks](tasks.md) holds the one build phase.
 
 ## Why
 
-The import's browser test failed in CI on the merge of `0187` (run `44917097991`) and on the merge of `0144` (run `43605762087`), and passed on the merge after each. Both times `_choose` timed out on its second dialog. `0187` touched no page or import code, so the race is the test's own.
+The import's browser test failed in CI on the merges of `0144` (run `43605762087`), `0187` (run `44917097991`) and `0198` (run `44947985280`), and passed on the merge after each. Each time `_choose` timed out on its second dialog. None of the three touched page or import code, so the page did not change between a red and a green run.
 
 ## What Changes
 
-- `tests/e2e/test_import.py`: `_choose` waits for the first dialog to close before it presses `⇧A`.
-- `design.md`: the cause of the timeout and the evidence for it, written once a probe has shown it.
+- `tests/e2e/test_import.py`: after it answers the sheet's first dialog, `_choose` presses `⇧A` and waits a short time for the dialog; when none opens it presses again, a bounded number of times, and its last wait is today's.
 
 ## Capabilities
 
@@ -34,7 +33,8 @@ One test file, `tests/e2e/test_import.py`. No product file changes, no format ve
 
 ## Not in this change
 
-- Any file under `ui/src` or `isekai/`. A page that drops the key is a product fault: it wants its own scenario, when the probe of [design](design.md#d2) shows it.
-- A longer timeout.
-- A retry of the whole test, or of the key press.
+- Any file under `ui/src` or `isekai/`.
+- A longer timeout, or a retry of the whole test.
+- A proof of the cause: the run cannot open a browser, and CI's browser step proves the change after its merge.
+- Any phase a person runs.
 - A decision in force: `docs/decisions.md` is untouched.
