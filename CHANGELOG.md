@@ -15,6 +15,12 @@ its new digest.
 - `_asked`'s `generate` and `Record.__init__`'s `planned`, `others` and `order` are keyword-only, so both wide rows leave `tests/test_ratchets.py`; `_session`'s two calls pass them by keyword (0204 D3).
 - `docs/principles.md` names `_session` and `_rendered` under *Free work first* with the reason each keeps its row, and the interface README and `isekai/README.md` list `requests.py` (0204 D4).
 
+## [0.88.13] - 2026-11-22
+
+Gate: local 1m13s · CI not read under mf-ship · 0.88.12: local 1m13s · CI not read under mf-ship
+
+- The import's browser test presses `⇧A` again when no file dialog opens, so a dropped press no longer fails it; its last wait is the one it had (0202 D1).
+
 ## [0.88.12] - 2026-11-22
 
 Gate: local 1m13s · CI not read under mf-ship · 0.88.11: local 1m16s · CI not read under mf-ship
