@@ -133,7 +133,13 @@ from isekai.foundation.names import (
     run_id,
     slug,
 )
-from isekai.foundation.producers import PRODUCERS, Producer, producer_for
+from isekai.foundation.producers import (
+    PREPARE,
+    PRODUCERS,
+    Producer,
+    producer_for,
+    tagged_runs,
+)
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.rundir import Run, assign, run_at, runs_in
 
@@ -160,6 +166,7 @@ __all__ = [
     "OUTPUTS",
     "PHOTO",
     "PHOTOGRAPH_VERBS",
+    "PREPARE",
     "PRODUCERS",
     "PROMPTS",
     "REPOSITORY",
@@ -233,6 +240,7 @@ __all__ = [
     "slug",
     "source_copy",
     "stage_command",
+    "tagged_runs",
     "unmigrated",
     "version_of",
     "versions",

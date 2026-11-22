@@ -31,6 +31,7 @@ def draft_across(
     version: int,
     vocabulary: Callable[[], Vocabulary],
     field_map: Callable[[], FieldMap],
+    *,
     seed: int,
 ) -> Path:
     """Return `target`'s draft from `source`'s approval `version`.
@@ -105,7 +106,7 @@ def draft_from_image(
     run, flow, version, seed = image
     if flow == target.id:
         return revise(run, flow, version, seed)
-    return draft_across(run, target, flow, version, vocabulary, field_map, seed)
+    return draft_across(run, target, flow, version, vocabulary, field_map, seed=seed)
 
 
 def refuse_image_drafts(

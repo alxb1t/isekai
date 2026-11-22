@@ -189,6 +189,34 @@ def test_collections_are_ordered_by_their_newest_file(tmp_path: Path) -> None:
     assert (rows[2].newest, rows[2].kind) == (1_000, "import")
 
 
+@pytest.mark.spec("ui:batch-folder:batches-are-ordered-by-their-newest-file")
+@pytest.mark.parametrize(
+    ("scope", "folder", "word"),
+    [
+        ("photo", "captions", "caption"),
+        ("photo", "wd14", "tag"),
+        ("photo", "tags", "tag"),
+        (SUMMON, "sheets", "sheet"),
+        (SUMMON, "review", "review"),
+        (SUMMON, "prompts", "prompt"),
+        (SUMMON, "outputs", "render"),
+    ],
+)
+def test_a_rows_kind_is_what_its_newest_stage_folder_says(
+    tmp_path: Path, scope: str, folder: str, word: str
+) -> None:
+    source = _collection(tmp_path, "b", "ada.jpg") / "sources" / "ada.jpg"
+    written = tmp_path / "b" / "runs" / "x" / scope / folder / "001.json"
+    written.parent.mkdir(parents=True)
+    written.write_bytes(b"{}")
+    os.utime(source, (1_000, 1_000))
+    os.utime(written, (2_000, 2_000))
+
+    (row,) = library.rows(tmp_path, OFFERED, FLOWS_DIR)
+
+    assert row.kind == word
+
+
 @pytest.mark.spec("ui:batch-folder:no-file-records-a-batch")
 def test_listing_and_opening_a_collection_writes_no_file(
     tmp_path: Path, vocabulary: Vocabulary

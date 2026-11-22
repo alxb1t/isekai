@@ -709,11 +709,11 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 
 ### D73 · A stage is declared once, in isekai/foundation/producers.py
 
-**`isekai/foundation/producers.py` declares each stage a run passes through as a frozen `Producer(key, folder, scope, verb, budget)`, in `PRODUCERS`, in the order a run passes them: caption, wd14, tags, sheet, review, assemble, render. `BUDGETS` of `failures.py`, and `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words of `names.py`, are read from it, and `run.py` re-exports `Producer` and `PRODUCERS`. The module imports nothing of `isekai`. `producer_for(key)` returns a stage's row, and `attempt` in `run.py` is the sequence of `caption`, `wd14`, `tags` and `sheet`, which reads the row by `producer_for`.**
+**`isekai/foundation/producers.py` declares each stage a run passes through as a frozen `Producer(key, folder, scope, verb, budget)`, in `PRODUCERS`, in the order a run passes them: caption, wd14, tags, sheet, review, assemble, render. `BUDGETS` of `failures.py`, and `DESCRIPTION`, `PHOTOGRAPH_VERBS` and the stage folders' words of `names.py`, are read from it, and `run.py` re-exports `Producer` and `PRODUCERS`. The module imports nothing of `isekai`. `producer_for(key)` returns a stage's row, and `attempt` in `run.py` is the sequence of `caption`, `wd14`, `tags` and `sheet`, which reads the row by `producer_for`. `PREPARE` and `tagged_runs` beside the record hold Prepare's order by verb and its tag rule, which the app's plan and the `prepare` verb read; `_KINDS` of `ui/library.py` reads its keys from the record, and a test holds the keys of `STAGES`, `_WRITES`, `PREPARE`, `REACHED` and the runner's `_BUILDERS` to it.**
 
 - **Why:** a stage was spelled in several literals that no test held to agree, and a new stage edited each of them. One row says what a stage is, and a table that names it is read from the row. The key is the budget's key and the `stage` of a failure record on disk, so it never changes.
-- **Accepts:** the tables above the foundation, the pipeline's own `STAGE` constants and the hub cell's `Stage` stay as they are, the paid stages, `assemble` and `render`, keep their own sequences, and `review` has a row with no budget. Reopen when the interface's tables are read from the record.
-- **Made by:** `0183`, `0188`.
+- **Accepts:** `STAGES`, `_WRITES`, `REACHED` and the runner's builders stay written, each held to the record by a test, the pipeline's own `STAGE` constants and the hub cell's `Stage` stay as they are, the paid stages, `assemble` and `render`, keep their own sequences, and `review` has a row with no budget. `Producer` gains no field for a table with one reader. Reopen when a second reader of one of those tables earns it a field.
+- **Made by:** `0183`, `0188`, `0201`.
 
 ### D74 · A terminal delete or cancel refuses beside a live render
 
@@ -730,6 +730,22 @@ the vendored sheet's own, is the default. `⇧T` chooses one, and the browser ke
 - **Why:** a command a person pastes was spelt by hand at sites beside its builders, so a change to the entry would edit each and nothing failed on a missed one. One constant is one edit.
 - **Accepts:** the argv of `again` and of the children, the bare `isekai ui` texts and the `isekai.boundary` provisioning commands stay as they are, and a docstring or a comment that names the entry is not read. A refusal's reason and its fix are still one string. Reopen when the entry changes, or when a refusal's fix rides the wire.
 - **Made by:** `0193`.
+
+### D76 · The child's lines are declared in isekai/interface/progress.py
+
+**`isekai/interface/progress.py` declares a child's lines — the item line, and the session's step and image lines — their stage, state and step names, and `--progress json`; `Reporter.item`, `Steps` and `_Images` write and read them there, and `progress_line` is the one reader.**
+
+- **Why:** a line was spelled by its emitter, again in each verb that names its stage and state, and again in each reader, and no test held them to agree. One module says what a line is, and a test holds each sample to it.
+- **Accepts:** the `steps.step` literals in `render.py`, the emitters' `str` parameters, the pipeline's `STAGE_RENDER` and the app's `cell` event stay as they are. Reopen when an emitter is typed by a shape.
+- **Made by:** `0196`.
+
+### D77 · review is a package entered by its front door, and a patch names the module that reads the name
+
+**`isekai/pipeline/review/` is the review stage. `__init__.py` is its front door: it defines `Status` and `state` and re-exports every name an importer or a test reads. `records.py` holds the draft's read and write with the helpers the parts share, `budget.py` the token budget, and `drafts.py`, `approval.py` and `cancelling.py` the three parts. A part imports `records.py`, `approval.py` also `budget.py`, and no other part. A test patches a name of the stage on the module that reads it, `isekai.pipeline.review.records` for `create` and `write`.**
+
+- **Why:** a patch of a name in a module that no longer reads it changes nothing, and the wire's deriver names a type by its module, so a moved `Status` renames the page's `ReviewStatus`. The front door keeps every importer and every test import as it was.
+- **Accepts:** a private name of the stage is not importable from the front door, and a name two parts read lives in `records.py`. Reopen when a part needs a name another defines.
+- **Made by:** `0198`, `0199`.
 
 ## Infrastructure
 

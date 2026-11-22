@@ -37,28 +37,31 @@ from typing import Any, Literal, TextIO, get_args
 from isekai.boundary.gpu import GpunitExit, Say, Volume, refused_line
 from isekai.foundation.artifacts import session_id
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import REPOSITORY
+from isekai.foundation.run import PHOTOGRAPH_VERBS, PREPARE, REPOSITORY, tagged_runs
+from isekai.interface.progress import (
+    ARGUMENT,
+    DONE,
+    IMAGE,
+    LANDED,
+    SHEET,
+    TAG,
+    progress_line,
+)
 from isekai.interface.render import (
     LOST_EXIT,
     REFUSALS,
     load_timing,
-    progress_line,
     without_flags,
 )
 from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
 
-# The stages Prepare counts, in order. Its one child takes each photograph through
-# them in turn: tag and caption once, naming no flow, since every flow reads the
-# one description (D17); then sheet for each of its cells.
-PREPARE = ("tag", "caption", "sheet")
-
 # The cell stages a done line must read for its stage to count it; a stage absent
 # writes no file the hub's stage reads.
 REACHED = {
-    "tag": {"tagged", "sheet", "draft", "approved", "rendered"},
-    "sheet": {"sheet", "draft", "approved", "rendered"},
+    TAG: {"tagged", "sheet", "draft", "approved", "rendered"},
+    SHEET: {"sheet", "draft", "approved", "rendered"},
 }
 
 # The kinds of job, each with its own slot.
@@ -118,8 +121,7 @@ def prepare_command(runs: Path, cells: Sequence[str]) -> list[str]:
         "prepare",
         "--runs",
         str(runs),
-        "--progress",
-        "json",
+        *ARGUMENT,
         *cells,
     ]
 
@@ -139,8 +141,7 @@ def render_command(limit: int, roots: Sequence[Path], session: str) -> list[str]
         str(limit),
         "--session",
         session,
-        "--progress",
-        "json",
+        *ARGUMENT,
         *map(str, roots),
     ]
 
@@ -155,24 +156,21 @@ class Step:
 
 
 def plan(todo: Mapping[str, Sequence[str]], tagged: Mapping[str, bool]) -> list[Step]:
-    """Return the steps that prepare `todo`'s runs: the photographs once, then by flow.
+    """Return the steps that prepare `todo`'s runs, in `PREPARE`'s order.
 
-    `tag` takes only the runs of a flow `tagged` names, and is left out when that
-    leaves none.
+    The photographs' steps name no flow and the sheets go by flow. `tag` takes the
+    runs `tagged_runs` names, and is left out when that leaves none.
     e.g. {"summon": ["r1"]} -> tag, caption over r1, then sheet over r1 in summon
     """
     photographs = tuple(dict.fromkeys(run for ids in todo.values() for run in ids))
-    tag = tuple(
-        dict.fromkeys(run for flow, ids in todo.items() if tagged[flow] for run in ids)
-    )
-    described = [
-        Step(None, verb, runs)
-        for verb, runs in (("tag", tag), ("caption", photographs))
-        if runs
-    ]
-    return described + [
-        Step(flow, "sheet", tuple(ids)) for flow, ids in todo.items() if ids
-    ]
+    described = {"tag": tagged_runs(todo, tagged), "caption": photographs}
+    steps: list[Step] = []
+    for verb in PREPARE:
+        if verb not in PHOTOGRAPH_VERBS:
+            steps += [Step(flow, verb, tuple(ids)) for flow, ids in todo.items() if ids]
+        elif described[verb]:
+            steps.append(Step(None, verb, described[verb]))
+    return steps
 
 
 def cells_of(steps: Sequence[Step]) -> list[str]:
@@ -230,7 +228,7 @@ class _Job:
         reached = {event.get("cell", {}).get("stage") for event in found}
         done = self.completed.setdefault(verb, set())
         counts = (
-            line.get("state") == "done"
+            line.get("state") == DONE
             and (verb not in REACHED or bool(reached & REACHED[verb]))
             and identity in self.asked(verb)
             and identity not in done
@@ -609,13 +607,8 @@ class Jobs:
                 continue
             reported = True
             with self._lock:
-                if line.get("step") == "image":
-                    job.session["images"].append(
-                        {
-                            key: line.get(key)
-                            for key in ("digest", "flow", "version", "seed")
-                        }
-                    )
+                if line.get("step") == IMAGE:
+                    job.session["images"].append({key: line.get(key) for key in LANDED})
                 else:
                     job.session["steps"][str(line.get("step"))] = line.get("state")
             self._publish(job)

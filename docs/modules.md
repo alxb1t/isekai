@@ -38,14 +38,14 @@ Every lazy edge points down, as every module-level one does.
 
 **Where this version's pieces sit.** `import` is `pipeline/importing.py`, a stage
 no other stage imports; the CLI's `import` verb and `StagingRoutes` of `interface/ui/routes/staging.py`
-both compose it, and `ui/library.py` reads `shared/image.py`'s `metadata_in` for the
+both compose it, the upload session over it is `interface/ui/uploads.py`'s, and `ui/library.py` reads `shared/image.py`'s `metadata_in` for the
 not-cleaned mark.
 `assign` is `foundation/rundir.py`'s, read through `run.py`, because a tick is the run's layout, and the CLI
 verb and `HubRoutes` of `interface/ui/routes/hub.py` both call it. `migrate` is `foundation/migrate.py`'s,
 which imports `artifacts.py`, `run.py` and `refusal.py`: it moves the run's layout,
 and `cli.py`'s verb walks each runs root, reaching the library's collections
 through `interface/ui/`'s `collection_runs` inside the handler. `--progress json`
-is `Reporter` of `interface/verbs/common.py`. **Prepare and Render reach the CLI by process, never
+is the lines `interface/progress.py` declares, which `Reporter` of `interface/verbs/common.py` and `Steps` write. **Prepare and Render reach the CLI by process, never
 by import**: `interface/ui/jobs.py` runs `python -m isekai prepare`
 over the cells, each photograph tagged, captioned and sheeted in turn, and
 `python -m isekai render` between `python -m gpunit volume up` and `volume down`,
@@ -55,7 +55,7 @@ as children, so the CLI stays the one path a stage runs through, and
 `StreamRoutes` of `interface/ui/routes/stream.py` serves the stream.
 Every other write the server makes runs in its own process, through the function
 that owns it: stage ③'s review functions, which `ReviewRoutes` of
-`interface/ui/routes/reviewing.py` calls, import's reader, `sheet()` for a
+`interface/ui/routes/reviewing.py` calls, the reader of `interface/ui/uploads.py`, `sheet()` for a
 target's first sheet when a draft is made from another flow, filled from the
 photograph's tags — `interface/drafting.py`'s `draft_across` runs it, the same
 sequence the CLI's `draft` runs (D4) — and, for a deleted render, `delete_render` and, for
