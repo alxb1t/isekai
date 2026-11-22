@@ -10,6 +10,8 @@ its new digest.
 
 ## [Unreleased]
 
+- The import's browser test presses `⇧A` again when no file dialog opens, so a dropped press no longer fails it; its last wait is the one it had (0202 D1).
+
 ## [0.88.11] - 2026-11-22
 
 Gate: local 1m16s · CI not read under mf-ship · 0.88.10: local 1m18s · CI not read under mf-ship
